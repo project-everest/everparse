@@ -282,28 +282,6 @@ let cbor_array_index
   | _ ->
     return (cbor_array_index_case_serialized a i)
 
-noeq
-type cbor_array_iterator_payload_t =
-| CBOR_Array_Iterator_Payload_Array:
-    payload: A.array cbor ->
-    footprint: Ghost.erased (Seq.seq cbor) ->
-    cbor_array_iterator_payload_t
-| CBOR_Array_Iterator_Payload_Serialized:
-    payload: cbor_serialized_payload_t ->
-    footprint: cbor_serialized_footprint_t ->
-    cbor_array_iterator_payload_t
-
-// NOTE: this type could be made abstract (with val and
-// CAbstractStruct, and then hiding cbor_array_iterator_payload_t
-// altogether), but then, users couldn't allocate on stack
-noeq
-type cbor_array_iterator_t = {
-  cbor_array_iterator_length: U64.t;
-  cbor_array_iterator_payload: cbor_array_iterator_payload_t;
-  footprint: cbor_footprint_t;
-}
-
-[@@inline_let]
 let dummy_cbor_array_iterator = {
   cbor_array_iterator_length = 0uL;
   cbor_array_iterator_payload = CBOR_Array_Iterator_Payload_Array A.null Seq.empty;
@@ -554,7 +532,9 @@ let cbor_array_iterator_next_array
     (cbor_array_iterator_match p _ l)
     (cbor_array_iterator_match_array p i l);
   let _ = gen_elim () in
-  let a = CBOR_Array_Iterator_Payload_Array?.payload i.cbor_array_iterator_payload in
+  let a = match i.cbor_array_iterator_payload with
+  | CBOR_Array_Iterator_Payload_Array payload _ -> payload
+  in
   let fp : Ghost.erased _ = CBOR_Array_Iterator_Payload_Array?.footprint i.cbor_array_iterator_payload in
   rewrite
     (A.pts_to _ p _)
@@ -687,7 +667,9 @@ let cbor_array_iterator_next_serialized
     (cbor_array_iterator_match_serialized p i l);
   let _ = gen_elim () in
   GR.pts_to_perm i.footprint;
-  let a = CBOR_Array_Iterator_Payload_Serialized?.payload i.cbor_array_iterator_payload in
+  let a = match i.cbor_array_iterator_payload with
+  | CBOR_Array_Iterator_Payload_Serialized payload _ -> payload
+  in
   let va = vpattern_replace (LPS.aparse (LPS.parse_nlist (U64.v i.cbor_array_iterator_length) CborST.parse_raw_data_item) _) in
   vpattern_rewrite (fun a -> LPS.aparse (LPS.parse_nlist (U64.v i.cbor_array_iterator_length) CborST.parse_raw_data_item) a _) a;
   intro_implies

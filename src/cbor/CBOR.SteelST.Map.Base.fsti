@@ -23,8 +23,6 @@ val cbor_map_length
       U64.v res == List.Tot.length (Cbor.Map?.v v)
     )
 
-val cbor_map_iterator_t: Type0
-
 val dummy_cbor_map_iterator: cbor_map_iterator_t
 
 val cbor_map_iterator_match

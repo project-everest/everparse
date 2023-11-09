@@ -4,6 +4,7 @@ open CBOR.SteelST.Map.Base
 open Steel.ST.OnRange
 open Steel.ST.GenElim
 friend CBOR.SteelST.Map.Base
+open CBOR.SteelST.Type.Def
 
 module Cbor = CBOR.Spec
 module U64 = FStar.UInt64
@@ -44,7 +45,9 @@ let cbor_map_iterator_next_serialized
     (cbor_map_iterator_match_serialized p i l);
   let _ = gen_elim () in
   GR.pts_to_perm i.footprint;
-  let a = CBOR_Map_Iterator_Payload_Serialized?.payload i.cbor_map_iterator_payload in
+  let a = match i.cbor_map_iterator_payload with
+  | CBOR_Map_Iterator_Payload_Serialized payload _ -> payload
+  in
   let va = vpattern_replace (LPS.aparse (LPS.parse_nlist (U64.v i.cbor_map_iterator_length) (LPS.nondep_then CborST.parse_raw_data_item CborST.parse_raw_data_item)) _) in
   vpattern_rewrite (fun a -> LPS.aparse (LPS.parse_nlist (U64.v i.cbor_map_iterator_length) (LPS.nondep_then CborST.parse_raw_data_item CborST.parse_raw_data_item)) a _) a;
   intro_implies

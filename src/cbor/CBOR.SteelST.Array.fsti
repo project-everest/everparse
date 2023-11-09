@@ -65,8 +65,6 @@ val cbor_array_index
         raw_data_item_match p a v)
     )
 
-val cbor_array_iterator_t: Type0
-
 val dummy_cbor_array_iterator: cbor_array_iterator_t
 
 val cbor_array_iterator_match

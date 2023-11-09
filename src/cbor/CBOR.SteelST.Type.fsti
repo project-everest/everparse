@@ -58,3 +58,11 @@ val mk_cbor_map_entry
     cbor_map_entry_key res == key /\
     cbor_map_entry_value res == value
   ))
+
+inline_for_extraction
+noextract
+val cbor_array_iterator_t: Type0
+
+inline_for_extraction
+noextract
+val cbor_map_iterator_t: Type0

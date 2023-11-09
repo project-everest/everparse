@@ -72,28 +72,6 @@ let cbor_map_length
       (raw_data_item_match p _ _);
     return res
 
-noeq
-type cbor_map_iterator_payload_t =
-| CBOR_Map_Iterator_Payload_Map:
-    payload: A.array cbor_map_entry ->
-    footprint: Ghost.erased (Seq.seq cbor_map_entry) ->
-    cbor_map_iterator_payload_t
-| CBOR_Map_Iterator_Payload_Serialized:
-    payload: cbor_serialized_payload_t ->
-    footprint: cbor_serialized_footprint_t ->
-    cbor_map_iterator_payload_t
-
-// NOTE: this type could be made abstract (with val and
-// CAbstractStruct, and then hiding cbor_array_iterator_payload_t
-// altogether), but then, users couldn't allocate on stack
-noeq
-type cbor_map_iterator_t = {
-  cbor_map_iterator_length: U64.t;
-  cbor_map_iterator_payload: cbor_map_iterator_payload_t;
-  footprint: cbor_footprint_t;
-}
-
-[@@inline_let]
 let dummy_cbor_map_iterator = {
   cbor_map_iterator_length = 0uL;
   cbor_map_iterator_payload = CBOR_Map_Iterator_Payload_Map A.null Seq.empty;

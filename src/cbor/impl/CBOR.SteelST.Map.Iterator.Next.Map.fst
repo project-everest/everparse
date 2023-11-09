@@ -4,6 +4,7 @@ open CBOR.SteelST.Map.Base
 open Steel.ST.OnRange
 open Steel.ST.GenElim
 friend CBOR.SteelST.Map.Base
+open CBOR.SteelST.Type.Def
 
 module Cbor = CBOR.Spec
 module U64 = FStar.UInt64
@@ -65,7 +66,9 @@ let cbor_map_iterator_next_map
     (cbor_map_iterator_match p _ l)
     (cbor_map_iterator_match_map p i l);
   let _ = cbor_map_iterator_match_map_elim p i l in
-  let a = CBOR_Map_Iterator_Payload_Map?.payload i.cbor_map_iterator_payload in
+  let a = match i.cbor_map_iterator_payload with
+  | CBOR_Map_Iterator_Payload_Map payload _ -> payload
+  in
   let fp : Ghost.erased _ = CBOR_Map_Iterator_Payload_Map?.footprint i.cbor_map_iterator_payload in
   rewrite
     (A.pts_to _ p _)

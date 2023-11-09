@@ -83,3 +83,43 @@ and cbor =
   v: cbor_serialized ->
   self_footprint: cbor_footprint_t ->
   cbor
+
+[@@no_auto_projectors]
+noeq
+type cbor_array_iterator_payload_t =
+| CBOR_Array_Iterator_Payload_Array:
+    payload: A.array cbor ->
+    footprint: Ghost.erased (Seq.seq cbor) ->
+    cbor_array_iterator_payload_t
+| CBOR_Array_Iterator_Payload_Serialized:
+    payload: cbor_serialized_payload_t ->
+    footprint: cbor_serialized_footprint_t ->
+    cbor_array_iterator_payload_t
+
+[@@no_auto_projectors]
+noeq
+type cbor_array_iterator_t = {
+  cbor_array_iterator_length: U64.t;
+  cbor_array_iterator_payload: cbor_array_iterator_payload_t;
+  footprint: cbor_footprint_t;
+}
+
+[@@no_auto_projectors]
+noeq
+type cbor_map_iterator_payload_t =
+| CBOR_Map_Iterator_Payload_Map:
+    payload: A.array cbor_map_entry ->
+    footprint: Ghost.erased (Seq.seq cbor_map_entry) ->
+    cbor_map_iterator_payload_t
+| CBOR_Map_Iterator_Payload_Serialized:
+    payload: cbor_serialized_payload_t ->
+    footprint: cbor_serialized_footprint_t ->
+    cbor_map_iterator_payload_t
+
+[@@no_auto_projectors]
+noeq
+type cbor_map_iterator_t = {
+  cbor_map_iterator_length: U64.t;
+  cbor_map_iterator_payload: cbor_map_iterator_payload_t;
+  footprint: cbor_footprint_t;
+}

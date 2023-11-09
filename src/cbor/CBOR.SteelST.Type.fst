@@ -24,3 +24,7 @@ let cbor_map_entry_key_value_inj
 let mk_cbor_map_entry
   k v
 = Mkcbor_map_entry k v
+
+let cbor_array_iterator_t = cbor_array_iterator_t
+
+let cbor_map_iterator_t = cbor_map_iterator_t
