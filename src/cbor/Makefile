@@ -80,7 +80,7 @@ extract-steel-raw: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelC% CBOR_SteelST%,$
 	$(KRML) -bundle 'CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORRaw]' $^
 
 extract-steel: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelC%,$(ALL_KRML_FILES))
-	$(KRML) -bundle 'CBOR.SteelST+CBOR.Spec.Constants+CBOR.SteelST.Type+CBOR.SteelST.Array+CBOR.SteelST.String+CBOR.SteelST.SimpleValue+CBOR.SteelST.Int64+CBOR.SteelST.Tagged+CBOR.SteelST.Map.Base+CBOR.SteelST.Map=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR,rename-prefix]' $^
+	$(KRML) -bundle 'CBOR.SteelST+CBOR.Spec.Constants+CBOR.SteelST.Type.Base+CBOR.SteelST.Type.Def+CBOR.SteelST.Match+CBOR.SteelST.Type+CBOR.SteelST.Array+CBOR.SteelST.String+CBOR.SteelST.SimpleValue+CBOR.SteelST.Int64+CBOR.SteelST.Tagged+CBOR.SteelST.Map.Base+CBOR.SteelST.Map=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR,rename-prefix]' $^
 
 extract: extract-steelc extract-steel extract-steel-raw
 

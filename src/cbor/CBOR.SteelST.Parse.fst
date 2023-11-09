@@ -1,7 +1,8 @@
 module CBOR.SteelST.Parse
 open Steel.ST.OnRange
 open Steel.ST.GenElim
-friend CBOR.SteelST.Type
+friend CBOR.SteelST.Match
+open CBOR.SteelST.Type.Def
 
 module CborST = CBOR.SteelST.Raw
 module LPA = LowParse.SteelST.ArrayPtr.IntroElim

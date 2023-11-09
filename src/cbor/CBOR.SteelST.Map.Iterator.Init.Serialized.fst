@@ -4,6 +4,7 @@ open CBOR.SteelST.Map.Base
 open Steel.ST.OnRange
 open Steel.ST.GenElim
 friend CBOR.SteelST.Map.Base
+open CBOR.SteelST.Type.Def
 
 module Cbor = CBOR.Spec
 module U64 = FStar.UInt64

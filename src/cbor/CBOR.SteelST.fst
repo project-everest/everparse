@@ -9,6 +9,7 @@ friend CBOR.SteelST.String
 friend CBOR.SteelST.Tagged
 friend CBOR.SteelST.Array
 friend CBOR.SteelST.Map
+open CBOR.SteelST.Type.Def
 
 module CborST = CBOR.SteelST.Raw
 module LPA = LowParse.SteelST.ArrayPtr.IntroElim

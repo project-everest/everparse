@@ -1,5 +1,5 @@
 module CBOR.SteelST.Perm
-include CBOR.SteelST.Type
+include CBOR.SteelST.Match
 
 open Steel.ST.Util
 

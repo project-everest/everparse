@@ -1,5 +1,5 @@
 module CBOR.SteelST.Map.Base
-include CBOR.SteelST.Type
+include CBOR.SteelST.Match
 open Steel.ST.Util
 
 module Cbor = CBOR.Spec

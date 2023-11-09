@@ -2,6 +2,7 @@ module CBOR.SteelST.Map
 open Steel.ST.OnRange
 open Steel.ST.GenElim
 friend CBOR.SteelST.Map.Base
+open CBOR.SteelST.Type.Def
 
 open CBOR.SteelST.Map.Iterator.Init.Map
 open CBOR.SteelST.Map.Iterator.Init.Serialized

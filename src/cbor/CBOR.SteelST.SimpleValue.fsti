@@ -1,5 +1,5 @@
 module CBOR.SteelST.SimpleValue
-include CBOR.SteelST.Type
+include CBOR.SteelST.Match
 open Steel.ST.Util
 
 module Cbor = CBOR.Spec
