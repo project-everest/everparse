@@ -4,7 +4,7 @@
 # of rebuilding them. This Makefile assumes that everything else from
 # the F* standard library and KRMLLib is already built (and fails otherwise)
 
-all: impl dist
+all: test
 .PHONY: all
 
 ifndef FSTAR_HOME
@@ -59,6 +59,10 @@ impl: verify-all
 .PHONY: dist
 dist: verify-all
 	+$(MAKE) -C $@
+
+.PHONY: test
+test: impl dist
+	test $$(for f in $$(wc -l dist/out/CBOR.h) ; do echo $$f ; done | head -n 1) -eq $$(for f in $$(wc -l impl/out/CBOR.h) ; do echo $$f ; done | head -n 1)
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
