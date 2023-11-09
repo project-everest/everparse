@@ -16,6 +16,7 @@ val cbor_serialized_payload_t: Type0
 noextract [@@erasable; noextract_to "krml"]
 val cbor_serialized_footprint_t: Type0
 
+[@@no_auto_projectors]
 noeq
 type cbor_serialized = {
   cbor_serialized_size: SZ.t;
@@ -28,6 +29,7 @@ val cbor_footprint_t: Type0
 
 val dummy_cbor_footprint: cbor_footprint_t
 
+[@@no_auto_projectors]
 noeq
 type cbor_tagged0 = {
   cbor_tagged0_tag: U64.t;

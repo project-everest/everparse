@@ -10,10 +10,15 @@ module LPS = LowParse.SteelST.SeqMatch
 module LW = LowParse.SteelST.L2ROutput.IntroElim
 module GR = Steel.ST.GhostReference
 
+let is_CBOR_Case_String (c: cbor) : Tot bool =
+  match c with
+  | CBOR_Case_String _ _ _ -> true
+  | _ -> false
+
 let destr_cbor_string
   #p #va c
 = raw_data_item_match_get_case c;
-  if CBOR_Case_String? c
+  if is_CBOR_Case_String c
   then begin
     noop ();
     noop ();

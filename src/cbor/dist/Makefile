@@ -4,8 +4,7 @@
 # of rebuilding them. This Makefile assumes that everything else from
 # the F* standard library and KRMLLib is already built (and fails otherwise)
 
-all: impl dist
-.PHONY: all
+all: verify-all test
 
 ifndef FSTAR_HOME
   FSTAR_EXE:=$(shell which fstar.exe)
@@ -26,20 +25,21 @@ endif
 ifdef KRML_HOME
   KRMLLIB:=$(KRML_HOME)/krmllib
 endif
+LOWPARSE_HOME=../../lowparse
 INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
 
 ifndef STEEL_HOME
-  STEEL_HOME=$(realpath ../../../steel)
+  STEEL_HOME=$(realpath ../../../../steel)
 endif
+INCLUDE_PATHS=..
 
-ALREADY_CACHED = --already_cached *,-CBOR,-CDDL,-COSE,-DPE.Messages
+ALREADY_CACHED = --already_cached *,-CBOR.SteelST.Type.Def
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED) --cmi --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
 
 FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS)
 
-LOWPARSE_FILES=$(wildcard *.fst *.fsti)
+LOWPARSE_FILES=$(wildcard *.fst *.fsti ../*.fst ../*.fsti)
 
-.PHONY: clean
 clean:
 	rm -rf *.checked *.source .depend .depend.tmp out *.krml *.o
 
@@ -49,21 +49,35 @@ clean:
 
 include .depend
 
-.PHONY: verify-all
 verify-all: $(ALL_CHECKED_FILES)
 
-.PHONY: impl
-impl: verify-all
-	+$(MAKE) -C $@
+%.krml:
+	$(FSTAR) --codegen krml $(patsubst %.checked,%,$(notdir $<)) --extract_module $(basename $(patsubst %.checked,%,$(notdir $<))) --warn_error '@241'
+	@touch $@
 
-.PHONY: dist
-dist: verify-all
-	+$(MAKE) -C $@
+KRML = $(KRML_HOME)/krml \
+	 -ccopt "-Ofast" \
+	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
+	 -tmpdir out \
+	 -skip-compilation \
+	 $(KRML_OPTS) \
+	 -warn-error '@2@4@15'
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
 
-.PHONY: %.fst-in %.fsti-in
+extract-steel: $(filter-out COSE_% CDDL_% DPE_%,$(ALL_KRML_FILES))
+	$(KRML) -bundle 'CBOR.SteelST+CBOR.Spec.Constants+CBOR.SteelST.Type.Base+CBOR.SteelST.Type.Def+CBOR.SteelST.Match+CBOR.SteelST.Type+CBOR.SteelST.Array+CBOR.SteelST.String+CBOR.SteelST.SimpleValue+CBOR.SteelST.Int64+CBOR.SteelST.Tagged+CBOR.SteelST.Map.Base+CBOR.SteelST.Map=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR,rename-prefix]' $^
+	! test -f CBOR.c
+
+extract: extract-steel
+
+test-steel: extract-steel
+
+test: test-steel
+
+.PHONY: all verify-all clean %.fst-in %.fsti-in extract-steel extract test-steel test
+
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
