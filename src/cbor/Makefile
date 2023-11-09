@@ -4,7 +4,8 @@
 # of rebuilding them. This Makefile assumes that everything else from
 # the F* standard library and KRMLLib is already built (and fails otherwise)
 
-all: verify-all test
+all: impl
+.PHONY: all
 
 ifndef FSTAR_HOME
   FSTAR_EXE:=$(shell which fstar.exe)
@@ -25,27 +26,20 @@ endif
 ifdef KRML_HOME
   KRMLLIB:=$(KRML_HOME)/krmllib
 endif
-LOWPARSE_HOME=../lowparse
 INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
 
 ifndef STEEL_HOME
   STEEL_HOME=$(realpath ../../../steel)
 endif
-INCLUDE_PATHS=$(LOWPARSE_HOME) $(LOWPARSE_HOME)/steel
 
 ALREADY_CACHED = --already_cached *,-CBOR,-CDDL,-COSE,-DPE.Messages
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED) --cmi --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
-
-ifneq (,$(STEEL_C))
-  FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel/steel_c_array
-else
-  FSTAR_OPTIONS += --include $(LOWPARSE_HOME)/steel/steel_array
-endif
 
 FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS)
 
 LOWPARSE_FILES=$(wildcard *.fst *.fsti)
 
+.PHONY: clean
 clean:
 	rm -rf *.checked *.source .depend .depend.tmp out *.krml *.o
 
@@ -55,45 +49,17 @@ clean:
 
 include .depend
 
+.PHONY: verify-all
 verify-all: $(ALL_CHECKED_FILES)
 
-%.krml:
-	$(FSTAR) --codegen krml $(patsubst %.checked,%,$(notdir $<)) --extract_module $(basename $(patsubst %.checked,%,$(notdir $<))) --warn_error '@241'
-	@touch $@
-
-KRML = $(KRML_HOME)/krml \
-	 -ccopt "-Ofast" \
-	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
-	 -tmpdir out \
-	 -skip-linking \
-	 $(KRML_OPTS) \
-	 -warn-error '@2@4@15'
+.PHONY: impl
+impl: verify-all
+	+$(MAKE) -C $@
 
 $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
 
-extract-steelc: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelST%,$(ALL_KRML_FILES)) $(filter CBOR_SteelST_Raw%,$(ALL_KRML_FILES))
-	$(KRML) -bundle 'CBOR.SteelC+CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORSteelC]' $^
-
-extract-steel-raw: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelC% CBOR_SteelST%,$(ALL_KRML_FILES)) $(filter CBOR_SteelST_Raw%,$(ALL_KRML_FILES))
-	$(KRML) -bundle 'CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORRaw]' $^
-
-extract-steel: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelC%,$(ALL_KRML_FILES))
-	$(KRML) -bundle 'CBOR.SteelST+CBOR.Spec.Constants+CBOR.SteelST.Type.Base+CBOR.SteelST.Type.Def+CBOR.SteelST.Match+CBOR.SteelST.Type+CBOR.SteelST.Array+CBOR.SteelST.String+CBOR.SteelST.SimpleValue+CBOR.SteelST.Int64+CBOR.SteelST.Tagged+CBOR.SteelST.Map.Base+CBOR.SteelST.Map=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR,rename-prefix]' $^
-
-extract: extract-steelc extract-steel extract-steel-raw
-
-test-steel-raw: extract-steel-raw
-	$(CC) -Wall -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I $(STEEL_HOME)/include/steel -I out -c cbor_unverified.c
-
-test-steel: extract-steel
-
-test-steelc: extract-steelc
-
-test: test-steel test-steelc test-steel-raw
-
-.PHONY: all verify-all clean %.fst-in %.fsti-in lowparse extract-steel extract-steelc extract test-steel test-steelc test extract-steel-raw test-steel-raw
-
+.PHONY: %.fst-in %.fsti-in
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
