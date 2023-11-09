@@ -74,6 +74,7 @@ extract-steel: $(filter-out COSE_% CDDL_% DPE_%,$(ALL_KRML_FILES))
 extract: extract-steel
 
 test-steel: extract-steel
+	$(CC) -Wall -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I $(STEEL_HOME)/include/steel -I out -c cbor_test.c
 
 test: test-steel
 
