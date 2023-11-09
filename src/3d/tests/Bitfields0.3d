@@ -42,3 +42,11 @@ typedef struct _BFA (mutable UINT8 *outx, mutable UINT8 *outy, mutable UINT8 *ou
      {:act *outz = z; };     
    UINT32 blah;
 } BFA;
+
+//bitfield boundaries coincide with the the types of their underlying fields
+typedef struct _BFBoundary {
+   UINT16 x : 12; //4 bits of padding here are implicit
+   UINT8 y : 4;
+   UINT8 z : 3; //y and z are packed, but with 1 bit of padding left
+   UINT16 w : 12; //4 bits of padding here are implicit
+} BFBoundary;

@@ -338,13 +338,20 @@ let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
 
 and resolve_atomic_field (env:qenv) (f:atomic_field) : ML (atomic_field & qenv) =
   let resolve_atomic_field' (env:qenv) (sf:atomic_field') : ML atomic_field' =
-    { sf with
-      field_type = resolve_typ env sf.field_type;
-      field_array_opt = resolve_field_array_t env sf.field_array_opt;
-      field_constraint = map_opt (resolve_expr env) sf.field_constraint;
-      field_bitwidth = map_opt (resolve_field_bitwidth_t env) sf.field_bitwidth;
-      field_action = map_opt (fun (a, b) -> resolve_action env a, b) sf.field_action } in
-
+    let is_non_scalar = not (FieldScalar? sf.field_array_opt) in
+    if is_non_scalar && (Some? sf.field_constraint)
+    then error (Printf.sprintf "Non-scalar field '%s' cannot be refined with constraints" sf.field_ident.v.name) f.range
+    else if is_non_scalar && (Some? sf.field_bitwidth)
+    then error (Printf.sprintf "Non-scalar field '%s' cannot have a bit width" sf.field_ident.v.name) f.range
+    else (
+        { sf with
+          field_type = resolve_typ env sf.field_type;
+          field_array_opt = resolve_field_array_t env sf.field_array_opt;
+          field_constraint = map_opt (resolve_expr env) sf.field_constraint;
+          field_bitwidth = map_opt (resolve_field_bitwidth_t env) sf.field_bitwidth;
+          field_action = map_opt (fun (a, b) -> resolve_action env a, b) sf.field_action }
+    )
+  in
   let env = push_name env f.v.field_ident.v.name in
   { f with v = resolve_atomic_field' env f.v }, env
 
