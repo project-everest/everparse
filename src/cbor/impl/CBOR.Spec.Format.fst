@@ -1389,7 +1389,116 @@ let deterministically_encoded_cbor_map_key_order_major_type_intro
   assert (bytes_lex_order (serialize serialize_initial_byte b1) (serialize serialize_initial_byte b2));
   bytes_lex_compare_append (serialize serialize_initial_byte b1) (serialize serialize_initial_byte b2) (serialize (serialize_long_argument b1) l1 `Seq.append` serialize (serialize_content h1) c1) (serialize (serialize_long_argument b2) l2 `Seq.append` serialize (serialize_content h2) c2)
 
+let deterministically_encoded_cbor_map_key_order_simple_value_intro
+  (x1 x2: simple_value)
+: Lemma
+  (requires (
+    x1 `U8.lt` x2 == true
+  ))
+  (ensures (
+    Ghost.reveal deterministically_encoded_cbor_map_key_order (Simple x1) (Simple x2) == true
+  ))
+= let v1 = Simple x1 in
+  let v2 = Simple x2 in
+  serialize_raw_data_item_aux_correct v1;
+  serialize_synth_eq
+    _
+    synth_raw_data_item
+    (serialize_dtuple2 serialize_header serialize_content)
+    synth_raw_data_item_recip
+    ()
+    v1;
+  let v1' = synth_raw_data_item_recip v1 in
+  serialize_dtuple2_eq serialize_header serialize_content v1';
+  let (| h1, c1 |) = v1' in
+  serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h1;
+  let (| b1, l1 |) = h1 in
+  serialize_raw_data_item_aux_correct v2;
+  serialize_synth_eq
+    _
+    synth_raw_data_item
+    (serialize_dtuple2 serialize_header serialize_content)
+    synth_raw_data_item_recip
+    ()
+    v2;
+  let v2' = synth_raw_data_item_recip v2 in
+  serialize_dtuple2_eq serialize_header serialize_content v2';
+  let (| h2, c2 |) = v2' in
+  serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h2;
+  let (| b2, l2 |) = h2 in
+  serialize_initial_byte_lt b1 b2;
+  Seq.append_assoc (serialize serialize_initial_byte b1) (serialize (serialize_long_argument b1) l1) (serialize (serialize_content h1) c1);
+  Seq.append_assoc (serialize serialize_initial_byte b2) (serialize (serialize_long_argument b2) l2) (serialize (serialize_content h2) c2);
+  if (x1 `U8.lte` max_simple_value_additional_info)
+  then begin
+    assert (bytes_lex_order (serialize serialize_initial_byte b1) (serialize serialize_initial_byte b2));
+    bytes_lex_compare_append (serialize serialize_initial_byte b1) (serialize serialize_initial_byte b2) (serialize (serialize_long_argument b1) l1 `Seq.append` serialize (serialize_content h1) c1) (serialize (serialize_long_argument b2) l2 `Seq.append` serialize (serialize_content h2) c2)
+  end
+  else begin
+    assert (b1 == b2);
+    assert (b1 == (major_type_simple_value, (additional_info_long_argument_8_bits, ())));
+    let LongArgumentSimpleValue _ x1' = l1 in
+    assert (x1 == x1');
+    let p1' : parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.weaken parse_long_argument_kind (parse_synth (parse_filter parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b1 ())) in
+    assert (parse_long_argument b1 == p1');
+    let s1_pre = serialize_synth #_ #_ #(long_argument b1) _ (LongArgumentSimpleValue #b1 ()) (serialize_filter serialize_u8 simple_value_long_argument_wf) LongArgumentSimpleValue?.v () in
+    let s1' : serializer p1' = serialize_weaken parse_long_argument_kind s1_pre in
+    serializer_unique (parse_long_argument b1) (serialize_long_argument b1) s1' l1;
+    serialize_u8_spec x1;
+    serialize_synth_eq #_ #_ #(long_argument b1) (parse_filter parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b1 ()) (serialize_filter serialize_u8 simple_value_long_argument_wf) LongArgumentSimpleValue?.v () l1;
+    assert (serialize s1_pre l1 == serialize (serialize_filter serialize_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue?.v l1));
+    assert (serialize s1' l1 == serialize (serialize_filter serialize_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue?.v l1));
+    assert (serialize s1' l1 == Seq.create 1 x1');
+    assert (serialize (serialize_long_argument b1) l1 == Seq.create 1 (x1 <: U8.t));
+    assert (b2 == (major_type_simple_value, (additional_info_long_argument_8_bits, ())));
+    let LongArgumentSimpleValue _ x2' = l2 in
+    assert (x2 == x2');
+    let p2' : parser parse_long_argument_kind (long_argument b2) = LowParse.Spec.Base.weaken parse_long_argument_kind (parse_synth (parse_filter parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b2 ())) in
+    assert (parse_long_argument b2 == p2');
+    let s2_pre = serialize_synth #_ #_ #(long_argument b2) _ (LongArgumentSimpleValue #b2 ()) (serialize_filter serialize_u8 simple_value_long_argument_wf) LongArgumentSimpleValue?.v () in
+    let s2' : serializer p2' = serialize_weaken parse_long_argument_kind s2_pre in
+    serializer_unique (parse_long_argument b2) (serialize_long_argument b2) s2' l2;
+    serialize_u8_spec x2;
+    serialize_synth_eq #_ #_ #(long_argument b2) (parse_filter parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b2 ()) (serialize_filter serialize_u8 simple_value_long_argument_wf) LongArgumentSimpleValue?.v () l2;
+    assert (serialize s2_pre l2 == serialize (serialize_filter serialize_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue?.v l2));
+    assert (serialize s2' l2 == serialize (serialize_filter serialize_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue?.v l2));
+    assert (serialize s2' l2 == Seq.create 1 x2');
+    assert (serialize (serialize_long_argument b2) l2 == Seq.create 1 (x2 <: U8.t));
+    assert (bytes_lex_order (serialize (serialize_long_argument b1) l1) (serialize (serialize_long_argument b2) l2));
+    assert (bytes_lex_order (serialize serialize_header h1) (serialize serialize_header h2));
+    bytes_lex_order_serialize_strong_prefix serialize_header h1 h2 (serialize (serialize_content h1) c1) (serialize (serialize_content h2) c2)
+  end
+
+let deterministically_encoded_cbor_map_key_order_simple_value_correct
+  (x1 x2: simple_value)
+: Lemma
+  (ensures (Ghost.reveal deterministically_encoded_cbor_map_key_order (Simple x1) (Simple x2) == x1 `U8.lt` x2))
+= let s1 = serialize serialize_raw_data_item (Simple x1) in
+  let s2 = serialize serialize_raw_data_item (Simple x2) in
+  if x1 `U8.lt` x2
+  then deterministically_encoded_cbor_map_key_order_simple_value_intro x1 x2
+  else if x2 `U8.lt` x1
+  then begin
+    deterministically_encoded_cbor_map_key_order_simple_value_intro x2 x1;
+    if bytes_lex_order s1 s2
+    then begin
+      bytes_lex_order_trans s1 s2 s1;
+      bytes_lex_order_irrefl s1 s1
+    end
+    else ()
+  end
+  else Classical.move_requires (bytes_lex_order_irrefl s1) s1
+
 #pop-options
+
+let bytes_lex_compare_prefix
+  (l: bytes)
+  (l1 l2: bytes)
+: Lemma
+  (ensures (bytes_lex_compare (Seq.append l l1) (Seq.append l l2) == bytes_lex_compare l1 l2))
+= seq_to_list_append l l1;
+  seq_to_list_append l l2;
+  lex_compare_prefix byte_compare (fun _ _ -> ()) (Seq.seq_to_list l) (Seq.seq_to_list l1) (Seq.seq_to_list l2)
 
 #restart-solver
 let lex_compare_with_header_long_argument
@@ -1421,9 +1530,7 @@ let lex_compare_with_header_long_argument
   serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h2;
   let (| b1, l1 |) = h1 in
   let (| _, l2 |) = h2 in
-  seq_to_list_append (serialize serialize_initial_byte b1) (serialize (serialize_long_argument b1) l1);
-  seq_to_list_append (serialize serialize_initial_byte b1) (serialize (serialize_long_argument b1) l2);
-  lex_compare_prefix byte_compare (fun _ _ -> ()) (Seq.seq_to_list (serialize serialize_initial_byte b1)) (Seq.seq_to_list (serialize (serialize_long_argument b1) l1)) (Seq.seq_to_list (serialize (serialize_long_argument b1) l2))
+  bytes_lex_compare_prefix (serialize serialize_initial_byte b1) (serialize (serialize_long_argument b1) l1) (serialize (serialize_long_argument b1) l2)
 
 #push-options "--z3rlimit 16"
 
@@ -1649,5 +1756,164 @@ let lex_order_int64_correct
     else ()
   end
   else Classical.move_requires (bytes_lex_order_irrefl s1) s1
+
+let deterministically_encoded_cbor_map_key_order_string_intro
+  (ty: major_type_byte_string_or_text_string)
+  (len1: U64.t)
+  (x1: Seq.lseq byte (U64.v len1))
+  (len2: U64.t)
+  (x2: Seq.lseq byte (U64.v len2))
+: Lemma
+  (requires (
+    len1 `U64.lt` len2 \/ (len1 == len2 /\ bytes_lex_order x1 x2)
+  ))
+  (ensures (
+    Ghost.reveal deterministically_encoded_cbor_map_key_order (String ty x1) (String ty x2) == true
+  ))
+= 
+  let v1 = String ty x1 in
+  serialize_raw_data_item_aux_correct v1;
+  serialize_synth_eq
+    _
+    synth_raw_data_item
+    (serialize_dtuple2 serialize_header serialize_content)
+    synth_raw_data_item_recip
+    ()
+    v1;
+  let v1' = synth_raw_data_item_recip v1 in
+  serialize_dtuple2_eq serialize_header serialize_content v1';
+  let (| h1, c1 |) = v1' in
+  let v2 = String ty x2 in
+  serialize_raw_data_item_aux_correct v2;
+  serialize_synth_eq
+    _
+    synth_raw_data_item
+    (serialize_dtuple2 serialize_header serialize_content)
+    synth_raw_data_item_recip
+    ()
+    v2;
+  let v2' = synth_raw_data_item_recip v2 in
+  serialize_dtuple2_eq serialize_header serialize_content v2';
+  let (| h2, c2 |) = v2' in
+  if len1 `U64.lt` len2
+  then begin
+    lex_order_header_intro ty len1 len2;
+    bytes_lex_order_serialize_strong_prefix serialize_header h1 h2 (serialize (serialize_content h1) c1) (serialize (serialize_content h2) c2)
+  end
+  else begin
+    assert (h1 == h2);
+    bytes_lex_compare_prefix (serialize serialize_header h1) (serialize (serialize_content h1) c1) (serialize (serialize_content h2) c2)
+  end
+
+let deterministically_encoded_cbor_map_key_order_string_correct
+  (ty: major_type_byte_string_or_text_string)
+  (len1: U64.t)
+  (x1: Seq.lseq byte (U64.v len1))
+  (len2: U64.t)
+  (x2: Seq.lseq byte (U64.v len2))
+: Lemma
+  (ensures (
+    Ghost.reveal deterministically_encoded_cbor_map_key_order (String ty x1) (String ty x2) ==
+      (len1 `U64.lt` len2 || (len1 = len2 && bytes_lex_order x1 x2))
+  ))
+=
+  let v1 = String ty x1 in
+  let v2 = String ty x2 in
+  if len1 `U64.lt` len2 || (len1 = len2 && bytes_lex_order x1 x2)
+  then begin
+    deterministically_encoded_cbor_map_key_order_string_intro ty len1 x1 len2 x2
+  end
+  else if not (Ghost.reveal deterministically_encoded_cbor_map_key_order v1 v2)
+  then ()
+  else if len2 `U64.lt` len1 || (len2 = len1 && bytes_lex_order x2 x1)
+  then begin
+    deterministically_encoded_cbor_map_key_order_string_intro ty len2 x2 len1 x1;
+    bytes_lex_order_trans (serialize serialize_raw_data_item v1) (serialize serialize_raw_data_item v2) (serialize serialize_raw_data_item v1);
+    bytes_lex_order_irrefl (serialize serialize_raw_data_item v1) (serialize serialize_raw_data_item v1)
+  end
+  else begin
+    bytes_lex_order_total x1 x2;
+    assert (x1 == x2);
+    bytes_lex_order_irrefl (serialize serialize_raw_data_item v1) (serialize serialize_raw_data_item v1)
+  end
+
+let deterministically_encoded_cbor_map_key_order_tagged_intro
+  (tag1: U64.t)
+  (x1: raw_data_item)
+  (tag2: U64.t)
+  (x2: raw_data_item)
+: Lemma
+  (requires (
+    tag1 `U64.lt` tag2 \/ (tag1 == tag2 /\ Ghost.reveal deterministically_encoded_cbor_map_key_order x1 x2)
+  ))
+  (ensures (
+    Ghost.reveal deterministically_encoded_cbor_map_key_order (Tagged tag1 x1) (Tagged tag2 x2) == true
+  ))
+= 
+  let v1 = Tagged tag1 x1 in
+  serialize_raw_data_item_aux_correct v1;
+  serialize_synth_eq
+    _
+    synth_raw_data_item
+    (serialize_dtuple2 serialize_header serialize_content)
+    synth_raw_data_item_recip
+    ()
+    v1;
+  let v1' = synth_raw_data_item_recip v1 in
+  serialize_dtuple2_eq serialize_header serialize_content v1';
+  let (| h1, c1 |) = v1' in
+  let v2 = Tagged tag2 x2 in
+  serialize_raw_data_item_aux_correct v2;
+  serialize_synth_eq
+    _
+    synth_raw_data_item
+    (serialize_dtuple2 serialize_header serialize_content)
+    synth_raw_data_item_recip
+    ()
+    v2;
+  let v2' = synth_raw_data_item_recip v2 in
+  serialize_dtuple2_eq serialize_header serialize_content v2';
+  let (| h2, c2 |) = v2' in
+  if tag1 `U64.lt` tag2
+  then begin
+    lex_order_header_intro major_type_tagged tag1 tag2;
+    bytes_lex_order_serialize_strong_prefix serialize_header h1 h2 (serialize (serialize_content h1) c1) (serialize (serialize_content h2) c2)
+  end
+  else begin
+    assert (h1 == h2);
+    bytes_lex_compare_prefix (serialize serialize_header h1) (serialize (serialize_content h1) c1) (serialize (serialize_content h2) c2)
+  end
+
+let deterministically_encoded_cbor_map_key_order_tagged_correct
+  (tag1: U64.t)
+  (x1: raw_data_item)
+  (tag2: U64.t)
+  (x2: raw_data_item)
+: Lemma
+  (ensures (
+    Ghost.reveal deterministically_encoded_cbor_map_key_order (Tagged tag1 x1) (Tagged tag2 x2) ==
+      (tag1 `U64.lt` tag2 || (tag1 = tag2 && Ghost.reveal deterministically_encoded_cbor_map_key_order x1 x2))
+  ))
+=
+  let v1 = Tagged tag1 x1 in
+  let v2 = Tagged tag2 x2 in
+  if tag1 `U64.lt` tag2 || (tag1 = tag2 && Ghost.reveal deterministically_encoded_cbor_map_key_order x1 x2)
+  then begin
+    deterministically_encoded_cbor_map_key_order_tagged_intro tag1 x1 tag2 x2
+  end
+  else if not (Ghost.reveal deterministically_encoded_cbor_map_key_order v1 v2)
+  then ()
+  else if tag2 `U64.lt` tag1 || (tag2 = tag1 && Ghost.reveal deterministically_encoded_cbor_map_key_order x2 x1)
+  then begin
+    deterministically_encoded_cbor_map_key_order_tagged_intro tag2 x2 tag1 x1;
+    bytes_lex_order_trans (serialize serialize_raw_data_item v1) (serialize serialize_raw_data_item v2) (serialize serialize_raw_data_item v1);
+    bytes_lex_order_irrefl (serialize serialize_raw_data_item v1) (serialize serialize_raw_data_item v1)
+  end
+  else begin
+    bytes_lex_order_total (serialize serialize_raw_data_item x1) (serialize serialize_raw_data_item x2);
+    serializer_injective _ serialize_raw_data_item x1 x2;
+    assert (x1 == x2);
+    bytes_lex_order_irrefl (serialize serialize_raw_data_item v1) (serialize serialize_raw_data_item v1)
+  end
 
 #pop-options
