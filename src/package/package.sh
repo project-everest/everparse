@@ -224,7 +224,8 @@ make_everparse() {
     $cp $EVERPARSE_HOME/bin/qd.exe everparse/bin/qd.exe
     $cp -r $EVERPARSE_HOME/bin/3d.exe everparse/bin/3d.exe
     mkdir -p everparse/src/3d
-    $cp -r $EVERPARSE_HOME/src/lowparse everparse/src/
+    mkdir -p everparse/src/lowparse
+    $cp $EVERPARSE_HOME/src/lowparse/*.fst $EVERPARSE_HOME/src/lowparse/*.fsti $EVERPARSE_HOME/src/lowparse/*.checked $EVERPARSE_HOME/src/lowparse/*.c $EVERPARSE_HOME/src/lowparse/*.h everparse/src/lowparse/
     if $is_windows ; then
         $cp -r $EVERPARSE_HOME/src/package/everparse.cmd everparse/
     else
