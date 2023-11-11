@@ -552,7 +552,8 @@ let rec check_out_expr (env:env) (oe0:out_expr)
     (match bopt with
      | None ->
        {oe0 with
-        out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
+        out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
+
         out_expr_meta=Some ({
           out_expr_base_t = oe_bt;
           out_expr_t = with_range (Pointer oe_t) oe.out_expr_node.range;
@@ -1452,15 +1453,15 @@ let elaborate_bit_fields env (fields:list field)
                    (print_typ sf.field_type)
                    (print_typ bit_field_typ));
 
+             let type_matches_current_open_field = eq_typ env sf.field_type bit_field_typ in
              if remaining_size < bw.v //not enough space in this bit field, start a new one
+             || not type_matches_current_open_field
              then let _ = next_bf_index () in
                   let af, open_bit_field = new_bit_field sf bw hd.range in
                   let tl = aux open_bit_field tl in
                   { hd with v = AtomicField af } :: tl
              else //extend this bit field
                   begin
-                   if not (eq_typ env sf.field_type bit_field_typ)
-                   then raise (error "Packing fields of different types into the same bit field is not yet supported" hd.range);
                    let remaining_size = remaining_size - bw.v in
                    let from = pos in
                    let to = pos + bw.v in
