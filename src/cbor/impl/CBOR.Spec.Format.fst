@@ -1200,10 +1200,19 @@ let data_item_wf_pred (order: (raw_data_item -> raw_data_item -> bool)) : pred_r
 
 (* 4.2.1 Deterministically encoded CBOR: The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings. *)
 
+let serialized_lex_order
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (x1 x2: t)
+: GTot bool
+= LowParse.Spec.SeqBytes.bytes_lex_order (serialize s x1) (serialize s x2)
+
 let deterministically_encoded_cbor_map_key_order'
   (k1 k2: raw_data_item)
 : GTot bool
-= LowParse.Spec.SeqBytes.bytes_lex_order (serialize_raw_data_item k1) (serialize_raw_data_item k2)
+= serialized_lex_order serialize_raw_data_item k1 k2
 
 let deterministically_encoded_cbor_map_key_order : Ghost.erased (raw_data_item -> raw_data_item -> bool) = Ghost.hide (FStar.Ghost.Pull.pull (fun x -> FStar.Ghost.Pull.pull (deterministically_encoded_cbor_map_key_order' x)))
 
@@ -1917,3 +1926,170 @@ let deterministically_encoded_cbor_map_key_order_tagged_correct
   end
 
 #pop-options
+
+let serialized_lex_compare'
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (x1 x2: t)
+: GTot int
+= LowParse.Spec.SeqBytes.bytes_lex_compare (serialize s x1) (serialize s x2)
+
+let serialized_lex_compare
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+: Tot (Ghost.erased (t -> t -> int))
+= FStar.Ghost.Pull.pull (fun x1 -> FStar.Ghost.Pull.pull (serialized_lex_compare' s x1))
+
+#push-options "--z3rlimit 16"
+
+let rec bytes_lex_compare_serialize_strong_prefix1
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (l1 l2: t)
+  (suff1 suff2: bytes)
+  (pre: bytes)
+  (mid1 mid2: bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    serialize s l1 == pre `Seq.append` mid1 /\
+    serialize s l2 == pre `Seq.append` mid2 /\
+    Seq.length mid1 <= Seq.length mid2
+  ))
+  (ensures (
+    bytes_lex_compare (serialize s l1 `Seq.append` suff1) (serialize s l2 `Seq.append` suff2) == (
+      let comp = bytes_lex_compare mid1 mid2 in
+      if comp = 0
+      then bytes_lex_compare suff1 suff2
+      else comp
+  )))
+  (decreases (Seq.length mid1))
+= bytes_lex_compare_prefix pre mid1 mid2;
+  Seq.append_assoc pre mid1 suff1;
+  Seq.append_assoc pre mid2 suff2;
+  bytes_lex_compare_prefix pre (mid1 `Seq.append` suff1) (mid2 `Seq.append` suff2);
+  if Seq.length mid1 = 0
+  then begin
+    assume False
+  end else begin
+    let x = Seq.index mid1 0 in
+    let x2 = Seq.index mid2 0 in
+    let c = byte_compare x x2 in
+    if c = 0
+    then begin
+      assert (x == x2);
+      let mid1' = Seq.tail mid1 in
+      let mid2' = Seq.tail mid2 in
+      let sx = Seq.slice mid1 0 1 in
+      assert (sx `Seq.equal` Seq.slice mid2 0 1);
+      let pre' = pre `Seq.append` sx in
+      Seq.lemma_split mid1 1;
+      Seq.lemma_split mid2 1;
+      Seq.append_assoc pre sx (Seq.tail mid1);
+      Seq.append_assoc pre sx (Seq.tail mid2);
+      bytes_lex_compare_serialize_strong_prefix1 s l1 l2 suff1 suff2 pre' mid1' mid2'
+    end
+    else ()
+  end
+
+#pop-options
+
+let rec lex_compare_oppose
+  (#t: Type)
+  (compare: t -> t -> int)
+  (l1 l2: list t)
+: Lemma
+  (requires (forall x1 x2 . compare x2 x1 == - compare x1 x2))
+  (ensures (lex_compare compare l1 l2 == - lex_compare compare l2 l1))
+= match l1, l2 with
+  | [], [] -> ()
+  | [], _ -> ()
+  | a1 :: q1, [] -> ()
+  | a1 :: q1, a2 :: q2 ->
+    lex_compare_oppose compare q1 q2
+
+let bytes_lex_compare_serialize_strong_prefix0
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (l1 l2: t)
+  (suff1 suff2: bytes)
+  (pre: bytes)
+  (mid1 mid2: bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    serialize s l1 == pre `Seq.append` mid1 /\
+    serialize s l2 == pre `Seq.append` mid2
+  ))
+  (ensures (
+    bytes_lex_compare (serialize s l1 `Seq.append` suff1) (serialize s l2 `Seq.append` suff2) == (
+      let comp = bytes_lex_compare mid1 mid2 in
+      if comp = 0
+      then bytes_lex_compare suff1 suff2
+      else comp
+  )))
+= if Seq.length mid1 <= Seq.length mid2
+  then bytes_lex_compare_serialize_strong_prefix1 s l1 l2 suff1 suff2 pre mid1 mid2
+  else begin
+    lex_compare_oppose byte_compare (Seq.seq_to_list (serialize s l1 `Seq.append` suff1)) (Seq.seq_to_list (serialize s l2 `Seq.append` suff2));
+    lex_compare_oppose byte_compare (Seq.seq_to_list mid1) (Seq.seq_to_list mid2);
+    lex_compare_oppose byte_compare (Seq.seq_to_list suff1) (Seq.seq_to_list suff2);
+    bytes_lex_compare_serialize_strong_prefix1 s l2 l1 suff2 suff1 pre mid2 mid1
+  end
+
+let bytes_lex_compare_serialize_strong_prefix
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (l1 l2: t)
+  (suff1 suff2: bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong
+  ))
+  (ensures (
+    bytes_lex_compare (serialize s l1 `Seq.append` suff1) (serialize s l2 `Seq.append` suff2) == (
+      let comp = bytes_lex_compare (serialize s l1) (serialize s l2) in
+      if comp = 0
+      then bytes_lex_compare suff1 suff2
+      else comp
+  )))
+= let s1 = serialize s l1 in
+  let s2 = serialize s l2 in
+  Seq.append_empty_l s1;
+  Seq.append_empty_l s2;
+  bytes_lex_compare_serialize_strong_prefix0 s l1 l2 suff1 suff2 Seq.empty s1 s2
+
+let rec serialized_lex_compare_nlist
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (n: nat)
+  (x1 x2: nlist n t)
+: Lemma
+  (requires (k.parser_kind_subkind == Some ParserStrong))
+  (ensures (
+    Ghost.reveal (serialized_lex_compare (serialize_nlist n s)) x1 x2 == lex_compare (serialized_lex_compare s) x1 x2
+  ))
+  (decreases n)
+= if n = 0
+  then assume False
+  else begin
+    let a1 :: q1 = x1 in
+    let a2 :: q2 = x2 in
+    serialize_nlist_cons (n - 1) s a1 q1;
+    serialize_nlist_cons (n - 1) s a2 q2;
+    if Ghost.reveal (serialized_lex_compare s) a1 a2 = 0
+    then assume False
+    else assume False
+  end
