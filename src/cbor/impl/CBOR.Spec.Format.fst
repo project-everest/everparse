@@ -1936,13 +1936,22 @@ let serialized_lex_compare'
 : GTot int
 = LowParse.Spec.SeqBytes.bytes_lex_compare (serialize s x1) (serialize s x2)
 
+let serialized_lex_compare1
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (x1: t)
+: GTot (t -> int)
+= FStar.Ghost.Pull.pull (serialized_lex_compare' s x1)
+
 let serialized_lex_compare
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
   (s: serializer p)
-: Tot (Ghost.erased (t -> t -> int))
-= FStar.Ghost.Pull.pull (fun x1 -> FStar.Ghost.Pull.pull (serialized_lex_compare' s x1))
+: GTot (t -> t -> int)
+= FStar.Ghost.Pull.pull (serialized_lex_compare1 s)
 
 #push-options "--z3rlimit 16"
 
@@ -1976,7 +1985,11 @@ let rec bytes_lex_compare_serialize_strong_prefix1
   bytes_lex_compare_prefix pre (mid1 `Seq.append` suff1) (mid2 `Seq.append` suff2);
   if Seq.length mid1 = 0
   then begin
-    assume False
+    assert (mid1 `Seq.equal` Seq.empty);
+    Seq.append_empty_r pre;
+    Seq.append_empty_r (serialize s l2);
+    serialize_strong_prefix s l2 l1 Seq.empty mid2;
+    bytes_lex_compare_prefix (serialize s l1) suff1 suff2
   end else begin
     let x = Seq.index mid1 0 in
     let x2 = Seq.index mid2 0 in
@@ -2013,6 +2026,12 @@ let rec lex_compare_oppose
   | a1 :: q1, [] -> ()
   | a1 :: q1, a2 :: q2 ->
     lex_compare_oppose compare q1 q2
+
+let bytes_lex_compare_oppose
+  (l1 l2: bytes)
+: Lemma
+  (bytes_lex_compare l1 l2 == - bytes_lex_compare l2 l1)
+= lex_compare_oppose byte_compare (Seq.seq_to_list l1) (Seq.seq_to_list l2)
 
 let bytes_lex_compare_serialize_strong_prefix0
   (#k: parser_kind)
@@ -2069,6 +2088,8 @@ let bytes_lex_compare_serialize_strong_prefix
   Seq.append_empty_l s2;
   bytes_lex_compare_serialize_strong_prefix0 s l1 l2 suff1 suff2 Seq.empty s1 s2
 
+#push-options "--z3rlimit 16"
+
 let rec serialized_lex_compare_nlist
   (#k: parser_kind)
   (#t: Type)
@@ -2079,17 +2100,20 @@ let rec serialized_lex_compare_nlist
 : Lemma
   (requires (k.parser_kind_subkind == Some ParserStrong))
   (ensures (
-    Ghost.reveal (serialized_lex_compare (serialize_nlist n s)) x1 x2 == lex_compare (serialized_lex_compare s) x1 x2
+    (serialized_lex_compare (serialize_nlist n s)) x1 x2 == lex_compare (serialized_lex_compare s) x1 x2
   ))
   (decreases n)
 = if n = 0
-  then assume False
+  then begin
+    ()
+  end
   else begin
     let a1 :: q1 = x1 in
     let a2 :: q2 = x2 in
     serialize_nlist_cons (n - 1) s a1 q1;
     serialize_nlist_cons (n - 1) s a2 q2;
-    if Ghost.reveal (serialized_lex_compare s) a1 a2 = 0
-    then assume False
-    else assume False
+    bytes_lex_compare_serialize_strong_prefix s a1 a2 (serialize (serialize_nlist (n - 1) s) q1) (serialize (serialize_nlist (n - 1) s) q2);
+    serialized_lex_compare_nlist s (n - 1) q1 q2
   end
+
+#pop-options
