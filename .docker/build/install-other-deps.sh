@@ -24,8 +24,9 @@ STEEL_BRANCH=$(jq -c -r '.RepoVersions.steel_version' "$build_home"/config.json 
 fi
 
 # Install Steel and its dependencies
-[[ -n "$STEEL_HOME" ]]
-git clone --branch $STEEL_BRANCH https://github.com/FStarLang/steel "$STEEL_HOME"
-OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$STEEL_HOME"
+if [[ -n "$STEEL_HOME" ]] ; then
+    git clone --branch $STEEL_BRANCH https://github.com/FStarLang/steel "$STEEL_HOME"
+    OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$STEEL_HOME"
+fi
 
 opam install hex re ctypes sha sexplib
