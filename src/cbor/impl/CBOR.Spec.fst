@@ -56,6 +56,16 @@ let rec bytes_lex_compare_correct
   then ()
   else bytes_lex_compare_correct (Seq.tail s1) (Seq.tail s2)
 
+let bytes_lex_compare_equal
+  x1 x2
+= LowParse.Spec.Sorted.lex_compare_equal
+    LowParse.Spec.SeqBytes.byte_compare
+    (fun _ _ -> ())
+    (Seq.seq_to_list x1)
+    (Seq.seq_to_list x2);
+  Seq.lemma_seq_list_bij x1;
+  Seq.lemma_seq_list_bij x2
+
 let deterministically_encoded_cbor_map_key_order_spec
   (x1 x2: raw_data_item)
 : Lemma

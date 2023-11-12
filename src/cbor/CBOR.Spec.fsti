@@ -114,6 +114,11 @@ let rec bytes_lex_compare
     then bytes_lex_compare (Seq.tail s1) (Seq.tail s2)
     else c
 
+val bytes_lex_compare_equal
+  (s1 s2: Seq.seq U8.t)
+: Lemma
+  (bytes_lex_compare s1 s2 == 0 <==> s1 == s2)
+
 val deterministically_encoded_cbor_map_key_order_spec
   (x1 x2: raw_data_item)
 : Lemma
@@ -195,6 +200,16 @@ val cbor_compare_correct
   (x1 x2: raw_data_item)
 : Lemma
   (ensures (cbor_compare x1 x2 == bytes_lex_compare (serialize_cbor x1) (serialize_cbor x2)))
+
+let cbor_compare_equal
+  (x1 x2: raw_data_item)
+: Lemma
+  (cbor_compare x1 x2 == 0 <==> x1 == x2)
+= cbor_compare_correct x1 x2;
+  bytes_lex_compare_equal (serialize_cbor x1) (serialize_cbor x2);
+  Seq.append_empty_r (serialize_cbor x1);
+  Seq.append_empty_r (serialize_cbor x2);
+  Classical.move_requires (serialize_cbor_inj x1 x2 Seq.empty) Seq.empty
 
 let deterministically_encoded_cbor_map_key_order_major_type_intro
   (v1 v2: raw_data_item)
