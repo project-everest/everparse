@@ -548,64 +548,63 @@ let destr_cbor_serialized
     (raw_data_item_match p c va);
   return c'
 
-let cbor_is_equal_aux
-  #p1 #p2 #v1 #v2 a1 a2
-= noop ();
-  return CborCompareFailure
+let elim_aparse_with_serializer_with_implies
+  (#opened: _)
+  (#k: LPS.parser_kind)
+  (#t: Type)
+  (#vp: LPS.v k t)
+  (#p: LPS.parser k t)
+  (s: LPS.serializer p)
+  (a: LPS.byte_array)
+: STGhost (LPA.v LPS.byte) opened
+    (LPS.aparse p a vp)
+    (fun va -> LPA.arrayptr a va `star` (LPA.arrayptr a va `implies_` LPS.aparse p a vp))
+    True
+    (fun va ->
+      LPA.array_of va == LPS.array_of vp /\
+      LPS.arrayptr_parse p va == Some vp /\
+      LPS.serialize s vp.contents == LPA.contents_of va
+    )
+= let res = LPS.elim_aparse_with_serializer s a in
+  intro_implies
+    (LPA.arrayptr a res)
+    (LPS.aparse p a vp)
+    emp
+    (fun _ ->
+      let _ = LPS.intro_aparse p a in
+      vpattern_rewrite (LPS.aparse p a) vp
+    );
+  res
 
-(*
-  if CBOR_Case_Serialized? a1 && CBOR_Case_Serialized? a2
-  then begin
-  end else begin
-    noop ()
-    return 
-  end
-  
-  let _ = A.intro_fits_u64 () in
-  let type1 = cbor_get_major_type a1 in
-  let type2 = cbor_get_major_type a2 in
-  if type1 <> type2
-  then begin
-    noop ();
-    return false
-  end
-  else begin
-    if type1 = Cbor.major_type_uint64 || type1 = Cbor.major_type_neg_int64
-    then begin
-      let i1 = destr_cbor_int64 a1 in
-      let i2 = destr_cbor_int64 a2 in
-      return (i1.cbor_int_value = i2.cbor_int_value)
-    end
-    else if type1 = Cbor.major_type_simple_value
-    then begin
-      let i1 = destr_cbor_simple_value a1 in
-      let i2 = destr_cbor_simple_value a2 in
-      return (i1 = i2)
-    end
-    else if type1 = Cbor.major_type_byte_string || type1 = Cbor.major_type_text_string
-    then begin
-      let s1 = destr_cbor_string a1 in
-      let _ = gen_elim () in
-      let s2 = destr_cbor_string a2 in
-      let _ = gen_elim () in
-      let t1 = LPA.intro_arrayptr_with_implies s1.cbor_string_payload in
-      let _ = gen_elim () in
-      let t2 = LPA.intro_arrayptr_with_implies s2.cbor_string_payload in
-      let _ = gen_elim () in
-      let res = LowParse.SteelST.Assoc.eq_byte_arrays t1 (SZ.uint64_to_sizet s1.cbor_string_length) t2 (SZ.uint64_to_sizet s2.cbor_string_length) in
-      elim_implies (LPA.arrayptr t1 _) (A.pts_to _ _ _);
-      elim_implies (LPA.arrayptr t2 _) (A.pts_to _ _ _);
-      elim_implies (A.pts_to s1.cbor_string_payload _ _) (raw_data_item_match p1 _ _);
-      elim_implies (A.pts_to s2.cbor_string_payload _ _) (raw_data_item_match p2 _ _);
-      return res
-    end
-    else begin
-      // TODO: tagged, arrays and maps
-      noop ();
-      return false
-    end
-  end
-*)
+let cbor_compare_aux
+  #p1 #p2 #v1 #v2 a1 a2
+= Cbor.cbor_compare_correct v1 v2;
+  match a1, a2 with
+  | CBOR_Case_Serialized _ _, CBOR_Case_Serialized _ _ ->
+    let s1 = destr_cbor_serialized a1 in
+    let _ = gen_elim () in
+    let _ = elim_aparse_with_serializer_with_implies CborST.serialize_raw_data_item s1.cbor_serialized_payload in
+    implies_trans
+      (LPA.arrayptr s1.cbor_serialized_payload _)
+      (LPS.aparse CborST.parse_raw_data_item s1.cbor_serialized_payload _)
+      (raw_data_item_match p1 a1 v1);
+    let s2 = destr_cbor_serialized a2 in
+    let _ = gen_elim () in
+    let _ = elim_aparse_with_serializer_with_implies CborST.serialize_raw_data_item s2.cbor_serialized_payload in
+    implies_trans
+      (LPA.arrayptr s2.cbor_serialized_payload _)
+      (LPS.aparse CborST.parse_raw_data_item s2.cbor_serialized_payload _)
+      (raw_data_item_match p2 a2 v2);
+    let i = LowParse.SteelST.SeqBytes.byte_array_lex_compare s1.cbor_serialized_size s1.cbor_serialized_payload s2.cbor_serialized_size s2.cbor_serialized_payload in
+    elim_implies
+      (LPA.arrayptr s1.cbor_serialized_payload _)
+      (raw_data_item_match p1 a1 v1);
+    elim_implies
+      (LPA.arrayptr s2.cbor_serialized_payload _)
+      (raw_data_item_match p2 a2 v2);
+    let res = if i `FStar.Int16.lt` 0s then -1s else if 0s `FStar.Int16.lt` i then 1s else 0s in
+    return res
+  | _ -> return 2s // implemented in Pulse
 
 (* Serialization *)
 

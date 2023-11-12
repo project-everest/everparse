@@ -114,6 +114,17 @@ let rec bytes_lex_compare
     then bytes_lex_compare (Seq.tail s1) (Seq.tail s2)
     else c
 
+let rec bytes_lex_compare_values
+  (s1 s2: Seq.seq U8.t)
+: Lemma
+  (ensures (let c = bytes_lex_compare s1 s2 in
+    c == -1 \/ c == 0 \/ c == 1))
+  (decreases (Seq.length s1))
+  [SMTPat (bytes_lex_compare s1 s2)]
+= if Seq.length s1 = 0 || Seq.length s2 = 0
+  then ()
+  else bytes_lex_compare_values (Seq.tail s1) (Seq.tail s2)
+
 val bytes_lex_compare_equal
   (s1 s2: Seq.seq U8.t)
 : Lemma
