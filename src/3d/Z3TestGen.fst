@@ -960,6 +960,7 @@ let print_witness_as_c_aux
 let print_witness_as_c_gen
   (out: (string -> ML unit))
   (witness: Seq.seq int)
+  (output_filename: string)
   (f: (len: int { len == Seq.length witness }) -> ML unit)
 : ML unit
 = let len = Seq.length witness in
@@ -970,19 +971,51 @@ let print_witness_as_c_gen
   print_witness_as_c_aux out witness len;
   out "\\n\");
 ";
+  out ("
+  {
+    FILE *outfile = fopen(\""^output_filename^"\", \"wb\");
+    if (outfile == NULL) {
+      printf(\"Cannot open output witness file "^output_filename^"\\n\");
+      return 1;
+    }
+    size_t written = fwrite(witness, sizeof(uint8_t), "^string_of_int len^", outfile);
+    fclose(outfile);
+    if (written != "^string_of_int len^") {
+      printf(\"Cannot write witness file "^output_filename^"\\n\");
+      return 1;
+    }
+    printf(\"Successfully produced binary witness file "^output_filename^"\\n\");
+  }
+");
   f len;
   out "};
 "
+
+let rec mk_args_as_file_name (accu: string) (l: list string) : Tot string
+  (decreases l)
+= match l with
+  | [] -> accu
+  | a :: q -> mk_args_as_file_name (accu ^ "." ^ a) q
+
+let mk_output_filename
+  (counter: ref int)
+  (validator_name: string)
+  (args: list string)
+: ML string
+= let i = !counter in
+  counter := i + 1;
+  mk_args_as_file_name ("witness." ^ string_of_int i ^ "." ^ validator_name) args ^ ".dat"
 
 let print_witness_as_c
   (out: (string -> ML unit))
   (positive: bool)
   (validator_name: string)
   (arg_types: list arg_type)
+  (counter: ref int)
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
-= print_witness_as_c_gen out witness (fun len ->
+= print_witness_as_c_gen out witness (mk_output_filename counter validator_name args) (fun len ->
     print_witness_call_as_c out positive validator_name arg_types len args
   )
 
@@ -991,10 +1024,11 @@ let print_diff_witness_as_c
   (validator_name1: string)
   (validator_name2: string)
   (arg_types: list arg_type)
+  (counter: ref int)
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
-= print_witness_as_c_gen out witness (fun len ->
+= print_witness_as_c_gen out witness (mk_output_filename counter validator_name1 args) (fun len ->
     print_witness_call_as_c out true validator_name1 arg_types len args;
     print_witness_call_as_c out false validator_name2 arg_types len args
   )
@@ -1146,15 +1180,16 @@ let do_test (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (
   cout "
   int main(void) {
 ";
+  let counter = alloc 0 in
   if pos
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c cout true validator_name args) z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+    witnesses_for (print_witness_as_c cout true validator_name args counter) z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
   end;
   if neg
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c cout false validator_name args) z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+    witnesses_for (print_witness_as_c cout false validator_name args counter) z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
   end;
   cout "  return 0;
   }
@@ -1172,7 +1207,8 @@ let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: st
 
 let do_diff_test_for (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for (print_diff_witness_as_c cout validator_name1 validator_name2 args) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
+  let counter = alloc 0 in
+  witnesses_for (print_diff_witness_as_c cout validator_name1 validator_name2 args counter) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
 
 let do_diff_test (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
   let args = List.assoc name1 prog in
