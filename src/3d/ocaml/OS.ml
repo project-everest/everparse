@@ -121,4 +121,13 @@ let file_contents f =
   close_in ic;
   s
 
+let write_witness_to_file w filename =
+  BatFile.with_file_out filename (fun out ->
+    List.iter
+      (fun x ->
+        BatIO.write out (char_of_int (Z.to_int x))
+      )
+      w
+  )
+
 let int_of_string x = Z.of_string x

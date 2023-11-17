@@ -960,7 +960,6 @@ let print_witness_as_c_aux
 let print_witness_as_c_gen
   (out: (string -> ML unit))
   (witness: Seq.seq int)
-  (output_filename: string)
   (f: (len: int { len == Seq.length witness }) -> ML unit)
 : ML unit
 = let len = Seq.length witness in
@@ -971,22 +970,6 @@ let print_witness_as_c_gen
   print_witness_as_c_aux out witness len;
   out "\\n\");
 ";
-  out ("
-  {
-    FILE *outfile = fopen(\""^output_filename^"\", \"wb\");
-    if (outfile == NULL) {
-      printf(\"Cannot open output witness file "^output_filename^"\\n\");
-      return 1;
-    }
-    size_t written = fwrite(witness, sizeof(uint8_t), "^string_of_int len^", outfile);
-    fclose(outfile);
-    if (written != "^string_of_int len^") {
-      printf(\"Cannot write witness file "^output_filename^"\\n\");
-      return 1;
-    }
-    printf(\"Successfully produced binary witness file "^output_filename^"\\n\");
-  }
-");
   f len;
   out "};
 "
@@ -1015,7 +998,8 @@ let print_witness_as_c
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
-= print_witness_as_c_gen out witness (mk_output_filename counter validator_name args) (fun len ->
+= OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter validator_name args);
+  print_witness_as_c_gen out witness (fun len ->
     print_witness_call_as_c out positive validator_name arg_types len args
   )
 
@@ -1028,7 +1012,8 @@ let print_diff_witness_as_c
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
-= print_witness_as_c_gen out witness (mk_output_filename counter validator_name1 args) (fun len ->
+= OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter validator_name1 args);
+  print_witness_as_c_gen out witness (fun len ->
     print_witness_call_as_c out true validator_name1 arg_types len args;
     print_witness_call_as_c out false validator_name2 arg_types len args
   )
