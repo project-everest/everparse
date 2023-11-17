@@ -982,14 +982,16 @@ let rec mk_args_as_file_name (accu: string) (l: list string) : Tot string
 
 let mk_output_filename
   (counter: ref int)
+  (out_dir: string)
   (validator_name: string)
   (args: list string)
 : ML string
 = let i = !counter in
   counter := i + 1;
-  mk_args_as_file_name ("witness." ^ string_of_int i ^ "." ^ validator_name) args ^ ".dat"
+  OS.concat out_dir (mk_args_as_file_name ("witness." ^ string_of_int i ^ "." ^ validator_name) args ^ ".dat")
 
 let print_witness_as_c
+  (out_dir: string)
   (out: (string -> ML unit))
   (positive: bool)
   (validator_name: string)
@@ -998,12 +1000,13 @@ let print_witness_as_c
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
-= OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter ((if positive then "POS." else "NEG.") ^ validator_name) args);
+= OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ((if positive then "POS." else "NEG.") ^ validator_name) args);
   print_witness_as_c_gen out witness (fun len ->
     print_witness_call_as_c out positive validator_name arg_types len args
   )
 
 let print_diff_witness_as_c
+  (out_dir: string)
   (out: (string -> ML unit))
   (validator_name1: string)
   (validator_name2: string)
@@ -1012,7 +1015,7 @@ let print_diff_witness_as_c
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
-= OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter ("POS." ^ validator_name1 ^ ".NEG." ^ validator_name2) args);
+= OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ("POS." ^ validator_name1 ^ ".NEG." ^ validator_name2) args);
   print_witness_as_c_gen out witness (fun len ->
     print_witness_call_as_c out true validator_name1 arg_types len args;
     print_witness_call_as_c out false validator_name2 arg_types len args
@@ -1148,7 +1151,7 @@ static void TestErrorHandler (
 }
 "
 
-let do_test (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =
+let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =
   let args = List.assoc name1 prog in
   if None? args
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
@@ -1169,12 +1172,12 @@ let do_test (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (
   if pos
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c cout true validator_name args counter) z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+    witnesses_for (print_witness_as_c out_dir cout true validator_name args counter) z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
   end;
   if neg
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c cout false validator_name args counter) z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+    witnesses_for (print_witness_as_c out_dir cout false validator_name args counter) z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
   end;
   cout "  return 0;
   }
@@ -1190,11 +1193,11 @@ let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: st
   (mk_get_first_positive_test_witness name1 l)
   (mk_call_args name2 0 l)
 
-let do_diff_test_for (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses =
+let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for (print_diff_witness_as_c cout validator_name1 validator_name2 args counter) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
+  witnesses_for (print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
 
-let do_diff_test (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
+let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
   let args = List.assoc name1 prog in
   if None? args
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
@@ -1222,8 +1225,8 @@ let do_diff_test (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 
   int main(void) {
 ";
   let counter = alloc 0 in
-  do_diff_test_for counter cout z3 prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses;
-  do_diff_test_for counter cout z3 prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses;
+  do_diff_test_for out_dir counter cout z3 prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses;
+  do_diff_test_for out_dir counter cout z3 prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses;
   cout "  return 0;
   }
 "
