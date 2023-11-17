@@ -13,6 +13,14 @@ let prelude : string =
 (declare-datatypes () ((State (mk-state (input-size Int) (choice-index Int)))))
 (declare-datatypes () ((Result (mk-result (return-value Int) (after-state State)))))
 
+; From EverParse3d.ErrorCode.is_range_okay
+(define-fun is_range_okay ((size Int) (offset Int) (access_size Int)) Bool
+  (and
+    (>= size access_size)
+    (>= (- size access_size) offset)
+  )
+)
+
 (define-fun parse-empty ((x State)) Result
   (mk-result 0 x)
 )
