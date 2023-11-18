@@ -12,6 +12,7 @@ module SM = Steel.ST.SeqMatch
 
 (* Parsing *)
 
+[@@no_auto_projectors]
 noeq
 type read_cbor_success_t = {
   read_cbor_payload: cbor;
@@ -19,6 +20,7 @@ type read_cbor_success_t = {
   read_cbor_remainder_length: SZ.t;
 }
 
+[@@no_auto_projectors]
 noeq
 type read_cbor_t =
 | ParseError

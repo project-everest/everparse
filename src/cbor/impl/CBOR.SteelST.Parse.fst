@@ -156,8 +156,8 @@ let read_deterministically_encoded_cbor
 = A.pts_to_length a _;
   let _ = A.intro_fits_u64 () in
   let res = read_cbor' a sz in
-  if ParseError? res
-  then begin
+  match res with
+  | ParseError ->
     rewrite
       (read_cbor_post a p va res)
       (read_cbor_error_post a p va);
@@ -166,8 +166,7 @@ let read_deterministically_encoded_cbor
       (read_deterministically_encoded_cbor_error_post a p va)
       (read_deterministically_encoded_cbor_post a p va res);
     return res
-  end else begin
-    let r = ParseSuccess?._0 res in
+  | ParseSuccess r ->
     rewrite
       (read_cbor_post a p va res)
       (read_cbor_success_post a p va r);
@@ -200,5 +199,4 @@ let read_deterministically_encoded_cbor
         (read_deterministically_encoded_cbor_error_post a p va)
         (read_deterministically_encoded_cbor_post a p va ParseError);
       return ParseError
-    end
   end
