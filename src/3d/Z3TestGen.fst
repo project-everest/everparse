@@ -63,7 +63,15 @@ let prelude : string =
 (define-fun parse-u8 ((x State)) Result
   (mk-result
     (choose (choice-index x))
-    (mk-state (- (input-size x) 1) (+ (choice-index x) 1))
+    (mk-state
+      (let ((new-size (- (input-size x) 1)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 1)
+    )
   )
 )
 
@@ -74,7 +82,15 @@ let prelude : string =
         (choose (+ 0 (choice-index x)))
       )
     )
-    (mk-state (- (input-size x) 2) (+ (choice-index x) 2))
+    (mk-state
+      (let ((new-size (- (input-size x) 2)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 2)
+    )
   )
 )
 
@@ -85,7 +101,15 @@ let prelude : string =
         (choose (+ 1 (choice-index x)))
       )
     )
-    (mk-state (- (input-size x) 2) (+ (choice-index x) 2))
+    (mk-state
+      (let ((new-size (- (input-size x) 2)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 2)
+    )
   )
 )
 
@@ -104,7 +128,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state (- (input-size x) 4) (+ (choice-index x) 4))
+    (mk-state
+      (let ((new-size (- (input-size x) 4)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 4)
+    )
   )
 )
 
@@ -123,7 +155,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state (- (input-size x) 4) (+ (choice-index x) 4))
+    (mk-state
+      (let ((new-size (- (input-size x) 4)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 4)
+    )
   )
 )
 
@@ -158,7 +198,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state (- (input-size x) 8) (+ (choice-index x) 8))
+    (mk-state
+      (let ((new-size (- (input-size x) 8)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 8)
+    )
   )
 )
 
@@ -193,7 +241,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state (- (input-size x) 8) (+ (choice-index x) 8))
+    (mk-state
+      (let ((new-size (- (input-size x) 8)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 8)
+    )
   )
 )
 
@@ -1102,6 +1158,7 @@ Printf.sprintf "
 %s
 (define-fun state-witness () State (%s initial-state))
 (define-fun state-witness-input-size () Int (input-size state-witness))
+(assert (>= state-witness-input-size -1)) ; do not record tests that artificially fail due to SMT2 encoding
 (declare-fun state-witness-size () Int)
 (assert (<= state-witness-size (choice-index state-witness)))
 (assert (>= state-witness-size (choice-index state-witness)))
@@ -1135,7 +1192,7 @@ let mk_want_another_distinct_witness witness witness_args : Tot string =
 let mk_get_first_negative_test_witness (name: string) (l: list arg_type) : string =
   mk_get_witness name l ^
 "
-(assert (< state-witness-input-size 0)) ; validator shall genuinely fail, we are not interested in positive cases followed by garbage
+(assert (= state-witness-input-size -1)) ; validator shall genuinely fail, we are not interested in positive cases followed by garbage
 "
 
 let test_error_handler = "
@@ -1193,13 +1250,16 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
   )
 
 let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: string) : string =
+  let call2 = mk_call_args name2 0 l in
   Printf.sprintf
 "
 %s
 (assert (not (= (input-size (%s initial-state)) 0))) ; test cases that do not consume everything are considered failing
+(assert (>= (input-size (%s initial-state)) -1)) ; do not record tests that artificially fail due to SMT2 encoding
 "
   (mk_get_first_positive_test_witness name1 l)
-  (mk_call_args name2 0 l)
+  call2
+  call2
 
 let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
