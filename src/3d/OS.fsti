@@ -25,6 +25,10 @@ val file_exists: string -> FStar.All.ML bool
 
 val file_contents: string -> FStar.All.ML string
 
+(* Write a witness into a binary file *)
+
+val write_witness_to_file: list int -> string -> FStar.All.ML unit
+
 (* Moved here to break dependency cycle *)
 
 val int_of_string (x:string) : FStar.All.ML int

@@ -133,6 +133,8 @@ let z3_witnesses : ref (option vstring) = alloc None
 
 let z3_executable : ref (option vstring) = alloc None
 
+let test_checker : ref (option vstring) = alloc None
+
 noeq
 type cmd_option_kind =
   | OptBool:
@@ -364,6 +366,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "save_z3_transcript" (OptStringOption "some file name" always_valid save_z3_transcript) "Save the Z3 transcript (input and output) to a file" [];
     CmdOption "skip_c_makefiles" (OptBool skip_c_makefiles) "Do not Generate Makefile.basic, Makefile.include" [];
     CmdOption "skip_o_rules" (OptBool skip_o_rules) "With --makefile, do not generate rules for .o files" [];
+    CmdOption "test_checker" (OptStringOption "parser name" always_valid test_checker) "produce a test checker executable" [];
     CmdFStarOption (let open FStar.Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
     CmdOption "equate_types" (OptList "an argument of the form A,B, to generate asserts of the form (A.t == B.t)" valid_equate_types equate_types_list) "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line" [];
     CmdOption "z3_diff_test" (OptStringOption "parser1,parser2" valid_equate_types z3_diff_test) "produce differential tests for two parsers" [];
@@ -574,3 +577,5 @@ let get_z3_executable () =
   | Some z3 -> z3
 
 let get_save_z3_transcript () = !save_z3_transcript
+
+let get_test_checker () = !test_checker

@@ -13,6 +13,14 @@ let prelude : string =
 (declare-datatypes () ((State (mk-state (input-size Int) (choice-index Int)))))
 (declare-datatypes () ((Result (mk-result (return-value Int) (after-state State)))))
 
+; From EverParse3d.ErrorCode.is_range_okay
+(define-fun is_range_okay ((size Int) (offset Int) (access_size Int)) Bool
+  (and
+    (>= size access_size)
+    (>= (- size access_size) offset)
+  )
+)
+
 (define-fun parse-empty ((x State)) Result
   (mk-result 0 x)
 )
@@ -864,12 +872,12 @@ let rec read_witness_args (z3: Z3.z3) (accu: list string) (n: nat) : ML (list st
     read_witness_args z3 (arg :: accu) n'
   end
 
-let module_and_wrapper_name
+let module_and_validator_name
   (s: string)
 : ML (string & string)
 = match String.split ['.'] s with
-  | [modul; fn] -> modul, Target.wrapper_name modul fn
-  | _ -> failwith "Z3TestGen.wrapper_name"
+  | [modul; fn] -> modul, Target.validator_name modul fn
+  | _ -> failwith "Z3TestGen.validator_name"
 
 let rec print_witness_args_as_c
   (out: (string -> ML unit))
@@ -888,23 +896,23 @@ let rec print_witness_args_as_c
 
 let print_witness_call_as_c_aux
   (out: (string -> ML unit))
-  (wrapper_name: string)
+  (validator_name: string)
   (arg_types: list arg_type)
   (witness_length: nat)
   (args: list string)
 : ML unit
 =
-  out wrapper_name;
+  out validator_name;
   out "(";
   print_witness_args_as_c out arg_types args;
-  out "witness, ";
+  out "&context, &TestErrorHandler, witness, ";
   out (string_of_int witness_length);
-  out ");"
+  out ", 0);"
 
 let print_witness_call_as_c
   (out: (string -> ML unit))
   (positive: bool)
-  (wrapper_name: string)
+  (validator_name: string)
   (arg_types: list arg_type)
   (witness_length: nat)
   (args: list string)
@@ -912,13 +920,27 @@ let print_witness_call_as_c
 =
   out "
   {
-    BOOLEAN result = ";
-  print_witness_call_as_c_aux out wrapper_name arg_types witness_length args;
+    uint8_t context = 0;
+    uint64_t output = ";
+  print_witness_call_as_c_aux out validator_name arg_types witness_length args;
   out "
     printf(\"  ";
-  print_witness_call_as_c_aux out wrapper_name arg_types witness_length args;
+  print_witness_call_as_c_aux out validator_name arg_types witness_length args;
   out " // \");
-    if (result) printf (\"ACCEPTED\\n\\n\"); else printf (\"REJECTED\\n\\n\");
+    BOOLEAN result = !EverParseIsError(output);
+    BOOLEAN consumes_all_bytes_if_successful = true;
+    if (result) {
+      consumes_all_bytes_if_successful = (output == ";
+  out (string_of_int witness_length);
+  out "U);
+      result = consumes_all_bytes_if_successful;
+    }
+    if (result)
+      printf (\"ACCEPTED\\n\\n\");
+    else if (!consumes_all_bytes_if_successful)
+      printf (\"REJECTED (not all bytes consumed)\\n\\n\");
+    else
+      printf (\"REJECTED (failed)\\n\\n\");
     if (";
   if positive then out "!";
   out "result)
@@ -960,29 +982,51 @@ let print_witness_as_c_gen
   out "};
 "
 
+let rec mk_args_as_file_name (accu: string) (l: list string) : Tot string
+  (decreases l)
+= match l with
+  | [] -> accu
+  | a :: q -> mk_args_as_file_name (accu ^ "." ^ a) q
+
+let mk_output_filename
+  (counter: ref int)
+  (out_dir: string)
+  (validator_name: string)
+  (args: list string)
+: ML string
+= let i = !counter in
+  counter := i + 1;
+  OS.concat out_dir (mk_args_as_file_name ("witness." ^ string_of_int i ^ "." ^ validator_name) args ^ ".dat")
+
 let print_witness_as_c
+  (out_dir: string)
   (out: (string -> ML unit))
   (positive: bool)
-  (wrapper_name: string)
+  (validator_name: string)
   (arg_types: list arg_type)
+  (counter: ref int)
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
-= print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out positive wrapper_name arg_types len args
+= OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ((if positive then "POS." else "NEG.") ^ validator_name) args);
+  print_witness_as_c_gen out witness (fun len ->
+    print_witness_call_as_c out positive validator_name arg_types len args
   )
 
 let print_diff_witness_as_c
+  (out_dir: string)
   (out: (string -> ML unit))
-  (wrapper_name1: string)
-  (wrapper_name2: string)
+  (validator_name1: string)
+  (validator_name2: string)
   (arg_types: list arg_type)
+  (counter: ref int)
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
-= print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out true wrapper_name1 arg_types len args;
-    print_witness_call_as_c out false wrapper_name2 arg_types len args
+= OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ("POS." ^ validator_name1 ^ ".NEG." ^ validator_name2) args);
+  print_witness_as_c_gen out witness (fun len ->
+    print_witness_call_as_c out true validator_name1 arg_types len args;
+    print_witness_call_as_c out false validator_name2 arg_types len args
   )
 
 let print_witness (witness: Seq.seq int) : ML unit =
@@ -1067,7 +1111,7 @@ Printf.sprintf "
 
 let mk_get_first_positive_test_witness (name: string) (l: list arg_type) : string =
   mk_get_witness name l ^ "
-(assert (>= state-witness-input-size 0))
+(assert (= (input-size state-witness) 0)) ; validator shall consume all input
 "
 
 let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
@@ -1091,31 +1135,57 @@ let mk_want_another_distinct_witness witness witness_args : Tot string =
 let mk_get_first_negative_test_witness (name: string) (l: list arg_type) : string =
   mk_get_witness name l ^
 "
-(assert (< state-witness-input-size 0))
+(assert (< state-witness-input-size 0)) ; validator shall genuinely fail, we are not interested in positive cases followed by garbage
 "
 
-let do_test (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =
+let test_error_handler = "
+static void TestErrorHandler (
+  const char *typename_s,
+  const char *fieldname,
+  const char *reason,
+  uint64_t error_code,
+  uint8_t *context,
+  EVERPARSE_INPUT_BUFFER input,
+  uint64_t start_pos
+) {
+  (void) error_code;
+  (void) input;
+  if (*context) {
+    printf(\"Reached from position %ld: type name %s, field name %s\\n\", start_pos, typename_s, fieldname);
+  } else {
+    printf(\"Parsing failed at position %ld: type name %s, field name %s. Reason: %s\\n\", start_pos, typename_s, fieldname, reason);
+    *context = 1;
+  }
+}
+"
+
+let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =
   let args = List.assoc name1 prog in
   if None? args
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
   let args = Some?.v args in
-  let modul, wrapper_name = module_and_wrapper_name name1 in
+  let modul, validator_name = module_and_validator_name name1 in
   let nargs = count_args args in with_option_out_file out_file (fun cout ->
   cout "#include <stdio.h>
+#include <stdbool.h>
 #include \"";
   cout modul;
-  cout "Wrapper.h\"
+  cout ".h\"
+";
+  cout test_error_handler;
+  cout "
   int main(void) {
 ";
+  let counter = alloc 0 in
   if pos
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c cout true wrapper_name args) z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+    witnesses_for (print_witness_as_c out_dir cout true validator_name args counter) z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
   end;
   if neg
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c cout false wrapper_name args) z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+    witnesses_for (print_witness_as_c out_dir cout false validator_name args counter) z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
   end;
   cout "  return 0;
   }
@@ -1126,16 +1196,16 @@ let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: st
   Printf.sprintf
 "
 %s
-(assert (< (input-size (%s initial-state)) 0))
+(assert (not (= (input-size (%s initial-state)) 0))) ; test cases that do not consume everything are considered failing
 "
   (mk_get_first_positive_test_witness name1 l)
   (mk_call_args name2 0 l)
 
-let do_diff_test_for (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) wrapper_name1 wrapper_name2 nbwitnesses =
+let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for (print_diff_witness_as_c cout wrapper_name1 wrapper_name2 args) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
+  witnesses_for (print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
 
-let do_diff_test (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
+let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
   let args = List.assoc name1 prog in
   if None? args
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
@@ -1146,21 +1216,134 @@ let do_diff_test (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 
   if args2 <> Some args
   then failwith (Printf.sprintf "do_diff_test: parsers %s and %s do not have the same arg types" name1 name2);
   let nargs = count_args args in
-  let modul1, wrapper_name1 = module_and_wrapper_name name1 in
-  let modul2, wrapper_name2 = module_and_wrapper_name name2 in
+  let modul1, validator_name1 = module_and_validator_name name1 in
+  let modul2, validator_name2 = module_and_validator_name name2 in
   with_option_out_file out_file (fun cout ->
   cout "#include <stdio.h>
+#include <stdbool.h>
 #include \"";
   cout modul1;
-  cout "Wrapper.h\"
+  cout ".h\"
 #include \"";
   cout modul2;
-  cout "Wrapper.h\"
+  cout ".h\"
+";
+  cout test_error_handler;
+  cout "
   int main(void) {
 ";
-  do_diff_test_for cout z3 prog name1 name2 args nargs wrapper_name1 wrapper_name2 nbwitnesses;
-  do_diff_test_for cout z3 prog name2 name1 args nargs wrapper_name2 wrapper_name1 nbwitnesses;
+  let counter = alloc 0 in
+  do_diff_test_for out_dir counter cout z3 prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses;
+  do_diff_test_for out_dir counter cout z3 prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses;
   cout "  return 0;
   }
 "
 )
+
+let test_exe_mk_arg
+  (accu: (int & string & string & string))
+  (p: arg_type)
+: Tot (int & string & string & string)
+= let (cur_arg, read_args, call_args_lhs, call_args_rhs) = accu in
+  let cur_arg_s = string_of_int cur_arg in
+  let arg_var = "arg" ^ cur_arg_s in
+  let cur_arg' = cur_arg + 1 in
+  let read_args' = read_args ^
+  begin match p with
+  | ArgInt _ -> "
+  unsigned long long "^arg_var^" = strtoull(argv["^cur_arg_s^"], NULL, 0);
+"
+  | ArgBool -> "
+  BOOLEAN "^arg_var^" = (strcmp(argv["^cur_arg_s^"], \"true\") == 0);
+  if (! ("^arg_var^" || strcmp(argv["^cur_arg_s^"], \"false\") == 0)) {
+    printf(\"Argument %d must be true or false, got %s\\n\", "^cur_arg_s^", argv["^cur_arg_s^"]);
+    return 1;
+  }
+"
+  | _ -> "
+unsigned long long "^arg_var^" = 0;
+"
+  end
+  in
+  let call_args_lhs' = call_args_lhs ^ arg_var ^ ", " in
+  let call_args_rhs' = call_args_lhs ^ ", " ^ arg_var in
+  (cur_arg', read_args', call_args_lhs', call_args_rhs')
+
+let test_checker_c
+  (modul: string)
+  (validator_name: string)
+  (params: list arg_type)
+: Tot string
+=
+  let (nb_cmd_and_args, read_args, call_args_lhs, call_args_rhs) = List.Tot.fold_left test_exe_mk_arg (2, "", "", "") params in
+  let nb_cmd_and_args_s = string_of_int nb_cmd_and_args in
+  let nb_args_s = string_of_int (nb_cmd_and_args - 1) in
+  "
+#include \""^modul^".h\"
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <stdlib.h>
+
+"^test_error_handler^"
+
+int main(int argc, char** argv) {
+  if (argc < "^nb_cmd_and_args_s^") {
+    printf(\"Wrong number of arguments, expected "^nb_args_s^", got %d\\n\", argc);
+    return 3;
+  }
+  char * filename = argv[1];
+"^read_args^"
+  int testfile = open(filename, O_RDONLY);
+  if (testfile == -1) {
+    printf(\"File %s does not exist\\n\", filename);
+    return 3;
+  }
+  struct stat statbuf;
+  if (fstat(testfile, &statbuf)) {
+    close(testfile);
+    printf(\"Cannot detect file size for %s\\n\", filename);
+    return 3;
+  }
+  off_t len = statbuf.st_size;
+  if (len > 4294967295) {
+    printf(\"File is too large. EverParse/3D only supports data up to 4 GB\");
+    return 3;
+  }
+  void * vbuf =
+    mmap(NULL, len, PROT_READ, MAP_PRIVATE, testfile, 0);
+  if (vbuf == MAP_FAILED) {
+    close(testfile);
+    printf(\"Cannot read %ld bytes from %s\\n\", len, filename);
+    return 3;
+  }
+  uint8_t * buf = (uint8_t *) vbuf;
+  printf(\"Read %ld bytes from %s\\n\", len, filename);
+  uint8_t context = 0;
+  uint64_t result = "^validator_name^"("^call_args_lhs^"&context, &TestErrorHandler, buf, len, 0);
+  munmap(vbuf, len);
+  close(testfile);
+  if (EverParseIsError(result)) {
+    printf(\"Witness from %s REJECTED because validator failed\\n\", filename);
+    return 2;
+  };
+  if (result != (uint64_t) len) { // consistent with the postcondition of validate_with_action_t' (see also valid_length)
+    printf(\"Witness from %s REJECTED because validator only consumed %ld out of %ld bytes\\n\", filename, result, len);
+    return 1;
+  }
+  printf(\"Witness from %s ACCEPTED\\n\", filename);
+  return 0;
+}
+"
+
+let produce_test_checker_exe (out_file: string) (prog: prog) (name1: string) : ML unit =
+  let args = List.assoc name1 prog in
+  if None? args
+  then failwith (Printf.sprintf "produce_test_checker_exe: parser %s not found" name1);
+  let args = Some?.v args in
+  let modul, validator_name = module_and_validator_name name1 in
+  with_out_file out_file (fun cout ->
+    cout (test_checker_c modul validator_name args)
+  )

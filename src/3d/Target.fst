@@ -1118,6 +1118,15 @@ let wrapper_name
     fn
   |> pascal_case
 
+let validator_name
+  (modul: string)
+  (fn: string)
+: ML string
+= Printf.sprintf "%s_validate_%s"
+    modul
+    fn
+  |> pascal_case
+
 let print_c_entry
                   (produce_everparse_error: opt_produce_everparse_error)
                   (modul: string)
@@ -1236,12 +1245,7 @@ let print_c_entry
              wrapper_name
              (print_params params)
     in
-    let validator_name =
-       Printf.sprintf "%s_validate_%s"
-         modul
-         d.decl_name.td_name.A.v.A.name
-       |> pascal_case
-    in
+    let validator_name = validator_name modul d.decl_name.td_name.A.v.A.name in
     let impl =
       let body = 
         if is_input_stream_buffer
@@ -1329,7 +1333,7 @@ let print_c_entry
     if HashingOptions.InputStreamBuffer? input_stream_binding
     then Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason)%s"
                          modul
-                         (if produce_everparse_error = Some ProduceEverParseError then "{}" else ";")
+                         (if produce_everparse_error = Some ProduceEverParseError then "{(void) StructName; (void) FieldName; (void) Reason;}" else ";")
     else ""
   in
   let impl =
