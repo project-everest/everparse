@@ -10,7 +10,7 @@ module I = InterpreterTarget
 let prelude : string =
 "
 (set-option :produce-models true)
-(declare-datatypes () ((State (mk-state (input-size Int) (choice-index Int)))))
+(declare-datatypes () ((State (mk-state (input-size Int) (choice-index Int) (branch-index Int)))))
 (declare-datatypes () ((Result (mk-result (return-value Int) (after-state State)))))
 
 ; From EverParse3d.ErrorCode.is_range_okay
@@ -31,13 +31,13 @@ let prelude : string =
 ))
 
 (define-fun parse-false ((x State)) State
-  (mk-state -1 (choice-index x))
+  (mk-state -1 (choice-index x) (branch-index x))
 )
 
 (define-fun parse-all-bytes ((x State)) State
   (if (<= (input-size x) 0)
     x
-    (mk-state 0 (+ (choice-index x) (input-size x)))
+    (mk-state 0 (+ (choice-index x) (input-size x)) (branch-index x))
   )
 )
 
@@ -56,6 +56,7 @@ let prelude : string =
         -1
       )
       (+ (choice-index x) (input-size x))
+      (branch-index x)
     )
   )
 )
@@ -71,6 +72,7 @@ let prelude : string =
         )
       )
       (+ (choice-index x) 1)
+      (branch-index x)
     )
   )
 )
@@ -90,6 +92,7 @@ let prelude : string =
         )
       )
       (+ (choice-index x) 2)
+      (branch-index x)
     )
   )
 )
@@ -109,6 +112,7 @@ let prelude : string =
         )
       )
       (+ (choice-index x) 2)
+      (branch-index x)
     )
   )
 )
@@ -136,6 +140,7 @@ let prelude : string =
         )
       )
       (+ (choice-index x) 4)
+      (branch-index x)
     )
   )
 )
@@ -163,6 +168,7 @@ let prelude : string =
         )
       )
       (+ (choice-index x) 4)
+      (branch-index x)
     )
   )
 )
@@ -206,6 +212,7 @@ let prelude : string =
         )
       )
       (+ (choice-index x) 8)
+      (branch-index x)
     )
   )
 )
@@ -249,6 +256,7 @@ let prelude : string =
         )
       )
       (+ (choice-index x) 8)
+      (branch-index x)
     )
   )
 )
@@ -272,7 +280,7 @@ let prelude : string =
 
 (declare-const initial-input-size Int)
 (assert (>= initial-input-size 0))
-(define-fun initial-state () State (mk-state initial-input-size 0))
+(define-fun initial-state () State (mk-state initial-input-size 0 0))
 
 "
 
@@ -560,7 +568,7 @@ let mk_parse_dep_pair_with_refinement
          (let (("^dsnd_binder_name^" (return-value "^tmp^")))
            ("^dsnd^" (after-state "^tmp^"))
          )
-         (mk-state -1 (choice-index (after-state "^tmp^")))
+         (mk-state -1 (choice-index (after-state "^tmp^")) (branch-index (after-state "^tmp^")))
        )
      )
    )
@@ -623,14 +631,15 @@ let mk_parse_exact
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
   (let (("^sz^" "^size^"))
     (if (< (input-size "^input^") "^sz^")
-      (mk-state -1 (choice-index "^input^"))
-      (let (("^res^" ("^body^" (mk-state "^sz^" (choice-index "^input^")))))
+      (mk-state -1 (choice-index "^input^") (branch-index "^input^"))
+      (let (("^res^" ("^body^" (mk-state "^sz^" (choice-index "^input^") (branch-index "^input^")))))
         (mk-state
           (if (= (input-size "^res^") 0)
             (- (input-size "^input^") "^sz^")
             -1
           )
           (choice-index "^res^")
+          (branch-index "^res^")
         )
       )
     )
@@ -744,7 +753,7 @@ let mk_parse_string
 "(define-fun-rec "^name^" ("^binders^"("^input^" State)) State
   (let (("^tmp^" ("^body^" "^input^")))
     (if (< (choice-index (after-state "^tmp^")) 0)
-      (mk-state -1 (choice-index (after-state "^tmp^")))
+      (mk-state -1 (choice-index (after-state "^tmp^")) (branch-index (after-state "^tmp^")))
       (if (= (return-value "^tmp^") "^terminator^")
         (after-state "^tmp^")
         ("^rec_call^" (after-state "^tmp^"))
