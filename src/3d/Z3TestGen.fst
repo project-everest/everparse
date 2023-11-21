@@ -593,8 +593,37 @@ let parse_dep_pair_with_refinement_gen (tag: parser reading) (cond_binder: strin
 let parse_dep_pair_with_refinement (tag: parser reading) (cond_binder: A.ident) (cond: unit -> ML string) (payload_binder: A.ident) (payload: parser not_reading) : parser not_reading =
   parse_dep_pair_with_refinement_gen tag (ident_to_string cond_binder) cond (ident_to_string payload_binder) payload
 
-let parse_dep_pair (tag: parser reading) (new_binder: A.ident) (payload: parser not_reading) : parser not_reading =
-  parse_dep_pair_with_refinement tag new_binder (fun _ -> "true") new_binder payload
+let mk_parse_dep_pair
+  (name: string)
+  (binders: string)
+  (dfst: string)
+  (dsnd_binder_name: string)
+  (dsnd: string) (* already contains the new argument *)
+: string
+= let input = Printf.sprintf "%s-input" name in
+  let tmp = Printf.sprintf "%s-tmp" name in
+"(define-fun "^name^" ("^binders^"("^input^" State)) State
+   (let (("^tmp^" ("^dfst^" "^input^")))
+     (if (< (input-size (after-state "^tmp^")) 0)
+       (after-state "^tmp^")
+       (let (("^dsnd_binder_name^" (return-value "^tmp^")))
+         ("^dsnd^" (after-state "^tmp^"))
+       )
+     )
+   )
+ )
+"
+
+let parse_dep_pair (tag: parser reading) (payload_binder: A.ident) (payload: parser not_reading) : parser not_reading =
+  fun name binders _ out ->
+    let payload_binder = ident_to_string payload_binder in
+    let name_tag = Printf.sprintf "%s-tag" name in
+    let body_tag = tag name_tag binders false out in
+    let binders' = push_binder payload_binder "Int" binders in (* TODO: support more types *)
+    let name_payload = Printf.sprintf "%s-payload" name in
+    let body_payload = payload name_payload binders' false out in
+    out (mk_parse_dep_pair name binders.bind body_tag.call payload_binder body_payload.call);
+    { call = mk_function_call name binders }
 
 let parse_refine (tag: parser reading) (cond_binder: A.ident) (cond: unit -> ML string) : parser not_reading =
   parse_dep_pair_with_refinement tag cond_binder cond cond_binder (parse_itype I.Unit)
