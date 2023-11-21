@@ -1178,7 +1178,25 @@ let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq i
 
 let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer -> false | _ -> true) l)
 
-let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (mk_want_another_witness: Seq.seq int -> list string -> Tot string) i : ML unit =
+let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
+  (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
+= if i >= Seq.length witness
+  then accu
+  else mk_choose_conj witness ("(and (= (choose "^string_of_int i^") "^string_of_int (Seq.index witness i)^") "^accu^")") (i + 1)
+
+let rec mk_arg_conj (accu: string) (i: nat) (l: list string) : Tot string (decreases l) =
+  match l with
+  | [] -> accu
+  | arg :: q ->
+    mk_arg_conj (Printf.sprintf "(and %s (= arg-%d %s))" accu i arg) (i + 1) q
+
+let mk_want_another_distinct_witness witness witness_args : Tot string =
+  Printf.sprintf
+"(assert (not %s))
+"
+  (mk_arg_conj (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
+
+let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i : ML unit =
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
@@ -1189,8 +1207,8 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
     if i <= 1
     then ()
     else begin
-      z3.to_z3 (mk_want_another_witness witness witness_args);
-      want_witnesses print_test_case z3 name l nargs mk_want_another_witness (i - 1)
+      z3.to_z3 (mk_want_another_distinct_witness witness witness_args);
+      want_witnesses print_test_case z3 name l nargs (i - 1)
     end
   end
   else begin
@@ -1208,12 +1226,6 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
       end;
     FStar.IO.print_newline ()
   end
-
-let witnesses_for (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness mk_want_another_witness nbwitnesses =
-  z3.to_z3 "(push)\n";
-  z3.to_z3 mk_get_first_witness;
-  want_witnesses print_test_case z3 name l nargs mk_want_another_witness nbwitnesses;
-  z3.to_z3 "(pop)\n"
 
 let rec mk_call_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
   match l with
@@ -1241,31 +1253,19 @@ Printf.sprintf "
   (mk_assert_args "" 0 l)
   (mk_call_args name 0 l)
 
-let mk_get_first_positive_test_witness (name: string) (l: list arg_type) : string =
-  mk_get_witness name l ^ "
+let witnesses_for (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness nbwitnesses =
+  z3.to_z3 "(push)\n";
+  z3.to_z3 (mk_get_witness name l);
+  z3.to_z3 mk_get_first_witness;
+  want_witnesses print_test_case z3 name l nargs nbwitnesses;
+  z3.to_z3 "(pop)\n"
+
+let mk_get_positive_test_witness (name: string) (l: list arg_type) : string =
+"
 (assert (= (input-size state-witness) 0)) ; validator shall consume all input
 "
 
-let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
-  (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
-= if i >= Seq.length witness
-  then accu
-  else mk_choose_conj witness ("(and (= (choose "^string_of_int i^") "^string_of_int (Seq.index witness i)^") "^accu^")") (i + 1)
-
-let rec mk_arg_conj (accu: string) (i: nat) (l: list string) : Tot string (decreases l) =
-  match l with
-  | [] -> accu
-  | arg :: q ->
-    mk_arg_conj (Printf.sprintf "(and %s (= arg-%d %s))" accu i arg) (i + 1) q
-
-let mk_want_another_distinct_witness witness witness_args : Tot string =
-  Printf.sprintf
-"(assert (not %s))
-"
-  (mk_arg_conj (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
-
-let mk_get_first_negative_test_witness (name: string) (l: list arg_type) : string =
-  mk_get_witness name l ^
+let mk_get_negative_test_witness (name: string) (l: list arg_type) : string =
 "
 (assert (= state-witness-input-size -1)) ; validator shall genuinely fail, we are not interested in positive cases followed by garbage
 "
@@ -1312,19 +1312,19 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
   if pos
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c out_dir cout true validator_name args counter) z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+    witnesses_for (print_witness_as_c out_dir cout true validator_name args counter) z3 name1 args nargs (mk_get_positive_test_witness name1 args) nbwitnesses
   end;
   if neg
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c out_dir cout false validator_name args counter) z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
+    witnesses_for (print_witness_as_c out_dir cout false validator_name args counter) z3 name1 args nargs (mk_get_negative_test_witness name1 args) nbwitnesses
   end;
   cout "  return 0;
   }
 "
   )
 
-let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: string) : string =
+let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) : string =
   let call2 = mk_call_args name2 0 l in
   Printf.sprintf
 "
@@ -1333,12 +1333,12 @@ let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: st
 (assert (not (= (input-size negative-state-witness) 0))) ; test cases that do not consume everything are considered failing
 (assert (>= (input-size negative-state-witness) -1)) ; do not record tests that artificially fail due to SMT2 encoding
 "
-  (mk_get_first_positive_test_witness name1 l)
+  (mk_get_positive_test_witness name1 l)
   call2
 
 let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for (print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
+  witnesses_for (print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter) z3 name1 args nargs (mk_get_diff_test_witness name1 args name2) nbwitnesses
 
 let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
   let args = List.assoc name1 prog in
