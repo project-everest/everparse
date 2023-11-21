@@ -1196,22 +1196,19 @@ let mk_want_another_distinct_witness witness witness_args : Tot string =
 "
   (mk_arg_conj (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
 
-let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness i : ML unit =
-  z3.to_z3 "(push)\n";
-  z3.to_z3 mk_get_first_witness;
+let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i : ML unit =
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
     let witness = read_witness z3 in
     let witness_args = read_witness_args z3 [] nargs in
-    z3.to_z3 "(pop)\n";
     print_witness_and_call name l witness witness_args;
     print_test_case witness witness_args;
     if i <= 1
     then ()
     else begin
       z3.to_z3 (mk_want_another_distinct_witness witness witness_args);
-      want_witnesses print_test_case z3 name l nargs mk_get_first_witness (i - 1)
+      want_witnesses print_test_case z3 name l nargs (i - 1)
     end
   end
   else begin
@@ -1227,7 +1224,6 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
         end
         else Printf.sprintf ";; %s: z3 gave up" status
       end;
-    z3.to_z3 "(pop)\n";
     FStar.IO.print_newline ()
   end
 
@@ -1249,7 +1245,6 @@ Printf.sprintf "
 %s
 (define-fun state-witness () State (%s initial-state))
 (define-fun state-witness-input-size () Int (input-size state-witness))
-(assert (>= state-witness-input-size -1)) ; do not record tests that artificially fail due to SMT2 encoding
 (declare-fun state-witness-size () Int)
 (assert (<= state-witness-size (choice-index state-witness)))
 (assert (>= state-witness-size (choice-index state-witness)))
@@ -1257,68 +1252,108 @@ Printf.sprintf "
   (mk_assert_args "" 0 l)
   (mk_call_args name 0 l)
 
+noeq
+type branch_trace_node =
+| Node: value: nat -> children: list branch_trace_node -> branch_trace_node
+
+let assert_valid_state =
+  "(assert (or (= state-witness-input-size -1) (= state-witness-input-size 0)))\n"
+
+let rec enumerate_branch_traces'
+  (z3: Z3.z3)
+  (max_depth cur_depth: nat)
+  (branch_trace: string)
+: ML (list branch_trace_node)
+= if max_depth = cur_depth
+  then []
+  else begin
+    z3.to_z3 (Printf.sprintf "(assert (> (branch-index state-witness) %d))\n" cur_depth);
+    z3.to_z3 "(check-sat)\n";
+    let status = z3.from_z3 () in
+    if status = "sat"
+    then
+      let rec aux accu choice : ML (list branch_trace_node) =
+        let branch_trace' = branch_trace ^ " " ^ string_of_int choice in
+        FStar.IO.print_string (Printf.sprintf "Checking feasibility of branch trace: %s\n" branch_trace');
+        z3.to_z3 "(push)\n";
+        z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
+        z3.to_z3 "(check-sat)\n";
+        let status = z3.from_z3 () in
+        if status = "unsat"
+        then begin
+          FStar.IO.print_string "Branch condition is always false\n";
+          z3.to_z3 "(pop)\n";
+          aux accu (choice + 1)
+        end
+        else if status = "sat"
+        then begin
+          FStar.IO.print_string "Branch condition may hold. Checking validity for parser encoding\n";
+          z3.to_z3 "(push)\n";
+          z3.to_z3 assert_valid_state;
+          z3.to_z3 "(check-sat)\n";
+          let status = z3.from_z3 () in
+          z3.to_z3 "(pop)\n";
+          if status = "sat"
+          then begin
+            FStar.IO.print_string "Branch is valid\n";
+            let res = enumerate_branch_traces' z3 max_depth (cur_depth + 1) branch_trace' in
+            z3.to_z3 "(pop)\n";
+            aux (Node choice res :: accu) (choice + 1)
+          end
+          else begin
+            FStar.IO.print_string "Branch is invalid or Z3 gave up\n";
+            z3.to_z3 "(pop)\n";
+            accu
+          end
+        end
+        else begin
+          FStar.IO.print_string "Z3 gave up evaluating branch condition. Aborting\n";
+          z3.to_z3 "(pop)\n";
+          accu
+        end
+      in
+      aux [] 0
+    else begin
+      FStar.IO.print_string "Cannot take further branches under this case\n";
+      []
+    end
+  end
+
+let enumerate_branch_traces
+  (z3: Z3.z3)
+  (max_depth: nat)
+: ML (list branch_trace_node)
+= z3.to_z3 "(push)\n";
+  let res = enumerate_branch_traces' z3 max_depth 0 "" in
+  z3.to_z3 "(pop)\n";
+  res
+
 let rec want_witnesses_with_depth
-  (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness nbwitnesses
-  max_depth branch_trace_cond cur_depth
+  (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
+  cur_depth (tree: list branch_trace_node) (branch_trace: string)
 : ML unit
 =
-  FStar.IO.print_string (Printf.sprintf ";; Generating witnesses for branch trace: %s\n" branch_trace_cond);
-  let mk_get_first_witness' = Printf.sprintf
-"(assert %s)
-(assert (>= (branch-index state-witness) %d))
-%s
-"
-    branch_trace_cond
-    cur_depth
-    mk_get_first_witness
+  FStar.IO.print_string (Printf.sprintf "Checking witnesses for branch trace: %s\n" branch_trace);
+  want_witnesses print_test_case z3 name l nargs nbwitnesses;
+  z3.to_z3 (Printf.sprintf "(assert (> (branch-index state-witness) %d))\n" cur_depth);
+  let rec aux (tree: list branch_trace_node) : ML unit = match tree with
+  | [] -> ()
+  | Node choice tree' :: q ->
+    z3.to_z3 "(push)\n";
+    z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
+    want_witnesses_with_depth print_test_case z3 name l nargs nbwitnesses (cur_depth + 1) tree' (branch_trace ^ " " ^ string_of_int choice);
+    z3.to_z3 "(pop)\n";
+    aux q
   in
-  want_witnesses print_test_case z3 name l nargs mk_get_first_witness' nbwitnesses;
-  if cur_depth < max_depth
-  then begin
-    let rec aux cur_choice : ML unit =
-      let branch_trace_cond' = Printf.sprintf "(and (= (branch-trace %d) %d) %s)"
-        cur_depth
-        cur_choice
-        branch_trace_cond
-      in
-      FStar.IO.print_string (Printf.sprintf ";; Checking feasibility of branch trace: %s\n" branch_trace_cond');
-      z3.to_z3 "(push)\n";
-      z3.to_z3 (Printf.sprintf "(assert %s)\n" branch_trace_cond');
-      z3.to_z3 (Printf.sprintf "(assert (> (branch-index state-witness) %d))\n" cur_depth);
-      z3.to_z3 "(assert (<= state-witness-input-size 0)) ; do not take into account packets that succeed early\n";
-      z3.to_z3 "(check-sat)\n";
-      let status = z3.from_z3 () in
-      if status = "sat"
-      then begin
-        z3.to_z3 "(pop)\n";
-        want_witnesses_with_depth print_test_case z3 name l nargs mk_get_first_witness nbwitnesses max_depth branch_trace_cond' (1 + cur_depth);
-        aux (1 + cur_choice)
-      end else begin
-        if status = "unsat"
-        then
-          FStar.IO.print_string (Printf.sprintf ";; Branch trace %s is unfeasible (unsat)\n" branch_trace_cond')
-        else begin
-          let reason =
-            if status = "unknown"
-            then begin
-              z3.to_z3 "(get-info :reason-unknown)";
-              let msg = z3.from_z3 () in
-              Printf.sprintf "unknown (%s)" msg
-            end
-            else Printf.sprintf "%s" status
-          in
-          FStar.IO.print_string (Printf.sprintf ";; z3 gave up on branch trace %s. Reason: %s\n" branch_trace_cond' reason)
-        end;
-        z3.to_z3 "(pop)\n"
-      end
-    in
-    aux 0
-  end
+  aux tree
 
 let witnesses_for (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness nbwitnesses max_depth =
   z3.to_z3 "(push)\n";
   z3.to_z3 (mk_get_witness name l);
-  want_witnesses_with_depth print_test_case z3 name l nargs mk_get_first_witness nbwitnesses max_depth "true" 0;
+  let traces = enumerate_branch_traces z3 max_depth in
+  z3.to_z3 assert_valid_state;
+  z3.to_z3 mk_get_first_witness;
+  want_witnesses_with_depth print_test_case z3 name l nargs nbwitnesses 0 traces "";
   z3.to_z3 "(pop)\n"
 
 let mk_get_positive_test_witness (name: string) (l: list arg_type) : string =
