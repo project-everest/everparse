@@ -1204,12 +1204,11 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
     let witness_args = read_witness_args z3 [] nargs in
     print_witness_and_call name l witness witness_args;
     print_test_case witness witness_args;
+    z3.to_z3 (mk_want_another_distinct_witness witness witness_args);
     if i <= 1
     then ()
-    else begin
-      z3.to_z3 (mk_want_another_distinct_witness witness witness_args);
+    else
       want_witnesses print_test_case z3 name l nargs (i - 1)
-    end
   end
   else begin
     FStar.IO.print_string
