@@ -30,6 +30,8 @@ let prelude : string =
   (and (<= 0 (choose i)) (< (choose i) 256))
 ))
 
+(declare-fun branch-trace (Int) Int)
+
 (define-fun parse-false ((x State)) State
   (mk-state -1 (choice-index x) (branch-index x))
 )
@@ -594,7 +596,8 @@ let parse_dep_pair (tag: parser reading) (new_binder: A.ident) (payload: parser 
 let parse_refine (tag: parser reading) (cond_binder: A.ident) (cond: unit -> ML string) : parser not_reading =
   parse_dep_pair_with_refinement tag cond_binder cond cond_binder (parse_itype I.Unit)
 
-let mk_parse_ifthenelse
+let mk_parse_ifthenelse_cons
+  (counter: int)
   (name: string)
   (binders: string)
   (cond: string)
@@ -603,20 +606,52 @@ let mk_parse_ifthenelse
 : string
 = let input = Printf.sprintf "%s-input" name in
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
-   (if "^cond^"
-     ("^f_then^" "^input^")
+   (if (and "^cond^" (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int counter^")))
+     ("^f_then^" (if (< (branch-index "^input^") 0) "^input^" (mk-state (input-size "^input^") (choice-index "^input^") (+ 1 (branch-index "^input^")))))
      ("^f_else^" "^input^")
    )
  )
 "
 
-let parse_ifthenelse (cond: unit -> ML string) (pthen: parser not_reading) (pelse: parser not_reading) : parser not_reading =
+let parse_ifthenelse_cons (cond: unit -> ML string) (pthen: parser not_reading) (pelse: int -> parser not_reading) (counter: int) : parser not_reading =
+  fun name binders _ out ->
+    let name_then = Printf.sprintf "%s-then" name in
+    let body_then = pthen name_then binders false out in
+    let name_else = Printf.sprintf "%s-else" name in
+    let body_else = pelse (counter + 1) name_else binders false out in
+    out (mk_parse_ifthenelse_cons counter name binders.bind (cond ()) body_then.call body_else.call);
+    { call = mk_function_call name binders }
+
+let mk_parse_ifthenelse_nil
+  (counter: int)
+  (name: string)
+  (binders: string)
+  (cond: string)
+  (f_then: string)
+  (f_else: string)
+: string
+= let input = Printf.sprintf "%s-input" name in
+  let tmp = Printf.sprintf "%s-tmp" name in
+"(define-fun "^name^" ("^binders^"("^input^" State)) State
+   (let (("^tmp^" (if (< (branch-index "^input^") 0) "^input^" (mk-state (input-size "^input^") (choice-index "^input^") (+ 1 (branch-index "^input^"))))))
+     (if (and "^cond^" (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int counter^")))
+       ("^f_then^" "^tmp^")
+       (if (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int (1 + counter)^"))
+         ("^f_else^" "^tmp^")
+         (mk-state -2 (choice-index "^tmp^") (branch-index "^tmp^")) ; this is a Z3 encoding artifact, not a parsing failure
+       )
+     )
+   )
+ )
+"
+
+let parse_ifthenelse_nil (cond: unit -> ML string) (pthen: parser not_reading) (pelse: parser not_reading) (counter: int) : parser not_reading =
   fun name binders _ out ->
     let name_then = Printf.sprintf "%s-then" name in
     let body_then = pthen name_then binders false out in
     let name_else = Printf.sprintf "%s-else" name in
     let body_else = pelse name_else binders false out in
-    out (mk_parse_ifthenelse name binders.bind (cond ()) body_then.call body_else.call);
+    out (mk_parse_ifthenelse_nil counter name binders.bind (cond ()) body_then.call body_else.call);
     { call = mk_function_call name binders }
 
 let mk_parse_exact
@@ -797,9 +832,27 @@ let rec type_has_actions = function
   | I.T_dep_pair _ _ (_, t) ->
     type_has_actions t
 
+let rec typ_depth (t: I.typ) : GTot nat
+  (decreases t)
+= match t with
+  | I.T_if_else _ t1 t2 // 2 accounts for the call to parse_then_else_with_branch_trace
+    -> 2 + typ_depth t1 + typ_depth t2
+  | I.T_pair _ t1 t2
+    -> 1 + typ_depth t1 + typ_depth t2
+  | I.T_dep_pair _ _ (_, t')
+  | I.T_dep_pair_with_refinement _ _ _ (_, t')
+  | I.T_with_comment _ t' _
+  | I.T_at_most _ _ t'
+  | I.T_exact _ _ t'
+  | I.T_nlist _ _ t'
+    -> 1 + typ_depth t'
+  | _
+    -> 0
+
 let rec parse_typ (t : I.typ) : Pure (parser not_reading)
   (requires (type_has_actions t == false))
   (ensures (fun _ -> True))
+  (decreases (typ_depth t))
 = match t with
   | I.T_false _ -> parse_false
   | I.T_denoted _ d -> parse_denoted d
@@ -807,12 +860,22 @@ let rec parse_typ (t : I.typ) : Pure (parser not_reading)
   | I.T_dep_pair _ t1 (lam, t2) -> parse_dep_pair (parse_readable_dtyp t1) lam (parse_typ t2)
   | I.T_refine _ base (lam, cond) -> parse_refine (parse_readable_dtyp base) lam (fun _ -> mk_expr cond)
   | I.T_dep_pair_with_refinement _ base (lam_cond, cond) (lam_k, k) -> parse_dep_pair_with_refinement (parse_readable_dtyp base) lam_cond (fun _ -> mk_expr cond) lam_k (parse_typ k)
-  | I.T_if_else cond t1 t2 -> parse_ifthenelse (fun _ -> mk_expr cond) (parse_typ t1) (parse_typ t2)
+  | I.T_if_else cond t1 t2 -> parse_ifthenelse cond t1 t2 0
   | I.T_with_comment _ base _ -> parse_typ base
   | I.T_at_most _ size body -> parse_at_most (fun _ -> mk_expr size) (parse_typ body)
   | I.T_exact _ size body -> parse_exact (fun _ -> mk_expr size) (parse_typ body)
   | I.T_string _ elt terminator -> parse_string (parse_readable_dtyp elt) (fun _ -> mk_expr terminator)
   | I.T_nlist _ size body -> parse_nlist (fun _ -> mk_expr size) (parse_typ body)
+
+and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Pure (int -> parser not_reading)
+  (requires (type_has_actions tthen == false /\ type_has_actions telse == false))
+  (ensures (fun _ -> True))
+  (decreases (1 + typ_depth tthen + typ_depth telse))
+= match telse with
+  | I.T_if_else cond2 tthen2 telse2 ->
+    parse_ifthenelse_cons (fun _ -> mk_expr cond) (parse_typ tthen) (parse_ifthenelse cond2 tthen2 telse2)
+  | _ ->
+    parse_ifthenelse_nil (fun _ -> mk_expr cond) (parse_typ tthen) (parse_typ telse)
 
 type arg_type =
 | ArgInt of A.integer_type
@@ -1263,11 +1326,11 @@ let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: st
   Printf.sprintf
 "
 %s
-(assert (not (= (input-size (%s initial-state)) 0))) ; test cases that do not consume everything are considered failing
-(assert (>= (input-size (%s initial-state)) -1)) ; do not record tests that artificially fail due to SMT2 encoding
+(define-fun negative-state-witness () State (%s (mk-state initial-input-size 0 -1))) ; branch trace is ignored for the second parser
+(assert (not (= (input-size negative-state-witness) 0))) ; test cases that do not consume everything are considered failing
+(assert (>= (input-size negative-state-witness) -1)) ; do not record tests that artificially fail due to SMT2 encoding
 "
   (mk_get_first_positive_test_witness name1 l)
-  call2
   call2
 
 let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses =
