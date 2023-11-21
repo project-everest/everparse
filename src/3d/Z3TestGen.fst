@@ -1257,10 +1257,68 @@ Printf.sprintf "
   (mk_assert_args "" 0 l)
   (mk_call_args name 0 l)
 
-let witnesses_for (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness nbwitnesses =
+let rec want_witnesses_with_depth
+  (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness nbwitnesses
+  max_depth branch_trace_cond cur_depth
+: ML unit
+=
+  FStar.IO.print_string (Printf.sprintf ";; Generating witnesses for branch trace: %s\n" branch_trace_cond);
+  let mk_get_first_witness' = Printf.sprintf
+"(assert %s)
+(assert (>= (branch-index state-witness) %d))
+%s
+"
+    branch_trace_cond
+    cur_depth
+    mk_get_first_witness
+  in
+  want_witnesses print_test_case z3 name l nargs mk_get_first_witness' nbwitnesses;
+  if cur_depth < max_depth
+  then begin
+    let rec aux cur_choice : ML unit =
+      let branch_trace_cond' = Printf.sprintf "(and (= (branch-trace %d) %d) %s)"
+        cur_depth
+        cur_choice
+        branch_trace_cond
+      in
+      FStar.IO.print_string (Printf.sprintf ";; Checking feasibility of branch trace: %s\n" branch_trace_cond');
+      z3.to_z3 "(push)\n";
+      z3.to_z3 (Printf.sprintf "(assert %s)\n" branch_trace_cond');
+      z3.to_z3 (Printf.sprintf "(assert (> (branch-index state-witness) %d))\n" cur_depth);
+      z3.to_z3 "(assert (<= state-witness-input-size 0)) ; do not take into account packets that succeed early\n";
+      z3.to_z3 "(check-sat)\n";
+      let status = z3.from_z3 () in
+      if status = "sat"
+      then begin
+        z3.to_z3 "(pop)\n";
+        want_witnesses_with_depth print_test_case z3 name l nargs mk_get_first_witness nbwitnesses max_depth branch_trace_cond' (1 + cur_depth);
+        aux (1 + cur_choice)
+      end else begin
+        if status = "unsat"
+        then
+          FStar.IO.print_string (Printf.sprintf ";; Branch trace %s is unfeasible (unsat)\n" branch_trace_cond')
+        else begin
+          let reason =
+            if status = "unknown"
+            then begin
+              z3.to_z3 "(get-info :reason-unknown)";
+              let msg = z3.from_z3 () in
+              Printf.sprintf "unknown (%s)" msg
+            end
+            else Printf.sprintf "%s" status
+          in
+          FStar.IO.print_string (Printf.sprintf ";; z3 gave up on branch trace %s. Reason: %s\n" branch_trace_cond' reason)
+        end;
+        z3.to_z3 "(pop)\n"
+      end
+    in
+    aux 0
+  end
+
+let witnesses_for (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness nbwitnesses max_depth =
   z3.to_z3 "(push)\n";
   z3.to_z3 (mk_get_witness name l);
-  want_witnesses print_test_case z3 name l nargs mk_get_first_witness nbwitnesses;
+  want_witnesses_with_depth print_test_case z3 name l nargs mk_get_first_witness nbwitnesses max_depth "true" 0;
   z3.to_z3 "(pop)\n"
 
 let mk_get_positive_test_witness (name: string) (l: list arg_type) : string =
@@ -1294,7 +1352,7 @@ static void TestErrorHandler (
 }
 "
 
-let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =
+let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
   let args = List.assoc name1 prog in
   if None? args
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
@@ -1315,12 +1373,12 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
   if pos
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c out_dir cout true validator_name args counter) z3 name1 args nargs (mk_get_positive_test_witness name1 args) nbwitnesses
+    witnesses_for (print_witness_as_c out_dir cout true validator_name args counter) z3 name1 args nargs (mk_get_positive_test_witness name1 args) nbwitnesses depth
   end;
   if neg
   then begin
     FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c out_dir cout false validator_name args counter) z3 name1 args nargs (mk_get_negative_test_witness name1 args) nbwitnesses
+    witnesses_for (print_witness_as_c out_dir cout false validator_name args counter) z3 name1 args nargs (mk_get_negative_test_witness name1 args) nbwitnesses depth
   end;
   cout "  return 0;
   }
@@ -1339,11 +1397,11 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
   (mk_get_positive_test_witness name1 l)
   call2
 
-let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses =
+let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for (print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter) z3 name1 args nargs (mk_get_diff_test_witness name1 args name2) nbwitnesses
+  witnesses_for (print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter) z3 name1 args nargs (mk_get_diff_test_witness name1 args name2) nbwitnesses depth
 
-let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
+let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses depth =
   let args = List.assoc name1 prog in
   if None? args
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
@@ -1371,8 +1429,8 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: 
   int main(void) {
 ";
   let counter = alloc 0 in
-  do_diff_test_for out_dir counter cout z3 prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses;
-  do_diff_test_for out_dir counter cout z3 prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses;
+  do_diff_test_for out_dir counter cout z3 prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
+  do_diff_test_for out_dir counter cout z3 prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
   cout "  return 0;
   }
 "

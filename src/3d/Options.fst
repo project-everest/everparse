@@ -135,6 +135,8 @@ let z3_executable : ref (option vstring) = alloc None
 
 let test_checker : ref (option vstring) = alloc None
 
+let z3_branch_depth : ref (option vstring) = alloc None
+
 noeq
 type cmd_option_kind =
   | OptBool:
@@ -369,11 +371,12 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "test_checker" (OptStringOption "parser name" always_valid test_checker) "produce a test checker executable" [];
     CmdFStarOption (let open FStar.Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0), "Show this version of EverParse");
     CmdOption "equate_types" (OptList "an argument of the form A,B, to generate asserts of the form (A.t == B.t)" valid_equate_types equate_types_list) "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line" [];
+    CmdOption "z3_branch_depth" (OptStringOption "nb" always_valid z3_branch_depth) "enumerate branch choices up to depth nb (default 0)" [];
     CmdOption "z3_diff_test" (OptStringOption "parser1,parser2" valid_equate_types z3_diff_test) "produce differential tests for two parsers" [];
     CmdOption "z3_executable" (OptStringOption "path/to/z3" always_valid z3_executable) "z3 executable for test case generation (default `z3`; does not affect verification of generated F* code)" [];
     CmdOption "z3_test" (OptStringOption "parser name" always_valid z3_test) "produce positive and/or negative test cases for a given parser" [];
     CmdOption "z3_test_mode" (OptStringOption "pos|neg|all" valid_z3_test_mode z3_test_mode) "produce positive, negative, or all kinds of test cases (default all)" [];
-    CmdOption "z3_witnesses" (OptStringOption "nb" always_valid z3_witnesses) "ask for nb distinct test witnesses" [];
+    CmdOption "z3_witnesses" (OptStringOption "nb" always_valid z3_witnesses) "ask for nb distinct test witnesses per branch case (default 1)" [];
     CmdOption "__arg0" (OptStringOption "executable name" always_valid arg0) "executable name to use for the help message" [];
     CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|emit_config" valid_micro_step micro_step) "micro step" [];
     CmdOption "__produce_c_from_existing_krml" (OptBool produce_c_from_existing_krml) "produce C from .krml files" [];
@@ -561,7 +564,10 @@ let get_z3_witnesses () =
   | Some s ->
   try
     let n = OS.int_of_string s in
-    if n < 1 then 1 else n
+    if n < 1 then (1 <: pos) else begin
+      assert (n >= 1);
+      (n <: pos)
+    end
   with _ -> 1
 
 let get_debug _ = !debug
@@ -579,3 +585,15 @@ let get_z3_executable () =
 let get_save_z3_transcript () = !save_z3_transcript
 
 let get_test_checker () = !test_checker
+
+let get_z3_branch_depth () =
+  match !z3_branch_depth with
+  | None -> 0
+  | Some s ->
+  try
+    let n = OS.int_of_string s in
+    if n < 0 then (0 <: nat) else begin
+      assert (n >= 0);
+      (n <: nat)
+    end
+  with _ -> 0
