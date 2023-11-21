@@ -137,6 +137,8 @@ let test_checker : ref (option vstring) = alloc None
 
 let z3_branch_depth : ref (option vstring) = alloc None
 
+let z3_options : ref (option vstring) = alloc None
+
 noeq
 type cmd_option_kind =
   | OptBool:
@@ -374,6 +376,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_branch_depth" (OptStringOption "nb" always_valid z3_branch_depth) "enumerate branch choices up to depth nb (default 0)" [];
     CmdOption "z3_diff_test" (OptStringOption "parser1,parser2" valid_equate_types z3_diff_test) "produce differential tests for two parsers" [];
     CmdOption "z3_executable" (OptStringOption "path/to/z3" always_valid z3_executable) "z3 executable for test case generation (default `z3`; does not affect verification of generated F* code)" [];
+    CmdOption "z3_options" (OptStringOption "'options to z3'" always_valid z3_options) "command-line options to pass to z3 for test case generation (does not affect verification of generated F* code)" [];
     CmdOption "z3_test" (OptStringOption "parser name" always_valid z3_test) "produce positive and/or negative test cases for a given parser" [];
     CmdOption "z3_test_mode" (OptStringOption "pos|neg|all" valid_z3_test_mode z3_test_mode) "produce positive, negative, or all kinds of test cases (default all)" [];
     CmdOption "z3_witnesses" (OptStringOption "nb" always_valid z3_witnesses) "ask for nb distinct test witnesses per branch case (default 1)" [];
@@ -597,3 +600,8 @@ let get_z3_branch_depth () =
       (n <: nat)
     end
   with _ -> 0
+
+let get_z3_options () : ML string = 
+  match !z3_options with
+  | None -> ""
+  | Some s -> s
