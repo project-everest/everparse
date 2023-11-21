@@ -1331,13 +1331,13 @@ let rec enumerate_branch_traces'
           else begin
             FStar.IO.print_string "Branch is invalid or Z3 gave up\n";
             z3.to_z3 "(pop)\n";
-            accu
+            List.Tot.rev accu
           end
         end
         else begin
           FStar.IO.print_string "Z3 gave up evaluating branch condition. Aborting\n";
           z3.to_z3 "(pop)\n";
-          accu
+          List.Tot.rev accu
         end
       in
       aux [] 0
