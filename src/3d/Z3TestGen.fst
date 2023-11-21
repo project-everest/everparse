@@ -1347,13 +1347,21 @@ let rec want_witnesses_with_depth
   in
   aux tree
 
-let witnesses_for (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness nbwitnesses max_depth =
+let witnesses_for (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq int -> list string -> ML unit) & (unit -> ML string))) nbwitnesses max_depth =
   z3.to_z3 "(push)\n";
   z3.to_z3 (mk_get_witness name l);
   let traces = enumerate_branch_traces z3 max_depth in
   z3.to_z3 assert_valid_state;
-  z3.to_z3 mk_get_first_witness;
-  want_witnesses_with_depth print_test_case z3 name l nargs nbwitnesses 0 traces "";
+  List.iter
+    #((Seq.seq int -> list string -> ML unit) & (unit -> ML string))
+    (fun (ptc, f) ->
+      z3.to_z3 "(push)\n";
+      z3.to_z3 (f ());
+      want_witnesses_with_depth ptc z3 name l nargs nbwitnesses 0 traces "";
+      z3.to_z3 "(pop)\n"
+    )
+    print_test_case_mk_get_first_witness
+    ;
   z3.to_z3 "(pop)\n"
 
 let mk_get_positive_test_witness (name: string) (l: list arg_type) : string =
@@ -1405,16 +1413,25 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
   int main(void) {
 ";
   let counter = alloc 0 in
-  if pos
-  then begin
-    FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c out_dir cout true validator_name args counter) z3 name1 args nargs (mk_get_positive_test_witness name1 args) nbwitnesses depth
-  end;
-  if neg
-  then begin
-    FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c out_dir cout false validator_name args counter) z3 name1 args nargs (mk_get_negative_test_witness name1 args) nbwitnesses depth
-  end;
+  let tasks =
+    begin
+      if pos
+      then [print_witness_as_c out_dir cout true validator_name args counter, (fun _ -> (
+        FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
+        mk_get_positive_test_witness name1 args
+      ))]
+      else []
+    end `List.Tot.append`
+    begin
+      if neg
+      then [print_witness_as_c out_dir cout false validator_name args counter, (fun _ -> (
+        FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
+        mk_get_negative_test_witness name1 args
+      ))]
+      else []
+    end
+  in
+  witnesses_for z3 name1 args nargs tasks nbwitnesses depth;
   cout "  return 0;
   }
 "
@@ -1434,7 +1451,7 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
 
 let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for (print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter) z3 name1 args nargs (mk_get_diff_test_witness name1 args name2) nbwitnesses depth
+  witnesses_for z3 name1 args nargs ([print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 args name2)]) nbwitnesses depth
 
 let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses depth =
   let args = List.assoc name1 prog in
