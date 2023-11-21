@@ -1196,19 +1196,22 @@ let mk_want_another_distinct_witness witness witness_args : Tot string =
 "
   (mk_arg_conj (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
 
-let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i : ML unit =
+let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness i : ML unit =
+  z3.to_z3 "(push)\n";
+  z3.to_z3 mk_get_first_witness;
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
     let witness = read_witness z3 in
     let witness_args = read_witness_args z3 [] nargs in
+    z3.to_z3 "(pop)\n";
     print_witness_and_call name l witness witness_args;
     print_test_case witness witness_args;
     if i <= 1
     then ()
     else begin
       z3.to_z3 (mk_want_another_distinct_witness witness witness_args);
-      want_witnesses print_test_case z3 name l nargs (i - 1)
+      want_witnesses print_test_case z3 name l nargs mk_get_first_witness (i - 1)
     end
   end
   else begin
@@ -1224,6 +1227,7 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
         end
         else Printf.sprintf ";; %s: z3 gave up" status
       end;
+    z3.to_z3 "(pop)\n";
     FStar.IO.print_newline ()
   end
 
@@ -1256,8 +1260,7 @@ Printf.sprintf "
 let witnesses_for (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness nbwitnesses =
   z3.to_z3 "(push)\n";
   z3.to_z3 (mk_get_witness name l);
-  z3.to_z3 mk_get_first_witness;
-  want_witnesses print_test_case z3 name l nargs nbwitnesses;
+  want_witnesses print_test_case z3 name l nargs mk_get_first_witness nbwitnesses;
   z3.to_z3 "(pop)\n"
 
 let mk_get_positive_test_witness (name: string) (l: list arg_type) : string =
