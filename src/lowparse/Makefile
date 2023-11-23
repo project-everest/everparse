@@ -30,17 +30,23 @@ INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
 ALREADY_CACHED = --already_cached *,-LowParse
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED)
 
-LOWPARSE_FILES=$(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
+LOWPARSE_FILES := $(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
 
 clean:
-	rm -rf *.checked *.source .depend
+	rm -rf *.checked *.source .depend .depend.tmp
 
 .depend: $(LOWPARSE_FILES)
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) > $@
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) > $@.tmp
+	mv $@.tmp $@
 
 include .depend
 
-verify-all: $(ALL_CHECKED_FILES)
+steel: verify-all
+	+$(MAKE) -C $@
+
+lowparse: $(ALL_CHECKED_FILES)
+
+verify-all: lowparse
 
 tot: $(filter LowParse.Tot.%,$(ALL_CHECKED_FILES))
 
@@ -56,7 +62,7 @@ $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
 
-.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test
+.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test lowparse spec slow low steel
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)

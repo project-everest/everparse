@@ -11,6 +11,7 @@ branchname=$4
 build_home="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 . "$build_home"/build_funs.sh
 . "$build_home"/install-krml-funs.sh
+. "$build_home"/install-steel-funs.sh
 export_home FSTAR "$(pwd)/FStar"
 
 cd quackyducky

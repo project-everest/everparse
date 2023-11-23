@@ -34,6 +34,8 @@ type long_packet_type_t =
   | Handshake
   | Retry
 
+#push-options "--z3rlimit 16"
+
 [@filter_bitsum'_t_attr]
 inline_for_extraction
 noextract
@@ -43,6 +45,8 @@ let long_packet_type : enum long_packet_type_t (bitfield uint8 2) = [
   Handshake, 2uy;
   Retry, 3uy;
 ]
+
+#pop-options
 
 [@filter_bitsum'_t_attr]
 inline_for_extraction

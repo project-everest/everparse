@@ -1488,6 +1488,8 @@ let destr_bitsum'_bitsum_cons_nil
           (fun x -> f (bitsum'_type_intro_BitSum' cl bitsum'_size key key_size e payload (| k, x |)))
         x
 
+#set-options "--print_universes"
+
 [@filter_bitsum'_t_attr]
 noextract
 let rec mk_destr_bitsum'_t
@@ -1496,7 +1498,7 @@ let rec mk_destr_bitsum'_t
   (#cl: uint_t tot t)
   (#bitsum'_size: nat)
   (b: bitsum' cl bitsum'_size)
-: Tot (destr_bitsum'_t b <: Type u#1)
+: Tot (destr_bitsum'_t b <: Type u#(1 + a))
   (decreases %[b;1;()])
 = match b with
   | BitStop _ -> destr_bitsum'_bitstop cl
@@ -1514,7 +1516,7 @@ and mk_destr_bitsum'_bitsum_t
   (payload: (enum_key e -> Tot (bitsum' cl (bitsum'_size - key_size))))
   (l1: list (key & bitfield cl key_size))
   (l2: list (key & bitfield cl key_size) { e == l1 `L.append` l2 } )
-: Tot (destr_bitsum'_bitsum_t cl bitsum'_size key key_size e payload l1 l2 <: Type u#1)
+: Tot (destr_bitsum'_bitsum_t cl bitsum'_size key key_size e payload l1 l2 <: Type u#(1 + a))
   (decreases %[BitSum' key key_size e payload; 0; l2])
 = bitsum_wellfoundedness (BitSum' key key_size e payload);
   match l2 with
