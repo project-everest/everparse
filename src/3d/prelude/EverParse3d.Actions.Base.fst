@@ -52,12 +52,39 @@ inline_for_extraction
 noextract
 let input_buffer_t = EverParse3d.InputStream.All.t
 
+inline_for_extraction
+let error_handler = 
+    typename:string ->
+    fieldname:string ->
+    error_reason:string ->
+    error_code:U64.t ->
+    ctxt: app_ctxt ->
+    sl: input_buffer_t ->
+    pos: LPE.pos_t ->
+    Stack unit
+      (requires fun h ->
+        I.live sl h /\
+        true_inv (I.footprint sl) h /\
+        B.live h ctxt /\
+        loc_not_unused_in h `loc_includes` app_loc ctxt eloc_none /\
+        address_liveness_insensitive_locs `loc_includes` app_loc ctxt eloc_none /\
+        app_loc ctxt eloc_none `loc_disjoint` I.footprint sl /\
+        U64.v pos <= Seq.length (I.get_read sl h)
+      )
+      (ensures fun h0 _ h1 ->
+        let sl = Ghost.reveal sl in
+        modifies (app_loc ctxt eloc_none) h0 h1 /\
+        B.live h1 ctxt /\
+        true_inv (I.footprint sl) h1)
+
 let action
   p inv l on_success a
 =
     (# [tcresolve ()] I.extra_t #input_buffer_t) ->
     ctxt: app_ctxt ->
+    error_handler_fn : error_handler ->
     sl: input_buffer_t ->
+    len: I.tlen sl ->
     pos: LPE.pos_t ->
     posf: LPE.pos_t ->
     Stack a
@@ -133,31 +160,6 @@ let valid
 = I.live sl h /\
   Some? (LP.parse p (I.get_remaining sl h))
 
-inline_for_extraction
-let error_handler = 
-    typename:string ->
-    fieldname:string ->
-    error_reason:string ->
-    error_code:U64.t ->
-    ctxt: app_ctxt ->
-    sl: input_buffer_t ->
-    pos: LPE.pos_t ->
-    Stack unit
-      (requires fun h ->
-        I.live sl h /\
-        true_inv (I.footprint sl) h /\
-        B.live h ctxt /\
-        loc_not_unused_in h `loc_includes` app_loc ctxt eloc_none /\
-        address_liveness_insensitive_locs `loc_includes` app_loc ctxt eloc_none /\
-        app_loc ctxt eloc_none `loc_disjoint` I.footprint sl /\
-        U64.v pos <= Seq.length (I.get_read sl h)
-      )
-      (ensures fun h0 _ h1 ->
-        let sl = Ghost.reveal sl in
-        modifies (app_loc ctxt eloc_none) h0 h1 /\
-        B.live h1 ctxt /\
-        true_inv (I.footprint sl) h1)
-
 inline_for_extraction noextract
 let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv:slice_inv) (l:eloc) (allow_reading:bool) =
   (# [tcresolve ()] I.extra_t #input_buffer_t) ->
@@ -205,9 +207,9 @@ let validate_eta v =
 let act_with_comment
   s res a
 =
-  fun ctxt sl pos posf ->
+  fun ctxt err sl len pos posf ->
   LPL.comment s;
-  a ctxt sl pos posf
+  a ctxt err sl len pos posf
 
 let leaf_reader
   #nz
@@ -254,7 +256,7 @@ let validate_with_success_action' (name: string) #nz #wk (#k1:parser_kind nz wk)
     if LPE.is_success pos1
     then
          [@(rename_let ("action_success_" ^ name))]
-         let b = a ctxt input pos0 pos1 in
+         let b = a ctxt error_handler_fn input input_length pos0 pos1 in
          let h2 = HST.get () in
          modifies_address_liveness_insensitive_unused_in h1 h2;
          if not b
@@ -418,7 +420,7 @@ let validate_dep_pair_with_refinement_and_action'
           res1
         else begin
              modifies_address_liveness_insensitive_unused_in h1 h2;
-             if not (a field_value ctxt input startPosition res1)
+             if not (a field_value ctxt error_handler_fn input input_length startPosition res1)
              then LPE.set_validator_error_pos LPE.validator_error_action_failed res1 //action failed
              else begin
                let h15 = HST.get () in
@@ -466,7 +468,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
              res1
         else let h2 = HST.get() in
              modifies_address_liveness_insensitive_unused_in h0 h2;
-             if not (a field_value ctxt input startPosition res1)
+             if not (a field_value ctxt error_handler_fn input input_length startPosition res1)
              then LPE.set_validator_error_pos LPE.validator_error_action_failed startPosition //action failed
              else begin
                let h15 = HST.get () in
@@ -525,7 +527,7 @@ let validate_dep_pair_with_action
         let field_value = r1 input startPosition in
         let h2 = HST.get() in
         modifies_address_liveness_insensitive_unused_in h1 h2;
-        let action_result = a field_value ctxt input startPosition res in
+        let action_result = a field_value ctxt error_handler_fn input input_length startPosition res in
         let h3 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h2 h3;
         if not action_result
@@ -699,7 +701,7 @@ let validate_filter_with_action
       if ok
         then let h15 = HST.get () in
              let _ = modifies_address_liveness_insensitive_unused_in h h15 in
-             if a field_value ctxt input pos0 res
+             if a field_value ctxt error_handler_fn input input_length pos0 res
              then res
              else LPE.set_validator_error_pos LPE.validator_error_action_failed res
       else LPE.set_validator_error_pos LPE.validator_error_constraint_failed res
@@ -725,7 +727,7 @@ let validate_with_dep_action
       let field_value = r input pos0 in
       let h15 = HST.get () in
       let _ = modifies_address_liveness_insensitive_unused_in h h15 in
-      if a field_value ctxt input pos0 res
+      if a field_value ctxt error_handler_fn input input_length pos0 res
       then res
       else LPE.set_validator_error_pos LPE.validator_error_action_failed res
     end
@@ -1590,7 +1592,7 @@ let action_return
       #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:Type) (x:a)
   : action p true_inv eloc_none false a
-  = fun _ _ _ _ -> x
+  = fun _ _ _ _ _ _ -> x
 
 noextract
 inline_for_extraction
@@ -1602,13 +1604,13 @@ let action_bind
       (#invg:slice_inv) (#lg:eloc) #bg
       (#b:Type) (g: (a -> action p invg lg bg b))
   : Tot (action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
-  = fun ctxt input pos posf ->
+  = fun ctxt error_handler_fn input input_length pos posf ->
     let h0 = HST.get () in
     [@(rename_let ("" ^ name))]
-    let x = f ctxt input pos posf in
+    let x = f ctxt error_handler_fn input input_length pos posf in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h0 h1;
-    g x ctxt input pos posf
+    g x ctxt error_handler_fn input input_length pos posf
 
 noextract
 inline_for_extraction
@@ -1619,12 +1621,12 @@ let action_seq
       (#invg:slice_inv) (#lg:eloc) #bg
       (#b:Type) (g: action p invg lg bg b)
   : Tot (action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
-  = fun ctxt input pos posf ->
+  = fun ctxt error_handler_fn input input_length pos posf ->
     let h0 = HST.get () in
-    let _ = f ctxt input pos posf in
+    let _ = f ctxt error_handler_fn input input_length pos posf in
     let h1 = HST.get () in
     modifies_address_liveness_insensitive_unused_in h0 h1;
-    g ctxt input pos posf
+    g ctxt error_handler_fn input input_length pos posf
 
 noextract
 inline_for_extraction
@@ -1636,24 +1638,24 @@ let action_ite
       (#invg:slice_inv) (#lg:eloc) #bg
       (else_: squash (not guard) -> action p invg lg bg a)
   : action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) a
-  = fun ctxt input pos posf ->
+  = fun ctxt error_handler_fn input input_length pos posf ->
       if guard 
-      then then_ () ctxt input pos posf
-      else else_ () ctxt input pos posf
+      then then_ () ctxt error_handler_fn input input_length pos posf
+      else else_ () ctxt error_handler_fn input input_length pos posf
 
 noextract
 inline_for_extraction
 let action_abort
       #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
   : action p true_inv eloc_none false bool
-  = fun _ _ _ _ -> false
+  = fun _ _ _ _ _ _ -> false
 
 noextract
 inline_for_extraction
 let action_field_pos_64
       #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
    : action p true_inv eloc_none false U64.t
-   = fun _ _ pos _ -> pos
+   = fun _ _ _ _ pos _ -> pos
 
 (* FIXME: this is now unsound in general (only valid for flat buffer)
 noextract
@@ -1672,7 +1674,7 @@ let action_deref
       #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:_) (x:B.pointer a)
    : action p (ptr_inv x) loc_none false a
-   = fun _ _ _ _ -> !*x
+   = fun _ _ _ _ _ _ -> !*x
 
 noextract
 inline_for_extraction
@@ -1680,7 +1682,7 @@ let action_assignment
       #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:_) (x:B.pointer a) (v:a)
    : action p (ptr_inv x) (ptr_loc x) false unit
-   = fun _ _ _ _ -> x *= v
+   = fun _ _ _ _ _ _ -> x *= v
 
 (* FIXME: This is now unsound.
 noextract
@@ -1707,6 +1709,101 @@ let external_action l =
 
 noextract
 inline_for_extraction
-let mk_external_action #_ #_ #_ #_ #_ #_ f = fun _ _ _ _ -> f ()
+let mk_external_action #_ #_ #_ #_ #_ #_ f = fun _ _ _ _ _ _ -> f ()
+
+let validate_with_action_as_action 
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#t:Type)
+      (#p:parser k t)
+      (#inv:slice_inv)
+      (#l:eloc)
+      (#allow_reading:bool)
+      (v:validate_with_action_t p inv l allow_reading)
+  : action p inv l true unit
+  = fun ctxt error_handler_fn input input_length pos posf ->
+      let h0 = HST.get () in
+      assume (U64.v pos == Seq.length (I.get_read input h0));
+      assume ( I.perm_footprint input == loc_none);
+      let _ = v ctxt error_handler_fn input input_length pos in
+      ()
+
+module CP = EverParse3d.CopyBuffer
+
+let stream_of_cp (x:CP.t) = dfst (CP.as_input_stream x)
+
+let loc_of (x:CP.t) : GTot loc =
+  I.footprint (stream_of_cp x)
+
+module I = EverParse3d.InputStream.All
+
+let liveness_preserved (x:CP.t) =
+  let sl = stream_of_cp x in
+  forall l h0 h1. {:pattern (modifies l h0 h1)}
+    I.live sl h0 /\
+    modifies l h0 h1 /\
+    address_liveness_insensitive_locs `loc_includes` l ==>
+    I.live sl h1
+
+let cp_live (x:CP.t) (__:loc) (h:HS.mem) : Type0 =
+  I.live (stream_of_cp x) h
+
+let cp_mem_inv (x:CP.t) (l:loc) : mem_inv =
+  assume (liveness_preserved x);
+  cp_live x l
+  
+let cp_slice_inv (x:CP.t) : slice_inv = cp_mem_inv x
+
+let probe_fn = src:U64.t -> len:U64.t -> dest:CP.t ->
+  Stack bool
+    (fun h0 ->
+      I.live (stream_of_cp dest) h0)
+    (fun h0 b h1 ->
+      let sl = stream_of_cp dest in
+      I.live sl h1 /\
+      (if b
+       then (
+        Seq.length (I.get_read sl h1) == 0 /\
+        modifies (I.footprint sl) h0 h1
+       )
+       else (
+        h0 == h1
+       )))
+
+let probe_then_validate 
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#t:Type)
+      (#p:parser k t)
+      (#inv:slice_inv)
+      (#l:eloc)
+      (#allow_reading:bool)
+      (v:validate_with_action_t p inv l allow_reading)
+      (src:U64.t)
+      (len:U64.t)
+      (dest:CP.t)
+      (probe:probe_fn)
+  : action p (conj_inv inv (cp_slice_inv dest))
+             (eloc_union l (loc_of dest)) 
+             true
+             unit
+  = fun ctxt error_handler_fn input input_length pos posf ->
+      let h0 = HST.get () in
+      let b = probe src len dest in
+      if b
+      then (
+        let h1 = HST.get () in
+        assume (loc_not_unused_in h1 `loc_includes` loc_not_unused_in h0);
+        assert (loc_not_unused_in h0 `loc_includes` app_loc ctxt (eloc_union l (loc_of dest)));
+        assert (inv (I.footprint input) h1);
+        let (| sl, sl_len |) = CP.as_input_stream dest in
+        assume (inv (I.footprint sl) h1);
+        assume (loc_of dest `loc_disjoint` app_loc ctxt l);
+        let _ = v ctxt error_handler_fn sl sl_len 0uL in
+        ()  
+      )
+      else ()
 
 #pop-options
