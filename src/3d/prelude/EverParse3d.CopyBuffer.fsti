@@ -17,6 +17,8 @@ let stream_of (x:t) = dfst (as_input_stream x)
 let loc_of (x:t) : GTot B.loc =
   I.footprint (stream_of x)
 
+let inv (x:t) (h:HS.mem) = I.live (stream_of x) h
+
 let liveness_preserved (x:t) =
   let sl = stream_of x in
   forall l h0 h1. {:pattern (modifies l h0 h1)}

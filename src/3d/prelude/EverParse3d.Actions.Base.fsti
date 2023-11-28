@@ -18,9 +18,7 @@ module Cast = FStar.Int.Cast
 open EverParse3d.Prelude
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
-
-// inline_for_extraction
-// let ___PUINT8 = LPL.puint8
+module CP = EverParse3d.CopyBuffer
 
 inline_for_extraction
 noextract
@@ -36,7 +34,7 @@ val eloc : Type0
 val eloc_union (l1 l2: eloc) : Tot eloc
 val eloc_none : eloc
 val eloc_includes (l1 l2: eloc) : Tot prop
-
+val eloc_disjoint (l1 l2: eloc) : Tot prop
 val inv_implies_refl (inv: slice_inv) : Tot (squash (inv `inv_implies` inv))
 
 val inv_implies_true (inv0:slice_inv) : Tot (squash (inv0 `inv_implies` true_inv))
@@ -742,6 +740,28 @@ val mk_external_action
   (#nz:_) (#wk:_) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
   (#l:eloc) ($f: external_action l)
   : action p true_inv l false unit
+
+val copy_buffer_inv (x:CP.t) : slice_inv
+val copy_buffer_loc (x:CP.t) : eloc
+module B = LowStar.Buffer
+val probe_then_validate
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#t:Type)
+      (#p:parser k t)
+      (#inv:slice_inv)
+      (#l:eloc)
+      (#allow_reading:bool)
+      (v:validate_with_action_t p inv l allow_reading)
+      (src:U64.t)
+      (len:U64.t)
+      (dest:CP.t { copy_buffer_loc dest `eloc_disjoint` l })
+      (probe:CP.probe_fn)
+  : action p (conj_inv inv (copy_buffer_inv dest))
+             (eloc_union l (copy_buffer_loc dest)) 
+             true
+             bool
 
 // Some actions are valid only for specific backends (buffer, extern, etc.)
 

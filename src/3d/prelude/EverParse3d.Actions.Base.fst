@@ -32,7 +32,7 @@ let eloc = (l: FStar.Ghost.erased B.loc { B.address_liveness_insensitive_locs `B
 let eloc_union (l1 l2:eloc) : Tot eloc = B.loc_union l1 l2
 let eloc_none : eloc = B.loc_none
 let eloc_includes (l1 l2:eloc) = B.loc_includes l1 l2 /\ True
-
+let eloc_disjoint (l1 l2:eloc) = B.loc_disjoint l1 l2 /\ True
 let inv_implies_refl inv = ()
 let inv_implies_true inv0 = ()
 let inv_implies_conj inv0 inv1 inv2 h01 h02 = ()
@@ -1712,9 +1712,13 @@ noextract
 inline_for_extraction
 let mk_external_action #_ #_ #_ #_ #_ #_ f = fun _ _ _ _ _ _ -> f ()
   
-let cp_slice_inv (x:CP.t) : slice_inv = 
-  CP.properties x;
-  fun h -> I.live (CP.stream_of x) h
+let copy_buffer_inv (x:CP.t)
+: slice_inv
+= CP.properties x;
+  CP.inv x
+let copy_buffer_loc (x:CP.t)
+: eloc
+= CP.loc_of x
 
 let probe_then_validate 
       (#nz:bool)
@@ -1728,12 +1732,12 @@ let probe_then_validate
       (v:validate_with_action_t p inv l allow_reading)
       (src:U64.t)
       (len:U64.t)
-      (dest:CP.t { CP.loc_of dest `loc_disjoint` l })
+      (dest:CP.t { copy_buffer_loc dest `eloc_disjoint` l })
       (probe:CP.probe_fn)
-  : action p (conj_inv inv (cp_slice_inv dest))
-             (eloc_union l (CP.loc_of dest)) 
+  : action p (conj_inv inv (copy_buffer_inv dest))
+             (eloc_union l (copy_buffer_loc dest)) 
              true
-             unit
+             bool
   = fun ctxt error_handler_fn input input_length pos posf ->
       CP.properties dest;
       let h0 = HST.get () in
@@ -1743,9 +1747,9 @@ let probe_then_validate
         let h1 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h0 h1;
         let (| sl, sl_len |) = CP.as_input_stream dest in
-        let _ = v ctxt error_handler_fn sl sl_len 0uL in
-        ()  
+        let result = v ctxt error_handler_fn sl sl_len 0uL in
+        not (LPE.is_error result)
       )
-      else ()
+      else false
 
 #pop-options

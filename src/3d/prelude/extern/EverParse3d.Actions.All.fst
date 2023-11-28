@@ -9,7 +9,7 @@ let ___PUINT8 = (b:LowStar.Buffer.buffer FStar.UInt8.t { ~ (LowStar.Buffer.g_is_
 let action_field_ptr u = false_elim ()
 
 let action_field_ptr_after _ n write_to =
-  fun ctxt input _ currentPosition ->
+  fun ctxt _err input _len _posBefore currentPosition ->
   let buf = EverParse3d.InputStream.Extern.peep input currentPosition n in
   let buf_not_null = not (LowStar.Buffer.is_null buf) in
   if buf_not_null
@@ -20,7 +20,7 @@ let action_field_ptr_after _ n write_to =
   buf_not_null
 
 let action_field_ptr_after_with_setter _ n write_to =
-  fun ctxt input _ currentPosition ->
+  fun ctxt _err input _len _posBefore currentPosition ->
   let buf = EverParse3d.InputStream.Extern.peep input currentPosition n in
   let buf_not_null = not (LowStar.Buffer.is_null buf) in
   if buf_not_null
