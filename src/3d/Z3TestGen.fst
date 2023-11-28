@@ -590,17 +590,27 @@ let mk_parse_dep_pair_with_refinement
 : string
 = let input = Printf.sprintf "%s-input" name in
   let tmp = Printf.sprintf "%s-tmp" name in
+  let condtmp = Printf.sprintf "%s-condtmp" name in
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
    (let (("^tmp^" ("^dfst^" "^input^")))
      (if (< (input-size (after-state "^tmp^")) 0)
        (after-state "^tmp^")
-       (if (and (let (("^cond_binder_name^" (return-value "^tmp^"))) "^cond^") (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 0)))
-         (let (("^dsnd_binder_name^" (return-value "^tmp^")))
-           ("^dsnd^" (if (< (branch-index (after-state "^tmp^")) 0) (after-state "^tmp^") (mk-state (input-size (after-state "^tmp^")) (choice-index (after-state "^tmp^")) (+ 1 (branch-index (after-state "^tmp^"))))))
-         )
-         (if (< (branch-index (after-state "^tmp^")) 0)
-           (mk-state -1 (choice-index (after-state "^tmp^")) (branch-index (after-state "^tmp^")))
-           (mk-state (if (= (branch-trace (branch-index (after-state "^tmp^"))) 1) -1 -2) (choice-index (after-state "^tmp^")) (+ 1 (branch-index (after-state "^tmp^"))))
+       (let (("^condtmp^" (let (("^cond_binder_name^" (return-value "^tmp^"))) "^cond^")))
+         (if (and "^condtmp^" (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 0)))
+           (let (("^dsnd_binder_name^" (return-value "^tmp^")))
+             ("^dsnd^"
+               (mk-state
+                 (input-size (after-state "^tmp^"))
+                 (choice-index (after-state "^tmp^"))
+                 (+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))
+               )
+             )
+           )
+           (mk-state
+             (if (and (not "^condtmp^") (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 1))) -1 -2)
+             (choice-index (after-state "^tmp^"))
+             (+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))
+           )
          )
        )
      )
@@ -668,7 +678,10 @@ let mk_parse_ifthenelse_cons
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
    (if (and "^cond^" (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int counter^")))
      ("^f_then^" (if (< (branch-index "^input^") 0) "^input^" (mk-state (input-size "^input^") (choice-index "^input^") (+ 1 (branch-index "^input^")))))
-     ("^f_else^" "^input^")
+     (if (not "^cond^")
+       ("^f_else^" "^input^")
+       (mk-state -2 (choice-index "^input^") (+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))) ; this is a Z3 encoding artifact, not a parsing failure
+     )
    )
  )
 "
@@ -696,9 +709,9 @@ let mk_parse_ifthenelse_nil
    (let (("^tmp^" (if (< (branch-index "^input^") 0) "^input^" (mk-state (input-size "^input^") (choice-index "^input^") (+ 1 (branch-index "^input^"))))))
      (if (and "^cond^" (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int counter^")))
        ("^f_then^" "^tmp^")
-       (if (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int (1 + counter)^"))
+       (if (and (not "^cond^") (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int (1 + counter)^")))
          ("^f_else^" "^tmp^")
-         (mk-state -2 (choice-index "^tmp^") (branch-index "^tmp^")) ; this is a Z3 encoding artifact, not a parsing failure
+         (mk-state -2 (choice-index "^tmp^") (+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))) ; this is a Z3 encoding artifact, not a parsing failure
        )
      )
    )
