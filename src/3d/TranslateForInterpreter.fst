@@ -185,7 +185,7 @@ let pair_parser n1 p1 p2 =
     mk_parser (pk_and_then p1.p_kind p2.p_kind)
               pt
               t_id
-              "none"
+              (ident_to_string n1)
               (Parse_pair n1 p1 p2)
 let dep_pair_typ t1 (t2:(A.ident & T.typ)) : T.typ =
     T.T_dep_pair t1 t2
@@ -202,7 +202,7 @@ let dep_pair_parser n1 p1 (p2:A.ident & T.parser) =
       (pk_and_then p1.p_kind (snd p2).p_kind) 
       t
       t_id
-      "none"
+      (ident_to_string n1)
       (Parse_dep_pair n1 p1 (Some (fst p2), snd p2))
 let dep_pair_with_refinement_parser n1 p1 (e:T.lam T.expr) (p2:A.ident & T.parser) =
   let open T in
@@ -214,7 +214,7 @@ let dep_pair_with_refinement_parser n1 p1 (e:T.lam T.expr) (p2:A.ident & T.parse
       (pk_and_then k1 (snd p2).p_kind)
       t
       t_id
-      "none"
+      (ident_to_string n1)
       (Parse_dep_pair_with_refinement n1 p1 e (Some (fst p2), snd p2))
 let dep_pair_with_refinement_and_action_parser n1 p1 (e:T.lam T.expr) (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
@@ -226,7 +226,7 @@ let dep_pair_with_refinement_and_action_parser n1 p1 (e:T.lam T.expr) (a:T.lam T
       (pk_and_then k1 (snd p2).p_kind)
       t
       t_id
-      "none"
+      (ident_to_string n1)
       (Parse_dep_pair_with_refinement_and_action n1 p1 e a (Some (fst p2), snd p2))
 let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
