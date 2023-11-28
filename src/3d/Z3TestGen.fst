@@ -280,6 +280,25 @@ let prelude : string =
   (get-bitfield-lsb nbBits value (- nbBits bitsTo) (- nbBits bitsFrom))
 )
 
+;; see EverParse3d.Actions.Base.validate_nlist_total_constant_size
+(define-fun parse-nlist-total-constant-size ((size Int) (eltSize Int) (x State)) State
+  (if (< (input-size x) 0)
+    x
+    (if (and (= 0 (mod size eltSize)) (>= (input-size x) size))
+      (mk-state
+        (- (input-size x) size)
+        (+ (choice-index x) size)
+        (branch-index x)
+      )
+      (mk-state
+        -1
+        (choice-index x)
+        (branch-index x)
+      )
+    )
+  )
+)
+
 (declare-const initial-input-size Int)
 (assert (>= initial-input-size 0))
 (define-fun initial-state () State (mk-state initial-input-size 0 0))
@@ -480,8 +499,11 @@ let parse_itype  : I.itype -> parser not_reading = function
   | I.AllZeros -> parse_all_zeros
   | i -> wrap_parser (parse_readable_itype i)
 
+let mk_app_without_paren' id args =
+  mk_args_aux None id args
+
 let mk_app_without_paren id args =
-  mk_args_aux None (ident_to_string id) args
+  mk_app_without_paren' (ident_to_string id) args
   
 let parse_readable_app
   (hd: A.ident)
@@ -496,11 +518,17 @@ let parse_readable_dtyp
   | I.DT_IType i -> parse_readable_itype i
   | I.DT_App _ hd args -> parse_readable_app hd args
 
+let parse_not_readable_app'
+  (hd: string)
+  (args: list I.expr)
+: Tot (parser not_reading)
+= maybe_toplevel_parser (fun _ _ _ _ -> { call = mk_app_without_paren' hd args })
+
 let parse_not_readable_app
   (hd: A.ident)
   (args: list I.expr)
 : Tot (parser not_reading)
-= maybe_toplevel_parser (fun _ _ _ _ -> { call = mk_app_without_paren hd args })
+= parse_not_readable_app' (ident_to_string hd) args
 
 let parse_dtyp
   (d: I.dtyp)
@@ -808,6 +836,24 @@ let parse_nlist
 : Tot (parser not_reading)
 = parse_exact size (parse_list body)
 
+let itype_byte_size (i: I.itype) : Tot (option pos) = match i with
+  | I.UInt8 | I.UInt8BE -> Some 1
+  | I.UInt16 | I.UInt16BE -> Some 2
+  | I.UInt32 | I.UInt32BE -> Some 4
+  | I.UInt64 | I.UInt64BE -> Some 8
+  | _ -> None
+
+let parse_nlist_total_constant_size
+  (i: I.itype {Some? (itype_byte_size i)}) // TODO: DT_App?
+  (size: I.expr)
+: Tot (parser not_reading)
+= parse_not_readable_app'
+    "parse-nlist-total-constant-size"
+    [
+      size;
+      T.mk_expr (T.Constant (A.Int A.UInt8 (Some?.v (itype_byte_size i))));
+    ]
+
 let mk_parse_string
   (name: string)
   (rec_call: string)
@@ -885,7 +931,8 @@ let rec parse_typ (t : I.typ) : Pure (parser not_reading)
   (requires (type_has_actions t == false))
   (ensures (fun _ -> True))
   (decreases (typ_depth t))
-= match t with
+= 
+  match t with
   | I.T_false _ -> parse_false
   | I.T_denoted _ d -> parse_denoted d
   | I.T_pair _ t1 t2 -> parse_pair (parse_typ t1) (parse_typ t2)
@@ -897,7 +944,15 @@ let rec parse_typ (t : I.typ) : Pure (parser not_reading)
   | I.T_at_most _ size body -> parse_at_most (fun _ -> mk_expr size) (parse_typ body)
   | I.T_exact _ size body -> parse_exact (fun _ -> mk_expr size) (parse_typ body)
   | I.T_string _ elt terminator -> parse_string (parse_readable_dtyp elt) (fun _ -> mk_expr terminator)
-  | I.T_nlist _ size body -> parse_nlist (fun _ -> mk_expr size) (parse_typ body)
+  | I.T_nlist _ size body ->
+    if match body with
+    | I.T_denoted _ (I.DT_IType i) -> Some? (itype_byte_size i)
+    | _ -> false
+    then
+      let I.T_denoted _ (I.DT_IType i) = body in
+      parse_nlist_total_constant_size i size
+    else
+      parse_nlist (fun _ -> mk_expr size) (parse_typ body)
 
 and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Pure (int -> parser not_reading)
   (requires (type_has_actions tthen == false /\ type_has_actions telse == false))
