@@ -37,17 +37,27 @@ typedef struct _ZeroByte
 } ZeroByte;
 
 
-typedef struct _UNUSED_BYTES (UINT32 len)
+typedef struct _UNUSED_BYTES32
 {
-    ZeroByte    Bytes[len];
-} UNUSED_BYTES;
+    ZeroByte    b1;
+    ZeroByte    b2;
+    ZeroByte    b3;
+    ZeroByte    b4;
+} UNUSED_BYTES32;
+
+typedef struct _UNUSED_BYTES24
+{
+    ZeroByte    b1;
+    ZeroByte    b2;
+    ZeroByte    b3;
+} UNUSED_BYTES24;
     
 
 typedef struct _DESTINATION_UNREACHABLE_MESSAGE
 {
      DESTINATION_UNREACHABLE_CODE        Code;
      UINT16BE                            Checksum;
-     UNUSED_BYTES(32)                    Unused;
+     UNUSED_BYTES32                      Unused;
      IP_HEADER_AND_DATAGRAM              OriginalMsg;
 } DESTINATION_UNREACHABLE_MESSAGE;
 
@@ -63,7 +73,7 @@ typedef struct _TIME_EXCEEDED_MESSAGE
 {
     TIME_EXCEEDED_CODE        Code;
     UINT16BE                  Checksum;
-    UNUSED_BYTES(32)          Unused;
+    UNUSED_BYTES32            Unused;
     IP_HEADER_AND_DATAGRAM    OriginalMsg;
 } TIME_EXCEEDED_MESSAGE;
 
@@ -76,7 +86,7 @@ typedef struct _PARAMETER_PROBLEM_MESSAGE
     };
     UINT16BE                  Checksum;
     UINT8                     Pointer;  //Valid only if code is 0, is there something to check?
-    UNUSED_BYTES(24)          Unused;
+    UNUSED_BYTES24            Unused;
     IP_HEADER_AND_DATAGRAM    OriginalMsg;
 } PARAMETER_PROBLEM_MESSAGE;
 
@@ -88,7 +98,7 @@ typedef struct _SOURCE_QUENCH_MESSAGE
         Code == 0
     };
     UINT16BE                  Checksum;
-    UNUSED_BYTES(32)          Unused;
+    UNUSED_BYTES32            Unused;
     IP_HEADER_AND_DATAGRAM    OriginalMsg;
 } SOURCE_QUENCH_MESSAGE;
 
