@@ -21,6 +21,7 @@ module U64 = FStar.UInt64
 module A = EverParse3d.Actions.All
 module P = EverParse3d.Prelude
 module T = FStar.Tactics
+module CP = EverParse3d.CopyBuffer
 open FStar.List.Tot
 
 
@@ -258,244 +259,6 @@ let get_leaf_reader (r:reader_binding)
   : leaf_reader (parser_of_binding r)
   = Some?.v (leaf_reader_of_binding r)
 
-(** Now we define the AST of 3D programs *)
-
-let action_binding
-      (inv:A.slice_inv)
-      (l:A.eloc)
-      (on_success:bool)
-      (a:Type)
-  : Type u#1 //in Universe 1 because it is polymorphic in t
-  = (#nz:bool) ->
-    (#wk:P.weak_kind) ->
-    (#k:P.parser_kind nz wk) ->
-    (#t:Type u#0) ->
-    (p:P.parser k t) ->
-    A.action p inv l on_success a
-
-[@@specialize]
-let mk_action_binding
-    (#l:A.eloc)
-    ($f: A.external_action l)
-  : action_binding A.true_inv l false unit
-  = fun (#nz:_) (#wk:_) (#k:P.parser_kind nz wk) (#t:Type u#0) (p:P.parser k t) ->
-      A.mk_external_action f
-
-(* The type of atomic actions.
-
-   `atomic_action l i b t`: is an atomic action that
-     - may modify locations `l`
-     - relies on a memory invariant `i`
-     - b, when set, indicates that the action can only run in a success handler
-     - t, is the result type of the action
-
-   In comparison with with the 3D front-end's internal representation
-   of actions, some notable differences
-
-     - The indexing structure tell us exactly the type to which these
-       will translate. It's also worth comparing these types to the
-       types of the action primitives in Actions.fsti---the indexing
-       structure is the same
-
-     - The type is already partially interpreted, e.g., rather than
-       relying on an explicit representation of names (e.g., in
-       Action_deref), this representation directly uses a pointer
-       value.
-*)
-noeq
-type atomic_action
-  : A.slice_inv -> A.eloc -> bool -> Type0 -> Type u#1 =
-  | Action_return:
-      #a:Type0 ->
-      x:a ->
-      atomic_action A.true_inv A.eloc_none false a
-
-  | Action_abort:
-      atomic_action A.true_inv A.eloc_none false bool
-
-  | Action_field_pos_64:
-      atomic_action A.true_inv A.eloc_none false U64.t
-
-  | Action_field_pos_32:
-      squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
-      atomic_action A.true_inv A.eloc_none false U32.t
-
-  | Action_field_ptr:
-      squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
-      atomic_action A.true_inv A.eloc_none true A.___PUINT8
-
-  | Action_field_ptr_after:
-      squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
-      (sz: FStar.UInt64.t) ->
-      write_to: A.bpointer A.___PUINT8 ->
-      atomic_action (A.ptr_inv write_to) (A.ptr_loc write_to) false bool
- 
-  | Action_field_ptr_after_with_setter:
-      squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
-      (sz: FStar.UInt64.t) ->
-      (#out_loc: A.eloc) ->
-      write_to: (A.___PUINT8 -> Tot (A.external_action out_loc)) ->
-      atomic_action A.true_inv out_loc false bool
-
- | Action_deref:
-      #a:Type0 ->
-      x:A.bpointer a ->
-      atomic_action (A.ptr_inv x) A.eloc_none false a
-
-  | Action_assignment:
-      #a:Type0 ->
-      x:A.bpointer a ->
-      rhs:a ->
-      atomic_action (A.ptr_inv x) (A.ptr_loc x) false unit
-
-  | Action_call:
-      #inv:A.slice_inv ->
-      #loc:A.eloc ->
-      #b:bool ->
-      #t:Type0 ->
-      action_binding inv loc b t ->
-      atomic_action inv loc b t
-
-(* Denotation of atomic_actions as A.action *)
-[@@specialize]
-let atomic_action_as_action
-   (#nz #wk:_)
-   (#pk:P.parser_kind nz wk) (#pt:Type)
-   (#i #l #b #t:_)
-   (p:P.parser pk pt)
-   (a:atomic_action i l b t)
-  : Tot (A.action p i l b t)
-  = match a with
-    | Action_return x ->
-      A.action_return x
-    | Action_abort ->
-      A.action_abort
-    | Action_field_pos_64 ->
-      A.action_field_pos_64 ()
-    | Action_field_pos_32 sq  ->
-      A.action_field_pos_32 sq
-    | Action_field_ptr sq ->
-      A.action_field_ptr sq
-    | Action_field_ptr_after sq sz write_to ->
-      A.action_field_ptr_after sq sz write_to
-    | Action_field_ptr_after_with_setter sq sz write_to ->
-      A.action_field_ptr_after_with_setter sq sz write_to
-    | Action_deref x ->
-      A.action_deref x
-    | Action_assignment x rhs ->
-      A.action_assignment x rhs
-    | Action_call c ->
-      c p
-
-(* A sub-language of monadic actions.
-
-   The indexing structure mirrors the indexes of the combinators in
-   Actions.fst
-*)
-noeq
-type action
-  : A.slice_inv -> A.eloc -> bool -> Type0 -> Type u#1 =
-  | Atomic_action:
-      #i:_ -> #l:_ -> #b:_ -> #t:_ ->
-      atomic_action i l b t ->
-      action i l b t
-
-  | Action_seq:
-      #i0:_ -> #l0:_ -> #b0:_ -> hd:atomic_action i0 l0 b0 unit ->
-      #i1:_ -> #l1:_ -> #b1:_ -> #t:_ -> tl:action i1 l1 b1 t ->
-      action (A.conj_inv i0 i1) (A.eloc_union l0 l1) (b0 || b1) t
-
-  | Action_ite :
-      hd:bool ->
-      #i0:_ -> #l0:_ -> #b0:_ -> #t:_ -> then_:(_:squash hd -> action i0 l0 b0 t) ->
-      #i1:_ -> #l1:_ -> #b1:_ -> else_:(_:squash (not hd) -> action i1 l1 b1 t) ->
-      action (A.conj_inv i0 i1) (A.eloc_union l0 l1) (b0 || b1) t
-
-  | Action_let:
-      #i0:_ -> #l0:_ -> #b0:_ -> #t0:_ -> head:atomic_action i0 l0 b0 t0 ->
-      #i1:_ -> #l1:_ -> #b1:_ -> #t1:_ -> k:(t0 -> action i1 l1 b1 t1) ->
-      action (A.conj_inv i0 i1) (A.eloc_union l0 l1) (b0 || b1) t1
-
-  | Action_act:
-      #i0:_ -> #l0:_ -> #b0:_ -> act:action i0 l0 b0 unit ->
-      action i0 l0 b0 bool
-
-let _inv_implies_refl (inv: A.slice_inv) : Lemma
-  (inv `A.inv_implies` inv)
-  [SMTPat (inv `A.inv_implies` inv)]
-= A.inv_implies_refl inv
-
-let _inv_implies_true (inv0: A.slice_inv) : Lemma
-  (inv0 `A.inv_implies` A.true_inv)
-  [SMTPat (inv0 `A.inv_implies` A.true_inv)]
-= A.inv_implies_true inv0
-
-let _inv_implies_conj (inv0 inv1 inv2: A.slice_inv) : Lemma
-  (requires (
-    inv0 `A.inv_implies` inv1 /\
-    inv0 `A.inv_implies` inv2
-  ))
-  (ensures (
-    inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2)
-  ))
-  [SMTPat (inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2))]
-= A.inv_implies_conj inv0 inv1 inv2 () ()
-
-let _eloc_includes_none (l1:A.eloc) : Lemma
-  (l1 `A.eloc_includes` A.eloc_none)
-  [SMTPat (l1 `A.eloc_includes` A.eloc_none)]
-= A.eloc_includes_none l1
-
-let _eloc_includes_union (l0: A.eloc) (l1 l2: A.eloc) : Lemma
-  (requires (
-    l0 `A.eloc_includes` l1 /\
-    l0 `A.eloc_includes` l2
-  ))
-  (ensures (
-    l0 `A.eloc_includes` (l1 `A.eloc_union` l2)
-  ))
-  [SMTPat (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))]
-= A.eloc_includes_union l0 l1 l2 () ()
-
-let _eloc_includes_refl (l: A.eloc) : Lemma
-  (l `A.eloc_includes` l)
-  [SMTPat (l `A.eloc_includes` l)]
-= A.eloc_includes_refl l
-
-(* Denotation of action as A.action *)
-[@@specialize]
-let rec action_as_action
-   (#nz #wk:_)
-   (#pk:P.parser_kind nz wk) (#pt:_)
-   (#i #l #b #t:_)
-   (p:P.parser pk pt)
-   (a:action i l b t)
-  : Tot (A.action p i l b t)
-    (decreases a)
-  = match a with
-    | Atomic_action a ->
-      atomic_action_as_action p a
-
-    | Action_seq hd tl ->
-      let a1 = atomic_action_as_action p hd in
-      let tl = action_as_action p tl in
-      A.action_seq a1 tl
-
-    | Action_ite hd t e ->
-      let then_ (x:squash hd) = action_as_action p (t x) in
-      let else_ (x:squash (not hd)) = action_as_action p (e x) in
-      A.action_ite hd then_ else_
-
-    | Action_let hd k ->
-      let head = atomic_action_as_action p hd in
-      let k x = action_as_action p (k x) in
-      A.action_bind "hd" head k
-
-    | Action_act #i0 #l0 #b0 a ->
-      A.action_weaken (A.action_seq (action_as_action p a) (A.action_return true)) #i0 #l0
-
-(* Some AST nodes contain source comments that we propagate to the output *)
-let comments = string
 
 (* The main type of 3D types. Some points to note:
 
@@ -619,6 +382,254 @@ let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
     | DT_App _ _ _ _ b _ -> 
       let (| _, lr |) = get_leaf_reader b in
       lr
+
+(** Now we define the AST of 3D programs *)
+
+let action_binding
+      (inv:A.slice_inv)
+      (l:A.eloc)
+      (on_success:bool)
+      (a:Type)
+  : Type u#0
+  = A.action inv l on_success a
+
+[@@specialize]
+let mk_action_binding
+    (#l:A.eloc)
+    ($f: A.external_action l)
+  : action_binding A.true_inv l false unit
+  = A.mk_external_action f
+
+(* The type of atomic actions.
+
+   `atomic_action l i b t`: is an atomic action that
+     - may modify locations `l`
+     - relies on a memory invariant `i`
+     - b, when set, indicates that the action can only run in a success handler
+     - t, is the result type of the action
+
+   In comparison with with the 3D front-end's internal representation
+   of actions, some notable differences
+
+     - The indexing structure tell us exactly the type to which these
+       will translate. It's also worth comparing these types to the
+       types of the action primitives in Actions.fsti---the indexing
+       structure is the same
+
+     - The type is already partially interpreted, e.g., rather than
+       relying on an explicit representation of names (e.g., in
+       Action_deref), this representation directly uses a pointer
+       value.
+*)
+noeq
+type atomic_action
+  : A.slice_inv -> A.eloc -> bool -> Type0 -> Type u#1 =
+  | Action_return:
+      #a:Type0 ->
+      x:a ->
+      atomic_action A.true_inv A.eloc_none false a
+
+  | Action_abort:
+      atomic_action A.true_inv A.eloc_none false bool
+
+  | Action_field_pos_64:
+      atomic_action A.true_inv A.eloc_none false U64.t
+
+  | Action_field_pos_32:
+      squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
+      atomic_action A.true_inv A.eloc_none false U32.t
+
+  | Action_field_ptr:
+      squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
+      atomic_action A.true_inv A.eloc_none true A.___PUINT8
+
+  | Action_field_ptr_after:
+      squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
+      (sz: FStar.UInt64.t) ->
+      write_to: A.bpointer A.___PUINT8 ->
+      atomic_action (A.ptr_inv write_to) (A.ptr_loc write_to) false bool
+ 
+  | Action_field_ptr_after_with_setter:
+      squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
+      (sz: FStar.UInt64.t) ->
+      (#out_loc: A.eloc) ->
+      write_to: (A.___PUINT8 -> Tot (A.external_action out_loc)) ->
+      atomic_action A.true_inv out_loc false bool
+
+  | Action_deref:
+      #a:Type0 ->
+      x:A.bpointer a ->
+      atomic_action (A.ptr_inv x) A.eloc_none false a
+
+  | Action_assignment:
+      #a:Type0 ->
+      x:A.bpointer a ->
+      rhs:a ->
+      atomic_action (A.ptr_inv x) (A.ptr_loc x) false unit
+
+  | Action_call:
+      #inv:A.slice_inv ->
+      #loc:A.eloc ->
+      #b:bool ->
+      #t:Type0 ->
+      action_binding inv loc b t ->
+      atomic_action inv loc b t
+  
+  | Action_probe_then_validate:
+      #nz:bool -> 
+      #wk:_ ->
+      #k:P.parser_kind nz wk ->
+      #has_reader:bool ->
+      #inv:A.slice_inv -> 
+      #l:A.eloc ->
+      dt:dtyp k has_reader inv l ->
+      src:U64.t ->
+      len:U64.t ->
+      dest:CP.t { A.copy_buffer_loc dest `A.eloc_disjoint` l } ->
+      probe:CP.probe_fn ->
+      atomic_action (A.conj_inv inv (A.copy_buffer_inv dest))
+                    (A.eloc_union l (A.copy_buffer_loc dest))
+                    true bool
+
+
+
+(* Denotation of atomic_actions as A.action *)
+[@@specialize]
+let atomic_action_as_action
+   (#i #l #b #t:_)
+   (a:atomic_action i l b t)
+  : Tot (A.action i l b t)
+  = match a with
+    | Action_return x ->
+      A.action_return x
+    | Action_abort ->
+      A.action_abort
+    | Action_field_pos_64 ->
+      A.action_field_pos_64
+    | Action_field_pos_32 sq  ->
+      A.action_field_pos_32 sq
+    | Action_field_ptr sq ->
+      A.action_field_ptr sq
+    | Action_field_ptr_after sq sz write_to ->
+      A.action_field_ptr_after sq sz write_to
+    | Action_field_ptr_after_with_setter sq sz write_to ->
+      A.action_field_ptr_after_with_setter sq sz write_to
+    | Action_deref x ->
+      A.action_deref x
+    | Action_assignment x rhs ->
+      A.action_assignment x rhs
+    | Action_call c ->
+      c
+    | Action_probe_then_validate dt src len dest probe ->
+      let v = dtyp_as_validator dt in
+      A.probe_then_validate v src len dest probe
+
+(* A sub-language of monadic actions.
+
+   The indexing structure mirrors the indexes of the combinators in
+   Actions.fst
+*)
+noeq
+type action
+  : A.slice_inv -> A.eloc -> bool -> Type0 -> Type u#1 =
+  | Atomic_action:
+      #i:_ -> #l:_ -> #b:_ -> #t:_ ->
+      atomic_action i l b t ->
+      action i l b t
+
+  | Action_seq:
+      #i0:_ -> #l0:_ -> #b0:_ -> hd:atomic_action i0 l0 b0 unit ->
+      #i1:_ -> #l1:_ -> #b1:_ -> #t:_ -> tl:action i1 l1 b1 t ->
+      action (A.conj_inv i0 i1) (A.eloc_union l0 l1) (b0 || b1) t
+
+  | Action_ite :
+      hd:bool ->
+      #i0:_ -> #l0:_ -> #b0:_ -> #t:_ -> then_:(_:squash hd -> action i0 l0 b0 t) ->
+      #i1:_ -> #l1:_ -> #b1:_ -> else_:(_:squash (not hd) -> action i1 l1 b1 t) ->
+      action (A.conj_inv i0 i1) (A.eloc_union l0 l1) (b0 || b1) t
+
+  | Action_let:
+      #i0:_ -> #l0:_ -> #b0:_ -> #t0:_ -> head:atomic_action i0 l0 b0 t0 ->
+      #i1:_ -> #l1:_ -> #b1:_ -> #t1:_ -> k:(t0 -> action i1 l1 b1 t1) ->
+      action (A.conj_inv i0 i1) (A.eloc_union l0 l1) (b0 || b1) t1
+
+  | Action_act:
+      #i0:_ -> #l0:_ -> #b0:_ -> act:action i0 l0 b0 unit ->
+      action i0 l0 b0 bool
+
+let _inv_implies_refl (inv: A.slice_inv) : Lemma
+  (inv `A.inv_implies` inv)
+  [SMTPat (inv `A.inv_implies` inv)]
+= A.inv_implies_refl inv
+
+let _inv_implies_true (inv0: A.slice_inv) : Lemma
+  (inv0 `A.inv_implies` A.true_inv)
+  [SMTPat (inv0 `A.inv_implies` A.true_inv)]
+= A.inv_implies_true inv0
+
+let _inv_implies_conj (inv0 inv1 inv2: A.slice_inv) : Lemma
+  (requires (
+    inv0 `A.inv_implies` inv1 /\
+    inv0 `A.inv_implies` inv2
+  ))
+  (ensures (
+    inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2)
+  ))
+  [SMTPat (inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2))]
+= A.inv_implies_conj inv0 inv1 inv2 () ()
+
+let _eloc_includes_none (l1:A.eloc) : Lemma
+  (l1 `A.eloc_includes` A.eloc_none)
+  [SMTPat (l1 `A.eloc_includes` A.eloc_none)]
+= A.eloc_includes_none l1
+
+let _eloc_includes_union (l0: A.eloc) (l1 l2: A.eloc) : Lemma
+  (requires (
+    l0 `A.eloc_includes` l1 /\
+    l0 `A.eloc_includes` l2
+  ))
+  (ensures (
+    l0 `A.eloc_includes` (l1 `A.eloc_union` l2)
+  ))
+  [SMTPat (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))]
+= A.eloc_includes_union l0 l1 l2 () ()
+
+let _eloc_includes_refl (l: A.eloc) : Lemma
+  (l `A.eloc_includes` l)
+  [SMTPat (l `A.eloc_includes` l)]
+= A.eloc_includes_refl l
+
+(* Denotation of action as A.action *)
+[@@specialize]
+let rec action_as_action
+   (#i #l #b #t:_)
+   (a:action i l b t)
+  : Tot (A.action i l b t)
+    (decreases a)
+  = match a with
+    | Atomic_action a ->
+      atomic_action_as_action a
+
+    | Action_seq hd tl ->
+      let a1 = atomic_action_as_action hd in
+      let tl = action_as_action tl in
+      A.action_seq a1 tl
+
+    | Action_ite hd t e ->
+      let then_ (x:squash hd) = action_as_action (t x) in
+      let else_ (x:squash (not hd)) = action_as_action (e x) in
+      A.action_ite hd then_ else_
+
+    | Action_let hd k ->
+      let head = atomic_action_as_action hd in
+      let k x = action_as_action (k x) in
+      A.action_bind "hd" head k
+
+    | Action_act #i0 #l0 #b0 a ->
+      A.action_weaken (A.action_seq (action_as_action a) (A.action_return true)) #i0 #l0
+
+(* Some AST nodes contain source comments that we propagate to the output *)
+let comments = string
 
 [@@ no_auto_projectors]
 noeq
@@ -1045,7 +1056,7 @@ let rec as_validator
           (dtyp_as_validator t)
           (dtyp_as_leaf_reader t)
           f "reading field_value" "checking constraint"
-          (fun x -> action_as_action (as_parser (T_refine fn t f)) (a x)))
+          (fun x -> action_as_action (a x)))
 
     | T_dep_pair_with_refinement fn base refinement k ->
       assert_norm (as_type (T_dep_pair_with_refinement fn base refinement k) ==
@@ -1071,7 +1082,7 @@ let rec as_validator
           A.validate_dep_pair_with_action 
             (dtyp_as_validator base)
             (dtyp_as_leaf_reader base)
-            (fun x -> action_as_action (dtyp_as_parser base) (act x))
+            (fun x -> action_as_action (act x))
             (fun x -> as_validator typename (t x))))
 
     | T_dep_pair_with_refinement_and_action fn base refinement k act ->
@@ -1085,7 +1096,7 @@ let rec as_validator
               (dtyp_as_validator base))
             (dtyp_as_leaf_reader base)
             refinement
-            (fun x -> action_as_action (dtyp_as_parser base) (act x))
+            (fun x -> action_as_action (act x))
             (fun x -> as_validator typename (k x)))
 
     | T_if_else b t0 t1 ->
@@ -1120,7 +1131,7 @@ let rec as_validator
       A.validate_with_error_handler typename fn 
         (A.validate_with_success_action fn
           (as_validator typename t)
-          (action_as_action (as_parser t) a))
+          (action_as_action a))
 
     | T_with_dep_action fn i a ->
       assert_norm (as_type (T_with_dep_action fn i a) == dtyp_as_type i);
@@ -1130,7 +1141,7 @@ let rec as_validator
           A.validate_with_dep_action fn
             (dtyp_as_validator i)
             (dtyp_as_leaf_reader i)
-            (fun x -> action_as_action (dtyp_as_parser i) (a x))))
+            (fun x -> action_as_action (a x))))
 
     | T_with_comment fn t c ->
       assert_norm (as_type (T_with_comment fn t c) == as_type t);

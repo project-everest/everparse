@@ -11,19 +11,19 @@ module P = EverParse3d.Prelude
 let ___PUINT8 = IB.puint8
 
 let action_field_ptr
-      #nz #wk (#k:P.parser_kind nz wk) (#t:Type) (#p:P.parser k t) (u:unit)
+     (u:unit)
    = fun ctxt _err input _len startPosition _ ->
        let open LowParse.Slice in
        IB.offset input.EverParse3d.InputStream.Buffer.Aux.buf (LowParse.Low.ErrorCode.uint64_to_uint32 startPosition) input.EverParse3d.InputStream.Buffer.Aux.perm_of
 
 let action_field_ptr_after
-      #nz #wk (#k:P.parser_kind nz wk) (#t:Type) (#p:P.parser k t) n
+      n
    = false_elim ()
 
 let action_field_ptr_after_with_setter _ = false_elim ()
 
 let action_field_pos_32
-      #nz #wk (#k:P.parser_kind nz wk) (#t:Type) (#p:P.parser k t) (u:unit)
+     (u:unit)
    = fun ctxt _err input _len startPosition _ ->
        [@inline_let]
        let res = LowParse.Low.ErrorCode.uint64_to_uint32 startPosition in

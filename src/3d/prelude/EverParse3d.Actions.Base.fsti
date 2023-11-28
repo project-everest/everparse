@@ -56,11 +56,6 @@ val ptr_inv (#a: _) (x: bpointer a) : Tot slice_inv
 
 inline_for_extraction noextract
 val action
-      (#nz:bool)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#t:Type)
-      (p:parser k t)
       (inv:slice_inv)
       (l:eloc)
       (on_success:bool)
@@ -95,17 +90,12 @@ val validate_eta
 inline_for_extraction noextract
 val act_with_comment
       (s: string)
-      (#nz:bool)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
       (#[@@@erasable] inv:slice_inv)
       (#[@@@erasable] l:eloc)
       (#b:_)
       (res:Type)
-      (a: action p inv l b res)
-: Tot (action p inv l b res)
+      (a: action inv l b res)
+: Tot (action inv l b res)
 
 inline_for_extraction noextract
 val leaf_reader
@@ -130,7 +120,7 @@ val validate_with_success_action
       (#[@@@erasable] inv2:slice_inv)
       (#[@@@erasable] l2:eloc)
       (#b:bool)
-      (a:action p1 inv2 l2 b bool)
+      (a:action inv2 l2 b bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
 
 
@@ -213,7 +203,7 @@ val validate_dep_pair_with_refinement_and_action
       (#[@@@erasable] inv1':slice_inv)
       (#[@@@erasable] l1':eloc)
       (#b:_)
-      (a:t1 -> action p1 inv1' l1' b bool)
+      (a:t1 -> action inv1' l1' b bool)
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
@@ -241,7 +231,7 @@ val validate_dep_pair_with_action
       (#[@@@erasable] inv1':slice_inv)
       (#[@@@erasable] l1':eloc)
       (#b:_)
-      (a:t1 -> action p1 inv1' l1' b bool)
+      (a:t1 -> action inv1' l1' b bool)
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
@@ -317,7 +307,7 @@ val validate_filter_with_action
        (#b:bool)
        (#[@@@erasable] inva:slice_inv)
        (#[@@@erasable] la:eloc)
-       (a: t -> action (p `parse_filter` f) inva la b bool)
+       (a: t -> action inva la b bool)
   : validate_with_action_t #nz (p `parse_filter` f) (conj_inv inv inva) (eloc_union l la) false
 
 inline_for_extraction noextract
@@ -334,7 +324,7 @@ val validate_with_dep_action
        (#b:bool)
        (#[@@@erasable] inva:slice_inv)
        (#[@@@erasable] la:eloc)
-       (a: t -> action p inva la b bool)
+       (a: t -> action inva la b bool)
   : validate_with_action_t #nz p (conj_inv inv inva) (eloc_union l la) false
 
 inline_for_extraction noextract
@@ -598,137 +588,91 @@ val validate_all_zeros
 noextract
 inline_for_extraction
 val action_return
-      (#nz:_)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
       (#a:Type)
       (x:a)
-  : action p true_inv eloc_none false a
+  : action true_inv eloc_none false a
 
 noextract
 inline_for_extraction
 val action_bind
       (name: string)
-      (#nz:_)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
       (#[@@@erasable] invf:slice_inv)
       (#[@@@erasable] lf:eloc)
       (#bf:_)
       (#a:Type)
-      (f: action p invf lf bf a)
+      (f: action invf lf bf a)
       (#[@@@erasable] invg:slice_inv)
       (#[@@@erasable] lg:eloc)
       (#bg:_)
       (#b:Type)
-      (g: (a -> action p invg lg bg b))
-  : Tot (action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
+      (g: (a -> action invg lg bg b))
+  : Tot (action (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
 
 noextract
 inline_for_extraction
 val action_seq
-      (#nz:_)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
       (#[@@@erasable] invf:slice_inv)
       (#[@@@erasable] lf:eloc)
       (#bf:_)
       (#a:Type)
-      (f: action p invf lf bf a)
+      (f: action invf lf bf a)
       (#[@@@erasable] invg:slice_inv)
       (#[@@@erasable] lg:eloc)
       (#bg:_)
       (#b:Type)
-      (g: action p invg lg bg b)
-  : Tot (action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
+      (g: action invg lg bg b)
+  : Tot (action (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
 
 noextract
 inline_for_extraction
 val action_ite
-      (#nz:_)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
       (#[@@@erasable] invf:slice_inv)
       (#[@@@erasable] lf:eloc)
       (guard:bool)
       (#bf:_)
       (#a:Type)
-      (then_: squash guard -> action p invf lf bf a)
+      (then_: squash guard -> action invf lf bf a)
       (#[@@@erasable] invg:slice_inv)
       (#[@@@erasable] lg:eloc)
       (#bg:_)
-      (else_: squash (not guard) -> action p invg lg bg a)
-  : action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) a
+      (else_: squash (not guard) -> action invg lg bg a)
+  : action (conj_inv invf invg) (eloc_union lf lg) (bf || bg) a
 
 noextract
 inline_for_extraction
-val action_abort
-      (#nz:_)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
-  : action p true_inv eloc_none false bool
+val action_abort      
+  : action true_inv eloc_none false bool
 
 noextract
 inline_for_extraction
 val action_field_pos_64
-      (#nz:_)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
-      (u:unit)
-   : action p true_inv eloc_none false U64.t
+   : action true_inv eloc_none false U64.t
 
 noextract
 inline_for_extraction
 val action_deref
-      (#nz:_)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
       (#a:_)
       (x:bpointer a)
-   : action p (ptr_inv x) eloc_none false a
+   : action (ptr_inv x) eloc_none false a
 
 noextract
 inline_for_extraction
 val action_assignment
-      (#nz:_)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
       (#a:_)
       (x:bpointer a)
       (v:a)
-   : action p (ptr_inv x) (ptr_loc x) false unit
+   : action (ptr_inv x) (ptr_loc x) false unit
 
 noextract
 inline_for_extraction
 val action_weaken
-      (#nz:_)
-      (#wk: _)
-      (#k:parser_kind nz wk)
-      (#[@@@erasable] t:Type)
-      (#[@@@erasable] p:parser k t)
       (#[@@@erasable] inv:slice_inv)
       (#[@@@erasable] l:eloc)
       (#b:_)
       (#a:_)
-      (act:action p inv l b a)
+      (act:action inv l b a)
       (#[@@@erasable] inv':slice_inv{inv' `inv_implies` inv}) (#l':eloc{l' `eloc_includes` l})
-   : action p inv' l' b a
+   : action inv' l' b a
 
 inline_for_extraction
 noextract
@@ -737,9 +681,8 @@ val external_action (l: eloc) : Tot Type0
 noextract
 inline_for_extraction
 val mk_external_action
-  (#nz:_) (#wk:_) (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
   (#l:eloc) ($f: external_action l)
-  : action p true_inv l false unit
+  : action true_inv l false unit
 
 val copy_buffer_inv (x:CP.t) : slice_inv
 val copy_buffer_loc (x:CP.t) : eloc
@@ -758,10 +701,10 @@ val probe_then_validate
       (len:U64.t)
       (dest:CP.t { copy_buffer_loc dest `eloc_disjoint` l })
       (probe:CP.probe_fn)
-  : action p (conj_inv inv (copy_buffer_inv dest))
-             (eloc_union l (copy_buffer_loc dest)) 
-             true
-             bool
+  : action (conj_inv inv (copy_buffer_inv dest))
+           (eloc_union l (copy_buffer_loc dest)) 
+           true
+           bool
 
 // Some actions are valid only for specific backends (buffer, extern, etc.)
 

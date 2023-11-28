@@ -79,7 +79,7 @@ let error_handler =
         true_inv h1)
 
 let action
-  p inv l on_success a
+  inv l on_success a
 =
     (# [tcresolve ()] I.extra_t #input_buffer_t) ->
     ctxt: app_ctxt ->
@@ -245,7 +245,7 @@ inline_for_extraction
 noextract
 let validate_with_success_action' (name: string) #nz #wk (#k1:parser_kind nz wk) #t1 (#p1:parser k1 t1) (#inv1:_) (#l1:eloc)
                          (v1:validate_with_action_t p1 inv1 l1 false)
-                         (#inv2:_) (#l2:eloc) #b (a:action p1 inv2 l2 b bool)
+                         (#inv2:_) (#l2:eloc) #b (a:action inv2 l2 b bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (l1 `eloc_union` l2) false
   = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
@@ -386,7 +386,7 @@ let validate_dep_pair_with_refinement_and_action'
       (#nz1: _) (#k1:parser_kind nz1 _) (#t1: _) (#p1:parser k1 t1)
       (#inv1: _) (#l1: _) (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
-      (#inv1': _) (#l1': _) (#b: _) (a:t1 -> action p1 inv1' l1' b bool)
+      (#inv1': _) (#l1': _) (#b: _) (a:t1 -> action inv1' l1' b bool)
       (#nz2: _) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f) -> parser k2 (t2 x))
       (#inv2: _) (#l2: _) (#ar2: _) (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t
@@ -437,7 +437,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
       (#nz1: _) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1: _) (#p1:parser k1 t1) (r1: leaf_reader p1)
       (inv1: _) (l1: _)
       (f: t1 -> bool)
-      (#inv1': _) (#l1': _) (#b: _) (a:t1 -> action p1 inv1' l1' b bool)
+      (#inv1': _) (#l1': _) (#b: _) (a:t1 -> action inv1' l1' b bool)
       (#nz2: _) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       (#inv2: _) (#l2: _) (#ar2: _) (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Pure (validate_with_action_t
@@ -485,7 +485,7 @@ let validate_dep_pair_with_refinement_and_action
       #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
-      #inv1' #l1' #b (a:t1 -> action p1 inv1' l1' b bool)
+      #inv1' #l1' #b (a:t1 -> action inv1' l1' b bool)
       #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t ((p1 `parse_filter` f) `parse_dep_pair` p2)
@@ -506,7 +506,7 @@ inline_for_extraction noextract
 let validate_dep_pair_with_action
       #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #l1 (v1:validate_with_action_t p1 inv1 l1 true) (r1: leaf_reader p1)
-      #inv1' #l1' #b (a:t1 -> action p1 inv1' l1' b bool)
+      #inv1' #l1' #b (a:t1 -> action inv1' l1' b bool)
       #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
       #inv2 #l2 #ar2 (v2:(x:t1 -> validate_with_action_t (p2 x) inv2 l2 ar2))
   : Tot (validate_with_action_t
@@ -680,7 +680,7 @@ let validate_filter_with_action
                     (name: string) #nz (#k:parser_kind nz _) (#t:_) (#p:parser k t)
                     #inv #l (v:validate_with_action_t p inv l true)
                     (r:leaf_reader p) (f:t -> bool) (cr:string) (cf:string)
-                    (#b:bool) #inva (#la:eloc) (a: t -> action #nz #WeakKindStrongPrefix #(filter_kind k) #_ (p `LPC.parse_filter` f) inva la b bool)
+                    (#b:bool) #inva (#la:eloc) (a: t -> action inva la b bool)
   : Tot (validate_with_action_t #nz #WeakKindStrongPrefix (p `LPC.parse_filter` f) (conj_inv inv inva) (eloc_union l la) false)
   = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
@@ -713,7 +713,7 @@ let validate_with_dep_action
                     (name: string) #nz (#k:parser_kind nz _) (#t:_) (#p:parser k t)
                     #inv #l (v:validate_with_action_t p inv l true)
                     (r:leaf_reader p)
-                    (#b:bool) #inva (#la:eloc) (a: t -> action p inva la b bool)
+                    (#b:bool) #inva (#la:eloc) (a: t -> action inva la b bool)
   : Tot (validate_with_action_t #nz p (conj_inv inv inva) (eloc_union l la) false)
   = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
@@ -1590,21 +1590,19 @@ let validate_all_zeros =
 noextract
 inline_for_extraction
 let action_return
-      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:Type) (x:a)
-  : action p true_inv eloc_none false a
+  : action true_inv eloc_none false a
   = fun _ _ _ _ _ _ -> x
 
 noextract
 inline_for_extraction
 let action_bind
       (name: string)
-      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#invf:slice_inv) (#lf:eloc)
-      #bf (#a:Type) (f: action p invf lf bf a)
+      #bf (#a:Type) (f: action invf lf bf a)
       (#invg:slice_inv) (#lg:eloc) #bg
-      (#b:Type) (g: (a -> action p invg lg bg b))
-  : Tot (action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
+      (#b:Type) (g: (a -> action invg lg bg b))
+  : Tot (action (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
   = fun ctxt error_handler_fn input input_length pos posf ->
     let h0 = HST.get () in
     [@(rename_let ("" ^ name))]
@@ -1616,12 +1614,11 @@ let action_bind
 noextract
 inline_for_extraction
 let action_seq
-      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#invf:slice_inv) (#lf:eloc)
-      #bf (#a:Type) (f: action p invf lf bf a)
+      #bf (#a:Type) (f: action invf lf bf a)
       (#invg:slice_inv) (#lg:eloc) #bg
-      (#b:Type) (g: action p invg lg bg b)
-  : Tot (action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
+      (#b:Type) (g: action invg lg bg b)
+  : Tot (action (conj_inv invf invg) (eloc_union lf lg) (bf || bg) b)
   = fun ctxt error_handler_fn input input_length pos posf ->
     let h0 = HST.get () in
     let _ = f ctxt error_handler_fn input input_length pos posf in
@@ -1632,13 +1629,12 @@ let action_seq
 noextract
 inline_for_extraction
 let action_ite
-      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#invf:slice_inv) (#lf:eloc)
       (guard:bool)
-      #bf (#a:Type) (then_: squash guard -> action p invf lf bf a)
+      #bf (#a:Type) (then_: squash guard -> action invf lf bf a)
       (#invg:slice_inv) (#lg:eloc) #bg
-      (else_: squash (not guard) -> action p invg lg bg a)
-  : action p (conj_inv invf invg) (eloc_union lf lg) (bf || bg) a
+      (else_: squash (not guard) -> action invg lg bg a)
+  : action (conj_inv invf invg) (eloc_union lf lg) (bf || bg) a
   = fun ctxt error_handler_fn input input_length pos posf ->
       if guard 
       then then_ () ctxt error_handler_fn input input_length pos posf
@@ -1647,15 +1643,13 @@ let action_ite
 noextract
 inline_for_extraction
 let action_abort
-      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
-  : action p true_inv eloc_none false bool
+  : action true_inv eloc_none false bool
   = fun _ _ _ _ _ _ -> false
 
 noextract
 inline_for_extraction
 let action_field_pos_64
-      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t) (u:unit)
-   : action p true_inv eloc_none false U64.t
+   : action true_inv eloc_none false U64.t
    = fun _ _ _ _ pos _ -> pos
 
 (* FIXME: this is now unsound in general (only valid for flat buffer)
@@ -1672,17 +1666,15 @@ let action_field_ptr
 noextract
 inline_for_extraction
 let action_deref
-      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:_) (x:B.pointer a)
-   : action p (ptr_inv x) loc_none false a
+   : action (ptr_inv x) loc_none false a
    = fun _ _ _ _ _ _ -> !*x
 
 noextract
 inline_for_extraction
 let action_assignment
-      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
       (#a:_) (x:B.pointer a) (v:a)
-   : action p (ptr_inv x) (ptr_loc x) false unit
+   : action (ptr_inv x) (ptr_loc x) false unit
    = fun _ _ _ _ _ _ -> x *= v
 
 (* FIXME: This is now unsound.
@@ -1699,10 +1691,9 @@ let action_read_value
 noextract
 inline_for_extraction
 let action_weaken
-      #nz #wk (#k:parser_kind nz wk) (#t:Type) (#p:parser k t)
-      (#inv:slice_inv) (#l:eloc) (#b:_) (#a:_) (act:action p inv l b a)
+      (#inv:slice_inv) (#l:eloc) (#b:_) (#a:_) (act:action inv l b a)
       (#inv':slice_inv{inv' `inv_implies` inv}) (#l':eloc{l' `eloc_includes` l})
-   : action p inv' l' b a
+   : action inv' l' b a
    = act
 
 let external_action l =
@@ -1710,7 +1701,7 @@ let external_action l =
 
 noextract
 inline_for_extraction
-let mk_external_action #_ #_ #_ #_ #_ #_ f = fun _ _ _ _ _ _ -> f ()
+let mk_external_action  #_ f = fun _ _ _ _ _ _ -> f ()
   
 let copy_buffer_inv (x:CP.t)
 : slice_inv
@@ -1734,10 +1725,10 @@ let probe_then_validate
       (len:U64.t)
       (dest:CP.t { copy_buffer_loc dest `eloc_disjoint` l })
       (probe:CP.probe_fn)
-  : action p (conj_inv inv (copy_buffer_inv dest))
-             (eloc_union l (copy_buffer_loc dest)) 
-             true
-             bool
+  : action (conj_inv inv (copy_buffer_inv dest))
+           (eloc_union l (copy_buffer_loc dest)) 
+           true
+           bool
   = fun ctxt error_handler_fn input input_length pos posf ->
       CP.properties dest;
       let h0 = HST.get () in
