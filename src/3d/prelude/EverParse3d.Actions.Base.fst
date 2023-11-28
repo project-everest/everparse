@@ -8,7 +8,8 @@ module B = LowStar.Buffer
 module I = EverParse3d.InputStream.Base
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
-
+module CP = EverParse3d.CopyBuffer
+module AppCtxt = EverParse3d.AppCtxt
 module LPE = EverParse3d.ErrorCode
 open FStar.Tactics.Typeclasses
 
@@ -43,10 +44,10 @@ let eloc_includes_refl l = ()
 let bpointer a = B.pointer a
 let ptr_loc #a (x:B.pointer a) : Tot eloc = B.loc_buffer x
 let ptr_inv #a (x:B.pointer a) : slice_inv = fun h -> B.live h x
-
-
-let app_ctxt = B.pointer U8.t
-let app_loc (x:app_ctxt) (l:eloc) : eloc = B.loc_buffer x `loc_union` l
+let app_ctxt = AppCtxt.app_ctxt
+let app_loc (x:AppCtxt.app_ctxt) (l:eloc) : eloc = 
+  AppCtxt.properties x;
+  AppCtxt.loc_of x `loc_union` l
 
 inline_for_extraction
 noextract
@@ -1710,56 +1711,10 @@ let external_action l =
 noextract
 inline_for_extraction
 let mk_external_action #_ #_ #_ #_ #_ #_ f = fun _ _ _ _ _ _ -> f ()
-module CP = EverParse3d.CopyBuffer
-
-let stream_of_cp (x:CP.t) = dfst (CP.as_input_stream x)
-
-let loc_of (x:CP.t) : GTot loc =
-  I.footprint (stream_of_cp x)
-
-module I = EverParse3d.InputStream.All
-
-let liveness_preserved (x:CP.t) =
-  let sl = stream_of_cp x in
-  forall l h0 h1. {:pattern (modifies l h0 h1)}
-    (I.live sl h0 /\
-     modifies l h0 h1 /\
-     address_liveness_insensitive_locs `loc_includes` l) ==>
-    I.live sl h1
-
-let cp_live (x:CP.t) (h:HS.mem) : Type0 =
-  I.live (stream_of_cp x) h
-
-let cp_mem_inv (x:CP.t)  : mem_inv =
-  assume (liveness_preserved x);//
-  cp_live x
   
-let cp_slice_inv (x:CP.t) : slice_inv = cp_mem_inv x
-
-let probe_fn = src:U64.t -> len:U64.t -> dest:CP.t ->
-  Stack bool
-    (fun h0 ->
-      I.live (stream_of_cp dest) h0)
-    (fun h0 b h1 ->
-      let sl = stream_of_cp dest in
-      I.live sl h1 /\
-      (if b
-       then (
-        Seq.length (I.get_read sl h1) == 0 /\
-        modifies (I.footprint sl) h0 h1
-       )
-       else (
-        h0 == h1
-       )))
-
-assume val cp_region : HS.rid
-assume val ctxt_region : HS.rid
-let cp_ctxt_disjoint (x:CP.t) (ctxt:app_ctxt) 
-  : Lemma (
-      cp_region `HS.disjoint` ctxt_region /\
-      B.loc_region_only true cp_region `loc_includes` loc_of x /\
-      B.loc_region_only true ctxt_region `loc_includes` app_loc ctxt loc_none
-    ) = admit()
+let cp_slice_inv (x:CP.t) : slice_inv = 
+  CP.properties x;
+  fun h -> I.live (CP.stream_of x) h
 
 let probe_then_validate 
       (#nz:bool)
@@ -1773,13 +1728,14 @@ let probe_then_validate
       (v:validate_with_action_t p inv l allow_reading)
       (src:U64.t)
       (len:U64.t)
-      (dest:CP.t { loc_of dest `loc_disjoint` l })
-      (probe:probe_fn)
+      (dest:CP.t { CP.loc_of dest `loc_disjoint` l })
+      (probe:CP.probe_fn)
   : action p (conj_inv inv (cp_slice_inv dest))
-             (eloc_union l (loc_of dest)) 
+             (eloc_union l (CP.loc_of dest)) 
              true
              unit
   = fun ctxt error_handler_fn input input_length pos posf ->
+      CP.properties dest;
       let h0 = HST.get () in
       let b = probe src len dest in
       if b
@@ -1787,7 +1743,6 @@ let probe_then_validate
         let h1 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h0 h1;
         let (| sl, sl_len |) = CP.as_input_stream dest in
-        cp_ctxt_disjoint dest ctxt;
         let _ = v ctxt error_handler_fn sl sl_len 0uL in
         ()  
       )
