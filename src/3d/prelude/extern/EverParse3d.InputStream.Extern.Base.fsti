@@ -94,16 +94,29 @@ val read:
       get_remaining x h' == Seq.slice s (U64.v n) (Seq.length s)
     ))
 
-val peep:
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
-    (x: t) ->
-    (n: U64.t) ->
-    HST.Stack (B.buffer U8.t)
-    (requires (fun h ->
+noextract [@@noextract_to "krml"]
+let peep_pre
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t)
+    (x: t)
+    (n: U64.t)
+    (h: HS.mem)
+: Tot prop
+=
       live x h /\
       Seq.length (get_remaining x h) >= U64.v n
-    ))
-    (ensures (fun h dst' h' ->
+
+noextract [@@noextract_to "krml"]
+let peep_post
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t)
+    (x: t)
+    (n: U64.t)
+    (h: HS.mem)
+    (dst' : B.buffer U8.t)
+    (h' : HS.mem)
+: Tot prop
+=
+  peep_pre x n h /\
+  begin
       let s = get_remaining x h in
       B.modifies B.loc_none h h' /\
       ((~ (B.g_is_null dst')) ==> (
@@ -111,6 +124,18 @@ val peep:
         B.live h' dst' /\
         footprint x `B.loc_includes` B.loc_buffer dst'
       ))
+  end
+
+val peep:
+    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
+    (x: t) ->
+    (n: U64.t) ->
+    HST.Stack (B.buffer U8.t)
+    (requires (fun h ->
+      peep_pre x n h
+    ))
+    (ensures (fun h dst' h' ->
+      peep_post x n h dst' h'
     ))
 
 val skip:
