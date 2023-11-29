@@ -1692,18 +1692,23 @@ int main(int argc, char** argv) {
     printf(\"File is too large. EverParse/3D only supports data up to 4 GB\");
     return 3;
   }
-  void * vbuf =
-    mmap(NULL, len, PROT_READ, MAP_PRIVATE, testfile, 0);
-  if (vbuf == MAP_FAILED) {
-    close(testfile);
-    printf(\"Cannot read %ld bytes from %s\\n\", len, filename);
-    return 3;
-  }
-  uint8_t * buf = (uint8_t *) vbuf;
+  uint8_t dummy = 42;
+  uint8_t * buf = &dummy; // for zero-sized files (mmap does not support zero-sized mappings)
+  void * vbuf = NULL;
+  if (len > 0) {
+    vbuf = mmap(NULL, len, PROT_READ, MAP_PRIVATE, testfile, 0);
+    if (vbuf == MAP_FAILED) {
+      close(testfile);
+      printf(\"Cannot read %ld bytes from %s\\n\", len, filename);
+      return 3;
+    };
+    buf = (uint8_t *) vbuf;
+  };
   printf(\"Read %ld bytes from %s\\n\", len, filename);
   uint8_t context = 0;
   uint64_t result = "^validator_name^"("^call_args_lhs^"&context, &TestErrorHandler, buf, len, 0);
-  munmap(vbuf, len);
+  if (len > 0)
+    munmap(vbuf, len);
   close(testfile);
   if (EverParseIsError(result)) {
     printf(\"Witness from %s REJECTED because validator failed\\n\", filename);
