@@ -15,6 +15,7 @@ let action_field_ptr_after _ n write_to =
   if buf_not_null
   then begin
     let open LowStar.BufferOps in
+    ptr_inv_elim write_to;
     write_to *= buf
   end;
   buf_not_null

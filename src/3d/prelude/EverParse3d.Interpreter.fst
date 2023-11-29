@@ -1232,7 +1232,7 @@ let specialization_steps =
                 `%snd;
                 `%Mktuple2?._1;
                 `%Mktuple2?._2;
-                `coerce_eq]@projector_names)]
+                `%coerce_eq]@projector_names)]
 
 let specialize_tac steps (_:unit)
   : T.Tac unit
