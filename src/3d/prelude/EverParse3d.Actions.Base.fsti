@@ -41,11 +41,19 @@ val inv_implies_true (inv0:slice_inv) : Tot (squash (inv0 `inv_implies` true_inv
 
 val inv_implies_conj (inv0 inv1 inv2: slice_inv) (h01: squash (inv0 `inv_implies` inv1)) (h02: squash (inv0 `inv_implies` inv2)) : Tot (squash (inv0 `inv_implies` (inv1 `conj_inv` inv2)))
 
+val conj_inv_true_left_unit (inv:slice_inv) : Tot (squash (true_inv `conj_inv` inv == inv))
+
+val conj_inv_true_right_unit (inv:slice_inv) : Tot (squash (inv `conj_inv` true_inv == inv))
+
 val eloc_includes_none (l1:eloc) : Tot (squash (l1 `eloc_includes` eloc_none))
 
 val eloc_includes_union (l0: eloc) (l1 l2: eloc) (h01: squash (l0 `eloc_includes` l1)) (h02: squash (l0 `eloc_includes` l2)) : Tot (squash (l0 `eloc_includes` (l1 `eloc_union` l2)))
 
 val eloc_includes_refl (l: eloc) : Tot (squash (l `eloc_includes` l))
+
+val eloc_union_none_left_unit (l:eloc) : Tot (squash (eloc_none `eloc_union` l == l))
+
+val eloc_union_none_right_unit (l:eloc) : Tot (squash (l `eloc_union` eloc_none == l))
 
 inline_for_extraction
 noextract

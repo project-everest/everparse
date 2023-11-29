@@ -833,6 +833,31 @@ type typ
       terminator:dtyp_as_type element_type ->
       typ P.parse_string_kind A.true_inv A.eloc_none false
 
+[@@specialize]
+let t_probe_then_validate
+      (fieldname:string)
+      (len:U64.t)
+      (probe:CP.probe_fn)
+      (dest:CP.t)
+      (#nz #wk:_) (#pk:P.parser_kind nz wk)
+      (#has_reader #i:_)
+      (#l:A.eloc { A.copy_buffer_loc dest `A.eloc_disjoint` l })
+      (td:dtyp pk has_reader i l)
+ : typ (parser_kind_of_itype UInt64)
+       (A.conj_inv i (A.copy_buffer_inv dest))
+       (A.eloc_union l (A.copy_buffer_loc dest))
+       false
+ = let t = 
+    T_with_dep_action fieldname
+     (DT_IType UInt64)
+     (fun src ->
+        Atomic_action (Action_probe_then_validate td src len dest probe))
+   in
+   coerce_eq (
+    A.eloc_union_none_left_unit (A.eloc_union l (A.copy_buffer_loc dest));
+    A.conj_inv_true_left_unit (A.conj_inv i (A.copy_buffer_inv dest))
+   ) t
+  
 
 (* Type denotation of `typ` *)
 let rec as_type
@@ -891,6 +916,7 @@ let rec as_type
 
     | T_string _ elt_t terminator ->
       P.cstring (dtyp_as_type elt_t) terminator
+
 
 (* Parser denotation of `typ` *)
 let rec as_parser
@@ -1205,7 +1231,8 @@ let specialization_steps =
                 `%fst;
                 `%snd;
                 `%Mktuple2?._1;
-                `%Mktuple2?._2]@projector_names)]
+                `%Mktuple2?._2;
+                `coerce_eq]@projector_names)]
 
 let specialize_tac steps (_:unit)
   : T.Tac unit

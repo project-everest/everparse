@@ -12,12 +12,12 @@ module CP = EverParse3d.CopyBuffer
 module AppCtxt = EverParse3d.AppCtxt
 module LPE = EverParse3d.ErrorCode
 open FStar.Tactics.Typeclasses
-
+open FStar.FunctionalExtensionality
 module B = LowStar.Buffer
 module U8 = FStar.UInt8
 module P = EverParse3d.Prelude
-
-let hinv = HS.mem -> Tot Type0
+module F = FStar.FunctionalExtensionality
+let hinv = HS.mem ^-> prop
 let liveness_inv = i:hinv {
   forall l h0 h1. {:pattern (i h1); (modifies l h0 h1)}  i h0 /\ modifies l h0 h1 /\ address_liveness_insensitive_locs `loc_includes` l ==> i h1
 }
@@ -26,8 +26,8 @@ let slice_inv = mem_inv
 let inv_implies (inv0 inv1:slice_inv) =
   forall h.
     inv0 h ==> inv1 h
-let true_inv : slice_inv = fun _ -> True
-let conj_inv (i0 i1:slice_inv) : slice_inv = fun h -> i0 h /\ i1 h
+let true_inv : slice_inv = F.on HS.mem #prop (fun _ -> True)
+let conj_inv (i0 i1:slice_inv) : slice_inv = F.on HS.mem #prop (fun h -> i0 h /\ i1 h)
 let eloc = (l: FStar.Ghost.erased B.loc { B.address_liveness_insensitive_locs `B.loc_includes` l })
 let eloc_union (l1 l2:eloc) : Tot eloc = B.loc_union l1 l2
 let eloc_none : eloc = B.loc_none
@@ -36,14 +36,20 @@ let eloc_disjoint (l1 l2:eloc) = B.loc_disjoint l1 l2 /\ True
 let inv_implies_refl inv = ()
 let inv_implies_true inv0 = ()
 let inv_implies_conj inv0 inv1 inv2 h01 h02 = ()
+let conj_inv_true_left_unit i =
+  FStar.PredicateExtensionality.predicateExtensionality _ (conj_inv true_inv i) i
+let conj_inv_true_right_unit i =
+  FStar.PredicateExtensionality.predicateExtensionality _ (conj_inv i true_inv) i
 
 let eloc_includes_none l = ()
 let eloc_includes_union l0 l1 l2 h01 h02 = ()
 let eloc_includes_refl l = ()
+let eloc_union_none_left_unit l = ()
+let eloc_union_none_right_unit l = ()
 
 let bpointer a = B.pointer a
 let ptr_loc #a (x:B.pointer a) : Tot eloc = B.loc_buffer x
-let ptr_inv #a (x:B.pointer a) : slice_inv = fun h -> B.live h x
+let ptr_inv #a (x:B.pointer a) : slice_inv = F.on HS.mem #prop (fun h -> B.live h x /\ True)
 let app_ctxt = AppCtxt.app_ctxt
 let app_loc (x:AppCtxt.app_ctxt) (l:eloc) : eloc = 
   AppCtxt.properties x;
@@ -1662,20 +1668,29 @@ let action_field_ptr
        let open LowParse.Slice in
        LPL.offset input (LPL.uint64_to_uint32 startPosition)
 *)
+module T = FStar.Tactics
+let ptr_inv_elim (x:B.pointer 'a)
+  : Lemma
+    (ensures forall h. ptr_inv x h ==> B.live h x)
+  = introduce forall h. ptr_inv x h ==> B.live h x
+         with assert (ptr_inv x h ==> B.live h x)
+                  by (T.norm [delta])
 
 noextract
 inline_for_extraction
 let action_deref
       (#a:_) (x:B.pointer a)
    : action (ptr_inv x) loc_none false a
-   = fun _ _ _ _ _ _ -> !*x
+   = fun _ _ _ _ _ _ -> 
+        ptr_inv_elim x;
+        !*x
 
 noextract
 inline_for_extraction
 let action_assignment
       (#a:_) (x:B.pointer a) (v:a)
    : action (ptr_inv x) (ptr_loc x) false unit
-   = fun _ _ _ _ _ _ -> x *= v
+   = fun _ _ _ _ _ _ -> ptr_inv_elim x; x *= v
 
 (* FIXME: This is now unsound.
 noextract
@@ -1706,7 +1721,7 @@ let mk_external_action  #_ f = fun _ _ _ _ _ _ -> f ()
 let copy_buffer_inv (x:CP.t)
 : slice_inv
 = CP.properties x;
-  CP.inv x
+  F.on HS.mem #prop (CP.inv x)
 let copy_buffer_loc (x:CP.t)
 : eloc
 = CP.loc_of x
