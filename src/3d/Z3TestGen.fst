@@ -744,7 +744,10 @@ let mk_parse_exact
         (mk-state
           (if (= (input-size "^res^") 0)
             (- (input-size "^input^") "^sz^")
-            -1
+            (if (> (input-size "^res^") 0)
+              -1
+              (input-size "^res^")
+            )
           )
           (choice-index "^res^")
           (branch-index "^res^")
