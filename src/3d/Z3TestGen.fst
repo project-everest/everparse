@@ -1613,7 +1613,7 @@ let test_exe_mk_arg
   }
 "
   | _ -> "
-unsigned long long "^arg_var^" = 0;
+void * "^arg_var^" = NULL;
 "
   end
   in
