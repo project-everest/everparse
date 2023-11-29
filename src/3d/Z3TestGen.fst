@@ -1039,10 +1039,32 @@ let produce_not_type_decl (a: I.not_type_decl) (out: string -> ML unit) : ML uni
 
 type prog_def = {
   args: list arg_type;
-  enum_base_type: option A.integer_type;
+  enum_base_type: option arg_type;
 }
 
 let prog = list (string & prog_def)
+
+let rec arg_type_of_typ_with_prog
+  (accu: prog)
+  (t: T.typ)
+: Tot (option arg_type)
+  (decreases t)
+= match arg_type_of_typ t with
+  | Some ty -> Some ty
+  | None ->
+    begin match t with
+    | T.T_app hd _ _ ->
+      begin match List.Tot.assoc (ident_to_string hd) accu with
+      | Some def -> def.enum_base_type
+      | _ -> None
+      end
+    | T.T_with_action base _
+    | T.T_with_dep_action base _
+    | T.T_with_comment base _
+    | T.T_refine base _ ->
+      arg_type_of_typ_with_prog accu base
+    | _ -> None
+    end
 
 let produce_type_decl (out: string -> ML unit) (accu: prog) (a: I.type_decl) : ML prog =
   let binders = binders_of_params a.name.td_params in
@@ -1050,8 +1072,11 @@ let produce_type_decl (out: string -> ML unit) (accu: prog) (a: I.type_decl) : M
   if type_has_actions a.typ then failwith (Printf.sprintf "produce_type_decl: %s still has some actions" name);
   let _ = parse_typ a.typ name binders true out in
   (name, {
-    args = List.map (fun (i, ty) -> match arg_type_of_typ ty with Some t -> t | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params;
-    enum_base_type = None;
+    args = List.map (fun (i, ty) -> match arg_type_of_typ_with_prog accu ty with Some t -> t | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params;
+    enum_base_type = begin match a.enum_typ with
+    | Some ty -> arg_type_of_typ_with_prog accu ty
+    | _ -> None
+    end;
   }) :: accu
 
 let produce_decl (out: string -> ML unit) (accu: prog) (a: I.decl) : ML prog =
