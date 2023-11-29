@@ -1037,14 +1037,22 @@ let produce_not_type_decl (a: I.not_type_decl) (out: string -> ML unit) : ML uni
   | T.Extern_fn _ _ _
   -> ()
 
-let prog = list (string & list arg_type)
+type prog_def = {
+  args: list arg_type;
+  enum_base_type: option A.integer_type;
+}
+
+let prog = list (string & prog_def)
 
 let produce_type_decl (out: string -> ML unit) (accu: prog) (a: I.type_decl) : ML prog =
   let binders = binders_of_params a.name.td_params in
   let name = ident_to_string a.name.td_name in
   if type_has_actions a.typ then failwith (Printf.sprintf "produce_type_decl: %s still has some actions" name);
   let _ = parse_typ a.typ name binders true out in
-  (name, List.map (fun (i, ty) -> match arg_type_of_typ ty with Some t -> t | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params) :: accu
+  (name, {
+    args = List.map (fun (i, ty) -> match arg_type_of_typ ty with Some t -> t | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params;
+    enum_base_type = None;
+  }) :: accu
 
 let produce_decl (out: string -> ML unit) (accu: prog) (a: I.decl) : ML prog =
   match a with
@@ -1492,10 +1500,10 @@ static void TestErrorHandler (
 "
 
 let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
-  let args = List.assoc name1 prog in
-  if None? args
+  let def = List.assoc name1 prog in
+  if None? def
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
-  let args = Some?.v args in
+  let args = (Some?.v def).args in
   let modul, validator_name = module_and_validator_name name1 in
   let nargs = count_args args in with_option_out_file out_file (fun cout ->
   cout "#include <stdio.h>
@@ -1550,14 +1558,14 @@ let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML un
   witnesses_for z3 name1 args nargs ([print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 args name2)]) nbwitnesses depth
 
 let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses depth =
-  let args = List.assoc name1 prog in
-  if None? args
+  let def = List.assoc name1 prog in
+  if None? def
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
-  let args = Some?.v args in
-  let args2 = List.assoc name2 prog in
-  if None? args2
+  let args = (Some?.v def).args in
+  let def2 = List.assoc name2 prog in
+  if None? def2
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name2);
-  if args2 <> Some args
+  if def2 <> def
   then failwith (Printf.sprintf "do_diff_test: parsers %s and %s do not have the same arg types" name1 name2);
   let nargs = count_args args in
   let modul1, validator_name1 = module_and_validator_name name1 in
@@ -1683,10 +1691,10 @@ int main(int argc, char** argv) {
 "
 
 let produce_test_checker_exe (out_file: string) (prog: prog) (name1: string) : ML unit =
-  let args = List.assoc name1 prog in
-  if None? args
+  let def = List.assoc name1 prog in
+  if None? def
   then failwith (Printf.sprintf "produce_test_checker_exe: parser %s not found" name1);
-  let args = Some?.v args in
+  let args = (Some?.v def).args in
   let modul, validator_name = module_and_validator_name name1 in
   with_out_file out_file (fun cout ->
     cout (test_checker_c modul validator_name args)
