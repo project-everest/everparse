@@ -1375,7 +1375,7 @@ let validate_weaken_inv_loc
       #nz #wk (#k:parser_kind nz wk) #t (#p:parser k t)
       #inv #disj (#l:eloc) #ar
       (inv':slice_inv{inv' `inv_implies` inv})
-      (#disj':_{ disj' `imp_disjointness` disj})
+      (disj':_{ disj' `imp_disjointness` disj})
       (l':eloc{l' `eloc_includes` l})
       (v:validate_with_action_t p inv disj l ar)
   : Tot (validate_with_action_t p inv' disj' l' ar)
