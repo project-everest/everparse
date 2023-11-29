@@ -616,23 +616,6 @@ let _eloc_includes_refl (l: A.eloc) : Lemma
   [SMTPat (l `A.eloc_includes` l)]
 = A.eloc_includes_refl l
 
-let conj_disjointess_trivial_unit_left (d:A.disjointness_pre)
-  : Lemma 
-    (ensures (A.disjointness_trivial `A.conj_disjointness` d) == d)
-    [SMTPat (A.disjointness_trivial `A.conj_disjointness` d)]
-  = admit()
-
-let conj_disjointess_trivial_unit_right (d:A.disjointness_pre)
-  : Lemma 
-    (ensures (d `A.conj_disjointness` A.disjointness_trivial == d))
-    [SMTPat (d `A.conj_disjointness` A.disjointness_trivial)]
-  = admit()
-
-let imp_disjointess_idem (d:A.disjointness_pre)
-  : Lemma 
-    (ensures (A.imp_disjointness d d))
-    [SMTPat (A.imp_disjointness d d)]
-  = admit()
 
 (* Denotation of action as A.action *)
 [@@specialize]

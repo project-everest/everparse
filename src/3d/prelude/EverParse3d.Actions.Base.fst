@@ -53,6 +53,24 @@ let disjoint l1 l2 = eloc_disjoint l1 l2
 let conj_disjointness p1 p2 = p1 /\ p2
 let imp_disjointness p1 p2 = p1 ==> p2
 
+let conj_disjointess_trivial_unit_left (d:disjointness_pre)
+  : Lemma 
+    (ensures (disjointness_trivial `conj_disjointness` d) == d)
+    [SMTPat (disjointness_trivial `conj_disjointness` d)]
+  = FStar.PropositionalExtensionality.apply (disjointness_trivial `conj_disjointness` d) d
+
+let conj_disjointess_trivial_unit_right (d:disjointness_pre)
+  : Lemma 
+    (ensures (d `conj_disjointness` disjointness_trivial == d))
+    [SMTPat (d `conj_disjointness` disjointness_trivial)]
+  = FStar.PropositionalExtensionality.apply (d `conj_disjointness` disjointness_trivial) d
+
+let imp_disjointess_idem (d:disjointness_pre)
+  : Lemma 
+    (ensures (imp_disjointness d d))
+    [SMTPat (imp_disjointness d d)]
+  = ()
+  
 let bpointer a = B.pointer a
 let ptr_loc #a (x:B.pointer a) : Tot eloc = B.loc_buffer x
 let ptr_inv #a (x:B.pointer a) : slice_inv = F.on HS.mem #prop (fun h -> B.live h x /\ True)

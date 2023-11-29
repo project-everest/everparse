@@ -62,6 +62,21 @@ val disjoint (l1 l2:eloc) : disjointness_pre
 val conj_disjointness (d0 d1:disjointness_pre) : disjointness_pre
 val imp_disjointness (d1 d2:disjointness_pre) : prop
 
+val conj_disjointess_trivial_unit_left (d:disjointness_pre)
+  : Lemma 
+    (ensures (disjointness_trivial `conj_disjointness` d) == d)
+    [SMTPat (disjointness_trivial `conj_disjointness` d)]
+
+val conj_disjointess_trivial_unit_right (d:disjointness_pre)
+  : Lemma 
+    (ensures (d `conj_disjointness` disjointness_trivial == d))
+    [SMTPat (d `conj_disjointness` disjointness_trivial)]
+
+val imp_disjointess_idem (d:disjointness_pre)
+  : Lemma 
+    (ensures (imp_disjointness d d))
+    [SMTPat (imp_disjointness d d)]
+
 inline_for_extraction
 noextract
 val bpointer (a: Type0) : Tot Type0
