@@ -1689,6 +1689,7 @@ int main(int argc, char** argv) {
   }
   off_t len = statbuf.st_size;
   if (len > 4294967295) {
+    close(testfile);
     printf(\"File is too large. EverParse/3D only supports data up to 4 GB\");
     return 3;
   }
