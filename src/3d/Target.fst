@@ -524,164 +524,164 @@ let rec print_action (mname:string) (a:action) : ML string =
     Printf.sprintf "(action_act %s)" 
       (print_action mname a)
       
-let rec print_validator (mname:string) (v:validator) : ML string = //(decreases v) =
-  let is_unit_validator v =
-    let open A in
-    match v.v_validator with
-    | Validate_app ({v={name="unit"}}) [] -> true
-    | _ -> false
-  in
-  match v.v_validator with
-  | Validate_return ->
-    "validate_ret"
+// let rec print_validator (mname:string) (v:validator) : ML string = //(decreases v) =
+//   let is_unit_validator v =
+//     let open A in
+//     match v.v_validator with
+//     | Validate_app ({v={name="unit"}}) [] -> true
+//     | _ -> false
+//   in
+//   match v.v_validator with
+//   | Validate_return ->
+//     "validate_ret"
 
-  | Validate_app hd args ->
-    Printf.sprintf "(validate_eta (%svalidate_%s %s))"
-                   (maybe_mname_prefix mname hd)
-                   (print_ident hd)
-                   (String.concat " " (print_indexes mname args))
+//   | Validate_app hd args ->
+//     Printf.sprintf "(validate_eta (%svalidate_%s %s))"
+//                    (maybe_mname_prefix mname hd)
+//                    (print_ident hd)
+//                    (String.concat " " (print_indexes mname args))
 
-  | Validate_nlist e p ->
-    Printf.sprintf "(validate_nlist %s %s)"
-                   (print_expr mname e)
-                   (print_validator mname p)
+//   | Validate_nlist e p ->
+//     Printf.sprintf "(validate_nlist %s %s)"
+//                    (print_expr mname e)
+//                    (print_validator mname p)
 
-  | Validate_t_at_most e p ->
-    Printf.sprintf "(validate_t_at_most %s %s)"
-                   (print_expr mname e)
-                   (print_validator mname p)
+//   | Validate_t_at_most e p ->
+//     Printf.sprintf "(validate_t_at_most %s %s)"
+//                    (print_expr mname e)
+//                    (print_validator mname p)
 
-  | Validate_t_exact e p ->
-    Printf.sprintf "(validate_t_exact %s %s)"
-                   (print_expr mname e)
-                   (print_validator mname p)
+//   | Validate_t_exact e p ->
+//     Printf.sprintf "(validate_t_exact %s %s)"
+//                    (print_expr mname e)
+//                    (print_validator mname p)
 
-  | Validate_nlist_constant_size_without_actions e p ->
-    let n_is_const = match fst e with
-    | Constant (A.Int _ _) -> true
-    | _ -> false
-    in
-    Printf.sprintf "(validate_nlist_constant_size_without_actions %s %s %s)"
-                   (if n_is_const then "true" else "false")
-                   (print_expr mname e)
-                   (print_validator mname p)
+//   | Validate_nlist_constant_size_without_actions e p ->
+//     let n_is_const = match fst e with
+//     | Constant (A.Int _ _) -> true
+//     | _ -> false
+//     in
+//     Printf.sprintf "(validate_nlist_constant_size_without_actions %s %s %s)"
+//                    (if n_is_const then "true" else "false")
+//                    (print_expr mname e)
+//                    (print_validator mname p)
 
-  | Validate_pair n1 p1 p2 ->
-    Printf.sprintf "(validate_pair \"%s\" %s %s)"
-                   (print_maybe_qualified_ident mname n1)
-                   (print_validator mname p1)
-                   (print_validator mname p2)
+//   | Validate_pair n1 p1 p2 ->
+//     Printf.sprintf "(validate_pair \"%s\" %s %s)"
+//                    (print_maybe_qualified_ident mname n1)
+//                    (print_validator mname p1)
+//                    (print_validator mname p2)
 
-  | Validate_dep_pair n1 p1 r p2 ->
-    Printf.sprintf "(validate_dep_pair \"%s\" %s %s %s)"
-                   (print_ident n1)
-                   (print_validator mname p1)
-                   (print_reader mname r)
-                   (print_lam (print_validator mname) p2)
+//   | Validate_dep_pair n1 p1 r p2 ->
+//     Printf.sprintf "(validate_dep_pair \"%s\" %s %s %s)"
+//                    (print_ident n1)
+//                    (print_validator mname p1)
+//                    (print_reader mname r)
+//                    (print_lam (print_validator mname) p2)
 
-  | Validate_dep_pair_with_refinement p1_is_constant_size_without_actions n1 p1 r e p2 ->
-    Printf.sprintf "(validate_dep_pair_with_refinement %s \"%s\" %s %s %s %s)"
-                   (if p1_is_constant_size_without_actions then "true" else "false")
-                   (print_maybe_qualified_ident mname n1)
-                   (print_validator mname p1)
-                   (print_reader mname r)
-                   (print_expr_lam mname e)
-                   (print_lam (print_validator mname) p2)
+//   | Validate_dep_pair_with_refinement p1_is_constant_size_without_actions n1 p1 r e p2 ->
+//     Printf.sprintf "(validate_dep_pair_with_refinement %s \"%s\" %s %s %s %s)"
+//                    (if p1_is_constant_size_without_actions then "true" else "false")
+//                    (print_maybe_qualified_ident mname n1)
+//                    (print_validator mname p1)
+//                    (print_reader mname r)
+//                    (print_expr_lam mname e)
+//                    (print_lam (print_validator mname) p2)
 
-  | Validate_dep_pair_with_action p1 r a p2 ->
-    Printf.sprintf "(validate_dep_pair_with_action %s %s %s %s)"
-                   (print_validator mname p1)
-                   (print_reader mname r)
-                   (print_lam (print_action mname) a)
-                   (print_lam (print_validator mname) p2)
+//   | Validate_dep_pair_with_action p1 r a p2 ->
+//     Printf.sprintf "(validate_dep_pair_with_action %s %s %s %s)"
+//                    (print_validator mname p1)
+//                    (print_reader mname r)
+//                    (print_lam (print_action mname) a)
+//                    (print_lam (print_validator mname) p2)
 
-  | Validate_dep_pair_with_refinement_and_action p1_is_constant_size_without_actions n1 p1 r e a p2 ->
-    Printf.sprintf "(validate_dep_pair_with_refinement_and_action %s \"%s\" %s %s %s %s %s)"
-                   (if p1_is_constant_size_without_actions then "true" else "false")
-                   (print_maybe_qualified_ident mname n1)
-                   (print_validator mname p1)
-                   (print_reader mname r)
-                   (print_expr_lam mname e)
-                   (print_lam (print_action mname) a)
-                   (print_lam (print_validator mname) p2)
+//   | Validate_dep_pair_with_refinement_and_action p1_is_constant_size_without_actions n1 p1 r e a p2 ->
+//     Printf.sprintf "(validate_dep_pair_with_refinement_and_action %s \"%s\" %s %s %s %s %s)"
+//                    (if p1_is_constant_size_without_actions then "true" else "false")
+//                    (print_maybe_qualified_ident mname n1)
+//                    (print_validator mname p1)
+//                    (print_reader mname r)
+//                    (print_expr_lam mname e)
+//                    (print_lam (print_action mname) a)
+//                    (print_lam (print_validator mname) p2)
 
-  | Validate_map p1 e ->
-    Printf.sprintf "(%s `validate_map` %s)"
-                   (print_validator mname p1)
-                   (print_expr_lam mname e)
+//   | Validate_map p1 e ->
+//     Printf.sprintf "(%s `validate_map` %s)"
+//                    (print_validator mname p1)
+//                    (print_expr_lam mname e)
 
-  | Validate_refinement n1 p1 r e ->
-    begin
-      if is_unit_validator p1
-      then Printf.sprintf "(validate_unit_refinement %s \"checking precondition\")"
-                          (print_expr_lam mname e)
-      else Printf.sprintf "(validate_filter \"%s\" %s %s %s
-                                            \"reading field value\" \"checking constraint\")"
-                          (print_maybe_qualified_ident mname n1)
-                          (print_validator mname p1)
-                          (print_reader mname r)
-                          (print_expr_lam mname e)
-    end
+//   | Validate_refinement n1 p1 r e ->
+//     begin
+//       if is_unit_validator p1
+//       then Printf.sprintf "(validate_unit_refinement %s \"checking precondition\")"
+//                           (print_expr_lam mname e)
+//       else Printf.sprintf "(validate_filter \"%s\" %s %s %s
+//                                             \"reading field value\" \"checking constraint\")"
+//                           (print_maybe_qualified_ident mname n1)
+//                           (print_validator mname p1)
+//                           (print_reader mname r)
+//                           (print_expr_lam mname e)
+//     end
 
-  | Validate_refinement_with_action n1 p1 r e a ->
-    Printf.sprintf "(validate_filter_with_action \"%s\" %s %s %s
-                                            \"reading field value\" \"checking constraint\"
-                                            %s)"
-                   (print_maybe_qualified_ident mname n1)
-                   (print_validator mname p1)
-                   (print_reader mname r)
-                   (print_expr_lam mname e)
-                   (print_lam (print_action mname) a)
+//   | Validate_refinement_with_action n1 p1 r e a ->
+//     Printf.sprintf "(validate_filter_with_action \"%s\" %s %s %s
+//                                             \"reading field value\" \"checking constraint\"
+//                                             %s)"
+//                    (print_maybe_qualified_ident mname n1)
+//                    (print_validator mname p1)
+//                    (print_reader mname r)
+//                    (print_expr_lam mname e)
+//                    (print_lam (print_action mname) a)
 
-  | Validate_with_action name v a ->
-    Printf.sprintf "(validate_with_success_action \"%s\" %s %s)"
-                   (print_maybe_qualified_ident mname name)
-                   (print_validator mname v)
-                   (print_action mname a)
+//   | Validate_with_action name v a ->
+//     Printf.sprintf "(validate_with_success_action \"%s\" %s %s)"
+//                    (print_maybe_qualified_ident mname name)
+//                    (print_validator mname v)
+//                    (print_action mname a)
 
-  | Validate_with_dep_action n v r a ->
-    Printf.sprintf "(validate_with_dep_action \"%s\" %s %s %s)"
-                   (print_maybe_qualified_ident mname n)
-                   (print_validator mname v)
-                   (print_reader mname r)
-                   (print_lam (print_action mname) a)
+//   | Validate_with_dep_action n v r a ->
+//     Printf.sprintf "(validate_with_dep_action \"%s\" %s %s %s)"
+//                    (print_maybe_qualified_ident mname n)
+//                    (print_validator mname v)
+//                    (print_reader mname r)
+//                    (print_lam (print_action mname) a)
 
-  | Validate_weaken_left p1 k ->
-    Printf.sprintf "(validate_weaken_left %s _)"
-                   (print_validator mname p1)
+//   | Validate_weaken_left p1 k ->
+//     Printf.sprintf "(validate_weaken_left %s _)"
+//                    (print_validator mname p1)
 
-  | Validate_weaken_right p1 k ->
-    Printf.sprintf "(validate_weaken_right %s _)"
-                   (print_validator mname p1)
+//   | Validate_weaken_right p1 k ->
+//     Printf.sprintf "(validate_weaken_right %s _)"
+//                    (print_validator mname p1)
 
-  | Validate_if_else e v1 v2 ->
-    Printf.sprintf "(validate_ite %s (fun _ -> %s) (fun _ -> %s) (fun _ -> %s) (fun _ -> %s))"
-                   (print_expr mname e)
-                   (print_parser mname v1.v_parser)
-                   (print_validator mname v1)
-                   (print_parser mname v2.v_parser)
-                   (print_validator mname v2)
+//   | Validate_if_else e v1 v2 ->
+//     Printf.sprintf "(validate_ite %s (fun _ -> %s) (fun _ -> %s) (fun _ -> %s) (fun _ -> %s))"
+//                    (print_expr mname e)
+//                    (print_parser mname v1.v_parser)
+//                    (print_validator mname v1)
+//                    (print_parser mname v2.v_parser)
+//                    (print_validator mname v2)
 
-  | Validate_impos ->
-    "(validate_impos())"
+//   | Validate_impos ->
+//     "(validate_impos())"
 
-  | Validate_with_error_handler typename fieldname v ->
-    Printf.sprintf "(validate_with_error_handler \"%s\" \"%s\" %s)"
-                   (print_maybe_qualified_ident mname typename)
-                   fieldname
-                   (print_validator mname v)
+//   | Validate_with_error_handler typename fieldname v ->
+//     Printf.sprintf "(validate_with_error_handler \"%s\" \"%s\" %s)"
+//                    (print_maybe_qualified_ident mname typename)
+//                    fieldname
+//                    (print_validator mname v)
 
-  | Validate_with_comment v c ->
-    let c = String.concat "\n" c in
-    Printf.sprintf "(validate_with_comment \"%s\" %s)"
-                   c
-                   (print_validator mname v)
+//   | Validate_with_comment v c ->
+//     let c = String.concat "\n" c in
+//     Printf.sprintf "(validate_with_comment \"%s\" %s)"
+//                    c
+//                    (print_validator mname v)
 
-  | Validate_string velem relem zero ->
-    Printf.sprintf "(validate_string %s %s %s)" 
-                   (print_validator mname velem)
-                   (print_reader mname relem)
-                   (print_expr mname zero)
+//   | Validate_string velem relem zero ->
+//     Printf.sprintf "(validate_string %s %s %s)" 
+//                    (print_validator mname velem)
+//                    (print_reader mname relem)
+//                    (print_expr mname zero)
 
 let print_typedef_name (mname:string) (tdn:typedef_name) : ML string =
   Printf.sprintf "%s %s"
@@ -852,114 +852,114 @@ let is_type_abbreviation (td:type_decl) : bool =
   | TD_abbrev _ -> true
   | TD_struct _ -> false
 
-let print_decl_for_validators (mname:string) (d:decl) : ML string =
-  match fst d with
-  | Definition _ -> ""
+// let print_decl_for_validators (mname:string) (d:decl) : ML string =
+//   match fst d with
+//   | Definition _ -> ""
   
-  | Assumption _ ->
-    print_assumption mname d
+//   | Assumption _ ->
+//     print_assumption mname d
 
-  | Type_decl td ->
-    (if false //not td.decl_name.td_entrypoint
-     then ""
-     else if is_type_abbreviation td
-     then ""
-     else Printf.sprintf "noextract\ninline_for_extraction\nlet %s = %s.Types.%s  (* from corresponding Types.fst  *)\n\n"
-            (print_typedef_name mname td.decl_name)
-            mname
-            (print_typedef_typ td.decl_name))
-    `strcat`
-    Printf.sprintf "noextract\ninline_for_extraction\nlet kind_%s : parser_kind %s %s = %s\n\n"
-      (print_ident td.decl_name.td_name)
-      (string_of_bool td.decl_parser.p_kind.pk_nz)
-      (A.print_weak_kind td.decl_parser.p_kind.pk_weak_kind)
-      (print_kind mname td.decl_parser.p_kind)
-    `strcat`
-    Printf.sprintf "noextract\nlet parse_%s : parser (kind_%s) (%s) = %s\n\n"
-      (print_typedef_name mname td.decl_name)
-      (print_ident td.decl_name.td_name)
-      (print_typedef_typ td.decl_name)
-      (print_parser mname td.decl_parser)
-    `strcat`
-    (let inv, fp = print_typedef_actions_inv_and_fp td in
-     Printf.sprintf "%slet validate_%s = validate_weaken_inv_loc _ _ %s <: Tot (validate_with_action_t (parse_%s) %s %s %b) by    (weaken_tac())\n\n"
-      (print_attributes td.decl_name.td_entrypoint (snd d))
-      (print_typedef_name mname td.decl_name)
-      (print_validator mname td.decl_validator)
-      (print_typedef_typ td.decl_name)
-      inv
-      fp
-      td.decl_validator.v_allow_reading)
-    `strcat`
-    (match td.decl_reader with
-     | None -> ""
-     | Some r ->
-       Printf.sprintf "%sinline_for_extraction\nlet read_%s : leaf_reader (parse_%s) = %s\n\n"
-         (if td.decl_name.td_entrypoint then "" else "noextract\n")
-         (print_typedef_name mname td.decl_name)
-         (print_typedef_typ td.decl_name)
-         (print_reader mname r))
+//   | Type_decl td ->
+//     (if false //not td.decl_name.td_entrypoint
+//      then ""
+//      else if is_type_abbreviation td
+//      then ""
+//      else Printf.sprintf "noextract\ninline_for_extraction\nlet %s = %s.Types.%s  (* from corresponding Types.fst  *)\n\n"
+//             (print_typedef_name mname td.decl_name)
+//             mname
+//             (print_typedef_typ td.decl_name))
+//     `strcat`
+//     Printf.sprintf "noextract\ninline_for_extraction\nlet kind_%s : parser_kind %s %s = %s\n\n"
+//       (print_ident td.decl_name.td_name)
+//       (string_of_bool td.decl_parser.p_kind.pk_nz)
+//       (A.print_weak_kind td.decl_parser.p_kind.pk_weak_kind)
+//       (print_kind mname td.decl_parser.p_kind)
+//     `strcat`
+//     Printf.sprintf "noextract\nlet parse_%s : parser (kind_%s) (%s) = %s\n\n"
+//       (print_typedef_name mname td.decl_name)
+//       (print_ident td.decl_name.td_name)
+//       (print_typedef_typ td.decl_name)
+//       (print_parser mname td.decl_parser)
+//     `strcat`
+//     (let inv, fp = print_typedef_actions_inv_and_fp td in
+//      Printf.sprintf "%slet validate_%s = validate_weaken_inv_loc _ _ %s <: Tot (validate_with_action_t (parse_%s) %s %s %b) by    (weaken_tac())\n\n"
+//       (print_attributes td.decl_name.td_entrypoint (snd d))
+//       (print_typedef_name mname td.decl_name)
+//       (print_validator mname td.decl_validator)
+//       (print_typedef_typ td.decl_name)
+//       inv
+//       fp
+//       td.decl_validator.v_allow_reading)
+//     `strcat`
+//     (match td.decl_reader with
+//      | None -> ""
+//      | Some r ->
+//        Printf.sprintf "%sinline_for_extraction\nlet read_%s : leaf_reader (parse_%s) = %s\n\n"
+//          (if td.decl_name.td_entrypoint then "" else "noextract\n")
+//          (print_typedef_name mname td.decl_name)
+//          (print_typedef_typ td.decl_name)
+//          (print_reader mname r))
   
-  | Output_type _
-  | Output_type_expr _ _
-  | Extern_type _
-  | Extern_fn _ _ _ -> ""
+//   | Output_type _
+//   | Output_type_expr _ _
+//   | Extern_type _
+//   | Extern_fn _ _ _ -> ""
 
-let print_type_decl_signature (mname:string) (d:decl{Type_decl? (fst d)}) : ML string =
-  match fst d with
-  | Type_decl td ->
-    if false //not td.decl_name.td_entrypoint
-    then ""
-    else begin
-      (if is_type_abbreviation td
-       then Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s.Types.%s\n\n"
-              (print_typedef_name mname td.decl_name)
-              mname
-              (print_typedef_typ td.decl_name)
-       else Printf.sprintf "noextract\ninline_for_extraction\nval %s : Type0\n\n"
-              (print_typedef_name mname td.decl_name))
-      `strcat`
-      Printf.sprintf "noextract\ninline_for_extraction\nval kind_%s : parser_kind %s %s\n\n"
-        (print_ident td.decl_name.td_name)
-        (string_of_bool td.decl_parser.p_kind.pk_nz)
-        (A.print_weak_kind td.decl_parser.p_kind.pk_weak_kind)
-      `strcat`
-      Printf.sprintf "noextract\nval parse_%s : parser (kind_%s) (%s)\n\n"
-        (print_typedef_name mname td.decl_name)
-        (print_ident td.decl_name.td_name)
-        (print_typedef_typ td.decl_name)
-      `strcat`
-      (let inv, fp = print_typedef_actions_inv_and_fp td in
-      Printf.sprintf "val validate_%s : validate_with_action_t (parse_%s) %s %s %b\n\n"
-        (print_typedef_name mname td.decl_name)
-        (print_typedef_typ td.decl_name)
-        inv
-        fp
-        td.decl_validator.v_allow_reading)
-      `strcat`
-      (match td.decl_reader with
-       | None -> ""
-       | Some r ->
-         Printf.sprintf "%sinline_for_extraction\nval read_%s : leaf_reader (parse_%s)\n\n"
-           (if td.decl_name.td_entrypoint then "" else "noextract\n")
-           (print_typedef_name mname td.decl_name)
-           (print_typedef_typ td.decl_name))
-     end
+// let print_type_decl_signature (mname:string) (d:decl{Type_decl? (fst d)}) : ML string =
+//   match fst d with
+//   | Type_decl td ->
+//     if false //not td.decl_name.td_entrypoint
+//     then ""
+//     else begin
+//       (if is_type_abbreviation td
+//        then Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s.Types.%s\n\n"
+//               (print_typedef_name mname td.decl_name)
+//               mname
+//               (print_typedef_typ td.decl_name)
+//        else Printf.sprintf "noextract\ninline_for_extraction\nval %s : Type0\n\n"
+//               (print_typedef_name mname td.decl_name))
+//       `strcat`
+//       Printf.sprintf "noextract\ninline_for_extraction\nval kind_%s : parser_kind %s %s\n\n"
+//         (print_ident td.decl_name.td_name)
+//         (string_of_bool td.decl_parser.p_kind.pk_nz)
+//         (A.print_weak_kind td.decl_parser.p_kind.pk_weak_kind)
+//       `strcat`
+//       Printf.sprintf "noextract\nval parse_%s : parser (kind_%s) (%s)\n\n"
+//         (print_typedef_name mname td.decl_name)
+//         (print_ident td.decl_name.td_name)
+//         (print_typedef_typ td.decl_name)
+//       `strcat`
+//       (let inv, fp = print_typedef_actions_inv_and_fp td in
+//       Printf.sprintf "val validate_%s : validate_with_action_t (parse_%s) %s %s %b\n\n"
+//         (print_typedef_name mname td.decl_name)
+//         (print_typedef_typ td.decl_name)
+//         inv
+//         fp
+//         td.decl_validator.v_allow_reading)
+//       `strcat`
+//       (match td.decl_reader with
+//        | None -> ""
+//        | Some r ->
+//          Printf.sprintf "%sinline_for_extraction\nval read_%s : leaf_reader (parse_%s)\n\n"
+//            (if td.decl_name.td_entrypoint then "" else "noextract\n")
+//            (print_typedef_name mname td.decl_name)
+//            (print_typedef_typ td.decl_name))
+//      end
 
-let print_decl_signature (mname:string) (d:decl) : ML string =
-  match fst d with
-  | Assumption _
-  | Definition _ -> ""
-  | Type_decl td ->
-    if (snd d).is_hoisted
-    then ""
-    else if not ((snd d).is_exported || td.decl_name.td_entrypoint)
-    then ""
-    else print_type_decl_signature mname d
-  | Output_type _
-  | Output_type_expr _ _
-  | Extern_type _
-  | Extern_fn _ _ _ -> ""
+// let print_decl_signature (mname:string) (d:decl) : ML string =
+//   match fst d with
+//   | Assumption _
+//   | Definition _ -> ""
+//   | Type_decl td ->
+//     if (snd d).is_hoisted
+//     then ""
+//     else if not ((snd d).is_exported || td.decl_name.td_entrypoint)
+//     then ""
+//     else print_type_decl_signature mname d
+//   | Output_type _
+//   | Output_type_expr _ _
+//   | Extern_type _
+//   | Extern_fn _ _ _ -> ""
 
 let has_output_types (ds:list decl) : bool =
   List.Tot.existsb (fun (d, _) -> Output_type? d) ds
@@ -978,58 +978,58 @@ let external_api_include (modul:string) (ds:list decl) : string =
   then Printf.sprintf "open %s.ExternalAPI\n\n" modul
   else ""
 
-let print_decls (modul: string) (ds:list decl) =
-  let decls =
-  Printf.sprintf
-    "module %s\n\
-     open EverParse3d.Prelude\n\
-     open EverParse3d.Actions.All\n\
-     %s\
-     \n\n\
-     #set-options \"--using_facts_from '* FStar EverParse3d.Prelude -FStar.Tactics -FStar.Reflection -LowParse'\"\n\
-     %s"
-     modul
-     (external_api_include modul ds)
-     (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n"
-       (ds |> List.map (print_decl_for_validators modul)
-           |> List.filter (fun s -> s <> "")))
-  in
-  decls
+// let print_decls (modul: string) (ds:list decl) =
+//   let decls =
+//   Printf.sprintf
+//     "module %s\n\
+//      open EverParse3d.Prelude\n\
+//      open EverParse3d.Actions.All\n\
+//      %s\
+//      \n\n\
+//      #set-options \"--using_facts_from '* FStar EverParse3d.Prelude -FStar.Tactics -FStar.Reflection -LowParse'\"\n\
+//      %s"
+//      modul
+//      (external_api_include modul ds)
+//      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n"
+//        (ds |> List.map (print_decl_for_validators modul)
+//            |> List.filter (fun s -> s <> "")))
+//   in
+//   decls
 
-let print_types_decls (modul:string) (ds:list decl) =
-  let decls =
-  Printf.sprintf
-    "module %s.Types\n\
-     open EverParse3d.Prelude\n\
-     open EverParse3d.Actions.All\n\n\
-     %s\
-     #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
-     %s"
-     modul
-     (external_api_include modul ds)
-     (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" 
-       (ds |> List.map (print_decl_for_types modul)
-           |> List.filter (fun s -> s <> "")))
-  in
-  decls
+// let print_types_decls (modul:string) (ds:list decl) =
+//   let decls =
+//   Printf.sprintf
+//     "module %s.Types\n\
+//      open EverParse3d.Prelude\n\
+//      open EverParse3d.Actions.All\n\n\
+//      %s\
+//      #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
+//      %s"
+//      modul
+//      (external_api_include modul ds)
+//      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" 
+//        (ds |> List.map (print_decl_for_types modul)
+//            |> List.filter (fun s -> s <> "")))
+//   in
+//   decls
 
-let print_decls_signature (mname: string) (ds:list decl) =
-  let decls =
-    Printf.sprintf
-    "module %s\n\
-     open EverParse3d.Prelude\n\
-     open EverParse3d.Actions.All\n\
-     %s\
-     \n\n\
-     %s"
-     mname
-     (external_api_include mname ds)
-     (String.concat "\n" (ds |> List.map (print_decl_signature mname) |> List.filter (fun s -> s <> "")))
-  in
-  // let dummy =
-  //     "let retain (x:result) : Tot (FStar.UInt64.t & bool) = field_id_of_result x, result_is_error x"
-  // in
-  decls // ^ "\n" ^ dummy
+// let print_decls_signature (mname: string) (ds:list decl) =
+//   let decls =
+//     Printf.sprintf
+//     "module %s\n\
+//      open EverParse3d.Prelude\n\
+//      open EverParse3d.Actions.All\n\
+//      %s\
+//      \n\n\
+//      %s"
+//      mname
+//      (external_api_include mname ds)
+//      (String.concat "\n" (ds |> List.map (print_decl_signature mname) |> List.filter (fun s -> s <> "")))
+//   in
+//   // let dummy =
+//   //     "let retain (x:result) : Tot (FStar.UInt64.t & bool) = field_id_of_result x, result_is_error x"
+//   // in
+//   decls // ^ "\n" ^ dummy
 
 #push-options "--z3rlimit_factor 4"
 let pascal_case name : ML string =
@@ -1401,13 +1401,14 @@ let rec base_output_type (t:typ) : ML A.ident =
   | T_app id A.KindOutput [] -> id
   | T_pointer t -> base_output_type t
   | _ -> failwith "Target.base_output_type called with a non-output type"
-
+#push-options "--fuel 1"
 let rec print_output_type_val (tbl:set) (t:typ) : ML string =
   let open A in
   if is_output_type t
   then let s = print_output_type false t in
        if H.try_find tbl s <> None then ""
        else let _ = H.insert tbl s () in
+            assert (is_output_type t);
             match t with
             | T_app id KindOutput [] ->
               Printf.sprintf "\n\nval %s : Type0\n\n" s
@@ -1415,18 +1416,7 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
               let bs = print_output_type_val tbl bt in
               bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = bpointer %s\n\n" s (print_output_type false bt))
   else ""
-
-// let print_output_type_c_typedef (tbl:set) (t:typ) : ML string =
-//   if is_output_type t
-//   then let s = pascal_case (print_output_type t) in
-//        match H.try_find tbl s with
-//        | Some _ -> ""
-//        | None ->
-//          H.insert tbl s ();
-//          Printf.sprintf "\n\ntypedef %s %s;\n\n"
-//            (print_as_c_type t)
-//            s
-//   else ""
+#pop-options
 
 let rec print_out_expr' (oe:output_expr') : ML string =
   match oe with

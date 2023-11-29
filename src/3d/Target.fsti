@@ -196,149 +196,149 @@ type reader =
   | Read_filter : r:reader -> f:lam expr -> reader
   | Read_app : hd:A.ident -> args:list index -> reader
 
-noeq
-type validator' =
-  | Validate_return:
-    validator'
+// noeq
+// type validator' =
+//   | Validate_return:
+//     validator'
 
-  | Validate_app:
-    hd:A.ident ->
-    args:list index ->
-    validator'
+//   | Validate_app:
+//     hd:A.ident ->
+//     args:list index ->
+//     validator'
 
-  | Validate_nlist:
-    n:expr ->
-    v:validator ->
-    validator'
+//   | Validate_nlist:
+//     n:expr ->
+//     v:validator ->
+//     validator'
 
-  | Validate_nlist_constant_size_without_actions:
-    n:expr ->
-    v:validator ->
-    validator'
+//   | Validate_nlist_constant_size_without_actions:
+//     n:expr ->
+//     v:validator ->
+//     validator'
 
-  | Validate_t_at_most:
-    n:expr ->
-    v:validator ->
-    validator'
+//   | Validate_t_at_most:
+//     n:expr ->
+//     v:validator ->
+//     validator'
 
-  | Validate_t_exact:
-    n:expr ->
-    v:validator ->
-    validator'
+//   | Validate_t_exact:
+//     n:expr ->
+//     v:validator ->
+//     validator'
 
-  | Validate_pair:
-    n1:A.ident ->
-    v1:validator ->
-    v2:validator ->
-    validator'
+//   | Validate_pair:
+//     n1:A.ident ->
+//     v1:validator ->
+//     v2:validator ->
+//     validator'
 
-  | Validate_dep_pair:
-    n1:A.ident ->
-    v:validator ->
-    r:reader ->
-    k:lam validator ->
-    validator'
+//   | Validate_dep_pair:
+//     n1:A.ident ->
+//     v:validator ->
+//     r:reader ->
+//     k:lam validator ->
+//     validator'
 
-  | Validate_dep_pair_with_refinement:
-    p1_is_constant_size_without_actions:bool ->
-    n1:A.ident ->
-    dfst:validator ->
-    r:reader ->
-    refinement:lam expr ->
-    dsnd:lam validator ->
-    validator'
+//   | Validate_dep_pair_with_refinement:
+//     p1_is_constant_size_without_actions:bool ->
+//     n1:A.ident ->
+//     dfst:validator ->
+//     r:reader ->
+//     refinement:lam expr ->
+//     dsnd:lam validator ->
+//     validator'
 
-  | Validate_dep_pair_with_action:
-    dfst:validator ->
-    r:reader ->
-    a:lam action ->
-    dsnd:lam validator ->
-    validator'
+//   | Validate_dep_pair_with_action:
+//     dfst:validator ->
+//     r:reader ->
+//     a:lam action ->
+//     dsnd:lam validator ->
+//     validator'
 
-  | Validate_dep_pair_with_refinement_and_action:
-    p1_is_constant_size_without_actions:bool ->
-    n1:A.ident ->
-    dfst:validator ->
-    r:reader ->
-    refinement:lam expr ->
-    a:lam action ->
-    dsnd:lam validator ->
-    validator'
+//   | Validate_dep_pair_with_refinement_and_action:
+//     p1_is_constant_size_without_actions:bool ->
+//     n1:A.ident ->
+//     dfst:validator ->
+//     r:reader ->
+//     refinement:lam expr ->
+//     a:lam action ->
+//     dsnd:lam validator ->
+//     validator'
 
-  | Validate_map:
-    p:validator ->
-    f:lam expr ->
-    validator'
+//   | Validate_map:
+//     p:validator ->
+//     f:lam expr ->
+//     validator'
 
-  | Validate_refinement:
-    n:A.ident ->
-    v:validator ->
-    r:reader ->
-    f:lam expr ->
-    validator'
+//   | Validate_refinement:
+//     n:A.ident ->
+//     v:validator ->
+//     r:reader ->
+//     f:lam expr ->
+//     validator'
 
-  | Validate_refinement_with_action:
-    n:A.ident ->
-    v:validator ->
-    r:reader ->
-    f:lam expr ->
-    a:lam action ->
-    validator'
+//   | Validate_refinement_with_action:
+//     n:A.ident ->
+//     v:validator ->
+//     r:reader ->
+//     f:lam expr ->
+//     a:lam action ->
+//     validator'
 
-  | Validate_with_dep_action:
-    name:A.ident ->
-    v:validator ->
-    r:reader ->
-    a:lam action ->
-    validator'
+//   | Validate_with_dep_action:
+//     name:A.ident ->
+//     v:validator ->
+//     r:reader ->
+//     a:lam action ->
+//     validator'
 
-  | Validate_with_action:
-    name:A.ident ->
-    v:validator ->
-    a:action ->
-    validator'
+//   | Validate_with_action:
+//     name:A.ident ->
+//     v:validator ->
+//     a:action ->
+//     validator'
 
-  | Validate_weaken_left:
-    v:validator ->
-    k:parser_kind ->
-    validator'
+//   | Validate_weaken_left:
+//     v:validator ->
+//     k:parser_kind ->
+//     validator'
 
-  | Validate_weaken_right:
-    v:validator ->
-    k:parser_kind ->
-    validator'
+//   | Validate_weaken_right:
+//     v:validator ->
+//     k:parser_kind ->
+//     validator'
 
-  | Validate_if_else:
-    e:expr ->
-    validator ->
-    validator ->
-    validator'
+//   | Validate_if_else:
+//     e:expr ->
+//     validator ->
+//     validator ->
+//     validator'
 
-  | Validate_impos:
-    validator'
+//   | Validate_impos:
+//     validator'
 
-  | Validate_with_error_handler:
-    typename:A.ident ->
-    fieldname:string ->
-    v:validator ->
-    validator'
+//   | Validate_with_error_handler:
+//     typename:A.ident ->
+//     fieldname:string ->
+//     v:validator ->
+//     validator'
 
-  | Validate_with_comment:
-    v:validator ->
-    c:A.comments ->
-    validator'
+//   | Validate_with_comment:
+//     v:validator ->
+//     c:A.comments ->
+//     validator'
 
-  | Validate_string:
-    v:validator ->
-    r:reader ->
-    zero:expr ->
-    validator'
+//   | Validate_string:
+//     v:validator ->
+//     r:reader ->
+//     zero:expr ->
+//     validator'
 
-and validator = {
-  v_allow_reading: bool;
-  v_parser:parser;
-  v_validator:validator'
-}
+// and validator = {
+//   v_allow_reading: bool;
+//   v_parser:parser;
+//   v_validator:validator'
+// }
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -347,8 +347,8 @@ type type_decl = {
   decl_name: typedef_name;
   decl_typ: typedef_body;
   decl_parser: parser;
-  decl_validator: validator;
-  decl_reader: option reader;
+  // decl_validator: validator;
+  // decl_reader: option reader;
   decl_is_enum : bool
 }
 
@@ -417,9 +417,9 @@ val print_parser (mname:string) (p:parser) : ML string
 val print_action (mname:string) (a:action) : ML string
 val print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
 val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string
-val print_decls (modul: string) (ds:list decl) : ML string
-val print_types_decls (modul: string) (ds:list decl) : ML string
-val print_decls_signature (modul: string) (ds:list decl) : ML string
+// val print_decls (modul: string) (ds:list decl) : ML string
+// val print_types_decls (modul: string) (ds:list decl) : ML string
+// val print_decls_signature (modul: string) (ds:list decl) : ML string
 val wrapper_name (modul: string) (fn: string) : ML string
 val validator_name (modul: string) (fn: string) : ML string
 type produce_everparse_error = | ProduceEverParseError
