@@ -118,7 +118,7 @@ let parse_check_and_desugar (pa: opt_prune_actions) (en:env) (mname:string) (fn:
   
 let translate_module (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
   : ML (list Target.decl &
-        option (list InterpreterTarget.decl) &
+        list InterpreterTarget.decl &
         StaticAssertions.static_asserts &
         env) =
 
@@ -132,7 +132,7 @@ let translate_module (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
         TranslateForInterpreter.translate_decls en.binding_env en.typesizes_env env decls
       in
       let tds = InterpreterTarget.translate_decls env' decls in
-      decls, Some tds, (env, env')
+      decls, tds, (env, env')
   in
   let en = { en with translate_env = tenv } in
   t_decls,
@@ -366,19 +366,14 @@ let process_file_gen
                  (emit_fstar:bool)
                  (emit_output_types_defs:bool)
                  (all_modules:list string)
-  : ML (env & option (list InterpreterTarget.decl)) =
+  : ML (env & list InterpreterTarget.decl) =
   
-  let t_decls, interpreter_decls_opt, static_asserts, en =
+  let t_decls, interpreter_decls, static_asserts, en =
       translate_module pa en modul fn
   in
   if emit_fstar 
   then (
-    (
-      match interpreter_decls_opt with
-      | None -> failwith "Impossible: interpreter mode expects interperter target decls"
-      | Some tds ->
-        emit_fstar_code_for_interpreter en modul t_decls tds all_modules
-    );
+    emit_fstar_code_for_interpreter en modul t_decls interpreter_decls all_modules;
     emit_entrypoint produce_ep_error en modul t_decls static_asserts emit_output_types_defs
   )
   else IO.print_string (Printf.sprintf "Not emitting F* code for %s\n" fn);
@@ -390,7 +385,7 @@ let process_file_gen
     binding_env = Binding.finish_module en.binding_env modul;
     translate_env = 
       en.translate_env;
-  }, interpreter_decls_opt
+  }, interpreter_decls
 
 let process_file
                  (en:env)
@@ -462,11 +457,8 @@ let process_file_for_z3
                  (all_modules:list string)
   : ML (env & Z3TestGen.prog) =
   let (en, accu) = en_accu in
-  let (en, interpreter_decls_opt) = process_file_gen (Some Target.ProduceEverParseError) (Some PruneActions) en fn modul emit_fstar emit_output_types_defs all_modules in
-  let accu = match interpreter_decls_opt with
-  | None -> failwith "process_file_for_z3: no interpreter decls left"
-  | Some i -> Z3TestGen.produce_decls out accu i
-  in
+  let (en, interpreter_decls) = process_file_gen (Some Target.ProduceEverParseError) (Some PruneActions) en fn modul emit_fstar emit_output_types_defs all_modules in
+  let accu = Z3TestGen.produce_decls out accu interpreter_decls in
   (en, accu)
 
 let process_files_for_z3
