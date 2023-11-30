@@ -1671,7 +1671,7 @@ let test_checker_c
 
 int main(int argc, char** argv) {
   if (argc < "^nb_cmd_and_args_s^") {
-    printf(\"Wrong number of arguments, expected "^nb_args_s^", got %d\\n\", argc);
+    printf(\"Wrong number of arguments, expected "^nb_args_s^", got %d\\n\", argc - 1);
     return 3;
   }
   char * filename = argv[1];
