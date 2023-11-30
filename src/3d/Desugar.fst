@@ -426,6 +426,9 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let ret = resolve_typ env ret in
     let params, _ = resolve_params env params in
     ExternFn id ret params
+  | ExternProbe id ->
+    let id = resolve_ident env id in
+    ExternProbe id
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 

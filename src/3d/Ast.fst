@@ -469,6 +469,14 @@ type field_array_t =
 
 [@@ PpxDerivingYoJson ]
 noeq
+type probe_call = {
+  probe_fn:option ident;
+  probe_length:expr;
+  probe_dest:expr
+}
+
+[@@ PpxDerivingYoJson ]
+noeq
 type atomic_field' = {
   field_dependence:bool;   //computed; whether or not the rest of the struct depends on this field
   field_ident:ident;       //name of the field
@@ -476,7 +484,8 @@ type atomic_field' = {
   field_array_opt: field_array_t;
   field_constraint:option expr; //refinement constraint
   field_bitwidth:option field_bitwidth_t;  //bits used for the field; elaborate from Inl to Inr
-  field_action:option (action & bool); //boo indicates if the action depends on the field value
+  field_action:option (action & bool); //bool indicates if the action depends on the field value
+  field_probe:option probe_call; //set in case this field has to be probed then validated
 }
 
 and atomic_field = with_meta_t atomic_field'
@@ -564,6 +573,7 @@ type decl' =
   | OutputType : out_typ -> decl'
   | ExternType : typedef_names -> decl'
   | ExternFn   : ident -> typ -> list param -> decl'
+  | ExternProbe : ident -> decl'
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -778,6 +788,7 @@ let puint8 = mk_prim_t "PUINT8"
 let tuint16 = mk_prim_t "UINT16"
 let tuint32 = mk_prim_t "UINT32"
 let tuint64 = mk_prim_t "UINT64"
+let tcopybuffer = mk_prim_t "COPY_BUFFER_T"
 let tunknown = mk_prim_t "?"
 let unit_atomic_field rng = 
     let dummy_identifier = with_range (to_ident' "_empty_") rng in
@@ -788,7 +799,8 @@ let unit_atomic_field rng =
          field_array_opt=FieldScalar;
          field_constraint=None;
          field_bitwidth=None;
-         field_action=None
+         field_action=None;
+         field_probe=None
         } in
     with_range f rng
 
@@ -893,11 +905,13 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
     CaseType names (subst_params s params) (subst_switch_case s cases)
   | OutputType _
   | ExternType _
-  | ExternFn _ _ _ -> d
+  | ExternFn _ _ _ 
+  | ExternProbe _ -> d
 let subst_decl (s:subst) (d:decl) : ML decl = decl_with_v d (subst_decl' s d.d_decl.v)
 
 (*** Printing the source AST; for debugging only **)
-let print_constant (c:constant) =
+let print_constant (c:constant) =
+
   let print_tag = function
     | UInt8 -> "uy"
     | UInt16 -> "us"
@@ -1104,13 +1118,18 @@ and print_atomic_field (f:atomic_field) : ML string =
     | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-b-te-size-at-most %s]" (print_expr sz)
   in
   let sf = f.v in
-    Printf.sprintf "%s%s %s%s%s%s;"
+    Printf.sprintf "%s%s %s%s%s%s%s;"
       (if sf.field_dependence then "dependent " else "")
       (print_typ sf.field_type)
       (print_ident sf.field_ident)
       (print_bitfield sf.field_bitwidth)
       (print_array sf.field_array_opt)
       (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
+      (print_opt sf.field_probe
+        (fun p -> Printf.sprintf "probe %s (length=%s, destination=%s)"
+          (print_opt p.probe_fn print_ident)
+          (print_expr p.probe_length)
+          (print_expr p.probe_dest)))
 
 and print_switch_case (s:switch_case) : ML string =
   let head, cases = s in
@@ -1173,7 +1192,8 @@ let print_decl' (d:decl') : ML string =
                     (ident_to_string td.typedef_ptr_abbrev)
   | OutputType out_t -> "Printing for output types is TBD"
   | ExternType _ -> "Printing for extern types is TBD"
-  | ExternFn _ _ _ -> "Printing for extern functions is TBD"
+  | ExternFn _ _ _
+  | ExternProbe _ -> "Printing for extern functions is TBD"
 
 let print_decl (d:decl) : ML string =
   match d.d_decl.comments with
@@ -1265,11 +1285,11 @@ let decl'_prune_actions
   | OutputType _
   | ExternType _
   | ExternFn _ _ _
-  -> d
-  | Record names params where fields
-  -> Record names params where (record_prune_actions fields)
-  | CaseType names params cases
-  -> CaseType names params (switch_case_prune_actions cases)
+  | ExternProbe _ -> d
+  | Record names params where fields ->
+    Record names params where (record_prune_actions fields)
+  | CaseType names params cases ->
+    CaseType names params (switch_case_prune_actions cases)
 
 let decl_prune_actions
   (d: decl)

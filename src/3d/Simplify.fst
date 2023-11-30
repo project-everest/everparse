@@ -190,6 +190,8 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     let ret = simplify_typ env ret in
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
     decl_with_v d (ExternFn f ret params)
+
+  | ExternProbe _ -> d
   
 
 let simplify_prog benv senv (p:list decl) =

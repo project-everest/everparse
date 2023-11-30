@@ -429,7 +429,8 @@ let decl_size_with_alignment (env:env_t) (d:decl)
 
     | OutputType _
     | ExternType _
-    | ExternFn _ _ _ -> d
+    | ExternFn _ _ _
+    | ExternProbe _ -> d
 
 let size_of_decls (genv:B.global_env) (senv:size_env) (ds:list decl) =
   let env =

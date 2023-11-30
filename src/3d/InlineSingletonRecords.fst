@@ -202,7 +202,8 @@ let simplify_decl (env:env) (d:decl) : ML decl =
 
   | OutputType _
   | ExternType _
-  | ExternFn _ _ _ -> d
+  | ExternFn _ _ _
+  | ExternProbe _ -> d
 
 let simplify_prog (p:list decl) =
   let env = H.create 10 in

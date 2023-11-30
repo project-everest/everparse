@@ -194,7 +194,8 @@ let scan_deps (fn:string) : ML scan_deps_t =
       (deps_of_switch_case sc)
     | OutputType _
     | ExternType _
-    | ExternFn _ _ _ -> []  //AR: no dependencies from the output/extern types yet
+    | ExternFn _ _ _
+    | ExternProbe _ -> []  //AR: no dependencies from the output/extern types yet
   in
 
   let has_output_types (ds:list decl) : bool =
