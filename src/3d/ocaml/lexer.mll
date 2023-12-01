@@ -147,6 +147,7 @@ rule token =
   | "[:byte-size-single-element-array"        { locate lexbuf LBRACK_SINGLE_ELEMENT_BYTESIZE }
   | "[:zeroterm"     { locate lexbuf LBRACK_STRING }
   | "[:zeroterm-byte-size-at-most"     { locate lexbuf LBRACK_STRING_AT_MOST }
+  | "[:consume-all"  { locate lexbuf LBRACK_CONSUME_ALL }
   | "["                          { locate lexbuf LBRACK (* intended for use with UINT8 arrays only, interpreted as [:byte-size] *)}
   | "]"                          { locate lexbuf RBRACK }
   | "[="           { deprecation_warning lexbuf "[:byte-size-single-element-array";
