@@ -8,18 +8,18 @@ open LowStar.Buffer
 open FStar.HyperStack.ST
 val region : HS.rid
 
-val t : Type0
+val copy_buffer_t : Type0
 
-val as_input_stream : t -> (sl:I.t & I.tlen sl)
+val stream_of : copy_buffer_t -> I.t
+val stream_len (c:copy_buffer_t) : I.tlen (stream_of c)
 
-let stream_of (x:t) = dfst (as_input_stream x)
 
-let loc_of (x:t) : GTot B.loc =
+let loc_of (x:copy_buffer_t) : GTot B.loc =
   I.footprint (stream_of x)
 
-let inv (x:t) (h:HS.mem) = I.live (stream_of x) h
+let inv (x:copy_buffer_t) (h:HS.mem) = I.live (stream_of x) h
 
-let liveness_preserved (x:t) =
+let liveness_preserved (x:copy_buffer_t) =
   let sl = stream_of x in
   forall l h0 h1. {:pattern (modifies l h0 h1)}
     (I.live sl h0 /\
@@ -27,7 +27,7 @@ let liveness_preserved (x:t) =
      address_liveness_insensitive_locs `loc_includes` l) ==>
     I.live sl h1
 
-val properties (x:t)
+val properties (x:copy_buffer_t)
   : Lemma (
       liveness_preserved x /\
       B.loc_region_only true region `loc_includes` loc_of x /\
@@ -35,7 +35,7 @@ val properties (x:t)
     )
 
 
-let probe_fn = src:U64.t -> len:U64.t -> dest:t ->
+let probe_fn = src:U64.t -> len:U64.t -> dest:copy_buffer_t ->
   Stack bool
     (fun h0 ->
       I.live (stream_of dest) h0)

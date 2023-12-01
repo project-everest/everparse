@@ -800,8 +800,8 @@ val mk_external_action
   (#l:eloc) ($f: external_action l)
   : action true_inv disjointness_trivial l false unit
 
-val copy_buffer_inv (x:CP.t) : slice_inv
-val copy_buffer_loc (x:CP.t) : eloc
+val copy_buffer_inv (x:CP.copy_buffer_t) : slice_inv
+val copy_buffer_loc (x:CP.copy_buffer_t) : eloc
 
 inline_for_extraction
 noextract
@@ -818,7 +818,7 @@ val probe_then_validate
       (v:validate_with_action_t p inv disj l allow_reading)
       (src:U64.t)
       (len:U64.t)
-      (dest:CP.t)
+      (dest:CP.copy_buffer_t)
       (probe:CP.probe_fn)
   : action (conj_inv inv (copy_buffer_inv dest))
            (conj_disjointness disj (disjoint (copy_buffer_loc dest) l))

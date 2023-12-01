@@ -1,5 +1,4 @@
-extern probe probe_and_copy
-extern UINT32 test(UINT32 x)
+extern probe ProbeAndCopy
 
 typedef struct _T {
   UINT32 x { x >= 17 };

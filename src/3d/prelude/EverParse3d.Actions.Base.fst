@@ -1805,11 +1805,11 @@ noextract
 inline_for_extraction
 let mk_external_action  #_ f = fun _ _ _ _ _ _ -> f ()
   
-let copy_buffer_inv (x:CP.t)
+let copy_buffer_inv (x:CP.copy_buffer_t)
 : slice_inv
 = CP.properties x;
   F.on HS.mem #prop (CP.inv x)
-let copy_buffer_loc (x:CP.t)
+let copy_buffer_loc (x:CP.copy_buffer_t)
 : eloc
 = CP.loc_of x
 
@@ -1828,7 +1828,7 @@ let probe_then_validate
       (v:validate_with_action_t p inv disj l allow_reading)
       (src:U64.t)
       (len:U64.t)
-      (dest:CP.t)
+      (dest:CP.copy_buffer_t)
       (probe:CP.probe_fn)
   = fun ctxt error_handler_fn input input_length pos posf ->
       CP.properties dest;
@@ -1838,8 +1838,7 @@ let probe_then_validate
       then (
         let h1 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h0 h1;
-        let (| sl, sl_len |) = CP.as_input_stream dest in
-        let result = v ctxt error_handler_fn sl sl_len 0uL in
+        let result = v ctxt error_handler_fn (CP.stream_of dest) (CP.stream_len dest) 0uL in
         not (LPE.is_error result)
       )
       else false

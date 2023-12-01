@@ -26,7 +26,7 @@ open FStar.List.Tot
 
 inline_for_extraction
 noextract
-let ___COPY_BUFFER_T = CP.t
+let ___COPY_BUFFER_T = CP.copy_buffer_t
 
 (* This module defines a strongly typed abstract syntax for an
    intermediate representation of 3D programs. This is the type `typ`.
@@ -519,7 +519,7 @@ type atomic_action
       dt:dtyp k has_reader inv disj l ->
       src:U64.t ->
       len:U64.t ->
-      dest:CP.t ->
+      dest:CP.copy_buffer_t ->
       probe:CP.probe_fn ->
       atomic_action (A.conj_inv inv (A.copy_buffer_inv dest))
                     (join_disj disj (Some (A.disjoint (A.copy_buffer_loc dest) l)))
@@ -901,7 +901,7 @@ let t_probe_then_validate
       (fieldname:string)
       (probe:CP.probe_fn)
       (len:U64.t)
-      (dest:CP.t)
+      (dest:CP.copy_buffer_t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
       (#has_reader #i #disj:_)
       (#l:A.eloc)
