@@ -737,9 +737,9 @@ let rec print_eloc mname (e:eloc)
 let rec print_disj mname (d:disj_pre)
   : ML string
   = match d with
-    | Disj_triv -> "A.disjointness_trivial"
-    | Disj_pair i j -> Printf.sprintf "(A.disjoint %s %s)" (print_eloc mname i) (print_eloc mname j)
-    | Disj_conj i j -> Printf.sprintf "(A.conj_disjointness %s %s)" (print_disj mname i) (print_disj mname j)
+    | Disj_triv -> "None"
+    | Disj_pair i j -> Printf.sprintf "(Some (A.disjoint %s %s))" (print_eloc mname i) (print_eloc mname j)
+    | Disj_conj i j -> Printf.sprintf "(join_disj %s %s)" (print_disj mname i) (print_disj mname j)
     | Disj_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "disj" hd) (print_args mname args)
 
 let print_td_iface is_entrypoint mname root_name binders args typ_indexes_binders typ_indexes_args ar pk_wk pk_nz =
@@ -762,7 +762,7 @@ let print_td_iface is_entrypoint mname root_name binders args typ_indexes_binder
   let disj_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
-                    val disj_%s %s : A.disjointness_pre"
+                    val disj_%s %s : disj_index"
       root_name
       typ_indexes_binders
   in
@@ -875,7 +875,7 @@ let print_binding mname (td:type_decl)
     let fvs2 = free_vars_of_disj disj in
     let fvs3 = free_vars_of_eloc eloc in
     let s0, _, _ = print_inv_or_eloc_or_disj "inv" "A.slice_inv" (print_inv mname inv) (fvs1@fvs2@fvs3) in
-    let s1, _, _ = print_inv_or_eloc_or_disj "disj" "A.disjointness_pre" (print_disj mname disj) (fvs1@fvs2@fvs3) in
+    let s1, _, _ = print_inv_or_eloc_or_disj "disj" "disj_index" (print_disj mname disj) (fvs1@fvs2@fvs3) in
     let s2, fvb, fva = print_inv_or_eloc_or_disj "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2@fvs3) in
     s0 ^ s1 ^ s2, fvb, fva
   in

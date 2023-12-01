@@ -205,6 +205,21 @@ let leaf_reader #nz #wk (#k: P.parser_kind nz wk) #t (p:P.parser k t)
 (* Now, we can define the type of an environment *)
 module T = FStar.Tactics
 
+let disj_index = option A.disjointness_pre
+
+[@@specialize]
+let interp_disj_index = function
+  | None -> A.disjointness_trivial
+  | Some d -> d
+
+[@@specialize]
+let join_disj (d0 d1:disj_index)
+  : disj_index
+  = match d0, d1 with
+    | None, d
+    | d, None -> d
+    | Some d0, Some d1 -> Some (A.conj_disjointness d0 d1)
+
 (* global_binding: 
 
    Represents the lifting of a fully applied a shallow F*
@@ -219,7 +234,7 @@ type global_binding = {
   //Memory invariant of any actions it contains
   inv:A.slice_inv;
   //Disjointness precondition
-  disj:A.disjointness_pre;
+  disj:disj_index;
   //Write footprint of any of its actions
   loc:A.eloc;
   //Its type denotation
@@ -229,7 +244,7 @@ type global_binding = {
   //Whether the type can be read -- to avoid double fetches
   p_reader: option (leaf_reader p_p);
   //Its validate-with-action denotationa
-  p_v : A.validate_with_action_t p_p inv disj loc (Some? p_reader);
+  p_v : A.validate_with_action_t p_p inv (interp_disj_index disj) loc (Some? p_reader);
 }
 
 let projector_names : list string = [
@@ -297,7 +312,7 @@ type dtyp
     P.parser_kind nz wk ->
     has_reader:bool ->
     A.slice_inv ->
-    A.disjointness_pre ->
+    disj_index ->
     A.eloc ->
     Type =
   | DT_IType:
@@ -305,7 +320,7 @@ type dtyp
       dtyp (parser_kind_of_itype i)
            (allow_reader_of_itype i)
            A.true_inv
-           A.disjointness_trivial
+           None
            A.eloc_none
 
   | DT_App:
@@ -317,7 +332,7 @@ type dtyp
       pk:P.parser_kind nz wk ->
       hr:bool ->
       inv:A.slice_inv ->
-      disj:A.disjointness_pre ->
+      disj:disj_index ->
       loc:A.eloc ->
       x:global_binding ->
       _:squash (nz == nz_of_binding x /\
@@ -367,12 +382,12 @@ let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #disj #l
 let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk)
                       (#hr:_)
                       (#[@@@erasable] i:A.slice_inv)
-                      (#[@@@erasable] disj:A.disjointness_pre)
+                      (#disj:disj_index)
                       (#[@@@erasable] l:A.eloc)
                       (d:dtyp pk hr i disj l)
-  : A.validate_with_action_t #nz #wk #pk #(dtyp_as_type d) (dtyp_as_parser d) i disj l hr
+  : A.validate_with_action_t #nz #wk #pk #(dtyp_as_type d) (dtyp_as_parser d) i (interp_disj_index disj) l hr
   = match d 
-    returns A.validate_with_action_t #nz #wk #pk #(dtyp_as_type d) (dtyp_as_parser d) i disj l hr
+    returns A.validate_with_action_t #nz #wk #pk #(dtyp_as_type d) (dtyp_as_parser d) i (interp_disj_index disj) l hr
     with
     | DT_IType i -> 
       itype_as_validator i
@@ -386,7 +401,7 @@ let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk)
 [@@specialize]
 let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
                         (#[@@@erasable] i:A.slice_inv)
-                        (#[@@@erasable] disj:A.disjointness_pre)
+                        (#disj:disj_index)
                         (#[@@@erasable] l:A.eloc)
                         (d:dtyp pk true i disj l)
   : A.leaf_reader (dtyp_as_parser d)
@@ -438,49 +453,49 @@ let mk_action_binding
 *)
 noeq
 type atomic_action
-  : A.slice_inv -> A.disjointness_pre -> A.eloc -> bool -> Type0 -> Type u#1 =
+  : A.slice_inv -> disj_index -> A.eloc -> bool -> Type0 -> Type u#1 =
   | Action_return:
       #a:Type0 ->
       x:a ->
-      atomic_action A.true_inv A.disjointness_trivial A.eloc_none false a
+      atomic_action A.true_inv None A.eloc_none false a
 
   | Action_abort:
-      atomic_action A.true_inv A.disjointness_trivial A.eloc_none false bool
+      atomic_action A.true_inv None A.eloc_none false bool
 
   | Action_field_pos_64:
-      atomic_action A.true_inv A.disjointness_trivial A.eloc_none false U64.t
+      atomic_action A.true_inv None A.eloc_none false U64.t
 
   | Action_field_pos_32:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
-      atomic_action A.true_inv A.disjointness_trivial A.eloc_none false U32.t
+      atomic_action A.true_inv None A.eloc_none false U32.t
 
   | Action_field_ptr:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
-      atomic_action A.true_inv A.disjointness_trivial A.eloc_none true A.___PUINT8
+      atomic_action A.true_inv None A.eloc_none true A.___PUINT8
 
   | Action_field_ptr_after:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
       (sz: FStar.UInt64.t) ->
       write_to: A.bpointer A.___PUINT8 ->
-      atomic_action (A.ptr_inv write_to) A.disjointness_trivial (A.ptr_loc write_to) false bool
+      atomic_action (A.ptr_inv write_to) None (A.ptr_loc write_to) false bool
  
   | Action_field_ptr_after_with_setter:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
       (sz: FStar.UInt64.t) ->
       (#out_loc: A.eloc) ->
       write_to: (A.___PUINT8 -> Tot (A.external_action out_loc)) ->
-      atomic_action A.true_inv A.disjointness_trivial out_loc false bool
+      atomic_action A.true_inv None out_loc false bool
 
   | Action_deref:
       #a:Type0 ->
       x:A.bpointer a ->
-      atomic_action (A.ptr_inv x) A.disjointness_trivial A.eloc_none false a
+      atomic_action (A.ptr_inv x) None A.eloc_none false a
 
   | Action_assignment:
       #a:Type0 ->
       x:A.bpointer a ->
       rhs:a ->
-      atomic_action (A.ptr_inv x) A.disjointness_trivial (A.ptr_loc x) false unit
+      atomic_action (A.ptr_inv x) None (A.ptr_loc x) false unit
 
   | Action_call:
       #inv:A.slice_inv ->
@@ -488,7 +503,7 @@ type atomic_action
       #b:bool ->
       #t:Type0 ->
       action_binding inv loc b t ->
-      atomic_action inv A.disjointness_trivial loc b t
+      atomic_action inv None loc b t
   
   | Action_probe_then_validate:
       #nz:bool -> 
@@ -496,7 +511,7 @@ type atomic_action
       #k:P.parser_kind nz wk ->
       #has_reader:bool ->
       #inv:A.slice_inv -> 
-      #disj:A.disjointness_pre ->
+      #disj:disj_index ->
       #l:A.eloc ->
       dt:dtyp k has_reader inv disj l ->
       src:U64.t ->
@@ -504,7 +519,7 @@ type atomic_action
       dest:CP.t ->
       probe:CP.probe_fn ->
       atomic_action (A.conj_inv inv (A.copy_buffer_inv dest))
-                    (A.conj_disjointness (A.disjoint (A.copy_buffer_loc dest) l) disj)
+                    (join_disj (Some (A.disjoint (A.copy_buffer_loc dest) l)) disj)
                     (A.eloc_union l (A.copy_buffer_loc dest))
                     true bool
 
@@ -515,7 +530,7 @@ type atomic_action
 let atomic_action_as_action
    (#i #d #l #b #t:_)
    (a:atomic_action i d l b t)
-  : Tot (A.action i d l b t)
+  : Tot (A.action i (interp_disj_index d) l b t)
   = match a with
     | Action_return x ->
       A.action_return x
@@ -548,31 +563,31 @@ let atomic_action_as_action
 *)
 noeq
 type action
-  : A.slice_inv -> A.disjointness_pre -> A.eloc -> bool -> Type0 -> Type u#1 =
+  : A.slice_inv -> disj_index -> A.eloc -> bool -> Type0 -> Type u#1 =
   | Atomic_action:
       #i:_ -> #d:_ -> #l:_ -> #b:_ -> #t:_ ->
       atomic_action i d l b t ->
       action i d l b t
 
   | Action_seq:
-      #i0:_ -> #l0:_ -> #b0:_ -> hd:atomic_action i0 A.disjointness_trivial l0 b0 unit ->
-      #i1:_ -> #l1:_ -> #b1:_ -> #t:_ -> tl:action i1 A.disjointness_trivial l1 b1 t ->
-      action (A.conj_inv i0 i1) A.disjointness_trivial (A.eloc_union l0 l1) (b0 || b1) t
+      #i0:_ -> #l0:_ -> #b0:_ -> hd:atomic_action i0 None l0 b0 unit ->
+      #i1:_ -> #l1:_ -> #b1:_ -> #t:_ -> tl:action i1 None l1 b1 t ->
+      action (A.conj_inv i0 i1) None (A.eloc_union l0 l1) (b0 || b1) t
 
   | Action_ite :
       hd:bool ->
-      #i0:_ -> #l0:_ -> #b0:_ -> #t:_ -> then_:(_:squash hd -> action i0 A.disjointness_trivial l0 b0 t) ->
-      #i1:_ -> #l1:_ -> #b1:_ -> else_:(_:squash (not hd) -> action i1 A.disjointness_trivial l1 b1 t) ->
-      action (A.conj_inv i0 i1) A.disjointness_trivial (A.eloc_union l0 l1) (b0 || b1) t
+      #i0:_ -> #l0:_ -> #b0:_ -> #t:_ -> then_:(_:squash hd -> action i0 None l0 b0 t) ->
+      #i1:_ -> #l1:_ -> #b1:_ -> else_:(_:squash (not hd) -> action i1 None l1 b1 t) ->
+      action (A.conj_inv i0 i1) None (A.eloc_union l0 l1) (b0 || b1) t
 
   | Action_let:
-      #i0:_ -> #l0:_ -> #b0:_ -> #t0:_ -> head:atomic_action i0 A.disjointness_trivial l0 b0 t0 ->
-      #i1:_ -> #l1:_ -> #b1:_ -> #t1:_ -> k:(t0 -> action i1 A.disjointness_trivial l1 b1 t1) ->
-      action (A.conj_inv i0 i1) A.disjointness_trivial (A.eloc_union l0 l1) (b0 || b1) t1
+      #i0:_ -> #l0:_ -> #b0:_ -> #t0:_ -> head:atomic_action i0 None l0 b0 t0 ->
+      #i1:_ -> #l1:_ -> #b1:_ -> #t1:_ -> k:(t0 -> action i1 None l1 b1 t1) ->
+      action (A.conj_inv i0 i1) None (A.eloc_union l0 l1) (b0 || b1) t1
 
   | Action_act:
-      #i0:_ -> #l0:_ -> #b0:_ -> act:action i0 A.disjointness_trivial l0 b0 unit ->
-      action i0 A.disjointness_trivial l0 b0 bool
+      #i0:_ -> #l0:_ -> #b0:_ -> act:action i0 None l0 b0 unit ->
+      action i0 None l0 b0 bool
 
 let _inv_implies_refl (inv: A.slice_inv) : Lemma
   (inv `A.inv_implies` inv)
@@ -622,7 +637,7 @@ let _eloc_includes_refl (l: A.eloc) : Lemma
 let rec action_as_action
    (#i #d #l #b #t:_)
    (a:action i d l b t)
-  : Tot (A.action i d l b t)
+  : Tot (A.action i (interp_disj_index d) l b t)
     (decreases a)
   = match a with
     | Atomic_action a ->
@@ -655,13 +670,13 @@ type typ
   : #nz:bool -> #wk:P.weak_kind ->
     P.parser_kind nz wk ->
     A.slice_inv ->
-    A.disjointness_pre ->
+    disj_index ->
     A.eloc ->
     bool ->
     Type =
   | T_false:
       fieldname:string ->      
-      typ P.impos_kind A.true_inv A.disjointness_trivial A.eloc_none true
+      typ P.impos_kind A.true_inv None A.eloc_none true
 
   | T_denoted :
       fieldname:string ->       
@@ -680,7 +695,7 @@ type typ
       t2:typ pk2 i2 d2 l2 b2 ->
       typ (P.and_then_kind pk1 pk2) 
           (A.conj_inv i1 i2)
-          (A.conj_disjointness d1 d2)
+          (join_disj d1 d2)
           (A.eloc_union l1 l2) false
 
   | T_dep_pair:
@@ -690,7 +705,7 @@ type typ
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:bool ->
       //the first component is a pre-denoted type with a reader
-      t1:dtyp pk1 true i1 A.disjointness_trivial l1 ->
+      t1:dtyp pk1 true i1 None l1 ->
       //the second component is a function from denotations of t1
       //that's why it's a small type, so that we can speak about its
       //denotation here
@@ -719,7 +734,7 @@ type typ
       #i2:_ -> #l2:_ -> #b2:_ ->
       base:dtyp pk1 true i1 d1 l1 ->
       refinement:(dtyp_as_type base -> bool) ->
-      act:(dtyp_as_type base -> action i2 A.disjointness_trivial l2 b2 bool) ->
+      act:(dtyp_as_type base -> action i2 None l2 b2 bool) ->
       typ (P.filter_kind pk1) (A.conj_inv i1 i2) d1 (A.eloc_union l1 l2) false
   
   | T_dep_pair_with_refinement:
@@ -734,7 +749,7 @@ type typ
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
       //the first component is a pre-denoted type with a reader
-      base:dtyp pk1 true i1 A.disjointness_trivial l1 ->
+      base:dtyp pk1 true i1 None l1 ->
       //the second component is a function from denotations of base
       refinement:(dtyp_as_type base -> bool) ->
       k:(x:dtyp_as_type base { refinement x } -> typ pk2 i2 d2 l2 b2) ->
@@ -751,9 +766,9 @@ type typ
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
       #i3:_ -> #l3:_ -> #b3:_ ->      
-      base:dtyp pk1 true i1 A.disjointness_trivial l1 ->
+      base:dtyp pk1 true i1 None l1 ->
       k:(x:dtyp_as_type base -> typ pk2 i2 d2 l2 b2) ->
-      act:(dtyp_as_type base -> action i3 A.disjointness_trivial l3 b3 bool) ->
+      act:(dtyp_as_type base -> action i3 None l3 b3 bool) ->
       typ (P.and_then_kind pk1 pk2)
           (A.conj_inv i1 (A.conj_inv i3 i2))
           d2
@@ -773,11 +788,11 @@ type typ
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
       #i3:_ -> #l3:_ -> #b3:_ ->      
       //the first component is a pre-denoted type with a reader
-      base:dtyp pk1 true i1 A.disjointness_trivial l1 ->
+      base:dtyp pk1 true i1 None l1 ->
       //the second component is a function from denotations of base
       refinement:(dtyp_as_type base -> bool) ->
       k:(x:dtyp_as_type base { refinement x } -> typ pk2 i2 d2 l2 b2) ->
-      act:(dtyp_as_type base -> action i3 A.disjointness_trivial l3 b3 bool) ->
+      act:(dtyp_as_type base -> action i3 None l3 b3 bool) ->
       typ (P.and_then_kind (P.filter_kind pk1) pk2)
           (A.conj_inv i1 (A.conj_inv i3 i2))
           d2
@@ -794,7 +809,7 @@ type typ
       t2:(squash (not b) -> typ pk2 i2 d2 l2 b2) ->
       typ (P.glb pk1 pk2)
           (A.conj_inv i1 i2)
-          (A.conj_disjointness d1 d2)
+          (join_disj d1 d2)
           (A.eloc_union l1 l2) false
 
   | T_cases:
@@ -807,7 +822,7 @@ type typ
       t2:typ pk2 i2 d2 l2 b2 ->
       typ (P.glb pk1 pk2)
           (A.conj_inv i1 i2)
-          (A.conj_disjointness d1 d2)
+          (join_disj d1 d2)
           (A.eloc_union l1 l2)
           false
 
@@ -817,7 +832,7 @@ type typ
       #l1:_ -> #i1:_ -> #d1:_ -> #b1:_ ->
       #l2:_ -> #i2:_ -> #b2:_ ->
       base:typ pk i1 d1 l1 b1 ->
-      act:action i2 A.disjointness_trivial l2 b2 bool ->
+      act:action i2 None l2 b2 bool ->
       typ pk (A.conj_inv i1 i2) d1 (A.eloc_union l1 l2) false
 
   | T_with_dep_action:
@@ -825,7 +840,7 @@ type typ
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
-      head:dtyp pk1 true i1 A.disjointness_trivial l1 ->
+      head:dtyp pk1 true i1 None l1 ->
       act:(dtyp_as_type head -> action i2 d2 l2 b2 bool) ->
       typ pk1 (A.conj_inv i1 i2) d2 (A.eloc_union l1 l2) false
 
@@ -864,9 +879,9 @@ type typ
   | T_string:
       fieldname:string ->       
       #pk1:P.parser_kind true P.WeakKindStrongPrefix ->
-      element_type:dtyp pk1 true A.true_inv A.disjointness_trivial A.eloc_none ->
+      element_type:dtyp pk1 true A.true_inv None A.eloc_none ->
       terminator:dtyp_as_type element_type ->
-      typ P.parse_string_kind A.true_inv A.disjointness_trivial A.eloc_none false
+      typ P.parse_string_kind A.true_inv None A.eloc_none false
 
 
 [@@specialize]
@@ -890,7 +905,7 @@ let t_probe_then_validate
       (td:dtyp pk has_reader i disj l)
  : typ (parser_kind_of_itype UInt64)
        (A.conj_inv i (A.copy_buffer_inv dest))
-       (A.conj_disjointness (A.disjoint (A.copy_buffer_loc dest) l) disj)
+       (join_disj (Some (A.disjoint (A.copy_buffer_loc dest) l)) disj)
        (A.eloc_union l (A.copy_buffer_loc dest))
        false
  = let t = 
@@ -1051,7 +1066,7 @@ let rec as_parser
 [@@specialize]
 let rec as_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
                   (#[@@@erasable] inv:A.slice_inv)
-                  (#[@@@erasable] d:A.disjointness_pre)
+                  (#d:disj_index)
                   (#[@@@erasable] loc:A.eloc)
                   (t:typ pk inv d loc true)
   : leaf_reader (as_parser t)
@@ -1078,14 +1093,14 @@ let rec as_validator
           (typename:string)
           #nz #wk (#pk:P.parser_kind nz wk)
           (#[@@@erasable] inv:A.slice_inv)
-          (#[@@@erasable] disj:A.disjointness_pre)
+          (#disj:disj_index)
           (#[@@@erasable] loc:A.eloc)
           #b
           (t:typ pk inv disj loc b)
-  : Tot (A.validate_with_action_t #nz #wk #pk #(as_type t) (as_parser t) inv disj loc b)
+  : Tot (A.validate_with_action_t #nz #wk #pk #(as_type t) (as_parser t) inv (interp_disj_index disj) loc b)
         (decreases t)
   = match t
-    returns Tot (A.validate_with_action_t (as_parser t) inv disj loc b)
+    returns Tot (A.validate_with_action_t (as_parser t) inv (interp_disj_index disj) loc b)
     with
     | T_false fn ->
       A.validate_with_error_handler typename fn (A.validate_impos())
@@ -1251,7 +1266,7 @@ let rec as_validator
 [@@noextract_to "krml"; specialize]
 inline_for_extraction noextract 
 let validator_of #allow_reading #nz #wk (#k:P.parser_kind nz wk) #i #d #l (t:typ k i d l allow_reading) = 
-  A.validate_with_action_t (as_parser t) i d l allow_reading
+  A.validate_with_action_t (as_parser t) i (interp_disj_index d) l allow_reading
 
 [@@noextract_to "krml"; specialize]  
 inline_for_extraction noextract   
@@ -1291,13 +1306,13 @@ let specialize_tac steps (_:unit)
 let mk_global_binding #nz #wk 
                       (pk:P.parser_kind nz wk)
                       ([@@@erasable] inv:A.slice_inv)
-                      ([@@@erasable] disj:A.disjointness_pre)
+                      (disj:disj_index)
                       ([@@@erasable] loc:A.eloc)
                       ([@@@erasable] p_t : Type0)
                       ([@@@erasable] p_p : P.parser pk p_t)
                       (p_reader: option (leaf_reader p_p))
                       (b:bool)
-                      (p_v : A.validate_with_action_t p_p inv disj loc b)
+                      (p_v : A.validate_with_action_t p_p inv (interp_disj_index disj) loc b)
                       ([@@@erasable] pf:squash (b == Some? p_reader))
    : global_binding
    = {
@@ -1316,7 +1331,7 @@ let mk_global_binding #nz #wk
 [@@specialize]
 let mk_dt_app #nz #wk (pk:P.parser_kind nz wk) (b:bool)
               ([@@@erasable] inv:A.slice_inv)
-              ([@@@erasable] disj:A.disjointness_pre)
+              (disj:disj_index)
               ([@@@erasable] loc:A.eloc)
               (x:global_binding)
               ([@@@erasable] pf:squash (nz == nz_of_binding x /\
@@ -1334,13 +1349,13 @@ let mk_dt_app #nz #wk (pk:P.parser_kind nz wk) (b:bool)
 let mk_dtyp_app #nz #wk 
                 (pk:P.parser_kind nz wk)
                 ([@@@erasable] inv:A.slice_inv)
-                ([@@@erasable] disj:A.disjointness_pre)
+                (disj:_)
                 ([@@@erasable] loc:A.eloc)
                 ([@@@erasable] p_t : Type0)
                 ([@@@erasable] p_p : P.parser pk p_t)
                 (p_reader: option (leaf_reader p_p))
                 (b:bool)
-                (p_v : A.validate_with_action_t p_p inv disj loc b)
+                (p_v : A.validate_with_action_t p_p inv (interp_disj_index disj) loc b)
                 ([@@@erasable] pf:squash (b == Some? p_reader))
    : dtyp #nz #wk pk b inv disj loc
    = let gb = {
