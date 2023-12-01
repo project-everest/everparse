@@ -111,6 +111,7 @@ let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   | FieldScalar -> FieldScalar
   | FieldArrayQualified (e, b) -> FieldArrayQualified (simplify_expr env e, b)
   | FieldString sz -> FieldString (map_opt (simplify_expr env) sz)
+  | FieldConsumeAll -> FieldConsumeAll
 
 let simplify_atomic_field (env:T.env_t) (f:atomic_field)
   : ML atomic_field

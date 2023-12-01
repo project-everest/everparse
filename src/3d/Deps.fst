@@ -147,7 +147,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
     match fa with
     | FieldScalar -> []
     | FieldArrayQualified (e, _) -> deps_of_expr e
-    | FieldString eopt -> deps_of_opt deps_of_expr eopt in
+    | FieldString eopt -> deps_of_opt deps_of_expr eopt
+    | FieldConsumeAll -> []
+  in
 
   let deps_of_atomic_field (af:atomic_field) : ML (list string) =
       let af = af.v in

@@ -1113,6 +1113,13 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
     | FieldScalar -> FieldScalar
     | FieldArrayQualified (e, b) -> FieldArrayQualified (check_annot e, b)
     | FieldString sz -> FieldString (map_opt check_annot sz)
+    | FieldConsumeAll ->
+      if
+        if eq_typ env sf.field_type tuint8
+        then true
+        else eq_typ env sf.field_type tuint8be
+      then FieldConsumeAll
+      else error (Printf.sprintf "This ':consume-all field returns %s instead of UINT8 or UINT8BE" (print_typ sf.field_type)) f.range
     in
     let fc = sf.field_constraint |> map_opt (fun e ->
         add_local env sf.field_ident sf.field_type;

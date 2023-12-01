@@ -466,6 +466,7 @@ type field_array_t =
   | FieldScalar
   | FieldArrayQualified of (expr & array_qualifier) //array size in bytes, the qualifier indicates whether this is a variable-length suffix or not
   | FieldString of (option expr)
+  | FieldConsumeAll // [:consume-all]
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -784,6 +785,7 @@ let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) Ki
 let tbool = mk_prim_t "Bool"
 let tunit = mk_prim_t "unit"
 let tuint8 = mk_prim_t "UINT8"
+let tuint8be = mk_prim_t "UINT8BE"
 let puint8 = mk_prim_t "PUINT8"
 let tuint16 = mk_prim_t "UINT16"
 let tuint32 = mk_prim_t "UINT32"
@@ -862,6 +864,7 @@ let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   | FieldScalar -> f
   | FieldArrayQualified (e, q) -> FieldArrayQualified (subst_expr s e, q)
   | FieldString sz -> FieldString (map_opt (subst_expr s) sz)
+  | FieldConsumeAll -> f
 let rec subst_field (s:subst) (ff:field) : ML field =
   match ff.v with
   | AtomicField f -> {ff with v = AtomicField (subst_atomic_field s f)}
@@ -1116,6 +1119,7 @@ and print_atomic_field (f:atomic_field) : ML string =
       end
     | FieldString None -> Printf.sprintf "[::zeroterm]"
     | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-b-te-size-at-most %s]" (print_expr sz)
+    | FieldConsumeAll -> Printf.sprintf "[:consume-all]"
   in
   let sf = f.v in
     Printf.sprintf "%s%s %s%s%s%s%s;"

@@ -329,6 +329,7 @@ let resolve_field_array_t (env:qenv) (farr:field_array_t) : ML field_array_t =
     FieldArrayQualified (resolve_expr env e, aq)
   | FieldString None -> farr
   | FieldString (Some e) -> FieldString (Some (resolve_expr env e))
+  | FieldConsumeAll -> farr
 
 let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
   match ff.v with
