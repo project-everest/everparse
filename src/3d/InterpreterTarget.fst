@@ -846,7 +846,7 @@ let print_inv_or_eloc_or_disj mname (tdn:T.typedef_name) root_name binders tag t
     in
     s0, fv_binders_string, fv_args_string
 
-
+[@@"skip_norm_for_extraction"]
 let print_binding mname (td:type_decl)
 : ML (string & string)
 = let tdn = td.name in
@@ -860,13 +860,13 @@ let print_binding mname (td:type_decl)
   let def = print_type_decl mname td in
   let weak_kind = A.print_weak_kind k.pk_weak_kind in
   let pk_of_binding =
-    Printf.sprintf "[@@noextract_to \"krml\"]\n\
+      OS.format "[@@noextract_to \"krml\"]\n\
                     inline_for_extraction noextract\n\
-                    let kind_%s : P.parser_kind %b %s = coerce (_ by (T.norm [delta_only [`%%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s\n"
-      root_name
-      k.pk_nz
-      weak_kind
-      (T.print_kind mname k)
+                    let kind_%s : P.parser_kind %s %s = coerce (_ by (T.norm [delta_only [`%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s\n"
+     [root_name;
+      string_of_bool k.pk_nz;
+      weak_kind;
+      (T.print_kind mname k)]
   in
   let print_inv_or_eloc_or_disj = print_inv_or_eloc_or_disj mname tdn root_name binders in
   let typ_indexes_of_binding, fv_binders, fv_args =
@@ -880,35 +880,36 @@ let print_binding mname (td:type_decl)
     s0 ^ s1 ^ s2, fvb, fva
   in
   let def' =
-    FStar.Printf.sprintf
+    OS.format
       "[@@specialize; noextract_to \"krml\"]\n\
         noextract\n\
         let def'_%s %s\n\
-          : typ kind_%s (inv_%s %s) (eloc_%s %s) (disj_%s %s) %b\n\
-          = coerce (_ by (coerce_validator [`%%kind_%s; `%%inv_%s; `%%eloc_%s])) (def_%s %s)"
-        root_name
-        binders
-        root_name
-        root_name fv_args
-        root_name fv_args
-        root_name fv_args
-        td.allow_reading
-        root_name
-        root_name
-        root_name
-        root_name
-        args
+          : typ kind_%s (inv_%s %s) (disj_%s %s) (eloc_%s %s)  %s\n\
+          = coerce (_ by (coerce_validator [`%kind_%s; `%inv_%s; `%disj_%s; `%eloc_%s])) (def_%s %s)"
+       [root_name;
+        binders;
+        root_name;
+        root_name; fv_args;
+        root_name; fv_args;
+        root_name; fv_args;
+        string_of_bool td.allow_reading;
+        root_name;
+        root_name;
+        root_name;
+        root_name;
+        root_name;
+        args]
   in
   let as_type_or_parser tag =
-      Printf.sprintf "[@@noextract_to \"krml\"]\n\
+      OS.format "[@@noextract_to \"krml\"]\n\
                       noextract\n
                       let %s_%s %s = (as_%s (def'_%s %s))"
-        tag
-        root_name
-        binders
-        tag
-        root_name
-        args
+       [tag;
+        root_name;
+        binders;
+        tag;
+        root_name;
+        args]
   in
   let validate_binding =
     let cinline =
@@ -917,63 +918,64 @@ let print_binding mname (td:type_decl)
       then ""
       else "; CInline"
     in
-    FStar.Printf.sprintf "[@@normalize_for_extraction specialization_steps%s]\n\
+    OS.format "[@@normalize_for_extraction specialization_steps%s]\n\
                             let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
-                            cinline
-                            root_name
-                            binders
-                            root_name
-                            root_name
-                            args
+                           [cinline;
+                            root_name;
+                            binders;
+                            root_name;
+                            root_name;
+                            args]
   in
   let dtyp : string =
     let reader =
       if td.allow_reading
-      then Printf.sprintf "(Some (as_reader (def_%s %s)))"
-                          root_name
-                          args
+      then OS.format "(Some (as_reader (def_%s %s)))"
+                        [root_name;
+                         args]
       else "None"
     in
     let coerce_validator =
-      Printf.sprintf "(T.norm [delta_only [`%%parser_%s; `%%type_%s; `%%coerce]]; T.trefl())"
-        root_name
-        root_name
+      OS.format "(T.norm [delta_only [`%parser_%s; `%type_%s; `%coerce]]; T.trefl())"
+       [root_name;
+        root_name]
     in
-    Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
+    OS.format "[@@specialize; noextract_to \"krml\"]\n\
                       noextract\n\
                       let dtyp_%s %s\n\
-                        : dtyp kind_%s %b (inv_%s %s) (disj_%s %s) (eloc_%s %s)\n\
+                        : dtyp kind_%s %s (inv_%s %s) (disj_%s %s) (eloc_%s %s)\n\
                         = mk_dtyp_app\n\
                                   kind_%s\n
                                   (inv_%s %s)\n
                                   (disj_%s %s)\n
                                   (eloc_%s %s)\n
                                   (type_%s %s)\n\
-                                  (coerce (_ by (T.norm [delta_only [`%%type_%s]]; T.trefl())) (parser_%s %s))\n\
+                                  (coerce (_ by (T.norm [delta_only [`%type_%s]]; T.trefl())) (parser_%s %s))\n\
                                   %s\n\
-                                  %b\n\
+                                  %s\n\
                                   (coerce (_ by %s) (validate_%s %s))\n\
-                                  (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
-                      root_name  binders
-                      root_name td.allow_reading root_name fv_args root_name fv_args root_name fv_args
-                      root_name
-                      root_name fv_args
-                      root_name fv_args
-                      root_name fv_args
-                      root_name args
-                      root_name
-                      root_name args
-                      reader
-                      td.allow_reading
-                      coerce_validator root_name args
+                                  (_ by (T.norm [delta_only [`%Some?]; iota]; T.trefl()))\n"
+                     [root_name; binders;
+                      root_name; string_of_bool td.allow_reading;
+                      root_name; fv_args; root_name; fv_args; root_name; fv_args;
+                      root_name;
+                      root_name; fv_args;
+                      root_name; fv_args;
+                      root_name; fv_args;
+                      root_name; args;
+                      root_name;
+                      root_name; args;
+                      reader;
+                      string_of_bool td.allow_reading;
+                      coerce_validator; root_name; args]
   in
   let enum_typ_of_binding =
     match td.enum_typ with
     | None -> ""
     | Some t ->
-      Printf.sprintf "let %s = %s\n"
-        root_name
-        (T.print_typ mname t)
+      OS.format "let %s = %s\n"
+        [root_name;
+         T.print_typ mname t]
   in
   let impl =
     String.concat "\n"
