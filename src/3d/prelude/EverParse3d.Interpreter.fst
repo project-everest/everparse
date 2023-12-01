@@ -24,6 +24,9 @@ module T = FStar.Tactics
 module CP = EverParse3d.CopyBuffer
 open FStar.List.Tot
 
+inline_for_extraction
+noextract
+let ___COPY_BUFFER_T = CP.t
 
 (* This module defines a strongly typed abstract syntax for an
    intermediate representation of 3D programs. This is the type `typ`.
@@ -519,7 +522,7 @@ type atomic_action
       dest:CP.t ->
       probe:CP.probe_fn ->
       atomic_action (A.conj_inv inv (A.copy_buffer_inv dest))
-                    (join_disj (Some (A.disjoint (A.copy_buffer_loc dest) l)) disj)
+                    (join_disj disj (Some (A.disjoint (A.copy_buffer_loc dest) l)))
                     (A.eloc_union l (A.copy_buffer_loc dest))
                     true bool
 
@@ -896,8 +899,8 @@ let coerce (#[@@@erasable]a:Type)
 [@@specialize]
 let t_probe_then_validate
       (fieldname:string)
-      (len:U64.t)
       (probe:CP.probe_fn)
+      (len:U64.t)
       (dest:CP.t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
       (#has_reader #i #disj:_)
@@ -905,7 +908,7 @@ let t_probe_then_validate
       (td:dtyp pk has_reader i disj l)
  : typ (parser_kind_of_itype UInt64)
        (A.conj_inv i (A.copy_buffer_inv dest))
-       (join_disj (Some (A.disjoint (A.copy_buffer_loc dest) l)) disj)
+       (join_disj disj (Some (A.disjoint (A.copy_buffer_loc dest) l)))
        (A.eloc_union l (A.copy_buffer_loc dest))
        false
  = let t = 
@@ -1372,6 +1375,8 @@ let mk_dtyp_app #nz #wk
      } in
      DT_App pk b inv disj loc gb ()
 
+//attribute to tag disjointness indexes of type definitions
+let specialize_disjointness = ()
 let coerce_validator steps : T.Tac unit =
   let open FStar.List.Tot in
   T.norm [delta_only (steps @ [`%parser_kind_of_itype;
@@ -1383,7 +1388,9 @@ let coerce_validator steps : T.Tac unit =
                                `%coerce;
                                `%validator_of;
                                `%dtyp_of;
+                               `%join_disj;
                               ]);
+           delta_attr [`%specialize_disjointness];                  
            zeta;
            iota;
            primops];

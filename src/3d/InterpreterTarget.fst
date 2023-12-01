@@ -280,11 +280,11 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
     | T.Parse_with_probe p _ _ dest ->
       let i, l, d, s = typ_indexes_of_parser p in 
       typ_indexes_union
+           (i, l, d, s)
            (Inv_copy_buf dest,
             Eloc_copy_buf dest,
             Disj_pair (Eloc_copy_buf dest) l, 
             On_success true)
-           (i, l, d, s)
 
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
@@ -760,7 +760,7 @@ let print_td_iface is_entrypoint mname root_name binders args typ_indexes_binder
       typ_indexes_binders
   in
   let disj_t =
-    Printf.sprintf "[@@noextract_to \"krml\"]\n\
+    Printf.sprintf "[@@noextract_to \"krml\"; specialize_disjointness]\n\
                     noextract\n\
                     val disj_%s %s : disj_index"
       root_name
@@ -810,7 +810,9 @@ let print_binders_as_args mname binders =
     List.map (fun (i, _) -> print_ident mname i) binders |>
     String.concat " "
 
-let print_inv_or_eloc_or_disj mname (tdn:T.typedef_name) root_name binders tag ty defn fvs
+let print_inv_or_eloc_or_disj
+      mname (tdn:T.typedef_name) root_name binders
+      tag additional_attr ty defn fvs
   : ML (string & string & string)
   = let fv_binders =
         List.filter
@@ -831,9 +833,15 @@ let print_inv_or_eloc_or_disj mname (tdn:T.typedef_name) root_name binders tag t
                         fv_binders_string
                         defn
     in
-    let s0 = Printf.sprintf "[@@noextract_to \"krml\"]\n\
+    let additional_attr =
+      match additional_attr with
+      | None -> ""
+      | Some s -> "; " ^ s
+    in
+    let s0 = Printf.sprintf "[@@noextract_to \"krml\"%s]\n\
                               noextract\n\
                               let %s_%s = %s\n"
+                              additional_attr
                               tag root_name f
     in
     let body =
@@ -874,9 +882,9 @@ let print_binding mname (td:type_decl)
     let fvs1 = free_vars_of_inv inv in
     let fvs2 = free_vars_of_disj disj in
     let fvs3 = free_vars_of_eloc eloc in
-    let s0, _, _ = print_inv_or_eloc_or_disj "inv" "A.slice_inv" (print_inv mname inv) (fvs1@fvs2@fvs3) in
-    let s1, _, _ = print_inv_or_eloc_or_disj "disj" "disj_index" (print_disj mname disj) (fvs1@fvs2@fvs3) in
-    let s2, fvb, fva = print_inv_or_eloc_or_disj "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2@fvs3) in
+    let s0, _, _ = print_inv_or_eloc_or_disj "inv" None "A.slice_inv" (print_inv mname inv) (fvs1@fvs2@fvs3) in
+    let s1, _, _ = print_inv_or_eloc_or_disj "disj" (Some "specialize_disjointness") "disj_index" (print_disj mname disj) (fvs1@fvs2@fvs3) in
+    let s2, fvb, fva = print_inv_or_eloc_or_disj "eloc" None "A.eloc" (print_eloc mname eloc) (fvs1@fvs2@fvs3) in
     s0 ^ s1 ^ s2, fvb, fva
   in
   let def' =

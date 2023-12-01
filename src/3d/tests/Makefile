@@ -86,9 +86,9 @@ elf-test: ELF.3d
 	$(3D) --odir out.batch --batch ELF.3d
 	g++ -o out.batch/elf-test -I out.batch $(addprefix out.batch/, ELF.c ELFWrapper.c) TestELF.cpp
 
-pair-test: Pair.3d
+%-test: %.3d
 	mkdir -p out.batch
-	$(3D) --odir out.batch --batch Pair.3d
+	$(3D) $(FLAGS3D) --odir out.batch --batch $^
 
 inplace-hash-test:
 	mkdir -p out.inplace-hash

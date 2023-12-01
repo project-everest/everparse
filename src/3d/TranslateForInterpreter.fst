@@ -549,9 +549,16 @@ let rec parse_typ (env:global_env)
   | T.T_pointer _ ->
     failwith "No parsers for pointer types"
 
-  | T.T_with_probe t probe len dest -> 
-    let p = parse_typ env typename fieldname t in
-    { p with p_parser = T.Parse_with_probe p probe len dest }
+  | T.T_with_probe content_type probe len dest -> 
+    let p = parse_typ env typename fieldname content_type in
+    let q = T.Parse_with_probe p probe len dest in
+    let u64_t, _ = translate_typ A.tuint64 in
+    let u64_parser = parse_typ env typename fieldname u64_t in
+    { p_kind = u64_parser.p_kind;
+      p_typ = t;
+      p_parser = q;
+      p_typename = typename;
+      p_fieldname = fieldname }
 
 
 let rec read_typ (env:global_env) (t:T.typ) : ML (option T.reader) =
@@ -1269,7 +1276,8 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
       params@[i, t],ds@ds_t) ([], ds) params in
     ds @ [with_comments (T.Extern_fn f ret params) false []]
 
-  | ExternProbe _ -> failwith "Not yet translating probe declarations"
+  | ExternProbe f ->
+    [with_comments (T.Extern_probe f) false []]
 
 noeq
 type translate_env = {

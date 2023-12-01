@@ -1813,6 +1813,8 @@ let copy_buffer_loc (x:CP.t)
 : eloc
 = CP.loc_of x
 
+inline_for_extraction
+noextract
 let probe_then_validate 
       (#nz:bool)
       (#wk: _)

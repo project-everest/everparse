@@ -1,0 +1,13 @@
+extern probe probe_and_copy
+extern UINT32 test(UINT32 x)
+
+typedef struct _T {
+  UINT32 x { x >= 17 };
+  UINT32 y { y >= x };
+} T;
+
+entrypoint
+typedef struct _S(COPY_BUFFER_T dest) {
+  UINT8 tag;
+  T *t probe (length = 8, destination = dest);
+} S;

@@ -294,9 +294,9 @@ let parser_weak_kind (env:global_env) (id:ident) : ML (option _) =
   | Some (_, Inl attrs) -> Some attrs.parser_weak_kind
   | _ -> None
 
-let typ_weak_kind env (t:typ) : ML (option weak_kind) =
+let rec typ_weak_kind env (t:typ) : ML (option weak_kind) =
   match t.v with
-  | Pointer _ -> None
+  | Pointer _ -> typ_weak_kind env tuint64
   | Type_app hd _ _ -> parser_weak_kind env.globals hd
 
 let typ_has_reader env (t:typ) : ML bool =
@@ -1097,7 +1097,7 @@ let rec check_field_action (env:env) (f:atomic_field) (a:action)
 let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
   : ML atomic_field
   = let sf = f.v in
-    let sf_field_type = check_typ false env sf.field_type in
+    let sf_field_type = check_typ (Some? sf.field_probe) env sf.field_type in
     let check_annot (e: expr) : ML expr =
         let e, t = check_expr env e in
         if not (eq_typ env t tuint32)

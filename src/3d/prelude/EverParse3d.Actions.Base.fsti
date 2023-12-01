@@ -802,7 +802,9 @@ val mk_external_action
 
 val copy_buffer_inv (x:CP.t) : slice_inv
 val copy_buffer_loc (x:CP.t) : eloc
-module B = LowStar.Buffer
+
+inline_for_extraction
+noextract
 val probe_then_validate
       (#nz:bool)
       (#wk: _)
@@ -819,7 +821,7 @@ val probe_then_validate
       (dest:CP.t)
       (probe:CP.probe_fn)
   : action (conj_inv inv (copy_buffer_inv dest))
-           (conj_disjointness (disjoint (copy_buffer_loc dest) l) disj)
+           (conj_disjointness disj (disjoint (copy_buffer_loc dest) l))
            (eloc_union l (copy_buffer_loc dest)) 
            true
            bool

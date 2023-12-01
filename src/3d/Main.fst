@@ -140,17 +140,17 @@ let translate_module (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
   static_asserts,
   en
 
-let has_output_types (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Output_type? d) t_decls
+// let has_output_types (t_decls:list Target.decl) : bool =
+//   List.Tot.existsb (fun (d, _) -> Target.Output_type? d) t_decls
 
-let has_out_exprs (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Output_type_expr? d) t_decls
+// let has_out_exprs (t_decls:list Target.decl) : bool =
+//   List.Tot.existsb (fun (d, _) -> Target.Output_type_expr? d) t_decls
 
-let has_extern_types (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Extern_type? d) t_decls
+// let has_extern_types (t_decls:list Target.decl) : bool =
+//   List.Tot.existsb (fun (d, _) -> Target.Extern_type? d) t_decls
 
-let has_extern_functions (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Extern_fn? d) t_decls
+// let has_extern_functions (t_decls:list Target.decl) : bool =
+//   List.Tot.existsb (fun (d, _) -> Target.Extern_fn? d) t_decls
 
 let emit_fstar_code_for_interpreter (en:env)
                                     (modul:string)
@@ -164,7 +164,7 @@ let emit_fstar_code_for_interpreter (en:env)
         InterpreterTarget.print_decls en modul itds
     in
 
-    let has_external_types = has_output_types tds || has_extern_types tds in
+    let has_external_types = T.has_output_types tds || T.has_extern_types tds in
 
     if has_external_types
     then begin
@@ -175,10 +175,7 @@ let emit_fstar_code_for_interpreter (en:env)
       FStar.IO.close_write_file external_types_fsti_file
     end;
 
-    let has_external_api =
-      has_out_exprs tds ||
-      has_extern_types tds || // FIXME: I added this to fix discrepancy with GenMakefile, does this make sense?
-      has_extern_functions tds in
+    let has_external_api = T.has_external_api tds in
 
     if has_external_api
     then begin
@@ -263,10 +260,11 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
     FStar.IO.close_write_file h_file
   end;
 
-  let has_output_types = has_output_types t_decls in
-  let has_out_exprs = has_out_exprs t_decls in
-  let has_extern_types = has_extern_types t_decls in
-  let has_extern_fns = has_extern_functions t_decls in
+  let has_output_types = T.has_output_types t_decls in
+  let has_out_exprs = T.has_output_type_exprs t_decls in
+  let has_extern_types = T.has_extern_types t_decls in
+  // let has_extern_fns = T.has_extern_functions t_decls in
+  // let has_extern_probes = T.has_extern_probes t_decls in
 
   (*
    * If there are output types in the module

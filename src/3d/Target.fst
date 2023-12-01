@@ -53,6 +53,26 @@ let rec parser_kind_eq k k' =
     && parser_kind_eq k2 k2'
   | _ -> false
 
+let has_output_types (ds:list decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Output_type? d) ds
+
+let has_output_type_exprs (ds:list decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Output_type_expr? d) ds
+
+let has_extern_types (ds:list decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Extern_type? d) ds
+
+let has_extern_functions (ds:list decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Extern_fn? d) ds
+
+let has_extern_probes (ds:list decl) : bool =
+  List.Tot.existsb (fun (d, _) -> Extern_probe? d) ds
+
+let has_external_api (ds:list decl) : bool =
+  has_output_type_exprs ds
+  || has_extern_types ds
+  || has_extern_functions ds
+  || has_extern_probes ds
 // Some constants
 
 let default_attrs = {
@@ -417,68 +437,6 @@ let rec print_kind (mname:string) (k:parser_kind) : Tot string =
   | PK_string ->
     "parse_string_kind"
 
-// let rec print_parser (mname:string) (p:parser) : ML string = //(decreases p) =
-//   match p.p_parser with
-//   | Parse_return v ->
-//     Printf.sprintf "(parse_ret %s)" (print_expr mname v)
-//   | Parse_app hd args ->
-//     Printf.sprintf "(%sparse_%s %s)" (maybe_mname_prefix mname hd) (print_ident hd) (String.concat " " (print_indexes mname args))
-//   | Parse_nlist e p ->
-//     Printf.sprintf "(parse_nlist %s %s)" (print_expr mname e) (print_parser mname p)
-//   | Parse_t_at_most e p ->
-//     Printf.sprintf "(parse_t_at_most %s %s)" (print_expr mname e) (print_parser mname p)
-//   | Parse_t_exact e p ->
-//     Printf.sprintf "(parse_t_exact %s %s)" (print_expr mname e) (print_parser mname p)
-//   | Parse_pair _ p1 p2 ->
-//     Printf.sprintf "(%s `parse_pair` %s)" (print_parser mname p1) (print_parser mname p2)
-//   | Parse_dep_pair _ p1 p2
-//   | Parse_dep_pair_with_action p1 _ p2 ->
-//     Printf.sprintf "(%s `parse_dep_pair` %s)"
-//       (print_parser mname p1)
-//       (print_lam (print_parser mname) p2)
-//   | Parse_dep_pair_with_refinement _ p1 e p2
-//   | Parse_dep_pair_with_refinement_and_action _ p1 e _ p2 ->
-//     Printf.sprintf "((%s `parse_filter` %s) `parse_dep_pair` %s)"
-//                    (print_parser mname p1)
-//                    (print_expr_lam mname e)
-//                    (print_lam (print_parser mname) p2)
-//   | Parse_map p1 e ->
-//     Printf.sprintf "(%s `parse_map` %s)"
-//       (print_parser mname p1)
-//       (print_expr_lam mname e)
-//   | Parse_refinement _ p1 e
-//   | Parse_refinement_with_action _ p1 e _ ->
-//     Printf.sprintf "(%s `parse_filter` %s)"
-//       (print_parser mname p1)
-//       (print_expr_lam mname e)
-//   | Parse_weaken_left p1 k ->
-//     Printf.sprintf "(parse_weaken_left %s %s)" (print_parser mname p1) (print_kind mname k)
-//   | Parse_weaken_right p1 k ->
-//     Printf.sprintf "(parse_weaken_right %s %s)" (print_parser mname p1) (print_kind mname k)
-//   | Parse_if_else e p1 p2 ->
-//     Printf.sprintf "(parse_ite %s (fun _ -> %s) (fun _ -> %s))"
-//       (print_expr mname e)
-//       (print_parser mname p1)
-//       (print_parser mname p2)
-//   | Parse_impos -> "(parse_impos())"
-//   | Parse_with_dep_action _ p _
-//   | Parse_with_action _ p _
-//   | Parse_with_comment p _ -> print_parser mname p
-//   | Parse_string elem zero ->
-//     Printf.sprintf "(parse_string %s %s)" (print_parser mname elem) (print_expr mname zero)
-
-// let rec print_reader (mname:string) (r:reader) : ML string =
-//   match r with
-//   | Read_u8 -> "read____UINT8"
-//   | Read_u16 -> "read____UINT16"
-//   | Read_u32 -> "read____UINT32"
-//   | Read_app hd args ->
-//     Printf.sprintf "(%sread_%s %s)" (maybe_mname_prefix mname hd) (print_ident hd) (String.concat " " (print_indexes mname args))
-//   | Read_filter r f ->
-//     Printf.sprintf "(read_filter %s %s)"
-//       (print_reader mname r)
-//       (print_expr_lam mname f)
-
 let rec print_action (mname:string) (a:action) : ML string =
   let print_atomic_action (a:atomic_action)
     : ML string
@@ -697,184 +655,11 @@ let is_type_abbreviation (td:type_decl) : bool =
   | TD_abbrev _ -> true
   | TD_struct _ -> false
 
-// let print_decl_for_validators (mname:string) (d:decl) : ML string =
-//   match fst d with
-//   | Definition _ -> ""
-  
-//   | Assumption _ ->
-//     print_assumption mname d
-
-//   | Type_decl td ->
-//     (if false //not td.decl_name.td_entrypoint
-//      then ""
-//      else if is_type_abbreviation td
-//      then ""
-//      else Printf.sprintf "noextract\ninline_for_extraction\nlet %s = %s.Types.%s  (* from corresponding Types.fst  *)\n\n"
-//             (print_typedef_name mname td.decl_name)
-//             mname
-//             (print_typedef_typ td.decl_name))
-//     `strcat`
-//     Printf.sprintf "noextract\ninline_for_extraction\nlet kind_%s : parser_kind %s %s = %s\n\n"
-//       (print_ident td.decl_name.td_name)
-//       (string_of_bool td.decl_parser.p_kind.pk_nz)
-//       (A.print_weak_kind td.decl_parser.p_kind.pk_weak_kind)
-//       (print_kind mname td.decl_parser.p_kind)
-//     `strcat`
-//     Printf.sprintf "noextract\nlet parse_%s : parser (kind_%s) (%s) = %s\n\n"
-//       (print_typedef_name mname td.decl_name)
-//       (print_ident td.decl_name.td_name)
-//       (print_typedef_typ td.decl_name)
-//       (print_parser mname td.decl_parser)
-//     `strcat`
-//     (let inv, fp = print_typedef_actions_inv_and_fp td in
-//      Printf.sprintf "%slet validate_%s = validate_weaken_inv_loc _ _ %s <: Tot (validate_with_action_t (parse_%s) %s %s %b) by    (weaken_tac())\n\n"
-//       (print_attributes td.decl_name.td_entrypoint (snd d))
-//       (print_typedef_name mname td.decl_name)
-//       (print_validator mname td.decl_validator)
-//       (print_typedef_typ td.decl_name)
-//       inv
-//       fp
-//       td.decl_validator.v_allow_reading)
-//     `strcat`
-//     (match td.decl_reader with
-//      | None -> ""
-//      | Some r ->
-//        Printf.sprintf "%sinline_for_extraction\nlet read_%s : leaf_reader (parse_%s) = %s\n\n"
-//          (if td.decl_name.td_entrypoint then "" else "noextract\n")
-//          (print_typedef_name mname td.decl_name)
-//          (print_typedef_typ td.decl_name)
-//          (print_reader mname r))
-  
-//   | Output_type _
-//   | Output_type_expr _ _
-//   | Extern_type _
-//   | Extern_fn _ _ _ -> ""
-
-// let print_type_decl_signature (mname:string) (d:decl{Type_decl? (fst d)}) : ML string =
-//   match fst d with
-//   | Type_decl td ->
-//     if false //not td.decl_name.td_entrypoint
-//     then ""
-//     else begin
-//       (if is_type_abbreviation td
-//        then Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s.Types.%s\n\n"
-//               (print_typedef_name mname td.decl_name)
-//               mname
-//               (print_typedef_typ td.decl_name)
-//        else Printf.sprintf "noextract\ninline_for_extraction\nval %s : Type0\n\n"
-//               (print_typedef_name mname td.decl_name))
-//       `strcat`
-//       Printf.sprintf "noextract\ninline_for_extraction\nval kind_%s : parser_kind %s %s\n\n"
-//         (print_ident td.decl_name.td_name)
-//         (string_of_bool td.decl_parser.p_kind.pk_nz)
-//         (A.print_weak_kind td.decl_parser.p_kind.pk_weak_kind)
-//       `strcat`
-//       Printf.sprintf "noextract\nval parse_%s : parser (kind_%s) (%s)\n\n"
-//         (print_typedef_name mname td.decl_name)
-//         (print_ident td.decl_name.td_name)
-//         (print_typedef_typ td.decl_name)
-//       `strcat`
-//       (let inv, fp = print_typedef_actions_inv_and_fp td in
-//       Printf.sprintf "val validate_%s : validate_with_action_t (parse_%s) %s %s %b\n\n"
-//         (print_typedef_name mname td.decl_name)
-//         (print_typedef_typ td.decl_name)
-//         inv
-//         fp
-//         td.decl_validator.v_allow_reading)
-//       `strcat`
-//       (match td.decl_reader with
-//        | None -> ""
-//        | Some r ->
-//          Printf.sprintf "%sinline_for_extraction\nval read_%s : leaf_reader (parse_%s)\n\n"
-//            (if td.decl_name.td_entrypoint then "" else "noextract\n")
-//            (print_typedef_name mname td.decl_name)
-//            (print_typedef_typ td.decl_name))
-//      end
-
-// let print_decl_signature (mname:string) (d:decl) : ML string =
-//   match fst d with
-//   | Assumption _
-//   | Definition _ -> ""
-//   | Type_decl td ->
-//     if (snd d).is_hoisted
-//     then ""
-//     else if not ((snd d).is_exported || td.decl_name.td_entrypoint)
-//     then ""
-//     else print_type_decl_signature mname d
-//   | Output_type _
-//   | Output_type_expr _ _
-//   | Extern_type _
-//   | Extern_fn _ _ _ -> ""
-
-let has_output_types (ds:list decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Output_type? d) ds
-
-let has_output_type_exprs (ds:list decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Output_type_expr? d) ds
-
-let has_extern_types (ds:list decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Extern_type? d) ds
-
-let has_extern_functions (ds:list decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Extern_fn? d) ds
 
 let external_api_include (modul:string) (ds:list decl) : string =
-  if has_output_type_exprs ds || has_extern_types ds || has_extern_functions ds
+  if has_external_api ds
   then Printf.sprintf "open %s.ExternalAPI\n\n" modul
   else ""
-
-// let print_decls (modul: string) (ds:list decl) =
-//   let decls =
-//   Printf.sprintf
-//     "module %s\n\
-//      open EverParse3d.Prelude\n\
-//      open EverParse3d.Actions.All\n\
-//      %s\
-//      \n\n\
-//      #set-options \"--using_facts_from '* FStar EverParse3d.Prelude -FStar.Tactics -FStar.Reflection -LowParse'\"\n\
-//      %s"
-//      modul
-//      (external_api_include modul ds)
-//      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n"
-//        (ds |> List.map (print_decl_for_validators modul)
-//            |> List.filter (fun s -> s <> "")))
-//   in
-//   decls
-
-// let print_types_decls (modul:string) (ds:list decl) =
-//   let decls =
-//   Printf.sprintf
-//     "module %s.Types\n\
-//      open EverParse3d.Prelude\n\
-//      open EverParse3d.Actions.All\n\n\
-//      %s\
-//      #set-options \"--fuel 0 --ifuel 0 --using_facts_from '* -FStar.Tactics -FStar.Reflection -LowParse'\"\n\n\
-//      %s"
-//      modul
-//      (external_api_include modul ds)
-//      (String.concat "\n////////////////////////////////////////////////////////////////////////////////\n" 
-//        (ds |> List.map (print_decl_for_types modul)
-//            |> List.filter (fun s -> s <> "")))
-//   in
-//   decls
-
-// let print_decls_signature (mname: string) (ds:list decl) =
-//   let decls =
-//     Printf.sprintf
-//     "module %s\n\
-//      open EverParse3d.Prelude\n\
-//      open EverParse3d.Actions.All\n\
-//      %s\
-//      \n\n\
-//      %s"
-//      mname
-//      (external_api_include mname ds)
-//      (String.concat "\n" (ds |> List.map (print_decl_signature mname) |> List.filter (fun s -> s <> "")))
-//   in
-//   // let dummy =
-//   //     "let retain (x:result) : Tot (FStar.UInt64.t & bool) = field_id_of_result x, result_is_error x"
-//   // in
-//   decls // ^ "\n" ^ dummy
 
 #push-options "--z3rlimit_factor 4"
 let pascal_case name : ML string =
@@ -1004,7 +789,7 @@ let print_c_entry
    let input_stream_binding = Options.get_input_stream_binding () in
    let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
    let wrapped_call_buffer name params =
-     Printf.sprintf
+     OS.format //Printf.sprintf
        "EVERPARSE_ERROR_FRAME frame;\n\t\
        frame.filled = FALSE;\n\t\
        %s\
@@ -1018,14 +803,14 @@ let print_c_entry
          return FALSE;\n\t\
        }\n\t\
        return TRUE;"
-       (if is_input_stream_buffer then ""
-        else "EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t")
-       name
-       params
-       modul
+       [(if is_input_stream_buffer then ""
+         else "EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t");
+        name;
+        params;
+        modul]
    in
    let wrapped_call_stream name params =
-     Printf.sprintf
+     OS.format //Printf.sprintf
        "EVERPARSE_ERROR_FRAME frame =\n\t\
              { .filled = FALSE,\n\t\
                .typename_s = \"UNKNOWN\",\n\t\
@@ -1042,8 +827,8 @@ let print_c_entry
        }\n\t\
        EverParseRetreat(_extra, base, parsedSize);\n\
        return parsedSize;"
-       name
-       params
+       [name;
+        params]
    in
    let mk_param (name: string) (typ: string) : Tot param =
      (A.with_range (A.to_ident' name) A.dummy_range, T_app (A.with_range (A.to_ident' typ) A.dummy_range) A.KindSpec [])
@@ -1083,12 +868,14 @@ let print_c_entry
     let wrapper_name = wrapper_name modul d.decl_name.td_name.A.v.A.name in
     let signature =
       if is_input_stream_buffer 
-      then Printf.sprintf "BOOLEAN %s(%suint8_t *base, uint32_t len)"
-             wrapper_name
-            (print_params params)
-      else Printf.sprintf "uint64_t %s(%sEVERPARSE_INPUT_STREAM_BASE base)"
-             wrapper_name
-             (print_params params)
+      then OS.format //Printf.sprintf
+            "BOOLEAN %s(%suint8_t *base, uint32_t len)"
+             [wrapper_name;
+             (print_params params)]
+      else OS.format //Printf.sprintf
+            "uint64_t %s(%sEVERPARSE_INPUT_STREAM_BASE base)"
+             [wrapper_name;
+             (print_params params)]
     in
     let validator_name = validator_name modul d.decl_name.td_name.A.v.A.name in
     let impl =
@@ -1097,7 +884,8 @@ let print_c_entry
         then wrapped_call_buffer validator_name (print_arguments params)
         else wrapped_call_stream validator_name (print_arguments params)
       in
-      Printf.sprintf "%s {\n\t%s\n}" signature body
+      OS.format "%s {\n\t%s\n}" 
+        [signature; body]
     in
     signature ^";",
     impl
@@ -1138,16 +926,16 @@ let print_c_entry
         String.concat
           ""
           (List.map
-             (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" dep)
+             (fun dep -> OS.format "#include \"%s_ExternalTypedefs.h\"\n\n" [dep])
              signatures_output_typ_deps) in
     let self =
       if has_output_types ds || has_extern_types ds
-      then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
+      then OS.format "#include \"%s_ExternalTypedefs.h\"\n" [modul]
       else "" in
-    Printf.sprintf "%s\n%s\n\n" deps self in
+    OS.format "%s\n%s\n\n" [deps; self] in
 
   let header =
-    Printf.sprintf
+    OS.format //Printf.sprintf
       "#include \"EverParseEndianness.h\"\n\
        %s\n\
        %s\
@@ -1158,54 +946,57 @@ let print_c_entry
        #ifdef __cplusplus\n\
        }\n\
        #endif\n"
-      error_code_macros
-      external_defs_includes
-      (signatures |> String.concat "\n\n")
+      [error_code_macros;
+       external_defs_includes;
+      (signatures |> String.concat "\n\n")]
   in
   let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
   let header =
     if input_stream_include = ""
     then header
-    else Printf.sprintf
+    else OS.format //Printf.sprintf
       "#include \"%s\"\n\
       %s"
-      input_stream_include
-      header
+      [input_stream_include;
+       header]
   in
   let add_includes = Options.make_includes () in
-  let header = Printf.sprintf "%s%s" add_includes header in
+  let header = OS.format "%s%s" [add_includes; header] in
   let error_callback_proto =
     if HashingOptions.InputStreamBuffer? input_stream_binding
-    then Printf.sprintf "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason)%s"
-                         modul
-                         (if produce_everparse_error = Some ProduceEverParseError then "{(void) StructName; (void) FieldName; (void) Reason;}" else ";")
+    then OS.format //Printf.sprintf 
+          "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason)%s"
+              [modul;
+               (if produce_everparse_error = Some ProduceEverParseError
+                then "{(void) StructName; (void) FieldName; (void) Reason;}"
+                else ";")]
     else ""
   in
   let impl =
-    Printf.sprintf
+    OS.format //Printf.sprintf
       "#include \"%sWrapper.h\"\n\
        #include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
        %s\n\n\
        %s\n\n\
        %s\n"
-      modul
-      modul
-      error_callback_proto
-      default_error_handler
-      (impls |> String.concat "\n\n")
+     [modul;
+      modul;
+      error_callback_proto;
+      default_error_handler;
+      (impls |> String.concat "\n\n")]
   in
   let impl =
     if input_stream_include = ""
     then impl
     else
-      Printf.sprintf
+      OS.format //Printf.sprintf
         "#include \"%s\"\n\
         %s"
-        input_stream_include
-        impl
+        [input_stream_include;
+        impl]
   in
-  let impl = Printf.sprintf "%s%s" add_includes impl in
+  let impl = OS.format "%s%s" [add_includes; impl] in
   header,
   impl
 

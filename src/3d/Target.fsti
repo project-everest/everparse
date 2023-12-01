@@ -264,7 +264,12 @@ type decl' =
 type decl = decl' * decl_attributes
 
 type decls = list decl
-
+val has_output_types (ds:list decl) : bool
+val has_output_type_exprs (ds:list decl) : bool
+val has_extern_types (ds:list decl) : bool
+val has_extern_functions (ds:list decl) : bool
+val has_extern_probes (ds:list decl) : bool
+val has_external_api (ds:list decl) : bool
 val error_handler_decl : decl
 val maybe_mname_prefix (mname:string) (i:A.ident) : string
 val print_ident (i:A.ident) : string
