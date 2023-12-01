@@ -131,3 +131,5 @@ let write_witness_to_file w filename =
   )
 
 let int_of_string x = Z.of_string x
+
+let format fmt args = FStar_Compiler_Util.format fmt args

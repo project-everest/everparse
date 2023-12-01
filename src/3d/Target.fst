@@ -379,6 +379,7 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
+  | T_with_probe t _ _ _ -> Printf.sprintf "bpointer (%s)" (print_typ mname t)
 
 and print_indexes (mname:string) (is:list index) : ML (list string) = //(decreases is) =
   match is with
@@ -416,67 +417,67 @@ let rec print_kind (mname:string) (k:parser_kind) : Tot string =
   | PK_string ->
     "parse_string_kind"
 
-let rec print_parser (mname:string) (p:parser) : ML string = //(decreases p) =
-  match p.p_parser with
-  | Parse_return v ->
-    Printf.sprintf "(parse_ret %s)" (print_expr mname v)
-  | Parse_app hd args ->
-    Printf.sprintf "(%sparse_%s %s)" (maybe_mname_prefix mname hd) (print_ident hd) (String.concat " " (print_indexes mname args))
-  | Parse_nlist e p ->
-    Printf.sprintf "(parse_nlist %s %s)" (print_expr mname e) (print_parser mname p)
-  | Parse_t_at_most e p ->
-    Printf.sprintf "(parse_t_at_most %s %s)" (print_expr mname e) (print_parser mname p)
-  | Parse_t_exact e p ->
-    Printf.sprintf "(parse_t_exact %s %s)" (print_expr mname e) (print_parser mname p)
-  | Parse_pair _ p1 p2 ->
-    Printf.sprintf "(%s `parse_pair` %s)" (print_parser mname p1) (print_parser mname p2)
-  | Parse_dep_pair _ p1 p2
-  | Parse_dep_pair_with_action p1 _ p2 ->
-    Printf.sprintf "(%s `parse_dep_pair` %s)"
-      (print_parser mname p1)
-      (print_lam (print_parser mname) p2)
-  | Parse_dep_pair_with_refinement _ p1 e p2
-  | Parse_dep_pair_with_refinement_and_action _ p1 e _ p2 ->
-    Printf.sprintf "((%s `parse_filter` %s) `parse_dep_pair` %s)"
-                   (print_parser mname p1)
-                   (print_expr_lam mname e)
-                   (print_lam (print_parser mname) p2)
-  | Parse_map p1 e ->
-    Printf.sprintf "(%s `parse_map` %s)"
-      (print_parser mname p1)
-      (print_expr_lam mname e)
-  | Parse_refinement _ p1 e
-  | Parse_refinement_with_action _ p1 e _ ->
-    Printf.sprintf "(%s `parse_filter` %s)"
-      (print_parser mname p1)
-      (print_expr_lam mname e)
-  | Parse_weaken_left p1 k ->
-    Printf.sprintf "(parse_weaken_left %s %s)" (print_parser mname p1) (print_kind mname k)
-  | Parse_weaken_right p1 k ->
-    Printf.sprintf "(parse_weaken_right %s %s)" (print_parser mname p1) (print_kind mname k)
-  | Parse_if_else e p1 p2 ->
-    Printf.sprintf "(parse_ite %s (fun _ -> %s) (fun _ -> %s))"
-      (print_expr mname e)
-      (print_parser mname p1)
-      (print_parser mname p2)
-  | Parse_impos -> "(parse_impos())"
-  | Parse_with_dep_action _ p _
-  | Parse_with_action _ p _
-  | Parse_with_comment p _ -> print_parser mname p
-  | Parse_string elem zero ->
-    Printf.sprintf "(parse_string %s %s)" (print_parser mname elem) (print_expr mname zero)
+// let rec print_parser (mname:string) (p:parser) : ML string = //(decreases p) =
+//   match p.p_parser with
+//   | Parse_return v ->
+//     Printf.sprintf "(parse_ret %s)" (print_expr mname v)
+//   | Parse_app hd args ->
+//     Printf.sprintf "(%sparse_%s %s)" (maybe_mname_prefix mname hd) (print_ident hd) (String.concat " " (print_indexes mname args))
+//   | Parse_nlist e p ->
+//     Printf.sprintf "(parse_nlist %s %s)" (print_expr mname e) (print_parser mname p)
+//   | Parse_t_at_most e p ->
+//     Printf.sprintf "(parse_t_at_most %s %s)" (print_expr mname e) (print_parser mname p)
+//   | Parse_t_exact e p ->
+//     Printf.sprintf "(parse_t_exact %s %s)" (print_expr mname e) (print_parser mname p)
+//   | Parse_pair _ p1 p2 ->
+//     Printf.sprintf "(%s `parse_pair` %s)" (print_parser mname p1) (print_parser mname p2)
+//   | Parse_dep_pair _ p1 p2
+//   | Parse_dep_pair_with_action p1 _ p2 ->
+//     Printf.sprintf "(%s `parse_dep_pair` %s)"
+//       (print_parser mname p1)
+//       (print_lam (print_parser mname) p2)
+//   | Parse_dep_pair_with_refinement _ p1 e p2
+//   | Parse_dep_pair_with_refinement_and_action _ p1 e _ p2 ->
+//     Printf.sprintf "((%s `parse_filter` %s) `parse_dep_pair` %s)"
+//                    (print_parser mname p1)
+//                    (print_expr_lam mname e)
+//                    (print_lam (print_parser mname) p2)
+//   | Parse_map p1 e ->
+//     Printf.sprintf "(%s `parse_map` %s)"
+//       (print_parser mname p1)
+//       (print_expr_lam mname e)
+//   | Parse_refinement _ p1 e
+//   | Parse_refinement_with_action _ p1 e _ ->
+//     Printf.sprintf "(%s `parse_filter` %s)"
+//       (print_parser mname p1)
+//       (print_expr_lam mname e)
+//   | Parse_weaken_left p1 k ->
+//     Printf.sprintf "(parse_weaken_left %s %s)" (print_parser mname p1) (print_kind mname k)
+//   | Parse_weaken_right p1 k ->
+//     Printf.sprintf "(parse_weaken_right %s %s)" (print_parser mname p1) (print_kind mname k)
+//   | Parse_if_else e p1 p2 ->
+//     Printf.sprintf "(parse_ite %s (fun _ -> %s) (fun _ -> %s))"
+//       (print_expr mname e)
+//       (print_parser mname p1)
+//       (print_parser mname p2)
+//   | Parse_impos -> "(parse_impos())"
+//   | Parse_with_dep_action _ p _
+//   | Parse_with_action _ p _
+//   | Parse_with_comment p _ -> print_parser mname p
+//   | Parse_string elem zero ->
+//     Printf.sprintf "(parse_string %s %s)" (print_parser mname elem) (print_expr mname zero)
 
-let rec print_reader (mname:string) (r:reader) : ML string =
-  match r with
-  | Read_u8 -> "read____UINT8"
-  | Read_u16 -> "read____UINT16"
-  | Read_u32 -> "read____UINT32"
-  | Read_app hd args ->
-    Printf.sprintf "(%sread_%s %s)" (maybe_mname_prefix mname hd) (print_ident hd) (String.concat " " (print_indexes mname args))
-  | Read_filter r f ->
-    Printf.sprintf "(read_filter %s %s)"
-      (print_reader mname r)
-      (print_expr_lam mname f)
+// let rec print_reader (mname:string) (r:reader) : ML string =
+//   match r with
+//   | Read_u8 -> "read____UINT8"
+//   | Read_u16 -> "read____UINT16"
+//   | Read_u32 -> "read____UINT32"
+//   | Read_app hd args ->
+//     Printf.sprintf "(%sread_%s %s)" (maybe_mname_prefix mname hd) (print_ident hd) (String.concat " " (print_indexes mname args))
+//   | Read_filter r f ->
+//     Printf.sprintf "(read_filter %s %s)"
+//       (print_reader mname r)
+//       (print_expr_lam mname f)
 
 let rec print_action (mname:string) (a:action) : ML string =
   let print_atomic_action (a:atomic_action)
@@ -524,164 +525,6 @@ let rec print_action (mname:string) (a:action) : ML string =
     Printf.sprintf "(action_act %s)" 
       (print_action mname a)
       
-// let rec print_validator (mname:string) (v:validator) : ML string = //(decreases v) =
-//   let is_unit_validator v =
-//     let open A in
-//     match v.v_validator with
-//     | Validate_app ({v={name="unit"}}) [] -> true
-//     | _ -> false
-//   in
-//   match v.v_validator with
-//   | Validate_return ->
-//     "validate_ret"
-
-//   | Validate_app hd args ->
-//     Printf.sprintf "(validate_eta (%svalidate_%s %s))"
-//                    (maybe_mname_prefix mname hd)
-//                    (print_ident hd)
-//                    (String.concat " " (print_indexes mname args))
-
-//   | Validate_nlist e p ->
-//     Printf.sprintf "(validate_nlist %s %s)"
-//                    (print_expr mname e)
-//                    (print_validator mname p)
-
-//   | Validate_t_at_most e p ->
-//     Printf.sprintf "(validate_t_at_most %s %s)"
-//                    (print_expr mname e)
-//                    (print_validator mname p)
-
-//   | Validate_t_exact e p ->
-//     Printf.sprintf "(validate_t_exact %s %s)"
-//                    (print_expr mname e)
-//                    (print_validator mname p)
-
-//   | Validate_nlist_constant_size_without_actions e p ->
-//     let n_is_const = match fst e with
-//     | Constant (A.Int _ _) -> true
-//     | _ -> false
-//     in
-//     Printf.sprintf "(validate_nlist_constant_size_without_actions %s %s %s)"
-//                    (if n_is_const then "true" else "false")
-//                    (print_expr mname e)
-//                    (print_validator mname p)
-
-//   | Validate_pair n1 p1 p2 ->
-//     Printf.sprintf "(validate_pair \"%s\" %s %s)"
-//                    (print_maybe_qualified_ident mname n1)
-//                    (print_validator mname p1)
-//                    (print_validator mname p2)
-
-//   | Validate_dep_pair n1 p1 r p2 ->
-//     Printf.sprintf "(validate_dep_pair \"%s\" %s %s %s)"
-//                    (print_ident n1)
-//                    (print_validator mname p1)
-//                    (print_reader mname r)
-//                    (print_lam (print_validator mname) p2)
-
-//   | Validate_dep_pair_with_refinement p1_is_constant_size_without_actions n1 p1 r e p2 ->
-//     Printf.sprintf "(validate_dep_pair_with_refinement %s \"%s\" %s %s %s %s)"
-//                    (if p1_is_constant_size_without_actions then "true" else "false")
-//                    (print_maybe_qualified_ident mname n1)
-//                    (print_validator mname p1)
-//                    (print_reader mname r)
-//                    (print_expr_lam mname e)
-//                    (print_lam (print_validator mname) p2)
-
-//   | Validate_dep_pair_with_action p1 r a p2 ->
-//     Printf.sprintf "(validate_dep_pair_with_action %s %s %s %s)"
-//                    (print_validator mname p1)
-//                    (print_reader mname r)
-//                    (print_lam (print_action mname) a)
-//                    (print_lam (print_validator mname) p2)
-
-//   | Validate_dep_pair_with_refinement_and_action p1_is_constant_size_without_actions n1 p1 r e a p2 ->
-//     Printf.sprintf "(validate_dep_pair_with_refinement_and_action %s \"%s\" %s %s %s %s %s)"
-//                    (if p1_is_constant_size_without_actions then "true" else "false")
-//                    (print_maybe_qualified_ident mname n1)
-//                    (print_validator mname p1)
-//                    (print_reader mname r)
-//                    (print_expr_lam mname e)
-//                    (print_lam (print_action mname) a)
-//                    (print_lam (print_validator mname) p2)
-
-//   | Validate_map p1 e ->
-//     Printf.sprintf "(%s `validate_map` %s)"
-//                    (print_validator mname p1)
-//                    (print_expr_lam mname e)
-
-//   | Validate_refinement n1 p1 r e ->
-//     begin
-//       if is_unit_validator p1
-//       then Printf.sprintf "(validate_unit_refinement %s \"checking precondition\")"
-//                           (print_expr_lam mname e)
-//       else Printf.sprintf "(validate_filter \"%s\" %s %s %s
-//                                             \"reading field value\" \"checking constraint\")"
-//                           (print_maybe_qualified_ident mname n1)
-//                           (print_validator mname p1)
-//                           (print_reader mname r)
-//                           (print_expr_lam mname e)
-//     end
-
-//   | Validate_refinement_with_action n1 p1 r e a ->
-//     Printf.sprintf "(validate_filter_with_action \"%s\" %s %s %s
-//                                             \"reading field value\" \"checking constraint\"
-//                                             %s)"
-//                    (print_maybe_qualified_ident mname n1)
-//                    (print_validator mname p1)
-//                    (print_reader mname r)
-//                    (print_expr_lam mname e)
-//                    (print_lam (print_action mname) a)
-
-//   | Validate_with_action name v a ->
-//     Printf.sprintf "(validate_with_success_action \"%s\" %s %s)"
-//                    (print_maybe_qualified_ident mname name)
-//                    (print_validator mname v)
-//                    (print_action mname a)
-
-//   | Validate_with_dep_action n v r a ->
-//     Printf.sprintf "(validate_with_dep_action \"%s\" %s %s %s)"
-//                    (print_maybe_qualified_ident mname n)
-//                    (print_validator mname v)
-//                    (print_reader mname r)
-//                    (print_lam (print_action mname) a)
-
-//   | Validate_weaken_left p1 k ->
-//     Printf.sprintf "(validate_weaken_left %s _)"
-//                    (print_validator mname p1)
-
-//   | Validate_weaken_right p1 k ->
-//     Printf.sprintf "(validate_weaken_right %s _)"
-//                    (print_validator mname p1)
-
-//   | Validate_if_else e v1 v2 ->
-//     Printf.sprintf "(validate_ite %s (fun _ -> %s) (fun _ -> %s) (fun _ -> %s) (fun _ -> %s))"
-//                    (print_expr mname e)
-//                    (print_parser mname v1.v_parser)
-//                    (print_validator mname v1)
-//                    (print_parser mname v2.v_parser)
-//                    (print_validator mname v2)
-
-//   | Validate_impos ->
-//     "(validate_impos())"
-
-//   | Validate_with_error_handler typename fieldname v ->
-//     Printf.sprintf "(validate_with_error_handler \"%s\" \"%s\" %s)"
-//                    (print_maybe_qualified_ident mname typename)
-//                    fieldname
-//                    (print_validator mname v)
-
-//   | Validate_with_comment v c ->
-//     let c = String.concat "\n" c in
-//     Printf.sprintf "(validate_with_comment \"%s\" %s)"
-//                    c
-//                    (print_validator mname v)
-
-//   | Validate_string velem relem zero ->
-//     Printf.sprintf "(validate_string %s %s %s)" 
-//                    (print_validator mname velem)
-//                    (print_reader mname relem)
-//                    (print_expr mname zero)
 
 let print_typedef_name (mname:string) (tdn:typedef_name) : ML string =
   Printf.sprintf "%s %s"
@@ -837,7 +680,9 @@ let print_decl_for_types (mname:string) (d:decl) : ML string =
 
   | Extern_type _
 
-  | Extern_fn _ _ _ -> ""
+  | Extern_fn _ _ _
+  
+  | Extern_probe _ -> ""
 
 /// Print a decl for M.fst
 ///
@@ -1534,39 +1379,6 @@ let output_setter_name lhs = Printf.sprintf "set_%s" (out_fn_name lhs)
 let output_getter_name lhs = Printf.sprintf "get_%s" (out_fn_name lhs)
 let output_base_var lhs = base_id_of_output_expr lhs
 
-let print_external_api_fstar (modul:string) (ds:decls) : ML string =
-  let tbl = H.create 10 in
-  let s = String.concat "" (ds |> List.map (fun d ->
-    match fst d with
-    | Output_type ot ->
-      let t = T_app ot.out_typ_names.typedef_abbrev A.KindOutput [] in
-      Printf.sprintf "%s%s"
-        (print_output_type_val tbl t)
-        (print_output_type_val tbl (T_pointer t))
-    | Output_type_expr oe is_get ->
-      Printf.sprintf "%s"
-        // (print_output_type_val tbl oe.oe_bt)
-        // (print_output_type_val tbl oe.oe_t)
-        (if not is_get then print_out_expr_set_fstar tbl modul oe
-         else print_out_expr_get_fstar tbl modul oe)
-    | Extern_type i ->
-      Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
-    | Extern_fn f ret params ->
-      Printf.sprintf "\n\nval %s %s (_:unit) : Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies output_loc h0 h1)\n\n"
-        (print_ident f)
-        (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
-          (print_ident i)
-          (print_typ modul t))))
-    | _ -> "")) in
-   Printf.sprintf
-    "module %s.ExternalAPI\n\n\
-     open FStar.HyperStack.ST\n\    
-     open EverParse3d.Prelude\n\
-     open EverParse3d.Actions.All\n\
-     noextract val output_loc : eloc\n\n%s"
-    modul
-    s
-
 let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string =
   let tbl = H.create 10 in
   let s = String.concat "" (ds |> List.map (fun d ->
@@ -1609,6 +1421,8 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
           (print_typ modul t))))
+    | Extern_probe f ->
+      Printf.sprintf "\n\nval %s : EverParse3d.CopyBuffer.probe_fn\n\n" (print_ident f)
     | _ -> "")) in
 
    let external_types_include =

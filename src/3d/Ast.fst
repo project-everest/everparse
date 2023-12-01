@@ -472,7 +472,7 @@ noeq
 type probe_call = {
   probe_fn:option ident;
   probe_length:expr;
-  probe_dest:expr
+  probe_dest:ident
 }
 
 [@@ PpxDerivingYoJson ]
@@ -1129,7 +1129,7 @@ and print_atomic_field (f:atomic_field) : ML string =
         (fun p -> Printf.sprintf "probe %s (length=%s, destination=%s)"
           (print_opt p.probe_fn print_ident)
           (print_expr p.probe_length)
-          (print_expr p.probe_dest)))
+          (print_ident p.probe_dest)))
 
 and print_switch_case (s:switch_case) : ML string =
   let head, cases = s in

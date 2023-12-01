@@ -174,13 +174,21 @@ type typ : Type =
       terminator:expr ->
       typ
 
-val inv_eloc : Type0
+  | T_probe_then_validate:
+      fn:non_empty_string ->
+      t:dtyp ->
+      probe:A.ident ->
+      len:expr ->
+      dest:A.ident ->
+      typ
+
+val typ_indexes : Type0
 noeq
 type type_decl = {
   name : T.typedef_name;
   typ : typ;
   kind : T.parser_kind;
-  inv_eloc : inv_eloc;
+  typ_indexes : typ_indexes;
   allow_reading: bool;
   attrs : T.decl_attributes;
   enum_typ: option (t:T.typ {T.T_refine? t })

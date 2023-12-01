@@ -93,7 +93,7 @@ let size_and_alignment_of_typ (env:env_t) (t:typ)
   : ML (size & alignment)
   = match t.v with
     | Type_app i _ _ -> size_and_alignment_of_typename env i
-    | Pointer _ -> Variable, Some 8
+    | Pointer _ -> Fixed 8, Some 8 //pointers are 64 bit and aligned
 
 let size_of_typ (env:env_t) (t:typ)
   : ML size
@@ -229,7 +229,8 @@ let padding_field (env:env_t) (diag_enclosing_type_name:ident (* for diagnostics
       field_array_opt=(if n = 1 then FieldScalar else FieldArrayQualified(n_expr, ByteArrayByteSize));
       field_constraint=None;
       field_bitwidth=None;
-      field_action=None
+      field_action=None;
+      field_probe=None
     } in
     let af = with_dummy_range sf in
     let f = with_dummy_range (AtomicField af) in

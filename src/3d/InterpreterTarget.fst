@@ -27,6 +27,7 @@ type inv =
   | Inv_conj : inv -> inv -> inv
   | Inv_ptr  : A.ident -> inv
   | Inv_name : A.ident -> list expr -> inv
+  | Inv_copy_buf: A.ident -> inv
 
 noeq
 type eloc =
@@ -35,6 +36,20 @@ type eloc =
   | Eloc_union  : eloc -> eloc -> eloc
   | Eloc_ptr    : A.ident -> eloc
   | Eloc_name   : A.ident -> list expr -> eloc
+  | Eloc_copy_buf: A.ident -> eloc
+
+noeq
+type disj_pre =
+  | Disj_triv : disj_pre
+  | Disj_pair : eloc -> eloc -> disj_pre
+  | Disj_conj : disj_pre -> disj_pre -> disj_pre
+  | Disj_name : A.ident -> list expr -> disj_pre
+
+let disj_conj d0 d1 =
+  match d0, d1 with
+  | Disj_triv, d
+  | d, Disj_triv -> d
+  | _, _ -> Disj_conj d0 d1
 
 noeq
 type on_success =
@@ -42,10 +57,12 @@ type on_success =
   | On_success_named : A.ident -> list expr -> on_success
   | On_success_union : on_success -> on_success -> on_success
 
-let inv_eloc = inv & eloc & on_success
-let inv_eloc_nil = Inv_true, Eloc_none, On_success false
-let inv_eloc_union (i, e, b) (i', e', b') = Inv_conj i i', Eloc_union e e', On_success_union b b'
-let inv_eloc_name hd args = Inv_name hd args, Eloc_name hd args, On_success_named hd args
+let typ_indexes = inv & eloc & disj_pre & on_success
+let typ_indexes_nil = Inv_true, Eloc_none, Disj_triv, On_success false
+let typ_indexes_union (i, e, d, b) (i', e', d', b') =
+  Inv_conj i i', Eloc_union e e', disj_conj d d', On_success_union b b'
+let typ_indexes_name hd args =
+  Inv_name hd args, Eloc_name hd args, Disj_name hd args, On_success_named hd args
 
 let env = H.t A.ident' type_decl
 let create_env (_:unit) : ML env = H.create 100
@@ -66,6 +83,7 @@ let rec free_vars_of_inv (i:inv)
     | Inv_conj i j -> free_vars_of_inv i @ free_vars_of_inv j
     | Inv_ptr x -> [x]
     | Inv_name _ args -> List.collect free_vars_of_expr args
+    | Inv_copy_buf x -> [x]
 
 let rec free_vars_of_eloc (e:eloc)
   : ML (list A.ident)
@@ -75,15 +93,26 @@ let rec free_vars_of_eloc (e:eloc)
     | Eloc_union i j -> free_vars_of_eloc i @ free_vars_of_eloc j
     | Eloc_ptr x -> [x]
     | Eloc_name _ args -> List.collect free_vars_of_expr args
+    | Eloc_copy_buf x -> [x]
 
-let free_vars_of_inv_eloc (i:inv_eloc) =
-  let i, j, _ = i in
-  free_vars_of_inv i @ free_vars_of_eloc j
+let rec free_vars_of_disj (d:disj_pre)
+  : ML (list A.ident)
+  = match d with
+    | Disj_name _ args -> List.collect free_vars_of_expr args
+    | Disj_conj d0 d1 -> free_vars_of_disj d0 @ free_vars_of_disj d1
+    | Disj_pair i j -> free_vars_of_eloc i @ free_vars_of_eloc j
+    | _ -> []
+
+let free_vars_of_typ_indexes (i:typ_indexes) =
+  let i, j, d, _ = i in
+  free_vars_of_inv i @
+  free_vars_of_eloc j @
+  free_vars_of_disj d
 
 let filter_args_for_inv (args:list expr)
                         (td:type_decl)
   : ML (list expr)
-  = let fvs = free_vars_of_inv_eloc td.inv_eloc in
+  = let fvs = free_vars_of_typ_indexes td.typ_indexes in
     let args =
       List.map2
         (fun (b, _) a ->
@@ -152,6 +181,7 @@ let tag_of_parser p
     | Parse_impos -> "Parse_impos"
     | Parse_with_comment _ _ -> "Parse_with_comment"
     | Parse_string _ _ -> "Parse_string"
+    | Parse_with_probe _ _ _ _ -> "Parse_with_probe"
 
 let as_lam (x:T.lam 'a)
   : lam 'a
@@ -162,60 +192,66 @@ let as_lam (x:T.lam 'a)
     in
     i, snd x
 
-let rec inv_eloc_of_action (a:T.action)
-  : ML inv_eloc
+let rec typ_indexes_of_action (a:T.action)
+  : ML typ_indexes
   = let open T in
     let of_atomic_action (a:T.atomic_action)
-      : ML inv_eloc
+      : ML typ_indexes
       = match a with
         | Action_return _
         | Action_abort
         | Action_field_pos_32
-        | Action_field_pos_64 -> inv_eloc_nil
-        | Action_field_ptr_after _ write_to -> Inv_ptr write_to, Eloc_ptr write_to, On_success false
-        | Action_field_ptr_after_with_setter _ _ _ -> Inv_true, Eloc_output, On_success false
-        | Action_field_ptr -> Inv_true, Eloc_none, On_success true
-        | Action_deref x -> Inv_ptr x, Eloc_none, On_success false
-        | Action_assignment x _ -> Inv_ptr x, Eloc_ptr x, On_success false
-        | Action_call f args -> Inv_true, Eloc_output, On_success false
+        | Action_field_pos_64 -> typ_indexes_nil
+        | Action_field_ptr_after _ write_to ->
+          Inv_ptr write_to, Eloc_ptr write_to, Disj_triv, On_success false
+        | Action_field_ptr_after_with_setter _ _ _ ->
+          Inv_true, Eloc_output, Disj_triv, On_success false
+        | Action_field_ptr ->
+          Inv_true, Eloc_none, Disj_triv, On_success true
+        | Action_deref x ->
+          Inv_ptr x, Eloc_none, Disj_triv, On_success false
+        | Action_assignment x _ ->
+          Inv_ptr x, Eloc_ptr x, Disj_triv, On_success false
+        | Action_call f args ->
+          Inv_true, Eloc_output, Disj_triv, On_success false
     in
     match a with
     | Atomic_action aa -> of_atomic_action aa
     | Action_seq hd tl
     | Action_let _ hd tl ->
-      inv_eloc_union (of_atomic_action hd) (inv_eloc_of_action tl)
+      typ_indexes_union (of_atomic_action hd) (typ_indexes_of_action tl)
     | Action_ite _ a0 a1 ->
-      inv_eloc_union (inv_eloc_of_action a0) (inv_eloc_of_action a1)
+      typ_indexes_union (typ_indexes_of_action a0) (typ_indexes_of_action a1)
     | Action_act a ->
-      inv_eloc_of_action a
+      typ_indexes_of_action a
 
-let rec inv_eloc_of_parser (en:env) (p:T.parser)
-  : ML inv_eloc
-  = let inv_eloc_of_parser = inv_eloc_of_parser en in
+let rec typ_indexes_of_parser (en:env) (p:T.parser)
+  : ML typ_indexes
+  = let typ_indexes_of_parser = typ_indexes_of_parser en in
     match p.p_parser with
     | T.Parse_impos ->
-      inv_eloc_nil
+      typ_indexes_nil
 
     | T.Parse_app hd args ->
       let dt = dtyp_of_app en hd args in
       begin
       match dt with
       | DT_IType _ ->
-        inv_eloc_nil
+        typ_indexes_nil
       | DT_App _ hd args ->
         let td =
           match H.try_find en hd.v with
           | Some td -> td
           | _ -> failwith (Printf.sprintf "Type decl not found for %s" (A.ident_to_string hd))
         in
-        inv_eloc_name hd (filter_args_for_inv args td)
+        typ_indexes_name hd (filter_args_for_inv args td)
       end
 
     | T.Parse_if_else _ p q
     | T.Parse_pair _ p q
     | T.Parse_dep_pair _ p (_, q)
     | T.Parse_dep_pair_with_refinement _ p _ (_, q) ->
-      inv_eloc_union (inv_eloc_of_parser p) (inv_eloc_of_parser q)
+      typ_indexes_union (typ_indexes_of_parser p) (typ_indexes_of_parser q)
 
     | T.Parse_weaken_left p _
     | T.Parse_weaken_right p _
@@ -224,22 +260,31 @@ let rec inv_eloc_of_parser (en:env) (p:T.parser)
     | T.Parse_nlist _ p
     | T.Parse_t_at_most _ p
     | T.Parse_t_exact _ p ->
-      inv_eloc_of_parser p
+      typ_indexes_of_parser p
 
     | T.Parse_dep_pair_with_action p (_, a) (_, q)
     | T.Parse_dep_pair_with_refinement_and_action _ p _ (_, a) (_, q) ->
-      inv_eloc_union (inv_eloc_of_parser p)
-                     (inv_eloc_union (inv_eloc_of_action a) (inv_eloc_of_parser q))
+      typ_indexes_union (typ_indexes_of_parser p)
+                     (typ_indexes_union (typ_indexes_of_action a) (typ_indexes_of_parser q))
 
     | T.Parse_with_action _ p a
     | T.Parse_with_dep_action _ p (_, a) ->
-      inv_eloc_union (inv_eloc_of_parser p) (inv_eloc_of_action a)
+      typ_indexes_union (typ_indexes_of_parser p) (typ_indexes_of_action a)
 
     | T.Parse_string p _ ->
-      inv_eloc_nil
+      typ_indexes_nil
 
     | T.Parse_refinement_with_action n p f (_, a) ->
-      inv_eloc_union (inv_eloc_of_parser p) (inv_eloc_of_action a)
+      typ_indexes_union (typ_indexes_of_parser p) (typ_indexes_of_action a)
+
+    | T.Parse_with_probe p _ _ dest ->
+      let i, l, d, s = typ_indexes_of_parser p in 
+      typ_indexes_union
+           (Inv_copy_buf dest,
+            Eloc_copy_buf dest,
+            Disj_pair (Eloc_copy_buf dest) l, 
+            On_success true)
+           (i, l, d, s)
 
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
@@ -261,7 +306,7 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
         | _ ->
           failwith
             (Printf.sprintf "Expected a named type, got %s"
-              (T.print_parser "" p))
+              (tag_of_parser p))
     in
     let fn = nes p.p_fieldname in
     match p.p_parser with
@@ -370,6 +415,10 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
     | T.Parse_weaken_right p _ ->
       typ_of_parser p
 
+    | T.Parse_with_probe p probe_fn len dest ->
+      let d = dtyp_of_parser p in
+      T_probe_then_validate fn d probe_fn len dest
+
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
 
@@ -413,7 +462,7 @@ let translate_decls (en:env) (ds:T.decls)
               { name = td.decl_name;
                 typ = typ_of_parser en td.decl_parser;
                 kind = td.decl_parser.p_kind;
-                inv_eloc = inv_eloc_of_parser en td.decl_parser;
+                typ_indexes = typ_indexes_of_parser en td.decl_parser;
                 allow_reading = ar;
                 attrs = attrs;
                 enum_typ = refined
@@ -637,6 +686,14 @@ let rec print_typ (mname:string) (t:typ)
                      (print_dtyp mname d)
                      (T.print_expr mname z)
 
+    | T_probe_then_validate fn dt probe_fn len dest ->
+      Printf.sprintf "(t_probe_then_validate \"%s\" %s %s %s %s)"
+                     fn
+                     (T.print_maybe_qualified_ident mname probe_fn)
+                     (T.print_expr mname len)
+                     (T.print_maybe_qualified_ident mname dest)
+                     (print_dtyp mname dt)
+
 let print_param mname (p:T.param) =
   Printf.sprintf "(%s:%s)"
     (print_ident mname (fst p))
@@ -651,7 +708,7 @@ let print_type_decl mname (td:type_decl) =
   FStar.Printf.sprintf
     "[@@specialize; noextract_to \"krml\"]\n\
      noextract\n\
-     let def_%s = ( %s <: Tot (typ _ _ _ _) by (T.norm [delta_attr [`%%specialize]; zeta; iota; primops]; T.smt()))\n"
+     let def_%s = ( %s <: Tot (typ _ _ _ _ _) by (T.norm [delta_attr [`%%specialize]; zeta; iota; primops]; T.smt()))\n"
       (print_typedef_name mname td.name)
       (print_typ mname td.typ)
 
@@ -665,6 +722,7 @@ let rec print_inv mname (i:inv)
     | Inv_conj i j -> Printf.sprintf "(A.conj_inv %s %s)" (print_inv mname i) (print_inv mname j)
     | Inv_ptr x -> Printf.sprintf "(A.ptr_inv %s)" (print_ident mname x)
     | Inv_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "inv" hd) (print_args mname args)
+    | Inv_copy_buf x -> Printf.sprintf "(A.copy_buffer_inv %s)" (print_ident mname x)
 
 let rec print_eloc mname (e:eloc)
   : ML string
@@ -674,8 +732,17 @@ let rec print_eloc mname (e:eloc)
     | Eloc_union i j -> Printf.sprintf "(A.eloc_union %s %s)" (print_eloc mname i) (print_eloc mname j)
     | Eloc_ptr x -> Printf.sprintf "(A.ptr_loc %s)" (print_ident mname x)
     | Eloc_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "eloc" hd) (print_args mname args)
+    | Eloc_copy_buf x -> Printf.sprintf "(A.copy_buffer_loc %s)" (print_ident mname x)
 
-let print_td_iface is_entrypoint mname root_name binders args inv_eloc_binders inv_eloc_args ar pk_wk pk_nz =
+let rec print_disj mname (d:disj_pre)
+  : ML string
+  = match d with
+    | Disj_triv -> "A.disjointness_trivial"
+    | Disj_pair i j -> Printf.sprintf "(A.disjoint %s %s)" (print_eloc mname i) (print_eloc mname j)
+    | Disj_conj i j -> Printf.sprintf "(A.conj_disjointness %s %s)" (print_disj mname i) (print_disj mname j)
+    | Disj_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "disj" hd) (print_args mname args)
+
+let print_td_iface is_entrypoint mname root_name binders args typ_indexes_binders typ_indexes_args ar pk_wk pk_nz =
   let kind_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     inline_for_extraction\n\
@@ -690,24 +757,32 @@ let print_td_iface is_entrypoint mname root_name binders args inv_eloc_binders i
                     noextract\n\
                     val inv_%s %s : A.slice_inv"
       root_name
-      inv_eloc_binders
+      typ_indexes_binders
+  in
+  let disj_t =
+    Printf.sprintf "[@@noextract_to \"krml\"]\n\
+                    noextract\n\
+                    val disj_%s %s : A.disjointness_pre"
+      root_name
+      typ_indexes_binders
   in
   let eloc_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
                     val eloc_%s %s : A.eloc"
       root_name
-      inv_eloc_binders
+      typ_indexes_binders
   in
   let def'_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
-                    val def'_%s %s: typ kind_%s (inv_%s %s) (eloc_%s %s) %b"
+                    val def'_%s %s: typ kind_%s (inv_%s %s) (disj_%s %s) (eloc_%s %s) %b"
       root_name
       binders
       root_name
-      root_name inv_eloc_args
-      root_name inv_eloc_args
+      root_name typ_indexes_args
+      root_name typ_indexes_args
+      root_name typ_indexes_args
       ar
   in
   let validator_t =
@@ -725,198 +800,208 @@ let print_td_iface is_entrypoint mname root_name binders args inv_eloc_binders i
       binders
       root_name args
   in
-  String.concat "\n\n" [kind_t; inv_t; eloc_t; def'_t; validator_t; dtyp_t]
+  String.concat "\n\n" [kind_t; inv_t; disj_t; eloc_t; def'_t; validator_t; dtyp_t]
+
+let print_binders mname binders =
+    List.map (print_param mname) binders |>
+    String.concat " "
+
+let print_binders_as_args mname binders =
+    List.map (fun (i, _) -> print_ident mname i) binders |>
+    String.concat " "
+
+let print_inv_or_eloc_or_disj mname (tdn:T.typedef_name) root_name binders tag ty defn fvs
+  : ML (string & string & string)
+  = let fv_binders =
+        List.filter
+        (fun (i, _) ->
+          Some? (List.tryFind (fun j -> A.ident_name i = A.ident_name j) fvs))
+        tdn.td_params
+    in
+    let print_binders = print_binders mname in
+    let print_args = print_binders_as_args mname in
+    let fv_binders_string = print_binders fv_binders in
+    let fv_args_string = print_args fv_binders in
+    let f =
+      match fv_binders with
+      | [] ->
+        defn
+      | _ ->
+        Printf.sprintf "(fun %s -> %s)"
+                        fv_binders_string
+                        defn
+    in
+    let s0 = Printf.sprintf "[@@noextract_to \"krml\"]\n\
+                              noextract\n\
+                              let %s_%s = %s\n"
+                              tag root_name f
+    in
+    let body =
+      let body =
+        Printf.sprintf "%s_%s %s" tag root_name fv_args_string
+      in
+      match tdn.td_params with
+      | [] -> body
+      | _ -> Printf.sprintf "(fun %s -> %s)" binders body
+    in
+    s0, fv_binders_string, fv_args_string
+
 
 let print_binding mname (td:type_decl)
-  : ML (string & string)
-  = let tdn = td.name in
-    let typ = td.typ in
-    let k = td.kind in
-    let root_name = print_ident mname tdn.td_name in
-    let print_binders binders =
-        List.map (print_param mname) binders |>
-        String.concat " "
+: ML (string & string)
+= let tdn = td.name in
+  let k = td.kind in
+  let typ = td.typ in
+  let root_name = print_ident mname tdn.td_name in
+  let print_binders = print_binders mname in
+  let print_args = print_binders_as_args mname in
+  let binders = print_binders tdn.td_params in
+  let args = print_args tdn.td_params in
+  let def = print_type_decl mname td in
+  let weak_kind = A.print_weak_kind k.pk_weak_kind in
+  let pk_of_binding =
+    Printf.sprintf "[@@noextract_to \"krml\"]\n\
+                    inline_for_extraction noextract\n\
+                    let kind_%s : P.parser_kind %b %s = coerce (_ by (T.norm [delta_only [`%%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s\n"
+      root_name
+      k.pk_nz
+      weak_kind
+      (T.print_kind mname k)
+  in
+  let print_inv_or_eloc_or_disj = print_inv_or_eloc_or_disj mname tdn root_name binders in
+  let typ_indexes_of_binding, fv_binders, fv_args =
+    let inv, eloc, disj, _ = td.typ_indexes in
+    let fvs1 = free_vars_of_inv inv in
+    let fvs2 = free_vars_of_disj disj in
+    let fvs3 = free_vars_of_eloc eloc in
+    let s0, _, _ = print_inv_or_eloc_or_disj "inv" "A.slice_inv" (print_inv mname inv) (fvs1@fvs2@fvs3) in
+    let s1, _, _ = print_inv_or_eloc_or_disj "disj" "A.disjointness_pre" (print_disj mname disj) (fvs1@fvs2@fvs3) in
+    let s2, fvb, fva = print_inv_or_eloc_or_disj "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2@fvs3) in
+    s0 ^ s1 ^ s2, fvb, fva
+  in
+  let def' =
+    FStar.Printf.sprintf
+      "[@@specialize; noextract_to \"krml\"]\n\
+        noextract\n\
+        let def'_%s %s\n\
+          : typ kind_%s (inv_%s %s) (eloc_%s %s) (disj_%s %s) %b\n\
+          = coerce (_ by (coerce_validator [`%%kind_%s; `%%inv_%s; `%%eloc_%s])) (def_%s %s)"
+        root_name
+        binders
+        root_name
+        root_name fv_args
+        root_name fv_args
+        root_name fv_args
+        td.allow_reading
+        root_name
+        root_name
+        root_name
+        root_name
+        args
+  in
+  let as_type_or_parser tag =
+      Printf.sprintf "[@@noextract_to \"krml\"]\n\
+                      noextract\n
+                      let %s_%s %s = (as_%s (def'_%s %s))"
+        tag
+        root_name
+        binders
+        tag
+        root_name
+        args
+  in
+  let validate_binding =
+    let cinline =
+      if td.name.td_entrypoint
+      || td.attrs.is_exported
+      then ""
+      else "; CInline"
     in
-    let print_args binders =
-        List.map (fun (i, _) -> print_ident mname i) binders |>
-        String.concat " "
+    FStar.Printf.sprintf "[@@normalize_for_extraction specialization_steps%s]\n\
+                            let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
+                            cinline
+                            root_name
+                            binders
+                            root_name
+                            root_name
+                            args
+  in
+  let dtyp : string =
+    let reader =
+      if td.allow_reading
+      then Printf.sprintf "(Some (as_reader (def_%s %s)))"
+                          root_name
+                          args
+      else "None"
     in
-    let binders = print_binders tdn.td_params in
-    let args = print_args tdn.td_params in
-    let def = print_type_decl mname td in
-    let weak_kind = A.print_weak_kind k.pk_weak_kind in
-    let pk_of_binding =
-     Printf.sprintf "[@@noextract_to \"krml\"]\n\
-                     inline_for_extraction noextract\n\
-                     let kind_%s : P.parser_kind %b %s = coerce (_ by (T.norm [delta_only [`%%weak_kind_glb]; zeta; iota; primops]; T.trefl())) %s\n"
-       root_name
-       k.pk_nz
-       weak_kind
-       (T.print_kind mname k)
+    let coerce_validator =
+      Printf.sprintf "(T.norm [delta_only [`%%parser_%s; `%%type_%s; `%%coerce]]; T.trefl())"
+        root_name
+        root_name
     in
-    let print_inv_or_eloc tag ty defn fvs
-      : ML (string & string & string)
-      = let fv_binders =
-            List.filter
-            (fun (i, _) ->
-              Some? (List.tryFind (fun j -> A.ident_name i = A.ident_name j) fvs))
-            tdn.td_params
-        in
-        let fv_binders_string = print_binders fv_binders in
-        let fv_args_string = print_args fv_binders in
-        let f =
-          match fv_binders with
-          | [] ->
-            defn
-          | _ ->
-            Printf.sprintf "(fun %s -> %s)"
-                           fv_binders_string
-                           defn
-        in
-        let s0 = Printf.sprintf "[@@noextract_to \"krml\"]\n\
-                                 noextract\n\
-                                 let %s_%s = %s\n"
-                                 tag root_name f
-        in
-        let body =
-          let body =
-            Printf.sprintf "%s_%s %s" tag root_name fv_args_string
-          in
-          match tdn.td_params with
-          | [] -> body
-          | _ -> Printf.sprintf "(fun %s -> %s)" binders body
-        in
-        s0, fv_binders_string, fv_args_string
-   in
-   let inv_eloc_of_binding, fv_binders, fv_args =
-     let inv, eloc, _ = td.inv_eloc in
-     let fvs1 = free_vars_of_inv inv in
-     let fvs2 = free_vars_of_eloc eloc in
-     let s0, _, _ = print_inv_or_eloc "inv" "A.slice_inv" (print_inv mname inv) (fvs1@fvs2) in
-     let s1, fv_binders, fv_args = print_inv_or_eloc "eloc" "A.eloc" (print_eloc mname eloc) (fvs1@fvs2) in
-     s0 ^ s1, fv_binders, fv_args
-   in
-
-   let def' =
-      FStar.Printf.sprintf
-        "[@@specialize; noextract_to \"krml\"]\n\
-          noextract\n\
-          let def'_%s %s\n\
-            : typ kind_%s (inv_%s %s) (eloc_%s %s) %b\n\
-            = coerce (_ by (coerce_validator [`%%kind_%s; `%%inv_%s; `%%eloc_%s])) (def_%s %s)"
-          root_name
-          binders
-          root_name
-          root_name fv_args
-          root_name fv_args
-          td.allow_reading
-          root_name
-          root_name
-          root_name
-          root_name
-          args
-   in
-   let as_type_or_parser tag =
-       Printf.sprintf "[@@noextract_to \"krml\"]\n\
-                       noextract\n
-                       let %s_%s %s = (as_%s (def'_%s %s))"
-         tag
-         root_name
-         binders
-         tag
-         root_name
-         args
-   in
-   let validate_binding =
-      let cinline =
-        if td.name.td_entrypoint
-        || td.attrs.is_exported
-        then ""
-        else "; CInline"
-      in
-      FStar.Printf.sprintf "[@@normalize_for_extraction specialization_steps%s]\n\
-                             let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
-                             cinline
-                             root_name
-                             binders
-                             root_name
-                             root_name
-                             args
-   in
-   let dtyp : string =
-     let reader =
-       if td.allow_reading
-       then Printf.sprintf "(Some (as_reader (def_%s %s)))"
-                           root_name
-                           args
-       else "None"
-     in
-     let coerce_validator =
-       Printf.sprintf "(T.norm [delta_only [`%%parser_%s; `%%type_%s; `%%coerce]]; T.trefl())"
-         root_name
-         root_name
-     in
-     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
-                       noextract\n\
-                       let dtyp_%s %s\n\
-                         : dtyp kind_%s %b (inv_%s %s) (eloc_%s %s)\n\
-                         = mk_dtyp_app\n\
-                                   kind_%s\n
-                                   (inv_%s %s)\n
-                                   (eloc_%s %s)\n
-                                   (type_%s %s)\n\
-                                   (coerce (_ by (T.norm [delta_only [`%%type_%s]]; T.trefl())) (parser_%s %s))\n\
-                                   %s\n\
-                                   %b\n\
-                                   (coerce (_ by %s) (validate_%s %s))\n\
-                                   (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
-                       root_name  binders
-                       root_name td.allow_reading root_name fv_args root_name fv_args
-                       root_name
-                       root_name fv_args
-                       root_name fv_args
-                       root_name args
-                       root_name
-                       root_name args
-                       reader
-                       td.allow_reading
-                       coerce_validator root_name args
-   in
-   let enum_typ_of_binding =
-     match td.enum_typ with
-     | None -> ""
-     | Some t ->
-       Printf.sprintf "let %s = %s\n"
-         root_name
-         (T.print_typ mname t)
-   in
-   let impl =
-     String.concat "\n"
-       [def;
-        pk_of_binding;
-        inv_eloc_of_binding;
-        def';
-        (as_type_or_parser "type");
-        (as_type_or_parser "parser");
-        validate_binding;
-        dtyp;
-        enum_typ_of_binding]
-   in
-   // impl, ""
-   if Some? td.enum_typ
-   && (td.name.td_entrypoint || td.attrs.is_exported)
-   then "", impl //exported enums are fully revealed
-   else if td.name.td_entrypoint
-        || td.attrs.is_exported
-   then
-     let iface =
-       print_td_iface td.name.td_entrypoint
-                      mname root_name binders args
-                      fv_binders fv_args td.allow_reading
-                      weak_kind k.pk_nz
-     in
-     impl, iface
-   else impl, ""
+    Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
+                      noextract\n\
+                      let dtyp_%s %s\n\
+                        : dtyp kind_%s %b (inv_%s %s) (disj_%s %s) (eloc_%s %s)\n\
+                        = mk_dtyp_app\n\
+                                  kind_%s\n
+                                  (inv_%s %s)\n
+                                  (disj_%s %s)\n
+                                  (eloc_%s %s)\n
+                                  (type_%s %s)\n\
+                                  (coerce (_ by (T.norm [delta_only [`%%type_%s]]; T.trefl())) (parser_%s %s))\n\
+                                  %s\n\
+                                  %b\n\
+                                  (coerce (_ by %s) (validate_%s %s))\n\
+                                  (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
+                      root_name  binders
+                      root_name td.allow_reading root_name fv_args root_name fv_args root_name fv_args
+                      root_name
+                      root_name fv_args
+                      root_name fv_args
+                      root_name fv_args
+                      root_name args
+                      root_name
+                      root_name args
+                      reader
+                      td.allow_reading
+                      coerce_validator root_name args
+  in
+  let enum_typ_of_binding =
+    match td.enum_typ with
+    | None -> ""
+    | Some t ->
+      Printf.sprintf "let %s = %s\n"
+        root_name
+        (T.print_typ mname t)
+  in
+  let impl =
+    String.concat "\n"
+      [def;
+      pk_of_binding;
+      typ_indexes_of_binding;
+      def';
+      (as_type_or_parser "type");
+      (as_type_or_parser "parser");
+      validate_binding;
+      dtyp;
+      enum_typ_of_binding]
+  in
+  // impl, ""
+  if Some? td.enum_typ
+  && (td.name.td_entrypoint || td.attrs.is_exported)
+  then "", impl //exported enums are fully revealed
+  else if td.name.td_entrypoint
+      || td.attrs.is_exported
+  then
+    let iface =
+      print_td_iface td.name.td_entrypoint
+                    mname root_name binders args
+                    fv_binders fv_args td.allow_reading
+                    weak_kind k.pk_nz
+    in
+    impl, iface
+  else impl, ""
 
 let print_decl mname (d:decl)
   : ML (string & string) =

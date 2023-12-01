@@ -667,6 +667,11 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
     | Type_app _ KindOutput _ ->
       error "Impossible, check_typ is not supposed to typecheck output types!" t.range
 
+and check_ident (env:env) (i:ident)
+  : ML (ident & typ)
+  = let t = lookup_expr_name env i in
+    i, t
+
 and check_expr (env:env) (e:expr)
   : ML (expr & typ)
   = let w e' = with_range e' e.range in
@@ -695,8 +700,8 @@ and check_expr (env:env) (e:expr)
       e, type_of_constant e.range c
 
     | Identifier i ->
-      let t = lookup_expr_name env i in
-      e, t
+      let i, t = check_ident env i in
+      { e with v = Identifier i }, t
 
     | Static _ -> 
       failwith "Static expressions should have been desugared already"
@@ -1137,10 +1142,10 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
                             length.range
           else length
         in
-        let dest, dest_typ = check_expr env p.probe_dest in
+        let dest, dest_typ = check_ident env p.probe_dest in
         if not (eq_typ env dest_typ tcopybuffer)
         then error (Printf.sprintf "Probe destination expression %s has type %s instead of COPY_BUFFER_T"
-                            (print_expr dest)
+                            (print_ident dest)
                             (print_typ dest_typ))
                             dest.range;
         let probe_fn =
@@ -1807,93 +1812,201 @@ let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
 
 let initial_global_env () =
   let cfg = Deps.get_config () in
-  let e = {
-    ge_h = H.create 10;
-    ge_out_t = H.create 10;
-    ge_extern_t = H.create 10;
-    ge_extern_fn = H.create 10;
-    ge_probe_fn = H.create 10;
-    ge_cfg = cfg
-  }
+  let e =
+    {
+      ge_h = H.create 10;
+      ge_out_t = H.create 10;
+      ge_extern_t = H.create 10;
+      ge_extern_fn = H.create 10;
+      ge_probe_fn = H.create 10;
+      ge_cfg = cfg
+    }
   in
   let nullary_decl i =
-    let td_name = {
-      typedef_name = i;
-      typedef_abbrev = i;
-      typedef_ptr_abbrev = i;
-      typedef_attributes = []
-    }
+    let td_name =
+      { typedef_name = i; typedef_abbrev = i; typedef_ptr_abbrev = i; typedef_attributes = [] }
     in
     mk_decl (Record td_name [] None []) dummy_range [] true
   in
   let _type_names =
-    [ ("unit",     { may_fail = false;
-                     integral = None;
-                     bit_order = None;
-                     has_reader = true;
-                     parser_weak_kind = WeakKindStrongPrefix;
-                     parser_kind_nz=Some false});
-                    
-      ("Bool",     { may_fail = true;
-                     integral = None;
-                     bit_order = None;
-                     has_reader = true;
-                     parser_weak_kind = WeakKindStrongPrefix;
-                     parser_kind_nz=Some true});
-
-      ("UINT8",    { may_fail = true;
-                     integral = Some UInt8;
-                     bit_order = Some LSBFirst;
-                     has_reader = true;
-                     parser_weak_kind = WeakKindStrongPrefix;
-                     parser_kind_nz=Some true });
-
-      ("UINT16",   { may_fail = true; 
-                     integral = Some UInt16;
-                     bit_order = Some LSBFirst;
-                     has_reader = true;
-                     parser_weak_kind = WeakKindStrongPrefix;
-                     parser_kind_nz=Some true });
-      ("UINT32",   { may_fail = true;
-                     integral = Some UInt32 ; bit_order = Some LSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("UINT64",   { may_fail = true;  integral = Some UInt64 ; bit_order = Some LSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("UINT8BE",   { may_fail = true;  integral = Some UInt8 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
-      ("UINT16BE",   { may_fail = true;  integral = Some UInt16 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
-      ("UINT32BE",   { may_fail = true;  integral = Some UInt32 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("UINT64BE",   { may_fail = true;  integral = Some UInt64 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("field_id", { may_fail = true;  integral = Some UInt32 ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("all_bytes", { may_fail = false;  integral = None ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindConsumesAll; parser_kind_nz=Some false});
-      ("all_zeros", { may_fail = true;  integral = None ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindConsumesAll; parser_kind_nz=Some false});
-      ("PUINT8",   { may_fail = true;  integral = None ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true})]
-    |> List.iter (fun (i, attrs) ->
-      let i = with_dummy_range (to_ident' i) in
-      add_global e i (nullary_decl i) (Inl attrs))
+    [
+      ("unit",
+        {
+          may_fail = false;
+          integral = None;
+          bit_order = None;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some false
+        });
+      ("Bool",
+        {
+          may_fail = true;
+          integral = None;
+          bit_order = None;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT8",
+        {
+          may_fail = true;
+          integral = Some UInt8;
+          bit_order = Some LSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT16",
+        {
+          may_fail = true;
+          integral = Some UInt16;
+          bit_order = Some LSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT32",
+        {
+          may_fail = true;
+          integral = Some UInt32;
+          bit_order = Some LSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT64",
+        {
+          may_fail = true;
+          integral = Some UInt64;
+          bit_order = Some LSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT8BE",
+        {
+          may_fail = true;
+          integral = Some UInt8;
+          bit_order = Some MSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT16BE",
+        {
+          may_fail = true;
+          integral = Some UInt16;
+          bit_order = Some MSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT32BE",
+        {
+          may_fail = true;
+          integral = Some UInt32;
+          bit_order = Some MSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT64BE",
+        {
+          may_fail = true;
+          integral = Some UInt64;
+          bit_order = Some MSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("field_id",
+        {
+          may_fail = true;
+          integral = Some UInt32;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("all_bytes",
+        {
+          may_fail = false;
+          integral = None;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindConsumesAll;
+          parser_kind_nz = Some false
+        });
+      ("all_zeros",
+        {
+          may_fail = true;
+          integral = None;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindConsumesAll;
+          parser_kind_nz = Some false
+        });
+      ("PUINT8",
+        {
+          may_fail = true;
+          integral = None;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("COPY_BUFFER_T",
+        {
+          may_fail = true;
+          integral = None;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+    ] |>
+    List.iter (fun (i, attrs) ->
+          let i = with_dummy_range (to_ident' i) in
+          add_global e i (nullary_decl i) (Inl attrs))
   in
   let _operators =
-    [ ("is_range_okay", { macro_arguments_t=[tuint32;tuint32;tuint32]; macro_result_t=tbool; macro_defn_t = None}) ]
-    |> List.iter (fun (i, d) ->
-        let i = with_dummy_range (to_ident' i) in
-        add_global e i (nullary_decl i) (Inr d))
+    [
+      ("is_range_okay",
+        {
+          macro_arguments_t = [tuint32; tuint32; tuint32];
+          macro_result_t = tbool;
+          macro_defn_t = None
+        })
+    ] |>
+    List.iter (fun (i, d) ->
+          let i = with_dummy_range (to_ident' i) in
+          add_global e i (nullary_decl i) (Inr d))
   in
   let _void =
     let void_ident = with_dummy_range (to_ident' "void") in
-    add_extern_type e void_ident (mk_decl (ExternType ({
-      typedef_name = void_ident;
-      typedef_abbrev = void_ident;
-      typedef_ptr_abbrev = void_ident;
-      typedef_attributes = []
-    })) dummy_range [] false)
+    add_extern_type e
+      void_ident
+      (mk_decl (ExternType
+            ({
+                typedef_name = void_ident;
+                typedef_abbrev = void_ident;
+                typedef_ptr_abbrev = void_ident;
+                typedef_attributes = []
+              }))
+          dummy_range
+          []
+          false)
   in
-  let _ = 
+  let _ =
     match cfg with
     | None -> ()
     | Some (cfg, module_name) ->
-      List.iter 
-        (fun flag ->
-          let ms = nullary_macro tbool None in
-          let i = with_dummy_range { to_ident' flag with modul_name = Some module_name } in
-          let d = mk_decl (ExternFn i tbool []) dummy_range [] false in
-          add_global e i d (Inr ms))
+      List.iter (fun flag ->
+            let ms = nullary_macro tbool None in
+            let i = with_dummy_range ({ to_ident' flag with modul_name = Some module_name }) in
+            let d = mk_decl (ExternFn i tbool []) dummy_range [] false in
+            add_global e i d (Inr ms))
         cfg.compile_time_flags.flags
   in
   e

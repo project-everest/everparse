@@ -267,14 +267,14 @@ field_action:
 with_probe:
   | PROBE probe_fn_opt=option_of(i=IDENT { i })
           LPAREN length=IDENT EQ len=expr COMMA
-                 destination=IDENT EQ dest=expr
+                 destination=IDENT EQ dest=IDENT
           RPAREN
     {
       if length.v.name <> "length" || length.v.modul_name <> None
       then error "Expected 'length' as the first argument to 'with probe'" length.range;
       if destination.v.name <> "destination" || destination.v.modul_name <> None
       then error "Expected 'destination' as the second argument to 'with probe'" destination.range;
-      { probe_fn=probe_fn_opt; probe_length=len; probe_des=dest }
+      { probe_fn=probe_fn_opt; probe_length=len; probe_dest=dest }
     }
 
 atomic_field:

@@ -168,7 +168,8 @@ let simplify_decl (env:env) (d:decl) : ML decl =
           field_array_opt = FieldScalar;
           field_constraint = Some constraint;
           field_bitwidth = None;
-          field_action = None }
+          field_action = None;
+          field_probe = None }
     in
     let af = with_dummy_range field in
     Options.debug_print_string 

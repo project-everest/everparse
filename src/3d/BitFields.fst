@@ -123,6 +123,7 @@ let coalesce_grouped_bit_field env (f:bitfield_group)
       field_constraint = field_constraint;
       field_bitwidth = None;
       field_action = field_action;
+      field_probe = None
     } in
     let af = with_dummy_range struct_field in
     with_dummy_range (AtomicField af),
