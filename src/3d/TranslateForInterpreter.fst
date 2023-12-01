@@ -887,6 +887,7 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
           | None -> str
           | Some e -> mk_at_most str e
           end
+        | FieldConsumeAll -> T.T_app (with_range (to_ident' "all_bytes") sf.field_type.range) KindSpec []
     in
     let t =
       match sf.field_constraint with
