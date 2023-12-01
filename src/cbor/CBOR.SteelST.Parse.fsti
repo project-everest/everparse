@@ -14,22 +14,17 @@ module SM = Steel.ST.SeqMatch
 
 [@@no_auto_projectors]
 noeq
-type read_cbor_success_t = {
+type read_cbor_t = {
+  read_cbor_is_success: bool;
   read_cbor_payload: cbor;
   read_cbor_remainder: A.array U8.t;
   read_cbor_remainder_length: SZ.t;
 }
 
-[@@no_auto_projectors]
-noeq
-type read_cbor_t =
-| ParseError
-| ParseSuccess of read_cbor_success_t
-
 noextract
 let read_cbor_success_postcond
   (va: Ghost.erased (Seq.seq U8.t))
-  (c: read_cbor_success_t)
+  (c: read_cbor_t)
   (v: Cbor.raw_data_item)
   (rem: Seq.seq U8.t)
 : Tot prop
@@ -41,7 +36,7 @@ let read_cbor_success_post
   (a: A.array U8.t)
   (p: perm)
   (va: Ghost.erased (Seq.seq U8.t))
-  (c: read_cbor_success_t)
+  (c: read_cbor_t)
 : Tot vprop
 = exists_ (fun v -> exists_ (fun rem ->
     raw_data_item_match full_perm c.read_cbor_payload v `star`
@@ -71,9 +66,9 @@ let read_cbor_post
   (va: Ghost.erased (Seq.seq U8.t))
   (res: read_cbor_t)
 : Tot vprop
-= match res with
-  | ParseError -> read_cbor_error_post a p va
-  | ParseSuccess c -> read_cbor_success_post a p va c
+= if res.read_cbor_is_success
+  then read_cbor_success_post a p va res
+  else read_cbor_error_post a p va
 
 val read_cbor
   (#va: Ghost.erased (Seq.seq U8.t))
@@ -89,7 +84,7 @@ val read_cbor
 noextract
 let read_deterministically_encoded_cbor_success_postcond
   (va: Ghost.erased (Seq.seq U8.t))
-  (c: read_cbor_success_t)
+  (c: read_cbor_t)
   (v: Cbor.raw_data_item)
   (rem: Seq.seq U8.t)
 : Tot prop
@@ -101,7 +96,7 @@ let read_deterministically_encoded_cbor_success_post
   (a: A.array U8.t)
   (p: perm)
   (va: Ghost.erased (Seq.seq U8.t))
-  (c: read_cbor_success_t)
+  (c: read_cbor_t)
 : Tot vprop
 = exists_ (fun v -> exists_ (fun rem ->
     raw_data_item_match full_perm c.read_cbor_payload v `star`
@@ -131,9 +126,9 @@ let read_deterministically_encoded_cbor_post
   (va: Ghost.erased (Seq.seq U8.t))
   (res: read_cbor_t)
 : Tot vprop
-= match res with
-  | ParseError -> read_deterministically_encoded_cbor_error_post a p va
-  | ParseSuccess c -> read_deterministically_encoded_cbor_success_post a p va c
+= if res.read_cbor_is_success
+  then read_deterministically_encoded_cbor_success_post a p va res
+  else read_deterministically_encoded_cbor_error_post a p va
 
 val read_deterministically_encoded_cbor
   (#va: Ghost.erased (Seq.seq U8.t))
