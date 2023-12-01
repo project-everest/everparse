@@ -12,6 +12,37 @@ module SM = Steel.ST.SeqMatch
 
 (* Relating a CBOR C object with a CBOR high-level value *)
 
+val dummy_cbor : cbor
+
+val cbor_map_entry_key: cbor_map_entry -> cbor
+
+val cbor_map_entry_value: cbor_map_entry -> cbor
+
+val cbor_map_entry_key_value_inj
+  (m1 m2: cbor_map_entry)
+: Lemma
+  (requires (
+    cbor_map_entry_key m1 == cbor_map_entry_key m2 /\
+    cbor_map_entry_value m1 == cbor_map_entry_value m2
+  ))
+  (ensures (m1 == m2))
+  [SMTPatOr [
+    [SMTPat (cbor_map_entry_key m1); SMTPat (cbor_map_entry_key m2)];
+    [SMTPat (cbor_map_entry_key m1); SMTPat (cbor_map_entry_value m2)];
+    [SMTPat (cbor_map_entry_value m1); SMTPat (cbor_map_entry_key m2)];
+    [SMTPat (cbor_map_entry_value m1); SMTPat (cbor_map_entry_value m2)];
+  ]]
+
+val mk_cbor_map_entry
+  (key: cbor)
+  (value: cbor)
+: Pure cbor_map_entry
+  (requires True)
+  (ensures (fun res ->
+    cbor_map_entry_key res == key /\
+    cbor_map_entry_value res == value
+  ))
+
 noextract
 let fstp (#a1 #a2: Type) (x: (a1 & a2)) : Tot a1 = fst x
 
