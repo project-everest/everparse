@@ -208,20 +208,15 @@ let leaf_reader #nz #wk (#k: P.parser_kind nz wk) #t (p:P.parser k t)
 (* Now, we can define the type of an environment *)
 module T = FStar.Tactics
 
-let disj_index = option A.disjointness_pre
-
+let disj_index = A.disjointness_pre
+let disj_none = A.disjointness_trivial
 [@@specialize]
-let interp_disj_index = function
-  | None -> A.disjointness_trivial
-  | Some d -> d
+let interp_disj_index x = x
 
 [@@specialize]
 let join_disj (d0 d1:disj_index)
   : disj_index
-  = match d0, d1 with
-    | None, d
-    | d, None -> d
-    | Some d0, Some d1 -> Some (A.conj_disjointness d0 d1)
+  = A.conj_disjointness d0 d1
 
 (* global_binding: 
 
@@ -323,7 +318,7 @@ type dtyp
       dtyp (parser_kind_of_itype i)
            (allow_reader_of_itype i)
            A.true_inv
-           None
+           disj_none
            A.eloc_none
 
   | DT_App:
@@ -460,45 +455,45 @@ type atomic_action
   | Action_return:
       #a:Type0 ->
       x:a ->
-      atomic_action A.true_inv None A.eloc_none false a
+      atomic_action A.true_inv disj_none A.eloc_none false a
 
   | Action_abort:
-      atomic_action A.true_inv None A.eloc_none false bool
+      atomic_action A.true_inv disj_none A.eloc_none false bool
 
   | Action_field_pos_64:
-      atomic_action A.true_inv None A.eloc_none false U64.t
+      atomic_action A.true_inv disj_none A.eloc_none false U64.t
 
   | Action_field_pos_32:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
-      atomic_action A.true_inv None A.eloc_none false U32.t
+      atomic_action A.true_inv disj_none A.eloc_none false U32.t
 
   | Action_field_ptr:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
-      atomic_action A.true_inv None A.eloc_none true A.___PUINT8
+      atomic_action A.true_inv disj_none A.eloc_none true A.___PUINT8
 
   | Action_field_ptr_after:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
       (sz: FStar.UInt64.t) ->
       write_to: A.bpointer A.___PUINT8 ->
-      atomic_action (A.ptr_inv write_to) None (A.ptr_loc write_to) false bool
+      atomic_action (A.ptr_inv write_to) disj_none (A.ptr_loc write_to) false bool
  
   | Action_field_ptr_after_with_setter:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
       (sz: FStar.UInt64.t) ->
       (#out_loc: A.eloc) ->
       write_to: (A.___PUINT8 -> Tot (A.external_action out_loc)) ->
-      atomic_action A.true_inv None out_loc false bool
+      atomic_action A.true_inv disj_none out_loc false bool
 
   | Action_deref:
       #a:Type0 ->
       x:A.bpointer a ->
-      atomic_action (A.ptr_inv x) None A.eloc_none false a
+      atomic_action (A.ptr_inv x) disj_none A.eloc_none false a
 
   | Action_assignment:
       #a:Type0 ->
       x:A.bpointer a ->
       rhs:a ->
-      atomic_action (A.ptr_inv x) None (A.ptr_loc x) false unit
+      atomic_action (A.ptr_inv x) disj_none (A.ptr_loc x) false unit
 
   | Action_call:
       #inv:A.slice_inv ->
@@ -506,7 +501,7 @@ type atomic_action
       #b:bool ->
       #t:Type0 ->
       action_binding inv loc b t ->
-      atomic_action inv None loc b t
+      atomic_action inv disj_none loc b t
   
   | Action_probe_then_validate:
       #nz:bool -> 
@@ -522,7 +517,7 @@ type atomic_action
       dest:CP.copy_buffer_t ->
       probe:CP.probe_fn ->
       atomic_action (A.conj_inv inv (A.copy_buffer_inv dest))
-                    (join_disj disj (Some (A.disjoint (A.copy_buffer_loc dest) l)))
+                    (join_disj disj (A.disjoint (A.copy_buffer_loc dest) l))
                     (A.eloc_union l (A.copy_buffer_loc dest))
                     true bool
 
@@ -573,24 +568,24 @@ type action
       action i d l b t
 
   | Action_seq:
-      #i0:_ -> #l0:_ -> #b0:_ -> hd:atomic_action i0 None l0 b0 unit ->
-      #i1:_ -> #l1:_ -> #b1:_ -> #t:_ -> tl:action i1 None l1 b1 t ->
-      action (A.conj_inv i0 i1) None (A.eloc_union l0 l1) (b0 || b1) t
+      #i0:_ -> #l0:_ -> #b0:_ -> hd:atomic_action i0 disj_none l0 b0 unit ->
+      #i1:_ -> #l1:_ -> #b1:_ -> #t:_ -> tl:action i1 disj_none l1 b1 t ->
+      action (A.conj_inv i0 i1) disj_none (A.eloc_union l0 l1) (b0 || b1) t
 
   | Action_ite :
       hd:bool ->
-      #i0:_ -> #l0:_ -> #b0:_ -> #t:_ -> then_:(_:squash hd -> action i0 None l0 b0 t) ->
-      #i1:_ -> #l1:_ -> #b1:_ -> else_:(_:squash (not hd) -> action i1 None l1 b1 t) ->
-      action (A.conj_inv i0 i1) None (A.eloc_union l0 l1) (b0 || b1) t
+      #i0:_ -> #l0:_ -> #b0:_ -> #t:_ -> then_:(_:squash hd -> action i0 disj_none l0 b0 t) ->
+      #i1:_ -> #l1:_ -> #b1:_ -> else_:(_:squash (not hd) -> action i1 disj_none l1 b1 t) ->
+      action (A.conj_inv i0 i1) disj_none (A.eloc_union l0 l1) (b0 || b1) t
 
   | Action_let:
-      #i0:_ -> #l0:_ -> #b0:_ -> #t0:_ -> head:atomic_action i0 None l0 b0 t0 ->
-      #i1:_ -> #l1:_ -> #b1:_ -> #t1:_ -> k:(t0 -> action i1 None l1 b1 t1) ->
-      action (A.conj_inv i0 i1) None (A.eloc_union l0 l1) (b0 || b1) t1
+      #i0:_ -> #l0:_ -> #b0:_ -> #t0:_ -> head:atomic_action i0 disj_none l0 b0 t0 ->
+      #i1:_ -> #l1:_ -> #b1:_ -> #t1:_ -> k:(t0 -> action i1 disj_none l1 b1 t1) ->
+      action (A.conj_inv i0 i1) disj_none (A.eloc_union l0 l1) (b0 || b1) t1
 
   | Action_act:
-      #i0:_ -> #l0:_ -> #b0:_ -> act:action i0 None l0 b0 unit ->
-      action i0 None l0 b0 bool
+      #i0:_ -> #l0:_ -> #b0:_ -> act:action i0 disj_none l0 b0 unit ->
+      action i0 disj_none l0 b0 bool
 
 let _inv_implies_refl (inv: A.slice_inv) : Lemma
   (inv `A.inv_implies` inv)
@@ -679,7 +674,7 @@ type typ
     Type =
   | T_false:
       fieldname:string ->      
-      typ P.impos_kind A.true_inv None A.eloc_none true
+      typ P.impos_kind A.true_inv disj_none A.eloc_none true
 
   | T_denoted :
       fieldname:string ->       
@@ -708,7 +703,7 @@ type typ
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:bool ->
       //the first component is a pre-denoted type with a reader
-      t1:dtyp pk1 true i1 None l1 ->
+      t1:dtyp pk1 true i1 disj_none l1 ->
       //the second component is a function from denotations of t1
       //that's why it's a small type, so that we can speak about its
       //denotation here
@@ -737,7 +732,7 @@ type typ
       #i2:_ -> #l2:_ -> #b2:_ ->
       base:dtyp pk1 true i1 d1 l1 ->
       refinement:(dtyp_as_type base -> bool) ->
-      act:(dtyp_as_type base -> action i2 None l2 b2 bool) ->
+      act:(dtyp_as_type base -> action i2 disj_none l2 b2 bool) ->
       typ (P.filter_kind pk1) (A.conj_inv i1 i2) d1 (A.eloc_union l1 l2) false
   
   | T_dep_pair_with_refinement:
@@ -752,7 +747,7 @@ type typ
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
       //the first component is a pre-denoted type with a reader
-      base:dtyp pk1 true i1 None l1 ->
+      base:dtyp pk1 true i1 disj_none l1 ->
       //the second component is a function from denotations of base
       refinement:(dtyp_as_type base -> bool) ->
       k:(x:dtyp_as_type base { refinement x } -> typ pk2 i2 d2 l2 b2) ->
@@ -769,9 +764,9 @@ type typ
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
       #i3:_ -> #l3:_ -> #b3:_ ->      
-      base:dtyp pk1 true i1 None l1 ->
+      base:dtyp pk1 true i1 disj_none l1 ->
       k:(x:dtyp_as_type base -> typ pk2 i2 d2 l2 b2) ->
-      act:(dtyp_as_type base -> action i3 None l3 b3 bool) ->
+      act:(dtyp_as_type base -> action i3 disj_none l3 b3 bool) ->
       typ (P.and_then_kind pk1 pk2)
           (A.conj_inv i1 (A.conj_inv i3 i2))
           d2
@@ -791,11 +786,11 @@ type typ
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
       #i3:_ -> #l3:_ -> #b3:_ ->      
       //the first component is a pre-denoted type with a reader
-      base:dtyp pk1 true i1 None l1 ->
+      base:dtyp pk1 true i1 disj_none l1 ->
       //the second component is a function from denotations of base
       refinement:(dtyp_as_type base -> bool) ->
       k:(x:dtyp_as_type base { refinement x } -> typ pk2 i2 d2 l2 b2) ->
-      act:(dtyp_as_type base -> action i3 None l3 b3 bool) ->
+      act:(dtyp_as_type base -> action i3 disj_none l3 b3 bool) ->
       typ (P.and_then_kind (P.filter_kind pk1) pk2)
           (A.conj_inv i1 (A.conj_inv i3 i2))
           d2
@@ -835,7 +830,7 @@ type typ
       #l1:_ -> #i1:_ -> #d1:_ -> #b1:_ ->
       #l2:_ -> #i2:_ -> #b2:_ ->
       base:typ pk i1 d1 l1 b1 ->
-      act:action i2 None l2 b2 bool ->
+      act:action i2 disj_none l2 b2 bool ->
       typ pk (A.conj_inv i1 i2) d1 (A.eloc_union l1 l2) false
 
   | T_with_dep_action:
@@ -843,7 +838,7 @@ type typ
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #l1:_ ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
-      head:dtyp pk1 true i1 None l1 ->
+      head:dtyp pk1 true i1 disj_none l1 ->
       act:(dtyp_as_type head -> action i2 d2 l2 b2 bool) ->
       typ pk1 (A.conj_inv i1 i2) d2 (A.eloc_union l1 l2) false
 
@@ -882,9 +877,9 @@ type typ
   | T_string:
       fieldname:string ->       
       #pk1:P.parser_kind true P.WeakKindStrongPrefix ->
-      element_type:dtyp pk1 true A.true_inv None A.eloc_none ->
+      element_type:dtyp pk1 true A.true_inv disj_none A.eloc_none ->
       terminator:dtyp_as_type element_type ->
-      typ P.parse_string_kind A.true_inv None A.eloc_none false
+      typ P.parse_string_kind A.true_inv disj_none A.eloc_none false
 
 
 [@@specialize]
@@ -908,7 +903,7 @@ let t_probe_then_validate
       (td:dtyp pk has_reader i disj l)
  : typ (parser_kind_of_itype UInt64)
        (A.conj_inv i (A.copy_buffer_inv dest))
-       (join_disj disj (Some (A.disjoint (A.copy_buffer_loc dest) l)))
+       (join_disj disj ( (A.disjoint (A.copy_buffer_loc dest) l)))
        (A.eloc_union l (A.copy_buffer_loc dest))
        false
  = let t = 
