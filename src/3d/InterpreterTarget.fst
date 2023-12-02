@@ -87,14 +87,23 @@ let typ_indexes = inv & eloc & disj_pre & on_success
 let typ_indexes_nil = Inv_true, Eloc_none, Disj_triv, On_success false
 let typ_indexes_union (i, e, d, b) (i', e', d', b') =
   Inv_conj i i', Eloc_union e e', disj_conj d d', On_success_union b b'
-let typ_indexes_union_l_bias (i, e, d, b) (i', e', d', b') =
+let typ_indexes_union_l_bias r (t t':typ_indexes) : ML typ_indexes =
+  let (i, e, d, b), (i', e', d', b') = t, t' in
   if not (Disj_triv? d)
-  then failwith "Unexpected disjunctive index in typ_indexes_union_l_bias"
-  else Inv_conj i i', Eloc_union e e', d', On_success_union b b'
-let typ_indexes_union_r_bias (i, e, d, b) (i', e', d', b') =
+  then (
+    Ast.warning "Unexpected disjunctive index in typ_indexes_union_l_bias" r;
+    Inv_conj i i', Eloc_union e e', disj_conj d d', On_success_union b b'
+  )
+  else
+   Inv_conj i i', Eloc_union e e', d, On_success_union b b'
+let typ_indexes_union_r_bias r (i, e, d, b) (i', e', d', b') =
   if not (Disj_triv? d')
-  then failwith "Unexpected disjunctive index in typ_indexes_union_r_bias"
-  else Inv_conj i i', Eloc_union e e', d, On_success_union b b'
+  then (
+    Ast.warning "Unexpected disjunctive index in typ_indexes_union_l_bias" r;
+    Inv_conj i i', Eloc_union e e', disj_conj d d', On_success_union b b'
+  )
+  else
+    Inv_conj i i', Eloc_union e e', d, On_success_union b b'
  
 let typ_indexes_name hd args =
   Inv_name hd args,
@@ -268,6 +277,8 @@ let rec typ_indexes_of_action (a:T.action)
 let rec typ_indexes_of_parser (en:env) (p:T.parser)
   : ML typ_indexes
   = let typ_indexes_of_parser = typ_indexes_of_parser en in
+    let typ_indexes_union_l_bias = typ_indexes_union_l_bias p.p_typename.range in
+    let typ_indexes_union_r_bias = typ_indexes_union_r_bias p.p_typename.range in
     match p.p_parser with
     | T.Parse_impos ->
       typ_indexes_nil
