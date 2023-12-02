@@ -1,5 +1,6 @@
 extern probe ProbeAndCopy
 
+export
 typedef struct _T {
   UINT32 x { x >= 17 };
   UINT32 y { y >= x };

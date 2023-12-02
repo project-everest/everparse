@@ -34,16 +34,39 @@ type eloc =
   | Eloc_none   : eloc
   | Eloc_output : eloc
   | Eloc_union  : eloc -> eloc -> eloc
-  | Eloc_ptr    : A.ident -> eloc
+  | Eloc_ptr    : expr -> eloc
   | Eloc_name   : A.ident -> list expr -> eloc
-  | Eloc_copy_buf: A.ident -> eloc
+  | Eloc_copy_buf: expr -> eloc
 
 noeq
 type disj_pre =
   | Disj_triv : disj_pre
   | Disj_pair : eloc -> eloc -> disj_pre
   | Disj_conj : disj_pre -> disj_pre -> disj_pre
-  | Disj_name : A.ident -> list expr -> disj_pre
+
+let rec subst_eloc subst (e:eloc)
+  : eloc
+  = match e with
+    | Eloc_none
+    | Eloc_output -> e
+    | Eloc_union i j ->
+      Eloc_union (subst_eloc subst i)
+                 (subst_eloc subst j)
+    | Eloc_ptr x -> Eloc_ptr (T.subst_expr subst x)
+    | Eloc_name hd args ->
+      Eloc_name hd (List.Tot.map (T.subst_expr subst) args)
+    | Eloc_copy_buf x -> Eloc_copy_buf (T.subst_expr subst x)
+
+let rec subst_disj_index subst (d:disj_pre)
+  : disj_pre
+  = match d with
+    | Disj_triv -> d
+    | Disj_pair e1 e2 -> 
+      Disj_pair (subst_eloc subst e1)
+                (subst_eloc subst e2)
+    | Disj_conj d1 d2 ->
+      Disj_conj (subst_disj_index subst d1)
+                (subst_disj_index subst d2)
 
 let disj_conj d0 d1 =
   match d0, d1 with
@@ -61,8 +84,10 @@ let typ_indexes = inv & eloc & disj_pre & on_success
 let typ_indexes_nil = Inv_true, Eloc_none, Disj_triv, On_success false
 let typ_indexes_union (i, e, d, b) (i', e', d', b') =
   Inv_conj i i', Eloc_union e e', disj_conj d d', On_success_union b b'
-let typ_indexes_name hd args =
-  Inv_name hd args, Eloc_name hd args, Disj_name hd args, On_success_named hd args
+let typ_indexes_name_except_disj hd args =
+  Inv_name hd args,
+  Eloc_name hd args,
+  On_success_named hd args
 
 let env = H.t A.ident' type_decl
 let create_env (_:unit) : ML env = H.create 100
@@ -91,14 +116,14 @@ let rec free_vars_of_eloc (e:eloc)
     | Eloc_none
     | Eloc_output -> []
     | Eloc_union i j -> free_vars_of_eloc i @ free_vars_of_eloc j
-    | Eloc_ptr x -> [x]
+    | Eloc_ptr x -> free_vars_of_expr x
     | Eloc_name _ args -> List.collect free_vars_of_expr args
-    | Eloc_copy_buf x -> [x]
+    | Eloc_copy_buf x -> free_vars_of_expr x
 
 let rec free_vars_of_disj (d:disj_pre)
   : ML (list A.ident)
   = match d with
-    | Disj_name _ args -> List.collect free_vars_of_expr args
+    // | Disj_name _ args -> List.collect free_vars_of_expr args
     | Disj_conj d0 d1 -> free_vars_of_disj d0 @ free_vars_of_disj d1
     | Disj_pair i j -> free_vars_of_eloc i @ free_vars_of_eloc j
     | _ -> []
@@ -192,6 +217,8 @@ let as_lam (x:T.lam 'a)
     in
     i, snd x
 
+let id_as_expr (i:A.ident) = T.mk_expr (T.Identifier i)
+
 let rec typ_indexes_of_action (a:T.action)
   : ML typ_indexes
   = let open T in
@@ -203,7 +230,7 @@ let rec typ_indexes_of_action (a:T.action)
         | Action_field_pos_32
         | Action_field_pos_64 -> typ_indexes_nil
         | Action_field_ptr_after _ write_to ->
-          Inv_ptr write_to, Eloc_ptr write_to, Disj_triv, On_success false
+          Inv_ptr write_to, Eloc_ptr (id_as_expr write_to), Disj_triv, On_success false
         | Action_field_ptr_after_with_setter _ _ _ ->
           Inv_true, Eloc_output, Disj_triv, On_success false
         | Action_field_ptr ->
@@ -211,7 +238,7 @@ let rec typ_indexes_of_action (a:T.action)
         | Action_deref x ->
           Inv_ptr x, Eloc_none, Disj_triv, On_success false
         | Action_assignment x _ ->
-          Inv_ptr x, Eloc_ptr x, Disj_triv, On_success false
+          Inv_ptr x, Eloc_ptr (id_as_expr x), Disj_triv, On_success false
         | Action_call f args ->
           Inv_true, Eloc_output, Disj_triv, On_success false
     in
@@ -244,7 +271,16 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
           | Some td -> td
           | _ -> failwith (Printf.sprintf "Type decl not found for %s" (A.ident_to_string hd))
         in
-        typ_indexes_name hd (filter_args_for_inv args td)
+        let _, _, disj_index_p, _ = td.typ_indexes in
+        let subst =
+          match T.mk_subst td.name.td_params args with
+          | None -> 
+            failwith (Printf.sprintf "Unexpected number of arguments to type %s" (A.ident_to_string td.name.td_name))
+          | Some s -> s
+        in
+        let disj_index = subst_disj_index subst disj_index_p in
+        let i, e, r = typ_indexes_name_except_disj hd (filter_args_for_inv args td) in
+        i, e, disj_index, r
       end
 
     | T.Parse_if_else _ p q
@@ -282,8 +318,8 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
       typ_indexes_union
            (i, l, d, s)
            (Inv_copy_buf dest,
-            Eloc_copy_buf dest,
-            Disj_pair (Eloc_copy_buf dest) l, 
+            Eloc_copy_buf (id_as_expr dest),
+            Disj_pair (Eloc_copy_buf (id_as_expr dest)) l, 
             On_success true)
 
     | T.Parse_map _ _
@@ -730,9 +766,9 @@ let rec print_eloc mname (e:eloc)
     | Eloc_none -> "A.eloc_none"
     | Eloc_output -> "output_loc" //This is a bit sketchy
     | Eloc_union i j -> Printf.sprintf "(A.eloc_union %s %s)" (print_eloc mname i) (print_eloc mname j)
-    | Eloc_ptr x -> Printf.sprintf "(A.ptr_loc %s)" (print_ident mname x)
+    | Eloc_ptr x -> Printf.sprintf "(A.ptr_loc %s)" (T.print_expr mname x)
     | Eloc_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "eloc" hd) (print_args mname args)
-    | Eloc_copy_buf x -> Printf.sprintf "(A.copy_buffer_loc %s)" (print_ident mname x)
+    | Eloc_copy_buf x -> Printf.sprintf "(A.copy_buffer_loc %s)" (T.print_expr mname x)
 
 let rec print_disj mname (d:disj_pre)
   : ML string
@@ -740,9 +776,9 @@ let rec print_disj mname (d:disj_pre)
     | Disj_triv -> "None"
     | Disj_pair i j -> Printf.sprintf "(Some (A.disjoint %s %s))" (print_eloc mname i) (print_eloc mname j)
     | Disj_conj i j -> Printf.sprintf "(join_disj %s %s)" (print_disj mname i) (print_disj mname j)
-    | Disj_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "disj" hd) (print_args mname args)
+    // | Disj_name hd args -> Printf.sprintf "(%s %s)" (print_derived_name mname "disj" hd) (print_args mname args)
 
-let print_td_iface is_entrypoint mname root_name binders args typ_indexes_binders typ_indexes_args ar pk_wk pk_nz =
+let print_td_iface is_entrypoint mname root_name binders args typ_indexes_binders typ_indexes_args disj_index ar pk_wk pk_nz =
   let kind_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     inline_for_extraction\n\
@@ -759,13 +795,6 @@ let print_td_iface is_entrypoint mname root_name binders args typ_indexes_binder
       root_name
       typ_indexes_binders
   in
-  let disj_t =
-    Printf.sprintf "[@@noextract_to \"krml\"; specialize_disjointness]\n\
-                    noextract\n\
-                    val disj_%s %s : disj_index"
-      root_name
-      typ_indexes_binders
-  in
   let eloc_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
@@ -776,12 +805,12 @@ let print_td_iface is_entrypoint mname root_name binders args typ_indexes_binder
   let def'_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
-                    val def'_%s %s: typ kind_%s (inv_%s %s) (disj_%s %s) (eloc_%s %s) %b"
+                    val def'_%s %s: typ kind_%s (inv_%s %s) (%s) (eloc_%s %s) %b"
       root_name
       binders
       root_name
       root_name typ_indexes_args
-      root_name typ_indexes_args
+      disj_index //root_name typ_indexes_args
       root_name typ_indexes_args
       ar
   in
@@ -800,7 +829,7 @@ let print_td_iface is_entrypoint mname root_name binders args typ_indexes_binder
       binders
       root_name args
   in
-  String.concat "\n\n" [kind_t; inv_t; disj_t; eloc_t; def'_t; validator_t; dtyp_t]
+  String.concat "\n\n" [kind_t; inv_t; eloc_t; def'_t; validator_t; dtyp_t]
 
 let print_binders mname binders =
     List.map (print_param mname) binders |>
@@ -877,15 +906,14 @@ let print_binding mname (td:type_decl)
       (T.print_kind mname k)]
   in
   let print_inv_or_eloc_or_disj = print_inv_or_eloc_or_disj mname tdn root_name binders in
-  let typ_indexes_of_binding, fv_binders, fv_args =
+  let typ_indexes_of_binding, disj_index, fv_binders, fv_args =
     let inv, eloc, disj, _ = td.typ_indexes in
     let fvs1 = free_vars_of_inv inv in
     let fvs2 = free_vars_of_disj disj in
     let fvs3 = free_vars_of_eloc eloc in
     let s0, _, _ = print_inv_or_eloc_or_disj "inv" None "A.slice_inv" (print_inv mname inv) (fvs1@fvs2@fvs3) in
-    let s1, _, _ = print_inv_or_eloc_or_disj "disj" (Some "specialize_disjointness") "disj_index" (print_disj mname disj) (fvs1@fvs2@fvs3) in
     let s2, fvb, fva = print_inv_or_eloc_or_disj "eloc" None "A.eloc" (print_eloc mname eloc) (fvs1@fvs2@fvs3) in
-    s0 ^ s1 ^ s2, fvb, fva
+    s0 ^ s2, print_disj mname disj, fvb, fva
   in
   let def' =
     OS.format
@@ -1007,7 +1035,7 @@ let print_binding mname (td:type_decl)
     let iface =
       print_td_iface td.name.td_entrypoint
                     mname root_name binders args
-                    fv_binders fv_args td.allow_reading
+                    fv_binders fv_args disj_index td.allow_reading
                     weak_kind k.pk_nz
     in
     impl, iface

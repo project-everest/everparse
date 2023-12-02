@@ -61,6 +61,8 @@ type expr' =
 
 and expr = expr' & A.range
 
+let subst = list (A.ident' & expr)
+val subst_expr (s:subst) (e:expr) : expr
 let mk_expr (e:expr') = e, A.dummy_range
 
 type lam a = (option A.ident) & a
@@ -108,6 +110,13 @@ and index = either typ expr
 let field_typ = typ
 
 type param = A.ident & typ
+
+let mk_subst (l:list param) (args:list expr) : ML (option subst) =
+  if List.Tot.length l <> List.Tot.length args
+  then None
+  else (
+    Some (List.map2 #param (fun (i, t) e -> i.v, e) l args)
+  )
 
 noeq
 type struct_field = {

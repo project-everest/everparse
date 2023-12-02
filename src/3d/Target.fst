@@ -19,6 +19,33 @@ open FStar.All
 module A = Ast
 open Binding
 
+let lookup (s:subst) (i:A.ident) : option expr =
+  List.Tot.assoc i.v s
+
+let rec subst_expr (s:subst) (e:expr)
+: expr
+= match fst e with
+  | Constant _ -> e
+  | Identifier i -> (
+    match lookup s i with
+    | Some e' -> e'
+    | None -> e
+  )
+  | App hd args -> (
+    App hd (subst_exprs s args), snd e
+  )
+  | Record tn fields -> (
+    Record tn (subst_fields s fields), snd e
+  )
+and subst_exprs s es =
+  match es with
+  | [] -> []
+  | e::es -> subst_expr s e :: subst_exprs s es
+and subst_fields s fs =
+  match fs with
+  | [] -> []
+  | (i, e)::fs -> (i, subst_expr s e)::subst_fields s fs
+
 let rec expr_eq e1 e2 =
   match fst e1, fst e2 with
   | Constant c1, Constant c2 -> c1=c2
