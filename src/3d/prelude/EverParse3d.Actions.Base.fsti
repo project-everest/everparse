@@ -64,22 +64,16 @@ val imp_disjointness (d1 d2:disjointness_pre) : prop
 val disjoint_none_r (l:eloc)
   : squash (disjoint l eloc_none == disjointness_trivial)
 val disjoint_none_l (l:eloc)
-  : Lemma (disjoint eloc_none l == disjointness_trivial)
+  : squash (disjoint eloc_none l == disjointness_trivial)
    
-val conj_disjointess_trivial_unit_left (d:disjointness_pre)
-  : Lemma 
-    (ensures (disjointness_trivial `conj_disjointness` d) == d)
-    [SMTPat (disjointness_trivial `conj_disjointness` d)]
+val conj_disjointness_trivial_left_unit (d:disjointness_pre)
+  : squash ((disjointness_trivial `conj_disjointness` d) == d)
 
-val conj_disjointess_trivial_unit_right (d:disjointness_pre)
-  : Lemma 
-    (ensures (d `conj_disjointness` disjointness_trivial == d))
-    [SMTPat (d `conj_disjointness` disjointness_trivial)]
+val conj_disjointness_trivial_right_unit (d:disjointness_pre)
+  : squash ((d `conj_disjointness` disjointness_trivial) == d)
 
-val imp_disjointess_idem (d:disjointness_pre)
-  : Lemma 
-    (ensures (imp_disjointness d d))
-    [SMTPat (imp_disjointness d d)]
+val imp_disjointness_refl (d:disjointness_pre)
+  : squash (imp_disjointness d d)
 
 inline_for_extraction
 noextract

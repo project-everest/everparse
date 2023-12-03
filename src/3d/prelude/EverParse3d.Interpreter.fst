@@ -579,39 +579,168 @@ type atomic_action
                     (join_disj disj (disjoint (Some (A.copy_buffer_loc dest)) l))
                     (join_loc l (Some (A.copy_buffer_loc dest)))
                     true bool
-let inv_true_unit_left (d:A.slice_inv)
-  : Lemma 
-    (ensures (A.true_inv `A.conj_inv` d) == d)
-    [SMTPat (A.true_inv `A.conj_inv` d)]
-  = A.conj_inv_true_left_unit d
 
-let inv_true_unit_right (d:A.slice_inv)
-  : Lemma 
-    (ensures (d `A.conj_inv` A.true_inv) == d)
-    [SMTPat (d `A.conj_inv` A.true_inv)]
-  = A.conj_inv_true_right_unit d
+// let _inv_implies_refl (inv: A.slice_inv) : Lemma
+//   (inv `A.inv_implies` inv)
+//   [SMTPat (inv `A.inv_implies` inv)]
+// = A.inv_implies_refl inv
+
+// let _inv_implies_true (inv0: A.slice_inv) : Lemma
+//   (inv0 `A.inv_implies` A.true_inv)
+//   [SMTPat (inv0 `A.inv_implies` A.true_inv)]
+// = A.inv_implies_true inv0
+
+// let _inv_implies_conj (inv0 inv1 inv2: A.slice_inv) : Lemma
+//   (requires (
+//     inv0 `A.inv_implies` inv1 /\
+//     inv0 `A.inv_implies` inv2
+//   ))
+//   (ensures (
+//     inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2)
+//   ))
+//   [SMTPat (inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2))]
+// = A.inv_implies_conj inv0 inv1 inv2 () ()
+
+// let _eloc_includes_none (l1:A.eloc) : Lemma
+//   (l1 `A.eloc_includes` A.eloc_none)
+//   [SMTPat (l1 `A.eloc_includes` A.eloc_none)]
+// = A.eloc_includes_none l1
+
+// let _eloc_includes_union (l0: A.eloc) (l1 l2: A.eloc) : Lemma
+//   (requires (
+//     l0 `A.eloc_includes` l1 /\
+//     l0 `A.eloc_includes` l2
+//   ))
+//   (ensures (
+//     l0 `A.eloc_includes` (l1 `A.eloc_union` l2)
+//   ))
+//   [SMTPat (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))]
+// = A.eloc_includes_union l0 l1 l2 () ()
+
+// let _eloc_includes_refl (l: A.eloc) : Lemma
+//   (l `A.eloc_includes` l)
+//   [SMTPat (l `A.eloc_includes` l)]
+// = A.eloc_includes_refl l
+
+
+let index_equations ()
+  : Lemma
+    (ensures (
+      (forall (d:A.slice_inv).
+        {:pattern (A.true_inv `A.conj_inv` d)} (A.true_inv `A.conj_inv` d) == d) /\
+      (forall (d:A.slice_inv).
+        {:pattern (d `A.conj_inv` A.true_inv)} (d `A.conj_inv` A.true_inv) == d) /\
+      (forall (l:A.eloc).
+        {:pattern (l `A.eloc_union` A.eloc_none)} (l `A.eloc_union` A.eloc_none) == l) /\
+      (forall (l:A.eloc).
+        {:pattern (A.eloc_none `A.eloc_union` l)} (A.eloc_none `A.eloc_union` l) == l) /\
+      (forall (l:A.eloc).
+        {:pattern (A.disjoint l A.eloc_none)} (A.disjoint l A.eloc_none) == A.disjointness_trivial) /\
+      (forall (l:A.eloc).
+        {:pattern (A.disjoint A.eloc_none l)} (A.disjoint A.eloc_none l) == A.disjointness_trivial) /\
+      (forall (d:A.disjointness_pre).
+        {:pattern (A.conj_disjointness d A.disjointness_trivial)} (A.conj_disjointness d A.disjointness_trivial) == d) /\
+      (forall (d:A.disjointness_pre).
+        {:pattern (A.conj_disjointness A.disjointness_trivial d)} (A.conj_disjointness A.disjointness_trivial d) == d) /\
+      (forall (d:A.disjointness_pre).
+        {:pattern (A.imp_disjointness d d)} A.imp_disjointness d d) /\
+      (forall (i:A.slice_inv).
+        {:pattern (A.inv_implies i i)} A.inv_implies i i) /\ 
+      (forall (i:A.slice_inv).
+        {:pattern (A.inv_implies i A.true_inv)} A.inv_implies i A.true_inv) /\
+      //inv_implies_conj
+      (forall (i0 i1 i2:A.slice_inv).
+        {:pattern (i0 `A.inv_implies` (i1 `A.conj_inv` i2))}
+        (i0 `A.inv_implies` i1 /\
+         i0 `A.inv_implies` i2) ==>
+        (i0 `A.inv_implies` (i1 `A.conj_inv` i2))) /\
+      //eloc_includes_none
+      (forall (l:A.eloc).
+        {:pattern (l `A.eloc_includes` A.eloc_none)} l `A.eloc_includes` A.eloc_none) /\
+      //eloc_includes_union
+      (forall (l0 l1 l2:A.eloc).
+        {:pattern (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))}
+        (l0 `A.eloc_includes` l1 /\
+         l0 `A.eloc_includes` l2) ==>
+        (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))) /\
+      //eloc_includes_refl
+      (forall (l:A.eloc).
+        {:pattern (l `A.eloc_includes` l)} (l `A.eloc_includes` l))
+    ))
+  = introduce forall d. _
+    with A.conj_inv_true_left_unit d;
+    introduce forall d. _
+    with A.conj_inv_true_right_unit d;
+    introduce forall l. _
+    with A.eloc_union_none_right_unit l;
+    introduce forall l. _
+    with A.eloc_union_none_left_unit l;
+    introduce forall l. _
+    with A.disjoint_none_r l;
+    introduce forall l. _
+    with A.disjoint_none_l l;
+    introduce forall d. _
+    with A.conj_disjointness_trivial_left_unit d;
+    introduce forall d. _
+    with A.conj_disjointness_trivial_right_unit d;
+    introduce forall d. _
+    with A.imp_disjointness_refl d;
+    introduce forall i. _
+    with A.inv_implies_refl i;
+    introduce forall i. _
+    with A.inv_implies_true i;
+    introduce forall i0 i1 i2. 
+        (i0 `A.inv_implies` i1 /\
+         i0 `A.inv_implies` i2) ==>
+        (i0 `A.inv_implies` (i1 `A.conj_inv` i2))
+    with introduce _ ==> _
+    with _ . A.inv_implies_conj i0 i1 i2 () ();
+    introduce forall l. _
+    with A.eloc_includes_none l;
+    introduce forall l0 l1 l2. (l0 `A.eloc_includes` l1 /\
+         l0 `A.eloc_includes` l2) ==>
+        (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))
+    with introduce _ ==> _
+    with _ . A.eloc_includes_union l0 l1 l2 () ();
+    introduce forall l. _
+    with A.eloc_includes_refl l
+
+    
+
+
+// let inv_true_unit_left (d:A.slice_inv)
+//   : Lemma 
+//     (ensures (A.true_inv `A.conj_inv` d) == d)
+//     [SMTPat (A.true_inv `A.conj_inv` d)]
+//   = A.conj_inv_true_left_unit d
+
+// let inv_true_unit_right (d:A.slice_inv)
+//   : Lemma 
+//     (ensures (d `A.conj_inv` A.true_inv) == d)
+//     [SMTPat (d `A.conj_inv` A.true_inv)]
+//   = A.conj_inv_true_right_unit d
   
-let loc_none_unit_right (d:A.eloc)
-  : Lemma 
-    (ensures (d `A.eloc_union` A.eloc_none == d))
-    [SMTPat (d `A.eloc_union` A.eloc_none)]
-  = A.eloc_union_none_right_unit d
+// let loc_none_unit_right (d:A.eloc)
+//   : Lemma 
+//     (ensures (d `A.eloc_union` A.eloc_none == d))
+//     [SMTPat (d `A.eloc_union` A.eloc_none)]
+//   = A.eloc_union_none_right_unit d
 
-let loc_none_unit_left (d:A.eloc)
-  : Lemma 
-    (ensures (A.eloc_none `A.eloc_union` d == d))
-    [SMTPat (A.eloc_none `A.eloc_union` d)]
-  = A.eloc_union_none_left_unit d
+// let loc_none_unit_left (d:A.eloc)
+//   : Lemma 
+//     (ensures (A.eloc_none `A.eloc_union` d == d))
+//     [SMTPat (A.eloc_none `A.eloc_union` d)]
+//   = A.eloc_union_none_left_unit d
 
-let disjoint_none_r (l:A.eloc)
-  : Lemma (A.disjoint l A.eloc_none == A.disjointness_trivial)
-    [SMTPat (A.disjoint l A.eloc_none)]
-  = A.disjoint_none_r l
+// let disjoint_none_r (l:A.eloc)
+//   : Lemma (A.disjoint l A.eloc_none == A.disjointness_trivial)
+//     [SMTPat (A.disjoint l A.eloc_none)]
+//   = A.disjoint_none_r l
 
-let disjoint_none_l (l:A.eloc)
-  : Lemma (A.disjoint A.eloc_none l == A.disjointness_trivial)
-    [SMTPat (A.disjoint A.eloc_none l)]
-  = A.disjoint_none_l l
+// let disjoint_none_l (l:A.eloc)
+//   : Lemma (A.disjoint A.eloc_none l == A.disjointness_trivial)
+//     [SMTPat (A.disjoint A.eloc_none l)]
+//   = A.disjoint_none_l l
 
 (* Denotation of atomic_actions as A.action *)
 [@@specialize]
@@ -641,6 +770,7 @@ let atomic_action_as_action
     | Action_call c ->
       c
     | Action_probe_then_validate #nz #wk #k #_hr #inv #l dt src len dest probe ->
+      index_equations();
       let v = dtyp_as_validator dt in
       A.probe_then_validate v src len dest probe
 
@@ -677,48 +807,6 @@ type action
       #i0:_ -> #l0:_ -> #b0:_ -> act:action i0 disj_none l0 b0 unit ->
       action i0 disj_none l0 b0 bool
 
-let _inv_implies_refl (inv: A.slice_inv) : Lemma
-  (inv `A.inv_implies` inv)
-  [SMTPat (inv `A.inv_implies` inv)]
-= A.inv_implies_refl inv
-
-let _inv_implies_true (inv0: A.slice_inv) : Lemma
-  (inv0 `A.inv_implies` A.true_inv)
-  [SMTPat (inv0 `A.inv_implies` A.true_inv)]
-= A.inv_implies_true inv0
-
-let _inv_implies_conj (inv0 inv1 inv2: A.slice_inv) : Lemma
-  (requires (
-    inv0 `A.inv_implies` inv1 /\
-    inv0 `A.inv_implies` inv2
-  ))
-  (ensures (
-    inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2)
-  ))
-  [SMTPat (inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2))]
-= A.inv_implies_conj inv0 inv1 inv2 () ()
-
-let _eloc_includes_none (l1:A.eloc) : Lemma
-  (l1 `A.eloc_includes` A.eloc_none)
-  [SMTPat (l1 `A.eloc_includes` A.eloc_none)]
-= A.eloc_includes_none l1
-
-let _eloc_includes_union (l0: A.eloc) (l1 l2: A.eloc) : Lemma
-  (requires (
-    l0 `A.eloc_includes` l1 /\
-    l0 `A.eloc_includes` l2
-  ))
-  (ensures (
-    l0 `A.eloc_includes` (l1 `A.eloc_union` l2)
-  ))
-  [SMTPat (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))]
-= A.eloc_includes_union l0 l1 l2 () ()
-
-let _eloc_includes_refl (l: A.eloc) : Lemma
-  (l `A.eloc_includes` l)
-  [SMTPat (l `A.eloc_includes` l)]
-= A.eloc_includes_refl l
-
 
 (* Denotation of action as A.action *)
 [@@specialize]
@@ -727,7 +815,8 @@ let rec action_as_action
    (a:action i d l b t)
   : Tot (A.action (interp_inv i) (interp_disj d) (interp_loc l) b t)
     (decreases a)
-  = match a with
+  = index_equations();
+    match a with
     | Atomic_action a ->
       atomic_action_as_action a
 
@@ -787,24 +876,26 @@ type typ
       typ (P.and_then_kind pk1 pk2) 
           (join_inv i1 i2)
           (join_disj d1 d2)
-          (join_loc l1 l2) false
+          (join_loc l1 l2)
+          false
 
   | T_dep_pair:
       first_fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
-      #i1:_ -> #l1:_ ->
+      #i1:_ -> #d1:_ -> #l1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:bool ->
       //the first component is a pre-denoted type with a reader
-      t1:dtyp pk1 true i1 disj_none l1 ->
+      t1:dtyp pk1 true i1 d1 l1 ->
       //the second component is a function from denotations of t1
       //that's why it's a small type, so that we can speak about its
       //denotation here
       t2:(dtyp_as_type t1 -> typ pk2 i2 d2 l2 b2) ->
       typ (P.and_then_kind pk1 pk2)
           (join_inv i1 i2)
-          d2
-          (join_loc l1 l2) false
+          (join_disj d1 d2)
+          (join_loc l1 l2)
+          false
 
   | T_refine:
       fieldname:string ->       
@@ -822,11 +913,15 @@ type typ
       fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #d1:_ -> #l1:_ ->
-      #i2:_ -> #l2:_ -> #b2:_ ->
+      #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
       base:dtyp pk1 true i1 d1 l1 ->
       refinement:(dtyp_as_type base -> bool) ->
-      act:(dtyp_as_type base -> action i2 disj_none l2 b2 bool) ->
-      typ (P.filter_kind pk1) (join_inv i1 i2) d1 (join_loc l1 l2) false
+      act:(dtyp_as_type base -> action i2 d2 l2 b2 bool) ->
+      typ (P.filter_kind pk1)
+          (join_inv i1 i2)
+          (join_disj d1 d2)
+          (join_loc l1 l2)
+          false
   
   | T_dep_pair_with_refinement:
       //This construct serves two purposes
@@ -836,33 +931,33 @@ type typ
       //    to depend on the refinement of the first field
       first_fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
-      #i1:_ -> #l1:_ ->
+      #i1:_ -> #d1:_ -> #l1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
       //the first component is a pre-denoted type with a reader
-      base:dtyp pk1 true i1 disj_none l1 ->
+      base:dtyp pk1 true i1 d1 l1 ->
       //the second component is a function from denotations of base
       refinement:(dtyp_as_type base -> bool) ->
       k:(x:dtyp_as_type base { refinement x } -> typ pk2 i2 d2 l2 b2) ->
       typ (P.and_then_kind (P.filter_kind pk1) pk2)
           (join_inv i1 i2)
-          d2
+          (join_disj d1 d2)
           (join_loc l1 l2)
           false
 
   | T_dep_pair_with_action:
       fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
-      #i1:_ -> #l1:_ ->
+      #i1:_ -> #d1:_ -> #l1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
-      #i3:_ -> #l3:_ -> #b3:_ ->      
-      base:dtyp pk1 true i1 disj_none l1 ->
+      #i3:_ -> #d3:_ -> #l3:_ -> #b3:_ ->      
+      base:dtyp pk1 true i1 d1 l1 ->
       k:(x:dtyp_as_type base -> typ pk2 i2 d2 l2 b2) ->
-      act:(dtyp_as_type base -> action i3 disj_none l3 b3 bool) ->
+      act:(dtyp_as_type base -> action i3 d3 l3 b3 bool) ->
       typ (P.and_then_kind pk1 pk2)
           (join_inv i1 (join_inv i3 i2))
-          d2
+          (join_disj d1 (join_disj d3 d2))
           (join_loc l1 (join_loc l3 l2))
           false
 
@@ -874,19 +969,19 @@ type typ
       //    to depend on the refinement of the first field
       first_fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
-      #i1:_ -> #l1:_ ->
+      #i1:_ -> #d1:_ -> #l1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
-      #i3:_ -> #l3:_ -> #b3:_ ->      
+      #i3:_ -> #d3:_ -> #l3:_ -> #b3:_ ->      
       //the first component is a pre-denoted type with a reader
-      base:dtyp pk1 true i1 disj_none l1 ->
+      base:dtyp pk1 true i1 d1 l1 ->
       //the second component is a function from denotations of base
       refinement:(dtyp_as_type base -> bool) ->
       k:(x:dtyp_as_type base { refinement x } -> typ pk2 i2 d2 l2 b2) ->
-      act:(dtyp_as_type base -> action i3 disj_none l3 b3 bool) ->
+      act:(dtyp_as_type base -> action i3 d3 l3 b3 bool) ->
       typ (P.and_then_kind (P.filter_kind pk1) pk2)
           (join_inv i1 (join_inv i3 i2))
-          d2
+          (join_disj d1 (join_disj d3 d2))
           (join_loc l1 (join_loc l3 l2))
           false
 
@@ -921,19 +1016,19 @@ type typ
       fieldname:string ->       
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #l1:_ -> #i1:_ -> #d1:_ -> #b1:_ ->
-      #l2:_ -> #i2:_ -> #b2:_ ->
+      #l2:_ -> #i2:_ -> #d2:_ -> #b2:_ ->
       base:typ pk i1 d1 l1 b1 ->
-      act:action i2 disj_none l2 b2 bool ->
-      typ pk (join_inv i1 i2) d1 (join_loc l1 l2) false
+      act:action i2 d2 l2 b2 bool ->
+      typ pk (join_inv i1 i2) (join_disj d1 d2) (join_loc l1 l2) false
 
   | T_with_dep_action:
       fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
-      #i1:_ -> #l1:_ ->
+      #i1:_ -> #d1: _ -> #l1:_ ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
-      head:dtyp pk1 true i1 disj_none l1 ->
+      head:dtyp pk1 true i1 d1 l1 ->
       act:(dtyp_as_type head -> action i2 d2 l2 b2 bool) ->
-      typ pk1 (join_inv i1 i2) d2 (join_loc l1 l2) false
+      typ pk1 (join_inv i1 i2) (join_disj d1 d2) (join_loc l1 l2) false
 
   | T_with_comment:
       fieldname:string ->       
@@ -1174,6 +1269,8 @@ let rec as_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
      related by construction to the parser
      and type denotations
 *)
+#push-options "--query_stats --split_queries no --z3rlimit_factor 4 --z3cliopt 'smt.qi.eager_threshold=100'"
+#restart-solver
 let rec as_validator
           (typename:string)
           #nz #wk (#pk:P.parser_kind nz wk)
@@ -1189,7 +1286,8 @@ let rec as_validator
             (interp_loc loc)
             b)
         (decreases t)
-  = match t
+  = index_equations();
+    match t
     returns Tot (
       A.validate_with_action_t #nz #wk #pk #(as_type t)
             (as_parser t)
@@ -1257,7 +1355,6 @@ let rec as_validator
             refinement
             (fun x -> as_validator typename (k x))))
 
-
     | T_dep_pair_with_action fn base t act ->
       assert_norm (as_type (T_dep_pair_with_action fn base t act) ==
                         x:dtyp_as_type base & as_type (t x));
@@ -1285,6 +1382,7 @@ let rec as_validator
             (fun x -> action_as_action (act x))
             (fun x -> as_validator typename (k x)))
 
+
     | T_if_else b t0 t1 ->
       assert_norm (as_type (T_if_else b t0 t1) == P.t_ite b (fun _ -> as_type (t0())) (fun _ -> as_type (t1 ())));
       let p0 (_:squash b) = P.parse_weaken_right (as_parser (t0())) _ in
@@ -1310,7 +1408,7 @@ let rec as_validator
         A.validate_weaken_left (as_validator typename t1) _
       in
       A.validate_ite b p0 v0 p1 v1
-
+ 
     | T_with_action fn t a ->
       assert_norm (as_type (T_with_action fn t a) == as_type t);
       assert_norm (as_parser (T_with_action fn t a) == as_parser t);
@@ -1328,6 +1426,7 @@ let rec as_validator
             (dtyp_as_validator i)
             (dtyp_as_leaf_reader i)
             (fun x -> action_as_action (a x))))
+
 
     | T_with_comment fn t c ->
       assert_norm (as_type (T_with_comment fn t c) == as_type t);
@@ -1359,7 +1458,7 @@ let rec as_validator
         (A.validate_string (dtyp_as_validator elt_t)
                            (dtyp_as_leaf_reader elt_t)
                            terminator)
-
+#pop-options 
 [@@noextract_to "krml"; specialize]
 inline_for_extraction noextract 
 let validator_of #allow_reading #nz #wk (#k:P.parser_kind nz wk) #i #d #l (t:typ k i d l allow_reading) = 
