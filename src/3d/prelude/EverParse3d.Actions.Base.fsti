@@ -64,16 +64,69 @@ val imp_disjointness (d1 d2:disjointness_pre) : prop
 val disjoint_none_r (l:eloc)
   : squash (disjoint l eloc_none == disjointness_trivial)
 val disjoint_none_l (l:eloc)
-  : squash (disjoint eloc_none l == disjointness_trivial)
-   
+  : squash (disjoint eloc_none l == disjointness_trivial)   
 val conj_disjointness_trivial_left_unit (d:disjointness_pre)
   : squash ((disjointness_trivial `conj_disjointness` d) == d)
-
 val conj_disjointness_trivial_right_unit (d:disjointness_pre)
   : squash ((d `conj_disjointness` disjointness_trivial) == d)
-
 val imp_disjointness_refl (d:disjointness_pre)
   : squash (imp_disjointness d d)
+
+val index_equations (_:unit)
+  : Lemma
+    (ensures (
+      //true_inv left unit
+      (forall (d:slice_inv).
+        {:pattern (true_inv `conj_inv` d)} (true_inv `conj_inv` d) == d) /\
+      //true_inv right unit
+      (forall (d:slice_inv).
+        {:pattern (d `conj_inv` true_inv)} (d `conj_inv` true_inv) == d) /\
+      //eloc_none left unit
+      (forall (l:eloc).
+        {:pattern (l `eloc_union` eloc_none)} (l `eloc_union` eloc_none) == l) /\
+      //eloc_none right unit
+      (forall (l:eloc).
+        {:pattern (eloc_none `eloc_union` l)} (eloc_none `eloc_union` l) == l) /\
+      //disjoint eloc_none right trivial
+      (forall (l:eloc).
+        {:pattern (disjoint l eloc_none)} (disjoint l eloc_none) == disjointness_trivial) /\
+      //disjoint eloc_none left trivial
+      (forall (l:eloc).
+        {:pattern (disjoint eloc_none l)} (disjoint eloc_none l) == disjointness_trivial) /\
+      //disjointness_pre right unit
+      (forall (d:disjointness_pre).
+        {:pattern (conj_disjointness d disjointness_trivial)} (conj_disjointness d disjointness_trivial) == d) /\
+      //disjointness_pre left unit
+      (forall (d:disjointness_pre).
+        {:pattern (conj_disjointness disjointness_trivial d)} (conj_disjointness disjointness_trivial d) == d) /\
+      //imp_disjointness refl
+      (forall (d:disjointness_pre).
+        {:pattern (imp_disjointness d d)} imp_disjointness d d) /\
+      //inv_implies refl
+      (forall (i:slice_inv).
+        {:pattern (inv_implies i i)} inv_implies i i) /\ 
+      //inv_implies true_inv right trivial
+      (forall (i:slice_inv).
+        {:pattern (inv_implies i true_inv)} inv_implies i true_inv) /\
+      //inv_implies_conj
+      (forall (i0 i1 i2:slice_inv).
+        {:pattern (i0 `inv_implies` (i1 `conj_inv` i2))}
+        (i0 `inv_implies` i1 /\
+         i0 `inv_implies` i2) ==>
+        (i0 `inv_implies` (i1 `conj_inv` i2))) /\
+      //eloc_includes_none
+      (forall (l:eloc).
+        {:pattern (l `eloc_includes` eloc_none)} l `eloc_includes` eloc_none) /\
+      //eloc_includes_union
+      (forall (l0 l1 l2:eloc).
+        {:pattern (l0 `eloc_includes` (l1 `eloc_union` l2))}
+        (l0 `eloc_includes` l1 /\
+         l0 `eloc_includes` l2) ==>
+        (l0 `eloc_includes` (l1 `eloc_union` l2))) /\
+      //eloc_includes_refl
+      (forall (l:eloc).
+        {:pattern (l `eloc_includes` l)} (l `eloc_includes` l))
+    ))
 
 inline_for_extraction
 noextract

@@ -61,24 +61,54 @@ let disjoint_none_l l =
       (disjoint  eloc_none l)
       (disjointness_trivial)
 
-let conj_disjointess_trivial_unit_left (d:disjointness_pre)
-  : Lemma 
-    (ensures (disjointness_trivial `conj_disjointness` d) == d)
-    [SMTPat (disjointness_trivial `conj_disjointness` d)]
+let conj_disjointness_trivial_left_unit (d:disjointness_pre)
   = FStar.PropositionalExtensionality.apply (disjointness_trivial `conj_disjointness` d) d
 
-let conj_disjointess_trivial_unit_right (d:disjointness_pre)
-  : Lemma 
-    (ensures (d `conj_disjointness` disjointness_trivial == d))
-    [SMTPat (d `conj_disjointness` disjointness_trivial)]
+let conj_disjointness_trivial_right_unit (d:disjointness_pre)
   = FStar.PropositionalExtensionality.apply (d `conj_disjointness` disjointness_trivial) d
 
-let imp_disjointess_idem (d:disjointness_pre)
-  : Lemma 
-    (ensures (imp_disjointness d d))
-    [SMTPat (imp_disjointness d d)]
+let imp_disjointness_refl (d:disjointness_pre)
   = ()
   
+let index_equations ()
+  = introduce forall d. _
+    with conj_inv_true_left_unit d;
+    introduce forall d. _
+    with conj_inv_true_right_unit d;
+    introduce forall l. _
+    with eloc_union_none_right_unit l;
+    introduce forall l. _
+    with eloc_union_none_left_unit l;
+    introduce forall l. _
+    with disjoint_none_r l;
+    introduce forall l. _
+    with disjoint_none_l l;
+    introduce forall d. _
+    with conj_disjointness_trivial_left_unit d;
+    introduce forall d. _
+    with conj_disjointness_trivial_right_unit d;
+    introduce forall d. _
+    with imp_disjointness_refl d;
+    introduce forall i. _
+    with inv_implies_refl i;
+    introduce forall i. _
+    with inv_implies_true i;
+    introduce forall i0 i1 i2. 
+        (i0 `inv_implies` i1 /\
+         i0 `inv_implies` i2) ==>
+        (i0 `inv_implies` (i1 `conj_inv` i2))
+    with introduce _ ==> _
+    with _ . inv_implies_conj i0 i1 i2 () ();
+    introduce forall l. _
+    with eloc_includes_none l;
+    introduce forall l0 l1 l2. (l0 `eloc_includes` l1 /\
+         l0 `eloc_includes` l2) ==>
+        (l0 `eloc_includes` (l1 `eloc_union` l2))
+    with introduce _ ==> _
+    with _ . eloc_includes_union l0 l1 l2 () ();
+    introduce forall l. _
+    with eloc_includes_refl l
+
 let bpointer a = B.pointer a
 let ptr_loc #a (x:B.pointer a) : Tot eloc = B.loc_buffer x
 let ptr_inv #a (x:B.pointer a) : slice_inv = F.on HS.mem #prop (fun h -> B.live h x /\ True)

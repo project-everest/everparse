@@ -580,167 +580,6 @@ type atomic_action
                     (join_loc l (Some (A.copy_buffer_loc dest)))
                     true bool
 
-// let _inv_implies_refl (inv: A.slice_inv) : Lemma
-//   (inv `A.inv_implies` inv)
-//   [SMTPat (inv `A.inv_implies` inv)]
-// = A.inv_implies_refl inv
-
-// let _inv_implies_true (inv0: A.slice_inv) : Lemma
-//   (inv0 `A.inv_implies` A.true_inv)
-//   [SMTPat (inv0 `A.inv_implies` A.true_inv)]
-// = A.inv_implies_true inv0
-
-// let _inv_implies_conj (inv0 inv1 inv2: A.slice_inv) : Lemma
-//   (requires (
-//     inv0 `A.inv_implies` inv1 /\
-//     inv0 `A.inv_implies` inv2
-//   ))
-//   (ensures (
-//     inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2)
-//   ))
-//   [SMTPat (inv0 `A.inv_implies` (inv1 `A.conj_inv` inv2))]
-// = A.inv_implies_conj inv0 inv1 inv2 () ()
-
-// let _eloc_includes_none (l1:A.eloc) : Lemma
-//   (l1 `A.eloc_includes` A.eloc_none)
-//   [SMTPat (l1 `A.eloc_includes` A.eloc_none)]
-// = A.eloc_includes_none l1
-
-// let _eloc_includes_union (l0: A.eloc) (l1 l2: A.eloc) : Lemma
-//   (requires (
-//     l0 `A.eloc_includes` l1 /\
-//     l0 `A.eloc_includes` l2
-//   ))
-//   (ensures (
-//     l0 `A.eloc_includes` (l1 `A.eloc_union` l2)
-//   ))
-//   [SMTPat (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))]
-// = A.eloc_includes_union l0 l1 l2 () ()
-
-// let _eloc_includes_refl (l: A.eloc) : Lemma
-//   (l `A.eloc_includes` l)
-//   [SMTPat (l `A.eloc_includes` l)]
-// = A.eloc_includes_refl l
-
-
-let index_equations ()
-  : Lemma
-    (ensures (
-      (forall (d:A.slice_inv).
-        {:pattern (A.true_inv `A.conj_inv` d)} (A.true_inv `A.conj_inv` d) == d) /\
-      (forall (d:A.slice_inv).
-        {:pattern (d `A.conj_inv` A.true_inv)} (d `A.conj_inv` A.true_inv) == d) /\
-      (forall (l:A.eloc).
-        {:pattern (l `A.eloc_union` A.eloc_none)} (l `A.eloc_union` A.eloc_none) == l) /\
-      (forall (l:A.eloc).
-        {:pattern (A.eloc_none `A.eloc_union` l)} (A.eloc_none `A.eloc_union` l) == l) /\
-      (forall (l:A.eloc).
-        {:pattern (A.disjoint l A.eloc_none)} (A.disjoint l A.eloc_none) == A.disjointness_trivial) /\
-      (forall (l:A.eloc).
-        {:pattern (A.disjoint A.eloc_none l)} (A.disjoint A.eloc_none l) == A.disjointness_trivial) /\
-      (forall (d:A.disjointness_pre).
-        {:pattern (A.conj_disjointness d A.disjointness_trivial)} (A.conj_disjointness d A.disjointness_trivial) == d) /\
-      (forall (d:A.disjointness_pre).
-        {:pattern (A.conj_disjointness A.disjointness_trivial d)} (A.conj_disjointness A.disjointness_trivial d) == d) /\
-      (forall (d:A.disjointness_pre).
-        {:pattern (A.imp_disjointness d d)} A.imp_disjointness d d) /\
-      (forall (i:A.slice_inv).
-        {:pattern (A.inv_implies i i)} A.inv_implies i i) /\ 
-      (forall (i:A.slice_inv).
-        {:pattern (A.inv_implies i A.true_inv)} A.inv_implies i A.true_inv) /\
-      //inv_implies_conj
-      (forall (i0 i1 i2:A.slice_inv).
-        {:pattern (i0 `A.inv_implies` (i1 `A.conj_inv` i2))}
-        (i0 `A.inv_implies` i1 /\
-         i0 `A.inv_implies` i2) ==>
-        (i0 `A.inv_implies` (i1 `A.conj_inv` i2))) /\
-      //eloc_includes_none
-      (forall (l:A.eloc).
-        {:pattern (l `A.eloc_includes` A.eloc_none)} l `A.eloc_includes` A.eloc_none) /\
-      //eloc_includes_union
-      (forall (l0 l1 l2:A.eloc).
-        {:pattern (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))}
-        (l0 `A.eloc_includes` l1 /\
-         l0 `A.eloc_includes` l2) ==>
-        (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))) /\
-      //eloc_includes_refl
-      (forall (l:A.eloc).
-        {:pattern (l `A.eloc_includes` l)} (l `A.eloc_includes` l))
-    ))
-  = introduce forall d. _
-    with A.conj_inv_true_left_unit d;
-    introduce forall d. _
-    with A.conj_inv_true_right_unit d;
-    introduce forall l. _
-    with A.eloc_union_none_right_unit l;
-    introduce forall l. _
-    with A.eloc_union_none_left_unit l;
-    introduce forall l. _
-    with A.disjoint_none_r l;
-    introduce forall l. _
-    with A.disjoint_none_l l;
-    introduce forall d. _
-    with A.conj_disjointness_trivial_left_unit d;
-    introduce forall d. _
-    with A.conj_disjointness_trivial_right_unit d;
-    introduce forall d. _
-    with A.imp_disjointness_refl d;
-    introduce forall i. _
-    with A.inv_implies_refl i;
-    introduce forall i. _
-    with A.inv_implies_true i;
-    introduce forall i0 i1 i2. 
-        (i0 `A.inv_implies` i1 /\
-         i0 `A.inv_implies` i2) ==>
-        (i0 `A.inv_implies` (i1 `A.conj_inv` i2))
-    with introduce _ ==> _
-    with _ . A.inv_implies_conj i0 i1 i2 () ();
-    introduce forall l. _
-    with A.eloc_includes_none l;
-    introduce forall l0 l1 l2. (l0 `A.eloc_includes` l1 /\
-         l0 `A.eloc_includes` l2) ==>
-        (l0 `A.eloc_includes` (l1 `A.eloc_union` l2))
-    with introduce _ ==> _
-    with _ . A.eloc_includes_union l0 l1 l2 () ();
-    introduce forall l. _
-    with A.eloc_includes_refl l
-
-    
-
-
-// let inv_true_unit_left (d:A.slice_inv)
-//   : Lemma 
-//     (ensures (A.true_inv `A.conj_inv` d) == d)
-//     [SMTPat (A.true_inv `A.conj_inv` d)]
-//   = A.conj_inv_true_left_unit d
-
-// let inv_true_unit_right (d:A.slice_inv)
-//   : Lemma 
-//     (ensures (d `A.conj_inv` A.true_inv) == d)
-//     [SMTPat (d `A.conj_inv` A.true_inv)]
-//   = A.conj_inv_true_right_unit d
-  
-// let loc_none_unit_right (d:A.eloc)
-//   : Lemma 
-//     (ensures (d `A.eloc_union` A.eloc_none == d))
-//     [SMTPat (d `A.eloc_union` A.eloc_none)]
-//   = A.eloc_union_none_right_unit d
-
-// let loc_none_unit_left (d:A.eloc)
-//   : Lemma 
-//     (ensures (A.eloc_none `A.eloc_union` d == d))
-//     [SMTPat (A.eloc_none `A.eloc_union` d)]
-//   = A.eloc_union_none_left_unit d
-
-// let disjoint_none_r (l:A.eloc)
-//   : Lemma (A.disjoint l A.eloc_none == A.disjointness_trivial)
-//     [SMTPat (A.disjoint l A.eloc_none)]
-//   = A.disjoint_none_r l
-
-// let disjoint_none_l (l:A.eloc)
-//   : Lemma (A.disjoint A.eloc_none l == A.disjointness_trivial)
-//     [SMTPat (A.disjoint A.eloc_none l)]
-//   = A.disjoint_none_l l
 
 (* Denotation of atomic_actions as A.action *)
 [@@specialize]
@@ -770,7 +609,7 @@ let atomic_action_as_action
     | Action_call c ->
       c
     | Action_probe_then_validate #nz #wk #k #_hr #inv #l dt src len dest probe ->
-      index_equations();
+      A.index_equations();
       let v = dtyp_as_validator dt in
       A.probe_then_validate v src len dest probe
 
@@ -815,7 +654,7 @@ let rec action_as_action
    (a:action i d l b t)
   : Tot (A.action (interp_inv i) (interp_disj d) (interp_loc l) b t)
     (decreases a)
-  = index_equations();
+  = A.index_equations();
     match a with
     | Atomic_action a ->
       atomic_action_as_action a
@@ -1286,7 +1125,7 @@ let rec as_validator
             (interp_loc loc)
             b)
         (decreases t)
-  = index_equations();
+  = A.index_equations();
     match t
     returns Tot (
       A.validate_with_action_t #nz #wk #pk #(as_type t)
