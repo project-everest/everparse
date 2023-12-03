@@ -52,6 +52,14 @@ let disjointness_trivial = True
 let disjoint l1 l2 = eloc_disjoint l1 l2
 let conj_disjointness p1 p2 = p1 /\ p2
 let imp_disjointness p1 p2 = p1 ==> p2
+let disjoint_none_r l =
+  FStar.PropositionalExtensionality.apply
+      (disjoint l eloc_none)
+      (disjointness_trivial)
+let disjoint_none_l l =
+  FStar.PropositionalExtensionality.apply
+      (disjoint  eloc_none l)
+      (disjointness_trivial)
 
 let conj_disjointess_trivial_unit_left (d:disjointness_pre)
   : Lemma 

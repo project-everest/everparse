@@ -61,7 +61,11 @@ val disjointness_trivial : disjointness_pre
 val disjoint (l1 l2:eloc) : disjointness_pre
 val conj_disjointness (d0 d1:disjointness_pre) : disjointness_pre
 val imp_disjointness (d1 d2:disjointness_pre) : prop
-
+val disjoint_none_r (l:eloc)
+  : squash (disjoint l eloc_none == disjointness_trivial)
+val disjoint_none_l (l:eloc)
+  : Lemma (disjoint eloc_none l == disjointness_trivial)
+   
 val conj_disjointess_trivial_unit_left (d:disjointness_pre)
   : Lemma 
     (ensures (disjointness_trivial `conj_disjointness` d) == d)
