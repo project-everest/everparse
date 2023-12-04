@@ -12,7 +12,6 @@ inline_for_extraction
 noextract
 val t : Type0
 
-[@@ FStar.Tactics.Typeclasses.tcinstance]
 noextract
 inline_for_extraction
-val inst : input_stream_inst t
+instance val inst : input_stream_inst t
