@@ -33,11 +33,11 @@ type eloc =
   | Eloc_output : eloc
   | Eloc_union  : eloc -> eloc -> eloc
   | Eloc_ptr    : expr -> eloc
-  | Eloc_copy_buf: expr -> eloc
+  | Eloc_copy_buf: e:expr { T.Identifier? (fst e) } -> eloc
 
 noeq
 type disj =
-  | Disj_pair : eloc -> eloc -> disj
+  | Disj_pair : l:eloc{ Eloc_copy_buf? l } -> eloc -> disj
   | Disj_conj : disj -> disj -> disj
 
 let index a = option a
@@ -49,7 +49,7 @@ let disj_pair l m : index disj =
   | Some l, Some m -> Some (Disj_pair l m)
 
 
-let subst_index s (i:index 'a) =
+let subst_index (s:'a -> ML 'a) (i:index 'a) =
   match i with
   | None -> None
   | Some i -> Some (s i)
@@ -76,19 +76,34 @@ let rec subst_inv' subst (i:inv)
       Inv_copy_buf (T.subst_expr subst x)
 let subst_inv s = subst_index (subst_inv' s)
 
+let eq_tags e e' =
+  match e, e' with
+  | Eloc_output, Eloc_output
+  | Eloc_union _ _, Eloc_union _ _ 
+  | Eloc_ptr _, Eloc_ptr _ 
+  | Eloc_copy_buf _, Eloc_copy_buf _ -> true
+  | _ -> false
+
 let rec subst_eloc' subst (e:eloc)
-  : eloc
+  : ML (e':eloc { eq_tags e e' })
   = match e with
     | Eloc_output -> e
     | Eloc_union i j ->
       Eloc_union (subst_eloc' subst i)
                  (subst_eloc' subst j)
     | Eloc_ptr x -> Eloc_ptr (T.subst_expr subst x)
-    | Eloc_copy_buf x -> Eloc_copy_buf (T.subst_expr subst x)
+    | Eloc_copy_buf x ->
+      let y = T.subst_expr subst x in
+      if not (T.Identifier? (fst y))
+      then (
+        Ast.error "Unexpected non-identifier in subst_eloc" (snd x)
+      )
+      else
+        Eloc_copy_buf y
 let subst_eloc s = subst_index (subst_eloc' s)
 
 let rec subst_disj' subst (d:disj)
-  : disj
+  : ML disj
   = match d with
     | Disj_pair e1 e2 -> 
       Disj_pair (subst_eloc' subst e1)
@@ -550,6 +565,39 @@ let rec allow_reading_of_typ (t:typ)
 
   | _ -> false
 
+let check_validity_of_typ_indexes (td:T.type_decl) indexes =
+  let rec atomic_locs_of l =
+    match l with
+    | Eloc_output -> [l]
+    | Eloc_union l1 l2 -> atomic_locs_of l1 @ atomic_locs_of l2
+    | Eloc_ptr _ -> [l]
+    | Eloc_copy_buf _ -> [l]
+  in
+  let rec valid_disj (d:disj) : ML unit =
+    match d with
+    | Disj_conj d1 d2 ->
+      valid_disj d1;
+      valid_disj d2
+
+    | Disj_pair (Eloc_copy_buf (T.Identifier x, rx)) l2 -> 
+      let l2_locs = atomic_locs_of l2 in
+      if List.existsb
+          (function
+            | Eloc_copy_buf (T.Identifier y, ry) -> A.eq_idents x y
+            | _ -> false)
+          l2_locs
+      then (
+        A.error (Printf.sprintf "Nested mutation of the copy buffer [%s]" (T.print_ident x))
+                td.decl_name.td_name.range
+      )
+      else ()
+    
+  in
+  let _, _, disj, _ = indexes in
+  match disj with
+  | None -> ()
+  | Some disj -> valid_disj disj
+
 let translate_decls (en:env) (ds:T.decls)
   : ML (list decl)
   = List.map
@@ -568,11 +616,13 @@ let translate_decls (en:env) (ds:T.decls)
                    | _ -> None
               else None
             in
+            let typ_indexes = typ_indexes_of_parser en td.decl_parser in
+            check_validity_of_typ_indexes td typ_indexes;
             let td =
               { name = td.decl_name;
                 typ = typ_of_parser en td.decl_parser;
                 kind = td.decl_parser.p_kind;
-                typ_indexes = typ_indexes_of_parser en td.decl_parser;
+                typ_indexes;
                 allow_reading = ar;
                 attrs = attrs;
                 enum_typ = refined
