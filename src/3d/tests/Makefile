@@ -36,7 +36,7 @@ all: batch-test batch-test-negative batch-cleanup-test \
 
 #AR: TODO: remove ELF.3d from here
 
-INTERPRETABLE_FILES=$(filter-out FAIL%.3d ELF.3d, $(wildcard *.3d))
+INTERPRETABLE_FILES=$(filter-out FAIL%.3d ELF.3d Probe.3d, $(wildcard *.3d))
 INTERPRETABLE_MODULES=$(basename $(INTERPRETABLE_FILES))
 interpret_all: $(addsuffix .interpret, $(INTERPRETABLE_MODULES))
 
