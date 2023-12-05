@@ -486,7 +486,7 @@ let rec print_action (mname:string) (a:action) : ML string =
       | Action_assignment lhs rhs ->
         Printf.sprintf "(action_assignment %s %s)" (print_ident lhs) (print_expr mname rhs)
       | Action_call f args ->
-        Printf.sprintf "(mk_external_action (%s %s))" (print_ident f) (String.concat " " (List.map (print_expr mname) args))
+        Printf.sprintf "(mk_extern_action (%s %s))" (print_ident f) (String.concat " " (List.map (print_expr mname) args))
   in
   match a with
   | Atomic_action a ->
@@ -1116,7 +1116,7 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
           (Some?.v oe.oe_bitwidth)
       end in
     Printf.sprintf
-        "\n\nval %s (_:%s) (_:%s) : external_action output_loc\n\n"
+        "\n\nval %s (_:%s) (_:%s) : extern_action (NonTrivial output_loc)\n\n"
         fn_name
         fn_arg1_t
         fn_arg2_t
@@ -1234,7 +1234,7 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | Extern_fn f ret params ->
-      Printf.sprintf "\n\nval %s %s : external_action output_loc\n"
+      Printf.sprintf "\n\nval %s %s : extern_action (NonTrivial output_loc)\n"
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
@@ -1252,6 +1252,7 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
     "module %s.ExternalAPI\n\n\
      open EverParse3d.Prelude\n\
      open EverParse3d.Actions.All\n\
+     open EverParse3d.Interpreter\n\
      %s\n\
      noextract val output_loc : eloc\n\n%s"
     modul

@@ -475,7 +475,7 @@ let dtyp_as_leaf_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
       let (| _, lr |) = get_leaf_reader b in
       lr
 
-(** Now we define the AST of 3D programs *)
+(** Actions *)
 
 let action_binding
       (inv:inv_index)
@@ -485,12 +485,19 @@ let action_binding
   : Type u#0
   = A.action (interp_inv inv) A.disjointness_trivial (interp_loc l) on_success a
 
+inline_for_extraction
+let extern_action (l:loc_index) = A.external_action (interp_loc l)
+
+inline_for_extraction
+let mk_extern_action (#l:loc_index) ($f:extern_action l)
+  = A.mk_external_action f
+
 [@@specialize]
 let mk_action_binding
     (#l:loc_index)
-    ($f:A.external_action (interp_loc l))
+    ($f:extern_action l)
   : action_binding inv_none l false unit
-  = A.mk_external_action f
+  = mk_extern_action f
 
 (* The type of atomic actions.
 
@@ -545,7 +552,7 @@ type atomic_action
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
       sz: FStar.UInt64.t ->
       #out_loc:loc_index ->
-      write_to: (A.___PUINT8 -> Tot (A.external_action (interp_loc out_loc))) ->
+      write_to: (A.___PUINT8 -> Tot (extern_action out_loc)) ->
       atomic_action inv_none disj_none out_loc false bool
 
   | Action_deref:
