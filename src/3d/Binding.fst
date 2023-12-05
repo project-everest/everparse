@@ -1151,7 +1151,7 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
         in
         let dest, dest_typ = check_ident env p.probe_dest in
         if not (eq_typ env dest_typ tcopybuffer)
-        then error (Printf.sprintf "Probe destination expression %s has type %s instead of COPY_BUFFER_T"
+        then error (Printf.sprintf "Probe destination expression %s has type %s instead of EVERPARSE_COPY_BUFFER_T"
                             (print_ident dest)
                             (print_typ dest_typ))
                             dest.range;
@@ -1963,7 +1963,7 @@ let initial_global_env () =
           parser_weak_kind = WeakKindStrongPrefix;
           parser_kind_nz = Some true
         });
-      ("COPY_BUFFER_T",
+      ("EVERPARSE_COPY_BUFFER_T",
         {
           may_fail = true;
           integral = None;

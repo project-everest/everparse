@@ -166,7 +166,7 @@ let push_name (env:qenv) (name:string) : qenv =
 let prim_consts = [
   "unit"; "Bool"; "UINT8"; "UINT16"; "UINT32"; "UINT64";
   "UINT8BE"; "UINT16BE"; "UINT32BE"; "UINT64BE";
-  "field_id"; "PUINT8"; "COPY_BUFFER_T";
+  "field_id"; "PUINT8"; "EVERPARSE_COPY_BUFFER_T";
   "all_bytes"; "all_zeros";
   "is_range_okay";
   "void" ]

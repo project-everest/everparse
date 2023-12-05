@@ -6,7 +6,7 @@ typedef struct _T {
 } T;
 
 entrypoint
-typedef struct _S(COPY_BUFFER_T dest) {
+typedef struct _S(EVERPARSE_COPY_BUFFER_T dest) {
   UINT8 tag;
   T *t probe (length = 8, destination = dest);
 } S;
@@ -14,7 +14,7 @@ typedef struct _S(COPY_BUFFER_T dest) {
 
 //Nested probing of the same buffer; should fail
 entrypoint
-typedef struct _R(COPY_BUFFER_T dest) {
+typedef struct _R(EVERPARSE_COPY_BUFFER_T dest) {
   UINT8 tag;
   S(dest) *s probe (length = 9, destination = dest);
 } R;
