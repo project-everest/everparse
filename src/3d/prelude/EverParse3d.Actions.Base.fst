@@ -239,7 +239,7 @@ let validate_with_action_t'
      (l:eloc)
      (allow_reading:bool)
 : Type 
-  (# [EverParse3d.Util.solve_from_ctx ()] I.extra_t #input_buffer_t) ->
+= (# [EverParse3d.Util.solve_from_ctx ()] I.extra_t #input_buffer_t) ->
   (ctxt: app_ctxt) ->
   (error_handler_fn : error_handler) ->
   (sl: input_buffer_t) ->
