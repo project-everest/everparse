@@ -60,7 +60,7 @@ val preserved:
 val extra_t: Type0
 
 val has:
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t) ->
     (x: t) ->
     (n: U64.t) ->
     HST.Stack bool
@@ -71,7 +71,7 @@ val has:
     ))
 
 val read:
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t) ->
     (x: t) ->
     (n: U64.t) ->
     (dst: B.buffer U8.t) ->
@@ -96,7 +96,7 @@ val read:
 
 noextract [@@noextract_to "krml"]
 let peep_pre
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t)
     (x: t)
     (n: U64.t)
     (h: HS.mem)
@@ -107,7 +107,7 @@ let peep_pre
 
 noextract [@@noextract_to "krml"]
 let peep_post
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t)
     (x: t)
     (n: U64.t)
     (h: HS.mem)
@@ -127,7 +127,7 @@ let peep_post
   end
 
 val peep:
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t) ->
     (x: t) ->
     (n: U64.t) ->
     HST.Stack (B.buffer U8.t)
@@ -139,7 +139,7 @@ val peep:
     ))
 
 val skip:
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t) ->
     (x: t) ->
     (n: U64.t) ->
     HST.Stack unit
@@ -152,7 +152,7 @@ val skip:
     ))
 
 val empty:
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t) ->
     (x: t) ->
     HST.Stack U64.t
     (requires (fun h -> live x h))

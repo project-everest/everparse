@@ -111,7 +111,7 @@ open LowStar.BufferOps
 inline_for_extraction
 noextract
 let has
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (_: unit)
     (position: LPE.pos_t)
@@ -137,7 +137,7 @@ let has
 inline_for_extraction
 noextract
 let read0
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -183,7 +183,7 @@ module LP = LowParse.Low.Base
 inline_for_extraction
 noextract
 let read
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (t': Type0)
     (k: LP.parser_kind)
     (p: LP.parser k t')
@@ -245,7 +245,7 @@ let read
 
 noextract [@@noextract_to "krml"]
 let peep_pre'
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (h: HS.mem)
@@ -257,7 +257,7 @@ let peep_pre'
 noextract [@@noextract_to "krml"]
 unfold
 let peep_post'
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -279,7 +279,7 @@ let peep_post'
 
 noextract [@@noextract_to "krml"]
 let peep0_pre'
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -292,7 +292,7 @@ let peep0_pre'
 // #restart-solver
 
 let peep_post_extract_concl
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: Aux.t)
     (n: U64.t)
     (h: HS.mem)
@@ -316,7 +316,7 @@ let peep_post_extract_concl
 = ()
 
 let peep0_exit // this is the crucial lemma for peep to work
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -350,7 +350,7 @@ let peep0_exit // this is the crucial lemma for peep to work
 inline_for_extraction
 noextract
 let peep0
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -363,7 +363,7 @@ let peep0
 inline_for_extraction
 noextract
 let peep
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -385,7 +385,7 @@ let peep
 inline_for_extraction
 noextract
 let skip
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -410,7 +410,7 @@ let skip
 inline_for_extraction
 noextract
 let skip_if_success
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (pos: LPE.pos_t)
     (res: U64.t)
@@ -436,7 +436,7 @@ let skip_if_success
 inline_for_extraction
 noextract
 let empty
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (_: unit)
     (position: LPE.pos_t)
