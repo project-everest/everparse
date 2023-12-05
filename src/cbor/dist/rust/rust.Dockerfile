@@ -9,5 +9,5 @@ RUN rustup component add rustfmt
 RUN cargo install bindgen-cli
 ADD out/CBOR.h CBOR.h
 ADD rust/bindings.h bindings.h
-RUN git clone https://github.com/FStarLang/karamel karamel
-RUN bindgen -o CBOR_Extern.rs bindings.h -- -I karamel/include -I karamel/krmllib/dist/minimal
+ADD rust/krmllib.h krmllib.h
+RUN bindgen -o CBOR_Extern.rs bindings.h
