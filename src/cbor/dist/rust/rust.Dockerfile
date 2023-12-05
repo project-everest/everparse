@@ -10,4 +10,4 @@ RUN cargo install bindgen-cli
 ADD out/CBOR.h CBOR.h
 ADD rust/bindings.h bindings.h
 ADD rust/krmllib.h krmllib.h
-RUN bindgen -o CBOR_Extern.rs bindings.h
+RUN bindgen -o CBOR_Extern.rs --allowlist-file ./CBOR.h bindings.h
