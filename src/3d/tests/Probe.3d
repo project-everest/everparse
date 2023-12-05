@@ -10,3 +10,17 @@ typedef struct _S(COPY_BUFFER_T dest) {
   UINT8 tag;
   T *t probe (length = 8, destination = dest);
 } S;
+
+entrypoint
+typedef struct _U(COPY_BUFFER_T destS, COPY_BUFFER_T destT) {
+  UINT8 tag;
+  S(destT) *t probe (length = 9, destination = destS);
+} U;
+
+//reuse copy buffer, sequentially
+entrypoint
+typedef struct _V(COPY_BUFFER_T destS, COPY_BUFFER_T destT) {
+  UINT8 tag;
+  S(destT) *s probe (length = 9, destination = destS);
+  T *t probe (length = 8, destination = destT);
+} V;
