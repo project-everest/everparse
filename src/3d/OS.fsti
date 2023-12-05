@@ -32,6 +32,3 @@ val write_witness_to_file: list int -> string -> FStar.All.ML unit
 (* Moved here to break dependency cycle *)
 
 val int_of_string (x:string) : FStar.All.ML int
-
-
-val format (fmt:string) (args:list string) : FStar.All.ML string
