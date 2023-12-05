@@ -816,7 +816,7 @@ let print_c_entry
    let input_stream_binding = Options.get_input_stream_binding () in
    let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
    let wrapped_call_buffer name params =
-     OS.format //Printf.sprintf
+     Printf.sprintf
        "EVERPARSE_ERROR_FRAME frame;\n\t\
        frame.filled = FALSE;\n\t\
        %s\
@@ -830,14 +830,14 @@ let print_c_entry
          return FALSE;\n\t\
        }\n\t\
        return TRUE;"
-       [(if is_input_stream_buffer then ""
-         else "EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t");
-        name;
-        params;
-        modul]
+       (if is_input_stream_buffer then ""
+         else "EVERPARSE_INPUT_BUFFER input = EverParseMakeInputBuffer(base);\n\t")
+        name
+        params
+        modul
    in
    let wrapped_call_stream name params =
-     OS.format //Printf.sprintf
+     Printf.sprintf
        "EVERPARSE_ERROR_FRAME frame =\n\t\
              { .filled = FALSE,\n\t\
                .typename_s = \"UNKNOWN\",\n\t\
@@ -854,8 +854,8 @@ let print_c_entry
        }\n\t\
        EverParseRetreat(_extra, base, parsedSize);\n\
        return parsedSize;"
-       [name;
-        params]
+       name
+       params
    in
    let mk_param (name: string) (typ: string) : Tot param =
      (A.with_range (A.to_ident' name) A.dummy_range, T_app (A.with_range (A.to_ident' typ) A.dummy_range) A.KindSpec [])
@@ -895,14 +895,14 @@ let print_c_entry
     let wrapper_name = wrapper_name modul d.decl_name.td_name.A.v.A.name in
     let signature =
       if is_input_stream_buffer 
-      then OS.format //Printf.sprintf
+      then Printf.sprintf
             "BOOLEAN %s(%suint8_t *base, uint32_t len)"
-             [wrapper_name;
-             (print_params params)]
-      else OS.format //Printf.sprintf
+             wrapper_name
+             (print_params params)
+      else Printf.sprintf
             "uint64_t %s(%sEVERPARSE_INPUT_STREAM_BASE base)"
-             [wrapper_name;
-             (print_params params)]
+             wrapper_name
+             (print_params params)
     in
     let validator_name = validator_name modul d.decl_name.td_name.A.v.A.name in
     let impl =
@@ -911,8 +911,8 @@ let print_c_entry
         then wrapped_call_buffer validator_name (print_arguments params)
         else wrapped_call_stream validator_name (print_arguments params)
       in
-      OS.format "%s {\n\t%s\n}" 
-        [signature; body]
+      Printf.sprintf "%s {\n\t%s\n}" 
+        signature body
     in
     signature ^";",
     impl
@@ -953,16 +953,16 @@ let print_c_entry
         String.concat
           ""
           (List.map
-             (fun dep -> OS.format "#include \"%s_ExternalTypedefs.h\"\n\n" [dep])
+             (fun dep -> Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n\n" dep)
              signatures_output_typ_deps) in
     let self =
       if has_output_types ds || has_extern_types ds
-      then OS.format "#include \"%s_ExternalTypedefs.h\"\n" [modul]
+      then Printf.sprintf "#include \"%s_ExternalTypedefs.h\"\n" modul
       else "" in
-    OS.format "%s\n%s\n\n" [deps; self] in
+    Printf.sprintf "%s\n%s\n\n" deps self in
 
   let header =
-    OS.format //Printf.sprintf
+    Printf.sprintf
       "#include \"EverParseEndianness.h\"\n\
        %s\n\
        %s\
@@ -973,57 +973,57 @@ let print_c_entry
        #ifdef __cplusplus\n\
        }\n\
        #endif\n"
-      [error_code_macros;
-       external_defs_includes;
-      (signatures |> String.concat "\n\n")]
+      error_code_macros
+      external_defs_includes
+      (signatures |> String.concat "\n\n")
   in
   let input_stream_include = HashingOptions.input_stream_include input_stream_binding in
   let header =
     if input_stream_include = ""
     then header
-    else OS.format //Printf.sprintf
+    else Printf.sprintf
       "#include \"%s\"\n\
       %s"
-      [input_stream_include;
-       header]
+      input_stream_include
+      header
   in
   let add_includes = Options.make_includes () in
-  let header = OS.format "%s%s" [add_includes; header] in
+  let header = Printf.sprintf "%s%s" add_includes header in
   let error_callback_proto =
     if HashingOptions.InputStreamBuffer? input_stream_binding
-    then OS.format //Printf.sprintf 
+    then Printf.sprintf 
           "void %sEverParseError(const char *StructName, const char *FieldName, const char *Reason)%s"
-              [modul;
+              modul
                (if produce_everparse_error = Some ProduceEverParseError
                 then "{(void) StructName; (void) FieldName; (void) Reason;}"
-                else ";")]
+                else ";")
     else ""
   in
   let impl =
-    OS.format //Printf.sprintf
+    Printf.sprintf
       "#include \"%sWrapper.h\"\n\
        #include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
        %s\n\n\
        %s\n\n\
        %s\n"
-     [modul;
-      modul;
-      error_callback_proto;
-      default_error_handler;
-      (impls |> String.concat "\n\n")]
+      modul
+      modul
+      error_callback_proto
+      default_error_handler
+      (impls |> String.concat "\n\n")
   in
   let impl =
     if input_stream_include = ""
     then impl
     else
-      OS.format //Printf.sprintf
+      Printf.sprintf
         "#include \"%s\"\n\
         %s"
-        [input_stream_include;
-        impl]
+        input_stream_include
+        impl
   in
-  let impl = OS.format "%s%s" [add_includes; impl] in
+  let impl = Printf.sprintf "%s%s" add_includes impl in
   header,
   impl
 
