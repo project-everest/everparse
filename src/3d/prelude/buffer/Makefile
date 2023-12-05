@@ -49,6 +49,7 @@ EverParse.h: EverParse.rsp
 	  -add-include 'EverParse:"EverParseEndianness.h"' \
 	  -static-header 'EverParse3d.Prelude.StaticHeader,LowParse.Low.Base,EverParse3d.ErrorCode,EverParse3d.InputStream.\*' \
 	  -no-prefix LowParse.Slice \
+	  -no-prefix EverParse3d.CopyBuffer \
 	  -no-prefix LowParse.Low.BoundedInt \
 	  -fmicrosoft \
 	  -fextern-c \

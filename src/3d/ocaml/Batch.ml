@@ -354,6 +354,7 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
       "-skip-compilation" ::
         "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.CopyBuffer,EverParse3d.InputStream.\\*" ::
           "-no-prefix" :: "LowParse.Slice" ::
+          "-no-prefix" :: "EverParse3d.CopyBuffer" ::
             "-no-prefix" :: "LowParse.Low.BoundedInt" ::
                 "-library" :: everparse_only_bundle ::
                   "-warn-error" :: "-9@4-20" ::

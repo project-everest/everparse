@@ -35,7 +35,7 @@ extern "C" {
 
 typedef const char * EVERPARSE_STRING;
 typedef EVERPARSE_STRING PRIMS_STRING;
-typedef void* EVERPARSE_COPY_BUFFER_T;
+typedef void* COPY_BUFFER_T;
 
 #ifndef KRML_MAYBE_UNUSED_VAR
 #  define KRML_MAYBE_UNUSED_VAR(x) (void)(x)
