@@ -31,7 +31,7 @@ val cbor_get_major_type
 (* Serialization *)
 
 noextract
-let write_cbor_postcond
+let cbor_write_postcond
   (va: Cbor.raw_data_item)
   (out: A.array U8.t)
   (vout': Seq.seq U8.t)
@@ -46,7 +46,7 @@ let write_cbor_postcond
   ))
 
 [@@__reduce__]
-let write_cbor_post
+let cbor_write_post
   (va: Ghost.erased Cbor.raw_data_item)
   (c: cbor)
   (vout: Ghost.erased (Seq.seq U8.t))
@@ -56,9 +56,9 @@ let write_cbor_post
 : Tot vprop
 = 
   A.pts_to out full_perm vout' `star`
-  pure (write_cbor_postcond va out vout' res)
+  pure (cbor_write_postcond va out vout' res)
 
-val write_cbor
+val cbor_write
   (#p: perm)
   (#va: Ghost.erased Cbor.raw_data_item)
   (c: cbor)
@@ -71,7 +71,7 @@ val write_cbor
     )
     (fun res -> 
       raw_data_item_match p c (Ghost.reveal va) `star`
-      exists_ (write_cbor_post va c vout out res)
+      exists_ (cbor_write_post va c vout out res)
     )
     (SZ.v sz == A.length out)
     (fun _ -> True)

@@ -67,7 +67,7 @@ let read_header_argument_as_simple_value
     (fun res -> 
       let (| b, x |) = va.contents in
       let (major_type, (additional_info, _)) = b in
-      major_type = major_type_simple_value /\ additional_info `U8.lte` additional_info_long_argument_8_bits /\
+      major_type = cbor_major_type_simple_value /\ additional_info `U8.lte` additional_info_long_argument_8_bits /\
       res == argument_as_simple_value b x
     )
 = rewrite (aparse parse_header a va) (aparse (parse_dtuple2 parse_initial_byte parse_long_argument) a va);

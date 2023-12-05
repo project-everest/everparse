@@ -10,7 +10,7 @@ module R = Steel.ST.Reference
 module A = Steel.ST.Array
 module SM = Steel.ST.SeqMatch
 
-val constr_cbor_map
+val cbor_constr_map
   (#c': Ghost.erased (Seq.seq cbor_map_entry))
   (#v': Ghost.erased (list (Cbor.raw_data_item & Cbor.raw_data_item)))
   (a: A.array cbor_map_entry)

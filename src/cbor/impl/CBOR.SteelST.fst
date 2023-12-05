@@ -23,23 +23,23 @@ let cbor_get_major_type
   match a with
   | CBOR_Case_Map _ _ ->
     noop ();
-    return Cbor.major_type_map
+    return Cbor.cbor_major_type_map
   | CBOR_Case_Array _ _ ->
     noop ();
-    return Cbor.major_type_array
+    return Cbor.cbor_major_type_array
   | CBOR_Case_Tagged _ ->
     noop ();
-    return Cbor.major_type_tagged
+    return Cbor.cbor_major_type_tagged
   | CBOR_Case_Simple_value _ _ ->
     noop ();
-    return Cbor.major_type_simple_value
+    return Cbor.cbor_major_type_simple_value
   | CBOR_Case_String _ _ _ ->
-    let s = destr_cbor_string a in
+    let s = cbor_destr_string a in
     let _ = gen_elim () in
     elim_implies (A.pts_to _ _ _) (raw_data_item_match p _ _);
     return s.cbor_string_type
   | CBOR_Case_Int64 _ _ ->
-    let i = destr_cbor_int64 a in
+    let i = cbor_destr_int64 a in
     return i.cbor_int_type
   | _ ->
     let s = destr_cbor_serialized a in
@@ -101,7 +101,7 @@ let rec cbor_l2r_write
   | CBOR_Case_Map _ _ -> l2r_writer_for_map cbor_l2r_write va c out
   | _ -> l2r_writer_for_serialized c out
 
-let write_cbor
+let cbor_write
   (#p: perm)
   (#va: Ghost.erased Cbor.raw_data_item)
   (c: cbor)
@@ -114,7 +114,7 @@ let write_cbor
     )
     (fun res -> 
       raw_data_item_match p c (Ghost.reveal va) `star`
-      exists_ (write_cbor_post va c vout out res)
+      exists_ (cbor_write_post va c vout out res)
     )
     (SZ.v sz == A.length out)
     (fun _ -> True)

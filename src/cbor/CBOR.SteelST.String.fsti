@@ -10,7 +10,7 @@ module R = Steel.ST.Reference
 module A = Steel.ST.Array
 module SM = Steel.ST.SeqMatch
 
-val destr_cbor_string
+val cbor_destr_string
   (#p: perm)
   (#va: Ghost.erased Cbor.raw_data_item)
   (c: cbor {Cbor.String? va})
@@ -25,7 +25,7 @@ val destr_cbor_string
         vc' == Cbor.String?.v va
     ))))
 
-val constr_cbor_string
+val cbor_constr_string
   (#va: Ghost.erased (Seq.seq U8.t))
   (#p: perm)
   (typ: Cbor.major_type_byte_string_or_text_string)

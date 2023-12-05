@@ -173,7 +173,7 @@ val jump_data_item
 (* Comparisons with unserialized values *)
 
 val lex_compare_with_header
-  (ty: Ghost.erased major_type_t { ty `U8.lt` major_type_simple_value })
+  (ty: Ghost.erased major_type_t { ty `U8.lt` cbor_major_type_simple_value })
   (x: U64.t)
   (b: U8.t)
   (#vh: v (get_parser_kind parse_header) header)

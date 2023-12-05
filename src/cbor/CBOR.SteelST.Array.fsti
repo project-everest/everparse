@@ -10,7 +10,7 @@ module R = Steel.ST.Reference
 module A = Steel.ST.Array
 module SM = Steel.ST.SeqMatch
 
-val constr_cbor_array
+val cbor_constr_array
   (#c': Ghost.erased (Seq.seq cbor))
   (#v': Ghost.erased (list Cbor.raw_data_item))
   (a: A.array cbor)
@@ -65,7 +65,7 @@ val cbor_array_index
         raw_data_item_match p a v)
     )
 
-val dummy_cbor_array_iterator: cbor_array_iterator_t
+val cbor_dummy_array_iterator: cbor_array_iterator_t
 
 val cbor_array_iterator_match
   (p: perm)
@@ -112,7 +112,7 @@ val cbor_array_iterator_next
       )
     ))
 
-val read_cbor_array
+val cbor_read_array
   (#p: perm)
   (#v: Ghost.erased Cbor.raw_data_item)
   (a: cbor)

@@ -101,7 +101,7 @@ let cbor_map_iterator_next_serialized
     (cbor_map_iterator_match p i2 l);
   let res_key = read_valid_cbor_from_buffer_with_size_strong p a sz_key in
   let res_value = read_valid_cbor_from_buffer_with_size_strong p ar sz_value in
-  let res = mk_cbor_map_entry res_key res_value in
+  let res = cbor_mk_map_entry res_key res_value in
   rewrite_with_implies
     (raw_data_item_match p res_key _)
     (raw_data_item_match p (cbor_map_entry_key res) (fstp (List.Tot.hd l)));

@@ -253,7 +253,7 @@ let raw_data_item_match_simple_value_prop
 : GTot prop
 = let Cbor.Simple v = v in
   let payload = C.struct_get_field c cbor_payload in
-  C.struct_get_field c cbor_type == C.mk_scalar Cbor.major_type_simple_value /\
+  C.struct_get_field c cbor_type == C.mk_scalar Cbor.cbor_major_type_simple_value /\
   C.union_get_case payload == Some cbor_case_simple_value /\
   C.union_get_field payload cbor_case_simple_value == C.mk_scalar v
 
@@ -318,7 +318,7 @@ let raw_data_item_match_tagged_prop
 : GTot prop
 = let Cbor.Tagged tag v = v in
   let payload = C.struct_get_field c cbor_payload in
-  C.struct_get_field c cbor_type == C.mk_scalar Cbor.major_type_tagged /\
+  C.struct_get_field c cbor_type == C.mk_scalar Cbor.cbor_major_type_tagged /\
   C.union_get_case payload == Some cbor_case_tagged /\
   begin let payload = C.union_get_field payload cbor_case_tagged in
     C.struct_get_field payload cbor_tagged_tag == C.mk_scalar tag /\
@@ -346,7 +346,7 @@ let raw_data_item_match_array_prop
 : GTot prop
 = let Cbor.Array l = v in
   let payload = C.struct_get_field c cbor_payload in
-  C.struct_get_field c cbor_type == C.mk_scalar Cbor.major_type_array /\
+  C.struct_get_field c cbor_type == C.mk_scalar Cbor.cbor_major_type_array /\
   C.union_get_case payload == Some cbor_case_array /\
   begin let payload = C.union_get_field payload cbor_case_array in
     C.struct_get_field payload cbor_array_count == C.mk_scalar (U64.uint_to_t (List.Tot.length l)) /\
@@ -374,7 +374,7 @@ let raw_data_item_match_map_prop
 : GTot prop
 = let Cbor.Map l = v in
   let payload = C.struct_get_field c cbor_payload in
-  C.struct_get_field c cbor_type == C.mk_scalar Cbor.major_type_map /\
+  C.struct_get_field c cbor_type == C.mk_scalar Cbor.cbor_major_type_map /\
   C.union_get_case payload == Some cbor_case_map /\
   begin let payload = C.union_get_field payload cbor_case_map in
     C.struct_get_field payload cbor_map_entry_count == C.mk_scalar (U64.uint_to_t (List.Tot.length l)) /\

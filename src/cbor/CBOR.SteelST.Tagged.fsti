@@ -32,7 +32,7 @@ type cbor_tagged = {
   cbor_tagged_payload: cbor;
 }
 
-val destr_cbor_tagged
+val cbor_destr_tagged
   (#p: perm)
   (#v: Ghost.erased Cbor.raw_data_item)
   (a: cbor)
@@ -50,7 +50,7 @@ val destr_cbor_tagged
       res.cbor_tagged_tag == Cbor.Tagged?.tag v
     )
 
-val constr_cbor_tagged
+val cbor_constr_tagged
   (#c': Ghost.erased (cbor))
   (#v': Ghost.erased (Cbor.raw_data_item))
   (tag: U64.t)

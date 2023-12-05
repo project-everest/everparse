@@ -15,7 +15,7 @@ let is_CBOR_Case_String (c: cbor) : Tot bool =
   | CBOR_Case_String _ _ _ -> true
   | _ -> false
 
-let destr_cbor_string
+let cbor_destr_string
   #p #va c
 = raw_data_item_match_get_case c;
   if is_CBOR_Case_String c
@@ -88,7 +88,7 @@ let size_comp_for_string
 : Tot (cbor_size_comp_for va c)
 = fun #p sz perr ->
     let _ = A.intro_fits_u64 () in
-    let c' = destr_cbor_string c in
+    let c' = cbor_destr_string c in
     let _ = gen_elim () in
     let res = CBOR.SteelST.Raw.Write.size_comp_string c'.cbor_string_type c'.cbor_string_length (Cbor.String?.v va) sz perr in
     let _ = gen_elim () in
@@ -123,7 +123,7 @@ let l2r_write_cbor_string
   let _ = A.intro_fits_u64 () in
   serialize_cbor_string_eq va;
   noop ();
-  let c' = destr_cbor_string c in
+  let c' = cbor_destr_string c in
   let _ = gen_elim () in
   let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header c'.cbor_string_type c'.cbor_string_length out in
   let _ = gen_elim () in
@@ -153,7 +153,7 @@ let l2r_write_cbor_string
 
 #pop-options
 
-let constr_cbor_string
+let cbor_constr_string
   #va #p typ a len
 = let fp = GR.alloc () in
   [@@inline_let]

@@ -10,7 +10,7 @@ module R = Steel.ST.Reference
 module A = Steel.ST.Array
 module SM = Steel.ST.SeqMatch
 
-val destr_cbor_int64
+val cbor_destr_int64
   (#p: perm)
   (#va: Ghost.erased Cbor.raw_data_item)
   (c: cbor)
@@ -22,7 +22,7 @@ val destr_cbor_int64
       Ghost.reveal va == Cbor.Int64 c'.cbor_int_type c'.cbor_int_value
     )
 
-val constr_cbor_int64
+val cbor_constr_int64
   (ty: Cbor.major_type_uint64_or_neg_int64)
   (value: U64.t)
 : STT cbor

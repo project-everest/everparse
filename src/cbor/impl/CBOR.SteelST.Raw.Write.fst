@@ -487,7 +487,7 @@ let write_simple_value
     return res
 
 let write_uint64_as_argument
-  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (ty: major_type_t { ty `U8.lt` cbor_major_type_simple_value })
   (x: U64.t)
 : Tot (maybe_r2l_writer_for serialize_header (uint64_as_argument ty x))
 = cps_uint64_as_argument
@@ -593,7 +593,7 @@ let l2r_write_simple_value
 #pop-options
 
 let size_comp_uint64_header
-  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (ty: major_type_t { ty `U8.lt` cbor_major_type_simple_value })
   (x: U64.t)
 : Tot (size_comp_for serialize_header (uint64_as_argument ty x))
 = cps_uint64_as_argument
@@ -686,7 +686,7 @@ let size_comp_string
 #pop-options
 
 let l2r_write_uint64_header
-  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (ty: major_type_t { ty `U8.lt` cbor_major_type_simple_value })
   (x: U64.t)
 : Tot (l2r_writer_for serialize_header (uint64_as_argument ty x))
 = cps_uint64_as_argument

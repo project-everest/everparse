@@ -58,7 +58,7 @@ let validate_long_argument
     ifthenelse_validate_and_read
       (additional_info = additional_info_long_argument_8_bits)
       (fun _ -> ifthenelse_validate_and_read
-        (major_type = major_type_simple_value)
+        (major_type = cbor_major_type_simple_value)
         (fun _ ->
           rewrite_validate_and_read
             (validate_and_read_weaken
@@ -178,7 +178,7 @@ let jump_long_argument
     ifthenelse_read_and_jump
       (additional_info = additional_info_long_argument_8_bits)
       (fun _ -> ifthenelse_read_and_jump
-        (major_type = major_type_simple_value)
+        (major_type = cbor_major_type_simple_value)
         (fun _ ->
           rewrite_read_and_jump
             (read_and_jump_weaken
@@ -310,7 +310,7 @@ let validate_leaf_content
     match b with
     | (major_type, _) ->
       ifthenelse_validate
-        (major_type = major_type_byte_string || major_type = major_type_text_string)
+        (major_type = cbor_major_type_byte_string || major_type = cbor_major_type_text_string)
         (fun _ -> rewrite_validator
           (validate_weaken
             parse_content_kind
@@ -347,7 +347,7 @@ let jump_leaf_content
     match b with
     | (major_type, _) ->
       ifthenelse_jump
-        (major_type = major_type_byte_string || major_type = major_type_text_string)
+        (major_type = cbor_major_type_byte_string || major_type = cbor_major_type_text_string)
         (fun _ -> rewrite_jumper
           (jump_weaken
             parse_content_kind
@@ -499,7 +499,7 @@ let count_remaining_data_items
     let ar = ghost_split_dtuple2_full parse_header parse_leaf_content a in
     let _ = gen_elim () in
     let major_type = read_header_major_type a in
-    if major_type = major_type_array
+    if major_type = cbor_major_type_array
     then begin
       let arg = read_header_argument_as_uint64 a in
       let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
@@ -509,7 +509,7 @@ let count_remaining_data_items
       noop ();
       return res
     end
-    else if major_type = major_type_map
+    else if major_type = cbor_major_type_map
     then begin
       let arg = read_header_argument_as_uint64 a in
       let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
@@ -538,7 +538,7 @@ let count_remaining_data_items
       let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
       vpattern_rewrite (aparse _ a) va;
       noop ();
-      if major_type = major_type_tagged
+      if major_type = cbor_major_type_tagged
       then begin
         noop ();
         noop ();
@@ -574,7 +574,7 @@ let jump_count_remaining_data_items
     let ar = ghost_split_dtuple2_full parse_header parse_leaf_content a in
     let _ = gen_elim () in
     let major_type = read_header_major_type a in
-    if major_type = major_type_array
+    if major_type = cbor_major_type_array
     then begin
       let arg = read_header_argument_as_uint64 a in
       let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
@@ -584,7 +584,7 @@ let jump_count_remaining_data_items
       noop ();
       return res
     end
-    else if major_type = major_type_map
+    else if major_type = cbor_major_type_map
     then begin
       let arg = read_header_argument_as_uint64 a in
       let _ = intro_dtuple2 parse_header parse_leaf_content a ar in
@@ -601,7 +601,7 @@ let jump_count_remaining_data_items
       let _ = rewrite_aparse a parse_raw_data_item_param.parse_header in
       vpattern_rewrite (aparse _ a) va;
       noop ();
-      if major_type = major_type_tagged
+      if major_type = cbor_major_type_tagged
       then begin
         noop ();
         noop ();

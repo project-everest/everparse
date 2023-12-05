@@ -68,9 +68,9 @@ uint64_t cbor_read_int64 (struct cbor *elt) {
   switch (elt->cbor_type) {
   case CBOR_TYPE_SERIALIZED:
     return CBOR_SteelST_Raw_read_int64(elt->cbor_payload.cbor_case_serialized.cbor_serialized_payload);
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_UINT64:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_UINT64:
     return elt->cbor_payload.cbor_case_uint64;
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_NEG_INT64:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_NEG_INT64:
     return elt->cbor_payload.cbor_case_neg_int64;
   default:
     return 0; // this shouldn't happen
@@ -104,33 +104,33 @@ void load_cbor (struct cbor* elt) {
   uint8_t *payload = elt->cbor_payload.cbor_case_serialized.cbor_serialized_payload;
   uint8_t typ = CBOR_SteelST_Raw_read_major_type(payload);
   switch (typ) {
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_UINT64:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_UINT64:
     {
       elt->cbor_type = typ;
       elt->cbor_payload.cbor_case_uint64 = CBOR_SteelST_Raw_read_int64(payload);
       return;
     }
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_NEG_INT64:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_NEG_INT64:
     {
       elt->cbor_type = typ;
       elt->cbor_payload.cbor_case_neg_int64 = CBOR_SteelST_Raw_read_int64(payload);
       return;
     }
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_BYTE_STRING:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_BYTE_STRING:
     {
       elt->cbor_type = typ;
       elt->cbor_payload.cbor_case_byte_string.cbor_string_byte_length = CBOR_SteelST_Raw_read_argument_as_uint64(payload);
       elt->cbor_payload.cbor_case_byte_string.cbor_string_payload = CBOR_SteelST_Raw_focus_string(payload);
       return;
     }
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_TEXT_STRING:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_TEXT_STRING:
     {
       elt->cbor_type = typ;
       elt->cbor_payload.cbor_case_text_string.cbor_string_byte_length = CBOR_SteelST_Raw_read_argument_as_uint64(payload);
       elt->cbor_payload.cbor_case_text_string.cbor_string_payload = CBOR_SteelST_Raw_focus_string(payload);
       return;
     }
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_ARRAY:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_ARRAY:
     {
       uint64_t count = CBOR_SteelST_Raw_read_argument_as_uint64(payload);
       struct cbor *array = calloc(count, sizeof(struct cbor));
@@ -146,7 +146,7 @@ void load_cbor (struct cbor* elt) {
       }
       return;
     }
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_MAP:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_MAP:
     {
       uint64_t count = CBOR_SteelST_Raw_read_argument_as_uint64(payload);
       struct cbor_pair *map = calloc(count, sizeof(struct cbor_pair));
@@ -163,7 +163,7 @@ void load_cbor (struct cbor* elt) {
       }
       return;
     }
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_TAGGED:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_TAGGED:
     {
       struct cbor *elt = malloc(sizeof(struct cbor));
       if (elt == NULL)
@@ -176,7 +176,7 @@ void load_cbor (struct cbor* elt) {
       preload_cbor(&payload, elt);
       return;
     }
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_SIMPLE_VALUE:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_SIMPLE_VALUE:
     {
       elt->cbor_type = typ;
       elt->cbor_payload.cbor_case_simple_value = CBOR_SteelST_Raw_read_simple_value(payload);
@@ -189,7 +189,7 @@ void load_cbor (struct cbor* elt) {
 void full_load_cbor (struct cbor* elt) {
   load_cbor(elt);
   switch (elt->cbor_type) {
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_ARRAY:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_ARRAY:
     {
       uint64_t count = elt->cbor_payload.cbor_case_array.cbor_array_count;
       struct cbor* child = elt->cbor_payload.cbor_case_array.cbor_array_payload;
@@ -199,7 +199,7 @@ void full_load_cbor (struct cbor* elt) {
       }
       return;
     }
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_MAP:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_MAP:
     {
       uint64_t count = elt->cbor_payload.cbor_case_map.cbor_map_entry_count;
       struct cbor_pair* entry = elt->cbor_payload.cbor_case_map.cbor_map_payload;
@@ -210,7 +210,7 @@ void full_load_cbor (struct cbor* elt) {
       }
       return;
     }
-  case CBOR_SPEC_CONSTANTS_MAJOR_TYPE_TAGGED:
+  case CBOR_SPEC_CONSTANTS_CBOR_MAJOR_TYPE_TAGGED:
     {
       full_load_cbor(elt->cbor_payload.cbor_case_tagged.cbor_tagged_payload);
       return;

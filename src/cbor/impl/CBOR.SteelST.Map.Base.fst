@@ -72,7 +72,7 @@ let cbor_map_length
       (raw_data_item_match p _ _);
     return res
 
-let dummy_cbor_map_iterator = {
+let cbor_dummy_map_iterator = {
   cbor_map_iterator_length = 0uL;
   cbor_map_iterator_payload = CBOR_Map_Iterator_Payload_Map A.null Seq.empty;
   footprint = dummy_cbor_footprint;

@@ -12,7 +12,7 @@ module LPS = LowParse.SteelST.SeqMatch
 module LW = LowParse.SteelST.L2ROutput.IntroElim
 module GR = Steel.ST.GhostReference
 
-let dummy_cbor : cbor = CBOR_Case_Simple_value 0uy dummy_cbor_footprint
+let cbor_dummy : cbor = CBOR_Case_Simple_value 0uy dummy_cbor_footprint
 
 let cbor_map_entry_key x = match x with
 | Mkcbor_map_entry k _ -> k
@@ -24,7 +24,7 @@ let cbor_map_entry_key_value_inj
   m1 m2
 = ()
 
-let mk_cbor_map_entry
+let cbor_mk_map_entry
   k v
 = Mkcbor_map_entry k v
 

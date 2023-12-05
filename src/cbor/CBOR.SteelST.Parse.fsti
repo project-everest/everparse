@@ -14,129 +14,129 @@ module SM = Steel.ST.SeqMatch
 
 [@@no_auto_projectors]
 noeq
-type read_cbor_t = {
-  read_cbor_is_success: bool;
-  read_cbor_payload: cbor;
-  read_cbor_remainder: A.array U8.t;
-  read_cbor_remainder_length: SZ.t;
+type cbor_read_t = {
+  cbor_read_is_success: bool;
+  cbor_read_payload: cbor;
+  cbor_read_remainder: A.array U8.t;
+  cbor_read_remainder_length: SZ.t;
 }
 
 noextract
-let read_cbor_success_postcond
+let cbor_read_success_postcond
   (va: Ghost.erased (Seq.seq U8.t))
-  (c: read_cbor_t)
+  (c: cbor_read_t)
   (v: Cbor.raw_data_item)
   (rem: Seq.seq U8.t)
 : Tot prop
-= SZ.v c.read_cbor_remainder_length == Seq.length rem /\
+= SZ.v c.cbor_read_remainder_length == Seq.length rem /\
   va `Seq.equal` (Cbor.serialize_cbor v `Seq.append` rem)
 
 [@@__reduce__]
-let read_cbor_success_post
+let cbor_read_success_post
   (a: A.array U8.t)
   (p: perm)
   (va: Ghost.erased (Seq.seq U8.t))
-  (c: read_cbor_t)
+  (c: cbor_read_t)
 : Tot vprop
 = exists_ (fun v -> exists_ (fun rem ->
-    raw_data_item_match full_perm c.read_cbor_payload v `star`
-    A.pts_to c.read_cbor_remainder p rem `star`
-    ((raw_data_item_match full_perm c.read_cbor_payload v `star` A.pts_to c.read_cbor_remainder p rem) `implies_`
+    raw_data_item_match full_perm c.cbor_read_payload v `star`
+    A.pts_to c.cbor_read_remainder p rem `star`
+    ((raw_data_item_match full_perm c.cbor_read_payload v `star` A.pts_to c.cbor_read_remainder p rem) `implies_`
       A.pts_to a p va) `star`
-    pure (read_cbor_success_postcond va c v rem)
+    pure (cbor_read_success_postcond va c v rem)
   ))
 
 noextract
-let read_cbor_error_postcond
+let cbor_read_error_postcond
   (va: Ghost.erased (Seq.seq U8.t))
 : Tot prop
 = forall v suff . ~ (Ghost.reveal va == Cbor.serialize_cbor v `Seq.append` suff)
 
 [@@__reduce__]
-let read_cbor_error_post
+let cbor_read_error_post
   (a: A.array U8.t)
   (p: perm)
   (va: Ghost.erased (Seq.seq U8.t))
 : Tot vprop
-= A.pts_to a p va `star` pure (read_cbor_error_postcond va)
+= A.pts_to a p va `star` pure (cbor_read_error_postcond va)
 
-let read_cbor_post
+let cbor_read_post
   (a: A.array U8.t)
   (p: perm)
   (va: Ghost.erased (Seq.seq U8.t))
-  (res: read_cbor_t)
+  (res: cbor_read_t)
 : Tot vprop
-= if res.read_cbor_is_success
-  then read_cbor_success_post a p va res
-  else read_cbor_error_post a p va
+= if res.cbor_read_is_success
+  then cbor_read_success_post a p va res
+  else cbor_read_error_post a p va
 
-val read_cbor
+val cbor_read
   (#va: Ghost.erased (Seq.seq U8.t))
   (#p: perm)
   (a: A.array U8.t)
   (sz: SZ.t)
-: ST read_cbor_t
+: ST cbor_read_t
     (A.pts_to a p va)
-    (fun res -> read_cbor_post a p va res)
+    (fun res -> cbor_read_post a p va res)
     (SZ.v sz == Seq.length va \/ SZ.v sz == A.length a)
     (fun _ -> True)
 
 noextract
-let read_deterministically_encoded_cbor_success_postcond
+let cbor_read_deterministically_encoded_success_postcond
   (va: Ghost.erased (Seq.seq U8.t))
-  (c: read_cbor_t)
+  (c: cbor_read_t)
   (v: Cbor.raw_data_item)
   (rem: Seq.seq U8.t)
 : Tot prop
-= read_cbor_success_postcond va c v rem /\
+= cbor_read_success_postcond va c v rem /\
   Cbor.data_item_wf Cbor.deterministically_encoded_cbor_map_key_order v == true
 
 [@@__reduce__]
-let read_deterministically_encoded_cbor_success_post
+let cbor_read_deterministically_encoded_success_post
   (a: A.array U8.t)
   (p: perm)
   (va: Ghost.erased (Seq.seq U8.t))
-  (c: read_cbor_t)
+  (c: cbor_read_t)
 : Tot vprop
 = exists_ (fun v -> exists_ (fun rem ->
-    raw_data_item_match full_perm c.read_cbor_payload v `star`
-    A.pts_to c.read_cbor_remainder p rem `star`
-    ((raw_data_item_match full_perm c.read_cbor_payload v `star` A.pts_to c.read_cbor_remainder p rem) `implies_`
+    raw_data_item_match full_perm c.cbor_read_payload v `star`
+    A.pts_to c.cbor_read_remainder p rem `star`
+    ((raw_data_item_match full_perm c.cbor_read_payload v `star` A.pts_to c.cbor_read_remainder p rem) `implies_`
       A.pts_to a p va) `star`
-    pure (read_deterministically_encoded_cbor_success_postcond va c v rem)
+    pure (cbor_read_deterministically_encoded_success_postcond va c v rem)
   ))
 
 noextract
-let read_deterministically_encoded_cbor_error_postcond
+let cbor_read_deterministically_encoded_error_postcond
   (va: Ghost.erased (Seq.seq U8.t))
 : Tot prop
 = forall v suff . Ghost.reveal va == Cbor.serialize_cbor v `Seq.append` suff ==> Cbor.data_item_wf Cbor.deterministically_encoded_cbor_map_key_order v == false
 
 [@@__reduce__]
-let read_deterministically_encoded_cbor_error_post
+let cbor_read_deterministically_encoded_error_post
   (a: A.array U8.t)
   (p: perm)
   (va: Ghost.erased (Seq.seq U8.t))
 : Tot vprop
-= A.pts_to a p va `star` pure (read_deterministically_encoded_cbor_error_postcond va)
+= A.pts_to a p va `star` pure (cbor_read_deterministically_encoded_error_postcond va)
 
-let read_deterministically_encoded_cbor_post
+let cbor_read_deterministically_encoded_post
   (a: A.array U8.t)
   (p: perm)
   (va: Ghost.erased (Seq.seq U8.t))
-  (res: read_cbor_t)
+  (res: cbor_read_t)
 : Tot vprop
-= if res.read_cbor_is_success
-  then read_deterministically_encoded_cbor_success_post a p va res
-  else read_deterministically_encoded_cbor_error_post a p va
+= if res.cbor_read_is_success
+  then cbor_read_deterministically_encoded_success_post a p va res
+  else cbor_read_deterministically_encoded_error_post a p va
 
-val read_deterministically_encoded_cbor
+val cbor_read_deterministically_encoded
   (#va: Ghost.erased (Seq.seq U8.t))
   (#p: perm)
   (a: A.array U8.t)
   (sz: SZ.t)
-: ST read_cbor_t
+: ST cbor_read_t
     (A.pts_to a p va)
-    (fun res -> read_deterministically_encoded_cbor_post a p va res)
+    (fun res -> cbor_read_deterministically_encoded_post a p va res)
     (SZ.v sz == Seq.length va \/ SZ.v sz == A.length a)
     (fun _ -> True)

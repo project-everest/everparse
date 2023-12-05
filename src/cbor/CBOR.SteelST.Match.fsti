@@ -12,7 +12,7 @@ module SM = Steel.ST.SeqMatch
 
 (* Relating a CBOR C object with a CBOR high-level value *)
 
-val dummy_cbor : cbor
+val cbor_dummy : cbor
 
 val cbor_map_entry_key: cbor_map_entry -> cbor
 
@@ -33,7 +33,7 @@ val cbor_map_entry_key_value_inj
     [SMTPat (cbor_map_entry_value m1); SMTPat (cbor_map_entry_value m2)];
   ]]
 
-val mk_cbor_map_entry
+val cbor_mk_map_entry
   (key: cbor)
   (value: cbor)
 : Pure cbor_map_entry

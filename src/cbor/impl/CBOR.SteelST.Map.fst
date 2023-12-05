@@ -59,7 +59,7 @@ let size_comp_for_map_entry
     return sz2
   end
 
-let constr_cbor_map
+let cbor_constr_map
   #c' #v' a len
 = [@@inline_let]
   let ares : cbor_map = {
@@ -128,7 +128,7 @@ let serialize_cbor_map_eq
 : Lemma
   (
     let s0 = LPS.serialize CborST.serialize_raw_data_item c in
-    let s1 = LPS.serialize CborST.serialize_header (CborST.uint64_as_argument Cbor.major_type_map (U64.uint_to_t (List.Tot.length (Cbor.Map?.v c)))) in
+    let s1 = LPS.serialize CborST.serialize_header (CborST.uint64_as_argument Cbor.cbor_major_type_map (U64.uint_to_t (List.Tot.length (Cbor.Map?.v c)))) in
     let s2 = LPS.serialize (LPS.serialize_nlist (List.Tot.length (Cbor.Map?.v c)) (LPS.serialize_nondep_then CborST.serialize_raw_data_item CborST.serialize_raw_data_item)) (Cbor.Map?.v c) in
     s0 == s1 `Seq.append` s2 /\ Seq.length s0 == Seq.length s1 + Seq.length s2
   )
@@ -171,7 +171,7 @@ let size_comp_for_map
       (raw_data_item_match p _ _);
     LPS.seq_list_match_length (raw_data_item_map_entry_match p) _ _;
     A.pts_to_length _ _;
-    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_map c'.cbor_map_length sz perr in
+    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.cbor_major_type_map c'.cbor_map_length sz perr in
     let _ = gen_elim () in
     let err1 = R.read perr in
     if err1
@@ -301,7 +301,7 @@ let l2r_writer_for_map
       (raw_data_item_match p _ _);
     LPS.seq_list_match_length (raw_data_item_map_entry_match p) _ _;
     A.pts_to_length _ _;
-    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_map c'.cbor_map_length out in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.cbor_major_type_map c'.cbor_map_length out in
     let _ = gen_elim () in
     let _ = LPS.elim_aparse_with_serializer CborST.serialize_header res in
     let res_pl = LPS.l2r_write_array_payload_as_nlist

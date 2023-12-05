@@ -119,7 +119,7 @@ val write_simple_value
 : Tot (maybe_r2l_writer_for serialize_raw_data_item (Simple x))
 
 val write_uint64_as_argument
-  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (ty: major_type_t { ty `U8.lt` cbor_major_type_simple_value })
   (x: U64.t)
 : Tot (maybe_r2l_writer_for serialize_header (uint64_as_argument ty x))
 
@@ -144,7 +144,7 @@ val l2r_write_simple_value
 : Tot (l2r_writer_for serialize_raw_data_item (Simple x))
 
 val size_comp_uint64_header
-  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (ty: major_type_t { ty `U8.lt` cbor_major_type_simple_value })
   (x: U64.t)
 : Tot (size_comp_for serialize_header (uint64_as_argument ty x))
 
@@ -160,7 +160,7 @@ val size_comp_string
 : Tot (size_comp_for serialize_raw_data_item (String ty (Ghost.reveal v)))
 
 val l2r_write_uint64_header
-  (ty: major_type_t { ty `U8.lt` major_type_simple_value })
+  (ty: major_type_t { ty `U8.lt` cbor_major_type_simple_value })
   (x: U64.t)
 : Tot (l2r_writer_for serialize_header (uint64_as_argument ty x))
 

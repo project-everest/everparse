@@ -14,7 +14,7 @@ let serialize_cbor_error
   (x: Seq.seq U8.t)
 : Lemma
   (requires (LPS.parse CborST.parse_raw_data_item x == None))
-  (ensures (read_cbor_error_postcond x))
+  (ensures (cbor_read_error_postcond x))
 = let prf
     (v: Cbor.raw_data_item)
     (suff: Seq.seq U8.t)
@@ -28,17 +28,17 @@ let serialize_cbor_error
 #push-options "--z3rlimit 64"
 #restart-solver
 
-let read_cbor'
+let cbor_read'
   (#va: Ghost.erased (Seq.seq U8.t))
   (#p: perm)
   (a: A.array U8.t)
   (sz: SZ.t)
-: ST read_cbor_t
+: ST cbor_read_t
     (A.pts_to a p va)
-    (fun res -> read_cbor_post a p va res)
+    (fun res -> cbor_read_post a p va res)
     (SZ.v sz == Seq.length va \/ SZ.v sz == A.length a)
     (fun res ->
-      res.read_cbor_is_success == true ==> CBOR_Case_Serialized? res.read_cbor_payload
+      res.cbor_read_is_success == true ==> CBOR_Case_Serialized? res.cbor_read_payload
     )
 = A.pts_to_length a _;
   let a' = LPA.intro_arrayptr_with_implies a in
@@ -49,8 +49,8 @@ let read_cbor'
     (LPA.arrayptr a' va')
     (LPA.arrayptr a' _)
     (A.pts_to a p va);
-  let res = R.with_local 0ul #_ #(res: read_cbor_t {
-      res.read_cbor_is_success == true ==> CBOR_Case_Serialized? res.read_cbor_payload
+  let res = R.with_local 0ul #_ #(res: cbor_read_t {
+      res.cbor_read_is_success == true ==> CBOR_Case_Serialized? res.cbor_read_payload
   }) (fun perr ->
     let sz' = CborST.validate_raw_data_item a' sz perr in
     let _ = gen_elim () in
@@ -87,41 +87,41 @@ let read_cbor'
         (A.pts_to a p va);
       [@@inline_let]
       let res = {
-        read_cbor_is_success = true;
-        read_cbor_payload = c;
-        read_cbor_remainder = rem;
-        read_cbor_remainder_length = sz `SZ.sub` sz';
+        cbor_read_is_success = true;
+        cbor_read_payload = c;
+        cbor_read_remainder = rem;
+        cbor_read_remainder_length = sz `SZ.sub` sz';
       }
       in
       vpattern_rewrite_with_implies
         (fun c -> raw_data_item_match full_perm c _)
-        res.read_cbor_payload;
+        res.cbor_read_payload;
       implies_trans_l1
-        (raw_data_item_match full_perm res.read_cbor_payload _)
+        (raw_data_item_match full_perm res.cbor_read_payload _)
         (raw_data_item_match full_perm c _)
         (A.pts_to rem p _)
         (A.pts_to a p va);
       vpattern_rewrite_with_implies
         (fun rem -> A.pts_to rem p _)
-        res.read_cbor_remainder;
+        res.cbor_read_remainder;
       implies_trans_r1
-        (raw_data_item_match full_perm res.read_cbor_payload _)
-        (A.pts_to res.read_cbor_remainder _ _)
+        (raw_data_item_match full_perm res.cbor_read_payload _)
+        (A.pts_to res.cbor_read_remainder _ _)
         (A.pts_to rem _ _)
         (A.pts_to a p va);
       rewrite
-        (read_cbor_success_post a p va res)
-        (read_cbor_post a p va res);
+        (cbor_read_success_post a p va res)
+        (cbor_read_post a p va res);
       return res
     end else begin
       noop ();
       serialize_cbor_error va;
       [@@inline_let]
       let res = {
-        read_cbor_is_success = false;
-        read_cbor_payload = dummy_cbor;
-        read_cbor_remainder = a;
-        read_cbor_remainder_length = sz;
+        cbor_read_is_success = false;
+        cbor_read_payload = cbor_dummy;
+        cbor_read_remainder = a;
+        cbor_read_remainder_length = sz;
       }
       in
       noop ();
@@ -129,8 +129,8 @@ let read_cbor'
         (LPA.arrayptr a' va')
         (A.pts_to a p va);
       rewrite
-        (read_cbor_error_post a p va)
-        (read_cbor_post a p va res);
+        (cbor_read_error_post a p va)
+        (cbor_read_post a p va res);
       return res
     end
   )
@@ -139,44 +139,44 @@ let read_cbor'
 
 #pop-options
 
-let read_cbor
+let cbor_read
   #va #p a sz
-= read_cbor' a sz
+= cbor_read' a sz
 
 let serialize_deterministically_encoded_cbor_error
   (x: Seq.seq U8.t)
-  (c: read_cbor_t)
+  (c: cbor_read_t)
   (v0: Cbor.raw_data_item)
   (rem: Seq.seq U8.t)
 : Lemma
   (requires (
-    read_cbor_success_postcond x c v0 rem /\
+    cbor_read_success_postcond x c v0 rem /\
     Cbor.data_item_wf Cbor.deterministically_encoded_cbor_map_key_order v0 == false
   ))
-  (ensures (read_deterministically_encoded_cbor_error_postcond x))
+  (ensures (cbor_read_deterministically_encoded_error_postcond x))
 = Cbor.serialize_cbor_with_test_correct v0 rem (fun c' _ -> Cbor.data_item_wf Cbor.deterministically_encoded_cbor_map_key_order c' == true)
 
-let read_deterministically_encoded_cbor
+let cbor_read_deterministically_encoded
   #va #p a sz
 = A.pts_to_length a _;
   let _ = A.intro_fits_u64 () in
-  let res = read_cbor' a sz in
-  if not res.read_cbor_is_success
+  let res = cbor_read' a sz in
+  if not res.cbor_read_is_success
   then begin
     rewrite
-      (read_cbor_post a p va res)
-      (read_cbor_error_post a p va);
+      (cbor_read_post a p va res)
+      (cbor_read_error_post a p va);
     let _ = gen_elim () in
     rewrite
-      (read_deterministically_encoded_cbor_error_post a p va)
-      (read_deterministically_encoded_cbor_post a p va res);
+      (cbor_read_deterministically_encoded_error_post a p va)
+      (cbor_read_deterministically_encoded_post a p va res);
     return res
   end else begin
     rewrite
-      (read_cbor_post a p va res)
-      (read_cbor_success_post a p va res);
+      (cbor_read_post a p va res)
+      (cbor_read_success_post a p va res);
     let _ = gen_elim () in
-    let s = destr_cbor_serialized res.read_cbor_payload in
+    let s = destr_cbor_serialized res.cbor_read_payload in
     let _ = gen_elim () in
     let test = CBOR.SteelST.Raw.Map.check_raw_data_item
       (CBOR.SteelST.Raw.Map.check_data_item_wf_head CBOR.SteelST.Raw.Map.deterministically_encoded_cbor_map_key_order_impl ())
@@ -190,8 +190,8 @@ let read_deterministically_encoded_cbor
       noop ();
       noop (); // FIXME: WHY WHY WHY do I need that many noop()s ?
       rewrite
-        (read_deterministically_encoded_cbor_success_post a p va res)
-        (read_deterministically_encoded_cbor_post a p va res);
+        (cbor_read_deterministically_encoded_success_post a p va res)
+        (cbor_read_deterministically_encoded_post a p va res);
       return res
     end else begin
       let v = vpattern_erased (raw_data_item_match full_perm _) in
@@ -202,12 +202,12 @@ let read_deterministically_encoded_cbor
         (A.pts_to a p va);
       [@@inline_let]
       let res = {
-        res with read_cbor_is_success = false
+        res with cbor_read_is_success = false
       }
       in
       rewrite
-        (read_deterministically_encoded_cbor_error_post a p va)
-        (read_deterministically_encoded_cbor_post a p va res);
+        (cbor_read_deterministically_encoded_error_post a p va)
+        (cbor_read_deterministically_encoded_post a p va res);
       return res
     end
   end

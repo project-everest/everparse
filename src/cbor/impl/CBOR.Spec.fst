@@ -83,24 +83,24 @@ let rec cbor_compare_correct'
 = let ty1 = get_major_type x1 in
   if LowParse.Spec.SeqBytes.byte_compare (get_major_type x1) (get_major_type x2) <> 0
   then serialized_lex_compare_major_type_intro x1 x2
-  else if ty1 = major_type_uint64 || ty1 = major_type_neg_int64
+  else if ty1 = cbor_major_type_uint64 || ty1 = cbor_major_type_neg_int64
   then serialized_lex_compare_int64 ty1 (Int64?.v x1) (Int64?.v x2)
-  else if ty1 = major_type_simple_value
+  else if ty1 = cbor_major_type_simple_value
   then serialized_lex_compare_simple_value (Simple?.v x1) (Simple?.v x2)
-  else if ty1 = major_type_byte_string || ty1 = major_type_text_string
+  else if ty1 = cbor_major_type_byte_string || ty1 = cbor_major_type_text_string
   then serialized_lex_compare_string ty1 (U64.uint_to_t (Seq.length (String?.v x1))) (String?.v x1) (U64.uint_to_t (Seq.length (String?.v x2))) (String?.v x2)
-  else if ty1 = major_type_tagged
+  else if ty1 = cbor_major_type_tagged
   then begin
     serialized_lex_compare_tagged (Tagged?.tag x1) (Tagged?.v x1) (Tagged?.tag x2) (Tagged?.v x2);
     cbor_compare_correct' (Tagged?.v x1) (Tagged?.v x2)
   end
-  else if ty1 = major_type_array
+  else if ty1 = cbor_major_type_array
   then begin
     serialized_lex_compare_array (U64.uint_to_t (List.Tot.length (Array?.v x1))) (Array?.v x1) (U64.uint_to_t (List.Tot.length (Array?.v x2))) (Array?.v x2);
     if List.Tot.length (Array?.v x1) = List.Tot.length (Array?.v x2)
     then cbor_compare_array_correct (Array?.v x1) (Array?.v x2)
   end
-  else if ty1 = major_type_map
+  else if ty1 = cbor_major_type_map
   then begin
     serialized_lex_compare_map (U64.uint_to_t (List.Tot.length (Map?.v x1))) (Map?.v x1) (U64.uint_to_t (List.Tot.length (Map?.v x2))) (Map?.v x2);
     if List.Tot.length (Map?.v x1) = List.Tot.length (Map?.v x2)

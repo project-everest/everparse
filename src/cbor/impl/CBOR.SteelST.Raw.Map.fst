@@ -153,7 +153,7 @@ let check_data_item_wf_head
 = fun a va ->
   rewrite (aparse _ a _) (aparse parse_raw_data_item a va);
   let major_type = read_major_type a in
-  if major_type = major_type_map
+  if major_type = cbor_major_type_map
   then begin
     let n64 = read_argument_as_uint64 a in
     let n = SZ.uint64_to_sizet n64 in
@@ -305,7 +305,7 @@ let compare_u64
 
 #restart-solver
 let lex_compare_with_header
-  (ty: Ghost.erased major_type_t { ty `U8.lt` major_type_simple_value })
+  (ty: Ghost.erased major_type_t { ty `U8.lt` cbor_major_type_simple_value })
   (x: U64.t)
   (b: U8.t)
   (#vh: v (get_parser_kind parse_header) header)

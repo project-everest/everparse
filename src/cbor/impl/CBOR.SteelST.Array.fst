@@ -82,7 +82,7 @@ let raw_data_item_match_array_elim
   rewrite (raw_data_item_array_match p _ _) (raw_data_item_array_match p a.footprint (Cbor.Array?.v v));
   sq
 
-let constr_cbor_array
+let cbor_constr_array
   #c' #v' a len
 = let fp = GR.alloc () in
   [@@inline_let]
@@ -111,7 +111,7 @@ let constr_cbor_array
     );
   return res
 
-let destr_cbor_array
+let cbor_destr_array
   (#p: perm)
   (#v: Ghost.erased Cbor.raw_data_item)
   (a: cbor)
@@ -153,7 +153,7 @@ let cbor_array_length
 = raw_data_item_match_get_case a;
   match a with
   | CBOR_Case_Array _ _ ->
-    let a' = destr_cbor_array a in
+    let a' = cbor_destr_array a in
     elim_implies
       (A.pts_to _ _ _ `star` raw_data_item_array_match p _ _)
       (raw_data_item_match p _ _);
@@ -185,7 +185,7 @@ let cbor_array_index_case_array
     )
 = raw_data_item_match_get_case a;
   noop ();
-  let ar = destr_cbor_array a in
+  let ar = cbor_destr_array a in
   A.pts_to_length ar.cbor_array_payload _;
   SM.seq_list_match_length (raw_data_item_match p) ar.footprint (maybe_cbor_array v);
   let res = A.index ar.cbor_array_payload i in
@@ -282,7 +282,7 @@ let cbor_array_index
   | _ ->
     return (cbor_array_index_case_serialized a i)
 
-let dummy_cbor_array_iterator = {
+let cbor_dummy_array_iterator = {
   cbor_array_iterator_length = 0uL;
   cbor_array_iterator_payload = CBOR_Array_Iterator_Payload_Array A.null Seq.empty;
   footprint = dummy_cbor_footprint;
@@ -383,8 +383,8 @@ let cbor_array_iterator_init_array
     )
 = raw_data_item_match_perm_le_full_perm a;
   let len = cbor_array_length a in
-  let ar = destr_cbor_array a in
-  let fp = GR.alloc () in // I could reuse the footprint from `a`, but `destr_cbor_array` does not expose it
+  let ar = cbor_destr_array a in
+  let fp = GR.alloc () in // I could reuse the footprint from `a`, but `cbor_destr_array` does not expose it
   gref_lower_perm fp p;
   let res = {
     cbor_array_iterator_length = len;
@@ -864,7 +864,7 @@ let array_lower_perm
 #push-options "--z3rlimit 64"
 #restart-solver
 
-let read_cbor_array
+let cbor_read_array
   #p #obj input a0 len
 = 
   raw_data_item_match_perm_le_full_perm input;
@@ -872,7 +872,7 @@ let read_cbor_array
   raw_data_item_match_get_case input;
   match input with
   | CBOR_Case_Array _ _ ->
-    let res = destr_cbor_array input in
+    let res = cbor_destr_array input in
     A.pts_to_length res.cbor_array_payload _;
     SM.seq_list_match_length (raw_data_item_match p) res.footprint (maybe_cbor_array obj);
     implies_concl_r
@@ -934,7 +934,7 @@ let serialize_cbor_array_eq
 : Lemma
   (
     let s0 = LPS.serialize CborST.serialize_raw_data_item c in
-    let s1 = LPS.serialize CborST.serialize_header (CborST.uint64_as_argument Cbor.major_type_array (U64.uint_to_t (List.Tot.length (Cbor.Array?.v c)))) in
+    let s1 = LPS.serialize CborST.serialize_header (CborST.uint64_as_argument Cbor.cbor_major_type_array (U64.uint_to_t (List.Tot.length (Cbor.Array?.v c)))) in
     let s2 = LPS.serialize (LPS.serialize_nlist (List.Tot.length (Cbor.Array?.v c)) CborST.serialize_raw_data_item) (Cbor.Array?.v c) in
     s0 == s1 `Seq.append` s2 /\ Seq.length s0 == Seq.length s1 + Seq.length s2
   )
@@ -969,7 +969,7 @@ let size_comp_for_array
     raw_data_item_match_get_case c;
     let _ : squash (Cbor.Array? va) = () in
     serialize_cbor_array_eq va;
-    let c' = destr_cbor_array c in
+    let c' = cbor_destr_array c in
     let l = Ghost.hide (maybe_cbor_array va) in
     assert (Ghost.reveal l == Cbor.Array?.v va);
     rewrite_with_implies_with_tactic
@@ -982,7 +982,7 @@ let size_comp_for_array
       (raw_data_item_match p _ _);
     LPS.seq_list_match_length (raw_data_item_match p) _ _;
     A.pts_to_length _ _;
-    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_array c'.cbor_array_length sz perr in
+    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.cbor_major_type_array c'.cbor_array_length sz perr in
     let _ = gen_elim () in
     let err1 = R.read perr in
     if err1
@@ -1034,7 +1034,7 @@ let l2r_writer_for_array
     raw_data_item_match_get_case c;
     let _ : squash (Cbor.Array? va) = () in
     serialize_cbor_array_eq va;
-    let c' = destr_cbor_array c in
+    let c' = cbor_destr_array c in
     let l = Ghost.hide (maybe_cbor_array va) in
     assert (Ghost.reveal l == Cbor.Array?.v va);
     rewrite_with_implies_with_tactic
@@ -1047,7 +1047,7 @@ let l2r_writer_for_array
       (raw_data_item_match p _ _);
     LPS.seq_list_match_length (raw_data_item_match p) _ _;
     A.pts_to_length _ _;
-    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_array c'.cbor_array_length out in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.cbor_major_type_array c'.cbor_array_length out in
     let _ = gen_elim () in
     let _ = LPS.elim_aparse_with_serializer CborST.serialize_header res in
     let res_pl = LPS.l2r_write_array_payload_as_nlist

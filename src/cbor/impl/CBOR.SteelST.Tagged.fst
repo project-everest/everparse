@@ -66,7 +66,7 @@ let destr_cbor_tagged0
 #push-options "--z3rlimit 64"
 #restart-solver
 
-let destr_cbor_tagged
+let cbor_destr_tagged
   #p #v a
 =
   raw_data_item_match_get_case a;
@@ -123,7 +123,7 @@ let destr_cbor_tagged
       (raw_data_item_match p a v);
     return res
 
-let constr_cbor_tagged
+let cbor_constr_tagged
   #c' #v' tag a
 = [@@inline_let]
   let res_tg = {
@@ -180,7 +180,7 @@ let serialize_cbor_tagged_eq
 : Lemma
   (
     let s0 = LPS.serialize CborST.serialize_raw_data_item c in
-    let s1 = LPS.serialize CborST.serialize_header (CborST.uint64_as_argument Cbor.major_type_tagged (Cbor.Tagged?.tag c)) in
+    let s1 = LPS.serialize CborST.serialize_header (CborST.uint64_as_argument Cbor.cbor_major_type_tagged (Cbor.Tagged?.tag c)) in
     let s2 = LPS.serialize CborST.serialize_raw_data_item (Cbor.Tagged?.v c) in
     s0 == s1 `Seq.append` s2 /\ Seq.length s0 == Seq.length s1 + Seq.length s2
   )
@@ -209,8 +209,8 @@ let size_comp_for_tagged
     raw_data_item_match_get_case c;
     let _ : squash (Cbor.Tagged? va) = () in
     serialize_cbor_tagged_eq va;
-    let c' = destr_cbor_tagged c in
-    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.major_type_tagged c'.cbor_tagged_tag sz perr in
+    let c' = cbor_destr_tagged c in
+    let sz1 = CBOR.SteelST.Raw.Write.size_comp_uint64_header Cbor.cbor_major_type_tagged c'.cbor_tagged_tag sz perr in
     let _ = gen_elim () in
     let err1 = R.read perr in
     if err1
@@ -245,8 +245,8 @@ let l2r_writer_for_tagged
     raw_data_item_match_get_case c;
     let _ : squash (Cbor.Tagged? va) = () in
     serialize_cbor_tagged_eq va;
-    let c' = destr_cbor_tagged c in
-    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.major_type_tagged c'.cbor_tagged_tag out in
+    let c' = cbor_destr_tagged c in
+    let res = CBOR.SteelST.Raw.Write.l2r_write_uint64_header Cbor.cbor_major_type_tagged c'.cbor_tagged_tag out in
     let _ = gen_elim () in
     let _ = LPS.elim_aparse_with_serializer CborST.serialize_header res in
     let res_pl = write _ c'.cbor_tagged_payload out in

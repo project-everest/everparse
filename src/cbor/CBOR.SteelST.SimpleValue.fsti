@@ -10,7 +10,7 @@ module R = Steel.ST.Reference
 module A = Steel.ST.Array
 module SM = Steel.ST.SeqMatch
 
-val destr_cbor_simple_value
+val cbor_destr_simple_value
   (#p: perm)
   (#va: Ghost.erased Cbor.raw_data_item)
   (c: cbor)
@@ -24,7 +24,7 @@ val destr_cbor_simple_value
       Ghost.reveal va == Cbor.Simple c'
     )
 
-val constr_cbor_simple_value
+val cbor_constr_simple_value
   (value: Cbor.simple_value)
 : STT cbor
     emp

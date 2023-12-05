@@ -68,7 +68,7 @@ let header_map : Cddl.typ = Cddl.t_map (
 
 let empty_or_serialized_map : Cddl.typ =
   Cddl.bstr_cbor data_item_order header_map `Cddl.t_choice`
-  Cddl.str_size Cbor.major_type_byte_string 0
+  Cddl.str_size Cbor.cbor_major_type_byte_string 0
 
 let headers #b : Cddl.array_group3 b =
   Cddl.array_group3_item (* protected: *) (Cddl.coerce_to_bounded_typ _ empty_or_serialized_map) `Cddl.array_group3_concat`

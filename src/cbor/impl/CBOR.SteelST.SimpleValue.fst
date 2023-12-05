@@ -10,7 +10,7 @@ module LPS = LowParse.SteelST.SeqMatch
 module LW = LowParse.SteelST.L2ROutput.IntroElim
 module GR = Steel.ST.GhostReference
 
-let destr_cbor_simple_value
+let cbor_destr_simple_value
   #p #va c
 = raw_data_item_match_get_case c;
   match c with
@@ -40,7 +40,7 @@ let size_comp_for_simple_value
   (c: cbor { Cbor.Simple? va })
 : Tot (cbor_size_comp_for va c)
 = fun sz perr ->
-    let c' = destr_cbor_simple_value c in
+    let c' = cbor_destr_simple_value c in
     let res = CBOR.SteelST.Raw.Write.size_comp_simple_value c' sz perr in
     let _ = gen_elim () in
     return res
@@ -50,12 +50,12 @@ let l2r_writer_for_simple_value
   (c: cbor { Cbor.Simple? va })
 : Tot (cbor_l2r_writer_for va c)
 = fun out ->
-    let c' = destr_cbor_simple_value c in
+    let c' = cbor_destr_simple_value c in
     let res = CBOR.SteelST.Raw.Write.l2r_write_simple_value c' out in
     let _ = gen_elim () in
     return res
 
-let constr_cbor_simple_value
+let cbor_constr_simple_value
   value
 = let fp = GR.alloc () in
   [@@inline_let]

@@ -10,7 +10,7 @@ module LPS = LowParse.SteelST.SeqMatch
 module LW = LowParse.SteelST.L2ROutput.IntroElim
 module GR = Steel.ST.GhostReference
 
-let destr_cbor_int64
+let cbor_destr_int64
   #p #va c
 = raw_data_item_match_get_case c;
   match c with
@@ -47,7 +47,7 @@ let size_comp_for_int64
   (c: cbor { Cbor.Int64? va })
 : Tot (cbor_size_comp_for va c)
 = fun sz perr ->
-    let c' = destr_cbor_int64 c in
+    let c' = cbor_destr_int64 c in
     let res = CBOR.SteelST.Raw.Write.size_comp_int64 c'.cbor_int_type c'.cbor_int_value sz perr in
     let _ = gen_elim () in
     return res
@@ -57,12 +57,12 @@ let l2r_writer_for_int64
   (c: cbor { Cbor.Int64? va })
 : Tot (cbor_l2r_writer_for va c)
 = fun out ->
-    let c' = destr_cbor_int64 c in
+    let c' = cbor_destr_int64 c in
     let res = CBOR.SteelST.Raw.Write.l2r_write_int64 c'.cbor_int_type c'.cbor_int_value out in
     let _ = gen_elim () in
     return res
 
-let constr_cbor_int64
+let cbor_constr_int64
   ty value
 = let fp = GR.alloc () in
   [@@inline_let]
