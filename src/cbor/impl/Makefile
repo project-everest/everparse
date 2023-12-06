@@ -73,6 +73,8 @@ $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
 
+CBOR.SteelC.fst.checked: FSTAR_OPTIONS += --ext compat:open_metas
+
 extract-steelc: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelST%,$(ALL_KRML_FILES)) $(filter CBOR_SteelST_Raw%,$(ALL_KRML_FILES))
 	$(KRML) -bundle 'CBOR.SteelC+CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORSteelC]' $^
 
