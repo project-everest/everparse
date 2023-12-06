@@ -214,8 +214,6 @@ type type_decl = {
   decl_name: typedef_name;
   decl_typ: typedef_body;
   decl_parser: parser;
-  // decl_validator: validator;
-  // decl_reader: option reader;
   decl_is_enum : bool
 }
 
@@ -284,15 +282,11 @@ val maybe_mname_prefix (mname:string) (i:A.ident) : string
 val print_ident (i:A.ident) : string
 val print_maybe_qualified_ident (mname:string) (i:A.ident) : ML string
 val print_expr (mname:string) (e:expr) : ML string
-val print_typ (mname:string) (t:typ) : ML string //(decreases t)
+val print_typ (mname:string) (t:typ) : ML string
 val print_kind (mname:string) (k:parser_kind) : Tot string
-// val print_parser (mname:string) (p:parser) : ML string
 val print_action (mname:string) (a:action) : ML string
 val print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
 val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string
-// val print_decls (modul: string) (ds:list decl) : ML string
-// val print_types_decls (modul: string) (ds:list decl) : ML string
-// val print_decls_signature (modul: string) (ds:list decl) : ML string
 val wrapper_name (modul: string) (fn: string) : ML string
 val validator_name (modul: string) (fn: string) : ML string
 type produce_everparse_error = | ProduceEverParseError

@@ -140,18 +140,6 @@ let translate_module (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
   static_asserts,
   en
 
-// let has_output_types (t_decls:list Target.decl) : bool =
-//   List.Tot.existsb (fun (d, _) -> Target.Output_type? d) t_decls
-
-// let has_out_exprs (t_decls:list Target.decl) : bool =
-//   List.Tot.existsb (fun (d, _) -> Target.Output_type_expr? d) t_decls
-
-// let has_extern_types (t_decls:list Target.decl) : bool =
-//   List.Tot.existsb (fun (d, _) -> Target.Extern_type? d) t_decls
-
-// let has_extern_functions (t_decls:list Target.decl) : bool =
-//   List.Tot.existsb (fun (d, _) -> Target.Extern_fn? d) t_decls
-
 let emit_fstar_code_for_interpreter (en:env)
                                     (modul:string)
                                     (tds:list T.decl)
@@ -263,9 +251,7 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
   let has_output_types = T.has_output_types t_decls in
   let has_out_exprs = T.has_output_type_exprs t_decls in
   let has_extern_types = T.has_extern_types t_decls in
-  // let has_extern_fns = T.has_extern_functions t_decls in
-  // let has_extern_probes = T.has_extern_probes t_decls in
-
+  
   (*
    * If there are output types in the module
    *   and emit_output_types_defs flag is set,

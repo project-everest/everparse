@@ -126,29 +126,6 @@ let typ_indexes_union (i, e, d, b) (i', e', d', b') =
   join_eloc e e',
   join_disj d d',
   On_success_union b b'
-// let typ_indexes_union_l_bias r (t t':typ_indexes) : ML typ_indexes =
-//   let (i, e, d, b), (i', e', d', b') = t, t' in
-//   if not (Disj_triv? d)
-//   then (
-//     Ast.warning "Unexpected disjunctive index in typ_indexes_union_l_bias" r;
-//     Inv_conj i i', Eloc_union e e', disj_conj d d', On_success_union b b'
-//   )
-//   else
-//    Inv_conj i i', Eloc_union e e', d, On_success_union b b'
-// let typ_indexes_union_r_bias r (i, e, d, b) (i', e', d', b') =
-//   if not (Disj_triv? d')
-//   then (
-//     Ast.warning "Unexpected disjunctive index in typ_indexes_union_l_bias" r;
-//     Inv_conj i i', Eloc_union e e', disj_conj d d', On_success_union b b'
-//   )
-//   else
-//     Inv_conj i i', Eloc_union e e', d, On_success_union b b'
- 
-// let typ_indexes_name hd args =
-//   Inv_name hd args,
-//   Eloc_name hd args,
-//   Disj_name hd args,
-//   On_success_named hd args
 
 let env = H.t A.ident' type_decl
 let create_env (_:unit) : ML env = H.create 100

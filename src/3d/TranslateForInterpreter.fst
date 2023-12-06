@@ -1052,12 +1052,10 @@ let hoist_one_type_definition (should_inline:bool)
       let t_parser = parse_typ orig_tdn.td_name type_name body in
       add_parser_kind_nz genv tdn.td_name t_parser.p_kind.pk_nz t_parser.p_kind.pk_weak_kind;
       add_parser_kind_is_constant_size genv tdn.td_name (parser_is_constant_size_without_actions genv t_parser);
-     // let reader = maybe_add_reader genv tdn body in
       let td = {
         decl_name = tdn;
         decl_typ = TD_abbrev body;
         decl_parser = t_parser;
-       // decl_reader = reader;
         decl_is_enum = false        
       } in
       let td = Type_decl td in
