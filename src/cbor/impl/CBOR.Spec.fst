@@ -139,3 +139,8 @@ and cbor_compare_map_correct
 let cbor_compare_correct
   v1 v2
 = cbor_compare_correct' v1 v2
+
+let cbor_map_sort = map_sort cbor_compare
+
+let cbor_map_sort_eq _ = ()
+
