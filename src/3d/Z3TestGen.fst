@@ -10,7 +10,7 @@ module I = InterpreterTarget
 let prelude : string =
 "
 (set-option :produce-models true)
-(declare-datatypes () ((State (mk-state (input-size Int) (choice-index Int)))))
+(declare-datatypes () ((State (mk-state (input-size Int) (choice-index Int) (branch-index Int)))))
 (declare-datatypes () ((Result (mk-result (return-value Int) (after-state State)))))
 
 ; From EverParse3d.ErrorCode.is_range_okay
@@ -30,14 +30,16 @@ let prelude : string =
   (and (<= 0 (choose i)) (< (choose i) 256))
 ))
 
+(declare-fun branch-trace (Int) Int)
+
 (define-fun parse-false ((x State)) State
-  (mk-state -1 (choice-index x))
+  (mk-state -1 (choice-index x) (branch-index x))
 )
 
 (define-fun parse-all-bytes ((x State)) State
   (if (<= (input-size x) 0)
     x
-    (mk-state 0 (+ (choice-index x) (input-size x)))
+    (mk-state 0 (+ (choice-index x) (input-size x)) (branch-index x))
   )
 )
 
@@ -56,6 +58,7 @@ let prelude : string =
         -1
       )
       (+ (choice-index x) (input-size x))
+      (branch-index x)
     )
   )
 )
@@ -63,7 +66,16 @@ let prelude : string =
 (define-fun parse-u8 ((x State)) Result
   (mk-result
     (choose (choice-index x))
-    (mk-state (- (input-size x) 1) (+ (choice-index x) 1))
+    (mk-state
+      (let ((new-size (- (input-size x) 1)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 1)
+      (branch-index x)
+    )
   )
 )
 
@@ -74,7 +86,16 @@ let prelude : string =
         (choose (+ 0 (choice-index x)))
       )
     )
-    (mk-state (- (input-size x) 2) (+ (choice-index x) 2))
+    (mk-state
+      (let ((new-size (- (input-size x) 2)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 2)
+      (branch-index x)
+    )
   )
 )
 
@@ -85,7 +106,16 @@ let prelude : string =
         (choose (+ 1 (choice-index x)))
       )
     )
-    (mk-state (- (input-size x) 2) (+ (choice-index x) 2))
+    (mk-state
+      (let ((new-size (- (input-size x) 2)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 2)
+      (branch-index x)
+    )
   )
 )
 
@@ -104,7 +134,16 @@ let prelude : string =
         )
       )
     )
-    (mk-state (- (input-size x) 4) (+ (choice-index x) 4))
+    (mk-state
+      (let ((new-size (- (input-size x) 4)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 4)
+      (branch-index x)
+    )
   )
 )
 
@@ -123,7 +162,16 @@ let prelude : string =
         )
       )
     )
-    (mk-state (- (input-size x) 4) (+ (choice-index x) 4))
+    (mk-state
+      (let ((new-size (- (input-size x) 4)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 4)
+      (branch-index x)
+    )
   )
 )
 
@@ -158,7 +206,16 @@ let prelude : string =
         )
       )
     )
-    (mk-state (- (input-size x) 8) (+ (choice-index x) 8))
+    (mk-state
+      (let ((new-size (- (input-size x) 8)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 8)
+      (branch-index x)
+    )
   )
 )
 
@@ -193,7 +250,16 @@ let prelude : string =
         )
       )
     )
-    (mk-state (- (input-size x) 8) (+ (choice-index x) 8))
+    (mk-state
+      (let ((new-size (- (input-size x) 8)))
+        (if (< new-size 0)
+          -1
+          new-size
+        )
+      )
+      (+ (choice-index x) 8)
+      (branch-index x)
+    )
   )
 )
 
@@ -214,9 +280,28 @@ let prelude : string =
   (get-bitfield-lsb nbBits value (- nbBits bitsTo) (- nbBits bitsFrom))
 )
 
+;; see EverParse3d.Actions.Base.validate_nlist_total_constant_size
+(define-fun parse-nlist-total-constant-size ((size Int) (eltSize Int) (x State)) State
+  (if (< (input-size x) 0)
+    x
+    (if (and (= 0 (mod size eltSize)) (>= (input-size x) size))
+      (mk-state
+        (- (input-size x) size)
+        (+ (choice-index x) size)
+        (branch-index x)
+      )
+      (mk-state
+        -1
+        (choice-index x)
+        (branch-index x)
+      )
+    )
+  )
+)
+
 (declare-const initial-input-size Int)
 (assert (>= initial-input-size 0))
-(define-fun initial-state () State (mk-state initial-input-size 0))
+(define-fun initial-state () State (mk-state initial-input-size 0 0))
 
 "
 
@@ -414,8 +499,11 @@ let parse_itype  : I.itype -> parser not_reading = function
   | I.AllZeros -> parse_all_zeros
   | i -> wrap_parser (parse_readable_itype i)
 
+let mk_app_without_paren' id args =
+  mk_args_aux None id args
+
 let mk_app_without_paren id args =
-  mk_args_aux None (ident_to_string id) args
+  mk_app_without_paren' (ident_to_string id) args
   
 let parse_readable_app
   (hd: A.ident)
@@ -430,11 +518,17 @@ let parse_readable_dtyp
   | I.DT_IType i -> parse_readable_itype i
   | I.DT_App _ hd args -> parse_readable_app hd args
 
+let parse_not_readable_app'
+  (hd: string)
+  (args: list I.expr)
+: Tot (parser not_reading)
+= maybe_toplevel_parser (fun _ _ _ _ -> { call = mk_app_without_paren' hd args })
+
 let parse_not_readable_app
   (hd: A.ident)
   (args: list I.expr)
 : Tot (parser not_reading)
-= maybe_toplevel_parser (fun _ _ _ _ -> { call = mk_app_without_paren hd args })
+= parse_not_readable_app' (ident_to_string hd) args
 
 let parse_dtyp
   (d: I.dtyp)
@@ -496,15 +590,28 @@ let mk_parse_dep_pair_with_refinement
 : string
 = let input = Printf.sprintf "%s-input" name in
   let tmp = Printf.sprintf "%s-tmp" name in
+  let condtmp = Printf.sprintf "%s-condtmp" name in
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
    (let (("^tmp^" ("^dfst^" "^input^")))
      (if (< (input-size (after-state "^tmp^")) 0)
        (after-state "^tmp^")
-       (if (let (("^cond_binder_name^" (return-value "^tmp^"))) "^cond^")
-         (let (("^dsnd_binder_name^" (return-value "^tmp^")))
-           ("^dsnd^" (after-state "^tmp^"))
+       (let (("^condtmp^" (let (("^cond_binder_name^" (return-value "^tmp^"))) "^cond^")))
+         (if (and "^condtmp^" (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 0)))
+           (let (("^dsnd_binder_name^" (return-value "^tmp^")))
+             ("^dsnd^"
+               (mk-state
+                 (input-size (after-state "^tmp^"))
+                 (choice-index (after-state "^tmp^"))
+                 (+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))
+               )
+             )
+           )
+           (mk-state
+             (if (and (not "^condtmp^") (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 1))) -1 -2)
+             (choice-index (after-state "^tmp^"))
+             (+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))
+           )
          )
-         (mk-state -1 (choice-index (after-state "^tmp^")))
        )
      )
    )
@@ -524,13 +631,43 @@ let parse_dep_pair_with_refinement_gen (tag: parser reading) (cond_binder: strin
 let parse_dep_pair_with_refinement (tag: parser reading) (cond_binder: A.ident) (cond: unit -> ML string) (payload_binder: A.ident) (payload: parser not_reading) : parser not_reading =
   parse_dep_pair_with_refinement_gen tag (ident_to_string cond_binder) cond (ident_to_string payload_binder) payload
 
-let parse_dep_pair (tag: parser reading) (new_binder: A.ident) (payload: parser not_reading) : parser not_reading =
-  parse_dep_pair_with_refinement tag new_binder (fun _ -> "true") new_binder payload
+let mk_parse_dep_pair
+  (name: string)
+  (binders: string)
+  (dfst: string)
+  (dsnd_binder_name: string)
+  (dsnd: string) (* already contains the new argument *)
+: string
+= let input = Printf.sprintf "%s-input" name in
+  let tmp = Printf.sprintf "%s-tmp" name in
+"(define-fun "^name^" ("^binders^"("^input^" State)) State
+   (let (("^tmp^" ("^dfst^" "^input^")))
+     (if (< (input-size (after-state "^tmp^")) 0)
+       (after-state "^tmp^")
+       (let (("^dsnd_binder_name^" (return-value "^tmp^")))
+         ("^dsnd^" (after-state "^tmp^"))
+       )
+     )
+   )
+ )
+"
+
+let parse_dep_pair (tag: parser reading) (payload_binder: A.ident) (payload: parser not_reading) : parser not_reading =
+  fun name binders _ out ->
+    let payload_binder = ident_to_string payload_binder in
+    let name_tag = Printf.sprintf "%s-tag" name in
+    let body_tag = tag name_tag binders false out in
+    let binders' = push_binder payload_binder "Int" binders in (* TODO: support more types *)
+    let name_payload = Printf.sprintf "%s-payload" name in
+    let body_payload = payload name_payload binders' false out in
+    out (mk_parse_dep_pair name binders.bind body_tag.call payload_binder body_payload.call);
+    { call = mk_function_call name binders }
 
 let parse_refine (tag: parser reading) (cond_binder: A.ident) (cond: unit -> ML string) : parser not_reading =
   parse_dep_pair_with_refinement tag cond_binder cond cond_binder (parse_itype I.Unit)
 
-let mk_parse_ifthenelse
+let mk_parse_ifthenelse_cons
+  (counter: int)
   (name: string)
   (binders: string)
   (cond: string)
@@ -539,20 +676,55 @@ let mk_parse_ifthenelse
 : string
 = let input = Printf.sprintf "%s-input" name in
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
-   (if "^cond^"
-     ("^f_then^" "^input^")
-     ("^f_else^" "^input^")
+   (if (and "^cond^" (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int counter^")))
+     ("^f_then^" (if (< (branch-index "^input^") 0) "^input^" (mk-state (input-size "^input^") (choice-index "^input^") (+ 1 (branch-index "^input^")))))
+     (if (not "^cond^")
+       ("^f_else^" "^input^")
+       (mk-state -2 (choice-index "^input^") (+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))) ; this is a Z3 encoding artifact, not a parsing failure
+     )
    )
  )
 "
 
-let parse_ifthenelse (cond: unit -> ML string) (pthen: parser not_reading) (pelse: parser not_reading) : parser not_reading =
+let parse_ifthenelse_cons (cond: unit -> ML string) (pthen: parser not_reading) (pelse: int -> parser not_reading) (counter: int) : parser not_reading =
+  fun name binders _ out ->
+    let name_then = Printf.sprintf "%s-then" name in
+    let body_then = pthen name_then binders false out in
+    let name_else = Printf.sprintf "%s-else" name in
+    let body_else = pelse (counter + 1) name_else binders false out in
+    out (mk_parse_ifthenelse_cons counter name binders.bind (cond ()) body_then.call body_else.call);
+    { call = mk_function_call name binders }
+
+let mk_parse_ifthenelse_nil
+  (counter: int)
+  (name: string)
+  (binders: string)
+  (cond: string)
+  (f_then: string)
+  (f_else: string)
+: string
+= let input = Printf.sprintf "%s-input" name in
+  let tmp = Printf.sprintf "%s-tmp" name in
+"(define-fun "^name^" ("^binders^"("^input^" State)) State
+   (let (("^tmp^" (if (< (branch-index "^input^") 0) "^input^" (mk-state (input-size "^input^") (choice-index "^input^") (+ 1 (branch-index "^input^"))))))
+     (if (and "^cond^" (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int counter^")))
+       ("^f_then^" "^tmp^")
+       (if (and (not "^cond^") (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int (1 + counter)^")))
+         ("^f_else^" "^tmp^")
+         (mk-state -2 (choice-index "^tmp^") (+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))) ; this is a Z3 encoding artifact, not a parsing failure
+       )
+     )
+   )
+ )
+"
+
+let parse_ifthenelse_nil (cond: unit -> ML string) (pthen: parser not_reading) (pelse: parser not_reading) (counter: int) : parser not_reading =
   fun name binders _ out ->
     let name_then = Printf.sprintf "%s-then" name in
     let body_then = pthen name_then binders false out in
     let name_else = Printf.sprintf "%s-else" name in
     let body_else = pelse name_else binders false out in
-    out (mk_parse_ifthenelse name binders.bind (cond ()) body_then.call body_else.call);
+    out (mk_parse_ifthenelse_nil counter name binders.bind (cond ()) body_then.call body_else.call);
     { call = mk_function_call name binders }
 
 let mk_parse_exact
@@ -567,14 +739,18 @@ let mk_parse_exact
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
   (let (("^sz^" "^size^"))
     (if (< (input-size "^input^") "^sz^")
-      (mk-state -1 (choice-index "^input^"))
-      (let (("^res^" ("^body^" (mk-state "^sz^" (choice-index "^input^")))))
+      (mk-state -1 (choice-index "^input^") (branch-index "^input^"))
+      (let (("^res^" ("^body^" (mk-state "^sz^" (choice-index "^input^") (branch-index "^input^")))))
         (mk-state
           (if (= (input-size "^res^") 0)
             (- (input-size "^input^") "^sz^")
-            -1
+            (if (> (input-size "^res^") 0)
+              -1
+              (input-size "^res^")
+            )
           )
           (choice-index "^res^")
+          (branch-index "^res^")
         )
       )
     )
@@ -676,6 +852,24 @@ let parse_nlist
 : Tot (parser not_reading)
 = parse_exact size (parse_list body)
 
+let itype_byte_size (i: I.itype) : Tot (option pos) = match i with
+  | I.UInt8 | I.UInt8BE -> Some 1
+  | I.UInt16 | I.UInt16BE -> Some 2
+  | I.UInt32 | I.UInt32BE -> Some 4
+  | I.UInt64 | I.UInt64BE -> Some 8
+  | _ -> None
+
+let parse_nlist_total_constant_size
+  (i: I.itype {Some? (itype_byte_size i)}) // TODO: DT_App?
+  (size: I.expr)
+: Tot (parser not_reading)
+= parse_not_readable_app'
+    "parse-nlist-total-constant-size"
+    [
+      size;
+      T.mk_expr (T.Constant (A.Int A.UInt8 (Some?.v (itype_byte_size i))));
+    ]
+
 let mk_parse_string
   (name: string)
   (rec_call: string)
@@ -688,7 +882,7 @@ let mk_parse_string
 "(define-fun-rec "^name^" ("^binders^"("^input^" State)) State
   (let (("^tmp^" ("^body^" "^input^")))
     (if (< (choice-index (after-state "^tmp^")) 0)
-      (mk-state -1 (choice-index (after-state "^tmp^")))
+      (mk-state -1 (choice-index (after-state "^tmp^")) (branch-index (after-state "^tmp^")))
       (if (= (return-value "^tmp^") "^terminator^")
         (after-state "^tmp^")
         ("^rec_call^" (after-state "^tmp^"))
@@ -732,22 +926,59 @@ let rec type_has_actions = function
   | I.T_dep_pair _ _ (_, t) ->
     type_has_actions t
 
+let rec typ_depth (t: I.typ) : GTot nat
+  (decreases t)
+= match t with
+  | I.T_if_else _ t1 t2 // 2 accounts for the call to parse_then_else_with_branch_trace
+    -> 2 + typ_depth t1 + typ_depth t2
+  | I.T_pair _ t1 t2
+    -> 1 + typ_depth t1 + typ_depth t2
+  | I.T_dep_pair _ _ (_, t')
+  | I.T_dep_pair_with_refinement _ _ _ (_, t')
+  | I.T_with_comment _ t' _
+  | I.T_at_most _ _ t'
+  | I.T_exact _ _ t'
+  | I.T_nlist _ _ t'
+    -> 1 + typ_depth t'
+  | _
+    -> 0
+
 let rec parse_typ (t : I.typ) : Pure (parser not_reading)
   (requires (type_has_actions t == false))
   (ensures (fun _ -> True))
-= match t with
+  (decreases (typ_depth t))
+= 
+  match t with
   | I.T_false _ -> parse_false
   | I.T_denoted _ d -> parse_denoted d
   | I.T_pair _ t1 t2 -> parse_pair (parse_typ t1) (parse_typ t2)
   | I.T_dep_pair _ t1 (lam, t2) -> parse_dep_pair (parse_readable_dtyp t1) lam (parse_typ t2)
   | I.T_refine _ base (lam, cond) -> parse_refine (parse_readable_dtyp base) lam (fun _ -> mk_expr cond)
   | I.T_dep_pair_with_refinement _ base (lam_cond, cond) (lam_k, k) -> parse_dep_pair_with_refinement (parse_readable_dtyp base) lam_cond (fun _ -> mk_expr cond) lam_k (parse_typ k)
-  | I.T_if_else cond t1 t2 -> parse_ifthenelse (fun _ -> mk_expr cond) (parse_typ t1) (parse_typ t2)
+  | I.T_if_else cond t1 t2 -> parse_ifthenelse cond t1 t2 0
   | I.T_with_comment _ base _ -> parse_typ base
   | I.T_at_most _ size body -> parse_at_most (fun _ -> mk_expr size) (parse_typ body)
   | I.T_exact _ size body -> parse_exact (fun _ -> mk_expr size) (parse_typ body)
   | I.T_string _ elt terminator -> parse_string (parse_readable_dtyp elt) (fun _ -> mk_expr terminator)
-  | I.T_nlist _ size body -> parse_nlist (fun _ -> mk_expr size) (parse_typ body)
+  | I.T_nlist _ size body ->
+    if match body with
+    | I.T_denoted _ (I.DT_IType i) -> Some? (itype_byte_size i)
+    | _ -> false
+    then
+      let I.T_denoted _ (I.DT_IType i) = body in
+      parse_nlist_total_constant_size i size
+    else
+      parse_nlist (fun _ -> mk_expr size) (parse_typ body)
+
+and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Pure (int -> parser not_reading)
+  (requires (type_has_actions tthen == false /\ type_has_actions telse == false))
+  (ensures (fun _ -> True))
+  (decreases (1 + typ_depth tthen + typ_depth telse))
+= match telse with
+  | I.T_if_else cond2 tthen2 telse2 ->
+    parse_ifthenelse_cons (fun _ -> mk_expr cond) (parse_typ tthen) (parse_ifthenelse cond2 tthen2 telse2)
+  | _ ->
+    parse_ifthenelse_nil (fun _ -> mk_expr cond) (parse_typ tthen) (parse_typ telse)
 
 type arg_type =
 | ArgInt of A.integer_type
@@ -809,14 +1040,47 @@ let produce_not_type_decl (a: I.not_type_decl) (out: string -> ML unit) : ML uni
   | T.Extern_fn _ _ _
   -> ()
 
-let prog = list (string & list arg_type)
+type prog_def = {
+  args: list arg_type;
+  enum_base_type: option arg_type;
+}
+
+let prog = list (string & prog_def)
+
+let rec arg_type_of_typ_with_prog
+  (accu: prog)
+  (t: T.typ)
+: Tot (option arg_type)
+  (decreases t)
+= match arg_type_of_typ t with
+  | Some ty -> Some ty
+  | None ->
+    begin match t with
+    | T.T_app hd _ _ ->
+      begin match List.Tot.assoc (ident_to_string hd) accu with
+      | Some def -> def.enum_base_type
+      | _ -> None
+      end
+    | T.T_with_action base _
+    | T.T_with_dep_action base _
+    | T.T_with_comment base _
+    | T.T_refine base _ ->
+      arg_type_of_typ_with_prog accu base
+    | _ -> None
+    end
 
 let produce_type_decl (out: string -> ML unit) (accu: prog) (a: I.type_decl) : ML prog =
   let binders = binders_of_params a.name.td_params in
   let name = ident_to_string a.name.td_name in
   if type_has_actions a.typ then failwith (Printf.sprintf "produce_type_decl: %s still has some actions" name);
   let _ = parse_typ a.typ name binders true out in
-  (name, List.map (fun (i, ty) -> match arg_type_of_typ ty with Some t -> t | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params) :: accu
+  (name, {
+    args = List.map (fun (i, ty) -> match arg_type_of_typ_with_prog accu ty with Some t -> t | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params;
+    enum_base_type = begin match a.enum_typ with
+    | Some ty -> arg_type_of_typ_with_prog accu ty
+    | _ -> None
+    end;
+  }) :: accu
 
 let produce_decl (out: string -> ML unit) (accu: prog) (a: I.decl) : ML prog =
   match a with
@@ -1047,7 +1311,25 @@ let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq i
 
 let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer -> false | _ -> true) l)
 
-let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (mk_want_another_witness: Seq.seq int -> list string -> Tot string) i : ML unit =
+let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
+  (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
+= if i >= Seq.length witness
+  then accu
+  else mk_choose_conj witness ("(and (= (choose "^string_of_int i^") "^string_of_int (Seq.index witness i)^") "^accu^")") (i + 1)
+
+let rec mk_arg_conj (accu: string) (i: nat) (l: list string) : Tot string (decreases l) =
+  match l with
+  | [] -> accu
+  | arg :: q ->
+    mk_arg_conj (Printf.sprintf "(and %s (= arg-%d %s))" accu i arg) (i + 1) q
+
+let mk_want_another_distinct_witness witness witness_args : Tot string =
+  Printf.sprintf
+"(assert (not %s))
+"
+  (mk_arg_conj (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
+
+let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i : ML unit =
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
@@ -1055,12 +1337,11 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
     let witness_args = read_witness_args z3 [] nargs in
     print_witness_and_call name l witness witness_args;
     print_test_case witness witness_args;
+    z3.to_z3 (mk_want_another_distinct_witness witness witness_args);
     if i <= 1
     then ()
-    else begin
-      z3.to_z3 (mk_want_another_witness witness witness_args);
-      want_witnesses print_test_case z3 name l nargs mk_want_another_witness (i - 1)
-    end
+    else
+      want_witnesses print_test_case z3 name l nargs (i - 1)
   end
   else begin
     FStar.IO.print_string
@@ -1077,12 +1358,6 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
       end;
     FStar.IO.print_newline ()
   end
-
-let witnesses_for (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) mk_get_first_witness mk_want_another_witness nbwitnesses =
-  z3.to_z3 "(push)\n";
-  z3.to_z3 mk_get_first_witness;
-  want_witnesses print_test_case z3 name l nargs mk_want_another_witness nbwitnesses;
-  z3.to_z3 "(pop)\n"
 
 let rec mk_call_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
   match l with
@@ -1109,33 +1384,126 @@ Printf.sprintf "
   (mk_assert_args "" 0 l)
   (mk_call_args name 0 l)
 
-let mk_get_first_positive_test_witness (name: string) (l: list arg_type) : string =
-  mk_get_witness name l ^ "
+noeq
+type branch_trace_node =
+| Node: value: nat -> children: list branch_trace_node -> branch_trace_node
+
+let assert_valid_state =
+  "(assert (or (= state-witness-input-size -1) (= state-witness-input-size 0)))\n"
+
+let rec enumerate_branch_traces'
+  (z3: Z3.z3)
+  (max_depth cur_depth: nat)
+  (branch_trace: string)
+: ML (list branch_trace_node)
+= if max_depth = cur_depth
+  then []
+  else begin
+    z3.to_z3 (Printf.sprintf "(assert (> (branch-index state-witness) %d))\n" cur_depth);
+    z3.to_z3 "(check-sat)\n";
+    let status = z3.from_z3 () in
+    if status = "sat"
+    then
+      let rec aux accu choice : ML (list branch_trace_node) =
+        let branch_trace' = branch_trace ^ " " ^ string_of_int choice in
+        FStar.IO.print_string (Printf.sprintf "Checking feasibility of branch trace: %s\n" branch_trace');
+        z3.to_z3 "(push)\n";
+        z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
+        z3.to_z3 "(check-sat)\n";
+        let status = z3.from_z3 () in
+        if status = "unsat"
+        then begin
+          FStar.IO.print_string "Branch condition is always false\n";
+          z3.to_z3 "(pop)\n";
+          aux accu (choice + 1)
+        end
+        else if status = "sat"
+        then begin
+          FStar.IO.print_string "Branch condition may hold. Checking validity for parser encoding\n";
+          z3.to_z3 "(push)\n";
+          z3.to_z3 assert_valid_state;
+          z3.to_z3 "(check-sat)\n";
+          let status = z3.from_z3 () in
+          z3.to_z3 "(pop)\n";
+          if status = "sat"
+          then begin
+            FStar.IO.print_string "Branch is valid\n";
+            let res = enumerate_branch_traces' z3 max_depth (cur_depth + 1) branch_trace' in
+            z3.to_z3 "(pop)\n";
+            aux (Node choice res :: accu) (choice + 1)
+          end
+          else begin
+            FStar.IO.print_string "Branch is invalid or Z3 gave up\n";
+            z3.to_z3 "(pop)\n";
+            List.Tot.rev accu
+          end
+        end
+        else begin
+          FStar.IO.print_string "Z3 gave up evaluating branch condition. Aborting\n";
+          z3.to_z3 "(pop)\n";
+          List.Tot.rev accu
+        end
+      in
+      aux [] 0
+    else begin
+      FStar.IO.print_string "Cannot take further branches under this case\n";
+      []
+    end
+  end
+
+let enumerate_branch_traces
+  (z3: Z3.z3)
+  (max_depth: nat)
+: ML (list branch_trace_node)
+= z3.to_z3 "(push)\n";
+  let res = enumerate_branch_traces' z3 max_depth 0 "" in
+  z3.to_z3 "(pop)\n";
+  res
+
+let rec want_witnesses_with_depth
+  (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
+  cur_depth (tree: list branch_trace_node) (branch_trace: string)
+: ML unit
+=
+  FStar.IO.print_string (Printf.sprintf "Checking witnesses for branch trace: %s\n" branch_trace);
+  want_witnesses print_test_case z3 name l nargs nbwitnesses;
+  z3.to_z3 (Printf.sprintf "(assert (> (branch-index state-witness) %d))\n" cur_depth);
+  let rec aux (tree: list branch_trace_node) : ML unit = match tree with
+  | [] -> ()
+  | Node choice tree' :: q ->
+    z3.to_z3 "(push)\n";
+    z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
+    want_witnesses_with_depth print_test_case z3 name l nargs nbwitnesses (cur_depth + 1) tree' (branch_trace ^ " " ^ string_of_int choice);
+    z3.to_z3 "(pop)\n";
+    aux q
+  in
+  aux tree
+
+let witnesses_for (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq int -> list string -> ML unit) & (unit -> ML string))) nbwitnesses max_depth =
+  z3.to_z3 "(push)\n";
+  z3.to_z3 (mk_get_witness name l);
+  let traces = enumerate_branch_traces z3 max_depth in
+  z3.to_z3 assert_valid_state;
+  List.iter
+    #((Seq.seq int -> list string -> ML unit) & (unit -> ML string))
+    (fun (ptc, f) ->
+      z3.to_z3 "(push)\n";
+      z3.to_z3 (f ());
+      want_witnesses_with_depth ptc z3 name l nargs nbwitnesses 0 traces "";
+      z3.to_z3 "(pop)\n"
+    )
+    print_test_case_mk_get_first_witness
+    ;
+  z3.to_z3 "(pop)\n"
+
+let mk_get_positive_test_witness (name: string) (l: list arg_type) : string =
+"
 (assert (= (input-size state-witness) 0)) ; validator shall consume all input
 "
 
-let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
-  (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
-= if i >= Seq.length witness
-  then accu
-  else mk_choose_conj witness ("(and (= (choose "^string_of_int i^") "^string_of_int (Seq.index witness i)^") "^accu^")") (i + 1)
-
-let rec mk_arg_conj (accu: string) (i: nat) (l: list string) : Tot string (decreases l) =
-  match l with
-  | [] -> accu
-  | arg :: q ->
-    mk_arg_conj (Printf.sprintf "(and %s (= arg-%d %s))" accu i arg) (i + 1) q
-
-let mk_want_another_distinct_witness witness witness_args : Tot string =
-  Printf.sprintf
-"(assert (not %s))
+let mk_get_negative_test_witness (name: string) (l: list arg_type) : string =
 "
-  (mk_arg_conj (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
-
-let mk_get_first_negative_test_witness (name: string) (l: list arg_type) : string =
-  mk_get_witness name l ^
-"
-(assert (< state-witness-input-size 0)) ; validator shall genuinely fail, we are not interested in positive cases followed by garbage
+(assert (= state-witness-input-size -1)) ; validator shall genuinely fail, we are not interested in positive cases followed by garbage
 "
 
 let test_error_handler = "
@@ -1159,11 +1527,11 @@ static void TestErrorHandler (
 }
 "
 
-let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (pos: bool) (neg: bool) : ML unit =
-  let args = List.assoc name1 prog in
-  if None? args
+let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
+  let def = List.assoc name1 prog in
+  if None? def
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
-  let args = Some?.v args in
+  let args = (Some?.v def).args in
   let modul, validator_name = module_and_validator_name name1 in
   let nargs = count_args args in with_option_out_file out_file (fun cout ->
   cout "#include <stdio.h>
@@ -1177,43 +1545,55 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
   int main(void) {
 ";
   let counter = alloc 0 in
-  if pos
-  then begin
-    FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c out_dir cout true validator_name args counter) z3 name1 args nargs (mk_get_first_positive_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
-  end;
-  if neg
-  then begin
-    FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-    witnesses_for (print_witness_as_c out_dir cout false validator_name args counter) z3 name1 args nargs (mk_get_first_negative_test_witness name1 args) mk_want_another_distinct_witness nbwitnesses
-  end;
+  let tasks =
+    begin
+      if pos
+      then [print_witness_as_c out_dir cout true validator_name args counter, (fun _ -> (
+        FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
+        mk_get_positive_test_witness name1 args
+      ))]
+      else []
+    end `List.Tot.append`
+    begin
+      if neg
+      then [print_witness_as_c out_dir cout false validator_name args counter, (fun _ -> (
+        FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
+        mk_get_negative_test_witness name1 args
+      ))]
+      else []
+    end
+  in
+  witnesses_for z3 name1 args nargs tasks nbwitnesses depth;
   cout "  return 0;
   }
 "
   )
 
-let mk_get_first_diff_test_witness (name1: string) (l: list arg_type) (name2: string) : string =
+let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) : string =
+  let call2 = mk_call_args name2 0 l in
   Printf.sprintf
 "
 %s
-(assert (not (= (input-size (%s initial-state)) 0))) ; test cases that do not consume everything are considered failing
+(define-fun negative-state-witness () State (%s (mk-state initial-input-size 0 -1))) ; branch trace is ignored for the second parser
+(assert (not (= (input-size negative-state-witness) 0))) ; test cases that do not consume everything are considered failing
+(assert (>= (input-size negative-state-witness) -1)) ; do not record tests that artificially fail due to SMT2 encoding
 "
-  (mk_get_first_positive_test_witness name1 l)
-  (mk_call_args name2 0 l)
+  (mk_get_positive_test_witness name1 l)
+  call2
 
-let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses =
+let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for (print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter) z3 name1 args nargs (mk_get_first_diff_test_witness name1 args name2) mk_want_another_distinct_witness nbwitnesses
+  witnesses_for z3 name1 args nargs ([print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 args name2)]) nbwitnesses depth
 
-let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses =
-  let args = List.assoc name1 prog in
-  if None? args
+let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses depth =
+  let def = List.assoc name1 prog in
+  if None? def
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
-  let args = Some?.v args in
-  let args2 = List.assoc name2 prog in
-  if None? args2
+  let args = (Some?.v def).args in
+  let def2 = List.assoc name2 prog in
+  if None? def2
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name2);
-  if args2 <> Some args
+  if def2 <> def
   then failwith (Printf.sprintf "do_diff_test: parsers %s and %s do not have the same arg types" name1 name2);
   let nargs = count_args args in
   let modul1, validator_name1 = module_and_validator_name name1 in
@@ -1233,8 +1613,8 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: 
   int main(void) {
 ";
   let counter = alloc 0 in
-  do_diff_test_for out_dir counter cout z3 prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses;
-  do_diff_test_for out_dir counter cout z3 prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses;
+  do_diff_test_for out_dir counter cout z3 prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
+  do_diff_test_for out_dir counter cout z3 prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
   cout "  return 0;
   }
 "
@@ -1261,7 +1641,7 @@ let test_exe_mk_arg
   }
 "
   | _ -> "
-unsigned long long "^arg_var^" = 0;
+void * "^arg_var^" = NULL;
 "
   end
   in
@@ -1291,7 +1671,7 @@ let test_checker_c
 
 int main(int argc, char** argv) {
   if (argc < "^nb_cmd_and_args_s^") {
-    printf(\"Wrong number of arguments, expected "^nb_args_s^", got %d\\n\", argc);
+    printf(\"Wrong number of arguments, expected "^nb_args_s^", got %d\\n\", argc - 1);
     return 3;
   }
   char * filename = argv[1];
@@ -1309,21 +1689,27 @@ int main(int argc, char** argv) {
   }
   off_t len = statbuf.st_size;
   if (len > 4294967295) {
+    close(testfile);
     printf(\"File is too large. EverParse/3D only supports data up to 4 GB\");
     return 3;
   }
-  void * vbuf =
-    mmap(NULL, len, PROT_READ, MAP_PRIVATE, testfile, 0);
-  if (vbuf == MAP_FAILED) {
-    close(testfile);
-    printf(\"Cannot read %ld bytes from %s\\n\", len, filename);
-    return 3;
-  }
-  uint8_t * buf = (uint8_t *) vbuf;
+  uint8_t dummy = 42;
+  uint8_t * buf = &dummy; // for zero-sized files (mmap does not support zero-sized mappings)
+  void * vbuf = NULL;
+  if (len > 0) {
+    vbuf = mmap(NULL, len, PROT_READ, MAP_PRIVATE, testfile, 0);
+    if (vbuf == MAP_FAILED) {
+      close(testfile);
+      printf(\"Cannot read %ld bytes from %s\\n\", len, filename);
+      return 3;
+    };
+    buf = (uint8_t *) vbuf;
+  };
   printf(\"Read %ld bytes from %s\\n\", len, filename);
   uint8_t context = 0;
   uint64_t result = "^validator_name^"("^call_args_lhs^"&context, &TestErrorHandler, buf, len, 0);
-  munmap(vbuf, len);
+  if (len > 0)
+    munmap(vbuf, len);
   close(testfile);
   if (EverParseIsError(result)) {
     printf(\"Witness from %s REJECTED because validator failed\\n\", filename);
@@ -1339,10 +1725,10 @@ int main(int argc, char** argv) {
 "
 
 let produce_test_checker_exe (out_file: string) (prog: prog) (name1: string) : ML unit =
-  let args = List.assoc name1 prog in
-  if None? args
+  let def = List.assoc name1 prog in
+  if None? def
   then failwith (Printf.sprintf "produce_test_checker_exe: parser %s not found" name1);
-  let args = Some?.v args in
+  let args = (Some?.v def).args in
   let modul, validator_name = module_and_validator_name name1 in
   with_out_file out_file (fun cout ->
     cout (test_checker_c modul validator_name args)
