@@ -17,10 +17,14 @@ typedef struct _U(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) 
   S(destT) *t probe (length = 9, destination = destS);
 } U;
 
+//Use multiple probe functions if you like
+extern probe ProbeAndCopyAlt
+
 //reuse copy buffer, sequentially
 entrypoint
 typedef struct _V(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
   UINT8 tag;
-  S(destT) *s probe (length = 9, destination = destS);
-  T *t probe (length = 8, destination = destT);
+  S(destT) *s probe ProbeAndCopy(length = 9, destination = destS);
+  T *t probe ProbeAndCopyAlt(length = 8, destination = destT);
+  T *t2 probe ProbeAndCopy(length = 8, destination = destT);
 } V;

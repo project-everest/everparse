@@ -331,6 +331,13 @@ let resolve_field_array_t (env:qenv) (farr:field_array_t) : ML field_array_t =
   | FieldString (Some e) -> FieldString (Some (resolve_expr env e))
   | FieldConsumeAll -> farr
 
+let resolve_probe_call env pc =
+  {
+    probe_fn = map_opt (resolve_ident env) pc.probe_fn;
+    probe_length = resolve_expr env pc.probe_length;
+    probe_dest = resolve_ident env pc.probe_dest;
+  }
+
 let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
   match ff.v with
   | AtomicField f -> let f, e = resolve_atomic_field env f in {ff with v = AtomicField f}, e
@@ -350,7 +357,8 @@ and resolve_atomic_field (env:qenv) (f:atomic_field) : ML (atomic_field & qenv) 
           field_array_opt = resolve_field_array_t env sf.field_array_opt;
           field_constraint = map_opt (resolve_expr env) sf.field_constraint;
           field_bitwidth = map_opt (resolve_field_bitwidth_t env) sf.field_bitwidth;
-          field_action = map_opt (fun (a, b) -> resolve_action env a, b) sf.field_action }
+          field_action = map_opt (fun (a, b) -> resolve_action env a, b) sf.field_action;
+          field_probe = map_opt (resolve_probe_call env) sf.field_probe }
     )
   in
   let env = push_name env f.v.field_ident.v.name in
