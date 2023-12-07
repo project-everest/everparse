@@ -55,7 +55,7 @@ let input_buffer_t = EverParse3d.InputStream.All.t
 let action
   p inv l on_success a
 =
-    (# [tcresolve ()] I.extra_t #input_buffer_t) ->
+    (# [EverParse3d.Util.solve_from_ctx ()] I.extra_t #input_buffer_t) ->
     ctxt: app_ctxt ->
     sl: input_buffer_t ->
     pos: LPE.pos_t ->
@@ -160,7 +160,7 @@ let error_handler =
 
 inline_for_extraction noextract
 let validate_with_action_t' (#k:LP.parser_kind) (#t:Type) (p:LP.parser k t) (inv:slice_inv) (l:eloc) (allow_reading:bool) =
-  (# [tcresolve ()] I.extra_t #input_buffer_t) ->
+  (# [EverParse3d.Util.solve_from_ctx ()] I.extra_t #input_buffer_t) ->
   (ctxt: app_ctxt) ->
   (error_handler_fn : error_handler) ->
   (sl: input_buffer_t) ->
@@ -216,7 +216,7 @@ let leaf_reader
   (p: parser k t)
 : Tot Type
 =
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _extra_t : I.extra_t #input_buffer_t ) ->
+  (# [EverParse3d.Util.solve_from_ctx ()] _extra_t : I.extra_t #input_buffer_t ) ->
   (sl: input_buffer_t) ->
   (pos: LPE.pos_t) ->
   Stack t
@@ -825,7 +825,7 @@ let validate_list_inv
 inline_for_extraction
 noextract
 let validate_list_body
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _extra_t : I.extra_t #input_buffer_t ) 
+  (# [EverParse3d.Util.solve_from_ctx ()] _extra_t : I.extra_t #input_buffer_t )
   (#k:LP.parser_kind)
   #t
   (#p:LP.parser k t)
@@ -860,7 +860,7 @@ let validate_list_body
 inline_for_extraction
 noextract
 let validate_list'
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _extra_t : I.extra_t #input_buffer_t ) 
+  (# [EverParse3d.Util.solve_from_ctx ()] _extra_t : I.extra_t #input_buffer_t )
   (#k:LP.parser_kind)
   #t
   (#p:LP.parser k t)
@@ -1505,7 +1505,7 @@ let validate_list_up_to_inv
 
 inline_for_extraction
 let validate_list_up_to_body
-  (# [FStar.Tactics.Typeclasses.tcresolve ()] _extra_t : I.extra_t #input_buffer_t ) 
+  (# [EverParse3d.Util.solve_from_ctx ()] _extra_t : I.extra_t #input_buffer_t )
   (#k: parser_kind true WeakKindStrongPrefix)
   (#t: eqtype)
   (#p: parser k t)
