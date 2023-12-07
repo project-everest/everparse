@@ -102,6 +102,7 @@ let has_external_api_fsti
   (modul: string)
 : Tot bool
 =
+  Deps.has_extern_probe g modul ||
   Deps.has_out_exprs g modul ||
   Deps.has_extern_types g modul ||
   Deps.has_extern_functions g modul
