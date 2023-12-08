@@ -118,7 +118,7 @@ let parse_check_and_desugar (pa: opt_prune_actions) (en:env) (mname:string) (fn:
   
 let translate_module (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
   : ML (list Target.decl &
-        option (list InterpreterTarget.decl) &
+        list InterpreterTarget.decl &
         StaticAssertions.static_asserts &
         env) =
 
@@ -132,25 +132,13 @@ let translate_module (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
         TranslateForInterpreter.translate_decls en.binding_env en.typesizes_env env decls
       in
       let tds = InterpreterTarget.translate_decls env' decls in
-      decls, Some tds, (env, env')
+      decls, tds, (env, env')
   in
   let en = { en with translate_env = tenv } in
   t_decls,
   i_decls,
   static_asserts,
   en
-
-let has_output_types (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Output_type? d) t_decls
-
-let has_out_exprs (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Output_type_expr? d) t_decls
-
-let has_extern_types (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Extern_type? d) t_decls
-
-let has_extern_functions (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Extern_fn? d) t_decls
 
 let emit_fstar_code_for_interpreter (en:env)
                                     (modul:string)
@@ -164,7 +152,7 @@ let emit_fstar_code_for_interpreter (en:env)
         InterpreterTarget.print_decls en modul itds
     in
 
-    let has_external_types = has_output_types tds || has_extern_types tds in
+    let has_external_types = T.has_output_types tds || T.has_extern_types tds in
 
     if has_external_types
     then begin
@@ -175,10 +163,7 @@ let emit_fstar_code_for_interpreter (en:env)
       FStar.IO.close_write_file external_types_fsti_file
     end;
 
-    let has_external_api =
-      has_out_exprs tds ||
-      has_extern_types tds || // FIXME: I added this to fix discrepancy with GenMakefile, does this make sense?
-      has_extern_functions tds in
+    let has_external_api = T.has_external_api tds in
 
     if has_external_api
     then begin
@@ -263,11 +248,10 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
     FStar.IO.close_write_file h_file
   end;
 
-  let has_output_types = has_output_types t_decls in
-  let has_out_exprs = has_out_exprs t_decls in
-  let has_extern_types = has_extern_types t_decls in
-  let has_extern_fns = has_extern_functions t_decls in
-
+  let has_output_types = T.has_output_types t_decls in
+  let has_out_exprs = T.has_output_type_exprs t_decls in
+  let has_extern_types = T.has_extern_types t_decls in
+  
   (*
    * If there are output types in the module
    *   and emit_output_types_defs flag is set,
@@ -366,19 +350,14 @@ let process_file_gen
                  (emit_fstar:bool)
                  (emit_output_types_defs:bool)
                  (all_modules:list string)
-  : ML (env & option (list InterpreterTarget.decl)) =
+  : ML (env & list InterpreterTarget.decl) =
   
-  let t_decls, interpreter_decls_opt, static_asserts, en =
+  let t_decls, interpreter_decls, static_asserts, en =
       translate_module pa en modul fn
   in
   if emit_fstar 
   then (
-    (
-      match interpreter_decls_opt with
-      | None -> failwith "Impossible: interpreter mode expects interperter target decls"
-      | Some tds ->
-        emit_fstar_code_for_interpreter en modul t_decls tds all_modules
-    );
+    emit_fstar_code_for_interpreter en modul t_decls interpreter_decls all_modules;
     emit_entrypoint produce_ep_error en modul t_decls static_asserts emit_output_types_defs
   )
   else IO.print_string (Printf.sprintf "Not emitting F* code for %s\n" fn);
@@ -390,7 +369,7 @@ let process_file_gen
     binding_env = Binding.finish_module en.binding_env modul;
     translate_env = 
       en.translate_env;
-  }, interpreter_decls_opt
+  }, interpreter_decls
 
 let process_file
                  (en:env)
@@ -462,11 +441,8 @@ let process_file_for_z3
                  (all_modules:list string)
   : ML (env & Z3TestGen.prog) =
   let (en, accu) = en_accu in
-  let (en, interpreter_decls_opt) = process_file_gen (Some Target.ProduceEverParseError) (Some PruneActions) en fn modul emit_fstar emit_output_types_defs all_modules in
-  let accu = match interpreter_decls_opt with
-  | None -> failwith "process_file_for_z3: no interpreter decls left"
-  | Some i -> Z3TestGen.produce_decls out accu i
-  in
+  let (en, interpreter_decls) = process_file_gen (Some Target.ProduceEverParseError) (Some PruneActions) en fn modul emit_fstar emit_output_types_defs all_modules in
+  let accu = Z3TestGen.produce_decls out accu interpreter_decls in
   (en, accu)
 
 let process_files_for_z3

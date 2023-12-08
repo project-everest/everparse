@@ -909,6 +909,7 @@ let rec type_has_actions = function
   | I.T_refine_with_action _ _ _ _
   | I.T_dep_pair_with_refinement_and_action _ _ _ _ _
   | I.T_with_action _ _ _
+  | I.T_probe_then_validate _ _ _ _ _
     -> true
   | I.T_false _
   | I.T_denoted _ _
@@ -1038,6 +1039,7 @@ let produce_not_type_decl (a: I.not_type_decl) (out: string -> ML unit) : ML uni
   | T.Output_type_expr _ _
   | T.Extern_type _
   | T.Extern_fn _ _ _
+  | T.Extern_probe _
   -> ()
 
 type prog_def = {

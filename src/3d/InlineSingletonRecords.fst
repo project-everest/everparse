@@ -41,7 +41,11 @@ let simplify_atomic_field (env:env) (f:atomic_field)
   = let field = f.v in
     let field = 
       match field.field_type.v with
-      | Pointer _ -> failwith "Impossible: field types cannot be pointers"
+      | Pointer _ -> (
+        if Some? field.field_probe
+        then field
+        else failwith "Impossible: field types cannot be pointers"
+      ) 
       | Type_app hd _ args ->
         begin
         match H.try_find env hd.v with
@@ -168,7 +172,8 @@ let simplify_decl (env:env) (d:decl) : ML decl =
           field_array_opt = FieldScalar;
           field_constraint = Some constraint;
           field_bitwidth = None;
-          field_action = None }
+          field_action = None;
+          field_probe = None }
     in
     let af = with_dummy_range field in
     Options.debug_print_string 
@@ -202,7 +207,8 @@ let simplify_decl (env:env) (d:decl) : ML decl =
 
   | OutputType _
   | ExternType _
-  | ExternFn _ _ _ -> d
+  | ExternFn _ _ _
+  | ExternProbe _ -> d
 
 let simplify_prog (p:list decl) =
   let env = H.create 10 in

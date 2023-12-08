@@ -1,0 +1,20 @@
+typedef struct _secondary(UINT64 bound) {
+  UINT16 x { x >= bound };
+  UINT16 y { y >= x };
+} secondary;
+
+extern probe ProbeInPlace
+
+entrypoint
+typedef struct _primaryInPlace(EVERPARSE_COPY_BUFFER_T dest) {
+  UINT64 bound;
+  secondary(bound) *payload probe ProbeInPlace (length = 4, destination = dest);
+} primaryInPlace;
+
+extern probe ProbeAndCopy
+
+entrypoint
+typedef struct _primaryAndCopy(EVERPARSE_COPY_BUFFER_T dest) {
+  UINT64 bound;
+  secondary(bound) *payload probe ProbeAndCopy (length = 4, destination = dest);
+} primaryAndCopy;

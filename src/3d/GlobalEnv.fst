@@ -76,5 +76,23 @@ type global_env = {
   ge_out_t: H.t ident' decl;  //a table for output types declarations
   ge_extern_t: H.t ident' decl;  //a table for extern type declarations
   ge_extern_fn: H.t ident' decl;  //a table for extern function declarations
+  ge_probe_fn: H.t ident' decl;  //a table for probe function declarations
   ge_cfg: option (Config.config & string)
 }
+
+let default_probe_fn (g:global_env)
+  : ML (option ident)
+  = if H.length g.ge_probe_fn <> 1
+    then None 
+    else (
+      match H.fold (fun k v _ -> Some v) g.ge_probe_fn (None #decl) with
+      | Some {d_decl={v=ExternProbe id}} -> Some id
+      | _ -> None
+    )
+
+let resolve_probe_fn (g:global_env) (id:ident)
+  : ML (option ident)
+  = match H.try_find g.ge_probe_fn id.v with
+    | Some {d_decl={v=ExternProbe id}} -> Some id
+    | _ -> None
+    

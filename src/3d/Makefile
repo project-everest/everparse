@@ -39,7 +39,7 @@ Version.fst:
 	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh
 
 .depend: $(wildcard *.fst *.fsti) Version.fst
-	$(FSTAR) --odir ocaml/generated --dep full $(ROOT) --extract '* -Prims -FStar' > .depend
+	$(FSTAR) --odir ocaml/generated --dep full $(ROOT) --extract '* -Prims -FStar' --output_deps_to .depend
 
 include .depend
 

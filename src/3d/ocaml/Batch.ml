@@ -352,7 +352,7 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
   let krml_args =
     "-tmpdir" :: out_dir ::
       "-skip-compilation" ::
-        "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.InputStream.\\*" ::
+        "-static-header" :: "LowParse.Low.Base,EverParse3d.Prelude.StaticHeader,EverParse3d.ErrorCode,EverParse3d.CopyBuffer,EverParse3d.InputStream.\\*" ::
           "-no-prefix" :: "LowParse.Slice" ::
             "-no-prefix" :: "LowParse.Low.BoundedInt" ::
                 "-library" :: everparse_only_bundle ::
@@ -397,7 +397,7 @@ let call_krml files_and_modules_cleanup out_dir krml_args =
   (* append the everparse and krmllib bundles to the list of arguments *)
   let krml_args = krml_args @ [
         "-bundle" ;
-        Printf.sprintf "%s,%s[rename=Lib,rename-prefix]" fstar_krmllib_bundle everparse_only_bundle;
+        Printf.sprintf "%s[rename=Lib,rename-prefix]" fstar_krmllib_bundle;
         "-bundle" ;
         Printf.sprintf "%s[rename=EverParse,rename-prefix]" everparse_only_bundle;
   ]
