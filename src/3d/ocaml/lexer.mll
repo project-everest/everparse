@@ -64,7 +64,8 @@ let () =
   H.add keywords "export" EXPORT;
   H.add keywords "output" OUTPUT;
   H.add keywords "union" UNION;
-  H.add keywords "extern" EXTERN
+  H.add keywords "extern" EXTERN;
+  H.add keywords "probe" PROBE
 
 let unsigned_int_of_string s = int_of_string (String.sub s 0 (String.length s - 2))
 
@@ -147,6 +148,7 @@ rule token =
   | "[:byte-size-single-element-array"        { locate lexbuf LBRACK_SINGLE_ELEMENT_BYTESIZE }
   | "[:zeroterm"     { locate lexbuf LBRACK_STRING }
   | "[:zeroterm-byte-size-at-most"     { locate lexbuf LBRACK_STRING_AT_MOST }
+  | "[:consume-all"  { locate lexbuf LBRACK_CONSUME_ALL }
   | "["                          { locate lexbuf LBRACK (* intended for use with UINT8 arrays only, interpreted as [:byte-size] *)}
   | "]"                          { locate lexbuf RBRACK }
   | "[="           { deprecation_warning lexbuf "[:byte-size-single-element-array";

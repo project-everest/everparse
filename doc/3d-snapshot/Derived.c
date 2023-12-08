@@ -45,11 +45,11 @@ DerivedValidateTriple(
   }
   /* Validating field third */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - positionAfterpair);
+  BOOLEAN hasBytes = 4ULL <= (InputLength - positionAfterpair);
   uint64_t positionAfterTriple0;
   if (hasBytes)
   {
-    positionAfterTriple0 = positionAfterpair + (uint64_t)4U;
+    positionAfterTriple0 = positionAfterpair + 4ULL;
   }
   else
   {

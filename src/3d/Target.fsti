@@ -61,6 +61,8 @@ type expr' =
 
 and expr = expr' & A.range
 
+let subst = list (A.ident' & expr)
+val subst_expr (s:subst) (e:expr) : expr
 let mk_expr (e:expr') = e, A.dummy_range
 
 type lam a = (option A.ident) & a
@@ -98,6 +100,7 @@ type typ =
   | T_with_action: typ -> action -> typ
   | T_with_dep_action: typ -> a:lam action -> typ
   | T_with_comment: typ -> A.comments -> typ
+  | T_with_probe: typ -> probe_fn:A.ident -> len:expr -> dest:A.ident -> typ
 
 (* An index is an F* type or an expression
    -- we reuse Ast expressions for this
@@ -107,6 +110,13 @@ and index = either typ expr
 let field_typ = typ
 
 type param = A.ident & typ
+
+let mk_subst (l:list param) (args:list expr) : ML (option subst) =
+  if List.Tot.length l <> List.Tot.length args
+  then None
+  else (
+    Some (List.map2 #param (fun (i, t) e -> i.v, e) l args)
+  )
 
 noeq
 type struct_field = {
@@ -179,7 +189,8 @@ type parser' =
   | Parse_impos     : parser'
   | Parse_with_comment: p:parser -> c:A.comments -> parser'
   | Parse_string    : p:parser -> zero:expr -> parser'
-
+  | Parse_with_probe : p:parser -> probe:A.ident -> len:expr -> dest:A.ident -> parser'
+  
 and parser = {
   p_kind:parser_kind;
   p_typ:typ;
@@ -196,150 +207,6 @@ type reader =
   | Read_filter : r:reader -> f:lam expr -> reader
   | Read_app : hd:A.ident -> args:list index -> reader
 
-noeq
-type validator' =
-  | Validate_return:
-    validator'
-
-  | Validate_app:
-    hd:A.ident ->
-    args:list index ->
-    validator'
-
-  | Validate_nlist:
-    n:expr ->
-    v:validator ->
-    validator'
-
-  | Validate_nlist_constant_size_without_actions:
-    n:expr ->
-    v:validator ->
-    validator'
-
-  | Validate_t_at_most:
-    n:expr ->
-    v:validator ->
-    validator'
-
-  | Validate_t_exact:
-    n:expr ->
-    v:validator ->
-    validator'
-
-  | Validate_pair:
-    n1:A.ident ->
-    v1:validator ->
-    v2:validator ->
-    validator'
-
-  | Validate_dep_pair:
-    n1:A.ident ->
-    v:validator ->
-    r:reader ->
-    k:lam validator ->
-    validator'
-
-  | Validate_dep_pair_with_refinement:
-    p1_is_constant_size_without_actions:bool ->
-    n1:A.ident ->
-    dfst:validator ->
-    r:reader ->
-    refinement:lam expr ->
-    dsnd:lam validator ->
-    validator'
-
-  | Validate_dep_pair_with_action:
-    dfst:validator ->
-    r:reader ->
-    a:lam action ->
-    dsnd:lam validator ->
-    validator'
-
-  | Validate_dep_pair_with_refinement_and_action:
-    p1_is_constant_size_without_actions:bool ->
-    n1:A.ident ->
-    dfst:validator ->
-    r:reader ->
-    refinement:lam expr ->
-    a:lam action ->
-    dsnd:lam validator ->
-    validator'
-
-  | Validate_map:
-    p:validator ->
-    f:lam expr ->
-    validator'
-
-  | Validate_refinement:
-    n:A.ident ->
-    v:validator ->
-    r:reader ->
-    f:lam expr ->
-    validator'
-
-  | Validate_refinement_with_action:
-    n:A.ident ->
-    v:validator ->
-    r:reader ->
-    f:lam expr ->
-    a:lam action ->
-    validator'
-
-  | Validate_with_dep_action:
-    name:A.ident ->
-    v:validator ->
-    r:reader ->
-    a:lam action ->
-    validator'
-
-  | Validate_with_action:
-    name:A.ident ->
-    v:validator ->
-    a:action ->
-    validator'
-
-  | Validate_weaken_left:
-    v:validator ->
-    k:parser_kind ->
-    validator'
-
-  | Validate_weaken_right:
-    v:validator ->
-    k:parser_kind ->
-    validator'
-
-  | Validate_if_else:
-    e:expr ->
-    validator ->
-    validator ->
-    validator'
-
-  | Validate_impos:
-    validator'
-
-  | Validate_with_error_handler:
-    typename:A.ident ->
-    fieldname:string ->
-    v:validator ->
-    validator'
-
-  | Validate_with_comment:
-    v:validator ->
-    c:A.comments ->
-    validator'
-
-  | Validate_string:
-    v:validator ->
-    r:reader ->
-    zero:expr ->
-    validator'
-
-and validator = {
-  v_allow_reading: bool;
-  v_parser:parser;
-  v_validator:validator'
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 
 noeq
@@ -347,8 +214,6 @@ type type_decl = {
   decl_name: typedef_name;
   decl_typ: typedef_body;
   decl_parser: parser;
-  decl_validator: validator;
-  decl_reader: option reader;
   decl_is_enum : bool
 }
 
@@ -401,26 +266,32 @@ type decl' =
 
   | Extern_type : A.ident -> decl'
   | Extern_fn : A.ident -> typ -> list param -> decl'
+  | Extern_probe : A.ident -> decl'
 
 type decl = decl' * decl_attributes
 
 type decls = list decl
-
+val has_output_types (ds:list decl) : bool
+val has_output_type_exprs (ds:list decl) : bool
+val has_extern_types (ds:list decl) : bool
+val has_extern_functions (ds:list decl) : bool
+val has_extern_probes (ds:list decl) : bool
+val has_external_api (ds:list decl) : bool
 val error_handler_decl : decl
 val maybe_mname_prefix (mname:string) (i:A.ident) : string
 val print_ident (i:A.ident) : string
 val print_maybe_qualified_ident (mname:string) (i:A.ident) : ML string
 val print_expr (mname:string) (e:expr) : ML string
-val print_typ (mname:string) (t:typ) : ML string //(decreases t)
+val print_typ (mname:string) (t:typ) : ML string
 val print_kind (mname:string) (k:parser_kind) : Tot string
-val print_parser (mname:string) (p:parser) : ML string
 val print_action (mname:string) (a:action) : ML string
 val print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
 val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string
-val print_decls (modul: string) (ds:list decl) : ML string
-val print_types_decls (modul: string) (ds:list decl) : ML string
-val print_decls_signature (modul: string) (ds:list decl) : ML string
-val print_c_entry (modul: string) (env: global_env) (ds:list decl)
+val wrapper_name (modul: string) (fn: string) : ML string
+val validator_name (modul: string) (fn: string) : ML string
+type produce_everparse_error = | ProduceEverParseError
+type opt_produce_everparse_error = option produce_everparse_error
+val print_c_entry (_: opt_produce_everparse_error) (modul: string) (env: global_env) (ds:list decl)
   : ML (string & string)
 
 (*
@@ -437,7 +308,6 @@ val output_base_var (lhs:output_expr) : ML A.ident
  * Used by Main
  *)
  
-val print_external_api_fstar (modul:string) (ds:decls) : ML string
 val print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
 val print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string
 val print_out_exprs_c (modul:string) (ds:decls) : ML string

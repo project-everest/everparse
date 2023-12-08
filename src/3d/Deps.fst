@@ -17,7 +17,8 @@ type dep_graph = {
   modules_with_output_types: list string;
   modules_with_out_exprs: list string;
   modules_with_extern_types: list string;
-  modules_with_extern_functions: list string
+  modules_with_extern_functions: list string;
+  modules_with_extern_probe: list string;
 }
 
 let all_edges_from (g:dep_graph') (node:string) : Tot (list edge) =
@@ -63,7 +64,8 @@ type scan_deps_t = {
   sd_has_output_types: bool;
   sd_has_out_exprs: bool;
   sd_has_extern_types: bool;
-  sd_has_extern_functions: bool
+  sd_has_extern_functions: bool;
+  sd_has_extern_probe: bool;
 }
 
 let scan_deps (fn:string) : ML scan_deps_t =
@@ -147,7 +149,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
     match fa with
     | FieldScalar -> []
     | FieldArrayQualified (e, _) -> deps_of_expr e
-    | FieldString eopt -> deps_of_opt deps_of_expr eopt in
+    | FieldString eopt -> deps_of_opt deps_of_expr eopt
+    | FieldConsumeAll -> []
+  in
 
   let deps_of_atomic_field (af:atomic_field) : ML (list string) =
       let af = af.v in
@@ -194,7 +198,8 @@ let scan_deps (fn:string) : ML scan_deps_t =
       (deps_of_switch_case sc)
     | OutputType _
     | ExternType _
-    | ExternFn _ _ _ -> []  //AR: no dependencies from the output/extern types yet
+    | ExternFn _ _ _
+    | ExternProbe _ -> []  //AR: no dependencies from the output/extern types yet
   in
 
   let has_output_types (ds:list decl) : bool =
@@ -209,6 +214,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
   let has_extern_functions (ds:list decl) : bool =
     List.Tot.existsb (fun d -> ExternFn? d.d_decl.v) ds in
 
+  let has_extern_probe (ds: list decl) : bool =
+    List.Tot.existsb (fun d -> ExternProbe? d.d_decl.v) ds in
+
   {
     sd_deps = List.collect deps_of_decl decls;
     sd_has_entrypoint = has_entrypoint;
@@ -217,6 +225,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     sd_has_out_exprs = has_out_exprs decls;
     sd_has_extern_types = has_extern_types decls;
     sd_has_extern_functions = has_extern_functions decls;
+    sd_has_extern_probe = has_extern_probe decls;
   }
 
 let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & list string)
@@ -231,7 +240,9 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
          sd_has_output_types = has_output_types;
          sd_has_out_exprs = has_out_exprs;
          sd_has_extern_types = has_extern_types;
-         sd_has_extern_functions = has_extern_functions} =
+         sd_has_extern_functions = has_extern_functions;
+         sd_has_extern_probe = has_extern_probe;
+        } =
       scan_deps (Options.get_file_name (OS.concat dirname mname))
     in
     let edges = List.fold_left (fun edges dep ->
@@ -246,6 +257,7 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
       modules_with_out_exprs = (if has_out_exprs then mname::g.modules_with_out_exprs else g.modules_with_out_exprs);
       modules_with_extern_types = (if has_extern_types then mname::g.modules_with_extern_types else g.modules_with_extern_types);
       modules_with_extern_functions = (if has_extern_functions then mname::g.modules_with_extern_functions else g.modules_with_extern_functions);
+      modules_with_extern_probe = (if has_extern_probe then mname::g.modules_with_extern_probe else g.modules_with_extern_probe);
     }
     in
     List.fold_left (fun acc dep -> build_dep_graph_aux dirname dep acc)
@@ -259,7 +271,8 @@ let build_dep_graph_from_list files =
     modules_with_output_types = [];
     modules_with_out_exprs = [];
     modules_with_extern_types = [];
-    modules_with_extern_functions = []
+    modules_with_extern_functions = [];
+    modules_with_extern_probe = [];
   }
   in
   let g1 = List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) acc) (g0, []) files
@@ -300,6 +313,8 @@ let has_out_exprs g m = List.Tot.mem m g.modules_with_out_exprs
 let has_extern_types g m = List.Tot.mem m g.modules_with_extern_types
 
 let has_extern_functions g m = List.Tot.mem m g.modules_with_extern_functions
+
+let has_extern_probe g m = List.Tot.mem m g.modules_with_extern_probe
 
 
 #push-options "--warn_error -272"

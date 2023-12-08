@@ -466,6 +466,15 @@ type field_array_t =
   | FieldScalar
   | FieldArrayQualified of (expr & array_qualifier) //array size in bytes, the qualifier indicates whether this is a variable-length suffix or not
   | FieldString of (option expr)
+  | FieldConsumeAll // [:consume-all]
+
+[@@ PpxDerivingYoJson ]
+noeq
+type probe_call = {
+  probe_fn:option ident;
+  probe_length:expr;
+  probe_dest:ident
+}
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -476,7 +485,8 @@ type atomic_field' = {
   field_array_opt: field_array_t;
   field_constraint:option expr; //refinement constraint
   field_bitwidth:option field_bitwidth_t;  //bits used for the field; elaborate from Inl to Inr
-  field_action:option (action & bool); //boo indicates if the action depends on the field value
+  field_action:option (action & bool); //bool indicates if the action depends on the field value
+  field_probe:option probe_call; //set in case this field has to be probed then validated
 }
 
 and atomic_field = with_meta_t atomic_field'
@@ -564,6 +574,7 @@ type decl' =
   | OutputType : out_typ -> decl'
   | ExternType : typedef_names -> decl'
   | ExternFn   : ident -> typ -> list param -> decl'
+  | ExternProbe : ident -> decl'
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -774,10 +785,12 @@ let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) Ki
 let tbool = mk_prim_t "Bool"
 let tunit = mk_prim_t "unit"
 let tuint8 = mk_prim_t "UINT8"
+let tuint8be = mk_prim_t "UINT8BE"
 let puint8 = mk_prim_t "PUINT8"
 let tuint16 = mk_prim_t "UINT16"
 let tuint32 = mk_prim_t "UINT32"
 let tuint64 = mk_prim_t "UINT64"
+let tcopybuffer = mk_prim_t "EVERPARSE_COPY_BUFFER_T"
 let tunknown = mk_prim_t "?"
 let unit_atomic_field rng = 
     let dummy_identifier = with_range (to_ident' "_empty_") rng in
@@ -788,7 +801,8 @@ let unit_atomic_field rng =
          field_array_opt=FieldScalar;
          field_constraint=None;
          field_bitwidth=None;
-         field_action=None
+         field_action=None;
+         field_probe=None
         } in
     with_range f rng
 
@@ -850,6 +864,7 @@ let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   | FieldScalar -> f
   | FieldArrayQualified (e, q) -> FieldArrayQualified (subst_expr s e, q)
   | FieldString sz -> FieldString (map_opt (subst_expr s) sz)
+  | FieldConsumeAll -> f
 let rec subst_field (s:subst) (ff:field) : ML field =
   match ff.v with
   | AtomicField f -> {ff with v = AtomicField (subst_atomic_field s f)}
@@ -893,11 +908,13 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
     CaseType names (subst_params s params) (subst_switch_case s cases)
   | OutputType _
   | ExternType _
-  | ExternFn _ _ _ -> d
+  | ExternFn _ _ _ 
+  | ExternProbe _ -> d
 let subst_decl (s:subst) (d:decl) : ML decl = decl_with_v d (subst_decl' s d.d_decl.v)
 
 (*** Printing the source AST; for debugging only **)
-let print_constant (c:constant) =
+let print_constant (c:constant) =
+
   let print_tag = function
     | UInt8 -> "uy"
     | UInt16 -> "us"
@@ -1102,15 +1119,21 @@ and print_atomic_field (f:atomic_field) : ML string =
       end
     | FieldString None -> Printf.sprintf "[::zeroterm]"
     | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-b-te-size-at-most %s]" (print_expr sz)
+    | FieldConsumeAll -> Printf.sprintf "[:consume-all]"
   in
   let sf = f.v in
-    Printf.sprintf "%s%s %s%s%s%s;"
+    Printf.sprintf "%s%s %s%s%s%s%s;"
       (if sf.field_dependence then "dependent " else "")
       (print_typ sf.field_type)
       (print_ident sf.field_ident)
       (print_bitfield sf.field_bitwidth)
       (print_array sf.field_array_opt)
       (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
+      (print_opt sf.field_probe
+        (fun p -> Printf.sprintf "probe %s (length=%s, destination=%s)"
+          (print_opt p.probe_fn print_ident)
+          (print_expr p.probe_length)
+          (print_ident p.probe_dest)))
 
 and print_switch_case (s:switch_case) : ML string =
   let head, cases = s in
@@ -1173,7 +1196,8 @@ let print_decl' (d:decl') : ML string =
                     (ident_to_string td.typedef_ptr_abbrev)
   | OutputType out_t -> "Printing for output types is TBD"
   | ExternType _ -> "Printing for extern types is TBD"
-  | ExternFn _ _ _ -> "Printing for extern functions is TBD"
+  | ExternFn _ _ _
+  | ExternProbe _ -> "Printing for extern functions is TBD"
 
 let print_decl (d:decl) : ML string =
   match d.d_decl.comments with
@@ -1209,3 +1233,75 @@ let field_tag_equal (f0 f1:field) =
   | RecordField _ _, RecordField _ _
   | SwitchCaseField _ _, SwitchCaseField _ _ -> true
   | _ -> false
+
+(* Pruning actions out of the surface ast (to generate validators checking Z3 test cases) *)
+
+let atomic_field'_prune_actions
+  (a: atomic_field')
+: Tot atomic_field'
+= { a with field_action = None }
+
+let atomic_field_prune_actions
+  (a: atomic_field)
+: Tot atomic_field
+= { a with v = atomic_field'_prune_actions a.v }
+
+let rec field'_prune_actions
+  (f: field')
+: Tot field'
+= match f with
+  | AtomicField a -> AtomicField (atomic_field_prune_actions a)
+  | RecordField r i -> RecordField (record_prune_actions r) i
+  | SwitchCaseField s i -> SwitchCaseField (switch_case_prune_actions s) i
+
+and field_prune_actions
+  (f: field)
+: Tot field
+= { f with v = field'_prune_actions f.v }
+
+and record_prune_actions (r: record) : Tot record =
+  match r with
+  | [] -> []
+  | f :: r' -> field_prune_actions f :: record_prune_actions r'
+
+and case_prune_actions (c: case) : Tot case =
+  match c with
+  | Case e f -> Case e (field_prune_actions f)
+  | DefaultCase f -> DefaultCase (field_prune_actions f)
+
+and cases_prune_actions (l: list case) : Tot (list case) =
+  match l with
+  | [] -> []
+  | c :: l' -> case_prune_actions c :: cases_prune_actions l'
+
+and switch_case_prune_actions (s: switch_case) : Tot switch_case =
+  let (e, l) = s in
+  (e, cases_prune_actions l)
+
+let decl'_prune_actions
+  (d: decl')
+: Tot decl'
+= match d with
+  | ModuleAbbrev _ _
+  | Define _ _ _
+  | TypeAbbrev _ _
+  | Enum _ _ _
+  | OutputType _
+  | ExternType _
+  | ExternFn _ _ _
+  | ExternProbe _ -> d
+  | Record names params where fields ->
+    Record names params where (record_prune_actions fields)
+  | CaseType names params cases ->
+    CaseType names params (switch_case_prune_actions cases)
+
+let decl_prune_actions
+  (d: decl)
+: Tot decl
+= { d with d_decl = { d.d_decl with v = decl'_prune_actions d.d_decl.v } }
+
+let prog_prune_actions
+  (p: prog)
+: Tot prog
+= let (decls, refines) = p in
+  (List.Tot.map decl_prune_actions decls, refines)

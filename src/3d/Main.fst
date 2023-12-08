@@ -45,13 +45,20 @@ let right (x:either 'a 'b)
     | Inr x -> x
     | _ -> failwith "Expected right"
 
-let parse_check_and_desugar (en:env) (mname:string) (fn:string)
+type prune_actions = | PruneActions
+type opt_prune_actions = option prune_actions
+
+let parse_check_and_desugar (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
   : ML (list Ast.decl &
         StaticAssertions.static_asserts &
         env) =
   Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn mname);
-  let decls, refinement = parse_prog fn in
-
+  let decls, refinement =
+    let p = parse_prog fn in
+    if pa = Some PruneActions
+    then prog_prune_actions p
+    else p
+  in
 
   Options.debug_print_string "=============After parsing=============\n";
   Options.debug_print_string (print_decls decls);
@@ -109,14 +116,14 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   static_asserts,
   en
   
-let translate_module (en:env) (mname:string) (fn:string)
+let translate_module (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
   : ML (list Target.decl &
-        option (list InterpreterTarget.decl) &
+        list InterpreterTarget.decl &
         StaticAssertions.static_asserts &
         env) =
 
   let decls, static_asserts, en = 
-      parse_check_and_desugar en mname fn
+      parse_check_and_desugar pa en mname fn
   in      
       
   let t_decls, i_decls, tenv = 
@@ -125,25 +132,13 @@ let translate_module (en:env) (mname:string) (fn:string)
         TranslateForInterpreter.translate_decls en.binding_env en.typesizes_env env decls
       in
       let tds = InterpreterTarget.translate_decls env' decls in
-      decls, Some tds, (env, env')
+      decls, tds, (env, env')
   in
   let en = { en with translate_env = tenv } in
   t_decls,
   i_decls,
   static_asserts,
   en
-
-let has_output_types (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Output_type? d) t_decls
-
-let has_out_exprs (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Output_type_expr? d) t_decls
-
-let has_extern_types (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Extern_type? d) t_decls
-
-let has_extern_functions (t_decls:list Target.decl) : bool =
-  List.Tot.existsb (fun (d, _) -> Target.Extern_fn? d) t_decls
 
 let emit_fstar_code_for_interpreter (en:env)
                                     (modul:string)
@@ -157,7 +152,7 @@ let emit_fstar_code_for_interpreter (en:env)
         InterpreterTarget.print_decls en modul itds
     in
 
-    let has_external_types = has_output_types tds || has_extern_types tds in
+    let has_external_types = T.has_output_types tds || T.has_extern_types tds in
 
     if has_external_types
     then begin
@@ -168,10 +163,7 @@ let emit_fstar_code_for_interpreter (en:env)
       FStar.IO.close_write_file external_types_fsti_file
     end;
 
-    let has_external_api =
-      has_out_exprs tds ||
-      has_extern_types tds || // FIXME: I added this to fix discrepancy with GenMakefile, does this make sense?
-      has_extern_functions tds in
+    let has_external_api = T.has_external_api tds in
 
     if has_external_api
     then begin
@@ -224,7 +216,8 @@ let emit_fstar_code_for_interpreter (en:env)
 
     ()
    
-let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
+let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
+                    (en:env) (modul:string) (t_decls:list Target.decl)
                     (static_asserts:StaticAssertions.static_asserts)
                     (emit_output_types_defs:bool)
   : ML unit =
@@ -235,7 +228,7 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
     | Type_decl td -> td.decl_name.td_entrypoint
     | _ -> false) t_decls |> Some?
   then begin
-    let wrapper_header, wrapper_impl = Target.print_c_entry modul en.binding_env t_decls in
+    let wrapper_header, wrapper_impl = Target.print_c_entry produce_ep_error modul en.binding_env t_decls in
 
     let c_file =
       open_write_file
@@ -255,11 +248,10 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file h_file
   end;
 
-  let has_output_types = has_output_types t_decls in
-  let has_out_exprs = has_out_exprs t_decls in
-  let has_extern_types = has_extern_types t_decls in
-  let has_extern_fns = has_extern_functions t_decls in
-
+  let has_output_types = T.has_output_types t_decls in
+  let has_out_exprs = T.has_output_type_exprs t_decls in
+  let has_extern_types = T.has_extern_types t_decls in
+  
   (*
    * If there are output types in the module
    *   and emit_output_types_defs flag is set,
@@ -349,26 +341,24 @@ let emit_entrypoint (en:env) (modul:string) (t_decls:list Target.decl)
     FStar.IO.close_write_file c_static_asserts_file
   end
 
-let process_file (en:env)
+let process_file_gen
+                 (produce_ep_error: Target.opt_produce_everparse_error)
+                 (pa: opt_prune_actions)
+                 (en:env)
                  (fn:string)
                  (modul:string)
                  (emit_fstar:bool)
                  (emit_output_types_defs:bool)
                  (all_modules:list string)
-  : ML env =
+  : ML (env & list InterpreterTarget.decl) =
   
-  let t_decls, interpreter_decls_opt, static_asserts, en =
-      translate_module en modul fn
+  let t_decls, interpreter_decls, static_asserts, en =
+      translate_module pa en modul fn
   in
   if emit_fstar 
   then (
-    (
-      match interpreter_decls_opt with
-      | None -> failwith "Impossible: interpreter mode expects interperter target decls"
-      | Some tds ->
-        emit_fstar_code_for_interpreter en modul t_decls tds all_modules
-    );
-    emit_entrypoint en modul t_decls static_asserts emit_output_types_defs
+    emit_fstar_code_for_interpreter en modul t_decls interpreter_decls all_modules;
+    emit_entrypoint produce_ep_error en modul t_decls static_asserts emit_output_types_defs
   )
   else IO.print_string (Printf.sprintf "Not emitting F* code for %s\n" fn);
 
@@ -379,7 +369,17 @@ let process_file (en:env)
     binding_env = Binding.finish_module en.binding_env modul;
     translate_env = 
       en.translate_env;
-  }
+  }, interpreter_decls
+
+let process_file
+                 (en:env)
+                 (fn:string)
+                 (modul:string)
+                 (emit_fstar:bool)
+                 (emit_output_types_defs: bool)
+                 (all_modules:list string)
+  : ML env =
+  fst (process_file_gen None None en fn modul emit_fstar emit_output_types_defs all_modules)
 
 let emit_config_as_fstar_module ()
   : ML unit
@@ -395,23 +395,169 @@ let emit_config_as_fstar_module ()
       FStar.IO.close_write_file fst_file
     | _ -> ()
       
-
-let process_files (files_and_modules:list (string & string))
-                  (emit_fstar:string -> ML bool)
+let process_files_gen
+                  (#env: Type)
+                  (initial_env: unit -> ML env)
+                  (files_and_modules:list (string & string))
+                  (emit_fstar:option (string -> ML bool))
                   (emit_output_types_defs:bool)
-  : ML unit =
+                  (process_file: (env -> string -> string -> bool -> bool -> list string -> ML env))
+  : ML env =
   
   IO.print_string 
     (Printf.sprintf "Processing files: %s\n"
                     (List.map fst files_and_modules |> String.concat " "));
   let all_modules = List.map snd files_and_modules in
   let env = initial_env () in
-  if Options.get_batch() then emit_config_as_fstar_module();
+  if Some? emit_fstar then
+    if Options.get_batch() then emit_config_as_fstar_module();
   files_and_modules
   |> List.fold_left (fun env (fn, modul) ->
-                    process_file env fn modul (emit_fstar modul) emit_output_types_defs all_modules) env
-  |> ignore
+                    process_file env fn modul (match emit_fstar with Some f -> f modul | _ -> false) emit_output_types_defs all_modules) env
+
+let process_files_t =
+  (files_and_modules:list (string & string)) ->
+  (emit_fstar:string -> ML bool) ->
+  (emit_output_types_defs:bool) ->
+  ML (option (unit -> ML unit))
   
+let process_files : process_files_t = fun files_and_modules emit_fstar emit_output_types_defs ->
+  process_files_gen
+    initial_env
+    files_and_modules
+    (Some emit_fstar)
+    emit_output_types_defs
+    process_file
+  |> ignore;
+  (Some (fun _ -> ()))
+
+let process_file_for_z3
+                 (out: string -> ML unit)
+                 (en_accu:(env & Z3TestGen.prog))
+                 (fn:string)
+                 (modul:string)
+                 (emit_fstar:bool)
+                 (emit_output_types_defs:bool)
+                 (all_modules:list string)
+  : ML (env & Z3TestGen.prog) =
+  let (en, accu) = en_accu in
+  let (en, interpreter_decls) = process_file_gen (Some Target.ProduceEverParseError) (Some PruneActions) en fn modul emit_fstar emit_output_types_defs all_modules in
+  let accu = Z3TestGen.produce_decls out accu interpreter_decls in
+  (en, accu)
+
+let process_files_for_z3
+                  (out: string -> ML unit)
+                  (files_and_modules:list (string & string))
+                  (emit_fstar:option (string -> ML bool))
+                  (emit_output_types_defs:bool)
+  : ML Z3TestGen.prog =
+  out Z3TestGen.prelude;
+  process_files_gen
+    (fun _ -> initial_env (), [])
+    files_and_modules
+    emit_fstar
+    emit_output_types_defs
+    (process_file_for_z3 out)
+  |> snd
+
+let produce_z3
+  (files_and_modules:list (string & string))
+: ML unit
+= ignore (process_files_for_z3 FStar.IO.print_string files_and_modules None false)
+
+let build_test_exe
+  (out_dir: string)
+: ML unit
+=
+  if not (Options.get_skip_c_makefiles ())
+  then begin
+    OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
+  end
+
+let build_and_run_test_exe
+  (out_dir: string)
+: ML unit
+=
+  if not (Options.get_skip_c_makefiles ())
+  then begin
+    build_test_exe out_dir;
+    OS.run_cmd (OS.concat out_dir "test.exe") []
+  end
+
+let with_z3_thread_or
+  (batch: bool)
+  (out_dir: string)
+  (debug: bool)
+  (transcript: option string)
+  (f: (Z3.z3 -> ML unit))
+: ML (option (unit -> ML unit))
+= if batch
+  then
+    let thr = Z3.with_z3_thread debug transcript f in
+    Some (fun _ ->
+      Z3.wait_for_z3_thread thr;
+      build_and_run_test_exe out_dir
+    )
+  else begin
+    Z3.with_z3 debug transcript f;
+    None
+  end
+
+let produce_z3_and_test_gen
+  (batch: bool)
+  (out_dir: string)
+  (do_test: option string -> int -> Z3TestGen.prog -> Z3.z3 -> ML unit)
+: Tot process_files_t
+= fun
+  (files_and_modules:list (string & string))
+  (emit_fstar:string -> ML bool)
+  (emit_output_types_defs:bool)
+->
+  let nbwitnesses = Options.get_z3_witnesses () in
+  let buf : ref string = alloc "" in
+  let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
+  with_z3_thread_or batch out_dir (Options.get_debug ()) (Options.get_save_z3_transcript ()) (fun z3 ->
+    z3.to_z3 !buf;
+    do_test (if batch then Some (OS.concat out_dir "testcases.c") else None) nbwitnesses prog z3
+  )
+
+let produce_z3_and_test
+  (batch: bool)
+  (out_dir: string)
+  (name: string)
+: Tot process_files_t
+= produce_z3_and_test_gen batch out_dir (fun out_file nbwitnesses prog z3 ->
+    Z3TestGen.do_test out_dir out_file z3 prog name nbwitnesses (Options.get_z3_branch_depth ()) (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
+  )
+
+let produce_z3_and_diff_test
+  (batch: bool)
+  (out_dir: string)
+  (names: (string & string))
+: Tot process_files_t
+=
+  let (name1, name2) = names in
+  produce_z3_and_test_gen batch out_dir (fun out_file nbwitnesses prog z3 ->
+    Z3TestGen.do_diff_test out_dir out_file z3 prog name1 name2 nbwitnesses (Options.get_z3_branch_depth ())
+  )
+
+let produce_test_checker_exe
+  (batch: bool)
+  (out_dir: string)
+  (name1: string)
+: Tot process_files_t
+= fun
+  (files_and_modules:list (string & string))
+  (emit_fstar:string -> ML bool)
+  (emit_output_types_defs:bool)
+->
+  let prog = process_files_for_z3 (fun _ -> ()) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
+  Z3TestGen.produce_test_checker_exe (OS.concat out_dir "testcases.c") prog name1;
+  Some (fun _ ->
+    if batch then
+    build_test_exe out_dir
+  )
+
 let produce_and_postprocess_c
   (out_dir: string)
   (file: string)
@@ -502,13 +648,36 @@ let go () : ML unit =
   if Some? check_hashes
   then Batch.check_all_hashes (Some?.v check_hashes) out_dir all_files_and_modules
   else
+  (* Special mode: --emit_smt_encoding *)
+  if Options.get_emit_smt_encoding ()
+  then produce_z3 all_files_and_modules
+  else
   (* Default mode: process .3d files *)
+  let batch = Options.get_batch () in
   let should_emit_fstar_code : string -> ML bool =
     let cmd_line_modules = List.map Options.get_module_name cmd_line_files in
     fun modul ->
-      let b = Options.get_batch () in
-      b || List.Tot.mem modul cmd_line_modules in
-  process_files all_files_and_modules should_emit_fstar_code (Options.get_emit_output_types_defs ());
+      batch || List.Tot.mem modul cmd_line_modules in
+  let process : process_files_t =
+    (* Special mode: --test_checker *)
+    let test_checker = Options.get_test_checker () in
+    if Some? test_checker
+    then produce_test_checker_exe batch out_dir (Some?.v test_checker)
+    else
+    (* Special mode: --z3_diff_test *)
+    let z3_diff_test = Options.get_z3_diff_test () in
+    if Some? z3_diff_test
+    then produce_z3_and_diff_test batch out_dir (Some?.v z3_diff_test)
+    else
+    (* Special mode: --z3_test *)
+    let z3_test = Options.get_z3_test () in
+    if Some? z3_test
+    then produce_z3_and_test batch out_dir (Some?.v z3_test)
+    else process_files
+  in
+  match process all_files_and_modules should_emit_fstar_code (Options.get_emit_output_types_defs ()) with
+  | None -> ()
+  | Some finalize ->
   (* we need to pretty-print source modules in all cases, regardless of --batch,
      because of the Makefile scenario
    *)
@@ -518,7 +687,8 @@ let go () : ML unit =
   Batch.pretty_print_source_modules input_stream_binding out_dir
     (List.filter (fun (_, m) -> should_emit_fstar_code m) all_files_and_modules);
   (* Sub-mode of the default mode: --batch *)
-  if Options.get_batch ()
+  let _ =
+  if batch
   then
   let _ = Batch.postprocess_fst
         input_stream_binding
@@ -541,6 +711,8 @@ let go () : ML unit =
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())
         out_dir all_files_and_modules
+  in
+  finalize ()
 
 #push-options "--warn_error -272" //top-level effects are okay
 #push-options "--admit_smt_queries true" //explicitly not handling all exceptions, so that we can meaningful backtraces

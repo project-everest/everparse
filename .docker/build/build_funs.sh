@@ -61,7 +61,6 @@ function rebuild_doc () {
 }
 
 function test_mitls_parsers () {
-        fetch_and_make_karamel &&
         OTHERFLAGS='--admit_smt_queries true' make -j $threads quackyducky lowparse &&
         export_home EVERPARSE "$(pwd)" &&
         fetch_mitls &&
@@ -80,7 +79,6 @@ function build_and_test_quackyducky() {
     # Rebuild the EverParse documentation and push it to project-everest.github.io
     rebuild_doc &&
     # Test EverParse proper
-    fetch_and_make_karamel &&
     make -j $threads -k ci &&
     # Build incrementality test
     pushd tests/sample && {

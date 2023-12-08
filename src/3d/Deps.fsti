@@ -25,4 +25,6 @@ val has_extern_types (g:dep_graph) (modul:string) : bool
 
 val has_extern_functions (g:dep_graph) (modul:string) : bool
 
+val has_extern_probe (g:dep_graph) (modul:string) : bool
+
 val get_config (_:unit) : ML (option (Config.config & string))

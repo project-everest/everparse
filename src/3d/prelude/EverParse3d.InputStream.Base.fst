@@ -61,7 +61,7 @@ class input_stream_inst (t: Type) : Type = {
   extra_t: Type0;
 
   has:
-    (# [FStar.Tactics.Typeclasses.tcresolve () ] extra_t ) ->
+    (# [EverParse3d.Util.solve_from_ctx () ] extra_t ) ->
     (x: t) ->
     (len: tlen x) ->
     (pos: LPE.pos_t) ->
@@ -77,7 +77,7 @@ class input_stream_inst (t: Type) : Type = {
     ));
   
   read:
-    (# [FStar.Tactics.Typeclasses.tcresolve ()] extra_t ) ->
+    (# [EverParse3d.Util.solve_from_ctx ()] extra_t ) ->
     (t': Type0) ->
     (k: LP.parser_kind) ->
     (p: LP.parser k t') ->
@@ -107,7 +107,7 @@ class input_stream_inst (t: Type) : Type = {
     ));
 
   skip:
-    (# [FStar.Tactics.Typeclasses.tcresolve ()] extra_t ) ->
+    (# [EverParse3d.Util.solve_from_ctx ()] extra_t ) ->
     (x: t) ->
     (pos: LPE.pos_t) ->
     (n: U64.t) ->
@@ -125,7 +125,7 @@ class input_stream_inst (t: Type) : Type = {
     ));
 
   skip_if_success:
-    (# [FStar.Tactics.Typeclasses.tcresolve ()] extra_t ) ->
+    (# [EverParse3d.Util.solve_from_ctx ()] extra_t ) ->
     (x: t) ->
     (pos: LPE.pos_t) ->
     (res: U64.t) ->
@@ -145,7 +145,7 @@ class input_stream_inst (t: Type) : Type = {
     ));
   
   empty:
-    (# [FStar.Tactics.Typeclasses.tcresolve ()] extra_t ) ->
+    (# [EverParse3d.Util.solve_from_ctx ()] extra_t ) ->
     (x: t) ->
     (len: tlen x) ->
     (pos: LPE.pos_t) ->
@@ -233,7 +233,7 @@ let length_all #t (#_: input_stream_inst t) (x: t) : GTot nat = U64.v (len_all x
 
 let preserved'
     (#t: Type)
-    (# [FStar.Tactics.Typeclasses.tcresolve ()] inst : input_stream_inst t)
+    (# [EverParse3d.Util.solve_from_ctx ()] inst : input_stream_inst t)
     (x: t)
     (l: B.loc)
     (h: HS.mem)

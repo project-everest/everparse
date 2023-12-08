@@ -172,6 +172,10 @@ make_everparse() {
             # Locate libffi
             {
                 # Debian:
+                libffi=$(dpkg -L libffi8 | grep '/libffi.so.8$' | head -n 1)
+                [[ -n "$libffi" ]]
+            } || {
+                # Debian:
                 libffi=$(dpkg -L libffi7 | grep '/libffi.so.7$' | head -n 1)
                 [[ -n "$libffi" ]]
             } || {
@@ -246,7 +250,21 @@ make_everparse() {
     if $is_windows ; then
         wget --output-document=everparse/bin/clang-format.exe https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe
     fi
-    
+
+    # Download and build the latest z3 for test case generation purposes
+    if ! $is_windows ; then
+        if ! [[ -d z3-latest ]] ; then
+            git clone https://github.com/Z3Prover/z3 z3-latest
+        fi
+        z3_latest_dir="$PWD/everparse/z3-latest"
+        mkdir -p "$z3_latest_dir"
+        pushd z3-latest
+        python scripts/mk_make.py --prefix="$z3_latest_dir"
+        $MAKE -C build "$@"
+        $MAKE -C build install "$@"
+        popd
+    fi
+
     # licenses
     mkdir -p everparse/licenses
     if [[ -f $FSTAR_HOME/LICENSE ]] ; then

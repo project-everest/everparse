@@ -16,7 +16,12 @@ type rule_t = {
 let input_dir = "$(EVERPARSE_INPUT_DIR)"
 let output_dir = "$(EVERPARSE_OUTPUT_DIR)"
 
-let print_gnu_make_rule
+let oext = function
+| HashingOptions.MakefileGMake -> "o"
+| HashingOptions.MakefileNMake -> "obj"
+
+let print_make_rule
+  mtype
   input_stream_binding
   (r: rule_t)
 : Tot string
@@ -29,9 +34,17 @@ let print_gnu_make_rule
       match r.ty with
       | EverParse -> Printf.sprintf "$(EVERPARSE_CMD) --odir %s" output_dir
       | CC ->
+        let iopt = match mtype with
+        | HashingOptions.MakefileGMake -> "-I"
+        | HashingOptions.MakefileNMake -> "/I"
+        in
+        let copt = match mtype with
+        | HashingOptions.MakefileGMake -> "-c"
+        | HashingOptions.MakefileNMake -> "/c"
+        in        
         let ddd_home = "$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d" in
         let ddd_actions_home = ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding) in
-        Printf.sprintf "$(CC) $(CFLAGS) -I %s -I %s -c" ddd_home ddd_actions_home
+        Printf.sprintf "$(CC) $(CFLAGS) %s %s %s %s %s" iopt ddd_home iopt ddd_actions_home copt
     in
     let rule = Printf.sprintf "%s\t%s %s\n\n" rule cmd r.args in
     rule
@@ -102,6 +115,7 @@ let has_external_api_fsti
   (modul: string)
 : Tot bool
 =
+  Deps.has_extern_probe g modul ||
   Deps.has_out_exprs g modul ||
   Deps.has_extern_types g modul ||
   Deps.has_extern_functions g modul
@@ -389,7 +403,15 @@ let produce_h_rules
     List.Tot.map (produce_nop_rule [to]) (maybe_krml_generated_h g m)
   ) all_files
 
+let c_to_o mtype o c =
+  let oflag = match mtype with
+  | HashingOptions.MakefileGMake -> "-o"
+  | HashingOptions.MakefileNMake -> "/Fo:"
+  in
+  Printf.sprintf "%s %s %s" oflag o c
+
 let produce_output_types_o_rule
+  mtype
   (emit_output_types_defs: bool)
   (g:Deps.dep_graph)
   (modul:string)
@@ -398,61 +420,64 @@ let produce_output_types_o_rule
   if Deps.has_out_exprs g modul
   then
     let c = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "c" in
-    let o = mk_filename (Printf.sprintf "%s_OutputTypes" modul) "o" in
+    let o = mk_filename (Printf.sprintf "%s_OutputTypes" modul) (oext mtype) in
     [{
       ty = CC;
       from = c :: maybe_external_typedefs_h emit_output_types_defs g modul;
       to = o;
-      args = Printf.sprintf "-o %s %s" o c; }]
+      args = c_to_o mtype o c; }]
   else
     let _ = FStar.IO.print_string (Printf.sprintf "%s has no output types\n" modul) in
     []
     
 let produce_o_rule
+  mtype
   (modul: string)
 : Tot rule_t
 =
   let c = mk_filename modul "c" in
-  let o = mk_filename modul "o" in
+  let o = mk_filename modul (oext mtype) in
   {
     ty = CC;
     from = [c; mk_filename modul "h"];
     to = o;
-    args = Printf.sprintf "-o %s %s" o c;
+    args = c_to_o mtype o c;
   }
 
 let produce_wrapper_o_rule
+  mtype
   (g: Deps.dep_graph)
   (modul: string)
 : Tot (list rule_t)
 =
   let wc = mk_filename (Printf.sprintf "%sWrapper" modul) "c" in
   let wh = mk_filename (Printf.sprintf "%sWrapper" modul) "h" in
-  let wo = mk_filename (Printf.sprintf "%sWrapper" modul) "o" in
+  let wo = mk_filename (Printf.sprintf "%sWrapper" modul) (oext mtype) in
   let h = mk_filename modul "h" in
   if Deps.has_entrypoint g modul
   then [{
     ty = CC;
     from = [wc; wh; h];
     to = wo;
-    args = Printf.sprintf "-o %s %s" wo wc;
+    args = c_to_o mtype wo wc;
   }]
   else []
 
 let produce_static_assertions_o_rule
+  mtype
   (g: Deps.dep_graph)
   (modul: string)
 : Tot (list rule_t)
 =
   let wc = mk_filename (Printf.sprintf "%sStaticAssertions" modul) "c" in
-  let wo = mk_filename (Printf.sprintf "%sStaticAssertions" modul) "o" in
+  let wo = mk_filename (Printf.sprintf "%sStaticAssertions" modul) (oext mtype) in
   let h = mk_filename modul "h" in
   if Deps.has_static_assertions g modul
   then [{
     ty = CC;
     from = [wc; h];
     to = wo;
-    args = Printf.sprintf "-o %s %s" wo wc;
+    args = c_to_o mtype wo wc;
   }]
   else []
 
@@ -476,6 +501,7 @@ type produce_makefile_res = {
 }
 
 let produce_makefile
+  mtype
   (emit_output_types_defs: bool)
   (skip_o_rules: bool)
   (clang_format: bool)
@@ -488,10 +514,10 @@ let produce_makefile
   let rules =
     produce_clang_format_rule clang_format `List.Tot.append`
     (if skip_o_rules then [] else
-      List.Tot.concatMap (produce_wrapper_o_rule g) all_modules `List.Tot.append`
-      List.Tot.concatMap (produce_static_assertions_o_rule g) all_modules `List.Tot.append`
-      List.concatMap (produce_output_types_o_rule emit_output_types_defs g) all_modules `List.Tot.append`
-      List.Tot.map produce_o_rule all_modules
+      List.Tot.concatMap (produce_wrapper_o_rule mtype g) all_modules `List.Tot.append`
+      List.Tot.concatMap (produce_static_assertions_o_rule mtype g) all_modules `List.Tot.append`
+      List.concatMap (produce_output_types_o_rule mtype emit_output_types_defs g) all_modules `List.Tot.append`
+      List.Tot.map (produce_o_rule mtype) all_modules
     ) `List.Tot.append`
     List.concatMap (produce_fst_rules emit_output_types_defs g clang_format) all_files `List.Tot.append`
     List.concatMap (produce_external_types_fsti_checked_rule g) all_modules `List.Tot.append`
@@ -509,7 +535,8 @@ let produce_makefile
     all_files = all_files;
   }
 
-let write_gnu_makefile
+let write_makefile
+  mtype
   input_stream_binding
   (emit_output_types_defs: bool)
   (skip_o_rules: bool)
@@ -519,8 +546,8 @@ let write_gnu_makefile
 =
   let makefile = Options.get_makefile_name () in
   let file = FStar.IO.open_write_file makefile in
-  let {graph = g; rules; all_files} = produce_makefile emit_output_types_defs skip_o_rules clang_format files in
-  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_gnu_make_rule input_stream_binding) rules));
+  let {graph = g; rules; all_files} = produce_makefile mtype emit_output_types_defs skip_o_rules clang_format files in
+  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype input_stream_binding) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
       begin if ext <> "h"
@@ -548,21 +575,5 @@ let write_gnu_makefile
   in
   write_all_ext_files "H" "h";
   write_all_ext_files "C" "c";
-  write_all_ext_files "O" "o";
+  write_all_ext_files "O" (oext mtype);
   FStar.IO.close_write_file file
-
-let write_nmakefile = write_gnu_makefile
-
-let write_makefile
-  (mtype: HashingOptions.makefile_type)
-: Tot (
-    (_: HashingOptions.input_stream_binding_t) ->
-    (emit_output_types_defs: bool) ->
-    (skip_o_rules: bool) ->
-    (clang_format: bool) ->
-    (files: list string) ->
-    FStar.All.ML unit
-  )
-= match mtype with
-  | HashingOptions.MakefileGMake -> write_gnu_makefile
-  | HashingOptions.MakefileNMake -> write_nmakefile

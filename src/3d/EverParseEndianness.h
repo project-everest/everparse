@@ -30,11 +30,24 @@ extern "C" {
  ********* Implementation of LowStar.Endianness (selected bits) **************
  *****************************************************************************/
 
+#if defined(_MSC_VER)
+#  include <windows.h>
+#endif
+  
 #include <string.h>
 #include <stdint.h>
 
 typedef const char * EVERPARSE_STRING;
 typedef EVERPARSE_STRING PRIMS_STRING;
+typedef void* EVERPARSE_COPY_BUFFER_T;
+
+#ifndef KRML_MAYBE_UNUSED_VAR
+#  define KRML_MAYBE_UNUSED_VAR(x) (void)(x)
+#endif
+
+#ifndef KRML_HOST_IGNORE
+#  define KRML_HOST_IGNORE(x) (void)(x)
+#endif
 
 #ifndef KRML_HOST_PRINTF
 #  include <stdio.h>
@@ -61,7 +74,6 @@ typedef EVERPARSE_STRING PRIMS_STRING;
 #if defined(_MSC_VER)
 
 #  include <stdlib.h>
-#  include <windef.h>
 
 #  define htobe16(x) _byteswap_ushort(x)
 #  define htole16(x) (x)

@@ -59,12 +59,14 @@ let copy_env (e:env) =
     globals = e.globals;
     locals = locals
   }
-  
+
+#push-options "--warn_error -272"  //intentional top-level effect
 let env_of_global_env 
   : global_env -> env
   = let locals = H.create 1 in
     fun g -> { this = None; locals; globals = g }
-    
+#pop-options
+
 let global_env_of_env e = e.globals
 
 let params_of_decl (d:decl) : list param =
@@ -78,6 +80,7 @@ let params_of_decl (d:decl) : list param =
   | OutputType _ -> []
   | ExternType _ -> []
   | ExternFn _ _ ps -> ps
+  | ExternProbe _ -> []
 
 let check_shadow (e:H.t ident' 'a) (i:ident) (r:range) =
   match H.try_find e i.v with
@@ -291,9 +294,9 @@ let parser_weak_kind (env:global_env) (id:ident) : ML (option _) =
   | Some (_, Inl attrs) -> Some attrs.parser_weak_kind
   | _ -> None
 
-let typ_weak_kind env (t:typ) : ML (option weak_kind) =
+let rec typ_weak_kind env (t:typ) : ML (option weak_kind) =
   match t.v with
-  | Pointer _ -> None
+  | Pointer _ -> typ_weak_kind env tuint64
   | Type_app hd _ _ -> parser_weak_kind env.globals hd
 
 let typ_has_reader env (t:typ) : ML bool =
@@ -463,6 +466,15 @@ let add_extern_type (ge:global_env) (i:ident) (d:decl{ExternType? d.d_decl.v}) :
   insert td_abbrev.v
 
 (*
+ * Add extern probe function to the environment
+ *
+ * TODO: check shadow
+ *)
+let add_extern_probe (ge:global_env) (i:ident) (d:decl{ExternProbe? d.d_decl.v}) : ML unit =
+  H.insert ge.ge_probe_fn i.v d
+
+
+(*
  * Add extern function to the environment
  *
  * TODO: check shadow
@@ -552,7 +564,8 @@ let rec check_out_expr (env:env) (oe0:out_expr)
     (match bopt with
      | None ->
        {oe0 with
-        out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
+        out_expr_node={oe0.out_expr_node with v=OE_addrof oe};
+
         out_expr_meta=Some ({
           out_expr_base_t = oe_bt;
           out_expr_t = with_range (Pointer oe_t) oe.out_expr_node.range;
@@ -654,6 +667,11 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
     | Type_app _ KindOutput _ ->
       error "Impossible, check_typ is not supposed to typecheck output types!" t.range
 
+and check_ident (env:env) (i:ident)
+  : ML (ident & typ)
+  = let t = lookup_expr_name env i in
+    i, t
+
 and check_expr (env:env) (e:expr)
   : ML (expr & typ)
   = let w e' = with_range e' e.range in
@@ -682,8 +700,8 @@ and check_expr (env:env) (e:expr)
       e, type_of_constant e.range c
 
     | Identifier i ->
-      let t = lookup_expr_name env i in
-      e, t
+      let i, t = check_ident env i in
+      { e with v = Identifier i }, t
 
     | Static _ -> 
       failwith "Static expressions should have been desugared already"
@@ -1079,7 +1097,7 @@ let rec check_field_action (env:env) (f:atomic_field) (a:action)
 let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
   : ML atomic_field
   = let sf = f.v in
-    let sf_field_type = check_typ false env sf.field_type in
+    let sf_field_type = check_typ (Some? sf.field_probe) env sf.field_type in
     let check_annot (e: expr) : ML expr =
         let e, t = check_expr env e in
         if not (eq_typ env t tuint32)
@@ -1095,6 +1113,13 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
     | FieldScalar -> FieldScalar
     | FieldArrayQualified (e, b) -> FieldArrayQualified (check_annot e, b)
     | FieldString sz -> FieldString (map_opt check_annot sz)
+    | FieldConsumeAll ->
+      if
+        if eq_typ env sf.field_type tuint8
+        then true
+        else eq_typ env sf.field_type tuint8be
+      then FieldConsumeAll
+      else error (Printf.sprintf "This ':consume-all field returns %s instead of UINT8 or UINT8BE" (print_typ sf.field_type)) f.range
     in
     let fc = sf.field_constraint |> map_opt (fun e ->
         add_local env sf.field_ident sf.field_type;
@@ -1109,14 +1134,72 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
         remove_local env sf.field_ident;
         a, dependent)
     in
+    let f_probe =
+      match sf.field_probe with
+      | None -> None
+      | Some p ->
+        let length, typ = check_expr env p.probe_length in
+        let length =
+          if not (eq_typ env typ tuint64)
+          then match try_cast_integer env (length, typ) tuint64 with
+              | Some e -> e
+              | _ -> error (Printf.sprintf "Probe length expression %s has type %s instead of UInt64"
+                            (print_expr length)
+                            (print_typ typ))
+                            length.range
+          else length
+        in
+        let dest, dest_typ = check_ident env p.probe_dest in
+        if not (eq_typ env dest_typ tcopybuffer)
+        then error (Printf.sprintf "Probe destination expression %s has type %s instead of EVERPARSE_COPY_BUFFER_T"
+                            (print_ident dest)
+                            (print_typ dest_typ))
+                            dest.range;
+        let probe_fn =
+          match p.probe_fn with
+          | None -> (
+            match GlobalEnv.default_probe_fn env.globals with
+            | None -> 
+              error (Printf.sprintf "Probe function not specified and no default probe function found")
+                    p.probe_length.range
+            | Some i -> i
+          )
+          | Some p -> (
+            match GlobalEnv.resolve_probe_fn env.globals p with
+            | None -> 
+              error (Printf.sprintf "Probe function %s not found" (print_ident p))
+                    p.range
+            | Some i -> 
+              i
+          )
+        in
+        Some { probe_fn=Some probe_fn; probe_length=length; probe_dest=dest }
+    in        
     if extend_scope then add_local env sf.field_ident sf.field_type;
     let sf = {
         sf with
         field_type = sf_field_type;
         field_array_opt = fa;
         field_constraint = fc;
-        field_action = f_act
+        field_action = f_act;
+        field_probe = f_probe;
     } in
+    let _ = 
+      match sf.field_type.v, sf.field_array_opt,
+            sf.field_constraint, sf.field_bitwidth,
+            sf.field_action, sf.field_probe
+      with
+      | Pointer _, FieldScalar,
+        None, None,
+        None, Some _ ->
+        ()
+      | _, _,
+        _, _,
+        _, Some _ ->
+        error (Printf.sprintf "Probe annotation is only allowed on pointer fields with no other constraints")
+              f.range
+      | _ -> ()
+    in
     Options.debug_print_string
       (Printf.sprintf "Field %s has comments <%s>\n"
                   (print_ident sf.field_ident)
@@ -1452,15 +1535,15 @@ let elaborate_bit_fields env (fields:list field)
                    (print_typ sf.field_type)
                    (print_typ bit_field_typ));
 
+             let type_matches_current_open_field = eq_typ env sf.field_type bit_field_typ in
              if remaining_size < bw.v //not enough space in this bit field, start a new one
+             || not type_matches_current_open_field
              then let _ = next_bf_index () in
                   let af, open_bit_field = new_bit_field sf bw hd.range in
                   let tl = aux open_bit_field tl in
                   { hd with v = AtomicField af } :: tl
              else //extend this bit field
                   begin
-                   if not (eq_typ env sf.field_type bit_field_typ)
-                   then raise (error "Packing fields of different types into the same bit field is not yet supported" hd.range);
                    let remaining_size = remaining_size - bw.v in
                    let from = pos in
                    let to = pos + bw.v in
@@ -1574,7 +1657,8 @@ let elaborate_record_decl (e:global_env)
             field_array_opt = FieldScalar;
             field_constraint = w;
             field_bitwidth = None;
-            field_action = None
+            field_action = None;
+            field_probe = None
           }
         in
         let af = with_range (AtomicField (with_range field e.range)) e.range in
@@ -1726,73 +1810,210 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     add_extern_fn e f d;
     d
 
+  | ExternProbe i ->
+    add_extern_probe e i d;
+    d
+
 let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
   List.map (bind_decl g) p, g
 
 let initial_global_env () =
   let cfg = Deps.get_config () in
-  let e = {
-    ge_h = H.create 10;
-    ge_out_t = H.create 10;
-    ge_extern_t = H.create 10;
-    ge_extern_fn = H.create 10;
-    ge_cfg = cfg
-  }
+  let e =
+    {
+      ge_h = H.create 10;
+      ge_out_t = H.create 10;
+      ge_extern_t = H.create 10;
+      ge_extern_fn = H.create 10;
+      ge_probe_fn = H.create 10;
+      ge_cfg = cfg
+    }
   in
   let nullary_decl i =
-    let td_name = {
-      typedef_name = i;
-      typedef_abbrev = i;
-      typedef_ptr_abbrev = i;
-      typedef_attributes = []
-    }
+    let td_name =
+      { typedef_name = i; typedef_abbrev = i; typedef_ptr_abbrev = i; typedef_attributes = [] }
     in
     mk_decl (Record td_name [] None []) dummy_range [] true
   in
   let _type_names =
-    [ ("unit",     { may_fail = false; integral = None; bit_order = None; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some false});
-      ("Bool",     { may_fail = true;  integral = None; bit_order = None; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("UINT8",    { may_fail = true;  integral = Some UInt8 ; bit_order = Some LSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
-      ("UINT16",   { may_fail = true;  integral = Some UInt16 ; bit_order = Some LSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
-      ("UINT32",   { may_fail = true;  integral = Some UInt32 ; bit_order = Some LSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("UINT64",   { may_fail = true;  integral = Some UInt64 ; bit_order = Some LSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("UINT8BE",   { may_fail = true;  integral = Some UInt8 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
-      ("UINT16BE",   { may_fail = true;  integral = Some UInt16 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true });
-      ("UINT32BE",   { may_fail = true;  integral = Some UInt32 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("UINT64BE",   { may_fail = true;  integral = Some UInt64 ; bit_order = Some MSBFirst ; has_reader = true; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("field_id", { may_fail = true;  integral = Some UInt32 ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true});
-      ("all_bytes", { may_fail = false;  integral = None ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindConsumesAll; parser_kind_nz=Some false});
-      ("all_zeros", { may_fail = true;  integral = None ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindConsumesAll; parser_kind_nz=Some false});
-      ("PUINT8",   { may_fail = true;  integral = None ; bit_order = None ; has_reader = false; parser_weak_kind = WeakKindStrongPrefix; parser_kind_nz=Some true})]
-    |> List.iter (fun (i, attrs) ->
-      let i = with_dummy_range (to_ident' i) in
-      add_global e i (nullary_decl i) (Inl attrs))
+    [
+      ("unit",
+        {
+          may_fail = false;
+          integral = None;
+          bit_order = None;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some false
+        });
+      ("Bool",
+        {
+          may_fail = true;
+          integral = None;
+          bit_order = None;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT8",
+        {
+          may_fail = true;
+          integral = Some UInt8;
+          bit_order = Some LSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT16",
+        {
+          may_fail = true;
+          integral = Some UInt16;
+          bit_order = Some LSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT32",
+        {
+          may_fail = true;
+          integral = Some UInt32;
+          bit_order = Some LSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT64",
+        {
+          may_fail = true;
+          integral = Some UInt64;
+          bit_order = Some LSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT8BE",
+        {
+          may_fail = true;
+          integral = Some UInt8;
+          bit_order = Some MSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT16BE",
+        {
+          may_fail = true;
+          integral = Some UInt16;
+          bit_order = Some MSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT32BE",
+        {
+          may_fail = true;
+          integral = Some UInt32;
+          bit_order = Some MSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("UINT64BE",
+        {
+          may_fail = true;
+          integral = Some UInt64;
+          bit_order = Some MSBFirst;
+          has_reader = true;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("field_id",
+        {
+          may_fail = true;
+          integral = Some UInt32;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("all_bytes",
+        {
+          may_fail = false;
+          integral = None;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindConsumesAll;
+          parser_kind_nz = Some false
+        });
+      ("all_zeros",
+        {
+          may_fail = true;
+          integral = None;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindConsumesAll;
+          parser_kind_nz = Some false
+        });
+      ("PUINT8",
+        {
+          may_fail = true;
+          integral = None;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+      ("EVERPARSE_COPY_BUFFER_T",
+        {
+          may_fail = true;
+          integral = None;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindStrongPrefix;
+          parser_kind_nz = Some true
+        });
+    ] |>
+    List.iter (fun (i, attrs) ->
+          let i = with_dummy_range (to_ident' i) in
+          add_global e i (nullary_decl i) (Inl attrs))
   in
   let _operators =
-    [ ("is_range_okay", { macro_arguments_t=[tuint32;tuint32;tuint32]; macro_result_t=tbool; macro_defn_t = None}) ]
-    |> List.iter (fun (i, d) ->
-        let i = with_dummy_range (to_ident' i) in
-        add_global e i (nullary_decl i) (Inr d))
+    [
+      ("is_range_okay",
+        {
+          macro_arguments_t = [tuint32; tuint32; tuint32];
+          macro_result_t = tbool;
+          macro_defn_t = None
+        })
+    ] |>
+    List.iter (fun (i, d) ->
+          let i = with_dummy_range (to_ident' i) in
+          add_global e i (nullary_decl i) (Inr d))
   in
   let _void =
     let void_ident = with_dummy_range (to_ident' "void") in
-    add_extern_type e void_ident (mk_decl (ExternType ({
-      typedef_name = void_ident;
-      typedef_abbrev = void_ident;
-      typedef_ptr_abbrev = void_ident;
-      typedef_attributes = []
-    })) dummy_range [] false)
+    add_extern_type e
+      void_ident
+      (mk_decl (ExternType
+            ({
+                typedef_name = void_ident;
+                typedef_abbrev = void_ident;
+                typedef_ptr_abbrev = void_ident;
+                typedef_attributes = []
+              }))
+          dummy_range
+          []
+          false)
   in
-  let _ = 
+  let _ =
     match cfg with
     | None -> ()
     | Some (cfg, module_name) ->
-      List.iter 
-        (fun flag ->
-          let ms = nullary_macro tbool None in
-          let i = with_dummy_range { to_ident' flag with modul_name = Some module_name } in
-          let d = mk_decl (ExternFn i tbool []) dummy_range [] false in
-          add_global e i d (Inr ms))
+      List.iter (fun flag ->
+            let ms = nullary_macro tbool None in
+            let i = with_dummy_range ({ to_ident' flag with modul_name = Some module_name }) in
+            let d = mk_decl (ExternFn i tbool []) dummy_range [] false in
+            add_global e i d (Inr ms))
         cfg.compile_time_flags.flags
   in
   e
