@@ -25,14 +25,13 @@ nswamy, protz, taramana 5-Feb-2020
  ********* Implementation of LowStar.Endianness (selected bits) **************
  *****************************************************************************/
 
+#include <windows.h>
 #include <string.h>
 
 /* ... for Windows (MSVC)... not targeting XBOX 360! */
 
 #  include <stdlib.h>
 #  include <stdint.h>
-
-#  include <windef.h>
 
 typedef const char * EVERPARSE_STRING;
 typedef EVERPARSE_STRING PRIMS_STRING;

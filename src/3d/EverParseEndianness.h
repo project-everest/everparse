@@ -30,6 +30,10 @@ extern "C" {
  ********* Implementation of LowStar.Endianness (selected bits) **************
  *****************************************************************************/
 
+#if defined(_MSC_VER)
+#  include <windows.h>
+#endif
+  
 #include <string.h>
 #include <stdint.h>
 
@@ -70,7 +74,6 @@ typedef void* EVERPARSE_COPY_BUFFER_T;
 #if defined(_MSC_VER)
 
 #  include <stdlib.h>
-#  include <windef.h>
 
 #  define htobe16(x) _byteswap_ushort(x)
 #  define htole16(x) (x)
