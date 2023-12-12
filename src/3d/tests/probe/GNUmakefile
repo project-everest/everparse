@@ -25,7 +25,7 @@ export EVERPARSE_HOME
 EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe
 
 # Options passed to EverParse
-EVERPARSE_OPTIONS=
+EVERPARSE_OPTIONS=--no_copy_everparse_h
 
 # Command to run EverParse
 EVERPARSE_CMD=$(EVERPARSE_EXE) $(EVERPARSE_OPTIONS)

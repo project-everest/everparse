@@ -24,7 +24,7 @@ export EVERPARSE_HOME
 # everparse.sh or everparse.cmd script from the EverParse binary
 # package; followed by arguments
 EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe
-EVERPARSE_CMD=$(EVERPARSE_EXE) --input_stream static --input_stream_include EverParseStream.h
+EVERPARSE_CMD=$(EVERPARSE_EXE) --no_copy_everparse_h --input_stream static --input_stream_include EverParseStream.h
 
 # Output directory for .c/.h files as well as temporary files (.fst,
 # .krml, etc.)
