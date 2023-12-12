@@ -16,3 +16,8 @@ jobs:
         shell: cmd
         run: |
           .\everparse\everparse.cmd src\3d\tests\Arithmetic.3d src\3d\tests\FieldDependence0.3d && .\everparse\everparse.cmd src\3d\tests\Comments.3d && .\everparse\everparse.cmd --check_hashes inplace src\3d\tests\Comments.3d
+      - name: Archive EverParse package
+        uses: actions/upload-artifact@v3
+        with:
+          name: everparse
+          path: everparse
