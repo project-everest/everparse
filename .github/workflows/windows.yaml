@@ -2,7 +2,7 @@ name: Build and test EverParse
 on: push
 jobs:
   build:
-    runs-on: windows-2019
+    runs-on: [self-hosted, windows, X64]
     steps:
       - name: Check out repo        
         uses: actions/checkout@v2
