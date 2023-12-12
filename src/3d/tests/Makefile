@@ -34,7 +34,7 @@ clean_out_files=\
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test modules-interpret elf-test static funptr ifdefs probe
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe
 
 #AR: TODO: remove ELF.3d from here
 
@@ -56,9 +56,6 @@ funptr:
 
 modules:
 	+$(MAKE) -C modules
-
-modules-interpret:
-	+$(MAKE) -C modules-interpret
 
 tcpip:
 	+$(MAKE) -C tcpip
@@ -119,4 +116,4 @@ batch-cleanup-test:
 clean:
 	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe out.batch-interpret
 
-.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules modules-interpret tcpip extern %.interpret batch-interpret-test static funptr ifdefs
+.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs
