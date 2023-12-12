@@ -3,6 +3,7 @@
 
 param(
   [switch] $WithClean,
+  [switch] $DownloadZ3,
   [switch] $Release,
   [string] $GHToken,
   [string] $ReleaseOrg,
@@ -61,12 +62,14 @@ $ProgressPreference = 'SilentlyContinue'
 # Switch to this script's directory
 Push-Location -ErrorAction Stop -LiteralPath $PSScriptRoot
 
-# Build z3 with Visual Studio
-$Error.Clear()
-cmd.exe /c .\build-z3.cmd
-if (-not $?) {
-    $Error
-    exit 1
+if (-not $DownloadZ3) {
+  # Build z3 with Visual Studio
+  $Error.Clear()
+  cmd.exe /c .\build-z3.cmd
+  if (-not $?) {
+      $Error
+      exit 1
+  }
 }
 
 $Error.Clear()
@@ -81,11 +84,15 @@ Remove-Item "cygwinsetup.exe"
 
 $Error.Clear()
 Write-Host "Install and build everparse dependencies"
+$everestCmd = "./everest.sh --yes -j 6"
 if ($Release) {
-    Invoke-BashCmd "./everest.sh --yes --release -j 6 check"
-} else {
-    Invoke-BashCmd "./everest.sh --yes -j 6 check"
+   $everestCmd += " --release"
 }
+if ($DownloadZ3) {
+   $everestCmd += " --no-z3"
+}
+$everestCmd += " check"
+Invoke-BashCmd $everestCmd
 if (-not $?) {
     $Error
     exit 1

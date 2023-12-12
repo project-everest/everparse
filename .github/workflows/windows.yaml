@@ -11,7 +11,7 @@ jobs:
       - name: Build EverParse and its dependencies
         shell: powershell
         run: |
-          .\src\package\windows\build-everparse.ps1 -WithClean
+          .\src\package\windows\build-everparse.ps1 -WithClean -DownloadZ3
       - name: Test EverParse
         shell: cmd
         run: |
