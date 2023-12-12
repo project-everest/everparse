@@ -2,6 +2,7 @@
 # and builds EverParse.
 
 param(
+  [switch] $WithClean,
   [switch] $Release,
   [string] $GHToken,
   [string] $ReleaseOrg,
@@ -18,6 +19,9 @@ if ($Release) {
 # Choose a temporary directory name for Cygwin
 $tmpRoot = "C:\"
 [string] $tmpBaseName = "everparse-cygwin64.tmp"
+if ($WithClean) {
+   Remove-Item -Path ($tmpRoot + $tmpBaseName) -Recurse
+}
 New-Item -Path $tmpRoot -Name $tmpBaseName -ItemType directory
 if (-not $?) {
    $Error
