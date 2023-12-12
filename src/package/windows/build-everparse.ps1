@@ -21,7 +21,7 @@ if ($Release) {
 $tmpRoot = "C:\"
 [string] $tmpBaseName = "everparse-cygwin64.tmp"
 if ($WithClean) {
-   Remove-Item -Path ($tmpRoot + $tmpBaseName) -Recurse
+   Remove-Item -Path ($tmpRoot + $tmpBaseName) -Recurse -Force
 }
 New-Item -Path $tmpRoot -Name $tmpBaseName -ItemType directory
 if (-not $?) {
