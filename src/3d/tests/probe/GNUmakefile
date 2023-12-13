@@ -25,7 +25,7 @@ export EVERPARSE_HOME
 EVERPARSE_EXE=$(EVERPARSE_HOME)/bin/3d.exe
 
 # Options passed to EverParse
-EVERPARSE_OPTIONS=--no_copy_everparse_h
+EVERPARSE_OPTIONS=
 
 # Command to run EverParse
 EVERPARSE_CMD=$(EVERPARSE_EXE) $(EVERPARSE_OPTIONS)
@@ -77,7 +77,7 @@ all_o_files=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o
 # and the EverParse library directory into the compiler's include
 # path.
 $(EVERPARSE_OUTPUT_DIR)/main.o: $(EVERPARSE_INPUT_DIR)/main.c $(EVERPARSE_OUTPUT_DIR)/ProbeWrapper.h
-	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/src/3d/prelude/buffer -c -o $@ $<
+	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 
 # Link the test program
 $(EVERPARSE_OUTPUT_DIR)/test.exe: $(all_o_files)
