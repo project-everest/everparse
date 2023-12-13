@@ -22,6 +22,7 @@ let oext = function
 
 let print_make_rule
   mtype
+  everparse_h
   input_stream_binding
   (r: rule_t)
 : Tot string
@@ -35,16 +36,22 @@ let print_make_rule
       | EverParse -> Printf.sprintf "$(EVERPARSE_CMD) --odir %s" output_dir
       | CC ->
         let iopt = match mtype with
-        | HashingOptions.MakefileGMake -> "-I"
-        | HashingOptions.MakefileNMake -> "/I"
+          | HashingOptions.MakefileGMake -> "-I"
+          | HashingOptions.MakefileNMake -> "/I"
+        in
+        let inc =
+          if everparse_h
+          then ""
+          else
+            let ddd_home = "$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d" in
+            let ddd_actions_home = ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding) in
+            Printf.sprintf "%s %s %s %s" iopt ddd_home iopt ddd_actions_home
         in
         let copt = match mtype with
         | HashingOptions.MakefileGMake -> "-c"
         | HashingOptions.MakefileNMake -> "/c"
-        in        
-        let ddd_home = "$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d" in
-        let ddd_actions_home = ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding) in
-        Printf.sprintf "$(CC) $(CFLAGS) %s %s %s %s %s" iopt ddd_home iopt ddd_actions_home copt
+        in
+        Printf.sprintf "$(CC) $(CFLAGS) %s %s %s %s %s %s" iopt input_dir iopt output_dir inc copt
     in
     let rule = Printf.sprintf "%s\t%s %s\n\n" rule cmd r.args in
     rule
@@ -432,6 +439,7 @@ let produce_output_types_o_rule
     
 let produce_o_rule
   mtype
+  (everparse_h: bool)
   (modul: string)
 : Tot rule_t
 =
@@ -439,13 +447,14 @@ let produce_o_rule
   let o = mk_filename modul (oext mtype) in
   {
     ty = CC;
-    from = [c; mk_filename modul "h"];
+    from = ((if everparse_h then [mk_filename "EverParse" "h"] else []) `List.Tot.append` [c; mk_filename modul "h"]);
     to = o;
     args = c_to_o mtype o c;
   }
 
 let produce_wrapper_o_rule
   mtype
+  (everparse_h: bool)
   (g: Deps.dep_graph)
   (modul: string)
 : Tot (list rule_t)
@@ -457,7 +466,7 @@ let produce_wrapper_o_rule
   if Deps.has_entrypoint g modul
   then [{
     ty = CC;
-    from = [wc; wh; h];
+    from =((if everparse_h then [mk_filename "EverParse" "h"] else []) `List.Tot.append` [wc; wh; h]);
     to = wo;
     args = c_to_o mtype wo wc;
   }]
@@ -465,6 +474,7 @@ let produce_wrapper_o_rule
 
 let produce_static_assertions_o_rule
   mtype
+  (everparse_h: bool)
   (g: Deps.dep_graph)
   (modul: string)
 : Tot (list rule_t)
@@ -475,7 +485,7 @@ let produce_static_assertions_o_rule
   if Deps.has_static_assertions g modul
   then [{
     ty = CC;
-    from = [wc; h];
+    from = ((if everparse_h then [mk_filename "EverParse" "h"] else []) `List.Tot.append` [wc; h]);
     to = wo;
     args = c_to_o mtype wo wc;
   }]
@@ -493,6 +503,26 @@ let produce_clang_format_rule
    args = "--__micro_step copy_clang_format";
   }] else []
 
+let produce_everparse_h_rule
+  (everparse_h: bool)
+: Tot (list rule_t)
+=
+  if everparse_h
+  then [
+    {
+      ty = EverParse;
+      from = [];
+      to = mk_filename "EverParseEndianness" "h";
+      args = "--__micro_step copy_everparse_h";
+    };
+    {
+      ty = Nop;
+      from = [mk_filename "EverParseEndianness" "h"];
+      to = mk_filename "EverParse" "h";
+      args = "";
+    }
+  ] else []
+
 noeq
 type produce_makefile_res = {
   rules: list rule_t;
@@ -502,6 +532,7 @@ type produce_makefile_res = {
 
 let produce_makefile
   mtype
+  (everparse_h: bool)
   (emit_output_types_defs: bool)
   (skip_o_rules: bool)
   (clang_format: bool)
@@ -512,12 +543,13 @@ let produce_makefile
   let all_files = Deps.collect_and_sort_dependencies_from_graph g files in
   let all_modules = List.map Options.get_module_name all_files in
   let rules =
+    produce_everparse_h_rule everparse_h `List.Tot.append`
     produce_clang_format_rule clang_format `List.Tot.append`
     (if skip_o_rules then [] else
-      List.Tot.concatMap (produce_wrapper_o_rule mtype g) all_modules `List.Tot.append`
-      List.Tot.concatMap (produce_static_assertions_o_rule mtype g) all_modules `List.Tot.append`
+      List.Tot.concatMap (produce_wrapper_o_rule mtype everparse_h g) all_modules `List.Tot.append`
+      List.Tot.concatMap (produce_static_assertions_o_rule mtype everparse_h g) all_modules `List.Tot.append`
       List.concatMap (produce_output_types_o_rule mtype emit_output_types_defs g) all_modules `List.Tot.append`
-      List.Tot.map (produce_o_rule mtype) all_modules
+      List.Tot.map (produce_o_rule mtype everparse_h) all_modules
     ) `List.Tot.append`
     List.concatMap (produce_fst_rules emit_output_types_defs g clang_format) all_files `List.Tot.append`
     List.concatMap (produce_external_types_fsti_checked_rule g) all_modules `List.Tot.append`
@@ -538,6 +570,7 @@ let produce_makefile
 let write_makefile
   mtype
   input_stream_binding
+  (everparse_h: bool)
   (emit_output_types_defs: bool)
   (skip_o_rules: bool)
   (clang_format: bool)
@@ -546,10 +579,14 @@ let write_makefile
 =
   let makefile = Options.get_makefile_name () in
   let file = FStar.IO.open_write_file makefile in
-  let {graph = g; rules; all_files} = produce_makefile mtype emit_output_types_defs skip_o_rules clang_format files in
-  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype input_stream_binding) rules));
+  let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format files in
+  FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
     let ln =
+      begin if ext = "h" && everparse_h
+      then [mk_filename "EverParse" "h"; mk_filename "EverParseEndianness" "h"]
+      else []
+      end `List.Tot.append`
       begin if ext <> "h"
       then
         List.concatMap (fun f -> let m = Options.get_module_name f in if Deps.has_static_assertions g m then [mk_filename (Printf.sprintf "%sStaticAssertions" m) ext] else []) all_files

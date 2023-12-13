@@ -601,6 +601,17 @@ let go () : ML unit =
     let _ = Batch.copy_clang_format (Options.get_output_dir ()) in
     exit 0
   else
+  if micro_step = Some HashingOptions.MicroStepCopyEverParseH
+  then
+  (* Special mode: --__micro_step copy_everparse_h *)
+    let _ = Batch.copy_everparse_h
+      (Options.get_clang_format ())
+      (Options.get_clang_format_executable ())
+      (Options.get_input_stream_binding ())
+      (Options.get_output_dir ())
+    in
+    exit 0
+  else
   (* for other modes, a nonempty list of files is needed on the command line, so if none are there, then we shall print the help message *)
   let input_stream_binding = Options.get_input_stream_binding () in
   if Nil? cmd_line_files
@@ -622,6 +633,7 @@ let go () : ML unit =
     GenMakefile.write_makefile
       t
       input_stream_binding
+      (not (Options.get_no_everparse_h ()))
       (Options.get_emit_output_types_defs ())
       (Options.get_skip_o_rules ())
       (Options.get_clang_format ())
