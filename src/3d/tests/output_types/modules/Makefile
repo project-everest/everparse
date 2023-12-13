@@ -19,7 +19,7 @@ export EVERPARSE_HOME
 # Command to run EverParse: path to either the 3d executable or the
 # everparse.sh or everparse.cmd script from the EverParse binary
 # package
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --no_copy_everparse_h
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe
 
 
 # Output directory for .c/.h files as well as temporary files (.fst,
@@ -29,11 +29,6 @@ EVERPARSE_OUTPUT_DIR=obj
 # Input directory containing .3d (and auxiliary .3d.copyright.txt)
 # files
 EVERPARSE_INPUT_DIR=src
-
-# If a .3d file contains a `refining` clause, then the C compiler must
-# be given the include path that contains the .h files pointed to by
-# such clauses.
-# CFLAGS += -I src
 
 #########################################
 # Generating and including the Makefile #
@@ -73,7 +68,7 @@ $(EVERPARSE_OUTPUT_DIR)/TestErrorHandlers.o: $(EVERPARSE_INPUT_DIR)/TestErrorHan
 	$(CC) -c -o $@ $<
 
 $(EVERPARSE_OUTPUT_DIR)/Test.o: $(EVERPARSE_INPUT_DIR)/Test.cpp $(EVERPARSE_OUTPUT_DIR)/BBWrapper.h $(EVERPARSE_OUTPUT_DIR)/CCWrapper.h
-	$(CXX) $(CXXFLAGS) -I $(EVERPARSE_INPUT_DIR) -I $(EVERPARSE_OUTPUT_DIR) -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/src/3d/prelude/buffer -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -I $(EVERPARSE_INPUT_DIR) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 
 # Link the test program
 $(EVERPARSE_OUTPUT_DIR)/test.exe: $(all_o_files)
