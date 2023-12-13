@@ -11,6 +11,7 @@ type micro_step_t =
   | MicroStepVerify
   | MicroStepExtract
   | MicroStepCopyClangFormat
+  | MicroStepCopyEverParseH
   | MicroStepEmitConfig
   
 type makefile_type =

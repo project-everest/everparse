@@ -34,6 +34,13 @@ val copy_clang_format
   (out_dir: string)
 : ML unit
 
+val copy_everparse_h
+  (clang_format: bool)
+  (clang_format_executable: string)
+  (_: input_stream_binding_t)
+  (out_dir: string)
+: ML unit
+
 val produce_and_postprocess_one_c
   (_: input_stream_binding_t)
   (emit_output_types_defs: bool)
