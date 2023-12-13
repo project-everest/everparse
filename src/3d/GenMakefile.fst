@@ -35,14 +35,14 @@ let print_make_rule
       match r.ty with
       | EverParse -> Printf.sprintf "$(EVERPARSE_CMD) --odir %s" output_dir
       | CC ->
+        let iopt = match mtype with
+          | HashingOptions.MakefileGMake -> "-I"
+          | HashingOptions.MakefileNMake -> "/I"
+        in
         let inc =
           if everparse_h
           then ""
           else
-            let iopt = match mtype with
-            | HashingOptions.MakefileGMake -> "-I"
-            | HashingOptions.MakefileNMake -> "/I"
-            in
             let ddd_home = "$(EVERPARSE_HOME)" `OS.concat` "src" `OS.concat` "3d" in
             let ddd_actions_home = ddd_home `OS.concat` "prelude" `OS.concat` (HashingOptions.string_of_input_stream_binding input_stream_binding) in
             Printf.sprintf "%s %s %s %s" iopt ddd_home iopt ddd_actions_home
@@ -51,7 +51,7 @@ let print_make_rule
         | HashingOptions.MakefileGMake -> "-c"
         | HashingOptions.MakefileNMake -> "/c"
         in
-        Printf.sprintf "$(CC) $(CFLAGS) %s %s" inc copt
+        Printf.sprintf "$(CC) $(CFLAGS) %s %s %s %s %s %s" iopt input_dir iopt output_dir inc copt
     in
     let rule = Printf.sprintf "%s\t%s %s\n\n" rule cmd r.args in
     rule
