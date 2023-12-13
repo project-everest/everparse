@@ -12,8 +12,8 @@ git config --global --add safe.directory $(pwd)
 # Revert the submodules back to a clean working copy
 submodules="FStar karamel"
 rm -rf $submodules
-git checkout $submodules
-git submodule update --init
+git checkout -- $submodules || true
+git submodule update --init || true
 rm -rf everparse* EverParse* nuget_package
 export EVERPARSE_MAKE_OPTS='-j 12'
 if [[ "$1" = "--release" ]] ; then

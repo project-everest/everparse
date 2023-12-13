@@ -9,10 +9,15 @@ jobs:
       - name: Check out repo        
         uses: actions/checkout@v2
       - name: Build EverParse and its dependencies
-        shell: pwsh
+        shell: powershell
         run: |
-          .\src\package\windows\build-everparse.ps1
+          .\src\package\windows\build-everparse.ps1 -WithClean -DownloadZ3
       - name: Test EverParse
         shell: cmd
         run: |
           .\everparse\everparse.cmd src\3d\tests\Arithmetic.3d src\3d\tests\FieldDependence0.3d && .\everparse\everparse.cmd src\3d\tests\Comments.3d && .\everparse\everparse.cmd --check_hashes inplace src\3d\tests\Comments.3d
+      - name: Archive EverParse package
+        uses: actions/upload-artifact@v3
+        with:
+          name: everparse
+          path: everparse
