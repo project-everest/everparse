@@ -90,10 +90,10 @@ BoundedSumWhereValidateBoundedSum(
             EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
               positionAfterleft);
         }
-        uint64_t positionAfterBoundedSum0;
+        uint64_t positionAfterBoundedSum1;
         if (EverParseIsError(positionAfterright_refinement))
         {
-          positionAfterBoundedSum0 = positionAfterright_refinement;
+          positionAfterBoundedSum1 = positionAfterright_refinement;
         }
         else
         {
@@ -103,24 +103,24 @@ BoundedSumWhereValidateBoundedSum(
           BOOLEAN
           right_refinementConstraintIsOk = left <= Bound && right_refinement <= (Bound - left);
           /* end: checking constraint */
-          positionAfterBoundedSum0 =
+          positionAfterBoundedSum1 =
             EverParseCheckConstraintOk(right_refinementConstraintIsOk,
               positionAfterright_refinement);
         }
-        if (EverParseIsSuccess(positionAfterBoundedSum0))
+        if (EverParseIsSuccess(positionAfterBoundedSum1))
         {
-          positionAfterBoundedSum = positionAfterBoundedSum0;
+          positionAfterBoundedSum = positionAfterBoundedSum1;
         }
         else
         {
           ErrorHandlerFn("_boundedSum",
             "right.refinement",
-            EverParseErrorReasonOfResult(positionAfterBoundedSum0),
-            EverParseGetValidatorErrorKind(positionAfterBoundedSum0),
+            EverParseErrorReasonOfResult(positionAfterBoundedSum1),
+            EverParseGetValidatorErrorKind(positionAfterBoundedSum1),
             Ctxt,
             Input,
             positionAfterleft);
-          positionAfterBoundedSum = positionAfterBoundedSum0;
+          positionAfterBoundedSum = positionAfterBoundedSum1;
         }
       }
     }
