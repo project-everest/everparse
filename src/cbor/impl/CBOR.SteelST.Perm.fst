@@ -37,8 +37,8 @@ let rec seq_list_match_gather
     (decreases l1)
 = SM.seq_list_match_length p1 s l1;
   SM.seq_list_match_length p2 s l2;
-  match l1 with
-  | [] ->
+  if Nil? l1
+  then begin
     rewrite
       (SM.seq_list_match s l1 p1)
       (SM.seq_list_match_nil0 s);
@@ -49,7 +49,8 @@ let rec seq_list_match_gather
     rewrite
       (SM.seq_list_match_nil0 s)
       (SM.seq_list_match s l1 p)
-  | a1 :: q1 ->
+  end else begin
+    let a1 :: q1 = l1 in
     let a2 :: q2 = l2 in
     SM.seq_list_match_cons_eq s l1 p1;
     SM.seq_list_match_cons_eq s l2 p2;
@@ -76,6 +77,7 @@ let rec seq_list_match_gather
     rewrite
       (SM.seq_list_match_cons0 s l1 p SM.seq_list_match)
       (SM.seq_list_match s l1 p)
+  end
 
 #push-options "--smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr native"
 
