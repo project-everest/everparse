@@ -1020,6 +1020,7 @@ let print_binding mname (td:type_decl)
                                   %s\n\
                                   (type_%s %s)\n\
                                   (coerce (_ by (T.norm [delta_only [`%%type_%s]]; T.trefl())) (parser_%s %s))\n\
+                                  (coerce (_ by (T.norm [delta_only [`%%type_%s]]; T.trefl())) (serializer_%s %s))\n\
                                   %s\n\
                                   %b\n\
                                   (coerce (_ by %s) (validate_%s %s))\n\
@@ -1029,6 +1030,8 @@ let print_binding mname (td:type_decl)
                       inv disj eloc
                       root_name
                       inv disj eloc
+                      root_name args
+                      root_name
                       root_name args
                       root_name
                       root_name args
@@ -1051,6 +1054,7 @@ let print_binding mname (td:type_decl)
       def';
       (as_type_or_parser "type");
       (as_type_or_parser "parser");
+      (as_type_or_parser "serializer");
       validate_binding;
       dtyp;
       enum_typ_of_binding]

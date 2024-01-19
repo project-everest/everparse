@@ -144,6 +144,22 @@ let itype_as_parser (i:itype)
     | AllBytes -> P.parse_all_bytes
     | AllZeros -> P.parse_all_zeros
 
+(* Interpretation of an itype as a serializer *)
+let itype_as_serializer (i:itype)
+  : P.serializer (itype_as_parser i)
+  = match i with
+    | UInt8 -> P.serialize____UINT8
+    | UInt16 -> P.serialize____UINT16
+    | UInt32 -> P.serialize____UINT32
+    | UInt64 -> P.serialize____UINT64
+    | UInt8BE -> P.serialize____UINT8BE
+    | UInt16BE -> P.serialize____UINT16BE
+    | UInt32BE -> P.serialize____UINT32BE
+    | UInt64BE -> P.serialize____UINT64BE
+    | Unit -> P.serialize_unit
+    | AllBytes -> P.serialize_all_bytes
+    | AllZeros -> P.serialize_all_zeros
+
 [@@specialize]
 let allow_reader_of_itype (i:itype)
   : bool
@@ -289,6 +305,8 @@ type global_binding = {
   p_t : Type0;
   //Its parser denotation
   p_p : P.parser parser_kind p_t;
+  //Its serializer denotation
+  p_s : P.serializer p_p;
   //Whether the type can be read -- to avoid double fetches
   p_reader: option (leaf_reader p_p);
   //Its validate-with-action denotationa
@@ -309,6 +327,7 @@ let projector_names : list string = [
   `%Mkglobal_binding?.loc;
   `%Mkglobal_binding?.p_t;
   `%Mkglobal_binding?.p_p;
+  `%Mkglobal_binding?.p_s;
   `%Mkglobal_binding?.p_reader;
   `%Mkglobal_binding?.p_v;
 ]
@@ -321,6 +340,7 @@ let disj_of_bindng = Mkglobal_binding?.disj
 let loc_of_binding = Mkglobal_binding?.loc
 let type_of_binding = Mkglobal_binding?.p_t
 let parser_of_binding = Mkglobal_binding?.p_p
+let serializer_of_binding = Mkglobal_binding?.p_s
 let leaf_reader_of_binding = Mkglobal_binding?.p_reader
 let validator_of_binding = Mkglobal_binding?.p_v
 
@@ -428,6 +448,16 @@ let dtyp_as_parser #nz #wk (#pk:P.parser_kind nz wk) #hr #i #disj #l
 
     | DT_App _ _ _ _ _ b _ ->
       parser_of_binding b
+ 
+let dtyp_as_serializer #nz #wk (#pk:P.parser_kind nz wk) #hr #i #disj #l
+                   (d:dtyp pk hr i disj l)
+  : P.serializer (dtyp_as_parser d)
+  = match d returns Tot (P.serializer (dtyp_as_parser d)) with
+    | DT_IType i -> 
+      itype_as_serializer i
+
+    | DT_App _ _ _ _ _ b _ ->
+      serializer_of_binding b
 
 [@@specialize]
 let dtyp_as_validator #nz #wk (#pk:P.parser_kind nz wk)
@@ -891,7 +921,7 @@ type typ
 
   | T_nlist:
       fieldname:string ->       
-      #wk:_ -> #pk:P.parser_kind true wk ->
+      #pk:P.parser_kind true P.WeakKindStrongPrefix ->
       #i:_ -> #l:_ -> #d:_ -> #b:_ ->
       n:U32.t ->
       t:typ pk i d l b ->
@@ -899,7 +929,7 @@ type typ
 
   | T_at_most:
       fieldname:string ->       
-      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #nz:_ -> #pk:P.parser_kind nz P.WeakKindStrongPrefix ->
       #i:_ -> #d:_ -> #l:_ -> #b:_ ->
       n:U32.t ->
       t:typ pk i d l b ->
@@ -907,7 +937,7 @@ type typ
 
   | T_exact:
       fieldname:string ->       
-      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #nz:_ -> #pk:P.parser_kind nz P.WeakKindStrongPrefix ->
       #i:_ -> #d:_ -> #l:_ -> #b:_ ->
       n:U32.t ->
       t:typ pk i d l b ->
@@ -950,149 +980,115 @@ let t_probe_then_validate
      (fun src ->
         Atomic_action (Action_probe_then_validate td src len dest probe))
     
-
-(* Type denotation of `typ` *)
-let rec as_type
+(* Type, parser and serializer denotation of `typ` *)
+let rec denote
           #nz #wk (#pk:P.parser_kind nz wk)
           #l #i #d #b
           (t:typ pk l i d b)
-  : Tot Type0
-    (decreases t)
-  = match t with
-    | T_false _ -> False
-
-    | T_denoted _ td -> 
-      dtyp_as_type td
-
-    | T_pair _ t1 t2 ->
-      as_type t1 & as_type t2
-
-    | T_dep_pair _ i t
-    | T_dep_pair_with_action _ i t _ ->
-      x:dtyp_as_type i & as_type (t x)
-
-    | T_refine _ base refinement ->
-      P.refine (dtyp_as_type base) refinement
-
-    | T_refine_with_action _ base refinement _ ->
-      P.refine (dtyp_as_type base) refinement
-
-    | T_dep_pair_with_refinement _ base refinement t ->
-      x:P.refine (dtyp_as_type base) refinement & as_type (t x)
-
-    | T_dep_pair_with_refinement_and_action _ base refinement t _ ->
-      x:P.refine (dtyp_as_type base) refinement & as_type (t x)
-
-    | T_if_else b t0 t1 ->
-      P.t_ite b (fun _ -> as_type (t0()))
-                      (fun _ -> as_type (t1()))
-
-    | T_cases b t0 t1 ->
-      P.t_ite b (fun _ -> as_type t0) (fun _ -> as_type t1)
-
-    | T_with_action _ t _
-    | T_with_comment _ t _ ->
-      as_type t
-
-    | T_with_dep_action _ i _ ->
-      dtyp_as_type i
-
-    | T_nlist _ n t ->
-      P.nlist n (as_type t)
-
-    | T_at_most _ n t ->
-      P.t_at_most n (as_type t)
-
-    | T_exact _ n t ->
-      P.t_exact n (as_type t)
-
-    | T_string _ elt_t terminator ->
-      P.cstring (dtyp_as_type elt_t) terminator
-
-
-(* Parser denotation of `typ` *)
-let rec as_parser
-          #nz #wk (#pk:P.parser_kind nz wk)
-          #l #i #d #b
-          (t:typ pk l i d b)
-  : Tot (P.parser pk (as_type t))
+  : Tot (t:Type0 & p:P.parser pk t & P.serializer p)
         (decreases t)
-  = match t returns Tot (P.parser pk (as_type t)) with
+  = match t returns Tot (t:Type0 & p:P.parser pk t & P.serializer p) with
     | T_false _ ->
       //assert_norm (as_type g T_false == False);
-      P.parse_impos()
+      (| False, P.parse_impos(), P.serialize_impos() |)
 
     | T_denoted _ d ->
-      dtyp_as_parser d
+      (| dtyp_as_type d, dtyp_as_parser d, dtyp_as_serializer d |)
 
     | T_pair _ t1 t2 ->
       //assert_norm (as_type g (T_pair t1 t2) == as_type g t1 * as_type g t2);
-      let p1 = as_parser t1 in
-      let p2 = as_parser t2 in
-      P.parse_pair p1 p2
+      (| (denote t1)._1 & (denote t2)._1,
+         P.parse_pair (denote t1)._2 (denote t2)._2,
+         P.serialize_pair _ _ (denote t1)._3 (denote t2)._3 |)
 
     | T_dep_pair _ i t
     | T_dep_pair_with_action _ i t _ ->
       //assert_norm (as_type g (T_dep_pair i t) == x:itype_as_type i & as_type g (t x));
       let pi = dtyp_as_parser i in
-      P.parse_dep_pair pi (fun (x:dtyp_as_type i) -> as_parser (t x))
+      (| x:dtyp_as_type i & (denote (t x))._1,
+         P.parse_dep_pair pi (fun (x:dtyp_as_type i) -> (denote (t x))._2),
+         P.serialize_dep_pair _ _ (dtyp_as_serializer i) (fun x -> (denote (t x))._3) |)
 
     | T_refine _ base refinement
     | T_refine_with_action _ base refinement _ ->
       //assert_norm (as_type g (T_refine base refinement) == P.refine (itype_as_type base) refinement);
-      let pi = dtyp_as_parser base in
-      P.parse_filter pi refinement
+      (| P.refine (dtyp_as_type base) refinement,
+         P.parse_filter (dtyp_as_parser base) refinement,
+         P.serialize_filter _ _ (dtyp_as_serializer base) |)
 
     | T_dep_pair_with_refinement _ base refinement k ->
-      P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
-
+      (| x:P.refine (dtyp_as_type base) refinement & (denote (k x))._1,
+        P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> (denote (k x))._2)),
+         P.serialize_dep_pair _ _ (P.serialize_filter _ _ (dtyp_as_serializer base)) (fun x -> (denote (k x))._3) |)
 
     | T_dep_pair_with_refinement_and_action _ base refinement k _ ->
-      P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> as_parser (k x)))
+      (| x:P.refine (dtyp_as_type base) refinement & (denote (k x))._1,
+         P.((dtyp_as_parser base `parse_filter` refinement) `parse_dep_pair` (fun x -> (denote (k x))._2)),
+         P.serialize_dep_pair _ _ (P.serialize_filter _ _ (dtyp_as_serializer base)) (fun x -> (denote (k x))._3) |)
 
-    | T_if_else b t0 t1 ->
-      //assert_norm (as_type g (T_if_else b t0 t1) == P.t_ite b (as_type g t0) (as_type g t1));
-      let p0 (_:squash b) = 
-        P.parse_weaken_right (as_parser (t0())) _
-      in
-      let p1 (_:squash (not b)) = 
-        P.parse_weaken_left (as_parser (t1())) _
-      in
-      P.parse_ite b p0 p1
+    | T_if_else #nz1 #wk1 #pk1 #l1 #i1 #d1 #b1 #nz2 #wk2 #pk2 b t0 t1 ->
+      let p0 (_:squash b) = P.parse_weaken_right (denote (t0 ()))._2 pk2 in
+      let p1 (_:squash (not b)) = P.parse_weaken_left (denote (t1 ()))._2 pk1 in
+      let s0 (_:squash b) : P.serializer (p0 ()) = P.serialize_weaken_right (denote (t0 ()))._2 pk2 (denote (t0 ()))._3 in
+      let s1 (_:squash (not b)) : P.serializer (p1 ()) = P.serialize_weaken_left (denote (t1 ()))._2 pk1 (denote (t1 ()))._3 in
+      (| (if b then (denote (t0 ()))._1 else (denote (t1 ()))._1),
+         P.parse_ite b p0 p1, P.serialize_ite b p0 p1 s0 s1 |)
 
     | T_cases b t0 t1 ->
       //assert_norm (as_type g (T_if_else b t0 t1) == P.t_ite b (as_type g t0) (as_type g t1));
-      let p0 (_:squash b) = 
-        P.parse_weaken_right (as_parser t0) _
-      in
-      let p1 (_:squash (not b)) = 
-        P.parse_weaken_left (as_parser t1) _
-      in
-      P.parse_ite b p0 p1
+      let p0 (_:squash b) = P.parse_weaken_right (denote t0)._2 _ in
+      let p1 (_:squash (not b)) = P.parse_weaken_left (denote t1)._2 _ in
+      let s0 (_:squash b) : P.serializer (p0 ()) = P.serialize_weaken_right _ _ (denote t0)._3 in
+      let s1 (_:squash (not b)) : P.serializer (p1 ()) = P.serialize_weaken_left _ _ (denote t1)._3 in
+      (| (if b then (denote t0)._1 else (denote t1)._1), P.parse_ite b p0 p1, P.serialize_ite b p0 p1 s0 s1 |)
 
     | T_with_action _ t a ->
       //assert_norm (as_type g (T_with_action t a) == as_type g t);
-      as_parser t
+      denote t
 
     | T_with_dep_action _ i a ->
       //assert_norm (as_type g (T_with_dep_action i a) == itype_as_type i);
-      dtyp_as_parser i
+      (| dtyp_as_type i, dtyp_as_parser i, dtyp_as_serializer i |)
 
     | T_with_comment _ t c ->
       //assert_norm (as_type g (T_with_comment t c) == as_type g t);
-      as_parser t
+      denote t
 
     | T_nlist _ n t ->
-      P.parse_nlist n (as_parser t)
+      (| P.nlist n (denote t)._1 (denote t)._3, P.parse_nlist n (denote t)._3, P.serialize_nlist n (denote t)._3 |)
 
     | T_at_most _ n t ->
-      P.parse_t_at_most n (as_parser t)
+      (| P.t_at_most n _ (denote t)._3, P.parse_t_at_most n (denote t)._3, P.serialize_t_at_most n (denote t)._3 |)
 
     | T_exact _ n t ->
-      P.parse_t_exact n (as_parser t)
+      (| P.t_exact n _ (denote t)._3, P.parse_t_exact n (denote t)._3, P.serialize_t_exact n (denote t)._3 |)
 
     | T_string _ elt_t terminator ->
-      P.parse_string (dtyp_as_parser elt_t) terminator
+      (| P.cstring (dtyp_as_type elt_t) terminator, P.parse_string (dtyp_as_parser elt_t) terminator, P.serialize_string (dtyp_as_serializer elt_t) terminator |)
+
+(* Type denotation of `typ` *)
+let as_type
+          #nz #wk (#pk:P.parser_kind nz wk)
+          #l #i #d #b
+          (t:typ pk l i d b)
+  : Tot Type0 =
+  (denote t)._1
+
+(* Parser denotation of `typ` *)
+let as_parser
+          #nz #wk (#pk:P.parser_kind nz wk)
+          #l #i #d #b
+          (t:typ pk l i d b)
+  : P.parser pk (as_type t) =
+  (denote t)._2
+
+(* Serializer denotation of `typ` *)
+let as_serializer
+          #nz #wk (#pk:P.parser_kind nz wk)
+          #l #i #d #b
+          (t:typ pk l i d b)
+  : Tot (P.serializer (as_parser t)) =
+  (denote t)._3
 
 [@@specialize]
 let rec as_reader #nz (#pk:P.parser_kind nz P.WeakKindStrongPrefix)
@@ -1234,31 +1230,31 @@ let rec as_validator
             (fun x -> as_validator typename (k x)))
 
 
-    | T_if_else b t0 t1 ->
-      assert_norm (as_type (T_if_else b t0 t1) == P.t_ite b (fun _ -> as_type (t0())) (fun _ -> as_type (t1 ())));
-      let p0 (_:squash b) = P.parse_weaken_right (as_parser (t0())) _ in
-      let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser (t1())) _ in
+    | T_if_else #nz1 #wk1 #pk1 #l1 #i1 #d1 #b1 #nz2 #wk2 #pk2 #l2 #i2 #d2 #b2 b t0 t1 ->
+      assert_norm (as_type (T_if_else b t0 t1) == (if b then as_type (t0()) else as_type (t1 ())));
+      let p0 (_:squash b) = P.parse_weaken_right (as_parser (t0())) pk2 in
+      let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser (t1())) pk1 in
       assert_norm (as_parser (T_if_else b t0 t1) == P.parse_ite b p0 p1);
       let v0 (_:squash b) = 
-        A.validate_weaken_right (as_validator typename (t0())) _
+        A.validate_weaken_right (as_validator typename (t0())) pk2
       in
       let v1 (_:squash (not b)) =
-        A.validate_weaken_left (as_validator typename (t1())) _
+        A.validate_weaken_left (as_validator typename (t1())) pk1
       in
-      A.validate_ite b p0 v0 p1 v1
+      coerce () (A.validate_ite b p0 v0 p1 v1)
 
-    | T_cases b t0 t1 ->
+    | T_cases #nz1 #wk1 #pk1 #l1 #i1 #d1 #b1 #nz2 #wk2 #pk2 #l2 #i2 #d2 #b2 b t0 t1 ->
       assert_norm (as_type (T_cases b t0 t1) == P.t_ite b (fun _ -> as_type t0) (fun _ -> as_type t1));
-      let p0 (_:squash b) = P.parse_weaken_right (as_parser t0) _ in
-      let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) _ in
+      let p0 (_:squash b) = P.parse_weaken_right (as_parser t0) pk2 in
+      let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) pk1 in
       assert_norm (as_parser (T_cases b t0 t1) == P.parse_ite b p0 p1);
       let v0 (_:squash b) = 
-        A.validate_weaken_right (as_validator typename t0) _
+        A.validate_weaken_right (as_validator typename t0) pk2
       in
       let v1 (_:squash (not b)) =
-        A.validate_weaken_left (as_validator typename t1) _
+        A.validate_weaken_left (as_validator typename t1) pk1
       in
-      A.validate_ite b p0 v0 p1 v1
+      coerce () (A.validate_ite b p0 v0 p1 v1)
  
     | T_with_action fn t a ->
       assert_norm (as_type (T_with_action fn t a) == as_type t);
@@ -1285,22 +1281,22 @@ let rec as_validator
       A.validate_with_comment c (as_validator typename t)
 
     | T_nlist fn n t ->
-      assert_norm (as_type (T_nlist fn n t) == P.nlist n (as_type t));
-      assert_norm (as_parser (T_nlist fn n t) == P.parse_nlist n (as_parser t));
+      assert_norm (as_type (T_nlist fn n t) == P.nlist n (as_type t) (as_serializer t));
+      assert_norm (as_parser (T_nlist fn n t) == P.parse_nlist n (as_serializer t));
       A.validate_with_error_handler typename fn 
-        (A.validate_nlist n (as_validator typename t))
+        (A.validate_nlist n (as_serializer t) (as_validator typename t))
 
     | T_at_most fn n t ->
-      assert_norm (as_type (T_at_most fn n t) == P.t_at_most n (as_type t));
-      assert_norm (as_parser (T_at_most fn n t) == P.parse_t_at_most n (as_parser t));
+      assert_norm (as_type (T_at_most fn n t) == P.t_at_most n (as_type t) (as_serializer t));
+      assert_norm (as_parser (T_at_most fn n t) == P.parse_t_at_most n (as_serializer t));
       A.validate_with_error_handler typename fn 
-        (A.validate_t_at_most n (as_validator typename t))
+        (A.validate_t_at_most n (as_serializer t) (as_validator typename t))
 
     | T_exact fn n t ->
-      assert_norm (as_type (T_exact fn n t) == P.t_exact n (as_type t));
-      assert_norm (as_parser (T_exact fn n t) == P.parse_t_exact n (as_parser t));
+      assert_norm (as_type (T_exact fn n t) == P.t_exact n (as_type t) (as_serializer t));
+      assert_norm (as_parser (T_exact fn n t) == P.parse_t_exact n (as_serializer t));
       A.validate_with_error_handler typename fn 
-        (A.validate_t_exact n (as_validator typename t))
+        (A.validate_t_exact n (as_serializer t) (as_validator typename t))
 
     | T_string fn elt_t terminator ->
       assert_norm (as_type (T_string fn elt_t terminator) == P.cstring (dtyp_as_type elt_t) terminator);
@@ -1370,6 +1366,7 @@ let mk_global_binding #nz #wk
                       ([@@@erasable] loc:loc_index)
                       ([@@@erasable] p_t : Type0)
                       ([@@@erasable] p_p : P.parser pk p_t)
+                      ((*[@@@erasable]*) p_s : P.serializer p_p)
                       (p_reader: option (leaf_reader p_p))
                       (b:bool)
                       (p_v : A.validate_with_action_t p_p 
@@ -1387,6 +1384,7 @@ let mk_global_binding #nz #wk
        loc = loc;
        p_t = p_t;
        p_p = p_p;
+       p_s = p_s;
        p_reader = p_reader;
        p_v = p_v
      }
@@ -1416,6 +1414,7 @@ let mk_dtyp_app #nz #wk
                 ([@@@erasable] loc:loc_index)
                 ([@@@erasable] p_t : Type0)
                 ([@@@erasable] p_p : P.parser pk p_t)
+                ((*[@@@erasable]*) p_s : P.serializer p_p)
                 (p_reader: option (leaf_reader p_p))
                 (b:bool)
                 (p_v : A.validate_with_action_t p_p 
@@ -1434,6 +1433,7 @@ let mk_dtyp_app #nz #wk
        loc = loc;
        p_t = p_t;
        p_p = p_p;
+       p_s = p_s;
        p_reader = p_reader;
        p_v = p_v
      } in

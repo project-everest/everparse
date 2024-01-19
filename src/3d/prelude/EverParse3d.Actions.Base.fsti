@@ -526,61 +526,61 @@ val validate_ite
 noextract inline_for_extraction
 val validate_nlist
        (n:U32.t)
-       (#wk: _)
-       (#k:parser_kind true wk)
+       (#k:parser_kind true WeakKindStrongPrefix)
        (#[@@@erasable] t:Type)
        (#[@@@erasable] p:parser k t)
+       ((*[@@@erasable]*) s:serializer p)
        (#[@@@erasable] inv:slice_inv)
        (#[@@@erasable] disj:disjointness_pre)                   
        (#[@@@erasable] l:eloc)
        (#allow_reading:bool)
        (v: validate_with_action_t p inv disj l allow_reading)
-: validate_with_action_t (parse_nlist n p) inv disj l false
+: validate_with_action_t (parse_nlist n s) inv disj l false
 
 noextract inline_for_extraction
 val validate_nlist_constant_size_without_actions
        (n_is_const: bool)
        (n:U32.t)
-       (#wk: _)
-       (#k:parser_kind true wk)
+       (#k:parser_kind true WeakKindStrongPrefix)
        (#[@@@erasable] t:Type)
        (#[@@@erasable] p:parser k t)
+       ((*[@@@erasable]*) s:serializer p)
        (#[@@@erasable] inv:slice_inv)
        (#[@@@erasable] disj:disjointness_pre)                   
        (#[@@@erasable] l:eloc)
        (#allow_reading:bool)
        (v: validate_with_action_t p inv disj l allow_reading)
-: Tot (validate_with_action_t (parse_nlist n p) inv disj l false)
+: Tot (validate_with_action_t (parse_nlist n s) inv disj l false)
 
 noextract inline_for_extraction
 val validate_t_at_most
        (n:U32.t)
        (#nz: _)
-       (#wk: _)
-       (#k:parser_kind nz wk)
+       (#k:parser_kind nz WeakKindStrongPrefix)
        (#[@@@erasable] t:Type)
        (#[@@@erasable] p:parser k t)
+       ((*[@@@erasable]*) s:serializer p)
        (#[@@@erasable] inv:slice_inv)
        (#[@@@erasable] disj:disjointness_pre)                   
        (#[@@@erasable] l:eloc)
        (#ar:_)
        (v:validate_with_action_t p inv disj l ar)
-  : Tot (validate_with_action_t (parse_t_at_most n p) inv disj l false)
+  : Tot (validate_with_action_t (parse_t_at_most n s) inv disj l false)
 
 noextract inline_for_extraction
 val validate_t_exact
        (n:U32.t)
        (#nz:bool)
-       (#wk: _)
-       (#k:parser_kind nz wk)
+       (#k:parser_kind nz WeakKindStrongPrefix)
        (#[@@@erasable] t:Type)
        (#[@@@erasable] p:parser k t)
+       ((*[@@@erasable]*) s:serializer p)
        (#[@@@erasable] inv:slice_inv)
        (#[@@@erasable] disj:disjointness_pre)                   
        (#[@@@erasable] l:eloc)
        (#ar:_)
        (v:validate_with_action_t p inv disj l ar)
-  : Tot (validate_with_action_t (parse_t_exact n p) inv disj l false)
+  : Tot (validate_with_action_t (parse_t_exact n s) inv disj l false)
 
 inline_for_extraction noextract
 val validate_with_comment
