@@ -153,7 +153,7 @@ rule token =
   | "]"                          { locate lexbuf RBRACK }
   | "[="           { deprecation_warning lexbuf "[:byte-size-single-element-array";
                      locate lexbuf LBRACK_EQ }
-  | "[<="          { deprecation_warning lexbuf "[:byte-size-at-most";
+  | "[<="          { deprecation_warning lexbuf "[:byte-size-single-element-array-at-most";
                      locate lexbuf LBRACK_LEQ }
   | "*"            { locate lexbuf STAR }
   | "/"            { locate lexbuf DIV }
