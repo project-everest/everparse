@@ -169,7 +169,7 @@ let size_and_alignment_of_atomic_field (env:env_t) (f:atomic_field)
 
       | FieldArrayQualified (n, ByteArrayByteSize) ->
         if base_size <> Fixed 1
-        then warning "Expected a byte array; if the underlying array elements are larger than a byte, use the '[:byte-size' notation"
+        then error "Expected a byte array; if the underlying array elements are larger than a byte, use the '[:byte-size' notation"
                      f.range;
         let n = value_of_const_expr env n in
         begin

@@ -457,7 +457,7 @@ let field_bitwidth_t = either (with_meta_t int) bitfield_attr
 type array_qualifier =
   | ByteArrayByteSize  //[
   | ArrayByteSize      //[:byte-size
-  | ArrayByteSizeAtMost //[:byte-size-at-most
+  | ArrayByteSizeAtMost //[:byte-size-single-element-array-at-most
   | ArrayByteSizeSingleElementArray //[:byte-size-single-element-array
 
 [@@ PpxDerivingYoJson ]
@@ -1114,11 +1114,11 @@ and print_atomic_field (f:atomic_field) : ML string =
       begin match q with
       | ByteArrayByteSize -> Printf.sprintf "[%s]" (print_expr e)
       | ArrayByteSize -> Printf.sprintf "[:byte-size %s]" (print_expr e)
-      | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-at-most %s]" (print_expr e)
+      | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-single-element-array-at-most %s]" (print_expr e)
       | ArrayByteSizeSingleElementArray -> Printf.sprintf "[:byte-size-single-element-array %s]" (print_expr e)
       end
     | FieldString None -> Printf.sprintf "[::zeroterm]"
-    | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-b-te-size-at-most %s]" (print_expr sz)
+    | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-byte-size-at-most %s]" (print_expr sz)
     | FieldConsumeAll -> Printf.sprintf "[:consume-all]"
   in
   let sf = f.v in
