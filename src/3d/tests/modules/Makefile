@@ -92,7 +92,7 @@ clean:
 
 # This rule is for continuous integration only (for the purpose of
 # testing EverParse.) It can be ignored by users.
-ci: $(EVERPARSE_ALL_O_FILES)
+ci: $(EVERPARSE_ALL_O_FILES) $(EVERPARSE_ALL_H_FILES)
 	! test -e $(EVERPARSE_OUTPUT_DIR)/Lib.h
 	$(EVERPARSE_CMD) --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.h
 	$(EVERPARSE_CMD) --check_inplace_hash src/Point.3d=$(EVERPARSE_OUTPUT_DIR)/Point.c
