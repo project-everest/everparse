@@ -126,27 +126,27 @@ Triangle2ValidateTriangle(
       else
       {
         uint64_t
-        positionAfterTriangle =
+        positionAfterTriangle0 =
           ValidatePoint(Ctxt,
             ErrorHandlerFn,
             truncatedInput,
             truncatedInputLength,
             position);
         uint64_t result1;
-        if (EverParseIsSuccess(positionAfterTriangle))
+        if (EverParseIsSuccess(positionAfterTriangle0))
         {
-          result1 = positionAfterTriangle;
+          result1 = positionAfterTriangle0;
         }
         else
         {
           ErrorHandlerFn("_triangle",
             "corners.element",
-            EverParseErrorReasonOfResult(positionAfterTriangle),
-            EverParseGetValidatorErrorKind(positionAfterTriangle),
+            EverParseErrorReasonOfResult(positionAfterTriangle0),
+            EverParseGetValidatorErrorKind(positionAfterTriangle0),
             Ctxt,
             truncatedInput,
             position);
-          result1 = positionAfterTriangle;
+          result1 = positionAfterTriangle0;
         }
         result = result1;
         ite = EverParseIsError(result1);

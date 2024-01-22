@@ -361,6 +361,7 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
                       "-fparentheses" ::
                         "-fcurly-braces" ::
                           "-fmicrosoft" ::
+                          "-fno-shadow" ::
                             "-header" :: filename_concat ddd_home "noheader.txt" ::
                               "-minimal" ::
                                 "-add-include" :: "\"EverParse.h\"" ::
