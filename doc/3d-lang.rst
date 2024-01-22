@@ -374,8 +374,10 @@ A variation is:
 
 * ``T f[:byte-size-single-element-array-at-most n]``
 
-similar to the previous form, but where ``n`` is an upper bound on the
-size in bytes.
+which describes a field ``f`` that contains a single element of type
+``T`` occupying at most ``n`` bytes, followed by padding bytes to make
+up to ``n`` bytes. This construct thus always consumes exactly ``n``
+bytes.
 
 We expect to add several other kinds of variable-length array-like
 types in the uture.
