@@ -641,23 +641,23 @@ let hashed_files
       (modul: string)
   =
   {
-    Hashing.c = filename_concat out_dir (Printf.sprintf "%s.c" modul);
-    Hashing.h = filename_concat out_dir (Printf.sprintf "%s.h" modul);
-    Hashing.wrapper_c =
+    Hashing_Hash.c = filename_concat out_dir (Printf.sprintf "%s.c" modul);
+    Hashing_Hash.h = filename_concat out_dir (Printf.sprintf "%s.h" modul);
+    Hashing_Hash.wrapper_c =
       begin
         let w = filename_concat out_dir (Printf.sprintf "%sWrapper.c" modul) in
         if Sys.file_exists w
         then Some w
         else None
       end;
-    Hashing.wrapper_h =
+    Hashing_Hash.wrapper_h =
       begin
         let w = filename_concat out_dir (Printf.sprintf "%sWrapper.h" modul) in
         if Sys.file_exists w
         then Some w
         else None
       end;
-    Hashing.assertions =
+    Hashing_Hash.assertions =
       begin
         let assertions = filename_concat out_dir (Printf.sprintf "%sStaticAssertions.c" modul) in
         if Sys.file_exists assertions

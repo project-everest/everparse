@@ -1,4 +1,4 @@
-ROOT=Main.fst
+ROOT=Main.fst Hashing.Hash.fst
 
 EVERPARSE_HOME=$(realpath ../..)
 
