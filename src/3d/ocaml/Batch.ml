@@ -598,7 +598,7 @@ let add_copyright
   let copyright_file = Printf.sprintf "%s.copyright.txt" ddd_file in
   if Sys.file_exists copyright_file
   then begin
-      let h = Hashing.hash_as_comment ddd_file in
+      let h = Hashing_Hash.hash_as_comment ddd_file in
       List.iter (add_copyright_header (Some h) out_dir copyright_file) (collect_files_from produced_files wrappers out_dir [] dm)
     end
 
@@ -671,7 +671,7 @@ let check_inplace_hash
   =
   match String.split_on_char '=' file_3d_file_c with
   | [file_3d; file_c] ->
-     if Hashing.check_inplace_hashes file_3d (Hashing.OneHash file_c)
+     if Hashing.check_inplace_hashes file_3d (Hashing_Hash.OneHash file_c)
      then begin
          print_endline (Printf.sprintf "EverParse check_inplace_hash succeeded on %s" file_3d)
        end else begin
@@ -690,7 +690,7 @@ let check_hashes
   let c = hashed_files out_dir modul in
   match ch with
   | InplaceHashes ->
-     Hashing.check_inplace_hashes file (Hashing.AllHashes c)
+     Hashing.check_inplace_hashes file (Hashing_Hash.AllHashes c)
   | _ ->
      let json = filename_concat out_dir (Printf.sprintf "%s.json" modul) in
      Hashing.check_hash file None json && (

@@ -32,3 +32,35 @@ let hash f opt_c =
      end
   end;
   hash_finish h
+
+let c_comment_intro = "EverParse checksum hash"
+
+let hash_as_comment file =
+  let h = hash file None in
+  c_comment_intro ^ ":" ^ h
+
+type check_inplace_hashes_t =
+  | AllHashes of c_files
+  | OneHash of string
+
+let check_inplace_hashes f file_3d files_c =
+  let h = hash file_3d None in
+  match files_c with
+  | OneHash c_file -> f h c_file
+  | AllHashes files_c ->
+    List.for_all (f h) (
+      files_c.c ::
+      files_c.h ::
+      begin match files_c.wrapper_c with
+      | None -> []
+      | Some w -> [w]
+      end @
+      begin match files_c.wrapper_h with
+      | None -> []
+      | Some w -> [w]
+      end @
+      begin match files_c.assertions with
+      | None -> []
+      | Some assertions -> [assertions]
+      end
+    )

@@ -2,19 +2,8 @@ open Hashing_Hash
 
 (* load, check and save weak hashes from a C file *)
 
-let c_comment_intro = "EverParse checksum hash"
-
-let hash_as_comment file =
-  let h = hash file None in
-  Printf.sprintf "%s:%s" c_comment_intro h
-
-type check_inplace_hashes_t =
-  | AllHashes of c_files
-  | OneHash of string
-
 let check_inplace_hashes file_3d files_c =
-  let h = hash file_3d None in
-  let f file_c =
+  let f h file_c =
     let ch = open_in file_c in
     (* Check fails if a bad hash or no hash is found. A
        good hash alone does not make the check succeed *)
@@ -42,26 +31,7 @@ let check_inplace_hashes file_3d files_c =
     close_in ch;
     res
   in
-  match files_c with
-  | OneHash c_file -> f c_file
-  | AllHashes files_c ->
-    List.for_all f (
-      files_c.c ::
-      files_c.h ::
-      begin match files_c.wrapper_c with
-      | None -> []
-      | Some w -> [w]
-      end @
-      begin match files_c.wrapper_h with
-      | None -> []
-      | Some w -> [w]
-      end @
-      begin match files_c.assertions with
-      | None -> []
-      | Some assertions -> [assertions]
-      end
-    )
-  
+  Hashing_Hash.check_inplace_hashes f file_3d files_c
 
 (* load, check and save hashes from/to JSON file *)
 
