@@ -39,6 +39,8 @@ extract-hashchk: $(ALL_FS_FILES)
 FSTARLIB_FILES= \
   FStar_Pervasives_Native.fs \
   extracted/FStar_Pervasives.fs \
+  FStar_List_Tot_Base.fs \
+  FStar_List.fs \
   prims.fs
 
 fstarlib:
