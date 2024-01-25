@@ -1,4 +1,4 @@
-ROOT=Hashing.Hash.fst
+ROOT=Hashing.Hash.fst Options.fst
 
 EVERPARSE_HOME=$(realpath ../..)
 
@@ -41,6 +41,9 @@ FSTARLIB_FILES= \
   extracted/FStar_Pervasives.fs \
   FStar_List_Tot_Base.fs \
   FStar_List.fs \
+  FStar_Char.fs \
+  FStar_Monotonic_Heap.fs \
+  FStar_CommonST.fs \
   prims.fs
 
 fstarlib:
