@@ -405,7 +405,7 @@ cases:
   | cs=nonempty_list(case) { cs }
 
 attribute:
-  | ENTRYPOINT { Entrypoint }
+  | ENTRYPOINT { Entrypoint None }
   | ALIGNED    { Aligned }
 
 attributes:

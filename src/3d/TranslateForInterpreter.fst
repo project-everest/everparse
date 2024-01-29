@@ -372,10 +372,6 @@ let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
     let args, decls = args |> List.map translate_typ_param |> List.split in
     T.T_app hd b (List.map Inr args), List.flatten decls
 
-let has_entrypoint (l:list A.attribute) =
-  List.tryFind (function A.Entrypoint -> true | _ -> false) l
-  |> Some?
-
 let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param)
   : ML (T.typedef_name & T.decls) =
 

@@ -508,8 +508,16 @@ and switch_case = expr & list case
 
 
 [@@ PpxDerivingYoJson ]
+noeq
+type probe_entrypoint = {
+  probe_ep_fn: ident;
+  probe_ep_length:expr;
+}
+
+[@@ PpxDerivingYoJson ]
+noeq
 type attribute =
-  | Entrypoint
+  | Entrypoint: (probe: option probe_entrypoint) -> attribute
   | Aligned
 
 /// Typedefs are given 2 names by convention and can be tagged as an
@@ -607,7 +615,7 @@ let prog = list decl & option type_refinement
 (** Entrypoint and export definitions *)
 
 let has_entrypoint (l:list attribute) : Tot bool =
-  Some? (List.Tot.tryFind (function Entrypoint -> true | _ -> false) l)
+  List.Tot.existsb Entrypoint? l
 
 let is_entrypoint_or_export d = match d.d_decl.v with
   | Record names _ _ _
