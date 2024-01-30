@@ -3,12 +3,15 @@ extern probe ProbeInPlace
 #define PROBE_LENGTH 28
 
 entrypoint probe ProbeInPlace (length = PROBE_LENGTH)
-typedef struct _test1(UINT64 bound) {
-  UINT16 x { x >= bound };
+typedef struct _test1 {
+  UINT16 x;
   UINT16 y { y >= x };
 } test1;
 
+extern probe ProbeAndCopy
+
 entrypoint probe ProbeInPlace (length = 42)
+entrypoint probe ProbeAndCopy (length = sizeof(test1))
 typedef struct _test2(UINT64 bound) {
   UINT16 x { x >= bound };
   UINT16 y { y >= x };
@@ -20,7 +23,7 @@ typedef struct _test3(UINT64 bound) {
   UINT16 y { y >= x };
 } test3;
 
-entrypoint probe ProbeInPlace (length = PROBE_LENGTH)
+entrypoint
 typedef struct _secondary(UINT64 bound) {
   UINT16 x { x >= bound };
   UINT16 y { y >= x };
@@ -31,8 +34,6 @@ typedef struct _primaryInPlace(EVERPARSE_COPY_BUFFER_T dest) {
   UINT64 bound;
   secondary(bound) *payload probe ProbeInPlace (length = 4, destination = dest);
 } primaryInPlace;
-
-extern probe ProbeAndCopy
 
 entrypoint
 typedef struct _primaryAndCopy(EVERPARSE_COPY_BUFFER_T dest) {
