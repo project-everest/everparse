@@ -617,6 +617,15 @@ let prog = list decl & option type_refinement
 let has_entrypoint (l:list attribute) : Tot bool =
   List.Tot.existsb Entrypoint? l
 
+let rec get_entrypoint_probes' (l: list attribute) (accu: list probe_entrypoint) : Tot (list probe_entrypoint) =
+  match l with
+  | [] -> List.Tot.rev accu
+  | Entrypoint (Some probe) :: q -> get_entrypoint_probes' q (probe :: accu)
+  | _ :: q -> get_entrypoint_probes' q accu
+
+let get_entrypoint_probes (l: list attribute) : Tot (list probe_entrypoint) =
+  get_entrypoint_probes' l []
+
 let is_entrypoint_or_export d = match d.d_decl.v with
   | Record names _ _ _
   | CaseType names _ _ ->

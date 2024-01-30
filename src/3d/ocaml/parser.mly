@@ -406,6 +406,12 @@ cases:
 
 attribute:
   | ENTRYPOINT { Entrypoint None }
+  | ENTRYPOINT PROBE i=qident len=expr {
+      Entrypoint (Some ({
+        probe_ep_fn = i;
+        probe_ep_length = len;
+      }))
+    }
   | ALIGNED    { Aligned }
 
 attributes:

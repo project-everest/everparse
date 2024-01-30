@@ -133,9 +133,16 @@ type typedef_body =
   | TD_struct : list field  -> typedef_body
 
 noeq
+type probe_entrypoint = {
+  probe_ep_fn: A.ident;
+  probe_ep_length: expr;
+}
+
+noeq
 type typedef_name = {
   td_name:A.ident;
   td_params:list param;
+  td_entrypoint_probes: list probe_entrypoint;
   td_entrypoint:bool
 }
 type typedef = typedef_name & typedef_body
