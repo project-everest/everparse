@@ -776,6 +776,14 @@ let wrapper_name
     fn
   |> pascal_case
 
+let probe_wrapper_name
+  (modul: string)
+  (probe_fn: string)
+  (fn: string)
+: ML string
+= Printf.sprintf "%s_%s_check_%s" modul probe_fn fn
+    |> pascal_case
+
 let validator_name
   (modul: string)
   (fn: string)
@@ -988,17 +996,18 @@ let print_c_entry
       else wrapped_call_stream validator_name pargs
     in
     (* Probe wrapper *)
-    let probe_wrapper_signature probe =
+    let probe_wrapper_signature probe : ML _ =
       let return_type =
         if is_input_stream_buffer 
         then "BOOLEAN"
         else "uint64_t"
       in
+      let probe_fn = probe_fn_to_c probe.probe_ep_fn in
+      let probe_wrapper_name = probe_wrapper_name modul probe_fn d.decl_name.td_name.A.v.A.name in
       Printf.sprintf
-            "%s %sProbe%s(%sEVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr)"
+            "%s %s(%sEVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr)"
              return_type
-             wrapper_name
-             (probe_fn_to_c probe.probe_ep_fn)
+             probe_wrapper_name
              pparams
     in
     let probe_wrapper (probe: probe_entrypoint) : ML _ =
