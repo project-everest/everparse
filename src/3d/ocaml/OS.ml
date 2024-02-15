@@ -1,3 +1,5 @@
+let argv _ = Array.to_list Sys.argv
+
 let dirname = Filename.dirname
 
 (* The filename without its path *)

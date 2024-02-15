@@ -1,5 +1,7 @@
 module OS
 
+val argv : unit -> FStar.All.ML (list string)
+
 val dirname : string -> Tot string
 
 (* The filename without its path *)

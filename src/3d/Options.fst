@@ -156,7 +156,7 @@ type cmd_option_kind =
       (v: ref (list (valid_string valid))) ->
       cmd_option_kind
 
-module Getopt = FStar.Getopt
+module Getopt = FStarGetopt
 
 let fstar_opt = Getopt.opt & string
 

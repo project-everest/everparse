@@ -13,13 +13,14 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 *)
-module FStar.Getopt
+module FStarGetopt
 open FStar.ST
 open FStar.All
 open FStar.Char
 
+let cmdline (_: unit) : ML (list string) = OS.argv ()
+
 val noshort : char
-val nolong : string
 noeq
 type opt_variant 'a =
   | ZeroArgs of (unit -> ML 'a)
@@ -33,6 +34,5 @@ type parse_cmdline_res =
   | Error of string
   | Success
 
-val parse_cmdline: list opt  -> (string -> ML parse_cmdline_res) -> parse_cmdline_res
-val parse_string: list opt  -> (string -> ML parse_cmdline_res) -> string -> parse_cmdline_res
-val cmdline: unit -> list string
+val parse_cmdline: list opt  -> (string -> ML parse_cmdline_res) -> ML parse_cmdline_res
+val parse_string: list opt  -> (string -> ML parse_cmdline_res) -> string -> ML parse_cmdline_res
