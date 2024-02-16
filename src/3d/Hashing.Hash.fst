@@ -43,7 +43,7 @@ type check_inplace_hashes_t =
   | AllHashes of c_files
   | OneHash of string
 
-let check_inplace_hashes f file_3d files_c =
+let check_inplace_hashes_on f file_3d files_c =
   let h = hash file_3d None in
   match files_c with
   | OneHash c_file -> f h c_file
@@ -64,3 +64,24 @@ let check_inplace_hashes f file_3d files_c =
       | Some assertions -> [assertions]
       end
     )
+
+let check_inplace_hash
+     f file_3d_file_c
+  =
+  let eqstr' () : FStar.All.ML (s: string { String.length s == 1 }) =
+    assert_norm (String.length "=" == 1);
+    "="
+  in
+  let eqstr = eqstr' () in
+  match String.split [String.index eqstr 0] file_3d_file_c with
+  | [file_3d; file_c] ->
+     if check_inplace_hashes_on f file_3d (OneHash file_c)
+     then begin
+         FStar.IO.print_string (Printf.sprintf "EverParse check_inplace_hash succeeded on %s\n" file_3d)
+       end else begin
+         FStar.IO.print_string (Printf.sprintf "EverParse check_inplace_hash failed on %s\n" file_3d);
+         FStar.All.exit 255
+       end
+  | _ -> FStar.All.failwith "check_inplace_hash: expected file.3d=file.h"
+
+let check_inplace_hashes f = List.iter (check_inplace_hash f)

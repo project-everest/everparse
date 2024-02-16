@@ -666,21 +666,7 @@ let hashed_files
       end;
   }
 
-let check_inplace_hash
-      file_3d_file_c
-  =
-  match String.split_on_char '=' file_3d_file_c with
-  | [file_3d; file_c] ->
-     if Hashing.check_inplace_hashes file_3d (Hashing_Hash.OneHash file_c)
-     then begin
-         print_endline (Printf.sprintf "EverParse check_inplace_hash succeeded on %s" file_3d)
-       end else begin
-         print_endline (Printf.sprintf "EverParse check_inplace_hash failed on %s" file_3d);
-         exit 255
-       end
-  | _ -> failwith "check_inplace_hash: expected file.3d=file.h"
-
-let check_inplace_hashes = List.iter check_inplace_hash
+let check_inplace_hashes = Hashing_Hash.check_inplace_hashes Hashing.check_inplace_hashes_f
 
 let check_hashes
       (ch: check_hashes_t)

@@ -2,8 +2,7 @@ open Hashing_Hash
 
 (* load, check and save weak hashes from a C file *)
 
-let check_inplace_hashes file_3d files_c =
-  let f h file_c =
+let check_inplace_hashes_f h file_c =
     let ch = open_in file_c in
     (* Check fails if a bad hash or no hash is found. A
        good hash alone does not make the check succeed *)
@@ -30,8 +29,9 @@ let check_inplace_hashes file_3d files_c =
     let res = aux false in
     close_in ch;
     res
-  in
-  Hashing_Hash.check_inplace_hashes f file_3d files_c
+
+let check_inplace_hashes file_3d files_c =
+  Hashing_Hash.check_inplace_hashes_on check_inplace_hashes_f file_3d files_c
 
 (* load, check and save hashes from/to JSON file *)
 
