@@ -18,7 +18,7 @@ INCLUDE_PATHS=
 OTHERFLAGS?=
 FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached '*,'
 
-all: extract-hashchk
+all: extract-hashchk fstarlib
 
 .PHONY: all extract-hashchk
 
@@ -44,6 +44,8 @@ FSTARLIB_FILES= \
   FStar_Char.fs \
   FStar_Monotonic_Heap.fs \
   FStar_CommonST.fs \
+  FStar_All.fs \
+  FStar_IO.fs \
   prims.fs
 
 fstarlib:

@@ -59,7 +59,17 @@ let parse_cmdline specs others =
 
 let parse_string specs others (str:string) =
     let split_spaces (str:string) =
-      let seps = [' '; '\t'] in
+      let _space (_: unit): ML (s: string { String.length s == 1 }) =
+        assert_norm (String.length " " == 1);
+        " "
+      in
+      let _tab (_: unit): ML (s: string { String.length s == 1 }) =
+        assert_norm (String.length "\t" == 1);
+        "\t"
+      in
+      let space = _space () in
+      let tab = _tab () in
+      let seps = [String.index space 0; String.index tab 0] in
       FStar.List.filter (fun s -> s <> "") (String.split seps str)
     in
     let index_of str c : Pure int

@@ -1,5 +1,8 @@
 module OS
 
+let argv () =
+    Array.toList (System.Environment.GetCommandLineArgs())
+
 let dirname (s: string) =
     System.IO.Path.GetDirectoryName(s)
 
