@@ -18,8 +18,6 @@
     <Compile Include="FStar_List.fs" />
     <Compile Include="3d\Version.fs" />
     <Compile Include="Hashing_Op.fs" />
-    <Compile Include="3d\Hashing_Hash.fs" />
-    <Compile Include="3d\HashingOptions.fs" />
     <Compile Include="fstarlib\FStar_Char.fs" />
     <Compile Include="FStar_String.fs" />
     <Compile Include="fstarlib\FStar_Monotonic_Heap.fs" />
@@ -27,6 +25,8 @@
     <Compile Include="FStar_ST.fs" />
     <Compile Include="FStar_All.fs" />
     <Compile Include="fstarlib\FStar_IO.fs" />
+    <Compile Include="3d\Hashing_Hash.fs" />
+    <Compile Include="3d\HashingOptions.fs" />
     <Compile Include="OS.fs" />
     <Compile Include="3d\FStarGetopt.fs" />
     <Compile Include="3d\Options.fs" />
