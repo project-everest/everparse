@@ -5,6 +5,7 @@
     <OtherFlags>--nowarn:0086 --nowarn:0025 --nowarn:0044 --langversion:5.0 --mlcompatibility</OtherFlags>
     <WarnOn>3390;$(WarnOn)</WarnOn>
     <Name>hashchk</Name>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <EnableUnmanagedDebugging>true</EnableUnmanagedDebugging>

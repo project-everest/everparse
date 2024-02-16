@@ -73,3 +73,12 @@ FSTAR_OPTIONS=$(OTHERFLAGS) $(addprefix --include , $(EVERPARSE_HOME)/src/lowpar
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS)
+
+.PHONY: hashchk hashchk-boot
+
+hashchk:
+	cd hashchk && dotnet publish -o $(EVERPARSE_HOME)/bin
+
+hashchk-boot: 3d
+	+$(MAKE) -f hashchk.Makefile
+	+$(MAKE) hashchk
