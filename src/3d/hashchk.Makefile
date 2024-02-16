@@ -37,10 +37,8 @@ extract-hashchk: $(ALL_FS_FILES)
 .PHONY: fstarlib
 
 FSTARLIB_FILES= \
-  FStar_Pervasives_Native.fs \
   extracted/FStar_Pervasives.fs \
   FStar_List_Tot_Base.fs \
-  FStar_List.fs \
   FStar_Char.fs \
   FStar_Monotonic_Heap.fs \
   FStar_CommonST.fs \

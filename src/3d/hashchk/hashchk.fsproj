@@ -12,10 +12,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="fstarlib\prims.fs" />
-    <Compile Include="fstarlib\FStar_Pervasives_Native.fs" />
+    <Compile Include="FStar_Pervasives_Native.fs" />
     <Compile Include="fstarlib\FStar_Pervasives.fs" />
     <Compile Include="fstarlib\FStar_List_Tot_Base.fs" />
-    <Compile Include="fstarlib\FStar_List.fs" />
+    <Compile Include="FStar_List.fs" />
     <Compile Include="3d\Version.fs" />
     <Compile Include="Hashing_Op.fs" />
     <Compile Include="3d\Hashing_Hash.fs" />

@@ -1,10 +1,25 @@
 #light "off"
 module FStar_Pervasives_Native
 open Prims
+type 'a option0 = 'a option
+let none0 : 'a option0 = None
+let some0 : 'a -> 'a option0 = Some
+let is_none0 (x: 'a option0) : bool = match x with
+| None -> true
+| _ -> false
+let get_some0 (x: 'a option0) : 'a = match x with
+| None -> failwith "Option0 value not available"
+| Some v -> v
 type 'Aa option =
 | None
 | Some of 'Aa
-
+let option_intro (x: 'a option0) : 'a option =
+    if is_none0 x
+    then None
+    else Some (get_some0 x)
+let option_elim (x: 'a option) : 'a option0 = match x with
+| None -> none0
+| Some v -> some0 v
 
 let uu___is_None = function None -> true | _ -> false
 let uu___is_Some = function Some _ -> true | _ -> false
