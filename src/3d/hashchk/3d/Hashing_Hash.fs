@@ -111,7 +111,7 @@ _0
 end))
 
 
-let check_inplace_hashes : (Prims.string  ->  Prims.string  ->  Prims.bool)  ->  Prims.string  ->  check_inplace_hashes_t  ->  Prims.bool = (fun ( f  :  Prims.string  ->  Prims.string  ->  Prims.bool ) ( file_3d  :  Prims.string ) ( files_c  :  check_inplace_hashes_t ) -> (
+let check_inplace_hashes_on : (Prims.string  ->  Prims.string  ->  Prims.bool)  ->  Prims.string  ->  check_inplace_hashes_t  ->  Prims.bool = (fun ( f  :  Prims.string  ->  Prims.string  ->  Prims.bool ) ( file_3d  :  Prims.string ) ( files_c  :  check_inplace_hashes_t ) -> (
 
 let h = (hash file_3d FStar_Pervasives_Native.None)
 in (match (files_c) with
@@ -139,6 +139,35 @@ end
 (assertions)::[]
 end))))
 end)))
+
+
+let check_inplace_hash : (Prims.string  ->  Prims.string  ->  Prims.bool)  ->  Prims.string  ->  unit = (fun ( f  :  Prims.string  ->  Prims.string  ->  Prims.bool ) ( file_3d_file_c  :  Prims.string ) -> (
+
+let eqstr' = (fun ( uu___  :  unit ) -> "=")
+in (
+
+let eqstr = (eqstr' ())
+in (match ((FStar_String.split (((FStar_String.index eqstr (Prims.parse_int "0")))::[]) file_3d_file_c)) with
+| (file_3d)::(file_c)::[] -> begin
+(
+
+let uu___ = (check_inplace_hashes_on f file_3d (OneHash (file_c)))
+in (match (uu___) with
+| true -> begin
+(FStar_IO.print_string (Prims.strcat "EverParse check_inplace_hash succeeded on " (Prims.strcat file_3d "\n")))
+end
+| uu___1 -> begin
+((FStar_IO.print_string (Prims.strcat "EverParse check_inplace_hash failed on " (Prims.strcat file_3d "\n")));
+(FStar_All.exit (Prims.parse_int "255"));
+)
+end))
+end
+| uu___ -> begin
+(failwith "check_inplace_hash: expected file.3d=file.h")
+end))))
+
+
+let check_inplace_hashes : (Prims.string  ->  Prims.string  ->  Prims.bool)  ->  Prims.string Prims.list  ->  unit = (fun ( f  :  Prims.string  ->  Prims.string  ->  Prims.bool ) -> (FStar_List.iter (check_inplace_hash f)))
 
 
 
