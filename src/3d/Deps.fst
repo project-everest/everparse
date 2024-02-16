@@ -28,7 +28,7 @@ let dependencies graph modul =
   List.Tot.map snd (all_edges_from graph.graph modul)
 
 let dep_exists dirname name =
-  OS.file_exists (Options.get_file_name (OS.concat dirname name))
+  OS.file_exists (Options.file_name (OS.concat dirname name))
 
 (*
  * root is already greyed
@@ -243,7 +243,7 @@ let rec build_dep_graph_aux (dirname:string) (mname:string) (acc:dep_graph & lis
          sd_has_extern_functions = has_extern_functions;
          sd_has_extern_probe = has_extern_probe;
         } =
-      scan_deps (Options.get_file_name (OS.concat dirname mname))
+      scan_deps (Options.file_name (OS.concat dirname mname))
     in
     let edges = List.fold_left (fun edges dep ->
       if List.mem (mname, dep) edges
@@ -275,7 +275,7 @@ let build_dep_graph_from_list files =
     modules_with_extern_probe = [];
   }
   in
-  let g1 = List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.get_module_name fn) acc) (g0, []) files
+  let g1 = List.fold_left (fun acc fn -> build_dep_graph_aux (OS.dirname fn) (Options.module_name fn) acc) (g0, []) files
   |> fst
   in
   {g1 with graph =
@@ -294,9 +294,9 @@ let get_sorted_deps (g: dep_graph) (ml: list string) : ML (list string) =
 
 let collect_and_sort_dependencies_from_graph (g: dep_graph) (files:list string) : ML (list string) =
   let dirname = files |> List.hd |> OS.dirname in
-  let filename_of modul = Options.get_file_name (OS.concat dirname modul) in
+  let filename_of modul = Options.file_name (OS.concat dirname modul) in
   files
-  |> List.map Options.get_module_name
+  |> List.map Options.module_name
   |> get_sorted_deps g
   |> List.fold_left (fun acc mod -> if List.mem mod acc then acc else mod::acc) []
   |> List.rev
@@ -322,7 +322,7 @@ let parsed_config : ref (option (Config.config & string)) = ST.alloc None
 #pop-options
 
 let parse_config () =
-  match Options.get_config_file () with
+  match Options.config_file () with
   | None -> None
   | Some fn -> 
     let module_name = Options.config_module_name () in

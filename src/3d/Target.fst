@@ -213,7 +213,7 @@ let integer_type_of_arith_op (o:op{arith_op o}) =
   | BitwiseNot t -> t
 
 let print_arith_op_range () : ML bool =
-  List.length (Options.get_equate_types_list ()) = 0
+  List.length (Options.equate_types_list ()) = 0
 
 let print_arith_op
   (o:op{arith_op o})
@@ -601,7 +601,7 @@ let print_attributes (entrypoint:bool) (attrs:decl_attributes) : string =
 let maybe_print_type_equality (mname:string) (td:type_decl) : ML string =
   if td.decl_name.td_entrypoint
   then
-    let equate_types_list = Options.get_equate_types_list () in
+    let equate_types_list = Options.equate_types_list () in
     (match (List.tryFind (fun (_, m) -> m = mname) equate_types_list) with
      | Some (a, _) ->
        let typname = A.ident_name td.decl_name.td_name in
@@ -813,7 +813,7 @@ let print_c_entry
             );\n\
           }" 
    in
-   let input_stream_binding = Options.get_input_stream_binding () in
+   let input_stream_binding = Options.input_stream_binding () in
    let is_input_stream_buffer = HashingOptions.InputStreamBuffer? input_stream_binding in
    let wrapped_call_buffer name params =
      Printf.sprintf
@@ -945,7 +945,7 @@ let print_c_entry
   in
 
   let external_defs_includes =
-    if not (Options.get_emit_output_types_defs ()) then "" else
+    if not (Options.emit_output_types_defs ()) then "" else
     let deps =
       if List.length signatures_output_typ_deps = 0
       then ""
@@ -1281,7 +1281,7 @@ let get_out_exprs_deps (modul:string) (ds:decls) : ML (list string) =
 let print_out_exprs_c modul (ds:decls) : ML string =
   let tbl = H.create 10 in
   let deps = get_out_exprs_deps modul ds in
-  let emit_output_types_defs = Options.get_emit_output_types_defs () in
+  let emit_output_types_defs = Options.emit_output_types_defs () in
   let dep_includes =
     if List.length deps = 0 || not emit_output_types_defs
     then ""

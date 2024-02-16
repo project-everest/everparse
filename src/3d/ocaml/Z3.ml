@@ -15,7 +15,7 @@ let maybe_output_line (maybe_file: out_channel option) (s: string) =
   maybe_output_string maybe_file "\n"
 
 let with_z3 (debug: bool) (transcript: string option) (f: (z3 -> 'a)) : 'a =
-  let cmd_line = Printf.sprintf "%s %s -in" (Options.get_z3_executable ()) (Options.get_z3_options ()) in
+  let cmd_line = Printf.sprintf "%s %s -in" (Options.z3_executable ()) (Options.z3_options ()) in
   let (ch_from_z3, ch_to_z3) as ch_z3 = Unix.open_process cmd_line in
   let ch_transcript = match transcript with
     | None -> None
