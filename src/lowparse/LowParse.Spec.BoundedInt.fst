@@ -25,7 +25,20 @@ let bounded_integer_prop_equiv
   assert_norm (pow2 24 == 16777216);
   assert_norm (pow2 32 == 4294967296)
 
-#push-options "--z3rlimit 16"
+let bounded_integer_prop_equiv_smtpat i u
+: Lemma
+  (bounded_integer_prop i u <==> U32.v u < pow2 (8 * i))
+  [SMTPat (bounded_integer_prop i u)]
+=
+  bounded_integer_prop_equiv i u
+
+let bounded_integer_compat_smtpat (i: integer_size) u
+: Lemma
+  (requires bounded_integer_prop i u)
+  (ensures pow2 (8 * i) <= pow2 32 /\ pow2 32 == 4294967296)
+  [SMTPat (bounded_integer_prop i u)]
+=
+  M.pow2_le_compat 32 (8 `FStar.Mul.op_Star` i)
 
 let decode_bounded_integer
   (i: integer_size)
@@ -129,8 +142,6 @@ let bounded_integer_of_le_injective'
     E.le_to_n_inj b1 b2
   end else ()
 
-#pop-options
-
 let bounded_integer_of_le_injective
   (i: integer_size)
 : Lemma
@@ -152,6 +163,10 @@ let synth_u16_le_injective : squash (synth_injective synth_u16_le) = ()
 
 let parse_u16_le = parse_bounded_integer_le 2 `parse_synth` synth_u16_le
 
+let parse_u16_le_spec b =
+  parse_synth_eq (parse_bounded_integer_le 2) synth_u16_le b;
+  E.lemma_le_to_n_is_bounded (Seq.slice b 0 2)
+
 inline_for_extraction
 let synth_u32_le
   (x: bounded_integer 4)
@@ -160,14 +175,16 @@ let synth_u32_le
 
 let parse_u32_le = parse_bounded_integer_le 4 `parse_synth` synth_u32_le
 
+let parse_u32_le_spec b =
+  parse_synth_eq (parse_bounded_integer_le 4) synth_u32_le b;
+  E.lemma_le_to_n_is_bounded (Seq.slice b 0 4)
+
 let serialize_bounded_integer_le'
   (sz: integer_size)
 : Tot (bare_serializer (bounded_integer sz))
 = (fun (x: bounded_integer sz) ->
     E.n_to_le sz (U32.v x)
   )
-
-#push-options "--z3rlimit 16"
 
 let serialize_bounded_integer_le_correct
   (sz: integer_size)
@@ -184,8 +201,6 @@ let serialize_bounded_integer_le_correct
   = ()
   in
   Classical.forall_intro prf
-
-#pop-options
 
 let serialize_bounded_integer_le
 sz
