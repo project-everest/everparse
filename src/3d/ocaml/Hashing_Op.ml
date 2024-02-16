@@ -1,5 +1,7 @@
 type t = HashingBase.t
 
+let debug_hash = false
+
 (* Hash a boolean *)
 
 let hash_bool h b =
@@ -32,6 +34,9 @@ let hash_file_option h = function
 (* Hash a string *)
 
 let hash_string h s =
+  if debug_hash then begin
+      print_endline ("hash_string: \"" ^ s ^ "\"")
+  end;
   hash_int h (String.length s);
   HashingBase.update h (Bytes.of_string s)
 
