@@ -23,7 +23,7 @@ let uppercase (s : string) = s.ToUpperInvariant()
 //let escaped = BatString.escaped
 let index = get
 
-let index_of (s : string) (c : char) = s.IndexOf(c) 
+let index_of (s : string) (c : char) = Prims.int_intro (s.IndexOf(c))
 let list_of_string (s : string) = s |> Seq.toList 
 let string_of_list (l : char list) = string(Array.ofList l)
 let string_of_char (c : char) =  string(c, 1)

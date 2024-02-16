@@ -21,7 +21,9 @@ let rec ediv_rem (n:bigint) (d:bigint) : bigint * bigint =
         d - r
     else BigInteger.DivRem (n, d)
 
+let int_elim (x: bigint) : int = int x
 type int       = bigint
+let int_intro (x: Microsoft.FSharp.Core.int) : int = bigint x
 type nonzero = int
 let ( + )  (x:bigint) (y:int) = x + y
 let ( - )  (x:int) (y:int) = x - y

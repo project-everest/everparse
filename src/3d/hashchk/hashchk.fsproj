@@ -11,7 +11,7 @@
     <UseVSHostingProcess>true</UseVSHostingProcess>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="fstarlib\prims.fs" />
+    <Compile Include="prims.fs" />
     <Compile Include="FStar_Pervasives_Native.fs" />
     <Compile Include="fstarlib\FStar_Pervasives.fs" />
     <Compile Include="fstarlib\FStar_List_Tot_Base.fs" />
@@ -25,7 +25,7 @@
     <Compile Include="fstarlib\FStar_Monotonic_Heap.fs" />
     <Compile Include="fstarlib\FStar_CommonST.fs" />
     <Compile Include="FStar_ST.fs" />
-    <Compile Include="fstarlib\FStar_All.fs" />
+    <Compile Include="FStar_All.fs" />
     <Compile Include="fstarlib\FStar_IO.fs" />
     <Compile Include="OS.fs" />
     <Compile Include="3d\FStarGetopt.fs" />

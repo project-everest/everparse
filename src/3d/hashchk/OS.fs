@@ -18,8 +18,8 @@ let remove_extension (s: string) =
 let concat (d: string) (f: string) =
     System.IO.Path.Combine(d, f)
 
-let int_of_string (s: string) =
+let int_of_string (s: string) : Prims.int =
     let r = ref 0
     if System.Int32.TryParse(s, r)
-    then !r
-    else 0
+    then Prims.int_intro !r
+    else Prims.int_zero

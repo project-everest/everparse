@@ -9,7 +9,7 @@ let hd = List.head
 let tail = List.tail
 let tl = List.tail
 
-let nth l i = List.nth l (Microsoft.FSharp.Core.Operators.int i)
+let nth l i = List.nth l (Prims.int_elim i)
 let length l : int = List.length l |> System.Numerics.BigInteger.op_Implicit
 let rev = List.rev
 let map = List.map

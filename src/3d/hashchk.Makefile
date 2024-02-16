@@ -42,9 +42,8 @@ FSTARLIB_FILES= \
   FStar_Char.fs \
   FStar_Monotonic_Heap.fs \
   FStar_CommonST.fs \
-  FStar_All.fs \
   FStar_IO.fs \
-  prims.fs
+
 
 fstarlib:
 	+$(MAKE) -C $(FSTAR_HOME)/ulib -f Makefile.extract.fsharp all-fs
