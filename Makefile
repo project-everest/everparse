@@ -20,10 +20,20 @@ lowparse-unit-test: lowparse
 3d-unit-test: 3d
 	+$(MAKE) -C src/3d test
 
+.PHONY: 3d-unit-ci
+3d-unit-ci: 3d
+	+$(MAKE) -C src/3d hashchk-boot
+	+$(MAKE) -C src/3d/tests ci
+
 3d-doc-test: 3d
 	+$(MAKE) -C doc 3d
 
-3d-test: 3d-unit-test 3d-doc-test
+.PHONY: 3d-common-test
+3d-common-test: 3d-doc-test
+
+3d-test: 3d-unit-test 3d-common-test
+
+3d-ci: 3d-unit-ci 3d-common-test
 
 lowparse-bitfields-test: lowparse
 	+$(MAKE) -C tests/bitfields
@@ -44,9 +54,12 @@ quackyducky-sample0-test: quackyducky lowparse
 
 quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
 
-test: all lowparse-test quackyducky-test 3d-test
+.PHONY: common-test
+common-test: all lowparse-test quackyducky-test
 
-ci: test
+test: common-test 3d-test
+
+ci: common-test 3d-ci
 
 clean-3d:
 	+$(MAKE) -C src/3d clean

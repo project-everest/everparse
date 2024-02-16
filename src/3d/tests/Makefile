@@ -34,7 +34,16 @@ clean_out_files=\
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe
+all: test
+
+test: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe
+
+.PHONY: test ci inplace-hash-ci
+
+ci: test inplace-hash-ci
+
+inplace-hash-ci: inplace-hash-test
+	$(EVERPARSE_HOME)/bin/hashchk --check_inplace_hash Comments.3d=out.inplace-hash/Comments.h
 
 #AR: TODO: remove ELF.3d from here
 
