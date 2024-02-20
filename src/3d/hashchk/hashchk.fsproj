@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <OtherFlags>--nowarn:0086 --nowarn:0025 --nowarn:0044 --langversion:5.0 --mlcompatibility</OtherFlags>
     <WarnOn>3390;$(WarnOn)</WarnOn>
     <Name>hashchk</Name>
