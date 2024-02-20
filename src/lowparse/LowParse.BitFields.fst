@@ -500,7 +500,7 @@ let get_bitfield_get_bitfield
     then nth_get_bitfield x lo hi (i + lo')
   )
 
-#push-options "--z3rlimit_factor 2"
+#push-options "--z3rlimit_factor 4"
 let get_bitfield_zero_inner
   (#tot: pos)
   (x: U.uint_t tot)
