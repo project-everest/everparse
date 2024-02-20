@@ -18,9 +18,9 @@ RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 # Repository install may incur some (transient?) failures (see for instance https://github.com/dotnet/sdk/issues/27082 )
 # So, we use manual install instead, from https://docs.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual#manual-install
 ENV DOTNET_ROOT /home/opam/dotnet
-RUN wget -nv https://download.visualstudio.microsoft.com/download/pr/cd0d0a4d-2a6a-4d0d-b42e-dfd3b880e222/008a93f83aba6d1acf75ded3d2cfba24/dotnet-sdk-6.0.400-linux-x64.tar.gz && \
+RUN wget -nv https://download.visualstudio.microsoft.com/download/pr/85bcc525-4e9c-471e-9c1d-96259aa1a315/930833ef34f66fe9ee2643b0ba21621a/dotnet-sdk-8.0.201-linux-x64.tar.gz && \
     mkdir -p $DOTNET_ROOT && \
-    tar xf dotnet-sdk-6.0.400-linux-x64.tar.gz -C $DOTNET_ROOT && \
+    tar xf dotnet-sdk-8.0.201-linux-x64.tar.gz -C $DOTNET_ROOT && \
     echo 'export PATH=$PATH:$DOTNET_ROOT:$DOTNET_ROOT/tools' | tee --append $HOME/.profile $HOME/.bashrc $HOME/.bash_profile && \
     rm -f dotnet-sdk*.tar.gz
 

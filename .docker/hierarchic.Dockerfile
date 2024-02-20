@@ -3,6 +3,13 @@
 ARG FSTAR_BRANCH=master
 FROM fstar:local-branch-$FSTAR_BRANCH
 
+# CI dependencies: .NET Core 8.0
+# Repository install may incur some (transient?) failures (see for instance https://github.com/dotnet/sdk/issues/27082 )
+# So, we use manual install instead, from https://docs.microsoft.com/en-us/dotnet/core/install/linux-scripted-manual#manual-install
+RUN wget -nv https://download.visualstudio.microsoft.com/download/pr/85bcc525-4e9c-471e-9c1d-96259aa1a315/930833ef34f66fe9ee2643b0ba21621a/dotnet-sdk-8.0.201-linux-x64.tar.gz && \
+    tar xf dotnet-sdk-8.0.201-linux-x64.tar.gz -C $DOTNET_ROOT && \
+    rm -f dotnet-sdk*.tar.gz
+
 ADD --chown=opam:opam ./ $HOME/everparse/
 WORKDIR $HOME/everparse
 
