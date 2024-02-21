@@ -42,7 +42,7 @@ let hash_file filename =
     let sp = System.ReadOnlySpan(a, 0, a.Length)
     Hashing_Op.bytes_to_hex sp
 
-let everparse_version = "2023.01.23"
+let everparse_version = "2023.05.03"
 
 let everparse_url =
   let suffix =
@@ -66,9 +66,9 @@ let everparse_filename =
 
 let everparse_hash =
   if System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux)
-  then "73826947643f3dedca20ba6c9aeeb4436b81e899ac9f85a07edf53a02933a408"
+  then "7e825832d3ebda85fb3951f90c6ec9280d6109df212285f0c2da7a4520efc6f4"
   else if System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows)
-  then "17e578949cf98c752c5bc08fe81b573ef39f6b8ff340199b34697716f8b3ee6d"
+  then "2915961509c14eba035f51a7aeb7b22e9e72e14879b4564897016a4dd1d35436"
   else failwith "everparse_filename: Cannot determine OS platform"
 
 let everparse_unpack () =
