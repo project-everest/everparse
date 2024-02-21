@@ -43,7 +43,7 @@ test: batch-test batch-test-negative batch-cleanup-test inplace-hash-test module
 ci: test inplace-hash-ci
 
 inplace-hash-ci: inplace-hash-test
-	$(EVERPARSE_HOME)/bin/hashchk --check_inplace_hash Comments.3d=out.inplace-hash/Comments.h
+	$(EVERPARSE_HOME)/bin/everparse --check_inplace_hash Comments.3d=out.inplace-hash/Comments.h
 
 #AR: TODO: remove ELF.3d from here
 

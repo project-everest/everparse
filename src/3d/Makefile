@@ -77,7 +77,7 @@ FSTAR_OPTIONS=$(OTHERFLAGS) $(addprefix --include , $(EVERPARSE_HOME)/src/lowpar
 .PHONY: hashchk hashchk-boot
 
 hashchk:
-	cd hashchk && dotnet publish -o $(EVERPARSE_HOME)/bin
+	cd hashchk && dotnet publish -o $(EVERPARSE_HOME)/bin everparse.fsproj
 
 hashchk-boot: 3d
 	+$(MAKE) -f hashchk.Makefile
