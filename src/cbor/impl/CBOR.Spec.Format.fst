@@ -1337,6 +1337,8 @@ let serialize_initial_byte_compare
   let b2' = synth_bitsum'_recip initial_byte_desc b2 in
   serialize_u8_spec' b1';
   serialize_u8_spec' b2';
+  seq_to_list_length_one (serialize serialize_initial_byte b1);
+  seq_to_list_length_one (serialize serialize_initial_byte b2);  
   assert (bytes_lex_compare
       (serialize serialize_initial_byte b1)
       (serialize serialize_initial_byte b2) == byte_compare b1' b2'
@@ -1449,12 +1451,18 @@ let rec bytes_lex_compare_serialize_strong_prefix1
   end else begin
     let x = Seq.index mid1 0 in
     let x2 = Seq.index mid2 0 in
+    let mid1' = Seq.tail mid1 in
+    let mid2' = Seq.tail mid2 in
+    assert (mid1 `Seq.equal` Seq.cons x mid1');
+    assert (mid2 `Seq.equal` Seq.cons x2 mid2');
+    Seq.lemma_append_cons mid1 suff1;
+    Seq.lemma_append_cons mid2 suff2;
+    assert ((mid1 `Seq.append` suff1) == Seq.cons x (mid1' `Seq.append` suff1));
+    assert ((mid2 `Seq.append` suff2) == Seq.cons x2 (mid2' `Seq.append` suff2));
     let c = byte_compare x x2 in
     if c = 0
     then begin
       assert (x == x2);
-      let mid1' = Seq.tail mid1 in
-      let mid2' = Seq.tail mid2 in
       let sx = Seq.slice mid1 0 1 in
       assert (sx `Seq.equal` Seq.slice mid2 0 1);
       let pre' = pre `Seq.append` sx in
@@ -1648,6 +1656,10 @@ let serialized_lex_compare_simple_value
   Seq.append_assoc (serialize serialize_initial_byte b1) (serialize (serialize_long_argument b1) l1) (serialize (serialize_content h1) c1);
   Seq.append_assoc (serialize serialize_initial_byte b2) (serialize (serialize_long_argument b2) l2) (serialize (serialize_content h2) c2);
   bytes_lex_compare_serialize_strong_prefix serialize_initial_byte b1 b2 (serialize (serialize_long_argument b1) l1 `Seq.append` serialize (serialize_content h1) c1) (serialize (serialize_long_argument b2) l2 `Seq.append` serialize (serialize_content h2) c2);
+  seq_to_list_length_one (serialize serialize_initial_byte b1);
+  seq_to_list_length_one (serialize serialize_initial_byte b2);
+  seq_to_list_append (serialize (serialize_long_argument b1) l1) (serialize (serialize_content h1) c1);
+  seq_to_list_append (serialize (serialize_long_argument b2) l2) (serialize (serialize_content h2) c2);
   let (ty1, (info1, ())) = b1 in
   let (ty2, (info2, ())) = b2 in
   if (x1 `U8.lte` max_simple_value_additional_info || x2 `U8.lte` max_simple_value_additional_info)
@@ -1667,7 +1679,9 @@ let serialized_lex_compare_simple_value
     assert (serialize s1_pre l1 == serialize (serialize_filter serialize_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue?.v l1));
     assert (serialize s1' l1 == serialize (serialize_filter serialize_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue?.v l1));
     assert (serialize s1' l1 == Seq.create 1 x1');
+    seq_to_list_length_one (serialize s1' l1);
     assert (serialize (serialize_long_argument b1) l1 == Seq.create 1 (x1 <: U8.t));
+    seq_to_list_length_one (serialize (serialize_long_argument b1) l1);
     assert (b2 == (cbor_major_type_simple_value, (additional_info_long_argument_8_bits, ())));
     let LongArgumentSimpleValue _ x2' = l2 in
     assert (x2 == x2');
@@ -1681,7 +1695,9 @@ let serialized_lex_compare_simple_value
     assert (serialize s2_pre l2 == serialize (serialize_filter serialize_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue?.v l2));
     assert (serialize s2' l2 == serialize (serialize_filter serialize_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue?.v l2));
     assert (serialize s2' l2 == Seq.create 1 x2');
+    seq_to_list_length_one (serialize s2' l2);
     assert (serialize (serialize_long_argument b2) l2 == Seq.create 1 (x2 <: U8.t));
+    seq_to_list_length_one (serialize (serialize_long_argument b2) l2);
     bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (serialize (serialize_content h1) c1) (serialize (serialize_content h2) c2)
   end
 

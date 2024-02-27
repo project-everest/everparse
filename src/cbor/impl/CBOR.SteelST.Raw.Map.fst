@@ -301,6 +301,7 @@ let compare_u64
   : Tot I16.t
   = if x1 `U64.lt` x2 then -1s else if x2 `U64.lt` x1 then 1s else 0s
 
+(*
 #push-options "--z3rlimit 32 --ifuel 8"
 
 #restart-solver
@@ -342,3 +343,4 @@ let lex_compare_with_header
   end
 
 #pop-options
+*)

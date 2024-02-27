@@ -172,6 +172,7 @@ val jump_data_item
 
 (* Comparisons with unserialized values *)
 
+(*
 val lex_compare_with_header
   (ty: Ghost.erased major_type_t { ty `U8.lt` cbor_major_type_simple_value })
   (x: U64.t)
@@ -187,3 +188,4 @@ val lex_compare_with_header
       let s = serialize serialize_header vh.contents in
       bytes_lex_compare s0 s `same_sign` I16.v i
     )
+*)

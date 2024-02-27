@@ -54,7 +54,11 @@ let rec bytes_lex_compare_correct
   [SMTPat (bytes_lex_compare s1 s2)]
 = if Seq.length s1 = 0 || Seq.length s2 = 0
   then ()
-  else bytes_lex_compare_correct (Seq.tail s1) (Seq.tail s2)
+  else begin
+    Seq.cons_head_tail s1;
+    Seq.cons_head_tail s2;
+    bytes_lex_compare_correct (Seq.tail s1) (Seq.tail s2)
+  end
 
 let bytes_lex_compare_equal
   x1 x2
