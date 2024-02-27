@@ -213,12 +213,41 @@ let rec list_is_suffix_of_precedes
     else list_is_suffix_of_precedes v0 small (List.Tot.tl large)
   end
 
+let opt_precedes_list_item
+  (#t1 #t2: Type)
+  (x2: option t2)
+  (x1: t1)
+: GTot bool
+= FStar.StrongExcludedMiddle.strong_excluded_middle (opt_precedes x1 x2)
+
+module Pull = FStar.Ghost.Pull
+
+noextract
+let opt_precedes_list
+  (#t1 #t2: Type)
+  (l: list t1)
+  (b: option t2)
+: Tot prop
+= List.Tot.for_all (Pull.pull (opt_precedes_list_item b)) l
+
+let rec opt_precedes_opt_precedes_list
+  (#t1 #t2: Type)
+  (l: list t1)
+  (b: option t2)
+: Lemma
+  (requires (opt_precedes l b))
+  (ensures (opt_precedes_list l b))
+  [SMTPat (opt_precedes_list l b)]
+= match l with
+  | [] -> ()
+  | a :: q -> opt_precedes_opt_precedes_list q b
+
 [@@erasable; noextract_to "krml"]
-let array_group3 (bound: option Cbor.raw_data_item) = (l: list Cbor.raw_data_item { opt_precedes l bound }) -> Ghost (option (list Cbor.raw_data_item))
+let array_group3 (bound: option Cbor.raw_data_item) = (l: list Cbor.raw_data_item { opt_precedes_list l bound }) -> Ghost (option (list Cbor.raw_data_item & list Cbor.raw_data_item))
   (requires True)
   (ensures (fun l' -> match l' with
   | None -> True
-  | Some l' -> opt_precedes l' bound
+  | Some (l1, l2) -> l == l1 `List.Tot.append` l2
   ))
 
 noextract
@@ -229,12 +258,25 @@ let array_group3_equiv
 = forall l . g1 l == g2 l
 
 let array_group3_always_false #b : array_group3 b = fun _ -> None
-let array_group3_empty #b : array_group3 b = fun x -> Some x
+
+let opt_precedes_list_assoc
+  (#t1 #t2: Type)
+  (l1 l2: list t1)
+  (b: option t2)
+: Lemma
+  (opt_precedes_list (l1 `List.Tot.append` l2) b <==>  opt_precedes_list l1 b /\ opt_precedes_list l2 b)
+  [SMTPat (opt_precedes_list (l1 `List.Tot.append` l2) b)]
+= List.Tot.for_all_append (Pull.pull (opt_precedes_list_item b)) l1 l2
+
+let array_group3_empty #b : array_group3 b = fun x -> Some ([], x)
 let array_group3_concat #b (a1 a3: array_group3 b) : array_group3 b =
   (fun l ->
     match a1 l with
     | None -> None
-    | Some l3 -> a3 l3
+    | Some (l1, l2) ->  begin match a3 l2 with
+      | None -> None
+      | Some (l3, l4) -> List.Tot.append_assoc l1 l3 l4; Some (List.Tot.append l1 l3, l4)
+    end
   )
 
 let array_group3_concat_equiv
@@ -250,17 +292,22 @@ let array_group3_choice #b (a1 a3: array_group3 b) : array_group3 b =
     | None -> a3 l
     | Some l3 -> Some l3
 
-let rec array_group3_zero_or_more' #b (a: array_group3 b) (l: list Cbor.raw_data_item { opt_precedes l b }) : Ghost (option (list Cbor.raw_data_item))
+let rec array_group3_zero_or_more' #b (a: array_group3 b) (l: list Cbor.raw_data_item { opt_precedes_list l b }) : Ghost (option (list Cbor.raw_data_item & list Cbor.raw_data_item))
   (requires True)
-  (ensures (fun l' -> match l' with None -> True | Some l' -> opt_precedes l' b))
+  (ensures (fun l' -> match l' with None -> True | Some (l1, l2) -> l == l1 `List.Tot.append` l2))
   (decreases (List.Tot.length l))
 =
   match a l with
-  | None -> Some l
-  | Some l' ->
-    if List.Tot.length l' >= List.Tot.length l
-    then Some l
-    else array_group3_zero_or_more' a l'
+  | None -> Some ([], l)
+  | Some (l1, l2) ->
+    List.Tot.append_length l1 l2;
+    if Nil? l1
+    then Some (l1, l2)
+    else
+      begin match array_group3_zero_or_more' a l2 with
+      | None -> None
+      | Some (l2', l3) -> List.Tot.append_assoc l1 l2' l3; Some (List.Tot.append l1 l2', l3)
+      end
 
 let array_group3_zero_or_more #b : array_group3 b -> array_group3 b = array_group3_zero_or_more'
 
@@ -273,7 +320,7 @@ let array_group3_zero_or_one #b (a: array_group3 b) : Tot (array_group3 b) =
 let array_group3_item (#b: option Cbor.raw_data_item) (t: bounded_typ_gen b) : array_group3 b = fun l ->
   match l with
   | [] -> None
-  | a :: q -> if t a then Some q else None
+  | a :: q -> if t a then Some ([a], q) else None
 
 let array_group3_item_equiv
   #b
@@ -284,10 +331,10 @@ let array_group3_item_equiv
 = ()
 
 let match_array_group3 (#b: option Cbor.raw_data_item) (a: array_group3 b)
-  (l: list Cbor.raw_data_item {opt_precedes l b})
+  (l: list Cbor.raw_data_item {opt_precedes_list l b})
 : GTot bool
 = match a l with
-  | Some l' -> Nil? l'
+  | Some (_, l') -> Nil? l'
   | _ -> false
 
 let t_array3 (#b: option Cbor.raw_data_item) (a: array_group3 b) : bounded_typ_gen b = fun x ->
@@ -325,8 +372,6 @@ let rec t_array3_rec
 [@@erasable]
 noeq
 type map_group_entry (b: option Cbor.raw_data_item) = | MapGroupEntry: (fst: bounded_typ_gen b) -> (snd: bounded_typ_gen b) -> map_group_entry b
-
-module Pull = FStar.Ghost.Pull
 
 noextract
 let opt_map_entry_bounded'
