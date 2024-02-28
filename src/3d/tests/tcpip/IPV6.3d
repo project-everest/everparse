@@ -71,7 +71,17 @@ typedef struct _IPV6_HEADER
   UINT32BE TrafficClass:8;
   UINT32BE FlowLabel:20;
   UINT16BE PayloadLength;
-  UINT8 NextHeader;
+  UINT8 NextHeader
+  {
+    // The value 59 in the Next Header field of an IPv6 header or any
+    // extension header indicates that there is nothing following that
+    // header.
+    // For payload lengths greater than 65,535 bytes, the Payload Length 
+    // field is set to 0 and the Jumbo Payload option is used in the
+    // Hop-by-Hop Options extension header (NextHeader == 0).
+    // PayloadLength = 0 => NextHeader \in {0, 59}
+    PayloadLength > 0 || (NextHeader == 59 || NextHeader == 0)
+  };
   UINT8 HopLimit;
   UINT8 SourceAddress[16];
   UINT8 DestinationAddress[16];
