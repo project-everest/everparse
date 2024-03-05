@@ -36,7 +36,11 @@ typedef struct _IP_DATAGRAM_HEADER_PARAMETRIZED (
 
     //Total length of the IP datagram
 
-    UINT16BE                                             TotalLength;
+    UINT16BE                                             TotalLength
+    {
+        // Total Length is the length of the datagram, measured in octets, *including* internet header and data.
+        TotalLength >= IHL * 4
+    };
 
     UINT16BE                                             Identification;
 
