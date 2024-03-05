@@ -378,11 +378,22 @@ and resolve_switch_case (env:qenv) (sc:switch_case) : ML switch_case = //case fi
   let e, l = sc in
   resolve_expr env e, List.map (resolve_case env) l
 
+let resolve_typedef_attribute (env: qenv) (a: attribute) : ML attribute =
+  match a with
+  | Entrypoint (Some p) ->
+    Entrypoint (Some ({
+      probe_ep_fn = resolve_ident env p.probe_ep_fn;
+      probe_ep_length = resolve_expr env p.probe_ep_length;
+    }))
+  | _ -> a
+
 let resolve_typedef_names (env:qenv) (td_names:typedef_names) : ML typedef_names =
-  { td_names with
+  {
     typedef_name = resolve_ident env td_names.typedef_name;
     typedef_abbrev = resolve_ident env td_names.typedef_abbrev;
-    typedef_ptr_abbrev = resolve_ident env td_names.typedef_ptr_abbrev }
+    typedef_ptr_abbrev = resolve_ident env td_names.typedef_ptr_abbrev;
+    typedef_attributes = List.map (resolve_typedef_attribute env) td_names.typedef_attributes;
+  }
 
 let resolve_enum_case (env:qenv) (ec:enum_case) : ML enum_case =
   match ec with
