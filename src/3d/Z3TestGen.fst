@@ -1331,7 +1331,7 @@ let mk_want_another_distinct_witness witness witness_args : Tot string =
 "
   (mk_arg_conj (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
 
-let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i : ML unit =
+let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i (accu_no_dup: string) : ML string =
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
@@ -1339,11 +1339,13 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
     let witness_args = read_witness_args z3 [] nargs in
     print_witness_and_call name l witness witness_args;
     print_test_case witness witness_args;
-    z3.to_z3 (mk_want_another_distinct_witness witness witness_args);
+    let new_no_dup = mk_want_another_distinct_witness witness witness_args in
+    let accu_no_dup' = accu_no_dup ^ new_no_dup in
+    z3.to_z3 new_no_dup;
     if i <= 1
-    then ()
+    then accu_no_dup'
     else
-      want_witnesses print_test_case z3 name l nargs (i - 1)
+      want_witnesses print_test_case z3 name l nargs (i - 1) accu_no_dup'
   end
   else begin
     FStar.IO.print_string
@@ -1358,7 +1360,8 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
         end
         else Printf.sprintf ";; %s: z3 gave up" status
       end;
-    FStar.IO.print_newline ()
+    FStar.IO.print_newline ();
+    accu_no_dup
   end
 
 let rec mk_call_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
@@ -1468,7 +1471,7 @@ let rec want_witnesses_with_depth
 : ML unit
 =
   FStar.IO.print_string (Printf.sprintf "Checking witnesses for branch trace: %s\n" branch_trace);
-  want_witnesses print_test_case z3 name l nargs nbwitnesses;
+  let _ : string = want_witnesses print_test_case z3 name l nargs nbwitnesses "" in
   z3.to_z3 (Printf.sprintf "(assert (> (branch-index state-witness) %d))\n" cur_depth);
   let rec aux (tree: list branch_trace_node) : ML unit = match tree with
   | [] -> ()
@@ -1514,22 +1517,24 @@ let rec enumerate_branch_traces_for_next_depth'
 let rec want_witnesses_at_leaves
   (f: (unit -> ML string))
   (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
-  max_depth (cur_depth: nat { cur_depth <= max_depth }) (tree: list branch_trace_node) (branch_trace: string)
-: ML unit
+  max_depth (cur_depth: nat { cur_depth <= max_depth }) (tree: list branch_trace_node) (branch_trace: string) (accu_no_dup: string)
+: ML string
 =
 //  FStar.IO.print_string (Printf.sprintf "want_witnesses_at_leaves: max_depth = %d, cur_depth = %d, branch_trace = %s\n" max_depth cur_depth branch_trace);
   match tree with
   | [] ->
     if cur_depth < max_depth
-    then ()
+    then accu_no_dup
     else begin
       FStar.IO.print_string (Printf.sprintf "Checking witnesses for branch trace: %s\n" branch_trace);
       z3.to_z3 "(push)\n";
       z3.to_z3 (f ());
       z3.to_z3 assert_valid_state;
       z3.to_z3 (Printf.sprintf "(assert (>= (branch-index state-witness) %d))\n" cur_depth);
-      want_witnesses print_test_case z3 name l nargs nbwitnesses;
-      z3.to_z3 "(pop)\n"
+      z3.to_z3 accu_no_dup;
+      let new_no_dup = want_witnesses print_test_case z3 name l nargs nbwitnesses accu_no_dup in
+      z3.to_z3 "(pop)\n";
+      accu_no_dup ^ new_no_dup
     end
   | Node choice tree' :: q ->
     if cur_depth = max_depth
@@ -1538,9 +1543,9 @@ let rec want_witnesses_at_leaves
     else begin
       z3.to_z3 "(push)\n";
       z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
-      want_witnesses_at_leaves f print_test_case z3 name l nargs nbwitnesses max_depth (cur_depth + 1) tree' (branch_trace ^ " " ^ string_of_int choice);
+      let accu_no_dup1 = want_witnesses_at_leaves f print_test_case z3 name l nargs nbwitnesses max_depth (cur_depth + 1) tree' (branch_trace ^ " " ^ string_of_int choice) accu_no_dup in
       z3.to_z3 "(pop)\n";
-      want_witnesses_at_leaves f print_test_case z3 name l nargs nbwitnesses max_depth cur_depth q branch_trace
+      want_witnesses_at_leaves f print_test_case z3 name l nargs nbwitnesses max_depth cur_depth q branch_trace accu_no_dup1
     end
 
 let want_witnesses_indefinitely
@@ -1550,17 +1555,18 @@ let want_witnesses_indefinitely
 = let rec aux
     (cur_depth: nat)
     (tree: list branch_trace_node)
+    (accu_no_dup: string)
   : ML unit
   = if Nil? tree && cur_depth > 0
     then
       FStar.IO.print_string "Tree is empty, no more paths to explore.\n"
     else begin
-      want_witnesses_at_leaves f print_test_case z3 name l nargs nbwitnesses cur_depth 0 tree "";
+      let accu_no_dup' = want_witnesses_at_leaves f print_test_case z3 name l nargs nbwitnesses cur_depth 0 tree "" accu_no_dup in
       let tree' = enumerate_branch_traces_for_next_depth' z3 (cur_depth + 1) 0 "" tree in
-      aux (cur_depth + 1) tree'
+      aux (cur_depth + 1) tree' accu_no_dup'
     end
   in
-  aux 0 []
+  aux 0 [] ""
 
 let witnesses_for_depth max_depth (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq int -> list string -> ML unit) & (unit -> ML string))) nbwitnesses =
   z3.to_z3 "(push)\n";
