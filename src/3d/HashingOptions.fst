@@ -36,3 +36,8 @@ let input_stream_include = function
   | InputStreamBuffer -> ""
   | InputStreamStatic s
   | InputStreamExtern s -> s
+
+type timeout_options =
+  | TimeoutUnspecified
+  | TimeoutUnlimited
+  | Timeout of pos
