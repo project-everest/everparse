@@ -601,15 +601,15 @@ let get_test_checker () = !test_checker
 
 let get_z3_branch_depth () =
   match !z3_branch_depth with
-  | None -> 0
+  | None -> None
   | Some s ->
   try
     let n = OS.int_of_string s in
-    if n < 0 then (0 <: nat) else begin
+    if n < 0 then None else begin
       assert (n >= 0);
-      (n <: nat)
+      Some (n <: nat)
     end
-  with _ -> 0
+  with _ -> None
 
 let get_z3_options () : ML string = 
   match !z3_options with

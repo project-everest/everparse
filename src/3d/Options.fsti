@@ -80,4 +80,4 @@ val get_save_z3_transcript: unit -> ML (option string)
 
 val get_test_checker: unit -> ML (option string)
 
-val get_z3_branch_depth: unit -> ML nat
+val get_z3_branch_depth: unit -> ML (option nat)

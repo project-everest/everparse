@@ -1481,7 +1481,88 @@ let rec want_witnesses_with_depth
   in
   aux tree
 
-let witnesses_for (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq int -> list string -> ML unit) & (unit -> ML string))) nbwitnesses max_depth =
+let rec enumerate_branch_traces_for_next_depth'
+  (z3: Z3.z3)
+  (next_depth: nat)
+  (cur_depth: nat { cur_depth < next_depth })
+  (branch_trace: string)
+  (tree: list branch_trace_node)
+: ML (list branch_trace_node)
+= 
+//  FStar.IO.print_string (Printf.sprintf "enumerate_branch_traces_for_next_depth': next_depth = %d, cur_depth = %d, branch_trace = %s\n" next_depth cur_depth branch_trace);
+  match tree with
+  | [] ->
+    if cur_depth + 1 = next_depth
+    then enumerate_branch_traces' z3 next_depth cur_depth branch_trace
+    else []
+  | Node choice tree' :: q ->
+    if cur_depth + 1 = next_depth
+    then failwith "enumerate_branch_traces_for_next_depth': input tree too large, this should not happen"
+    else begin
+      let branch_trace' = branch_trace ^ " " ^ string_of_int choice in
+      z3.to_z3 "(push)\n";
+      z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
+      let tree'' = enumerate_branch_traces_for_next_depth' z3 next_depth (cur_depth + 1) branch_trace' tree' in
+      z3.to_z3 "(pop)\n";
+      let q' = enumerate_branch_traces_for_next_depth' z3 next_depth cur_depth branch_trace q in
+      // simplify the tree if no branches were found AND we are not at the end of the tree
+      if Nil? tree'' && cur_depth + 2 < next_depth
+      then q'
+      else Node choice tree'' :: q'
+    end
+
+let rec want_witnesses_at_leaves
+  (f: (unit -> ML string))
+  (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
+  max_depth (cur_depth: nat { cur_depth <= max_depth }) (tree: list branch_trace_node) (branch_trace: string)
+: ML unit
+=
+//  FStar.IO.print_string (Printf.sprintf "want_witnesses_at_leaves: max_depth = %d, cur_depth = %d, branch_trace = %s\n" max_depth cur_depth branch_trace);
+  match tree with
+  | [] ->
+    if cur_depth < max_depth
+    then ()
+    else begin
+      FStar.IO.print_string (Printf.sprintf "Checking witnesses for branch trace: %s\n" branch_trace);
+      z3.to_z3 "(push)\n";
+      z3.to_z3 (f ());
+      z3.to_z3 assert_valid_state;
+      z3.to_z3 (Printf.sprintf "(assert (>= (branch-index state-witness) %d))\n" cur_depth);
+      want_witnesses print_test_case z3 name l nargs nbwitnesses;
+      z3.to_z3 "(pop)\n"
+    end
+  | Node choice tree' :: q ->
+    if cur_depth = max_depth
+    then
+      failwith "want_witnesses_at_leaves: tree is too large. This should not happen"
+    else begin
+      z3.to_z3 "(push)\n";
+      z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
+      want_witnesses_at_leaves f print_test_case z3 name l nargs nbwitnesses max_depth (cur_depth + 1) tree' (branch_trace ^ " " ^ string_of_int choice);
+      z3.to_z3 "(pop)\n";
+      want_witnesses_at_leaves f print_test_case z3 name l nargs nbwitnesses max_depth cur_depth q branch_trace
+    end
+
+let want_witnesses_indefinitely
+  (f: (unit -> ML string))
+  (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
+: ML unit
+= let rec aux
+    (cur_depth: nat)
+    (tree: list branch_trace_node)
+  : ML unit
+  = if Nil? tree && cur_depth > 0
+    then
+      FStar.IO.print_string "Tree is empty, no more paths to explore.\n"
+    else begin
+      want_witnesses_at_leaves f print_test_case z3 name l nargs nbwitnesses cur_depth 0 tree "";
+      let tree' = enumerate_branch_traces_for_next_depth' z3 (cur_depth + 1) 0 "" tree in
+      aux (cur_depth + 1) tree'
+    end
+  in
+  aux 0 []
+
+let witnesses_for_depth max_depth (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq int -> list string -> ML unit) & (unit -> ML string))) nbwitnesses =
   z3.to_z3 "(push)\n";
   z3.to_z3 (mk_get_witness name l);
   let traces = enumerate_branch_traces z3 max_depth in
@@ -1497,6 +1578,24 @@ let witnesses_for (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { na
     print_test_case_mk_get_first_witness
     ;
   z3.to_z3 "(pop)\n"
+
+let witnesses_for_indefinitely (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq int -> list string -> ML unit) & (unit -> ML string))) nbwitnesses =
+  z3.to_z3 "(push)\n";
+  z3.to_z3 (mk_get_witness name l);
+  List.iter
+    #((Seq.seq int -> list string -> ML unit) & (unit -> ML string))
+    (fun (ptc, f) ->
+      z3.to_z3 "(push)\n";
+      want_witnesses_indefinitely f ptc z3 name l nargs nbwitnesses;
+      z3.to_z3 "(pop)\n"
+    )
+    print_test_case_mk_get_first_witness
+    ;
+  z3.to_z3 "(pop)\n"
+
+let witnesses_for = function
+| None -> witnesses_for_indefinitely
+| Some depth -> witnesses_for_depth depth
 
 let mk_get_positive_test_witness (name: string) (l: list arg_type) : string =
 "
@@ -1529,7 +1628,7 @@ static void TestErrorHandler (
 }
 "
 
-let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
+let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: option nat) (pos: bool) (neg: bool) : ML unit =
   let def = List.assoc name1 prog in
   if None? def
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
@@ -1565,7 +1664,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
       else []
     end
   in
-  witnesses_for z3 name1 args nargs tasks nbwitnesses depth;
+  witnesses_for depth z3 name1 args nargs tasks nbwitnesses;
   cout "  return 0;
   }
 "
@@ -1585,7 +1684,7 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
 
 let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for z3 name1 args nargs ([print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 args name2)]) nbwitnesses depth
+  witnesses_for depth z3 name1 args nargs ([print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 args name2)]) nbwitnesses
 
 let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses depth =
   let def = List.assoc name1 prog in
