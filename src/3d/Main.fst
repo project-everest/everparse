@@ -527,7 +527,7 @@ let produce_z3_and_test
   (name: string)
 : Tot process_files_t
 = produce_z3_and_test_gen batch out_dir (fun out_file nbwitnesses prog z3 ->
-    Z3TestGen.do_test out_dir out_file z3 prog name nbwitnesses (Options.get_z3_branch_depth ()) (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
+    Z3TestGen.do_test out_dir out_file z3 prog name nbwitnesses (Options.get_z3_timeout ()) (Options.get_z3_branch_depth ()) (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
 
 let produce_z3_and_diff_test
@@ -538,7 +538,7 @@ let produce_z3_and_diff_test
 =
   let (name1, name2) = names in
   produce_z3_and_test_gen batch out_dir (fun out_file nbwitnesses prog z3 ->
-    Z3TestGen.do_diff_test out_dir out_file z3 prog name1 name2 nbwitnesses (Options.get_z3_branch_depth ())
+    Z3TestGen.do_diff_test out_dir out_file z3 prog name1 name2 nbwitnesses (Options.get_z3_timeout ()) (Options.get_z3_branch_depth ())
   )
 
 let produce_test_checker_exe

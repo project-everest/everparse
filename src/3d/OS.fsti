@@ -29,6 +29,10 @@ val file_contents: string -> FStar.All.ML string
 
 val write_witness_to_file: list int -> string -> FStar.All.ML unit
 
+(* Timestamp, to implement the --z3_timeout option *)
+
+val timestamp : unit -> FStar.All.ML nat
+
 (* Moved here to break dependency cycle *)
 
 val int_of_string (x:string) : FStar.All.ML int

@@ -130,4 +130,11 @@ let write_witness_to_file w filename =
       w
   )
 
+let timestamp () =
+  try
+    Z.of_float (Unix.time ())
+  with e ->
+    print_endline (Printexc.to_string e);
+    raise e
+
 let int_of_string x = Z.of_string x

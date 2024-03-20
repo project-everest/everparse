@@ -1331,19 +1331,44 @@ let mk_want_another_distinct_witness witness witness_args : Tot string =
 "
   (mk_arg_conj (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
 
-let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i : ML unit =
-  z3.to_z3 "(check-sat)\n";
+let check_timeout_exceeded (timeout: option nat) : ML bool =
+  match timeout with
+  | None -> false
+  | Some timeout ->
+    let res = OS.timestamp () > timeout in
+    if res then FStar.IO.print_string "3D global timeout exceeded!\n";
+    res
+
+let send_check_sat (z3: Z3.z3) (timeout: option nat) : ML unit =
+  begin match timeout with
+  | None -> ()
+  | Some timeout ->
+    let timeout = timeout - OS.timestamp () in
+    let timeout : nat = if timeout > 0 then timeout * 1000 else 1 in // z3 expects milliseconds, we have seconds
+    let timeout_cmd = Printf.sprintf "(set-option :timeout %d)\n" timeout in
+    FStar.IO.print_string timeout_cmd;
+    z3.to_z3 timeout_cmd
+  end;
+  z3.to_z3 "(check-sat)\n"
+
+let rec want_witnesses (timeout: option nat) (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i (accu_no_dup: string) : ML string =
+  send_check_sat z3 timeout;
   let status = z3.from_z3 () in
   if status = "sat" then begin
     let witness = read_witness z3 in
     let witness_args = read_witness_args z3 [] nargs in
     print_witness_and_call name l witness witness_args;
     print_test_case witness witness_args;
-    z3.to_z3 (mk_want_another_distinct_witness witness witness_args);
-    if i <= 1
-    then ()
+    let new_no_dup = mk_want_another_distinct_witness witness witness_args in
+    let accu_no_dup' = accu_no_dup ^ new_no_dup in
+    z3.to_z3 new_no_dup;
+    if
+      if check_timeout_exceeded timeout
+      then true
+      else i <= 1
+    then accu_no_dup'
     else
-      want_witnesses print_test_case z3 name l nargs (i - 1)
+      want_witnesses timeout print_test_case z3 name l nargs (i - 1) accu_no_dup'
   end
   else begin
     FStar.IO.print_string
@@ -1358,7 +1383,8 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
         end
         else Printf.sprintf ";; %s: z3 gave up" status
       end;
-    FStar.IO.print_newline ()
+    FStar.IO.print_newline ();
+    accu_no_dup
   end
 
 let rec mk_call_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
@@ -1394,6 +1420,7 @@ let assert_valid_state =
   "(assert (or (= state-witness-input-size -1) (= state-witness-input-size 0)))\n"
 
 let rec enumerate_branch_traces'
+  (timeout: option nat)
   (z3: Z3.z3)
   (max_depth cur_depth: nat)
   (branch_trace: string)
@@ -1402,7 +1429,7 @@ let rec enumerate_branch_traces'
   then []
   else begin
     z3.to_z3 (Printf.sprintf "(assert (> (branch-index state-witness) %d))\n" cur_depth);
-    z3.to_z3 "(check-sat)\n";
+    send_check_sat z3 timeout;
     let status = z3.from_z3 () in
     if status = "sat"
     then
@@ -1411,7 +1438,7 @@ let rec enumerate_branch_traces'
         FStar.IO.print_string (Printf.sprintf "Checking feasibility of branch trace: %s\n" branch_trace');
         z3.to_z3 "(push)\n";
         z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
-        z3.to_z3 "(check-sat)\n";
+        send_check_sat z3 timeout;
         let status = z3.from_z3 () in
         if status = "unsat"
         then begin
@@ -1424,13 +1451,13 @@ let rec enumerate_branch_traces'
           FStar.IO.print_string "Branch condition may hold. Checking validity for parser encoding\n";
           z3.to_z3 "(push)\n";
           z3.to_z3 assert_valid_state;
-          z3.to_z3 "(check-sat)\n";
+          send_check_sat z3 timeout;
           let status = z3.from_z3 () in
           z3.to_z3 "(pop)\n";
           if status = "sat"
           then begin
             FStar.IO.print_string "Branch is valid\n";
-            let res = enumerate_branch_traces' z3 max_depth (cur_depth + 1) branch_trace' in
+            let res = enumerate_branch_traces' timeout z3 max_depth (cur_depth + 1) branch_trace' in
             z3.to_z3 "(pop)\n";
             aux (Node choice res :: accu) (choice + 1)
           end
@@ -1454,49 +1481,171 @@ let rec enumerate_branch_traces'
   end
 
 let enumerate_branch_traces
+  timeout
   (z3: Z3.z3)
   (max_depth: nat)
 : ML (list branch_trace_node)
 = z3.to_z3 "(push)\n";
-  let res = enumerate_branch_traces' z3 max_depth 0 "" in
+  let res = enumerate_branch_traces' timeout z3 max_depth 0 "" in
   z3.to_z3 "(pop)\n";
   res
 
-let rec want_witnesses_with_depth
+let compute_timeout (timeout: HashingOptions.timeout_options) (allow_unspecified: bool) : ML (option nat) =
+  match timeout with
+  | HashingOptions.Timeout n -> Some (OS.timestamp () + n)
+  | HashingOptions.TimeoutUnlimited -> None
+  | _ ->
+    if allow_unspecified
+    then None
+    else failwith "compute_timeout: please specify either --z3_branch_depth n, where n shall be a nonnegative integer, or --z3_global_timeout t, where t shall be a positive integer or 'unlimited'"
+
+let rec want_witnesses_with_depth'
+  timeout
   (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
   cur_depth (tree: list branch_trace_node) (branch_trace: string)
 : ML unit
 =
   FStar.IO.print_string (Printf.sprintf "Checking witnesses for branch trace: %s\n" branch_trace);
-  want_witnesses print_test_case z3 name l nargs nbwitnesses;
+  let _ : string = want_witnesses timeout print_test_case z3 name l nargs nbwitnesses "" in
   z3.to_z3 (Printf.sprintf "(assert (> (branch-index state-witness) %d))\n" cur_depth);
   let rec aux (tree: list branch_trace_node) : ML unit = match tree with
   | [] -> ()
   | Node choice tree' :: q ->
     z3.to_z3 "(push)\n";
     z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
-    want_witnesses_with_depth print_test_case z3 name l nargs nbwitnesses (cur_depth + 1) tree' (branch_trace ^ " " ^ string_of_int choice);
+    want_witnesses_with_depth' timeout print_test_case z3 name l nargs nbwitnesses (cur_depth + 1) tree' (branch_trace ^ " " ^ string_of_int choice);
     z3.to_z3 "(pop)\n";
     aux q
   in
   aux tree
 
-let witnesses_for (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq int -> list string -> ML unit) & (unit -> ML string))) nbwitnesses max_depth =
+let want_witnesses_with_depth timeout =
+  let timeout = compute_timeout timeout true in
+  want_witnesses_with_depth' timeout
+
+let rec enumerate_branch_traces_for_next_depth'
+  timeout
+  (z3: Z3.z3)
+  (next_depth: nat)
+  (cur_depth: nat { cur_depth < next_depth })
+  (branch_trace: string)
+  (tree: list branch_trace_node)
+: ML (list branch_trace_node)
+= 
+//  FStar.IO.print_string (Printf.sprintf "enumerate_branch_traces_for_next_depth': next_depth = %d, cur_depth = %d, branch_trace = %s\n" next_depth cur_depth branch_trace);
+  match tree with
+  | [] ->
+    if cur_depth + 1 = next_depth
+    then enumerate_branch_traces' timeout z3 next_depth cur_depth branch_trace
+    else []
+  | Node choice tree' :: q ->
+    if cur_depth + 1 = next_depth
+    then failwith "enumerate_branch_traces_for_next_depth': input tree too large, this should not happen"
+    else begin
+      let branch_trace' = branch_trace ^ " " ^ string_of_int choice in
+      z3.to_z3 "(push)\n";
+      z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
+      let tree'' = enumerate_branch_traces_for_next_depth' timeout z3 next_depth (cur_depth + 1) branch_trace' tree' in
+      z3.to_z3 "(pop)\n";
+      let q' = enumerate_branch_traces_for_next_depth' timeout z3 next_depth cur_depth branch_trace q in
+      // simplify the tree if no branches were found AND we are not at the end of the tree
+      if Nil? tree'' && cur_depth + 2 < next_depth
+      then q'
+      else Node choice tree'' :: q'
+    end
+
+let rec want_witnesses_at_leaves
+  (timeout: option nat)
+  (f: (unit -> ML string))
+  (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
+  max_depth (cur_depth: nat { cur_depth <= max_depth }) (tree: list branch_trace_node) (branch_trace: string) (accu_no_dup: string)
+: ML string
+=
+//  FStar.IO.print_string (Printf.sprintf "want_witnesses_at_leaves: max_depth = %d, cur_depth = %d, branch_trace = %s\n" max_depth cur_depth branch_trace);
+  match tree with
+  | [] ->
+    if cur_depth < max_depth
+    then accu_no_dup
+    else begin
+      FStar.IO.print_string (Printf.sprintf "Checking witnesses for branch trace: %s\n" branch_trace);
+      z3.to_z3 "(push)\n";
+      z3.to_z3 (f ());
+      z3.to_z3 assert_valid_state;
+      z3.to_z3 (Printf.sprintf "(assert (>= (branch-index state-witness) %d))\n" cur_depth);
+      z3.to_z3 accu_no_dup;
+      let new_no_dup = want_witnesses timeout print_test_case z3 name l nargs nbwitnesses accu_no_dup in
+      z3.to_z3 "(pop)\n";
+      accu_no_dup ^ new_no_dup
+    end
+  | Node choice tree' :: q ->
+    if cur_depth = max_depth
+    then
+      failwith "want_witnesses_at_leaves: tree is too large. This should not happen"
+    else begin
+      z3.to_z3 "(push)\n";
+      z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
+      let accu_no_dup1 = want_witnesses_at_leaves timeout f print_test_case z3 name l nargs nbwitnesses max_depth (cur_depth + 1) tree' (branch_trace ^ " " ^ string_of_int choice) accu_no_dup in
+      z3.to_z3 "(pop)\n";
+      want_witnesses_at_leaves timeout f print_test_case z3 name l nargs nbwitnesses max_depth cur_depth q branch_trace accu_no_dup1
+    end
+
+let want_witnesses_indefinitely
+  (timeout: HashingOptions.timeout_options)
+  (f: (unit -> ML string))
+  (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
+: ML unit
+= 
+  let timeout = compute_timeout timeout false in
+  let rec aux
+    (cur_depth: nat)
+    (tree: list branch_trace_node)
+    (accu_no_dup: string)
+  : ML unit
+  = if Nil? tree && cur_depth > 0
+    then
+      FStar.IO.print_string "Tree is empty, no more paths to explore.\n"
+    else begin
+      let accu_no_dup' = want_witnesses_at_leaves timeout f print_test_case z3 name l nargs nbwitnesses cur_depth 0 tree "" accu_no_dup in
+      let tree' = enumerate_branch_traces_for_next_depth' timeout z3 (cur_depth + 1) 0 "" tree in
+      aux (cur_depth + 1) tree' accu_no_dup'
+    end
+  in
+  aux 0 [] ""
+
+let witnesses_for_depth max_depth (timeout: HashingOptions.timeout_options) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq int -> list string -> ML unit) & (unit -> ML string))) nbwitnesses =
   z3.to_z3 "(push)\n";
   z3.to_z3 (mk_get_witness name l);
-  let traces = enumerate_branch_traces z3 max_depth in
+  let traces = enumerate_branch_traces (compute_timeout timeout true) z3 max_depth in
   z3.to_z3 assert_valid_state;
   List.iter
     #((Seq.seq int -> list string -> ML unit) & (unit -> ML string))
     (fun (ptc, f) ->
       z3.to_z3 "(push)\n";
       z3.to_z3 (f ());
-      want_witnesses_with_depth ptc z3 name l nargs nbwitnesses 0 traces "";
+      want_witnesses_with_depth timeout ptc z3 name l nargs nbwitnesses 0 traces "";
       z3.to_z3 "(pop)\n"
     )
     print_test_case_mk_get_first_witness
     ;
   z3.to_z3 "(pop)\n"
+
+let witnesses_for_indefinitely (timeout: HashingOptions.timeout_options) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq int -> list string -> ML unit) & (unit -> ML string))) nbwitnesses =
+  z3.to_z3 "(push)\n";
+  z3.to_z3 (mk_get_witness name l);
+  List.iter
+    #((Seq.seq int -> list string -> ML unit) & (unit -> ML string))
+    (fun (ptc, f) ->
+      z3.to_z3 "(push)\n";
+      want_witnesses_indefinitely timeout f ptc z3 name l nargs nbwitnesses;
+      z3.to_z3 "(pop)\n"
+    )
+    print_test_case_mk_get_first_witness
+    ;
+  z3.to_z3 "(pop)\n"
+
+let witnesses_for = function
+| None -> witnesses_for_indefinitely
+| Some depth -> witnesses_for_depth depth
 
 let mk_get_positive_test_witness (name: string) (l: list arg_type) : string =
 "
@@ -1529,7 +1678,7 @@ static void TestErrorHandler (
 }
 "
 
-let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
+let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (timeout: HashingOptions.timeout_options) (depth: option nat) (pos: bool) (neg: bool) : ML unit =
   let def = List.assoc name1 prog in
   if None? def
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
@@ -1565,7 +1714,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
       else []
     end
   in
-  witnesses_for z3 name1 args nargs tasks nbwitnesses depth;
+  witnesses_for depth timeout z3 name1 args nargs tasks nbwitnesses;
   cout "  return 0;
   }
 "
@@ -1583,11 +1732,11 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
   (mk_get_positive_test_witness name1 l)
   call2
 
-let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses depth =
+let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses timeout depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for z3 name1 args nargs ([print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 args name2)]) nbwitnesses depth
+  witnesses_for depth timeout z3 name1 args nargs ([print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 args name2)]) nbwitnesses
 
-let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses depth =
+let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses timeout depth =
   let def = List.assoc name1 prog in
   if None? def
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
@@ -1615,8 +1764,8 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: 
   int main(void) {
 ";
   let counter = alloc 0 in
-  do_diff_test_for out_dir counter cout z3 prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
-  do_diff_test_for out_dir counter cout z3 prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
+  do_diff_test_for out_dir counter cout z3 prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses timeout depth;
+  do_diff_test_for out_dir counter cout z3 prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses timeout depth;
   cout "  return 0;
   }
 "
