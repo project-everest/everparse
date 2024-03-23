@@ -98,16 +98,39 @@ let parse_impos ()
 let parse_ite e p1 p2
   = if e then p1 () else p2 ()
 
-let nlist (n:U32.t) (t:Type) = list t
+let serializer p = LP.serializer p
+
+let serialize_dep_pair p1 p2 s1 s2 = LPC.serialize_dtuple2 s1 s2
+
+let serialize_pair p1 p2 s1 s2 = LPC.serialize_nondep_then s1 s2
+
+let serialize_filter p f s = LPC.serialize_filter s f
 
 inline_for_extraction noextract
-let parse_nlist n #wk #k #t p
+let serialize_weaken_left #nz #wk #k p k' s b = s b
+
+inline_for_extraction noextract
+let serialize_weaken_right #nz #wk #k p k' s b = s b
+
+let serialize_impos () (t:False) = Seq.empty
+
+let serialize_ite e p1 p2 s1 s2 =
+  if e then s1 () else s2 ()
+
+let nlist (n:U32.t) t #k #p s =
+  LowParse.Spec.FLData.parse_fldata_strong_t (LowParse.Spec.List.serialize_list p s) (U32.v n)
+
+inline_for_extraction noextract
+let parse_nlist n s
   = let open LowParse.Spec.FLData in
     let open LowParse.Spec.List in
     parse_weaken
-            #false #WeakKindStrongPrefix #(parse_fldata_kind (U32.v n) parse_list_kind) #(list t)
-            (LowParse.Spec.FLData.parse_fldata (LowParse.Spec.List.parse_list p) (U32.v n))
+            #false #WeakKindStrongPrefix #_ #_
+            (parse_fldata_strong (serialize_list _ s) (U32.v n))
             #false kind_nlist
+
+let serialize_nlist n s b =
+  LowParse.Spec.FLData.serialize_fldata_strong _ _ b
 
 let all_bytes = Seq.seq LP.byte
 let parse_all_bytes' 
@@ -116,37 +139,48 @@ let parse_all_bytes'
 let parse_all_bytes =
   LP.parser_kind_prop_equiv kind_all_bytes parse_all_bytes';
   parse_all_bytes'
+let serialize_all_bytes b = b
 
 ////////////////////////////////////////////////////////////////////////////////
 module B32 = FStar.Bytes
-let t_at_most (n:U32.t) (t:Type) = t & all_bytes
+let t_at_most (n:U32.t) (t:Type) s =
+  LowParse.Spec.FLData.parse_fldata_strong_t
+    (LPC.serialize_nondep_then s serialize_all_bytes) (U32.v n)
+
 inline_for_extraction noextract
-let parse_t_at_most n #nz #wk #k #t p
+let parse_t_at_most n #nz #k #t #p s
   = let open LowParse.Spec.FLData in
     let open LowParse.Spec.List in
     parse_weaken
             #false 
             #WeakKindStrongPrefix
-            (LowParse.Spec.FLData.parse_fldata 
-                (LPC.nondep_then p parse_all_bytes)
+            (LowParse.Spec.FLData.parse_fldata_strong
+                (LPC.serialize_nondep_then s serialize_all_bytes)
                 (U32.v n))
             #false
             kind_t_at_most
 
+let serialize_t_at_most n s b =
+  LowParse.Spec.FLData.serialize_fldata_strong _ _ b
+
 ////////////////////////////////////////////////////////////////////////////////
-let t_exact (n:U32.t) (t:Type) = t
+let t_exact n t s =
+  LowParse.Spec.FLData.parse_fldata_strong_t s (U32.v n)
 inline_for_extraction noextract
-let parse_t_exact n #nz #wk #k #t p
+let parse_t_exact n #nz #k #t #p s
   = let open LowParse.Spec.FLData in
     let open LowParse.Spec.List in
     parse_weaken
             #false 
             #WeakKindStrongPrefix
-            (LowParse.Spec.FLData.parse_fldata 
-                p
+            (LowParse.Spec.FLData.parse_fldata_strong
+                s
                 (U32.v n))
             #false
             kind_t_exact
+
+let serialize_t_exact n s b =
+  LowParse.Spec.FLData.serialize_fldata_strong _ _ b
 
 ////////////////////////////////////////////////////////////////////////////////
 // Readers
@@ -180,7 +214,7 @@ let validator_no_read #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t)
   = LPL.validator_no_read #k #t p
 
 let parse_nlist_total_fixed_size_aux
-  (n:U32.t) (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
+  (n:U32.t) (#k:parser_kind true WeakKindStrongPrefix) #t (p:parser k t) (s:serializer p)
   (x: LP.bytes)
 : Lemma
   (requires (
@@ -192,7 +226,7 @@ let parse_nlist_total_fixed_size_aux
     Seq.length x >= U32.v n
   ))
   (ensures (
-    Some? (LP.parse (parse_nlist n p) x)
+    Some? (LP.parse (parse_nlist n s) x)
   ))
 = let x' = Seq.slice x 0 (U32.v n) in
   let cnt = (U32.v n / k.LP.parser_kind_low) in
@@ -202,7 +236,7 @@ let parse_nlist_total_fixed_size_aux
   LP.parser_kind_prop_equiv LowParse.Spec.List.parse_list_kind (LowParse.Spec.List.parse_list p)
 
 let parse_nlist_total_fixed_size_kind_correct
-  (n:U32.t) (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
+  (n:U32.t) (#k:parser_kind true WeakKindStrongPrefix) #t (p:parser k t) (s:serializer p)
 : Lemma
   (requires (
     let open LP in
@@ -212,15 +246,15 @@ let parse_nlist_total_fixed_size_kind_correct
     k.parser_kind_metadata == Some ParserKindMetadataTotal
   ))
   (ensures (
-    LP.parser_kind_prop (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)
+    LP.parser_kind_prop (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n s)
   ))
-= LP.parser_kind_prop_equiv (LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) (parse_nlist n p);
-  LP.parser_kind_prop_equiv (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p);
-  Classical.forall_intro (Classical.move_requires (parse_nlist_total_fixed_size_aux n p))
+= LP.parser_kind_prop_equiv (LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) (parse_nlist n s);
+  LP.parser_kind_prop_equiv (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n s);
+  Classical.forall_intro (Classical.move_requires (parse_nlist_total_fixed_size_aux n p s))
 
 inline_for_extraction noextract
-let validate_nlist_total_constant_size_mod_ok (n:U32.t) #wk (#k:parser_kind true wk) (#t: Type) (p:parser k t)
-  : Pure (validator_no_read (parse_nlist n p))
+let validate_nlist_total_constant_size_mod_ok (n:U32.t) (#k:parser_kind true WeakKindStrongPrefix) (#t: Type) (p:parser k t) (s:serializer p)
+  : Pure (validator_no_read (parse_nlist n s))
   (requires (
     let open LP in
     k.parser_kind_subkind == Some ParserStrong /\
@@ -235,11 +269,11 @@ let validate_nlist_total_constant_size_mod_ok (n:U32.t) #wk (#k:parser_kind true
          let h = FStar.HyperStack.ST.get () in
          [@inline_let]
          let _ =
-           parse_nlist_total_fixed_size_kind_correct n p;
-           LPL.valid_facts (parse_nlist n p) h sl (LPL.uint64_to_uint32 pos);
-           LPL.valid_facts (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) h sl (LPL.uint64_to_uint32 pos)
+           parse_nlist_total_fixed_size_kind_correct n p s;
+           LPL.valid_facts (parse_nlist n s) h sl (LPL.uint64_to_uint32 pos);
+           LPL.valid_facts (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n s)) h sl (LPL.uint64_to_uint32 pos)
          in
-         LPL.validate_total_constant_size_no_read (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) (FStar.Int.Cast.uint32_to_uint64 n) () sl len pos
+         LPL.validate_total_constant_size_no_read (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n s)) (FStar.Int.Cast.uint32_to_uint64 n) () sl len pos
       )
 
 module LUT = LowParse.Spec.ListUpTo
@@ -265,11 +299,17 @@ let parse_string
   LowParse.Spec.Base.parser_kind_prop_equiv k p;
   LP.weaken parse_string_kind (LUT.parse_list_up_to (cond_string_up_to terminator) p (fun _ _ _ -> ()))
 
+let serialize_string #k #t #p s terminator =
+  LowParse.Spec.Base.parser_kind_prop_equiv k p;
+  let s = LUT.serialize_list_up_to (cond_string_up_to terminator) (fun _ _ _ -> ()) s in
+  fun b -> s b
+
 inline_for_extraction noextract
 let is_zero (x: FStar.UInt8.t) : Tot bool = x = 0uy
 
 let all_zeros = list (LowParse.Spec.Combinators.parse_filter_refine is_zero)
 let parse_all_zeros = LowParse.Spec.List.parse_list (LowParse.Spec.Combinators.parse_filter LowParse.Spec.Int.parse_u8 is_zero)
+let serialize_all_zeros = LowParse.Spec.List.serialize_list _ (LowParse.Spec.Combinators.serialize_filter LowParse.Spec.Int.serialize_u8 is_zero)
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -278,37 +318,47 @@ let parse_all_zeros = LowParse.Spec.List.parse_list (LowParse.Spec.Combinators.p
 
 /// UINT8
 let parse____UINT8 = LowParse.Spec.Int.parse_u8
+let serialize____UINT8 = LowParse.Spec.Int.serialize_u8
 let read____UINT8 = LowParse.Low.Int.read_u8
 
 /// UINT8BE
 let parse____UINT8BE = LowParse.Spec.Int.parse_u8
+let serialize____UINT8BE = LowParse.Spec.Int.serialize_u8
 let read____UINT8BE = LowParse.Low.Int.read_u8
 
 /// UInt16BE
 let parse____UINT16BE = LowParse.Spec.Int.parse_u16
+let serialize____UINT16BE = LowParse.Spec.Int.serialize_u16
 let read____UINT16BE = LowParse.Low.Int.read_u16
 
 /// UInt32BE
 let parse____UINT32BE = LowParse.Spec.Int.parse_u32
+let serialize____UINT32BE = LowParse.Spec.Int.serialize_u32
 let read____UINT32BE = LowParse.Low.Int.read_u32
 
 /// UInt64BE
 let parse____UINT64BE = LowParse.Spec.Int.parse_u64
+let serialize____UINT64BE = LowParse.Spec.Int.serialize_u64
 let read____UINT64BE = LowParse.Low.Int.read_u64
 
 
 /// UInt16
 let parse____UINT16 = LowParse.Spec.BoundedInt.parse_u16_le
+let serialize____UINT16 = LowParse.Spec.BoundedInt.serialize_u16_le
 let read____UINT16 = LowParse.Low.BoundedInt.read_u16_le
 
 /// UInt32
 let parse____UINT32 = LowParse.Spec.BoundedInt.parse_u32_le
+let serialize____UINT32 = LowParse.Spec.BoundedInt.serialize_u32_le
 let read____UINT32 = LowParse.Low.BoundedInt.read_u32_le
 
 
 /// UInt64
 let parse____UINT64 = LowParse.Spec.Int.parse_u64_le
+let serialize____UINT64 = LowParse.Spec.Int.serialize_u64_le
 let read____UINT64 = LowParse.Low.Int.read_u64_le
+
+let serialize_unit () = Seq.empty
   
 inline_for_extraction noextract
 let read_unit
