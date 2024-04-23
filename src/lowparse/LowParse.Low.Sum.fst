@@ -500,7 +500,6 @@ let valid_sum_elim_tag
   let _ = valid_facts (parse_enum_key p (sum_enum t)) h input pos in
   ()
 
-#push-options "--z3rlimit_factor 4 --fuel 1"
 inline_for_extraction
 let read_sum_tag
   (t: sum)
@@ -523,7 +522,6 @@ let read_sum_tag
 = let h = HST.get () in
   [@inline_let] let _ = valid_sum_elim_tag h t p pc input pos in
   read_enum_key p32 (sum_enum t) destr input pos
-#pop-options
 
 inline_for_extraction
 let jump_sum_aux
