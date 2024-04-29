@@ -1,0 +1,1 @@
+quackyducky -odir . $1 specs.qd
