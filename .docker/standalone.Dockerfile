@@ -23,7 +23,7 @@ RUN eval $(opam env) && .docker/build/install-deps.sh
 # jinja2==3.0.0 because of https://github.com/mkdocs/mkdocs/issues/2799
 # alabaster==0.7.13 because of https://alabaster.readthedocs.io/en/latest/changelog.html (0.7.14 breaks old Sphinx versions.)
 RUN sudo apt-get install --yes --no-install-recommends python3-pip python3-setuptools python3-distutils
-RUN sudo pip3 install --break-system-packages tzdata sphinx==1.7.2 jinja2==3.0.0 alabaster==0.7.13 sphinx_rtd_theme
+RUN sudo pip3 install --break-system-packages pytz tzdata sphinx==1.7.2 jinja2==3.0.0 alabaster==0.7.13 sphinx_rtd_theme
 
 # CI proper
 ARG CI_THREADS=24
