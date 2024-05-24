@@ -52,6 +52,15 @@ let serialize_u8_spec'
     Seq.index s 0 == x)
 = serialize_u8_spec x
 
+let serialize_u8_spec_be
+  (x: U8.t)
+: Lemma
+  (serialize serialize_u8 x == E.n_to_be 1 (U8.v x))
+= let s = E.n_to_be 1 (U8.v x) in
+  Seq.slice_length s;
+  parse_u8_spec s;
+  parse_injective parse_u8 (serialize serialize_u8 x) s
+
 inline_for_extraction
 let parse_u16_kind : parser_kind =
   total_constant_size_parser_kind 2
@@ -70,6 +79,15 @@ val parse_u16_spec
   )))
 
 val serialize_u16 : serializer parse_u16
+
+let serialize_u16_spec_be
+  (x: U16.t)
+: Lemma
+  (serialize serialize_u16 x == E.n_to_be 2 (U16.v x))
+= let s = E.n_to_be 2 (U16.v x) in
+  Seq.slice_length s;
+  parse_u16_spec s;
+  parse_injective parse_u16 (serialize serialize_u16 x) s
 
 inline_for_extraction
 let parse_u32_kind : parser_kind =
@@ -90,6 +108,15 @@ val parse_u32_spec
 
 val serialize_u32 : serializer parse_u32
 
+let serialize_u32_spec_be
+  (x: U32.t)
+: Lemma
+  (serialize serialize_u32 x == E.n_to_be 4 (U32.v x))
+= let s = E.n_to_be 4 (U32.v x) in
+  Seq.slice_length s;
+  parse_u32_spec s;
+  parse_injective parse_u32 (serialize serialize_u32 x) s
+
 inline_for_extraction
 let parse_u64_kind : parser_kind =
   total_constant_size_parser_kind 8
@@ -108,6 +135,15 @@ val parse_u64_spec
   )))
 
 val serialize_u64 : serializer parse_u64
+
+let serialize_u64_spec_be
+  (x: U64.t)
+: Lemma
+  (serialize serialize_u64 x == E.n_to_be 8 (U64.v x))
+= let s = E.n_to_be 8 (U64.v x) in
+  Seq.slice_length s;
+  parse_u64_spec s;
+  parse_injective parse_u64 (serialize serialize_u64 x) s
 
 val parse_u64_le: parser parse_u64_kind U64.t
 
