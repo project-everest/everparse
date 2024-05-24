@@ -34,8 +34,10 @@ function fetch_mitls() {
 
 function rebuild_doc () {
    if
-      [[ "$OS" != "Windows_NT" ]] &&
-      [[ "$branchname" == "master" ]]
+      [[ "$OS" != "Windows_NT" ]] && {
+          [[ "$branchname" == "master" ]] ||
+          [[ "$branchname" == "taramana_ci" ]]
+      }
    then
        git config --global user.name "Dzomo, the Everest Yak"
        git config --global user.email "everbld@microsoft.com"
