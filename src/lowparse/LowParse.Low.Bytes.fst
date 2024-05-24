@@ -395,8 +395,6 @@ let jump_bounded_vlbytes
 : Tot (jumper (parse_bounded_vlbytes min max))
 = jump_bounded_vlbytes' min max (log256' max)
 
-#push-options "--z3rlimit_factor 2 --retry 2"
-#restart-solver
 let valid_exact_all_bytes_elim
   (h: HS.mem)
   (#rrel #rel: _)
@@ -416,7 +414,6 @@ let valid_exact_all_bytes_elim
   valid_facts (parse_flbytes length) h input pos ;
   assert (no_lookahead_on (parse_flbytes length) (bytes_of_slice_from_to h input pos pos') (bytes_of_slice_from h input pos));
   assert (injective_postcond (parse_flbytes length) (bytes_of_slice_from_to h input pos pos') (bytes_of_slice_from h input pos))
-#pop-options
 
 #push-options "--z3rlimit 32"
 
