@@ -59,12 +59,13 @@ let generic_headers (g: Cddl.map_group None) : Cddl.map_group None =
 
 // Section 3
 
-let header_map : Cddl.typ = Cddl.t_map (
+let header_map0 : Cddl.map_group None =
   (generic_headers (
     Cddl.map_group_cons_zero_or_more (label `Cddl.MapGroupEntry` values) false
       Cddl.map_group_empty
   ))
-)
+
+let header_map : Cddl.typ = Cddl.t_map header_map0
 
 let empty_or_serialized_map : Cddl.typ =
   Cddl.bstr_cbor data_item_order header_map `Cddl.t_choice`
@@ -107,10 +108,40 @@ assume val s_Signature : Cddl.string64 // "Signature"
 [@@noextract_to "krml"]
 assume val s_Signature1 : Cddl.string64 // "Signature1"
 
+(* // This is the CDDL specification as in the Standard, which should match the prose text.
+
 let sig_structure = Cddl.t_array3 (
   Cddl.array_group3_item (* context *) (Cddl.name_as_text_string s_Signature `Cddl.t_choice` Cddl.name_as_text_string s_Signature1) `Cddl.array_group3_concat`
   Cddl.array_group3_item (* body_protected *) empty_or_serialized_map `Cddl.array_group3_concat`
   Cddl.array_group3_zero_or_one (Cddl.array_group3_item (* sign_protected *) empty_or_serialized_map) `Cddl.array_group3_concat`
+  Cddl.array_group3_item (* external_aad *) Cddl.bstr `Cddl.array_group3_concat`
+  Cddl.array_group3_item (* payload *) Cddl.bstr
+)
+
+// But it actually DOESN'T, because of the greedy semantics for `?`, see RFC 8610 Appendix A, which is explicitly normative:
+//
+//  "Similarly, the occurrence indicators ("?", "*", "+") are "greedy" in
+//   PEG, i.e., they consume as much input as they match" [...]
+//  "The syntax used for expressing the PEG component of CDDL is based on
+//   ABNF, interpreted in the obvious way with PEG semantics."
+//
+// Fortunately, this specification is not normative and the prose text has precedence (see 1.4)
+
+// In fact, the normative prose text of Section 4.4 ties the absence of the `sign_protected` field to the `COSE_Sign1` (single signature) structure. Which yields:
+
+*)
+
+let sig_structure = Cddl.t_array3 (
+  Cddl.array_group3_item (* context *) (Cddl.name_as_text_string s_Signature) `Cddl.array_group3_concat`
+  Cddl.array_group3_item (* body_protected *) empty_or_serialized_map `Cddl.array_group3_concat`
+  Cddl.array_group3_item (* sign_protected *) empty_or_serialized_map `Cddl.array_group3_concat`
+  Cddl.array_group3_item (* external_aad *) Cddl.bstr `Cddl.array_group3_concat`
+  Cddl.array_group3_item (* payload *) Cddl.bstr
+)
+
+let sig1_structure = Cddl.t_array3 (
+  Cddl.array_group3_item (* context *) (Cddl.name_as_text_string s_Signature1) `Cddl.array_group3_concat`
+  Cddl.array_group3_item (* body_protected *) empty_or_serialized_map `Cddl.array_group3_concat`
   Cddl.array_group3_item (* external_aad *) Cddl.bstr `Cddl.array_group3_concat`
   Cddl.array_group3_item (* payload *) Cddl.bstr
 )
