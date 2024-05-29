@@ -67,7 +67,7 @@ $(ALL_CHECKED_FILES): %.checked:
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
 	touch $@
 
-extract-steel: $(filter-out COSE_% CDDL_% DPE_%,$(ALL_KRML_FILES))
+extract-steel: $(ALL_KRML_FILES)
 	$(KRML) -bundle 'CBOR.SteelST+CBOR.Spec.Constants+CBOR.SteelST.Type.Base+CBOR.SteelST.Type.Def+CBOR.SteelST.Match+CBOR.SteelST.Type+CBOR.SteelST.Array+CBOR.SteelST.String+CBOR.SteelST.SimpleValue+CBOR.SteelST.Int64+CBOR.SteelST.Tagged+CBOR.SteelST.Map.Base+CBOR.SteelST.Map+CBOR.SteelST.Parse=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' -no-prefix 'CBOR.*' $^
 	! test -f out/CBOR.c
 

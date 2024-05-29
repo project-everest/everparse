@@ -33,7 +33,7 @@ ifndef STEEL_HOME
 endif
 INCLUDE_PATHS=$(LOWPARSE_HOME) $(LOWPARSE_HOME)/steel ..
 
-ALREADY_CACHED = --already_cached *,-CBOR,-CDDL
+ALREADY_CACHED = --already_cached *,-CBOR
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED) --cmi --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
 
 ifneq (,$(STEEL_C))
@@ -75,13 +75,13 @@ $(ALL_CHECKED_FILES): %.checked:
 
 CBOR.SteelC.fst.checked: FSTAR_OPTIONS += --ext compat:open_metas
 
-extract-steelc: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelST%,$(ALL_KRML_FILES)) $(filter CBOR_SteelST_Raw%,$(ALL_KRML_FILES))
+extract-steelc: $(filter-out CBOR_SteelST%,$(ALL_KRML_FILES)) $(filter CBOR_SteelST_Raw%,$(ALL_KRML_FILES))
 	$(KRML) -bundle 'CBOR.SteelC+CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORSteelC]' $^
 
-extract-steel-raw: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelC% CBOR_SteelST%,$(ALL_KRML_FILES)) $(filter CBOR_SteelST_Raw%,$(ALL_KRML_FILES))
+extract-steel-raw: $(filter-out CBOR_SteelC% CBOR_SteelST%,$(ALL_KRML_FILES)) $(filter CBOR_SteelST_Raw%,$(ALL_KRML_FILES))
 	$(KRML) -bundle 'CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORRaw]' $^
 
-extract-steel: $(filter-out COSE_% CDDL_% DPE_% CBOR_SteelC%,$(ALL_KRML_FILES))
+extract-steel: $(filter-out CBOR_SteelC%,$(ALL_KRML_FILES))
 	$(KRML) -bundle 'CBOR.SteelST+CBOR.Spec.Constants+CBOR.SteelST.Type.Base+CBOR.SteelST.Type.Def+CBOR.SteelST.Match+CBOR.SteelST.Type+CBOR.SteelST.Array+CBOR.SteelST.String+CBOR.SteelST.SimpleValue+CBOR.SteelST.Int64+CBOR.SteelST.Tagged+CBOR.SteelST.Map.Base+CBOR.SteelST.Map+CBOR.SteelST.Parse=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' -no-prefix 'CBOR.*' $^
 
 extract: extract-steelc extract-steel extract-steel-raw
