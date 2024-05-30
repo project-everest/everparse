@@ -1,41 +1,22 @@
-# This Makefile only tests extraction of CBOR parsing and serialization.
-# It is not intended to be used with `emacs`. Instead, please use VSCode, with
-# a workspace starting from the Steel root directory.
+all: verify extract
 
-PULSE_HOME ?= ../../../../../
-OUTPUT_DIRECTORY=_output
-# CACHE_DIRECTORY=$(OUTPUT_DIRECTORY)/cache
-SRC_DIRS := extern
-ifneq (,$(wildcard ../_output/cache))
-  INCLUDE_PATHS += ../_output/cache
-endif
-OTHERFLAGS += --cmi --already_cached '*,-CBOR,-CDDL,-CBOR.Pulse.Type,-CDDLExtractionTest,-COSE' --warn_error -342
+EVERCBOR_SRC_PATH = $(realpath ..)
+INCLUDE_PATHS += $(EVERCBOR_SRC_PATH)/cbor $(EVERCBOR_SRC_PATH)/cbor/pulse $(EVERCBOR_SRC_PATH)/cbor/pulse/extern
 
-FSTAR_DEP_OPTIONS=--extract '* -FStar.Tactics -FStar.Reflection -Steel -Pulse +Pulse.Class +Pulse.Lib -Pulse.Lib.Core'
+include $(EVERCBOR_SRC_PATH)/pulse.Makefile
+include $(EVERCBOR_SRC_PATH)/karamel.Makefile
+
+ALREADY_CACHED := *,-CDDL,-CDDLExtractionTest,
+FSTAR_OPTIONS += --warn_error -342
+FSTAR_DEP_OPTIONS := --extract '* -FStar.Tactics -FStar.Reflection -Steel -Pulse -PulseCore +Pulse.Class -Pulse.Lib'
+OUTPUT_DIRECTORY := _output
+
+include $(EVERCBOR_SRC_PATH)/common.Makefile
+
 KRML=$(KRML_HOME)/krml $(KRML_OPTS)
-all: verify test
 
-include $(PULSE_HOME)/share/pulse/Makefile.include
+# NOTE: this redoes extraction from ../cbor/pulse, but we can't do much better, unless we hide CBOR.Pulse under an interface
+extract: $(ALL_KRML_FILES)
+	$(KRML) -bundle C -bundle CBOR.Spec.Constants+CBOR.Pulse.Type+CBOR.Pulse.Extern=[rename=CBOR] -no-prefix CBOR.Spec.Constants,CBOR.Pulse.Type,CBOR.Pulse.Extern -bundle CDDLExtractionTest.Assume+CDDLExtractionTest.Bytes+CDDLExtractionTest.BytesUnwrapped+CDDLExtractionTest.Choice=*[rename=CDDLExtractionTest] -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY)
 
-FILTERED_KRML_FILES := $(filter-out %/prims.krml,$(ALL_KRML_FILES))
-
-.PHONY: extract_all
-extract_all: $(FILTERED_KRML_FILES)
-
-extract_all_ml: $(ALL_ML_FILES)
-
-.PHONY: extract_c
-extract_c: $(OUTPUT_DIRECTORY)/CBOR.h
-
-$(OUTPUT_DIRECTORY)/CBOR.h: $(FILTERED_KRML_FILES)
-	$(KRML) -bundle C -bundle CBOR.Spec.Constants+CBOR.Pulse.Type+CBOR.Pulse.Extern=[rename=CBOR] -no-prefix CBOR.Spec.Constants,CBOR.Pulse.Type,CBOR.Pulse.Extern -bundle CBOR.Pulse= -bundle CDDLExtractionTest.Assume+CDDLExtractionTest.Bytes+CDDLExtractionTest.BytesUnwrapped+CDDLExtractionTest.Choice=*[rename=CDDLExtractionTest] -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY)
-
-.PHONY: extern
-
-extern/CBOR.o: extern/CBOR.h extern/CBOR.c
-	+$(MAKE) -C extern
-
-extern: extern/CBOR.o
-
-test: extern extract_c
-	+$(MAKE) -C test
+.PHONY: extract
