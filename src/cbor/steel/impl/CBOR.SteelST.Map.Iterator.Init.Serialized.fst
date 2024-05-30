@@ -48,7 +48,7 @@ let cbor_map_iterator_init_serialized
   let fp = GR.alloc () in // same as above, I could use the footprint from `a` but `destr_cbor_serialized` does not expose it
   gref_lower_perm fp p;
   [@@inline_let]
-  let res = {
+  let res : cbor_map_iterator_t = {
     cbor_map_iterator_length = len;
     cbor_map_iterator_payload = CBOR_Map_Iterator_Payload_Serialized ar (LPA.set_array_perm (LPS.array_of var0) (LPA.array_perm (LPS.array_of var0) `div_perm` p));
     footprint = fp;

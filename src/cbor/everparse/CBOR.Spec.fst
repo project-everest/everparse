@@ -1,7 +1,6 @@
 module CBOR.Spec
 open CBOR.Spec.Format
-module LPA = LowParse.SteelST.ArrayPtr.IntroElim
-module LPS = LowParse.SteelST.SeqMatch
+module LPS = LowParse.Spec.Base
 
 let serialize_cbor
   c
