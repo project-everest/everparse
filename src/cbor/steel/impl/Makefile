@@ -29,13 +29,13 @@ KRML = $(KRML_HOME)/krml \
 CBOR.SteelC.fst.checked: FSTAR_OPTIONS += --ext compat:open_metas
 
 extract-steelc: $(filter-out CBOR_SteelST%,$(ALL_KRML_FILES)) $(filter CBOR_SteelST_Raw%,$(ALL_KRML_FILES))
-	$(KRML) -bundle 'CBOR.SteelC+CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORSteelC]' $^
+	$(KRML) -header header.txt -skip-makefiles -bundle 'CBOR.SteelC+CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORSteelC]' $^
 
 extract-steel-raw: $(filter-out CBOR_SteelC% CBOR_SteelST%,$(ALL_KRML_FILES)) $(filter CBOR_SteelST_Raw%,$(ALL_KRML_FILES))
-	$(KRML) -bundle 'CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORRaw]' $^
+	$(KRML) -header header.txt -skip-makefiles -bundle 'CBOR.SteelST.Raw+CBOR.Spec.Constants=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBORRaw]' $^
 
 extract-steel: $(filter-out CBOR_SteelC%,$(ALL_KRML_FILES))
-	$(KRML) -bundle 'CBOR.SteelST+CBOR.Spec.Constants+CBOR.SteelST.Type.Base+CBOR.SteelST.Type.Def+CBOR.SteelST.Match+CBOR.SteelST.Type+CBOR.SteelST.Array+CBOR.SteelST.String+CBOR.SteelST.SimpleValue+CBOR.SteelST.Int64+CBOR.SteelST.Tagged+CBOR.SteelST.Map.Base+CBOR.SteelST.Map+CBOR.SteelST.Parse=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' -no-prefix 'CBOR.*' $^
+	$(KRML) -header header.txt -skip-makefiles -bundle 'CBOR.SteelST+CBOR.Spec.Constants+CBOR.SteelST.Type.Base+CBOR.SteelST.Type.Def+CBOR.SteelST.Match+CBOR.SteelST.Type+CBOR.SteelST.Array+CBOR.SteelST.String+CBOR.SteelST.SimpleValue+CBOR.SteelST.Int64+CBOR.SteelST.Tagged+CBOR.SteelST.Map.Base+CBOR.SteelST.Map+CBOR.SteelST.Parse=CBOR.\*,Steel.\*,C,LowStar.\*,LowParse.\*[rename=CBOR]' -no-prefix 'CBOR.*' $^
 
 extract: extract-steelc extract-steel extract-steel-raw
 
