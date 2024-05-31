@@ -2,7 +2,6 @@ all: verify extract
 
 EVERCBOR_SRC_PATH = $(realpath ../..)
 INCLUDE_PATHS += $(realpath ..)
-SRC_DIRS += extern
 
 include $(EVERCBOR_SRC_PATH)/pulse.Makefile
 include $(EVERCBOR_SRC_PATH)/karamel.Makefile

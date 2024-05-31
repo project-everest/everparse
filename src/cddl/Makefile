@@ -1,7 +1,7 @@
 all: verify extract
 
 EVERCBOR_SRC_PATH = $(realpath ..)
-INCLUDE_PATHS += $(EVERCBOR_SRC_PATH)/cbor $(EVERCBOR_SRC_PATH)/cbor/pulse $(EVERCBOR_SRC_PATH)/cbor/pulse/extern
+INCLUDE_PATHS += $(EVERCBOR_SRC_PATH)/cbor $(EVERCBOR_SRC_PATH)/cbor/pulse
 
 include $(EVERCBOR_SRC_PATH)/pulse.Makefile
 include $(EVERCBOR_SRC_PATH)/karamel.Makefile
