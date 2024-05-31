@@ -24,6 +24,33 @@ open CDDL.Spec
 
 module R = Pulse.Lib.Reference
 
+assume val elim_stick0
+  (_: unit)
+  (#hyp #concl: vprop)
+: stt_ghost unit emp_inames
+    ((hyp @==> concl) ** hyp)
+    (fun _ -> concl)
+
+assume val stick_refl0
+    (p: vprop)
+: stt_ghost unit emp_inames
+    (emp)
+    (fun _ -> p @==> p)
+
+assume val stick_consume_l
+    (_: unit)
+    (#p #q #r: vprop)
+: stt_ghost unit emp_inames
+    (p ** ((p ** q) @==> r))
+    (fun _ -> q @==> r)
+
+assume val stick_trans
+    (_: unit)
+    (#p #q #r: vprop)
+: stt_ghost unit emp_inames
+    ((p @==> q) ** (q @==> r))
+    (fun _ -> p @==> r)
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_typ
     (#b: option raw_data_item)

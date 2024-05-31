@@ -1,7 +1,7 @@
 all: verify extract
 
-EVERCBOR_SRC_PATH = $(realpath ../..)
-INCLUDE_PATHS += $(realpath ..)
+EVERCBOR_SRC_PATH = $(realpath ../../..)
+INCLUDE_PATHS += $(realpath ..) $(realpath ../..)
 
 include $(EVERCBOR_SRC_PATH)/pulse.Makefile
 include $(EVERCBOR_SRC_PATH)/karamel.Makefile
@@ -14,6 +14,6 @@ OUTPUT_DIRECTORY := _output
 include $(EVERCBOR_SRC_PATH)/common.Makefile
 
 extract: $(ALL_KRML_FILES)
-	$(KRML_HOME)/krml -warn-error @1..27 -bundle C -bundle CBOR.Spec.Constants+CBOR.Pulse.Type+CBOR.Pulse.Extern+CBOR.Pulse=CBOR.Spec.Type[rename=CBOR] -no-prefix CBOR.Spec.Constants,CBOR.Pulse.Type,CBOR.Pulse.Extern -skip-compilation $^ -tmpdir $(OUTPUT_DIRECTORY)
+	$(KRML_HOME)/krml -warn-error @1..27 -bundle C -bundle CBOR.Spec.Constants+CBOR.Pulse.Type+CBOR.Pulse.Extern=[rename=CBOR] -no-prefix CBOR.Spec.Constants,CBOR.Pulse.Type,CBOR.Pulse.Extern -bundle CBOR.Pulse=* -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY)
 
 .PHONY: extract
