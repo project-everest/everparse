@@ -14,6 +14,6 @@ OUTPUT_DIRECTORY := _output
 include $(EVERCBOR_SRC_PATH)/common.Makefile
 
 extract: $(ALL_KRML_FILES)
-	$(KRML_HOME)/krml -warn-error @1..27 -bundle C -bundle CBOR.Spec.Constants+CBOR.Pulse.Type+CBOR.Pulse.Extern+CBOR.Pulse=CBOR.Spec.Type[rename=CBOR] -no-prefix CBOR.Spec.Constants,CBOR.Pulse.Type,CBOR.Pulse.Extern -skip-compilation $^ -tmpdir $(OUTPUT_DIRECTORY)
+	$(KRML_HOME)/krml -header header.txt -warn-error @1..27 -bundle C -bundle CBOR.Spec.Constants+CBOR.Pulse.Type+CBOR.Pulse.Extern+CBOR.Pulse=CBOR.Spec.Type[rename=CBOR] -no-prefix CBOR.Spec.Constants,CBOR.Pulse.Type,CBOR.Pulse.Extern -skip-compilation $^ -tmpdir $(OUTPUT_DIRECTORY)
 
 .PHONY: extract
