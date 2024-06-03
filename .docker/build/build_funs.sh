@@ -40,7 +40,7 @@ function rebuild_doc () {
       }
    then
        git config --global user.name "Dzomo, the Everest Yak"
-       git config --global user.email "everbld@microsoft.com"
+       git config --global user.email "24394600+dzomo@users.noreply.github.com"
        [[ -n "$DZOMO_GITHUB_TOKEN" ]] &&
        git clone https://"$DZOMO_GITHUB_TOKEN"@github.com/project-everest/project-everest.github.io project-everest-github-io &&
        rm -rf project-everest-github-io/everparse &&
