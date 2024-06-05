@@ -42,3 +42,35 @@ val union (#t #u: Type) (s1 s2: fmap t u) : Pure (fmap t u)
   | Some v -> Some v
   | _ -> get y s2
   end))
+
+val length
+  (#t #u: Type)
+  (s: fmap t u)
+: GTot nat
+
+val length_empty
+  (t u: Type)
+: Lemma
+  (length (empty t u) == 0)
+  [SMTPat (length (empty t u))]
+
+val length_singleton
+  (#t #u: Type) (x: t) (elt: u) (eq: eq_elem_test x) (equ: eq_elem_test elt)
+: Lemma
+  (length (singleton x elt eq equ) == 1)
+  [SMTPat (length (singleton x elt eq equ))]
+
+let disjoint
+  (#t #u: Type)
+  (s1 s2: fmap t u)
+: Tot prop
+= forall x . None? (get x s1) \/ None? (get x s2)
+
+val length_disjoint_union
+  (#t #u: Type) (s1 s2: fmap t u)
+: Lemma
+  (requires (disjoint s1 s2))
+  (ensures (
+    length (union s1 s2) == length s1 + length s2
+  ))
+  [SMTPat (length (union s1 s2))]
