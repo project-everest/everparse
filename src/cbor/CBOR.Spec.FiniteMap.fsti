@@ -9,6 +9,7 @@ let eq_elem_test (#t: Type) (x: t) : Type =
 let eq_test (t: Type) =
   (x: t) -> eq_elem_test x
 
+[@@erasable]
 noeq type universe_token : Type u#a =
 | UniverseToken
 
