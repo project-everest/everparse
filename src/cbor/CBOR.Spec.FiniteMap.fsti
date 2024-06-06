@@ -24,6 +24,25 @@ let op_idem
 : Tot prop
 = forall a x . f (f a x) x == f a x
 
+val list_fold_comm
+  (#accu #t: Type)
+  (f: accu -> t -> accu { op_comm f })
+  (a: accu)
+  (l1 l2: list t)
+: Lemma
+  (ensures (List.Tot.fold_left f a (List.Tot.append l1 l2) == List.Tot.fold_left f a (List.Tot.append l2 l1)))
+
+val list_fold_ext
+  (#accu #t: Type)
+  (f: accu -> t -> accu { op_comm f /\ op_idem f })
+  (a: accu)
+  (l1 l2: list t)
+: Lemma
+  (requires (
+    (forall x . List.Tot.memP x l1 <==> List.Tot.memP x l2)
+  ))
+  (ensures (List.Tot.fold_left f a l1 == List.Tot.fold_left f a l2))
+
 val fmap (t: Type u#a) (u: Type u#b) (token: universe_token u#c) : Type u#(max a b (1 + c))
 
 val fmap_eq (#t #u: Type) (#token: universe_token) : eq_test (fmap t u token)
@@ -48,25 +67,6 @@ val equal_eq
 : Lemma
   (equal s1 s2 <==> s1 == s2)
   [SMTPat (equal s1 s2)]
-
-val list_fold_comm
-  (#accu #t: Type)
-  (f: accu -> t -> accu { op_comm f })
-  (a: accu)
-  (l1 l2: list t)
-: Lemma
-  (ensures (List.Tot.fold_left f a (List.Tot.append l1 l2) == List.Tot.fold_left f a (List.Tot.append l2 l1)))
-
-val list_fold_ext
-  (#accu #t: Type)
-  (f: accu -> t -> accu { op_comm f /\ op_idem f })
-  (a: accu)
-  (l1 l2: list t)
-: Lemma
-  (requires (
-    (forall x . List.Tot.memP x l1 <==> List.Tot.memP x l2)
-  ))
-  (ensures (List.Tot.fold_left f a l1 == List.Tot.fold_left f a l2))
 
 val fold
   (#t: Type u#a)

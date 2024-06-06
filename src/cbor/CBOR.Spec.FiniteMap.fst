@@ -2,133 +2,6 @@ module CBOR.Spec.FiniteMap
 
 open FStar.FunctionalExtensionality
 
-let map (t u: Type) : Type = t ^-> option u
-
-let map_get (#t #u: Type) (x: t) (s: map t u) : option u = s x
-
-let map_equal
-  (#t #u: Type)
-  (s1 s2: map t u)
-: Tot prop
-= forall x . map_get x s1 == map_get x s2
-
-let map_equal_eq_intro
-  (#t #u: Type)
-  (s1 s2: map t u)
-: Lemma
-  (requires map_equal s1 s2)
-  (ensures s1 == s2)
-= assert (feq s1 s2)
-
-let map_equal_eq
-  (#t #u: Type)
-  (s1 s2: map t u)
-: Lemma
-  (map_equal s1 s2 <==> s1 == s2)
-  [SMTPat (map_equal s1 s2)]
-= Classical.move_requires (map_equal_eq_intro s1) s2
-
-let fmap' (t u: Type) : Type =
-  (s: map t u { exists (l: list t) . forall (x: t) . List.Tot.memP x l <==> Some? (s x) })
-
-let map_included (#t #u: Type) (s1 s2: t -> option u) : Tot prop =
-  forall (elt: t) . begin match s1 elt with
-  | None -> True
-  | g -> g == s2 elt
-  end
-
-let included_elem_test_codom (#t #u: Type) (x: t -> option u) (y: t -> option u) : Type =
-  (z: bool { z == true <==> map_included x y})
-
-let included_elem_test (#t #u: Type) (x: t -> option u) : Type =
-  restricted_t (t -> option u) (included_elem_test_codom x)
-
-noeq
-type fmap_fold_dom
-  (t: Type u#a) (token: universe_token u#c)
-: Type u#(max a (1 + c))
-= {
-  accu: Type u#c;
-  f: (f: (accu -> t -> accu) { op_comm f /\ op_idem f });
-  a: accu;
-}
-
-let fmap_fold_codom
-  (#t: Type u#a) (#u: Type u#b) (#token: universe_token u#c) (s: t -> option u) (x: fmap_fold_dom t token) : Type u#c =
-  (a': x.accu { forall l . (forall x . List.Tot.memP x l <==> Some? (s x)) ==> a' == List.Tot.fold_left x.f x.a l })
-
-noeq
-type fmap (t: Type u#a) (u: Type u#b) (token: universe_token u#c) : Type u#(max a b (1 + c)) = {
-  s: fmap' t u;
-  test: included_elem_test s;
-  fold: restricted_t (fmap_fold_dom t token) (fmap_fold_codom s);
-}
-
-let fmap_eq (#t #u: Type) #token : eq_test (fmap t u token) =
-  (fun (s1: fmap t u token) -> fun (s2: fmap t u token) ->
-    let res : bool = s1.test s2.s && s2.test s1.s in
-    if res
-    then begin
-      assert (s1.s `map_equal` s2.s);
-      assert (feq s1.test s2.test);
-      assert (feq s1.fold s2.fold);
-      true
-    end
-    else false
-  )
-
-let fmap_intro
-  (#t #u: Type)
-  (#token: universe_token)
-  (s: t -> Tot (option u))
-  (test: (t -> option u) -> Tot bool)
-  (fold: (x: fmap_fold_dom t token) -> fmap_fold_codom s x)
-  (l: Ghost.erased (list t))
-: Pure (fmap t u token)
-    (requires (
-      (forall (x: t) . List.Tot.memP x l <==> Some? (s x)) /\
-      (forall (s': t -> option u) . test s' <==>  map_included s s')
-    ))
-    (ensures (fun _ -> True))
-= Classical.exists_intro (fun (l: list t) -> forall (x: t) . List.Tot.memP x l <==>  Some? (s x) ) l;
-  let s0 : fmap' t u = on_dom t s in
-  {
-    s = s0;
-    test = on_dom (t -> option u) #(included_elem_test_codom s0) (fun (s': t -> option u) -> test s');
-    fold = on_dom (fmap_fold_dom t token) #(fmap_fold_codom s0) fold;
-  }
-
-let fmap_elim
-  (#t #u: Type)
-  (#token: _)
-  (s: fmap t u token)
-: Ghost (list t)
-    (requires True)
-    (ensures (fun l -> forall (x: t) . List.Tot.memP x l <==> Some? (s.s x)))
-= FStar.IndefiniteDescription.indefinite_description_ghost _ (fun (l: list t) -> forall (x: t) . List.Tot.memP x l <==> Some? (s.s x ))
-
-let get (#t #u: Type) (#token: _) (x: t) (s: fmap t u token) : Tot (option u) = s.s x
-
-let domain s = fmap_elim s
-
-let equal_eq_intro
-  (#t #u: Type) (#token: _)
-  (s1 s2: fmap t u token)
-: Lemma
-  (requires equal s1 s2)
-  (ensures s1 == s2)
-= assert (feq s1.s s2.s);
-  assert (feq s1.test s2.test);
-  assert (feq s1.fold s2.fold)
-
-let equal_eq
-  (#t #u: Type) #token
-  (s1 s2: fmap t u token)
-: Lemma
-  (equal s1 s2 <==> s1 == s2)
-  [SMTPat (equal s1 s2)]
-= Classical.move_requires (equal_eq_intro s1) s2
-
 let rec list_fold_comm
   (#accu #t: Type)
   (f: accu -> t -> accu { op_comm f })
@@ -309,17 +182,163 @@ let rec list_fold_ext
     memP_filter_ghost_neq h q';
     list_fold_ext f (f a h) (List.Tot.filter (ghost_neq h) q) (List.Tot.filter (ghost_neq h) q')
 
+let list_fold_ext'
+  (#accu #t: Type)
+  (f: accu -> t -> accu { op_comm f /\ op_idem f })
+  (a: accu)
+  (l1 l2: list t)
+: Lemma
+  (ensures
+    (forall x . List.Tot.memP x l1 <==> List.Tot.memP x l2) ==>
+    List.Tot.fold_left f a l1 == List.Tot.fold_left f a l2
+  )
+= Classical.move_requires (list_fold_ext f a l1) l2
+
+let map (t u: Type) : Type = t ^-> option u
+
+let map_get (#t #u: Type) (x: t) (s: map t u) : option u = s x
+
+let map_equal
+  (#t #u: Type)
+  (s1 s2: map t u)
+: Tot prop
+= forall x . map_get x s1 == map_get x s2
+
+let map_equal_eq_intro
+  (#t #u: Type)
+  (s1 s2: map t u)
+: Lemma
+  (requires map_equal s1 s2)
+  (ensures s1 == s2)
+= assert (feq s1 s2)
+
+let map_equal_eq
+  (#t #u: Type)
+  (s1 s2: map t u)
+: Lemma
+  (map_equal s1 s2 <==> s1 == s2)
+  [SMTPat (map_equal s1 s2)]
+= Classical.move_requires (map_equal_eq_intro s1) s2
+
+let fmap' (t u: Type) : Type =
+  (s: map t u { exists (l: list t) . forall (x: t) . List.Tot.memP x l <==> Some? (s x) })
+
+let map_included (#t #u: Type) (s1 s2: t -> option u) : Tot prop =
+  forall (elt: t) . begin match s1 elt with
+  | None -> True
+  | g -> g == s2 elt
+  end
+
+let included_elem_test_codom (#t #u: Type) (x: t -> option u) (y: t -> option u) : Type =
+  (z: bool { z == true <==> map_included x y})
+
+let included_elem_test (#t #u: Type) (x: t -> option u) : Type =
+  restricted_t (t -> option u) (included_elem_test_codom x)
+
+noeq
+type fmap_fold_dom
+  (t: Type u#a) (token: universe_token u#c)
+: Type u#(max a (1 + c))
+= {
+  accu: Type u#c;
+  f: (f: (accu -> t -> accu) { op_comm f /\ op_idem f });
+  a: accu;
+}
+
+let fmap_fold_codom
+  (#t: Type u#a) (#u: Type u#b) (#token: universe_token u#c) (s: t -> option u) (x: fmap_fold_dom t token) : Type u#c =
+  (a': x.accu { forall l . (forall x . List.Tot.memP x l <==> Some? (s x)) ==> a' == List.Tot.fold_left x.f x.a l })
+
+noeq
+type fmap (t: Type u#a) (u: Type u#b) (token: universe_token u#c) : Type u#(max a b (1 + c)) = {
+  s: fmap' t u;
+  test: included_elem_test s;
+  fold: restricted_t (fmap_fold_dom t token) (fmap_fold_codom s);
+}
+
+let fmap_eq (#t #u: Type) #token : eq_test (fmap t u token) =
+  (fun (s1: fmap t u token) -> fun (s2: fmap t u token) ->
+    let res : bool = s1.test s2.s && s2.test s1.s in
+    if res
+    then begin
+      assert (s1.s `map_equal` s2.s);
+      assert (feq s1.test s2.test);
+      assert (feq s1.fold s2.fold);
+      true
+    end
+    else false
+  )
+
+let fmap_fold_codom'
+  (#t: Type u#a) (l: list t) (#token: universe_token u#c) (x: fmap_fold_dom t token) : Type u#c =
+  (a': x.accu { a' == List.Tot.fold_left x.f x.a l })
+
+let fmap_intro
+  (#t #u: Type)
+  (#token: universe_token)
+  (s: t -> Tot (option u))
+  (test: (t -> option u) -> Tot bool)
+  (l: Ghost.erased (list t))
+  (fold: (x: fmap_fold_dom t token) -> fmap_fold_codom' l x)
+: Pure (fmap t u token)
+    (requires (
+      (forall (x: t) . List.Tot.memP x l <==> Some? (s x)) /\
+      (forall (s': t -> option u) . test s' <==>  map_included s s')
+    ))
+    (ensures (fun _ -> True))
+= Classical.exists_intro (fun (l: list t) -> forall (x: t) . List.Tot.memP x l <==>  Some? (s x) ) l;
+  let s0 : fmap' t u = on_dom t s in
+  {
+    s = s0;
+    test = on_dom (t -> option u) #(included_elem_test_codom s0) (fun (s': t -> option u) -> test s');
+    fold = on_dom (fmap_fold_dom t token) #(fmap_fold_codom s0) (fun x -> 
+      Classical.forall_intro (list_fold_ext' x.f x.a l);
+      fold x
+    );
+  }
+
+let fmap_elim
+  (#t #u: Type)
+  (#token: _)
+  (s: fmap t u token)
+: Ghost (list t)
+    (requires True)
+    (ensures (fun l -> forall (x: t) . List.Tot.memP x l <==> Some? (s.s x)))
+= FStar.IndefiniteDescription.indefinite_description_ghost _ (fun (l: list t) -> forall (x: t) . List.Tot.memP x l <==> Some? (s.s x ))
+
+let get (#t #u: Type) (#token: _) (x: t) (s: fmap t u token) : Tot (option u) = s.s x
+
+let domain s = fmap_elim s
+
+let equal_eq_intro
+  (#t #u: Type) (#token: _)
+  (s1 s2: fmap t u token)
+: Lemma
+  (requires equal s1 s2)
+  (ensures s1 == s2)
+= assert (feq s1.s s2.s);
+  assert (feq s1.test s2.test);
+  assert (feq s1.fold s2.fold)
+
+let equal_eq
+  (#t #u: Type) #token
+  (s1 s2: fmap t u token)
+: Lemma
+  (equal s1 s2 <==> s1 == s2)
+  [SMTPat (equal s1 s2)]
+= Classical.move_requires (equal_eq_intro s1) s2
+
 let fold
   f a s
 = s.fold { accu = _; f = f; a = a }
 
-let empty (t u: Type) : Pure (fmap t u)
+let empty (t u: Type) token : Pure (fmap t u token)
   (requires True)
   (ensures (fun s -> forall x . None? (get x s)))
 =
-  fmap_intro (fun _ -> None) (fun _ -> true) []
+  fmap_intro (fun _ -> None) (fun _ -> true) [] (fun x -> x.a)
 
-let singleton (#t #u: Type) (x: t) (elt: u) (eq: eq_elem_test x) (equ: eq_elem_test elt) : Pure (fmap t u)
+let singleton (#t #u: Type) token (x: t) (elt: u) (eq: eq_elem_test x) (equ: eq_elem_test elt) : Pure (fmap t u token)
   (requires True)
   (ensures (fun s -> get x s == Some elt /\ (forall y . (~ (x == y)) ==>  get y s == None)))
 =
@@ -328,8 +347,9 @@ let singleton (#t #u: Type) (x: t) (elt: u) (eq: eq_elem_test x) (equ: eq_elem_t
     | None -> false
     | Some elt' -> equ elt')
   [x]
+  (fun y -> y.f y.a x)
 
-let union (#t #u: Type) (s1 s2: fmap t u) : Pure (fmap t u)
+let union (#t #u: Type) #token (s1 s2: fmap t u token) : Pure (fmap t u token)
   (requires True)
   (ensures (fun s -> forall y . get y s == begin match get y s1 with
   | Some v -> Some v
@@ -347,6 +367,10 @@ let union (#t #u: Type) (s1 s2: fmap t u) : Pure (fmap t u)
   | _ -> s' x'
   ))
   (l1 `List.Tot.append` l2)
+  (fun x ->
+    List.Tot.fold_left_append x.f l1 l2;
+    s2.fold {x with a = s1.fold x}
+  )
 
 let rec list_memP_filter (#t: Type) (f: t -> bool) (l: list t) (x: t) : Lemma
   (ensures List.Tot.memP x (List.Tot.filter f l) <==> List.Tot.memP x l /\ f x)
@@ -447,14 +471,16 @@ let rec prune_list
 
 let length
   (#t #u: Type)
-  (s: fmap t u)
+  #token
+  (s: fmap t u token)
 : GTot nat
 = let l = fmap_elim s in
   List.Tot.length (prune_list l)
 
 let length_intro
   (#t #u: Type)
-  (s: fmap t u)
+  #token
+  (s: fmap t u token)
   (l: list t)
 : Lemma
   (requires (
@@ -471,20 +497,19 @@ let length_intro
 
 let length_empty
   (t u: Type)
+  token
 : Lemma
-  (length (empty t u) == 0)
-  [SMTPat (length (empty t u))]
-= length_intro (empty t u) []
+  (length (empty t u token) == 0)
+= length_intro (empty t u token) []
 
 let length_singleton
-  (#t #u: Type) (x: t) (elt: u) (eq: eq_elem_test x) (equ: eq_elem_test elt)
+  (#t #u: Type) token (x: t) (elt: u) (eq: eq_elem_test x) (equ: eq_elem_test elt)
 : Lemma
-  (length (singleton x elt eq equ) == 1)
-  [SMTPat (length (singleton x elt eq equ))]
-= length_intro (singleton x elt eq equ) [x]
+  (length (singleton token x elt eq equ) == 1)
+= length_intro (singleton token x elt eq equ) [x]
 
 let length_disjoint_union
-  (#t #u: Type) (s1 s2: fmap t u)
+  (#t #u: Type) #token (s1 s2: fmap t u token)
 : Lemma
   (requires (disjoint s1 s2))
   (ensures (
