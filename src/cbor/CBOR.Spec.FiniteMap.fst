@@ -330,7 +330,8 @@ let equal_eq
 
 let fold
   f a s
-= s.fold { accu = _; f = f; a = a }
+= Classical.forall_intro (list_fold_ext' f a (domain s));
+  s.fold { accu = _; f = f; a = a }
 
 let empty (t u: Type) token : Pure (fmap t u token)
   (requires True)

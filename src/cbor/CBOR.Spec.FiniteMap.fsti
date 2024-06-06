@@ -78,7 +78,9 @@ val fold
   (s: fmap t u token)
 : Pure accu
     (requires True)
-    (ensures (fun a' -> a' == List.Tot.fold_left f a (domain s)))
+    (ensures (fun a' -> a' == List.Tot.fold_left f a (domain s) /\
+      (forall l . (forall x . List.Tot.memP x l <==> Some? (get x s)) ==> a' == List.Tot.fold_left f a l)
+    ))
 
 val empty (t u: Type) (token: universe_token) : Pure (fmap t u token)
   (requires True)
