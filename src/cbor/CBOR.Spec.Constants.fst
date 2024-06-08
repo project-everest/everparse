@@ -53,3 +53,23 @@ let cbor_major_type_map : major_type_t = 5uy
 
 [@@CMacro]
 let cbor_major_type_tagged : major_type_t = 6uy
+
+(* Simple values *)
+
+[@@CMacro]
+let min_simple_value_long_argument = 32uy
+
+[@@CMacro]
+let max_simple_value_additional_info = 23uy
+
+inline_for_extraction
+noextract
+let simple_value_wf
+  (x: U8.t)
+: Tot bool
+= x `U8.lte` max_simple_value_additional_info || min_simple_value_long_argument `U8.lte` x
+
+inline_for_extraction
+noextract
+let simple_value : eqtype =
+  (x: U8.t { simple_value_wf x == true } )
