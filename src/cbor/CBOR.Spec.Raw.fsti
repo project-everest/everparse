@@ -92,6 +92,15 @@ let holds_on_pair2
 let list_for_all_exists (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: list t1) (l2: list t2) : bool =
   List.Tot.for_all (fun x -> List.Tot.existsb (p x) l2) l1
 
+let rec list_for_all_exists_eq (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: list t1) (l2: list t2) : Lemma
+  (ensures (list_for_all_exists p l1 l2 == begin match l1 with
+  | [] -> true
+  | a :: q -> List.Tot.existsb (p a) l2 && list_for_all_exists p q l2
+  end))
+= match l1 with
+  | [] -> ()
+  | _ :: q -> list_for_all_exists_eq p q l2
+
 val raw_equiv_eq (l1 l2: raw_data_item) : Lemma
   (raw_equiv l1 l2 == begin match l1, l2 with
   | Simple v1, Simple v2 -> v1 = v2
@@ -107,6 +116,9 @@ val raw_equiv_eq (l1 l2: raw_data_item) : Lemma
     raw_equiv v1 v2
   | _ -> false
   end)
+
+val raw_equiv_sym (l1 l2: raw_data_item) : Lemma
+  (raw_equiv l1 l2 == raw_equiv l2 l1)
 
 noextract
 let get_major_type
@@ -128,6 +140,56 @@ let holds_on_pair
 : Tot bool
 = let (x1, x2) = x in
   pred x1 && pred x2
+
+let andp (#t: Type) (p1 p2: t -> bool) (x: t) : bool =
+  p1 x && p2 x
+
+let holds_on_pair_andp
+  (#t: Type)
+  (p1 p2: (t -> bool))
+  (x: (t & t))
+: Lemma
+  (holds_on_pair (andp p1 p2) x == (holds_on_pair p1 x && holds_on_pair p2 x))
+= ()
+
+let rec list_for_all_implies
+  (#t: Type)
+  (p1 p2: t -> bool)
+  (l: list t)
+  (prf: (x: t { x << l }) -> Lemma
+    (p1 x == true ==> p2 x == true)
+  )
+: Lemma
+  (ensures (List.Tot.for_all p1 l == true ==> List.Tot.for_all p2 l == true))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q -> prf a; list_for_all_implies p1 p2 q prf
+
+let list_for_all_ext
+  (#t: Type)
+  (p1 p2: t -> bool)
+  (l: list t)
+  (prf: (x: t { x << l }) -> Lemma
+    (p1 x == p2 x)
+  )
+: Lemma
+  (ensures (List.Tot.for_all p1 l == List.Tot.for_all p2 l))
+= list_for_all_implies p1 p2 l (fun x -> prf x);
+  list_for_all_implies p2 p1 l (fun x -> prf x)
+
+let rec list_for_all_andp
+  (#t: Type)
+  (p1 p2: t -> bool)
+  (l: list t)
+: Lemma
+  (ensures (
+    List.Tot.for_all (andp p1 p2) l == (List.Tot.for_all p1 l && List.Tot.for_all p2 l)
+  ))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> list_for_all_andp p1 p2 q
 
 noextract
 val holds_on_raw_data_item
@@ -154,6 +216,30 @@ val holds_on_raw_data_item_eq
   (x: raw_data_item)
 : Lemma
   (holds_on_raw_data_item p x == holds_on_raw_data_item' p x)
+
+let rec holds_on_raw_data_item_andp
+  (p1 p2: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Lemma
+  (ensures (
+    holds_on_raw_data_item (andp p1 p2) x == (holds_on_raw_data_item p1 x && holds_on_raw_data_item p2 x)
+  ))
+  (decreases x)
+= holds_on_raw_data_item_eq (andp p1 p2) x;
+  holds_on_raw_data_item_eq p1 x;
+  holds_on_raw_data_item_eq p2 x;
+  match x with
+  | Array _ l ->
+    list_for_all_ext (holds_on_raw_data_item (andp p1 p2)) (andp (holds_on_raw_data_item p1) (holds_on_raw_data_item p2)) l (fun x -> holds_on_raw_data_item_andp p1 p2 x);
+    list_for_all_andp (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) l
+  | Map _ l ->
+    list_for_all_ext (holds_on_pair (holds_on_raw_data_item (andp p1 p2))) (andp (holds_on_pair (holds_on_raw_data_item p1)) (holds_on_pair (holds_on_raw_data_item p2))) l (fun x ->
+      holds_on_raw_data_item_andp p1 p2 (fst x);
+      holds_on_raw_data_item_andp p1 p2 (snd x)
+    );
+    list_for_all_andp (holds_on_pair (holds_on_raw_data_item p1)) (holds_on_pair (holds_on_raw_data_item p2)) l
+  | Tagged _ x' -> holds_on_raw_data_item_andp p1 p2 x'
+  | _ -> ()
 
 let holds_on_raw_data_item_eq_simple
   (p: (raw_data_item -> bool))
@@ -323,7 +409,7 @@ let rec raw_equiv_sorted_optimal
     raw_uint64_optimal_unique v1 v2
   | _ -> admit ()
 
-let raw_data_item_sorted_optimal_valid
+let rec raw_data_item_sorted_optimal_valid
   (order: raw_data_item -> raw_data_item -> bool {
     order_irrefl order /\
     order_trans order
@@ -335,4 +421,12 @@ let raw_data_item_sorted_optimal_valid
     raw_data_item_ints_optimal x1
   ))
   (ensures (valid_raw_data_item x1))
-= admit ()
+= holds_on_raw_data_item_eq (raw_data_item_sorted_elem order) x1;
+  holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x1;
+  match x1 with
+  | Simple _
+  | Int64 _ _
+  | String _ _ _
+    -> ()
+  | Tagged tag v -> raw_data_item_sorted_optimal_valid order v
+  | _ -> assume False
