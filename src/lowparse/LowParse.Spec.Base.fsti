@@ -359,6 +359,14 @@ let tot_parser
 : Tot Type
 = (f: tot_bare_parser t { parser_kind_prop k f } )
 
+val tot_parser_of_parser
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Ghost (tot_parser k t)
+    (requires True)
+    (ensures (fun p' -> forall x . parse p' x == parse p x))
+
 inline_for_extraction
 let get_parser_kind
   (#k: parser_kind)
@@ -701,6 +709,20 @@ let serializer
 : Tot Type
 = (f: bare_serializer t { serializer_correct p f } )
 
+inline_for_extraction
+let tot_bare_serializer
+  (t: Type)
+: Tot Type
+= t -> Tot bytes
+
+[@unifier_hint_injective]
+let tot_serializer
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Tot Type
+= (f: tot_bare_serializer t { serializer_correct p f } )
+
 let mk_serializer
   (#k: parser_kind)
   (#t: Type)
@@ -753,6 +775,13 @@ let serialize_ext'
   (ensures (fun _ -> True))
 = serialize_ext p1 s1 p2
 
+let bare_serialize
+  (#t: Type)
+  (s: bare_serializer t)
+  (x: t)
+: GTot bytes
+= s x
+
 let serialize
   (#k: parser_kind)
   (#t: Type)
@@ -761,6 +790,15 @@ let serialize
   (x: t)
 : GTot bytes
 = s x
+
+val tot_serializer_of_serializer
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+: Ghost (tot_serializer p)
+    (requires True)
+    (ensures (fun s' -> forall x . bare_serialize s' x == serialize s x))
 
 let parse_serialize
   (#k: parser_kind)
