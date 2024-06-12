@@ -34,10 +34,10 @@ let dummy_raw_data_item : Ghost.erased raw_data_item =
 let raw_uint64_equiv (x1 x2: raw_uint64) : Tot bool =
   x1.value = x2.value
 
-let rec list_for_all2 (#t1 #t2: Type) (l1: list t1) (l2: list t2) (p: (x1: t1) -> (x2: t2 { x1 << l1 /\ x2 << l2 }) -> bool) : Tot bool (decreases l1) =
+let rec list_for_all2 (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: list t1) (l2: list t2) : Tot bool (decreases l1) =
   match l1, l2 with
   | [], [] -> true
-  | a1 :: q1, a2 :: q2 -> p a1 a2 && list_for_all2 q1 q2 p
+  | a1 :: q1, a2 :: q2 -> p a1 a2 && list_for_all2 p q1 q2
   | _ -> false
 
 (*
@@ -327,7 +327,7 @@ val raw_equiv_eq (l1 l2: raw_data_item) : Lemma
   | Simple v1, Simple v2 -> v1 = v2
   | Int64 ty1 v1, Int64 ty2 v2 -> ty1 = ty2 && raw_uint64_equiv v1 v2
   | String ty1 len1 v1, String ty2 len2 v2 -> ty1 = ty2 && raw_uint64_equiv len1 len2 && v1 = v2
-  | Array len1 v1, Array len2 v2 -> raw_uint64_equiv len1 len2 && list_for_all2 v1 v2 raw_equiv
+  | Array len1 v1, Array len2 v2 -> raw_uint64_equiv len1 len2 && list_for_all2 raw_equiv v1 v2
   | Map len1 v1, Map len2 v2 ->
     raw_uint64_equiv len1 len2 &&
     list_for_all_exists (holds_on_pair2 raw_equiv) v1 v2 &&
@@ -338,8 +338,68 @@ val raw_equiv_eq (l1 l2: raw_data_item) : Lemma
   | _ -> false
   end)
 
-val raw_equiv_sym (l1 l2: raw_data_item) : Lemma
-  (raw_equiv l1 l2 == raw_equiv l2 l1)
+let swap (#t1 #t2: Type) (p: t1 -> t2 -> bool) (x2: t2) (x1: t1) : bool =
+  p x1 x2
+
+let rec list_for_all2_implies'
+  (#t1 #t2: Type)
+  (p p': t1 -> t2 -> bool)
+  (l1: list t1)
+  (l2: list t2)
+  (prf: (x: t1) -> (y: t2 { x << l1 /\ List.Tot.memP x l1 /\ y << l2 /\ List.Tot.memP y l2 }) -> Lemma
+    (p x y == true ==> p' x y == true)
+  )
+: Lemma
+  (ensures (list_for_all2 p l1 l2 == true ==> list_for_all2 p' l1 l2 == true))
+  (decreases l1)
+= if list_for_all2 p l1 l2
+  then match l1, l2 with
+  | [], [] -> ()
+  | a1 :: q1, a2 :: q2 ->
+    prf a1 a2;
+    list_for_all2_implies' p p' q1 q2 prf
+
+let list_for_all2_implies
+  (#t1 #t2: Type)
+  (p p': t1 -> t2 -> bool)
+  (l1: list t1)
+  (l2: list t2)
+  (prf: (x: t1) -> (y: t2 { x << l1 /\ List.Tot.memP x l1 /\ y << l2 /\ List.Tot.memP y l2 }) -> Lemma
+    (requires (p x y == true))
+    (ensures (p' x y == true))
+  )
+: Lemma
+  (requires (list_for_all2 p l1 l2 == true))
+  (ensures (list_for_all2 p' l1 l2 == true))
+= list_for_all2_implies' p p' l1 l2 (fun x y -> if p x y then prf x y else ())
+
+let rec list_for_all2_swap
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> bool)
+  (l1: list t1)
+  (l2: list t2)
+: Lemma
+  (ensures (list_for_all2 (swap p) l2 l1 == list_for_all2 p l1 l2))
+  (decreases l1)
+= match l1, l2 with
+  | a1 :: q1, a2 :: q2 -> list_for_all2_swap p q1 q2
+  | _ -> ()
+
+let rec raw_equiv_sym (l1 l2: raw_data_item) : Lemma
+  (requires (raw_equiv l1 l2 == true))
+  (ensures (raw_equiv l2 l1 == true))
+  (decreases l1)
+= raw_equiv_eq l1 l2;
+  raw_equiv_eq l2 l1;
+  match l1, l2 with
+  | Array len1 v1, Array len2 v2 ->
+    list_for_all2_implies raw_equiv (swap raw_equiv) v1 v2 (fun x1 x2 ->
+      raw_equiv_sym x1 x2
+    );
+    list_for_all2_swap raw_equiv v2 v1
+  | Tagged len1 v1, Tagged len2 v2 ->
+    raw_equiv_sym v1 v2
+  | _ -> ()
 
 noextract
 let get_major_type
@@ -614,7 +674,7 @@ let rec list_for_all2_intro
   )
 : Lemma
   (requires (List.Tot.length l1 == List.Tot.length l2))
-  (ensures (list_for_all2 l1 l2 p))
+  (ensures (list_for_all2 p l1 l2))
   (decreases l1)
 = match l1, l2 with
   | a1 :: q1, a2 :: q2 ->
@@ -622,45 +682,13 @@ let rec list_for_all2_intro
     list_for_all2_intro p q1 q2 prf
   | _ -> ()
 
-let rec list_for_all2_implies'
-  (#t1 #t2: Type)
-  (p p': t1 -> t2 -> bool)
-  (l1: list t1)
-  (l2: list t2)
-  (prf: (x: t1) -> (y: t2 { x << l1 /\ List.Tot.memP x l1 /\ y << l2 /\ List.Tot.memP y l2 }) -> Lemma
-    (p x y == true ==> p' x y == true)
-  )
-: Lemma
-  (ensures (list_for_all2 l1 l2 p == true ==> list_for_all2 l1 l2 p' == true))
-  (decreases l1)
-= if list_for_all2 l1 l2 p
-  then match l1, l2 with
-  | [], [] -> ()
-  | a1 :: q1, a2 :: q2 ->
-    prf a1 a2;
-    list_for_all2_implies' p p' q1 q2 prf
-
-let list_for_all2_implies
-  (#t1 #t2: Type)
-  (p p': t1 -> t2 -> bool)
-  (l1: list t1)
-  (l2: list t2)
-  (prf: (x: t1) -> (y: t2 { x << l1 /\ List.Tot.memP x l1 /\ y << l2 /\ List.Tot.memP y l2 }) -> Lemma
-    (requires (p x y == true))
-    (ensures (p' x y == true))
-  )
-: Lemma
-  (requires (list_for_all2 l1 l2 p == true))
-  (ensures (list_for_all2 l1 l2 p' == true))
-= list_for_all2_implies' p p' l1 l2 (fun x y -> if p x y then prf x y else ())
-
 let rec list_for_all2_length
   (#t1 #t2: Type)
   (p: t1 -> t2 -> bool)
   (l1: list t1)
   (l2: list t2)
 : Lemma
-  (requires list_for_all2 l1 l2 p == true)
+  (requires list_for_all2 p l1 l2 == true)
   (ensures List.Tot.length l1 == List.Tot.length l2)
   (decreases l1)
 = match l1, l2 with
@@ -680,7 +708,7 @@ let rec list_for_all2_prod
     List.Tot.length l1 == List.Tot.length l2
   ))
   (ensures (
-    list_for_all2 l1 l2 (prodp p1 p2) == true
+    list_for_all2 (prodp p1 p2) l1 l2 == true
   ))
   (decreases l1)
 = match l1, l2 with
@@ -693,7 +721,7 @@ let rec list_for_all2_andp
   (l1: list t1)
   (l2: list t2)
 : Lemma
-  (ensures (list_for_all2 l1 l2 (andp2 p p') == (list_for_all2 l1 l2 p && list_for_all2 l1 l2 p')))
+  (ensures (list_for_all2 (andp2 p p') l1 l2 == (list_for_all2 p l1 l2 && list_for_all2 p' l1 l2)))
   (decreases l1)
 = match l1, l2 with
   | _ :: q1, _ :: q2 -> list_for_all2_andp p p' q1 q2
@@ -706,14 +734,14 @@ let list_for_all2_andp_intro
   (l2: list t2)
 : Lemma
   (requires (
-    list_for_all2 l1 l2 p == true /\
-    list_for_all2 l1 l2 p' == true
+    list_for_all2 p l1 l2 == true /\
+    list_for_all2 p' l1 l2 == true
   ))
-  (ensures (list_for_all2 l1 l2 (andp2 p p') == true))
+  (ensures (list_for_all2 (andp2 p p') l1 l2 == true))
 = list_for_all2_andp p p' l1 l2
 
 let rec list_for_all2_equals (#t: eqtype) (l1 l2: list t) : Lemma
-  (requires (list_for_all2 l1 l2 ( = ) == true))
+  (requires (list_for_all2 ( = ) l1 l2 == true))
   (ensures (l1 == l2))
   (decreases l1)
 = match l1, l2 with
@@ -780,7 +808,76 @@ let rec raw_equiv_sorted_optimal
     list_for_all2_equals l1 l2
   | Map len1 l1, Map len2 l2 ->
     raw_uint64_optimal_unique len1 len2;
-    assume False
+    assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
+    list_for_all_andp (holds_on_pair (raw_data_item_sorted order)) (holds_on_pair raw_data_item_ints_optimal) l1;
+    list_for_all_andp (holds_on_pair (raw_data_item_sorted order)) (holds_on_pair raw_data_item_ints_optimal) l2;
+    list_for_all_exists_prodp
+      (holds_on_pair2 raw_equiv)
+      (andp
+        (holds_on_pair (raw_data_item_sorted order))
+        (holds_on_pair raw_data_item_ints_optimal)
+      )
+      (andp
+        (holds_on_pair (raw_data_item_sorted order))
+        (holds_on_pair raw_data_item_ints_optimal)
+      )
+      l1 l2;
+    list_for_all_exists_implies
+      (andp2
+        (holds_on_pair2 raw_equiv)
+        (prodp
+          (andp
+            (holds_on_pair (raw_data_item_sorted order))
+            (holds_on_pair raw_data_item_ints_optimal)
+          )
+          (andp
+            (holds_on_pair (raw_data_item_sorted order))
+            (holds_on_pair raw_data_item_ints_optimal)
+          )
+        )
+      )
+      ( = )
+      l1 l2
+      (fun x1 x2 ->
+        raw_equiv_sorted_optimal order (fst x1) (fst x2);
+        raw_equiv_sorted_optimal order (snd x1) (snd x2)
+      );
+    list_for_all_exists_equal_eq l1 l2;
+    list_for_all_exists_prodp
+      (holds_on_pair2 raw_equiv)
+      (andp
+        (holds_on_pair (raw_data_item_sorted order))
+        (holds_on_pair raw_data_item_ints_optimal)
+      )
+      (andp
+        (holds_on_pair (raw_data_item_sorted order))
+        (holds_on_pair raw_data_item_ints_optimal)
+      )
+      l2 l1;
+    list_for_all_exists_implies
+      (andp2
+        (holds_on_pair2 raw_equiv)
+        (prodp
+          (andp
+            (holds_on_pair (raw_data_item_sorted order))
+            (holds_on_pair raw_data_item_ints_optimal)
+          )
+          (andp
+            (holds_on_pair (raw_data_item_sorted order))
+            (holds_on_pair raw_data_item_ints_optimal)
+          )
+        )
+      )
+      ( = )
+      l2 l1
+      (fun x2 x1 ->
+        raw_equiv_sym (fst x2) (fst x1);
+        raw_equiv_sorted_optimal order (fst x1) (fst x2);
+        raw_equiv_sym (snd x2) (snd x1);
+        raw_equiv_sorted_optimal order (snd x1) (snd x2)
+      );
+    list_for_all_exists_equal_eq l2 l1;
+    list_sorted_ext_eq (map_entry_order order _) l1 l2
 
 let rec raw_data_item_sorted_optimal_valid_aux
   (order: (raw_data_item -> raw_data_item -> bool) {
