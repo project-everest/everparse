@@ -100,6 +100,19 @@ let list_for_all_exists_implies
     list_existsb2_implies p p' x1 l2 (fun x2 -> prf x1 x2)
   )
 
+let list_for_all_exists_ext
+  (#t1 #t2: Type)
+  (p p': t1 -> t2 -> bool)
+  (l1: list t1)
+  (l2: list t2)
+  (prf: (x1: t1) -> (x2: t2 { x1 << l1 /\ x2 << l2 }) -> Lemma
+    (ensures (p' x1 x2 == p x1 x2))
+  )
+: Lemma
+  (ensures (list_for_all_exists p' l1 l2 == list_for_all_exists p l1 l2))
+= Classical.move_requires (list_for_all_exists_implies p p' l1 l2) (fun x1 x2 -> prf x1 x2);
+  Classical.move_requires (list_for_all_exists_implies p' p l1 l2) (fun x1 x2 -> prf x1 x2)
+
 let andp2 (#t #t': Type) (p1 p2: t -> t' -> bool) (x: t) (x': t') : bool =
   p1 x x' && p2 x x'
 
@@ -286,6 +299,19 @@ let list_for_all2_implies
   (ensures (list_for_all2 p' l1 l2 == true))
 = list_for_all2_implies' p p' l1 l2 (fun x y -> if p x y then prf x y else ())
 
+let list_for_all2_ext
+  (#t1 #t2: Type)
+  (p p': t1 -> t2 -> bool)
+  (l1: list t1)
+  (l2: list t2)
+  (prf: (x: t1) -> (y: t2 { x << l1 /\ List.Tot.memP x l1 /\ y << l2 /\ List.Tot.memP y l2 }) -> Lemma
+    (ensures (p' x y == p x y))
+  )
+: Lemma
+  (ensures (list_for_all2 p' l1 l2 == list_for_all2 p l1 l2))
+= Classical.move_requires (list_for_all2_implies p p' l1 l2) (fun x y -> prf x y);
+  Classical.move_requires (list_for_all2_implies p' p l1 l2) (fun x y -> prf x y)
+
 let rec list_for_all2_swap
   (#t1 #t2: Type)
   (p: t1 -> t2 -> bool)
@@ -440,3 +466,63 @@ let rec list_for_all2_equals (#t: eqtype) (l1 l2: list t) : Lemma
 = match l1, l2 with
   | [], [] -> ()
   | _ :: q1, _ :: q2 -> list_for_all2_equals q1 q2
+
+(* Well-founded recursion *)
+
+let rec wf_list_for_all (#t: Type) (l: list t) (p: (x: t { x << l }) -> bool) : bool =
+  match l with
+  | [] -> true
+  | a :: q -> p a && wf_list_for_all q p
+
+let rec wf_list_for_all_eq (#t: Type) (p: t -> bool) (l: list t) : Lemma
+  (ensures wf_list_for_all l p == List.Tot.for_all p l)
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> wf_list_for_all_eq p q
+
+let rec wf_list_existsb (#t: Type) (l: list t) (p: (x: t { x << l }) -> bool) : bool =
+  match l with
+  | [] -> false
+  | a :: q -> p a || wf_list_existsb q p
+
+let rec wf_list_existsb_eq (#t: Type) (p: t -> bool) (l: list t) : Lemma
+  (ensures wf_list_existsb l p == List.Tot.existsb p l)
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    if p a
+    then ()
+    else wf_list_existsb_eq p q
+
+let rec wf_list_for_all2 (#t1 #t2: Type) (l1: list t1) (l2: list t2) (p: (x1: t1) -> (x2: t2 { x1 << l1 /\ x2 << l2 }) -> bool) : Tot bool
+  (decreases l1)
+=
+  match l1, l2 with
+  | [], [] -> true
+  | a1 :: q1, a2 :: q2 -> p a1 a2 && wf_list_for_all2 q1 q2 p
+  | _ -> false
+
+let rec wf_list_for_all2_eq (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: list t1) (l2: list t2) : Lemma
+    (ensures (wf_list_for_all2 l1 l2 p == list_for_all2 p l1 l2))
+    (decreases l1)
+= match l1, l2 with
+  | a1 :: q1, a2 :: q2 -> wf_list_for_all2_eq p q1 q2
+  | _ -> ()
+
+let rec wf_list_for_all_exists (#t1 #t2: Type) (l1: list t1) (l2: list t2) (p: (x1: t1) -> (x2: t2 { x1 << l1 /\ x2 << l2 }) -> bool) : Tot bool
+    (decreases l1)
+= match l1 with
+  | [] -> true
+  | a :: q -> wf_list_existsb l2 (p a) && wf_list_for_all_exists q l2 p
+
+let rec wf_list_for_all_exists_eq (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: list t1) (l2: list t2) : Lemma
+    (ensures wf_list_for_all_exists l1 l2 p == list_for_all_exists p l1 l2)
+    (decreases l1)
+= list_for_all_exists_eq p l1 l2;
+  match l1 with
+  | [] -> ()
+  | a :: q ->
+    wf_list_existsb_eq (p a) l2;
+    wf_list_for_all_exists_eq p q l2

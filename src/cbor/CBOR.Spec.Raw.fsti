@@ -35,42 +35,6 @@ let dummy_raw_data_item : Ghost.erased raw_data_item =
 let raw_uint64_equiv (x1 x2: raw_uint64) : Tot bool =
   x1.value = x2.value
 
-(*
-let rec list_forall (#t: Type) (l: list t) (p: (x: t { x << l }) -> bool) : bool =
-  match l with
-  | [] -> true
-  | a :: q -> p a && list_forall q p
-
-let rec list_exists (#t: Type) (l: list t) (p: (x: t { x << l }) -> bool) : bool =
-  match l with
-  | [] -> false
-  | a :: q -> p a || list_exists q p
-
-let list_exists2 (#t': Type) (l0: list t') (#t: Type) (l: list t) (p: (x': t') -> (x: t { x' << l0 /\ x << l }) -> bool) (x: t' { x << l0 }) : bool =
-  list_exists l (p x)
-
-let list_exists1_swap (#t': Type) (#t: Type) (l: list t) (p: (x: t) -> (x': t' { x << l }) -> bool) (x: t') : bool =
-  list_exists l (fun x' -> p x' x)
-
-let rec raw_equiv (l1 l2: raw_data_item) : Tot bool (decreases l1) =
-  match l1, l2 with
-  | Simple v1, Simple v2 -> v1 = v2
-  | Int64 ty1 v1, Int64 ty2 v2 -> ty1 = ty2 && raw_uint64_equiv v1 v2
-  | String ty1 len1 v1, String ty2 len2 v2 -> ty1 = ty2 && raw_uint64_equiv len1 len2 && v1 = v2
-  | Array len1 v1, Array len2 v2 -> raw_uint64_equiv len1 len2 && list_for_all2 v1 v2 raw_equiv
-  | Map len1 v1, Map len2 v2 ->
-    raw_uint64_equiv len1 len2 &&
-    list_forall v1 (list_exists2 v1 v2 raw_pair_equiv) &&
-    list_forall v2 (list_exists1_swap v1 raw_pair_equiv)
-  | Tagged tag1 v1, Tagged tag2 v2 ->
-    raw_uint64_equiv tag1 tag2 &&
-    raw_equiv v1 v2
-  | _ -> false
-
-and raw_pair_equiv (l1 l2: (raw_data_item & raw_data_item)) : Tot bool (decreases l1) =
-  raw_equiv (fst l1) (fst l2) && raw_equiv (snd l1) (snd l2)
-*)
-
 val raw_equiv (l1 l2: raw_data_item) : Tot bool
 
 val raw_equiv_eq (l1 l2: raw_data_item) : Lemma
@@ -89,21 +53,8 @@ val raw_equiv_eq (l1 l2: raw_data_item) : Lemma
   | _ -> false
   end)
 
-let rec raw_equiv_sym (l1 l2: raw_data_item) : Lemma
-  (requires (raw_equiv l1 l2 == true))
-  (ensures (raw_equiv l2 l1 == true))
-  (decreases l1)
-= raw_equiv_eq l1 l2;
-  raw_equiv_eq l2 l1;
-  match l1, l2 with
-  | Array len1 v1, Array len2 v2 ->
-    list_for_all2_implies raw_equiv (swap raw_equiv) v1 v2 (fun x1 x2 ->
-      raw_equiv_sym x1 x2
-    );
-    list_for_all2_swap raw_equiv v2 v1
-  | Tagged len1 v1, Tagged len2 v2 ->
-    raw_equiv_sym v1 v2
-  | _ -> ()
+val raw_equiv_sym (l1 l2: raw_data_item) : Lemma
+  (ensures (raw_equiv l1 l2 == raw_equiv l2 l1))
 
 noextract
 let get_major_type
