@@ -82,3 +82,38 @@ let rec raw_equiv_eq' (l1 l2: raw_data_item) : Lemma (ensures
 let raw_equiv_eq l1 l2 = raw_equiv_eq' l1 l2
 
 let raw_equiv_sym l1 l2 = raw_equiv_eq' l1 l2
+
+let rec holds_on_raw_data_item
+  (p: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Tot bool
+= p x &&
+  begin match x with
+  | Array _ l -> wf_list_for_all l (holds_on_raw_data_item p)
+  | Map _ l ->
+    wf_list_for_all l (holds_on_pair_raw_data_item p)
+  | Tagged _ v -> holds_on_raw_data_item p v
+  | _ -> true
+  end
+
+and holds_on_pair_raw_data_item
+  (p: (raw_data_item -> bool))
+  (x: (raw_data_item & raw_data_item))
+: Tot bool
+= holds_on_raw_data_item p (fst x) &&
+  holds_on_raw_data_item p (snd x)
+
+let holds_on_raw_data_item_eq
+  (p: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Lemma
+  (holds_on_raw_data_item p x == holds_on_raw_data_item' p x)
+= match x with
+  | Array len l ->
+    assert_norm (holds_on_raw_data_item p (Array len l) == (p (Array len l) && wf_list_for_all l (holds_on_raw_data_item p)));
+    wf_list_for_all_eq (holds_on_raw_data_item p) l
+  | Map len l ->
+    assert_norm (holds_on_raw_data_item p (Map len l) == (p (Map len l) && wf_list_for_all l (holds_on_pair_raw_data_item p)));
+    wf_list_for_all_eq (holds_on_pair_raw_data_item p) l;
+    list_for_all_ext (holds_on_pair_raw_data_item p) (holds_on_pair (holds_on_raw_data_item p)) l (fun _ -> ())
+  | _ -> ()
