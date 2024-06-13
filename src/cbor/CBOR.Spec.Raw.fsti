@@ -1,5 +1,6 @@
 module CBOR.Spec.Raw
 include CBOR.Spec.Constants
+open CBOR.Spec.Util
 
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
@@ -33,12 +34,6 @@ let dummy_raw_data_item : Ghost.erased raw_data_item =
 
 let raw_uint64_equiv (x1 x2: raw_uint64) : Tot bool =
   x1.value = x2.value
-
-let rec list_for_all2 (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: list t1) (l2: list t2) : Tot bool (decreases l1) =
-  match l1, l2 with
-  | [], [] -> true
-  | a1 :: q1, a2 :: q2 -> p a1 a2 && list_for_all2 p q1 q2
-  | _ -> false
 
 (*
 let rec list_forall (#t: Type) (l: list t) (p: (x: t { x << l }) -> bool) : bool =
@@ -78,250 +73,6 @@ and raw_pair_equiv (l1 l2: (raw_data_item & raw_data_item)) : Tot bool (decrease
 
 val raw_equiv (l1 l2: raw_data_item) : Tot bool
 
-noextract
-let holds_on_pair2
-  (#t: Type)
-  (pred: (t -> t -> bool))
-  (x: (t & t))
-  (y: (t & t))
-: Tot bool
-= let (x1, x2) = x in
-  let (y1, y2) = y in
-  pred x1 y1 && pred x2 y2
-
-let list_existsb2
-  (#t1 #t2: Type)
-  (p: t1 -> t2 -> bool)
-  (l2: list t2)
-  (x: t1)
-: Tot bool
-= List.Tot.existsb (p x) l2
-
-let list_for_all_exists (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: list t1) (l2: list t2) : bool =
-  List.Tot.for_all (list_existsb2 p l2) l1
-
-let rec list_for_all_exists_eq (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: list t1) (l2: list t2) : Lemma
-  (ensures (list_for_all_exists p l1 l2 == begin match l1 with
-  | [] -> true
-  | a :: q -> List.Tot.existsb (p a) l2 && list_for_all_exists p q l2
-  end))
-= match l1 with
-  | [] -> ()
-  | _ :: q -> list_for_all_exists_eq p q l2
-
-let rec list_existsb_implies
-  (#t: Type)
-  (p p' : t -> bool)
-  (l: list t)
-  (prf: (x: t { x << l }) -> Lemma
-    (requires (p x == true))
-    (ensures (p' x == true))
-  )
-: Lemma
-  (requires (List.Tot.existsb p l == true))
-  (ensures (List.Tot.existsb p' l == true))
-= match l with
-  | a :: q ->
-    if p a
-    then prf a
-    else list_existsb_implies p p' q prf
-
-let list_existsb2_implies
-  (#t1 #t2: Type)
-  (p p' : t1 -> t2 -> bool)
-  (x1: t1)
-  (l2: list t2)
-  (prf: (x2: t2 { x2 << l2 }) -> Lemma
-    (requires (p x1 x2 == true))
-    (ensures (p' x1 x2 == true))
-  )
-: Lemma
-  (requires (list_existsb2 p l2 x1 == true))
-  (ensures (list_existsb2 p' l2 x1 == true))
-= list_existsb_implies (p x1) (p' x1) l2 prf
-
-let rec list_for_all_implies
-  (#t: Type)
-  (p1 p2: t -> bool)
-  (l: list t)
-  (prf: (x: t { x << l }) -> Lemma
-    (requires (p1 x == true))
-    (ensures (p2 x == true))
-  )
-: Lemma
-  (requires (List.Tot.for_all p1 l == true))
-  (ensures (List.Tot.for_all p2 l == true))
-  (decreases l)
-= match l with
-  | [] -> ()
-  | a :: q -> prf a; list_for_all_implies p1 p2 q prf
-
-let list_for_all_exists_implies
-  (#t1 #t2: Type)
-  (p p': t1 -> t2 -> bool)
-  (l1: list t1)
-  (l2: list t2)
-  (prf: (x1: t1) -> (x2: t2 { x1 << l1 /\ x2 << l2 }) -> Lemma
-    (requires (p x1 x2 == true))
-    (ensures (p' x1 x2 == true))
-  )
-: Lemma
-  (requires (list_for_all_exists p l1 l2 == true))
-  (ensures (list_for_all_exists p' l1 l2 == true))
-= list_for_all_implies (list_existsb2 p l2) (list_existsb2 p' l2) l1 (fun x1 ->
-    list_existsb2_implies p p' x1 l2 (fun x2 -> prf x1 x2)
-  )
-
-let andp2 (#t #t': Type) (p1 p2: t -> t' -> bool) (x: t) (x': t') : bool =
-  p1 x x' && p2 x x'
-
-let rec list_existsb_elim (#t: Type) (p: t -> bool) (l: list t) : Pure t
-  (requires (List.Tot.existsb p l == true))
-  (ensures (fun x -> p x == true /\ List.Tot.memP x l))
-= let a :: q = l in
-  if p a
-  then a
-  else list_existsb_elim p q
-
-let rec list_existsb_intro (#t: Type) (p: t -> bool) (l: list t) (x: t) : Lemma
-  (requires (p x == true /\
-    List.Tot.memP x l
-  ))
-  (ensures (List.Tot.existsb p l == true))
-  (decreases l)
-= match l with
-  | a :: q ->
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (x == a)
-    then ()
-    else list_existsb_intro p q x
-
-let prodp (#t1 #t2: Type) (p1: t1 -> bool) (p2: t2 -> bool) (x1: t1) (x2: t2) : bool =
-  p1 x1 && p2 x2
-
-let rec list_for_all_exists_prodp (#t1 #t2: Type) (p: t1 -> t2 -> bool) (p1: t1 -> bool) (p2: t2 -> bool) (l1: list t1) (l2: list t2) : Lemma
-  (requires (
-    List.Tot.for_all p1 l1 == true /\
-    List.Tot.for_all p2 l2 == true /\
-    list_for_all_exists p l1 l2
-  ))
-  (ensures (list_for_all_exists (andp2 p (prodp p1 p2)) l1 l2 == true))
-  (decreases l1)
-= match l1 with
-  | [] -> ()
-  | a1 :: q1 ->
-    let a2 = list_existsb_elim (p a1) l2 in
-    List.Tot.for_all_mem p2 l2;
-    list_existsb_intro (andp2 p (prodp p1 p2) a1) l2 a2;
-    list_for_all_exists_prodp p p1 p2 q1 l2
-
-let rec list_for_all_exists_equal_eq' (#t: eqtype) (l1 l2: list t) (x: t) : Lemma
-  (requires (
-    list_for_all_exists ( = ) l1 l2 == true /\
-    List.Tot.memP x l1
-  ))
-  (ensures (
-    List.Tot.memP x l2
-  ))
-  (decreases l1)
-= let a1 :: q1 = l1 in
-  if x = a1
-  then
-    let x2 = list_existsb_elim ( ( = ) x ) l2 in
-    ()
-  else
-    list_for_all_exists_equal_eq' q1 l2 x
-
-let list_for_all_exists_equal_eq (#t: eqtype) (l1 l2: list t) : Lemma
-  (requires (
-    list_for_all_exists ( = ) l1 l2 == true
-  ))
-  (ensures (
-    forall x . List.Tot.memP x l1 ==> List.Tot.memP x l2
-  ))
-= Classical.forall_intro (fun x -> Classical.move_requires (list_for_all_exists_equal_eq' l1 l2) x)
-
-let order_irrefl
-  (#t: Type)
-  (order: t -> t -> bool)
-: Tot prop
-= forall x . ~ (order x x)
-
-let order_trans
-  (#t: Type)
-  (order: t -> t -> bool)
-: Tot prop
-= forall x y z . (order x y /\ order y z) ==> order x z
-
-let rec list_sorted_memP
-  (#t: Type)
-  (order: (t -> t -> bool) {
-    order_trans order
-  })
-  (a: t)
-  (l: list t)
-  (x: t)
-: Lemma
-  (requires (
-    List.Tot.sorted order (a :: l) /\
-    List.Tot.memP x l
-  ))
-  (ensures (order a x == true))
-  (decreases l)
-= let a' :: l' = l in
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (a' == x)
-  then ()
-  else list_sorted_memP order a' l' x
-
-let list_sorted_cons_not_memP
-  (#t: Type)
-  (order: (t -> t -> bool) {
-    order_irrefl order /\
-    order_trans order
-  })
-  (a: t)
-  (l: list t)
-: Lemma
-  (requires (
-    List.Tot.sorted order (a :: l)
-  ))
-  (ensures (~ (List.Tot.memP a l)))
-= if FStar.StrongExcludedMiddle.strong_excluded_middle (List.Tot.memP a l)
-  then list_sorted_memP order a l a
-  else ()
-
-let rec list_sorted_ext_eq
-  (#t: Type)
-  (order: t -> t -> bool {
-    order_irrefl order /\
-    order_trans order
-  })
-  (l1 l2: list t)
-: Lemma
-  (requires (
-    List.Tot.sorted order l1 == true /\
-    List.Tot.sorted order l2 == true /\
-    (forall x . List.Tot.memP x l1 <==> List.Tot.memP x l2)
-  ))
-  (ensures (
-    l1 == l2
-  ))
-  (decreases l1)
-= match l1, l2 with
-  | [], [] -> ()
-  | a1 :: q1, a2 :: q2 ->
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (a1 == a2)
-    then begin
-      list_sorted_cons_not_memP order a1 q1;
-      list_sorted_cons_not_memP order a2 q2;
-      list_sorted_ext_eq order q1 q2
-    end
-    else begin
-      list_sorted_memP order a2 q2 a1;
-      list_sorted_memP order a1 q1 a2
-    end
-  | a1 :: _, [] -> assert (List.Tot.memP a1 l2)
-  | [], a2 :: _ -> assert (List.Tot.memP a2 l1)
-
 val raw_equiv_eq (l1 l2: raw_data_item) : Lemma
   (raw_equiv l1 l2 == begin match l1, l2 with
   | Simple v1, Simple v2 -> v1 = v2
@@ -337,53 +88,6 @@ val raw_equiv_eq (l1 l2: raw_data_item) : Lemma
     raw_equiv v1 v2
   | _ -> false
   end)
-
-let swap (#t1 #t2: Type) (p: t1 -> t2 -> bool) (x2: t2) (x1: t1) : bool =
-  p x1 x2
-
-let rec list_for_all2_implies'
-  (#t1 #t2: Type)
-  (p p': t1 -> t2 -> bool)
-  (l1: list t1)
-  (l2: list t2)
-  (prf: (x: t1) -> (y: t2 { x << l1 /\ List.Tot.memP x l1 /\ y << l2 /\ List.Tot.memP y l2 }) -> Lemma
-    (p x y == true ==> p' x y == true)
-  )
-: Lemma
-  (ensures (list_for_all2 p l1 l2 == true ==> list_for_all2 p' l1 l2 == true))
-  (decreases l1)
-= if list_for_all2 p l1 l2
-  then match l1, l2 with
-  | [], [] -> ()
-  | a1 :: q1, a2 :: q2 ->
-    prf a1 a2;
-    list_for_all2_implies' p p' q1 q2 prf
-
-let list_for_all2_implies
-  (#t1 #t2: Type)
-  (p p': t1 -> t2 -> bool)
-  (l1: list t1)
-  (l2: list t2)
-  (prf: (x: t1) -> (y: t2 { x << l1 /\ List.Tot.memP x l1 /\ y << l2 /\ List.Tot.memP y l2 }) -> Lemma
-    (requires (p x y == true))
-    (ensures (p' x y == true))
-  )
-: Lemma
-  (requires (list_for_all2 p l1 l2 == true))
-  (ensures (list_for_all2 p' l1 l2 == true))
-= list_for_all2_implies' p p' l1 l2 (fun x y -> if p x y then prf x y else ())
-
-let rec list_for_all2_swap
-  (#t1 #t2: Type)
-  (p: t1 -> t2 -> bool)
-  (l1: list t1)
-  (l2: list t2)
-: Lemma
-  (ensures (list_for_all2 (swap p) l2 l1 == list_for_all2 p l1 l2))
-  (decreases l1)
-= match l1, l2 with
-  | a1 :: q1, a2 :: q2 -> list_for_all2_swap p q1 q2
-  | _ -> ()
 
 let rec raw_equiv_sym (l1 l2: raw_data_item) : Lemma
   (requires (raw_equiv l1 l2 == true))
@@ -412,51 +116,6 @@ let get_major_type
   | Array _ _ -> cbor_major_type_array
   | Map _ _ -> cbor_major_type_map
   | Tagged _ _ -> cbor_major_type_tagged
-
-noextract
-let holds_on_pair
-  (#t: Type)
-  (pred: (t -> bool))
-  (x: (t & t))
-: Tot bool
-= let (x1, x2) = x in
-  pred x1 && pred x2
-
-let andp (#t: Type) (p1 p2: t -> bool) (x: t) : bool =
-  p1 x && p2 x
-
-let holds_on_pair_andp
-  (#t: Type)
-  (p1 p2: (t -> bool))
-  (x: (t & t))
-: Lemma
-  (holds_on_pair (andp p1 p2) x == (holds_on_pair p1 x && holds_on_pair p2 x))
-= ()
-
-let list_for_all_ext
-  (#t: Type)
-  (p1 p2: t -> bool)
-  (l: list t)
-  (prf: (x: t { x << l }) -> Lemma
-    (p1 x == p2 x)
-  )
-: Lemma
-  (ensures (List.Tot.for_all p1 l == List.Tot.for_all p2 l))
-= Classical.move_requires (list_for_all_implies p1 p2 l) (fun x -> prf x);
-  Classical.move_requires (list_for_all_implies p2 p1 l) (fun x -> prf x)
-
-let rec list_for_all_andp
-  (#t: Type)
-  (p1 p2: t -> bool)
-  (l: list t)
-: Lemma
-  (ensures (
-    List.Tot.for_all (andp p1 p2) l == (List.Tot.for_all p1 l && List.Tot.for_all p2 l)
-  ))
-  (decreases l)
-= match l with
-  | [] -> ()
-  | _ :: q -> list_for_all_andp p1 p2 q
 
 noextract
 val holds_on_raw_data_item
@@ -640,18 +299,6 @@ let raw_data_item_ints_optimal_elem (x: raw_data_item) : Tot bool =
 let raw_data_item_ints_optimal : raw_data_item -> Tot bool =
   holds_on_raw_data_item raw_data_item_ints_optimal_elem
 
-let rec list_no_setoid_repeats
-  (#t: Type)
-  (equiv: t -> t -> bool)
-  (l: list t)
-: Tot bool
-  (decreases l)
-= match l with
-  | [] -> true
-  | a :: q ->
-    list_no_setoid_repeats equiv q &&
-    not (List.Tot.existsb (equiv a) q)
-
 let valid_raw_data_item_elem
   (l: raw_data_item)
 : Tot bool
@@ -663,90 +310,6 @@ let valid_raw_data_item
   (l: raw_data_item)
 : Tot bool
 = holds_on_raw_data_item valid_raw_data_item_elem l
-
-let rec list_for_all2_intro
-  (#t1 #t2: Type)
-  (p: t1 -> t2 -> bool)
-  (l1: list t1)
-  (l2: list t2)
-  (prf: (x: t1) -> (y: t2 { x << l1 /\ List.Tot.memP x l1 /\ y << l2 /\ List.Tot.memP y l2 }) -> Lemma
-    (p x y)
-  )
-: Lemma
-  (requires (List.Tot.length l1 == List.Tot.length l2))
-  (ensures (list_for_all2 p l1 l2))
-  (decreases l1)
-= match l1, l2 with
-  | a1 :: q1, a2 :: q2 ->
-    prf a1 a2;
-    list_for_all2_intro p q1 q2 prf
-  | _ -> ()
-
-let rec list_for_all2_length
-  (#t1 #t2: Type)
-  (p: t1 -> t2 -> bool)
-  (l1: list t1)
-  (l2: list t2)
-: Lemma
-  (requires list_for_all2 p l1 l2 == true)
-  (ensures List.Tot.length l1 == List.Tot.length l2)
-  (decreases l1)
-= match l1, l2 with
-  | [], [] -> ()
-  | _ :: q1, _ :: q2 -> list_for_all2_length p q1 q2
-
-let rec list_for_all2_prod
-  (#t1 #t2: Type)
-  (p1: t1 -> bool)
-  (p2: t2 -> bool)
-  (l1: list t1)
-  (l2: list t2)
-: Lemma
-  (requires (
-    List.Tot.for_all p1 l1 == true /\
-    List.Tot.for_all p2 l2 == true /\
-    List.Tot.length l1 == List.Tot.length l2
-  ))
-  (ensures (
-    list_for_all2 (prodp p1 p2) l1 l2 == true
-  ))
-  (decreases l1)
-= match l1, l2 with
-  | [], [] -> ()
-  | _ :: q1, _ :: q2 -> list_for_all2_prod p1 p2 q1 q2
-
-let rec list_for_all2_andp
-  (#t1 #t2: Type)
-  (p p': t1 -> t2 -> bool)
-  (l1: list t1)
-  (l2: list t2)
-: Lemma
-  (ensures (list_for_all2 (andp2 p p') l1 l2 == (list_for_all2 p l1 l2 && list_for_all2 p' l1 l2)))
-  (decreases l1)
-= match l1, l2 with
-  | _ :: q1, _ :: q2 -> list_for_all2_andp p p' q1 q2
-  | _ -> ()
-
-let list_for_all2_andp_intro
-  (#t1 #t2: Type)
-  (p p': t1 -> t2 -> bool)
-  (l1: list t1)
-  (l2: list t2)
-: Lemma
-  (requires (
-    list_for_all2 p l1 l2 == true /\
-    list_for_all2 p' l1 l2 == true
-  ))
-  (ensures (list_for_all2 (andp2 p p') l1 l2 == true))
-= list_for_all2_andp p p' l1 l2
-
-let rec list_for_all2_equals (#t: eqtype) (l1 l2: list t) : Lemma
-  (requires (list_for_all2 ( = ) l1 l2 == true))
-  (ensures (l1 == l2))
-  (decreases l1)
-= match l1, l2 with
-  | [], [] -> ()
-  | _ :: q1, _ :: q2 -> list_for_all2_equals q1 q2
 
 let rec raw_equiv_sorted_optimal
   (order: raw_data_item -> raw_data_item -> bool {
