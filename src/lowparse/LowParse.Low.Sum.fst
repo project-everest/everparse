@@ -435,7 +435,7 @@ let parse_sum_eq4
   ))
 = parse_sum_eq'' t p pc input
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 48"
 
 let valid_sum_elim
   (h: HS.mem)
