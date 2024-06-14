@@ -2191,6 +2191,33 @@ let serialize_tot_filter
 : Tot (serializer (tot_parse_filter p f))
 = serialize_ext #(parse_filter_kind k) _ (serialize_filter s f) #(parse_filter_kind k) _
 
+let tot_serialize_filter'
+  (#t: Type)
+  (s: tot_bare_serializer t)
+  (f: (t -> Tot bool))
+: Tot (tot_bare_serializer (x: t { f x == true } ))
+= fun (input: t { f input == true } ) -> s input
+
+let tot_serialize_filter_correct
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer #k p)
+  (f: (t -> Tot bool))
+: Lemma
+  (serializer_correct #(parse_filter_kind k) (tot_parse_filter p f) (tot_serialize_filter' s f))
+= serializer_correct_ext_gen (parse_filter #k p f) (serialize_filter #k #_ #p s f) #(parse_filter_kind k) (tot_parse_filter p f) (tot_serialize_filter' s f)
+
+let tot_serialize_filter
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer #k p)
+  (f: (t -> Tot bool))
+: Tot (tot_serializer #(parse_filter_kind k) (tot_parse_filter p f))
+= tot_serialize_filter_correct s f;
+  tot_serialize_filter' s f
+
 let serialize_weaken
   (#k: parser_kind)
   (#t: Type)
@@ -2208,6 +2235,15 @@ let serialize_tot_weaken
   (s: serializer #k p { k' `is_weaker_than` k })
 : Tot (serializer #k' (tot_weaken k' p))
 = serialize_ext #k _ s #k' (tot_weaken k' p)
+
+let tot_serialize_weaken
+  (#k: parser_kind)
+  (#t: Type)
+  (k' : parser_kind)
+  (#p: tot_parser k t)
+  (s: tot_serializer #k p { k' `is_weaker_than` k })
+: Tot (tot_serializer (tot_weaken k' p))
+= tot_serialize_ext #k _ s #k' (tot_weaken k' p)
 
 let parser_matches
   (#k: parser_kind)

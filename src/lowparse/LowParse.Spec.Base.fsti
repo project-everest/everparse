@@ -676,6 +676,23 @@ let serializer_correct
 : GTot Type0
 = forall (x: t) .{:pattern (parse p (f x))} parse p (f x) == Some (x, Seq.length (f x))
 
+let serializer_correct_ext_gen
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (f1: bare_serializer t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (f2: bare_serializer t1)
+: Lemma
+  (requires (t1 == t2 /\
+    (forall (input: bytes) . parse p1 input == parse p2 input) /\
+    (forall (x: t1) . f1 x == f2 x)
+  ))
+  (ensures (serializer_correct p1 f1 <==> serializer_correct p2 f2))
+= ()
+
 let serializer_correct_ext
   (#k1: parser_kind)
   (#t1: Type)
