@@ -23,14 +23,10 @@ let parser_kind_prop_ext
 = no_lookahead_ext f1 f2;
   injective_ext f1 f2
 
-let tot_parser_of_parser
-  #k
+let tot_bare_parser_of_bare_parser
   #t
   p
-= let p' : tot_bare_parser t = Ghost.reveal (FStar.Ghost.Pull.pull p) in
-  assert (forall x . p' x == p x);
-  parser_kind_prop_ext k p p';
-  p'
+= Ghost.reveal (FStar.Ghost.Pull.pull p)
 
 let is_weaker_than_correct
   (k1: parser_kind)
@@ -105,7 +101,7 @@ let serializer_correct_implies_complete
   in
   Classical.forall_intro (Classical.move_requires prf)
 
-let tot_serializer_of_serializer
+let tot_bare_serializer_of_bare_serializer
   s
 = FStar.Ghost.Pull.pull s
 

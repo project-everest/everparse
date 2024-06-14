@@ -359,13 +359,23 @@ let tot_parser
 : Tot Type
 = (f: tot_bare_parser t { parser_kind_prop k f } )
 
-val tot_parser_of_parser
+val tot_bare_parser_of_bare_parser
+  (#t: Type)
+  (p: bare_parser t)
+: Ghost (tot_bare_parser t)
+    (requires True)
+    (ensures (fun p' -> forall x . parse p' x == parse p x))
+
+let tot_parser_of_parser
   (#k: parser_kind)
   (#t: Type)
   (p: parser k t)
 : Ghost (tot_parser k t)
     (requires True)
     (ensures (fun p' -> forall x . parse p' x == parse p x))
+= let p' = tot_bare_parser_of_bare_parser p in
+  parser_kind_prop_ext k p p';
+  p'
 
 inline_for_extraction
 let get_parser_kind
@@ -723,6 +733,20 @@ let tot_serializer
 : Tot Type
 = (f: tot_bare_serializer t { serializer_correct p f } )
 
+let mk_tot_serializer
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+  (f: tot_bare_serializer t)
+  (prf: (
+    (x: t) ->
+    Lemma
+    (parse p (f x) == Some (x, Seq.length (f x)))
+  ))
+: Tot (tot_serializer p)
+= Classical.forall_intro prf;
+  f
+
 let mk_serializer
   (#k: parser_kind)
   (#t: Type)
@@ -791,7 +815,14 @@ let serialize
 : GTot bytes
 = s x
 
-val tot_serializer_of_serializer
+val tot_bare_serializer_of_bare_serializer
+  (#t: Type)
+  (s: bare_serializer t)
+: Ghost (tot_bare_serializer t)
+    (requires True)
+    (ensures (fun s' -> forall x . bare_serialize s' x == bare_serialize s x))
+
+let tot_serializer_of_serializer
   (#k: parser_kind)
   (#t: Type)
   (#p: parser k t)
@@ -799,6 +830,21 @@ val tot_serializer_of_serializer
 : Ghost (tot_serializer p)
     (requires True)
     (ensures (fun s' -> forall x . bare_serialize s' x == serialize s x))
+= tot_bare_serializer_of_bare_serializer s
+
+let tot_serialize_ext
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (s1: tot_serializer p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+: Pure (tot_serializer p2)
+  (requires (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
+  (ensures (fun _ -> True))
+= serializer_correct_ext p1 s1 p2;
+  (s1 <: tot_bare_serializer t2)
 
 let parse_serialize
   (#k: parser_kind)
