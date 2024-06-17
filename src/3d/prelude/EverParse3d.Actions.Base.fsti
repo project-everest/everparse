@@ -843,13 +843,14 @@ val action_weaken
 
 inline_for_extraction
 noextract
-val external_action (l: eloc) : Tot Type0
+val external_action (t: Type0) (l: eloc) : Tot Type0
 
 noextract
 inline_for_extraction
 val mk_external_action
-  (#l:eloc) ($f: external_action l)
-  : action true_inv disjointness_trivial l false unit
+  (#t: Type)
+  (#l:eloc) ($f: external_action t l)
+  : action true_inv disjointness_trivial l false t
 
 val copy_buffer_inv (x:CP.copy_buffer_t) : slice_inv
 val copy_buffer_loc (x:CP.copy_buffer_t) : eloc
