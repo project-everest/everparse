@@ -1116,7 +1116,7 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
           (Some?.v oe.oe_bitwidth)
       end in
     Printf.sprintf
-        "\n\nval %s (_:%s) (_:%s) : extern_action (NonTrivial output_loc)\n\n"
+        "\n\nval %s (_:%s) (_:%s) : extern_action unit (NonTrivial output_loc)\n\n"
         fn_name
         fn_arg1_t
         fn_arg2_t
@@ -1234,11 +1234,12 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | Extern_fn f ret params ->
-      Printf.sprintf "\n\nval %s %s : extern_action (NonTrivial output_loc)\n"
+      Printf.sprintf "\n\nval %s %s : extern_action %s (NonTrivial output_loc)\n"
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
           (print_typ modul t))))
+        (print_typ modul ret)
     | Extern_probe f ->
       Printf.sprintf "\n\nval %s : EverParse3d.CopyBuffer.probe_fn\n\n" (print_ident f)
     | _ -> "")) in
