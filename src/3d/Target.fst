@@ -405,8 +405,13 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
   match t with
   | T_false -> "False"
   | T_app hd _ args ->  //output types are already handled at the beginning of print_typ
+    let hd' =
+      if hd.v = Ast.to_ident' "void"
+      then "unit"
+      else print_maybe_qualified_ident mname hd
+    in
     Printf.sprintf "(%s %s)"
-      (print_maybe_qualified_ident mname hd)
+      hd'
       (String.concat " " (print_indexes mname args))
   | T_dep_pair t1 (x, t2) ->
     Printf.sprintf "(%s:%s & %s)"
