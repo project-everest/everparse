@@ -3,29 +3,31 @@
 
 // defining iterator operations declared in Test.3d
 
-static bool isOutFailure (OUT* p, uint8_t *perr) {
-  *perr = 0;
+static uint8_t isOutFailure (OUT* p) {
   if (p == NULL)
-    *perr = 1;
+    return 1;
   if (p->remainingCount == 0)
-    *perr = 1;
-  return (! (*perr == 0));
+    return 1;
+  return 0;
 }
 
-#define CHECK_OUT(p, perr) if (isOutFailure(p, perr)) return;
+#define CHECK_OUT(p) { uint8_t err = isOutFailure(p); if (err) return err; }
 
-void SetCurrentf1 (OUT* p, uint32_t f1, uint8_t *perr) {
-  CHECK_OUT(p, perr);
+uint8_t SetCurrentf1 (OUT* p, uint32_t f1) {
+  CHECK_OUT(p);
   p->current->f1 = f1;
+  return 0;
 }
 
-void SetCurrentf2 (OUT* p, uint32_t f2, uint8_t *perr) {
-  CHECK_OUT(p, perr);
+uint8_t SetCurrentf2 (OUT* p, uint32_t f2) {
+  CHECK_OUT(p);
   p->current->f2 = f2;
+  return 0;
 }
 
-void Advance (OUT* p, uint8_t *perr) {
-  CHECK_OUT(p, perr);
+uint8_t Advance (OUT* p) {
+  CHECK_OUT(p);
   p->current++;
   p->remainingCount--;
+  return 0;
 }

@@ -22,10 +22,9 @@ int main(void) {
     .current = array,
     .remainingCount = outCount
   };
-  uint8_t err;
   * (uint32_t*) test = 0;
   test[0] = inSize;
-  if (TestCheckContainer(&out, &err, test, testSize))
+  if (TestCheckContainer(&out, test, testSize))
     printf("Validation succeeded\n");
   else
     printf("Validation failed\n");
