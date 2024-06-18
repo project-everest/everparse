@@ -456,3 +456,76 @@ let raw_data_item_sorted_optimal_valid
       | _ -> ()
     )
     x1
+
+let map_key_not_map
+  (x: (raw_data_item & raw_data_item))
+: Tot bool
+= not (Map? (fst x))
+
+let no_map_and_no_repeats_keys_map
+  (v: list (raw_data_item & raw_data_item))
+: Tot bool
+= List.Tot.for_all map_key_not_map v &&
+  List.Tot.noRepeats (List.Tot.map fst v)
+
+let no_map_and_no_repeats_keys_elem
+  (x: raw_data_item)
+: Tot bool
+= match x with
+  | Map _ v ->
+    no_map_and_no_repeats_keys_map v
+  | _ -> true
+
+let no_map_and_no_repeats_keys
+: (x: raw_data_item) -> Tot bool
+= holds_on_raw_data_item no_map_and_no_repeats_keys_elem
+
+let list_no_repeats_no_setoid_repeats
+  (#key: Type)
+  (#value: Type)
+  (equiv: key -> key -> bool)
+  (l: list (key & value))
+  (prf: (x: (key & value)) -> (y: (key & value)) -> Lemma
+    (requires (List.Tot.memP x l /\
+      List.Tot.memP y l /\
+      fst x `equiv` fst y
+    ))
+    (ensures (x == y))
+  )
+: Lemma
+  (requires (List.Tot.no_repeats_p (List.Tot.map fst l)))
+  (ensures (list_no_setoid_repeats (map_entry_order equiv _) l))
+= admit ()
+
+let no_map_and_no_repeats_keys_map_list_no_setoid_repeats
+  (v: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    no_map_and_no_repeats_keys_map v == true /\
+    List.Tot.for_all (holds_on_pair no_map_and_no_repeats_keys) v == true
+  ))
+  (ensures (
+    list_no_setoid_repeats (map_entry_order raw_equiv _) v
+  ))
+= admit ()
+
+let no_map_and_no_repeats_keys_valid
+  (x: raw_data_item)
+: Lemma
+  (requires (no_map_and_no_repeats_keys x == true))
+  (ensures (valid_raw_data_item x == true))
+= holds_on_raw_data_item_implies
+    no_map_and_no_repeats_keys_elem
+    valid_raw_data_item_elem
+    (fun x ->
+      if no_map_and_no_repeats_keys x
+      then begin
+        holds_on_raw_data_item_eq no_map_and_no_repeats_keys_elem x;
+        match x with
+        | Map len v ->
+          assert_norm (no_map_and_no_repeats_keys == holds_on_raw_data_item no_map_and_no_repeats_keys_elem);
+          no_map_and_no_repeats_keys_map_list_no_setoid_repeats v
+        | _ -> ()
+      end
+    )
+    x

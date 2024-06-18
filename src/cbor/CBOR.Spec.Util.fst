@@ -526,3 +526,6 @@ let rec wf_list_for_all_exists_eq (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: lis
   | a :: q ->
     wf_list_existsb_eq (p a) l2;
     wf_list_for_all_exists_eq p q l2
+
+let notp (#t: Type) (p: t -> bool) (x: t) : Tot bool =
+  not (p x)
