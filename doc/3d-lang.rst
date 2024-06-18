@@ -419,6 +419,8 @@ An action is a program composed from a few elements:
   
 * Conditionals
 
+* External function calls
+
 An action is evaluated with respect to a handler (e.g.,
 ``on-success``) associated with a given field. We refer to this field
 as the "base field" of the action.
@@ -457,10 +459,6 @@ Atomic actions
 * ``return e`` Returns a boolean value ``e``
 
 * ``abort``: Causes the current validation process to fail.
-  
-We plan to support additional user-defined actions as callbacks to
-external C functions.
-  
 
 Composing atomic actions sequentially and conditionally
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -483,6 +481,20 @@ Composite actions can be built in a few ways:
   true. Additionally, ``if (e) { p0 } else { p1 }`` is also legal,
   with the expected semantics, i.e., ``p1` is run in case ``e`` is
   false.
+
+* External function calls: an action can call a user-defined callback
+  C function. The user first needs to declare the callback function with
+  a top-level declaration in the 3D file: for instance,
+  ``extern UINT8 myFunction(UINT32 myArg1, UINT16 myArg2)``
+  Then the user can call this function in an action, with
+  ``var myReturnValue = myFunction(e1, e2);``
+  The user can also declare a function that returns no value, with
+  ``void`` as its return type. Then, the user can call this function
+  directly as a statement in an action, without ``var`` :
+  ``myFunction(e1, e2);``
+  An external function can also accept out-parameters, using
+  ``mutable myType* myArg`` in its 3D declaration.
+
 
 Another example
 ^^^^^^^^^^^^^^^

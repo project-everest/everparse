@@ -486,17 +486,18 @@ let action_binding
   = A.action (interp_inv inv) A.disjointness_trivial (interp_loc l) on_success a
 
 inline_for_extraction
-let extern_action (l:loc_index) = A.external_action (interp_loc l)
+let extern_action (t: Type) (l:loc_index) = A.external_action t (interp_loc l)
 
 inline_for_extraction
-let mk_extern_action (#l:loc_index) ($f:extern_action l)
+let mk_extern_action (#t: Type) (#l:loc_index) ($f:extern_action t l)
   = A.mk_external_action f
 
 [@@specialize]
 let mk_action_binding
+    (#t: Type)
     (#l:loc_index)
-    ($f:extern_action l)
-  : action_binding inv_none l false unit
+    ($f:extern_action t l)
+  : action_binding inv_none l false t
   = mk_extern_action f
 
 (* The type of atomic actions.
@@ -552,7 +553,7 @@ type atomic_action
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
       sz: FStar.UInt64.t ->
       #out_loc:loc_index ->
-      write_to: (A.___PUINT8 -> Tot (extern_action out_loc)) ->
+      write_to: (A.___PUINT8 -> Tot (extern_action unit out_loc)) ->
       atomic_action inv_none disj_none out_loc false bool
 
   | Action_deref:

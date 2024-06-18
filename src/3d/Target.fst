@@ -405,8 +405,13 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
   match t with
   | T_false -> "False"
   | T_app hd _ args ->  //output types are already handled at the beginning of print_typ
+    let hd' =
+      if hd.v = Ast.to_ident' "void"
+      then "unit"
+      else print_maybe_qualified_ident mname hd
+    in
     Printf.sprintf "(%s %s)"
-      (print_maybe_qualified_ident mname hd)
+      hd'
       (String.concat " " (print_indexes mname args))
   | T_dep_pair t1 (x, t2) ->
     Printf.sprintf "(%s:%s & %s)"
@@ -629,6 +634,7 @@ let print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
     let x_ps = {
       td_name = x;
       td_params = params;
+      td_entrypoint_probes = [];
       td_entrypoint = false
     } in
     Printf.sprintf "%slet %s : %s = %s\n\n"
@@ -775,6 +781,14 @@ let wrapper_name
     fn
   |> pascal_case
 
+let probe_wrapper_name
+  (modul: string)
+  (probe_fn: string)
+  (fn: string)
+: ML string
+= Printf.sprintf "%s_%s_check_%s" modul probe_fn fn
+    |> pascal_case
+
 let validator_name
   (modul: string)
   (fn: string)
@@ -783,6 +797,41 @@ let validator_name
     modul
     fn
   |> pascal_case
+
+let define_ident_to_c
+  (i: A.ident)
+: Tot string
+= Printf.sprintf "%s__%s"
+    (match i.v.modul_name with
+      | None -> ""
+      | Some m -> uppercase m ^ "__")
+    (uppercase i.v.name)
+
+let expr_to_c
+  (e: expr)
+: ML string
+= match fst e with
+  | Constant (A.Int _ i) -> Printf.sprintf "%dU" i
+  | Constant (A.XInt tag x) ->
+    let print_tag = function
+      | A.UInt8 -> "uy"
+      | A.UInt16 -> "us"
+      | A.UInt32 -> "ul"
+      | A.UInt64 -> "uL"
+    in
+    let tag = print_tag tag in
+    let x =
+      if String.length x >= 2
+      && String.sub x (String.length x - 2) 2 = tag
+      then String.sub x 0 (String.length x - 2)
+      else x
+    in
+    Printf.sprintf "%sU" x
+  | Identifier i -> define_ident_to_c i
+  | _ -> A.error "expr_to_c: this case should have been removed by Binding" (snd e)
+
+let probe_fn_to_c (i: A.ident) : Tot string =
+  i.v.name
 
 let print_c_entry
                   (produce_everparse_error: opt_produce_everparse_error)
@@ -836,6 +885,22 @@ let print_c_entry
         params
         modul
    in
+   let wrapped_call_probe_buffer wrappedName params (probe: probe_entrypoint) : ML string =
+     let len = expr_to_c probe.probe_ep_length in
+     Printf.sprintf
+      "if (%s(probeAddr, %s, probeDest)) {
+         uint8_t * base = EverParseStreamOf(probeDest);
+         return %s(%s base, %s);
+       } else {
+         // FIXME: we currently assume that the probe function handles its own error
+         return FALSE;
+       }"
+       (probe_fn_to_c probe.probe_ep_fn)
+       len
+       wrappedName
+       params
+       len
+   in
    let wrapped_call_stream name params =
      Printf.sprintf
        "EVERPARSE_ERROR_FRAME frame =\n\t\
@@ -857,10 +922,25 @@ let print_c_entry
        name
        params
    in
+   let wrapped_call_probe_stream wrappedName params (probe: probe_entrypoint) : ML string =
+     let len = print_expr modul probe.probe_ep_length in
+     Printf.sprintf
+      "if (%s(probeAddr, %s, probeDest)) {
+         EVERPARSE_INPUT_STREAM_BASE * base = EverParseStreamOf(probeDest);
+         return %s(%s base);
+       } else {
+         // FIXME: we currently assume that the probe function handles its own error
+         return 0;
+       }"
+       (probe_fn_to_c probe.probe_ep_fn)
+       len
+       wrappedName
+       params
+   in
    let mk_param (name: string) (typ: string) : Tot param =
      (A.with_range (A.to_ident' name) A.dummy_range, T_app (A.with_range (A.to_ident' typ) A.dummy_range) A.KindSpec [])
    in
-   let print_one_validator (d:type_decl) : ML (string & string) =
+   let print_validators_for_one_decl (d:type_decl) : ML (list (string & string)) =
     let params = 
       d.decl_name.td_params @
       (if is_input_stream_buffer then [] else [mk_param "_extra" "EVERPARSE_EXTRA_T"])
@@ -893,29 +973,58 @@ let print_c_entry
        | _ -> params ^ ", "
     in
     let wrapper_name = wrapper_name modul d.decl_name.td_name.A.v.A.name in
+    let impl signature body =
+      Printf.sprintf "%s {\n\t%s\n}" 
+        signature body
+    in
+    let constr_wrapper signature body =
+      (signature ^ ";", impl signature body)
+    in
+    (* Main wrapper *)
+    let pparams = print_params params in
+    let pargs = print_arguments params in
     let signature =
       if is_input_stream_buffer 
       then Printf.sprintf
             "BOOLEAN %s(%suint8_t *base, uint32_t len)"
              wrapper_name
-             (print_params params)
+             pparams
       else Printf.sprintf
             "uint64_t %s(%sEVERPARSE_INPUT_STREAM_BASE base)"
              wrapper_name
-             (print_params params)
+             pparams
     in
     let validator_name = validator_name modul d.decl_name.td_name.A.v.A.name in
-    let impl =
-      let body = 
-        if is_input_stream_buffer
-        then wrapped_call_buffer validator_name (print_arguments params)
-        else wrapped_call_stream validator_name (print_arguments params)
-      in
-      Printf.sprintf "%s {\n\t%s\n}" 
-        signature body
+    let body = 
+      if is_input_stream_buffer
+      then wrapped_call_buffer validator_name pargs
+      else wrapped_call_stream validator_name pargs
     in
-    signature ^";",
-    impl
+    (* Probe wrapper *)
+    let probe_wrapper_signature probe : ML _ =
+      let return_type =
+        if is_input_stream_buffer 
+        then "BOOLEAN"
+        else "uint64_t"
+      in
+      let probe_fn = probe_fn_to_c probe.probe_ep_fn in
+      let probe_wrapper_name = probe_wrapper_name modul probe_fn d.decl_name.td_name.A.v.A.name in
+      Printf.sprintf
+            "%s %s(%sEVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr)"
+             return_type
+             probe_wrapper_name
+             pparams
+    in
+    let probe_wrapper (probe: probe_entrypoint) : ML _ =
+      constr_wrapper
+        (probe_wrapper_signature probe)
+        (if is_input_stream_buffer
+          then wrapped_call_probe_buffer wrapper_name pargs probe
+          else wrapped_call_probe_stream wrapper_name pargs probe
+        )
+    in
+    (* Collecting everything together *)
+    constr_wrapper signature body :: List.map probe_wrapper d.decl_name.td_entrypoint_probes
   in
 
   let signatures_output_typ_deps =
@@ -938,7 +1047,7 @@ let print_c_entry
           match fst d with
           | Type_decl d ->
             if d.decl_name.td_entrypoint
-            then [print_one_validator d]
+            then print_validators_for_one_decl d
             else []
           | _ -> [])
         ds)
@@ -1116,7 +1225,7 @@ let print_out_expr_set_fstar (tbl:set) (mname:string) (oe:output_expr) : ML stri
           (Some?.v oe.oe_bitwidth)
       end in
     Printf.sprintf
-        "\n\nval %s (_:%s) (_:%s) : extern_action (NonTrivial output_loc)\n\n"
+        "\n\nval %s (_:%s) (_:%s) : extern_action unit (NonTrivial output_loc)\n\n"
         fn_name
         fn_arg1_t
         fn_arg2_t
@@ -1234,11 +1343,12 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | Extern_fn f ret params ->
-      Printf.sprintf "\n\nval %s %s : extern_action (NonTrivial output_loc)\n"
+      Printf.sprintf "\n\nval %s %s : extern_action %s (NonTrivial output_loc)\n"
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
           (print_typ modul t))))
+        (print_typ modul ret)
     | Extern_probe f ->
       Printf.sprintf "\n\nval %s : EverParse3d.CopyBuffer.probe_fn\n\n" (print_ident f)
     | _ -> "")) in

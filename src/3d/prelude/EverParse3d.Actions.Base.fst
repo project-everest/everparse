@@ -1835,8 +1835,8 @@ noextract
 inline_for_extraction
 let action_weaken #inv #disj #l #b #a act #inv' #disj' #l' = act
 
-let external_action l =
-  unit -> Stack unit (fun _ -> True) (fun h0 _ h1 -> B.modifies l h0 h1)
+let external_action t l =
+  unit -> Stack t (fun _ -> True) (fun h0 _ h1 -> B.modifies l h0 h1)
 
 noextract
 inline_for_extraction
