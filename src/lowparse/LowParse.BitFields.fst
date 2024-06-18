@@ -327,7 +327,7 @@ let nth_set_bitfield
   end;
   assert (y == (if lo <= i && i < hi then nth v (i - lo) else nth x i))
 
-#push-options "--z3rlimit 48"
+#push-options "--z3rlimit 32"
 let get_bitfield_set_bitfield_same
   (#tot: pos) (x: U.uint_t tot)
   (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (v: ubitfield tot (hi - lo))
@@ -1272,5 +1272,5 @@ let uint8 : uint_t 8 U8.t = {
   bitfield_eq_rhs = (fun x lo hi z -> bitfield_eq8_rhs x lo hi z);
 }
 
-let uint8_v_eq x = ()
+let uint8_v_eq_fn _ = ()
 let uint8_uint_to_t_eq x = ()

@@ -1042,7 +1042,7 @@ let rec check_field_action (env:env) (f:atomic_field) (a:action)
                                (Ast.print_expr arg)
                                (Ast.print_typ t_arg)) arg.range
                  else arg) params args in
-               Action_call f args, tunit
+               Action_call f args, ret_t
     in
     match a.v with
     | Atomic_action aa ->

@@ -275,8 +275,17 @@ type uint_t (tot: pos) (t: Type) = {
 }
 
 inline_for_extraction
+let bitfield_refine
+  (#t: Type)
+  (tot: pos)
+  (v: (t -> U.uint_t tot))
+  (sz: nat)
+: Tot Type
+= (x: t { v x < pow2 sz })
+
+inline_for_extraction
 let bitfield (#tot: pos) (#t: Type) (cl: uint_t tot t) (sz: nat { sz <= tot }) : Tot Type =
-  (x: t { cl.v x < pow2 sz })
+  bitfield_refine tot cl.v sz
 
 let uint_t_v_uint_to_t #tot #t (cl: uint_t tot t) (x: U.uint_t tot) : Lemma
   (cl.v (cl.uint_to_t x) == x)
@@ -393,11 +402,14 @@ inline_for_extraction
 noextract
 val uint8 : uint_t 8 U8.t
 
-val uint8_v_eq
+val uint8_v_eq_fn (_: unit) : Lemma (uint8.v == U8.v)
+
+let uint8_v_eq
   (x: U8.t)
 : Lemma
   (uint8.v x == U8.v x)
   [SMTPat (uint8.v x)]
+= uint8_v_eq_fn ()
 
 val uint8_uint_to_t_eq
   (x: U.uint_t 8)
