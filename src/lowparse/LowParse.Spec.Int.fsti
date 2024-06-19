@@ -37,7 +37,9 @@ val parse_u8_spec'
     v == Seq.index b 0
   )))
 
-val serialize_u8 : serializer parse_u8
+val tot_serialize_u8 : tot_serializer #parse_u8_kind tot_parse_u8
+
+let serialize_u8 : serializer parse_u8 = tot_serialize_u8
 
 val serialize_u8_spec
   (x: U8.t)
@@ -65,7 +67,9 @@ inline_for_extraction
 let parse_u16_kind : parser_kind =
   total_constant_size_parser_kind 2
 
-val parse_u16: parser parse_u16_kind U16.t
+val tot_parse_u16 : tot_parser parse_u16_kind U16.t
+
+let parse_u16: parser parse_u16_kind U16.t = tot_parse_u16
 
 val parse_u16_spec
   (b: bytes)
@@ -78,7 +82,9 @@ val parse_u16_spec
     U16.v v == E.be_to_n (Seq.slice b 0 2)
   )))
 
-val serialize_u16 : serializer parse_u16
+val tot_serialize_u16 : tot_serializer #parse_u16_kind tot_parse_u16
+
+let serialize_u16 : serializer parse_u16 = tot_serialize_u16
 
 let serialize_u16_spec_be
   (x: U16.t)
@@ -93,7 +99,9 @@ inline_for_extraction
 let parse_u32_kind : parser_kind =
   total_constant_size_parser_kind 4
 
-val parse_u32: parser parse_u32_kind U32.t
+val tot_parse_u32: tot_parser parse_u32_kind U32.t
+
+let parse_u32: parser parse_u32_kind U32.t = tot_parse_u32
 
 val parse_u32_spec
   (b: bytes)
@@ -106,7 +114,9 @@ val parse_u32_spec
     U32.v v == E.be_to_n (Seq.slice b 0 4)
   )))
 
-val serialize_u32 : serializer parse_u32
+val tot_serialize_u32 : tot_serializer #parse_u32_kind tot_parse_u32
+
+let serialize_u32 : serializer parse_u32 = tot_serialize_u32
 
 let serialize_u32_spec_be
   (x: U32.t)
@@ -121,7 +131,9 @@ inline_for_extraction
 let parse_u64_kind : parser_kind =
   total_constant_size_parser_kind 8
 
-val parse_u64: parser parse_u64_kind U64.t
+val tot_parse_u64: tot_parser parse_u64_kind U64.t
+
+let parse_u64: parser parse_u64_kind U64.t = tot_parse_u64
 
 val parse_u64_spec
   (b: bytes)
@@ -134,7 +146,9 @@ val parse_u64_spec
     U64.v v == E.be_to_n (Seq.slice b 0 8)
   )))
 
-val serialize_u64 : serializer parse_u64
+val tot_serialize_u64 : tot_serializer #parse_u64_kind tot_parse_u64
+
+let serialize_u64 : serializer parse_u64 = tot_serialize_u64
 
 let serialize_u64_spec_be
   (x: U64.t)
