@@ -753,3 +753,53 @@ let valid_no_maps_in_keys_valid
       | _ -> ()
     )
     x
+
+let rec valid_valid_no_maps_in_keys_map
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    valid_raw_data_item_map l == true
+  ))
+  (ensures (
+    valid_raw_data_item_no_maps_in_keys_map l == true
+  ))
+= match l with
+  | [] -> ()
+  | a :: q ->
+    valid_valid_no_maps_in_keys_map q;
+    if List.Tot.existsb (map_entry_order raw_equiv_no_map _ a) q
+    then
+      list_existsb_implies (map_entry_order raw_equiv_no_map _ a) (map_entry_order raw_equiv _ a) q (fun a' -> raw_equiv_list_no_map_equiv [fst a] [fst a'])
+
+let valid_valid_no_maps_in_keys
+  (x: raw_data_item)
+: Lemma
+  (requires (valid_raw_data_item x == true /\
+    no_maps_in_keys x == true
+  ))
+  (ensures (valid_raw_data_item_no_maps_in_keys x == true))
+= holds_on_raw_data_item_andp
+    valid_raw_data_item_elem
+    no_maps_in_keys_elem
+    x;
+  holds_on_raw_data_item_implies
+    (andp valid_raw_data_item_elem no_maps_in_keys_elem)
+    valid_raw_data_item_no_maps_in_keys_elem
+    (fun x' -> 
+      match x' with
+      | Map len v ->
+        holds_on_raw_data_item_eq_map valid_raw_data_item len v;
+        valid_valid_no_maps_in_keys_map v
+      | _ -> ()
+    )
+    x
+
+let valid_raw_data_item_no_maps_in_keys_eq
+  (x: raw_data_item)
+: Lemma
+  (valid_raw_data_item_no_maps_in_keys x ==
+    (valid_raw_data_item x && no_maps_in_keys x)
+  )
+= Classical.move_requires valid_no_maps_in_keys_no_maps_in_keys x;
+  Classical.move_requires valid_no_maps_in_keys_valid x;
+  Classical.move_requires valid_valid_no_maps_in_keys x
