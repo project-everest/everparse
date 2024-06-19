@@ -1,4 +1,4 @@
-module CBOR.Spec.Raw
+module CBOR.Spec.Raw.Base
 
 let rec raw_equiv (l1 l2: raw_data_item) : Tot bool (decreases l1) =
   match l1, l2 with

@@ -1,4 +1,4 @@
-module CBOR.Spec.Raw
+module CBOR.Spec.Raw.Base
 include CBOR.Spec.Constants
 open CBOR.Spec.Util
 
