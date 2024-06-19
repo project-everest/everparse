@@ -6,6 +6,17 @@ let rec list_for_all2 (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: list t1) (l2: l
   | a1 :: q1, a2 :: q2 -> p a1 a2 && list_for_all2 p q1 q2
   | _ -> false
 
+let rec list_for_all2_append (#t1 #t2: Type) (p: t1 -> t2 -> bool) (ll1 lr1: list t1) (ll2 lr2: list t2) : Lemma
+  (requires (List.Tot.length ll1 == List.Tot.length ll2))
+  (ensures (
+    list_for_all2 p (ll1 `List.Tot.append` lr1) (ll2 `List.Tot.append` lr2) ==
+      (list_for_all2 p ll1 ll2 && list_for_all2 p lr1 lr2)
+  ))
+  (decreases ll1)
+= match ll1, ll2 with
+  | a1 :: q1, a2 :: q2 -> list_for_all2_append p q1 lr1 q2 lr2
+  | _ -> ()
+
 noextract
 let holds_on_pair2
   (#t: Type)
@@ -324,6 +335,32 @@ let rec list_for_all2_swap
   | a1 :: q1, a2 :: q2 -> list_for_all2_swap p q1 q2
   | _ -> ()
 
+let rec list_for_all2_sym'
+  (#t: Type)
+  (p: t -> t -> bool)
+  (l1 l2: list t)
+  (prf: (x1: t) -> (x2: t { List.Tot.memP x1 l1 /\ x1 << l1 /\ List.Tot.memP x2 l2 /\ x2 << l2 }) -> Lemma
+    (requires (p x1 x2 == true))
+    (ensures (p x2 x1 == true))
+  )
+: Lemma
+  (requires (list_for_all2 p l1 l2 == true))
+  (ensures (list_for_all2 p l2 l1 == true))
+= match l1, l2 with
+  | x1 :: q1, x2 :: q2 -> prf x1 x2; list_for_all2_sym' p q1 q2 prf
+  | _ -> ()
+
+let list_for_all2_sym
+  (#t: Type)
+  (p: t -> t -> bool)
+  (l1 l2: list t)
+  (prf: (x1: t) -> (x2: t { List.Tot.memP x1 l1 /\ x1 << l1 /\ List.Tot.memP x2 l2 /\ x2 << l2 }) -> Lemma
+    (p x1 x2 == p x2 x1)
+  )
+: Lemma
+  (ensures (list_for_all2 p l1 l2 == list_for_all2 p l2 l1))
+= Classical.move_requires (list_for_all2_sym' p l1 l2) (fun x1 x2 -> prf x1 x2);
+  Classical.move_requires (list_for_all2_sym' p l2 l1) (fun x2 x1 -> prf x1 x2)
 
 noextract
 let holds_on_pair
@@ -467,6 +504,89 @@ let rec list_for_all2_equals (#t: eqtype) (l1 l2: list t) : Lemma
   | [], [] -> ()
   | _ :: q1, _ :: q2 -> list_for_all2_equals q1 q2
 
+let prod_or (#t1 #t2: Type) (p1: t1 -> bool) (p2: t2 -> bool) (x1: t1) (x2: t2) : Tot bool =
+  p1 x1 || p2 x2
+
+let rec list_for_all2_prod_or_weak
+  (#t1 #t2: Type)
+  (p1: t1 -> bool) (p2: t2 -> bool)
+  (l1: list t1)
+  (l2: list t2)
+: Lemma
+  (requires (
+    List.Tot.length l1 == List.Tot.length l2 /\ (
+    List.Tot.for_all p1 l1 == true \/
+    List.Tot.for_all p2 l2 == true
+  )))
+  (ensures (
+    list_for_all2 (prod_or p1 p2) l1 l2 == true
+  ))
+= match l1, l2 with
+  | _ :: q1, _ :: q2 -> list_for_all2_prod_or_weak p1 p2 q1 q2
+  | _ -> ()
+
+let rec list_sum (#t: Type) (f: t -> nat) (l: list t) : Tot nat =
+  match l with
+  | [] -> 0
+  | a :: q -> f a + list_sum f q
+
+let rec list_sum_append (#t: Type) (f: t -> nat) (l1 l2: list t) : Lemma
+  (ensures (list_sum f (l1 `List.Tot.append` l2) == list_sum f l1 + list_sum f l2))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | _ :: q -> list_sum_append f q l2
+
+let rec list_sum_ext (#t: Type) (f1 f2: t -> nat) (l: list t) (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
+  (f1 x == f2 x)
+)
+  : Lemma
+  (ensures (list_sum f1 l == list_sum f2 l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q -> prf a; list_sum_ext f1 f2 q prf
+
+let pair_sum (#t1: Type) (#t2: Type) (f1: t1 -> nat) (f2: t2 -> nat) (x: (t1 & t2)) : Tot nat =
+  f1 (fst x) + f2 (snd x)
+
+let rec list_of_pair_list
+  (#t: Type)
+  (x: list (t & t))
+: Tot (list t)
+= match x with
+  | [] -> []
+  | (a, b) :: q -> a :: b :: list_of_pair_list q
+
+let rec list_of_pair_list_sum
+  (#t: Type)
+  (f: t -> nat)
+  (l: list (t & t))
+: Lemma
+  (list_sum (pair_sum f f) l == list_sum f (list_of_pair_list l))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_of_pair_list_sum f q
+
+let rec list_of_pair_list_for_all
+  (#t: Type)
+  (f: t -> bool)
+  (l: list (t & t))
+: Lemma
+  (List.Tot.for_all (holds_on_pair f) l == List.Tot.for_all f (list_of_pair_list l))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_of_pair_list_for_all f q
+
+let rec list_of_pair_list_length
+  (#t: Type)
+  (l: list (t & t))
+: Lemma
+  (List.Tot.length (list_of_pair_list l) == (let len = List.Tot.length l in len + len))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_of_pair_list_length q
+
 (* Well-founded recursion *)
 
 let rec wf_list_for_all (#t: Type) (l: list t) (p: (x: t { x << l }) -> bool) : bool =
@@ -529,3 +649,15 @@ let rec wf_list_for_all_exists_eq (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: lis
 
 let notp (#t: Type) (p: t -> bool) (x: t) : Tot bool =
   not (p x)
+
+let rec wf_list_sum (#t: Type) (l: list t) (f: (x: t { List.Tot.memP x l /\ x << l }) -> nat) : Tot nat (decreases l) =
+  match l with
+  | [] -> 0
+  | a :: q -> f a + wf_list_sum q f
+
+let rec wf_list_sum_eq (#t: Type) (f: t -> nat) (l: list t) : Lemma
+  (ensures (wf_list_sum l f == list_sum f l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> wf_list_sum_eq f q
