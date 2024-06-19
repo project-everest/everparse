@@ -9,13 +9,18 @@ module U64 = FStar.UInt64
 
 let nlist ([@@@strictly_positive] t: eqtype) (n: nat) : Tot eqtype = (l: list t { List.Tot.length l == n })
 
-type integer_size = (n: nat { n < 4 })
+type integer_size = (n: nat { n <= 4 })
 
 open FStar.Mul
 
+let raw_uint64_size_prop (size: integer_size) (value: U64.t) : Tot prop =
+  if size = 0
+  then U64.v value <= U8.v max_simple_value_additional_info
+  else U64.v value < pow2 (8 * pow2 (size - 1))
+
 type raw_uint64 = {
   size: integer_size;
-  value: (x: U64.t { U64.v x < pow2 (8 * pow2 size) })
+  value: (value: U64.t { raw_uint64_size_prop size value })
 }
 
 let _ = assert_norm (8 * pow2 3 == 64)
@@ -219,9 +224,12 @@ let raw_data_item_sorted (order: (raw_data_item -> raw_data_item -> bool)) : Tot
 = holds_on_raw_data_item (raw_data_item_sorted_elem order)
 
 let raw_uint64_optimal (x: raw_uint64) : Tot bool =
-  if x.size = 0
-  then true
-  else pow2 (8 * pow2 (x.size - 1)) <= U64.v x.value
+  ((U64.v x.value <= U8.v max_simple_value_additional_info) = (x.size = 0)) &&
+  begin
+    if x.size <= 1
+    then true
+    else pow2 (8 * pow2 (x.size - 2)) <= U64.v x.value
+  end
 
 let raw_uint64_optimal_unique (x1 x2: raw_uint64) : Lemma
   (requires (raw_uint64_optimal x1 /\ raw_uint64_optimal x2 /\ raw_uint64_equiv x1 x2))
@@ -232,9 +240,11 @@ let rec raw_uint64_optimize (x: raw_uint64) : Pure raw_uint64
   (requires True)
   (ensures (fun x' -> raw_uint64_equiv x x' /\ raw_uint64_optimal x'))
   (decreases x.size)
-= if x.size = 0
+= if U64.v x.value <= U8.v max_simple_value_additional_info
+  then { x with size = 0 }
+  else if x.size <= 1
   then x
-  else if pow2 (8 * pow2 (x.size - 1)) <= U64.v x.value
+  else if pow2 (8 * pow2 (x.size - 2)) <= U64.v x.value
   then x
   else raw_uint64_optimize { x with size = x.size - 1 }
 
