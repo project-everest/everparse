@@ -9,6 +9,8 @@ module U32 = FStar.UInt32
 module Classical = FStar.Classical
 module L = FStar.List.Tot
 
+let tot_parse_nlist n p = tot_parse_nlist' n p
+
 let parse_nlist
   (n: nat)
   (#k: parser_kind)
@@ -155,3 +157,5 @@ let serialize_nlist
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
 : Tot (y: serializer (parse_nlist n p) { y == serialize_nlist' n s })
 = serialize_nlist' n s
+
+let tot_serialize_nlist n s = tot_serialize_nlist' n s

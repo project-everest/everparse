@@ -137,6 +137,60 @@ let parse_nlist_kind
     parser_kind_subkind = (if n = 0 then Some ParserStrong else k.parser_kind_subkind);
   }
 
+
+let rec tot_parse_nlist'
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+: Tot (tot_parser (parse_nlist_kind n k) (nlist n t))
+= if n = 0
+  then tot_parse_ret nlist_nil
+  else begin
+    [@inline_let] let _ = assert (parse_nlist_kind n k == parse_nlist_kind' n k) in
+    tot_parse_synth
+      (p `tot_nondep_then` tot_parse_nlist' (n - 1) p)
+      (synth_nlist (n - 1))
+  end
+
+val tot_parse_nlist
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+: Pure (tot_parser (parse_nlist_kind n k) (nlist n t))
+    (requires True)
+    (ensures (fun y -> y == tot_parse_nlist' n p))
+
+let tot_parse_nlist_eq
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+  (b: bytes)
+: Lemma (
+  parse (tot_parse_nlist n p) b == (
+    if n = 0
+    then Some ([], 0)
+    else match parse p b with
+    | Some (elem, consumed) ->
+      let b' = Seq.slice b consumed (Seq.length b) in
+      begin match parse (tot_parse_nlist (n - 1) p) b' with
+      | Some (q, consumed') -> Some (elem :: q, consumed + consumed')
+      | _ -> None
+      end
+    | _ -> None
+  ))
+= if n = 0
+  then ()
+  else begin
+    tot_parse_synth_eq
+      (p `tot_nondep_then` tot_parse_nlist' (n - 1) p)
+      (synth_nlist (n - 1))
+      b;
+    nondep_then_eq #k p #(parse_nlist_kind (n - 1) k) (tot_parse_nlist' (n - 1) p) b
+  end
+
 let rec parse_nlist'
   (n: nat)
   (#k: parser_kind)
@@ -189,6 +243,21 @@ let parse_nlist_eq
       b;
     nondep_then_eq p (parse_nlist' (n - 1) p) b
   end
+
+let rec tot_parse_nlist_parse_nlist
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+  (b: bytes)
+: Lemma
+  (ensures (tot_parse_nlist n p b == parse_nlist n #k p b))
+  (decreases n)
+= tot_parse_nlist_eq n p b;
+  parse_nlist_eq n #k p b;
+  if n = 0
+  then ()
+  else Classical.forall_intro (tot_parse_nlist_parse_nlist (n - 1) p)
 
 let rec parse_nlist_ext
   (n: nat)
@@ -400,6 +469,77 @@ let rec serialize_nlist_serialize_list
     serialize_nlist_serialize_list (n - 1) s q;
     serialize_nlist_cons (n - 1) s a q;
     serialize_list_cons p s a q
+  end
+
+let rec tot_serialize_nlist'
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer #k p { k.parser_kind_subkind == Some ParserStrong } )
+: Tot (tot_serializer #(parse_nlist_kind n k) (tot_parse_nlist n p))
+= if n = 0
+  then begin
+    Classical.forall_intro (nlist_nil_unique t);
+    (fun _ -> Seq.empty)
+  end
+  else begin
+    synth_inverse_1 t (n - 1);
+    synth_inverse_2 t (n - 1);
+    tot_serialize_synth _ (synth_nlist (n - 1)) (tot_serialize_nondep_then s (tot_serialize_nlist' (n - 1) s)) (synth_nlist_recip (n - 1)) ()
+  end
+
+val tot_serialize_nlist
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer #k p { k.parser_kind_subkind == Some ParserStrong } )
+: Tot (y: tot_serializer #(parse_nlist_kind n k) (tot_parse_nlist n p) { y == tot_serialize_nlist' n s })
+
+let tot_serialize_nlist_nil
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+  (s: tot_serializer #k p { k.parser_kind_subkind == Some ParserStrong } )
+: Lemma
+  (ensures (bare_serialize (tot_serialize_nlist 0 s) [] == Seq.empty))
+= ()
+
+let tot_serialize_nlist_cons
+  (#k: parser_kind)
+  (#t: Type)
+  (n: nat)
+  (#p: tot_parser k t)
+  (s: tot_serializer #k p { k.parser_kind_subkind == Some ParserStrong } )
+  (a: t)
+  (q: nlist n t)
+: Lemma
+  (ensures (
+    bare_serialize (tot_serialize_nlist (n + 1) s) (a :: q) == Seq.append (bare_serialize s a) (bare_serialize (tot_serialize_nlist n s) q)
+  ))
+= tot_serialize_synth_eq #(parse_nlist_kind (n + 1) k) _ (synth_nlist n) (tot_serialize_nondep_then s (tot_serialize_nlist' n s)) (synth_nlist_recip n) () (a :: q);
+  tot_serialize_nondep_then_eq s (tot_serialize_nlist' n s) (a, q)
+
+let rec tot_serialize_nlist_serialize_nlist
+  (#k: parser_kind)
+  (#t: Type)
+  (n: nat)
+  (#p: tot_parser k t)
+  (s: tot_serializer #k p { k.parser_kind_subkind == Some ParserStrong } )
+  (l: nlist n t)
+: Lemma
+  (ensures (
+    bare_serialize (tot_serialize_nlist n s) l == serialize (serialize_nlist n #k #_ #p s) l
+  ))
+  (decreases n)
+= if n = 0
+  then ()
+  else begin
+    let a :: q = l in
+    serialize_nlist_cons #k (n - 1) #p s a q;
+    tot_serialize_nlist_cons (n - 1) s a q;
+    tot_serialize_nlist_serialize_nlist (n - 1) s q
   end
 
 (* variable-count lists proper *)
