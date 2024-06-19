@@ -121,7 +121,8 @@ let rec holds_on_raw_data_item_andp
 let rec holds_on_raw_data_item_implies
   (p1 p2: (raw_data_item -> bool))
   (prf: ((x': raw_data_item) -> Lemma
-    (holds_on_raw_data_item p1 x' == true ==> p2 x' == true)
+    (requires (holds_on_raw_data_item p1 x' == true))
+    (ensures (p2 x' == true))
   ))
   (x: raw_data_item)
 : Lemma
@@ -250,11 +251,16 @@ let raw_data_item_ints_optimal_elem (x: raw_data_item) : Tot bool =
 let raw_data_item_ints_optimal : raw_data_item -> Tot bool =
   holds_on_raw_data_item raw_data_item_ints_optimal_elem
 
+let valid_raw_data_item_map
+  (v: list (raw_data_item & raw_data_item))
+: Tot bool
+= list_no_setoid_repeats (map_entry_order raw_equiv _) v
+
 let valid_raw_data_item_elem
   (l: raw_data_item)
 : Tot bool
 = match l with
-  | Map _ v -> list_no_setoid_repeats (map_entry_order raw_equiv _) v
+  | Map _ v -> valid_raw_data_item_map v
   | _ -> true
 
 let valid_raw_data_item
@@ -443,16 +449,12 @@ let raw_data_item_sorted_optimal_valid
       match x with
       | Map len v ->
         holds_on_raw_data_item_andp (raw_data_item_sorted_elem order) raw_data_item_ints_optimal_elem x;
-        if holds_on_raw_data_item (andp (raw_data_item_sorted_elem order) (raw_data_item_ints_optimal_elem)
-        ) (Map len v)
-        then begin
           holds_on_raw_data_item_eq (raw_data_item_sorted_elem order) (Map len v);
           holds_on_raw_data_item_eq (raw_data_item_ints_optimal_elem) (Map len v);
           assert (List.Tot.for_all (holds_on_pair (holds_on_raw_data_item raw_data_item_ints_optimal_elem)) v);
           assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
           assert (List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) v);
           raw_data_item_sorted_optimal_valid_aux order v
-        end
       | _ -> ()
     )
     x1
@@ -663,11 +665,91 @@ let rec raw_equiv_list_no_map_eq'
     raw_equiv_list_no_map_eq' q1 q2
   | _ -> ()
 
-let no_maps_in_keys_elem
-  (x: raw_data_item)
+let no_maps_in_keys_map
+  (v: list (raw_data_item & raw_data_item))
 : Tot bool
-= match x with
-  | Map _ v -> List.Tot.for_all (holds_on_raw_data_item (notp Map?)) (List.Tot.map fst v)
+= List.Tot.for_all (holds_on_raw_data_item (notp Map?)) (List.Tot.map fst v)
+
+let no_maps_in_keys_elem
+  (l: raw_data_item)
+: Tot bool
+= match l with
+  | Map _ v -> no_maps_in_keys_map v
   | _ -> true
 
 let no_maps_in_keys = holds_on_raw_data_item no_maps_in_keys_elem
+
+let valid_raw_data_item_no_maps_in_keys_map
+  (v: list (raw_data_item & raw_data_item))
+: Tot bool
+= list_no_setoid_repeats (map_entry_order raw_equiv_no_map _) v
+
+let valid_raw_data_item_no_maps_in_keys_elem
+  (l: raw_data_item)
+: Tot bool
+= no_maps_in_keys_elem l &&
+  begin match l with
+  | Map _ v -> valid_raw_data_item_no_maps_in_keys_map v
+  | _ -> true
+  end
+
+let valid_raw_data_item_no_maps_in_keys = holds_on_raw_data_item valid_raw_data_item_no_maps_in_keys_elem
+
+let valid_no_maps_in_keys_no_maps_in_keys
+  (x: raw_data_item)
+: Lemma
+  (requires (valid_raw_data_item_no_maps_in_keys x == true))
+  (ensures (no_maps_in_keys x == true))
+= holds_on_raw_data_item_implies
+    valid_raw_data_item_no_maps_in_keys_elem
+    no_maps_in_keys_elem
+    (fun x' -> ())
+    x
+
+let rec valid_no_maps_in_keys_valid_map
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all (holds_on_pair valid_raw_data_item_no_maps_in_keys) l == true /\
+    no_maps_in_keys_map l == true /\
+    valid_raw_data_item_no_maps_in_keys_map l == true
+  ))
+  (ensures (
+    valid_raw_data_item_map l == true
+  ))
+= match l with
+  | [] -> ()
+  | a :: q ->
+    valid_no_maps_in_keys_valid_map q;
+    if List.Tot.existsb (map_entry_order raw_equiv _ a) q
+    then begin
+      let a' = list_existsb_elim (map_entry_order raw_equiv _ a) q in
+      assert (List.Tot.memP a l);
+      assert (List.Tot.memP a' l);
+      List.Tot.for_all_mem (holds_on_pair valid_raw_data_item_no_maps_in_keys) l;
+      List.Tot.memP_map_intro fst a l;
+      List.Tot.memP_map_intro fst a' l;
+      valid_no_maps_in_keys_no_maps_in_keys (fst a);
+      valid_no_maps_in_keys_no_maps_in_keys (fst a');
+      list_for_all2_prod_or_weak (holds_on_raw_data_item (notp Map?)) (holds_on_raw_data_item (notp Map?)) [fst a] [fst a'];
+      raw_equiv_equiv_list_no_map [fst a] [fst a'];
+      list_existsb_intro (map_entry_order raw_equiv_no_map _ a) q a'
+    end
+
+let valid_no_maps_in_keys_valid
+  (x: raw_data_item)
+: Lemma
+  (requires (valid_raw_data_item_no_maps_in_keys x == true))
+  (ensures (valid_raw_data_item x == true))
+= holds_on_raw_data_item_implies
+    valid_raw_data_item_no_maps_in_keys_elem
+    valid_raw_data_item_elem
+    (fun x' -> 
+      assert_norm (valid_raw_data_item_no_maps_in_keys == holds_on_raw_data_item valid_raw_data_item_no_maps_in_keys_elem);
+      match x' with
+      | Map len v ->
+        holds_on_raw_data_item_eq_map valid_raw_data_item_no_maps_in_keys_elem len v;
+        valid_no_maps_in_keys_valid_map v
+      | _ -> ()
+    )
+    x
