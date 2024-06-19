@@ -216,27 +216,45 @@ let valid_raw_data_item_no_maps_in_keys_map
 : Tot bool
 = list_no_setoid_repeats (map_entry_order raw_equiv_no_map _) v
 
-let valid_raw_data_item_no_maps_in_keys_elem
+let valid_raw_data_item_no_maps_in_keys_elem_gen
+  (p: raw_data_item -> bool)
   (l: raw_data_item)
 : Tot bool
-= no_maps_in_keys_elem l &&
+= p l &&
   begin match l with
   | Map _ v -> valid_raw_data_item_no_maps_in_keys_map v
   | _ -> true
   end
 
+let valid_raw_data_item_no_maps_in_keys_elem =
+  valid_raw_data_item_no_maps_in_keys_elem_gen no_maps_in_keys_elem
+
+let valid_raw_data_item_no_maps_in_keys_gen
+  (p: raw_data_item -> bool)
+: Tot (raw_data_item -> bool)
+= holds_on_raw_data_item (valid_raw_data_item_no_maps_in_keys_elem_gen p)
+
 let valid_raw_data_item_no_maps_in_keys = holds_on_raw_data_item valid_raw_data_item_no_maps_in_keys_elem
+
+let valid_no_maps_in_keys_no_maps_in_keys_gen
+  (p: raw_data_item -> bool)
+  (x: raw_data_item)
+: Lemma
+  (requires (valid_raw_data_item_no_maps_in_keys_gen p x == true))
+  (ensures (holds_on_raw_data_item p x == true))
+= holds_on_raw_data_item_implies
+    (valid_raw_data_item_no_maps_in_keys_elem_gen p)
+    p
+    (fun x' -> ())
+    x
 
 let valid_no_maps_in_keys_no_maps_in_keys
   (x: raw_data_item)
 : Lemma
   (requires (valid_raw_data_item_no_maps_in_keys x == true))
   (ensures (no_maps_in_keys x == true))
-= holds_on_raw_data_item_implies
-    valid_raw_data_item_no_maps_in_keys_elem
-    no_maps_in_keys_elem
-    (fun x' -> ())
-    x
+= assert_norm (valid_raw_data_item_no_maps_in_keys == valid_raw_data_item_no_maps_in_keys_gen no_maps_in_keys_elem);
+  valid_no_maps_in_keys_no_maps_in_keys_gen no_maps_in_keys_elem x
 
 let rec valid_no_maps_in_keys_valid_map
   (l: list (raw_data_item & raw_data_item))
@@ -286,6 +304,22 @@ let valid_no_maps_in_keys_valid
     )
     x
 
+let valid_no_maps_in_keys_valid_gen
+  (p: raw_data_item -> bool)
+  (x: raw_data_item)
+: Lemma
+  (requires (
+    valid_raw_data_item_no_maps_in_keys_gen p x == true /\
+    (forall x' . p x' == true ==> no_maps_in_keys_elem x' == true)
+  ))
+  (ensures (valid_raw_data_item x == true))
+= holds_on_raw_data_item_implies
+    (valid_raw_data_item_no_maps_in_keys_elem_gen p)
+    valid_raw_data_item_no_maps_in_keys_elem
+    (fun x' -> ())
+    x;
+  valid_no_maps_in_keys_valid x
+
 let rec valid_valid_no_maps_in_keys_map
   (l: list (raw_data_item & raw_data_item))
 : Lemma
@@ -303,20 +337,21 @@ let rec valid_valid_no_maps_in_keys_map
     then
       list_existsb_implies (map_entry_order raw_equiv_no_map _ a) (map_entry_order raw_equiv _ a) q (fun a' -> raw_equiv_list_no_map_equiv [fst a] [fst a'])
 
-let valid_valid_no_maps_in_keys
+let valid_valid_no_maps_in_keys_gen
+  (p: raw_data_item -> bool)
   (x: raw_data_item)
 : Lemma
   (requires (valid_raw_data_item x == true /\
-    no_maps_in_keys x == true
+    holds_on_raw_data_item p x == true
   ))
-  (ensures (valid_raw_data_item_no_maps_in_keys x == true))
+  (ensures (valid_raw_data_item_no_maps_in_keys_gen p x == true))
 = holds_on_raw_data_item_andp
     valid_raw_data_item_elem
-    no_maps_in_keys_elem
+    p
     x;
   holds_on_raw_data_item_implies
-    (andp valid_raw_data_item_elem no_maps_in_keys_elem)
-    valid_raw_data_item_no_maps_in_keys_elem
+    (andp valid_raw_data_item_elem p)
+    (valid_raw_data_item_no_maps_in_keys_elem_gen p)
     (fun x' -> 
       match x' with
       | Map len v ->
@@ -325,6 +360,16 @@ let valid_valid_no_maps_in_keys
       | _ -> ()
     )
     x
+
+let valid_valid_no_maps_in_keys
+  (x: raw_data_item)
+: Lemma
+  (requires (valid_raw_data_item x == true /\
+    no_maps_in_keys x == true
+  ))
+  (ensures (valid_raw_data_item_no_maps_in_keys x == true))
+= assert_norm (valid_raw_data_item_no_maps_in_keys x == valid_raw_data_item_no_maps_in_keys_gen no_maps_in_keys_elem x);
+  valid_valid_no_maps_in_keys_gen no_maps_in_keys_elem x
 
 let valid_raw_data_item_no_maps_in_keys_eq
   (x: raw_data_item)
@@ -335,3 +380,17 @@ let valid_raw_data_item_no_maps_in_keys_eq
 = Classical.move_requires valid_no_maps_in_keys_no_maps_in_keys x;
   Classical.move_requires valid_no_maps_in_keys_valid x;
   Classical.move_requires valid_valid_no_maps_in_keys x
+
+let valid_raw_data_item_no_maps_in_keys_gen_eq
+  (p: raw_data_item -> bool)
+  (x: raw_data_item)
+: Lemma
+  (requires (
+    forall x' . p x' == true ==> no_maps_in_keys_elem x' == true
+  ))
+  (ensures (valid_raw_data_item_no_maps_in_keys_gen p x ==
+    (valid_raw_data_item x && holds_on_raw_data_item p x)
+  ))
+= Classical.move_requires (valid_no_maps_in_keys_no_maps_in_keys_gen p) x;
+  Classical.move_requires (valid_no_maps_in_keys_valid_gen p) x;
+  Classical.move_requires (valid_valid_no_maps_in_keys_gen p) x
