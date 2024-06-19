@@ -117,3 +117,42 @@ let holds_on_raw_data_item_eq
     wf_list_for_all_eq (holds_on_pair_raw_data_item p) l;
     list_for_all_ext (holds_on_pair_raw_data_item p) (holds_on_pair (holds_on_raw_data_item p)) l (fun _ -> ())
   | _ -> ()
+
+let rec raw_data_item_size
+  (x: raw_data_item)
+: Tot nat
+= match x with
+  | Array _ v -> 2 + wf_list_sum v raw_data_item_size
+  | Map _ v -> 2 + wf_list_sum v raw_data_item_pair_size
+  | Tagged _ v -> 2 + raw_data_item_size v
+  | _ -> 1
+
+and raw_data_item_pair_size
+  (x: (raw_data_item & raw_data_item))
+: Tot nat
+= raw_data_item_size (fst x) + raw_data_item_size (snd x)
+
+let raw_data_item_pair_size_eq
+  (x: (raw_data_item & raw_data_item))
+: Lemma
+  (raw_data_item_pair_size x == pair_sum raw_data_item_size raw_data_item_size x)
+= ()
+
+let raw_data_item_size_eq
+  (x: raw_data_item)
+: Lemma
+  (raw_data_item_size x == begin match x with
+  | Array _ v -> 2 + list_sum raw_data_item_size v
+  | Map _ v -> 2 + list_sum (pair_sum raw_data_item_size raw_data_item_size) v
+  | Tagged _ v -> 2 + raw_data_item_size v
+  | _ -> 1
+  end)
+= match x with
+  | Array len v ->
+    assert_norm (raw_data_item_size (Array len v) == 2 + wf_list_sum v raw_data_item_size);
+    wf_list_sum_eq raw_data_item_size v
+  | Map len v ->
+    assert_norm (raw_data_item_size (Map len v) == 2 + wf_list_sum v raw_data_item_pair_size);
+    wf_list_sum_eq raw_data_item_pair_size v;
+    list_sum_ext raw_data_item_pair_size (pair_sum raw_data_item_size raw_data_item_size) v (fun _ -> ())
+  | _ -> ()
