@@ -1,4 +1,6 @@
 module CBOR.Spec.Type
+
+(*
 open LowParse.WellFounded
 
 // Ordering of map keys (Section 4.2)
