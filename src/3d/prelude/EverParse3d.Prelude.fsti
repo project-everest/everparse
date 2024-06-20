@@ -108,13 +108,66 @@ val parse_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk)
   : Tot (parser k (t_ite e a b))
 
 ////////////////////////////////////////////////////////////////////////////////
-// Variable-sized list whose size in bytes is exactly n
+// Serializers
 ////////////////////////////////////////////////////////////////////////////////
-val nlist (n:U32.t) (t:Type u#r) : Type u#r
+
+// [@@erasable] // TODO: why does this not work?
+inline_for_extraction
+noextract
+val serializer (#nz:bool) (#wk: weak_kind) (#k:parser_kind nz wk) (#t:Type u#r) (p: parser k t) : Type u#r
 
 inline_for_extraction noextract
-val parse_nlist (n:U32.t) (#wk: _) (#k:parser_kind true wk) (#t:_) (p:parser k t)
-  : Tot (parser kind_nlist (nlist n t))
+val serialize_dep_pair
+    #nz1 (#k1:parser_kind nz1 WeakKindStrongPrefix) #t1 (p1: parser k1 t1)
+    #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2: t1 -> Tot Type) (p2: (x: t1) -> parser k2 (t2 x))
+    (s1:serializer p1) (s2:(x: t1) -> serializer (p2 x))
+  : Tot (serializer (parse_dep_pair p1 p2))
+
+inline_for_extraction noextract
+val serialize_pair
+    #nz1 (#k1:parser_kind nz1 WeakKindStrongPrefix) #t1 (p1:parser k1 t1)
+    #nz2 #wk2 (#k2:parser_kind nz2 wk2) #t2 (p2:parser k2 t2)
+    (s1:serializer p1) (s2:serializer p2)
+  : Tot (serializer (parse_pair p1 p2))
+
+inline_for_extraction noextract
+val serialize_filter #nz #wk (#k:parser_kind nz wk) #t (p:parser k t) (f:t -> bool) (s:serializer p)
+  : Tot (serializer (parse_filter p f))
+
+inline_for_extraction noextract
+val serialize_weaken_left (#nz:_) (#wk: _)  (#k:parser_kind nz wk) (#t:_) (p:parser k t)
+                      (#nz':_) (#wk': _) (k':parser_kind nz' wk') (s:serializer p)
+  : Tot (serializer (parse_weaken_left p k'))
+
+inline_for_extraction noextract
+val serialize_weaken_right (#nz:_) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p:parser k t)
+                       (#nz':_) (#wk': _) (k':parser_kind nz' wk') (s:serializer p)
+  : Tot (serializer (parse_weaken_right p k'))
+
+val serialize_impos (_:unit) : serializer (parse_impos ())
+
+val serialize_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk)
+              (e:bool)
+              (#a:squash e -> Type)
+              (#b:squash (not e) -> Type)
+              (p1:squash e -> parser k (a()))
+              (p2:squash (not e) -> parser k (b()))
+              (s1:squash e -> serializer (p1()))
+              (s2:squash (not e) -> serializer (p2()))
+  : Tot (serializer (parse_ite e p1 p2))
+
+////////////////////////////////////////////////////////////////////////////////
+// Variable-sized list whose size in bytes is exactly n
+////////////////////////////////////////////////////////////////////////////////
+val nlist (n:U32.t) (t:Type u#r) (#k:parser_kind true WeakKindStrongPrefix) (#p:parser k t) (s:serializer p) : Type u#r
+
+inline_for_extraction noextract
+val parse_nlist (n:U32.t) (#k:parser_kind true WeakKindStrongPrefix) (#t:_) (#p:parser k t) (s:serializer p)
+  : Tot (parser kind_nlist (nlist n t s))
+
+inline_for_extraction noextract
+val serialize_nlist (n:U32.t) (#k:parser_kind true WeakKindStrongPrefix) (#t:_) (#p:parser k t) (s:serializer p)
+  : Tot (serializer (parse_nlist n s))
 
 /////
 // Parse all of the remaining bytes of the input buffer
@@ -123,24 +176,33 @@ noextract
 val all_bytes: Type0
 
 val parse_all_bytes: parser kind_all_bytes all_bytes
+val serialize_all_bytes: serializer parse_all_bytes
 
 ////////////////////////////////////////////////////////////////////////////////
 // Variable-sized element whose size in bytes is at most n
 ////////////////////////////////////////////////////////////////////////////////
-val t_at_most (n:U32.t) (t:Type u#r) : Type u#r
+val t_at_most (n:U32.t) (t:Type u#r) #nz (#k:parser_kind nz WeakKindStrongPrefix) (#p:parser k t) (s:serializer p) : Type u#r
 
 inline_for_extraction noextract
-val parse_t_at_most (n:U32.t) (#nz: _) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p:parser k t)
-  : Tot (parser kind_t_at_most (t_at_most n t))
+val parse_t_at_most (n:U32.t) (#nz: _) (#k:parser_kind nz WeakKindStrongPrefix) (#t:_) (#p:parser k t) (s:serializer p)
+  : Tot (parser kind_t_at_most (t_at_most n t s))
+
+inline_for_extraction noextract
+val serialize_t_at_most (n:U32.t) (#nz: _) (#k:parser_kind nz WeakKindStrongPrefix) (#t:_) (#p:parser k t) (s:serializer p)
+  : Tot (serializer (parse_t_at_most n s))
 
 ////////////////////////////////////////////////////////////////////////////////
 // Variable-sized element whose size in bytes is exactly n
 ////////////////////////////////////////////////////////////////////////////////
-val t_exact (n:U32.t) (t:Type u#r) : Type u#r
+val t_exact (n:U32.t) (t:Type u#r) #nz (#k:parser_kind nz WeakKindStrongPrefix) (#p:parser k t) (s:serializer p) : Type u#r
 
 inline_for_extraction noextract
-val parse_t_exact (n:U32.t) (#nz:bool) (#wk: _) (#k:parser_kind nz wk) (#t:_) (p:parser k t)
-  : Tot (parser kind_t_exact (t_exact n t))
+val parse_t_exact (n:U32.t) (#nz:bool) (#k:parser_kind nz WeakKindStrongPrefix) (#t:_) (#p:parser k t) (s:serializer p)
+  : Tot (parser kind_t_exact (t_exact n t s))
+
+inline_for_extraction noextract
+val serialize_t_exact (n:U32.t) (#nz:bool) (#k:parser_kind nz WeakKindStrongPrefix) (#t:_) (#p:parser k t) (s:serializer p)
+  : Tot (serializer (parse_t_exact n s))
 
 ////////////////////////////////////////////////////////////////////////////////
 // Readers
@@ -176,10 +238,19 @@ val parse_string
   (terminator: t)
 : Tot (parser parse_string_kind (cstring t terminator))
 
+val serialize_string
+  (#k: parser_kind true WeakKindStrongPrefix)
+  (#t: eqtype)
+  (#p: parser k t)
+  (s: serializer p)
+  (terminator: t)
+: Tot (serializer (parse_string p terminator))
+
 noextract
 val all_zeros: Type0
 
 val parse_all_zeros: parser kind_all_zeros all_zeros
+val serialize_all_zeros: serializer parse_all_zeros
 
 ////////////////////////////////////////////////////////////////////////////////
 // Base types
@@ -191,6 +262,7 @@ let ___Bool = bool
 /// UINT8
 let ___UINT8 : eqtype = FStar.UInt8.t
 val parse____UINT8 : parser kind____UINT8 ___UINT8
+val serialize____UINT8 : serializer parse____UINT8
 val read____UINT8 : reader parse____UINT8
 
 // Big-endian (or "network order")
@@ -198,21 +270,25 @@ val read____UINT8 : reader parse____UINT8
 /// UINT8BE
 let ___UINT8BE : eqtype = FStar.UInt8.t
 val parse____UINT8BE : parser kind____UINT8BE ___UINT8BE
+val serialize____UINT8BE : serializer parse____UINT8BE
 val read____UINT8BE : reader parse____UINT8BE
 
 /// UInt16BE
 let ___UINT16BE : eqtype = U16.t
 val parse____UINT16BE : parser kind____UINT16BE ___UINT16BE
+val serialize____UINT16BE : serializer parse____UINT16BE
 val read____UINT16BE : reader parse____UINT16BE
 
 /// UInt32BE
 let ___UINT32BE : eqtype = U32.t
 val parse____UINT32BE : parser kind____UINT32BE ___UINT32BE
+val serialize____UINT32BE : serializer parse____UINT32BE
 val read____UINT32BE : reader parse____UINT32BE
 
 /// UInt64BE
 let ___UINT64BE : eqtype = U64.t
 val parse____UINT64BE : parser kind____UINT64BE ___UINT64BE
+val serialize____UINT64BE : serializer parse____UINT64BE
 val read____UINT64BE : reader parse____UINT64BE
 
 // Little-endian
@@ -220,21 +296,25 @@ val read____UINT64BE : reader parse____UINT64BE
 /// UInt16
 let ___UINT16 : eqtype = U16.t
 val parse____UINT16 : parser kind____UINT16 ___UINT16
+val serialize____UINT16 : serializer parse____UINT16
 val read____UINT16 : reader parse____UINT16
 
 /// UInt32
 let ___UINT32 : eqtype = U32.t
 val parse____UINT32 : parser kind____UINT32 ___UINT32
+val serialize____UINT32 : serializer parse____UINT32
 val read____UINT32 : reader parse____UINT32
 
 /// UInt64
 let ___UINT64 : eqtype = U64.t
 val parse____UINT64 : parser kind____UINT64 ___UINT64
+val serialize____UINT64 : serializer parse____UINT64
 val read____UINT64 : reader parse____UINT64
 
 let parse_unit
   : parser kind_unit unit
   = parse_ret ()
+val serialize_unit : serializer parse_unit
 
 inline_for_extraction noextract
 val read_unit
