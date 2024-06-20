@@ -207,7 +207,7 @@ let tot_serialize_ret
   (v_unique: (v' : t) -> Lemma (v == v'))
 : Tot (tot_serializer (tot_parse_ret v))
 = mk_tot_serializer
-    (parse_ret v)
+    (tot_parse_ret v)
     (fun (x: t) -> Seq.empty)
     (fun x -> v_unique x)
 
@@ -224,7 +224,7 @@ let tot_parse_empty : tot_parser parse_ret_kind unit =
 let parse_empty : parser parse_ret_kind unit =
   tot_parse_empty
 
-let tot_serialize_empty : tot_serializer parse_empty = tot_serialize_ret () (fun _ -> ())
+let tot_serialize_empty : tot_serializer tot_parse_empty = tot_serialize_ret () (fun _ -> ())
 
 let serialize_empty : serializer parse_empty = tot_serialize_empty
 
@@ -265,7 +265,7 @@ let tot_fail_serializer
   (prf: (x: t) -> Lemma False)
 : Tot (serializer (fail_parser k t))
 = mk_tot_serializer
-    (fail_parser k t)
+    (tot_fail_parser k t)
     (fun x -> prf x; false_elim ())
     (fun x -> prf x)
 
@@ -283,7 +283,7 @@ let tot_parse_false : tot_parser parse_false_kind (squash False) = tot_fail_pars
 
 let parse_false : parser parse_false_kind (squash False) = tot_parse_false
 
-let tot_serialize_false : tot_serializer parse_false = fun input -> false_elim ()
+let tot_serialize_false : tot_serializer tot_parse_false = fun input -> false_elim ()
 
 let serialize_false : serializer parse_false = tot_serialize_false
 

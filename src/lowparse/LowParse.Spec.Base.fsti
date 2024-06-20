@@ -746,14 +746,14 @@ let tot_bare_serializer
 let tot_serializer
   (#k: parser_kind)
   (#t: Type)
-  (p: parser k t)
+  (p: tot_parser k t)
 : Tot Type
-= (f: tot_bare_serializer t { serializer_correct p f } )
+= (f: tot_bare_serializer t { serializer_correct #k p f } )
 
 let mk_tot_serializer
   (#k: parser_kind)
   (#t: Type)
-  (p: parser k t)
+  (p: tot_parser k t)
   (f: tot_bare_serializer t)
   (prf: (
     (x: t) ->
@@ -842,25 +842,25 @@ val tot_bare_serializer_of_bare_serializer
 let tot_serializer_of_serializer
   (#k: parser_kind)
   (#t: Type)
-  (#p: parser k t)
+  (#p: tot_parser k t)
   (s: serializer p)
 : Ghost (tot_serializer p)
     (requires True)
-    (ensures (fun s' -> forall x . bare_serialize s' x == serialize s x))
+    (ensures (fun s' -> forall x . bare_serialize s' x == serialize #k s x))
 = tot_bare_serializer_of_bare_serializer s
 
 let tot_serialize_ext
   (#k1: parser_kind)
   (#t1: Type)
-  (p1: parser k1 t1)
+  (p1: tot_parser k1 t1)
   (s1: tot_serializer p1)
   (#k2: parser_kind)
   (#t2: Type)
-  (p2: parser k2 t2)
+  (p2: tot_parser k2 t2)
 : Pure (tot_serializer p2)
   (requires (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
   (ensures (fun _ -> True))
-= serializer_correct_ext p1 s1 p2;
+= serializer_correct_ext #k1 p1 s1 #k2 p2;
   (s1 <: tot_bare_serializer t2)
 
 let parse_serialize
