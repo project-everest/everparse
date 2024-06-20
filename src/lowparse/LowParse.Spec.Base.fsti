@@ -842,9 +842,9 @@ val tot_bare_serializer_of_bare_serializer
 let tot_serializer_of_serializer
   (#k: parser_kind)
   (#t: Type)
-  (#p: tot_parser k t)
+  (#p: parser k t)
   (s: serializer p)
-: Ghost (tot_serializer p)
+: Ghost (tot_serializer (tot_parser_of_parser p))
     (requires True)
     (ensures (fun s' -> forall x . bare_serialize s' x == serialize #k s x))
 = tot_bare_serializer_of_bare_serializer s

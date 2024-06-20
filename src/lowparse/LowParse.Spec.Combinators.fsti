@@ -263,7 +263,7 @@ let tot_fail_serializer
   (k: parser_kind {fail_parser_kind_precond k} )
   (t: Type)
   (prf: (x: t) -> Lemma False)
-: Tot (serializer (fail_parser k t))
+: Tot (tot_serializer (tot_fail_parser k t))
 = mk_tot_serializer
     (tot_fail_parser k t)
     (fun x -> prf x; false_elim ())
