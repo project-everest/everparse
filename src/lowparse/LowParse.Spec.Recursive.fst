@@ -74,21 +74,19 @@ let parse_recursive_step_ext
 
 let parse_recursive
   p
-= magic () // close_by_fuel (parse_recursive_step p) closure (parse_recursive_step_ext p)
+= close_by_fuel (parse_recursive_step p) closure (parse_recursive_step_ext p)
 
 let parse_recursive_eq
   (p: parse_recursive_param)
   (b: bytes)
 : Lemma
   (parse (parse_recursive p) b == parse (parse_recursive_aux p (parse_recursive p)) b)
-= admit () (*
-  let c = closure b in
+= let c = closure b in
   let q = parse_recursive_step p (c - 1) in
   assert (parse (parse_recursive p) b == parse (parse_recursive_aux p q) b);
   parse_recursive_aux_ext p q (parse_recursive p) b (fun input' -> // here hypothesis Seq.length input' < Seq.length input is used
     parse_recursive_step_ext p (c - 1) input'
   )
-*)
 
 let has_pred_level
   (#p: parse_recursive_param)
@@ -148,17 +146,18 @@ let mk_serialize_recursive_alt_with_level
     s1 (| l, c |)
   in
   mk_tot_serializer
-    #(parse_filter_kind (and_then_kind pp.parse_header_kind parse_recursive_payload_kind))
-    #(parse_filter_refine #(parse_recursive_alt_t pp.t pp.header pp.count) (has_pred_level #pp sp n)) (tot_parse_filter #_ #(parse_recursive_alt_t pp.t pp.header pp.count) (parse_recursive_alt pp (parse_recursive pp)) (has_pred_level sp n))
+//    #(parse_filter_kind (and_then_kind pp.parse_header_kind parse_recursive_payload_kind))
+//    #(parse_filter_refine #(parse_recursive_alt_t pp.t pp.header pp.count) (has_pred_level #pp sp n))
+  (tot_parse_filter #_ #(parse_recursive_alt_t pp.t pp.header pp.count) (parse_recursive_alt pp (parse_recursive pp)) (has_pred_level sp n))
     s'
     (fun x ->
       let b = s' x in
+      let (| l0, c0 |) = x in
       tot_parse_filter_eq (parse_recursive_alt pp (parse_recursive pp)) (has_pred_level sp n) b;
-      assume False (*
+      assume (Some? (parse (parse_recursive_alt pp (parse_recursive pp)) b));
       let Some (l, consumed) = parse pp.parse_header b in
       let b' = Seq.slice b consumed (Seq.length b) in
       tot_parse_filter_eq (tot_parse_nlist (pp.count l) (parse_recursive pp)) (list_has_pred_level sp.level n) b'
-*)      
     )
 
 (* WIP
