@@ -130,9 +130,6 @@ let mk_serialize_recursive_with_level
       tot_parse_synth_eq (parse_recursive_alt pp (parse_recursive pp)) pp.synth_ b
     )
 
-#push-options "--z3rlimit 128 --print_implicits --ifuel 8"
-#restart-solver
-
 let mk_serialize_recursive_alt_with_level
   (#pp: parse_recursive_param)
   (#sp: serialize_recursive_param pp)
@@ -152,15 +149,40 @@ let mk_serialize_recursive_alt_with_level
     s'
     (fun x ->
       let b = s' x in
-      let (| l0, c0 |) = x in
+      tot_parse_dtuple2_ext
+        pp.parse_header
+        pp.parse_header
+        (fun l ->
+          tot_weaken parse_recursive_payload_kind (tot_parse_nlist (pp.count l) (parse_recursive pp) `tot_parse_filter` list_has_pred_level sp.level n)
+        )
+        (fun l ->
+          tot_weaken parse_recursive_payload_kind (tot_parse_nlist (pp.count l) (parse_recursive pp)) `tot_parse_filter` list_has_pred_level sp.level n
+        )
+        b
+        ()
+        (fun l b' ->
+          tot_parse_filter_eq
+            (tot_parse_nlist (pp.count l) (parse_recursive pp))
+            (list_has_pred_level sp.level n)
+            b';
+          tot_parse_filter_eq
+            (tot_weaken parse_recursive_payload_kind (tot_parse_nlist (pp.count l) (parse_recursive pp)))
+            (list_has_pred_level sp.level n)
+            b'
+        );
+      tot_parse_dtuple2_filter_swap
+        pp.parse_header
+        (parse_recursive_payload pp (parse_recursive pp))
+        (fun _ -> list_has_pred_level sp.level n)
+        (fun l -> tot_weaken parse_recursive_payload_kind (tot_parse_nlist (pp.count l) (parse_recursive pp)) `tot_parse_filter` list_has_pred_level sp.level n)
+        (has_pred_level sp n)
+        b;
       tot_parse_filter_eq (parse_recursive_alt pp (parse_recursive pp)) (has_pred_level sp n) b;
-      assume (Some? (parse (parse_recursive_alt pp (parse_recursive pp)) b));
+      assert (Some? (parse (parse_recursive_alt pp (parse_recursive pp)) b));
       let Some (l, consumed) = parse pp.parse_header b in
       let b' = Seq.slice b consumed (Seq.length b) in
       tot_parse_filter_eq (tot_parse_nlist (pp.count l) (parse_recursive pp)) (list_has_pred_level sp.level n) b'
     )
-
-(* WIP
 
 let serialize_recursive_list_has_pred_level_zero
   (#pp: parse_recursive_param)
@@ -181,17 +203,18 @@ let serialize_recursive_list_has_pred_level_zero
 
 #restart-solver
 
+(* WIP
 let rec serialize_recursive_list_has_pred_level_pos
   (#pp: parse_recursive_param)
   (sp: serialize_recursive_param pp)
   (n: pos)
-  (s: serializer (parse_filter (parse_recursive pp) (has_level sp.level (n - 1))))
+  (s: tot_serializer (tot_parse_filter (parse_recursive pp) (has_level sp.level (n - 1))))
   (len: nat)
-: Tot (serializer (parse_nlist len (parse_recursive pp) `parse_filter` list_has_pred_level sp.level n))
+: Tot (tot_serializer (tot_parse_nlist len (parse_recursive pp) `tot_parse_filter` list_has_pred_level sp.level n))
   (decreases len)
 = let s'
     (l: parse_filter_refine #(nlist len pp.t) (list_has_pred_level sp.level n))
-  : GTot bytes
+  : Tot bytes
   = match l with
     | [] -> Seq.empty
     | a :: q ->
