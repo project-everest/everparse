@@ -1463,6 +1463,40 @@ let tot_parse_dtuple2
   parser_kind_prop_ext (and_then_kind k1 k2) (parse_dtuple2 #k1 p1 #k2 p2) (tot_bare_parse_dtuple2 p1 p2);
   tot_bare_parse_dtuple2 p1 p2
 
+let tot_parse_dtuple2_ext
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: tot_parser k1 t1)
+  (#k1': parser_kind)
+  (p1': tot_parser k1' t1)
+  (#k2: parser_kind)
+  (#t2: (t1 -> Tot Type))
+  (p2: (x: t1) -> tot_parser k2 (t2 x))
+  (#k2': parser_kind)
+  (p2': (x: t1) -> tot_parser k2' (t2 x))
+  (input: bytes)
+  (prf1: squash (parse p1 input == parse p1' input))
+  (prf2: (
+    (tag: t1) ->
+    (b: bytes { k1.parser_kind_low + Seq.length b <= Seq.length input /\
+      k1'.parser_kind_low + Seq.length b <= Seq.length input
+    }) ->
+    Lemma
+    (parse (p2 tag) b == parse (p2' tag) b)
+  ))
+: Lemma
+  (parse (tot_parse_dtuple2 p1 p2) input == parse (tot_parse_dtuple2 p1 p2') input)
+= assert (p1' input == p1 input);
+  match p1 input with
+  | None -> ()
+  | Some (x1, consumed1) ->
+    parser_kind_prop_equiv k1 p1;
+    parser_kind_prop_equiv k1' p1';
+    assert (consumed1 >= k1.parser_kind_low);
+    assert (parse p1' input == Some (x1, consumed1));
+    assert (consumed1 >= k1'.parser_kind_low);
+    prf2 x1 (Seq.slice input consumed1 (Seq.length input))
+
 let tot_bare_serialize_dtuple2
   (#k1: parser_kind)
   (#t1: Type)
@@ -2217,6 +2251,56 @@ let tot_serialize_filter
 : Tot (tot_serializer #(parse_filter_kind k) (tot_parse_filter p f))
 = tot_serialize_filter_correct s f;
   tot_serialize_filter' s f
+
+let tot_parse_dtuple2_filter_swap'
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: tot_parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: t1 -> Type)
+  (p2: (x1: t1) -> tot_parser k2 (t2 x1))
+  (f: (x1: t1) -> (x2: t2 x1) -> bool)
+  (input: bytes)
+: Lemma
+  (match parse (tot_parse_dtuple2 p1 (fun x1 -> tot_parse_filter (p2 x1) (f x1))) input, parse (tot_parse_filter (tot_parse_dtuple2 p1 p2) (fun x -> f (dfst x) (dsnd x))) input with
+  | None, None -> True
+  | Some (x, len), Some (x', len') ->
+    len == len' /\
+    dfst x == dfst x' /\
+    dsnd x == dsnd x'
+  | _ -> False
+  )
+= Classical.forall_intro_2 (fun x1 input -> tot_parse_filter_eq (p2 x1) (f x1) input);
+  Classical.forall_intro (tot_parse_filter_eq (tot_parse_dtuple2 p1 p2) (fun x -> f (dfst x) (dsnd x)))
+
+let tot_parse_dtuple2_filter_swap
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: tot_parser k1 t1)
+  (#k2: parser_kind)
+  (#t2: t1 -> Type)
+  (p2: (x1: t1) -> tot_parser k2 (t2 x1))
+  (f: (x1: t1) -> (x2: t2 x1) -> bool)
+  (p2' : (x1: t1) -> tot_parser (parse_filter_kind k2) (parse_filter_refine (f x1)))
+  (f': dtuple2 t1 t2 -> bool)
+  (input: bytes)
+: Lemma
+  (requires (
+    (forall (x1: t1) input . parse (p2' x1) input == parse (tot_parse_filter (p2 x1) (f x1)) input) /\
+    (forall x . f' x == f (dfst x) (dsnd x))
+  ))
+  (ensures (
+  match parse (tot_parse_dtuple2 p1 p2') input, parse (tot_parse_filter (tot_parse_dtuple2 p1 p2) f') input with
+  | None, None -> True
+  | Some (x, len), Some (x', len') ->
+    len == len' /\
+    dfst x == dfst x' /\
+    dsnd x == dsnd x'
+  | _ -> False
+  ))
+= tot_parse_dtuple2_filter_swap' p1 p2 f input;
+  tot_parse_filter_eq (tot_parse_dtuple2 p1 p2) f' input;
+  tot_parse_filter_eq (tot_parse_dtuple2 p1 p2) (fun x -> f (dfst x) (dsnd x)) input
 
 let serialize_weaken
   (#k: parser_kind)
