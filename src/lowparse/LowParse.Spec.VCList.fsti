@@ -542,6 +542,122 @@ let rec tot_serialize_nlist_serialize_nlist
     tot_serialize_nlist_serialize_nlist (n - 1) s q
   end
 
+let rec refine_nlist_of_nlist_refine
+  (#t: Type)
+  (f: t -> bool)
+  (fl: list t -> bool { forall l . fl l == List.Tot.for_all f l })
+  (n: nat)
+  (l: nlist n (parse_filter_refine f))
+: Tot (parse_filter_refine #(nlist n t) fl)
+= match l with
+  | [] -> []
+  | a :: q -> a :: refine_nlist_of_nlist_refine f fl (n - 1) q
+
+let rec refine_nlist_of_nlist_refine_injective
+  (#t: Type)
+  (f: t -> bool)
+  (fl: list t -> bool)
+  (n: nat)
+: Lemma
+  (requires (
+    forall l . fl l == List.Tot.for_all f l
+  ))
+  (ensures (synth_injective (refine_nlist_of_nlist_refine f fl n)))
+  (decreases n)
+  [SMTPat (synth_injective (refine_nlist_of_nlist_refine f fl n))] // FIXME: WHY WHY WHY does this pattern not trigger?
+= if n = 0
+  then ()
+  else begin
+    refine_nlist_of_nlist_refine_injective f fl (n - 1);
+    synth_injective_intro'
+      #(nlist n (parse_filter_refine f))
+      #(parse_filter_refine #(nlist n t) fl)
+      (refine_nlist_of_nlist_refine f fl n)
+      (fun l1 l2 ->
+        let _ :: q1, _ :: q2 = l1, l2 in
+        assert (refine_nlist_of_nlist_refine f fl (n - 1) q1 == refine_nlist_of_nlist_refine f fl (n - 1) q2)
+      )
+  end
+
+let rec tot_parse_nlist_refine_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t { k.parser_kind_subkind == Some ParserStrong })
+  (f: t -> bool)
+  (fl: list t -> bool)
+  (n: nat)
+  (b: bytes)
+: Lemma
+  (requires (
+    forall l . fl l == List.Tot.for_all f l
+  ))
+  (ensures (synth_injective (refine_nlist_of_nlist_refine f fl n) /\
+    parse (tot_parse_nlist n p `tot_parse_filter` fl) b == parse (tot_parse_nlist n (p `tot_parse_filter` f) `tot_parse_synth` refine_nlist_of_nlist_refine f fl n) b
+  ))
+  (decreases n)
+= refine_nlist_of_nlist_refine_injective f fl n;
+  tot_parse_synth_eq
+    (tot_parse_nlist n (p `tot_parse_filter` f))
+    (refine_nlist_of_nlist_refine f fl n)
+    b;
+  tot_parse_filter_eq
+    (tot_parse_nlist n p)
+    fl
+    b;
+  tot_parse_nlist_eq n p b;
+  tot_parse_nlist_eq n (p `tot_parse_filter` f) b;
+  tot_parse_filter_eq p f b;
+  if n = 0
+  then ()
+  else begin
+    match parse p b with
+    | None -> ()
+    | Some (e, consumed) ->
+      let b' = Seq.slice b consumed (Seq.length b) in
+      tot_parse_nlist_refine_eq p f fl (n - 1) b';
+      tot_parse_synth_eq
+        (tot_parse_nlist (n - 1) (p `tot_parse_filter` f))
+        (refine_nlist_of_nlist_refine f fl (n - 1))
+        b';
+      tot_parse_filter_eq
+        (tot_parse_nlist (n - 1) p)
+        fl
+        b'
+  end
+
+let rec nlist_refine_of_refine_nlist
+  (#t: Type)
+  (f: t -> bool)
+  (fl: list t -> bool { forall l . fl l == List.Tot.for_all f l })
+  (n: nat)
+  (l: parse_filter_refine #(nlist n t) fl)
+: Tot (nlist n (parse_filter_refine f))
+= match l with
+  | [] -> []
+  | a :: q -> a :: nlist_refine_of_refine_nlist f fl (n - 1) q
+
+let rec refine_nlist_of_nlist_refine_inverse
+  (#t: Type)
+  (f: t -> bool)
+  (fl: list t -> bool)
+  (n: nat)
+: Lemma
+  (requires (forall l . fl l == List.Tot.for_all f l))
+  (ensures (synth_inverse (refine_nlist_of_nlist_refine f fl n) (nlist_refine_of_refine_nlist f fl n)))
+  (decreases n)
+= if n = 0
+  then ()
+  else begin
+    refine_nlist_of_nlist_refine_inverse f fl (n - 1);
+    synth_inverse_intro'
+      (refine_nlist_of_nlist_refine f fl n)
+      (nlist_refine_of_refine_nlist f fl n)
+      (fun (l: parse_filter_refine #(nlist n t) fl)  ->
+        let a :: q = l in
+        assert (refine_nlist_of_nlist_refine f fl (n - 1) (nlist_refine_of_refine_nlist f fl (n - 1) q) == q)
+      )
+  end
+
 (* variable-count lists proper *)
 
 let bounded_count_prop
