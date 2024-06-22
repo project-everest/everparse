@@ -658,6 +658,58 @@ let rec refine_nlist_of_nlist_refine_inverse
       )
   end
 
+let rec tot_serialize_nlist_refine'
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t { k.parser_kind_subkind == Some ParserStrong })
+  (f: t -> bool)
+  (fl: list t -> bool { forall l . fl l == List.Tot.for_all f l })
+  (s: tot_serializer (tot_parse_filter p f))
+  (n: nat)
+  (l: parse_filter_refine #(nlist n t) fl)
+: Tot bytes
+  (decreases n)
+= if n = 0
+  then Seq.empty
+  else
+    let a :: q = l in
+    s a `Seq.append` tot_serialize_nlist_refine' p f fl s (n - 1) q
+
+let tot_serialize_nlist_refine
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t { k.parser_kind_subkind == Some ParserStrong })
+  (f: t -> bool)
+  (fl: list t -> bool { forall l . fl l == List.Tot.for_all f l })
+  (s: tot_serializer (tot_parse_filter p f))
+  (n: nat)
+: Tot (
+    let _ = refine_nlist_of_nlist_refine_injective f fl n in
+    tot_serializer (tot_parse_nlist n (tot_parse_filter p f) `tot_parse_synth` refine_nlist_of_nlist_refine f fl n)
+  )
+  (decreases n)
+= 
+  refine_nlist_of_nlist_refine_injective f fl n;
+  refine_nlist_of_nlist_refine_inverse f fl n;
+  tot_serialize_synth
+    (tot_parse_nlist n (tot_parse_filter p f))
+    (refine_nlist_of_nlist_refine f fl n)
+    (tot_serialize_nlist n s)
+    (nlist_refine_of_refine_nlist f fl n)
+    ()
+
+val tot_serialize_nlist_refine_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t { k.parser_kind_subkind == Some ParserStrong })
+  (f: t -> bool)
+  (fl: list t -> bool { forall l . fl l == List.Tot.for_all f l })
+  (s: tot_serializer (tot_parse_filter p f))
+  (n: nat)
+  (l: parse_filter_refine #(nlist n t) fl)
+: Lemma
+  (ensures (tot_serialize_nlist_refine p f fl s n l == tot_serialize_nlist_refine' p f fl s n l))
+
 (* variable-count lists proper *)
 
 let bounded_count_prop
