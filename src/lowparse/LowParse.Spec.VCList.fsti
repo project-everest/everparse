@@ -584,13 +584,10 @@ let rec tot_parse_nlist_refine_eq
   (#t: Type)
   (p: tot_parser k t { k.parser_kind_subkind == Some ParserStrong })
   (f: t -> bool)
-  (fl: list t -> bool)
+  (fl: list t -> bool {    forall l . fl l == List.Tot.for_all f l })
   (n: nat)
   (b: bytes)
 : Lemma
-  (requires (
-    forall l . fl l == List.Tot.for_all f l
-  ))
   (ensures (synth_injective (refine_nlist_of_nlist_refine f fl n) /\
     parse (tot_parse_nlist n p `tot_parse_filter` fl) b == parse (tot_parse_nlist n (p `tot_parse_filter` f) `tot_parse_synth` refine_nlist_of_nlist_refine f fl n) b
   ))
@@ -709,6 +706,24 @@ val tot_serialize_nlist_refine_eq
   (l: parse_filter_refine #(nlist n t) fl)
 : Lemma
   (ensures (tot_serialize_nlist_refine p f fl s n l == tot_serialize_nlist_refine' p f fl s n l))
+
+let tot_serialize_refine_nlist
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t { k.parser_kind_subkind == Some ParserStrong })
+  (f: t -> bool)
+  (fl: list t -> bool { forall l . fl l == List.Tot.for_all f l })
+  (s: tot_serializer (tot_parse_filter p f))
+  (n: nat)
+: Tot (
+    tot_serializer (tot_parse_nlist n p `tot_parse_filter` fl)
+  )
+= Classical.forall_intro (tot_parse_nlist_refine_eq p f fl n);
+  refine_nlist_of_nlist_refine_injective f fl n;
+  tot_serialize_ext
+    _
+    (tot_serialize_nlist_refine p f fl s n)
+    _
 
 (* variable-count lists proper *)
 
