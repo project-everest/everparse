@@ -203,8 +203,7 @@ let serialize_recursive_list_has_pred_level_zero
 
 #restart-solver
 
-(* WIP
-let rec serialize_recursive_list_has_pred_level_pos
+let serialize_recursive_list_has_pred_level_pos
   (#pp: parse_recursive_param)
   (sp: serialize_recursive_param pp)
   (n: pos)
@@ -212,48 +211,21 @@ let rec serialize_recursive_list_has_pred_level_pos
   (len: nat)
 : Tot (tot_serializer (tot_parse_nlist len (parse_recursive pp) `tot_parse_filter` list_has_pred_level sp.level n))
   (decreases len)
-= let s'
-    (l: parse_filter_refine #(nlist len pp.t) (list_has_pred_level sp.level n))
-  : Tot bytes
-  = match l with
-    | [] -> Seq.empty
-    | a :: q ->
-      forall_list_cons a q (has_level sp.level (n - 1));
-      s a `Seq.append` serialize_recursive_list_has_pred_level_pos sp n s (len - 1) q
-  in
-  mk_serializer
-    (parse_nlist len (parse_recursive pp) `parse_filter` list_has_pred_level sp.level n)
-    s'
-    (fun l ->
-      let b = s' l in
-      parse_filter_eq (parse_nlist len (parse_recursive pp)) (list_has_pred_level sp.level n) b;
-      parse_nlist_eq len (parse_recursive pp) b;
-      match l with
-      | [] -> ()
-      | a :: q ->
-        forall_list_cons a q (has_level sp.level (n - 1));
-        parse_filter_eq (parse_recursive pp) (has_level sp.level (n - 1)) (s a);
-        let b' = serialize_recursive_list_has_pred_level_pos sp n s (len - 1) q in
-        assert_norm (s' (a :: q) == s a `Seq.append` b');
-        assert (parse (parse_recursive pp) (s a) == Some (a, Seq.length (s a)));
-        let (b1, b2) = Seq.split_eq b (Seq.length (s a)) in
-        Seq.lemma_append_inj b1 b2 (s a) b';
-        parse_strong_prefix (parse_recursive pp) (s a) b;
-        parse_filter_eq (parse_nlist (len - 1) (parse_recursive pp)) (list_has_pred_level sp.level n) b'
-    )
+= Classical.forall_intro (forall_list_correct (has_level sp.level (n - 1)));
+  tot_serialize_refine_nlist (parse_recursive pp) (has_level sp.level (n - 1)) (list_has_pred_level sp.level n) s len
 
 let rec serialize_recursive_with_level
   (#pp: parse_recursive_param)
   (sp: serialize_recursive_param pp)
   (n: nat)
-: Tot (serializer (parse_filter (parse_recursive pp) (has_level sp.level n)))
+: Tot (tot_serializer (tot_parse_filter (parse_recursive pp) (has_level sp.level n)))
 = mk_serialize_recursive_with_level
     n
     (mk_serialize_recursive_alt_with_level
       n
       (fun l ->
         let len = pp.count l in
-        serialize_weaken _
+        tot_serialize_weaken _
         (
           if n = 0
           then serialize_recursive_list_has_pred_level_zero sp n len
@@ -261,27 +233,22 @@ let rec serialize_recursive_with_level
         )
       )
     )
-*)
 
 let serialize_recursive
   #pp sp
-= admit ()
-(*
-  let s' (x: pp.t) : GTot bytes =
+= let s' (x: pp.t) : Tot bytes =
     serialize_recursive_with_level sp (sp.level x) x
   in
-  mk_serializer
+  mk_tot_serializer
     _
     s'
     (fun x ->
-      parse_filter_eq (parse_recursive pp) (has_level sp.level (sp.level x)) (s' x)
+      tot_parse_filter_eq (parse_recursive pp) (has_level sp.level (sp.level x)) (s' x)
     )
-*)
 
 let serialize_recursive_eq
   #pp sp x
-= admit () (*
+=
   Classical.forall_intro (parse_recursive_eq pp);
-  let s' = serialize_ext (parse_recursive pp) (serialize_recursive sp) (parse_recursive_aux pp (parse_recursive pp)) in
-  serializer_unique _ (serialize_recursive_aux sp) s' x
-*)
+  let s' = tot_serialize_ext (parse_recursive pp) (serialize_recursive sp) (parse_recursive_aux pp (parse_recursive pp)) in
+  serializer_unique #(parse_recursive_kind pp.parse_header_kind) (parse_recursive pp) (serialize_recursive_aux sp) s' x
