@@ -178,7 +178,7 @@ let rec cbor_compare
   then int_compare (U8.v (Simple?.v x1)) (U8.v (Simple?.v x2))
   else if ty1 = cbor_major_type_byte_string || ty1 = cbor_major_type_text_string
   then
-    let c = int_compare (Seq.length (String?.v x1)) (Seq.length (String?.v x2)) in
+    let c = raw_uint64_compare (String?.len x1) (String?.len x2) in
     if c <> 0
     then c
     else bytes_lex_compare (String?.v x1) (String?.v x2)
