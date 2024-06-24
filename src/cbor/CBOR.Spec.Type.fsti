@@ -19,136 +19,113 @@ include CBOR.Spec.Constants
 
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
+module FS = FStar.FiniteSet.Base
+module FSA = FStar.FiniteSet.Ambient
 
 (* The generic data model *)
 
-let u0 = CBOR.Spec.FiniteMap.UniverseToken u#0
+val cbor: eqtype
 
-noextract
-noeq
-type cbor_case (t: Type u#a) : Type u#(max a 1) =
-  | CSimple: (v: simple_value) -> cbor_case t
-  | CInt64: (typ: major_type_uint64_or_neg_int64) -> (v: U64.t) -> cbor_case t
-  | CString: (typ: major_type_byte_string_or_text_string) -> (v: Seq.seq U8.t { FStar.UInt.fits (Seq.length v) U64.n }) -> cbor_case t // Section 3.1: "a string containing an invalid UTF-8 sequence is well-formed but invalid", so we don't care about UTF-8 specifics here.
-  | CArray: (v: list t { FStar.UInt.fits (List.Tot.length v) U64.n }) -> cbor_case t
-  | CMap: (c: CBOR.Spec.FiniteMap.fmap t t u0 { FStar.UInt.fits (CBOR.Spec.FiniteMap.length c) U64.n }) -> cbor_case t
-  | CTagged: (tag: U64.t) -> (v: t) -> cbor_case t
+val cbor_map: eqtype
 
-let rec list_eq
-  (#t: Type)
-  (eq: CBOR.Spec.FiniteMap.eq_test t)
-  (l1 l2: list t)
-: Tot (CBOR.Spec.FiniteMap.eq_elem_test_codom l1 l2)
-  (decreases l1)
-= match l1, l2 with
-  | [], [] -> true
-  | x1 :: l1', x2 :: l2' -> eq x1 x2 && list_eq eq l1' l2'
-  | _ -> false
+val cbor_map_get: cbor_map -> cbor -> Tot (option cbor)
 
-let rec seq_eq
-  (#t: Type)
-  (eq: CBOR.Spec.FiniteMap.eq_test t)
-  (l1 l2: Seq.seq t)
-: Tot (CBOR.Spec.FiniteMap.eq_elem_test_codom l1 l2)
-  (decreases (Seq.length l1))
-= if Seq.length l1 = 0
-  then
-    if Seq.length l2 = 0
-    then begin
-      assert (l1 `Seq.equal` l2);
-      true
+let cbor_map_equal (m1 m2: cbor_map) : Tot prop =
+  (forall k . cbor_map_get m1 k == cbor_map_get m2 k)
+
+val cbor_map_ext: (m1: cbor_map) -> (m2: cbor_map) -> Lemma
+  (ensures (cbor_map_equal m1 m2 <==> m1 == m2))
+  [SMTPat (cbor_map_equal m1 m2)]
+
+val cbor_map_set_keys: (m: cbor_map) -> FS.set cbor
+
+val cbor_map_set_keys_mem: (m: cbor_map) -> (k: cbor) -> Lemma
+  (FS.mem k (cbor_map_set_keys m) <==> Some? (cbor_map_get m k))
+  [SMTPat (FS.mem k (cbor_map_set_keys m))]
+
+val cbor_map_length (m: cbor_map) : Pure nat
+  (requires True)
+  (ensures (fun n -> n == FS.cardinality (cbor_map_set_keys m)))
+
+val cbor_map_empty: cbor_map
+
+val cbor_map_get_empty: (k: cbor) -> Lemma
+  (ensures (cbor_map_get cbor_map_empty k == None))
+  [SMTPat (cbor_map_get cbor_map_empty k)]
+
+let cbor_map_set_keys_empty : squash (cbor_map_set_keys cbor_map_empty == FS.emptyset) =
+  assert (cbor_map_set_keys cbor_map_empty `FS.equal` FS.emptyset)
+
+let cbor_map_length_empty: squash (cbor_map_length cbor_map_empty == 0) = ()
+
+val cbor_map_singleton: cbor -> cbor -> cbor_map
+
+val cbor_map_get_singleton: (k: cbor) -> (v: cbor) -> (k': cbor) -> Lemma
+  (ensures (cbor_map_get (cbor_map_singleton k v) k' == (if k = k' then Some v else None)))
+  [SMTPat (cbor_map_get (cbor_map_singleton k v) k')]
+
+let cbor_map_set_keys_singleton (k: cbor) (v: cbor) : Lemma
+  (ensures (cbor_map_set_keys (cbor_map_singleton k v) == FS.singleton k))
+  [SMTPat (cbor_map_set_keys (cbor_map_singleton k v))]
+= assert (cbor_map_set_keys (cbor_map_singleton k v) `FS.equal` FS.singleton k)
+
+let cbor_map_length_singleton (k: cbor) (v: cbor) : Lemma
+  (ensures (cbor_map_length (cbor_map_singleton k v) == 1))
+= ()
+
+val cbor_map_filter:
+  (cbor -> cbor -> bool) ->
+  cbor_map ->
+  cbor_map
+
+val cbor_map_get_filter: (f: (cbor -> cbor -> bool)) -> (m: cbor_map) -> (k: cbor) -> Lemma
+  (ensures (cbor_map_get (cbor_map_filter f m) k == begin match cbor_map_get m k with
+  | None -> None
+  | Some v -> if f k v then Some v else None
+  end))
+  [SMTPat (cbor_map_get (cbor_map_filter f m) k)]
+
+val cbor_map_union: cbor_map -> cbor_map -> cbor_map
+
+val cbor_map_get_union: (m1: cbor_map) -> (m2: cbor_map) -> (k: cbor) -> Lemma
+  (ensures (cbor_map_get (cbor_map_union m1 m2) k == begin match cbor_map_get m1 k with
+    | None -> cbor_map_get m2 k
+    | v -> v
     end
-    else false
-  else if Seq.length l2 = 0
-  then false
-  else begin
-    Seq.cons_head_tail l1;
-    Seq.cons_head_tail l2;
-    eq (Seq.head l1) (Seq.head l2) && seq_eq eq (Seq.tail l1) (Seq.tail l2)
-  end
+  ))
+  [SMTPat (cbor_map_get (cbor_map_union m1 m2) k)]
 
-let cbor_case_eq
-  (#t: Type)
-  (eq: CBOR.Spec.FiniteMap.eq_test t)
-: Tot (CBOR.Spec.FiniteMap.eq_test (cbor_case t))
-= fun c1 c2 -> match c1, c2 with
-  | CSimple v1, CSimple v2 -> v1 = v2
-  | CInt64 t1 v1, CInt64 t2 v2 -> t1 = t2 && v1 = v2
-  | CString t1 s1, CString t2 s2 -> t1 = t2 && seq_eq (fun x y -> x = y) s1 s2
-  | CArray l1, CArray l2 -> list_eq eq l1 l2
-  | CMap l1, CMap l2 -> CBOR.Spec.FiniteMap.fmap_eq l1 l2
-  | CTagged tag1 x1, CTagged tag2 x2 -> tag1 = tag2 && eq x1 x2
-  | _ -> false
+let cbor_map_set_keys_union (m1 m2: cbor_map) : Lemma
+  (ensures (cbor_map_set_keys (cbor_map_union m1 m2) == (cbor_map_set_keys m1 `FS.union` cbor_map_set_keys m2)))
+  [SMTPat (cbor_map_set_keys (cbor_map_union m1 m2))]
+= assert (cbor_map_set_keys (cbor_map_union m1 m2) `FS.equal` (cbor_map_set_keys m1 `FS.union` cbor_map_set_keys m2))
 
-let rec list_bound
-  (#t: Type)
-  (bound: t -> Tot nat)
-  (l: list t)
-: Tot nat
-= match l with
-  | [] -> 0
-  | a :: q ->
-    let ba = bound a in
-    let bq = list_bound bound q in
-    if ba >= bq then ba else bq
+let cbor_map_disjoint (m1 m2: cbor_map) : Tot prop =
+  forall k . ~ (Some? (cbor_map_get m1 k) /\ Some? (cbor_map_get m2 k))
 
-let fmap_bound_op
-  (#t: Type)
-  (s: CBOR.Spec.FiniteMap.fmap t t u0)
-  (bound: t -> Tot nat)
-  (accu: nat)
-  (x: t)
-: Tot nat
-= let bx = bound x in
-  let accu1 = if bx > accu then bx else accu in
-  let bw = match CBOR.Spec.FiniteMap.get x s with
-  | None -> 0
-  | Some w -> bound w
-  in
-  if bw > accu1 then bw else accu1
+let cbor_map_length_disjoint_union (m1 m2: cbor_map) : Lemma
+  (requires (cbor_map_disjoint m1 m2))
+  (ensures (
+    cbor_map_length (cbor_map_union m1 m2) == cbor_map_length m1 + cbor_map_length m2
+  ))
+= ()
 
-let fmap_bound
-  (#t: Type)
-  (bound: t -> Tot nat)
-  (s: CBOR.Spec.FiniteMap.fmap t t u0)
-: Tot nat
-= CBOR.Spec.FiniteMap.fold (fmap_bound_op s bound) 0 s
+type cbor_case =
+  | CSimple: (v: simple_value) -> cbor_case
+  | CInt64: (typ: major_type_uint64_or_neg_int64) -> (v: U64.t) -> cbor_case
+  | CString: (typ: major_type_byte_string_or_text_string) -> (v: Seq.seq U8.t { FStar.UInt.fits (Seq.length v) U64.n }) -> cbor_case // Section 3.1: "a string containing an invalid UTF-8 sequence is well-formed but invalid", so we don't care about UTF-8 specifics here.
+  | CArray: (v: list cbor { FStar.UInt.fits (List.Tot.length v) U64.n }) -> cbor_case
+  | CMap: (c: cbor_map { FStar.UInt.fits (cbor_map_length c) U64.n }) -> cbor_case
+  | CTagged: (tag: U64.t) -> (v: cbor) -> cbor_case
 
-let cbor_case_bound
-  (#t: Type)
-  (bound: t -> nat)
-  (x: cbor_case t)
-: Tot nat
-= match x with
-  | CArray l -> 1 + list_bound bound l
-  | CMap l -> 1 + fmap_bound bound l
-  | CTagged _ x -> 1 + bound x
-  | _ -> 0
+val unpack: cbor -> cbor_case
 
-[@@erasable] noeq type empty_t : Type u#a =
+val pack: cbor_case -> cbor
 
-noextract [@@noextract_to "krml"]
-let empty_elim (#t: Type u#b) (x: empty_t u#a) : Tot t =
-  match empty_t with
+val unpack_pack: (c: cbor_case) -> Lemma
+  (ensures (unpack (pack c) == c))
+  [SMTPat (pack c)]
 
-let rec cbor1 (b: nat) : Tot (Type u#1)
-  (decreases (b + b + 1))
-= cbor_case (cbor2 b)
-
-and cbor2 (b: nat) : Tot (Type u#1)
-  (decreases (b + b))
-= (if b = 0 then empty_t else cbor1 (b - 1))
-
-let rec cbor1_bound (b: nat) : Tot (cbor1 b -> nat) (decreases (b + b + 1))
-= cbor_case_bound (cbor2_bound b)
-
-and cbor2_bound (b: nat) : Tot (cbor2 b -> nat) (decreases (b + b))
-= if b = 0 then empty_elim #nat else cbor1_bound (b - 1)
-
-noeq
-type cbor = {
-  b: nat;
-  obj: (obj: cbor1 b { cbor1_bound b obj == b });
-}
-
-let cbor_bound (x: cbor) : Tot nat = x.b
+val pack_unpack: (c: cbor) -> Lemma
+  (ensures (pack (unpack c) == c))
+  [SMTPat (unpack c)]
