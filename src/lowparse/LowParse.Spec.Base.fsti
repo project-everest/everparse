@@ -972,6 +972,21 @@ val serialize_length
   ))
   [SMTPat (Seq.length (serialize s x))]
 
+let tot_serialize_length
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (x: t)
+: Lemma
+  (let x = Seq.length (bare_serialize s x) in
+   k.parser_kind_low <= x /\ (
+   match k.parser_kind_high with
+   | None -> True
+   | Some y -> x <= y
+  ))
+= serialize_length #k #t #p s x
+
 val serialize_not_fail
   (#k: parser_kind)
   (#t: Type)
@@ -998,6 +1013,21 @@ let serialize_strong_prefix
 = parse_strong_prefix p (serialize s x1) (serialize s x1 `Seq.append` q1);
   parse_strong_prefix p (serialize s x2) (serialize s x2 `Seq.append` q2);
   Seq.lemma_append_inj (serialize s x1) q1 (serialize s x2) q2
+
+let tot_serialize_strong_prefix
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (x1 x2: t)
+  (q1 q2: bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    bare_serialize s x1 `Seq.append` q1 == bare_serialize s x2 `Seq.append` q2
+  ))
+  (ensures (x1 == x2 /\ q1 == q2))
+= serialize_strong_prefix #k #t #p s x1 x2 q1 q2
 
 let parse_truncate
   (#k: parser_kind)
