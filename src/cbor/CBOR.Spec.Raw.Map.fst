@@ -14,8 +14,8 @@
    limitations under the License.
 *)
 
-module CBOR.Spec.Map
-include CBOR.Spec.Raw
+module CBOR.Spec.Raw.Map
+include CBOR.Spec.Raw.Base
 
 let rec list_for_all_weaken
   (#t: Type)
