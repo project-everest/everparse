@@ -419,6 +419,65 @@ let rec list_no_setoid_repeats
     list_no_setoid_repeats equiv q &&
     not (List.Tot.existsb (equiv a) q)
 
+let rec list_no_setoid_repeats_implies
+  (#t: Type)
+  (equiv1 equiv2: t -> t -> bool)
+  (l: list t)
+  (prf: (x1: t) -> (x2: t { List.Tot.memP x1 l /\ List.Tot.memP x2 l /\ x1 << l /\ x2 << l }) -> Lemma
+    (requires (equiv2 x1 x2))
+    (ensures (equiv1 x1 x2))
+  )
+: Lemma
+  (requires (list_no_setoid_repeats equiv1 l == true))
+  (ensures (list_no_setoid_repeats equiv2 l == true))
+= match l with
+  | [] -> ()
+  | a :: q ->
+    list_no_setoid_repeats_implies equiv1 equiv2 q prf;
+    if List.Tot.existsb (equiv2 a) q
+    then begin
+      let a' = list_existsb_elim (equiv2 a) q in
+      List.Tot.memP_precedes a l;
+      List.Tot.memP_precedes a' l;
+      prf a a';
+      list_existsb_intro (equiv1 a) q a'
+    end
+
+let rec list_no_setoid_repeats_noRepeats
+  (#t: eqtype)
+  (l: list t)
+: Lemma
+  (list_no_setoid_repeats ( = ) l == List.Tot.noRepeats l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    list_no_setoid_repeats_noRepeats q;
+    if List.Tot.existsb (( = ) a) q
+    then begin
+      let a' = list_existsb_elim (( = ) a) q in
+      assert (a == a');
+      List.Tot.mem_memP a q
+    end
+    else if List.Tot.mem a q
+    then list_existsb_intro (( = ) a) q a
+    else ()
+
+let rec list_no_repeats_noRepeats
+  (#t: eqtype)
+  (l: list t)
+: Lemma
+  (List.Tot.noRepeats l == true <==> List.Tot.no_repeats_p l)
+= match l with
+  | [] -> ()
+  | a :: q -> List.Tot.mem_memP a q; list_no_repeats_noRepeats q
+
+let list_no_setoid_repeats_no_repeats
+  (#t: eqtype)
+  (l: list t)
+: Lemma
+  (list_no_setoid_repeats ( = ) l == true <==> List.Tot.no_repeats_p l)
+= list_no_setoid_repeats_noRepeats l;
+  list_no_repeats_noRepeats l
 
 let rec list_for_all2_intro
   (#t1 #t2: Type)
