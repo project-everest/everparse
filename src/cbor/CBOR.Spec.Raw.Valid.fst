@@ -1,27 +1,196 @@
 module CBOR.Spec.Raw.Valid
 
-let rec raw_equiv_list_no_map
-  (l1 l2: list raw_data_item)
-: Tot bool
-  (decreases (list_sum raw_data_item_size l1))
-= match l1, l2 with
-  | [], [] -> true
-  | x1 :: q1, x2 :: q2 ->
-    raw_data_item_size_eq x1;
-    begin match x1, x2 with
-    | Simple v1, Simple v2 -> v1 = v2 && raw_equiv_list_no_map q1 q2
-    | Int64 ty1 v1, Int64 ty2 v2 -> ty1 = ty2 && raw_uint64_equiv v1 v2 && raw_equiv_list_no_map q1 q2
-    | String ty1 len1 v1, String ty2 len2 v2 -> ty1 = ty2 && raw_uint64_equiv len1 len2 && v1 = v2 && raw_equiv_list_no_map q1 q2
-    | Array len1 v1, Array len2 v2 ->
-      list_sum_append raw_data_item_size v1 q1;
-      raw_uint64_equiv len1 len2 &&
-      raw_equiv_list_no_map (List.Tot.append v1 q1) (List.Tot.append v2 q2)
-    | Tagged tag1 v1, Tagged tag2 v2 ->
-      raw_uint64_equiv tag1 tag2 &&
-      raw_equiv_list_no_map (v1 :: q1) (v2 :: q2)
-    | _ -> false
+let rec raw_equiv_sorted_optimal
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires (
+    raw_equiv x1 x2 /\
+    raw_data_item_sorted order x1 /\
+    raw_data_item_sorted order x2 /\
+    raw_data_item_ints_optimal x1 /\
+    raw_data_item_ints_optimal x2
+  ))
+  (ensures (x1 == x2))
+  (decreases x1)
+= raw_equiv_eq x1 x2;
+  holds_on_raw_data_item_eq (raw_data_item_sorted_elem order) x1;
+  holds_on_raw_data_item_eq (raw_data_item_sorted_elem order) x2;
+  holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x1;
+  holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x2;
+  match x1, x2 with
+  | Simple _, Simple _ -> ()
+  | Int64 _ v1, Int64 _ v2 ->
+    raw_uint64_optimal_unique v1 v2
+  | String _ v1 _, String _ v2 _ ->
+    raw_uint64_optimal_unique v1 v2
+  | Tagged tag1 v1, Tagged tag2 v2 ->
+    raw_uint64_optimal_unique tag1 tag2;
+    raw_equiv_sorted_optimal order v1 v2
+  | Array len1 l1, Array len2 l2 ->
+    raw_uint64_optimal_unique len1 len2;
+    assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
+    list_for_all2_prod (raw_data_item_sorted order) (raw_data_item_sorted order) l1 l2;
+    list_for_all2_prod raw_data_item_ints_optimal raw_data_item_ints_optimal l1 l2;
+    list_for_all2_andp_intro
+      (prodp (raw_data_item_sorted order) (raw_data_item_sorted order))
+      (prodp raw_data_item_ints_optimal raw_data_item_ints_optimal)
+      l1 l2;
+    list_for_all2_andp_intro
+      (andp2
+        (prodp (raw_data_item_sorted order) (raw_data_item_sorted order))
+        (prodp raw_data_item_ints_optimal raw_data_item_ints_optimal))
+      raw_equiv
+      l1 l2;
+    list_for_all2_implies
+      (andp2
+        (andp2
+          (prodp (raw_data_item_sorted order) (raw_data_item_sorted order))
+          (prodp raw_data_item_ints_optimal raw_data_item_ints_optimal))
+        raw_equiv
+      )
+      ( = )
+      l1 l2
+      (fun x1' x2' ->
+        raw_equiv_sorted_optimal order x1' x2'
+      );
+    list_for_all2_equals l1 l2
+  | Map len1 l1, Map len2 l2 ->
+    raw_uint64_optimal_unique len1 len2;
+    assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
+    list_for_all_andp (holds_on_pair (raw_data_item_sorted order)) (holds_on_pair raw_data_item_ints_optimal) l1;
+    list_for_all_andp (holds_on_pair (raw_data_item_sorted order)) (holds_on_pair raw_data_item_ints_optimal) l2;
+    list_for_all_exists_prodp
+      (holds_on_pair2 raw_equiv)
+      (andp
+        (holds_on_pair (raw_data_item_sorted order))
+        (holds_on_pair raw_data_item_ints_optimal)
+      )
+      (andp
+        (holds_on_pair (raw_data_item_sorted order))
+        (holds_on_pair raw_data_item_ints_optimal)
+      )
+      l1 l2;
+    list_for_all_exists_implies
+      (andp2
+        (holds_on_pair2 raw_equiv)
+        (prodp
+          (andp
+            (holds_on_pair (raw_data_item_sorted order))
+            (holds_on_pair raw_data_item_ints_optimal)
+          )
+          (andp
+            (holds_on_pair (raw_data_item_sorted order))
+            (holds_on_pair raw_data_item_ints_optimal)
+          )
+        )
+      )
+      ( = )
+      l1 l2
+      (fun x1 x2 ->
+        raw_equiv_sorted_optimal order (fst x1) (fst x2);
+        raw_equiv_sorted_optimal order (snd x1) (snd x2)
+      );
+    list_for_all_exists_equal_eq l1 l2;
+    list_for_all_exists_prodp
+      (holds_on_pair2 raw_equiv)
+      (andp
+        (holds_on_pair (raw_data_item_sorted order))
+        (holds_on_pair raw_data_item_ints_optimal)
+      )
+      (andp
+        (holds_on_pair (raw_data_item_sorted order))
+        (holds_on_pair raw_data_item_ints_optimal)
+      )
+      l2 l1;
+    list_for_all_exists_implies
+      (andp2
+        (holds_on_pair2 raw_equiv)
+        (prodp
+          (andp
+            (holds_on_pair (raw_data_item_sorted order))
+            (holds_on_pair raw_data_item_ints_optimal)
+          )
+          (andp
+            (holds_on_pair (raw_data_item_sorted order))
+            (holds_on_pair raw_data_item_ints_optimal)
+          )
+        )
+      )
+      ( = )
+      l2 l1
+      (fun x2 x1 ->
+        raw_equiv_sym (fst x2) (fst x1);
+        raw_equiv_sorted_optimal order (fst x1) (fst x2);
+        raw_equiv_sym (snd x2) (snd x1);
+        raw_equiv_sorted_optimal order (snd x1) (snd x2)
+      );
+    list_for_all_exists_equal_eq l2 l1;
+    list_sorted_ext_eq (map_entry_order order _) l1 l2
+
+let rec raw_data_item_sorted_optimal_valid_aux
+  (order: (raw_data_item -> raw_data_item -> bool) {
+    order_irrefl order /\
+    order_trans order
+  })
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) l /\
+    List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) l /\
+    FStar.List.Tot.sorted (map_entry_order order _) l
+  ))
+  (ensures (
+    list_no_setoid_repeats (map_entry_order raw_equiv _) l
+  ))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    raw_data_item_sorted_optimal_valid_aux order q;
+    if List.Tot.existsb (map_entry_order raw_equiv _ a) q
+    then begin
+      let a' = list_existsb_elim (map_entry_order raw_equiv _ a) q in
+      list_sorted_memP (map_entry_order order _) a q a';
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_sorted order)) q;
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_ints_optimal)) q;
+      raw_equiv_sorted_optimal order (fst a) (fst a')
     end
-  | _ -> false
+    else ()
+
+
+let raw_data_item_sorted_optimal_valid
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (x1: raw_data_item)
+: Lemma
+  (requires (
+    raw_data_item_sorted order x1 /\
+    raw_data_item_ints_optimal x1
+  ))
+  (ensures (valid_raw_data_item x1))
+= holds_on_raw_data_item_andp (raw_data_item_sorted_elem order) raw_data_item_ints_optimal_elem x1;
+  holds_on_raw_data_item_implies
+    (andp (raw_data_item_sorted_elem order) raw_data_item_ints_optimal_elem)
+    valid_raw_data_item_elem
+    (fun x ->
+      match x with
+      | Map len v ->
+        holds_on_raw_data_item_andp (raw_data_item_sorted_elem order) raw_data_item_ints_optimal_elem x;
+          holds_on_raw_data_item_eq (raw_data_item_sorted_elem order) (Map len v);
+          holds_on_raw_data_item_eq (raw_data_item_ints_optimal_elem) (Map len v);
+          assert (List.Tot.for_all (holds_on_pair (holds_on_raw_data_item raw_data_item_ints_optimal_elem)) v);
+          assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
+          assert (List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) v);
+          raw_data_item_sorted_optimal_valid_aux order v
+      | _ -> ()
+    )
+    x1
 
 let rec raw_equiv_list_no_map_append
   (ll1 lr1 ll2 lr2: list raw_data_item)
@@ -163,22 +332,6 @@ let raw_equiv_list_no_map_eq
   then raw_equiv_equiv_list_no_map l1 l2
   else ()
 
-let raw_equiv_no_map
-  (x1 x2: raw_data_item)
-: Tot bool
-= raw_equiv_list_no_map [x1] [x2]
-
-let raw_equiv_list_no_map_no_map2
-  (l1 l2: list raw_data_item)
-: Lemma
-  (requires (raw_equiv_list_no_map l1 l2 == true))
-  (ensures (List.Tot.for_all (holds_on_raw_data_item (notp Map?)) l1 == true /\
-    List.Tot.for_all (holds_on_raw_data_item (notp Map?)) l2 == true
-  ))
-= raw_equiv_list_no_map_no_map l1 l2;
-  raw_equiv_list_no_map_sym l1 l2;
-  raw_equiv_list_no_map_no_map l2 l1
-
 let rec raw_equiv_list_no_map_eq'
   (l1 l2: list raw_data_item)
 : Lemma
@@ -192,45 +345,6 @@ let rec raw_equiv_list_no_map_eq'
     raw_equiv_list_no_map_eq' q1 q2
   | _ -> ()
 
-let no_maps_in_keys_map
-  (v: list (raw_data_item & raw_data_item))
-: Tot bool
-= List.Tot.for_all (holds_on_raw_data_item (notp Map?)) (List.Tot.map fst v)
-
-let no_maps_in_keys_elem
-  (l: raw_data_item)
-: Tot bool
-= match l with
-  | Map _ v -> no_maps_in_keys_map v
-  | _ -> true
-
-let no_maps_in_keys = holds_on_raw_data_item no_maps_in_keys_elem
-
-let valid_raw_data_item_no_maps_in_keys_map
-  (v: list (raw_data_item & raw_data_item))
-: Tot bool
-= list_no_setoid_repeats (map_entry_order raw_equiv_no_map _) v
-
-let valid_raw_data_item_no_maps_in_keys_elem_gen
-  (p: raw_data_item -> bool)
-  (l: raw_data_item)
-: Tot bool
-= p l &&
-  begin match l with
-  | Map _ v -> valid_raw_data_item_no_maps_in_keys_map v
-  | _ -> true
-  end
-
-let valid_raw_data_item_no_maps_in_keys_elem =
-  valid_raw_data_item_no_maps_in_keys_elem_gen no_maps_in_keys_elem
-
-let valid_raw_data_item_no_maps_in_keys_gen
-  (p: raw_data_item -> bool)
-: Tot (raw_data_item -> bool)
-= holds_on_raw_data_item (valid_raw_data_item_no_maps_in_keys_elem_gen p)
-
-let valid_raw_data_item_no_maps_in_keys = holds_on_raw_data_item valid_raw_data_item_no_maps_in_keys_elem
-
 let valid_no_maps_in_keys_no_maps_in_keys_gen
   (p: raw_data_item -> bool)
   (x: raw_data_item)
@@ -242,14 +356,6 @@ let valid_no_maps_in_keys_no_maps_in_keys_gen
     p
     (fun x' -> ())
     x
-
-let valid_no_maps_in_keys_no_maps_in_keys
-  (x: raw_data_item)
-: Lemma
-  (requires (valid_raw_data_item_no_maps_in_keys x == true))
-  (ensures (no_maps_in_keys x == true))
-= assert_norm (valid_raw_data_item_no_maps_in_keys == valid_raw_data_item_no_maps_in_keys_gen no_maps_in_keys_elem);
-  valid_no_maps_in_keys_no_maps_in_keys_gen no_maps_in_keys_elem x
 
 let rec valid_no_maps_in_keys_valid_map
   (l: list (raw_data_item & raw_data_item))
