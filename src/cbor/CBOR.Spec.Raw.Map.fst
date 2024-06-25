@@ -15,7 +15,7 @@
 *)
 
 module CBOR.Spec.Raw.Map
-include CBOR.Spec.Raw.Base
+include CBOR.Spec.Raw.Valid
 
 let rec list_for_all_weaken
   (#t: Type)

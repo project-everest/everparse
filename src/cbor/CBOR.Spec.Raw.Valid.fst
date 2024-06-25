@@ -1,9 +1,4 @@
 module CBOR.Spec.Raw.Valid
-include CBOR.Spec.Raw.Base
-open CBOR.Spec.Util
-
-module U8 = FStar.UInt8
-module U64 = FStar.UInt64
 
 let rec raw_equiv_list_no_map
   (l1 l2: list raw_data_item)

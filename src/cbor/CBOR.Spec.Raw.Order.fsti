@@ -15,7 +15,7 @@
 *)
 
 module CBOR.Spec.Raw.Order
-include CBOR.Spec.Raw.Base
+include CBOR.Spec.Raw.Valid
 
 module U8 = FStar.UInt8
 
