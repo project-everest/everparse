@@ -127,3 +127,4 @@ and cbor_compare_map_correct
 
 #pop-options
 
+let cbor_compare_correct = cbor_compare_correct'
