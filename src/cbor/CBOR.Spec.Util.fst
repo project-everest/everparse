@@ -646,6 +646,17 @@ let rec list_of_pair_list_length
   | [] -> ()
   | _ :: q -> list_of_pair_list_length q
 
+let apply_on_pair (#a #b: Type) (f: a -> b) (x: (a & a)) : Tot (b & b) =
+  (f (fst x), f (snd x))
+
+let rec list_map_ext (#t #t': Type) (f1 f2: t -> t') (l: list t) (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
+  (f1 x == f2 x)
+) : Lemma
+  (List.Tot.map f1 l == List.Tot.map f2 l)
+= match l with
+  | [] -> ()
+  | a :: q -> prf a; list_map_ext f1 f2 q prf
+
 (* Well-founded recursion *)
 
 let rec wf_list_for_all (#t: Type) (l: list t) (p: (x: t { x << l }) -> bool) : bool =
@@ -720,3 +731,21 @@ let rec wf_list_sum_eq (#t: Type) (f: t -> nat) (l: list t) : Lemma
 = match l with
   | [] -> ()
   | _ :: q -> wf_list_sum_eq f q
+
+let rec wf_list_map (#t1 #t2: Type) (l: list t1) (f: (x1: t1 { List.Tot.memP x1 l /\ x1 << l }) -> t2) : Tot (list t2) =
+  match l with
+  | [] -> []
+  | a :: q -> f a :: wf_list_map q f
+
+let rec wf_list_map_eq (#t1 #t2: Type) (f: t1 -> t2) (l: list t1) : Lemma
+  (wf_list_map l f == List.Tot.map f l)
+= match l with
+  | [] -> ()
+  | _ :: q -> wf_list_map_eq f q
+
+let rec wf_list_map_length (#t1 #t2: Type) (l: list t1) (f: (x1: t1 { List.Tot.memP x1 l /\ x1 << l }) -> t2) : Lemma
+  (ensures (List.Tot.length (wf_list_map l f) == List.Tot.length l))
+  [SMTPat (List.Tot.length (wf_list_map l f))]
+= match l with
+  | [] -> ()
+  | _ :: q -> wf_list_map_length q f

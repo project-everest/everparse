@@ -156,3 +156,33 @@ let raw_data_item_size_eq
     wf_list_sum_eq raw_data_item_pair_size v;
     list_sum_ext raw_data_item_pair_size (pair_sum raw_data_item_size raw_data_item_size) v (fun _ -> ())
   | _ -> ()
+
+let rec raw_data_item_fmap
+  (f: raw_data_item -> raw_data_item)
+  (x: raw_data_item)
+: Tot raw_data_item
+= match x with
+  | Map len v ->
+    f (Map len (wf_list_map v (raw_data_item_pair_fmap f)))
+  | Array len v -> f (Array len (wf_list_map v (raw_data_item_fmap f)))
+  | Tagged tag v -> f (Tagged tag (raw_data_item_fmap f v))
+  | _ -> f x
+
+and raw_data_item_pair_fmap
+  (f: raw_data_item -> raw_data_item)
+  (x: (raw_data_item & raw_data_item))
+: Tot (raw_data_item & raw_data_item)
+= raw_data_item_fmap f (fst x), raw_data_item_fmap f (snd x)
+
+let raw_data_item_fmap_eq
+  f x
+= match x with
+  | Map len v ->
+    assert_norm (raw_data_item_fmap f (Map len v) == f (Map len (wf_list_map v (raw_data_item_pair_fmap f))));
+    wf_list_map_eq (raw_data_item_pair_fmap f) v;
+    list_map_ext (raw_data_item_pair_fmap f) (apply_on_pair (raw_data_item_fmap f)) v (fun _ -> ());
+    ()
+  | Array len v ->
+    assert_norm (raw_data_item_fmap f (Array len v) == f (Array len (wf_list_map v (raw_data_item_fmap f))));
+    wf_list_map_eq (raw_data_item_fmap f) v
+  | _ -> ()

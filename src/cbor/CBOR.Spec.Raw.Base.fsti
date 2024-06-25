@@ -215,3 +215,19 @@ val raw_data_item_size_eq
   | Tagged _ v -> 2 + raw_data_item_size v
   | _ -> 1
   end)
+
+val raw_data_item_fmap
+  (f: raw_data_item -> raw_data_item)
+  (x: raw_data_item)
+: Tot raw_data_item
+
+val raw_data_item_fmap_eq
+  (f: raw_data_item -> raw_data_item)
+  (x: raw_data_item)
+: Lemma
+  (raw_data_item_fmap f x == begin match x with
+  | Map len v -> f (Map len (List.Tot.map (apply_on_pair (raw_data_item_fmap f)) v))
+  | Array len v -> f (Array len (List.Tot.map (raw_data_item_fmap f) v))
+  | Tagged tag v -> f (Tagged tag (raw_data_item_fmap f v))
+  | _ -> f x
+  end)
