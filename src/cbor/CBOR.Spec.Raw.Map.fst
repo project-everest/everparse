@@ -127,6 +127,20 @@ let rec list_ghost_assoc
     then Some v'
     else list_ghost_assoc k m'
 
+let rec list_ghost_assoc_eq
+  (#key: eqtype)
+  (#value: Type)
+  (k: key)
+  (m: list (key & value))
+: Lemma
+  (list_ghost_assoc k m == List.Tot.assoc k m)
+= match m with
+  | [] -> ()
+  | (k', _) :: m' ->
+    if (k = k')
+    then ()
+    else list_ghost_assoc_eq k m'
+
 let rec list_ghost_assoc_append
     (#tk #tv: Type)
     (k: tk)
