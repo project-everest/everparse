@@ -61,6 +61,19 @@ val raw_equiv_eq (l1 l2: raw_data_item) : Lemma
 val raw_equiv_sym (l1 l2: raw_data_item) : Lemma
   (ensures (raw_equiv l1 l2 == raw_equiv l2 l1))
 
+let rec raw_equiv_refl (x: raw_data_item) : Lemma
+  (raw_equiv x x == true)
+= raw_equiv_eq x x;
+  match x with
+  | Tagged tag v -> raw_equiv_refl v
+  | Array len v ->
+    list_for_all2_refl raw_equiv v (fun x -> raw_equiv_refl x)
+  | Map len v ->
+    list_for_all2_refl (holds_on_pair2 raw_equiv) v
+      (fun x -> raw_equiv_refl (fst x); raw_equiv_refl (snd x));
+    list_for_all2_exists (holds_on_pair2 raw_equiv) v v
+  | _ -> ()
+
 noextract
 let get_major_type
   (d: raw_data_item)

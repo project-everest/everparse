@@ -28,6 +28,17 @@ let holds_on_pair2
   let (y1, y2) = y in
   pred x1 y1 && pred x2 y2
 
+let rec list_existsb_append
+  (#t: Type)
+  (p: t -> bool)
+  (l1: list t)
+  (l2: list t)
+: Lemma
+  (List.Tot.existsb p (l1 `List.Tot.append` l2) == (List.Tot.existsb p l1 || List.Tot.existsb p l2))
+= match l1 with
+  | [] -> ()
+  | a :: q -> if p a then () else list_existsb_append p q l2
+
 let list_existsb2
   (#t1 #t2: Type)
   (p: t1 -> t2 -> bool)
@@ -123,6 +134,18 @@ let list_for_all_exists_ext
   (ensures (list_for_all_exists p' l1 l2 == list_for_all_exists p l1 l2))
 = Classical.move_requires (list_for_all_exists_implies p p' l1 l2) (fun x1 x2 -> prf x1 x2);
   Classical.move_requires (list_for_all_exists_implies p' p l1 l2) (fun x1 x2 -> prf x1 x2)
+
+let list_for_all_exists_append_r_l
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> bool)
+  (l1: list t1)
+  (l2l l2r: list t2)
+: Lemma
+  (requires (list_for_all_exists p l1 l2r == true))
+  (ensures (list_for_all_exists p l1 (l2l `List.Tot.append` l2r) == true))
+= list_for_all_implies (list_existsb2 p l2r) (list_existsb2 p (l2l `List.Tot.append` l2r)) l1 (fun x1 ->
+    list_existsb_append (p x1) l2l l2r
+  )
 
 let andp2 (#t #t': Type) (p1 p2: t -> t' -> bool) (x: t) (x': t') : bool =
   p1 x x' && p2 x x'
@@ -362,6 +385,19 @@ let list_for_all2_sym
 = Classical.move_requires (list_for_all2_sym' p l1 l2) (fun x1 x2 -> prf x1 x2);
   Classical.move_requires (list_for_all2_sym' p l2 l1) (fun x2 x1 -> prf x1 x2)
 
+let rec list_for_all2_refl
+  (#t: Type)
+  (p: t -> t -> bool)
+  (l: list t)
+  (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
+    (p x x == true)
+  )
+: Lemma
+  (ensures (list_for_all2 p l l == true))
+= match l with
+  | [] -> ()
+  | a :: q -> prf a; list_for_all2_refl p q prf
+
 noextract
 let holds_on_pair
   (#t: Type)
@@ -582,6 +618,21 @@ let rec list_for_all2_prod_or_weak
   ))
 = match l1, l2 with
   | _ :: q1, _ :: q2 -> list_for_all2_prod_or_weak p1 p2 q1 q2
+  | _ -> ()
+
+let rec list_for_all2_exists
+  (#t1 #t2: Type)
+  (p: t1 -> t2 -> bool)
+  (l1: list t1)
+  (l2: list t2)
+: Lemma
+  (requires (list_for_all2 p l1 l2 == true))
+  (ensures (list_for_all_exists p l1 l2 == true))
+= match l1, l2 with
+  | a1 :: q1, a2 :: q2 ->
+    list_existsb_intro (p a1) l2 a2;
+    list_for_all2_exists p q1 q2;
+    list_for_all_exists_append_r_l p q1 [a2] q2
   | _ -> ()
 
 let rec list_sum (#t: Type) (f: t -> nat) (l: list t) : Tot nat =
