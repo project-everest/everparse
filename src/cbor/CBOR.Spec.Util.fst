@@ -398,6 +398,29 @@ let rec list_for_all2_refl
   | [] -> ()
   | a :: q -> prf a; list_for_all2_refl p q prf
 
+let rec list_for_all2_trans
+  (#t: Type)
+  (p: t -> t -> bool)
+  (l1 l2 l3: list t)
+  (prf: (x1: t) -> (x2: t) -> (x3: t {
+    List.Tot.memP x1 l1 /\ x1 << l1 /\
+    List.Tot.memP x2 l2 /\ x2 << l2 /\
+    List.Tot.memP x3 l3 /\ x3 << l3
+    }) -> Lemma
+    (requires (p x1 x2 == true /\ p x2 x3 == true))
+    (ensures (p x1 x3 == true))
+  )
+: Lemma
+  (requires (list_for_all2 p l1 l2 == true /\
+    list_for_all2 p l2 l3 == true
+  ))
+  (ensures (list_for_all2 p l1 l3 == true))
+= match l1, l2, l3 with
+  | a1 :: q1, a2 :: q2, a3 :: q3 ->
+    prf a1 a2 a3;
+    list_for_all2_trans p q1 q2 q3 prf
+  | _ -> ()
+
 noextract
 let holds_on_pair
   (#t: Type)
@@ -442,6 +465,52 @@ let rec list_for_all_andp
 = match l with
   | [] -> ()
   | _ :: q -> list_for_all_andp p1 p2 q
+
+let rec list_for_all_intro
+  (#t: Type)
+  (p: t -> bool)
+  (l: list t)
+  (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
+    (p x == true)
+  )
+: Lemma
+  (List.Tot.for_all p l == true)
+= match l with
+  | [] -> ()
+  | a :: q -> prf a; list_for_all_intro p q prf
+
+let list_for_all_exists_trans
+  (#t: Type)
+  (p: t -> t -> bool)
+  (l1 l2 l3: list t)
+  (prf:
+    (x1: t) -> (x2: t) -> (x3: t {
+      List.Tot.memP x1 l1 /\ x1 << l1 /\
+      List.Tot.memP x2 l2 /\ x2 << l2 /\
+      List.Tot.memP x3 l3 /\ x3 << l3
+    }) ->
+    Lemma
+    (requires (p x1 x2 == true /\
+      p x2 x3 == true
+    ))
+    (ensures (p x1 x3 == true))
+  )
+: Lemma
+  (requires (list_for_all_exists p l1 l2 == true /\
+    list_for_all_exists p l2 l3 == true
+  ))
+  (ensures (list_for_all_exists p l1 l3 == true))
+= list_for_all_intro (list_existsb2 p l3) l1 (fun x1 ->
+    List.Tot.memP_precedes x1 l1;
+    List.Tot.for_all_mem (list_existsb2 p l2) l1;
+    let x2 = list_existsb_elim (p x1) l2 in
+    List.Tot.memP_precedes x2 l2;
+    List.Tot.for_all_mem (list_existsb2 p l3) l2;
+    let x3 = list_existsb_elim (p x2) l3 in
+    List.Tot.memP_precedes x3 l3;
+    prf x1 x2 x3;
+    list_existsb_intro (p x1) l3 x3
+  )
 
 let rec list_no_setoid_repeats
   (#t: Type)
@@ -639,6 +708,14 @@ let rec list_sum (#t: Type) (f: t -> nat) (l: list t) : Tot nat =
   match l with
   | [] -> 0
   | a :: q -> f a + list_sum f q
+
+let rec list_sum_memP (#t: Type) (f: t -> nat) (l: list t) (x: t) : Lemma
+  (requires (List.Tot.memP x l))
+  (ensures (f x <= list_sum f l))
+= let a :: q = l in
+  if FStar.StrongExcludedMiddle.strong_excluded_middle (x == a)
+  then ()
+  else list_sum_memP f q x
 
 let rec list_sum_append (#t: Type) (f: t -> nat) (l1 l2: list t) : Lemma
   (ensures (list_sum f (l1 `List.Tot.append` l2) == list_sum f l1 + list_sum f l2))
