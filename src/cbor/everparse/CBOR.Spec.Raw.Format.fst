@@ -521,18 +521,18 @@ let synth_inverse_list_of_pair_list
   [SMTPat (list_of_pair_list t nb_pairs)]
 = Classical.forall_intro (list_of_pair_list_of_list #t nb_pairs)
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 #restart-solver
 
 let rec parse_pair_list_as_list
   (#t: Type)
   (#k: parser_kind)
-  (p: parser k t)
+  (p: tot_parser k t)
   (nb_pairs: nat)
   (input: bytes)
 : Lemma
   (ensures (
-    match parse (parse_nlist nb_pairs (p `nondep_then` p)) input, parse (parse_nlist (nb_pairs + nb_pairs) p) input with
+    match parse (tot_parse_nlist nb_pairs (p `tot_nondep_then` p)) input, parse (tot_parse_nlist (nb_pairs + nb_pairs) p) input with
     | None, None -> True
     | Some (l, consumed), Some (l', consumed') ->
       consumed == consumed' /\
@@ -540,28 +540,28 @@ let rec parse_pair_list_as_list
     | _ -> False
   ))
   (decreases nb_pairs)
-= parse_nlist_eq nb_pairs (p `nondep_then` p) input;
-  parse_nlist_eq (nb_pairs + nb_pairs) p input;
+= tot_parse_nlist_eq nb_pairs (p `tot_nondep_then` p) input;
+  tot_parse_nlist_eq (nb_pairs + nb_pairs) p input;
   if nb_pairs = 0
   then ()
   else begin
-    nondep_then_eq p p input;
+    nondep_then_eq #k p #k p input;
     assert (nb_pairs + nb_pairs - 1 - 1 == (nb_pairs - 1) + (nb_pairs - 1));
     match parse p input with
     | None -> ()
     | Some (x1, consumed1) ->
       let input2 = Seq.slice input consumed1 (Seq.length input) in
-      parse_nlist_eq (nb_pairs + nb_pairs - 1) p input2;
+      tot_parse_nlist_eq (nb_pairs + nb_pairs - 1) p input2;
       match parse p input2 with
       | None -> ()
       | Some (x2, consumed2) ->
         let input3 = Seq.slice input2 consumed2 (Seq.length input2) in
         parse_pair_list_as_list p (nb_pairs - 1) input3;
         // FIXME: WHY WHY WHY do I need all of these?
-        assert (Some? (parse (parse_nlist nb_pairs (p `nondep_then` p)) input) == Some? (parse (parse_nlist (nb_pairs - 1) (p `nondep_then` p)) input3));
-        assert (Some? (parse (parse_nlist (nb_pairs + nb_pairs) p) input) == Some? (parse (parse_nlist (nb_pairs + nb_pairs - 1 - 1) p) input3));
-        assert (Some? (parse (parse_nlist (nb_pairs + nb_pairs) p) input) == Some? (parse (parse_nlist ((nb_pairs - 1) + (nb_pairs - 1)) p) input3));
-        assert (Some? (parse (parse_nlist (nb_pairs - 1) (p `nondep_then` p)) input3) == Some? (parse (parse_nlist ((nb_pairs - 1) + (nb_pairs - 1)) p) input3))
+        assert (Some? (parse (tot_parse_nlist nb_pairs (p `tot_nondep_then` p)) input) == Some? (parse (tot_parse_nlist (nb_pairs - 1) (p `tot_nondep_then` p)) input3));
+        assert (Some? (parse (tot_parse_nlist (nb_pairs + nb_pairs) p) input) == Some? (parse (tot_parse_nlist (nb_pairs + nb_pairs - 1 - 1) p) input3));
+        assert (Some? (parse (tot_parse_nlist (nb_pairs + nb_pairs) p) input) == Some? (parse (tot_parse_nlist ((nb_pairs - 1) + (nb_pairs - 1)) p) input3));
+        assert (Some? (parse (tot_parse_nlist (nb_pairs - 1) (p `tot_nondep_then` p)) input3) == Some? (parse (tot_parse_nlist ((nb_pairs - 1) + (nb_pairs - 1)) p) input3))
   end
 
 #pop-options
@@ -656,8 +656,7 @@ let tot_parse_nlist_parse_nlist'
   (ensures (tot_parse_nlist n p b == parse_nlist n #k p b))
 = tot_parse_nlist_parse_nlist n p b
 
-// #push-options "--z3rlimit 128 --ifuel 8"
-#push-options "--admit_smt_queries true"
+#push-options "--z3rlimit 128 --ifuel 8"
 #restart-solver
 
 let parse_raw_data_item_eq
