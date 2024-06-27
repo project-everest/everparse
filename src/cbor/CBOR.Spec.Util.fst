@@ -734,6 +734,18 @@ let rec list_sum_ext (#t: Type) (f1 f2: t -> nat) (l: list t) (prf: (x: t { List
   | [] -> ()
   | a :: q -> prf a; list_sum_ext f1 f2 q prf
 
+let rec list_sum_map (#t1: Type) (f1: t1 -> nat) (l1: list t1) (#t2: Type) (f2: t2 -> nat) (phi: t1 -> t2)
+  (prf: (
+    (x1: t1 { List.Tot.memP x1 l1 /\ x1 << l1 }) -> Lemma
+    (f2 (phi x1) == f1 x1)
+  ))
+: Lemma
+  (ensures (list_sum f2 (List.Tot.map phi l1) == list_sum f1 l1))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | a :: q -> prf a; list_sum_map f1 q f2 phi prf
+
 let pair_sum (#t1: Type) (#t2: Type) (f1: t1 -> nat) (f2: t2 -> nat) (x: (t1 & t2)) : Tot nat =
   f1 (fst x) + f2 (snd x)
 

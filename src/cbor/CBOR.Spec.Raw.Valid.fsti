@@ -16,16 +16,24 @@ let map_entry_order
 : Tot bool
 = key_order (fst m1) (fst m2)
 
-noextract
-let raw_data_item_sorted_elem (order: (raw_data_item -> raw_data_item -> bool)) (x: raw_data_item) : Tot bool
-= match x with
-  | Map _ l ->
-      FStar.List.Tot.sorted (map_entry_order order _) l
+let valid_raw_data_item_map
+  (v: list (raw_data_item & raw_data_item))
+: Tot bool
+= list_no_setoid_repeats (map_entry_order raw_equiv _) v
+
+let valid_raw_data_item_elem
+  (l: raw_data_item)
+: Tot bool
+= match l with
+  | Map _ v -> valid_raw_data_item_map v
   | _ -> true
 
-noextract
-let raw_data_item_sorted (order: (raw_data_item -> raw_data_item -> bool)) : Tot (raw_data_item -> bool)
-= holds_on_raw_data_item (raw_data_item_sorted_elem order)
+let valid_raw_data_item
+  (l: raw_data_item)
+: Tot bool
+= holds_on_raw_data_item valid_raw_data_item_elem l
+
+(* Shortest-size integers *)
 
 let raw_uint64_optimal (x: raw_uint64) : Tot bool =
   ((U64.v x.value <= U8.v max_simple_value_additional_info) = (x.size = 0)) &&
@@ -65,22 +73,84 @@ let raw_data_item_ints_optimal_elem (x: raw_data_item) : Tot bool =
 let raw_data_item_ints_optimal : raw_data_item -> Tot bool =
   holds_on_raw_data_item raw_data_item_ints_optimal_elem
 
-let valid_raw_data_item_map
-  (v: list (raw_data_item & raw_data_item))
-: Tot bool
-= list_no_setoid_repeats (map_entry_order raw_equiv _) v
+let raw_data_item_uint64_optimize_elem (x: raw_data_item) : Tot raw_data_item =
+  match x with
+  | Int64 ty v -> Int64 ty (raw_uint64_optimize v)
+  | String ty len v -> String ty (raw_uint64_optimize len) v
+  | Array len v -> Array (raw_uint64_optimize len) v
+  | Map len v -> Map (raw_uint64_optimize len) v
+  | Tagged tag v -> Tagged (raw_uint64_optimize tag) v
+  | _ -> x
 
-let valid_raw_data_item_elem
-  (l: raw_data_item)
-: Tot bool
-= match l with
-  | Map _ v -> valid_raw_data_item_map v
+let raw_data_item_uint64_optimize_elem_correct (x: raw_data_item) : Lemma
+  (raw_data_item_ints_optimal_elem (raw_data_item_uint64_optimize_elem x) == true)
+= ()
+
+let raw_data_item_uint64_optimize_elem_equiv (x: raw_data_item) : Lemma
+  (raw_equiv x (raw_data_item_uint64_optimize_elem x) == true)
+= raw_equiv_eq x (raw_data_item_uint64_optimize_elem x);
+  match x with
+  | Array _ v -> list_for_all2_refl raw_equiv v (fun x -> raw_equiv_refl x)
+  | Map _ v ->
+    list_for_all2_refl (holds_on_pair2 raw_equiv) v (fun x -> raw_equiv_refl (fst x); raw_equiv_refl (snd x));
+    list_for_all2_exists (holds_on_pair2 raw_equiv) v v
+  | Tagged _ v -> raw_equiv_refl v
+  | _ -> ()
+
+let raw_data_item_uint64_optimize_elem_valid (x: raw_data_item) : Lemma
+  (requires (valid_raw_data_item x == true))
+  (ensures (valid_raw_data_item (raw_data_item_uint64_optimize_elem x) == true))
+= holds_on_raw_data_item_eq valid_raw_data_item_elem x;
+  holds_on_raw_data_item_eq valid_raw_data_item_elem (raw_data_item_uint64_optimize_elem x)
+
+let raw_data_item_uint64_optimize_elem_size (x: raw_data_item) : Lemma
+  (raw_data_item_size (raw_data_item_uint64_optimize_elem x) == raw_data_item_size x)
+= raw_data_item_size_eq x;
+  raw_data_item_size_eq (raw_data_item_uint64_optimize_elem x)
+
+let raw_data_item_uint64_optimize : raw_data_item -> raw_data_item =
+  raw_data_item_fmap raw_data_item_uint64_optimize_elem
+
+let rec raw_data_item_uint64_optimize_size (x: raw_data_item) : Lemma
+  (ensures (raw_data_item_size (raw_data_item_uint64_optimize x) == raw_data_item_size x))
+  (decreases x)
+= raw_data_item_size_eq x;
+  raw_data_item_size_eq (raw_data_item_uint64_optimize x);
+  raw_data_item_fmap_eq raw_data_item_uint64_optimize_elem x;
+  assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
+  match x with
+  | Map len v ->
+    assert (raw_data_item_uint64_optimize (Map len v) == raw_data_item_fmap raw_data_item_uint64_optimize_elem (Map len v));
+    assert (raw_data_item_uint64_optimize (Map len v) == raw_data_item_uint64_optimize_elem (Map len (List.Tot.map (apply_on_pair raw_data_item_uint64_optimize) v)));
+    list_sum_map (pair_sum raw_data_item_size raw_data_item_size) v (pair_sum raw_data_item_size raw_data_item_size) (apply_on_pair raw_data_item_uint64_optimize) (fun x ->
+      raw_data_item_uint64_optimize_size (fst x);
+      raw_data_item_uint64_optimize_size (snd x)
+    );
+    raw_data_item_uint64_optimize_elem_size (Map len (List.Tot.map (apply_on_pair raw_data_item_uint64_optimize) v))
+  | Array len v ->
+    list_sum_map raw_data_item_size v raw_data_item_size raw_data_item_uint64_optimize (fun x ->
+      raw_data_item_uint64_optimize_size x
+    );
+    raw_data_item_uint64_optimize_elem_size (Array len (List.Tot.map raw_data_item_uint64_optimize v))
+  | Tagged len v ->
+    raw_data_item_uint64_optimize_size v;
+    raw_data_item_uint64_optimize_elem_size (Tagged len (raw_data_item_uint64_optimize v))
+  | _ -> raw_data_item_uint64_optimize_elem_size x
+
+(* Sorting map keys *)
+
+noextract
+let raw_data_item_sorted_elem (order: (raw_data_item -> raw_data_item -> bool)) (x: raw_data_item) : Tot bool
+= match x with
+  | Map _ l ->
+      FStar.List.Tot.sorted (map_entry_order order _) l
   | _ -> true
 
-let valid_raw_data_item
-  (l: raw_data_item)
-: Tot bool
-= holds_on_raw_data_item valid_raw_data_item_elem l
+noextract
+let raw_data_item_sorted (order: (raw_data_item -> raw_data_item -> bool)) : Tot (raw_data_item -> bool)
+= holds_on_raw_data_item (raw_data_item_sorted_elem order)
+
+(* Correctness of the (old, new or other) deterministic map key orders wrt. validity *)
 
 val raw_equiv_sorted_optimal
   (order: raw_data_item -> raw_data_item -> bool {
