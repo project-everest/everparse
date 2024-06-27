@@ -157,6 +157,59 @@ let raw_data_item_size_eq
     list_sum_ext raw_data_item_pair_size (pair_sum raw_data_item_size raw_data_item_size) v (fun _ -> ())
   | _ -> ()
 
+#push-options "--z3rlimit 16"
+
+#restart-solver
+let rec raw_equiv_trans (x1 x2 x3: raw_data_item) : Lemma
+  (requires (raw_equiv x1 x2 == true /\
+    raw_equiv x2 x3 == true
+  ))
+  (ensures (raw_equiv x1 x3 == true))
+  (decreases (raw_data_item_size x1 + raw_data_item_size x2 + raw_data_item_size x3))
+= raw_data_item_size_eq x1;
+  raw_data_item_size_eq x2;
+  raw_data_item_size_eq x3;
+  raw_equiv_eq x1 x2;
+  raw_equiv_eq x2 x3;
+  raw_equiv_eq x1 x3;
+  match x1, x2, x3 with
+  | Array _ v1, Array _ v2, Array _ v3 ->
+    list_for_all2_trans raw_equiv v1 v2 v3 (fun x1 x2 x3 ->
+      list_sum_memP raw_data_item_size v1 x1;
+      list_sum_memP raw_data_item_size v2 x2;
+      list_sum_memP raw_data_item_size v3 x3;
+      raw_equiv_trans x1 x2 x3
+    )
+  | Map _ v1, Map _ v2, Map _ v3 ->
+    let prf (l1 l2 l3: list (raw_data_item & raw_data_item)) : Lemma
+      (requires (
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) l1 + 
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) l2 + 
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) l3 ==
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) v1 + 
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) v2 + 
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) v3 /\
+        list_for_all_exists (holds_on_pair2 raw_equiv) l1 l2 == true /\
+        list_for_all_exists (holds_on_pair2 raw_equiv) l2 l3 == true
+      ))
+      (ensures (
+        list_for_all_exists (holds_on_pair2 raw_equiv) l1 l3 == true
+      ))
+    = list_for_all_exists_trans (holds_on_pair2 raw_equiv) l1 l2 l3 (fun x1 x2 x3 ->
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) l1 x1;
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) l2 x2;
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) l3 x3;
+        raw_equiv_trans (fst x1) (fst x2) (fst x3);
+        raw_equiv_trans (snd x1) (snd x2) (snd x3)
+      )
+    in
+    prf v1 v2 v3;
+    prf v3 v2 v1
+  | Tagged _ v1, Tagged _ v2, Tagged _ v3 -> raw_equiv_trans v1 v2 v3
+  | _ -> ()
+
+#pop-options
+
 let rec raw_data_item_fmap
   (f: raw_data_item -> raw_data_item)
   (x: raw_data_item)
