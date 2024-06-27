@@ -250,3 +250,49 @@ val raw_data_item_fmap_eq
   | Tagged tag v -> f (Tagged tag (raw_data_item_fmap f v))
   | _ -> f x
   end)
+
+let rec raw_equiv_fmap
+  (f: raw_data_item -> raw_data_item)
+  (prf: (x: raw_data_item) -> Lemma
+    (raw_equiv x (f x) == true)
+  )
+  (x: raw_data_item)
+: Lemma
+  (ensures (raw_equiv x (raw_data_item_fmap f x) == true))
+  (decreases x)
+= raw_data_item_fmap_eq f x;
+  let x' = raw_data_item_fmap f x in
+  raw_equiv_eq x x';
+  match x with
+  | Map len v ->
+    list_for_all2_map (apply_on_pair (raw_data_item_fmap f)) v (holds_on_pair2 raw_equiv) (fun x ->
+      raw_equiv_fmap f prf (fst x);
+      raw_equiv_fmap f prf (snd x)
+    );
+    let v_ = List.Tot.map (apply_on_pair (raw_data_item_fmap f)) v in
+    list_for_all2_exists (holds_on_pair2 raw_equiv) v v_;
+    list_for_all2_swap (holds_on_pair2 raw_equiv) v v_;
+    list_for_all2_implies (swap (holds_on_pair2 raw_equiv)) (holds_on_pair2 raw_equiv) v_ v (fun x x_ ->
+      raw_equiv_sym (fst x) (fst x_);
+      raw_equiv_sym (snd x) (snd x_)
+    );
+    list_for_all2_exists (holds_on_pair2 raw_equiv) v_ v;
+    let x_ = Map len v_ in
+    raw_equiv_eq x x_;
+    prf x_;
+    raw_equiv_trans x x_ x'
+  | Array len v ->
+    list_for_all2_map (raw_data_item_fmap f) v raw_equiv (fun x ->
+      raw_equiv_fmap f prf x
+    );
+    let x_ = Array len (List.Tot.map (raw_data_item_fmap f) v) in
+    raw_equiv_eq x x_;
+    prf x_;
+    raw_equiv_trans x x_ x'
+  | Tagged len v ->
+    raw_equiv_fmap f prf v;
+    let x_ = Tagged len (raw_data_item_fmap f v) in
+    raw_equiv_eq x x_;
+    prf x_;
+    raw_equiv_trans x x_ x'
+  | _ -> prf x

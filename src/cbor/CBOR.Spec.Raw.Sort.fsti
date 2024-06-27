@@ -111,27 +111,8 @@ let rec cbor_raw_sort_ints_optimal
     cbor_raw_sort_elem_ints_optimal x'
   | _ -> ()
 
-(*
-let rec cbor_raw_sort_equiv
+let cbor_raw_sort_equiv
   (x: raw_data_item)
 : Lemma
   (ensures (raw_equiv x (cbor_raw_sort x) == true))
-= raw_equiv_eq x (cbor_raw_sort x);
-  assert_norm (cbor_raw_sort == raw_data_item_fmap cbor_raw_sort_elem);
-  raw_data_item_fmap_eq cbor_raw_sort_elem x;
-  match x with
-  | Tagged tag v ->
-    cbor_raw_sort_equiv v
-  | Array len v ->
-    list_for_all2_map cbor_raw_sort v raw_data_item_ints_optimal raw_data_item_ints_optimal (fun x ->
-      cbor_raw_sort_ints_optimal x
-    )
-  | Map len v ->
-    list_for_all_map (apply_on_pair cbor_raw_sort) v (holds_on_pair raw_data_item_ints_optimal) (holds_on_pair raw_data_item_ints_optimal) (fun x ->
-      cbor_raw_sort_ints_optimal (fst x);
-      cbor_raw_sort_ints_optimal (snd x)
-    );
-    let x' = Map len (List.Tot.map (apply_on_pair cbor_raw_sort) v) in
-    holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x';
-    cbor_raw_sort_elem_ints_optimal x'
-  | _ -> ()
+= raw_equiv_fmap cbor_raw_sort_elem cbor_raw_sort_elem_equiv x
