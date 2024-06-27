@@ -349,6 +349,9 @@ let rec list_sorted_append_chunk_elim
     end
   | _ :: l1' -> list_sorted_append_chunk_elim order l1' l2 l3
 
+#push-options "--z3rlimit 16"
+
+#restart-solver
 let rec map_sort_merge_correct
   (#t1 #t2: Type)
   (key_order: t1 -> t1 -> bool)
@@ -368,6 +371,7 @@ let rec map_sort_merge_correct
   ))
   (ensures (
     let (sorted, res) = map_sort_merge key_compare accu l1 l2 in
+    List.Tot.length res == List.Tot.length accu + List.Tot.length l1 + List.Tot.length l2 /\
     (forall x . List.Tot.memP x res <==> List.Tot.memP x (accu `List.Tot.append` (l1 `List.Tot.append` l2))) /\
     (List.Tot.no_repeats_p (List.Tot.map fst res) <==> List.Tot.no_repeats_p (List.Tot.map fst (accu `List.Tot.append` (l1 `List.Tot.append` l2)))) /\
     (if sorted
@@ -377,8 +381,8 @@ let rec map_sort_merge_correct
   ))
   (decreases (List.Tot.length l1 + List.Tot.length l2))
 = match l1, l2 with
-  | [], _ -> ()
-  | _, [] -> List.Tot.append_l_nil l1
+  | [], _ -> List.Tot.append_length accu l2
+  | _, [] -> List.Tot.append_l_nil l1; List.Tot.append_length accu l1
   | (k1, v1) :: l1', (k2, v2) :: l2' ->
     List.Tot.map_append fst l1 l2;
     List.Tot.map_append fst accu (l1 `List.Tot.append` l2);
@@ -389,6 +393,7 @@ let rec map_sort_merge_correct
     else if c < 0
     then begin
       let accu' = accu `List.Tot.append` [(k1, v1)] in
+      List.Tot.append_length accu [(k1, v1)];
       List.Tot.append_assoc accu l1 l2;
       List.Tot.append_assoc accu [(k1, v1)] l1';
       List.Tot.append_assoc accu' l1' l2;
@@ -400,6 +405,7 @@ let rec map_sort_merge_correct
     end
     else begin
       let accu' = accu `List.Tot.append` [(k2, v2)] in
+      List.Tot.append_length accu [(k2, v2)];
       List.Tot.append_memP_forall l1 l2;
       List.Tot.append_memP_forall accu (l1 `List.Tot.append` l2);
       List.Tot.append_memP_forall accu [(k2, v2)];
@@ -417,6 +423,8 @@ let rec map_sort_merge_correct
       List.Tot.append_assoc accu [(k2, v2)] l1;
       map_sort_merge_correct key_order key_compare accu' l1 l2'
     end
+
+#pop-options
 
 let rec list_splitAt_length
   (#t: Type)
@@ -476,7 +484,7 @@ let list_memP_map_forall
 = Classical.forall_intro (fun y -> List.Tot.memP_map_elim f y l);
   Classical.forall_intro (fun x -> List.Tot.memP_map_intro f x l)
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
 #restart-solver
 let rec map_sort_correct
@@ -493,6 +501,7 @@ let rec map_sort_correct
     (forall x y . (key_compare x y < 0 <==> key_compare y x > 0))
   ))
   (ensures (let (res, l') = map_sort key_compare l in
+    List.Tot.length l' == List.Tot.length l /\
     (forall x . List.Tot.memP x l' <==> List.Tot.memP x l) /\
     (List.Tot.no_repeats_p (List.Tot.map fst l') <==> List.Tot.no_repeats_p (List.Tot.map fst l)) /\
     (res == true <==> List.Tot.no_repeats_p (List.Tot.map fst l)) /\
@@ -507,6 +516,8 @@ let rec map_sort_correct
   then ()
   else begin
     let (l1, l2) = List.Tot.splitAt (len / 2) l in
+    list_splitAt_append (len / 2) l;
+    List.Tot.append_length l1 l2;
     List.Tot.append_memP_forall l1 l2;
     List.Tot.map_append fst l1 l2;
     List.Tot.no_repeats_p_append (List.Tot.map fst l1) (List.Tot.map fst l2);
@@ -521,7 +532,7 @@ let rec map_sort_correct
     List.Tot.map_append fst l1' l2;
     List.Tot.append_memP_forall l1' l2;
     if not res
-    then ()
+    then List.Tot.append_length l1' l2
     else begin
       let (res, l2') = map_sort key_compare l2 in
       map_sort_correct key_order key_compare l2;
@@ -531,7 +542,7 @@ let rec map_sort_correct
       List.Tot.map_append fst l1' l2';
       List.Tot.append_memP_forall l1' l2';
       if not res
-      then ()
+      then List.Tot.append_length l1' l2'
       else begin
         let (res, l') = map_sort_merge key_compare [] l1' l2' in
         assert (map_sort key_compare l == (res, l'));
