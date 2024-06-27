@@ -137,6 +137,28 @@ let rec raw_data_item_uint64_optimize_size (x: raw_data_item) : Lemma
     raw_data_item_uint64_optimize_elem_size (Tagged len (raw_data_item_uint64_optimize v))
   | _ -> raw_data_item_uint64_optimize_elem_size x
 
+let rec raw_data_item_uint64_optimize_correct (x: raw_data_item) : Lemma
+  (ensures (raw_data_item_ints_optimal (raw_data_item_uint64_optimize x) == true))
+  (decreases x)
+= holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x;
+  raw_data_item_fmap_eq raw_data_item_uint64_optimize_elem x;
+  assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
+  assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
+  match x with
+  | Map len v ->
+    list_for_all_truep v;
+    list_for_all_map (apply_on_pair raw_data_item_uint64_optimize) v truep (holds_on_pair raw_data_item_ints_optimal) (fun x ->
+      raw_data_item_uint64_optimize_correct (fst x);
+      raw_data_item_uint64_optimize_correct (snd x)
+    )
+  | Array len v ->
+    list_for_all_truep v;
+    list_for_all_map (raw_data_item_uint64_optimize) v truep raw_data_item_ints_optimal (fun x ->
+      raw_data_item_uint64_optimize_correct x
+    )
+  | Tagged len v -> raw_data_item_uint64_optimize_correct v
+  | _ -> ()
+
 (* Sorting map keys *)
 
 noextract

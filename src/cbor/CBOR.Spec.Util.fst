@@ -512,6 +512,26 @@ let list_for_all_exists_trans
     list_existsb_intro (p x1) l3 x3
   )
 
+let rec list_for_all_map
+  (#t1 #t2: Type) (f: t1 -> t2) (l: list t1) (p1: t1 -> bool) (p2: t2 -> bool) (prf: (x: t1 { List.Tot.memP x l /\ x << l }) -> Lemma
+    (requires (p1 x == true))
+    (ensures (p2 (f x) == true))
+  ) : Lemma
+  (requires (List.Tot.for_all p1 l == true))
+  (ensures (List.Tot.for_all p2 (List.Tot.map f l) == true))
+= match l with
+  | [] -> ()
+  | a :: q -> prf a; list_for_all_map f q p1 p2 prf
+
+let truep (#t: Type) (x: t) : Tot bool = true
+
+let list_for_all_truep
+  (#t: Type)
+  (l: list t)
+: Lemma
+  (List.Tot.for_all truep l)
+= list_for_all_intro truep l (fun _ -> ())
+
 let rec list_no_setoid_repeats
   (#t: Type)
   (equiv: t -> t -> bool)
