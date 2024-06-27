@@ -93,18 +93,25 @@ val holds_on_raw_data_item
 : Tot bool
 
 noextract
-let holds_on_raw_data_item'
+let pre_holds_on_raw_data_item
   (p: (raw_data_item -> bool))
   (x: raw_data_item)
 : Tot bool
-= p x &&
-  begin match x with
+= begin match x with
   | Array _ l -> List.Tot.for_all (holds_on_raw_data_item p) l
   | Map _ l ->
     List.Tot.for_all (holds_on_pair (holds_on_raw_data_item p)) l
   | Tagged _ v -> holds_on_raw_data_item p v
   | _ -> true
   end
+
+noextract
+let holds_on_raw_data_item'
+  (p: (raw_data_item -> bool))
+  (x: raw_data_item)
+: Tot bool
+= p x &&
+  pre_holds_on_raw_data_item p x
 
 val holds_on_raw_data_item_eq
   (p: (raw_data_item -> bool))
@@ -170,6 +177,29 @@ let rec holds_on_raw_data_item_implies
   holds_on_raw_data_item_eq p2 x;
   prf x;
   match x with
+  | Array _ v ->
+    list_for_all_implies (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) v (fun x -> holds_on_raw_data_item_implies p1 p2 prf x)
+  | Tagged _ v -> holds_on_raw_data_item_implies p1 p2 prf v
+  | Map _ v ->
+    list_for_all_implies (holds_on_pair (holds_on_raw_data_item p1)) (holds_on_pair (holds_on_raw_data_item p2)) v (fun x ->
+      holds_on_raw_data_item_implies p1 p2 prf (fst x);
+      holds_on_raw_data_item_implies p1 p2 prf (snd x)
+    )
+  | _ -> ()
+
+// FIXME: avoid this code duplication
+let pre_holds_on_raw_data_item_implies
+  (p1 p2: (raw_data_item -> bool))
+  (prf: ((x': raw_data_item) -> Lemma
+    (requires (holds_on_raw_data_item p1 x' == true))
+    (ensures (p2 x' == true))
+  ))
+  (x: raw_data_item)
+: Lemma
+  (requires (pre_holds_on_raw_data_item p1 x))
+  (ensures (pre_holds_on_raw_data_item p2 x == true))
+  (decreases x)
+= match x with
   | Array _ v ->
     list_for_all_implies (holds_on_raw_data_item p1) (holds_on_raw_data_item p2) v (fun x -> holds_on_raw_data_item_implies p1 p2 prf x)
   | Tagged _ v -> holds_on_raw_data_item_implies p1 p2 prf v
@@ -316,43 +346,17 @@ let rec raw_equiv_fmap
     raw_equiv_trans x x_ x'
   | _ -> prf x
 
-let rec holds_on_raw_data_item_fmap_gen
+val holds_on_raw_data_item_fmap_gen
   (f: raw_data_item -> raw_data_item)
   (p q: raw_data_item -> bool)
   (prf: (x: raw_data_item) -> Lemma
-    (requires (holds_on_raw_data_item p x == true))
+    (requires (pre_holds_on_raw_data_item p x == true))
     (ensures (holds_on_raw_data_item (p `andp` q) (f x) == true))
   )
   (x: raw_data_item)
 : Lemma
-  (requires (holds_on_raw_data_item p x == true))
+  (requires (pre_holds_on_raw_data_item p x == true))
   (ensures (holds_on_raw_data_item (p `andp` q) (raw_data_item_fmap f x) == true))
-= admit ()
-
-(*
-assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
-  holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x;
-  holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem (cbor_raw_sort x);
-  assert_norm (cbor_raw_sort == raw_data_item_fmap cbor_raw_sort_elem);
-  raw_data_item_fmap_eq cbor_raw_sort_elem x;
-  match x with
-  | Tagged tag v ->
-    cbor_raw_sort_ints_optimal v;
-    cbor_raw_sort_elem_ints_optimal (Tagged tag (cbor_raw_sort v))
-  | Array len v ->
-    list_for_all_map cbor_raw_sort v raw_data_item_ints_optimal raw_data_item_ints_optimal (fun x ->
-      cbor_raw_sort_ints_optimal x
-    )
-  | Map len v ->
-    list_for_all_map (apply_on_pair cbor_raw_sort) v (holds_on_pair raw_data_item_ints_optimal) (holds_on_pair raw_data_item_ints_optimal) (fun x ->
-      cbor_raw_sort_ints_optimal (fst x);
-      cbor_raw_sort_ints_optimal (snd x)
-    );
-    let x' = Map len (List.Tot.map (apply_on_pair cbor_raw_sort) v) in
-    holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x';
-    cbor_raw_sort_elem_ints_optimal x'
-  | _ -> ()
-*)
 
 let holds_on_raw_data_item_fmap_implies
   (f: raw_data_item -> raw_data_item)
@@ -362,12 +366,12 @@ let holds_on_raw_data_item_fmap_implies
     (ensures (p x == true))
   )
   (prf: (x: raw_data_item) -> Lemma
-    (requires (holds_on_raw_data_item p x == true))
+    (requires (pre_holds_on_raw_data_item p x == true))
     (ensures (holds_on_raw_data_item q (f x) == true))
   )
   (x: raw_data_item)
 : Lemma
-  (requires (holds_on_raw_data_item p x == true))
+  (requires (pre_holds_on_raw_data_item p x == true))
   (ensures (holds_on_raw_data_item q (raw_data_item_fmap f x) == true))
 = holds_on_raw_data_item_fmap_gen f p q (fun x ->
     prf x;
@@ -379,12 +383,12 @@ let holds_on_raw_data_item_fmap_inv
   (f: raw_data_item -> raw_data_item)
   (p: raw_data_item -> bool)
   (prf: (x: raw_data_item) -> Lemma
-    (requires (holds_on_raw_data_item p x == true))
+    (requires (pre_holds_on_raw_data_item p x == true))
     (ensures (holds_on_raw_data_item p (f x) == true))
   )
   (x: raw_data_item)
 : Lemma
-  (requires (holds_on_raw_data_item p x == true))
+  (requires (pre_holds_on_raw_data_item p x == true))
   (ensures (holds_on_raw_data_item p (raw_data_item_fmap f x) == true))
 = holds_on_raw_data_item_fmap_implies f p p (fun _ -> ()) prf x
 
@@ -398,4 +402,5 @@ let holds_on_raw_data_item_fmap
 : Lemma
   (ensures (holds_on_raw_data_item p (raw_data_item_fmap f x) == true))
 = holds_on_raw_data_item_truep x;
+  holds_on_raw_data_item_eq truep x;
   holds_on_raw_data_item_fmap_implies f truep p (fun _ -> ()) (fun x -> prf x) x
