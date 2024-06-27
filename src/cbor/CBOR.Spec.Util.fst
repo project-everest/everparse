@@ -768,6 +768,20 @@ let rec list_for_all2_exists
     list_for_all_exists_append_r_l p q1 [a2] q2
   | _ -> ()
 
+let rec list_for_all2_map
+  (#t1 #t2: Type)
+  (f: t1 -> t2)
+  (l: list t1)
+  (p: t1 -> t2 -> bool)
+  (prf: (x: t1 { List.Tot.memP x l /\ x << l }) -> Lemma
+    (p x (f x) == true)
+  )
+: Lemma
+  (list_for_all2 p l (List.Tot.map f l) == true)
+= match l with
+  | [] -> ()
+  | a :: q -> prf a; list_for_all2_map f q p prf
+
 let rec list_sum (#t: Type) (f: t -> nat) (l: list t) : Tot nat =
   match l with
   | [] -> 0

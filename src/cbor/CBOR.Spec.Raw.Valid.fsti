@@ -177,6 +177,47 @@ let rec raw_data_item_uint64_optimize_correct (x: raw_data_item) : Lemma
   | Tagged len v -> raw_data_item_uint64_optimize_correct v
   | _ -> ()
 
+let rec raw_data_item_uint64_optimize_equiv (x: raw_data_item) : Lemma
+  (ensures (raw_equiv x (raw_data_item_uint64_optimize x) == true))
+  (decreases x)
+= raw_data_item_fmap_eq raw_data_item_uint64_optimize_elem x;
+  assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
+  let x' = raw_data_item_uint64_optimize x in
+  raw_equiv_eq x x';
+  match x with
+  | Map len v ->
+    list_for_all2_map (apply_on_pair raw_data_item_uint64_optimize) v (holds_on_pair2 raw_equiv) (fun x ->
+      raw_data_item_uint64_optimize_equiv (fst x);
+      raw_data_item_uint64_optimize_equiv (snd x)
+    );
+    let v_ = List.Tot.map (apply_on_pair raw_data_item_uint64_optimize) v in
+    list_for_all2_exists (holds_on_pair2 raw_equiv) v v_;
+    list_for_all2_swap (holds_on_pair2 raw_equiv) v v_;
+    list_for_all2_implies (swap (holds_on_pair2 raw_equiv)) (holds_on_pair2 raw_equiv) v_ v (fun x x_ ->
+      raw_equiv_sym (fst x) (fst x_);
+      raw_equiv_sym (snd x) (snd x_)
+    );
+    list_for_all2_exists (holds_on_pair2 raw_equiv) v_ v;
+    let x_ = Map len v_ in
+    raw_equiv_eq x x_;
+    raw_data_item_uint64_optimize_elem_equiv x_;
+    raw_equiv_trans x x_ x'
+  | Array len v ->
+    list_for_all2_map raw_data_item_uint64_optimize v raw_equiv (fun x ->
+      raw_data_item_uint64_optimize_equiv x
+    );
+    let x_ = Array len (List.Tot.map raw_data_item_uint64_optimize v) in
+    raw_equiv_eq x x_;
+    raw_data_item_uint64_optimize_elem_equiv x_;
+    raw_equiv_trans x x_ x'
+  | Tagged len v ->
+    raw_data_item_uint64_optimize_equiv v;
+    let x_ = Tagged len (raw_data_item_uint64_optimize v) in
+    raw_equiv_eq x x_;
+    raw_data_item_uint64_optimize_elem_equiv x_;
+    raw_equiv_trans x x_ x'
+  | _ -> raw_data_item_uint64_optimize_elem_equiv x
+
 (* Sorting map keys *)
 
 noextract
