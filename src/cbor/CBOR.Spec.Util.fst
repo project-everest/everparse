@@ -604,6 +604,50 @@ let list_no_setoid_repeats_no_repeats
 = list_no_setoid_repeats_noRepeats l;
   list_no_repeats_noRepeats l
 
+let rec list_memP_map_elim
+  (#a #b: Type)
+  (f: a -> Tot b)
+  (y: b)
+  (l: list a)
+: Ghost a
+  (requires (List.Tot.memP y (List.Tot.map f l)))
+  (ensures (fun (x : a) -> List.Tot.memP x l /\ f x == y))
+  (decreases l)
+= let x :: q = l in
+  if (FStar.StrongExcludedMiddle.strong_excluded_middle (f x == y))
+  then x
+  else list_memP_map_elim f y q
+
+let rec list_no_setoid_repeats_map
+  (#t1: Type)
+  (#t2: Type)
+  (f: t1 -> t2)
+  (l: list t1)
+  (p1: t1 -> t1 -> bool)
+  (p2: t2 -> t2 -> bool)
+  (prf: (x: t1) -> (x': t1 {
+    List.Tot.memP x l /\ x << l /\
+    List.Tot.memP x' l /\ x' << l
+  }) -> Lemma
+    (requires (p2 (f x) (f x') == true))
+    (ensures (p1 x x' == true))
+  )
+: Lemma
+  (requires (list_no_setoid_repeats p1 l == true))
+  (ensures (list_no_setoid_repeats p2 (List.Tot.map f l) == true))
+= match l with
+  | [] -> ()
+  | a :: q ->
+    list_no_setoid_repeats_map f q p1 p2 prf;
+    if List.Tot.existsb (p2 (f a)) (List.Tot.map f q)
+    then begin
+      let b' = list_existsb_elim (p2 (f a)) (List.Tot.map f q) in
+      let a' = list_memP_map_elim f b' q in
+      List.Tot.memP_precedes a' l;
+      prf a a';
+      list_existsb_intro (p1 a) q a'
+    end
+
 let rec list_for_all2_intro
   (#t1 #t2: Type)
   (p: t1 -> t2 -> bool)

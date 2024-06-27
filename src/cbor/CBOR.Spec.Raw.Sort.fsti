@@ -18,3 +18,5 @@ val cbor_map_sort_correct
       (forall k . List.Tot.assoc k l' == List.Tot.assoc k l)
     ))
   ))
+  [SMTPat (cbor_map_sort l)]
+

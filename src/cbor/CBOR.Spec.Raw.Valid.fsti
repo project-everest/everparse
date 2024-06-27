@@ -21,6 +21,24 @@ let valid_raw_data_item_map
 : Tot bool
 = list_no_setoid_repeats (map_entry_order raw_equiv _) v
 
+let valid_raw_data_item_map_no_repeats
+  (v: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (valid_raw_data_item_map v == true))
+  (ensures (List.Tot.no_repeats_p (List.Tot.map fst v)))
+= list_no_setoid_repeats_map
+    fst
+    v
+    (map_entry_order raw_equiv _)
+    raw_equiv
+    (fun x x' -> ());
+  list_no_setoid_repeats_implies
+    raw_equiv
+    ( = )
+    (List.Tot.map fst v)
+    (fun x x' -> raw_equiv_refl x);
+  list_no_setoid_repeats_no_repeats (List.Tot.map fst v)
+
 let valid_raw_data_item_elem
   (l: raw_data_item)
 : Tot bool
