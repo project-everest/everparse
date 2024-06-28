@@ -244,43 +244,42 @@ let raw_data_item_fmap_eq
 
 #restart-solver
 let rec holds_on_raw_data_item_fmap_gen
-  (f: raw_data_item -> raw_data_item)
-  (p q: raw_data_item -> bool)
-  (prf: (x: raw_data_item) -> Lemma
-    (requires (pre_holds_on_raw_data_item p x == true))
-    (ensures (holds_on_raw_data_item (p `andp` q) (f x) == true))
-  )
-  (x: raw_data_item)
-: Lemma
-  (requires (pre_holds_on_raw_data_item p x == true))
-  (ensures (holds_on_raw_data_item (p `andp` q) (raw_data_item_fmap f x) == true))
+  f p q prf1 prf x
 = let x' = raw_data_item_fmap f x in
   raw_data_item_fmap_eq f x;
+  holds_on_raw_data_item_eq p x;
   match x with
   | Tagged tag v ->
-    holds_on_raw_data_item_eq p v;
-    holds_on_raw_data_item_fmap_gen f p q prf v;
+    holds_on_raw_data_item_fmap_gen f p q prf1 prf v; 
+    prf1 x;
     let x_ = Tagged tag (raw_data_item_fmap f v) in
     pre_holds_on_raw_data_item_implies (p `andp` q) p (fun _ -> ()) x_;
+    pre_holds_on_raw_data_item_implies (p `andp` q) q (fun _ -> ()) x_;
+    holds_on_raw_data_item_eq p x_;
     prf x_
   | Array len v ->
     list_for_all_map (raw_data_item_fmap f) v (holds_on_raw_data_item p) (holds_on_raw_data_item (p `andp` q)) (fun x ->
-      holds_on_raw_data_item_eq p x;
-      holds_on_raw_data_item_fmap_gen f p q prf x
+      holds_on_raw_data_item_fmap_gen f p q prf1 prf x
     );
+    prf1 x;
     let x_ = Array len (List.Tot.map (raw_data_item_fmap f) v) in
     pre_holds_on_raw_data_item_implies (p `andp` q) p (fun _ -> ()) x_;
+    pre_holds_on_raw_data_item_implies (p `andp` q) q (fun _ -> ()) x_;
+    holds_on_raw_data_item_eq p x_;
     prf x_
   | Map len v ->
     list_for_all_map (apply_on_pair (raw_data_item_fmap f)) v (holds_on_pair (holds_on_raw_data_item p)) (holds_on_pair (holds_on_raw_data_item (p `andp` q))) (fun x ->
-      holds_on_raw_data_item_eq p (fst x);
-      holds_on_raw_data_item_fmap_gen f p q prf (fst x);
-      holds_on_raw_data_item_eq p (snd x);
-      holds_on_raw_data_item_fmap_gen f p q prf (snd x)
+      holds_on_raw_data_item_fmap_gen f p q prf1 prf (fst x);
+      holds_on_raw_data_item_fmap_gen f p q prf1 prf (snd x)
     );
+    prf1 x;
     let x_ = Map len (List.Tot.map (apply_on_pair (raw_data_item_fmap f)) v) in
     pre_holds_on_raw_data_item_implies (p `andp` q) p (fun _ -> ()) x_;
+    pre_holds_on_raw_data_item_implies (p `andp` q) q (fun _ -> ()) x_;
+    holds_on_raw_data_item_eq p x_;
     prf x_
-  | _ -> prf x
+  | _ ->
+    prf1 x;
+    prf x
 
 #pop-options
