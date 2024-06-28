@@ -544,6 +544,30 @@ let rec list_no_setoid_repeats
     list_no_setoid_repeats equiv q &&
     not (List.Tot.existsb (equiv a) q)
 
+let rec list_no_setoid_repeats_append_elim_l
+  (#t: Type)
+  (equiv: t -> t -> bool)
+  (l1 l2: list t)
+: Lemma
+  (requires (list_no_setoid_repeats equiv (l1 `List.Tot.append` l2) == true))
+  (ensures (list_no_setoid_repeats equiv l1 == true))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | a :: q -> list_no_setoid_repeats_append_elim_l equiv q l2; list_existsb_append (equiv a) q l2
+
+let rec list_no_setoid_repeats_append_elim_r
+  (#t: Type)
+  (equiv: t -> t -> bool)
+  (l1 l2: list t)
+: Lemma
+  (requires (list_no_setoid_repeats equiv (l1 `List.Tot.append` l2) == true))
+  (ensures (list_no_setoid_repeats equiv l2 == true))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | a :: q -> list_no_setoid_repeats_append_elim_r equiv q l2
+
 let rec list_no_setoid_repeats_implies
   (#t: Type)
   (equiv1 equiv2: t -> t -> bool)
@@ -874,6 +898,100 @@ let rec list_map_ext (#t #t': Type) (f1 f2: t -> t') (l: list t) (prf: (x: t { L
 = match l with
   | [] -> ()
   | a :: q -> prf a; list_map_ext f1 f2 q prf
+
+let rec list_setoid_assoc
+  (#t1: Type)
+  (#t2: Type)
+  (equiv: t1 -> t1 -> bool)
+  (x: t1)
+  (l: list (t1 & t2))
+: Tot (option t2)
+= match l with
+  | [] -> None
+  | (a, v) :: q -> if equiv x a then Some v else list_setoid_assoc equiv x q
+
+let rec list_setoid_assoc_mem
+  (#t1: Type)
+  (#t2: Type)
+  (equiv: t1 -> t1 -> bool)
+  (x: t1)
+  (l: list (t1 & t2))
+: Pure (option t1)
+  (requires True)
+  (ensures (fun a ->
+    match list_setoid_assoc equiv x l, a with
+    | None, None -> True
+    | Some v, Some a -> List.Tot.memP (a, v) l /\ equiv x a == true
+    | _ -> False
+    )
+  )
+= match l with
+  | [] -> None
+  | (a, v) :: q ->
+    if equiv x a
+    then Some a
+    else list_setoid_assoc_mem equiv x q
+
+let rec list_setoid_assoc_mem_elim
+  (#t1: Type)
+  (#t2: Type)
+  (equiv: t1 -> t1 -> bool)
+  (l: list (t1 & t2))
+  (xy: (t1 & t2))
+  (x: t1)
+: Lemma
+  (requires (
+    List.Tot.memP xy l /\
+    equiv x (fst xy)
+  ))
+  (ensures (
+    Some? (list_setoid_assoc equiv x l)
+  ))
+= let xy' :: q = l in
+  if FStar.StrongExcludedMiddle.strong_excluded_middle (xy == xy')
+  then ()
+  else list_setoid_assoc_mem_elim equiv q xy x
+
+let rec list_setoid_assoc_append
+  (#t1: Type)
+  (#t2: Type)
+  (equiv: t1 -> t1 -> bool)
+  (x: t1)
+  (l l': list (t1 & t2))
+: Lemma
+  (list_setoid_assoc equiv x (l `List.Tot.append` l') == begin match list_setoid_assoc equiv x l with
+  | None -> list_setoid_assoc equiv x l'
+  | v -> v
+  end)
+= match l with
+  | [] -> ()
+  | _ :: q -> list_setoid_assoc_append equiv x q l'
+
+let rec list_setoid_assoc_ext
+  (#t1: Type)
+  (#t2: Type)
+  (equiv equiv': t1 -> t1 -> bool)
+  (x: t1)
+  (l: list (t1 & t2))
+  (prf: (y: (t1 & t2) { List.Tot.memP y l /\ y << l }) -> Lemma
+    (equiv x (fst y) == equiv' x (fst y))
+  )
+: Lemma
+  (list_setoid_assoc equiv x l == list_setoid_assoc equiv' x l)
+= match l with
+  | [] -> ()
+  | av :: q -> prf av; list_setoid_assoc_ext equiv equiv' x q prf
+
+let rec list_setoid_assoc_eqtype
+  (#t1: eqtype)
+  (#t2: Type)
+  (x: t1)
+  (l: list (t1 & t2))
+: Lemma
+  (list_setoid_assoc ( = ) x l == List.Tot.assoc x l)
+= match l with
+  | [] -> ()
+  | (a, v) :: q -> list_setoid_assoc_eqtype x q
 
 (* Well-founded recursion *)
 

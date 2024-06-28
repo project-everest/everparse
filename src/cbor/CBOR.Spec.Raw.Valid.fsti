@@ -224,6 +224,26 @@ val raw_equiv_sorted_optimal
   ))
   (ensures (x1 == x2))
 
+let raw_equiv_sorted_optimal_eq
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires (
+    raw_data_item_sorted order x1 /\
+    raw_data_item_sorted order x2 /\
+    raw_data_item_ints_optimal x1 /\
+    raw_data_item_ints_optimal x2
+  ))
+  (ensures (raw_equiv x1 x2 == (x1 = x2)))
+= if raw_equiv x1 x2
+  then raw_equiv_sorted_optimal order x1 x2
+  else if x1 = x2
+  then raw_equiv_refl x1
+  else ()
+
 val raw_data_item_sorted_optimal_valid
   (order: raw_data_item -> raw_data_item -> bool {
     order_irrefl order /\
@@ -236,6 +256,133 @@ val raw_data_item_sorted_optimal_valid
     raw_data_item_ints_optimal x1
   ))
   (ensures (valid_raw_data_item x1))
+
+(* Equivalence and map access *)
+
+let list_setoid_assoc_sorted_optimal
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (x: raw_data_item)
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    raw_data_item_ints_optimal x == true /\
+    raw_data_item_sorted order x == true /\
+    List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) l == true /\
+    List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) l == true
+  ))
+  (ensures (
+    list_setoid_assoc raw_equiv x l == List.Tot.assoc x l
+  ))
+= list_setoid_assoc_ext
+    raw_equiv
+    ( = )
+    x
+    l
+    (fun y ->
+      List.Tot.for_all_mem (holds_on_pair raw_data_item_ints_optimal) l;
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_sorted order)) l;
+      raw_equiv_sorted_optimal_eq order x (fst y)
+    );
+  list_setoid_assoc_eqtype x l
+
+let rec list_setoid_assoc_valid_equiv'
+  (x1: raw_data_item)
+  (l1l l1r: list (raw_data_item & raw_data_item))
+  (x2: raw_data_item)
+  (l2: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    let l1 = l1l `List.Tot.append` l1r in
+    valid_raw_data_item_map l1 == true /\
+    valid_raw_data_item_map l2 == true /\
+    list_for_all_exists (holds_on_pair2 raw_equiv) l1 l2 == true /\
+    list_for_all_exists (holds_on_pair2 raw_equiv) l2 l1 == true /\
+    list_setoid_assoc raw_equiv x1 l1l == None /\
+    raw_equiv x1 x2 == true /\
+    Some? (list_setoid_assoc raw_equiv x1 l1r)
+  ))
+  (ensures (
+    match list_setoid_assoc raw_equiv x1 l1r, list_setoid_assoc raw_equiv x2 l2 with
+    | Some v1, Some v2 -> raw_equiv v1 v2
+    | _ -> False
+  ))
+  (decreases l1r)
+= let xv1 :: q = l1r in
+  let (x1', v1) = xv1 in
+  if raw_equiv x1 x1'
+  then begin
+    List.Tot.for_all_append (list_existsb2 (holds_on_pair2 raw_equiv) l2) l1l l1r;
+    let xv2mem = list_existsb_elim (holds_on_pair2 raw_equiv xv1) l2 in
+    raw_equiv_sym x1 x2;
+    raw_equiv_trans x2 x1 x1';
+    raw_equiv_trans x2 x1' (fst xv2mem);
+    list_setoid_assoc_mem_elim raw_equiv l2 xv2mem x2;
+    let Some v2 = list_setoid_assoc raw_equiv x2 l2 in
+    if raw_equiv v1 v2
+    then ()
+    else begin
+      let Some x2'' = list_setoid_assoc_mem raw_equiv x2 l2 in
+      let l1 = l1l `List.Tot.append` l1r in
+      List.Tot.for_all_mem (list_existsb2 (holds_on_pair2 raw_equiv) l1) l2;
+      let xv2'' = (x2'', v2) in
+      let xv1'' = list_existsb_elim (holds_on_pair2 raw_equiv xv2'') l1 in
+      let (x1'', v1'') = xv1'' in
+      List.Tot.append_memP l1l l1r xv1'';
+      raw_equiv_trans x1 x2 x2'';
+      raw_equiv_trans x1 x2'' x1'';
+      if FStar.StrongExcludedMiddle.strong_excluded_middle (List.Tot.memP xv1'' l1l)
+      then begin
+        list_setoid_assoc_mem_elim raw_equiv l1l xv1'' x1
+      end
+      else begin
+        raw_equiv_sym v2 v1'';
+        assert (List.Tot.memP xv1'' q);
+        list_no_setoid_repeats_append_elim_r (map_entry_order raw_equiv _) l1l l1r;
+        raw_equiv_sym x1 x1';
+        raw_equiv_trans x1' x1 x1'';
+        list_existsb_intro (map_entry_order raw_equiv _ xv1) q xv1''
+      end
+    end
+  end
+  else begin
+    list_setoid_assoc_append raw_equiv x1 l1l [xv1];
+    List.Tot.append_assoc l1l [xv1] q;
+    list_setoid_assoc_valid_equiv' x1 (l1l `List.Tot.append` [xv1]) q x2 l2
+  end
+
+let list_setoid_assoc_valid_equiv
+  (x1: raw_data_item)
+  (l1: list (raw_data_item & raw_data_item))
+  (x2: raw_data_item)
+  (l2: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    valid_raw_data_item_map l1 == true /\
+    valid_raw_data_item_map l2 == true /\
+    list_for_all_exists (holds_on_pair2 raw_equiv) l1 l2 == true /\
+    list_for_all_exists (holds_on_pair2 raw_equiv) l2 l1 == true /\
+    raw_equiv x1 x2 == true
+  ))
+  (ensures (
+    match list_setoid_assoc raw_equiv x1 l1, list_setoid_assoc raw_equiv x2 l2 with
+    | None, None -> True
+    | Some v1, Some v2 -> raw_equiv v1 v2
+    | _ -> False
+  ))
+= if Some? (list_setoid_assoc raw_equiv x1 l1)
+  then list_setoid_assoc_valid_equiv' x1 [] l1 x2 l2
+  else if Some? (list_setoid_assoc raw_equiv x2 l2)
+  then begin
+    raw_equiv_sym x1 x2;
+    list_setoid_assoc_valid_equiv' x2 [] l2 x1 l1
+  end
+  else ()
+
+(* When there are no maps in map keys, equivalence and absence of
+   setoid duplicates can be checked in constant stack space. *)
 
 let rec raw_equiv_list_no_map
   (l1 l2: list raw_data_item)
