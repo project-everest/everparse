@@ -100,10 +100,6 @@ let raw_data_item_uint64_optimize_elem (x: raw_data_item) : Tot raw_data_item =
   | Tagged tag v -> Tagged (raw_uint64_optimize tag) v
   | _ -> x
 
-let raw_data_item_uint64_optimize_elem_correct (x: raw_data_item) : Lemma
-  (raw_data_item_ints_optimal_elem (raw_data_item_uint64_optimize_elem x) == true)
-= ()
-
 let raw_data_item_uint64_optimize_elem_equiv (x: raw_data_item) : Lemma
   (raw_equiv x (raw_data_item_uint64_optimize_elem x) == true)
 = raw_equiv_eq x (raw_data_item_uint64_optimize_elem x);
@@ -155,31 +151,35 @@ let rec raw_data_item_uint64_optimize_size (x: raw_data_item) : Lemma
     raw_data_item_uint64_optimize_elem_size (Tagged len (raw_data_item_uint64_optimize v))
   | _ -> raw_data_item_uint64_optimize_elem_size x
 
-let rec raw_data_item_uint64_optimize_correct (x: raw_data_item) : Lemma
+let raw_data_item_uint64_optimize_correct (x: raw_data_item) : Lemma
   (ensures (raw_data_item_ints_optimal (raw_data_item_uint64_optimize x) == true))
-  (decreases x)
-= holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x;
-  raw_data_item_fmap_eq raw_data_item_uint64_optimize_elem x;
-  assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
-  assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
-  match x with
-  | Map len v ->
-    list_for_all_truep v;
-    list_for_all_map (apply_on_pair raw_data_item_uint64_optimize) v truep (holds_on_pair raw_data_item_ints_optimal) (fun x ->
-      raw_data_item_uint64_optimize_correct (fst x);
-      raw_data_item_uint64_optimize_correct (snd x)
-    )
-  | Array len v ->
-    list_for_all_truep v;
-    list_for_all_map (raw_data_item_uint64_optimize) v truep raw_data_item_ints_optimal (fun x ->
-      raw_data_item_uint64_optimize_correct x
-    )
-  | Tagged len v -> raw_data_item_uint64_optimize_correct v
-  | _ -> ()
+= holds_on_raw_data_item_fmap raw_data_item_uint64_optimize_elem raw_data_item_ints_optimal_elem (fun _ -> ()) x
 
 let raw_data_item_uint64_optimize_equiv (x: raw_data_item) : Lemma
   (ensures (raw_equiv x (raw_data_item_uint64_optimize x) == true))
 = raw_equiv_fmap raw_data_item_uint64_optimize_elem raw_data_item_uint64_optimize_elem_equiv x
+
+let raw_data_item_uint64_optimize_valid (x: raw_data_item) : Lemma
+    (requires (valid_raw_data_item x == true))
+    (ensures (valid_raw_data_item (raw_data_item_uint64_optimize x) == true))
+= holds_on_raw_data_item_fmap_inv
+    raw_data_item_uint64_optimize_elem
+    valid_raw_data_item_elem
+    (fun x ->
+      assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
+      match x with
+      | Map len v ->
+        list_no_setoid_repeats_map (apply_on_pair raw_data_item_uint64_optimize) v (map_entry_order raw_equiv _) (map_entry_order raw_equiv _) (fun x x' ->
+          raw_data_item_uint64_optimize_equiv (fst x);
+          raw_data_item_uint64_optimize_equiv (fst x');
+          raw_equiv_sym (raw_data_item_uint64_optimize (fst x')) (fst x');
+          raw_equiv_trans (fst x) (raw_data_item_uint64_optimize (fst x)) (raw_data_item_uint64_optimize (fst x'));
+          raw_equiv_trans (fst x) (raw_data_item_uint64_optimize (fst x')) (fst x')
+        )
+      | _ -> ()
+    )
+    (fun x -> raw_data_item_uint64_optimize_elem_valid x)
+    x
 
 (* Sorting map keys *)
 

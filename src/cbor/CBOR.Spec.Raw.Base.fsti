@@ -384,6 +384,40 @@ val holds_on_raw_data_item_fmap_gen
   (requires (holds_on_raw_data_item p x == true))
   (ensures (holds_on_raw_data_item (p `andp` q) (raw_data_item_fmap f x) == true))
 
+let holds_on_raw_data_item_fmap_inv
+  (f: raw_data_item -> raw_data_item)
+  (p: raw_data_item -> bool)
+  (prf1: (x: raw_data_item) -> Lemma
+    (requires (
+      holds_on_raw_data_item p x == true /\
+      pre_holds_on_raw_data_item p (pre_raw_data_item_fmap f x) == true
+    ))
+    (ensures (
+      p (pre_raw_data_item_fmap f x) == true
+    ))
+  )
+  (prf: (x: raw_data_item) -> Lemma
+    (requires (holds_on_raw_data_item p x == true))
+    (ensures (holds_on_raw_data_item p (f x) == true))
+  )
+  (x: raw_data_item)
+: Lemma
+  (requires (holds_on_raw_data_item p x == true))
+  (ensures (holds_on_raw_data_item p (raw_data_item_fmap f x) == true))
+= holds_on_raw_data_item_fmap_gen f p truep
+    (fun x ->
+      pre_holds_on_raw_data_item_implies (p `andp` truep) p (fun x -> holds_on_raw_data_item_eq (p `andp` truep) x) (pre_raw_data_item_fmap f x);
+      prf1 x
+    )
+    (fun x ->
+      holds_on_raw_data_item_truep x;
+      holds_on_raw_data_item_eq truep x;
+      prf x;
+      holds_on_raw_data_item_implies p (p `andp` truep) (fun x -> holds_on_raw_data_item_eq p x) (f x)
+    )
+    x;
+  holds_on_raw_data_item_implies (p `andp` truep) p (fun x -> holds_on_raw_data_item_eq p x) (raw_data_item_fmap f x)
+
 let holds_on_raw_data_item_fmap
   (f: raw_data_item -> raw_data_item)
   (p: raw_data_item -> bool)
