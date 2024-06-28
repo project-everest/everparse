@@ -244,6 +244,46 @@ let raw_equiv_sorted_optimal_eq
   then raw_equiv_refl x1
   else ()
 
+let valid_raw_data_item_map_no_repeats_sorted_optimal'
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (v: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) v == true /\
+    List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) v == true /\
+    List.Tot.no_repeats_p (List.Tot.map fst v)
+  ))
+  (ensures (valid_raw_data_item_map v == true))
+= list_no_setoid_repeats_no_repeats (List.Tot.map fst v);
+  list_no_setoid_repeats_map_elim
+    fst
+    v
+    (map_entry_order raw_equiv _)
+    ( = )
+    (fun x x' ->
+      List.Tot.for_all_mem (holds_on_pair raw_data_item_ints_optimal) v;
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_sorted order)) v;
+      raw_equiv_sorted_optimal_eq order (fst x) (fst x')
+    )
+
+let valid_raw_data_item_map_no_repeats_sorted_optimal
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (v: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) v == true /\
+    List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) v == true
+  ))
+  (ensures (valid_raw_data_item_map v == true <==> List.Tot.no_repeats_p (List.Tot.map fst v)))
+= Classical.move_requires valid_raw_data_item_map_no_repeats v;
+  Classical.move_requires (valid_raw_data_item_map_no_repeats_sorted_optimal' order) v
+
 val raw_data_item_sorted_optimal_valid
   (order: raw_data_item -> raw_data_item -> bool {
     order_irrefl order /\

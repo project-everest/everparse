@@ -672,6 +672,36 @@ let rec list_no_setoid_repeats_map
       list_existsb_intro (p1 a) q a'
     end
 
+let rec list_no_setoid_repeats_map_elim
+  (#t1: Type)
+  (#t2: Type)
+  (f: t1 -> t2)
+  (l: list t1)
+  (p1: t1 -> t1 -> bool)
+  (p2: t2 -> t2 -> bool)
+  (prf: (x: t1) -> (x': t1 {
+    List.Tot.memP x l /\ x << l /\
+    List.Tot.memP x' l /\ x' << l
+  }) -> Lemma
+    (requires (p1 x x' == true))
+    (ensures (p2 (f x) (f x') == true))
+  )
+: Lemma
+  (requires (list_no_setoid_repeats p2 (List.Tot.map f l) == true))
+  (ensures (list_no_setoid_repeats p1 l == true))
+= match l with
+  | [] -> ()
+  | a :: q ->
+    list_no_setoid_repeats_map_elim f q p1 p2 prf;
+    if List.Tot.existsb (p1 a) q
+    then begin
+      let a' = list_existsb_elim (p1 a) q in
+      List.Tot.memP_precedes a' l;
+      prf a a';
+      List.Tot.memP_map_intro f a' q;
+      list_existsb_intro (p2 (f a)) (List.Tot.map f q) (f a')
+    end
+
 let rec list_for_all2_intro
   (#t1 #t2: Type)
   (p: t1 -> t2 -> bool)
