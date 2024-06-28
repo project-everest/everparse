@@ -159,6 +159,24 @@ let raw_data_item_uint64_optimize_equiv (x: raw_data_item) : Lemma
   (ensures (raw_equiv x (raw_data_item_uint64_optimize x) == true))
 = raw_equiv_fmap raw_data_item_uint64_optimize_elem raw_data_item_uint64_optimize_elem_equiv x
 
+let valid_raw_data_item_map_fmap_equiv
+  (f: raw_data_item -> raw_data_item)
+  (prf: (x: raw_data_item) -> Lemma
+    (raw_equiv x (f x) == true)
+  )
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (valid_raw_data_item_map l == true))
+  (ensures (valid_raw_data_item_map (List.Tot.map (apply_on_pair f) l) == true))
+= 
+        list_no_setoid_repeats_map (apply_on_pair f) l (map_entry_order raw_equiv _) (map_entry_order raw_equiv _) (fun x x' ->
+          prf (fst x);
+          prf (fst x');
+          raw_equiv_sym (f (fst x')) (fst x');
+          raw_equiv_trans (fst x) (f (fst x)) (f (fst x'));
+          raw_equiv_trans (fst x) (f (fst x')) (fst x')
+        )
+
 let raw_data_item_uint64_optimize_valid (x: raw_data_item) : Lemma
     (requires (valid_raw_data_item x == true))
     (ensures (valid_raw_data_item (raw_data_item_uint64_optimize x) == true))
@@ -166,16 +184,10 @@ let raw_data_item_uint64_optimize_valid (x: raw_data_item) : Lemma
     raw_data_item_uint64_optimize_elem
     valid_raw_data_item_elem
     (fun x ->
-      assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
       match x with
       | Map len v ->
-        list_no_setoid_repeats_map (apply_on_pair raw_data_item_uint64_optimize) v (map_entry_order raw_equiv _) (map_entry_order raw_equiv _) (fun x x' ->
-          raw_data_item_uint64_optimize_equiv (fst x);
-          raw_data_item_uint64_optimize_equiv (fst x');
-          raw_equiv_sym (raw_data_item_uint64_optimize (fst x')) (fst x');
-          raw_equiv_trans (fst x) (raw_data_item_uint64_optimize (fst x)) (raw_data_item_uint64_optimize (fst x'));
-          raw_equiv_trans (fst x) (raw_data_item_uint64_optimize (fst x')) (fst x')
-        )
+        assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
+        valid_raw_data_item_map_fmap_equiv raw_data_item_uint64_optimize (fun x -> raw_data_item_uint64_optimize_equiv x) v
       | _ -> ()
     )
     (fun x -> raw_data_item_uint64_optimize_elem_valid x)
