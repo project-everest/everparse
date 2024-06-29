@@ -33,9 +33,11 @@ let cbor_map_sort_failsafe_correct
   (let l' = cbor_map_sort_failsafe l in
     List.Tot.length l' == List.Tot.length l /\
     (forall x . List.Tot.memP x l' <==> List.Tot.memP x l) /\
+    (List.Tot.no_repeats_p (List.Tot.map fst l') <==> List.Tot.no_repeats_p (List.Tot.map fst l)) /\
     (List.Tot.no_repeats_p (List.Tot.map fst l) ==> (
       List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l' /\
-      List.Tot.no_repeats_p (List.Tot.map fst l')      
+      List.Tot.no_repeats_p (List.Tot.map fst l') /\
+      (forall k . List.Tot.assoc k l' == List.Tot.assoc k l)
     ))
   )
 = ()

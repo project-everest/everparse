@@ -108,7 +108,9 @@ let cbor_map_length_disjoint_union (m1 m2: cbor_map) : Lemma
   (ensures (
     cbor_map_length (cbor_map_union m1 m2) == cbor_map_length m1 + cbor_map_length m2
   ))
-= ()
+= 
+  assert (FS.intersection (cbor_map_set_keys m1) (cbor_map_set_keys m2) `FS.equal` FS.emptyset);
+  assert (FS.cardinality (FS.union (cbor_map_set_keys m1) (cbor_map_set_keys m2)) == FS.cardinality (cbor_map_set_keys m1) + FS.cardinality (cbor_map_set_keys m2))
 
 type cbor_case =
   | CSimple: (v: simple_value) -> cbor_case

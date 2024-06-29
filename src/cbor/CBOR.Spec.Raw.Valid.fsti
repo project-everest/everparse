@@ -78,6 +78,13 @@ let rec raw_uint64_optimize (x: raw_uint64) : Pure raw_uint64
   then x
   else raw_uint64_optimize { x with size = x.size - 1 }
 
+let mk_raw_uint64 (x: U64.t) : Pure raw_uint64
+  (requires True)
+  (ensures (fun y -> y.value == x /\
+    raw_uint64_optimal y == true
+  ))
+= raw_uint64_optimize { size = 4; value = x }
+
 let raw_data_item_ints_optimal_elem (x: raw_data_item) : Tot bool =
   match x with
   | Int64 _ v

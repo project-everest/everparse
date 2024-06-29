@@ -1023,6 +1023,22 @@ let rec list_setoid_assoc_eqtype
   | [] -> ()
   | (a, v) :: q -> list_setoid_assoc_eqtype x q
 
+let list_assoc_append
+    (#tk: eqtype)
+    (#tv: Type)
+    (k: tk)
+    (l1 l2: list (tk & tv))
+: Lemma
+    (ensures (List.Tot.assoc k (l1 `List.Tot.append` l2) == (
+        match List.Tot.assoc k l1 with
+        | Some v -> Some v
+        | None -> List.Tot.assoc k l2
+    )))
+= list_setoid_assoc_eqtype k (l1 `List.Tot.append` l2);
+  list_setoid_assoc_append ( = ) k l1 l2;
+  list_setoid_assoc_eqtype k l1;
+  list_setoid_assoc_eqtype k l2
+
 (* Well-founded recursion *)
 
 let rec wf_list_for_all (#t: Type) (l: list t) (p: (x: t { x << l }) -> bool) : bool =
