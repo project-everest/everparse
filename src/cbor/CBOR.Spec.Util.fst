@@ -264,6 +264,23 @@ let list_sorted_cons_not_memP
   then list_sorted_memP order a l a
   else ()
 
+let rec list_sorted_cons_elim
+  (#t1: Type)
+  (key_order: t1 -> t1 -> bool {
+    forall x y z . (key_order x y /\ key_order y z) ==> key_order x z
+  })
+  (a: t1)
+  (q: list t1)
+: Lemma
+  (requires (List.Tot.sorted key_order (a :: q)))
+  (ensures (List.Tot.for_all (key_order a) q))
+  (decreases q)
+= match q with
+  | [] -> ()
+  | b :: r ->
+    list_sorted_cons_elim key_order b r;
+    list_for_all_implies (key_order b) (key_order a) r (fun _ -> ())
+
 let rec list_sorted_ext_eq
   (#t: Type)
   (order: t -> t -> bool {
@@ -296,6 +313,91 @@ let rec list_sorted_ext_eq
     end
   | a1 :: _, [] -> assert (List.Tot.memP a1 l2)
   | [], a2 :: _ -> assert (List.Tot.memP a2 l1)
+
+let rec list_sorted_append_elim
+  (#t: Type)
+  (order: t -> t -> bool)
+  (l1 l2: list t)
+: Lemma
+  (requires (List.Tot.sorted order (l1 `List.Tot.append` l2)))
+  (ensures (
+    List.Tot.sorted order l1 /\
+    List.Tot.sorted order l2
+  ))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | [_] -> ()
+  | a :: b :: q ->
+    list_sorted_append_elim order (b :: q) l2
+
+let rec list_sorted_append_chunk_intro
+  (#t: Type)
+  (order: t -> t -> bool)
+  (l1 l2 l3: list t)
+: Lemma
+  (requires (
+    List.Tot.sorted order (l1 `List.Tot.append` l2) /\
+    List.Tot.sorted order (l2 `List.Tot.append` l3) /\
+    Cons? l2
+  ))
+  (ensures (
+    List.Tot.sorted order (l1 `List.Tot.append` (l2 `List.Tot.append` l3))
+  ))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | [a] -> () // because of List.Tot.sorted (l2 `List.Tot.append` l3) and Cons? l2
+  | a :: l1' -> list_sorted_append_chunk_intro order l1' l2 l3
+
+let rec list_sorted_order_elim
+  (#t: Type)
+  (order: t -> t -> bool)
+  (l0: list t)
+  (a1: t)
+  (l1: list t)
+  (a2: t)
+  (l2: list t)
+: Lemma
+  (requires (
+    (forall x y z . (order x y /\ order y z) ==> order x z) /\
+    List.Tot.sorted order (l0 `List.Tot.append` (a1 :: (l1 `List.Tot.append` (a2 :: l2))))
+  ))
+  (ensures (order a1 a2 == true))
+  (decreases (List.Tot.length l0 + List.Tot.length l1))
+= match l0 with
+  | [] ->
+    begin match l1 with
+    | [] -> ()
+    | a1' :: l1' ->
+      list_sorted_order_elim order [] a1' l1' a2 l2 // and transitivity
+    end
+  | a0 :: l0' ->
+    list_sorted_order_elim order l0' a1 l1 a2 l2
+
+let rec list_sorted_append_chunk_elim
+  (#t: Type)
+  (order: t -> t -> bool)
+  (l1 l2 l3: list t)
+: Lemma
+  (requires (
+    (forall x y z . (order x y /\ order y z) ==> order x z) /\
+    List.Tot.sorted order (l1 `List.Tot.append` (l2 `List.Tot.append` l3))
+  ))
+  (ensures (
+    List.Tot.sorted order (l1 `List.Tot.append` l3)
+  ))
+  (decreases l1)
+= match l1 with
+  | [] -> list_sorted_append_elim order l2 l3
+  | [a] ->
+    begin match l3 with
+    | [] -> ()
+    | b :: q ->
+      list_sorted_append_elim order l2 l3;
+      list_sorted_order_elim order [] a l2 b q
+    end
+  | _ :: l1' -> list_sorted_append_chunk_elim order l1' l2 l3
 
 
 let swap (#t1 #t2: Type) (p: t1 -> t2 -> bool) (x2: t2) (x1: t1) : bool =
@@ -532,6 +634,27 @@ let list_for_all_truep
   (List.Tot.for_all truep l)
 = list_for_all_intro truep l (fun _ -> ())
 
+let rec list_tot_for_all_order_trans
+    (#t1: Type)
+    (order: t1 -> t1 -> bool {
+      (forall x . order x x == false) /\
+      (forall x y z . (order x y /\ order y z) ==> order x z)
+    })
+    (k1v1: _)
+    (k2v2: _)
+    (l1: list t1)
+  : Lemma
+  (requires (order k1v1 k2v2 /\
+    List.Tot.for_all (order k2v2) l1
+  ))
+  (ensures (
+    List.Tot.for_all (order k1v1) l1
+  ))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | _ :: q -> list_tot_for_all_order_trans order k1v1 k2v2 q
+
 let rec list_no_setoid_repeats
   (#t: Type)
   (equiv: t -> t -> bool)
@@ -641,6 +764,15 @@ let rec list_memP_map_elim
   if (FStar.StrongExcludedMiddle.strong_excluded_middle (f x == y))
   then x
   else list_memP_map_elim f y q
+
+let list_memP_map_forall
+  (#t1 #t2: Type)
+  (f: t1 -> t2)
+  (l: list t1)
+: Lemma
+  (forall y . List.Tot.memP y (List.Tot.map f l) <==> (exists x . List.Tot.memP x l /\ y == f x))
+= Classical.forall_intro (fun y -> List.Tot.memP_map_elim f y l);
+  Classical.forall_intro (fun x -> List.Tot.memP_map_intro f x l)
 
 let rec list_no_setoid_repeats_map
   (#t1: Type)
@@ -1038,6 +1170,119 @@ let list_assoc_append
   list_setoid_assoc_append ( = ) k l1 l2;
   list_setoid_assoc_eqtype k l1;
   list_setoid_assoc_eqtype k l2
+
+let rec list_assoc_mem_intro
+  (#tk: eqtype)
+  (#tv: Type)
+  (k: tk)
+  (v: tv)
+  (l: list (tk & tv))
+: Lemma
+  (requires (List.Tot.assoc k l == Some v))
+  (ensures (List.Tot.memP (k, v) l))
+  (decreases l)
+= let (k', v') :: l' = l in
+  if (k = k')
+  then ()
+  else list_assoc_mem_intro k v l'
+
+let rec list_assoc_no_repeats_mem_elim
+  (#tk: eqtype)
+  (#tv: Type)
+  (k: tk)
+  (v: tv)
+  (l: list (tk & tv))
+: Lemma
+  (requires (
+    List.Tot.no_repeats_p (List.Tot.map fst l) /\
+    List.Tot.memP (k, v) l
+  ))
+  (ensures (List.Tot.assoc k l == Some v))
+  (decreases l)
+= List.Tot.memP_map_intro fst (k, v) l;
+  let (k', v') :: l' = l in
+  if (k = k')
+  then
+    if FStar.StrongExcludedMiddle.strong_excluded_middle (v == v')
+    then ()
+    else List.Tot.memP_map_intro fst (k, v) l'
+  else list_assoc_no_repeats_mem_elim k v l'
+
+let list_assoc_no_repeats_mem
+  (#tk: eqtype)
+  (#tv: Type)
+  (l: list (tk & tv))
+  (k: tk)
+  (v: tv)
+: Lemma
+  (ensures (List.Tot.no_repeats_p (List.Tot.map fst l) ==> (List.Tot.assoc k l == Some v <==> List.Tot.memP (k, v) l)))
+= Classical.move_requires (list_assoc_no_repeats_mem_elim k v) l;
+  Classical.move_requires (list_assoc_mem_intro k v) l
+
+let list_assoc_no_repeats_equiv'
+  (#tk: eqtype)
+  (#tv: Type)
+  (l1 l2: list (tk & tv))
+  (k: tk)
+: Lemma
+  (requires (
+    List.Tot.no_repeats_p (List.Tot.map fst l1) /\
+    List.Tot.no_repeats_p (List.Tot.map fst l2) /\
+    (forall kv . List.Tot.memP kv l1 <==> List.Tot.memP kv l2)
+  ))
+  (ensures (List.Tot.assoc k l1 == List.Tot.assoc k l2))
+= match List.Tot.assoc k l1 with
+  | None ->
+    begin match List.Tot.assoc k l2 with
+    | None -> ()
+    | Some v ->
+      list_assoc_no_repeats_mem l2 k v;
+      list_assoc_no_repeats_mem l1 k v
+    end
+  | Some v ->
+    list_assoc_no_repeats_mem l1 k v;
+    list_assoc_no_repeats_mem l2 k v
+
+let list_assoc_no_repeats_equiv
+  (#tk: eqtype)
+  (#tv: Type)
+  (l1 l2: list (tk & tv))
+: Lemma
+  (requires (
+    List.Tot.no_repeats_p (List.Tot.map fst l1) /\
+    List.Tot.no_repeats_p (List.Tot.map fst l2) /\
+    (forall kv . List.Tot.memP kv l1 <==> List.Tot.memP kv l2)
+  ))
+  (ensures (forall k . List.Tot.assoc k l1 == List.Tot.assoc k l2))
+= Classical.forall_intro (Classical.move_requires (list_assoc_no_repeats_equiv' l1 l2))
+
+let rec list_splitAt_length
+  (#t: Type)
+  (n: nat)
+  (l: list t)
+: Lemma
+  (requires (List.Tot.length l >= n))
+  (ensures (
+    let (l1, l2) = List.Tot.splitAt n l in
+    List.Tot.length l1 == n /\
+    List.Tot.length l1 + List.Tot.length l2 == List.Tot.length l
+  ))
+  [SMTPat (List.Tot.splitAt n l)]
+= if n = 0 then () else list_splitAt_length (n - 1) (List.Tot.tl l)
+
+let rec list_splitAt_append
+  (#t: Type)
+  (n: nat)
+  (l: list t)
+: Lemma
+  (ensures (let (l1, l2) = List.Tot.splitAt n l in
+    l == l1 `List.Tot.append` l2
+  ))
+  [SMTPat (List.Tot.splitAt n l)]
+= match l with
+  | [] -> ()
+  | a :: q ->
+    if n = 0 then () else list_splitAt_append (n - 1) q
 
 (* Well-founded recursion *)
 

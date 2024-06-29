@@ -84,7 +84,7 @@ let rec cbor_map_length m =
       then begin
         let Some v' = List.Tot.assoc a q in
         List.Tot.assoc_memP_some a v' q;
-        CBOR.Spec.Util.list_sorted_memP (R.map_entry_order R.deterministically_encoded_cbor_map_key_order _) kv q (a, v')
+        U.list_sorted_memP (R.map_entry_order R.deterministically_encoded_cbor_map_key_order _) kv q (a, v')
       end
       else ()
     in
@@ -139,7 +139,7 @@ let rec list_sorted_filter
     list_sorted_filter key_order f q;
     if f a
     then begin
-      CBOR.Spec.Raw.Map.list_sorted_cons_elim key_order a q;
+      U.list_sorted_cons_elim key_order a q;
       list_for_all_filter_invariant (key_order a) f q
     end
     else ()
@@ -178,7 +178,7 @@ let rec cbor_map_get_filter'
         | None -> ()
         | Some v' ->
           List.Tot.assoc_memP_some a v' (cbor_map_filter f q);
-          CBOR.Spec.Util.list_sorted_memP (R.map_entry_order R.deterministically_encoded_cbor_map_key_order _) (a, v) q (a, v')
+          U.list_sorted_memP (R.map_entry_order R.deterministically_encoded_cbor_map_key_order _) (a, v) q (a, v')
       end
     end
     else cbor_map_get_filter' f q k
@@ -225,7 +225,7 @@ let cbor_map_get_union m1 m2 k =
   let m2' = cbor_map_filter (cbor_map_diff_f m1) m2 in
   R.cbor_map_sort_failsafe_correct (List.Tot.append m1 m2');
   CBOR.Spec.Raw.Map.list_sorted_map_entry_order_no_repeats R.deterministically_encoded_cbor_map_key_order (cbor_map_union m1 m2);
-  CBOR.Spec.Util.list_assoc_append k m1 m2';
+  U.list_assoc_append k m1 m2';
   cbor_map_get_filter (cbor_map_diff_f m1) m2 k
 
 let rec list_cbor_of_cbor_list

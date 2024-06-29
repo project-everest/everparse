@@ -15,5 +15,4 @@ let cbor_map_sort_correct x =
   Classical.forall_intro_2 cbor_compare_correct;
   Classical.forall_intro_2 cbor_compare_equal;
   Classical.forall_intro_2 bytes_lex_compare_opp;
-  Classical.forall_intro_2 (list_ghost_assoc_eq #raw_data_item #raw_data_item);
   map_sort_correct deterministically_encoded_cbor_map_key_order cbor_compare x
