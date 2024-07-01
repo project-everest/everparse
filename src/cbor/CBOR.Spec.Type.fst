@@ -1,7 +1,6 @@
 module CBOR.Spec.Type
 
 module R = CBOR.Spec.Raw.Sort
-module U = CBOR.Spec.Util
 
 let cbor_bool (x: R.raw_data_item) : Tot bool =
   R.raw_data_item_ints_optimal x &&
@@ -228,17 +227,15 @@ let cbor_map_get_union m1 m2 k =
   U.list_assoc_append k m1 m2';
   cbor_map_get_filter (cbor_map_diff_f m1) m2 k
 
-let rec list_cbor_of_cbor_list
-  (l: list R.raw_data_item {
-    List.Tot.for_all (R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem) l == true /\
-    List.Tot.for_all (R.holds_on_raw_data_item (R.raw_data_item_sorted_elem R.deterministically_encoded_cbor_map_key_order)) l == true
-  })
-: Pure (list cbor)
-    (requires True)
-    (ensures (fun l' -> List.Tot.length l' == List.Tot.length l))
-= match l with
-  | [] -> []
-  | a :: q -> a :: list_cbor_of_cbor_list q
+let cast_to_cbor (x: R.raw_data_item) : Tot cbor =
+  if cbor_bool x
+  then x
+  else R.Simple 0uy // dummy
+
+let list_cbor_of_cbor_list
+  (l: list R.raw_data_item)
+: Tot (list cbor)
+= List.Tot.map cast_to_cbor l
 
 let unpack m =
   assert_norm (R.raw_data_item_ints_optimal == R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem);
@@ -255,17 +252,24 @@ let unpack m =
     CMap v
   | R.Tagged tag v -> CTagged tag.value v
 
-let rec cbor_list_of_list_cbor
+let cast_from_cbor (x: cbor) : Tot R.raw_data_item = x
+
+let cbor_list_of_list_cbor (l: list cbor) : Tot (list R.raw_data_item) =
+  List.Tot.map cast_from_cbor l
+
+let cbor_list_of_list_cbor_correct
   (l: list cbor)
-: Pure (list R.raw_data_item)
-    (requires True)
-    (ensures (fun l' -> List.Tot.length l' == List.Tot.length l /\
-      List.Tot.for_all (R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem) l' == true /\
-      List.Tot.for_all (R.holds_on_raw_data_item (R.raw_data_item_sorted_elem R.deterministically_encoded_cbor_map_key_order)) l' == true    
-    ))
-= match l with
-  | [] -> []
-  | a :: q -> a :: cbor_list_of_list_cbor q
+: Lemma
+  (ensures (let l' = cbor_list_of_list_cbor l in
+   List.Tot.for_all (R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem) l' == true /\
+   List.Tot.for_all (R.holds_on_raw_data_item (R.raw_data_item_sorted_elem R.deterministically_encoded_cbor_map_key_order)) l' == true
+  ))
+  [SMTPat (cbor_list_of_list_cbor l)]
+= U.list_for_all_truep l;
+  assert_norm (R.raw_data_item_ints_optimal == R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem);
+  assert_norm (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order == R.holds_on_raw_data_item (R.raw_data_item_sorted_elem R.deterministically_encoded_cbor_map_key_order));
+  U.list_for_all_map cast_from_cbor l U.truep R.raw_data_item_ints_optimal (fun _ -> ());
+  U.list_for_all_map cast_from_cbor l U.truep (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order)  (fun _ -> ())
 
 let pack x =
   let m : R.raw_data_item = match x with
@@ -316,3 +320,94 @@ let pack_unpack c = match c with
   | R.Array len v ->
     R.raw_uint64_optimal_unique len (R.mk_raw_uint64 len.value);
     cbor_list_of_list_cbor_of_cbor_list v
+
+let mk_cbor r =
+  if R.valid_raw_data_item r
+  then begin
+    R.raw_data_item_uint64_optimize_correct r;
+    R.raw_data_item_uint64_optimize_valid r;
+    let r' = R.raw_data_item_uint64_optimize r in
+    R.cbor_raw_sort_correct r';
+    R.cbor_raw_sort r'
+  end
+  else pack (CSimple 0uy) // dummy
+
+let mk_cbor_equiv'
+  (r: R.raw_data_item)
+: Lemma
+  (requires (R.valid_raw_data_item r == true))
+  (ensures (R.raw_equiv r (mk_cbor r)))
+= R.raw_data_item_uint64_optimize_equiv r;
+  let r' = R.raw_data_item_uint64_optimize r in
+  R.cbor_raw_sort_equiv r';
+  R.raw_equiv_trans r r' (mk_cbor r)
+
+let mk_cbor_equiv
+  r1 r2
+= mk_cbor_equiv' r1;
+  mk_cbor_equiv' r2;
+  R.raw_equiv_sym (mk_cbor r2) r2;
+  R.raw_equiv_sym (mk_cbor r1) r1;
+  Classical.move_requires (R.raw_equiv_trans r1 (mk_cbor r1)) (mk_cbor r2);
+  Classical.move_requires (R.raw_equiv_trans r1 (mk_cbor r2)) r2;
+  Classical.move_requires (R.raw_equiv_trans (mk_cbor r1) r1) r2;
+  Classical.move_requires (R.raw_equiv_trans (mk_cbor r1) r2) (mk_cbor r2);
+  Classical.move_requires (R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor r1)) (mk_cbor r2)
+
+let mk_cbor_eq
+  r
+= assert_norm (R.valid_raw_data_item == R.holds_on_raw_data_item R.valid_raw_data_item_elem);
+  R.holds_on_raw_data_item_eq R.valid_raw_data_item_elem r;
+  mk_cbor_equiv' r;
+  let r' = mk_cbor r in
+  assert (R.raw_equiv r r' == true);
+  R.raw_equiv_eq r r';
+  assert_norm (R.raw_data_item_ints_optimal == R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem);
+  assert_norm (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order == R.holds_on_raw_data_item (R.raw_data_item_sorted_elem R.deterministically_encoded_cbor_map_key_order));
+  R.holds_on_raw_data_item_eq R.raw_data_item_ints_optimal_elem r';
+  R.holds_on_raw_data_item_eq (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order) r';
+  R.raw_data_item_sorted_optimal_valid R.deterministically_encoded_cbor_map_key_order r';
+  R.holds_on_raw_data_item_eq R.valid_raw_data_item_elem r';
+  match r, r' with
+  | R.Tagged _ v, R.Tagged _ v' ->
+    mk_cbor_equiv' v;
+    R.raw_equiv_sym (mk_cbor v) v;
+    R.raw_equiv_trans (mk_cbor v) v v';
+    R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor v) v'
+  | R.Array len v, R.Array len' v' ->
+    List.Tot.for_all_mem R.valid_raw_data_item v;
+    List.Tot.for_all_mem R.raw_data_item_ints_optimal v';
+    List.Tot.for_all_mem (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order) v';
+    U.list_for_all2_map2 R.raw_equiv v v' mk_cbor cast_to_cbor ( = ) (fun x x' ->
+      mk_cbor_equiv' x;
+      R.raw_equiv_sym (mk_cbor x) x;
+      R.raw_equiv_trans (mk_cbor x) x x';
+      R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor x) x'
+    );
+    U.list_for_all2_equals
+      (List.Tot.map mk_cbor v)
+      (List.Tot.map cast_to_cbor v')
+  | R.Map _ v, R.Map _ v' ->
+    let prf
+      (x: R.raw_data_item)
+    : Lemma
+      (mk_cbor_match_map_elem v v' x)
+      [SMTPat (mk_cbor_match_map_elem v v' x)]
+    = if R.valid_raw_data_item x
+      then begin
+        mk_cbor_equiv' x;
+        R.list_setoid_assoc_valid_equiv x v (mk_cbor x) v';
+        R.list_setoid_assoc_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor x) v';
+        match U.list_setoid_assoc R.raw_equiv x v, cbor_map_get v' (mk_cbor x) with
+        | Some w, Some w' ->
+          list_assoc_cbor (mk_cbor x) v';
+          let Some x_ = U.list_setoid_assoc_mem R.raw_equiv x v in
+          List.Tot.for_all_mem (U.holds_on_pair R.valid_raw_data_item) v;
+          mk_cbor_equiv' w;
+          R.raw_equiv_sym w (mk_cbor w);
+          R.raw_equiv_trans (mk_cbor w) w w';
+          R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor w) w'
+        | _ -> ()
+      end
+    in ()
+  | _ -> ()

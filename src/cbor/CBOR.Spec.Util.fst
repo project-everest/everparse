@@ -500,7 +500,36 @@ let rec list_for_all2_refl
   | [] -> ()
   | a :: q -> prf a; list_for_all2_refl p q prf
 
-let rec list_for_all2_trans
+let rec list_for_all2_trans_gen
+  (#t1 #t2 #t3: Type)
+  (p12: t1 -> t2 -> bool)
+  (p23: t2 -> t3 -> bool)
+  (p13: t1 -> t3 -> bool)
+  (l1: list t1)
+  (l2: list t2)
+  (l3: list t3)
+  (prf: (x1: t1) -> (x2: t2) -> (x3: t3 {
+    List.Tot.memP x1 l1 /\ x1 << l1 /\
+    List.Tot.memP x2 l2 /\ x2 << l2 /\
+    List.Tot.memP x3 l3 /\ x3 << l3
+  }) -> Lemma
+    (requires (p12 x1 x2 == true /\
+      p23 x2 x3 == true
+    ))
+    (ensures (p13 x1 x3 == true))
+  )
+: Lemma
+  (requires (list_for_all2 p12 l1 l2 == true /\
+    list_for_all2 p23 l2 l3 == true
+  ))
+  (ensures (list_for_all2 p13 l1 l3 == true))
+= match l1, l2, l3 with
+  | a1 :: q1, a2 :: q2, a3 :: q3 ->
+    prf a1 a2 a3;
+    list_for_all2_trans_gen p12 p23 p13 q1 q2 q3 prf
+  | _ -> ()
+
+let list_for_all2_trans
   (#t: Type)
   (p: t -> t -> bool)
   (l1 l2 l3: list t)
@@ -517,11 +546,10 @@ let rec list_for_all2_trans
     list_for_all2 p l2 l3 == true
   ))
   (ensures (list_for_all2 p l1 l3 == true))
-= match l1, l2, l3 with
-  | a1 :: q1, a2 :: q2, a3 :: q3 ->
-    prf a1 a2 a3;
-    list_for_all2_trans p q1 q2 q3 prf
-  | _ -> ()
+= list_for_all2_trans_gen
+    p p p
+    l1 l2 l3
+    prf
 
 noextract
 let holds_on_pair
@@ -967,6 +995,28 @@ let rec list_for_all2_map
 = match l with
   | [] -> ()
   | a :: q -> prf a; list_for_all2_map f q p prf
+
+let rec list_for_all2_map2
+  (#t1 #t2: Type)
+  (#t1' #t2': Type)
+  (p: t1 -> t2 -> bool)
+  (l1: list t1)
+  (l2: list t2)
+  (f1: t1 -> t1')
+  (f2: t2 -> t2')
+  (p': t1' -> t2' -> bool)
+  (prf: (x1: t1) -> (x2: t2 { List.Tot.memP x1 l1 /\ x1 << l1 /\
+    List.Tot.memP x2 l2 /\ x2 << l2
+  }) -> Lemma
+    (requires (p x1 x2 == true))
+    (ensures (p' (f1 x1) (f2 x2) == true))
+  )
+: Lemma
+  (requires (list_for_all2 p l1 l2) == true)
+  (ensures (list_for_all2 p' (List.Tot.map f1 l1) (List.Tot.map f2 l2) == true))
+= match l1, l2 with
+  | a1 :: q1, a2 :: q2 -> prf a1 a2; list_for_all2_map2 p q1 q2 f1 f2 p' prf
+  | _ -> ()
 
 let rec list_sum (#t: Type) (f: t -> nat) (l: list t) : Tot nat =
   match l with

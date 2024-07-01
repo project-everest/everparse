@@ -47,9 +47,7 @@ let valid_raw_data_item_elem
   | _ -> true
 
 let valid_raw_data_item
-  (l: raw_data_item)
-: Tot bool
-= holds_on_raw_data_item valid_raw_data_item_elem l
+= holds_on_raw_data_item valid_raw_data_item_elem
 
 (* Shortest-size integers *)
 
