@@ -9,6 +9,14 @@ module SZ = FStar.SizeT
 module S = Pulse.Lib.Slice
 
 inline_for_extraction
+let validate_u8 : validator tot_parse_u8 =
+  validate_total_constant_size tot_parse_u8 1sz
+
+inline_for_extraction
+let jump_u8 : jumper tot_parse_u8 =
+  jump_constant_size tot_parse_u8 1sz
+
+inline_for_extraction
 noextract
 let be_to_n_1 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint8 1)
 
@@ -29,6 +37,14 @@ fn read_u8' (_: unit) : leaf_reader #FStar.UInt8.t #parse_u8_kind #tot_parse_u8 
 
 inline_for_extraction
 let read_u8 : reader tot_serialize_u8 = reader_of_leaf_reader (read_u8' ())
+
+inline_for_extraction
+let validate_u16 : validator tot_parse_u16 =
+  validate_total_constant_size tot_parse_u16 2sz
+
+inline_for_extraction
+let jump_u16 : jumper tot_parse_u16 =
+  jump_constant_size tot_parse_u16 2sz
 
 inline_for_extraction
 noextract
@@ -53,6 +69,14 @@ inline_for_extraction
 let read_u16 : reader tot_serialize_u16 = reader_of_leaf_reader (read_u16' ())
 
 inline_for_extraction
+let validate_u32 : validator tot_parse_u32 =
+  validate_total_constant_size tot_parse_u32 4sz
+
+inline_for_extraction
+let jump_u32 : jumper tot_parse_u32 =
+  jump_constant_size tot_parse_u32 4sz
+
+inline_for_extraction
 noextract
 let be_to_n_4 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint32 4)
 
@@ -73,6 +97,14 @@ fn read_u32' (_: unit) : leaf_reader #FStar.UInt32.t #parse_u32_kind #tot_parse_
 
 inline_for_extraction
 let read_u32 : reader tot_serialize_u32 = reader_of_leaf_reader (read_u32' ())
+
+inline_for_extraction
+let validate_u64 : validator tot_parse_u64 =
+  validate_total_constant_size tot_parse_u64 8sz
+
+inline_for_extraction
+let jump_u64 : jumper tot_parse_u64 =
+  jump_constant_size tot_parse_u64 8sz
 
 inline_for_extraction
 noextract

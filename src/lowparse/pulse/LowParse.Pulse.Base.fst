@@ -20,6 +20,24 @@ let validator_post (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (
   | _ -> False
   end
 
+let validator_post_intro_success (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t) : Lemma
+  (requires (
+    SZ.v offset <= Seq.length v /\ (
+    let pv = parse p (Seq.slice v (SZ.v offset) (Seq.length v)) in
+    Some? pv /\
+    snd (Some?.v pv) == SZ.v off
+  )))
+  (ensures (validator_post p offset v (Some off)))
+= ()
+
+let validator_post_intro_failure (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) : Lemma
+  (requires (
+    SZ.v offset <= Seq.length v /\
+    parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == None
+  ))
+  (ensures (validator_post p offset v None))
+= ()
+
 inline_for_extraction
 let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
   (input: slice byte) ->
@@ -43,6 +61,30 @@ fn validate_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: validator
 ```
 
 inline_for_extraction
+```pulse
+fn validate_total_constant_size (#t: Type0) (#k: parser_kind) (p: parser k t) (sz: SZ.t {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == SZ.v sz /\
+    k.parser_kind_metadata == Some ParserKindMetadataTotal
+})
+: validator #_ #k p =
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  parser_kind_prop_equiv k p;
+  pts_to_len input;
+  if SZ.lt (SZ.sub (len input) offset) sz
+  {
+    None #SZ.t
+  } else {
+    Some (sz <: SZ.t)
+  }
+}
+```
+
+inline_for_extraction
 let jumper (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
   (input: slice byte) ->
   (offset: SZ.t) ->
@@ -61,6 +103,23 @@ fn jump_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: jumper p1) (#
   (#v: Ghost.erased bytes)
 {
   v1 input offset;
+}
+```
+
+inline_for_extraction
+```pulse
+fn jump_constant_size (#t: Type0) (#k: parser_kind) (p: parser k t) (sz: SZ.t {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == SZ.v sz
+})
+: jumper #_ #k p =
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  parser_kind_prop_equiv k p;
+  (sz <: SZ.t)
 }
 ```
 
