@@ -130,8 +130,8 @@ let reader
   (pre: vprop) ->
   (t': Type0) ->
   (post: (t' -> vprop)) ->
-  (cont: (x: t { x == Ghost.reveal v }) -> stt t' (pts_to_serialized s input #pm v ** pre) post) ->
-  stt t' (pts_to_serialized s input #pm v ** pre) post
+  (cont: (x: t { x == Ghost.reveal v }) -> stt t' (pts_to_serialized s input #pm v ** pre) (fun x -> post x)) ->
+  stt t' (pts_to_serialized s input #pm v ** pre) (fun x -> post x)
 
 inline_for_extraction
 let call_reader
@@ -190,3 +190,68 @@ fn read
   call_reader r input #pm #v emp t (fun v' -> pts_to_serialized s input #pm v' ** pure (Ghost.reveal v == v')) (read_cont r input pm v)
 }
 ```
+
+inline_for_extraction
+let leaf_reader
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+: Tot Type
+= (input: slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased t) ->
+  stt t (pts_to_serialized s input #pm v) (fun res ->
+    pts_to_serialized s input #pm v **
+    pure (res == Ghost.reveal v)
+  )
+
+inline_for_extraction
+let leaf_read
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: leaf_reader s)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+: stt t (pts_to_serialized s input #pm v) (fun res ->
+    pts_to_serialized s input #pm v **
+    pure (res == Ghost.reveal v)
+  )
+= r input #pm #v
+
+inline_for_extraction
+```pulse
+fn reader_of_leaf_reader'
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: leaf_reader s)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (cont: (x: t { x == Ghost.reveal v }) -> stt t' (pts_to_serialized s input #pm v ** pre) (fun x -> post x))
+  requires (pts_to_serialized s input #pm v ** pre)
+  returns res: t'
+  ensures post res
+{
+  let res = leaf_read r input #pm #v;
+  cont res
+}
+```
+
+inline_for_extraction
+let reader_of_leaf_reader
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: leaf_reader s)
+: reader s
+= reader_of_leaf_reader' r

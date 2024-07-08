@@ -1,0 +1,97 @@
+module LowParse.Pulse.Int
+include LowParse.Spec.Int
+include LowParse.Pulse.Base
+open LowParse.Pulse.Util
+
+module E = LowParse.Pulse.Endianness
+module EI = LowParse.Spec.Endianness.Instances
+module SZ = FStar.SizeT
+module S = Pulse.Lib.Slice
+
+inline_for_extraction
+noextract
+let be_to_n_1 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint8 1)
+
+inline_for_extraction
+```pulse
+fn read_u8' (_: unit) : leaf_reader #FStar.UInt8.t #parse_u8_kind #tot_parse_u8 tot_serialize_u8
+= (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased FStar.UInt8.t)
+{
+  unfold (pts_to_serialized tot_serialize_u8 input #pm v);
+  serialize_u8_spec_be v;
+  let res = be_to_n_1 input 1sz;
+  fold (pts_to_serialized tot_serialize_u8 input #pm v);
+  res
+}
+```
+
+inline_for_extraction
+let read_u8 : reader tot_serialize_u8 = reader_of_leaf_reader (read_u8' ())
+
+inline_for_extraction
+noextract
+let be_to_n_2 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint16 2)
+
+inline_for_extraction
+```pulse
+fn read_u16' (_: unit) : leaf_reader #FStar.UInt16.t #parse_u16_kind #tot_parse_u16 tot_serialize_u16
+= (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased FStar.UInt16.t)
+{
+  unfold (pts_to_serialized tot_serialize_u16 input #pm v);
+  serialize_u16_spec_be v;
+  let res = be_to_n_2 input 2sz;
+  fold (pts_to_serialized tot_serialize_u16 input #pm v);
+  res
+}
+```
+
+inline_for_extraction
+let read_u16 : reader tot_serialize_u16 = reader_of_leaf_reader (read_u16' ())
+
+inline_for_extraction
+noextract
+let be_to_n_4 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint32 4)
+
+inline_for_extraction
+```pulse
+fn read_u32' (_: unit) : leaf_reader #FStar.UInt32.t #parse_u32_kind #tot_parse_u32 tot_serialize_u32
+= (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased FStar.UInt32.t)
+{
+  unfold (pts_to_serialized tot_serialize_u32 input #pm v);
+  serialize_u32_spec_be v;
+  let res = be_to_n_4 input 4sz;
+  fold (pts_to_serialized tot_serialize_u32 input #pm v);
+  res
+}
+```
+
+inline_for_extraction
+let read_u32 : reader tot_serialize_u32 = reader_of_leaf_reader (read_u32' ())
+
+inline_for_extraction
+noextract
+let be_to_n_8 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint64 8)
+
+inline_for_extraction
+```pulse
+fn read_u64' (_: unit) : leaf_reader #FStar.UInt64.t #parse_u64_kind #tot_parse_u64 tot_serialize_u64
+= (input: S.slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased FStar.UInt64.t)
+{
+  unfold (pts_to_serialized tot_serialize_u64 input #pm v);
+  serialize_u64_spec_be v;
+  let res = be_to_n_8 input 8sz;
+  fold (pts_to_serialized tot_serialize_u64 input #pm v);
+  res
+}
+```
+
+inline_for_extraction
+let read_u64 : reader tot_serialize_u64 = reader_of_leaf_reader (read_u64' ())
