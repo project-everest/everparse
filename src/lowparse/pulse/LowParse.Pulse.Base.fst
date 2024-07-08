@@ -12,31 +12,16 @@ let serializer #k = tot_serializer #k
 let pts_to_serialized (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (input: slice byte) (#[exact (`1.0R)] pm: perm) (v: t) : vprop =
   pts_to input #pm (bare_serialize s v)
 
-let validator_post (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) (res: option SZ.t) : Tot prop =
-  SZ.v offset <= Seq.length v /\
-  begin match res, parse p (Seq.slice v (SZ.v offset) (Seq.length v)) with
-  | None, None -> True
-  | Some off, Some (_, consumed) -> SZ.v off == consumed
-  | _ -> False
-  end
-
-let validator_post_intro_success (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t) : Lemma
-  (requires (
+let validator_success (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t) : Tot prop =
     SZ.v offset <= Seq.length v /\ (
     let pv = parse p (Seq.slice v (SZ.v offset) (Seq.length v)) in
     Some? pv /\
     snd (Some?.v pv) == SZ.v off
-  )))
-  (ensures (validator_post p offset v (Some off)))
-= ()
+  )
 
-let validator_post_intro_failure (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) : Lemma
-  (requires (
+let validator_failure (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) : Tot prop =
     SZ.v offset <= Seq.length v /\
     parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == None
-  ))
-  (ensures (validator_post p offset v None))
-= ()
 
 inline_for_extraction
 let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
@@ -44,9 +29,14 @@ let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
   (offset: SZ.t) ->
   (#pm: perm) ->
   (#v: Ghost.erased bytes) ->
-  stt (option SZ.t)
-    (pts_to input #pm v ** pure (SZ.v offset <= Seq.length v))
-    (fun res -> pts_to input #pm v ** pure (validator_post p offset v res))
+  (pre: vprop) ->
+  (t': Type0) ->
+  (post: (t' -> vprop)) ->
+  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success p offset v off)) (fun x -> post x))) ->
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure p offset v)) (fun x -> post x))) ->
+  stt t'
+    (pts_to input #pm v ** pre ** pure (SZ.v offset <= Seq.length v))
+    (fun x -> post x)
 
 inline_for_extraction
 ```pulse
@@ -55,8 +45,13 @@ fn validate_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: validator
   (offset: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success p2 offset v off)) (fun x -> post x)))
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure p2 offset v)) (fun x -> post x)))
 {
-  v1 input offset;
+  v1 input offset pre t' post ksucc kfail;
 }
 ```
 
@@ -72,14 +67,19 @@ fn validate_total_constant_size (#t: Type0) (#k: parser_kind) (p: parser k t) (s
   (offset: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success p offset v off)) (fun x -> post x)))
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure p offset v)) (fun x -> post x)))
 {
   parser_kind_prop_equiv k p;
   pts_to_len input;
   if SZ.lt (SZ.sub (len input) offset) sz
   {
-    None #SZ.t
+    kfail ()
   } else {
-    Some (sz <: SZ.t)
+    ksucc (sz <: SZ.t)
   }
 }
 ```
@@ -92,7 +92,7 @@ let jumper (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
   (#v: Ghost.erased bytes) ->
   stt SZ.t
     (pts_to input #pm v ** pure (SZ.v offset <= Seq.length v /\ Some? (parse p (Seq.slice v (SZ.v offset) (Seq.length v)))))
-    (fun res -> pts_to input #pm v ** pure (validator_post p offset v (Some res)))
+    (fun res -> pts_to input #pm v ** pure (validator_success p offset v res))
 
 inline_for_extraction
 ```pulse
@@ -154,7 +154,7 @@ fn peek
   (#pm: perm)
   (#v: Ghost.erased bytes)
   (consumed: SZ.t)
-  requires (pts_to input #pm v ** pure (validator_post #k #t p 0sz v (Some consumed)))
+  requires (pts_to input #pm v ** pure (validator_success #k #t p 0sz v (consumed)))
   returns res: (slice byte & slice byte)
   ensures peek_post s input pm v consumed res
 {
