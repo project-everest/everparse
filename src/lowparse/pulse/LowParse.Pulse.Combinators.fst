@@ -452,23 +452,22 @@ fn validate_dtuple2_cont_success1
   (offset: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased bytes)
-  (v2: (off: SZ.t { validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) }) -> (key: Ghost.erased t1 { fst (Some?.v (parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)))) == Ghost.reveal key }) ->
-  validator_for (p2 key) input (SZ.add offset off) pm v)
+  (v2: (x: t1) -> validator (p2 x))
   (pre: vprop)
   (t': Type0)
   (post: (t' -> vprop))
   (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_dtuple2 p1 p2) offset v off)) (fun x -> post x)))
   (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_dtuple2 p1 p2) offset v)) (fun x -> post x)))
   (off: SZ.t)
-  requires pts_to input #pm v ** pre ** pure (validator_success p1 offset v off)
+  (x: t1)
+  requires pts_to input #pm v ** pre ** pure (validator_success p1 offset v off /\ parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))
   returns x: t'
   ensures post x
 {
   pts_to_len input; // for SZ.fits (offset + off)
-  let key : Ghost.erased t1 = Ghost.hide (fst (Some?.v (parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)))));
-  v2 off key pre t' post
-    (validate_dtuple2_cont_success2 p1 p2 input offset #pm #v pre t' post key off ksucc)
-    (validate_dtuple2_cont_failure2 p1 p2 input offset #pm #v pre t' post key off kfail)
+  v2 x input (offset `SZ.add` off) #pm #v pre t' post
+    (validate_dtuple2_cont_success2 p1 p2 input offset #pm #v pre t' post x off ksucc)
+    (validate_dtuple2_cont_failure2 p1 p2 input offset #pm #v pre t' post x off kfail)
 }
 ```
 
@@ -500,22 +499,21 @@ fn validate_dtuple2_cont_failure1
 
 inline_for_extraction
 ```pulse
-fn validate_dtuple2_gen
+fn validate_dtuple2
   (#t1: Type0)
   (#t2: t1 -> Type0)
   (#k1: parser_kind)
   (#p1: parser k1 t1)
-  (v1: validator p1)
+  (v1: validate_and_read p1)
   (#k2: parser_kind)
-  (p2: ((x: t1) -> parser k2 (t2 x)))
+  (#p2: ((x: t1) -> parser k2 (t2 x)))
+  (v2: ((x: t1) -> validator (p2 x)))
+: validator #(dtuple2 t1 t2) #(and_then_kind k1 k2) (tot_parse_dtuple2 #k1 #t1 p1 #k2 #t2 p2)
+=
   (input: slice byte)
   (offset: SZ.t)
-  (pm: perm)
-  (v: Ghost.erased bytes)
-  (v2: (off: SZ.t { validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) }) -> (key: Ghost.erased t1 { fst (Some?.v (parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)))) == Ghost.reveal key }) ->
-  validator_for (p2 key) input (SZ.add offset off) pm v)
-: validator_for #(dtuple2 t1 t2) #(and_then_kind k1 k2) (tot_parse_dtuple2 #k1 #t1 p1 #k2 #t2 p2) input offset pm v
-= 
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
   (pre: vprop)
   (t': Type0)
   (post: (t' -> vprop))
@@ -527,121 +525,6 @@ fn validate_dtuple2_gen
     (validate_dtuple2_cont_failure1 p1 p2 input offset #pm #v pre t' post kfail)
 }
 ```
-
-inline_for_extraction
-let validate_nondep_then
-  (#t1 #t2: Type0)
-  (#k1: parser_kind)
-  (#p1: parser k1 t1)
-  (v1: validator p1)
-  (#k2: parser_kind)
-  (#p2: parser k2 t2)
-  (v2: validator p2)
-: validator #(t1 & t2) #(and_then_kind k1 k2) (tot_nondep_then #k1 #t1 p1 #k2 #t2 p2)
-= Classical.forall_intro (nondep_then_eq_dtuple2 p1 p2);
-  validate_ext
-    (validate_synth
-      (fun input offset #pm #v ->
-        validate_dtuple2_gen
-          v1
-          (fun _ -> p2)
-          input
-          offset
-          pm
-          v
-          (fun off _ -> v2 input (SZ.add offset off) #pm #v)
-      )
-      pair_of_dtuple2
-    )
-    (tot_nondep_then #k1 #t1 p1 #k2 #t2 p2)    
-
-inline_for_extraction
-```pulse
-fn validate_dtuple2_payload_cont
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
-  (#k1: parser_kind)
-  (#p1: parser k1 t1)
-  (s1: serializer p1)
-  (#k2: parser_kind)
-  (p2: ((x: t1) -> parser k2 (t2 x)))
-  (v2: ((x: t1) -> validator (p2 x)))
-  (input: slice byte)
-  (offset: SZ.t)
-  (pm: perm)
-  (v: Ghost.erased bytes)
-  (off: SZ.t { validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) })
-  (key: Ghost.erased t1 { fst (Some?.v (parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)))) == Ghost.reveal key })
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (ksucc: ((off': SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (p2 key) (SZ.add offset off) v off')) (fun x -> post x)))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (p2 key) (SZ.add offset off) v)) (fun x -> post x)))
-  (input_key: slice byte)
-  (x: t1 { x == Ghost.reveal key })
-  requires (pts_to_serialized s1 input_key #pm key ** (pre ** (pts_to_serialized s1 input_key #pm key @==> pts_to input #pm v)))
-  returns res: t'
-  ensures post res
-{
-  elim_stick (pts_to_serialized s1 input_key #pm key) _;
-  v2 x input (SZ.add offset off) pre t' post ksucc kfail
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_dtuple2_payload
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
-  (#k1: parser_kind)
-  (#p1: parser k1 t1)
-  (#s1: serializer p1)
-  (r1: reader s1)
-  (#k2: parser_kind)
-  (p2: ((x: t1) -> parser k2 (t2 x)))
-  (v2: ((x: t1) -> validator (p2 x)))
-  (input: slice byte)
-  (offset: SZ.t)
-  (pm: perm)
-  (v: Ghost.erased bytes)
-  (off: SZ.t { validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) })
-  (key: Ghost.erased t1 { fst (Some?.v (parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)))) == Ghost.reveal key })
-: validator_for #(t2 key) #k2 (p2 key) input (SZ.add offset off) pm v
-=
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (ksucc: ((off': SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (p2 key) (SZ.add offset off) v off')) (fun x -> post x)))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (p2 key) (SZ.add offset off) v)) (fun x -> post x)))
-{
-  let input' = peek_stick_gen s1 input offset off;
-  assert (pts_to_serialized s1 input' #pm key);
-  r1 input' _ t' post (validate_dtuple2_payload_cont s1 p2 v2 input offset pm v off key pre t' post ksucc kfail input')
-}
-```
-
-inline_for_extraction
-let validate_dtuple2
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
-  (#k1: parser_kind)
-  (#p1: parser k1 t1)
-  (v1: validator p1)
-  (#s1: serializer p1)
-  (r1: reader s1)
-  (#k2: parser_kind)
-  (p2: ((x: t1) -> parser k2 (t2 x)))
-  (v2: ((x: t1) -> validator (p2 x)))
-: Tot (validator (tot_parse_dtuple2 p1 p2))
-= fun input offset #pm #v ->
-    validate_dtuple2_gen
-      v1
-      p2
-      input
-      offset
-      pm
-      v
-      (validate_dtuple2_payload r1 p2 v2 input offset pm v)
 
 inline_for_extraction
 ```pulse
