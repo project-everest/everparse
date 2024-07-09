@@ -24,6 +24,352 @@ let parse_serialize_strong_prefix
 = let sv = bare_serialize s v in
   parse_strong_prefix #k p sv (sv `Seq.append` suff)
 
+let tot_parse_synth_eq'
+  (#k: parser_kind)
+  (#t1: Type)
+  (#t2: Type)
+  (p1: tot_parser k t1)
+  (f2: (t1 -> Tot t2) {synth_injective f2})
+  (b: bytes)
+: Lemma
+  (ensures (parse (tot_parse_synth p1 f2) b == parse_synth' #k p1 f2 b))
+= parse_synth_eq #k p1 f2 b
+
+inline_for_extraction
+let validate_synth
+  (#t #t': Type)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (w: validator p)
+  (f: (t -> t') { synth_injective f })
+: Tot (validator (tot_parse_synth p f))
+= Classical.forall_intro (tot_parse_synth_eq' p f);
+  w
+
+inline_for_extraction
+let jump_synth
+  (#t #t': Type)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (w: jumper p)
+  (f: (t -> t') { synth_injective f })
+: Tot (jumper (tot_parse_synth p f))
+= Classical.forall_intro (tot_parse_synth_eq' p f);
+  w
+
+```pulse
+ghost
+fn pts_to_serialized_synth_intro
+  (#t #t': Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (f: (t -> t') { synth_injective f })
+  (f': (t' -> t) { synth_inverse f f' })
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+  requires pts_to_serialized s input #pm v
+  ensures pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm (f v)
+{
+  tot_parse_synth_eq p f (bare_serialize s v);
+  parse_serialize #k #t' #(tot_parse_synth p f) (tot_serialize_synth p f s f' ()) (f v);
+  parse_injective #k #t' (tot_parse_synth p f) (bare_serialize s v) (bare_serialize (tot_serialize_synth p f s f' ()) (f v));
+  unfold (pts_to_serialized s input #pm v);
+  rewrite (pts_to input #pm (bare_serialize s v))
+    as (pts_to input #pm (bare_serialize (tot_serialize_synth p f s f' ()) (f v)));
+  fold (pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm (f v))
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_synth_elim
+  (#t #t': Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (f: (t -> t') { synth_injective f })
+  (f': (t' -> t) { synth_inverse f f' })
+  (input: slice byte)
+  (#pm: perm)
+  (v: t)
+  requires pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm (f v)
+  ensures pts_to_serialized s input #pm v
+{
+  tot_parse_synth_eq p f (bare_serialize s v);
+  parse_serialize #k #t' #(tot_parse_synth p f) (tot_serialize_synth p f s f' ()) (f v);
+  parse_injective #k #t' (tot_parse_synth p f) (bare_serialize s v) (bare_serialize (tot_serialize_synth p f s f' ()) (f v));
+  unfold (pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm (f v));
+  rewrite (pts_to input #pm (bare_serialize (tot_serialize_synth p f s f' ()) (f v)))
+    as (pts_to input #pm (bare_serialize s v));
+  fold (pts_to_serialized s input #pm v)
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_synth_l2r
+  (#t #t': Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (f: (t -> t') { synth_injective f })
+  (f': (t' -> t) { synth_inverse f f' })
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t')
+  requires pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm v
+  ensures pts_to_serialized s input #pm (f' v)
+{
+  tot_serialize_synth_eq p f s f' () v;
+  unfold (pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm v);
+  fold (pts_to_serialized s input #pm (f' v))
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_synth_r2l
+  (#t #t': Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (f: (t -> t') { synth_injective f })
+  (f': (t' -> t) { synth_inverse f f' })
+  (input: slice byte)
+  (#pm: perm)
+  (v: t')
+  requires pts_to_serialized s input #pm (f' v)
+  ensures pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm v
+{
+  tot_serialize_synth_eq p f s f' () v;
+  unfold (pts_to_serialized s input #pm (f' v));
+  fold (pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm v)
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_filter_gen_cont_success
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: serializer p)
+  (f: (t -> bool))
+  (f': (input: slice byte) -> (pm: perm) -> (v: Ghost.erased t) -> stt bool (pts_to_serialized s input #pm v) (fun res -> pts_to_serialized s input #pm v ** pure (res == f v)))
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_filter p f) offset v off)) (fun x -> post x)))
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_filter p f) offset v)) (fun x -> post x)))
+  (off: SZ.t)
+  requires (pts_to input #pm v ** pre ** pure (validator_success (p) offset v off))
+  returns res: t'
+  ensures post res
+{
+  Seq.lemma_split v (SZ.v offset);
+  let split123 = split false input offset;
+  match split123 { Mktuple2 input1 input23 -> {
+    unfold (split_post input pm v offset split123);
+    unfold (split_post' input pm v offset input1 input23);
+    with v1 v23 . assert (pts_to input1 #pm v1 ** pts_to input23 #pm v23);
+    tot_parse_filter_eq p f v23;
+    let split23 = peek_stick s input23 off;
+    match split23 { Mktuple2 input2 input3 -> {
+      unfold (peek_stick_post s input23 pm v23 off split23);
+      unfold (peek_stick_post' s input23 pm v23 off input2 input3);
+      let cond = f' input2 pm _;
+      elim_stick (pts_to_serialized s input2 #pm _ ** _) _;
+      join input1 input23 input;
+      rewrite (pts_to input #pm (Seq.append v1 v23)) as (pts_to input #pm v);
+      if cond {
+        ksucc off
+      } else {
+        kfail ()
+      }
+    }}
+  }}
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_filter_gen_cont_failure
+  (#t: Type0)
+  (#k: parser_kind)
+  (p: tot_parser k t)
+  (f: (t -> bool))
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_filter p f) offset v)) (fun x -> post x)))
+  (_: unit)
+  requires (pts_to input #pm v ** pre ** pure (validator_failure (p) offset v))
+  returns res: t'
+  ensures post res
+{
+  tot_parse_filter_eq p f (Seq.slice v (SZ.v offset) (Seq.length v));
+  kfail ()
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_filter_gen
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: serializer p)
+  (w: validator p)
+  (f: (t -> bool))
+  (f': (input: slice byte) -> (pm: perm) -> (v: Ghost.erased t) -> stt bool (pts_to_serialized s input #pm v) (fun res -> pts_to_serialized s input #pm v ** pure (res == f v)))
+: validator #_ #(parse_filter_kind k) (tot_parse_filter p f)
+=
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_filter p f) offset v off)) (fun x -> post x)))
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_filter p f) offset v)) (fun x -> post x)))
+{
+  w input offset pre t' post
+    (validate_filter_gen_cont_success s f f' input offset #pm #v pre t' post ksucc kfail)
+    (validate_filter_gen_cont_failure p f input offset #pm #v pre t' post kfail)
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_filter_read_cond_cont
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: serializer p)
+  (f: (t -> bool))
+  (input: slice byte)
+  (pm: perm)
+  (v: Ghost.erased t)
+  (x: t { x == Ghost.reveal v })
+  requires (pts_to_serialized s input #pm v ** emp)
+  returns res: bool
+  ensures pts_to_serialized s input #pm v ** pure (res == f v)
+{
+  f x
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_filter_read_cond
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (#s: serializer p)
+  (r: reader s)
+  (f: (t -> bool))
+  (input: slice byte)
+  (pm: perm)
+  (v: Ghost.erased t)
+  requires (pts_to_serialized s input #pm v)
+  returns res: bool
+  ensures pts_to_serialized s input #pm v ** pure (res == f v)
+{
+  r input #pm #v emp bool (fun res -> pts_to_serialized s input #pm v ** pure (res == f v)) (validate_filter_read_cond_cont s f input pm v)
+}
+```
+
+inline_for_extraction
+let validate_filter
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (#s: serializer p)
+  (r: reader s)
+  (w: validator p)
+  (f: (t -> bool))
+: validator #_ #(parse_filter_kind k) (tot_parse_filter p f)
+= validate_filter_gen s w f (validate_filter_read_cond r f)
+
+inline_for_extraction
+```pulse
+fn jump_filter
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (w: jumper p)
+  (f: (t -> bool))
+: jumper #_ #(parse_filter_kind k) (tot_parse_filter p f)
+=
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  Classical.forall_intro (tot_parse_filter_eq p f);
+  w input offset #pm #v
+}
+```
+
+let parse_filter_refine_intro
+  (#t: Type)
+  (f: (t -> GTot bool))
+  (v: t)
+  (sq: squash (f v == true))
+: Tot (parse_filter_refine f)
+= v
+
+```pulse
+ghost
+fn pts_to_serialized_filter_intro
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: serializer p)
+  (f: (t -> bool))
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  requires (pts_to_serialized s input #pm v ** pure (f v == true))
+  ensures exists* (v': parse_filter_refine f) . pts_to_serialized (tot_serialize_filter s f) input #pm v' ** pure ((v' <: t) == Ghost.reveal v)
+{
+  unfold (pts_to_serialized s input #pm v);
+  let sq: squash (f v == true) = ();
+  let v' : Ghost.erased (parse_filter_refine f) = Ghost.hide (parse_filter_refine_intro #t f (Ghost.reveal v) sq);
+  fold (pts_to_serialized (tot_serialize_filter s f) input #pm v');
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_filter_elim
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: serializer p)
+  (f: (t -> bool))
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (parse_filter_refine f))
+  requires (pts_to_serialized (tot_serialize_filter s f) input #pm v)
+  ensures pts_to_serialized s input #pm v
+{
+  unfold (pts_to_serialized (tot_serialize_filter s f) input #pm v);
+  fold (pts_to_serialized s input #pm v);
+}
+```
+
 let split_nondep_then_post'
   (#t1 #t2: Type0)
   (#k1: parser_kind)
@@ -59,6 +405,7 @@ let split_nondep_then_post
 = let (left, right) = res in
   split_nondep_then_post' s1 s2 input pm v left right
 
+inline_for_extraction
 ```pulse
 fn split_nondep_then
   (#t1 #t2: Type0)
