@@ -714,6 +714,94 @@ let validate_dtuple2
       v
       (validate_dtuple2_payload r1 p2 v2 input offset pm v)
 
+inline_for_extraction
+```pulse
+fn jump_nondep_then
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (v1: jumper p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (v2: jumper p2)
+: jumper #(t1 & t2) #(and_then_kind k1 k2) (tot_nondep_then #k1 #t1 p1 #k2 #t2 p2)
+= 
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  nondep_then_eq #k1 p1 #k2 p2 (Seq.slice v (SZ.v offset) (Seq.length v));
+  pts_to_len input;
+  let consumed1 = v1 input offset;
+  let consumed2 = v2 input (offset `SZ.add` consumed1);
+  SZ.add consumed1 consumed2
+}
+```
+
+inline_for_extraction
+```pulse
+fn jump_dtuple2_payload_cont
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1)
+  (#k2: parser_kind)
+  (p2: ((x: t1) -> parser k2 (t2 x)))
+  (v2: ((x: t1) -> jumper (p2 x)))
+  (input: slice byte)
+  (offset: SZ.t)
+  (pm: perm)
+  (v: Ghost.erased bytes)
+  (off: SZ.t { jumper_pre (tot_parse_dtuple2 p1 p2) offset v /\ validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) })
+  (key: Ghost.erased t1 { fst (Some?.v (parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)))) == Ghost.reveal key })
+  (input_key: slice byte)
+  (x: t1 { x == Ghost.reveal key })
+  requires (pts_to_serialized s1 input_key #pm key ** (pts_to_serialized s1 input_key #pm key @==> pts_to input #pm v))
+  returns res: SZ.t
+  ensures (pts_to input #pm v ** pure (validator_success (tot_parse_dtuple2 p1 p2) offset v res))
+{
+  elim_stick (pts_to_serialized s1 input_key #pm key) _;
+  pts_to_len input;
+  let off2 = v2 x input (SZ.add offset off);
+  SZ.add off off2
+}
+```
+
+inline_for_extraction
+```pulse
+fn jump_dtuple2
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (v1: jumper p1)
+  (#s1: serializer p1)
+  (r1: reader s1)
+  (#k2: parser_kind)
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (v2: (x: t1) -> jumper (p2 x))
+: jumper #(dtuple2 t1 t2) #(and_then_kind k1 k2) (tot_parse_dtuple2 #k1 #t1 p1 #k2 #t2 p2)
+= 
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  pts_to_len input;
+  let off1 = v1 input offset;
+  let input1 = peek_stick_gen s1 input offset off1;
+  with key . assert (pts_to_serialized s1 input1 #pm key);
+  r1
+    input1
+    (pts_to_serialized s1 input1 #pm key @==> pts_to input #pm v) 
+    SZ.t
+    (fun res -> pts_to input #pm v ** pure (validator_success (tot_parse_dtuple2 p1 p2) offset v res))
+    (jump_dtuple2_payload_cont s1 p2 v2 input offset pm v off1 key input1)
+}
+```
+
 let split_dtuple2_post'
   (#t1: Type0)
   (#t2: t1 -> Type0)
