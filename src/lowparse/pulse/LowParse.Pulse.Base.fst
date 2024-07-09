@@ -39,6 +39,83 @@ let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
     (fun x -> post x)
 
 inline_for_extraction
+let validate
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (w: validator p)
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success p offset v off)) (fun x -> post x)))
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure p offset v)) (fun x -> post x)))
+: stt t'
+    (pts_to input #pm v ** pre ** pure (SZ.v offset <= Seq.length v))
+    (fun x -> post x)
+= w input offset #pm #v pre t' post ksucc kfail
+
+let validate_nonempty_post
+  (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t)
+: Tot prop
+= SZ.v offset <= Seq.length v /\
+  (off == 0sz <==> None? (parse p (Seq.slice v (SZ.v offset) (Seq.length v)))) /\
+  (if off = 0sz then validator_failure p offset v else validator_success p offset v off)
+
+inline_for_extraction
+```pulse
+fn validate_nonempty_success (#t: Type0) (#k: parser_kind) (p: parser k t { k.parser_kind_low > 0 })
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (sq: squash (SZ.v offset <= Seq.length v))
+  (off: SZ.t)
+  requires pts_to input #pm v ** emp ** pure (validator_success p offset v off)
+  returns off: SZ.t
+  ensures pts_to input #pm v ** pure (validate_nonempty_post p offset v off)
+{
+  parser_kind_prop_equiv k p;
+  off
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_nonempty_failure (#t: Type0) (#k: parser_kind) (p: parser k t { k.parser_kind_low > 0 })
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (sq: squash (SZ.v offset <= Seq.length v))
+  (_: unit)
+  requires pts_to input #pm v ** emp ** pure (validator_failure p offset v)
+  returns off: SZ.t
+  ensures pts_to input #pm v ** pure (validate_nonempty_post p offset v off)
+{
+  parser_kind_prop_equiv k p;
+  0sz
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_nonempty (#t: Type0) (#k: parser_kind) (#p: parser k t) (w: validator p { k.parser_kind_low > 0 })
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  requires pts_to input #pm v ** pure (SZ.v offset <= Seq.length v)
+  returns off: SZ.t
+  ensures pts_to input #pm v ** pure (validate_nonempty_post p offset v off)
+{
+  validate w input offset #pm #v emp SZ.t (fun off -> pts_to input #pm v ** pure (validate_nonempty_post p offset v off))
+    (validate_nonempty_success p input offset #pm #v ())
+    (validate_nonempty_failure p input offset #pm #v ())
+}
+```
+
+inline_for_extraction
 let validate_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: validator p1) (#k2: parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : validator #_ #k2 p2 =
   v1
 
