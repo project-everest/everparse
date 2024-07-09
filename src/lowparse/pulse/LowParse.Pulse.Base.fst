@@ -585,3 +585,128 @@ let reader_of_leaf_reader
   (r: leaf_reader s)
 : reader s
 = reader_of_leaf_reader' r
+
+inline_for_extraction
+let validate_and_read (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
+  (input: slice byte) ->
+  (offset: SZ.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased bytes) ->
+  (pre: vprop) ->
+  (t': Type0) ->
+  (post: (t' -> vprop)) ->
+  (ksucc: ((off: SZ.t) -> (x: t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success p offset v off /\ parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x))) ->
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure p offset v)) (fun x -> post x))) ->
+  stt t'
+    (pts_to input #pm v ** pre ** pure (SZ.v offset <= Seq.length v))
+    (fun x -> post x)
+
+inline_for_extraction
+```pulse
+fn validate_and_read_intro_cont_read
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> (x: t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success p offset v off /\ parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x)))
+  (off: SZ.t)
+  (#v': Ghost.erased t)
+  (input': slice byte { validator_success p offset v off /\ parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (Ghost.reveal v', SZ.v off) })
+  (x: t { x == Ghost.reveal v' })
+  requires pts_to_serialized s input' #pm v' ** (pre ** (pts_to_serialized s input' #pm v' @==> pts_to input #pm v))
+  returns x': t'
+  ensures post x'
+{
+  elim_stick _ _;
+  ksucc off x
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_and_read_intro_cont_validate
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (#s: serializer p) (r: reader s)
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> (x: t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success p offset v off /\ parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x)))
+  (off: SZ.t)
+  requires pts_to input #pm v ** pre ** pure (validator_success p offset v off)
+  returns x' : t'
+  ensures post x'
+{
+  let input' = peek_stick_gen s input offset off;
+  with v' . assert (pts_to_serialized s input' #pm v');
+  r input' #pm #v' _ _ _ (validate_and_read_intro_cont_read s input offset #pm #v pre t' post ksucc off #_ input')
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_and_read_intro
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (w: validator p) (#s: serializer p) (r: reader s)
+: validate_and_read #t #k p
+=
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> (x: t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success p offset v off /\ parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x)))
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure p offset v)) (fun x -> post x)))
+{
+  w input offset _ _ _ (validate_and_read_intro_cont_validate r input offset #pm #v pre t' post ksucc) kfail
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_and_read_elim_cont
+  (#t: Type0) (#k: parser_kind) (p: parser k t)
+  (input: slice byte)
+  (offset: SZ.t)
+  (pm: perm)
+  (v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success p offset v off)) (fun x -> post x)))
+  (off: SZ.t)
+  (x: t)
+  requires pts_to input #pm v ** pre ** pure (validator_success p offset v off /\ parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))
+  returns x' : t'
+  ensures post x'
+{
+  ksucc off
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_and_read_elim
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (w: validate_and_read p)
+: validator #t #k p
+=
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success p offset v off)) (fun x -> post x)))
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure p offset v)) (fun x -> post x)))
+{
+  w input offset pre t' post (validate_and_read_elim_cont p input offset pm v pre t' post ksucc) kfail
+}
+```
