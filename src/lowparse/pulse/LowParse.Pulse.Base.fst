@@ -12,6 +12,98 @@ let serializer #k = tot_serializer #k
 let pts_to_serialized (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (input: slice byte) (#[exact (`1.0R)] pm: perm) (v: t) : vprop =
   pts_to input #pm (bare_serialize s v)
 
+```pulse
+ghost
+fn pts_to_serialized_intro_stick
+  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v0: bytes) (v: t)
+  requires (pts_to input #pm v0 ** pure (v0 == bare_serialize s v))
+  ensures (pts_to_serialized s input #pm v ** (pts_to_serialized s input #pm v @==> pts_to input #pm v0))
+{
+  rewrite_with_stick (pts_to input #pm v0) (pts_to_serialized s input #pm v)
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_elim_stick
+  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
+  requires (pts_to_serialized s input #pm v)
+  ensures (pts_to input #pm (bare_serialize s v) ** (pts_to input #pm (bare_serialize s v) @==> pts_to_serialized s input #pm v))
+{
+  rewrite_with_stick (pts_to_serialized s input #pm v) (pts_to input #pm (bare_serialize s v))
+}
+```
+
+let serializer_ext_eq
+  (#t: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (s1: serializer p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2)
+  (v: t)
+: Lemma
+  (requires forall x . parse p1 x == parse p2 x)
+  (ensures (bare_serialize s1 v == bare_serialize s2 v))
+= let s2' = serialize_ext #k1 p1 s1 #k2 p2 in
+  serializer_unique p2 s2 s2' v
+
+```pulse
+ghost
+fn pts_to_serialized_ext
+  (#t: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (s1: serializer p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+  requires pts_to_serialized s1 input #pm v ** pure (
+    forall x . parse p1 x == parse p2 x
+  )
+  ensures pts_to_serialized s2 input #pm v
+{
+  serializer_ext_eq s1 s2 v;
+  unfold (pts_to_serialized s1 input #pm v);
+  fold (pts_to_serialized s2 input #pm v)
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_ext_stick
+  (#t: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (s1: serializer p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+  requires pts_to_serialized s1 input #pm v ** pure (
+    forall x . parse p1 x == parse p2 x
+  )
+  ensures pts_to_serialized s2 input #pm v ** (pts_to_serialized s2 input #pm v @==> pts_to_serialized s1 input #pm v)
+{
+  pts_to_serialized_ext s1 s2 input;
+  ghost
+  fn aux
+    (_: unit)
+    requires emp ** pts_to_serialized s2 input #pm v
+    ensures pts_to_serialized s1 input #pm v
+  {
+    pts_to_serialized_ext s2 s1 input
+  };
+  intro_stick _ _ _ aux
+}
+```
+
 let validator_success (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t) : GTot bool =
     SZ.v offset <= Seq.length v && (
     let pv = parse p (Seq.slice v (SZ.v offset) (Seq.length v)) in

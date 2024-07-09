@@ -109,6 +109,34 @@ fn pts_to_serialized_synth_elim
 
 ```pulse
 ghost
+fn pts_to_serialized_synth_stick
+  (#t #t': Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (f: (t -> t') { synth_injective f })
+  (f': (t' -> t) { synth_inverse f f' })
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t)
+  requires pts_to_serialized s input #pm v
+  ensures pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm (f v) ** (pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm (f v) @==> pts_to_serialized s input #pm v)
+{
+  pts_to_serialized_synth_intro s f f' input;
+  ghost
+  fn aux
+    (_: unit)
+    requires emp ** pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm (f v)
+    ensures pts_to_serialized s input #pm v
+  {
+    pts_to_serialized_synth_elim s f f' input v 
+  };
+  intro_stick _ _ _ aux
+}
+```
+
+```pulse
+ghost
 fn pts_to_serialized_synth_l2r
   (#t #t': Type0)
   (#k: parser_kind)
@@ -146,6 +174,34 @@ fn pts_to_serialized_synth_r2l
   tot_serialize_synth_eq p f s f' () v;
   unfold (pts_to_serialized s input #pm (f' v));
   fold (pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm v)
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_synth_l2r_stick
+  (#t #t': Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (f: (t -> t') { synth_injective f })
+  (f': (t' -> t) { synth_inverse f f' })
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t')
+  requires pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm v
+  ensures pts_to_serialized s input #pm (f' v) ** (pts_to_serialized s input #pm (f' v) @==> pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm v)
+{
+  pts_to_serialized_synth_l2r s f f' input;
+  ghost
+  fn aux
+    (_: unit)
+    requires emp ** pts_to_serialized s input #pm (f' v)
+    ensures pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm v
+  {
+    pts_to_serialized_synth_r2l s f f' input v
+  };
+  intro_stick _ _ _ aux
 }
 ```
 
@@ -658,6 +714,85 @@ let validate_dtuple2
       v
       (validate_dtuple2_payload r1 p2 v2 input offset pm v)
 
+let split_dtuple2_post'
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (s2: (x: t1) -> serializer (p2 x))
+  (input: slice byte)
+  (pm: perm)
+  (v: Ghost.erased (dtuple2 t1 t2))
+  (left right: slice byte)
+: Tot vprop
+= pts_to_serialized s1 left #pm (dfst v) **
+  pts_to_serialized (s2 (dfst v)) right #pm (dsnd v) **
+  ((pts_to_serialized s1 left #pm (dfst v) **
+  pts_to_serialized (s2 (dfst v)) right #pm (dsnd v)) @==>
+    pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
+
+let split_dtuple2_post
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (s2: (x: t1) -> serializer (p2 x))
+  (input: slice byte)
+  (pm: perm)
+  (v: Ghost.erased (dtuple2 t1 t2))
+  (res: (slice byte & slice byte))
+: Tot vprop
+= let (left, right) = res in
+  split_dtuple2_post' s1 s2 input pm v left right
+
+inline_for_extraction
+```pulse
+fn split_dtuple2
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#p2: ((x: t1) -> parser k2 (t2 x)))
+  (s2: (x: t1) -> serializer (p2 x))
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (dtuple2 t1 t2))
+  requires pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v
+  returns res: (slice byte & slice byte)
+  ensures split_dtuple2_post s1 s2 input pm v res
+{
+  rewrite_with_stick
+    (pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
+    (pts_to input #pm (bare_serialize s1 (dfst v) `Seq.append` bare_serialize (s2 (dfst v)) (dsnd v)));
+  parse_serialize_strong_prefix s1 (dfst v) (bare_serialize (s2 (dfst v)) (dsnd v));
+  let i = j1 input 0sz;
+  let res = slice_append_split_stick false input i;
+  match res {
+    Mktuple2 input1 input2 -> {
+      unfold (slice_append_split_stick_post input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i res);
+      unfold (slice_append_split_stick_post' input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i input1 input2);
+      stick_trans (_ ** _) _ _;
+      pts_to_serialized_intro_stick s1 input1 (dfst v);
+      pts_to_serialized_intro_stick (s2 (dfst v)) input2 (dsnd v);
+      stick_prod (pts_to_serialized s1 input1 #pm _) (pts_to input1 #pm _) (pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input2 #pm _);
+      stick_trans (pts_to_serialized s1 input1 #pm _ ** pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input1 #pm _ ** pts_to input2 #pm _) _;
+      fold (split_dtuple2_post' s1 s2 input pm v input1 input2);
+      fold (split_dtuple2_post s1 s2 input pm v (input1, input2));
+      (input1, input2)
+    }
+  }
+}
+```
+
 let split_nondep_then_post'
   (#t1 #t2: Type0)
   (#k1: parser_kind)
@@ -711,39 +846,31 @@ fn split_nondep_then
   returns res: (slice byte & slice byte)
   ensures split_nondep_then_post s1 s2 input pm v res
 {
-  tot_serialize_nondep_then_eq s1 s2 v;
-  rewrite (pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v)
-    as (pts_to input #pm (bare_serialize s1 (fst v) `Seq.append` bare_serialize s2 (snd v)));
-  parse_serialize_strong_prefix s1 (fst v) (bare_serialize s2 (snd v));
-  let i = j1 input 0sz;
-  let res = slice_append_split false input i;
-  match res {
-    Mktuple2 input1 input2 -> {
-      unfold (slice_append_split_post input pm (bare_serialize s1 (fst v)) (bare_serialize s2 (snd v)) i res);
-      unfold (slice_append_split_post' input pm (bare_serialize s1 (fst v)) (bare_serialize s2 (snd v)) i input1 input2);
-      fold (pts_to_serialized s1 input1 #pm (fst v));
-      fold (pts_to_serialized s2 input2 #pm (snd v));
-      ghost
-      fn aux
-        (_foo: unit)
-        requires is_split input pm i input1 input2 ** (pts_to_serialized s1 input1 #pm (fst v) ** pts_to_serialized s2 input2 #pm (snd v))
-        ensures pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v
-      {
-        unfold (pts_to_serialized s1 input1 #pm (fst v));
-        unfold (pts_to_serialized s2 input2 #pm (snd v));
-        join input1 input2 input;
-        rewrite (pts_to input #pm (bare_serialize s1 (fst v) `Seq.append` bare_serialize s2 (snd v)))
-          as (pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v)
-      };
-      intro_stick
-        (pts_to_serialized s1 input1 #pm (fst v) ** pts_to_serialized s2 input2 #pm (snd v))
-        (pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v)
-        (is_split input pm i input1 input2)
-        aux;
-      fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
-      fold (split_nondep_then_post s1 s2 input pm v (input1, input2));
-      (input1, input2)
-    }
-  }
+  Classical.forall_intro (nondep_then_eq_dtuple2 p1 p2);
+  pts_to_serialized_ext_stick
+    (tot_serialize_nondep_then s1 s2)
+    (tot_serialize_synth
+      (tot_parse_dtuple2 p1 (fun _ -> p2))
+      pair_of_dtuple2
+      (tot_serialize_dtuple2 s1 (fun _ -> s2))
+      dtuple2_of_pair
+      ()
+    )
+    input;
+  pts_to_serialized_synth_l2r_stick
+    (tot_serialize_dtuple2 s1 (fun _ -> s2))
+    pair_of_dtuple2
+    dtuple2_of_pair
+    input;
+  stick_trans (pts_to_serialized (tot_serialize_dtuple2 s1 (fun _ -> s2)) _ #pm _) _ _;
+  let res = split_dtuple2 s1 j1 (fun _ -> s2) input;
+  match res { Mktuple2 input1 input2 -> {
+    unfold (split_dtuple2_post s1 (fun _ -> s2) input pm (dtuple2_of_pair v) res);
+    unfold (split_dtuple2_post' s1 (fun _ -> s2) input pm (dtuple2_of_pair v) input1 input2);
+    stick_trans (_ ** _) _ _;
+    fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
+    fold (split_nondep_then_post s1 s2 input pm v (input1, input2));
+    (input1, input2)
+  }}
 }
 ```

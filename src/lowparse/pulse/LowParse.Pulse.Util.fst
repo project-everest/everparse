@@ -229,6 +229,52 @@ fn slice_append_split (#t: Type) (mutb: bool) (s: S.slice t) (#p: perm) (#v1 #v2
 }
 ```
 
+let slice_append_split_stick_post'
+    (#t: Type) (s: S.slice t) (p: perm) (v1 v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
+    (s1: S.slice t)
+    (s2: S.slice t)
+: Tot vprop
+=
+            S.pts_to s1 #p v1 **
+            S.pts_to s2 #p v2 **
+            ((S.pts_to s1 #p v1 ** S.pts_to s2 #p v2) @==> S.pts_to s #p (v1 `Seq.append` v2))
+
+let slice_append_split_stick_post
+    (#t: Type) (s: S.slice t) (p: perm) (v1 v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
+    (res: (S.slice t & S.slice t))
+: Tot vprop
+= let (s1, s2) = res in
+  slice_append_split_stick_post' s p v1 v2 i s1 s2
+
+inline_for_extraction
+```pulse
+fn slice_append_split_stick (#t: Type) (mutb: bool) (input: S.slice t) (#p: perm) (#v1 #v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
+    requires S.pts_to input #p (v1 `Seq.append` v2) ** pure (slice_append_split_precond mutb p v1 i)
+    returns res: (S.slice t & S.slice t)
+    ensures slice_append_split_stick_post input p v1 v2 i res
+{
+  let res = slice_append_split mutb input i;
+  match res {
+    Mktuple2 input1 input2 -> {
+      unfold (slice_append_split_post input p v1 v2 i res);
+      unfold (slice_append_split_post' input p v1 v2 i input1 input2);
+      ghost
+      fn aux
+        (_foo: unit)
+        requires S.is_split input p i input1 input2 ** (S.pts_to input1 #p v1 ** S.pts_to input2 #p v2)
+        ensures S.pts_to input #p (v1 `Seq.append` v2)
+      {
+        S.join input1 input2 input;
+      };
+      intro_stick _ _ _ aux;
+      fold (slice_append_split_stick_post' input p v1 v2 i input1 input2);
+      fold (slice_append_split_stick_post input p v1 v2 i (input1, input2));
+      (input1, input2)
+    }
+  }
+}
+```
+
 let slice_split_stick_post'
     (#t: Type) (s: S.slice t) (p: perm) (v: Ghost.erased (Seq.seq t)) (i: SZ.t)
     (s1: S.slice t)
@@ -276,5 +322,25 @@ fn slice_split_stick (#t: Type) (mutb: bool) (s: S.slice t) (#p: perm) (#v: Ghos
     fold (slice_split_stick_post s p v i (s1, s2));
     (s1, s2)
   }}
+}
+```
+
+```pulse
+ghost
+fn rewrite_with_stick
+  (p1 p2: vprop)
+  requires p1 ** pure (p1 == p2)
+  ensures p2 ** (p2 @==> p1)
+{
+  rewrite p1 as p2;
+  ghost
+  fn aux
+    (_: unit)
+    requires emp ** p2
+    ensures p1
+  {
+    rewrite p2 as p1
+  };
+  intro_stick _ _ _ aux
 }
 ```
