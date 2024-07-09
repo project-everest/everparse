@@ -24,11 +24,13 @@ let validator_failure (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t
     None? (parse p (Seq.slice v (SZ.v offset) (Seq.length v)))
 
 inline_for_extraction
-let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
-  (input: slice byte) ->
-  (offset: SZ.t) ->
-  (#pm: perm) ->
-  (#v: Ghost.erased bytes) ->
+let validator_for (#t: Type0) (#k: parser_kind) (p: parser k t)
+  (input: slice byte)
+  (offset: SZ.t)
+  (pm: perm)
+  (v: Ghost.erased bytes)
+: Tot Type
+=
   (pre: vprop) ->
   (t': Type0) ->
   (post: (t' -> vprop)) ->
@@ -37,6 +39,14 @@ let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
   stt t'
     (pts_to input #pm v ** pre ** pure (SZ.v offset <= Seq.length v))
     (fun x -> post x)
+
+inline_for_extraction
+let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
+  (input: slice byte) ->
+  (offset: SZ.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased bytes) ->
+  validator_for p input offset pm v
 
 inline_for_extraction
 let validate
@@ -307,6 +317,40 @@ fn peek_stick
     fold (peek_stick_post' s input pm v consumed left right);
     fold (peek_stick_post s input pm v consumed (left, right));
     (left, right)
+  }}
+}
+```
+
+```pulse
+fn peek_stick_gen
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (offset: SZ.t)
+  (consumed: SZ.t)
+  requires (pts_to input #pm v ** pure (validator_success #k #t p offset v (consumed)))
+  returns input': slice byte
+  ensures exists* v' . pts_to_serialized s input' #pm v' ** (pts_to_serialized s input' #pm v' @==> pts_to input #pm v) ** pure (
+    validator_success #k #t p offset v consumed /\
+    parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (v', SZ.v consumed)
+  )
+{
+  let split123 = slice_split_stick false input offset;
+  match split123 { Mktuple2 input1 input23 -> {
+    unfold (slice_split_stick_post input pm v offset split123);
+    unfold (slice_split_stick_post' input pm v offset input1 input23);
+    with v23 . assert (pts_to input23 #pm v23);
+    stick_elim_partial_l (pts_to input1 #pm _) (pts_to input23 #pm v23) (pts_to input #pm v);
+    let split23 = peek_stick s input23 consumed;
+    match split23 { Mktuple2 input2 input3 -> {
+      unfold (peek_stick_post s input23 pm v23 consumed split23);
+      unfold (peek_stick_post' s input23 pm v23 consumed input2 input3);
+      with v' . assert (pts_to_serialized s input2 #pm v');
+      stick_elim_partial_r (pts_to_serialized s input2 #pm _) (pts_to input3 #pm _) (pts_to input23 #pm v23);
+      stick_trans (pts_to_serialized s input2 #pm _) (pts_to input23 #pm _) (pts_to input #pm _);
+      input2
+    }}
   }}
 }
 ```

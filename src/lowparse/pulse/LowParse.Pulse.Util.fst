@@ -228,3 +228,53 @@ fn slice_append_split (#t: Type) (mutb: bool) (s: S.slice t) (#p: perm) (#v1 #v2
   }
 }
 ```
+
+let slice_split_stick_post'
+    (#t: Type) (s: S.slice t) (p: perm) (v: Ghost.erased (Seq.seq t)) (i: SZ.t)
+    (s1: S.slice t)
+    (s2: S.slice t)
+: Tot vprop
+= exists* v1 v2 .
+            S.pts_to s1 #p v1 **
+            S.pts_to s2 #p v2 **
+            ((S.pts_to s1 #p v1 ** S.pts_to s2 #p v2) @==> S.pts_to s #p v) **
+            pure (
+                SZ.v i <= Seq.length v /\
+                (v1, v2) == Seq.split v (SZ.v i)
+            )
+
+let slice_split_stick_post
+    (#t: Type) (s: S.slice t) (p: perm) (v: Ghost.erased (Seq.seq t)) (i: SZ.t)
+    (res: (S.slice t & S.slice t))
+: Tot vprop
+= let (s1, s2) = res in
+  slice_split_stick_post' s p v i s1 s2
+
+inline_for_extraction
+```pulse
+fn slice_split_stick (#t: Type) (mutb: bool) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Seq.seq t)) (i: SZ.t)
+    requires S.pts_to s #p v ** pure (S.split_precond mutb p v i)
+    returns res: (S.slice t & S.slice t)
+    ensures slice_split_stick_post s p v i res
+{
+  Seq.lemma_split v (SZ.v i);
+  let res = S.split mutb s i;
+  match res { Mktuple2 s1 s2 -> {
+    unfold (S.split_post s p v i res);
+    unfold (S.split_post' s p v i s1 s2);
+    with v1 v2 . assert (S.pts_to s1 #p v1 ** S.pts_to s2 #p v2);
+    ghost
+    fn aux
+      (_: unit)
+    requires (S.is_split s p i s1 s2 ** (S.pts_to s1 #p v1 ** S.pts_to s2 #p v2))
+    ensures (S.pts_to s #p v)
+    {
+      S.join s1 s2 s
+    };
+    intro_stick _ _ _ aux;
+    fold (slice_split_stick_post' s p v i s1 s2);
+    fold (slice_split_stick_post s p v i (s1, s2));
+    (s1, s2)
+  }}
+}
+```
