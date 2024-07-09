@@ -384,6 +384,145 @@ let nondep_then_eq_dtuple2
 
 inline_for_extraction
 ```pulse
+fn validate_nondep_then_cont_success2
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (p2: parser k2 t2)
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (off: SZ.t {validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) })
+  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_nondep_then p1 p2) offset v off)) (fun x -> post x)))
+  (off': SZ.t)
+  requires pts_to input #pm v ** pre ** pure (validator_success p2 (offset `SZ.add` off) v off')
+  returns x: t'
+  ensures post x
+{
+  pts_to_len input; // for SZ.fits (off + off')
+  nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 (Seq.slice v (SZ.v offset) (Seq.length v));
+  ksucc (off `SZ.add` off')
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_nondep_then_cont_failure2
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (p2: parser k2 t2)
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (off: SZ.t {validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) })
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_nondep_then p1 p2) offset v)) (fun x -> post x)))
+  (_: unit)
+  requires pts_to input #pm v ** pre ** pure (validator_failure p2 (offset `SZ.add` off) v)
+  returns x: t'
+  ensures post x
+{
+  nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 (Seq.slice v (SZ.v offset) (Seq.length v));
+  kfail ()
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_nondep_then_cont_success1
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (v2: validator p2)
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_nondep_then p1 p2) offset v off)) (fun x -> post x)))
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_nondep_then p1 p2) offset v)) (fun x -> post x)))
+  (off: SZ.t)
+  requires pts_to input #pm v ** pre ** pure (validator_success p1 offset v off)
+  returns x: t'
+  ensures post x
+{
+  pts_to_len input; // for SZ.fits (offset + off)  
+  v2 input (offset `SZ.add` off) #pm #v pre t' post
+    (validate_nondep_then_cont_success2 p1 p2 input offset #pm #v pre t' post off ksucc)
+    (validate_nondep_then_cont_failure2 p1 p2 input offset #pm #v pre t' post off kfail)
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_nondep_then_cont_failure1
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (p1: parser k1 t1)
+  (#k2: parser_kind)
+  (p2: parser k2 t2)
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_nondep_then p1 p2) offset v)) (fun x -> post x)))
+  (_: unit)
+  requires pts_to input #pm v ** pre ** pure (validator_failure p1 offset v)
+  returns x: t'
+  ensures post x
+{
+  nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 (Seq.slice v (SZ.v offset) (Seq.length v));
+  kfail ()
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_nondep_then
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (v1: validator p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (v2: validator p2)
+: validator #(t1 & t2) #(and_then_kind k1 k2) (tot_nondep_then #k1 #t1 p1 #k2 #t2 p2)
+= 
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_nondep_then p1 p2) offset v off)) (fun x -> post x)))
+  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_nondep_then p1 p2) offset v)) (fun x -> post x)))
+{
+  v1 input offset #pm #v pre t' post
+    (validate_nondep_then_cont_success1 p1 v2 input offset #pm #v pre t' post ksucc kfail)
+    (validate_nondep_then_cont_failure1 p1 p2 input offset #pm #v pre t' post kfail)
+}
+```
+
+inline_for_extraction
+```pulse
 fn validate_dtuple2_cont_success2
   (#t1: Type0)
   (#t2: t1 -> Type0)
