@@ -234,7 +234,7 @@ let elim_stt_cps
 inline_for_extraction
 ```pulse
 fn read_synth_cont
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: reader s1)
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (s1: serializer p1)
   (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
   (f2': (x: t1) -> stt_cps (f2 x))
   (input: slice byte)
@@ -271,7 +271,78 @@ fn read_synth
 {
   pts_to_serialized_synth_l2r_stick s1 f2 f1 input;
   r input #pm #_ (pre ** (pts_to_serialized s1 input #pm (f1 v) @==> pts_to_serialized (tot_serialize_synth p1 f2 s1 f1 ()) input #pm v)) t' post
-    (read_synth_cont r f2 f1 f2' input pm v pre t' post cont)
+    (read_synth_cont s1 f2 f1 f2' input pm v pre t' post cont)
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_and_read_synth_cont_cont
+  (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1)
+  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 })
+  (input: slice byte)
+  (pm: perm)
+  (v: Ghost.erased bytes)
+  (offset: SZ.t)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (cont: (off: SZ.t) -> (x: t2) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_synth p1 f2) offset v off /\ parse (tot_parse_synth p1 f2) (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x))
+  (off: SZ.t)
+  (x: t1 { validator_success p1 offset v off /\ parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off) })
+  (x2: t2 { x2 == f2 x })
+  requires pts_to input #pm v ** pre
+  returns x': t'
+  ensures post x'
+{
+  tot_parse_synth_eq p1 f2 (Seq.slice v (SZ.v offset) (Seq.length v));
+  cont off x2
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_and_read_synth_cont
+  (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1)
+  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 })
+  (f2': (x: t1) -> stt_cps (f2 x))
+  (input: slice byte)
+  (pm: perm)
+  (v: Ghost.erased bytes)
+  (offset: SZ.t)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (cont: (off: SZ.t) -> (x: t2) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_synth p1 f2) offset v off /\ parse (tot_parse_synth p1 f2) (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x))
+  (off: SZ.t)
+  (x: t1)
+  requires pts_to input #pm v ** pre ** pure (validator_success p1 offset v off /\ parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))
+  returns x': t'
+  ensures post x'
+{
+  f2' x (pts_to input #pm v ** pre) t' post (validate_and_read_synth_cont_cont p1 f2 input pm v offset pre t' post cont off x)
+}
+```
+
+inline_for_extraction
+```pulse
+fn validate_and_read_synth
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (w: validate_and_read p1)
+  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 })
+  (f2': (x: t1) -> stt_cps (f2 x))
+: validate_and_read #t2 #k1 (tot_parse_synth p1 f2)
+= (input: slice byte)
+  (offset: _)
+  (#pm: _)
+  (#v: _)
+  (pre: _)
+  (t': Type0)
+  (post: _)
+  (ksucc: _)
+  (kfail: _)
+{
+  tot_parse_synth_eq p1 f2 (Seq.slice v (SZ.v offset) (Seq.length v));
+  w input offset #pm #v pre t' post (validate_and_read_synth_cont p1 f2 f2' input pm v offset pre t' post ksucc) kfail
 }
 ```
 
