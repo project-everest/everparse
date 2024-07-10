@@ -378,6 +378,7 @@ fn validate_and_read_filter_cont_success
   (#k: parser_kind)
   (p: tot_parser k t)
   (f: (t -> bool))
+  (f': (x: t) -> (y: bool { y == f x }))
   (input: slice byte)
   (offset: SZ.t)
   (#pm: perm)
@@ -394,7 +395,7 @@ fn validate_and_read_filter_cont_success
   ensures post res
 {
   tot_parse_filter_eq p f (Seq.slice v (SZ.v offset) (Seq.length v));
-  if f x {
+  if f' x {
     ksucc off x
   } else {
     kfail ()
@@ -410,6 +411,7 @@ fn validate_and_read_filter
   (#p: tot_parser k t)
   (w: validate_and_read p)
   (f: (t -> bool))
+  (f': (x: t) -> (y: bool { y == f x }))
 : validate_and_read #_ #(parse_filter_kind k) (tot_parse_filter p f)
 =
   (input: slice byte)
@@ -423,10 +425,20 @@ fn validate_and_read_filter
   (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_filter p f) offset v)) (fun x -> post x)))
 {
   w input offset #pm #v pre t' post
-    (validate_and_read_filter_cont_success p f input offset #pm #v pre t' post ksucc kfail)
+    (validate_and_read_filter_cont_success p f f' input offset #pm #v pre t' post ksucc kfail)
     (validate_and_read_filter_cont_failure p f input offset #pm #v pre t' post kfail)
 }
 ```
+
+inline_for_extraction
+let validate_and_read_filter'
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (w: validate_and_read p)
+  (f: (t -> bool))
+: validate_and_read #_ #(parse_filter_kind k) (tot_parse_filter p f)
+= validate_and_read_filter w f (fun x -> f x)
 
 inline_for_extraction
 ```pulse
