@@ -206,6 +206,76 @@ fn pts_to_serialized_synth_l2r_stick
 ```
 
 inline_for_extraction
+let stt_cps
+  (#t: Type)
+  (y: t)
+: Tot Type
+= (pre: vprop) -> (t': Type0) -> (post: (t' -> vprop)) -> (phi: ((y': t { y' == y }) -> stt t' pre (fun x -> post x))) -> stt t' pre (fun x -> post x)
+
+inline_for_extraction
+let intro_stt_cps
+  (#t: Type)
+  (y: t)
+: Tot (stt_cps y)
+= fun pre t' post phi -> phi y
+
+inline_for_extraction
+let elim_stt_cps
+  (#t: Type)
+  (y: Ghost.erased t)
+  (cps: stt_cps (Ghost.reveal y))
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (phi: ((y': t { y' == Ghost.reveal y }) -> stt t' pre (fun x -> post x)))
+: stt t' pre (fun x -> post x)
+= cps pre t' post phi
+
+inline_for_extraction
+```pulse
+fn read_synth_cont
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: reader s1)
+  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
+  (f2': (x: t1) -> stt_cps (f2 x))
+  (input: slice byte)
+  (pm: perm)
+  (v: Ghost.erased t2)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (cont: (x: t2 { x == Ghost.reveal v }) -> stt t' (pts_to_serialized (tot_serialize_synth p1 f2 s1 f1 ()) input #pm v ** pre) (fun x -> post x))
+  (x: t1 { x == Ghost.reveal (f1 v) })
+  requires pts_to_serialized s1 input #pm (f1 v) ** (pre ** (pts_to_serialized s1 input #pm (f1 v) @==> pts_to_serialized (tot_serialize_synth p1 f2 s1 f1 ()) input #pm v))
+  returns x': t'
+  ensures post x'
+{
+  elim_stick _ _;
+  f2' x (pts_to_serialized (tot_serialize_synth p1 f2 s1 f1 ()) input #pm v ** pre) t' post cont
+}
+```
+
+inline_for_extraction
+```pulse
+fn read_synth
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: reader s1)
+  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
+  (f2': (x: t1) -> stt_cps (f2 x))
+: reader #t2 #k1 #(tot_parse_synth p1 f2) (tot_serialize_synth p1 f2 s1 f1 ())
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+  (pre: _)
+  (t': Type0)
+  (post: _)
+  (cont: _)
+{
+  pts_to_serialized_synth_l2r_stick s1 f2 f1 input;
+  r input #pm #_ (pre ** (pts_to_serialized s1 input #pm (f1 v) @==> pts_to_serialized (tot_serialize_synth p1 f2 s1 f1 ()) input #pm v)) t' post
+    (read_synth_cont r f2 f1 f2' input pm v pre t' post cont)
+}
+```
+
+inline_for_extraction
 ```pulse
 fn validate_and_read_filter_cont_failure
   (#t: Type0)
@@ -355,7 +425,23 @@ fn pts_to_serialized_filter_elim
 }
 ```
 
-
+inline_for_extraction
+```pulse
+fn read_filter
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: reader s1) (f: (t1 -> bool))
+: reader #(parse_filter_refine f) #(parse_filter_kind k1) #(tot_parse_filter p1 f) (tot_serialize_filter s1 f)
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+  (pre: _)
+  (t': Type0)
+  (post: _)
+  (cont: _)
+{
+  pts_to_serialized_filter_elim s1 f input;
+  r input #pm #(Ghost.hide (Ghost.reveal v)) pre t' post cont
+}
+```
 
 let pair_of_dtuple2
   (#t1 #t2: Type)
