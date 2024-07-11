@@ -303,8 +303,16 @@ fn ifthenelse_jumper (#t: Type0) (#k: parser_kind) (p: parser k t) (cond: bool) 
 ```
 
 inline_for_extraction
-let jump_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: jumper p1) (#k2: parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : jumper #_ #k2 p2 =
-  v1
+```pulse
+fn jump_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: jumper p1) (#k2: parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : jumper #_ #k2 p2 =
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  v1 input offset #pm #v
+}
+```
 
 inline_for_extraction
 ```pulse
@@ -348,6 +356,7 @@ let peek_post
 = let (left, right) = res in
   peek_post' s input pm v consumed left right
 
+inline_for_extraction
 ```pulse
 fn peek
   (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
@@ -402,6 +411,7 @@ let peek_stick_post
 = let (left, right) = res in
   peek_stick_post' s input pm v consumed left right
 
+inline_for_extraction
 ```pulse
 fn peek_stick
   (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
@@ -435,6 +445,7 @@ fn peek_stick
 }
 ```
 
+inline_for_extraction
 ```pulse
 fn peek_stick_gen
   (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)

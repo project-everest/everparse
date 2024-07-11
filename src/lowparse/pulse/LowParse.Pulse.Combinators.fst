@@ -551,6 +551,7 @@ fn jump_filter
 }
 ```
 
+inline_for_extraction
 let parse_filter_refine_intro
   (#t: Type)
   (f: (t -> GTot bool))
