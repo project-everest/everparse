@@ -18,7 +18,8 @@ let jump_u8 : jumper tot_parse_u8 =
 
 inline_for_extraction
 noextract
-let be_to_n_1 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint8 1)
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let be_to_n_1 =  (E.mk_be_to_n EI.uint8 1)
 
 inline_for_extraction
 ```pulse

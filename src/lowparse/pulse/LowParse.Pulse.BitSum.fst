@@ -70,14 +70,32 @@ let jump_bitsum'
   (#p: parser k t)
   (w: jumper p)
 : Tot (jumper (tot_parse_bitsum' b p))
-= [@@inline_let]
-  let _ = synth_bitsum'_injective b in
-  jump_synth
+= jump_synth
     (jump_filter
       w
       (filter_bitsum' b)
     )
-    (synth_bitsum' b)
+    (synth_bitsum'_injective b; synth_bitsum' b)
+
+inline_for_extraction
+```pulse
+fn read_bitsum'_cont
+  (#t: eqtype)
+  (#tot: pos)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (k_: bitsum'_type b)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (phi: (k': bitsum'_type b { k' == k_ }) -> stt t' pre (fun x -> post x))
+  requires pre
+  returns x: t'
+  ensures post x
+{
+  phi k_
+}
+```
 
 inline_for_extraction
 let read_bitsum'
@@ -91,20 +109,16 @@ let read_bitsum'
   (#s: serializer p)
   (r: reader s)
 : Tot (reader (tot_serialize_bitsum' b s))
-= [@@inline_let]
-  let _ = synth_bitsum'_injective b in
-  [@@inline_let]
-  let _ = synth_bitsum'_recip_inverse b in
-  read_synth
+= read_synth
     (read_filter
       r
       (filter_bitsum' b)
     )
-    (synth_bitsum' b)
-    (synth_bitsum'_recip b)
+    (synth_bitsum'_injective b; synth_bitsum' b)
+    (synth_bitsum'_recip_inverse b; synth_bitsum'_recip b)
     (
       d
         stt_cps
         stt_cps_ifthenelse
-        (fun k pre t' post phi -> phi k)
+        (read_bitsum'_cont b)
     )

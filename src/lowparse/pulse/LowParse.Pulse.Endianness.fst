@@ -44,7 +44,7 @@ fn be_to_n_0
   (pos: SZ.t)
 {
   E.reveal_be_to_n (Seq.slice (v) 0 0);
-  u.zero
+  UIntType?.zero u
 }
 ```
 
@@ -67,7 +67,7 @@ fn be_to_n_1
   E.reveal_be_to_n (Seq.slice (v) 0 1);
   E.reveal_be_to_n (Seq.slice (v) 0 0);
   let last = S.op_Array_Access x 0sz;
-  (u.from_byte last)
+  UIntType?.from_byte u last
 }
 ```
 
@@ -95,8 +95,8 @@ fn be_to_n_S
   let pos' = pos `SZ.sub` 1sz;
   let last = S.op_Array_Access x pos';
   let n = ih x #pm #v pos';
-  let blast = u.from_byte last;
-  u.add blast (u.mul256 n)
+  let blast = UIntType?.from_byte u last;
+  UIntType?.add u blast (u.mul256 n)
 }
 ```
 

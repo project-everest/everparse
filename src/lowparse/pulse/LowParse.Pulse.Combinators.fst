@@ -115,15 +115,24 @@ let validate_synth
   w
 
 inline_for_extraction
-let jump_synth
-  (#t #t': Type)
+```pulse
+fn jump_synth
+  (#t #t': Type0)
   (#k: parser_kind)
   (#p: tot_parser k t)
   (w: jumper p)
   (f: (t -> t') { synth_injective f })
-: Tot (jumper (tot_parse_synth p f))
-= Classical.forall_intro (tot_parse_synth_eq' p f);
-  w
+: jumper #t' #k (tot_parse_synth #k #t p f)
+=
+  (input: _)
+  (offset: _)
+  (#pm: _)
+  (#v: _)
+{    
+  tot_parse_synth_eq' p f (Seq.slice v (SZ.v offset) (Seq.length v));
+  w input offset #pm #v
+}
+```
 
 ```pulse
 ghost
