@@ -118,3 +118,63 @@ let validate_long_argument
           )
         )
       )
+
+inline_for_extraction
+noextract
+let jump_long_argument
+  (b: initial_byte)
+: Tot (jumper (parse_long_argument b))
+= match b with
+  | (major_type, (additional_info, _)) ->
+    ifthenelse_jumper
+      (parse_long_argument b)
+      (additional_info = additional_info_long_argument_8_bits)
+      (fun _ ->
+        jump_ext
+          (jump_constant_size (if major_type = cbor_major_type_simple_value then tot_parse_synth (tot_parse_filter tot_parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b ()) else tot_weaken (parse_filter_kind parse_u8_kind) (tot_parse_synth tot_parse_u8 (LongArgumentU8 #b ()))) 1sz)
+          (parse_long_argument b)
+      )
+      (fun _ -> ifthenelse_jumper
+        (parse_long_argument b)
+        (additional_info = additional_info_long_argument_16_bits)
+        (fun _ ->
+          jump_ext
+            (jump_synth
+              jump_u16
+              (LongArgumentU16 #b ())
+            )
+            (parse_long_argument b)
+        )
+        (fun _ -> ifthenelse_jumper
+          (parse_long_argument b)
+          (additional_info = additional_info_long_argument_32_bits)
+          (fun _ ->
+            jump_ext
+              (jump_synth
+                jump_u32
+                (LongArgumentU32 #b ())
+              )
+              (parse_long_argument b)
+          )
+          (fun _ -> ifthenelse_jumper
+            (parse_long_argument b)
+            (additional_info = additional_info_long_argument_64_bits)
+            (fun _ ->
+              jump_ext
+                (jump_synth
+                  jump_u64
+                  (LongArgumentU64 #b ())
+                )
+                (parse_long_argument b)
+            )
+            (fun _ ->
+              jump_ext
+                (jump_synth
+                  jump_empty
+                  (LongArgumentOther #b additional_info ())
+                )
+                (parse_long_argument b)
+            )
+          )
+        )
+      )
