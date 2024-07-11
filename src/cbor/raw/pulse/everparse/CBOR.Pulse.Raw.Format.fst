@@ -178,3 +178,13 @@ let jump_long_argument
           )
         )
       )
+
+inline_for_extraction
+noextract
+let validate_header : validate_and_read parse_header =
+  validate_and_read_dtuple2 validate_initial_byte validate_long_argument
+
+inline_for_extraction
+noextract
+let jump_header : jumper parse_header =
+  jump_dtuple2 jump_initial_byte read_initial_byte jump_long_argument
