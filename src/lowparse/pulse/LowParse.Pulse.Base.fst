@@ -285,6 +285,24 @@ let jumper (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
     (fun res -> pts_to input #pm v ** pure (validator_success p offset v res))
 
 inline_for_extraction
+```pulse
+fn ifthenelse_jumper (#t: Type0) (#k: parser_kind) (p: parser k t) (cond: bool) (jtrue: squash (cond == true) -> jumper p) (jfalse: squash (cond == false) -> jumper p)
+: jumper #t #k p
+=
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  if cond {
+    jtrue () input offset
+  } else {
+    jfalse () input offset
+  }
+}
+```
+
+inline_for_extraction
 let jump_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: jumper p1) (#k2: parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : jumper #_ #k2 p2 =
   v1
 

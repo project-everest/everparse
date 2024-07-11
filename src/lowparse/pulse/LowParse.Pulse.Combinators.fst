@@ -61,6 +61,9 @@ let validate_and_read_ret
 = validate_and_read_intro (validate_ret x) (read_ret x v_unique)
 
 inline_for_extraction
+let jump_ret (#t: Type) (x: t) : jumper (tot_parse_ret x) = jump_constant_size (tot_parse_ret x) 0sz 
+
+inline_for_extraction
 let validate_empty : validator tot_parse_empty = validate_ret ()
 
 inline_for_extraction
@@ -69,6 +72,9 @@ let read_empty : reader tot_serialize_empty = read_ret () (fun _ -> ())
 inline_for_extraction
 let validate_and_read_empty : validate_and_read tot_parse_empty =
   validate_and_read_intro validate_empty read_empty
+
+inline_for_extraction
+let jump_empty : jumper tot_parse_empty = jump_ret ()
 
 let parse_serialize_strong_prefix
   (#t: Type)
