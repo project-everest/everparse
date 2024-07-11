@@ -88,7 +88,7 @@ let read_bitsum'
   (d: destr_bitsum'_t b)
   (#k: parser_kind)
   (#p: parser k t)
-  (s: serializer p)
+  (#s: serializer p)
   (r: reader s)
 : Tot (reader (tot_serialize_bitsum' b s))
 = [@@inline_let]

@@ -8,6 +8,68 @@ open Pulse.Lib.Slice
 
 module SZ = FStar.SizeT
 
+inline_for_extraction
+```pulse
+fn validate_ret
+  (#t: Type0)
+  (x: t)
+: validator #t #parse_ret_kind (tot_parse_ret x)
+= (input: slice byte)
+  (offset: _)
+  (#pm: _)
+  (#v: _)
+  (pre: _)
+  (t': Type0)
+  (post: _)
+  (ksucc: _)
+  (kfail: _)
+{
+  ksucc 0sz
+}
+```
+
+inline_for_extraction
+```pulse
+fn leaf_read_ret
+  (#t: Type0)
+  (x: t)
+  (v_unique: (v' : t) -> Lemma (x == v'))
+: leaf_reader #t #parse_ret_kind #(tot_parse_ret x) (tot_serialize_ret x v_unique)
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+{
+  v_unique v;
+  x
+}
+```
+
+inline_for_extraction
+let read_ret
+  (#t: Type0)
+  (x: t)
+  (v_unique: (v' : t) -> Lemma (x == v'))
+: Tot (reader (tot_serialize_ret x v_unique))
+= reader_of_leaf_reader (leaf_read_ret x v_unique)
+
+inline_for_extraction
+let validate_and_read_ret
+  (#t: Type0)
+  (x: t)
+  (v_unique: (v' : t) -> Lemma (x == v'))
+: Tot (validate_and_read (tot_parse_ret x))
+= validate_and_read_intro (validate_ret x) (read_ret x v_unique)
+
+inline_for_extraction
+let validate_empty : validator tot_parse_empty = validate_ret ()
+
+inline_for_extraction
+let read_empty : reader tot_serialize_empty = read_ret () (fun _ -> ())
+
+inline_for_extraction
+let validate_and_read_empty : validate_and_read tot_parse_empty =
+  validate_and_read_intro validate_empty read_empty
+
 let parse_serialize_strong_prefix
   (#t: Type)
   (#k: parser_kind)
@@ -276,6 +338,13 @@ fn read_synth
 ```
 
 inline_for_extraction
+let read_synth'
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: reader s1)
+  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
+: Tot (reader (tot_serialize_synth p1 f2 s1 f1 ()))
+= read_synth r f2 f1 (fun x -> intro_stt_cps (f2 x))
+
+inline_for_extraction
 ```pulse
 fn validate_and_read_synth_cont_cont
   (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1)
@@ -345,6 +414,13 @@ fn validate_and_read_synth
   w input offset #pm #v pre t' post (validate_and_read_synth_cont p1 f2 f2' input pm v offset pre t' post ksucc) kfail
 }
 ```
+
+inline_for_extraction
+let validate_and_read_synth'
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (w: validate_and_read p1)
+  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 })
+: Tot (validate_and_read (tot_parse_synth p1 f2))
+= validate_and_read_synth w f2 (fun x -> intro_stt_cps (f2 x))
 
 inline_for_extraction
 ```pulse

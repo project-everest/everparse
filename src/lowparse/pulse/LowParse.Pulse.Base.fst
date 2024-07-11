@@ -222,6 +222,10 @@ let validate_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: validato
   v1
 
 inline_for_extraction
+let validate_weaken (#t: Type0) (#k1: parser_kind) (k2: parser_kind) (#p1: parser k1 t) (v1: validator p1 { k2 `is_weaker_than` k1 }) : validator (tot_weaken k2 p1) =
+  validate_ext v1 (tot_weaken k2 p1)
+
+inline_for_extraction
 ```pulse
 fn validate_total_constant_size (#t: Type0) (#k: parser_kind) (p: parser k t) (sz: SZ.t {
     k.parser_kind_high == Some k.parser_kind_low /\
@@ -603,6 +607,27 @@ let validate_and_read (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
 
 inline_for_extraction
 ```pulse
+fn validate_and_read_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: validate_and_read p1) (#k2: parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : validate_and_read #_ #k2 p2 =
+  (input: slice byte)
+  (offset: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (pre: vprop)
+  (t': Type0)
+  (post: (t' -> vprop))
+  (ksucc: _)
+  (kfail: _)
+{
+  v1 input offset #pm #v pre t' post ksucc kfail
+}
+```
+
+inline_for_extraction
+let validate_and_read_weaken (#t: Type0) (#k1: parser_kind) (k2: parser_kind) (#p1: parser k1 t) (v1: validate_and_read p1 { k2 `is_weaker_than` k1 }) : validate_and_read (tot_weaken k2 p1) =
+  validate_and_read_ext v1 (tot_weaken k2 p1)
+
+inline_for_extraction
+```pulse
 fn validate_and_read_intro_cont_read
   (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
   (input: slice byte)
@@ -708,5 +733,29 @@ fn validate_and_read_elim
   (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure p offset v)) (fun x -> post x)))
 {
   w input offset pre t' post (validate_and_read_elim_cont p input offset pm v pre t' post ksucc) kfail
+}
+```
+
+inline_for_extraction
+```pulse
+fn ifthenelse_validate_and_read
+  (#t: Type0) (#k: parser_kind) (p: parser k t) (cond: bool) (wtrue: squash (cond == true) -> validate_and_read p) (wfalse: squash (cond == false) -> validate_and_read p)
+: validate_and_read #t #k p
+=
+  (input: _)
+  (offset: _)
+  (#pm: _)
+  (#v: _)
+  (pre: _)
+  (t': Type0)
+  (post: _)
+  (ksucc: _)
+  (kfail: _)
+{
+  if cond {
+    wtrue () input offset pre t' post ksucc kfail
+  } else {
+    wfalse () input offset pre t' post ksucc kfail
+  }
 }
 ```
