@@ -569,6 +569,49 @@ fn read
 ```
 
 inline_for_extraction
+```pulse
+fn read_then_cont
+  (#t: Type0)
+  (#t': Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: reader s)
+  (f: t -> t')
+  (input: slice byte)
+  (pm: perm)
+  (v: Ghost.erased t)
+  (v': t { Ghost.reveal v == v' })
+  requires (pts_to_serialized s input #pm v ** emp)
+  returns v_ : t'
+  ensures (pts_to_serialized s input #pm v' ** pure (f (Ghost.reveal v) == v_))
+{
+  f v'
+}
+```
+
+inline_for_extraction
+```pulse
+fn read_then
+  (#t: Type0)
+  (#t': Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: reader s)
+  (f: t -> t')
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  requires (pts_to_serialized s input #pm v)
+  returns v' : t'
+  ensures (pts_to_serialized s input #pm v ** pure (f (Ghost.reveal v) == v'))
+{
+  call_reader r input #pm #v emp t' (fun v' -> pts_to_serialized s input #pm v ** pure (f (Ghost.reveal v) == v')) (read_then_cont r f input pm v)
+}
+```
+
+inline_for_extraction
 let leaf_reader
   (#t: Type0)
   (#k: parser_kind)
