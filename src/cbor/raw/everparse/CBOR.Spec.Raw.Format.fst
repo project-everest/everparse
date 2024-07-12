@@ -162,7 +162,7 @@ let long_argument_other_prop
     ~ (b.additional_info == additional_info_long_argument_8_bits \/ b.additional_info == additional_info_long_argument_16_bits \/ b.additional_info == additional_info_long_argument_32_bits \/ b.additional_info == additional_info_long_argument_64_bits)
   )
 
-inline_for_extraction
+// inline_for_extraction
 type long_argument
   (b: initial_byte)
 = | LongArgumentSimpleValue:
