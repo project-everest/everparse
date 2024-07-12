@@ -677,6 +677,60 @@ let reader_of_leaf_reader
 = reader_of_leaf_reader' r
 
 inline_for_extraction
+let pure_reader
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+: Tot Type
+= (input: slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased t) ->
+  (t': Type0) ->
+  (f: ((x: t { x == Ghost.reveal v }) -> Tot t')) ->
+  stt t' (pts_to_serialized s input #pm v) (fun x' -> pts_to_serialized s input #pm v ** pure (x' == f v))
+
+inline_for_extraction
+```pulse
+fn pure_read
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: pure_reader s)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  requires (pts_to_serialized s input #pm v)
+  returns v' : t
+  ensures (pts_to_serialized s input #pm v' ** pure (Ghost.reveal v == v'))
+{
+  r input #pm #v t id
+}
+```
+
+inline_for_extraction
+```pulse
+fn pure_reader_of_leaf_reader
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: leaf_reader s)
+: pure_reader #t #k #p s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  (t': Type0)
+  (f: _)
+{
+  let x = r input #pm #v;
+  f x
+}
+```
+
+inline_for_extraction
 let validate_and_read (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
   (input: slice byte) ->
   (offset: SZ.t) ->

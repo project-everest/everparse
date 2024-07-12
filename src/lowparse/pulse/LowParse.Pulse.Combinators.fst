@@ -360,6 +360,58 @@ let read_synth'
 = read_synth r f2 f1 (fun x -> intro_stt_cps (f2 x))
 
 inline_for_extraction
+let pure_read_synth_cont_t
+  (#t: Type0)
+  (x: t)
+= (t': Type0) -> (g': ((y: t { y == x }) -> t')) -> (y': t' { y' == g' x })
+
+inline_for_extraction
+let pure_read_synth_cont
+  (#t1 #t2: Type0)
+  (f2: (t1 -> Tot t2))
+  (f2': ((x: t1) -> pure_read_synth_cont_t (f2 x)))
+  (x1: Ghost.erased t1)
+  (t': Type0)
+  (g: ((x2: t2 { x2 == f2 x1 }) -> Tot t'))
+  (x1': t1 { x1' == Ghost.reveal x1 })
+: Tot t'
+= f2' x1' t' g
+
+inline_for_extraction
+```pulse
+fn pure_read_synth
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: pure_reader s1)
+  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
+  (f2': ((x: t1) -> pure_read_synth_cont_t (f2 x)))
+: pure_reader #t2 #k1 #(tot_parse_synth p1 f2) (tot_serialize_synth p1 f2 s1 f1 ())
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+  (t': Type0)
+  (g: _)
+{
+  pts_to_serialized_synth_l2r_stick s1 f2 f1 input;
+  let res = r input #pm #(f1 v) t' (pure_read_synth_cont f2 f2' (f1 v) t' g);
+  elim_stick _ _;
+  res
+}
+```
+
+inline_for_extraction
+let pure_read_synth_cont_init
+  (#t: Type0)
+  (x: t)
+: Tot (pure_read_synth_cont_t #t x)
+= fun t' g' -> g' x
+
+inline_for_extraction
+let pure_read_synth'
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: pure_reader s1)
+  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
+: pure_reader #t2 #k1 #(tot_parse_synth p1 f2) (tot_serialize_synth p1 f2 s1 f1 ())
+= pure_read_synth r f2 f1 (fun x -> pure_read_synth_cont_init (f2 x))
+
+inline_for_extraction
 ```pulse
 fn validate_and_read_synth_cont_cont
   (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1)
@@ -570,14 +622,12 @@ fn pts_to_serialized_filter_intro
   (f: (t -> bool))
   (input: slice byte)
   (#pm: perm)
-  (#v: Ghost.erased t)
+  (#v: t)
   requires (pts_to_serialized s input #pm v ** pure (f v == true))
-  ensures exists* (v': parse_filter_refine f) . pts_to_serialized (tot_serialize_filter s f) input #pm v' ** pure ((v' <: t) == Ghost.reveal v)
+  ensures exists* (v': parse_filter_refine f) . pts_to_serialized (tot_serialize_filter s f) input #pm v' ** pure ((v' <: t) == v)
 {
   unfold (pts_to_serialized s input #pm v);
-  let sq: squash (f v == true) = ();
-  let v' : Ghost.erased (parse_filter_refine f) = Ghost.hide (parse_filter_refine_intro #t f (Ghost.reveal v) sq);
-  fold (pts_to_serialized (tot_serialize_filter s f) input #pm v');
+  fold (pts_to_serialized (tot_serialize_filter s f) input #pm v);
 }
 ```
 
@@ -591,7 +641,7 @@ fn pts_to_serialized_filter_elim
   (f: (t -> bool))
   (input: slice byte)
   (#pm: perm)
-  (#v: Ghost.erased (parse_filter_refine f))
+  (#v: parse_filter_refine f)
   requires (pts_to_serialized (tot_serialize_filter s f) input #pm v)
   ensures pts_to_serialized s input #pm v
 {
@@ -615,6 +665,35 @@ fn read_filter
 {
   pts_to_serialized_filter_elim s1 f input;
   r input #pm #(Ghost.hide (Ghost.reveal v)) pre t' post cont
+}
+```
+
+inline_for_extraction
+let pure_read_filter_cont
+  (#t: Type0)
+  (f: t -> bool)
+  (v: Ghost.erased (parse_filter_refine f))
+  (t': Type0)
+  (g: (x: parse_filter_refine f { x == Ghost.reveal v }) -> t')
+  (x: t { x == Ghost.reveal #t (Ghost.hide #t (Ghost.reveal v)) })
+: Tot t'
+= g x
+
+inline_for_extraction
+```pulse
+fn pure_read_filter
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: pure_reader s1) (f: (t1 -> bool))
+: pure_reader #(parse_filter_refine f) #(parse_filter_kind k1) #(tot_parse_filter p1 f) (tot_serialize_filter s1 f)
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+  (t': Type0)
+  (g: _)
+{
+  pts_to_serialized_filter_elim s1 f input;
+  let res = r input #pm #(Ghost.hide (Ghost.reveal v)) t' (pure_read_filter_cont f v t' g);
+  pts_to_serialized_filter_intro s1 f input;
+  res
 }
 ```
 
