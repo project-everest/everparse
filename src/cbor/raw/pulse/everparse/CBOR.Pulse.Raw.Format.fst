@@ -188,3 +188,12 @@ inline_for_extraction
 noextract
 let jump_header : jumper parse_header =
   jump_dtuple2 jump_initial_byte read_initial_byte jump_long_argument
+
+let test_parse = tot_parse_dtuple2 tot_parse_u8 (fun _ -> tot_parse_u8)
+
+inline_for_extraction
+let jump_u8'_on (x: FStar.UInt8.t) : jumper tot_parse_u8 =
+  jump_constant_size tot_parse_u8 1sz
+
+inline_for_extraction
+let test_jump : jumper test_parse = jump_dtuple2 jump_u8 read_u8 jump_u8'_on
