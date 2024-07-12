@@ -267,6 +267,17 @@ let slice_append_split_stick_post
 = let SlicePair s1 s2 = res in
   slice_append_split_stick_post' s p v1 v2 i s1 s2
 
+```pulse
+ghost
+fn slice_append_split_stick_aux
+  (#t: Type) (input: S.slice t) (p: perm) (v1 v2: (Seq.seq t)) (i: SZ.t) (input1 input2: S.slice t) (_: unit)
+    requires S.is_split input p i input1 input2 ** (S.pts_to input1 #p v1 ** S.pts_to input2 #p v2)
+    ensures S.pts_to input #p (v1 `Seq.append` v2)
+{
+  S.join input1 input2 input
+}
+```
+
 inline_for_extraction
 noextract
 ```pulse
@@ -280,15 +291,7 @@ fn slice_append_split_stick (#t: Type) (mutb: bool) (input: S.slice t) (#p: perm
     SlicePair input1 input2 -> {
       unfold (slice_append_split_post input p v1 v2 i res);
       unfold (slice_append_split_post' input p v1 v2 i input1 input2);
-      ghost
-      fn aux
-        (_foo: unit)
-        requires S.is_split input p i input1 input2 ** (S.pts_to input1 #p v1 ** S.pts_to input2 #p v2)
-        ensures S.pts_to input #p (v1 `Seq.append` v2)
-      {
-        S.join input1 input2 input;
-      };
-      intro_stick _ _ _ aux;
+      intro_stick _ _ _ (slice_append_split_stick_aux input p v1 v2 i input1 input2);
       fold (slice_append_split_stick_post' input p v1 v2 i input1 input2);
       fold (slice_append_split_stick_post input p v1 v2 i (SlicePair input1 input2));
       (SlicePair input1 input2)
@@ -318,6 +321,18 @@ let slice_split_stick_post
 = let (SlicePair s1 s2) = res in
   slice_split_stick_post' s p v i s1 s2
 
+```pulse
+ghost
+fn slice_split_stick_aux
+  (#t: Type) (s: S.slice t) (p: perm) (v: Seq.seq t) (i: SZ.t)
+  (s1 s2: S.slice t) (v1 v2: Seq.seq t) (hyp: squash (v == Seq.append v1 v2)) (_: unit)
+    requires (S.is_split s p i s1 s2 ** (S.pts_to s1 #p v1 ** S.pts_to s2 #p v2))
+    ensures (S.pts_to s #p v)
+    {
+      S.join s1 s2 s
+    }
+```
+
 inline_for_extraction
 noextract
 ```pulse
@@ -332,15 +347,7 @@ fn slice_split_stick (#t: Type) (mutb: bool) (s: S.slice t) (#p: perm) (#v: Ghos
     unfold (split_post0 s p v i res);
     unfold (S.split_post' s p v i s1 s2);
     with v1 v2 . assert (S.pts_to s1 #p v1 ** S.pts_to s2 #p v2);
-    ghost
-    fn aux
-      (_: unit)
-    requires (S.is_split s p i s1 s2 ** (S.pts_to s1 #p v1 ** S.pts_to s2 #p v2))
-    ensures (S.pts_to s #p v)
-    {
-      S.join s1 s2 s
-    };
-    intro_stick _ _ _ aux;
+    intro_stick _ _ _ (slice_split_stick_aux s p v i s1 s2 v1 v2 ());
     fold (slice_split_stick_post' s p v i s1 s2);
     fold (slice_split_stick_post s p v i (SlicePair s1 s2));
     (SlicePair s1 s2)

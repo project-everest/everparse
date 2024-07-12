@@ -411,6 +411,29 @@ let peek_stick_post
 = let (SlicePair left right) = res in
   peek_stick_post' s input pm v consumed left right
 
+```pulse
+ghost
+fn peek_stick_aux
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
+  (input: slice byte)
+  (pm: perm)
+  (consumed: SZ.t)
+  (v: bytes)
+  (left right: slice byte)
+  (v1: t)
+  (v2: bytes)
+  (hyp: squash (
+    bare_serialize s v1 `Seq.append` v2 == v
+  ))
+  (_: unit)
+  requires (is_split input pm consumed left right ** (pts_to_serialized s left #pm v1 ** pts_to right #pm v2))
+  ensures pts_to input #pm v
+{
+  unfold (pts_to_serialized s left #pm v1);
+  join left right input
+}
+```
+
 inline_for_extraction
 ```pulse
 fn peek_stick
@@ -428,16 +451,7 @@ fn peek_stick
     unfold (peek_post s input pm v consumed res);
     unfold (peek_post' s input pm v consumed left right);
     with v1 v2 . assert (pts_to_serialized s left #pm v1 ** pts_to right #pm v2);
-    ghost
-    fn aux
-      (_foo: unit)
-      requires (is_split input pm consumed left right ** (pts_to_serialized s left #pm v1 ** pts_to right #pm v2))
-      ensures pts_to input #pm v
-      {
-        unfold (pts_to_serialized s left #pm v1);
-        join left right input
-      };
-    intro_stick (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) (is_split input pm consumed left right) aux;
+    intro_stick (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) (is_split input pm consumed left right) (peek_stick_aux s input pm consumed v left right v1 v2 ());
     fold (peek_stick_post' s input pm v consumed left right);
     fold (peek_stick_post s input pm v consumed (left `SlicePair` right));
     (left `SlicePair` right)
