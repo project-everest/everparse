@@ -53,7 +53,8 @@ let jump_u16 : jumper tot_parse_u16 =
 
 inline_for_extraction
 noextract
-let be_to_n_2 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint16 2)
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let be_to_n_2 = (E.mk_be_to_n EI.uint16 2)
 
 inline_for_extraction
 ```pulse
@@ -87,7 +88,8 @@ let jump_u32 : jumper tot_parse_u32 =
 
 inline_for_extraction
 noextract
-let be_to_n_4 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint32 4)
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let be_to_n_4 = (E.mk_be_to_n EI.uint32 4)
 
 inline_for_extraction
 ```pulse
@@ -121,7 +123,8 @@ let jump_u64 : jumper tot_parse_u64 =
 
 inline_for_extraction
 noextract
-let be_to_n_8 = norm [delta_attr [`%E.must_reduce]; iota; zeta; primops] (E.mk_be_to_n EI.uint64 8)
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%E.must_reduce]; iota; zeta; primops]; FStar.Tactics.trefl ())]
+let be_to_n_8 = (E.mk_be_to_n EI.uint64 8)
 
 inline_for_extraction
 ```pulse
