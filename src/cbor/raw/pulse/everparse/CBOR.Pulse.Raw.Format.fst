@@ -5,6 +5,7 @@ open LowParse.Pulse.Combinators
 open LowParse.Pulse.Int
 open LowParse.Pulse.BitSum
 
+(*
 inline_for_extraction
 noextract
 let validate_initial_byte : validate_and_read parse_initial_byte =
@@ -19,17 +20,14 @@ let validate_initial_byte : validate_and_read parse_initial_byte =
     )
     initial_byte_wf
     (fun x -> initial_byte_wf x)
+*)
 
 inline_for_extraction
 noextract
 let jump_initial_byte : jumper parse_initial_byte =
-  jump_filter
-    (jump_bitsum'
-      initial_byte_desc
-      jump_u8
-    )
-    initial_byte_wf
+  jump_constant_size parse_initial_byte 1sz
 
+(*
 inline_for_extraction
 noextract
 let read_initial_byte : reader serialize_initial_byte =
@@ -39,17 +37,22 @@ let read_initial_byte : reader serialize_initial_byte =
       read_u8
     )
     initial_byte_wf
+*)
 
 inline_for_extraction
 noextract
 let pure_read_initial_byte : pure_reader serialize_initial_byte =
-  pure_read_filter
-    (pure_read_bitsum'
-      destr_initial_byte
-      (pure_reader_of_leaf_reader (read_u8' ()))
-    )
-    initial_byte_wf
+  pure_read_synth'
+    (pure_read_filter
+      (pure_read_bitsum'
+        destr_initial_byte
+        (pure_reader_of_leaf_reader (read_u8' ()))
+      )
+      initial_byte_wf)
+    synth_initial_byte
+    synth_initial_byte_recip
 
+(*
 inline_for_extraction
 noextract
 let validate_long_argument
@@ -198,6 +201,7 @@ inline_for_extraction
 noextract
 let jump_header : jumper parse_header =
   jump_dtuple2 jump_initial_byte read_initial_byte jump_long_argument
+*)
 
 let test_parse = tot_parse_dtuple2 tot_parse_u8 (fun _ -> tot_parse_u8)
 

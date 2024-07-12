@@ -19,44 +19,13 @@ fn test (#pm: perm) (#v: Ghost.erased bytes) (s: slice byte)
 }
 ```
 
-type c_initial_byte = {
-  major_type: major_type_t;
-  additional_info: additional_info_t;
-  prf: squash (initial_byte_wf (major_type, (additional_info, ())));
-}
-
-inline_for_extraction
-noextract
-let synth_c_initial_byte
-  (x: initial_byte)
-: Tot c_initial_byte
-= match x with
-  (major_type, (additional_info, _)) -> {
-    major_type = major_type;
-    additional_info = additional_info;
-    prf = ();
-  }
-
-let _ : squash (LowParse.Spec.Combinators.synth_injective synth_c_initial_byte) = ()
-
-inline_for_extraction
-noextract
-let synth_c_initial_byte_recip
-  (x: c_initial_byte)
-: Tot initial_byte
-= (x.major_type, (x.additional_info, ()))
-
-let _ : squash (LowParse.Spec.Combinators.synth_inverse synth_c_initial_byte synth_c_initial_byte_recip) = ()
-
 ```pulse
 fn test2 (#pm: perm) (#v: Ghost.erased initial_byte) (s: slice byte)
   requires pts_to_serialized serialize_initial_byte s  #pm v
   returns _: major_type_t
   ensures pts_to_serialized serialize_initial_byte s #pm v
 {
-  LowParse.Pulse.Combinators.pts_to_serialized_synth_stick serialize_initial_byte synth_c_initial_byte synth_c_initial_byte_recip s;
-  let x = pure_read (LowParse.Pulse.Combinators.pure_read_synth' pure_read_initial_byte synth_c_initial_byte synth_c_initial_byte_recip) s;
-  elim_stick _ _;
+  let x = pure_read pure_read_initial_byte s;
   x.major_type
 }
 ```

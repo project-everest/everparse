@@ -88,7 +88,11 @@ let mk_initial_byte_wf
     (fun b -> initial_byte_wf b)
     x
 
-let initial_byte = parse_filter_refine initial_byte_wf
+type initial_byte = {
+  major_type: major_type_t;
+  additional_info: additional_info_t;
+  prf: squash (initial_byte_wf (major_type, (additional_info, ())));
+}
 
 module SZ = FStar.SizeT
 
@@ -105,15 +109,13 @@ inline_for_extraction
 let argument_size
   (b: initial_byte)
 : Tot SZ.t
-= match b with
-  | (major_type, (additional_info, _)) ->
-    if additional_info = additional_info_long_argument_8_bits
+=   if b.additional_info = additional_info_long_argument_8_bits
     then 1sz
-    else if additional_info = additional_info_long_argument_16_bits
+    else if b.additional_info = additional_info_long_argument_16_bits
     then 2sz
-    else if additional_info = additional_info_long_argument_32_bits
+    else if b.additional_info = additional_info_long_argument_32_bits
     then 3sz
-    else if additional_info = additional_info_long_argument_64_bits
+    else if b.additional_info = additional_info_long_argument_64_bits
     then 4sz
     else 0sz
 
@@ -130,40 +132,34 @@ let simple_value_long_argument_wf // 3.3: "an encoder MUST NOT issue two-byte se
 let long_argument_simple_value_prop
   (b: initial_byte)
 : GTot prop
-= let (major_type, (additional_info, _)) = b in
-  additional_info == additional_info_long_argument_8_bits /\ major_type == cbor_major_type_simple_value
+= b.additional_info == additional_info_long_argument_8_bits /\ b.major_type == cbor_major_type_simple_value
 
 let long_argument_u8_prop
   (b: initial_byte)
 : GTot prop
-= let (major_type, (additional_info, _)) = b in
-  additional_info == additional_info_long_argument_8_bits /\ ~ (major_type == cbor_major_type_simple_value)
+= b.additional_info == additional_info_long_argument_8_bits /\ ~ (b.major_type == cbor_major_type_simple_value)
 
 let long_argument_u16_prop
   (b: initial_byte)
 : GTot prop
-= let (major_type, (additional_info, _)) = b in
-  additional_info == additional_info_long_argument_16_bits
+= b.additional_info == additional_info_long_argument_16_bits
 
 let long_argument_u32_prop
   (b: initial_byte)
 : GTot prop
-= let (major_type, (additional_info, _)) = b in
-  additional_info == additional_info_long_argument_32_bits
+= b.additional_info == additional_info_long_argument_32_bits
 
 let long_argument_u64_prop
   (b: initial_byte)
 : GTot prop
-= let (major_type, (additional_info, _)) = b in
-  additional_info == additional_info_long_argument_64_bits
+= b.additional_info == additional_info_long_argument_64_bits
 
 let long_argument_other_prop
   (b: initial_byte)
   (a: additional_info_t)
 : GTot prop
-= let (major_type, (additional_info, _)) = b in
-  a == additional_info /\ (
-    ~ (additional_info == additional_info_long_argument_8_bits \/ additional_info == additional_info_long_argument_16_bits \/ additional_info == additional_info_long_argument_32_bits \/ additional_info == additional_info_long_argument_64_bits)
+= a == b.additional_info /\ (
+    ~ (b.additional_info == additional_info_long_argument_8_bits \/ b.additional_info == additional_info_long_argument_16_bits \/ b.additional_info == additional_info_long_argument_32_bits \/ b.additional_info == additional_info_long_argument_64_bits)
   )
 
 inline_for_extraction
@@ -229,8 +225,7 @@ let get_header_argument_as_simple_value_initial_byte_precond
   (b: initial_byte)
 : GTot bool
 = 
-  let (major_type, (additional_info, _)) = b in
-  major_type = cbor_major_type_simple_value && additional_info `U8.lte` additional_info_simple_value_max
+  b.major_type = cbor_major_type_simple_value && b.additional_info `U8.lte` additional_info_simple_value_max
 
 inline_for_extraction
 let argument_as_simple_value
@@ -251,15 +246,13 @@ let content
 : Tot Type
 = match h with
   | (| b, long_arg |) ->
-    match b with
-    | (major_type, _) ->
-      if major_type = cbor_major_type_byte_string || major_type = cbor_major_type_text_string
+      if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then Seq.lseq byte (U64.v (argument_as_uint64 b long_arg))
-      else if major_type = cbor_major_type_array
+      else if b.major_type = cbor_major_type_array
       then nlist (U64.v (argument_as_uint64 b long_arg)) raw_data_item
-      else if major_type = cbor_major_type_map
+      else if b.major_type = cbor_major_type_map
       then nlist (U64.v (argument_as_uint64 b long_arg)) (raw_data_item & raw_data_item)
-      else if major_type = cbor_major_type_tagged
+      else if b.major_type = cbor_major_type_tagged
       then raw_data_item
       else unit
 
@@ -271,17 +264,15 @@ let synth_raw_data_item'
 : Tot raw_data_item
 = match h with
   | (| b, long_arg |) ->
-    match b with
-    | (major_type, _) ->
-      if major_type = cbor_major_type_uint64 || major_type = cbor_major_type_neg_int64
-      then Int64 major_type (argument_as_raw_uint64 b long_arg)
-      else if major_type = cbor_major_type_byte_string || major_type = cbor_major_type_text_string
-      then String major_type (argument_as_raw_uint64 b long_arg) c
-      else if major_type = cbor_major_type_array
+      if b.major_type = cbor_major_type_uint64 || b.major_type = cbor_major_type_neg_int64
+      then Int64 b.major_type (argument_as_raw_uint64 b long_arg)
+      else if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
+      then String b.major_type (argument_as_raw_uint64 b long_arg) c
+      else if b.major_type = cbor_major_type_array
       then Array (argument_as_raw_uint64 b long_arg) c
-      else if major_type = cbor_major_type_map
+      else if b.major_type = cbor_major_type_map
       then Map (argument_as_raw_uint64 b long_arg) c
-      else if major_type = cbor_major_type_tagged
+      else if b.major_type = cbor_major_type_tagged
       then Tagged (argument_as_raw_uint64 b long_arg) c
       else
         // TODO: support floats
@@ -299,8 +290,25 @@ let synth_raw_data_item
 let synth_raw_data_item_injective : squash (synth_injective synth_raw_data_item) = ()
 #pop-options
 
-let parse_initial_byte : tot_parser _ initial_byte =
+let parse_initial_byte' : tot_parser _ (parse_filter_refine initial_byte_wf) =
   tot_parse_filter (tot_parse_bitsum' initial_byte_desc tot_parse_u8) initial_byte_wf
+
+inline_for_extraction
+noextract
+let synth_initial_byte
+  (x: parse_filter_refine initial_byte_wf)
+: Tot initial_byte
+= match x with
+  (major_type, (additional_info, _)) -> {
+    major_type = major_type;
+    additional_info = additional_info;
+    prf = ();
+  }
+
+let _ : squash (synth_injective synth_initial_byte) = ()
+
+let parse_initial_byte : tot_parser _ initial_byte =
+  tot_parse_synth parse_initial_byte' synth_initial_byte
 
 noextract
 let parse_long_argument_kind = strong_parser_kind 0 8 None
@@ -308,20 +316,18 @@ let parse_long_argument_kind = strong_parser_kind 0 8 None
 let parse_long_argument
   (b: initial_byte)
 : Tot (tot_parser parse_long_argument_kind (long_argument b))
-= match b with
-  | (major_type, (additional_info, _)) ->
-    if additional_info = additional_info_long_argument_8_bits
+=   if b.additional_info = additional_info_long_argument_8_bits
     then
-      if major_type = cbor_major_type_simple_value
+      if b.major_type = cbor_major_type_simple_value
       then tot_weaken _ (tot_parse_filter tot_parse_u8 simple_value_long_argument_wf `tot_parse_synth` LongArgumentSimpleValue ())
       else tot_weaken _ (tot_parse_u8 `tot_parse_synth` LongArgumentU8 ())
-    else if additional_info = additional_info_long_argument_16_bits
+    else if b.additional_info = additional_info_long_argument_16_bits
     then tot_weaken _ (tot_parse_u16 `tot_parse_synth` LongArgumentU16 ())
-    else if additional_info = additional_info_long_argument_32_bits
+    else if b.additional_info = additional_info_long_argument_32_bits
     then tot_weaken _ (tot_parse_u32 `tot_parse_synth` LongArgumentU32 ())
-    else if additional_info = additional_info_long_argument_64_bits
+    else if b.additional_info = additional_info_long_argument_64_bits
     then tot_weaken _ (tot_parse_u64 `tot_parse_synth` LongArgumentU64 ())
-    else tot_weaken _ (tot_parse_empty `tot_parse_synth` LongArgumentOther additional_info ())
+    else tot_weaken _ (tot_parse_empty `tot_parse_synth` LongArgumentOther b.additional_info ())
 
 let parse_header : tot_parser _ header =
   tot_parse_dtuple2 parse_initial_byte parse_long_argument
@@ -347,15 +353,13 @@ let parse_content
   (h: header) : tot_parser parse_content_kind (content h)
 = match h with
   | (| b, long_arg |) ->
-    match b with
-    | (major_type, _) ->
-      if major_type = cbor_major_type_byte_string || major_type = cbor_major_type_text_string
+      if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then tot_weaken _ (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
-      else if major_type = cbor_major_type_array
+      else if b.major_type = cbor_major_type_array
       then tot_weaken _ (tot_parse_nlist (U64.v (argument_as_uint64 b long_arg)) p)
-      else if major_type = cbor_major_type_map
+      else if b.major_type = cbor_major_type_map
       then tot_weaken _ (tot_parse_nlist (U64.v (argument_as_uint64 b long_arg)) (p `tot_nondep_then` p))
-      else if major_type = cbor_major_type_tagged
+      else if b.major_type = cbor_major_type_tagged
       then tot_weaken _ p
       else tot_weaken _ tot_parse_empty
 
@@ -390,8 +394,8 @@ let leaf_content_seq_cond
   (h: header)
 : GTot prop
 = 
-      let (| (major_type, _), _ |) = h in
-      major_type == cbor_major_type_byte_string \/ major_type == cbor_major_type_text_string
+      let (| b, _ |) = h in
+      b.major_type == cbor_major_type_byte_string \/ b.major_type == cbor_major_type_text_string
 
 inline_for_extraction
 type leaf_content
@@ -410,9 +414,7 @@ let parse_leaf_content
 : tot_parser parse_content_kind (leaf_content h)
 = match h with
   | (| b, long_arg |) ->
-    match b with
-    | (major_type, _) ->
-      if major_type = cbor_major_type_byte_string || major_type = cbor_major_type_text_string
+      if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then tot_weaken _ (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)) `tot_parse_synth` LeafContentSeq ())
       else tot_weaken _ (tot_parse_empty `tot_parse_synth` LeafContentEmpty ())
 
@@ -425,16 +427,14 @@ let remaining_data_items
 : Tot nat
 = match l with
   | (| (| b, long_arg |), _ |) ->
-    match b with
-    | (major_type, _) ->
-      if major_type = cbor_major_type_array
+      if b.major_type = cbor_major_type_array
       then
         U64.v (argument_as_uint64 b long_arg)
-      else if major_type = cbor_major_type_map
+      else if b.major_type = cbor_major_type_map
       then
         let count = U64.v (argument_as_uint64 b long_arg) in
         count + count
-      else if major_type = cbor_major_type_tagged
+      else if b.major_type = cbor_major_type_tagged
       then 1
       else 0
 
@@ -582,15 +582,13 @@ let synth_raw_data_item'_from_alt
     | (| h, lc |) ->
       match h with
       | (| b, long_arg |) ->
-        match b with
-        | (major_type, _) ->
-          if major_type = cbor_major_type_array
+          if b.major_type = cbor_major_type_array
           then (| h, c |)
-          else if major_type = cbor_major_type_map
+          else if b.major_type = cbor_major_type_map
           then (| h, pair_list_of_list _ (U64.v (argument_as_uint64 b long_arg)) c |)
-          else if major_type = cbor_major_type_tagged
+          else if b.major_type = cbor_major_type_tagged
           then (| h, List.Tot.hd c |)
-          else if major_type = cbor_major_type_byte_string || major_type = cbor_major_type_text_string
+          else if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
           then (| h, LeafContentSeq?.v lc |)
           else (| h, () |)
 
@@ -708,13 +706,26 @@ let _ : squash (major_type_t == bitfield uint8 3) =
   uint8_v_eq_fn ()
 
 inline_for_extraction
+let mk_initial_byte'
+  (t: major_type_t)
+  (x: additional_info_t)
+: Pure (parse_filter_refine initial_byte_wf)
+    (requires (initial_byte_wf (t, (x, ()))))
+    (ensures (fun _ -> True))
+= (t, (x, ()))
+
+inline_for_extraction
 let mk_initial_byte
   (t: major_type_t)
   (x: additional_info_t)
 : Pure initial_byte
     (requires (initial_byte_wf (t, (x, ()))))
     (ensures (fun _ -> True))
-= (t, (x, ()))
+= {
+    major_type = t;
+    additional_info = x;
+    prf = ()
+  }
 
 #push-options "--z3rlimit 16"
 
@@ -725,8 +736,7 @@ let raw_uint64_as_argument
     (requires (t `U8.lt` cbor_major_type_simple_value))
     (ensures (fun y ->
       let (| b, arg |) = y in
-      let (major_type', _) = b in
-      t == major_type' /\
+      t == b.major_type /\
       argument_as_raw_uint64 b arg = x
     ))
 = if x.size = 0
@@ -747,41 +757,54 @@ let simple_value_as_argument
     (requires True)
     (ensures (fun y ->
       let (| b, arg |) = y in
-      let (major_type, (additional_info, _)) = b in
-      major_type = cbor_major_type_simple_value /\
-      additional_info `U8.lte` additional_info_long_argument_8_bits /\
+      b.major_type = cbor_major_type_simple_value /\
+      b.additional_info `U8.lte` additional_info_long_argument_8_bits /\
       argument_as_simple_value b arg == x
     ))
 = if x `U8.lte` max_simple_value_additional_info
   then (| mk_initial_byte cbor_major_type_simple_value x, LongArgumentOther x () () |)
   else (| mk_initial_byte cbor_major_type_simple_value additional_info_long_argument_8_bits, LongArgumentSimpleValue () x |)
 
-let serialize_initial_byte : tot_serializer parse_initial_byte =
-  tot_serialize_filter
-    (tot_serialize_bitsum'
-      initial_byte_desc
-      tot_serialize_u8
+inline_for_extraction
+noextract
+let synth_initial_byte_recip
+  (x: initial_byte)
+: Tot (parse_filter_refine initial_byte_wf)
+= (x.major_type, (x.additional_info, ()))
+
+let serialize_initial_byte' : tot_serializer parse_initial_byte' =
+    (tot_serialize_filter
+      (tot_serialize_bitsum'
+        initial_byte_desc
+        tot_serialize_u8
+      )
+      initial_byte_wf
     )
-    initial_byte_wf
+
+let serialize_initial_byte : tot_serializer parse_initial_byte =
+  tot_serialize_synth
+    parse_initial_byte'
+    synth_initial_byte
+    serialize_initial_byte'
+    synth_initial_byte_recip
+    ()
 
 let serialize_long_argument
   (b: initial_byte)
 : Tot (tot_serializer (parse_long_argument b))
-= match b with
-  | (major_type, (additional_info, _)) ->
-    if additional_info = additional_info_long_argument_8_bits
+=   if b.additional_info = additional_info_long_argument_8_bits
     then
-      if major_type = cbor_major_type_simple_value
+      if b.major_type = cbor_major_type_simple_value
       then
         tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentSimpleValue ()) (tot_serialize_filter tot_serialize_u8 simple_value_long_argument_wf) LongArgumentSimpleValue?.v ())
       else tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentU8 ()) (tot_serialize_u8) LongArgumentU8?.v ())
-    else if additional_info = additional_info_long_argument_16_bits
+    else if b.additional_info = additional_info_long_argument_16_bits
     then tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentU16 ()) (tot_serialize_u16) LongArgumentU16?.v ())
-    else if additional_info = additional_info_long_argument_32_bits
+    else if b.additional_info = additional_info_long_argument_32_bits
     then tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentU32 ()) (tot_serialize_u32) LongArgumentU32?.v ())
-    else if additional_info = additional_info_long_argument_64_bits
+    else if b.additional_info = additional_info_long_argument_64_bits
     then tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentU64 ()) (tot_serialize_u64) LongArgumentU64?.v ())
-    else tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentOther additional_info ()) tot_serialize_empty LongArgumentOther?.v ())
+    else tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentOther b.additional_info ()) tot_serialize_empty LongArgumentOther?.v ())
 
 let serialize_header : tot_serializer parse_header =
   tot_serialize_dtuple2 serialize_initial_byte serialize_long_argument
@@ -817,15 +840,13 @@ let synth_raw_data_item'_from_alt_recip
   | (| h, c |) ->
     match h with
     | (| b, long_arg |) ->
-      match b with
-      | (major_type, _) ->
-        if major_type = cbor_major_type_array
+        if b.major_type = cbor_major_type_array
         then (| (| h, LeafContentEmpty () () |), c |)
-        else if major_type = cbor_major_type_map
+        else if b.major_type = cbor_major_type_map
         then (| (| h, LeafContentEmpty () () |), list_of_pair_list _ (U64.v (argument_as_uint64 b long_arg)) c |)
-        else if major_type = cbor_major_type_tagged
+        else if b.major_type = cbor_major_type_tagged
         then (| (| h, LeafContentEmpty () () |), [c] |)
-        else if major_type = cbor_major_type_byte_string || major_type = cbor_major_type_text_string
+        else if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
         then (| (| h, LeafContentSeq () c |), [] |)
         else (| (| h, LeafContentEmpty () () |), [] |)
 
@@ -851,9 +872,7 @@ let serialize_leaf_content
 : Tot (tot_serializer (parse_leaf_content h))
 = match h with
   | (| b, long_arg |) ->
-    match b with
-    | (major_type, _) ->
-      if major_type = cbor_major_type_byte_string || major_type = cbor_major_type_text_string
+      if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then tot_serialize_weaken _ (tot_serialize_synth _ (LeafContentSeq ()) (tot_serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) LeafContentSeq?.v ())
       else tot_serialize_weaken _ (tot_serialize_synth _ (LeafContentEmpty ()) tot_serialize_empty LeafContentEmpty?.v ())
 
@@ -949,15 +968,13 @@ let serialize_content
 : Tot (tot_serializer (parse_content parse_raw_data_item h))
 = match h with
   | (| b, long_arg |) ->
-    match b with
-    | (major_type, _) ->
-      if major_type = cbor_major_type_byte_string || major_type = cbor_major_type_text_string
+      if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then tot_serialize_weaken _ (tot_serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
-      else if major_type = cbor_major_type_array
+      else if b.major_type = cbor_major_type_array
       then tot_serialize_weaken _ (tot_serialize_nlist (U64.v (argument_as_uint64 b long_arg)) serialize_raw_data_item)
-      else if major_type = cbor_major_type_map
+      else if b.major_type = cbor_major_type_map
       then tot_serialize_weaken _ (tot_serialize_nlist (U64.v (argument_as_uint64 b long_arg)) (serialize_raw_data_item `tot_serialize_nondep_then` serialize_raw_data_item))
-      else if major_type = cbor_major_type_tagged
+      else if b.major_type = cbor_major_type_tagged
       then tot_serialize_weaken _ serialize_raw_data_item
       else tot_serialize_weaken _ tot_serialize_empty
 
@@ -982,7 +999,7 @@ let serialize_raw_data_item_aux_correct
 let get_major_type_synth_raw_data_item
   (x: raw_data_item')
 : Lemma
-  (get_major_type (synth_raw_data_item x) == (match x with (| (| (major_type, _), _ |), _ |) -> major_type))
+  (get_major_type (synth_raw_data_item x) == (match x with (| (| b, _ |), _ |) -> b.major_type))
   [SMTPat (synth_raw_data_item x)]
 = assert_norm (pow2 3 == 8)
 
@@ -995,8 +1012,8 @@ noextract
 let get_header_major_type
   (h: header)
 : Tot major_type_t
-= let (| (major_type, _), _ |) = h in
-  major_type
+= let (| b, _ |) = h in
+  b.major_type
 
 inline_for_extraction
 noextract
@@ -1047,20 +1064,27 @@ let get_uint64_as_initial_byte
     (fun cond iftrue iffalse -> if cond then iftrue () else iffalse ())
     ty
     x
-    (fun h -> match h with (| b, _ |) -> mk_synth_initial_byte b)
+    (fun h -> match h with (| b, _ |) -> mk_synth_initial_byte (synth_initial_byte_recip b))
 
 let get_initial_byte_header_correct
   (h: header)
 : Lemma
   (let b' = bare_serialize serialize_header h in
     Seq.length b' > 0 /\
-    mk_synth_initial_byte (dfst h) == Seq.index b' 0)
+    mk_synth_initial_byte (synth_initial_byte_recip (dfst h)) == Seq.index b' 0)
 = let (| b, _ |) = h in
+  tot_serialize_synth_eq
+    parse_initial_byte'
+    synth_initial_byte
+    serialize_initial_byte'
+    synth_initial_byte_recip
+    ()
+    b;
   tot_serialize_bitsum'_eq
     initial_byte_desc
     tot_serialize_u8
-    b;
-  serialize_u8_spec (synth_bitsum'_recip initial_byte_desc b)
+    (synth_initial_byte_recip b);
+  serialize_u8_spec (synth_bitsum'_recip initial_byte_desc (synth_initial_byte_recip b))
 
 let get_initial_byte_header_inj
   (h1 h2: header)
@@ -1076,12 +1100,12 @@ let get_initial_byte_header_inj
 =
   let (| b1, l1 |) = h1 in
   let (| b2, l2 |) = h2 in
-  let b1' = synth_bitsum'_recip initial_byte_desc b1 in
-  let b2' = synth_bitsum'_recip initial_byte_desc b2 in
+  let b1' = synth_bitsum'_recip initial_byte_desc (synth_initial_byte_recip b1) in
+  let b2' = synth_bitsum'_recip initial_byte_desc (synth_initial_byte_recip b2) in
   get_initial_byte_header_correct h1;
   get_initial_byte_header_correct h2;
-  assert (synth_bitsum' initial_byte_desc b1' == b1);
-  assert (synth_bitsum' initial_byte_desc b2' == b2)
+  assert (synth_bitsum' initial_byte_desc b1' == synth_initial_byte_recip b1);
+  assert (synth_bitsum' initial_byte_desc b2' == synth_initial_byte_recip b2)
 
 let get_uint64_as_initial_byte_header_correct
   (ty: major_type_t { ty `U8.lt` cbor_major_type_simple_value })
@@ -1218,23 +1242,37 @@ let serialize_initial_byte_compare
       (bare_serialize serialize_initial_byte b1)
       (bare_serialize serialize_initial_byte b2)
     == (
-      let (ty1, (info1, ())) = b1 in
-      let (ty2, (info2, ())) = b2 in
-      let ty_compare = byte_compare ty1 ty2 in
+      let ty_compare = byte_compare b1.major_type b2.major_type in
       if ty_compare = 0
-      then byte_compare info1 info2
+      then byte_compare b1.additional_info b2.additional_info
       else ty_compare
   )))
-= tot_serialize_bitsum'_eq
-    initial_byte_desc
-    tot_serialize_u8
+= let b1_ = synth_initial_byte_recip b1 in
+  let b2_ = synth_initial_byte_recip b2 in
+  tot_serialize_synth_eq
+    parse_initial_byte'
+    synth_initial_byte
+    serialize_initial_byte'
+    synth_initial_byte_recip
+    ()
     b1;
+  tot_serialize_synth_eq
+    parse_initial_byte'
+    synth_initial_byte
+    serialize_initial_byte'
+    synth_initial_byte_recip
+    ()
+    b2;
   tot_serialize_bitsum'_eq
     initial_byte_desc
     tot_serialize_u8
-    b2;
-  let b1' = synth_bitsum'_recip initial_byte_desc b1 in
-  let b2' = synth_bitsum'_recip initial_byte_desc b2 in
+    b1_;
+  tot_serialize_bitsum'_eq
+    initial_byte_desc
+    tot_serialize_u8
+    b2_;
+  let b1' = synth_bitsum'_recip initial_byte_desc b1_ in
+  let b2' = synth_bitsum'_recip initial_byte_desc b2_ in
   serialize_u8_spec' b1';
   serialize_u8_spec' b2';
   assert (Seq.length (bare_serialize serialize_initial_byte b1) == 1);
@@ -1245,16 +1283,14 @@ let serialize_initial_byte_compare
       (bare_serialize serialize_initial_byte b1)
       (bare_serialize serialize_initial_byte b2) == byte_compare b1' b2'
   );
-  let (ty1, (info1, ())) = b1 in
-  let (ty2, (info2, ())) = b2 in
-  assert (synth_bitsum' initial_byte_desc b1' == b1);
-  assert (synth_bitsum' initial_byte_desc b2' == b2);
-  assert (U8.v ty1 == get_bitfield (U8.v b1') 5 8);
-  assert (U8.v info1 == get_bitfield (U8.v b1') 0 5);
+  assert (synth_bitsum' initial_byte_desc b1' == b1_);
+  assert (synth_bitsum' initial_byte_desc b2' == b2_);
+  assert (U8.v b1.major_type == get_bitfield (U8.v b1') 5 8);
+  assert (U8.v b1.additional_info == get_bitfield (U8.v b1') 0 5);
   get_bitfield_eq (U8.v b1') 5 8;
   get_bitfield_eq (U8.v b1') 0 5;
-  assert (U8.v ty2 == get_bitfield (U8.v b2') 5 8);
-  assert (U8.v info2 == get_bitfield (U8.v b2') 0 5);
+  assert (U8.v b2.major_type == get_bitfield (U8.v b2') 5 8);
+  assert (U8.v b2.additional_info == get_bitfield (U8.v b2') 0 5);
   get_bitfield_eq (U8.v b2') 5 8;
   get_bitfield_eq (U8.v b2') 0 5;
   assert_norm (pow2 5 == 32);
@@ -1269,10 +1305,8 @@ let serialize_initial_byte_lt
       (bare_serialize serialize_initial_byte b1)
       (bare_serialize serialize_initial_byte b2)
     == (
-      let (ty1, (info1, ())) = b1 in
-      let (ty2, (info2, ())) = b2 in
-      (ty1 `U8.lt` ty2) ||
-        ((ty1 = ty2) && (info1 `U8.lt` info2))
+      (b1.major_type `U8.lt` b2.major_type) ||
+        ((b1.major_type = b2.major_type) && (b1.additional_info `U8.lt` b2.additional_info))
   )))
 = serialize_initial_byte_compare b1 b2
 
@@ -1547,13 +1581,11 @@ let serialized_lex_compare_simple_value
   seq_to_list_length_one (bare_serialize serialize_initial_byte b2);
   seq_to_list_append (bare_serialize (serialize_long_argument b1) l1) (bare_serialize (serialize_content h1) c1);
   seq_to_list_append (bare_serialize (serialize_long_argument b2) l2) (bare_serialize (serialize_content h2) c2);
-  let (ty1, (info1, ())) = b1 in
-  let (ty2, (info2, ())) = b2 in
   if (x1 `U8.lte` max_simple_value_additional_info || x2 `U8.lte` max_simple_value_additional_info)
   then ()
   else begin
     assert (b1 == b2);
-    assert (b1 == (cbor_major_type_simple_value, (additional_info_long_argument_8_bits, ())));
+    assert (b1 == mk_initial_byte cbor_major_type_simple_value additional_info_long_argument_8_bits);
     let LongArgumentSimpleValue _ x1' = l1 in
     assert (x1 == x1');
     let p1' : tot_parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.tot_weaken parse_long_argument_kind (tot_parse_synth (tot_parse_filter tot_parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b1 ())) in
@@ -1569,7 +1601,7 @@ let serialized_lex_compare_simple_value
     seq_to_list_length_one (bare_serialize s1' l1);
     assert (bare_serialize (serialize_long_argument b1) l1 == Seq.create 1 (x1 <: U8.t));
     seq_to_list_length_one (bare_serialize (serialize_long_argument b1) l1);
-    assert (b2 == (cbor_major_type_simple_value, (additional_info_long_argument_8_bits, ())));
+    assert (b2 == mk_initial_byte cbor_major_type_simple_value additional_info_long_argument_8_bits);
     let LongArgumentSimpleValue _ x2' = l2 in
     assert (x2 == x2');
     let p2' : tot_parser parse_long_argument_kind (long_argument b2) = LowParse.Spec.Base.tot_weaken parse_long_argument_kind (tot_parse_synth (tot_parse_filter tot_parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b2 ())) in
@@ -1746,7 +1778,7 @@ let lex_compare_with_header_correct
   ))
 = let h1 = raw_uint64_as_argument ty1 x1 in
   let (| b1, l1 |) = h1 in
-  let (_, (a1, _)) = b1 in
+  let a1 = b1.additional_info in
   if a1 = additional_info_long_argument_8_bits
   then begin
     lex_compare_with_header_uint ty1 x1 ty2 x2 b1 tot_parse_u8 (LongArgumentU8 #b1 ()) LongArgumentU8?.v tot_serialize_u8 1 U8.v (fun x -> serialize_u8_spec_be x) (fun x -> ())
