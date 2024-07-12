@@ -711,6 +711,58 @@ fn pure_read
 
 inline_for_extraction
 ```pulse
+fn ifthenelse_pure_reader
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (cond: bool)
+  (iftrue: squash (cond == true) -> pure_reader s)
+  (iffalse: squash (cond == false) -> pure_reader s)
+:pure_reader #t #k #p s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  (t': Type0)
+  (f: _)
+{
+  if cond {
+    iftrue () input #pm #v t' f
+  } else {
+    iffalse () input #pm #v t' f
+  }
+}
+```
+
+inline_for_extraction
+```pulse
+fn pure_reader_ext
+  (#t: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (#s1: serializer p1)
+  (r1: pure_reader s1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2 { forall x . parse p1 x == parse p2 x })
+:pure_reader #t #k2 #p2 s2
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  (t': Type0)
+  (f: _)
+{
+  pts_to_serialized_ext_stick s2 s1 input;
+  let res = r1 input #pm #v t' f;
+  elim_stick _ _;
+  res
+}
+```
+
+inline_for_extraction
+```pulse
 fn pure_reader_of_leaf_reader
   (#t: Type0)
   (#k: parser_kind)

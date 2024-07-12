@@ -67,7 +67,10 @@ inline_for_extraction
 let validate_empty : validator tot_parse_empty = validate_ret ()
 
 inline_for_extraction
-let read_empty : reader tot_serialize_empty = read_ret () (fun _ -> ())
+let leaf_read_empty : leaf_reader tot_serialize_empty = leaf_read_ret () (fun _ -> ())
+
+inline_for_extraction
+let read_empty : reader tot_serialize_empty = reader_of_leaf_reader leaf_read_empty
 
 inline_for_extraction
 let validate_and_read_empty : validate_and_read tot_parse_empty =
@@ -1341,6 +1344,40 @@ fn split_nondep_then
     fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
     fold (split_nondep_then_post s1 s2 input pm v (input1 `SlicePair` input2));
     (input1 `SlicePair` input2)
+  }}
+}
+```
+
+inline_for_extraction
+```pulse
+fn pure_read_dtuple2
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (j1: jumper p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#s1: serializer p1)
+  (r1: pure_reader s1)
+  (#k2: parser_kind)
+  (#p2: (x: t1) -> parser k2 (t2 x))
+  (#s2: (x: t1) -> serializer (p2 x))
+  (r2: (x: t1) -> pure_reader (s2 x))
+: pure_reader #(dtuple2 t1 t2) #(and_then_kind k1 k2) #(tot_parse_dtuple2 p1 p2) (tot_serialize_dtuple2 s1 s2)
+=   
+  (input: slice byte)
+  (#pm: perm)
+  (#v: _)
+  (t': Type0)
+  (f: _)
+{
+  let split12 = split_dtuple2 s1 j1 s2 input;
+  match split12 { SlicePair input1 input2 -> {
+    unfold (split_dtuple2_post s1 s2 input pm v split12);
+    unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
+    let x1 = pure_read r1 input1;
+    let x2 = pure_read (r2 x1) input2;
+    elim_stick _ _;
+    f (Mkdtuple2 x1 x2)
   }}
 }
 ```
