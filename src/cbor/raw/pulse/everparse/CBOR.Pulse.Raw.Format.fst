@@ -42,6 +42,16 @@ let read_initial_byte : reader serialize_initial_byte =
 
 inline_for_extraction
 noextract
+let pure_read_initial_byte : pure_reader serialize_initial_byte =
+  pure_read_filter
+    (pure_read_bitsum'
+      destr_initial_byte
+      (pure_reader_of_leaf_reader (read_u8' ()))
+    )
+    initial_byte_wf
+
+inline_for_extraction
+noextract
 let validate_long_argument
   (b: initial_byte)
 : Tot (validate_and_read (parse_long_argument b))
