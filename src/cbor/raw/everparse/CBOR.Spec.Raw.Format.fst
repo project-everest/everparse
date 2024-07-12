@@ -27,8 +27,11 @@ let filter_initial_byte : filter_bitsum'_t initial_byte_desc =
     (mk_filter_bitsum'_t' initial_byte_desc)
 
 inline_for_extraction
+[@@ FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta_attr [`%filter_bitsum'_t_attr];
+  delta_only [`%destr_bitsum'_bitstop; `%destr_bitsum'_bitfield];
+iota; zeta; primops]; FStar.Tactics.trefl ())]
 let destr_initial_byte : destr_bitsum'_t initial_byte_desc =
-  norm [delta_attr [`%filter_bitsum'_t_attr]; iota; zeta; primops]
+//  norm [delta_attr [`%filter_bitsum'_t_attr]; iota; zeta; primops]
     (mk_destr_bitsum'_t initial_byte_desc)
 
 inline_for_extraction
