@@ -368,13 +368,13 @@ fn peek
   returns res: slice_pair byte
   ensures peek_post s input pm v consumed res
 {
-  let s1s2 = slice_split false input #pm #v consumed;
+  let s1s2 = split false input #pm #v consumed;
   match s1s2 {
     SlicePair s1 s2 -> {
       Seq.lemma_split v (SZ.v consumed);
       let v1 = Ghost.hide (fst (Some?.v (parse p v)));
       parse_injective #k p (bare_serialize s v1) v;
-      unfold (split_post0 input pm v consumed (SlicePair s1 s2));
+      unfold (split_post input pm v consumed (SlicePair s1 s2));
       unfold (split_post' input pm v consumed s1 s2);
       with v1' . assert (pts_to s1 #pm v1');
       rewrite (pts_to s1 #pm v1') as (pts_to_serialized s s1 #pm v1);

@@ -184,25 +184,6 @@ fn stick_elim_partial_r
 }
 ```
 
-noeq type slice_pair (t: Type) = | SlicePair: (fst: S.slice t) -> (snd: S.slice t) -> slice_pair t
-
-let split_post0
-    (#t: Type) (s: S.slice t) (p: perm) (v: Ghost.erased (Seq.seq t)) (i: SZ.t)
-    (res: (slice_pair t))
-: Tot vprop
-= let SlicePair s1 s2 = res in
-    S.split_post' s p v i s1 s2
-
-```pulse
-fn slice_split (#t: Type) (mutb: bool) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Seq.seq t)) (i: SZ.t)
-    requires S.pts_to s #p v ** pure (S.split_precond mutb p v i)
-    returns res: slice_pair t
-    ensures split_post0 s p v i res
-{
-  admit ()
-}
-```
-
 noextract
 let slice_append_split_precond
   (#t: Type) (mutb: bool) (p: perm) (v1: Ghost.erased (Seq.seq t)) (i: SZ.t)
@@ -221,9 +202,9 @@ let slice_append_split_post'
 
 let slice_append_split_post
     (#t: Type) (s: S.slice t) (p: perm) (v1 v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
-    (res: slice_pair t)
+    (res: S.slice_pair t)
 : Tot vprop
-= let SlicePair s1 s2 = res in
+= let S.SlicePair s1 s2 = res in
   slice_append_split_post' s p v1 v2 i s1 s2
 
 inline_for_extraction
@@ -231,20 +212,20 @@ noextract
 ```pulse
 fn slice_append_split (#t: Type) (mutb: bool) (s: S.slice t) (#p: perm) (#v1 #v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
     requires S.pts_to s #p (v1 `Seq.append` v2) ** pure (slice_append_split_precond mutb p v1 i)
-    returns res: slice_pair t
+    returns res: S.slice_pair t
     ensures slice_append_split_post  s p v1 v2 i res
 {
   let vs = Ghost.hide (Seq.split (Seq.append v1 v2) (SZ.v i));
   assert (pure (fst vs `Seq.equal` v1));
   assert (pure (snd vs `Seq.equal` v2));
-  let res = slice_split mutb s i;
+  let res = S.split mutb s i;
   match res {
-    SlicePair s1 s2 -> {
-      unfold (split_post0 s p (Seq.append v1 v2) i res);
+    S.SlicePair s1 s2 -> {
+      unfold (S.split_post s p (Seq.append v1 v2) i res);
       unfold (S.split_post' s p (Seq.append v1 v2) i s1 s2);
       fold (slice_append_split_post' s p v1 v2 i s1 s2);
-      fold (slice_append_split_post s p v1 v2 i (SlicePair s1 s2));
-      (SlicePair s1 s2)
+      fold (slice_append_split_post s p v1 v2 i (S.SlicePair s1 s2));
+      (S.SlicePair s1 s2)
     }
   }
 }
@@ -262,9 +243,9 @@ let slice_append_split_stick_post'
 
 let slice_append_split_stick_post
     (#t: Type) (s: S.slice t) (p: perm) (v1 v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
-    (res: slice_pair t)
+    (res: S.slice_pair t)
 : Tot vprop
-= let SlicePair s1 s2 = res in
+= let S.SlicePair s1 s2 = res in
   slice_append_split_stick_post' s p v1 v2 i s1 s2
 
 ```pulse
@@ -283,18 +264,18 @@ noextract
 ```pulse
 fn slice_append_split_stick (#t: Type) (mutb: bool) (input: S.slice t) (#p: perm) (#v1 #v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
     requires S.pts_to input #p (v1 `Seq.append` v2) ** pure (slice_append_split_precond mutb p v1 i)
-    returns res: slice_pair t
+    returns res: S.slice_pair t
     ensures slice_append_split_stick_post input p v1 v2 i res
 {
   let res = slice_append_split mutb input i;
   match res {
-    SlicePair input1 input2 -> {
+    S.SlicePair input1 input2 -> {
       unfold (slice_append_split_post input p v1 v2 i res);
       unfold (slice_append_split_post' input p v1 v2 i input1 input2);
       intro_stick _ _ _ (slice_append_split_stick_aux input p v1 v2 i input1 input2);
       fold (slice_append_split_stick_post' input p v1 v2 i input1 input2);
-      fold (slice_append_split_stick_post input p v1 v2 i (SlicePair input1 input2));
-      (SlicePair input1 input2)
+      fold (slice_append_split_stick_post input p v1 v2 i (S.SlicePair input1 input2));
+      (S.SlicePair input1 input2)
     }
   }
 }
@@ -316,9 +297,9 @@ let slice_split_stick_post'
 
 let slice_split_stick_post
     (#t: Type) (s: S.slice t) (p: perm) (v: Ghost.erased (Seq.seq t)) (i: SZ.t)
-    (res: slice_pair t)
+    (res: S.slice_pair t)
 : Tot vprop
-= let (SlicePair s1 s2) = res in
+= let (S.SlicePair s1 s2) = res in
   slice_split_stick_post' s p v i s1 s2
 
 ```pulse
@@ -338,19 +319,19 @@ noextract
 ```pulse
 fn slice_split_stick (#t: Type) (mutb: bool) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Seq.seq t)) (i: SZ.t)
     requires S.pts_to s #p v ** pure (S.split_precond mutb p v i)
-    returns res: slice_pair t
+    returns res: S.slice_pair t
     ensures slice_split_stick_post s p v i res
 {
   Seq.lemma_split v (SZ.v i);
-  let res = slice_split mutb s i;
-  match res { SlicePair s1 s2 -> {
-    unfold (split_post0 s p v i res);
+  let res = S.split mutb s i;
+  match res { S.SlicePair s1 s2 -> {
+    unfold (S.split_post s p v i res);
     unfold (S.split_post' s p v i s1 s2);
     with v1 v2 . assert (S.pts_to s1 #p v1 ** S.pts_to s2 #p v2);
     intro_stick _ _ _ (slice_split_stick_aux s p v i s1 s2 v1 v2 ());
     fold (slice_split_stick_post' s p v i s1 s2);
-    fold (slice_split_stick_post s p v i (SlicePair s1 s2));
-    (SlicePair s1 s2)
+    fold (slice_split_stick_post s p v i (S.SlicePair s1 s2));
+    (S.SlicePair s1 s2)
   }}
 }
 ```
