@@ -351,9 +351,9 @@ let peek_post
   (pm: perm)
   (v: bytes)
   (consumed: SZ.t)
-  (res: (slice byte & slice byte))
+  (res: slice_pair byte)
 : Tot vprop
-= let (left, right) = res in
+= let SlicePair left right = res in
   peek_post' s input pm v consumed left right
 
 inline_for_extraction
@@ -365,22 +365,22 @@ fn peek
   (#v: Ghost.erased bytes)
   (consumed: SZ.t)
   requires (pts_to input #pm v ** pure (validator_success #k #t p 0sz v (consumed)))
-  returns res: (slice byte & slice byte)
+  returns res: slice_pair byte
   ensures peek_post s input pm v consumed res
 {
-  let s1s2 = split false input #pm #v consumed;
+  let s1s2 = slice_split false input #pm #v consumed;
   match s1s2 {
-    Mktuple2 s1 s2 -> {
+    SlicePair s1 s2 -> {
       Seq.lemma_split v (SZ.v consumed);
       let v1 = Ghost.hide (fst (Some?.v (parse p v)));
       parse_injective #k p (bare_serialize s v1) v;
-      unfold (split_post input pm v consumed (s1, s2));
+      unfold (split_post0 input pm v consumed (SlicePair s1 s2));
       unfold (split_post' input pm v consumed s1 s2);
       with v1' . assert (pts_to s1 #pm v1');
       rewrite (pts_to s1 #pm v1') as (pts_to_serialized s s1 #pm v1);
       fold (peek_post' s input pm v consumed s1 s2);
-      fold (peek_post s input pm v consumed (s1, s2));
-      (s1, s2)
+      fold (peek_post s input pm v consumed (SlicePair s1 s2));
+      (SlicePair s1 s2)
     }
   }
 }
@@ -406,9 +406,9 @@ let peek_stick_post
   (pm: perm)
   (v: bytes)
   (consumed: SZ.t)
-  (res: (slice byte & slice byte))
+  (res: slice_pair byte)
 : Tot vprop
-= let (left, right) = res in
+= let (SlicePair left right) = res in
   peek_stick_post' s input pm v consumed left right
 
 inline_for_extraction
@@ -420,11 +420,11 @@ fn peek_stick
   (#v: Ghost.erased bytes)
   (consumed: SZ.t)
   requires (pts_to input #pm v ** pure (validator_success #k #t p 0sz v (consumed)))
-  returns res: (slice byte & slice byte)
+  returns res: (slice_pair byte)
   ensures peek_stick_post s input pm v consumed res
 {
   let res = peek s input consumed;
-  match res { Mktuple2 left right -> {
+  match res { SlicePair left right -> {
     unfold (peek_post s input pm v consumed res);
     unfold (peek_post' s input pm v consumed left right);
     with v1 v2 . assert (pts_to_serialized s left #pm v1 ** pts_to right #pm v2);
@@ -439,8 +439,8 @@ fn peek_stick
       };
     intro_stick (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) (is_split input pm consumed left right) aux;
     fold (peek_stick_post' s input pm v consumed left right);
-    fold (peek_stick_post s input pm v consumed (left, right));
-    (left, right)
+    fold (peek_stick_post s input pm v consumed (left `SlicePair` right));
+    (left `SlicePair` right)
   }}
 }
 ```
@@ -462,13 +462,13 @@ fn peek_stick_gen
   )
 {
   let split123 = slice_split_stick false input offset;
-  match split123 { Mktuple2 input1 input23 -> {
+  match split123 { SlicePair input1 input23 -> {
     unfold (slice_split_stick_post input pm v offset split123);
     unfold (slice_split_stick_post' input pm v offset input1 input23);
     with v23 . assert (pts_to input23 #pm v23);
     stick_elim_partial_l (pts_to input1 #pm _) (pts_to input23 #pm v23) (pts_to input #pm v);
     let split23 = peek_stick s input23 consumed;
-    match split23 { Mktuple2 input2 input3 -> {
+    match split23 { SlicePair input2 input3 -> {
       unfold (peek_stick_post s input23 pm v23 consumed split23);
       unfold (peek_stick_post' s input23 pm v23 consumed input2 input3);
       with v' . assert (pts_to_serialized s input2 #pm v');

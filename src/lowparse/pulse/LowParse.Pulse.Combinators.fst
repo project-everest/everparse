@@ -1137,9 +1137,9 @@ let split_dtuple2_post
   (input: slice byte)
   (pm: perm)
   (v: Ghost.erased (dtuple2 t1 t2))
-  (res: (slice byte & slice byte))
+  (res: slice_pair byte)
 : Tot vprop
-= let (left, right) = res in
+= let (SlicePair left right) = res in
   split_dtuple2_post' s1 s2 input pm v left right
 
 inline_for_extraction
@@ -1158,7 +1158,7 @@ fn split_dtuple2
   (#pm: perm)
   (#v: Ghost.erased (dtuple2 t1 t2))
   requires pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v
-  returns res: (slice byte & slice byte)
+  returns res: slice_pair byte
   ensures split_dtuple2_post s1 s2 input pm v res
 {
   rewrite_with_stick
@@ -1168,7 +1168,7 @@ fn split_dtuple2
   let i = j1 input 0sz;
   let res = slice_append_split_stick false input i;
   match res {
-    Mktuple2 input1 input2 -> {
+    SlicePair input1 input2 -> {
       unfold (slice_append_split_stick_post input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i res);
       unfold (slice_append_split_stick_post' input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i input1 input2);
       stick_trans (_ ** _) _ _;
@@ -1177,8 +1177,8 @@ fn split_dtuple2
       stick_prod (pts_to_serialized s1 input1 #pm _) (pts_to input1 #pm _) (pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input2 #pm _);
       stick_trans (pts_to_serialized s1 input1 #pm _ ** pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input1 #pm _ ** pts_to input2 #pm _) _;
       fold (split_dtuple2_post' s1 s2 input pm v input1 input2);
-      fold (split_dtuple2_post s1 s2 input pm v (input1, input2));
-      (input1, input2)
+      fold (split_dtuple2_post s1 s2 input pm v (input1 `SlicePair` input2));
+      (input1 `SlicePair` input2)
     }
   }
 }
@@ -1214,9 +1214,9 @@ let split_nondep_then_post
   (input: slice byte)
   (pm: perm)
   (v: Ghost.erased (t1 & t2))
-  (res: (slice byte & slice byte))
+  (res: slice_pair byte)
 : Tot vprop
-= let (left, right) = res in
+= let (SlicePair left right) = res in
   split_nondep_then_post' s1 s2 input pm v left right
 
 inline_for_extraction
@@ -1234,7 +1234,7 @@ fn split_nondep_then
   (#pm: perm)
   (#v: Ghost.erased (t1 & t2))
   requires pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v
-  returns res: (slice byte & slice byte)
+  returns res: slice_pair byte
   ensures split_nondep_then_post s1 s2 input pm v res
 {
   Classical.forall_intro (nondep_then_eq_dtuple2 p1 p2);
@@ -1255,13 +1255,13 @@ fn split_nondep_then
     input;
   stick_trans (pts_to_serialized (tot_serialize_dtuple2 s1 (fun _ -> s2)) _ #pm _) _ _;
   let res = split_dtuple2 s1 j1 (fun _ -> s2) input;
-  match res { Mktuple2 input1 input2 -> {
+  match res { SlicePair input1 input2 -> {
     unfold (split_dtuple2_post s1 (fun _ -> s2) input pm (dtuple2_of_pair v) res);
     unfold (split_dtuple2_post' s1 (fun _ -> s2) input pm (dtuple2_of_pair v) input1 input2);
     stick_trans (_ ** _) _ _;
     fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
-    fold (split_nondep_then_post s1 s2 input pm v (input1, input2));
-    (input1, input2)
+    fold (split_nondep_then_post s1 s2 input pm v (input1 `SlicePair` input2));
+    (input1 `SlicePair` input2)
   }}
 }
 ```
