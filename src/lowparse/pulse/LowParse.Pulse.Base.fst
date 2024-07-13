@@ -495,123 +495,6 @@ fn peek_stick_gen
 ```
 
 inline_for_extraction
-let reader
-  (#t: Type0)
-  (#k: parser_kind)
-  (#p: parser k t)
-  (s: serializer p)
-: Tot Type
-= (input: slice byte) ->
-  (#pm: perm) ->
-  (#v: Ghost.erased t) ->
-  (pre: vprop) ->
-  (t': Type0) ->
-  (post: (t' -> vprop)) ->
-  (cont: (x: t { x == Ghost.reveal v }) -> stt t' (pts_to_serialized s input #pm v ** pre) (fun x -> post x)) ->
-  stt t' (pts_to_serialized s input #pm v ** pre) (fun x -> post x)
-
-inline_for_extraction
-let call_reader
-  (#t: Type0)
-  (#k: parser_kind)
-  (#p: parser k t)
-  (#s: serializer p)
-  (r: reader s)
-  (input: slice byte)
-  (#pm: perm)
-  (#v: Ghost.erased t)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (cont: (x: t { x == Ghost.reveal v }) -> stt t' (pts_to_serialized s input #pm v ** pre) (fun t' -> post t'))
-: stt t' (pts_to_serialized s input #pm v ** pre) (fun t' -> post t')
-= r input pre t' (fun x -> post x) (fun x -> cont x)
-
-#push-options "--print_implicits --query_stats"
-
-inline_for_extraction
-```pulse
-fn read_cont
-  (#t: Type0)
-  (#k: parser_kind)
-  (#p: parser k t)
-  (#s: serializer p)
-  (r: reader s)
-  (input: slice byte)
-  (pm: perm)
-  (v: Ghost.erased t)
-  (v': t { Ghost.reveal v == v' })
-  requires (pts_to_serialized s input #pm v ** emp)
-  returns v' : t
-  ensures (pts_to_serialized s input #pm v' ** pure (Ghost.reveal v == v'))
-{
-  v'
-}
-```
-
-inline_for_extraction
-```pulse
-fn read
-  (#t: Type0)
-  (#k: parser_kind)
-  (#p: parser k t)
-  (#s: serializer p)
-  (r: reader s)
-  (input: slice byte)
-  (#pm: perm)
-  (#v: Ghost.erased t)
-  requires (pts_to_serialized s input #pm v)
-  returns v' : t
-  ensures (pts_to_serialized s input #pm v' ** pure (Ghost.reveal v == v'))
-{
-  call_reader r input #pm #v emp t (fun v' -> pts_to_serialized s input #pm v' ** pure (Ghost.reveal v == v')) (read_cont r input pm v)
-}
-```
-
-inline_for_extraction
-```pulse
-fn read_then_cont
-  (#t: Type0)
-  (#t': Type0)
-  (#k: parser_kind)
-  (#p: parser k t)
-  (#s: serializer p)
-  (r: reader s)
-  (f: t -> t')
-  (input: slice byte)
-  (pm: perm)
-  (v: Ghost.erased t)
-  (v': t { Ghost.reveal v == v' })
-  requires (pts_to_serialized s input #pm v ** emp)
-  returns v_ : t'
-  ensures (pts_to_serialized s input #pm v' ** pure (f (Ghost.reveal v) == v_))
-{
-  f v'
-}
-```
-
-inline_for_extraction
-```pulse
-fn read_then
-  (#t: Type0)
-  (#t': Type0)
-  (#k: parser_kind)
-  (#p: parser k t)
-  (#s: serializer p)
-  (r: reader s)
-  (f: t -> t')
-  (input: slice byte)
-  (#pm: perm)
-  (#v: Ghost.erased t)
-  requires (pts_to_serialized s input #pm v)
-  returns v' : t'
-  ensures (pts_to_serialized s input #pm v ** pure (f (Ghost.reveal v) == v'))
-{
-  call_reader r input #pm #v emp t' (fun v' -> pts_to_serialized s input #pm v ** pure (f (Ghost.reveal v) == v')) (read_then_cont r f input pm v)
-}
-```
-
-inline_for_extraction
 let leaf_reader
   (#t: Type0)
   (#k: parser_kind)
@@ -643,41 +526,7 @@ let leaf_read
 = r input #pm #v
 
 inline_for_extraction
-```pulse
-fn reader_of_leaf_reader'
-  (#t: Type0)
-  (#k: parser_kind)
-  (#p: parser k t)
-  (#s: serializer p)
-  (r: leaf_reader s)
-  (input: slice byte)
-  (#pm: perm)
-  (#v: Ghost.erased t)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (cont: (x: t { x == Ghost.reveal v }) -> stt t' (pts_to_serialized s input #pm v ** pre) (fun x -> post x))
-  requires (pts_to_serialized s input #pm v ** pre)
-  returns res: t'
-  ensures post res
-{
-  let res = leaf_read r input #pm #v;
-  cont res
-}
-```
-
-inline_for_extraction
-let reader_of_leaf_reader
-  (#t: Type0)
-  (#k: parser_kind)
-  (#p: parser k t)
-  (#s: serializer p)
-  (r: leaf_reader s)
-: reader s
-= reader_of_leaf_reader' r
-
-inline_for_extraction
-let pure_reader
+let reader
   (#t: Type0)
   (#k: parser_kind)
   (#p: parser k t)
@@ -692,18 +541,17 @@ let pure_reader
 
 inline_for_extraction
 ```pulse
-fn pure_read
+fn leaf_reader_of_reader
   (#t: Type0)
   (#k: parser_kind)
   (#p: parser k t)
   (#s: serializer p)
-  (r: pure_reader s)
+  (r: reader s)
+: leaf_reader #t #k #p s
+=
   (input: slice byte)
   (#pm: perm)
   (#v: Ghost.erased t)
-  requires (pts_to_serialized s input #pm v)
-  returns v' : t
-  ensures (pts_to_serialized s input #pm v' ** pure (Ghost.reveal v == v'))
 {
   r input #pm #v t id
 }
@@ -711,15 +559,15 @@ fn pure_read
 
 inline_for_extraction
 ```pulse
-fn ifthenelse_pure_reader
+fn ifthenelse_reader
   (#t: Type0)
   (#k: parser_kind)
   (#p: parser k t)
   (s: serializer p)
   (cond: bool)
-  (iftrue: squash (cond == true) -> pure_reader s)
-  (iffalse: squash (cond == false) -> pure_reader s)
-:pure_reader #t #k #p s
+  (iftrue: squash (cond == true) -> reader s)
+  (iffalse: squash (cond == false) -> reader s)
+:reader #t #k #p s
 =
   (input: slice byte)
   (#pm: perm)
@@ -737,16 +585,16 @@ fn ifthenelse_pure_reader
 
 inline_for_extraction
 ```pulse
-fn pure_reader_ext
+fn reader_ext
   (#t: Type0)
   (#k1: parser_kind)
   (#p1: parser k1 t)
   (#s1: serializer p1)
-  (r1: pure_reader s1)
+  (r1: reader s1)
   (#k2: parser_kind)
   (#p2: parser k2 t)
   (s2: serializer p2 { forall x . parse p1 x == parse p2 x })
-:pure_reader #t #k2 #p2 s2
+:reader #t #k2 #p2 s2
 =
   (input: slice byte)
   (#pm: perm)
@@ -763,13 +611,13 @@ fn pure_reader_ext
 
 inline_for_extraction
 ```pulse
-fn pure_reader_of_leaf_reader
+fn reader_of_leaf_reader
   (#t: Type0)
   (#k: parser_kind)
   (#p: parser k t)
   (#s: serializer p)
   (r: leaf_reader s)
-: pure_reader #t #k #p s
+: reader #t #k #p s
 =
   (input: slice byte)
   (#pm: perm)
@@ -818,6 +666,7 @@ inline_for_extraction
 let validate_and_read_weaken (#t: Type0) (#k1: parser_kind) (k2: parser_kind) (#p1: parser k1 t) (v1: validate_and_read p1 { k2 `is_weaker_than` k1 }) : validate_and_read (tot_weaken k2 p1) =
   validate_and_read_ext v1 (tot_weaken k2 p1)
 
+(*
 inline_for_extraction
 ```pulse
 fn validate_and_read_intro_cont_read
@@ -885,6 +734,7 @@ fn validate_and_read_intro
   w input offset _ _ _ (validate_and_read_intro_cont_validate r input offset #pm #v pre t' post ksucc) kfail
 }
 ```
+*)
 
 inline_for_extraction
 ```pulse

@@ -52,6 +52,7 @@ let read_ret
 : Tot (reader (tot_serialize_ret x v_unique))
 = reader_of_leaf_reader (leaf_read_ret x v_unique)
 
+(*
 inline_for_extraction
 let validate_and_read_ret
   (#t: Type0)
@@ -59,6 +60,7 @@ let validate_and_read_ret
   (v_unique: (v' : t) -> Lemma (x == v'))
 : Tot (validate_and_read (tot_parse_ret x))
 = validate_and_read_intro (validate_ret x) (read_ret x v_unique)
+*)
 
 inline_for_extraction
 let jump_ret (#t: Type) (x: t) : jumper (tot_parse_ret x) = jump_constant_size (tot_parse_ret x) 0sz 
@@ -72,9 +74,11 @@ let leaf_read_empty : leaf_reader tot_serialize_empty = leaf_read_ret () (fun _ 
 inline_for_extraction
 let read_empty : reader tot_serialize_empty = reader_of_leaf_reader leaf_read_empty
 
+(*
 inline_for_extraction
 let validate_and_read_empty : validate_and_read tot_parse_empty =
   validate_and_read_intro validate_empty read_empty
+*)
 
 inline_for_extraction
 let jump_empty : jumper tot_parse_empty = jump_ret ()
@@ -312,67 +316,16 @@ let elim_stt_cps
 = cps pre t' post phi
 
 inline_for_extraction
-```pulse
-fn read_synth_cont
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (s1: serializer p1)
-  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
-  (f2': (x: t1) -> stt_cps (f2 x))
-  (input: slice byte)
-  (pm: perm)
-  (v: Ghost.erased t2)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (cont: (x: t2 { x == Ghost.reveal v }) -> stt t' (pts_to_serialized (tot_serialize_synth p1 f2 s1 f1 ()) input #pm v ** pre) (fun x -> post x))
-  (x: t1 { x == Ghost.reveal (f1 v) })
-  requires pts_to_serialized s1 input #pm (f1 v) ** (pre ** (pts_to_serialized s1 input #pm (f1 v) @==> pts_to_serialized (tot_serialize_synth p1 f2 s1 f1 ()) input #pm v))
-  returns x': t'
-  ensures post x'
-{
-  elim_stick _ _;
-  f2' x (pts_to_serialized (tot_serialize_synth p1 f2 s1 f1 ()) input #pm v ** pre) t' post cont
-}
-```
-
-inline_for_extraction
-```pulse
-fn read_synth
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: reader s1)
-  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
-  (f2': (x: t1) -> stt_cps (f2 x))
-: reader #t2 #k1 #(tot_parse_synth p1 f2) (tot_serialize_synth p1 f2 s1 f1 ())
-= (input: slice byte)
-  (#pm: _)
-  (#v: _)
-  (pre: _)
-  (t': Type0)
-  (post: _)
-  (cont: _)
-{
-  pts_to_serialized_synth_l2r_stick s1 f2 f1 input;
-  r input #pm #_ (pre ** (pts_to_serialized s1 input #pm (f1 v) @==> pts_to_serialized (tot_serialize_synth p1 f2 s1 f1 ()) input #pm v)) t' post
-    (read_synth_cont s1 f2 f1 f2' input pm v pre t' post cont)
-}
-```
-
-inline_for_extraction
-let read_synth'
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: reader s1)
-  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
-: Tot (reader (tot_serialize_synth p1 f2 s1 f1 ()))
-= read_synth r f2 f1 (fun x -> intro_stt_cps (f2 x))
-
-inline_for_extraction
-let pure_read_synth_cont_t
+let read_synth_cont_t
   (#t: Type0)
   (x: t)
 = (t': Type0) -> (g': ((y: t { y == x }) -> t')) -> (y': t' { y' == g' x })
 
 inline_for_extraction
-let pure_read_synth_cont
+let read_synth_cont
   (#t1 #t2: Type0)
   (f2: (t1 -> Tot t2))
-  (f2': ((x: t1) -> pure_read_synth_cont_t (f2 x)))
+  (f2': ((x: t1) -> read_synth_cont_t (f2 x)))
   (x1: Ghost.erased t1)
   (t': Type0)
   (g: ((x2: t2 { x2 == f2 x1 }) -> Tot t'))
@@ -382,11 +335,11 @@ let pure_read_synth_cont
 
 inline_for_extraction
 ```pulse
-fn pure_read_synth
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: pure_reader s1)
+fn read_synth
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: reader s1)
   (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
-  (f2': ((x: t1) -> pure_read_synth_cont_t (f2 x)))
-: pure_reader #t2 #k1 #(tot_parse_synth p1 f2) (tot_serialize_synth p1 f2 s1 f1 ())
+  (f2': ((x: t1) -> read_synth_cont_t (f2 x)))
+: reader #t2 #k1 #(tot_parse_synth p1 f2) (tot_serialize_synth p1 f2 s1 f1 ())
 = (input: slice byte)
   (#pm: _)
   (#v: _)
@@ -394,25 +347,25 @@ fn pure_read_synth
   (g: _)
 {
   pts_to_serialized_synth_l2r_stick s1 f2 f1 input;
-  let res = r input #pm #(f1 v) t' (pure_read_synth_cont f2 f2' (f1 v) t' g);
+  let res = r input #pm #(f1 v) t' (read_synth_cont f2 f2' (f1 v) t' g);
   elim_stick _ _;
   res
 }
 ```
 
 inline_for_extraction
-let pure_read_synth_cont_init
+let read_synth_cont_init
   (#t: Type0)
   (x: t)
-: Tot (pure_read_synth_cont_t #t x)
+: Tot (read_synth_cont_t #t x)
 = fun t' g' -> g' x
 
 inline_for_extraction
-let pure_read_synth'
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: pure_reader s1)
+let read_synth'
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: reader s1)
   (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
-: pure_reader #t2 #k1 #(tot_parse_synth p1 f2) (tot_serialize_synth p1 f2 s1 f1 ())
-= pure_read_synth r f2 f1 (fun x -> pure_read_synth_cont_init (f2 x))
+: reader #t2 #k1 #(tot_parse_synth p1 f2) (tot_serialize_synth p1 f2 s1 f1 ())
+= read_synth r f2 f1 (fun x -> read_synth_cont_init (f2 x))
 
 inline_for_extraction
 ```pulse
@@ -654,25 +607,7 @@ fn pts_to_serialized_filter_elim
 ```
 
 inline_for_extraction
-```pulse
-fn read_filter
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: reader s1) (f: (t1 -> bool))
-: reader #(parse_filter_refine f) #(parse_filter_kind k1) #(tot_parse_filter p1 f) (tot_serialize_filter s1 f)
-= (input: slice byte)
-  (#pm: _)
-  (#v: _)
-  (pre: _)
-  (t': Type0)
-  (post: _)
-  (cont: _)
-{
-  pts_to_serialized_filter_elim s1 f input;
-  r input #pm #(Ghost.hide (Ghost.reveal v)) pre t' post cont
-}
-```
-
-inline_for_extraction
-let pure_read_filter_cont
+let read_filter_cont
   (#t: Type0)
   (f: t -> bool)
   (v: Ghost.erased (parse_filter_refine f))
@@ -684,9 +619,9 @@ let pure_read_filter_cont
 
 inline_for_extraction
 ```pulse
-fn pure_read_filter
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: pure_reader s1) (f: (t1 -> bool))
-: pure_reader #(parse_filter_refine f) #(parse_filter_kind k1) #(tot_parse_filter p1 f) (tot_serialize_filter s1 f)
+fn read_filter
+  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (r: reader s1) (f: (t1 -> bool))
+: reader #(parse_filter_refine f) #(parse_filter_kind k1) #(tot_parse_filter p1 f) (tot_serialize_filter s1 f)
 = (input: slice byte)
   (#pm: _)
   (#v: _)
@@ -694,7 +629,7 @@ fn pure_read_filter
   (g: _)
 {
   pts_to_serialized_filter_elim s1 f input;
-  let res = r input #pm #(Ghost.hide (Ghost.reveal v)) t' (pure_read_filter_cont f v t' g);
+  let res = r input #pm #(Ghost.hide (Ghost.reveal v)) t' (read_filter_cont f v t' g);
   pts_to_serialized_filter_intro s1 f input;
   res
 }
@@ -1124,6 +1059,7 @@ fn jump_nondep_then
 }
 ```
 
+(*
 inline_for_extraction
 ```pulse
 fn jump_dtuple2_payload_cont
@@ -1186,6 +1122,7 @@ fn jump_dtuple2
     (jump_dtuple2_payload_cont s1 p2 v2 input offset pm v off1 key input1)
 }
 ```
+*)
 
 let split_dtuple2_post'
   (#t1: Type0)
@@ -1350,19 +1287,19 @@ fn split_nondep_then
 
 inline_for_extraction
 ```pulse
-fn pure_read_dtuple2
+fn read_dtuple2
   (#t1: Type0)
   (#t2: t1 -> Type0)
   (#k1: parser_kind)
   (#p1: parser k1 t1)
   (j1: jumper p1 { k1.parser_kind_subkind == Some ParserStrong })
   (#s1: serializer p1)
-  (r1: pure_reader s1)
+  (r1: reader s1)
   (#k2: parser_kind)
   (#p2: (x: t1) -> parser k2 (t2 x))
   (#s2: (x: t1) -> serializer (p2 x))
-  (r2: (x: t1) -> pure_reader (s2 x))
-: pure_reader #(dtuple2 t1 t2) #(and_then_kind k1 k2) #(tot_parse_dtuple2 p1 p2) (tot_serialize_dtuple2 s1 s2)
+  (r2: (x: t1) -> reader (s2 x))
+: reader #(dtuple2 t1 t2) #(and_then_kind k1 k2) #(tot_parse_dtuple2 p1 p2) (tot_serialize_dtuple2 s1 s2)
 =   
   (input: slice byte)
   (#pm: perm)
@@ -1374,8 +1311,8 @@ fn pure_read_dtuple2
   match split12 { SlicePair input1 input2 -> {
     unfold (split_dtuple2_post s1 s2 input pm v split12);
     unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
-    let x1 = pure_read r1 input1;
-    let x2 = pure_read (r2 x1) input2;
+    let x1 = leaf_reader_of_reader r1 input1;
+    let x2 = leaf_reader_of_reader (r2 x1) input2;
     elim_stick _ _;
     f (Mkdtuple2 x1 x2)
   }}

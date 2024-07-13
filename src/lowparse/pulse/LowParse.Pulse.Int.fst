@@ -39,9 +39,11 @@ fn read_u8' (_: unit) : leaf_reader #FStar.UInt8.t #parse_u8_kind #tot_parse_u8 
 inline_for_extraction
 let read_u8 : reader tot_serialize_u8 = reader_of_leaf_reader (read_u8' ())
 
+(*
 inline_for_extraction
 let validate_and_read_u8 : validate_and_read tot_parse_u8 =
   validate_and_read_intro validate_u8 read_u8
+*)
 
 inline_for_extraction
 let validate_u16 : validator tot_parse_u16 =
@@ -74,9 +76,11 @@ fn read_u16' (_: unit) : leaf_reader #FStar.UInt16.t #parse_u16_kind #tot_parse_
 inline_for_extraction
 let read_u16 : reader tot_serialize_u16 = reader_of_leaf_reader (read_u16' ())
 
+(*
 inline_for_extraction
 let validate_and_read_u16 : validate_and_read tot_parse_u16 =
   validate_and_read_intro validate_u16 read_u16
+*)
 
 inline_for_extraction
 let validate_u32 : validator tot_parse_u32 =
@@ -109,9 +113,11 @@ fn read_u32' (_: unit) : leaf_reader #FStar.UInt32.t #parse_u32_kind #tot_parse_
 inline_for_extraction
 let read_u32 : reader tot_serialize_u32 = reader_of_leaf_reader (read_u32' ())
 
+(*
 inline_for_extraction
 let validate_and_read_u32 : validate_and_read tot_parse_u32 =
   validate_and_read_intro validate_u32 read_u32
+*)
 
 inline_for_extraction
 let validate_u64 : validator tot_parse_u64 =
@@ -144,6 +150,8 @@ fn read_u64' (_: unit) : leaf_reader #FStar.UInt64.t #parse_u64_kind #tot_parse_
 inline_for_extraction
 let read_u64 : reader tot_serialize_u64 = reader_of_leaf_reader (read_u64' ())
 
+(*
 inline_for_extraction
 let validate_and_read_u64 : validate_and_read tot_parse_u64 =
   validate_and_read_intro validate_u64 read_u64
+*)
