@@ -23,12 +23,12 @@ let validate_initial_byte : validate_and_read parse_initial_byte =
 *)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let jump_initial_byte : jumper parse_initial_byte =
   jump_constant_size parse_initial_byte 1sz
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_initial_byte : reader serialize_initial_byte =
   read_synth'
     (read_filter
@@ -41,7 +41,7 @@ let read_initial_byte : reader serialize_initial_byte =
     synth_initial_byte_recip
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_long_argument_8_simple_value
   (b: initial_byte)
   (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
@@ -60,7 +60,7 @@ let read_long_argument_8_simple_value
             (serialize_long_argument b)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_long_argument_8_not_simple_value
   (b: initial_byte)
   (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
@@ -76,7 +76,7 @@ let read_long_argument_8_not_simple_value
                 (serialize_long_argument b)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_long_argument_8
   (b: initial_byte)
   (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
@@ -88,7 +88,7 @@ let read_long_argument_8
     (read_long_argument_8_not_simple_value b sq1)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_long_argument_16
   (b: initial_byte)
   (sq: squash ((b.additional_info = additional_info_long_argument_16_bits) == true))
@@ -103,7 +103,7 @@ let read_long_argument_16
                 (serialize_long_argument b)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_long_argument_32
   (b: initial_byte)
   (sq: squash ((b.additional_info = additional_info_long_argument_32_bits) == true))
@@ -118,7 +118,7 @@ let read_long_argument_32
                 (serialize_long_argument b)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_long_argument_64
   (b: initial_byte)
   (sq: squash ((b.additional_info = additional_info_long_argument_64_bits) == true))
@@ -133,7 +133,7 @@ let read_long_argument_64
                 (serialize_long_argument b)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_long_argument_other
   (b: initial_byte)
   (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
@@ -151,7 +151,7 @@ let read_long_argument_other
                 (serialize_long_argument b)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_long_argument_not_8_16_32
   (b: initial_byte)
   (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
@@ -165,7 +165,7 @@ let read_long_argument_not_8_16_32
     (read_long_argument_other b sq8 sq16 sq32)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_long_argument_not_8_16
   (b: initial_byte)
   (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
@@ -178,7 +178,7 @@ let read_long_argument_not_8_16
     (read_long_argument_not_8_16_32 b sq8 sq16)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_long_argument_not_8
   (b: initial_byte)
   (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
@@ -190,7 +190,7 @@ let read_long_argument_not_8
     (read_long_argument_not_8_16 b sq8)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let read_long_argument
   (b: initial_byte)
 : Tot (reader (serialize_long_argument b))
@@ -285,12 +285,22 @@ let read_long_argument
 *)
 
 inline_for_extraction
-noextract
-let read_header : reader serialize_header =
+noextract [@@noextract_to "krml"]
+let read_header' : reader serialize_header =
   read_dtuple2
     jump_initial_byte
     read_initial_byte
     read_long_argument
+
+```pulse
+fn read_header (_: unit) : leaf_reader #header #parse_header_kind #parse_header serialize_header =
+  (input: Pulse.Lib.Slice.slice byte)
+  (#pm: perm)
+  (#v: _)
+{
+  leaf_reader_of_reader read_header' input #pm #v
+}
+```
 
 (*
 inline_for_extraction

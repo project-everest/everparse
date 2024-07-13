@@ -329,7 +329,9 @@ let parse_long_argument
     then tot_weaken _ (tot_parse_u64 `tot_parse_synth` LongArgumentU64 ())
     else tot_weaken _ (tot_parse_empty `tot_parse_synth` LongArgumentOther b.additional_info ())
 
-let parse_header : tot_parser _ header =
+let parse_header_kind = and_then_kind (parse_filter_kind parse_u8_kind) parse_long_argument_kind
+
+let parse_header : tot_parser parse_header_kind header =
   tot_parse_dtuple2 parse_initial_byte parse_long_argument
 
 inline_for_extraction

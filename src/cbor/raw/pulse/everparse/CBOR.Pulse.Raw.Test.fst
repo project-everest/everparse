@@ -38,7 +38,7 @@ fn test3 (#pm: perm) (#v: Ghost.erased header) (s: slice byte)
   returns _: major_type_t
   ensures pts_to_serialized serialize_header s #pm v
 {
-  let x = leaf_reader_of_reader read_header s;
+  let x = read_header () s;
   (dfst x).major_type
 }
 ```
