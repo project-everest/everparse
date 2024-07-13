@@ -52,15 +52,13 @@ let read_ret
 : Tot (reader (tot_serialize_ret x v_unique))
 = reader_of_leaf_reader (leaf_read_ret x v_unique)
 
-(*
 inline_for_extraction
 let validate_and_read_ret
   (#t: Type0)
   (x: t)
   (v_unique: (v' : t) -> Lemma (x == v'))
 : Tot (validate_and_read (tot_parse_ret x))
-= validate_and_read_intro (validate_ret x) (read_ret x v_unique)
-*)
+= validate_and_read_intro (validate_ret x) (leaf_read_ret x v_unique)
 
 inline_for_extraction
 let jump_ret (#t: Type) (x: t) : jumper (tot_parse_ret x) = jump_constant_size (tot_parse_ret x) 0sz 
@@ -74,11 +72,9 @@ let leaf_read_empty : leaf_reader tot_serialize_empty = leaf_read_ret () (fun _ 
 inline_for_extraction
 let read_empty : reader tot_serialize_empty = reader_of_leaf_reader leaf_read_empty
 
-(*
 inline_for_extraction
 let validate_and_read_empty : validate_and_read tot_parse_empty =
-  validate_and_read_intro validate_empty read_empty
-*)
+  validate_and_read_intro validate_empty leaf_read_empty
 
 inline_for_extraction
 let jump_empty : jumper tot_parse_empty = jump_ret ()
@@ -1059,37 +1055,6 @@ fn jump_nondep_then
 }
 ```
 
-(*
-inline_for_extraction
-```pulse
-fn jump_dtuple2_payload_cont
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
-  (#k1: parser_kind)
-  (#p1: parser k1 t1)
-  (s1: serializer p1)
-  (#k2: parser_kind)
-  (p2: ((x: t1) -> parser k2 (t2 x)))
-  (v2: ((x: t1) -> jumper (p2 x)))
-  (input: slice byte)
-  (offset: SZ.t)
-  (pm: perm)
-  (v: Ghost.erased bytes)
-  (off: SZ.t { jumper_pre (tot_parse_dtuple2 p1 p2) offset v /\ validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) })
-  (key: Ghost.erased t1 { fst (Some?.v (parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)))) == Ghost.reveal key })
-  (input_key: slice byte)
-  (x: t1 { x == Ghost.reveal key })
-  requires (pts_to_serialized s1 input_key #pm key ** (pts_to_serialized s1 input_key #pm key @==> pts_to input #pm v))
-  returns res: SZ.t
-  ensures (pts_to input #pm v ** pure (validator_success (tot_parse_dtuple2 p1 p2) offset v res))
-{
-  elim_stick (pts_to_serialized s1 input_key #pm key) _;
-  pts_to_len input;
-  let off2 = v2 x input (SZ.add offset off);
-  SZ.add off off2
-}
-```
-
 inline_for_extraction
 ```pulse
 fn jump_dtuple2
@@ -1099,7 +1064,7 @@ fn jump_dtuple2
   (#p1: parser k1 t1)
   (v1: jumper p1)
   (#s1: serializer p1)
-  (r1: reader s1)
+  (r1: leaf_reader s1)
   (#k2: parser_kind)
   (#p2: (x: t1) -> parser k2 (t2 x))
   (v2: (x: t1) -> jumper (p2 x))
@@ -1112,17 +1077,11 @@ fn jump_dtuple2
 {
   pts_to_len input;
   let off1 = v1 input offset;
-  let input1 = peek_stick_gen s1 input offset off1;
-  with key . assert (pts_to_serialized s1 input1 #pm key);
-  r1
-    input1
-    (pts_to_serialized s1 input1 #pm key @==> pts_to input #pm v) 
-    SZ.t
-    (fun res -> pts_to input #pm v ** pure (validator_success (tot_parse_dtuple2 p1 p2) offset v res))
-    (jump_dtuple2_payload_cont s1 p2 v2 input offset pm v off1 key input1)
+  let x = read_from_validator_success r1 input offset off1;
+  let off2 = v2 x input (SZ.add offset off1);
+  SZ.add off1 off2
 }
 ```
-*)
 
 let split_dtuple2_post'
   (#t1: Type0)

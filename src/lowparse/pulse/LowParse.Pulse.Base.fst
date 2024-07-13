@@ -526,6 +526,33 @@ let leaf_read
 = r input #pm #v
 
 inline_for_extraction
+```pulse
+fn read_from_validator_success
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: leaf_reader s)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+  (offset: SZ.t)
+  (consumed: SZ.t)
+  requires (pts_to input #pm v ** pure (validator_success #k #t p offset v (consumed)))
+  returns v' : t
+  ensures pts_to input #pm v ** pure (
+    validator_success #k #t p offset v consumed /\
+    parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (v', SZ.v consumed)
+  )
+{
+  let input' = peek_stick_gen s input offset consumed;
+  let res = r input';
+  elim_stick _ _;
+  res
+}
+```
+
+inline_for_extraction
 let reader
   (#t: Type0)
   (#k: parser_kind)
@@ -666,36 +693,10 @@ inline_for_extraction
 let validate_and_read_weaken (#t: Type0) (#k1: parser_kind) (k2: parser_kind) (#p1: parser k1 t) (v1: validate_and_read p1 { k2 `is_weaker_than` k1 }) : validate_and_read (tot_weaken k2 p1) =
   validate_and_read_ext v1 (tot_weaken k2 p1)
 
-(*
-inline_for_extraction
-```pulse
-fn validate_and_read_intro_cont_read
-  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (ksucc: ((off: SZ.t) -> (x: t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success p offset v off /\ parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x)))
-  (off: SZ.t)
-  (#v': Ghost.erased t)
-  (input': slice byte { validator_success p offset v off /\ parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (Ghost.reveal v', SZ.v off) })
-  (x: t { x == Ghost.reveal v' })
-  requires pts_to_serialized s input' #pm v' ** (pre ** (pts_to_serialized s input' #pm v' @==> pts_to input #pm v))
-  returns x': t'
-  ensures post x'
-{
-  elim_stick _ _;
-  ksucc off x
-}
-```
-
 inline_for_extraction
 ```pulse
 fn validate_and_read_intro_cont_validate
-  (#t: Type0) (#k: parser_kind) (#p: parser k t) (#s: serializer p) (r: reader s)
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (#s: serializer p) (r: leaf_reader s)
   (input: slice byte)
   (offset: SZ.t)
   (#pm: perm)
@@ -709,16 +710,15 @@ fn validate_and_read_intro_cont_validate
   returns x' : t'
   ensures post x'
 {
-  let input' = peek_stick_gen s input offset off;
-  with v' . assert (pts_to_serialized s input' #pm v');
-  r input' #pm #v' _ _ _ (validate_and_read_intro_cont_read s input offset #pm #v pre t' post ksucc off #_ input')
+  let x = read_from_validator_success r input offset off;
+  ksucc off x
 }
 ```
 
 inline_for_extraction
 ```pulse
 fn validate_and_read_intro
-  (#t: Type0) (#k: parser_kind) (#p: parser k t) (w: validator p) (#s: serializer p) (r: reader s)
+  (#t: Type0) (#k: parser_kind) (#p: parser k t) (w: validator p) (#s: serializer p) (r: leaf_reader s)
 : validate_and_read #t #k p
 =
   (input: slice byte)
@@ -734,7 +734,6 @@ fn validate_and_read_intro
   w input offset _ _ _ (validate_and_read_intro_cont_validate r input offset #pm #v pre t' post ksucc) kfail
 }
 ```
-*)
 
 inline_for_extraction
 ```pulse
