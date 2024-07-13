@@ -27,26 +27,14 @@ noextract
 let jump_initial_byte : jumper parse_initial_byte =
   jump_constant_size parse_initial_byte 1sz
 
-(*
 inline_for_extraction
 noextract
 let read_initial_byte : reader serialize_initial_byte =
-  read_filter
-    (read_bitsum'
-      destr_initial_byte
-      read_u8
-    )
-    initial_byte_wf
-*)
-
-inline_for_extraction
-noextract
-let pure_read_initial_byte : pure_reader serialize_initial_byte =
-  pure_read_synth'
-    (pure_read_filter
-      (pure_read_bitsum'
+  read_synth'
+    (read_filter
+      (read_bitsum'
         destr_initial_byte
-        (pure_reader_of_leaf_reader (read_u8' ()))
+        (reader_of_leaf_reader (read_u8' ()))
       )
       initial_byte_wf)
     synth_initial_byte
@@ -54,16 +42,16 @@ let pure_read_initial_byte : pure_reader serialize_initial_byte =
 
 inline_for_extraction
 noextract
-let pure_read_long_argument_8_simple_value
+let read_long_argument_8_simple_value
   (b: initial_byte)
   (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
   (sq2: squash ((b.major_type = cbor_major_type_simple_value) == true))
-: Tot (pure_reader (serialize_long_argument b))
+: Tot (reader (serialize_long_argument b))
 =
-          pure_reader_ext
-            (pure_read_synth'
-              (pure_read_filter
-                (pure_reader_of_leaf_reader (read_u8' ()))
+          reader_ext
+            (read_synth'
+              (read_filter
+                (reader_of_leaf_reader (read_u8' ()))
                 simple_value_long_argument_wf
               )
               (LongArgumentSimpleValue #b ())
@@ -73,15 +61,15 @@ let pure_read_long_argument_8_simple_value
 
 inline_for_extraction
 noextract
-let pure_read_long_argument_8_not_simple_value
+let read_long_argument_8_not_simple_value
   (b: initial_byte)
   (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
   (sq2: squash ((b.major_type = cbor_major_type_simple_value) == false))
-: Tot (pure_reader (serialize_long_argument b))
+: Tot (reader (serialize_long_argument b))
 =
-              pure_reader_ext
-                (pure_read_synth'
-                  (pure_reader_of_leaf_reader (read_u8' ()))
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader (read_u8' ()))
                   (LongArgumentU8 #b ())
                   (LongArgumentU8?.v)
                 )
@@ -89,26 +77,26 @@ let pure_read_long_argument_8_not_simple_value
 
 inline_for_extraction
 noextract
-let pure_read_long_argument_8
+let read_long_argument_8
   (b: initial_byte)
   (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
-: Tot (pure_reader (serialize_long_argument b))
-= ifthenelse_pure_reader
+: Tot (reader (serialize_long_argument b))
+= ifthenelse_reader
     (serialize_long_argument b)
     (b.major_type = cbor_major_type_simple_value)
-    (pure_read_long_argument_8_simple_value b sq1)
-    (pure_read_long_argument_8_not_simple_value b sq1)
+    (read_long_argument_8_simple_value b sq1)
+    (read_long_argument_8_not_simple_value b sq1)
 
 inline_for_extraction
 noextract
-let pure_read_long_argument_16
+let read_long_argument_16
   (b: initial_byte)
   (sq: squash ((b.additional_info = additional_info_long_argument_16_bits) == true))
-: Tot (pure_reader (serialize_long_argument b))
+: Tot (reader (serialize_long_argument b))
 =
-              pure_reader_ext
-                (pure_read_synth'
-                  (pure_reader_of_leaf_reader (read_u16' ()))
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader (read_u16' ()))
                   (LongArgumentU16 #b ())
                   (LongArgumentU16?.v)
                 )
@@ -116,14 +104,14 @@ let pure_read_long_argument_16
 
 inline_for_extraction
 noextract
-let pure_read_long_argument_32
+let read_long_argument_32
   (b: initial_byte)
   (sq: squash ((b.additional_info = additional_info_long_argument_32_bits) == true))
-: Tot (pure_reader (serialize_long_argument b))
+: Tot (reader (serialize_long_argument b))
 =
-              pure_reader_ext
-                (pure_read_synth'
-                  (pure_reader_of_leaf_reader (read_u32' ()))
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader (read_u32' ()))
                   (LongArgumentU32 #b ())
                   (LongArgumentU32?.v)
                 )
@@ -131,14 +119,14 @@ let pure_read_long_argument_32
 
 inline_for_extraction
 noextract
-let pure_read_long_argument_64
+let read_long_argument_64
   (b: initial_byte)
   (sq: squash ((b.additional_info = additional_info_long_argument_64_bits) == true))
-: Tot (pure_reader (serialize_long_argument b))
+: Tot (reader (serialize_long_argument b))
 =
-              pure_reader_ext
-                (pure_read_synth'
-                  (pure_reader_of_leaf_reader (read_u64' ()))
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader (read_u64' ()))
                   (LongArgumentU64 #b ())
                   (LongArgumentU64?.v)
                 )
@@ -146,17 +134,17 @@ let pure_read_long_argument_64
 
 inline_for_extraction
 noextract
-let pure_read_long_argument_other
+let read_long_argument_other
   (b: initial_byte)
   (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
   (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
   (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
   (sq64: squash ((b.additional_info = additional_info_long_argument_64_bits) == false))
-: Tot (pure_reader (serialize_long_argument b))
+: Tot (reader (serialize_long_argument b))
 =
-              pure_reader_ext
-                (pure_read_synth'
-                  (pure_reader_of_leaf_reader leaf_read_empty)
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader leaf_read_empty)
                   (LongArgumentOther #b b.additional_info ())
                   LongArgumentOther?.v
                 )
@@ -164,71 +152,71 @@ let pure_read_long_argument_other
 
 inline_for_extraction
 noextract
-let pure_read_long_argument_not_8_16_32
+let read_long_argument_not_8_16_32
   (b: initial_byte)
   (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
   (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
   (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
-: Tot (pure_reader (serialize_long_argument b))
-= ifthenelse_pure_reader
+: Tot (reader (serialize_long_argument b))
+= ifthenelse_reader
     (serialize_long_argument b)
     (b.additional_info = additional_info_long_argument_64_bits)
-    (pure_read_long_argument_64 b)
-    (pure_read_long_argument_other b sq8 sq16 sq32)
+    (read_long_argument_64 b)
+    (read_long_argument_other b sq8 sq16 sq32)
 
 inline_for_extraction
 noextract
-let pure_read_long_argument_not_8_16
+let read_long_argument_not_8_16
   (b: initial_byte)
   (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
   (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
-: Tot (pure_reader (serialize_long_argument b))
-= ifthenelse_pure_reader
+: Tot (reader (serialize_long_argument b))
+= ifthenelse_reader
     (serialize_long_argument b)
     (b.additional_info = additional_info_long_argument_32_bits)
-    (pure_read_long_argument_32 b)
-    (pure_read_long_argument_not_8_16_32 b sq8 sq16)
+    (read_long_argument_32 b)
+    (read_long_argument_not_8_16_32 b sq8 sq16)
 
 inline_for_extraction
 noextract
-let pure_read_long_argument_not_8
+let read_long_argument_not_8
   (b: initial_byte)
   (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
-: Tot (pure_reader (serialize_long_argument b))
-= ifthenelse_pure_reader
+: Tot (reader (serialize_long_argument b))
+= ifthenelse_reader
     (serialize_long_argument b)
     (b.additional_info = additional_info_long_argument_16_bits)
-    (pure_read_long_argument_16 b)
-    (pure_read_long_argument_not_8_16 b sq8)
+    (read_long_argument_16 b)
+    (read_long_argument_not_8_16 b sq8)
 
 inline_for_extraction
 noextract
-let pure_read_long_argument
+let read_long_argument
   (b: initial_byte)
-: Tot (pure_reader (serialize_long_argument b))
-= ifthenelse_pure_reader
+: Tot (reader (serialize_long_argument b))
+= ifthenelse_reader
       (serialize_long_argument b)
       (b.additional_info = additional_info_long_argument_8_bits)
-      (pure_read_long_argument_8 b)
-      (pure_read_long_argument_not_8 b)
+      (read_long_argument_8 b)
+      (read_long_argument_not_8 b)
 
 (* // FIXME: ideally I want lambdas, as in the following:
 inline_for_extraction
 noextract
-let pure_read_long_argument
+let read_long_argument
   (b: initial_byte)
-: Tot (pure_reader (serialize_long_argument b))
-=   ifthenelse_pure_reader
+: Tot (reader (serialize_long_argument b))
+=   ifthenelse_reader
       (serialize_long_argument b)
       (b.additional_info = additional_info_long_argument_8_bits)
-      (fun _ -> ifthenelse_pure_reader
+      (fun _ -> ifthenelse_reader
         (serialize_long_argument b)
         (b.major_type = cbor_major_type_simple_value)
         (fun _ ->
-          pure_reader_ext
-            (pure_read_synth'
-              (pure_read_filter
-                (pure_reader_of_leaf_reader (read_u8' ()))
+          reader_ext
+            (read_synth'
+              (read_filter
+                (reader_of_leaf_reader (read_u8' ()))
                 simple_value_long_argument_wf
               )
               (LongArgumentSimpleValue #b ())
@@ -237,55 +225,55 @@ let pure_read_long_argument
             (serialize_long_argument b)
         )
         (fun _ ->
-          pure_reader_ext
-            (pure_read_synth'
-              (pure_reader_of_leaf_reader (read_u8' ()))
+          reader_ext
+            (read_synth'
+              (reader_of_leaf_reader (read_u8' ()))
               (LongArgumentU8 #b ())
               (LongArgumentU8?.v)
             )
             (serialize_long_argument b)
         )
       )
-      (fun _ -> ifthenelse_pure_reader
+      (fun _ -> ifthenelse_reader
         (serialize_long_argument b)
         (b.additional_info = additional_info_long_argument_16_bits)
         (fun _ ->
-          pure_reader_ext
-            (pure_read_synth'
-              (pure_reader_of_leaf_reader (read_u16' ()))
+          reader_ext
+            (read_synth'
+              (reader_of_leaf_reader (read_u16' ()))
               (LongArgumentU16 #b ())
               (LongArgumentU16?.v)
             )
             (serialize_long_argument b)
         )
-        (fun _ -> ifthenelse_pure_reader
+        (fun _ -> ifthenelse_reader
           (serialize_long_argument b)
           (b.additional_info = additional_info_long_argument_32_bits)
           (fun _ ->
-            pure_reader_ext
-              (pure_read_synth'
-                (pure_reader_of_leaf_reader (read_u32' ()))
+            reader_ext
+              (read_synth'
+                (reader_of_leaf_reader (read_u32' ()))
                 (LongArgumentU32 #b ())
                 (LongArgumentU32?.v)
               )
               (serialize_long_argument b)
           )
-          (fun _ -> ifthenelse_pure_reader
+          (fun _ -> ifthenelse_reader
             (serialize_long_argument b)
             (b.additional_info = additional_info_long_argument_64_bits)
             (fun _ ->
-              pure_reader_ext
-                (pure_read_synth'
-                  (pure_reader_of_leaf_reader (read_u64' ()))
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader (read_u64' ()))
                   (LongArgumentU64 #b ())
                   (LongArgumentU64?.v)
                 )
                 (serialize_long_argument b)
             )
             (fun _ ->
-              pure_reader_ext
-                (pure_read_synth'
-                  (pure_reader_of_leaf_reader leaf_read_empty)
+              reader_ext
+                (read_synth'
+                  (reader_of_leaf_reader leaf_read_empty)
                   (LongArgumentOther #b b.additional_info ())
                   LongArgumentOther?.v
                 )
@@ -298,11 +286,11 @@ let pure_read_long_argument
 
 inline_for_extraction
 noextract
-let pure_read_header : pure_reader serialize_header =
-  pure_read_dtuple2
+let read_header : reader serialize_header =
+  read_dtuple2
     jump_initial_byte
-    pure_read_initial_byte
-    pure_read_long_argument
+    read_initial_byte
+    read_long_argument
 
 (*
 inline_for_extraction
@@ -455,6 +443,7 @@ let jump_header : jumper parse_header =
   jump_dtuple2 jump_initial_byte read_initial_byte jump_long_argument
 *)
 
+(*
 noextract
 let test_parse = tot_parse_dtuple2 tot_parse_u8 (fun _ -> tot_parse_u8)
 
@@ -466,3 +455,4 @@ let jump_u8'_on (x: FStar.UInt8.t) : jumper tot_parse_u8 =
 inline_for_extraction
 noextract
 let test_jump : jumper test_parse = jump_dtuple2 jump_u8 read_u8 jump_u8'_on
+*)

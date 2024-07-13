@@ -26,7 +26,7 @@ fn test2 (#pm: perm) (#v: Ghost.erased initial_byte) (s: slice byte)
   returns _: major_type_t
   ensures pts_to_serialized serialize_initial_byte s #pm v
 {
-  let x = pure_read pure_read_initial_byte s;
+  let x = read read_initial_byte s;
   x.major_type
 }
 ```
@@ -38,7 +38,7 @@ fn test3 (#pm: perm) (#v: Ghost.erased header) (s: slice byte)
   returns _: major_type_t
   ensures pts_to_serialized serialize_header s #pm v
 {
-  let x = pure_read pure_read_header s;
+  let x = leaf_reader_of_reader read_header s;
   (dfst x).major_type
 }
 ```
