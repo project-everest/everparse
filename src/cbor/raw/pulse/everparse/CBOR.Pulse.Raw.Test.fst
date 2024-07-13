@@ -7,7 +7,6 @@ open LowParse.Pulse.Base
 open Pulse.Lib.Slice
 module SZ = FStar.SizeT
 
-(*
 ```pulse
 fn test (#pm: perm) (#v: Ghost.erased bytes) (s: slice byte)
   requires pts_to s #pm v ** pure (exists off . validator_success test_parse 0sz v off)
@@ -20,6 +19,7 @@ fn test (#pm: perm) (#v: Ghost.erased bytes) (s: slice byte)
 }
 ```
 
+(*
 ```pulse
 fn test2 (#pm: perm) (#v: Ghost.erased initial_byte) (s: slice byte)
   requires pts_to_serialized serialize_initial_byte s  #pm v

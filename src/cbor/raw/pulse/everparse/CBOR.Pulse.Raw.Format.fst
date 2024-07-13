@@ -5,22 +5,23 @@ open LowParse.Pulse.Combinators
 open LowParse.Pulse.Int
 open LowParse.Pulse.BitSum
 
-(*
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let validate_initial_byte : validate_and_read parse_initial_byte =
-  validate_and_read_filter
-    (validate_bitsum'
-      filter_initial_byte
-      destr_initial_byte
-      (validate_and_read_intro
-        validate_u8
-        read_u8
+  validate_and_read_synth'
+    (validate_and_read_filter
+      (validate_bitsum'
+        filter_initial_byte
+        destr_initial_byte
+        (validate_and_read_intro
+          validate_u8
+          (read_u8' ())
+        )
       )
+      initial_byte_wf
+      (fun x -> initial_byte_wf x)
     )
-    initial_byte_wf
-    (fun x -> initial_byte_wf x)
-*)
+    synth_initial_byte
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -453,16 +454,14 @@ let jump_header : jumper parse_header =
   jump_dtuple2 jump_initial_byte read_initial_byte jump_long_argument
 *)
 
-(*
-noextract
+noextract [@@noextract_to "krml"]
 let test_parse = tot_parse_dtuple2 tot_parse_u8 (fun _ -> tot_parse_u8)
 
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let jump_u8'_on (x: FStar.UInt8.t) : jumper tot_parse_u8 =
   jump_constant_size tot_parse_u8 1sz
 
 inline_for_extraction
-noextract
-let test_jump : jumper test_parse = jump_dtuple2 jump_u8 read_u8 jump_u8'_on
-*)
+noextract [@@noextract_to "krml"]
+let test_jump : jumper test_parse = jump_dtuple2 jump_u8 (read_u8' ()) jump_u8'_on
