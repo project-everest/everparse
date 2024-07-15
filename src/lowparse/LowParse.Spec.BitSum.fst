@@ -238,6 +238,43 @@ let rec filter_bitsum'
     else
       false
 
+let rec bitsum'_no_bitsum
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+: Tot bool
+= match b with
+  | BitStop _ -> true
+  | BitField _ rest -> bitsum'_no_bitsum rest
+  | BitSum' _ _ _ _ -> false
+
+let rec filter_bitsum'_no_bitsum
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size { bitsum'_no_bitsum b == true })
+  (x: t)
+: Lemma
+  (ensures (filter_bitsum' b x == true))
+  (decreases b)
+  [SMTPat (bitsum'_no_bitsum b); SMTPat (filter_bitsum' b x)]
+= match b with
+  | BitField _ rest -> filter_bitsum'_no_bitsum rest x
+  | _ -> ()
+
+let synth_filter_bitsum'_no_bitsum
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size { bitsum'_no_bitsum b == true })
+  (x: t)
+: Tot (parse_filter_refine (filter_bitsum' b))
+= x
+
 let rec synth_bitsum'
   (#tot: pos)
   (#t: eqtype)
@@ -381,6 +418,34 @@ let tot_parse_bitsum'
 : Tot (tot_parser (parse_filter_kind k) (bitsum'_type b))
 = synth_bitsum'_injective b;
   (p `tot_parse_filter` filter_bitsum' b) `tot_parse_synth` synth_bitsum' b
+
+let tot_parse_bitsum'_no_bitsum
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot { bitsum'_no_bitsum b == true })
+  (#k: parser_kind)
+  (p: tot_parser k t)
+: Tot (tot_parser k (bitsum'_type b))
+= synth_bitsum'_injective b;
+  (p `tot_parse_synth` synth_filter_bitsum'_no_bitsum b) `tot_parse_synth` synth_bitsum' b
+
+let tot_parse_bitsum'_no_bitsum_eq
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot { bitsum'_no_bitsum b == true })
+  (#k: parser_kind)
+  (p: tot_parser k t)
+  (x: bytes)
+: Lemma
+  (ensures (parse (tot_parse_bitsum'_no_bitsum b p) x == parse (tot_parse_bitsum' b p) x))
+  [SMTPat (parse (tot_parse_bitsum'_no_bitsum b p) x)]
+= synth_bitsum'_injective b;
+  tot_parse_synth_eq (tot_parse_filter p (filter_bitsum' b)) (synth_bitsum' b) x;
+  tot_parse_synth_eq (tot_parse_synth p (synth_filter_bitsum'_no_bitsum b)) (synth_bitsum' b) x;
+  tot_parse_filter_eq p (filter_bitsum' b) x;
+  tot_parse_synth_eq p (synth_filter_bitsum'_no_bitsum b) x
 
 let rec synth_bitsum'_recip'
   (#tot: pos)
