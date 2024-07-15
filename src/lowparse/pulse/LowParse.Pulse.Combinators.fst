@@ -91,15 +91,24 @@ let tot_parse_synth_eq'
 = parse_synth_eq #k p1 f2 b
 
 inline_for_extraction
-let validate_synth
+```pulse
+fn validate_synth
   (#t #t': Type)
   (#k: parser_kind)
   (#p: tot_parser k t)
   (w: validator p)
   (f: (t -> t') { synth_injective f })
-: Tot (validator (tot_parse_synth p f))
-= Classical.forall_intro (tot_parse_synth_eq' p f);
-  w
+: validator #t' #k (tot_parse_synth p f)
+= (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  tot_parse_synth_eq' p f (Seq.slice v (SZ.v offset) (Seq.length v));
+  w input poffset #offset #pm #v
+}
+```
 
 inline_for_extraction
 ```pulse
