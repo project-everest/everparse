@@ -15,16 +15,12 @@ fn validate_ret
   (x: t)
 : validator #t #parse_ret_kind (tot_parse_ret x)
 = (input: slice byte)
-  (offset: _)
+  (poffset: _)
+  (#offset: _)
   (#pm: _)
   (#v: _)
-  (pre: _)
-  (t': Type0)
-  (post: _)
-  (ksucc: _)
-  (kfail: _)
 {
-  ksucc 0sz
+  true
 }
 ```
 
@@ -53,14 +49,6 @@ let read_ret
 = reader_of_leaf_reader (leaf_read_ret x v_unique)
 
 inline_for_extraction
-let validate_and_read_ret
-  (#t: Type0)
-  (x: t)
-  (v_unique: (v' : t) -> Lemma (x == v'))
-: Tot (validate_and_read (tot_parse_ret x))
-= validate_and_read_intro (validate_ret x) (leaf_read_ret x v_unique)
-
-inline_for_extraction
 let jump_ret (#t: Type) (x: t) : jumper (tot_parse_ret x) = jump_constant_size (tot_parse_ret x) 0sz 
 
 inline_for_extraction
@@ -71,10 +59,6 @@ let leaf_read_empty : leaf_reader tot_serialize_empty = leaf_read_ret () (fun _ 
 
 inline_for_extraction
 let read_empty : reader tot_serialize_empty = reader_of_leaf_reader leaf_read_empty
-
-inline_for_extraction
-let validate_and_read_empty : validate_and_read tot_parse_empty =
-  validate_and_read_intro validate_empty leaf_read_empty
 
 inline_for_extraction
 let jump_empty : jumper tot_parse_empty = jump_ret ()
@@ -286,32 +270,6 @@ fn pts_to_serialized_synth_l2r_stick
 ```
 
 inline_for_extraction
-let stt_cps
-  (#t: Type)
-  (y: t)
-: Tot Type
-= (pre: vprop) -> (t': Type0) -> (post: (t' -> vprop)) -> (phi: ((y': t { y' == y }) -> stt t' pre (fun x -> post x))) -> stt t' pre (fun x -> post x)
-
-inline_for_extraction
-let intro_stt_cps
-  (#t: Type)
-  (y: t)
-: Tot (stt_cps y)
-= fun pre t' post phi -> phi y
-
-inline_for_extraction
-let elim_stt_cps
-  (#t: Type)
-  (y: Ghost.erased t)
-  (cps: stt_cps (Ghost.reveal y))
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (phi: ((y': t { y' == Ghost.reveal y }) -> stt t' pre (fun x -> post x)))
-: stt t' pre (fun x -> post x)
-= cps pre t' post phi
-
-inline_for_extraction
 let read_synth_cont_t
   (#t: Type0)
   (x: t)
@@ -365,175 +323,55 @@ let read_synth'
 
 inline_for_extraction
 ```pulse
-fn validate_and_read_synth_cont_cont
-  (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1)
-  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 })
-  (input: slice byte)
-  (pm: perm)
-  (v: Ghost.erased bytes)
-  (offset: SZ.t)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (cont: (off: SZ.t) -> (x: t2) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_synth p1 f2) offset v off /\ parse (tot_parse_synth p1 f2) (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x))
-  (off: SZ.t)
-  (x: t1 { validator_success p1 offset v off /\ parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off) })
-  (x2: t2 { x2 == f2 x })
-  requires pts_to input #pm v ** pre
-  returns x': t'
-  ensures post x'
-{
-  tot_parse_synth_eq p1 f2 (Seq.slice v (SZ.v offset) (Seq.length v));
-  cont off x2
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_and_read_synth_cont
-  (#k1: parser_kind) (#t1: Type0) (p1: parser k1 t1)
-  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 })
-  (f2': (x: t1) -> stt_cps (f2 x))
-  (input: slice byte)
-  (pm: perm)
-  (v: Ghost.erased bytes)
-  (offset: SZ.t)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (cont: (off: SZ.t) -> (x: t2) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_synth p1 f2) offset v off /\ parse (tot_parse_synth p1 f2) (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x))
-  (off: SZ.t)
-  (x: t1)
-  requires pts_to input #pm v ** pre ** pure (validator_success p1 offset v off /\ parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))
-  returns x': t'
-  ensures post x'
-{
-  f2' x (pts_to input #pm v ** pre) t' post (validate_and_read_synth_cont_cont p1 f2 input pm v offset pre t' post cont off x)
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_and_read_synth
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (w: validate_and_read p1)
-  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 })
-  (f2': (x: t1) -> stt_cps (f2 x))
-: validate_and_read #t2 #k1 (tot_parse_synth p1 f2)
-= (input: slice byte)
-  (offset: _)
-  (#pm: _)
-  (#v: _)
-  (pre: _)
-  (t': Type0)
-  (post: _)
-  (ksucc: _)
-  (kfail: _)
-{
-  tot_parse_synth_eq p1 f2 (Seq.slice v (SZ.v offset) (Seq.length v));
-  w input offset #pm #v pre t' post (validate_and_read_synth_cont p1 f2 f2' input pm v offset pre t' post ksucc) kfail
-}
-```
-
-inline_for_extraction
-let validate_and_read_synth'
-  (#k1: parser_kind) (#t1: Type0) (#p1: parser k1 t1) (w: validate_and_read p1)
-  (#t2: Type0) (f2: (t1 -> Tot t2) { synth_injective f2 })
-: Tot (validate_and_read (tot_parse_synth p1 f2))
-= validate_and_read_synth w f2 (fun x -> intro_stt_cps (f2 x))
-
-inline_for_extraction
-```pulse
-fn validate_and_read_filter_cont_failure
+fn validate_filter
   (#t: Type0)
   (#k: parser_kind)
-  (p: tot_parser k t)
-  (f: (t -> bool))
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_filter p f) offset v)) (fun x -> post x)))
-  (_: unit)
-  requires (pts_to input #pm v ** pre ** pure (validator_failure (p) offset v))
-  returns res: t'
-  ensures post res
-{
-  tot_parse_filter_eq p f (Seq.slice v (SZ.v offset) (Seq.length v));
-  kfail ()
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_and_read_filter_cont_success
-  (#t: Type0)
-  (#k: parser_kind)
-  (p: tot_parser k t)
+  (#p: tot_parser k t)
+  (w: validator p)
+  (#s: serializer p)
+  (r: leaf_reader s)
   (f: (t -> bool))
   (f': (x: t) -> (y: bool { y == f x }))
+: validator #_ #(parse_filter_kind k) (tot_parse_filter p f)
+=
   (input: slice byte)
-  (offset: SZ.t)
+  (poffset: _)
+  (#offset: _)
   (#pm: perm)
   (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (ksucc: ((off: SZ.t) -> (x: parse_filter_refine f) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_filter p f) offset v off /\ parse (tot_parse_filter p f) (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x)))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_filter p f) offset v)) (fun x -> post x)))
-  (off: SZ.t)
-  (x: t)
-  requires pts_to input #pm v ** pre ** pure (validator_success p offset v off /\ parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))
-  returns res: t'
-  ensures post res
 {
   tot_parse_filter_eq p f (Seq.slice v (SZ.v offset) (Seq.length v));
-  if f' x {
-    ksucc off x
+  let offset = !poffset;
+  let is_valid = w input poffset;
+  if is_valid {
+    let off = !poffset;
+    let x = read_from_validator_success r input offset off;
+    f' x
   } else {
-    kfail ()
+    false
   }
 }
 ```
 
 inline_for_extraction
-```pulse
-fn validate_and_read_filter
+let validate_filter'_test
   (#t: Type0)
-  (#k: parser_kind)
-  (#p: tot_parser k t)
-  (w: validate_and_read p)
   (f: (t -> bool))
-  (f': (x: t) -> (y: bool { y == f x }))
-: validate_and_read #_ #(parse_filter_kind k) (tot_parse_filter p f)
-=
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (ksucc: ((off: SZ.t) -> (x: parse_filter_refine f) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_filter p f) offset v off /\ parse (tot_parse_filter p f) (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x)))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_filter p f) offset v)) (fun x -> post x)))
-{
-  w input offset #pm #v pre t' post
-    (validate_and_read_filter_cont_success p f f' input offset #pm #v pre t' post ksucc kfail)
-    (validate_and_read_filter_cont_failure p f input offset #pm #v pre t' post kfail)
-}
-```
+  (x: t)
+: Tot (y: bool { y == f x })
+= f x
 
 inline_for_extraction
-let validate_and_read_filter'
+let validate_filter'
   (#t: Type0)
   (#k: parser_kind)
   (#p: tot_parser k t)
-  (w: validate_and_read p)
+  (w: validator p)
+  (#s: serializer p)
+  (r: leaf_reader s)
   (f: (t -> bool))
-: validate_and_read #_ #(parse_filter_kind k) (tot_parse_filter p f)
-= validate_and_read_filter w f (fun x -> f x)
+: validator #_ #(parse_filter_kind k) (tot_parse_filter p f)
+= validate_filter w r f (validate_filter'_test f)
 
 inline_for_extraction
 ```pulse
@@ -658,117 +496,6 @@ let nondep_then_eq_dtuple2
 
 inline_for_extraction
 ```pulse
-fn validate_nondep_then_cont_success2
-  (#t1 #t2: Type0)
-  (#k1: parser_kind)
-  (p1: parser k1 t1)
-  (#k2: parser_kind)
-  (p2: parser k2 t2)
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (off: SZ.t {validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) })
-  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_nondep_then p1 p2) offset v off)) (fun x -> post x)))
-  (off': SZ.t)
-  requires pts_to input #pm v ** pre ** pure (validator_success p2 (offset `SZ.add` off) v off')
-  returns x: t'
-  ensures post x
-{
-  pts_to_len input; // for SZ.fits (off + off')
-  nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 (Seq.slice v (SZ.v offset) (Seq.length v));
-  ksucc (off `SZ.add` off')
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_nondep_then_cont_failure2
-  (#t1 #t2: Type0)
-  (#k1: parser_kind)
-  (p1: parser k1 t1)
-  (#k2: parser_kind)
-  (p2: parser k2 t2)
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (off: SZ.t {validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) })
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_nondep_then p1 p2) offset v)) (fun x -> post x)))
-  (_: unit)
-  requires pts_to input #pm v ** pre ** pure (validator_failure p2 (offset `SZ.add` off) v)
-  returns x: t'
-  ensures post x
-{
-  nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 (Seq.slice v (SZ.v offset) (Seq.length v));
-  kfail ()
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_nondep_then_cont_success1
-  (#t1 #t2: Type0)
-  (#k1: parser_kind)
-  (p1: parser k1 t1)
-  (#k2: parser_kind)
-  (#p2: parser k2 t2)
-  (v2: validator p2)
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_nondep_then p1 p2) offset v off)) (fun x -> post x)))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_nondep_then p1 p2) offset v)) (fun x -> post x)))
-  (off: SZ.t)
-  requires pts_to input #pm v ** pre ** pure (validator_success p1 offset v off)
-  returns x: t'
-  ensures post x
-{
-  pts_to_len input; // for SZ.fits (offset + off)  
-  v2 input (offset `SZ.add` off) #pm #v pre t' post
-    (validate_nondep_then_cont_success2 p1 p2 input offset #pm #v pre t' post off ksucc)
-    (validate_nondep_then_cont_failure2 p1 p2 input offset #pm #v pre t' post off kfail)
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_nondep_then_cont_failure1
-  (#t1 #t2: Type0)
-  (#k1: parser_kind)
-  (p1: parser k1 t1)
-  (#k2: parser_kind)
-  (p2: parser k2 t2)
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_nondep_then p1 p2) offset v)) (fun x -> post x)))
-  (_: unit)
-  requires pts_to input #pm v ** pre ** pure (validator_failure p1 offset v)
-  returns x: t'
-  ensures post x
-{
-  nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 (Seq.slice v (SZ.v offset) (Seq.length v));
-  kfail ()
-}
-```
-
-inline_for_extraction
-```pulse
 fn validate_nondep_then
   (#t1 #t2: Type0)
   (#k1: parser_kind)
@@ -780,133 +507,18 @@ fn validate_nondep_then
 : validator #(t1 & t2) #(and_then_kind k1 k2) (tot_nondep_then #k1 #t1 p1 #k2 #t2 p2)
 = 
   (input: slice byte)
-  (offset: SZ.t)
+  (poffset: _)
+  (#offset: _)
   (#pm: perm)
   (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_nondep_then p1 p2) offset v off)) (fun x -> post x)))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_nondep_then p1 p2) offset v)) (fun x -> post x)))
 {
-  v1 input offset #pm #v pre t' post
-    (validate_nondep_then_cont_success1 p1 v2 input offset #pm #v pre t' post ksucc kfail)
-    (validate_nondep_then_cont_failure1 p1 p2 input offset #pm #v pre t' post kfail)
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_dtuple2_cont_success2
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
-  (#k1: parser_kind)
-  (p1: parser k1 t1)
-  (#k2: parser_kind)
-  (p2: ((x: t1) -> parser k2 (t2 x)))
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (key: Ghost.erased t1)
-  (off: SZ.t { validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) /\ fst (Some?.v (parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)))) == Ghost.reveal key })
-  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_dtuple2 p1 p2) offset v off)) (fun x -> post x)))
-  (off': SZ.t)
-  requires pts_to input #pm v ** pre ** pure (validator_success (p2 key) (offset `SZ.add` off) v off')
-  returns x: t'
-  ensures post x
-{
-  pts_to_len input; // for SZ.fits (off + off')
-  ksucc (off `SZ.add` off')
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_dtuple2_cont_failure2
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
-  (#k1: parser_kind)
-  (p1: parser k1 t1)
-  (#k2: parser_kind)
-  (p2: ((x: t1) -> parser k2 (t2 x)))
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (key: Ghost.erased t1)
-  (off: SZ.t { validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) /\ fst (Some?.v (parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)))) == Ghost.reveal key })
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_dtuple2 p1 p2) offset v)) (fun x -> post x)))
-  (_: unit)
-  requires pts_to input #pm v ** pre ** pure (validator_failure (p2 key) (offset `SZ.add` off) v)
-  returns x: t'
-  ensures post x
-{
-  kfail ()
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_dtuple2_cont_success1
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
-  (#k1: parser_kind)
-  (p1: parser k1 t1)
-  (#k2: parser_kind)
-  (p2: ((x: t1) -> parser k2 (t2 x)))
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (v2: (x: t1) -> validator (p2 x))
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_dtuple2 p1 p2) offset v off)) (fun x -> post x)))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_dtuple2 p1 p2) offset v)) (fun x -> post x)))
-  (off: SZ.t)
-  (x: t1)
-  requires pts_to input #pm v ** pre ** pure (validator_success p1 offset v off /\ parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))
-  returns x: t'
-  ensures post x
-{
-  pts_to_len input; // for SZ.fits (offset + off)
-  v2 x input (offset `SZ.add` off) #pm #v pre t' post
-    (validate_dtuple2_cont_success2 p1 p2 input offset #pm #v pre t' post x off ksucc)
-    (validate_dtuple2_cont_failure2 p1 p2 input offset #pm #v pre t' post x off kfail)
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_dtuple2_cont_failure1
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
-  (#k1: parser_kind)
-  (p1: parser k1 t1)
-  (#k2: parser_kind)
-  (p2: ((x: t1) -> parser k2 (t2 x)))
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_dtuple2 p1 p2) offset v)) (fun x -> post x)))
-  (_: unit)
-  requires pts_to input #pm v ** pre ** pure (validator_failure p1 offset v)
-  returns x: t'
-  ensures post x
-{
-  kfail ()
+  nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 (Seq.slice v (SZ.v offset) (Seq.length v));
+  let is_valid1 = v1 input poffset;
+  if is_valid1 {
+    v2 input poffset
+  } else {
+    false
+  }
 }
 ```
 
@@ -917,116 +529,29 @@ fn validate_dtuple2
   (#t2: t1 -> Type0)
   (#k1: parser_kind)
   (#p1: parser k1 t1)
-  (v1: validate_and_read p1)
+  (v1: validator p1)
+  (#s1: serializer p1)
+  (r1: leaf_reader s1)
   (#k2: parser_kind)
   (#p2: ((x: t1) -> parser k2 (t2 x)))
   (v2: ((x: t1) -> validator (p2 x)))
 : validator #(dtuple2 t1 t2) #(and_then_kind k1 k2) (tot_parse_dtuple2 #k1 #t1 p1 #k2 #t2 p2)
 =
   (input: slice byte)
-  (offset: SZ.t)
+  (poffset: _)
+  (#offset: _)
   (#pm: perm)
   (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (ksucc: ((off: SZ.t) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_dtuple2 p1 p2) offset v off)) (fun x -> post x)))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_nondep_then p1 p2) offset v)) (fun x -> post x)))
 {
-  v1 input offset #pm #v pre t' post
-    (validate_dtuple2_cont_success1 p1 p2 input offset #pm #v v2 pre t' post ksucc kfail)
-    (validate_dtuple2_cont_failure1 p1 p2 input offset #pm #v pre t' post kfail)
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_and_read_dtuple2_cont_success2
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
-  (#k1: parser_kind)
-  (p1: parser k1 t1)
-  (#k2: parser_kind)
-  (p2: ((x: t1) -> parser k2 (t2 x)))
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (key: t1)
-  (off: SZ.t { validator_success p1 offset v off /\ SZ.fits (SZ.v offset + SZ.v off) /\ fst (Some?.v (parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)))) == key })
-  (ksucc: ((off: SZ.t) -> (x: dtuple2 t1 t2) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_dtuple2 p1 p2) offset v off /\ parse (tot_parse_dtuple2 p1 p2) (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x)))
-  (off': SZ.t)
-  (x: t2 key)
-  requires pts_to input #pm v ** pre ** pure (validator_success (p2 key) (offset `SZ.add` off) v off' /\ parse (p2 key) (Seq.slice v (SZ.v (offset `SZ.add` off)) (Seq.length v)) == Some (x, SZ.v off'))
-  returns x: t'
-  ensures post x
-{
-  pts_to_len input; // for SZ.fits (off + off')
-  ksucc (off `SZ.add` off') (| key, x |)
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_and_read_dtuple2_cont_success1
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
-  (#k1: parser_kind)
-  (p1: parser k1 t1)
-  (#k2: parser_kind)
-  (p2: ((x: t1) -> parser k2 (t2 x)))
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (v2: (x: t1) -> validate_and_read (p2 x))
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (ksucc: ((off: SZ.t) -> (x: dtuple2 t1 t2) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_dtuple2 p1 p2) offset v off /\ parse (tot_parse_dtuple2 p1 p2) (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x)))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_parse_dtuple2 p1 p2) offset v)) (fun x -> post x)))
-  (off: SZ.t)
-  (x: t1)
-  requires pts_to input #pm v ** pre ** pure (validator_success p1 offset v off /\ parse p1 (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))
-  returns x: t'
-  ensures post x
-{
-  pts_to_len input; // for SZ.fits (offset + off)
-  v2 x input (offset `SZ.add` off) #pm #v pre t' post
-    (validate_and_read_dtuple2_cont_success2 p1 p2 input offset #pm #v pre t' post x off ksucc)
-    (validate_dtuple2_cont_failure2 p1 p2 input offset #pm #v pre t' post x off kfail)
-}
-```
-
-inline_for_extraction
-```pulse
-fn validate_and_read_dtuple2
-  (#t1: Type0)
-  (#t2: t1 -> Type0)
-  (#k1: parser_kind)
-  (#p1: parser k1 t1)
-  (v1: validate_and_read p1)
-  (#k2: parser_kind)
-  (#p2: ((x: t1) -> parser k2 (t2 x)))
-  (v2: ((x: t1) -> validate_and_read (p2 x)))
-: validate_and_read #(dtuple2 t1 t2) #(and_then_kind k1 k2) (tot_parse_dtuple2 #k1 #t1 p1 #k2 #t2 p2)
-=
-  (input: slice byte)
-  (offset: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased bytes)
-  (pre: vprop)
-  (t': Type0)
-  (post: (t' -> vprop))
-  (ksucc: ((off: SZ.t) -> (x: dtuple2 t1 t2) -> stt t' (pts_to input #pm v ** pre ** pure (validator_success (tot_parse_dtuple2 p1 p2) offset v off /\ parse (tot_parse_dtuple2 p1 p2) (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (x, SZ.v off))) (fun x -> post x)))
-  (kfail: (unit -> stt t' (pts_to input #pm v ** pre ** pure (validator_failure (tot_nondep_then p1 p2) offset v)) (fun x -> post x)))
-{
-  v1 input offset #pm #v pre t' post
-    (validate_and_read_dtuple2_cont_success1 p1 p2 input offset #pm #v v2 pre t' post ksucc kfail)
-    (validate_dtuple2_cont_failure1 p1 p2 input offset #pm #v pre t' post kfail)
+  let offset = !poffset;
+  let is_valid1 = v1 input poffset;
+  if is_valid1 {
+    let off = !poffset;
+    let x = read_from_validator_success r1 input offset off;
+    v2 x input poffset
+  } else {
+    false
+  }
 }
 ```
 
@@ -1049,9 +574,8 @@ fn jump_nondep_then
 {
   nondep_then_eq #k1 p1 #k2 p2 (Seq.slice v (SZ.v offset) (Seq.length v));
   pts_to_len input;
-  let consumed1 = v1 input offset;
-  let consumed2 = v2 input (offset `SZ.add` consumed1);
-  SZ.add consumed1 consumed2
+  let off1 = v1 input offset;
+  v2 input off1
 }
 ```
 
@@ -1078,8 +602,7 @@ fn jump_dtuple2
   pts_to_len input;
   let off1 = v1 input offset;
   let x = read_from_validator_success r1 input offset off1;
-  let off2 = v2 x input (SZ.add offset off1);
-  SZ.add off1 off2
+  v2 x input off1
 }
 ```
 
