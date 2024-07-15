@@ -17,18 +17,16 @@ fn test (#pm: perm) (#v: Ghost.erased bytes) (s: slice byte)
 }
 ```
 
-(*
 ```pulse
 fn test1 (#pm: perm) (#v: Ghost.erased bytes) (s: slice byte)
   requires pts_to s #pm v
   returns _: SZ.t
   ensures pts_to s #pm v
 {
-//  validate_nonempty (validate_and_read_elim validate_header) s 0sz
-  validate_nonempty (validate_and_read_elim validate_initial_byte) s 0sz
+//  validate_nonempty (validate_header) s 0sz
+  validate_nonempty (validate_initial_byte) s 0sz
 }
 ```
-*)
 
 ```pulse
 fn test2 (#pm: perm) (#v: Ghost.erased initial_byte) (s: slice byte)

@@ -33,24 +33,22 @@ fn read_initial_byte_t (_: unit) : leaf_reader #initial_byte_t #(parse_filter_ki
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-let validate_initial_byte : validate_and_read parse_initial_byte =
-    validate_and_read_filter'
-      (validate_and_read_intro
-        (validate_synth
-          (validate_ext
-            (validate_total_constant_size
-              (LowParse.Spec.BitSum.tot_parse_bitsum'_no_bitsum
-                initial_byte_desc
-                tot_parse_u8
-              )
-              1sz
+let validate_initial_byte : validator parse_initial_byte =
+    validate_filter'
+      (validate_synth
+        (validate_ext
+          (validate_total_constant_size
+            (LowParse.Spec.BitSum.tot_parse_bitsum'_no_bitsum
+              initial_byte_desc
+              tot_parse_u8
             )
-            parse_initial_byte'
+            1sz
           )
-          synth_initial_byte
+          parse_initial_byte'
         )
-        (read_initial_byte_t ())
+        synth_initial_byte
       )
+      (read_initial_byte_t ())
       initial_byte_wf
 
 inline_for_extraction
