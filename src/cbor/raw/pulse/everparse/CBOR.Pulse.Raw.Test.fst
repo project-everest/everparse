@@ -13,24 +13,33 @@ fn test (#pm: perm) (#v: Ghost.erased bytes) (s: slice byte)
   returns _: SZ.t
   ensures pts_to s #pm v
 {
-//  validate_nonempty (validate_and_read_elim validate_header) s 0sz
-//  validate_nonempty (validate_and_read_elim validate_initial_byte) s 0sz
   test_jump s 0sz
 }
 ```
 
 (*
 ```pulse
+fn test1 (#pm: perm) (#v: Ghost.erased bytes) (s: slice byte)
+  requires pts_to s #pm v
+  returns _: SZ.t
+  ensures pts_to s #pm v
+{
+//  validate_nonempty (validate_and_read_elim validate_header) s 0sz
+  validate_nonempty (validate_and_read_elim validate_initial_byte) s 0sz
+}
+```
+*)
+
+```pulse
 fn test2 (#pm: perm) (#v: Ghost.erased initial_byte) (s: slice byte)
   requires pts_to_serialized serialize_initial_byte s  #pm v
   returns _: major_type_t
   ensures pts_to_serialized serialize_initial_byte s #pm v
 {
-  let x = read read_initial_byte s;
+  let x = leaf_reader_of_reader read_initial_byte s;
   x.major_type
 }
 ```
-*)
 
 ```pulse
 fn test3 (#pm: perm) (#v: Ghost.erased header) (s: slice byte)

@@ -69,30 +69,28 @@ let additional_info_long_argument_8_bits : additional_info_t = 24uy
 let additional_info_unassigned_min : additional_info_t = 28uy
 
 inline_for_extraction
-let initial_byte_wf (b: bitsum'_type initial_byte_desc) : Tot bool =
+let initial_byte' = bitsum'_type initial_byte_desc
+
+inline_for_extraction
+let initial_byte_wf' (b: initial_byte') : Tot bool =
   match b with
   | (major_type, (additional_info, _)) ->
     (if major_type = cbor_major_type_simple_value then additional_info `U8.lte` additional_info_long_argument_8_bits else true) && // TODO: support floating-point numbers
     additional_info `U8.lt` additional_info_unassigned_min
     // we disallow value 31 because we do not support indefinite lengths (section 4.2.1)
 
-inline_for_extraction
-let mk_initial_byte_wf
-  (x: U8.t)
-: Pure bool
-  (requires True)
-  (ensures (fun y -> y == initial_byte_wf (synth_bitsum' initial_byte_desc x)))
-= destr_initial_byte
-    (fun b -> (y: bool { y == initial_byte_wf b }))
-    (fun _ cond sv_true sv_false -> if cond then sv_true () else sv_false ())
-    (fun b -> initial_byte_wf b)
-    x
-
-type initial_byte = {
+type initial_byte_t = {
   major_type: major_type_t;
   additional_info: additional_info_t;
-  prf: squash (initial_byte_wf (major_type, (additional_info, ())));
 }
+
+inline_for_extraction
+let initial_byte_wf
+  (x: initial_byte_t)
+: Tot bool
+= initial_byte_wf' (x.major_type, (x.additional_info, ()))
+
+let initial_byte = parse_filter_refine initial_byte_wf
 
 module SZ = FStar.SizeT
 
@@ -290,25 +288,29 @@ let synth_raw_data_item
 let synth_raw_data_item_injective : squash (synth_injective synth_raw_data_item) = ()
 #pop-options
 
-let parse_initial_byte' : tot_parser _ (parse_filter_refine initial_byte_wf) =
-  tot_parse_filter (tot_parse_bitsum' initial_byte_desc tot_parse_u8) initial_byte_wf
+let parse_initial_byte' : tot_parser _ initial_byte' =
+  tot_parse_bitsum' initial_byte_desc tot_parse_u8
 
 inline_for_extraction
 noextract
 let synth_initial_byte
-  (x: parse_filter_refine initial_byte_wf)
-: Tot initial_byte
+  (x: initial_byte')
+: Tot initial_byte_t
 = match x with
   (major_type, (additional_info, _)) -> {
     major_type = major_type;
     additional_info = additional_info;
-    prf = ();
   }
 
 let _ : squash (synth_injective synth_initial_byte) = ()
 
+let parse_initial_byte_t : tot_parser _ initial_byte_t =
+    (tot_parse_synth parse_initial_byte' synth_initial_byte)
+
 let parse_initial_byte : tot_parser _ initial_byte =
-  tot_parse_synth parse_initial_byte' synth_initial_byte
+  tot_parse_filter
+    parse_initial_byte_t
+    initial_byte_wf
 
 noextract
 let parse_long_argument_kind = strong_parser_kind 0 8 None
@@ -708,25 +710,15 @@ let _ : squash (major_type_t == bitfield uint8 3) =
   uint8_v_eq_fn ()
 
 inline_for_extraction
-let mk_initial_byte'
-  (t: major_type_t)
-  (x: additional_info_t)
-: Pure (parse_filter_refine initial_byte_wf)
-    (requires (initial_byte_wf (t, (x, ()))))
-    (ensures (fun _ -> True))
-= (t, (x, ()))
-
-inline_for_extraction
 let mk_initial_byte
   (t: major_type_t)
   (x: additional_info_t)
 : Pure initial_byte
-    (requires (initial_byte_wf (t, (x, ()))))
+    (requires (initial_byte_wf' (t, (x, ()))))
     (ensures (fun _ -> True))
 = {
     major_type = t;
     additional_info = x;
-    prf = ()
   }
 
 #push-options "--z3rlimit 16"
@@ -770,26 +762,29 @@ let simple_value_as_argument
 inline_for_extraction
 noextract
 let synth_initial_byte_recip
-  (x: initial_byte)
-: Tot (parse_filter_refine initial_byte_wf)
+  (x: initial_byte_t)
+: Tot initial_byte'
 = (x.major_type, (x.additional_info, ()))
 
 let serialize_initial_byte' : tot_serializer parse_initial_byte' =
-    (tot_serialize_filter
       (tot_serialize_bitsum'
         initial_byte_desc
         tot_serialize_u8
       )
-      initial_byte_wf
+
+let serialize_initial_byte_t : tot_serializer parse_initial_byte_t =
+    (tot_serialize_synth
+      parse_initial_byte'
+      synth_initial_byte
+      serialize_initial_byte'
+      synth_initial_byte_recip
+      ()
     )
 
 let serialize_initial_byte : tot_serializer parse_initial_byte =
-  tot_serialize_synth
-    parse_initial_byte'
-    synth_initial_byte
-    serialize_initial_byte'
-    synth_initial_byte_recip
-    ()
+  tot_serialize_filter
+    serialize_initial_byte_t
+    initial_byte_wf
 
 let serialize_long_argument
   (b: initial_byte)

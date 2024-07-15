@@ -7,21 +7,51 @@ open LowParse.Pulse.BitSum
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-let validate_initial_byte : validate_and_read parse_initial_byte =
-  validate_and_read_synth'
-    (validate_and_read_filter
-      (validate_bitsum'
-        filter_initial_byte
-        destr_initial_byte
-        (validate_and_read_intro
-          validate_u8
-          (read_u8' ())
-        )
-      )
-      initial_byte_wf
-      (fun x -> initial_byte_wf x)
+let read_initial_byte_t' : reader serialize_initial_byte_t =
+  read_synth'
+    (read_bitsum'
+      destr_initial_byte
+      (reader_of_leaf_reader (read_u8' ()))
     )
     synth_initial_byte
+    synth_initial_byte_recip
+
+(* FIXME: WHY WHY WHY does this not extract?
+let read_initial_byte_t : leaf_reader serialize_initial_byte_t =
+  leaf_reader_of_reader read_initial_byte_t'
+*)
+
+```pulse
+fn read_initial_byte_t (_: unit) : leaf_reader #initial_byte_t #(parse_filter_kind parse_u8_kind) #parse_initial_byte_t serialize_initial_byte_t =
+  (input: Pulse.Lib.Slice.slice byte)
+  (#pm: perm)
+  (#v: _)
+{
+  leaf_reader_of_reader read_initial_byte_t' input #pm #v
+}
+```
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_initial_byte : validate_and_read parse_initial_byte =
+    validate_and_read_filter'
+      (validate_and_read_intro
+        (validate_synth
+          (validate_ext
+            (validate_total_constant_size
+              (LowParse.Spec.BitSum.tot_parse_bitsum'_no_bitsum
+                initial_byte_desc
+                tot_parse_u8
+              )
+              1sz
+            )
+            parse_initial_byte'
+          )
+          synth_initial_byte
+        )
+        (read_initial_byte_t ())
+      )
+      initial_byte_wf
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -31,15 +61,9 @@ let jump_initial_byte : jumper parse_initial_byte =
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let read_initial_byte : reader serialize_initial_byte =
-  read_synth'
-    (read_filter
-      (read_bitsum'
-        destr_initial_byte
-        (reader_of_leaf_reader (read_u8' ()))
-      )
-      initial_byte_wf)
-    synth_initial_byte
-    synth_initial_byte_recip
+  read_filter
+    (reader_of_leaf_reader (read_initial_byte_t ()))
+    initial_byte_wf
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
