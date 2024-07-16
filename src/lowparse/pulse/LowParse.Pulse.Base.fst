@@ -150,6 +150,29 @@ fn validate
 }
 ```
 
+inline_for_extraction
+```pulse
+fn ifthenelse_validator
+  (#t: Type0) (#k: parser_kind) (p: parser k t)
+  (cond: bool)
+  (wtrue: squash (cond == true) -> validator p)
+  (wfalse: squash (cond == false) -> validator p)
+: validator #t #k p
+=
+  (input: slice byte)
+  (poffset: R.ref SZ.t)
+  (#offset: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  if cond {
+    wtrue () input poffset
+  } else {
+    wfalse () input poffset
+  }
+}
+```
+
 let validate_nonempty_post
   (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t)
 : Tot prop
