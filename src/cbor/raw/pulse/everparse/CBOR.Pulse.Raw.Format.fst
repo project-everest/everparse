@@ -480,88 +480,139 @@ let validate_long_argument
       (validate_long_argument_8 b)
       (validate_long_argument_not_8 b)
 
-(*
 inline_for_extraction
-noextract
-let jump_long_argument
+noextract [@@noextract_to "krml"]
+let jump_long_argument_8
   (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
 : Tot (jumper (parse_long_argument b))
-= match b with
-  | (major_type, (additional_info, _)) ->
-    ifthenelse_jumper
-      (parse_long_argument b)
-      (additional_info = additional_info_long_argument_8_bits)
-      (fun _ ->
+=
         jump_ext
-          (jump_constant_size (if major_type = cbor_major_type_simple_value then tot_parse_synth (tot_parse_filter tot_parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b ()) else tot_weaken (parse_filter_kind parse_u8_kind) (tot_parse_synth tot_parse_u8 (LongArgumentU8 #b ()))) 1sz)
+          (jump_constant_size (if b.major_type = cbor_major_type_simple_value then tot_parse_synth (tot_parse_filter tot_parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b ()) else tot_weaken (parse_filter_kind parse_u8_kind) (tot_parse_synth tot_parse_u8 (LongArgumentU8 #b ()))) 1sz)
           (parse_long_argument b)
-      )
-      (fun _ -> ifthenelse_jumper
-        (parse_long_argument b)
-        (additional_info = additional_info_long_argument_16_bits)
-        (fun _ ->
-          jump_ext
-            (jump_synth
-              jump_u16
-              (LongArgumentU16 #b ())
-            )
-            (parse_long_argument b)
-        )
-        (fun _ -> ifthenelse_jumper
-          (parse_long_argument b)
-          (additional_info = additional_info_long_argument_32_bits)
-          (fun _ ->
-            jump_ext
-              (jump_synth
-                jump_u32
-                (LongArgumentU32 #b ())
-              )
-              (parse_long_argument b)
-          )
-          (fun _ -> ifthenelse_jumper
-            (parse_long_argument b)
-            (additional_info = additional_info_long_argument_64_bits)
-            (fun _ ->
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_16
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_16_bits) == true))
+: Tot (jumper (parse_long_argument b))
+=
+              jump_ext
+                (jump_synth
+                  jump_u16
+                  (LongArgumentU16 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_32
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_32_bits) == true))
+: Tot (jumper (parse_long_argument b))
+=
+              jump_ext
+                (jump_synth
+                  jump_u32
+                  (LongArgumentU32 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_64
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_64_bits) == true))
+: Tot (jumper (parse_long_argument b))
+=
               jump_ext
                 (jump_synth
                   jump_u64
                   (LongArgumentU64 #b ())
                 )
                 (parse_long_argument b)
-            )
-            (fun _ ->
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_other
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+  (sq64: squash ((b.additional_info = additional_info_long_argument_64_bits) == false))
+: Tot (jumper (parse_long_argument b))
+=
               jump_ext
                 (jump_synth
                   jump_empty
-                  (LongArgumentOther #b additional_info ())
+                  (LongArgumentOther #b b.additional_info ())
                 )
                 (parse_long_argument b)
-            )
-          )
-        )
-      )
-*)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_not_8_16_32
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+: Tot (jumper (parse_long_argument b))
+= ifthenelse_jumper
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_64_bits)
+    (jump_long_argument_64 b)
+    (jump_long_argument_other b sq8 sq16 sq32)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_not_8_16
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+: Tot (jumper (parse_long_argument b))
+= ifthenelse_jumper
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_32_bits)
+    (jump_long_argument_32 b)
+    (jump_long_argument_not_8_16_32 b sq8 sq16)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument_not_8
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+: Tot (jumper (parse_long_argument b))
+= ifthenelse_jumper
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_16_bits)
+    (jump_long_argument_16 b)
+    (jump_long_argument_not_8_16 b sq8)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_long_argument
+  (b: initial_byte)
+: Tot (jumper (parse_long_argument b))
+= ifthenelse_jumper
+      (parse_long_argument b)
+      (b.additional_info = additional_info_long_argument_8_bits)
+      (jump_long_argument_8 b)
+      (jump_long_argument_not_8 b)
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let validate_header : validator parse_header =
   validate_dtuple2 validate_initial_byte (leaf_reader_of_reader read_initial_byte) validate_long_argument
 
-(*
 inline_for_extraction
-noextract
+noextract [@@noextract_to "krml"]
 let jump_header : jumper parse_header =
-  jump_dtuple2 jump_initial_byte read_initial_byte jump_long_argument
-*)
+  jump_dtuple2 jump_initial_byte (leaf_reader_of_reader read_initial_byte) jump_long_argument
 
 noextract [@@noextract_to "krml"]
-let test_parse = tot_parse_dtuple2 tot_parse_u8 (fun _ -> tot_parse_u8)
-
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let jump_u8'_on (x: FStar.UInt8.t) : jumper tot_parse_u8 =
-  jump_constant_size tot_parse_u8 1sz
+let test_parse = parse_header
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-let test_jump : jumper test_parse = jump_dtuple2 jump_u8 (read_u8' ()) jump_u8'_on
+let test_jump : jumper test_parse = jump_header
