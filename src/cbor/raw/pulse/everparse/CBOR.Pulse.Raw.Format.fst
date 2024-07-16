@@ -625,6 +625,140 @@ fn jump_header (_: unit) : jumper #header #parse_header_kind parse_header =
 }
 ```
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_header_initial_byte
+  (h: header)
+: Tot initial_byte
+= match h with (| b, _ |) -> b
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_header_long_argument
+  (h: header)
+: Tot (long_argument (get_header_initial_byte h))
+= match h with (| _, l |) -> l
+
+module U64 = FStar.UInt64
+
+let get_header_argument_as_uint64
+  (h: header { ~ (long_argument_simple_value_prop (get_header_initial_byte h)) })
+: Tot U64.t
+= match h with (| b, l |) -> argument_as_uint64 b l
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let impl_leaf_content_seq_cond
+  (h: header)
+: Pure bool
+    (requires True)
+    (ensures (fun res -> res == true <==> leaf_content_seq_cond h))
+= let b = get_header_initial_byte h in
+  b.major_type = cbor_major_type_byte_string ||
+  b.major_type = cbor_major_type_text_string
+
+module SZ = FStar.SizeT
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_leaf_content_seq
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+  (prf: squash (impl_leaf_content_seq_cond h == true))
+: Tot (validator (parse_leaf_content h))
+= validate_ext
+    (validate_total_constant_size
+      (LowParse.Spec.SeqBytes.tot_parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h)) `tot_parse_synth` LeafContentSeq ())
+      (SZ.uint64_to_sizet (get_header_argument_as_uint64 h))
+    )
+    (parse_leaf_content h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_leaf_content_empty
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+  (prf: squash (impl_leaf_content_seq_cond h == false))
+: Tot (validator (parse_leaf_content h))
+= validate_ext
+    (validate_synth
+      validate_empty
+      (LeafContentEmpty ())
+    )
+    (parse_leaf_content h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_leaf_content
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+: Tot (validator (parse_leaf_content h))
+= ifthenelse_validator
+    (parse_leaf_content h)
+    (impl_leaf_content_seq_cond h)
+    (validate_leaf_content_seq sq h)
+    (validate_leaf_content_empty sq h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_leaf
+  (sq: squash (SZ.fits_u64))
+: Tot (validator parse_leaf)
+= validate_dtuple2
+    (validate_header ())
+    (read_header ())
+    (validate_leaf_content sq)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_leaf_content_seq
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+  (prf: squash (impl_leaf_content_seq_cond h == true))
+: Tot (jumper (parse_leaf_content h))
+= jump_ext
+    (jump_constant_size
+      (LowParse.Spec.SeqBytes.tot_parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h)) `tot_parse_synth` LeafContentSeq ())
+      (SZ.uint64_to_sizet (get_header_argument_as_uint64 h))
+    )
+    (parse_leaf_content h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_leaf_content_empty
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+  (prf: squash (impl_leaf_content_seq_cond h == false))
+: Tot (jumper (parse_leaf_content h))
+= jump_ext
+    (jump_synth
+      jump_empty
+      (LeafContentEmpty ())
+    )
+    (parse_leaf_content h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_leaf_content
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+: Tot (jumper (parse_leaf_content h))
+= ifthenelse_jumper
+    (parse_leaf_content h)
+    (impl_leaf_content_seq_cond h)
+    (jump_leaf_content_seq sq h)
+    (jump_leaf_content_empty sq h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let jump_leaf
+  (sq: squash (SZ.fits_u64))
+: Tot (jumper parse_leaf)
+= jump_dtuple2
+    (jump_header ())
+    (read_header ())
+    (jump_leaf_content sq)
+
 noextract [@@noextract_to "krml"]
 let test_parse = parse_header
 
