@@ -600,19 +600,34 @@ let jump_long_argument
       (jump_long_argument_8 b)
       (jump_long_argument_not_8 b)
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let validate_header : validator parse_header =
+```pulse
+fn validate_header (_: unit) : validator #header #parse_header_kind parse_header =
+  (input: _)
+  (poffset: _)
+  (#offset: _)
+  (#pm: _)
+  (#v: _)
+{
   validate_dtuple2 validate_initial_byte (leaf_reader_of_reader read_initial_byte) validate_long_argument
+    input poffset #offset #pm #v
+}
+```
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let jump_header : jumper parse_header =
+```pulse
+fn jump_header (_: unit) : jumper #header #parse_header_kind parse_header =
+  (input: _)
+  (offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
   jump_dtuple2 jump_initial_byte (leaf_reader_of_reader read_initial_byte) jump_long_argument
+    input offset #pm #v
+}
+```
 
 noextract [@@noextract_to "krml"]
 let test_parse = parse_header
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-let test_jump : jumper test_parse = jump_header
+let test_jump : jumper test_parse = jump_header ()
