@@ -325,86 +325,162 @@ fn read_header (_: unit) : leaf_reader #header #parse_header_kind #parse_header 
 }
 ```
 
-(*
 inline_for_extraction
-noextract
-let validate_long_argument
+noextract [@@noextract_to "krml"]
+let validate_long_argument_8_simple_value
   (b: initial_byte)
-: Tot (validate_and_read (parse_long_argument b))
-= match b with
-  | (major_type, (additional_info, _)) ->
-    ifthenelse_validate_and_read
-      (parse_long_argument b)
-      (additional_info = additional_info_long_argument_8_bits)
-      (fun _ -> ifthenelse_validate_and_read
-        (parse_long_argument b)
-        (major_type = cbor_major_type_simple_value)
-        (fun _ ->
-          validate_and_read_ext
-            (validate_and_read_synth'
-              (validate_and_read_filter
-                (validate_and_read_u8)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+  (sq2: squash ((b.major_type = cbor_major_type_simple_value) == true))
+: Tot (validator (parse_long_argument b))
+=
+          validate_ext
+            (validate_synth
+              (validate_filter'
+                validate_u8
+                (read_u8' ())
                 simple_value_long_argument_wf
-                (fun x -> simple_value_long_argument_wf x)
               )
               (LongArgumentSimpleValue #b ())
             )
             (parse_long_argument b)
-        )
-        (fun _ ->
-          validate_and_read_ext
-            (validate_and_read_synth'
-              validate_and_read_u8
-              (LongArgumentU8 #b ())
-            )
-            (parse_long_argument b)
-        )
-      )
-      (fun _ -> ifthenelse_validate_and_read
-        (parse_long_argument b)
-        (additional_info = additional_info_long_argument_16_bits)
-        (fun _ ->
-          validate_and_read_ext
-            (validate_and_read_synth'
-              validate_and_read_u16
-              (LongArgumentU16 #b ())
-            )
-            (parse_long_argument b)
-        )
-        (fun _ -> ifthenelse_validate_and_read
-          (parse_long_argument b)
-          (additional_info = additional_info_long_argument_32_bits)
-          (fun _ ->
-            validate_and_read_ext
-              (validate_and_read_synth'
-                validate_and_read_u32
-                (LongArgumentU32 #b ())
-              )
-              (parse_long_argument b)
-          )
-          (fun _ -> ifthenelse_validate_and_read
-            (parse_long_argument b)
-            (additional_info = additional_info_long_argument_64_bits)
-            (fun _ ->
-              validate_and_read_ext
-                (validate_and_read_synth'
-                  validate_and_read_u64
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_8_not_simple_value
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+  (sq2: squash ((b.major_type = cbor_major_type_simple_value) == false))
+: Tot (validator (parse_long_argument b))
+=
+              validate_ext
+                (validate_synth
+                  validate_u8
+                  (LongArgumentU8 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_8
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+: Tot (validator (parse_long_argument b))
+= ifthenelse_validator
+    (parse_long_argument b)
+    (b.major_type = cbor_major_type_simple_value)
+    (validate_long_argument_8_simple_value b sq1)
+    (validate_long_argument_8_not_simple_value b sq1)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_16
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_16_bits) == true))
+: Tot (validator (parse_long_argument b))
+=
+              validate_ext
+                (validate_synth
+                  validate_u16
+                  (LongArgumentU16 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_32
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_32_bits) == true))
+: Tot (validator (parse_long_argument b))
+=
+              validate_ext
+                (validate_synth
+                  validate_u32
+                  (LongArgumentU32 #b ())
+                )
+                (parse_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_64
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_64_bits) == true))
+: Tot (validator (parse_long_argument b))
+=
+              validate_ext
+                (validate_synth
+                  validate_u64
                   (LongArgumentU64 #b ())
                 )
                 (parse_long_argument b)
-            )
-            (fun _ ->
-              validate_and_read_ext
-                (validate_and_read_synth'
-                  validate_and_read_empty
-                  (LongArgumentOther #b additional_info ())
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_other
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+  (sq64: squash ((b.additional_info = additional_info_long_argument_64_bits) == false))
+: Tot (validator (parse_long_argument b))
+=
+              validate_ext
+                (validate_synth
+                  validate_empty
+                  (LongArgumentOther #b b.additional_info ())
                 )
                 (parse_long_argument b)
-            )
-          )
-        )
-      )
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_not_8_16_32
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+: Tot (validator (parse_long_argument b))
+= ifthenelse_validator
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_64_bits)
+    (validate_long_argument_64 b)
+    (validate_long_argument_other b sq8 sq16 sq32)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_not_8_16
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+: Tot (validator (parse_long_argument b))
+= ifthenelse_validator
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_32_bits)
+    (validate_long_argument_32 b)
+    (validate_long_argument_not_8_16_32 b sq8 sq16)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument_not_8
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+: Tot (validator (parse_long_argument b))
+= ifthenelse_validator
+    (parse_long_argument b)
+    (b.additional_info = additional_info_long_argument_16_bits)
+    (validate_long_argument_16 b)
+    (validate_long_argument_not_8_16 b sq8)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let validate_long_argument
+  (b: initial_byte)
+: Tot (validator (parse_long_argument b))
+= ifthenelse_validator
+      (parse_long_argument b)
+      (b.additional_info = additional_info_long_argument_8_bits)
+      (validate_long_argument_8 b)
+      (validate_long_argument_not_8 b)
+
+(*
 inline_for_extraction
 noextract
 let jump_long_argument
@@ -464,12 +540,14 @@ let jump_long_argument
           )
         )
       )
+*)
 
 inline_for_extraction
-noextract
-let validate_header : validate_and_read parse_header =
-  validate_and_read_dtuple2 validate_initial_byte validate_long_argument
+noextract [@@noextract_to "krml"]
+let validate_header : validator parse_header =
+  validate_dtuple2 validate_initial_byte (leaf_reader_of_reader read_initial_byte) validate_long_argument
 
+(*
 inline_for_extraction
 noextract
 let jump_header : jumper parse_header =
