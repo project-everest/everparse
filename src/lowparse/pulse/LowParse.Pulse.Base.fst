@@ -116,9 +116,11 @@ let validator_failure (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t
     None? (parse p (Seq.slice v (SZ.v offset) (Seq.length v)))
 
 let validator_postcond (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t) (res: bool) : GTot bool =
+  SZ.v off <= Seq.length v && (
   if res
   then validator_success p offset v off
   else validator_failure p offset v
+)
 
 module R = Pulse.Lib.Reference
 
