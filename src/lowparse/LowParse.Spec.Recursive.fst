@@ -88,6 +88,64 @@ let parse_recursive_eq
     parse_recursive_step_ext p (c - 1) input'
   )
 
+let tot_parse_nlist_sum
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+  (n1 n2: nat)
+  (b: bytes)
+: Lemma
+  (ensures (parse (tot_parse_nlist (n1 + n2) p) b ==
+    begin match parse (tot_parse_nlist n1 p) b with
+    | None -> None
+    | Some (l1, consumed1) ->
+      let b2 = Seq.slice b consumed1 (Seq.length b) in
+      match parse (tot_parse_nlist n2 p) b2 with
+      | None -> None
+      | Some (l2, consumed2) ->
+        List.Tot.append_length l1 l2;
+        Some (l1 `List.Tot.append` l2, consumed1 + consumed2)
+    end
+  ))
+= Classical.forall_intro_2 (fun n -> tot_parse_nlist_parse_nlist n p);
+  parse_nlist_sum #k #t p n1 n2 b
+
+#push-options "--z3rlimit 32"
+
+#restart-solver
+let parse_consume_nlist_recursive_eq'
+  (p: parse_recursive_param)
+  (n: nat)
+  (b: bytes)
+: Lemma
+  (parse_consume (tot_parse_nlist n (parse_recursive p)) b == begin
+    if n = 0
+    then Some (0)
+    else match parse p.parse_header b with
+    | None -> None
+    | Some (h, consumed1) ->
+      let b2 = Seq.slice b consumed1 (Seq.length b) in
+      match parse_consume (tot_parse_nlist (p.count h + (n - 1)) (parse_recursive p)) b2 with
+      | None -> None
+      | Some (consumed2) ->
+        Some (consumed1 + consumed2)
+  end
+  )
+= tot_parse_nlist_eq n (parse_recursive p) b;
+  if n = 0
+  then ()
+  else begin
+    parse_recursive_eq' p b;
+    match parse p.parse_header b with
+    | None -> ()
+    | Some (h, consumed1) ->
+      let b2 = Seq.slice b consumed1 (Seq.length b) in
+      tot_parse_nlist_sum (parse_recursive p) (p.count h) (n - 1) b2
+  end
+
+#pop-options
+
+
 let has_pred_level
   (#p: parse_recursive_param)
   (s: serialize_recursive_param p)

@@ -99,6 +99,34 @@ let parse_recursive_eq'
 = parse_recursive_eq p b;
   tot_parse_synth_eq (parse_recursive_alt p (parse_recursive p)) p.synth_ b
 
+let parse_consume
+  (#t: Type)
+  (p: bare_parser t)
+  (input: bytes)
+: GTot (option (consumed_length input))
+= match parse p input with
+  | None -> None
+  | Some (_, consumed) -> Some consumed
+
+val parse_consume_nlist_recursive_eq'
+  (p: parse_recursive_param)
+  (n: nat)
+  (b: bytes)
+: Lemma
+  (parse_consume (tot_parse_nlist n (parse_recursive p)) b == begin
+    if n = 0
+    then Some (0)
+    else match parse p.parse_header b with
+    | None -> None
+    | Some (h, consumed1) ->
+      let b2 = Seq.slice b consumed1 (Seq.length b) in
+      match parse_consume (tot_parse_nlist (p.count h + (n - 1)) (parse_recursive p)) b2 with
+      | None -> None
+      | Some (consumed2) ->
+        Some (consumed1 + consumed2)
+  end
+  )
+
 let list_has_pred_level
   (#t: Type)
   (level: (t -> nat))
