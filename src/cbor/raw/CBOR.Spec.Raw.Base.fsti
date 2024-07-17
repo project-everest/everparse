@@ -9,14 +9,14 @@ module U64 = FStar.UInt64
 
 let nlist ([@@@strictly_positive] t: eqtype) (n: nat) : Tot eqtype = (l: list t { List.Tot.length l == n })
 
-type integer_size = (n: nat { n <= 4 })
+type integer_size = (n: U8.t { U8.v n <= 4 })
 
 open FStar.Mul
 
 let raw_uint64_size_prop (size: integer_size) (value: U64.t) : Tot prop =
-  if size = 0
+  if U8.v size = 0
   then U64.v value <= U8.v max_simple_value_additional_info
-  else U64.v value < pow2 (8 * pow2 (size - 1))
+  else U64.v value < pow2 (8 * pow2 (U8.v size - 1))
 
 type raw_uint64 = {
   size: integer_size;
@@ -35,7 +35,7 @@ type raw_data_item : eqtype
 //  | Float: (v: Float.float) -> raw_data_item // TODO
 
 let dummy_raw_data_item : Ghost.erased raw_data_item =
-  Int64 cbor_major_type_uint64 { size = 0; value = 0uL }
+  Int64 cbor_major_type_uint64 { size = 0uy; value = 0uL }
 
 let raw_uint64_equiv (x1 x2: raw_uint64) : Tot bool =
   x1.value = x2.value

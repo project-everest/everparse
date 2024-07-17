@@ -52,11 +52,11 @@ let valid_raw_data_item
 (* Shortest-size integers *)
 
 let raw_uint64_optimal (x: raw_uint64) : Tot bool =
-  ((U64.v x.value <= U8.v max_simple_value_additional_info) = (x.size = 0)) &&
+  ((U64.v x.value <= U8.v max_simple_value_additional_info) = (U8.v x.size = 0)) &&
   begin
-    if x.size <= 1
+    if U8.v x.size <= 1
     then true
-    else pow2 (8 * pow2 (x.size - 2)) <= U64.v x.value
+    else pow2 (8 * pow2 (U8.v x.size - 2)) <= U64.v x.value
   end
 
 let raw_uint64_optimal_unique (x1 x2: raw_uint64) : Lemma
@@ -67,21 +67,21 @@ let raw_uint64_optimal_unique (x1 x2: raw_uint64) : Lemma
 let rec raw_uint64_optimize (x: raw_uint64) : Pure raw_uint64
   (requires True)
   (ensures (fun x' -> raw_uint64_equiv x x' /\ raw_uint64_optimal x'))
-  (decreases x.size)
+  (decreases U8.v x.size)
 = if U64.v x.value <= U8.v max_simple_value_additional_info
-  then { x with size = 0 }
-  else if x.size <= 1
+  then { x with size = 0uy }
+  else if U8.v x.size <= 1
   then x
-  else if pow2 (8 * pow2 (x.size - 2)) <= U64.v x.value
+  else if pow2 (8 * pow2 (U8.v x.size - 2)) <= U64.v x.value
   then x
-  else raw_uint64_optimize { x with size = x.size - 1 }
+  else raw_uint64_optimize { x with size = U8.sub x.size 1uy }
 
 let mk_raw_uint64 (x: U64.t) : Pure raw_uint64
   (requires True)
   (ensures (fun y -> y.value == x /\
     raw_uint64_optimal y == true
   ))
-= raw_uint64_optimize { size = 4; value = x }
+= raw_uint64_optimize { size = 4uy; value = x }
 
 let raw_data_item_ints_optimal_elem (x: raw_data_item) : Tot bool =
   match x with

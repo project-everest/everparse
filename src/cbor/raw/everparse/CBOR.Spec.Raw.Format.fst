@@ -200,15 +200,15 @@ let argument_as_raw_uint64
 : Tot raw_uint64
 = match x with
   | LongArgumentU8 _ v ->
-    { size = 1; value = Cast.uint8_to_uint64 v }
+    { size = 1uy; value = Cast.uint8_to_uint64 v }
   | LongArgumentU16 _ v ->
-    { size = 2; value = Cast.uint16_to_uint64 v }
+    { size = 2uy; value = Cast.uint16_to_uint64 v }
   | LongArgumentU32 _ v ->
-    { size = 3; value = Cast.uint32_to_uint64 v }
+    { size = 3uy; value = Cast.uint32_to_uint64 v }
   | LongArgumentU64 _ v ->
-    { size = 4; value = v }
+    { size = 4uy; value = v }
   | LongArgumentOther v _ _ ->
-    { size = 0; value = Cast.uint8_to_uint64 v }
+    { size = 0uy; value = Cast.uint8_to_uint64 v }
 
 let argument_as_uint64
   (b: initial_byte { ~ (long_argument_simple_value_prop b) })
@@ -733,13 +733,13 @@ let raw_uint64_as_argument
       t == b.major_type /\
       argument_as_raw_uint64 b arg = x
     ))
-= if x.size = 0
+= if x.size = 0uy
   then (| mk_initial_byte t (Cast.uint64_to_uint8 x.value), LongArgumentOther (Cast.uint64_to_uint8 x.value) () () |)
-  else if x.size = 1
+  else if x.size = 1uy
   then (| mk_initial_byte t additional_info_long_argument_8_bits, LongArgumentU8 () (Cast.uint64_to_uint8 x.value) |)
-  else if x.size = 2
+  else if x.size = 2uy
   then (| mk_initial_byte t additional_info_long_argument_16_bits, LongArgumentU16 () (Cast.uint64_to_uint16 x.value) |)
-  else if x.size = 3
+  else if x.size = 3uy
   then (| mk_initial_byte t additional_info_long_argument_32_bits, LongArgumentU32 () (Cast.uint64_to_uint32 x.value) |)
   else (| mk_initial_byte t additional_info_long_argument_64_bits, LongArgumentU64 () x.value |)
 
@@ -1038,13 +1038,13 @@ let cps_raw_uint64_as_argument
     (ensures (fun _ -> True))
   )
 : Tot t'
-= t'_ifthenelse (x.size = 0)
+= t'_ifthenelse (x.size = 0uy)
     (fun _ -> k (| mk_initial_byte ty (Cast.uint64_to_uint8 x.value), LongArgumentOther (Cast.uint64_to_uint8 x.value) () () |))
-    (fun _ -> t'_ifthenelse (x.size = 1)
+    (fun _ -> t'_ifthenelse (x.size = 1uy)
       (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_8_bits, LongArgumentU8 () (Cast.uint64_to_uint8 x.value) |))
-      (fun _ -> t'_ifthenelse (x.size = 2)
+      (fun _ -> t'_ifthenelse (x.size = 2uy)
         (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_16_bits, LongArgumentU16 () (Cast.uint64_to_uint16 x.value) |))
-        (fun _ -> t'_ifthenelse (x.size = 3)
+        (fun _ -> t'_ifthenelse (x.size = 3uy)
           (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_32_bits, LongArgumentU32 () (Cast.uint64_to_uint32 x.value) |))
           (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_64_bits, LongArgumentU64 () x.value |))
         )
@@ -1815,7 +1815,7 @@ let raw_uint64_compare
   (x1 x2: raw_uint64)
 : Tot int
 =
-      let c = int_compare x1.size x2.size in
+      let c = int_compare (U8.v x1.size) (U8.v x2.size) in
       if c = 0
       then int_compare (U64.v x1.value) (U64.v x2.value)
       else c
@@ -1882,7 +1882,7 @@ let serialized_lex_compare_int64
 let raw_uint64_lt
   (x1 x2: raw_uint64)
 : Tot bool
-= x1.size < x2.size || (x1.size = x2.size && x1.value `U64.lt` x2.value)
+= x1.size `U8.lt` x2.size || (x1.size = x2.size && x1.value `U64.lt` x2.value)
 
 let lex_order_int64_correct
   (ty: major_type_uint64_or_neg_int64)

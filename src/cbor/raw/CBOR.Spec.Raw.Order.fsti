@@ -114,7 +114,7 @@ let raw_uint64_compare
   (x1 x2: raw_uint64)
 : Tot int
 =
-      let c = int_compare x1.size x2.size in
+      let c = int_compare (U8.v x1.size) (U8.v x2.size) in
       if c = 0
       then int_compare (U64.v x1.value) (U64.v x2.value)
       else c
@@ -264,7 +264,7 @@ let deterministically_encoded_cbor_map_key_order_major_type_intro
 let raw_uint64_lt
   (x1 x2: raw_uint64)
 : Tot bool
-= x1.size < x2.size || (x1.size = x2.size && x1.value `U64.lt` x2.value)
+= x1.size `U8.lt` x2.size || (x1.size = x2.size && x1.value `U64.lt` x2.value)
 
 let deterministically_encoded_cbor_map_key_order_int64
   (ty: major_type_uint64_or_neg_int64)
