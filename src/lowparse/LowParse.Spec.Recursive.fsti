@@ -99,15 +99,6 @@ let parse_recursive_eq'
 = parse_recursive_eq p b;
   tot_parse_synth_eq (parse_recursive_alt p (parse_recursive p)) p.synth_ b
 
-let parse_consume
-  (#t: Type)
-  (p: bare_parser t)
-  (input: bytes)
-: GTot (option (consumed_length input))
-= match parse p input with
-  | None -> None
-  | Some (_, consumed) -> Some consumed
-
 val parse_consume_nlist_recursive_eq'
   (p: parse_recursive_param)
   (n: nat)
