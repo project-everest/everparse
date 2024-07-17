@@ -903,4 +903,8 @@ let test_parse = parse_raw_data_item
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+let test_validate : validator test_parse = validate_raw_data_item (assume SZ.fits_u64)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 let test_jump : jumper test_parse = jump_raw_data_item (assume SZ.fits_u64)

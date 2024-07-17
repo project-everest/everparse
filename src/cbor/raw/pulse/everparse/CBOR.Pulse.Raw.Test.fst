@@ -23,8 +23,9 @@ fn test1 (#pm: perm) (#v: Ghost.erased bytes) (s: slice byte)
   returns _: SZ.t
   ensures pts_to s #pm v
 {
-  validate_nonempty (validate_header ()) s 0sz
+//  validate_nonempty (validate_header ()) s 0sz
 //  validate_nonempty (validate_initial_byte) s 0sz
+  validate_nonempty test_validate s 0sz
 }
 ```
 
