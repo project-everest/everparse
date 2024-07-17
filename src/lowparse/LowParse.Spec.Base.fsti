@@ -32,6 +32,15 @@ let parse
 : GTot (option (t * consumed_length input))
 = p input
 
+let parse_consume
+  (#t: Type)
+  (p: bare_parser t)
+  (input: bytes)
+: GTot (option (consumed_length input))
+= match parse p input with
+  | None -> None
+  | Some (_, consumed) -> Some consumed
+
 (** Injectivity of parsing *)
 
 let injective_precond
