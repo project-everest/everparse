@@ -4,6 +4,7 @@ open LowParse.Pulse.Util
 open LowParse.Pulse.Combinators
 open LowParse.Pulse.Int
 open LowParse.Pulse.BitSum
+open LowParse.Pulse.Recursive
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -758,6 +759,103 @@ let jump_leaf
     (jump_header ())
     (read_header ())
     (jump_leaf_content sq)
+
+module R = Pulse.Lib.Reference
+module S = Pulse.Lib.Slice
+
+```pulse
+fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
+  validate_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
+=
+    (#va: Ghost.erased leaf)
+    (#pm: perm)
+    (a: _)
+    (bound: SZ.t)
+    (#rem: Ghost.erased SZ.t)
+    (prem: R.ref SZ.t)
+{
+  rewrite_with_stick
+    (pts_to_serialized serialize_raw_data_item_param.serialize_header a #pm va)
+    (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
+  match spl { S.SlicePair input1 input2 -> {
+    unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
+    unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
+    let h = read_header () input1;
+    elim_stick
+      (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
+      (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+    elim_stick _ _;
+    let typ = get_header_major_type h;
+    if (typ = cbor_major_type_array) {
+      let arg64 = get_header_argument_as_uint64 h;
+      prem := SZ.uint64_to_sizet arg64;
+      false
+    }
+    else if (typ = cbor_major_type_map) {
+      let arg64 = get_header_argument_as_uint64 h;
+      let arg = SZ.uint64_to_sizet arg64;
+      if SZ.gt arg bound {
+        true
+      } else if SZ.lt (SZ.sub bound arg) arg {
+        true
+      } else {
+        prem := (SZ.add arg arg);
+        false
+      }
+    }
+    else if (typ = cbor_major_type_tagged) {
+      prem := 1sz;
+      false
+    }
+    else {
+      prem := 0sz;
+      false
+    }
+  }}
+}
+```
+
+```pulse
+fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
+  jump_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
+=
+    (#va: Ghost.erased leaf)
+    (#pm: perm)
+    (a: _)
+    (bound: SZ.t)
+{
+  rewrite_with_stick
+    (pts_to_serialized serialize_raw_data_item_param.serialize_header a #pm va)
+    (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
+  match spl { S.SlicePair input1 input2 -> {
+    unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
+    unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
+    let h = read_header () input1;
+    elim_stick
+      (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
+      (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+    elim_stick _ _;
+    let typ = get_header_major_type h;
+    if (typ = cbor_major_type_array) {
+      let arg64 = get_header_argument_as_uint64 h;
+      SZ.uint64_to_sizet arg64
+    }
+    else if (typ = cbor_major_type_map) {
+      let arg64 = get_header_argument_as_uint64 h;
+      let arg = SZ.uint64_to_sizet arg64;
+      SZ.add arg arg
+    }
+    else if (typ = cbor_major_type_tagged) {
+      1sz
+    }
+    else {
+      0sz
+    }
+  }}
+}
+```
 
 noextract [@@noextract_to "krml"]
 let test_parse = parse_header
