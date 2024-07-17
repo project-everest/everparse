@@ -16,12 +16,12 @@ let validate_recursive_step_count_post
   (err: bool)
 : Tot prop
 = let count = p.count va in
-  (err == true ==> (SZ.v rem - 1) + count > SZ.v bound) /\
-  SZ.v rem' == (if err then SZ.v rem else count + (SZ.v rem - 1))
+  (err == true ==> count > SZ.v bound) /\
+  SZ.v rem' == (if err then SZ.v rem else count)
 
 inline_for_extraction
 let validate_recursive_step_count
-  (#p: parse_recursive_param)
+  (#p: parse_recursive_param u#0 u#0)
   (s: serialize_recursive_param p)
 : Tot Type
 =
@@ -32,7 +32,7 @@ let validate_recursive_step_count
     (#rem: Ghost.erased SZ.t) ->
     (prem: R.ref SZ.t) ->
     stt bool
-      (pts_to_serialized s.serialize_header a #pm va ** R.pts_to prem rem ** pure (SZ.v rem > 0))
+      (pts_to_serialized s.serialize_header a #pm va ** R.pts_to prem rem)
       (fun err -> pts_to_serialized s.serialize_header a #pm va ** (
         exists* rem' . R.pts_to prem rem' ** pure (
           validate_recursive_step_count_post p va bound rem rem' err
@@ -55,7 +55,7 @@ let parse_nlist_recursive_bound_correct
     assert (consumed >= n * p.parse_header_kind.parser_kind_low);
     FStar.Math.Lemmas.lemma_mult_le_right n 1 p.parse_header_kind.parser_kind_low
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64"
 
 #restart-solver
 inline_for_extraction
@@ -95,22 +95,31 @@ fn validate_nlist_recursive
         (Some? pr0 ==> (SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr))
     ))
   {
-    with gn . assert (pts_to pn gn);
-    with goffset . assert (pts_to poffset goffset);
-    parse_consume_nlist_recursive_eq' p (SZ.v gn) (Seq.slice v (SZ.v goffset) (Seq.length v));
     let off = !poffset;
-    let res1 = w input poffset;
-    if not res1 {
+    let n = !pn;
+    parse_consume_nlist_recursive_eq' p (SZ.v n) (Seq.slice v (SZ.v off) (Seq.length v));
+    parse_nlist_recursive_bound_correct p (SZ.v n) (Seq.slice v (SZ.v off) (Seq.length v));
+    if SZ.gt n (SZ.sub (S.len input) off) {
       pres := false;
     } else {
-      let off1 = !poffset;
-      let input1 = peek_stick_gen s.serialize_header input off off1;
-      with gv . assert (pts_to_serialized s.serialize_header input1 #pm gv);
-      parse_nlist_recursive_bound_correct p (p.count gv + (SZ.v gn - 1)) (Seq.slice v (SZ.v off1) (Seq.length v));
-      let res2 = f #gv #pm input1 (SZ.sub (S.len input) off1) pn;
-      elim_stick _ _;
-      if res2 {
-        pres := false
+      let res1 = w input poffset;
+      if not res1 {
+        pres := false;
+      } else {
+        let off1 = !poffset;
+        let input1 = peek_stick_gen s.serialize_header input off off1;
+        parser_kind_prop_equiv p.parse_header_kind p.parse_header;
+        with gv . assert (pts_to_serialized s.serialize_header input1 #pm gv);
+        parse_nlist_recursive_bound_correct p (p.count gv + (SZ.v n - 1)) (Seq.slice v (SZ.v off1) (Seq.length v));
+        let bound = SZ.sub (SZ.sub (S.len input) off) n;
+        let res2 = f #gv #pm input1 bound pn;
+        elim_stick _ _;
+        let count = !pn;
+        if (res2 || SZ.gt count bound) {
+          pres := false
+        } else {
+          pn := SZ.add (SZ.sub n 1sz) count;
+        }
       }
     }
   } ;
@@ -143,7 +152,7 @@ fn validate_recursive
 
 inline_for_extraction
 let jump_recursive_step_count
-  (#p: parse_recursive_param)
+  (#p: parse_recursive_param u#0 u#0)
   (s: serialize_recursive_param p)
 : Tot Type
 =
@@ -156,8 +165,6 @@ let jump_recursive_step_count
       (fun res -> pts_to_serialized s.serialize_header a #pm va ** pure (p.count va == SZ.v res))
 
 #push-options "--z3rlimit 32"
-
-#restart-solver
 
 #restart-solver
 inline_for_extraction
