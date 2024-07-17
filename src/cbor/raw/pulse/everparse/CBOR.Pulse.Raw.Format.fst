@@ -857,9 +857,50 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
 }
 ```
 
+inline_for_extraction
 noextract [@@noextract_to "krml"]
-let test_parse = parse_header
+let validate_raw_data_item' (_: squash SZ.fits_u64) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+  validate_recursive
+    serialize_raw_data_item_param
+    (validate_leaf ())
+    (validate_recursive_step_count_leaf ())
+
+```pulse
+fn validate_raw_data_item (_: squash SZ.fits_u64) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+  (input: _)
+  (poffset: _)
+  (#offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  validate_raw_data_item' ()
+    input poffset #offset #pm #v
+}
+```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-let test_jump : jumper test_parse = jump_header ()
+let jump_raw_data_item' (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+  jump_recursive
+    serialize_raw_data_item_param
+    (jump_leaf ())
+    (jump_recursive_step_count_leaf ())
+
+```pulse
+fn jump_raw_data_item (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
+  (input: _)
+  (offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  jump_raw_data_item' ()
+    input offset #pm #v
+}
+```
+
+noextract [@@noextract_to "krml"]
+let test_parse = parse_raw_data_item
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let test_jump : jumper test_parse = jump_raw_data_item (assume SZ.fits_u64)

@@ -1005,7 +1005,6 @@ let get_raw_data_item_header
 : GTot header
 = dfst (synth_raw_data_item_recip x)
 
-noextract
 let get_header_major_type
   (h: header)
 : Tot major_type_t
