@@ -694,6 +694,66 @@ fn split_dtuple2
 }
 ```
 
+inline_for_extraction
+```pulse
+fn dtuple2_dfst
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#p2: ((x: t1) -> parser k2 (t2 x)))
+  (s2: (x: t1) -> serializer (p2 x))
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (dtuple2 t1 t2))
+  requires pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v
+  returns res: slice byte
+  ensures pts_to_serialized s1 res #pm (dfst v) **
+    (pts_to_serialized s1 res #pm (dfst v) @==> pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
+{
+  let spl = split_dtuple2 s1 j1 s2 input;
+  match spl { SlicePair input1 input2 -> {
+    unfold (split_dtuple2_post s1 s2 input pm v spl);
+    unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
+    stick_elim_partial_r _ _ _;
+    input1
+  }}
+}
+```
+
+inline_for_extraction
+```pulse
+fn dtuple2_dsnd
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#p2: ((x: t1) -> parser k2 (t2 x)))
+  (s2: (x: t1) -> serializer (p2 x))
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (dtuple2 t1 t2))
+  requires pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v
+  returns res: slice byte
+  ensures pts_to_serialized (s2 (dfst v)) res #pm (dsnd v) **
+    (pts_to_serialized (s2 (dfst v)) res #pm (dsnd v) @==> pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
+{
+  let spl = split_dtuple2 s1 j1 s2 input;
+  match spl { SlicePair input1 input2 -> {
+    unfold (split_dtuple2_post s1 s2 input pm v spl);
+    unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
+    stick_elim_partial_l _ _ _;
+    input2
+  }}
+}
+```
+
 let split_nondep_then_post'
   (#t1 #t2: Type0)
   (#k1: parser_kind)
@@ -772,6 +832,64 @@ fn split_nondep_then
     fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
     fold (split_nondep_then_post s1 s2 input pm v (input1 `SlicePair` input2));
     (input1 `SlicePair` input2)
+  }}
+}
+```
+
+inline_for_extraction
+```pulse
+fn nondep_then_fst
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t2))
+  requires pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v
+  returns res: slice byte
+  ensures pts_to_serialized s1 res #pm (fst v) **
+    (pts_to_serialized s1 res #pm (fst v) @==> pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v)
+{
+  let spl = split_nondep_then s1 j1 s2 input;
+  match spl { SlicePair input1 input2 -> {
+    unfold (split_nondep_then_post s1 s2 input pm v spl);
+    unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
+    stick_elim_partial_r _ _ _;
+    input1
+  }}
+}
+```
+
+inline_for_extraction
+```pulse
+fn nondep_then_snd
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t2))
+  requires pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v
+  returns res: slice byte
+  ensures pts_to_serialized s2 res #pm (snd v) **
+    (pts_to_serialized s2 res #pm (snd v) @==> pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v)
+{
+  let spl = split_nondep_then s1 j1 s2 input;
+  match spl { SlicePair input1 input2 -> {
+    unfold (split_nondep_then_post s1 s2 input pm v spl);
+    unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
+    stick_elim_partial_l _ _ _;
+    input2
   }}
 }
 ```

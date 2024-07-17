@@ -7,6 +7,23 @@ module SZ = FStar.SizeT
 
 ```pulse
 ghost
+fn stick_id
+  (p: vprop)
+requires emp
+ensures (p @==> p)
+{
+  ghost fn aux (_: unit)
+    requires emp ** p
+    ensures p
+  {
+    ()
+  };
+  intro_stick p p emp aux
+}
+```
+
+```pulse
+ghost
 fn stick_trans
   (p1 p2 p3: vprop)
   requires (p1 @==> p2) ** (p2 @==> p3)
