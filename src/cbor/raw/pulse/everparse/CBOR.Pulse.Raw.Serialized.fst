@@ -37,6 +37,35 @@ fn cbor_match_int_intro
 ```
 
 ```pulse
+fn cbor_match_string_intro
+  (input: S.slice byte)
+  (#pm: perm)
+  (#v: Seq.seq byte)
+  (c: cbor_string)
+  (r: raw_data_item)
+  requires
+    S.pts_to input #pm v ** pure (
+      input == c.cbor_string_ptr /\
+      pm == c.cbor_string_perm /\
+      Seq.length v == SZ.v (S.len c.cbor_string_ptr) /\
+      r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) }) v
+    )
+  ensures
+    cbor_match_string c 1.0R r **
+    (cbor_match_string c 1.0R r @==> S.pts_to input #pm v)
+{
+  fold (cbor_match_string c 1.0R r);
+  ghost fn aux (_: unit)
+    requires emp ** cbor_match_string c 1.0R r
+    ensures S.pts_to input #pm v
+  {
+    unfold (cbor_match_string c 1.0R r)
+  };
+  intro_stick _ _ _ aux
+}
+```
+
+```pulse
 fn cbor_read
   (input: S.slice byte)
   (#pm: perm)
