@@ -34,6 +34,19 @@ fn pts_to_serialized_elim_stick
 }
 ```
 
+```pulse
+ghost
+fn pts_to_serialized_length
+  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
+  requires (pts_to_serialized s input #pm v)
+  ensures (pts_to_serialized s input #pm v ** pure (Seq.length (bare_serialize s v) == SZ.v (len input)))
+{
+  unfold (pts_to_serialized s input #pm v);
+  pts_to_len input;
+  fold (pts_to_serialized s input #pm v)
+}
+```
+
 let serializer_ext_eq
   (#t: Type0)
   (#k1: parser_kind)

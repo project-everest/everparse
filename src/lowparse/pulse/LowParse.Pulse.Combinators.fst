@@ -278,6 +278,34 @@ fn pts_to_serialized_synth_l2r_stick
 }
 ```
 
+```pulse
+ghost
+fn pts_to_serialized_synth_l2r_stick'
+  (#t #t': Type0)
+  (#k_: parser_kind)
+  (#p_: tot_parser k_ t')
+  (#s_: tot_serializer p_)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (f: (t -> t') { synth_injective f })
+  (f': (t' -> t) { synth_inverse f f' })
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t')
+  requires pts_to_serialized s_ input #pm v ** pure (forall x . parse p_ x == parse (tot_parse_synth p f) x)
+  ensures pts_to_serialized s input #pm (f' v) ** (pts_to_serialized s input #pm (f' v) @==> pts_to_serialized s_ input #pm v)
+{
+  pts_to_serialized_ext_stick
+    s_
+    (tot_serialize_synth p f s f' ())
+    input;
+  pts_to_serialized_synth_l2r_stick
+    s f f' input;
+  stick_trans _ _ (pts_to_serialized s_ input #pm v)
+}
+```
+
 inline_for_extraction
 let read_synth_cont_t
   (#t: Type0)

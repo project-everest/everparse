@@ -197,3 +197,52 @@ ensures exists* v .
   res2
 }
 ```
+
+let synth_nlist_1
+  (#t: Type)
+  (x: t)
+: Tot (nlist 1 t)
+= [x]
+
+let synth_nlist_1_recip
+  (#t: Type)
+  (x: nlist 1 t)
+: Tot t
+= List.Tot.hd x
+
+let tot_parse_nlist_1_eq
+  (#t: Type)
+  (#k: parser_kind)
+  (p: parser k t)
+  (b: bytes)
+: Lemma
+  (parse (tot_parse_nlist 1 p) b == parse (tot_parse_synth p synth_nlist_1) b)
+= tot_parse_nlist_eq 1 p b;
+  tot_parse_synth_eq p synth_nlist_1 b
+
+```pulse
+fn pts_to_serialized_nlist_1
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased t)
+  requires pts_to_serialized s input #pm v
+  ensures exists* v' . pts_to_serialized (tot_serialize_nlist 1 s) input #pm v' **
+    (pts_to_serialized (tot_serialize_nlist 1 s) input #pm v' @==>
+      pts_to_serialized s input #pm v) **
+    pure ((v' <: list t) == [Ghost.reveal v])
+{
+  pts_to_serialized_synth_stick s synth_nlist_1 synth_nlist_1_recip input;
+  Classical.forall_intro (tot_parse_nlist_1_eq p);
+  pts_to_serialized_ext_stick
+    (tot_serialize_synth p synth_nlist_1 s synth_nlist_1_recip ())
+    (tot_serialize_nlist 1 s)
+    input;
+  stick_trans
+    (pts_to_serialized (tot_serialize_nlist 1 s) input #pm _)
+    _ _
+}
+```
