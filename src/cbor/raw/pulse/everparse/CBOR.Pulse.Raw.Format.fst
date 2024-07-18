@@ -908,3 +908,202 @@ let test_validate : validator test_parse = validate_raw_data_item (assume SZ.fit
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let test_jump : jumper test_parse = jump_raw_data_item (assume SZ.fits_u64)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn get_header_and_contents
+  (input: S.slice byte)
+  (outh: R.ref header)
+  (#pm: perm)
+  (#v: Ghost.erased raw_data_item)
+  requires exists* h . pts_to_serialized serialize_raw_data_item input #pm v ** pts_to outh h
+  returns outc: S.slice byte
+  ensures exists* h c .
+    pts_to outh h **
+    pts_to_serialized (serialize_content h) outc #pm c **
+    (pts_to_serialized (serialize_content h) outc #pm c @==> pts_to_serialized serialize_raw_data_item input #pm v) **
+    pure (synth_raw_data_item_recip v == (| h, c |))
+{
+  Classical.forall_intro parse_raw_data_item_eq;
+  pts_to_serialized_ext_stick
+    serialize_raw_data_item
+    serialize_raw_data_item_aux
+    input;
+  pts_to_serialized_synth_l2r_stick
+    (tot_serialize_dtuple2 serialize_header serialize_content)
+    synth_raw_data_item
+    synth_raw_data_item_recip
+    input;
+  stick_trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+  with v' . assert (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_content) input #pm v');
+  let spl = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
+  match spl { S.SlicePair ph outc -> {
+    unfold (split_dtuple2_post serialize_header serialize_content input pm v' spl);
+    unfold (split_dtuple2_post' serialize_header serialize_content input pm v' ph outc);
+    stick_trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    let h = read_header () ph;
+    stick_elim_partial_l _ _ _;
+    outh := h;
+    outc
+  }}
+}
+```
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_int64_value
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure raw_uint64
+    (requires h == dfst (synth_raw_data_item_recip v) /\ Int64? v)
+    (ensures fun res -> Int64? v /\ res == Int64?.v v)
+= match h with
+  (| b, l |) -> argument_as_raw_uint64 b l
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_string_length
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure raw_uint64
+    (requires h == dfst (synth_raw_data_item_recip v) /\ String? v)
+    (ensures fun res -> String? v /\ res == String?.len v)
+= match h with
+  (| b, l |) -> argument_as_raw_uint64 b l
+
+```pulse
+ghost
+fn get_string_payload
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item)
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+  requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |) /\ String? v)
+  ensures exists* v' .
+    S.pts_to input #pm v' **
+    (S.pts_to input #pm v' @==> pts_to_serialized (serialize_content h) input #pm c) **
+    pure (String? v /\ v' == String?.v v)
+{
+  pts_to_serialized_ext_stick
+    (serialize_content h)
+    (LowParse.Spec.SeqBytes.tot_serialize_lseq_bytes (U64.v (String?.len v).value))
+    input;
+  with v1 . assert (pts_to_serialized (LowParse.Spec.SeqBytes.tot_serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1);
+  let v2 : Ghost.erased bytes = Ghost.hide #bytes (Ghost.reveal #(Seq.lseq byte (U64.v (String?.len v).value)) v1);
+  rewrite_with_stick
+    (pts_to_serialized (LowParse.Spec.SeqBytes.tot_serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1)
+    (S.pts_to input #pm v2);
+  stick_trans _ _ (pts_to_serialized (serialize_content h) input #pm c)
+}
+```
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_tagged_tag
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure raw_uint64
+    (requires h == dfst (synth_raw_data_item_recip v) /\ Tagged? v)
+    (ensures fun res -> Tagged? v /\ res == Tagged?.tag v)
+= match h with
+  (| b, l |) -> argument_as_raw_uint64 b l
+
+```pulse
+ghost
+fn get_tagged_payload
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item)
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+  requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |) /\ Tagged? v)
+  ensures exists* v' .
+    pts_to_serialized serialize_raw_data_item input #pm v' **
+    (pts_to_serialized serialize_raw_data_item input #pm v' @==> pts_to_serialized (serialize_content h) input #pm c) **
+    pure (Tagged? v /\ v' == Tagged?.v v)
+{
+  pts_to_serialized_ext_stick
+    (serialize_content h)
+    serialize_raw_data_item
+    input
+}
+```
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_simple_value
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure simple_value
+    (requires h == dfst (synth_raw_data_item_recip v) /\ Simple? v)
+    (ensures fun res -> Simple? v /\ res == Simple?.v v)
+= match h with
+  (| b, l |) -> argument_as_simple_value b l
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_array_length
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure raw_uint64
+    (requires h == dfst (synth_raw_data_item_recip v) /\ Array? v)
+    (ensures fun res -> Array? v /\ res == Array?.len v)
+= match h with
+  (| b, l |) -> argument_as_raw_uint64 b l
+
+module L = LowParse.Spec.VCList
+
+```pulse
+ghost
+fn get_array_payload
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item {Array? v })
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+  requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
+  ensures exists* v' .
+    pts_to_serialized (L.tot_serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v' **
+    (pts_to_serialized (L.tot_serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v' @==> pts_to_serialized (serialize_content h) input #pm c) **
+    pure (v' == Array?.v v)
+{
+  pts_to_serialized_ext_stick
+    (serialize_content h)
+    (L.tot_serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item)
+    input
+}
+```
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_map_length
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure raw_uint64
+    (requires h == dfst (synth_raw_data_item_recip v) /\ Map? v)
+    (ensures fun res -> Map? v /\ res == Map?.len v)
+= match h with
+  (| b, l |) -> argument_as_raw_uint64 b l
+
+```pulse
+ghost
+fn get_map_payload
+  (input: S.slice byte)
+  (v: Ghost.erased raw_data_item {Map? v })
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+  requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
+  ensures exists* v' .
+    pts_to_serialized (L.tot_serialize_nlist (U64.v (Map?.len v).value) (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v' **
+    (pts_to_serialized (L.tot_serialize_nlist (U64.v (Map?.len v).value) (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v' @==> pts_to_serialized (serialize_content h) input #pm c) **
+    pure (v' == Map?.v v)
+{
+  pts_to_serialized_ext_stick
+    (serialize_content h)
+    (L.tot_serialize_nlist (U64.v (Map?.len v).value) (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+    input
+}
+```
