@@ -404,24 +404,6 @@ let synth_nlist_append_injective
       (fst x2) (snd x2)
   )
 
-let parse_nlist_append_eq
-  (#t: Type)
-  (#k: parser_kind)
-  (p: parser k t)
-  (n1 n2: nat)
-  (b: bytes)
-: Lemma
-  (parse (L.tot_parse_nlist (n1 + n2) p) b == parse ((L.tot_parse_nlist n1 p `C.tot_nondep_then` L.tot_parse_nlist n2 p) `C.tot_parse_synth` synth_nlist_append t n1 n2) b)
-= C.tot_parse_synth_eq
-    (L.tot_parse_nlist n1 p `C.tot_nondep_then` L.tot_parse_nlist n2 p)
-    (synth_nlist_append t n1 n2)
-    b;
-  tot_nondep_then_eq
-    (L.tot_parse_nlist n1 p)
-    (L.tot_parse_nlist n2 p)
-    b;
-  tot_parse_nlist_sum #k #t p n1 n2 b
-
 let parse_recursive_cons_payload_eq_nlist
   (p: parse_recursive_param)
   (n: pos)
@@ -431,7 +413,15 @@ let parse_recursive_cons_payload_eq_nlist
   (parse (C.tot_parse_synth (parse_nlist_recursive_cons_payload p n h) (synth_nlist_append p.t (p.count h) (n - 1))) b ==
     parse (L.tot_parse_nlist (p.count h + (n - 1)) (parse_recursive p)) b
   )
-= admit ()
+= C.tot_parse_synth_eq
+    (parse_nlist_recursive_cons_payload p n h)
+    (synth_nlist_append p.t (p.count h) (n - 1))
+    b;
+  tot_nondep_then_eq
+    (L.tot_parse_nlist (p.count h) (parse_recursive p))
+    (L.tot_parse_nlist (n - 1) (parse_recursive p))
+    b;
+  tot_parse_nlist_sum (parse_recursive p) (p.count h) (n - 1) b
 
 let rec synth_nlist_append_recip
   (t: Type)
@@ -471,8 +461,6 @@ let serialize_recursive_bound_correct
 : Lemma
   (count <= Seq.length (L.tot_serialize_nlist count (serialize_recursive s) c))
 = parse_nlist_recursive_bound_correct p count (L.tot_serialize_nlist count (serialize_recursive s) c)
-
-#push-options "--print_implicits"
 
 inline_for_extraction
 ```pulse
@@ -580,10 +568,20 @@ fn impl_nlist_forall_pred_recursive
           (L.tot_serialize_nlist (p.count h + (SZ.v n - 1)) (serialize_recursive s))
           pc;
         with c' . assert (pts_to_serialized (L.tot_serialize_nlist (p.count h + (SZ.v n - 1)) (serialize_recursive s)) pc #pm c');
-        pts_to_serialized_length _ pc;
+        pts_to_serialized_length
+          (L.tot_serialize_nlist (p.count h + (SZ.v n - 1)) (serialize_recursive s))
+          pc;
         serialize_recursive_bound_correct s (p.count h + (SZ.v n - 1)) c';
         let count = f ph (S.len pc);
-        admit ()
+        stick_elim_partial_l _ _ _;
+        stick_trans
+          _ _
+          (pts_to_serialized (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s)) input #pm v);
+        stick_trans
+          _ _
+          (pts_to_serialized (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s)) input #pm v);
+        pn := SZ.add (SZ.sub n 1sz) count;
+        ppi := pc;
       }}
     }
   };
