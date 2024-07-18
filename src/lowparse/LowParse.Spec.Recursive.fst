@@ -88,28 +88,6 @@ let parse_recursive_eq
     parse_recursive_step_ext p (c - 1) input'
   )
 
-let tot_parse_nlist_sum
-  (#k: parser_kind)
-  (#t: Type)
-  (p: tot_parser k t)
-  (n1 n2: nat)
-  (b: bytes)
-: Lemma
-  (ensures (parse (tot_parse_nlist (n1 + n2) p) b ==
-    begin match parse (tot_parse_nlist n1 p) b with
-    | None -> None
-    | Some (l1, consumed1) ->
-      let b2 = Seq.slice b consumed1 (Seq.length b) in
-      match parse (tot_parse_nlist n2 p) b2 with
-      | None -> None
-      | Some (l2, consumed2) ->
-        List.Tot.append_length l1 l2;
-        Some (l1 `List.Tot.append` l2, consumed1 + consumed2)
-    end
-  ))
-= Classical.forall_intro_2 (fun n -> tot_parse_nlist_parse_nlist n p);
-  parse_nlist_sum #k #t p n1 n2 b
-
 #push-options "--z3rlimit 32"
 
 #restart-solver
