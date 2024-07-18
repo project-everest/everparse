@@ -1,0 +1,74 @@
+module CBOR.Pulse.Raw.Type
+open CBOR.Spec.Raw.Base
+open Pulse.Lib.Pervasives
+open Pulse.Lib.Slice
+
+module SZ = FStar.SizeT
+module U8 = FStar.UInt8
+module U64 = FStar.UInt64
+module A = Pulse.Lib.Array
+
+noeq
+type cbor_serialized = {
+  cbor_serialized_header: raw_uint64;
+  cbor_serialized_payload: slice U8.t;
+  cbor_serialized_perm: perm;
+}
+
+// not reusing raw_uint64, for packing purposes
+noeq
+type cbor_int = {
+  cbor_int_type: major_type_uint64_or_neg_int64;
+  cbor_int_size: integer_size;
+  cbor_int_value: (value: U64.t { raw_uint64_size_prop cbor_int_size value });
+}
+
+// not reusing raw_uint64, for packing purposes
+noeq
+type cbor_string = {
+  cbor_string_type: major_type_byte_string_or_text_string;
+  cbor_string_size: integer_size;
+  cbor_string_ptr: (ptr: slice U8.t {
+    let len = SZ.v (len ptr) in
+    FStar.UInt.fits len 64 /\
+    raw_uint64_size_prop cbor_string_size (U64.uint_to_t len)
+  }) ;
+  cbor_string_perm: perm;
+}
+
+noeq
+type cbor_tagged = {
+  cbor_tagged_tag: raw_uint64;
+  cbor_tagged_ptr: ref cbor_raw;
+  cbor_tagged_perm: perm;
+}
+
+and cbor_array = {
+  cbor_array_length: raw_uint64;
+  cbor_array_ptr: (ar: A.array cbor_raw { A.length ar == U64.v cbor_array_length.value });
+  cbor_array_perm: perm;
+}
+
+and cbor_map_entry = {
+  cbor_map_entry_key: cbor_raw;
+  cbor_map_entry_value: cbor_raw;
+}
+
+and cbor_map = {
+  cbor_map_length: raw_uint64;
+  cbor_map_ptr: (ar: A.array cbor_map_entry { A.length ar == U64.v cbor_map_length.value });
+  cbor_map_perm: perm;
+}
+
+and cbor_raw =
+| CBOR_Case_Int: v: cbor_int -> cbor_raw
+| CBOR_Case_Simple: v: simple_value -> cbor_raw
+| CBOR_Case_String: v: cbor_string -> cbor_raw
+| CBOR_Case_Tagged: v: cbor_tagged -> cbor_raw
+| CBOR_Case_Array: v: cbor_array -> cbor_raw
+| CBOR_Case_Map: v: cbor_map -> cbor_raw
+| CBOR_Case_Serialized_Tagged: v: cbor_serialized -> cbor_raw
+| CBOR_Case_Serialized_Array: v: cbor_serialized -> cbor_raw
+| CBOR_Case_Serialized_Map: v: cbor_serialized -> cbor_raw
+
+let perm_mul (p1 p2: perm) : Tot perm = p1 *. p2
