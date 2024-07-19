@@ -122,24 +122,73 @@ let rec cbor_match
 
 ```pulse
 ghost
-fn cbor_match_trade_int_intro
+fn cbor_match_int_intro_trade_aux
   (q: slprop)
+  (res: cbor_int)
   (v: raw_data_item)
-  (res: cbor_raw)
   requires
-    q ** pure (CBOR_Case_Int? res)
+    q
   ensures
-    trade (cbor_match 1.0R res v) q
+    trade (cbor_match_int res v) q
 { 
   ghost
   fn aux (_: unit)
-     requires q ** cbor_match 1.0R res v
+     requires q ** cbor_match_int res v
      ensures q
   {
-    unfold (cbor_match 1.0R (CBOR_Case_Int (CBOR_Case_Int?.v res)) v);
-    unfold (cbor_match_int (CBOR_Case_Int?.v res) v)
+    unfold (cbor_match_int res v)
   };
   intro_trade _ _ _ aux
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_match_int_intro_aux
+  (typ: major_type_uint64_or_neg_int64)
+  (i: raw_uint64)
+  requires emp
+  returns res: cbor_int
+  ensures cbor_match_int res (Int64 typ i)
+{
+  let res = { cbor_int_type = typ; cbor_int_size = i.size; cbor_int_value = i.value };
+  fold (cbor_match_int res (Int64 typ i));
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_match_int_intro
+  (typ: major_type_uint64_or_neg_int64)
+  (i: raw_uint64)
+  requires emp
+  returns res: cbor_raw
+  ensures cbor_match 1.0R res (Int64 typ i)
+{
+  let resi = cbor_match_int_intro_aux typ i;
+  let res = CBOR_Case_Int resi;
+  fold (cbor_match 1.0R res (Int64 typ i));
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_match_int_intro_trade
+  (q: slprop)
+  (typ: major_type_uint64_or_neg_int64)
+  (i: raw_uint64)
+  requires q
+  returns res: cbor_raw
+  ensures cbor_match 1.0R res (Int64 typ i) ** trade (cbor_match 1.0R res (Int64 typ i)) q
+{
+  let resi = cbor_match_int_intro_aux typ i;
+  cbor_match_int_intro_trade_aux q resi (Int64 typ i);
+  let res = CBOR_Case_Int resi;
+  Trade.rewrite_with_trade (cbor_match_int resi (Int64 typ i)) (cbor_match 1.0R res (Int64 typ i));
+  Trade.trans _ _ q;
+  res
 }
 ```
 

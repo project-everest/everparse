@@ -28,12 +28,7 @@ fn cbor_read
   if (typ = cbor_major_type_uint64) {
     elim_trade _ _;
     let i = get_int64_value v h;
-    let resi = { cbor_int_type = typ; cbor_int_size = i.size; cbor_int_value = i.value };
-    fold (cbor_match_int resi v);
-    let res = CBOR_Case_Int resi;
-    fold (cbor_match 1.0R res v);
-    cbor_match_trade_int_intro (pts_to_serialized serialize_raw_data_item input #pm v) v res;
-    res
+    cbor_match_int_intro_trade (pts_to_serialized serialize_raw_data_item input #pm v) typ i
   }
   else if (typ = cbor_major_type_text_string || typ = cbor_major_type_byte_string) {
     let i = get_string_length v h;
