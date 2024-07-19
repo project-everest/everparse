@@ -1,10 +1,5 @@
-module CBOR.Pulse.Raw.Serialized
+module CBOR.Pulse.Raw.Serialized.Base
 friend CBOR.Pulse.Raw.Match.Serialized
-
-open LowParse.Pulse.Util
-open CBOR.Spec.Raw.Format
-open CBOR.Pulse.Raw.Format
-open LowParse.Pulse.Combinators
 
 let dummy_initial_byte : initial_byte = { major_type = cbor_major_type_simple_value; additional_info = 0uy }
 
