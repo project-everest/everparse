@@ -484,7 +484,7 @@ fn impl_nlist_forall_pred_recursive
   let mut pn = n0;
   let mut pres = true;
   let mut ppi = input;
-  Trade.refl emp_inames (pts_to_serialized (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s)) input #pm v);
+  Trade.refl (pts_to_serialized (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s)) input #pm v);
   while (
     let res = !pres;
     let n = !pn;
