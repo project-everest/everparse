@@ -1,203 +1,178 @@
 module LowParse.Pulse.Util
 include Pulse.Lib.Pervasives
-include Pulse.Lib.Stick
+open Pulse.Lib.Trade
 
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
+module T = FStar.Tactics
 
 ```pulse
 ghost
-fn stick_id
+fn trade_id
+  (#[T.exact (`emp_inames)] is:inames)
   (p: vprop)
 requires emp
-ensures (p @==> p)
+ensures (trade #is p p)
 {
   ghost fn aux (_: unit)
     requires emp ** p
     ensures p
+    opens is
   {
     ()
   };
-  intro_stick p p emp aux
+  intro_trade p p emp aux
 }
 ```
 
 ```pulse
 ghost
-fn stick_trans
-  (p1 p2 p3: vprop)
-  requires (p1 @==> p2) ** (p2 @==> p3)
-  ensures (p1 @==> p3)
-{
-  ghost
-  fn aux
-    (_foo: unit)
-  requires ((p1 @==> p2) ** (p2 @==> p3)) ** p1
-  ensures p3
-  {
-    elim_stick p1 p2;
-    elim_stick p2 p3
-  };
-  intro_stick p1 p3 ((p1 @==> p2) ** (p2 @==> p3)) aux
-}
-```
-
-```pulse
-ghost
-fn stick_reg_l
+fn trade_reg_l
+  (#is : inames)
   (p p1 p2: vprop)
-  requires (p1 @==> p2)
-  ensures ((p ** p1) @==> (p ** p2))
+  requires (trade #is p1 p2)
+  ensures (trade #is (p ** p1) (p ** p2))
 {
   ghost
   fn aux
     (_foo: unit)
-  requires ((p1 @==> p2) ** (p ** p1))
+  requires ((trade #is p1 p2) ** (p ** p1))
   ensures (p ** p2)
+  opens is
   {
-    elim_stick p1 p2
+    elim_trade #is p1 p2
   };
-  intro_stick (p ** p1) (p ** p2) (p1 @==> p2) aux
+  intro_trade (p ** p1) (p ** p2) (trade #is p1 p2) aux
 }
 ```
 
 ```pulse
 ghost
-fn stick_eq
+fn trade_eq
+  (#[T.exact (`emp_inames)] is:inames)
   (p1 p2: vprop)
   requires pure (p1 == p2) // ideally with `vprop_equivs ()`
-  ensures (p1 @==> p2)
+  ensures (trade #is p1 p2)
 {
   ghost
   fn aux
     (_foo: unit)
   requires pure (p1 == p2) ** p1
   ensures p2
+  opens is
   {
     rewrite p1 as p2
   };
-  intro_stick p1 p2 (pure (p1 == p2)) aux
+  intro_trade p1 p2 (pure (p1 == p2)) aux
 }
 ```
 
 ```pulse
 ghost
-fn stick_rewrite_l
-  (l1 l2 r: vprop)
-  requires (l1 @==> r) ** pure (l1 == l2)
-  ensures l2 @==> r
-{
-  rewrite (l1 @==> r) as (l2 @==> r)
-}
-```
-
-```pulse
-ghost
-fn stick_rewrite_r
-  (l r1 r2: vprop)
-  requires (l @==> r1) ** pure (r1 == r2)
-  ensures l @==> r2
-{
-  rewrite (l @==> r1) as (l @==> r2)
-}
-```
-
-```pulse
-ghost
-fn stick_reg_r
+fn trade_reg_r
+  (#is: inames)
   (p1 p2 p: vprop)
-  requires (p1 @==> p2)
-  ensures ((p1 ** p) @==> (p2 ** p))
+  requires (trade #is p1 p2)
+  ensures (trade #is (p1 ** p) (p2 ** p))
 {
-  stick_reg_l p p1 p2;
+  trade_reg_l p p1 p2;
   vprop_equivs ();
-  rewrite ((p ** p1) @==> (p ** p2))
-    as ((p1 ** p) @==> (p2 ** p))
+  rewrite (trade #is (p ** p1) (p ** p2))
+    as (trade #is (p1 ** p) (p2 ** p))
 }
 ```
 
 ```pulse
 ghost
-fn stick_weak_concl_l
+fn trade_weak_concl_l
+  (#is: inames)
   (p1 p2 p: vprop)
-  requires (p1 @==> p2) ** p
-  ensures (p1 @==> (p ** p2))
+  requires (trade #is p1 p2) ** p
+  ensures (trade #is p1 (p ** p2))
 {
   ghost
   fn aux
     (_foo: unit)
-    requires ((p1 @==> p2) ** p) ** p1
+    requires ((trade #is p1 p2) ** p) ** p1
     ensures p ** p2
+    opens is
   {
-    elim_stick p1 p2
+    elim_trade #is p1 p2
   };
-  intro_stick p1 (p ** p2) ((p1 @==> p2) ** p) aux
+  intro_trade p1 (p ** p2) ((trade #is p1 p2) ** p) aux
 }
 ```
 
 ```pulse
 ghost
-fn stick_weak_concl_r
+fn trade_weak_concl_r
+  (#is: inames)
   (p1 p2 p: vprop)
-  requires (p1 @==> p2) ** p
-  ensures (p1 @==> (p2 ** p))
+  requires (trade #is p1 p2) ** p
+  ensures (trade #is p1 (p2 ** p))
 {
-  stick_weak_concl_l p1 p2 p;
+  trade_weak_concl_l p1 p2 p;
   vprop_equivs ();
-  stick_eq (p ** p2) (p2 ** p);
-  stick_trans p1 _ _
+  trade_eq is (p ** p2) (p2 ** p); // FIXME: why is the `is`  argument explicit?
+  trade_compose p1 _ _
 }
 ```
 
 ```pulse
 ghost
-fn stick_prod
+fn trade_prod
+  (#is: inames)
   (l1 r1 l2 r2: vprop)
-  requires ((l1 @==> r1) ** (l2 @==> r2))
-  ensures ((l1 ** l2) @==> (r1 ** r2))
+  requires (trade #is l1 r1 ** trade #is l2 r2)
+  ensures (trade #is (l1 ** l2) (r1 ** r2))
 {
   ghost
   fn aux
     (_foo: unit)
-    requires ((l1 @==> r1) ** (l2 @==> r2)) ** (l1 ** l2)
+    requires ((trade #is l1 r1) ** (trade #is l2 r2)) ** (l1 ** l2)
     ensures r1 ** r2
+    opens is
   {
-    elim_stick l1 r1;
-    elim_stick l2 r2
+    elim_trade #is l1 r1;
+    elim_trade #is l2 r2
   };
-  intro_stick (l1 ** l2) (r1 ** r2) ((l1 @==> r1) ** (l2 @==> r2)) aux
+  intro_trade (l1 ** l2) (r1 ** r2) ((trade #is l1 r1) ** (trade #is l2 r2)) aux
 }
 ```
 
 ```pulse
 ghost
-fn stick_elim_partial_l
+fn trade_elim_partial_l
+  (#is: inames)
   (p p1 p2: vprop)
-  requires p ** ((p ** p1) @==> p2)
-  ensures p1 @==> p2
+  requires p ** (trade #is (p ** p1) p2)
+  ensures trade #is p1 p2
 {
   ghost
   fn aux
     (_foo: unit)
-  requires (p ** ((p ** p1) @==> p2)) ** p1
+  requires (p ** (trade #is (p ** p1) p2)) ** p1
   ensures p2
+  opens is
   {
-    elim_stick (p ** p1) p2
+    elim_trade #is (p ** p1) p2
   };
-  intro_stick p1 p2 (p ** ((p ** p1) @==> p2)) aux
+  intro_trade p1 p2 (p ** (trade #is (p ** p1) p2)) aux
 }
 ```
 
 ```pulse
 ghost
-fn stick_elim_partial_r
+fn trade_elim_partial_r
+  (#is: inames)
   (p1 p p2: vprop)
-  requires ((p1 ** p) @==> p2) ** p
-  ensures p1 @==> p2
+  requires (trade #is (p1 ** p) p2) ** p
+  ensures trade #is p1 p2
 {
   vprop_equivs ();
-  stick_rewrite_l (p1 ** p) (p ** p1) p2;
-  stick_elim_partial_l p p1 p2
+  rewrite (trade #is (p1 ** p) p2)
+    as (trade #is (p ** p1) p2);
+  trade_elim_partial_l p p1 p2
 }
 ```
 
@@ -256,7 +231,7 @@ let slice_append_split_stick_post'
 =
             S.pts_to s1 #p v1 **
             S.pts_to s2 #p v2 **
-            ((S.pts_to s1 #p v1 ** S.pts_to s2 #p v2) @==> S.pts_to s #p (v1 `Seq.append` v2))
+            (trade (S.pts_to s1 #p v1 ** S.pts_to s2 #p v2) (S.pts_to s #p (v1 `Seq.append` v2)))
 
 let slice_append_split_stick_post
     (#t: Type) (s: S.slice t) (p: perm) (v1 v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
@@ -289,7 +264,7 @@ fn slice_append_split_stick (#t: Type) (mutb: bool) (input: S.slice t) (#p: perm
     S.SlicePair input1 input2 -> {
       unfold (slice_append_split_post input p v1 v2 i res);
       unfold (slice_append_split_post' input p v1 v2 i input1 input2);
-      intro_stick _ _ _ (slice_append_split_stick_aux input p v1 v2 i input1 input2);
+      intro_trade _ _ _ (slice_append_split_stick_aux input p v1 v2 i input1 input2);
       fold (slice_append_split_stick_post' input p v1 v2 i input1 input2);
       fold (slice_append_split_stick_post input p v1 v2 i (S.SlicePair input1 input2));
       (S.SlicePair input1 input2)
@@ -306,7 +281,7 @@ let slice_split_stick_post'
 = exists* v1 v2 .
             S.pts_to s1 #p v1 **
             S.pts_to s2 #p v2 **
-            ((S.pts_to s1 #p v1 ** S.pts_to s2 #p v2) @==> S.pts_to s #p v) **
+            (trade (S.pts_to s1 #p v1 ** S.pts_to s2 #p v2) (S.pts_to s #p v)) **
             pure (
                 SZ.v i <= Seq.length v /\
                 (v1, v2) == Seq.split v (SZ.v i)
@@ -345,7 +320,7 @@ fn slice_split_stick (#t: Type) (mutb: bool) (s: S.slice t) (#p: perm) (#v: Ghos
     unfold (S.split_post s p v i res);
     unfold (S.split_post' s p v i s1 s2);
     with v1 v2 . assert (S.pts_to s1 #p v1 ** S.pts_to s2 #p v2);
-    intro_stick _ _ _ (slice_split_stick_aux s p v i s1 s2 v1 v2 ());
+    intro_trade _ _ _ (slice_split_stick_aux s p v i s1 s2 v1 v2 ());
     fold (slice_split_stick_post' s p v i s1 s2);
     fold (slice_split_stick_post s p v i (S.SlicePair s1 s2));
     (S.SlicePair s1 s2)
@@ -355,10 +330,11 @@ fn slice_split_stick (#t: Type) (mutb: bool) (s: S.slice t) (#p: perm) (#v: Ghos
 
 ```pulse
 ghost
-fn rewrite_with_stick
+fn rewrite_with_trade
+  (#[T.exact (`emp_inames)] is:inames)
   (p1 p2: vprop)
   requires p1 ** pure (p1 == p2)
-  ensures p2 ** (p2 @==> p1)
+  ensures p2 ** (trade #is p2 p1)
 {
   rewrite p1 as p2;
   ghost
@@ -366,9 +342,10 @@ fn rewrite_with_stick
     (_: unit)
     requires emp ** p2
     ensures p1
+    opens is
   {
     rewrite p2 as p1
   };
-  intro_stick _ _ _ aux
+  intro_trade _ _ _ aux
 }
 ```
