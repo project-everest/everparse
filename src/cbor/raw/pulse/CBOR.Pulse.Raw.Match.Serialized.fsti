@@ -11,16 +11,16 @@ val cbor_match_serialized_payload_array
   (c: cbor_serialized)
   (p: perm)
   (r: list raw_data_item)
-: Tot vprop
+: Tot slprop
 
 val cbor_match_serialized_payload_map
   (c: cbor_serialized)
   (p: perm)
   (r: list (raw_data_item & raw_data_item))
-: Tot vprop
+: Tot slprop
 
 val cbor_match_serialized_payload_tagged
   (c: cbor_serialized)
   (p: perm)
   (r: raw_data_item)
-: Tot vprop
+: Tot slprop
