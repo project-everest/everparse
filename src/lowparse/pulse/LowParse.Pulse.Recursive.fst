@@ -108,7 +108,7 @@ fn validate_nlist_recursive
         pres := false;
       } else {
         let off1 = !poffset;
-        let input1 = peek_stick_gen s.serialize_header input off off1;
+        let input1 = peek_trade_gen s.serialize_header input off off1;
         parser_kind_prop_equiv p.parse_header_kind p.parse_header;
         with gv . assert (pts_to_serialized s.serialize_header input1 #pm gv);
         parse_nlist_recursive_bound_correct p (p.count gv + (SZ.v n - 1)) (Seq.slice v (SZ.v off1) (Seq.length v));
@@ -208,7 +208,7 @@ fn jump_nlist_recursive
     let off = !poffset;
     let off1 = w input off;
     poffset := off1;
-    let input1 = peek_stick_gen s.serialize_header input off off1;
+    let input1 = peek_trade_gen s.serialize_header input off off1;
     with gv . assert (pts_to_serialized s.serialize_header input1 #pm gv);
     parse_nlist_recursive_bound_correct p (p.count gv + (SZ.v gn - 1)) (Seq.slice v (SZ.v off1) (Seq.length v));
     let n = !pn;
@@ -511,7 +511,7 @@ fn impl_nlist_forall_pred_recursive
     if not res {
       pres := false
     } else {
-      pts_to_serialized_ext_stick
+      pts_to_serialized_ext_trade
         (L.tot_serialize_nlist (SZ.v n) (serialize_recursive s))
         (serialize_nlist_recursive_cons s (SZ.v n))
         pi;
@@ -519,7 +519,7 @@ fn impl_nlist_forall_pred_recursive
         _
         (pts_to_serialized (L.tot_serialize_nlist (SZ.v n) (serialize_recursive s)) pi #pm vi)
         _;
-      C.pts_to_serialized_synth_l2r_stick
+      C.pts_to_serialized_synth_l2r_trade
         (C.tot_serialize_dtuple2
           s.serialize_header
           (serialize_nlist_recursive_cons_payload s (SZ.v n))
@@ -552,13 +552,13 @@ fn impl_nlist_forall_pred_recursive
         with h c . assert (pts_to_serialized s.serialize_header ph #pm h ** pts_to_serialized (serialize_nlist_recursive_cons_payload s (SZ.v n) h) pc #pm c);
         List.Tot.for_all_append pr.pred (fst c) (snd c);
         synth_nlist_append_recip_inverse p.t (p.count h) (SZ.v n - 1); // FIXME: WHY WHY WHY does this pattern not trigger?
-        C.pts_to_serialized_synth_stick
+        C.pts_to_serialized_synth_trade
           (serialize_nlist_recursive_cons_payload s (SZ.v n) h)
           (synth_nlist_append p.t (p.count h) (SZ.v n - 1))
           (synth_nlist_append_recip p.t (p.count h) (SZ.v n - 1))
           pc;
         Classical.forall_intro (parse_recursive_cons_payload_eq_nlist p (SZ.v n) h);
-        C.pts_to_serialized_ext_stick
+        C.pts_to_serialized_ext_trade
           (L.tot_serialize_synth
             _
             (synth_nlist_append p.t (p.count h) (SZ.v n - 1))
