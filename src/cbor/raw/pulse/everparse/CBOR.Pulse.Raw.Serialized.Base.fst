@@ -10,6 +10,41 @@ let dummy_long_argument : long_argument dummy_initial_byte = LongArgumentOther d
 let dummy_header : header = (| dummy_initial_byte, dummy_long_argument |)
 
 ```pulse
+ghost
+fn cbor_match_serialized_tagged_intro_aux
+  (tag: raw_uint64)
+  (pc: S.slice byte)
+  (#v: raw_data_item)
+  (#pm: perm)
+  (res: cbor_serialized)
+  (r: raw_data_item { Tagged? r })
+  requires
+    pts_to_serialized serialize_raw_data_item pc #pm v ** pure (
+      res.cbor_serialized_header == tag /\
+      res.cbor_serialized_payload == pc /\
+      res.cbor_serialized_perm == pm /\
+      r == Tagged tag v
+    )
+  ensures
+    cbor_match_serialized_tagged res 1.0R r **
+    trade
+      (cbor_match_serialized_tagged res 1.0R r)
+      (pts_to_serialized serialize_raw_data_item pc #pm v)
+{
+  fold (cbor_match_serialized_payload_tagged res 1.0R v);
+  fold (cbor_match_serialized_tagged res 1.0R r);
+  ghost fn aux (_: unit)
+    requires emp ** cbor_match_serialized_tagged res 1.0R r
+    ensures pts_to_serialized serialize_raw_data_item pc #pm v
+  {
+    unfold (cbor_match_serialized_tagged res 1.0R r);
+    unfold (cbor_match_serialized_payload_tagged res 1.0R v)
+  };
+  intro_trade _ _ _ aux
+}
+```
+
+```pulse
 fn cbor_read
   (input: S.slice byte)
   (#pm: perm)
@@ -39,7 +74,22 @@ fn cbor_read
     res
   }
   else if (typ = cbor_major_type_tagged) {
-    admit ()
+    let tag = get_tagged_tag v h;
+    get_tagged_payload pc v;
+    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    let rest = {
+      cbor_serialized_header = tag;
+      cbor_serialized_payload = pc;
+      cbor_serialized_perm = pm;
+    };
+    cbor_match_serialized_tagged_intro_aux tag pc rest v;
+    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    let res = CBOR_Case_Serialized_Tagged rest;
+    Trade.rewrite_with_trade
+      (cbor_match_serialized_tagged rest 1.0R v)
+      (cbor_match 1.0R res v);
+    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    res
   }
   else if (typ = cbor_major_type_array) {
     admit ()
