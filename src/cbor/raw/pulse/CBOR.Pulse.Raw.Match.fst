@@ -11,6 +11,7 @@ module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
+module Trade = Pulse.Lib.Trade.Util
 
 let cbor_match_int
   (c: cbor_int)
@@ -144,7 +145,7 @@ fn cbor_match_trade_int_intro
 
 ```pulse
 ghost
-fn cbor_match_string_intro
+fn cbor_match_string_intro_aux
   (input: S.slice U8.t)
   (#pm: perm)
   (#v: Seq.seq U8.t)
@@ -169,5 +170,39 @@ fn cbor_match_string_intro
     unfold (cbor_match_string c 1.0R r)
   };
   intro_trade _ _ _ aux
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_match_string_intro
+  (typ: major_type_byte_string_or_text_string)
+  (len: raw_uint64)
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  requires
+    S.pts_to input #pm v ** pure (
+      Seq.length v == U64.v len.value
+    )
+  returns c: cbor_raw
+  ensures exists* r .
+    cbor_match 1.0R c r **
+    trade (cbor_match 1.0R c r) (S.pts_to input #pm v) **
+    pure (
+      Seq.length v == U64.v len.value /\
+      r == String typ len (Ghost.reveal v)
+    )
+{
+  S.pts_to_len input;
+  let ress = { cbor_string_type = typ; cbor_string_size = len.size; cbor_string_ptr = input; cbor_string_perm = pm };
+  let r : Ghost.erased raw_data_item = Ghost.hide (String typ len (Ghost.reveal v));
+  cbor_match_string_intro_aux input ress r;
+  let res = CBOR_Case_String ress;
+  Trade.rewrite_with_trade
+    (cbor_match_string ress 1.0R r)
+    (cbor_match 1.0R res r);
+  Trade.trans _ _ (S.pts_to input #pm v);
+  res
 }
 ```

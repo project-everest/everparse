@@ -39,15 +39,7 @@ fn cbor_read
     let i = get_string_length v h;
     get_string_payload pc v;
     Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
-    S.pts_to_len pc;
-    with v' . assert (S.pts_to pc #pm v');
-    let ress = { cbor_string_type = typ; cbor_string_size = i.size; cbor_string_ptr = pc; cbor_string_perm = pm };
-    cbor_match_string_intro pc ress v;
-    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
-    let res = CBOR_Case_String ress;
-    Trade.rewrite_with_trade
-      (cbor_match_string ress 1.0R v)
-      (cbor_match 1.0R res v);
+    let res = cbor_match_string_intro typ i pc;
     Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
     res
   }
