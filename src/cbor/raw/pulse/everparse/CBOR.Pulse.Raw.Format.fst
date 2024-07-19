@@ -928,11 +928,11 @@ fn get_header_and_contents
     pure (synth_raw_data_item_recip v == (| h, c |))
 {
   Classical.forall_intro parse_raw_data_item_eq;
-  pts_to_serialized_ext_stick
+  pts_to_serialized_ext_trade
     serialize_raw_data_item
     serialize_raw_data_item_aux
     input;
-  pts_to_serialized_synth_l2r_stick
+  pts_to_serialized_synth_l2r_trade
     (tot_serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item
     synth_raw_data_item_recip
@@ -988,7 +988,7 @@ fn get_string_payload
     trade (S.pts_to input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (String? v /\ v' == String?.v v)
 {
-  pts_to_serialized_ext_stick
+  pts_to_serialized_ext_trade
     (serialize_content h)
     (LowParse.Spec.SeqBytes.tot_serialize_lseq_bytes (U64.v (String?.len v).value))
     input;
@@ -1026,7 +1026,7 @@ fn get_tagged_payload
     trade (pts_to_serialized serialize_raw_data_item input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (Tagged? v /\ v' == Tagged?.v v)
 {
-  pts_to_serialized_ext_stick
+  pts_to_serialized_ext_trade
     (serialize_content h)
     serialize_raw_data_item
     input
@@ -1071,7 +1071,7 @@ fn get_array_payload
     trade (pts_to_serialized (L.tot_serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (v' == Array?.v v)
 {
-  pts_to_serialized_ext_stick
+  pts_to_serialized_ext_trade
     (serialize_content h)
     (L.tot_serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item)
     input
@@ -1103,7 +1103,7 @@ fn get_map_payload
     trade (pts_to_serialized (L.tot_serialize_nlist (U64.v (Map?.len v).value) (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (v' == Map?.v v)
 {
-  pts_to_serialized_ext_stick
+  pts_to_serialized_ext_trade
     (serialize_content h)
     (L.tot_serialize_nlist (U64.v (Map?.len v).value) (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
     input

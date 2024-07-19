@@ -90,14 +90,14 @@ fn cbor_read
   else if (typ = cbor_major_type_text_string || typ = cbor_major_type_byte_string) {
     let i = get_string_length v h;
     get_string_payload pc v;
-    stick_trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    trade_trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
     S.pts_to_len pc;
     with v' . assert (S.pts_to pc #pm v');
     let res = CBOR_Case_String { cbor_string_type = typ; cbor_string_size = i.size; cbor_string_ptr = pc; cbor_string_perm = pm };
-    rewrite_with_stick
+    rewrite_with_trade
       (S.pts_to pc #pm v')
       (cbor_match 1.0R res v);
-    stick_trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    trade_trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
   }
 *)
   else {

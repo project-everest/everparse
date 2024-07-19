@@ -117,7 +117,7 @@ fn cbor_parse
     ))
 {
   cbor_parse_aux len v;
-  let input1 = peek_stick_gen serialize_raw_data_item input 0sz len;
+  let input1 = peek_trade_gen serialize_raw_data_item input 0sz len;
   let res = CBOR.Pulse.Raw.Serialized.Base.cbor_read input1;
   Trade.trans _ _ (pts_to input #pm v);
   res
