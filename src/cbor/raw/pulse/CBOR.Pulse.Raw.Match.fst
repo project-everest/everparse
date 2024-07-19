@@ -194,6 +194,61 @@ fn cbor_match_int_intro_trade
 
 ```pulse
 ghost
+fn cbor_match_simple_intro_trade_aux
+  (q: slprop)
+  (res: simple_value)
+  (v: raw_data_item)
+  requires
+    q
+  ensures
+    trade (cbor_match_simple res v) q
+{ 
+  ghost
+  fn aux (_: unit)
+     requires q ** cbor_match_simple res v
+     ensures q
+  {
+    unfold (cbor_match_simple res v)
+  };
+  intro_trade _ _ _ aux
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_match_simple_intro
+  (i: simple_value)
+  requires emp
+  returns res: cbor_raw
+  ensures cbor_match 1.0R res (Simple i)
+{
+  fold (cbor_match_simple i (Simple i));
+  let res = CBOR_Case_Simple i;
+  fold (cbor_match 1.0R res (Simple i));
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_match_simple_intro_trade
+  (q: slprop)
+  (i: simple_value)
+  requires q
+  returns res: cbor_raw
+  ensures cbor_match 1.0R res (Simple i) ** trade (cbor_match 1.0R res (Simple i)) q
+{
+  cbor_match_simple_intro_trade_aux q i (Simple i);
+  fold (cbor_match_simple i (Simple i));
+  let res = CBOR_Case_Simple i;
+  Trade.rewrite_with_trade (cbor_match_simple i (Simple i)) (cbor_match 1.0R res (Simple i));
+  Trade.trans _ _ q;
+  res
+}
+```
+
+```pulse
+ghost
 fn cbor_match_string_intro_aux
   (input: S.slice U8.t)
   (#pm: perm)
