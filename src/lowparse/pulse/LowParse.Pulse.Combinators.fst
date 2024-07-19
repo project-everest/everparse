@@ -656,7 +656,7 @@ let split_dtuple2_post'
   (pm: perm)
   (v: Ghost.erased (dtuple2 t1 t2))
   (left right: slice byte)
-: Tot vprop
+: Tot slprop
 = pts_to_serialized s1 left #pm (dfst v) **
   pts_to_serialized (s2 (dfst v)) right #pm (dsnd v) **
   trade (pts_to_serialized s1 left #pm (dfst v) **
@@ -676,7 +676,7 @@ let split_dtuple2_post
   (pm: perm)
   (v: Ghost.erased (dtuple2 t1 t2))
   (res: slice_pair byte)
-: Tot vprop
+: Tot slprop
 = let (SlicePair left right) = res in
   split_dtuple2_post' s1 s2 input pm v left right
 
@@ -794,7 +794,7 @@ let split_nondep_then_post'
   (pm: perm)
   (v: Ghost.erased (t1 & t2))
   (left right: slice byte)
-: Tot vprop
+: Tot slprop
 = pts_to_serialized s1 left #pm (fst v) **
   pts_to_serialized s2 right #pm (snd v) **
   trade (pts_to_serialized s1 left #pm (fst v) **
@@ -813,7 +813,7 @@ let split_nondep_then_post
   (pm: perm)
   (v: Ghost.erased (t1 & t2))
   (res: slice_pair byte)
-: Tot vprop
+: Tot slprop
 = let (SlicePair left right) = res in
   split_nondep_then_post' s1 s2 input pm v left right
 

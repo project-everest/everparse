@@ -16,7 +16,7 @@ let slice_append_split_post'
     (#t: Type) (s: S.slice t) (p: perm) (v1 v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
     (s1: S.slice t)
     (s2: S.slice t)
-: Tot vprop
+: Tot slprop
 =
             S.pts_to s1 #p v1 **
             S.pts_to s2 #p v2 **
@@ -25,7 +25,7 @@ let slice_append_split_post'
 let slice_append_split_post
     (#t: Type) (s: S.slice t) (p: perm) (v1 v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
     (res: S.slice_pair t)
-: Tot vprop
+: Tot slprop
 = let S.SlicePair s1 s2 = res in
   slice_append_split_post' s p v1 v2 i s1 s2
 
@@ -57,7 +57,7 @@ let slice_append_split_trade_post'
     (#t: Type) (s: S.slice t) (p: perm) (v1 v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
     (s1: S.slice t)
     (s2: S.slice t)
-: Tot vprop
+: Tot slprop
 =
             S.pts_to s1 #p v1 **
             S.pts_to s2 #p v2 **
@@ -66,7 +66,7 @@ let slice_append_split_trade_post'
 let slice_append_split_trade_post
     (#t: Type) (s: S.slice t) (p: perm) (v1 v2: Ghost.erased (Seq.seq t)) (i: SZ.t)
     (res: S.slice_pair t)
-: Tot vprop
+: Tot slprop
 = let S.SlicePair s1 s2 = res in
   slice_append_split_trade_post' s p v1 v2 i s1 s2
 
@@ -107,7 +107,7 @@ let slice_split_trade_post'
     (#t: Type) (s: S.slice t) (p: perm) (v: Ghost.erased (Seq.seq t)) (i: SZ.t)
     (s1: S.slice t)
     (s2: S.slice t)
-: Tot vprop
+: Tot slprop
 = exists* v1 v2 .
             S.pts_to s1 #p v1 **
             S.pts_to s2 #p v2 **
@@ -120,7 +120,7 @@ let slice_split_trade_post'
 let slice_split_trade_post
     (#t: Type) (s: S.slice t) (p: perm) (v: Ghost.erased (Seq.seq t)) (i: SZ.t)
     (res: S.slice_pair t)
-: Tot vprop
+: Tot slprop
 = let (S.SlicePair s1 s2) = res in
   slice_split_trade_post' s p v i s1 s2
 

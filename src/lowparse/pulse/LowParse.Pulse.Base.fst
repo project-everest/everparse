@@ -10,7 +10,7 @@ module Trade = Pulse.Lib.Trade.Util
 let parser = tot_parser
 let serializer #k = tot_serializer #k
 
-let pts_to_serialized (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (input: slice byte) (#[exact (`1.0R)] pm: perm) (v: t) : vprop =
+let pts_to_serialized (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (input: slice byte) (#[exact (`1.0R)] pm: perm) (v: t) : slprop =
   pts_to input #pm (bare_serialize s v)
 
 ```pulse
@@ -338,7 +338,7 @@ let peek_post'
   (v: bytes)
   (consumed: SZ.t)
   (left right: slice byte)
-: Tot vprop
+: Tot slprop
 = exists* v1 v2 . pts_to_serialized s left #pm v1 ** pts_to right #pm v2 ** is_split input pm consumed left right ** pure (
     bare_serialize s v1 `Seq.append` v2 == v /\
     Seq.length (bare_serialize s v1) == SZ.v consumed /\
@@ -352,7 +352,7 @@ let peek_post
   (v: bytes)
   (consumed: SZ.t)
   (res: slice_pair byte)
-: Tot vprop
+: Tot slprop
 = let SlicePair left right = res in
   peek_post' s input pm v consumed left right
 
@@ -393,7 +393,7 @@ let peek_trade_post'
   (v: bytes)
   (consumed: SZ.t)
   (left right: slice byte)
-: Tot vprop
+: Tot slprop
 = exists* v1 v2 . pts_to_serialized s left #pm v1 ** pts_to right #pm v2 ** trade (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) ** pure (
     bare_serialize s v1 `Seq.append` v2 == v /\
     Seq.length (bare_serialize s v1) == SZ.v consumed /\
@@ -407,7 +407,7 @@ let peek_trade_post
   (v: bytes)
   (consumed: SZ.t)
   (res: slice_pair byte)
-: Tot vprop
+: Tot slprop
 = let (SlicePair left right) = res in
   peek_trade_post' s input pm v consumed left right
 
