@@ -20,7 +20,7 @@ fn pts_to_serialized_intro_stick
   requires (pts_to input #pm v0 ** pure (v0 == bare_serialize s v))
   ensures (pts_to_serialized s input #pm v ** (trade (pts_to_serialized s input #pm v) (pts_to input #pm v0)))
 {
-  Trade.rewrite_with_trade emp_inames (pts_to input #pm v0) (pts_to_serialized s input #pm v)
+  Trade.rewrite_with_trade (pts_to input #pm v0) (pts_to_serialized s input #pm v)
 }
 ```
 
@@ -31,7 +31,7 @@ fn pts_to_serialized_elim_stick
   requires (pts_to_serialized s input #pm v)
   ensures (pts_to input #pm (bare_serialize s v) ** (trade (pts_to input #pm (bare_serialize s v)) (pts_to_serialized s input #pm v)))
 {
-  Trade.rewrite_with_trade emp_inames (pts_to_serialized s input #pm v) (pts_to input #pm (bare_serialize s v))
+  Trade.rewrite_with_trade (pts_to_serialized s input #pm v) (pts_to input #pm (bare_serialize s v))
 }
 ```
 

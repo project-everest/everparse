@@ -699,7 +699,7 @@ fn split_dtuple2
   returns res: slice_pair byte
   ensures split_dtuple2_post s1 s2 input pm v res
 {
-  Trade.rewrite_with_trade emp_inames
+  Trade.rewrite_with_trade
     (pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
     (pts_to input #pm (bare_serialize s1 (dfst v) `Seq.append` bare_serialize (s2 (dfst v)) (dsnd v)));
   parse_serialize_strong_prefix s1 (dfst v) (bare_serialize (s2 (dfst v)) (dsnd v));

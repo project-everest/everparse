@@ -71,7 +71,7 @@ ensures exists* v' .
 {
   synth_inverse_1 t (n - 1);
   synth_inverse_2 t (n - 1);
-  Trade.rewrite_with_trade emp_inames
+  Trade.rewrite_with_trade
     (pts_to_serialized (tot_serialize_nlist n s) input #pm v)
     (pts_to_serialized (tot_serialize_synth _ (synth_nlist (n - 1)) (tot_serialize_nondep_then s (tot_serialize_nlist' (n - 1) s)) (synth_nlist_recip (n - 1)) ()) input #pm v);
   pts_to_serialized_synth_l2r_stick
@@ -164,7 +164,7 @@ ensures exists* v .
   trade (pts_to_serialized s input' #pm v) (pts_to_serialized (tot_serialize_nlist (SZ.v n0) s) input #pm v0) **
   pure (v == List.Tot.index v0 (SZ.v i0))
 {
-  Trade.refl emp_inames (pts_to_serialized (tot_serialize_nlist (SZ.v n0) s) input #pm v0);
+  Trade.refl (pts_to_serialized (tot_serialize_nlist (SZ.v n0) s) input #pm v0);
   let mut pi = 0sz;
   let mut pres = input;
   while (
