@@ -45,6 +45,46 @@ fn cbor_match_serialized_tagged_intro_aux
 ```
 
 ```pulse
+ghost
+fn cbor_match_serialized_array_intro_aux
+  (len: raw_uint64)
+  (pc: S.slice byte)
+  (#n: nat)
+  (#v: LowParse.Spec.VCList.nlist n raw_data_item)
+  (#pm: perm)
+  (res: cbor_serialized)
+  (r: raw_data_item)
+  (sq: squash (Array? r))
+  requires
+    pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n serialize_raw_data_item) pc #pm v ** pure (
+      res.cbor_serialized_header == len /\
+      res.cbor_serialized_payload == pc /\
+      res.cbor_serialized_perm == pm /\
+      n == U64.v len.value /\
+      r == Array len v
+    )
+  ensures
+    cbor_match_serialized_array res 1.0R r **
+    trade
+      (cbor_match_serialized_array res 1.0R r)
+      (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n serialize_raw_data_item) pc #pm v)
+{
+  fold (cbor_match_serialized_payload_array res 1.0R v);
+  fold (cbor_match_serialized_array res 1.0R r);
+  ghost fn aux (_: unit)
+    requires emp ** cbor_match_serialized_array res 1.0R r
+    ensures (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n serialize_raw_data_item) pc #pm v)
+  {
+    unfold (cbor_match_serialized_array res 1.0R r);
+    unfold (cbor_match_serialized_payload_array res 1.0R (Array?.v r))
+  };
+  intro_trade _ _ _ aux
+}
+```
+
+#push-options "--print_implicits"
+
+```pulse
 fn cbor_read
   (input: S.slice byte)
   (#pm: perm)
@@ -92,7 +132,23 @@ fn cbor_read
     res
   }
   else if (typ = cbor_major_type_array) {
-    admit ()
+    let len = get_array_length v h;
+    get_array_payload pc v;
+    with n (v': LowParse.Spec.VCList.nlist n raw_data_item) . assert (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n serialize_raw_data_item) pc #pm v');
+    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    let resa = {
+      cbor_serialized_header = len;
+      cbor_serialized_payload = pc;
+      cbor_serialized_perm = pm;
+    };
+    cbor_match_serialized_array_intro_aux len pc #n #v' #pm resa (Ghost.reveal v) ();
+    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    let res = CBOR_Case_Serialized_Array resa;
+    Trade.rewrite_with_trade
+      (cbor_match_serialized_array resa 1.0R v)
+      (cbor_match 1.0R res v);
+    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    res
   }
   else if (typ = cbor_major_type_map) {
     admit ()
