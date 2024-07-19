@@ -82,7 +82,43 @@ fn cbor_match_serialized_array_intro_aux
 }
 ```
 
-#push-options "--print_implicits"
+```pulse
+ghost
+fn cbor_match_serialized_map_intro_aux
+  (len: raw_uint64)
+  (pc: S.slice byte)
+  (#n: nat)
+  (#v: LowParse.Spec.VCList.nlist n (raw_data_item & raw_data_item))
+  (#pm: perm)
+  (res: cbor_serialized)
+  (r: raw_data_item)
+  (sq: squash (Map? r))
+  requires
+    pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v ** pure (
+      res.cbor_serialized_header == len /\
+      res.cbor_serialized_payload == pc /\
+      res.cbor_serialized_perm == pm /\
+      n == U64.v len.value /\
+      r == Map len v
+    )
+  ensures
+    cbor_match_serialized_map res 1.0R r **
+    trade
+      (cbor_match_serialized_map res 1.0R r)
+      (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
+{
+  fold (cbor_match_serialized_payload_map res 1.0R v);
+  fold (cbor_match_serialized_map res 1.0R r);
+  ghost fn aux (_: unit)
+    requires emp ** cbor_match_serialized_map res 1.0R r
+    ensures (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
+  {
+    unfold (cbor_match_serialized_map res 1.0R r);
+    unfold (cbor_match_serialized_payload_map res 1.0R (Map?.v r))
+  };
+  intro_trade _ _ _ aux
+}
+```
 
 ```pulse
 fn cbor_read
@@ -151,7 +187,23 @@ fn cbor_read
     res
   }
   else if (typ = cbor_major_type_map) {
-    admit ()
+    let len = get_map_length v h;
+    get_map_payload pc v;
+    with n (v': LowParse.Spec.VCList.nlist n (raw_data_item & raw_data_item)) . assert (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v');
+    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    let resa = {
+      cbor_serialized_header = len;
+      cbor_serialized_payload = pc;
+      cbor_serialized_perm = pm;
+    };
+    cbor_match_serialized_map_intro_aux len pc #n #v' #pm resa (Ghost.reveal v) ();
+    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    let res = CBOR_Case_Serialized_Map resa;
+    Trade.rewrite_with_trade
+      (cbor_match_serialized_map resa 1.0R v)
+      (cbor_match 1.0R res v);
+    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    res
   }
   else {
     assert (pure (typ == cbor_major_type_simple_value));
