@@ -2,6 +2,7 @@ module CBOR.Pulse.Raw.Match
 include CBOR.Pulse.Raw.Match.Serialized
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
+open Pulse.Lib.Trade
 
 module PM = Pulse.Lib.SeqMatch
 module A = Pulse.Lib.Array
@@ -9,6 +10,7 @@ module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
 module U64 = FStar.UInt64
+module U8 = FStar.UInt8
 
 let cbor_match_int
   (c: cbor_int)
@@ -116,3 +118,56 @@ let rec cbor_match
   | CBOR_Case_Serialized_Map v, Map _ _ -> cbor_match_serialized_map v p r
   | CBOR_Case_Serialized_Tagged v, Tagged _ _ -> cbor_match_serialized_tagged v p r
   | _ -> pure False
+
+```pulse
+ghost
+fn cbor_match_trade_int_intro
+  (q: slprop)
+  (v: raw_data_item)
+  (res: cbor_raw)
+  requires
+    q ** pure (CBOR_Case_Int? res)
+  ensures
+    trade (cbor_match 1.0R res v) q
+{ 
+  ghost
+  fn aux (_: unit)
+     requires q ** cbor_match 1.0R res v
+     ensures q
+  {
+    unfold (cbor_match 1.0R (CBOR_Case_Int (CBOR_Case_Int?.v res)) v);
+    unfold (cbor_match_int (CBOR_Case_Int?.v res) v)
+  };
+  intro_trade _ _ _ aux
+}
+```
+
+```pulse
+ghost
+fn cbor_match_string_intro
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Seq.seq U8.t)
+  (c: cbor_string)
+  (r: raw_data_item)
+  requires
+    S.pts_to input #pm v ** pure (
+      input == c.cbor_string_ptr /\
+      pm == c.cbor_string_perm /\
+      Seq.length v == SZ.v (S.len c.cbor_string_ptr) /\
+      r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) }) v
+    )
+  ensures
+    cbor_match_string c 1.0R r **
+    trade (cbor_match_string c 1.0R r) (S.pts_to input #pm v)
+{
+  fold (cbor_match_string c 1.0R r);
+  ghost fn aux (_: unit)
+    requires emp ** cbor_match_string c 1.0R r
+    ensures S.pts_to input #pm v
+  {
+    unfold (cbor_match_string c 1.0R r)
+  };
+  intro_trade _ _ _ aux
+}
+```
