@@ -182,7 +182,7 @@ fn pts_to_serialized_synth_elim
 
 ```pulse
 ghost
-fn pts_to_serialized_synth_stick
+fn pts_to_serialized_synth_trade
   (#t #t': Type0)
   (#k: parser_kind)
   (#p: tot_parser k t)
@@ -252,7 +252,7 @@ fn pts_to_serialized_synth_r2l
 
 ```pulse
 ghost
-fn pts_to_serialized_synth_l2r_stick
+fn pts_to_serialized_synth_l2r_trade
   (#t #t': Type0)
   (#k: parser_kind)
   (#p: tot_parser k t)
@@ -280,7 +280,7 @@ fn pts_to_serialized_synth_l2r_stick
 
 ```pulse
 ghost
-fn pts_to_serialized_synth_l2r_stick'
+fn pts_to_serialized_synth_l2r_trade'
   (#t #t': Type0)
   (#k_: parser_kind)
   (#p_: tot_parser k_ t')
@@ -296,11 +296,11 @@ fn pts_to_serialized_synth_l2r_stick'
   requires pts_to_serialized s_ input #pm v ** pure (forall x . parse p_ x == parse (tot_parse_synth p f) x)
   ensures pts_to_serialized s input #pm (f' v) ** trade (pts_to_serialized s input #pm (f' v)) (pts_to_serialized s_ input #pm v)
 {
-  pts_to_serialized_ext_stick
+  pts_to_serialized_ext_trade
     s_
     (tot_serialize_synth p f s f' ())
     input;
-  pts_to_serialized_synth_l2r_stick
+  pts_to_serialized_synth_l2r_trade
     s f f' input;
   Trade.trans _ _ (pts_to_serialized s_ input #pm v)
 }
@@ -337,7 +337,7 @@ fn read_synth
   (t': Type0)
   (g: _)
 {
-  pts_to_serialized_synth_l2r_stick s1 f2 f1 input;
+  pts_to_serialized_synth_l2r_trade s1 f2 f1 input;
   let res = r input #pm #(f1 v) t' (read_synth_cont f2 f2' (f1 v) t' g);
   elim_trade _ _;
   res
@@ -704,14 +704,14 @@ fn split_dtuple2
     (pts_to input #pm (bare_serialize s1 (dfst v) `Seq.append` bare_serialize (s2 (dfst v)) (dsnd v)));
   parse_serialize_strong_prefix s1 (dfst v) (bare_serialize (s2 (dfst v)) (dsnd v));
   let i = j1 input 0sz;
-  let res = slice_append_split_stick false input i;
+  let res = slice_append_split_trade false input i;
   match res {
     SlicePair input1 input2 -> {
-      unfold (slice_append_split_stick_post input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i res);
-      unfold (slice_append_split_stick_post' input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i input1 input2);
+      unfold (slice_append_split_trade_post input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i res);
+      unfold (slice_append_split_trade_post' input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i input1 input2);
       Trade.trans (_ ** _) _ _;
-      pts_to_serialized_intro_stick s1 input1 (dfst v);
-      pts_to_serialized_intro_stick (s2 (dfst v)) input2 (dsnd v);
+      pts_to_serialized_intro_trade s1 input1 (dfst v);
+      pts_to_serialized_intro_trade (s2 (dfst v)) input2 (dsnd v);
       Trade.prod (pts_to_serialized s1 input1 #pm _) (pts_to input1 #pm _) (pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input2 #pm _);
       Trade.trans (pts_to_serialized s1 input1 #pm _ ** pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input1 #pm _ ** pts_to input2 #pm _) _;
       fold (split_dtuple2_post' s1 s2 input pm v input1 input2);
@@ -836,7 +836,7 @@ fn split_nondep_then
   ensures split_nondep_then_post s1 s2 input pm v res
 {
   Classical.forall_intro (nondep_then_eq_dtuple2 p1 p2);
-  pts_to_serialized_ext_stick
+  pts_to_serialized_ext_trade
     (tot_serialize_nondep_then s1 s2)
     (tot_serialize_synth
       (tot_parse_dtuple2 p1 (fun _ -> p2))
@@ -846,7 +846,7 @@ fn split_nondep_then
       ()
     )
     input;
-  pts_to_serialized_synth_l2r_stick
+  pts_to_serialized_synth_l2r_trade
     (tot_serialize_dtuple2 s1 (fun _ -> s2))
     pair_of_dtuple2
     dtuple2_of_pair

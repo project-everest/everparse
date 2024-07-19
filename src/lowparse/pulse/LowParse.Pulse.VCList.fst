@@ -74,7 +74,7 @@ ensures exists* v' .
   Trade.rewrite_with_trade
     (pts_to_serialized (tot_serialize_nlist n s) input #pm v)
     (pts_to_serialized (tot_serialize_synth _ (synth_nlist (n - 1)) (tot_serialize_nondep_then s (tot_serialize_nlist' (n - 1) s)) (synth_nlist_recip (n - 1)) ()) input #pm v);
-  pts_to_serialized_synth_l2r_stick
+  pts_to_serialized_synth_l2r_trade
     (tot_serialize_nondep_then s (tot_serialize_nlist' (n - 1) s))
     (synth_nlist (n - 1))
     (synth_nlist_recip (n - 1))
@@ -235,9 +235,9 @@ fn pts_to_serialized_nlist_1
       (pts_to_serialized s input #pm v) **
     pure ((v' <: list t) == [Ghost.reveal v])
 {
-  pts_to_serialized_synth_stick s synth_nlist_1 synth_nlist_1_recip input;
+  pts_to_serialized_synth_trade s synth_nlist_1 synth_nlist_1_recip input;
   Classical.forall_intro (tot_parse_nlist_1_eq p);
-  pts_to_serialized_ext_stick
+  pts_to_serialized_ext_trade
     (tot_serialize_synth p synth_nlist_1 s synth_nlist_1_recip ())
     (tot_serialize_nlist 1 s)
     input;
