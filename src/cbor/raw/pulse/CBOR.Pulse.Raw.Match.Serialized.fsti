@@ -24,17 +24,3 @@ val cbor_match_serialized_payload_tagged
   (p: perm)
   (r: raw_data_item)
 : Tot vprop
-
-(*
-val cbor_validate
-  (input: slice U8.t)
-  (#pm: perm)
-  (#v: Ghost.erased (Seq.seq U8.t))
-: stt SZ.t
-    (pts_to input #pm v)
-    (fun res -> pts_to input #pm v ** pure (
-      if SZ.v res = 0
-      then (~ (exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2))
-      else exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ SZ.v res == Seq.length (serialize_cbor v1)
-    ))
-*)
