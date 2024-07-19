@@ -24,5 +24,5 @@ val cbor_read
     pts_to_serialized serialize_raw_data_item input #pm v)
   (ensures fun res ->
       cbor_match 1.0R res v **
-      (cbor_match 1.0R res v @==> pts_to_serialized serialize_raw_data_item input #pm v)
+      trade (cbor_match 1.0R res v) (pts_to_serialized serialize_raw_data_item input #pm v)
   )

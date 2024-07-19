@@ -96,6 +96,8 @@ let cbor_parse_aux
     Classical.forall_intro_2 (fun v1 v2 -> Classical.move_requires (prf v1) v2);
     ()
 
+module Trade = Pulse.Lib.Trade.Util
+
 ```pulse
 fn cbor_parse
   (input: slice U8.t)
@@ -109,7 +111,7 @@ fn cbor_parse
   ensures
     (exists* v' .
       cbor_match 1.0R res v' **
-      (cbor_match 1.0R res v' @==> pts_to input #pm v) ** pure (
+      trade (cbor_match 1.0R res v') (pts_to input #pm v) ** pure (
         SZ.v len <= Seq.length v /\
         Seq.slice v 0 (SZ.v len) == serialize_cbor v'
     ))
@@ -117,7 +119,7 @@ fn cbor_parse
   cbor_parse_aux len v;
   let input1 = peek_stick_gen serialize_raw_data_item input 0sz len;
   let res = CBOR.Pulse.Raw.Serialized.Base.cbor_read input1;
-  LowParse.Pulse.Util.stick_trans _ _ (pts_to input #pm v);
+  Trade.trans _ _ (pts_to input #pm v);
   res
 }
 ```

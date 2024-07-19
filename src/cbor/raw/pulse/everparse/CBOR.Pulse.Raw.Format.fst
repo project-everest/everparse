@@ -6,6 +6,8 @@ open LowParse.Pulse.Int
 open LowParse.Pulse.BitSum
 open LowParse.Pulse.Recursive
 
+module Trade = Pulse.Lib.Trade.Util
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let read_initial_byte_t' : reader serialize_initial_byte_t =
@@ -774,7 +776,7 @@ fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (#rem: Ghost.erased SZ.t)
     (prem: R.ref SZ.t)
 {
-  rewrite_with_stick
+  Trade.rewrite_with_trade
     (pts_to_serialized serialize_raw_data_item_param.serialize_header a #pm va)
     (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
@@ -782,10 +784,10 @@ fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
     unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
     let h = read_header () input1;
-    elim_stick
+    elim_trade
       (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
       (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
-    elim_stick _ _;
+    elim_trade _ _;
     let typ = get_header_major_type h;
     if (typ = cbor_major_type_array) {
       let arg64 = get_header_argument_as_uint64 h;
@@ -825,7 +827,7 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (a: _)
     (bound: SZ.t)
 {
-  rewrite_with_stick
+  Trade.rewrite_with_trade
     (pts_to_serialized serialize_raw_data_item_param.serialize_header a #pm va)
     (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
@@ -833,10 +835,10 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
     unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
     let h = read_header () input1;
-    elim_stick
+    elim_trade
       (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
       (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
-    elim_stick _ _;
+    elim_trade _ _;
     let typ = get_header_major_type h;
     if (typ = cbor_major_type_array) {
       let arg64 = get_header_argument_as_uint64 h;
@@ -922,7 +924,7 @@ fn get_header_and_contents
   ensures exists* h c .
     pts_to outh h **
     pts_to_serialized (serialize_content h) outc #pm c **
-    (pts_to_serialized (serialize_content h) outc #pm c @==> pts_to_serialized serialize_raw_data_item input #pm v) **
+    trade (pts_to_serialized (serialize_content h) outc #pm c) (pts_to_serialized serialize_raw_data_item input #pm v) **
     pure (synth_raw_data_item_recip v == (| h, c |))
 {
   Classical.forall_intro parse_raw_data_item_eq;
@@ -935,15 +937,15 @@ fn get_header_and_contents
     synth_raw_data_item
     synth_raw_data_item_recip
     input;
-  stick_trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
   with v' . assert (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_content) input #pm v');
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
   match spl { S.SlicePair ph outc -> {
     unfold (split_dtuple2_post serialize_header serialize_content input pm v' spl);
     unfold (split_dtuple2_post' serialize_header serialize_content input pm v' ph outc);
-    stick_trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
     let h = read_header () ph;
-    stick_elim_partial_l _ _ _;
+    Trade.elim_hyp_l _ _ _;
     outh := h;
     outc
   }}
@@ -983,7 +985,7 @@ fn get_string_payload
   requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |) /\ String? v)
   ensures exists* v' .
     S.pts_to input #pm v' **
-    (S.pts_to input #pm v' @==> pts_to_serialized (serialize_content h) input #pm c) **
+    trade (S.pts_to input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (String? v /\ v' == String?.v v)
 {
   pts_to_serialized_ext_stick
@@ -992,10 +994,10 @@ fn get_string_payload
     input;
   with v1 . assert (pts_to_serialized (LowParse.Spec.SeqBytes.tot_serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1);
   let v2 : Ghost.erased bytes = Ghost.hide #bytes (Ghost.reveal #(Seq.lseq byte (U64.v (String?.len v).value)) v1);
-  rewrite_with_stick
+  Trade.rewrite_with_trade
     (pts_to_serialized (LowParse.Spec.SeqBytes.tot_serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1)
     (S.pts_to input #pm v2);
-  stick_trans _ _ (pts_to_serialized (serialize_content h) input #pm c)
+  Trade.trans _ _ (pts_to_serialized (serialize_content h) input #pm c)
 }
 ```
 
@@ -1021,7 +1023,7 @@ fn get_tagged_payload
   requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |) /\ Tagged? v)
   ensures exists* v' .
     pts_to_serialized serialize_raw_data_item input #pm v' **
-    (pts_to_serialized serialize_raw_data_item input #pm v' @==> pts_to_serialized (serialize_content h) input #pm c) **
+    trade (pts_to_serialized serialize_raw_data_item input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (Tagged? v /\ v' == Tagged?.v v)
 {
   pts_to_serialized_ext_stick
@@ -1066,7 +1068,7 @@ fn get_array_payload
   requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
   ensures exists* v' .
     pts_to_serialized (L.tot_serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v' **
-    (pts_to_serialized (L.tot_serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v' @==> pts_to_serialized (serialize_content h) input #pm c) **
+    trade (pts_to_serialized (L.tot_serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (v' == Array?.v v)
 {
   pts_to_serialized_ext_stick
@@ -1098,7 +1100,7 @@ fn get_map_payload
   requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
   ensures exists* v' .
     pts_to_serialized (L.tot_serialize_nlist (U64.v (Map?.len v).value) (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v' **
-    (pts_to_serialized (L.tot_serialize_nlist (U64.v (Map?.len v).value) (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v' @==> pts_to_serialized (serialize_content h) input #pm c) **
+    trade (pts_to_serialized (L.tot_serialize_nlist (U64.v (Map?.len v).value) (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (v' == Map?.v v)
 {
   pts_to_serialized_ext_stick

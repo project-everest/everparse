@@ -17,7 +17,7 @@ fn cbor_match_int_intro
   requires
     pts_to_serialized serialize_raw_data_item input #pm v ** pure (CBOR_Case_Int? res)
   ensures
-    (cbor_match 1.0R res v @==> pts_to_serialized serialize_raw_data_item input #pm v)  
+    trade (cbor_match 1.0R res v) (pts_to_serialized serialize_raw_data_item input #pm v)  
 { 
   ghost
   fn aux (_: unit)
@@ -27,7 +27,7 @@ fn cbor_match_int_intro
     unfold (cbor_match 1.0R (CBOR_Case_Int (CBOR_Case_Int?.v res)) v);
     unfold (cbor_match_int (CBOR_Case_Int?.v res) v)
   };
-  intro_stick _ _ _ aux
+  intro_trade _ _ _ aux
 }
 ```
 
@@ -47,7 +47,7 @@ fn cbor_match_string_intro
     )
   ensures
     cbor_match_string c 1.0R r **
-    (cbor_match_string c 1.0R r @==> S.pts_to input #pm v)
+    trade (cbor_match_string c 1.0R r) (S.pts_to input #pm v)
 {
   fold (cbor_match_string c 1.0R r);
   ghost fn aux (_: unit)
@@ -56,7 +56,7 @@ fn cbor_match_string_intro
   {
     unfold (cbor_match_string c 1.0R r)
   };
-  intro_stick _ _ _ aux
+  intro_trade _ _ _ aux
 }
 ```
 
@@ -70,14 +70,14 @@ fn cbor_read
   returns res: cbor_raw
   ensures
       cbor_match 1.0R res v **
-      (cbor_match 1.0R res v @==> pts_to_serialized serialize_raw_data_item input #pm v)
+      trade (cbor_match 1.0R res v) (pts_to_serialized serialize_raw_data_item input #pm v)
 {
   let mut ph = dummy_header;
   let pc = get_header_and_contents input ph;
   let h = !ph;
   let typ = ((get_header_initial_byte h).major_type);
   if (typ = cbor_major_type_uint64) {
-    elim_stick _ _;
+    elim_trade _ _;
     let i = get_int64_value v h;
     let resi = { cbor_int_type = typ; cbor_int_size = i.size; cbor_int_value = i.value };
     fold (cbor_match_int resi v);

@@ -2,11 +2,12 @@ module CBOR.Pulse.Raw.Parse
 include CBOR.Pulse.Raw.Match
 open CBOR.Spec.Raw.Order
 open Pulse.Lib.Pervasives
-open Pulse.Lib.Stick
+open Pulse.Lib.Trade
 open Pulse.Lib.Slice
 
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
+module Trade = Pulse.Lib.Trade.Util
 
 val cbor_validate
   (input: slice U8.t)
@@ -31,7 +32,7 @@ val cbor_parse
     ))
     (fun res -> exists* v' .
       cbor_match 1.0R res v' **
-      (cbor_match 1.0R res v' @==> pts_to input #pm v) ** pure (
+      trade (cbor_match 1.0R res v') (pts_to input #pm v) ** pure (
         SZ.v len <= Seq.length v /\
         Seq.slice v 0 (SZ.v len) == serialize_cbor v'
     ))
