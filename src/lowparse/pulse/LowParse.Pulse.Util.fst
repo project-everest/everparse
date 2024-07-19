@@ -1,6 +1,6 @@
 module LowParse.Pulse.Util
 include Pulse.Lib.Pervasives
-open Pulse.Lib.Trade
+include Pulse.Lib.Trade
 
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT

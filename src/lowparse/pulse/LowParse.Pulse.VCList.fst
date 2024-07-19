@@ -3,11 +3,11 @@ include LowParse.Spec.VCList
 include LowParse.Pulse.Combinators
 open FStar.Tactics.V2
 open LowParse.Pulse.Util
-open Pulse.Lib.Stick
 open Pulse.Lib.Slice
 
 module SZ = FStar.SizeT
 module R = Pulse.Lib.Reference
+module Trade = Pulse.Lib.Trade.Util
 
 inline_for_extraction
 ```pulse
@@ -64,14 +64,14 @@ requires
   pts_to_serialized (tot_serialize_nlist n s) input #pm v
 ensures exists* v' .
   pts_to_serialized (tot_serialize_nondep_then s (tot_serialize_nlist (n - 1) s)) input #pm v' **
-  (pts_to_serialized (tot_serialize_nondep_then s (tot_serialize_nlist (n - 1) s)) input #pm v' @==> pts_to_serialized (tot_serialize_nlist n s) input #pm v) **
+  trade (pts_to_serialized (tot_serialize_nondep_then s (tot_serialize_nlist (n - 1) s)) input #pm v') (pts_to_serialized (tot_serialize_nlist n s) input #pm v) **
   pure (
     v == (fst v' :: snd v')
   )
 {
   synth_inverse_1 t (n - 1);
   synth_inverse_2 t (n - 1);
-  rewrite_with_stick
+  Trade.rewrite_with_trade emp_inames
     (pts_to_serialized (tot_serialize_nlist n s) input #pm v)
     (pts_to_serialized (tot_serialize_synth _ (synth_nlist (n - 1)) (tot_serialize_nondep_then s (tot_serialize_nlist' (n - 1) s)) (synth_nlist_recip (n - 1)) ()) input #pm v);
   pts_to_serialized_synth_l2r_stick
@@ -79,7 +79,7 @@ ensures exists* v' .
     (synth_nlist (n - 1))
     (synth_nlist_recip (n - 1))
     input;
-  stick_trans (pts_to_serialized (tot_serialize_nondep_then s (tot_serialize_nlist (n - 1) s)) input #pm _) _ _
+  Trade.trans (pts_to_serialized (tot_serialize_nondep_then s (tot_serialize_nlist (n - 1) s)) input #pm _) _ _
 }
 ```
 
@@ -100,7 +100,7 @@ requires
 returns input' : slice byte
 ensures exists* v' .
   pts_to_serialized s input' #pm v' **
-  (pts_to_serialized s input' #pm v' @==> pts_to_serialized (tot_serialize_nlist n s) input #pm v) **
+  trade (pts_to_serialized s input' #pm v') (pts_to_serialized (tot_serialize_nlist n s) input #pm v) **
   pure (
     Cons? v /\
     v' == List.Tot.hd v
@@ -108,7 +108,7 @@ ensures exists* v' .
 {
   nlist_cons_as_nondep_then s n input;
   let res = nondep_then_fst s j (tot_serialize_nlist (n - 1) s) input;
-  stick_trans (pts_to_serialized s res #pm _) _ _;
+  Trade.trans (pts_to_serialized s res #pm _) _ _;
   res
 }
 ```
@@ -130,7 +130,7 @@ requires
 returns input' : slice byte
 ensures exists* v' .
   pts_to_serialized (tot_serialize_nlist (n - 1) s) input' #pm v' **
-  (pts_to_serialized (tot_serialize_nlist (n - 1) s) input' #pm v' @==> pts_to_serialized (tot_serialize_nlist n s) input #pm v) **
+  trade (pts_to_serialized (tot_serialize_nlist (n - 1) s) input' #pm v') (pts_to_serialized (tot_serialize_nlist n s) input #pm v) **
   pure (
     Cons? v /\
     v' == List.Tot.tl v
@@ -138,7 +138,7 @@ ensures exists* v' .
 {
   nlist_cons_as_nondep_then s n input;
   let res = nondep_then_snd s j (tot_serialize_nlist (n - 1) s) input;
-  stick_trans (pts_to_serialized (tot_serialize_nlist (n - 1) s) res #pm _) _ _;
+  Trade.trans (pts_to_serialized (tot_serialize_nlist (n - 1) s) res #pm _) _ _;
   res
 }
 ```
@@ -161,10 +161,10 @@ requires
 returns input' : slice byte
 ensures exists* v .
   pts_to_serialized s input' #pm v **
-  (pts_to_serialized s input' #pm v @==> pts_to_serialized (tot_serialize_nlist (SZ.v n0) s) input #pm v0) **
+  trade (pts_to_serialized s input' #pm v) (pts_to_serialized (tot_serialize_nlist (SZ.v n0) s) input #pm v0) **
   pure (v == List.Tot.index v0 (SZ.v i0))
 {
-  stick_id (pts_to_serialized (tot_serialize_nlist (SZ.v n0) s) input #pm v0);
+  Trade.refl emp_inames (pts_to_serialized (tot_serialize_nlist (SZ.v n0) s) input #pm v0);
   let mut pi = 0sz;
   let mut pres = input;
   while (
@@ -173,7 +173,7 @@ ensures exists* v .
   ) invariant b . exists* i res (n: nat) (v: nlist n t) . (
     R.pts_to pi i ** R.pts_to pres res **
     pts_to_serialized (tot_serialize_nlist n s) res #pm v **
-    (pts_to_serialized (tot_serialize_nlist n s) res #pm v @==> pts_to_serialized (tot_serialize_nlist (SZ.v n0) s) input #pm v0) **
+    trade (pts_to_serialized (tot_serialize_nlist n s) res #pm v) (pts_to_serialized (tot_serialize_nlist (SZ.v n0) s) input #pm v0) **
     pure (
       SZ.v i <= SZ.v i0 /\
       (b == (SZ.v i < SZ.v i0)) /\
@@ -185,14 +185,14 @@ ensures exists* v .
     let res2 = nlist_tl s j (SZ.v n0 - SZ.v i) res;
     pi := (SZ.add i 1sz);
     pres := res2;
-    stick_trans
+    Trade.trans
       (pts_to_serialized (tot_serialize_nlist (SZ.v n0 - SZ.v i - 1) s) res2 #pm _)
       _
       _
   };
   let res = !pres;
   let res2 = nlist_hd s j (SZ.v n0 - SZ.v i0) res;
-  stick_trans
+  Trade.trans
     (pts_to_serialized s res2 #pm _) _ _;
   res2
 }
@@ -231,8 +231,8 @@ fn pts_to_serialized_nlist_1
   (#v: Ghost.erased t)
   requires pts_to_serialized s input #pm v
   ensures exists* v' . pts_to_serialized (tot_serialize_nlist 1 s) input #pm v' **
-    (pts_to_serialized (tot_serialize_nlist 1 s) input #pm v' @==>
-      pts_to_serialized s input #pm v) **
+    trade (pts_to_serialized (tot_serialize_nlist 1 s) input #pm v')
+      (pts_to_serialized s input #pm v) **
     pure ((v' <: list t) == [Ghost.reveal v])
 {
   pts_to_serialized_synth_stick s synth_nlist_1 synth_nlist_1_recip input;
@@ -241,7 +241,7 @@ fn pts_to_serialized_nlist_1
     (tot_serialize_synth p synth_nlist_1 s synth_nlist_1_recip ())
     (tot_serialize_nlist 1 s)
     input;
-  stick_trans
+  Trade.trans
     (pts_to_serialized (tot_serialize_nlist 1 s) input #pm _)
     _ _
 }

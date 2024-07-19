@@ -5,6 +5,7 @@ open Pulse.Lib.Slice
 open LowParse.Spec.Base
 
 module SZ = FStar.SizeT
+module Trade = Pulse.Lib.Trade.Util
 
 let parser = tot_parser
 let serializer #k = tot_serializer #k
@@ -17,9 +18,9 @@ ghost
 fn pts_to_serialized_intro_stick
   (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v0: bytes) (v: t)
   requires (pts_to input #pm v0 ** pure (v0 == bare_serialize s v))
-  ensures (pts_to_serialized s input #pm v ** (pts_to_serialized s input #pm v @==> pts_to input #pm v0))
+  ensures (pts_to_serialized s input #pm v ** (trade (pts_to_serialized s input #pm v) (pts_to input #pm v0)))
 {
-  rewrite_with_stick (pts_to input #pm v0) (pts_to_serialized s input #pm v)
+  Trade.rewrite_with_trade emp_inames (pts_to input #pm v0) (pts_to_serialized s input #pm v)
 }
 ```
 
@@ -28,9 +29,9 @@ ghost
 fn pts_to_serialized_elim_stick
   (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
   requires (pts_to_serialized s input #pm v)
-  ensures (pts_to input #pm (bare_serialize s v) ** (pts_to input #pm (bare_serialize s v) @==> pts_to_serialized s input #pm v))
+  ensures (pts_to input #pm (bare_serialize s v) ** (trade (pts_to input #pm (bare_serialize s v)) (pts_to_serialized s input #pm v)))
 {
-  rewrite_with_stick (pts_to_serialized s input #pm v) (pts_to input #pm (bare_serialize s v))
+  Trade.rewrite_with_trade emp_inames (pts_to_serialized s input #pm v) (pts_to input #pm (bare_serialize s v))
 }
 ```
 
@@ -102,7 +103,7 @@ fn pts_to_serialized_ext_stick
   requires pts_to_serialized s1 input #pm v ** pure (
     forall x . parse p1 x == parse p2 x
   )
-  ensures pts_to_serialized s2 input #pm v ** (pts_to_serialized s2 input #pm v @==> pts_to_serialized s1 input #pm v)
+  ensures pts_to_serialized s2 input #pm v ** trade (pts_to_serialized s2 input #pm v) (pts_to_serialized s1 input #pm v)
 {
   pts_to_serialized_ext s1 s2 input;
   ghost
@@ -113,7 +114,7 @@ fn pts_to_serialized_ext_stick
   {
     pts_to_serialized_ext s2 s1 input
   };
-  intro_stick _ _ _ aux
+  intro_trade _ _ _ aux
 }
 ```
 
@@ -393,7 +394,7 @@ let peek_stick_post'
   (consumed: SZ.t)
   (left right: slice byte)
 : Tot vprop
-= exists* v1 v2 . pts_to_serialized s left #pm v1 ** pts_to right #pm v2 ** ((pts_to_serialized s left #pm v1 ** pts_to right #pm v2) @==> pts_to input #pm v) ** pure (
+= exists* v1 v2 . pts_to_serialized s left #pm v1 ** pts_to right #pm v2 ** trade (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) ** pure (
     bare_serialize s v1 `Seq.append` v2 == v /\
     Seq.length (bare_serialize s v1) == SZ.v consumed /\
     parse p v == Some (v1, SZ.v consumed)
@@ -450,7 +451,7 @@ fn peek_stick
     unfold (peek_post s input pm v consumed res);
     unfold (peek_post' s input pm v consumed left right);
     with v1 v2 . assert (pts_to_serialized s left #pm v1 ** pts_to right #pm v2);
-    intro_stick (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) (is_split input pm consumed left right) (peek_stick_aux s input pm consumed v left right v1 v2 ());
+    intro_trade (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) (is_split input pm consumed left right) (peek_stick_aux s input pm consumed v left right v1 v2 ());
     fold (peek_stick_post' s input pm v consumed left right);
     fold (peek_stick_post s input pm v consumed (left `SlicePair` right));
     (left `SlicePair` right)
@@ -469,7 +470,7 @@ fn peek_stick_gen
   (off: SZ.t)
   requires (pts_to input #pm v ** pure (validator_success #k #t p offset v (off)))
   returns input': slice byte
-  ensures exists* v' . pts_to_serialized s input' #pm v' ** (pts_to_serialized s input' #pm v' @==> pts_to input #pm v) ** pure (
+  ensures exists* v' . pts_to_serialized s input' #pm v' ** trade (pts_to_serialized s input' #pm v') (pts_to input #pm v) ** pure (
     validator_success #k #t p offset v off /\
     parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (v', SZ.v off - SZ.v offset)
   )
@@ -479,15 +480,15 @@ fn peek_stick_gen
     unfold (slice_split_stick_post input pm v offset split123);
     unfold (slice_split_stick_post' input pm v offset input1 input23);
     with v23 . assert (pts_to input23 #pm v23);
-    stick_elim_partial_l (pts_to input1 #pm _) (pts_to input23 #pm v23) (pts_to input #pm v);
+    Trade.elim_hyp_l (pts_to input1 #pm _) (pts_to input23 #pm v23) (pts_to input #pm v);
     let consumed = SZ.sub off offset;
     let split23 = peek_stick s input23 consumed;
     match split23 { SlicePair input2 input3 -> {
       unfold (peek_stick_post s input23 pm v23 consumed split23);
       unfold (peek_stick_post' s input23 pm v23 consumed input2 input3);
       with v' . assert (pts_to_serialized s input2 #pm v');
-      stick_elim_partial_r (pts_to_serialized s input2 #pm _) (pts_to input3 #pm _) (pts_to input23 #pm v23);
-      stick_trans (pts_to_serialized s input2 #pm _) (pts_to input23 #pm _) (pts_to input #pm _);
+      Trade.elim_hyp_r (pts_to_serialized s input2 #pm _) (pts_to input3 #pm _) (pts_to input23 #pm v23);
+      Trade.trans (pts_to_serialized s input2 #pm _) (pts_to input23 #pm _) (pts_to input #pm _);
       input2
     }}
   }}
@@ -547,7 +548,7 @@ fn read_from_validator_success
 {
   let input' = peek_stick_gen s input offset off;
   let res = r input';
-  elim_stick _ _;
+  Trade.elim _ _;
   res
 }
 ```
@@ -631,7 +632,7 @@ fn reader_ext
 {
   pts_to_serialized_ext_stick s2 s1 input;
   let res = r1 input #pm #v t' f;
-  elim_stick _ _;
+  elim_trade _ _;
   res
 }
 ```

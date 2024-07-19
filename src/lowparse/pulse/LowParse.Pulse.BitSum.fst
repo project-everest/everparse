@@ -3,7 +3,6 @@ include LowParse.Spec.BitSum
 include LowParse.Pulse.Combinators
 open FStar.Tactics.V2
 open LowParse.Pulse.Util
-open Pulse.Lib.Stick
 open Pulse.Lib.Slice
 
 #push-options "--print_universes"

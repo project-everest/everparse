@@ -3,10 +3,10 @@ include LowParse.Spec.Combinators
 include LowParse.Pulse.Base
 open FStar.Tactics.V2
 open LowParse.Pulse.Util
-open Pulse.Lib.Stick
 open Pulse.Lib.Slice
 
 module SZ = FStar.SizeT
+module Trade = Pulse.Lib.Trade.Util
 
 inline_for_extraction
 ```pulse
@@ -193,7 +193,7 @@ fn pts_to_serialized_synth_stick
   (#pm: perm)
   (#v: t)
   requires pts_to_serialized s input #pm v
-  ensures pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm (f v) ** (pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm (f v) @==> pts_to_serialized s input #pm v)
+  ensures pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm (f v) ** trade (pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm (f v)) (pts_to_serialized s input #pm v)
 {
   pts_to_serialized_synth_intro s f f' input;
   ghost
@@ -204,7 +204,7 @@ fn pts_to_serialized_synth_stick
   {
     pts_to_serialized_synth_elim s f f' input v 
   };
-  intro_stick _ _ _ aux
+  intro_trade _ _ _ aux
 }
 ```
 
@@ -263,7 +263,7 @@ fn pts_to_serialized_synth_l2r_stick
   (#pm: perm)
   (#v: t')
   requires pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm v
-  ensures pts_to_serialized s input #pm (f' v) ** (pts_to_serialized s input #pm (f' v) @==> pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm v)
+  ensures pts_to_serialized s input #pm (f' v) ** trade (pts_to_serialized s input #pm (f' v)) (pts_to_serialized (tot_serialize_synth p f s f' ()) input #pm v)
 {
   pts_to_serialized_synth_l2r s f f' input;
   ghost
@@ -274,7 +274,7 @@ fn pts_to_serialized_synth_l2r_stick
   {
     pts_to_serialized_synth_r2l s f f' input v
   };
-  intro_stick _ _ _ aux
+  intro_trade _ _ _ aux
 }
 ```
 
@@ -294,7 +294,7 @@ fn pts_to_serialized_synth_l2r_stick'
   (#pm: perm)
   (#v: t')
   requires pts_to_serialized s_ input #pm v ** pure (forall x . parse p_ x == parse (tot_parse_synth p f) x)
-  ensures pts_to_serialized s input #pm (f' v) ** (pts_to_serialized s input #pm (f' v) @==> pts_to_serialized s_ input #pm v)
+  ensures pts_to_serialized s input #pm (f' v) ** trade (pts_to_serialized s input #pm (f' v)) (pts_to_serialized s_ input #pm v)
 {
   pts_to_serialized_ext_stick
     s_
@@ -302,7 +302,7 @@ fn pts_to_serialized_synth_l2r_stick'
     input;
   pts_to_serialized_synth_l2r_stick
     s f f' input;
-  stick_trans _ _ (pts_to_serialized s_ input #pm v)
+  Trade.trans _ _ (pts_to_serialized s_ input #pm v)
 }
 ```
 
@@ -339,7 +339,7 @@ fn read_synth
 {
   pts_to_serialized_synth_l2r_stick s1 f2 f1 input;
   let res = r input #pm #(f1 v) t' (read_synth_cont f2 f2' (f1 v) t' g);
-  elim_stick _ _;
+  elim_trade _ _;
   res
 }
 ```
@@ -659,9 +659,9 @@ let split_dtuple2_post'
 : Tot vprop
 = pts_to_serialized s1 left #pm (dfst v) **
   pts_to_serialized (s2 (dfst v)) right #pm (dsnd v) **
-  ((pts_to_serialized s1 left #pm (dfst v) **
-  pts_to_serialized (s2 (dfst v)) right #pm (dsnd v)) @==>
-    pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
+  trade (pts_to_serialized s1 left #pm (dfst v) **
+  pts_to_serialized (s2 (dfst v)) right #pm (dsnd v))
+    (pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
 
 let split_dtuple2_post
   (#t1: Type0)
@@ -699,7 +699,7 @@ fn split_dtuple2
   returns res: slice_pair byte
   ensures split_dtuple2_post s1 s2 input pm v res
 {
-  rewrite_with_stick
+  Trade.rewrite_with_trade emp_inames
     (pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
     (pts_to input #pm (bare_serialize s1 (dfst v) `Seq.append` bare_serialize (s2 (dfst v)) (dsnd v)));
   parse_serialize_strong_prefix s1 (dfst v) (bare_serialize (s2 (dfst v)) (dsnd v));
@@ -709,11 +709,11 @@ fn split_dtuple2
     SlicePair input1 input2 -> {
       unfold (slice_append_split_stick_post input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i res);
       unfold (slice_append_split_stick_post' input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i input1 input2);
-      stick_trans (_ ** _) _ _;
+      Trade.trans (_ ** _) _ _;
       pts_to_serialized_intro_stick s1 input1 (dfst v);
       pts_to_serialized_intro_stick (s2 (dfst v)) input2 (dsnd v);
-      stick_prod (pts_to_serialized s1 input1 #pm _) (pts_to input1 #pm _) (pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input2 #pm _);
-      stick_trans (pts_to_serialized s1 input1 #pm _ ** pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input1 #pm _ ** pts_to input2 #pm _) _;
+      Trade.prod (pts_to_serialized s1 input1 #pm _) (pts_to input1 #pm _) (pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input2 #pm _);
+      Trade.trans (pts_to_serialized s1 input1 #pm _ ** pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input1 #pm _ ** pts_to input2 #pm _) _;
       fold (split_dtuple2_post' s1 s2 input pm v input1 input2);
       fold (split_dtuple2_post s1 s2 input pm v (input1 `SlicePair` input2));
       (input1 `SlicePair` input2)
@@ -740,13 +740,13 @@ fn dtuple2_dfst
   requires pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v
   returns res: slice byte
   ensures pts_to_serialized s1 res #pm (dfst v) **
-    (pts_to_serialized s1 res #pm (dfst v) @==> pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
+    trade (pts_to_serialized s1 res #pm (dfst v)) (pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
 {
   let spl = split_dtuple2 s1 j1 s2 input;
   match spl { SlicePair input1 input2 -> {
     unfold (split_dtuple2_post s1 s2 input pm v spl);
     unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
-    stick_elim_partial_r _ _ _;
+    Trade.elim_hyp_r _ _ _;
     input1
   }}
 }
@@ -770,13 +770,13 @@ fn dtuple2_dsnd
   requires pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v
   returns res: slice byte
   ensures pts_to_serialized (s2 (dfst v)) res #pm (dsnd v) **
-    (pts_to_serialized (s2 (dfst v)) res #pm (dsnd v) @==> pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
+    trade (pts_to_serialized (s2 (dfst v)) res #pm (dsnd v)) (pts_to_serialized (tot_serialize_dtuple2 s1 s2) input #pm v)
 {
   let spl = split_dtuple2 s1 j1 s2 input;
   match spl { SlicePair input1 input2 -> {
     unfold (split_dtuple2_post s1 s2 input pm v spl);
     unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
-    stick_elim_partial_l _ _ _;
+    Trade.elim_hyp_l _ _ _;
     input2
   }}
 }
@@ -797,9 +797,9 @@ let split_nondep_then_post'
 : Tot vprop
 = pts_to_serialized s1 left #pm (fst v) **
   pts_to_serialized s2 right #pm (snd v) **
-  ((pts_to_serialized s1 left #pm (fst v) **
-  pts_to_serialized s2 right #pm (snd v)) @==>
-    pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v)
+  trade (pts_to_serialized s1 left #pm (fst v) **
+  pts_to_serialized s2 right #pm (snd v))
+    (pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v)
 
 let split_nondep_then_post
   (#t1 #t2: Type0)
@@ -851,12 +851,12 @@ fn split_nondep_then
     pair_of_dtuple2
     dtuple2_of_pair
     input;
-  stick_trans (pts_to_serialized (tot_serialize_dtuple2 s1 (fun _ -> s2)) _ #pm _) _ _;
+  Trade.trans (pts_to_serialized (tot_serialize_dtuple2 s1 (fun _ -> s2)) _ #pm _) _ _;
   let res = split_dtuple2 s1 j1 (fun _ -> s2) input;
   match res { SlicePair input1 input2 -> {
     unfold (split_dtuple2_post s1 (fun _ -> s2) input pm (dtuple2_of_pair v) res);
     unfold (split_dtuple2_post' s1 (fun _ -> s2) input pm (dtuple2_of_pair v) input1 input2);
-    stick_trans (_ ** _) _ _;
+    Trade.trans (_ ** _) _ _;
     fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
     fold (split_nondep_then_post s1 s2 input pm v (input1 `SlicePair` input2));
     (input1 `SlicePair` input2)
@@ -881,13 +881,13 @@ fn nondep_then_fst
   requires pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v
   returns res: slice byte
   ensures pts_to_serialized s1 res #pm (fst v) **
-    (pts_to_serialized s1 res #pm (fst v) @==> pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v)
+    trade (pts_to_serialized s1 res #pm (fst v)) (pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v)
 {
   let spl = split_nondep_then s1 j1 s2 input;
   match spl { SlicePair input1 input2 -> {
     unfold (split_nondep_then_post s1 s2 input pm v spl);
     unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
-    stick_elim_partial_r _ _ _;
+    Trade.elim_hyp_r _ _ _;
     input1
   }}
 }
@@ -910,13 +910,13 @@ fn nondep_then_snd
   requires pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v
   returns res: slice byte
   ensures pts_to_serialized s2 res #pm (snd v) **
-    (pts_to_serialized s2 res #pm (snd v) @==> pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v)
+    trade (pts_to_serialized s2 res #pm (snd v)) (pts_to_serialized (tot_serialize_nondep_then s1 s2) input #pm v)
 {
   let spl = split_nondep_then s1 j1 s2 input;
   match spl { SlicePair input1 input2 -> {
     unfold (split_nondep_then_post s1 s2 input pm v spl);
     unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
-    stick_elim_partial_l _ _ _;
+    Trade.elim_hyp_l _ _ _;
     input2
   }}
 }
@@ -950,7 +950,7 @@ fn read_dtuple2
     unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
     let x1 = leaf_reader_of_reader r1 input1;
     let x2 = leaf_reader_of_reader (r2 x1) input2;
-    elim_stick _ _;
+    elim_trade _ _;
     f (Mkdtuple2 x1 x2)
   }}
 }
