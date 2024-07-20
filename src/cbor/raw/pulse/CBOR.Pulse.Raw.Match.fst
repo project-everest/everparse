@@ -111,14 +111,50 @@ let rec cbor_match
 = match c, r with
   | CBOR_Case_Array v, Array _ _ -> cbor_match_array v p r (cbor_match p)
   | CBOR_Case_Map v, Map _ _ -> cbor_match_map v p r (cbor_match p)
-  | CBOR_Case_Simple v, _ -> cbor_match_simple v r
-  | CBOR_Case_Int v, _ -> cbor_match_int v r
-  | CBOR_Case_String v, _ -> cbor_match_string v p r
+  | CBOR_Case_Simple v, Simple _ -> cbor_match_simple v r
+  | CBOR_Case_Int v, Int64 _ _ -> cbor_match_int v r
+  | CBOR_Case_String v, String _ _ _ -> cbor_match_string v p r
   | CBOR_Case_Tagged v, Tagged _ _ -> cbor_match_tagged v p r (cbor_match p)
   | CBOR_Case_Serialized_Array v, Array _ _ -> cbor_match_serialized_array v p r
   | CBOR_Case_Serialized_Map v, Map _ _ -> cbor_match_serialized_map v p r
   | CBOR_Case_Serialized_Tagged v, Tagged _ _ -> cbor_match_serialized_tagged v p r
   | _ -> pure False
+
+let cbor_match_cases_pred
+  (c: cbor_raw)
+  (r: raw_data_item)
+: Tot bool
+= 
+    match c, r with
+    | CBOR_Case_Array _, Array _ _
+    | CBOR_Case_Map _, Map _ _
+    | CBOR_Case_Simple _, Simple _
+    | CBOR_Case_Int _, Int64 _ _
+    | CBOR_Case_String _, String _ _ _
+    | CBOR_Case_Tagged _, Tagged _ _
+    | CBOR_Case_Serialized_Array _, Array _ _
+    | CBOR_Case_Serialized_Map _, Map _ _
+    | CBOR_Case_Serialized_Tagged _, Tagged _ _ ->
+      true
+    | _ -> false
+
+```pulse
+ghost
+fn cbor_match_cases
+  (c: cbor_raw)
+  (#pm: perm)
+  (#r: raw_data_item)
+  requires cbor_match pm c r
+  ensures cbor_match pm c r ** pure (cbor_match_cases_pred c r)
+{
+  if cbor_match_cases_pred c r {
+    ()
+  } else {
+    rewrite (cbor_match pm c r) as (pure False);
+    rewrite emp as (cbor_match pm c r)
+  }
+}
+```
 
 ```pulse
 ghost
