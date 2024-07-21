@@ -83,7 +83,7 @@ let cbor_match_serialized_array
   (p: perm)
   (r: raw_data_item { Array? r })
 : Tot slprop
-= cbor_match_serialized_payload_array c p (Array?.v r) **
+= cbor_match_serialized_payload_array c.cbor_serialized_payload (p `perm_mul` c.cbor_serialized_perm)  (Array?.v r) **
   pure (c.cbor_serialized_header == Array?.len r)
 
 let cbor_match_serialized_map
@@ -91,7 +91,7 @@ let cbor_match_serialized_map
   (p: perm)
   (r: raw_data_item { Map? r })
 : Tot slprop
-= cbor_match_serialized_payload_map c p (Map?.v r) **
+= cbor_match_serialized_payload_map c.cbor_serialized_payload (p `perm_mul` c.cbor_serialized_perm) (Map?.v r) **
   pure (c.cbor_serialized_header == Map?.len r)
 
 let cbor_match_serialized_tagged
@@ -99,7 +99,7 @@ let cbor_match_serialized_tagged
   (p: perm)
   (r: raw_data_item { Tagged? r })
 : Tot slprop
-= cbor_match_serialized_payload_tagged c p (Tagged?.v r) **
+= cbor_match_serialized_payload_tagged c.cbor_serialized_payload (p `perm_mul` c.cbor_serialized_perm) (Tagged?.v r) **
   pure (c.cbor_serialized_header == Tagged?.tag r)
 
 let rec cbor_match

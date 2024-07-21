@@ -31,14 +31,14 @@ fn cbor_match_serialized_tagged_intro_aux
       (cbor_match_serialized_tagged res 1.0R r)
       (pts_to_serialized serialize_raw_data_item pc #pm v)
 {
-  fold (cbor_match_serialized_payload_tagged res 1.0R v);
+  fold (cbor_match_serialized_payload_tagged pc (1.0R `perm_mul` res.cbor_serialized_perm) v);
   fold (cbor_match_serialized_tagged res 1.0R r);
   ghost fn aux (_: unit)
     requires emp ** cbor_match_serialized_tagged res 1.0R r
     ensures pts_to_serialized serialize_raw_data_item pc #pm v
   {
     unfold (cbor_match_serialized_tagged res 1.0R r);
-    unfold (cbor_match_serialized_payload_tagged res 1.0R v)
+    unfold (cbor_match_serialized_payload_tagged pc pm v)
   };
   intro_trade _ _ _ aux
 }
@@ -69,14 +69,14 @@ fn cbor_match_serialized_array_intro_aux
       (cbor_match_serialized_array res 1.0R r)
       (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n serialize_raw_data_item) pc #pm v)
 {
-  fold (cbor_match_serialized_payload_array res 1.0R v);
+  fold (cbor_match_serialized_payload_array res.cbor_serialized_payload (1.0R `perm_mul` res.cbor_serialized_perm) v);
   fold (cbor_match_serialized_array res 1.0R r);
   ghost fn aux (_: unit)
     requires emp ** cbor_match_serialized_array res 1.0R r
     ensures (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n serialize_raw_data_item) pc #pm v)
   {
     unfold (cbor_match_serialized_array res 1.0R r);
-    unfold (cbor_match_serialized_payload_array res 1.0R (Array?.v r))
+    unfold (cbor_match_serialized_payload_array pc pm (Array?.v r))
   };
   intro_trade _ _ _ aux
 }
@@ -107,14 +107,14 @@ fn cbor_match_serialized_map_intro_aux
       (cbor_match_serialized_map res 1.0R r)
       (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
 {
-  fold (cbor_match_serialized_payload_map res 1.0R v);
+  fold (cbor_match_serialized_payload_map res.cbor_serialized_payload (1.0R `perm_mul` res.cbor_serialized_perm) v);
   fold (cbor_match_serialized_map res 1.0R r);
   ghost fn aux (_: unit)
     requires emp ** cbor_match_serialized_map res 1.0R r
     ensures (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
   {
     unfold (cbor_match_serialized_map res 1.0R r);
-    unfold (cbor_match_serialized_payload_map res 1.0R (Map?.v r))
+    unfold (cbor_match_serialized_payload_map pc pm (Map?.v r))
   };
   intro_trade _ _ _ aux
 }

@@ -26,13 +26,13 @@ fn cbor_match_serialized_tagged_elim
       (cbor_match_serialized_tagged c pm r)
 {
   unfold (cbor_match_serialized_tagged c pm r);
-  unfold (cbor_match_serialized_payload_tagged c pm (Tagged?.v r));
+  unfold (cbor_match_serialized_payload_tagged c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Tagged?.v r));
   with pm' . assert (pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r));
   ghost fn aux (_: unit)
     requires emp ** (pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r))
     ensures (cbor_match_serialized_tagged c pm r)
   {
-    fold (cbor_match_serialized_payload_tagged c pm (Tagged?.v r));
+    fold (cbor_match_serialized_payload_tagged c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Tagged?.v r));
     fold (cbor_match_serialized_tagged c pm r);
   };
   intro_trade _ _ _ aux
