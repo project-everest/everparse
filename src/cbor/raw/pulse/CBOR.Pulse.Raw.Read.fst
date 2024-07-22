@@ -13,36 +13,51 @@ module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 module Trade = Pulse.Lib.Trade.Util
 
-(*
 ```pulse
 ghost
 fn cbor_match_tagged_elim
   (c: cbor_tagged)
-  (pm: perm)
+  (p: perm)
   (r: raw_data_item { Tagged? r })
   requires
-    cbor_match_tagged c pm r
-  ensures exists* pm' .
-    cbor_match 1.0R 
-    pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r) **
+    cbor_match_tagged c p r cbor_match
+  ensures exists* c' . R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+    cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r) **
     trade
-      (pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r))
-      (cbor_match_serialized_tagged c pm r)
+      (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+        cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r))
+      (cbor_match_tagged c p r cbor_match)
 {
-  unfold (cbor_match_serialized_tagged c pm r);
-  unfold (cbor_match_serialized_payload_tagged c pm (Tagged?.v r));
-  with pm' . assert (pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r));
+  unfold (cbor_match_tagged c p r cbor_match);
+  with c' . assert (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+    cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r));
   ghost fn aux (_: unit)
-    requires emp ** (pts_to_serialized serialize_raw_data_item c.cbor_serialized_payload #pm' (Tagged?.v r))
-    ensures (cbor_match_serialized_tagged c pm r)
+    requires emp ** (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+      cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r))
+    ensures cbor_match_tagged c p r cbor_match
   {
-    fold (cbor_match_serialized_payload_tagged c pm (Tagged?.v r));
-    fold (cbor_match_serialized_tagged c pm r);
+    fold (cbor_match_tagged c p r cbor_match)
   };
   intro_trade _ _ _ aux
 }
 ```
 
+let cbor_match_eq_tagged
+  (pm: perm)
+  (ct: cbor_tagged)
+  (r: raw_data_item)
+: Lemma
+  (requires (Tagged? r))
+  (ensures 
+    (cbor_match pm (CBOR_Case_Tagged ct) r ==
+    cbor_match_tagged ct pm r cbor_match
+  ))
+=
+  let Tagged tag v = r in
+  assert_norm (
+    cbor_match pm (CBOR_Case_Tagged ct) (Tagged tag v) ==
+      cbor_match_tagged ct pm (Tagged tag v) cbor_match
+  )
 
 ```pulse
 fn cbor_match_tagged_get_payload
@@ -51,10 +66,10 @@ fn cbor_match_tagged_get_payload
   (#r: Ghost.erased raw_data_item { Tagged? r })
   requires cbor_match pm c r
   returns res: cbor_raw
-  ensures
-    cbor_match 1.0R res (Tagged?.v r) **
+  ensures exists* pm' .
+    cbor_match pm' res (Tagged?.v r) **
     trade
-      (cbor_match 1.0R res (Tagged?.v r))
+      (cbor_match pm' res (Tagged?.v r))
       (cbor_match pm c r)
 {
   cbor_match_cases c;
@@ -67,7 +82,16 @@ fn cbor_match_tagged_get_payload
     Trade.trans _ _ (cbor_match pm c r);
     res
   } else {
-    admit ()
+    let ct = CBOR_Case_Tagged?.v c;
+    cbor_match_eq_tagged pm ct r;
+    Trade.rewrite_with_trade
+      (cbor_match pm c r)
+      (cbor_match_tagged ct pm r cbor_match);
+    cbor_match_tagged_elim ct pm r;
+    Trade.trans _ _ (cbor_match pm c r);
+    let res = !ct.cbor_tagged_ptr;
+    Trade.elim_hyp_l _ _ (cbor_match pm c r);
+    res
   }
 }
 ```
