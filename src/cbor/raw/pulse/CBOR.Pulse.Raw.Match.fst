@@ -41,21 +41,21 @@ let cbor_match_tagged
   (c: cbor_tagged)
   (p: perm)
   (r: raw_data_item { Tagged? r })
-  (cbor_match: (cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  (cbor_match: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
 : Tot slprop
-= exists* c' . R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_perm) c' **
-    cbor_match c' (Tagged?.v r) **
+= exists* c' . R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+    cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r) **
     pure (c.cbor_tagged_tag == Tagged?.tag r)
 
 let cbor_match_array
   (c: cbor_array)
   (p: perm)
   (r: raw_data_item {Array? r})
-  (cbor_match: (cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  (cbor_match: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
 : Tot slprop
 = exists* v .
-    A.pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_perm) v **
-    PM.seq_list_match v (Array?.v r) cbor_match **
+    A.pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) v **
+    PM.seq_list_match v (Array?.v r) (cbor_match (p `perm_mul` c.cbor_array_payload_perm)) **
     pure (c.cbor_array_length == Array?.len r)
 
 let cbor_match_map_entry
@@ -71,11 +71,11 @@ let cbor_match_map
   (c: cbor_map)
   (p: perm)
   (r: raw_data_item {Map? r})
-  (cbor_match: (cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
+  (cbor_match: (perm -> cbor_raw -> (v': raw_data_item { v' << r }) -> slprop))
 : Tot slprop
 = exists* v .
-    A.pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_perm) v **
-    PM.seq_list_match v (Map?.v r) (cbor_match_map_entry r cbor_match) **
+    A.pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) v **
+    PM.seq_list_match v (Map?.v r) (cbor_match_map_entry r (cbor_match (p `perm_mul` c.cbor_map_payload_perm))) **
     pure (c.cbor_map_length == Map?.len r)
 
 let cbor_match_serialized_array
@@ -109,12 +109,12 @@ let rec cbor_match
 : Tot slprop
   (decreases r)
 = match c, r with
-  | CBOR_Case_Array v, Array _ _ -> cbor_match_array v p r (cbor_match p)
-  | CBOR_Case_Map v, Map _ _ -> cbor_match_map v p r (cbor_match p)
+  | CBOR_Case_Array v, Array _ _ -> cbor_match_array v p r cbor_match
+  | CBOR_Case_Map v, Map _ _ -> cbor_match_map v p r cbor_match
   | CBOR_Case_Simple v, Simple _ -> cbor_match_simple v r
   | CBOR_Case_Int v, Int64 _ _ -> cbor_match_int v r
   | CBOR_Case_String v, String _ _ _ -> cbor_match_string v p r
-  | CBOR_Case_Tagged v, Tagged _ _ -> cbor_match_tagged v p r (cbor_match p)
+  | CBOR_Case_Tagged v, Tagged _ _ -> cbor_match_tagged v p r cbor_match
   | CBOR_Case_Serialized_Array v, Array _ _ -> cbor_match_serialized_array v p r
   | CBOR_Case_Serialized_Map v, Map _ _ -> cbor_match_serialized_map v p r
   | CBOR_Case_Serialized_Tagged v, Tagged _ _ -> cbor_match_serialized_tagged v p r
@@ -344,5 +344,103 @@ fn cbor_match_string_intro
     (cbor_match 1.0R res r);
   Trade.trans _ _ (S.pts_to input #pm v);
   res
+}
+```
+
+let cbor_string_reset_perm (p: perm) (c: cbor_string) : cbor_string = {
+  c with cbor_string_perm = p `perm_mul` c.cbor_string_perm
+}
+
+let cbor_serialized_reset_perm (p: perm) (c: cbor_serialized) : cbor_serialized = {
+  c with cbor_serialized_perm = p `perm_mul` c.cbor_serialized_perm
+}
+
+let cbor_tagged_reset_perm (p: perm) (c: cbor_tagged) : cbor_tagged = {
+  c with
+    cbor_tagged_ref_perm = p `perm_mul` c.cbor_tagged_ref_perm;
+    cbor_tagged_payload_perm = p `perm_mul` c.cbor_tagged_payload_perm
+}
+
+let cbor_array_reset_perm (p: perm) (c: cbor_array) : cbor_array = {
+  c with
+    cbor_array_array_perm = p `perm_mul` c.cbor_array_array_perm;
+    cbor_array_payload_perm = p `perm_mul` c.cbor_array_payload_perm;
+}
+
+let cbor_map_reset_perm (p: perm) (c: cbor_map) : cbor_map = {
+  c with
+    cbor_map_array_perm = p `perm_mul` c.cbor_map_array_perm;
+    cbor_map_payload_perm = p `perm_mul` c.cbor_map_payload_perm;
+}
+
+let cbor_raw_reset_perm (p: perm) (c: cbor_raw) : cbor_raw = match c with
+| CBOR_Case_String v -> CBOR_Case_String (cbor_string_reset_perm p v)
+| CBOR_Case_Tagged v -> CBOR_Case_Tagged (cbor_tagged_reset_perm p v)
+| CBOR_Case_Array v -> CBOR_Case_Array (cbor_array_reset_perm p v)
+| CBOR_Case_Map v -> CBOR_Case_Map (cbor_map_reset_perm p v)
+| CBOR_Case_Serialized_Tagged v -> CBOR_Case_Serialized_Tagged (cbor_serialized_reset_perm p v)
+| CBOR_Case_Serialized_Array v -> CBOR_Case_Serialized_Array (cbor_serialized_reset_perm p v)
+| CBOR_Case_Serialized_Map v -> CBOR_Case_Serialized_Map (cbor_serialized_reset_perm p v)
+| _ -> c
+
+```pulse
+ghost
+fn cbor_string_reset_perm_correct
+  (p: perm)
+  (c: cbor_string)
+  (r: raw_data_item)
+  requires
+    cbor_match_string c p r
+  ensures
+    cbor_match_string (cbor_string_reset_perm p c) 1.0R r **
+    trade
+      (cbor_match_string (cbor_string_reset_perm p c) 1.0R r)
+      (cbor_match_string c p r)
+{
+  perm_1_l (p `perm_mul` c.cbor_string_perm);
+  let c' = cbor_string_reset_perm p c;
+  unfold (cbor_match_string c p r);
+  fold (cbor_match_string c' 1.0R r);
+  ghost fn aux (_: unit)
+    requires (emp ** cbor_match_string c' 1.0R r)
+    ensures (cbor_match_string c p r)
+  {
+    unfold (cbor_match_string c' 1.0R r);
+    fold (cbor_match_string c p r)
+  };
+  intro_trade _ _ _ aux
+}
+```
+
+```pulse
+ghost
+fn cbor_raw_reset_perm_correct
+  (p: perm)
+  (c: cbor_raw)
+  (r: raw_data_item)
+  requires
+    cbor_match p c r
+  ensures
+    cbor_match 1.0R (cbor_raw_reset_perm p c) r **
+    trade
+      (cbor_match 1.0R (cbor_raw_reset_perm p c) r)
+      (cbor_match p c r)
+{
+  cbor_match_cases c;
+  let c' = cbor_raw_reset_perm p c;
+  match c {
+    CBOR_Case_String v -> {
+      Trade.rewrite_with_trade
+        (cbor_match p c r)
+        (cbor_match_string v p r);
+        cbor_string_reset_perm_correct p v r;
+        Trade.trans _ _ (cbor_match p c r);
+        Trade.rewrite_with_trade
+          (cbor_match_string (cbor_string_reset_perm p v) 1.0R r)
+          (cbor_match 1.0R c' r);
+        Trade.trans _ _ (cbor_match p c r)
+    }
+    _ -> { admit () }
+  }
 }
 ```

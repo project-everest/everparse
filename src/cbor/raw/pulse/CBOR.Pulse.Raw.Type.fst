@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Type
+include CBOR.Pulse.Raw.Util
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Slice
@@ -40,13 +41,15 @@ noeq
 type cbor_tagged = {
   cbor_tagged_tag: raw_uint64;
   cbor_tagged_ptr: ref cbor_raw;
-  cbor_tagged_perm: perm;
+  cbor_tagged_ref_perm: perm;
+  cbor_tagged_payload_perm: perm;
 }
 
 and cbor_array = {
   cbor_array_length: raw_uint64;
   cbor_array_ptr: (ar: A.array cbor_raw { A.length ar == U64.v cbor_array_length.value });
-  cbor_array_perm: perm;
+  cbor_array_array_perm: perm;
+  cbor_array_payload_perm: perm;
 }
 
 and cbor_map_entry = {
@@ -57,7 +60,8 @@ and cbor_map_entry = {
 and cbor_map = {
   cbor_map_length: raw_uint64;
   cbor_map_ptr: (ar: A.array cbor_map_entry { A.length ar == U64.v cbor_map_length.value });
-  cbor_map_perm: perm;
+  cbor_map_array_perm: perm;
+  cbor_map_payload_perm: perm;
 }
 
 and cbor_raw =
@@ -70,5 +74,3 @@ and cbor_raw =
 | CBOR_Case_Serialized_Tagged: v: cbor_serialized -> cbor_raw
 | CBOR_Case_Serialized_Array: v: cbor_serialized -> cbor_raw
 | CBOR_Case_Serialized_Map: v: cbor_serialized -> cbor_raw
-
-let perm_mul (p1 p2: perm) : Tot perm = p1 *. p2
