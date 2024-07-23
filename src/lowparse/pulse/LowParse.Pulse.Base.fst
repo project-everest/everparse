@@ -411,7 +411,7 @@ let peek_trade_post
 ```pulse
 ghost
 fn peek_trade_aux
-  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
+  (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
   (input: slice byte)
   (pm: perm)
   (consumed: SZ.t)
@@ -434,7 +434,7 @@ fn peek_trade_aux
 inline_for_extraction
 ```pulse
 fn peek_trade
-  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
+  (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
   (input: slice byte)
   (#pm: perm)
   (#v: Ghost.erased bytes)
@@ -459,7 +459,7 @@ fn peek_trade
 inline_for_extraction
 ```pulse
 fn peek_trade_gen
-  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
+  (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
   (input: slice byte)
   (#pm: perm)
   (#v: Ghost.erased bytes)
@@ -510,7 +510,7 @@ let leaf_reader
 inline_for_extraction
 let leaf_read
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (#s: serializer p)
   (r: leaf_reader s)
@@ -527,7 +527,7 @@ inline_for_extraction
 ```pulse
 fn read_from_validator_success
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (#s: serializer p)
   (r: leaf_reader s)
@@ -568,7 +568,7 @@ inline_for_extraction
 ```pulse
 fn leaf_reader_of_reader
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (#s: serializer p)
   (r: reader s)
@@ -586,7 +586,7 @@ inline_for_extraction
 ```pulse
 fn ifthenelse_reader
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (s: serializer p)
   (cond: bool)
@@ -612,11 +612,11 @@ inline_for_extraction
 ```pulse
 fn reader_ext
   (#t: Type0)
-  (#k1: parser_kind)
+  (#k1: Ghost.erased parser_kind)
   (#p1: parser k1 t)
   (#s1: serializer p1)
   (r1: reader s1)
-  (#k2: parser_kind)
+  (#k2: Ghost.erased parser_kind)
   (#p2: parser k2 t)
   (s2: serializer p2 { forall x . parse p1 x == parse p2 x })
 :reader #t #k2 #p2 s2
@@ -638,7 +638,7 @@ inline_for_extraction
 ```pulse
 fn reader_of_leaf_reader
   (#t: Type0)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (#s: serializer p)
   (r: leaf_reader s)

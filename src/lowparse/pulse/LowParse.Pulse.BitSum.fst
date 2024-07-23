@@ -13,10 +13,10 @@ let jump_bitsum'
   (#tot: pos)
   (#cl: uint_t tot t)
   (b: bitsum' cl tot)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (w: jumper p)
-: Tot (jumper (tot_parse_bitsum' b p))
+: Tot (jumper (parse_bitsum' b p))
 = jump_synth
     (jump_filter
       w
@@ -38,11 +38,11 @@ let read_bitsum'
   (#cl: uint_t tot t)
   (#b: bitsum' cl tot)
   (d: destr_bitsum'_t b)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (#s: serializer p)
   (r: reader s)
-: Tot (reader (tot_serialize_bitsum' b s))
+: Tot (reader (serialize_bitsum' b s))
 = read_synth
     (read_filter
       r
