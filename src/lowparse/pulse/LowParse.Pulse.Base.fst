@@ -7,9 +7,6 @@ open LowParse.Spec.Base
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 
-let parser = tot_parser
-let serializer #k = tot_serializer #k
-
 let pts_to_serialized (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (input: slice byte) (#[exact (`1.0R)] pm: perm) (v: t) : slprop =
   pts_to input #pm (bare_serialize s v)
 
@@ -152,7 +149,7 @@ let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
 inline_for_extraction
 ```pulse
 fn validate
-  (#t: Type0) (#k: parser_kind) (#p: parser k t) (w: validator p)
+  (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (w: validator p)
   (input: slice byte)
   (poffset: R.ref SZ.t)
   (#offset: Ghost.erased SZ.t)
@@ -169,7 +166,7 @@ fn validate
 inline_for_extraction
 ```pulse
 fn ifthenelse_validator
-  (#t: Type0) (#k: parser_kind) (p: parser k t)
+  (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t)
   (cond: bool)
   (wtrue: squash (cond == true) -> validator p)
   (wfalse: squash (cond == false) -> validator p)
@@ -198,7 +195,7 @@ let validate_nonempty_post
 
 inline_for_extraction
 ```pulse
-fn validate_nonempty (#t: Type0) (#k: parser_kind) (#p: parser k t) (w: validator p { k.parser_kind_low > 0 })
+fn validate_nonempty (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (w: validator p { k.parser_kind_low > 0 })
   (input: slice byte)
   (offset: SZ.t)
   (#pm: perm)
@@ -219,16 +216,16 @@ fn validate_nonempty (#t: Type0) (#k: parser_kind) (#p: parser k t) (w: validato
 ```
 
 inline_for_extraction
-let validate_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: validator p1) (#k2: parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : validator #_ #k2 p2 =
+let validate_ext (#t: Type0) (#k1: Ghost.erased parser_kind) (#p1: parser k1 t) (v1: validator p1) (#k2: Ghost.erased parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : validator #_ #k2 p2 =
   v1
 
 inline_for_extraction
-let validate_weaken (#t: Type0) (#k1: parser_kind) (k2: parser_kind) (#p1: parser k1 t) (v1: validator p1 { k2 `is_weaker_than` k1 }) : validator (tot_weaken k2 p1) =
-  validate_ext v1 (tot_weaken k2 p1)
+let validate_weaken (#t: Type0) (#k1: Ghost.erased parser_kind) (k2: Ghost.erased parser_kind) (#p1: parser k1 t) (v1: validator p1 { k2 `is_weaker_than` k1 }) : validator (weaken k2 p1) =
+  validate_ext v1 (weaken k2 p1)
 
 inline_for_extraction
 ```pulse
-fn validate_total_constant_size (#t: Type0) (#k: parser_kind) (p: parser k t) (sz: SZ.t {
+fn validate_total_constant_size (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t) (sz: SZ.t {
     k.parser_kind_high == Some k.parser_kind_low /\
     k.parser_kind_low == SZ.v sz /\
     k.parser_kind_metadata == Some ParserKindMetadataTotal
@@ -285,7 +282,7 @@ let jumper (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
 
 inline_for_extraction
 ```pulse
-fn ifthenelse_jumper (#t: Type0) (#k: parser_kind) (p: parser k t) (cond: bool) (jtrue: squash (cond == true) -> jumper p) (jfalse: squash (cond == false) -> jumper p)
+fn ifthenelse_jumper (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t) (cond: bool) (jtrue: squash (cond == true) -> jumper p) (jfalse: squash (cond == false) -> jumper p)
 : jumper #t #k p
 =
   (input: slice byte)
@@ -303,7 +300,7 @@ fn ifthenelse_jumper (#t: Type0) (#k: parser_kind) (p: parser k t) (cond: bool) 
 
 inline_for_extraction
 ```pulse
-fn jump_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: jumper p1) (#k2: parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : jumper #_ #k2 p2 =
+fn jump_ext (#t: Type0) (#k1: Ghost.erased parser_kind) (#p1: parser k1 t) (v1: jumper p1) (#k2: Ghost.erased parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : jumper #_ #k2 p2 =
   (input: slice byte)
   (offset: SZ.t)
   (#pm: perm)
@@ -315,7 +312,7 @@ fn jump_ext (#t: Type0) (#k1: parser_kind) (#p1: parser k1 t) (v1: jumper p1) (#
 
 inline_for_extraction
 ```pulse
-fn jump_constant_size (#t: Type0) (#k: parser_kind) (p: parser k t) (sz: SZ.t {
+fn jump_constant_size (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t) (sz: SZ.t {
     k.parser_kind_high == Some k.parser_kind_low /\
     k.parser_kind_low == SZ.v sz
 })
@@ -359,7 +356,7 @@ let peek_post
 inline_for_extraction
 ```pulse
 fn peek
-  (#t: Type0) (#k: parser_kind) (#p: parser k t) (s: serializer p)
+  (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
   (input: slice byte)
   (#pm: perm)
   (#v: Ghost.erased bytes)
