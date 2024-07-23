@@ -386,6 +386,13 @@ let tot_parser_of_parser
   parser_kind_prop_ext k p p';
   p'
 
+let parser_of_tot_parser
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+: Tot (parser k t)
+= p
+
 inline_for_extraction
 let get_parser_kind
   (#k: parser_kind)
@@ -857,6 +864,14 @@ let tot_serializer_of_serializer
     (requires True)
     (ensures (fun s' -> forall x . bare_serialize s' x == serialize #k s x))
 = tot_bare_serializer_of_bare_serializer s
+
+let serializer_of_tot_serializer
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+: Tot (serializer (parser_of_tot_parser p))
+= s
 
 let tot_serialize_ext
   (#k1: parser_kind)
