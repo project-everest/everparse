@@ -61,7 +61,7 @@ let parse_nlist_recursive_bound_correct
 #restart-solver
 inline_for_extraction
 ```pulse
-fn validate_nlist_recursive
+fn validate_tot_nlist_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
   (w: validator (parser_of_tot_parser p.parse_header))
@@ -132,6 +132,27 @@ fn validate_nlist_recursive
 
 inline_for_extraction
 ```pulse
+fn validate_nlist_recursive
+  (#p: Ghost.erased parse_recursive_param)
+  (s: Ghost.erased (serialize_recursive_param p))
+  (w: validator (parser_of_tot_parser p.parse_header))
+  (f: validate_recursive_step_count s)
+  (n0: SZ.t)
+: validator #(L.nlist (SZ.v n0) p.t) #(L.parse_nlist_kind (SZ.v n0) (parse_recursive_kind p.parse_header_kind)) (L.parse_nlist (SZ.v n0) (parser_of_tot_parser (parse_recursive p)))
+=
+  (input: S.slice byte)
+  (poffset: R.ref SZ.t)
+  (#offset0: Ghost.erased SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  L.tot_parse_nlist_parse_nlist (SZ.v n0) (parse_recursive p) (Seq.slice (Ghost.reveal v) (SZ.v offset0) (Seq.length (Ghost.reveal v)));
+  validate_tot_nlist_recursive s w f n0 input poffset
+}
+```
+
+inline_for_extraction
+```pulse
 fn validate_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
@@ -145,8 +166,8 @@ fn validate_recursive
   (#pm: perm)
   (#v: Ghost.erased bytes)
 {
-  L.tot_parse_nlist_eq 1 (parse_recursive p) (Seq.slice v (SZ.v offset) (Seq.length v));
-  Classical.forall_intro (L.tot_parse_nlist_eq 0 (parse_recursive p));
+  L.parse_nlist_eq 1 (parser_of_tot_parser (parse_recursive p)) (Seq.slice v (SZ.v offset) (Seq.length v));
+  Classical.forall_intro (L.parse_nlist_eq 0 (parser_of_tot_parser (parse_recursive p)));
   validate_nlist_recursive s w f 1sz input poffset
 }
 ```
@@ -170,7 +191,7 @@ let jump_recursive_step_count
 #restart-solver
 inline_for_extraction
 ```pulse
-fn jump_nlist_recursive
+fn jump_tot_nlist_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
   (w: jumper (parser_of_tot_parser p.parse_header))
@@ -222,6 +243,27 @@ fn jump_nlist_recursive
 
 #pop-options
 
+#restart-solver
+inline_for_extraction
+```pulse
+fn jump_nlist_recursive
+  (#p: Ghost.erased parse_recursive_param)
+  (s: Ghost.erased (serialize_recursive_param p))
+  (w: jumper (parser_of_tot_parser p.parse_header))
+  (f: jump_recursive_step_count s)
+  (n0: SZ.t)
+: jumper #(L.nlist (SZ.v n0) p.t) #(L.parse_nlist_kind (SZ.v n0) (parse_recursive_kind p.parse_header_kind)) (L.parse_nlist (SZ.v n0) (parser_of_tot_parser (parse_recursive p)))
+=
+  (input: S.slice byte)
+  (offset0: R.ref SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  L.tot_parse_nlist_parse_nlist (SZ.v n0) (parse_recursive p) (Seq.slice (Ghost.reveal v) (SZ.v offset0) (Seq.length (Ghost.reveal v)));
+  jump_tot_nlist_recursive s w f n0 input offset0
+}
+```
+
 inline_for_extraction
 ```pulse
 fn jump_recursive
@@ -236,8 +278,8 @@ fn jump_recursive
   (#pm: perm)
   (#v: Ghost.erased bytes)
 {
-  L.tot_parse_nlist_eq 1 (parse_recursive p) (Seq.slice v (SZ.v offset) (Seq.length v));
-  Classical.forall_intro (L.tot_parse_nlist_eq 0 (parse_recursive p));
+  L.parse_nlist_eq 1 (parser_of_tot_parser (parse_recursive p)) (Seq.slice v (SZ.v offset) (Seq.length v));
+  Classical.forall_intro (L.parse_nlist_eq 0 (parser_of_tot_parser (parse_recursive p)));
   jump_nlist_recursive s w f 1sz input offset
 }
 ```
@@ -473,7 +515,6 @@ let serialize_recursive_bound_correct
   (count <= Seq.length (L.serialize_nlist count (serializer_of_tot_serializer (serialize_recursive s)) c))
 = parse_nlist_recursive_bound_correct' p count (L.serialize_nlist count (serializer_of_tot_serializer (serialize_recursive s)) c)
 
-(*
 inline_for_extraction
 ```pulse
 fn impl_nlist_forall_pred_recursive
@@ -488,14 +529,14 @@ fn impl_nlist_forall_pred_recursive
   (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased (L.nlist (SZ.v n0) p.t))
-  requires pts_to_serialized (serializer_of_tot_serializer (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s))) input #pm v
+  requires pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v
   returns res: bool
-  ensures pts_to_serialized (serializer_of_tot_serializer (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s))) input #pm v ** pure (res == List.Tot.for_all pr.pred v)
+  ensures pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v ** pure (res == List.Tot.for_all pr.pred v)
 {
   let mut pn = n0;
   let mut pres = true;
   let mut ppi = input;
-  Trade.refl (pts_to_serialized (serializer_of_tot_serializer (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s))) input #pm v);
+  Trade.refl (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
   while (
     let res = !pres;
     let n = !pn;
@@ -504,9 +545,9 @@ fn impl_nlist_forall_pred_recursive
     pts_to pres res **
     pts_to pn n **
     pts_to ppi pi **
-    pts_to_serialized (serializer_of_tot_serializer (L.tot_serialize_nlist (SZ.v n) (serialize_recursive s))) pi #pm vi **
-    trade (pts_to_serialized (serializer_of_tot_serializer (L.tot_serialize_nlist (SZ.v n) (serialize_recursive s))) pi #pm vi)
-      (pts_to_serialized (serializer_of_tot_serializer (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s))) input #pm v
+    pts_to_serialized (L.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (serialize_recursive s))) pi #pm vi **
+    trade (pts_to_serialized (L.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (serialize_recursive s))) pi #pm vi)
+      (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v
     ) **
     pure (
       b == (res && (SZ.v n > 0)) /\
@@ -514,25 +555,25 @@ fn impl_nlist_forall_pred_recursive
   )) {
     let n = !pn;
     let pi = !ppi;
-    with vi . assert (pts_to_serialized (serializer_of_tot_serializer (L.tot_serialize_nlist (SZ.v n) (serialize_recursive s))) pi #pm vi);
-    let px = L.nlist_hd (serialize_recursive s) w (SZ.v n) pi;
+    with vi . assert (pts_to_serialized (L.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (serialize_recursive s))) pi #pm vi);
+    let px = L.nlist_hd (serializer_of_tot_serializer (serialize_recursive s)) w (SZ.v n) pi;
     pr.prf (List.Tot.hd vi);
     let res = g px;
-    elim_trade (pts_to_serialized (serialize_recursive s) px #pm _) _;
+    elim_trade (pts_to_serialized (serializer_of_tot_serializer (serialize_recursive s)) px #pm _) _;
     if not res {
       pres := false
     } else {
       pts_to_serialized_ext_trade
-        (L.tot_serialize_nlist (SZ.v n) (serialize_recursive s))
+        (L.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (serialize_recursive s)))
         (serialize_nlist_recursive_cons s (SZ.v n))
         pi;
       Trade.trans
         _
-        (pts_to_serialized (serializer_of_tot_serializer (L.tot_serialize_nlist (SZ.v n) (serialize_recursive s))) pi #pm vi)
+        (pts_to_serialized (L.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (serialize_recursive s))) pi #pm vi)
         _;
       C.pts_to_serialized_synth_l2r_trade
-        (C.tot_serialize_dtuple2
-          s.serialize_header
+        (C.serialize_dtuple2
+          (serializer_of_tot_serializer s.serialize_header)
           (serialize_nlist_recursive_cons_payload s (SZ.v n))
         )
         (synth_nlist_recursive_cons p (SZ.v n))
@@ -540,27 +581,27 @@ fn impl_nlist_forall_pred_recursive
         pi;
       Trade.trans
         _ _
-        (pts_to_serialized (serializer_of_tot_serializer (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s))) input #pm v);
+        (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
       with vi . assert (
         pts_to_serialized
-          (C.tot_serialize_dtuple2
-            s.serialize_header
+          (C.serialize_dtuple2
+            (serializer_of_tot_serializer s.serialize_header)
             (serialize_nlist_recursive_cons_payload s (SZ.v n))
           )
           pi #pm vi
       );
       let spl = C.split_dtuple2
-        s.serialize_header
+        (serializer_of_tot_serializer s.serialize_header)
         j
         (serialize_nlist_recursive_cons_payload s (SZ.v n))
         pi;
       match spl { S.SlicePair ph pc -> {
-        unfold (C.split_dtuple2_post s.serialize_header (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi spl);
-        unfold (C.split_dtuple2_post' s.serialize_header (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi ph pc);
+        unfold (C.split_dtuple2_post (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi spl);
+        unfold (C.split_dtuple2_post' (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi ph pc);
         Trade.trans
           _ _
-          (pts_to_serialized (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s)) input #pm v);
-        with h c . assert (pts_to_serialized s.serialize_header ph #pm h ** pts_to_serialized (serialize_nlist_recursive_cons_payload s (SZ.v n) h) pc #pm c);
+          (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
+        with h c . assert (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) ph #pm h ** pts_to_serialized (serialize_nlist_recursive_cons_payload s (SZ.v n) h) pc #pm c);
         List.Tot.for_all_append pr.pred (fst c) (snd c);
         synth_nlist_append_recip_inverse p.t (p.count h) (SZ.v n - 1); // FIXME: WHY WHY WHY does this pattern not trigger?
         C.pts_to_serialized_synth_trade
@@ -570,28 +611,28 @@ fn impl_nlist_forall_pred_recursive
           pc;
         Classical.forall_intro (parse_recursive_cons_payload_eq_nlist p (SZ.v n) h);
         C.pts_to_serialized_ext_trade
-          (L.tot_serialize_synth
+          (C.serialize_synth
             _
             (synth_nlist_append p.t (p.count h) (SZ.v n - 1))
             (serialize_nlist_recursive_cons_payload s (SZ.v n) h)
             (synth_nlist_append_recip p.t (p.count h) (SZ.v n - 1))
             ()
           )
-          (L.tot_serialize_nlist (p.count h + (SZ.v n - 1)) (serialize_recursive s))
+          (L.serialize_nlist (p.count h + (SZ.v n - 1)) (serializer_of_tot_serializer (serialize_recursive s)))
           pc;
-        with c' . assert (pts_to_serialized (L.tot_serialize_nlist (p.count h + (SZ.v n - 1)) (serialize_recursive s)) pc #pm c');
+        with c' . assert (pts_to_serialized (L.serialize_nlist (p.count h + (SZ.v n - 1)) (serializer_of_tot_serializer (serialize_recursive s))) pc #pm c');
         pts_to_serialized_length
-          (L.tot_serialize_nlist (p.count h + (SZ.v n - 1)) (serialize_recursive s))
+          (L.serialize_nlist (p.count h + (SZ.v n - 1)) (serializer_of_tot_serializer (serialize_recursive s)))
           pc;
         serialize_recursive_bound_correct s (p.count h + (SZ.v n - 1)) c';
         let count = f ph (S.len pc);
         Trade.elim_hyp_l _ _ _;
         Trade.trans
           _ _
-          (pts_to_serialized (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s)) input #pm v);
+          (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
         Trade.trans
           _ _
-          (pts_to_serialized (L.tot_serialize_nlist (SZ.v n0) (serialize_recursive s)) input #pm v);
+          (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
         pn := SZ.add (SZ.sub n 1sz) count;
         ppi := pc;
       }}
@@ -605,21 +646,21 @@ fn impl_nlist_forall_pred_recursive
 inline_for_extraction
 ```pulse
 fn impl_pred_recursive
-  (#p: parse_recursive_param)
-  (s: serialize_recursive_param p)
-  (w: jumper (parse_recursive p)) // for code conciseness purposes
-  (j: jumper p.parse_header)
+  (#p: Ghost.erased parse_recursive_param)
+  (s: Ghost.erased (serialize_recursive_param p))
+  (w: jumper (parser_of_tot_parser (parse_recursive p))) // for code conciseness purposes
+  (j: jumper (parser_of_tot_parser p.parse_header))
   (f: jump_recursive_step_count s)
   (pr: pred_recursive_t s)
-  (g: impl_pred_t (serialize_recursive s) pr.base)
+  (g: impl_pred_t (serializer_of_tot_serializer (serialize_recursive s)) pr.base)
   (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased p.t)
-  requires pts_to_serialized (serialize_recursive s) input #pm v
+  requires pts_to_serialized (serializer_of_tot_serializer (serialize_recursive s)) input #pm v
   returns res: bool
-  ensures pts_to_serialized (serialize_recursive s) input #pm v ** pure (res == pr.pred v)
+  ensures pts_to_serialized (serializer_of_tot_serializer (serialize_recursive s)) input #pm v ** pure (res == pr.pred v)
 {
-  L.pts_to_serialized_nlist_1 (serialize_recursive s) input;
+  L.pts_to_serialized_nlist_1 (serializer_of_tot_serializer (serialize_recursive s)) input;
   let res = impl_nlist_forall_pred_recursive s w j f pr g 1sz input;
   elim_trade _ _;
   res
