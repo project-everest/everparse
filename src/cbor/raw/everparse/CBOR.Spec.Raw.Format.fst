@@ -288,8 +288,20 @@ let synth_raw_data_item
 let synth_raw_data_item_injective : squash (synth_injective synth_raw_data_item) = ()
 #pop-options
 
-let parse_initial_byte' : tot_parser _ initial_byte' =
+let tot_parse_initial_byte' : tot_parser _ initial_byte' =
   tot_parse_bitsum' initial_byte_desc tot_parse_u8
+
+let parse_initial_byte' : parser _ initial_byte' =
+  parse_bitsum' initial_byte_desc parse_u8
+
+let tot_parse_initial_byte'_eq (b: bytes) : Lemma
+  (ensures (parse tot_parse_initial_byte' b == parse parse_initial_byte' b))
+  [SMTPat (parse tot_parse_initial_byte' b)]
+= synth_bitsum'_injective initial_byte_desc;
+  parse_synth_eq (parse_u8 `parse_filter` filter_bitsum' initial_byte_desc) (synth_bitsum' initial_byte_desc) b;
+  parse_filter_eq parse_u8 (filter_bitsum' initial_byte_desc) b;
+  tot_parse_synth_eq (tot_parse_u8 `tot_parse_filter` filter_bitsum' initial_byte_desc) (synth_bitsum' initial_byte_desc) b;
+  tot_parse_filter_eq tot_parse_u8 (filter_bitsum' initial_byte_desc) b
 
 inline_for_extraction
 noextract
@@ -304,18 +316,38 @@ let synth_initial_byte
 
 let _ : squash (synth_injective synth_initial_byte) = ()
 
-let parse_initial_byte_t : tot_parser _ initial_byte_t =
-    (tot_parse_synth parse_initial_byte' synth_initial_byte)
+let tot_parse_initial_byte_t : tot_parser _ initial_byte_t =
+    (tot_parse_synth tot_parse_initial_byte' synth_initial_byte)
 
-let parse_initial_byte : tot_parser _ initial_byte =
+let parse_initial_byte_t : parser _ initial_byte_t =
+    (parse_synth parse_initial_byte' synth_initial_byte)
+
+let tot_parse_initial_byte_t_eq (b: bytes) : Lemma
+  (ensures (parse tot_parse_initial_byte_t b == parse parse_initial_byte_t b))
+  [SMTPat (parse tot_parse_initial_byte_t b)]
+= parse_synth_eq parse_initial_byte' synth_initial_byte b;
+  tot_parse_synth_eq tot_parse_initial_byte' synth_initial_byte b
+
+let tot_parse_initial_byte : tot_parser _ initial_byte =
   tot_parse_filter
+    tot_parse_initial_byte_t
+    initial_byte_wf
+
+let parse_initial_byte : parser _ initial_byte =
+  parse_filter
     parse_initial_byte_t
     initial_byte_wf
+
+let tot_parse_initial_byte_eq (b: bytes) : Lemma
+  (ensures (parse tot_parse_initial_byte b == parse parse_initial_byte b))
+  [SMTPat (parse tot_parse_initial_byte b)]
+= tot_parse_filter_eq tot_parse_initial_byte_t initial_byte_wf b;
+  parse_filter_eq parse_initial_byte_t initial_byte_wf b
 
 noextract
 let parse_long_argument_kind = strong_parser_kind 0 8 None
 
-let parse_long_argument
+let tot_parse_long_argument
   (b: initial_byte)
 : Tot (tot_parser parse_long_argument_kind (long_argument b))
 =   if b.additional_info = additional_info_long_argument_8_bits
@@ -331,10 +363,109 @@ let parse_long_argument
     then tot_weaken _ (tot_parse_u64 `tot_parse_synth` LongArgumentU64 ())
     else tot_weaken _ (tot_parse_empty `tot_parse_synth` LongArgumentOther b.additional_info ())
 
+let parse_long_argument
+  (b: initial_byte)
+: Tot (parser parse_long_argument_kind (long_argument b))
+=   if b.additional_info = additional_info_long_argument_8_bits
+    then
+      if b.major_type = cbor_major_type_simple_value
+      then weaken _ (parse_filter parse_u8 simple_value_long_argument_wf `parse_synth` LongArgumentSimpleValue ())
+      else weaken _ (parse_u8 `parse_synth` LongArgumentU8 ())
+    else if b.additional_info = additional_info_long_argument_16_bits
+    then weaken _ (parse_u16 `parse_synth` LongArgumentU16 ())
+    else if b.additional_info = additional_info_long_argument_32_bits
+    then weaken _ (parse_u32 `parse_synth` LongArgumentU32 ())
+    else if b.additional_info = additional_info_long_argument_64_bits
+    then weaken _ (parse_u64 `parse_synth` LongArgumentU64 ())
+    else weaken _ (parse_empty `parse_synth` LongArgumentOther b.additional_info ())
+
+let tot_parse_long_argument_eq
+  (b: initial_byte)
+  (input: bytes)
+: Lemma
+  (ensures (parse (tot_parse_long_argument b) input == parse (parse_long_argument b) input))
+  [SMTPat (parse (tot_parse_long_argument b) input)]
+=
+    if b.additional_info = additional_info_long_argument_8_bits
+    then
+      if b.major_type = cbor_major_type_simple_value
+      then begin
+        parse_synth_eq
+          (parse_filter parse_u8 simple_value_long_argument_wf)
+          (LongArgumentSimpleValue #b ())
+          input;
+        parse_filter_eq parse_u8 simple_value_long_argument_wf input;
+        tot_parse_synth_eq
+          (tot_parse_filter tot_parse_u8 simple_value_long_argument_wf)
+          (LongArgumentSimpleValue #b ())
+          input;
+        tot_parse_filter_eq tot_parse_u8 simple_value_long_argument_wf input
+      end
+      else begin
+        parse_synth_eq parse_u8 (LongArgumentU8 #b ()) input;
+        tot_parse_synth_eq tot_parse_u8 (LongArgumentU8 #b ()) input
+      end
+    else if b.additional_info = additional_info_long_argument_16_bits
+    then begin
+      parse_synth_eq parse_u16 (LongArgumentU16 #b ()) input;
+      tot_parse_synth_eq tot_parse_u16 (LongArgumentU16 #b ()) input
+    end
+    else if b.additional_info = additional_info_long_argument_32_bits
+    then begin
+      parse_synth_eq parse_u32 (LongArgumentU32 #b ()) input;
+      tot_parse_synth_eq tot_parse_u32 (LongArgumentU32 #b ()) input
+    end
+    else if b.additional_info = additional_info_long_argument_64_bits
+    then begin
+      parse_synth_eq parse_u64 (LongArgumentU64 #b ()) input;
+      tot_parse_synth_eq tot_parse_u64 (LongArgumentU64 #b ()) input
+    end
+    else begin
+      parse_synth_eq parse_empty (LongArgumentOther #b b.additional_info ()) input;
+      tot_parse_synth_eq tot_parse_empty (LongArgumentOther #b b.additional_info ()) input
+    end
+
 let parse_header_kind = and_then_kind (parse_filter_kind parse_u8_kind) parse_long_argument_kind
 
-let parse_header : tot_parser parse_header_kind header =
-  tot_parse_dtuple2 parse_initial_byte parse_long_argument
+let tot_parse_header : tot_parser parse_header_kind header =
+  tot_parse_dtuple2 tot_parse_initial_byte tot_parse_long_argument
+
+let parse_header : parser parse_header_kind header =
+  parse_dtuple2 parse_initial_byte parse_long_argument
+
+let tot_parse_dtuple2_eq'
+  (#kt1: parser_kind)
+  (#t1: Type)
+  (pt1: tot_parser kt1 t1)
+  (#kt2: parser_kind)
+  (#t2: (t1 -> Type))
+  (pt2: ((x: t1) -> tot_parser kt2 (t2 x)))
+  (#kg1: parser_kind)
+  (pg1: parser kg1 t1)
+  (#kg2: parser_kind)
+  (pg2: ((x: t1) -> parser kg2 (t2 x)))
+  (input: bytes)
+: Lemma
+  (requires (
+    parse pt1 input == parse pg1 input /\
+    begin match parse pt1 input with
+    | None -> True
+    | Some (h, consumed) -> 
+      let input' = Seq.slice input consumed (Seq.length input) in
+      parse (pt2 h) input' == parse (pg2 h) input'
+    end
+  ))
+  (ensures (
+    parse (tot_parse_dtuple2 pt1 pt2) input == parse (parse_dtuple2 pg1 pg2) input
+  ))
+= parse_dtuple2_eq pg1 pg2 input
+
+let tot_parse_header_eq
+  (input: bytes)
+: Lemma
+  (ensures (parse tot_parse_header input == parse parse_header input))
+  [SMTPat (parse tot_parse_header input)]
+= tot_parse_dtuple2_eq' tot_parse_initial_byte tot_parse_long_argument parse_initial_byte parse_long_argument input
 
 inline_for_extraction
 let parse_content_kind : parser_kind = {
@@ -353,31 +484,24 @@ let parse_raw_data_item_kind : parser_kind = {
 }
 
 let parse_content
-  (p: tot_parser parse_raw_data_item_kind raw_data_item)
-  (h: header) : tot_parser parse_content_kind (content h)
+  (p: parser parse_raw_data_item_kind raw_data_item)
+  (h: header) : parser parse_content_kind (content h)
 = match h with
   | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
-      then tot_weaken _ (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
+      then weaken _ (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
       else if b.major_type = cbor_major_type_array
-      then tot_weaken _ (tot_parse_nlist (U64.v (argument_as_uint64 b long_arg)) p)
+      then weaken _ (parse_nlist (U64.v (argument_as_uint64 b long_arg)) p)
       else if b.major_type = cbor_major_type_map
-      then tot_weaken _ (tot_parse_nlist (U64.v (argument_as_uint64 b long_arg)) (p `tot_nondep_then` p))
+      then weaken _ (parse_nlist (U64.v (argument_as_uint64 b long_arg)) (p `nondep_then` p))
       else if b.major_type = cbor_major_type_tagged
-      then tot_weaken _ p
-      else tot_weaken _ tot_parse_empty
+      then weaken _ p
+      else weaken _ parse_empty
 
 let parse_raw_data_item_aux
-  (p: tot_parser parse_raw_data_item_kind raw_data_item)
-: Tot (tot_parser parse_raw_data_item_kind raw_data_item)
-= tot_parse_dtuple2 parse_header (parse_content p) `tot_parse_synth` synth_raw_data_item
-
-let rec parse_raw_data_item_fuel
-  (fuel: nat)
-: Tot (tot_parser parse_raw_data_item_kind raw_data_item)
-= if fuel = 0
-  then tot_fail_parser _ _
-  else parse_raw_data_item_aux (parse_raw_data_item_fuel (fuel - 1))
+  (p: parser parse_raw_data_item_kind raw_data_item)
+: Tot (parser parse_raw_data_item_kind raw_data_item)
+= parse_dtuple2 parse_header (parse_content p) `parse_synth` synth_raw_data_item
 
 (* 
 
@@ -413,7 +537,7 @@ type leaf_content
     (v: unit) ->
     leaf_content h
 
-let parse_leaf_content
+let tot_parse_leaf_content
   (h: header)
 : tot_parser parse_content_kind (leaf_content h)
 = match h with
@@ -422,9 +546,43 @@ let parse_leaf_content
       then tot_weaken _ (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)) `tot_parse_synth` LeafContentSeq ())
       else tot_weaken _ (tot_parse_empty `tot_parse_synth` LeafContentEmpty ())
 
+let parse_leaf_content
+  (h: header)
+: parser parse_content_kind (leaf_content h)
+= match h with
+  | (| b, long_arg |) ->
+      if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
+      then weaken _ (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)) `parse_synth` LeafContentSeq ())
+      else weaken _ (parse_empty `parse_synth` LeafContentEmpty ())
+
+let tot_parse_leaf_content_eq
+  (h: header)
+  (input: bytes)
+: Lemma
+  (ensures (parse (tot_parse_leaf_content h) input == parse (parse_leaf_content h) input))
+  [SMTPat (parse (tot_parse_leaf_content h) input)]
+= match h with
+  | (| b, long_arg |) ->
+      if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
+      then begin
+        (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)) `tot_parse_synth_eq` LeafContentSeq #h ()) input;
+        (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)) `parse_synth_eq` LeafContentSeq #h ()) input
+      end
+      else begin
+        (tot_parse_empty `tot_parse_synth_eq` LeafContentEmpty #h ()) input;
+        (parse_empty `parse_synth_eq` LeafContentEmpty #h ()) input
+      end
+
 let leaf = dtuple2 header leaf_content
 
-let parse_leaf : tot_parser _ leaf = parse_header `tot_parse_dtuple2` parse_leaf_content
+let tot_parse_leaf : tot_parser _ leaf = tot_parse_header `tot_parse_dtuple2` tot_parse_leaf_content
+
+let parse_leaf : parser _ leaf = parse_header `parse_dtuple2` parse_leaf_content
+
+let tot_parse_leaf_eq (input: bytes) : Lemma
+  (ensures (parse tot_parse_leaf input == parse parse_leaf input))
+  [SMTPat (parse tot_parse_leaf input)]
+= tot_parse_dtuple2_eq' tot_parse_header tot_parse_leaf_content parse_header parse_leaf_content input
 
 let remaining_data_items
   (l: leaf)
@@ -534,12 +692,12 @@ let synth_inverse_list_of_pair_list
 let rec parse_pair_list_as_list
   (#t: Type)
   (#k: parser_kind)
-  (p: tot_parser k t)
+  (p: parser k t)
   (nb_pairs: nat)
   (input: bytes)
 : Lemma
   (ensures (
-    match parse (tot_parse_nlist nb_pairs (p `tot_nondep_then` p)) input, parse (tot_parse_nlist (nb_pairs + nb_pairs) p) input with
+    match parse (parse_nlist nb_pairs (p `nondep_then` p)) input, parse (parse_nlist (nb_pairs + nb_pairs) p) input with
     | None, None -> True
     | Some (l, consumed), Some (l', consumed') ->
       consumed == consumed' /\
@@ -547,8 +705,8 @@ let rec parse_pair_list_as_list
     | _ -> False
   ))
   (decreases nb_pairs)
-= tot_parse_nlist_eq nb_pairs (p `tot_nondep_then` p) input;
-  tot_parse_nlist_eq (nb_pairs + nb_pairs) p input;
+= parse_nlist_eq nb_pairs (p `nondep_then` p) input;
+  parse_nlist_eq (nb_pairs + nb_pairs) p input;
   if nb_pairs = 0
   then ()
   else begin
@@ -558,17 +716,17 @@ let rec parse_pair_list_as_list
     | None -> ()
     | Some (x1, consumed1) ->
       let input2 = Seq.slice input consumed1 (Seq.length input) in
-      tot_parse_nlist_eq (nb_pairs + nb_pairs - 1) p input2;
+      parse_nlist_eq (nb_pairs + nb_pairs - 1) p input2;
       match parse p input2 with
       | None -> ()
       | Some (x2, consumed2) ->
         let input3 = Seq.slice input2 consumed2 (Seq.length input2) in
         parse_pair_list_as_list p (nb_pairs - 1) input3;
         // FIXME: WHY WHY WHY do I need all of these?
-        assert (Some? (parse (tot_parse_nlist nb_pairs (p `tot_nondep_then` p)) input) == Some? (parse (tot_parse_nlist (nb_pairs - 1) (p `tot_nondep_then` p)) input3));
-        assert (Some? (parse (tot_parse_nlist (nb_pairs + nb_pairs) p) input) == Some? (parse (tot_parse_nlist (nb_pairs + nb_pairs - 1 - 1) p) input3));
-        assert (Some? (parse (tot_parse_nlist (nb_pairs + nb_pairs) p) input) == Some? (parse (tot_parse_nlist ((nb_pairs - 1) + (nb_pairs - 1)) p) input3));
-        assert (Some? (parse (tot_parse_nlist (nb_pairs - 1) (p `tot_nondep_then` p)) input3) == Some? (parse (tot_parse_nlist ((nb_pairs - 1) + (nb_pairs - 1)) p) input3))
+        assert (Some? (parse (parse_nlist nb_pairs (p `nondep_then` p)) input) == Some? (parse (parse_nlist (nb_pairs - 1) (p `nondep_then` p)) input3));
+        assert (Some? (parse (parse_nlist (nb_pairs + nb_pairs) p) input) == Some? (parse (parse_nlist (nb_pairs + nb_pairs - 1 - 1) p) input3));
+        assert (Some? (parse (parse_nlist (nb_pairs + nb_pairs) p) input) == Some? (parse (parse_nlist ((nb_pairs - 1) + (nb_pairs - 1)) p) input3));
+        assert (Some? (parse (parse_nlist (nb_pairs - 1) (p `nondep_then` p)) input3) == Some? (parse (parse_nlist ((nb_pairs - 1) + (nb_pairs - 1)) p) input3))
   end
 
 #pop-options
@@ -617,7 +775,7 @@ let parse_raw_data_item_param = {
   t = raw_data_item;
   header = leaf;
   parse_header_kind = _;
-  parse_header = parse_leaf;
+  parse_header = tot_parse_leaf;
   count = remaining_data_items;
   synth_ = synth_raw_data_item_from_alt;
   synth_inj = synth_raw_data_item_from_alt_injective;
@@ -661,45 +819,44 @@ let tot_parse_nlist_parse_nlist'
   (ensures (tot_parse_nlist n p b == parse_nlist n #k p b))
 = tot_parse_nlist_parse_nlist n p b
 
-#push-options "--z3rlimit 128 --ifuel 8"
-#restart-solver
+// #push-options "--z3rlimit 128 --ifuel 8"
+#push-options "--z3rlimit 64"
 
+#restart-solver
 let parse_raw_data_item_eq
   (b: bytes)
 : Lemma
   (parse parse_raw_data_item b == parse (parse_raw_data_item_aux parse_raw_data_item) b)
 =
   parse_recursive_eq parse_raw_data_item_param b;
-  tot_parse_synth_eq (tot_parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item b;
-//  parse_dtuple2_eq parse_header (parse_content parse_raw_data_item) b;
+  parse_synth_eq (parse_dtuple2 parse_header (parse_content parse_raw_data_item)) synth_raw_data_item b;
+  parse_dtuple2_eq parse_header (parse_content parse_raw_data_item) b;
   tot_parse_synth_eq (parse_recursive_alt parse_raw_data_item_param parse_raw_data_item) synth_raw_data_item_from_alt b;
-//  parse_dtuple2_eq parse_leaf (parse_recursive_payload parse_raw_data_item_param parse_raw_data_item) b;
-//  parse_dtuple2_eq parse_header parse_leaf_content b;
-  match parse parse_header b with
+  match parse tot_parse_header b with
   | None -> ()
-  | Some _ ->
-    Classical.forall_intro_2 (tot_parse_nlist_parse_nlist' parse_raw_data_item);
-    Classical.forall_intro (parse_nlist_zero #parse_raw_data_item_kind parse_raw_data_item);
-    Classical.forall_intro (parse_nlist_one #parse_raw_data_item_kind parse_raw_data_item);
-    let prf_seq
-      (h: header)
-      (prf: squash (leaf_content_seq_cond h))
-      (b: bytes)
-    : Lemma
-      (tot_parse_synth (tot_parse_lseq_bytes (U64.v (argument_as_uint64 (dfst h) (dsnd h)))) (LeafContentSeq #h prf) b == parse_synth' (parse_lseq_bytes (U64.v (argument_as_uint64 (dfst h) (dsnd h)))) (LeafContentSeq #h prf) b)
-    = tot_parse_synth_eq (tot_parse_lseq_bytes (U64.v (argument_as_uint64 (dfst h) (dsnd h)))) (LeafContentSeq #h prf) b
-    in
-    Classical.forall_intro_3 prf_seq;
-    let prf_empty
-      (h: header)
-      (prf: squash (~ (leaf_content_seq_cond h)))
-      (b: bytes)
-    : Lemma
-      (tot_parse_synth tot_parse_empty (LeafContentEmpty #h prf) b == parse_synth' parse_empty (LeafContentEmpty #h prf) b)
-    = tot_parse_synth_eq tot_parse_empty (LeafContentEmpty #h prf) b
-    in
-    Classical.forall_intro_3 prf_empty;
-    Classical.forall_intro_2 (parse_pair_list_as_list #_ #parse_raw_data_item_kind parse_raw_data_item)
+  | Some (h, consumed) ->
+    let b1 = Seq.slice b consumed (Seq.length b) in
+    let (| f, l |) = h in
+    if f.major_type = cbor_major_type_byte_string || f.major_type = cbor_major_type_text_string
+    then begin
+      tot_parse_synth_eq (tot_parse_lseq_bytes (U64.v (argument_as_uint64 (dfst h) (dsnd h)))) (LeafContentSeq #h ()) b1
+    end
+    else begin
+      let lc = LeafContentEmpty #h () in
+      let lf : leaf = (| h, lc () |) in
+      tot_parse_synth_eq tot_parse_empty lc b1;
+      tot_parse_nlist_parse_nlist' parse_raw_data_item (parse_raw_data_item_param.count lf) b1;
+      if f.major_type = cbor_major_type_tagged
+      then tot_parse_nlist_eq (parse_raw_data_item_param.count lf) parse_raw_data_item b1
+      else if f.major_type = cbor_major_type_array
+      then ()
+      else if f.major_type = cbor_major_type_map
+      then begin
+        let nb_pairs = U64.v (argument_as_uint64 f l) in
+        parse_pair_list_as_list #raw_data_item #parse_raw_data_item_kind parse_raw_data_item nb_pairs b1
+      end
+      else ()
+    end
 
 #pop-options
 
@@ -766,29 +923,40 @@ let synth_initial_byte_recip
 : Tot initial_byte'
 = (x.major_type, (x.additional_info, ()))
 
-let serialize_initial_byte' : tot_serializer parse_initial_byte' =
+let tot_serialize_initial_byte' : tot_serializer tot_parse_initial_byte' =
       (tot_serialize_bitsum'
         initial_byte_desc
         tot_serialize_u8
       )
 
-let serialize_initial_byte_t : tot_serializer parse_initial_byte_t =
+let serialize_initial_byte' : serializer parse_initial_byte' =
+  serialize_ext (parser_of_tot_parser tot_parse_initial_byte') (serializer_of_tot_serializer tot_serialize_initial_byte') parse_initial_byte'
+
+let tot_serialize_initial_byte_t : tot_serializer tot_parse_initial_byte_t =
     (tot_serialize_synth
-      parse_initial_byte'
+      tot_parse_initial_byte'
       synth_initial_byte
-      serialize_initial_byte'
+      tot_serialize_initial_byte'
       synth_initial_byte_recip
       ()
     )
 
-let serialize_initial_byte : tot_serializer parse_initial_byte =
+let serialize_initial_byte_t : serializer parse_initial_byte_t =
+  serialize_ext (parser_of_tot_parser tot_parse_initial_byte_t) (serializer_of_tot_serializer tot_serialize_initial_byte_t) parse_initial_byte_t
+
+let tot_serialize_initial_byte : tot_serializer tot_parse_initial_byte =
   tot_serialize_filter
-    serialize_initial_byte_t
+    tot_serialize_initial_byte_t
     initial_byte_wf
 
-let serialize_long_argument
+let serialize_initial_byte : serializer parse_initial_byte =
+  serialize_ext (parser_of_tot_parser tot_parse_initial_byte) (serializer_of_tot_serializer tot_serialize_initial_byte) parse_initial_byte
+
+#restart-solver
+
+let tot_serialize_long_argument
   (b: initial_byte)
-: Tot (tot_serializer (parse_long_argument b))
+: Tot (tot_serializer (tot_parse_long_argument b))
 =   if b.additional_info = additional_info_long_argument_8_bits
     then
       if b.major_type = cbor_major_type_simple_value
@@ -803,8 +971,16 @@ let serialize_long_argument
     then tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentU64 ()) (tot_serialize_u64) LongArgumentU64?.v ())
     else tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentOther b.additional_info ()) tot_serialize_empty LongArgumentOther?.v ())
 
-let serialize_header : tot_serializer parse_header =
-  tot_serialize_dtuple2 serialize_initial_byte serialize_long_argument
+let serialize_long_argument
+  (b: initial_byte)
+: Tot (serializer (parse_long_argument b))
+= serialize_ext (parser_of_tot_parser (tot_parse_long_argument b)) (serializer_of_tot_serializer (tot_serialize_long_argument b)) (parse_long_argument b)
+
+let tot_serialize_header : tot_serializer tot_parse_header =
+  tot_serialize_dtuple2 tot_serialize_initial_byte tot_serialize_long_argument
+
+let serialize_header : serializer parse_header =
+  serialize_ext (parser_of_tot_parser tot_parse_header) (serializer_of_tot_serializer tot_serialize_header) parse_header
 
 let synth_raw_data_item_recip
   (x: raw_data_item)
@@ -864,17 +1040,25 @@ let synth_raw_data_item_from_alt_recip
 
 let synth_raw_data_item_from_alt_inverse : squash (synth_inverse synth_raw_data_item_from_alt synth_raw_data_item_from_alt_recip) = ()
 
-let serialize_leaf_content
+let tot_serialize_leaf_content
   (h: header)
-: Tot (tot_serializer (parse_leaf_content h))
+: Tot (tot_serializer (tot_parse_leaf_content h))
 = match h with
   | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then tot_serialize_weaken _ (tot_serialize_synth _ (LeafContentSeq ()) (tot_serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) LeafContentSeq?.v ())
       else tot_serialize_weaken _ (tot_serialize_synth _ (LeafContentEmpty ()) tot_serialize_empty LeafContentEmpty?.v ())
 
-let serialize_leaf : tot_serializer parse_leaf =
-  tot_serialize_dtuple2 serialize_header serialize_leaf_content
+let serialize_leaf_content
+  (h: header)
+: Tot (serializer (parse_leaf_content h))
+= serialize_ext (parser_of_tot_parser (tot_parse_leaf_content h)) (serializer_of_tot_serializer (tot_serialize_leaf_content h)) (parse_leaf_content h)
+
+let tot_serialize_leaf : tot_serializer tot_parse_leaf =
+  tot_serialize_dtuple2 tot_serialize_header tot_serialize_leaf_content
+
+let serialize_leaf : serializer parse_leaf =
+  serialize_ext (parser_of_tot_parser tot_parse_leaf) (serializer_of_tot_serializer tot_serialize_leaf) parse_leaf
 
 (* Construction of the serializer, by "step indexing" over the "level"
    (in fact the depth) of the raw data item. *)
@@ -948,7 +1132,7 @@ let synth_raw_data_item_from_alt_recip_list_has_pred_level
 #restart-solver
 
 let serialize_raw_data_item_param : serialize_recursive_param parse_raw_data_item_param = {
-  serialize_header = serialize_leaf;
+  serialize_header = tot_serialize_leaf;
   synth_recip = synth_raw_data_item_from_alt_recip;
   synth_inv = synth_raw_data_item_from_alt_inverse;
   level = level;
@@ -962,24 +1146,24 @@ let serialize_raw_data_item : tot_serializer parse_raw_data_item =
 
 let serialize_content
   (h: header)
-: Tot (tot_serializer (parse_content parse_raw_data_item h))
+: Tot (serializer (parse_content parse_raw_data_item h))
 = match h with
   | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
-      then tot_serialize_weaken _ (tot_serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
+      then serialize_weaken _ (serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
       else if b.major_type = cbor_major_type_array
-      then tot_serialize_weaken _ (tot_serialize_nlist (U64.v (argument_as_uint64 b long_arg)) serialize_raw_data_item)
+      then serialize_weaken _ (serialize_nlist (U64.v (argument_as_uint64 b long_arg)) (serializer_of_tot_serializer serialize_raw_data_item))
       else if b.major_type = cbor_major_type_map
-      then tot_serialize_weaken _ (tot_serialize_nlist (U64.v (argument_as_uint64 b long_arg)) (serialize_raw_data_item `tot_serialize_nondep_then` serialize_raw_data_item))
+      then serialize_weaken _ (serialize_nlist (U64.v (argument_as_uint64 b long_arg)) (serializer_of_tot_serializer serialize_raw_data_item `serialize_nondep_then` serializer_of_tot_serializer serialize_raw_data_item))
       else if b.major_type = cbor_major_type_tagged
-      then tot_serialize_weaken _ serialize_raw_data_item
-      else tot_serialize_weaken _ tot_serialize_empty
+      then serialize_weaken _ (serializer_of_tot_serializer serialize_raw_data_item)
+      else serialize_weaken _ serialize_empty
 
-let serialize_raw_data_item_aux : tot_serializer (parse_raw_data_item_aux parse_raw_data_item) =
-  tot_serialize_synth
+let serialize_raw_data_item_aux : serializer (parse_raw_data_item_aux parse_raw_data_item) =
+  serialize_synth
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
 
@@ -988,7 +1172,7 @@ let serialize_raw_data_item_aux_correct
 : Lemma
   (bare_serialize serialize_raw_data_item x == bare_serialize serialize_raw_data_item_aux x)
 = Classical.forall_intro parse_raw_data_item_eq;
-  let s' = tot_serialize_ext parse_raw_data_item serialize_raw_data_item (parse_raw_data_item_aux parse_raw_data_item) in
+  let s' = serialize_ext (parser_of_tot_parser parse_raw_data_item) (serializer_of_tot_serializer serialize_raw_data_item) (parse_raw_data_item_aux parse_raw_data_item) in
   serializer_unique #parse_raw_data_item_kind (parse_raw_data_item_aux parse_raw_data_item) serialize_raw_data_item_aux s' x
 
 // Some lemmas about the initial byte
@@ -1070,9 +1254,9 @@ let get_initial_byte_header_correct
     mk_synth_initial_byte (synth_initial_byte_recip (dfst h)) == Seq.index b' 0)
 = let (| b, _ |) = h in
   tot_serialize_synth_eq
-    parse_initial_byte'
+    tot_parse_initial_byte'
     synth_initial_byte
-    serialize_initial_byte'
+    tot_serialize_initial_byte'
     synth_initial_byte_recip
     ()
     b;
@@ -1082,6 +1266,9 @@ let get_initial_byte_header_correct
     (synth_initial_byte_recip b);
   serialize_u8_spec (synth_bitsum'_recip initial_byte_desc (synth_initial_byte_recip b))
 
+#push-options "--z3rlimit 16"
+
+#restart-solver
 let get_initial_byte_header_inj
   (h1 h2: header)
 : Lemma
@@ -1102,6 +1289,8 @@ let get_initial_byte_header_inj
   get_initial_byte_header_correct h2;
   assert (synth_bitsum' initial_byte_desc b1' == synth_initial_byte_recip b1);
   assert (synth_bitsum' initial_byte_desc b2' == synth_initial_byte_recip b2)
+
+#pop-options
 
 let get_uint64_as_initial_byte_header_correct
   (ty: major_type_t { ty `U8.lt` cbor_major_type_simple_value })
@@ -1168,6 +1357,15 @@ let map_entry_order_eq
 let serialized_lex_order
   (#k: parser_kind)
   (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (x1 x2: t)
+: GTot bool
+= LowParse.Spec.SeqBytes.bytes_lex_order (s x1) (s x2)
+
+let tot_serialized_lex_order
+  (#k: parser_kind)
+  (#t: Type)
   (#p: tot_parser k t)
   (s: tot_serializer p)
   (x1 x2: t)
@@ -1177,7 +1375,7 @@ let serialized_lex_order
 let deterministically_encoded_cbor_map_key_order
   (k1 k2: raw_data_item)
 : Tot bool
-= serialized_lex_order serialize_raw_data_item k1 k2
+= tot_serialized_lex_order serialize_raw_data_item k1 k2
 
 let deterministically_encoded_cbor_map_key_order_irrefl
   (x y: raw_data_item)
@@ -1246,16 +1444,16 @@ let serialize_initial_byte_compare
 = let b1_ = synth_initial_byte_recip b1 in
   let b2_ = synth_initial_byte_recip b2 in
   tot_serialize_synth_eq
-    parse_initial_byte'
+    tot_parse_initial_byte'
     synth_initial_byte
-    serialize_initial_byte'
+    tot_serialize_initial_byte'
     synth_initial_byte_recip
     ()
     b1;
   tot_serialize_synth_eq
-    parse_initial_byte'
+    tot_parse_initial_byte'
     synth_initial_byte
-    serialize_initial_byte'
+    tot_serialize_initial_byte'
     synth_initial_byte_recip
     ()
     b2;
@@ -1308,7 +1506,7 @@ let serialize_initial_byte_lt
 
 #pop-options
 
-let serialized_lex_compare
+let tot_serialized_lex_compare
   (#k: parser_kind)
   (#t: Type)
   (#p: tot_parser k t)
@@ -1316,6 +1514,70 @@ let serialized_lex_compare
   (x1 x2: t)
 : Tot int
 = LowParse.Spec.SeqBytes.bytes_lex_compare (s x1) (s x2)
+
+let serialized_lex_compare
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (x1 x2: t)
+: GTot int
+= LowParse.Spec.SeqBytes.bytes_lex_compare (s x1) (s x2)
+
+let serialized_lex_compare_eq_tot
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+  (x1 x2: t)
+: Lemma
+  (serialized_lex_compare s x1 x2 == tot_serialized_lex_compare (tot_serializer_of_serializer s) x1 x2)
+= ()
+
+let tot_serialized_lex_compare_eq_ghost
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (x1 x2: t)
+: Lemma
+  (tot_serialized_lex_compare s x1 x2 == serialized_lex_compare (serializer_of_tot_serializer s) x1 x2)
+= ()
+
+let serialized_lex_compare_ext
+  (#t: Type)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (s1: serializer p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2)
+  (x1 x2: t)
+: Lemma
+  (requires (forall x . parse p1 x == parse p2 x))
+  (ensures (
+    serialized_lex_compare s1 x1 x2 == serialized_lex_compare s2 x1 x2
+  ))
+= serializer_unique_strong s1 s2 x1;
+  serializer_unique_strong s1 s2 x2
+
+let tot_serialized_lex_compare_ext
+  (#t: Type)
+  (#k1: parser_kind)
+  (#p1: tot_parser k1 t)
+  (s1: tot_serializer p1)
+  (#k2: parser_kind)
+  (#p2: tot_parser k2 t)
+  (s2: tot_serializer p2)
+  (x1 x2: t)
+: Lemma
+  (requires (forall x . parse p1 x == parse p2 x))
+  (ensures (
+    tot_serialized_lex_compare s1 x1 x2 == tot_serialized_lex_compare s2 x1 x2
+  ))
+= tot_serialized_lex_compare_eq_ghost s1 x1 x2;
+  tot_serialized_lex_compare_eq_ghost s2 x1 x2;
+  serialized_lex_compare_ext (serializer_of_tot_serializer s1) (serializer_of_tot_serializer s2) x1 x2
 
 let bytes_lex_compare_prefix
   (l: bytes)
@@ -1331,8 +1593,8 @@ let bytes_lex_compare_prefix
 let rec bytes_lex_compare_serialize_strong_prefix1
   (#k: parser_kind)
   (#t: Type)
-  (#p: tot_parser k t)
-  (s: tot_serializer p)
+  (#p: parser k t)
+  (s: serializer p)
   (l1 l2: t)
   (suff1 suff2: bytes)
   (pre: bytes)
@@ -1361,7 +1623,7 @@ let rec bytes_lex_compare_serialize_strong_prefix1
     assert (mid1 `Seq.equal` Seq.empty);
     Seq.append_empty_r pre;
     Seq.append_empty_r (bare_serialize s l2);
-    tot_serialize_strong_prefix s l2 l1 Seq.empty mid2;
+    serialize_strong_prefix s l2 l1 Seq.empty mid2;
     bytes_lex_compare_prefix (bare_serialize s l1) suff1 suff2
   end else begin
     let x = Seq.index mid1 0 in
@@ -1415,8 +1677,8 @@ let bytes_lex_compare_oppose
 let bytes_lex_compare_serialize_strong_prefix0
   (#k: parser_kind)
   (#t: Type)
-  (#p: tot_parser k t)
-  (s: tot_serializer p)
+  (#p: parser k t)
+  (s: serializer p)
   (l1 l2: t)
   (suff1 suff2: bytes)
   (pre: bytes)
@@ -1446,8 +1708,8 @@ let bytes_lex_compare_serialize_strong_prefix0
 let bytes_lex_compare_serialize_strong_prefix
   (#k: parser_kind)
   (#t: Type)
-  (#p: tot_parser k t)
-  (s: tot_serializer p)
+  (#p: parser k t)
+  (s: serializer p)
   (l1 l2: t)
   (suff1 suff2: bytes)
 : Lemma
@@ -1467,6 +1729,26 @@ let bytes_lex_compare_serialize_strong_prefix
   Seq.append_empty_l s2;
   bytes_lex_compare_serialize_strong_prefix0 s l1 l2 suff1 suff2 Seq.empty s1 s2
 
+let bytes_lex_compare_tot_serialize_strong_prefix
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (l1 l2: t)
+  (suff1 suff2: bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong
+  ))
+  (ensures (
+    bytes_lex_compare (bare_serialize s l1 `Seq.append` suff1) (bare_serialize s l2 `Seq.append` suff2) == (
+      let comp = bytes_lex_compare (bare_serialize s l1) (bare_serialize s l2) in
+      if comp = 0
+      then bytes_lex_compare suff1 suff2
+      else comp
+  )))
+= bytes_lex_compare_serialize_strong_prefix (serializer_of_tot_serializer s) l1 l2 suff1 suff2
+
 #push-options "--z3rlimit 32"
 #restart-solver
 
@@ -1477,34 +1759,34 @@ let serialized_lex_compare_major_type_intro
     byte_compare (get_major_type v1) (get_major_type v2) <> 0
   ))
   (ensures (
-    serialized_lex_compare serialize_raw_data_item v1 v2 ==
+    tot_serialized_lex_compare serialize_raw_data_item v1 v2 ==
       byte_compare (get_major_type v1) (get_major_type v2)
   ))
 = get_major_type_synth_raw_data_item_recip v1;
   serialize_raw_data_item_aux_correct v1;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v1;
   let v1' = synth_raw_data_item_recip v1 in
-//  tot_serialize_dtuple2_eq serialize_header serialize_content v1';
+  serialize_dtuple2_eq serialize_header serialize_content v1';
   let (| h1, c1 |) = v1' in
 //  serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h1;
   let (| b1, l1 |) = h1 in
   get_major_type_synth_raw_data_item_recip v2;
   serialize_raw_data_item_aux_correct v2;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v2;
   let v2' = synth_raw_data_item_recip v2 in
-//  serialize_dtuple2_eq serialize_header serialize_content v2';
+  serialize_dtuple2_eq serialize_header serialize_content v2';
   let (| h2, c2 |) = v2' in
 //  serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h2;
   let (| b2, l2 |) = h2 in
@@ -1536,34 +1818,34 @@ let serialized_lex_compare_simple_value
   (x1 x2: simple_value)
 : Lemma
   (ensures (
-    serialized_lex_compare serialize_raw_data_item (Simple x1) (Simple x2) ==
+    tot_serialized_lex_compare serialize_raw_data_item (Simple x1) (Simple x2) ==
       byte_compare x1 x2
   ))
 = let v1 = Simple x1 in
   let v2 = Simple x2 in
   serialize_raw_data_item_aux_correct v1;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v1;
   let v1' = synth_raw_data_item_recip v1 in
-//  serialize_dtuple2_eq serialize_header serialize_content v1';
+  serialize_dtuple2_eq serialize_header serialize_content v1';
   let (| h1, c1 |) = v1' in
 //  serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h1;
   let (| b1, l1 |) = h1 in
   serialize_raw_data_item_aux_correct v2;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v2;
   let v2' = synth_raw_data_item_recip v2 in
-//  serialize_dtuple2_eq serialize_header serialize_content v2';
+  serialize_dtuple2_eq serialize_header serialize_content v2';
   let (| h2, c2 |) = v2' in
 //  serialize_dtuple2_eq serialize_initial_byte serialize_long_argument h2;
   let (| b2, l2 |) = h2 in
@@ -1571,9 +1853,9 @@ let serialized_lex_compare_simple_value
   Seq.append_assoc (bare_serialize serialize_initial_byte b1) (bare_serialize (serialize_long_argument b1) l1) (bare_serialize (serialize_content h1) c1);
   Seq.append_assoc (bare_serialize serialize_initial_byte b2) (bare_serialize (serialize_long_argument b2) l2) (bare_serialize (serialize_content h2) c2);
   bytes_lex_compare_serialize_strong_prefix serialize_initial_byte b1 b2 (bare_serialize (serialize_long_argument b1) l1 `Seq.append` bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_long_argument b2) l2 `Seq.append` bare_serialize (serialize_content h2) c2);
-  tot_serialize_length serialize_initial_byte b1;
+  tot_serialize_length tot_serialize_initial_byte b1;
   seq_to_list_length_one (bare_serialize serialize_initial_byte b1);
-  tot_serialize_length serialize_initial_byte b2;
+  tot_serialize_length tot_serialize_initial_byte b2;
   seq_to_list_length_one (bare_serialize serialize_initial_byte b2);
   seq_to_list_append (bare_serialize (serialize_long_argument b1) l1) (bare_serialize (serialize_content h1) c1);
   seq_to_list_append (bare_serialize (serialize_long_argument b2) l2) (bare_serialize (serialize_content h2) c2);
@@ -1585,7 +1867,7 @@ let serialized_lex_compare_simple_value
     let LongArgumentSimpleValue _ x1' = l1 in
     assert (x1 == x1');
     let p1' : tot_parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.tot_weaken parse_long_argument_kind (tot_parse_synth (tot_parse_filter tot_parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b1 ())) in
-    assert (parse_long_argument b1 == p1');
+    assert (tot_parse_long_argument b1 == p1');
     let s1_pre = tot_serialize_synth #_ #_ #(long_argument b1) _ (LongArgumentSimpleValue #b1 ()) (tot_serialize_filter tot_serialize_u8 simple_value_long_argument_wf) LongArgumentSimpleValue?.v () in
     let s1' : tot_serializer p1' = tot_serialize_weaken parse_long_argument_kind s1_pre in
     serializer_unique #parse_long_argument_kind (parse_long_argument b1) (serialize_long_argument b1) s1' l1;
@@ -1601,7 +1883,7 @@ let serialized_lex_compare_simple_value
     let LongArgumentSimpleValue _ x2' = l2 in
     assert (x2 == x2');
     let p2' : tot_parser parse_long_argument_kind (long_argument b2) = LowParse.Spec.Base.tot_weaken parse_long_argument_kind (tot_parse_synth (tot_parse_filter tot_parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b2 ())) in
-    assert (parse_long_argument b2 == p2');
+    assert (tot_parse_long_argument b2 == p2');
     let s2_pre = tot_serialize_synth #_ #_ #(long_argument b2) _ (LongArgumentSimpleValue #b2 ()) (tot_serialize_filter tot_serialize_u8 simple_value_long_argument_wf) LongArgumentSimpleValue?.v () in
     let s2' : tot_serializer p2' = tot_serialize_weaken parse_long_argument_kind s2_pre in
     serializer_unique #parse_long_argument_kind (parse_long_argument b2) (serialize_long_argument b2) s2' l2;
@@ -1731,7 +2013,7 @@ let lex_compare_with_header_uint
     get_uint64_as_initial_byte ty1 x1 == get_uint64_as_initial_byte ty2 x2 /\
     dfst h1 == b1 /\
     parse_long_argument_kind `is_weaker_than` k /\
-    parse_long_argument b1 == LowParse.Spec.Base.tot_weaken parse_long_argument_kind (tot_parse_synth p f)
+    tot_parse_long_argument b1 == LowParse.Spec.Base.tot_weaken parse_long_argument_kind (tot_parse_synth p f)
   ))
   (ensures (
     ty1 == ty2 /\
@@ -1744,7 +2026,7 @@ let lex_compare_with_header_uint
   let (| _, l1 |) = raw_uint64_as_argument ty1 x1 in
   let (| _, l2 |) = raw_uint64_as_argument ty2 x2 in
   let p1' : tot_parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.tot_weaken parse_long_argument_kind (tot_parse_synth (p) f) in
-  assert (parse_long_argument b1 == p1');
+  assert (tot_parse_long_argument b1 == p1');
   let s1_pre = tot_serialize_synth #_ #_ #(long_argument b1) _ f (s) g () in
   let s1' : tot_serializer p1' = tot_serialize_weaken parse_long_argument_kind s1_pre in
   serializer_unique #parse_long_argument_kind (parse_long_argument b1) (serialize_long_argument b1) s1' l1;
@@ -1795,7 +2077,7 @@ let lex_compare_with_header_correct
     lex_compare_with_header_long_argument ty1 x1 ty2 x2;
     let (| _, l2 |) = raw_uint64_as_argument ty2 x2 in
     let p1' : tot_parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.tot_weaken parse_long_argument_kind (tot_parse_synth tot_parse_empty (LongArgumentOther #b1 a1 ())) in
-    assert (parse_long_argument b1 == p1');
+    assert (tot_parse_long_argument b1 == p1');
     let s1_pre = tot_serialize_synth #_ #_ #(long_argument b1) _ (LongArgumentOther #b1 a1 ()) tot_serialize_empty LongArgumentOther?.v () in
     let s1' : tot_serializer p1' = tot_serialize_weaken parse_long_argument_kind s1_pre in
     serializer_unique #parse_long_argument_kind (parse_long_argument b1) (serialize_long_argument b1) s1' l1;
@@ -1854,27 +2136,27 @@ let serialized_lex_compare_int64
 = 
   let v1 = Int64 ty x1 in
   serialize_raw_data_item_aux_correct v1;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v1;
   let v1' = synth_raw_data_item_recip v1 in
-//  serialize_dtuple2_eq serialize_header serialize_content v1';
+  serialize_dtuple2_eq serialize_header serialize_content v1';
   let (| h1, c1 |) = v1' in
   let v2 = Int64 ty x2 in
   serialize_raw_data_item_aux_correct v2;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v2;
   let v2' = synth_raw_data_item_recip v2 in
-//  serialize_dtuple2_eq serialize_header serialize_content v2';
+  serialize_dtuple2_eq serialize_header serialize_content v2';
   let (| h2, c2 |) = v2' in
   lex_compare_header_intro ty x1 x2;
   bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_content h2) c2)
@@ -1899,7 +2181,7 @@ let serialized_lex_compare_string
   (x2: Seq.lseq byte (U64.v len2.value))
 : Lemma
   (ensures (
-    serialized_lex_compare serialize_raw_data_item (String ty len1 x1) (String ty len2 x2) == (
+    tot_serialized_lex_compare serialize_raw_data_item (String ty len1 x1) (String ty len2 x2) == (
       let c = raw_uint64_compare len1 len2 in
       if c = 0
       then bytes_lex_compare x1 x2
@@ -1908,27 +2190,27 @@ let serialized_lex_compare_string
 = 
   let v1 = String ty len1 x1 in
   serialize_raw_data_item_aux_correct v1;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v1;
   let v1' = synth_raw_data_item_recip v1 in
-//  serialize_dtuple2_eq serialize_header serialize_content v1';
+  serialize_dtuple2_eq serialize_header serialize_content v1';
   let (| h1, c1 |) = v1' in
   let v2 = String ty len2 x2 in
   serialize_raw_data_item_aux_correct v2;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v2;
   let v2' = synth_raw_data_item_recip v2 in
-//  serialize_dtuple2_eq serialize_header serialize_content v2';
+  serialize_dtuple2_eq serialize_header serialize_content v2';
   let (| h2, c2 |) = v2' in
   lex_compare_header_intro ty len1 len2;
   bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_content h2) c2)
@@ -1953,36 +2235,36 @@ let serialized_lex_compare_tagged
   (x2: raw_data_item)
 : Lemma
   (ensures (
-    serialized_lex_compare serialize_raw_data_item (Tagged tag1 x1) (Tagged tag2 x2) == (
+    tot_serialized_lex_compare serialize_raw_data_item (Tagged tag1 x1) (Tagged tag2 x2) == (
       let c = raw_uint64_compare tag1 tag2 in
       if c = 0
-      then serialized_lex_compare serialize_raw_data_item x1 x2
+      then tot_serialized_lex_compare serialize_raw_data_item x1 x2
       else c
   )))
 = 
   let v1 = Tagged tag1 x1 in
   serialize_raw_data_item_aux_correct v1;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v1;
   let v1' = synth_raw_data_item_recip v1 in
-//  serialize_dtuple2_eq serialize_header serialize_content v1';
+  serialize_dtuple2_eq serialize_header serialize_content v1';
   let (| h1, c1 |) = v1' in
   let v2 = Tagged tag2 x2 in
   serialize_raw_data_item_aux_correct v2;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v2;
   let v2' = synth_raw_data_item_recip v2 in
-//  serialize_dtuple2_eq serialize_header serialize_content v2';
+  serialize_dtuple2_eq serialize_header serialize_content v2';
   let (| h2, c2 |) = v2' in
   lex_compare_header_intro cbor_major_type_tagged tag1 tag2;
   bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_content h2) c2)
@@ -2004,16 +2286,21 @@ let deterministically_encoded_cbor_map_key_order_tagged_correct
 #push-options "--z3rlimit 16"
 
 let rec serialized_lex_compare_nlist
-  (#k: parser_kind)
   (#t: Type)
-  (#p: tot_parser k t)
-  (s: tot_serializer p)
+  (#kt: parser_kind)
+  (#pt: tot_parser kt t)
+  (st: tot_serializer pt)
+  (#kg: parser_kind)
+  (#pg: parser kg t)
+  (sg: serializer pg)
   (n: nat)
   (x1 x2: nlist n t)
 : Lemma
-  (requires (k.parser_kind_subkind == Some ParserStrong))
+  (requires (kg.parser_kind_subkind == Some ParserStrong /\
+    (forall x . parse pt x == parse pg x)
+  ))
   (ensures (
-    (serialized_lex_compare (tot_serialize_nlist n s)) x1 x2 == lex_compare (serialized_lex_compare s) x1 x2
+    serialized_lex_compare (serialize_nlist n sg) x1 x2 == lex_compare (tot_serialized_lex_compare st) x1 x2
   ))
   (decreases n)
 = if n = 0
@@ -2023,11 +2310,29 @@ let rec serialized_lex_compare_nlist
   else begin
     let a1 :: q1 = x1 in
     let a2 :: q2 = x2 in
-    tot_serialize_nlist_cons (n - 1) s a1 q1;
-    tot_serialize_nlist_cons (n - 1) s a2 q2;
-    bytes_lex_compare_serialize_strong_prefix s a1 a2 (bare_serialize (tot_serialize_nlist (n - 1) s) q1) (bare_serialize (tot_serialize_nlist (n - 1) s) q2);
-    serialized_lex_compare_nlist s (n - 1) q1 q2
+    serialize_nlist_cons (n - 1) sg a1 q1;
+    serializer_unique_strong sg (serializer_of_tot_serializer st) a1;
+    serializer_unique_strong sg (serializer_of_tot_serializer st) a2;
+    serialize_nlist_cons (n - 1) sg a2 q2;
+    bytes_lex_compare_serialize_strong_prefix sg a1 a2 (bare_serialize (serialize_nlist (n - 1) sg) q1) (bare_serialize (serialize_nlist (n - 1) sg) q2);
+    serialized_lex_compare_nlist st sg (n - 1) q1 q2
   end
+
+let rec lex_compare_ext
+  (#t: Type)
+  (compare1 compare2: t -> t -> int)
+  (l1 l2: list t)
+  (prf: (x1: t) -> (x2: t { List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2 }) -> Lemma
+    (compare1 x1 x2 == compare2 x1 x2)
+  )
+: Lemma
+  (ensures (lex_compare compare1 l1 l2 == lex_compare compare2 l1 l2))
+  (decreases l1)
+= match l1, l2 with
+  | a1 :: q1, a2 :: q2 ->
+    prf a1 a2;
+    lex_compare_ext compare1 compare2 q1 q2 prf
+  | _ -> ()
 
 #pop-options
 
@@ -2040,42 +2345,65 @@ let serialized_lex_compare_array
   (x2: list raw_data_item {List.Tot.length x2 == U64.v len2.value})
 : Lemma
   (ensures (
-    serialized_lex_compare serialize_raw_data_item (Array len1 x1) (Array len2 x2) == (
+    tot_serialized_lex_compare serialize_raw_data_item (Array len1 x1) (Array len2 x2) == (
       let c = raw_uint64_compare len1 len2 in
       if c = 0
-      then lex_compare (serialized_lex_compare serialize_raw_data_item) x1 x2
+      then lex_compare (tot_serialized_lex_compare serialize_raw_data_item) x1 x2
       else c
   )))
 = 
   let v1 = Array len1 x1 in
   serialize_raw_data_item_aux_correct v1;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v1;
   let v1' = synth_raw_data_item_recip v1 in
-//  serialize_dtuple2_eq serialize_header serialize_content v1';
+  serialize_dtuple2_eq serialize_header serialize_content v1';
   let (| h1, c1 |) = v1' in
   let v2 = Array len2 x2 in
   serialize_raw_data_item_aux_correct v2;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v2;
   let v2' = synth_raw_data_item_recip v2 in
-//  serialize_dtuple2_eq serialize_header serialize_content v2';
+  serialize_dtuple2_eq serialize_header serialize_content v2';
   let (| h2, c2 |) = v2' in
   lex_compare_header_intro cbor_major_type_array len1 len2;
   bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_content h2) c2);
   if len1 = len2
-  then serialized_lex_compare_nlist serialize_raw_data_item (U64.v len1.value) c1 c2
+  then serialized_lex_compare_nlist serialize_raw_data_item (serializer_of_tot_serializer serialize_raw_data_item) (U64.v len1.value) c1 c2
   else ()
+
+let tot_nondep_then_eq_gen
+  (#t1: Type)
+  (#kt1: parser_kind)
+  (pt1: tot_parser kt1 t1)
+  (#kg1: parser_kind)
+  (pg1: parser kg1 t1)
+  (#t2: Type)
+  (#kt2: parser_kind)
+  (pt2: tot_parser kt2 t2)
+  (#kg2: parser_kind)
+  (pg2: parser kg2 t2)
+  (sq: squash (
+    (forall x . parse pt1 x == parse pg1 x) /\
+    (forall x . parse pt2 x == parse pg2 x)
+  ))
+  (x: bytes)
+: Lemma
+  (ensures 
+    parse (tot_nondep_then pt1 pt2) x == parse (nondep_then pg1 pg2) x
+  )
+= nondep_then_eq (parser_of_tot_parser pt1) (parser_of_tot_parser pt2) x;
+  nondep_then_eq pg1 pg2 x
 
 let serialized_lex_compare_map
   (len1: raw_uint64)
@@ -2084,48 +2412,51 @@ let serialized_lex_compare_map
   (x2: list (raw_data_item & raw_data_item) {List.Tot.length x2 == U64.v len2.value})
 : Lemma
   (ensures (
-    serialized_lex_compare serialize_raw_data_item (Map len1 x1) (Map len2 x2) == (
+    tot_serialized_lex_compare serialize_raw_data_item (Map len1 x1) (Map len2 x2) == (
       let c = raw_uint64_compare len1 len2 in
       if c = 0
-      then lex_compare (serialized_lex_compare (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) x1 x2
+      then lex_compare (tot_serialized_lex_compare (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) x1 x2
       else c
   )))
 = 
   let v1 = Map len1 x1 in
   serialize_raw_data_item_aux_correct v1;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v1;
   let v1' = synth_raw_data_item_recip v1 in
-//  serialize_dtuple2_eq serialize_header serialize_content v1';
+  serialize_dtuple2_eq serialize_header serialize_content v1';
   let (| h1, c1 |) = v1' in
   let v2 = Map len2 x2 in
   serialize_raw_data_item_aux_correct v2;
-  tot_serialize_synth_eq
+  serialize_synth_eq
     _
     synth_raw_data_item
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item_recip
     ()
     v2;
   let v2' = synth_raw_data_item_recip v2 in
-//  serialize_dtuple2_eq serialize_header serialize_content v2';
+  serialize_dtuple2_eq serialize_header serialize_content v2';
   let (| h2, c2 |) = v2' in
   lex_compare_header_intro cbor_major_type_map len1 len2;
   bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_content h2) c2);
   if len1 = len2
-  then serialized_lex_compare_nlist (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) (U64.v len1.value) c1 c2
+  then begin
+    Classical.forall_intro (tot_nondep_then_eq_gen parse_raw_data_item (parser_of_tot_parser parse_raw_data_item) parse_raw_data_item (parser_of_tot_parser parse_raw_data_item) ());
+    serialized_lex_compare_nlist (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) (serialize_nondep_then (serializer_of_tot_serializer serialize_raw_data_item) (serializer_of_tot_serializer serialize_raw_data_item)) (U64.v len1.value) c1 c2
+  end
   else ()
 
 #pop-options
 
 #push-options "--z3rlimit 16"
 
-let serialized_lex_compare_nondep_then
+let tot_serialized_lex_compare_nondep_then
   (#k1: parser_kind)
   (#t1: Type)
   (#p1: tot_parser k1 t1)
@@ -2138,15 +2469,15 @@ let serialized_lex_compare_nondep_then
 : Lemma
   (requires (k1.parser_kind_subkind == Some ParserStrong))
   (ensures (
-    (serialized_lex_compare (tot_serialize_nondep_then s1 s2)) x1 x2 == (
-      let c = serialized_lex_compare s1 (fst x1) (fst x2) in
+    (tot_serialized_lex_compare (tot_serialize_nondep_then s1 s2)) x1 x2 == (
+      let c = tot_serialized_lex_compare s1 (fst x1) (fst x2) in
       if c = 0
-      then serialized_lex_compare s2 (snd x1) (snd x2)
+      then tot_serialized_lex_compare s2 (snd x1) (snd x2)
       else c
   )))
 =
   tot_serialize_nondep_then_eq s1 s2 x1;
   tot_serialize_nondep_then_eq s1 s2 x2;
-  bytes_lex_compare_serialize_strong_prefix s1 (fst x1) (fst x2) (bare_serialize s2 (snd x1)) (bare_serialize s2 (snd x2))
+  bytes_lex_compare_serialize_strong_prefix (serializer_of_tot_serializer s1) (fst x1) (fst x2) (bare_serialize s2 (snd x1)) (bare_serialize s2 (snd x2))
 
 #pop-options
