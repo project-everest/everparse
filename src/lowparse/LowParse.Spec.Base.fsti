@@ -925,6 +925,21 @@ let serializer_unique
   let _ = parse p (s2 x) in
   serializer_correct_implies_complete p s2
 
+let serializer_unique_strong
+  (#t: Type)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (s1: serializer p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2)
+  (x: t)
+: Lemma
+  (requires (forall x . parse p1 x == parse p2 x))
+  (ensures (s1 x == s2 x))
+= let s1' = serialize_ext p2 s2 p1 in
+  serializer_unique p1 s1 s1' x
+
 let serializer_injective
   (#k: parser_kind)
   (#t: Type)
