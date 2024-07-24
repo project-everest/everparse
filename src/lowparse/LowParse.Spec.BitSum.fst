@@ -408,6 +408,34 @@ let parse_bitsum'
 = synth_bitsum'_injective b;
   (p `parse_filter` filter_bitsum' b) `parse_synth` synth_bitsum' b
 
+let parse_bitsum'_no_bitsum
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot { bitsum'_no_bitsum b == true })
+  (#k: parser_kind)
+  (p: parser k t)
+: Tot (parser k (bitsum'_type b))
+= synth_bitsum'_injective b;
+  (p `parse_synth` synth_filter_bitsum'_no_bitsum b) `parse_synth` synth_bitsum' b
+
+let parse_bitsum'_no_bitsum_eq
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot { bitsum'_no_bitsum b == true })
+  (#k: parser_kind)
+  (p: parser k t)
+  (x: bytes)
+: Lemma
+  (ensures (parse (parse_bitsum'_no_bitsum b p) x == parse (parse_bitsum' b p) x))
+  [SMTPat (parse (parse_bitsum'_no_bitsum b p) x)]
+= synth_bitsum'_injective b;
+  parse_synth_eq (parse_filter p (filter_bitsum' b)) (synth_bitsum' b) x;
+  parse_synth_eq (parse_synth p (synth_filter_bitsum'_no_bitsum b)) (synth_bitsum' b) x;
+  parse_filter_eq p (filter_bitsum' b) x;
+  parse_synth_eq p (synth_filter_bitsum'_no_bitsum b) x
+
 let tot_parse_bitsum'
   (#tot: pos)
   (#t: eqtype)
