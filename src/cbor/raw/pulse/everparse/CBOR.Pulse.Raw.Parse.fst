@@ -91,7 +91,7 @@ let cbor_parse_aux
       (requires (v == serialize_cbor v1 `Seq.append` v2))
       (ensures (v1 == v'))
     = parsed_data_is_serialize #parse_raw_data_item_kind #raw_data_item #parse_raw_data_item serialize_raw_data_item v;
-      tot_serialize_strong_prefix serialize_raw_data_item v1 v' v2 (Seq.slice v consumed (Seq.length v))
+      serialize_strong_prefix serialize_raw_data_item v1 v' v2 (Seq.slice v consumed (Seq.length v))
     in
     Classical.forall_intro_2 (fun v1 v2 -> Classical.move_requires (prf v1) v2);
     ()

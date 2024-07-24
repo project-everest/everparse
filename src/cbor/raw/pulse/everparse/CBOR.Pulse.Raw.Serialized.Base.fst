@@ -56,7 +56,7 @@ fn cbor_match_serialized_array_intro_aux
   (r: raw_data_item)
   (sq: squash (Array? r))
   requires
-    pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n serialize_raw_data_item) pc #pm v ** pure (
+    pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) pc #pm v ** pure (
       res.cbor_serialized_header == len /\
       res.cbor_serialized_payload == pc /\
       res.cbor_serialized_perm == pm /\
@@ -67,13 +67,13 @@ fn cbor_match_serialized_array_intro_aux
     cbor_match_serialized_array res 1.0R r **
     trade
       (cbor_match_serialized_array res 1.0R r)
-      (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n serialize_raw_data_item) pc #pm v)
+      (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) pc #pm v)
 {
   fold (cbor_match_serialized_payload_array res.cbor_serialized_payload (1.0R `perm_mul` res.cbor_serialized_perm) v);
   fold (cbor_match_serialized_array res 1.0R r);
   ghost fn aux (_: unit)
     requires emp ** cbor_match_serialized_array res 1.0R r
-    ensures (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n serialize_raw_data_item) pc #pm v)
+    ensures (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) pc #pm v)
   {
     unfold (cbor_match_serialized_array res 1.0R r);
     unfold (cbor_match_serialized_payload_array pc pm (Array?.v r))
@@ -94,7 +94,7 @@ fn cbor_match_serialized_map_intro_aux
   (r: raw_data_item)
   (sq: squash (Map? r))
   requires
-    pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v ** pure (
+    pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v ** pure (
       res.cbor_serialized_header == len /\
       res.cbor_serialized_payload == pc /\
       res.cbor_serialized_perm == pm /\
@@ -105,13 +105,13 @@ fn cbor_match_serialized_map_intro_aux
     cbor_match_serialized_map res 1.0R r **
     trade
       (cbor_match_serialized_map res 1.0R r)
-      (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
+      (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
 {
   fold (cbor_match_serialized_payload_map res.cbor_serialized_payload (1.0R `perm_mul` res.cbor_serialized_perm) v);
   fold (cbor_match_serialized_map res 1.0R r);
   ghost fn aux (_: unit)
     requires emp ** cbor_match_serialized_map res 1.0R r
-    ensures (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
+    ensures (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v)
   {
     unfold (cbor_match_serialized_map res 1.0R r);
     unfold (cbor_match_serialized_payload_map pc pm (Map?.v r))
@@ -170,7 +170,7 @@ fn cbor_read
   else if (typ = cbor_major_type_array) {
     let len = get_array_length v h;
     get_array_payload pc v;
-    with n (v': LowParse.Spec.VCList.nlist n raw_data_item) . assert (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n serialize_raw_data_item) pc #pm v');
+    with n (v': LowParse.Spec.VCList.nlist n raw_data_item) . assert (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n serialize_raw_data_item) pc #pm v');
     Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
     let resa = {
       cbor_serialized_header = len;
@@ -189,7 +189,7 @@ fn cbor_read
   else if (typ = cbor_major_type_map) {
     let len = get_map_length v h;
     get_map_payload pc v;
-    with n (v': LowParse.Spec.VCList.nlist n (raw_data_item & raw_data_item)) . assert (pts_to_serialized (LowParse.Spec.VCList.tot_serialize_nlist n (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v');
+    with n (v': LowParse.Spec.VCList.nlist n (raw_data_item & raw_data_item)) . assert (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) pc #pm v');
     Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
     let resa = {
       cbor_serialized_header = len;

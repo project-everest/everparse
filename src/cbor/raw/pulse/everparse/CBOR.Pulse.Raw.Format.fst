@@ -11,13 +11,16 @@ module Trade = Pulse.Lib.Trade.Util
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let read_initial_byte_t' : reader serialize_initial_byte_t =
-  read_synth'
-    (read_bitsum'
-      destr_initial_byte
-      (reader_of_leaf_reader (read_u8' ()))
+  reader_ext
+    (read_synth'
+      (read_bitsum'
+        destr_initial_byte
+        (reader_of_leaf_reader (read_u8' ()))
+      )
+      synth_initial_byte
+      synth_initial_byte_recip
     )
-    synth_initial_byte
-    synth_initial_byte_recip
+    _
 
 (* FIXME: WHY WHY WHY does this not extract?
 let read_initial_byte_t : leaf_reader serialize_initial_byte_t =
@@ -41,9 +44,9 @@ let validate_initial_byte : validator parse_initial_byte =
       (validate_synth
         (validate_ext
           (validate_total_constant_size
-            (LowParse.Spec.BitSum.tot_parse_bitsum'_no_bitsum
+            (LowParse.Spec.BitSum.parse_bitsum'_no_bitsum
               initial_byte_desc
-              tot_parse_u8
+              parse_u8
             )
             1sz
           )
@@ -313,10 +316,13 @@ let read_long_argument
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let read_header' : reader serialize_header =
-  read_dtuple2
-    jump_initial_byte
-    read_initial_byte
-    read_long_argument
+  reader_ext
+    (read_dtuple2
+      jump_initial_byte
+      read_initial_byte
+      read_long_argument
+    )
+    _
 
 ```pulse
 fn read_header (_: unit) : leaf_reader #header #parse_header_kind #parse_header serialize_header =
@@ -491,7 +497,7 @@ let jump_long_argument_8
 : Tot (jumper (parse_long_argument b))
 =
         jump_ext
-          (jump_constant_size (if b.major_type = cbor_major_type_simple_value then tot_parse_synth (tot_parse_filter tot_parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b ()) else tot_weaken (parse_filter_kind parse_u8_kind) (tot_parse_synth tot_parse_u8 (LongArgumentU8 #b ()))) 1sz)
+          (jump_constant_size (if b.major_type = cbor_major_type_simple_value then parse_synth (parse_filter parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b ()) else weaken (parse_filter_kind parse_u8_kind) (parse_synth parse_u8 (LongArgumentU8 #b ()))) 1sz)
           (parse_long_argument b)
 
 inline_for_extraction
@@ -671,7 +677,7 @@ let validate_leaf_content_seq
 : Tot (validator (parse_leaf_content h))
 = validate_ext
     (validate_total_constant_size
-      (LowParse.Spec.SeqBytes.tot_parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h)) `tot_parse_synth` LeafContentSeq ())
+      (LowParse.Spec.SeqBytes.parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h)) `parse_synth` LeafContentSeq ())
       (SZ.uint64_to_sizet (get_header_argument_as_uint64 h))
     )
     (parse_leaf_content h)
@@ -721,7 +727,7 @@ let jump_leaf_content_seq
 : Tot (jumper (parse_leaf_content h))
 = jump_ext
     (jump_constant_size
-      (LowParse.Spec.SeqBytes.tot_parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h)) `tot_parse_synth` LeafContentSeq ())
+      (LowParse.Spec.SeqBytes.parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h)) `parse_synth` LeafContentSeq ())
       (SZ.uint64_to_sizet (get_header_argument_as_uint64 h))
     )
     (parse_leaf_content h)
@@ -776,9 +782,10 @@ fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (#rem: Ghost.erased SZ.t)
     (prem: R.ref SZ.t)
 {
-  Trade.rewrite_with_trade
-    (pts_to_serialized serialize_raw_data_item_param.serialize_header a #pm va)
-    (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  pts_to_serialized_ext_trade
+    (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
+    (serialize_dtuple2 serialize_header serialize_leaf_content)
+    a;
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
   match spl { S.SlicePair input1 input2 -> {
     unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
@@ -786,7 +793,7 @@ fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     let h = read_header () input1;
     elim_trade
       (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
-      (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+      (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
     elim_trade _ _;
     let typ = get_header_major_type h;
     if (typ = cbor_major_type_array) {
@@ -827,9 +834,10 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (a: _)
     (bound: SZ.t)
 {
-  Trade.rewrite_with_trade
-    (pts_to_serialized serialize_raw_data_item_param.serialize_header a #pm va)
-    (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  pts_to_serialized_ext_trade
+    (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
+    (serialize_dtuple2 serialize_header serialize_leaf_content)
+    a;
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
   match spl { S.SlicePair input1 input2 -> {
     unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
@@ -837,7 +845,7 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     let h = read_header () input1;
     elim_trade
       (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
-      (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+      (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
     elim_trade _ _;
     let typ = get_header_major_type h;
     if (typ = cbor_major_type_array) {
@@ -933,12 +941,12 @@ fn get_header_and_contents
     serialize_raw_data_item_aux
     input;
   pts_to_serialized_synth_l2r_trade
-    (tot_serialize_dtuple2 serialize_header serialize_content)
+    (serialize_dtuple2 serialize_header serialize_content)
     synth_raw_data_item
     synth_raw_data_item_recip
     input;
   Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
-  with v' . assert (pts_to_serialized (tot_serialize_dtuple2 serialize_header serialize_content) input #pm v');
+  with v' . assert (pts_to_serialized (serialize_dtuple2 serialize_header serialize_content) input #pm v');
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
   match spl { S.SlicePair ph outc -> {
     unfold (split_dtuple2_post serialize_header serialize_content input pm v' spl);
@@ -990,12 +998,12 @@ fn get_string_payload
 {
   pts_to_serialized_ext_trade
     (serialize_content h)
-    (LowParse.Spec.SeqBytes.tot_serialize_lseq_bytes (U64.v (String?.len v).value))
+    (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value))
     input;
-  with v1 . assert (pts_to_serialized (LowParse.Spec.SeqBytes.tot_serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1);
+  with v1 . assert (pts_to_serialized (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1);
   let v2 : Ghost.erased bytes = Ghost.hide #bytes (Ghost.reveal #(Seq.lseq byte (U64.v (String?.len v).value)) v1);
   Trade.rewrite_with_trade
-    (pts_to_serialized (LowParse.Spec.SeqBytes.tot_serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1)
+    (pts_to_serialized (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1)
     (S.pts_to input #pm v2);
   Trade.trans _ _ (pts_to_serialized (serialize_content h) input #pm c)
 }
@@ -1067,13 +1075,13 @@ fn get_array_payload
   (#c: Ghost.erased (content h)) 
   requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
   ensures exists* v' .
-    pts_to_serialized (L.tot_serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v' **
-    trade (pts_to_serialized (L.tot_serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
+    pts_to_serialized (L.serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v' **
+    trade (pts_to_serialized (L.serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (v' == Array?.v v)
 {
   pts_to_serialized_ext_trade
     (serialize_content h)
-    (L.tot_serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item)
+    (L.serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item)
     input
 }
 ```
@@ -1099,13 +1107,13 @@ fn get_map_payload
   (#c: Ghost.erased (content h)) 
   requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
   ensures exists* v' .
-    pts_to_serialized (L.tot_serialize_nlist (U64.v (Map?.len v).value) (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v' **
-    trade (pts_to_serialized (L.tot_serialize_nlist (U64.v (Map?.len v).value) (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
+    pts_to_serialized (L.serialize_nlist (U64.v (Map?.len v).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v' **
+    trade (pts_to_serialized (L.serialize_nlist (U64.v (Map?.len v).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (v' == Map?.v v)
 {
   pts_to_serialized_ext_trade
     (serialize_content h)
-    (L.tot_serialize_nlist (U64.v (Map?.len v).value) (tot_serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
+    (L.serialize_nlist (U64.v (Map?.len v).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
     input
 }
 ```

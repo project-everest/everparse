@@ -3,13 +3,13 @@ module F = CBOR.Spec.Raw.Format
 module M = CBOR.Spec.Raw.Map
 module LP = LowParse.Spec.Base
 
-let serialize_cbor c = F.serialize_raw_data_item c
+let serialize_cbor c = F.tot_serialize_raw_data_item c
 
 let serialize_cbor_inj c1 c2 s1 s2 =
   LP.serialize_strong_prefix #F.parse_raw_data_item_kind #_ #F.parse_raw_data_item F.serialize_raw_data_item c1 c2 s1 s2
 
 let serialize_cbor_nonempty c =
-  LP.tot_serialize_length F.serialize_raw_data_item c
+  LP.tot_serialize_length F.tot_serialize_raw_data_item c
 
 let deterministically_encoded_cbor_map_key_order = F.deterministically_encoded_cbor_map_key_order
 
@@ -103,7 +103,7 @@ and cbor_compare_array_correct
   (x1 x2: list raw_data_item)
 : Lemma
   (requires (List.Tot.length x1 == List.Tot.length x2))
-  (ensures (cbor_compare_array x1 x2 == LowParse.Spec.Sorted.lex_compare (F.serialized_lex_compare F.serialize_raw_data_item) x1 x2))
+  (ensures (cbor_compare_array x1 x2 == LowParse.Spec.Sorted.lex_compare (F.tot_serialized_lex_compare F.tot_serialize_raw_data_item) x1 x2))
   (decreases x1)
 = match x1, x2 with
   | a1 :: q1, a2 :: q2 ->
@@ -115,13 +115,13 @@ and cbor_compare_map_correct
   (x1 x2: list (raw_data_item & raw_data_item))
 : Lemma
   (requires (List.Tot.length x1 == List.Tot.length x2))
-  (ensures (cbor_compare_map x1 x2 == LowParse.Spec.Sorted.lex_compare (F.serialized_lex_compare (LowParse.Spec.Combinators.tot_serialize_nondep_then F.serialize_raw_data_item F.serialize_raw_data_item)) x1 x2))
+  (ensures (cbor_compare_map x1 x2 == LowParse.Spec.Sorted.lex_compare (F.tot_serialized_lex_compare (LowParse.Spec.Combinators.tot_serialize_nondep_then F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item)) x1 x2))
   (decreases x1)
 = match x1, x2 with
   | a1 :: q1, a2 :: q2 ->
     cbor_compare_correct' (fst a1) (fst a2);
     cbor_compare_correct' (snd a1) (snd a2);
-    F.serialized_lex_compare_nondep_then F.serialize_raw_data_item F.serialize_raw_data_item a1 a2;
+    F.tot_serialized_lex_compare_nondep_then F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item a1 a2;
     cbor_compare_map_correct q1 q2
   | _ -> ()
 
