@@ -56,9 +56,9 @@ fn l2r_writer_ext
 }
 ```
 
-(*
 inline_for_extraction
-let l2r_writer_lens
+```pulse
+fn l2r_writer_lens
   (#t1' #t2' #t: Type0)
   (vmatch1: t1' -> t -> slprop)
   (vmatch2: t2' -> t -> slprop)
@@ -71,24 +71,18 @@ let l2r_writer_lens
   (#s: serializer p)
   (w: l2r_writer vmatch1 s)
 : l2r_writer #t2' #t vmatch2 #k #p s
-= (x2': t2') ->
-  (#x: Ghost.erased t) ->
-  (out: slice byte) ->
-  (offset: SZ.t) ->
-  (#v: Ghost.erased bytes) ->
-  stt SZ.t
-    (S.pts_to out v ** vmatch x2' x ** pure (
-      SZ.v offset + Seq.length (bare_serialize s x) <= Seq.length v
-    ))
-    (fun res -> exists* v' .
-      S.pts_to out v' ** vmatch2 x2' x ** pure (
-      let bs = bare_serialize s x in
-      SZ.v offset + Seq.length bs <= Seq.length v /\
-      Seq.length v' == Seq.length v /\
-      Seq.slice v' 0 (SZ.v offset) == Seq.slice v 0 (SZ.v offset) /\
-      Seq.slice v' (SZ.v offset) (SZ.v offset + Seq.length bs) == bs
-    ))
-*)
+= (x2': t2')
+  (#x: Ghost.erased t)
+  (out: slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  let x1' = lens x2' _;
+  let res = w x1' out offset;
+  elim_trade _ _;
+  res
+}
+```
 
 inline_for_extraction
 let compute_remaining_size
@@ -169,5 +163,33 @@ fn compute_remaining_size_ext
 {
   serializer_unique_strong s1 s2 x;
   cr1 x' out
+}
+```
+
+inline_for_extraction
+```pulse
+fn compute_remaining_size_lens
+  (#t1' #t2' #t: Type0)
+  (vmatch1: t1' -> t -> slprop)
+  (vmatch2: t2' -> t -> slprop)
+  (lens: (x2': t2') -> (x: Ghost.erased t) -> stt t1'
+    (vmatch2 x2' x)
+    (fun x1' -> vmatch1 x1' x ** trade (vmatch1 x1' x) (vmatch2 x2' x))
+  )
+  (#k: parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: compute_remaining_size vmatch1 s)
+: compute_remaining_size #t2' #t vmatch2 #k #p s
+=
+  (x2': t2')
+  (#x: Ghost.erased t)
+  (out: R.ref SZ.t)
+  (#v: Ghost.erased SZ.t)
+{
+  let x1' = lens x2' _;
+  let res = w x1' out;
+  elim_trade _ _;
+  res
 }
 ```
