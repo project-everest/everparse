@@ -140,6 +140,8 @@ let z3_branch_depth : ref (option vstring) = alloc None
 
 let z3_options : ref (option vstring) = alloc None
 
+let skip_checks_in_z3_test_executable : ref bool = alloc false
+
 noeq
 type cmd_option_kind =
   | OptBool:
@@ -389,6 +391,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_test" (OptStringOption "parser name" always_valid z3_test) "produce positive and/or negative test cases for a given parser" [];
     CmdOption "z3_test_mode" (OptStringOption "pos|neg|all" valid_z3_test_mode z3_test_mode) "produce positive, negative, or all kinds of test cases (default all)" [];
     CmdOption "z3_witnesses" (OptStringOption "nb" always_valid z3_witnesses) "ask for nb distinct test witnesses per branch case (default 1)" [];
+    CmdOption "__skip_checks_in_z3_test_executable" (OptBool skip_checks_in_z3_test_executable) "The test executable should not abort if Z3 produces a mislabeled test case" [];
     CmdOption "__arg0" (OptStringOption "executable name" always_valid arg0) "executable name to use for the help message" [];
     CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|copy_everparse_h|emit_config" valid_micro_step micro_step) "micro step" [];
     CmdOption "__produce_c_from_existing_krml" (OptBool produce_c_from_existing_krml) "produce C from .krml files" [];
@@ -615,3 +618,6 @@ let get_z3_options () : ML string =
   match !z3_options with
   | None -> ""
   | Some s -> s
+
+let get_skip_checks_in_z3_test_executable () : ML bool =
+  !skip_checks_in_z3_test_executable

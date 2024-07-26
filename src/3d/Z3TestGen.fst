@@ -1176,6 +1176,7 @@ let print_witness_call_as_c_aux
   out ", 0);"
 
 let print_witness_call_as_c
+  (skip_checks_in_z3_test_executable: bool)
   (out: (string -> ML unit))
   (positive: bool)
   (validator_name: string)
@@ -1207,10 +1208,17 @@ let print_witness_call_as_c
       printf (\"REJECTED (not all bytes consumed)\\n\\n\");
     else
       printf (\"REJECTED (failed)\\n\\n\");
-    if (";
+";
+  if not skip_checks_in_z3_test_executable then begin
+    out
+"if (";
   if positive then out "!";
   out "result)
       return 1;
+"
+  end;
+  out
+"
   };
 "
 
@@ -1265,6 +1273,7 @@ let mk_output_filename
   OS.concat out_dir (mk_args_as_file_name ("witness." ^ string_of_int i ^ "." ^ validator_name) args ^ ".dat")
 
 let print_witness_as_c
+  (skip_checks_in_z3_test_executable: bool)
   (out_dir: string)
   (out: (string -> ML unit))
   (positive: bool)
@@ -1276,10 +1285,11 @@ let print_witness_as_c
 : ML unit
 = OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ((if positive then "POS." else "NEG.") ^ validator_name) args);
   print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out positive validator_name arg_types len args
+    print_witness_call_as_c skip_checks_in_z3_test_executable out positive validator_name arg_types len args
   )
 
 let print_diff_witness_as_c
+  (skip_checks_in_z3_test_executable: bool)
   (out_dir: string)
   (out: (string -> ML unit))
   (validator_name1: string)
@@ -1291,8 +1301,8 @@ let print_diff_witness_as_c
 : ML unit
 = OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ("POS." ^ validator_name1 ^ ".NEG." ^ validator_name2) args);
   print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out true validator_name1 arg_types len args;
-    print_witness_call_as_c out false validator_name2 arg_types len args
+    print_witness_call_as_c skip_checks_in_z3_test_executable out true validator_name1 arg_types len args;
+    print_witness_call_as_c skip_checks_in_z3_test_executable out false validator_name2 arg_types len args
   )
 
 let print_witness (witness: Seq.seq int) : ML unit =
@@ -1529,7 +1539,9 @@ static void TestErrorHandler (
 }
 "
 
-let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
+let do_test
+  (skip_checks_in_z3_test_executable: bool)
+(out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
   let def = List.assoc name1 prog in
   if None? def
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
@@ -1550,7 +1562,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
   let tasks =
     begin
       if pos
-      then [print_witness_as_c out_dir cout true validator_name args counter, (fun _ -> (
+      then [print_witness_as_c skip_checks_in_z3_test_executable out_dir cout true validator_name args counter, (fun _ -> (
         FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
         mk_get_positive_test_witness name1 args
       ))]
@@ -1558,7 +1570,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
     end `List.Tot.append`
     begin
       if neg
-      then [print_witness_as_c out_dir cout false validator_name args counter, (fun _ -> (
+      then [print_witness_as_c skip_checks_in_z3_test_executable out_dir cout false validator_name args counter, (fun _ -> (
         FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
         mk_get_negative_test_witness name1 args
       ))]
@@ -1583,11 +1595,15 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
   (mk_get_positive_test_witness name1 l)
   call2
 
-let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses depth =
+let do_diff_test_for
+  (skip_checks_in_z3_test_executable: bool)
+  (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for z3 name1 args nargs ([print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 args name2)]) nbwitnesses depth
+  witnesses_for z3 name1 args nargs ([print_diff_witness_as_c skip_checks_in_z3_test_executable out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 args name2)]) nbwitnesses depth
 
-let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses depth =
+let do_diff_test
+  (skip_checks_in_z3_test_executable: bool)
+  (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses depth =
   let def = List.assoc name1 prog in
   if None? def
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
@@ -1615,8 +1631,8 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: 
   int main(void) {
 ";
   let counter = alloc 0 in
-  do_diff_test_for out_dir counter cout z3 prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
-  do_diff_test_for out_dir counter cout z3 prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
+  do_diff_test_for skip_checks_in_z3_test_executable out_dir counter cout z3 prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
+  do_diff_test_for skip_checks_in_z3_test_executable out_dir counter cout z3 prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
   cout "  return 0;
   }
 "
