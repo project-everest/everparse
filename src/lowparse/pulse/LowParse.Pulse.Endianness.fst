@@ -120,7 +120,7 @@ let rec mk_be_to_n
   then be_to_n_1 u
   else be_to_n_S (mk_be_to_n u (len - 1))
 
-// Disclaimer: a function of type n_to_be_t is ultimately meant to be called with a buffer of size len, so we do not care about any output bytes beyond position len.
+// Writing from right to left: pos should be the position one past the end of the writing zone
 
 inline_for_extraction
 noextract
@@ -136,16 +136,18 @@ let n_to_be_t
   (pos: SZ.t) ->
   stt unit
     (S.pts_to x v ** pure (
-      SZ.v pos == len /\
-      len <= Seq.length v /\
+      len <= SZ.v pos /\
+      SZ.v pos <= Seq.length v /\
       u.v n < pow2 (8 * len)
     ))
     (fun _ -> exists* v' . S.pts_to x v' ** pure (
-      SZ.v pos == len /\
-      len <= Seq.length v /\
-      Seq.length v' == Seq.length v /\
+      len <= SZ.v pos /\
+      SZ.v pos <= Seq.length v /\
       u.v n < pow2 (8 * len) /\
-      Seq.slice (v') 0 len `Seq.equal` n_to_be len (u.v n)
+      Seq.length v' == Seq.length v /\
+      Seq.slice v' 0 (SZ.v pos - len) `Seq.equal` Seq.slice (v) 0 (SZ.v pos - len) /\
+      Seq.slice v' (SZ.v pos - len) (SZ.v pos) `Seq.equal` n_to_be len (u.v n) /\
+      Seq.slice v' (SZ.v pos) (Seq.length v') `Seq.equal` Seq.slice v (SZ.v pos) (Seq.length v)
     ))
 
 inline_for_extraction
@@ -182,7 +184,7 @@ fn n_to_be_1
   E.reveal_n_to_be 1 (u.v n);
   E.reveal_n_to_be 0 (u.v n / pow2 8);
   let n' = u.to_byte n;
-  S.op_Array_Assignment x 0sz n'
+  S.op_Array_Assignment x (pos `SZ.sub` 1sz) n'
 }
 ```
 
@@ -201,12 +203,17 @@ fn n_to_be_S
   (#v: Ghost.erased (Seq.seq U8.t))
   (pos: SZ.t)
 {
+  Seq.lemma_split (Seq.slice v (SZ.v pos - 1) (Seq.length v)) 1;
   reveal_n_to_be (len + 1) (u.v n);
   let lo = u.to_byte n;
   let hi = u.div256 n;
   let pos' = pos `SZ.sub` 1sz;
+  with v1 . assert (S.pts_to x v1);
+  Seq.lemma_split (Seq.slice v1 (SZ.v pos - 1) (Seq.length v1)) 1;
   let _ = ih hi x pos';
-  S.op_Array_Assignment x pos' lo
+  S.op_Array_Assignment x pos' lo;
+  with v2 . assert (S.pts_to x v2);
+  Seq.lemma_split (Seq.slice v2 (SZ.v pos - 1) (Seq.length v2)) 1;
 }
 ```
 
