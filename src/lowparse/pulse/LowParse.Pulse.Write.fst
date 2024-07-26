@@ -104,7 +104,6 @@ let compute_remaining_size
       (res == true ==> bs + SZ.v v' == SZ.v v)
     ))
 
-
 inline_for_extraction
 ```pulse
 fn compute_size
@@ -191,5 +190,35 @@ fn compute_remaining_size_lens
   let res = w x1' out;
   elim_trade _ _;
   res
+}
+```
+
+inline_for_extraction
+```pulse
+fn compute_remaining_size_constant_size
+  (#t' #t: Type0)
+  (#vmatch: t' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sz: SZ.t {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == SZ.v sz
+  })
+: compute_remaining_size #t' #t vmatch #k #p s
+=
+  (x': t')
+  (#x: Ghost.erased t)
+  (out: R.ref SZ.t)
+  (#v: Ghost.erased SZ.t)
+{
+  serialize_length s x;
+  let capacity = !out;
+  if (SZ.lt capacity sz) {
+    false
+  } else {
+    out := SZ.sub capacity sz;
+    true
+  }
 }
 ```
