@@ -66,15 +66,15 @@ let prelude : string =
 (define-fun parse-u8 ((x State)) Result
   (mk-result
     (choose (choice-index x))
-    (mk-state
-      (let ((new-size (- (input-size x) 1)))
+    (let ((new-size (- (input-size x) 1)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 1))
+        (branch-index x)
       )
-      (+ (choice-index x) 1)
-      (branch-index x)
     )
   )
 )
@@ -86,15 +86,15 @@ let prelude : string =
         (choose (+ 0 (choice-index x)))
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 2)))
+    (let ((new-size (- (input-size x) 2)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 2))
+        (branch-index x)
       )
-      (+ (choice-index x) 2)
-      (branch-index x)
     )
   )
 )
@@ -106,15 +106,15 @@ let prelude : string =
         (choose (+ 1 (choice-index x)))
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 2)))
+    (let ((new-size (- (input-size x) 2)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 2))
+        (branch-index x)
       )
-      (+ (choice-index x) 2)
-      (branch-index x)
     )
   )
 )
@@ -134,15 +134,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 4)))
+    (let ((new-size (- (input-size x) 4)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 4))
+        (branch-index x)
       )
-      (+ (choice-index x) 4)
-      (branch-index x)
     )
   )
 )
@@ -162,15 +162,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 4)))
+    (let ((new-size (- (input-size x) 4)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 4))
+        (branch-index x)
       )
-      (+ (choice-index x) 4)
-      (branch-index x)
     )
   )
 )
@@ -206,15 +206,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 8)))
+    (let ((new-size (- (input-size x) 8)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 8))
+        (branch-index x)
       )
-      (+ (choice-index x) 8)
-      (branch-index x)
     )
   )
 )
@@ -250,15 +250,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 8)))
+    (let ((new-size (- (input-size x) 8)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 8))
+        (branch-index x)
       )
-      (+ (choice-index x) 8)
-      (branch-index x)
     )
   )
 )
@@ -292,7 +292,7 @@ let prelude : string =
       )
       (mk-state
         -1
-        (choice-index x)
+        (+ (choice-index x) (input-size x))
         (branch-index x)
       )
     )
@@ -590,13 +590,12 @@ let mk_parse_dep_pair_with_refinement
 : string
 = let input = Printf.sprintf "%s-input" name in
   let tmp = Printf.sprintf "%s-tmp" name in
-  let condtmp = Printf.sprintf "%s-condtmp" name in
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
    (let (("^tmp^" ("^dfst^" "^input^")))
      (if (< (input-size (after-state "^tmp^")) 0)
        (after-state "^tmp^")
-       (let (("^condtmp^" (let (("^cond_binder_name^" (return-value "^tmp^"))) "^cond^")))
-         (if (and "^condtmp^" (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 0)))
+       (if (let (("^cond_binder_name^" (return-value "^tmp^"))) "^cond^")
+         (if (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 0))
            (let (("^dsnd_binder_name^" (return-value "^tmp^")))
              ("^dsnd^"
                (mk-state
@@ -607,10 +606,15 @@ let mk_parse_dep_pair_with_refinement
              )
            )
            (mk-state
-             (if (and (not "^condtmp^") (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 1))) -1 -2)
+             -2
              (choice-index (after-state "^tmp^"))
-             (+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))
+             (+ 1 (branch-index (after-state "^tmp^")))
            )
+         )
+         (mk-state
+           (if (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 1)) -1 -2)
+           (choice-index (after-state "^tmp^"))
+           (+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))
          )
        )
      )
@@ -1134,6 +1138,20 @@ let read_witness (z3: Z3.z3) : ML (Seq.seq int) =
   in
   aux Seq.empty witness_size
 
+let read_branch_trace (z3: Z3.z3) : ML (Seq.seq int) =
+  z3.to_z3 "(eval (branch-index state-witness))\n";
+  let witness_size = Lisp.read_bare_int_from z3.from_z3 in
+  let rec aux (accu: Seq.seq int) (remaining: int) : ML (Seq.seq int) =
+    if remaining <= 0
+    then accu
+    else
+      let index = remaining - 1 in
+      let _ = z3.to_z3 (Printf.sprintf "(eval (branch-trace %d))\n" index) in
+      let v = Lisp.read_bare_int_from z3.from_z3 in
+      aux (Seq.cons v accu) index
+  in
+  aux Seq.empty witness_size
+
 let rec read_witness_args (z3: Z3.z3) (accu: list string) (n: nat) : ML (list string) =
   if n = 0
   then accu
@@ -1354,7 +1372,12 @@ let print_diff_witness_as_c
 let print_witness (witness: Seq.seq int) : ML unit =
   FStar.IO.print_string " produced witness: [";
   List.iter (fun i -> FStar.IO.print_string (string_of_int i); FStar.IO.print_string "; ") (Seq.seq_to_list witness);
-  FStar.IO.print_string "]\n"
+  FStar.IO.print_string "]"
+
+let print_branch_trace (witness: Seq.seq int) : ML unit =
+  FStar.IO.print_string " with branch trace : [";
+  List.iter (fun i -> FStar.IO.print_string (string_of_int i); FStar.IO.print_string "; ") (Seq.seq_to_list witness);
+  FStar.IO.print_string "]"
 
 let rec mk_witness_call (accu: string) (l: list arg_type) (args: list string) : Tot string (decreases l) =
   match l, args with
@@ -1362,10 +1385,13 @@ let rec mk_witness_call (accu: string) (l: list arg_type) (args: list string) : 
   | _ :: ql, a :: qargs -> mk_witness_call (Printf.sprintf "%s %s" accu a) ql qargs
   | _ -> Printf.sprintf "(%s)" accu
 
-let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq int) (args: list string) : ML unit =
+let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq int) (input_size: string) (branch_trace: Seq.seq int) (args: list string) : ML unit =
   FStar.IO.print_string ";; call ";
   FStar.IO.print_string (mk_witness_call name l args);
-  print_witness witness
+  print_witness witness;
+  FStar.IO.print_string (Printf.sprintf " with remaining input %s " input_size);
+  print_branch_trace branch_trace;
+  FStar.IO.print_string "\n"
 
 let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer _ -> false | _ -> true) l)
 
@@ -1391,9 +1417,12 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
+    z3.to_z3 "(eval (input-size state-witness))\n";
+    let input_size = z3.from_z3 () in
     let witness = read_witness z3 in
     let witness_args = read_witness_args z3 [] nargs in
-    print_witness_and_call name l witness witness_args;
+    let branch_trace = read_branch_trace z3 in
+    print_witness_and_call name l witness input_size branch_trace witness_args;
     print_test_case witness witness_args;
     z3.to_z3 (mk_want_another_distinct_witness witness witness_args);
     if i <= 1
