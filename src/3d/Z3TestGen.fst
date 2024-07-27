@@ -968,31 +968,51 @@ and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Tot (int -> 
   | _ ->
     parse_ifthenelse_nil (fun _ -> mk_expr cond) (parse_typ tthen) (parse_typ telse)
 
-type arg_type =
+type simple_arg_type (allow_out: bool) =
 | ArgInt of A.integer_type
 | ArgBool
-| ArgPointer
+| ArgOutput: squash allow_out -> string -> simple_arg_type allow_out
+| ArgExtern: squash allow_out -> simple_arg_type allow_out
 
-let arg_type_of_typ (t: T.typ) : Tot (option arg_type) =
+type arg_type =
+| ArgSimple of simple_arg_type false
+| ArgPointer of simple_arg_type true
+
+let output_type_name_to_string (i: A.ident) : Tot string = ident_to_string i
+
+let simple_arg_type_of_typ (t: T.typ) (allow_out: bool) : Tot (option (simple_arg_type allow_out)) =
   match t with
-  | T.T_pointer _
-  | T.T_app _ A.KindOutput _
-  | T.T_app _ A.KindExtern _
-  | T.T_app {v = {modul_name = None; name = "PUINT8"}} _ _
-    -> Some ArgPointer
   | T.T_app {v = {modul_name = None; name = "Bool"}} _ _
     -> Some ArgBool
-  | T.T_app i _ _
+  | T.T_app i k _
     ->
     begin match A.maybe_as_integer_typ i with
     | Some t -> Some (ArgInt t)
-    | None -> None
+    | None ->
+      if A.KindOutput? k && allow_out then Some (ArgOutput () (output_type_name_to_string i))
+      else if A.KindExtern? k && allow_out then Some (ArgExtern ())
+      else None
     end
   | _ -> None
 
+let arg_type_of_typ (t: T.typ) : Tot (option arg_type) =
+  match t with
+  | T.T_pointer t ->
+    begin match simple_arg_type_of_typ t true with
+    | Some t' -> Some (ArgPointer t')
+    | _ -> None
+    end
+  | T.T_app {v = {modul_name = None; name = "PUINT8"}} _ _
+    -> Some (ArgPointer (ArgInt A.UInt8))
+  | _ ->
+    begin match simple_arg_type_of_typ t false with
+    | Some t' -> Some (ArgSimple t')
+    | _ -> None
+    end
+
 let smt_type_of_typ (t: T.typ) : Tot string =
   match arg_type_of_typ t with
-  | Some ArgBool -> "Bool"
+  | Some (ArgSimple ArgBool) -> "Bool"
   | _ -> "Int"
 
 let rec binders_of_params = function
@@ -1030,7 +1050,7 @@ let produce_not_type_decl (a: I.not_type_decl) (out: string -> ML unit) : ML uni
   -> ()
 
 type prog_def = {
-  args: list arg_type;
+  args: list (string & arg_type);
   enum_base_type: option arg_type;
 }
 
@@ -1063,7 +1083,7 @@ let produce_type_decl (out: string -> ML unit) (accu: prog) (a: I.type_decl) : M
   let name = ident_to_string a.name.td_name in
   let _ = parse_typ a.typ name binders true out in
   (name, {
-    args = List.map (fun (i, ty) -> match arg_type_of_typ_with_prog accu ty with Some t -> t | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params;
+    args = List.map (fun (i, ty) -> match arg_type_of_typ_with_prog accu ty with Some t -> (ident_to_string i, t) | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params;
     enum_base_type = begin match a.enum_typ with
     | Some ty -> arg_type_of_typ_with_prog accu ty
     | _ -> None
@@ -1133,13 +1153,14 @@ let module_and_validator_name
 
 let rec print_witness_args_as_c
   (out: (string -> ML unit))
-  (l: list arg_type) (args: list string)
+  (l: list (string & arg_type)) (args: list string)
 : ML unit
 = match l, args with
-  | ArgPointer :: q, _ ->
-    out "NULL, ";
+  | (name, ArgPointer _) :: q, _ ->
+    out name;
+    out ", ";
     print_witness_args_as_c out q args
-  | ty :: ql, a :: qargs ->
+  | (_, ArgSimple ty) :: ql, a :: qargs ->
     out a;
     (if ArgInt? ty then out "U" else ());
     out ", ";
@@ -1149,7 +1170,7 @@ let rec print_witness_args_as_c
 let print_witness_call_as_c_aux
   (out: (string -> ML unit))
   (validator_name: string)
-  (arg_types: list arg_type)
+  (arg_types: list (string & arg_type))
   (witness_length: nat)
   (args: list string)
 : ML unit
@@ -1161,12 +1182,42 @@ let print_witness_call_as_c_aux
   out (string_of_int witness_length);
   out ", 0);"
 
+let pointer_elt_type_as_c (x: simple_arg_type true) : Tot (option string) =
+  match x with
+  | ArgInt A.UInt8 -> Some "uint8_t"
+  | ArgInt A.UInt16 -> Some "uint16_t"
+  | ArgInt A.UInt32 -> Some "uint32_t"
+  | ArgInt A.UInt64 -> Some "uint64_t"
+  | ArgBool -> Some "BOOLEAN"
+  | ArgOutput _ s -> Some s
+  | _ -> None
+
+let alloc_ptr_arg
+  (arg_var: string)
+  (pt: simple_arg_type true)
+: Tot string
+=
+    match pointer_elt_type_as_c pt with
+    | None ->
+"
+  void * "^arg_var^" = NULL;
+"
+    | Some ty ->
+Printf.sprintf "
+  %s _contents_%s;
+  %s *%s = &_contents_%s;
+  bzero((void*)%s, sizeof(%s));
+"
+  ty arg_var
+  ty arg_var arg_var
+  arg_var ty
+
 let print_witness_call_as_c
   (skip_checks_in_z3_test_executable: bool)
   (out: (string -> ML unit))
   (positive: bool)
   (validator_name: string)
-  (arg_types: list arg_type)
+  (arg_types: list (string & arg_type))
   (witness_length: nat)
   (args: list string)
 : ML unit
@@ -1174,6 +1225,15 @@ let print_witness_call_as_c
   out "
   {
     uint8_t context = 0;
+";
+  List.iter
+    (fun arg_ty ->
+      match arg_ty with
+      | (arg_var, ArgPointer ty) -> out (alloc_ptr_arg arg_var ty)
+      | _ -> ()
+    )
+    arg_types;
+  out "
     uint64_t output = ";
   print_witness_call_as_c_aux out validator_name arg_types witness_length args;
   out "
@@ -1264,7 +1324,7 @@ let print_witness_as_c
   (out: (string -> ML unit))
   (positive: bool)
   (validator_name: string)
-  (arg_types: list arg_type)
+  (arg_types: list (string & arg_type))
   (counter: ref int)
   (witness: Seq.seq int)
   (args: list string)
@@ -1280,7 +1340,7 @@ let print_diff_witness_as_c
   (out: (string -> ML unit))
   (validator_name1: string)
   (validator_name2: string)
-  (arg_types: list arg_type)
+  (arg_types: list (string & arg_type))
   (counter: ref int)
   (witness: Seq.seq int)
   (args: list string)
@@ -1298,7 +1358,7 @@ let print_witness (witness: Seq.seq int) : ML unit =
 
 let rec mk_witness_call (accu: string) (l: list arg_type) (args: list string) : Tot string (decreases l) =
   match l, args with
-  | ArgPointer :: q, _ -> mk_witness_call (Printf.sprintf "%s 0" accu) q args
+  | ArgPointer _ :: q, _ -> mk_witness_call (Printf.sprintf "%s 0" accu) q args
   | _ :: ql, a :: qargs -> mk_witness_call (Printf.sprintf "%s %s" accu a) ql qargs
   | _ -> Printf.sprintf "(%s)" accu
 
@@ -1307,7 +1367,7 @@ let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq i
   FStar.IO.print_string (mk_witness_call name l args);
   print_witness witness
 
-let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer -> false | _ -> true) l)
+let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer _ -> false | _ -> true) l)
 
 let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
   (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
@@ -1360,15 +1420,15 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
 let rec mk_call_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
   match l with
   | [] -> accu
-  | ArgPointer :: q -> mk_call_args (Printf.sprintf "%s 0" accu) i q
+  | ArgPointer _ :: q -> mk_call_args (Printf.sprintf "%s 0" accu) i q
   | _ :: q -> mk_call_args (Printf.sprintf "%s arg-%d" accu i) (i + 1) q
 
 let rec mk_assert_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
   match l with
   | [] -> accu
-  | ArgPointer :: q -> mk_assert_args accu i q
-  | ArgBool :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Bool)\n" accu i) (i + 1) q
-  | ArgInt it :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Int)\n(assert (and (<= 0 arg-%d) (< arg-%d %d)))\n" accu i i i (pow2 (integer_type_bit_size it))) (i + 1) q
+  | ArgPointer _ :: q -> mk_assert_args accu i q
+  | ArgSimple ArgBool :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Bool)\n" accu i) (i + 1) q
+  | ArgSimple (ArgInt it) :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Int)\n(assert (and (<= 0 arg-%d) (< arg-%d %d)))\n" accu i i i (pow2 (integer_type_bit_size it))) (i + 1) q
 
 let mk_get_witness (name: string) (l: list arg_type) : string =
 Printf.sprintf "
@@ -1532,10 +1592,12 @@ let do_test
   if None? def
   then failwith (Printf.sprintf "do_test: parser %s not found" name1);
   let args = (Some?.v def).args in
+  let sargs = List.Tot.map snd args in
   let modul, validator_name = module_and_validator_name name1 in
-  let nargs = count_args args in with_option_out_file out_file (fun cout ->
+  let nargs = count_args sargs in with_option_out_file out_file (fun cout ->
   cout "#include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include \"";
   cout modul;
   cout ".h\"
@@ -1550,7 +1612,7 @@ let do_test
       if pos
       then [print_witness_as_c skip_checks_in_z3_test_executable out_dir cout true validator_name args counter, (fun _ -> (
         FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-        mk_get_positive_test_witness name1 args
+        mk_get_positive_test_witness name1 sargs
       ))]
       else []
     end `List.Tot.append`
@@ -1558,12 +1620,12 @@ let do_test
       if neg
       then [print_witness_as_c skip_checks_in_z3_test_executable out_dir cout false validator_name args counter, (fun _ -> (
         FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-        mk_get_negative_test_witness name1 args
+        mk_get_negative_test_witness name1 sargs
       ))]
       else []
     end
   in
-  witnesses_for z3 name1 args nargs tasks nbwitnesses depth;
+  witnesses_for z3 name1 sargs nargs tasks nbwitnesses depth;
   cout "  return 0;
   }
 "
@@ -1583,9 +1645,10 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
 
 let do_diff_test_for
   (skip_checks_in_z3_test_executable: bool)
-  (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses depth =
+  (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 (args: list (string & arg_type)) (nargs: nat { nargs == count_args (List.Tot.map snd args) }) validator_name1 validator_name2 nbwitnesses depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for z3 name1 args nargs ([print_diff_witness_as_c skip_checks_in_z3_test_executable out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 args name2)]) nbwitnesses depth
+  let sargs = List.Tot.map snd args in
+  witnesses_for z3 name1 sargs nargs ([print_diff_witness_as_c skip_checks_in_z3_test_executable out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 sargs name2)]) nbwitnesses depth
 
 let do_diff_test
   (skip_checks_in_z3_test_executable: bool)
@@ -1594,12 +1657,13 @@ let do_diff_test
   if None? def
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
   let args = (Some?.v def).args in
+  let sargs = List.Tot.map snd args in
   let def2 = List.assoc name2 prog in
   if None? def2
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name2);
   if def2 <> def
   then failwith (Printf.sprintf "do_diff_test: parsers %s and %s do not have the same arg types" name1 name2);
-  let nargs = count_args args in
+  let nargs = count_args sargs in
   let modul1, validator_name1 = module_and_validator_name name1 in
   let modul2, validator_name2 = module_and_validator_name name2 in
   with_option_out_file out_file (fun cout ->
@@ -1634,19 +1698,17 @@ let test_exe_mk_arg
   let cur_arg' = cur_arg + 1 in
   let read_args' = read_args ^
   begin match p with
-  | ArgInt _ -> "
+  | ArgSimple (ArgInt _) -> "
   unsigned long long "^arg_var^" = strtoull(argv["^cur_arg_s^"], NULL, 0);
 "
-  | ArgBool -> "
+  | ArgSimple ArgBool -> "
   BOOLEAN "^arg_var^" = (strcmp(argv["^cur_arg_s^"], \"true\") == 0);
   if (! ("^arg_var^" || strcmp(argv["^cur_arg_s^"], \"false\") == 0)) {
     printf(\"Argument %d must be true or false, got %s\\n\", "^cur_arg_s^", argv["^cur_arg_s^"]);
     return 1;
   }
 "
-  | _ -> "
-void * "^arg_var^" = NULL;
-"
+  | ArgPointer pt -> alloc_ptr_arg arg_var pt
   end
   in
   let call_args_lhs' = call_args_lhs ^ arg_var ^ ", " in
@@ -1670,6 +1732,7 @@ let test_checker_c
 #include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 "^test_error_handler^"
 
@@ -1735,5 +1798,5 @@ let produce_test_checker_exe (out_file: string) (prog: prog) (name1: string) : M
   let args = (Some?.v def).args in
   let modul, validator_name = module_and_validator_name name1 in
   with_out_file out_file (fun cout ->
-    cout (test_checker_c modul validator_name args)
+    cout (test_checker_c modul validator_name (List.Tot.map snd args))
   )
