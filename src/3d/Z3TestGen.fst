@@ -1053,10 +1053,12 @@ let produce_not_type_decl (a: I.not_type_decl) (out: string -> ML unit) : ML uni
   | T.Extern_probe _
   -> ()
 
-type prog_def = {
-  args: list (string & arg_type);
-  enum_base_type: option arg_type;
-}
+type prog_def =
+| ProgDef:
+  args: list (string & arg_type) ->
+  enum_base_type: option arg_type ->
+  prog_def
+| ProgOutput
 
 let prog = list (string & prog_def)
 
@@ -1071,7 +1073,7 @@ let rec arg_type_of_typ_with_prog
     begin match t with
     | T.T_app hd _ _ ->
       begin match List.Tot.assoc (ident_to_string hd) accu with
-      | Some def -> def.enum_base_type
+      | Some (ProgDef args enum_base_type) -> enum_base_type
       | _ -> None
       end
     | T.T_with_action base _
@@ -1086,16 +1088,23 @@ let produce_type_decl (out: string -> ML unit) (accu: prog) (a: I.type_decl) : M
   let binders = binders_of_params a.name.td_params in
   let name = ident_to_string a.name.td_name in
   let _ = parse_typ a.typ name binders true out in
-  (name, {
-    args = List.map (fun (i, ty) -> match arg_type_of_typ_with_prog accu ty with Some t -> (ident_to_string i, t) | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params;
-    enum_base_type = begin match a.enum_typ with
+  (name, ProgDef
+    (List.map (fun (i, ty) -> match arg_type_of_typ_with_prog accu ty with Some t -> (ident_to_string i, t) | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params)
+    begin match a.enum_typ with
     | Some ty -> arg_type_of_typ_with_prog accu ty
     | _ -> None
-    end;
-  }) :: accu
+    end
+  ) :: accu
+
+let produce_output_type_decl
+  (accu: prog)
+  (ot: A.out_typ)
+: Tot prog
+= admit ()
 
 let produce_decl (out: string -> ML unit) (accu: prog) (a: I.decl) : ML prog =
   match a with
+//  | Inl (T.Output_type ot, _) -> produce_output_type_decl accu ot
   | Inl a -> produce_not_type_decl a out; accu
   | Inr a -> produce_type_decl out accu a
 
@@ -1606,9 +1615,11 @@ static void TestErrorHandler (
 
 let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
   let def = List.assoc name1 prog in
-  if None? def
-  then failwith (Printf.sprintf "do_test: parser %s not found" name1);
-  let args = (Some?.v def).args in
+  begin match def with
+  | Some (ProgDef _ _) -> ()
+  | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
+  end;
+  let Some (ProgDef args _) = def in
   let sargs = List.Tot.map snd args in
   let modul, validator_name = module_and_validator_name name1 in
   let nargs = count_args sargs in with_option_out_file out_file (fun cout ->
@@ -1668,9 +1679,11 @@ let do_diff_test_for
 
 let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses depth =
   let def = List.assoc name1 prog in
-  if None? def
-  then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
-  let args = (Some?.v def).args in
+  begin match def with
+  | Some (ProgDef _ _) -> ()
+  | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
+  end;
+  let Some (ProgDef args _) = def in
   let sargs = List.Tot.map snd args in
   let def2 = List.assoc name2 prog in
   if None? def2
@@ -1807,9 +1820,11 @@ int main(int argc, char** argv) {
 
 let produce_test_checker_exe (out_file: string) (prog: prog) (name1: string) : ML unit =
   let def = List.assoc name1 prog in
-  if None? def
-  then failwith (Printf.sprintf "produce_test_checker_exe: parser %s not found" name1);
-  let args = (Some?.v def).args in
+  begin match def with
+  | Some (ProgDef _ _) -> ()
+  | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
+  end;
+  let Some (ProgDef args _) = def in
   let modul, validator_name = module_and_validator_name name1 in
   with_out_file out_file (fun cout ->
     cout (test_checker_c modul validator_name (List.Tot.map snd args))
