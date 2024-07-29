@@ -1296,6 +1296,19 @@ let rec print_outparameter
     | _ -> ()
     end
 
+let print_outparameters
+  (out: (string -> ML unit))
+  (p: prog)
+  (arg_types: list (string & arg_type))
+: ML unit
+= List.iter
+    (fun (name, ty) ->
+      match ty with
+      | ArgPointer ty -> print_outparameter out p ("(*" ^ name ^ ")") ty
+      | _ -> ()
+    )
+    arg_types
+
 let print_witness_call_as_c
   (out: (string -> ML unit))
   (p: prog)
@@ -1335,13 +1348,7 @@ let print_witness_call_as_c
     if (result) {
       printf (\"ACCEPTED\\n\\n\");
 ";
-  List.iter
-    (fun (name, ty) ->
-      match ty with
-      | ArgPointer ty -> print_outparameter out p ("(*" ^ name ^ ")") ty
-      | _ -> ()
-    )
-    arg_types;
+  print_outparameters out p arg_types;
   out
 "
     }
@@ -1788,12 +1795,17 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: 
 
 let test_exe_mk_arg
   (accu: (int & string & string & string))
-  (p: arg_type)
+  (pn: (string & arg_type))
 : Tot (int & string & string & string)
-= let (cur_arg, read_args, call_args_lhs, call_args_rhs) = accu in
+=
+  let (arg_var, p) = pn in
+  let (cur_arg, read_args, call_args_lhs, call_args_rhs) = accu in
   let cur_arg_s = string_of_int cur_arg in
-  let arg_var = "arg" ^ cur_arg_s in
-  let cur_arg' = cur_arg + 1 in
+  let cur_arg' = cur_arg + begin match p with
+  | ArgPointer _ -> 0
+  | _ -> 1
+  end
+  in
   let read_args' = read_args ^
   begin match p with
   | ArgSimple (ArgInt _) -> "
@@ -1816,7 +1828,8 @@ let test_exe_mk_arg
 let test_checker_c
   (modul: string)
   (validator_name: string)
-  (params: list arg_type)
+  (outparameters: string)
+  (params: list (string & arg_type))
 : Tot string
 =
   let (nb_cmd_and_args, read_args, call_args_lhs, call_args_rhs) = List.Tot.fold_left test_exe_mk_arg (2, "", "", "") params in
@@ -1885,6 +1898,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   printf(\"Witness from %s ACCEPTED\\n\", filename);
+  "^outparameters^"
   return 0;
 }
 "
@@ -1897,6 +1911,9 @@ let produce_test_checker_exe (out_file: string) (prog: prog) (name1: string) : M
   end;
   let Some (ProgDef args _) = def in
   let modul, validator_name = module_and_validator_name name1 in
+  let outparameters : ref string = alloc "" in
+  let outp s : ML unit = outparameters := !outparameters ^ s in
+  print_outparameters outp prog args;
   with_out_file out_file (fun cout ->
-    cout (test_checker_c modul validator_name (List.Tot.map snd args))
+    cout (test_checker_c modul validator_name !outparameters args)
   )
