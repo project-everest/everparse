@@ -1058,7 +1058,9 @@ type prog_def =
   args: list (string & arg_type) ->
   enum_base_type: option arg_type ->
   prog_def
-| ProgOutput
+| ProgOutput:
+  args: list (string & simple_arg_type true) ->
+  prog_def
 
 let prog = list (string & prog_def)
 
@@ -1096,15 +1098,42 @@ let produce_type_decl (out: string -> ML unit) (accu: prog) (a: I.type_decl) : M
     end
   ) :: accu
 
+let simple_arg_type_of_ast_typ
+  (a: Ast.typ)
+: Tot (simple_arg_type true)
+= match a.v with
+  | A.Pointer _ -> ArgExtern ()
+  | A.Type_app i _ _ ->
+    begin match A.maybe_as_integer_typ i with
+    | Some it -> ArgInt it
+    | None ->
+      if None? i.v.modul_name && i.v.name = "Bool"
+      then ArgBool
+      else ArgOutput () (output_type_name_to_string i)
+    end
+
+let rec prog_out_fields_of_ast_out_fields
+  (accu: list (string & simple_arg_type true))
+  (fds: list A.out_field)
+: Tot (list (string & simple_arg_type true))
+  (decreases fds)
+= match fds with
+  | [] -> List.Tot.rev accu
+  | A.Out_field_named name ty None :: q ->
+    prog_out_fields_of_ast_out_fields
+      ((ident_to_string name, simple_arg_type_of_ast_typ ty) :: accu)
+      q
+  | _ :: q -> prog_out_fields_of_ast_out_fields accu q
+
 let produce_output_type_decl
   (accu: prog)
   (ot: A.out_typ)
 : Tot prog
-= admit ()
+= (ident_to_string ot.out_typ_names.typedef_name, ProgOutput (prog_out_fields_of_ast_out_fields [] ot.out_typ_fields)) :: accu
 
 let produce_decl (out: string -> ML unit) (accu: prog) (a: I.decl) : ML prog =
   match a with
-//  | Inl (T.Output_type ot, _) -> produce_output_type_decl accu ot
+  | Inl (T.Output_type ot, _) -> produce_output_type_decl accu ot
   | Inl a -> produce_not_type_decl a out; accu
   | Inr a -> produce_type_decl out accu a
 
