@@ -1281,9 +1281,9 @@ let rec print_outparameter
     out "
   printf(\"";
     out expr;
-    out " = %d\", ";
+    out " = %ld\\n\", ((uint64_t) (";
     out expr;
-    out ");\n"
+    out ")));\n"
   | ArgExtern _ -> ()
   | ArgOutput _ name ->
     begin match List.Tot.assoc name p with
