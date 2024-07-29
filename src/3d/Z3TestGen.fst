@@ -1268,8 +1268,37 @@ Printf.sprintf "
   ty arg_var arg_var
   arg_var ty
 
+let rec print_outparameter
+  (#allow_out: bool)
+  (out: (string -> ML unit))
+  (p: prog)
+  (expr: string)
+  (ty: simple_arg_type allow_out)
+: ML unit
+= match ty with
+  | ArgBool
+  | ArgInt _ ->
+    out "
+  printf(\"";
+    out expr;
+    out " = %d\", ";
+    out expr;
+    out ");\n"
+  | ArgExtern _ -> ()
+  | ArgOutput _ name ->
+    begin match List.Tot.assoc name p with
+    | Some (ProgOutput args) ->
+      List.iter
+        (fun (fd, ty) ->
+          print_outparameter out p (expr ^ "." ^ fd) ty
+        )
+        args
+    | _ -> ()
+    end
+
 let print_witness_call_as_c
   (out: (string -> ML unit))
+  (p: prog)
   (positive: bool)
   (validator_name: string)
   (arg_types: list (string & arg_type))
@@ -1303,8 +1332,19 @@ let print_witness_call_as_c
   out "U);
       result = consumes_all_bytes_if_successful;
     }
-    if (result)
+    if (result) {
       printf (\"ACCEPTED\\n\\n\");
+";
+  List.iter
+    (fun (name, ty) ->
+      match ty with
+      | ArgPointer ty -> print_outparameter out p ("(*" ^ name ^ ")") ty
+      | _ -> ()
+    )
+    arg_types;
+  out
+"
+    }
     else if (!consumes_all_bytes_if_successful)
       printf (\"REJECTED (not all bytes consumed)\\n\\n\");
     else
@@ -1369,6 +1409,7 @@ let mk_output_filename
 let print_witness_as_c
   (out_dir: string)
   (out: (string -> ML unit))
+  (p: prog)
   (positive: bool)
   (validator_name: string)
   (arg_types: list (string & arg_type))
@@ -1378,12 +1419,13 @@ let print_witness_as_c
 : ML unit
 = OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ((if positive then "POS." else "NEG.") ^ validator_name) args);
   print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out positive validator_name arg_types len args
+    print_witness_call_as_c out p positive validator_name arg_types len args
   )
 
 let print_diff_witness_as_c
   (out_dir: string)
   (out: (string -> ML unit))
+  (p: prog)
   (validator_name1: string)
   (validator_name2: string)
   (arg_types: list (string & arg_type))
@@ -1393,8 +1435,8 @@ let print_diff_witness_as_c
 : ML unit
 = OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ("POS." ^ validator_name1 ^ ".NEG." ^ validator_name2) args);
   print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out true validator_name1 arg_types len args;
-    print_witness_call_as_c out false validator_name2 arg_types len args
+    print_witness_call_as_c out p true validator_name1 arg_types len args;
+    print_witness_call_as_c out p false validator_name2 arg_types len args
   )
 
 let print_witness (witness: Seq.seq int) : ML unit =
@@ -1667,7 +1709,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
   let tasks =
     begin
       if pos
-      then [print_witness_as_c out_dir cout true validator_name args counter, (fun _ -> (
+      then [print_witness_as_c out_dir cout prog true validator_name args counter, (fun _ -> (
         FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
         mk_get_positive_test_witness name1 sargs
       ))]
@@ -1675,7 +1717,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
     end `List.Tot.append`
     begin
       if neg
-      then [print_witness_as_c out_dir cout false validator_name args counter, (fun _ -> (
+      then [print_witness_as_c out_dir cout prog false validator_name args counter, (fun _ -> (
         FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
         mk_get_negative_test_witness name1 sargs
       ))]
@@ -1704,7 +1746,7 @@ let do_diff_test_for
   (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 (args: list (string & arg_type)) (nargs: nat { nargs == count_args (List.Tot.map snd args) }) validator_name1 validator_name2 nbwitnesses depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
   let sargs = List.Tot.map snd args in
-  witnesses_for z3 name1 sargs nargs ([print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 sargs name2)]) nbwitnesses depth
+  witnesses_for z3 name1 sargs nargs ([print_diff_witness_as_c out_dir cout prog validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 sargs name2)]) nbwitnesses depth
 
 let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses depth =
   let def = List.assoc name1 prog in
