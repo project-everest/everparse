@@ -675,10 +675,11 @@ let l2r_writer
     (fun res -> exists* v' .
       S.pts_to out v' ** vmatch x' x ** pure (
       let bs = bare_serialize s x in
-      SZ.v offset + Seq.length bs <= Seq.length v /\
+      SZ.v res == SZ.v offset + Seq.length bs /\
+      SZ.v res <= Seq.length v /\
       Seq.length v' == Seq.length v /\
-      Seq.slice v' 0 (SZ.v offset) == Seq.slice v 0 (SZ.v offset) /\
-      Seq.slice v' (SZ.v offset) (SZ.v offset + Seq.length bs) == bs
+      Seq.slice v' 0 (SZ.v offset) `Seq.equal` Seq.slice v 0 (SZ.v offset) /\
+      Seq.slice v' (SZ.v offset) (SZ.v res) `Seq.equal` bs
     ))
 
 ```pulse
@@ -701,6 +702,38 @@ fn l2r_writer_ext
 {
   serializer_unique_strong s1 s2 x;
   w x' out offset
+}
+```
+
+let vmatch_and_const
+  (#tl #th: Type)
+  (const: slprop)
+  (vmatch: tl -> th -> slprop)
+  (xl: tl)
+  (xh: th)
+: Tot slprop
+= const ** vmatch xl xh
+
+```pulse
+fn l2r_writer_frame
+  (#t' #t: Type0)
+  (#vmatch: t' -> t -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t)
+  (#s1: serializer p1)
+  (const: slprop)
+  (w: l2r_writer vmatch s1)
+: l2r_writer #t' #t (vmatch_and_const const vmatch) #k1 #p1 s1
+= (x': t')
+  (#x: Ghost.erased t)
+  (out: slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  unfold (vmatch_and_const const vmatch);
+  let res = w x' out offset;
+  fold (vmatch_and_const const vmatch);
+  res
 }
 ```
 
@@ -816,10 +849,11 @@ let l2r_leaf_writer
     (fun res -> exists* v' .
       S.pts_to out v' ** pure (
       let bs = bare_serialize s x in
-      SZ.v offset + Seq.length bs <= Seq.length v /\
+      SZ.v res == SZ.v offset + Seq.length bs /\
+      SZ.v res <= Seq.length v /\
       Seq.length v' == Seq.length v /\
       Seq.slice v' 0 (SZ.v offset) == Seq.slice v 0 (SZ.v offset) /\
-      Seq.slice v' (SZ.v offset) (SZ.v offset + Seq.length bs) == bs
+      Seq.slice v' (SZ.v offset) (SZ.v res) == bs
     ))
 
 inline_for_extraction
@@ -922,6 +956,30 @@ fn compute_remaining_size_ext
 {
   serializer_unique_strong s1 s2 x;
   cr1 x' out
+}
+```
+
+inline_for_extraction
+```pulse
+fn compute_remaining_size_frame
+  (#t' #t: Type0)
+  (#vmatch: t' -> t -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t)
+  (#s1: serializer p1)
+  (const: slprop)
+  (cr1: compute_remaining_size vmatch s1)
+: compute_remaining_size #t' #t (vmatch_and_const const vmatch) #k1 #p1 s1
+=
+  (x': t')
+  (#x: Ghost.erased t)
+  (out: R.ref SZ.t)
+  (#v: Ghost.erased SZ.t)
+{
+  unfold (vmatch_and_const const vmatch);
+  let res = cr1 x' out;
+  fold (vmatch_and_const const vmatch);
+  res
 }
 ```
 
