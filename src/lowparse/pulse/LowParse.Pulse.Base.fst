@@ -858,6 +858,28 @@ let l2r_leaf_writer
 
 inline_for_extraction
 ```pulse
+fn l2r_leaf_writer_ext
+  (#t: Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t)
+  (#s1: serializer p1)
+  (w1: l2r_leaf_writer s1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2 { forall x . parse p1 x == parse p2 x })
+: l2r_leaf_writer u#0 #t #k2 #p2 s2
+= (x: t)
+  (out: slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  serializer_unique_strong s1 s2 x;
+  w1 x out offset
+}
+```
+
+inline_for_extraction
+```pulse
 fn l2r_writer_of_leaf_writer
   (#t: Type)
   (#k: parser_kind)
