@@ -1136,3 +1136,74 @@ fn l2r_write_nondep_then
   res2
 }
 ```
+
+inline_for_extraction
+```pulse
+fn l2r_leaf_write_synth
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (w: l2r_leaf_writer u#0 s1)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+  (f1': ((x2: t2) -> (x1: t1 { x1 == f1 x2 })))
+: l2r_leaf_writer u#0 #t2 #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
+=
+  (x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  serialize_synth_eq p1 f2 s1 f1 () x;
+  w (f1' x) out offset
+}
+```
+
+let vmatch_synth
+  (#tl: Type)
+  (#th1 #th2: Type)
+  (vmatch: tl -> th1 -> slprop)
+  (f21: th2 -> GTot th1)
+  (xh: tl)
+  (xl2: th2)
+: slprop
+= vmatch xh (f21 xl2)
+
+inline_for_extraction
+```pulse
+fn size_synth
+  (#t: Type0) (#t1: Type0) (#t2: Type0)
+  (vmatch: t -> t1 -> slprop)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: compute_remaining_size vmatch s1)
+  (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+: compute_remaining_size #t #t2 (vmatch_synth vmatch f1) #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
+= (x': _)
+  (#x: _)
+  (out: _)
+  (#v: _)
+{
+  serialize_synth_eq p1 f2 s1 f1 () x;
+  unfold (vmatch_synth vmatch f1 x' x);
+  let res = w x' out;
+  fold (vmatch_synth vmatch f1 x' x);
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn l2r_write_synth
+  (#t: Type0) (#t1: Type0) (#t2: Type0)
+  (vmatch: t -> t1 -> slprop)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: l2r_writer vmatch s1)
+  (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+: l2r_writer #t #t2 (vmatch_synth vmatch f1) #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
+= (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  serialize_synth_eq p1 f2 s1 f1 () x;
+  unfold (vmatch_synth vmatch f1 x' x);
+  let res = w x' out offset;
+  fold (vmatch_synth vmatch f1 x' x);
+  res
+}
+```
