@@ -1207,3 +1207,55 @@ fn l2r_write_synth
   res
 }
 ```
+
+let vmatch_filter
+  (#tl: Type0)
+  (#th: Type0)
+  (vmatch: tl -> th -> slprop)
+  (f: th -> GTot bool)
+: Tot (tl -> parse_filter_refine f -> slprop)
+= vmatch
+
+
+#set-options "--print_universes --print_implicits"
+
+inline_for_extraction
+```pulse
+fn l2r_write_filter
+  (#t: Type0) (#t1: Type0)
+  (vmatch: t -> t1 -> slprop)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: l2r_writer #t #t1 vmatch s1)
+  (f: (t1 -> GTot bool))
+: l2r_writer #t #(parse_filter_refine u#0 f) (vmatch_filter vmatch f) #(parse_filter_kind k1) #(parse_filter p1 f) (serialize_filter s1 f)
+= (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  unfold (vmatch_filter vmatch f x' x);
+  let res = w x' #(Ghost.hide #t1 (Ghost.reveal x)) out offset;
+  fold (vmatch_filter vmatch f x' x);
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn size_filter
+  (#t: Type0) (#t1: Type0)
+  (vmatch: t -> t1 -> slprop)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: compute_remaining_size #t #t1 vmatch s1)
+  (f: (t1 -> GTot bool))
+: compute_remaining_size #t #(parse_filter_refine u#0 f) (vmatch_filter vmatch f) #(parse_filter_kind k1) #(parse_filter p1 f) (serialize_filter s1 f)
+= (x': _)
+  (#x: _)
+  (out: _)
+  (#v: _)
+{
+  unfold (vmatch_filter vmatch f x' x);
+  let res = w x' #(Ghost.hide #t1 (Ghost.reveal x)) out;
+  fold (vmatch_filter vmatch f x' x);
+  res
+}
+```
