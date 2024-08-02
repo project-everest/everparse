@@ -1221,6 +1221,22 @@ let vmatch_filter
 
 inline_for_extraction
 ```pulse
+fn l2r_leaf_write_filter
+  (#t1: Type0)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: l2r_leaf_writer #t1 s1)
+  (f: (t1 -> GTot bool))
+: l2r_leaf_writer u#0 #(parse_filter_refine u#0 f) #(parse_filter_kind k1) #(parse_filter p1 f) (serialize_filter s1 f)
+= (x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  w x out offset
+}
+```
+
+inline_for_extraction
+```pulse
 fn l2r_write_filter
   (#t: Type0) (#t1: Type0)
   (vmatch: t -> t1 -> slprop)
