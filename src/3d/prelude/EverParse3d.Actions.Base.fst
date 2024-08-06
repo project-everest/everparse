@@ -385,6 +385,8 @@ let validate_drop
   then validate_drop_true v
   else v
 
+let validate_without_reading v = validate_drop v
+
 let validate_with_success_action
   name v1 a
 = validate_with_success_action' name (validate_drop v1) a

@@ -230,6 +230,7 @@ let assumption = A.ident * typ
 
 type decl_attributes = {
   is_hoisted: bool;
+  is_entrypoint: bool;
   is_exported: bool;
   is_if_def: bool;
   should_inline: bool;

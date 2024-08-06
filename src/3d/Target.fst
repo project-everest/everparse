@@ -104,6 +104,7 @@ let has_external_api (ds:list decl) : bool =
 
 let default_attrs = {
     is_hoisted = false;
+    is_entrypoint = false;
     is_if_def = false;
     is_exported = false;
     should_inline = false;

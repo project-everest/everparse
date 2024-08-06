@@ -919,6 +919,7 @@ let rec typ_depth (t: I.typ) : GTot nat
   | I.T_dep_pair_with_refinement _ _ _ (_, t')
   | I.T_dep_pair_with_refinement_and_action _ _ _ (_, t') _
   | I.T_with_action _ t' _
+  | I.T_drop t'
   | I.T_with_comment _ t' _
   | I.T_at_most _ _ t'
   | I.T_exact _ _ t'
@@ -949,6 +950,7 @@ let rec parse_typ (t : I.typ) : Tot (parser not_reading)
   | I.T_dep_pair_with_refinement _ base (lam_cond, cond) (lam_k, k) -> parse_dep_pair_with_refinement (parse_readable_dtyp base) lam_cond (fun _ -> mk_expr cond) lam_k (parse_typ k)
   | I.T_if_else cond t1 t2 -> parse_ifthenelse cond t1 t2 0
   | I.T_with_action _ base _
+  | I.T_drop base
   | I.T_with_comment _ base _ -> parse_typ base
   | I.T_at_most _ size body -> parse_at_most (fun _ -> mk_expr size) (parse_typ body)
   | I.T_exact _ size body -> parse_exact (fun _ -> mk_expr size) (parse_typ body)
