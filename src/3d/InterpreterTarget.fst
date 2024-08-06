@@ -583,6 +583,11 @@ let translate_decls (en:env) (ds:T.decls)
           | (T.Type_decl td, attrs) ->
             let t = typ_of_parser en td.decl_parser in
             let ar = allow_reading_of_typ t in
+            let ar =
+              if attrs.T.is_entrypoint
+              then false
+              else ar
+            in
             let refined =
               if td.decl_is_enum
               then match td.decl_typ with
@@ -595,9 +600,14 @@ let translate_decls (en:env) (ds:T.decls)
             in
             let typ_indexes = typ_indexes_of_parser en td.decl_parser in
             check_validity_of_typ_indexes td typ_indexes;
+            let typ =
+              if attrs.T.is_entrypoint
+              then T_drop t
+              else t
+            in
             let td =
               { name = td.decl_name;
-                typ = typ_of_parser en td.decl_parser;
+                typ = typ;
                 kind = td.decl_parser.p_kind;
                 typ_indexes;
                 allow_reading = ar;
@@ -793,6 +803,10 @@ let rec print_typ (mname:string) (t:typ)
                      (print_dtyp mname d)
                      (print_lam mname (print_action mname) a)
 
+    | T_drop t ->
+      Printf.sprintf "(T_drop %s)"
+                     (print_typ mname t)
+    
     | T_with_comment fn t c ->
       Printf.sprintf "(T_with_comment \"%s\" %s \"%s\")"
                      fn
@@ -882,6 +896,7 @@ let print_disj mname = print_index (print_disj' mname)
 
 let print_td_iface is_entrypoint mname root_name binders args
                    inv eloc disj ar pk_wk pk_nz =
+  let ar = if is_entrypoint then false else ar in
   let kind_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     inline_for_extraction\n\
@@ -902,10 +917,9 @@ let print_td_iface is_entrypoint mname root_name binders args
       ar
   in
   let validator_t =
-    Printf.sprintf "val validate_%s %s : validator_of %s (def'_%s %s)"
+    Printf.sprintf "val validate_%s %s : validator_of (def'_%s %s)"
       root_name
       binders
-      (if is_entrypoint then "#false" else "")
       root_name args
   in
   let dtyp_t =

@@ -336,6 +336,7 @@ and translate_out_expr (oe:out_expr) : ML T.output_expr =
 
 let output_types_attributes = {
   T.is_hoisted = false;
+  T.is_entrypoint = false;
   T.is_if_def = false;
   T.is_exported = false;
   T.should_inline = false;
@@ -947,13 +948,13 @@ let rec free_vars_expr (genv:global_env)
     | Record _ fields ->
       List.fold_left (fun out (_, e) -> free_vars_expr genv env out e) out fields
 
-let with_attrs (d:T.decl') (h:bool) (ifdef:bool) (e:bool) (i:bool) (c:list string)
+let with_attrs (d:T.decl') (h:bool) (is_entrypoint: bool) (ifdef:bool) (e:bool) (i:bool) (c:list string)
   : T.decl
-  = d, T.({ is_hoisted = h; is_if_def = ifdef; is_exported = e; should_inline = i; comments = c } )
+  = d, T.({ is_hoisted = h; is_entrypoint = is_entrypoint; is_if_def = ifdef; is_exported = e; should_inline = i; comments = c } )
 
-let with_comments (d:T.decl') (e:bool) (c:list string)
+let with_comments (d:T.decl') (is_entrypoint: bool) (e:bool) (c:list string)
   : T.decl
-  = d, T.({ is_hoisted = false; is_if_def=false; is_exported = e; should_inline = false; comments = c } )
+  = d, T.({ is_hoisted = false; is_entrypoint = is_entrypoint; is_if_def=false; is_exported = e; should_inline = false; comments = c } )
 
 let rec hoist_typ
           (fn:string)
@@ -987,7 +988,7 @@ let rec hoist_typ
       in
       let d = Definition def in
       let t = T_refine t1 (None, app) in
-      ds@[with_attrs d true false false true []],  //hoisted, not exported, inlineable
+      ds@[with_attrs d true false false false true []],  //hoisted, not entrypoint, not exported, inlineable
       t
 
     | T_refine t1 (None, e) ->
@@ -1059,7 +1060,7 @@ let hoist_one_type_definition (should_inline:bool)
         decl_is_enum = false        
       } in
       let td = Type_decl td in
-      with_attrs td true false false should_inline [comment],  //hoisted, not exported, should_inline
+      with_attrs td true false false false should_inline [comment],  //hoisted, not entrypoint, not exported, should_inline
       tdef
 
 let hoist_field (genv:global_env) (env:env_t) (tdn:T.typedef_name) (f:T.field)
@@ -1196,7 +1197,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
 
   | Define i (Some t) s ->
     let t, ds = translate_typ t in
-    ds@[with_comments (T.Definition (i, [], t, T.mk_expr (T.Constant s))) d.d_exported d.d_decl.comments]
+    ds@[with_comments (T.Definition (i, [], t, T.mk_expr (T.Constant s))) (A.is_entrypoint d) d.d_exported d.d_decl.comments]
 
   | TypeAbbrev t i ->
     let tdn = make_tdn i in
@@ -1212,7 +1213,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_parser = p;
         decl_is_enum = false
     } in
-    ds1@ds2@[with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+    ds1@ds2@[with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
   | Enum t i ids ->
     let ids = Desugar.check_desugared_enum_cases ids in
@@ -1230,7 +1231,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_parser = p;
         decl_is_enum = true
     } in
-    ds1@ds2@[with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+    ds1@ds2@[with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
   | Record tdn params _ ast_fields ->
     let tdn, ds1 = translate_typedef_name tdn params in
@@ -1246,7 +1247,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
           decl_parser = p;
           decl_is_enum = false
     } in
-   ds1@ds2 @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+   ds1@ds2 @ [with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
   | CaseType tdn0 params switch_case ->
     let tdn, ds1 = translate_typedef_name tdn0 params in
@@ -1262,21 +1263,21 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_parser = p;
         decl_is_enum = false
     } in
-    ds1 @ ds2 @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+    ds1 @ ds2 @ [with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
-  | OutputType out_t -> [with_comments (T.Output_type out_t) false []]  //No decl for output type specifications
+  | OutputType out_t -> [with_comments (T.Output_type out_t) (A.is_entrypoint d) false []]  //No decl for output type specifications
 
-  | ExternType tdnames -> [with_comments (T.Extern_type tdnames.typedef_abbrev) false []]
+  | ExternType tdnames -> [with_comments (T.Extern_type tdnames.typedef_abbrev) (A.is_entrypoint d) false []]
 
   | ExternFn f ret params ->
     let ret, ds = translate_typ ret in
     let params, ds = List.fold_left (fun (params, ds) (t, i, _) ->
       let t, ds_t = translate_typ t in
       params@[i, t],ds@ds_t) ([], ds) params in
-    ds @ [with_comments (T.Extern_fn f ret params) false []]
+    ds @ [with_comments (T.Extern_fn f ret params) (A.is_entrypoint d) false []]
 
   | ExternProbe f ->
-    [with_comments (T.Extern_probe f) false []]
+    [with_comments (T.Extern_probe f) (A.is_entrypoint d) false []]
 
 noeq
 type translate_env = {

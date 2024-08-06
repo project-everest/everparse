@@ -144,6 +144,10 @@ type typ : Type =
       act:lam action ->
       typ
 
+  | T_drop:
+      t:typ ->
+      typ
+
   | T_with_comment:
       fn:non_empty_string ->
       t:typ ->
@@ -190,7 +194,7 @@ type type_decl = {
   kind : T.parser_kind;
   typ_indexes : typ_indexes;
   allow_reading: bool;
-  attrs : T.decl_attributes;
+  attrs : (attrs: T.decl_attributes { attrs.is_entrypoint ==> ~ allow_reading });
   enum_typ: option (t:T.typ {T.T_refine? t })
 }
 let not_type_decl = (d: T.decl { ~ (T.Type_decl? (fst d)) })
