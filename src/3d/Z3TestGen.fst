@@ -66,15 +66,15 @@ let prelude : string =
 (define-fun parse-u8 ((x State)) Result
   (mk-result
     (choose (choice-index x))
-    (mk-state
-      (let ((new-size (- (input-size x) 1)))
+    (let ((new-size (- (input-size x) 1)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 1))
+        (branch-index x)
       )
-      (+ (choice-index x) 1)
-      (branch-index x)
     )
   )
 )
@@ -86,15 +86,15 @@ let prelude : string =
         (choose (+ 0 (choice-index x)))
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 2)))
+    (let ((new-size (- (input-size x) 2)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 2))
+        (branch-index x)
       )
-      (+ (choice-index x) 2)
-      (branch-index x)
     )
   )
 )
@@ -106,15 +106,15 @@ let prelude : string =
         (choose (+ 1 (choice-index x)))
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 2)))
+    (let ((new-size (- (input-size x) 2)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 2))
+        (branch-index x)
       )
-      (+ (choice-index x) 2)
-      (branch-index x)
     )
   )
 )
@@ -134,15 +134,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 4)))
+    (let ((new-size (- (input-size x) 4)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 4))
+        (branch-index x)
       )
-      (+ (choice-index x) 4)
-      (branch-index x)
     )
   )
 )
@@ -162,15 +162,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 4)))
+    (let ((new-size (- (input-size x) 4)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 4))
+        (branch-index x)
       )
-      (+ (choice-index x) 4)
-      (branch-index x)
     )
   )
 )
@@ -206,15 +206,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 8)))
+    (let ((new-size (- (input-size x) 8)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 8))
+        (branch-index x)
       )
-      (+ (choice-index x) 8)
-      (branch-index x)
     )
   )
 )
@@ -250,15 +250,15 @@ let prelude : string =
         )
       )
     )
-    (mk-state
-      (let ((new-size (- (input-size x) 8)))
+    (let ((new-size (- (input-size x) 8)))
+      (mk-state
         (if (< new-size 0)
           -1
           new-size
         )
+        (+ (choice-index x) (if (< new-size 0) (input-size x) 8))
+        (branch-index x)
       )
-      (+ (choice-index x) 8)
-      (branch-index x)
     )
   )
 )
@@ -292,7 +292,7 @@ let prelude : string =
       )
       (mk-state
         -1
-        (choice-index x)
+        (+ (choice-index x) (input-size x))
         (branch-index x)
       )
     )
@@ -590,13 +590,12 @@ let mk_parse_dep_pair_with_refinement
 : string
 = let input = Printf.sprintf "%s-input" name in
   let tmp = Printf.sprintf "%s-tmp" name in
-  let condtmp = Printf.sprintf "%s-condtmp" name in
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
    (let (("^tmp^" ("^dfst^" "^input^")))
      (if (< (input-size (after-state "^tmp^")) 0)
        (after-state "^tmp^")
-       (let (("^condtmp^" (let (("^cond_binder_name^" (return-value "^tmp^"))) "^cond^")))
-         (if (and "^condtmp^" (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 0)))
+       (if (let (("^cond_binder_name^" (return-value "^tmp^"))) "^cond^")
+         (if (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 0))
            (let (("^dsnd_binder_name^" (return-value "^tmp^")))
              ("^dsnd^"
                (mk-state
@@ -607,10 +606,15 @@ let mk_parse_dep_pair_with_refinement
              )
            )
            (mk-state
-             (if (and (not "^condtmp^") (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 1))) -1 -2)
+             -2
              (choice-index (after-state "^tmp^"))
-             (+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))
+             (+ 1 (branch-index (after-state "^tmp^")))
            )
+         )
+         (mk-state
+           (if (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 1)) -1 -2)
+           (choice-index (after-state "^tmp^"))
+           (+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))
          )
        )
      )
@@ -903,30 +907,6 @@ let parse_string
     out (mk_parse_string name rec_call binders.bind body.call (terminator ()));
     { call = rec_call }
 
-let rec type_has_actions = function
-  | I.T_with_dep_action _ _ _
-  | I.T_dep_pair_with_action _ _ _ _
-  | I.T_refine_with_action _ _ _ _
-  | I.T_dep_pair_with_refinement_and_action _ _ _ _ _
-  | I.T_with_action _ _ _
-  | I.T_probe_then_validate _ _ _ _ _
-    -> true
-  | I.T_false _
-  | I.T_denoted _ _
-  | I.T_refine _ _ _
-  | I.T_string _ _ _
-    -> false
-  | I.T_if_else _ t1 t2
-  | I.T_pair _ t1 t2 ->
-    type_has_actions t1 || type_has_actions t2
-  | I.T_at_most _ _ t
-  | I.T_exact _ _ t
-  | I.T_nlist _ _ t
-  | I.T_with_comment _ t _
-  | I.T_dep_pair_with_refinement _ _ _ (_, t)
-  | I.T_dep_pair _ _ (_, t) ->
-    type_has_actions t
-
 let rec typ_depth (t: I.typ) : GTot nat
   (decreases t)
 = match t with
@@ -935,28 +915,40 @@ let rec typ_depth (t: I.typ) : GTot nat
   | I.T_pair _ t1 t2
     -> 1 + typ_depth t1 + typ_depth t2
   | I.T_dep_pair _ _ (_, t')
+  | I.T_dep_pair_with_action _ _ (_, t') _
   | I.T_dep_pair_with_refinement _ _ _ (_, t')
+  | I.T_dep_pair_with_refinement_and_action _ _ _ (_, t') _
+  | I.T_with_action _ t' _
   | I.T_with_comment _ t' _
   | I.T_at_most _ _ t'
   | I.T_exact _ _ t'
   | I.T_nlist _ _ t'
     -> 1 + typ_depth t'
-  | _
+  | I.T_with_dep_action _ _ _
+  | I.T_refine _ _ _
+  | I.T_refine_with_action _ _ _ _
+  | I.T_false _
+  | I.T_string _ _ _
+  | I.T_denoted _ _
+  | I.T_probe_then_validate _ _ _ _ _
     -> 0
 
-let rec parse_typ (t : I.typ) : Pure (parser not_reading)
-  (requires (type_has_actions t == false))
-  (ensures (fun _ -> True))
+let rec parse_typ (t : I.typ) : Tot (parser not_reading)
   (decreases (typ_depth t))
 = 
   match t with
   | I.T_false _ -> parse_false
+  | I.T_with_dep_action _ d _
   | I.T_denoted _ d -> parse_denoted d
   | I.T_pair _ t1 t2 -> parse_pair (parse_typ t1) (parse_typ t2)
+  | I.T_dep_pair_with_action _ t1 (lam, t2) _
   | I.T_dep_pair _ t1 (lam, t2) -> parse_dep_pair (parse_readable_dtyp t1) lam (parse_typ t2)
+  | I.T_refine_with_action _ base (lam, cond) _
   | I.T_refine _ base (lam, cond) -> parse_refine (parse_readable_dtyp base) lam (fun _ -> mk_expr cond)
+  | I.T_dep_pair_with_refinement_and_action _ base (lam_cond, cond) (lam_k, k) _
   | I.T_dep_pair_with_refinement _ base (lam_cond, cond) (lam_k, k) -> parse_dep_pair_with_refinement (parse_readable_dtyp base) lam_cond (fun _ -> mk_expr cond) lam_k (parse_typ k)
   | I.T_if_else cond t1 t2 -> parse_ifthenelse cond t1 t2 0
+  | I.T_with_action _ base _
   | I.T_with_comment _ base _ -> parse_typ base
   | I.T_at_most _ size body -> parse_at_most (fun _ -> mk_expr size) (parse_typ body)
   | I.T_exact _ size body -> parse_exact (fun _ -> mk_expr size) (parse_typ body)
@@ -970,10 +962,9 @@ let rec parse_typ (t : I.typ) : Pure (parser not_reading)
       parse_nlist_total_constant_size i size
     else
       parse_nlist (fun _ -> mk_expr size) (parse_typ body)
+  | I.T_probe_then_validate _ _ _ _ _ -> unsupported_parser "probe_then_validate" _
 
-and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Pure (int -> parser not_reading)
-  (requires (type_has_actions tthen == false /\ type_has_actions telse == false))
-  (ensures (fun _ -> True))
+and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Tot (int -> parser not_reading)
   (decreases (1 + typ_depth tthen + typ_depth telse))
 = match telse with
   | I.T_if_else cond2 tthen2 telse2 ->
@@ -981,31 +972,51 @@ and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Pure (int ->
   | _ ->
     parse_ifthenelse_nil (fun _ -> mk_expr cond) (parse_typ tthen) (parse_typ telse)
 
-type arg_type =
+type simple_arg_type (allow_out: bool) =
 | ArgInt of A.integer_type
 | ArgBool
-| ArgPointer
+| ArgOutput: squash allow_out -> string -> simple_arg_type allow_out
+| ArgExtern: squash allow_out -> simple_arg_type allow_out
 
-let arg_type_of_typ (t: T.typ) : Tot (option arg_type) =
+type arg_type =
+| ArgSimple of simple_arg_type false
+| ArgPointer of simple_arg_type true
+
+let output_type_name_to_string (i: A.ident) : Tot string = ident_to_string i
+
+let simple_arg_type_of_typ (t: T.typ) (allow_out: bool) : Tot (option (simple_arg_type allow_out)) =
   match t with
-  | T.T_pointer _
-  | T.T_app _ A.KindOutput _
-  | T.T_app _ A.KindExtern _
-  | T.T_app {v = {modul_name = None; name = "PUINT8"}} _ _
-    -> Some ArgPointer
   | T.T_app {v = {modul_name = None; name = "Bool"}} _ _
     -> Some ArgBool
-  | T.T_app i _ _
+  | T.T_app i k _
     ->
     begin match A.maybe_as_integer_typ i with
     | Some t -> Some (ArgInt t)
-    | None -> None
+    | None ->
+      if A.KindOutput? k && allow_out then Some (ArgOutput () (output_type_name_to_string i))
+      else if A.KindExtern? k && allow_out then Some (ArgExtern ())
+      else None
     end
   | _ -> None
 
+let arg_type_of_typ (t: T.typ) : Tot (option arg_type) =
+  match t with
+  | T.T_pointer t ->
+    begin match simple_arg_type_of_typ t true with
+    | Some t' -> Some (ArgPointer t')
+    | _ -> None
+    end
+  | T.T_app {v = {modul_name = None; name = "PUINT8"}} _ _
+    -> Some (ArgPointer (ArgInt A.UInt8))
+  | _ ->
+    begin match simple_arg_type_of_typ t false with
+    | Some t' -> Some (ArgSimple t')
+    | _ -> None
+    end
+
 let smt_type_of_typ (t: T.typ) : Tot string =
   match arg_type_of_typ t with
-  | Some ArgBool -> "Bool"
+  | Some (ArgSimple ArgBool) -> "Bool"
   | _ -> "Int"
 
 let rec binders_of_params = function
@@ -1042,10 +1053,14 @@ let produce_not_type_decl (a: I.not_type_decl) (out: string -> ML unit) : ML uni
   | T.Extern_probe _
   -> ()
 
-type prog_def = {
-  args: list arg_type;
-  enum_base_type: option arg_type;
-}
+type prog_def =
+| ProgDef:
+  args: list (string & arg_type) ->
+  enum_base_type: option arg_type ->
+  prog_def
+| ProgOutput:
+  args: list (string & simple_arg_type true) ->
+  prog_def
 
 let prog = list (string & prog_def)
 
@@ -1060,7 +1075,7 @@ let rec arg_type_of_typ_with_prog
     begin match t with
     | T.T_app hd _ _ ->
       begin match List.Tot.assoc (ident_to_string hd) accu with
-      | Some def -> def.enum_base_type
+      | Some (ProgDef args enum_base_type) -> enum_base_type
       | _ -> None
       end
     | T.T_with_action base _
@@ -1074,18 +1089,51 @@ let rec arg_type_of_typ_with_prog
 let produce_type_decl (out: string -> ML unit) (accu: prog) (a: I.type_decl) : ML prog =
   let binders = binders_of_params a.name.td_params in
   let name = ident_to_string a.name.td_name in
-  if type_has_actions a.typ then failwith (Printf.sprintf "produce_type_decl: %s still has some actions" name);
   let _ = parse_typ a.typ name binders true out in
-  (name, {
-    args = List.map (fun (i, ty) -> match arg_type_of_typ_with_prog accu ty with Some t -> t | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params;
-    enum_base_type = begin match a.enum_typ with
+  (name, ProgDef
+    (List.map (fun (i, ty) -> match arg_type_of_typ_with_prog accu ty with Some t -> (ident_to_string i, t) | None -> failwith (Printf.sprintf "Parser %s has unsupported argument type for %s" name (ident_to_string i))) a.name.td_params)
+    begin match a.enum_typ with
     | Some ty -> arg_type_of_typ_with_prog accu ty
     | _ -> None
-    end;
-  }) :: accu
+    end
+  ) :: accu
+
+let simple_arg_type_of_ast_typ
+  (a: Ast.typ)
+: Tot (simple_arg_type true)
+= match a.v with
+  | A.Pointer _ -> ArgExtern ()
+  | A.Type_app i _ _ ->
+    begin match A.maybe_as_integer_typ i with
+    | Some it -> ArgInt it
+    | None ->
+      if None? i.v.modul_name && i.v.name = "Bool"
+      then ArgBool
+      else ArgOutput () (output_type_name_to_string i)
+    end
+
+let rec prog_out_fields_of_ast_out_fields
+  (accu: list (string & simple_arg_type true))
+  (fds: list A.out_field)
+: Tot (list (string & simple_arg_type true))
+  (decreases fds)
+= match fds with
+  | [] -> List.Tot.rev accu
+  | A.Out_field_named name ty None :: q ->
+    prog_out_fields_of_ast_out_fields
+      ((ident_to_string name, simple_arg_type_of_ast_typ ty) :: accu)
+      q
+  | _ :: q -> prog_out_fields_of_ast_out_fields accu q
+
+let produce_output_type_decl
+  (accu: prog)
+  (ot: A.out_typ)
+: Tot prog
+= (ident_to_string ot.out_typ_names.typedef_name, ProgOutput (prog_out_fields_of_ast_out_fields [] ot.out_typ_fields)) :: accu
 
 let produce_decl (out: string -> ML unit) (accu: prog) (a: I.decl) : ML prog =
   match a with
+  | Inl (T.Output_type ot, _) -> produce_output_type_decl accu ot
   | Inl a -> produce_not_type_decl a out; accu
   | Inr a -> produce_type_decl out accu a
 
@@ -1128,6 +1176,20 @@ let read_witness (z3: Z3.z3) : ML (Seq.seq int) =
   in
   aux Seq.empty witness_size
 
+let read_branch_trace (z3: Z3.z3) : ML (Seq.seq int) =
+  z3.to_z3 "(eval (branch-index state-witness))\n";
+  let witness_size = Lisp.read_bare_int_from z3.from_z3 in
+  let rec aux (accu: Seq.seq int) (remaining: int) : ML (Seq.seq int) =
+    if remaining <= 0
+    then accu
+    else
+      let index = remaining - 1 in
+      let _ = z3.to_z3 (Printf.sprintf "(eval (branch-trace %d))\n" index) in
+      let v = Lisp.read_bare_int_from z3.from_z3 in
+      aux (Seq.cons v accu) index
+  in
+  aux Seq.empty witness_size
+
 let rec read_witness_args (z3: Z3.z3) (accu: list string) (n: nat) : ML (list string) =
   if n = 0
   then accu
@@ -1147,13 +1209,14 @@ let module_and_validator_name
 
 let rec print_witness_args_as_c
   (out: (string -> ML unit))
-  (l: list arg_type) (args: list string)
+  (l: list (string & arg_type)) (args: list string)
 : ML unit
 = match l, args with
-  | ArgPointer :: q, _ ->
-    out "NULL, ";
+  | (name, ArgPointer _) :: q, _ ->
+    out name;
+    out ", ";
     print_witness_args_as_c out q args
-  | ty :: ql, a :: qargs ->
+  | (_, ArgSimple ty) :: ql, a :: qargs ->
     out a;
     (if ArgInt? ty then out "U" else ());
     out ", ";
@@ -1163,7 +1226,7 @@ let rec print_witness_args_as_c
 let print_witness_call_as_c_aux
   (out: (string -> ML unit))
   (validator_name: string)
-  (arg_types: list arg_type)
+  (arg_types: list (string & arg_type))
   (witness_length: nat)
   (args: list string)
 : ML unit
@@ -1175,11 +1238,83 @@ let print_witness_call_as_c_aux
   out (string_of_int witness_length);
   out ", 0);"
 
+let pointer_elt_type_as_c (x: simple_arg_type true) : Tot (option string) =
+  match x with
+  | ArgInt A.UInt8 -> Some "uint8_t"
+  | ArgInt A.UInt16 -> Some "uint16_t"
+  | ArgInt A.UInt32 -> Some "uint32_t"
+  | ArgInt A.UInt64 -> Some "uint64_t"
+  | ArgBool -> Some "BOOLEAN"
+  | ArgOutput _ s -> Some s
+  | _ -> None
+
+let alloc_ptr_arg
+  (arg_var: string)
+  (pt: simple_arg_type true)
+: Tot string
+=
+    match pointer_elt_type_as_c pt with
+    | None ->
+"
+  void * "^arg_var^" = NULL;
+"
+    | Some ty ->
+Printf.sprintf "
+  %s _contents_%s;
+  %s *%s = &_contents_%s;
+  bzero((void*)%s, sizeof(%s));
+"
+  ty arg_var
+  ty arg_var arg_var
+  arg_var ty
+
+let rec print_outparameter
+  (#allow_out: bool)
+  (out: (string -> ML unit))
+  (p: prog)
+  (expr: string)
+  (ty: simple_arg_type allow_out)
+: ML unit
+= match ty with
+  | ArgBool
+  | ArgInt _ ->
+    out "
+  printf(\"";
+    out expr;
+    out " = %ld\\n\", ((uint64_t) (";
+    out expr;
+    out ")));\n"
+  | ArgExtern _ -> ()
+  | ArgOutput _ name ->
+    begin match List.Tot.assoc name p with
+    | Some (ProgOutput args) ->
+      List.iter
+        (fun (fd, ty) ->
+          print_outparameter out p (expr ^ "." ^ fd) ty
+        )
+        args
+    | _ -> ()
+    end
+
+let print_outparameters
+  (out: (string -> ML unit))
+  (p: prog)
+  (arg_types: list (string & arg_type))
+: ML unit
+= List.iter
+    (fun (name, ty) ->
+      match ty with
+      | ArgPointer ty -> print_outparameter out p ("(*" ^ name ^ ")") ty
+      | _ -> ()
+    )
+    arg_types
+
 let print_witness_call_as_c
   (out: (string -> ML unit))
+  (p: prog)
   (positive: bool)
   (validator_name: string)
-  (arg_types: list arg_type)
+  (arg_types: list (string & arg_type))
   (witness_length: nat)
   (args: list string)
 : ML unit
@@ -1187,6 +1322,15 @@ let print_witness_call_as_c
   out "
   {
     uint8_t context = 0;
+";
+  List.iter
+    (fun arg_ty ->
+      match arg_ty with
+      | (arg_var, ArgPointer ty) -> out (alloc_ptr_arg arg_var ty)
+      | _ -> ()
+    )
+    arg_types;
+  out "
     uint64_t output = ";
   print_witness_call_as_c_aux out validator_name arg_types witness_length args;
   out "
@@ -1201,8 +1345,13 @@ let print_witness_call_as_c
   out "U);
       result = consumes_all_bytes_if_successful;
     }
-    if (result)
+    if (result) {
       printf (\"ACCEPTED\\n\\n\");
+";
+  print_outparameters out p arg_types;
+  out
+"
+    }
     else if (!consumes_all_bytes_if_successful)
       printf (\"REJECTED (not all bytes consumed)\\n\\n\");
     else
@@ -1267,51 +1416,61 @@ let mk_output_filename
 let print_witness_as_c
   (out_dir: string)
   (out: (string -> ML unit))
+  (p: prog)
   (positive: bool)
   (validator_name: string)
-  (arg_types: list arg_type)
+  (arg_types: list (string & arg_type))
   (counter: ref int)
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
 = OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ((if positive then "POS." else "NEG.") ^ validator_name) args);
   print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out positive validator_name arg_types len args
+    print_witness_call_as_c out p positive validator_name arg_types len args
   )
 
 let print_diff_witness_as_c
   (out_dir: string)
   (out: (string -> ML unit))
+  (p: prog)
   (validator_name1: string)
   (validator_name2: string)
-  (arg_types: list arg_type)
+  (arg_types: list (string & arg_type))
   (counter: ref int)
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
 = OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ("POS." ^ validator_name1 ^ ".NEG." ^ validator_name2) args);
   print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out true validator_name1 arg_types len args;
-    print_witness_call_as_c out false validator_name2 arg_types len args
+    print_witness_call_as_c out p true validator_name1 arg_types len args;
+    print_witness_call_as_c out p false validator_name2 arg_types len args
   )
 
 let print_witness (witness: Seq.seq int) : ML unit =
   FStar.IO.print_string " produced witness: [";
   List.iter (fun i -> FStar.IO.print_string (string_of_int i); FStar.IO.print_string "; ") (Seq.seq_to_list witness);
-  FStar.IO.print_string "]\n"
+  FStar.IO.print_string "]"
+
+let print_branch_trace (witness: Seq.seq int) : ML unit =
+  FStar.IO.print_string " with branch trace : [";
+  List.iter (fun i -> FStar.IO.print_string (string_of_int i); FStar.IO.print_string "; ") (Seq.seq_to_list witness);
+  FStar.IO.print_string "]"
 
 let rec mk_witness_call (accu: string) (l: list arg_type) (args: list string) : Tot string (decreases l) =
   match l, args with
-  | ArgPointer :: q, _ -> mk_witness_call (Printf.sprintf "%s 0" accu) q args
+  | ArgPointer _ :: q, _ -> mk_witness_call (Printf.sprintf "%s 0" accu) q args
   | _ :: ql, a :: qargs -> mk_witness_call (Printf.sprintf "%s %s" accu a) ql qargs
   | _ -> Printf.sprintf "(%s)" accu
 
-let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq int) (args: list string) : ML unit =
+let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq int) (input_size: string) (branch_trace: Seq.seq int) (args: list string) : ML unit =
   FStar.IO.print_string ";; call ";
   FStar.IO.print_string (mk_witness_call name l args);
-  print_witness witness
+  print_witness witness;
+  FStar.IO.print_string (Printf.sprintf " with remaining input %s " input_size);
+  print_branch_trace branch_trace;
+  FStar.IO.print_string "\n"
 
-let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer -> false | _ -> true) l)
+let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer _ -> false | _ -> true) l)
 
 let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
   (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
@@ -1335,9 +1494,12 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
+    z3.to_z3 "(eval (input-size state-witness))\n";
+    let input_size = z3.from_z3 () in
     let witness = read_witness z3 in
     let witness_args = read_witness_args z3 [] nargs in
-    print_witness_and_call name l witness witness_args;
+    let branch_trace = read_branch_trace z3 in
+    print_witness_and_call name l witness input_size branch_trace witness_args;
     print_test_case witness witness_args;
     z3.to_z3 (mk_want_another_distinct_witness witness witness_args);
     if i <= 1
@@ -1364,15 +1526,15 @@ let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)
 let rec mk_call_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
   match l with
   | [] -> accu
-  | ArgPointer :: q -> mk_call_args (Printf.sprintf "%s 0" accu) i q
+  | ArgPointer _ :: q -> mk_call_args (Printf.sprintf "%s 0" accu) i q
   | _ :: q -> mk_call_args (Printf.sprintf "%s arg-%d" accu i) (i + 1) q
 
 let rec mk_assert_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
   match l with
   | [] -> accu
-  | ArgPointer :: q -> mk_assert_args accu i q
-  | ArgBool :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Bool)\n" accu i) (i + 1) q
-  | ArgInt it :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Int)\n(assert (and (<= 0 arg-%d) (< arg-%d %d)))\n" accu i i i (pow2 (integer_type_bit_size it))) (i + 1) q
+  | ArgPointer _ :: q -> mk_assert_args accu i q
+  | ArgSimple ArgBool :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Bool)\n" accu i) (i + 1) q
+  | ArgSimple (ArgInt it) :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Int)\n(assert (and (<= 0 arg-%d) (< arg-%d %d)))\n" accu i i i (pow2 (integer_type_bit_size it))) (i + 1) q
 
 let mk_get_witness (name: string) (l: list arg_type) : string =
 Printf.sprintf "
@@ -1531,13 +1693,17 @@ static void TestErrorHandler (
 
 let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
   let def = List.assoc name1 prog in
-  if None? def
-  then failwith (Printf.sprintf "do_test: parser %s not found" name1);
-  let args = (Some?.v def).args in
+  begin match def with
+  | Some (ProgDef _ _) -> ()
+  | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
+  end;
+  let Some (ProgDef args _) = def in
+  let sargs = List.Tot.map snd args in
   let modul, validator_name = module_and_validator_name name1 in
-  let nargs = count_args args in with_option_out_file out_file (fun cout ->
+  let nargs = count_args sargs in with_option_out_file out_file (fun cout ->
   cout "#include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 #include \"";
   cout modul;
   cout ".h\"
@@ -1550,22 +1716,22 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
   let tasks =
     begin
       if pos
-      then [print_witness_as_c out_dir cout true validator_name args counter, (fun _ -> (
+      then [print_witness_as_c out_dir cout prog true validator_name args counter, (fun _ -> (
         FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
-        mk_get_positive_test_witness name1 args
+        mk_get_positive_test_witness name1 sargs
       ))]
       else []
     end `List.Tot.append`
     begin
       if neg
-      then [print_witness_as_c out_dir cout false validator_name args counter, (fun _ -> (
+      then [print_witness_as_c out_dir cout prog false validator_name args counter, (fun _ -> (
         FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
-        mk_get_negative_test_witness name1 args
+        mk_get_negative_test_witness name1 sargs
       ))]
       else []
     end
   in
-  witnesses_for z3 name1 args nargs tasks nbwitnesses depth;
+  witnesses_for z3 name1 sargs nargs tasks nbwitnesses depth;
   cout "  return 0;
   }
 "
@@ -1583,21 +1749,26 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
   (mk_get_positive_test_witness name1 l)
   call2
 
-let do_diff_test_for (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 args (nargs: nat { nargs == count_args args }) validator_name1 validator_name2 nbwitnesses depth =
+let do_diff_test_for
+  (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 (args: list (string & arg_type)) (nargs: nat { nargs == count_args (List.Tot.map snd args) }) validator_name1 validator_name2 nbwitnesses depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
-  witnesses_for z3 name1 args nargs ([print_diff_witness_as_c out_dir cout validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 args name2)]) nbwitnesses depth
+  let sargs = List.Tot.map snd args in
+  witnesses_for z3 name1 sargs nargs ([print_diff_witness_as_c out_dir cout prog validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 sargs name2)]) nbwitnesses depth
 
 let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) name1 name2 nbwitnesses depth =
   let def = List.assoc name1 prog in
-  if None? def
-  then failwith (Printf.sprintf "do_diff_test: parser %s not found" name1);
-  let args = (Some?.v def).args in
+  begin match def with
+  | Some (ProgDef _ _) -> ()
+  | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
+  end;
+  let Some (ProgDef args _) = def in
+  let sargs = List.Tot.map snd args in
   let def2 = List.assoc name2 prog in
   if None? def2
   then failwith (Printf.sprintf "do_diff_test: parser %s not found" name2);
   if def2 <> def
   then failwith (Printf.sprintf "do_diff_test: parsers %s and %s do not have the same arg types" name1 name2);
-  let nargs = count_args args in
+  let nargs = count_args sargs in
   let modul1, validator_name1 = module_and_validator_name name1 in
   let modul2, validator_name2 = module_and_validator_name name2 in
   with_option_out_file out_file (fun cout ->
@@ -1624,27 +1795,30 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: 
 
 let test_exe_mk_arg
   (accu: (int & string & string & string))
-  (p: arg_type)
+  (pn: (string & arg_type))
 : Tot (int & string & string & string)
-= let (cur_arg, read_args, call_args_lhs, call_args_rhs) = accu in
+=
+  let (arg_var, p) = pn in
+  let (cur_arg, read_args, call_args_lhs, call_args_rhs) = accu in
   let cur_arg_s = string_of_int cur_arg in
-  let arg_var = "arg" ^ cur_arg_s in
-  let cur_arg' = cur_arg + 1 in
+  let cur_arg' = cur_arg + begin match p with
+  | ArgPointer _ -> 0
+  | _ -> 1
+  end
+  in
   let read_args' = read_args ^
   begin match p with
-  | ArgInt _ -> "
+  | ArgSimple (ArgInt _) -> "
   unsigned long long "^arg_var^" = strtoull(argv["^cur_arg_s^"], NULL, 0);
 "
-  | ArgBool -> "
+  | ArgSimple ArgBool -> "
   BOOLEAN "^arg_var^" = (strcmp(argv["^cur_arg_s^"], \"true\") == 0);
   if (! ("^arg_var^" || strcmp(argv["^cur_arg_s^"], \"false\") == 0)) {
     printf(\"Argument %d must be true or false, got %s\\n\", "^cur_arg_s^", argv["^cur_arg_s^"]);
     return 1;
   }
 "
-  | _ -> "
-void * "^arg_var^" = NULL;
-"
+  | ArgPointer pt -> alloc_ptr_arg arg_var pt
   end
   in
   let call_args_lhs' = call_args_lhs ^ arg_var ^ ", " in
@@ -1654,7 +1828,8 @@ void * "^arg_var^" = NULL;
 let test_checker_c
   (modul: string)
   (validator_name: string)
-  (params: list arg_type)
+  (outparameters: string)
+  (params: list (string & arg_type))
 : Tot string
 =
   let (nb_cmd_and_args, read_args, call_args_lhs, call_args_rhs) = List.Tot.fold_left test_exe_mk_arg (2, "", "", "") params in
@@ -1668,6 +1843,7 @@ let test_checker_c
 #include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 "^test_error_handler^"
 
@@ -1722,16 +1898,22 @@ int main(int argc, char** argv) {
     return 1;
   }
   printf(\"Witness from %s ACCEPTED\\n\", filename);
+  "^outparameters^"
   return 0;
 }
 "
 
 let produce_test_checker_exe (out_file: string) (prog: prog) (name1: string) : ML unit =
   let def = List.assoc name1 prog in
-  if None? def
-  then failwith (Printf.sprintf "produce_test_checker_exe: parser %s not found" name1);
-  let args = (Some?.v def).args in
+  begin match def with
+  | Some (ProgDef _ _) -> ()
+  | _ -> failwith (Printf.sprintf "do_test: parser %s not found" name1)
+  end;
+  let Some (ProgDef args _) = def in
   let modul, validator_name = module_and_validator_name name1 in
+  let outparameters : ref string = alloc "" in
+  let outp s : ML unit = outparameters := !outparameters ^ s in
+  print_outparameters outp prog args;
   with_out_file out_file (fun cout ->
-    cout (test_checker_c modul validator_name args)
+    cout (test_checker_c modul validator_name !outparameters args)
   )
