@@ -26,7 +26,7 @@ val action_field_ptr_after_with_setter
       (u:squash (EverParse3d.Actions.BackendFlag.backend_flag == BackendFlagExtern))
       (sz: FStar.UInt64.t)
       (#output_loc: eloc)
-      (write_to: (___PUINT8 -> Tot (external_action output_loc)))
+      (write_to: (___PUINT8 -> Tot (external_action unit output_loc)))
    : action true_inv disjointness_trivial output_loc false bool // if action returns true, writes some value to write_to. if false, do nothing
 
 noextract
