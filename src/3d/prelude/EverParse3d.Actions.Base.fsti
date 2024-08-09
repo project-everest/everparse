@@ -191,6 +191,20 @@ val leaf_reader
  : Type u#0
 
 inline_for_extraction noextract
+val validate_without_reading
+      (#nz:bool)
+      (#wk: _)
+      (#k:parser_kind nz wk)
+      (#[@@@erasable] t:Type)
+      (#[@@@erasable] p:parser k t)
+      (#[@@@erasable] inv:slice_inv)
+      (#[@@@erasable] disj:disjointness_pre)
+      (#[@@@erasable] l:eloc)
+      (#allow_reading:bool)
+      (v: validate_with_action_t p inv disj l allow_reading)
+: Tot (validate_with_action_t p inv disj l false)
+
+inline_for_extraction noextract
 val validate_with_success_action
       (name: string)
       (#nz:bool)
@@ -209,7 +223,6 @@ val validate_with_success_action
       (#b:bool)
       (a:action inv2 disj2 l2 b bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (conj_disjointness disj1 disj2) (l1 `eloc_union` l2) false
-
 
 inline_for_extraction noextract
 val validate_with_error_handler
@@ -843,13 +856,14 @@ val action_weaken
 
 inline_for_extraction
 noextract
-val external_action (l: eloc) : Tot Type0
+val external_action (t: Type0) (l: eloc) : Tot Type0
 
 noextract
 inline_for_extraction
 val mk_external_action
-  (#l:eloc) ($f: external_action l)
-  : action true_inv disjointness_trivial l false unit
+  (#t: Type)
+  (#l:eloc) ($f: external_action t l)
+  : action true_inv disjointness_trivial l false t
 
 val copy_buffer_inv (x:CP.copy_buffer_t) : slice_inv
 val copy_buffer_loc (x:CP.copy_buffer_t) : eloc

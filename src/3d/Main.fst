@@ -45,19 +45,13 @@ let right (x:either 'a 'b)
     | Inr x -> x
     | _ -> failwith "Expected right"
 
-type prune_actions = | PruneActions
-type opt_prune_actions = option prune_actions
-
-let parse_check_and_desugar (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
+let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   : ML (list Ast.decl &
         StaticAssertions.static_asserts &
         env) =
   Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn mname);
   let decls, refinement =
-    let p = parse_prog fn in
-    if pa = Some PruneActions
-    then prog_prune_actions p
-    else p
+    parse_prog fn
   in
 
   Options.debug_print_string "=============After parsing=============\n";
@@ -116,14 +110,14 @@ let parse_check_and_desugar (pa: opt_prune_actions) (en:env) (mname:string) (fn:
   static_asserts,
   en
   
-let translate_module (pa: opt_prune_actions) (en:env) (mname:string) (fn:string)
+let translate_module (en:env) (mname:string) (fn:string)
   : ML (list Target.decl &
         list InterpreterTarget.decl &
         StaticAssertions.static_asserts &
         env) =
 
   let decls, static_asserts, en = 
-      parse_check_and_desugar pa en mname fn
+      parse_check_and_desugar en mname fn
   in      
       
   let t_decls, i_decls, tenv = 
@@ -343,7 +337,6 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
 
 let process_file_gen
                  (produce_ep_error: Target.opt_produce_everparse_error)
-                 (pa: opt_prune_actions)
                  (en:env)
                  (fn:string)
                  (modul:string)
@@ -353,7 +346,7 @@ let process_file_gen
   : ML (env & list InterpreterTarget.decl) =
   
   let t_decls, interpreter_decls, static_asserts, en =
-      translate_module pa en modul fn
+      translate_module en modul fn
   in
   if emit_fstar 
   then (
@@ -379,7 +372,7 @@ let process_file
                  (emit_output_types_defs: bool)
                  (all_modules:list string)
   : ML env =
-  fst (process_file_gen None None en fn modul emit_fstar emit_output_types_defs all_modules)
+  fst (process_file_gen None en fn modul emit_fstar emit_output_types_defs all_modules)
 
 let emit_config_as_fstar_module ()
   : ML unit
@@ -441,7 +434,7 @@ let process_file_for_z3
                  (all_modules:list string)
   : ML (env & Z3TestGen.prog) =
   let (en, accu) = en_accu in
-  let (en, interpreter_decls) = process_file_gen (Some Target.ProduceEverParseError) (Some PruneActions) en fn modul emit_fstar emit_output_types_defs all_modules in
+  let (en, interpreter_decls) = process_file_gen (Some Target.ProduceEverParseError) en fn modul emit_fstar emit_output_types_defs all_modules in
   let accu = Z3TestGen.produce_decls out accu interpreter_decls in
   (en, accu)
 
@@ -601,6 +594,17 @@ let go () : ML unit =
     let _ = Batch.copy_clang_format (Options.get_output_dir ()) in
     exit 0
   else
+  if micro_step = Some HashingOptions.MicroStepCopyEverParseH
+  then
+  (* Special mode: --__micro_step copy_everparse_h *)
+    let _ = Batch.copy_everparse_h
+      (Options.get_clang_format ())
+      (Options.get_clang_format_executable ())
+      (Options.get_input_stream_binding ())
+      (Options.get_output_dir ())
+    in
+    exit 0
+  else
   (* for other modes, a nonempty list of files is needed on the command line, so if none are there, then we shall print the help message *)
   let input_stream_binding = Options.get_input_stream_binding () in
   if Nil? cmd_line_files
@@ -622,6 +626,7 @@ let go () : ML unit =
     GenMakefile.write_makefile
       t
       input_stream_binding
+      (not (Options.get_no_everparse_h ()))
       (Options.get_emit_output_types_defs ())
       (Options.get_skip_o_rules ())
       (Options.get_clang_format ())

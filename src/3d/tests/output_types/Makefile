@@ -3,26 +3,13 @@ export EVERPARSE_HOME
 EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe
 SOURCE_FILES=TPoint.3d AnonStruct.3d AnonUnion.3d
 
-all: basic interpret modules modules_batch
+all: interpret modules modules_batch
 
 modules:
 	+$(MAKE) -C $@
 
 modules_batch:
 	+$(MAKE) -C $@
-
-basic: $(SOURCE_FILES) basic.out
-	$(EVERPARSE_CMD) --batch TPoint.3d --odir basic.out
-	$(EVERPARSE_CMD) --batch AnonUnion.3d --odir basic.out
-	$(EVERPARSE_CMD) --batch AnonStruct.3d --odir basic.out
-	$(EVERPARSE_CMD) --batch ExternVector.3d --odir basic.out
-	$(EVERPARSE_CMD) --batch OutputBitFields.3d --odir basic.out
-	g++ -o basic.out/test1 -I basic.out $(addprefix basic.out/, AnonStruct_OutputTypes.c AnonStruct.c AnonStructWrapper.c) TestAnonStruct.cpp
-	./basic.out/test1
-	g++ -o basic.out/test2 -I basic.out $(addprefix basic.out/, TPoint_OutputTypes.c TPoint.c TPointWrapper.c) TestTPoint.cpp
-	./basic.out/test2
-	gcc -o basic.out/test3 -I basic.out -I . $(addprefix basic.out/, ExternVector.c ExternVectorWrapper.c) ExternVectorDriver.c
-	./basic.out/test3
 
 interpret: $(SOURCE_FILES) interpret.out
 	$(EVERPARSE_CMD) --batch TPoint.3d --odir interpret.out
@@ -59,4 +46,4 @@ FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 %.out:
 	mkdir -p $@
 
-.PHONY: all basic interpret modules modules_batch
+.PHONY: all interpret modules modules_batch

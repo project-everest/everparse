@@ -34,11 +34,6 @@ EVERPARSE_OUTPUT_DIR=obj
 # files
 EVERPARSE_INPUT_DIR=src
 
-# If a .3d file contains a `refining` clause, then the C compiler must
-# be given the include path that contains the .h files pointed to by
-# such clauses.
-CFLAGS += -I src
-
 #########################################
 # Generating and including the Makefile #
 #########################################
@@ -73,10 +68,10 @@ all_o_files=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o $(EVERPARSE_
 # and the EverParse library directory into the compiler's include
 # path.
 $(EVERPARSE_OUTPUT_DIR)/main.o: $(EVERPARSE_INPUT_DIR)/main.c $(EVERPARSE_OUTPUT_DIR)/TestWrapper.h src/EverParseStream.h
-	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/src/3d/prelude/static -c -o $@ $<
+	$(CC) $(CFLAGS) -I $(EVERPARSE_INPUT_DIR) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 
-$(EVERPARSE_OUTPUT_DIR)/EverParseStream.o: src/EverParseStream.c src/EverParseStream.h
-	$(CC) $(CFLAGS) -I $(EVERPARSE_HOME)/src/3d -I $(EVERPARSE_HOME)/src/3d/prelude/static -c -o $@ $<
+$(EVERPARSE_OUTPUT_DIR)/EverParseStream.o: src/EverParseStream.c src/EverParseStream.h $(EVERPARSE_OUTPUT_DIR)/EverParseEndianness.h
+	$(CC) $(CFLAGS) -I $(EVERPARSE_INPUT_DIR) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 
 # Link the test program
 $(EVERPARSE_OUTPUT_DIR)/test.exe: $(all_o_files)

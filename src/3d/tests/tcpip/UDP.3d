@@ -22,6 +22,12 @@ typedef struct _UDP_Header
 {
   UINT16BE SourcePort;
   UINT16BE DestinationPort;
-  UINT16BE Length;
+  UINT16BE Length
+  {
+    // Length is the length in octets of this user datagram including this header and the data (this
+    // means the minimum value of the length is eight, unless the length of the UDP header + data is
+    // greater than 65,535 (see Jumboframes in RFC 2675), in which case it is zero.
+    Length >= 8 || Length == 0
+  };
   UINT16BE CheckSum;
 } UDP_HEADER;

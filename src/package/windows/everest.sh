@@ -235,14 +235,20 @@ use_our_z3 () {
     prompt_yes "write_z3_env_dest_file z3" true
 }
 
+no_z3=false
+
 do_update_z3 () {
-  local current_z3=$(parse_z3_version)
-  echo "... version of z3 found in PATH: $current_z3"
-  local new_z3=4.8.5
-  if [[ $new_z3 != $current_z3 ]]; then
-    red "This is not z3 $current_z3"
-    magenta "Use our existing z3? [Yn]"
-    prompt_yes use_our_z3 false
+  if $no_z3 ; then
+    echo "... skipping z3"
+  else
+    local current_z3=$(parse_z3_version)
+    echo "... version of z3 found in PATH: $current_z3"
+    local new_z3=4.8.5
+    if [[ $new_z3 != $current_z3 ]]; then
+        red "This is not z3 $current_z3"
+        magenta "Use our existing z3? [Yn]"
+        prompt_yes use_our_z3 false
+    fi
   fi
 }
 
@@ -558,7 +564,7 @@ set_opt () {
 # ------------------------------------------------------------------------------
 
 OPTIONS=j:k
-LONGOPTS=yes,release,windows,openssl,opt,admit,no-vale-archive
+LONGOPTS=yes,release,windows,openssl,opt,admit,no-vale-archive,no-z3
 
 # Temporarily stores output to check for errors
 # --alternative allows long options to start with a single '-'
@@ -591,6 +597,11 @@ while true; do
 
         (-release|--release)
             everparse_do_release=1
+            shift
+            ;;
+
+        --no-z3)
+            no_z3=true
             shift
             ;;
 

@@ -361,6 +361,7 @@ let krml_args input_stream_binding emit_output_types_defs add_include skip_c_mak
                       "-fparentheses" ::
                         "-fcurly-braces" ::
                           "-fmicrosoft" ::
+                          "-fno-shadow" ::
                             "-header" :: filename_concat ddd_home "noheader.txt" ::
                               "-minimal" ::
                                 "-add-include" :: "\"EverParse.h\"" ::
@@ -604,6 +605,24 @@ let add_copyright
   
 (* Call clang-format *)
 
+let call_clang_format_on
+  (clang_format_executable: string)
+  (files: string list)
+= match files with
+  | [] -> ()
+  | _ ->
+  let clang_format_args =
+    "-i" ::
+      "--style=file" ::
+        files
+  in
+  let clang_format_exe =
+    if clang_format_executable <> ""
+    then clang_format_executable
+    else Printf.sprintf "clang-format%s" (if Sys.win32 then ".exe" else "")
+  in
+  run_cmd clang_format_exe clang_format_args
+
 let call_clang_format
       (no_everparse_h: bool)
       (produced_files: bool)
@@ -612,21 +631,8 @@ let call_clang_format
       (out_dir: string)
       (files_and_modules: (string * string) list)
   =
-  let clang_format_exe =
-    if clang_format_exe0 <> ""
-    then clang_format_exe0
-    else Printf.sprintf "clang-format%s" (if Sys.win32 then ".exe" else "")
-  in
   let files = collect_files no_everparse_h produced_files wrappers out_dir files_and_modules in
-  match files with
-  | [] -> ()
-  | _ ->
-  let clang_format_args =
-    "-i" ::
-      "--style=file" ::
-        files
-  in
-  run_cmd clang_format_exe clang_format_args
+  call_clang_format_on clang_format_exe0 files
 
 (* Check and Save hashes *)
 
@@ -705,6 +711,26 @@ let save_hashes
 let copy_clang_format out_dir =
   copy (filename_concat ddd_home ".clang-format") (filename_concat out_dir ".clang-format")
 
+let copy_everparse_h_raw
+      input_stream_binding
+      out_dir =
+      let dest_everparse_h = filename_concat out_dir "EverParse.h" in
+      let everparse_h_source = (filename_concat (ddd_actions_c_home input_stream_binding) "EverParse.h") in
+      if file_exists everparse_h_source
+      then copy everparse_h_source dest_everparse_h;
+      let everparse_endianness_source = (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
+      if file_exists everparse_endianness_source
+      then copy everparse_endianness_source (filename_concat out_dir "EverParseEndianness.h")
+
+let copy_everparse_h
+      (clang_format: bool)
+      (clang_format_executable: string)
+      input_stream_binding
+      out_dir =
+  copy_everparse_h_raw input_stream_binding out_dir;
+  if clang_format
+  then call_clang_format_on clang_format_executable [filename_concat out_dir "EverParse.h"; filename_concat out_dir "EverParseEndianness.h"]
+
 (* Postprocess C files, assuming that they have already been processed *)
 
 let postprocess_c
@@ -725,13 +751,7 @@ let postprocess_c
   (* copy EverParse.h unless prevented *)
   if not no_everparse_h
   then begin
-      let dest_everparse_h = filename_concat out_dir "EverParse.h" in
-      let everparse_h_source = (filename_concat (ddd_actions_c_home input_stream_binding) "EverParse.h") in
-      if file_exists everparse_h_source
-      then copy everparse_h_source dest_everparse_h;
-      let everparse_endianness_source = (filename_concat ddd_home (Printf.sprintf "EverParseEndianness%s.h" (if Sys.win32 then "_Windows_NT" else ""))) in
-      if file_exists everparse_endianness_source
-      then copy everparse_endianness_source (filename_concat out_dir "EverParseEndianness.h")
+      copy_everparse_h_raw input_stream_binding out_dir
     end;
   (* clang-format the files if asked for *)
   if clang_format

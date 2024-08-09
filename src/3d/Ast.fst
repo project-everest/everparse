@@ -457,7 +457,7 @@ let field_bitwidth_t = either (with_meta_t int) bitfield_attr
 type array_qualifier =
   | ByteArrayByteSize  //[
   | ArrayByteSize      //[:byte-size
-  | ArrayByteSizeAtMost //[:byte-size-at-most
+  | ArrayByteSizeAtMost //[:byte-size-single-element-array-at-most
   | ArrayByteSizeSingleElementArray //[:byte-size-single-element-array
 
 [@@ PpxDerivingYoJson ]
@@ -1114,11 +1114,11 @@ and print_atomic_field (f:atomic_field) : ML string =
       begin match q with
       | ByteArrayByteSize -> Printf.sprintf "[%s]" (print_expr e)
       | ArrayByteSize -> Printf.sprintf "[:byte-size %s]" (print_expr e)
-      | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-at-most %s]" (print_expr e)
+      | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-single-element-array-at-most %s]" (print_expr e)
       | ArrayByteSizeSingleElementArray -> Printf.sprintf "[:byte-size-single-element-array %s]" (print_expr e)
       end
     | FieldString None -> Printf.sprintf "[::zeroterm]"
-    | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-b-te-size-at-most %s]" (print_expr sz)
+    | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-byte-size-at-most %s]" (print_expr sz)
     | FieldConsumeAll -> Printf.sprintf "[:consume-all]"
   in
   let sf = f.v in
@@ -1233,75 +1233,3 @@ let field_tag_equal (f0 f1:field) =
   | RecordField _ _, RecordField _ _
   | SwitchCaseField _ _, SwitchCaseField _ _ -> true
   | _ -> false
-
-(* Pruning actions out of the surface ast (to generate validators checking Z3 test cases) *)
-
-let atomic_field'_prune_actions
-  (a: atomic_field')
-: Tot atomic_field'
-= { a with field_action = None }
-
-let atomic_field_prune_actions
-  (a: atomic_field)
-: Tot atomic_field
-= { a with v = atomic_field'_prune_actions a.v }
-
-let rec field'_prune_actions
-  (f: field')
-: Tot field'
-= match f with
-  | AtomicField a -> AtomicField (atomic_field_prune_actions a)
-  | RecordField r i -> RecordField (record_prune_actions r) i
-  | SwitchCaseField s i -> SwitchCaseField (switch_case_prune_actions s) i
-
-and field_prune_actions
-  (f: field)
-: Tot field
-= { f with v = field'_prune_actions f.v }
-
-and record_prune_actions (r: record) : Tot record =
-  match r with
-  | [] -> []
-  | f :: r' -> field_prune_actions f :: record_prune_actions r'
-
-and case_prune_actions (c: case) : Tot case =
-  match c with
-  | Case e f -> Case e (field_prune_actions f)
-  | DefaultCase f -> DefaultCase (field_prune_actions f)
-
-and cases_prune_actions (l: list case) : Tot (list case) =
-  match l with
-  | [] -> []
-  | c :: l' -> case_prune_actions c :: cases_prune_actions l'
-
-and switch_case_prune_actions (s: switch_case) : Tot switch_case =
-  let (e, l) = s in
-  (e, cases_prune_actions l)
-
-let decl'_prune_actions
-  (d: decl')
-: Tot decl'
-= match d with
-  | ModuleAbbrev _ _
-  | Define _ _ _
-  | TypeAbbrev _ _
-  | Enum _ _ _
-  | OutputType _
-  | ExternType _
-  | ExternFn _ _ _
-  | ExternProbe _ -> d
-  | Record names params where fields ->
-    Record names params where (record_prune_actions fields)
-  | CaseType names params cases ->
-    CaseType names params (switch_case_prune_actions cases)
-
-let decl_prune_actions
-  (d: decl)
-: Tot decl
-= { d with d_decl = { d.d_decl with v = decl'_prune_actions d.d_decl.v } }
-
-let prog_prune_actions
-  (p: prog)
-: Tot prog
-= let (decls, refines) = p in
-  (List.Tot.map decl_prune_actions decls, refines)
