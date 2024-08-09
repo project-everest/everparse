@@ -882,6 +882,12 @@ type typ
       act:(dtyp_as_type head -> action i2 d2 l2 b2 bool) ->
       typ pk1 (join_inv i1 i2) (join_disj d1 d2) (join_loc l1 l2) false
 
+  | T_drop:
+      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #l:_ -> #i:_ -> #d:_ -> #b:_ ->
+      t:typ pk i d l b ->
+      typ pk i d l false
+
   | T_with_comment:
       fieldname:string ->       
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
@@ -991,6 +997,7 @@ let rec as_type
     | T_cases b t0 t1 ->
       P.t_ite b (fun _ -> as_type t0) (fun _ -> as_type t1)
 
+    | T_drop t
     | T_with_action _ t _
     | T_with_comment _ t _ ->
       as_type t
@@ -1078,6 +1085,10 @@ let rec as_parser
     | T_with_dep_action _ i a ->
       //assert_norm (as_type g (T_with_dep_action i a) == itype_as_type i);
       dtyp_as_parser i
+
+    | T_drop t ->
+      //assert_norm (as_type g (T_with_comment t c) == as_type g t);
+      as_parser t
 
     | T_with_comment _ t c ->
       //assert_norm (as_type g (T_with_comment t c) == as_type g t);
@@ -1279,6 +1290,10 @@ let rec as_validator
             (dtyp_as_leaf_reader i)
             (fun x -> action_as_action (a x))))
 
+    | T_drop t ->
+      assert_norm (as_type (T_drop t) == as_type t);
+      assert_norm (as_parser (T_drop t) == as_parser t);
+      A.validate_without_reading (as_validator typename t)
 
     | T_with_comment fn t c ->
       assert_norm (as_type (T_with_comment fn t c) == as_type t);
