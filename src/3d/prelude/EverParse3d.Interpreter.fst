@@ -486,17 +486,18 @@ let action_binding
   = A.action (interp_inv inv) A.disjointness_trivial (interp_loc l) on_success a
 
 inline_for_extraction
-let extern_action (l:loc_index) = A.external_action (interp_loc l)
+let extern_action (t: Type) (l:loc_index) = A.external_action t (interp_loc l)
 
 inline_for_extraction
-let mk_extern_action (#l:loc_index) ($f:extern_action l)
+let mk_extern_action (#t: Type) (#l:loc_index) ($f:extern_action t l)
   = A.mk_external_action f
 
 [@@specialize]
 let mk_action_binding
+    (#t: Type)
     (#l:loc_index)
-    ($f:extern_action l)
-  : action_binding inv_none l false unit
+    ($f:extern_action t l)
+  : action_binding inv_none l false t
   = mk_extern_action f
 
 (* The type of atomic actions.
@@ -552,7 +553,7 @@ type atomic_action
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
       sz: FStar.UInt64.t ->
       #out_loc:loc_index ->
-      write_to: (A.___PUINT8 -> Tot (extern_action out_loc)) ->
+      write_to: (A.___PUINT8 -> Tot (extern_action unit out_loc)) ->
       atomic_action inv_none disj_none out_loc false bool
 
   | Action_deref:
@@ -881,6 +882,12 @@ type typ
       act:(dtyp_as_type head -> action i2 d2 l2 b2 bool) ->
       typ pk1 (join_inv i1 i2) (join_disj d1 d2) (join_loc l1 l2) false
 
+  | T_drop:
+      #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
+      #l:_ -> #i:_ -> #d:_ -> #b:_ ->
+      t:typ pk i d l b ->
+      typ pk i d l false
+
   | T_with_comment:
       fieldname:string ->       
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
@@ -990,6 +997,7 @@ let rec as_type
     | T_cases b t0 t1 ->
       P.t_ite b (fun _ -> as_type t0) (fun _ -> as_type t1)
 
+    | T_drop t
     | T_with_action _ t _
     | T_with_comment _ t _ ->
       as_type t
@@ -1077,6 +1085,10 @@ let rec as_parser
     | T_with_dep_action _ i a ->
       //assert_norm (as_type g (T_with_dep_action i a) == itype_as_type i);
       dtyp_as_parser i
+
+    | T_drop t ->
+      //assert_norm (as_type g (T_with_comment t c) == as_type g t);
+      as_parser t
 
     | T_with_comment _ t c ->
       //assert_norm (as_type g (T_with_comment t c) == as_type g t);
@@ -1278,6 +1290,10 @@ let rec as_validator
             (dtyp_as_leaf_reader i)
             (fun x -> action_as_action (a x))))
 
+    | T_drop t ->
+      assert_norm (as_type (T_drop t) == as_type t);
+      assert_norm (as_parser (T_drop t) == as_parser t);
+      A.validate_without_reading (as_validator typename t)
 
     | T_with_comment fn t c ->
       assert_norm (as_type (T_with_comment fn t c) == as_type t);
