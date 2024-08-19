@@ -95,4 +95,9 @@ let resolve_probe_fn (g:global_env) (id:ident)
   = match H.try_find g.ge_probe_fn id.v with
     | Some {d_decl={v=ExternProbe id}} -> Some id
     | _ -> None
-    
+
+let fields_of_type (g:global_env) (typename:ident)
+: ML (option (list field))
+= match H.try_find g.ge_h typename.v with
+  | Some ({d_decl={v=Record _ _ _ fields}}, _) -> Some fields
+  | _ -> None
