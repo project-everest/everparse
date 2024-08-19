@@ -127,7 +127,7 @@ let print_static_asserts (sas:static_asserts)
       | SizeOfAssertion sa ->
         Printf.sprintf "C_ASSERT(sizeof(%s) == %d);" (ident_to_string sa.type_name) sa.size
       | OffsetOfAssertion oa ->
-        Printf.sprintf "C_ASSERT(offsetof(%s, %s) == %d);" (ident_to_string oa.type_name) (ident_to_string oa.field_name) oa.offset
+        Printf.sprintf "C_ASSERT(offsetof(%s, %s) == %d);" (oa.type_name.v.name) (ident_to_string oa.field_name) oa.offset
     in
     let sizeof_assertions =
         sas.assertions
@@ -135,4 +135,4 @@ let print_static_asserts (sas:static_asserts)
         |> String.concat "\n"
     in
     Options.make_includes () ^
-    includes ^ "\n" ^ sizeof_assertions
+    includes ^ "\n#include <stddef.h>\n" ^ sizeof_assertions
