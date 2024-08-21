@@ -132,30 +132,40 @@ let serialize_bounded_seq_vlbytes
 let parse_lseq_bytes_gen
   (sz: nat)
   (s: bytes { Seq.length s == sz } )
-: GTot (Seq.lseq byte sz)
+: Tot (Seq.lseq byte sz)
 = s
+
+let tot_parse_lseq_bytes
+  (sz: nat)
+: Tot (tot_parser (total_constant_size_parser_kind sz) (Seq.lseq byte sz))
+= tot_make_total_constant_size_parser sz (Seq.lseq byte sz) (parse_lseq_bytes_gen sz)
 
 let parse_lseq_bytes
   (sz: nat)
 : Tot (parser (total_constant_size_parser_kind sz) (Seq.lseq byte sz))
-= make_total_constant_size_parser sz (Seq.lseq byte sz) (parse_lseq_bytes_gen sz)
+= tot_parse_lseq_bytes sz
 
 let serialize_lseq_bytes'
   (sz: nat)
-: Tot (bare_serializer (Seq.lseq byte sz))
+: Tot (tot_bare_serializer (Seq.lseq byte sz))
 = fun x -> x
 
 let serialize_lseq_bytes_correct
   (sz: nat)
 : Lemma
-  (serializer_correct (parse_lseq_bytes sz) (serialize_lseq_bytes' sz))
+  (serializer_correct #(total_constant_size_parser_kind sz) (tot_parse_lseq_bytes sz) (serialize_lseq_bytes' sz))
 = ()
+
+let tot_serialize_lseq_bytes
+  (sz: nat)
+: Tot (tot_serializer #(total_constant_size_parser_kind sz) (tot_parse_lseq_bytes sz))
+= serialize_lseq_bytes_correct sz;
+  serialize_lseq_bytes' sz
 
 let serialize_lseq_bytes
   (sz: nat)
 : Tot (serializer (parse_lseq_bytes sz))
-= serialize_lseq_bytes_correct sz;
-  serialize_lseq_bytes' sz
+= tot_serialize_lseq_bytes sz
 
 module S = LowParse.Spec.Sorted
 
