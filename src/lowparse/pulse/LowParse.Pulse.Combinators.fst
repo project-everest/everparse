@@ -509,6 +509,8 @@ let dtuple2_of_pair
 = match x with
   | (x1, x2) -> (| x1, x2 |)
 
+let const_fun (#t1: Type) (#t2: Type) (x2: t2) (x1: t1) : Tot t2 = x2
+
 let nondep_then_eq_dtuple2
   (#t1 #t2: Type)
   (#k1 #k2: parser_kind)
@@ -516,9 +518,9 @@ let nondep_then_eq_dtuple2
   (p2: parser k2 t2)
   (input: bytes)
 : Lemma
-  (parse (nondep_then p1 p2) input == parse (parse_synth (parse_dtuple2 p1 (fun _ -> p2)) pair_of_dtuple2) input)
-= parse_synth_eq (parse_dtuple2 p1 (fun _ -> p2)) pair_of_dtuple2 input;
-  parse_dtuple2_eq p1 (fun _ -> p2) input;
+  (parse (nondep_then p1 p2) input == parse (parse_synth (parse_dtuple2 p1 #k2 #(const_fun t2) (const_fun p2)) pair_of_dtuple2) input)
+= parse_synth_eq (parse_dtuple2 p1 #k2 #(const_fun t2) (const_fun p2)) pair_of_dtuple2 input;
+  parse_dtuple2_eq p1 #k2 #(const_fun t2) (const_fun p2) input;
   nondep_then_eq #k1 #t1 p1 #k2 #t2 p2 input
 
 inline_for_extraction
@@ -810,6 +812,32 @@ let split_nondep_then_post
 = let (SlicePair left right) = res in
   split_nondep_then_post' s1 s2 input pm v left right
 
+#set-options "--print_implicits"
+
+```pulse
+ghost
+fn pts_to_serialized_ext_trade'
+  (#t: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (s1: serializer p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2)
+  (input: slice byte)
+  (prf: (x: bytes) -> Lemma
+    (parse p1 x == parse p2 x)
+  )
+  (#pm: perm)
+  (#v: t)
+  requires pts_to_serialized s1 input #pm v
+  ensures pts_to_serialized s2 input #pm v ** trade (pts_to_serialized s2 input #pm v) (pts_to_serialized s1 input #pm v)
+{
+  Classical.forall_intro prf;
+  pts_to_serialized_ext_trade s1 s2 input
+}
+```
+
 inline_for_extraction
 ```pulse
 fn split_nondep_then
@@ -828,27 +856,27 @@ fn split_nondep_then
   returns res: slice_pair byte
   ensures split_nondep_then_post s1 s2 input pm v res
 {
-  Classical.forall_intro (nondep_then_eq_dtuple2 p1 p2);
-  pts_to_serialized_ext_trade
+  pts_to_serialized_ext_trade'
     (serialize_nondep_then s1 s2)
-    (serialize_synth
-      (parse_dtuple2 p1 (fun _ -> p2))
-      pair_of_dtuple2
-      (serialize_dtuple2 s1 (fun _ -> s2))
+    (serialize_synth #(and_then_kind k1 k2) #(_: t1 & t2) #(t1 & t2)
+      (parse_dtuple2 #k1 #t1 p1 #k2 #(const_fun t2) (const_fun p2))
+      (pair_of_dtuple2 #t1 #t2)
+      (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
       dtuple2_of_pair
       ()
     )
-    input;
+    input
+    (nondep_then_eq_dtuple2 #t1 #t2 #k1 #k2 p1 p2);
   pts_to_serialized_synth_l2r_trade
-    (serialize_dtuple2 s1 (fun _ -> s2))
+    (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
     pair_of_dtuple2
     dtuple2_of_pair
     input;
-  Trade.trans (pts_to_serialized (serialize_dtuple2 s1 (fun _ -> s2)) _ #pm _) _ _;
-  let res = split_dtuple2 s1 j1 (fun _ -> s2) input;
+  Trade.trans (pts_to_serialized (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2)) _ #pm _) _ _;
+  let res = split_dtuple2 #t1 #(const_fun t2) s1 j1 #_ #(const_fun p2) (const_fun s2) input;
   match res { SlicePair input1 input2 -> {
-    unfold (split_dtuple2_post s1 (fun _ -> s2) input pm (dtuple2_of_pair v) res);
-    unfold (split_dtuple2_post' s1 (fun _ -> s2) input pm (dtuple2_of_pair v) input1 input2);
+    unfold (split_dtuple2_post #t1 #(const_fun t2) s1 #k2 #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) res);
+    unfold (split_dtuple2_post' #t1 #(const_fun t2) s1 #_ #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) input1 input2);
     Trade.trans (_ ** _) _ _;
     fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
     fold (split_nondep_then_post s1 s2 input pm v (input1 `SlicePair` input2));
