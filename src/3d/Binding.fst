@@ -116,13 +116,17 @@ let format_identifier (e:env) (i:ident) : ML ident =
     error msg i.range
 
 let add_global (e:global_env) (i:ident) (d:decl) (t:either decl_attributes macro_signature) : ML unit =
-  let insert k v = H.insert e.ge_h k v in
+  let insert k v =
+    Options.debug_print_string
+      (Printf.sprintf "Inserting global: %s\n" (ident_to_string k));
+    H.insert e.ge_h k.v v
+  in
 
   check_shadow e.ge_h i d.d_decl.range;
   let env = mk_env e in
   let i' = format_identifier env i in
-  insert i.v (d, t);
-  insert i'.v (d, t);
+  insert i (d, t);
+  insert i' (d, t);
   match typedef_names d with
   | None -> ()
   | Some td ->
@@ -130,8 +134,8 @@ let add_global (e:global_env) (i:ident) (d:decl) (t:either decl_attributes macro
     then begin
       check_shadow e.ge_h td.typedef_abbrev d.d_decl.range;
       let abbrev = format_identifier env td.typedef_abbrev in
-      insert td.typedef_abbrev.v (d, t);
-      insert abbrev.v (d, t)
+      insert td.typedef_abbrev (d, t);
+      insert abbrev (d, t)
     end
 
 let add_local (e:env) (i:ident) (t:typ) : ML unit =
@@ -1703,6 +1707,62 @@ let rec check_output_field (ge:global_env) (fld:out_field) : ML unit =
 and check_output_fields (ge:global_env) (flds:list out_field) : ML unit =
   List.iter (check_output_field ge) flds
 
+let check_entrypoint_probe_length_type
+  (e: env)
+  (t: typ)
+: ML bool
+= if eq_typ e t tuint8
+  then true
+  else if eq_typ e t tuint16
+  then true
+  else eq_typ e t tuint32
+
+let is_sizeof_not_this (l: expr) : Tot bool =
+  match l.v with
+  | App SizeOf [{v=Identifier _}] ->
+      true
+  | _ -> false
+
+let check_entrypoint_probe_length
+  (e: global_env)
+  (l: expr)
+: ML expr
+= if
+    Constant? l.v ||
+    Identifier? l.v
+  then
+    let lenv = mk_env e in
+    let (l', t') = check_expr lenv l in
+    if check_entrypoint_probe_length_type lenv t'
+    then l'
+    else error ("entrypoint probe: expected UINT32, got " ^ print_typ t') l.range
+  else if is_sizeof_not_this l
+  then
+    let lenv = mk_env e in
+    let (l', t') = check_expr lenv l in
+    l'
+  else error ("entrypoint probe: expected a constant, #define'd identifier, or sizeof; got " ^ print_expr l) l.range
+
+let check_attribute
+  (e: global_env)
+  (a: attribute)
+: ML attribute
+= match a with
+  | Entrypoint (Some p) ->
+    Entrypoint (Some ({
+      p with probe_ep_length = check_entrypoint_probe_length e p.probe_ep_length
+    }))
+  | _ -> a
+
+let check_typedef_names
+  (e: global_env)
+  (tdnames: Ast.typedef_names)
+: ML Ast.typedef_names
+= {
+    tdnames with
+      typedef_attributes = List.map (check_attribute e) tdnames.typedef_attributes
+}
+
 let bind_decl (e:global_env) (d:decl) : ML decl =
   match d.d_decl.v with
   | ModuleAbbrev i m -> d
@@ -1774,9 +1834,11 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     d
 
   | Record tdnames params where fields ->
+    let tdnames = check_typedef_names e tdnames in
     elaborate_record_decl e tdnames params where fields d.d_decl.range d.d_decl.comments d.d_exported
 
   | CaseType tdnames params switch ->
+    let tdnames = check_typedef_names e tdnames in
     let env = { mk_env e with this=Some tdnames.typedef_name } in
     check_params env params;
     let switch = check_switch check_field env switch in

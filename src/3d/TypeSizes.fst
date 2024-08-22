@@ -239,7 +239,7 @@ let padding_field (env:env_t) (diag_enclosing_type_name:ident (* for diagnostics
 
 let should_align (td:typedef_names)
   : bool
-  = List.Tot.Base.mem Aligned td.typedef_attributes
+  = List.Tot.Base.existsb Aligned? td.typedef_attributes
 
 let alignment_padding env (should_align:bool) 
                           (diag_enclosing_type_name:ident (* for diagnostics only *))
