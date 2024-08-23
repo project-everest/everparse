@@ -24,7 +24,9 @@ WORKDIR $HOME/everparse
 RUN eval $(opam env) && src/package/windows/everest.sh opam
 
 # Install other dependencies
-RUN sudo apt-get install --yes wget
+RUN sudo apt-get install --yes \
+  python-is-python3 \
+  wget
 
 # Build and publish the release
 ARG CI_THREADS=24
