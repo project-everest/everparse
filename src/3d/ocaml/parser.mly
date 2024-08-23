@@ -405,7 +405,15 @@ cases:
   | cs=nonempty_list(case) { cs }
 
 attribute:
-  | ENTRYPOINT { Entrypoint }
+  | ENTRYPOINT { Entrypoint None }
+  | ENTRYPOINT PROBE i=qident LPAREN length=IDENT EQ len=expr RPAREN {
+      if length.v.name <> "length" || length.v.modul_name <> None
+      then error "Expected 'length' as the first argument to 'entrypoint probe'" length.range;
+      Entrypoint (Some ({
+        probe_ep_fn = i;
+        probe_ep_length = len;
+      }))
+    }
   | ALIGNED    { Aligned }
 
 attributes:
