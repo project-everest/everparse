@@ -147,8 +147,7 @@ make_everparse() {
         fstar_commit_id=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^commit=' | sed 's!^.*=!!')
         fstar_commit_date_hr=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^date=' | sed 's!^.*=!!')
     fi
-    $MAKE -C "$KRML_HOME" "$@" minimal
-    $MAKE -C "$KRML_HOME/krmllib" "$@" verify-all
+    $MAKE -C "$KRML_HOME" "$@"
 
     # Install ocaml-sha if not found
     if ! ocamlfind query sha ; then
