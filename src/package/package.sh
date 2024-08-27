@@ -147,7 +147,14 @@ make_everparse() {
         fstar_commit_id=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^commit=' | sed 's!^.*=!!')
         fstar_commit_date_hr=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^date=' | sed 's!^.*=!!')
     fi
-    $MAKE -C "$KRML_HOME" "$@"
+    if $is_windows ; then
+        # FIXME: krmllib cannot be built on Windows because the krmllib Makefiles use Cygwin paths, which cannot be used by the krml executable
+        # Thus, things like compiling a 3D parser test executable won't work on Windows
+        $MAKE -C "$KRML_HOME" "$@" minimal
+        $MAKE -C "$KRML_HOME/krmllib" "$@" verify-all
+    else
+        $MAKE -C "$KRML_HOME" "$@"
+    fi
 
     # Install ocaml-sha if not found
     if ! ocamlfind query sha ; then
