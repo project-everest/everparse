@@ -373,9 +373,13 @@ let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
     let args, decls = args |> List.map translate_typ_param |> List.split in
     T.T_app hd b (List.map Inr args), List.flatten decls
 
-let has_entrypoint (l:list A.attribute) =
-  List.tryFind (function A.Entrypoint -> true | _ -> false) l
-  |> Some?
+let translate_probe_entrypoint
+  (p: A.probe_entrypoint)
+: ML T.probe_entrypoint
+= {
+    probe_ep_fn = p.probe_ep_fn;
+    probe_ep_length = translate_expr p.probe_ep_length;
+  }
 
 let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param)
   : ML (T.typedef_name & T.decls) =
@@ -384,9 +388,12 @@ let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param)
     let t, ds = translate_typ t in
     (id, t), ds) |> List.split in
 
+  let entrypoint_probes = List.map translate_probe_entrypoint (A.get_entrypoint_probes tdn.typedef_attributes) in
+
   let open T in
   { td_name = tdn.typedef_name;
     td_params = params;
+    td_entrypoint_probes = entrypoint_probes;
     td_entrypoint = has_entrypoint tdn.typedef_attributes }, List.flatten ds
 
 let make_enum_typ (t:T.typ) (ids:list ident) =
@@ -1048,6 +1055,7 @@ let hoist_one_type_definition (should_inline:bool)
       let tdn = {
           td_name = id;
           td_params = List.rev env;
+          td_entrypoint_probes = [];
           td_entrypoint = false
       } in
       let t_parser = parse_typ orig_tdn.td_name type_name body in

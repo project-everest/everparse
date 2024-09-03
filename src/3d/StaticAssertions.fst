@@ -25,14 +25,26 @@ type sizeof_assertion = {
 }
 
 noeq
+type offsetof_assertion = {
+  type_name : ident;
+  field_name : ident;
+  offset : int
+}
+
+noeq
+type static_assert =
+| SizeOfAssertion of sizeof_assertion
+| OffsetOfAssertion of offsetof_assertion
+
+noeq
 type static_asserts = {
   includes : list string;
-  sizeof_assertions : list sizeof_assertion
+  assertions : list static_assert
 }
 
 let empty_static_asserts = {
   includes = [];
-  sizeof_assertions = []
+  assertions = []
 }
 
 let compute_static_asserts (benv:B.global_env)
@@ -43,36 +55,62 @@ let compute_static_asserts (benv:B.global_env)
     match r with
     | None -> empty_static_asserts
     | Some r -> 
-      let sizeof_assertions =
+      let static_assertions =
         r.type_map
-        |> List.map
+        |> List.collect
           (fun (i, jopt) ->
             let j =
               match jopt with
               | None -> i
               | Some j -> j
             in
+            let offsets = TypeSizes.field_offsets_of_type env j in
+            let offset_of_assertions =
+              match offsets with
+              | Inr msg ->
+                Ast.warning 
+                  (Printf.sprintf
+                    "No offsetof assertions for type %s because %s\ns"
+                    (ident_to_string j)
+                    msg)
+                  i.range;
+                []
+              | Inl offsets ->
+                offsets |>
+                List.collect
+                  (fun offset -> 
+                    if TypeSizes.is_alignment_field (fst offset)
+                    then []
+                    else [OffsetOfAssertion { 
+                            type_name = i;
+                            field_name = fst offset;
+                            offset = snd offset }])
+            in
             let t_j = with_dummy_range (Type_app j KindSpec []) in
-            match TypeSizes.size_of_typ env t_j with
-            | TypeSizes.Fixed n
-            | TypeSizes.WithVariableSuffix n ->
-             { type_name = i;
-               size = n }
-            | _ -> 
-              Ast.error 
-                (Printf.sprintf
-                  "Type %s is variable sized and cannot refine a C type %s"
-                  (ident_to_string j) (ident_to_string i))
-                i.range)
+            let sizeof_assertion =
+              match TypeSizes.size_of_typ env t_j with
+              | TypeSizes.Fixed n
+              | TypeSizes.WithVariableSuffix n ->
+                SizeOfAssertion {
+                  type_name = i;
+                  size = n }
+              | _ -> 
+                Ast.error 
+                  (Printf.sprintf
+                    "Type %s is variable sized and cannot refine a C type %s"
+                    (ident_to_string j) (ident_to_string i))
+                  i.range
+            in
+            sizeof_assertion::offset_of_assertions)
       in
       {
         includes = r.Ast.includes;
-        sizeof_assertions = sizeof_assertions
+        assertions = static_assertions
       }
 
 let no_static_asserts (sas: static_asserts) : Tot bool =
   Nil? sas.includes &&
-  Nil? sas.sizeof_assertions
+  Nil? sas.assertions
 
 let has_static_asserts (sas: static_asserts) : Tot bool =
   not (no_static_asserts sas)
@@ -84,10 +122,17 @@ let print_static_asserts (sas:static_asserts)
         |> List.map (fun i -> Printf.sprintf "#include \"%s\"" i)
         |> String.concat "\n"
     in
+    let print_static_assert (sa:static_assert) =
+      match sa with
+      | SizeOfAssertion sa ->
+        Printf.sprintf "C_ASSERT(sizeof(%s) == %d);" (ident_to_string sa.type_name) sa.size
+      | OffsetOfAssertion oa ->
+        Printf.sprintf "C_ASSERT(offsetof(%s, %s) == %d);" (ident_to_string oa.type_name) (ident_to_string oa.field_name) oa.offset
+    in
     let sizeof_assertions =
-        sas.sizeof_assertions
-        |> List.map (fun sa -> Printf.sprintf "C_ASSERT(sizeof(%s) == %d);" (ident_to_string sa.type_name) sa.size)
+        sas.assertions
+        |> List.map print_static_assert
         |> String.concat "\n"
     in
     Options.make_includes () ^
-    includes ^ "\n" ^ sizeof_assertions
+    includes ^ "\n#include <stddef.h>\n" ^ sizeof_assertions

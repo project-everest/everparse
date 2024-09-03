@@ -180,6 +180,15 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Some (Inr i) -> maybe_dep i
     | _ -> [] in
 
+  let deps_of_attribute (a:attribute) : ML (list string) = match a with
+    | Entrypoint (Some p) -> maybe_dep p.probe_ep_fn `List.Tot.append` deps_of_expr p.probe_ep_length
+    | _ -> []
+  in
+
+  let deps_of_typedef_names (td: typedef_names) : ML (list string) =
+    List.collect deps_of_attribute td.typedef_attributes
+  in
+
   let deps_of_decl (d:decl) : ML (list string) =
     match d.d_decl.v with
     | ModuleAbbrev i m ->
@@ -189,11 +198,13 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Define _ (Some t) _ -> deps_of_typ t
     | TypeAbbrev t _ -> deps_of_typ t
     | Enum _base_t _ l -> List.collect deps_of_enum_case l
-    | Record _ params wopt flds ->
+    | Record tdnames params wopt flds ->
+      (deps_of_typedef_names tdnames)@
       (deps_of_params params)@
       (deps_of_opt deps_of_expr wopt)@
       (List.collect deps_of_field flds)
-    | CaseType _ params sc ->
+    | CaseType tdnames params sc ->
+      (deps_of_typedef_names tdnames)@
       (deps_of_params params)@
       (deps_of_switch_case sc)
     | OutputType _
