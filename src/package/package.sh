@@ -275,7 +275,8 @@ make_everparse() {
         # TODO: have F* install its license
         wget --output-document=everparse/licenses/FStar https://raw.githubusercontent/FStarLang/FStar/master/LICENSE
     fi
-    $cp $KRML_HOME/LICENSE everparse/licenses/KaRaMeL
+    $cp $KRML_HOME/LICENSE-APACHE everparse/licenses/KaRaMeL-Apache
+    $cp $KRML_HOME/LICENSE-MIT everparse/licenses/KaRaMeL-MIT
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
     wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE
