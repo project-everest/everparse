@@ -80,7 +80,7 @@ Linux
    * wget
    * which
 
-3. Run ``opam init --compiler=4.12.0`` and follow the instructions. This will install OCaml.
+3. Run ``opam init --compiler=4.14.0`` and follow the instructions. This will install OCaml.
 
    This step will modify your configuration scripts to add the path to
    OCaml and its libraries to the PATH environment variable every time
@@ -89,8 +89,8 @@ Linux
 
    .. note::
 
-      You need to specify an OCaml version number (between 4.08.0 and
-      4.12.x), so that OCaml will be installed in your user profile,
+      You need to specify an OCaml version number (between 4.12.0 and
+      4.14.x), so that OCaml will be installed in your user profile,
       because some EverParse dependencies do not work well with a
       system-wide OCaml. Thus, if opam says that there is an
       ambiguity, you should re-run ``opam init`` with the non-system
