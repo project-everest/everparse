@@ -238,6 +238,43 @@ let rec filter_bitsum'
     else
       false
 
+let rec bitsum'_no_bitsum
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size)
+: Tot bool
+= match b with
+  | BitStop _ -> true
+  | BitField _ rest -> bitsum'_no_bitsum rest
+  | BitSum' _ _ _ _ -> false
+
+let rec filter_bitsum'_no_bitsum
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size { bitsum'_no_bitsum b == true })
+  (x: t)
+: Lemma
+  (ensures (filter_bitsum' b x == true))
+  (decreases b)
+  [SMTPat (bitsum'_no_bitsum b); SMTPat (filter_bitsum' b x)]
+= match b with
+  | BitField _ rest -> filter_bitsum'_no_bitsum rest x
+  | _ -> ()
+
+let synth_filter_bitsum'_no_bitsum
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (#bitsum'_size: nat)
+  (b: bitsum' cl bitsum'_size { bitsum'_no_bitsum b == true })
+  (x: t)
+: Tot (parse_filter_refine (filter_bitsum' b))
+= x
+
 let rec synth_bitsum'
   (#tot: pos)
   (#t: eqtype)
@@ -370,6 +407,73 @@ let parse_bitsum'
 : Tot (parser (parse_filter_kind k) (bitsum'_type b))
 = synth_bitsum'_injective b;
   (p `parse_filter` filter_bitsum' b) `parse_synth` synth_bitsum' b
+
+let parse_bitsum'_no_bitsum
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot { bitsum'_no_bitsum b == true })
+  (#k: parser_kind)
+  (p: parser k t)
+: Tot (parser k (bitsum'_type b))
+= synth_bitsum'_injective b;
+  (p `parse_synth` synth_filter_bitsum'_no_bitsum b) `parse_synth` synth_bitsum' b
+
+let parse_bitsum'_no_bitsum_eq
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot { bitsum'_no_bitsum b == true })
+  (#k: parser_kind)
+  (p: parser k t)
+  (x: bytes)
+: Lemma
+  (ensures (parse (parse_bitsum'_no_bitsum b p) x == parse (parse_bitsum' b p) x))
+  [SMTPat (parse (parse_bitsum'_no_bitsum b p) x)]
+= synth_bitsum'_injective b;
+  parse_synth_eq (parse_filter p (filter_bitsum' b)) (synth_bitsum' b) x;
+  parse_synth_eq (parse_synth p (synth_filter_bitsum'_no_bitsum b)) (synth_bitsum' b) x;
+  parse_filter_eq p (filter_bitsum' b) x;
+  parse_synth_eq p (synth_filter_bitsum'_no_bitsum b) x
+
+let tot_parse_bitsum'
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#k: parser_kind)
+  (p: tot_parser k t)
+: Tot (tot_parser (parse_filter_kind k) (bitsum'_type b))
+= synth_bitsum'_injective b;
+  (p `tot_parse_filter` filter_bitsum' b) `tot_parse_synth` synth_bitsum' b
+
+let tot_parse_bitsum'_no_bitsum
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot { bitsum'_no_bitsum b == true })
+  (#k: parser_kind)
+  (p: tot_parser k t)
+: Tot (tot_parser k (bitsum'_type b))
+= synth_bitsum'_injective b;
+  (p `tot_parse_synth` synth_filter_bitsum'_no_bitsum b) `tot_parse_synth` synth_bitsum' b
+
+let tot_parse_bitsum'_no_bitsum_eq
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot { bitsum'_no_bitsum b == true })
+  (#k: parser_kind)
+  (p: tot_parser k t)
+  (x: bytes)
+: Lemma
+  (ensures (parse (tot_parse_bitsum'_no_bitsum b p) x == parse (tot_parse_bitsum' b p) x))
+  [SMTPat (parse (tot_parse_bitsum'_no_bitsum b p) x)]
+= synth_bitsum'_injective b;
+  tot_parse_synth_eq (tot_parse_filter p (filter_bitsum' b)) (synth_bitsum' b) x;
+  tot_parse_synth_eq (tot_parse_synth p (synth_filter_bitsum'_no_bitsum b)) (synth_bitsum' b) x;
+  tot_parse_filter_eq p (filter_bitsum' b) x;
+  tot_parse_synth_eq p (synth_filter_bitsum'_no_bitsum b) x
 
 let rec synth_bitsum'_recip'
   (#tot: pos)
@@ -586,6 +690,45 @@ let serialize_bitsum'_eq
     (p `parse_filter` filter_bitsum' b)
     (synth_bitsum' b)
     (s `serialize_filter` filter_bitsum' b)
+    (synth_bitsum'_recip b)
+    ()
+    x
+
+let tot_serialize_bitsum'
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: tot_serializer #k p)
+: Tot (tot_serializer (tot_parse_bitsum' b p))
+= synth_bitsum'_injective b;
+  synth_bitsum'_recip_inverse b;
+  tot_serialize_synth
+    (p `tot_parse_filter` filter_bitsum' b)
+    (synth_bitsum' b)
+    (s `tot_serialize_filter` filter_bitsum' b)
+    (synth_bitsum'_recip b)
+    ()
+
+let tot_serialize_bitsum'_eq
+  (#tot: pos)
+  (#t: eqtype)
+  (#cl: uint_t tot t)
+  (b: bitsum' cl tot)
+  (#k: parser_kind)
+  (#p: tot_parser k t)
+  (s: tot_serializer #k p)
+  (x: bitsum'_type b)
+: Lemma
+  (bare_serialize (tot_serialize_bitsum' b s) x == bare_serialize s (synth_bitsum'_recip b x))
+= synth_bitsum'_injective b;
+  synth_bitsum'_recip_inverse b;
+  tot_serialize_synth_eq
+    (p `tot_parse_filter` filter_bitsum' b)
+    (synth_bitsum' b)
+    (s `tot_serialize_filter` filter_bitsum' b)
     (synth_bitsum'_recip b)
     ()
     x

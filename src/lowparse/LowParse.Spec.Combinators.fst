@@ -76,15 +76,6 @@ let parse_synth_eq
   (ensures (parse (parse_synth p1 f2) b == parse_synth' p1 f2 b))
 = ()
 
-unfold
-let tot_parse_fret' (#t #t':Type) (f: t -> Tot t') (v:t) : Tot (tot_bare_parser t') =
-  fun (b: bytes) -> Some (f v, (0 <: consumed_length b))
-
-unfold
-let tot_parse_fret (#t #t':Type) (f: t -> Tot t') (v:t) : Tot (tot_parser parse_ret_kind t') =
-  [@inline_let] let _ = parser_kind_prop_equiv parse_ret_kind (tot_parse_fret' f v) in
-  tot_parse_fret' f v
-
 let tot_parse_synth
   #k #t1 #t2 p1 f2
 = coerce (tot_parser k t2) (tot_and_then p1 (fun v1 -> tot_parse_fret f2 v1))
@@ -123,6 +114,39 @@ let serialize_synth_eq
   (x: t2)
 : Lemma
   (serialize (serialize_synth p1 f2 s1 g1 u) x == serialize s1 (g1 x))
+= ()
+
+let tot_bare_serialize_synth
+  (#t1: Type)
+  (#t2: Type)
+  (s1: tot_bare_serializer t1)
+  (g1: t2 -> Tot t1)
+: Tot (tot_bare_serializer t2) =
+  fun (x: t2) -> s1 (g1 x)
+
+let tot_bare_serialize_synth_correct
+  (#k: parser_kind)
+  (#t1: Type)
+  (#t2: Type)
+  (p1: tot_parser k t1)
+  (f2: t1 -> Tot t2)
+  (s1: tot_serializer #k p1)
+  (g1: t2 -> Tot t1)
+: Lemma
+  (requires (
+    (forall (x : t2) . f2 (g1 x) == x) /\
+    (forall (x x' : t1) . f2 x == f2 x' ==> x == x')
+  ))
+  (ensures (serializer_correct #k (tot_parse_synth p1 f2) (tot_bare_serialize_synth s1 g1 )))
+= ()
+
+let tot_serialize_synth
+  #k #t1 #t2 p1 f2 s1 g1 u
+= tot_bare_serialize_synth_correct p1 f2 s1 g1;
+  tot_bare_serialize_synth s1 g1
+
+let tot_serialize_synth_eq
+  #k #t1 #t2 p1 f2 s1 g1 u b
 = ()
 
 let serialize_synth_upd_chain
@@ -630,6 +654,14 @@ let serialize_nondep_then_upd_right_chain
 
 #reset-options "--z3rlimit 32 --using_facts_from '* -FStar.Tactis -FStar.Reflection'"
 
+let tot_serialize_nondep_then
+  #k1 #t1 #p1 s1 #k2 #t2 #p2 s2
+= Classical.forall_intro (serialize_nondep_then_eq #k1 #_ #p1 s1 #k2 #_ #p2 s2);
+  tot_bare_serialize_nondep_then s1 s2
+
+let tot_serialize_nondep_then_eq
+  #k1 #t1 #p1 s1 #k2 #t2 #p2 s2 b
+= ()
 
 let make_total_constant_size_parser_compose
   (sz: nat)

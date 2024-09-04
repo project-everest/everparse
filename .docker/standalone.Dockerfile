@@ -1,6 +1,6 @@
 # This Dockerfile should be run from the root EverParse directory
 
-ARG ocaml_version=4.12
+ARG ocaml_version=4.14
 FROM ocaml/opam:ubuntu-23.10-ocaml-$ocaml_version
 
 ADD --chown=opam:opam ./ $HOME/everparse/
