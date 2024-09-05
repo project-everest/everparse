@@ -1,3 +1,5 @@
+export OTHERFLAGS+=--ext context_pruning
+
 all: quackyducky lowparse 3d
 
 lowparse:

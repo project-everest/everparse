@@ -7,8 +7,6 @@ module U32 = FStar.UInt32
 
 module T = FStar.Tactics
 
-#reset-options "--using_facts_from '* -FStar.Tactis -FStar.Reflection'"
-
 let and_then #k #t p #k' #t' p' =
   let f : bare_parser t' = and_then_bare p p' in
   and_then_correct p p' ;
@@ -562,7 +560,7 @@ let serialize_nondep_then_upd_bw_left
   ))
 = serialize_nondep_then_upd_left s1 s2 x y
 
-#reset-options "--z3refresh --z3rlimit 64 --z3cliopt smt.arith.nl=false --using_facts_from '* -FStar.Tactis -FStar.Reflection'"
+#reset-options "--z3refresh --z3rlimit 64 --z3cliopt smt.arith.nl=false"
 
 let serialize_nondep_then_upd_bw_left_chain
   (#k1: parser_kind)
@@ -652,7 +650,7 @@ let serialize_nondep_then_upd_right_chain
   seq_upd_seq_right_to_left s l2 s2' i' s';
   seq_upd_seq_slice_idem s l2 (Seq.length s)
 
-#reset-options "--z3rlimit 32 --using_facts_from '* -FStar.Tactis -FStar.Reflection'"
+#reset-options "--z3rlimit 32"
 
 let tot_serialize_nondep_then
   #k1 #t1 #p1 s1 #k2 #t2 #p2 s2
