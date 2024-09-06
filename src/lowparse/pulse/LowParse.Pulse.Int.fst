@@ -1,7 +1,7 @@
 module LowParse.Pulse.Int
 include LowParse.Spec.Int
 include LowParse.Pulse.Base
-open LowParse.Pulse.Util
+open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 
 module E = LowParse.Pulse.Endianness
 module EI = LowParse.Spec.Endianness.Instances

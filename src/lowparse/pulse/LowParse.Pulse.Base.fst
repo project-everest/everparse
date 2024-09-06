@@ -1,6 +1,6 @@
 module LowParse.Pulse.Base
 open FStar.Tactics.V2
-open LowParse.Pulse.Util
+open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 open Pulse.Lib.Slice
 open LowParse.Spec.Base
 
@@ -473,10 +473,10 @@ fn peek_trade_gen
     parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (v', SZ.v off - SZ.v offset)
   )
 {
-  let split123 = slice_split_trade false input offset;
+  let split123 = split_trade false input offset;
   match split123 { SlicePair input1 input23 -> {
-    unfold (slice_split_trade_post input pm v offset split123);
-    unfold (slice_split_trade_post' input pm v offset input1 input23);
+    unfold (split_trade_post input pm v offset split123);
+    unfold (split_trade_post' input pm v offset input1 input23);
     with v23 . assert (pts_to input23 #pm v23);
     Trade.elim_hyp_l (pts_to input1 #pm _) (pts_to input23 #pm v23) (pts_to input #pm v);
     let consumed = SZ.sub off offset;

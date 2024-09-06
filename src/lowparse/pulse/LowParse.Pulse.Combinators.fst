@@ -2,7 +2,7 @@ module LowParse.Pulse.Combinators
 include LowParse.Spec.Combinators
 include LowParse.Pulse.Base
 open FStar.Tactics.V2
-open LowParse.Pulse.Util
+open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 open Pulse.Lib.Slice
 
 module SZ = FStar.SizeT
@@ -699,11 +699,11 @@ fn split_dtuple2
     (pts_to input #pm (bare_serialize s1 (dfst v) `Seq.append` bare_serialize (s2 (dfst v)) (dsnd v)));
   parse_serialize_strong_prefix s1 (dfst v) (bare_serialize (s2 (dfst v)) (dsnd v));
   let i = j1 input 0sz;
-  let res = slice_append_split_trade false input i;
+  let res = append_split_trade false input i;
   match res {
     SlicePair input1 input2 -> {
-      unfold (slice_append_split_trade_post input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i res);
-      unfold (slice_append_split_trade_post' input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i input1 input2);
+      unfold (append_split_trade_post input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i res);
+      unfold (append_split_trade_post' input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i input1 input2);
       Trade.trans (_ ** _) _ _;
       pts_to_serialized_intro_trade s1 input1 (dfst v);
       pts_to_serialized_intro_trade (s2 (dfst v)) input2 (dsnd v);

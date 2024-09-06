@@ -1,5 +1,5 @@
 module LowParse.Pulse.Endianness
-open LowParse.Pulse.Util
+open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 include LowParse.Spec.Endianness
 
 module U8 = FStar.UInt8
