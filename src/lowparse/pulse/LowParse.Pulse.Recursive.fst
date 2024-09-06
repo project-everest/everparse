@@ -1,7 +1,7 @@
 module LowParse.Pulse.Recursive
 open LowParse.Spec.Base
 include LowParse.Spec.Recursive
-open LowParse.Pulse.Util
+open Pulse.Lib.Slice.Util open Pulse.Lib.Trade open Pulse.Lib.Pervasives
 open LowParse.Pulse.Base
 
 module S = Pulse.Lib.Slice
