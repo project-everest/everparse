@@ -2,7 +2,7 @@ module CBOR.Pulse.Raw.Test
 open LowParse.Spec.Base
 open CBOR.Spec.Raw.Format
 open CBOR.Pulse.Raw.Format
-open LowParse.Pulse.Util
+open Pulse.Lib.Slice open Pulse.Lib.Pervasives open Pulse.Lib.Trade
 open LowParse.Pulse.Base
 open Pulse.Lib.Slice
 module SZ = FStar.SizeT

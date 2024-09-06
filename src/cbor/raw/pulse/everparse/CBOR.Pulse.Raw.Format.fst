@@ -1,6 +1,6 @@
 module CBOR.Pulse.Raw.Format
 open CBOR.Spec.Raw.Format
-open LowParse.Pulse.Util
+open Pulse.Lib.Slice open Pulse.Lib.Pervasives open Pulse.Lib.Trade
 open LowParse.Pulse.Combinators
 open LowParse.Pulse.Int
 open LowParse.Pulse.BitSum
@@ -960,6 +960,8 @@ fn get_header_and_contents
 }
 ```
 
+#push-options "--z3rlimit 16"
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let get_int64_value
@@ -981,6 +983,8 @@ let get_string_length
     (ensures fun res -> String? v /\ res == String?.len v)
 = match h with
   (| b, l |) -> argument_as_raw_uint64 b l
+
+#pop-options
 
 ```pulse
 ghost

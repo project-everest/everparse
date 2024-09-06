@@ -3,7 +3,7 @@ include CBOR.Pulse.Raw.Match
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
 
-open LowParse.Pulse.Util
+open Pulse.Lib.Slice open Pulse.Lib.Pervasives open Pulse.Lib.Trade
 open CBOR.Spec.Raw.Format
 open CBOR.Pulse.Raw.Format
 open LowParse.Pulse.Combinators
