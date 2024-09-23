@@ -177,12 +177,42 @@ let slice_split_right_postcond
 = SZ.v i <= Seq.length v /\
   v' == Seq.slice v (SZ.v i) (Seq.length v)
 
-assume val slice_split_right (#t: Type) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Seq.seq t)) (i: SZ.t) : stt (S.slice t)
-    (requires S.pts_to s #p v ** pure (S.split_precond false p v i))
-    (ensures fun res -> exists* v' . S.pts_to res #p v' **
+
+```pulse
+ghost
+fn slice_split_right_aux (#t: Type0) (s1: S.slice t) (p: perm) (v1: Seq.seq t) (s2: S.slice t) (v2: Seq.seq t) (i: SZ.t) (s: S.slice t) (v: Seq.seq t) (sq: squash (v == v1 `Seq.append` v2)) (_: unit)
+requires
+    ((S.is_split s p i s1 s2 ** S.pts_to s1 #p v1) ** S.pts_to s2 #p v2)
+ensures
+    (S.pts_to s #p v)
+{
+  S.join s1 s2 s
+}
+```
+
+inline_for_extraction
+```pulse
+fn slice_split_right (#t: Type0) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Seq.seq t)) (i: SZ.t)
+    requires S.pts_to s #p v ** pure (S.split_precond false p v i)
+    returns res: S.slice t
+    ensures exists* v' . S.pts_to res #p v' **
       trade (S.pts_to res #p v') (S.pts_to s #p v) **
       pure (slice_split_right_postcond p v i v')
-    )
+{
+  let sp = S.split false s i;
+  match sp {
+    S.SlicePair s1 s2 -> {
+      unfold (S.split_post s p v i sp);
+      unfold (S.split_post' s p v i s1 s2);
+      with v1 . assert (S.pts_to s1 #p v1);
+      with v2 . assert (S.pts_to s2 #p v2);
+      let sq : squash (Ghost.reveal v == v1 `Seq.append` v2) = Seq.lemma_split v (SZ.v i);
+      Trade.intro _ _ _ (slice_split_right_aux s1 p v1 s2 v2 i s v sq);
+      s2
+    }
+  }
+}
+```
 
 ```pulse
 ghost
