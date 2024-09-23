@@ -20,3 +20,7 @@ let perm_1_l
 : Lemma
   (1.0R `perm_mul` p == p)
 = ()
+
+let half_mul (a b: real) : Lemma
+  ((a *. b) /. 2.0R == a *. (b /. 2.0R))
+= ()

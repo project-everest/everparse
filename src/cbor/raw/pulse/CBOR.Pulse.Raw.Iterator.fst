@@ -48,7 +48,20 @@ ensures
        )
        (cbor_raw_slice_iterator_match elt_match pm c l)
 {
-  admit ()
+  unfold (cbor_raw_slice_iterator_match elt_match pm c l);
+  with sq . assert (Pulse.Lib.Slice.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+     PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
+  );
+  ghost
+  fn aux ()
+  requires emp ** (Pulse.Lib.Slice.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+         PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
+       )
+  ensures cbor_raw_slice_iterator_match elt_match pm c l
+  {
+    fold (cbor_raw_slice_iterator_match elt_match pm c l);
+  };
+  Trade.intro _ _ _ aux
 }
 ```
 
@@ -73,7 +86,21 @@ ensures
          PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
        )
 {
-  admit ()
+  S.share c.s;
+  half_mul pm c.slice_perm;
+  fold (cbor_raw_slice_iterator_match elt_match pm c' l);
+  ghost
+  fn aux ()
+  requires (S.pts_to c.s #((pm `perm_mul` c.slice_perm) /. 2.0R) sq ** cbor_raw_slice_iterator_match elt_match pm c' l)
+  ensures
+       (Pulse.Lib.Slice.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+         PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
+       )
+  {
+    unfold (cbor_raw_slice_iterator_match elt_match pm c' l);
+    S.gather c.s
+  };
+  Trade.intro _ _ _ aux
 }
 ```
 
@@ -106,15 +133,18 @@ type cbor_raw_iterator (elt: Type0) (ser: Type0) =
 | CBOR_Raw_Iterator_Slice of cbor_raw_slice_iterator elt
 | CBOR_Raw_Iterator_Serialized of ser
 
-assume val seq_list_match_cons_elim_trade
-  (#t #t': Type)
+```pulse
+ghost
+fn seq_list_match_cons_elim_trade
+  (#t #t': Type0)
   (c: Seq.seq t)
   (v: list t' { Cons? v \/ Seq.length c > 0 })
   (item_match: (t -> (v': t' { v' << v }) -> slprop))
-: stt_ghost (squash (Cons? v /\ Seq.length c > 0))
-    emp_inames
+requires
     (PM.seq_list_match c v item_match)
-    (fun _ -> item_match (Seq.head c) (List.Tot.hd v) **
+returns res: (squash (Cons? v /\ Seq.length c > 0))
+ensures
+    (item_match (Seq.head c) (List.Tot.hd v) **
       PM.seq_list_match (Seq.tail c) (List.Tot.tl v) item_match **
       trade
         (item_match (Seq.head c) (List.Tot.hd v) **
@@ -122,6 +152,24 @@ assume val seq_list_match_cons_elim_trade
         )
         (PM.seq_list_match c v item_match)
     )
+{
+  PM.seq_list_match_cons_elim c v item_match;
+  ghost
+  fn aux ()
+    requires emp **
+      (item_match (Seq.head c) (List.Tot.hd v) **
+          PM.seq_list_match (Seq.tail c) (List.Tot.tl v) item_match
+      )
+    ensures
+      (PM.seq_list_match c v item_match)
+  {
+    Seq.cons_head_tail c;
+    PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd v) (Seq.tail c) (List.Tot.tl v) item_match
+  };
+  Trade.intro _ _ _ aux;
+  ()
+}
+```
 
 let slice_split_right_postcond
   (#t: Type) (p: perm) (v: Ghost.erased (Seq.seq t)) (i: SZ.t) (v': Seq.seq t)
