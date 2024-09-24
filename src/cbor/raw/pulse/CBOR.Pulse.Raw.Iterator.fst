@@ -316,6 +316,57 @@ let cbor_raw_iterator_match
   | CBOR_Raw_Iterator_Slice c' -> cbor_raw_slice_iterator_match elt_match pm c' l
   | CBOR_Raw_Iterator_Serialized c' -> ser_match pm c' l
 
+let cbor_raw_serialized_iterator_is_empty_t
+  (#elt_high #ser: Type0)
+  (ser_match: perm -> ser -> list elt_high -> slprop)
+=
+  (c: ser) ->
+  (#pm: perm) ->
+  (#r: Ghost.erased (list elt_high)) ->
+  stt bool
+    (ser_match pm c r)
+    (fun res -> ser_match pm c r **
+      pure (res == Nil? r)
+    )
+
+inline_for_extraction
+```pulse
+fn cbor_raw_iterator_is_empty
+  (#elt_low #elt_high #ser: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (phi: cbor_raw_serialized_iterator_is_empty_t ser_match)
+  (c: cbor_raw_iterator elt_low ser)
+  (#pm: perm)
+  (#r: Ghost.erased (list elt_high))
+requires
+    cbor_raw_iterator_match elt_match ser_match pm c r
+returns res: bool
+ensures
+    cbor_raw_iterator_match elt_match ser_match pm c r **
+    pure (res == Nil? r)
+{
+  match c {
+    CBOR_Raw_Iterator_Slice c' -> {
+      rewrite (cbor_raw_iterator_match elt_match ser_match pm c r)
+        as (cbor_raw_slice_iterator_match elt_match pm c' r);
+      let res = cbor_raw_slice_iterator_is_empty elt_match c';
+      rewrite (cbor_raw_slice_iterator_match elt_match pm c' r)
+        as (cbor_raw_iterator_match elt_match ser_match pm c r);
+      res
+    }
+    CBOR_Raw_Iterator_Serialized c' -> {
+      rewrite (cbor_raw_iterator_match elt_match ser_match pm c r)
+        as (ser_match pm c' r);
+      let res = phi c';
+      rewrite (ser_match pm c' r)
+        as (cbor_raw_iterator_match elt_match ser_match pm c r);
+      res
+    }
+  }
+}
+```
+
 inline_for_extraction
 let cbor_raw_serialized_iterator_next_t
   (#elt_low #elt_high #ser: Type0)
