@@ -303,3 +303,127 @@ ensures
   res
 }
 ```
+
+let cbor_raw_iterator_match
+  (#elt_low #elt_high #ser: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (pm: perm)
+  (c: cbor_raw_iterator elt_low ser)
+  (l: list elt_high)
+: Tot slprop
+= match c with
+  | CBOR_Raw_Iterator_Slice c' -> cbor_raw_slice_iterator_match elt_match pm c' l
+  | CBOR_Raw_Iterator_Serialized c' -> ser_match pm c' l
+
+inline_for_extraction
+let cbor_raw_serialized_iterator_next_t
+  (#elt_low #elt_high #ser: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (ser_match: perm -> ser -> list elt_high -> slprop)
+=
+  (pi: R.ref (cbor_raw_iterator elt_low ser)) ->
+  (#pm: perm) ->
+  (i: ser) ->
+  (#l: Ghost.erased (list elt_high)) ->
+  stt elt_low
+  (exists* i0 .
+    R.pts_to pi i0 **
+    ser_match pm i l **
+    pure (Cons? l)
+  )
+  (fun res -> exists* a p i' q .
+    elt_match p res a **
+    R.pts_to pi (CBOR_Raw_Iterator_Serialized i') **
+    ser_match pm i' q **
+    trade
+      (elt_match p res a ** ser_match pm i' q)
+      (ser_match pm i l) **
+    pure (Ghost.reveal l == a :: q)
+  )
+
+```pulse
+ghost
+fn trade_partial_trans_3
+  (a b c d: slprop)
+requires
+  (trade (a ** b) c ** trade d b)
+ensures
+  (trade (a ** d) c)
+{
+  Trade.reg_l a d b;
+  Trade.trans (a ** d) (a ** b) c
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_raw_iterator_next
+  (#elt_low #elt_high #ser: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (phi: cbor_raw_serialized_iterator_next_t elt_match ser_match)
+  (pi: R.ref (cbor_raw_iterator elt_low ser))
+  (#pm: perm)
+  (#i0: Ghost.erased (cbor_raw_iterator elt_low ser))
+  (#l: Ghost.erased (list elt_high))
+requires
+    R.pts_to pi i0 **
+    cbor_raw_iterator_match elt_match ser_match pm i0 l **
+    pure (Cons? l)
+returns res: elt_low
+ensures
+  exists* a p i' q .
+    elt_match p res a **
+    R.pts_to pi i' **
+    cbor_raw_iterator_match elt_match ser_match pm i' q **
+    trade
+      (elt_match p res a ** cbor_raw_iterator_match elt_match ser_match pm i' q)
+      (cbor_raw_iterator_match elt_match ser_match pm i0 l) **
+    pure (Ghost.reveal l == a :: q)
+{
+  let i0 = !pi;
+  match i0 {
+    CBOR_Raw_Iterator_Slice i -> {
+      Trade.rewrite_with_trade // FIXME: PLEASE automate this step away!
+        (cbor_raw_iterator_match elt_match ser_match pm i0 l)
+        (cbor_raw_slice_iterator_match elt_match pm i l);
+      let res = cbor_raw_slice_iterator_next elt_match pi i;
+      // BEGIN FIXME: PLEASE PLEASE PLEASE automate the following steps away!
+      Trade.trans _ _ (cbor_raw_iterator_match elt_match ser_match pm i0 l);
+      with p a . assert (elt_match p res a);
+      with i' q . assert (cbor_raw_slice_iterator_match elt_match pm i' q);
+      Trade.rewrite_with_trade
+        (cbor_raw_slice_iterator_match elt_match pm i' q)
+        (cbor_raw_iterator_match elt_match ser_match pm (CBOR_Raw_Iterator_Slice i') q);
+      trade_partial_trans_3
+        (elt_match p res a)
+        (cbor_raw_slice_iterator_match elt_match pm i' q)
+        (cbor_raw_iterator_match elt_match ser_match pm i0 l)
+        (cbor_raw_iterator_match elt_match ser_match pm (CBOR_Raw_Iterator_Slice i') q);
+      // END FIXME
+      res
+    }
+    CBOR_Raw_Iterator_Serialized i -> {
+      Trade.rewrite_with_trade // FIXME: PLEASE automate this step away!
+        (cbor_raw_iterator_match elt_match ser_match pm i0 l)
+        (ser_match pm i l);
+      let res = phi pi i;
+      // BEGIN FIXME: PLEASE PLEASE PLEASE automate the following steps away!
+      Trade.trans _ _ (cbor_raw_iterator_match elt_match ser_match pm i0 l);
+      with p a . assert (elt_match p res a);
+      with i' q . assert (ser_match pm i' q);
+      Trade.rewrite_with_trade
+        (ser_match pm i' q)
+        (cbor_raw_iterator_match elt_match ser_match pm (CBOR_Raw_Iterator_Serialized i') q);
+      trade_partial_trans_3
+        (elt_match p res a)
+        (ser_match pm i' q)
+        (cbor_raw_iterator_match elt_match ser_match pm i0 l)
+        (cbor_raw_iterator_match elt_match ser_match pm (CBOR_Raw_Iterator_Serialized i') q);
+      // END FIXME
+      res
+    }
+  }
+}
+```
