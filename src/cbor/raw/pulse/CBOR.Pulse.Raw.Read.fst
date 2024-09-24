@@ -1,5 +1,6 @@
 module CBOR.Pulse.Raw.Read
 include CBOR.Pulse.Raw.Match
+open CBOR.Pulse.Raw.Iterator
 open CBOR.Pulse.Raw.Serialized
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
@@ -96,37 +97,6 @@ fn cbor_match_tagged_get_payload
 }
 ```
 
-noeq
-type cbor_array_iterator =
-| CBOR_Array_Iterator_Slice:
-  s: Pulse.Lib.Slice.slice cbor_raw ->
-  slice_perm: perm ->
-  payload_perm: perm ->
-  cbor_array_iterator
-| CBOR_Array_Iterator_Serialized of cbor_serialized_array_iterator
-
-let cbor_array_iterator_slice_match
-  (pm: perm)
-  (slice_perm: perm)
-  (payload_perm: perm)
-  (s: Pulse.Lib.Slice.slice cbor_raw)
-  (l: list raw_data_item)
-: Tot slprop
-= exists* sq .
-     Pulse.Lib.Slice.pts_to s #(pm `perm_mul` slice_perm) sq **
-     PM.seq_list_match sq l (cbor_match (pm `perm_mul` payload_perm))
-
-let cbor_array_iterator_match
-  (pm: perm)
-  (i: cbor_array_iterator)
-  (l: list raw_data_item)
-: Tot slprop
-= match i with
-  | CBOR_Array_Iterator_Slice s slice_perm payload_perm ->
-    cbor_array_iterator_slice_match pm slice_perm payload_perm s l
-  | CBOR_Array_Iterator_Serialized s ->
-    cbor_serialized_array_iterator_match pm s l
-
 ```pulse
 ghost
 fn cbor_match_array_elim
@@ -158,59 +128,27 @@ fn cbor_match_array_elim
 }
 ```
 
-#set-options "--print_implicits"
+let cbor_array_iterator
+= cbor_raw_iterator cbor_raw cbor_serialized_array_iterator
+
+let cbor_array_iterator_match
+= cbor_raw_iterator_match
+    cbor_match
+    cbor_serialized_array_iterator_match
 
 ```pulse
-ghost
-fn cbor_array_iterator_slice_match_intro
-  (c': cbor_array)
-  (pm: perm)
-  (s: Seq.seq cbor_raw)
-  (l: list raw_data_item)
-  (s': Pulse.Lib.Slice.slice cbor_raw)
-requires
-  A.pts_to c'.cbor_array_ptr #((pm `perm_mul` c'.cbor_array_array_perm) /. 2.0R) s **
-  Pulse.Lib.Slice.pts_to s' #((pm `perm_mul` c'.cbor_array_array_perm) /. 2.0R) s **
-  PM.seq_list_match s l (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)) **
-  Pulse.Lib.Slice.is_from_array c'.cbor_array_ptr ((pm `perm_mul` c'.cbor_array_array_perm) /. 2.0R) s'
-ensures
-  cbor_array_iterator_slice_match 1.0R ((pm `perm_mul` c'.cbor_array_array_perm) /. 2.0R) (pm `perm_mul` c'.cbor_array_payload_perm) s' l **
-  trade
-    (cbor_array_iterator_slice_match 1.0R ((pm `perm_mul` c'.cbor_array_array_perm) /. 2.0R) (pm `perm_mul` c'.cbor_array_payload_perm) s' l)
-    (A.pts_to c'.cbor_array_ptr #(pm `perm_mul` c'.cbor_array_array_perm) s **
-      PM.seq_list_match s l (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)))
-{
-  fold (cbor_array_iterator_slice_match 1.0R ((pm `perm_mul` c'.cbor_array_array_perm) /. 2.0R) (pm `perm_mul` c'.cbor_array_payload_perm) s' l);
-  ghost
-  fn aux (_: unit)
-    requires
-      (A.pts_to c'.cbor_array_ptr #((pm `perm_mul` c'.cbor_array_array_perm) /. 2.0R) s **
-        Pulse.Lib.Slice.is_from_array c'.cbor_array_ptr ((pm `perm_mul` c'.cbor_array_array_perm) /. 2.0R) s') **
-      cbor_array_iterator_slice_match 1.0R ((pm `perm_mul` c'.cbor_array_array_perm) /. 2.0R) (pm `perm_mul` c'.cbor_array_payload_perm) s' l
-    ensures
-      A.pts_to c'.cbor_array_ptr #(pm `perm_mul` c'.cbor_array_array_perm) s **
-      PM.seq_list_match s l (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm))
-  {
-    unfold (cbor_array_iterator_slice_match 1.0R ((pm `perm_mul` c'.cbor_array_array_perm) /. 2.0R) (pm `perm_mul` c'.cbor_array_payload_perm) s' l);
-    Pulse.Lib.Slice.to_array s';
-    A.gather c'.cbor_array_ptr
-  };
-  Trade.intro _ _ _ aux
-}
-```
-  
-```pulse
 fn cbor_array_iterator_init
+  (fits: squash (SZ.fits_u64))
   (c: cbor_raw)
   (#pm: perm)
   (#r: Ghost.erased raw_data_item { Array? r })
 requires
-    (cbor_match pm c r ** pure SZ.fits_u64)
+    (cbor_match pm c r)
 returns res: cbor_array_iterator
-ensures
-      cbor_array_iterator_match 1.0R res (Array?.v r) **
+ensures exists* p .
+      cbor_array_iterator_match p res (Array?.v r) **
       trade
-        (cbor_array_iterator_match 1.0R res (Array?.v r))
+        (cbor_array_iterator_match p res (Array?.v r))
         (cbor_match pm c r)
 {
   cbor_match_cases c;
@@ -224,7 +162,7 @@ ensures
         (cbor_serialized_array_iterator_match 1.0R i' (Array?.v r))
         (cbor_match_serialized_array c' pm r)
         (cbor_match pm c r);
-      let i = CBOR_Array_Iterator_Serialized i';
+      let i : cbor_array_iterator = CBOR_Raw_Iterator_Serialized i';
       Trade.rewrite_with_trade
         (cbor_serialized_array_iterator_match 1.0R i' (Array?.v r))
         (cbor_array_iterator_match 1.0R i (Array?.v r));
@@ -248,22 +186,11 @@ ensures
           PM.seq_list_match s (Array?.v r) (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)))
         (cbor_match_array c' pm r cbor_match)
         (cbor_match pm c r);
-      A.share c'.cbor_array_ptr;
-      let s' = Pulse.Lib.Slice.from_array false c'.cbor_array_ptr (SZ.uint64_to_sizet c'.cbor_array_length.value);
-      cbor_array_iterator_slice_match_intro _ _ _ _ _;
-      Trade.trans
-        (cbor_array_iterator_slice_match _ _ _ _ _)
-        _
-        (cbor_match pm c r);
-      let i = CBOR_Array_Iterator_Slice s' ((pm `perm_mul` c'.cbor_array_array_perm) /. 2.0R) (pm `perm_mul` c'.cbor_array_payload_perm);
-      Trade.rewrite_with_trade
-        (cbor_array_iterator_slice_match _ _ _ _ _)
-        (cbor_array_iterator_match 1.0R i (Array?.v r));
-      Trade.trans
-        (cbor_array_iterator_match 1.0R i (Array?.v r))
-        _
-        (cbor_match pm c r);
-      i
+      let res = cbor_raw_iterator_init_from_array cbor_match cbor_serialized_array_iterator_match c'.cbor_array_ptr (SZ.uint64_to_sizet c'.cbor_array_length.value);
+      Trade.trans _ _ (cbor_match pm c r);
+      with p . assert (cbor_raw_iterator_match cbor_match cbor_serialized_array_iterator_match p res (Array?.v r));
+      fold (cbor_array_iterator_match p res (Array?.v r));
+      res
     }
   }
 }
@@ -281,28 +208,14 @@ ensures
     cbor_array_iterator_match pm c r **
     pure (res == Nil? r)
 {
-  match c {
-    CBOR_Array_Iterator_Serialized c' -> {
-      rewrite (cbor_array_iterator_match pm c r)
-        as (cbor_serialized_array_iterator_match pm c' r);
-      let res = cbor_serialized_array_iterator_is_empty c';
-      rewrite (cbor_serialized_array_iterator_match pm c' r)
-        as (cbor_array_iterator_match pm c r);
-      res
-    }
-    CBOR_Array_Iterator_Slice s ps pp -> {
-      rewrite (cbor_array_iterator_match pm c r)
-        as (cbor_array_iterator_slice_match pm ps pp s r);
-      unfold (cbor_array_iterator_slice_match pm ps pp s r);
-      PM.seq_list_match_length (cbor_match (pm `perm_mul` pp)) _ _;
-      Pulse.Lib.Slice.pts_to_len s;
-      let res = (Pulse.Lib.Slice.len s = 0sz);
-      fold (cbor_array_iterator_slice_match pm ps pp s r);
-      rewrite (cbor_array_iterator_slice_match pm ps pp s r)
-        as (cbor_array_iterator_match pm c r);
-      res
-    }
-  }
+  unfold (cbor_array_iterator_match pm c r);
+  let res = cbor_raw_iterator_is_empty
+    cbor_match
+    cbor_serialized_array_iterator_match
+    cbor_serialized_array_iterator_is_empty
+    c;
+  fold (cbor_array_iterator_match pm c r);
+  res
 }
 ```
 
@@ -326,39 +239,14 @@ ensures exists* a p i' q .
       (cbor_array_iterator_match pm i l) **
     pure (Ghost.reveal l == a :: q)
 {
-  let i = !pi;
-  match i {
-    CBOR_Array_Iterator_Serialized i_ -> {
-      let mut pi_ = i_;
-      Trade.rewrite_with_trade (cbor_array_iterator_match pm i l)
-        (cbor_serialized_array_iterator_match pm i_ l);
-      let res = cbor_serialized_array_iterator_next pi_;
-      let i'_ = !pi_;
-      with q . assert (cbor_serialized_array_iterator_match pm i'_ q);
-      let i' = CBOR_Array_Iterator_Serialized i'_;
-      Trade.rewrite_with_trade
-        (cbor_serialized_array_iterator_match pm i'_ q)
-        (cbor_array_iterator_match pm i' q);
-      with p a . assert (cbor_match p res a);
-      Trade.reg_l
-        (cbor_match p res a)
-        (cbor_array_iterator_match pm i' q)
-        (cbor_serialized_array_iterator_match pm i'_ q);
-      Trade.trans
-        (cbor_match p res a ** cbor_array_iterator_match pm i' q)
-        (cbor_match p res a ** cbor_serialized_array_iterator_match pm i'_ q)
-        (cbor_serialized_array_iterator_match pm i_ l);
-      Trade.trans
-        (cbor_match p res a ** cbor_array_iterator_match pm i' q)
-        (cbor_serialized_array_iterator_match pm i_ l)
-        (cbor_array_iterator_match pm i l);
-      pi := i';
-      res
-    }
-    CBOR_Array_Iterator_Slice s ps pp -> {
-      admit ()
-    }
-  }
+  unfold (cbor_array_iterator_match pm i l);
+  let res = cbor_raw_iterator_next
+    cbor_match
+    cbor_serialized_array_iterator_match
+    cbor_serialized_array_iterator_next
+    pi;
+  with i' . assert (R.pts_to pi i');
+  fold (cbor_array_iterator_match pm i' (List.Tot.tl l));
+  res
 }
 ```
-

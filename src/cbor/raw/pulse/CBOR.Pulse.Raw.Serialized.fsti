@@ -1,5 +1,6 @@
 module CBOR.Pulse.Raw.Serialized
 include CBOR.Pulse.Raw.Match
+open CBOR.Pulse.Raw.Iterator
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Trade
@@ -46,31 +47,6 @@ val cbor_serialized_array_iterator_init
         (cbor_match_serialized_array c pm r)
     )
 
-val cbor_serialized_array_iterator_is_empty
-  (i: cbor_serialized_array_iterator)
-  (#pm: perm)
-  (#l: Ghost.erased (list raw_data_item))
-: stt bool
-  (cbor_serialized_array_iterator_match pm i l)
-  (fun res ->
-    cbor_serialized_array_iterator_match pm i l **
-    pure (res == Nil? l)
-  )
+val cbor_serialized_array_iterator_is_empty : cbor_raw_serialized_iterator_is_empty_t cbor_serialized_array_iterator_match
 
-val cbor_serialized_array_iterator_next
-  (pi: ref cbor_serialized_array_iterator)
-  (#pm: perm)
-  (#i: Ghost.erased cbor_serialized_array_iterator)
-  (#l: Ghost.erased (list raw_data_item))
-: stt cbor_raw
-  (pts_to pi i ** cbor_serialized_array_iterator_match pm i l ** pure (Cons? l))
-  (fun res -> exists* a i' q .
-    pts_to pi i' **
-    cbor_match pm res a **
-    cbor_serialized_array_iterator_match pm i' q **
-    trade
-      (cbor_match pm res a **
-        cbor_serialized_array_iterator_match pm i' q)
-      (cbor_serialized_array_iterator_match pm i l) **
-    pure (Ghost.reveal l == a :: q)
-  )
+val cbor_serialized_array_iterator_next : cbor_raw_serialized_iterator_next_t cbor_match cbor_serialized_array_iterator_match
