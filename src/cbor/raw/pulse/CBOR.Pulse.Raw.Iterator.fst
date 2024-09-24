@@ -104,6 +104,86 @@ ensures
 }
 ```
 
+```pulse
+ghost
+fn slice_from_array_trade_aux (#t: Type0) (a: array t) (p: perm) (v: Ghost.erased (Seq.seq t)) (s: S.slice t) (_: unit)
+requires
+    (S.is_from_array a p s ** S.pts_to s #p v)
+ensures
+    (A.pts_to a #p v)
+{
+  S.to_array s
+}
+```
+
+inline_for_extraction
+```pulse
+fn slice_from_array_trade (#t: Type0) (a: array t) (#p: perm) (#v: Ghost.erased (Seq.seq t)) (alen: SZ.t {
+    SZ.v alen == A.length a
+})
+requires
+    (A.pts_to a #p v)
+returns s: S.slice t
+ensures
+    (
+        S.pts_to s #p v **
+        trade
+          (S.pts_to s #p v)
+          (A.pts_to a #p v)
+    )
+{
+  let s = S.from_array false a alen;
+  Trade.intro _ _ _ (slice_from_array_trade_aux a p v s);
+  s
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_raw_slice_iterator_init
+  (#elt_low #elt_high: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (a: A.array elt_low)
+  (alen: SZ.t { SZ.v alen == A.length a })
+  (#pm: perm)
+  (#pm': perm)
+  (#l: Ghost.erased (list elt_high))
+  (#sq: Ghost.erased (Seq.seq elt_low))
+requires
+  A.pts_to a #pm sq **
+  PM.seq_list_match sq l (elt_match pm')
+returns res: cbor_raw_slice_iterator elt_low
+ensures exists* p .
+  cbor_raw_slice_iterator_match elt_match p res l **
+     trade
+       (cbor_raw_slice_iterator_match elt_match p res l)
+       (A.pts_to a #pm sq **
+         PM.seq_list_match sq l (elt_match pm')
+       )
+{
+  let s = slice_from_array_trade a alen;
+  let c = {
+    s = s;
+    slice_perm = 1.0R;
+    payload_perm = pm' `perm_div` pm;
+  };
+  let c' = { c with slice_perm = 0.5R };
+  perm_mul_div pm pm';
+  Trade.rewrite_with_trade
+    (PM.seq_list_match sq l (elt_match pm'))
+    (PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm)));
+  Trade.prod
+    (S.pts_to s #pm sq)
+    (A.pts_to a #pm sq)
+    (PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm)))
+    (PM.seq_list_match sq l (elt_match pm'))
+    ;
+  cbor_raw_slice_iterator_match_fold elt_match pm c c' l sq;
+  Trade.trans (cbor_raw_slice_iterator_match elt_match pm c' l) _ _;
+  c'
+}
+```
+
 inline_for_extraction
 ```pulse
 fn cbor_raw_slice_iterator_is_empty
