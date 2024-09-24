@@ -396,6 +396,41 @@ let cbor_raw_iterator_match
   | CBOR_Raw_Iterator_Slice c' -> cbor_raw_slice_iterator_match elt_match pm c' l
   | CBOR_Raw_Iterator_Serialized c' -> ser_match pm c' l
 
+inline_for_extraction
+```pulse
+fn cbor_raw_iterator_init_from_array
+  (#elt_low #elt_high #ser: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (a: A.array elt_low)
+  (alen: SZ.t { SZ.v alen == A.length a })
+  (#pm: perm)
+  (#pm': perm)
+  (#l: Ghost.erased (list elt_high))
+  (#sq: Ghost.erased (Seq.seq elt_low))
+requires
+  A.pts_to a #pm sq **
+  PM.seq_list_match sq l (elt_match pm')
+returns res: cbor_raw_iterator elt_low ser
+ensures exists* p .
+  cbor_raw_iterator_match elt_match ser_match p res l **
+     trade
+       (cbor_raw_iterator_match elt_match ser_match p res l)
+       (A.pts_to a #pm sq **
+         PM.seq_list_match sq l (elt_match pm')
+       )
+{
+  let i = cbor_raw_slice_iterator_init elt_match a alen;
+  with p . assert (cbor_raw_slice_iterator_match elt_match p i l);
+  let res : cbor_raw_iterator elt_low ser = CBOR_Raw_Iterator_Slice i;
+  Trade.rewrite_with_trade
+    (cbor_raw_slice_iterator_match elt_match p i l)
+    (cbor_raw_iterator_match elt_match ser_match p res l);
+  Trade.trans (cbor_raw_iterator_match elt_match ser_match p res l) _ _;
+  res
+}
+```
+
 let cbor_raw_serialized_iterator_is_empty_t
   (#elt_high #ser: Type0)
   (ser_match: perm -> ser -> list elt_high -> slprop)
