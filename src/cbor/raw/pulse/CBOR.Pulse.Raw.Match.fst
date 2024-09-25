@@ -58,7 +58,7 @@ let cbor_match_array
     PM.seq_list_match v (Array?.v r) (cbor_match (p `perm_mul` c.cbor_array_payload_perm)) **
     pure (c.cbor_array_length == Array?.len r)
 
-let cbor_match_map_entry
+let cbor_match_map_entry0
   (r0: raw_data_item)
   (cbor_match: (cbor_raw -> (v': raw_data_item { v' << r0 }) -> slprop))
   (c: cbor_map_entry)
@@ -67,7 +67,7 @@ let cbor_match_map_entry
 = cbor_match c.cbor_map_entry_key (fst r) **
   cbor_match c.cbor_map_entry_value (snd r)
 
-let cbor_match_map
+let cbor_match_map0
   (c: cbor_map)
   (p: perm)
   (r: raw_data_item {Map? r})
@@ -75,7 +75,7 @@ let cbor_match_map
 : Tot slprop
 = exists* v .
     A.pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) v **
-    PM.seq_list_match v (Map?.v r) (cbor_match_map_entry r (cbor_match (p `perm_mul` c.cbor_map_payload_perm))) **
+    PM.seq_list_match v (Map?.v r) (cbor_match_map_entry0 r (cbor_match (p `perm_mul` c.cbor_map_payload_perm))) **
     pure (c.cbor_map_length == Map?.len r)
 
 let cbor_match_serialized_array
@@ -110,7 +110,7 @@ let rec cbor_match
   (decreases r)
 = match c, r with
   | CBOR_Case_Array v, Array _ _ -> cbor_match_array v p r cbor_match
-  | CBOR_Case_Map v, Map _ _ -> cbor_match_map v p r cbor_match
+  | CBOR_Case_Map v, Map _ _ -> cbor_match_map0 v p r cbor_match
   | CBOR_Case_Simple v, Simple _ -> cbor_match_simple v r
   | CBOR_Case_Int v, Int64 _ _ -> cbor_match_int v r
   | CBOR_Case_String v, String _ _ _ -> cbor_match_string v p r
@@ -119,6 +119,126 @@ let rec cbor_match
   | CBOR_Case_Serialized_Map v, Map _ _ -> cbor_match_serialized_map v p r
   | CBOR_Case_Serialized_Tagged v, Tagged _ _ -> cbor_match_serialized_tagged v p r
   | _ -> pure False
+
+let cbor_match_map_entry
+  (p: perm)
+  (c: cbor_map_entry)
+  (r: (raw_data_item & raw_data_item))
+: Tot slprop
+= cbor_match p c.cbor_map_entry_key (fst r) **
+  cbor_match p c.cbor_map_entry_value (snd r)
+
+let cbor_match_map
+  (p: perm)
+  (c: cbor_map)
+  (r: raw_data_item {Map? r})
+: Tot slprop
+= exists* v .
+    A.pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) v **
+    PM.seq_list_match v (Map?.v r) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm)) **
+    pure (c.cbor_map_length == Map?.len r)
+
+let slprop_implies (s1 s2: slprop) =
+  unit -> stt_ghost unit emp_inames s1 (fun _ -> s2)
+
+let slprop_implies_elim (#s1 #s2: slprop) (f: slprop_implies s1 s2) : stt_ghost unit emp_inames s1 (fun _ -> s2) =
+  f ()
+
+let seq_list_match_implies
+  (#t #t': Type0)
+  (c: Seq.seq t)
+  (v: list t')
+  (item_match1: (t -> (v': t' { v' << v }) -> slprop))
+  (item_match2: (t -> (v': t' { v' << v }) -> slprop))
+  (imp: ((v0: t) -> (v': t' { v' << v }) -> slprop_implies (item_match1 v0 v') (item_match2 v0 v')))
+: Tot (slprop_implies (PM.seq_list_match c v item_match1) (PM.seq_list_match c v item_match2))
+  (decreases v)
+= fun _ -> PM.seq_list_match_weaken c v item_match1 item_match2 (fun v0 v' -> imp v0 v' ())
+
+```pulse
+fn cbor_match_map_entry0_entry
+  (r0: raw_data_item)
+  (p: perm)
+  (c: cbor_map_entry)
+  (r: (raw_data_item & raw_data_item) { r << r0 })
+: slprop_implies (cbor_match_map_entry0 r0 (cbor_match p) c r) (cbor_match_map_entry p c r)
+= (_: _) {
+  rewrite (cbor_match_map_entry0 r0 (cbor_match p) c r)
+    as (cbor_match_map_entry p c r)
+}
+```
+
+```pulse
+ghost
+fn cbor_match_map0_map
+  (c: cbor_map)
+  (p: perm)
+  (r: raw_data_item {Map? r})
+requires
+  (cbor_match_map0 c p r cbor_match)
+ensures
+  (cbor_match_map p c r)
+{
+  unfold (cbor_match_map0 c p r cbor_match);
+  with v . assert (PM.seq_list_match v (Map?.v r) (cbor_match_map_entry0 r (cbor_match (p `perm_mul` c.cbor_map_payload_perm))));
+  slprop_implies_elim (seq_list_match_implies v (Map?.v r) (cbor_match_map_entry0 r (cbor_match (p `perm_mul` c.cbor_map_payload_perm))) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm)) (cbor_match_map_entry0_entry r (p `perm_mul` c.cbor_map_payload_perm)));
+  fold (cbor_match_map p c r)
+}
+```
+
+```pulse
+fn cbor_match_map_entry_entry0
+  (r0: raw_data_item)
+  (p: perm)
+  (c: cbor_map_entry)
+  (r: (raw_data_item & raw_data_item) { r << r0 })
+: slprop_implies (cbor_match_map_entry p c r) (cbor_match_map_entry0 r0 (cbor_match p) c r)
+= (_: _) {
+  rewrite (cbor_match_map_entry p c r)
+    as (cbor_match_map_entry0 r0 (cbor_match p) c r)
+}
+```
+
+```pulse
+ghost
+fn cbor_match_map_map0
+  (c: cbor_map)
+  (p: perm)
+  (r: raw_data_item {Map? r})
+requires
+  (cbor_match_map p c r)
+ensures
+  (cbor_match_map0 c p r cbor_match)
+{
+  unfold (cbor_match_map p c r);
+  with v . assert (PM.seq_list_match v (Map?.v r) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm)));
+  slprop_implies_elim (seq_list_match_implies v (Map?.v r)
+    (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm))
+    (cbor_match_map_entry0 r (cbor_match (p `perm_mul` c.cbor_map_payload_perm)))
+    (cbor_match_map_entry_entry0 r (p `perm_mul` c.cbor_map_payload_perm))
+  );
+  fold (cbor_match_map0 c p r cbor_match)
+}
+```
+
+```pulse
+ghost
+fn cbor_match_map0_map_trade
+  (c: cbor_map)
+  (p: perm)
+  (r: raw_data_item {Map? r})
+requires
+  (cbor_match_map0 c p r cbor_match)
+ensures
+  (cbor_match_map p c r ** trade (cbor_match_map p c r) (cbor_match_map0 c p r cbor_match))
+{
+  cbor_match_map0_map c p r;
+  ghost fn aux (_: unit) requires emp ** cbor_match_map p c r ensures cbor_match_map0 c p r cbor_match {
+    cbor_match_map_map0 c p r;
+  };
+  Trade.intro _ _ _ aux
+}
+```
 
 let cbor_match_cases_pred
   (c: cbor_raw)

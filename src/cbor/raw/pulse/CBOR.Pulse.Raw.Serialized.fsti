@@ -50,3 +50,29 @@ val cbor_serialized_array_iterator_init
 val cbor_serialized_array_iterator_is_empty : cbor_raw_serialized_iterator_is_empty_t cbor_serialized_array_iterator_match
 
 val cbor_serialized_array_iterator_next (_: squash SZ.fits_u64) : cbor_raw_serialized_iterator_next_t cbor_match cbor_serialized_array_iterator_match
+
+[@@CAbstractStruct]
+val cbor_serialized_map_iterator: Type0
+
+val cbor_serialized_map_iterator_match
+  (p: perm)
+  (i: cbor_serialized_map_iterator)
+  (a: list (raw_data_item & raw_data_item))
+: slprop
+
+val cbor_serialized_map_iterator_init
+  (c: cbor_serialized)
+  (#pm: perm)
+  (#r: Ghost.erased raw_data_item { Map? r })
+: stt cbor_serialized_map_iterator
+    (cbor_match_serialized_map c pm r)
+    (fun res -> exists* p .
+      cbor_serialized_map_iterator_match p res (Map?.v r) **
+      trade
+        (cbor_serialized_map_iterator_match p res (Map?.v r))
+        (cbor_match_serialized_map c pm r)
+    )
+
+val cbor_serialized_map_iterator_is_empty : cbor_raw_serialized_iterator_is_empty_t cbor_serialized_map_iterator_match
+
+val cbor_serialized_map_iterator_next (_: squash SZ.fits_u64) : cbor_raw_serialized_iterator_next_t cbor_match_map_entry cbor_serialized_map_iterator_match
