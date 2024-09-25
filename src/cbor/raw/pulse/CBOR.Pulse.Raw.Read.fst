@@ -158,17 +158,18 @@ ensures exists* p .
         (cbor_match pm c r)
         (cbor_match_serialized_array c' pm r);
       let i' = cbor_serialized_array_iterator_init c';
+      with p . assert (cbor_serialized_array_iterator_match p i' (Array?.v r));
       Trade.trans
-        (cbor_serialized_array_iterator_match 1.0R i' (Array?.v r))
+        (cbor_serialized_array_iterator_match p i' (Array?.v r))
         (cbor_match_serialized_array c' pm r)
         (cbor_match pm c r);
       let i : cbor_array_iterator = CBOR_Raw_Iterator_Serialized i';
       Trade.rewrite_with_trade
-        (cbor_serialized_array_iterator_match 1.0R i' (Array?.v r))
-        (cbor_array_iterator_match 1.0R i (Array?.v r));
+        (cbor_serialized_array_iterator_match p i' (Array?.v r))
+        (cbor_array_iterator_match p i (Array?.v r));
       Trade.trans
-        (cbor_array_iterator_match 1.0R i (Array?.v r))
-        (cbor_serialized_array_iterator_match 1.0R i' (Array?.v r))
+        (cbor_array_iterator_match p i (Array?.v r))
+        (cbor_serialized_array_iterator_match p i' (Array?.v r))
         (cbor_match pm c r);
       i
     }
@@ -221,6 +222,7 @@ ensures
 
 ```pulse
 fn cbor_array_iterator_next
+  (sq: squash SZ.fits_u64)
   (pi: R.ref cbor_array_iterator)
   (#pm: perm)
   (#i: Ghost.erased cbor_array_iterator)
@@ -243,7 +245,7 @@ ensures exists* a p i' q .
   let res = cbor_raw_iterator_next
     cbor_match
     cbor_serialized_array_iterator_match
-    cbor_serialized_array_iterator_next
+    (cbor_serialized_array_iterator_next sq)
     pi;
   with i' . assert (R.pts_to pi i');
   fold (cbor_array_iterator_match pm i' (List.Tot.tl l));

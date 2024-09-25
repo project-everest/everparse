@@ -40,13 +40,13 @@ val cbor_serialized_array_iterator_init
   (#r: Ghost.erased raw_data_item { Array? r })
 : stt cbor_serialized_array_iterator
     (cbor_match_serialized_array c pm r)
-    (fun res ->
-      cbor_serialized_array_iterator_match 1.0R res (Array?.v r) **
+    (fun res -> exists* p .
+      cbor_serialized_array_iterator_match p res (Array?.v r) **
       trade
-        (cbor_serialized_array_iterator_match 1.0R res (Array?.v r))
+        (cbor_serialized_array_iterator_match p res (Array?.v r))
         (cbor_match_serialized_array c pm r)
     )
 
 val cbor_serialized_array_iterator_is_empty : cbor_raw_serialized_iterator_is_empty_t cbor_serialized_array_iterator_match
 
-val cbor_serialized_array_iterator_next : cbor_raw_serialized_iterator_next_t cbor_match cbor_serialized_array_iterator_match
+val cbor_serialized_array_iterator_next (_: squash SZ.fits_u64) : cbor_raw_serialized_iterator_next_t cbor_match cbor_serialized_array_iterator_match
