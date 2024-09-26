@@ -43,23 +43,6 @@ fn cbor_match_tagged_elim
 }
 ```
 
-let cbor_match_eq_tagged
-  (pm: perm)
-  (ct: cbor_tagged)
-  (r: raw_data_item)
-: Lemma
-  (requires (Tagged? r))
-  (ensures 
-    (cbor_match pm (CBOR_Case_Tagged ct) r ==
-    cbor_match_tagged ct pm r cbor_match
-  ))
-=
-  let Tagged tag v = r in
-  assert_norm (
-    cbor_match pm (CBOR_Case_Tagged ct) (Tagged tag v) ==
-      cbor_match_tagged ct pm (Tagged tag v) cbor_match
-  )
-
 ```pulse
 fn cbor_match_tagged_get_payload
   (c: cbor_raw)

@@ -348,6 +348,72 @@ fn cbor_match_int_intro_trade
 }
 ```
 
+inline_for_extraction
+```pulse
+fn cbor_match_int_elim_type
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Int64? v)
+returns res: major_type_uint64_or_neg_int64
+ensures
+  cbor_match p c v ** pure (Int64? v /\ res == Int64?.typ v)
+{
+  cbor_match_cases c;
+  let c' = CBOR_Case_Int?.v c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_int c' v);
+  unfold (cbor_match_int c' v);
+  fold (cbor_match_int c' v);
+  Trade.elim _ _;
+  c'.cbor_int_type
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_match_int_elim_value
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Int64? v)
+returns res: raw_uint64
+ensures
+  cbor_match p c v ** pure (Int64? v /\ res == Int64?.v v)
+{
+  cbor_match_cases c;
+  let c' = CBOR_Case_Int?.v c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_int c' v);
+  unfold (cbor_match_int c' v);
+  fold (cbor_match_int c' v);
+  Trade.elim _ _;
+  let res = {
+    size = c'.cbor_int_size;
+    value = c'.cbor_int_value;
+  };
+  res
+}
+```
+
+```pulse
+ghost
+fn cbor_match_int_free
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Int64? v)
+ensures
+  emp
+{
+  cbor_match_cases c;
+  let c' = CBOR_Case_Int?.v c;
+  rewrite (cbor_match p c v) as (cbor_match_int c' v);
+  unfold (cbor_match_int c' v)
+}
+```
+
 ```pulse
 ghost
 fn cbor_match_simple_intro_trade_aux
@@ -400,6 +466,46 @@ fn cbor_match_simple_intro_trade
   Trade.rewrite_with_trade (cbor_match_simple i (Simple i)) (cbor_match 1.0R res (Simple i));
   Trade.trans _ _ q;
   res
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_match_simple_elim
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Simple? v)
+returns res: simple_value
+ensures
+  cbor_match p c v ** pure (v == Simple res)
+{
+  cbor_match_cases c;
+  let res = CBOR_Case_Simple?.v c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_simple res v);
+  unfold (cbor_match_simple res v);
+  fold (cbor_match_simple res v);
+  Trade.elim _ _;
+  res
+}
+```
+
+```pulse
+ghost
+fn cbor_match_simple_free
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Simple? v)
+ensures
+  emp
+{
+  cbor_match_cases c;
+  let res = CBOR_Case_Simple?.v c;
+  rewrite (cbor_match p c v) as (cbor_match_simple res v);
+  unfold (cbor_match_simple res v)
 }
 ```
 
@@ -464,6 +570,216 @@ fn cbor_match_string_intro
     (cbor_match 1.0R res r);
   Trade.trans _ _ (S.pts_to input #pm v);
   res
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_match_string_elim_type
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (String? v)
+returns res: major_type_byte_string_or_text_string
+ensures
+  cbor_match p c v ** pure (String? v /\ res == String?.typ v)
+{
+  cbor_match_cases c;
+  let c' = CBOR_Case_String?.v c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
+  unfold (cbor_match_string c' p v);
+  fold (cbor_match_string c' p v);
+  Trade.elim _ _;
+  c'.cbor_string_type
+}
+```
+
+```pulse
+ghost fn cbor_match_string_elim_payload_aux
+  (c: cbor_string)
+  (p: perm)
+  (r: Ghost.erased raw_data_item { String? r })
+  (_: unit)
+requires
+  pure (
+    String?.typ r == c.cbor_string_type /\
+    String?.len r == ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) })) **
+  S.pts_to c.cbor_string_ptr #(p `perm_mul` c.cbor_string_perm) (String?.v r)
+ensures
+  cbor_match_string c p r
+{
+  fold (cbor_match_string c p r)
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_match_string_elim_payload
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (String? v)
+returns res: S.slice U8.t
+ensures exists* p' v' .
+  S.pts_to res #p' v' **
+  trade (S.pts_to res #p' v') (cbor_match p c v) **
+  pure (String? v /\ v' == String?.v v)
+{
+  cbor_match_cases c;
+  let c' = CBOR_Case_String?.v c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
+  unfold (cbor_match_string c' p v);
+  Trade.intro _ _ _ (cbor_match_string_elim_payload_aux c' p v);
+  Trade.trans _ _ (cbor_match p c v);
+  c'.cbor_string_ptr
+}
+```
+
+let cbor_match_eq_tagged
+  (pm: perm)
+  (ct: cbor_tagged)
+  (r: raw_data_item)
+: Lemma
+  (requires (Tagged? r))
+  (ensures 
+    (cbor_match pm (CBOR_Case_Tagged ct) r ==
+    cbor_match_tagged ct pm r cbor_match
+  ))
+=
+  let Tagged tag v = r in
+  assert_norm (
+    cbor_match pm (CBOR_Case_Tagged ct) (Tagged tag v) ==
+      cbor_match_tagged ct pm (Tagged tag v) cbor_match
+  )
+
+inline_for_extraction
+```pulse
+fn cbor_match_tagged_get_tag
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Tagged? v)
+returns res: raw_uint64
+ensures
+  cbor_match p c v ** pure (Tagged? v /\ res == Tagged?.tag v)
+{
+  cbor_match_cases c;
+  match c {
+    CBOR_Case_Tagged c' -> {
+      cbor_match_eq_tagged p c' v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_tagged c' p v cbor_match);
+      unfold (cbor_match_tagged c' p v cbor_match);
+      fold (cbor_match_tagged c' p v cbor_match);
+      Trade.elim _ _;
+      c'.cbor_tagged_tag
+    }
+    CBOR_Case_Serialized_Tagged c' -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_serialized_tagged c' p v);
+      unfold (cbor_match_serialized_tagged c' p v);
+      fold (cbor_match_serialized_tagged c' p v);
+      Trade.elim _ _;
+      c'.cbor_serialized_header
+    }
+  }
+}
+```
+
+let cbor_match_eq_array
+  (pm: perm)
+  (ct: cbor_array)
+  (r: raw_data_item)
+: Lemma
+  (requires (Array? r))
+  (ensures 
+    cbor_match pm (CBOR_Case_Array ct) r ==
+    cbor_match_array ct pm r cbor_match
+  )
+=
+  assert_norm (cbor_match pm (CBOR_Case_Array ct) (Array (Array?.len r) (Array?.v r)) ==
+    cbor_match_array ct pm (Array (Array?.len r) (Array?.v r)) cbor_match
+  )
+
+inline_for_extraction
+```pulse
+fn cbor_match_array_get_length
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Array? v)
+returns res: raw_uint64
+ensures
+  cbor_match p c v ** pure (Array? v /\ res == Array?.len v)
+{
+  cbor_match_cases c;
+  match c {
+    CBOR_Case_Array c' -> {
+      cbor_match_eq_array p c' v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_array c' p v cbor_match);
+      unfold (cbor_match_array c' p v cbor_match);
+      fold (cbor_match_array c' p v cbor_match);
+      Trade.elim _ _;
+      c'.cbor_array_length
+    }
+    CBOR_Case_Serialized_Array c' -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_serialized_array c' p v);
+      unfold (cbor_match_serialized_array c' p v);
+      fold (cbor_match_serialized_array c' p v);
+      Trade.elim _ _;
+      c'.cbor_serialized_header
+    }
+  }
+}
+```
+
+let cbor_match_eq_map
+  (pm: perm)
+  (ct: cbor_map)
+  (r: raw_data_item)
+: Lemma
+  (requires (Map? r))
+  (ensures 
+    cbor_match pm (CBOR_Case_Map ct) r ==
+    cbor_match_map0 ct pm r cbor_match
+  )
+=
+  assert_norm (cbor_match pm (CBOR_Case_Map ct) (Map (Map?.len r) (Map?.v r)) ==
+    cbor_match_map0 ct pm (Map (Map?.len r) (Map?.v r)) cbor_match
+  )
+
+inline_for_extraction
+```pulse
+fn cbor_match_map_get_length
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (Map? v)
+returns res: raw_uint64
+ensures
+  cbor_match p c v ** pure (Map? v /\ res == Map?.len v)
+{
+  cbor_match_cases c;
+  match c {
+    CBOR_Case_Map c' -> {
+      cbor_match_eq_map p c' v;
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_map0 c' p v cbor_match);
+      unfold (cbor_match_map0 c' p v cbor_match);
+      fold (cbor_match_map0 c' p v cbor_match);
+      Trade.elim _ _;
+      c'.cbor_map_length
+    }
+    CBOR_Case_Serialized_Map c' -> {
+      Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_serialized_map c' p v);
+      unfold (cbor_match_serialized_map c' p v);
+      fold (cbor_match_serialized_map c' p v);
+      Trade.elim _ _;
+      c'.cbor_serialized_header
+    }
+  }
 }
 ```
 
