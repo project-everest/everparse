@@ -657,14 +657,15 @@ fn reader_of_leaf_reader
 ```
 
 inline_for_extraction
-let l2r_writer
+let l2r_writer_for
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
   (#k: parser_kind)
   (#p: parser k t)
   (s: serializer p)
-= (x': t') ->
-  (#x: Ghost.erased t) ->
+  (x': t')
+  (x: Ghost.erased t)
+=
   (out: slice byte) ->
   (offset: SZ.t) ->
   (#v: Ghost.erased bytes) ->
@@ -681,6 +682,17 @@ let l2r_writer
       Seq.slice v' 0 (SZ.v offset) `Seq.equal` Seq.slice v 0 (SZ.v offset) /\
       Seq.slice v' (SZ.v offset) (SZ.v res) `Seq.equal` bs
     ))
+
+inline_for_extraction
+let l2r_writer
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+= (x': t') ->
+  (#x: Ghost.erased t) ->
+  l2r_writer_for vmatch s x' x
 
 ```pulse
 fn l2r_writer_ext

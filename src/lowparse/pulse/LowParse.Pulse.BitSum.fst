@@ -56,3 +56,28 @@ let read_bitsum'
         (read_synth_cont_ifthenelse #(bitsum'_type b))
         (read_synth_cont_init)
     )
+
+inline_for_extraction
+```pulse
+fn l2r_write_bitsum'
+  (#t: eqtype)
+  (#tot: pos)
+  (#cl: uint_t tot t)
+  (#b: bitsum' cl tot)
+  (sr: synth_bitsum'_recip_t b)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: l2r_leaf_writer s)
+: (l2r_leaf_writer u#0 #(bitsum'_type b) #(parse_filter_kind k) #(parse_bitsum' b p) (serialize_bitsum' b s))
+= (x: _)
+  (out: _)
+  (offset: _)
+  (#v: Ghost.erased bytes)
+{
+  serialize_bitsum'_eq b s x;
+  synth_bitsum'_injective b;
+  synth_bitsum'_recip_inverse b;
+  w (sr x) out offset
+}
+```

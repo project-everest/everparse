@@ -1183,6 +1183,21 @@ fn l2r_leaf_write_synth
 }
 ```
 
+inline_for_extraction
+let mk_synth
+  (#t1 #t2: Type)
+  (f: (t1 -> Tot t2))
+  (x: t1)
+: Tot (y: t2 { y == f x })
+= f x
+
+inline_for_extraction
+let l2r_leaf_write_synth'
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (w: l2r_leaf_writer u#0 s1)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
+: l2r_leaf_writer u#0 #t2 #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
+= l2r_leaf_write_synth w f2 f1 (mk_synth f1)
+
 let vmatch_synth
   (#tl: Type)
   (#th1 #th2: Type)
@@ -1232,6 +1247,32 @@ fn l2r_write_synth
   unfold (vmatch_synth vmatch f1 x' x);
   let res = w x' out offset;
   fold (vmatch_synth vmatch f1 x' x);
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn l2r_write_synth2
+  (#t: Type0) (#t1: Type0) (#t2: Type0)
+  (vmatch: t -> t2 -> slprop)
+  (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: l2r_writer (vmatch_synth vmatch f2) s1)
+: l2r_writer #t #t2 vmatch #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
+= (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  serialize_synth_eq p1 f2 s1 f1 () x;
+  Trade.rewrite_with_trade
+    (vmatch x' x)
+    (vmatch x' (f2 (f1 x)));
+  fold (vmatch_synth vmatch f2 x' (f1 x));
+  let res = w x' out offset;
+  unfold (vmatch_synth vmatch f2 x' (f1 x));
+  Trade.elim _ _;
   res
 }
 ```
