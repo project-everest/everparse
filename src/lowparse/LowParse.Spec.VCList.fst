@@ -19,7 +19,7 @@ let parse_nlist
 : Tot (y: parser (parse_nlist_kind n k) (nlist n t) { y == parse_nlist' n p } )
 = parse_nlist' n p
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 64 --fuel 2 --ifuel 2"
 #restart-solver
 
 let rec parse_nlist_sum
