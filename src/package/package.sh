@@ -260,7 +260,7 @@ make_everparse() {
     # Download and build the latest z3 for test case generation purposes
     if ! $is_windows ; then
         if ! [[ -d z3-latest ]] ; then
-            git clone https://github.com/Z3Prover/z3 z3-latest
+            git clone --branch z3-4.13.0 https://github.com/Z3Prover/z3 z3-latest
         fi
         z3_latest_dir="$PWD/everparse/z3-latest"
         mkdir -p "$z3_latest_dir"
