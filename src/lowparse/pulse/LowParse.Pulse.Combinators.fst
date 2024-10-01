@@ -1070,6 +1070,110 @@ fn l2r_write_dtuple2
 }
 ```
 
+let vmatch_dep_proj2
+  (#tl #th1: Type)
+  (#th2: th1 -> Type)
+  (vmatch: tl -> dtuple2 th1 th2 -> slprop)
+  (xh1: th1)
+  (xl: tl)
+  (xh2: th2 xh1)
+: Tot slprop
+= vmatch xl (| xh1, xh2 |)
+
+inline_for_extraction
+```pulse
+fn l2r_write_dtuple2_recip
+  (#tl #th1: Type)
+  (#th2: th1 -> Type)
+  (#vmatch: tl -> dtuple2 th1 th2 -> slprop)
+  (#vmatch1: tl -> th1 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (w1: l2r_writer vmatch1 s1)
+  (phi: (xl: tl) -> (xh: Ghost.erased (dtuple2 th1 th2)) -> stt_ghost unit emp_inames
+    (vmatch xl xh)
+    (fun _ -> vmatch1 xl (dfst xh) ** trade (vmatch1 xl (dfst xh)) (vmatch xl xh))
+  )
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#k2: Ghost.erased parser_kind)
+  (#p2: (x: th1) -> parser k2 (th2 x))
+  (#s2: (x: th1) -> serializer (p2 x))
+  (w2: (xh1: Ghost.erased th1) -> l2r_writer (vmatch_dep_proj2 vmatch xh1) (s2 xh1))
+: l2r_writer #tl #(dtuple2 th1 th2) vmatch #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
+= (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  serialize_dtuple2_eq s1 s2 x;
+  phi x' x;
+  let res1 = w1 x' out offset;
+  Trade.elim _ _;
+  with v1 . assert (S.pts_to out v1);
+  Trade.rewrite_with_trade 
+    (vmatch x' x)
+    (vmatch x' (| dfst x, dsnd x |));
+  fold (vmatch_dep_proj2 vmatch (dfst x) x' (dsnd x));
+  let res2 = w2 (dfst x) x' out res1;
+  unfold (vmatch_dep_proj2 vmatch (dfst x) x' (dsnd x));
+  Trade.elim _ _;
+  with v2 . assert (S.pts_to out v2);
+  Seq.slice_slice v1 0 (SZ.v res1) (SZ.v offset) (SZ.v res1);
+  Seq.slice_slice v1 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
+  Seq.slice_slice v2 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
+  Seq.slice_slice v2 0 (SZ.v res1) 0 (SZ.v offset);
+  res2
+}
+```
+
+inline_for_extraction
+```pulse
+fn l2r_write_dtuple2_recip_explicit_header
+  (#tl #th1: Type)
+  (#th2: th1 -> Type)
+  (#vmatch: tl -> dtuple2 th1 th2 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (w1: l2r_leaf_writer s1)
+  (phi: (xl: tl) -> (xh: Ghost.erased (dtuple2 th1 th2)) -> stt th1
+    (vmatch xl xh)
+    (fun res -> vmatch xl xh ** pure (res == dfst xh))
+  )
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#k2: Ghost.erased parser_kind)
+  (#p2: (x: th1) -> parser k2 (th2 x))
+  (#s2: (x: th1) -> serializer (p2 x))
+  (w2: (xh1: th1) -> l2r_writer (vmatch_dep_proj2 vmatch xh1) (s2 xh1))
+: l2r_writer #tl #(dtuple2 th1 th2) vmatch #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
+= (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  serialize_dtuple2_eq s1 s2 x;
+  let xh1 = phi x' x;
+  let res1 = w1 xh1 out offset;
+  with v1 . assert (S.pts_to out v1);
+  Trade.rewrite_with_trade 
+    (vmatch x' x)
+    (vmatch x' (| xh1, dsnd x |));
+  fold (vmatch_dep_proj2 vmatch xh1 x' (dsnd x));
+  let res2 = w2 xh1 x' out res1;
+  unfold (vmatch_dep_proj2 vmatch xh1 x' (dsnd x));
+  Trade.elim _ _;
+  with v2 . assert (S.pts_to out v2);
+  Seq.slice_slice v1 0 (SZ.v res1) (SZ.v offset) (SZ.v res1);
+  Seq.slice_slice v1 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
+  Seq.slice_slice v2 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
+  Seq.slice_slice v2 0 (SZ.v res1) 0 (SZ.v offset);
+  res2
+}
+```
+
 inline_for_extraction
 ```pulse
 fn size_nondep_then
@@ -1253,10 +1357,10 @@ fn l2r_write_synth
 
 inline_for_extraction
 ```pulse
-fn l2r_write_synth2
+fn l2r_write_synth_recip
   (#t: Type0) (#t1: Type0) (#t2: Type0)
   (vmatch: t -> t2 -> slprop)
-  (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> Tot t1) { synth_inverse f2 f1 })
+  (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
   (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: l2r_writer (vmatch_synth vmatch f2) s1)
 : l2r_writer #t #t2 vmatch #k1 #(parse_synth p1 f2) (serialize_synth p1 f2 s1 f1 ())
 = (x': _)
@@ -1321,6 +1425,40 @@ fn l2r_write_filter
   unfold (vmatch_filter vmatch f x' x);
   let res = w x' #(Ghost.hide #t1 (Ghost.reveal x)) out offset;
   fold (vmatch_filter vmatch f x' x);
+  res
+}
+```
+
+let vmatch_filter_recip
+  (#tl: Type0)
+  (#th: Type0)
+  (f: th -> GTot bool)
+  (vmatch: tl -> parse_filter_refine f -> slprop)
+  (xl: tl)
+  (xh: th)
+: Tot slprop
+= exists* (xh' : parse_filter_refine f) . vmatch xl xh' ** pure (xh == xh')
+
+inline_for_extraction
+```pulse
+fn l2r_write_filter_recip
+  (#t: Type0) (#t1: Type0)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1)
+  (f: (t1 -> GTot bool))
+  (vmatch: t -> parse_filter_refine f -> slprop)
+  (w: l2r_writer (vmatch_filter_recip f vmatch) s1)
+: l2r_writer #t #(parse_filter_refine u#0 f) vmatch #(parse_filter_kind k1) #(parse_filter p1 f) (serialize_filter s1 f)
+= (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  fold (vmatch_filter_recip f vmatch x' x);
+  let res = w x' #(Ghost.hide (Ghost.reveal x)) out offset;
+  unfold (vmatch_filter_recip f vmatch x' x);
+  with xh . assert (vmatch x' xh);
+  rewrite (vmatch x' xh) as (vmatch x' x);
   res
 }
 ```
