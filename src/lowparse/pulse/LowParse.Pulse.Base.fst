@@ -717,6 +717,75 @@ fn l2r_writer_ext
 }
 ```
 
+inline_for_extraction
+```pulse
+fn l2r_writer_ifthenelse
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> l2r_writer vmatch s))
+  (iffalse: (squash (cond == false) -> l2r_writer vmatch s))
+: l2r_writer #t' #t vmatch #k #p s
+= (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  if (cond) {
+    iftrue () x' out offset
+  } else {
+    iffalse () x' out offset
+  }
+}
+```
+
+let vmatch_with_cond
+  (#tl #th: Type)
+  (vmatch: tl -> th -> slprop)
+  (cond: tl -> GTot bool)
+  (xl: tl)
+  (xh: th)
+: Tot slprop
+= vmatch xl xh ** pure (cond xl)
+
+let pnot (#t: Type) (cond: t -> GTot bool) (x: t) : GTot bool = not (cond x)
+
+inline_for_extraction
+```pulse
+fn l2r_writer_ifthenelse_low
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (cond: (t' -> bool))
+  (iftrue: l2r_writer (vmatch_with_cond vmatch cond) s)
+  (iffalse: l2r_writer (vmatch_with_cond vmatch (pnot cond)) s)
+: l2r_writer #t' #t vmatch #k #p s
+= (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  if (cond x') {
+    fold (vmatch_with_cond vmatch cond x' x);
+    let res = iftrue x' out offset;
+    unfold (vmatch_with_cond vmatch cond x' x);
+    res
+  } else {
+    fold (vmatch_with_cond vmatch (pnot cond) x' x);
+    let res = iffalse x' out offset;
+    unfold (vmatch_with_cond vmatch (pnot cond) x' x);
+    res
+  }
+}
+```
+
 let vmatch_and_const
   (#tl #th: Type)
   (const: slprop)
