@@ -614,6 +614,32 @@ ensures
 }
 ```
 
+inline_for_extraction
+```pulse
+fn cbor_match_string_elim_length
+  (c: cbor_raw)
+  (#p: perm)
+  (#v: Ghost.erased raw_data_item)
+requires
+  cbor_match p c v ** pure (String? v)
+returns res: raw_uint64
+ensures
+  cbor_match p c v ** pure (String? v /\ res == String?.len v)
+{
+  cbor_match_cases c;
+  let c' = CBOR_Case_String?.v c;
+  Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
+  unfold (cbor_match_string c' p v);
+  fold (cbor_match_string c' p v);
+  Trade.elim _ _;
+  let res = {
+    size = c'.cbor_string_size;
+    value = SZ.sizet_to_uint64 (S.len c'.cbor_string_ptr);
+  };
+  res
+}
+```
+
 ```pulse
 ghost fn cbor_match_string_elim_payload_aux
   (c: cbor_string)

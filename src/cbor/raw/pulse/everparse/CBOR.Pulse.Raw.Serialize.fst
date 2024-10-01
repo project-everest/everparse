@@ -83,10 +83,120 @@ assume val ser_body_for_array
   (r: Ghost.erased raw_data_item)
 : LP.l2r_writer_for (cbor_match p) serialize_raw_data_item c r
 
-assume val ser_body
+```pulse
+fn cbor_raw_get_header
+  (p: perm)
+  (xl: cbor_raw)
+  (xh: erased raw_data_item)
+requires
+      (cbor_match p xl xh)
+returns res: header
+ensures
+          cbor_match p xl xh **
+          pure (res == get_raw_data_item_header xh)
+{
+  cbor_match_cases xl;
+  if (CBOR_Case_Int? xl) {
+      let ty = cbor_match_int_elim_type xl;
+      let v = cbor_match_int_elim_value xl;
+      raw_uint64_as_argument ty v
+  }
+  else if (CBOR_Case_String? xl) {
+    let ty = cbor_match_string_elim_type xl;
+    let len = cbor_match_string_elim_length xl;
+    raw_uint64_as_argument ty len
+  }
+  else if (CBOR_Case_Tagged? xl || CBOR_Case_Serialized_Tagged? xl) {
+    let tag = cbor_match_tagged_get_tag xl;
+    raw_uint64_as_argument cbor_major_type_tagged tag
+  }
+  else if (CBOR_Case_Array? xl || CBOR_Case_Serialized_Array? xl) {
+    let len = cbor_match_array_get_length xl;
+    raw_uint64_as_argument cbor_major_type_array len
+  }
+  else if (CBOR_Case_Map? xl || CBOR_Case_Serialized_Map? xl) {
+    let len = cbor_match_map_get_length xl;
+    raw_uint64_as_argument cbor_major_type_map len
+  }
+  else {
+    let v = cbor_match_simple_elim xl;
+    simple_value_as_argument v
+  }
+}
+```
+
+let synth_raw_data_item_recip_synth_raw_data_item
+  (x: _)
+: Lemma
+  (synth_raw_data_item_recip (synth_raw_data_item x) == x)
+= assert (synth_raw_data_item (synth_raw_data_item_recip (synth_raw_data_item x)) == synth_raw_data_item x)
+
+inline_for_extraction
+```pulse
+fn cbor_raw_get_header'
+  (p: perm)
+  (xl: cbor_raw)
+  (xh: erased (dtuple2 header content))
+requires
+      (LP.vmatch_synth (cbor_match p) synth_raw_data_item xl (reveal xh))
+returns res: header
+ensures
+          LP.vmatch_synth (cbor_match p) synth_raw_data_item xl (reveal xh) **
+          pure (res == dfst (reveal xh))
+{
+  synth_raw_data_item_recip_synth_raw_data_item xh;
+  unfold (LP.vmatch_synth (cbor_match p) synth_raw_data_item xl (reveal xh));
+  let res = cbor_raw_get_header p xl _;
+  fold (LP.vmatch_synth (cbor_match p) synth_raw_data_item xl (reveal xh));
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn ser_payload
+  (f: ((p: perm) -> l2r_writer (cbor_match p) serialize_raw_data_item))
+  (p: perm)
+  (xh1: header)
+: l2r_writer #cbor_raw #(content xh1)
+        (LP.vmatch_dep_proj2
+            (LP.vmatch_synth
+                (cbor_match p)
+                synth_raw_data_item
+            )
+            xh1
+        )
+        #(parse_content_kind)
+        #(parse_content parse_raw_data_item xh1)
+        (serialize_content xh1)
+= (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  admit ()
+}
+```
+
+inline_for_extraction
+let ser_body
   (f: (p: perm) -> LP.l2r_writer (cbor_match p) serialize_raw_data_item)
   (p: perm)
 : LP.l2r_writer (cbor_match p) serialize_raw_data_item
+= LP.l2r_writer_ext #_ #_ #_ #_ #_ #serialize_raw_data_item_aux
+    (LP.l2r_write_synth_recip
+      _
+      synth_raw_data_item
+      synth_raw_data_item_recip
+      (LP.l2r_write_dtuple2_recip_explicit_header
+        write_header
+        (cbor_raw_get_header' p)
+        ()
+        (ser_payload f p)
+      )
+    )
+    (Classical.forall_intro parse_raw_data_item_eq; serialize_raw_data_item)
 
 let ser_pre
   (p: perm)
