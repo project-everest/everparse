@@ -717,6 +717,43 @@ fn l2r_writer_ext
 }
 ```
 
+let vmatch_ext
+  (#t' #t1 t2: Type)
+  (vmatch: t' -> t1 -> slprop)
+  (x': t')
+  (x2: t2)
+: Tot slprop
+= exists* (x1: t1) . vmatch x' x1 ** pure (t1 == t2 /\ x1 == x2)
+
+```pulse
+fn l2r_writer_ext_gen
+  (#t' #t1 #t2: Type0)
+  (#vmatch: t' -> t2 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1)
+  (w: l2r_writer (vmatch_ext t1 vmatch) s1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2 { t1 == t2 /\ (forall b . parse p1 b == parse p2 b) })
+: l2r_writer #t' #t2 vmatch #k2 #p2 s2
+= (x': t')
+  (#x: Ghost.erased t2)
+  (out: slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  let x1 : Ghost.erased t1 = Ghost.hide #t1 (Ghost.reveal #t2 x);
+  serializer_unique_strong s1 s2 x1;
+  fold (vmatch_ext t1 vmatch x' x1);
+  let res = w x' out offset;
+  unfold (vmatch_ext t1 vmatch x' x1);
+  with x2 . assert (vmatch x' x2);
+  rewrite (vmatch x' x2) as (vmatch x' x);
+  res
+}
+```
+
 inline_for_extraction
 ```pulse
 fn l2r_writer_ifthenelse
