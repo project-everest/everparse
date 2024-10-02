@@ -892,7 +892,7 @@ fn l2r_writer_lens
   (#vmatch1: t1' -> t -> slprop)
   (#vmatch2: t2' -> t -> slprop)
   (lens: vmatch_lens vmatch1 vmatch2)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (#s: serializer p)
   (w: l2r_writer vmatch2 s)
@@ -1177,3 +1177,10 @@ fn compute_remaining_size_constant_size
   }
 }
 ```
+
+inline_for_extraction
+noeq
+type with_perm (t: Type) = {
+  v: t;
+  p: perm
+}

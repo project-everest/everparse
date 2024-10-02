@@ -8,18 +8,16 @@ module SZ = FStar.SizeT
 
 let pts_to_seqbytes
   (n: nat)
-  (p: perm)
-  (s: S.slice byte)
+  (s: with_perm (S.slice byte))
   (v: Seq.lseq byte n)
 : Tot slprop
-= exists* (v': Seq.seq byte) . S.pts_to s #p v' ** pure (v' == v)
+= exists* (v': Seq.seq byte) . S.pts_to s.v #s.p v' ** pure (v' == v)
 
 inline_for_extraction
 ```pulse
 fn l2r_write_lseq_bytes_copy
   (n: Ghost.erased nat)
-  (p: perm)
-: l2r_writer #_ #_ (pts_to_seqbytes n p) #_ #_ (serialize_lseq_bytes n)
+: l2r_writer #_ #_ (pts_to_seqbytes n) #_ #_ (serialize_lseq_bytes n)
 =
   (x': _)
   (#x: _)
@@ -27,10 +25,10 @@ fn l2r_write_lseq_bytes_copy
   (offset: _)
   (#v: _)
 {
-  unfold (pts_to_seqbytes n p x' x);
+  unfold (pts_to_seqbytes n x' x);
   S.pts_to_len out;
-  S.pts_to_len x';
-  let length = S.len x';
+  S.pts_to_len x'.v;
+  let length = S.len x'.v;
   let sp1 = S.split true out offset;
   match sp1 {
     SlicePair sp11 sp12 -> {
@@ -43,8 +41,8 @@ fn l2r_write_lseq_bytes_copy
           unfold (S.split_post sp12 1.0R v12 length sp2);
           unfold (S.split_post' sp12 1.0R v12 length sp21 sp22);
           S.pts_to_len sp21;
-          S.copy sp21 x';
-          fold (pts_to_seqbytes n p x' x);
+          S.copy sp21 x'.v;
+          fold (pts_to_seqbytes n x' x);
           S.join sp21 sp22 sp12;
           S.join sp11 sp12 out;
           SZ.add offset length;
