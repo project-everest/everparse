@@ -152,13 +152,10 @@ ensures
 }
 ```
 
-inline_for_extraction
-```pulse
-fn ser_payload
-  (f: ((p: perm) -> l2r_writer (cbor_match p) serialize_raw_data_item))
+let match_cbor_payload
   (p: perm)
   (xh1: header)
-: l2r_writer #cbor_raw #(content xh1)
+=
         (LP.vmatch_dep_proj2
             (LP.vmatch_synth
                 (cbor_match p)
@@ -166,18 +163,145 @@ fn ser_payload
             )
             xh1
         )
-        #(parse_content_kind)
-        #(parse_content parse_raw_data_item xh1)
-        (serialize_content xh1)
-= (x': _)
-  (#x: _)
-  (out: _)
-  (offset: _)
-  (#v: _)
+
+module U64 = FStar.UInt64
+
+#push-options "--print_implicits"
+
+module Trade = Pulse.Lib.Trade.Util
+
+```pulse
+ghost
+fn ser_payload_string_lens_aux
+  (p: perm)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string))
+  (xl: cbor_raw)
+  (xh: content xh1)
+requires
+  (vmatch_ext
+      (Seq.Properties.lseq byte
+                  (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                          (get_header_long_argument xh1))))
+      (match_cbor_payload p xh1) xl xh
+  )
+returns xh': Ghost.erased raw_data_item
+ensures
+  (cbor_match p xl xh' **
+    Trade.trade
+      (cbor_match p xl xh')
+      (vmatch_ext
+        (Seq.Properties.lseq byte
+          (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+            (get_header_long_argument xh1))))
+        (match_cbor_payload p xh1) xl xh
+      ) **
+      pure (synth_raw_data_item_recip xh' == (| xh1, xh |))
+  )
 {
   admit ()
 }
 ```
+
+```pulse
+ghost
+fn pts_to_seqbytes_intro
+  (n: nat)
+  (p: perm)
+  (s: S.slice byte)
+  (v: bytes)
+requires
+  S.pts_to s #p v ** pure (Seq.length v == n)
+returns v': Seq.lseq byte n
+ensures
+  LowParse.Pulse.SeqBytes.pts_to_seqbytes n p s v' **
+  Trade.trade
+    (LowParse.Pulse.SeqBytes.pts_to_seqbytes n p s v')
+    (S.pts_to s #p v)
+{
+  let v' : Seq.lseq byte n = v;
+  fold (LowParse.Pulse.SeqBytes.pts_to_seqbytes n p s v');
+  ghost fn aux (_: unit)
+    requires emp ** LowParse.Pulse.SeqBytes.pts_to_seqbytes n p s v'
+    ensures S.pts_to s #p v
+  {
+    unfold (LowParse.Pulse.SeqBytes.pts_to_seqbytes n p s v')
+  };
+  Trade.intro _ _ _ aux;
+  v'
+}
+```
+
+inline_for_extraction
+```pulse
+fn ser_payload_string_lens
+  (p: perm)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string))
+: 
+vmatch_lens #cbor_raw
+  #(S.slice byte)
+  #(Seq.Properties.lseq byte
+              (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                      (get_header_long_argument xh1))))
+  (vmatch_ext
+      (Seq.Properties.lseq byte
+                  (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                          (get_header_long_argument xh1))))
+      (match_cbor_payload p xh1))
+  (LowParse.Pulse.SeqBytes.pts_to_seqbytes
+              (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                      (get_header_long_argument xh1)))
+      p)
+= (x1': _)
+  (x: _)
+{
+  let xh' = ser_payload_string_lens_aux p xh1 sq x1' x;
+  let res = cbor_match_string_elim_payload x1';
+  Trade.trans _ (cbor_match p x1' xh') _;
+  S.pts_to_len res;
+  pts_to_seqbytes_intro
+    (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                          (get_header_long_argument xh1)))
+    p
+    res
+    _;
+  Trade.trans
+    (LowParse.Pulse.SeqBytes.pts_to_seqbytes
+              (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                      (get_header_long_argument xh1)))
+      p res _)
+    _ _;
+  res
+}
+```
+
+inline_for_extraction
+let ser_payload_string
+  (p: perm)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string))
+: l2r_writer (match_cbor_payload p xh1) (serialize_content xh1)
+= l2r_writer_ext_gen
+    (l2r_writer_lens
+      (ser_payload_string_lens p xh1 sq)
+      (LowParse.Pulse.SeqBytes.l2r_write_lseq_bytes_copy
+        (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+        p
+      )
+    )
+    (serialize_content xh1)
+
+inline_for_extraction
+let ser_payload
+  (f: ((p: perm) -> l2r_writer (cbor_match p) serialize_raw_data_item))
+  (p: perm)
+  (xh1: header)
+: l2r_writer (match_cbor_payload p xh1) (serialize_content xh1)
+= l2r_writer_ifthenelse _ _
+    (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)
+    (ser_payload_string p xh1)
+    (magic ())
 
 inline_for_extraction
 let ser_body
