@@ -1,6 +1,6 @@
-module CBOR.Pulse.Raw.Match.Serialized
-open CBOR.Spec.Raw.Format
-open CBOR.Pulse.Raw.Format
+module CBOR.Pulse.Raw.Format.Match
+open CBOR.Spec.Raw.EverParse
+open CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Pulse.VCList
 
 module U64 = FStar.UInt64

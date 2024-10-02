@@ -1,4 +1,4 @@
-module CBOR.Pulse.Raw.Serialized
+module CBOR.Pulse.Raw.Format.Serialized
 include CBOR.Pulse.Raw.Match
 open CBOR.Pulse.Raw.Iterator
 open CBOR.Spec.Raw.Base

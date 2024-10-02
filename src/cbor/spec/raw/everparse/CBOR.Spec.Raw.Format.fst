@@ -1,5 +1,5 @@
-module CBOR.Spec.Raw.Order
-module F = CBOR.Spec.Raw.Format
+module CBOR.Spec.Raw.Format
+module F = CBOR.Spec.Raw.EverParse
 module M = CBOR.Spec.Raw.Map
 module LP = LowParse.Spec.Base
 

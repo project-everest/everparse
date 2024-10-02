@@ -1,5 +1,5 @@
 module CBOR.Spec.Raw.Sort
-include CBOR.Spec.Raw.Order
+include CBOR.Spec.Raw.Format
 open CBOR.Spec.Util
 
 noextract [@@noextract_to "krml"]

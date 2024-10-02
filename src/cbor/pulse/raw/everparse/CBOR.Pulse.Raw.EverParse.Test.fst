@@ -1,7 +1,7 @@
-module CBOR.Pulse.Raw.Test
+module CBOR.Pulse.Raw.EverParse.Test
 open LowParse.Spec.Base
-open CBOR.Spec.Raw.Format
-open CBOR.Pulse.Raw.Format
+open CBOR.Spec.Raw.EverParse
+open CBOR.Pulse.Raw.EverParse.Format
 open Pulse.Lib.Slice open Pulse.Lib.Pervasives open Pulse.Lib.Trade
 open LowParse.Pulse.Base
 open Pulse.Lib.Slice

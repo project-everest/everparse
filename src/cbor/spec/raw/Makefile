@@ -1,6 +1,6 @@
 all: verify
 
-EVERCBOR_SRC_PATH = $(realpath ../..)
+EVERCBOR_SRC_PATH = $(realpath ../../..)
 
 INCLUDE_PATHS += $(realpath ..)
 

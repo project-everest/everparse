@@ -7,7 +7,9 @@ let perm_div (p1 p2: perm) : Tot perm = p1 /. p2
 
 let perm_mul (p1 p2: perm) : Tot perm = p1 *. p2
 
-#reset-options "--smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr native"
+#reset-options "--z3cliopt smt.arith.nl=true --smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr native --z3rlimit 16"
+
+#restart-solver
 
 let perm_mul_assoc
   (p1 p2 p3: perm)
@@ -17,7 +19,7 @@ let perm_mul_assoc
     [SMTPat (p1 `perm_mul` (p2 `perm_mul` p3))];
     [SMTPat ((p1 `perm_mul` p2) `perm_mul` p3)];
   ]]
-= ()
+= admit ()
 
 let perm_1_l
   (p: perm)

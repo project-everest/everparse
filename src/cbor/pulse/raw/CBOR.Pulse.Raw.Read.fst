@@ -1,7 +1,7 @@
 module CBOR.Pulse.Raw.Read
 include CBOR.Pulse.Raw.Match
 open CBOR.Pulse.Raw.Iterator
-open CBOR.Pulse.Raw.Serialized
+open CBOR.Pulse.Raw.Format.Serialized
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Trade

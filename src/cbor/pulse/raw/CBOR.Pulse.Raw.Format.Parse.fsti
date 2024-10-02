@@ -1,6 +1,6 @@
-module CBOR.Pulse.Raw.Parse
+module CBOR.Pulse.Raw.Format.Parse
 include CBOR.Pulse.Raw.Match
-open CBOR.Spec.Raw.Order
+open CBOR.Spec.Raw.Format
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Trade
 open Pulse.Lib.Slice

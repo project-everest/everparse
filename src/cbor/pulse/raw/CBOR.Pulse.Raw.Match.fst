@@ -1,5 +1,5 @@
 module CBOR.Pulse.Raw.Match
-include CBOR.Pulse.Raw.Match.Serialized
+include CBOR.Pulse.Raw.Format.Match
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Trade

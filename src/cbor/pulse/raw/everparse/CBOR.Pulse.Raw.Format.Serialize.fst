@@ -1,9 +1,9 @@
-module CBOR.Pulse.Raw.Serialize
+module CBOR.Pulse.Raw.Format.Serialize
 open Pulse.Lib.Pervasives
-open CBOR.Pulse.Raw.Serialized.Base
-friend CBOR.Spec.Raw.Order
-open CBOR.Spec.Raw.Format
-open CBOR.Pulse.Raw.Format
+open CBOR.Pulse.Raw.EverParse.Serialized.Base
+friend CBOR.Spec.Raw.Format
+open CBOR.Spec.Raw.EverParse
+open CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Spec.Base
 open LowParse.Pulse.Base
 

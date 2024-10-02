@@ -1,5 +1,5 @@
-module CBOR.Pulse.Raw.Serialized.Base
-friend CBOR.Pulse.Raw.Match.Serialized
+module CBOR.Pulse.Raw.EverParse.Serialized.Base
+friend CBOR.Pulse.Raw.Format.Match
 
 module Trade = Pulse.Lib.Trade.Util
 

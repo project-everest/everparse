@@ -1,4 +1,4 @@
-module CBOR.Pulse.Raw.Iterator.Serialized
+module CBOR.Pulse.Raw.EverParse.Iterator
 open CBOR.Pulse.Raw.Util
 open CBOR.Pulse.Raw.Iterator
 open Pulse.Lib.Slice open Pulse.Lib.Pervasives open Pulse.Lib.Trade

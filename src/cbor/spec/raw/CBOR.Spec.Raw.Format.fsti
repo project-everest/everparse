@@ -14,7 +14,7 @@
    limitations under the License.
 *)
 
-module CBOR.Spec.Raw.Order
+module CBOR.Spec.Raw.Format
 include CBOR.Spec.Raw.Valid
 
 module U8 = FStar.UInt8

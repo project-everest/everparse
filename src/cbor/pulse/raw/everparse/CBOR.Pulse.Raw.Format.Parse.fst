@@ -1,8 +1,8 @@
-module CBOR.Pulse.Raw.Parse
-open CBOR.Pulse.Raw.Serialized.Base
-friend CBOR.Spec.Raw.Order
-open CBOR.Spec.Raw.Format
-open CBOR.Pulse.Raw.Format
+module CBOR.Pulse.Raw.Format.Parse
+open CBOR.Pulse.Raw.EverParse.Serialized.Base
+friend CBOR.Spec.Raw.Format
+open CBOR.Spec.Raw.EverParse
+open CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Spec.Base
 open LowParse.Pulse.Base
 
@@ -118,7 +118,7 @@ fn cbor_parse
 {
   cbor_parse_aux len v;
   let input1 = peek_trade_gen serialize_raw_data_item input 0sz len;
-  let res = CBOR.Pulse.Raw.Serialized.Base.cbor_read input1;
+  let res = cbor_read input1;
   Trade.trans _ _ (pts_to input #pm v);
   res
 }

@@ -1,7 +1,7 @@
 all: verify
 
 EVERCBOR_SRC_PATH = $(realpath ../../..)
-INCLUDE_PATHS += $(realpath ..) $(realpath ../..)
+INCLUDE_PATHS += $(realpath ..) $(realpath ../../spec) $(realpath ../../spec/raw)
 ALREADY_CACHED := *,-CBOR.Pulse.Raw,
 
 include $(EVERCBOR_SRC_PATH)/pulse.Makefile

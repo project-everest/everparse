@@ -1,11 +1,11 @@
-module CBOR.Pulse.Raw.Serialized.Base
+module CBOR.Pulse.Raw.EverParse.Serialized.Base
 include CBOR.Pulse.Raw.Match
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
 
 open Pulse.Lib.Slice open Pulse.Lib.Pervasives open Pulse.Lib.Trade
-open CBOR.Spec.Raw.Format
-open CBOR.Pulse.Raw.Format
+open CBOR.Spec.Raw.EverParse
+open CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Pulse.Combinators
 
 module PM = Pulse.Lib.SeqMatch
