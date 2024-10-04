@@ -175,7 +175,89 @@ fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t #_ #_ 
 }
 ```
 
-assume val cbor_raw_sorted : LowParse.Pulse.Recursive.impl_pred_t serialize_raw_data_item (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order)
+let impl_order_t
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (order: (t -> t -> bool))
+=
+    (a1: slice byte) ->
+    (a2: slice byte) ->
+    (#p1: perm) ->
+    (#p2: perm) ->
+    (#v1: Ghost.erased t) ->
+    (#v2: Ghost.erased t) ->
+    stt bool
+      (pts_to_serialized s a1 #p1 v1 ** pts_to_serialized s a2 #p2 v2)
+      (fun res -> pts_to_serialized s a1 #p1 v1 ** pts_to_serialized s a2 #p2 v2 ** pure (res == order v1 v2))
+
+assume val nlist_sorted
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (order: Ghost.erased (t -> t -> bool))
+  (impl_order: impl_order_t s order)
+  (n: SZ.t)
+  (a: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (LowParse.Spec.VCList.nlist (SZ.v n) t))
+: stt bool
+    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) s) a #pm v)
+    (fun res -> pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) s) a #pm v ** pure (res == List.Tot.sorted order v))
+
+assume val impl_deterministically_encoded_cbor_map_key_order : impl_order_t (LowParse.Pulse.Combinators.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) (map_entry_order deterministically_encoded_cbor_map_key_order raw_data_item)
+
+```pulse
+fn cbor_raw_sorted (_: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred_t #_ #_ #_ serialize_raw_data_item (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order)
+= (a: _)
+  (#pm: _)
+  (#va: _)
+{
+  Classical.forall_intro parse_raw_data_item_eq;
+  pts_to_serialized_ext_trade
+    serialize_raw_data_item
+    serialize_raw_data_item_aux
+    a;
+  LowParse.Pulse.Combinators.pts_to_serialized_synth_l2r_trade
+    (LowParse.Spec.Combinators.serialize_dtuple2 serialize_header serialize_content)
+    synth_raw_data_item
+    synth_raw_data_item_recip
+    a;
+  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item a #pm va);
+  with va' . assert (pts_to_serialized (LowParse.Spec.Combinators.serialize_dtuple2 serialize_header serialize_content) a #pm va');
+  let spl = LowParse.Pulse.Combinators.split_dtuple2 serialize_header (jump_header ()) serialize_content a;
+  match spl {
+    SlicePair ah ap -> {
+      unfold (LowParse.Pulse.Combinators.split_dtuple2_post serialize_header serialize_content a pm va' spl);
+      unfold (LowParse.Pulse.Combinators.split_dtuple2_post' serialize_header serialize_content a pm va' ah ap);
+      Trade.trans _ _ (pts_to_serialized serialize_raw_data_item a #pm va);
+      let h = read_header () ah;
+      if (get_header_major_type h = cbor_major_type_map) {
+        Trade.elim_hyp_l _ _ _;
+        with vp . assert (pts_to_serialized (serialize_content h) ap #pm vp);
+        let n = get_header_argument_as_uint64 h;
+        let k : Ghost.erased parser_kind = LowParse.Spec.Combinators.and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind;
+        let p : parser k (raw_data_item & raw_data_item) = LowParse.Spec.Combinators.nondep_then parse_raw_data_item parse_raw_data_item;
+        let s : serializer p = LowParse.Spec.Combinators.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item;
+        pts_to_serialized_ext_trade
+          (serialize_content h)
+          (LowParse.Spec.VCList.serialize_nlist (SZ.v (SZ.uint64_to_sizet n)) s)
+          ap;
+        Trade.trans _ _ (pts_to_serialized serialize_raw_data_item a #pm va);
+        let res = nlist_sorted s () (map_entry_order deterministically_encoded_cbor_map_key_order raw_data_item) (impl_deterministically_encoded_cbor_map_key_order) (SZ.uint64_to_sizet n) ap;
+        Trade.elim _ _;
+        res
+      } else {
+        Trade.elim _ _;
+        true
+      }
+    }
+  }
+}
+```
 
 ```pulse
 fn cbor_validate_det
@@ -206,7 +288,7 @@ fn cbor_validate_det
       Trade.elim _ _;
       0sz
     } else {
-      let check2 = impl_holds_on_raw_data_item f64 (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order) cbor_raw_sorted input1;
+      let check2 = impl_holds_on_raw_data_item f64 (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order) (cbor_raw_sorted f64) input1;
       Trade.elim _ _;
       if (not check2) {
         cbor_validate_det_fail v v1 (Seq.slice v (SZ.v len) (Seq.length v));
