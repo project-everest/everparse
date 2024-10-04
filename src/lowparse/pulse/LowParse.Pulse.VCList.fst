@@ -301,6 +301,31 @@ let nlist_match_array
     PM.seq_list_match c l (vmatch a) **
     pure (varray a == Some ar)
 
+```pulse
+ghost
+fn nlist_match_array_intro
+  (#tarray: Type0)
+  (#telem: Type0)
+  (#t: Type0)
+  (varray: (tarray -> GTot (option (with_perm (A.array telem)))))
+  (vmatch: (tarray -> telem -> t -> slprop))
+  (n: nat)
+  (a: tarray)
+  (l: nlist n t)
+  (ar: with_perm (A.array telem))
+  (c: Seq.seq telem)
+requires
+    (A.pts_to ar.v #ar.p c **
+      PM.seq_list_match c l (vmatch a) **
+      pure (varray a == Some ar)
+    )
+ensures
+    (nlist_match_array varray vmatch n a l)
+{
+  fold (nlist_match_array varray vmatch n a l)
+}
+```
+
 module GR = Pulse.Lib.GhostReference
 
 let serialize_nlist_singleton
