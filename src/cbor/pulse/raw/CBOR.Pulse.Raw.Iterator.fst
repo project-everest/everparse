@@ -3,7 +3,7 @@ open CBOR.Pulse.Raw.Util
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Trade
 
-module PM = Pulse.Lib.SeqMatch
+module PM = Pulse.Lib.SeqMatch.Util
 module A = Pulse.Lib.Array
 module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
@@ -213,44 +213,6 @@ type cbor_raw_iterator (elt: Type0) (ser: Type0) =
 | CBOR_Raw_Iterator_Slice of cbor_raw_slice_iterator elt
 | CBOR_Raw_Iterator_Serialized of ser
 
-```pulse
-ghost
-fn seq_list_match_cons_elim_trade
-  (#t #t': Type0)
-  (c: Seq.seq t)
-  (v: list t' { Cons? v \/ Seq.length c > 0 })
-  (item_match: (t -> (v': t' { v' << v }) -> slprop))
-requires
-    (PM.seq_list_match c v item_match)
-returns res: (squash (Cons? v /\ Seq.length c > 0))
-ensures
-    (item_match (Seq.head c) (List.Tot.hd v) **
-      PM.seq_list_match (Seq.tail c) (List.Tot.tl v) item_match **
-      trade
-        (item_match (Seq.head c) (List.Tot.hd v) **
-          PM.seq_list_match (Seq.tail c) (List.Tot.tl v) item_match
-        )
-        (PM.seq_list_match c v item_match)
-    )
-{
-  PM.seq_list_match_cons_elim c v item_match;
-  ghost
-  fn aux ()
-    requires emp **
-      (item_match (Seq.head c) (List.Tot.hd v) **
-          PM.seq_list_match (Seq.tail c) (List.Tot.tl v) item_match
-      )
-    ensures
-      (PM.seq_list_match c v item_match)
-  {
-    Seq.cons_head_tail c;
-    PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd v) (Seq.tail c) (List.Tot.tl v) item_match
-  };
-  Trade.intro _ _ _ aux;
-  ()
-}
-```
-
 let slice_split_right_postcond
   (#t: Type) (p: perm) (v: Ghost.erased (Seq.seq t)) (i: SZ.t) (v': Seq.seq t)
 : Tot prop
@@ -354,7 +316,7 @@ ensures
   with sq . assert (S.pts_to i.s #(pm `perm_mul` i.slice_perm) sq);
   PM.seq_list_match_length (elt_match (pm `perm_mul` i.payload_perm)) _ _;
   let res = Pulse.Lib.Slice.op_Array_Access i.s 0sz;
-  seq_list_match_cons_elim_trade _ l (elt_match (pm `perm_mul` i.payload_perm)); // 2: (elt_match _ (List.Tot.hd l) ** PM.seq_list_match _ (List.Tot.tl l) _) @==> PM.seq_list_match _ l _
+  PM.seq_list_match_cons_elim_trade _ l (elt_match (pm `perm_mul` i.payload_perm)); // 2: (elt_match _ (List.Tot.hd l) ** PM.seq_list_match _ (List.Tot.tl l) _) @==> PM.seq_list_match _ l _
 //  assert (elt_match (pm `perm_mul` i.payload_perm) res (List.Tot.hd l)); // FIXME: make this work, without the need for `rewrite ... sq`, see below
   let s' = slice_split_right i.s 1sz; // 3: S.pts_to s' _ @==> S.pts_to i.s _
   let i1 = { i with s = s' };
