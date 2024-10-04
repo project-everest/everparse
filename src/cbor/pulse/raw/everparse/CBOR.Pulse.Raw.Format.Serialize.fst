@@ -49,7 +49,6 @@ assume val write_header : l2r_leaf_writer serialize_header
 module SZ = FStar.SizeT
 module PM = Pulse.Lib.SeqMatch
 module A = Pulse.Lib.Array
-module S = Pulse.Lib.Slice
 
 let cbor_match_with_perm
   (x: with_perm cbor_raw)
@@ -341,7 +340,7 @@ let ser_payload_array_array_elem
 ```pulse
 ghost
 fn ser_payload_array_array_lens_aux
-  (f64: SZ.fits_u64)
+  (f64: squash SZ.fits_u64)
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in
     b.major_type = cbor_major_type_array))
@@ -441,7 +440,7 @@ ensures
 inline_for_extraction
 ```pulse
 fn ser_payload_array_array_lens
-  (f64: SZ.fits_u64)
+  (f64: squash SZ.fits_u64)
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in
     b.major_type = cbor_major_type_array))
@@ -467,7 +466,7 @@ vmatch_lens #_ #_ #_
 
 inline_for_extraction
 let ser_payload_array_array
-  (f64: SZ.fits_u64)
+  (f64: squash SZ.fits_u64)
   (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
@@ -487,7 +486,7 @@ let ser_payload_array_array
 
 inline_for_extraction
 let ser_payload_array
-  (f64: SZ.fits_u64)
+  (f64: squash SZ.fits_u64)
   (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
@@ -500,7 +499,7 @@ let ser_payload_array
 
 inline_for_extraction
 let ser_payload_not_string
-  (f64: SZ.fits_u64)
+  (f64: squash SZ.fits_u64)
   (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
   (xh1: header)
   (sq: squash (not (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
@@ -512,7 +511,7 @@ let ser_payload_not_string
 
 inline_for_extraction
 let ser_payload
-  (f64: SZ.fits_u64)
+  (f64: squash SZ.fits_u64)
   (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
   (xh1: header)
 : l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
@@ -523,7 +522,7 @@ let ser_payload
 
 inline_for_extraction
 let ser_body
-  (f64: SZ.fits_u64)
+  (f64: squash SZ.fits_u64)
   (f: LP.l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
 : LP.l2r_writer (cbor_match_with_perm) serialize_raw_data_item
 = LP.l2r_writer_ext #_ #_ #_ #_ #_ #serialize_raw_data_item_aux
@@ -611,7 +610,7 @@ ensures
 inline_for_extraction
 ```pulse
 fn ser_body'
-  (f64: SZ.fits_u64)
+  (f64: squash SZ.fits_u64)
   (f: (x': with_perm cbor_raw) -> (x: Ghost.erased raw_data_item) -> (out: S.slice LP.byte) -> (offset: SZ.t) -> (v: Ghost.erased LP.bytes) -> stt SZ.t (ser_pre x' x out offset v) (fun res -> ser_post x' x out offset v res))
   (x': with_perm cbor_raw)
   (x: Ghost.erased raw_data_item)
@@ -630,7 +629,7 @@ ensures
 
 ```pulse
 fn rec ser'
-  (f64: SZ.fits_u64)
+  (f64: squash SZ.fits_u64)
   (x': with_perm cbor_raw)
   (x: Ghost.erased raw_data_item)
   (out: S.slice LP.byte)
@@ -646,7 +645,31 @@ ensures
 }
 ```
 
-let ser (f64: SZ.fits_u64) (p: perm) : l2r_writer (cbor_match p) serialize_raw_data_item =
+let ser (f64: squash SZ.fits_u64) (p: perm) : l2r_writer (cbor_match p) serialize_raw_data_item =
   l2r_writer_lens
     (cbor_match_with_perm_lens p)
     (ser_fold (ser' f64))
+
+```pulse
+fn cbor_serialize
+  (x: cbor_raw)
+  (output: S.slice U8.t)
+  (#y: Ghost.erased raw_data_item)
+  (#pm: perm)
+requires
+    (exists* v . cbor_match pm x y ** S.pts_to output v ** pure (Seq.length (serialize_cbor y) <= SZ.v (S.len output)))
+returns res: SZ.t
+ensures exists* v . cbor_match pm x y ** S.pts_to output v ** pure (
+      let s = serialize_cbor y in
+      SZ.v res == Seq.length s /\
+      (exists v' . v `Seq.equal` (s `Seq.append` v'))
+    )
+{
+  let sq : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  S.pts_to_len output;
+  let res = ser sq _ x output 0sz;
+  with v . assert (S.pts_to output v);
+  Seq.lemma_split v (SZ.v res);
+  res
+}
+```
