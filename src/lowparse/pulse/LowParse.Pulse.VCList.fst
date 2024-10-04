@@ -290,15 +290,16 @@ let nlist_match_array
   (#tarray: Type0)
   (#telem: Type0)
   (#t: Type)
-  (varray: (tarray -> with_perm (A.array telem)))
+  (varray: (tarray -> GTot (option (with_perm (A.array telem)))))
   (vmatch: (tarray -> telem -> t -> slprop))
   (n: nat)
   (a: tarray)
   (l: LowParse.Spec.VCList.nlist n t)
 : Tot slprop
-= exists* c .
-    A.pts_to (varray a).v #(varray a).p c **
-    PM.seq_list_match c l (vmatch a)
+= exists* (ar: with_perm (A.array telem)) c .
+    A.pts_to ar.v #ar.p c **
+    PM.seq_list_match c l (vmatch a) **
+    pure (varray a == Some ar)
 
 module GR = Pulse.Lib.GhostReference
 
@@ -354,7 +355,7 @@ fn l2r_write_nlist_as_array
   (#tarray: Type0)
   (#telem: Type0)
   (#t: Type0)
-  (varray: (tarray -> with_perm (A.array telem)))
+  (varray: (tarray -> option (with_perm (A.array telem))))
   (vmatch: (tarray -> telem -> t -> slprop))
   (#k: Ghost.erased parser_kind)
   (#p: parser k t)
@@ -369,8 +370,8 @@ fn l2r_write_nlist_as_array
   (offset: _)
   (#v: _)
 {
-  let a = varray arr;
   unfold (nlist_match_array varray vmatch (SZ.v n) arr x);
+  let a = Some?.v (varray arr);
   with c . assert (A.pts_to a.v #a.p c);
   let pl1 : GR.ref (list t) = GR.alloc #(list t) [];
   let mut pres = offset;
