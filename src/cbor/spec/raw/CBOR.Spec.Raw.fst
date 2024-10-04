@@ -1,5 +1,5 @@
 module CBOR.Spec.Raw
-friend CBOR.Spec.Type
+friend CBOR.Spec.API.Type
 
 module R = CBOR.Spec.Raw.Sort
   

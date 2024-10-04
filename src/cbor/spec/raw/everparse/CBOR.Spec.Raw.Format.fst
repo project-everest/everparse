@@ -8,6 +8,20 @@ let serialize_cbor c = F.tot_serialize_raw_data_item c
 let serialize_cbor_inj c1 c2 s1 s2 =
   LP.serialize_strong_prefix #F.parse_raw_data_item_kind #_ #F.parse_raw_data_item F.serialize_raw_data_item c1 c2 s1 s2
 
+let parse_cbor x =
+  match F.tot_parse_raw_data_item x with
+  | None -> None
+  | Some (y, n) ->
+    LP.serializer_correct_implies_complete #F.parse_raw_data_item_kind F.tot_parse_raw_data_item F.tot_serialize_raw_data_item;
+    assert (Some? (LP.parse F.tot_parse_raw_data_item x));
+    Some (y, n)
+
+let parse_cbor_prefix x y =
+  LP.parse_strong_prefix #F.parse_raw_data_item_kind F.tot_parse_raw_data_item x y
+
+let serialize_parse_cbor x =
+  assert (Some? (LP.parse F.tot_parse_raw_data_item (serialize_cbor x)))
+
 let serialize_cbor_nonempty c =
   LP.tot_serialize_length F.tot_serialize_raw_data_item c
 

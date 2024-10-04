@@ -1,4 +1,4 @@
-module CBOR.Spec.Type
+module CBOR.Spec.API.Type
 
 module R = CBOR.Spec.Raw.Sort
 

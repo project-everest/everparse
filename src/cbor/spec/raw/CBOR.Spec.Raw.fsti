@@ -1,5 +1,5 @@
 module CBOR.Spec.Raw
-include CBOR.Spec.Type
+include CBOR.Spec.API.Type
 
 module R = CBOR.Spec.Raw.Valid
 module U = CBOR.Spec.Util
