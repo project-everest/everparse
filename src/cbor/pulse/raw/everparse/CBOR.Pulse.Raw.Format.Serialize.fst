@@ -51,31 +51,6 @@ module PM = Pulse.Lib.SeqMatch
 module A = Pulse.Lib.Array
 module S = Pulse.Lib.Slice
 
-let nlist_match_array
-  (#t': Type0)
-  (#t: Type)
-  (vmatch: (t' -> t -> slprop))
-  (n: nat)
-  (p: perm)
-  (a: A.array t')
-  (l: LowParse.Spec.VCList.nlist n t)
-: Tot slprop
-= exists* c .
-    A.pts_to a #p c **
-    PM.seq_list_match c l vmatch
-
-assume val l2r_write_nlist_as_array
-  (#t': Type0)
-  (#t: Type)
-  (vmatch: (t' -> t -> slprop))
-  (#k: Ghost.erased parser_kind)
-  (#p: parser k t)
-  (#s: serializer p)
-  (w: l2r_writer vmatch s { k.parser_kind_subkind == Some LP.ParserStrong })
-  (n: SZ.t)
-  (p: perm)
-: l2r_writer (nlist_match_array vmatch (SZ.v n) p) (LowParse.Spec.VCList.serialize_nlist (SZ.v n) s)
-
 let cbor_match_with_perm
   (x: with_perm cbor_raw)
   (y: raw_data_item)
@@ -103,12 +78,6 @@ fn cbor_match_with_perm_lens
   res
 }
 ```
-
-assume val ser_body_for_array
-  (f: LP.l2r_writer cbor_match_with_perm serialize_raw_data_item)
-  (c: with_perm cbor_raw { CBOR_Case_Array? c.v })
-  (r: Ghost.erased raw_data_item)
-: LP.l2r_writer_for cbor_match_with_perm serialize_raw_data_item c r
 
 ```pulse
 fn cbor_raw_get_header
@@ -338,17 +307,241 @@ let ser_payload_string
     (serialize_content xh1)
 
 inline_for_extraction
+let cbor_with_perm_case_array
+  (c: with_perm cbor_raw)
+: Tot bool
+= CBOR_Case_Array? c.v
+
+inline_for_extraction
+let cbor_with_perm_case_array_get
+  (c: with_perm cbor_raw)
+: Tot (option (with_perm (A.array cbor_raw)))
+= match c.v with
+  | CBOR_Case_Array a -> Some { v = a.cbor_array_ptr; p = perm_mul c.p a.cbor_array_array_perm }
+  | _ -> None
+
+let cbor_with_perm_case_array_match_elem
+  (c: with_perm cbor_raw)
+: (x: cbor_raw) ->
+  (y: raw_data_item) ->
+  Tot slprop
+= cbor_match
+    (perm_mul c.p (match c.v with CBOR_Case_Array a -> a.cbor_array_payload_perm | _ -> 1.0R (* dummy *) ))
+
+inline_for_extraction
+let ser_payload_array_array_elem
+  (f: l2r_writer cbor_match_with_perm serialize_raw_data_item)
+  (a: with_perm cbor_raw)
+: l2r_writer (cbor_with_perm_case_array_match_elem a) serialize_raw_data_item
+= l2r_writer_lens
+    (cbor_match_with_perm_lens _)
+    f
+
+assume val nlist_match_array_intro
+  (#tarray: Type0)
+  (#telem: Type0)
+  (#t: Type)
+  (varray: (tarray -> GTot (option (with_perm (A.array telem)))))
+  (vmatch: (tarray -> telem -> t -> slprop))
+  (n: nat)
+  (a: tarray)
+  (l: LowParse.Spec.VCList.nlist n t)
+  (ar: with_perm (A.array telem))
+  (c: Seq.seq telem)
+: stt_ghost unit emp_inames
+    (A.pts_to ar.v #ar.p c **
+      PM.seq_list_match c l (vmatch a) **
+      pure (varray a == Some ar)
+    )
+    (fun _ -> LowParse.Pulse.VCList.nlist_match_array varray vmatch n a l)
+
+#restart-solver
+```pulse
+ghost
+fn ser_payload_array_array_lens_aux
+  (f64: SZ.fits_u64)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in
+    b.major_type = cbor_major_type_array))
+  (xl: with_perm cbor_raw)
+  (xh: LowParse.Spec.VCList.nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte
+                          xh1)
+                      (get_header_long_argument xh1)))) raw_data_item)
+requires
+  (vmatch_ext (LowParse.Spec.VCList.nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte
+                          xh1)
+                      (get_header_long_argument xh1))))
+          raw_data_item)
+      (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array)
+      xl xh
+  )
+ensures
+  LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
+    cbor_with_perm_case_array_match_elem
+    (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1))))
+    xl xh **
+  Trade.trade
+    (LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
+      cbor_with_perm_case_array_match_elem
+      (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+        (get_header_long_argument xh1))))
+      xl xh)
+      (vmatch_ext (LowParse.Spec.VCList.nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte
+                                              xh1)
+                                              (get_header_long_argument xh1))))
+                  raw_data_item)
+                  (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array)
+                  xl xh
+      )
+{
+  unfold       (vmatch_ext (LowParse.Spec.VCList.nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte
+                                              xh1)
+                                              (get_header_long_argument xh1))))
+                  raw_data_item)
+                  (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array)
+                  xl xh
+      );
+  with xh2 . assert 
+    (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array xl xh2);
+  unfold (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array xl xh2);
+  let xh0' : raw_data_item' = (| xh1, xh2 |);
+  let xh0 = synth_raw_data_item xh0';
+  let a = CBOR_Case_Array?.v xl.v;
+  cbor_match_eq_array xl.p a xh0;
+  rewrite (match_cbor_payload xh1 xl xh2) as (cbor_match_array a xl.p xh0 cbor_match);
+  unfold (cbor_match_array a xl.p xh0 cbor_match);
+  let ar = Some?.v (cbor_with_perm_case_array_get xl);
+    nlist_match_array_intro cbor_with_perm_case_array_get
+      cbor_with_perm_case_array_match_elem
+      (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+        (get_header_long_argument xh1))))
+      xl xh
+      ar _
+    ;
+  ghost fn aux (_: unit)
+  requires emp **
+    LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
+      cbor_with_perm_case_array_match_elem
+      (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+        (get_header_long_argument xh1))))
+      xl xh
+  ensures
+    (vmatch_ext (LowParse.Spec.VCList.nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte
+                          xh1)
+                      (get_header_long_argument xh1))))
+          raw_data_item)
+      (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array)
+      xl xh
+    )
+  {
+    unfold (    LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
+      cbor_with_perm_case_array_match_elem
+      (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+        (get_header_long_argument xh1))))
+      xl xh
+    );
+    fold (cbor_match_array a xl.p xh0 cbor_match);
+    rewrite (cbor_match_array a xl.p xh0 cbor_match) as (match_cbor_payload xh1 xl xh2);
+    fold (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array xl xh2);
+    fold (vmatch_ext (LowParse.Spec.VCList.nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte
+                                              xh1)
+                                              (get_header_long_argument xh1))))
+                  raw_data_item)
+                  (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array)
+                  xl xh
+      );
+  };
+  Trade.intro _ _ _ aux
+}
+```
+
+inline_for_extraction
+```pulse
+fn ser_payload_array_array_lens
+  (f64: SZ.fits_u64)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in
+    b.major_type = cbor_major_type_array))
+:
+vmatch_lens #_ #_ #_
+  (vmatch_ext (LowParse.Spec.VCList.nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte
+                          xh1)
+                      (get_header_long_argument xh1))))
+          raw_data_item)
+      (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array))
+  (LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
+      cbor_with_perm_case_array_match_elem
+      (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+                  (get_header_long_argument xh1)))))
+=
+  (x1': _)
+  (x: _)
+{
+  ser_payload_array_array_lens_aux f64 xh1 sq x1' x;
+  x1'
+}
+```
+
+inline_for_extraction
+let ser_payload_array_array
+  (f64: SZ.fits_u64)
+  (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
+: l2r_writer (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array) (serialize_content xh1)
+= l2r_writer_ext_gen
+    (l2r_writer_lens
+      (ser_payload_array_array_lens f64 xh1 sq)
+      (LowParse.Pulse.VCList.l2r_write_nlist_as_array
+        cbor_with_perm_case_array_get
+        cbor_with_perm_case_array_match_elem
+        serialize_raw_data_item
+        (ser_payload_array_array_elem f)
+        (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+      )
+    )
+    (serialize_content xh1)
+
+inline_for_extraction
+let ser_payload_array
+  (f64: SZ.fits_u64)
+  (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
+: l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
+= l2r_writer_ifthenelse_low
+    _ _
+    cbor_with_perm_case_array
+    (ser_payload_array_array f64 f xh1 sq)
+    (magic ())
+
+inline_for_extraction
+let ser_payload_not_string
+  (f64: SZ.fits_u64)
+  (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (not (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
+: l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
+= l2r_writer_ifthenelse _ _
+    (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array)
+    (ser_payload_array f64 f xh1)
+    (magic ())
+
+inline_for_extraction
 let ser_payload
+  (f64: SZ.fits_u64)
   (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
   (xh1: header)
 : l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
 = l2r_writer_ifthenelse _ _
     (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)
     (ser_payload_string xh1)
-    (magic ())
+    (ser_payload_not_string f64 f xh1)
 
 inline_for_extraction
 let ser_body
+  (f64: SZ.fits_u64)
   (f: LP.l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
 : LP.l2r_writer (cbor_match_with_perm) serialize_raw_data_item
 = LP.l2r_writer_ext #_ #_ #_ #_ #_ #serialize_raw_data_item_aux
@@ -360,7 +553,7 @@ let ser_body
         write_header
         (cbor_raw_get_header')
         ()
-        (ser_payload f)
+        (ser_payload f64 f)
       )
     )
     (Classical.forall_intro parse_raw_data_item_eq; serialize_raw_data_item)
@@ -436,6 +629,7 @@ ensures
 inline_for_extraction
 ```pulse
 fn ser_body'
+  (f64: SZ.fits_u64)
   (f: (x': with_perm cbor_raw) -> (x: Ghost.erased raw_data_item) -> (out: S.slice LP.byte) -> (offset: SZ.t) -> (v: Ghost.erased LP.bytes) -> stt SZ.t (ser_pre x' x out offset v) (fun res -> ser_post x' x out offset v res))
   (x': with_perm cbor_raw)
   (x: Ghost.erased raw_data_item)
@@ -448,12 +642,13 @@ returns res: SZ.t
 ensures
   ser_post x' x out offset v res
 {
-  ser_unfold (ser_fold f) x' x out offset v;
+  ser_unfold (ser_body f64 (ser_fold f)) x' x out offset v;
 }
 ```
 
 ```pulse
 fn rec ser'
+  (f64: SZ.fits_u64)
   (x': with_perm cbor_raw)
   (x: Ghost.erased raw_data_item)
   (out: S.slice LP.byte)
@@ -465,11 +660,11 @@ returns res: SZ.t
 ensures
   ser_post x' x out offset v res
 {
-  ser_body' ser' x' x out offset v
+  ser_body' f64 (ser' f64) x' x out offset v
 }
 ```
 
-let ser (p: perm) : l2r_writer (cbor_match p) serialize_raw_data_item =
+let ser (f64: SZ.fits_u64) (p: perm) : l2r_writer (cbor_match p) serialize_raw_data_item =
   l2r_writer_lens
     (cbor_match_with_perm_lens p)
-    (ser_fold ser')
+    (ser_fold (ser' f64))
