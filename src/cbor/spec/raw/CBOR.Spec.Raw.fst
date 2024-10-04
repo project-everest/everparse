@@ -93,3 +93,9 @@ let mk_cbor_eq
       end
     in ()
   | _ -> ()
+
+let mk_det_raw_cbor c =
+  R.raw_data_item_sorted_optimal_valid R.deterministically_encoded_cbor_map_key_order c;
+  mk_cbor_equiv' c;
+  R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order c (mk_cbor c);
+  c

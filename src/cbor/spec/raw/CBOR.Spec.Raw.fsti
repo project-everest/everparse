@@ -2,6 +2,7 @@ module CBOR.Spec.Raw
 include CBOR.Spec.API.Type
 
 module R = CBOR.Spec.Raw.Valid
+module RS = CBOR.Spec.Raw.Sort
 module U = CBOR.Spec.Util
 
 val mk_cbor (r: R.raw_data_item) : Tot cbor
@@ -46,3 +47,35 @@ val mk_cbor_eq
   | R.Array _ v1, CArray v2 -> List.Tot.map mk_cbor v1 == v2
   | _ -> False
   ))
+
+val mk_det_raw_cbor (c: cbor) : Pure R.raw_data_item
+  (requires True)
+  (ensures fun y ->
+    R.raw_data_item_ints_optimal y /\
+    RS.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order y /\
+    R.valid_raw_data_item y /\
+    mk_cbor y == c
+  )
+
+let mk_det_raw_cbor_inj (c1 c2: cbor) : Lemma
+  (requires (mk_det_raw_cbor c1 == mk_det_raw_cbor c2))
+  (ensures (c1 == c2))
+= ()
+
+let mk_det_raw_cbor_inj_strong (c1 c2: cbor) : Lemma
+  (requires (R.raw_equiv (mk_det_raw_cbor c1) (mk_det_raw_cbor c2)))
+  (ensures (c1 == c2))
+= mk_cbor_equiv (mk_det_raw_cbor c1) (mk_det_raw_cbor c2)
+
+let mk_det_raw_cbor_mk_cbor (x: R.raw_data_item) : Lemma
+  (requires (
+    R.raw_data_item_ints_optimal x /\
+    RS.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order x
+  ))
+  (ensures (
+    R.valid_raw_data_item x /\
+    mk_det_raw_cbor (mk_cbor x) == x
+  ))
+= R.raw_data_item_sorted_optimal_valid RS.deterministically_encoded_cbor_map_key_order x;
+  mk_cbor_equiv (mk_det_raw_cbor (mk_cbor x)) x;
+  R.raw_equiv_sorted_optimal RS.deterministically_encoded_cbor_map_key_order (mk_det_raw_cbor (mk_cbor x)) x
