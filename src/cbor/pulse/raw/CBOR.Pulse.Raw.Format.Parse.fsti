@@ -8,6 +8,7 @@ open Pulse.Lib.Slice
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
+module R = CBOR.Spec.Raw.Valid
 
 val cbor_validate
   (input: slice U8.t)
@@ -19,6 +20,18 @@ val cbor_validate
       if SZ.v res = 0
       then (~ (exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2))
       else exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ SZ.v res == Seq.length (serialize_cbor v1)
+    ))
+
+val cbor_validate_det
+  (input: slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+: stt SZ.t
+    (pts_to input #pm v)
+    (fun res -> pts_to input #pm v ** pure (
+      if SZ.v res = 0
+      then (~ (exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ R.raw_data_item_ints_optimal v1 /\ R.raw_data_item_sorted deterministically_encoded_cbor_map_key_order v1))
+      else exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ SZ.v res == Seq.length (serialize_cbor v1) /\ R.raw_data_item_ints_optimal v1 /\ R.raw_data_item_sorted deterministically_encoded_cbor_map_key_order v1
     ))
 
 val cbor_parse
