@@ -41,6 +41,29 @@ let serialize_cbor_inj'
     Classical.move_requires (serialize_cbor_inj c1 c2 s1) s2
   )
 
+val parse_cbor (x: Seq.seq U8.t) : Pure (option (raw_data_item & nat))
+  (requires True)
+  (ensures (fun res -> match res with
+  | None -> True
+  | Some (y, n) -> n <= Seq.length x /\ serialize_cbor y == Seq.slice x 0 n // unique binary representation
+  ))
+
+val parse_cbor_prefix
+  (x y: Seq.seq U8.t)
+: Lemma
+  (requires (match parse_cbor x with
+  | Some (_, n) -> Seq.length y >= n /\ Seq.slice x 0 n `Seq.equal` Seq.slice y 0 n
+  | _ -> False
+  ))
+  (ensures (
+    parse_cbor x == parse_cbor y
+  ))
+
+val serialize_parse_cbor (x: raw_data_item) : Lemma
+  (let s = serialize_cbor x in
+    parse_cbor s == Some (x, Seq.length s)
+  )
+
 let serialize_cbor_with_test_correct
   (c: raw_data_item)
   (suff: Seq.seq U8.t)
