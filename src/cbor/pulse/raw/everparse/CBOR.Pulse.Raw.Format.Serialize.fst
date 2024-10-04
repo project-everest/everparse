@@ -337,24 +337,6 @@ let ser_payload_array_array_elem
     (cbor_match_with_perm_lens _)
     f
 
-assume val nlist_match_array_intro
-  (#tarray: Type0)
-  (#telem: Type0)
-  (#t: Type)
-  (varray: (tarray -> GTot (option (with_perm (A.array telem)))))
-  (vmatch: (tarray -> telem -> t -> slprop))
-  (n: nat)
-  (a: tarray)
-  (l: LowParse.Spec.VCList.nlist n t)
-  (ar: with_perm (A.array telem))
-  (c: Seq.seq telem)
-: stt_ghost unit emp_inames
-    (A.pts_to ar.v #ar.p c **
-      PM.seq_list_match c l (vmatch a) **
-      pure (varray a == Some ar)
-    )
-    (fun _ -> LowParse.Pulse.VCList.nlist_match_array varray vmatch n a l)
-
 #restart-solver
 ```pulse
 ghost
@@ -412,7 +394,7 @@ ensures
   rewrite (match_cbor_payload xh1 xl xh2) as (cbor_match_array a xl.p xh0 cbor_match);
   unfold (cbor_match_array a xl.p xh0 cbor_match);
   let ar = Some?.v (cbor_with_perm_case_array_get xl);
-    nlist_match_array_intro cbor_with_perm_case_array_get
+    LowParse.Pulse.VCList.nlist_match_array_intro cbor_with_perm_case_array_get
       cbor_with_perm_case_array_match_elem
       (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
         (get_header_long_argument xh1))))
