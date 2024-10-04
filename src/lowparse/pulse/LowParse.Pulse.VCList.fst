@@ -9,6 +9,41 @@ module SZ = FStar.SizeT
 module R = Pulse.Lib.Reference
 module Trade = Pulse.Lib.Trade.Util
 
+#push-options "--z3rlimit 16"
+
+let rec serialize_nlist_append
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (n1: nat)
+  (l1: nlist n1 t)
+  (n2: nat)
+  (l2: nlist n2 t)
+: Lemma
+  (ensures (let l = List.Tot.append l1 l2 in
+    List.Tot.length l == n1 + n2 /\
+    serialize (serialize_nlist (n1 + n2) s) l == Seq.append (serialize (serialize_nlist n1 s) l1) (serialize (serialize_nlist n2 s) l2)
+  ))
+  (decreases n1)
+= if n1 = 0
+  then begin
+    serialize_nlist_nil p s;
+    Seq.append_empty_l (serialize (serialize_nlist n2 s) l2)
+  end    
+  else begin
+    let a :: q = l1 in
+    serialize_nlist_append s (n1 - 1) q n2 l2;
+    serialize_nlist_cons ((n1 - 1) + n2) s a (List.Tot.append q l2);
+    serialize_nlist_cons (n1 - 1) s a q;
+    Seq.append_assoc
+      (serialize s a)
+      (serialize (serialize_nlist (n1 - 1) s) q)
+      (serialize (serialize_nlist n2 s) l2)
+  end
+
+#pop-options
+
 inline_for_extraction
 ```pulse
 fn jump_nlist
@@ -249,7 +284,7 @@ fn pts_to_serialized_nlist_1
 ```
 
 module A = Pulse.Lib.Array
-module PM = Pulse.Lib.SeqMatch
+module PM = Pulse.Lib.SeqMatch.Util
 
 let nlist_match_array
   (#tarray: Type0)
@@ -266,6 +301,52 @@ let nlist_match_array
     PM.seq_list_match c l (vmatch a)
 
 module GR = Pulse.Lib.GhostReference
+
+let serialize_nlist_singleton
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (x: t)
+: Lemma
+  (let l = [x] in
+    List.Tot.length l == 1 /\
+    serialize (serialize_nlist 1 s) l == serialize s x)
+= serialize_nlist_cons 0 s x [];
+  serialize_nlist_nil p s;
+  Seq.append_empty_r (serialize s x)
+
+let serialize_nlist_cons'
+  (#k: parser_kind)
+  (#t: Type)
+  (n: nat)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong } )
+  (a: t)
+  (q: nlist n t)
+: Lemma
+  (ensures (
+    let l = a :: q in
+    List.Tot.length l == n + 1 /\
+    serialize (serialize_nlist (n + 1) s) l == Seq.append (serialize s a) (serialize (serialize_nlist n s) q)
+  ))
+= serialize_nlist_cons n s a q
+
+let seq_slice_append_ijk
+  (#t: Type)
+  (s: Seq.seq t)
+  (i j k: nat)
+: Lemma
+  (requires (i <= j /\ j <= k /\ k <= Seq.length s))
+  (ensures (
+    i <= j /\ j <= k /\ k <= Seq.length s /\
+    Seq.slice s i k == Seq.append (Seq.slice s i j) (Seq.slice s j k)
+  ))
+= Seq.lemma_split (Seq.slice s i k) (j - i)
+
+#push-options "--z3rlimit 16"
+
+#restart-solver
 
 inline_for_extraction
 ```pulse
@@ -324,6 +405,55 @@ fn l2r_write_nlist_as_array
       True
     )
   ) {
+    let i = !pi;
+    let off = !pres;
+    PM.seq_list_match_length (vmatch arr) _ _;
+    with l1 . assert (GR.pts_to pl1 l1);
+    with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
+    serialize_nlist_append s (SZ.v i) l1 (SZ.v n - SZ.v i) l2;
+    PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
+    let e = A.op_Array_Access a.v i;
+    let c2' : Ghost.erased (Seq.seq telem) = Seq.tail c2;
+    with ve l2' . assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match c2' l2' (vmatch arr));
+    List.Tot.append_assoc l1 [ve] l2';
+    let i' = SZ.add i 1sz;
+    let ni' : Ghost.erased nat = Ghost.hide (SZ.v n - SZ.v i');
+    serialize_nlist_cons' (ni') s ve l2';
+    serialize_nlist_singleton s ve;
+    serialize_nlist_append s (SZ.v i) l1 1 [ve];
+    Trade.rewrite_with_trade
+      (vmatch arr _ _)
+      (vmatch arr e ve);
+    with v1 . assert (pts_to out v1);
+    assert (pure (
+      SZ.v off + Seq.length (bare_serialize s ve) <= Seq.length v1
+    ));
+    let res = w arr e out off;
+    with v1' . assert (pts_to out v1');
+    Trade.elim (vmatch arr e ve) _;
+    pi := i';
+    List.Tot.append_length l1 [ve];
+    let l1' : Ghost.erased (list t) = List.Tot.append l1 [ve];
+    GR.op_Colon_Equals pl1 l1';
+    pres := res;
+    Trade.elim_hyp_l _ _ _;
+    Trade.trans _ _ (PM.seq_list_match c x (vmatch arr));
+    assert (pure (Seq.equal c2' (Seq.slice c (SZ.v i') (SZ.v n))));
+    assert (pure (SZ.v offset <= SZ.v res));
+    assert (pure (SZ.v res <= Seq.length v));
+    assert (pure (Seq.length v1' == Seq.length v));
+    Seq.slice_slice v1 0 (SZ.v off) 0 (SZ.v offset);
+    Seq.slice_slice v1' 0 (SZ.v off) 0 (SZ.v offset);
+    assert (pure (Seq.slice v1' 0 (SZ.v offset) `Seq.equal` Seq.slice v 0 (SZ.v offset)));
+    assert (pure (List.Tot.length l1' == SZ.v i'));
+    Seq.slice_slice v1 0 (SZ.v off) (SZ.v offset) (SZ.v off);
+    Seq.slice_slice v1' 0 (SZ.v off) (SZ.v offset) (SZ.v off);
+    seq_slice_append_ijk v1' (SZ.v offset) (SZ.v off) (SZ.v res);
+    assert (pure (Seq.slice v1' (SZ.v offset) (SZ.v off) == bare_serialize (serialize_nlist (SZ.v i) s) l1));
+    assert (pure (Seq.slice v1' (SZ.v off) (SZ.v res) == bare_serialize s ve));
+    assert (pure (Seq.slice v1' (SZ.v offset) (SZ.v res) == Seq.append (Seq.slice v1' (SZ.v offset) (SZ.v off)) (Seq.slice v1' (SZ.v off) (SZ.v res))));
+    assert (pure (Seq.slice v1' (SZ.v offset) (SZ.v res) `Seq.equal` bare_serialize (serialize_nlist (SZ.v i') s) l1'));
+    assert (pure (List.Tot.append l1' l2' == Ghost.reveal x));
     ()
   };
   with l1 . assert (GR.pts_to pl1 l1);
@@ -335,3 +465,5 @@ fn l2r_write_nlist_as_array
   !pres
 }
 ```
+
+#pop-options
