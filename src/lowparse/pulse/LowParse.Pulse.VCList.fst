@@ -247,3 +247,91 @@ fn pts_to_serialized_nlist_1
     _ _
 }
 ```
+
+module A = Pulse.Lib.Array
+module PM = Pulse.Lib.SeqMatch
+
+let nlist_match_array
+  (#tarray: Type0)
+  (#telem: Type0)
+  (#t: Type)
+  (varray: (tarray -> with_perm (A.array telem)))
+  (vmatch: (tarray -> telem -> t -> slprop))
+  (n: nat)
+  (a: tarray)
+  (l: LowParse.Spec.VCList.nlist n t)
+: Tot slprop
+= exists* c .
+    A.pts_to (varray a).v #(varray a).p c **
+    PM.seq_list_match c l (vmatch a)
+
+module GR = Pulse.Lib.GhostReference
+
+inline_for_extraction
+```pulse
+fn l2r_write_nlist_as_array
+  (#tarray: Type0)
+  (#telem: Type0)
+  (#t: Type0)
+  (varray: (tarray -> with_perm (A.array telem)))
+  (vmatch: (tarray -> telem -> t -> slprop))
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p  { k.parser_kind_subkind == Some ParserStrong })
+  (w: ((a: tarray) -> l2r_writer (vmatch a) s))
+  (n: SZ.t)
+: l2r_writer #_ #_ (nlist_match_array varray vmatch (SZ.v n)) #_ #_ (LowParse.Spec.VCList.serialize_nlist (SZ.v n) s)
+=
+  (arr: _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  let a = varray arr;
+  unfold (nlist_match_array varray vmatch (SZ.v n) arr x);
+  with c . assert (A.pts_to a.v #a.p c);
+  let pl1 : GR.ref (list t) = GR.alloc #(list t) [];
+  let mut pres = offset;
+  let mut pi = 0sz;
+  Trade.refl (PM.seq_list_match c x (vmatch arr));
+  PM.seq_list_match_length (vmatch arr) _ _;
+  while (
+    let i = !pi;
+    SZ.lt i n
+  ) invariant b . exists* res i l1 c2 l2 v1 . (
+    A.pts_to a.v #a.p c **
+    R.pts_to pres res **
+    R.pts_to pi i **
+    GR.pts_to pl1 l1 **
+    PM.seq_list_match c2 l2 (vmatch arr) **
+    pts_to out v1 **
+    trade
+      (PM.seq_list_match c2 l2 (vmatch arr))
+      (PM.seq_list_match c x (vmatch arr)) **
+    pure (
+      SZ.v i <= SZ.v n /\
+      b == (SZ.v i < SZ.v n) /\
+      Seq.length c == SZ.v n /\
+      Seq.equal c2 (Seq.slice c (SZ.v i) (SZ.v n)) /\
+      SZ.v offset <= SZ.v res /\
+      SZ.v res <= Seq.length v /\
+      Seq.length v1 == Seq.length v /\
+      Seq.slice v1 0 (SZ.v offset) `Seq.equal` Seq.slice v 0 (SZ.v offset) /\
+      List.Tot.length l1 == SZ.v i /\
+      Seq.slice v1 (SZ.v offset) (SZ.v res) `Seq.equal` bare_serialize (serialize_nlist (SZ.v i) s) l1 /\
+      List.Tot.append l1 l2 == Ghost.reveal x /\
+      True
+    )
+  ) {
+    ()
+  };
+  with l1 . assert (GR.pts_to pl1 l1);
+  GR.free pl1;
+  PM.seq_list_match_length (vmatch arr) _ _;
+  List.Tot.append_l_nil l1;
+  Trade.elim _ _;
+  fold (nlist_match_array varray vmatch (SZ.v n) arr x);
+  !pres
+}
+```
