@@ -1,10 +1,9 @@
 module CBOR.Pulse.API.Det
+friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
 
 module SpecRaw = CBOR.Spec.Raw
 module Raw = CBOR.Pulse.Raw.Match
-
-let cbor_det_t = Raw.cbor_raw
 
 let cbor_det_match
   p c v
