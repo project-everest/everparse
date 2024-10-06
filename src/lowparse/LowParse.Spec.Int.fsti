@@ -23,7 +23,7 @@ val parse_u8_spec
     let pp = parse parse_u8 b in
     Some? pp /\ (
     let (Some (v, consumed)) = pp in
-    U8.v v == E.be_to_n (Seq.slice b 0 1)
+    U8.v v == E.be_to_n (Seq.slice b 0 1) /\ consumed == 1
   )))
 
 val parse_u8_spec'
@@ -34,7 +34,7 @@ val parse_u8_spec'
     let pp = parse parse_u8 b in
     Some? pp /\ (
     let (Some (v, consumed)) = pp in
-    v == Seq.index b 0
+    v == Seq.index b 0 /\ consumed == 1
   )))
 
 val tot_serialize_u8 : tot_serializer #parse_u8_kind tot_parse_u8
@@ -79,7 +79,7 @@ val parse_u16_spec
     let pp = parse parse_u16 b in
     Some? pp /\ (
     let (Some (v, consumed)) = pp in
-    U16.v v == E.be_to_n (Seq.slice b 0 2)
+    U16.v v == E.be_to_n (Seq.slice b 0 2) /\ consumed == 2
   )))
 
 val tot_serialize_u16 : tot_serializer #parse_u16_kind tot_parse_u16
@@ -111,7 +111,7 @@ val parse_u32_spec
     let pp = parse parse_u32 b in
     Some? pp /\ (
     let (Some (v, consumed)) = pp in
-    U32.v v == E.be_to_n (Seq.slice b 0 4)
+    U32.v v == E.be_to_n (Seq.slice b 0 4) /\ consumed == 4
   )))
 
 val tot_serialize_u32 : tot_serializer #parse_u32_kind tot_parse_u32
@@ -143,7 +143,7 @@ val parse_u64_spec
     let pp = parse parse_u64 b in
     Some? pp /\ (
     let (Some (v, consumed)) = pp in
-    U64.v v == E.be_to_n (Seq.slice b 0 8)
+    U64.v v == E.be_to_n (Seq.slice b 0 8) /\ consumed == 8
   )))
 
 val tot_serialize_u64 : tot_serializer #parse_u64_kind tot_parse_u64
@@ -169,7 +169,7 @@ val parse_u64_le_spec
     let pp = parse parse_u64_le b in
     Some? pp /\ (
     let (Some (v, consumed)) = pp in
-    U64.v v == E.le_to_n (Seq.slice b 0 8)
+    U64.v v == E.le_to_n (Seq.slice b 0 8) /\ consumed == 8
   )))
 
 val serialize_u64_le : serializer parse_u64_le
