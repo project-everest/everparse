@@ -1,5 +1,5 @@
 module CBOR.Pulse.API.Base
-include CBOR.Spec.API.Type
+open CBOR.Spec.API.Type
 open Pulse.Lib.Pervasives
 module T = CBOR.Spec.API.Type
 module S = Pulse.Lib.Slice
@@ -23,7 +23,7 @@ let cbor_major_type (c: cbor) : Tot T.major_type_t =
   | CTagged _ _ -> cbor_major_type_tagged
 
 inline_for_extraction
-let equal
+let equal_t
   (#t: Type)
   (vmatch: perm -> t -> cbor -> slprop)
 = (x1: t) ->
