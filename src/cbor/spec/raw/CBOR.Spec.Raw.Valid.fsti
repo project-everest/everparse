@@ -64,24 +64,28 @@ let raw_uint64_optimal_unique (x1 x2: raw_uint64) : Lemma
   (ensures (x1 == x2))
 = ()
 
-let rec raw_uint64_optimize (x: raw_uint64) : Pure raw_uint64
-  (requires True)
-  (ensures (fun x' -> raw_uint64_equiv x x' /\ raw_uint64_optimal x'))
-  (decreases U8.v x.size)
-= if U64.v x.value <= U8.v max_simple_value_additional_info
-  then { x with size = 0uy }
-  else if U8.v x.size <= 1
-  then x
-  else if pow2 (8 * pow2 (U8.v x.size - 2)) <= U64.v x.value
-  then x
-  else raw_uint64_optimize { x with size = U8.sub x.size 1uy }
-
 let mk_raw_uint64 (x: U64.t) : Pure raw_uint64
   (requires True)
   (ensures (fun y -> y.value == x /\
     raw_uint64_optimal y == true
   ))
-= raw_uint64_optimize { size = 4uy; value = x }
+= let size =
+    if U64.lte x (FStar.Int.Cast.uint8_to_uint64 max_simple_value_additional_info)
+    then 0uy
+    else if U64.lt x 256uL
+    then 1uy
+    else if U64.lt x 65536uL
+    then 2uy
+    else if U64.lt x 4294967296uL
+    then 3uy
+    else 4uy
+  in
+  { size = size; value = x }
+
+let raw_uint64_optimize (x: raw_uint64) : Pure raw_uint64
+  (requires True)
+  (ensures (fun x' -> raw_uint64_equiv x x' /\ raw_uint64_optimal x'))
+= mk_raw_uint64 x.value
 
 let raw_data_item_ints_optimal_elem (x: raw_data_item) : Tot bool =
   match x with
