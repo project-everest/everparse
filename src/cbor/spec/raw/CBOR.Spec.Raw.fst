@@ -91,7 +91,9 @@ let mk_cbor_eq
           R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor w) w'
         | _ -> ()
       end
-    in ()
+    in
+    cbor_map_length_eq v';
+    ()
   | _ -> ()
 
 let mk_det_raw_cbor c =
@@ -99,3 +101,74 @@ let mk_det_raw_cbor c =
   mk_cbor_equiv' c;
   R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order c (mk_cbor c);
   c
+
+(* NOTE: the following lemmas DO use the definition of mk_det_raw_cbor *)
+
+let rec no_repeats_map_fst_mk_det_raw_cbor_map_entry
+  (l: list (cbor & cbor))
+: Lemma
+  (requires (List.Tot.no_repeats_p (List.Tot.map fst l)))
+  (ensures (List.Tot.no_repeats_p (List.Tot.map fst (List.Tot.map mk_det_raw_cbor_map_entry l))))
+= match l with
+  | [] -> ()
+  | a :: q ->
+    CBOR.Spec.Util.list_memP_map_forall fst q;
+    CBOR.Spec.Util.list_memP_map_forall mk_det_raw_cbor_map_entry q;
+    CBOR.Spec.Util.list_memP_map_forall fst (List.Tot.map mk_det_raw_cbor_map_entry q);
+    no_repeats_map_fst_mk_det_raw_cbor_map_entry q
+
+let rec assoc_map_mk_det_raw_cbor_map_entry
+  (l: list (cbor & cbor))
+  (x: cbor)
+: Lemma
+  (match List.Tot.assoc x l, List.Tot.assoc x (List.Tot.map mk_det_raw_cbor_map_entry l) with
+  | Some y, Some y' -> y == y'
+  | None, None -> True
+  | _ -> False)
+= match l with
+  | a :: q -> if x = fst a then () else begin
+    assert (mk_cbor (fst (mk_det_raw_cbor_map_entry a)) == fst a);
+    assoc_map_mk_det_raw_cbor_map_entry q x
+  end
+  | _ -> ()
+
+let mk_det_raw_cbor_map
+  l len
+=
+  let l1 = List.Tot.map mk_det_raw_cbor_map_entry l in
+  CBOR.Spec.Util.list_memP_map_forall mk_det_raw_cbor_map_entry l;
+  no_repeats_map_fst_mk_det_raw_cbor_map_entry l;
+  RS.cbor_map_sort_correct l1;
+  let l' = RS.cbor_map_sort l1 in
+  let r = R.Map (R.mk_raw_uint64 len) l' in
+  R.holds_on_raw_data_item_eq R.raw_data_item_ints_optimal_elem r;
+  List.Tot.for_all_mem (CBOR.Spec.Util.holds_on_pair R.raw_data_item_ints_optimal) l';
+  assert_norm (R.raw_data_item_ints_optimal == R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem);
+  assert (R.raw_data_item_ints_optimal r);
+  R.holds_on_raw_data_item_eq (R.raw_data_item_sorted_elem R.deterministically_encoded_cbor_map_key_order) r;
+  List.Tot.for_all_mem (CBOR.Spec.Util.holds_on_pair (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order)) l';
+  assert_norm (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order == R.holds_on_raw_data_item (R.raw_data_item_sorted_elem R.deterministically_encoded_cbor_map_key_order));
+  assert (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order r);
+  R.raw_data_item_sorted_optimal_valid R.deterministically_encoded_cbor_map_key_order r;
+  let res = mk_cbor r in
+  mk_cbor_eq r;
+  let CMap m = unpack res in
+  mk_det_raw_cbor_mk_cbor r;
+  assert (List.Tot.length l == FStar.UInt64.v len);
+  assert (List.Tot.length l' == FStar.UInt64.v len);
+  assert (cbor_map_length m == FStar.UInt64.v len);
+  let prf
+    (x: cbor)
+  : Lemma
+    (List.Tot.assoc x l == cbor_map_get m x)
+  = let x' = mk_det_raw_cbor x in
+    assert (mk_cbor_match_map_elem l' m x');
+    RS.list_setoid_assoc_sorted_optimal R.deterministically_encoded_cbor_map_key_order x' l';
+    assert (x' == x);
+    assert (List.Tot.assoc x' l1 == List.Tot.assoc x' l');
+    assoc_map_mk_det_raw_cbor_map_entry l x;
+    assert (List.Tot.assoc x l == cbor_map_get m x)
+  in
+  Classical.forall_intro prf;
+  assert (mk_det_raw_cbor res == R.Map (R.mk_raw_uint64 len) l');
+  res

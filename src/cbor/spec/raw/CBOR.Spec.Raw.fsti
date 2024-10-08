@@ -43,7 +43,9 @@ val mk_cbor_eq
   | R.Int64 ty1 v1, CInt64 ty2 v2 -> ty1 == ty2 /\ v1.value == v2
   | R.String ty1 _ v1, CString ty2 v2 -> ty1 == ty2 /\ v1 == v2
   | R.Tagged tag1 v1, CTagged tag2 v2 -> tag1.value == tag2 /\ mk_cbor v1 == v2
-  | R.Map _ v1, CMap v2 -> mk_cbor_match_map v1 v2
+  | R.Map _ v1, CMap v2 ->
+    cbor_map_length v2 == List.Tot.length v1 /\
+    mk_cbor_match_map v1 v2
   | R.Array _ v1, CArray v2 -> List.Tot.map mk_cbor v1 == v2
   | _ -> False
   ))
@@ -79,3 +81,29 @@ let mk_det_raw_cbor_mk_cbor (x: R.raw_data_item) : Lemma
 = R.raw_data_item_sorted_optimal_valid RS.deterministically_encoded_cbor_map_key_order x;
   mk_cbor_equiv (mk_det_raw_cbor (mk_cbor x)) x;
   R.raw_equiv_sorted_optimal RS.deterministically_encoded_cbor_map_key_order (mk_det_raw_cbor (mk_cbor x)) x
+
+let mk_det_raw_cbor_map_entry
+  (x: (cbor & cbor))
+: Tot (R.raw_data_item & R.raw_data_item)
+= (mk_det_raw_cbor (fst x), mk_det_raw_cbor (snd x))
+
+val mk_det_raw_cbor_map
+  (l: list (cbor & cbor))
+  (len: FStar.UInt64.t)
+: Pure cbor
+  (requires (List.Tot.no_repeats_p (List.Tot.map fst l) /\
+    FStar.UInt64.v len == List.Tot.length l
+  ))
+  (ensures (fun res ->
+    match unpack res with
+    | CMap m ->
+      let l1 = List.Tot.map mk_det_raw_cbor_map_entry l in
+      let l' = RS.cbor_map_sort l1 in
+      List.Tot.no_repeats_p (List.Tot.map fst l1) /\
+      List.Tot.length l == FStar.UInt64.v len /\
+      List.Tot.length l' == FStar.UInt64.v len /\
+      cbor_map_length m == FStar.UInt64.v len /\
+      (forall x . List.Tot.assoc x l == cbor_map_get m x) /\
+      mk_det_raw_cbor res == R.Map (R.mk_raw_uint64 len) l'
+    | _ -> False
+  ))
