@@ -766,7 +766,8 @@ let rec list_no_repeats_noRepeats
   (#t: eqtype)
   (l: list t)
 : Lemma
-  (List.Tot.noRepeats l == true <==> List.Tot.no_repeats_p l)
+  (ensures (List.Tot.noRepeats l == true <==> List.Tot.no_repeats_p l))
+  [SMTPat (List.Tot.noRepeats l)]
 = match l with
   | [] -> ()
   | a :: q -> List.Tot.mem_memP a q; list_no_repeats_noRepeats q

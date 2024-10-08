@@ -64,134 +64,186 @@ let rec list_sorted_map_entry_order_no_repeats
     list_sorted_map_entry_order_no_repeats key_order q;
     list_sorted_map_entry_order_not_memP_tail key_order a q
 
-[@@noextract_to "krml"] noextract
-let rec map_sort_merge
-  (#t1 #t2: Type)
-  (key_compare: t1 -> t1 -> int)
-  (accu: list (t1 & t2))
-  (l1: list (t1 & t2))
-  (l2: list (t1 & t2))
-: Tot (bool & list (t1 & t2))
-  (decreases (List.Tot.length l1 + List.Tot.length l2))
-= match l1, l2 with
-  |  (k1, v1) :: l1', (k2, v2) :: l2' ->
-    begin let c = key_compare k1 k2 in
-      if c = 0
-      then (false, accu `List.Tot.append` (l1 `List.Tot.append` l2))
-      else if c < 0
-      then map_sort_merge key_compare (accu `List.Tot.append` [(k1, v1)]) l1' l2
-      else
-        map_sort_merge key_compare (accu `List.Tot.append` [(k2, v2)]) l1 l2'
-        // TODO in this case:
-        // 1. prove that the sort is stable, i.e. that the maps are extensionally equal throughout
-        // 2. extract and swap the whole prefix of l2 less than the head of l1, rather than just the head of l2
-     end
-  | [], _ -> (true, accu `List.Tot.append` l2)
-  | _, [] -> (true, accu `List.Tot.append` l1)
+val list_sortWith: ('a -> 'a -> Tot bool) -> l:list 'a -> Tot (list 'a) (decreases (List.Tot.length l))
+let rec list_sortWith f = function
+  | [] -> []
+  | pivot::tl ->
+     let hi, lo = List.Tot.partition (f pivot) tl in
+     List.Tot.partition_length (f pivot) tl;
+     List.Tot.append (list_sortWith f lo) (pivot::list_sortWith f hi)
 
-#push-options "--z3rlimit 16"
+let rec list_sortWith_length 
+  (#a: Type)
+  (f: a -> a -> bool)
+  (l: list a)
+: Lemma
+  (ensures (List.Tot.length (list_sortWith f l) == List.Tot.length l))
+  (decreases (List.Tot.length l))
+= match l with
+  | [] -> ()
+  | pivot :: tl ->
+    List.Tot.partition_length (f pivot) tl;
+    let (hi, lo) = List.Tot.partition (f pivot) tl in
+    list_sortWith_length f hi;
+    list_sortWith_length f lo;
+    List.Tot.append_length (list_sortWith f lo) (pivot :: list_sortWith f hi)
 
-#restart-solver
-let rec map_sort_merge_correct
-  (#t1 #t2: Type)
-  (key_order: t1 -> t1 -> bool)
-  (key_compare: t1 -> t1 -> int)
-  (accu: list (t1 & t2))
-  (l1: list (t1 & t2))
-  (l2: list (t1 & t2))
+let rec list_sortWith_permutation (#a: eqtype) (f: a -> a -> bool) (l: list a) :
+  Lemma (ensures forall x. List.Tot.count x l = List.Tot.count x (list_sortWith f l))
+        (decreases List.Tot.length l)
+= match l with
+    | [] -> ()
+    | pivot::tl ->
+       let hi, lo  = List.Tot.partition (f pivot) tl in
+       List.Tot.partition_length (f pivot) tl;
+       List.Tot.partition_count_forall (f pivot) tl;
+       list_sortWith_permutation f lo;
+       list_sortWith_permutation f hi;
+       List.Tot.append_count_forall (list_sortWith f lo) (pivot::list_sortWith f hi)
+
+(** Correctness of the merging of two sorted lists around a pivot. *)
+let rec list_append_sorted (#a:Type)
+               (f:(a -> a -> Tot bool))
+               (l1:list a{List.Tot.sorted f l1})
+               (l2:list a{List.Tot.sorted f l2})
+               (pivot:a)
+:  Lemma (requires  (forall a1 a2 a3. f a1 a2 /\ f a2 a3 ==> f a1 a3)
+                                    /\ (forall y. List.Tot.memP y l1 ==> f y pivot)
+                                    /\ (forall y. List.Tot.memP y l2 ==> f pivot y)
+                        )
+                        (ensures (List.Tot.sorted f (List.Tot.append l1 (pivot::l2))))
+                        (decreases l1)
+                        [SMTPat (List.Tot.sorted f (List.Tot.append l1 (pivot::l2)))]
+= match l1 with
+  | [] -> ()
+  | hd::tl -> list_append_sorted f tl l2 pivot
+
+
+let rec list_partition_memP_forall (#a:Type) (f:(a -> Tot bool))
+                  (l:list a)
+                  : Lemma (requires True)
+                          (ensures (let l1, l2 = List.Tot.partition f l in
+                                    (forall x. List.Tot.memP x l <==> (List.Tot.memP x l1 \/ List.Tot.memP x l2))))
+= match l with
+  | [] -> ()
+  | hd::tl -> list_partition_memP_forall f tl
+
+let rec list_partition_memP_p_forall (#a:Type) (p:(a -> Tot bool))
+                  (l:list a)
+                  : Lemma (requires True)
+                          (ensures (let l1, l2 = List.Tot.partition p l in
+                                    (forall x. List.Tot.memP x l1 ==> p x) /\ (forall x. List.Tot.memP x l2 ==> not (p x))))
+= match l with
+  | [] -> ()
+  | hd::tl -> list_partition_memP_p_forall p tl
+
+let rec total_order_on_list
+  (#t: Type)
+  (f: (t -> t -> bool))
+  (l: list t)
+: Tot prop
+= match l with
+  | [] -> True
+  | a :: q -> (forall (b: t) . List.Tot.memP b q ==> (f a b \/ f b a)) /\
+    total_order_on_list f q
+
+let rec partition_total_order_on_list
+  (#t: Type)
+  (f: (t -> t -> bool))
+  (p: (t -> bool))
+  (l: list t)
+: Lemma
+  (requires (total_order_on_list f l))
+  (ensures (let (l1, l2) = List.Tot.partition p l in
+    total_order_on_list f l1 /\ total_order_on_list f l2
+  ))
+= match l with
+  | [] -> ()
+  | a :: q ->
+    partition_total_order_on_list f p q;
+    list_partition_memP_forall p q
+
+let list_sorted_memP_implies
+  (#t: Type)
+  (order: (t -> t -> bool) {
+    order_trans order
+  })
+  (a: t)
+  (l: list t)
+  (x: t)
+: Lemma
+  ((
+    List.Tot.sorted order (a :: l) /\
+    List.Tot.memP x l
+  ) ==>
+  (order a x == true))
+= Classical.move_requires (list_sorted_memP order a l) x
+
+let rec sorted_total_order_on_list
+  (#t: Type)
+  (f: (t -> t -> bool))
+  (l: list t)
 : Lemma
   (requires (
-    (forall x . key_order x x == false) /\
-    (forall x y z . (key_order x y /\ key_order y z) ==> key_order x z) /\
-    (forall x y . key_order x y == (key_compare x y < 0)) /\
-    (forall x y . key_compare x y == 0 <==> x == y) /\
-    (forall x y . (key_compare x y < 0 <==> key_compare y x > 0)) /\
-    List.Tot.sorted (map_entry_order key_order _) (accu `List.Tot.append` l1) /\
-    List.Tot.sorted (map_entry_order key_order _) (accu `List.Tot.append` l2)
+    order_trans f /\
+    List.Tot.sorted f l
   ))
   (ensures (
-    let (sorted, res) = map_sort_merge key_compare accu l1 l2 in
-    List.Tot.length res == List.Tot.length accu + List.Tot.length l1 + List.Tot.length l2 /\
-    (forall x . List.Tot.memP x res <==> List.Tot.memP x (accu `List.Tot.append` (l1 `List.Tot.append` l2))) /\
-    (List.Tot.no_repeats_p (List.Tot.map fst res) <==> List.Tot.no_repeats_p (List.Tot.map fst (accu `List.Tot.append` (l1 `List.Tot.append` l2)))) /\
-    (if sorted
-    then List.Tot.sorted (map_entry_order key_order _) res
-    else ~ (List.Tot.no_repeats_p (List.Tot.map fst res))
-    )
+    total_order_on_list f l
   ))
-  (decreases (List.Tot.length l1 + List.Tot.length l2))
-= match l1, l2 with
-  | [], _ -> List.Tot.append_length accu l2
-  | _, [] -> List.Tot.append_l_nil l1; List.Tot.append_length accu l1
-  | (k1, v1) :: l1', (k2, v2) :: l2' ->
-    List.Tot.map_append fst l1 l2;
-    List.Tot.map_append fst accu (l1 `List.Tot.append` l2);
-    let c = key_compare k1 k2 in
-    if c = 0
-    then
-      List.Tot.no_repeats_p_false_intro (List.Tot.map fst accu) [k1] (List.Tot.map fst l1') (List.Tot.map fst l2')
-    else if c < 0
-    then begin
-      let accu' = accu `List.Tot.append` [(k1, v1)] in
-      List.Tot.append_length accu [(k1, v1)];
-      List.Tot.append_assoc accu l1 l2;
-      List.Tot.append_assoc accu [(k1, v1)] l1';
-      List.Tot.append_assoc accu' l1' l2;
-      List.Tot.append_assoc accu [(k1, v1)] l2;
-      list_sorted_append_elim (map_entry_order key_order _) accu' l1';
-      list_sorted_append_elim (map_entry_order key_order _) accu l2;
-      list_sorted_append_chunk_intro (map_entry_order key_order _) accu [(k1, v1)] l2;
-      map_sort_merge_correct key_order key_compare accu' l1' l2
-    end
-    else begin
-      let accu' = accu `List.Tot.append` [(k2, v2)] in
-      List.Tot.append_length accu [(k2, v2)];
-      List.Tot.append_memP_forall l1 l2;
-      List.Tot.append_memP_forall accu (l1 `List.Tot.append` l2);
-      List.Tot.append_memP_forall accu [(k2, v2)];
-      List.Tot.append_memP_forall l1 l2';
-      List.Tot.append_memP_forall accu' (l1 `List.Tot.append` l2');
-      List.Tot.no_repeats_p_append_permut (List.Tot.map fst accu) [k2] (List.Tot.map fst l1) [] (List.Tot.map fst l2');
-      List.Tot.append_assoc (List.Tot.map fst accu) [k2] (List.Tot.map fst l1 `List.Tot.append` List.Tot.map fst l2');
-      List.Tot.map_append fst accu [(k2, v2)];
-      List.Tot.map_append fst l1 l2';
-      List.Tot.map_append fst accu' (l1 `List.Tot.append` l2');
-      List.Tot.append_assoc accu [(k2, v2)] l2';
-      list_sorted_append_elim (map_entry_order key_order _) accu' l2';
-      list_sorted_append_elim (map_entry_order key_order _) accu l1;
-      list_sorted_append_chunk_intro (map_entry_order key_order _) accu [(k2, v2)] l1;
-      List.Tot.append_assoc accu [(k2, v2)] l1;
-      map_sort_merge_correct key_order key_compare accu' l1 l2'
-    end
+= match l with
+  | [] -> ()
+  | [_] -> ()
+  | a :: b :: q ->
+    Classical.forall_intro (list_sorted_memP_implies f a (b :: q));
+    sorted_total_order_on_list f (b :: q)
 
-#pop-options
+(** Correctness of [sortWith], part 2/2: the elements of [sortWith f
+l] are sorted according to comparison function [f], and the elements
+of [sortWith f l] are the elements of [l]. *)
+let rec list_sortWith_sorted (#a:Type) (f:(a -> a -> Tot bool)) (l:list a) :
+  Lemma (requires (total_order_on_list #a f l /\
+    order_trans f /\
+    (forall x y . ~ (f x y /\ f y x))
+  ))
+        (ensures ((List.Tot.sorted f (list_sortWith f l)) /\ (forall x. List.Tot.memP x l <==> List.Tot.memP x (list_sortWith f l))))
+        (decreases List.Tot.length l)
+=
+  match l with
+  | [] -> ()
+  | pivot::tl ->
+     let hi, lo  = List.Tot.partition (f pivot) tl in
+     List.Tot.partition_length (f pivot) tl;
+     list_partition_memP_forall (f pivot) tl;
+     list_partition_memP_p_forall (f pivot) tl;
+     partition_total_order_on_list f (f pivot) tl;
+     list_sortWith_sorted f lo;
+     list_sortWith_sorted f hi;
+     List.Tot.append_memP_forall (list_sortWith f lo) (pivot::list_sortWith f hi);
+     list_append_sorted f (list_sortWith f lo) (list_sortWith f hi) pivot
 
 [@@noextract_to "krml"] noextract
-let rec map_sort
+let map_sort
   (#t1 #t2: Type)
-  (key_compare: t1 -> t1 -> int)
+  (key_order: t1 -> t1 -> bool)
   (l: list (t1 & t2))
-: Tot (bool & list (t1 & t2))
+: Tot (list (t1 & t2))
   (decreases (List.Tot.length l))
-= let len = List.Tot.length l in
-  if len < 2
-  then (true, l)
-  else
-    let (l1, l2) = List.Tot.splitAt (len / 2) l in
-    let (res, l1') = map_sort key_compare l1 in
-    if not res
-    then (false, l1' `List.Tot.append` l2)
-    else
-      let (res, l2') = map_sort key_compare l2 in
-      if not res
-      then (false, l1' `List.Tot.append` l2')
-      else map_sort_merge key_compare [] l1' l2'
+= list_sortWith (map_entry_order key_order _) l
 
-#push-options "--z3rlimit 64"
+let no_repeats_append_false_intro
+  (#t: Type)
+  (l1 l2: list t)
+  (x: t)
+: Lemma
+  (requires (List.Tot.memP x l1 /\
+    List.Tot.memP x l2
+  ))
+  (ensures (~ (List.Tot.no_repeats_p (List.Tot.append l1 l2))))
+= Classical.move_requires (List.Tot.no_repeats_p_append_elim l1) l2
 
-#restart-solver
-let rec map_sort_correct
-  (#t1: eqtype)
+let rec no_repeats_fst_total_order_on_list
+  (#t1: Type)
   (#t2: Type)
   (key_order: t1 -> t1 -> bool)
   (key_compare: t1 -> t1 -> int)
@@ -204,66 +256,40 @@ let rec map_sort_correct
     (forall x y . key_compare x y == 0 <==> x == y) /\
     (forall x y . (key_compare x y < 0 <==> key_compare y x > 0))
   ))
-  (ensures (let (res, l') = map_sort key_compare l in
+  (ensures (List.Tot.no_repeats_p (List.Tot.map fst l) <==> total_order_on_list (map_entry_order key_order _) l))
+= match l with
+  | [] -> ()
+  | a :: q ->
+    list_memP_map_forall fst q;
+    no_repeats_fst_total_order_on_list key_order key_compare q
+
+#restart-solver
+let map_sort_correct
+  (#t1: eqtype) // for assoc
+  (#t2: Type)
+  (key_order: t1 -> t1 -> bool)
+  (key_compare: t1 -> t1 -> int)
+  (l: list (t1 & t2))
+: Lemma
+  (requires (
+    (forall x . key_order x x == false) /\
+    (forall x y z . (key_order x y /\ key_order y z) ==> key_order x z) /\
+    (forall x y . key_order x y == (key_compare x y < 0)) /\
+    (forall x y . key_compare x y == 0 <==> x == y) /\
+    (forall x y . (key_compare x y < 0 <==> key_compare y x > 0)) /\
+    List.Tot.no_repeats_p (List.Tot.map fst l)
+  ))
+  (ensures (let l' = map_sort key_order l in
     List.Tot.length l' == List.Tot.length l /\
     (forall x . List.Tot.memP x l' <==> List.Tot.memP x l) /\
-    (List.Tot.no_repeats_p (List.Tot.map fst l') <==> List.Tot.no_repeats_p (List.Tot.map fst l)) /\
-    (res == true <==> List.Tot.no_repeats_p (List.Tot.map fst l)) /\
-    (res == true ==> (
-      List.Tot.sorted (map_entry_order key_order _) l' /\
-      (forall k . List.Tot.assoc k l' == List.Tot.assoc k l)
-    ))
+    (List.Tot.no_repeats_p (List.Tot.map fst l')) /\
+    List.Tot.sorted (map_entry_order key_order _) l' /\
+    (forall k . List.Tot.assoc k l' == List.Tot.assoc k l)
   ))
-  (decreases (List.Tot.length l))
-= let len = List.Tot.length l in
-  if len < 2
-  then ()
-  else begin
-    let (l1, l2) = List.Tot.splitAt (len / 2) l in
-    list_splitAt_append (len / 2) l;
-    List.Tot.append_length l1 l2;
-    List.Tot.append_memP_forall l1 l2;
-    List.Tot.map_append fst l1 l2;
-    List.Tot.no_repeats_p_append (List.Tot.map fst l1) (List.Tot.map fst l2);
-    List.Tot.append_memP_forall (List.Tot.map fst l1) (List.Tot.map fst l2);
-    list_memP_map_forall fst l1;
-    list_memP_map_forall fst l2;
-    let (res, l1') = map_sort key_compare l1 in
-    map_sort_correct key_order key_compare l1;
-    list_memP_map_forall fst l1';
-    List.Tot.append_memP_forall (List.Tot.map fst l1') (List.Tot.map fst l2);
-    List.Tot.no_repeats_p_append (List.Tot.map fst l1') (List.Tot.map fst l2);
-    List.Tot.map_append fst l1' l2;
-    List.Tot.append_memP_forall l1' l2;
-    if not res
-    then List.Tot.append_length l1' l2
-    else begin
-      let (res, l2') = map_sort key_compare l2 in
-      map_sort_correct key_order key_compare l2;
-      list_memP_map_forall fst l2';
-      List.Tot.append_memP_forall (List.Tot.map fst l1') (List.Tot.map fst l2');
-      List.Tot.no_repeats_p_append (List.Tot.map fst l1') (List.Tot.map fst l2');
-      List.Tot.map_append fst l1' l2';
-      List.Tot.append_memP_forall l1' l2';
-      if not res
-      then List.Tot.append_length l1' l2'
-      else begin
-        let (res, l') = map_sort_merge key_compare [] l1' l2' in
-        assert (map_sort key_compare l == (res, l'));
-        map_sort_merge_correct key_order key_compare [] l1' l2';
-        assert (forall x . List.Tot.memP x l' <==> (List.Tot.memP x l1' \/ List.Tot.memP x l2'));
-        assert (forall x . List.Tot.memP x l' <==> List.Tot.memP x l);
-        assert (List.Tot.no_repeats_p (List.Tot.map fst l') <==> List.Tot.no_repeats_p (List.Tot.map fst l));
-        if res
-        then begin
-          assert (List.Tot.sorted (map_entry_order key_order _) l');
-          list_sorted_map_entry_order_no_repeats key_order l';
-          list_assoc_no_repeats_equiv l l';
-          assert (forall k . List.Tot.assoc k l' == List.Tot.assoc k l)
-        end
-        else ()
-      end
-    end
-  end
-
-  #pop-options
+= list_sortWith_length (map_entry_order key_order _) l;
+  no_repeats_fst_total_order_on_list key_order key_compare l;
+  list_sortWith_sorted (map_entry_order key_order _) l;
+  let l' = map_sort key_order l in
+  list_sorted_map_entry_order_no_repeats key_order l';
+  list_assoc_no_repeats_equiv l l';
+  ()

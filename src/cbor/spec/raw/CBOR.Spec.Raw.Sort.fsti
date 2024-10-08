@@ -5,27 +5,27 @@ open CBOR.Spec.Util
 noextract [@@noextract_to "krml"]
 val cbor_map_sort
   (l: list (raw_data_item & raw_data_item))
-: Tot (bool & list (raw_data_item & raw_data_item))
+: Tot (list (raw_data_item & raw_data_item))
 
 val cbor_map_sort_correct
   (l: list (raw_data_item & raw_data_item))
 : Lemma
-  (ensures (let (res, l') = cbor_map_sort l in
+  (requires List.Tot.no_repeats_p (List.Tot.map fst l))
+  (ensures (let l' = cbor_map_sort l in
     List.Tot.length l' == List.Tot.length l /\
     (forall x . List.Tot.memP x l' <==> List.Tot.memP x l) /\
-    (List.Tot.no_repeats_p (List.Tot.map fst l') <==> List.Tot.no_repeats_p (List.Tot.map fst l)) /\
-    (res == true <==> List.Tot.no_repeats_p (List.Tot.map fst l)) /\
-    (res == true ==> (
-      List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l' /\
-      (forall k . List.Tot.assoc k l' == List.Tot.assoc k l)
-    ))
+    (List.Tot.no_repeats_p (List.Tot.map fst l')) /\
+    List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l' /\
+    (forall k . List.Tot.assoc k l' == List.Tot.assoc k l)
   ))
   [SMTPat (cbor_map_sort l)]
 
 let cbor_map_sort_failsafe
   (l: list (raw_data_item & raw_data_item))
 : Tot (list (raw_data_item & raw_data_item))
-= snd (cbor_map_sort l)
+= if List.Tot.noRepeats (List.Tot.map fst l)
+  then cbor_map_sort l
+  else l
 
 let cbor_map_sort_failsafe_correct
   (l: list (raw_data_item & raw_data_item))

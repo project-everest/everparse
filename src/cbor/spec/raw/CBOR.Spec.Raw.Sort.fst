@@ -1,12 +1,12 @@
 module CBOR.Spec.Raw.Sort
 open CBOR.Spec.Raw.Map
 
-let cbor_map_sort = map_sort cbor_compare
+let cbor_map_sort = map_sort deterministically_encoded_cbor_map_key_order
 
 let cbor_map_sort_eq
   (l: list (raw_data_item & raw_data_item))
 : Lemma
-  (cbor_map_sort l == map_sort cbor_compare l)
+  (cbor_map_sort l == map_sort deterministically_encoded_cbor_map_key_order l)
 = ()
 
 let cbor_map_sort_correct x =
