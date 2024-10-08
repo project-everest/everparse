@@ -12,7 +12,7 @@ include $(EVERCBOR_SRC_PATH)/pulse.Makefile
 include $(EVERCBOR_SRC_PATH)/everparse.Makefile
 include $(EVERCBOR_SRC_PATH)/common.Makefile
 
-test-extract: $(ALL_KRML_FILES)
+test-extr: $(ALL_KRML_FILES)
 	$(KRML_HOME)/krml $(KRML_OPTS) -warn-error @1..27 -skip-linking -bundle 'CBOR.Pulse.Raw.EverParse.Test=\*' -tmpdir $(OUTPUT_DIRECTORY) $^
 
-.PHONY: test-extract
+.PHONY: test-extr
