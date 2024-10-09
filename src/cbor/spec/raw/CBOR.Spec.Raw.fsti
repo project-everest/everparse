@@ -1,4 +1,5 @@
 module CBOR.Spec.Raw
+include CBOR.Spec.Raw.Sort
 include CBOR.Spec.API.Type
 
 module R = CBOR.Spec.Raw.Valid

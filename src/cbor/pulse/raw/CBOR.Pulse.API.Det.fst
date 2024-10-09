@@ -38,18 +38,12 @@ let cbor_det_map_entry_match p c v =
 
 assume val cbor_raw_compare (p: perm) : Pulse.Lib.Array.MergeSort.impl_compare_t
   (Raw.cbor_match p)
-  CBOR.Spec.Raw.Format.cbor_compare
-
-[@@noextract_to "krml"] noextract
-let spec_cbor_map_entry_raw_compare
-  (x1 x2: CBOR.Spec.Raw.Base.raw_data_item & CBOR.Spec.Raw.Base.raw_data_item)
-: Tot int
-= CBOR.Spec.Raw.Format.cbor_compare (fst x1) (fst x2)
+  SpecRaw.cbor_compare
 
 ```pulse
 fn cbor_map_entry_raw_compare
   (p: perm)
-: Pulse.Lib.Array.MergeSort.impl_compare_t u#0 u#0 #_ #_ (Raw.cbor_match_map_entry p) spec_cbor_map_entry_raw_compare
+: Pulse.Lib.Array.MergeSort.impl_compare_t u#0 u#0 #_ #_ (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare
 = (x1: _)
   (x2: _)
   (#y1: _)
@@ -64,11 +58,11 @@ fn cbor_map_entry_raw_compare
 }
 ```
 
-assume val cbor_raw_sort_aux (p: perm) : Pulse.Lib.Array.MergeSort.sort_aux_t #_ #_ (Raw.cbor_match_map_entry p) spec_cbor_map_entry_raw_compare // Pulse issue here
+assume val cbor_raw_sort_aux (p: perm) : Pulse.Lib.Array.MergeSort.sort_aux_t #_ #_ (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare // Pulse issue here
 
 let cbor_raw_sort
   (p: perm)
-: Pulse.Lib.Array.MergeSort.sort_t #_ #_ (Raw.cbor_match_map_entry p) spec_cbor_map_entry_raw_compare
+: Pulse.Lib.Array.MergeSort.sort_t #_ #_ (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare
 = Pulse.Lib.Array.MergeSort.sort _ _ (cbor_raw_sort_aux p)
 
 ```pulse
@@ -86,52 +80,31 @@ ensures
     (SM.seq_list_match c v (cbor_det_map_entry_match p))
 decreases v
 {
-  admit ()
+  SM.seq_list_match_length (cbor_det_map_entry_match p) c v;
+  if (Nil? v) {
+    SM.seq_list_match_nil_elim c v (cbor_det_map_entry_match p);
+    SM.seq_list_match_nil_intro c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v) (Raw.cbor_match_map_entry p);
+    ghost fn aux (_: unit)
+      requires emp ** SM.seq_list_match c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v) (Raw.cbor_match_map_entry p)
+      ensures SM.seq_list_match c v (cbor_det_map_entry_match p)
+    {
+      SM.seq_list_match_nil_elim c (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry v) (Raw.cbor_match_map_entry p);
+      SM.seq_list_match_nil_intro c v (cbor_det_map_entry_match p);
+    };
+    Trade.intro _ _ _ aux
+  } else {
+    SM.seq_list_match_cons_elim_trade c v (cbor_det_map_entry_match p);
+    Trade.rewrite_with_trade
+      (cbor_det_map_entry_match p (Seq.head c) (List.Tot.hd v))
+      (Raw.cbor_match_map_entry p (Seq.head c) (SpecRaw.mk_det_raw_cbor_map_entry (List.Tot.hd v)));
+    Trade.trans_hyp_l _ _ _ (SM.seq_list_match c v (cbor_det_map_entry_match p));
+    seq_list_map_cbor_det_map_entry_match_elim p (Seq.tail c) (List.Tot.tl v);
+    Trade.trans_hyp_r _ _ _ (SM.seq_list_match c v (cbor_det_map_entry_match p));
+    SM.seq_list_match_cons_intro_trade (Seq.head c) (SpecRaw.mk_det_raw_cbor_map_entry (List.Tot.hd v)) (Seq.tail c) (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry (List.Tot.tl v)) (Raw.cbor_match_map_entry p);
+    Trade.trans _ _ (SM.seq_list_match c v (cbor_det_map_entry_match p));
+  }
 }
 ```
-
-let spec_cbor_map_entry_raw_compare_correct : squash (
-  let order = (CBOR.Spec.Raw.Valid.map_entry_order CBOR.Spec.Raw.Format.deterministically_encoded_cbor_map_key_order _) in
-  let compare = spec_cbor_map_entry_raw_compare in
-    (forall x y z . (order x y /\ order y z) ==> order x z) /\
-    (forall x y . order x y == (compare x y < 0)) /\
-    (forall x y . (compare x y < 0 <==> compare y x > 0))
-  )
-= admit ()
-
-let list_sorted_ext_eq_map_entry_order_deterministically_encoded_cbor_map_key_order
-  (l1 l2: list (CBOR.Spec.Raw.Base.raw_data_item & CBOR.Spec.Raw.Base.raw_data_item))
-: Lemma
-  (requires (
-    let order = CBOR.Spec.Raw.Valid.map_entry_order CBOR.Spec.Raw.Format.deterministically_encoded_cbor_map_key_order CBOR.Spec.Raw.Base.raw_data_item in
-    List.Tot.sorted order l1 == true /\
-    True (* /\
-    List.Tot.sorted order l2 == true /\
- (forall x . List.Tot.memP x l1 <==> List.Tot.memP x l2)
-*) 
-  ))
-  (ensures (
-    l1 == l2
-  ))
-= admit () (*
-CBOR.Spec.Util.list_sorted_ext_eq
-    (CBOR.Spec.Raw.Valid.map_entry_order CBOR.Spec.Raw.Format.deterministically_encoded_cbor_map_key_order _)
-    l1 l2
-*)
-
-assume val cbor_map_sort_correct
-  (l l': list (CBOR.Spec.Raw.Base.raw_data_item & CBOR.Spec.Raw.Base.raw_data_item))
-: Lemma
-  (requires List.Tot.no_repeats_p (List.Tot.map fst l) /\
-    l' == CBOR.Spec.Raw.Sort.cbor_map_sort l
-  )
-  (ensures (
-    List.Tot.length l' == List.Tot.length l /\
-    (forall x . List.Tot.memP x l' <==> List.Tot.memP x l) /\
-    (List.Tot.no_repeats_p (List.Tot.map fst l')) /\
-    List.Tot.sorted (CBOR.Spec.Raw.Valid.map_entry_order CBOR.Spec.Raw.Format.deterministically_encoded_cbor_map_key_order _) l' /\
-    (forall k . List.Tot.assoc k l' == List.Tot.assoc k l)
-  ))
 
 ```pulse
 fn cbor_det_mk_map
@@ -149,29 +122,22 @@ fn cbor_det_mk_map
   let vv1 = Ghost.hide (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry vv);
   let v' : Ghost.erased Spec.cbor = Ghost.hide (SpecRaw.mk_det_raw_cbor_map vv len);
   seq_list_map_cbor_det_map_entry_match_elim pv va vv;
-  assert (SM.seq_list_match va vv1 (Raw.cbor_match_map_entry pv));
   let _ : bool = cbor_raw_sort pv a (SZ.uint64_to_sizet len);
   Trade.trans _ _ (SM.seq_list_match va vv (cbor_det_map_entry_match pv));
   with va' vv' . assert (Pulse.Lib.Array.pts_to a va' ** SM.seq_list_match va' vv' (Raw.cbor_match_map_entry pv));
   A.pts_to_len a;
   SM.seq_list_match_length (Raw.cbor_match_map_entry pv) va' vv';
-  cbor_map_sort_correct vv1 (CBOR.Spec.Raw.Sort.cbor_map_sort vv1);
+  SpecRaw.cbor_map_sort_correct vv1;
   Pulse.Lib.Array.MergeSort.spec_sort_correct
-    (CBOR.Spec.Raw.Valid.map_entry_order CBOR.Spec.Raw.Format.deterministically_encoded_cbor_map_key_order _)
-    spec_cbor_map_entry_raw_compare
+    (SpecRaw.map_entry_order SpecRaw.deterministically_encoded_cbor_map_key_order _)
+    SpecRaw.cbor_map_entry_raw_compare
     vv1;
-  assume (pure (
-    List.Tot.sorted
-      (CBOR.Spec.Raw.Valid.map_entry_order CBOR.Spec.Raw.Format.deterministically_encoded_cbor_map_key_order _)
-      vv'
-  ));
-  assert (pure (
-    forall x . List.Tot.memP x vv' <==> List.Tot.memP x (CBOR.Spec.Raw.Sort.cbor_map_sort vv1)
-  ));
-  list_sorted_ext_eq_map_entry_order_deterministically_encoded_cbor_map_key_order
+  SpecRaw.cbor_map_entry_raw_compare_succeeds vv1;
+  CBOR.Spec.Util.list_sorted_ext_eq
+    (SpecRaw.map_entry_order SpecRaw.deterministically_encoded_cbor_map_key_order _)
     vv'
-    (CBOR.Spec.Raw.Sort.cbor_map_sort vv1);
-  let raw_len = CBOR.Spec.Raw.Valid.mk_raw_uint64 len;
+    (SpecRaw.cbor_map_sort vv1);
+  let raw_len = SpecRaw.mk_raw_uint64 len;
   let res = CBOR.Pulse.Raw.Match.cbor_match_map_intro raw_len a;
   Trade.trans_concl_r _ _ _ (SM.seq_list_match va vv (cbor_det_map_entry_match pv));
   with p' vraw . assert (Raw.cbor_match p' res vraw);

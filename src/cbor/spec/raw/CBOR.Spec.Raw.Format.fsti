@@ -262,6 +262,22 @@ val cbor_compare_correct
 : Lemma
   (ensures (cbor_compare x1 x2 == bytes_lex_compare (serialize_cbor x1) (serialize_cbor x2)))
 
+let cbor_map_entry_raw_compare
+  (x1 x2: raw_data_item & raw_data_item)
+: Tot int
+= cbor_compare (fst x1) (fst x2)
+
+let cbor_map_entry_raw_compare_correct : squash (
+  let order = (map_entry_order deterministically_encoded_cbor_map_key_order _) in
+  let compare = cbor_map_entry_raw_compare in
+    (forall x y z . (order x y /\ order y z) ==> order x z) /\
+    (forall x y . order x y == (compare x y < 0)) /\
+    (forall x y . (compare x y < 0 <==> compare y x > 0))
+  )
+= Classical.forall_intro_2 deterministically_encoded_cbor_map_key_order_spec;
+  Classical.forall_intro_2 cbor_compare_correct;
+  Classical.forall_intro_2 bytes_lex_compare_opp
+
 let cbor_compare_equal
   (x1 x2: raw_data_item)
 : Lemma
@@ -271,6 +287,38 @@ let cbor_compare_equal
   Seq.append_empty_r (serialize_cbor x1);
   Seq.append_empty_r (serialize_cbor x2);
   Classical.move_requires (serialize_cbor_inj x1 x2 Seq.empty) Seq.empty
+
+let cbor_map_entry_raw_compare_succeeds
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (List.Tot.no_repeats_p (List.Tot.map fst l)))
+  (ensures (~ (
+    exists l1 l2 x1 x2 . l == List.Tot.append l1 l2 /\ List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2 /\ cbor_map_entry_raw_compare x1 x2 == 0
+  )))
+= let prf1
+      (l1 l2: list (raw_data_item & raw_data_item))
+      (x1 x2: (raw_data_item & raw_data_item))
+  : Lemma
+    (requires 
+      l == List.Tot.append l1 l2 /\ List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2 /\ cbor_map_entry_raw_compare x1 x2 == 0
+    )
+    (ensures False)
+  = List.Tot.map_append fst l1 l2;
+    List.Tot.memP_map_intro fst x1 l1;
+    List.Tot.memP_map_intro fst x2 l2;
+    cbor_compare_equal (fst x1) (fst x2);
+    List.Tot.no_repeats_p_append_elim (List.Tot.map fst l1) (List.Tot.map fst l2)
+  in
+  let prf2
+    (l1 l2: list (raw_data_item & raw_data_item))
+    (x1 x2: (raw_data_item & raw_data_item))
+  : Lemma
+    (ensures ~ (
+      l == List.Tot.append l1 l2 /\ List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2 /\ cbor_map_entry_raw_compare x1 x2 == 0
+    ))
+  = Classical.move_requires (prf1 l1 l2 x1) x2
+  in
+  Classical.forall_intro_4 prf2
 
 let deterministically_encoded_cbor_map_key_order_major_type_intro
   (v1 v2: raw_data_item)
