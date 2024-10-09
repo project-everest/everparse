@@ -118,6 +118,74 @@ ensures exists* v' .
 }
 ```
 
+let nlist_hd_tl_post'
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (n: pos)
+  (input: slice byte)
+  (pm: perm)
+  (v: (nlist n t))
+  (hd tl: slice byte)
+: slprop
+= pts_to_serialized s hd #pm (List.Tot.hd v) **
+  pts_to_serialized (serialize_nlist (n - 1) s) tl #pm (List.Tot.tl v) **
+  Trade.trade
+    (pts_to_serialized s hd #pm (List.Tot.hd v) **
+      pts_to_serialized (serialize_nlist (n - 1) s) tl #pm (List.Tot.tl v))
+    (pts_to_serialized (serialize_nlist n s) input #pm v)
+
+let nlist_hd_tl_post
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (n: pos)
+  (input: slice byte)
+  (pm: perm)
+  (v: (nlist n t))
+  (hd_tl: (slice_pair byte))
+: slprop
+= nlist_hd_tl_post' s sq n input pm v (hd_tl.fst) (hd_tl.snd)
+
+inline_for_extraction
+```pulse
+fn nlist_hd_tl
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: jumper p)
+  (n: Ghost.erased pos)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t))
+requires
+  pts_to_serialized (serialize_nlist n s) input #pm v
+returns res : slice_pair byte
+ensures
+  nlist_hd_tl_post s sq n input pm v res
+{
+  nlist_cons_as_nondep_then s n input;
+  with v' . assert (pts_to_serialized (serialize_nondep_then s (serialize_nlist (n - 1) s)) input #pm v');
+  let res = split_nondep_then #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p)) (coerce_eq () (serialize_nlist (n - 1) s <: serializer (parse_nlist (n - 1) p))) input; // FIXME: same as above
+  match res {
+    SlicePair s1 s2 -> {
+      unfold (split_nondep_then_post s (serialize_nlist (n - 1) s) input pm v' res);
+      unfold (split_nondep_then_post' s (serialize_nlist (n - 1) s) input pm v' s1 s2);
+      Trade.trans _ _ (pts_to_serialized (serialize_nlist n s) input #pm v);
+      fold (nlist_hd_tl_post' s sq n input pm v s1 s2);
+      fold (nlist_hd_tl_post s sq n input pm v res);
+      res
+    }
+  }
+}
+```
+
 inline_for_extraction
 ```pulse
 fn nlist_hd
@@ -232,6 +300,116 @@ ensures exists* v .
   res2
 }
 ```
+
+let impl_order_t
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (order: (t -> t -> bool))
+=
+    (a1: slice byte) ->
+    (a2: slice byte) ->
+    (#p1: perm) ->
+    (#p2: perm) ->
+    (#v1: Ghost.erased t) ->
+    (#v2: Ghost.erased t) ->
+    stt bool
+      (pts_to_serialized s a1 #p1 v1 ** pts_to_serialized s a2 #p2 v2)
+      (fun res -> pts_to_serialized s a1 #p1 v1 ** pts_to_serialized s a2 #p2 v2 ** pure (res == order v1 v2))
+
+#push-options "--z3rlimit 16"
+
+#restart-solver
+
+inline_for_extraction
+```pulse
+fn nlist_sorted
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: jumper p)
+  (order: Ghost.erased (t -> t -> bool))
+  (impl_order: impl_order_t s order)
+  (n: SZ.t)
+  (a: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist (SZ.v n) t))
+requires
+    (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v)
+returns res: bool
+ensures
+    (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v ** pure (res == List.Tot.sorted order v))
+{
+  if (n = 0sz) {
+    true
+  } else {
+    let pl = nlist_hd_tl s sq j (SZ.v n) a;
+    match pl {
+      SlicePair s1 s2 -> {
+        unfold (nlist_hd_tl_post s sq (SZ.v n) a pm v pl);
+        unfold (nlist_hd_tl_post' s sq (SZ.v n) a pm v s1 s2);
+        let mut phd = s1;
+        let mut ptl = s2;
+        let n' : SZ.t = SZ.sub n 1sz;
+        let mut pi = n';
+        let mut pres = true;
+        while (
+          let i = !pi;
+          let res = !pres;
+          (res && SZ.gt i 0sz)
+        ) invariant cont . exists* shd stl i res hd tl .
+          R.pts_to phd shd **
+          R.pts_to ptl stl **
+          R.pts_to pi i **
+          R.pts_to pres res **
+          pts_to_serialized s shd #pm hd **
+          pts_to_serialized (serialize_nlist (SZ.v i) s) stl #pm tl **
+          Trade.trade
+            (pts_to_serialized s shd #pm hd **
+              pts_to_serialized (serialize_nlist (SZ.v i) s) stl #pm tl)
+            (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v) **
+          pure (
+            List.Tot.sorted order v == (res && List.Tot.sorted order (hd :: tl)) /\
+            cont == (res && SZ.gt i 0sz)
+          )
+        {
+          with gi . assert (R.pts_to pi gi);
+          let stl = !ptl;
+          with tl . assert (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
+          let pl = nlist_hd_tl s sq j (SZ.v gi) stl;
+          match pl {
+            SlicePair s1 s2 -> {
+              unfold (nlist_hd_tl_post s sq (SZ.v gi) stl pm tl pl);
+              unfold (nlist_hd_tl_post' s sq (SZ.v gi) stl pm tl s1 s2);
+              let shd = !phd;
+              let res = impl_order shd s1;
+              if (res) {
+                Trade.elim_hyp_l _ _ (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v);
+                Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v);
+                phd := s1;
+                ptl := s2;
+                let i = !pi;
+                let i' : SZ.t = SZ.sub i 1sz;
+                pi := i';
+              } else {
+                Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
+                pres := false;
+              }
+            }
+          }
+        };
+        Trade.elim _ _;
+        !pres
+      }
+    }
+  }
+}
+```
+
+#pop-options
 
 let synth_nlist_1
   (#t: Type)
