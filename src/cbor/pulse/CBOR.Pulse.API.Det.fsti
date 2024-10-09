@@ -25,3 +25,7 @@ val cbor_det_match_with_size_eq:
     (fun _ -> cbor_det_match_with_size sz p c v **
       pure (sz == Seq.length (Spec.cbor_det_serialize v))
     )
+
+val cbor_det_map_entry_match: perm -> cbor_det_map_entry_t -> Spec.cbor & Spec.cbor -> slprop
+
+val cbor_det_mk_map () : mk_map_t cbor_det_match cbor_det_map_entry_match
