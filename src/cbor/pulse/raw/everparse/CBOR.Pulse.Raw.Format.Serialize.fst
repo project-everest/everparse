@@ -42,6 +42,34 @@ let write_long_argument_8_simple_value
             )
             (serialize_long_argument b)
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let write_long_argument_8_not_simple_value
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+  (sq2: squash ((b.major_type = cbor_major_type_simple_value) == false))
+: Tot (l2r_leaf_writer (serialize_long_argument b))
+=
+              l2r_leaf_writer_ext
+                (LP.l2r_leaf_write_synth'
+                  (LPI.l2r_leaf_write_u8 ())
+                  (LongArgumentU8 #b ())
+                  (LongArgumentU8?.v)
+                )
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let write_long_argument_8
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+: Tot (l2r_leaf_writer (serialize_long_argument b))
+= l2r_leaf_writer_ifthenelse
+    (serialize_long_argument b)
+    (b.major_type = cbor_major_type_simple_value)
+    (write_long_argument_8_simple_value b sq1)
+    (write_long_argument_8_not_simple_value b sq1)
+
 (* etc. *)
 
 assume val write_header : l2r_leaf_writer serialize_header
