@@ -1027,7 +1027,7 @@ inline_for_extraction
 ```pulse
 fn l2r_writer_of_leaf_writer
   (#t: Type)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (#s: serializer p)
   (w: l2r_leaf_writer s)
@@ -1039,8 +1039,28 @@ fn l2r_writer_of_leaf_writer
   (#v: Ghost.erased bytes)
 {
   unfold (eq_as_slprop t x' x);
-  let res = w x' out offset;
   fold (eq_as_slprop t x' x);
+  w x' out offset
+}
+```
+
+inline_for_extraction
+```pulse
+fn l2r_leaf_writer_of_writer
+  (#t: Type)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: l2r_writer #t #t (eq_as_slprop t) #k #p s)
+: l2r_leaf_writer u#0 #t #k #p s
+= (x: t)
+  (out: slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  fold (eq_as_slprop t x x);
+  let res = w x out offset;
+  unfold (eq_as_slprop t x x);
   res
 }
 ```

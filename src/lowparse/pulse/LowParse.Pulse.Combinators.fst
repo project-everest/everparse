@@ -41,6 +41,22 @@ fn leaf_read_ret
 ```
 
 inline_for_extraction
+```pulse
+fn l2r_leaf_write_ret
+  (#t: Type0)
+  (x: t)
+  (v_unique: (v' : t) -> Lemma (x == v'))
+: l2r_leaf_writer u#0 #t #_ #_ (serialize_ret x v_unique)
+= (x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  offset
+}
+```
+
+inline_for_extraction
 let read_ret
   (#t: Type0)
   (x: t)
@@ -62,6 +78,9 @@ let read_empty : reader serialize_empty = reader_of_leaf_reader leaf_read_empty
 
 inline_for_extraction
 let jump_empty : jumper parse_empty = jump_ret ()
+
+inline_for_extraction
+let l2r_leaf_write_empty : l2r_leaf_writer serialize_empty = l2r_leaf_write_ret () (fun _ -> ())
 
 let parse_serialize_strong_prefix
   (#t: Type)
@@ -1128,6 +1147,17 @@ fn l2r_write_dtuple2_recip
 }
 ```
 
+let lemma_seq_append_ijk
+  (#t: Type)
+  (s: Seq.seq t)
+  (i j k: nat)
+: Lemma
+  (requires (i <= j /\ j <= k /\ k <= Seq.length s))
+  (ensures (
+    Seq.slice s i k == Seq.append (Seq.slice s i j) (Seq.slice s j k)
+  ))
+= assert (Seq.equal (Seq.slice s i k) (Seq.append (Seq.slice s i j) (Seq.slice s j k)))
+
 inline_for_extraction
 ```pulse
 fn l2r_write_dtuple2_recip_explicit_header
@@ -1170,9 +1200,122 @@ fn l2r_write_dtuple2_recip_explicit_header
   Seq.slice_slice v1 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
   Seq.slice_slice v2 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
   Seq.slice_slice v2 0 (SZ.v res1) 0 (SZ.v offset);
+  lemma_seq_append_ijk v2 (SZ.v offset) (SZ.v res1) (SZ.v res2);
   res2
 }
 ```
+
+inline_for_extraction
+```pulse
+fn l2r_leaf_write_dtuple2_phi
+  (th1: Type0)
+  (th2: (th1 -> Type0))
+  (xl: dtuple2 th1 th2)
+  (xh: Ghost.erased (dtuple2 th1 th2))
+requires
+  eq_as_slprop (dtuple2 th1 th2) xl xh
+returns res: th1
+ensures
+  eq_as_slprop (dtuple2 th1 th2) xl xh ** pure (res == dfst xh)
+{
+  unfold (eq_as_slprop (dtuple2 th1 th2) xl xh);
+  fold (eq_as_slprop (dtuple2 th1 th2) xl xh);
+  dfst xl
+}
+```
+
+```pulse
+ghost
+fn l2r_leaf_write_dtuple2_body_lens_aux
+  (#th1: Type0)
+  (#th2: (th1 -> Tot Type0))
+  (xh1: th1)
+  (x': dtuple2 th1 th2)
+  (x: th2 xh1)
+requires
+  vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x
+returns res: Ghost.erased (th2 xh1)
+ensures
+  eq_as_slprop (th2 xh1) res x **
+  Trade.trade
+    (eq_as_slprop (th2 xh1) res x)
+    (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x) **
+    pure (
+      dfst x' == xh1 /\
+      Ghost.reveal res == dsnd x'
+    )
+{
+  unfold (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x);
+  unfold (eq_as_slprop (dtuple2 th1 th2) x' (| xh1, x |));
+  let res : Ghost.erased (th2 xh1) = dsnd x';
+  fold (eq_as_slprop (th2 xh1) res x);
+  ghost fn aux (_: unit)
+    requires emp ** eq_as_slprop (th2 xh1) res x
+    ensures vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x
+  {
+    unfold (eq_as_slprop (th2 xh1) res x);
+    fold (eq_as_slprop (dtuple2 th1 th2) x' (| xh1, x |));
+    fold (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1 x' x);
+  };
+  Trade.intro _ _ _ aux;
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn l2r_leaf_write_dtuple2_body_lens
+  (#th1: Type0)
+  (#th2: (th1 -> Tot Type0))
+  (xh1: th1)
+: vmatch_lens #(dtuple2 th1 th2)
+  #(th2 xh1)
+  #(th2 xh1)
+  (vmatch_dep_proj2 #(dtuple2 th1 th2) #th1 #th2 (eq_as_slprop (dtuple2 th1 th2)) xh1)
+  (eq_as_slprop (th2 xh1))
+= (x': dtuple2 th1 th2)
+  (x: Ghost.erased (th2 xh1))
+{
+  let _ = l2r_leaf_write_dtuple2_body_lens_aux xh1 x' x;
+  dsnd x'
+}
+```
+
+inline_for_extraction
+let l2r_leaf_write_dtuple2_body
+  (#th1: Type0)
+  (#th2: (th1 -> Type0))
+  (#k2: Ghost.erased parser_kind)
+  (#p2: (x: th1) -> parser k2 (th2 x))
+  (#s2: (x: th1) -> serializer (p2 x))
+  (w2: (xh1: th1) -> l2r_leaf_writer (s2 xh1))
+  (xh1: th1)
+: l2r_writer (vmatch_dep_proj2 (eq_as_slprop (dtuple2 th1 th2)) xh1) (s2 xh1)
+= l2r_writer_lens
+    (l2r_leaf_write_dtuple2_body_lens #th1 #th2 xh1)
+    (l2r_writer_of_leaf_writer (w2 xh1))
+
+inline_for_extraction
+let l2r_leaf_write_dtuple2
+  (#th1: Type0)
+  (#th2: (th1 -> Type0))
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (w1: l2r_leaf_writer s1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#k2: Ghost.erased parser_kind)
+  (#p2: (x: th1) -> parser k2 (th2 x))
+  (#s2: (x: th1) -> serializer (p2 x))
+  (w2: (xh1: th1) -> l2r_leaf_writer (s2 xh1))
+: l2r_leaf_writer (serialize_dtuple2 s1 s2)
+= l2r_leaf_writer_of_writer
+    (l2r_write_dtuple2_recip_explicit_header
+      w1
+      (l2r_leaf_write_dtuple2_phi th1 th2)
+      sq
+      (l2r_leaf_write_dtuple2_body w2)
+    )
 
 inline_for_extraction
 ```pulse
