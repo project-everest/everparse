@@ -998,6 +998,30 @@ fn l2r_leaf_writer_ext
 
 inline_for_extraction
 ```pulse
+fn l2r_leaf_writer_ifthenelse
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> l2r_leaf_writer s))
+  (iffalse: (squash (cond == false) -> l2r_leaf_writer s))
+: l2r_leaf_writer u#0 #t #k #p s
+= (x: t)
+  (out: slice byte)
+  (offset: SZ.t)
+  (#v: Ghost.erased bytes)
+{
+  if (cond) {
+    iftrue () x out offset;
+  } else {
+    iffalse () x out offset;
+  }
+}
+```
+
+inline_for_extraction
+```pulse
 fn l2r_writer_of_leaf_writer
   (#t: Type)
   (#k: parser_kind)
