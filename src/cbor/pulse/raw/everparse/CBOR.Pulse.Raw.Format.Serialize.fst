@@ -3,7 +3,7 @@ open Pulse.Lib.Pervasives
 open CBOR.Pulse.Raw.EverParse.Serialized.Base
 friend CBOR.Spec.Raw.Format
 open CBOR.Spec.Raw.EverParse
-open CBOR.Pulse.Raw.EverParse.Format
+open CBOR.Pulse.Raw.EverParse.Format // for get_header_initial_byte
 open LowParse.Spec.Base
 open LowParse.Pulse.Base
 
@@ -12,7 +12,7 @@ module LP = LowParse.Pulse.Combinators
 module LPI = LowParse.Pulse.Int
 
 inline_for_extraction
-let write_initial_byte_t' : l2r_leaf_writer serialize_initial_byte_t =
+let write_initial_byte' : l2r_leaf_writer serialize_initial_byte_t =
   l2r_leaf_writer_ext
     (LP.l2r_leaf_write_synth'
       (LowParse.Pulse.BitSum.l2r_write_bitsum'
@@ -23,6 +23,13 @@ let write_initial_byte_t' : l2r_leaf_writer serialize_initial_byte_t =
       synth_initial_byte_recip
     )
     _
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let write_initial_byte : l2r_leaf_writer serialize_initial_byte =
+  LP.l2r_leaf_write_filter
+    write_initial_byte'
+    initial_byte_wf
 
 inline_for_extraction
 let write_long_argument_8_simple_value
@@ -70,9 +77,127 @@ let write_long_argument_8
     (write_long_argument_8_simple_value b sq1)
     (write_long_argument_8_not_simple_value b sq1)
 
-(* etc. *)
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let write_long_argument_16
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_16_bits) == true))
+: Tot (l2r_leaf_writer (serialize_long_argument b))
+=
+              l2r_leaf_writer_ext
+                (LP.l2r_leaf_write_synth'
+                  (LPI.l2r_leaf_write_u16 ())
+                  (LongArgumentU16 #b ())
+                  (LongArgumentU16?.v)
+                )
+                (serialize_long_argument b)
 
-assume val write_header : l2r_leaf_writer serialize_header
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let write_long_argument_32
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_32_bits) == true))
+: Tot (l2r_leaf_writer (serialize_long_argument b))
+=
+              l2r_leaf_writer_ext
+                (LP.l2r_leaf_write_synth'
+                  (LPI.l2r_leaf_write_u32 ())
+                  (LongArgumentU32 #b ())
+                  (LongArgumentU32?.v)
+                )
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let write_long_argument_64
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_64_bits) == true))
+: Tot (l2r_leaf_writer (serialize_long_argument b))
+=
+              l2r_leaf_writer_ext
+                (LP.l2r_leaf_write_synth'
+                  (LPI.l2r_leaf_write_u64 ())
+                  (LongArgumentU64 #b ())
+                  (LongArgumentU64?.v)
+                )
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let write_long_argument_other
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+  (sq64: squash ((b.additional_info = additional_info_long_argument_64_bits) == false))
+: Tot (l2r_leaf_writer (serialize_long_argument b))
+=
+              l2r_leaf_writer_ext
+                (LP.l2r_leaf_write_synth'
+                  LP.l2r_leaf_write_empty
+                  (LongArgumentOther #b b.additional_info ())
+                  LongArgumentOther?.v
+                )
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let write_long_argument_not_8_16_32
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+: Tot (l2r_leaf_writer (serialize_long_argument b))
+= l2r_leaf_writer_ifthenelse
+    (serialize_long_argument b)
+    (b.additional_info = additional_info_long_argument_64_bits)
+    (write_long_argument_64 b)
+    (write_long_argument_other b sq8 sq16 sq32)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let write_long_argument_not_8_16
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+: Tot (l2r_leaf_writer (serialize_long_argument b))
+= l2r_leaf_writer_ifthenelse
+    (serialize_long_argument b)
+    (b.additional_info = additional_info_long_argument_32_bits)
+    (write_long_argument_32 b)
+    (write_long_argument_not_8_16_32 b sq8 sq16)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let write_long_argument_not_8
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+: Tot (l2r_leaf_writer (serialize_long_argument b))
+= l2r_leaf_writer_ifthenelse
+    (serialize_long_argument b)
+    (b.additional_info = additional_info_long_argument_16_bits)
+    (write_long_argument_16 b)
+    (write_long_argument_not_8_16 b sq8)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let write_long_argument
+  (b: initial_byte)
+: Tot (l2r_leaf_writer (serialize_long_argument b))
+= l2r_leaf_writer_ifthenelse
+      (serialize_long_argument b)
+      (b.additional_info = additional_info_long_argument_8_bits)
+      (write_long_argument_8 b)
+      (write_long_argument_not_8 b)
+
+let write_header : l2r_leaf_writer serialize_header =
+  l2r_leaf_writer_ext
+    (LP.l2r_leaf_write_dtuple2
+      write_initial_byte
+      ()
+      write_long_argument
+    )
+    _
 
 module SZ = FStar.SizeT
 module PM = Pulse.Lib.SeqMatch
