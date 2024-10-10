@@ -512,6 +512,15 @@ let ser_payload_array_array
     )
     (serialize_content xh1)
 
+assume val ser_payload_array_not_array
+  (f64: squash SZ.fits_u64)
+//  (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
+:
+l2r_writer (vmatch_with_cond (match_cbor_payload xh1) (pnot cbor_with_perm_case_array))
+  (serialize_content xh1)
+
 inline_for_extraction
 let ser_payload_array
   (f64: squash SZ.fits_u64)
@@ -523,7 +532,16 @@ let ser_payload_array
     _ _
     cbor_with_perm_case_array
     (ser_payload_array_array f64 f xh1 sq)
-    (magic ())
+    (ser_payload_array_not_array f64 (* f *) xh1 sq)
+
+assume val ser_payload_not_string_not_array
+  (f64: squash SZ.fits_u64)
+//  (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (not (let b = get_header_initial_byte xh1 in b.major_type = 
+cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
+  (_: squash ((get_header_initial_byte xh1).major_type = cbor_major_type_array == false))
+: l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
 
 inline_for_extraction
 let ser_payload_not_string
@@ -535,7 +553,7 @@ let ser_payload_not_string
 = l2r_writer_ifthenelse _ _
     (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array)
     (ser_payload_array f64 f xh1)
-    (magic ())
+    (ser_payload_not_string_not_array f64 (* f *) xh1 sq)
 
 inline_for_extraction
 let ser_payload
