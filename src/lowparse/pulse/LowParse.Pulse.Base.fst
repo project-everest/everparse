@@ -694,6 +694,7 @@ let l2r_writer
   (#x: Ghost.erased t) ->
   l2r_writer_for vmatch s x' x
 
+inline_for_extraction
 ```pulse
 fn l2r_writer_ext
   (#t' #t: Type0)
@@ -725,6 +726,7 @@ let vmatch_ext
 : Tot slprop
 = exists* (x1: t1) . vmatch x' x1 ** pure (t1 == t2 /\ x1 == x2)
 
+inline_for_extraction
 ```pulse
 fn l2r_writer_ext_gen
   (#t' #t1 #t2: Type0)
@@ -832,6 +834,7 @@ let vmatch_and_const
 : Tot slprop
 = const ** vmatch xl xh
 
+inline_for_extraction
 ```pulse
 fn l2r_writer_frame
   (#t' #t: Type0)
