@@ -226,6 +226,28 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
 }
 ```
 
+#restart-solver
+
+let cbor_validate_det_success
+  (v: Seq.seq U8.t)
+  (len: SZ.t)
+  (v': raw_data_item)
+: Lemma
+  (requires (
+    validator_success parse_raw_data_item 0sz v len /\
+    parse parse_raw_data_item (Seq.slice v 0 (Seq.length v)) == Some (v', SZ.v len - 0) /\
+    holds_on_raw_data_item R.raw_data_item_ints_optimal_elem v' /\
+    holds_on_raw_data_item (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order) v'
+  ))
+  (ensures exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ SZ.v len == Seq.length (serialize_cbor v1) /\ R.raw_data_item_ints_optimal v1 /\ R.raw_data_item_sorted deterministically_encoded_cbor_map_key_order v1
+  )
+= Seq.lemma_split v (SZ.v len);
+  let v2 = Seq.slice v (SZ.v len) (Seq.length v) in
+  parse_injective parse_raw_data_item (Seq.slice v 0 (Seq.length v)) (serialize_cbor v');
+  assert (Ghost.reveal v == serialize_cbor v' `Seq.append` v2)
+
+#restart-solver
+
 ```pulse
 fn cbor_validate_det
   (input: slice U8.t)
@@ -261,6 +283,7 @@ fn cbor_validate_det
         cbor_validate_det_fail v v1 (Seq.slice v (SZ.v len) (Seq.length v));
         0sz
       } else {
+        cbor_validate_det_success v len v1;
         len
       }
     }

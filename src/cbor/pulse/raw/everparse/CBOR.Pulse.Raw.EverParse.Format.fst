@@ -1,4 +1,6 @@
 module CBOR.Pulse.Raw.EverParse.Format
+open LowParse.Pulse.Int
+open LowParse.Pulse.BitSum
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -924,9 +926,9 @@ fn get_string_payload
   (#h: Ghost.erased header)
   (#c: Ghost.erased (content h)) 
   requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |) /\ String? v)
-  ensures exists* v' .
-    S.pts_to input #pm v' **
-    trade (S.pts_to input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
+  ensures exists* (v': Seq.seq byte) .
+    pts_to input #pm v' **
+    trade (pts_to input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (String? v /\ v' == String?.v v)
 {
   pts_to_serialized_ext_trade
@@ -937,7 +939,7 @@ fn get_string_payload
   let v2 : Ghost.erased bytes = Ghost.hide #bytes (Ghost.reveal #(Seq.lseq byte (U64.v (String?.len v).value)) v1);
   Trade.rewrite_with_trade
     (pts_to_serialized (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1)
-    (S.pts_to input #pm v2);
+    (pts_to input #pm v2);
   Trade.trans _ _ (pts_to_serialized (serialize_content h) input #pm c)
 }
 ```

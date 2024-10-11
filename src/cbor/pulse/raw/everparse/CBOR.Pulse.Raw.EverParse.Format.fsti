@@ -2,8 +2,6 @@ module CBOR.Pulse.Raw.EverParse.Format
 open CBOR.Spec.Raw.EverParse
 open Pulse.Lib.Slice open Pulse.Lib.Pervasives open Pulse.Lib.Trade
 open LowParse.Pulse.Combinators
-open LowParse.Pulse.Int
-open LowParse.Pulse.BitSum
 open LowParse.Pulse.Recursive
 
 module Trade = Pulse.Lib.Trade.Util
@@ -65,9 +63,9 @@ val get_string_payload
   (#c: Ghost.erased (content h)) 
 : stt_ghost unit emp_inames
   (requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |) /\ String? v))
-  (ensures fun _ -> exists* v' .
-    S.pts_to input #pm v' **
-    trade (S.pts_to input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
+  (ensures fun _ -> exists* (v' : Seq.seq byte) .
+    pts_to input #pm v' **
+    trade (pts_to input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (String? v /\ v' == String?.v v)
   )
 

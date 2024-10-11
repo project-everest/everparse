@@ -25,7 +25,7 @@ let cbor_raw_slice_iterator_match
   (l: list elt_high)
 : Tot slprop
 = exists* sq .
-     Pulse.Lib.Slice.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+     pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
      PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
 
 ```pulse
@@ -40,21 +40,21 @@ requires
   cbor_raw_slice_iterator_match elt_match pm c l
 ensures
   exists* sq .
-     Pulse.Lib.Slice.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+     pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
      PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm)) **
      trade
-       (Pulse.Lib.Slice.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+       (pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
          PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
        )
        (cbor_raw_slice_iterator_match elt_match pm c l)
 {
   unfold (cbor_raw_slice_iterator_match elt_match pm c l);
-  with sq . assert (Pulse.Lib.Slice.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+  with sq . assert (pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
      PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
   );
   ghost
   fn aux ()
-  requires emp ** (Pulse.Lib.Slice.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+  requires emp ** (pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
          PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
        )
   ensures cbor_raw_slice_iterator_match elt_match pm c l
@@ -76,13 +76,13 @@ fn cbor_raw_slice_iterator_match_fold
   (l: list elt_high)
   (sq: Seq.seq elt_low)
 requires
-  Pulse.Lib.Slice.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+  pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
   PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
 ensures
   cbor_raw_slice_iterator_match elt_match pm c' l **
      trade
        (cbor_raw_slice_iterator_match elt_match pm c' l)
-       (Pulse.Lib.Slice.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+       (pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
          PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
        )
 {
@@ -91,9 +91,9 @@ ensures
   fold (cbor_raw_slice_iterator_match elt_match pm c' l);
   ghost
   fn aux ()
-  requires (S.pts_to c.s #((pm `perm_mul` c.slice_perm) /. 2.0R) sq ** cbor_raw_slice_iterator_match elt_match pm c' l)
+  requires (pts_to c.s #((pm `perm_mul` c.slice_perm) /. 2.0R) sq ** cbor_raw_slice_iterator_match elt_match pm c' l)
   ensures
-       (Pulse.Lib.Slice.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+       (pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
          PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
        )
   {
@@ -108,7 +108,7 @@ ensures
 ghost
 fn slice_from_array_trade_aux (#t: Type0) (a: array t) (p: perm) (v: Ghost.erased (Seq.seq t)) (s: S.slice t) (_: unit)
 requires
-    (S.is_from_array a p s ** S.pts_to s #p v)
+    (S.is_from_array a s ** pts_to s #p v)
 ensures
     (A.pts_to a #p v)
 {
@@ -126,13 +126,13 @@ requires
 returns s: S.slice t
 ensures
     (
-        S.pts_to s #p v **
+        pts_to s #p v **
         trade
-          (S.pts_to s #p v)
+          (pts_to s #p v)
           (A.pts_to a #p v)
     )
 {
-  let s = S.from_array false a alen;
+  let s = S.from_array a alen;
   Trade.intro _ _ _ (slice_from_array_trade_aux a p v s);
   s
 }
@@ -173,7 +173,7 @@ ensures exists* p .
     (PM.seq_list_match sq l (elt_match pm'))
     (PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm)));
   Trade.prod
-    (S.pts_to s #pm sq)
+    (pts_to s #pm sq)
     (A.pts_to a #pm sq)
     (PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm)))
     (PM.seq_list_match sq l (elt_match pm'))
@@ -224,9 +224,9 @@ let slice_split_right_postcond
 ghost
 fn slice_split_right_aux (#t: Type0) (s1: S.slice t) (p: perm) (v1: Seq.seq t) (s2: S.slice t) (v2: Seq.seq t) (i: SZ.t) (s: S.slice t) (v: Seq.seq t) (sq: squash (v == v1 `Seq.append` v2)) (_: unit)
 requires
-    ((S.is_split s p i s1 s2 ** S.pts_to s1 #p v1) ** S.pts_to s2 #p v2)
+    ((S.is_split s s1 s2 ** pts_to s1 #p v1) ** pts_to s2 #p v2)
 ensures
-    (S.pts_to s #p v)
+    (pts_to s #p v)
 {
   S.join s1 s2 s
 }
@@ -235,19 +235,17 @@ ensures
 inline_for_extraction
 ```pulse
 fn slice_split_right (#t: Type0) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Seq.seq t)) (i: SZ.t)
-    requires S.pts_to s #p v ** pure (S.split_precond false p v i)
+    requires pts_to s #p v ** pure (SZ.v i <= Seq.length v)
     returns res: S.slice t
-    ensures exists* v' . S.pts_to res #p v' **
-      trade (S.pts_to res #p v') (S.pts_to s #p v) **
+    ensures exists* v' . pts_to res #p v' **
+      trade (pts_to res #p v') (pts_to s #p v) **
       pure (slice_split_right_postcond p v i v')
 {
-  let sp = S.split false s i;
+  let sp = S.split s i;
   match sp {
     S.SlicePair s1 s2 -> {
-      unfold (S.split_post s p v i sp);
-      unfold (S.split_post' s p v i s1 s2);
-      with v1 . assert (S.pts_to s1 #p v1);
-      with v2 . assert (S.pts_to s2 #p v2);
+      with v1 . assert (pts_to s1 #p v1);
+      with v2 . assert (pts_to s2 #p v2);
       let sq : squash (Ghost.reveal v == v1 `Seq.append` v2) = Seq.lemma_split v (SZ.v i);
       Trade.intro _ _ _ (slice_split_right_aux s1 p v1 s2 v2 i s v sq);
       s2
@@ -312,33 +310,33 @@ ensures
       (cbor_raw_slice_iterator_match elt_match pm i l) **
     pure (Ghost.reveal l == a :: q)
 {
-  cbor_raw_slice_iterator_match_unfold elt_match pm i l; // 1: (S.pts_to i.s _ ** PM.seq_list_match _ l _) @==> cbor_raw_slice_iterator_match elt_match pm i l
-  with sq . assert (S.pts_to i.s #(pm `perm_mul` i.slice_perm) sq);
+  cbor_raw_slice_iterator_match_unfold elt_match pm i l; // 1: (pts_to i.s _ ** PM.seq_list_match _ l _) @==> cbor_raw_slice_iterator_match elt_match pm i l
+  with sq . assert (pts_to i.s #(pm `perm_mul` i.slice_perm) sq);
   PM.seq_list_match_length (elt_match (pm `perm_mul` i.payload_perm)) _ _;
   let res = Pulse.Lib.Slice.op_Array_Access i.s 0sz;
   PM.seq_list_match_cons_elim_trade _ l (elt_match (pm `perm_mul` i.payload_perm)); // 2: (elt_match _ (List.Tot.hd l) ** PM.seq_list_match _ (List.Tot.tl l) _) @==> PM.seq_list_match _ l _
 //  assert (elt_match (pm `perm_mul` i.payload_perm) res (List.Tot.hd l)); // FIXME: make this work, without the need for `rewrite ... sq`, see below
-  let s' = slice_split_right i.s 1sz; // 3: S.pts_to s' _ @==> S.pts_to i.s _
+  let s' = slice_split_right i.s 1sz; // 3: pts_to s' _ @==> pts_to i.s _
   let i1 = { i with s = s' };
   let i' = { i1 with slice_perm = i.slice_perm /. 2.0R };
   pi := CBOR_Raw_Iterator_Slice i';
-  cbor_raw_slice_iterator_match_fold elt_match pm i1 i' (List.Tot.tl l) _; // 4: cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l) @==> (S.pts_to s' _ ** PM.seq_list_match _ (List.Tot.tl l) _)
+  cbor_raw_slice_iterator_match_fold elt_match pm i1 i' (List.Tot.tl l) _; // 4: cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l) @==> (pts_to s' _ ** PM.seq_list_match _ (List.Tot.tl l) _)
   // BEGIN FIXME: PLEASE PLEASE PLEASE automate the following steps away!
   trade_partial_trans // uses 2, 4
     (cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l))
-    (S.pts_to s' #(pm `perm_mul` i.slice_perm) _)
+    (pts_to s' #(pm `perm_mul` i.slice_perm) _)
     (PM.seq_list_match _ (List.Tot.tl l) (elt_match (pm `perm_mul` i.payload_perm)))
     (elt_match (pm `perm_mul` i.payload_perm) res (List.Tot.hd l))
-    (PM.seq_list_match _ l (elt_match (pm `perm_mul` i.payload_perm))); // 5: elt_match _ _ (List.Tot.hd l) ** cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l) @==> PM.seq_list_match _ l _ ** S.pts_to s' _
+    (PM.seq_list_match _ l (elt_match (pm `perm_mul` i.payload_perm))); // 5: elt_match _ _ (List.Tot.hd l) ** cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l) @==> PM.seq_list_match _ l _ ** pts_to s' _
   trade_partial_trans_2 // uses 3, 5
     (elt_match (pm `perm_mul` i.payload_perm) res (List.Tot.hd l) ** cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l))
     (PM.seq_list_match _ l (elt_match (pm `perm_mul` i.payload_perm)))
-    (S.pts_to s' #(pm `perm_mul` i.slice_perm) _)
-    (S.pts_to i.s #(pm `perm_mul` i.slice_perm) _); // 6: elt_match _ _ (List.Tot.hd l) ** cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l) @==> PM.seq_list_match _ l _ ** S.pts_to i.s _
+    (pts_to s' #(pm `perm_mul` i.slice_perm) _)
+    (pts_to i.s #(pm `perm_mul` i.slice_perm) _); // 6: elt_match _ _ (List.Tot.hd l) ** cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l) @==> PM.seq_list_match _ l _ ** pts_to i.s _
   slprop_equivs ();
   Trade.trans
     (elt_match (pm `perm_mul` i.payload_perm) res (List.Tot.hd l) ** cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l))
-    (PM.seq_list_match _ l (elt_match (pm `perm_mul` i.payload_perm)) ** S.pts_to i.s #(pm `perm_mul` i.slice_perm) _)
+    (PM.seq_list_match _ l (elt_match (pm `perm_mul` i.payload_perm)) ** pts_to i.s #(pm `perm_mul` i.slice_perm) _)
     (cbor_raw_slice_iterator_match elt_match pm i l);
   // END FIXME
   rewrite (elt_match (pm `perm_mul` i.payload_perm) (Seq.head sq) (List.Tot.hd l)) as (elt_match (pm `perm_mul` i.payload_perm) res (List.Tot.hd l)); // FIXME: automate this step away; it is the only occurrence of `sq`, see the `assert` above

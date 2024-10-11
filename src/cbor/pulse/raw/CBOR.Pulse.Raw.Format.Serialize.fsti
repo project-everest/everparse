@@ -15,8 +15,8 @@ val cbor_serialize
   (#y: Ghost.erased raw_data_item)
   (#pm: perm)
 : stt SZ.t
-    (exists* v . cbor_match pm x y ** S.pts_to output v ** pure (Seq.length (serialize_cbor y) <= SZ.v (S.len output)))
-    (fun res -> exists* v . cbor_match pm x y ** S.pts_to output v ** pure (
+    (exists* v . cbor_match pm x y ** pts_to output v ** pure (Seq.length (serialize_cbor y) <= SZ.v (S.len output)))
+    (fun res -> exists* v . cbor_match pm x y ** pts_to output v ** pure (
       let s = serialize_cbor y in
       SZ.v res == Seq.length s /\
       (exists v' . v `Seq.equal` (s `Seq.append` v'))

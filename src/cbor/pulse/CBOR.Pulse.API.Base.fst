@@ -131,9 +131,9 @@ let get_string_t
   stt (S.slice FStar.UInt8.t)
     (vmatch p x y ** pure (CString? (unpack y)))
     (fun res -> exists* p' v' .
-      S.pts_to res #p' v' **
+      pts_to res #p' v' **
       Trade.trade
-        (S.pts_to res #p' v')
+        (pts_to res #p' v')
         (vmatch p x y) **
       pure (match unpack y with
       | CString _ v -> v == v'
@@ -441,12 +441,12 @@ let mk_string_t
   (#p: perm) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->
   stt t
-    (S.pts_to s #p v ** pure (FStar.UInt.fits (Seq.length v) 64))
+    (pts_to s #p v ** pure (FStar.UInt.fits (Seq.length v) 64))
     (fun res -> exists* p' v' .
       vmatch p' res (pack (CString ty v')) **
       Trade.trade
         (vmatch p' res (pack (CString ty v')))
-        (S.pts_to s #p v) **
+        (pts_to s #p v) **
       pure (v' == Ghost.reveal v)
     )
 

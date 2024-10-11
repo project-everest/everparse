@@ -56,9 +56,70 @@ let parse_nlist_recursive_bound_correct
     assert (consumed >= n * p.parse_header_kind.parser_kind_low);
     FStar.Math.Lemmas.lemma_mult_le_right n 1 p.parse_header_kind.parser_kind_low
 
-#push-options "--z3rlimit 64"
+#restart-solver
+
+let validate_tot_nlist_recursive_progress
+  (p: parse_recursive_param)
+  (v: bytes)
+  (n: nat)
+  (off: nat)
+  (off': nat)
+: Lemma
+  (requires (
+    off <= Seq.length v /\
+    n > 0 /\
+    begin match parse_consume p.parse_header (Seq.slice v off (Seq.length v)) with
+    | None -> False
+    | Some consumed -> off' == off + consumed
+    end
+  ))
+  (ensures (
+    off <= off' /\
+    off' <= Seq.length v /\
+    n > 0 /\
+    begin match parse p.parse_header (Seq.slice v off (Seq.length v)) with
+    | Some (h, _) ->
+      let pr = parse_consume (L.tot_parse_nlist n (parse_recursive p)) (Seq.slice v (off) (Seq.length v)) in
+      let n' = (n - 1) + p.count h in
+      let pr' = parse_consume (L.tot_parse_nlist n' (parse_recursive p)) (Seq.slice v (off') (Seq.length v)) in
+      (Some? pr == Some? pr') /\
+      (Some? pr ==> off + Some?.v pr == off' + Some?.v pr')
+    end
+  ))
+= parse_consume_nlist_recursive_eq' p n (Seq.slice v off (Seq.length v))
 
 #restart-solver
+
+let validate_tot_nlist_recursive_overflow
+  (p: parse_recursive_param)
+  (v: bytes)
+  (n: nat)
+  (off: nat)
+: Lemma
+  (requires (
+    off <= Seq.length v /\
+    n > 0 /\
+    begin match parse p.parse_header (Seq.slice v off (Seq.length v)) with
+    | Some (h, _) ->
+      let bound = (Seq.length v - off) - n in
+      p.count h > bound
+    | None -> False
+    end
+  ))
+  (ensures (
+    off <= Seq.length v /\
+    None? (parse_consume (L.tot_parse_nlist n (parse_recursive p)) (Seq.slice v off (Seq.length v)))
+  ))
+=
+  parser_kind_prop_equiv p.parse_header_kind p.parse_header;
+  parse_consume_nlist_recursive_eq' p n (Seq.slice v off (Seq.length v));
+  parse_nlist_recursive_bound_correct p (n) (Seq.slice v (off) (Seq.length v));
+  let Some (h, consumed) = parse p.parse_header (Seq.slice v off (Seq.length v)) in
+  let offset = off + consumed in
+  parse_nlist_recursive_bound_correct p (p.count h + (n - 1)) (Seq.slice v (offset) (Seq.length v))
+
+#restart-solver
+
 inline_for_extraction
 ```pulse
 fn validate_tot_nlist_recursive
@@ -86,7 +147,7 @@ fn validate_tot_nlist_recursive
     pts_to pres res **
     pts_to pn n **
     pts_to poffset offset **
-    S.pts_to input #pm v **
+    pts_to input #pm v **
     pure (
       SZ.v offset <= Seq.length v /\
       b == (res && (SZ.gt n 0sz)) /\ (
@@ -98,6 +159,10 @@ fn validate_tot_nlist_recursive
   {
     let off = !poffset;
     let n = !pn;
+    let pr0 = Ghost.hide (parse_consume (L.tot_parse_nlist (SZ.v n0) (parse_recursive p)) (Seq.slice v (SZ.v offset0) (Seq.length v)));
+    let pr = Ghost.hide (parse_consume (L.tot_parse_nlist (SZ.v n) (parse_recursive p)) (Seq.slice v (SZ.v off) (Seq.length v)));
+    assert (pure (Some? pr0 == (Some? pr)));
+    assert (pure (Some? pr0 ==> (SZ.v offset0 + Some?.v pr0 == SZ.v off + Some?.v pr)));
     parse_consume_nlist_recursive_eq' p (SZ.v n) (Seq.slice v (SZ.v off) (Seq.length v));
     parse_nlist_recursive_bound_correct p (SZ.v n) (Seq.slice v (SZ.v off) (Seq.length v));
     if SZ.gt n (SZ.sub (S.len input) off) {
@@ -107,19 +172,25 @@ fn validate_tot_nlist_recursive
       if not res1 {
         pres := false;
       } else {
-        let off1 = !poffset;
-        let input1 = peek_trade_gen (serializer_of_tot_serializer s.serialize_header) input off off1;
+        let offset = !poffset;
+        let input1 = peek_trade_gen (serializer_of_tot_serializer s.serialize_header) input off offset;
         parser_kind_prop_equiv p.parse_header_kind p.parse_header;
         with gv . assert (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) input1 #pm gv);
-        parse_nlist_recursive_bound_correct p (p.count gv + (SZ.v n - 1)) (Seq.slice v (SZ.v off1) (Seq.length v));
+        parse_nlist_recursive_bound_correct p (p.count gv + (SZ.v n - 1)) (Seq.slice v (SZ.v offset) (Seq.length v));
         let bound = SZ.sub (SZ.sub (S.len input) off) n;
         let res2 = f #gv #pm input1 bound pn;
         elim_trade _ _;
         let count = !pn;
         if (res2 || SZ.gt count bound) {
+          validate_tot_nlist_recursive_overflow p v (SZ.v n) (SZ.v off);
           pres := false
         } else {
-          pn := SZ.add (SZ.sub n 1sz) count;
+          validate_tot_nlist_recursive_progress p v (SZ.v n) (SZ.v off) (SZ.v offset);
+          let n' : SZ.t = SZ.add (SZ.sub n 1sz) count;
+          pn := n';
+          let pr' = Ghost.hide (parse_consume (L.tot_parse_nlist (SZ.v n') (parse_recursive p)) (Seq.slice v (SZ.v offset) (Seq.length v)));
+          assert (pure (Some? pr0 == (Some? pr')));
+          assert (pure (Some? pr0 ==> (SZ.v offset0 + Some?.v pr0 == SZ.v offset + Some?.v pr')));
         }
       }
     }
@@ -127,8 +198,6 @@ fn validate_tot_nlist_recursive
   !pres
 }
 ```
-
-#pop-options
 
 inline_for_extraction
 ```pulse
@@ -213,7 +282,7 @@ fn jump_tot_nlist_recursive
   ) invariant b . exists* n offset .
     pts_to pn n **
     pts_to poffset offset **
-    S.pts_to input #pm v **
+    pts_to input #pm v **
     pure (
       SZ.v offset <= Seq.length v /\
       b == (SZ.gt n 0sz) /\ (

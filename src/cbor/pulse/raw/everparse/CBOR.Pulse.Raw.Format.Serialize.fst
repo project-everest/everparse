@@ -369,20 +369,20 @@ fn pts_to_seqbytes_intro
   (v: bytes)
   (res: with_perm (S.slice byte))
 requires
-  S.pts_to s #p v ** pure (Seq.length v == n /\ res.v == s /\ res.p == p)
+  pts_to s #p v ** pure (Seq.length v == n /\ res.v == s /\ res.p == p)
 returns v': Ghost.erased (Seq.lseq byte n)
 ensures
   LowParse.Pulse.SeqBytes.pts_to_seqbytes n res v' **
   Trade.trade
     (LowParse.Pulse.SeqBytes.pts_to_seqbytes n res v')
-    (S.pts_to s #p v) **
+    (pts_to s #p v) **
   pure (v == Ghost.reveal v')
 {
   let v' : Seq.lseq byte n = v;
   fold (LowParse.Pulse.SeqBytes.pts_to_seqbytes n res v');
   ghost fn aux (_: unit)
     requires emp ** LowParse.Pulse.SeqBytes.pts_to_seqbytes n res v'
-    ensures S.pts_to s #p v
+    ensures pts_to s #p v
   {
     unfold (LowParse.Pulse.SeqBytes.pts_to_seqbytes n res v')
   };
@@ -420,7 +420,7 @@ vmatch_lens #_ #_ #_
   let s = cbor_match_string_elim_payload x1'.v;
   Trade.trans _ (cbor_match _ x1'.v xh') _;
   S.pts_to_len s;
-  with p' . assert (S.pts_to s #p' x);
+  with p' . assert (pts_to s #p' (Ghost.reveal x <: Seq.seq U8.t));
   let res : with_perm (S.slice byte) = {
     v = s;
     p = p';
@@ -716,7 +716,7 @@ let ser_pre
   (v: Ghost.erased LP.bytes)
 : Tot slprop
 =
-    (S.pts_to out v ** cbor_match_with_perm x' x ** pure (
+    (pts_to out v ** cbor_match_with_perm x' x ** pure (
       SZ.v offset + Seq.length (bare_serialize serialize_raw_data_item x) <= Seq.length v
     ))
 
@@ -730,7 +730,7 @@ let ser_post
 : Tot slprop
 =
   exists* v' .
-      S.pts_to out v' ** cbor_match_with_perm x' x ** pure (
+      pts_to out v' ** cbor_match_with_perm x' x ** pure (
       let bs = bare_serialize serialize_raw_data_item x in
       SZ.v res == SZ.v offset + Seq.length bs /\
       SZ.v res <= Seq.length v /\
@@ -826,9 +826,9 @@ fn cbor_serialize
   (#y: Ghost.erased raw_data_item)
   (#pm: perm)
 requires
-    (exists* v . cbor_match pm x y ** S.pts_to output v ** pure (Seq.length (serialize_cbor y) <= SZ.v (S.len output)))
+    (exists* v . cbor_match pm x y ** pts_to output v ** pure (Seq.length (serialize_cbor y) <= SZ.v (S.len output)))
 returns res: SZ.t
-ensures exists* v . cbor_match pm x y ** S.pts_to output v ** pure (
+ensures exists* v . cbor_match pm x y ** pts_to output v ** pure (
       let s = serialize_cbor y in
       SZ.v res == Seq.length s /\
       (exists v' . v `Seq.equal` (s `Seq.append` v'))
@@ -837,7 +837,7 @@ ensures exists* v . cbor_match pm x y ** S.pts_to output v ** pure (
   let sq : squash (SZ.fits_u64) = assume (SZ.fits_u64);
   S.pts_to_len output;
   let res = ser sq _ x output 0sz;
-  with v . assert (S.pts_to output v);
+  with v . assert (pts_to output v);
   Seq.lemma_split v (SZ.v res);
   res
 }

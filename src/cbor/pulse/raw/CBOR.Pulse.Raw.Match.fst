@@ -34,8 +34,10 @@ let cbor_match_string
   (p: perm)
   (r: raw_data_item)
 : Tot slprop
-= exists* v . S.pts_to c.cbor_string_ptr #(p `perm_mul` c.cbor_string_perm) v ** pure
-    (r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) }) v)
+= exists* (v: Seq.seq U8.t) . pts_to c.cbor_string_ptr #(p `perm_mul` c.cbor_string_perm) v ** pure
+    (Seq.length v == SZ.v (S.len c.cbor_string_ptr) /\
+      r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) }) v
+    )
 
 let cbor_match_tagged
   (c: cbor_tagged)
@@ -537,7 +539,7 @@ fn cbor_match_string_intro_aux
   (c: cbor_string)
   (r: raw_data_item)
   requires
-    S.pts_to input #pm v ** pure (
+    pts_to input #pm v ** pure (
       input == c.cbor_string_ptr /\
       pm == c.cbor_string_perm /\
       Seq.length v == SZ.v (S.len c.cbor_string_ptr) /\
@@ -545,12 +547,12 @@ fn cbor_match_string_intro_aux
     )
   ensures
     cbor_match_string c 1.0R r **
-    trade (cbor_match_string c 1.0R r) (S.pts_to input #pm v)
+    trade (cbor_match_string c 1.0R r) (pts_to input #pm v)
 {
   fold (cbor_match_string c 1.0R r);
   ghost fn aux (_: unit)
     requires emp ** cbor_match_string c 1.0R r
-    ensures S.pts_to input #pm v
+    ensures pts_to input #pm v
   {
     unfold (cbor_match_string c 1.0R r)
   };
@@ -567,13 +569,13 @@ fn cbor_match_string_intro
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
   requires
-    S.pts_to input #pm v ** pure (
+    pts_to input #pm v ** pure (
       Seq.length v == U64.v len.value
     )
   returns c: cbor_raw
   ensures exists* r .
     cbor_match 1.0R c r **
-    trade (cbor_match 1.0R c r) (S.pts_to input #pm v) **
+    trade (cbor_match 1.0R c r) (pts_to input #pm v) **
     pure (
       Seq.length v == U64.v len.value /\
       r == String typ len (Ghost.reveal v)
@@ -587,7 +589,7 @@ fn cbor_match_string_intro
   Trade.rewrite_with_trade
     (cbor_match_string ress 1.0R r)
     (cbor_match 1.0R res r);
-  Trade.trans _ _ (S.pts_to input #pm v);
+  Trade.trans _ _ (pts_to input #pm v);
   res
 }
 ```
@@ -645,12 +647,15 @@ ghost fn cbor_match_string_elim_payload_aux
   (c: cbor_string)
   (p: perm)
   (r: Ghost.erased raw_data_item { String? r })
+  (v: Seq.seq U8.t)
   (_: unit)
 requires
   pure (
     String?.typ r == c.cbor_string_type /\
-    String?.len r == ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) })) **
-  S.pts_to c.cbor_string_ptr #(p `perm_mul` c.cbor_string_perm) (String?.v r)
+    String?.len r == ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) }) /\
+    v == (String?.v r <: Seq.seq U8.t)
+  ) **
+  pts_to c.cbor_string_ptr #(p `perm_mul` c.cbor_string_perm) v
 ensures
   cbor_match_string c p r
 {
@@ -667,16 +672,16 @@ fn cbor_match_string_elim_payload
 requires
   cbor_match p c v ** pure (String? v)
 returns res: S.slice U8.t
-ensures exists* p' v' .
-  S.pts_to res #p' v' **
-  trade (S.pts_to res #p' v') (cbor_match p c v) **
+ensures exists* p' (v': Seq.seq U8.t) .
+  pts_to res #p' v' **
+  trade (pts_to res #p' v') (cbor_match p c v) **
   pure (String? v /\ v' == String?.v v)
 {
   cbor_match_cases c;
   let c' = CBOR_Case_String?.v c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
   unfold (cbor_match_string c' p v);
-  Trade.intro _ _ _ (cbor_match_string_elim_payload_aux c' p v);
+  Trade.intro _ _ _ (cbor_match_string_elim_payload_aux c' p v _);
   Trade.trans _ _ (cbor_match p c v);
   c'.cbor_string_ptr
 }
