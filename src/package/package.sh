@@ -114,7 +114,12 @@ make_everparse() {
         elif find_fstar="$(which fstar.exe)" ; then
             export FSTAR_HOME=$(fixpath "$(dirname $find_fstar)"/..)
         else
-            git clone https://github.com/FStarLang/FStar
+            if $is_windows ; then
+                fstar_branch_opt="--branch taramana_dune_3.5"
+            else
+                fstar_branch_opt=
+            fi
+            git clone $fstar_branch_opt https://github.com/FStarLang/FStar
             export FSTAR_HOME=$(fixpath $PWD/FStar)
         fi
     else
