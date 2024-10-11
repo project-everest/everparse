@@ -1,13 +1,4 @@
 module CBOR.Pulse.Raw.EverParse.Format
-open CBOR.Spec.Raw.EverParse
-open Pulse.Lib.Slice open Pulse.Lib.Pervasives open Pulse.Lib.Trade
-open LowParse.Pulse.Combinators
-open LowParse.Pulse.Int
-open LowParse.Pulse.BitSum
-open LowParse.Pulse.Recursive
-
-module Trade = Pulse.Lib.Trade.Util
-module U64 = FStar.UInt64
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -646,8 +637,6 @@ let impl_leaf_content_seq_cond
   b.major_type = cbor_major_type_byte_string ||
   b.major_type = cbor_major_type_text_string
 
-module SZ = FStar.SizeT
-
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let validate_leaf_content_seq
@@ -747,9 +736,6 @@ let jump_leaf
     (jump_header ())
     (read_header ())
     (jump_leaf_content sq)
-
-module R = Pulse.Lib.Reference
-module S = Pulse.Lib.Slice
 
 ```pulse
 fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
@@ -888,17 +874,6 @@ fn jump_raw_data_item (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_raw
 }
 ```
 
-noextract [@@noextract_to "krml"]
-let test_parse = parse_raw_data_item
-
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let test_validate : validator test_parse = validate_raw_data_item (assume SZ.fits_u64)
-
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let test_jump : jumper test_parse = jump_raw_data_item (assume SZ.fits_u64)
-
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 ```pulse
@@ -940,32 +915,6 @@ fn get_header_and_contents
 }
 ```
 
-#push-options "--z3rlimit 16"
-
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let get_int64_value
-  (v: Ghost.erased raw_data_item)
-  (h: header)
-: Pure raw_uint64
-    (requires h == dfst (synth_raw_data_item_recip v) /\ Int64? v)
-    (ensures fun res -> Int64? v /\ res == Int64?.v v)
-= match h with
-  (| b, l |) -> argument_as_raw_uint64 b l
-
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let get_string_length
-  (v: Ghost.erased raw_data_item)
-  (h: header)
-: Pure raw_uint64
-    (requires h == dfst (synth_raw_data_item_recip v) /\ String? v)
-    (ensures fun res -> String? v /\ res == String?.len v)
-= match h with
-  (| b, l |) -> argument_as_raw_uint64 b l
-
-#pop-options
-
 ```pulse
 ghost
 fn get_string_payload
@@ -993,17 +942,6 @@ fn get_string_payload
 }
 ```
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let get_tagged_tag
-  (v: Ghost.erased raw_data_item)
-  (h: header)
-: Pure raw_uint64
-    (requires h == dfst (synth_raw_data_item_recip v) /\ Tagged? v)
-    (ensures fun res -> Tagged? v /\ res == Tagged?.tag v)
-= match h with
-  (| b, l |) -> argument_as_raw_uint64 b l
-
 ```pulse
 ghost
 fn get_tagged_payload
@@ -1025,38 +963,14 @@ fn get_tagged_payload
 }
 ```
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let get_simple_value
-  (v: Ghost.erased raw_data_item)
-  (h: header)
-: Pure simple_value
-    (requires h == dfst (synth_raw_data_item_recip v) /\ Simple? v)
-    (ensures fun res -> Simple? v /\ res == Simple?.v v)
-= match h with
-  (| b, l |) -> argument_as_simple_value b l
-
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let get_array_length
-  (v: Ghost.erased raw_data_item)
-  (h: header)
-: Pure raw_uint64
-    (requires h == dfst (synth_raw_data_item_recip v) /\ Array? v)
-    (ensures fun res -> Array? v /\ res == Array?.len v)
-= match h with
-  (| b, l |) -> argument_as_raw_uint64 b l
-
-module L = LowParse.Spec.VCList
-
 ```pulse
 ghost
-fn get_array_payload
+fn get_array_payload'
   (input: S.slice byte)
   (v: Ghost.erased raw_data_item {Array? v })
   (#pm: perm)
   (#h: Ghost.erased header)
-  (#c: Ghost.erased (content h)) 
+  (#c: Ghost.erased (content h))
   requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
   ensures exists* v' .
     pts_to_serialized (L.serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item) input #pm v' **
@@ -1070,25 +984,29 @@ fn get_array_payload
 }
 ```
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let get_map_length
-  (v: Ghost.erased raw_data_item)
-  (h: header)
-: Pure raw_uint64
-    (requires h == dfst (synth_raw_data_item_recip v) /\ Map? v)
-    (ensures fun res -> Map? v /\ res == Map?.len v)
-= match h with
-  (| b, l |) -> argument_as_raw_uint64 b l
+```pulse
+ghost
+fn get_array_payload
+  (input: S.slice byte)
+: get_array_payload_t input
+=
+  (v: _)
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+{
+  get_array_payload' input v
+}
+```
 
 ```pulse
 ghost
-fn get_map_payload
+fn get_map_payload'
   (input: S.slice byte)
   (v: Ghost.erased raw_data_item {Map? v })
   (#pm: perm)
   (#h: Ghost.erased header)
-  (#c: Ghost.erased (content h)) 
+  (#c: Ghost.erased (content h))
   requires pts_to_serialized (serialize_content h) input #pm c ** pure (synth_raw_data_item_recip v == (| Ghost.reveal h, Ghost.reveal c |))
   ensures exists* v' .
     pts_to_serialized (L.serialize_nlist (U64.v (Map?.len v).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) input #pm v' **
@@ -1099,5 +1017,20 @@ fn get_map_payload
     (serialize_content h)
     (L.serialize_nlist (U64.v (Map?.len v).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
     input
+}
+```
+
+```pulse
+ghost
+fn get_map_payload
+  (input: S.slice byte)
+: get_map_payload_t input
+=
+  (v: _)
+  (#pm: perm)
+  (#h: Ghost.erased header)
+  (#c: Ghost.erased (content h)) 
+{
+  get_map_payload' input v
 }
 ```

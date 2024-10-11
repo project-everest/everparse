@@ -1335,6 +1335,77 @@ let get_major_type_synth_raw_data_item_recip
   (get_major_type x == get_header_major_type (dfst (synth_raw_data_item_recip x)))
 = ()
 
+
+#push-options "--z3rlimit 16"
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_int64_value
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure raw_uint64
+    (requires h == dfst (synth_raw_data_item_recip v) /\ Int64? v)
+    (ensures fun res -> Int64? v /\ res == Int64?.v v)
+= match h with
+  (| b, l |) -> argument_as_raw_uint64 b l
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_string_length
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure raw_uint64
+    (requires h == dfst (synth_raw_data_item_recip v) /\ String? v)
+    (ensures fun res -> String? v /\ res == String?.len v)
+= match h with
+  (| b, l |) -> argument_as_raw_uint64 b l
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_tagged_tag
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure raw_uint64
+    (requires h == dfst (synth_raw_data_item_recip v) /\ Tagged? v)
+    (ensures fun res -> Tagged? v /\ res == Tagged?.tag v)
+= match h with
+  (| b, l |) -> argument_as_raw_uint64 b l
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_simple_value
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure simple_value
+    (requires h == dfst (synth_raw_data_item_recip v) /\ Simple? v)
+    (ensures fun res -> Simple? v /\ res == Simple?.v v)
+= match h with
+  (| b, l |) -> argument_as_simple_value b l
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_array_length
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure raw_uint64
+    (requires h == dfst (synth_raw_data_item_recip v) /\ Array? v)
+    (ensures fun res -> Array? v /\ res == Array?.len v)
+= match h with
+  (| b, l |) -> argument_as_raw_uint64 b l
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_map_length
+  (v: Ghost.erased raw_data_item)
+  (h: header)
+: Pure raw_uint64
+    (requires h == dfst (synth_raw_data_item_recip v) /\ Map? v)
+    (ensures fun res -> Map? v /\ res == Map?.len v)
+= match h with
+  (| b, l |) -> argument_as_raw_uint64 b l
+
+#pop-options
+
 // Ordering of map keys (Section 4.2)
 
 let rec list_for_all_holds_on_pair_list_of_pair_list
