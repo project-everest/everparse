@@ -5,8 +5,7 @@ open Pulse.Lib.Pervasives
 
 open Pulse.Lib.Slice open Pulse.Lib.Pervasives open Pulse.Lib.Trade
 open CBOR.Spec.Raw.EverParse
-open CBOR.Pulse.Raw.EverParse.Format
-open LowParse.Pulse.Combinators
+open LowParse.Spec.Base open LowParse.Pulse.Base
 
 module PM = Pulse.Lib.SeqMatch
 module A = Pulse.Lib.Array

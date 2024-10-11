@@ -1,9 +1,7 @@
 module CBOR.Pulse.Raw.Format.Serialize
 open Pulse.Lib.Pervasives
-open CBOR.Pulse.Raw.EverParse.Serialized.Base
 friend CBOR.Spec.Raw.Format
 open CBOR.Spec.Raw.EverParse
-open CBOR.Pulse.Raw.EverParse.Format // for get_header_initial_byte
 open LowParse.Spec.Base
 open LowParse.Pulse.Base
 

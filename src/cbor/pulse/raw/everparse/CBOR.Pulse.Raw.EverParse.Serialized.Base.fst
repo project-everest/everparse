@@ -1,6 +1,9 @@
 module CBOR.Pulse.Raw.EverParse.Serialized.Base
 friend CBOR.Pulse.Raw.Format.Match
 
+open CBOR.Pulse.Raw.EverParse.Format
+open LowParse.Pulse.Combinators
+
 module Trade = Pulse.Lib.Trade.Util
 
 let dummy_initial_byte : initial_byte = { major_type = cbor_major_type_simple_value; additional_info = 0uy }

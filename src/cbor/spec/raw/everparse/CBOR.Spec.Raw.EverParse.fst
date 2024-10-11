@@ -863,6 +863,27 @@ let parse_raw_data_item_eq
 
 #pop-options
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_header_initial_byte
+  (h: header)
+: Tot initial_byte
+= match h with (| b, _ |) -> b
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_header_long_argument
+  (h: header)
+: Tot (long_argument (get_header_initial_byte h))
+= match h with (| _, l |) -> l
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let get_header_argument_as_uint64
+  (h: header { ~ (long_argument_simple_value_prop (get_header_initial_byte h)) })
+: Tot U64.t
+= match h with (| b, l |) -> argument_as_uint64 b l
+
 (* Serialization *)
 
 let _ : squash (major_type_t == bitfield uint8 3) =
