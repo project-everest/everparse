@@ -337,10 +337,13 @@ let peek_post'
   (consumed: SZ.t)
   (left right: slice byte)
 : Tot slprop
-= exists* v1 v2 . pts_to_serialized s left #pm v1 ** pts_to right #pm v2 ** is_split input pm consumed left right ** pure (
+= exists* v1 v2 . pts_to_serialized s left #pm v1 ** pts_to right #pm v2 ** is_split input left right ** pure (
     bare_serialize s v1 `Seq.append` v2 == v /\
     Seq.length (bare_serialize s v1) == SZ.v consumed /\
-    parse p v == Some (v1, SZ.v consumed)
+    begin match parse p v with
+    | Some (v2, consumed2) -> v1 == v2 /\ SZ.v consumed == consumed2
+    | _ -> False
+    end
   )
 
 let peek_post
@@ -366,14 +369,12 @@ fn peek
   returns res: slice_pair byte
   ensures peek_post s input pm v consumed res
 {
-  let s1s2 = split false input #pm #v consumed;
+  let s1s2 = split input consumed;
   match s1s2 {
     SlicePair s1 s2 -> {
       Seq.lemma_split v (SZ.v consumed);
       let v1 = Ghost.hide (fst (Some?.v (parse p v)));
       parse_injective #k p (bare_serialize s v1) v;
-      unfold (split_post input pm v consumed (SlicePair s1 s2));
-      unfold (split_post' input pm v consumed s1 s2);
       with v1' . assert (pts_to s1 #pm v1');
       rewrite (pts_to s1 #pm v1') as (pts_to_serialized s s1 #pm v1);
       fold (peek_post' s input pm v consumed s1 s2);
@@ -395,7 +396,10 @@ let peek_trade_post'
 = exists* v1 v2 . pts_to_serialized s left #pm v1 ** pts_to right #pm v2 ** trade (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) ** pure (
     bare_serialize s v1 `Seq.append` v2 == v /\
     Seq.length (bare_serialize s v1) == SZ.v consumed /\
-    parse p v == Some (v1, SZ.v consumed)
+    begin match parse p v with
+    | Some (v2, consumed2) -> v1 == v2 /\ SZ.v consumed == consumed2
+    | _ -> False
+    end
   )
 
 let peek_trade_post
@@ -424,7 +428,7 @@ fn peek_trade_aux
     bare_serialize s v1 `Seq.append` v2 == v
   ))
   (_: unit)
-  requires (is_split input pm consumed left right ** (pts_to_serialized s left #pm v1 ** pts_to right #pm v2))
+  requires (is_split input left right ** (pts_to_serialized s left #pm v1 ** pts_to right #pm v2))
   ensures pts_to input #pm v
 {
   unfold (pts_to_serialized s left #pm v1);
@@ -449,7 +453,7 @@ fn peek_trade
     unfold (peek_post s input pm v consumed res);
     unfold (peek_post' s input pm v consumed left right);
     with v1 v2 . assert (pts_to_serialized s left #pm v1 ** pts_to right #pm v2);
-    intro_trade (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) (is_split input pm consumed left right) (peek_trade_aux s input pm consumed v left right v1 v2 ());
+    intro_trade (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) (is_split input left right) (peek_trade_aux s input pm consumed v left right v1 v2 ());
     fold (peek_trade_post' s input pm v consumed left right);
     fold (peek_trade_post s input pm v consumed (left `SlicePair` right));
     (left `SlicePair` right)
@@ -473,12 +477,10 @@ fn peek_trade_gen
     parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (v', SZ.v off - SZ.v offset)
   )
 {
-  let split123 = split_trade false input offset;
+  let split123 = split_trade input offset;
   match split123 { SlicePair input1 input23 -> {
-    unfold (split_trade_post input pm v offset split123);
-    unfold (split_trade_post' input pm v offset input1 input23);
     with v23 . assert (pts_to input23 #pm v23);
-    Trade.elim_hyp_l (pts_to input1 #pm _) (pts_to input23 #pm v23) (pts_to input #pm v);
+    Trade.elim_hyp_l (pts_to input1 #pm _) (pts_to input23 #pm v23) _;
     let consumed = SZ.sub off offset;
     let split23 = peek_trade s input23 consumed;
     match split23 { SlicePair input2 input3 -> {
@@ -670,11 +672,11 @@ let l2r_writer_for
   (offset: SZ.t) ->
   (#v: Ghost.erased bytes) ->
   stt SZ.t
-    (S.pts_to out v ** vmatch x' x ** pure (
+    (pts_to out v ** vmatch x' x ** pure (
       SZ.v offset + Seq.length (bare_serialize s x) <= Seq.length v
     ))
     (fun res -> exists* v' .
-      S.pts_to out v' ** vmatch x' x ** pure (
+      pts_to out v' ** vmatch x' x ** pure (
       let bs = bare_serialize s x in
       SZ.v res == SZ.v offset + Seq.length bs /\
       SZ.v res <= Seq.length v /\
@@ -964,11 +966,11 @@ let l2r_leaf_writer
   (offset: SZ.t) ->
   (#v: Ghost.erased bytes) ->
   stt SZ.t
-    (S.pts_to out v ** pure (
+    (pts_to out v ** pure (
       SZ.v offset + Seq.length (bare_serialize s x) <= Seq.length v
     ))
     (fun res -> exists* v' .
-      S.pts_to out v' ** pure (
+      pts_to out v' ** pure (
       let bs = bare_serialize s x in
       SZ.v res == SZ.v offset + Seq.length bs /\
       SZ.v res <= Seq.length v /\

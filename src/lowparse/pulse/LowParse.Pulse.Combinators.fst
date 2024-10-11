@@ -718,11 +718,9 @@ fn split_dtuple2
     (pts_to input #pm (bare_serialize s1 (dfst v) `Seq.append` bare_serialize (s2 (dfst v)) (dsnd v)));
   parse_serialize_strong_prefix s1 (dfst v) (bare_serialize (s2 (dfst v)) (dsnd v));
   let i = j1 input 0sz;
-  let res = append_split_trade false input i;
+  let res = append_split_trade input i;
   match res {
     SlicePair input1 input2 -> {
-      unfold (append_split_trade_post input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i res);
-      unfold (append_split_trade_post' input pm (bare_serialize s1 (dfst v)) (bare_serialize (s2 (dfst v)) (dsnd v)) i input1 input2);
       Trade.trans (_ ** _) _ _;
       pts_to_serialized_intro_trade s1 input1 (dfst v);
       pts_to_serialized_intro_trade (s2 (dfst v)) input2 (dsnd v);
@@ -1075,10 +1073,10 @@ fn l2r_write_dtuple2
   serialize_dtuple2_eq s1 s2 x;
   unfold (vmatch_dep_prod vmatch1 vmatch2);
   let res1 = w1 (dfst x') #(dfst x) out offset;
-  with v1 . assert (S.pts_to out v1);
+  with v1 . assert (pts_to out v1);
   fold (vmatch_and_const (vmatch1 (dfst x') (dfst x)) (vmatch2 (dfst x)) (dsnd x') (dsnd x));
   let res2 = w2 (dfst x') (dfst x) (dsnd x') #(dsnd x) out res1;
-  with v2 . assert (S.pts_to out v2);
+  with v2 . assert (pts_to out v2);
   Seq.slice_slice v1 0 (SZ.v res1) (SZ.v offset) (SZ.v res1);
   Seq.slice_slice v1 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
   Seq.slice_slice v2 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
@@ -1130,7 +1128,7 @@ fn l2r_write_dtuple2_recip
   phi x' x;
   let res1 = w1 x' out offset;
   Trade.elim _ _;
-  with v1 . assert (S.pts_to out v1);
+  with v1 . assert (pts_to out v1);
   Trade.rewrite_with_trade 
     (vmatch x' x)
     (vmatch x' (| dfst x, dsnd x |));
@@ -1138,7 +1136,7 @@ fn l2r_write_dtuple2_recip
   let res2 = w2 (dfst x) x' out res1;
   unfold (vmatch_dep_proj2 vmatch (dfst x) x' (dsnd x));
   Trade.elim _ _;
-  with v2 . assert (S.pts_to out v2);
+  with v2 . assert (pts_to out v2);
   Seq.slice_slice v1 0 (SZ.v res1) (SZ.v offset) (SZ.v res1);
   Seq.slice_slice v1 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
   Seq.slice_slice v2 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
@@ -1187,7 +1185,7 @@ fn l2r_write_dtuple2_recip_explicit_header
   serialize_dtuple2_eq s1 s2 x;
   let xh1 = phi x' x;
   let res1 = w1 xh1 out offset;
-  with v1 . assert (S.pts_to out v1);
+  with v1 . assert (pts_to out v1);
   Trade.rewrite_with_trade 
     (vmatch x' x)
     (vmatch x' (| xh1, dsnd x |));
@@ -1195,7 +1193,7 @@ fn l2r_write_dtuple2_recip_explicit_header
   let res2 = w2 xh1 x' out res1;
   unfold (vmatch_dep_proj2 vmatch xh1 x' (dsnd x));
   Trade.elim _ _;
-  with v2 . assert (S.pts_to out v2);
+  with v2 . assert (pts_to out v2);
   Seq.slice_slice v1 0 (SZ.v res1) (SZ.v offset) (SZ.v res1);
   Seq.slice_slice v1 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
   Seq.slice_slice v2 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
@@ -1398,11 +1396,11 @@ fn l2r_write_nondep_then
   serialize_nondep_then_eq s1 s2 x;
   let x1 = f1 x' x;
   let res1 = w1 x1 #(Ghost.hide (fst x)) out offset;
-  with v1 . assert (S.pts_to out v1);
+  with v1 . assert (pts_to out v1);
   Trade.elim _ _;
   let x2 = f2 x' x;
   let res2 = w2 x2 #(Ghost.hide (snd x)) out res1;
-  with v2 . assert (S.pts_to out v2);
+  with v2 . assert (pts_to out v2);
   Seq.slice_slice v1 0 (SZ.v res1) (SZ.v offset) (SZ.v res1);
   Seq.slice_slice v1 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);
   Seq.slice_slice v2 (SZ.v offset) (SZ.v res2) 0 (SZ.v res1 - SZ.v offset);

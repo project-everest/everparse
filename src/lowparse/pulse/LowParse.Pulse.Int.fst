@@ -56,7 +56,7 @@ fn l2r_leaf_write_u8 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt8.t #parse_u8_ki
   (pos: SZ.t)
   (#v: Ghost.erased (Seq.seq byte))
 {
-  S.pts_to_len x;
+  pts_to_len x;
   serialize_u8_spec_be n;
   let pos' = SZ.add pos 1sz;
   n_to_be_1 n x pos';
@@ -112,7 +112,7 @@ fn l2r_leaf_write_u16 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt16.t #parse_u16
   (pos: SZ.t)
   (#v: Ghost.erased (Seq.seq byte))
 {
-  S.pts_to_len x;
+  pts_to_len x;
   serialize_u16_spec_be n;
   let pos' = SZ.add pos 2sz;
   n_to_be_2 n x pos';
@@ -168,7 +168,7 @@ fn l2r_leaf_write_u32 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt32.t #parse_u32
   (pos: SZ.t)
   (#v: Ghost.erased (Seq.seq byte))
 {
-  S.pts_to_len x;
+  pts_to_len x;
   serialize_u32_spec_be n;
   let pos' = SZ.add pos 4sz;
   n_to_be_4 n x pos';
@@ -224,7 +224,7 @@ fn l2r_leaf_write_u64 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt64.t #parse_u64
   (pos: SZ.t)
   (#v: Ghost.erased (Seq.seq byte))
 {
-  S.pts_to_len x;
+  pts_to_len x;
   serialize_u64_spec_be n;
   let pos' = SZ.add pos 8sz;
   n_to_be_8 n x pos';

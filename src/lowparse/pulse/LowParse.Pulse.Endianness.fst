@@ -20,11 +20,11 @@ let be_to_n_t
   (#v: Ghost.erased (Seq.seq U8.t)) ->
   (pos: SZ.t) ->
   stt t
-    (S.pts_to x #pm v ** pure (
+    (pts_to x #pm v ** pure (
       SZ.v pos == len /\
       len <= Seq.length v
     ))
-    (fun res -> S.pts_to x #pm v ** pure (
+    (fun res -> pts_to x #pm v ** pure (
       SZ.v pos == len /\
       len <= Seq.length v /\
       u.v res == E.be_to_n (Seq.slice v 0 len)
@@ -135,12 +135,12 @@ let n_to_be_t
   (#v: Ghost.erased (Seq.seq U8.t)) ->
   (pos: SZ.t) ->
   stt unit
-    (S.pts_to x v ** pure (
+    (pts_to x v ** pure (
       len <= SZ.v pos /\
       SZ.v pos <= Seq.length v /\
       u.v n < pow2 (8 * len)
     ))
-    (fun _ -> exists* v' . S.pts_to x v' ** pure (
+    (fun _ -> exists* v' . pts_to x v' ** pure (
       len <= SZ.v pos /\
       SZ.v pos <= Seq.length v /\
       u.v n < pow2 (8 * len) /\
@@ -208,11 +208,11 @@ fn n_to_be_S
   let lo = u.to_byte n;
   let hi = u.div256 n;
   let pos' = pos `SZ.sub` 1sz;
-  with v1 . assert (S.pts_to x v1);
+  with v1 . assert (pts_to x v1);
   Seq.lemma_split (Seq.slice v1 (SZ.v pos - 1) (Seq.length v1)) 1;
   let _ = ih hi x pos';
   S.op_Array_Assignment x pos' lo;
-  with v2 . assert (S.pts_to x v2);
+  with v2 . assert (pts_to x v2);
   Seq.lemma_split (Seq.slice v2 (SZ.v pos - 1) (Seq.length v2)) 1;
 }
 ```
