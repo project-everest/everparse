@@ -98,28 +98,6 @@ let cbor_parse_aux
 
 module Trade = Pulse.Lib.Trade.Util
 
-let cbor_validate_det_fail
-  (v: Seq.seq U8.t)
-  (v1': raw_data_item)
-  (v2': Seq.seq U8.t)
-: Lemma
-  (requires (
-    Ghost.reveal v == serialize_cbor v1' `Seq.append` v2' /\
-    (~ (R.raw_data_item_ints_optimal v1' /\ R.raw_data_item_sorted deterministically_encoded_cbor_map_key_order v1'))
-  ))
-  (ensures (
-    ~ (exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ R.raw_data_item_ints_optimal v1 /\ R.raw_data_item_sorted deterministically_encoded_cbor_map_key_order v1)
-  ))
-= let aux
-    (v1: raw_data_item)
-    (v2: Seq.seq U8.t)
-  : Lemma
-    (requires Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ R.raw_data_item_ints_optimal v1 /\ R.raw_data_item_sorted deterministically_encoded_cbor_map_key_order v1)
-    (ensures False)
-  = serialize_cbor_inj v1 v1' v2 v2' 
-  in
-  Classical.forall_intro_2 (fun v1 v2 -> Classical.move_requires (aux v1) v2)
-
 #push-options "--z3rlimit 16"
 
 #restart-solver
@@ -239,27 +217,47 @@ let cbor_validate_det_success
     holds_on_raw_data_item R.raw_data_item_ints_optimal_elem v' /\
     holds_on_raw_data_item (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order) v'
   ))
-  (ensures exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ SZ.v len == Seq.length (serialize_cbor v1) /\ R.raw_data_item_ints_optimal v1 /\ R.raw_data_item_sorted deterministically_encoded_cbor_map_key_order v1
+  (ensures
+    cbor_validate_det_post v len
   )
 = Seq.lemma_split v (SZ.v len);
   let v2 = Seq.slice v (SZ.v len) (Seq.length v) in
   parse_injective parse_raw_data_item (Seq.slice v 0 (Seq.length v)) (serialize_cbor v');
+  serialize_length serialize_raw_data_item v';
   assert (Ghost.reveal v == serialize_cbor v' `Seq.append` v2)
+
+let cbor_validate_det_fail
+  (v: Seq.seq U8.t)
+  (v1': raw_data_item)
+  (v2': Seq.seq U8.t)
+: Lemma
+  (requires (
+    Ghost.reveal v == serialize_cbor v1' `Seq.append` v2' /\
+    (~ (R.raw_data_item_ints_optimal v1' /\ R.raw_data_item_sorted deterministically_encoded_cbor_map_key_order v1'))
+  ))
+  (ensures (
+    cbor_validate_det_post v 0sz
+  ))
+= let aux
+    (v1: raw_data_item)
+    (v2: Seq.seq U8.t)
+  : Lemma
+    (requires Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ R.raw_data_item_ints_optimal v1 /\ R.raw_data_item_sorted deterministically_encoded_cbor_map_key_order v1)
+    (ensures False)
+  = serialize_cbor_inj v1 v1' v2 v2' 
+  in
+  Classical.forall_intro_2 (fun v1 v2 -> Classical.move_requires (aux v1) v2)
 
 #restart-solver
 
 ```pulse
-fn cbor_validate_det
+fn cbor_validate_det'
   (input: slice U8.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
   requires pts_to input #pm v
-  returns res: SZ.t
-  ensures pts_to input #pm v ** pure (
-      if SZ.v res = 0
-      then (~ (exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ R.raw_data_item_ints_optimal v1 /\ R.raw_data_item_sorted deterministically_encoded_cbor_map_key_order v1))
-      else exists v1 v2 . Ghost.reveal v == serialize_cbor v1 `Seq.append` v2 /\ SZ.v res == Seq.length (serialize_cbor v1) /\ R.raw_data_item_ints_optimal v1 /\ R.raw_data_item_sorted deterministically_encoded_cbor_map_key_order v1
-  )
+  returns res: (res: SZ.t { cbor_validate_det_post v res })
+  ensures pts_to input #pm v
 {
   let f64 : squash SZ.fits_u64 = assume SZ.fits_u64;
   let len = cbor_validate input;
@@ -283,11 +281,25 @@ fn cbor_validate_det
         cbor_validate_det_fail v v1 (Seq.slice v (SZ.v len) (Seq.length v));
         0sz
       } else {
-        cbor_validate_det_success v len v1;
+        let sq : squash (cbor_validate_det_post v len) = cbor_validate_det_success v len v1;
         len
       }
     }
   }
+}
+```
+
+```pulse
+fn cbor_validate_det
+  (input: slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  requires pts_to input #pm v
+  returns res: SZ.t
+  ensures pts_to input #pm v ** pure (cbor_validate_det_post v res)
+{
+  let res = cbor_validate_det' input;
+  res
 }
 ```
 
