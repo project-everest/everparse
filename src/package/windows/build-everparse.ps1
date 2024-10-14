@@ -2,6 +2,8 @@
 # and builds EverParse.
 
 param(
+  [switch] $WithClean,
+  [switch] $DownloadZ3,
   [switch] $Release,
   [string] $GHToken,
   [string] $ReleaseOrg,
@@ -18,6 +20,11 @@ if ($Release) {
 # Choose a temporary directory name for Cygwin
 $tmpRoot = "C:\"
 [string] $tmpBaseName = "everparse-cygwin64.tmp"
+if ($WithClean) {
+   if (Test-Path ($tmpRoot + $tmpBaseName)) {
+      Remove-Item -Path ($tmpRoot + $tmpBaseName) -Recurse -Force
+   }
+}
 New-Item -Path $tmpRoot -Name $tmpBaseName -ItemType directory
 if (-not $?) {
    $Error
@@ -57,12 +64,14 @@ $ProgressPreference = 'SilentlyContinue'
 # Switch to this script's directory
 Push-Location -ErrorAction Stop -LiteralPath $PSScriptRoot
 
-# Build z3 with Visual Studio
-$Error.Clear()
-cmd.exe /c .\build-z3.cmd
-if (-not $?) {
-    $Error
-    exit 1
+if (-not $DownloadZ3) {
+  # Build z3 with Visual Studio
+  $Error.Clear()
+  cmd.exe /c .\build-z3.cmd
+  if (-not $?) {
+      $Error
+      exit 1
+  }
 }
 
 $Error.Clear()
@@ -77,11 +86,15 @@ Remove-Item "cygwinsetup.exe"
 
 $Error.Clear()
 Write-Host "Install and build everparse dependencies"
+$everestCmd = "./everest.sh --yes -j 6"
 if ($Release) {
-    Invoke-BashCmd "./everest.sh --yes --release -j 6 check"
-} else {
-    Invoke-BashCmd "./everest.sh --yes -j 6 check"
+   $everestCmd += " --release"
 }
+if ($DownloadZ3) {
+   $everestCmd += " --no-z3"
+}
+$everestCmd += " check"
+Invoke-BashCmd $everestCmd
 if (-not $?) {
     $Error
     exit 1
@@ -118,7 +131,7 @@ $Env:EVERPARSE_RELEASE_REPO = $OldReleaseRepo
 
 $Error.Clear()
 Write-Host "remove our copy of Cygwin"
-Remove-Item -Recurse -Force -Path $Global:cygwinRoot
+cmd /c rmdir /s /q $Global:cygwinRoot
 if (-not $?) {
     $Error
     exit 1

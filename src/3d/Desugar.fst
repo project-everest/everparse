@@ -165,8 +165,8 @@ let push_name (env:qenv) (name:string) : qenv =
 
 let prim_consts = [
   "unit"; "Bool"; "UINT8"; "UINT16"; "UINT32"; "UINT64";
-  "UINT16BE"; "UINT32BE"; "UINT64BE";
-  "field_id"; "PUINT8";
+  "UINT8BE"; "UINT16BE"; "UINT32BE"; "UINT64BE";
+  "field_id"; "PUINT8"; "EVERPARSE_COPY_BUFFER_T";
   "all_bytes"; "all_zeros";
   "is_range_okay";
   "void" ]
@@ -329,6 +329,14 @@ let resolve_field_array_t (env:qenv) (farr:field_array_t) : ML field_array_t =
     FieldArrayQualified (resolve_expr env e, aq)
   | FieldString None -> farr
   | FieldString (Some e) -> FieldString (Some (resolve_expr env e))
+  | FieldConsumeAll -> farr
+
+let resolve_probe_call env pc =
+  {
+    probe_fn = map_opt (resolve_ident env) pc.probe_fn;
+    probe_length = resolve_expr env pc.probe_length;
+    probe_dest = resolve_ident env pc.probe_dest;
+  }
 
 let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
   match ff.v with
@@ -338,13 +346,21 @@ let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
 
 and resolve_atomic_field (env:qenv) (f:atomic_field) : ML (atomic_field & qenv) =
   let resolve_atomic_field' (env:qenv) (sf:atomic_field') : ML atomic_field' =
-    { sf with
-      field_type = resolve_typ env sf.field_type;
-      field_array_opt = resolve_field_array_t env sf.field_array_opt;
-      field_constraint = map_opt (resolve_expr env) sf.field_constraint;
-      field_bitwidth = map_opt (resolve_field_bitwidth_t env) sf.field_bitwidth;
-      field_action = map_opt (fun (a, b) -> resolve_action env a, b) sf.field_action } in
-
+    let is_non_scalar = not (FieldScalar? sf.field_array_opt) in
+    if is_non_scalar && (Some? sf.field_constraint)
+    then error (Printf.sprintf "Non-scalar field '%s' cannot be refined with constraints" sf.field_ident.v.name) f.range
+    else if is_non_scalar && (Some? sf.field_bitwidth)
+    then error (Printf.sprintf "Non-scalar field '%s' cannot have a bit width" sf.field_ident.v.name) f.range
+    else (
+        { sf with
+          field_type = resolve_typ env sf.field_type;
+          field_array_opt = resolve_field_array_t env sf.field_array_opt;
+          field_constraint = map_opt (resolve_expr env) sf.field_constraint;
+          field_bitwidth = map_opt (resolve_field_bitwidth_t env) sf.field_bitwidth;
+          field_action = map_opt (fun (a, b) -> resolve_action env a, b) sf.field_action;
+          field_probe = map_opt (resolve_probe_call env) sf.field_probe }
+    )
+  in
   let env = push_name env f.v.field_ident.v.name in
   { f with v = resolve_atomic_field' env f.v }, env
 
@@ -362,11 +378,22 @@ and resolve_switch_case (env:qenv) (sc:switch_case) : ML switch_case = //case fi
   let e, l = sc in
   resolve_expr env e, List.map (resolve_case env) l
 
+let resolve_typedef_attribute (env: qenv) (a: attribute) : ML attribute =
+  match a with
+  | Entrypoint (Some p) ->
+    Entrypoint (Some ({
+      probe_ep_fn = resolve_ident env p.probe_ep_fn;
+      probe_ep_length = resolve_expr env p.probe_ep_length;
+    }))
+  | _ -> a
+
 let resolve_typedef_names (env:qenv) (td_names:typedef_names) : ML typedef_names =
-  { td_names with
+  {
     typedef_name = resolve_ident env td_names.typedef_name;
     typedef_abbrev = resolve_ident env td_names.typedef_abbrev;
-    typedef_ptr_abbrev = resolve_ident env td_names.typedef_ptr_abbrev }
+    typedef_ptr_abbrev = resolve_ident env td_names.typedef_ptr_abbrev;
+    typedef_attributes = List.map (resolve_typedef_attribute env) td_names.typedef_attributes;
+  }
 
 let resolve_enum_case (env:qenv) (ec:enum_case) : ML enum_case =
   match ec with
@@ -419,6 +446,9 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let ret = resolve_typ env ret in
     let params, _ = resolve_params env params in
     ExternFn id ret params
+  | ExternProbe id ->
+    let id = resolve_ident env id in
+    ExternProbe id
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 

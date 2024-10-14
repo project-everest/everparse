@@ -18,7 +18,7 @@ export KRML_HOME?=$(realpath ../../../karamel)
 
 INCLUDE_PATHS=
 OTHERFLAGS?=
-FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached 'Prims FStar -FStar.Getopt'
+FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached 'Prims FStar -FStarC'
 
 all: 3d prelude
 
@@ -39,7 +39,7 @@ Version.fst:
 	env EVERPARSE_HOME=$(EVERPARSE_HOME) ./version.sh
 
 .depend: $(wildcard *.fst *.fsti) Version.fst
-	$(FSTAR) --odir ocaml/generated --dep full $(ROOT) --extract '* -Prims -FStar' > .depend
+	$(FSTAR) --odir ocaml/generated --dep full $(ROOT) --extract '* -Prims -FStar' --output_deps_to .depend
 
 include .depend
 

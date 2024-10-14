@@ -26,14 +26,24 @@ positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck
 positive_tests_nosuffix=$(basename $(positive_tests))
 modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
 modules_static_assertions=TestFieldPtrStaticAssertions.c AlignStaticAssertions.c
-clean_out_files=$(addsuffix .c,$(modules_or_wrappers)) $(modules_static_assertions) $(addsuffix .h,$(modules_or_wrappers))
+clean_out_files=\
+	$(addsuffix .c,$(modules_or_wrappers)) \
+	$(modules_static_assertions) \
+	$(addsuffix .h,$(modules_or_wrappers))\
+	Probe_ExternalAPI.h
+
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test modules-interpret elf-test static funptr ifdefs
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter
+
+.PHONY: iter
+
+iter:
+	+$(MAKE) -C $@
 
 #AR: TODO: remove ELF.3d from here
 
-INTERPRETABLE_FILES=$(filter-out FAILNoEntrypoint.3d ELF.3d, $(wildcard *.3d))
+INTERPRETABLE_FILES=$(filter-out FAIL%.3d ELF.3d, $(wildcard *.3d))
 INTERPRETABLE_MODULES=$(basename $(INTERPRETABLE_FILES))
 interpret_all: $(addsuffix .interpret, $(INTERPRETABLE_MODULES))
 
@@ -52,14 +62,15 @@ funptr:
 modules:
 	+$(MAKE) -C modules
 
-modules-interpret:
-	+$(MAKE) -C modules-interpret
-
 tcpip:
 	+$(MAKE) -C tcpip
 
 output-types:
 	+$(MAKE) -C output_types
+
+.PHONY: probe
+probe:
+	+$(MAKE) -C $@
 
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
 
@@ -86,6 +97,10 @@ elf-test: ELF.3d
 	$(3D) --odir out.batch --batch ELF.3d
 	g++ -o out.batch/elf-test -I out.batch $(addprefix out.batch/, ELF.c ELFWrapper.c) TestELF.cpp
 
+%-test: %.3d
+	mkdir -p out.batch
+	$(3D) $(FLAGS3D) --odir out.batch --batch $^
+
 inplace-hash-test:
 	mkdir -p out.inplace-hash
 	$(3D) --odir out.inplace-hash --batch --no_copy_everparse_h Comments.3d
@@ -106,4 +121,4 @@ batch-cleanup-test:
 clean:
 	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe out.batch-interpret
 
-.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules modules-interpret tcpip extern %.interpret batch-interpret-test static funptr ifdefs
+.PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs

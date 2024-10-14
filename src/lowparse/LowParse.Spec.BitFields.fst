@@ -5,6 +5,9 @@ include LowParse.BitFields
 
 module BF = LowParse.BitFields
 
+// IMPORTANT: these bitfield operators are defined in a least
+// significant bit (LSB) first fashion.
+
 let rec valid_bitfield_bounds (lo: nat) (hi: nat { lo <= hi }) (l: list nat) : Tot bool (decreases l) =
   match l with
   | [] -> true
@@ -89,6 +92,9 @@ let rec synth_bitfield_ext (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat) (
 let parse_bitfield (#t: Type) (#k: parser_kind) (p: parser k t) (#tot: pos) (cl: uint_t tot t) (l: list nat { valid_bitfield_widths 0 tot l }) : Tot (parser k (bitfields cl 0 tot l)) =
   p `parse_synth` synth_bitfield cl 0 tot l
 
+let tot_parse_bitfield (#t: Type) (#k: parser_kind) (p: tot_parser k t) (#tot: pos) (cl: uint_t tot t) (l: list nat { valid_bitfield_widths 0 tot l }) : Tot (tot_parser k (bitfields cl 0 tot l)) =
+  p `tot_parse_synth` synth_bitfield cl 0 tot l
+
 let rec synth_bitfield_recip' (#tot: pos) (#t: Type) (cl: uint_t tot t) (lo: nat) (hi: nat { lo <= hi /\ hi <= tot }) (l: list nat { valid_bitfield_widths lo hi l }) (x: bitfields cl lo hi l) : Tot t (decreases l) =
   match l with
   | [] -> cl.uint_to_t 0
@@ -142,6 +148,17 @@ let serialize_bitfield
   (#tot: pos) (cl: uint_t tot t) (l: list nat { valid_bitfield_widths 0 tot l })
 : Tot (serializer (parse_bitfield p cl l))
 = serialize_synth
+    p
+    (synth_bitfield cl 0 tot l)
+    s
+    (synth_bitfield_recip cl 0 tot l)
+    ()
+
+let tot_serialize_bitfield
+  (#t: Type) (#k: parser_kind) (#p: tot_parser k t) (s: tot_serializer #k p)
+  (#tot: pos) (cl: uint_t tot t) (l: list nat { valid_bitfield_widths 0 tot l })
+: Tot (tot_serializer #k (tot_parse_bitfield p cl l))
+= tot_serialize_synth
     p
     (synth_bitfield cl 0 tot l)
     s

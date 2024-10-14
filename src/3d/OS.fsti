@@ -16,7 +16,19 @@ val remove_extension: string -> Tot string
 
 val extension: string -> Tot string
 
+(* Run a command *)
+val run_cmd: string -> list string -> FStar.All.ML unit
+
+(* Probe a file *)
 
 val file_exists: string -> FStar.All.ML bool
 
 val file_contents: string -> FStar.All.ML string
+
+(* Write a witness into a binary file *)
+
+val write_witness_to_file: list int -> string -> FStar.All.ML unit
+
+(* Moved here to break dependency cycle *)
+
+val int_of_string (x:string) : FStar.All.ML int

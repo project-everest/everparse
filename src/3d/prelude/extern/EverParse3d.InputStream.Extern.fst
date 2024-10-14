@@ -69,6 +69,28 @@ let get_read (x: t) (h: HS.mem) : Ghost (Seq.seq U8.t)
     (ensures (fun y -> get_all x `Seq.equal` (y `Seq.append` get_remaining x h)))
 = Aux.get_read x.Aux.base h
 
+// #push-options "--quake 10"
+
+let get_remaining_eq // this is the crucial lemma for peep0_exit to work
+  (x: t) (h: HS.mem)
+: Lemma
+  (requires (
+    live x h
+  ))
+  (ensures (
+    live x h /\
+    get_remaining x h == Seq.slice (Aux.get_remaining x.Aux.base h) 0 (U64.v (len_all x) - Seq.length (get_read x h))
+  ))
+//  [SMTPat (get_remaining x h)] // TODO: test this pattern with other proofs besides peep
+= let len_read = Seq.length (get_read x h) in
+  Seq.lemma_split (get_all x) len_read;
+  Seq.lemma_append_inj (get_read x h) (get_remaining x h) (Seq.slice (get_all x) 0 len_read) (Seq.slice (get_all x) len_read (Seq.length (get_all x)));
+  let _ = Aux.get_read x.Aux.base h in
+  Seq.lemma_split (Aux.get_all x.Aux.base) len_read;
+  Seq.lemma_append_inj (get_read x h) (Aux.get_remaining x.Aux.base h) (Seq.slice (Aux.get_all x.Aux.base) 0 len_read) (Seq.slice (Aux.get_all x.Aux.base) len_read (Seq.length (Aux.get_all x.Aux.base)))
+
+// #pop-options
+
 let preserved
     (x: t)
     (l: B.loc)
@@ -89,7 +111,7 @@ open LowStar.BufferOps
 inline_for_extraction
 noextract
 let has
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (_: unit)
     (position: LPE.pos_t)
@@ -115,7 +137,7 @@ let has
 inline_for_extraction
 noextract
 let read0
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -146,6 +168,8 @@ let read0
   x.Aux.position *= Ghost.hide (position `U64.add` n);
   let h2 = HST.get () in
   Aux.preserved x.Aux.base (B.loc_buffer x.Aux.position) h1 h2;
+  get_remaining_eq x h0;
+  get_remaining_eq x h2;
   assert (
       let s = get_remaining x h0 in
       live x h2 /\
@@ -159,7 +183,7 @@ module LP = LowParse.Low.Base
 inline_for_extraction
 noextract
 let read
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (t': Type0)
     (k: LP.parser_kind)
     (p: LP.parser k t')
@@ -219,64 +243,149 @@ let read
 
 #pop-options
 
-#push-options "--z3rlimit 128 --fuel 0 --ifuel 1 --z3cliopt smt.arith.nl=false --split_queries"
-inline_for_extraction
-noextract
-let peep
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+noextract [@@noextract_to "krml"]
+let peep_pre'
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
+    (x: t)
+    (position: LPE.pos_t)
+    (h: HS.mem)
+: Tot prop
+=
+      live x h /\
+      U64.v position == Seq.length (get_read x h)
+
+noextract [@@noextract_to "krml"]
+unfold
+let peep_post'
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
-:   HST.Stack (B.buffer U8.t)
-    (requires (fun h ->
-      live x h /\
-      U64.v position == Seq.length (get_read x h)
-    ))
-    (ensures (fun h dst' h' ->
+    (h: HS.mem)
+    (dst' : B.buffer U8.t)
+    (h' : HS.mem)
+: Tot prop
+= peep_pre' x position h /\
+  begin
       let s = get_remaining x h in
       B.modifies B.loc_none h h' /\
       ((~ (B.g_is_null dst')) ==> (
-        Seq.length (get_remaining x h) >= U64.v n /\
+        Seq.length s >= U64.v n /\
         B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
         B.live h' dst' /\
         footprint x `B.loc_includes` B.loc_buffer dst'
       ))
-    ))
+  end
+
+noextract [@@noextract_to "krml"]
+let peep0_pre'
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
+    (x: t)
+    (position: LPE.pos_t)
+    (n: U64.t)
+    (h: HS.mem)
+: Tot prop
+= peep_pre' x position h /\
+  Seq.length (get_remaining x h) >= U64.v n
+
+// #push-options "--split_queries no --quake 10 --query_stats"
+// #restart-solver
+
+let peep_post_extract_concl
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
+    (x: Aux.t)
+    (n: U64.t)
+    (h: HS.mem)
+    (dst' : B.buffer U8.t)
+    (h' : HS.mem)
+: Lemma
+  (requires (Aux.peep_post x n h dst' h' /\
+    (~ (B.g_is_null dst'))
+  ))
+  (ensures (
+    Aux.peep_pre x n h /\
+    begin
+      let s = Aux.get_remaining x h in
+      B.modifies B.loc_none h h' /\
+      (~ (B.g_is_null dst')) /\
+      B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
+      B.live h' dst' /\
+      Aux.footprint x `B.loc_includes` B.loc_buffer dst'
+    end
+  ))
+= ()
+
+let peep0_exit // this is the crucial lemma for peep to work
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
+    (x: t)
+    (position: LPE.pos_t)
+    (n: U64.t)
+    (h: HS.mem)
+    (dst': B.buffer U8.t)
+    (h': HS.mem)
+: Lemma
+  (requires (
+    peep0_pre' x position n h /\
+    Aux.peep_post x.Aux.base n h dst' h'
+  ))
+  (ensures (
+    peep_post' x position n h dst' h'
+  ))
+= assert (Aux.peep_pre x.Aux.base n h);
+  assert (peep_pre' x position h);
+  assert (live x h);
+  let s = get_remaining x h in
+  get_remaining_eq x h;
+  assert (Seq.length s >= U64.v n);
+  assert (B.modifies B.loc_none h h');
+  if B.g_is_null dst'
+  then ()
+  else begin
+    peep_post_extract_concl x.Aux.base n h dst' h';
+    assert (B.live h' dst');
+    assert (B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n));
+    ()
+  end
+
+inline_for_extraction
+noextract
+let peep0
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
+    (x: t)
+    (position: LPE.pos_t)
+    (n: U64.t)
+:   HST.Stack (B.buffer U8.t)
+    (requires (fun h -> peep0_pre' x position n h))
+    (ensures (fun h dst' h' -> peep_post' x position n h dst' h'))
+= Classical.forall_intro_3 (fun h dst' h' -> Classical.move_requires (peep0_exit x position n h dst') h');
+  Aux.peep x.Aux.base n
+
+inline_for_extraction
+noextract
+let peep
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
+    (x: t)
+    (position: LPE.pos_t)
+    (n: U64.t)
+:   HST.Stack (B.buffer U8.t)
+    (requires (fun h -> peep_pre' x position h))
+    (ensures (fun h dst' h' -> peep_post' x position n h dst' h'))
 =
   let h0 = HST.get () in
   let b = has x () position n in
   let h1 = HST.get () in
   assert (B.(modifies loc_none h0 h1));
   preserved x B.loc_none h0 h1;
-  let dst =
-    if b returns HST.Stack _ (requires fun h -> live x h /\
-                                         U64.v position == Seq.length (get_read x h))
-                             (ensures (fun h dst' h' ->
-                                let s = get_remaining x h in
-                                B.modifies B.loc_none h h' /\
-                                ((~ (B.g_is_null dst')) ==> (
-                                  Seq.length (get_remaining x h) >= U64.v n /\
-                                  B.as_seq h' dst' `Seq.equal` Seq.slice s 0 (U64.v n) /\
-                                  B.live h' dst' /\
-                                  footprint x `B.loc_includes` B.loc_buffer dst'))))
-    then Aux.peep x.Aux.base n
-    else B.null
-  in
-  let h2 = HST.get () in
-  assert (B.modifies B.loc_none h0 h2);
-  assert ((~ (B.g_is_null dst)) ==>
-          (Seq.length (get_remaining x h0) >= U64.v n /\
-           B.as_seq h2 dst `Seq.equal` Seq.slice (get_remaining x h0) 0 (U64.v n) /\
-           B.live h2 dst /\
-           footprint x `B.loc_includes` B.loc_buffer dst));
-  dst
+  if b
+  then peep0 x position n
+  else B.null
 
-#pop-options
+// #pop-options
 
 inline_for_extraction
 noextract
 let skip
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (position: LPE.pos_t)
     (n: U64.t)
@@ -301,7 +410,7 @@ let skip
 inline_for_extraction
 noextract
 let skip_if_success
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (pos: LPE.pos_t)
     (res: U64.t)
@@ -327,7 +436,7 @@ let skip_if_success
 inline_for_extraction
 noextract
 let empty
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: Aux.extra_t)
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: Aux.extra_t)
     (x: t)
     (_: unit)
     (position: LPE.pos_t)

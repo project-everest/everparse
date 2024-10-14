@@ -13,10 +13,10 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 *)
-module FStar.Getopt
+module FStarC.Getopt
 open FStar.ST
 open FStar.All
-open FStar.BaseTypes
+open FStar.Char
 
 val noshort : char
 val nolong : string
@@ -25,7 +25,7 @@ type opt_variant 'a =
   | ZeroArgs of (unit -> ML 'a)
   | OneArg of (string -> ML 'a) * string
 
-type opt' 'a = char * string * opt_variant 'a * string
+type opt' 'a = char * string * opt_variant 'a
 type opt = opt' unit
 
 type parse_cmdline_res =

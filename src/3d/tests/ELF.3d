@@ -292,7 +292,10 @@ typedef struct _SECTION_HEADER_TABLE (OFFSET PhTableEnd,
                                       UINT64 ShOff,
                                       UINT16 ShNum,
 				      OFFSET ElfFileSize)
-where (PhTableEnd <= ShOff && ShOff - PhTableEnd <= MAX_UINT32)
+where (PhTableEnd <= ShOff && ShOff - PhTableEnd <= MAX_UINT32 &&
+  ShOff <= ElfFileSize &&
+  ElfFileSize - ShOff == sizeof (SECTION_HEADER_TABLE_ENTRY) * ShNum
+ )
 {
   UINT8        PHTABLE_SHTABLE_GAP[(UINT32) (ShOff - PhTableEnd)];
 

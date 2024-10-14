@@ -171,7 +171,10 @@ and are implicitly promoted to the underlying integer type, ``UINT32``
 in this case, although the 3d verifier is aware of suitable bounds on
 the types, e.g., that ``0 <= x < 64``.
 
-3d implements C's rules for packing bit fields. For instance,
+For types ``UINT8``. ``UINT16``, ``UINT32`` and ``UINT64``, 3d
+implements `MSVC's rules for packing bit fields
+<https://learn.microsoft.com/en-us/cpp/c-language/c-bit-fields>`_:
+least-significant bit first. For instance:
 
 .. literalinclude:: BF.3d
     :language: c
@@ -181,18 +184,26 @@ the types, e.g., that ``0 <= x < 64``.
 In ``BF2``, although ``x``, ``y`` and ``z`` cumulatively consume only
 26 bits, the layout of ``BF2`` is actually as shown below, consuming
 40 bits, since a given field must be represented within the bounds of
-a single underlying type---we have 10 unused bits after ``x`` and 4
-unused bits after ``y``.
+a single underlying type---we have 10 unused bits before ``x`` and 4
+unused bits before ``y``.
 
 .. code-block:: c
+
+   counting from most-significant bits to least-significant bits:
 
     0                   1                   2                   3                   4
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-   |     x     |       Unused      |           y           |Unused |        z      |
-   |           |                   |                       |       |               |
+   |      Unused       |     x     | Unused|           y           |        z      |
+   |                   |           |       |                       |               |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-                
+
+EverParse version 2023.04.17 and beyond encode bitfields with
+big-endian integer types ``UINT16BE``, ``UINT32BE`` and ``UINT64BE``
+with the most-significant bit (MSB) first, which is necessary for many
+IETF network protocols ("network byte order".) Those versions of
+EverParse introduce the integer type ``UINT8BE`` to read a 8-bit
+bitfield as MSB-first.
 
 Constants and Enumerations
 --------------------------
@@ -363,8 +374,10 @@ A variation is:
 
 * ``T f[:byte-size-single-element-array-at-most n]``
 
-similar to the previous form, but where ``n`` is an upper bound on the
-size in bytes.
+which describes a field ``f`` that contains a single element of type
+``T`` occupying at most ``n`` bytes, followed by padding bytes to make
+up to ``n`` bytes. This construct thus always consumes exactly ``n``
+bytes.
 
 We expect to add several other kinds of variable-length array-like
 types in the uture.
@@ -406,6 +419,8 @@ An action is a program composed from a few elements:
   
 * Conditionals
 
+* External function calls
+
 An action is evaluated with respect to a handler (e.g.,
 ``on-success``) associated with a given field. We refer to this field
 as the "base field" of the action.
@@ -444,10 +459,6 @@ Atomic actions
 * ``return e`` Returns a boolean value ``e``
 
 * ``abort``: Causes the current validation process to fail.
-  
-We plan to support additional user-defined actions as callbacks to
-external C functions.
-  
 
 Composing atomic actions sequentially and conditionally
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -470,6 +481,20 @@ Composite actions can be built in a few ways:
   true. Additionally, ``if (e) { p0 } else { p1 }`` is also legal,
   with the expected semantics, i.e., ``p1` is run in case ``e`` is
   false.
+
+* External function calls: an action can call a user-defined callback
+  C function. The user first needs to declare the callback function with
+  a top-level declaration in the 3D file: for instance,
+  ``extern UINT8 myFunction(UINT32 myArg1, UINT16 myArg2)``
+  Then the user can call this function in an action, with
+  ``var myReturnValue = myFunction(e1, e2);``
+  The user can also declare a function that returns no value, with
+  ``void`` as its return type. Then, the user can call this function
+  directly as a statement in an action, without ``var`` :
+  ``myFunction(e1, e2);``
+  An external function can also accept out-parameters, using
+  ``mutable myType* myArg`` in its 3D declaration.
+
 
 Another example
 ^^^^^^^^^^^^^^^

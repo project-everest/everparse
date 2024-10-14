@@ -25,6 +25,7 @@ nswamy, protz, taramana 5-Feb-2020
  ********* Implementation of LowStar.Endianness (selected bits) **************
  *****************************************************************************/
 
+#include <windows.h>
 #include <string.h>
 
 /* ... for Windows (MSVC)... not targeting XBOX 360! */
@@ -32,10 +33,17 @@ nswamy, protz, taramana 5-Feb-2020
 #  include <stdlib.h>
 #  include <stdint.h>
 
-#  include <windef.h>
-
 typedef const char * EVERPARSE_STRING;
 typedef EVERPARSE_STRING PRIMS_STRING;
+typedef void* EVERPARSE_COPY_BUFFER_T;
+
+#ifndef KRML_MAYBE_UNUSED_VAR
+#  define KRML_MAYBE_UNUSED_VAR(x) (void)(x)
+#endif
+
+#ifndef KRML_HOST_IGNORE
+#  define KRML_HOST_IGNORE(x) (void)(x)
+#endif
 
 #ifndef KRML_HOST_PRINTF
 #  include <stdio.h>

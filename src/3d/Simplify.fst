@@ -111,6 +111,7 @@ let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   | FieldScalar -> FieldScalar
   | FieldArrayQualified (e, b) -> FieldArrayQualified (simplify_expr env e, b)
   | FieldString sz -> FieldString (map_opt (simplify_expr env) sz)
+  | FieldConsumeAll -> FieldConsumeAll
 
 let simplify_atomic_field (env:T.env_t) (f:atomic_field)
   : ML atomic_field
@@ -155,6 +156,37 @@ let rec simplify_out_fields (env:T.env_t) (flds:list out_field) : ML (list out_f
     | Out_field_anon flds is_union ->
       Out_field_anon (simplify_out_fields env flds) is_union) flds
 
+let check_probe_size_range (e: expr) : ML unit =
+  match e.v with
+  | Constant (Int t n) ->
+    if integer_type_leq t UInt32
+    then ()
+    else
+      error
+        (Printf.sprintf "entrypoint probe: computed sizeof(%s) == %d, exceeds unsigned 32-bit integer range"
+          (print_expr e)
+          n
+        )
+      e.range
+  | App SizeOf _ -> error "check_probe_size_range: sizeof should have been eliminated already" e.range
+  | _ -> ()
+
+let simplify_attribute (env: T.env_t) (attr: attribute) : ML attribute =
+  match attr with
+  | Entrypoint (Some p) ->
+    let e' = simplify_expr env p.probe_ep_length in
+    check_probe_size_range e';
+    Entrypoint (Some ({
+      p with
+        probe_ep_length = e';
+    }))
+  | _ -> attr
+
+let simplify_typedef_names (env: T.env_t) (tdnames: typedef_names) : ML typedef_names =
+  { tdnames with
+      typedef_attributes = List.map (simplify_attribute env) tdnames.typedef_attributes;
+  }
+
 let simplify_decl (env:T.env_t) (d:decl) : ML decl =
   match d.d_decl.v with
   | ModuleAbbrev _ _ -> d
@@ -171,12 +203,14 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     decl_with_v d (Enum t i cases)
 
   | Record tdnames params wopt fields ->
+    let tdnames = simplify_typedef_names env tdnames in
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
     let fields = List.map (simplify_field env) fields in
     let wopt = match wopt with | None -> None | Some w -> Some (simplify_expr env w) in
     decl_with_v d (Record tdnames params wopt fields)
 
   | CaseType tdnames params switch ->
+    let tdnames = simplify_typedef_names env tdnames in
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in 
     let switch = simplify_switch_case env switch in
     decl_with_v d (CaseType tdnames params switch)
@@ -190,6 +224,8 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     let ret = simplify_typ env ret in
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
     decl_with_v d (ExternFn f ret params)
+
+  | ExternProbe _ -> d
   
 
 let simplify_prog benv senv (p:list decl) =

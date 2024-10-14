@@ -22,11 +22,11 @@ HelloWorldValidatePoint(
 {
   /* Validating field x */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes0 = (uint64_t)2U <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = 2ULL <= (InputLength - StartPosition);
   uint64_t positionAfterPoint;
   if (hasBytes0)
   {
-    positionAfterPoint = StartPosition + (uint64_t)2U;
+    positionAfterPoint = StartPosition + 2ULL;
   }
   else
   {
@@ -57,11 +57,11 @@ HelloWorldValidatePoint(
   }
   /* Validating field y */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes = (uint64_t)2U <= (InputLength - positionAfterx);
+  BOOLEAN hasBytes = 2ULL <= (InputLength - positionAfterx);
   uint64_t positionAfterPoint0;
   if (hasBytes)
   {
-    positionAfterPoint0 = positionAfterx + (uint64_t)2U;
+    positionAfterPoint0 = positionAfterx + 2ULL;
   }
   else
   {

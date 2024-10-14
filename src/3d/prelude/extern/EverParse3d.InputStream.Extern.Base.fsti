@@ -60,7 +60,7 @@ val preserved:
 val extra_t: Type0
 
 val has:
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t) ->
     (x: t) ->
     (n: U64.t) ->
     HST.Stack bool
@@ -71,7 +71,7 @@ val has:
     ))
 
 val read:
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t) ->
     (x: t) ->
     (n: U64.t) ->
     (dst: B.buffer U8.t) ->
@@ -94,16 +94,29 @@ val read:
       get_remaining x h' == Seq.slice s (U64.v n) (Seq.length s)
     ))
 
-val peep:
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
-    (x: t) ->
-    (n: U64.t) ->
-    HST.Stack (B.buffer U8.t)
-    (requires (fun h ->
+noextract [@@noextract_to "krml"]
+let peep_pre
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t)
+    (x: t)
+    (n: U64.t)
+    (h: HS.mem)
+: Tot prop
+=
       live x h /\
       Seq.length (get_remaining x h) >= U64.v n
-    ))
-    (ensures (fun h dst' h' ->
+
+noextract [@@noextract_to "krml"]
+let peep_post
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t)
+    (x: t)
+    (n: U64.t)
+    (h: HS.mem)
+    (dst' : B.buffer U8.t)
+    (h' : HS.mem)
+: Tot prop
+=
+  peep_pre x n h /\
+  begin
       let s = get_remaining x h in
       B.modifies B.loc_none h h' /\
       ((~ (B.g_is_null dst')) ==> (
@@ -111,10 +124,22 @@ val peep:
         B.live h' dst' /\
         footprint x `B.loc_includes` B.loc_buffer dst'
       ))
+  end
+
+val peep:
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t) ->
+    (x: t) ->
+    (n: U64.t) ->
+    HST.Stack (B.buffer U8.t)
+    (requires (fun h ->
+      peep_pre x n h
+    ))
+    (ensures (fun h dst' h' ->
+      peep_post x n h dst' h'
     ))
 
 val skip:
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t) ->
     (x: t) ->
     (n: U64.t) ->
     HST.Stack unit
@@ -127,7 +152,7 @@ val skip:
     ))
 
 val empty:
-    (#[FStar.Tactics.Typeclasses.tcresolve ()] _extra_t: extra_t) ->
+    (#[EverParse3d.Util.solve_from_ctx ()] _extra_t: extra_t) ->
     (x: t) ->
     HST.Stack U64.t
     (requires (fun h -> live x h))

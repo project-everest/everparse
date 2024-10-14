@@ -15,6 +15,7 @@ inline_for_extraction
 let read_int32le : leaf_reader parse_int32le
 = make_total_constant_size_reader 4 4ul decode_int32le (decode_int32le_total_constant ()) (fun #rrel #rel b pos ->
     let h = HST.get () in
+    assert ((U32.v pos + 4) <= Seq.length (B.as_seq h b));
     [@inline_let] let _ = decode_int32le_eq (Seq.slice (B.as_seq h b) (U32.v pos) (U32.v pos + 4)) in
     let r0 = B.index b pos in
     let r1 = B.index b (pos `U32.add` 1ul) in

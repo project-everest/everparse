@@ -192,22 +192,53 @@ let integer_type_lub (t1 t2: integer_type) : Tot integer_type =
 let integer_type_leq (t1 t2: integer_type) : bool =
   integer_type_lub t1 t2 = t2
 
-let maybe_as_integer_typ (i:ident) : ML (option integer_type) =
+let maybe_as_integer_typ (i:ident) : Tot (option integer_type) =
   if i.v.modul_name <> None
   then None
   else
     match i.v.name with
-    | "UINT8" -> UInt8 |> Some
-    | "UINT16" -> UInt16 |> Some
-    | "UINT32" -> UInt32 |> Some
-    | "UINT64" -> UInt64 |> Some
-    | "UINT16BE" -> UInt16 |> Some
-    | "UINT32BE" -> UInt32 |> Some
-    | "UINT64BE" -> UInt64 |> Some
+    | "UINT8" -> Some UInt8
+    | "UINT16" -> Some UInt16
+    | "UINT32" -> Some UInt32
+    | "UINT64" -> Some UInt64
+    | "UINT8BE" -> Some UInt8
+    | "UINT16BE" -> Some UInt16
+    | "UINT32BE" -> Some UInt32
+    | "UINT64BE" -> Some UInt64
     | _ -> None
 
 let as_integer_typ (i:ident) : ML integer_type =
   match maybe_as_integer_typ i with
+  | None -> error ("Unknown integer type: " ^ ident_to_string i) i.range
+  | Some t -> t
+
+/// Bit order for bitfields
+[@@ PpxDerivingYoJson ]
+type bitfield_bit_order =
+  | LSBFirst (* Least-significant bit first (MSVC default) *)
+  | MSBFirst (* Most-significant bit first (necessary for many IETF protocols) *)
+
+let maybe_bit_order_of (i:ident) : Pure (option bitfield_bit_order)
+  (requires True)
+  (ensures (fun y ->
+    Some? y == Some? (maybe_as_integer_typ i)
+  ))
+= if i.v.modul_name <> None
+  then None
+  else
+    match i.v.name with
+    | "UINT8" -> Some LSBFirst
+    | "UINT16" -> Some LSBFirst
+    | "UINT32" -> Some LSBFirst
+    | "UINT64" -> Some LSBFirst
+    | "UINT8BE" -> Some MSBFirst
+    | "UINT16BE" -> Some MSBFirst
+    | "UINT32BE" -> Some MSBFirst
+    | "UINT64BE" -> Some MSBFirst
+    | _ -> None
+
+let bit_order_of (i:ident) : ML bitfield_bit_order =
+  match maybe_bit_order_of i with
   | None -> error ("Unknown integer type: " ^ ident_to_string i) i.range
   | Some t -> t
 
@@ -243,7 +274,7 @@ type op =
   | LE of option integer_type
   | GE of option integer_type
   | IfThenElse
-  | BitFieldOf of int //BitFieldOf_n(i, from, to); the integer is the size of i in bits
+  | BitFieldOf: sz: int -> order: bitfield_bit_order -> op //BitFieldOf_n(i, from, to); the integer is the size of i in bits
   | SizeOf
   | Cast : from:option integer_type -> to:integer_type -> op
   | Ext of string
@@ -426,7 +457,7 @@ let field_bitwidth_t = either (with_meta_t int) bitfield_attr
 type array_qualifier =
   | ByteArrayByteSize  //[
   | ArrayByteSize      //[:byte-size
-  | ArrayByteSizeAtMost //[:byte-size-at-most
+  | ArrayByteSizeAtMost //[:byte-size-single-element-array-at-most
   | ArrayByteSizeSingleElementArray //[:byte-size-single-element-array
 
 [@@ PpxDerivingYoJson ]
@@ -435,6 +466,15 @@ type field_array_t =
   | FieldScalar
   | FieldArrayQualified of (expr & array_qualifier) //array size in bytes, the qualifier indicates whether this is a variable-length suffix or not
   | FieldString of (option expr)
+  | FieldConsumeAll // [:consume-all]
+
+[@@ PpxDerivingYoJson ]
+noeq
+type probe_call = {
+  probe_fn:option ident;
+  probe_length:expr;
+  probe_dest:ident
+}
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -445,7 +485,8 @@ type atomic_field' = {
   field_array_opt: field_array_t;
   field_constraint:option expr; //refinement constraint
   field_bitwidth:option field_bitwidth_t;  //bits used for the field; elaborate from Inl to Inr
-  field_action:option (action & bool); //boo indicates if the action depends on the field value
+  field_action:option (action & bool); //bool indicates if the action depends on the field value
+  field_probe:option probe_call; //set in case this field has to be probed then validated
 }
 
 and atomic_field = with_meta_t atomic_field'
@@ -467,8 +508,16 @@ and switch_case = expr & list case
 
 
 [@@ PpxDerivingYoJson ]
+noeq
+type probe_entrypoint = {
+  probe_ep_fn: ident;
+  probe_ep_length:expr;
+}
+
+[@@ PpxDerivingYoJson ]
+noeq
 type attribute =
-  | Entrypoint
+  | Entrypoint: (probe: option probe_entrypoint) -> attribute
   | Aligned
 
 /// Typedefs are given 2 names by convention and can be tagged as an
@@ -533,6 +582,7 @@ type decl' =
   | OutputType : out_typ -> decl'
   | ExternType : typedef_names -> decl'
   | ExternFn   : ident -> typ -> list param -> decl'
+  | ExternProbe : ident -> decl'
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -565,7 +615,16 @@ let prog = list decl & option type_refinement
 (** Entrypoint and export definitions *)
 
 let has_entrypoint (l:list attribute) : Tot bool =
-  Some? (List.Tot.tryFind (function Entrypoint -> true | _ -> false) l)
+  List.Tot.existsb Entrypoint? l
+
+let rec get_entrypoint_probes' (l: list attribute) (accu: list probe_entrypoint) : Tot (list probe_entrypoint) =
+  match l with
+  | [] -> List.Tot.rev accu
+  | Entrypoint (Some probe) :: q -> get_entrypoint_probes' q (probe :: accu)
+  | _ :: q -> get_entrypoint_probes' q accu
+
+let get_entrypoint_probes (l: list attribute) : Tot (list probe_entrypoint) =
+  get_entrypoint_probes' l []
 
 let is_entrypoint_or_export d = match d.d_decl.v with
   | Record names _ _ _
@@ -743,10 +802,12 @@ let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) Ki
 let tbool = mk_prim_t "Bool"
 let tunit = mk_prim_t "unit"
 let tuint8 = mk_prim_t "UINT8"
+let tuint8be = mk_prim_t "UINT8BE"
 let puint8 = mk_prim_t "PUINT8"
 let tuint16 = mk_prim_t "UINT16"
 let tuint32 = mk_prim_t "UINT32"
 let tuint64 = mk_prim_t "UINT64"
+let tcopybuffer = mk_prim_t "EVERPARSE_COPY_BUFFER_T"
 let tunknown = mk_prim_t "?"
 let unit_atomic_field rng = 
     let dummy_identifier = with_range (to_ident' "_empty_") rng in
@@ -757,7 +818,8 @@ let unit_atomic_field rng =
          field_array_opt=FieldScalar;
          field_constraint=None;
          field_bitwidth=None;
-         field_action=None
+         field_action=None;
+         field_probe=None
         } in
     with_range f rng
 
@@ -819,6 +881,7 @@ let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   | FieldScalar -> f
   | FieldArrayQualified (e, q) -> FieldArrayQualified (subst_expr s e, q)
   | FieldString sz -> FieldString (map_opt (subst_expr s) sz)
+  | FieldConsumeAll -> f
 let rec subst_field (s:subst) (ff:field) : ML field =
   match ff.v with
   | AtomicField f -> {ff with v = AtomicField (subst_atomic_field s f)}
@@ -862,11 +925,13 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
     CaseType names (subst_params s params) (subst_switch_case s cases)
   | OutputType _
   | ExternType _
-  | ExternFn _ _ _ -> d
+  | ExternFn _ _ _ 
+  | ExternProbe _ -> d
 let subst_decl (s:subst) (d:decl) : ML decl = decl_with_v d (subst_decl' s d.d_decl.v)
 
 (*** Printing the source AST; for debugging only **)
-let print_constant (c:constant) =
+let print_constant (c:constant) =
+
   let print_tag = function
     | UInt8 -> "uy"
     | UInt16 -> "us"
@@ -892,6 +957,10 @@ let print_integer_type = function
   | UInt32 -> "UINT32"
   | UInt64 -> "UINT64"
 
+let print_bitfield_bit_order = function
+  | LSBFirst -> "LSBFirst"
+  | MSBFirst -> "MSBFirst"
+
 let print_op = function
   | Eq -> "="
   | Neq -> "!="
@@ -914,7 +983,7 @@ let print_op = function
   | LE _ -> "<="
   | GE _ -> ">="
   | IfThenElse -> "ifthenelse"
-  | BitFieldOf i -> Printf.sprintf "bitfield_of(%d)" i
+  | BitFieldOf i o -> Printf.sprintf "bitfield_of(%d, %s)" i (print_bitfield_bit_order o)
   | SizeOf -> "sizeof"
   | Cast _ t -> "(" ^ print_integer_type t ^ ")"
   | Ext s -> s
@@ -1002,6 +1071,11 @@ let typ_as_integer_type (t:typ) : ML integer_type =
   | Type_app i _k [] -> as_integer_typ i
   | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
 
+let bit_order_of_typ (t:typ) : ML bitfield_bit_order =
+  match t.v with
+  | Type_app i _k [] -> bit_order_of i
+  | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
+
 let print_qual = function
   | Mutable -> "mutable"
   | Immutable -> ""
@@ -1057,20 +1131,26 @@ and print_atomic_field (f:atomic_field) : ML string =
       begin match q with
       | ByteArrayByteSize -> Printf.sprintf "[%s]" (print_expr e)
       | ArrayByteSize -> Printf.sprintf "[:byte-size %s]" (print_expr e)
-      | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-at-most %s]" (print_expr e)
+      | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-single-element-array-at-most %s]" (print_expr e)
       | ArrayByteSizeSingleElementArray -> Printf.sprintf "[:byte-size-single-element-array %s]" (print_expr e)
       end
     | FieldString None -> Printf.sprintf "[::zeroterm]"
-    | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-b-te-size-at-most %s]" (print_expr sz)
+    | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-byte-size-at-most %s]" (print_expr sz)
+    | FieldConsumeAll -> Printf.sprintf "[:consume-all]"
   in
   let sf = f.v in
-    Printf.sprintf "%s%s %s%s%s%s;"
+    Printf.sprintf "%s%s %s%s%s%s%s;"
       (if sf.field_dependence then "dependent " else "")
       (print_typ sf.field_type)
       (print_ident sf.field_ident)
       (print_bitfield sf.field_bitwidth)
       (print_array sf.field_array_opt)
       (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
+      (print_opt sf.field_probe
+        (fun p -> Printf.sprintf "probe %s (length=%s, destination=%s)"
+          (print_opt p.probe_fn print_ident)
+          (print_expr p.probe_length)
+          (print_ident p.probe_dest)))
 
 and print_switch_case (s:switch_case) : ML string =
   let head, cases = s in
@@ -1133,7 +1213,8 @@ let print_decl' (d:decl') : ML string =
                     (ident_to_string td.typedef_ptr_abbrev)
   | OutputType out_t -> "Printing for output types is TBD"
   | ExternType _ -> "Printing for extern types is TBD"
-  | ExternFn _ _ _ -> "Printing for extern functions is TBD"
+  | ExternFn _ _ _
+  | ExternProbe _ -> "Printing for extern functions is TBD"
 
 let print_decl (d:decl) : ML string =
   match d.d_decl.comments with

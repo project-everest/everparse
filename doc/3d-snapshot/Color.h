@@ -12,17 +12,17 @@ extern "C" {
 /**
 Enum constant
 */
-#define COLOR_RED ((uint32_t)1U)
+#define COLOR_RED (1U)
 
 /**
 Enum constant
 */
-#define COLOR_GREEN ((uint32_t)2U)
+#define COLOR_GREEN (2U)
 
 /**
 Enum constant
 */
-#define COLOR_BLUE ((uint32_t)42U)
+#define COLOR_BLUE (42U)
 
 uint64_t
 ColorValidateColoredPoint(

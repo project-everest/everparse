@@ -34,11 +34,6 @@ EVERPARSE_OUTPUT_DIR=obj
 # files
 EVERPARSE_INPUT_DIR=src
 
-# If a .3d file contains a `refining` clause, then the C compiler must
-# be given the include path that contains the .h files pointed to by
-# such clauses.
-CFLAGS += -I src
-
 #########################################
 # Generating and including the Makefile #
 #########################################

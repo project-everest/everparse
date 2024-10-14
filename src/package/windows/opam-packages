@@ -24,3 +24,6 @@ ppxlib ppxlib
 re re
 odoc odoc
 sha sha
+sexplib sexplib
+memtrace memtrace
+uucp uucp

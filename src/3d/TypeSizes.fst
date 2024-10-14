@@ -45,6 +45,7 @@ let initial_senv () =
        ("UINT16",   (Fixed 2,  Some 2));
        ("UINT32",   (Fixed 4,  Some 4));
        ("UINT64",   (Fixed 8,  Some 8));
+       ("UINT8BE",   (Fixed 1,  Some 1));
        ("UINT16BE",   (Fixed 2,  Some 2));
        ("UINT32BE",   (Fixed 4,  Some 4));
        ("UINT64BE",   (Fixed 8,  Some 8));
@@ -92,7 +93,7 @@ let size_and_alignment_of_typ (env:env_t) (t:typ)
   : ML (size & alignment)
   = match t.v with
     | Type_app i _ _ -> size_and_alignment_of_typename env i
-    | Pointer _ -> Variable, Some 8
+    | Pointer _ -> Fixed 8, Some 8 //pointers are 64 bit and aligned
 
 let size_of_typ (env:env_t) (t:typ)
   : ML size
@@ -168,7 +169,7 @@ let size_and_alignment_of_atomic_field (env:env_t) (f:atomic_field)
 
       | FieldArrayQualified (n, ByteArrayByteSize) ->
         if base_size <> Fixed 1
-        then warning "Expected a byte array; if the underlying array elements are larger than a byte, use the '[:byte-size' notation"
+        then error "Expected a byte array; if the underlying array elements are larger than a byte, use the '[:byte-size' notation"
                      f.range;
         let n = value_of_const_expr env n in
         begin
@@ -196,6 +197,7 @@ let size_and_alignment_of_atomic_field (env:env_t) (f:atomic_field)
     size, align
 
 #push-options "--warn_error -272"
+let alignment_prefix = Printf.sprintf "%salignment_padding" Ast.reserved_prefix
 let gen_alignment_ident
   : unit -> ML ident
   = let ctr : ref int = alloc 0 in
@@ -203,7 +205,7 @@ let gen_alignment_ident
       let next = !ctr in
       ctr := next + 1;
       with_range
-        (to_ident' (Printf.sprintf "%salignment_padding_%d" Ast.reserved_prefix next))
+        (to_ident' (Printf.sprintf "%s_%d" alignment_prefix next))
         dummy_range
 #pop-options
 
@@ -228,7 +230,8 @@ let padding_field (env:env_t) (diag_enclosing_type_name:ident (* for diagnostics
       field_array_opt=(if n = 1 then FieldScalar else FieldArrayQualified(n_expr, ByteArrayByteSize));
       field_constraint=None;
       field_bitwidth=None;
-      field_action=None
+      field_action=None;
+      field_probe=None
     } in
     let af = with_dummy_range sf in
     let f = with_dummy_range (AtomicField af) in
@@ -237,7 +240,7 @@ let padding_field (env:env_t) (diag_enclosing_type_name:ident (* for diagnostics
 
 let should_align (td:typedef_names)
   : bool
-  = List.Tot.Base.mem Aligned td.typedef_attributes
+  = List.Tot.Base.existsb Aligned? td.typedef_attributes
 
 let alignment_padding env (should_align:bool) 
                           (diag_enclosing_type_name:ident (* for diagnostics only *))
@@ -397,6 +400,38 @@ let rec size_and_alignment_of_field (env:env_t)
       let f = { f with v = SwitchCaseField swc field_name } in
       f, size, alignment
         
+let field_offsets_of_type (env:env_t) (typ:ident)
+: ML (either (list (ident & int)) string)
+= let ge = Binding.global_env_of_env (fst env) in
+  match GlobalEnv.fields_of_type ge typ with
+  | None ->
+    Inr <| Printf.sprintf "No fields for type %s" (ident_to_string typ)
+  | Some fields ->
+    let rec field_offsets (current_offset:int) (acc:list (ident & int)) (fields:list field)
+    : ML (either (list (ident & int)) string)
+    = match fields with
+      | [] -> Inl <| List.rev acc
+      | field :: fields ->
+        let _, size, _ = size_and_alignment_of_field env false typ field in
+        let id =
+          match field.v with
+          | AtomicField af -> af.v.field_ident
+          | RecordField _ id
+          | SwitchCaseField _ id -> id
+        in
+        match size with
+        | Fixed n ->
+          let next_offset = n + current_offset in
+          field_offsets next_offset ((id, current_offset) :: acc) fields
+
+        | WithVariableSuffix _
+        | Variable ->
+          Inl <| List.rev ((id, current_offset) :: acc)
+    in
+    field_offsets 0 [] fields
+
+let is_alignment_field (fieldname:ident) =
+  Utils.string_starts_with (ident_to_string fieldname) alignment_prefix
 
 let decl_size_with_alignment (env:env_t) (d:decl)
   : ML decl
@@ -428,13 +463,31 @@ let decl_size_with_alignment (env:env_t) (d:decl)
 
     | OutputType _
     | ExternType _
-    | ExternFn _ _ _ -> d
+    | ExternFn _ _ _
+    | ExternProbe _ -> d
+
+let idents_of_decl (d:decl) =
+  match d.d_decl.v with
+  | ModuleAbbrev i _
+  | Define i _ _ 
+  | TypeAbbrev _ i 
+  | Enum _ i _
+  | ExternFn i _ _
+  | ExternProbe i -> [i]
+  | Record names _ _ _
+  | CaseType names _ _
+  | OutputType { out_typ_names = names } 
+  | ExternType names -> [names.typedef_name; names.typedef_abbrev]
 
 let size_of_decls (genv:B.global_env) (senv:size_env) (ds:list decl) =
-  let env =
-    B.mk_env genv, senv in
-    // {senv with sizes = H.create 10} in
+  let env = B.mk_env genv, senv in
   let ds = List.map (decl_size_with_alignment env) ds in
+  let ge = B.global_env_of_env (fst env) in
+  ds |> List.iter (fun d ->
+  idents_of_decl d |> List.iter (fun i ->
+  match H.try_find ge.ge_h i.v with
+  | None -> ()
+  | Some (_, attrs) ->  H.insert ge.ge_h i.v (d, attrs)));
   ds
 
 let finish_module en mname e_and_p =

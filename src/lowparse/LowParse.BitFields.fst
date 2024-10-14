@@ -500,7 +500,7 @@ let get_bitfield_get_bitfield
     then nth_get_bitfield x lo hi (i + lo')
   )
 
-#push-options "--z3rlimit_factor 2"
+#push-options "--z3rlimit_factor 4"
 let get_bitfield_zero_inner
   (#tot: pos)
   (x: U.uint_t tot)
@@ -1272,5 +1272,5 @@ let uint8 : uint_t 8 U8.t = {
   bitfield_eq_rhs = (fun x lo hi z -> bitfield_eq8_rhs x lo hi z);
 }
 
-let uint8_v_eq x = ()
+let uint8_v_eq_fn _ = ()
 let uint8_uint_to_t_eq x = ()

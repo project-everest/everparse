@@ -32,6 +32,15 @@ let parse
 : GTot (option (t * consumed_length input))
 = p input
 
+let parse_consume
+  (#t: Type)
+  (p: bare_parser t)
+  (input: bytes)
+: GTot (option (consumed_length input))
+= match parse p input with
+  | None -> None
+  | Some (_, consumed) -> Some consumed
+
 (** Injectivity of parsing *)
 
 let injective_precond
@@ -359,6 +368,31 @@ let tot_parser
 : Tot Type
 = (f: tot_bare_parser t { parser_kind_prop k f } )
 
+val tot_bare_parser_of_bare_parser
+  (#t: Type)
+  (p: bare_parser t)
+: Ghost (tot_bare_parser t)
+    (requires True)
+    (ensures (fun p' -> forall x . parse p' x == parse p x))
+
+let tot_parser_of_parser
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Ghost (tot_parser k t)
+    (requires True)
+    (ensures (fun p' -> forall x . parse p' x == parse p x))
+= let p' = tot_bare_parser_of_bare_parser p in
+  parser_kind_prop_ext k p p';
+  p'
+
+let parser_of_tot_parser
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+: Tot (parser k t)
+= p
+
 inline_for_extraction
 let get_parser_kind
   (#k: parser_kind)
@@ -658,6 +692,23 @@ let serializer_correct
 : GTot Type0
 = forall (x: t) .{:pattern (parse p (f x))} parse p (f x) == Some (x, Seq.length (f x))
 
+let serializer_correct_ext_gen
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: parser k1 t1)
+  (f1: bare_serializer t1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: parser k2 t2)
+  (f2: bare_serializer t1)
+: Lemma
+  (requires (t1 == t2 /\
+    (forall (input: bytes) . parse p1 input == parse p2 input) /\
+    (forall (x: t1) . f1 x == f2 x)
+  ))
+  (ensures (serializer_correct p1 f1 <==> serializer_correct p2 f2))
+= ()
+
 let serializer_correct_ext
   (#k1: parser_kind)
   (#t1: Type)
@@ -700,6 +751,34 @@ let serializer
   (p: parser k t)
 : Tot Type
 = (f: bare_serializer t { serializer_correct p f } )
+
+inline_for_extraction
+let tot_bare_serializer
+  (t: Type)
+: Tot Type
+= t -> Tot bytes
+
+[@unifier_hint_injective]
+let tot_serializer
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+: Tot Type
+= (f: tot_bare_serializer t { serializer_correct #k p f } )
+
+let mk_tot_serializer
+  (#k: parser_kind)
+  (#t: Type)
+  (p: tot_parser k t)
+  (f: tot_bare_serializer t)
+  (prf: (
+    (x: t) ->
+    Lemma
+    (parse p (f x) == Some (x, Seq.length (f x)))
+  ))
+: Tot (tot_serializer p)
+= Classical.forall_intro prf;
+  f
 
 let mk_serializer
   (#k: parser_kind)
@@ -753,6 +832,13 @@ let serialize_ext'
   (ensures (fun _ -> True))
 = serialize_ext p1 s1 p2
 
+let bare_serialize
+  (#t: Type)
+  (s: bare_serializer t)
+  (x: t)
+: GTot bytes
+= s x
+
 let serialize
   (#k: parser_kind)
   (#t: Type)
@@ -761,6 +847,45 @@ let serialize
   (x: t)
 : GTot bytes
 = s x
+
+val tot_bare_serializer_of_bare_serializer
+  (#t: Type)
+  (s: bare_serializer t)
+: Ghost (tot_bare_serializer t)
+    (requires True)
+    (ensures (fun s' -> forall x . bare_serialize s' x == bare_serialize s x))
+
+let tot_serializer_of_serializer
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: parser k t)
+  (s: serializer p)
+: Ghost (tot_serializer (tot_parser_of_parser p))
+    (requires True)
+    (ensures (fun s' -> forall x . bare_serialize s' x == serialize #k s x))
+= tot_bare_serializer_of_bare_serializer s
+
+let serializer_of_tot_serializer
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+: Tot (serializer (parser_of_tot_parser p))
+= s
+
+let tot_serialize_ext
+  (#k1: parser_kind)
+  (#t1: Type)
+  (p1: tot_parser k1 t1)
+  (s1: tot_serializer p1)
+  (#k2: parser_kind)
+  (#t2: Type)
+  (p2: tot_parser k2 t2)
+: Pure (tot_serializer p2)
+  (requires (t1 == t2 /\ (forall (input: bytes) . parse p1 input == parse p2 input)))
+  (ensures (fun _ -> True))
+= serializer_correct_ext #k1 p1 s1 #k2 p2;
+  (s1 <: tot_bare_serializer t2)
 
 let parse_serialize
   (#k: parser_kind)
@@ -799,6 +924,21 @@ let serializer_unique
   let _ = parse p (s1 x) in
   let _ = parse p (s2 x) in
   serializer_correct_implies_complete p s2
+
+let serializer_unique_strong
+  (#t: Type)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (s1: serializer p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2)
+  (x: t)
+: Lemma
+  (requires (forall x . parse p1 x == parse p2 x))
+  (ensures (s1 x == s2 x))
+= let s1' = serialize_ext p2 s2 p1 in
+  serializer_unique p1 s1 s1' x
 
 let serializer_injective
   (#k: parser_kind)
@@ -871,6 +1011,21 @@ val serialize_length
   ))
   [SMTPat (Seq.length (serialize s x))]
 
+let tot_serialize_length
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (x: t)
+: Lemma
+  (let x = Seq.length (bare_serialize s x) in
+   k.parser_kind_low <= x /\ (
+   match k.parser_kind_high with
+   | None -> True
+   | Some y -> x <= y
+  ))
+= serialize_length #k #t #p s x
+
 val serialize_not_fail
   (#k: parser_kind)
   (#t: Type)
@@ -897,6 +1052,21 @@ let serialize_strong_prefix
 = parse_strong_prefix p (serialize s x1) (serialize s x1 `Seq.append` q1);
   parse_strong_prefix p (serialize s x2) (serialize s x2 `Seq.append` q2);
   Seq.lemma_append_inj (serialize s x1) q1 (serialize s x2) q2
+
+let tot_serialize_strong_prefix
+  (#k: parser_kind)
+  (#t: Type)
+  (#p: tot_parser k t)
+  (s: tot_serializer p)
+  (x1 x2: t)
+  (q1 q2: bytes)
+: Lemma
+  (requires (
+    k.parser_kind_subkind == Some ParserStrong /\
+    bare_serialize s x1 `Seq.append` q1 == bare_serialize s x2 `Seq.append` q2
+  ))
+  (ensures (x1 == x2 /\ q1 == q2))
+= serialize_strong_prefix #k #t #p s x1 x2 q1 q2
 
 let parse_truncate
   (#k: parser_kind)

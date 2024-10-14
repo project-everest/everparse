@@ -185,7 +185,7 @@ let pair_parser n1 p1 p2 =
     mk_parser (pk_and_then p1.p_kind p2.p_kind)
               pt
               t_id
-              "none"
+              (ident_to_string n1)
               (Parse_pair n1 p1 p2)
 let dep_pair_typ t1 (t2:(A.ident & T.typ)) : T.typ =
     T.T_dep_pair t1 t2
@@ -202,7 +202,7 @@ let dep_pair_parser n1 p1 (p2:A.ident & T.parser) =
       (pk_and_then p1.p_kind (snd p2).p_kind) 
       t
       t_id
-      "none"
+      (ident_to_string n1)
       (Parse_dep_pair n1 p1 (Some (fst p2), snd p2))
 let dep_pair_with_refinement_parser n1 p1 (e:T.lam T.expr) (p2:A.ident & T.parser) =
   let open T in
@@ -214,7 +214,7 @@ let dep_pair_with_refinement_parser n1 p1 (e:T.lam T.expr) (p2:A.ident & T.parse
       (pk_and_then k1 (snd p2).p_kind)
       t
       t_id
-      "none"
+      (ident_to_string n1)
       (Parse_dep_pair_with_refinement n1 p1 e (Some (fst p2), snd p2))
 let dep_pair_with_refinement_and_action_parser n1 p1 (e:T.lam T.expr) (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
@@ -226,7 +226,7 @@ let dep_pair_with_refinement_and_action_parser n1 p1 (e:T.lam T.expr) (a:T.lam T
       (pk_and_then k1 (snd p2).p_kind)
       t
       t_id
-      "none"
+      (ident_to_string n1)
       (Parse_dep_pair_with_refinement_and_action n1 p1 e a (Some (fst p2), snd p2))
 let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:A.ident & T.parser) =
   let open T in
@@ -283,7 +283,7 @@ let translate_op : A.op -> ML T.op =
   | LE topt -> T.LE (force_topt topt)
   | GE topt -> T.GE (force_topt topt)
   | IfThenElse -> T.IfThenElse
-  | BitFieldOf i -> T.BitFieldOf i
+  | BitFieldOf i order -> T.BitFieldOf i order
   | Cast (Some from) to -> T.Cast from to
   | Ext s -> T.Ext s
   | Cast None _
@@ -336,6 +336,7 @@ and translate_out_expr (oe:out_expr) : ML T.output_expr =
 
 let output_types_attributes = {
   T.is_hoisted = false;
+  T.is_entrypoint = false;
   T.is_if_def = false;
   T.is_exported = false;
   T.should_inline = false;
@@ -372,9 +373,13 @@ let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
     let args, decls = args |> List.map translate_typ_param |> List.split in
     T.T_app hd b (List.map Inr args), List.flatten decls
 
-let has_entrypoint (l:list A.attribute) =
-  List.tryFind (function A.Entrypoint -> true | _ -> false) l
-  |> Some?
+let translate_probe_entrypoint
+  (p: A.probe_entrypoint)
+: ML T.probe_entrypoint
+= {
+    probe_ep_fn = p.probe_ep_fn;
+    probe_ep_length = translate_expr p.probe_ep_length;
+  }
 
 let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param)
   : ML (T.typedef_name & T.decls) =
@@ -383,9 +388,12 @@ let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param)
     let t, ds = translate_typ t in
     (id, t), ds) |> List.split in
 
+  let entrypoint_probes = List.map translate_probe_entrypoint (A.get_entrypoint_probes tdn.typedef_attributes) in
+
   let open T in
   { td_name = tdn.typedef_name;
     td_params = params;
+    td_entrypoint_probes = entrypoint_probes;
     td_entrypoint = has_entrypoint tdn.typedef_attributes }, List.flatten ds
 
 let make_enum_typ (t:T.typ) (ids:list ident) =
@@ -549,11 +557,17 @@ let rec parse_typ (env:global_env)
   | T.T_pointer _ ->
     failwith "No parsers for pointer types"
 
-let pv ar p v = T.({
-  v_allow_reading = ar;
-  v_parser = p;
-  v_validator = v
-})
+  | T.T_with_probe content_type probe len dest -> 
+    let p = parse_typ env typename fieldname content_type in
+    let q = T.Parse_with_probe p probe len dest in
+    let u64_t, _ = translate_typ A.tuint64 in
+    let u64_parser = parse_typ env typename fieldname u64_t in
+    { p_kind = u64_parser.p_kind;
+      p_typ = t;
+      p_parser = q;
+      p_typename = typename;
+      p_fieldname = fieldname }
+
 
 let rec read_typ (env:global_env) (t:T.typ) : ML (option T.reader) =
   let open T in
@@ -705,6 +719,7 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_with_action _ _ _
   | T.Parse_if_else _ _ _
   | T.Parse_string _ _
+  | T.Parse_with_probe _ _ _ _
     -> false
   | T.Parse_map p _
   | T.Parse_refinement _ p _
@@ -721,148 +736,31 @@ let unknown_type_ident =
   } in
   with_range id dummy_range
 
-let rec make_validator (env:global_env) (p:T.parser) : ML T.validator =
-  let open T in
-  let with_error_handler v =
-    pv v.v_allow_reading
-       v.v_parser
-       (Validate_with_error_handler p.p_typename p.p_fieldname v)
-  in
-  match p.p_parser with
-  | Parse_impos ->
-    with_error_handler
-      (pv true p Validate_impos)
-
-  | Parse_app hd args ->
-    with_error_handler
-      (pv (has_reader env hd) p (Validate_app hd args))
-
-  | Parse_nlist n p ->
-    with_error_handler
-      (if parser_is_constant_size_without_actions env p
-       then pv false p (Validate_nlist_constant_size_without_actions n (make_validator env p))
-       else pv false p (Validate_nlist n (make_validator env p)))
-
-  | Parse_t_at_most n p ->
-    with_error_handler
-      (pv false p (Validate_t_at_most n (make_validator env p)))
-
-  | Parse_t_exact n p ->
-    with_error_handler
-      (pv false p (Validate_t_exact n (make_validator env p)))
-
-  | Parse_return e ->
-    pv true p Validate_return
-
-  | Parse_pair n1 p1 p2 ->
-     pv false p (Validate_pair n1 (make_validator env p1)
-                                  (make_validator env p2))
-
-  | Parse_dep_pair n1 p1 k ->
-     pv false p (Validate_dep_pair
-                     n1
-                     (make_validator env p1)
-                     (make_reader env p1.p_typ)
-                     (map_lam k (make_validator env)))
-
-  | Parse_dep_pair_with_refinement n1 p1 e k ->
-    let p1_is_constant_size_without_actions = parser_is_constant_size_without_actions env p1 in
-    pv false p (Validate_dep_pair_with_refinement
-                      p1_is_constant_size_without_actions
-                      n1
-                      (make_validator env p1)
-                      (make_reader env p1.p_typ)
-                      e
-                      (map_lam k (make_validator env)))
-
-  | Parse_dep_pair_with_action p1 a k ->
-    pv false p (Validate_dep_pair_with_action
-                       (make_validator env p1)
-                       (make_reader env p1.p_typ)
-                       a
-                       (map_lam k (make_validator env)))
-
-  | Parse_dep_pair_with_refinement_and_action n1 p1 e a k ->
-    let p1_is_constant_size_without_actions = parser_is_constant_size_without_actions env p1 in
-    pv false p (Validate_dep_pair_with_refinement_and_action
-                     p1_is_constant_size_without_actions
-                     n1
-                     (make_validator env p1)
-                     (make_reader env p1.p_typ)
-                     e
-                     a
-                     (map_lam k (make_validator env)))
-
-  | Parse_map p1 f ->
-    pv false p (Validate_map (make_validator env p1) f)
-
-  | Parse_refinement n1 p1 f ->
-    with_error_handler 
-      (pv false p (Validate_refinement n1 
-                                       (make_validator env p1)
-                                       (make_reader env p1.p_typ)
-                                       f))
-
-  | Parse_refinement_with_action n1 p1 f a ->
-    with_error_handler 
-      (pv false p (Validate_refinement_with_action n1 
-                                                   (make_validator env p1)
-                                                   (make_reader env p1.p_typ)
-                                                   f 
-                                                   a))
-
-  | Parse_with_action n1 p a ->
-    with_error_handler
-      (pv false p (Validate_with_action n1 (make_validator env p) a))
-
-  | Parse_with_dep_action n1 p a ->
-    with_error_handler
-      (pv false p (Validate_with_dep_action n1 
-                     (make_validator env p)
-                     (make_reader env p.p_typ)
-                     a))
-
-  | Parse_weaken_left p1 k ->
-    let v1 = make_validator env p1 in
-    pv v1.v_allow_reading p (Validate_weaken_left v1 k)
-
-  | Parse_weaken_right p1 k ->
-    let v1 = make_validator env p1 in
-    pv v1.v_allow_reading p (Validate_weaken_right v1 k)
-
-  | Parse_if_else e p1 p2 ->
-    pv false p (Validate_if_else e (make_validator env p1) (make_validator env p2))
-
-  | Parse_with_comment p c ->
-    let v = make_validator env p in
-    pv v.v_allow_reading p (Validate_with_comment v c)
-
-  | Parse_string elem zero ->
-    with_error_handler
-      (pv false p (Validate_string (make_validator env elem) (make_reader env elem.p_typ) zero))
-
-// x:t1;
-// t2;
-// t3;
-// y:t4;
-// t5;
-// t6
-
-// (x <-- parse_t1 ;
-//  (parse_t2 ;;
-//   parse_t3 ;;
-//   (y <-- parse_t4;
-//     ((parse_t5 ;;
-//       parse_t6) `map` (fun x56 -> y, x56))))
-//  `map` (fun x_2_3_4_5_6 -> {x = x; y .... }))
-
 let make_zero (r: range) (t: typ) : ML T.expr =
   let it = typ_as_integer_type t in
   (T.Constant (Int it 0), r)
 
 #push-options "--z3rlimit_factor 4"
 let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
-    let sf = f.v in
+  let sf = f.v in
+  match f.v.field_probe with
+  | Some probe_call -> (
+    match f.v.field_type.v, probe_call.probe_fn with
+    | Pointer t, Some probe_fn ->
+      let t, ds1 = translate_typ t in
+      let len = translate_expr probe_call.probe_length in
+      let dest = probe_call.probe_dest in
+      let sf_typ = T.T_with_probe t probe_fn len dest in
+      T.({ sf_dependence=sf.field_dependence;
+           sf_ident=sf.field_ident;
+           sf_typ=sf_typ }), 
+      ds1
+      
+    | _ -> 
+      failwith "Impossible: probed fields must be pointers and the probe function must be resolved"
+  )
+  
+  | _ -> 
     let t, ds1 = translate_typ sf.field_type in
     let t =
         let mk_at_most t e : ML T.typ =
@@ -887,6 +785,7 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
           | None -> str
           | Some e -> mk_at_most str e
           end
+        | FieldConsumeAll -> T.T_app (with_range (to_ident' "all_bytes") sf.field_type.range) KindSpec []
     in
     let t =
       match sf.field_constraint with
@@ -1056,13 +955,13 @@ let rec free_vars_expr (genv:global_env)
     | Record _ fields ->
       List.fold_left (fun out (_, e) -> free_vars_expr genv env out e) out fields
 
-let with_attrs (d:T.decl') (h:bool) (ifdef:bool) (e:bool) (i:bool) (c:list string)
+let with_attrs (d:T.decl') (h:bool) (is_entrypoint: bool) (ifdef:bool) (e:bool) (i:bool) (c:list string)
   : T.decl
-  = d, T.({ is_hoisted = h; is_if_def = ifdef; is_exported = e; should_inline = i; comments = c } )
+  = d, T.({ is_hoisted = h; is_entrypoint = is_entrypoint; is_if_def = ifdef; is_exported = e; should_inline = i; comments = c } )
 
-let with_comments (d:T.decl') (e:bool) (c:list string)
+let with_comments (d:T.decl') (is_entrypoint: bool) (e:bool) (c:list string)
   : T.decl
-  = d, T.({ is_hoisted = false; is_if_def=false; is_exported = e; should_inline = false; comments = c } )
+  = d, T.({ is_hoisted = false; is_entrypoint = is_entrypoint; is_if_def=false; is_exported = e; should_inline = false; comments = c } )
 
 let rec hoist_typ
           (fn:string)
@@ -1096,7 +995,7 @@ let rec hoist_typ
       in
       let d = Definition def in
       let t = T_refine t1 (None, app) in
-      ds@[with_attrs d true false false true []],  //hoisted, not exported, inlineable
+      ds@[with_attrs d true false false false true []],  //hoisted, not entrypoint, not exported, inlineable
       t
 
     | T_refine t1 (None, e) ->
@@ -1120,7 +1019,8 @@ let rec hoist_typ
       let d, t = hoist_typ fn genv env t in
       d, T_with_comment t c
 
-    | T_pointer _ ->
+    | T_pointer _
+    | T_with_probe _ _ _ _ ->
       [], t
 
 let add_parser_kind_nz (genv:global_env) (id:A.ident) (nz:bool) (wk: weak_kind) =
@@ -1130,21 +1030,6 @@ let add_parser_kind_nz (genv:global_env) (id:A.ident) (nz:bool) (wk: weak_kind) 
       (string_of_bool nz)) in
   H.insert genv.parser_weak_kind id.v wk;
   H.insert genv.parser_kind_nz id.v nz
-
-let maybe_add_reader (genv:global_env)
-                     (decl_name:_)
-                     (t:T.typ)
-  : ML (option T.reader)
-  = let open T in
-    let reader = read_typ genv t in
-    let _ =
-      if Some? reader
-      then begin
-        Options.debug_print_string (Printf.sprintf ">>>>>> Adding reader for %s with definition %s\n" (ident_to_string decl_name.td_name) (T.print_typ "" t));  //AR: TODO: needs a module name
-        add_reader genv decl_name.td_name
-     end
-    in
-    reader
 
 let hoist_one_type_definition (should_inline:bool)
                               (genv:global_env) (env:env_t) (orig_tdn:T.typedef_name)
@@ -1170,22 +1055,20 @@ let hoist_one_type_definition (should_inline:bool)
       let tdn = {
           td_name = id;
           td_params = List.rev env;
+          td_entrypoint_probes = [];
           td_entrypoint = false
       } in
       let t_parser = parse_typ orig_tdn.td_name type_name body in
       add_parser_kind_nz genv tdn.td_name t_parser.p_kind.pk_nz t_parser.p_kind.pk_weak_kind;
       add_parser_kind_is_constant_size genv tdn.td_name (parser_is_constant_size_without_actions genv t_parser);
-      let reader = maybe_add_reader genv tdn body in
       let td = {
         decl_name = tdn;
         decl_typ = TD_abbrev body;
         decl_parser = t_parser;
-        decl_validator = make_validator genv t_parser;
-        decl_reader = reader;
         decl_is_enum = false        
       } in
       let td = Type_decl td in
-      with_attrs td true false false should_inline [comment],  //hoisted, not exported, should_inline
+      with_attrs td true false false false should_inline [comment],  //hoisted, not entrypoint, not exported, should_inline
       tdef
 
 let hoist_field (genv:global_env) (env:env_t) (tdn:T.typedef_name) (f:T.field)
@@ -1322,7 +1205,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
 
   | Define i (Some t) s ->
     let t, ds = translate_typ t in
-    ds@[with_comments (T.Definition (i, [], t, T.mk_expr (T.Constant s))) d.d_exported d.d_decl.comments]
+    ds@[with_comments (T.Definition (i, [], t, T.mk_expr (T.Constant s))) (A.is_entrypoint d) d.d_exported d.d_decl.comments]
 
   | TypeAbbrev t i ->
     let tdn = make_tdn i in
@@ -1332,16 +1215,13 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let open T in
     add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
-    let reader = maybe_add_reader env tdn t in
     let td = {
         decl_name = tdn;
         decl_typ = TD_abbrev t;
         decl_parser = p;
-        decl_validator = make_validator env p;
-        decl_reader = reader;
         decl_is_enum = false
     } in
-    ds1@ds2@[with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+    ds1@ds2@[with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
   | Enum t i ids ->
     let ids = Desugar.check_desugared_enum_cases ids in
@@ -1353,16 +1233,13 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let open T in
     add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
-    let reader = maybe_add_reader env tdn refined_typ in
     let td = {
         decl_name = tdn;
         decl_typ = TD_abbrev refined_typ;
         decl_parser = p;
-        decl_validator = make_validator env p;
-        decl_reader = reader;
         decl_is_enum = true
     } in
-    ds1@ds2@[with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+    ds1@ds2@[with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
   | Record tdn params _ ast_fields ->
     let tdn, ds1 = translate_typedef_name tdn params in
@@ -1372,48 +1249,43 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
     let decl_typ = TD_abbrev p.p_typ in
-    let reader = maybe_add_reader env tdn p.p_typ in
     let td = {
           decl_name = tdn;
           decl_typ = decl_typ;
           decl_parser = p;
-          decl_validator = make_validator env p;
-          decl_reader = reader;
           decl_is_enum = false
     } in
-   ds1@ds2 @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+   ds1@ds2 @ [with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
   | CaseType tdn0 params switch_case ->
     let tdn, ds1 = translate_typedef_name tdn0 params in
     let dummy_ident = with_dummy_range (to_ident' "_") in    
     let p, ds2 = parse_field env tdn.td_name (with_dummy_range (SwitchCaseField switch_case dummy_ident)) in
-    // let t, ds2 = translate_switch_case_type env tdn switch_case in
-    // let p = parse_typ env tdn0.typedef_name "" t in
     let open T in
     add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
     add_parser_kind_is_constant_size env tdn.td_name (parser_is_constant_size_without_actions env p);
     let t = p.p_typ in
-    let reader = maybe_add_reader env tdn t in
     let td = {
         decl_name = tdn;
         decl_typ = TD_abbrev t;
         decl_parser = p;
-        decl_validator = make_validator env p;
-        decl_reader = reader;
         decl_is_enum = false
     } in
-    ds1 @ ds2 @ [with_comments (Type_decl td) d.d_exported A.(d.d_decl.comments)]
+    ds1 @ ds2 @ [with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
-  | OutputType out_t -> [with_comments (T.Output_type out_t) false []]  //No decl for output type specifications
+  | OutputType out_t -> [with_comments (T.Output_type out_t) (A.is_entrypoint d) false []]  //No decl for output type specifications
 
-  | ExternType tdnames -> [with_comments (T.Extern_type tdnames.typedef_abbrev) false []]
+  | ExternType tdnames -> [with_comments (T.Extern_type tdnames.typedef_abbrev) (A.is_entrypoint d) false []]
 
   | ExternFn f ret params ->
     let ret, ds = translate_typ ret in
     let params, ds = List.fold_left (fun (params, ds) (t, i, _) ->
       let t, ds_t = translate_typ t in
       params@[i, t],ds@ds_t) ([], ds) params in
-    ds @ [with_comments (T.Extern_fn f ret params) false []]
+    ds @ [with_comments (T.Extern_fn f ret params) (A.is_entrypoint d) false []]
+
+  | ExternProbe f ->
+    [with_comments (T.Extern_probe f) (A.is_entrypoint d) false []]
 
 noeq
 type translate_env = {

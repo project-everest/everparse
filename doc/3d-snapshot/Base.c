@@ -21,11 +21,11 @@ BaseValidateUlong(
 )
 {
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - StartPosition);
+  BOOLEAN hasBytes = 4ULL <= (InputLength - StartPosition);
   uint64_t positionAfterUlong;
   if (hasBytes)
   {
-    positionAfterUlong = StartPosition + (uint64_t)4U;
+    positionAfterUlong = StartPosition + 4ULL;
   }
   else
   {
@@ -67,11 +67,11 @@ BaseValidatePair(
 {
   /* Validating field first */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = (uint64_t)4U <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
   uint64_t positionAfterPair;
   if (hasBytes0)
   {
-    positionAfterPair = StartPosition + (uint64_t)4U;
+    positionAfterPair = StartPosition + 4ULL;
   }
   else
   {
@@ -102,11 +102,11 @@ BaseValidatePair(
   }
   /* Validating field second */
   /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = (uint64_t)4U <= (InputLength - positionAfterfirst);
+  BOOLEAN hasBytes = 4ULL <= (InputLength - positionAfterfirst);
   uint64_t positionAfterPair0;
   if (hasBytes)
   {
-    positionAfterPair0 = positionAfterfirst + (uint64_t)4U;
+    positionAfterPair0 = positionAfterfirst + 4ULL;
   }
   else
   {

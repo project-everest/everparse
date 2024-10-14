@@ -22,11 +22,11 @@ ValidatePoint(
 {
   /* Validating field x */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes0 = (uint64_t)2U <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = 2ULL <= (InputLength - StartPosition);
   uint64_t positionAfterPoint;
   if (hasBytes0)
   {
-    positionAfterPoint = StartPosition + (uint64_t)2U;
+    positionAfterPoint = StartPosition + 2ULL;
   }
   else
   {
@@ -57,11 +57,11 @@ ValidatePoint(
   }
   /* Validating field y */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes = (uint64_t)2U <= (InputLength - positionAfterx);
+  BOOLEAN hasBytes = 2ULL <= (InputLength - positionAfterx);
   uint64_t positionAfterPoint0;
   if (hasBytes)
   {
-    positionAfterPoint0 = positionAfterx + (uint64_t)2U;
+    positionAfterPoint0 = positionAfterx + 2ULL;
   }
   else
   {
@@ -103,11 +103,11 @@ ColoredPointValidateColoredPoint1(
 {
   /* Validating field color */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes = (uint64_t)1U <= (InputLength - StartPosition);
+  BOOLEAN hasBytes = 1ULL <= (InputLength - StartPosition);
   uint64_t positionAfterColoredPoint1;
   if (hasBytes)
   {
-    positionAfterColoredPoint1 = StartPosition + (uint64_t)1U;
+    positionAfterColoredPoint1 = StartPosition + 1ULL;
   }
   else
   {
@@ -206,11 +206,11 @@ ColoredPointValidateColoredPoint2(
   }
   /* Validating field color */
   /* Checking that we have enough space for a UINT8, i.e., 1 byte */
-  BOOLEAN hasBytes = (uint64_t)1U <= (InputLength - positionAfterpt);
+  BOOLEAN hasBytes = 1ULL <= (InputLength - positionAfterpt);
   uint64_t positionAfterColoredPoint20;
   if (hasBytes)
   {
-    positionAfterColoredPoint20 = positionAfterpt + (uint64_t)1U;
+    positionAfterColoredPoint20 = positionAfterpt + 1ULL;
   }
   else
   {

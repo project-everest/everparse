@@ -22,11 +22,11 @@ ValidatePoint(
 {
   /* Validating field x */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes0 = (uint64_t)2U <= (InputLength - StartPosition);
+  BOOLEAN hasBytes0 = 2ULL <= (InputLength - StartPosition);
   uint64_t positionAfterPoint;
   if (hasBytes0)
   {
-    positionAfterPoint = StartPosition + (uint64_t)2U;
+    positionAfterPoint = StartPosition + 2ULL;
   }
   else
   {
@@ -57,11 +57,11 @@ ValidatePoint(
   }
   /* Validating field y */
   /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes = (uint64_t)2U <= (InputLength - positionAfterx);
+  BOOLEAN hasBytes = 2ULL <= (InputLength - positionAfterx);
   uint64_t positionAfterPoint0;
   if (hasBytes)
   {
-    positionAfterPoint0 = positionAfterx + (uint64_t)2U;
+    positionAfterPoint0 = positionAfterx + 2ULL;
   }
   else
   {
@@ -102,10 +102,7 @@ Triangle2ValidateTriangle(
 )
 {
   /* Validating field corners */
-  BOOLEAN
-  hasEnoughBytes =
-    (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U)
-    <= (InputLength - StartPosition);
+  BOOLEAN hasEnoughBytes = (uint64_t)(4U * (uint32_t)3U) <= (InputLength - StartPosition);
   uint64_t positionAfterTriangle;
   if (!hasEnoughBytes)
   {
@@ -116,41 +113,40 @@ Triangle2ValidateTriangle(
   else
   {
     uint8_t *truncatedInput = Input;
-    uint64_t
-    truncatedInputLength = StartPosition + (uint64_t)((uint32_t)4U * (uint32_t)(uint8_t)3U);
+    uint64_t truncatedInputLength = StartPosition + (uint64_t)(4U * (uint32_t)3U);
     uint64_t result = StartPosition;
     while (TRUE)
     {
       uint64_t position = result;
       BOOLEAN ite;
-      if (!((uint64_t)1U <= (truncatedInputLength - position)))
+      if (!(1ULL <= (truncatedInputLength - position)))
       {
         ite = TRUE;
       }
       else
       {
         uint64_t
-        positionAfterTriangle =
+        positionAfterTriangle0 =
           ValidatePoint(Ctxt,
             ErrorHandlerFn,
             truncatedInput,
             truncatedInputLength,
             position);
         uint64_t result1;
-        if (EverParseIsSuccess(positionAfterTriangle))
+        if (EverParseIsSuccess(positionAfterTriangle0))
         {
-          result1 = positionAfterTriangle;
+          result1 = positionAfterTriangle0;
         }
         else
         {
           ErrorHandlerFn("_triangle",
             "corners.element",
-            EverParseErrorReasonOfResult(positionAfterTriangle),
-            EverParseGetValidatorErrorKind(positionAfterTriangle),
+            EverParseErrorReasonOfResult(positionAfterTriangle0),
+            EverParseGetValidatorErrorKind(positionAfterTriangle0),
             Ctxt,
             truncatedInput,
             position);
-          result1 = positionAfterTriangle;
+          result1 = positionAfterTriangle0;
         }
         result = result1;
         ite = EverParseIsError(result1);

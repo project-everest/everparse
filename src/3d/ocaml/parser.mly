@@ -55,12 +55,15 @@
 %token          DEFINE LPAREN RPAREN LBRACE RBRACE DOT RARROW COMMA SEMICOLON COLON_COLON COLON QUESTION
 %token          STAR DIV MINUS PLUS LEQ LESS_THAN GEQ GREATER_THAN WHERE REQUIRES IF ELSE
 %token          LBRACK RBRACK LBRACK_LEQ LBRACK_EQ LBRACK_BYTESIZE LBRACK_BYTESIZE_AT_MOST LBRACK_SINGLE_ELEMENT_BYTESIZE
+%token          LBRACK_CONSUME_ALL
 %token          LBRACK_STRING LBRACK_STRING_AT_MOST
 %token          MUTABLE LBRACE_ONSUCCESS LBRACE_ACT LBRACE_CHECK FIELD_POS_64 FIELD_POS_32 FIELD_PTR FIELD_PTR_AFTER VAR ABORT RETURN
 %token          REM SHIFT_LEFT SHIFT_RIGHT BITWISE_AND BITWISE_OR BITWISE_XOR BITWISE_NOT AS
 %token          MODULE EXPORT OUTPUT UNION EXTERN
 %token          ENTRYPOINT REFINING ALIGNED
 %token          HASH_IF HASH_ELSE HASH_ENDIF HASH_ELIF
+%token          PROBE
+
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
 %start <Ast.expr> expr_top
@@ -253,6 +256,7 @@ array_annot:
   | a=array_size { FieldArrayQualified a }
   | LBRACK_STRING RBRACK { FieldString None }
   | LBRACK_STRING_AT_MOST e=expr RBRACK { FieldString (Some e) }
+  | LBRACK_CONSUME_ALL RBRACK { FieldConsumeAll }
 
 bitwidth:
   | COLON i=INT { Inl (with_range (Z.of_string i) $startpos(i)) }
@@ -262,8 +266,26 @@ field_action:
   | LBRACE_CHECK a=action RBRACE { a, false }
   | LBRACE_ACT a=action RBRACE { with_range (Action_act a) $startpos(a), false }
 
+with_probe:
+  | PROBE probe_fn_opt=option_of(i=IDENT { i })
+          LPAREN length=IDENT EQ len=expr COMMA
+                 destination=IDENT EQ dest=IDENT
+          RPAREN
+    {
+      if length.v.name <> "length" || length.v.modul_name <> None
+      then error "Expected 'length' as the first argument to 'with probe'" length.range;
+      if destination.v.name <> "destination" || destination.v.modul_name <> None
+      then error "Expected 'destination' as the second argument to 'with probe'" destination.range;
+      { probe_fn=probe_fn_opt; probe_length=len; probe_dest=dest }
+    }
+
 atomic_field:
-  | t=typ fn=IDENT bopt=option_of(bitwidth) aopt=array_annot c=option_of(refinement) a=option_of(field_action)
+  | t=maybe_pointer_typ fn=IDENT
+      bopt=option_of(bitwidth)
+      aopt=array_annot
+      c=option_of(refinement)
+      a=option_of(field_action)
+      p=option_of(with_probe)
     {
         {
          field_dependence=false;
@@ -272,7 +294,8 @@ atomic_field:
          field_array_opt=aopt;
          field_constraint=c;
          field_bitwidth=bopt;
-         field_action=a
+         field_action=a;
+         field_probe=p
         }
     }
 
@@ -382,7 +405,15 @@ cases:
   | cs=nonempty_list(case) { cs }
 
 attribute:
-  | ENTRYPOINT { Entrypoint }
+  | ENTRYPOINT { Entrypoint None }
+  | ENTRYPOINT PROBE i=qident LPAREN length=IDENT EQ len=expr RPAREN {
+      if length.v.name <> "length" || length.v.modul_name <> None
+      then error "Expected 'length' as the first argument to 'entrypoint probe'" length.range;
+      Entrypoint (Some ({
+        probe_ep_fn = i;
+        probe_ep_length = len;
+      }))
+    }
   | ALIGNED    { Aligned }
 
 attributes:
@@ -507,6 +538,9 @@ decl_no_range:
 
   | EXTERN ret=typ i=IDENT ps=parameters
     { ExternFn (i, ret, ps) }
+
+  | EXTERN PROBE i=IDENT
+    { ExternProbe i }
 
 block_comment_opt:
   |                 {

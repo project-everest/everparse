@@ -34,11 +34,13 @@ function fetch_mitls() {
 
 function rebuild_doc () {
    if
-      [[ "$OS" != "Windows_NT" ]] &&
-      [[ "$branchname" == "master" ]]
+      [[ "$OS" != "Windows_NT" ]] && {
+          [[ "$branchname" == "master" ]] ||
+          [[ "$branchname" == "taramana_ci" ]]
+      }
    then
        git config --global user.name "Dzomo, the Everest Yak"
-       git config --global user.email "everbld@microsoft.com"
+       git config --global user.email "24394600+dzomo@users.noreply.github.com"
        [[ -n "$DZOMO_GITHUB_TOKEN" ]] &&
        git clone https://"$DZOMO_GITHUB_TOKEN"@github.com/project-everest/project-everest.github.io project-everest-github-io &&
        rm -rf project-everest-github-io/everparse &&
@@ -61,7 +63,6 @@ function rebuild_doc () {
 }
 
 function test_mitls_parsers () {
-        fetch_and_make_karamel &&
         OTHERFLAGS='--admit_smt_queries true' make -j $threads quackyducky lowparse &&
         export_home EVERPARSE "$(pwd)" &&
         fetch_mitls &&
@@ -80,7 +81,6 @@ function build_and_test_quackyducky() {
     # Rebuild the EverParse documentation and push it to project-everest.github.io
     rebuild_doc &&
     # Test EverParse proper
-    fetch_and_make_karamel &&
     make -j $threads -k ci &&
     # Build incrementality test
     pushd tests/sample && {
