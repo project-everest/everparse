@@ -2,7 +2,7 @@ module CBOR.Pulse.Raw.Compare.Base
 open Pulse.Lib.Pervasives
 module S = Pulse.Lib.Slice
 module A = Pulse.Lib.Array.MergeSort
-module SM = Pulse.Lib.SeqMatch
+module SM = Pulse.Lib.SeqMatch.Util
 module GR = Pulse.Lib.GhostReference
 module SZ = FStar.SizeT
 module I16 = FStar.Int16
@@ -116,23 +116,6 @@ let vmatch_slice_list
 = exists* vl . pts_to sl.v #sl.p vl **
   SM.seq_list_match vl sh vmatch
 
-assume val seq_list_match_index_trade
-  (#t1 #t2: Type0)
-  (p: t1 -> t2 -> slprop)
-  (s1: Seq.seq t1)
-  (s2: list t2)
-  (i: nat)
-: stt_ghost (squash (i < Seq.length s1 /\ List.Tot.length s2 == Seq.length s1))
-    emp_inames
-    (SM.seq_list_match s1 s2 p ** pure (
-      (i < Seq.length s1 \/ i < List.Tot.length s2)
-    ))
-    (fun _ ->
-      p (Seq.index s1 i) (List.Tot.index s2 i) **
-      (p (Seq.index s1 i) (List.Tot.index s2 i) `Trade.trade`
-        SM.seq_list_match s1 s2 p)
-    )
-
 let same_sign (x1 x2: int) : Tot prop =
   (x1 < 0 <==> x2 < 0) /\
   (x1 == 0 <==> x2 == 0)
@@ -185,14 +168,14 @@ fn impl_lex_compare
   ) {
     let i1 = !pi1;
     let x1 = S.op_Array_Access s1.v i1;
-    seq_list_match_index_trade vmatch c1 v1 (SZ.v i1);
+    SM.seq_list_match_index_trade vmatch c1 v1 (SZ.v i1);
     Trade.rewrite_with_trade
       (vmatch (Seq.index c1 (SZ.v i1)) (List.Tot.index v1 (SZ.v i1)))
       (vmatch x1 (List.Tot.index v1 (SZ.v i1)));
     Trade.trans _ _ (SM.seq_list_match c1 v1 vmatch);
     let i2 = !pi2;
     let x2 = S.op_Array_Access s2.v i2;
-    seq_list_match_index_trade vmatch c2 v2 (SZ.v i2);
+    SM.seq_list_match_index_trade vmatch c2 v2 (SZ.v i2);
     Trade.rewrite_with_trade
       (vmatch (Seq.index c2 (SZ.v i2)) (List.Tot.index v2 (SZ.v i2)))
       (vmatch x2 (List.Tot.index v2 (SZ.v i2)));
