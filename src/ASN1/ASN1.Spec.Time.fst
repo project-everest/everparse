@@ -136,7 +136,7 @@ let rec is_valid_digit_range
     is_valid_digit (B.index b (U32.v (U32.add s l'))) &&
     is_valid_digit_range b s l'
 
-#push-options "--fuel 8 --split_queries"
+#push-options "--fuel 8 --split_queries always"
 
 let is_valid_yymmdd
   (b : B.bytes)

@@ -267,8 +267,6 @@ let parse_asn1_identifier_loop_immediate_terminate
 = let _ = in_bound_32 i state in
   parse_ret (update_state state buf)
 
-#push-options "--print_implicits --query_stats"
-
 let parse_cast
   (t : eqtype)
   (p1 : t -> Type0)

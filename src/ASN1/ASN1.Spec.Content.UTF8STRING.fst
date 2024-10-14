@@ -1,5 +1,4 @@
 module ASN1.Spec.Content.UTF8STRING
-
 open ASN1.Base
 open ASN1.Spec.Automata
 
@@ -184,7 +183,7 @@ let utf8_cp_bp : automata_bare_parser_param utf8_cp_cp = {
     fun _ -> parser_kind_prop_equiv parse_u8_kind parse_u8
 }
 
-#push-options "--z3rlimit 64 --fuel 4 --ifuel 1 --split_queries"
+#push-options "--z3rlimit 64 --fuel 4 --ifuel 1" // --split_queries"
 
 let lemma_update_term_inj2 
   (state : utf8_cp_s)

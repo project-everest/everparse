@@ -1,5 +1,4 @@
 module ASN1.Base
-
 open LowParse.Tot.Base
 open LowParse.Tot.Combinators
 
@@ -60,11 +59,19 @@ type asn1_boolean_t = bool
 
 type asn1_integer_t (bound : pos) = integer_in_interval bound
 
+let rec pow2_mono (n m:nat)
+: Lemma
+  (requires n < m)
+  (ensures pow2 n < pow2 m)
+= if n + 1 = m then () else pow2_mono n (m - 1)
+let pow2_le (n:nat {n < 8}) : Lemma (pow2 n < 256) = pow2_mono n 8
+
 //Bitstring is represented as an array of bytes and 0~7 unused bits
 type asn1_bitstring_t = 
 | BYTES_WITH_UNUSEDBITS :
   unused : U8.t {0 <= (U8.v unused) /\ (U8.v unused) <= 7} ->
-  b : B.bytes {(U8.v unused = 0) \/ 
+  b : B.bytes {let _ = pow2_le (U8.v unused) in
+               (U8.v unused = 0) \/ 
                ((U8.v unused > 0) /\ B.length b > 0 /\ 
                 FStar.UInt.mod (U8.v (B.index b ((B.length b) - 1))) (pow2 (U8.v unused)) = 0)} -> asn1_bitstring_t
 //TODO: use bit op
@@ -309,9 +316,9 @@ let idlookup_with_fallback_t (#key : eqtype) (id : key) (lc : list (key & Type))
     let _ = List.assoc_memP_none id lc in
     fb
 
-let make_gen_choice_type (#key : eqtype) (lc : list (key & Type)) = (id : key) & (idlookup_t id lc)
+let make_gen_choice_type (#key : eqtype) (lc : list (key & Type)) = id : key & idlookup_t id lc
 
-let make_gen_choice_type_with_fallback (#key : eqtype) (lc : list (key & Type)) (fb : Type) = (id : key) & (idlookup_with_fallback_t id lc fb)
+let make_gen_choice_type_with_fallback (#key : eqtype) (lc : list (key & Type)) (fb : Type) = id : key & idlookup_with_fallback_t id lc fb
 
 let isNonEmpty (#t : Type) (l : list t)
 = match l with
