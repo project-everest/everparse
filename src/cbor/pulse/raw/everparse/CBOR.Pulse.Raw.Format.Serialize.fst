@@ -356,34 +356,6 @@ ensures
 
 ```pulse
 ghost
-fn vmatch_ext_elim_trade
-  (#t' #t1 t2: Type0)
-  (vmatch: t' -> t1 -> slprop)
-  (x': t')
-  (x2: t2)
-requires
-  vmatch_ext t2 vmatch x' x2
-returns x1: Ghost.erased t1
-ensures
-  vmatch x' x1 **
-  Trade.trade (vmatch x' x1) (vmatch_ext t2 vmatch x' x2) **
-  pure (t1 == t2 /\ x1 == x2)
-{
-  unfold (vmatch_ext t2 vmatch x' x2);
-  with x1 . assert (vmatch x' x1);
-  ghost fn aux (_: unit)
-    requires emp ** vmatch x' x1
-    ensures vmatch_ext t2 vmatch x' x2
-  {
-    fold (vmatch_ext t2 vmatch x' x2);
-  };
-  Trade.intro _ _ _ aux;
-  x1
-}
-```
-
-```pulse
-ghost
 fn ser_payload_string_lens_aux
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string))
@@ -423,37 +395,6 @@ ensures
 }
 ```
 
-```pulse
-ghost
-fn pts_to_seqbytes_intro
-  (n: nat)
-  (p: perm)
-  (s: S.slice byte)
-  (v: bytes)
-  (res: with_perm (S.slice byte))
-requires
-  pts_to s #p v ** pure (Seq.length v == n /\ res.v == s /\ res.p == p)
-returns v': Ghost.erased (Seq.lseq byte n)
-ensures
-  LowParse.Pulse.SeqBytes.pts_to_seqbytes n res v' **
-  Trade.trade
-    (LowParse.Pulse.SeqBytes.pts_to_seqbytes n res v')
-    (pts_to s #p v) **
-  pure (v == Ghost.reveal v')
-{
-  let v' : Seq.lseq byte n = v;
-  fold (LowParse.Pulse.SeqBytes.pts_to_seqbytes n res v');
-  ghost fn aux (_: unit)
-    requires emp ** LowParse.Pulse.SeqBytes.pts_to_seqbytes n res v'
-    ensures pts_to s #p v
-  {
-    unfold (LowParse.Pulse.SeqBytes.pts_to_seqbytes n res v')
-  };
-  Trade.intro _ _ _ aux;
-  v'
-}
-```
-
 inline_for_extraction
 ```pulse
 fn ser_payload_string_lens
@@ -488,7 +429,7 @@ vmatch_lens #_ #_ #_
     v = s;
     p = p';
   };
-  let x' = pts_to_seqbytes_intro
+  let x' = LowParse.Pulse.SeqBytes.pts_to_seqbytes_intro
     (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
                           (get_header_long_argument xh1)))
     _
@@ -549,32 +490,6 @@ let ser_payload_array_array_elem
 = l2r_writer_lens
     (cbor_match_with_perm_lens _)
     f
-
-```pulse
-ghost
-fn vmatch_with_cond_elim_trade
-  (#tl #th: Type0)
-  (vmatch: tl -> th -> slprop)
-  (cond: tl -> GTot bool)
-  (xl: tl)
-  (xh: th)
-requires
-  vmatch_with_cond vmatch cond xl xh
-ensures
-  vmatch xl xh **
-  Trade.trade (vmatch xl xh) (vmatch_with_cond vmatch cond xl xh) **
-  pure (cond xl)
-{
-  unfold (vmatch_with_cond vmatch cond xl xh);
-  ghost fn aux (_: unit)
-    requires emp ** vmatch xl xh
-    ensures vmatch_with_cond vmatch cond xl xh
-  {
-    fold (vmatch_with_cond vmatch cond xl xh)
-  };
-  Trade.intro _ _ _ aux
-}
-```
 
 #restart-solver
 ```pulse
@@ -713,58 +628,6 @@ let ser_payload_array_array
       )
     )
     (serialize_content xh1)
-
-let pts_to_serialized_with_perm
-  (#t: Type0)
-  (#k: parser_kind)
-  (#p: parser k t)
-  (s: serializer p)
-  (input: with_perm (S.slice byte))
-  (v: t)
-: Tot slprop
-= pts_to_serialized s input.v #input.p v
-
-inline_for_extraction
-```pulse
-fn l2r_write_copy
-  (#t: Type0)
-  (#k: Ghost.erased parser_kind)
-  (#p: parser k t)
-  (s: serializer p)
-: l2r_writer #_ #_ (pts_to_serialized_with_perm s) #_ #_ s
-= (x: _)
-  (#v: _)
-  (out: _)
-  (offset: SZ.t)
-  (#w: _)
-{
-  Trade.rewrite_with_trade
-    (pts_to_serialized_with_perm s x v)
-    (pts_to_serialized s x.v #x.p v);
-  pts_to_serialized_elim_trade s x.v;
-  Trade.trans _ _ (pts_to_serialized_with_perm s x v);
-  S.pts_to_len out;
-  S.pts_to_len x.v;
-  let length = S.len x.v;
-  let sp1 = S.split out offset;
-  match sp1 {
-    S.SlicePair sp11 sp12 -> {
-      with v12 . assert (pts_to sp12 v12);
-      let sp2 = S.split sp12 length;
-      match sp2 {
-        S.SlicePair sp21 sp22 -> {
-          S.pts_to_len sp21;
-          S.copy sp21 x.v;
-          S.join sp21 sp22 sp12;
-          S.join sp11 sp12 out;
-          Trade.elim _ _;
-          SZ.add offset length;
-        }
-      }
-    }
-  }
-}
-```
 
 ```pulse
 ghost
