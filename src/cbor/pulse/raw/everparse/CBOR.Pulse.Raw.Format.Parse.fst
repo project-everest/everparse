@@ -6,6 +6,8 @@ open CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Spec.Base
 open LowParse.Pulse.Base
 
+module CompareBytes = CBOR.Pulse.Raw.Compare.Bytes
+
 let parse_fail_no_serialize
   (v: Seq.seq U8.t)
 : Lemma
@@ -153,7 +155,30 @@ fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t #_ #_ 
 }
 ```
 
-assume val impl_deterministically_encoded_cbor_map_key_order : LowParse.Pulse.VCList.impl_order_t (LowParse.Pulse.Combinators.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) (map_entry_order deterministically_encoded_cbor_map_key_order raw_data_item)
+```pulse
+fn impl_deterministically_encoded_cbor_map_key_order (_: unit)
+: LowParse.Pulse.VCList.impl_order_t #_ #_ #_ (LowParse.Pulse.Combinators.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) (map_entry_order deterministically_encoded_cbor_map_key_order raw_data_item)
+= (a1: _)
+  (a2: _)
+  (#p1: _)
+  (#p2: _)
+  (#v1: _)
+  (#v2: _)
+{
+  deterministically_encoded_cbor_map_key_order_spec (fst v1) (fst v2);
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let k1 = LowParse.Pulse.Combinators.nondep_then_fst serialize_raw_data_item (jump_raw_data_item f64) serialize_raw_data_item a1;
+  let k2 = LowParse.Pulse.Combinators.nondep_then_fst serialize_raw_data_item (jump_raw_data_item f64) serialize_raw_data_item a2;
+  unfold (pts_to_serialized serialize_raw_data_item k1 #p1 (fst v1));
+  unfold (pts_to_serialized serialize_raw_data_item k2 #p2 (fst v2));
+  let res = CompareBytes.lex_compare_bytes k1 k2;
+  fold (pts_to_serialized serialize_raw_data_item k1 #p1 (fst v1));
+  Trade.elim (pts_to_serialized serialize_raw_data_item k1 #p1 (fst v1)) _;
+  fold (pts_to_serialized serialize_raw_data_item k2 #p2 (fst v2));
+  Trade.elim (pts_to_serialized serialize_raw_data_item k2 #p2 (fst v2)) _;
+  FStar.Int16.lt res 0s
+}
+```
 
 ```pulse
 fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred_t #_ #_ #_ serialize_raw_data_item (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order)
@@ -192,7 +217,7 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
           (LowParse.Spec.VCList.serialize_nlist (SZ.v (SZ.uint64_to_sizet n)) s)
           ap;
         Trade.trans _ _ (pts_to_serialized serialize_raw_data_item a #pm va);
-        let res = LowParse.Pulse.VCList.nlist_sorted s () (LowParse.Pulse.Combinators.jump_nondep_then (jump_raw_data_item sq) (jump_raw_data_item sq)) (map_entry_order deterministically_encoded_cbor_map_key_order raw_data_item) (impl_deterministically_encoded_cbor_map_key_order) (SZ.uint64_to_sizet n) ap;
+        let res = LowParse.Pulse.VCList.nlist_sorted s () (LowParse.Pulse.Combinators.jump_nondep_then (jump_raw_data_item sq) (jump_raw_data_item sq)) (map_entry_order deterministically_encoded_cbor_map_key_order raw_data_item) (impl_deterministically_encoded_cbor_map_key_order ()) (SZ.uint64_to_sizet n) ap;
         Trade.elim _ _;
         res
       } else {
