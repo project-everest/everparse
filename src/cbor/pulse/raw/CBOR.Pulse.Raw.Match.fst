@@ -933,7 +933,7 @@ fn cbor_match_array_intro
 }
 ```
 
-let cbor_match_eq_map
+let cbor_match_eq_map0
   (pm: perm)
   (ct: cbor_map)
   (r: raw_data_item)
@@ -963,7 +963,7 @@ ensures
   cbor_match_cases c;
   match c {
     CBOR_Case_Map c' -> {
-      cbor_match_eq_map p c' v;
+      cbor_match_eq_map0 p c' v;
       Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_map0 c' p v cbor_match);
       unfold (cbor_match_map0 c' p v cbor_match);
       fold (cbor_match_map0 c' p v cbor_match);
@@ -1049,7 +1049,7 @@ fn cbor_match_map_intro
   Trade.intro _ _ _ (cbor_match_map_intro_aux len pc pr c pm r res');
   cbor_match_map_map0_trade res' 1.0R (Map len r);
   Trade.trans _ (cbor_match_map 1.0R res' (Map len r)) _;
-  cbor_match_eq_map 1.0R res' (Map len r);
+  cbor_match_eq_map0 1.0R res' (Map len r);
   let res = CBOR_Case_Map res';
   Trade.rewrite_with_trade
     (cbor_match_map0 res' 1.0R (Map len r) cbor_match)
