@@ -5,6 +5,7 @@ friend CBOR.Spec.API.Format
 module SpecRaw = CBOR.Spec.Raw
 module Raw = CBOR.Pulse.Raw.Match
 module SM = Pulse.Lib.SeqMatch.Util
+module Compare = CBOR.Pulse.Raw.Compare
 
 let cbor_det_match
   p c v
@@ -36,9 +37,18 @@ ensures
 let cbor_det_map_entry_match p c v =
   Raw.cbor_match_map_entry p c (SpecRaw.mk_det_raw_cbor (fst v), SpecRaw.mk_det_raw_cbor (snd v))
 
-assume val cbor_raw_compare (p: perm) : Pulse.Lib.Array.MergeSort.impl_compare_t
+```pulse
+fn cbor_raw_compare (p: perm) : Pulse.Lib.Array.MergeSort.impl_compare_t u#0 u#0 #_ #_
   (Raw.cbor_match p)
   SpecRaw.cbor_compare
+= (x1: _)
+  (x2: _)
+  (#v1: _)
+  (#v2: _)
+{
+  Compare.impl_cbor_compare x1 x2
+}
+```
 
 ```pulse
 fn cbor_map_entry_raw_compare
