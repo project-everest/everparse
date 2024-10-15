@@ -1,16 +1,19 @@
 {
     "fstar_exe": "fstar.exe",
     "options": [
-      "--max_fuel", "0",
+      "--initial_fuel", "0",
+      "--max_fuel", "2",
+      "--initial_ifuel", "2",
       "--max_ifuel", "2",
       "--initial_ifuel", "2"
     ],
     "include_dirs": [
-      "./src/lowparse", 
+      "./src/lowparse",
       "${KRML_HOME}/krmllib",
       "${KRML_HOME}/krmllib/obj",
       "./src/3d",
-      "./src/3d/prelude"
+      "./src/3d/prelude",
+      "./src/ASN1"
     ]
   }
   
