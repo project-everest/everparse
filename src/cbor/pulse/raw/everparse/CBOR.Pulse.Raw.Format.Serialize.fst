@@ -615,30 +615,34 @@ ensures
                   xl xh
       )
 {
-  unfold       (vmatch_ext (LowParse.Spec.VCList.nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte
-                                              xh1)
-                                              (get_header_long_argument xh1))))
-                  raw_data_item)
-                  (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array)
-                  xl xh
-      );
-  with xh2 . assert 
-    (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array xl xh2);
-  unfold (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array xl xh2);
-  let xh0' : raw_data_item' = (| xh1, xh2 |);
-  let xh0 = synth_raw_data_item xh0';
+  let xh2 = vmatch_ext_elim_trade (LowParse.Spec.VCList.nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte
+                          xh1)
+                      (get_header_long_argument xh1))))
+          raw_data_item) (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array) _ _;
+  vmatch_with_cond_elim_trade (match_cbor_payload xh1) _ _ _;
+  Trade.trans (match_cbor_payload xh1 _ _) _ _;
+  let xh0 = match_cbor_payload_elim_trade xh1 _ _;
+  Trade.trans (cbor_match_with_perm xl xh0) _ _;
+  Trade.rewrite_with_trade
+    (cbor_match_with_perm xl xh0)
+    (cbor_match xl.p xl.v xh0);
+  Trade.trans (cbor_match _ _ _) _ _;
+  cbor_match_cases _;
   let a = CBOR_Case_Array?.v xl.v;
   cbor_match_eq_array xl.p a xh0;
-  rewrite (match_cbor_payload xh1 xl xh2) as (cbor_match_array a xl.p xh0 cbor_match);
+  Trade.rewrite_with_trade
+    (cbor_match xl.p xl.v xh0)
+    (cbor_match_array a xl.p xh0 cbor_match);
+  Trade.trans (cbor_match_array a xl.p xh0 cbor_match) _ _;
   unfold (cbor_match_array a xl.p xh0 cbor_match);
   let ar = Some?.v (cbor_with_perm_case_array_get xl);
-    LowParse.Pulse.VCList.nlist_match_array_intro cbor_with_perm_case_array_get
-      cbor_with_perm_case_array_match_elem
-      (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
-        (get_header_long_argument xh1))))
-      xl xh
-      ar _
-    ;
+  LowParse.Pulse.VCList.nlist_match_array_intro cbor_with_perm_case_array_get
+    cbor_with_perm_case_array_match_elem
+    (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
+      (get_header_long_argument xh1))))
+    xl xh
+    ar _
+  ;
   ghost fn aux (_: unit)
   requires emp **
     LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
@@ -647,13 +651,7 @@ ensures
         (get_header_long_argument xh1))))
       xl xh
   ensures
-    (vmatch_ext (LowParse.Spec.VCList.nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte
-                          xh1)
-                      (get_header_long_argument xh1))))
-          raw_data_item)
-      (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array)
-      xl xh
-    )
+    cbor_match_array a xl.p xh0 cbor_match
   {
     unfold (    LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
       cbor_with_perm_case_array_match_elem
@@ -662,17 +660,9 @@ ensures
       xl xh
     );
     fold (cbor_match_array a xl.p xh0 cbor_match);
-    rewrite (cbor_match_array a xl.p xh0 cbor_match) as (match_cbor_payload xh1 xl xh2);
-    fold (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array xl xh2);
-    fold (vmatch_ext (LowParse.Spec.VCList.nlist (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte
-                                              xh1)
-                                              (get_header_long_argument xh1))))
-                  raw_data_item)
-                  (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array)
-                  xl xh
-      );
   };
-  Trade.intro _ _ _ aux
+  Trade.intro _ _ _ aux;
+  Trade.trans _ (cbor_match_array a xl.p xh0 cbor_match) _;
 }
 ```
 
