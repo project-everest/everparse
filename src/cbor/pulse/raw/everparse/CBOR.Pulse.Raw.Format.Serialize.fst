@@ -330,11 +330,66 @@ module U64 = FStar.UInt64
 
 ```pulse
 ghost
+fn match_cbor_payload_elim_trade
+  (xh1: header)
+  (xl: with_perm cbor_raw)
+  (xh: content xh1)
+requires
+  match_cbor_payload xh1 xl xh
+returns xh': Ghost.erased raw_data_item
+ensures
+  (cbor_match_with_perm xl xh' **
+    Trade.trade
+      (cbor_match_with_perm xl xh')
+      (match_cbor_payload xh1 xl xh) **
+      pure (synth_raw_data_item_recip xh' == (| xh1, xh |))
+  )
+{
+  Trade.rewrite_with_trade
+    (match_cbor_payload xh1 xl xh)
+    (cbor_match_with_perm xl (synth_raw_data_item (| xh1, xh |)));
+  synth_raw_data_item_recip_synth_raw_data_item (| xh1, xh |);
+  synth_raw_data_item (| xh1, xh |)
+}
+```
+
+```pulse
+ghost
+fn vmatch_ext_elim_trade
+  (#t' #t1 t2: Type0)
+  (vmatch: t' -> t1 -> slprop)
+  (x': t')
+  (x2: t2)
+requires
+  vmatch_ext t2 vmatch x' x2
+returns x1: Ghost.erased t1
+ensures
+  vmatch x' x1 **
+  Trade.trade (vmatch x' x1) (vmatch_ext t2 vmatch x' x2) **
+  pure (t1 == t2 /\ x1 == x2)
+{
+  unfold (vmatch_ext t2 vmatch x' x2);
+  with x1 . assert (vmatch x' x1);
+  ghost fn aux (_: unit)
+    requires emp ** vmatch x' x1
+    ensures vmatch_ext t2 vmatch x' x2
+  {
+    fold (vmatch_ext t2 vmatch x' x2);
+  };
+  Trade.intro _ _ _ aux;
+  x1
+}
+```
+
+```pulse
+ghost
 fn ser_payload_string_lens_aux
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string))
   (xl: with_perm cbor_raw)
-  (xh: content xh1)
+  (xh: Seq.Properties.lseq byte
+                  (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                          (get_header_long_argument xh1))))
 requires
   (vmatch_ext
       (Seq.Properties.lseq byte
@@ -356,7 +411,14 @@ ensures
       pure (synth_raw_data_item_recip xh' == (| xh1, xh |))
   )
 {
-  admit ()
+  let _ = vmatch_ext_elim_trade 
+      (Seq.Properties.lseq byte
+                  (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                          (get_header_long_argument xh1))))
+      (match_cbor_payload xh1) xl xh;
+  let xh' = match_cbor_payload_elim_trade xh1 xl _;
+  Trade.trans (cbor_match_with_perm xl xh') _ _;
+  xh'
 }
 ```
 
@@ -486,6 +548,32 @@ let ser_payload_array_array_elem
 = l2r_writer_lens
     (cbor_match_with_perm_lens _)
     f
+
+```pulse
+ghost
+fn vmatch_with_cond_elim_trade
+  (#tl #th: Type0)
+  (vmatch: tl -> th -> slprop)
+  (cond: tl -> GTot bool)
+  (xl: tl)
+  (xh: th)
+requires
+  vmatch_with_cond vmatch cond xl xh
+ensures
+  vmatch xl xh **
+  Trade.trade (vmatch xl xh) (vmatch_with_cond vmatch cond xl xh) **
+  pure (cond xl)
+{
+  unfold (vmatch_with_cond vmatch cond xl xh);
+  ghost fn aux (_: unit)
+    requires emp ** vmatch xl xh
+    ensures vmatch_with_cond vmatch cond xl xh
+  {
+    fold (vmatch_with_cond vmatch cond xl xh)
+  };
+  Trade.intro _ _ _ aux
+}
+```
 
 #restart-solver
 ```pulse
