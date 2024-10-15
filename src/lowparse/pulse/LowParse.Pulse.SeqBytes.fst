@@ -5,6 +5,7 @@ open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
+module Trade = Pulse.Lib.Trade.Util
 
 let pts_to_seqbytes
   (n: nat)
@@ -12,6 +13,37 @@ let pts_to_seqbytes
   (v: Seq.lseq byte n)
 : Tot slprop
 = exists* (v': Seq.seq byte) . pts_to s.v #s.p v' ** pure (v' == v)
+
+```pulse
+ghost
+fn pts_to_seqbytes_intro
+  (n: nat)
+  (p: perm)
+  (s: S.slice byte)
+  (v: bytes)
+  (res: with_perm (S.slice byte))
+requires
+  pts_to s #p v ** pure (Seq.length v == n /\ res.v == s /\ res.p == p)
+returns v': Ghost.erased (Seq.lseq byte n)
+ensures
+  pts_to_seqbytes n res v' **
+  Trade.trade
+    (pts_to_seqbytes n res v')
+    (pts_to s #p v) **
+  pure (v == Ghost.reveal v')
+{
+  let v' : Seq.lseq byte n = v;
+  fold (pts_to_seqbytes n res v');
+  ghost fn aux (_: unit)
+    requires emp ** pts_to_seqbytes n res v'
+    ensures pts_to s #p v
+  {
+    unfold (pts_to_seqbytes n res v')
+  };
+  Trade.intro _ _ _ aux;
+  v'
+}
+```
 
 inline_for_extraction
 ```pulse

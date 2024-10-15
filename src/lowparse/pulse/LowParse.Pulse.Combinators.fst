@@ -82,6 +82,55 @@ let jump_empty : jumper parse_empty = jump_ret ()
 inline_for_extraction
 let l2r_leaf_write_empty : l2r_leaf_writer serialize_empty = l2r_leaf_write_ret () (fun _ -> ())
 
+```pulse
+ghost
+fn l2r_write_empty_lens_aux
+  (#tl: Type0)
+  (vmatch: tl -> unit -> slprop)
+  (xl: tl)
+  (v: unit)
+requires
+  vmatch xl v
+ensures
+  eq_as_slprop unit () v **
+  Trade.trade
+    (eq_as_slprop unit () v)
+    (vmatch xl v)
+{
+  fold (eq_as_slprop unit () v);
+  ghost fn aux (_: unit)
+  requires
+    vmatch xl v ** eq_as_slprop unit () v
+  ensures
+    vmatch xl v
+  {
+    unfold (eq_as_slprop unit () v)
+  };
+  Trade.intro _ _ _ aux
+}
+```
+
+inline_for_extraction
+```pulse
+fn l2r_write_empty_lens
+  (#tl: Type0)
+  (vmatch: tl -> unit -> slprop)
+: vmatch_lens #_ #_ #_ vmatch (eq_as_slprop unit)
+= (xl: _)
+  (v: _)
+{
+  l2r_write_empty_lens_aux vmatch xl v;
+  ()
+}
+```
+
+inline_for_extraction
+let l2r_write_empty
+  (#tl: Type0)
+  (vmatch: tl -> unit -> slprop)
+: l2r_writer vmatch serialize_empty
+= l2r_writer_lens (l2r_write_empty_lens vmatch) (l2r_writer_of_leaf_writer l2r_leaf_write_empty)
+
 let parse_serialize_strong_prefix
   (#t: Type)
   (#k: parser_kind)

@@ -728,6 +728,34 @@ let vmatch_ext
 : Tot slprop
 = exists* (x1: t1) . vmatch x' x1 ** pure (t1 == t2 /\ x1 == x2)
 
+```pulse
+ghost
+fn vmatch_ext_elim_trade
+  (#t' #t1 t2: Type0)
+  (vmatch: t' -> t1 -> slprop)
+  (x': t')
+  (x2: t2)
+requires
+  vmatch_ext t2 vmatch x' x2
+returns x1: Ghost.erased t1
+ensures
+  vmatch x' x1 **
+  Trade.trade (vmatch x' x1) (vmatch_ext t2 vmatch x' x2) **
+  pure (t1 == t2 /\ x1 == x2)
+{
+  unfold (vmatch_ext t2 vmatch x' x2);
+  with x1 . assert (vmatch x' x1);
+  ghost fn aux (_: unit)
+    requires emp ** vmatch x' x1
+    ensures vmatch_ext t2 vmatch x' x2
+  {
+    fold (vmatch_ext t2 vmatch x' x2);
+  };
+  Trade.intro _ _ _ aux;
+  x1
+}
+```
+
 inline_for_extraction
 ```pulse
 fn l2r_writer_ext_gen
@@ -792,6 +820,32 @@ let vmatch_with_cond
   (xh: th)
 : Tot slprop
 = vmatch xl xh ** pure (cond xl)
+
+```pulse
+ghost
+fn vmatch_with_cond_elim_trade
+  (#tl #th: Type0)
+  (vmatch: tl -> th -> slprop)
+  (cond: tl -> GTot bool)
+  (xl: tl)
+  (xh: th)
+requires
+  vmatch_with_cond vmatch cond xl xh
+ensures
+  vmatch xl xh **
+  Trade.trade (vmatch xl xh) (vmatch_with_cond vmatch cond xl xh) **
+  pure (cond xl)
+{
+  unfold (vmatch_with_cond vmatch cond xl xh);
+  ghost fn aux (_: unit)
+    requires emp ** vmatch xl xh
+    ensures vmatch_with_cond vmatch cond xl xh
+  {
+    fold (vmatch_with_cond vmatch cond xl xh)
+  };
+  Trade.intro _ _ _ aux
+}
+```
 
 let pnot (#t: Type) (cond: t -> GTot bool) (x: t) : GTot bool = not (cond x)
 
@@ -1233,3 +1287,55 @@ type with_perm (t: Type) = {
   v: t;
   p: perm
 }
+
+let pts_to_serialized_with_perm
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (input: with_perm (S.slice byte))
+  (v: t)
+: Tot slprop
+= pts_to_serialized s input.v #input.p v
+
+inline_for_extraction
+```pulse
+fn l2r_write_copy
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+: l2r_writer #_ #_ (pts_to_serialized_with_perm s) #_ #_ s
+= (x: _)
+  (#v: _)
+  (out: _)
+  (offset: SZ.t)
+  (#w: _)
+{
+  Trade.rewrite_with_trade
+    (pts_to_serialized_with_perm s x v)
+    (pts_to_serialized s x.v #x.p v);
+  pts_to_serialized_elim_trade s x.v;
+  Trade.trans _ _ (pts_to_serialized_with_perm s x v);
+  S.pts_to_len out;
+  S.pts_to_len x.v;
+  let length = S.len x.v;
+  let sp1 = S.split out offset;
+  match sp1 {
+    S.SlicePair sp11 sp12 -> {
+      with v12 . assert (pts_to sp12 v12);
+      let sp2 = S.split sp12 length;
+      match sp2 {
+        S.SlicePair sp21 sp22 -> {
+          S.pts_to_len sp21;
+          S.copy sp21 x.v;
+          S.join sp21 sp22 sp12;
+          S.join sp11 sp12 out;
+          Trade.elim _ _;
+          SZ.add offset length;
+        }
+      }
+    }
+  }
+}
+```
