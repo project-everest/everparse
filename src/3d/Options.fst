@@ -134,7 +134,7 @@ type cmd_option_kind =
       (v: ref (list (valid_string valid))) ->
       cmd_option_kind
 
-let fstar_opt = FStarC.Getopt.opt & string
+let fstar_opt = Getopt.opt & string
 
 noeq
 type cmd_option
@@ -167,7 +167,7 @@ let cmd_option_arg_desc (a: cmd_option) : Tot string =
   match a with
   | CmdFStarOption ((_, _, arg), _) ->
     begin match arg with
-    | FStarC.Getopt.OneArg (_, argdesc) -> argdesc
+    | Getopt.OneArg (_, argdesc) -> argdesc
     | _ -> ""
     end
   | CmdOption _ kind _ _ ->
@@ -206,15 +206,15 @@ let fstar_options_of_cmd_option
     begin match kind with
     | OptBool v ->
       [
-        ((FStarC.Getopt.noshort, name, FStarC.Getopt.ZeroArgs (fun _ -> set_implies options implies; v := true)), desc);
-        ((FStarC.Getopt.noshort, negate_name name, FStarC.Getopt.ZeroArgs (fun _ -> v := false)), negate_description desc);
+        ((Getopt.noshort, name, Getopt.ZeroArgs (fun _ -> set_implies options implies; v := true)), desc);
+        ((Getopt.noshort, negate_name name, Getopt.ZeroArgs (fun _ -> v := false)), negate_description desc);
       ]
     | OptStringOption arg_desc valid v ->
       [
         (
           (
-            FStarC.Getopt.noshort, name,
-            FStarC.Getopt.OneArg (
+            Getopt.noshort, name,
+            Getopt.OneArg (
               (fun (x: string) ->
                 if valid x
                 then begin
@@ -228,14 +228,14 @@ let fstar_options_of_cmd_option
           ),
           desc
         );
-        ((FStarC.Getopt.noshort, negate_name name, FStarC.Getopt.ZeroArgs (fun _ -> v := None)), negate_description desc)
+        ((Getopt.noshort, negate_name name, Getopt.ZeroArgs (fun _ -> v := None)), negate_description desc)
       ]
     | OptList arg_desc valid v ->
       [
         (
           (
-            FStarC.Getopt.noshort, name,
-            FStarC.Getopt.OneArg (
+            Getopt.noshort, name,
+            Getopt.OneArg (
               (fun (x: string) ->
                 if valid x
                 then begin
@@ -251,8 +251,8 @@ let fstar_options_of_cmd_option
         );
         (
           (
-            FStarC.Getopt.noshort, negate_name name,
-            FStarC.Getopt.ZeroArgs (fun _ -> v := [])
+            Getopt.noshort, negate_name name,
+            Getopt.ZeroArgs (fun _ -> v := [])
           ),
           desc
         );
@@ -342,7 +342,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)" [];
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
     CmdOption "debug" (OptBool debug) "Emit a lot of debugging output" [];
-    CmdFStarOption (('h', "help", FStarC.Getopt.ZeroArgs (fun _ -> display_usage (); exit 0)), "Show this help message");
+    CmdFStarOption (('h', "help", Getopt.ZeroArgs (fun _ -> display_usage (); exit 0)), "Show this help message");
     CmdOption "json" (OptBool json) "Dump the AST in JSON format" [];
     CmdOption "makefile" (OptStringOption "gmake|nmake" valid_makefile makefile) "Do not produce anything, other than a Makefile to produce everything" [];
     CmdOption "makefile_name" (OptStringOption "some file name" always_valid makefile_name) "Name of the Makefile to produce (with --makefile, default <output directory>/EverParse.Makefile" [];
@@ -352,7 +352,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "skip_c_makefiles" (OptBool skip_c_makefiles) "Do not Generate Makefile.basic, Makefile.include" [];
     CmdOption "skip_o_rules" (OptBool skip_o_rules) "With --makefile, do not generate rules for .o files" [];
     CmdOption "test_checker" (OptStringOption "parser name" always_valid test_checker) "produce a test checker executable" [];
-    CmdFStarOption ((let open FStarC.Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0)), "Show this version of EverParse");
+    CmdFStarOption ((let open Getopt in noshort, "version", ZeroArgs (fun _ -> FStar.IO.print_string (Printf.sprintf "EverParse/3d %s\nCopyright 2018, 2019, 2020 Microsoft Corporation\n" Version.everparse_version); exit 0)), "Show this version of EverParse");
     CmdOption "equate_types" (OptList "an argument of the form A,B, to generate asserts of the form (A.t == B.t)" valid_equate_types equate_types_list) "Takes an argument of the form A,B and then for each entrypoint definition in B, it generates an assert (A.t == B.t) in the B.Types file, useful when refactoring specs, you can provide multiple equate_types on the command line" [];
     CmdOption "z3_branch_depth" (OptStringOption "nb" always_valid z3_branch_depth) "enumerate branch choices up to depth nb (default 0)" [];
     CmdOption "z3_diff_test" (OptStringOption "parser1,parser2" valid_equate_types z3_diff_test) "produce differential tests for two parsers" [];
@@ -376,8 +376,8 @@ let display_usage = display_usage_2
 let compute_options = compute_options_2
 
 let parse_cmd_line () : ML (list string) =
-  let open FStarC.Getopt in
-  let res = FStarC.Getopt.parse_cmdline (List.Tot.map fst fstar_options) (fun file -> input_file := file :: !input_file; Success) in
+  let open Getopt in
+  let res = Getopt.parse_cmdline (List.Tot.map fst fstar_options) (fun file -> input_file := file :: !input_file; Success) in
   match res with
   | Success -> !input_file
   | Help -> display_usage(); exit 0

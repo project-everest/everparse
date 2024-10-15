@@ -13,7 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 *)
-module FStarC.Getopt
+module Getopt
 open FStar.ST
 open FStar.All
 open FStar.Char
