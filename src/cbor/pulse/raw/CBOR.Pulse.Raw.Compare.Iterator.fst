@@ -132,3 +132,48 @@ fn lex_compare_iterator
   }
 }
 ```
+
+#push-options "--print_implicits"
+
+inline_for_extraction
+```pulse
+fn lex_compare_iterator_peel_perm
+  (#elt_low #elt_high #ser: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (ser_is_empty: cbor_raw_serialized_iterator_is_empty_t ser_match)
+  (ser_next: cbor_raw_serialized_iterator_next_t elt_match ser_match)
+  (compare: Ghost.erased (elt_high -> elt_high -> int))
+  (impl_compare: A.impl_compare_t (vmatch_with_perm elt_match) compare)
+  (x1: cbor_raw_iterator elt_low ser)
+  (x2: cbor_raw_iterator elt_low ser)
+  (#p1: perm)
+  (#p2: perm)
+  (#v1: Ghost.erased (list elt_high))
+  (#v2: Ghost.erased (list elt_high))
+requires
+  cbor_raw_iterator_match elt_match ser_match p1 x1 v1 **
+  cbor_raw_iterator_match elt_match ser_match p2 x2 v2
+returns res: I16.t
+ensures
+  cbor_raw_iterator_match elt_match ser_match p1 x1 v1 **
+  cbor_raw_iterator_match elt_match ser_match p2 x2 v2 **
+  pure (same_sign (I16.v res) (lex_compare compare v1 v2))
+{
+  let pl1 = Mkwith_perm x1 p1;
+  Trade.rewrite_with_trade
+    (cbor_raw_iterator_match elt_match ser_match p1 x1 v1)
+    (vmatch_with_perm (cbor_raw_iterator_match elt_match ser_match) pl1 v1);
+  let pl2 = Mkwith_perm x2 p2;
+  Trade.rewrite_with_trade
+    (cbor_raw_iterator_match elt_match ser_match p2 x2 v2)
+    (vmatch_with_perm (cbor_raw_iterator_match elt_match ser_match) pl2 v2);
+  let res = lex_compare_iterator elt_match ser_match ser_is_empty ser_next compare impl_compare pl1 pl2;
+  Trade.elim _ (cbor_raw_iterator_match elt_match ser_match p1 x1 v1);
+  Trade.elim _ (cbor_raw_iterator_match elt_match ser_match p2 x2 v2);
+  res
+}
+```
+
+  
+  
