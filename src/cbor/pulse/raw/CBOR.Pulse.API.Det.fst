@@ -68,7 +68,29 @@ fn cbor_map_entry_raw_compare
 }
 ```
 
-assume val cbor_raw_sort_aux (p: perm) : Pulse.Lib.Array.MergeSort.sort_aux_t #_ #_ (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare // Pulse issue here
+```pulse
+fn rec cbor_raw_sort_aux
+  (p: perm)
+  (a: A.array Raw.cbor_map_entry)
+  (lo: SZ.t)
+  (hi: SZ.t)
+  (#c: Ghost.erased (Seq.seq Raw.cbor_map_entry))
+  (#l: Ghost.erased (list (SpecRaw.raw_data_item & SpecRaw.raw_data_item)))
+requires
+  A.pts_to_range a (SZ.v lo) (SZ.v hi) c **
+  SM.seq_list_match c l (Raw.cbor_match_map_entry p)
+returns res: bool
+ensures
+  Pulse.Lib.Array.MergeSort.sort_aux_post (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare a lo hi c l res
+{
+  Pulse.Lib.Array.MergeSort.sort_aux
+    (Raw.cbor_match_map_entry p)
+    SpecRaw.cbor_map_entry_raw_compare
+    (cbor_map_entry_raw_compare p)
+    (cbor_raw_sort_aux p)
+    a lo hi
+}
+```
 
 let cbor_raw_sort
   (p: perm)
