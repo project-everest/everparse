@@ -82,9 +82,6 @@ fn cbor_match_array_elim
 }
 ```
 
-let cbor_array_iterator
-= cbor_raw_iterator cbor_raw cbor_serialized_array_iterator
-
 let cbor_array_iterator_match
 = cbor_raw_iterator_match
     cbor_match

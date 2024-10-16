@@ -1,8 +1,9 @@
 module CBOR.Pulse.Raw.Format.Serialized
+include CBOR.Pulse.Raw.Format.Serialized.Iterator
+friend CBOR.Pulse.Raw.Format.Serialized.Iterator
 open CBOR.Spec.Raw.Base
 open CBOR.Pulse.Raw.Iterator
 open CBOR.Pulse.Raw.EverParse.Iterator
-
 open Pulse.Lib.Slice open Pulse.Lib.Pervasives open Pulse.Lib.Trade
 open CBOR.Spec.Raw.EverParse
 open CBOR.Pulse.Raw.EverParse.Format
@@ -59,8 +60,6 @@ fn cbor_match_serialized_tagged_get_payload
   res
 }
 ```
-  
-let cbor_serialized_array_iterator = cbor_raw_serialized_iterator 
 
 let cbor_serialized_array_iterator_match = cbor_raw_serialized_iterator_match serialize_raw_data_item
 
@@ -157,8 +156,6 @@ fn cbor_serialized_array_iterator_next_cont (_: unit)
 ```
 
 let cbor_serialized_array_iterator_next sq = cbor_raw_serialized_iterator_next _ (jump_raw_data_item sq) cbor_match (cbor_serialized_array_iterator_next_cont ())
-
-let cbor_serialized_map_iterator = cbor_raw_serialized_iterator 
 
 let cbor_serialized_map_iterator_match = cbor_raw_serialized_iterator_match (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
 

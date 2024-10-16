@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Format.Serialized
+include CBOR.Pulse.Raw.Format.Serialized.Iterator
 include CBOR.Pulse.Raw.Match
 open CBOR.Pulse.Raw.Iterator
 open CBOR.Spec.Raw.Base
@@ -25,9 +26,6 @@ val cbor_match_serialized_tagged_get_payload
       (cbor_match_serialized_tagged c pm r)
   )
 
-[@@CAbstractStruct]
-val cbor_serialized_array_iterator: Type0
-
 val cbor_serialized_array_iterator_match
   (p: perm)
   (i: cbor_serialized_array_iterator)
@@ -50,9 +48,6 @@ val cbor_serialized_array_iterator_init
 val cbor_serialized_array_iterator_is_empty : cbor_raw_serialized_iterator_is_empty_t cbor_serialized_array_iterator_match
 
 val cbor_serialized_array_iterator_next (_: squash SZ.fits_u64) : cbor_raw_serialized_iterator_next_t cbor_match cbor_serialized_array_iterator_match
-
-[@@CAbstractStruct]
-val cbor_serialized_map_iterator: Type0
 
 val cbor_serialized_map_iterator_match
   (p: perm)
