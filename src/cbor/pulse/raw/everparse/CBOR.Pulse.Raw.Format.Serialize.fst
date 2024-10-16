@@ -210,8 +210,8 @@ let cbor_match_with_perm
 
 module Trade = Pulse.Lib.Trade.Util
 
+inline_for_extraction
 ```pulse
-ghost
 fn cbor_match_with_perm_lens
   (p: perm)
 : vmatch_lens #_ #_ #_ (cbor_match p) cbor_match_with_perm
