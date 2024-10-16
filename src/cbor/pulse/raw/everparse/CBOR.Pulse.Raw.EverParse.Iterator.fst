@@ -11,12 +11,6 @@ module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module LP = LowParse.Pulse.VCList
 
-noeq
-type cbor_raw_serialized_iterator = {
-  s: S.slice LP.byte;
-  len: Ghost.erased nat;
-}
-
 let cbor_raw_serialized_iterator_match
   (#elt_high: Type0)
   (#k: LP.parser_kind)
@@ -126,7 +120,7 @@ fn cbor_raw_serialized_iterator_is_empty
   (#k: Ghost.erased LP.parser_kind)
   (#p: LP.parser k elt_high)
   (s: LP.serializer p { (Ghost.reveal k).parser_kind_subkind == Some LP.ParserStrong /\ (Ghost.reveal k).parser_kind_low > 0 })
-: cbor_raw_serialized_iterator_is_empty_t #elt_high #cbor_raw_serialized_iterator (cbor_raw_serialized_iterator_match s)
+: cbor_raw_serialized_iterator_is_empty_t #elt_high (cbor_raw_serialized_iterator_match s)
 = (c: cbor_raw_serialized_iterator)
   (#pm: perm)
   (#l: Ghost.erased (list elt_high))
@@ -165,9 +159,9 @@ fn cbor_raw_serialized_iterator_next
   (j: LP.jumper p)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
   (phi: cbor_raw_serialized_iterator_next_cont s elt_match)
-: cbor_raw_serialized_iterator_next_t #elt_low #elt_high #cbor_raw_serialized_iterator elt_match (cbor_raw_serialized_iterator_match s)
+: cbor_raw_serialized_iterator_next_t #elt_low #elt_high elt_match (cbor_raw_serialized_iterator_match s)
 =
-  (pi: R.ref (cbor_raw_iterator elt_low cbor_raw_serialized_iterator))
+  (pi: R.ref (cbor_raw_iterator elt_low))
   (#pm: perm)
   (i: cbor_raw_serialized_iterator)
   (#l: Ghost.erased (list elt_high))

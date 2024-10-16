@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Iterator
+include CBOR.Pulse.Raw.Iterator.Base
 open CBOR.Pulse.Raw.Util
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Trade
@@ -9,6 +10,7 @@ module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
+module U8 = FStar.SizeT
 
 noeq
 type cbor_raw_slice_iterator (elt: Type0) = {
@@ -162,7 +164,7 @@ ensures exists* p .
        )
 {
   let s = slice_from_array_trade a alen;
-  let c = {
+  let c : cbor_raw_slice_iterator elt_low = {
     s = s;
     slice_perm = 1.0R;
     payload_perm = pm' `perm_div` pm;
@@ -209,9 +211,9 @@ ensures
 ```
 
 noeq
-type cbor_raw_iterator (elt: Type0) (ser: Type0) =
+type cbor_raw_iterator (elt: Type0) =
 | CBOR_Raw_Iterator_Slice of cbor_raw_slice_iterator elt
-| CBOR_Raw_Iterator_Serialized of ser
+| CBOR_Raw_Iterator_Serialized of cbor_raw_serialized_iterator
 
 let slice_split_right_postcond
   (#t: Type) (p: perm) (v: Ghost.erased (Seq.seq t)) (i: SZ.t) (v': Seq.seq t)
@@ -288,9 +290,9 @@ ensures
 inline_for_extraction
 ```pulse
 fn cbor_raw_slice_iterator_next
-  (#elt_low #elt_high #ser: Type0)
+  (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
-  (pi: R.ref (cbor_raw_iterator elt_low ser))
+  (pi: R.ref (cbor_raw_iterator elt_low))
   (#pm: perm)
   (i:cbor_raw_slice_iterator elt_low)
   (#l: Ghost.erased (list elt_high))
@@ -345,11 +347,11 @@ ensures
 ```
 
 let cbor_raw_iterator_match
-  (#elt_low #elt_high #ser: Type0)
+  (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
-  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
   (pm: perm)
-  (c: cbor_raw_iterator elt_low ser)
+  (c: cbor_raw_iterator elt_low)
   (l: list elt_high)
 : Tot slprop
 = match c with
@@ -359,9 +361,9 @@ let cbor_raw_iterator_match
 inline_for_extraction
 ```pulse
 fn cbor_raw_iterator_init_from_array
-  (#elt_low #elt_high #ser: Type0)
+  (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
-  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
   (a: A.array elt_low)
   (alen: SZ.t { SZ.v alen == A.length a })
   (#pm: perm)
@@ -371,7 +373,7 @@ fn cbor_raw_iterator_init_from_array
 requires
   A.pts_to a #pm sq **
   PM.seq_list_match sq l (elt_match pm')
-returns res: cbor_raw_iterator elt_low ser
+returns res: cbor_raw_iterator elt_low
 ensures exists* p .
   cbor_raw_iterator_match elt_match ser_match p res l **
      trade
@@ -382,7 +384,7 @@ ensures exists* p .
 {
   let i = cbor_raw_slice_iterator_init elt_match a alen;
   with p . assert (cbor_raw_slice_iterator_match elt_match p i l);
-  let res : cbor_raw_iterator elt_low ser = CBOR_Raw_Iterator_Slice i;
+  let res : cbor_raw_iterator elt_low = CBOR_Raw_Iterator_Slice i;
   Trade.rewrite_with_trade
     (cbor_raw_slice_iterator_match elt_match p i l)
     (cbor_raw_iterator_match elt_match ser_match p res l);
@@ -393,10 +395,10 @@ ensures exists* p .
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_is_empty_t
-  (#elt_high #ser: Type0)
-  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (#elt_high: Type0)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
 =
-  (c: ser) ->
+  (c: cbor_raw_serialized_iterator) ->
   (#pm: perm) ->
   (#r: Ghost.erased (list elt_high)) ->
   stt bool
@@ -408,11 +410,11 @@ let cbor_raw_serialized_iterator_is_empty_t
 inline_for_extraction
 ```pulse
 fn cbor_raw_iterator_is_empty
-  (#elt_low #elt_high #ser: Type0)
+  (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
-  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
   (phi: cbor_raw_serialized_iterator_is_empty_t ser_match)
-  (c: cbor_raw_iterator elt_low ser)
+  (c: cbor_raw_iterator elt_low)
   (#pm: perm)
   (#r: Ghost.erased (list elt_high))
 requires
@@ -445,13 +447,13 @@ ensures
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_next_t
-  (#elt_low #elt_high #ser: Type0)
+  (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
-  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
 =
-  (pi: R.ref (cbor_raw_iterator elt_low ser)) ->
+  (pi: R.ref (cbor_raw_iterator elt_low)) ->
   (#pm: perm) ->
-  (i: ser) ->
+  (i: cbor_raw_serialized_iterator) ->
   (#l: Ghost.erased (list elt_high)) ->
   stt elt_low
   (exists* i0 .
@@ -486,13 +488,13 @@ ensures
 inline_for_extraction
 ```pulse
 fn cbor_raw_iterator_next
-  (#elt_low #elt_high #ser: Type0)
+  (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
-  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
   (phi: cbor_raw_serialized_iterator_next_t elt_match ser_match)
-  (pi: R.ref (cbor_raw_iterator elt_low ser))
+  (pi: R.ref (cbor_raw_iterator elt_low))
   (#pm: perm)
-  (#i0: Ghost.erased (cbor_raw_iterator elt_low ser))
+  (#i0: Ghost.erased (cbor_raw_iterator elt_low))
   (#l: Ghost.erased (list elt_high))
 requires
     R.pts_to pi i0 **

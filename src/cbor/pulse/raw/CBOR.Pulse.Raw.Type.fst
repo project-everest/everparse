@@ -1,5 +1,4 @@
 module CBOR.Pulse.Raw.Type
-include CBOR.Pulse.Raw.Format.Serialized.Iterator
 include CBOR.Pulse.Raw.Util
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
@@ -77,7 +76,7 @@ and cbor_raw =
 | CBOR_Case_Serialized_Map: v: cbor_serialized -> cbor_raw
 
 let cbor_array_iterator
-= CBOR.Pulse.Raw.Iterator.cbor_raw_iterator cbor_raw cbor_serialized_array_iterator
+= CBOR.Pulse.Raw.Iterator.cbor_raw_iterator cbor_raw
 
 let cbor_map_iterator
-= CBOR.Pulse.Raw.Iterator.cbor_raw_iterator cbor_raw cbor_serialized_map_iterator
+= CBOR.Pulse.Raw.Iterator.cbor_raw_iterator cbor_map_entry

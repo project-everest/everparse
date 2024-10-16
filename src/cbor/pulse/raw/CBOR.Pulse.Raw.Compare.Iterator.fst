@@ -20,9 +20,9 @@ let vmatch_with_perm
 inline_for_extraction
 ```pulse
 fn lex_compare_iterator
-  (#elt_low #elt_high #ser: Type0)
+  (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
-  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
   (ser_is_empty: cbor_raw_serialized_iterator_is_empty_t ser_match)
   (ser_next: cbor_raw_serialized_iterator_next_t elt_match ser_match)
   (compare: Ghost.erased (elt_high -> elt_high -> int))
@@ -138,15 +138,15 @@ fn lex_compare_iterator
 inline_for_extraction
 ```pulse
 fn lex_compare_iterator_peel_perm
-  (#elt_low #elt_high #ser: Type0)
+  (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
-  (ser_match: perm -> ser -> list elt_high -> slprop)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
   (ser_is_empty: cbor_raw_serialized_iterator_is_empty_t ser_match)
   (ser_next: cbor_raw_serialized_iterator_next_t elt_match ser_match)
   (compare: Ghost.erased (elt_high -> elt_high -> int))
   (impl_compare: A.impl_compare_t (vmatch_with_perm elt_match) compare)
-  (x1: cbor_raw_iterator elt_low ser)
-  (x2: cbor_raw_iterator elt_low ser)
+  (x1: cbor_raw_iterator elt_low)
+  (x2: cbor_raw_iterator elt_low)
   (#p1: perm)
   (#p2: perm)
   (#v1: Ghost.erased (list elt_high))

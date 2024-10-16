@@ -235,9 +235,6 @@ fn cbor_match_map_elim
 }
 ```
 
-let cbor_map_iterator
-= cbor_raw_iterator cbor_map_entry cbor_serialized_map_iterator
-
 let cbor_map_iterator_match
 = cbor_raw_iterator_match
     cbor_match_map_entry

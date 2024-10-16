@@ -1,5 +1,5 @@
 module CBOR.Pulse.Raw.Format.Serialized
-include CBOR.Pulse.Raw.Format.Serialized.Iterator
+open CBOR.Pulse.Raw.Iterator.Base
 include CBOR.Pulse.Raw.Match
 open CBOR.Pulse.Raw.Iterator
 open CBOR.Spec.Raw.Base
@@ -28,7 +28,7 @@ val cbor_match_serialized_tagged_get_payload
 
 val cbor_serialized_array_iterator_match
   (p: perm)
-  (i: cbor_serialized_array_iterator)
+  (i: cbor_raw_serialized_iterator)
   (a: list raw_data_item)
 : slprop
 
@@ -36,7 +36,7 @@ val cbor_serialized_array_iterator_init
   (c: cbor_serialized)
   (#pm: perm)
   (#r: Ghost.erased raw_data_item { Array? r })
-: stt cbor_serialized_array_iterator
+: stt cbor_raw_serialized_iterator
     (cbor_match_serialized_array c pm r)
     (fun res -> exists* p .
       cbor_serialized_array_iterator_match p res (Array?.v r) **
@@ -51,7 +51,7 @@ val cbor_serialized_array_iterator_next (_: squash SZ.fits_u64) : cbor_raw_seria
 
 val cbor_serialized_map_iterator_match
   (p: perm)
-  (i: cbor_serialized_map_iterator)
+  (i: cbor_raw_serialized_iterator)
   (a: list (raw_data_item & raw_data_item))
 : slprop
 
@@ -59,7 +59,7 @@ val cbor_serialized_map_iterator_init
   (c: cbor_serialized)
   (#pm: perm)
   (#r: Ghost.erased raw_data_item { Map? r })
-: stt cbor_serialized_map_iterator
+: stt cbor_raw_serialized_iterator
     (cbor_match_serialized_map c pm r)
     (fun res -> exists* p .
       cbor_serialized_map_iterator_match p res (Map?.v r) **

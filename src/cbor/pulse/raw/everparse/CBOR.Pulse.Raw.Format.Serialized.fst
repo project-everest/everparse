@@ -1,6 +1,4 @@
 module CBOR.Pulse.Raw.Format.Serialized
-include CBOR.Pulse.Raw.Format.Serialized.Iterator
-friend CBOR.Pulse.Raw.Format.Serialized.Iterator
 open CBOR.Spec.Raw.Base
 open CBOR.Pulse.Raw.Iterator
 open CBOR.Pulse.Raw.EverParse.Iterator
@@ -102,7 +100,7 @@ fn cbor_serialized_array_iterator_init
   (#r: Ghost.erased raw_data_item { Array? r })
 requires
     (cbor_match_serialized_array c pm r)
-returns res: cbor_serialized_array_iterator
+returns res: cbor_raw_serialized_iterator
 ensures
     (exists* p .
       cbor_serialized_array_iterator_match p res (Array?.v r) **
@@ -119,7 +117,7 @@ ensures
       #p
       (Array?.v (Ghost.reveal r)))
   );
-  let res : cbor_serialized_array_iterator = {
+  let res : cbor_raw_serialized_iterator = {
     s = c.cbor_serialized_payload;
     len = U64.v (Array?.len r).value;
   };
@@ -196,7 +194,7 @@ fn cbor_serialized_map_iterator_init
   (#r: Ghost.erased raw_data_item { Map? r })
 requires
     (cbor_match_serialized_map c pm r)
-returns res: cbor_serialized_map_iterator
+returns res: cbor_raw_serialized_iterator
 ensures
     (exists* p .
       cbor_serialized_map_iterator_match p res (Map?.v r) **
@@ -213,7 +211,7 @@ ensures
       #p
       (Map?.v (Ghost.reveal r)))
   );
-  let res : cbor_serialized_map_iterator = {
+  let res : cbor_raw_serialized_iterator = {
     s = c.cbor_serialized_payload;
     len = U64.v (Map?.len r).value;
   };
