@@ -1152,13 +1152,77 @@ fn ser_payload_tagged_tagged_lens
 }
 ```
 
-assume val ser_payload_tagged_not_tagged_lens
+```pulse
+ghost
+fn cbor_serialized_tagged_pts_to_serialized_with_perm_trade
+  (xs: cbor_serialized)
+  (p: perm)
+  (xh0: raw_data_item { Tagged? xh0 })
+  (res: with_perm (S.slice byte))
+requires
+  cbor_match_serialized_tagged xs p xh0 ** pure (
+    res.v == xs.cbor_serialized_payload /\
+    res.p == p `perm_mul` xs.cbor_serialized_perm
+  )
+ensures
+  pts_to_serialized_with_perm serialize_raw_data_item res (Tagged?.v xh0) **
+  Trade.trade
+    (pts_to_serialized_with_perm (serialize_raw_data_item) res (Tagged?.v xh0) )
+    (cbor_match_serialized_tagged xs p xh0)
+{
+  unfold (cbor_match_serialized_tagged xs p xh0);
+  rewrite (cbor_match_serialized_payload_tagged xs.cbor_serialized_payload (p `perm_mul` xs.cbor_serialized_perm) (Tagged?.v xh0))
+    as (pts_to_serialized_with_perm serialize_raw_data_item res (Tagged?.v xh0));
+  ghost fn aux (_: unit)
+  requires
+    emp ** pts_to_serialized_with_perm (serialize_raw_data_item) res (Tagged?.v xh0)
+  ensures
+    cbor_match_serialized_tagged xs p xh0
+  { 
+    rewrite (pts_to_serialized_with_perm (serialize_raw_data_item) res (Tagged?.v xh0))
+      as (cbor_match_serialized_payload_tagged xs.cbor_serialized_payload (p `perm_mul` xs.cbor_serialized_perm) (Tagged?.v xh0));
+    fold (cbor_match_serialized_tagged xs p xh0);
+  };
+  Trade.intro _ _ _ aux
+}
+```
+
+inline_for_extraction
+```pulse
+fn ser_payload_tagged_not_tagged_lens
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in
     b.major_type = cbor_major_type_tagged))
-: vmatch_lens (vmatch_with_cond (vmatch_ext raw_data_item (match_cbor_payload xh1))
+: vmatch_lens #_ #_ #_ (vmatch_with_cond (vmatch_ext raw_data_item (match_cbor_payload xh1))
       (pnot cbor_with_perm_case_tagged))
   (pts_to_serialized_with_perm serialize_raw_data_item)
+= (xl: _)
+  (v: _)
+{
+  vmatch_with_cond_elim_trade (vmatch_ext raw_data_item (match_cbor_payload xh1)) (pnot cbor_with_perm_case_tagged) _ _;
+  let xh2 = vmatch_ext_elim_trade raw_data_item (match_cbor_payload xh1) _ _;
+  Trade.trans (match_cbor_payload xh1 xl xh2) _ _;
+  let xh0 = match_cbor_payload_elim_trade xh1 xl xh2;
+  Trade.trans (cbor_match_with_perm xl xh0) _ _;
+  Trade.rewrite_with_trade
+    (cbor_match_with_perm xl xh0)
+    (cbor_match xl.p xl.v xh0);
+  Trade.trans (cbor_match xl.p xl.v xh0) _ _;
+  cbor_match_cases xl.v;
+  let ser = CBOR_Case_Serialized_Tagged?.v xl.v;
+  Trade.rewrite_with_trade
+    (cbor_match xl.p xl.v xh0)
+    (cbor_match_serialized_tagged ser xl.p xh0);
+  Trade.trans (cbor_match_serialized_tagged ser xl.p xh0) _ _;
+  let res = {
+    v = ser.cbor_serialized_payload;
+    p = xl.p `perm_mul` ser.cbor_serialized_perm;
+  };
+  cbor_serialized_tagged_pts_to_serialized_with_perm_trade ser _ _ res;
+  Trade.trans _ (cbor_match_serialized_tagged ser xl.p xh0) _;
+  res
+}
+```
 
 inline_for_extraction
 let ser_payload_tagged
