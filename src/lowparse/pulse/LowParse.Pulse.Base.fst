@@ -854,7 +854,7 @@ inline_for_extraction
 fn l2r_writer_ifthenelse_low
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (s: serializer p)
   (cond: (t' -> bool))
