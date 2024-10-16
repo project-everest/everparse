@@ -28,17 +28,6 @@ val validate_raw_data_item (_: squash SZ.fits_u64) : validator #raw_data_item #p
 
 val jump_raw_data_item (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item
 
-noextract [@@noextract_to "krml"]
-let test_parse = parse_raw_data_item
-
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let test_validate : validator test_parse = validate_raw_data_item (assume SZ.fits_u64)
-
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let test_jump : jumper test_parse = jump_raw_data_item (assume SZ.fits_u64)
-
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 val get_header_and_contents
