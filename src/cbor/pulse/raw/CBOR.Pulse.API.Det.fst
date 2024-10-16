@@ -150,6 +150,183 @@ ensures
 }
 ```
 
+```pulse
+fn cbor_det_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_det_match
+= (v: _)
+{
+  let res = Raw.cbor_match_simple_intro v;
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CSimple v)));
+  fold (cbor_det_match 1.0R res (Spec.pack (Spec.CSimple v)));
+  res
+}
+```
+
+```pulse
+fn cbor_det_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_det_match
+= (ty: _)
+  (v: _)
+{
+  let res = Raw.cbor_match_int_intro ty (SpecRaw.mk_raw_uint64 v);
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CInt64 ty v)));
+  fold (cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 ty v)));
+  res
+}
+```
+
+```pulse
+fn cbor_det_mk_string (_: unit) : mk_string_t u#0 #_ cbor_det_match
+= (ty: _)
+  (s: _)
+  (#p: _)
+  (#v: _)
+{
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  S.pts_to_len s;
+  let len64 = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (S.len s));
+  let res = Raw.cbor_match_string_intro ty len64 s;
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CString ty v)));
+  SpecRaw.mk_cbor_eq (SpecRaw.String ty len64 v);
+  SpecRaw.mk_cbor_equiv (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CString ty v))) (SpecRaw.String ty len64 v);
+  assert (pure (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CString ty v)) `SpecRaw.raw_equiv` SpecRaw.String ty len64 v));
+  SpecRaw.raw_equiv_sorted_optimal
+    SpecRaw.deterministically_encoded_cbor_map_key_order
+    (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CString ty v)))
+    (SpecRaw.String ty len64 v);
+  assert (pure (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CString ty v)) == SpecRaw.String ty len64 v));
+  fold (cbor_det_match 1.0R res (Spec.pack (Spec.CString ty v)));
+  res
+}
+```
+
+```pulse
+fn cbor_det_mk_tagged (_: unit) : mk_tagged_t #_ cbor_det_match
+= (tag: _)
+  (r: _)
+  (#pr: _)
+  (#v: _)
+  (#pv: _)
+  (#v': _)
+{
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let tag64 = SpecRaw.mk_raw_uint64 tag;
+  let w' : Ghost.erased SpecRaw.raw_data_item = SpecRaw.mk_det_raw_cbor v';
+  Trade.rewrite_with_trade
+    (cbor_det_match pv v v')
+    (Raw.cbor_match pv v w');
+  let res = Raw.cbor_match_tagged_intro tag64 r;
+  Trade.trans_concl_r _ _ (Raw.cbor_match pv v w') _;
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v')));
+  SpecRaw.mk_cbor_eq (SpecRaw.Tagged tag64 w');
+  SpecRaw.mk_cbor_equiv (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v'))) (SpecRaw.Tagged tag64 w');
+  assert (pure (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v')) `SpecRaw.raw_equiv` SpecRaw.Tagged tag64 w'));
+  SpecRaw.raw_equiv_sorted_optimal
+    SpecRaw.deterministically_encoded_cbor_map_key_order
+    (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v')))
+    (SpecRaw.Tagged tag64 w');
+  assert (pure (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v')) == SpecRaw.Tagged tag64 w'));
+  fold (cbor_det_match 1.0R res (Spec.pack (Spec.CTagged tag v')));
+  res
+}
+```
+
+noextract [@@noextract_to "krml"]
+let mk_det_raw_cbor (c: Spec.cbor) : Tot SpecRaw.raw_data_item = // FIXME: WHY WHY WHY do I need that? Pulse cannot typecheck `Pure _ True (fun _ -> _)` functions into `Tot` functions
+  SpecRaw.mk_det_raw_cbor c
+
+```pulse
+ghost
+fn rec seq_list_array_cbor_det_match_elim
+  (p: perm)
+  (c: Seq.seq cbor_det_t)
+  (v: list (Spec.cbor))
+requires
+  SM.seq_list_match c v (cbor_det_match p)
+ensures
+  SM.seq_list_match c (List.Tot.map mk_det_raw_cbor v) (Raw.cbor_match p) **
+  Trade.trade
+    (SM.seq_list_match c (List.Tot.map mk_det_raw_cbor v) (Raw.cbor_match p))
+    (SM.seq_list_match c v (cbor_det_match p))
+decreases v
+{
+  SM.seq_list_match_length (cbor_det_match p) c v;
+  if (Nil? v) {
+    SM.seq_list_match_nil_elim c v (cbor_det_match p);
+    SM.seq_list_match_nil_intro c (List.Tot.map mk_det_raw_cbor v) (Raw.cbor_match p);
+    ghost fn aux (_: unit)
+      requires emp ** SM.seq_list_match c (List.Tot.map mk_det_raw_cbor v) (Raw.cbor_match p)
+      ensures SM.seq_list_match c v (cbor_det_match p)
+    {
+      SM.seq_list_match_nil_elim c (List.Tot.map mk_det_raw_cbor v) (Raw.cbor_match p);
+      SM.seq_list_match_nil_intro c v (cbor_det_match p);
+    };
+    Trade.intro _ _ _ aux
+  } else {
+    SM.seq_list_match_cons_elim_trade c v (cbor_det_match p);
+    Trade.rewrite_with_trade
+      (cbor_det_match p (Seq.head c) (List.Tot.hd v))
+      (Raw.cbor_match p (Seq.head c) (mk_det_raw_cbor (List.Tot.hd v)));
+    Trade.trans_hyp_l _ _ _ (SM.seq_list_match c v (cbor_det_match p));
+    seq_list_array_cbor_det_match_elim p (Seq.tail c) (List.Tot.tl v);
+    Trade.trans_hyp_r _ _ _ (SM.seq_list_match c v (cbor_det_match p));
+    SM.seq_list_match_cons_intro_trade (Seq.head c) (mk_det_raw_cbor (List.Tot.hd v)) (Seq.tail c) (List.Tot.map mk_det_raw_cbor (List.Tot.tl v)) (Raw.cbor_match p);
+    Trade.trans _ _ (SM.seq_list_match c v (cbor_det_match p));
+  }
+}
+```
+
+let rec list_map_mk_det_raw_cbor_correct
+  (l: list Spec.cbor)
+: Lemma
+  (ensures (
+    let l' = List.Tot.map mk_det_raw_cbor l in
+    List.Tot.for_all SpecRaw.raw_data_item_ints_optimal l' /\
+    List.Tot.for_all (SpecRaw.raw_data_item_sorted SpecRaw.deterministically_encoded_cbor_map_key_order) l'
+  ))
+  [SMTPat (List.Tot.map mk_det_raw_cbor l)]
+= match l with
+  | [] -> ()
+  | _ :: q -> list_map_mk_det_raw_cbor_correct q
+
+let rec list_map_mk_cbor_mk_det_raw_cbor
+  (l: list Spec.cbor)
+: Lemma
+  (ensures (
+    List.Tot.map SpecRaw.mk_cbor (List.Tot.map mk_det_raw_cbor l) == l
+  ))
+  [SMTPat (List.Tot.map mk_det_raw_cbor l)]
+= match l with
+  | [] -> ()
+  | _ :: q -> list_map_mk_cbor_mk_det_raw_cbor q
+
+```pulse
+fn cbor_det_mk_array (_: unit) : mk_array_t #_ cbor_det_match
+= (a: _)
+  (len: _)
+  (#pa: _)
+  (#va: _)
+  (#pv: _)
+  (#vv: _)
+{
+  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  A.pts_to_len a;
+  SM.seq_list_match_length (cbor_det_match pv) va vv;
+  let len64 = SpecRaw.mk_raw_uint64 len;
+  let vv1 = Ghost.hide (List.Tot.map mk_det_raw_cbor vv);
+  let v' : Ghost.erased Spec.cbor = Ghost.hide (Spec.pack (Spec.CArray vv));
+  seq_list_array_cbor_det_match_elim _ _ _;
+  let _ : squash (SpecRaw.raw_data_item_ints_optimal == SpecRaw.holds_on_raw_data_item SpecRaw.raw_data_item_ints_optimal_elem) = assert_norm (SpecRaw.raw_data_item_ints_optimal == SpecRaw.holds_on_raw_data_item SpecRaw.raw_data_item_ints_optimal_elem);
+  let _ : squash (SpecRaw.raw_data_item_sorted SpecRaw.deterministically_encoded_cbor_map_key_order == SpecRaw.holds_on_raw_data_item (SpecRaw.raw_data_item_sorted_elem SpecRaw.deterministically_encoded_cbor_map_key_order)) = assert_norm (SpecRaw.raw_data_item_sorted SpecRaw.deterministically_encoded_cbor_map_key_order == SpecRaw.holds_on_raw_data_item (SpecRaw.raw_data_item_sorted_elem SpecRaw.deterministically_encoded_cbor_map_key_order));
+  SpecRaw.raw_data_item_sorted_optimal_valid SpecRaw.deterministically_encoded_cbor_map_key_order (SpecRaw.Array len64 vv1);
+  SpecRaw.mk_cbor_eq (SpecRaw.Array len64 vv1);
+  SpecRaw.mk_det_raw_cbor_mk_cbor (SpecRaw.Array len64 vv1);
+  let res = Raw.cbor_match_array_intro len64 a;
+  Trade.trans_concl_r _ _ _ _;
+  Spec.unpack_pack (Spec.CArray vv);
+  fold (cbor_det_match 1.0R res (Spec.pack (Spec.CArray vv)));
+  res
+}
+```
+
 let cbor_det_map_entry_match p c v =
   Raw.cbor_match_map_entry p c (SpecRaw.mk_det_raw_cbor (fst v), SpecRaw.mk_det_raw_cbor (snd v))
 

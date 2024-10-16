@@ -26,6 +26,8 @@ val cbor_det_match_with_size_eq:
       pure (sz == Seq.length (Spec.cbor_det_serialize v))
     )
 
+(* Validation, parsing and serialization *)
+
 noextract [@@noextract_to "krml"]
 let cbor_det_validate_post
   (v: Seq.seq U8.t)
@@ -97,6 +99,44 @@ val cbor_det_serialize
       (exists v' . v `Seq.equal` (s `Seq.append` v'))
     ))
 
+(* Constructors *)
+
+val cbor_det_mk_simple_value () : mk_simple_t cbor_det_match
+val cbor_det_mk_int64 () : mk_int64_t cbor_det_match
+val cbor_det_mk_string () : mk_string_t cbor_det_match
+val cbor_det_mk_tagged () : mk_tagged_t cbor_det_match
+val cbor_det_mk_array () : mk_array_t cbor_det_match
+
 val cbor_det_map_entry_match: perm -> cbor_det_map_entry_t -> Spec.cbor & Spec.cbor -> slprop
 
 val cbor_det_mk_map () : mk_map_t cbor_det_match cbor_det_map_entry_match
+
+(* Destructors
+
+val cbor_det_equal () : equal_t cbor_det_match
+val cbor_det_major_type () : get_major_type_t cbor_det_match
+val cbor_det_read_simple_value () : read_simple_value_t cbor_det_match
+val cbor_det_read_uint64 () : read_uint64_t cbor_det_match
+val cbor_det_get_string () : get_string_t cbor_det_match
+val cbor_det_get_tagged_tag () : get_tagged_tag_t cbor_det_match
+val cbor_det_get_tagged_payload () : get_tagged_payload_t cbor_det_match
+
+val cbor_det_get_array_length () : get_array_length_t cbor_det_match
+
+val cbor_det_array_iterator_match : perm -> cbor_det_array_iterator_t -> list Spec.cbor -> slprop
+
+val cbor_det_array_iterator_start () : array_iterator_start_t cbor_det_match cbor_det_array_iterator_match
+
+val cbor_det_array_iterator_is_empty () : array_iterator_is_empty_t cbor_det_array_iterator_match
+
+val cbor_det_array_iterator_next () : array_iterator_next_t cbor_det_match cbor_det_array_iterator_match
+
+val cbor_det_get_map_length () : get_map_length_t cbor_det_match
+
+val cbor_det_map_iterator_match : perm -> cbor_det_map_iterator_t -> list (Spec.cbor & Spec.cbor) -> slprop
+
+val cbor_det_map_iterator_start () : map_iterator_start_t cbor_det_match cbor_det_map_iterator_match
+
+val cbor_det_map_iterator_is_empty () : map_iterator_is_empty_t cbor_det_map_iterator_match
+
+val cbor_det_map_iterator_next () : map_iterator_next_t cbor_det_map_entry_match cbor_det_map_iterator_match
