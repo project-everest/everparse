@@ -7,8 +7,6 @@ module U32 = FStar.UInt32
 
 module T = FStar.Tactics
 
-#reset-options "--using_facts_from '* -FStar.Tactis -FStar.Reflection'"
-
 (** Constant-size parsers *)
 
 let make_constant_size_parser_aux
@@ -530,8 +528,6 @@ let and_then_correct
   parser_kind_prop_equiv (and_then_kind k k') (and_then_bare p p');
   and_then_injective p p';
   and_then_no_lookahead p p'
-
-#reset-options "--using_facts_from '* -FStar.Tactis -FStar.Reflection'"
 
 val and_then
   (#k: parser_kind)
@@ -1747,7 +1743,7 @@ val serialize_nondep_then_upd_bw_left
     serialize (serialize_nondep_then s1 s2) (y, snd x) == seq_upd_bw_seq s len2 (serialize s1 y)
   ))
 
-#reset-options "--z3refresh --z3rlimit 64 --z3cliopt smt.arith.nl=false --using_facts_from '* -FStar.Tactis -FStar.Reflection'"
+#reset-options "--z3refresh --z3rlimit 64 --z3cliopt smt.arith.nl=false"
 
 val serialize_nondep_then_upd_bw_left_chain
   (#k1: parser_kind)
@@ -1910,7 +1906,7 @@ val tot_serialize_nondep_then_eq
 : Lemma
   (bare_serialize (tot_serialize_nondep_then s1 s2) input == tot_bare_serialize_nondep_then s1 s2 input)
 
-#reset-options "--z3rlimit 32 --using_facts_from '* -FStar.Tactis -FStar.Reflection'"
+#reset-options "--z3rlimit 32"
 
 (** Apply a total transformation on parsed data *)
 

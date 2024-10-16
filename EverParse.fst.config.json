@@ -5,7 +5,8 @@
       "--max_fuel", "2",
       "--initial_ifuel", "2",
       "--max_ifuel", "2",
-      "--initial_ifuel", "2"
+      "--initial_ifuel", "2",
+      "--ext", "context_pruning"
     ],
     "include_dirs": [
       "./src/lowparse",
