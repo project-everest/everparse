@@ -19,7 +19,7 @@ let perm_mul_assoc
     [SMTPat (p1 `perm_mul` (p2 `perm_mul` p3))];
     [SMTPat ((p1 `perm_mul` p2) `perm_mul` p3)];
   ]]
-= admit ()
+= ()
 
 let perm_1_l
   (p: perm)
