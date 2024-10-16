@@ -301,6 +301,7 @@ ensures exists* v .
 }
 ```
 
+inline_for_extraction
 let impl_order_t
   (#t: Type0)
   (#k: parser_kind)
