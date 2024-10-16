@@ -6,10 +6,13 @@ open LowParse.Pulse.Combinators
 
 module Trade = Pulse.Lib.Trade.Util
 
+inline_for_extraction
 let dummy_initial_byte : initial_byte = { major_type = cbor_major_type_simple_value; additional_info = 0uy }
 
+inline_for_extraction
 let dummy_long_argument : long_argument dummy_initial_byte = LongArgumentOther dummy_initial_byte.additional_info () ()
 
+inline_for_extraction
 let dummy_header : header = (| dummy_initial_byte, dummy_long_argument |)
 
 ```pulse

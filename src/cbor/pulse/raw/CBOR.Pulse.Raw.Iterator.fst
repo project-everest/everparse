@@ -391,6 +391,7 @@ ensures exists* p .
 }
 ```
 
+inline_for_extraction
 let cbor_raw_serialized_iterator_is_empty_t
   (#elt_high #ser: Type0)
   (ser_match: perm -> ser -> list elt_high -> slprop)

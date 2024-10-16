@@ -129,6 +129,31 @@ fn impl_holds_on_raw_data_item
 }
 ```
 
+module U64 = FStar.UInt64
+module U8 = FStar.UInt8
+
+#restart-solver
+
+let impl_raw_uint64_optimal
+  (x: raw_uint64)
+: Pure bool
+    (requires True)
+    (ensures fun res -> res == raw_uint64_optimal x)
+= if
+    (x.value `U64.lte` FStar.Int.Cast.uint8_to_uint64 max_simple_value_additional_info) = (x.size = 0uy)
+  then
+    if x.size `U8.lte` 1uy
+    then true
+    else if x.size = 2uy
+    then 256uL `U64.lte` x.value
+    else if x.size = 3uy
+    then 65536uL `U64.lte` x.value
+    else begin
+      assert (x.size = 4uy);
+      4294967296uL `U64.lte` x.value
+    end
+  else false
+
 ```pulse
 fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t #_ #_ #_ serialize_raw_data_item R.raw_data_item_ints_optimal_elem
 = (a: _)
@@ -149,7 +174,7 @@ fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t #_ #_ 
   let input1 = LowParse.Pulse.Combinators.dtuple2_dfst serialize_header (jump_header ()) serialize_content a;
   Trade.trans _ _ (pts_to_serialized serialize_raw_data_item a #pm va);
   let h = read_header () input1;
-  let res = if get_header_major_type h = cbor_major_type_simple_value then true else R.raw_uint64_optimal (argument_as_raw_uint64 (get_header_initial_byte h) (get_header_long_argument h));
+  let res = if get_header_major_type h = cbor_major_type_simple_value then true else impl_raw_uint64_optimal (argument_as_raw_uint64 (get_header_initial_byte h) (get_header_long_argument h));
   Trade.elim _ _;
   res
 }
