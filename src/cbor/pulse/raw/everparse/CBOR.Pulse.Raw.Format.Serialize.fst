@@ -31,6 +31,10 @@ let write_initial_byte : l2r_leaf_writer serialize_initial_byte =
     initial_byte_wf
 
 inline_for_extraction
+let size_initial_byte : leaf_compute_remaining_size serialize_initial_byte =
+  leaf_compute_remaining_size_constant_size _ 1sz
+
+inline_for_extraction
 let write_long_argument_8_simple_value
   (b: initial_byte)
   (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
@@ -76,6 +80,18 @@ let write_long_argument_8
     (write_long_argument_8_simple_value b sq1)
     (write_long_argument_8_not_simple_value b sq1)
 
+#restart-solver
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let size_long_argument_8
+  (b: initial_byte)
+  (sq1: squash ((b.additional_info = additional_info_long_argument_8_bits) == true))
+: Tot (leaf_compute_remaining_size (serialize_long_argument b))
+= leaf_compute_remaining_size_ext
+    (leaf_compute_remaining_size_constant_size _ 1sz <: leaf_compute_remaining_size #(long_argument b) #_ #(if b.major_type = cbor_major_type_simple_value then LP.parse_synth (LP.parse_filter LPI.parse_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue #b ()) else weaken (LP.parse_filter_kind LPI.parse_u8_kind) (LP.parse_synth LPI.parse_u8 (LongArgumentU8 #b ()))) (if b.major_type = cbor_major_type_simple_value then LP.serialize_synth _ (LongArgumentSimpleValue #b ())  (LP.serialize_filter LPI.serialize_u8 simple_value_long_argument_wf) (LongArgumentSimpleValue?.v) () else LP.serialize_weaken (LP.parse_filter_kind LPI.parse_u8_kind) (LP.serialize_synth _ (LongArgumentU8 #b ()) LPI.serialize_u8 (LongArgumentU8?.v) ())))
+    _
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let write_long_argument_16
@@ -89,6 +105,17 @@ let write_long_argument_16
                   (LongArgumentU16 #b ())
                   (LongArgumentU16?.v)
                 )
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let size_long_argument_16
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_16_bits) == true))
+: Tot (leaf_compute_remaining_size (serialize_long_argument b))
+=
+              leaf_compute_remaining_size_ext
+                (leaf_compute_remaining_size_constant_size (LP.serialize_synth _ (LongArgumentU16 #b ()) LPI.serialize_u16 (LongArgumentU16?.v) ()) 2sz)
                 (serialize_long_argument b)
 
 inline_for_extraction
@@ -108,6 +135,17 @@ let write_long_argument_32
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+let size_long_argument_32
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_32_bits) == true))
+: Tot (leaf_compute_remaining_size (serialize_long_argument b))
+=
+              leaf_compute_remaining_size_ext
+                (leaf_compute_remaining_size_constant_size (LP.serialize_synth _ (LongArgumentU32 #b ()) LPI.serialize_u32 (LongArgumentU32?.v) ()) 4sz)
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 let write_long_argument_64
   (b: initial_byte)
   (sq: squash ((b.additional_info = additional_info_long_argument_64_bits) == true))
@@ -123,6 +161,17 @@ let write_long_argument_64
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+let size_long_argument_64
+  (b: initial_byte)
+  (sq: squash ((b.additional_info = additional_info_long_argument_64_bits) == true))
+: Tot (leaf_compute_remaining_size (serialize_long_argument b))
+=
+              leaf_compute_remaining_size_ext
+                (leaf_compute_remaining_size_constant_size (LP.serialize_synth _ (LongArgumentU64 #b ()) LPI.serialize_u64 (LongArgumentU64?.v) ()) 8sz)
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 let write_long_argument_other
   (b: initial_byte)
   (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
@@ -132,10 +181,26 @@ let write_long_argument_other
 : Tot (l2r_leaf_writer (serialize_long_argument b))
 =
               l2r_leaf_writer_ext
-                (LP.l2r_leaf_write_synth'
-                  LP.l2r_leaf_write_empty
-                  (LongArgumentOther #b b.additional_info ())
-                  LongArgumentOther?.v
+                (l2r_leaf_writer_zero_size
+                  (LP.serialize_synth _ (LongArgumentOther #b b.additional_info ()) LP.serialize_empty LongArgumentOther?.v ())
+                  ()
+                )
+                (serialize_long_argument b)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let size_long_argument_other
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+  (sq64: squash ((b.additional_info = additional_info_long_argument_64_bits) == false))
+: Tot (leaf_compute_remaining_size (serialize_long_argument b))
+=
+              leaf_compute_remaining_size_ext
+                (leaf_compute_remaining_size_zero_size
+                  (LP.serialize_synth _ (LongArgumentOther #b b.additional_info ()) LP.serialize_empty LongArgumentOther?.v ())
+                  ()
                 )
                 (serialize_long_argument b)
 
@@ -155,6 +220,20 @@ let write_long_argument_not_8_16_32
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+let size_long_argument_not_8_16_32
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+  (sq32: squash ((b.additional_info = additional_info_long_argument_32_bits) == false))
+: Tot (leaf_compute_remaining_size (serialize_long_argument b))
+= leaf_compute_remaining_size_ifthenelse
+    (serialize_long_argument b)
+    (b.additional_info = additional_info_long_argument_64_bits)
+    (size_long_argument_64 b)
+    (size_long_argument_other b sq8 sq16 sq32)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 let write_long_argument_not_8_16
   (b: initial_byte)
   (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
@@ -165,6 +244,19 @@ let write_long_argument_not_8_16
     (b.additional_info = additional_info_long_argument_32_bits)
     (write_long_argument_32 b)
     (write_long_argument_not_8_16_32 b sq8 sq16)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let size_long_argument_not_8_16
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+  (sq16: squash ((b.additional_info = additional_info_long_argument_16_bits) == false))
+: Tot (leaf_compute_remaining_size (serialize_long_argument b))
+= leaf_compute_remaining_size_ifthenelse
+    (serialize_long_argument b)
+    (b.additional_info = additional_info_long_argument_32_bits)
+    (size_long_argument_32 b)
+    (size_long_argument_not_8_16_32 b sq8 sq16)
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -180,6 +272,18 @@ let write_long_argument_not_8
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+let size_long_argument_not_8
+  (b: initial_byte)
+  (sq8: squash ((b.additional_info = additional_info_long_argument_8_bits) == false))
+: Tot (leaf_compute_remaining_size (serialize_long_argument b))
+= leaf_compute_remaining_size_ifthenelse
+    (serialize_long_argument b)
+    (b.additional_info = additional_info_long_argument_16_bits)
+    (size_long_argument_16 b)
+    (size_long_argument_not_8_16 b sq8)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 let write_long_argument
   (b: initial_byte)
 : Tot (l2r_leaf_writer (serialize_long_argument b))
@@ -189,12 +293,32 @@ let write_long_argument
       (write_long_argument_8 b)
       (write_long_argument_not_8 b)
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let size_long_argument
+  (b: initial_byte)
+: Tot (leaf_compute_remaining_size (serialize_long_argument b))
+= leaf_compute_remaining_size_ifthenelse
+      (serialize_long_argument b)
+      (b.additional_info = additional_info_long_argument_8_bits)
+      (size_long_argument_8 b)
+      (size_long_argument_not_8 b)
+
 let write_header : l2r_leaf_writer serialize_header =
   l2r_leaf_writer_ext
     (LP.l2r_leaf_write_dtuple2
       write_initial_byte
       ()
       write_long_argument
+    )
+    _
+
+let size_header : leaf_compute_remaining_size serialize_header =
+  leaf_compute_remaining_size_ext
+    (LP.leaf_compute_remaining_size_dtuple2
+      size_initial_byte
+      ()
+      size_long_argument
     )
     _
 
@@ -461,6 +585,20 @@ let ser_payload_string
     (serialize_content xh1)
 
 inline_for_extraction
+let size_payload_string
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string))
+: compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
+= compute_remaining_size_ext_gen
+    (compute_remaining_size_lens
+      (ser_payload_string_lens xh1 sq)
+      (LowParse.Pulse.SeqBytes.compute_remaining_size_lseq_bytes_copy
+        (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+      )
+    )
+    (serialize_content xh1)
+
+inline_for_extraction
 let cbor_with_perm_case_array
   (c: with_perm cbor_raw)
 : Tot bool
@@ -488,6 +626,15 @@ let ser_payload_array_array_elem
   (a: with_perm cbor_raw)
 : l2r_writer (cbor_with_perm_case_array_match_elem a) serialize_raw_data_item
 = l2r_writer_lens
+    (cbor_match_with_perm_lens _)
+    f
+
+inline_for_extraction
+let size_payload_array_array_elem
+  (f: compute_remaining_size cbor_match_with_perm serialize_raw_data_item)
+  (a: with_perm cbor_raw)
+: compute_remaining_size (cbor_with_perm_case_array_match_elem a) serialize_raw_data_item
+= compute_remaining_size_lens
     (cbor_match_with_perm_lens _)
     f
 
@@ -629,6 +776,26 @@ let ser_payload_array_array
     )
     (serialize_content xh1)
 
+inline_for_extraction
+let size_payload_array_array
+  (f64: squash SZ.fits_u64)
+  (f: compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
+: compute_remaining_size (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array) (serialize_content xh1)
+= compute_remaining_size_ext_gen
+    (compute_remaining_size_lens
+      (ser_payload_array_array_lens f64 xh1 sq)
+      (LowParse.Pulse.VCList.compute_remaining_size_nlist_as_array
+        cbor_with_perm_case_array_get
+        cbor_with_perm_case_array_match_elem
+        serialize_raw_data_item
+        (size_payload_array_array_elem f)
+        (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+      )
+    )
+    (serialize_content xh1)
+
 ```pulse
 ghost
 fn cbor_serialized_array_pts_to_serialized_with_perm_trade
@@ -736,6 +903,22 @@ l2r_writer (vmatch_with_cond (match_cbor_payload xh1) (pnot cbor_with_perm_case_
     _
 
 inline_for_extraction
+let size_payload_array_not_array
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
+:
+compute_remaining_size (vmatch_with_cond (match_cbor_payload xh1) (pnot cbor_with_perm_case_array))
+  (serialize_content xh1)
+= compute_remaining_size_ext_gen
+    (compute_remaining_size_lens
+      (ser_payload_array_not_array_lens xh1 sq)
+      (compute_remaining_size_copy (LowParse.Spec.VCList.serialize_nlist (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                          (get_header_long_argument xh1))) serialize_raw_data_item
+      ))
+    )
+    _
+
+inline_for_extraction
 let ser_payload_array
   (f64: squash SZ.fits_u64)
   (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
@@ -747,6 +930,19 @@ let ser_payload_array
     cbor_with_perm_case_array
     (ser_payload_array_array f64 f xh1 sq)
     (ser_payload_array_not_array xh1 sq)
+
+inline_for_extraction
+let size_payload_array
+  (f64: squash SZ.fits_u64)
+  (f: compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array))
+: compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
+= compute_remaining_size_ifthenelse_low
+    _ _
+    cbor_with_perm_case_array
+    (size_payload_array_array f64 f xh1 sq)
+    (size_payload_array_not_array xh1 sq)
 
 inline_for_extraction
 let cbor_with_perm_case_map
@@ -836,6 +1032,19 @@ let ser_payload_map_map_elem
   (a: with_perm cbor_raw)
 : l2r_writer (cbor_with_perm_case_map_match_elem a) (LP.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
 = LP.l2r_write_nondep_then
+    f
+    ()
+    f
+    _
+    (ser_payload_map_map_elem_fst a)
+    (ser_payload_map_map_elem_snd a)
+
+inline_for_extraction
+let size_payload_map_map_elem
+  (f: compute_remaining_size cbor_match_with_perm serialize_raw_data_item)
+  (a: with_perm cbor_raw)
+: compute_remaining_size (cbor_with_perm_case_map_match_elem a) (LP.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+= LP.compute_remaining_size_nondep_then
     f
     ()
     f
@@ -983,6 +1192,26 @@ let ser_payload_map_map
     )
     (serialize_content xh1)
 
+inline_for_extraction
+let size_payload_map_map
+  (f64: squash SZ.fits_u64)
+  (f: compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_map))
+: compute_remaining_size (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_map) (serialize_content xh1)
+= compute_remaining_size_ext_gen
+    (compute_remaining_size_lens
+      (ser_payload_map_map_lens f64 xh1 sq)
+      (LowParse.Pulse.VCList.compute_remaining_size_nlist_as_array
+        cbor_with_perm_case_map_get
+        cbor_with_perm_case_map_match_elem
+        (LP.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+        (size_payload_map_map_elem f)
+        (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+      )
+    )
+    (serialize_content xh1)
+
 ```pulse
 ghost
 fn cbor_serialized_map_pts_to_serialized_with_perm_trade
@@ -1090,6 +1319,22 @@ l2r_writer (vmatch_with_cond (match_cbor_payload xh1) (pnot cbor_with_perm_case_
     _
 
 inline_for_extraction
+let size_payload_map_not_map
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_map))
+:
+compute_remaining_size (vmatch_with_cond (match_cbor_payload xh1) (pnot cbor_with_perm_case_map))
+  (serialize_content xh1)
+= compute_remaining_size_ext_gen
+    (compute_remaining_size_lens
+      (ser_payload_map_not_map_lens xh1 sq)
+      (compute_remaining_size_copy (LowParse.Spec.VCList.serialize_nlist (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                          (get_header_long_argument xh1))) (LP.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
+      ))
+    )
+    _
+
+inline_for_extraction
 let ser_payload_map
   (f64: squash SZ.fits_u64)
   (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
@@ -1101,6 +1346,19 @@ let ser_payload_map
     cbor_with_perm_case_map
     (ser_payload_map_map f64 f xh1 sq)
     (ser_payload_map_not_map xh1 sq)
+
+inline_for_extraction
+let size_payload_map
+  (f64: squash SZ.fits_u64)
+  (f: compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_map))
+: compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
+= compute_remaining_size_ifthenelse_low
+    _ _
+    cbor_with_perm_case_map
+    (size_payload_map_map f64 f xh1 sq)
+    (size_payload_map_not_map xh1 sq)
 
 inline_for_extraction
 let cbor_with_perm_case_tagged
@@ -1246,6 +1504,27 @@ let ser_payload_tagged
     _
 
 inline_for_extraction
+let size_payload_tagged
+  (f: compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged))
+: compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
+= compute_remaining_size_ext_gen
+    (compute_remaining_size_ifthenelse_low
+      _ _
+      cbor_with_perm_case_tagged
+      (compute_remaining_size_lens
+        (ser_payload_tagged_tagged_lens xh1 sq)
+        f
+      )
+      (compute_remaining_size_lens
+        (ser_payload_tagged_not_tagged_lens xh1 sq)
+        (compute_remaining_size_copy serialize_raw_data_item)
+      )
+    )
+    _
+
+inline_for_extraction
 let ser_payload_scalar
   (xh1: header)
   (sq_not_string: squash (not (let b = get_header_initial_byte xh1 in b.major_type = 
@@ -1256,6 +1535,19 @@ cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
 : l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
 = l2r_writer_ext_gen
     (LP.l2r_write_empty _)
+    _
+
+inline_for_extraction
+let size_payload_scalar
+  (xh1: header)
+  (sq_not_string: squash (not (let b = get_header_initial_byte xh1 in b.major_type = 
+cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
+  (sq_not_array: squash ((get_header_initial_byte xh1).major_type = cbor_major_type_array == false))
+  (sq_not_map: squash ((get_header_initial_byte xh1).major_type = cbor_major_type_map == false))
+  (sq_not_tagged: squash ((get_header_initial_byte xh1).major_type = cbor_major_type_tagged == false))
+: compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
+= compute_remaining_size_ext_gen
+    (LP.compute_remaining_size_empty _)
     _
 
 inline_for_extraction
@@ -1274,6 +1566,21 @@ cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
     (ser_payload_scalar xh1 () () ())
 
 inline_for_extraction
+let size_payload_not_string_not_array_not_map
+  (f64: squash SZ.fits_u64)
+  (f: compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq_not_string: squash (not (let b = get_header_initial_byte xh1 in b.major_type = 
+cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
+  (sq_not_array: squash ((get_header_initial_byte xh1).major_type = cbor_major_type_array == false))
+  (sq_not_map: squash ((get_header_initial_byte xh1).major_type = cbor_major_type_map == false))
+: compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
+= compute_remaining_size_ifthenelse _ _
+    (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged)
+    (size_payload_tagged f xh1)
+    (size_payload_scalar xh1 () () ())
+
+inline_for_extraction
 let ser_payload_not_string_not_array
   (f64: squash SZ.fits_u64)
   (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
@@ -1288,6 +1595,20 @@ cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
     (ser_payload_not_string_not_array_not_map f64 f xh1 () ())
 
 inline_for_extraction
+let size_payload_not_string_not_array
+  (f64: squash SZ.fits_u64)
+  (f: compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (not (let b = get_header_initial_byte xh1 in b.major_type = 
+cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
+  (_: squash ((get_header_initial_byte xh1).major_type = cbor_major_type_array == false))
+: compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
+= compute_remaining_size_ifthenelse _ _
+    (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_map)
+    (size_payload_map f64 f xh1)
+    (size_payload_not_string_not_array_not_map f64 f xh1 () ())
+
+inline_for_extraction
 let ser_payload_not_string
   (f64: squash SZ.fits_u64)
   (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
@@ -1300,6 +1621,18 @@ let ser_payload_not_string
     (ser_payload_not_string_not_array f64 f xh1 sq)
 
 inline_for_extraction
+let size_payload_not_string
+  (f64: squash SZ.fits_u64)
+  (f: compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+  (sq: squash (not (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
+: compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
+= compute_remaining_size_ifthenelse _ _
+    (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_array)
+    (size_payload_array f64 f xh1)
+    (size_payload_not_string_not_array f64 f xh1 sq)
+
+inline_for_extraction
 let ser_payload
   (f64: squash SZ.fits_u64)
   (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
@@ -1309,6 +1642,17 @@ let ser_payload
     (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)
     (ser_payload_string xh1)
     (ser_payload_not_string f64 f xh1)
+
+inline_for_extraction
+let size_payload
+  (f64: squash SZ.fits_u64)
+  (f: compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item)
+  (xh1: header)
+: compute_remaining_size (match_cbor_payload xh1) (serialize_content xh1)
+= compute_remaining_size_ifthenelse _ _
+    (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)
+    (size_payload_string xh1)
+    (size_payload_not_string f64 f xh1)
 
 inline_for_extraction
 let ser_body
@@ -1325,6 +1669,25 @@ let ser_body
         (cbor_raw_get_header')
         ()
         (ser_payload f64 f)
+      )
+    )
+    (Classical.forall_intro parse_raw_data_item_eq; serialize_raw_data_item)
+
+inline_for_extraction
+let size_body
+  (f64: squash SZ.fits_u64)
+  (f: LP.compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item)
+: LP.compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item
+= LP.compute_remaining_size_ext #_ #_ #_ #_ #_ #serialize_raw_data_item_aux
+    (LP.compute_remaining_size_synth_recip
+      _
+      synth_raw_data_item
+      synth_raw_data_item_recip
+      (LP.compute_remaining_size_dtuple2_recip_explicit_header
+        size_header
+        (cbor_raw_get_header')
+        ()
+        (size_payload f64 f)
       )
     )
     (Classical.forall_intro parse_raw_data_item_eq; serialize_raw_data_item)
@@ -1463,3 +1826,131 @@ ensures exists* v . cbor_match pm x y ** pts_to output v ** pure (
   res
 }
 ```
+
+let size_pre
+  (x': with_perm cbor_raw)
+  (x: raw_data_item)
+  (out: ref SZ.t)
+  (v: SZ.t)
+: Tot slprop
+=
+    (pts_to out v ** cbor_match_with_perm x' x)
+
+let size_post
+  (x': with_perm cbor_raw)
+  (x: raw_data_item)
+  (out: ref SZ.t)
+  (v: SZ.t)
+  (res: bool)
+: Tot slprop
+=
+  exists* v' .
+      pts_to out v' ** cbor_match_with_perm x' x ** pure (
+        let bs = Seq.length (bare_serialize serialize_raw_data_item x) in
+        (res == true <==> bs <= SZ.v v) /\
+        (res == true ==> bs + SZ.v v' == SZ.v v)
+      )
+
+inline_for_extraction
+```pulse
+fn size_fold
+  (f: (x': with_perm cbor_raw) -> (x: Ghost.erased raw_data_item) -> (out: ref SZ.t) -> (v: Ghost.erased SZ.t) -> stt bool (size_pre x' x out v) (fun res -> size_post x' x out v res))
+: compute_remaining_size #_ #raw_data_item (cbor_match_with_perm) #parse_raw_data_item_kind #parse_raw_data_item serialize_raw_data_item
+=
+  (x': with_perm cbor_raw) (#x: raw_data_item) (out: _) (#v: _)
+{
+  fold (size_pre x' x out v);
+  let res = f x' x out v;
+  unfold (size_post x' x out v res);
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn size_unfold
+  (f: compute_remaining_size (cbor_match_with_perm) serialize_raw_data_item)
+  (x': with_perm cbor_raw)
+  (x: Ghost.erased raw_data_item)
+  (out: ref SZ.t)
+  (v: Ghost.erased SZ.t)
+requires
+  (size_pre x' x out v)
+returns res: bool
+ensures
+  (size_post x' x out v res)
+{
+  unfold (size_pre x' x out v);
+  let res = f x' out;
+  fold (size_post x' x out v res);
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn size_body'
+  (f64: squash SZ.fits_u64)
+  (f: (x': with_perm cbor_raw) -> (x: Ghost.erased raw_data_item) -> (out: ref SZ.t) -> (v: Ghost.erased SZ.t) -> stt bool (size_pre x' x out v) (fun res -> size_post x' x out v res))
+  (x': with_perm cbor_raw)
+  (x: Ghost.erased raw_data_item)
+  (out: ref SZ.t)
+  (v: Ghost.erased SZ.t)
+requires
+  (size_pre x' x out v)
+returns res: bool
+ensures
+  size_post x' x out v res
+{
+  size_unfold (size_body f64 (size_fold f)) x' x out v;
+}
+```
+
+```pulse
+fn rec siz'
+  (f64: squash SZ.fits_u64)
+  (x': with_perm cbor_raw)
+  (x: Ghost.erased raw_data_item)
+  (out: ref SZ.t)
+  (v: Ghost.erased SZ.t)
+requires
+  (size_pre x' x out v)
+returns res: bool
+ensures
+  size_post x' x out v res
+{
+  size_body' f64 (siz' f64) x' x out v
+}
+```
+
+let siz (f64: squash SZ.fits_u64) (p: perm) : compute_remaining_size (cbor_match p) serialize_raw_data_item =
+  compute_remaining_size_lens
+    (cbor_match_with_perm_lens p)
+    (size_fold (siz' f64))
+
+```pulse
+fn cbor_size
+  (x: cbor_raw)
+  (bound: SZ.t)
+  (#y: Ghost.erased raw_data_item)
+  (#pm: perm)
+requires
+    (cbor_match pm x y)
+returns res: SZ.t
+ensures cbor_match pm x y ** pure (
+        cbor_size_post bound y res
+    )
+{
+  serialize_length serialize_raw_data_item y;
+  let sq : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let mut output = bound;
+  let res = siz sq pm x output;
+  if (res) {
+    let rem = !output;
+    SZ.sub bound rem;
+  } else {
+    0sz
+  }
+}
+```
+

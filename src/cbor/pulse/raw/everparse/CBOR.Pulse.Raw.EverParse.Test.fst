@@ -76,3 +76,21 @@ ensures
   cbor_serialize x output;
 }
 ```
+
+```pulse
+fn siz
+  (x: cbor_raw)
+  (bound: SZ.t)
+  (#y: Ghost.erased raw_data_item)
+  (#pm: perm)
+requires
+    (cbor_match pm x y)
+returns res: SZ.t
+ensures
+    (cbor_match pm x y ** pure (
+      cbor_size_post bound y res
+    ))
+{
+  cbor_size x bound;
+}
+```
