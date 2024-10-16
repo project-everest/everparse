@@ -737,6 +737,35 @@ ensures
 }
 ```
 
+```pulse
+ghost
+fn cbor_match_tagged_elim
+  (c: cbor_tagged)
+  (p: perm)
+  (r: raw_data_item { Tagged? r })
+  requires
+    cbor_match_tagged c p r cbor_match
+  ensures exists* c' . R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+    cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r) **
+    trade
+      (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+        cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r))
+      (cbor_match_tagged c p r cbor_match)
+{
+  unfold (cbor_match_tagged c p r cbor_match);
+  with c' . assert (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+    cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r));
+  ghost fn aux (_: unit)
+    requires emp ** (R.pts_to c.cbor_tagged_ptr #(p `perm_mul` c.cbor_tagged_ref_perm) c' **
+      cbor_match (p `perm_mul` c.cbor_tagged_payload_perm) c' (Tagged?.v r))
+    ensures cbor_match_tagged c p r cbor_match
+  {
+    fold (cbor_match_tagged c p r cbor_match)
+  };
+  intro_trade _ _ _ aux
+}
+```
+
 inline_for_extraction
 ```pulse
 ghost

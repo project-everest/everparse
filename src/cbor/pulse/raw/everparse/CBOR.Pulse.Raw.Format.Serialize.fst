@@ -1102,10 +1102,84 @@ let ser_payload_map
     (ser_payload_map_map f64 f xh1 sq)
     (ser_payload_map_not_map xh1 sq)
 
-assume val ser_payload_tagged
+inline_for_extraction
+let cbor_with_perm_case_tagged
+  (c: with_perm cbor_raw)
+: Tot bool
+= CBOR_Case_Tagged? c.v
+
+inline_for_extraction
+```pulse
+fn ser_payload_tagged_tagged_lens
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in
+    b.major_type = cbor_major_type_tagged))
+: vmatch_lens #_ #_ #_ (vmatch_with_cond (vmatch_ext raw_data_item (match_cbor_payload xh1))
+      cbor_with_perm_case_tagged)
+  cbor_match_with_perm
+= (xl: _)
+  (v: _)
+{
+  vmatch_with_cond_elim_trade (vmatch_ext raw_data_item (match_cbor_payload xh1)) cbor_with_perm_case_tagged _ _;
+  let xh2 = vmatch_ext_elim_trade raw_data_item (match_cbor_payload xh1) _ _;
+  Trade.trans (match_cbor_payload xh1 xl xh2) _ _;
+  let xh0 = match_cbor_payload_elim_trade xh1 xl xh2;
+  Trade.trans (cbor_match_with_perm xl xh0) _ _;
+  Trade.rewrite_with_trade
+    (cbor_match_with_perm xl xh0)
+    (cbor_match xl.p xl.v xh0);
+  Trade.trans (cbor_match xl.p xl.v xh0) _ _;
+  cbor_match_cases xl.v;
+  let tg = CBOR_Case_Tagged?.v xl.v;
+  cbor_match_eq_tagged xl.p tg xh0;
+  Trade.rewrite_with_trade
+    (cbor_match xl.p xl.v xh0)
+    (cbor_match_tagged tg xl.p xh0 cbor_match);
+  Trade.trans (cbor_match_tagged tg xl.p xh0 cbor_match) _ _;
+  cbor_match_tagged_elim tg _ _;
+  Trade.trans _ (cbor_match_tagged tg xl.p xh0 cbor_match) _;
+  let pl = !(tg.cbor_tagged_ptr);
+  let res = {
+    v = pl;
+    p = xl.p `perm_mul` tg.cbor_tagged_payload_perm;
+  };
+  Trade.elim_hyp_l _ _ _;
+  Trade.rewrite_with_trade
+    (cbor_match _ _ _)
+    (cbor_match_with_perm res v);
+  Trade.trans (cbor_match_with_perm res v) _ _;
+  res
+}
+```
+
+assume val ser_payload_tagged_not_tagged_lens
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in
+    b.major_type = cbor_major_type_tagged))
+: vmatch_lens (vmatch_with_cond (vmatch_ext raw_data_item (match_cbor_payload xh1))
+      (pnot cbor_with_perm_case_tagged))
+  (pts_to_serialized_with_perm serialize_raw_data_item)
+
+inline_for_extraction
+let ser_payload_tagged
+  (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged))
 : l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
+= l2r_writer_ext_gen
+    (l2r_writer_ifthenelse_low
+      _ _
+      cbor_with_perm_case_tagged
+      (l2r_writer_lens
+        (ser_payload_tagged_tagged_lens xh1 sq)
+        f
+      )
+      (l2r_writer_lens
+        (ser_payload_tagged_not_tagged_lens xh1 sq)
+        (l2r_write_copy serialize_raw_data_item)
+      )
+    )
+    _
 
 inline_for_extraction
 let ser_payload_scalar
@@ -1123,7 +1197,7 @@ cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
 inline_for_extraction
 let ser_payload_not_string_not_array_not_map
   (f64: squash SZ.fits_u64)
-//  (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
+  (f: l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
   (xh1: header)
   (sq_not_string: squash (not (let b = get_header_initial_byte xh1 in b.major_type = 
 cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
@@ -1132,7 +1206,7 @@ cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
 : l2r_writer (match_cbor_payload xh1) (serialize_content xh1)
 = l2r_writer_ifthenelse _ _
     (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_tagged)
-    (ser_payload_tagged xh1)
+    (ser_payload_tagged f xh1)
     (ser_payload_scalar xh1 () () ())
 
 inline_for_extraction
@@ -1147,7 +1221,7 @@ cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string)))
 = l2r_writer_ifthenelse _ _
     (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_map)
     (ser_payload_map f64 f xh1)
-    (ser_payload_not_string_not_array_not_map f64 xh1 () ())
+    (ser_payload_not_string_not_array_not_map f64 f xh1 () ())
 
 inline_for_extraction
 let ser_payload_not_string
