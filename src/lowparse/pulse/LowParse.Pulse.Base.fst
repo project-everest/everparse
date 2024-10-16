@@ -791,7 +791,7 @@ inline_for_extraction
 fn l2r_writer_ifthenelse
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (s: serializer p)
   (cond: bool)
@@ -809,6 +809,27 @@ fn l2r_writer_ifthenelse
   } else {
     iffalse () x' out offset
   }
+}
+```
+
+inline_for_extraction
+```pulse
+fn l2r_writer_zero_size
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_high == Some 0))
+: l2r_writer #t' #t vmatch #k #p s
+= (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  serialize_length s x;
+  offset
 }
 ```
 
@@ -1122,6 +1143,17 @@ fn l2r_leaf_writer_of_writer
 ```
 
 inline_for_extraction
+let l2r_leaf_writer_zero_size
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_high == Some 0))
+: l2r_leaf_writer u#0 #t #k #p s
+= l2r_leaf_writer_of_writer
+    (l2r_writer_zero_size _ s ())
+
+inline_for_extraction
 let compute_remaining_size
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
@@ -1204,6 +1236,35 @@ fn compute_remaining_size_ext
 
 inline_for_extraction
 ```pulse
+fn compute_remaining_size_ext_gen
+  (#t' #t1 #t2: Type0)
+  (#vmatch: t' -> t2 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t1)
+  (#s1: serializer p1)
+  (w: compute_remaining_size (vmatch_ext t1 vmatch) s1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2 { t1 == t2 /\ (forall b . parse p1 b == parse p2 b) })
+: compute_remaining_size #t' #t2 vmatch #k2 #p2 s2
+= (x': t')
+  (#x: Ghost.erased t2)
+  (out: _)
+  (#v: _)
+{
+  let x1 : Ghost.erased t1 = Ghost.hide #t1 (Ghost.reveal #t2 x);
+  serializer_unique_strong s1 s2 x1;
+  fold (vmatch_ext t1 vmatch x' x1);
+  let res = w x' out;
+  unfold (vmatch_ext t1 vmatch x' x1);
+  with x2 . assert (vmatch x' x2);
+  rewrite (vmatch x' x2) as (vmatch x' x);
+  res
+}
+```
+
+inline_for_extraction
+```pulse
 fn compute_remaining_size_frame
   (#t' #t: Type0)
   (#vmatch: t' -> t -> slprop)
@@ -1233,7 +1294,7 @@ fn compute_remaining_size_lens
   (#vmatch1: t1' -> t -> slprop)
   (#vmatch2: t2' -> t -> slprop)
   (lens: vmatch_lens vmatch1 vmatch2)
-  (#k: parser_kind)
+  (#k: Ghost.erased parser_kind)
   (#p: parser k t)
   (#s: serializer p)
   (w: compute_remaining_size vmatch2 s)
@@ -1280,6 +1341,214 @@ fn compute_remaining_size_constant_size
   }
 }
 ```
+
+inline_for_extraction
+```pulse
+fn compute_remaining_size_zero_size
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (
+    k.parser_kind_high == Some 0
+  ))
+: compute_remaining_size #t' #t vmatch #k #p s
+=
+  (x': t')
+  (#x: Ghost.erased t)
+  (out: R.ref SZ.t)
+  (#v: Ghost.erased SZ.t)
+{
+  serialize_length s x;
+  true
+}
+```
+
+inline_for_extraction
+```pulse
+fn compute_remaining_size_ifthenelse
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> compute_remaining_size vmatch s))
+  (iffalse: (squash (cond == false) -> compute_remaining_size vmatch s))
+: compute_remaining_size #t' #t vmatch #k #p s
+= (x': _)
+  (#x: _)
+  (out: _)
+  (#v: _)
+{
+  if (cond) {
+    iftrue () x' out
+  } else {
+    iffalse () x' out
+  }
+}
+```
+
+inline_for_extraction
+```pulse
+fn compute_remaining_size_ifthenelse_low
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (cond: (t' -> bool))
+  (iftrue: compute_remaining_size (vmatch_with_cond vmatch cond) s)
+  (iffalse: compute_remaining_size (vmatch_with_cond vmatch (pnot cond)) s)
+: compute_remaining_size #t' #t vmatch #k #p s
+= (x': _)
+  (#x: _)
+  (out: _)
+  (#v: _)
+{
+  if (cond x') {
+    fold (vmatch_with_cond vmatch cond x' x);
+    let res = iftrue x' out;
+    unfold (vmatch_with_cond vmatch cond x' x);
+    res
+  } else {
+    fold (vmatch_with_cond vmatch (pnot cond) x' x);
+    let res = iffalse x' out;
+    unfold (vmatch_with_cond vmatch (pnot cond) x' x);
+    res
+  }
+}
+```
+
+inline_for_extraction
+let leaf_compute_remaining_size
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+= (x: t) ->
+  (out: R.ref SZ.t) ->
+  (#v: Ghost.erased SZ.t) ->
+  stt bool
+    (R.pts_to out v)
+    (fun res -> exists* v' .
+      R.pts_to out v' ** pure (
+      let bs = Seq.length (bare_serialize s x) in
+      (res == true <==> bs <= SZ.v v) /\
+      (res == true ==> bs + SZ.v v' == SZ.v v)
+    ))
+
+inline_for_extraction
+```pulse
+fn compute_remaining_size_of_leaf_compute_remaining_size
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: leaf_compute_remaining_size s)
+: compute_remaining_size #_ #_ (eq_as_slprop _) #_ #_ s
+= (x: _)
+  (#v: _)
+  (out: _)
+  (#outv: _)
+{
+  unfold (eq_as_slprop t x v);
+  fold (eq_as_slprop t x v);
+  w x out;
+}
+```
+
+inline_for_extraction
+```pulse
+fn leaf_compute_remaining_size_of_compute_remaining_size
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: compute_remaining_size (eq_as_slprop _) s)
+: leaf_compute_remaining_size #_ #_ #_ s
+= (x: _)
+  (out: _)
+  (#outv: _)
+{
+  fold (eq_as_slprop t x x);
+  let res = w x out;
+  unfold (eq_as_slprop t x x);
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn leaf_compute_remaining_size_ext
+  (#t: Type0)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 t)
+  (#s1: serializer p1)
+  (w1: leaf_compute_remaining_size s1)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2 { forall x . parse p1 x == parse p2 x })
+: leaf_compute_remaining_size #t #k2 #p2 s2
+= (x: t)
+  (out: _)
+  (#v: _)
+{
+  serializer_unique_strong s1 s2 x;
+  w1 x out
+}
+```
+
+inline_for_extraction
+```pulse
+fn leaf_compute_remaining_size_ifthenelse
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (cond: bool)
+  (iftrue: (squash (cond == true) -> leaf_compute_remaining_size s))
+  (iffalse: (squash (cond == false) -> leaf_compute_remaining_size s))
+: leaf_compute_remaining_size #t #k #p s
+= (x: t)
+  (out: _)
+  (#v: _)
+{
+  if (cond) {
+    iftrue () x out;
+  } else {
+    iffalse () x out;
+  }
+}
+```
+
+inline_for_extraction
+let leaf_compute_remaining_size_constant_size
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sz: SZ.t {
+    k.parser_kind_high == Some k.parser_kind_low /\
+    k.parser_kind_low == SZ.v sz
+  })
+: leaf_compute_remaining_size s
+= leaf_compute_remaining_size_of_compute_remaining_size
+    (compute_remaining_size_constant_size _ s sz)
+
+inline_for_extraction
+let leaf_compute_remaining_size_zero_size
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (
+    k.parser_kind_high == Some 0
+  ))
+: leaf_compute_remaining_size s
+= leaf_compute_remaining_size_of_compute_remaining_size
+    (compute_remaining_size_zero_size _ s sq)
 
 inline_for_extraction
 noeq
@@ -1336,6 +1605,37 @@ fn l2r_write_copy
         }
       }
     }
+  }
+}
+```
+
+inline_for_extraction
+```pulse
+fn compute_remaining_size_copy
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+: compute_remaining_size #_ #_ (pts_to_serialized_with_perm s) #_ #_ s
+= (x: _)
+  (#v: _)
+  (out: _)
+  (#w: _)
+{
+  Trade.rewrite_with_trade
+    (pts_to_serialized_with_perm s x v)
+    (pts_to_serialized s x.v #x.p v);
+  pts_to_serialized_elim_trade s x.v;
+  Trade.trans _ _ (pts_to_serialized_with_perm s x v);
+  S.pts_to_len x.v;
+  Trade.elim _ _;
+  let length = S.len x.v;
+  let cur = !out;
+  if (SZ.lt cur length) {
+    false
+  } else {
+    out := SZ.sub cur length;
+    true
   }
 }
 ```

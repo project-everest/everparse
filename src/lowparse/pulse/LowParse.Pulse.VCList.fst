@@ -554,6 +554,91 @@ let seq_slice_append_ijk
 
 inline_for_extraction
 ```pulse
+fn compute_remaining_size_nlist_as_array
+  (#tarray: Type0)
+  (#telem: Type0)
+  (#t: Type0)
+  (varray: (tarray -> option (with_perm (A.array telem))))
+  (vmatch: (tarray -> telem -> t -> slprop))
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p  { k.parser_kind_subkind == Some ParserStrong })
+  (w: ((a: tarray) -> compute_remaining_size (vmatch a) s))
+  (n: SZ.t)
+: compute_remaining_size #_ #_ (nlist_match_array varray vmatch (SZ.v n)) #_ #_ (LowParse.Spec.VCList.serialize_nlist (SZ.v n) s)
+=
+  (arr: _)
+  (#x: _)
+  (out: _)
+  (#v: _)
+{
+  unfold (nlist_match_array varray vmatch (SZ.v n) arr x);
+  let a = Some?.v (varray arr);
+  with c . assert (A.pts_to a.v #a.p c);
+  let mut pres = true;
+  let mut pi = 0sz;
+  Trade.refl (PM.seq_list_match c x (vmatch arr));
+  PM.seq_list_match_length (vmatch arr) _ _;
+  while (
+    let res = !pres;
+    let i = !pi;
+    (res && (SZ.lt i n))
+  ) invariant b . exists* res i c2 l2 v1 . (
+    A.pts_to a.v #a.p c **
+    R.pts_to pres res **
+    R.pts_to pi i **
+    PM.seq_list_match c2 l2 (vmatch arr) **
+    pts_to out v1 **
+    trade
+      (PM.seq_list_match c2 l2 (vmatch arr))
+      (PM.seq_list_match c x (vmatch arr))
+    ** pure (
+      SZ.v i <= SZ.v n /\
+      b == (res && (SZ.v i < SZ.v n)) /\
+      Seq.length c == SZ.v n /\
+      (res == false ==> SZ.v v < Seq.length (serialize (serialize_nlist (SZ.v n) s) x)) /\
+      (res == true ==> (
+        Seq.equal c2 (Seq.slice c (SZ.v i) (SZ.v n)) /\
+        List.Tot.length l2 == SZ.v n - SZ.v i /\
+        SZ.v v - Seq.length (serialize (serialize_nlist (SZ.v n) s) x) == SZ.v v1 - Seq.length (serialize (serialize_nlist (SZ.v n - SZ.v i) s) l2)
+      )) /\
+      True
+    )
+  ) {
+    let i = !pi;
+    PM.seq_list_match_length (vmatch arr) _ _;
+    with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
+    PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
+    let e = A.op_Array_Access a.v i;
+    let c2' : Ghost.erased (Seq.seq telem) = Seq.tail c2;
+    with ve l2' . assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match c2' l2' (vmatch arr));
+    let ni' : Ghost.erased nat = Ghost.hide (SZ.v n - SZ.v i - 1);
+    serialize_nlist_cons' (ni') s ve l2';
+    Trade.rewrite_with_trade
+      (vmatch arr _ _)
+      (vmatch arr e ve);
+    let res = w arr e out;
+    Trade.elim (vmatch arr e ve) _;
+    if (res) {
+      let i' = SZ.add i 1sz;
+      pi := i';
+      Trade.elim_hyp_l _ _ _;
+      Trade.trans _ _ (PM.seq_list_match c x (vmatch arr));
+    } else {
+      Trade.elim _ (PM.seq_list_match c2 l2 (vmatch arr));
+      pres := false;
+    }
+  };
+  Trade.elim _ _;
+  fold (nlist_match_array varray vmatch (SZ.v n) arr x);
+  !pres
+}
+```
+
+#restart-solver
+
+inline_for_extraction
+```pulse
 fn l2r_write_nlist_as_array
   (#tarray: Type0)
   (#telem: Type0)

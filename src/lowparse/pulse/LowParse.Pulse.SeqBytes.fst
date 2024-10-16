@@ -80,3 +80,28 @@ fn l2r_write_lseq_bytes_copy
   }
 }
 ```
+
+inline_for_extraction
+```pulse
+fn compute_remaining_size_lseq_bytes_copy
+  (n: Ghost.erased nat)
+: compute_remaining_size #_ #_ (pts_to_seqbytes n) #_ #_ (serialize_lseq_bytes n)
+=
+  (x': _)
+  (#x: _)
+  (out: _)
+  (#v: _)
+{
+  unfold (pts_to_seqbytes n x' x);
+  pts_to_len x'.v;
+  fold (pts_to_seqbytes n x' x);
+  let length = S.len x'.v;
+  let cur = !out;
+  if (SZ.lt cur length) {
+    false
+  } else {
+    out := SZ.sub cur length;
+    true
+  }
+}
+```

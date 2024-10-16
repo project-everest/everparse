@@ -81,3 +81,27 @@ fn l2r_write_bitsum'
   w (sr x) out offset
 }
 ```
+
+inline_for_extraction
+```pulse
+fn compute_remaining_size_bitsum'
+  (#t: eqtype)
+  (#tot: pos)
+  (#cl: uint_t tot t)
+  (#b: bitsum' cl tot)
+  (sr: synth_bitsum'_recip_t b)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (w: leaf_compute_remaining_size s)
+: (leaf_compute_remaining_size #(bitsum'_type b) #(parse_filter_kind k) #(parse_bitsum' b p) (serialize_bitsum' b s))
+= (x: _)
+  (out: _)
+  (#v: Ghost.erased bytes)
+{
+  serialize_bitsum'_eq b s x;
+  synth_bitsum'_injective b;
+  synth_bitsum'_recip_inverse b;
+  w (sr x) out
+}
+```
