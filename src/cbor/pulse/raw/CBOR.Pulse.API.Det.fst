@@ -6,6 +6,8 @@ module SpecRaw = CBOR.Spec.Raw
 module Raw = CBOR.Pulse.Raw.Match
 module SM = Pulse.Lib.SeqMatch.Util
 module Compare = CBOR.Pulse.Raw.Compare
+module Parse = CBOR.Pulse.Raw.Format.Parse
+module Serialize = CBOR.Pulse.Raw.Format.Serialize
 
 let cbor_det_match
   p c v
@@ -31,6 +33,120 @@ ensures
 {
     unfold (cbor_det_match_with_size sz p c v);
     fold (cbor_det_match_with_size sz p c v)
+}
+```
+
+let cbor_det_validate_post_intro
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+: Lemma
+  (requires (Parse.cbor_validate_det_post v res))
+  (ensures (cbor_det_validate_post v res))
+= Classical.forall_intro (Classical.move_requires SpecRaw.mk_det_raw_cbor_mk_cbor);
+  assert (forall (v1: SpecRaw.raw_data_item) . (SpecRaw.raw_data_item_ints_optimal v1 /\ SpecRaw.raw_data_item_sorted SpecRaw.deterministically_encoded_cbor_map_key_order v1) ==> SpecRaw.serialize_cbor v1 == Spec.cbor_det_serialize (SpecRaw.mk_cbor v1))
+
+```pulse
+fn cbor_det_validate
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+requires
+    (pts_to input #pm v)
+returns res: SZ.t
+ensures
+    (pts_to input #pm v ** pure (
+      cbor_det_validate_post v res
+    ))
+{
+  let res = Parse.cbor_validate_det input;
+  cbor_det_validate_post_intro v res;
+  res
+}
+```
+
+let cbor_det_parse_aux
+  (v: Seq.seq U8.t)
+  (len: nat)
+  (v1': SpecRaw.raw_data_item {
+    len <= Seq.length v /\
+    Seq.slice v 0 (len) == SpecRaw.serialize_cbor v1'
+  })
+  (v1: Spec.cbor)
+  (v2: Seq.seq U8.t)
+: Lemma
+  (v == Spec.cbor_det_serialize v1 `Seq.append` v2 ==> v1' == SpecRaw.mk_det_raw_cbor v1)
+= Seq.lemma_split v len;
+  Classical.move_requires (SpecRaw.serialize_cbor_inj (SpecRaw.mk_det_raw_cbor v1) v1' v2) (Seq.slice v (len) (Seq.length v))
+
+```pulse
+fn cbor_det_parse
+  (input: S.slice U8.t)
+  (len: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+requires
+    (pts_to input #pm v ** pure (
+      exists v1 v2 . Ghost.reveal v == Spec.cbor_det_serialize v1 `Seq.append` v2 /\ SZ.v len == Seq.length (Spec.cbor_det_serialize v1)
+    ))
+returns res: cbor_det_t
+ensures
+    (exists* v' .
+      cbor_det_match 1.0R res v' **
+      Trade.trade (cbor_det_match 1.0R res v') (pts_to input #pm v) ** pure (
+        SZ.v len <= Seq.length v /\
+        Seq.slice v 0 (SZ.v len) == Spec.cbor_det_serialize v'
+    ))
+{
+  Seq.lemma_split v (SZ.v len);
+  let res = Parse.cbor_parse input len;
+  with v1' . assert (Raw.cbor_match 1.0R res v1');
+  Classical.forall_intro_2 (cbor_det_parse_aux v (SZ.v len) v1');
+  fold (cbor_det_match 1.0R res (SpecRaw.mk_cbor v1'));
+  res
+}
+```
+
+```pulse
+fn cbor_det_size
+  (x: cbor_det_t)
+  (bound: SZ.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#pm: perm)
+requires
+    (cbor_det_match pm x y)
+returns res: SZ.t
+ensures
+    (cbor_det_match pm x y ** pure (
+      cbor_det_size_post bound y res
+    ))
+{
+  unfold (cbor_det_match pm x y);
+  let res = Serialize.cbor_size x bound;
+  fold (cbor_det_match pm x y);
+  res
+}
+```
+
+```pulse
+fn cbor_det_serialize
+  (x: cbor_det_t)
+  (output: S.slice U8.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#pm: perm)
+requires
+    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (S.len output)))
+returns res: SZ.t
+ensures
+    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
+      let s = Spec.cbor_det_serialize y in
+      SZ.v res == Seq.length s /\
+      (exists v' . v `Seq.equal` (s `Seq.append` v'))
+    ))
+{
+  unfold (cbor_det_match pm x y);
+  let res = Serialize.cbor_serialize x output;
+  fold (cbor_det_match pm x y);
+  res
 }
 ```
 
