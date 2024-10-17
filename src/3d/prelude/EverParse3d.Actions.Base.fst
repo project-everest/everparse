@@ -1316,6 +1316,7 @@ noextract
 inline_for_extraction
 let validate_nlist_constant_size_without_actions
     (n_is_const: bool)
+    (payload_is_constant_size: bool)
     (n:U32.t)
     #wk
     (#k:parser_kind true wk)
@@ -1323,14 +1324,19 @@ let validate_nlist_constant_size_without_actions
     (v: validate_with_action_t p inv disj l ar)
 : Tot (validate_with_action_t (parse_nlist n p) inv disj l false)
 = 
-  if
-    let open LP in
-    k.parser_kind_subkind = Some ParserStrong &&
-    k.parser_kind_high = Some k.parser_kind_low &&
-    k.parser_kind_metadata = Some ParserKindMetadataTotal &&
-    k.parser_kind_low < 4294967296
-  then
-    validate_drop (validate_nlist_total_constant_size n_is_const n p inv disj l)
+  if payload_is_constant_size
+  then (
+    if
+      let open LP in
+      k.parser_kind_subkind = Some ParserStrong &&
+      k.parser_kind_high = Some k.parser_kind_low &&
+      k.parser_kind_metadata = Some ParserKindMetadataTotal &&
+      k.parser_kind_low < 4294967296
+    then
+      validate_drop (validate_nlist_total_constant_size n_is_const n p inv disj l)
+    else
+      validate_nlist n v
+  )
   else
     validate_nlist n v
 

@@ -156,6 +156,7 @@ type typ : Type =
 
   | T_nlist:
       fn:non_empty_string ->
+      fixed_size_t:bool -> //does t have a fixed size?
       n:expr ->
       t:typ ->
       typ

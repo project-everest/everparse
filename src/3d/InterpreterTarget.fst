@@ -227,7 +227,7 @@ let tag_of_parser p
     match p.p_parser with
     | Parse_return _ -> "Parse_return"
     | Parse_app _ _ -> "Parse_app"
-    | Parse_nlist _ _ -> "Parse_nlist"
+    | Parse_nlist _ _ _ -> "Parse_nlist"
     | Parse_t_at_most _ _ -> "Parse_t_at_most"
     | Parse_t_exact _ _ -> "Parse_t_exact"
     | Parse_pair _ _ _ -> "Parse_pair"
@@ -348,7 +348,7 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
     | T.Parse_weaken_right p _
     | T.Parse_refinement _ p _
     | T.Parse_with_comment p _
-    | T.Parse_nlist _ p
+    | T.Parse_nlist _ _ p
     | T.Parse_t_at_most _ p
     | T.Parse_t_exact _ p ->
       typ_indexes_of_parser p
@@ -424,8 +424,8 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
     | T.Parse_with_comment p c ->
       T_with_comment fn (typ_of_parser p) (String.concat "; " c)
 
-    | T.Parse_nlist n p ->
-      T_nlist fn n (typ_of_parser p)
+    | T.Parse_nlist fixed_size n p ->
+      T_nlist fn fixed_size n (typ_of_parser p)
 
     | T.Parse_t_at_most n p ->
       T_at_most fn n (typ_of_parser p)
@@ -813,7 +813,7 @@ let rec print_typ (mname:string) (t:typ)
                      (print_typ mname t)
                      c
 
-    | T_nlist fn n t ->
+    | T_nlist fn fixed_size n t ->
       let rec as_constant n =
         let open T in
         match fst n with
@@ -846,9 +846,10 @@ let rec print_typ (mname:string) (t:typ)
         | None -> false, n
         | Some m -> true, (T.Constant m, snd n)
       in
-      Printf.sprintf "(T_nlist \"%s\" %b %s %s)"
+      Printf.sprintf "(T_nlist \"%s\" %b %b %s %s)"
                      fn
                      is_const
+                     fixed_size
                      (T.print_expr mname n)
                      (print_typ mname t)
 

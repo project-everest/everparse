@@ -165,7 +165,7 @@ type parser_kind' =
 and parser_kind = {
   pk_kind : parser_kind';
   pk_weak_kind : A.weak_kind ;
-  pk_nz: bool
+  pk_nz: bool;
 }
 
 val expr_eq (e1 e1:expr) : bool
@@ -177,7 +177,7 @@ noeq
 type parser' =
   | Parse_return    : v:expr -> parser'
   | Parse_app       : hd:A.ident -> args:list index -> parser'
-  | Parse_nlist     : n:expr -> t:parser -> parser'
+  | Parse_nlist     : t_size_constant:bool -> n:expr -> t:parser -> parser'
   | Parse_t_at_most : n:expr -> t:parser -> parser'
   | Parse_t_exact   : n:expr -> t:parser -> parser'
   | Parse_pair      : n1: A.ident -> p:parser -> q:parser -> parser'

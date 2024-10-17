@@ -373,6 +373,18 @@ let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
     let args, decls = args |> List.map translate_typ_param |> List.split in
     T.T_app hd b (List.map Inr args), List.flatten decls
 
+let rec is_fixed_size_array_payload (env:global_env) (t:T.typ)
+: ML bool
+= match t with
+  | T.T_false -> true
+  | T.T_app hd _ _ -> 
+    let size = TypeSizes.size_of_typename env.size_env hd in
+    TS.Fixed? size
+  | T.T_pointer _ -> true
+  | T.T_refine base _ -> is_fixed_size_array_payload env base
+  | T.T_with_comment t _ -> is_fixed_size_array_payload env t
+  | _ -> false
+
 let translate_probe_entrypoint
   (p: A.probe_entrypoint)
 : ML T.probe_entrypoint
@@ -466,11 +478,12 @@ let rec parse_typ (env:global_env)
 
   | T.T_app {v={name="nlist"}} KindSpec [Inr e; Inl t] ->
     let pt = parse_typ env typename (extend_fieldname "element") t in
+    let t_size_constant = is_fixed_size_array_payload env t in
     mk_parser pk_list
               t
               typename
               fieldname
-              (T.Parse_nlist e pt)
+              (T.Parse_nlist t_size_constant e pt)
 
   | T.T_app {v={name="t_at_most"}} KindSpec [Inr e; Inl t] ->
     let pt = parse_typ env typename (extend_fieldname "element") t in
@@ -695,7 +708,7 @@ let rec parser_is_constant_size_without_actions
     -> true
   | T.Parse_app hd _
     -> parser_kind_is_constant_size env hd
-  | T.Parse_nlist array_size parse_elem
+  | T.Parse_nlist _ array_size parse_elem
     -> begin match fst array_size with
       | T.Constant (A.Int _ array_size) -> parser_is_constant_size_without_actions env parse_elem
       | _ -> false

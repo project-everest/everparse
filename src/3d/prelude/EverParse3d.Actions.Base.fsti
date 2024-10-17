@@ -553,6 +553,7 @@ val validate_nlist
 noextract inline_for_extraction
 val validate_nlist_constant_size_without_actions
        (n_is_const: bool)
+       (payload_is_constant_size:bool)
        (n:U32.t)
        (#wk: _)
        (#k:parser_kind true wk)
