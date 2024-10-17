@@ -814,8 +814,41 @@ let rec print_typ (mname:string) (t:typ)
                      c
 
     | T_nlist fn n t ->
-      Printf.sprintf "(T_nlist \"%s\" %s %s)"
+      let rec as_constant n =
+        let open T in
+        match fst n with
+        | Constant (A.Int sw i) ->
+          Some (A.Int sw i)
+        | App (Cast _from to) [ n ] -> (
+          match as_constant n with
+          | Some (A.Int _ i) -> Some (A.Int to i)
+          | _ -> None
+        )
+        | App (Plus _) [ n; m ] -> (
+          match as_constant n, as_constant m with
+          | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i + j))
+          | _ -> None
+        )
+        | App (Minus _) [ n; m ] -> (
+          match as_constant n, as_constant m with
+          | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i - j))
+          | _ -> None
+        )
+        | App (Mul _) [ n; m ] -> (
+          match as_constant n, as_constant m with
+          | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i `op_Multiply` j))
+          | _ -> None
+        )
+        | _ -> None
+      in
+      let is_const, n =
+        match as_constant n with
+        | None -> false, n
+        | Some m -> true, (T.Constant m, snd n)
+      in
+      Printf.sprintf "(T_nlist \"%s\" %b %s %s)"
                      fn
+                     is_const
                      (T.print_expr mname n)
                      (print_typ mname t)
 

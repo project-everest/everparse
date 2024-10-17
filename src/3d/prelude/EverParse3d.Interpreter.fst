@@ -696,6 +696,7 @@ let rec action_as_action
 (* Some AST nodes contain source comments that we propagate to the output *)
 let comments = string
 
+
 [@@ no_auto_projectors]
 noeq
 type typ
@@ -900,6 +901,7 @@ type typ
       fieldname:string ->       
       #wk:_ -> #pk:P.parser_kind true wk ->
       #i:_ -> #l:_ -> #d:_ -> #b:_ ->
+      n_is_constant:bool ->
       n:U32.t ->
       t:typ pk i d l b ->
       typ P.kind_nlist i d l false
@@ -1005,7 +1007,7 @@ let rec as_type
     | T_with_dep_action _ i _ ->
       dtyp_as_type i
 
-    | T_nlist _ n t ->
+    | T_nlist _ _ n t ->
       P.nlist n (as_type t)
 
     | T_at_most _ n t ->
@@ -1094,7 +1096,7 @@ let rec as_parser
       //assert_norm (as_type g (T_with_comment t c) == as_type g t);
       as_parser t
 
-    | T_nlist _ n t ->
+    | T_nlist _ _ n t ->
       P.parse_nlist n (as_parser t)
 
     | T_at_most _ n t ->
@@ -1300,11 +1302,11 @@ let rec as_validator
       assert_norm (as_parser (T_with_comment fn t c) == as_parser t);
       A.validate_with_comment c (as_validator typename t)
 
-    | T_nlist fn n t ->
-      assert_norm (as_type (T_nlist fn n t) == P.nlist n (as_type t));
-      assert_norm (as_parser (T_nlist fn n t) == P.parse_nlist n (as_parser t));
+    | T_nlist fn n_is_const n t ->
+      assert_norm (as_type (T_nlist fn n_is_const n t) == P.nlist n (as_type t));
+      assert_norm (as_parser (T_nlist fn n_is_const n t) == P.parse_nlist n (as_parser t));
       A.validate_with_error_handler typename fn 
-        (A.validate_nlist n (as_validator typename t))
+        (A.validate_nlist_constant_size_without_actions n_is_const n (as_validator typename t))
 
     | T_at_most fn n t ->
       assert_norm (as_type (T_at_most fn n t) == P.t_at_most n (as_type t));
