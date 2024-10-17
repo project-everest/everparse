@@ -1123,6 +1123,24 @@ let rec list_setoid_assoc
   | [] -> None
   | (a, v) :: q -> if equiv x a then Some v else list_setoid_assoc equiv x q
 
+let rec list_setoid_assoc_equiv
+  (#t1: Type)
+  (#t2: Type)
+  (equiv: t1 -> t1 -> bool {
+    (forall x . equiv x x) /\
+    (forall x y . equiv x y == equiv y x) /\
+    order_trans equiv
+  })
+  (l: list (t1 & t2))
+  (x x': t1)
+: Lemma
+  (requires (equiv x x'))
+  (ensures (list_setoid_assoc equiv x l == list_setoid_assoc equiv x' l))
+= match l with
+  | [] -> ()
+  | a :: q ->
+    list_setoid_assoc_equiv equiv q x x'
+
 let rec list_setoid_assoc_mem
   (#t1: Type)
   (#t2: Type)

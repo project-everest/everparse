@@ -111,7 +111,7 @@ val cbor_det_map_entry_match: perm -> cbor_det_map_entry_t -> Spec.cbor & Spec.c
 
 val cbor_det_mk_map () : mk_map_t cbor_det_match cbor_det_map_entry_match
 
-(* Destructors
+(* Destructors *)
 
 val cbor_det_equal () : equal_t cbor_det_match
 val cbor_det_major_type () : get_major_type_t cbor_det_match

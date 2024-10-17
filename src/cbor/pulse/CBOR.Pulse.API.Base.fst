@@ -107,6 +107,14 @@ let read_simple_value_t
     (vmatch p x y ** pure (CSimple? (unpack y)))
     (fun res -> vmatch p x y ** pure (unpack y == CSimple res))
 
+let read_uint64_post
+  (y: cbor)
+  (res: FStar.UInt64.t)
+: Tot prop
+= match unpack y with
+    | CInt64 _ v -> res == v
+    | _ -> False
+
 inline_for_extraction
 let read_uint64_t
   (#t: Type)
@@ -116,10 +124,15 @@ let read_uint64_t
   (#y: Ghost.erased cbor) ->
   stt FStar.UInt64.t
     (vmatch p x y ** pure (CInt64? (unpack y)))
-    (fun res -> vmatch p x y ** pure (match unpack y with
-    | CInt64 _ v -> res == v
-    | _ -> False
-    ))
+    (fun res -> vmatch p x y ** pure (read_uint64_post y res))
+
+let get_string_post
+  (y: cbor)
+  (v' : Seq.seq FStar.UInt8.t)
+: Tot prop
+= match unpack y with
+      | CString _ v -> v == v'
+      | _ -> False
 
 inline_for_extraction
 let get_string_t
@@ -135,11 +148,16 @@ let get_string_t
       Trade.trade
         (pts_to res #p' v')
         (vmatch p x y) **
-      pure (match unpack y with
-      | CString _ v -> v == v'
-      | _ -> False
-      )
+      pure (get_string_post y v')
     )
+
+let get_tagged_tag_post
+  (y: cbor)
+  (res: FStar.UInt64.t)
+: Tot prop
+= match unpack y with
+    | CTagged tag _ -> res == tag
+    | _ -> False
 
 inline_for_extraction
 let get_tagged_tag_t
@@ -150,10 +168,17 @@ let get_tagged_tag_t
   (#y: Ghost.erased cbor) ->
   stt FStar.UInt64.t
     (vmatch p x y ** pure (CTagged? (unpack y)))
-    (fun res -> vmatch p x y ** pure (match unpack y with
-    | CTagged tag _ -> res == tag
-    | _ -> False
+    (fun res -> vmatch p x y ** pure (
+      get_tagged_tag_post y res
     ))
+
+let get_tagged_payload_post
+  (y: cbor)
+  (v' : cbor)
+: Tot prop
+= match unpack y with
+      | CTagged _ v -> v == v'
+      | _ -> False
 
 inline_for_extraction
 let get_tagged_payload_t
@@ -169,11 +194,16 @@ let get_tagged_payload_t
       Trade.trade
         (vmatch p' res v')
         (vmatch p x y) **
-      pure (match unpack y with
-      | CTagged _ v -> v == v'
-      | _ -> False
-      )
+      pure (get_tagged_payload_post y v')
     )
+
+let get_array_length_post
+  (y: cbor)
+  (res: FStar.UInt64.t)
+: Tot prop
+= match unpack y with
+      | CArray v -> FStar.UInt64.v res == List.Tot.length v
+      | _ -> False
 
 inline_for_extraction
 let get_array_length_t
@@ -184,11 +214,20 @@ let get_array_length_t
   (#y: Ghost.erased cbor) ->
   stt FStar.UInt64.t
     (vmatch p x y ** pure (CArray? (unpack y)))
-    (fun res -> vmatch p x y ** pure (match unpack y with
-      | CArray v -> FStar.UInt64.v res == List.Tot.length v
-      | _ -> False
+    (fun res -> vmatch p x y ** pure (
+       get_array_length_post y res
       )
     )
+
+let get_array_item_post
+  (i: FStar.UInt64.t)
+  (y: cbor)
+  (y' : cbor)
+: Tot prop
+= match unpack y with
+      | CArray v -> U64.v i < List.Tot.length v /\
+        List.Tot.nth v (U64.v i) == Some y'
+      | _ -> False
 
 inline_for_extraction
 let get_array_item_t
@@ -206,11 +245,7 @@ let get_array_item_t
     (fun res -> exists* p' y' .
       vmatch p' res y' **
       Trade.trade (vmatch p' res y') (vmatch p x y) **
-      pure (match unpack y with
-      | CArray v -> U64.v i < List.Tot.length v /\
-        List.Tot.nth v (U64.v i) == Some y'
-      | _ -> False
-      )
+      pure (get_array_item_post i y y')
     )
 
 inline_for_extraction
@@ -264,6 +299,14 @@ let array_iterator_next_t
       pure (Ghost.reveal z == v' :: z')
     )
 
+let get_map_length_post
+  (y: cbor)
+  (res: FStar.UInt64.t)
+: Tot prop
+= match unpack y with
+      | CMap v -> FStar.UInt64.v res == cbor_map_length v
+      | _ -> False
+
 inline_for_extraction
 let get_map_length_t
   (#t: Type)
@@ -273,11 +316,20 @@ let get_map_length_t
   (#y: Ghost.erased cbor) ->
   stt FStar.UInt64.t
     (vmatch p x y ** pure (CMap? (unpack y)))
-    (fun res -> vmatch p x y ** pure (match unpack y with
-      | CMap v -> FStar.UInt64.v res == cbor_map_length v
-      | _ -> False
+    (fun res -> vmatch p x y ** pure (
+       get_map_length_post y res
       )
     )
+
+let map_iterator_start_post
+  (y: cbor)
+  (l' : list (cbor & cbor))
+: Tot prop
+= match unpack y with
+      | CMap l -> (forall k . cbor_map_get l k == List.Tot.assoc k l') /\
+        List.Tot.length l' == cbor_map_length l /\
+        List.Tot.no_repeats_p (List.Tot.map fst l')
+      | _ -> False
 
 inline_for_extraction
 let map_iterator_start_t
@@ -294,11 +346,8 @@ let map_iterator_start_t
       Trade.trade
         (iter p' res l')
         (vmatch p x y) **
-      pure (match unpack y with
-      | CMap l -> (forall k . cbor_map_get l k == List.Tot.assoc k l') /\
-        List.Tot.length l' == cbor_map_length l /\
-        List.Tot.no_repeats_p (List.Tot.map fst l')
-      | _ -> False
+      pure (
+        map_iterator_start_post y l'
     ))
 
 inline_for_extraction
