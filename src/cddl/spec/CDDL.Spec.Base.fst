@@ -1,5 +1,5 @@
 module CDDL.Spec.Base
-module Cbor = CBOR.Spec
+module Cbor = CBOR.Spec.API.Type
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 
@@ -16,7 +16,7 @@ let opt_precedes
   | Some x2 -> x1 << x2
 
 [@@noextract_to "krml"]
-let bounded_typ_gen (e: option Cbor.raw_data_item) = (e': Cbor.raw_data_item { opt_precedes e' e }) -> GTot bool  // GTot needed because of the .cbor control (staged serialization)
+let bounded_typ_gen (e: option Cbor.cbor) = (e': Cbor.cbor { opt_precedes e' e }) -> Tot bool
 
 [@@noextract_to "krml"]
 let typ = bounded_typ_gen None
@@ -25,17 +25,17 @@ let any : typ = (fun _ -> true)
 let t_always_false : typ = (fun _ -> false)
 
 [@@noextract_to "krml"]
-let bounded_typ (e: Cbor.raw_data_item) = bounded_typ_gen (Some e)
+let bounded_typ (e: Cbor.cbor) = bounded_typ_gen (Some e)
 
 let coerce_to_bounded_typ
-  (b: option Cbor.raw_data_item)
+  (b: option Cbor.cbor)
   (t: typ)
 : Tot (bounded_typ_gen b)
 = t
 
 noextract
 let typ_equiv
-  (#b: option Cbor.raw_data_item)
+  (#b: option Cbor.cbor)
   (t1 t2: bounded_typ_gen b)
 : Tot prop
 = forall x . t1 x == t2 x
@@ -44,12 +44,12 @@ let typ_included (f1 f2: typ) : Tot prop =
   forall x . f1 x ==> f2 x
 
 let typ_disjoint (a1 a2: typ) : Tot prop
-= (forall (l: Cbor.raw_data_item) . ~ (a1 l /\ a2 l))
+= (forall (l: Cbor.cbor) . ~ (a1 l /\ a2 l))
 
-let t_literal (i: Cbor.raw_data_item) : typ =
-  (fun x -> FStar.StrongExcludedMiddle.strong_excluded_middle (x == i))
+let t_literal (i: Cbor.cbor) : typ =
+  (fun x -> x = i)
 
-let t_choice (#b: option Cbor.raw_data_item) (t1 t2: bounded_typ_gen b) : bounded_typ_gen b = (fun x -> t1 x || t2 x)
+let t_choice (#b: option Cbor.cbor) (t1 t2: bounded_typ_gen b) : bounded_typ_gen b = (fun x -> t1 x || t2 x)
 
 let t_choice_equiv
   #b
@@ -84,12 +84,11 @@ let bij_id (t: Type) : bijection t t = {
   bij_to_from_to = ();
 }
 
-let parser_spec (source:typ) (target: Type0) (target_prop: target -> prop) = (c: CBOR.Spec.raw_data_item { source c }) -> GTot (y: target { target_prop y })
+let parser_spec (source:typ) (target: Type0) (target_prop: target -> prop) = (c: Cbor.cbor { source c }) -> Tot (y: target { target_prop y })
 
 let serializer_spec (#source:typ) (#target: Type0) (#target_prop: target -> prop) (p: parser_spec source target target_prop) =
-  ((x: target { target_prop x }) -> GTot (y: CBOR.Spec.raw_data_item { source y /\ p y == x }))
+  ((x: target { target_prop x }) -> Tot (y: Cbor.cbor { source y /\ p y == x }))
 
-[@@erasable]
 noeq
 type spec (source:typ) (target: Type0) = {
   serializable: target -> prop;
@@ -141,14 +140,14 @@ let spec_bij (#source:typ) (#target1 #target2: Type0) (p: spec source target1) (
   serializer = serialize_spec_bij p.serializer bij;
 }
 
-let parser_spec_literal (x: CBOR.Spec.raw_data_item) (p: unit -> prop { p () }) : Tot (parser_spec (t_literal x) unit p) =
+let parser_spec_literal (x: Cbor.cbor) (p: unit -> prop { p () }) : Tot (parser_spec (t_literal x) unit p) =
   fun _ -> ()
 
-let serializer_spec_literal (x: CBOR.Spec.raw_data_item) (p: unit -> prop { p () }) : Tot (serializer_spec (parser_spec_literal x p)) = (fun _ -> x)
+let serializer_spec_literal (x: Cbor.cbor) (p: unit -> prop { p () }) : Tot (serializer_spec (parser_spec_literal x p)) = (fun _ -> x)
 
 let spec_literal_serializable (_: unit) : Tot prop = True
 
-let spec_literal (x: CBOR.Spec.raw_data_item) : Tot  (spec (t_literal x) unit) = {
+let spec_literal (x: Cbor.cbor) : Tot  (spec (t_literal x) unit) = {
   serializable = spec_literal_serializable;
   parser = parser_spec_literal x _;
   serializer = serializer_spec_literal x _;
