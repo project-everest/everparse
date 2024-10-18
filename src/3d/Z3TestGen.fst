@@ -912,7 +912,7 @@ let rec typ_depth (t: I.typ) : GTot nat
 = match t with
   | I.T_if_else _ t1 t2 // 2 accounts for the call to parse_then_else_with_branch_trace
     -> 2 + typ_depth t1 + typ_depth t2
-  | I.T_pair _ t1 t2
+  | I.T_pair _ _ t1 _ t2
     -> 1 + typ_depth t1 + typ_depth t2
   | I.T_dep_pair _ _ (_, t')
   | I.T_dep_pair_with_action _ _ (_, t') _
@@ -941,7 +941,7 @@ let rec parse_typ (t : I.typ) : Tot (parser not_reading)
   | I.T_false _ -> parse_false
   | I.T_with_dep_action _ d _
   | I.T_denoted _ d -> parse_denoted d
-  | I.T_pair _ t1 t2 -> parse_pair (parse_typ t1) (parse_typ t2)
+  | I.T_pair _ _ t1 _ t2 -> parse_pair (parse_typ t1) (parse_typ t2)
   | I.T_dep_pair_with_action _ t1 (lam, t2) _
   | I.T_dep_pair _ t1 (lam, t2) -> parse_dep_pair (parse_readable_dtyp t1) lam (parse_typ t2)
   | I.T_refine_with_action _ base (lam, cond) _

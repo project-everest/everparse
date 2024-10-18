@@ -87,7 +87,9 @@ type typ : Type =
 
   | T_pair:
       fn:non_empty_string ->
+      k1_const: bool -> // whether t1 is a total compile-time constant size type without actions
       t1:typ ->
+      k2_const: bool ->
       t2:typ ->
       typ
 

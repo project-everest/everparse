@@ -230,7 +230,7 @@ let tag_of_parser p
     | Parse_nlist _ _ _ -> "Parse_nlist"
     | Parse_t_at_most _ _ -> "Parse_t_at_most"
     | Parse_t_exact _ _ -> "Parse_t_exact"
-    | Parse_pair _ _ _ -> "Parse_pair"
+    | Parse_pair _ _ _ _ _ -> "Parse_pair"
     | Parse_dep_pair _ _ _ -> "Parse_dep_pair"
     | Parse_dep_pair_with_refinement _ _ _ _ -> "Parse_dep_pair_with_refinement"
     | Parse_dep_pair_with_action _ _ _ -> "Parse_dep_pair_with_action"
@@ -337,7 +337,7 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
       end
 
     | T.Parse_if_else _ p q
-    | T.Parse_pair _ p q ->
+    | T.Parse_pair _ _ p _ q ->
       typ_indexes_union (typ_indexes_of_parser p) (typ_indexes_of_parser q)
 
     | T.Parse_dep_pair _ p (_, q)
@@ -418,8 +418,8 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
     | T.Parse_app _ _ ->
       T_denoted fn (dtyp_of_parser p)
 
-    | T.Parse_pair _ p q ->
-      T_pair (nes p.p_fieldname) (typ_of_parser p) (typ_of_parser q)
+    | T.Parse_pair _ p_const p q_const q ->
+      T_pair (nes p.p_fieldname) p_const (typ_of_parser p) q_const (typ_of_parser q)
 
     | T.Parse_with_comment p c ->
       T_with_comment fn (typ_of_parser p) (String.concat "; " c)
@@ -555,7 +555,7 @@ let rec has_action_of_typ (t:typ)
     | DT_IType i -> false
     | DT_App has_action readable _ _ -> has_action
     end
-  | T_pair _ t1 t2 ->
+  | T_pair _ _ t1 _ t2 ->
     has_action_of_typ t1 || has_action_of_typ t2
   | T_dep_pair _ t1 (_, t2) ->
     has_action_of_dtyp t1 || has_action_of_typ t2
@@ -772,10 +772,12 @@ let rec print_typ (mname:string) (t:typ)
                      fn
                      (print_dtyp mname dt)
 
-    | T_pair fn t1 t2 ->
-      Printf.sprintf "(T_pair \"%s\" %s %s)"
+    | T_pair fn t1_const t1 t2_const t2 ->
+      Printf.sprintf "(T_pair \"%s\" %s %s %s %s)"
                      fn
+                     (if t1_const then "true" else "false")
                      (print_typ mname t1)
+                     (if t2_const then "true" else "false")
                      (print_typ mname t2)
 
     | T_dep_pair fn t k ->
