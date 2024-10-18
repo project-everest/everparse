@@ -168,9 +168,13 @@ let rec is_fixed_size_array_payload (env:global_env) (t:T.typ)
 : ML bool
 = match t with
   | T.T_false -> true
-  | T.T_app hd _ _ -> 
-    let size = TypeSizes.size_of_typename env.size_env hd in
-    TS.Fixed? size
+  | T.T_app hd _ _ ->
+    begin
+      try
+        let size = TypeSizes.size_of_typename env.size_env hd in
+        TS.Fixed? size
+      with _ -> false
+    end
   | T.T_pointer _ -> true
   | T.T_refine base _ -> is_fixed_size_array_payload env base
   | T.T_with_comment t _ -> is_fixed_size_array_payload env t
