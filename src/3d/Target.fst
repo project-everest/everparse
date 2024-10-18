@@ -414,6 +414,10 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
     Printf.sprintf "(%s %s)"
       hd'
       (String.concat " " (print_indexes mname args))
+  | T_nlist elt n ->
+    Printf.sprintf "(nlist %s %s)"
+      (print_expr mname n)
+      (print_typ mname elt)
   | T_pair t1 t2 ->
     Printf.sprintf "(%s & %s)"
       (print_typ mname t1)
