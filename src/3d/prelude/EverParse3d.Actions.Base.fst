@@ -495,6 +495,7 @@ let validate_pair
       false
   =
     if k1_const && k2_const &&
+      (not ha1) && (not ha2) && // IMPORTANT: do not erase actions from v1, v2
       k1.parser_kind_high = Some k1.parser_kind_low &&
       k1.parser_kind_metadata = Some LP.ParserKindMetadataTotal &&
       k2.parser_kind_high = Some k2.parser_kind_low &&
