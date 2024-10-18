@@ -93,6 +93,7 @@ noeq
 type typ =
   | T_false    : typ
   | T_app      : hd:A.ident -> A.t_kind -> args:list index -> typ
+  | T_pair     : fst: typ -> snd: typ -> typ
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
   | T_refine   : base:typ -> refinement:lam expr -> typ
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ
@@ -180,7 +181,7 @@ type parser' =
   | Parse_nlist     : t_size_constant:bool -> n:expr -> t:parser -> parser'
   | Parse_t_at_most : n:expr -> t:parser -> parser'
   | Parse_t_exact   : n:expr -> t:parser -> parser'
-  | Parse_pair      : n1: A.ident -> p:parser -> q:parser -> parser'
+  | Parse_pair      : n1: A.ident -> p_is_const: bool -> p:parser -> q_is_const: bool -> q:parser -> parser' // p_is_const, q_is_const record whether p and q are total compile-time constant size parsers
   | Parse_dep_pair  : n1: A.ident -> p:parser -> k:lam parser -> parser'
   | Parse_dep_pair_with_refinement: n1: A.ident -> dfst:parser -> refinement:lam expr -> dsnd:lam parser -> parser'
   | Parse_dep_pair_with_action: dfst:parser -> a:lam action -> dsnd:lam parser -> parser'

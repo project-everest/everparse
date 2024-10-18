@@ -734,7 +734,9 @@ type typ
       #i1:_ -> #d1:_ -> #l1:_ -> #ha1:_ -> #b1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #ha2:_ -> #b2:_ ->
+      k1_const: bool ->
       t1:typ pk1 i1 d1 l1 ha1 b1 ->
+      k2_const: bool ->
       t2:typ pk2 i2 d2 l2 ha2 b2 ->
       typ (P.and_then_kind pk1 pk2) 
           (join_inv i1 i2)
@@ -995,7 +997,7 @@ let rec as_type
     | T_denoted _ td -> 
       dtyp_as_type td
 
-    | T_pair _ t1 t2 ->
+    | T_pair _ _ t1 _ t2 ->
       as_type t1 & as_type t2
 
     | T_dep_pair _ i t
@@ -1057,7 +1059,7 @@ let rec as_parser
     | T_denoted _ d ->
       dtyp_as_parser d
 
-    | T_pair _ t1 t2 ->
+    | T_pair _ _ t1 _ t2 ->
       //assert_norm (as_type g (T_pair t1 t2) == as_type g t1 * as_type g t2);
       let p1 = as_parser t1 in
       let p2 = as_parser t2 in
@@ -1192,11 +1194,13 @@ let rec as_validator
       assert_norm (as_parser (T_denoted fn td) == dtyp_as_parser td);
       A.validate_with_error_handler typename fn (A.validate_eta (dtyp_as_validator td))
 
-    | T_pair fn t1 t2 ->
-      assert_norm (as_type (T_pair fn t1 t2) == as_type t1 * as_type t2);
-      assert_norm (as_parser (T_pair fn t1 t2) == P.parse_pair (as_parser t1) (as_parser t2));
+    | T_pair fn k1_const t1 k2_const t2 ->
+      assert_norm (as_type (T_pair fn k1_const t1 k2_const t2) == as_type t1 * as_type t2);
+      assert_norm (as_parser (T_pair fn k1_const t1 k2_const t2) == P.parse_pair (as_parser t1) (as_parser t2));
       A.validate_pair fn
+          k1_const
           (as_validator typename t1)
+          k2_const
           (as_validator typename t2)
     
     | T_dep_pair fn i t ->

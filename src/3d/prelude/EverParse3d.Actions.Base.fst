@@ -435,14 +435,76 @@ let validate_ret
 
 module LPC = LowParse.Spec.Combinators
 
+inline_for_extraction
+noextract
+let validate_total_constant_size_no_read'
+  (#k: LP.parser_kind)
+  (#t: Type)
+  (p: LP.parser k t)
+  (sz: U64.t)
+  (u: unit {
+    k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+    k.LP.parser_kind_low == U64.v sz /\
+    k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
+  })
+  inv disj l
+: validate_with_action_t' p inv disj l false true
+= fun ctxt error_handler_fn input input_length start_position ->
+  [@inline_let] let pos = start_position in
+  let h = HST.get () in
+  LP.parser_kind_prop_equiv k p; 
+  let hasBytes = I.has input input_length pos sz in
+  let h2 = HST.get () in
+  modifies_address_liveness_insensitive_unused_in h h2;
+  if hasBytes
+  then pos `U64.add` sz
+  else LPE.set_validator_error_pos LPE.validator_error_not_enough_data pos
+
+inline_for_extraction
+noextract
+let validate_total_constant_size_no_read
+  #nz #wk
+  (#k: parser_kind nz wk)
+  (#t: Type)
+  (p: parser k t)
+  (sz: U64.t)
+  (u: unit {
+    k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
+    k.LP.parser_kind_low == U64.v sz /\
+    k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
+  })
+  inv disj l
+: Tot (validate_with_action_t p inv disj l false true)
+= validate_total_constant_size_no_read' p sz u inv disj l
+
 inline_for_extraction noextract
 let validate_pair
        (name1: string)
        #nz1 (#k1:parser_kind nz1 WeakKindStrongPrefix) #t1 (#p1:parser k1 t1)
+       (k1_const: bool)
        (#inv1 #disj1:_) (#l1:eloc) (#ha1 #ar1:_) (v1:validate_with_action_t p1 inv1 disj1 l1 ha1 ar1)
        #nz2 #wk2 (#k2:parser_kind nz2 wk2) #t2 (#p2:parser k2 t2)
+       (k2_const: bool)
        (#inv2 #disj2:_) (#l2:eloc) (#ha2 #ar2:_) (v2:validate_with_action_t p2 inv2 disj2 l2 ha2 ar2)
-  = fun ctxt error_handler_fn input input_length start_position ->
+  : validate_with_action_t
+      (p1 `parse_pair` p2)
+      (conj_inv inv1 inv2)
+      (conj_disjointness disj1 disj2)
+      (l1 `eloc_union` l2)
+      (ha1 || ha2)
+      false
+  =
+    if k1_const && k2_const &&
+      (not ha1) && (not ha2) && // IMPORTANT: do not erase actions from v1, v2
+      k1.parser_kind_high = Some k1.parser_kind_low &&
+      k1.parser_kind_metadata = Some LP.ParserKindMetadataTotal &&
+      k2.parser_kind_high = Some k2.parser_kind_low &&
+      k2.parser_kind_metadata = Some LP.ParserKindMetadataTotal &&
+      k1.parser_kind_low + k2.parser_kind_low < 4294967296
+    then
+      validate_drop (validate_total_constant_size_no_read (p1 `parse_pair` p2) (U64.uint_to_t (k1.parser_kind_low + k2.parser_kind_low)) () (conj_inv inv1 inv2) (conj_disjointness disj1 disj2) (l1 `eloc_union` l2))
+    else
+    fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos = start_position in
     let h = HST.get () in
     LPC.nondep_then_eq p1 p2 (I.get_remaining input h);
@@ -1158,48 +1220,6 @@ let validate_nlist
     #false #WeakKindStrongPrefix #(LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) #(list t)
     (validate_fldata_consumes_all n (validate_list v))
     kind_nlist
-
-inline_for_extraction
-noextract
-let validate_total_constant_size_no_read'
-  (#k: LP.parser_kind)
-  (#t: Type)
-  (p: LP.parser k t)
-  (sz: U64.t)
-  (u: unit {
-    k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
-    k.LP.parser_kind_low == U64.v sz /\
-    k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
-  })
-  inv disj l
-: validate_with_action_t' p inv disj l false true
-= fun ctxt error_handler_fn input input_length start_position ->
-  [@inline_let] let pos = start_position in
-  let h = HST.get () in
-  LP.parser_kind_prop_equiv k p; 
-  let hasBytes = I.has input input_length pos sz in
-  let h2 = HST.get () in
-  modifies_address_liveness_insensitive_unused_in h h2;
-  if hasBytes
-  then pos `U64.add` sz
-  else LPE.set_validator_error_pos LPE.validator_error_not_enough_data pos
-
-inline_for_extraction
-noextract
-let validate_total_constant_size_no_read
-  #nz #wk
-  (#k: parser_kind nz wk)
-  (#t: Type)
-  (p: parser k t)
-  (sz: U64.t)
-  (u: unit {
-    k.LP.parser_kind_high == Some k.LP.parser_kind_low /\
-    k.LP.parser_kind_low == U64.v sz /\
-    k.LP.parser_kind_metadata == Some LP.ParserKindMetadataTotal
-  })
-  inv disj l
-: Tot (validate_with_action_t p inv disj l false true)
-= validate_total_constant_size_no_read' p sz u inv disj l
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size_mod_ok
