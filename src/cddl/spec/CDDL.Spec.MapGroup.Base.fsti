@@ -1,17 +1,16 @@
-module CDDL.Spec.MapGroupGen.Base
+module CDDL.Spec.MapGroup.Base
 include CDDL.Spec.Base
-include CDDL.Spec.GhostMap
-module Cbor = CBOR.Spec
+module Cbor = CBOR.Spec.API.Type
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 
 let map_group_item_post
-  (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
-  (l': (ghost_map Cbor.raw_data_item Cbor.raw_data_item & ghost_map Cbor.raw_data_item Cbor.raw_data_item))
+  (l: Cbor.cbor_map)
+  (l': (Cbor.cbor_map & Cbor.cbor_map))
 : Tot prop
 =
-  fst l' `ghost_map_disjoint` snd l' /\
-  (fst l' `ghost_map_union` snd l') == l
+  fst l' `Cbor.cbor_map_disjoint` snd l' /\
+  (fst l' `Cbor.cbor_map_union` snd l') == l
 
 [@@erasable]
 val map_group : Type0
@@ -24,8 +23,8 @@ val map_group_end : map_group
 
 let matches_map_group_entry
   (key value: typ)
-  (x: (Cbor.raw_data_item & Cbor.raw_data_item))
-: GTot bool
+  (x: (Cbor.cbor & Cbor.cbor))
+: Tot bool
 = key (fst x) && value (snd x)
 
 val map_group_match_item (cut: bool) (key value: typ) : map_group
@@ -138,7 +137,7 @@ let map_group_one_or_more (m: map_group) : map_group =
 
 let map_group_match_item_for
   (cut: bool)
-  (k: Cbor.raw_data_item)
+  (k: Cbor.cbor)
   (ty: typ)
 : Tot map_group
 = map_group_match_item cut (t_literal k) ty
@@ -154,31 +153,31 @@ type map_group_result =
 | MapGroupCutFail
 | MapGroupFail
 | MapGroupDet:
-  (consumed: ghost_map Cbor.raw_data_item Cbor.raw_data_item) ->
-  (remaining: ghost_map Cbor.raw_data_item Cbor.raw_data_item) ->
+  (consumed: Cbor.cbor_map) ->
+  (remaining: Cbor.cbor_map) ->
   map_group_result
 | MapGroupNonDet
 
-let map_group_result_prop (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item) (r: map_group_result) : Tot prop =
+let map_group_result_prop (l: Cbor.cbor_map) (r: map_group_result) : Tot prop =
   match r with
   | MapGroupDet c m -> map_group_item_post l (c, m)
   | _ -> True
 
-val apply_map_group_det (m: map_group) (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item) : Pure map_group_result
+val apply_map_group_det (m: map_group) (l: Cbor.cbor_map) : Pure map_group_result
   (requires True)
   (ensures fun r -> map_group_result_prop l r)
 
-val apply_map_group_det_always_false (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item) : Lemma
+val apply_map_group_det_always_false (l: Cbor.cbor_map) : Lemma
   (apply_map_group_det map_group_always_false l == MapGroupFail)
   [SMTPat (apply_map_group_det map_group_always_false l)]
 
-val apply_map_group_det_nop (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item) : Lemma
-  (apply_map_group_det map_group_nop l == MapGroupDet ghost_map_empty l)
+val apply_map_group_det_nop (l: Cbor.cbor_map) : Lemma
+  (apply_map_group_det map_group_nop l == MapGroupDet Cbor.cbor_map_empty l)
   [SMTPat (apply_map_group_det map_group_nop l)]
 
-val apply_map_group_det_end (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item) : Lemma
-  (apply_map_group_det map_group_end ghost_map_empty == MapGroupDet ghost_map_empty ghost_map_empty /\
-    ((~ (l == ghost_map_empty)) ==> apply_map_group_det map_group_end l == MapGroupFail)
+val apply_map_group_det_end (l: Cbor.cbor_map) : Lemma
+  (apply_map_group_det map_group_end Cbor.cbor_map_empty == MapGroupDet Cbor.cbor_map_empty Cbor.cbor_map_empty /\
+    ((~ (l == Cbor.cbor_map_empty)) ==> apply_map_group_det map_group_end l == MapGroupFail)
   )
   [SMTPat (apply_map_group_det map_group_end l)]
 
@@ -194,10 +193,10 @@ val apply_map_group_det_map_group_equiv (m1: det_map_group) (m2: map_group) : Le
   (ensures m1 == m2)
 
 let apply_map_group_det_map_group_equiv0 (m1 m2: map_group)
-  (prf1: (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item) -> Lemma
+  (prf1: (l: Cbor.cbor_map) -> Lemma
     (~ (MapGroupNonDet? (apply_map_group_det m1 l)))
   )
-  (prf2: (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item) -> Lemma
+  (prf2: (l: Cbor.cbor_map) -> Lemma
     (apply_map_group_det m1 l == apply_map_group_det m2 l)
   )
 : Lemma
@@ -206,7 +205,7 @@ let apply_map_group_det_map_group_equiv0 (m1 m2: map_group)
   Classical.forall_intro prf2;
   apply_map_group_det_map_group_equiv m1 m2
 
-val apply_map_group_det_choice (m1 m2: map_group) (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item) : Lemma
+val apply_map_group_det_choice (m1 m2: map_group) (l: Cbor.cbor_map) : Lemma
   (match apply_map_group_det m1 l with
   | MapGroupCutFail -> apply_map_group_det (m1 `map_group_choice` m2) l == MapGroupCutFail
   | MapGroupFail -> apply_map_group_det (m1 `map_group_choice` m2) l == apply_map_group_det m2 l
@@ -215,13 +214,13 @@ val apply_map_group_det_choice (m1 m2: map_group) (l: ghost_map Cbor.raw_data_it
   )
   [SMTPat (apply_map_group_det (map_group_choice m1 m2) l)]
 
-val apply_map_group_det_concat (m1 m2: map_group) (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item) : Lemma
+val apply_map_group_det_concat (m1 m2: map_group) (l: Cbor.cbor_map) : Lemma
   (match apply_map_group_det m1 l with
   | MapGroupCutFail -> apply_map_group_det (m1 `map_group_concat` m2) l == MapGroupCutFail
   | MapGroupFail -> apply_map_group_det (m1 `map_group_concat` m2) l == MapGroupFail
   | MapGroupDet c1 l1 ->
     apply_map_group_det (m1 `map_group_concat` m2) l == begin match apply_map_group_det m2 l1 with
-    | MapGroupDet c2 l2 -> MapGroupDet (c1 `ghost_map_union` c2) l2
+    | MapGroupDet c2 l2 -> MapGroupDet (c1 `Cbor.cbor_map_union` c2) l2
     | res -> res
     end
   | _ -> True)
@@ -236,15 +235,15 @@ let map_group_is_det_concat (m1 m2: det_map_group) : Lemma
 
 val apply_map_group_det_match_item_for
   (cut: bool)
-  (k: Cbor.raw_data_item)
+  (k: Cbor.cbor)
   (ty: typ)
-  (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+  (l: Cbor.cbor_map)
 : Lemma
-  (apply_map_group_det (map_group_match_item_for cut k ty) l == (match apply_ghost_map l k with
+  (apply_map_group_det (map_group_match_item_for cut k ty) l == (match Cbor.cbor_map_get l k with
   | None ->  MapGroupFail
   | Some x ->
     if ty x
-    then MapGroupDet (ghost_map_singleton k x) (ghost_map_filter (notp_g (matches_map_group_entry (t_literal k) ty)) l)
+    then MapGroupDet (Cbor.cbor_map_singleton k x) (Cbor.cbor_map_filter (CBOR.Spec.Util.notp (matches_map_group_entry (t_literal k) ty)) l)
     else if cut
     then MapGroupCutFail
     else MapGroupFail
@@ -253,42 +252,42 @@ val apply_map_group_det_match_item_for
 
 let map_group_is_det_match_item_for
   (cut: bool)
-  (k: Cbor.raw_data_item)
+  (k: Cbor.cbor)
   (ty: typ)
 : Lemma
   (map_group_is_det (map_group_match_item_for cut k ty))
 = ()
 
 val map_group_filter
-  (f: (Cbor.raw_data_item & Cbor.raw_data_item) -> GTot bool)
+  (f: (Cbor.cbor & Cbor.cbor) -> Tot bool)
 : map_group
 
 val apply_map_group_det_filter
-  (f: (Cbor.raw_data_item & Cbor.raw_data_item) -> GTot bool)
-  (l: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+  (f: (Cbor.cbor & Cbor.cbor) -> Tot bool)
+  (l: Cbor.cbor_map)
 : Lemma
   (apply_map_group_det (map_group_filter f) l ==
-    MapGroupDet (ghost_map_filter (notp_g f) l) (ghost_map_filter f l)
+    MapGroupDet (Cbor.cbor_map_filter (CBOR.Spec.Util.notp f) l) (Cbor.cbor_map_filter f l)
   )
   [SMTPat (apply_map_group_det (map_group_filter f) l)]
 
-val map_group_filter_filter (p1 p2: (Cbor.raw_data_item & Cbor.raw_data_item) -> GTot bool) : Lemma
-  (map_group_filter p1 `map_group_concat` map_group_filter p2 == map_group_filter (andp_g p1 p2))
+val map_group_filter_filter (p1 p2: (Cbor.cbor & Cbor.cbor) -> Tot bool) : Lemma
+  (map_group_filter p1 `map_group_concat` map_group_filter p2 == map_group_filter (CBOR.Spec.Util.andp p1 p2))
   [SMTPat (map_group_filter p1 `map_group_concat` map_group_filter p2)]
 
-let map_group_filter_ext (p1 p2: _ -> GTot bool) : Lemma
+let map_group_filter_ext (p1 p2: _ -> Tot bool) : Lemma
   (requires forall x . p1 x == p2 x)
   (ensures map_group_filter p1 == map_group_filter p2)
 =
-  Classical.forall_intro (Classical.move_requires (ghost_map_filter_ext (notp_g p1) (notp_g p2)));
-  Classical.forall_intro (Classical.move_requires (ghost_map_filter_ext p1 p2));
+  assert (forall x . Cbor.cbor_map_filter p1 x `Cbor.cbor_map_equal` Cbor.cbor_map_filter p2 x);
+  assert (forall x . Cbor.cbor_map_filter (CBOR.Spec.Util.notp p1) x `Cbor.cbor_map_equal` Cbor.cbor_map_filter (CBOR.Spec.Util.notp p2) x);
   apply_map_group_det_map_group_equiv
     (map_group_filter p1)
     (map_group_filter p2)
-  
-val map_group_zero_or_one_match_item_filter (key value: typ) (p: (Cbor.raw_data_item & Cbor.raw_data_item) -> GTot bool) : Lemma
+
+val map_group_zero_or_one_match_item_filter (key value: typ) (p: (Cbor.cbor & Cbor.cbor) -> Tot bool) : Lemma
   (requires (
-    forall x . p x ==> notp_g (matches_map_group_entry key value) x
+    forall x . p x ==> CBOR.Spec.Util.notp (matches_map_group_entry key value) x
   ))
   (ensures
     map_group_zero_or_one (map_group_match_item false key value) `map_group_concat` map_group_filter p == map_group_filter p
@@ -297,7 +296,7 @@ val map_group_zero_or_one_match_item_filter (key value: typ) (p: (Cbor.raw_data_
 
 val map_group_zero_or_more_match_item_filter (key value: typ) : Lemma
   (map_group_zero_or_more (map_group_match_item false key value) ==
-    map_group_filter (notp_g (matches_map_group_entry key value))
+    map_group_filter (CBOR.Spec.Util.notp (matches_map_group_entry key value))
   )
   [SMTPat (map_group_zero_or_more (map_group_match_item false key value))]
 
@@ -309,14 +308,14 @@ let map_group_zero_or_more_match_item_choice_left
     map_group_zero_or_more (map_group_match_item false key2 value)
   )
 = map_group_filter_ext
-    (notp_g (matches_map_group_entry (key1 `t_choice` key2) value))
-    (notp_g (matches_map_group_entry key1 value) `andp_g`
-      notp_g (matches_map_group_entry key2 value)
+    (CBOR.Spec.Util.notp (matches_map_group_entry (key1 `t_choice` key2) value))
+    (CBOR.Spec.Util.notp (matches_map_group_entry key1 value) `CBOR.Spec.Util.andp`
+      CBOR.Spec.Util.notp (matches_map_group_entry key2 value)
     )
 
 val map_group_zero_or_more_map_group_match_item_for
   (cut: bool)
-  (key: Cbor.raw_data_item)
+  (key: Cbor.cbor)
   (value: typ)
 : Lemma
   (map_group_zero_or_more (map_group_match_item_for cut key value) ==
@@ -327,7 +326,7 @@ let map_group_fail_shorten
   (g: map_group)
 : Tot prop
 = forall (m1 m2: _) .
-  (ghost_map_disjoint m1 m2 /\ MapGroupFail? (apply_map_group_det g (m1 `ghost_map_union` m2))) ==>
+  (Cbor.cbor_map_disjoint m1 m2 /\ MapGroupFail? (apply_map_group_det g (m1 `Cbor.cbor_map_union` m2))) ==>
   MapGroupFail? (apply_map_group_det g m1)
 
 val map_group_fail_shorten_match_item
@@ -349,13 +348,13 @@ val map_group_zero_or_more_choice
     map_group_zero_or_more (g1 `map_group_choice` g2) == map_group_zero_or_more g1 `map_group_concat` map_group_zero_or_more g2
   ))
 
-val matches_map_group (g: map_group) (m: list (Cbor.raw_data_item & Cbor.raw_data_item)) : GTot bool
+val matches_map_group (g: map_group) (m: Cbor.cbor_map) : GTot bool
 
-val matches_map_group_det (g: map_group) (m: list (Cbor.raw_data_item & Cbor.raw_data_item)) : Lemma
-  (match apply_map_group_det g (ghost_map_of_list m) with
+val matches_map_group_det (g: map_group) (m: Cbor.cbor_map) : Lemma
+  (match apply_map_group_det g m with
   | MapGroupCutFail
   | MapGroupFail -> ~ (matches_map_group g m)
-  | MapGroupDet _ m' -> matches_map_group g m <==> m' == ghost_map_empty
+  | MapGroupDet _ m' -> matches_map_group g m <==> m' == Cbor.cbor_map_empty
   | _ -> True)
   [SMTPat (matches_map_group g m)]
 
@@ -363,11 +362,10 @@ val t_map (g: map_group) : typ
 
 val t_map_eq
   (g: map_group)
-  (x: Cbor.raw_data_item)
+  (x: Cbor.cbor)
 : Lemma
-  (t_map g x == true <==> begin match x with
-    | Cbor.Map m ->
-      List.Tot.no_repeats_p (List.Tot.map fst m) /\
+  (t_map g x == true <==> begin match Cbor.unpack x with
+    | Cbor.CMap m ->
       matches_map_group g m
     | _ -> False
   end)

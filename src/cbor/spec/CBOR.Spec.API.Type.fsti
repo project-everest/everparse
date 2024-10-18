@@ -75,14 +75,14 @@ let cbor_map_length_singleton (k: cbor) (v: cbor) : Lemma
 = ()
 
 val cbor_map_filter:
-  (cbor -> cbor -> bool) ->
+  ((cbor & cbor) -> bool) ->
   cbor_map ->
   cbor_map
 
-val cbor_map_get_filter: (f: (cbor -> cbor -> bool)) -> (m: cbor_map) -> (k: cbor) -> Lemma
+val cbor_map_get_filter: (f: (cbor & cbor -> bool)) -> (m: cbor_map) -> (k: cbor) -> Lemma
   (ensures (cbor_map_get (cbor_map_filter f m) k == begin match cbor_map_get m k with
   | None -> None
-  | Some v -> if f k v then Some v else None
+  | Some v -> if f (k, v) then Some v else None
   end))
   [SMTPat (cbor_map_get (cbor_map_filter f m) k)]
 

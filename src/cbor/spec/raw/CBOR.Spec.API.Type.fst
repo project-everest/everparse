@@ -144,11 +144,11 @@ let rec list_sorted_filter
     else ()
 
 let cbor_map_filter_f
-  (f: cbor -> cbor -> bool)
+  (f: (cbor & cbor) -> bool)
   (x: (R.raw_data_item & R.raw_data_item))
 : Tot bool =
     if cbor_bool (fst x) && cbor_bool (snd x)
-    then f (fst x) (snd x)
+    then f (fst x, snd x)
     else false
 
 let cbor_map_filter f m =
@@ -156,13 +156,13 @@ let cbor_map_filter f m =
   List.Tot.filter (cbor_map_filter_f f) m
 
 let rec cbor_map_get_filter'
-  (f: (cbor -> cbor -> bool))
+  (f: (cbor & cbor -> bool))
   (m: cbor_map)
   (k: cbor)
 : Lemma
   (ensures (cbor_map_get (cbor_map_filter f m) k == begin match cbor_map_get m k with
   | None -> None
-  | Some v -> if f k v then Some v else None
+  | Some v -> if f (k, v) then Some v else None
   end))
   (decreases m)
 = match m with
@@ -170,7 +170,7 @@ let rec cbor_map_get_filter'
   | (a, v) :: q ->
     if k = a
     then begin
-      if f k v
+      if f (k, v)
       then ()
       else begin
         match cbor_map_get (cbor_map_filter f q) k with
@@ -184,8 +184,8 @@ let rec cbor_map_get_filter'
 
 let cbor_map_get_filter = cbor_map_get_filter'
 
-let cbor_map_diff_f (m1: cbor_map) (k v: cbor) : Tot bool =
-  None? (cbor_map_get m1 k)
+let cbor_map_diff_f (m1: cbor_map) (kv: (cbor & cbor)) : Tot bool =
+  None? (cbor_map_get m1 (fst kv))
 
 let cbor_map_union m1 m2 =
   let m2' = cbor_map_filter (cbor_map_diff_f m1) m2 in
