@@ -212,11 +212,11 @@ let dtyp_of_app (en: env) (hd:A.ident) (args:list T.index)
       DT_IType i
 
     | _ ->
-      let readable = match H.try_find en hd.v with
+      let has_action, readable = match H.try_find en hd.v with
       | None -> failwith "type not found"
-      | Some td -> td.allow_reading
+      | Some td -> td.has_action, td.allow_reading
       in
-      DT_App readable hd
+      DT_App has_action readable hd
         (List.map
           (function Inl _ -> failwith "Unexpected type application"
                   | Inr e -> e)
@@ -317,7 +317,7 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
       match dt with
       | DT_IType _ ->
         typ_indexes_nil
-      | DT_App _ hd args ->
+      | DT_App _ _ hd args ->
         let td =
           match H.try_find en hd.v with
           | Some td -> td
@@ -537,10 +537,43 @@ let rec allow_reading_of_typ (t:typ)
     begin
     match dt with
     | DT_IType i -> allow_reader_of_itype i
-    | DT_App readable _ _ -> readable
+    | DT_App has_action readable _ _ -> readable
     end
 
-  | _ -> false
+  | _ ->
+    false
+
+let rec has_action_of_typ (t:typ)
+  : Tot bool
+  =
+  match t with
+  | T_false _ -> false
+  | T_with_comment _ t _ -> has_action_of_typ t
+  | T_denoted _ dt ->
+    begin
+    match dt with
+    | DT_IType i -> false
+    | DT_App has_action readable _ _ -> has_action
+    end
+  | T_pair _ t1 t2 ->
+    has_action_of_typ t1 || has_action_of_typ t2
+  | T_dep_pair _ t1 (_, t2) ->
+    has_action_of_dtyp t1 || has_action_of_typ t2
+  | T_refine _ t _ -> has_action_of_dtyp t
+  | T_refine_with_action _ _ _ _ -> true
+  | T_dep_pair_with_refinement _ t _ (_, t2) -> has_action_of_dtyp t || has_action_of_typ t2
+  | T_dep_pair_with_action _ _ _ _ -> true
+  | T_dep_pair_with_refinement_and_action _ _ _ _ _ -> true
+  | T_if_else _ t1 t2 -> has_action_of_typ t1 || has_action_of_typ t2
+  | T_with_action _ _ _ -> true
+  | T_with_dep_action _ _ _ -> true
+  | T_drop t -> has_action_of_typ t
+  | T_with_comment _ t _ -> has_action_of_typ t
+  | T_nlist _ _ _ t -> has_action_of_typ t
+  | T_at_most _ _ t -> has_action_of_typ t
+  | T_exact _ _ t -> has_action_of_typ t
+  | T_string _ t _ -> has_action_of_dtyp t
+  | T_probe_then_validate _ t _ _ _ -> true
 
 let check_validity_of_typ_indexes (td:T.type_decl) indexes =
   let rec atomic_locs_of l =
@@ -610,6 +643,7 @@ let translate_decls (en:env) (ds:T.decls)
                 typ = typ;
                 kind = td.decl_parser.p_kind;
                 typ_indexes;
+                has_action = has_action_of_typ typ;
                 allow_reading = ar;
                 attrs = attrs;
                 enum_typ = refined
@@ -649,7 +683,7 @@ let print_dtyp (mname:string) (dt:dtyp) =
   | DT_IType i ->
     Printf.sprintf "(DT_IType %s)" (print_ityp i)
 
-  | DT_App _ hd args ->
+  | DT_App _ _ hd args ->
     Printf.sprintf "(%s %s)"
       (print_derived_name mname "dtyp" hd)
       (List.map (T.print_expr mname) args |> String.concat " ")
@@ -893,7 +927,7 @@ let print_type_decl mname (td:type_decl) =
   FStar.Printf.sprintf
     "[@@specialize; noextract_to \"krml\"]\n\
      noextract\n\
-     let def_%s = ( %s <: Tot (typ _ _ _ _ _) by (T.norm [delta_attr [`%%specialize]; zeta; iota; primops]; T.smt()))\n"
+     let def_%s = ( %s <: Tot (typ _ _ _ _ _ _) by (T.norm [delta_attr [`%%specialize]; zeta; iota; primops]; T.smt()))\n"
       (print_typedef_name mname td.name)
       (print_typ mname td.typ)
 
@@ -929,7 +963,7 @@ let rec print_disj' mname (d:disj)
 let print_disj mname = print_index (print_disj' mname)
 
 let print_td_iface is_entrypoint mname root_name binders args
-                   inv eloc disj ar pk_wk pk_nz =
+                   inv eloc disj ha ar pk_wk pk_nz =
   let ar = if is_entrypoint then false else ar in
   let kind_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
@@ -943,11 +977,12 @@ let print_td_iface is_entrypoint mname root_name binders args
   let def'_t =
     Printf.sprintf "[@@noextract_to \"krml\"]\n\
                     noextract\n\
-                    val def'_%s %s: typ kind_%s %s %s %s %b"
+                    val def'_%s %s: typ kind_%s %s %s %s %b %b"
       root_name
       binders
       root_name
       inv disj eloc
+      ha
       ar
   in
   let validator_t =
@@ -1006,13 +1041,14 @@ let print_binding mname (td:type_decl)
       "[@@specialize; noextract_to \"krml\"]\n\
         noextract\n\
         let def'_%s %s\n\
-          : typ kind_%s %s %s %s %s\n\
+          : typ kind_%s %s %s %s %b %b\n\
           = coerce (_ by (coerce_validator [`%%kind_%s])) (def_%s %s)"
         root_name
         binders
         root_name
         inv disj eloc
-        (string_of_bool td.allow_reading)
+        td.has_action
+        td.allow_reading
         root_name
         root_name
         args
@@ -1060,7 +1096,7 @@ let print_binding mname (td:type_decl)
     Printf.sprintf "[@@specialize; noextract_to \"krml\"]\n\
                       noextract\n\
                       let dtyp_%s %s\n\
-                        : dtyp kind_%s %b %s %s %s\n\
+                        : dtyp kind_%s %b %b %s %s %s\n\
                         = mk_dtyp_app\n\
                                   kind_%s\n\
                                   %s\n\
@@ -1070,10 +1106,11 @@ let print_binding mname (td:type_decl)
                                   (coerce (_ by (T.norm [delta_only [`%%type_%s]]; T.trefl())) (parser_%s %s))\n\
                                   %s\n\
                                   %b\n\
+                                  %b\n\
                                   (coerce (_ by %s) (validate_%s %s))\n\
                                   (_ by (T.norm [delta_only [`%%Some?]; iota]; T.trefl()))\n"
                       root_name binders
-                      root_name td.allow_reading
+                      root_name td.has_action td.allow_reading
                       inv disj eloc
                       root_name
                       inv disj eloc
@@ -1081,6 +1118,7 @@ let print_binding mname (td:type_decl)
                       root_name
                       root_name args
                       reader
+                      td.has_action
                       td.allow_reading
                       coerce_validator root_name args
   in
@@ -1113,7 +1151,7 @@ let print_binding mname (td:type_decl)
     let iface =
       print_td_iface td.name.td_entrypoint
                     mname root_name binders args
-                    inv eloc disj td.allow_reading
+                    inv eloc disj td.has_action td.allow_reading
                     weak_kind k.pk_nz
     in
     impl, iface

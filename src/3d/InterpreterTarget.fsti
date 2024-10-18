@@ -50,6 +50,7 @@ type dtyp : Type =
       i:itype -> dtyp
 
   | DT_App:
+      has_action:bool ->
       readable: bool ->
       hd:A.ident ->
       args:list expr ->
@@ -58,8 +59,13 @@ type dtyp : Type =
 let allow_reader_of_dtyp (d: dtyp) : Tot bool =
   match d with
   | DT_IType i -> allow_reader_of_itype i
-  | DT_App readable _ _ -> readable
+  | DT_App _ readable _ _ -> readable
 
+let has_action_of_dtyp d : Tot bool =
+  match d with
+  | DT_IType _ -> false
+  | DT_App has_action _ _ _ -> has_action
+  
 let readable_dtyp = (d: dtyp { allow_reader_of_dtyp d == true })
 
 let non_empty_string = s:string { s <> "" }
@@ -194,6 +200,7 @@ type type_decl = {
   typ : typ;
   kind : T.parser_kind;
   typ_indexes : typ_indexes;
+  has_action: bool;
   allow_reading: bool;
   attrs : (attrs: T.decl_attributes { attrs.is_entrypoint ==> ~ allow_reading });
   enum_typ: option (t:T.typ {T.T_refine? t })

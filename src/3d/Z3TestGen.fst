@@ -516,7 +516,7 @@ let parse_readable_dtyp
 : Tot (parser reading)
 = match d with
   | I.DT_IType i -> parse_readable_itype i
-  | I.DT_App _ hd args -> parse_readable_app hd args
+  | I.DT_App _ _ hd args -> parse_readable_app hd args
 
 let parse_not_readable_app'
   (hd: string)
@@ -537,7 +537,7 @@ let parse_dtyp
   then wrap_parser (parse_readable_dtyp d)
   else match d with
     | I.DT_IType i -> parse_itype i
-    | I.DT_App _ hd args -> parse_not_readable_app hd args
+    | I.DT_App _ _ hd args -> parse_not_readable_app hd args
 
 let parse_false : parser not_reading =
   maybe_toplevel_parser (fun _ _ _ _ -> { call = "parse-false" })
