@@ -164,7 +164,7 @@ let pk_glb k1 k2 = T.({
   pk_nz = k1.pk_nz && k2.pk_nz
 })
 
-let rec is_fixed_size_array_payload (env:global_env) (t:T.typ)
+let rec is_compile_time_fixed_size (env:global_env) (t:T.typ)
 : ML bool
 = match t with
   | T.T_false -> true
@@ -176,11 +176,15 @@ let rec is_fixed_size_array_payload (env:global_env) (t:T.typ)
       with _ -> false
     end
   | T.T_pointer _ -> true
-  | T.T_refine base _ -> is_fixed_size_array_payload env base
-  | T.T_with_comment t _ -> is_fixed_size_array_payload env t
+  | T.T_refine base _ -> is_compile_time_fixed_size env base
+  | T.T_with_comment t _ -> is_compile_time_fixed_size env t
+  | T.T_nlist elt n -> // this is the main reason why we need T.T_pair
+    if T.Constant? (fst n)
+    then is_compile_time_fixed_size env elt
+    else false
   | T.T_pair t1 t2 -> // this is the main reason why we need T.T_pair
-    if is_fixed_size_array_payload env t1
-    then is_fixed_size_array_payload env t2
+    if is_compile_time_fixed_size env t1
+    then is_compile_time_fixed_size env t2
     else false
   | _ -> false
 
@@ -202,8 +206,8 @@ let pair_parser env n1 p1 p2 =
     let open T in
     let pt = pair_typ p1.p_typ p2.p_typ in
     let t_id = with_dummy_range (to_ident' "tuple2") in
-    let p1_is_const = is_fixed_size_array_payload env p1.p_typ in
-    let p2_is_const = is_fixed_size_array_payload env p2.p_typ in
+    let p1_is_const = is_compile_time_fixed_size env p1.p_typ in
+    let p2_is_const = is_compile_time_fixed_size env p2.p_typ in
     mk_parser (pk_and_then p1.p_kind p2.p_kind)
               pt
               t_id
@@ -486,9 +490,9 @@ let rec parse_typ (env:global_env)
   | T.T_app _ A.KindExtern _ ->
     failwith "Impossible, did not expect parse_typ to be called with an output/extern type!"
 
-  | T.T_app {v={name="nlist"}} KindSpec [Inr e; Inl t] ->
+  | T.T_nlist t e ->
     let pt = parse_typ env typename (extend_fieldname "element") t in
-    let t_size_constant = is_fixed_size_array_payload env t in
+    let t_size_constant = is_compile_time_fixed_size env t in
     mk_parser pk_list
               t
               typename
@@ -800,7 +804,7 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
         | FieldArrayQualified (e, ByteArrayByteSize)
         | FieldArrayQualified (e, ArrayByteSize) ->
           let e = translate_expr e in
-          T.T_app (with_range (to_ident' "nlist") sf.field_type.range) KindSpec [Inr e; Inl t]
+          T.T_nlist t e
         | FieldArrayQualified (e, ArrayByteSizeAtMost) ->
           mk_at_most t e
         | FieldArrayQualified (e, ArrayByteSizeSingleElementArray) ->
@@ -1000,6 +1004,7 @@ let rec hoist_typ
   = let open T in
     match t with
     | T_false -> [], t
+    | T_nlist _ _
     | T_app _ _ _ -> [], t
     | T_pair t1 t2 ->
       let ds, t1 = hoist_typ fn genv env t1 in

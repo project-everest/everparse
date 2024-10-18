@@ -93,6 +93,7 @@ noeq
 type typ =
   | T_false    : typ
   | T_app      : hd:A.ident -> A.t_kind -> args:list index -> typ
+  | T_nlist    : elt: typ -> bytesize: expr -> typ
   | T_pair     : fst: typ -> snd: typ -> typ
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
   | T_refine   : base:typ -> refinement:lam expr -> typ
