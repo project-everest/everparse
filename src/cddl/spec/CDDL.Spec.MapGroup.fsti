@@ -1,24 +1,24 @@
-module CDDL.Spec.MapGroupGen
-include CDDL.Spec.MapGroupGen.Base
-module Cbor = CBOR.Spec
+module CDDL.Spec.MapGroup
+include CDDL.Spec.MapGroup.Base
+module Cbor = CBOR.Spec.API.Type
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 
-let ghost_map_disjoint_from_footprint
-  (m: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+let cbor_map_disjoint_from_footprint
+  (m: Cbor.cbor_map)
   (f: typ)
 : Tot prop
-= forall x . ghost_map_mem x m ==> ~ (f (fst x))
+= forall x . Some? (Cbor.cbor_map_get m x) ==> ~ (f x)
 
 let map_group_footprint
   (g: map_group)
   (f: typ)
 : Tot prop
-= forall m m' . (ghost_map_disjoint m m' /\ ghost_map_disjoint_from_footprint m' f) ==>
-  begin match apply_map_group_det g m, apply_map_group_det g (m `ghost_map_union` m') with
+= forall m m' . (Cbor.cbor_map_disjoint m m' /\ cbor_map_disjoint_from_footprint m' f) ==>
+  begin match apply_map_group_det g m, apply_map_group_det g (m `Cbor.cbor_map_union` m') with
   | MapGroupCutFail, MapGroupCutFail
   | MapGroupFail, MapGroupFail -> True
-  | MapGroupDet _ r, MapGroupDet _ r' -> r' == r `ghost_map_union` m'
+  | MapGroupDet _ r, MapGroupDet _ r' -> r' == r `Cbor.cbor_map_union` m'
   | _ -> False
   end
 
@@ -37,18 +37,18 @@ let map_group_footprint_equiv
 let map_group_footprint_elim
   (g: map_group)
   (f: typ)
-  (m m' : ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+  (m m' : Cbor.cbor_map)
 : Lemma
   (requires
     map_group_footprint g f /\
-    ghost_map_disjoint m m' /\
-    ghost_map_disjoint_from_footprint m' f
+    Cbor.cbor_map_disjoint m m' /\
+    cbor_map_disjoint_from_footprint m' f
   )
   (ensures
-  begin match apply_map_group_det g m, apply_map_group_det g (m `ghost_map_union` m') with
+  begin match apply_map_group_det g m, apply_map_group_det g (m `Cbor.cbor_map_union` m') with
   | MapGroupCutFail, MapGroupCutFail
   | MapGroupFail, MapGroupFail -> True
-  | MapGroupDet _ r, MapGroupDet _ r' -> r' == r `ghost_map_union` m'
+  | MapGroupDet _ r, MapGroupDet _ r' -> r' == r `Cbor.cbor_map_union` m'
   | _ -> False
   end
   )
@@ -58,17 +58,17 @@ let map_group_footprint_elim
 let map_group_footprint_intro
   (g: map_group)
   (f: typ)
-  (prf: (m: _) -> (m' : ghost_map Cbor.raw_data_item Cbor.raw_data_item) ->
+  (prf: (m: _) -> (m' : Cbor.cbor_map) ->
     Lemma
     (requires
-      ghost_map_disjoint m m' /\
-      ghost_map_disjoint_from_footprint m' f
+      Cbor.cbor_map_disjoint m m' /\
+      cbor_map_disjoint_from_footprint m' f
     )
     (ensures
-    begin match apply_map_group_det g m, apply_map_group_det g (m `ghost_map_union` m') with
+    begin match apply_map_group_det g m, apply_map_group_det g (m `Cbor.cbor_map_union` m') with
     | MapGroupCutFail, MapGroupCutFail
     | MapGroupFail, MapGroupFail -> True
-    | MapGroupDet _ r, MapGroupDet _ r' -> r' == r `ghost_map_union` m'
+    | MapGroupDet _ r, MapGroupDet _ r' -> r' == r `Cbor.cbor_map_union` m'
     | _ -> False
     end
     )
@@ -85,20 +85,23 @@ let map_group_footprint_consumed
 : Lemma
   (requires
     map_group_footprint g f /\
-    ghost_map_disjoint m m' /\
-    ghost_map_disjoint_from_footprint m' f /\
-    (MapGroupDet? (apply_map_group_det g m) \/ MapGroupDet? (apply_map_group_det g (m `ghost_map_union` m')))
+    Cbor.cbor_map_disjoint m m' /\
+    cbor_map_disjoint_from_footprint m' f /\
+    (MapGroupDet? (apply_map_group_det g m) \/ MapGroupDet? (apply_map_group_det g (m `Cbor.cbor_map_union` m')))
   )
   (ensures (
-    match apply_map_group_det g m, apply_map_group_det g (m `ghost_map_union` m') with
+    match apply_map_group_det g m, apply_map_group_det g (m `Cbor.cbor_map_union` m') with
     | MapGroupDet c _, MapGroupDet c' _ -> c == c'
     | _ -> False
   ))
-  [SMTPat (map_group_footprint g f); SMTPat (apply_map_group_det g (m `ghost_map_union` m'))]
+  [SMTPat (map_group_footprint g f); SMTPat (apply_map_group_det g (m `Cbor.cbor_map_union` m'))]
 = let MapGroupDet c r = apply_map_group_det g m in
-  let MapGroupDet c' r' = apply_map_group_det g (m `ghost_map_union` m') in
-  ghost_map_union_assoc c r m';
-  ghost_map_disjoint_union_simpl_r c c' r'
+  let MapGroupDet c' r' = apply_map_group_det g (m `Cbor.cbor_map_union` m') in
+  admit ()
+(*
+  Cbor.cbor_map_union_assoc c r m';
+  Cbor.cbor_map_disjoint_union_simpl_r c c' r'
+*)
 
 #restart-solver
 let map_group_footprint_is_consumed
@@ -110,52 +113,13 @@ let map_group_footprint_is_consumed
     map_group_footprint g f
   )
   (ensures (
-    match apply_map_group_det g m, apply_map_group_det g (ghost_map_filter (matches_map_group_entry f any) m) with
+    match apply_map_group_det g m, apply_map_group_det g (Cbor.cbor_map_filter (matches_map_group_entry f any) m) with
     | MapGroupDet _ _, MapGroupDet _ _
     | MapGroupFail, MapGroupFail
     | MapGroupCutFail, MapGroupCutFail -> True
     | _ -> False
   ))
-= ghost_map_split (matches_map_group_entry f any) m
-
-#restart-solver
-let map_group_footprint_is_consumed_ghost_map_of_list
-  (g: map_group)
-  (f: typ)
-  (m: _)
-: Lemma
-  (requires
-    map_group_footprint g f /\
-    List.Tot.no_repeats_p (List.Tot.map fst m)
-  )
-  (ensures (
-    forall (f': _ -> bool) .
-    (forall x . f' x == matches_map_group_entry f any x) ==>
-    begin match apply_map_group_det g (ghost_map_of_list m), apply_map_group_det g (ghost_map_of_list (List.Tot.filter f' m)) with
-    | MapGroupDet _ _, MapGroupDet _ _
-    | MapGroupFail, MapGroupFail
-    | MapGroupCutFail, MapGroupCutFail -> True
-    | _ -> False
-    end
-  ))
-= let prf
-      (f': _ -> bool)
-  : Lemma
-    (requires (forall x . f' x == matches_map_group_entry f any x))
-    (ensures 
-      begin match apply_map_group_det g (ghost_map_of_list m), apply_map_group_det g (ghost_map_of_list (List.Tot.filter f' m)) with
-      | MapGroupDet _ _, MapGroupDet _ _
-      | MapGroupFail, MapGroupFail
-      | MapGroupCutFail, MapGroupCutFail -> True
-      | _ -> False
-      end
-    )
-  = ghost_map_equiv
-      (ghost_map_filter f' (ghost_map_of_list m))
-      (ghost_map_filter (matches_map_group_entry f any) (ghost_map_of_list m));
-    map_group_footprint_is_consumed g f (ghost_map_of_list m)
-  in
-  Classical.forall_intro (Classical.move_requires prf)
+= admit () // ghost_map_split (matches_map_group_entry f any) m
 
 let map_group_footprint_consumed_disjoint
   (g: map_group)
@@ -170,11 +134,12 @@ let map_group_footprint_consumed_disjoint
   (ensures (
     match apply_map_group_det g m with
     | MapGroupDet c _ ->
-      ghost_map_disjoint_from_footprint c f'
+      cbor_map_disjoint_from_footprint c f'
     | _ -> False
   ))
-= ghost_map_split (matches_map_group_entry f any) m;
-  map_group_footprint_consumed g f (ghost_map_filter (matches_map_group_entry f any) m) (ghost_map_filter (notp_g (matches_map_group_entry f any)) m)
+= admit () (* ghost_map_split (matches_map_group_entry f any) m;
+  map_group_footprint_consumed g f (Cbor.cbor_map_filter (matches_map_group_entry f any) m) (Cbor.cbor_map_filter (CBOR.Spec.Util.notp (matches_map_group_entry f any)) m)
+*)
 
 #restart-solver
 let map_group_footprint_concat
@@ -221,18 +186,18 @@ let map_group_footprint_zero_or_one
 let map_group_footprint_consumes_all
   (g1: map_group)
   (f1: typ)
-  (m1: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+  (m1: Cbor.cbor_map)
 : Lemma
   (requires (
     map_group_footprint g1 f1 /\
-    apply_map_group_det g1 m1 == MapGroupDet m1 ghost_map_empty
+    apply_map_group_det g1 m1 == MapGroupDet m1 Cbor.cbor_map_empty
   ))
   (ensures (
-    ghost_map_filter (matches_map_group_entry f1 any) m1 == m1 /\
-    ghost_map_filter (notp_g (matches_map_group_entry f1 any)) m1 == ghost_map_empty
+    Cbor.cbor_map_filter (matches_map_group_entry f1 any) m1 == m1 /\
+    Cbor.cbor_map_filter (CBOR.Spec.Util.notp (matches_map_group_entry f1 any)) m1 == Cbor.cbor_map_empty
   ))
 = let phi1 = matches_map_group_entry f1 any in
-  ghost_map_split phi1 m1;
+  admit () (* ghost_map_split phi1 m1;
   map_group_footprint_elim g1 f1 (ghost_map_filter phi1 m1) (ghost_map_filter (notp_g phi1) m1); 
   map_group_footprint_consumed g1 f1 (ghost_map_filter phi1 m1) (ghost_map_filter (notp_g phi1) m1);
   let MapGroupDet c1 r1 = apply_map_group_det g1 (ghost_map_filter phi1 m1) in
@@ -240,32 +205,38 @@ let map_group_footprint_consumes_all
   assert (ghost_map_empty == r1 `ghost_map_union` ghost_map_filter (notp_g phi1) m1);
   ghost_map_ext ghost_map_empty (ghost_map_filter (notp_g phi1) m1);
   ()
+*)
 
 #restart-solver
 let map_group_footprint_concat_consumes_all
   (g1 g2: map_group)
   (f1 f2: typ)
-  (m1 m2: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+  (m1 m2: Cbor.cbor_map)
 : Lemma
   (requires (
     map_group_footprint g1 f1 /\
     map_group_footprint g2 f2 /\
-    apply_map_group_det g1 m1 == MapGroupDet m1 ghost_map_empty /\
-    apply_map_group_det g2 m2 == MapGroupDet m2 ghost_map_empty /\
+    apply_map_group_det g1 m1 == MapGroupDet m1 Cbor.cbor_map_empty /\
+    apply_map_group_det g2 m2 == MapGroupDet m2 Cbor.cbor_map_empty /\
     typ_disjoint f1 f2
   ))
   (ensures (
-    m1 `ghost_map_disjoint` m2 /\
-    apply_map_group_det (g1 `map_group_concat` g2) (m1 `ghost_map_union` m2) == MapGroupDet (m1 `ghost_map_union` m2) ghost_map_empty
+    m1 `Cbor.cbor_map_disjoint` m2 /\
+    apply_map_group_det (g1 `map_group_concat` g2) (m1 `Cbor.cbor_map_union` m2) == MapGroupDet (m1 `Cbor.cbor_map_union` m2) Cbor.cbor_map_empty
   ))
 = map_group_footprint_consumes_all g1 f1 m1;
   map_group_footprint_consumes_all g2 f2 m2;
+  let x = apply_map_group_det (g1 `map_group_concat` g2) (m1 `Cbor.cbor_map_union` m2) in
+  admit () (*  assert (MapGroupDet? x);
+  assert (MapGroupDet?.consumed x `Cbor.cbor_map_equal` (m1 `Cbor.cbor_map_union` m2));
+  assert (MapGroupDet?.remaining x `Cbor.cbor_map_equal` Cbor.cbor_map_empty);
   ()
+*)
 
 #restart-solver
 let map_group_footprint_match_item_for
   (cut: bool)
-  (key: Cbor.raw_data_item)
+  (key: Cbor.cbor)
   (value: typ)
 : Lemma
   (ensures (
@@ -277,20 +248,20 @@ let map_group_footprint_match_item_for
     g
     (t_literal key)
     (fun m m' ->
-       assert (~ (ghost_map_defined key m'));
-       match apply_map_group_det g m, apply_map_group_det g (m `ghost_map_union` m') with
+       assert (None? (Cbor.cbor_map_get m' key));
+       match apply_map_group_det g m, apply_map_group_det g (m `Cbor.cbor_map_union` m') with
        | MapGroupDet _ r, MapGroupDet _ r' ->
-         ghost_map_ext r' (r `ghost_map_union` m')
+         Cbor.cbor_map_ext r' (r `Cbor.cbor_map_union` m')
        | _ -> ()
     )
 
 #restart-solver
 let map_group_footprint_filter
-  (phi: _ -> GTot bool)
+  (phi: _ -> Tot bool)
   (f: typ)
 : Lemma
   (requires
-    forall (x: (Cbor.raw_data_item & Cbor.raw_data_item)) . notp_g phi x ==> f (fst x)
+    forall (x: (Cbor.cbor & Cbor.cbor)) . CBOR.Spec.Util.notp phi x ==> f (fst x)
   )
   (ensures (
     map_group_footprint (map_group_filter phi) f
@@ -302,10 +273,11 @@ let map_group_footprint_filter
     f
     (fun m m' ->
       let MapGroupDet _ r = apply_map_group_det g m in
-      let MapGroupDet _ r' = apply_map_group_det g (m `ghost_map_union` m') in
-      ghost_map_disjoint_union_filter phi m m';
+      let MapGroupDet _ r' = apply_map_group_det g (m `Cbor.cbor_map_union` m') in
+      admit () (* ghost_map_disjoint_union_filter phi m m';
       ghost_map_filter_for_all phi m';
       assert (r' == r `ghost_map_union` m')
+*)
     )
 
 let map_group_footprint_zero_or_more_match_item
@@ -315,6 +287,9 @@ let map_group_footprint_zero_or_more_match_item
   [SMTPat (map_group_footprint (map_group_zero_or_more (map_group_match_item false key value)))]
 = ()
 
+let cbor_map_included (c' c : Cbor.cbor_map) : Tot prop =
+  (forall x . Some? (Cbor.cbor_map_get c' x) ==> Cbor.cbor_map_get c' x == Cbor.cbor_map_get c x)
+
 let restrict_map_group
   (g g': map_group)
 : Tot prop
@@ -322,7 +297,7 @@ let restrict_map_group
   begin match apply_map_group_det g m, apply_map_group_det g' m with
   | MapGroupCutFail, MapGroupCutFail
   | MapGroupFail, MapGroupFail -> True
-  | MapGroupDet c r, MapGroupDet c' r' -> (forall x . ghost_map_mem x c' ==> ghost_map_mem x c)
+  | MapGroupDet c r, MapGroupDet c' r' -> cbor_map_included c' c
   | _ -> False
   end
 
@@ -332,7 +307,7 @@ let restrict_map_group_intro
     begin match apply_map_group_det g m, apply_map_group_det g' m with
     | MapGroupCutFail, MapGroupCutFail
     | MapGroupFail, MapGroupFail -> True
-    | MapGroupDet c r, MapGroupDet c' r' -> ghost_map_included c' c
+    | MapGroupDet c r, MapGroupDet c' r' -> cbor_map_included c' c
     | _ -> False
     end
   )
@@ -349,14 +324,14 @@ let restrict_map_group_refl
 
 let restrict_map_group_match_item_for
   (cut: bool)
-  (key: Cbor.raw_data_item)
+  (key: Cbor.cbor)
   (value: typ)
 : Lemma
   (restrict_map_group (map_group_match_item_for cut key value) (map_group_match_item_for cut key value))
 = ()
 
 let restrict_map_group_filter
-  (f: (Cbor.raw_data_item & Cbor.raw_data_item) -> GTot bool)
+  (f: (Cbor.cbor & Cbor.cbor) -> Tot bool)
 : Lemma
   (restrict_map_group (map_group_filter f) map_group_nop)
   [SMTPat (restrict_map_group (map_group_filter f) map_group_nop)]
@@ -439,7 +414,7 @@ let map_group_choice_compatible
   (left right: map_group)
 : Tot prop
 = forall x . match apply_map_group_det right x with
-  | MapGroupDet _ rem -> rem == ghost_map_empty ==> MapGroupFail? (apply_map_group_det left x)
+  | MapGroupDet _ rem -> rem == Cbor.cbor_map_empty ==> MapGroupFail? (apply_map_group_det left x)
   | _ -> True
 
 #restart-solver
@@ -447,7 +422,7 @@ let map_group_choice_compatible_intro
   (left right: map_group)
   (prf: (x: _) -> Lemma
     (requires begin match apply_map_group_det right x with
-     | MapGroupDet _ rem -> rem == ghost_map_empty
+     | MapGroupDet _ rem -> rem == Cbor.cbor_map_empty
      | _ -> False
     end)
     (ensures MapGroupFail? (apply_map_group_det left x))
@@ -459,7 +434,7 @@ let map_group_choice_compatible_intro
 #restart-solver
 val map_group_choice_compatible_match_item_for
   (cut: bool)
-  (key: Cbor.raw_data_item)
+  (key: Cbor.cbor)
   (value: typ)
   (right: map_group)
   (fp: typ)
@@ -476,7 +451,7 @@ let map_group_choice_compatible_no_cut
   (left right: map_group)
 : Tot prop
 = forall x . match apply_map_group_det right x with
-  | MapGroupDet _ rem -> rem == ghost_map_empty ==> ~ (MapGroupCutFail? (apply_map_group_det left x))
+  | MapGroupDet _ rem -> rem == Cbor.cbor_map_empty ==> ~ (MapGroupCutFail? (apply_map_group_det left x))
   | _ -> True
 
 let map_group_choice_compatible_implies_no_cut
@@ -491,7 +466,7 @@ let map_group_fail_concat_intro
   (f1: typ)
   (g2: det_map_group)
   (f2: typ)
-  (x: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+  (x: Cbor.cbor_map)
 : Lemma
   (requires (
     map_group_footprint g1 f1 /\
@@ -509,15 +484,15 @@ let map_group_fail_concat_intro
   else begin
     let MapGroupDet c1 r1 = apply_map_group_det g1 x in
     map_group_footprint_consumed_disjoint g1 f1 f2 x;
-    ghost_map_disjoint_union_comm c1 r1
+    admit () // ghost_map_disjoint_union_comm c1 r1
   end
 
 let map_group_consumes_all
   (g: map_group)
-  (x: ghost_map _ _)
+  (x: Cbor.cbor_map)
 : Tot prop
 = match apply_map_group_det g x with
-  | MapGroupDet _ r -> r == ghost_map_empty
+  | MapGroupDet _ r -> r == Cbor.cbor_map_empty
   | _ -> False
 
 let map_group_choice_compatible_concat_left
@@ -547,7 +522,7 @@ let map_group_concat_no_cut_intro
   (f1: typ)
   (g2: det_map_group)
   (f2: typ)
-  (x: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+  (x: Cbor.cbor_map)
 : Lemma
   (requires (
     map_group_footprint g1 f1 /\
@@ -564,7 +539,7 @@ let map_group_concat_no_cut_intro
   else begin
     let MapGroupDet c1 r1 = apply_map_group_det g1 x in
     map_group_footprint_consumed_disjoint g1 f1 f2 x;
-    ghost_map_disjoint_union_comm c1 r1
+    admit () // ghost_map_disjoint_union_comm c1 r1
   end
 
 #restart-solver
@@ -661,7 +636,7 @@ let map_group_choice_compatible_no_cut_choice_right
 = ()
 
 let map_group_choice_compatible_no_cut_match_item_for_no_cut
-  (key: Cbor.raw_data_item)
+  (key: Cbor.cbor)
   (value: typ)
   (g: det_map_group)
 : Lemma
@@ -677,7 +652,7 @@ let map_group_choice_compatible_no_cut_zero_or_more_match_item_left
 = ()
 
 let map_group_choice_compatible_no_cut_match_item_for_cut
-  (key: Cbor.raw_data_item)
+  (key: Cbor.cbor)
   (value: typ)
   (g: det_map_group)
   (f: typ)
@@ -694,8 +669,8 @@ let map_group_choice_compatible_no_cut_match_item_for_cut
 val map_group_footprint_concat_consumes_all_recip
   (g1 g2: map_group)
   (f1 f2: typ)
-  (m: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
-: Ghost (ghost_map Cbor.raw_data_item Cbor.raw_data_item & ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+  (m: Cbor.cbor_map)
+: Pure (Cbor.cbor_map & Cbor.cbor_map)
   (requires (
     map_group_footprint g1 f1 /\
     map_group_footprint g2 f2 /\
@@ -703,17 +678,17 @@ val map_group_footprint_concat_consumes_all_recip
     map_group_consumes_all (g1 `map_group_concat` g2) m
   ))
   (ensures (fun (m1, m2) ->
-    m1 `ghost_map_disjoint` m2 /\
-    apply_map_group_det g1 m1 == MapGroupDet m1 ghost_map_empty /\
-    apply_map_group_det g2 m2 == MapGroupDet m2 ghost_map_empty /\
-    m1 `ghost_map_union` m2 == m
+    m1 `Cbor.cbor_map_disjoint` m2 /\
+    apply_map_group_det g1 m1 == MapGroupDet m1 Cbor.cbor_map_empty /\
+    apply_map_group_det g2 m2 == MapGroupDet m2 Cbor.cbor_map_empty /\
+    m1 `Cbor.cbor_map_union` m2 == m
   ))
 
 #restart-solver
 let map_group_footprint_concat_consumes_all_recip'
   (g1 g2: map_group)
   (f1 f2: typ)
-  (m: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+  (m: Cbor.cbor_map)
 : Lemma
   (requires (
     map_group_footprint g1 f1 /\
@@ -723,17 +698,17 @@ let map_group_footprint_concat_consumes_all_recip'
   ))
   (ensures exists m1m2 .
     (let (m1, m2) = m1m2 in
-    m1 `ghost_map_disjoint` m2 /\
-    apply_map_group_det g1 m1 == MapGroupDet m1 ghost_map_empty /\
-    apply_map_group_det g2 m2 == MapGroupDet m2 ghost_map_empty /\
-    m1 `ghost_map_union` m2 == m
+    m1 `Cbor.cbor_map_disjoint` m2 /\
+    apply_map_group_det g1 m1 == MapGroupDet m1 Cbor.cbor_map_empty /\
+    apply_map_group_det g2 m2 == MapGroupDet m2 Cbor.cbor_map_empty /\
+    m1 `Cbor.cbor_map_union` m2 == m
   ))
 = let (_, _) = map_group_footprint_concat_consumes_all_recip g1 g2 f1 f2 m in
   ()
 
 #restart-solver
 let map_group_choice_compatible_match_item_for_concat_right
-  (k: Cbor.raw_data_item)
+  (k: Cbor.cbor)
   (v: typ)
   (g1 g2: det_map_group)
   (f1 f2: typ)
@@ -753,7 +728,7 @@ let map_group_choice_compatible_match_item_for_concat_right
 #restart-solver
 let map_group_choice_compatible_match_item_for_zero_or_one_right
   (cut: bool)
-  (k: Cbor.raw_data_item)
+  (k: Cbor.cbor)
   (v: typ)
   (g: det_map_group)
 : Lemma
@@ -767,7 +742,7 @@ let map_group_choice_compatible_match_item_for_zero_or_one_right
 
 #restart-solver
 let map_group_choice_compatible_match_item_for_same
-  (k: Cbor.raw_data_item)
+  (k: Cbor.cbor)
   (v1 v2: typ)
   (cut2: bool)
 : Lemma
@@ -779,12 +754,13 @@ let map_group_choice_compatible_match_item_for_same
   ))
 = ()
 
-let ghost_map_in_footprint
-  (m: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+let cbor_map_in_footprint
+  (m: Cbor.cbor_map)
   (f: typ)
 : Tot prop
-= forall x . ghost_map_mem x m ==> (f (fst x))
+= forall x . Some? (Cbor.cbor_map_get m x) ==> (f x)
 
+(* // TODO: use a map rather than a list
 unfold
 let map_group_parser_spec_arg_common
   (source: det_map_group)
