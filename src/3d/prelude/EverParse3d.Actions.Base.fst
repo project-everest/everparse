@@ -116,6 +116,11 @@ let app_ctxt = AppCtxt.app_ctxt
 let app_loc (x:AppCtxt.app_ctxt) (l:eloc) : eloc = 
   AppCtxt.properties x;
   AppCtxt.loc_of x `loc_union` l
+assume
+val action_ghost_loc (x:AppCtxt.app_ctxt) : l:eloc { eloc_disjoint l (AppCtxt.loc_of x) }
+let app_loc_fp (x:AppCtxt.app_ctxt) (has_action:bool) (l:eloc) : eloc = 
+  if has_action then action_ghost_loc x `loc_union` app_loc x l
+  else app_loc x l
 
 inline_for_extraction
 noextract
@@ -135,9 +140,9 @@ let error_handler =
         I.live sl h /\
         true_inv h /\
         B.live h ctxt /\
-        loc_not_unused_in h `loc_includes` app_loc ctxt eloc_none /\
-        address_liveness_insensitive_locs `loc_includes` app_loc ctxt eloc_none /\
-        app_loc ctxt eloc_none `loc_disjoint` I.footprint sl /\
+        loc_not_unused_in h `loc_includes` app_loc_fp ctxt true eloc_none /\
+        address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true eloc_none /\
+        app_loc_fp ctxt true eloc_none `loc_disjoint` I.footprint sl /\
         U64.v pos <= Seq.length (I.get_read sl h)
       )
       (ensures fun h0 _ h1 ->
@@ -161,15 +166,15 @@ let action
         disj /\
         inv h /\
         B.live h ctxt /\
-        loc_not_unused_in h `loc_includes` app_loc ctxt l /\
-        address_liveness_insensitive_locs `loc_includes` app_loc ctxt l /\
-        app_loc ctxt l `loc_disjoint` I.footprint sl /\
+        loc_not_unused_in h `loc_includes` app_loc_fp ctxt true l /\
+        address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true l /\
+        app_loc_fp ctxt true l `loc_disjoint` I.footprint sl /\
         U64.v pos <= U64.v posf /\
         U64.v posf == Seq.length (I.get_read sl h)
       )
       (ensures fun h0 _ h1 ->
         let sl = Ghost.reveal sl in
-        modifies (app_loc ctxt l) h0 h1 /\
+        modifies (app_loc_fp ctxt true l) h0 h1 /\
         B.live h1 ctxt /\
         inv h1)
 
@@ -237,7 +242,7 @@ let validate_with_action_t'
      (inv:slice_inv)
      (disj:disjointness_pre)
      (l:eloc)
-     (_has_action:bool)
+     (has_action:bool)
      (allow_reading:bool)
 : Type 
 = (# [EverParse3d.Util.solve_from_ctx ()] I.extra_t #input_buffer_t) ->
@@ -252,14 +257,14 @@ let validate_with_action_t'
     disj /\
     inv h /\
     B.live h ctxt /\
-    loc_not_unused_in h `loc_includes` app_loc ctxt l /\
-    address_liveness_insensitive_locs `loc_includes` app_loc ctxt l /\
+    loc_not_unused_in h `loc_includes` app_loc_fp ctxt true l /\
+    address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true l /\
     U64.v pos == Seq.length (I.get_read sl h) /\
-    app_loc ctxt l `loc_disjoint` I.footprint sl
+    app_loc_fp ctxt true l `loc_disjoint` I.footprint sl
   )
   (ensures fun h res h' ->
     I.live sl h' /\
-    modifies (app_loc ctxt l `loc_union` I.perm_footprint sl) h h' /\
+    modifies (app_loc_fp ctxt has_action l `loc_union` I.perm_footprint sl) h h' /\
     inv h' /\
     B.live h' ctxt /\
     (((~ allow_reading) \/ LPE.is_error res) ==> U64.v (LPE.get_validator_error_pos res) == Seq.length (I.get_read sl h')) /\
@@ -897,6 +902,7 @@ let validate_list_inv
       (ctxt:app_ctxt)
       (sl: input_buffer_t)
       (bres: pointer U64.t)
+      (ha:bool)
       (h: HS.mem)
       (stop: bool)
 : GTot Type0
@@ -905,10 +911,10 @@ let validate_list_inv
   let res = Seq.index (as_seq h bres) 0 in
   inv h0 /\
   disj /\
-  loc_not_unused_in h0 `loc_includes` app_loc ctxt l /\
-  app_loc ctxt l `loc_disjoint` I.footprint sl /\
-  app_loc ctxt l `loc_disjoint` loc_buffer bres /\
-  address_liveness_insensitive_locs `loc_includes` app_loc ctxt l /\
+  loc_not_unused_in h0 `loc_includes` app_loc_fp ctxt true l /\
+  app_loc_fp ctxt true l `loc_disjoint` I.footprint sl /\
+  app_loc_fp ctxt true l `loc_disjoint` loc_buffer bres /\
+  address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true l /\
   B.loc_buffer bres `B.loc_disjoint` I.footprint sl /\
   I.live sl h0 /\
   I.live sl h /\
@@ -935,7 +941,7 @@ let validate_list_inv
      valid (LPLL.parse_list p) h sl) /\
     (stop == true ==> (valid (LPLL.parse_list p) h sl /\ Seq.length (I.get_remaining sl h) == 0))
   ) /\
-  modifies (app_loc ctxt l `loc_union` loc_buffer bres `loc_union` I.perm_footprint sl) h1 h
+  modifies (app_loc_fp ctxt ha l `loc_union` loc_buffer bres `loc_union` I.perm_footprint sl) h1 h
 
 inline_for_extraction
 noextract
@@ -953,10 +959,10 @@ let validate_list_body
   (sl_len: I.tlen sl)
   (bres: pointer U64.t)
 : HST.Stack bool
-  (requires (fun h -> validate_list_inv p inv disj l g0 g1 ctxt sl bres h false))
+  (requires (fun h -> validate_list_inv p inv disj l g0 g1 ctxt sl bres ha h false))
   (ensures (fun h res h' ->
-    validate_list_inv p inv disj l g0 g1 ctxt sl bres h false /\
-    validate_list_inv p inv disj l g0 g1 ctxt sl bres h' res
+    validate_list_inv p inv disj l g0 g1 ctxt sl bres ha h false /\
+    validate_list_inv p inv disj l g0 g1 ctxt sl bres ha h' res
   ))
 =
   let h = HST.get () in
@@ -990,9 +996,9 @@ let validate_list'
   (requires (fun h ->
     inv h /\
     disj /\
-    loc_not_unused_in h `loc_includes` app_loc ctxt l /\
-    app_loc ctxt l `loc_disjoint` I.footprint sl /\
-    address_liveness_insensitive_locs `loc_includes` app_loc ctxt l /\
+    loc_not_unused_in h `loc_includes` app_loc_fp ctxt true l /\
+    app_loc_fp ctxt true l `loc_disjoint` I.footprint sl /\
+    address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true l /\
     B.live h ctxt /\
     I.live sl h /\
     U64.v pos == Seq.length (I.get_read sl h)
@@ -1016,7 +1022,7 @@ let validate_list'
       else LPE.get_validator_error_kind res == LPE.get_validator_error_kind LPE.validator_error_action_failed
     end /\
     (LPE.is_success res == false ==> U64.v (LPE.get_validator_error_pos res) == Seq.length (I.get_read sl h')) /\
-    modifies (app_loc ctxt l `B.loc_union` I.perm_footprint sl) h h'
+    modifies (app_loc_fp ctxt ha l `B.loc_union` I.perm_footprint sl) h h'
   ))
 = let h0 = HST.get () in
   let g0 = Ghost.hide h0 in
@@ -1028,13 +1034,13 @@ let validate_list'
   let g1 = Ghost.hide h1 in
   I.live_not_unused_in sl h0;
   C.Loops.do_while
-    (validate_list_inv p inv disj l g0 g1 ctxt sl result)
+    (validate_list_inv p inv disj l g0 g1 ctxt sl result ha)
     (fun _ -> validate_list_body v g0 g1 ctxt error_handler_fn sl sl_len result);
   let finalResult = index result 0ul in
   let h2 = HST.get () in
   HST.pop_frame ();
   let h' = HST.get () in
-  assert (B.modifies (app_loc ctxt l `B.loc_union` I.perm_footprint sl) h0 h');
+  assert (B.modifies (app_loc_fp ctxt ha l `B.loc_union` I.perm_footprint sl) h0 h');
   LP.parser_kind_prop_equiv LPLL.parse_list_kind (LPLL.parse_list p);
   finalResult
 
@@ -1628,6 +1634,7 @@ let validate_list_up_to_inv
   (sl: input_buffer_t)
   (h0: HS.mem)
   (bres: B.pointer U64.t)
+  (ha:bool)
   (h: HS.mem)
   (stop: bool)
 : GTot Type0
@@ -1637,12 +1644,13 @@ let validate_list_up_to_inv
   B.live h0 bres /\
   I.live sl h0 /\
   I.live sl h /\
-  B.loc_disjoint (I.footprint sl) (B.loc_buffer bres `B.loc_union` app_loc ctxt loc_none) /\
-  B.loc_disjoint (B.loc_buffer bres) (app_loc ctxt loc_none) /\
+  B.loc_disjoint (I.footprint sl) (B.loc_buffer bres `B.loc_union` app_loc_fp ctxt true loc_none) /\
+  B.loc_disjoint (B.loc_buffer bres) (app_loc_fp ctxt true loc_none) /\
   B.live h0 ctxt /\
   B.live h ctxt /\
-  address_liveness_insensitive_locs `loc_includes` (app_loc ctxt loc_none) /\
-  B.modifies (B.loc_buffer bres `B.loc_union` I.perm_footprint sl `B.loc_union` app_loc ctxt loc_none) h0 h /\
+  loc_not_unused_in h `loc_includes` app_loc_fp ctxt true loc_none /\
+  address_liveness_insensitive_locs `loc_includes` (app_loc_fp ctxt true loc_none) /\
+  B.modifies (B.loc_buffer bres `B.loc_union` I.perm_footprint sl `B.loc_union` app_loc_fp ctxt ha loc_none) h0 h /\
   begin
     let s = I.get_remaining sl h0 in
     let s' = I.get_remaining sl h in
@@ -1670,10 +1678,10 @@ let validate_list_up_to_body
   (# [EverParse3d.Util.solve_from_ctx ()] _extra_t : I.extra_t #input_buffer_t )
   (#k: parser_kind true WeakKindStrongPrefix)
   (#t: eqtype)
-  (#p: parser k t)
+  (#p: parser k t) (#ha:bool)
   (terminator: t)
   (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
-  (v: validator p)
+  (v: validator_maybe_action p ha)
   (r: leaf_reader p)
   (ctxt:app_ctxt)
   (error_handler_fn:error_handler)
@@ -1683,49 +1691,58 @@ let validate_list_up_to_body
   (bres: B.pointer U64.t)
 : HST.Stack bool
   (requires (fun h ->
-    validate_list_up_to_inv p terminator prf ctxt sl h0 bres h false
+    validate_list_up_to_inv p terminator prf ctxt sl h0 bres ha h false
   ))
   (ensures (fun h stop h' ->
-    validate_list_up_to_inv p terminator prf ctxt sl h0 bres h false /\
-    validate_list_up_to_inv p terminator prf ctxt sl h0 bres h' stop
+    validate_list_up_to_inv p terminator prf ctxt sl h0 bres ha h false /\
+    validate_list_up_to_inv p terminator prf ctxt sl h0 bres ha h' stop
   ))
 =
   let h = HST.get () in
+  assert (  loc_not_unused_in h `loc_includes` app_loc_fp ctxt true loc_none);
   LUT.parse_list_up_to_eq (cond_string_up_to terminator) p prf (I.get_remaining sl h);
   let position = !* bres in
   let result = v ctxt error_handler_fn sl sl_len position in
   B.upd bres 0ul result;
-  if LPE.is_error result
-  then begin
-    true
-  end else begin
-    let value = r sl position in
-    cond_string_up_to terminator value
-  end
+  let res =
+    if LPE.is_error result
+    then begin
+      true
+    end else begin
+      let value = r sl position in
+      cond_string_up_to terminator value
+    end
+  in
+  let h' = HST.get() in
+  assume (  loc_not_unused_in h' `loc_includes` app_loc_fp ctxt true loc_none);
+  res
 
 inline_for_extraction
 noextract
 let validate_list_up_to
   (#k: parser_kind true WeakKindStrongPrefix)
   (#t: eqtype)
-  (#p: parser k t)
-  (v: validator p)
+  (#p: parser k t) (#ha:bool)
+  (v: validator_maybe_action p ha)
   (r: leaf_reader p)
   (terminator: t)
   (prf: LUT.consumes_if_not_cond (cond_string_up_to terminator) p)
 : validate_with_action_t #true #WeakKindStrongPrefix
     (LUT.parse_list_up_to (cond_string_up_to terminator) p prf)
-    true_inv disjointness_trivial eloc_none false false
+    true_inv disjointness_trivial eloc_none ha false
 = fun ctxt error_handler_fn sl sl_len pos ->
     let h0 = HST.get () in
+   assert (  loc_not_unused_in h0 `loc_includes` app_loc_fp ctxt true loc_none);
     HST.push_frame ();
     let h1 = HST.get () in
     fresh_frame_modifies h0 h1;
     let bres = B.alloca pos 1ul in
     let h2 = HST.get () in
+   assume (  loc_not_unused_in h2 `loc_includes` app_loc_fp ctxt true loc_none);
+
     I.live_not_unused_in sl h0;
     C.Loops.do_while
-      (validate_list_up_to_inv p terminator prf ctxt sl h2 bres)
+      (validate_list_up_to_inv p terminator prf ctxt sl h2 bres ha)
       (fun _ -> validate_list_up_to_body terminator prf v r ctxt error_handler_fn sl sl_len h2 bres)
       ;
     let result = B.index bres 0ul in
@@ -1889,6 +1906,7 @@ let probe_then_validate
       then (
         let h1 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h0 h1;
+        assume ( action_ghost_loc ctxt `loc_disjoint` I.footprint (CP.stream_of dest)) ; //sl
         let result = v ctxt error_handler_fn (CP.stream_of dest) (CP.stream_len dest) 0uL in
         not (LPE.is_error result)
       )
