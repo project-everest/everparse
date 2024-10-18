@@ -150,7 +150,7 @@ let error_handler =
         true_inv h1)
 
 let action
-  inv disj l on_success a
+  inv disj l on_success returns_true a
 =   (# [EverParse3d.Util.solve_from_ctx ()] I.extra_t #input_buffer_t) ->
     ctxt: app_ctxt ->
     error_handler_fn : error_handler ->
@@ -171,11 +171,12 @@ let action
         U64.v pos <= U64.v posf /\
         U64.v posf == Seq.length (I.get_read sl h)
       )
-      (ensures fun h0 _ h1 ->
+      (ensures fun h0 res h1 ->
         let sl = Ghost.reveal sl in
         modifies (app_loc_fp ctxt true l) h0 h1 /\
         B.live h1 ctxt /\
-        inv h1)
+        inv h1 /\
+        (returns_true ==> res === true))
 
 module LP = LowParse.Spec.Base
 module LPL = LowParse.Low.Base
@@ -332,8 +333,8 @@ let validate_with_success_action'
       #t1 (#p1:parser k1 t1)
       (#inv1:_) (#disj1:_) (#l1:eloc) #ha
       (v1:validate_with_action_t p1 inv1 disj1 l1 ha false)
-      (#inv2:_) (#disj2:_) (#l2:eloc) #b
-      (a:action inv2 disj2 l2 b bool)
+      (#inv2:_) (#disj2:_) (#l2:eloc) #b #rt
+      (a:action inv2 disj2 l2 b rt bool)
   : validate_with_action_t p1 
       (conj_inv inv1 inv2)
       (conj_disjointness disj1 disj2)
@@ -352,9 +353,13 @@ let validate_with_success_action'
          let b = a ctxt error_handler_fn input input_length pos0 pos1 in
          let h2 = HST.get () in
          modifies_address_liveness_insensitive_unused_in h1 h2;
-         if not b
-         then LPE.set_validator_error_pos LPE.validator_error_action_failed pos1
-         else pos1
+         if rt
+         then pos1
+         else (
+           if not b
+           then LPE.set_validator_error_pos LPE.validator_error_action_failed pos1
+           else pos1
+         )
     else
          pos1
 
@@ -554,7 +559,7 @@ let validate_dep_pair_with_refinement_and_action'
       (#nz1: _) (#k1:parser_kind nz1 _) (#t1: _) (#p1:parser k1 t1)
       (#inv1 #disj1 #l1 #ha1: _) (v1:validate_with_action_t p1 inv1 disj1 l1 ha1 true) (r1: leaf_reader p1)
       (f: t1 -> bool)
-      (#inv1' #disj1' #l1' #b: _) (a:t1 -> action inv1' disj1' l1' b bool)
+      (#inv1' #disj1' #l1' #b #rt: _) (a:t1 -> action inv1' disj1' l1' b rt bool)
       (#nz2 #wk2: _) (#k2:parser_kind nz2 wk2)
       (#t2:refine _ f -> Type)
       (#p2:(x:refine _ f) -> parser k2 (t2 x))
@@ -592,13 +597,22 @@ let validate_dep_pair_with_refinement_and_action'
           res1
         else begin
              modifies_address_liveness_insensitive_unused_in h1 h2;
-             if not (a field_value ctxt error_handler_fn input input_length startPosition res1)
-             then LPE.set_validator_error_pos LPE.validator_error_action_failed res1 //action failed
-             else begin
+             let action_result = a field_value ctxt error_handler_fn input input_length startPosition res1 in
+             if rt
+             then (
                let h15 = HST.get () in
                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
                validate_drop (v2 field_value) ctxt error_handler_fn input input_length res1
-             end
+             )
+             else (
+              if not action_result
+              then LPE.set_validator_error_pos LPE.validator_error_action_failed res1 //action failed
+              else begin
+                let h15 = HST.get () in
+                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
+                validate_drop (v2 field_value) ctxt error_handler_fn input input_length res1
+              end
+             )
         end
       end
 
@@ -609,7 +623,7 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
       (#t1: _) (#p1:parser k1 t1) (r1: leaf_reader p1)
       (inv1 disj1 l1: _)
       (f: t1 -> bool)
-      (#inv1' #disj1' #l1' #b: _) (a:t1 -> action inv1' disj1' l1' b bool)
+      (#inv1' #disj1' #l1' #b #rt: _) (a:t1 -> action inv1' disj1' l1' b rt bool)
       (#nz2 #wk2: _) (#k2:parser_kind nz2 wk2)
       (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       (#inv2 #disj2 #l2 #ha2 #ar2: _) (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 disj2 l2 ha2 ar2))
@@ -644,13 +658,22 @@ let validate_dep_pair_with_refinement_and_action_total_zero_parser'
              res1
         else let h2 = HST.get() in
              modifies_address_liveness_insensitive_unused_in h0 h2;
-             if not (a field_value ctxt error_handler_fn input input_length startPosition res1)
-             then LPE.set_validator_error_pos LPE.validator_error_action_failed startPosition //action failed
-             else begin
+             let action_result = a field_value ctxt error_handler_fn input input_length startPosition res1 in
+             if rt
+             then (
                let h15 = HST.get () in
                let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
                validate_drop (v2 field_value) ctxt error_handler_fn input input_length res1
-             end
+             )
+             else (
+              if not action_result
+              then LPE.set_validator_error_pos LPE.validator_error_action_failed startPosition //action failed
+              else begin
+               let h15 = HST.get () in
+               let _ = modifies_address_liveness_insensitive_unused_in h0 h15 in
+               validate_drop (v2 field_value) ctxt error_handler_fn input input_length res1
+              end
+             )
         end
 
 inline_for_extraction noextract
@@ -661,7 +684,7 @@ let validate_dep_pair_with_refinement_and_action
       #inv1 #disj1 #l1 #ha1 (v1:validate_with_action_t p1 inv1 disj1 l1 ha1 true)
       (r1: leaf_reader p1)
       (f: t1 -> bool)
-      #inv1' #disj1' #l1' #b (a:t1 -> action inv1' disj1' l1' b bool)
+      #inv1' #disj1' #l1' #b #rt (a:t1 -> action inv1' disj1' l1' b rt bool)
       #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:refine _ f -> Type) (#p2:(x:refine _ f -> parser k2 (t2 x)))
       #inv2 #disj2 #l2 #ha2 #ar2 (v2:(x:refine _ f -> validate_with_action_t (p2 x) inv2 disj2 l2 ha2 ar2))
   = if
@@ -678,7 +701,7 @@ inline_for_extraction noextract
 let validate_dep_pair_with_action
       #nz1 (#k1:parser_kind nz1 _) #t1 (#p1:parser k1 t1)
       #inv1 #disj1 #l1 #ha1 (v1:validate_with_action_t p1 inv1 disj1 l1 ha1 true) (r1: leaf_reader p1)
-      #inv1' #disj1' #l1' #b (a:t1 -> action inv1' disj1' l1' b bool)
+      #inv1' #disj1' #l1' #b #rt (a:t1 -> action inv1' disj1' l1' b rt bool)
       #nz2 #wk2 (#k2:parser_kind nz2 wk2) (#t2:t1 -> Type) (#p2:(x:t1 -> parser k2 (t2 x)))
       #inv2 #disj2 #l2 #ha2 #ar2 (v2:(x:t1 -> validate_with_action_t (p2 x) inv2 disj2 l2 ha2 ar2))
   = fun ctxt error_handler_fn input input_length startPosition ->
@@ -698,10 +721,17 @@ let validate_dep_pair_with_action
         let action_result = a field_value ctxt error_handler_fn input input_length startPosition res in
         let h3 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h2 h3;
-        if not action_result
-        then LPE.set_validator_error_pos LPE.validator_error_action_failed res //action failed
-        else
-               validate_drop (v2 field_value) ctxt error_handler_fn input input_length res
+        if rt 
+        then (
+          validate_drop (v2 field_value) ctxt error_handler_fn input input_length res
+        )
+        else (
+          if not action_result
+          then LPE.set_validator_error_pos LPE.validator_error_action_failed res //action failed
+          else
+                validate_drop (v2 field_value) ctxt error_handler_fn input input_length res
+       )
+
       end
 
 inline_for_extraction noextract
@@ -855,8 +885,8 @@ let validate_filter_with_action
       #nz (#k:parser_kind nz _) (#t:_) (#p:parser k t)
       #inv #disj #l #ha (v:validate_with_action_t p inv disj l ha true)
       (r:leaf_reader p) (f:t -> bool) (cr:string) (cf:string)
-      (#b:bool) #inva #disja (#la:eloc)
-      (a: t -> action inva disja la b bool)
+      (#b #rt:bool) #inva #disja (#la:eloc)
+      (a: t -> action inva disja la b rt bool)
 = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
     let h = HST.get () in
@@ -877,7 +907,10 @@ let validate_filter_with_action
       if ok
         then let h15 = HST.get () in
              let _ = modifies_address_liveness_insensitive_unused_in h h15 in
-             if a field_value ctxt error_handler_fn input input_length pos0 res
+             let action_result = a field_value ctxt error_handler_fn input input_length pos0 res in
+             if rt 
+             then res
+             else if action_result
              then res
              else LPE.set_validator_error_pos LPE.validator_error_action_failed res
       else LPE.set_validator_error_pos LPE.validator_error_constraint_failed res
@@ -890,8 +923,8 @@ let validate_with_dep_action
       #inv #disj #l #ha
       (v:validate_with_action_t p inv disj l ha true)
       (r:leaf_reader p)
-      (#b:bool) #inva #disja (#la:eloc)
-      (a: t -> action inva disja la b bool)
+      (#b #rt:bool) #inva #disja (#la:eloc)
+      (a: t -> action inva disja la b rt bool)
 = fun ctxt error_handler_fn input input_length start_position ->
     [@inline_let] let pos0 = start_position in
     let h = HST.get () in
@@ -905,7 +938,9 @@ let validate_with_dep_action
       let field_value = r input pos0 in
       let h15 = HST.get () in
       let _ = modifies_address_liveness_insensitive_unused_in h h15 in
-      if a field_value ctxt error_handler_fn input input_length pos0 res
+      let action_result = a field_value ctxt error_handler_fn input input_length pos0 res in
+      if rt then res
+      else if action_result
       then res
       else LPE.set_validator_error_pos LPE.validator_error_action_failed res
     end
@@ -1792,12 +1827,17 @@ let action_return
 
 noextract
 inline_for_extraction
+let action_return_true
+  = fun _ _ _ _ _ _ -> true
+
+noextract
+inline_for_extraction
 let action_bind
       (name: string)
       (#invf:slice_inv) #disjf (#lf:eloc)
-      #bf (#a:Type) (f: action invf disjf lf bf a)
-      (#invg:slice_inv) #disjg (#lg:eloc) #bg
-      (#b:Type) (g: (a -> action invg disjg lg bg b))
+      #bf #rtf (#a:Type) (f: action invf disjf lf bf rtf a)
+      (#invg:slice_inv) #disjg (#lg:eloc) #bg #rtg
+      (#b:Type) (g: (a -> action invg disjg lg bg rtg b))
 = fun ctxt error_handler_fn input input_length pos posf ->
     let h0 = HST.get () in
     [@(rename_let ("" ^ name))]
@@ -1810,9 +1850,9 @@ noextract
 inline_for_extraction
 let action_seq
       (#invf:slice_inv) #disjf (#lf:eloc)
-      #bf (#a:Type) (f: action invf disjf lf bf a)
-      (#invg:slice_inv) #disjg (#lg:eloc) #bg
-      (#b:Type) (g: action invg disjg lg bg b)
+      #bf #rtf (#a:Type) (f: action invf disjf lf bf rtf a)
+      (#invg:slice_inv) #disjg (#lg:eloc) #bg #rtg
+      (#b:Type) (g: action invg disjg lg bg rtg b)
 = fun ctxt error_handler_fn input input_length pos posf ->
     let h0 = HST.get () in
     let _ = f ctxt error_handler_fn input input_length pos posf in
@@ -1825,9 +1865,9 @@ inline_for_extraction
 let action_ite
       (#invf:slice_inv) #disjf (#lf:eloc)
       (guard:bool)
-      #bf (#a:Type) (then_: squash guard -> action invf disjf lf bf a)
-      (#invg:slice_inv) #disjg (#lg:eloc) #bg
-      (else_: squash (not guard) -> action invg disjg lg bg a)
+      #bf #rtf (#a:Type) (then_: squash guard -> action invf disjf lf bf rtf a)
+      (#invg:slice_inv) #disjg (#lg:eloc) #bg #rtg
+      (else_: squash (not guard) -> action invg disjg lg bg rtg a)
 = fun ctxt error_handler_fn input input_length pos posf ->
     if guard 
     then then_ () ctxt error_handler_fn input input_length pos posf

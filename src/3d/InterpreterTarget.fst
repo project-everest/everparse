@@ -698,9 +698,14 @@ let rec print_action (mname:string) (a:T.action)
   = let print_atomic_action (a:T.atomic_action)
       : ML string
       = match a with
-        | T.Action_return e ->
-          Printf.sprintf "(Action_return %s)"
-                          (T.print_expr mname e)
+        | T.Action_return e -> (
+          match fst e with
+          | T.Constant (A.Bool true) ->
+            "Action_return_true"
+          | _ -> 
+            Printf.sprintf "(Action_return %s)"
+                            (T.print_expr mname e)
+        )
         | T.Action_abort ->
           "Action_abort"
 

@@ -141,7 +141,8 @@ val action
       (disj:disjointness_pre)
       (modifies_l:eloc)
       (on_success:bool)
-      (a:Type)
+      (always_succeeds:bool)
+      (a:Type0)
     : Type0
 
 inline_for_extraction noextract
@@ -178,10 +179,10 @@ val act_with_comment
       (#[@@@erasable] inv:slice_inv)
       (#[@@@erasable] disj:disjointness_pre)
       (#[@@@erasable] l:eloc)
-      (#b:_)
+      (#b #rt:_)
       (res:Type)
-      (a: action inv disj l b res)
-: Tot (action inv disj l b res)
+      (a: action inv disj l b rt res)
+: Tot (action inv disj l b rt res)
 
 inline_for_extraction noextract
 val leaf_reader
@@ -221,8 +222,8 @@ val validate_with_success_action
       (#[@@@erasable] inv2:slice_inv)
       (#[@@@erasable] disj2:disjointness_pre)
       (#[@@@erasable] l2:eloc)
-      (#b:bool)
-      (a:action inv2 disj2 l2 b bool)
+      (#b #rt:bool)
+      (a:action inv2 disj2 l2 b rt bool)
   : validate_with_action_t p1 (conj_inv inv1 inv2) (conj_disjointness disj1 disj2) (l1 `eloc_union` l2) true false
 
 inline_for_extraction noextract
@@ -326,8 +327,8 @@ val validate_dep_pair_with_refinement_and_action
       (#[@@@erasable] inv1':slice_inv)
       (#[@@@erasable] disj1':disjointness_pre)
       (#[@@@erasable] l1':eloc)
-      (#b:_)
-      (a:t1 -> action inv1' disj1' l1' b bool)
+      (#b #rt:_)
+      (a:t1 -> action inv1' disj1' l1' b rt bool)
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
@@ -361,8 +362,8 @@ val validate_dep_pair_with_action
       (#[@@@erasable] inv1':slice_inv)
       (#[@@@erasable] disj1':disjointness_pre)
       (#[@@@erasable] l1':eloc)
-      (#b:_)
-      (a:t1 -> action inv1' disj1' l1' b bool)
+      (#b #rt:_)
+      (a:t1 -> action inv1' disj1' l1' b rt bool)
       (#nz2:_)
       (#wk2: _)
       (#k2:parser_kind nz2 wk2)
@@ -449,11 +450,11 @@ val validate_filter_with_action
        (f:t -> bool)
        (cr:string)
        (cf:string)
-       (#b:bool)
+       (#b #rt:bool)
        (#[@@@erasable] inva:slice_inv)
        (#[@@@erasable] disja:disjointness_pre)                   
        (#[@@@erasable] la:eloc)
-       (a: t -> action inva disja la b bool)
+       (a: t -> action inva disja la b rt bool)
   : validate_with_action_t #nz
       (p `parse_filter` f)
       (conj_inv inv inva)
@@ -475,11 +476,11 @@ val validate_with_dep_action
        (#has_action:_)
        (v:validate_with_action_t p inv disj l has_action true)
        (r:leaf_reader p)
-       (#b:bool)
+       (#b #rt:bool)
        (#[@@@erasable] inva:slice_inv)
        (#[@@@erasable] disja:disjointness_pre)                   
        (#[@@@erasable] la:eloc)
-       (a: t -> action inva disja la b bool)
+       (a: t -> action inva disja la b rt bool)
   : validate_with_action_t #nz
       p
       (conj_inv inv inva)
@@ -773,7 +774,12 @@ inline_for_extraction
 val action_return
       (#a:Type)
       (x:a)
-  : action true_inv disjointness_trivial eloc_none false a
+  : action true_inv disjointness_trivial eloc_none false false a
+
+noextract
+inline_for_extraction
+val action_return_true
+  : action true_inv disjointness_trivial eloc_none false true bool
 
 noextract
 inline_for_extraction
@@ -782,20 +788,21 @@ val action_bind
       (#[@@@erasable] invf:slice_inv)
       (#[@@@erasable] disjf:disjointness_pre)
       (#[@@@erasable] lf:eloc)
-      (#bf:_)
+      (#bf #rtf:_)
       (#a:Type)
-      (f: action invf disjf lf bf a)
+      (f: action invf disjf lf bf rtf a)
       (#[@@@erasable] invg:slice_inv)
       (#[@@@erasable] disjg:disjointness_pre)
       (#[@@@erasable] lg:eloc)
-      (#bg:_)
+      (#bg #rt:_)
       (#b:Type)
-      (g: (a -> action invg disjg lg bg b))
+      (g: (a -> action invg disjg lg bg rt b))
   : action
       (conj_inv invf invg)
       (conj_disjointness disjf disjg)
       (eloc_union lf lg)
       (bf || bg)
+      rt
       b
 
 noextract
@@ -804,20 +811,21 @@ val action_seq
       (#[@@@erasable] invf:slice_inv)
       (#[@@@erasable] disjf:disjointness_pre)
       (#[@@@erasable] lf:eloc)
-      (#bf:_)
+      (#bf #rtf:_)
       (#a:Type)
-      (f: action invf disjf lf bf a)
+      (f: action invf disjf lf bf rtf a)
       (#[@@@erasable] invg:slice_inv)
       (#[@@@erasable] disjg:disjointness_pre)
       (#[@@@erasable] lg:eloc)
-      (#bg:_)
+      (#bg #rtg:_)
       (#b:Type)
-      (g: action invg disjg lg bg b)
+      (g: action invg disjg lg bg rtg b)
   : action
       (conj_inv invf invg)
       (conj_disjointness disjf disjg)
       (eloc_union lf lg)
       (bf || bg)
+      rtg
       b
 
 noextract
@@ -827,37 +835,38 @@ val action_ite
       (#[@@@erasable] disjf:disjointness_pre)
       (#[@@@erasable] lf:eloc)
       (guard:bool)
-      (#bf:_)
+      (#bf #rtf:_)
       (#a:Type)
-      (then_: squash guard -> action invf disjf lf bf a)
+      (then_: squash guard -> action invf disjf lf bf rtf a)
       (#[@@@erasable] invg:slice_inv)
       (#[@@@erasable] disjg:disjointness_pre)
       (#[@@@erasable] lg:eloc)
-      (#bg:_)
-      (else_: squash (not guard) -> action invg disjg lg bg a)
+      (#bg #rtg:_)
+      (else_: squash (not guard) -> action invg disjg lg bg rtg a)
   : action
       (conj_inv invf invg)
       (conj_disjointness disjf disjg)
       (eloc_union lf lg)
       (bf || bg)
+      (rtf && rtg)
       a
 
 noextract
 inline_for_extraction
 val action_abort      
-  : action true_inv disjointness_trivial eloc_none false bool
+  : action true_inv disjointness_trivial eloc_none false false bool
 
 noextract
 inline_for_extraction
 val action_field_pos_64
-   : action true_inv disjointness_trivial eloc_none false U64.t
+   : action true_inv disjointness_trivial eloc_none false false U64.t
 
 noextract
 inline_for_extraction
 val action_deref
       (#a:_)
       (x:bpointer a)
-   : action (ptr_inv x) disjointness_trivial eloc_none false a
+   : action (ptr_inv x) disjointness_trivial eloc_none false false a
 
 noextract
 inline_for_extraction
@@ -865,7 +874,7 @@ val action_assignment
       (#a:_)
       (x:bpointer a)
       (v:a)
-   : action (ptr_inv x) disjointness_trivial (ptr_loc x) false unit
+   : action (ptr_inv x) disjointness_trivial (ptr_loc x) false false unit
 
 noextract
 inline_for_extraction
@@ -873,13 +882,13 @@ val action_weaken
       (#[@@@erasable] inv:slice_inv)
       (#[@@@erasable] disj:disjointness_pre)
       (#[@@@erasable] l:eloc)
-      (#b:_)
+      (#b #rt:_)
       (#a:_)
-      (act:action inv disj l b a)
+      (act:action inv disj l b rt a)
       (#[@@@erasable] inv':slice_inv{inv' `inv_implies` inv})
       (#[@@@erasable] disj':disjointness_pre { disj' `imp_disjointness` disj })
       (#l':eloc{l' `eloc_includes` l})
-   : action inv' disj' l' b a
+   : action inv' disj' l' b rt a
 
 inline_for_extraction
 noextract
@@ -890,7 +899,7 @@ inline_for_extraction
 val mk_external_action
   (#t: Type)
   (#l:eloc) ($f: external_action t l)
-  : action true_inv disjointness_trivial l false t
+  : action true_inv disjointness_trivial l false false t
 
 val copy_buffer_inv (x:CP.copy_buffer_t) : slice_inv
 val copy_buffer_loc (x:CP.copy_buffer_t) : eloc
@@ -916,6 +925,7 @@ val probe_then_validate
            (conj_disjointness disj (disjoint (copy_buffer_loc dest) l))
            (eloc_union l (copy_buffer_loc dest)) 
            true
+           false
            bool
 
 // Some actions are valid only for specific backends (buffer, extern, etc.)

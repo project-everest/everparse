@@ -491,7 +491,7 @@ let action_binding
       (on_success:bool)
       (a:Type)
   : Type u#0
-  = A.action (interp_inv inv) A.disjointness_trivial (interp_loc l) on_success a
+  = A.action (interp_inv inv) A.disjointness_trivial (interp_loc l) on_success false a
 
 inline_for_extraction
 let extern_action (t: Type) (l:loc_index) = A.external_action t (interp_loc l)
@@ -531,49 +531,52 @@ let mk_action_binding
 *)
 noeq
 type atomic_action
-  : inv_index -> disj_index -> loc_index -> bool -> Type0 -> Type u#1 =
+  : inv_index -> disj_index -> loc_index -> bool -> bool -> Type0 -> Type u#1 =
   | Action_return:
       #a:Type0 ->
       x:a ->
-      atomic_action inv_none disj_none loc_none false a
+      atomic_action inv_none disj_none loc_none false false a
+
+  | Action_return_true:
+      atomic_action inv_none disj_none loc_none false true bool
 
   | Action_abort:
-      atomic_action inv_none disj_none loc_none false bool
+      atomic_action inv_none disj_none loc_none false false bool
 
   | Action_field_pos_64:
-      atomic_action inv_none disj_none loc_none false U64.t
+      atomic_action inv_none disj_none loc_none false false U64.t
 
   | Action_field_pos_32:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
-      atomic_action inv_none disj_none loc_none false U32.t
+      atomic_action inv_none disj_none loc_none false false U32.t
 
   | Action_field_ptr:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagBuffer) ->
-      atomic_action inv_none disj_none loc_none true A.___PUINT8
+      atomic_action inv_none disj_none loc_none true false A.___PUINT8
 
   | Action_field_ptr_after:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
       (sz: FStar.UInt64.t) ->
       write_to: A.bpointer A.___PUINT8 ->
-      atomic_action (NonTrivial (A.ptr_inv write_to)) disj_none (NonTrivial (A.ptr_loc write_to)) false bool
+      atomic_action (NonTrivial (A.ptr_inv write_to)) disj_none (NonTrivial (A.ptr_loc write_to)) false false bool
  
   | Action_field_ptr_after_with_setter:
       squash (EverParse3d.Actions.BackendFlag.backend_flag == A.BackendFlagExtern) ->
       sz: FStar.UInt64.t ->
       #out_loc:loc_index ->
       write_to: (A.___PUINT8 -> Tot (extern_action unit out_loc)) ->
-      atomic_action inv_none disj_none out_loc false bool
+      atomic_action inv_none disj_none out_loc false false bool
 
   | Action_deref:
       #a:Type0 ->
       x:A.bpointer a ->
-      atomic_action (NonTrivial (A.ptr_inv x)) disj_none loc_none false a
+      atomic_action (NonTrivial (A.ptr_inv x)) disj_none loc_none false false a
 
   | Action_assignment:
       #a:Type0 ->
       x:A.bpointer a ->
       rhs:a ->
-      atomic_action (NonTrivial (A.ptr_inv x)) disj_none (NonTrivial (A.ptr_loc x)) false unit
+      atomic_action (NonTrivial (A.ptr_inv x)) disj_none (NonTrivial (A.ptr_loc x)) false false unit
 
   | Action_call:
       #inv:inv_index ->
@@ -581,7 +584,7 @@ type atomic_action
       #b:bool ->
       #t:Type0 ->
       action_binding inv loc b t ->
-      atomic_action inv disj_none loc b t
+      atomic_action inv disj_none loc b false t
   
   | Action_probe_then_validate:
       #nz:bool -> 
@@ -600,18 +603,20 @@ type atomic_action
       atomic_action (join_inv inv (NonTrivial (A.copy_buffer_inv dest)))
                     (join_disj disj (disjoint (NonTrivial (A.copy_buffer_loc dest)) l))
                     (join_loc l (NonTrivial (A.copy_buffer_loc dest)))
-                    true bool
+                    true false bool
 
 
 (* Denotation of atomic_actions as A.action *)
 [@@specialize]
 let atomic_action_as_action
-   (#i #d #l #b #t:_)
-   (a:atomic_action i d l b t)
-  : Tot (A.action (interp_inv i) (interp_disj d) (interp_loc l) b t)
+   (#i #d #l #b #rt #t:_)
+   (a:atomic_action i d l b rt t)
+  : Tot (A.action (interp_inv i) (interp_disj d) (interp_loc l) b rt t)
   = match a with
     | Action_return x ->
       A.action_return x
+    | Action_return_true ->
+      A.action_return_true
     | Action_abort ->
       A.action_abort
     | Action_field_pos_64 ->
@@ -642,39 +647,39 @@ let atomic_action_as_action
 *)
 noeq
 type action
-  : inv_index -> disj_index -> loc_index -> bool -> Type0 -> Type u#1 =
+  : inv_index -> disj_index -> loc_index -> bool -> bool -> Type0 -> Type u#1 =
   | Atomic_action:
-      #i:_ -> #d:_ -> #l:_ -> #b:_ -> #t:_ ->
-      atomic_action i d l b t ->
-      action i d l b t
+      #i:_ -> #d:_ -> #l:_ -> #b:_ -> #rt:_ -> #t:_ ->
+      atomic_action i d l b rt t ->
+      action i d l b rt t
 
   | Action_seq:
-      #i0:_ -> #l0:_ -> #b0:_ -> hd:atomic_action i0 disj_none l0 b0 unit ->
-      #i1:_ -> #l1:_ -> #b1:_ -> #t:_ -> tl:action i1 disj_none l1 b1 t ->
-      action (join_inv i0 i1) disj_none (join_loc l0 l1) (b0 || b1) t
+      #i0:_ -> #l0:_ -> #b0:_ -> #rt1:_ -> hd:atomic_action i0 disj_none l0 b0 rt1 unit ->
+      #i1:_ -> #l1:_ -> #b1:_ -> #rt2:_ -> #t:_ -> tl:action i1 disj_none l1 b1 rt2 t ->
+      action (join_inv i0 i1) disj_none (join_loc l0 l1) (b0 || b1) rt2 t
 
   | Action_ite :
       hd:bool ->
-      #i0:_ -> #l0:_ -> #b0:_ -> #t:_ -> then_:(_:squash hd -> action i0 disj_none l0 b0 t) ->
-      #i1:_ -> #l1:_ -> #b1:_ -> else_:(_:squash (not hd) -> action i1 disj_none l1 b1 t) ->
-      action (join_inv i0 i1) disj_none (join_loc l0 l1) (b0 || b1) t
+      #i0:_ -> #l0:_ -> #b0:_ -> #rt0:_ -> #t:_ -> then_:(_:squash hd -> action i0 disj_none l0 b0 rt0 t) ->
+      #i1:_ -> #l1:_ -> #b1:_ -> #rt1:_ -> else_:(_:squash (not hd) -> action i1 disj_none l1 b1 rt1 t) ->
+      action (join_inv i0 i1) disj_none (join_loc l0 l1) (b0 || b1) (rt0 && rt1) t
 
   | Action_let:
-      #i0:_ -> #l0:_ -> #b0:_ -> #t0:_ -> head:atomic_action i0 disj_none l0 b0 t0 ->
-      #i1:_ -> #l1:_ -> #b1:_ -> #t1:_ -> k:(t0 -> action i1 disj_none l1 b1 t1) ->
-      action (join_inv i0 i1) disj_none (join_loc l0 l1) (b0 || b1) t1
+      #i0:_ -> #l0:_ -> #b0:_ -> #rt1:_ -> #t0:_ -> head:atomic_action i0 disj_none l0 b0 rt1 t0 ->
+      #i1:_ -> #l1:_ -> #b1:_ -> #rt2:_ -> #t1:_ -> k:(t0 -> action i1 disj_none l1 b1 rt2 t1) ->
+      action (join_inv i0 i1) disj_none (join_loc l0 l1) (b0 || b1) rt2 t1
 
   | Action_act:
-      #i0:_ -> #l0:_ -> #b0:_ -> act:action i0 disj_none l0 b0 unit ->
-      action i0 disj_none l0 b0 bool
+      #i0:_ -> #l0:_ -> #b0:_ -> #rt0:_ -> act:action i0 disj_none l0 b0 rt0 unit ->
+      action i0 disj_none l0 b0 true bool
 
 
 (* Denotation of action as A.action *)
 [@@specialize]
 let rec action_as_action
-   (#i #d #l #b #t:_)
-   (a:action i d l b t)
-  : Tot (A.action (interp_inv i) (interp_disj d) (interp_loc l) b t)
+   (#i #d #l #b #rt #t:_)
+   (a:action i d l b rt t)
+  : Tot (A.action (interp_inv i) (interp_disj d) (interp_loc l) b rt t)
     (decreases a)
   = A.index_equations();
     match a with
@@ -697,7 +702,7 @@ let rec action_as_action
       A.action_bind "hd" head k
 
     | Action_act #i0 #l0 #b0 a ->
-      A.action_weaken (A.action_seq (action_as_action a) (A.action_return true))
+      A.action_weaken (A.action_seq (action_as_action a) A.action_return_true)
                       #(interp_inv i0) 
                       #_ 
                       #(interp_loc l0)
@@ -780,10 +785,10 @@ type typ
       fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #d1:_ -> #l1:_ -> #ha1:_ ->
-      #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
+      #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ -> #rt2:_ ->
       base:dtyp pk1 ha1 true i1 d1 l1 ->
       refinement:(dtyp_as_type base -> bool) ->
-      act:(dtyp_as_type base -> action i2 d2 l2 b2 bool) ->
+      act:(dtyp_as_type base -> action i2 d2 l2 b2 rt2 bool) ->
       typ (P.filter_kind pk1)
           (join_inv i1 i2)
           (join_disj d1 d2)
@@ -820,10 +825,10 @@ type typ
       #i1:_ -> #d1:_ -> #l1:_ -> #ha1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ -> #ha2:_ ->
-      #i3:_ -> #d3:_ -> #l3:_ -> #b3:_ ->      
+      #i3:_ -> #d3:_ -> #l3:_ -> #b3:_ -> #rt3:_ ->
       base:dtyp pk1 ha1 true i1 d1 l1 ->
       k:(x:dtyp_as_type base -> typ pk2 i2 d2 l2 ha2 b2) ->
-      act:(dtyp_as_type base -> action i3 d3 l3 b3 bool) ->
+      act:(dtyp_as_type base -> action i3 d3 l3 b3 rt3 bool) ->
       typ (P.and_then_kind pk1 pk2)
           (join_inv i1 (join_inv i3 i2))
           (join_disj d1 (join_disj d3 d2))
@@ -842,13 +847,13 @@ type typ
       #i1:_ -> #d1:_ -> #l1:_ -> #ha1:_ ->
       #nz2:_ -> #wk2:_ -> #pk2:P.parser_kind nz2 wk2 ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ -> #ha2:_ ->
-      #i3:_ -> #d3:_ -> #l3:_ -> #b3:_ ->      
+      #i3:_ -> #d3:_ -> #l3:_ -> #b3:_ -> #rt3:_ -> 
       //the first component is a pre-denoted type with a reader
       base:dtyp pk1 ha1 true i1 d1 l1 ->
       //the second component is a function from denotations of base
       refinement:(dtyp_as_type base -> bool) ->
       k:(x:dtyp_as_type base { refinement x } -> typ pk2 i2 d2 l2 ha2 b2) ->
-      act:(dtyp_as_type base -> action i3 d3 l3 b3 bool) ->
+      act:(dtyp_as_type base -> action i3 d3 l3 b3 rt3 bool) ->
       typ (P.and_then_kind (P.filter_kind pk1) pk2)
           (join_inv i1 (join_inv i3 i2))
           (join_disj d1 (join_disj d3 d2))
@@ -890,18 +895,18 @@ type typ
       fieldname:string ->       
       #nz:_ -> #wk:_ -> #pk:P.parser_kind nz wk ->
       #l1:_ -> #i1:_ -> #d1:_ -> #b1:_ -> #ha1:_ ->
-      #l2:_ -> #i2:_ -> #d2:_ -> #b2:_ ->
+      #l2:_ -> #i2:_ -> #d2:_ -> #b2:_ -> #rt2:_ ->
       base:typ pk i1 d1 l1 ha1 b1 ->
-      act:action i2 d2 l2 b2 bool ->
+      act:action i2 d2 l2 b2 rt2 bool ->
       typ pk (join_inv i1 i2) (join_disj d1 d2) (join_loc l1 l2) true false
 
   | T_with_dep_action:
       fieldname:string ->       
       #nz1:_ -> #pk1:P.parser_kind nz1 P.WeakKindStrongPrefix ->
       #i1:_ -> #d1: _ -> #l1:_ -> #ha1:_ ->
-      #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ ->
+      #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ -> #rt2:_ ->
       head:dtyp pk1 ha1 true i1 d1 l1 ->
-      act:(dtyp_as_type head -> action i2 d2 l2 b2 bool) ->
+      act:(dtyp_as_type head -> action i2 d2 l2 b2 rt2 bool) ->
       typ pk1 (join_inv i1 i2) (join_disj d1 d2) (join_loc l1 l2) true false
 
   | T_drop:
