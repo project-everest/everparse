@@ -31,6 +31,13 @@ val cbor_map: eqtype
 
 val cbor_map_get: cbor_map -> cbor -> Tot (option cbor)
 
+val cbor_map_get_precedes (m: cbor_map) (x: cbor) : Lemma
+  (ensures (match cbor_map_get m x with
+  | None -> True
+  | Some y -> (x << m) /\ (y << m)
+  ))
+  [SMTPat (cbor_map_get m x)]
+
 let cbor_map_equal (m1 m2: cbor_map) : Tot prop =
   (forall k . cbor_map_get m1 k == cbor_map_get m2 k)
 
@@ -131,4 +138,15 @@ val unpack_pack: (c: cbor_case) -> Lemma
 
 val pack_unpack: (c: cbor) -> Lemma
   (ensures (pack (unpack c) == c))
+  [SMTPat (unpack c)]
+
+val unpack_precedes
+  (c: cbor)
+: Lemma
+  (ensures (match unpack c with
+  | CArray v -> (forall x . List.Tot.memP x v ==> x << c) // (v << c DOES NOT hold because of casting between the refinement on the list and the refinement on all its elements)
+  | CMap v -> v << c
+  | CTagged _ v -> v << c
+  | _ -> True
+  ))
   [SMTPat (unpack c)]

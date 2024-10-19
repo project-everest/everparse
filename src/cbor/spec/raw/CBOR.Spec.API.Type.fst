@@ -41,6 +41,13 @@ let cbor_map_get m k =
     list_assoc_cbor k m;
     Some v
 
+let cbor_map_get_precedes m k =
+  match List.Tot.assoc k m with
+  | None -> ()
+  | Some v ->
+    CBOR.Spec.Util.list_assoc_mem_intro k v m;
+    List.Tot.memP_precedes (k, v) m
+
 let cbor_map_ext m1 m2 =
   let prf () : Lemma
     (requires (cbor_map_equal m1 m2))
@@ -237,6 +244,22 @@ let list_cbor_of_cbor_list
 : Tot (list cbor)
 = List.Tot.map cast_to_cbor l
 
+let rec cbor_list_of_list_cbor_precedes (l: list R.raw_data_item {
+    List.Tot.for_all (R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem) l /\
+    List.Tot.for_all (R.holds_on_raw_data_item (R.raw_data_item_sorted_elem R.deterministically_encoded_cbor_map_key_order)) l
+  }) (x: cbor) : Lemma
+  (requires (
+    List.Tot.memP x (list_cbor_of_cbor_list l)
+  ))
+  (ensures (x << l))
+= let a :: q = l in
+  if a = x
+  then ()
+  else (
+    assert (q << l);
+    cbor_list_of_list_cbor_precedes q x
+  )
+
 let unpack m =
   assert_norm (R.raw_data_item_ints_optimal == R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem);
   assert_norm (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order == R.holds_on_raw_data_item (R.raw_data_item_sorted_elem R.deterministically_encoded_cbor_map_key_order));
@@ -321,3 +344,8 @@ let pack_unpack c = match c with
     R.raw_uint64_optimal_unique len (R.mk_raw_uint64 len.value);
     cbor_list_of_list_cbor_of_cbor_list v
 
+let unpack_precedes c =
+  match c with
+  | R.Array _ v ->
+    Classical.forall_intro (Classical.move_requires (cbor_list_of_list_cbor_precedes v))
+  | _ -> ()
