@@ -201,7 +201,7 @@ let pair_typ t1 t2 =
 let pair_value x y =
     T.Record (with_dummy_range (to_ident' "tuple2"))
              [(with_dummy_range (to_ident' "fst"), T.mk_expr (T.Identifier x));
-              (with_dummy_range (to_ident' "snd"), T.mk_expr (T.Identifier y))]
+              (with_dummy_range (to_ident' "snd"), T.mk_expr (T.Identifier y))]  
 let pair_parser env n1 p1 p2 =
     let open T in
     let pt = pair_typ p1.p_typ p2.p_typ in
@@ -490,9 +490,9 @@ let rec parse_typ (env:global_env)
   | T.T_app _ A.KindExtern _ ->
     failwith "Impossible, did not expect parse_typ to be called with an output/extern type!"
 
-  | T.T_nlist t e ->
-    let pt = parse_typ env typename (extend_fieldname "element") t in
-    let t_size_constant = is_compile_time_fixed_size env t in
+  | T.T_nlist telt e ->
+    let pt = parse_typ env typename (extend_fieldname "element") telt in
+    let t_size_constant = is_compile_time_fixed_size env telt in
     mk_parser pk_list
               t
               typename
