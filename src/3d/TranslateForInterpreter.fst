@@ -179,7 +179,7 @@ let rec is_compile_time_fixed_size (env:global_env) (t:T.typ)
   | T.T_refine base _ -> is_compile_time_fixed_size env base
   | T.T_with_comment t _ -> is_compile_time_fixed_size env t
   | T.T_nlist elt n -> // this is the main reason why we need T.T_pair
-    if T.Constant? (fst n)
+    if Some? (T.as_constant n)
     then is_compile_time_fixed_size env elt
     else false
   | T.T_pair t1 t2 -> // this is the main reason why we need T.T_pair

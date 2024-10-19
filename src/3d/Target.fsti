@@ -61,6 +61,32 @@ type expr' =
 
 and expr = expr' & A.range
 
+let rec as_constant n =
+  match fst n with
+  | Constant (A.Int sw i) ->
+    Some (A.Int sw i)
+  | App (Cast _from to) [ n ] -> (
+    match as_constant n with
+    | Some (A.Int _ i) -> Some (A.Int to i)
+    | _ -> None
+  )
+  | App (Plus _) [ n; m ] -> (
+    match as_constant n, as_constant m with
+    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i + j))
+    | _ -> None
+  )
+  | App (Minus _) [ n; m ] -> (
+    match as_constant n, as_constant m with
+    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i - j))
+    | _ -> None
+  )
+  | App (Mul _) [ n; m ] -> (
+    match as_constant n, as_constant m with
+    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i `op_Multiply` j))
+    | _ -> None
+  )
+  | _ -> None
+
 let subst = list (A.ident' & expr)
 val subst_expr (s:subst) (e:expr) : expr
 let mk_expr (e:expr') = e, A.dummy_range
