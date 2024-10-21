@@ -860,11 +860,19 @@ let rec print_typ (mname:string) (t:typ)
         | None -> false, n
         | Some m -> true, (T.Constant m, snd n)
       in
-      Printf.sprintf "(T_nlist \"%s\" %b %b %s %s)"
+      let n_is_const =
+        if is_const
+        then
+          match fst n with
+          | T.Constant (A.Int _ n) -> Printf.sprintf "(Some %d)" n
+          | _ -> "None"
+        else "None"
+      in
+      Printf.sprintf "(T_nlist \"%s\" %s %s %b %s)"
                      fn
-                     is_const
-                     fixed_size
                      (T.print_expr mname n)
+                     n_is_const
+                     fixed_size
                      (print_typ mname t)
 
     | T_at_most fn n t ->

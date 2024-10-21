@@ -182,7 +182,7 @@ type parser_kind' =
   | PK_return
   | PK_impos
   | PK_base     : hd:A.ident -> parser_kind'
-  | PK_list     : parser_kind'
+  | PK_list     : elt_kind:parser_kind -> option nat -> parser_kind'
   | PK_t_at_most: parser_kind'
   | PK_t_exact  : parser_kind'
   | PK_filter   : k:parser_kind -> parser_kind'

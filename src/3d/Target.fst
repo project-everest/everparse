@@ -69,7 +69,7 @@ let rec parser_kind_eq k k' =
   match k.pk_kind, k'.pk_kind with
   | PK_return, PK_return -> true
   | PK_impos, PK_impos -> true
-  | PK_list,  PK_list -> true
+  | PK_list k0 n0,  PK_list k1 n1 -> parser_kind_eq k0 k1 && n0=n1
   | PK_t_at_most,  PK_t_at_most -> true
   | PK_t_exact,  PK_t_exact -> true
   | PK_base hd1, PK_base hd2 -> A.(hd1.v = hd2.v)
@@ -454,8 +454,12 @@ let rec print_kind (mname:string) (k:parser_kind) : Tot string =
     Printf.sprintf "%skind_%s"
       (maybe_mname_prefix mname hd)
       (print_ident hd)
-  | PK_list ->
-    "kind_nlist"
+  | PK_list k0 n ->
+    Printf.sprintf "(kind_nlist %s %s)"
+      (print_kind mname k0)
+      (match n with
+       | None -> "None"
+       | Some n -> Printf.sprintf "(Some %d)" n)
   | PK_t_at_most ->
     "kind_t_at_most"
   | PK_t_exact ->

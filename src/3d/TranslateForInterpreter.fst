@@ -128,8 +128,8 @@ let pk_base id nz wk = T.({
   pk_weak_kind = wk;
   pk_nz = nz
 })
-let pk_list = T.({
-  pk_kind = PK_list;
+let pk_list k0 n = T.({
+  pk_kind = PK_list k0 n;
   pk_weak_kind = WeakKindStrongPrefix;
   pk_nz = false
 })
@@ -493,7 +493,12 @@ let rec parse_typ (env:global_env)
   | T.T_nlist telt e ->
     let pt = parse_typ env typename (extend_fieldname "element") telt in
     let t_size_constant = is_compile_time_fixed_size env telt in
-    mk_parser pk_list
+    let n_is_const =
+      match T.as_constant e with
+      | Some (A.Int _ n) -> if n >= 0 then Some n else None
+      | _ -> None
+    in
+    mk_parser (pk_list pt.p_kind n_is_const)
               t
               typename
               fieldname
