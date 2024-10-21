@@ -110,11 +110,21 @@ val parse_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk)
 ////////////////////////////////////////////////////////////////////////////////
 // Variable-sized list whose size in bytes is exactly n
 ////////////////////////////////////////////////////////////////////////////////
+unfold
+let memoizes_n_as_const (n_is_const:option nat) (n:U32.t) =
+  Some? n_is_const ==> Some?.v n_is_const = U32.v n
+
 val nlist (n:U32.t) (t:Type u#r) : Type u#r
 
 inline_for_extraction noextract
-val parse_nlist (n:U32.t) (#wk: _) (#k:parser_kind true wk) (#t:_) (p:parser k t)
-  : Tot (parser kind_nlist (nlist n t))
+val parse_nlist
+        (n:U32.t)
+        (n_const:option nat { Some? n_const ==> Some?.v n_const == U32.v n })
+        (#wk: _)
+        (#k:parser_kind true wk)
+        (#t:_)
+        (p:parser k t)
+  : Tot (parser (kind_nlist k n_const) (nlist n t))
 
 /////
 // Parse all of the remaining bytes of the input buffer

@@ -1244,21 +1244,23 @@ noextract
 inline_for_extraction
 let validate_nlist
   (n:U32.t)
+  (n_is_const:option nat { memoizes_n_as_const n_is_const n})
   #wk
   (#k:parser_kind true wk)
   #t
   (#p:parser k t)
   #inv #disj #l #ha #ar
   (v: validate_with_action_t p inv disj l ha ar)
-: Tot (validate_with_action_t (parse_nlist n p) inv disj l ha false)
+: Tot (validate_with_action_t (parse_nlist n n_is_const p) inv disj l ha false)
 = validate_weaken
     #false #WeakKindStrongPrefix #(LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) #(list t)
     (validate_fldata_consumes_all n (validate_list v))
-    kind_nlist
+    (kind_nlist k n_is_const)
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size_mod_ok
       (n:U32.t)
+      (n_is_const:option nat { memoizes_n_as_const n_is_const n})
       #wk 
       (#k:parser_kind true wk)
       (#t: Type)
@@ -1266,7 +1268,7 @@ let validate_nlist_total_constant_size_mod_ok
       inv
       disj
       l
-  : Pure (validate_with_action_t (parse_nlist n p) inv disj l false true)
+  : Pure (validate_with_action_t (parse_nlist n n_is_const p) inv disj l false true)
   (requires (
     let open LP in
     k.parser_kind_subkind == Some ParserStrong /\
@@ -1278,22 +1280,23 @@ let validate_nlist_total_constant_size_mod_ok
   (ensures (fun _ -> True))
 = [@inline_let]
   let _ =
-    parse_nlist_total_fixed_size_kind_correct n p
+    parse_nlist_total_fixed_size_kind_correct n n_is_const p
   in
   validate_total_constant_size_no_read'
-    (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p))
+    (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n n_is_const p))
     (Cast.uint32_to_uint64 n)
     () inv disj l
 
 inline_for_extraction noextract
 let validate_nlist_constant_size_mod_ko
       (n:U32.t)
+      (n_is_const:option nat{ memoizes_n_as_const n_is_const n})
       (#wk: _)
       (#k:parser_kind true wk)
       #t
       (p:parser k t)
       inv disj l
-  : Pure (validate_with_action_t (parse_nlist n p) inv disj l false true)
+  : Pure (validate_with_action_t (parse_nlist n n_is_const p) inv disj l false true)
   (requires (
     let open LP in
     k.parser_kind_subkind == Some ParserStrong /\
@@ -1307,12 +1310,12 @@ let validate_nlist_constant_size_mod_ko
      let h = FStar.HyperStack.ST.get () in
      [@inline_let]
      let f () : Lemma
-       (requires (Some? (LP.parse (parse_nlist n p) (I.get_remaining input h))))
+       (requires (Some? (LP.parse (parse_nlist n n_is_const p) (I.get_remaining input h))))
        (ensures False)
      = let sq = I.get_remaining input h in
        let sq' = Seq.slice sq 0 (U32.v n) in
        LowParse.Spec.List.list_length_constant_size_parser_correct p sq' ;
-       let Some (l, _) = LP.parse (parse_nlist n p) sq in
+       let Some (l, _) = LP.parse (parse_nlist n n_is_const p) sq in
        assert (U32.v n == FStar.List.Tot.length l `Prims.op_Multiply` k.LP.parser_kind_low) ;
        FStar.Math.Lemmas.cancel_mul_mod (FStar.List.Tot.length l) k.LP.parser_kind_low ;
        assert (U32.v n % k.LP.parser_kind_low == 0)
@@ -1325,12 +1328,13 @@ let validate_nlist_constant_size_mod_ko
 inline_for_extraction noextract
 let validate_nlist_total_constant_size'
       (n:U32.t)
+      (n_is_const:option nat { memoizes_n_as_const n_is_const n })
       #wk
       (#k:parser_kind true wk)
       #t
       (p:parser k t)
       inv disj l
-  : Pure (validate_with_action_t (parse_nlist n p) inv disj l false true)
+  : Pure (validate_with_action_t (parse_nlist n n_is_const p) inv disj l false true)
   (requires (
     let open LP in
     k.parser_kind_subkind == Some ParserStrong /\
@@ -1341,19 +1345,19 @@ let validate_nlist_total_constant_size'
   (ensures (fun _ -> True))
 = fun ctxt error_handler_fn input start_position -> // n is not an integer constant, so we need to eta-expand and swap fun and if
   if n `U32.rem` U32.uint_to_t k.LP.parser_kind_low = 0ul
-  then validate_nlist_total_constant_size_mod_ok n p inv disj l ctxt error_handler_fn input start_position
-  else validate_nlist_constant_size_mod_ko n p inv disj l ctxt error_handler_fn input start_position
+  then validate_nlist_total_constant_size_mod_ok n n_is_const p inv disj l ctxt error_handler_fn input start_position
+  else validate_nlist_constant_size_mod_ko n n_is_const p inv disj l ctxt error_handler_fn input start_position
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size
-      (n_is_const: bool)
       (n:U32.t)
+      (n_is_const: option nat { memoizes_n_as_const n_is_const n })
       #wk
       (#k:parser_kind true wk)
       (#t: Type)
       (p:parser k t)
       inv disj l
-: Pure (validate_with_action_t (parse_nlist n p) inv disj l false true)
+: Pure (validate_with_action_t (parse_nlist n n_is_const p) inv disj l false true)
   (requires (
     let open LP in
     k.parser_kind_subkind = Some ParserStrong /\
@@ -1366,31 +1370,31 @@ let validate_nlist_total_constant_size
   if
     if k.LP.parser_kind_low = 1
     then true
-    else if n_is_const
+    else if Some? n_is_const
     then U32.v n % k.LP.parser_kind_low = 0
     else false
   then
-    validate_nlist_total_constant_size_mod_ok n p inv disj l
+    validate_nlist_total_constant_size_mod_ok n n_is_const p inv disj l
   else if
-    if n_is_const
+    if Some? n_is_const
     then U32.v n % k.LP.parser_kind_low <> 0
     else false
   then
-    validate_nlist_constant_size_mod_ko n p inv disj l
+    validate_nlist_constant_size_mod_ko n n_is_const p inv disj l
   else
-    validate_nlist_total_constant_size' n p inv disj l
+    validate_nlist_total_constant_size' n n_is_const p inv disj l
 
 noextract
 inline_for_extraction
 let validate_nlist_constant_size_without_actions
-    (n_is_const: bool)
-    (payload_is_constant_size: bool)
     (n:U32.t)
+    (n_is_const:option nat { memoizes_n_as_const n_is_const n })
+    (payload_is_constant_size: bool)
     #wk
     (#k:parser_kind true wk)
     #t (#p:parser k t) #inv #disj #l #ar
     (v: validate_with_action_t p inv disj l false ar)
-: Tot (validate_with_action_t (parse_nlist n p) inv disj l false false)
+: Tot (validate_with_action_t (parse_nlist n n_is_const p) inv disj l false false)
 = 
   if payload_is_constant_size
   then (
@@ -1401,12 +1405,12 @@ let validate_nlist_constant_size_without_actions
       k.parser_kind_metadata = Some ParserKindMetadataTotal &&
       k.parser_kind_low < 4294967296
     then
-      validate_drop (validate_nlist_total_constant_size n_is_const n p inv disj l)
+      validate_drop (validate_nlist_total_constant_size n n_is_const p inv disj l)
     else
-      validate_nlist n v
+      validate_nlist n n_is_const v
   )
   else
-    validate_nlist n v
+    validate_nlist n n_is_const v
 
 #push-options "--z3rlimit_factor 16 --z3cliopt smt.arith.nl=false"
 #restart-solver

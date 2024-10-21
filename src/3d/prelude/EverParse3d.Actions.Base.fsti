@@ -561,6 +561,7 @@ val validate_ite
 noextract inline_for_extraction
 val validate_nlist
        (n:U32.t)
+       (n_is_const:option nat { memoizes_n_as_const n_is_const n})
        (#wk: _)
        (#k:parser_kind true wk)
        (#[@@@erasable] t:Type)
@@ -570,13 +571,13 @@ val validate_nlist
        (#[@@@erasable] l:eloc)
        (#ha #allow_reading:bool)
        (v: validate_with_action_t p inv disj l ha allow_reading)
-: validate_with_action_t (parse_nlist n p) inv disj l ha false
+: validate_with_action_t (parse_nlist n n_is_const p) inv disj l ha false
 
 noextract inline_for_extraction
 val validate_nlist_constant_size_without_actions
-       (n_is_const: bool)
-       (payload_is_constant_size:bool)
        (n:U32.t)
+       (n_is_const: option nat { memoizes_n_as_const n_is_const n })
+       (payload_is_constant_size:bool)
        (#wk: _)
        (#k:parser_kind true wk)
        (#[@@@erasable] t:Type)
@@ -586,7 +587,7 @@ val validate_nlist_constant_size_without_actions
        (#[@@@erasable] l:eloc)
        (#allow_reading:bool)
        (v: validate_with_action_t p inv disj l false allow_reading)
-: Tot (validate_with_action_t (parse_nlist n p) inv disj l false false)
+: Tot (validate_with_action_t (parse_nlist n n_is_const p) inv disj l false false)
 
 noextract inline_for_extraction
 val validate_t_at_most

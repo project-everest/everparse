@@ -101,13 +101,14 @@ let parse_ite e p1 p2
 let nlist (n:U32.t) (t:Type) = list t
 
 inline_for_extraction noextract
-let parse_nlist n #wk #k #t p
+let parse_nlist n n_is_const #wk #k #t p
   = let open LowParse.Spec.FLData in
     let open LowParse.Spec.List in
     parse_weaken
             #false #WeakKindStrongPrefix #(parse_fldata_kind (U32.v n) parse_list_kind) #(list t)
             (LowParse.Spec.FLData.parse_fldata (LowParse.Spec.List.parse_list p) (U32.v n))
-            #false kind_nlist
+            #false
+            (kind_nlist k n_is_const)
 
 let all_bytes = Seq.seq LP.byte
 let parse_all_bytes' 
@@ -180,7 +181,8 @@ let validator_no_read #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t)
   = LPL.validator_no_read #k #t p
 
 let parse_nlist_total_fixed_size_aux
-  (n:U32.t) (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
+  (n:U32.t) (n_is_const:option nat { memoizes_n_as_const n_is_const n })
+  (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
   (x: LP.bytes)
 : Lemma
   (requires (
@@ -192,7 +194,7 @@ let parse_nlist_total_fixed_size_aux
     Seq.length x >= U32.v n
   ))
   (ensures (
-    Some? (LP.parse (parse_nlist n p) x)
+    Some? (LP.parse (parse_nlist n n_is_const p) x)
   ))
 = let x' = Seq.slice x 0 (U32.v n) in
   let cnt = (U32.v n / k.LP.parser_kind_low) in
@@ -202,7 +204,8 @@ let parse_nlist_total_fixed_size_aux
   LP.parser_kind_prop_equiv LowParse.Spec.List.parse_list_kind (LowParse.Spec.List.parse_list p)
 
 let parse_nlist_total_fixed_size_kind_correct
-  (n:U32.t) (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
+  (n:U32.t) (n_is_const:option nat { memoizes_n_as_const n_is_const n })
+  (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
 : Lemma
   (requires (
     let open LP in
@@ -212,15 +215,18 @@ let parse_nlist_total_fixed_size_kind_correct
     k.parser_kind_metadata == Some ParserKindMetadataTotal
   ))
   (ensures (
-    LP.parser_kind_prop (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)
+    LP.parser_kind_prop (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n n_is_const p)
   ))
-= LP.parser_kind_prop_equiv (LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) (parse_nlist n p);
-  LP.parser_kind_prop_equiv (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p);
-  Classical.forall_intro (Classical.move_requires (parse_nlist_total_fixed_size_aux n p))
+= LP.parser_kind_prop_equiv (LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) (parse_nlist n n_is_const p);
+  LP.parser_kind_prop_equiv (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n n_is_const p);
+  Classical.forall_intro (Classical.move_requires (parse_nlist_total_fixed_size_aux n n_is_const p))
 
 inline_for_extraction noextract
-let validate_nlist_total_constant_size_mod_ok (n:U32.t) #wk (#k:parser_kind true wk) (#t: Type) (p:parser k t)
-  : Pure (validator_no_read (parse_nlist n p))
+let validate_nlist_total_constant_size_mod_ok
+    (n:U32.t)
+    (n_is_const:option nat { memoizes_n_as_const n_is_const n })
+    #wk (#k:parser_kind true wk) (#t: Type) (p:parser k t)
+  : Pure (validator_no_read (parse_nlist n n_is_const p))
   (requires (
     let open LP in
     k.parser_kind_subkind == Some ParserStrong /\
@@ -235,11 +241,11 @@ let validate_nlist_total_constant_size_mod_ok (n:U32.t) #wk (#k:parser_kind true
          let h = FStar.HyperStack.ST.get () in
          [@inline_let]
          let _ =
-           parse_nlist_total_fixed_size_kind_correct n p;
-           LPL.valid_facts (parse_nlist n p) h sl (LPL.uint64_to_uint32 pos);
-           LPL.valid_facts (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) h sl (LPL.uint64_to_uint32 pos)
+           parse_nlist_total_fixed_size_kind_correct n n_is_const p;
+           LPL.valid_facts (parse_nlist n n_is_const p) h sl (LPL.uint64_to_uint32 pos);
+           LPL.valid_facts (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n n_is_const p)) h sl (LPL.uint64_to_uint32 pos)
          in
-         LPL.validate_total_constant_size_no_read (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n p)) (FStar.Int.Cast.uint32_to_uint64 n) () sl len pos
+         LPL.validate_total_constant_size_no_read (LP.strengthen (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n n_is_const p)) (FStar.Int.Cast.uint32_to_uint64 n) () sl len pos
       )
 
 module LUT = LowParse.Spec.ListUpTo
