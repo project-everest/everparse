@@ -1252,10 +1252,8 @@ let validate_nlist
   #inv #disj #l #ha #ar
   (v: validate_with_action_t p inv disj l ha ar)
 : Tot (validate_with_action_t (parse_nlist n n_is_const p) inv disj l ha false)
-= validate_weaken
-    #false #WeakKindStrongPrefix #(LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) #(list t)
-    (validate_fldata_consumes_all n (validate_list v))
-    (kind_nlist k n_is_const)
+= fun ctxt error_handler_fn input input_length start_position ->
+    validate_fldata_consumes_all n (validate_list v) ctxt error_handler_fn input input_length start_position
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size_mod_ok

@@ -101,14 +101,67 @@ let parse_ite e p1 p2
 let nlist (n:U32.t) (t:Type) = list t
 
 inline_for_extraction noextract
+let parse_nlist'
+        (n:U32.t)
+        (n_const:option nat { Some? n_const ==> Some?.v n_const == U32.v n })
+        (#wk: _)
+        (#k:parser_kind true wk)
+        (#t:_)
+        (p:parser k t)
+  : Tot (LP.bare_parser (nlist n t))
+  = LowParse.Spec.FLData.parse_fldata (LowParse.Spec.List.parse_list p) (U32.v n)
+
+let parse_nlist_total_fixed_size_aux
+  (n:U32.t) (n_is_const:option nat { memoizes_n_as_const n_is_const n })
+  (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
+  (x: LP.bytes)
+: Lemma
+  (requires (
+    let open LP in
+    k.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_high == Some k.parser_kind_low /\
+    U32.v n % k.parser_kind_low == 0 /\
+    k.parser_kind_metadata == Some ParserKindMetadataTotal /\
+    Seq.length x >= U32.v n
+  ))
+  (ensures (
+    Some? (LP.parse (parse_nlist' n n_is_const p) x)
+  ))
+= let x' = Seq.slice x 0 (U32.v n) in
+  let cnt = (U32.v n / k.LP.parser_kind_low) in
+  FStar.Math.Lemmas.lemma_div_exact (U32.v n) k.LP.parser_kind_low;
+  FStar.Math.Lemmas.nat_over_pos_is_nat (U32.v n) k.LP.parser_kind_low;
+  LowParse.Spec.List.parse_list_total_constant_size p cnt x';
+  LP.parser_kind_prop_equiv LowParse.Spec.List.parse_list_kind (LowParse.Spec.List.parse_list p)
+
+let parse_nlist_total_fixed_size_kind_correct
+  (n:U32.t) (n_is_const:option nat { memoizes_n_as_const n_is_const n })
+  (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
+: Lemma
+  (requires (
+    let open LP in
+    k.parser_kind_subkind == Some ParserStrong /\
+    k.parser_kind_high == Some k.parser_kind_low /\
+    U32.v n % k.parser_kind_low == 0 /\
+    k.parser_kind_metadata == Some ParserKindMetadataTotal
+  ))
+  (ensures (
+    LP.parser_kind_prop (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist' n n_is_const p) /\
+    (Some? n_is_const ==> kind_nlist k n_is_const == LP.total_constant_size_parser_kind (U32.v n))
+  ))
+= LP.parser_kind_prop_equiv (LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) (parse_nlist' n n_is_const p);
+  LP.parser_kind_prop_equiv (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist' n n_is_const p);
+  Classical.forall_intro (Classical.move_requires (parse_nlist_total_fixed_size_aux n n_is_const p))
+
+inline_for_extraction noextract
 let parse_nlist n n_is_const #wk #k #t p
   = let open LowParse.Spec.FLData in
     let open LowParse.Spec.List in
-    parse_weaken
-            #false #WeakKindStrongPrefix #(parse_fldata_kind (U32.v n) parse_list_kind) #(list t)
-            (LowParse.Spec.FLData.parse_fldata (LowParse.Spec.List.parse_list p) (U32.v n))
-            #false
-            (kind_nlist k n_is_const)
+    let p' = parse_nlist' n n_is_const p in
+    LP.parser_kind_prop_equiv (parse_fldata_kind (U32.v n) (parse_list_kind)) p';
+    LP.parser_kind_prop_equiv (kind_nlist k n_is_const) p';
+    Classical.move_requires (parse_nlist_total_fixed_size_kind_correct n n_is_const #wk #k #t) p;
+    p'
 
 let all_bytes = Seq.seq LP.byte
 let parse_all_bytes' 
@@ -179,47 +232,6 @@ inline_for_extraction noextract
 let validator_no_read #nz #wk (#k:parser_kind nz wk) (#t:Type) (p:parser k t)
   : Type
   = LPL.validator_no_read #k #t p
-
-let parse_nlist_total_fixed_size_aux
-  (n:U32.t) (n_is_const:option nat { memoizes_n_as_const n_is_const n })
-  (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
-  (x: LP.bytes)
-: Lemma
-  (requires (
-    let open LP in
-    k.parser_kind_subkind == Some ParserStrong /\
-    k.parser_kind_high == Some k.parser_kind_low /\
-    U32.v n % k.parser_kind_low == 0 /\
-    k.parser_kind_metadata == Some ParserKindMetadataTotal /\
-    Seq.length x >= U32.v n
-  ))
-  (ensures (
-    Some? (LP.parse (parse_nlist n n_is_const p) x)
-  ))
-= let x' = Seq.slice x 0 (U32.v n) in
-  let cnt = (U32.v n / k.LP.parser_kind_low) in
-  FStar.Math.Lemmas.lemma_div_exact (U32.v n) k.LP.parser_kind_low;
-  FStar.Math.Lemmas.nat_over_pos_is_nat (U32.v n) k.LP.parser_kind_low;
-  LowParse.Spec.List.parse_list_total_constant_size p cnt x';
-  LP.parser_kind_prop_equiv LowParse.Spec.List.parse_list_kind (LowParse.Spec.List.parse_list p)
-
-let parse_nlist_total_fixed_size_kind_correct
-  (n:U32.t) (n_is_const:option nat { memoizes_n_as_const n_is_const n })
-  (#wk: _) (#k:parser_kind true wk) #t (p:parser k t)
-: Lemma
-  (requires (
-    let open LP in
-    k.parser_kind_subkind == Some ParserStrong /\
-    k.parser_kind_high == Some k.parser_kind_low /\
-    U32.v n % k.parser_kind_low == 0 /\
-    k.parser_kind_metadata == Some ParserKindMetadataTotal
-  ))
-  (ensures (
-    LP.parser_kind_prop (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n n_is_const p)
-  ))
-= LP.parser_kind_prop_equiv (LowParse.Spec.FLData.parse_fldata_kind (U32.v n) LowParse.Spec.List.parse_list_kind) (parse_nlist n n_is_const p);
-  LP.parser_kind_prop_equiv (LP.total_constant_size_parser_kind (U32.v n)) (parse_nlist n n_is_const p);
-  Classical.forall_intro (Classical.move_requires (parse_nlist_total_fixed_size_aux n n_is_const p))
 
 inline_for_extraction noextract
 let validate_nlist_total_constant_size_mod_ok

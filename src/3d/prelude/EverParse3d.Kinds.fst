@@ -105,7 +105,7 @@ let kind_nlist #b #w kelt nopt
           parser_kind_low = byte_size;
           parser_kind_high = Some byte_size;
           parser_kind_subkind = Some ParserStrong;
-          parser_kind_metadata = None; //Some ParserKindMetadataTotal
+          parser_kind_metadata = Some ParserKindMetadataTotal;
         }
       )
       else kind_nlist_default
