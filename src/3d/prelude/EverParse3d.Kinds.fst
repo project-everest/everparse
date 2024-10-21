@@ -96,8 +96,8 @@ let kind_nlist #b #w kelt nopt
     | None -> kind_nlist_default
     | Some byte_size -> 
       if Some kelt.parser_kind_low = kelt.parser_kind_high
-      && byte_size <> 0
-      && kelt.parser_kind_low % byte_size = 0
+      && kelt.parser_kind_low <> 0
+      && byte_size % kelt.parser_kind_low = 0
       && kelt.parser_kind_subkind = Some ParserStrong
       && kelt.parser_kind_metadata = Some ParserKindMetadataTotal
       then (
