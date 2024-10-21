@@ -112,7 +112,9 @@ val parse_ite (#nz:_) (#wk: _) (#k:parser_kind nz wk)
 ////////////////////////////////////////////////////////////////////////////////
 unfold
 let memoizes_n_as_const (n_is_const:option nat) (n:U32.t) =
-  Some? n_is_const ==> Some?.v n_is_const = U32.v n
+  match n_is_const with
+  | Some m -> m = U32.v n
+  | _ -> true
 
 val nlist (n:U32.t) (t:Type u#r) : Type u#r
 
