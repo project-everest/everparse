@@ -2,87 +2,6 @@
 
 #include "Triangle2.h"
 
-static inline uint64_t
-ValidatePoint(
-  uint8_t *Ctxt,
-  void
-  (*ErrorHandlerFn)(
-    EVERPARSE_STRING x0,
-    EVERPARSE_STRING x1,
-    EVERPARSE_STRING x2,
-    uint64_t x3,
-    uint8_t *x4,
-    uint8_t *x5,
-    uint64_t x6
-  ),
-  uint8_t *Input,
-  uint64_t InputLength,
-  uint64_t StartPosition
-)
-{
-  /* Validating field x */
-  /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes0 = 2ULL <= (InputLength - StartPosition);
-  uint64_t positionAfterPoint;
-  if (hasBytes0)
-  {
-    positionAfterPoint = StartPosition + 2ULL;
-  }
-  else
-  {
-    positionAfterPoint =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
-  }
-  uint64_t res;
-  if (EverParseIsSuccess(positionAfterPoint))
-  {
-    res = positionAfterPoint;
-  }
-  else
-  {
-    ErrorHandlerFn("_point",
-      "x",
-      EverParseErrorReasonOfResult(positionAfterPoint),
-      EverParseGetValidatorErrorKind(positionAfterPoint),
-      Ctxt,
-      Input,
-      StartPosition);
-    res = positionAfterPoint;
-  }
-  uint64_t positionAfterx = res;
-  if (EverParseIsError(positionAfterx))
-  {
-    return positionAfterx;
-  }
-  /* Validating field y */
-  /* Checking that we have enough space for a UINT16, i.e., 2 bytes */
-  BOOLEAN hasBytes = 2ULL <= (InputLength - positionAfterx);
-  uint64_t positionAfterPoint0;
-  if (hasBytes)
-  {
-    positionAfterPoint0 = positionAfterx + 2ULL;
-  }
-  else
-  {
-    positionAfterPoint0 =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterx);
-  }
-  if (EverParseIsSuccess(positionAfterPoint0))
-  {
-    return positionAfterPoint0;
-  }
-  ErrorHandlerFn("_point",
-    "y",
-    EverParseErrorReasonOfResult(positionAfterPoint0),
-    EverParseGetValidatorErrorKind(positionAfterPoint0),
-    Ctxt,
-    Input,
-    positionAfterx);
-  return positionAfterPoint0;
-}
-
 uint64_t
 Triangle2ValidateTriangle(
   uint8_t *Ctxt,
@@ -102,63 +21,17 @@ Triangle2ValidateTriangle(
 )
 {
   /* Validating field corners */
-  BOOLEAN hasEnoughBytes = (uint64_t)(4U * (uint32_t)3U) <= (InputLength - StartPosition);
-  uint64_t positionAfterTriangle;
-  if (!hasEnoughBytes)
+  BOOLEAN hasBytes = (uint64_t)12U <= (InputLength - StartPosition);
+  uint64_t res;
+  if (hasBytes)
   {
-    positionAfterTriangle =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
+    res = StartPosition + (uint64_t)12U;
   }
   else
   {
-    uint8_t *truncatedInput = Input;
-    uint64_t truncatedInputLength = StartPosition + (uint64_t)(4U * (uint32_t)3U);
-    uint64_t result = StartPosition;
-    while (TRUE)
-    {
-      uint64_t position = result;
-      BOOLEAN ite;
-      if (!(1ULL <= (truncatedInputLength - position)))
-      {
-        ite = TRUE;
-      }
-      else
-      {
-        uint64_t
-        positionAfterTriangle0 =
-          ValidatePoint(Ctxt,
-            ErrorHandlerFn,
-            truncatedInput,
-            truncatedInputLength,
-            position);
-        uint64_t result1;
-        if (EverParseIsSuccess(positionAfterTriangle0))
-        {
-          result1 = positionAfterTriangle0;
-        }
-        else
-        {
-          ErrorHandlerFn("_triangle",
-            "corners.element",
-            EverParseErrorReasonOfResult(positionAfterTriangle0),
-            EverParseGetValidatorErrorKind(positionAfterTriangle0),
-            Ctxt,
-            truncatedInput,
-            position);
-          result1 = positionAfterTriangle0;
-        }
-        result = result1;
-        ite = EverParseIsError(result1);
-      }
-      if (ite)
-      {
-        break;
-      }
-    }
-    uint64_t res = result;
-    positionAfterTriangle = res;
+    res = EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
   }
+  uint64_t positionAfterTriangle = res;
   if (EverParseIsSuccess(positionAfterTriangle))
   {
     return positionAfterTriangle;

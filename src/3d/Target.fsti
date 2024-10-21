@@ -61,6 +61,32 @@ type expr' =
 
 and expr = expr' & A.range
 
+let rec as_constant n =
+  match fst n with
+  | Constant (A.Int sw i) ->
+    Some (A.Int sw i)
+  | App (Cast _from to) [ n ] -> (
+    match as_constant n with
+    | Some (A.Int _ i) -> Some (A.Int to i)
+    | _ -> None
+  )
+  | App (Plus _) [ n; m ] -> (
+    match as_constant n, as_constant m with
+    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i + j))
+    | _ -> None
+  )
+  | App (Minus _) [ n; m ] -> (
+    match as_constant n, as_constant m with
+    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i - j))
+    | _ -> None
+  )
+  | App (Mul _) [ n; m ] -> (
+    match as_constant n, as_constant m with
+    | Some (A.Int sw i), Some (A.Int _ j) -> Some (A.Int sw (i `op_Multiply` j))
+    | _ -> None
+  )
+  | _ -> None
+
 let subst = list (A.ident' & expr)
 val subst_expr (s:subst) (e:expr) : expr
 let mk_expr (e:expr') = e, A.dummy_range
@@ -93,6 +119,8 @@ noeq
 type typ =
   | T_false    : typ
   | T_app      : hd:A.ident -> A.t_kind -> args:list index -> typ
+  | T_nlist    : elt: typ -> bytesize: expr -> typ
+  | T_pair     : fst: typ -> snd: typ -> typ
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
   | T_refine   : base:typ -> refinement:lam expr -> typ
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ
@@ -154,7 +182,7 @@ type parser_kind' =
   | PK_return
   | PK_impos
   | PK_base     : hd:A.ident -> parser_kind'
-  | PK_list     : parser_kind'
+  | PK_list     : elt_kind:parser_kind -> option nat -> parser_kind'
   | PK_t_at_most: parser_kind'
   | PK_t_exact  : parser_kind'
   | PK_filter   : k:parser_kind -> parser_kind'
@@ -165,7 +193,7 @@ type parser_kind' =
 and parser_kind = {
   pk_kind : parser_kind';
   pk_weak_kind : A.weak_kind ;
-  pk_nz: bool
+  pk_nz: bool;
 }
 
 val expr_eq (e1 e1:expr) : bool
@@ -177,10 +205,10 @@ noeq
 type parser' =
   | Parse_return    : v:expr -> parser'
   | Parse_app       : hd:A.ident -> args:list index -> parser'
-  | Parse_nlist     : n:expr -> t:parser -> parser'
+  | Parse_nlist     : t_size_constant:bool -> n:expr -> t:parser -> parser'
   | Parse_t_at_most : n:expr -> t:parser -> parser'
   | Parse_t_exact   : n:expr -> t:parser -> parser'
-  | Parse_pair      : n1: A.ident -> p:parser -> q:parser -> parser'
+  | Parse_pair      : n1: A.ident -> p_is_const: bool -> p:parser -> q_is_const: bool -> q:parser -> parser' // p_is_const, q_is_const record whether p and q are total compile-time constant size parsers
   | Parse_dep_pair  : n1: A.ident -> p:parser -> k:lam parser -> parser'
   | Parse_dep_pair_with_refinement: n1: A.ident -> dfst:parser -> refinement:lam expr -> dsnd:lam parser -> parser'
   | Parse_dep_pair_with_action: dfst:parser -> a:lam action -> dsnd:lam parser -> parser'

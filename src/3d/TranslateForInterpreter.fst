@@ -128,8 +128,8 @@ let pk_base id nz wk = T.({
   pk_weak_kind = wk;
   pk_nz = nz
 })
-let pk_list = T.({
-  pk_kind = PK_list;
+let pk_list k0 n = T.({
+  pk_kind = PK_list k0 n;
   pk_weak_kind = WeakKindStrongPrefix;
   pk_nz = false
 })
@@ -164,6 +164,30 @@ let pk_glb k1 k2 = T.({
   pk_nz = k1.pk_nz && k2.pk_nz
 })
 
+let rec is_compile_time_fixed_size (env:global_env) (t:T.typ)
+: ML bool
+= match t with
+  | T.T_false -> true
+  | T.T_app hd _ _ ->
+    begin
+      try
+        let size = TypeSizes.size_of_typename env.size_env hd in
+        TS.Fixed? size
+      with _ -> false
+    end
+  | T.T_pointer _ -> true
+  | T.T_refine base _ -> is_compile_time_fixed_size env base
+  | T.T_with_comment t _ -> is_compile_time_fixed_size env t
+  | T.T_nlist elt n -> // this is the main reason why we need T.T_pair
+    if Some? (T.as_constant n)
+    then is_compile_time_fixed_size env elt
+    else false
+  | T.T_pair t1 t2 -> // this is the main reason why we need T.T_pair
+    if is_compile_time_fixed_size env t1
+    then is_compile_time_fixed_size env t2
+    else false
+  | _ -> false
+
 let false_typ = T.T_false
 let unit_typ =
     T.T_app (with_dummy_range (to_ident' "unit")) KindSpec []
@@ -173,20 +197,22 @@ let unit_parser =
     let unit_id = with_dummy_range (to_ident' "unit") in
     mk_parser pk_return unit_typ unit_id "none" (T.Parse_return unit_val)
 let pair_typ t1 t2 =
-    T.T_app (with_dummy_range (to_ident' "tuple2")) KindSpec [Inl t1; Inl t2]
+    T.T_pair t1 t2
 let pair_value x y =
     T.Record (with_dummy_range (to_ident' "tuple2"))
              [(with_dummy_range (to_ident' "fst"), T.mk_expr (T.Identifier x));
-              (with_dummy_range (to_ident' "snd"), T.mk_expr (T.Identifier y))]
-let pair_parser n1 p1 p2 =
+              (with_dummy_range (to_ident' "snd"), T.mk_expr (T.Identifier y))]  
+let pair_parser env n1 p1 p2 =
     let open T in
     let pt = pair_typ p1.p_typ p2.p_typ in
     let t_id = with_dummy_range (to_ident' "tuple2") in
+    let p1_is_const = is_compile_time_fixed_size env p1.p_typ in
+    let p2_is_const = is_compile_time_fixed_size env p2.p_typ in
     mk_parser (pk_and_then p1.p_kind p2.p_kind)
               pt
               t_id
               (ident_to_string n1)
-              (Parse_pair n1 p1 p2)
+              (Parse_pair n1 p1_is_const p1 p2_is_const p2)
 let dep_pair_typ t1 (t2:(A.ident & T.typ)) : T.typ =
     T.T_dep_pair t1 t2
 let dep_pair_value x y : T.expr =
@@ -464,13 +490,19 @@ let rec parse_typ (env:global_env)
   | T.T_app _ A.KindExtern _ ->
     failwith "Impossible, did not expect parse_typ to be called with an output/extern type!"
 
-  | T.T_app {v={name="nlist"}} KindSpec [Inr e; Inl t] ->
-    let pt = parse_typ env typename (extend_fieldname "element") t in
-    mk_parser pk_list
+  | T.T_nlist telt e ->
+    let pt = parse_typ env typename (extend_fieldname "element") telt in
+    let t_size_constant = is_compile_time_fixed_size env telt in
+    let n_is_const =
+      match T.as_constant e with
+      | Some (A.Int _ n) -> if n >= 0 then Some n else None
+      | _ -> None
+    in
+    mk_parser (pk_list pt.p_kind n_is_const)
               t
               typename
               fieldname
-              (T.Parse_nlist e pt)
+              (T.Parse_nlist t_size_constant e pt)
 
   | T.T_app {v={name="t_at_most"}} KindSpec [Inr e; Inl t] ->
     let pt = parse_typ env typename (extend_fieldname "element") t in
@@ -512,6 +544,11 @@ let rec parse_typ (env:global_env)
     let p1 = parse_typ env typename fieldname t1 in
     let p2 = parse_typ env typename fieldname t2 in
     ite_parser typename fieldname e p1 p2
+
+  | T.T_pair t1 t2 ->
+    pair_parser env typename
+      (parse_typ env typename (extend_fieldname "first") t1)
+      (parse_typ env typename (extend_fieldname "second") t1)
 
   | T.T_dep_pair t1 (x, t2) ->
     dep_pair_parser typename (parse_typ env typename (extend_fieldname "first") t1) 
@@ -695,12 +732,12 @@ let rec parser_is_constant_size_without_actions
     -> true
   | T.Parse_app hd _
     -> parser_kind_is_constant_size env hd
-  | T.Parse_nlist array_size parse_elem
+  | T.Parse_nlist _ array_size parse_elem
     -> begin match fst array_size with
       | T.Constant (A.Int _ array_size) -> parser_is_constant_size_without_actions env parse_elem
       | _ -> false
       end
-  | T.Parse_pair _ hd tl
+  | T.Parse_pair _ _ hd _ tl
     -> if parser_is_constant_size_without_actions env hd
       then parser_is_constant_size_without_actions env tl
       else false
@@ -772,7 +809,7 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
         | FieldArrayQualified (e, ByteArrayByteSize)
         | FieldArrayQualified (e, ArrayByteSize) ->
           let e = translate_expr e in
-          T.T_app (with_range (to_ident' "nlist") sf.field_type.range) KindSpec [Inr e; Inl t]
+          T.T_nlist t e
         | FieldArrayQualified (e, ArrayByteSizeAtMost) ->
           mk_at_most t e
         | FieldArrayQualified (e, ArrayByteSizeSingleElementArray) ->
@@ -885,7 +922,7 @@ let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields
           parse_typ sf.sf_ident sf.sf_typ
 
         | Some rest -> 
-          pair_parser sf.sf_ident
+          pair_parser env sf.sf_ident
             (parse_typ sf.sf_ident sf.sf_typ)
             (aux rest)
         )
@@ -902,7 +939,7 @@ let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields
           aux gfs
 
         | Some rest -> 
-          pair_parser id
+          pair_parser env id
             (aux gfs)
             (aux rest)
         )
@@ -972,7 +1009,12 @@ let rec hoist_typ
   = let open T in
     match t with
     | T_false -> [], t
+    | T_nlist _ _
     | T_app _ _ _ -> [], t
+    | T_pair t1 t2 ->
+      let ds, t1 = hoist_typ fn genv env t1 in
+      let ds', t2 = hoist_typ fn genv env t2 in
+      ds@ds', T_pair t1 t2
     | T_dep_pair t1 (x, t2) ->
       let ds, t1 = hoist_typ fn genv env t1 in
       let ds', t2 = hoist_typ fn genv ((x, t1)::env) t2 in

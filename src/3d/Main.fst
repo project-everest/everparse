@@ -183,11 +183,8 @@ let emit_fstar_code_for_interpreter (en:env)
                              module T = FStar.Tactics\n\
                              module A = EverParse3d.Actions.All\n\
                              module P = EverParse3d.Prelude\n\
-                             #push-options \"--fuel 0 --ifuel 0\"\n\
-                             #push-options \"--using_facts_from 'Prims FStar.UInt FStar.UInt8 \
-                                                                 FStar.UInt16 FStar.UInt32 FStar.UInt64 \
-                                                                 EverParse3d FStar.Int.Cast %s'\"\n"
-                             modul maybe_open_external_api (all_modules |> String.concat " ")
+                             #set-options \"--fuel 0 --ifuel 0 --ext context_pruning\"\n"
+                             modul maybe_open_external_api
     in
 
     let fst_file =
