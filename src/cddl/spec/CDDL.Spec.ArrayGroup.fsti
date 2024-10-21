@@ -64,15 +64,13 @@ let opt_precedes_list_item
 : GTot bool
 = FStar.StrongExcludedMiddle.strong_excluded_middle (opt_precedes x1 x2)
 
-module Pull = FStar.Ghost.Pull
-
 noextract
 let opt_precedes_list
   (#t1 #t2: Type)
   (l: list t1)
   (b: option t2)
 : Tot prop
-= List.Tot.for_all (Pull.pull (opt_precedes_list_item b)) l
+= forall (x: t1) . List.Tot.memP x l ==> opt_precedes x b
 
 let rec opt_precedes_opt_precedes_list
   (#t1 #t2: Type)
@@ -103,14 +101,16 @@ let array_group3_equiv
 
 let array_group3_always_false #b : array_group3 b = fun _ -> None
 
-let opt_precedes_list_assoc
+let rec opt_precedes_list_assoc
   (#t1 #t2: Type)
   (l1 l2: list t1)
   (b: option t2)
 : Lemma
   (opt_precedes_list (l1 `List.Tot.append` l2) b <==>  opt_precedes_list l1 b /\ opt_precedes_list l2 b)
   [SMTPat (opt_precedes_list (l1 `List.Tot.append` l2) b)]
-= List.Tot.for_all_append (Pull.pull (opt_precedes_list_item b)) l1 l2
+= match l1 with
+  | [] -> ()
+  | _ :: q1 -> opt_precedes_list_assoc q1 l2 b
 
 let array_group3_empty #b : array_group3 b = fun x -> Some ([], x)
 let array_group3_concat #b (a1 a3: array_group3 b) : array_group3 b =
@@ -484,7 +484,6 @@ let match_array_group3 (#b: option Cbor.cbor) (a: array_group3 b)
   | Some (_, l') -> Nil? l'
   | _ -> false
 
-(*
 let t_array3 (#b: option Cbor.cbor) (a: array_group3 b) : bounded_typ_gen b = fun w -> let x = Cbor.unpack w in
   Cbor.CArray? x &&
   match_array_group3 a (Cbor.CArray?.v x)
@@ -492,19 +491,6 @@ let t_array3 (#b: option Cbor.cbor) (a: array_group3 b) : bounded_typ_gen b = fu
 let t_array3_equiv
   #b
   (a1 a2: array_group3 b)
-: Lemma
-  (requires (array_group3_equiv a1 a2))
-  (ensures (typ_equiv (t_array3 a1) (t_array3 a2)))
-= ()
-
-*)
-
-let t_array3 (a: array_group3 None) : typ = fun w -> let x = Cbor.unpack w in
-  Cbor.CArray? x &&
-  match_array_group3 a (Cbor.CArray?.v x)
-
-let t_array3_equiv
-  (a1 a2: array_group3 None)
 : Lemma
   (requires (array_group3_equiv a1 a2))
   (ensures (typ_equiv (t_array3 a1) (t_array3 a2)))
@@ -529,20 +515,9 @@ let maybe_close_array_group
   then close_array_group t
   else t
 
-(*
 let array3_close_array_group
   (#b: _)
   (a: array_group3 b)
-: Lemma
-  (typ_equiv
-    (t_array3 a)
-    (t_array3 (close_array_group a))
-  )
-= ()
-*)
-
-let array3_close_array_group
-  (a: array_group3 None)
 : Lemma
   (typ_equiv
     (t_array3 a)
@@ -559,16 +534,14 @@ let array3_close_array_group
 // destructor combinator. We need to annotate it with a bound b (akin
 // to the "size" annotation in a sized type.)
 
-(*
 let rec t_array3_rec
-  (phi: (b: Cbor.raw_data_item) -> (bounded_typ b -> array_group3 (Some b)))
-  (x: Cbor.raw_data_item)
-: GTot bool
-  (decreases x)
-=
-  Cbor.Array? x &&
-  match_array_group3 (phi x (t_array3_rec phi)) (Cbor.Array?.v x)
-*)
+  (phi: (b: Cbor.cbor) -> (bounded_typ b -> array_group3 (Some b)))
+  (w: Cbor.cbor)
+: Tot bool
+  (decreases w)
+= let x = Cbor.unpack w in
+  Cbor.CArray? x &&
+  match_array_group3 (phi w (t_array3_rec phi)) (Cbor.CArray?.v x)
 
 let array_group_parser_spec_arg
   (source: array_group3 None)
@@ -813,6 +786,8 @@ val array_group_parser_spec_concat
   })
 : Tot (array_group_parser_spec (array_group3_concat source1 source2) target_size target_prop)
 
+#restart-solver
+
 val array_group_parser_spec_concat_eq
   (#source1: array_group3 None)
   (#target1: Type)
@@ -834,8 +809,9 @@ val array_group_parser_spec_concat_eq
   })
   (x: array_group_parser_spec_arg (array_group3_concat source1 source2))
 : Lemma
-  (array_group_parser_spec_concat p1 p2 target_size target_prop x == (
-    let Some (x1, x2) = source1 x in
+  (let Some (x1, x2) = source1 x in
+    source1 x1 == Some (x1, []) /\
+    array_group_parser_spec_concat p1 p2 target_size target_prop x == (
     (p1 x1, p2 x2)
   ))
   [SMTPat (array_group_parser_spec_concat p1 p2 target_size target_prop x)]
