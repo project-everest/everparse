@@ -1368,15 +1368,15 @@ let validate_nlist_total_constant_size
   if
     if k.LP.parser_kind_low = 1
     then true
-    else if Some? n_is_const
-    then U32.v n % k.LP.parser_kind_low = 0
-    else false
+    else match n_is_const with
+         | Some n -> n % k.LP.parser_kind_low = 0
+         | _ -> false
   then
     validate_nlist_total_constant_size_mod_ok n n_is_const p inv disj l
   else if
-    if Some? n_is_const
-    then U32.v n % k.LP.parser_kind_low <> 0
-    else false
+    match n_is_const with
+    | Some n -> n % k.LP.parser_kind_low <> 0
+    | _ -> false
   then
     validate_nlist_constant_size_mod_ko n n_is_const p inv disj l
   else
