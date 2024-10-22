@@ -84,14 +84,14 @@ let bij_id (t: Type) : bijection t t = {
   bij_to_from_to = ();
 }
 
-let parser_spec (source:typ) (target: Type0) (target_prop: target -> prop) = (c: Cbor.cbor { source c }) -> Tot (y: target { target_prop y })
+let parser_spec (source:typ) (target: Type0) (target_prop: target -> bool) = (c: Cbor.cbor { source c }) -> Tot (y: target { target_prop y })
 
-let serializer_spec (#source:typ) (#target: Type0) (#target_prop: target -> prop) (p: parser_spec source target target_prop) =
+let serializer_spec (#source:typ) (#target: Type0) (#target_prop: target -> bool) (p: parser_spec source target target_prop) =
   ((x: target { target_prop x }) -> Tot (y: Cbor.cbor { source y /\ p y == x }))
 
 noeq
 type spec (source:typ) (target: Type0) = {
-  serializable: target -> prop;
+  serializable: target -> bool;
   parser: parser_spec source target serializable;
   serializer: serializer_spec parser;
 }
@@ -109,8 +109,8 @@ let spec_ext
 let spec_coerce_target_prop
   (#source:typ) (#target: Type0)
   (p: spec source target)
-  (target_prop' : (target -> prop) {
-    forall x . target_prop' x <==> p.serializable x
+  (target_prop' : (target -> bool) {
+    forall x . target_prop' x == p.serializable x
   })
 : Tot (spec source target)
 = {
@@ -119,18 +119,18 @@ let spec_coerce_target_prop
   serializer = p.serializer;
 }
 
-let parse_spec_bij (#source:typ) (#target1 #target2: Type0) (#target1_prop: target1 -> prop) (p: parser_spec source target1 target1_prop) (target2_prop: target2 -> prop) (bij: bijection target1 target2 {
+let parse_spec_bij (#source:typ) (#target1 #target2: Type0) (#target1_prop: target1 -> bool) (p: parser_spec source target1 target1_prop) (target2_prop: target2 -> bool) (bij: bijection target1 target2 {
   forall x . target2_prop x <==> target1_prop (bij.bij_to_from x)
 }) : parser_spec source target2 target2_prop =
   (fun c -> bij.bij_from_to (p c))
 
-let serialize_spec_bij (#source:typ) (#target1 #target2: Type0) (#target1_prop: _ -> prop) (#target2_prop: _ -> prop) (#p: parser_spec source target1 target1_prop) (s: serializer_spec p) (bij: bijection target1 target2 {
+let serialize_spec_bij (#source:typ) (#target1 #target2: Type0) (#target1_prop: _ -> bool) (#target2_prop: _ -> bool) (#p: parser_spec source target1 target1_prop) (s: serializer_spec p) (bij: bijection target1 target2 {
   forall x . target2_prop x <==> target1_prop (bij.bij_to_from x)
 }) : serializer_spec (parse_spec_bij p target2_prop bij) =
   (fun x -> s (bij.bij_to_from x))
 
 let spec_bij_serializable
-  (#source:typ) (#target1 #target2: Type0) (p: spec source target1) (bij: bijection target1 target2) (x: target2) : Tot prop
+  (#source:typ) (#target1 #target2: Type0) (p: spec source target1) (bij: bijection target1 target2) (x: target2) : Tot bool
 = p.serializable (bij.bij_to_from x)
 
 let spec_bij (#source:typ) (#target1 #target2: Type0) (p: spec source target1) (bij: bijection target1 target2)
@@ -140,12 +140,12 @@ let spec_bij (#source:typ) (#target1 #target2: Type0) (p: spec source target1) (
   serializer = serialize_spec_bij p.serializer bij;
 }
 
-let parser_spec_literal (x: Cbor.cbor) (p: unit -> prop { p () }) : Tot (parser_spec (t_literal x) unit p) =
+let parser_spec_literal (x: Cbor.cbor) (p: unit -> bool { p () }) : Tot (parser_spec (t_literal x) unit p) =
   fun _ -> ()
 
-let serializer_spec_literal (x: Cbor.cbor) (p: unit -> prop { p () }) : Tot (serializer_spec (parser_spec_literal x p)) = (fun _ -> x)
+let serializer_spec_literal (x: Cbor.cbor) (p: unit -> bool { p () }) : Tot (serializer_spec (parser_spec_literal x p)) = (fun _ -> x)
 
-let spec_literal_serializable (_: unit) : Tot prop = True
+let spec_literal_serializable (_: unit) : Tot bool = true
 
 let spec_literal (x: Cbor.cbor) : Tot  (spec (t_literal x) unit) = {
   serializable = spec_literal_serializable;
@@ -156,13 +156,13 @@ let spec_literal (x: Cbor.cbor) : Tot  (spec (t_literal x) unit) = {
 let parser_spec_choice
   (#source1: typ)
   (#target1: Type0)
-  (#target1_prop: _ -> prop)
+  (#target1_prop: _ -> bool)
   (p1: parser_spec source1 target1 target1_prop)
   (#source2: typ)
   (#target2: Type0)
-  (#target2_prop: _ -> prop)
+  (#target2_prop: _ -> bool)
   (p2: parser_spec source2 target2 target2_prop)
-  (target_prop: (target1 `either` target2) -> prop {
+  (target_prop: (target1 `either` target2) -> bool {
     forall x . target_prop x <==> begin match x with
     | Inl x1 -> target1_prop x1
     | Inr x2 -> target2_prop x2
@@ -177,15 +177,15 @@ let parser_spec_choice
 let serializer_spec_choice
   (#source1: typ)
   (#target1: Type0)
-  (#target1_prop: _ -> prop)
+  (#target1_prop: _ -> bool)
   (#p1: parser_spec source1 target1 target1_prop)
   (s1: serializer_spec p1)
   (#source2: typ)
   (#target2: Type0)
-  (#target2_prop: _ -> prop)
+  (#target2_prop: _ -> bool)
   (#p2: parser_spec source2 target2 target2_prop)
   (s2: serializer_spec p2 { source1 `typ_disjoint` source2 }) // disjointness needed to avoid the CBOR object serialized from one case to be parsed into the other case
-  (target_prop: (target1 `either` target2) -> prop {
+  (target_prop: (target1 `either` target2) -> bool {
     forall x . target_prop x <==> begin match x with
     | Inl x1 -> target1_prop x1
     | Inr x2 -> target2_prop x2
@@ -204,7 +204,7 @@ let spec_choice_serializable
   (#target2: Type0)
   (p2: spec source2 target2)
   (x: target1 `either` target2)
-: Tot prop  
+: Tot bool
 = match x with
     | Inl x1 -> p1.serializable x1
     | Inr x2 -> p2.serializable x2

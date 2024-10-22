@@ -787,7 +787,7 @@ let array_group_concat_close
 let array_group_serializer_spec_item
   (#ty: typ)
   (#target: Type)
-  (#target_prop: target -> GTot prop)
+  (#target_prop: target -> bool)
   (#p: parser_spec ty target target_prop)
   (s: serializer_spec p)
   (target_size: target -> Tot nat {
@@ -799,7 +799,7 @@ let array_group_serializer_spec_item
 let array_group_serializer_spec_item_eq
   (#ty: typ)
   (#target: Type)
-  (#target_prop: target -> GTot prop)
+  (#target_prop: target -> bool)
   (#p: parser_spec ty target target_prop)
   (s: serializer_spec p)
   (target_size: target -> Tot nat {

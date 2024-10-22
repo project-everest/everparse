@@ -114,22 +114,22 @@ let bstr_cbor_det
   | Some (y, consumed) -> consumed = Seq.length (Cbor.CString?.v x) && ty y
   end
 
-let parser_spec_bool (p: bool -> prop { forall x . p x }) : parser_spec t_bool bool p =
+let parser_spec_bool (p: bool -> bool { forall x . p x }) : parser_spec t_bool bool p =
   (fun x -> let Cbor.CSimple v = Cbor.unpack x in
     v = simple_value_true
   )
 
-let serializer_spec_bool (p: bool -> prop { forall x . p x }) : serializer_spec (parser_spec_bool p) =
+let serializer_spec_bool (p: bool -> bool { forall x . p x }) : serializer_spec (parser_spec_bool p) =
   (fun x -> Cbor.pack (Cbor.CSimple (if x then simple_value_true else simple_value_false)))
 
-let parser_spec_bstr (p: string64 -> prop { forall x . p x }) : parser_spec bstr string64 p =
+let parser_spec_bstr (p: string64 -> bool { forall x . p x }) : parser_spec bstr string64 p =
   (fun x -> let Cbor.CString _ v = Cbor.unpack x in v)
 
-let serializer_spec_bstr (p: string64 -> prop { forall x . p x }) : serializer_spec (parser_spec_bstr p) =
+let serializer_spec_bstr (p: string64 -> bool { forall x . p x }) : serializer_spec (parser_spec_bstr p) =
   (fun x -> Cbor.pack (Cbor.CString Cbor.cbor_major_type_byte_string x))
 
-let parser_spec_tstr (p: string64 -> prop { forall x . p x }) : parser_spec tstr string64 p =
+let parser_spec_tstr (p: string64 -> bool { forall x . p x }) : parser_spec tstr string64 p =
   (fun x -> let Cbor.CString _ v = Cbor.unpack x in v)
 
-let serializer_spec_tstr (p: string64 -> prop { forall x . p x }) : serializer_spec (parser_spec_tstr p) =
+let serializer_spec_tstr (p: string64 -> bool { forall x . p x }) : serializer_spec (parser_spec_tstr p) =
   (fun x -> Cbor.pack (Cbor.CString Cbor.cbor_major_type_text_string x))
