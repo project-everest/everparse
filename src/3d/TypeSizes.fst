@@ -300,7 +300,7 @@ let rec size_and_alignment_of_field (env:env_t)
         : ML (size & alignment & list field)
         = let field, field_size, field_alignment = size_and_alignment_of_field env should_align diag_enclosing_type_name f in
           let pad_size, padding_field =
-            let msg = Printf.sprintf "(preceding field %s)" (print_field field) in
+            let msg = Printf.sprintf "(preceding field %s)" (print_field' field false) in
             alignment_padding env should_align diag_enclosing_type_name msg offset field_alignment
           in
           let offset =
