@@ -3,6 +3,7 @@ include CDDL.Spec.MapGroup.Base
 module Cbor = CBOR.Spec.API.Type
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
+module U = CBOR.Spec.Util
 
 let cbor_map_disjoint_from_footprint
   (m: Cbor.cbor_map)
@@ -97,11 +98,8 @@ let map_group_footprint_consumed
   [SMTPat (map_group_footprint g f); SMTPat (apply_map_group_det g (m `Cbor.cbor_map_union` m'))]
 = let MapGroupDet c r = apply_map_group_det g m in
   let MapGroupDet c' r' = apply_map_group_det g (m `Cbor.cbor_map_union` m') in
-  admit ()
-(*
   Cbor.cbor_map_union_assoc c r m';
   Cbor.cbor_map_disjoint_union_simpl_r c c' r'
-*)
 
 #restart-solver
 let map_group_footprint_is_consumed
@@ -119,7 +117,7 @@ let map_group_footprint_is_consumed
     | MapGroupCutFail, MapGroupCutFail -> True
     | _ -> False
   ))
-= admit () // ghost_map_split (matches_map_group_entry f any) m
+= Cbor.cbor_map_split (matches_map_group_entry f any) m
 
 let map_group_footprint_consumed_disjoint
   (g: map_group)
@@ -137,9 +135,8 @@ let map_group_footprint_consumed_disjoint
       cbor_map_disjoint_from_footprint c f'
     | _ -> False
   ))
-= admit () (* ghost_map_split (matches_map_group_entry f any) m;
-  map_group_footprint_consumed g f (Cbor.cbor_map_filter (matches_map_group_entry f any) m) (Cbor.cbor_map_filter (CBOR.Spec.Util.notp (matches_map_group_entry f any)) m)
-*)
+= Cbor.cbor_map_split (matches_map_group_entry f any) m;
+  map_group_footprint_consumed g f (Cbor.cbor_map_filter (matches_map_group_entry f any) m) (Cbor.cbor_map_filter (U.notp (matches_map_group_entry f any)) m)
 
 #restart-solver
 let map_group_footprint_concat
@@ -194,18 +191,17 @@ let map_group_footprint_consumes_all
   ))
   (ensures (
     Cbor.cbor_map_filter (matches_map_group_entry f1 any) m1 == m1 /\
-    Cbor.cbor_map_filter (CBOR.Spec.Util.notp (matches_map_group_entry f1 any)) m1 == Cbor.cbor_map_empty
+    Cbor.cbor_map_filter (U.notp (matches_map_group_entry f1 any)) m1 == Cbor.cbor_map_empty
   ))
 = let phi1 = matches_map_group_entry f1 any in
-  admit () (* ghost_map_split phi1 m1;
-  map_group_footprint_elim g1 f1 (ghost_map_filter phi1 m1) (ghost_map_filter (notp_g phi1) m1); 
-  map_group_footprint_consumed g1 f1 (ghost_map_filter phi1 m1) (ghost_map_filter (notp_g phi1) m1);
-  let MapGroupDet c1 r1 = apply_map_group_det g1 (ghost_map_filter phi1 m1) in
-  let MapGroupDet c' r' = apply_map_group_det g1 (ghost_map_filter phi1 m1 `ghost_map_union` ghost_map_filter (notp_g phi1) m1) in
-  assert (ghost_map_empty == r1 `ghost_map_union` ghost_map_filter (notp_g phi1) m1);
-  ghost_map_ext ghost_map_empty (ghost_map_filter (notp_g phi1) m1);
+  Cbor.cbor_map_split phi1 m1;
+  map_group_footprint_elim g1 f1 (Cbor.cbor_map_filter phi1 m1) (Cbor.cbor_map_filter (U.notp phi1) m1); 
+  map_group_footprint_consumed g1 f1 (Cbor.cbor_map_filter phi1 m1) (Cbor.cbor_map_filter (U.notp phi1) m1);
+  let MapGroupDet c1 r1 = apply_map_group_det g1 (Cbor.cbor_map_filter phi1 m1) in
+  let MapGroupDet c' r' = apply_map_group_det g1 (Cbor.cbor_map_filter phi1 m1 `Cbor.cbor_map_union` Cbor.cbor_map_filter (U.notp phi1) m1) in
+  assert (Cbor.cbor_map_empty == r1 `Cbor.cbor_map_union` Cbor.cbor_map_filter (U.notp phi1) m1);
+  Cbor.cbor_map_ext Cbor.cbor_map_empty (Cbor.cbor_map_filter (U.notp phi1) m1);
   ()
-*)
 
 #restart-solver
 let map_group_footprint_concat_consumes_all
@@ -227,11 +223,10 @@ let map_group_footprint_concat_consumes_all
 = map_group_footprint_consumes_all g1 f1 m1;
   map_group_footprint_consumes_all g2 f2 m2;
   let x = apply_map_group_det (g1 `map_group_concat` g2) (m1 `Cbor.cbor_map_union` m2) in
-  admit () (*  assert (MapGroupDet? x);
+  assert (MapGroupDet? x);
   assert (MapGroupDet?.consumed x `Cbor.cbor_map_equal` (m1 `Cbor.cbor_map_union` m2));
   assert (MapGroupDet?.remaining x `Cbor.cbor_map_equal` Cbor.cbor_map_empty);
   ()
-*)
 
 #restart-solver
 let map_group_footprint_match_item_for
@@ -261,7 +256,7 @@ let map_group_footprint_filter
   (f: typ)
 : Lemma
   (requires
-    forall (x: (Cbor.cbor & Cbor.cbor)) . CBOR.Spec.Util.notp phi x ==> f (fst x)
+    forall (x: (Cbor.cbor & Cbor.cbor)) . U.notp phi x ==> f (fst x)
   )
   (ensures (
     map_group_footprint (map_group_filter phi) f
@@ -274,10 +269,9 @@ let map_group_footprint_filter
     (fun m m' ->
       let MapGroupDet _ r = apply_map_group_det g m in
       let MapGroupDet _ r' = apply_map_group_det g (m `Cbor.cbor_map_union` m') in
-      admit () (* ghost_map_disjoint_union_filter phi m m';
-      ghost_map_filter_for_all phi m';
-      assert (r' == r `ghost_map_union` m')
-*)
+      Cbor.cbor_map_disjoint_union_filter phi m m';
+      Cbor.cbor_map_filter_for_all phi m';
+      assert (r' == r `Cbor.cbor_map_union` m')
     )
 
 let map_group_footprint_zero_or_more_match_item
@@ -484,7 +478,7 @@ let map_group_fail_concat_intro
   else begin
     let MapGroupDet c1 r1 = apply_map_group_det g1 x in
     map_group_footprint_consumed_disjoint g1 f1 f2 x;
-    admit () // ghost_map_disjoint_union_comm c1 r1
+    Cbor.cbor_map_disjoint_union_comm c1 r1
   end
 
 let map_group_consumes_all
@@ -539,7 +533,7 @@ let map_group_concat_no_cut_intro
   else begin
     let MapGroupDet c1 r1 = apply_map_group_det g1 x in
     map_group_footprint_consumed_disjoint g1 f1 f2 x;
-    admit () // ghost_map_disjoint_union_comm c1 r1
+    Cbor.cbor_map_disjoint_union_comm c1 r1
   end
 
 #restart-solver
@@ -768,10 +762,10 @@ let map_group_parser_spec_arg_common
   (x: list (Cbor.raw_data_item & Cbor.raw_data_item)) // list needed because I need to preserve the order of elements when parsing a table
 : Tot prop
 = 
-    let m = ghost_map_of_list x in
+    let m = Cbor.cbor_map_of_list x in
     List.Tot.no_repeats_p (List.Tot.map fst x) /\
     map_group_footprint source source_fp /\
-    ghost_map_in_footprint m source_fp
+    Cbor.cbor_map_in_footprint m source_fp
 
 unfold
 let map_group_parser_spec_arg_prop
@@ -780,7 +774,7 @@ let map_group_parser_spec_arg_prop
   (x: list (Cbor.raw_data_item & Cbor.raw_data_item)) // list needed because I need to preserve the order of elements when parsing a table
 : Tot prop
 = map_group_parser_spec_arg_common source source_fp x /\
-  MapGroupDet? (apply_map_group_det source (ghost_map_of_list x))
+  MapGroupDet? (apply_map_group_det source (Cbor.cbor_map_of_list x))
 
 let map_group_parser_spec_arg
   (source: det_map_group)
@@ -819,8 +813,8 @@ let map_group_serializer_spec_arg_prop
   (x: list (Cbor.raw_data_item & Cbor.raw_data_item)) // list needed because I need to preserve the order of elements when parsing a table
 : Tot prop
 = map_group_parser_spec_arg_common source source_fp x /\
-  begin match apply_map_group_det source (ghost_map_of_list x) with
-  | MapGroupDet _ res -> res == ghost_map_empty // everything is consumed
+  begin match apply_map_group_det source (Cbor.cbor_map_of_list x) with
+  | MapGroupDet _ res -> res == Cbor.cbor_map_empty // everything is consumed
   | _ -> False
   end
 
@@ -964,8 +958,8 @@ let serializer_spec_map_group
 : Tot (serializer_spec (parser_spec_map_group source0 p target_prop'))
 = fun z ->
   let l = s z in
-  let MapGroupDet _ rem = apply_map_group_det source0 (ghost_map_of_list l) in
-  ghost_map_equiv rem ghost_map_empty;
+  let MapGroupDet _ rem = apply_map_group_det source0 (Cbor.cbor_map_of_list l) in
+  Cbor.cbor_map_equiv rem Cbor.cbor_map_empty;
   let res = Cbor.Map l in
   assert (t_map source0 res);
   Classical.forall_intro (fun f -> Classical.move_requires (list_forall_memP_filter #(Cbor.raw_data_item & Cbor.raw_data_item) f) l);
@@ -1083,8 +1077,8 @@ let map_group_parser_spec_match_item_for
 : Tot (map_group_parser_spec (map_group_match_item_for cut k ty) (t_literal k) target_size target_prop)
 = fun x ->
   let Some v = Cbor.list_ghost_assoc k x in
-  ghost_map_equiv (ghost_map_of_list x) (ghost_map_of_list [k, v]);
-  ghost_map_length_of_list [k, v];
+  Cbor.cbor_map_equiv (Cbor.cbor_map_of_list x) (Cbor.cbor_map_of_list [k, v]);
+  Cbor.cbor_map_length_of_list [k, v];
   p v
 
 let map_group_serializer_spec_match_item_for
@@ -1103,10 +1097,10 @@ let map_group_serializer_spec_match_item_for
   map_group_footprint_match_item_for cut k ty;
   let v = s x in
   let res = [k, v] in
-  let mres = ghost_map_of_list res in
-  ghost_map_equiv mres (ghost_map_singleton k v);
+  let mres = Cbor.cbor_map_of_list res in
+  Cbor.cbor_map_equiv mres (Cbor.cbor_map_singleton k v);
   let MapGroupDet _ rem = apply_map_group_det (map_group_match_item_for cut k ty) mres in
-  ghost_map_equiv rem ghost_map_empty;
+  Cbor.cbor_map_equiv rem Cbor.cbor_map_empty;
   res
 
 let mg_spec_match_item_for_size
@@ -1224,13 +1218,13 @@ let map_group_serializer_spec_concat
     let l1 = s1 x1 in
     let l2 = s2 x2 in
     let res = l1 `List.Tot.append` l2 in
-    map_group_footprint_concat_consumes_all source1 source2 source_fp1 source_fp2 (ghost_map_of_list l1) (ghost_map_of_list l2);
+    map_group_footprint_concat_consumes_all source1 source2 source_fp1 source_fp2 (Cbor.cbor_map_of_list l1) (Cbor.cbor_map_of_list l2);
     List.Tot.append_length l1 l2;
-    assert (ghost_map_in_footprint (ghost_map_of_list l1) (source_fp1 `t_choice` source_fp2));
-    assert (ghost_map_in_footprint (ghost_map_of_list l2) (source_fp1 `t_choice` source_fp2));
-    assert (ghost_map_in_footprint (ghost_map_of_list l1 `ghost_map_union` ghost_map_of_list l2) (source_fp1 `t_choice` source_fp2));
-    ghost_map_of_list_append l1 l2;
-    ghost_map_length_of_list (l1 `List.Tot.append` l2);
+    assert (Cbor.cbor_map_in_footprint (Cbor.cbor_map_of_list l1) (source_fp1 `t_choice` source_fp2));
+    assert (Cbor.cbor_map_in_footprint (Cbor.cbor_map_of_list l2) (source_fp1 `t_choice` source_fp2));
+    assert (Cbor.cbor_map_in_footprint (Cbor.cbor_map_of_list l1 `Cbor.cbor_map_union` Cbor.cbor_map_of_list l2) (source_fp1 `t_choice` source_fp2));
+    Cbor.cbor_map_of_list_append l1 l2;
+    Cbor.cbor_map_length_of_list (l1 `List.Tot.append` l2);
     assert (map_group_serializer_spec_arg_prop (source1 `map_group_concat` source2) (source_fp1 `t_choice` source_fp2) res);
     let prf
       (f1 : _ -> bool) (f2 : _ -> bool)
@@ -1374,9 +1368,9 @@ val map_group_parser_spec_choice_eq
         (forall x . f2 x == matches_map_group_entry source_fp2 any x) /\ (
         let l1 = List.Tot.filter f1 l in
         let l2 = List.Tot.filter f2 l in
-        let test = MapGroupDet? (apply_map_group_det source1 (ghost_map_of_list l1)) in
-        ghost_map_of_list l1 == ghost_map_filter (matches_map_group_entry source_fp1 any) (ghost_map_of_list l) /\
-        ghost_map_of_list l2 == ghost_map_filter (matches_map_group_entry source_fp2 any) (ghost_map_of_list l) /\
+        let test = MapGroupDet? (apply_map_group_det source1 (Cbor.cbor_map_of_list l1)) in
+        Cbor.cbor_map_of_list l1 == Cbor.cbor_map_filter (matches_map_group_entry source_fp1 any) (Cbor.cbor_map_of_list l) /\
+        Cbor.cbor_map_of_list l2 == Cbor.cbor_map_filter (matches_map_group_entry source_fp2 any) (Cbor.cbor_map_of_list l) /\
         (test ==> (
           map_group_parser_spec_arg_prop source1 source_fp1 l1 /\
           (l' <: (target1 `either` target2)) == Inl (p1 l1)
@@ -1435,9 +1429,9 @@ let map_group_serializer_spec_choice
       match x with
       | Inl y -> ()
       | Inr y ->
-        assert (MapGroupDet? (apply_map_group_det source2 (ghost_map_of_list res)));
-        assert (MapGroupFail? (apply_map_group_det source1 (ghost_map_of_list res)));
-        map_group_footprint_is_consumed_ghost_map_of_list source1 source_fp1 res;
+        assert (MapGroupDet? (apply_map_group_det source2 (Cbor.cbor_map_of_list res)));
+        assert (MapGroupFail? (apply_map_group_det source1 (Cbor.cbor_map_of_list res)));
+        map_group_footprint_is_consumed_Cbor.cbor_map_of_list source1 source_fp1 res;
         assert (map_group_parser_spec_choice p1 p2 target_size target_prop res == x)
     in
     res
