@@ -7,7 +7,6 @@
 extern "C" {
 #endif
 
-#include "Base.h"
 #include "EverParse.h"
 
 uint64_t

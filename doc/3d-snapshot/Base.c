@@ -65,66 +65,14 @@ BaseValidatePair(
   uint64_t StartPosition
 )
 {
-  /* Validating field first */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes0 = 4ULL <= (InputLength - StartPosition);
-  uint64_t positionAfterPair;
-  if (hasBytes0)
-  {
-    positionAfterPair = StartPosition + 4ULL;
-  }
-  else
-  {
-    positionAfterPair =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        StartPosition);
-  }
-  uint64_t res;
-  if (EverParseIsSuccess(positionAfterPair))
-  {
-    res = positionAfterPair;
-  }
-  else
-  {
-    ErrorHandlerFn("_Pair",
-      "first",
-      EverParseErrorReasonOfResult(positionAfterPair),
-      EverParseGetValidatorErrorKind(positionAfterPair),
-      Ctxt,
-      Input,
-      StartPosition);
-    res = positionAfterPair;
-  }
-  uint64_t positionAfterfirst = res;
-  if (EverParseIsError(positionAfterfirst))
-  {
-    return positionAfterfirst;
-  }
-  /* Validating field second */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = 4ULL <= (InputLength - positionAfterfirst);
-  uint64_t positionAfterPair0;
+  KRML_MAYBE_UNUSED_VAR(Ctxt);
+  KRML_MAYBE_UNUSED_VAR(ErrorHandlerFn);
+  KRML_MAYBE_UNUSED_VAR(Input);
+  BOOLEAN hasBytes = 8ULL <= (InputLength - StartPosition);
   if (hasBytes)
   {
-    positionAfterPair0 = positionAfterfirst + 4ULL;
+    return StartPosition + 8ULL;
   }
-  else
-  {
-    positionAfterPair0 =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterfirst);
-  }
-  if (EverParseIsSuccess(positionAfterPair0))
-  {
-    return positionAfterPair0;
-  }
-  ErrorHandlerFn("_Pair",
-    "second",
-    EverParseErrorReasonOfResult(positionAfterPair0),
-    EverParseGetValidatorErrorKind(positionAfterPair0),
-    Ctxt,
-    Input,
-    positionAfterfirst);
-  return positionAfterPair0;
+  return EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
 }
 

@@ -74,66 +74,13 @@ ColorValidateColoredPoint(
   {
     return positionAftercol_refinement0;
   }
-  /* Validating field x */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes1 = 4ULL <= (InputLength - positionAftercol_refinement0);
-  uint64_t positionAfterColoredPoint0;
-  if (hasBytes1)
-  {
-    positionAfterColoredPoint0 = positionAftercol_refinement0 + 4ULL;
-  }
-  else
-  {
-    positionAfterColoredPoint0 =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAftercol_refinement0);
-  }
-  uint64_t res;
-  if (EverParseIsSuccess(positionAfterColoredPoint0))
-  {
-    res = positionAfterColoredPoint0;
-  }
-  else
-  {
-    ErrorHandlerFn("_coloredPoint",
-      "x",
-      EverParseErrorReasonOfResult(positionAfterColoredPoint0),
-      EverParseGetValidatorErrorKind(positionAfterColoredPoint0),
-      Ctxt,
-      Input,
-      positionAftercol_refinement0);
-    res = positionAfterColoredPoint0;
-  }
-  uint64_t positionAfterx = res;
-  if (EverParseIsError(positionAfterx))
-  {
-    return positionAfterx;
-  }
-  /* Validating field y */
-  /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-  BOOLEAN hasBytes = 4ULL <= (InputLength - positionAfterx);
-  uint64_t positionAfterColoredPoint1;
+  BOOLEAN hasBytes = 8ULL <= (InputLength - positionAftercol_refinement0);
   if (hasBytes)
   {
-    positionAfterColoredPoint1 = positionAfterx + 4ULL;
+    return positionAftercol_refinement0 + 8ULL;
   }
-  else
-  {
-    positionAfterColoredPoint1 =
-      EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
-        positionAfterx);
-  }
-  if (EverParseIsSuccess(positionAfterColoredPoint1))
-  {
-    return positionAfterColoredPoint1;
-  }
-  ErrorHandlerFn("_coloredPoint",
-    "y",
-    EverParseErrorReasonOfResult(positionAfterColoredPoint1),
-    EverParseGetValidatorErrorKind(positionAfterColoredPoint1),
-    Ctxt,
-    Input,
-    positionAfterx);
-  return positionAfterColoredPoint1;
+  return
+    EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA,
+      positionAftercol_refinement0);
 }
 

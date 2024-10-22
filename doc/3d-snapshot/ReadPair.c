@@ -45,16 +45,9 @@ ReadPairValidatePair(
   {
     uint32_t first = Load32Le(Input + (uint32_t)StartPosition);
     *X = first;
-    if (TRUE)
-    {
-      positionAfterPair = positionAfterfirst0;
-    }
-    else
-    {
-      positionAfterPair =
-        EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAfterfirst0);
-    }
+    BOOLEAN actionResult = TRUE;
+    KRML_MAYBE_UNUSED_VAR(actionResult);
+    positionAfterPair = positionAfterfirst0;
   }
   uint64_t positionAfterfirst;
   if (EverParseIsSuccess(positionAfterPair))
@@ -99,16 +92,9 @@ ReadPairValidatePair(
   {
     uint32_t second = Load32Le(Input + (uint32_t)positionAfterfirst);
     *Y = second;
-    if (TRUE)
-    {
-      positionAfterPair0 = positionAftersecond;
-    }
-    else
-    {
-      positionAfterPair0 =
-        EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAftersecond);
-    }
+    BOOLEAN actionResult = TRUE;
+    KRML_MAYBE_UNUSED_VAR(actionResult);
+    positionAfterPair0 = positionAftersecond;
   }
   if (EverParseIsSuccess(positionAfterPair0))
   {
