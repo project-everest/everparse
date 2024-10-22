@@ -1,4 +1,4 @@
-name: Build and test EverParse based on a FStar image
+name: Linux build
 on:
   push:
     branches-ignore:
