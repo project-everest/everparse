@@ -27,9 +27,14 @@ module U = CBOR.Spec.Util
 
 val cbor: eqtype
 
+(** CBOR maps *)
+
 val cbor_map: eqtype
 
 val cbor_map_get: cbor_map -> cbor -> Tot (option cbor)
+
+let cbor_map_defined (k: cbor) (f: cbor_map) : Tot prop =
+  Some? (cbor_map_get f k)
 
 val cbor_map_get_precedes (m: cbor_map) (x: cbor) : Lemma
   (ensures (match cbor_map_get m x with
@@ -48,7 +53,7 @@ val cbor_map_ext: (m1: cbor_map) -> (m2: cbor_map) -> Lemma
 val cbor_map_set_keys: (m: cbor_map) -> FS.set cbor
 
 val cbor_map_set_keys_mem: (m: cbor_map) -> (k: cbor) -> Lemma
-  (FS.mem k (cbor_map_set_keys m) <==> Some? (cbor_map_get m k))
+  (FS.mem k (cbor_map_set_keys m) <==> cbor_map_defined k m)
   [SMTPat (FS.mem k (cbor_map_set_keys m))]
 
 val cbor_map_length (m: cbor_map) : Pure nat
@@ -109,7 +114,7 @@ let cbor_map_set_keys_union (m1 m2: cbor_map) : Lemma
 = assert (cbor_map_set_keys (cbor_map_union m1 m2) `FS.equal` (cbor_map_set_keys m1 `FS.union` cbor_map_set_keys m2))
 
 let cbor_map_disjoint (m1 m2: cbor_map) : Tot prop =
-  forall k . ~ (Some? (cbor_map_get m1 k) /\ Some? (cbor_map_get m2 k))
+  forall k . ~ (cbor_map_defined k m1 /\ cbor_map_defined k m2)
 
 let cbor_map_length_disjoint_union (m1 m2: cbor_map) : Lemma
   (requires (cbor_map_disjoint m1 m2))
@@ -119,6 +124,205 @@ let cbor_map_length_disjoint_union (m1 m2: cbor_map) : Lemma
 = 
   assert (FS.intersection (cbor_map_set_keys m1) (cbor_map_set_keys m2) `FS.equal` FS.emptyset);
   assert (FS.cardinality (FS.union (cbor_map_set_keys m1) (cbor_map_set_keys m2)) == FS.cardinality (cbor_map_set_keys m1) + FS.cardinality (cbor_map_set_keys m2))
+
+let cbor_map_mem (kv: (cbor & cbor)) (f: cbor_map) : Tot bool =
+  cbor_map_get f (fst kv) = Some (snd kv)
+
+let cbor_map_defined_alt
+  (k: cbor) (f: cbor_map)
+: Lemma
+  (cbor_map_defined k f <==> (exists v . cbor_map_mem (k, v) f))
+  [SMTPat (cbor_map_defined k f)]
+= match cbor_map_get f k with
+  | None -> ()
+  | Some _ -> ()
+
+let cbor_map_union_assoc (m1 m2 m3: cbor_map) : Lemma
+  (cbor_map_union (cbor_map_union m1 m2) m3 == cbor_map_union m1 (cbor_map_union m2 m3))
+= cbor_map_ext
+    (cbor_map_union (cbor_map_union m1 m2) m3)
+    (cbor_map_union m1 (cbor_map_union m2 m3))
+
+let cbor_map_union_empty_l (m: cbor_map) : Lemma
+  (cbor_map_union cbor_map_empty m == m)
+  [SMTPat (cbor_map_union cbor_map_empty m)]
+= cbor_map_ext (cbor_map_union cbor_map_empty m) m
+
+let cbor_map_union_empty_r (m: cbor_map) : Lemma
+  (cbor_map_union m cbor_map_empty == m)
+  [SMTPat (cbor_map_union m cbor_map_empty)]
+= cbor_map_ext (cbor_map_union m cbor_map_empty) m
+
+let cbor_map_disjoint_mem_union (m1 m2: cbor_map) (xv: (cbor & cbor)) : Lemma
+  (requires cbor_map_disjoint m1 m2)
+  (ensures cbor_map_mem xv (m1 `cbor_map_union` m2) <==> cbor_map_mem xv m1 \/ cbor_map_mem xv m2)
+= ()
+
+let cbor_map_disjoint_mem_union' (m1 m2: cbor_map) (_: squash (cbor_map_disjoint m1 m2)) : Lemma
+  (ensures forall xv . cbor_map_mem xv (m1 `cbor_map_union` m2) <==> cbor_map_mem xv m1 \/ cbor_map_mem xv m2)
+= ()
+
+let cbor_map_disjoint_union_comm (m1 m2: cbor_map) : Lemma
+  (requires cbor_map_disjoint m1 m2)
+  (ensures m1 `cbor_map_union` m2 == m2 `cbor_map_union` m1)
+  [SMTPat (m1 `cbor_map_union` m2)]
+= cbor_map_disjoint_mem_union' m1 m2 ();
+  cbor_map_disjoint_mem_union' m2 m1 ();
+  cbor_map_ext (m1 `cbor_map_union` m2) (m2 `cbor_map_union` m1)
+
+let cbor_map_mem_filter
+  (f: (cbor & cbor) -> Tot bool)
+  (m: cbor_map)
+  (x: (cbor & cbor))
+: Lemma
+  (cbor_map_mem x (cbor_map_filter f m) <==> cbor_map_mem x m /\ f x)
+  [SMTPat (cbor_map_mem x (cbor_map_filter f m))]
+= ()
+
+let cbor_map_filter_for_all
+  (f: (cbor & cbor) -> Tot bool)
+  (m: cbor_map)
+: Lemma
+  (requires forall x . cbor_map_mem x m ==> f x)
+  (ensures cbor_map_filter f m == m)
+= cbor_map_ext (cbor_map_filter f m) m
+
+let cbor_map_filter_for_all'
+  (f: (cbor & cbor) -> Tot bool)
+  (m: cbor_map)
+  (sq: squash (forall x . cbor_map_mem x m ==> f x))
+: Lemma
+  (ensures cbor_map_filter f m == m)
+= cbor_map_filter_for_all f m
+
+let cbor_map_filter_ext
+  (f1 f2: (cbor & cbor) -> Tot bool)
+  (m: cbor_map)
+: Lemma
+  (requires forall x . f1 x == f2 x)
+  (ensures cbor_map_filter f1 m == cbor_map_filter f2 m)
+= cbor_map_ext (cbor_map_filter f1 m) (cbor_map_filter f2 m)
+
+let cbor_map_disjoint_union_filter
+  (f: (cbor & cbor) -> Tot bool)
+  (m1 m2: cbor_map)
+: Lemma
+  (requires cbor_map_disjoint m1 m2)
+  (ensures (cbor_map_filter f (cbor_map_union m1 m2) == cbor_map_filter f m1 `cbor_map_union` cbor_map_filter f m2))
+= cbor_map_ext
+    (cbor_map_filter f (cbor_map_union m1 m2))
+    (cbor_map_filter f m1 `cbor_map_union` cbor_map_filter f m2)
+
+let cbor_map_disjoint_union_filter'
+  (f: (cbor & cbor) -> Tot bool)
+  (m1 m2: cbor_map)
+  (sq: squash (cbor_map_disjoint m1 m2))
+: Lemma
+  (ensures (cbor_map_filter f (cbor_map_union m1 m2) == cbor_map_filter f m1 `cbor_map_union` cbor_map_filter f m2))
+= cbor_map_disjoint_union_filter f m1 m2
+
+let cbor_map_filter_filter
+  (p1 p2: (cbor & cbor) -> Tot bool)
+  (f: cbor_map)
+: Lemma
+  (cbor_map_filter p2 (cbor_map_filter p1 f) == cbor_map_filter (p1 `U.andp` p2) f)
+= cbor_map_ext
+    (cbor_map_filter p2 (cbor_map_filter p1 f))
+    (cbor_map_filter (p1 `U.andp` p2) f)
+
+let cbor_map_filter_implies
+  (p1 p2: (cbor & cbor) -> Tot bool)
+  (f: cbor_map)
+: Lemma
+  (requires (forall kv . p1 kv ==> p2 kv))
+  (ensures (cbor_map_filter p2 (cbor_map_filter p1 f) == cbor_map_filter p1 f))
+= cbor_map_filter_filter p1 p2 f;
+  cbor_map_filter_ext p1 (p1 `U.andp` p2) f
+
+let cbor_map_split
+  (f: (cbor & cbor) -> Tot bool)
+  (m: cbor_map)
+: Lemma (
+    let mtrue = cbor_map_filter f m in
+    let mfalse = cbor_map_filter (U.notp f) m in
+    mtrue `cbor_map_disjoint` mfalse /\
+    mtrue `cbor_map_union` mfalse == m
+  )
+= let mtrue = cbor_map_filter f m in
+  let mfalse = cbor_map_filter (U.notp f) m in
+  assert (mtrue `cbor_map_disjoint` mfalse);
+  cbor_map_ext (mtrue `cbor_map_union` mfalse) m
+
+let cbor_map_equal' (f1 f2: cbor_map) : Tot prop
+= forall kv . cbor_map_mem kv f1 <==> cbor_map_mem kv f2
+
+let cbor_map_equiv (f1 f2: cbor_map) : Lemma
+  (requires cbor_map_equal' f1 f2)
+  (ensures f1 == f2)
+  [SMTPat (cbor_map_equal' f1 f2)]
+= let prf
+    (k: cbor)
+  : Lemma
+    (cbor_map_get f1 k == cbor_map_get f2 k)
+  = match cbor_map_get f1 k with
+    | Some v1 -> assert (cbor_map_mem (k, v1) f2)
+    | _ ->
+      begin match cbor_map_get f2 k with
+      | Some v2 -> assert (cbor_map_mem (k, v2) f1)
+      | _ -> ()
+      end
+  in
+  Classical.forall_intro prf;
+  assert (cbor_map_equal f1 f2)
+
+#restart-solver
+let cbor_map_disjoint_union_simpl_l
+  (g g1 g2: cbor_map)
+: Lemma
+  (requires
+    g `cbor_map_disjoint` g1 /\
+    g `cbor_map_disjoint` g2 /\
+    g `cbor_map_union` g1 == g `cbor_map_union` g2
+  )
+  (ensures g1 == g2)
+= assert (forall x . cbor_map_mem x g1 <==> (cbor_map_mem x (g `cbor_map_union` g1) /\ ~ (cbor_map_mem x g)));
+  cbor_map_equiv g1 g2
+
+#restart-solver
+let cbor_map_disjoint_union_simpl_r
+  (g1 g2 g: cbor_map)
+: Lemma
+  (requires
+    g1 `cbor_map_disjoint` g /\
+    g2 `cbor_map_disjoint` g /\
+    g1 `cbor_map_union` g == g2 `cbor_map_union` g
+  )
+  (ensures g1 == g2)
+= cbor_map_disjoint_union_comm g1 g;
+  cbor_map_disjoint_union_comm g2 g;
+  cbor_map_disjoint_union_simpl_l g g1 g2
+
+let cbor_map_included
+  (m1 m2: cbor_map)
+: Tot prop
+= forall x . cbor_map_mem x m1 ==> cbor_map_mem x m2
+
+let cbor_map_sub
+  (m1 m2: cbor_map)
+: Pure (cbor_map)
+    (requires cbor_map_included m2 m1)
+    (ensures fun m3 ->
+      m2 `cbor_map_disjoint` m3 /\
+      m2 `cbor_map_union` m3 == m1
+    )
+= let phi (kv: (cbor & cbor)) : Tot bool = not (cbor_map_mem kv m2) in
+  let m3 = cbor_map_filter phi m1 in
+  assert (cbor_map_disjoint m2 m3);
+  cbor_map_disjoint_mem_union' m2 m3 ();
+  cbor_map_equiv (cbor_map_union m2 m3) m1;
+  m3
+
+(** CBOR objects *)
 
 type cbor_case =
   | CSimple: (v: simple_value) -> cbor_case
