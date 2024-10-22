@@ -390,7 +390,7 @@ let rec size_and_alignment_of_field (env:env_t)
         if all_cases_fixed
         && not (Fixed? size)
         then error
-              "With the --align option, \
+              "With the 'aligned' qualifier, \
                all cases of a union with a fixed size \
                must have the same size; \
                union padding is not yet supported"
