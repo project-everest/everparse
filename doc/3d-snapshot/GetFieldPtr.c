@@ -87,16 +87,8 @@ GetFieldPtrValidateT(
     uint8_t *hd = Input + (uint32_t)positionAfterf1;
     *Out = hd;
     BOOLEAN actionSuccessF2 = TRUE;
-    if (!actionSuccessF2)
-    {
-      positionAfterT1 =
-        EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_ACTION_FAILED,
-          positionAfterf2);
-    }
-    else
-    {
-      positionAfterT1 = positionAfterf2;
-    }
+    KRML_MAYBE_UNUSED_VAR(actionSuccessF2);
+    positionAfterT1 = positionAfterf2;
   }
   else
   {
