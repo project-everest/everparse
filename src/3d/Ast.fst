@@ -1108,17 +1108,21 @@ let print_bitfield (bf:option field_bitwidth_t) =
      (print_typ a.bitfield_type)
      a.bitfield_from a.bitfield_to
 
-let rec print_field (f:field) : ML string =
+let rec print_field' (f:field) (with_comments:bool) : ML string =
   let field = 
     match f.v with
     | AtomicField f -> print_atomic_field f
     | RecordField f i -> Printf.sprintf "%s %s" (print_record f) i.v.name
     | SwitchCaseField f i -> Printf.sprintf "%s %s" (print_switch_case f) i.v. name
   in
-  match f.comments with 
-  | [] -> field
-  | comms -> Printf.sprintf "//%s\n%s" (String.concat "; " comms) field
-  
+  if with_comments then 
+    match f.comments with 
+    | [] -> field
+    | comms -> Printf.sprintf "//%s\n%s" (String.concat "; " comms) field
+  else field
+
+and print_field f : ML string = print_field' f true 
+
 and print_record (f:record) : ML string = 
   List.map print_field f |>
   String.concat ";\n"

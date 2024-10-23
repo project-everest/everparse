@@ -516,7 +516,7 @@ let parse_readable_dtyp
 : Tot (parser reading)
 = match d with
   | I.DT_IType i -> parse_readable_itype i
-  | I.DT_App _ hd args -> parse_readable_app hd args
+  | I.DT_App _ _ hd args -> parse_readable_app hd args
 
 let parse_not_readable_app'
   (hd: string)
@@ -537,7 +537,7 @@ let parse_dtyp
   then wrap_parser (parse_readable_dtyp d)
   else match d with
     | I.DT_IType i -> parse_itype i
-    | I.DT_App _ hd args -> parse_not_readable_app hd args
+    | I.DT_App _ _ hd args -> parse_not_readable_app hd args
 
 let parse_false : parser not_reading =
   maybe_toplevel_parser (fun _ _ _ _ -> { call = "parse-false" })
@@ -912,7 +912,7 @@ let rec typ_depth (t: I.typ) : GTot nat
 = match t with
   | I.T_if_else _ t1 t2 // 2 accounts for the call to parse_then_else_with_branch_trace
     -> 2 + typ_depth t1 + typ_depth t2
-  | I.T_pair _ t1 t2
+  | I.T_pair _ _ t1 _ t2
     -> 1 + typ_depth t1 + typ_depth t2
   | I.T_dep_pair _ _ (_, t')
   | I.T_dep_pair_with_action _ _ (_, t') _
@@ -923,7 +923,7 @@ let rec typ_depth (t: I.typ) : GTot nat
   | I.T_with_comment _ t' _
   | I.T_at_most _ _ t'
   | I.T_exact _ _ t'
-  | I.T_nlist _ _ t'
+  | I.T_nlist _ _ _ t'
     -> 1 + typ_depth t'
   | I.T_with_dep_action _ _ _
   | I.T_refine _ _ _
@@ -941,7 +941,7 @@ let rec parse_typ (t : I.typ) : Tot (parser not_reading)
   | I.T_false _ -> parse_false
   | I.T_with_dep_action _ d _
   | I.T_denoted _ d -> parse_denoted d
-  | I.T_pair _ t1 t2 -> parse_pair (parse_typ t1) (parse_typ t2)
+  | I.T_pair _ _ t1 _ t2 -> parse_pair (parse_typ t1) (parse_typ t2)
   | I.T_dep_pair_with_action _ t1 (lam, t2) _
   | I.T_dep_pair _ t1 (lam, t2) -> parse_dep_pair (parse_readable_dtyp t1) lam (parse_typ t2)
   | I.T_refine_with_action _ base (lam, cond) _
@@ -955,7 +955,7 @@ let rec parse_typ (t : I.typ) : Tot (parser not_reading)
   | I.T_at_most _ size body -> parse_at_most (fun _ -> mk_expr size) (parse_typ body)
   | I.T_exact _ size body -> parse_exact (fun _ -> mk_expr size) (parse_typ body)
   | I.T_string _ elt terminator -> parse_string (parse_readable_dtyp elt) (fun _ -> mk_expr terminator)
-  | I.T_nlist _ size body ->
+  | I.T_nlist _ _ size body ->
     if match body with
     | I.T_denoted _ (I.DT_IType i) -> Some? (itype_byte_size i)
     | _ -> false

@@ -300,7 +300,7 @@ let rec size_and_alignment_of_field (env:env_t)
         : ML (size & alignment & list field)
         = let field, field_size, field_alignment = size_and_alignment_of_field env should_align diag_enclosing_type_name f in
           let pad_size, padding_field =
-            let msg = Printf.sprintf "(preceding field %s)" (print_field field) in
+            let msg = Printf.sprintf "(preceding field %s)" (print_field' field false) in
             alignment_padding env should_align diag_enclosing_type_name msg offset field_alignment
           in
           let offset =
@@ -390,7 +390,7 @@ let rec size_and_alignment_of_field (env:env_t)
         if all_cases_fixed
         && not (Fixed? size)
         then error
-              "With the --align option, \
+              "With the 'aligned' qualifier, \
                all cases of a union with a fixed size \
                must have the same size; \
                union padding is not yet supported"

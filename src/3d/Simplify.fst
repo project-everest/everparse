@@ -119,6 +119,7 @@ let simplify_atomic_field (env:T.env_t) (f:atomic_field)
     let ft = simplify_typ env sf.field_type in
     let fa = simplify_field_array env sf.field_array_opt in
     let fc = sf.field_constraint |> map_opt (simplify_expr env) in
+    let fp = sf.field_probe |> map_opt (fun fp -> { fp with probe_length=simplify_expr env fp.probe_length } ) in
     let fact =
       match sf.field_action with
       | None -> None
@@ -127,7 +128,8 @@ let simplify_atomic_field (env:T.env_t) (f:atomic_field)
     let sf = { sf with field_type = ft;
                        field_array_opt = fa; 
                        field_constraint = fc;
-                       field_action = fact } in
+                       field_action = fact;
+                       field_probe = fp } in
     { f with v = sf }
 
 let rec simplify_field (env:T.env_t) (f:field)

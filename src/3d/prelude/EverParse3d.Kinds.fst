@@ -75,15 +75,40 @@ let impos_kind
 /// Lists/arrays
 inline_for_extraction
 noextract
-let kind_nlist
+let kind_nlist_default
+: parser_kind false WeakKindStrongPrefix
+= let open LP in
+  let open FStar.Mul in
+  {
+    parser_kind_low = 0;
+    parser_kind_high = None;
+    parser_kind_subkind = Some ParserStrong;
+    parser_kind_metadata = None
+  }
+  
+inline_for_extraction
+noextract
+let kind_nlist #b #w kelt nopt
   : parser_kind false WeakKindStrongPrefix
   = let open LP in
-    {
-      parser_kind_low = 0;
-      parser_kind_high = None;
-      parser_kind_subkind = Some ParserStrong;
-      parser_kind_metadata = None
-    }
+    let open FStar.Mul in
+    match nopt with
+    | None -> kind_nlist_default
+    | Some byte_size -> 
+      if Some kelt.parser_kind_low = kelt.parser_kind_high
+      && kelt.parser_kind_low <> 0
+      && byte_size % kelt.parser_kind_low = 0
+      && kelt.parser_kind_subkind = Some ParserStrong
+      && kelt.parser_kind_metadata = Some ParserKindMetadataTotal
+      then (
+        {
+          parser_kind_low = byte_size;
+          parser_kind_high = Some byte_size;
+          parser_kind_subkind = Some ParserStrong;
+          parser_kind_metadata = Some ParserKindMetadataTotal;
+        }
+      )
+      else kind_nlist_default
 
 let kind_all_bytes
   : parser_kind false WeakKindConsumesAll
@@ -91,11 +116,11 @@ let kind_all_bytes
 
 let kind_t_at_most
   : parser_kind false WeakKindStrongPrefix
-  = kind_nlist
+  = kind_nlist_default
 
 let kind_t_exact
   : parser_kind false WeakKindStrongPrefix
-  = kind_nlist
+  = kind_nlist_default
 
 let parse_string_kind
   : parser_kind true WeakKindStrongPrefix
