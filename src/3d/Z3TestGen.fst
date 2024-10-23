@@ -516,7 +516,7 @@ let parse_readable_dtyp
 : Tot (parser reading)
 = match d with
   | I.DT_IType i -> parse_readable_itype i
-  | I.DT_App _ hd args -> parse_readable_app hd args
+  | I.DT_App _ _ hd args -> parse_readable_app hd args
 
 let parse_not_readable_app'
   (hd: string)
@@ -537,7 +537,7 @@ let parse_dtyp
   then wrap_parser (parse_readable_dtyp d)
   else match d with
     | I.DT_IType i -> parse_itype i
-    | I.DT_App _ hd args -> parse_not_readable_app hd args
+    | I.DT_App _ _ hd args -> parse_not_readable_app hd args
 
 let parse_false : parser not_reading =
   maybe_toplevel_parser (fun _ _ _ _ -> { call = "parse-false" })
@@ -912,7 +912,7 @@ let rec typ_depth (t: I.typ) : GTot nat
 = match t with
   | I.T_if_else _ t1 t2 // 2 accounts for the call to parse_then_else_with_branch_trace
     -> 2 + typ_depth t1 + typ_depth t2
-  | I.T_pair _ t1 t2
+  | I.T_pair _ _ t1 _ t2
     -> 1 + typ_depth t1 + typ_depth t2
   | I.T_dep_pair _ _ (_, t')
   | I.T_dep_pair_with_action _ _ (_, t') _
@@ -923,7 +923,7 @@ let rec typ_depth (t: I.typ) : GTot nat
   | I.T_with_comment _ t' _
   | I.T_at_most _ _ t'
   | I.T_exact _ _ t'
-  | I.T_nlist _ _ t'
+  | I.T_nlist _ _ _ t'
     -> 1 + typ_depth t'
   | I.T_with_dep_action _ _ _
   | I.T_refine _ _ _
@@ -941,7 +941,7 @@ let rec parse_typ (t : I.typ) : Tot (parser not_reading)
   | I.T_false _ -> parse_false
   | I.T_with_dep_action _ d _
   | I.T_denoted _ d -> parse_denoted d
-  | I.T_pair _ t1 t2 -> parse_pair (parse_typ t1) (parse_typ t2)
+  | I.T_pair _ _ t1 _ t2 -> parse_pair (parse_typ t1) (parse_typ t2)
   | I.T_dep_pair_with_action _ t1 (lam, t2) _
   | I.T_dep_pair _ t1 (lam, t2) -> parse_dep_pair (parse_readable_dtyp t1) lam (parse_typ t2)
   | I.T_refine_with_action _ base (lam, cond) _
@@ -955,7 +955,7 @@ let rec parse_typ (t : I.typ) : Tot (parser not_reading)
   | I.T_at_most _ size body -> parse_at_most (fun _ -> mk_expr size) (parse_typ body)
   | I.T_exact _ size body -> parse_exact (fun _ -> mk_expr size) (parse_typ body)
   | I.T_string _ elt terminator -> parse_string (parse_readable_dtyp elt) (fun _ -> mk_expr terminator)
-  | I.T_nlist _ size body ->
+  | I.T_nlist _ _ size body ->
     if match body with
     | I.T_denoted _ (I.DT_IType i) -> Some? (itype_byte_size i)
     | _ -> false
@@ -1231,12 +1231,15 @@ let print_witness_call_as_c_aux
   (arg_types: list (string & arg_type))
   (witness_length: nat)
   (args: list string)
+  (num: nat)
 : ML unit
 =
   out validator_name;
   out "(";
   print_witness_args_as_c out arg_types args;
-  out "&context, &TestErrorHandler, witness, ";
+  out "&context, &TestErrorHandler, witness";
+  out (string_of_int num);
+  out ", ";
   out (string_of_int witness_length);
   out ", 0);"
 
@@ -1319,6 +1322,7 @@ let print_witness_call_as_c
   (arg_types: list (string & arg_type))
   (witness_length: nat)
   (args: list string)
+  (num: nat)
 : ML unit
 =
   out "
@@ -1334,10 +1338,10 @@ let print_witness_call_as_c
     arg_types;
   out "
     uint64_t output = ";
-  print_witness_call_as_c_aux out validator_name arg_types witness_length args;
+  print_witness_call_as_c_aux out validator_name arg_types witness_length args num;
   out "
     printf(\"  ";
-  print_witness_call_as_c_aux out validator_name arg_types witness_length args;
+  print_witness_call_as_c_aux out validator_name arg_types witness_length args num;
   out " // \");
     BOOLEAN result = !EverParseIsError(output);
     BOOLEAN consumes_all_bytes_if_successful = true;
@@ -1369,9 +1373,12 @@ let print_witness_as_c_aux
   (out: (string -> ML unit))
   (witness: Seq.seq int)
   (len: int { len == Seq.length witness })
+  (num: nat)
 : ML unit
 =
-  out "  uint8_t witness[";
+  out "  uint8_t witness";
+  out (string_of_int num);
+  out "[";
   out (string_of_int len);
   out "] = {";
   begin match Seq.seq_to_list witness with
@@ -1386,13 +1393,14 @@ let print_witness_as_c_gen
   (out: (string -> ML unit))
   (witness: Seq.seq int)
   (f: (len: int { len == Seq.length witness }) -> ML unit)
+  (num: nat)
 : ML unit
 = let len = Seq.length witness in
   out "{\n";
-  print_witness_as_c_aux out witness len;
+  print_witness_as_c_aux out witness len num;
   out "
   printf(\"";
-  print_witness_as_c_aux out witness len;
+  print_witness_as_c_aux out witness len num;
   out "\\n\");
 ";
   f len;
@@ -1406,7 +1414,7 @@ let rec mk_args_as_file_name (accu: string) (l: list string) : Tot string
   | a :: q -> mk_args_as_file_name (accu ^ "." ^ a) q
 
 let mk_output_filename
-  (counter: ref int)
+  (counter: ref nat)
   (out_dir: string)
   (validator_name: string)
   (args: list string)
@@ -1422,14 +1430,15 @@ let print_witness_as_c
   (positive: bool)
   (validator_name: string)
   (arg_types: list (string & arg_type))
-  (counter: ref int)
+  (counter: ref nat)
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
 = OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ((if positive then "POS." else "NEG.") ^ validator_name) args);
+  let num = !counter in
   print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out p positive validator_name arg_types len args
-  )
+    print_witness_call_as_c out p positive validator_name arg_types len args num
+  ) num
 
 let print_diff_witness_as_c
   (out_dir: string)
@@ -1438,15 +1447,17 @@ let print_diff_witness_as_c
   (validator_name1: string)
   (validator_name2: string)
   (arg_types: list (string & arg_type))
-  (counter: ref int)
+  (counter: ref nat)
   (witness: Seq.seq int)
   (args: list string)
 : ML unit
 = OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ("POS." ^ validator_name1 ^ ".NEG." ^ validator_name2) args);
+  let num = !counter in
   print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out p true validator_name1 arg_types len args;
-    print_witness_call_as_c out p false validator_name2 arg_types len args
+    print_witness_call_as_c out p true validator_name1 arg_types len args num;
+    print_witness_call_as_c out p false validator_name2 arg_types len args num
   )
+  num
 
 let print_witness (witness: Seq.seq int) : ML unit =
   FStar.IO.print_string " produced witness: [";
@@ -1752,7 +1763,7 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
   call2
 
 let do_diff_test_for
-  (out_dir: string) (counter: ref int) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 (args: list (string & arg_type)) (nargs: nat { nargs == count_args (List.Tot.map snd args) }) validator_name1 validator_name2 nbwitnesses depth =
+  (out_dir: string) (counter: ref nat) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 (args: list (string & arg_type)) (nargs: nat { nargs == count_args (List.Tot.map snd args) }) validator_name1 validator_name2 nbwitnesses depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
   let sargs = List.Tot.map snd args in
   witnesses_for z3 name1 sargs nargs ([print_diff_witness_as_c out_dir cout prog validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 sargs name2)]) nbwitnesses depth

@@ -68,7 +68,7 @@ val impos_kind
 /// Lists/arrays
 inline_for_extraction
 noextract
-val kind_nlist
+val kind_nlist #b #w (k:parser_kind b w) (n:option nat)
   : parser_kind false WeakKindStrongPrefix
 
 val kind_all_bytes

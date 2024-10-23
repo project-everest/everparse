@@ -18,8 +18,8 @@ set -o pipefail
 
 # Known URLs, directories and versions
 OPAM_URL=https://github.com/fdopen/opam-repository-mingw/releases/download/0.0.0.2/opam64.tar.xz
-MINIMAL_OCAML_VERSION=4.08.0
-OPAM_VERSION=4.12.0+mingw64c
+MINIMAL_OCAML_VERSION=4.14.0
+OPAM_VERSION=4.14.0+mingw64c
 SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
 MAKE=$(which gmake >/dev/null 2>&1 && echo gmake || echo make)
 

@@ -114,7 +114,12 @@ make_everparse() {
         elif find_fstar="$(which fstar.exe)" ; then
             export FSTAR_HOME=$(fixpath "$(dirname $find_fstar)"/..)
         else
-            git clone https://github.com/FStarLang/FStar
+            if $is_windows ; then
+                fstar_branch_opt="--branch taramana_dune_3.5"
+            else
+                fstar_branch_opt=
+            fi
+            git clone $fstar_branch_opt https://github.com/FStarLang/FStar
             export FSTAR_HOME=$(fixpath $PWD/FStar)
         fi
     else
@@ -147,8 +152,14 @@ make_everparse() {
         fstar_commit_id=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^commit=' | sed 's!^.*=!!')
         fstar_commit_date_hr=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^date=' | sed 's!^.*=!!')
     fi
-    $MAKE -C "$KRML_HOME" "$@" minimal
-    $MAKE -C "$KRML_HOME/krmllib" "$@" verify-all
+    if $is_windows ; then
+        # FIXME: krmllib cannot be built on Windows because the krmllib Makefiles use Cygwin paths, which cannot be used by the krml executable
+        # Thus, things like compiling a 3D parser test executable won't work on Windows
+        $MAKE -C "$KRML_HOME" "$@" minimal
+        $MAKE -C "$KRML_HOME/krmllib" "$@" verify-all
+    else
+        $MAKE -C "$KRML_HOME" "$@"
+    fi
 
     # Install ocaml-sha if not found
     if ! ocamlfind query sha ; then
@@ -254,7 +265,7 @@ make_everparse() {
     # Download and build the latest z3 for test case generation purposes
     if ! $is_windows ; then
         if ! [[ -d z3-latest ]] ; then
-            git clone https://github.com/Z3Prover/z3 z3-latest
+            git clone --branch z3-4.13.0 https://github.com/Z3Prover/z3 z3-latest
         fi
         z3_latest_dir="$PWD/everparse/z3-latest"
         mkdir -p "$z3_latest_dir"
@@ -275,7 +286,8 @@ make_everparse() {
         # TODO: have F* install its license
         wget --output-document=everparse/licenses/FStar https://raw.githubusercontent/FStarLang/FStar/master/LICENSE
     fi
-    $cp $KRML_HOME/LICENSE everparse/licenses/KaRaMeL
+    $cp $KRML_HOME/LICENSE-APACHE everparse/licenses/KaRaMeL-Apache
+    $cp $KRML_HOME/LICENSE-MIT everparse/licenses/KaRaMeL-MIT
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
     wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
     wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE

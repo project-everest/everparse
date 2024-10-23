@@ -1,4 +1,4 @@
-name: Build and test EverParse based on a FStar image
+name: Linux build
 on:
   push:
     branches-ignore:
@@ -38,7 +38,7 @@ jobs:
           DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
       - name: Archive build log
         if: ${{ always() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: log
           path: log.txt
@@ -127,10 +127,11 @@ jobs:
         env:
           DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
       - name: Archive EverParse package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: everparse
           path: everparse/everparse
+          include-hidden-files: true
       - name: Compute elapsed time
         if: ${{ always() }}
         run: |
