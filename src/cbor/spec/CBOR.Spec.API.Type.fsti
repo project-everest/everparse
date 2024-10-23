@@ -322,6 +322,14 @@ let cbor_map_sub
   cbor_map_equiv (cbor_map_union m2 m3) m1;
   m3
 
+val cbor_map_key_list (m: cbor_map) : GTot (list cbor)
+
+val cbor_map_key_list_mem (m: cbor_map) (k: cbor) : Lemma
+  (List.Tot.memP k (cbor_map_key_list m) <==> cbor_map_defined k m)
+
+val cbor_map_key_list_no_repeats_p (m: cbor_map) : Lemma
+  (List.Tot.no_repeats_p (cbor_map_key_list m))
+
 (** CBOR objects *)
 
 type cbor_case =

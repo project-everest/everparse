@@ -20,8 +20,8 @@ let cbor_map_prop (x: list (R.raw_data_item & R.raw_data_item)) : Tot prop =
 let cbor_map = (x: list (R.raw_data_item & R.raw_data_item) { cbor_map_prop x })
 
 let list_assoc_cbor
-  (k: R.raw_data_item)
   (m: cbor_map)
+  (k: R.raw_data_item)
 : Lemma
   (requires (Some? (List.Tot.assoc k m)))
   (ensures (match List.Tot.assoc k m with
@@ -38,7 +38,7 @@ let cbor_map_get m k =
   match List.Tot.assoc k m with
   | None -> None
   | Some v ->
-    list_assoc_cbor k m;
+    list_assoc_cbor m k;
     Some v
 
 let cbor_map_get_precedes m k =
@@ -56,10 +56,10 @@ let cbor_map_ext m1 m2 =
     R.deterministically_encoded_cbor_map_key_order_assoc_ext m1 m2 (fun k ->
       match List.Tot.assoc k m1, List.Tot.assoc k m2 with
       | Some v, _ ->
-        list_assoc_cbor k m1;
+        list_assoc_cbor m1 k;
         assert (cbor_map_get m1 k == cbor_map_get m2 k)
       | _, Some v ->
-        list_assoc_cbor k m2;
+        list_assoc_cbor m2 k;
         assert (cbor_map_get m1 k == cbor_map_get m2 k)
       | _ -> ()
     )
@@ -215,7 +215,7 @@ let cbor_map_union m1 m2 =
     List.Tot.assoc_mem x m2';
     if Some? (List.Tot.assoc x m2')
     then begin
-      list_assoc_cbor x m2';
+      list_assoc_cbor m2' x;
       cbor_map_get_filter (cbor_map_diff_f m1) m2' x
     end
   in
@@ -243,6 +243,38 @@ let list_cbor_of_cbor_list
   (l: list R.raw_data_item)
 : Tot (list cbor)
 = List.Tot.map cast_to_cbor l
+
+// let cbor_map_key_list_raw (m: cbor_map) : Tot (list R.raw_data_item) = List.Tot.map fst m
+
+let rec cbor_map_key_list_tot (m: cbor_map) : Tot (list cbor) =
+  match m with
+  | [] -> []
+  | (k, _) :: q -> k :: cbor_map_key_list_tot q
+
+let cbor_map_key_list (m: cbor_map) : GTot (list cbor) =
+  cbor_map_key_list_tot m
+
+let rec cbor_map_key_list_mem_aux (m: cbor_map) (k: cbor) : Lemma
+  (List.Tot.memP k (cbor_map_key_list m) <==> List.Tot.memP k (List.Tot.map fst m))
+= match m with
+  | [] -> ()
+  | (k', _) :: q ->
+    if k = k' then () else cbor_map_key_list_mem_aux q k
+
+let cbor_map_key_list_mem (m: cbor_map) (k: cbor) : Lemma
+  (List.Tot.memP k (cbor_map_key_list m) <==> cbor_map_defined k m)
+= cbor_map_key_list_mem_aux m k;
+  List.Tot.assoc_mem k m;
+  List.Tot.mem_memP k (List.Tot.map fst m)
+
+let rec cbor_map_key_list_no_repeats_p (m: cbor_map) : Lemma
+  (List.Tot.no_repeats_p (cbor_map_key_list m))
+= CBOR.Spec.Raw.Map.list_sorted_map_entry_order_no_repeats R.deterministically_encoded_cbor_map_key_order m;
+  match m with
+  | [] -> ()
+  | (k, _) :: q ->
+    cbor_map_key_list_mem_aux q k;
+    cbor_map_key_list_no_repeats_p q
 
 let rec cbor_list_of_list_cbor_precedes (l: list R.raw_data_item {
     List.Tot.for_all (R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem) l /\
