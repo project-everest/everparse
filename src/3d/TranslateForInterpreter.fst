@@ -269,9 +269,7 @@ let dep_pair_with_action_parser p1 (a:T.lam T.action) (p2:A.ident & T.parser) =
 let extend_fieldname fieldname e = Printf.sprintf "%s.%s" fieldname e
 let ite_parser typename fieldname (e:T.expr) (then_:T.parser) (else_:T.parser) : ML T.parser =      
     let k, p1, p2 =
-      if T.parser_kind_eq then_.p_kind else_.p_kind
-      then then_.p_kind, then_, else_
-      else let k = pk_glb then_.p_kind else_.p_kind in
+      let k = pk_glb then_.p_kind else_.p_kind in
            k,
            mk_parser k then_.p_typ typename (extend_fieldname fieldname "case_left") (T.Parse_weaken_right then_ else_.p_kind),
            mk_parser k else_.p_typ typename (extend_fieldname fieldname "case_right") (T.Parse_weaken_left else_ then_.p_kind)
