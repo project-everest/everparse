@@ -1353,6 +1353,78 @@ let rec list_splitAt_append
   | a :: q ->
     if n = 0 then () else list_splitAt_append (n - 1) q
 
+let op_comm
+  (#accu #t: Type)
+  (f: accu -> t -> accu)
+: Tot prop
+= forall a x1 x2 . f (f a x1) x2 == f (f a x2) x1
+
+let rec list_memP_extract
+  (#t: Type)
+  (x: t)
+  (l: list t)
+: Ghost (list t & list t)
+  (requires FStar.List.Tot.memP x l)
+  (ensures fun (ll, lr) ->
+    l == ll `List.Tot.append` (x :: lr)
+  )
+= let a :: q = l in
+  if FStar.StrongExcludedMiddle.strong_excluded_middle (a == x)
+  then ([], q)
+  else
+    let (ll, lr) = list_memP_extract x q in
+    (a :: ll, lr)
+
+let rec list_fold_comm
+  (#accu #t: Type)
+  (f: accu -> t -> accu { op_comm f })
+  (a: accu)
+  (l1 l2: list t)
+: Lemma
+  (ensures (List.Tot.fold_left f a (List.Tot.append l1 l2) == List.Tot.fold_left f a (List.Tot.append l2 l1)))
+  (decreases (List.Tot.length l1 + List.Tot.length l2))
+= match l1, l2 with
+  | [], _ -> List.Tot.append_l_nil l2
+  | _, [] -> List.Tot.append_l_nil l1
+  | h1 :: q1, h2 :: q2 ->
+    let x = List.Tot.fold_left f a (List.Tot.append l1 l2) in
+    list_fold_comm f (f a h1) q1 (h2 :: q2);
+    assert (x == List.Tot.fold_left f (f a h1) (h2 :: List.Tot.append q2 q1));
+    assert (f (f a h1) h2 == f (f a h2) h1);
+    assert (x == List.Tot.fold_left f (f a h2) (h1 :: List.Tot.append q2 q1));
+    list_fold_comm f (f (f a h2) h1) q2 q1;
+    assert (x == List.Tot.fold_left f (f a h2) (l1 `List.Tot.append` q2));
+    list_fold_comm f (f a h2) l1 q2;
+    assert (x == List.Tot.fold_left f a (l2 `List.Tot.append` l1))
+
+#restart-solver
+let rec list_fold_ext_no_repeats_p
+  (#accu #t: Type)
+  (f: accu -> t -> accu { op_comm f })
+  (a: accu)
+  (l1 l2: list t)
+: Lemma
+  (requires (
+    List.Tot.no_repeats_p l1 /\
+    List.Tot.no_repeats_p l2 /\
+    (forall x . List.Tot.memP x l1 <==> List.Tot.memP x l2)
+  ))
+  (ensures (List.Tot.fold_left f a l1 == List.Tot.fold_left f a l2))
+  (decreases (List.Tot.length l1 + List.Tot.length l2))
+= match l1 with
+  | [] -> ()
+  | h :: q ->
+    let (ll2, lr2) = list_memP_extract h l2 in
+    List.Tot.append_length ll2 (h :: lr2);
+    List.Tot.no_repeats_p_append_elim ll2 (h :: lr2);
+    list_fold_comm f a ll2 (h :: lr2);
+    list_fold_comm f (f a h) lr2 ll2;
+    List.Tot.append_length ll2 lr2;
+    Classical.forall_intro (List.Tot.append_memP ll2 (h :: lr2));
+    Classical.forall_intro (List.Tot.append_memP ll2 lr2);
+    List.Tot.no_repeats_p_append_intro ll2 lr2;
+    list_fold_ext_no_repeats_p f (f a h) q (List.Tot.append ll2 lr2)
+
 (* Well-founded recursion *)
 
 let rec wf_list_for_all (#t: Type) (l: list t) (p: (x: t { x << l }) -> bool) : bool =
