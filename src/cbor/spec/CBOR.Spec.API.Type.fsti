@@ -330,6 +330,44 @@ val cbor_map_key_list_mem (m: cbor_map) (k: cbor) : Lemma
 val cbor_map_key_list_no_repeats_p (m: cbor_map) : Lemma
   (List.Tot.no_repeats_p (cbor_map_key_list m))
 
+val cbor_map_key_list_length (m: cbor_map) : Lemma
+  (List.Tot.length (cbor_map_key_list m) == cbor_map_length m)
+
+val cbor_map_fold
+  (#a: Type)
+  (f: a -> cbor -> a)
+  (x: a)
+  (m: cbor_map)
+: Tot a
+
+val cbor_map_fold_ext
+  (#a: Type)
+  (f1 f2: a -> cbor -> a)
+  (x: a)
+  (m1 m2: cbor_map)
+: Lemma
+  (requires (
+    (forall (x: a) (y: cbor) . f1 x y == f2 x y) /\
+    (forall (x: cbor) . cbor_map_defined x m1 <==> cbor_map_defined x m2)
+  ))
+  (ensures (cbor_map_fold f1 x m1 == cbor_map_fold f2 x m2))
+
+val cbor_map_fold_eq
+  (#a: Type)
+  (f: a -> cbor -> a)
+  (x: a)
+  (m: cbor_map)
+  (l: list cbor)
+: Lemma
+  (requires (
+    U.op_comm f /\
+    (forall (x: cbor) . List.Tot.memP x l <==> cbor_map_defined x m) /\
+    List.Tot.no_repeats_p l
+  ))
+  (ensures (
+    cbor_map_fold f x m == List.Tot.fold_left f x l
+  ))
+
 (** CBOR objects *)
 
 type cbor_case =
