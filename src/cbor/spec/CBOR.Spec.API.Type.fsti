@@ -33,7 +33,7 @@ val cbor_map: eqtype
 
 val cbor_map_get: cbor_map -> cbor -> Tot (option cbor)
 
-let cbor_map_defined (k: cbor) (f: cbor_map) : Tot prop =
+let cbor_map_defined (k: cbor) (f: cbor_map) : Tot bool =
   Some? (cbor_map_get f k)
 
 val cbor_map_get_precedes (m: cbor_map) (x: cbor) : Lemma
