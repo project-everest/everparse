@@ -603,29 +603,33 @@ noeq
 type ag_spec
   (source: array_group None)
   (target: Type0)
+  (inj: bool)
 = {
   ag_size: target -> Tot nat;
   ag_serializable: target -> bool;
   ag_parser: array_group_parser_spec source ag_size ag_serializable;
   ag_serializer: array_group_serializer_spec ag_parser;
+  ag_parser_inj: squash (inj ==> (forall (c: array_group_parser_spec_arg source) . ag_serializer (ag_parser c) == c));
 }
 
 let ag_spec_coerce_target_prop
   (#source: array_group None)
   (#target: Type0)
-  (p: ag_spec source target)
+  (#inj: bool)
+  (p: ag_spec source target inj)
   (target_size': target -> Tot nat {
     forall x . target_size' x == p.ag_size x
   })
   (target_prop': target -> bool {
     forall x . target_prop' x <==> p.ag_serializable x
   })
-: ag_spec source target
+: ag_spec source target inj
 = {
   ag_size = target_size';
   ag_serializable = target_prop';
   ag_parser = (p.ag_parser <: array_group_parser_spec source target_size' target_prop');
   ag_serializer = p.ag_serializer;
+  ag_parser_inj = ();
 }
 
 let parser_spec_array_group
@@ -656,7 +660,8 @@ let serializer_spec_array_group
 let spec_array_group_serializable
   (#source: array_group None)
   (#target: Type0)
-  (p: ag_spec source target)
+  (#inj: bool)
+  (p: ag_spec source target inj)
   (x: target)
 : Tot bool
 = p.ag_serializable x &&
@@ -665,12 +670,14 @@ let spec_array_group_serializable
 let spec_array_group
   (#source: array_group None)
   (#target: Type0)
-  (p: ag_spec source target)
-: Tot (spec (t_array3 source) target)
+  (#inj: bool)
+  (p: ag_spec source target inj)
+: Tot (spec (t_array3 source) target inj)
 = {
   serializable = spec_array_group_serializable p;
   parser = parser_spec_array_group p.ag_parser _;
   serializer = serializer_spec_array_group p.ag_serializer _;
+  parser_inj = ();
 }
 
 let array_group_parser_spec_bij
@@ -709,7 +716,8 @@ let array_group_serializer_spec_bij
 let ag_spec_bij_size
   (#source: array_group None)
   (#target1: Type0)
-  (f: ag_spec source target1)
+  (#inj1: bool)
+  (f: ag_spec source target1 inj1)
   (#target2: Type0)
   (bij: bijection target1 target2)
   (x2: target2)
@@ -719,7 +727,8 @@ let ag_spec_bij_size
 let ag_spec_bij_serializable
   (#source: array_group None)
   (#target1: Type0)
-  (f: ag_spec source target1)
+  (#inj1: bool)
+  (f: ag_spec source target1 inj1)
   (#target2: Type0)
   (bij: bijection target1 target2)
   (x2: target2)
@@ -729,15 +738,17 @@ let ag_spec_bij_serializable
 let ag_spec_bij
   (#source: array_group None)
   (#target1: Type0)
-  (f: ag_spec source target1)
+  (#inj1: bool)
+  (f: ag_spec source target1 inj1)
   (#target2: Type0)
   (bij: bijection target1 target2)
-: Tot (ag_spec source target2)
+: Tot (ag_spec source target2 inj1)
 = {
   ag_size = ag_spec_bij_size f bij;
   ag_serializable = ag_spec_bij_serializable f bij;
   ag_parser = array_group_parser_spec_bij f.ag_parser _ _ bij;
   ag_serializer = array_group_serializer_spec_bij f.ag_serializer _ _ bij;
+  ag_parser_inj = ();
 }
 
 let array_group_parser_spec_item
@@ -785,13 +796,15 @@ let ag_spec_item_size
 let ag_spec_item
   (#ty: typ)
   (#target: Type)
-  (p: spec ty target)
-: Tot (ag_spec (array_group_item ty) target)
+  (#inj: bool)
+  (p: spec ty target inj)
+: Tot (ag_spec (array_group_item ty) target inj)
 = {
   ag_size = ag_spec_item_size target;
   ag_serializable = p.serializable;
   ag_parser = array_group_parser_spec_item p.parser _;
   ag_serializer = array_group_serializer_spec_item p.serializer _;
+  ag_parser_inj = ();
 }
 
 val array_group_parser_spec_concat
@@ -878,10 +891,12 @@ let array_group_serializer_spec_concat
 let ag_spec_concat_size
   (#source1: array_group None)
   (#target1: Type)
-  (p1: ag_spec source1 target1)
+  (#inj1: bool)
+  (p1: ag_spec source1 target1 inj1)
   (#source2: array_group None)
   (#target2: Type)
-  (p2: ag_spec source2 target2)
+  (#inj2: bool)
+  (p2: ag_spec source2 target2 inj2)
   (x: (target1 & target2))
 : Tot nat
 = p1.ag_size (fst x) + p2.ag_size (snd x)
@@ -889,10 +904,12 @@ let ag_spec_concat_size
 let ag_spec_concat_serializable
   (#source1: array_group None)
   (#target1: Type)
-  (p1: ag_spec source1 target1)
+  (#inj1: bool)
+  (p1: ag_spec source1 target1 inj1)
   (#source2: array_group None)
   (#target2: Type)
-  (p2: ag_spec source2 target2)
+  (#inj2: bool)
+  (p2: ag_spec source2 target2 inj2)
   (x: (target1 & target2))
 : Tot bool
 = p1.ag_serializable (fst x) && p2.ag_serializable (snd x)
@@ -900,18 +917,21 @@ let ag_spec_concat_serializable
 let ag_spec_concat
   (#source1: array_group None)
   (#target1: Type)
-  (p1: ag_spec source1 target1)
+  (#inj1: bool)
+  (p1: ag_spec source1 target1 inj1)
   (#source2: array_group None)
   (#target2: Type)
-  (p2: ag_spec source2 target2 {
+  (#inj2: bool)
+  (p2: ag_spec source2 target2 inj2 {
     array_group_concat_unique_weak source1 source2
   })
-: Tot (ag_spec (array_group_concat source1 source2) (target1 & target2))
+: Tot (ag_spec (array_group_concat source1 source2) (target1 & target2) (inj1 && inj2))
 = {
   ag_size = ag_spec_concat_size p1 p2;
   ag_serializable = ag_spec_concat_serializable p1 p2;
   ag_parser = array_group_parser_spec_concat p1.ag_parser p2.ag_parser _ _;
   ag_serializer = array_group_serializer_spec_concat p1.ag_serializer p2.ag_serializer _ _;
+  ag_parser_inj = ();
 }
 
 let rec array_group_parser_spec_zero_or_more'
@@ -1023,7 +1043,8 @@ let array_group_serializer_spec_zero_or_more
 let rec ag_spec_zero_or_more_size
   (#source: array_group None)
   (#target: Type)
-  (p: ag_spec source target)
+  (#inj: bool)
+  (p: ag_spec source target inj)
   (l: list target)
 : Tot nat
   (decreases l)
@@ -1034,7 +1055,8 @@ let rec ag_spec_zero_or_more_size
 let ag_spec_zero_or_more_serializable
   (#source: array_group None)
   (#target: Type)
-  (p: ag_spec source target)
+  (#inj: bool)
+  (p: ag_spec source target inj)
   (x: list target)
 : Tot bool
 = List.Tot.for_all p.ag_serializable x
@@ -1042,7 +1064,8 @@ let ag_spec_zero_or_more_serializable
 let ag_spec_zero_or_more_serializable_equiv
   (#source: array_group None)
   (#target: Type)
-  (p: ag_spec source target)
+  (#inj: bool)
+  (p: ag_spec source target inj)
   (x: list target)
 : Lemma
   (ensures (ag_spec_zero_or_more_serializable p x <==>
@@ -1054,15 +1077,17 @@ let ag_spec_zero_or_more_serializable_equiv
 let ag_spec_zero_or_more
   (#source: nonempty_array_group)
   (#target: Type)
-  (p: ag_spec source target {
+  (#inj: bool)
+  (p: ag_spec source target inj {
     array_group_concat_unique_strong source source
   })
-: Tot (ag_spec (array_group_zero_or_more source) (list target))
+: Tot (ag_spec (array_group_zero_or_more source) (list target) inj)
 = {
   ag_size = ag_spec_zero_or_more_size p;
   ag_serializable = ag_spec_zero_or_more_serializable p;
   ag_parser = array_group_parser_spec_zero_or_more p.ag_parser _ _;
   ag_serializer = array_group_serializer_spec_zero_or_more p.ag_serializer _ _;
+  ag_parser_inj = admit ();
 }
 
 let array_group_parser_spec_one_or_more
@@ -1113,7 +1138,8 @@ let array_group_serializer_spec_one_or_more
 let ag_spec_one_or_more_serializable
   (#source: array_group None)
   (#target: Type)
-  (p: ag_spec source target)
+  (#inj: bool)
+  (p: ag_spec source target inj)
   (x: list target)
 : Tot bool
 = Cons? x &&
@@ -1122,15 +1148,17 @@ let ag_spec_one_or_more_serializable
 let ag_spec_one_or_more
   (#source: nonempty_array_group)
   (#target: Type)
-  (p: ag_spec source target {
+  (#inj: bool)
+  (p: ag_spec source target inj {
     array_group_concat_unique_strong source source
   })
-: Tot (ag_spec (array_group_one_or_more source) (list target))
+: Tot (ag_spec (array_group_one_or_more source) (list target) inj)
 = {
   ag_size = ag_spec_zero_or_more_size p;
   ag_serializable = ag_spec_one_or_more_serializable p;
   ag_parser = array_group_parser_spec_one_or_more p.ag_parser _ _;
   ag_serializer = array_group_serializer_spec_one_or_more p.ag_serializer _ _;
+  ag_parser_inj = admit ();
 }
 
 let array_group_parser_spec_choice
@@ -1195,10 +1223,12 @@ let array_group_serializer_spec_choice
 let ag_spec_choice_size
   (#source1: array_group None)
   (#target1: Type0)
-  (p1: ag_spec source1 target1)
+  (#inj1: bool)
+  (p1: ag_spec source1 target1 inj1)
   (#source2: array_group None)
   (#target2: Type0)
-  (p2: ag_spec source2 target2)
+  (#inj2: bool)
+  (p2: ag_spec source2 target2 inj2)
   (x: either target1 target2)
 : Tot nat
 = match x with
@@ -1208,10 +1238,12 @@ let ag_spec_choice_size
 let ag_spec_choice_serializable
   (#source1: array_group None)
   (#target1: Type0)
-  (p1: ag_spec source1 target1)
+  (#inj1: bool)
+  (p1: ag_spec source1 target1 inj1)
   (#source2: array_group None)
   (#target2: Type0)
-  (p2: ag_spec source2 target2)
+  (#inj2: bool)
+  (p2: ag_spec source2 target2 inj2)
   (x: either target1 target2)
 : Tot bool
 = match x with
@@ -1221,16 +1253,19 @@ let ag_spec_choice_serializable
 let ag_spec_choice
   (#source1: array_group None)
   (#target1: Type0)
-  (p1: ag_spec source1 target1)
+  (#inj1: bool)
+  (p1: ag_spec source1 target1 inj1)
   (#source2: array_group None)
   (#target2: Type0)
-  (p2: ag_spec source2 target2  { source1 `array_group_disjoint` source2 })
-: Tot (ag_spec (source1 `array_group_choice` source2) (either target1 target2))
+  (#inj2: bool)
+  (p2: ag_spec source2 target2 inj2 { source1 `array_group_disjoint` source2 })
+: Tot (ag_spec (source1 `array_group_choice` source2) (either target1 target2) (inj1 && inj2))
 = {
   ag_size = ag_spec_choice_size p1 p2;
   ag_serializable = ag_spec_choice_serializable p1 p2;
   ag_parser = array_group_parser_spec_choice p1.ag_parser p2.ag_parser _ _;
   ag_serializer = array_group_serializer_spec_choice p1.ag_serializer p2.ag_serializer _ _;
+  ag_parser_inj = ();
 }
 
 let array_group_parser_spec_zero_or_one
@@ -1285,7 +1320,8 @@ let array_group_serializer_spec_zero_or_one
 let ag_spec_zero_or_one_size
   (#source: nonempty_array_group)
   (#target: Type)
-  (p: ag_spec source target)
+  (#inj: bool)
+  (p: ag_spec source target inj)
   (x: option target)
 : Tot nat
 = match x with
@@ -1295,7 +1331,8 @@ let ag_spec_zero_or_one_size
 let ag_spec_zero_or_one_serializable
   (#source: nonempty_array_group)
   (#target: Type)
-  (p: ag_spec source target)
+  (#inj: bool)
+  (p: ag_spec source target inj)
   (x: option target)
 : Tot bool
 = match x with
@@ -1305,11 +1342,13 @@ let ag_spec_zero_or_one_serializable
 let ag_spec_zero_or_one
   (#source: nonempty_array_group)
   (#target: Type)
-  (p: ag_spec source target)
-: Tot (ag_spec (array_group_zero_or_one source) (option target))
+  (#inj: bool)
+  (p: ag_spec source target inj)
+: Tot (ag_spec (array_group_zero_or_one source) (option target) inj)
 = {
   ag_size = ag_spec_zero_or_one_size p;
   ag_serializable = ag_spec_zero_or_one_serializable p;
   ag_parser = array_group_parser_spec_zero_or_one p.ag_parser _ _;
   ag_serializer = array_group_serializer_spec_zero_or_one p.ag_serializer _ _;
+  ag_parser_inj = ();
 }

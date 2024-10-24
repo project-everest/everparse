@@ -90,33 +90,36 @@ let serializer_spec (#source:typ) (#target: Type0) (#target_prop: target -> bool
   ((x: target { target_prop x }) -> Tot (y: Cbor.cbor { source y /\ p y == x }))
 
 noeq
-type spec (source:typ) (target: Type0) = {
+type spec (source:typ) (target: Type0) (inj: bool) = {
   serializable: target -> bool;
   parser: parser_spec source target serializable;
   serializer: serializer_spec parser;
+  parser_inj: squash (inj ==> (forall (c: Cbor.cbor { source c }) . serializer (parser c) == c));
 }
 
 let spec_ext
-  (#source: typ) (#target: Type0) (s: spec source target) (source' : typ) : Pure (spec source' target)
+  (#source: typ) (#target: Type0) (#inj: bool) (s: spec source target inj) (source' : typ) : Pure (spec source' target inj)
     (requires typ_equiv source source')
     (ensures fun _ -> True)
 = {
   serializable = (fun x -> s.serializable x);
   parser = (fun x -> s.parser x);
   serializer = (fun x -> s.serializer x);
+  parser_inj = ();
 }
 
 let spec_coerce_target_prop
-  (#source:typ) (#target: Type0)
-  (p: spec source target)
+  (#source:typ) (#target: Type0) (#inj: bool)
+  (p: spec source target inj)
   (target_prop' : (target -> bool) {
     forall x . target_prop' x == p.serializable x
   })
-: Tot (spec source target)
+: Tot (spec source target inj)
 = {
   serializable = target_prop';
   parser = (p.parser <: parser_spec source target target_prop');
   serializer = p.serializer;
+  parser_inj = ();
 }
 
 let parse_spec_bij (#source:typ) (#target1 #target2: Type0) (#target1_prop: target1 -> bool) (p: parser_spec source target1 target1_prop) (target2_prop: target2 -> bool) (bij: bijection target1 target2 {
@@ -130,14 +133,15 @@ let serialize_spec_bij (#source:typ) (#target1 #target2: Type0) (#target1_prop: 
   (fun x -> s (bij.bij_to_from x))
 
 let spec_bij_serializable
-  (#source:typ) (#target1 #target2: Type0) (p: spec source target1) (bij: bijection target1 target2) (x: target2) : Tot bool
+  (#source:typ) (#target1 #target2: Type0) (#inj: bool) (p: spec source target1 inj) (bij: bijection target1 target2) (x: target2) : Tot bool
 = p.serializable (bij.bij_to_from x)
 
-let spec_bij (#source:typ) (#target1 #target2: Type0) (p: spec source target1) (bij: bijection target1 target2)
-: spec source target2 = {
+let spec_bij (#source:typ) (#target1 #target2: Type0) (#inj: bool) (p: spec source target1 inj) (bij: bijection target1 target2)
+: spec source target2 inj = {
   serializable = spec_bij_serializable p bij;
   parser = parse_spec_bij p.parser _ bij;
   serializer = serialize_spec_bij p.serializer bij;
+  parser_inj = ();
 }
 
 let parser_spec_literal (x: Cbor.cbor) (p: unit -> bool { p () }) : Tot (parser_spec (t_literal x) unit p) =
@@ -147,10 +151,11 @@ let serializer_spec_literal (x: Cbor.cbor) (p: unit -> bool { p () }) : Tot (ser
 
 let spec_literal_serializable (_: unit) : Tot bool = true
 
-let spec_literal (x: Cbor.cbor) : Tot  (spec (t_literal x) unit) = {
+let spec_literal (x: Cbor.cbor) : Tot  (spec (t_literal x) unit true) = {
   serializable = spec_literal_serializable;
   parser = parser_spec_literal x _;
   serializer = serializer_spec_literal x _;
+  parser_inj = ();
 }
 
 let parser_spec_choice
@@ -199,10 +204,12 @@ let serializer_spec_choice
 let spec_choice_serializable
   (#source1: typ)
   (#target1: Type0)
-  (p1: spec source1 target1)
+  (#inj1: bool)
+  (p1: spec source1 target1 inj1)
   (#source2: typ)
   (#target2: Type0)
-  (p2: spec source2 target2)
+  (#inj2: bool)
+  (p2: spec source2 target2 inj2)
   (x: target1 `either` target2)
 : Tot bool
 = match x with
@@ -212,13 +219,16 @@ let spec_choice_serializable
 let spec_choice
   (#source1: typ)
   (#target1: Type0)
-  (p1: spec source1 target1)
+  (#inj1: bool)
+  (p1: spec source1 target1 inj1)
   (#source2: typ)
   (#target2: Type0)
-  (p2: spec source2 target2 { source1 `typ_disjoint` source2 })
-: Tot (spec (source1 `t_choice` source2) (target1 `either` target2))
+  (#inj2: bool)
+  (p2: spec source2 target2 inj2 { source1 `typ_disjoint` source2 })
+: Tot (spec (source1 `t_choice` source2) (target1 `either` target2) (inj1 && inj2))
 = {
   serializable = spec_choice_serializable p1 p2;
   parser = parser_spec_choice p1.parser p2.parser _;
   serializer = serializer_spec_choice p1.serializer p2.serializer _;
+  parser_inj = ();
 }

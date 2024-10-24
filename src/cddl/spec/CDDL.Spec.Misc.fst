@@ -72,12 +72,14 @@ let spec_tag
   (tag: U64.t)
   (#t: typ)
   (#target: Type)
-  (p: spec t target)
-: Tot (spec (t_tag tag t) target)
+  (#inj: bool)
+  (p: spec t target inj)
+: Tot (spec (t_tag tag t) target inj)
 = {
   serializable = p.serializable;
   parser = (function w -> let Cbor.CTagged _ v = Cbor.unpack w in p.parser v);
   serializer = (fun x -> Cbor.pack (Cbor.CTagged tag (p.serializer x)));
+  parser_inj = ();
 }
 
 // Section 3.8.1: Control .size
