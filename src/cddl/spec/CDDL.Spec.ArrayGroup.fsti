@@ -1074,7 +1074,7 @@ let ag_spec_zero_or_more_serializable_equiv
   [SMTPat (ag_spec_zero_or_more_serializable p x)]
 = List.Tot.for_all_mem p.ag_serializable x
 
-let ag_spec_zero_or_more_inj
+let rec ag_spec_zero_or_more_inj
   (#source: nonempty_array_group)
   (#target: Type)
   (#inj: bool)
@@ -1085,7 +1085,17 @@ let ag_spec_zero_or_more_inj
 : Lemma
   (requires inj)
   (ensures (array_group_serializer_spec_zero_or_more p.ag_serializer (ag_spec_zero_or_more_size p) (ag_spec_zero_or_more_serializable p) (array_group_parser_spec_zero_or_more p.ag_parser (ag_spec_zero_or_more_size p) (ag_spec_zero_or_more_serializable p) c) == c))
-= admit ()
+  (decreases (List.Tot.length c))
+= match source c with
+  | None -> ()
+  | Some (l1, l2) ->
+    if Nil? l1
+    then ()
+    else begin
+      array_group_concat_unique_weak_zero_or_more_right source source;
+      List.Tot.append_length l1 l2;
+      ag_spec_zero_or_more_inj p l2
+    end
 
 let ag_spec_zero_or_more
   (#source: nonempty_array_group)
