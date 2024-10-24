@@ -290,19 +290,6 @@ let cbor_map_fold
 : Tot a
 = List.Tot.fold_left f x (cbor_map_key_list_tot m)
 
-let rec list_fold_ext
-  (#a #b: Type)
-  (f1 f2: a -> b -> a)
-  (x: a)
-  (l: list b)
-: Lemma
-  (requires (forall (x: a) (y: b) . f1 x y == f2 x y))
-  (ensures (List.Tot.fold_left f1 x l == List.Tot.fold_left f2 x l))
-  (decreases l)
-= match l with
-  | [] -> ()
-  | a :: q -> list_fold_ext f1 f2 (f1 x a) q
-
 let rec list_sorted_map_entry_order
   (#key #value: Type)
   (f: key -> key -> bool {
@@ -339,12 +326,10 @@ let cbor_map_fold_ext
   ))
   (ensures (cbor_map_fold f1 x m1 == cbor_map_fold f2 x m2))
 = let l1 = cbor_map_key_list m1 in
-  Classical.forall_intro (cbor_map_key_list_mem m1);
-  Classical.forall_intro (cbor_map_key_list_mem m2);  
   cbor_map_key_list_sorted m1;
   cbor_map_key_list_sorted m2;  
   U.list_sorted_ext_eq R.deterministically_encoded_cbor_map_key_order l1 (cbor_map_key_list m2);
-  list_fold_ext f1 f2 x l1
+  U.list_fold_ext f1 f2 x l1
 
 let cbor_map_fold_eq
   (#a: Type)
@@ -361,8 +346,7 @@ let cbor_map_fold_eq
   (ensures (
     cbor_map_fold f x m == List.Tot.fold_left f x l
   ))
-= Classical.forall_intro (cbor_map_key_list_mem m);
-  cbor_map_key_list_no_repeats_p m;
+= cbor_map_key_list_no_repeats_p m;
   U.list_fold_ext_no_repeats_p f x (cbor_map_key_list m) l
 
 let rec cbor_list_of_list_cbor_precedes (l: list R.raw_data_item {

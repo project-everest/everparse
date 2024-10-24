@@ -325,13 +325,16 @@ let cbor_map_sub
 val cbor_map_key_list (m: cbor_map) : GTot (list cbor)
 
 val cbor_map_key_list_mem (m: cbor_map) (k: cbor) : Lemma
-  (List.Tot.memP k (cbor_map_key_list m) <==> cbor_map_defined k m)
+  (ensures (List.Tot.memP k (cbor_map_key_list m) <==> cbor_map_defined k m))
+  [SMTPat (List.Tot.memP k (cbor_map_key_list m))]
 
 val cbor_map_key_list_no_repeats_p (m: cbor_map) : Lemma
-  (List.Tot.no_repeats_p (cbor_map_key_list m))
+  (ensures (List.Tot.no_repeats_p (cbor_map_key_list m)))
+  [SMTPat (cbor_map_key_list m)]
 
 val cbor_map_key_list_length (m: cbor_map) : Lemma
-  (List.Tot.length (cbor_map_key_list m) == cbor_map_length m)
+  (ensures (List.Tot.length (cbor_map_key_list m) == cbor_map_length m))
+  [SMTPat (List.Tot.length (cbor_map_key_list m))]
 
 val cbor_map_fold
   (#a: Type)
@@ -367,6 +370,51 @@ val cbor_map_fold_eq
   (ensures (
     cbor_map_fold f x m == List.Tot.fold_left f x l
   ))
+
+let cbor_map_fold_empty
+  (#a: Type)
+  (f: a -> cbor -> a {
+    U.op_comm f
+  })
+  (x: a)
+: Lemma
+  (cbor_map_fold f x cbor_map_empty == x)
+= cbor_map_fold_eq f x cbor_map_empty []
+
+let cbor_map_fold_singleton
+  (#a: Type)
+  (f: a -> cbor -> a {
+    U.op_comm f
+  })
+  (x: a)
+  (key value: cbor)
+: Lemma
+  (cbor_map_fold f x (cbor_map_singleton key value) == f x key)
+= cbor_map_fold_eq f x (cbor_map_singleton key value) [key]
+
+let cbor_map_fold_union
+  (#a: Type)
+  (f: a -> cbor -> a {
+    U.op_comm f
+  })
+  (x: a)
+  (m1 m2: cbor_map)
+: Lemma
+  (requires (
+    cbor_map_disjoint m1 m2
+  ))
+  (ensures (
+    cbor_map_fold f x (cbor_map_union m1 m2) ==
+      cbor_map_fold f (cbor_map_fold f x m1) m2
+  ))
+= let l1 = cbor_map_key_list m1 in
+  let l2 = cbor_map_key_list m2 in
+  List.Tot.append_memP_forall l1 l2;
+  List.Tot.no_repeats_p_append l1 l2;
+  cbor_map_fold_eq f x (cbor_map_union m1 m2) (List.Tot.append l1 l2);
+  cbor_map_fold_eq f x m1 l1;
+  cbor_map_fold_eq f (cbor_map_fold f x m1) m2 l2;
+  U.list_fold_append f x l1 l2
 
 (** CBOR objects *)
 

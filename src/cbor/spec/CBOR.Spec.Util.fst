@@ -1375,6 +1375,31 @@ let rec list_memP_extract
     let (ll, lr) = list_memP_extract x q in
     (a :: ll, lr)
 
+let rec list_fold_ext
+  (#a #b: Type)
+  (f1 f2: a -> b -> a)
+  (x: a)
+  (l: list b)
+: Lemma
+  (requires (forall (x: a) (y: b) . f1 x y == f2 x y))
+  (ensures (List.Tot.fold_left f1 x l == List.Tot.fold_left f2 x l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q -> list_fold_ext f1 f2 (f1 x a) q
+
+let rec list_fold_append
+  (#accu #t: Type)
+  (f: accu -> t -> accu)
+  (a: accu)
+  (l1 l2: list t)
+: Lemma
+  (ensures List.Tot.fold_left f a (List.Tot.append l1 l2) == List.Tot.fold_left f (List.Tot.fold_left f a l1) l2)
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | x :: q -> list_fold_append f (f a x) q l2
+
 let rec list_fold_comm
   (#accu #t: Type)
   (f: accu -> t -> accu { op_comm f })
