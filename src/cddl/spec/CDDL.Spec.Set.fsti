@@ -1,6 +1,5 @@
 module CDDL.Spec.Set
 open CDDL.Spec.Base
-module Cbor = CBOR.Spec.API.Type
 module U = CBOR.Spec.Util
 
 val t (#target: Type) (#source: typ) (sp: spec source target true) : Tot eqtype
