@@ -304,3 +304,17 @@ let filter_implies
   (ensures (filter p2 (filter p1 f) == filter p1 f))
 = filter_filter p1 p2 f;
   filter_ext p1 (p1 `U.andp` p2) f
+
+let for_all
+  (#key: Type)
+  (#key_s: typ)
+  (#spec_key: spec key_s key true)
+  (#value: Type u#a)
+  (f: (key & value -> bool))
+  (m: t spec_key value)
+: Pure bool
+    (requires True)
+    (ensures fun b -> b <==> (forall k v . get m k == Some v ==> f (k, v)))
+= let b = (key_set (filter f m) = key_set m) in // HERE we use the fact that the key set is eqtype
+  assert (b == true <==> equal (filter f m) m);
+  b
