@@ -82,7 +82,7 @@ let mk_cbor_eq
         R.list_setoid_assoc_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor x) v';
         match U.list_setoid_assoc R.raw_equiv x v, cbor_map_get v' (mk_cbor x) with
         | Some w, Some w' ->
-          list_assoc_cbor (mk_cbor x) v';
+          list_assoc_cbor v' (mk_cbor x);
           let Some x_ = U.list_setoid_assoc_mem R.raw_equiv x v in
           List.Tot.for_all_mem (U.holds_on_pair R.valid_raw_data_item) v;
           mk_cbor_equiv' w;
