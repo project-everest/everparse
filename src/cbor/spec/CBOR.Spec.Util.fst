@@ -1381,7 +1381,7 @@ let rec list_fold_ext
   (x: a)
   (l: list b)
 : Lemma
-  (requires (forall (x: a) (y: b) . f1 x y == f2 x y))
+  (requires (forall (x: a) (y: b) . List.Tot.memP y l ==> f1 x y == f2 x y))
   (ensures (List.Tot.fold_left f1 x l == List.Tot.fold_left f2 x l))
   (decreases l)
 = match l with

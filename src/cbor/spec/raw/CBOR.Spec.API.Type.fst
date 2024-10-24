@@ -319,12 +319,6 @@ let cbor_map_fold_ext
   (f1 f2: a -> cbor -> a)
   (x: a)
   (m1 m2: cbor_map)
-: Lemma
-  (requires (
-    (forall (x: a) (y: cbor) . f1 x y == f2 x y) /\
-    (forall (x: cbor) . cbor_map_defined x m1 <==> cbor_map_defined x m2)
-  ))
-  (ensures (cbor_map_fold f1 x m1 == cbor_map_fold f2 x m2))
 = let l1 = cbor_map_key_list m1 in
   cbor_map_key_list_sorted m1;
   cbor_map_key_list_sorted m2;  

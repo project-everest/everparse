@@ -350,7 +350,7 @@ val cbor_map_fold_ext
   (m1 m2: cbor_map)
 : Lemma
   (requires (
-    (forall (x: a) (y: cbor) . f1 x y == f2 x y) /\
+    (forall (x: a) (y: cbor) . cbor_map_defined y m1 ==> f1 x y == f2 x y) /\
     (forall (x: cbor) . cbor_map_defined x m1 <==> cbor_map_defined x m2)
   ))
   (ensures (cbor_map_fold f1 x m1 == cbor_map_fold f2 x m2))
