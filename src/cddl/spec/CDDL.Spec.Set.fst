@@ -1,6 +1,4 @@
 module CDDL.Spec.Set
-open CDDL.Spec.Base
-module Cbor = CBOR.Spec.API.Type
 
 let dummy_cbor : Cbor.cbor = Cbor.pack (Cbor.CSimple 0uy)
 
@@ -58,12 +56,6 @@ let set_as_list
     ))
 = let l0 = Cbor.cbor_map_key_list s in
   list_target_of_list_cbor sp l0
-
-let equal
-  (#target: Type) (#source: typ) (#sp: spec source target true)
-  (s1 s2: t sp)
-: Tot prop
-= (forall x . mem x s1 <==> mem x s2)
 
 let ext0
   (#target: Type) (#source: typ) (#sp: spec source target true)
@@ -155,8 +147,6 @@ let rec list_fold_list_cbor_of_list_target
   | [] -> ()
   | b :: q -> list_fold_list_cbor_of_list_target sp f (f x b) q
 
-module U = CBOR.Spec.Util
-
 let fold_eq
   (#target: Type) (#source: typ) (#sp: spec source target true)
   (#a: Type)
@@ -206,12 +196,6 @@ let union
       forall x' . mem x' s <==> (mem x' s1 \/ mem x' s2)
     )
 = Cbor.cbor_map_union s1 s2
-
-let disjoint
-  (#target: Type) (#source: typ) (#sp: spec source target true)
-  (s1 s2: t sp)
-: Tot prop
-= forall x . ~ (mem x s1 /\ mem x s2)
 
 let disjoint_union_cardinality
   (#target: Type) (#source: typ) (#sp: spec source target true)
