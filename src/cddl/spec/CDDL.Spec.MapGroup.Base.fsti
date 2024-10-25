@@ -7,10 +7,26 @@ module U64 = FStar.UInt64
 let map_group_item_post
   (l: Cbor.cbor_map)
   (l': (Cbor.cbor_map & Cbor.cbor_map))
+: Tot bool
+=
+  fst l' `Cbor.cbor_map_disjoint_tot` snd l' &&
+  (fst l' `Cbor.cbor_map_union` snd l') = l
+
+let map_group_item_post_prop
+  (l: Cbor.cbor_map)
+  (l': (Cbor.cbor_map & Cbor.cbor_map))
 : Tot prop
 =
   fst l' `Cbor.cbor_map_disjoint` snd l' /\
-  (fst l' `Cbor.cbor_map_union` snd l') == l
+  (fst l' `Cbor.cbor_map_union` snd l') = l
+
+let map_group_item_post_equiv
+  (l: Cbor.cbor_map)
+  (l': (Cbor.cbor_map & Cbor.cbor_map))
+: Lemma
+  (ensures (map_group_item_post l l' <==> map_group_item_post_prop l l'))
+  [SMTPat (map_group_item_post l l')]
+= ()
 
 [@@erasable]
 val map_group : Type0
