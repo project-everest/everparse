@@ -1,4 +1,4 @@
-all: extract
+all: test
 
 EVERCBOR_SRC_PATH = $(realpath ../../..)
 SRC_DIRS += $(realpath ..)
