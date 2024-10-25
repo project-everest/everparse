@@ -186,15 +186,15 @@ fn impl_lex_compare
     if (c = 0s) {
       let i1' = SZ.add i1 1sz;
       let i2' = SZ.add i2 1sz;
-      if (SZ.lt i1' n1) {
-        if (SZ.lt i2' n2) {
-          pi1 := i1';
-          pi2 := i2';
-        } else {
-          pres := 1s;
-        }
-      } else if (SZ.lt i2' n2) {
+      let ci1' = SZ.lt i1' n1;
+      let ci2' = SZ.lt i2' n2;
+      if (ci2' && not ci1') {
         pres := -1s;
+      } else if (ci1' && not ci2') {
+        pres := 1s;
+      } else {
+        pi1 := i1';
+        pi2 := i2';
       }
     } else {
       pres := c;
