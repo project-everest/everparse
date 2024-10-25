@@ -1,14 +1,14 @@
 all: extract
 
-EVERCBOR_SRC_PATH = $(realpath ../..)
-INCLUDE_PATHS += $(realpath ../spec) $(realpath ../spec/raw) $(realpath ../spec/raw/everparse) raw raw/everparse $(EVERCBOR_SRC_PATH)/lowparse $(EVERCBOR_SRC_PATH)/lowparse/pulse
+EVERCBOR_SRC_PATH = $(realpath ../../..)
+SRC_DIRS += $(realpath ..)
+INCLUDE_PATHS += $(realpath ../../spec) $(realpath ../../spec/raw) $(realpath ../../spec/raw/everparse) $(realpath ../raw) $(realpath ../raw/everparse) $(EVERCBOR_SRC_PATH)/lowparse $(EVERCBOR_SRC_PATH)/lowparse/pulse
 
 FSTAR_OPTIONS += --warn_error -342
 FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice'
 
 ALREADY_CACHED := '*,'
-OUTPUT_DIRECTORY:=extract-det-c
-# FSTAR_DEP_FILE := extract-det-c.depend
+OUTPUT_DIRECTORY:=extracted
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
 include $(EVERCBOR_SRC_PATH)/pulse.Makefile
@@ -24,3 +24,8 @@ $(OUTPUT_DIRECTORY)/CBORDet.c: $(ALL_KRML_FILES)
 extract: $(OUTPUT_DIRECTORY)/CBORDet.o
 
 .PHONY: extract
+
+test: extract
+	+$(MAKE) -C $@
+
+.PHONY: test

@@ -1,11 +1,11 @@
 all: CBORDetTest
 
-EVERCBOR_SRC_PATH = $(realpath ../../..)
+EVERCBOR_SRC_PATH = $(realpath ../../../..)
 
 #EVERCBOR_LIB_PATH = $(realpath $(EVERCBOR_SRC_PATH)/..)/lib/evercbor
 #EVERCBOR_INCLUDE_PATH = $(realpath $(EVERCBOR_SRC_PATH)/..)/include/evercbor
-EVERCBOR_LIB_PATH = $(realpath ../extract-det-c)
-EVERCBOR_INCLUDE_PATH = $(realpath ../extract-det-c)
+EVERCBOR_LIB_PATH = $(realpath ../extracted)
+EVERCBOR_INCLUDE_PATH = $(realpath ../extracted)
 
 include $(EVERCBOR_SRC_PATH)/karamel.Makefile
 
