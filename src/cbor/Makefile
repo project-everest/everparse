@@ -32,7 +32,7 @@ ifndef STEEL_HOME
   STEEL_HOME=$(realpath ../../../steel)
 endif
 
-ALREADY_CACHED = --already_cached *,-CBOR,-CDDL,-COSE,-DPE.Messages
+ALREADY_CACHED = --already_cached *,-CBOR
 FSTAR_OPTIONS += --use_hints --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED) --cmi --include $(STEEL_HOME)/lib/steel --include $(STEEL_HOME)/lib/steel/c --load_cmxs steel
 
 FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS)
