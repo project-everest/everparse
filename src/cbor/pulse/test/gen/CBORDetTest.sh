@@ -8,6 +8,6 @@ cd "$( dirname "${BASH_SOURCE[0]}" )"
 
 dune build
 if ! [[ -e appendix_a.json ]] ; then
-    wget https://raw.githubusercontent.com/cbor/test-vectors/master/appendix_a.json
+    curl https://raw.githubusercontent.com/cbor/test-vectors/master/appendix_a.json -o appendix_a.json
 fi
-_build/default/GenCBORTest.exe appendix_a.json > ../CBORTest.c
+_build/default/GenCBORDetTest.exe appendix_a.json > ../CBORDetTest.c

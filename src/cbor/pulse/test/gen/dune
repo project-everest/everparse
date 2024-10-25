@@ -1,7 +1,7 @@
 (include_subdirs unqualified)
 (executable
- (name GenCBORTest)
- (public_name GenCBORTest)
+ (name GenCBORDetTest)
+ (public_name GenCBORDetTest)
  (libraries
     yojson
  )

@@ -10,17 +10,17 @@ let gen_int (x: int) (name: string) : c list =
     then ("UINT64", x)
     else ("NEG_INT64", -1-x)
   in
-  [`Instr ("cbor " ^ name ^ " = cbor_constr_int64(CBOR_MAJOR_TYPE_" ^ major_type ^ "," ^ string_of_int count ^ ")")]
+  [`Instr ("cbor_det_t " ^ name ^ " = cbor_det_mk_int64(CBOR_MAJOR_TYPE_" ^ major_type ^ "," ^ string_of_int count ^ ")")]
 
 let quote_string s = Yojson.Safe.to_string (`String s)
 
 let gen_string (s: string) (name: string) : c list =
-  [`Instr ("cbor " ^ name ^ " = cbor_constr_string(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *" ^ ")" ^ quote_string s ^ ", " ^ string_of_int (String.length s) ^ ")")]
+  [`Instr ("cbor_det_t " ^ name ^ " = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *" ^ ")" ^ quote_string s ^ ", " ^ string_of_int (String.length s) ^ "))")]
 
 let gen_map (gen: Yojson.Safe.t -> string -> c list) (l: (string * Yojson.Safe.t) list) (name: string) : c list =
   let len = List.length l in
   let elt i = name ^ "_map[" ^ string_of_int i ^ "]" in
-  let accu = [`Instr ("cbor " ^ name ^ " = cbor_constr_map(" ^ name ^ "_map, " ^ string_of_int len ^ ")")] in
+  let accu = [`Instr ("cbor_det_t " ^ name ^ " = cbor_det_mk_map(" ^ name ^ "_map, " ^ string_of_int len ^ ")")] in
   let rec aux accu i = function
   | [] -> accu
   | (s, x) :: q->
@@ -41,7 +41,7 @@ let gen_map (gen: Yojson.Safe.t -> string -> c list) (l: (string * Yojson.Safe.t
 let gen_array (gen: Yojson.Safe.t -> string -> c list) (l: Yojson.Safe.t list) (name: string) : c list =
   let len = List.length l in
   let elt i = name ^ "_array[" ^ string_of_int i ^ "]" in
-  let accu = [`Instr ("cbor " ^ name ^ " = cbor_constr_array(" ^ name ^ "_array, " ^ string_of_int len ^ ")")] in
+  let accu = [`Instr ("cbor_det_t " ^ name ^ " = cbor_det_mk_array(" ^ name ^ "_array, " ^ string_of_int len ^ ")")] in
   let rec aux accu i = function
   | [] -> accu
   | x :: q->
@@ -54,7 +54,7 @@ let gen_array (gen: Yojson.Safe.t -> string -> c list) (l: Yojson.Safe.t list) (
     aux accu' (i + 1) q
   in
   let accu' = aux accu 0 l in
-  let accu' = `Instr ("cbor " ^ elt len) :: accu' in
+  let accu' = `Instr ("cbor_det_t " ^ elt len) :: accu' in
   accu'
 
 exception GenUnsupported
@@ -108,11 +108,18 @@ let gen_encoding_test_c
     `Instr source_bytes ::
     decoded_c @
     `Instr ("uint8_t target_bytes[" ^ size_s ^ "]") ::
-    `Instr ("size_t target_bytes_written = cbor_write (source_cbor, target_bytes, " ^ size_s ^ ")") ::
-    `If ("target_bytes_written != " ^ size_s) ::
+    `Instr ("size_t target_byte_size = cbor_det_size(source_cbor, " ^ size_s ^ ")") ::
+    `If ("target_byte_size != " ^ size_s) ::
     `Block (
-        `Instr ("printf(\"Encoding failed: expected " ^ size_s ^ " bytes, wrote %ld\\n\", target_bytes_written)") ::
-        `Instr ("dump_encoding_test_failure(target_bytes, target_bytes_written)") ::
+        `Instr ("printf(\"Size computation failed: expected " ^ size_s ^ " bytes, got %ld\\n\", target_byte_size)") ::
+        `Instr ("return 1") ::
+        []
+     ) ::
+    `Instr ("target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, " ^ size_s ^ "))") ::
+    `If ("target_byte_size != " ^ size_s) ::
+    `Block (
+        `Instr ("printf(\"Encoding failed: expected " ^ size_s ^ " bytes, wrote %ld\\n\", target_byte_size)") ::
+        `Instr ("dump_encoding_test_failure(target_bytes, target_byte_size)") ::
         `Instr ("return 1") ::
         []
      ) ::
@@ -120,19 +127,22 @@ let gen_encoding_test_c
     `If ("compare_encoding != 0") ::
     `Block (
         `Instr ("printf(\"Encoding mismatch: expected " ^ hex_encoded ^ "\\n\")") ::
-        `Instr ("dump_encoding_test_failure(target_bytes, target_bytes_written)") ::
+        `Instr ("dump_encoding_test_failure(target_bytes, target_byte_size)") ::
         `Instr ("return 1") ::
         []
      ) ::
     `Instr ("printf(\"Encoding succeeded!\\n\")") ::
-    `Instr ("cbor_read_t target_cbor = cbor_read(source_bytes, " ^ size_s ^ ")") ::
-    `If ("! (target_cbor.cbor_read_is_success)") ::
+    `Instr ("target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, " ^ size_s ^ "))") ::
+    `If ("target_byte_size != " ^ size_s) ::
     `Block (
-        `Instr ("printf(\"Decoding failed!\\n\")") ::
+        `Instr ("printf(\"Validation failed: expected " ^ size_s ^ " bytes, got %ld\\n\", target_byte_size)") ::
         `Instr ("return 1") ::
         []
     ) ::
-    `If ("! (CBOR_Pulse_cbor_is_equal(source_cbor, target_cbor.cbor_read_payload))") ::
+    `Instr ("printf(\"Validation succeeded!\\n\")") ::
+    `Instr ("cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, " ^ size_s ^ "), target_byte_size)") ::
+    `Instr ("printf(\"Parsing succeeded!\\n\")") ::
+    `If ("! (cbor_det_equal(source_cbor, target_cbor))") ::
     `Block (
         `Instr ("printf(\"Decoding mismatch!\\n\")") ::
         `Instr ("return 1") ::
@@ -210,11 +220,15 @@ let mk_prog (x: c list) = "
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
-#include \"CBOR.h\"
+#include \"CBORDet.h\"
 
-char * hex_digits[16] = {\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"a\", \"b\", \"c\", \"d\", \"e\", \"f\"};
+static char * hex_digits[16] = {\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"a\", \"b\", \"c\", \"d\", \"e\", \"f\"};
 
-void dump_encoding_test_failure (uint8_t *bytes, size_t len) {
+static Pulse_Lib_Slice_slice__uint8_t mk_byte_slice (uint8_t *elt, size_t len) {
+  return (Pulse_Lib_Slice_slice__uint8_t) { elt = elt, len = len };
+}
+
+static void dump_encoding_test_failure (uint8_t *bytes, size_t len) {
   size_t pos = 0;
   printf(\"Encoded bytes: \");
   while (pos < len) {
