@@ -336,6 +336,17 @@ val cbor_map_key_list_length (m: cbor_map) : Lemma
   (ensures (List.Tot.length (cbor_map_key_list m) == cbor_map_length m))
   [SMTPat (List.Tot.length (cbor_map_key_list m))]
 
+let cbor_map_disjoint_tot
+  (m1 m2: cbor_map)
+: Pure bool
+    (requires True)
+    (ensures fun b -> b <==> cbor_map_disjoint m1 m2)
+= let f (xy: (cbor & cbor)) : Tot bool = cbor_map_defined (fst xy) m2 in
+  let m1' = cbor_map_filter f m1 in
+  cbor_map_key_list_length m1';
+  assert (Nil? (cbor_map_key_list m1') ==> cbor_map_equal m1' cbor_map_empty);
+  m1' = cbor_map_empty
+
 val cbor_map_fold
   (#a: Type)
   (f: a -> cbor -> a)
