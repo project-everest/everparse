@@ -1,4 +1,4 @@
-all: test
+all: extract
 
 EVERPARSE_SRC_PATH = $(realpath ../../..)
 SRC_DIRS += $(realpath ..)
