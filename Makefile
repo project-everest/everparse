@@ -57,7 +57,20 @@ lowparse-pulse: lowparse
 
 .PHONY: lowparse-pulse
 
-ci: test lowparse-pulse
+cbor: lowparse-pulse
+	+$(MAKE) -C src/cbor
+
+cbor-det-c-test: cbor
+	+$(MAKE) -C src/cbor/pulse/det-c test
+
+cbor-test: cbor-det-c-test
+
+cddl: cbor
+	+$(MAKE) -C src/cddl
+
+.PHONY: cbor cbor-det-c-test cbor-test cddl
+
+ci: test lowparse-pulse cbor-test cddl
 
 clean-3d:
 	+$(MAKE) -C src/3d clean
