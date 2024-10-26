@@ -1,5 +1,30 @@
 all: quackyducky lowparse 3d asn1
 
+ifeq (yes,$(shell test -d opt/fstar && echo -n yes))
+  export FSTAR_HOME=$(CURDIR)/opt/fstar
+endif
+
+ifeq (yes,$(shell test -d opt/karamel && echo -n yes))
+  export KRML_HOME=$(CURDIR)/opt/karamel
+endif
+
+ifeq (yes,$(shell test -d opt/pulse && echo -n yes))
+  export PULSE_HOME=$(CURDIR)/opt/pulse
+endif
+
+opt: opt/fstar opt/karamel opt/pulse
+
+opt/fstar:
+	+$(MAKE) OTHERFLAGS='--admit_smt_queries true' -C $@
+
+opt/karamel: opt/fstar
+	+$(MAKE) OTHERFLAGS='--admit_smt_queries true' -C $@
+
+opt/pulse: opt/fstar
+	+$(MAKE) OTHERFLAGS='--admit_smt_queries true' -C $@
+
+.PHONY: opt opt/fstar opt/karamel opt/pulse
+
 lowparse:
 	+$(MAKE) -C src/lowparse
 
