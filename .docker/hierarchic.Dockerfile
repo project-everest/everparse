@@ -8,6 +8,7 @@ WORKDIR $HOME/everparse
 
 # Dependencies (opam packages)
 ENV KRML_HOME=$HOME/everparse/karamel
+ENV PULSE_HOME=$HOME/everparse/pulse
 RUN sudo apt-get update && eval $(opam env) && .docker/build/install-other-deps.sh
 
 # CI dependencies: sphinx (for the docs)
