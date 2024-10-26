@@ -1,10 +1,11 @@
 module CBOR.Spec.Raw.EverParse
 include CBOR.Spec.Raw.Base
+open CBOR.Spec.Raw.Valid
 open LowParse.Spec
 open LowParse.Spec.BitSum
 open LowParse.Spec.Recursive
 open LowParse.Spec.SeqBytes
-open LowParse.Spec.Assoc
+open CBOR.Spec.Raw.EverParse.Assoc
 open CBOR.Spec.Util
 
 (* RFC 8949
@@ -1441,15 +1442,6 @@ let holds_on_raw_data_item_pred (p: (raw_data_item -> bool)) : pred_recursive_t 
   prf = holds_on_raw_data_item_eq_recursive p;
 }
 
-let map_entry_order_eq
-  (#key: Type)
-  (key_order: (key -> key -> bool))
-  (value: Type)
-: Lemma
-  (map_entry_order key_order value == LowParse.Spec.Assoc.map_entry_order key_order value)
-  [SMTPat (map_entry_order key_order value)]
-= assert_norm (map_entry_order key_order value == LowParse.Spec.Assoc.map_entry_order key_order value)
-
 (* 4.2.1 Deterministically encoded CBOR: The keys in every map MUST be sorted in the bytewise lexicographic order of their deterministic encodings. *)
 
 let serialized_lex_order
@@ -1504,10 +1496,11 @@ let deterministically_encoded_cbor_map_key_order_assoc_ext :
     Lemma
     (list_ghost_assoc k m1 == list_ghost_assoc k m2)
   )) ->
+  squash (List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m1) ->
+  squash (List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m2) ->
   Lemma
-  (requires (List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m1 /\ List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m2))
   (ensures (m1 == m2))
-= map_entry_order_assoc_ext deterministically_encoded_cbor_map_key_order deterministically_encoded_cbor_map_key_order_irrefl deterministically_encoded_cbor_map_key_order_trans deterministically_encoded_cbor_map_key_order_total
+= fun m1 m2 ext _ _ -> map_entry_order_assoc_ext deterministically_encoded_cbor_map_key_order deterministically_encoded_cbor_map_key_order_irrefl deterministically_encoded_cbor_map_key_order_trans deterministically_encoded_cbor_map_key_order_total m1 m2 ext
 
 (* Comparisons with unserialized values *)
 

@@ -34,11 +34,12 @@ let deterministically_encoded_cbor_map_key_order_trans x y z =
   F.deterministically_encoded_cbor_map_key_order_trans x y z
 
 let deterministically_encoded_cbor_map_key_order_assoc_ext m1 m2 ext =
-  assert_norm (map_entry_order deterministically_encoded_cbor_map_key_order raw_data_item == LowParse.Spec.Assoc.map_entry_order F.deterministically_encoded_cbor_map_key_order raw_data_item);
+  let sq1 : squash (List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m1) = () in
+  let sq2 : squash (List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m2) = () in
  F.deterministically_encoded_cbor_map_key_order_assoc_ext m1 m2 (fun k ->
-  LowParse.Spec.Assoc.list_ghost_assoc_eq k m1;
-  LowParse.Spec.Assoc.list_ghost_assoc_eq k m2;
-  ext k)
+  CBOR.Spec.Raw.EverParse.Assoc.list_ghost_assoc_eq k m1;
+  CBOR.Spec.Raw.EverParse.Assoc.list_ghost_assoc_eq k m2;
+  ext k) sq1 sq2
 
 let list_sorted_map_entry_order_deterministically_encoded_cbor_map_key_order_no_repeats
   (#t: Type)
@@ -46,8 +47,7 @@ let list_sorted_map_entry_order_deterministically_encoded_cbor_map_key_order_no_
 : Lemma
   (requires (List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l))
   (ensures (List.Tot.no_repeats_p (List.Tot.map fst l)))
-= assert_norm (map_entry_order deterministically_encoded_cbor_map_key_order raw_data_item == LowParse.Spec.Assoc.map_entry_order F.deterministically_encoded_cbor_map_key_order raw_data_item);
-  M.list_sorted_map_entry_order_no_repeats deterministically_encoded_cbor_map_key_order l
+=   M.list_sorted_map_entry_order_no_repeats deterministically_encoded_cbor_map_key_order l
 
 let rec bytes_lex_compare_correct
   (s1 s2: Seq.seq U8.t)
