@@ -1014,7 +1014,9 @@ let rec array_group_serializer_spec_zero_or_more'
   })
   (decreases x)
 = match x with
-  | [] -> []
+  | [] ->
+    assert (source [] == None);
+    []
   | a :: q ->
     array_group_concat_unique_weak_zero_or_more_right source source;
     let l1 = s a in
