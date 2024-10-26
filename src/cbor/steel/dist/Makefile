@@ -1,15 +1,15 @@
 all: verify test
 
-EVERCBOR_SRC_PATH = $(realpath ../../..)
+EVERPARSE_SRC_PATH = $(realpath ../../..)
 INCLUDE_PATHS += $(realpath ..) $(realpath ../..)
 
-include $(EVERCBOR_SRC_PATH)/karamel.Makefile
-include $(EVERCBOR_SRC_PATH)/steel.Makefile
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_SRC_PATH)/steel.Makefile
 
 SRC_DIRS += ..
 ALREADY_CACHED := *,-CBOR.SteelST.Type.Def,
 
-include $(EVERCBOR_SRC_PATH)/common.Makefile
+include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 KRML = $(KRML_HOME)/krml \
 	 -ccopt "-Ofast" \

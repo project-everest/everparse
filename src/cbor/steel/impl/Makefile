@@ -1,22 +1,22 @@
 all: verify test
 
-EVERCBOR_SRC_PATH = $(realpath ../../..)
-INCLUDE_PATHS += $(realpath ..) $(realpath ../..) $(realpath ../../everparse) $(EVERCBOR_SRC_PATH)/lowparse $(EVERCBOR_SRC_PATH)/lowparse/steel
+EVERPARSE_SRC_PATH = $(realpath ../../..)
+INCLUDE_PATHS += $(realpath ..) $(realpath ../..) $(realpath ../../everparse) $(EVERPARSE_SRC_PATH)/lowparse $(EVERPARSE_SRC_PATH)/lowparse/steel
 
-include $(EVERCBOR_SRC_PATH)/everparse.Makefile
-include $(EVERCBOR_SRC_PATH)/steel.Makefile
+include $(EVERPARSE_SRC_PATH)/everparse.Makefile
+include $(EVERPARSE_SRC_PATH)/steel.Makefile
 
 INCLUDE_PATHS += $(STEEL_LIB)/c
 
 ALREADY_CACHED := *,-CBOR,
 
 ifneq (,$(STEEL_C))
-  INCLUDE_PATHS += $(EVERCBOR_SRC_PATH)/lowparse/steel/steel_c_array
+  INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/lowparse/steel/steel_c_array
 else
-  FSTAR_OPTIONS += --include $(EVERCBOR_SRC_PATH)/lowparse/steel/steel_array
+  FSTAR_OPTIONS += --include $(EVERPARSE_SRC_PATH)/lowparse/steel/steel_array
 endif
 
-include $(EVERCBOR_SRC_PATH)/common.Makefile
+include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 KRML = $(KRML_HOME)/krml \
 	 -ccopt "-Ofast" \

@@ -1,6 +1,6 @@
 all: extract
 
-EVERCBOR_SRC_PATH = $(realpath ../../..)
+EVERPARSE_SRC_PATH = $(realpath ../../..)
 INCLUDE_PATHS += $(realpath ..) $(realpath ../../spec) $(realpath ../../spec/raw)
 # ALREADY_CACHED := *,
 
@@ -9,9 +9,9 @@ OUTPUT_DIRECTORY := extract-det-type
 FSTAR_DEP_OPTIONS := --extract '*,-FStar,-Pulse,-PulseCore,-CBOR,+Pulse.Class,+Pulse.Lib.Slice,+CBOR.Spec.Constants,+CBOR.Pulse.API.Det.Type,+CBOR.Pulse.Raw.Type'
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
-include $(EVERCBOR_SRC_PATH)/pulse.Makefile
-include $(EVERCBOR_SRC_PATH)/common.Makefile
-include $(EVERCBOR_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_SRC_PATH)/pulse.Makefile
+include $(EVERPARSE_SRC_PATH)/common.Makefile
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
 .PHONY: extract
 

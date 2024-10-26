@@ -1,14 +1,14 @@
 all: verify
 
-EVERCBOR_SRC_PATH = $(realpath ../..)
-INCLUDE_PATHS += $(EVERCBOR_SRC_PATH)/cbor/spec
+EVERPARSE_SRC_PATH = $(realpath ../..)
+INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec
 
 ALREADY_CACHED := *,-CDDL.Spec,
 # FSTAR_OPTIONS += --warn_error -342
 # FSTAR_DEP_OPTIONS := --extract '* -FStar.Tactics -FStar.Reflection -Steel -Pulse -PulseCore +Pulse.Class -Pulse.Lib'
 # OUTPUT_DIRECTORY := _output
 
-include $(EVERCBOR_SRC_PATH)/common.Makefile
+include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 # KRML=$(KRML_HOME)/krml $(KRML_OPTS)
 
