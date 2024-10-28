@@ -170,3 +170,7 @@ let fold_eq
   ))
 = list_sorted_no_repeats f s;
   list_fold_ext_no_repeats_p phi x s l
+
+let fold_eq_idem
+  (#elt: eqtype) (#u: Type) (#f: order elt) (phi: u -> elt -> u) (x: u) (s: t f) (l: list elt)
+= list_fold_ext_idem phi x s l

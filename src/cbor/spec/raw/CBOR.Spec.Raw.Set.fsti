@@ -96,3 +96,15 @@ val fold_eq
   (ensures (
     fold phi x s == List.Tot.fold_left phi x l
   ))
+
+val fold_eq_idem
+  (#elt: eqtype) (#u: Type) (#f: order elt) (phi: u -> elt -> u) (x: u) (s: t f) (l: list elt)
+: Lemma
+  (requires (
+    op_comm phi /\
+    op_idem phi /\
+    (forall x . List.Tot.memP x l <==> mem x s)
+  ))
+  (ensures (
+    fold phi x s == List.Tot.fold_left phi x l
+  ))

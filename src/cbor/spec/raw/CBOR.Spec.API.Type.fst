@@ -305,6 +305,14 @@ let cbor_map_fold_eq
 = cbor_map_key_list_no_repeats_p m;
   U.list_fold_ext_no_repeats_p f x (cbor_map_key_list m) l
 
+let cbor_map_fold_eq_idem
+  (#a: Type)
+  (f: a -> cbor -> a)
+  (x: a)
+  (m: cbor_map)
+  (l: list cbor)
+= U.list_fold_ext_idem f x (cbor_map_key_list m) l
+
 let rec cbor_list_of_list_cbor_precedes (l: list R.raw_data_item {
     List.Tot.for_all (R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem) l /\
     List.Tot.for_all (R.holds_on_raw_data_item (R.raw_data_item_sorted_elem R.deterministically_encoded_cbor_map_key_order)) l
