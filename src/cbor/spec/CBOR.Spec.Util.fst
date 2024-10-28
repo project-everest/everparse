@@ -1488,6 +1488,122 @@ let rec list_fold_ext_no_repeats_p
     List.Tot.no_repeats_p_append_intro ll2 lr2;
     list_fold_ext_no_repeats_p f (f a h) q (List.Tot.append ll2 lr2)
 
+let op_idem
+  (#accu #t: Type)
+  (f: accu -> t -> accu)
+: Tot prop
+= forall a x . f (f a x) x == f a x
+
+let rec list_filter_not_in
+  (#t: Type)
+  (a: t)
+  (l: list t)
+: GTot (list t)
+  (decreases l)
+= match l with
+  | [] -> []
+  | b :: q ->
+    let q' = list_filter_not_in a q in
+    if FStar.StrongExcludedMiddle.strong_excluded_middle (a == b)
+    then q'
+    else b :: q'
+
+let rec list_filter_not_in_memP
+  (#t: Type)
+  (a: t)
+  (l: list t)
+  (b: t)
+: Lemma
+  (ensures (List.Tot.memP b (list_filter_not_in a l) <==> (List.Tot.memP b l /\ (~ (a == b)))))
+  (decreases l)
+  [SMTPat (List.Tot.memP b (list_filter_not_in a l))]
+= match l with
+  | [] -> ()
+  | c :: q -> list_filter_not_in_memP a q b
+
+let rec list_filter_not_in_length
+  (#t: Type)
+  (a: t)
+  (l: list t)
+: Lemma
+  (ensures (List.Tot.length (list_filter_not_in a l) <= List.Tot.length l))
+  [SMTPat (List.Tot.length (list_filter_not_in a l))]
+= match l with
+  | [] -> ()
+  | _ :: q -> list_filter_not_in_length a q
+
+let rec list_filter_not_in_not_in
+  (#t: Type)
+  (a: t)
+  (l: list t)
+: Lemma
+  (requires (~ (List.Tot.memP a l)))
+  (ensures (list_filter_not_in a l == l))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_filter_not_in_not_in a q
+
+let rec list_filter_not_in_extract
+  (#t: Type)
+  (a: t)
+  (l1 l2: list t)
+: Lemma
+  (ensures (list_filter_not_in a (List.Tot.append l1 (a :: l2)) == list_filter_not_in a (List.Tot.append l1 l2)))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | _ :: q -> list_filter_not_in_extract a q l2
+
+let rec list_filter_not_in_fold
+  (#accu #t: Type)
+  (f: accu -> t -> accu { op_comm f /\ op_idem f })
+  (a: accu)
+  (h: t)
+  (l: list t)
+: Lemma
+  (ensures (List.Tot.fold_left f (f a h) l == List.Tot.fold_left f (f a h) (list_filter_not_in h l)))
+  (decreases (List.Tot.length l))
+= if FStar.StrongExcludedMiddle.strong_excluded_middle (List.Tot.memP h l)
+  then begin
+    let (l1, l2) = list_memP_extract h l in
+    list_fold_comm f (f a h) l1 (h :: l2);
+    List.Tot.append_length l1 (h :: l2);
+    list_fold_comm f (f a h) l2 l1;
+    List.Tot.append_length l1 l2;
+    list_filter_not_in_extract h l1 l2;
+    list_filter_not_in_fold f a h (List.Tot.append l1 l2)
+  end
+  else list_filter_not_in_not_in h l
+
+#restart-solver
+let rec list_fold_ext_idem
+  (#accu #t: Type)
+  (f: accu -> t -> accu { op_comm f /\
+    op_idem f
+  })
+  (a: accu)
+  (l1 l2: list t)
+: Lemma
+  (requires (
+    (forall x . List.Tot.memP x l1 <==> List.Tot.memP x l2)
+  ))
+  (ensures (List.Tot.fold_left f a l1 == List.Tot.fold_left f a l2))
+  (decreases (List.Tot.length l1 + List.Tot.length l2))
+= match l1 with
+  | [] -> ()
+  | h :: q ->
+    let (ll2, lr2) = list_memP_extract h l2 in
+    List.Tot.append_length ll2 (h :: lr2);
+    list_fold_comm f a ll2 (h :: lr2);
+    List.Tot.append_length lr2 ll2;
+    Classical.forall_intro (List.Tot.append_memP ll2 (h :: lr2));
+    Classical.forall_intro (List.Tot.append_memP lr2 ll2);
+    let l2' = List.Tot.append lr2 ll2 in
+    list_filter_not_in_fold f a h q;
+    list_filter_not_in_fold f a h l2';
+    list_fold_ext_idem f (f a h) (list_filter_not_in h q) (list_filter_not_in h l2')
+
+
 (* Well-founded recursion *)
 
 let rec wf_list_for_all (#t: Type) (l: list t) (p: (x: t { x << l }) -> bool) : bool =
