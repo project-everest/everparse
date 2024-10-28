@@ -65,6 +65,9 @@ cbor-det-c-test: cbor
 
 cbor-test: cbor-det-c-test
 
+cbor-rust:
+	+$(MAKE) -C src/cbor/pulse/det-c test-rs
+
 cddl: cbor
 	+$(MAKE) -C src/cddl
 
