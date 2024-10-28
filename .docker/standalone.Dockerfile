@@ -15,7 +15,7 @@ RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 # Dependencies (F*, Karamel and opam packages)
 ENV FSTAR_HOME=$HOME/FStar
 ENV KRML_HOME=$HOME/karamel
-ENV PULSE_HOME=$HOME/karamel
+ENV PULSE_HOME=$HOME/pulse
 RUN eval $(opam env) && .docker/build/install-deps.sh
 
 # CI dependencies: sphinx (for the docs)
