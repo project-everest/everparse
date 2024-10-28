@@ -112,44 +112,6 @@ let cbor_map_singleton k v = [k, v]
 
 let cbor_map_get_singleton k v k' = ()
 
-let rec list_for_all_filter_invariant
-  (#t: Type)
-  (p: t -> bool)
-  (f: t -> bool)
-  (l: list t)
-: Lemma
-  (requires (List.Tot.for_all p l == true))
-  (ensures (List.Tot.for_all p (List.Tot.filter f l) == true))
-  [SMTPat (List.Tot.for_all p (List.Tot.filter f l))]
-= match l with
-  | [] -> ()
-  | _ :: q -> list_for_all_filter_invariant p f q
-
-let rec list_sorted_filter
-  (#t1: Type)
-  (key_order: t1 -> t1 -> bool {
-    forall x y z . (key_order x y /\ key_order y z) ==> key_order x z
-  })
-  (f: t1 -> bool)
-  (l: list t1)
-: Lemma
-  (requires (
-    List.Tot.sorted key_order l
-  ))
-  (ensures (
-    List.Tot.sorted key_order (List.Tot.filter f l)
-  ))
-= match l with
-  | [] -> ()
-  | a :: q ->
-    list_sorted_filter key_order f q;
-    if f a
-    then begin
-      U.list_sorted_cons_elim key_order a q;
-      list_for_all_filter_invariant (key_order a) f q
-    end
-    else ()
-
 let cbor_map_filter_f
   (f: (cbor & cbor) -> bool)
   (x: (R.raw_data_item & R.raw_data_item))
@@ -159,7 +121,7 @@ let cbor_map_filter_f
     else false
 
 let cbor_map_filter f m =
-  list_sorted_filter (R.map_entry_order R.deterministically_encoded_cbor_map_key_order _) (cbor_map_filter_f f) m;
+  U.list_sorted_filter (R.map_entry_order R.deterministically_encoded_cbor_map_key_order _) (cbor_map_filter_f f) m;
   List.Tot.filter (cbor_map_filter_f f) m
 
 let rec cbor_map_get_filter'
