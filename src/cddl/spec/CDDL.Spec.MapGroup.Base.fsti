@@ -162,7 +162,6 @@ val map_group_zero_or_more_zero_or_one_eq
 : Lemma
   (map_group_zero_or_more (map_group_zero_or_one m) == map_group_zero_or_more m)
 
-[@@erasable]
 noeq
 type map_group_result =
 | MapGroupCutFail

@@ -1,4 +1,6 @@
-module CDDL.Spec.MapGroupGen
+module CDDL.Spec.MapGroup
+open CBOR.Spec.API.Type
+module U = CBOR.Spec.Util
 
 #push-options "--z3rlimit 32"
 
@@ -29,19 +31,19 @@ let restrict_map_group_concat
       match apply_map_group_det g1 m with
       | MapGroupDet c1 r1 ->
         let MapGroupDet c1' r1' = apply_map_group_det g1' m in
-        let d1 = c1 `ghost_map_sub` c1' in
-        ghost_map_union_assoc c1' d1 r1;
-        ghost_map_disjoint_union_simpl_l c1' (d1 `ghost_map_union` r1) r1';
-        ghost_map_disjoint_union_comm d1 r1;
-        assert (r1' == r1 `ghost_map_union` d1);
+        let d1 = c1 `cbor_map_sub` c1' in
+        cbor_map_union_assoc c1' d1 r1;
+        cbor_map_disjoint_union_simpl_l c1' (d1 `cbor_map_union` r1) r1';
+        cbor_map_disjoint_union_comm d1 r1;
+        assert (r1' == r1 `cbor_map_union` d1);
         map_group_footprint_consumed_disjoint g1 f1 f2' m;
-        assert (ghost_map_disjoint_from_footprint d1 f2');
+        assert (cbor_map_disjoint_from_footprint d1 f2');
         map_group_footprint_elim g2' f2' r1 d1;
         begin match apply_map_group_det g2 r1 with
         | MapGroupDet c2 r2 ->
           let MapGroupDet c2' r2' = apply_map_group_det g2' r1 in
-          assert (c2' `ghost_map_included` c2);
-          assert ((c1' `ghost_map_union` c2') `ghost_map_included` (c1 `ghost_map_union` c2))
+          assert (c2' `cbor_map_included` c2);
+          assert ((c1' `cbor_map_union` c2') `cbor_map_included` (c1 `cbor_map_union` c2))
         | _ -> ()
         end
       | _ -> ()
@@ -49,7 +51,7 @@ let restrict_map_group_concat
 
 let map_group_choice_compatible_match_item_for
   (cut: bool)
-  (key: Cbor.raw_data_item)
+  (key: cbor)
   (value: typ)
   (right: map_group)
   (fp: typ)
@@ -63,8 +65,8 @@ let map_group_choice_compatible_match_item_for
   ))
 = map_group_choice_compatible_intro (map_group_match_item_for cut key value) right (fun x ->
     let phi = matches_map_group_entry fp any in
-    ghost_map_split phi x;
-    map_group_footprint_elim right fp (ghost_map_filter phi x) (ghost_map_filter (notp_g phi) x)
+    cbor_map_split phi x;
+    map_group_footprint_elim right fp (cbor_map_filter phi x) (cbor_map_filter (U.notp phi) x)
   )
 
 #pop-options
@@ -75,8 +77,8 @@ let map_group_choice_compatible_match_item_for
 let map_group_footprint_concat_consumes_all_recip
   (g1 g2: map_group)
   (f1 f2: typ)
-  (m: ghost_map Cbor.raw_data_item Cbor.raw_data_item)
-: Ghost (ghost_map Cbor.raw_data_item Cbor.raw_data_item & ghost_map Cbor.raw_data_item Cbor.raw_data_item)
+  (m: cbor_map)
+: Pure (cbor_map & cbor_map)
   (requires (
     map_group_footprint g1 f1 /\
     map_group_footprint g2 f2 /\
@@ -84,40 +86,41 @@ let map_group_footprint_concat_consumes_all_recip
     map_group_consumes_all (g1 `map_group_concat` g2) m
   ))
   (ensures (fun (m1, m2) ->
-    m1 `ghost_map_disjoint` m2 /\
-    apply_map_group_det g1 m1 == MapGroupDet m1 ghost_map_empty /\
-    apply_map_group_det g2 m2 == MapGroupDet m2 ghost_map_empty /\
-    m1 `ghost_map_union` m2 == m
+    m1 `cbor_map_disjoint` m2 /\
+    apply_map_group_det g1 m1 == MapGroupDet m1 cbor_map_empty /\
+    apply_map_group_det g2 m2 == MapGroupDet m2 cbor_map_empty /\
+    m1 `cbor_map_union` m2 == m
   ))
-= ghost_map_split (matches_map_group_entry f1 any) m;
-  let m1 = ghost_map_filter (matches_map_group_entry f1 any) m in
-  let m1' = ghost_map_filter (notp_g (matches_map_group_entry f1 any)) m in
+= cbor_map_split (matches_map_group_entry f1 any) m;
+  let m1 = cbor_map_filter (matches_map_group_entry f1 any) m in
+  let m1' = cbor_map_filter (U.notp (matches_map_group_entry f1 any)) m in
   map_group_footprint_elim g1 f1 m1 m1';
-  let MapGroupDet _ r1 = apply_map_group_det g1 m1 in
+  let MapGroupDet _ r1 = apply_map_group_det g1 m1 in 
   let MapGroupDet _ r1' = apply_map_group_det g1 m in
-  assert (r1' == r1 `ghost_map_union` m1');
-  ghost_map_disjoint_union_comm r1 m1';
-  ghost_map_split (matches_map_group_entry f2 any) m1';
-  let m2 = ghost_map_filter (matches_map_group_entry f2 any) m1' in
-  let m2' = ghost_map_filter (notp_g (matches_map_group_entry f2 any)) m1' in
-  ghost_map_union_assoc m2 m2' r1;
-  ghost_map_disjoint_mem_union' m2' r1 ();
-  assert (ghost_map_included r1 m1);
-  assert (ghost_map_disjoint_from_footprint m1 f2);
-  assert (ghost_map_disjoint_from_footprint r1 f2);
-  assert (ghost_map_disjoint_from_footprint m2' f2);
-  map_group_footprint_elim g2 f2 m2 (m2' `ghost_map_union` r1);
+  assert (r1' == r1 `cbor_map_union` m1');
+  cbor_map_disjoint_union_comm r1 m1';
+  cbor_map_split (matches_map_group_entry f2 any) m1';
+  let m2 = cbor_map_filter (matches_map_group_entry f2 any) m1' in
+  let m2' = cbor_map_filter (U.notp (matches_map_group_entry f2 any)) m1' in
+  cbor_map_union_assoc m2 m2' r1;
+  cbor_map_disjoint_mem_union' m2' r1 ();
+  assert (cbor_map_included r1 m1);
+  assert (cbor_map_disjoint_from_footprint m1 f2);
+  assert (cbor_map_disjoint_from_footprint r1 f2);
+  assert (cbor_map_disjoint_from_footprint m2' f2);
+  map_group_footprint_elim g2 f2 m2 (m2' `cbor_map_union` r1);
   let MapGroupDet _ r2 = apply_map_group_det g2 m2 in
   let MapGroupDet _ r2' = apply_map_group_det g2 r1' in
-  assert (r2' == ghost_map_empty);
-  assert (r2' == r2 `ghost_map_union` (m2' `ghost_map_union` r1));
-  ghost_map_equiv r2 ghost_map_empty;
-  ghost_map_equiv m2' ghost_map_empty;
-  ghost_map_equiv r1 ghost_map_empty;
+  assert (r2' == cbor_map_empty);
+  assert (r2' == r2 `cbor_map_union` (m2' `cbor_map_union` r1));
+  cbor_map_equiv r2 cbor_map_empty;
+  cbor_map_equiv m2' cbor_map_empty;
+  cbor_map_equiv r1 cbor_map_empty;
   (m1, m2)
 
 #pop-options
 
+(*
 #restart-solver
 let parser_spec_map_group'
   (source0: det_map_group)
@@ -133,7 +136,7 @@ let parser_spec_map_group'
   (target_prop' : target -> prop {
     forall x . target_prop' x <==> (target_prop x /\ target_size x < pow2 64)
   })
-  (x: Cbor.raw_data_item { t_map source0 x })
+  (x: cbor { t_map source0 x })
 : Ghost target
     (requires True)
     (ensures (fun res ->
@@ -146,7 +149,7 @@ let parser_spec_map_group'
 =
     let Cbor.Map a = x in
     let a' = List.Tot.filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp any)) a in
-    ghost_map_split (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp any)) (ghost_map_of_list a);
+    cbor_map_split (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp any)) (cbor_map_of_list a);
     let res = p a' in
     res
 
@@ -205,29 +208,29 @@ let map_group_parser_spec_concat'
       )
     ))
 =
-  ghost_map_equiv
-    (ghost_map_filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp1 any)) (ghost_map_of_list l))
-    (ghost_map_filter (matches_map_group_entry source_fp1 any) (ghost_map_of_list l));
-  map_group_footprint_is_consumed source1 source_fp1 (ghost_map_of_list l);
+  cbor_map_equiv
+    (cbor_map_filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp1 any)) (cbor_map_of_list l))
+    (cbor_map_filter (matches_map_group_entry source_fp1 any) (cbor_map_of_list l));
+  map_group_footprint_is_consumed source1 source_fp1 (cbor_map_of_list l);
   let res1 = p1 (List.Tot.filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp1 any)) l) in
-  let MapGroupDet c1 r1 = apply_map_group_det source1 (ghost_map_filter (matches_map_group_entry source_fp1 any) (ghost_map_of_list l)) in
-  ghost_map_disjoint_union_comm r1 (ghost_map_filter (matches_map_group_entry source_fp2 any) (ghost_map_of_list l));
-  ghost_map_split (matches_map_group_entry source_fp1 any) (ghost_map_of_list l);
-  let MapGroupDet c1' r1' = apply_map_group_det source1 (ghost_map_of_list l) in
-  ghost_map_equiv
-    (ghost_map_filter (notp_g (matches_map_group_entry source_fp1 any)) (ghost_map_of_list l))
-    (ghost_map_filter (matches_map_group_entry source_fp2 any) (ghost_map_of_list l));
-  map_group_footprint_consumed source1 source_fp1 (ghost_map_filter (matches_map_group_entry source_fp1 any) (ghost_map_of_list l)) (ghost_map_filter (matches_map_group_entry source_fp2 any) (ghost_map_of_list l));
-  ghost_map_union_assoc c1 r1 (ghost_map_filter (matches_map_group_entry source_fp2 any) (ghost_map_of_list l));
-  assert (r1' == r1 `ghost_map_union` ghost_map_filter (matches_map_group_entry source_fp2 any) (ghost_map_of_list l));
-  map_group_footprint_consumed source2 source_fp2 (ghost_map_filter (matches_map_group_entry source_fp2 any) (ghost_map_of_list l)) r1;
-  ghost_map_equiv
-    (ghost_map_filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp2 any)) (ghost_map_of_list l))
-    (ghost_map_filter (matches_map_group_entry source_fp2 any) (ghost_map_of_list l));
+  let MapGroupDet c1 r1 = apply_map_group_det source1 (cbor_map_filter (matches_map_group_entry source_fp1 any) (cbor_map_of_list l)) in
+  cbor_map_disjoint_union_comm r1 (cbor_map_filter (matches_map_group_entry source_fp2 any) (cbor_map_of_list l));
+  cbor_map_split (matches_map_group_entry source_fp1 any) (cbor_map_of_list l);
+  let MapGroupDet c1' r1' = apply_map_group_det source1 (cbor_map_of_list l) in
+  cbor_map_equiv
+    (cbor_map_filter (U.notp (matches_map_group_entry source_fp1 any)) (cbor_map_of_list l))
+    (cbor_map_filter (matches_map_group_entry source_fp2 any) (cbor_map_of_list l));
+  map_group_footprint_consumed source1 source_fp1 (cbor_map_filter (matches_map_group_entry source_fp1 any) (cbor_map_of_list l)) (cbor_map_filter (matches_map_group_entry source_fp2 any) (cbor_map_of_list l));
+  cbor_map_union_assoc c1 r1 (cbor_map_filter (matches_map_group_entry source_fp2 any) (cbor_map_of_list l));
+  assert (r1' == r1 `cbor_map_union` cbor_map_filter (matches_map_group_entry source_fp2 any) (cbor_map_of_list l));
+  map_group_footprint_consumed source2 source_fp2 (cbor_map_filter (matches_map_group_entry source_fp2 any) (cbor_map_of_list l)) r1;
+  cbor_map_equiv
+    (cbor_map_filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp2 any)) (cbor_map_of_list l))
+    (cbor_map_filter (matches_map_group_entry source_fp2 any) (cbor_map_of_list l));
   let res2 = p2 (List.Tot.filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp2 any)) l) in
-  ghost_map_length_disjoint_union
-    (ghost_map_of_list (List.Tot.filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp1 any)) l))
-    (ghost_map_of_list (List.Tot.filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp2 any)) l));
+  cbor_map_length_disjoint_union
+    (cbor_map_of_list (List.Tot.filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp1 any)) l))
+    (cbor_map_of_list (List.Tot.filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp2 any)) l));
   let res = (res1, res2) in
   res
 
@@ -315,9 +318,9 @@ let map_group_parser_spec_choice'
         (forall x . f2 x == matches_map_group_entry source_fp2 any x) /\ (
         let l1 = List.Tot.filter f1 l in
         let l2 = List.Tot.filter f2 l in
-        let test = MapGroupDet? (apply_map_group_det source1 (ghost_map_of_list l1)) in
-        ghost_map_of_list l1 == ghost_map_filter (matches_map_group_entry source_fp1 any) (ghost_map_of_list l) /\
-        ghost_map_of_list l2 == ghost_map_filter (matches_map_group_entry source_fp2 any) (ghost_map_of_list l) /\
+        let test = MapGroupDet? (apply_map_group_det source1 (cbor_map_of_list l1)) in
+        cbor_map_of_list l1 == cbor_map_filter (matches_map_group_entry source_fp1 any) (cbor_map_of_list l) /\
+        cbor_map_of_list l2 == cbor_map_filter (matches_map_group_entry source_fp2 any) (cbor_map_of_list l) /\
         (test ==> (
           map_group_parser_spec_arg_prop source1 source_fp1 l1 /\
           (l' <: (target1 `either` target2)) == Inl (p1 l1)
@@ -327,20 +330,20 @@ let map_group_parser_spec_choice'
           (l' <: (target1 `either` target2)) == Inr (p2 l2)
         ))
     )))
-= let m1 = ghost_map_filter (matches_map_group_entry source_fp1 any) (ghost_map_of_list l) in
-  ghost_map_equiv
-    (ghost_map_filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp1 any)) (ghost_map_of_list l))
+= let m1 = cbor_map_filter (matches_map_group_entry source_fp1 any) (cbor_map_of_list l) in
+  cbor_map_equiv
+    (cbor_map_filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp1 any)) (cbor_map_of_list l))
     m1;
-  ghost_map_split (matches_map_group_entry source_fp1 any) (ghost_map_of_list l);
-  map_group_footprint_elim source1 source_fp1 m1 (ghost_map_filter (notp_g (matches_map_group_entry source_fp1 any)) (ghost_map_of_list l));
-  ghost_map_equiv
-    (ghost_map_filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp2 any)) (ghost_map_of_list l))
-    (ghost_map_filter (matches_map_group_entry source_fp2 any) (ghost_map_of_list l));
+  cbor_map_split (matches_map_group_entry source_fp1 any) (cbor_map_of_list l);
+  map_group_footprint_elim source1 source_fp1 m1 (cbor_map_filter (U.notp (matches_map_group_entry source_fp1 any)) (cbor_map_of_list l));
+  cbor_map_equiv
+    (cbor_map_filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp2 any)) (cbor_map_of_list l))
+    (cbor_map_filter (matches_map_group_entry source_fp2 any) (cbor_map_of_list l));
   match apply_map_group_det source1 m1 with
   | MapGroupDet _ _ -> Inl (p1 (List.Tot.filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp1 any)) l))
   | _ ->
     begin
-      map_group_footprint_is_consumed source2 source_fp2 (ghost_map_of_list l);
+      map_group_footprint_is_consumed source2 source_fp2 (cbor_map_of_list l);
       Inr (p2 (List.Tot.filter (FStar.Ghost.Pull.pull (matches_map_group_entry source_fp2 any)) l))
     end
 
@@ -392,9 +395,9 @@ let map_group_parser_spec_choice_eq
         (forall x . f2 x == matches_map_group_entry source_fp2 any x) /\ (
         let l1 = List.Tot.filter f1 l in
         let l2 = List.Tot.filter f2 l in
-        let test = MapGroupDet? (apply_map_group_det source1 (ghost_map_of_list l1)) in
-        ghost_map_of_list l1 == ghost_map_filter (matches_map_group_entry source_fp1 any) (ghost_map_of_list l) /\
-        ghost_map_of_list l2 == ghost_map_filter (matches_map_group_entry source_fp2 any) (ghost_map_of_list l) /\
+        let test = MapGroupDet? (apply_map_group_det source1 (cbor_map_of_list l1)) in
+        cbor_map_of_list l1 == cbor_map_filter (matches_map_group_entry source_fp1 any) (cbor_map_of_list l) /\
+        cbor_map_of_list l2 == cbor_map_filter (matches_map_group_entry source_fp2 any) (cbor_map_of_list l) /\
         (test ==> (
           map_group_parser_spec_arg_prop source1 source_fp1 l1 /\
           (l' <: (target1 `either` target2)) == Inl (p1 l1)
