@@ -18,7 +18,7 @@ let map_group_item_post_prop
 : Tot prop
 =
   fst l' `Cbor.cbor_map_disjoint` snd l' /\
-  (fst l' `Cbor.cbor_map_union` snd l') = l
+  (fst l' `Cbor.cbor_map_union` snd l') `Cbor.cbor_map_equal` l
 
 let map_group_item_post_equiv
   (l: Cbor.cbor_map)
@@ -28,7 +28,6 @@ let map_group_item_post_equiv
   [SMTPat (map_group_item_post l l')]
 = ()
 
-[@@erasable]
 val map_group : Type0
 
 val map_group_always_false : map_group
@@ -364,7 +363,7 @@ val map_group_zero_or_more_choice
     map_group_zero_or_more (g1 `map_group_choice` g2) == map_group_zero_or_more g1 `map_group_concat` map_group_zero_or_more g2
   ))
 
-val matches_map_group (g: map_group) (m: Cbor.cbor_map) : GTot bool
+val matches_map_group (g: map_group) (m: Cbor.cbor_map) : Tot bool
 
 val matches_map_group_det (g: map_group) (m: Cbor.cbor_map) : Lemma
   (match apply_map_group_det g m with

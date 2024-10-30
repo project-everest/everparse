@@ -225,7 +225,7 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
   with va' . assert (pts_to_serialized (LowParse.Spec.Combinators.serialize_dtuple2 serialize_header serialize_content) a #pm va');
   let spl = LowParse.Pulse.Combinators.split_dtuple2 serialize_header (jump_header ()) serialize_content a;
   match spl {
-    SlicePair ah ap -> {
+    Mktuple2 ah ap -> {
       unfold (LowParse.Pulse.Combinators.split_dtuple2_post serialize_header serialize_content a pm va' spl);
       unfold (LowParse.Pulse.Combinators.split_dtuple2_post' serialize_header serialize_content a pm va' ah ap);
       Trade.trans _ _ (pts_to_serialized serialize_raw_data_item a #pm va);

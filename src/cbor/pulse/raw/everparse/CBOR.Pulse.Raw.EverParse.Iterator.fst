@@ -188,7 +188,7 @@ fn cbor_raw_serialized_iterator_next
     s'
     i.s;
   match sp {
-    SlicePair s1 s2 -> {
+    Mktuple2 s1 s2 -> {
       unfold (LPC.split_nondep_then_post s s' i.s pm v' sp);
       unfold (LPC.split_nondep_then_post' s s' i.s pm v' s1 s2);
       Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);

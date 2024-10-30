@@ -762,9 +762,9 @@ let split_dtuple2_post
   (input: slice byte)
   (pm: perm)
   (v: Ghost.erased (dtuple2 t1 t2))
-  (res: slice_pair byte)
+  (res: (slice byte & slice byte))
 : Tot slprop
-= let (SlicePair left right) = res in
+= let (left, right) = res in
   split_dtuple2_post' s1 s2 input pm v left right
 
 inline_for_extraction
@@ -783,7 +783,7 @@ fn split_dtuple2
   (#pm: perm)
   (#v: Ghost.erased (dtuple2 t1 t2))
   requires pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v
-  returns res: slice_pair byte
+  returns res: (slice byte & slice byte)
   ensures split_dtuple2_post s1 s2 input pm v res
 {
   serialize_dtuple2_eq s1 s2 v;
@@ -794,15 +794,15 @@ fn split_dtuple2
   let i = j1 input 0sz;
   let res = append_split_trade input i;
   match res {
-    SlicePair input1 input2 -> {
+    Mktuple2 input1 input2 -> {
       Trade.trans (_ ** _) _ _;
       pts_to_serialized_intro_trade s1 input1 (dfst v);
       pts_to_serialized_intro_trade (s2 (dfst v)) input2 (dsnd v);
       Trade.prod (pts_to_serialized s1 input1 #pm _) (pts_to input1 #pm _) (pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input2 #pm _);
       Trade.trans (pts_to_serialized s1 input1 #pm _ ** pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input1 #pm _ ** pts_to input2 #pm _) _;
       fold (split_dtuple2_post' s1 s2 input pm v input1 input2);
-      fold (split_dtuple2_post s1 s2 input pm v (input1 `SlicePair` input2));
-      (input1 `SlicePair` input2)
+      fold (split_dtuple2_post s1 s2 input pm v (input1, input2));
+      (input1, input2)
     }
   }
 }
@@ -829,7 +829,7 @@ fn dtuple2_dfst
     trade (pts_to_serialized s1 res #pm (dfst v)) (pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v)
 {
   let spl = split_dtuple2 s1 j1 s2 input;
-  match spl { SlicePair input1 input2 -> {
+  match spl { Mktuple2 input1 input2 -> {
     unfold (split_dtuple2_post s1 s2 input pm v spl);
     unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
     Trade.elim_hyp_r _ _ _;
@@ -859,7 +859,7 @@ fn dtuple2_dsnd
     trade (pts_to_serialized (s2 (dfst v)) res #pm (dsnd v)) (pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v)
 {
   let spl = split_dtuple2 s1 j1 s2 input;
-  match spl { SlicePair input1 input2 -> {
+  match spl { Mktuple2 input1 input2 -> {
     unfold (split_dtuple2_post s1 s2 input pm v spl);
     unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
     Trade.elim_hyp_l _ _ _;
@@ -898,9 +898,9 @@ let split_nondep_then_post
   (input: slice byte)
   (pm: perm)
   (v: Ghost.erased (t1 & t2))
-  (res: slice_pair byte)
+  (res: (slice byte & slice byte))
 : Tot slprop
-= let (SlicePair left right) = res in
+= let (left, right) = res in
   split_nondep_then_post' s1 s2 input pm v left right
 
 #set-options "--print_implicits"
@@ -944,7 +944,7 @@ fn split_nondep_then
   (#pm: perm)
   (#v: Ghost.erased (t1 & t2))
   requires pts_to_serialized (serialize_nondep_then s1 s2) input #pm v
-  returns res: slice_pair byte
+  returns res: (slice byte & slice byte)
   ensures split_nondep_then_post s1 s2 input pm v res
 {
   pts_to_serialized_ext_trade'
@@ -965,13 +965,13 @@ fn split_nondep_then
     input;
   Trade.trans (pts_to_serialized (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2)) _ #pm _) _ _;
   let res = split_dtuple2 #t1 #(const_fun t2) s1 j1 #_ #(const_fun p2) (const_fun s2) input;
-  match res { SlicePair input1 input2 -> {
+  match res { Mktuple2 input1 input2 -> {
     unfold (split_dtuple2_post #t1 #(const_fun t2) s1 #k2 #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) res);
     unfold (split_dtuple2_post' #t1 #(const_fun t2) s1 #_ #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) input1 input2);
     Trade.trans (_ ** _) _ _;
     fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
-    fold (split_nondep_then_post s1 s2 input pm v (input1 `SlicePair` input2));
-    (input1 `SlicePair` input2)
+    fold (split_nondep_then_post s1 s2 input pm v (input1, input2));
+    (input1, input2)
   }}
 }
 ```
@@ -996,7 +996,7 @@ fn nondep_then_fst
     trade (pts_to_serialized s1 res #pm (fst v)) (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v)
 {
   let spl = split_nondep_then s1 j1 s2 input;
-  match spl { SlicePair input1 input2 -> {
+  match spl { Mktuple2 input1 input2 -> {
     unfold (split_nondep_then_post s1 s2 input pm v spl);
     unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
     Trade.elim_hyp_r _ _ _;
@@ -1025,7 +1025,7 @@ fn nondep_then_snd
     trade (pts_to_serialized s2 res #pm (snd v)) (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v)
 {
   let spl = split_nondep_then s1 j1 s2 input;
-  match spl { SlicePair input1 input2 -> {
+  match spl { Mktuple2 input1 input2 -> {
     unfold (split_nondep_then_post s1 s2 input pm v spl);
     unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
     Trade.elim_hyp_l _ _ _;
@@ -1057,7 +1057,7 @@ fn read_dtuple2
   (f: _)
 {
   let split12 = split_dtuple2 s1 j1 s2 input;
-  match split12 { SlicePair input1 input2 -> {
+  match split12 { Mktuple2 input1 input2 -> {
     unfold (split_dtuple2_post s1 s2 input pm v split12);
     unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
     let x1 = leaf_reader_of_reader r1 input1;

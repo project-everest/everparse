@@ -382,6 +382,22 @@ val cbor_map_fold_eq
     cbor_map_fold f x m == List.Tot.fold_left f x l
   ))
 
+val cbor_map_fold_eq_idem
+  (#a: Type)
+  (f: a -> cbor -> a)
+  (x: a)
+  (m: cbor_map)
+  (l: list cbor)
+: Lemma
+  (requires (
+    U.op_comm f /\
+    U.op_idem f /\
+    (forall (x: cbor) . List.Tot.memP x l <==> cbor_map_defined x m)
+  ))
+  (ensures (
+    cbor_map_fold f x m == List.Tot.fold_left f x l
+  ))
+
 let cbor_map_fold_empty
   (#a: Type)
   (f: a -> cbor -> a {

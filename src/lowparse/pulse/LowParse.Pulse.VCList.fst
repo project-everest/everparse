@@ -147,9 +147,9 @@ let nlist_hd_tl_post
   (input: slice byte)
   (pm: perm)
   (v: (nlist n t))
-  (hd_tl: (slice_pair byte))
+  (hd_tl: (slice byte & slice byte))
 : slprop
-= nlist_hd_tl_post' s sq n input pm v (hd_tl.fst) (hd_tl.snd)
+= nlist_hd_tl_post' s sq n input pm v (fst hd_tl) (snd hd_tl)
 
 inline_for_extraction
 ```pulse
@@ -166,7 +166,7 @@ fn nlist_hd_tl
   (#v: Ghost.erased (nlist n t))
 requires
   pts_to_serialized (serialize_nlist n s) input #pm v
-returns res : slice_pair byte
+returns res : (slice byte & slice byte)
 ensures
   nlist_hd_tl_post s sq n input pm v res
 {
@@ -174,7 +174,7 @@ ensures
   with v' . assert (pts_to_serialized (serialize_nondep_then s (serialize_nlist (n - 1) s)) input #pm v');
   let res = split_nondep_then #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p)) (coerce_eq () (serialize_nlist (n - 1) s <: serializer (parse_nlist (n - 1) p))) input; // FIXME: same as above
   match res {
-    SlicePair s1 s2 -> {
+    Mktuple2 s1 s2 -> {
       unfold (split_nondep_then_post s (serialize_nlist (n - 1) s) input pm v' res);
       unfold (split_nondep_then_post' s (serialize_nlist (n - 1) s) input pm v' s1 s2);
       Trade.trans _ _ (pts_to_serialized (serialize_nlist n s) input #pm v);
@@ -349,7 +349,7 @@ ensures
   } else {
     let pl = nlist_hd_tl s sq j (SZ.v n) a;
     match pl {
-      SlicePair s1 s2 -> {
+      Mktuple2 s1 s2 -> {
         unfold (nlist_hd_tl_post s sq (SZ.v n) a pm v pl);
         unfold (nlist_hd_tl_post' s sq (SZ.v n) a pm v s1 s2);
         let mut phd = s1;
@@ -382,7 +382,7 @@ ensures
           with tl . assert (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
           let pl = nlist_hd_tl s sq j (SZ.v gi) stl;
           match pl {
-            SlicePair s1 s2 -> {
+            Mktuple2 s1 s2 -> {
               unfold (nlist_hd_tl_post s sq (SZ.v gi) stl pm tl pl);
               unfold (nlist_hd_tl_post' s sq (SZ.v gi) stl pm tl s1 s2);
               let shd = !phd;
