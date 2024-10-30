@@ -29,7 +29,7 @@
 
     "RepoVersions" : {
         "mitls_version" : "origin/dev",
-        "pulse_version" : "origin/main",
+        "pulse_version" : "origin/_taramana_no_slice_pair",
         "karamel_version" : "origin/master"
     }
 }

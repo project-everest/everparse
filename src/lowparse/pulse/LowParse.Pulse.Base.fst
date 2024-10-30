@@ -352,9 +352,9 @@ let peek_post
   (pm: perm)
   (v: bytes)
   (consumed: SZ.t)
-  (res: slice_pair byte)
+  (res: (slice byte & slice byte))
 : Tot slprop
-= let SlicePair left right = res in
+= let (left, right) = res in
   peek_post' s input pm v consumed left right
 
 inline_for_extraction
@@ -366,20 +366,20 @@ fn peek
   (#v: Ghost.erased bytes)
   (consumed: SZ.t)
   requires (pts_to input #pm v ** pure (validator_success #k #t p 0sz v (consumed)))
-  returns res: slice_pair byte
+  returns res: (slice byte & slice byte)
   ensures peek_post s input pm v consumed res
 {
   let s1s2 = split input consumed;
   match s1s2 {
-    SlicePair s1 s2 -> {
+    Mktuple2 s1 s2 -> {
       Seq.lemma_split v (SZ.v consumed);
       let v1 = Ghost.hide (fst (Some?.v (parse p v)));
       parse_injective #k p (bare_serialize s v1) v;
       with v1' . assert (pts_to s1 #pm v1');
       rewrite (pts_to s1 #pm v1') as (pts_to_serialized s s1 #pm v1);
       fold (peek_post' s input pm v consumed s1 s2);
-      fold (peek_post s input pm v consumed (SlicePair s1 s2));
-      (SlicePair s1 s2)
+      fold (peek_post s input pm v consumed (s1, s2));
+      (s1, s2)
     }
   }
 }
@@ -408,9 +408,9 @@ let peek_trade_post
   (pm: perm)
   (v: bytes)
   (consumed: SZ.t)
-  (res: slice_pair byte)
+  (res: (slice byte & slice byte))
 : Tot slprop
-= let (SlicePair left right) = res in
+= let (left, right) = res in
   peek_trade_post' s input pm v consumed left right
 
 ```pulse
@@ -445,18 +445,18 @@ fn peek_trade
   (#v: Ghost.erased bytes)
   (consumed: SZ.t)
   requires (pts_to input #pm v ** pure (validator_success #k #t p 0sz v (consumed)))
-  returns res: (slice_pair byte)
+  returns res: (slice byte & slice byte)
   ensures peek_trade_post s input pm v consumed res
 {
   let res = peek s input consumed;
-  match res { SlicePair left right -> {
+  match res { Mktuple2 left right -> {
     unfold (peek_post s input pm v consumed res);
     unfold (peek_post' s input pm v consumed left right);
     with v1 v2 . assert (pts_to_serialized s left #pm v1 ** pts_to right #pm v2);
     intro_trade (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) (is_split input left right) (peek_trade_aux s input pm consumed v left right v1 v2 ());
     fold (peek_trade_post' s input pm v consumed left right);
-    fold (peek_trade_post s input pm v consumed (left `SlicePair` right));
-    (left `SlicePair` right)
+    fold (peek_trade_post s input pm v consumed (left, right));
+    (left, right)
   }}
 }
 ```
@@ -478,12 +478,12 @@ fn peek_trade_gen
   )
 {
   let split123 = split_trade input offset;
-  match split123 { SlicePair input1 input23 -> {
+  match split123 { Mktuple2 input1 input23 -> {
     with v23 . assert (pts_to input23 #pm v23);
     Trade.elim_hyp_l (pts_to input1 #pm _) (pts_to input23 #pm v23) _;
     let consumed = SZ.sub off offset;
     let split23 = peek_trade s input23 consumed;
-    match split23 { SlicePair input2 input3 -> {
+    match split23 { Mktuple2 input2 input3 -> {
       unfold (peek_trade_post s input23 pm v23 consumed split23);
       unfold (peek_trade_post' s input23 pm v23 consumed input2 input3);
       with v' . assert (pts_to_serialized s input2 #pm v');
@@ -1591,11 +1591,11 @@ fn l2r_write_copy
   let length = S.len x.v;
   let sp1 = S.split out offset;
   match sp1 {
-    S.SlicePair sp11 sp12 -> {
+    Mktuple2 sp11 sp12 -> {
       with v12 . assert (pts_to sp12 v12);
       let sp2 = S.split sp12 length;
       match sp2 {
-        S.SlicePair sp21 sp22 -> {
+        Mktuple2 sp21 sp22 -> {
           S.pts_to_len sp21;
           S.copy sp21 x.v;
           S.join sp21 sp22 sp12;

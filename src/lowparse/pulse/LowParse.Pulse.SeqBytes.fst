@@ -63,11 +63,11 @@ fn l2r_write_lseq_bytes_copy
   let length = S.len x'.v;
   let sp1 = S.split out offset;
   match sp1 {
-    SlicePair sp11 sp12 -> {
+    Mktuple2 sp11 sp12 -> {
       with v12 . assert (pts_to sp12 v12);
       let sp2 = S.split sp12 length;
       match sp2 {
-        SlicePair sp21 sp22 -> {
+        Mktuple2 sp21 sp22 -> {
           pts_to_len sp21;
           S.copy sp21 x'.v;
           fold (pts_to_seqbytes n x' x);
