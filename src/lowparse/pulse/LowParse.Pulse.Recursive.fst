@@ -664,7 +664,7 @@ fn impl_nlist_forall_pred_recursive
         j
         (serialize_nlist_recursive_cons_payload s (SZ.v n))
         pi;
-      match spl { S.SlicePair ph pc -> {
+      match spl { Mktuple2 ph pc -> {
         unfold (C.split_dtuple2_post (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi spl);
         unfold (C.split_dtuple2_post' (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi ph pc);
         Trade.trans

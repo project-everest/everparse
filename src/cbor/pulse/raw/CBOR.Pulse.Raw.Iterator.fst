@@ -245,7 +245,7 @@ fn slice_split_right (#t: Type0) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Se
 {
   let sp = S.split s i;
   match sp {
-    S.SlicePair s1 s2 -> {
+    Mktuple2 s1 s2 -> {
       with v1 . assert (pts_to s1 #p v1);
       with v2 . assert (pts_to s2 #p v2);
       let sq : squash (Ghost.reveal v == v1 `Seq.append` v2) = Seq.lemma_split v (SZ.v i);

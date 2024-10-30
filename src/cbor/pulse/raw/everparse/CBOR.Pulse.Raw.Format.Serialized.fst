@@ -251,7 +251,7 @@ fn cbor_serialized_map_iterator_next_cont (sq: squash SZ.fits_u64)
     serialize_raw_data_item
     x;
   match sp {
-    SlicePair s1 s2 -> {
+    Mktuple2 s1 s2 -> {
       unfold (LPC.split_nondep_then_post serialize_raw_data_item serialize_raw_data_item x pm v sp);
       unfold (LPC.split_nondep_then_post' serialize_raw_data_item serialize_raw_data_item x pm v s1 s2);
       with v1 . assert (pts_to_serialized serialize_raw_data_item s1 #pm v1);

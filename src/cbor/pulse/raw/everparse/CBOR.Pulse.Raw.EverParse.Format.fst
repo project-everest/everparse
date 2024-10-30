@@ -755,7 +755,7 @@ fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (serialize_dtuple2 serialize_header serialize_leaf_content)
     a;
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
-  match spl { S.SlicePair input1 input2 -> {
+  match spl { Mktuple2 input1 input2 -> {
     unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
     unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
     let h = read_header () input1;
@@ -807,7 +807,7 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (serialize_dtuple2 serialize_header serialize_leaf_content)
     a;
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
-  match spl { S.SlicePair input1 input2 -> {
+  match spl { Mktuple2 input1 input2 -> {
     unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
     unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
     let h = read_header () input1;
@@ -905,7 +905,7 @@ fn get_header_and_contents
   Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
   with v' . assert (pts_to_serialized (serialize_dtuple2 serialize_header serialize_content) input #pm v');
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
-  match spl { S.SlicePair ph outc -> {
+  match spl { Mktuple2 ph outc -> {
     unfold (split_dtuple2_post serialize_header serialize_content input pm v' spl);
     unfold (split_dtuple2_post' serialize_header serialize_content input pm v' ph outc);
     Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
