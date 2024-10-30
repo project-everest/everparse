@@ -3790,7 +3790,7 @@ pub(crate) fn cbor_raw_sort_aux(a: &mut [cbor_map_entry], lo: usize, hi: usize) 
                                 cond1
                                 {
                                     let i0: usize = (&pi)[0];
-                                    let save: cbor_map_entry = a[i0];
+                                    let save: &cbor_map_entry = &a[i0];
                                     let mut pj: [usize; 1] = [0usize; 1usize];
                                     let mut pidx: [usize; 1] = [i0; 1usize];
                                     let j: usize = (&pj)[0];
@@ -3814,7 +3814,7 @@ pub(crate) fn cbor_raw_sort_aux(a: &mut [cbor_map_entry], lo: usize, hi: usize) 
                                         cond2 = j1 < q.wrapping_sub(1usize)
                                     };
                                     let idx: usize = (&pidx)[0];
-                                    a[idx] = save;
+                                    a[idx] = *save;
                                     let i·: usize = i0.wrapping_add(1usize);
                                     (&mut pi)[0] = i·;
                                     let i3: usize = (&pi)[0];

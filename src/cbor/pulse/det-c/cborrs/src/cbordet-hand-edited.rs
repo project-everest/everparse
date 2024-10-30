@@ -636,26 +636,18 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                     cbor_raw::CBOR_Case_String { v: v1 } => v1,
                     _ => panic!("Incomplete pattern matching")
                 };
-            let x2·: & [u8] = c·.cbor_string_ptr;
+            let x2·: &[u8] = c·.cbor_string_ptr;
             let length: usize = x2·.len();
-            let sp1: (&mut[u8], &mut[u8]) = out.split_at_mut(res1);
+            let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
             let res0: usize =
-                match sp1
                 {
-                    (_sp11,sp12) =>
-                      {
-                          let sp2: (&mut[u8], &mut[u8]) = sp12.split_at_mut(length);
-                          match sp2
-                          {
-                              (sp21,_sp22) =>
-                                {
-                                    sp21.copy_from_slice(x2·);
-                                    res1.wrapping_add(length)
-                                },
-                              _ => panic!("Incomplete pattern matching")
-                          }
-                      },
-                    _ => panic!("Incomplete pattern matching")
+                    let _sp11: &[u8] = sp1.0;
+                    let sp12: &mut [u8] = sp1.1;
+                    let sp2: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                    let sp21: &mut [u8] = sp2.0;
+                    let _sp22: &[u8] = sp2.1;
+                    sp21.copy_from_slice(x2·);
+                    res1.wrapping_add(length)
                 };
             let res2: usize = res0;
             res2
@@ -680,7 +672,7 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                         }
                         {
                             option__LowParse_Pulse_Base_with_perm··CBOR_Pulse_Raw_Type_cbor_raw·::Some
-                            { ref v }
+                            { v }
                             => v,
                             _ => panic!("Incomplete pattern matching")
                         };
@@ -717,26 +709,18 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                             cbor_raw::CBOR_Case_Serialized_Array { v: v1 } => v1,
                             _ => panic!("Incomplete pattern matching")
                         };
-                    let x2·: & [u8] = xs.cbor_serialized_payload;
+                    let x2·: &[u8] = xs.cbor_serialized_payload;
                     let length: usize = x2·.len();
-                    let sp1: (&mut[u8], &mut[u8]) = out.split_at_mut(res1);
+                    let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
                     let res0: usize =
-                        match sp1
                         {
-                            (_sp11,sp12) =>
-                              {
-                                  let sp2: (&mut[u8], &mut[u8]) = sp12.split_at_mut(length);
-                                  match sp2
-                                  {
-                                      (sp21,_sp22) =>
-                                        {
-                                            sp21.copy_from_slice(x2·);
-                                            res1.wrapping_add(length)
-                                        },
-                                      _ => panic!("Incomplete pattern matching")
-                                  }
-                              },
-                            _ => panic!("Incomplete pattern matching")
+                            let _sp11: &[u8] = sp1.0;
+                            let sp12: &mut [u8] = sp1.1;
+                            let sp2: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                            let sp21: &mut [u8] = sp2.0;
+                            let _sp22: &[u8] = sp2.1;
+                            sp21.copy_from_slice(x2·);
+                            res1.wrapping_add(length)
                         };
                     let res2: usize = res0;
                     let res3: usize = res2;
@@ -763,7 +747,7 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                             }
                             {
                                 option__LowParse_Pulse_Base_with_perm··CBOR_Pulse_Raw_Type_cbor_map_entry·::Some
-                                { ref v }
+                                { v }
                                 => v,
                                 _ => panic!("Incomplete pattern matching")
                             };
@@ -803,26 +787,18 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                                 cbor_raw::CBOR_Case_Serialized_Map { v: v1 } => v1,
                                 _ => panic!("Incomplete pattern matching")
                             };
-                        let x2·: & [u8] = xs.cbor_serialized_payload;
+                        let x2·: &[u8] = xs.cbor_serialized_payload;
                         let length: usize = x2·.len();
-                        let sp1: (&mut[u8], &mut[u8]) = out.split_at_mut(res1);
+                        let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
                         let res0: usize =
-                            match sp1
                             {
-                                (_sp11,sp12) =>
-                                  {
-                                      let sp2: (&mut[u8], &mut[u8]) = sp12.split_at_mut(length);
-                                      match sp2
-                                      {
-                                          (sp21,_sp22) =>
-                                            {
-                                                sp21.copy_from_slice(x2·);
-                                                res1.wrapping_add(length)
-                                            },
-                                          _ => panic!("Incomplete pattern matching")
-                                      }
-                                  },
-                                _ => panic!("Incomplete pattern matching")
+                                let _sp11: &[u8] = sp1.0;
+                                let sp12: &mut [u8] = sp1.1;
+                                let sp2: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                                let sp21: &mut [u8] = sp2.0;
+                                let _sp22: &[u8] = sp2.1;
+                                sp21.copy_from_slice(x2·);
+                                res1.wrapping_add(length)
                             };
                         let res2: usize = res0;
                         let res3: usize = res2;
@@ -857,26 +833,18 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                                         cbor_raw::CBOR_Case_Serialized_Tagged { v: v1 } => v1,
                                         _ => panic!("Incomplete pattern matching")
                                     };
-                                let x2·: & [u8] = ser.cbor_serialized_payload;
+                                let x2·: &[u8] = ser.cbor_serialized_payload;
                                 let length: usize = x2·.len();
-                                let sp1: (&mut[u8], &mut[u8]) = out.split_at_mut(res1);
+                                let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
                                 let res0: usize =
-                                    match sp1
                                     {
-                                        (_sp11,sp12) =>
-                                          {
-                                              let sp2: (&mut[u8], &mut[u8]) = sp12.split_at_mut(length);
-                                              match sp2
-                                              {
-                                                  (sp21,_sp22) =>
-                                                    {
-                                                        sp21.copy_from_slice(x2·);
-                                                        res1.wrapping_add(length)
-                                                    },
-                                                  _ => panic!("Incomplete pattern matching")
-                                              }
-                                          },
-                                        _ => panic!("Incomplete pattern matching")
+                                        let _sp11: &[u8] = sp1.0;
+                                        let sp12: &mut [u8] = sp1.1;
+                                        let sp2: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
+                                        let sp21: &mut [u8] = sp2.0;
+                                        let _sp22: &[u8] = sp2.1;
+                                        sp21.copy_from_slice(x2·);
+                                        res1.wrapping_add(length)
                                     };
                                 let res2: usize = res0;
                                 res2
@@ -962,7 +930,7 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                                 }
                                 {
                                     option__LowParse_Pulse_Base_with_perm··CBOR_Pulse_Raw_Type_cbor_raw·::Some
-                                    { ref v }
+                                    { v }
                                     => v,
                                     _ => panic!("Incomplete pattern matching")
                                 };
@@ -1040,7 +1008,7 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                                     }
                                     {
                                         option__LowParse_Pulse_Base_with_perm··CBOR_Pulse_Raw_Type_cbor_map_entry·::Some
-                                        { ref v }
+                                        { v }
                                         => v,
                                         _ => panic!("Incomplete pattern matching")
                                     };
@@ -1211,117 +1179,119 @@ fn read_header(input: &[u8]) -> header
     let i: usize = 1usize;
     let s: (&[u8], &[u8]) = input.split_at(i);
     let res: (&[u8], &[u8]) =
-        match s { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
     let split12: (&[u8], &[u8]) =
-        match res { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
-    match split12
-    {
-        (input1,input2) =>
-          {
-              let x: initial_byte_t = read_initial_byte_t(input1);
-              let res0: initial_byte_t = x;
-              let x1: initial_byte_t = res0;
-              let x2: long_argument =
-                  if x1.additional_info == additional_info_long_argument_8_bits
-                  {
-                      if x1.major_type == cbor_major_type_simple_value
-                      {
-                          let last: u8 = input2[0usize];
-                          let res1: u8 = last;
-                          let x0: u8 = res1;
-                          let res2: long_argument =
-                              long_argument::LongArgumentSimpleValue { v: x0 };
-                          let res3: long_argument = res2;
-                          let res4: long_argument = res3;
-                          res4
-                      }
-                      else
-                      {
-                          let last: u8 = input2[0usize];
-                          let res1: u8 = last;
-                          let x0: u8 = res1;
-                          let res2: long_argument = long_argument::LongArgumentU8 { v: x0 };
-                          let res3: long_argument = res2;
-                          res3
-                      }
-                  }
-                  else if x1.additional_info == additional_info_long_argument_16_bits
-                  {
-                      let pos·: usize = 1usize;
-                      let last: u8 = input2[pos·];
-                      let last1: u8 = input2[0usize];
-                      let n: u16 = last1 as u16;
-                      let blast: u16 = last as u16;
-                      let res1: u16 = blast.wrapping_add(n.wrapping_mul(256u16));
-                      let x0: u16 = res1;
-                      let res2: long_argument = long_argument::LongArgumentU16 { v: x0 };
-                      let res3: long_argument = res2;
-                      res3
-                  }
-                  else if x1.additional_info == additional_info_long_argument_32_bits
-                  {
-                      let pos·: usize = 3usize;
-                      let last: u8 = input2[pos·];
-                      let pos·1: usize = pos·.wrapping_sub(1usize);
-                      let last1: u8 = input2[pos·1];
-                      let pos·2: usize = pos·1.wrapping_sub(1usize);
-                      let last2: u8 = input2[pos·2];
-                      let last3: u8 = input2[0usize];
-                      let n: u32 = last3 as u32;
-                      let blast: u32 = last2 as u32;
-                      let n0: u32 = blast.wrapping_add(n.wrapping_mul(256u32));
-                      let blast0: u32 = last1 as u32;
-                      let n1: u32 = blast0.wrapping_add(n0.wrapping_mul(256u32));
-                      let blast1: u32 = last as u32;
-                      let res1: u32 = blast1.wrapping_add(n1.wrapping_mul(256u32));
-                      let x0: u32 = res1;
-                      let res2: long_argument = long_argument::LongArgumentU32 { v: x0 };
-                      let res3: long_argument = res2;
-                      res3
-                  }
-                  else if x1.additional_info == additional_info_long_argument_64_bits
-                  {
-                      let pos·: usize = 7usize;
-                      let last: u8 = input2[pos·];
-                      let pos·1: usize = pos·.wrapping_sub(1usize);
-                      let last1: u8 = input2[pos·1];
-                      let pos·2: usize = pos·1.wrapping_sub(1usize);
-                      let last2: u8 = input2[pos·2];
-                      let pos·3: usize = pos·2.wrapping_sub(1usize);
-                      let last3: u8 = input2[pos·3];
-                      let pos·4: usize = pos·3.wrapping_sub(1usize);
-                      let last4: u8 = input2[pos·4];
-                      let pos·5: usize = pos·4.wrapping_sub(1usize);
-                      let last5: u8 = input2[pos·5];
-                      let pos·6: usize = pos·5.wrapping_sub(1usize);
-                      let last6: u8 = input2[pos·6];
-                      let last7: u8 = input2[0usize];
-                      let n: u64 = last7 as u64;
-                      let blast: u64 = last6 as u64;
-                      let n0: u64 = blast.wrapping_add(n.wrapping_mul(256u64));
-                      let blast0: u64 = last5 as u64;
-                      let n1: u64 = blast0.wrapping_add(n0.wrapping_mul(256u64));
-                      let blast1: u64 = last4 as u64;
-                      let n2: u64 = blast1.wrapping_add(n1.wrapping_mul(256u64));
-                      let blast2: u64 = last3 as u64;
-                      let n3: u64 = blast2.wrapping_add(n2.wrapping_mul(256u64));
-                      let blast3: u64 = last2 as u64;
-                      let n4: u64 = blast3.wrapping_add(n3.wrapping_mul(256u64));
-                      let blast4: u64 = last1 as u64;
-                      let n5: u64 = blast4.wrapping_add(n4.wrapping_mul(256u64));
-                      let blast5: u64 = last as u64;
-                      let res1: u64 = blast5.wrapping_add(n5.wrapping_mul(256u64));
-                      let x0: u64 = res1;
-                      let res2: long_argument = long_argument::LongArgumentU64 { v: x0 };
-                      let res3: long_argument = res2;
-                      res3
-                  }
-                  else
-                  { long_argument::LongArgumentOther { a: x1.additional_info } };
-              header { fst: x1, snd: x2 }
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let input1: &[u8] = split12.0;
+    let input2: &[u8] = split12.1;
+    let x: initial_byte_t = read_initial_byte_t(input1);
+    let res0: initial_byte_t = x;
+    let x1: initial_byte_t = res0;
+    let x2: long_argument =
+        if x1.additional_info == additional_info_long_argument_8_bits
+        {
+            if x1.major_type == cbor_major_type_simple_value
+            {
+                let last: u8 = input2[0usize];
+                let res1: u8 = last;
+                let x0: u8 = res1;
+                let res2: long_argument = long_argument::LongArgumentSimpleValue { v: x0 };
+                let res3: long_argument = res2;
+                let res4: long_argument = res3;
+                res4
+            }
+            else
+            {
+                let last: u8 = input2[0usize];
+                let res1: u8 = last;
+                let x0: u8 = res1;
+                let res2: long_argument = long_argument::LongArgumentU8 { v: x0 };
+                let res3: long_argument = res2;
+                res3
+            }
+        }
+        else if x1.additional_info == additional_info_long_argument_16_bits
+        {
+            let pos·: usize = 1usize;
+            let last: u8 = input2[pos·];
+            let last1: u8 = input2[0usize];
+            let n: u16 = last1 as u16;
+            let blast: u16 = last as u16;
+            let res1: u16 = blast.wrapping_add(n.wrapping_mul(256u16));
+            let x0: u16 = res1;
+            let res2: long_argument = long_argument::LongArgumentU16 { v: x0 };
+            let res3: long_argument = res2;
+            res3
+        }
+        else if x1.additional_info == additional_info_long_argument_32_bits
+        {
+            let pos·: usize = 3usize;
+            let last: u8 = input2[pos·];
+            let pos·1: usize = pos·.wrapping_sub(1usize);
+            let last1: u8 = input2[pos·1];
+            let pos·2: usize = pos·1.wrapping_sub(1usize);
+            let last2: u8 = input2[pos·2];
+            let last3: u8 = input2[0usize];
+            let n: u32 = last3 as u32;
+            let blast: u32 = last2 as u32;
+            let n0: u32 = blast.wrapping_add(n.wrapping_mul(256u32));
+            let blast0: u32 = last1 as u32;
+            let n1: u32 = blast0.wrapping_add(n0.wrapping_mul(256u32));
+            let blast1: u32 = last as u32;
+            let res1: u32 = blast1.wrapping_add(n1.wrapping_mul(256u32));
+            let x0: u32 = res1;
+            let res2: long_argument = long_argument::LongArgumentU32 { v: x0 };
+            let res3: long_argument = res2;
+            res3
+        }
+        else if x1.additional_info == additional_info_long_argument_64_bits
+        {
+            let pos·: usize = 7usize;
+            let last: u8 = input2[pos·];
+            let pos·1: usize = pos·.wrapping_sub(1usize);
+            let last1: u8 = input2[pos·1];
+            let pos·2: usize = pos·1.wrapping_sub(1usize);
+            let last2: u8 = input2[pos·2];
+            let pos·3: usize = pos·2.wrapping_sub(1usize);
+            let last3: u8 = input2[pos·3];
+            let pos·4: usize = pos·3.wrapping_sub(1usize);
+            let last4: u8 = input2[pos·4];
+            let pos·5: usize = pos·4.wrapping_sub(1usize);
+            let last5: u8 = input2[pos·5];
+            let pos·6: usize = pos·5.wrapping_sub(1usize);
+            let last6: u8 = input2[pos·6];
+            let last7: u8 = input2[0usize];
+            let n: u64 = last7 as u64;
+            let blast: u64 = last6 as u64;
+            let n0: u64 = blast.wrapping_add(n.wrapping_mul(256u64));
+            let blast0: u64 = last5 as u64;
+            let n1: u64 = blast0.wrapping_add(n0.wrapping_mul(256u64));
+            let blast1: u64 = last4 as u64;
+            let n2: u64 = blast1.wrapping_add(n1.wrapping_mul(256u64));
+            let blast2: u64 = last3 as u64;
+            let n3: u64 = blast2.wrapping_add(n2.wrapping_mul(256u64));
+            let blast3: u64 = last2 as u64;
+            let n4: u64 = blast3.wrapping_add(n3.wrapping_mul(256u64));
+            let blast4: u64 = last1 as u64;
+            let n5: u64 = blast4.wrapping_add(n4.wrapping_mul(256u64));
+            let blast5: u64 = last as u64;
+            let res1: u64 = blast5.wrapping_add(n5.wrapping_mul(256u64));
+            let x0: u64 = res1;
+            let res2: long_argument = long_argument::LongArgumentU64 { v: x0 };
+            let res3: long_argument = res2;
+            res3
+        }
+        else
+        { long_argument::LongArgumentOther { a: x1.additional_info } };
+    header { fst: x1, snd: x2 }
 }
 
 fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
@@ -1343,27 +1313,32 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
             let off: usize = poffset[0];
             let s·: (&[u8], &[u8]) = input.split_at(offset2);
             let split123: (&[u8], &[u8]) =
-                match s· { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-            let input·: &[u8] =
-                match split123
                 {
-                    (_input1,input23) =>
-                      {
-                          let consumed: usize = off.wrapping_sub(offset2);
-                          let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                          let res: (&[u8], &[u8]) =
-                              match s1s2
-                              { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                          let split23: (&[u8], &[u8]) =
-                              match res
-                              {
-                                  (left,right) => (left,right),
-                                  _ => panic!("Incomplete pattern matching")
-                              };
-                          match split23
-                          { (input2,_input3) => input2, _ => panic!("Incomplete pattern matching") }
-                      },
-                    _ => panic!("Incomplete pattern matching")
+                    let s1: &[u8] = s·.0;
+                    let s2: &[u8] = s·.1;
+                    (s1,s2)
+                };
+            let input·: &[u8] =
+                {
+                    let _input1: &[u8] = split123.0;
+                    let input23: &[u8] = split123.1;
+                    let consumed: usize = off.wrapping_sub(offset2);
+                    let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                    let res: (&[u8], &[u8]) =
+                        {
+                            let s1: &[u8] = s1s2.0;
+                            let s2: &[u8] = s1s2.1;
+                            (s1,s2)
+                        };
+                    let split23: (&[u8], &[u8]) =
+                        {
+                            let left: &[u8] = res.0;
+                            let right: &[u8] = res.1;
+                            (left,right)
+                        };
+                    let input2: &[u8] = split23.0;
+                    let _input3: &[u8] = split23.1;
+                    input2
                 };
             let res: initial_byte_t = read_initial_byte_t(input·);
             let x: initial_byte_t = res;
@@ -1381,27 +1356,32 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
         let off: usize = poffset[0];
         let s·: (&[u8], &[u8]) = input.split_at(offset1);
         let split123: (&[u8], &[u8]) =
-            match s· { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-        let input·: &[u8] =
-            match split123
             {
-                (_input1,input23) =>
-                  {
-                      let consumed: usize = off.wrapping_sub(offset1);
-                      let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                      let res: (&[u8], &[u8]) =
-                          match s1s2
-                          { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                      let split23: (&[u8], &[u8]) =
-                          match res
-                          {
-                              (left,right) => (left,right),
-                              _ => panic!("Incomplete pattern matching")
-                          };
-                      match split23
-                      { (input2,_input3) => input2, _ => panic!("Incomplete pattern matching") }
-                  },
-                _ => panic!("Incomplete pattern matching")
+                let s1: &[u8] = s·.0;
+                let s2: &[u8] = s·.1;
+                (s1,s2)
+            };
+        let input·: &[u8] =
+            {
+                let _input1: &[u8] = split123.0;
+                let input23: &[u8] = split123.1;
+                let consumed: usize = off.wrapping_sub(offset1);
+                let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                let res: (&[u8], &[u8]) =
+                    {
+                        let s1: &[u8] = s1s2.0;
+                        let s2: &[u8] = s1s2.1;
+                        (s1,s2)
+                    };
+                let split23: (&[u8], &[u8]) =
+                    {
+                        let left: &[u8] = res.0;
+                        let right: &[u8] = res.1;
+                        (left,right)
+                    };
+                let input2: &[u8] = split23.0;
+                let _input3: &[u8] = split23.1;
+                input2
             };
         let x: initial_byte_t = read_initial_byte_t(input·);
         let res: initial_byte_t = x;
@@ -1426,34 +1406,32 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
                     let off1: usize = poffset[0];
                     let s·0: (&[u8], &[u8]) = input.split_at(offset20);
                     let split1230: (&[u8], &[u8]) =
-                        match s·0
-                        { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                    let input·0: &[u8] =
-                        match split1230
                         {
-                            (_input1,input23) =>
-                              {
-                                  let consumed: usize = off1.wrapping_sub(offset20);
-                                  let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                                  let res1: (&[u8], &[u8]) =
-                                      match s1s2
-                                      {
-                                          (s1,s2) => (s1,s2),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  let split23: (&[u8], &[u8]) =
-                                      match res1
-                                      {
-                                          (left,right) => (left,right),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  match split23
-                                  {
-                                      (input2,_input3) => input2,
-                                      _ => panic!("Incomplete pattern matching")
-                                  }
-                              },
-                            _ => panic!("Incomplete pattern matching")
+                            let s1: &[u8] = s·0.0;
+                            let s2: &[u8] = s·0.1;
+                            (s1,s2)
+                        };
+                    let input·0: &[u8] =
+                        {
+                            let _input1: &[u8] = split1230.0;
+                            let input23: &[u8] = split1230.1;
+                            let consumed: usize = off1.wrapping_sub(offset20);
+                            let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                            let res1: (&[u8], &[u8]) =
+                                {
+                                    let s1: &[u8] = s1s2.0;
+                                    let s2: &[u8] = s1s2.1;
+                                    (s1,s2)
+                                };
+                            let split23: (&[u8], &[u8]) =
+                                {
+                                    let left: &[u8] = res1.0;
+                                    let right: &[u8] = res1.1;
+                                    (left,right)
+                                };
+                            let input2: &[u8] = split23.0;
+                            let _input3: &[u8] = split23.1;
+                            input2
                         };
                     let last: u8 = input·0[0usize];
                     let res1: u8 = last;
@@ -1521,23 +1499,32 @@ fn jump_header(input: &[u8], offset: usize) -> usize
     let off1: usize = offset.wrapping_add(1usize);
     let s·: (&[u8], &[u8]) = input.split_at(offset);
     let split123: (&[u8], &[u8]) =
-        match s· { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-    let input·: &[u8] =
-        match split123
         {
-            (_input1,input23) =>
-              {
-                  let consumed: usize = off1.wrapping_sub(offset);
-                  let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                  let res: (&[u8], &[u8]) =
-                      match s1s2 { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                  let split23: (&[u8], &[u8]) =
-                      match res
-                      { (left,right) => (left,right), _ => panic!("Incomplete pattern matching") };
-                  match split23
-                  { (input2,_input3) => input2, _ => panic!("Incomplete pattern matching") }
-              },
-            _ => panic!("Incomplete pattern matching")
+            let s1: &[u8] = s·.0;
+            let s2: &[u8] = s·.1;
+            (s1,s2)
+        };
+    let input·: &[u8] =
+        {
+            let _input1: &[u8] = split123.0;
+            let input23: &[u8] = split123.1;
+            let consumed: usize = off1.wrapping_sub(offset);
+            let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+            let res: (&[u8], &[u8]) =
+                {
+                    let s1: &[u8] = s1s2.0;
+                    let s2: &[u8] = s1s2.1;
+                    (s1,s2)
+                };
+            let split23: (&[u8], &[u8]) =
+                {
+                    let left: &[u8] = res.0;
+                    let right: &[u8] = res.1;
+                    (left,right)
+                };
+            let input2: &[u8] = split23.0;
+            let _input3: &[u8] = split23.1;
+            input2
         };
     let x: initial_byte_t = read_initial_byte_t(input·);
     let res: initial_byte_t = x;
@@ -1560,49 +1547,52 @@ fn validate_recursive_step_count_leaf(a: &[u8], bound: usize, prem: &mut [usize]
     let i: usize = jump_header(a, 0usize);
     let s: (&[u8], &[u8]) = a.split_at(i);
     let res: (&[u8], &[u8]) =
-        match s { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
     let spl: (&[u8], &[u8]) =
-        match res { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
-    match spl
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let input1: &[u8] = spl.0;
+    let _input2: &[u8] = spl.1;
+    let h: header = read_header(input1);
+    let typ: u8 = get_header_major_type(h);
+    if typ == cbor_major_type_array
     {
-        (input1,_input2) =>
-          {
-              let h: header = read_header(input1);
-              let typ: u8 = get_header_major_type(h);
-              if typ == cbor_major_type_array
-              {
-                  let l: long_argument = h.snd;
-                  let arg64: u64 = argument_as_uint64(l);
-                  prem[0] = arg64 as usize;
-                  false
-              }
-              else if typ == cbor_major_type_map
-              {
-                  let l: long_argument = h.snd;
-                  let arg64: u64 = argument_as_uint64(l);
-                  let arg: usize = arg64 as usize;
-                  if arg > bound
-                  { true }
-                  else if bound.wrapping_sub(arg) < arg
-                  { true }
-                  else
-                  {
-                      prem[0] = arg.wrapping_add(arg);
-                      false
-                  }
-              }
-              else if typ == cbor_major_type_tagged
-              {
-                  prem[0] = 1usize;
-                  false
-              }
-              else
-              {
-                  prem[0] = 0usize;
-                  false
-              }
-          },
-        _ => panic!("Incomplete pattern matching")
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(l);
+        prem[0] = arg64 as usize;
+        false
+    }
+    else if typ == cbor_major_type_map
+    {
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(l);
+        let arg: usize = arg64 as usize;
+        if arg > bound
+        { true }
+        else if bound.wrapping_sub(arg) < arg
+        { true }
+        else
+        {
+            prem[0] = arg.wrapping_add(arg);
+            false
+        }
+    }
+    else if typ == cbor_major_type_tagged
+    {
+        prem[0] = 1usize;
+        false
+    }
+    else
+    {
+        prem[0] = 0usize;
+        false
     }
 }
 
@@ -1611,32 +1601,35 @@ fn jump_recursive_step_count_leaf(a: &[u8]) -> usize
     let i: usize = jump_header(a, 0usize);
     let s: (&[u8], &[u8]) = a.split_at(i);
     let res: (&[u8], &[u8]) =
-        match s { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
     let spl: (&[u8], &[u8]) =
-        match res { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
-    match spl
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let input1: &[u8] = spl.0;
+    let _input2: &[u8] = spl.1;
+    let h: header = read_header(input1);
+    let typ: u8 = get_header_major_type(h);
+    if typ == cbor_major_type_array
     {
-        (input1,_input2) =>
-          {
-              let h: header = read_header(input1);
-              let typ: u8 = get_header_major_type(h);
-              if typ == cbor_major_type_array
-              {
-                  let l: long_argument = h.snd;
-                  let arg64: u64 = argument_as_uint64(l);
-                  arg64 as usize
-              }
-              else if typ == cbor_major_type_map
-              {
-                  let l: long_argument = h.snd;
-                  let arg64: u64 = argument_as_uint64(l);
-                  let arg: usize = arg64 as usize;
-                  arg.wrapping_add(arg)
-              }
-              else if typ == cbor_major_type_tagged { 1usize } else { 0usize }
-          },
-        _ => panic!("Incomplete pattern matching")
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(l);
+        arg64 as usize
     }
+    else if typ == cbor_major_type_map
+    {
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(l);
+        let arg: usize = arg64 as usize;
+        arg.wrapping_add(arg)
+    }
+    else if typ == cbor_major_type_tagged { 1usize } else { 0usize }
 }
 
 fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
@@ -1663,33 +1656,32 @@ fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
                     let off1: usize = poffset[0];
                     let s·: (&[u8], &[u8]) = input.split_at(offset1);
                     let split123: (&[u8], &[u8]) =
-                        match s· { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                    let input·: &[u8] =
-                        match split123
                         {
-                            (_input1,input23) =>
-                              {
-                                  let consumed: usize = off1.wrapping_sub(offset1);
-                                  let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                                  let res0: (&[u8], &[u8]) =
-                                      match s1s2
-                                      {
-                                          (s1,s2) => (s1,s2),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  let split23: (&[u8], &[u8]) =
-                                      match res0
-                                      {
-                                          (left,right) => (left,right),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  match split23
-                                  {
-                                      (input2,_input3) => input2,
-                                      _ => panic!("Incomplete pattern matching")
-                                  }
-                              },
-                            _ => panic!("Incomplete pattern matching")
+                            let s1: &[u8] = s·.0;
+                            let s2: &[u8] = s·.1;
+                            (s1,s2)
+                        };
+                    let input·: &[u8] =
+                        {
+                            let _input1: &[u8] = split123.0;
+                            let input23: &[u8] = split123.1;
+                            let consumed: usize = off1.wrapping_sub(offset1);
+                            let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                            let res0: (&[u8], &[u8]) =
+                                {
+                                    let s1: &[u8] = s1s2.0;
+                                    let s2: &[u8] = s1s2.1;
+                                    (s1,s2)
+                                };
+                            let split23: (&[u8], &[u8]) =
+                                {
+                                    let left: &[u8] = res0.0;
+                                    let right: &[u8] = res0.1;
+                                    (left,right)
+                                };
+                            let input2: &[u8] = split23.0;
+                            let _input3: &[u8] = split23.1;
+                            input2
                         };
                     let res0: header = read_header(input·);
                     let x: header = res0;
@@ -1722,30 +1714,32 @@ fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
                 let offset10: usize = poffset[0];
                 let s·: (&[u8], &[u8]) = input.split_at(off);
                 let split123: (&[u8], &[u8]) =
-                    match s· { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                let input1: &[u8] =
-                    match split123
                     {
-                        (_input1,input23) =>
-                          {
-                              let consumed: usize = offset10.wrapping_sub(off);
-                              let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                              let res0: (&[u8], &[u8]) =
-                                  match s1s2
-                                  { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                              let split23: (&[u8], &[u8]) =
-                                  match res0
-                                  {
-                                      (left,right) => (left,right),
-                                      _ => panic!("Incomplete pattern matching")
-                                  };
-                              match split23
-                              {
-                                  (input2,_input3) => input2,
-                                  _ => panic!("Incomplete pattern matching")
-                              }
-                          },
-                        _ => panic!("Incomplete pattern matching")
+                        let s1: &[u8] = s·.0;
+                        let s2: &[u8] = s·.1;
+                        (s1,s2)
+                    };
+                let input1: &[u8] =
+                    {
+                        let _input1: &[u8] = split123.0;
+                        let input23: &[u8] = split123.1;
+                        let consumed: usize = offset10.wrapping_sub(off);
+                        let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                        let res0: (&[u8], &[u8]) =
+                            {
+                                let s1: &[u8] = s1s2.0;
+                                let s2: &[u8] = s1s2.1;
+                                (s1,s2)
+                            };
+                        let split23: (&[u8], &[u8]) =
+                            {
+                                let left: &[u8] = res0.0;
+                                let right: &[u8] = res0.1;
+                                (left,right)
+                            };
+                        let input2: &[u8] = split23.0;
+                        let _input3: &[u8] = split23.1;
+                        input2
                     };
                 let bound: usize = input.len().wrapping_sub(off).wrapping_sub(n0);
                 let res2: bool = validate_recursive_step_count_leaf(input1, bound, &mut pn);
@@ -1779,27 +1773,32 @@ fn jump_raw_data_item(input: &[u8], offset: usize) -> usize
         let off1: usize = jump_header(input, off);
         let s·: (&[u8], &[u8]) = input.split_at(off);
         let split123: (&[u8], &[u8]) =
-            match s· { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-        let input·: &[u8] =
-            match split123
             {
-                (_input1,input23) =>
-                  {
-                      let consumed: usize = off1.wrapping_sub(off);
-                      let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                      let res: (&[u8], &[u8]) =
-                          match s1s2
-                          { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                      let split23: (&[u8], &[u8]) =
-                          match res
-                          {
-                              (left,right) => (left,right),
-                              _ => panic!("Incomplete pattern matching")
-                          };
-                      match split23
-                      { (input2,_input3) => input2, _ => panic!("Incomplete pattern matching") }
-                  },
-                _ => panic!("Incomplete pattern matching")
+                let s1: &[u8] = s·.0;
+                let s2: &[u8] = s·.1;
+                (s1,s2)
+            };
+        let input·: &[u8] =
+            {
+                let _input1: &[u8] = split123.0;
+                let input23: &[u8] = split123.1;
+                let consumed: usize = off1.wrapping_sub(off);
+                let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                let res: (&[u8], &[u8]) =
+                    {
+                        let s1: &[u8] = s1s2.0;
+                        let s2: &[u8] = s1s2.1;
+                        (s1,s2)
+                    };
+                let split23: (&[u8], &[u8]) =
+                    {
+                        let left: &[u8] = res.0;
+                        let right: &[u8] = res.1;
+                        (left,right)
+                    };
+                let input2: &[u8] = split23.0;
+                let _input3: &[u8] = split23.1;
+                input2
             };
         let res: header = read_header(input·);
         let x: header = res;
@@ -1818,27 +1817,32 @@ fn jump_raw_data_item(input: &[u8], offset: usize) -> usize
         (&mut poffset)[0] = off10;
         let s·0: (&[u8], &[u8]) = input.split_at(off);
         let split1230: (&[u8], &[u8]) =
-            match s·0 { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-        let input1: &[u8] =
-            match split1230
             {
-                (_input1,input23) =>
-                  {
-                      let consumed: usize = off10.wrapping_sub(off);
-                      let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                      let res0: (&[u8], &[u8]) =
-                          match s1s2
-                          { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                      let split23: (&[u8], &[u8]) =
-                          match res0
-                          {
-                              (left,right) => (left,right),
-                              _ => panic!("Incomplete pattern matching")
-                          };
-                      match split23
-                      { (input2,_input3) => input2, _ => panic!("Incomplete pattern matching") }
-                  },
-                _ => panic!("Incomplete pattern matching")
+                let s1: &[u8] = s·0.0;
+                let s2: &[u8] = s·0.1;
+                (s1,s2)
+            };
+        let input1: &[u8] =
+            {
+                let _input1: &[u8] = split1230.0;
+                let input23: &[u8] = split1230.1;
+                let consumed: usize = off10.wrapping_sub(off);
+                let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                let res0: (&[u8], &[u8]) =
+                    {
+                        let s1: &[u8] = s1s2.0;
+                        let s2: &[u8] = s1s2.1;
+                        (s1,s2)
+                    };
+                let split23: (&[u8], &[u8]) =
+                    {
+                        let left: &[u8] = res0.0;
+                        let right: &[u8] = res0.1;
+                        (left,right)
+                    };
+                let input2: &[u8] = split23.0;
+                let _input3: &[u8] = split23.1;
+                input2
             };
         let n0: usize = (&pn)[0];
         let unused: usize = input.len().wrapping_sub(off10);
@@ -1870,19 +1874,24 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
     let i: usize = jump_header(input, 0usize);
     let s: (&[u8], &[u8]) = input.split_at(i);
     let res: (&[u8], &[u8]) =
-        match s { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-    let spl: (&[u8], &[u8]) =
-        match res { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
-    let pc: & [u8] =
-        match spl
         {
-            (ph1,outc) =>
-              {
-                  let h: header = read_header(ph1);
-                  (&mut ph)[0] = h;
-                  outc
-              },
-            _ => panic!("Incomplete pattern matching")
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let spl: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let pc: &[u8] =
+        {
+            let ph1: &[u8] = spl.0;
+            let outc: &[u8] = spl.1;
+            let h: header = read_header(ph1);
+            (&mut ph)[0] = h;
+            outc
         };
     let h: header = (&ph)[0];
     let typ: u8 = h.fst.major_type;
@@ -2030,35 +2039,40 @@ pub enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
     CBOR_Raw_Iterator_Serialized { _0: &'a [u8] }
 }
 
-fn cbor_serialized_array_iterator_next <'a, 'b: 'a>(
-    pi: &'a mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'b>],
-    i: &'b [u8]
+fn cbor_serialized_array_iterator_next <'b, 'a>(
+    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>],
+    i: &'a [u8]
 ) ->
     cbor_raw
-    <'b>
+    <'a>
 {
     let i1: usize = jump_raw_data_item(i, 0usize);
     let s: (&[u8], &[u8]) = i.split_at(i1);
     let res: (&[u8], &[u8]) =
-        match s { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
     let res0: (&[u8], &[u8]) =
-        match res { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
     let sp: (&[u8], &[u8]) =
-        match res0
-        { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
-    match sp
-    {
-        (s1,s2) =>
-          {
-              let res1: cbor_raw = cbor_read(s1);
-              let i·: &[u8] = s2;
-              pi[0] =
-                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                  { _0: i· };
-              res1
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
+        {
+            let input1: &[u8] = res0.0;
+            let input2: &[u8] = res0.1;
+            (input1,input2)
+        };
+    let s1: &[u8] = sp.0;
+    let s2: &[u8] = sp.1;
+    let res1: cbor_raw = cbor_read(s1);
+    let i·: &[u8] = s2;
+    pi[0] =
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i· };
+    res1
 }
 
 fn cbor_serialized_map_iterator_init <'a>(c: cbor_serialized <'a>) -> &'a [u8]
@@ -2066,64 +2080,76 @@ fn cbor_serialized_map_iterator_init <'a>(c: cbor_serialized <'a>) -> &'a [u8]
 
 fn cbor_serialized_map_iterator_is_empty(c: &[u8]) -> bool { c.len() == 0usize }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
 {
     CBOR_Raw_Iterator_Slice { _0: &'a [cbor_map_entry <'a>] },
     CBOR_Raw_Iterator_Serialized { _0: &'a [u8] }
 }
 
-fn cbor_serialized_map_iterator_next <'a, 'b: 'a>(
-    pi: &'a mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'b>],
-    i: &'b [u8]
+fn cbor_serialized_map_iterator_next <'b, 'a>(
+    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>],
+    i: &'a [u8]
 ) ->
     cbor_map_entry
-    <'b>
+    <'a>
 {
     let off1: usize = jump_raw_data_item(i, 0usize);
     let i1: usize = jump_raw_data_item(i, off1);
     let s: (&[u8], &[u8]) = i.split_at(i1);
     let res: (&[u8], &[u8]) =
-        match s { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
     let res0: (&[u8], &[u8]) =
-        match res { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
     let sp: (&[u8], &[u8]) =
-        match res0
-        { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
-    match sp
-    {
-        (s1,s2) =>
-          {
-              let i10: usize = jump_raw_data_item(s1, 0usize);
-              let s0: (&[u8], &[u8]) = s1.split_at(i10);
-              let res1: (&[u8], &[u8]) =
-                  match s0 { (s11,s21) => (s11,s21), _ => panic!("Incomplete pattern matching") };
-              let res2: (&[u8], &[u8]) =
-                  match res1
-                  { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
-              let sp1: (&[u8], &[u8]) =
-                  match res2
-                  { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
-              let res3: cbor_map_entry =
-                  match sp1
-                  {
-                      (s11,s21) =>
-                        {
-                            let res10: cbor_raw = cbor_read(s11);
-                            let res20: cbor_raw = cbor_read(s21);
-                            cbor_map_entry
-                            { cbor_map_entry_key: res10, cbor_map_entry_value: res20 }
-                        },
-                      _ => panic!("Incomplete pattern matching")
-                  };
-              let i·: &[u8] = s2;
-              pi[0] =
-                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                  { _0: i· };
-              res3
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
+        {
+            let input1: &[u8] = res0.0;
+            let input2: &[u8] = res0.1;
+            (input1,input2)
+        };
+    let s1: &[u8] = sp.0;
+    let s2: &[u8] = sp.1;
+    let i10: usize = jump_raw_data_item(s1, 0usize);
+    let s0: (&[u8], &[u8]) = s1.split_at(i10);
+    let res1: (&[u8], &[u8]) =
+        {
+            let s11: &[u8] = s0.0;
+            let s21: &[u8] = s0.1;
+            (s11,s21)
+        };
+    let res2: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res1.0;
+            let input2: &[u8] = res1.1;
+            (input1,input2)
+        };
+    let sp1: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res2.0;
+            let input2: &[u8] = res2.1;
+            (input1,input2)
+        };
+    let res3: cbor_map_entry =
+        {
+            let s11: &[u8] = sp1.0;
+            let s21: &[u8] = sp1.1;
+            let res10: cbor_raw = cbor_read(s11);
+            let res20: cbor_raw = cbor_read(s21);
+            cbor_map_entry { cbor_map_entry_key: res10, cbor_map_entry_value: res20 }
+        };
+    let i·: &[u8] = s2;
+    pi[0] =
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+        { _0: i· };
+    res3
 }
 
 fn impl_uint8_compare(x1: u8, x2: u8) -> i16
@@ -2233,15 +2259,13 @@ fn cbor_array_iterator_is_empty <'a>(c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_c
 {
     match c
     {
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: ref c· } =>
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: c· } =>
           {
               let res: bool = c·.len() == 0usize;
               let res0: bool = res;
               res0
           },
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-        { _0: ref c· }
-        =>
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: c· } =>
           {
               let res: bool = cbor_serialized_array_iterator_is_empty(c·);
               res
@@ -2250,8 +2274,8 @@ fn cbor_array_iterator_is_empty <'a>(c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_c
     }
 }
 
-fn cbor_array_iterator_next <'a>(
-    pi: &'a mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>]
+fn cbor_array_iterator_next <'b, 'a>(
+    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>]
 ) ->
     cbor_raw
     <'a>
@@ -2259,12 +2283,16 @@ fn cbor_array_iterator_next <'a>(
     let i0: &cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = &pi[0];
     match *i0
     {
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: ref i1 } =>
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: i1 } =>
           {
               let res: &cbor_raw = &i1[0usize];
               let sp: (&[cbor_raw], &[cbor_raw]) = i1.split_at(1usize);
               let s·: &[cbor_raw] =
-                  match sp { (_s1,s2) => s2, _ => panic!("Incomplete pattern matching") };
+                  {
+                      let _s1: &[cbor_raw] = sp.0;
+                      let s2: &[cbor_raw] = sp.1;
+                      s2
+                  };
               let i11: &[cbor_raw] = s·;
               let i·: &[cbor_raw] = i11;
               pi[0] =
@@ -2273,9 +2301,7 @@ fn cbor_array_iterator_next <'a>(
               let res0: cbor_raw = *res;
               res0
           },
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-        { _0: ref i1 }
-        =>
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i1 } =>
           {
               let res: cbor_raw = cbor_serialized_array_iterator_next(pi, i1);
               res
@@ -2318,7 +2344,7 @@ fn cbor_map_iterator_is_empty <'a>(
     match c
     {
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-        { _0: ref c· }
+        { _0: c· }
         =>
           {
               let res: bool = c·.len() == 0usize;
@@ -2326,7 +2352,7 @@ fn cbor_map_iterator_is_empty <'a>(
               res0
           },
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-        { _0: ref c· }
+        { _0: c· }
         =>
           {
               let res: bool = cbor_serialized_map_iterator_is_empty(c·);
@@ -2336,8 +2362,8 @@ fn cbor_map_iterator_is_empty <'a>(
     }
 }
 
-fn cbor_map_iterator_next <'a>(
-    pi: &'a mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>]
+fn cbor_map_iterator_next <'b, 'a>(
+    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>]
 ) ->
     cbor_map_entry
     <'a>
@@ -2345,14 +2371,16 @@ fn cbor_map_iterator_next <'a>(
     let i0: &cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = &pi[0];
     match *i0
     {
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-        { _0: ref i1 }
-        =>
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice { _0: i1 } =>
           {
               let res: &cbor_map_entry = &i1[0usize];
               let sp: (&[cbor_map_entry], &[cbor_map_entry]) = i1.split_at(1usize);
               let s·: &[cbor_map_entry] =
-                  match sp { (_s1,s2) => s2, _ => panic!("Incomplete pattern matching") };
+                  {
+                      let _s1: &[cbor_map_entry] = sp.0;
+                      let s2: &[cbor_map_entry] = sp.1;
+                      s2
+                  };
               let i11: &[cbor_map_entry] = s·;
               let i·: &[cbor_map_entry] = i11;
               pi[0] =
@@ -2362,7 +2390,7 @@ fn cbor_map_iterator_next <'a>(
               res0
           },
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-        { _0: ref i1 }
+        { _0: i1 }
         =>
           {
               let res: cbor_map_entry = cbor_serialized_map_iterator_next(pi, i1);
@@ -2535,7 +2563,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                     match pl1
                     {
                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                        { _0: ref c· }
+                        { _0: c· }
                         =>
                           {
                               let res: bool = c·.len() == 0usize;
@@ -2543,7 +2571,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                               res0
                           },
                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                        { _0: ref c· }
+                        { _0: c· }
                         =>
                           {
                               let res: bool = cbor_serialized_array_iterator_is_empty(c·);
@@ -2555,7 +2583,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                     match pl2
                     {
                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                        { _0: ref c· }
+                        { _0: c· }
                         =>
                           {
                               let res: bool = c·.len() == 0usize;
@@ -2563,7 +2591,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                               res0
                           },
                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                        { _0: ref c· }
+                        { _0: c· }
                         =>
                           {
                               let res: bool = cbor_serialized_array_iterator_is_empty(c·);
@@ -2590,10 +2618,9 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                         while
                         cond
                         {
-                            // let i0: &cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = &(&pi1)[0];
+                            let i0: &cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = &(&pi1)[0];
                             let elt1: cbor_raw =
-                                // match *i0
-                                match pi1[0]
+                                match *i0
                                 {
                                     cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
                                     { _0: i }
@@ -2602,10 +2629,10 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                           let res0: &cbor_raw = &i[0usize];
                                           let sp: (&[cbor_raw], &[cbor_raw]) = i.split_at(1usize);
                                           let s·: &[cbor_raw] =
-                                              match sp
                                               {
-                                                  (_s1,s2) => s2,
-                                                  _ => panic!("Incomplete pattern matching")
+                                                  let _s1: &[cbor_raw] = sp.0;
+                                                  let s2: &[cbor_raw] = sp.1;
+                                                  s2
                                               };
                                           let i11: &[cbor_raw] = s·;
                                           let i·: &[cbor_raw] = i11;
@@ -2636,10 +2663,10 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                           let res0: &cbor_raw = &i[0usize];
                                           let sp: (&[cbor_raw], &[cbor_raw]) = i.split_at(1usize);
                                           let s·: &[cbor_raw] =
-                                              match sp
                                               {
-                                                  (_s1,s2) => s2,
-                                                  _ => panic!("Incomplete pattern matching")
+                                                  let _s1: &[cbor_raw] = sp.0;
+                                                  let s2: &[cbor_raw] = sp.1;
+                                                  s2
                                               };
                                           let i11: &[cbor_raw] = s·;
                                           let i·: &[cbor_raw] = i11;
@@ -2671,7 +2698,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                     match *i11
                                     {
                                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                        { _0: ref c· }
+                                        { _0: c· }
                                         =>
                                           {
                                               let res1: bool = c·.len() == 0usize;
@@ -2679,7 +2706,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                               res2
                                           },
                                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                        { _0: ref c· }
+                                        { _0: c· }
                                         =>
                                           {
                                               let res1: bool =
@@ -2694,7 +2721,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                     match *i21
                                     {
                                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                        { _0: ref c· }
+                                        { _0: c· }
                                         =>
                                           {
                                               let res1: bool = c·.len() == 0usize;
@@ -2702,7 +2729,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                               res2
                                           },
                                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                        { _0: ref c· }
+                                        { _0: c· }
                                         =>
                                           {
                                               let res1: bool =
@@ -2761,7 +2788,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                     match pl1
                     {
                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                        { _0: ref c· }
+                        { _0: c· }
                         =>
                           {
                               let res: bool = c·.len() == 0usize;
@@ -2769,7 +2796,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                               res0
                           },
                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                        { _0: ref c· }
+                        { _0: c· }
                         =>
                           {
                               let res: bool = cbor_serialized_map_iterator_is_empty(c·);
@@ -2781,7 +2808,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                     match pl2
                     {
                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                        { _0: ref c· }
+                        { _0: c· }
                         =>
                           {
                               let res: bool = c·.len() == 0usize;
@@ -2789,7 +2816,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                               res0
                           },
                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                        { _0: ref c· }
+                        { _0: c· }
                         =>
                           {
                               let res: bool = cbor_serialized_map_iterator_is_empty(c·);
@@ -2816,11 +2843,10 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                         while
                         cond
                         {
-                            // let i0: &cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                            //     &(&pi1)[0];
+                            let i0: &cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                                &(&pi1)[0];
                             let elt1: cbor_map_entry =
-                                // match *i0
-                                match pi1[0]
+                                match *i0
                                 {
                                     cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
                                     { _0: i }
@@ -2830,10 +2856,10 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                           let sp: (&[cbor_map_entry], &[cbor_map_entry]) =
                                               i.split_at(1usize);
                                           let s·: &[cbor_map_entry] =
-                                              match sp
                                               {
-                                                  (_s1,s2) => s2,
-                                                  _ => panic!("Incomplete pattern matching")
+                                                  let _s1: &[cbor_map_entry] = sp.0;
+                                                  let s2: &[cbor_map_entry] = sp.1;
+                                                  s2
                                               };
                                           let i11: &[cbor_map_entry] = s·;
                                           let i·: &[cbor_map_entry] = i11;
@@ -2853,11 +2879,10 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                       },
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            // let i00: &cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                            //     &(&pi2)[0];
+                            let i00: &cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                                &(&pi2)[0];
                             let elt2: cbor_map_entry =
-                                // match *i00
-                                match pi2[0]
+                                match *i00
                                 {
                                     cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
                                     { _0: i }
@@ -2867,10 +2892,10 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                           let sp: (&[cbor_map_entry], &[cbor_map_entry]) =
                                               i.split_at(1usize);
                                           let s·: &[cbor_map_entry] =
-                                              match sp
                                               {
-                                                  (_s1,s2) => s2,
-                                                  _ => panic!("Incomplete pattern matching")
+                                                  let _s1: &[cbor_map_entry] = sp.0;
+                                                  let s2: &[cbor_map_entry] = sp.1;
+                                                  s2
                                               };
                                           let i11: &[cbor_map_entry] = s·;
                                           let i·: &[cbor_map_entry] = i11;
@@ -2917,7 +2942,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                     match *i11
                                     {
                                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                        { _0: ref c· }
+                                        { _0: c· }
                                         =>
                                           {
                                               let res0: bool = c·.len() == 0usize;
@@ -2925,7 +2950,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                               res1
                                           },
                                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                        { _0: ref c· }
+                                        { _0: c· }
                                         =>
                                           {
                                               let res0: bool =
@@ -2940,7 +2965,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                     match *i21
                                     {
                                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                        { _0: ref c· }
+                                        { _0: c· }
                                         =>
                                           {
                                               let res0: bool = c·.len() == 0usize;
@@ -2948,7 +2973,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                               res1
                                           },
                                         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                        { _0: ref c· }
+                                        { _0: c· }
                                         =>
                                           {
                                               let res0: bool =
@@ -3025,11 +3050,23 @@ fn cbor_raw_ints_optimal(a: &[u8]) -> bool
     let i: usize = jump_header(a, 0usize);
     let s: (&[u8], &[u8]) = a.split_at(i);
     let res: (&[u8], &[u8]) =
-        match s { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
     let spl: (&[u8], &[u8]) =
-        match res { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
     let input1: &[u8] =
-        match spl { (input1,_input2) => input1, _ => panic!("Incomplete pattern matching") };
+        {
+            let input1: &[u8] = spl.0;
+            let _input2: &[u8] = spl.1;
+            input1
+        };
     let h: header = read_header(input1);
     if get_header_major_type(h) == cbor_major_type_simple_value
     { true }
@@ -3055,26 +3092,55 @@ fn impl_deterministically_encoded_cbor_map_key_order(a1: &[u8], a2: &[u8]) -> bo
     let i: usize = jump_raw_data_item(a1, 0usize);
     let s: (&[u8], &[u8]) = a1.split_at(i);
     let res: (&[u8], &[u8]) =
-        match s { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
     let res0: (&[u8], &[u8]) =
-        match res { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
     let spl: (&[u8], &[u8]) =
-        match res0
-        { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
+        {
+            let input1: &[u8] = res0.0;
+            let input2: &[u8] = res0.1;
+            (input1,input2)
+        };
     let k1: &[u8] =
-        match spl { (input1,_input2) => input1, _ => panic!("Incomplete pattern matching") };
+        {
+            let input1: &[u8] = spl.0;
+            let _input2: &[u8] = spl.1;
+            input1
+        };
     let i0: usize = jump_raw_data_item(a2, 0usize);
     let s0: (&[u8], &[u8]) = a2.split_at(i0);
     let res1: (&[u8], &[u8]) =
-        match s0 { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
+        {
+            let s1: &[u8] = s0.0;
+            let s2: &[u8] = s0.1;
+            (s1,s2)
+        };
     let res2: (&[u8], &[u8]) =
-        match res1
-        { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
+        {
+            let input1: &[u8] = res1.0;
+            let input2: &[u8] = res1.1;
+            (input1,input2)
+        };
     let spl0: (&[u8], &[u8]) =
-        match res2
-        { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
+        {
+            let input1: &[u8] = res2.0;
+            let input2: &[u8] = res2.1;
+            (input1,input2)
+        };
     let k2: &[u8] =
-        match spl0 { (input1,_input2) => input1, _ => panic!("Incomplete pattern matching") };
+        {
+            let input1: &[u8] = spl0.0;
+            let _input2: &[u8] = spl0.1;
+            input1
+        };
     let res3: i16 = lex_compare_bytes(k1, k2);
     res3 < 0i16
 }
@@ -3084,124 +3150,121 @@ fn cbor_raw_sorted(a: &[u8]) -> bool
     let i: usize = jump_header(a, 0usize);
     let s: (&[u8], &[u8]) = a.split_at(i);
     let res: (&[u8], &[u8]) =
-        match s { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
     let spl: (&[u8], &[u8]) =
-        match res { (input1,input2) => (input1,input2), _ => panic!("Incomplete pattern matching") };
-    match spl
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let ah: &[u8] = spl.0;
+    let ap: &[u8] = spl.1;
+    let h: header = read_header(ah);
+    if get_header_major_type(h) == cbor_major_type_map
     {
-        (ah,ap) =>
-          {
-              let h: header = read_header(ah);
-              if get_header_major_type(h) == cbor_major_type_map
-              {
-                  let l: long_argument = h.snd;
-                  let n: u64 = argument_as_uint64(l);
-                  if n as usize == 0usize
-                  { true }
-                  else
-                  {
-                      let off1: usize = jump_raw_data_item(ap, 0usize);
-                      let i0: usize = jump_raw_data_item(ap, off1);
-                      let s1: (&[u8], &[u8]) = ap.split_at(i0);
-                      let res0: (&[u8], &[u8]) =
-                          match s1
-                          { (s11,s2) => (s11,s2), _ => panic!("Incomplete pattern matching") };
-                      let res1: (&[u8], &[u8]) =
-                          match res0
-                          {
-                              (input1,input2) => (input1,input2),
-                              _ => panic!("Incomplete pattern matching")
-                          };
-                      let res2: (&[u8], &[u8]) =
-                          match res1
-                          {
-                              (input1,input2) => (input1,input2),
-                              _ => panic!("Incomplete pattern matching")
-                          };
-                      let pl: (&[u8], &[u8]) =
-                          match res2
-                          { (_s1,_s2) => res2, _ => panic!("Incomplete pattern matching") };
-                      match pl
-                      {
-                          (s10,s2) =>
-                            {
-                                let mut phd: [&[u8]; 1] = [s10; 1usize];
-                                let mut ptl: [&[u8]; 1] = [s2; 1usize];
-                                let n·: usize = (n as usize).wrapping_sub(1usize);
-                                let mut pi: [usize; 1] = [n·; 1usize];
-                                let mut pres: [bool; 1] = [true; 1usize];
-                                let i1: usize = (&pi)[0];
-                                let res3: bool = (&pres)[0];
-                                let mut cond: bool = res3 && i1 > 0usize;
-                                while
-                                cond
-                                {
-                                    let stl: &[u8] = (&ptl)[0];
-                                    let off10: usize = jump_raw_data_item(stl, 0usize);
-                                    let i2: usize = jump_raw_data_item(stl, off10);
-                                    let s3: (&[u8], &[u8]) = stl.split_at(i2);
-                                    let res4: (&[u8], &[u8]) =
-                                        match s3
-                                        {
-                                            (s11,s21) => (s11,s21),
-                                            _ => panic!("Incomplete pattern matching")
-                                        };
-                                    let res5: (&[u8], &[u8]) =
-                                        match res4
-                                        {
-                                            (input1,input2) => (input1,input2),
-                                            _ => panic!("Incomplete pattern matching")
-                                        };
-                                    let res6: (&[u8], &[u8]) =
-                                        match res5
-                                        {
-                                            (input1,input2) => (input1,input2),
-                                            _ => panic!("Incomplete pattern matching")
-                                        };
-                                    let pl1: (&[u8], &[u8]) =
-                                        match res6
-                                        {
-                                            (_s11,_s21) => res6,
-                                            _ => panic!("Incomplete pattern matching")
-                                        };
-                                    match pl1
-                                    {
-                                        (s11,s21) =>
-                                          {
-                                              let shd: &[u8] = (&phd)[0];
-                                              let res7: bool =
-                                                  impl_deterministically_encoded_cbor_map_key_order(
-                                                      shd,
-                                                      s11
-                                                  );
-                                              if res7
-                                              {
-                                                  (&mut phd)[0] = s11;
-                                                  (&mut ptl)[0] = s21;
-                                                  let i3: usize = (&pi)[0];
-                                                  let i·: usize = i3.wrapping_sub(1usize);
-                                                  (&mut pi)[0] = i·
-                                              }
-                                              else
-                                              { (&mut pres)[0] = false }
-                                          },
-                                        _ => panic!("Incomplete pattern matching")
-                                    };
-                                    let i3: usize = (&pi)[0];
-                                    let res7: bool = (&pres)[0];
-                                    cond = res7 && i3 > 0usize
-                                };
-                                (&pres)[0]
-                            },
-                          _ => panic!("Incomplete pattern matching")
-                      }
-                  }
-              }
-              else
-              { true }
-          },
-        _ => panic!("Incomplete pattern matching")
+        let l: long_argument = h.snd;
+        let n: u64 = argument_as_uint64(l);
+        if n as usize == 0usize
+        { true }
+        else
+        {
+            let off1: usize = jump_raw_data_item(ap, 0usize);
+            let i0: usize = jump_raw_data_item(ap, off1);
+            let s1: (&[u8], &[u8]) = ap.split_at(i0);
+            let res0: (&[u8], &[u8]) =
+                {
+                    let s11: &[u8] = s1.0;
+                    let s2: &[u8] = s1.1;
+                    (s11,s2)
+                };
+            let res1: (&[u8], &[u8]) =
+                {
+                    let input1: &[u8] = res0.0;
+                    let input2: &[u8] = res0.1;
+                    (input1,input2)
+                };
+            let res2: (&[u8], &[u8]) =
+                {
+                    let input1: &[u8] = res1.0;
+                    let input2: &[u8] = res1.1;
+                    (input1,input2)
+                };
+            let pl: (&[u8], &[u8]) =
+                {
+                    let _s1: &[u8] = res2.0;
+                    let _s2: &[u8] = res2.1;
+                    res2
+                };
+            let s10: &[u8] = pl.0;
+            let s2: &[u8] = pl.1;
+            let mut phd: [&[u8]; 1] = [s10; 1usize];
+            let mut ptl: [&[u8]; 1] = [s2; 1usize];
+            let n·: usize = (n as usize).wrapping_sub(1usize);
+            let mut pi: [usize; 1] = [n·; 1usize];
+            let mut pres: [bool; 1] = [true; 1usize];
+            let i1: usize = (&pi)[0];
+            let res3: bool = (&pres)[0];
+            let mut cond: bool = res3 && i1 > 0usize;
+            while
+            cond
+            {
+                let stl: &[u8] = (&ptl)[0];
+                let off10: usize = jump_raw_data_item(stl, 0usize);
+                let i2: usize = jump_raw_data_item(stl, off10);
+                let s3: (&[u8], &[u8]) = stl.split_at(i2);
+                let res4: (&[u8], &[u8]) =
+                    {
+                        let s11: &[u8] = s3.0;
+                        let s21: &[u8] = s3.1;
+                        (s11,s21)
+                    };
+                let res5: (&[u8], &[u8]) =
+                    {
+                        let input1: &[u8] = res4.0;
+                        let input2: &[u8] = res4.1;
+                        (input1,input2)
+                    };
+                let res6: (&[u8], &[u8]) =
+                    {
+                        let input1: &[u8] = res5.0;
+                        let input2: &[u8] = res5.1;
+                        (input1,input2)
+                    };
+                let pl1: (&[u8], &[u8]) =
+                    {
+                        let _s11: &[u8] = res6.0;
+                        let _s21: &[u8] = res6.1;
+                        res6
+                    };
+                {
+                    let s11: &[u8] = pl1.0;
+                    let s21: &[u8] = pl1.1;
+                    let shd: &[u8] = (&phd)[0];
+                    let res7: bool = impl_deterministically_encoded_cbor_map_key_order(shd, s11);
+                    if res7
+                    {
+                        (&mut phd)[0] = s11;
+                        (&mut ptl)[0] = s21;
+                        let i3: usize = (&pi)[0];
+                        let i·: usize = i3.wrapping_sub(1usize);
+                        (&mut pi)[0] = i·
+                    }
+                    else
+                    { (&mut pres)[0] = false }
+                };
+                let i3: usize = (&pi)[0];
+                let res7: bool = (&pres)[0];
+                cond = res7 && i3 > 0usize
+            };
+            (&pres)[0]
+        }
     }
+    else
+    { true }
 }
 
 fn cbor_validate_det·(input: &[u8]) -> usize
@@ -3213,27 +3276,32 @@ fn cbor_validate_det·(input: &[u8]) -> usize
     {
         let s·: (&[u8], &[u8]) = input.split_at(0usize);
         let split123: (&[u8], &[u8]) =
-            match s· { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-        let input1: &[u8] =
-            match split123
             {
-                (_input1,input23) =>
-                  {
-                      let consumed: usize = len.wrapping_sub(0usize);
-                      let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                      let res: (&[u8], &[u8]) =
-                          match s1s2
-                          { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                      let split23: (&[u8], &[u8]) =
-                          match res
-                          {
-                              (left,right) => (left,right),
-                              _ => panic!("Incomplete pattern matching")
-                          };
-                      match split23
-                      { (input2,_input3) => input2, _ => panic!("Incomplete pattern matching") }
-                  },
-                _ => panic!("Incomplete pattern matching")
+                let s1: &[u8] = s·.0;
+                let s2: &[u8] = s·.1;
+                (s1,s2)
+            };
+        let input1: &[u8] =
+            {
+                let _input1: &[u8] = split123.0;
+                let input23: &[u8] = split123.1;
+                let consumed: usize = len.wrapping_sub(0usize);
+                let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                let res: (&[u8], &[u8]) =
+                    {
+                        let s1: &[u8] = s1s2.0;
+                        let s2: &[u8] = s1s2.1;
+                        (s1,s2)
+                    };
+                let split23: (&[u8], &[u8]) =
+                    {
+                        let left: &[u8] = res.0;
+                        let right: &[u8] = res.1;
+                        (left,right)
+                    };
+                let input2: &[u8] = split23.0;
+                let _input3: &[u8] = split23.1;
+                input2
             };
         let check: [bool; 1] = [false; 1usize];
         crate::lowstar::ignore::ignore::<&[bool]>(&check);
@@ -3251,16 +3319,29 @@ fn cbor_validate_det·(input: &[u8]) -> usize
             let i: usize = jump_raw_data_item(pi, 0usize);
             let s: (&[u8], &[u8]) = pi.split_at(i);
             let res0: (&[u8], &[u8]) =
-                match s { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
+                {
+                    let s1: &[u8] = s.0;
+                    let s2: &[u8] = s.1;
+                    (s1,s2)
+                };
             let res1: (&[u8], &[u8]) =
-                match res0
-                { (input11,input2) => (input11,input2), _ => panic!("Incomplete pattern matching") };
+                {
+                    let input11: &[u8] = res0.0;
+                    let input2: &[u8] = res0.1;
+                    (input11,input2)
+                };
             let spl: (&[u8], &[u8]) =
-                match res1
-                { (input11,input2) => (input11,input2), _ => panic!("Incomplete pattern matching") };
+                {
+                    let input11: &[u8] = res1.0;
+                    let input2: &[u8] = res1.1;
+                    (input11,input2)
+                };
             let res2: &[u8] =
-                match spl
-                { (input11,_input2) => input11, _ => panic!("Incomplete pattern matching") };
+                {
+                    let input11: &[u8] = spl.0;
+                    let _input2: &[u8] = spl.1;
+                    input11
+                };
             let px: &[u8] = res2;
             let res3: bool = cbor_raw_ints_optimal(px);
             if ! res3
@@ -3270,30 +3351,32 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                 let off1: usize = jump_header(pi, 0usize);
                 let s·0: (&[u8], &[u8]) = pi.split_at(0usize);
                 let split1230: (&[u8], &[u8]) =
-                    match s·0 { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                let input·: &[u8] =
-                    match split1230
                     {
-                        (_input11,input23) =>
-                          {
-                              let consumed: usize = off1.wrapping_sub(0usize);
-                              let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                              let res10: (&[u8], &[u8]) =
-                                  match s1s2
-                                  { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                              let split23: (&[u8], &[u8]) =
-                                  match res10
-                                  {
-                                      (left,right) => (left,right),
-                                      _ => panic!("Incomplete pattern matching")
-                                  };
-                              match split23
-                              {
-                                  (input2,_input3) => input2,
-                                  _ => panic!("Incomplete pattern matching")
-                              }
-                          },
-                        _ => panic!("Incomplete pattern matching")
+                        let s1: &[u8] = s·0.0;
+                        let s2: &[u8] = s·0.1;
+                        (s1,s2)
+                    };
+                let input·: &[u8] =
+                    {
+                        let _input11: &[u8] = split1230.0;
+                        let input23: &[u8] = split1230.1;
+                        let consumed: usize = off1.wrapping_sub(0usize);
+                        let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                        let res10: (&[u8], &[u8]) =
+                            {
+                                let s1: &[u8] = s1s2.0;
+                                let s2: &[u8] = s1s2.1;
+                                (s1,s2)
+                            };
+                        let split23: (&[u8], &[u8]) =
+                            {
+                                let left: &[u8] = res10.0;
+                                let right: &[u8] = res10.1;
+                                (left,right)
+                            };
+                        let input2: &[u8] = split23.0;
+                        let _input3: &[u8] = split23.1;
+                        input2
                     };
                 let res10: header = read_header(input·);
                 let x: header = res10;
@@ -3311,25 +3394,24 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                     { off1.wrapping_add(0usize) };
                 let s0: (&[u8], &[u8]) = pi.split_at(i0);
                 let res11: (&[u8], &[u8]) =
-                    match s0 { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                let spl0: (&[u8], &[u8]) =
-                    match res11
                     {
-                        (input11,input2) => (input11,input2),
-                        _ => panic!("Incomplete pattern matching")
+                        let s1: &[u8] = s0.0;
+                        let s2: &[u8] = s0.1;
+                        (s1,s2)
                     };
-                match spl0
-                {
-                    (ph,pc) =>
-                      {
-                          let unused: usize = pc.len();
-                          crate::lowstar::ignore::ignore::<usize>(unused);
-                          let count: usize = jump_recursive_step_count_leaf(ph);
-                          (&mut pn)[0] = n0.wrapping_sub(1usize).wrapping_add(count);
-                          (&mut ppi)[0] = pc
-                      },
-                    _ => panic!("Incomplete pattern matching")
-                }
+                let spl0: (&[u8], &[u8]) =
+                    {
+                        let input11: &[u8] = res11.0;
+                        let input2: &[u8] = res11.1;
+                        (input11,input2)
+                    };
+                let ph: &[u8] = spl0.0;
+                let pc: &[u8] = spl0.1;
+                let unused: usize = pc.len();
+                crate::lowstar::ignore::ignore::<usize>(unused);
+                let count: usize = jump_recursive_step_count_leaf(ph);
+                (&mut pn)[0] = n0.wrapping_sub(1usize).wrapping_add(count);
+                (&mut ppi)[0] = pc
             };
             let res4: bool = (&pres)[0];
             let n1: usize = (&pn)[0];
@@ -3355,22 +3437,29 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                 let i: usize = jump_raw_data_item(pi, 0usize);
                 let s: (&[u8], &[u8]) = pi.split_at(i);
                 let res2: (&[u8], &[u8]) =
-                    match s { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                let res3: (&[u8], &[u8]) =
-                    match res2
                     {
-                        (input11,input2) => (input11,input2),
-                        _ => panic!("Incomplete pattern matching")
+                        let s1: &[u8] = s.0;
+                        let s2: &[u8] = s.1;
+                        (s1,s2)
+                    };
+                let res3: (&[u8], &[u8]) =
+                    {
+                        let input11: &[u8] = res2.0;
+                        let input2: &[u8] = res2.1;
+                        (input11,input2)
                     };
                 let spl: (&[u8], &[u8]) =
-                    match res3
                     {
-                        (input11,input2) => (input11,input2),
-                        _ => panic!("Incomplete pattern matching")
+                        let input11: &[u8] = res3.0;
+                        let input2: &[u8] = res3.1;
+                        (input11,input2)
                     };
                 let res4: &[u8] =
-                    match spl
-                    { (input11,_input2) => input11, _ => panic!("Incomplete pattern matching") };
+                    {
+                        let input11: &[u8] = spl.0;
+                        let _input2: &[u8] = spl.1;
+                        input11
+                    };
                 let px: &[u8] = res4;
                 let res5: bool = cbor_raw_sorted(px);
                 if ! res5
@@ -3380,34 +3469,32 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                     let off1: usize = jump_header(pi, 0usize);
                     let s·0: (&[u8], &[u8]) = pi.split_at(0usize);
                     let split1230: (&[u8], &[u8]) =
-                        match s·0
-                        { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                    let input·: &[u8] =
-                        match split1230
                         {
-                            (_input11,input23) =>
-                              {
-                                  let consumed: usize = off1.wrapping_sub(0usize);
-                                  let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                                  let res10: (&[u8], &[u8]) =
-                                      match s1s2
-                                      {
-                                          (s1,s2) => (s1,s2),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  let split23: (&[u8], &[u8]) =
-                                      match res10
-                                      {
-                                          (left,right) => (left,right),
-                                          _ => panic!("Incomplete pattern matching")
-                                      };
-                                  match split23
-                                  {
-                                      (input2,_input3) => input2,
-                                      _ => panic!("Incomplete pattern matching")
-                                  }
-                              },
-                            _ => panic!("Incomplete pattern matching")
+                            let s1: &[u8] = s·0.0;
+                            let s2: &[u8] = s·0.1;
+                            (s1,s2)
+                        };
+                    let input·: &[u8] =
+                        {
+                            let _input11: &[u8] = split1230.0;
+                            let input23: &[u8] = split1230.1;
+                            let consumed: usize = off1.wrapping_sub(0usize);
+                            let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                            let res10: (&[u8], &[u8]) =
+                                {
+                                    let s1: &[u8] = s1s2.0;
+                                    let s2: &[u8] = s1s2.1;
+                                    (s1,s2)
+                                };
+                            let split23: (&[u8], &[u8]) =
+                                {
+                                    let left: &[u8] = res10.0;
+                                    let right: &[u8] = res10.1;
+                                    (left,right)
+                                };
+                            let input2: &[u8] = split23.0;
+                            let _input3: &[u8] = split23.1;
+                            input2
                         };
                     let res10: header = read_header(input·);
                     let x: header = res10;
@@ -3425,25 +3512,24 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                         { off1.wrapping_add(0usize) };
                     let s0: (&[u8], &[u8]) = pi.split_at(i0);
                     let res11: (&[u8], &[u8]) =
-                        match s0 { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                    let spl0: (&[u8], &[u8]) =
-                        match res11
                         {
-                            (input11,input2) => (input11,input2),
-                            _ => panic!("Incomplete pattern matching")
+                            let s1: &[u8] = s0.0;
+                            let s2: &[u8] = s0.1;
+                            (s1,s2)
                         };
-                    match spl0
-                    {
-                        (ph,pc) =>
-                          {
-                              let unused: usize = pc.len();
-                              crate::lowstar::ignore::ignore::<usize>(unused);
-                              let count: usize = jump_recursive_step_count_leaf(ph);
-                              (&mut pn0)[0] = n1.wrapping_sub(1usize).wrapping_add(count);
-                              (&mut ppi0)[0] = pc
-                          },
-                        _ => panic!("Incomplete pattern matching")
-                    }
+                    let spl0: (&[u8], &[u8]) =
+                        {
+                            let input11: &[u8] = res11.0;
+                            let input2: &[u8] = res11.1;
+                            (input11,input2)
+                        };
+                    let ph: &[u8] = spl0.0;
+                    let pc: &[u8] = spl0.1;
+                    let unused: usize = pc.len();
+                    crate::lowstar::ignore::ignore::<usize>(unused);
+                    let count: usize = jump_recursive_step_count_leaf(ph);
+                    (&mut pn0)[0] = n1.wrapping_sub(1usize).wrapping_add(count);
+                    (&mut ppi0)[0] = pc
                 };
                 let res6: bool = (&pres0)[0];
                 let n2: usize = (&pn0)[0];
@@ -3466,23 +3552,32 @@ fn cbor_parse <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
 {
     let s·: (&[u8], &[u8]) = input.split_at(0usize);
     let split123: (&[u8], &[u8]) =
-        match s· { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-    let input1: &[u8] =
-        match split123
         {
-            (_input1,input23) =>
-              {
-                  let consumed: usize = len.wrapping_sub(0usize);
-                  let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                  let res: (&[u8], &[u8]) =
-                      match s1s2 { (s1,s2) => (s1,s2), _ => panic!("Incomplete pattern matching") };
-                  let split23: (&[u8], &[u8]) =
-                      match res
-                      { (left,right) => (left,right), _ => panic!("Incomplete pattern matching") };
-                  match split23
-                  { (input2,_input3) => input2, _ => panic!("Incomplete pattern matching") }
-              },
-            _ => panic!("Incomplete pattern matching")
+            let s1: &[u8] = s·.0;
+            let s2: &[u8] = s·.1;
+            (s1,s2)
+        };
+    let input1: &[u8] =
+        {
+            let _input1: &[u8] = split123.0;
+            let input23: &[u8] = split123.1;
+            let consumed: usize = len.wrapping_sub(0usize);
+            let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+            let res: (&[u8], &[u8]) =
+                {
+                    let s1: &[u8] = s1s2.0;
+                    let s2: &[u8] = s1s2.1;
+                    (s1,s2)
+                };
+            let split23: (&[u8], &[u8]) =
+                {
+                    let left: &[u8] = res.0;
+                    let right: &[u8] = res.1;
+                    (left,right)
+                };
+            let input2: &[u8] = split23.0;
+            let _input3: &[u8] = split23.1;
+            input2
         };
     let res: cbor_raw = cbor_read(input1);
     res
@@ -3589,7 +3684,7 @@ pub fn cbor_det_mk_int64 <'a>(ty: u8, v: u64) -> cbor_raw <'a>
     res0
 }
 
-pub fn cbor_det_mk_string <'a>(ty: u8, s: &'a mut [u8]) -> cbor_raw <'a>
+pub fn cbor_det_mk_string <'a>(ty: u8, s: &'a [u8]) -> cbor_raw <'a>
 {
     let len64: raw_uint64 = mk_raw_uint64(s.len() as u64);
     let ress: cbor_string =
@@ -3838,8 +3933,8 @@ pub fn cbor_det_array_iterator_is_empty <'a>(
     res
 }
 
-pub fn cbor_det_array_iterator_next <'a>(
-    x: &'a mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>]
+pub fn cbor_det_array_iterator_next <'b, 'a>(
+    x: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>]
 ) ->
     cbor_raw
     <'a>
@@ -3877,8 +3972,8 @@ pub fn cbor_det_map_iterator_is_empty <'a>(
     res
 }
 
-pub fn cbor_det_map_iterator_next <'a>(
-    x: &'a mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>]
+pub fn cbor_det_map_iterator_next <'b, 'a>(
+    x: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>]
 ) ->
     cbor_map_entry
     <'a>
