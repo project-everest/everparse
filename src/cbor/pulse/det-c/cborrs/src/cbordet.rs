@@ -439,25 +439,25 @@ fn size_header(x: header, out: &mut [usize]) -> bool
 pub struct cbor_int
 { pub cbor_int_type: u8, pub cbor_int_size: u8, pub cbor_int_value: u64 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq)]
 pub struct cbor_string <'a>
-{ pub cbor_string_type: u8, pub cbor_string_size: u8, pub cbor_string_ptr: &'a [u8] }
+{ pub cbor_string_type: u8, pub cbor_string_size: u8, pub cbor_string_ptr: &'a mut [u8] }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq)]
 pub struct cbor_tagged <'a>
 { pub cbor_tagged_tag: raw_uint64, pub cbor_tagged_ptr: &'a [cbor_raw <'a>] }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq)]
 pub struct cbor_array <'a>
 { pub cbor_array_length: raw_uint64, pub cbor_array_ptr: &'a [cbor_raw <'a>] }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq)]
 pub struct cbor_map <'a>
 { pub cbor_map_length: raw_uint64, pub cbor_map_ptr: &'a [cbor_map_entry <'a>] }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq)]
 pub struct cbor_serialized <'a>
-{ pub cbor_serialized_header: raw_uint64, pub cbor_serialized_payload: &'a [u8] }
+{ pub cbor_serialized_header: raw_uint64, pub cbor_serialized_payload: &'a mut [u8] }
 
 #[derive(PartialEq, Clone, Copy)]
 enum cbor_raw_tags
@@ -473,7 +473,7 @@ enum cbor_raw_tags
     CBOR_Case_Serialized_Map
 }
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq)]
 pub enum cbor_raw <'a>
 {
     CBOR_Case_Int { v: cbor_int },
@@ -585,7 +585,7 @@ enum option__LowParse_Pulse_Base_with_perm··CBOR_Pulse_Raw_Type_cbor_map_entry
 }
 
 #[derive(PartialEq)]
-struct slice_pair__uint8_t <'a>
+struct __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t <'a>
 { pub fst: &'a mut [u8], pub snd: &'a mut [u8] }
 
 #[derive(PartialEq)]
@@ -608,18 +608,20 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                     cbor_raw::CBOR_Case_String { v } => v,
                     _ => panic!("Incomplete pattern matching")
                 };
-            let x2·: & [u8] = c·.cbor_string_ptr;
+            let x2·: &mut [u8] = c·.cbor_string_ptr;
             let length: usize = x2·.len();
-            let sp1: slice_pair__uint8_t =
+            let sp1: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                 {
                     let actual_pair: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
-                    slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: actual_pair.0, snd: actual_pair.1 }
                 };
             let sp12: &mut [u8] = sp1.snd;
-            let sp2: slice_pair__uint8_t =
+            let sp2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                 {
                     let actual_pair: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
-                    slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: actual_pair.0, snd: actual_pair.1 }
                 };
             let sp21: &mut [u8] = sp2.fst;
             sp21.copy_from_slice(x2·);
@@ -684,18 +686,20 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                             cbor_raw::CBOR_Case_Serialized_Array { v } => v,
                             _ => panic!("Incomplete pattern matching")
                         };
-                    let x2·: & [u8] = xs.cbor_serialized_payload;
+                    let x2·: &mut [u8] = xs.cbor_serialized_payload;
                     let length: usize = x2·.len();
-                    let sp1: slice_pair__uint8_t =
+                    let sp1: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                         {
                             let actual_pair: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
-                            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                            { fst: actual_pair.0, snd: actual_pair.1 }
                         };
                     let sp12: &mut [u8] = sp1.snd;
-                    let sp2: slice_pair__uint8_t =
+                    let sp2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                         {
                             let actual_pair: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
-                            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                            { fst: actual_pair.0, snd: actual_pair.1 }
                         };
                     let sp21: &mut [u8] = sp2.fst;
                     sp21.copy_from_slice(x2·);
@@ -765,18 +769,20 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                                 cbor_raw::CBOR_Case_Serialized_Map { v } => v,
                                 _ => panic!("Incomplete pattern matching")
                             };
-                        let x2·: & [u8] = xs.cbor_serialized_payload;
+                        let x2·: &mut [u8] = xs.cbor_serialized_payload;
                         let length: usize = x2·.len();
-                        let sp1: slice_pair__uint8_t =
+                        let sp1: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                             {
                                 let actual_pair: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
-                                slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                                { fst: actual_pair.0, snd: actual_pair.1 }
                             };
                         let sp12: &mut [u8] = sp1.snd;
-                        let sp2: slice_pair__uint8_t =
+                        let sp2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                             {
                                 let actual_pair: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
-                                slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                                { fst: actual_pair.0, snd: actual_pair.1 }
                             };
                         let sp21: &mut [u8] = sp2.fst;
                         sp21.copy_from_slice(x2·);
@@ -814,21 +820,25 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                                         cbor_raw::CBOR_Case_Serialized_Tagged { v } => v,
                                         _ => panic!("Incomplete pattern matching")
                                     };
-                                let x2·: & [u8] = ser.cbor_serialized_payload;
+                                let x2·: &mut [u8] = ser.cbor_serialized_payload;
                                 let length: usize = x2·.len();
-                                let sp1: slice_pair__uint8_t =
+                                let
+                                sp1: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                                =
                                     {
                                         let actual_pair: (&mut [u8], &mut [u8]) =
                                             out.split_at_mut(res1);
-                                        slice_pair__uint8_t
+                                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
                                         { fst: actual_pair.0, snd: actual_pair.1 }
                                     };
                                 let sp12: &mut [u8] = sp1.snd;
-                                let sp2: slice_pair__uint8_t =
+                                let
+                                sp2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                                =
                                     {
                                         let actual_pair: (&mut [u8], &mut [u8]) =
                                             sp12.split_at_mut(length);
-                                        slice_pair__uint8_t
+                                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
                                         { fst: actual_pair.0, snd: actual_pair.1 }
                                     };
                                 let sp21: &mut [u8] = sp2.fst;
@@ -1162,17 +1172,20 @@ fn read_initial_byte_t(input: &[u8]) -> initial_byte_t
 fn read_header(input: &mut [u8]) -> header
 {
     let i: usize = 1usize;
-    let _letpattern: slice_pair__uint8_t =
+    let s: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(i);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s1: &mut [u8] = _letpattern.fst;
-    let s2: &mut [u8] = _letpattern.snd;
-    let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+    let s1: &mut [u8] = s.fst;
+    let s2: &mut [u8] = s.snd;
+    let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
     let input1: &mut [u8] = res.fst;
     let input2: &mut [u8] = res.snd;
-    let split12: slice_pair__uint8_t = slice_pair__uint8_t { fst: input1, snd: input2 };
+    let split12: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: input1, snd: input2 };
     let input10: &[u8] = split12.fst;
     let input20: &[u8] = split12.snd;
     let x: initial_byte_t = read_initial_byte_t(input10);
@@ -1295,27 +1308,34 @@ fn validate_header(input: &mut [u8], poffset: &mut [usize]) -> bool
         if is_valid
         {
             let off: usize = poffset[0];
-            let _letpattern: slice_pair__uint8_t =
+            let s·: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                 {
                     let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(offset2);
-                    slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: actual_pair.0, snd: actual_pair.1 }
                 };
-            let s1: &mut [u8] = _letpattern.fst;
-            let s2: &mut [u8] = _letpattern.snd;
-            let split123: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+            let s1: &mut [u8] = s·.fst;
+            let s2: &mut [u8] = s·.snd;
+            let split123: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
             let input23: &mut [u8] = split123.snd;
             let consumed: usize = off.wrapping_sub(offset2);
-            let s1s2: slice_pair__uint8_t =
+            let s1s2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                 {
                     let actual_pair: (&mut [u8], &mut [u8]) = input23.split_at_mut(consumed);
-                    slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: actual_pair.0, snd: actual_pair.1 }
                 };
             let s10: &mut [u8] = s1s2.fst;
             let s20: &mut [u8] = s1s2.snd;
-            let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s10, snd: s20 };
+            let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: s10, snd: s20 };
             let left: &mut [u8] = res.fst;
             let right: &mut [u8] = res.snd;
-            let split23: slice_pair__uint8_t = slice_pair__uint8_t { fst: left, snd: right };
+            let split23: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: left, snd: right };
             let input·: &[u8] = split23.fst;
             let res0: initial_byte_t = read_initial_byte_t(input·);
             let x: initial_byte_t = res0;
@@ -1331,27 +1351,33 @@ fn validate_header(input: &mut [u8], poffset: &mut [usize]) -> bool
     if is_valid1
     {
         let off: usize = poffset[0];
-        let _letpattern: slice_pair__uint8_t =
+        let s·: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
             {
                 let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(offset1);
-                slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: actual_pair.0, snd: actual_pair.1 }
             };
-        let s1: &mut [u8] = _letpattern.fst;
-        let s2: &mut [u8] = _letpattern.snd;
-        let split123: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+        let s1: &mut [u8] = s·.fst;
+        let s2: &mut [u8] = s·.snd;
+        let split123: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
         let input23: &mut [u8] = split123.snd;
         let consumed: usize = off.wrapping_sub(offset1);
-        let s1s2: slice_pair__uint8_t =
+        let s1s2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
             {
                 let actual_pair: (&mut [u8], &mut [u8]) = input23.split_at_mut(consumed);
-                slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: actual_pair.0, snd: actual_pair.1 }
             };
         let s10: &mut [u8] = s1s2.fst;
         let s20: &mut [u8] = s1s2.snd;
-        let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s10, snd: s20 };
+        let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s10, snd: s20 };
         let left: &mut [u8] = res.fst;
         let right: &mut [u8] = res.snd;
-        let split23: slice_pair__uint8_t = slice_pair__uint8_t { fst: left, snd: right };
+        let split23: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: left, snd: right };
         let input·: &[u8] = split23.fst;
         let x: initial_byte_t = read_initial_byte_t(input·);
         let res0: initial_byte_t = x;
@@ -1374,29 +1400,36 @@ fn validate_header(input: &mut [u8], poffset: &mut [usize]) -> bool
                 if is_valid0
                 {
                     let off1: usize = poffset[0];
-                    let _letpattern0: slice_pair__uint8_t =
+                    let s·0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                         {
                             let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(offset20);
-                            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                            { fst: actual_pair.0, snd: actual_pair.1 }
                         };
-                    let s11: &mut [u8] = _letpattern0.fst;
-                    let s21: &mut [u8] = _letpattern0.snd;
-                    let split1230: slice_pair__uint8_t = slice_pair__uint8_t { fst: s11, snd: s21 };
+                    let s11: &mut [u8] = s·0.fst;
+                    let s21: &mut [u8] = s·0.snd;
+                    let split1230: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: s11, snd: s21 };
                     let input230: &mut [u8] = split1230.snd;
                     let consumed0: usize = off1.wrapping_sub(offset20);
-                    let s1s20: slice_pair__uint8_t =
+                    let s1s20: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                         {
                             let actual_pair: (&mut [u8], &mut [u8]) =
                                 input230.split_at_mut(consumed0);
-                            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                            { fst: actual_pair.0, snd: actual_pair.1 }
                         };
                     let s12: &mut [u8] = s1s20.fst;
                     let s22: &mut [u8] = s1s20.snd;
-                    let res2: slice_pair__uint8_t = slice_pair__uint8_t { fst: s12, snd: s22 };
+                    let res2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: s12, snd: s22 };
                     let left0: &mut [u8] = res2.fst;
                     let right0: &mut [u8] = res2.snd;
-                    let split230: slice_pair__uint8_t =
-                        slice_pair__uint8_t { fst: left0, snd: right0 };
+                    let split230: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: left0, snd: right0 };
                     let input·0: &[u8] = split230.fst;
                     let last: u8 = input·0[0usize];
                     let res3: u8 = last;
@@ -1459,30 +1492,35 @@ fn validate_header(input: &mut [u8], poffset: &mut [usize]) -> bool
     { false }
 }
 
-fn jump_header(input: & [u8], offset: usize) -> usize
+fn jump_header(input: &mut [u8], offset: usize) -> usize
 {
     let off1: usize = offset.wrapping_add(1usize);
-    let _letpattern: slice_pair__uint8_t =
+    let s·: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(offset);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s1: &mut [u8] = _letpattern.fst;
-    let s2: &mut [u8] = _letpattern.snd;
-    let split123: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+    let s1: &mut [u8] = s·.fst;
+    let s2: &mut [u8] = s·.snd;
+    let split123: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
     let input23: &mut [u8] = split123.snd;
     let consumed: usize = off1.wrapping_sub(offset);
-    let s1s2: slice_pair__uint8_t =
+    let s1s2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = input23.split_at_mut(consumed);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
     let s10: &mut [u8] = s1s2.fst;
     let s20: &mut [u8] = s1s2.snd;
-    let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s10, snd: s20 };
+    let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s10, snd: s20 };
     let left: &mut [u8] = res.fst;
     let right: &mut [u8] = res.snd;
-    let split23: slice_pair__uint8_t = slice_pair__uint8_t { fst: left, snd: right };
+    let split23: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: left, snd: right };
     let input·: &[u8] = split23.fst;
     let x: initial_byte_t = read_initial_byte_t(input·);
     let res0: initial_byte_t = x;
@@ -1503,17 +1541,20 @@ fn jump_header(input: & [u8], offset: usize) -> usize
 fn validate_recursive_step_count_leaf(a: &mut [u8], bound: usize, prem: &mut [usize]) -> bool
 {
     let i: usize = jump_header(a, 0usize);
-    let _letpattern: slice_pair__uint8_t =
+    let s: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = a.split_at_mut(i);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s1: &mut [u8] = _letpattern.fst;
-    let s2: &mut [u8] = _letpattern.snd;
-    let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+    let s1: &mut [u8] = s.fst;
+    let s2: &mut [u8] = s.snd;
+    let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
     let input1: &mut [u8] = res.fst;
     let input2: &mut [u8] = res.snd;
-    let spl: slice_pair__uint8_t = slice_pair__uint8_t { fst: input1, snd: input2 };
+    let spl: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: input1, snd: input2 };
     let input10: &mut [u8] = spl.fst;
     let h: header = read_header(input10);
     let typ: u8 = get_header_major_type(h);
@@ -1554,17 +1595,20 @@ fn validate_recursive_step_count_leaf(a: &mut [u8], bound: usize, prem: &mut [us
 fn jump_recursive_step_count_leaf(a: &mut [u8]) -> usize
 {
     let i: usize = jump_header(a, 0usize);
-    let _letpattern: slice_pair__uint8_t =
+    let s: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = a.split_at_mut(i);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s1: &mut [u8] = _letpattern.fst;
-    let s2: &mut [u8] = _letpattern.snd;
-    let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+    let s1: &mut [u8] = s.fst;
+    let s2: &mut [u8] = s.snd;
+    let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
     let input1: &mut [u8] = res.fst;
     let input2: &mut [u8] = res.snd;
-    let spl: slice_pair__uint8_t = slice_pair__uint8_t { fst: input1, snd: input2 };
+    let spl: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: input1, snd: input2 };
     let input10: &mut [u8] = spl.fst;
     let h: header = read_header(input10);
     let typ: u8 = get_header_major_type(h);
@@ -1606,29 +1650,36 @@ fn validate_raw_data_item(input: &mut [u8], poffset: &mut [usize]) -> bool
                 if is_valid1
                 {
                     let off1: usize = poffset[0];
-                    let _letpattern: slice_pair__uint8_t =
+                    let s·: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                         {
                             let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(offset1);
-                            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                            { fst: actual_pair.0, snd: actual_pair.1 }
                         };
-                    let s1: &mut [u8] = _letpattern.fst;
-                    let s2: &mut [u8] = _letpattern.snd;
-                    let split123: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+                    let s1: &mut [u8] = s·.fst;
+                    let s2: &mut [u8] = s·.snd;
+                    let split123: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: s1, snd: s2 };
                     let input23: &mut [u8] = split123.snd;
                     let consumed: usize = off1.wrapping_sub(offset1);
-                    let s1s2: slice_pair__uint8_t =
+                    let s1s2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                         {
                             let actual_pair: (&mut [u8], &mut [u8]) =
                                 input23.split_at_mut(consumed);
-                            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                            { fst: actual_pair.0, snd: actual_pair.1 }
                         };
                     let s10: &mut [u8] = s1s2.fst;
                     let s20: &mut [u8] = s1s2.snd;
-                    let res0: slice_pair__uint8_t = slice_pair__uint8_t { fst: s10, snd: s20 };
+                    let res0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: s10, snd: s20 };
                     let left: &mut [u8] = res0.fst;
                     let right: &mut [u8] = res0.snd;
-                    let split23: slice_pair__uint8_t =
-                        slice_pair__uint8_t { fst: left, snd: right };
+                    let split23: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: left, snd: right };
                     let input·: &mut [u8] = split23.fst;
                     let res1: header = read_header(input·);
                     let x: header = res1;
@@ -1659,27 +1710,35 @@ fn validate_raw_data_item(input: &mut [u8], poffset: &mut [usize]) -> bool
             else
             {
                 let offset10: usize = poffset[0];
-                let _letpattern: slice_pair__uint8_t =
+                let s·: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                     {
                         let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(off);
-                        slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: actual_pair.0, snd: actual_pair.1 }
                     };
-                let s1: &mut [u8] = _letpattern.fst;
-                let s2: &mut [u8] = _letpattern.snd;
-                let split123: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+                let s1: &mut [u8] = s·.fst;
+                let s2: &mut [u8] = s·.snd;
+                let split123: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: s1, snd: s2 };
                 let input23: &mut [u8] = split123.snd;
                 let consumed: usize = offset10.wrapping_sub(off);
-                let s1s2: slice_pair__uint8_t =
+                let s1s2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                     {
                         let actual_pair: (&mut [u8], &mut [u8]) = input23.split_at_mut(consumed);
-                        slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: actual_pair.0, snd: actual_pair.1 }
                     };
                 let s10: &mut [u8] = s1s2.fst;
                 let s20: &mut [u8] = s1s2.snd;
-                let res0: slice_pair__uint8_t = slice_pair__uint8_t { fst: s10, snd: s20 };
+                let res0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: s10, snd: s20 };
                 let left: &mut [u8] = res0.fst;
                 let right: &mut [u8] = res0.snd;
-                let split23: slice_pair__uint8_t = slice_pair__uint8_t { fst: left, snd: right };
+                let split23: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: left, snd: right };
                 let input1: &mut [u8] = split23.fst;
                 let bound: usize = input.len().wrapping_sub(off).wrapping_sub(n0);
                 let res2: bool = validate_recursive_step_count_leaf(input1, bound, &mut pn);
@@ -1711,27 +1770,33 @@ fn jump_raw_data_item(input: &mut [u8], offset: usize) -> usize
     {
         let off: usize = (&poffset)[0];
         let off1: usize = jump_header(input, off);
-        let _letpattern: slice_pair__uint8_t =
+        let s·: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
             {
                 let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(off);
-                slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: actual_pair.0, snd: actual_pair.1 }
             };
-        let s1: &mut [u8] = _letpattern.fst;
-        let s2: &mut [u8] = _letpattern.snd;
-        let split123: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+        let s1: &mut [u8] = s·.fst;
+        let s2: &mut [u8] = s·.snd;
+        let split123: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
         let input23: &mut [u8] = split123.snd;
         let consumed: usize = off1.wrapping_sub(off);
-        let s1s2: slice_pair__uint8_t =
+        let s1s2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
             {
                 let actual_pair: (&mut [u8], &mut [u8]) = input23.split_at_mut(consumed);
-                slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: actual_pair.0, snd: actual_pair.1 }
             };
         let s10: &mut [u8] = s1s2.fst;
         let s20: &mut [u8] = s1s2.snd;
-        let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s10, snd: s20 };
+        let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s10, snd: s20 };
         let left: &mut [u8] = res.fst;
         let right: &mut [u8] = res.snd;
-        let split23: slice_pair__uint8_t = slice_pair__uint8_t { fst: left, snd: right };
+        let split23: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: left, snd: right };
         let input·: &mut [u8] = split23.fst;
         let res0: header = read_header(input·);
         let x: header = res0;
@@ -1748,27 +1813,33 @@ fn jump_raw_data_item(input: &mut [u8], offset: usize) -> usize
             else
             { off1.wrapping_add(0usize) };
         (&mut poffset)[0] = off10;
-        let _letpattern0: slice_pair__uint8_t =
+        let s·0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
             {
                 let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(off);
-                slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: actual_pair.0, snd: actual_pair.1 }
             };
-        let s11: &mut [u8] = _letpattern0.fst;
-        let s21: &mut [u8] = _letpattern0.snd;
-        let split1230: slice_pair__uint8_t = slice_pair__uint8_t { fst: s11, snd: s21 };
+        let s11: &mut [u8] = s·0.fst;
+        let s21: &mut [u8] = s·0.snd;
+        let split1230: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s11, snd: s21 };
         let input230: &mut [u8] = split1230.snd;
         let consumed0: usize = off10.wrapping_sub(off);
-        let s1s20: slice_pair__uint8_t =
+        let s1s20: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
             {
                 let actual_pair: (&mut [u8], &mut [u8]) = input230.split_at_mut(consumed0);
-                slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: actual_pair.0, snd: actual_pair.1 }
             };
         let s12: &mut [u8] = s1s20.fst;
         let s22: &mut [u8] = s1s20.snd;
-        let res1: slice_pair__uint8_t = slice_pair__uint8_t { fst: s12, snd: s22 };
+        let res1: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s12, snd: s22 };
         let left0: &mut [u8] = res1.fst;
         let right0: &mut [u8] = res1.snd;
-        let split230: slice_pair__uint8_t = slice_pair__uint8_t { fst: left0, snd: right0 };
+        let split230: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: left0, snd: right0 };
         let input1: &mut [u8] = split230.fst;
         let n0: usize = (&pn)[0];
         let unused: usize = input.len().wrapping_sub(off10);
@@ -1781,7 +1852,7 @@ fn jump_raw_data_item(input: &mut [u8], offset: usize) -> usize
     (&poffset)[0]
 }
 
-fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
+fn cbor_read <'a>(input: &'a mut [u8]) -> cbor_raw <'a>
 {
     let mut ph: [header; 1] =
         [header
@@ -1798,17 +1869,20 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
             };
             1usize];
     let i: usize = jump_header(input, 0usize);
-    let _letpattern: slice_pair__uint8_t =
+    let s: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(i);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s1: &mut [u8] = _letpattern.fst;
-    let s2: &mut [u8] = _letpattern.snd;
-    let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+    let s1: &mut [u8] = s.fst;
+    let s2: &mut [u8] = s.snd;
+    let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
     let input1: &mut [u8] = res.fst;
     let input2: &mut [u8] = res.snd;
-    let spl: slice_pair__uint8_t = slice_pair__uint8_t { fst: input1, snd: input2 };
+    let spl: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: input1, snd: input2 };
     let ph1: &mut [u8] = spl.fst;
     let outc: &mut [u8] = spl.snd;
     let h: header = read_header(ph1);
@@ -1957,7 +2031,7 @@ enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags
 pub enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
 {
     CBOR_Raw_Iterator_Slice { _0: &'a [cbor_raw <'a>] },
-    CBOR_Raw_Iterator_Serialized { _0: &'a [u8] }
+    CBOR_Raw_Iterator_Serialized { _0: &'a mut [u8] }
 }
 
 fn cbor_serialized_array_iterator_next <'a>(
@@ -1968,20 +2042,25 @@ fn cbor_serialized_array_iterator_next <'a>(
     <'a>
 {
     let i1: usize = jump_raw_data_item(i, 0usize);
-    let _letpattern: slice_pair__uint8_t =
+    let s: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = i.split_at_mut(i1);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s1: &mut [u8] = _letpattern.fst;
-    let s2: &mut [u8] = _letpattern.snd;
-    let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+    let s1: &mut [u8] = s.fst;
+    let s2: &mut [u8] = s.snd;
+    let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
     let input1: &mut [u8] = res.fst;
     let input2: &mut [u8] = res.snd;
-    let res0: slice_pair__uint8_t = slice_pair__uint8_t { fst: input1, snd: input2 };
+    let res0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: input1, snd: input2 };
     let input10: &mut [u8] = res0.fst;
     let input20: &mut [u8] = res0.snd;
-    let sp: slice_pair__uint8_t = slice_pair__uint8_t { fst: input10, snd: input20 };
+    let sp: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+        { fst: input10, snd: input20 };
     let s10: &mut [u8] = sp.fst;
     let s20: &[u8] = sp.snd;
     let res1: cbor_raw = cbor_read(s10);
@@ -2000,7 +2079,7 @@ fn cbor_serialized_map_iterator_is_empty(c: &[u8]) -> bool { c.len() == 0usize }
 pub enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
 {
     CBOR_Raw_Iterator_Slice { _0: &'a [cbor_map_entry <'a>] },
-    CBOR_Raw_Iterator_Serialized { _0: &'a [u8] }
+    CBOR_Raw_Iterator_Serialized { _0: &'a mut [u8] }
 }
 
 fn cbor_serialized_map_iterator_next <'a>(
@@ -2012,37 +2091,48 @@ fn cbor_serialized_map_iterator_next <'a>(
 {
     let off1: usize = jump_raw_data_item(i, 0usize);
     let i1: usize = jump_raw_data_item(i, off1);
-    let _letpattern: slice_pair__uint8_t =
+    let s: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = i.split_at_mut(i1);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s1: &mut [u8] = _letpattern.fst;
-    let s2: &mut [u8] = _letpattern.snd;
-    let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+    let s1: &mut [u8] = s.fst;
+    let s2: &mut [u8] = s.snd;
+    let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
     let input1: &mut [u8] = res.fst;
     let input2: &mut [u8] = res.snd;
-    let res0: slice_pair__uint8_t = slice_pair__uint8_t { fst: input1, snd: input2 };
+    let res0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: input1, snd: input2 };
     let input10: &mut [u8] = res0.fst;
     let input20: &mut [u8] = res0.snd;
-    let sp: slice_pair__uint8_t = slice_pair__uint8_t { fst: input10, snd: input20 };
+    let sp: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+        { fst: input10, snd: input20 };
     let s10: &mut [u8] = sp.fst;
     let s20: &[u8] = sp.snd;
     let i10: usize = jump_raw_data_item(s10, 0usize);
-    let _letpattern0: slice_pair__uint8_t =
+    let s0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = s10.split_at_mut(i10);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s11: &mut [u8] = _letpattern0.fst;
-    let s21: &mut [u8] = _letpattern0.snd;
-    let res1: slice_pair__uint8_t = slice_pair__uint8_t { fst: s11, snd: s21 };
+    let s11: &mut [u8] = s0.fst;
+    let s21: &mut [u8] = s0.snd;
+    let res1: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s11, snd: s21 };
     let input11: &mut [u8] = res1.fst;
     let input21: &mut [u8] = res1.snd;
-    let res2: slice_pair__uint8_t = slice_pair__uint8_t { fst: input11, snd: input21 };
+    let res2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+        { fst: input11, snd: input21 };
     let input12: &mut [u8] = res2.fst;
     let input22: &mut [u8] = res2.snd;
-    let sp1: slice_pair__uint8_t = slice_pair__uint8_t { fst: input12, snd: input22 };
+    let sp1: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+        { fst: input12, snd: input22 };
     let s110: &mut [u8] = sp1.fst;
     let s210: &mut [u8] = sp1.snd;
     let res10: cbor_raw = cbor_read(s110);
@@ -2181,7 +2271,9 @@ fn cbor_array_iterator_is_empty <'a>(c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_c
 }
 
 #[derive(PartialEq)]
-struct slice_pair__CBOR_Pulse_Raw_Type_cbor_raw <'a>
+struct
+__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw
+<'a>
 { pub fst: &'a [cbor_raw <'a>], pub snd: &'a [cbor_raw <'a>] }
 
 fn cbor_array_iterator_next <'a>(
@@ -2196,10 +2288,13 @@ fn cbor_array_iterator_next <'a>(
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: ref i1 } =>
           {
               let res: &cbor_raw = &i1[0usize];
-              let sp: slice_pair__CBOR_Pulse_Raw_Type_cbor_raw =
+              let
+              sp:
+              __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw
+              =
                   {
                       let actual_pair: (&[cbor_raw], &[cbor_raw]) = i1.split_at(1usize);
-                      slice_pair__CBOR_Pulse_Raw_Type_cbor_raw
+                      __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw
                       { fst: actual_pair.0, snd: actual_pair.1 }
                   };
               let s·: &[cbor_raw] = sp.snd;
@@ -2275,7 +2370,9 @@ fn cbor_map_iterator_is_empty <'a>(
 }
 
 #[derive(PartialEq)]
-struct slice_pair__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
+struct
+__Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry
+<'a>
 { pub fst: &'a [cbor_map_entry <'a>], pub snd: &'a [cbor_map_entry <'a>] }
 
 fn cbor_map_iterator_next <'a>(
@@ -2292,10 +2389,13 @@ fn cbor_map_iterator_next <'a>(
         =>
           {
               let res: &cbor_map_entry = &i1[0usize];
-              let sp: slice_pair__CBOR_Pulse_Raw_Type_cbor_map_entry =
+              let
+              sp:
+              __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry
+              =
                   {
                       let actual_pair: (&[cbor_map_entry], &[cbor_map_entry]) = i1.split_at(1usize);
-                      slice_pair__CBOR_Pulse_Raw_Type_cbor_map_entry
+                      __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry
                       { fst: actual_pair.0, snd: actual_pair.1 }
                   };
               let s·: &[cbor_map_entry] = sp.snd;
@@ -2543,11 +2643,14 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                     =>
                                       {
                                           let res0: &cbor_raw = &i[0usize];
-                                          let sp: slice_pair__CBOR_Pulse_Raw_Type_cbor_raw =
+                                          let
+                                          sp:
+                                          __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw
+                                          =
                                               {
                                                   let actual_pair: (&[cbor_raw], &[cbor_raw]) =
                                                       i.split_at(1usize);
-                                                  slice_pair__CBOR_Pulse_Raw_Type_cbor_raw
+                                                  __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw
                                                   { fst: actual_pair.0, snd: actual_pair.1 }
                                               };
                                           let s·: &[cbor_raw] = sp.snd;
@@ -2579,11 +2682,14 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                     =>
                                       {
                                           let res0: &cbor_raw = &i[0usize];
-                                          let sp: slice_pair__CBOR_Pulse_Raw_Type_cbor_raw =
+                                          let
+                                          sp:
+                                          __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw
+                                          =
                                               {
                                                   let actual_pair: (&[cbor_raw], &[cbor_raw]) =
                                                       i.split_at(1usize);
-                                                  slice_pair__CBOR_Pulse_Raw_Type_cbor_raw
+                                                  __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_raw
                                                   { fst: actual_pair.0, snd: actual_pair.1 }
                                               };
                                           let s·: &[cbor_raw] = sp.snd;
@@ -2772,14 +2878,17 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                     =>
                                       {
                                           let res0: &cbor_map_entry = &i[0usize];
-                                          let sp: slice_pair__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                                          let
+                                          sp:
+                                          __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry
+                                          =
                                               {
                                                   let
                                                   actual_pair:
                                                   (&[cbor_map_entry], &[cbor_map_entry])
                                                   =
                                                       i.split_at(1usize);
-                                                  slice_pair__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                                  __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry
                                                   { fst: actual_pair.0, snd: actual_pair.1 }
                                               };
                                           let s·: &[cbor_map_entry] = sp.snd;
@@ -2811,14 +2920,17 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                                     =>
                                       {
                                           let res0: &cbor_map_entry = &i[0usize];
-                                          let sp: slice_pair__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                                          let
+                                          sp:
+                                          __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry
+                                          =
                                               {
                                                   let
                                                   actual_pair:
                                                   (&[cbor_map_entry], &[cbor_map_entry])
                                                   =
                                                       i.split_at(1usize);
-                                                  slice_pair__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                                  __Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Type_cbor_map_entry
                                                   { fst: actual_pair.0, snd: actual_pair.1 }
                                               };
                                           let s·: &[cbor_map_entry] = sp.snd;
@@ -2973,17 +3085,20 @@ fn impl_raw_uint64_optimal(x: raw_uint64) -> bool
 fn cbor_raw_ints_optimal(a: &mut [u8]) -> bool
 {
     let i: usize = jump_header(a, 0usize);
-    let _letpattern: slice_pair__uint8_t =
+    let s: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = a.split_at_mut(i);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s1: &mut [u8] = _letpattern.fst;
-    let s2: &mut [u8] = _letpattern.snd;
-    let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+    let s1: &mut [u8] = s.fst;
+    let s2: &mut [u8] = s.snd;
+    let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
     let input1: &mut [u8] = res.fst;
     let input2: &mut [u8] = res.snd;
-    let spl: slice_pair__uint8_t = slice_pair__uint8_t { fst: input1, snd: input2 };
+    let spl: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: input1, snd: input2 };
     let input10: &mut [u8] = spl.fst;
     let h: header = read_header(input10);
     if get_header_major_type(h) == cbor_major_type_simple_value
@@ -3008,36 +3123,47 @@ fn cbor_raw_ints_optimal(a: &mut [u8]) -> bool
 fn impl_deterministically_encoded_cbor_map_key_order(a1: &mut [u8], a2: &mut [u8]) -> bool
 {
     let i: usize = jump_raw_data_item(a1, 0usize);
-    let _letpattern: slice_pair__uint8_t =
+    let s: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = a1.split_at_mut(i);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s1: &mut [u8] = _letpattern.fst;
-    let s2: &mut [u8] = _letpattern.snd;
-    let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+    let s1: &mut [u8] = s.fst;
+    let s2: &mut [u8] = s.snd;
+    let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
     let input1: &mut [u8] = res.fst;
     let input2: &mut [u8] = res.snd;
-    let res0: slice_pair__uint8_t = slice_pair__uint8_t { fst: input1, snd: input2 };
+    let res0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: input1, snd: input2 };
     let input10: &mut [u8] = res0.fst;
     let input20: &mut [u8] = res0.snd;
-    let spl: slice_pair__uint8_t = slice_pair__uint8_t { fst: input10, snd: input20 };
+    let spl: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+        { fst: input10, snd: input20 };
     let k1: &[u8] = spl.fst;
     let i0: usize = jump_raw_data_item(a2, 0usize);
-    let _letpattern0: slice_pair__uint8_t =
+    let s0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = a2.split_at_mut(i0);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s10: &mut [u8] = _letpattern0.fst;
-    let s20: &mut [u8] = _letpattern0.snd;
-    let res1: slice_pair__uint8_t = slice_pair__uint8_t { fst: s10, snd: s20 };
+    let s10: &mut [u8] = s0.fst;
+    let s20: &mut [u8] = s0.snd;
+    let res1: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s10, snd: s20 };
     let input11: &mut [u8] = res1.fst;
     let input21: &mut [u8] = res1.snd;
-    let res2: slice_pair__uint8_t = slice_pair__uint8_t { fst: input11, snd: input21 };
+    let res2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+        { fst: input11, snd: input21 };
     let input12: &mut [u8] = res2.fst;
     let input22: &mut [u8] = res2.snd;
-    let spl0: slice_pair__uint8_t = slice_pair__uint8_t { fst: input12, snd: input22 };
+    let spl0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+        { fst: input12, snd: input22 };
     let k2: &[u8] = spl0.fst;
     let res3: i16 = lex_compare_bytes(k1, k2);
     res3 < 0i16
@@ -3046,17 +3172,20 @@ fn impl_deterministically_encoded_cbor_map_key_order(a1: &mut [u8], a2: &mut [u8
 fn cbor_raw_sorted(a: &mut [u8]) -> bool
 {
     let i: usize = jump_header(a, 0usize);
-    let _letpattern: slice_pair__uint8_t =
+    let s: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = a.split_at_mut(i);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
-    let s1: &mut [u8] = _letpattern.fst;
-    let s2: &mut [u8] = _letpattern.snd;
-    let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+    let s1: &mut [u8] = s.fst;
+    let s2: &mut [u8] = s.snd;
+    let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
     let input1: &mut [u8] = res.fst;
     let input2: &mut [u8] = res.snd;
-    let spl: slice_pair__uint8_t = slice_pair__uint8_t { fst: input1, snd: input2 };
+    let spl: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: input1, snd: input2 };
     let ah: &mut [u8] = spl.fst;
     let ap: &mut [u8] = spl.snd;
     let h: header = read_header(ah);
@@ -3070,24 +3199,31 @@ fn cbor_raw_sorted(a: &mut [u8]) -> bool
         {
             let off1: usize = jump_raw_data_item(ap, 0usize);
             let i0: usize = jump_raw_data_item(ap, off1);
-            let _letpattern0: slice_pair__uint8_t =
+            let s10: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                 {
                     let actual_pair: (&mut [u8], &mut [u8]) = ap.split_at_mut(i0);
-                    slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: actual_pair.0, snd: actual_pair.1 }
                 };
-            let s10: &mut [u8] = _letpattern0.fst;
-            let s20: &mut [u8] = _letpattern0.snd;
-            let res0: slice_pair__uint8_t = slice_pair__uint8_t { fst: s10, snd: s20 };
+            let s11: &mut [u8] = s10.fst;
+            let s20: &mut [u8] = s10.snd;
+            let res0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: s11, snd: s20 };
             let input10: &mut [u8] = res0.fst;
             let input20: &mut [u8] = res0.snd;
-            let res1: slice_pair__uint8_t = slice_pair__uint8_t { fst: input10, snd: input20 };
+            let res1: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: input10, snd: input20 };
             let input11: &mut [u8] = res1.fst;
             let input21: &mut [u8] = res1.snd;
-            let res2: slice_pair__uint8_t = slice_pair__uint8_t { fst: input11, snd: input21 };
-            let pl: slice_pair__uint8_t = res2;
-            let s11: &mut [u8] = pl.fst;
+            let res2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: input11, snd: input21 };
+            let pl: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t = res2;
+            let s12: &mut [u8] = pl.fst;
             let s21: &mut [u8] = pl.snd;
-            let mut phd: [&mut [u8]; 1] = [s11; 1usize];
+            let mut phd: [&mut [u8]; 1] = [s12; 1usize];
             let mut ptl: [&mut [u8]; 1] = [s21; 1usize];
             let n·: usize = (n as usize).wrapping_sub(1usize);
             let mut pi: [usize; 1] = [n·; 1usize];
@@ -3101,23 +3237,30 @@ fn cbor_raw_sorted(a: &mut [u8]) -> bool
                 let stl: &mut [u8] = (&ptl)[0];
                 let off10: usize = jump_raw_data_item(stl, 0usize);
                 let i2: usize = jump_raw_data_item(stl, off10);
-                let _letpattern1: slice_pair__uint8_t =
+                let s3: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                     {
                         let actual_pair: (&mut [u8], &mut [u8]) = stl.split_at_mut(i2);
-                        slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: actual_pair.0, snd: actual_pair.1 }
                     };
-                let s110: &mut [u8] = _letpattern1.fst;
-                let s210: &mut [u8] = _letpattern1.snd;
-                let res4: slice_pair__uint8_t = slice_pair__uint8_t { fst: s110, snd: s210 };
+                let s110: &mut [u8] = s3.fst;
+                let s210: &mut [u8] = s3.snd;
+                let res4: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: s110, snd: s210 };
                 let input12: &mut [u8] = res4.fst;
                 let input22: &mut [u8] = res4.snd;
-                let res5: slice_pair__uint8_t = slice_pair__uint8_t { fst: input12, snd: input22 };
+                let res5: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: input12, snd: input22 };
                 let input13: &mut [u8] = res5.fst;
                 let input23: &mut [u8] = res5.snd;
-                let res6: slice_pair__uint8_t = slice_pair__uint8_t { fst: input13, snd: input23 };
-                let pl1: slice_pair__uint8_t = res6;
+                let res6: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: input13, snd: input23 };
+                let pl1: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t = res6;
                 let s111: &mut [u8] = pl1.fst;
-                let s211: &mut [u8] = pl1.snd;
+                let s211: &[u8] = pl1.snd;
                 let shd: &mut [u8] = (&phd)[0];
                 let res7: bool = impl_deterministically_encoded_cbor_map_key_order(shd, s111);
                 if res7
@@ -3148,27 +3291,33 @@ fn cbor_validate_det·(input: &mut [u8]) -> usize
     { len }
     else
     {
-        let _letpattern: slice_pair__uint8_t =
+        let s·: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
             {
                 let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(0usize);
-                slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: actual_pair.0, snd: actual_pair.1 }
             };
-        let s1: &mut [u8] = _letpattern.fst;
-        let s2: &mut [u8] = _letpattern.snd;
-        let split123: slice_pair__uint8_t = slice_pair__uint8_t { fst: s1, snd: s2 };
+        let s1: &mut [u8] = s·.fst;
+        let s2: &mut [u8] = s·.snd;
+        let split123: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
         let input23: &mut [u8] = split123.snd;
         let consumed: usize = len.wrapping_sub(0usize);
-        let s1s2: slice_pair__uint8_t =
+        let s1s2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
             {
                 let actual_pair: (&mut [u8], &mut [u8]) = input23.split_at_mut(consumed);
-                slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: actual_pair.0, snd: actual_pair.1 }
             };
         let s10: &mut [u8] = s1s2.fst;
         let s20: &mut [u8] = s1s2.snd;
-        let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s10, snd: s20 };
+        let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s10, snd: s20 };
         let left: &mut [u8] = res.fst;
         let right: &mut [u8] = res.snd;
-        let split23: slice_pair__uint8_t = slice_pair__uint8_t { fst: left, snd: right };
+        let split23: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: left, snd: right };
         let input1: &mut [u8] = split23.fst;
         let check: [bool; 1] = [false; 1usize];
         crate::lowstar::ignore::ignore::<&[bool]>(&check);
@@ -3184,20 +3333,27 @@ fn cbor_validate_det·(input: &mut [u8]) -> usize
             let n0: usize = (&pn)[0];
             let pi: &mut [u8] = (&ppi)[0];
             let i: usize = jump_raw_data_item(pi, 0usize);
-            let _letpattern0: slice_pair__uint8_t =
+            let s: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                 {
                     let actual_pair: (&mut [u8], &mut [u8]) = pi.split_at_mut(i);
-                    slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: actual_pair.0, snd: actual_pair.1 }
                 };
-            let s11: &mut [u8] = _letpattern0.fst;
-            let s21: &mut [u8] = _letpattern0.snd;
-            let res1: slice_pair__uint8_t = slice_pair__uint8_t { fst: s11, snd: s21 };
+            let s11: &mut [u8] = s.fst;
+            let s21: &mut [u8] = s.snd;
+            let res1: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: s11, snd: s21 };
             let input11: &mut [u8] = res1.fst;
             let input2: &mut [u8] = res1.snd;
-            let res2: slice_pair__uint8_t = slice_pair__uint8_t { fst: input11, snd: input2 };
+            let res2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: input11, snd: input2 };
             let input110: &mut [u8] = res2.fst;
             let input20: &mut [u8] = res2.snd;
-            let spl: slice_pair__uint8_t = slice_pair__uint8_t { fst: input110, snd: input20 };
+            let spl: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                { fst: input110, snd: input20 };
             let res3: &mut [u8] = spl.fst;
             let px: &mut [u8] = res3;
             let res4: bool = cbor_raw_ints_optimal(px);
@@ -3206,27 +3362,35 @@ fn cbor_validate_det·(input: &mut [u8]) -> usize
             else
             {
                 let off1: usize = jump_header(pi, 0usize);
-                let _letpattern1: slice_pair__uint8_t =
+                let s·0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                     {
                         let actual_pair: (&mut [u8], &mut [u8]) = pi.split_at_mut(0usize);
-                        slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: actual_pair.0, snd: actual_pair.1 }
                     };
-                let s12: &mut [u8] = _letpattern1.fst;
-                let s22: &mut [u8] = _letpattern1.snd;
-                let split1230: slice_pair__uint8_t = slice_pair__uint8_t { fst: s12, snd: s22 };
+                let s12: &mut [u8] = s·0.fst;
+                let s22: &mut [u8] = s·0.snd;
+                let split1230: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: s12, snd: s22 };
                 let input230: &mut [u8] = split1230.snd;
                 let consumed0: usize = off1.wrapping_sub(0usize);
-                let s1s20: slice_pair__uint8_t =
+                let s1s20: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                     {
                         let actual_pair: (&mut [u8], &mut [u8]) = input230.split_at_mut(consumed0);
-                        slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: actual_pair.0, snd: actual_pair.1 }
                     };
                 let s13: &mut [u8] = s1s20.fst;
                 let s23: &mut [u8] = s1s20.snd;
-                let res10: slice_pair__uint8_t = slice_pair__uint8_t { fst: s13, snd: s23 };
+                let res10: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: s13, snd: s23 };
                 let left0: &mut [u8] = res10.fst;
                 let right0: &mut [u8] = res10.snd;
-                let split230: slice_pair__uint8_t = slice_pair__uint8_t { fst: left0, snd: right0 };
+                let split230: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: left0, snd: right0 };
                 let input·: &mut [u8] = split230.fst;
                 let res11: header = read_header(input·);
                 let x: header = res11;
@@ -3242,17 +3406,22 @@ fn cbor_validate_det·(input: &mut [u8]) -> usize
                     }
                     else
                     { off1.wrapping_add(0usize) };
-                let _letpattern2: slice_pair__uint8_t =
+                let s0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                     {
                         let actual_pair: (&mut [u8], &mut [u8]) = pi.split_at_mut(i0);
-                        slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: actual_pair.0, snd: actual_pair.1 }
                     };
-                let s14: &mut [u8] = _letpattern2.fst;
-                let s24: &mut [u8] = _letpattern2.snd;
-                let res12: slice_pair__uint8_t = slice_pair__uint8_t { fst: s14, snd: s24 };
+                let s14: &mut [u8] = s0.fst;
+                let s24: &mut [u8] = s0.snd;
+                let res12: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: s14, snd: s24 };
                 let input111: &mut [u8] = res12.fst;
                 let input21: &mut [u8] = res12.snd;
-                let spl0: slice_pair__uint8_t = slice_pair__uint8_t { fst: input111, snd: input21 };
+                let spl0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: input111, snd: input21 };
                 let ph: &mut [u8] = spl0.fst;
                 let pc: &[u8] = spl0.snd;
                 let unused: usize = pc.len();
@@ -3283,20 +3452,27 @@ fn cbor_validate_det·(input: &mut [u8]) -> usize
                 let n1: usize = (&pn0)[0];
                 let pi: &mut [u8] = (&ppi0)[0];
                 let i: usize = jump_raw_data_item(pi, 0usize);
-                let _letpattern0: slice_pair__uint8_t =
+                let s: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                     {
                         let actual_pair: (&mut [u8], &mut [u8]) = pi.split_at_mut(i);
-                        slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: actual_pair.0, snd: actual_pair.1 }
                     };
-                let s11: &mut [u8] = _letpattern0.fst;
-                let s21: &mut [u8] = _letpattern0.snd;
-                let res3: slice_pair__uint8_t = slice_pair__uint8_t { fst: s11, snd: s21 };
+                let s11: &mut [u8] = s.fst;
+                let s21: &mut [u8] = s.snd;
+                let res3: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: s11, snd: s21 };
                 let input11: &mut [u8] = res3.fst;
                 let input2: &mut [u8] = res3.snd;
-                let res4: slice_pair__uint8_t = slice_pair__uint8_t { fst: input11, snd: input2 };
+                let res4: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: input11, snd: input2 };
                 let input110: &mut [u8] = res4.fst;
                 let input20: &mut [u8] = res4.snd;
-                let spl: slice_pair__uint8_t = slice_pair__uint8_t { fst: input110, snd: input20 };
+                let spl: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                    __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                    { fst: input110, snd: input20 };
                 let res5: &mut [u8] = spl.fst;
                 let px: &mut [u8] = res5;
                 let res6: bool = cbor_raw_sorted(px);
@@ -3305,29 +3481,36 @@ fn cbor_validate_det·(input: &mut [u8]) -> usize
                 else
                 {
                     let off1: usize = jump_header(pi, 0usize);
-                    let _letpattern1: slice_pair__uint8_t =
+                    let s·0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                         {
                             let actual_pair: (&mut [u8], &mut [u8]) = pi.split_at_mut(0usize);
-                            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                            { fst: actual_pair.0, snd: actual_pair.1 }
                         };
-                    let s12: &mut [u8] = _letpattern1.fst;
-                    let s22: &mut [u8] = _letpattern1.snd;
-                    let split1230: slice_pair__uint8_t = slice_pair__uint8_t { fst: s12, snd: s22 };
+                    let s12: &mut [u8] = s·0.fst;
+                    let s22: &mut [u8] = s·0.snd;
+                    let split1230: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: s12, snd: s22 };
                     let input230: &mut [u8] = split1230.snd;
                     let consumed0: usize = off1.wrapping_sub(0usize);
-                    let s1s20: slice_pair__uint8_t =
+                    let s1s20: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                         {
                             let actual_pair: (&mut [u8], &mut [u8]) =
                                 input230.split_at_mut(consumed0);
-                            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                            { fst: actual_pair.0, snd: actual_pair.1 }
                         };
                     let s13: &mut [u8] = s1s20.fst;
                     let s23: &mut [u8] = s1s20.snd;
-                    let res10: slice_pair__uint8_t = slice_pair__uint8_t { fst: s13, snd: s23 };
+                    let res10: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: s13, snd: s23 };
                     let left0: &mut [u8] = res10.fst;
                     let right0: &mut [u8] = res10.snd;
-                    let split230: slice_pair__uint8_t =
-                        slice_pair__uint8_t { fst: left0, snd: right0 };
+                    let split230: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: left0, snd: right0 };
                     let input·: &mut [u8] = split230.fst;
                     let res11: header = read_header(input·);
                     let x: header = res11;
@@ -3343,20 +3526,24 @@ fn cbor_validate_det·(input: &mut [u8]) -> usize
                         }
                         else
                         { off1.wrapping_add(0usize) };
-                    let _letpattern2: slice_pair__uint8_t =
+                    let s0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
                         {
                             let actual_pair: (&mut [u8], &mut [u8]) = pi.split_at_mut(i0);
-                            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+                            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                            { fst: actual_pair.0, snd: actual_pair.1 }
                         };
-                    let s14: &mut [u8] = _letpattern2.fst;
-                    let s24: &mut [u8] = _letpattern2.snd;
-                    let res12: slice_pair__uint8_t = slice_pair__uint8_t { fst: s14, snd: s24 };
+                    let s14: &mut [u8] = s0.fst;
+                    let s24: &mut [u8] = s0.snd;
+                    let res12: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: s14, snd: s24 };
                     let input111: &mut [u8] = res12.fst;
                     let input21: &mut [u8] = res12.snd;
-                    let spl0: slice_pair__uint8_t =
-                        slice_pair__uint8_t { fst: input111, snd: input21 };
+                    let spl0: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+                        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+                        { fst: input111, snd: input21 };
                     let ph: &mut [u8] = spl0.fst;
-                    let pc: &mut[u8] = spl0.snd;
+                    let pc: &[u8] = spl0.snd;
                     let unused: usize = pc.len();
                     crate::lowstar::ignore::ignore::<usize>(unused);
                     let count: usize = jump_recursive_step_count_leaf(ph);
@@ -3382,28 +3569,32 @@ fn cbor_validate_det(input: &mut [u8]) -> usize
 
 fn cbor_parse <'a>(input: &'a mut [u8], len: usize) -> cbor_raw <'a>
 {
-    // let _letpattern: slice_pair__uint8_t =
-    //     {
-    //         let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(0usize);
-    //         slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
-    //     };
-    // let s1: &mut [u8] = _letpattern.fst;
-    // let s2: &mut [u8] = _letpattern.snd;
-    let (s1, s2): (&[u8], &[u8]) = input.split_at(0);
-    // let (s1, s2): (&mut[u8], &mut[u8]) = input.split_at_mut(0);
-    let input23: & [u8] = s2;
+    let s·: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        {
+            let actual_pair: (&mut [u8], &mut [u8]) = input.split_at_mut(0usize);
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
+        };
+    let s1: &mut [u8] = s·.fst;
+    let s2: &mut [u8] = s·.snd;
+    let split123: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s1, snd: s2 };
+    let input23: &mut [u8] = split123.snd;
     let consumed: usize = len.wrapping_sub(0usize);
-    let s1s2: slice_pair__uint8_t =
+    let s1s2: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
         {
             let actual_pair: (&mut [u8], &mut [u8]) = input23.split_at_mut(consumed);
-            slice_pair__uint8_t { fst: actual_pair.0, snd: actual_pair.1 }
+            __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t
+            { fst: actual_pair.0, snd: actual_pair.1 }
         };
     let s10: &mut [u8] = s1s2.fst;
     let s20: &mut [u8] = s1s2.snd;
-    let res: slice_pair__uint8_t = slice_pair__uint8_t { fst: s10, snd: s20 };
+    let res: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: s10, snd: s20 };
     let left: &mut [u8] = res.fst;
     let right: &mut [u8] = res.snd;
-    let split23: slice_pair__uint8_t = slice_pair__uint8_t { fst: left, snd: right };
+    let split23: __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t =
+        __Pulse_Lib_Slice_slice·uint8_t_Pulse_Lib_Slice_slice·uint8_t { fst: left, snd: right };
     let input1: &mut [u8] = split23.fst;
     let res0: cbor_raw = cbor_read(input1);
     res0
