@@ -9,6 +9,7 @@ module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module A = Pulse.Lib.Array
 
+inline_for_extraction
 noeq
 type cbor_serialized = {
   cbor_serialized_header: raw_uint64;
@@ -17,6 +18,7 @@ type cbor_serialized = {
 }
 
 // not reusing raw_uint64, for packing purposes
+inline_for_extraction
 noeq
 type cbor_int = {
   cbor_int_type: major_type_uint64_or_neg_int64;
@@ -25,6 +27,7 @@ type cbor_int = {
 }
 
 // not reusing raw_uint64, for packing purposes
+inline_for_extraction
 noeq
 type cbor_string = {
   cbor_string_type: major_type_byte_string_or_text_string;
@@ -37,6 +40,7 @@ type cbor_string = {
   cbor_string_perm: perm;
 }
 
+inline_for_extraction
 noeq
 type cbor_tagged = {
   cbor_tagged_tag: raw_uint64;

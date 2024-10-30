@@ -377,15 +377,24 @@ ensures
     let len = cbor_match_string_elim_length xl;
     raw_uint64_as_argument ty len
   }
-  else if (CBOR_Case_Tagged? xl || CBOR_Case_Serialized_Tagged? xl) {
+  else if (
+    let a = CBOR_Case_Tagged? xl in
+    if a then true else CBOR_Case_Serialized_Tagged? xl
+  ) {
     let tag = cbor_match_tagged_get_tag xl;
     raw_uint64_as_argument cbor_major_type_tagged tag
   }
-  else if (CBOR_Case_Array? xl || CBOR_Case_Serialized_Array? xl) {
+  else if (
+    let a = CBOR_Case_Array? xl in
+    if a then true else CBOR_Case_Serialized_Array? xl
+  ) {
     let len = cbor_match_array_get_length xl;
     raw_uint64_as_argument cbor_major_type_array len
   }
-  else if (CBOR_Case_Map? xl || CBOR_Case_Serialized_Map? xl) {
+  else if (
+    let a = CBOR_Case_Map? xl in
+    if a then true else CBOR_Case_Serialized_Map? xl
+  ) {
     let len = cbor_match_map_get_length xl;
     raw_uint64_as_argument cbor_major_type_map len
   }
