@@ -64,11 +64,17 @@ val no_repeats_as_list (s: t) : Lemma
 
 val mem_as_list (s: t) (x: elt) : Lemma
   (ensures (List.Tot.memP x (as_list s) <==> mem x s))
-  [SMTPat (List.Tot.memP x (as_list s))]
+  [SMTPatOr [
+    [SMTPat (List.Tot.memP x (as_list s))];
+    [SMTPat (mem x s)];
+  ]]
 
 val length_as_list (s: t) : Lemma
   (ensures (List.Tot.length (as_list s) == cardinality s))
-  [SMTPat (as_list s)]
+  [SMTPatOr [
+    [SMTPat (as_list s)];
+    [SMTPat (cardinality s)];
+  ]]
 
 val fold (#u: Type) (phi: u -> elt -> u) (x: u) (s: t) : Tot u
 
