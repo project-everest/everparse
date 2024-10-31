@@ -63,12 +63,16 @@ cbor: lowparse-pulse
 cbor-det-c-test: cbor
 	+$(MAKE) -C src/cbor/pulse/det/c/test
 
-cbor-test: cbor-det-c-test
+# NOTE: I wish we could use `cargo -C ...` but see https://github.com/rust-lang/cargo/pull/11960
+cbor-det-rust-test: cbor
+	+cd src/cbor/pulse/det/rust && cargo test
+
+cbor-test: cbor-det-c-test cbor-det-rust-test
 
 cddl: cbor
 	+$(MAKE) -C src/cddl
 
-.PHONY: cbor cbor-det-c-test cbor-test cddl
+.PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
 ci: test lowparse-pulse cbor-test cddl
 
