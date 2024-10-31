@@ -61,12 +61,9 @@ cbor: lowparse-pulse
 	+$(MAKE) -C src/cbor
 
 cbor-det-c-test: cbor
-	+$(MAKE) -C src/cbor/pulse/det-c test
+	+$(MAKE) -C src/cbor/pulse/det/c/test
 
 cbor-test: cbor-det-c-test
-
-cbor-rust: cbor
-	+$(MAKE) -C src/cbor/pulse/det-c test-rs
 
 cddl: cbor
 	+$(MAKE) -C src/cddl
