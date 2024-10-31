@@ -4,3 +4,5 @@ pub mod lowstar {
     }
 }
 pub mod cbordet;
+
+#[cfg(test)] mod test;
