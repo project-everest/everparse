@@ -6,9 +6,9 @@ include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
 RUST_DIRECTORY:=src
 
-extract: target/debug/cborret
+extract: target/debug/libcborrs.rlib
 
-target/debug/cborret: $(RUST_DIRECTORY)/cbordet.rs
+target/debug/libcborrs.rlib: $(RUST_DIRECTORY)/cbordet.rs
 	cargo build
 	touch -c $@
 
