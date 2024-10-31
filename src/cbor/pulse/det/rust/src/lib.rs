@@ -4,7 +4,3 @@ pub mod lowstar {
     }
 }
 pub mod cbordet;
-
-fn main() {
-    println!("Hello, world!");
-}
