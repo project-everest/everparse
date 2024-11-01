@@ -100,21 +100,6 @@ let map_group_match_item_witness_bool (key value: typ) (l: cbor_map) (l': cbor_m
   key (fst x) &&
   value (snd x)
 
-(*
-let pred2_equiv_trans
-  (#t #t': Type)
-  (p1 p2 p3: t -> t' -> prop)
-: Lemma
-  (requires (
-    (forall x x' . p1 x x' <==> p2 x x') /\
-    (forall x x' . p2 x x' <==> p3 x x')
-  ))
-  (ensures (
-    (forall x x' . p1 x x' <==> p3 x x')
-  ))
-= ()
-*)
-
 let mps_union_assoc
   (x1 x2 x3: MPS.t)
 : Lemma
@@ -401,21 +386,6 @@ let map_group_match_item_ext
   assert (forall s . mps_exists (map_group_match_item_cut_exists_pred key s) s <==> mps_exists (map_group_match_item_cut_exists_pred key' s) s);
   assert (map_group_match_item cut key value `FE.feq` map_group_match_item cut key' value')
 
-(*
-let gset_map_witness_pred (#t1 #t2: Type) (f: t1 -> GTot t2) (s: FStar.GSet.set t1) x2 x1 : GTot prop =
-  x2 == f x1 /\ FStar.GSet.mem x1 s
-
-let gset_map (#t1 #t2: Type) (f: t1 -> GTot t2) (s: FStar.GSet.set t1) : FStar.GSet.set t2 =
-  FStar.GSet.comprehend (fun x2 -> FStar.StrongExcludedMiddle.strong_excluded_middle (exists x1 .
-    gset_map_witness_pred f s x2 x1
-  ))
-
-let gset_map_elim #t1 #t2 (f: t1 -> GTot t2) (s: FStar.GSet.set t1) (x2: t2) : Ghost t1
-  (requires FStar.GSet.mem x2 (gset_map f s))
-  (ensures fun x1 -> gset_map_witness_pred f s x2 x1)
-= FStar.IndefiniteDescription.indefinite_description_ghost _ (gset_map_witness_pred f s x2)
-*)
-
 let map_group_match_item_alt_pred
   (key value: typ)
   (l: cbor_map)
@@ -423,71 +393,6 @@ let map_group_match_item_alt_pred
 : Tot bool
 = cbor_map_mem kv l &&
   matches_map_group_entry key value kv
-
-(*
-let map_group_match_item_alt_r
-  l0
-  (ll, lr)
-= (ll, ghost_map_union l0 lr)
-
-let map_group_match_item_alt (key value: typ) (l: cbor_map) : GTot _ =
-  match maybe_indefinite_description_ghost (map_group_match_item_alt_pred key value l) with
-  | None -> FStar.GSet.empty
-  | Some kv ->
-    let l1 = ghost_map_singleton (fst kv) (snd kv) in
-    let l2 = ghost_map_sub l l1 in
-    FStar.GSet.union (FStar.GSet.singleton (l1, l2))
-      (gset_map (map_group_match_item_alt_r l1) (map_group_match_item' key value l2))
-
-#restart-solver
-let map_group_match_item_alt_map_group_match_item
-  (key value: typ) (l: cbor_map) l'
-: Lemma
-  (FStar.GSet.mem l' (map_group_match_item_alt key value l) ==> FStar.GSet.mem l' (map_group_match_item' key value l))
-=
-  if FStar.GSet.mem l' (map_group_match_item_alt key value l)
-  then begin
-    let Some kv = maybe_indefinite_description_ghost (map_group_match_item_alt_pred key value l) in
-    let l1 = ghost_map_singleton (fst kv) (snd kv) in
-    let l2 = ghost_map_sub l l1 in
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (l' == (l1, l2))
-    then assert (map_group_match_item_witness_pred key value l l' kv)
-    else begin
-      let x = gset_map_elim (map_group_match_item_alt_r l1) (map_group_match_item' key value l2) l' in
-      let kv' = map_group_match_item_elim key value l2 x in
-      ghost_map_union_assoc l1 (fst x) (snd x);
-      ghost_map_disjoint_union_comm l1 (fst x);
-      ghost_map_union_assoc (fst x) l1 (snd x);
-      assert (map_group_match_item_witness_pred key value l l' kv')
-    end
-  end
-
-let map_group_match_item_map_group_match_item_alt
-  (key value: typ) (l: cbor_map) l'
-: Lemma
-  (FStar.GSet.mem l' (map_group_match_item' key value l) ==> FStar.GSet.mem l' (map_group_match_item_alt key value l))
-= if FStar.GSet.mem l' (map_group_match_item' key value l)
-  then begin
-    let kv' = map_group_match_item_elim key value l l' in
-    assert (map_group_match_item_alt_pred key value l kv');
-    let Some kv = maybe_indefinite_description_ghost (map_group_match_item_alt_pred key value l) in
-    let l1 = ghost_map_singleton (fst kv) (snd kv) in
-    let l2 = ghost_map_sub l l1 in
-    if FStar.StrongExcludedMiddle.strong_excluded_middle (kv == kv')
-    then ghost_map_disjoint_union_simpl_l l1 l2 (snd l')
-    else begin
-      assert (ghost_map_mem kv' l2);
-      let l2' = snd l' `ghost_map_sub` l1 in
-      ghost_map_disjoint_union_comm l1 l2';
-      ghost_map_union_assoc (fst l') l1 l2';
-      ghost_map_disjoint_union_comm (fst l') l1;
-      ghost_map_union_assoc l1 (fst l') l2';
-      ghost_map_disjoint_union_simpl_l l1 (fst l' `ghost_map_union` l2') l2;
-      assert (map_group_match_item_witness_pred key value l2 (fst l', l2') kv');
-      assert (gset_map_witness_pred (map_group_match_item_alt_r l1) (map_group_match_item' key value l2) l' (fst l', l2'))
-    end
-  end
-*)
 
 let map_group_equiv
   (m1 m2: map_group)
@@ -503,16 +408,6 @@ let map_group_equiv_eq
   (map_group_equiv m1 m2 <==> m1 == m2)
   [SMTPat (map_group_equiv m1 m2)]
 = assert (FE.feq m1 m2 <==> m1 == m2)
-
-(*
-let map_group_match_item_alt_correct
-  (key value: typ) (l: cbor_map)
-: Lemma
-  (map_group_match_item_alt key value l == map_group_match_item' key value l)
-= Classical.forall_intro (map_group_match_item_map_group_match_item_alt key value l);
-  Classical.forall_intro (map_group_match_item_alt_map_group_match_item key value l);
-  assert (map_group_match_item_alt key value l `FStar.GSet.equal` map_group_match_item' key value l)
-*)
 
 let map_group_choice (m1 m2: map_group) : map_group =
   FE.on_dom cbor_map #map_group_codom (fun l ->
@@ -1306,24 +1201,21 @@ let map_group_match_item_for_eq_gen
       assert (map_group_match_item_for true k ty l == MapGroupCutFailure)
     end
 
-(*
-let gset_equal_intro
-  (#t: Type)
-  (s1 s2: FStar.GSet.set t)
-  (prf12: (x: t) -> Lemma
-    (requires FStar.GSet.mem x s1)
-    (ensures FStar.GSet.mem x s2)
+let mps_equal_intro
+  (s1 s2: MPS.t)
+  (prf12: (x: MPS.elt) -> Lemma
+    (requires MPS.mem x s1)
+    (ensures MPS.mem x s2)
   )
-  (prf21: (x: t) -> Lemma
-    (requires FStar.GSet.mem x s2)
-    (ensures FStar.GSet.mem x s1)
+  (prf21: (x: MPS.elt) -> Lemma
+    (requires MPS.mem x s2)
+    (ensures MPS.mem x s1)
   )
 : Lemma
   (s1 == s2)
 = Classical.forall_intro (Classical.move_requires prf12);
   Classical.forall_intro (Classical.move_requires prf21);
-  assert (s1 `FStar.GSet.equal` s2)
-*)
+  assert (s1 `MPS.equal` s2)
 
 let map_group_match_item_length
   (key value: typ)
@@ -1379,25 +1271,6 @@ let map_group_zero_or_more_zero_or_one_eq
         ()
     )
 
-(*
-let apply_map_group_det_old (m: map_group) (l: cbor_map) : Pure map_group_result
-  (requires True)
-  (ensures fun r -> map_group_result_prop l r)
-= match m l with
-  | MapGroupCutFailure -> MapGroupCutFail
-  | MapGroupResult s ->
-  if FStar.StrongExcludedMiddle.strong_excluded_middle (s == FStar.GSet.empty)
-  then MapGroupFail
-  else if FStar.StrongExcludedMiddle.strong_excluded_middle (exists x . s == FStar.GSet.singleton x)
-  then
-    let x = FStar.IndefiniteDescription.indefinite_description_ghost _ (fun x -> s == FStar.GSet.singleton x) in
-    MapGroupDet (fst x) (snd x)
-  else MapGroupNonDet
-
-let gset_is_singleton (#t: Type) (s: FStar.GSet.set t) (x: t) : Tot prop =
-  s == FStar.GSet.singleton x
-*)
-
 let apply_map_group_det (m: map_group) (l: cbor_map) : Pure map_group_result
   (requires True)
   (ensures fun r -> map_group_result_prop l r)
@@ -1413,15 +1286,6 @@ let apply_map_group_det (m: map_group) (l: cbor_map) : Pure map_group_result
       MapGroupDet (fst x) (snd x)
     else
       MapGroupNonDet
-
-(*
-let apply_map_group_det_eq_old
-  (m: map_group)
-  (l: cbor_map)
-: Lemma
-  (apply_map_group_det m l == apply_map_group_det_old m l)
-= ()
-*)
 
 #restart-solver
 let apply_map_group_det_eq_singleton (m: map_group) (l: cbor_map) (x : (_ & _)) : Lemma
@@ -1496,6 +1360,16 @@ let apply_map_group_det_choice (m1 m2: map_group) (l: cbor_map)
   | MapGroupFail -> apply_map_group_det_eq_map (m1 `map_group_choice` m2) m2 l
   | _ -> apply_map_group_det_eq_map (m1 `map_group_choice` m2) m1 l
 
+let mps_not_empty_elim
+  (s: MPS.t)
+: Ghost MPS.elt
+  (requires (s <> MPS.empty))
+  (ensures fun y -> MPS.mem y s)
+=
+  assert (forall x . (List.Tot.memP x (MPS.as_list s) <==> MPS.mem x s));
+  assert (Nil? (MPS.as_list s) ==> MPS.equal s MPS.empty);
+  List.Tot.hd (MPS.as_list s)
+
 #push-options "--z3rlimit 32"
 
 let apply_map_group_det_concat (m1 m2: map_group) (l: cbor_map) =
@@ -1531,25 +1405,22 @@ let apply_map_group_det_concat (m1 m2: map_group) (l: cbor_map) =
       assert (snd l2 == lr2)
     | MapGroupNonDet ->
       let s2 = MapGroupResult?._0 (m2 lr1) in
-      assert (forall x . (List.Tot.memP x (MPS.as_list s2) <==> MPS.mem x s2));
-      assert (Nil? (MPS.as_list s2) ==> MPS.equal s2 MPS.empty);
-      let l2 = List.Tot.hd (MPS.as_list s2) in
+      let l2 = mps_not_empty_elim s2 in
       let l0 = (cbor_map_union (fst l1) (fst l2), snd l2) in
       assert (map_group_concat_witness_pred m1 m2 l l0
         (l1, l2)
       );
       assert (MPS.mem l0 (MapGroupResult?._0 (map_group_concat m1 m2 l)));
       assert (~ (map_group_concat m1 m2 l == MapGroupResult MPS.empty));
-      if FStar.StrongExcludedMiddle.strong_excluded_middle (exists x . map_group_concat m1 m2 l == MapGroupResult (MPS.singleton x))
-      then begin
-        assert (match map_group_concat m1 m2 l with
-        |  MapGroupResult s -> s `MPS.equal` MPS.singleton l0
-        | _ -> False);
-        assume (MPS.equal
-          (MapGroupResult?._0 (m2 lr1))
-          (MPS.singleton l2)
-        )
-(*        
+      begin match map_group_concat m1 m2 l with
+      | MapGroupResult s ->
+        if MPS.cardinality s = 1
+        then begin
+          let x = mps_singleton_elim s in
+          assert (s `MPS.equal` MPS.singleton l0);
+          mps_equal_intro
+            (MapGroupResult?._0 (m2 lr1))
+            (MPS.singleton l2)
           (fun l2' ->
             let l0' = (cbor_map_union (fst l1) (fst l2'), snd l2') in
             assert (map_group_concat_witness_pred m1 m2 l l0'
@@ -1563,9 +1434,9 @@ let apply_map_group_det_concat (m1 m2: map_group) (l: cbor_map) =
             assert (l2' == l2)
           )
           (fun _ -> ())
-*)          
-      end
-      else ()
+        end
+        else ()
+     end
     end
   | _ -> ()
 
@@ -1642,7 +1513,7 @@ let map_group_zero_or_one_match_item_filter_matched
   cbor_map_disjoint_union_filter p s l';
   cbor_map_equiv cbor_map_empty (cbor_map_filter p s)
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 16"
 
 #restart-solver
 let map_group_zero_or_one_match_item_filter
@@ -1659,8 +1530,6 @@ let map_group_zero_or_one_match_item_filter
         let (l1, _) = map_group_concat_elim (map_group_zero_or_one (map_group_match_item false key value)) (map_group_filter p) l l' in
         let kv = map_group_match_item'_elim key value l l1 in
         assert (fst l1 == cbor_map_singleton (fst kv) (snd kv));
-//        assert (map_group_filter p (snd l1) == MapGroupResult (MPS.singleton (cbor_map_gr
-//        FStar.GSet.singleton (map_group_filter_item p (snd l1))));
         map_group_zero_or_one_match_item_filter_matched key value p l kv (snd l1);
         assert (snd l' == cbor_map_filter p l)
       end
@@ -1669,13 +1538,12 @@ let map_group_zero_or_one_match_item_filter
       let MapGroupResult s = map_group_match_item false key value l in
       if s = MPS.empty
       then map_group_concat_nop_l (map_group_filter p)
-      else assume False
-(*      
-      | Some l1 ->
-        let kv = map_group_match_item_elim key value l l1 in
+      else begin
+        let l1 = mps_not_empty_elim s in
+        let kv = map_group_match_item'_elim key value l l1 in
         map_group_zero_or_one_match_item_filter_matched key value p l kv (snd l1);
-        assert (map_group_concat_witness_pred (map_group_zero_or_one (map_group_match_item false key value)) (map_group_filter p) l l' (l1, (cbor_map_filter (notp_g p) (snd l1), cbor_map_filter p (snd l1))))
-*)
+        assert (map_group_concat_witness_pred (map_group_zero_or_one (map_group_match_item false key value)) (map_group_filter p) l l' (l1, (cbor_map_filter (CBOR.Spec.Util.notp p) (snd l1), cbor_map_filter p (snd l1))))
+      end
     )
 
 #restart-solver
@@ -1728,7 +1596,6 @@ let map_group_zero_or_one_bound_match_item_filter
     (map_group_zero_or_one (map_group_match_item false key value) `map_group_concat` bound_map_group l (map_group_filter p)) l == map_group_filter p l
   ))
 = let p = CBOR.Spec.Util.notp (matches_map_group_entry key value) in
-//  map_group_match_item_alt_correct key value l;
   if not (cbor_map_exists (matches_map_group_entry key value) l)
   then begin
     assert (MPS.equal (map_group_match_item' key value l) MPS.empty);
@@ -1742,12 +1609,14 @@ let map_group_zero_or_one_bound_match_item_filter
       l
   end
   else begin
-//    assert (Some? (gset_is_empty (map_group_match_item' key value l)));
+    let s = map_group_match_item' key value l in
+    assert (forall x . (cbor_map_mem x l /\ matches_map_group_entry key value x) ==> MPS.mem (cbor_map_singleton (fst x) (snd x), cbor_map_sub l (cbor_map_singleton (fst x) (snd x))) s);
+    assert (~ (MPS.equal s MPS.empty));
     map_group_concat_bound_map_group_elim
       (map_group_zero_or_one (map_group_match_item false key value))
       (map_group_filter p)
       l l
-      (fun _ -> assume False);
+      (fun _ -> ());
     map_group_zero_or_one_match_item_filter key value p
   end
 
@@ -1762,8 +1631,6 @@ let map_group_zero_or_one_map_group_match_item_no_cut_nonempty
   if s = MPS.empty
   then assert (MPS.mem (cbor_map_empty, l) s')
   else ()
-
-#push-options "--z3rlimit 16"
 
 #restart-solver
 let map_group_zero_or_more_match_item_filter (key value: typ) : Lemma
@@ -1788,16 +1655,6 @@ let map_group_zero_or_more_match_item_filter (key value: typ) : Lemma
       bound_map_group_ext l (map_group_zero_or_more (map_group_match_item false key value)) (map_group_filter f);
       map_group_zero_or_one_bound_match_item_filter key value l
     )
-
-#pop-options
-
-let eq_trans
-  (#t: Type)
-  (x1 x2 x3: t)
-  (sq12: squash (x1 == x2))
-  (sq23: squash (x2 == x3))
-: Tot (squash (x1 == x3))
-= ()
 
 let apply_map_group_det_ext
   (m1 m2: map_group)
@@ -1881,24 +1738,36 @@ let map_group_fail_shorten_intro
 = Classical.forall_intro_2 (fun m1 -> Classical.move_requires (prf m1))
 
 #restart-solver
+
 let map_group_fail_shorten_match_item
   (cut: bool)
   (key value: typ)
 : Lemma
   (map_group_fail_shorten (map_group_match_item cut key value))
 = map_group_fail_shorten_intro (map_group_match_item cut key value) (fun m1 m2 ->
-//    map_group_match_item_alt_correct key value (m1 `cbor_map_union` m2);
-//    map_group_match_item_alt_correct key value m1;
     let s12 = map_group_match_item' key value (m1 `cbor_map_union` m2) in
     if s12 = MPS.empty
     then begin
+      let s1 = map_group_match_item' key value m1 in
+      let prf
+        (x: MPS.elt)
+      : Lemma
+        (requires MPS.mem x s1)
+        (ensures exists y . MPS.mem y s12)
+      =
+        let j = map_group_match_item'_elim key value m1 x in
+        assert (cbor_map_mem j (fst x));
+        let x' = (fst x, snd x `cbor_map_union` m2) in
+        assert (map_group_match_item_witness_pred key value (m1 `cbor_map_union` m2) x' j);
+        assert (MPS.mem x' s12)
+      in
+      Classical.forall_intro (Classical.move_requires prf);
+      assert (MPS.equal s1 MPS.empty);
       assert (forall x . map_group_match_item_alt_pred key value m1 x ==> map_group_match_item_alt_pred key value (m1 `cbor_map_union` m2) x);
-//      assert (None? (maybe_indefinite_description_ghost (map_group_match_item_alt_pred key value m1)));
       cbor_map_disjoint_mem_union' m1 m2 ();
       assert (forall l entry . map_group_match_item_cut_failure_witness_pred key (MPS.singleton (cbor_map_empty, m1)) l entry ==> begin
         map_group_match_item_cut_failure_witness_pred key (MPS.singleton (cbor_map_empty, m1 `cbor_map_union` m2)) (cbor_map_empty, m1 `cbor_map_union` m2) entry
-      end);
-      assume False
+      end)
     end
     else begin
       assert (forall (kv: (cbor & cbor)) .
@@ -2012,11 +1881,9 @@ let map_group_zero_or_more_choice
   assert (map_group_zero_or_more (g1 `map_group_choice` g2) `FE.feq` (map_group_zero_or_more g1 `map_group_concat` map_group_zero_or_more g2)
   )
 
-let map_group_zero_or_one_choice
-  (g1 g2: map_group)
-: Lemma
-  (map_group_zero_or_one (g1 `map_group_choice` g2) == g1 `map_group_choice` map_group_zero_or_one g2)
-= map_group_choice_assoc g1 g2 map_group_nop
+let apply_map_group_det_productive
+  m f
+= ()
 
 let matches_map_group (g: map_group) (m: cbor_map) : Tot bool =
   match g m with

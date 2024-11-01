@@ -162,7 +162,6 @@ val map_group_zero_or_more_zero_or_one_eq
 : Lemma
   (map_group_zero_or_more (map_group_zero_or_one m) == map_group_zero_or_more m)
 
-[@@erasable]
 noeq
 type map_group_result =
 | MapGroupCutFail
@@ -362,6 +361,25 @@ val map_group_zero_or_more_choice
   (ensures (
     map_group_zero_or_more (g1 `map_group_choice` g2) == map_group_zero_or_more g1 `map_group_concat` map_group_zero_or_more g2
   ))
+
+let map_group_zero_or_one_choice
+  (g1 g2: map_group)
+: Lemma
+  (map_group_zero_or_one (g1 `map_group_choice` g2) == g1 `map_group_choice` map_group_zero_or_one g2)
+= map_group_choice_assoc g1 g2 map_group_nop
+
+val apply_map_group_det_productive
+  (m: map_group)
+  (f: Cbor.cbor_map)
+: Lemma
+  (requires (map_group_is_productive m))
+  (ensures (match apply_map_group_det m f with
+  | MapGroupDet consumed remaining ->
+    Cbor.cbor_map_length consumed > 0 /\
+    Cbor.cbor_map_length remaining < Cbor.cbor_map_length f
+  | _ -> True
+  ))
+  [SMTPat (map_group_is_productive m); SMTPat (apply_map_group_det m f)]
 
 val matches_map_group (g: map_group) (m: Cbor.cbor_map) : Tot bool
 
