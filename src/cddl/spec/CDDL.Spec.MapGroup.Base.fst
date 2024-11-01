@@ -1881,11 +1881,9 @@ let map_group_zero_or_more_choice
   assert (map_group_zero_or_more (g1 `map_group_choice` g2) `FE.feq` (map_group_zero_or_more g1 `map_group_concat` map_group_zero_or_more g2)
   )
 
-let map_group_zero_or_one_choice
-  (g1 g2: map_group)
-: Lemma
-  (map_group_zero_or_one (g1 `map_group_choice` g2) == g1 `map_group_choice` map_group_zero_or_one g2)
-= map_group_choice_assoc g1 g2 map_group_nop
+let apply_map_group_det_productive
+  m f
+= ()
 
 let matches_map_group (g: map_group) (m: cbor_map) : Tot bool =
   match g m with
