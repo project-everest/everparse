@@ -6,6 +6,9 @@ FROM fstar:local-branch-$FSTAR_BRANCH
 ADD --chown=opam:opam ./ $HOME/everparse/
 WORKDIR $HOME/everparse
 
+# install rust (for the CBOR tests)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
 # Dependencies (opam packages)
 ENV KRML_HOME=$HOME/everparse/karamel
 ENV PULSE_HOME=$HOME/everparse/pulse
@@ -22,7 +25,7 @@ RUN sudo pip3 install --break-system-packages pytz tzdata sphinx==1.7.2 jinja2==
 # CI proper
 ARG CI_THREADS=24
 ARG CI_BRANCH=master
-RUN --mount=type=secret,id=DZOMO_GITHUB_TOKEN eval $(opam env) && DZOMO_GITHUB_TOKEN=$(sudo cat /run/secrets/DZOMO_GITHUB_TOKEN) .docker/build/build-hierarchic.sh $CI_THREADS $CI_BRANCH
+RUN --mount=type=secret,id=DZOMO_GITHUB_TOKEN eval $(opam env) && . "$HOME/.cargo/env" && DZOMO_GITHUB_TOKEN=$(sudo cat /run/secrets/DZOMO_GITHUB_TOKEN) .docker/build/build-hierarchic.sh $CI_THREADS $CI_BRANCH
 
 WORKDIR $HOME
 ENV EVERPARSE_HOME $HOME/everparse

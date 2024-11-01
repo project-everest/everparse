@@ -12,6 +12,9 @@ RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
     wget \
     && true
 
+# install rust (for the CBOR tests)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+
 # Dependencies (F*, Karamel and opam packages)
 ENV FSTAR_HOME=$HOME/FStar
 ENV KRML_HOME=$HOME/karamel
@@ -30,7 +33,7 @@ RUN sudo pip3 install --break-system-packages pytz tzdata sphinx==1.7.2 jinja2==
 ARG CI_THREADS=24
 ARG CI_BRANCH=master
 
-RUN --mount=type=secret,id=DZOMO_GITHUB_TOKEN eval $(opam env) && DZOMO_GITHUB_TOKEN=$(sudo cat /run/secrets/DZOMO_GITHUB_TOKEN) .docker/build/build-standalone.sh $CI_THREADS $CI_BRANCH
+RUN --mount=type=secret,id=DZOMO_GITHUB_TOKEN eval $(opam env) && . "$HOME/.cargo/env" && DZOMO_GITHUB_TOKEN=$(sudo cat /run/secrets/DZOMO_GITHUB_TOKEN) .docker/build/build-standalone.sh $CI_THREADS $CI_BRANCH
 
 WORKDIR $HOME
 ENV EVERPARSE_HOME=$HOME/everparse
