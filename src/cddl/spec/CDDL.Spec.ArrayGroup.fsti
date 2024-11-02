@@ -993,6 +993,8 @@ let array_group_is_nonempty (a: array_group None) : Tot prop =
 let nonempty_array_group : Type0 =
   (a: array_group None { array_group_is_nonempty a })
 
+#push-options "--z3rlimit 16"
+
 let rec array_group_serializer_spec_zero_or_more'
   (#source: nonempty_array_group)
   (#target: Type)
@@ -1023,6 +1025,8 @@ let rec array_group_serializer_spec_zero_or_more'
     let l2 = array_group_serializer_spec_zero_or_more' s target_size' target_prop' q in
     let res = l1 `List.Tot.append` l2 in
     res
+
+#pop-options
 
 let array_group_serializer_spec_zero_or_more
   (#source: nonempty_array_group)

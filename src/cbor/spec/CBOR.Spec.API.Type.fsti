@@ -98,6 +98,13 @@ val cbor_map_get_filter: (f: (cbor & cbor -> bool)) -> (m: cbor_map) -> (k: cbor
   end))
   [SMTPat (cbor_map_get (cbor_map_filter f m) k)]
 
+val cbor_map_length_filter
+  (f: ((cbor & cbor) -> bool))
+  (m: cbor_map)
+: Lemma
+  (ensures (cbor_map_length (cbor_map_filter f m) <= cbor_map_length m))
+  [SMTPat (cbor_map_length (cbor_map_filter f m))]
+
 val cbor_map_union: cbor_map -> cbor_map -> cbor_map
 
 val cbor_map_get_union: (m1: cbor_map) -> (m2: cbor_map) -> (k: cbor) -> Lemma

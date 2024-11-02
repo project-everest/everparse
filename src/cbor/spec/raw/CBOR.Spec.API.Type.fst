@@ -156,6 +156,11 @@ let cbor_map_get_filter = cbor_map_get_filter'
 let cbor_map_diff_f (m1: cbor_map) (kv: (cbor & cbor)) : Tot bool =
   None? (cbor_map_get m1 (fst kv))
 
+let cbor_map_length_filter f m =
+  cbor_map_length_eq m;
+  cbor_map_length_eq (cbor_map_filter f m);
+  U.list_length_filter (cbor_map_filter_f f) m
+
 let cbor_map_union m1 m2 =
   let m2' = cbor_map_filter (cbor_map_diff_f m1) m2 in
   List.Tot.for_all_mem (U.holds_on_pair R.raw_data_item_ints_optimal) m1;

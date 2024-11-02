@@ -45,6 +45,50 @@ val ext
   (ensures (equal m1 m2 <==> m1 == m2))
   [SMTPat (equal m1 m2)]
 
+let mem
+  (#key: Type)
+  (#key_s: typ)
+  (#spec_key: spec key_s key true)
+  (#value: Type)
+  (kv: (key & value))
+  (f: t spec_key value)
+: Tot prop
+= get f (fst kv) == Some (snd kv)
+
+let equal'
+  (#key: Type)
+  (#key_s: typ)
+  (#spec_key: spec key_s key true)
+  (#value: Type)
+  (m1 m2: t spec_key value)
+: Tot prop =
+  (forall kv . mem kv m1 <==> mem kv m2)
+
+let ext'
+  (#key: Type)
+  (#key_s: typ)
+  (#spec_key: spec key_s key true)
+  (#value: Type)
+  (m1 m2: t spec_key value)
+: Lemma
+  (ensures (equal' m1 m2 <==> m1 == m2))
+  [SMTPat (equal' m1 m2)]
+= let prf
+    (k: key)
+  : Lemma
+    (requires (equal' m1 m2))
+    (ensures (get m1 k == get m2 k))
+  = match get m1 k with
+    | Some v -> assert (mem (k, v) m1)
+    | _ ->
+      begin match get m2 k with
+      | Some v -> assert (mem (k, v) m2)
+      | _ -> ()
+      end
+  in
+  Classical.forall_intro (Classical.move_requires prf);
+  assert (equal' m1 m2 ==> equal m1 m2)
+
 val length
   (#key: Type)
   (#key_s: typ)
@@ -314,7 +358,7 @@ let for_all
   (m: t spec_key value)
 : Pure bool
     (requires True)
-    (ensures fun b -> b <==> (forall k v . get m k == Some v ==> f (k, v)))
+    (ensures fun b -> b <==> (forall kv . mem kv m ==> f kv))
 = let b = (key_set (filter f m) = key_set m) in // HERE we use the fact that the key set is eqtype
   assert (b == true <==> equal (filter f m) m);
   b

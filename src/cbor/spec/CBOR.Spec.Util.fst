@@ -1603,6 +1603,12 @@ let rec list_fold_ext_idem
     list_filter_not_in_fold f a h l2';
     list_fold_ext_idem f (f a h) (list_filter_not_in h q) (list_filter_not_in h l2')
 
+let rec list_length_filter (#t: Type) (f: t -> bool) (l: list t) : Lemma
+  (List.Tot.length (List.Tot.filter f l) <= List.Tot.length l)
+= match l with
+  | [] -> ()
+  | _ :: q -> list_length_filter f q
+
 
 (* Well-founded recursion *)
 

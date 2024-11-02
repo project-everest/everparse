@@ -534,6 +534,8 @@ let map_group_concat_result_map
 : Tot map_group_item
 = (cbor_map_union consumed (fst x), snd x)
 
+#push-options "--z3rlimit 16"
+
 let map_group_concat_result_op
   (f: cbor_map)
   (m2: map_group)
@@ -547,6 +549,8 @@ let map_group_concat_result_op
       MPS.union accu (mps_map (map_group_concat_result_map (fst l)) s)
     | _ -> accu // dummy, since cut failure is determined separately
   else accu // dummy, since elements of l are already supposed to satisfy map_group_item_post f
+
+#pop-options
 
 let map_group_concat_result_post
   (m2: map_group)
@@ -1737,6 +1741,8 @@ let map_group_fail_shorten_intro
   (map_group_fail_shorten g)
 = Classical.forall_intro_2 (fun m1 -> Classical.move_requires (prf m1))
 
+#push-options "--z3rlimit 16"
+
 #restart-solver
 
 let map_group_fail_shorten_match_item
@@ -1776,6 +1782,8 @@ let map_group_fail_shorten_match_item
       )
     end
   )
+
+#pop-options
 
 #restart-solver
 let rec map_group_zero_or_more_choice'
