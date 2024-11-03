@@ -1,4 +1,6 @@
-all: spec.do
+all: pulse.do
+
+pulse.do: spec.do
 
 %.do:
 	+$(MAKE) -C $(basename $@)
