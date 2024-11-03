@@ -500,16 +500,16 @@ let match_array_group (#b: option Cbor.cbor) (a: array_group b)
   | Some (_, l') -> Nil? l'
   | _ -> false
 
-let t_array3 (#b: option Cbor.cbor) (a: array_group b) : bounded_typ_gen b = fun w -> let x = Cbor.unpack w in
+let t_array (#b: option Cbor.cbor) (a: array_group b) : bounded_typ_gen b = fun w -> let x = Cbor.unpack w in
   Cbor.CArray? x &&
   match_array_group a (Cbor.CArray?.v x)
 
-let t_array3_equiv
+let t_array_equiv
   #b
   (a1 a2: array_group b)
 : Lemma
   (requires (array_group_equiv a1 a2))
-  (ensures (typ_equiv (t_array3 a1) (t_array3 a2)))
+  (ensures (typ_equiv (t_array a1) (t_array a2)))
 = ()
 
 let close_array_group
@@ -531,13 +531,13 @@ let maybe_close_array_group
   then close_array_group t
   else t
 
-let array3_close_array_group
+let array_close_array_group
   (#b: _)
   (a: array_group b)
 : Lemma
   (typ_equiv
-    (t_array3 a)
-    (t_array3 (close_array_group a))
+    (t_array a)
+    (t_array (close_array_group a))
   )
 = ()
 
@@ -550,14 +550,14 @@ let array3_close_array_group
 // destructor combinator. We need to annotate it with a bound b (akin
 // to the "size" annotation in a sized type.)
 
-let rec t_array3_rec
+let rec t_array_rec
   (phi: (b: Cbor.cbor) -> (bounded_typ b -> array_group (Some b)))
   (w: Cbor.cbor)
 : Tot bool
   (decreases w)
 = let x = Cbor.unpack w in
   Cbor.CArray? x &&
-  match_array_group (phi w (t_array3_rec phi)) (Cbor.CArray?.v x)
+  match_array_group (phi w (t_array_rec phi)) (Cbor.CArray?.v x)
 
 let array_group_parser_spec_arg
   (source: array_group None)
@@ -641,7 +641,7 @@ let parser_spec_array_group
   (target_prop' : target -> bool {
     forall x . target_prop' x <==> (target_prop x /\ target_size x < pow2 64) // serializability condition
   })
-: Tot (parser_spec (t_array3 source) target target_prop')
+: Tot (parser_spec (t_array source) target target_prop')
 = fun x -> let Cbor.CArray a = Cbor.unpack x in p a
 
 let serializer_spec_array_group
@@ -672,7 +672,7 @@ let spec_array_group
   (#target: Type0)
   (#inj: bool)
   (p: ag_spec source target inj)
-: Tot (spec (t_array3 source) target inj)
+: Tot (spec (t_array source) target inj)
 = {
   serializable = spec_array_group_serializable p;
   parser = parser_spec_array_group p.ag_parser _;
