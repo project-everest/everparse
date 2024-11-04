@@ -43,9 +43,9 @@ fn impl_array_group_concat
   (#cbor_array_iterator_t: Type)
   (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
     (#b: Ghost.erased (option cbor))
-    (#g1: array_group b)
+    (#g1: Ghost.erased (array_group b))
     (f1: impl_array_group cbor_array_iterator_match g1)
-    (#g2: array_group b)
+    (#g2: Ghost.erased (array_group b))
     (f2: impl_array_group cbor_array_iterator_match g2)
 : impl_array_group #cbor_array_iterator_t cbor_array_iterator_match #b (array_group_concat g1 g2)
 =
@@ -75,7 +75,7 @@ fn impl_array_group_item
   (cbor_array_iterator_is_done: array_iterator_is_empty_t cbor_array_iterator_match)
   (cbor_array_iterator_next: array_iterator_next_t vmatch cbor_array_iterator_match)
     (#b: Ghost.erased (option cbor))
-    (#ty: bounded_typ_gen b)
+    (#ty: Ghost.erased (bounded_typ_gen b))
     (fty: impl_typ u#0 vmatch ty)
 : impl_array_group #cbor_array_iterator_t cbor_array_iterator_match #b (array_group_item ty)
 =
@@ -112,7 +112,7 @@ fn impl_t_array
   (cbor_array_iterator_init: array_iterator_start_t vmatch cbor_array_iterator_match)
   (cbor_array_iterator_is_done: array_iterator_is_empty_t cbor_array_iterator_match)
     (#b: Ghost.erased (option cbor))
-    (#g: (array_group b))
+    (#g: Ghost.erased (array_group b))
     (ig: (impl_array_group cbor_array_iterator_match (g)))
 : impl_typ u#0 #t vmatch #b (t_array g)
 =

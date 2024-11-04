@@ -29,7 +29,7 @@ fn impl_coerce_to_bounded_typ
     (#ty: Type u#0)
     (vmatch: perm -> ty -> cbor -> slprop)
     (b: Ghost.erased (option cbor))
-    (#t: typ)
+    (#t: Ghost.erased typ)
     (f: impl_typ vmatch t)
 : impl_typ u#0 #ty vmatch #b (coerce_to_bounded_typ b t) // FIXME: WHY WHY WHY do I need to provide the implicit argument
 = (c: ty)
@@ -46,7 +46,7 @@ fn impl_t_choice
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (#b: Ghost.erased (option cbor))
-    (#t1 #t2: bounded_typ_gen b)
+    (#t1 #t2: Ghost.erased (bounded_typ_gen b))
     (f1: impl_typ vmatch t1)
     (f2: impl_typ vmatch t2)
 : impl_typ u#0 #ty vmatch #b (t_choice t1 t2)
