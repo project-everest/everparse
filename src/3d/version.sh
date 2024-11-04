@@ -5,6 +5,8 @@ set -e
 everparse_last_version=$(sed 's!\r!!g' $EVERPARSE_HOME/version.txt)
 
 get_everparse_version() {
+    # allow manual override compatible with src/package/package.sh
+    if [[ -z "$everparse_version" ]] ; then
     (
 	cd $EVERPARSE_HOME
         everparse_this_commit=$(git show --no-patch --format=%h)
@@ -16,6 +18,9 @@ get_everparse_version() {
 	    echo "$everparse_this_commit (unreleased)"
 	fi
     )
+    else
+	echo "$everparse_version"
+    fi
 }
 
 get_fstar_commit() {
