@@ -67,6 +67,95 @@ fn impl_array_group_concat
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
+fn impl_array_group_choice
+  (#cbor_array_iterator_t: Type)
+  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#b: Ghost.erased (option cbor))
+    (#g1: Ghost.erased (array_group b))
+    (f1: impl_array_group cbor_array_iterator_match g1)
+    (#g2: Ghost.erased (array_group b))
+    (f2: impl_array_group cbor_array_iterator_match g2)
+: impl_array_group #cbor_array_iterator_t cbor_array_iterator_match #b (array_group_choice g1 g2)
+=
+    (pi: R.ref cbor_array_iterator_t)
+    (#p: perm)
+    (#gi: Ghost.erased cbor_array_iterator_t)
+    (#l: Ghost.erased (list cbor))
+{
+    let i = !pi;
+    Trade.rewrite_with_trade
+      (cbor_array_iterator_match p gi l)
+      (cbor_array_iterator_match p i l);
+    let test1 = f1 pi;
+    if (test1) {
+      Trade.trans _ _ (cbor_array_iterator_match p gi l);
+      true
+    } else {
+      Trade.elim _ (cbor_array_iterator_match p i l);
+      pi := i;
+      let res = f2 pi;
+      Trade.trans _ _ (cbor_array_iterator_match p gi l);
+      res
+    }
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_array_group_zero_or_more
+  (#cbor_array_iterator_t: Type)
+  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#g1: Ghost.erased (nonempty_array_group))
+    (f1: impl_array_group cbor_array_iterator_match g1)
+: impl_array_group #cbor_array_iterator_t cbor_array_iterator_match #None (array_group_zero_or_more g1)
+=
+    (pi: R.ref cbor_array_iterator_t)
+    (#p: perm)
+    (#gi: Ghost.erased cbor_array_iterator_t)
+    (#l: Ghost.erased (list cbor))
+{
+    let mut pcont = true;
+    Trade.refl (cbor_array_iterator_match p gi l);
+    while (
+      let cont = !pcont;
+      cont
+    ) invariant cont . exists* gi1 l1 .
+      R.pts_to pi gi1 **
+      cbor_array_iterator_match p gi1 l1 **
+      Trade.trade
+        (cbor_array_iterator_match p gi1 l1)
+        (cbor_array_iterator_match p gi l) **
+      R.pts_to pcont cont **
+      pure (
+        begin match array_group_zero_or_more g1 l, array_group_zero_or_more g1 l1 with
+        | None, None -> True
+        | Some (_, rem), Some (_, rem1) -> rem == rem1
+        | _ -> False
+        end /\
+        (cont == false ==> None? (Ghost.reveal g1 l1))
+      )
+    {
+      with gi1 l1 . assert (cbor_array_iterator_match p gi1 l1);
+      let i1 = !pi;
+      Trade.rewrite_with_trade
+        (cbor_array_iterator_match p gi1 l1)
+        (cbor_array_iterator_match p i1 l1);
+      Trade.trans _ _ (cbor_array_iterator_match p gi l);
+      let cont = f1 pi;
+      if (not cont) {
+        Trade.elim _ (cbor_array_iterator_match p i1 l1);
+        pi := i1;
+        pcont := false;
+      } else {
+        Trade.trans _ _ (cbor_array_iterator_match p gi l)
+      }
+    };
+    true
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
 fn impl_array_group_item
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
