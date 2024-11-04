@@ -1281,9 +1281,6 @@ val map_group_parser_spec_concat_eq
   )
   [SMTPat (map_group_parser_spec_concat p1 p2 target_size target_prop l)]
 
-let orp (#t: Type) (p1 p2: t -> bool) (x: t) : bool =
-  p1 x || p2 x
-
 #restart-solver
 let map_group_serializer_spec_concat
   (#source1: det_map_group)

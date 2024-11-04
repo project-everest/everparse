@@ -4,6 +4,9 @@ module Cbor = CBOR.Spec.API.Type
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 
+let orp (#t: Type) (p1 p2: t -> bool) (x: t) : bool =
+  p1 x || p2 x
+
 let map_group_item_post
   (l: Cbor.cbor_map)
   (l': (Cbor.cbor_map & Cbor.cbor_map))
