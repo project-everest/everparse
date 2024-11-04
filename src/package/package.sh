@@ -216,7 +216,7 @@ make_everparse() {
       # we have a F* source tree
       # TODO: create some `install-minimal` rule in the F* Makefile
       everparse_package_dir=$(fixpath "$(pwd)/everparse")
-      (cd $FSTAR_HOME/ocaml && dune install --prefix="$everparse_package_dir")
+      $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/
       PREFIX="$everparse_package_dir" $MAKE -C $FSTAR_HOME/ulib install
     else
       # we have a F* binary package, or opam package
