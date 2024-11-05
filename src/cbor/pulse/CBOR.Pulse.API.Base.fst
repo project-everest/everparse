@@ -23,6 +23,18 @@ let cbor_major_type (c: cbor) : Tot T.major_type_t =
   | CTagged _ _ -> cbor_major_type_tagged
 
 inline_for_extraction
+let equal_for_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (v1: cbor)
+= (x2: t) ->
+  (#p2: perm) ->
+  (#v2: Ghost.erased cbor) ->
+  stt bool
+    (vmatch p2 x2 v2)
+    (fun res -> vmatch p2 x2 v2 ** pure (res == (v1 = Ghost.reveal v2)))
+
+inline_for_extraction
 let equal_t
   (#t: Type)
   (vmatch: perm -> t -> cbor -> slprop)
@@ -409,7 +421,7 @@ let map_entry_value_t
     (vmatch2 p x2 v2)
     (fun res -> exists* p' .
       vmatch p' res (snd v2) **
-      Trade.trade (vmatch p' res (fst v2)) (vmatch2 p x2 v2)
+      Trade.trade (vmatch p' res (snd v2)) (vmatch2 p x2 v2)
     )
 
 (** Permissions *)

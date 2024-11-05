@@ -12,6 +12,7 @@ module U64 = FStar.UInt64
 noeq
 type linked_list_cell = {
   value: U64.t;
+  p: perm;
   tail: R.ref linked_list;
 }
 
@@ -35,7 +36,7 @@ let match_linked_list_cons
 : Tot slprop
 =
     exists* ll' .
-      R.pts_to c.tail ll' **
+      R.pts_to c.tail #c.p ll' **
       match_linked_list ll' q **
       pure (match_linked_list_cons_prop l0 c a)
 
@@ -97,10 +98,10 @@ requires
   )
 returns res: squash (Cons? l)
 ensures exists* ll' .
-  R.pts_to c.tail ll' **
+  R.pts_to c.tail #c.p ll' **
   match_linked_list l0 ll' (List.Tot.tl l) **
   Trade.trade
-    (R.pts_to c.tail ll' **
+    (R.pts_to c.tail #c.p ll' **
       match_linked_list l0 ll' (List.Tot.tl l))
     (match_linked_list l0 ll l) **
   pure (
@@ -113,9 +114,9 @@ ensures exists* ll' .
   let q = List.Tot.tl l;
   unfold (match_linked_list l0 (Some c) (a :: q));
   unfold (match_linked_list_cons l0 c a q (match_linked_list l0));
-  with ll' . assert (R.pts_to c.tail ll' ** match_linked_list l0 ll' q);
+  with ll' . assert (R.pts_to c.tail #c.p ll' ** match_linked_list l0 ll' q);
   ghost fn aux ()
-    requires emp ** (R.pts_to c.tail ll' ** match_linked_list l0 ll' q)
+    requires emp ** (R.pts_to c.tail #c.p ll' ** match_linked_list l0 ll' q)
     ensures match_linked_list l0 ll l
   {
     fold (match_linked_list_cons l0 c a q (match_linked_list l0));
@@ -262,13 +263,45 @@ let impl_map_group_for_excluded_post
   (vexcluded: list (cbor & cbor))
 : Tot prop
 =
-  match res, apply_map_group_det g (cbor_map_filter (list_not_defined_at vexcluded) m) with
-              | MGOK, MapGroupDet _ rem -> rem == cbor_map_empty
-              | MGCutFail, MapGroupCutFail -> True
-              | _, MapGroupNonDet -> False
-              | MGFail, MapGroupDet _ rem -> ~ (rem == cbor_map_empty)
-              | MGFail, MapGroupFail -> True
+  match apply_map_group_det g (cbor_map_filter (list_not_defined_at vexcluded) m) with
+              | MapGroupDet _ rem -> res == (if rem = cbor_map_empty then MGOK else MGFail)
+              | MapGroupCutFail -> MGCutFail? res
+              | MapGroupFail -> MGFail? res
               | _ -> False
+
+#restart-solver
+
+let impl_map_group_for_excluded_post_fail_left_intro'
+  (g1 g2: map_group)
+  (m: cbor_map)
+  (vexcluded: list (cbor & cbor))
+  (h: squash (
+    MapGroupFail? (apply_map_group_det g1 (cbor_map_filter (list_not_defined_at vexcluded) m))
+  ))
+: Tot (squash (impl_map_group_for_excluded_post MGFail (map_group_concat g1 g2) m vexcluded))
+= apply_map_group_det_concat g1 g2 (cbor_map_filter (list_not_defined_at vexcluded) m);
+  assert (MapGroupFail? (apply_map_group_det (map_group_concat g1 g2) (cbor_map_filter (list_not_defined_at vexcluded) m)))
+
+inline_for_extraction
+```pulse
+fn impl_map_group_for_excluded_post_fail_left_intro
+  (g1 g2: Ghost.erased map_group)
+  (m: Ghost.erased cbor_map)
+  (vexcluded: Ghost.erased (list (cbor & cbor)))
+  (h: squash (
+    MapGroupFail? (apply_map_group_det g1 (cbor_map_filter (list_not_defined_at vexcluded) m))
+  ))
+requires emp
+returns res: impl_map_group_result
+ensures pure (impl_map_group_for_excluded_post res (map_group_concat g1 g2) m vexcluded)
+{
+  impl_map_group_for_excluded_post_fail_left_intro' g1 g2 m vexcluded h;
+  assert (pure (impl_map_group_for_excluded_post MGFail (map_group_concat g1 g2) m vexcluded));
+  let res = MGFail;
+  assert (pure (impl_map_group_for_excluded_post res (map_group_concat g1 g2) m vexcluded));
+  res
+}
+```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_map_group_for_excluded
@@ -279,23 +312,20 @@ let impl_map_group_for_excluded
     (p: perm)
     (l: (list (cbor & cbor)))
     (m: cbor_map)
-    (pexcluded: R.ref linked_list)
     (lexcluded: linked_list)
     (vexcluded: (list (cbor & cbor)))
 = unit ->
     stt impl_map_group_result
         (
             cbor_map_iterator_match p i l **
-            R.pts_to pexcluded lexcluded **
             match_linked_list l lexcluded vexcluded **
             pure (List.Tot.no_repeats_p (List.Tot.map fst l) /\
               (forall x . cbor_map_get m x == List.Tot.assoc x l) /\
               FStar.UInt.fits (List.Tot.length l) 64
             )
         )
-        (fun res -> exists* lexcluded' .
+        (fun res ->
             cbor_map_iterator_match p i l **
-            R.pts_to pexcluded lexcluded' **
             match_linked_list l lexcluded vexcluded **
             pure (
               impl_map_group_for_excluded_post res g m vexcluded
@@ -312,10 +342,9 @@ let impl_map_group_for
     (l: (list (cbor & cbor)))
     (m: cbor_map)
 =
-    (pexcluded: R.ref linked_list) ->
-    (#lexcluded: Ghost.erased linked_list) ->
+    (lexcluded: linked_list) ->
     (#vexcluded: Ghost.erased (list (cbor & cbor))) ->
-    impl_map_group_for_excluded cbor_map_iterator_match g i p l m pexcluded lexcluded vexcluded
+    impl_map_group_for_excluded cbor_map_iterator_match g i p l m lexcluded vexcluded
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_map_group
@@ -358,12 +387,11 @@ fn impl_map_group_concat
   (#p: _)
   (#l: _)
   (m: _)
-  (pexcluded: _)
-  (#lexcluded: _)
+  (lexcluded: _)
   (#vexcluded: _)
   (_: unit)
 {
-  ig1 i #p #l m g2 (ig2 i #p #l m) pexcluded #lexcluded #vexcluded ()
+  ig1 i #p #l m g2 (ig2 i #p #l m) lexcluded #vexcluded ()
 }
 ```
 
@@ -463,6 +491,37 @@ fn impl_map_entry_cond_or
 }
 ```
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_map_entry_cond_matches_map_group_entry
+  (#t1 #t2: Type0)
+  (#vmatch: perm -> t1 -> cbor -> slprop)
+  (#vmatch2: perm -> t2 -> cbor & cbor -> slprop)
+  (cbor_map_entry_key: map_entry_key_t vmatch2 vmatch)
+  (cbor_map_entry_value: map_entry_value_t vmatch2 vmatch)  
+  (#ty1: Ghost.erased typ)
+  (i1: impl_typ vmatch ty1)
+  (#ty2: Ghost.erased typ)
+  (i2: impl_typ vmatch ty2)
+: impl_map_entry_cond u#0 #t2 vmatch2 (matches_map_group_entry ty1 ty2)
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  let k = cbor_map_entry_key x;
+  let match1 = i1 k;
+  Trade.elim _ _;
+  if (match1) {
+    let w = cbor_map_entry_value x;
+    let res = i2 w;
+    Trade.elim _ _;
+    res
+  } else {
+    false
+  }
+}
+```
+
 let list_nil_forall_not_memP
   (#t: Type)
   (l: list t)
@@ -515,8 +574,7 @@ fn impl_map_group_filter
   (#p: _)
   (#l: _)
   (m: _)
-  (pexcluded: _)
-  (#lexcluded: _)
+  (lexcluded: _)
   (#vexcluded: _)
   (_: unit)
 {
@@ -524,7 +582,6 @@ fn impl_map_group_filter
   let mut pres = true;
   let pl1 : GR.ref (list (cbor & cbor)) = GR.alloc (Nil #(cbor & cbor));
   let mut pj = 0uL;
-  let ll = !pexcluded;
   Trade.refl (cbor_map_iterator_match p i l);
   cbor_map_filter_filter f (list_not_defined_at vexcluded) m;
   list_nil_forall_not_memP (List.Tot.filter (U.andp (list_not_defined_at vexcluded) f) l);
@@ -556,7 +613,7 @@ fn impl_map_group_filter
      Trade.trade
       (cbor_map_iterator_match p i2 l2)
       (cbor_map_iterator_match p i l) **
-    match_linked_list l ll vexcluded **
+    match_linked_list l lexcluded vexcluded **
     pure (
       l == List.Tot.append l1 l2 /\
       List.Tot.length l1 == U64.v j /\
@@ -570,7 +627,7 @@ fn impl_map_group_filter
     list_index_append_cons l1 (List.Tot.hd l2) (List.Tot.tl l2);
     let entry = cbor_map_iterator_next pi;
     Trade.trans _ _ (cbor_map_iterator_match p i l);
-    let is_excluded = match_linked_list_mem ll j;
+    let is_excluded = match_linked_list_mem lexcluded j;
     pj := U64.add j 1uL;
     List.Tot.append_assoc l1 [List.Tot.hd l2] (List.Tot.tl l2);
     List.Tot.append_length l1 [List.Tot.hd l2];
@@ -594,6 +651,218 @@ fn impl_map_group_filter
 }
 ```
 
+let rec list_no_repeats_map_fst_filter
+  (#key: eqtype)
+  (#value: Type)
+  (f: (key & value) -> bool)
+  (l: list (key & value))
+: Lemma
+  (requires List.Tot.no_repeats_p (List.Tot.map fst l))
+  (ensures (List.Tot.no_repeats_p (List.Tot.map fst (List.Tot.filter f l))))
+= match l with
+  | [] -> ()
+  | a :: q ->
+    U.list_memP_map_forall fst q;
+    U.list_memP_map_forall fst (List.Tot.filter f q);
+    Classical.forall_intro (List.Tot.mem_filter f q);
+    list_no_repeats_map_fst_filter f q
+
+let rec list_assoc_filter
+  (#key: eqtype)
+  (#value: Type)
+  (f: (key & value) -> bool)
+  (l: list (key & value))
+  (k: key)
+: Lemma
+  (requires (List.Tot.no_repeats_p (List.Tot.map fst l)))
+  (ensures (List.Tot.assoc k (List.Tot.filter f l) == begin match List.Tot.assoc k l with
+  | None -> None
+  | Some v -> if f (k, v) then Some v else None
+  end
+  ))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | (a, _) :: q ->
+    list_no_repeats_map_fst_filter f q;
+    if k = a
+    then begin
+      Classical.forall_intro (U.list_assoc_no_repeats_mem l k);
+      Classical.forall_intro (U.list_assoc_no_repeats_mem (List.Tot.filter f l) k)
+    end
+    else list_assoc_filter f q k
+
+#push-options "--z3rlimit 128 --ifuel 8"
+
+#restart-solver
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_map_group_match_item_for
+  (#t1 #t2: Type0)
+  (#vmatch1: perm -> t1 -> cbor -> slprop)
+  (#vmatch2: perm -> t2 -> cbor & cbor -> slprop)
+  (cbor_map_entry_key: map_entry_key_t vmatch2 vmatch1)
+  (cbor_map_entry_value: map_entry_value_t vmatch2 vmatch1)
+  (#cbor_map_iterator_t: Type0)
+  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (cbor_map_iterator_is_empty: map_iterator_is_empty_t cbor_map_iterator_match)
+  (cbor_map_iterator_next: map_iterator_next_t vmatch2 cbor_map_iterator_match)
+  (cbor_map_entry_key: map_entry_key_t vmatch2 vmatch1)
+  (cbor_map_entry_value: map_entry_value_t vmatch2 vmatch1)  
+  (cut: bool)
+  (#key: Ghost.erased cbor)
+  (eq_key: equal_for_t vmatch1 key)
+  (#tvalue: Ghost.erased typ)
+  (impl_value: impl_typ vmatch1 tvalue)
+: impl_map_group_cps u#0 #cbor_map_iterator_t cbor_map_iterator_match (map_group_match_item_for cut key tvalue)
+=
+  (i: _)
+  (#p: _)
+  (#l: _)
+  (m: _)
+  (g': _)
+  (cont: _)
+  (lexcluded: _)
+  (#vexcluded: _)
+  (_: unit)
+{
+  let mut pi = i;
+  let mut pres = None #U64.t;
+  let mut pmatches = false;
+  let pl1 : GR.ref (list (cbor & cbor)) = GR.alloc (Nil #(cbor & cbor));
+  let mut pj = 0uL;
+  Trade.refl (cbor_map_iterator_match p i l);
+  Classical.forall_intro_2 (U.list_assoc_no_repeats_mem l);
+  Classical.forall_intro (Classical.move_requires (list_assoc_filter (list_not_defined_at vexcluded) l));
+  Classical.forall_intro_2 (U.list_assoc_no_repeats_mem (List.Tot.filter (list_not_defined_at vexcluded) l));
+  assert (pure (
+    cbor_map_get (cbor_map_filter (list_not_defined_at vexcluded) m) key == List.Tot.assoc (Ghost.reveal key) (List.Tot.filter (list_not_defined_at vexcluded) l)
+  ));
+  while (
+    let res = !pres;
+    if (None? res) {
+      with i2 l2 . assert (cbor_map_iterator_match p i2 l2);
+      let j2 = !pi;
+      Trade.rewrite_with_trade
+        (cbor_map_iterator_match p i2 l2)
+        (cbor_map_iterator_match p j2 l2);
+      let is_emp = cbor_map_iterator_is_empty j2;
+      Trade.elim _ (cbor_map_iterator_match p i2 l2);
+      not is_emp
+    } else {
+      false
+    }
+  )
+  invariant b. exists* i2 j l1 l2 res matches .
+    R.pts_to pi i2 **
+    cbor_map_iterator_match p i2 l2 **
+    R.pts_to pj j **
+    R.pts_to pres res **
+    GR.pts_to pl1 l1 **
+     Trade.trade
+      (cbor_map_iterator_match p i2 l2)
+      (cbor_map_iterator_match p i l) **
+    match_linked_list l lexcluded vexcluded **
+    R.pts_to pmatches matches **
+    pure (
+      l == List.Tot.append l1 l2 /\
+      List.Tot.length l1 == U64.v j /\
+      b == (None? res && Cons? l2) /\
+      begin match res with
+      | None -> True
+      | Some w ->
+        U64.v w < List.Tot.length l /\
+        (list_not_defined_at vexcluded (List.Tot.index l (U64.v w))) /\
+        fst (List.Tot.index l (U64.v w)) == Ghost.reveal key /\
+        matches == Ghost.reveal tvalue (snd (List.Tot.index l (U64.v w)))
+      end /\
+      (cbor_map_get (cbor_map_filter (list_not_defined_at vexcluded) m) key == begin match res with
+      | None -> List.Tot.assoc (Ghost.reveal key) (List.Tot.filter (list_not_defined_at vexcluded) l2)
+      | Some w -> Some (snd (List.Tot.index l (U64.v w)))
+      end)
+    )
+  {
+    let j = !pj;
+    with l1 . assert (GR.pts_to pl1 l1);
+    with gi2 l2 . assert (cbor_map_iterator_match p gi2 l2);
+    list_index_append_cons l1 (List.Tot.hd l2) (List.Tot.tl l2);
+    let entry = cbor_map_iterator_next pi;
+    Trade.trans _ _ (cbor_map_iterator_match p i l);
+    let is_excluded = match_linked_list_mem lexcluded j;
+    pj := U64.add j 1uL;
+    List.Tot.append_assoc l1 [List.Tot.hd l2] (List.Tot.tl l2);
+    List.Tot.append_length l1 [List.Tot.hd l2];
+    GR.op_Colon_Equals pl1 (List.Tot.append l1 [List.Tot.hd l2]);
+    if (not is_excluded) {
+      let entry_key = cbor_map_entry_key entry;
+      let key_equals = eq_key entry_key;
+      Trade.elim (vmatch1 _ entry_key _) _;
+      if (key_equals) {
+        let entry_value = cbor_map_entry_value entry;
+        let matches = impl_value entry_value;
+        Trade.elim (vmatch1 _ entry_value _) _;
+        pmatches := matches;
+        pres := Some j;
+(*        
+        let gentry : Ghost.erased (cbor & cbor) = Ghost.hide (List.Tot.hd l2);
+        assert (pure (gentry == List.Tot.index l (U64.v j)));
+        assert (pure (fst gentry == Ghost.reveal key));
+        assert (pure (list_not_defined_at vexcluded gentry));
+        assert (pure (matches == Ghost.reveal tvalue (snd gentry)));
+        assert (pure (List.Tot.assoc (Ghost.reveal key) (List.Tot.filter (list_not_defined_at vexcluded) l2) == Some (snd gentry)));
+*)
+        Trade.elim_hyp_l _ _ _;
+      } else {
+        Trade.elim_hyp_l _ _ _;
+      }
+    } else {
+      Trade.elim_hyp_l _ _ _;
+    }
+  };
+  Trade.elim _ _;
+  GR.free pl1;
+  let res = !pres;
+  match res {
+    None -> {
+      MGFail
+    }
+    Some entry -> {
+      let matches = !pmatches;
+      if (matches) {
+        let mut pexcluded = lexcluded;
+        let c : linked_list_cell = { value = entry; p = 0.5R; tail = pexcluded };
+        rewrite (R.pts_to pexcluded lexcluded) as (R.pts_to c.tail lexcluded);
+        R.share c.tail;
+        fold (match_linked_list_cons l c (List.Tot.index l (U64.v entry)) vexcluded (match_linked_list l));
+        assert_norm (match_linked_list l (Some c) (List.Tot.index l (U64.v entry) :: vexcluded) == match_linked_list_cons l c (List.Tot.index l (U64.v entry)) vexcluded (match_linked_list l));
+        Trade.rewrite_with_trade
+          (match_linked_list_cons l c (List.Tot.index l (U64.v entry)) vexcluded (match_linked_list l))
+          (match_linked_list l (Some c) (List.Tot.index l (U64.v entry) :: vexcluded));
+        let sq1 : squash (MapGroupDet? (apply_map_group_det (map_group_match_item_for cut key tvalue) (cbor_map_filter (list_not_defined_at vexcluded) m))) = assert (MapGroupDet? (apply_map_group_det (map_group_match_item_for cut key tvalue) (cbor_map_filter (list_not_defined_at vexcluded) m)));
+        let rem : Ghost.erased cbor_map = Ghost.hide (MapGroupDet?.remaining (apply_map_group_det (map_group_match_item_for cut key tvalue) (cbor_map_filter (list_not_defined_at vexcluded) m)));
+        assert (pure (
+          cbor_map_equal rem (cbor_map_filter (list_not_defined_at (List.Tot.index l (U64.v entry) :: vexcluded)) m)
+        ));
+        let res2 = cont (Some c) ();
+        Trade.elim _ _;
+        unfold (match_linked_list_cons l c (List.Tot.index l (U64.v entry)) vexcluded (match_linked_list l));
+        R.gather c.tail;
+        rewrite (R.pts_to c.tail lexcluded) as (R.pts_to pexcluded lexcluded);
+        res2
+      } else if (cut) {
+        MGCutFail
+      } else {
+        let sq1 : squash (MapGroupFail? (apply_map_group_det (map_group_match_item_for cut key tvalue) (cbor_map_filter (list_not_defined_at vexcluded) m))) = assert (MapGroupFail? (apply_map_group_det (map_group_match_item_for cut key tvalue) (cbor_map_filter (list_not_defined_at vexcluded) m)));
+        impl_map_group_for_excluded_post_fail_left_intro (map_group_match_item_for cut key tvalue) g' m vexcluded sq1;
+      }
+    }
+  }
+}
+```
+
+#pop-options
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn impl_map_group_of_cps
@@ -611,13 +880,12 @@ fn impl_map_group_of_cps
   (#p: _)
   (#l: _)
   (m: _)
-  (pexcluded: _)
-  (#lexcluded: _)
+  (lexcluded: _)
   (#vexcluded: _)
   (_: unit)
 {
   map_group_concat_nop_r g1;
-  impl_map_group_concat ig1 (impl_map_group_filter cbor_map_iterator_is_empty cbor_map_iterator_next (impl_map_entry_cond_true _)) i #p #l m pexcluded #lexcluded #vexcluded ()
+  impl_map_group_concat ig1 (impl_map_group_filter cbor_map_iterator_is_empty cbor_map_iterator_next (impl_map_entry_cond_true _)) i #p #l m lexcluded #vexcluded ()
 }
 ```
 
@@ -645,9 +913,8 @@ fn impl_t_map
       with pl l . assert (cbor_map_iterator_match pl i l);
       let lexcluded : linked_list = None #linked_list_cell;
       fold (match_linked_list l lexcluded []);
-      let mut pexcluded = lexcluded;
       assert (pure (cbor_map_equal (cbor_map_filter (list_not_defined_at []) m) m));
-      let res = ig i m pexcluded ();
+      let res = ig i m lexcluded ();
       Trade.elim _ _;
       unfold (match_linked_list l lexcluded []);
       (res = MGOK)
