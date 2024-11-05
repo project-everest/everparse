@@ -6,7 +6,7 @@
 		<version>1.0.0</version>
 		<authors>EverParse Contributors</authors>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
-		<license type="expression">MIT</license>
+		<license type="expression">Apache-2.0</license>
 		<projectUrl>https://project-everest.github.io/everparse/</projectUrl>
 		<description>EverParse: verified parsing for binary data formats</description>
 		<releaseNotes>Nuget package for EverParse on Windows x86-64</releaseNotes>
