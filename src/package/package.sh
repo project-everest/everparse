@@ -334,9 +334,15 @@ zip_everparse() {
     fi
     if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi
 
-    if $is_windows ; then
         # Create the nuget package
-
+    if $is_windows ; then
+	nuget_platform=Windows
+	nuget_short_platform=win
+    else
+	nuget_platform=Linux
+	nuget_short_platform=linux
+    fi
+	
         # We are in the top-level everparse root
 
         nuget_base=nuget_package
@@ -353,14 +359,9 @@ zip_everparse() {
         # Copy README to nuget top-level
         cp everparse/README $nuget_base
         # Copy the manifest file to nuget top-level
-        cp src/package/EverParse.nuspec $nuget_base
+        cp src/package/EverParse.$nuget_platform.nuspec $nuget_base
         # Create the content directory, and copy all the files there
-
-        #NOTE: this is creating the content dir with win- prefix,
-        #      since we are in if $is_windows
-        #      if someday we do it for linux also, change accordingly
-        
-        content_dir=$nuget_base/content/win-$platform
+        content_dir=$nuget_base/content/$nuget_short_platform-$platform
         mkdir -p $content_dir
         cp -R everparse/* $content_dir
 
@@ -368,20 +369,20 @@ zip_everparse() {
         nuget_exe_url=https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
         wget $nuget_exe_url
         chmod a+x nuget.exe
+	nuget_exe="$(pwd)/nuget.exe"
 
         # Run the pack command
         pushd $nuget_base
-
 
 	if [[ -z "$everparse_nuget_version" ]] ; then
 		everparse_nuget_version=1.0.0
 	fi
 	# NoDefaultExcludes for .clang-format file that nuget pack excludes
-        ../nuget.exe pack -OutputFileNamesWithoutVersion -NoDefaultExcludes -Version $everparse_nuget_version ./EverParse.nuspec
-        cp EverParse.nupkg ..
-        if $with_version ; then mv ../EverParse.nupkg ../EverParse."$everparse_nuget_version".nupkg ; fi
+        "$nuget_exe" pack -OutputFileNamesWithoutVersion -NoDefaultExcludes -Version $everparse_nuget_version ./EverParse.$nuget_platform.nuspec
+        cp EverParse.$nuget_platform.nupkg ..
+        if $with_version ; then mv ../EverParse.$nuget_platform.nupkg ../EverParse.$nuget_platform."$everparse_nuget_version".nupkg ; fi
         popd
-    fi
+
     # Not doing any cleanup in the spirit of existing package
 
     # TODO: push this package?
