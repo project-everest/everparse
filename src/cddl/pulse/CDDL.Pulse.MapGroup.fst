@@ -269,6 +269,13 @@ let impl_map_group_for_excluded_post
               | MapGroupFail -> MGFail? res
               | _ -> False
 
+inline_for_extraction
+let impl_map_group_result_for
+  (g: map_group)
+  (m: cbor_map)
+  (vexcluded: list (cbor & cbor))
+= (res: impl_map_group_result { impl_map_group_for_excluded_post res g m vexcluded })
+
 #restart-solver
 
 let impl_map_group_for_excluded_post_fail_left_intro'
@@ -292,8 +299,8 @@ fn impl_map_group_for_excluded_post_fail_left_intro
     MapGroupFail? (apply_map_group_det g1 (cbor_map_filter (list_not_defined_at vexcluded) m))
   ))
 requires emp
-returns res: impl_map_group_result
-ensures pure (impl_map_group_for_excluded_post res (map_group_concat g1 g2) m vexcluded)
+returns res: impl_map_group_result_for (map_group_concat g1 g2) m vexcluded
+ensures emp
 {
   impl_map_group_for_excluded_post_fail_left_intro' g1 g2 m vexcluded h;
   assert (pure (impl_map_group_for_excluded_post MGFail (map_group_concat g1 g2) m vexcluded));
@@ -315,7 +322,7 @@ let impl_map_group_for_excluded
     (lexcluded: linked_list)
     (vexcluded: (list (cbor & cbor)))
 = unit ->
-    stt impl_map_group_result
+    stt (impl_map_group_result_for g m vexcluded)
         (
             cbor_map_iterator_match p i l **
             match_linked_list l lexcluded vexcluded **
@@ -326,10 +333,7 @@ let impl_map_group_for_excluded
         )
         (fun res ->
             cbor_map_iterator_match p i l **
-            match_linked_list l lexcluded vexcluded **
-            pure (
-              impl_map_group_for_excluded_post res g m vexcluded
-            )
+            match_linked_list l lexcluded vexcluded
         )
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -692,7 +696,7 @@ let rec list_assoc_filter
     end
     else list_assoc_filter f q k
 
-#push-options "--z3rlimit 128 --ifuel 8"
+#push-options "--z3rlimit 16"
 
 #restart-solver
 
@@ -845,11 +849,12 @@ fn impl_map_group_match_item_for
           cbor_map_equal rem (cbor_map_filter (list_not_defined_at (List.Tot.index l (U64.v entry) :: vexcluded)) m)
         ));
         let res2 = cont (Some c) ();
+        let res3 : impl_map_group_result = res2;
         Trade.elim _ _;
         unfold (match_linked_list_cons l c (List.Tot.index l (U64.v entry)) vexcluded (match_linked_list l));
         R.gather c.tail;
         rewrite (R.pts_to c.tail lexcluded) as (R.pts_to pexcluded lexcluded);
-        res2
+        res3
       } else if (cut) {
         MGCutFail
       } else {
@@ -917,7 +922,7 @@ fn impl_t_map
       let res = ig i m lexcluded ();
       Trade.elim _ _;
       unfold (match_linked_list l lexcluded []);
-      (res = MGOK)
+      ((res <: impl_map_group_result) = MGOK)
     } else {
       false
     }
