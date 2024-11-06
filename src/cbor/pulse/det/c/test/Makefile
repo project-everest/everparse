@@ -4,8 +4,8 @@ EVERPARSE_SRC_PATH = $(realpath ../../../../..)
 
 #EVERPARSE_LIB_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)/lib/evercbor
 #EVERPARSE_INCLUDE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)/include/evercbor
-EVERPARSE_LIB_PATH = $(realpath ../extracted)
-EVERPARSE_INCLUDE_PATH = $(realpath ../extracted)
+EVERPARSE_LIB_PATH = $(realpath ..)
+EVERPARSE_INCLUDE_PATH = $(realpath ..)
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
