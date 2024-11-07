@@ -3955,13 +3955,24 @@ pub fn cbor_det_get_map_length <'a>(x: cbor_raw <'a>) -> u64
     res.value
 }
 
-pub fn cbor_det_map_iterator_start <'a>(x: cbor_raw <'a>) ->
+fn impl_cbor_det_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i16
+{
+    let res: i16 = impl_cbor_compare(x1, x2);
+    res
+}
+
+fn cbor_det_map_iterator_start· <'a>(x: cbor_raw <'a>) ->
     cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
     <'a>
 {
     let res: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = cbor_map_iterator_init(x);
     res
 }
+
+pub fn cbor_det_map_iterator_start <'a>(x: cbor_raw <'a>) ->
+    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+    <'a>
+{ cbor_det_map_iterator_start·(x) }
 
 pub fn cbor_det_map_iterator_is_empty <'a>(
     x: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
@@ -3980,4 +3991,54 @@ pub fn cbor_det_map_iterator_next <'b, 'a>(
 {
     let res: cbor_map_entry = cbor_map_iterator_next(x);
     res
+}
+
+pub fn cbor_det_map_entry_key <'a>(x2: cbor_map_entry <'a>) -> cbor_raw <'a>
+{ x2.cbor_map_entry_key }
+
+pub fn cbor_det_map_entry_value <'a>(x2: cbor_map_entry <'a>) -> cbor_raw <'a>
+{ x2.cbor_map_entry_value }
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum option__CBOR_Pulse_Raw_Type_cbor_raw <'a>
+{
+    None,
+    Some { v: cbor_raw <'a> }
+}
+
+pub fn cbor_det_map_get <'a>(x: cbor_raw <'a>, k: cbor_raw <'a>) ->
+    option__CBOR_Pulse_Raw_Type_cbor_raw
+    <'a>
+{
+    let i: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+        cbor_det_map_iterator_start·(x);
+    let mut pi: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] = [i; 1usize];
+    let mut pres: [option__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
+        [option__CBOR_Pulse_Raw_Type_cbor_raw::None; 1usize];
+    let i_is_empty: bool = cbor_det_map_iterator_is_empty(i);
+    let cont: bool = ! i_is_empty;
+    let mut pcont: [bool; 1] = [cont; 1usize];
+    while
+    (&pcont)[0]
+    {
+        let entry: cbor_map_entry = cbor_det_map_iterator_next(&mut pi);
+        let key: cbor_raw = cbor_det_map_entry_key(entry);
+        let comp: i16 = impl_cbor_det_compare(key, k);
+        if comp == 0i16
+        {
+            let value: cbor_raw = cbor_det_map_entry_value(entry);
+            (&mut pres)[0] = option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: value };
+            (&mut pcont)[0] = false
+        }
+        else if comp > 0i16
+        { (&mut pcont)[0] = false }
+        else
+        {
+            let i·: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi)[0];
+            let is_empty: bool = cbor_det_map_iterator_is_empty(i·);
+            let cont1: bool = ! is_empty;
+            (&mut pcont)[0] = cont1
+        }
+    };
+    (&pres)[0]
 }

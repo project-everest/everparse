@@ -103,6 +103,12 @@ typedef struct cbor_map_entry_s cbor_map_entry;
 
 typedef struct cbor_map_entry_s cbor_map_entry;
 
+#define FStar_Pervasives_Native_None 0
+#define FStar_Pervasives_Native_Some 1
+
+typedef uint8_t
+FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw__tags;
+
 typedef struct cbor_map_entry_s cbor_map_entry;
 
 typedef struct cbor_map_entry_s cbor_map_entry;
@@ -278,6 +284,21 @@ cbor_map_entry
 cbor_det_map_iterator_next(
   CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry *x
 );
+
+cbor_raw cbor_det_map_entry_key(cbor_map_entry x2);
+
+cbor_raw cbor_det_map_entry_value(cbor_map_entry x2);
+
+typedef struct FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw_s
+{
+  FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw__tags
+  tag;
+  cbor_raw v;
+}
+FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw;
+
+FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw
+cbor_det_map_get(cbor_raw x, cbor_raw k);
 
 
 #define __CBORDet_H_DEFINED
