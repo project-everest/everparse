@@ -270,6 +270,8 @@ cbor_det_array_iterator_next(
   CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw *x
 );
 
+cbor_raw cbor_det_get_array_item(cbor_raw x, uint64_t i);
+
 uint64_t cbor_det_get_map_length(cbor_raw x);
 
 CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry

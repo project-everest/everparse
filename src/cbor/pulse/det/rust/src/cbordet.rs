@@ -2020,6 +2020,83 @@ fn cbor_match_serialized_tagged_get_payload <'a>(c: cbor_serialized <'a>) -> cbo
     res
 }
 
+fn cbor_serialized_array_item <'a>(c: cbor_serialized <'a>, i: u64) -> cbor_raw <'a>
+{
+    let j: usize = i as usize;
+    let mut pi: [usize; 1] = [0usize; 1usize];
+    let mut pres: [&[u8]; 1] = [c.cbor_serialized_payload; 1usize];
+    let i1: usize = (&pi)[0];
+    let mut cond: bool = i1 < j;
+    while
+    cond
+    {
+        let res: &[u8] = (&pres)[0];
+        let i10: usize = (&pi)[0];
+        let i2: usize = jump_raw_data_item(res, 0usize);
+        let s: (&[u8], &[u8]) = res.split_at(i2);
+        let res1: (&[u8], &[u8]) =
+            {
+                let s1: &[u8] = s.0;
+                let s2: &[u8] = s.1;
+                (s1,s2)
+            };
+        let res10: (&[u8], &[u8]) =
+            {
+                let input1: &[u8] = res1.0;
+                let input2: &[u8] = res1.1;
+                (input1,input2)
+            };
+        let spl: (&[u8], &[u8]) =
+            {
+                let input1: &[u8] = res10.0;
+                let input2: &[u8] = res10.1;
+                (input1,input2)
+            };
+        let res11: &[u8] =
+            {
+                let _input1: &[u8] = spl.0;
+                let input2: &[u8] = spl.1;
+                input2
+            };
+        let res2: &[u8] = res11;
+        (&mut pi)[0] = i10.wrapping_add(1usize);
+        (&mut pres)[0] = res2;
+        let i11: usize = (&pi)[0];
+        cond = i11 < j
+    };
+    let res: &[u8] = (&pres)[0];
+    let i10: usize = jump_raw_data_item(res, 0usize);
+    let s: (&[u8], &[u8]) = res.split_at(i10);
+    let res1: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let res10: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res1.0;
+            let input2: &[u8] = res1.1;
+            (input1,input2)
+        };
+    let spl: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res10.0;
+            let input2: &[u8] = res10.1;
+            (input1,input2)
+        };
+    let res11: &[u8] =
+        {
+            let input1: &[u8] = spl.0;
+            let _input2: &[u8] = spl.1;
+            input1
+        };
+    let res2: &[u8] = res11;
+    let elt: &[u8] = res2;
+    let res0: cbor_raw = cbor_read(elt);
+    res0
+}
+
 fn cbor_serialized_array_iterator_init <'a>(c: cbor_serialized <'a>) -> &'a [u8]
 { c.cbor_serialized_payload }
 
@@ -2226,6 +2303,20 @@ fn cbor_match_tagged_get_payload <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
             match c
             { cbor_raw::CBOR_Case_Tagged { v } => v, _ => panic!("Incomplete pattern matching") };
         ct.cbor_tagged_ptr[0]
+    }
+}
+
+fn cbor_array_item <'a>(c: cbor_raw <'a>, i: u64) -> cbor_raw <'a>
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Serialized_Array { v: c· } =>
+          {
+              let res: cbor_raw = cbor_serialized_array_item(c·, i);
+              res
+          },
+        cbor_raw::CBOR_Case_Array { v: c· } => c·.cbor_array_ptr[i as usize],
+        _ => panic!("Incomplete pattern matching")
     }
 }
 
@@ -3940,6 +4031,12 @@ pub fn cbor_det_array_iterator_next <'b, 'a>(
     <'a>
 {
     let res: cbor_raw = cbor_array_iterator_next(x);
+    res
+}
+
+pub fn cbor_det_get_array_item <'a>(x: cbor_raw <'a>, i: u64) -> cbor_raw <'a>
+{
+    let res: cbor_raw = cbor_array_item(x, i);
     res
 }
 
