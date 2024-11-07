@@ -140,3 +140,9 @@ val cbor_det_map_iterator_start () : map_iterator_start_t cbor_det_match cbor_de
 val cbor_det_map_iterator_is_empty () : map_iterator_is_empty_t cbor_det_map_iterator_match
 
 val cbor_det_map_iterator_next () : map_iterator_next_t cbor_det_map_entry_match cbor_det_map_iterator_match
+
+val cbor_det_map_entry_key () : map_entry_key_t cbor_det_map_entry_match cbor_det_match
+
+val cbor_det_map_entry_value () : map_entry_value_t cbor_det_map_entry_match cbor_det_match
+
+val cbor_det_map_get () : map_get_t cbor_det_match

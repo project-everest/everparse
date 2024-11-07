@@ -9,6 +9,7 @@ module Compare = CBOR.Pulse.Raw.Compare
 module Parse = CBOR.Pulse.Raw.Format.Parse
 module Serialize = CBOR.Pulse.Raw.Format.Serialize
 module Read = CBOR.Pulse.Raw.Read
+module Map = CBOR.Spec.Raw.Map
 
 let cbor_det_match
   p c v
@@ -822,8 +823,117 @@ let rec list_map_mk_det_raw_cbor_map_entry_mk_cbor_map_entry
     SpecRaw.mk_det_raw_cbor_mk_cbor v;
     list_map_mk_det_raw_cbor_map_entry_mk_cbor_map_entry q
 
+let cbor_det_order
+  (x1 x2: Spec.cbor)
+: Tot bool
+= SpecRaw.deterministically_encoded_cbor_map_key_order (SpecRaw.mk_det_raw_cbor x1) (SpecRaw.mk_det_raw_cbor x2)
+
+let cbor_det_compare
+  (x1 x2: Spec.cbor)
+: Tot int
+= SpecRaw.cbor_compare (SpecRaw.mk_det_raw_cbor x1) (SpecRaw.mk_det_raw_cbor x2)
+
+let cbor_det_compare_swap
+  (x1 x2: Spec.cbor)
+: Lemma
+  (cbor_det_compare x1 x2 < 0 <==> cbor_det_compare x2 x1 > 0)
+= let x1' = SpecRaw.mk_det_raw_cbor x1 in
+  let x2' = SpecRaw.mk_det_raw_cbor x2 in
+  SpecRaw.cbor_compare_correct x1' x2';
+  SpecRaw.cbor_compare_correct x2' x1';
+  SpecRaw.bytes_lex_compare_opp (SpecRaw.serialize_cbor x2') (SpecRaw.serialize_cbor x1')
+
+let cbor_det_compare_equal
+  (x1 x2: Spec.cbor)
+: Lemma
+  (cbor_det_compare x1 x2 == 0 <==> x1 == x2)
+= SpecRaw.cbor_compare_equal (SpecRaw.mk_det_raw_cbor x1) (SpecRaw.mk_det_raw_cbor x2)
+
+let cbor_det_order_eq
+  (x1 x2: Spec.cbor)
+: Lemma
+  (cbor_det_order x1 x2 <==> (cbor_det_compare x1 x2 < 0))
+= SpecRaw.cbor_compare_correct (SpecRaw.mk_det_raw_cbor x1) (SpecRaw.mk_det_raw_cbor x2);
+SpecRaw.deterministically_encoded_cbor_map_key_order_spec (SpecRaw.mk_det_raw_cbor x1) (SpecRaw.mk_det_raw_cbor x2)
+
+module U = CBOR.Spec.Util
+
+let cbor_det_order_irrefl : squash (U.order_irrefl cbor_det_order) = ()
+
+let cbor_det_order_trans : squash (U.order_trans cbor_det_order) = ()
+
+module I16 = FStar.Int16
+
 ```pulse
-fn cbor_det_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cbor_det_match cbor_det_map_iterator_match
+fn impl_cbor_det_compare
+  (x1: cbor_det_t)
+  (x2: cbor_det_t)
+  (#px1: perm)
+  (#px2: perm)
+  (#vx1: Ghost.erased Spec.cbor)
+  (#vx2: Ghost.erased Spec.cbor)
+requires (cbor_det_match px1 x1 vx1 ** cbor_det_match px2 x2 vx2)
+returns res: I16.t
+ensures cbor_det_match px1 x1 vx1 ** cbor_det_match px2 x2 vx2 ** pure (Compare.same_sign (I16.v res) (cbor_det_compare vx1 vx2))
+{
+  unfold (cbor_det_match px1 x1 vx1);
+  unfold (cbor_det_match px2 x2 vx2);
+  let res = Compare.impl_cbor_compare x1 x2;
+  fold (cbor_det_match px1 x1 vx1);
+  fold (cbor_det_match px2 x2 vx2);
+  res
+}
+```
+
+let rec list_sorted_map_mk_cbor_map_entry
+  (r: list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all (CBOR.Spec.Util.holds_on_pair (SpecRaw.holds_on_raw_data_item (SpecRaw.raw_data_item_ints_optimal_elem))) r /\
+    List.Tot.for_all (CBOR.Spec.Util.holds_on_pair (SpecRaw.holds_on_raw_data_item (SpecRaw.raw_data_item_sorted_elem SpecRaw.deterministically_encoded_cbor_map_key_order))) r /\
+    List.Tot.sorted (SpecRaw.map_entry_order SpecRaw.deterministically_encoded_cbor_map_key_order _) r
+  ))
+  (ensures (
+    List.Tot.sorted (SpecRaw.map_entry_order cbor_det_order _) (List.Tot.map mk_cbor_map_entry r)
+  ))
+  (decreases r)
+= match r with
+  | [] -> ()
+  | [_] -> ()
+  | (k1, v1) :: (k2, v2) :: q ->
+    SpecRaw.mk_det_raw_cbor_mk_cbor k1;
+    SpecRaw.mk_det_raw_cbor_mk_cbor k2;
+    list_sorted_map_mk_cbor_map_entry ((k2, v2) :: q)
+
+let det_map_iterator_start_post
+  (y: Spec.cbor)
+  (l' : list (Spec.cbor & Spec.cbor))
+: Tot prop
+= match Spec.unpack y with
+      | Spec.CMap l -> (forall k . Spec.cbor_map_get l k == List.Tot.assoc k l') /\
+        List.Tot.length l' == Spec.cbor_map_length l /\
+        List.Tot.no_repeats_p (List.Tot.map fst l') /\
+        List.Tot.sorted (SpecRaw.map_entry_order cbor_det_order _) l'
+      | _ -> False
+
+inline_for_extraction
+let det_map_iterator_start_t
+= (x: cbor_det_t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased Spec.cbor) ->
+  stt cbor_det_map_iterator_t
+    (cbor_det_match p x y ** pure (Spec.CMap? (Spec.unpack y)))
+    (fun res -> exists* p' l' .
+      cbor_det_map_iterator_match p' res l' **
+      Trade.trade
+        (cbor_det_map_iterator_match p' res l')
+        (cbor_det_match p x y) **
+      pure (
+        det_map_iterator_start_post y l'
+    ))
+
+```pulse
+fn cbor_det_map_iterator_start' (_: unit) : det_map_iterator_start_t
 = (x: _)
   (#p: _)
   (#y: _)
@@ -838,6 +948,7 @@ fn cbor_det_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cb
   with p' l . assert (Read.cbor_map_iterator_match p' res l);
   list_map_mk_det_raw_cbor_map_entry_mk_cbor_map_entry l;  
   mk_cbor_match_map_elem_elim_no_repeats_p l;
+  list_sorted_map_mk_cbor_map_entry l;
   let m : Ghost.erased Spec.cbor_map = Spec.CMap?.c (Spec.unpack y);
   mk_cbor_match_map_elim l m;
   Trade.rewrite_with_trade
@@ -845,6 +956,16 @@ fn cbor_det_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cb
     (cbor_det_map_iterator_match p' res (List.Tot.map mk_cbor_map_entry l));
   Trade.trans _ _ (cbor_det_match p x y);
   res
+}
+```
+
+```pulse
+fn cbor_det_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cbor_det_match cbor_det_map_iterator_match
+= (x: _)
+  (#p: _)
+  (#y: _)
+{
+  cbor_det_map_iterator_start' () x;
 }
 ```
 
@@ -885,5 +1006,223 @@ fn cbor_det_map_iterator_next (_: unit) : map_iterator_next_t u#0 #_ #_ cbor_det
     (cbor_det_map_entry_match p' res (List.Tot.hd z));
   Trade.trans_hyp_l _ _ _ (cbor_det_map_iterator_match py y z);
   res
+}
+```
+
+```pulse
+fn cbor_det_map_entry_key (_: unit) : map_entry_key_t u#0 u#0 #_ #_ cbor_det_map_entry_match cbor_det_match
+= (x2: _)
+  (#p: _)
+  (#v2: _)
+{
+  unfold (cbor_det_map_entry_match p x2 v2);
+  unfold (Raw.cbor_match_map_entry p x2 (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+  fold (cbor_det_match p x2.cbor_map_entry_key (fst v2));
+  ghost fn aux (_: unit)
+    requires Raw.cbor_match p x2.cbor_map_entry_value (SpecRaw.mk_det_raw_cbor (snd v2)) ** cbor_det_match p x2.cbor_map_entry_key (fst v2)
+    ensures cbor_det_map_entry_match p x2 v2
+  {
+    unfold (cbor_det_match p x2.cbor_map_entry_key (fst v2));
+    fold (Raw.cbor_match_map_entry p x2 (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+    fold (cbor_det_map_entry_match p x2 v2);
+  };
+  Trade.intro _ _ _ aux;
+  x2.cbor_map_entry_key
+}
+```
+
+```pulse
+fn cbor_det_map_entry_value (_: unit) : map_entry_value_t u#0 u#0 #_ #_ cbor_det_map_entry_match cbor_det_match
+= (x2: _)
+  (#p: _)
+  (#v2: _)
+{
+  unfold (cbor_det_map_entry_match p x2 v2);
+  unfold (Raw.cbor_match_map_entry p x2 (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+  fold (cbor_det_match p x2.cbor_map_entry_value (snd v2));
+  ghost fn aux (_: unit)
+    requires Raw.cbor_match p x2.cbor_map_entry_key (SpecRaw.mk_det_raw_cbor (fst v2)) ** cbor_det_match p x2.cbor_map_entry_value (snd v2)
+    ensures cbor_det_map_entry_match p x2 v2
+  {
+    unfold (cbor_det_match p x2.cbor_map_entry_value (snd v2));
+    fold (Raw.cbor_match_map_entry p x2 (SpecRaw.mk_det_raw_cbor (fst v2), SpecRaw.mk_det_raw_cbor (snd v2)));
+    fold (cbor_det_map_entry_match p x2 v2);
+  };
+  Trade.intro _ _ _ aux;
+  x2.cbor_map_entry_value
+}
+```
+
+let cbor_det_map_get_invariant_none
+  (b: bool)
+  (px: perm)
+  (x: cbor_det_t)
+  (vx: Spec.cbor)
+  (vk: Spec.cbor)
+  (m: Spec.cbor_map)
+  (p': perm)
+  (i: cbor_det_map_iterator_t)
+: Tot slprop
+= exists* l .
+    cbor_det_map_iterator_match p' i l **
+    Trade.trade
+      (cbor_det_map_iterator_match p' i l)
+      (cbor_det_match px x vx) **
+  pure (
+    List.Tot.sorted (SpecRaw.map_entry_order cbor_det_order _) l /\
+    Spec.cbor_map_get m vk == (if b then List.Tot.assoc vk l else None) /\
+    (b ==> Cons? l)
+  )
+
+let cbor_det_map_get_invariant_some
+  (px: perm)
+  (x: cbor_det_t)
+  (vx: Spec.cbor)
+  (vk: Spec.cbor)
+  (m: Spec.cbor_map)
+  (x': cbor_det_t)
+: Tot slprop
+= exists* p' vx' .
+    cbor_det_match p' x' vx' **
+    Trade.trade
+      (cbor_det_match p' x' vx')
+      (cbor_det_match px x vx) **
+    pure (
+      Spec.cbor_map_get m vk == Some vx'
+    )
+
+let cbor_det_map_get_invariant
+  (b: bool)
+  (px: perm)
+  (x: cbor_det_t)
+  (vx: Spec.cbor)
+  (vk: Spec.cbor)
+  (m: Spec.cbor_map)
+  (p': perm)
+  (i: cbor_det_map_iterator_t)
+  (res: option cbor_det_t)
+: Tot slprop
+= match res with
+  | None -> cbor_det_map_get_invariant_none b px x vx vk m p' i
+  | Some x' -> cbor_det_map_get_invariant_some px x vx vk m x'
+
+let cbor_det_map_get_invariant_false_elim_precond
+  (vx: Spec.cbor)
+  (m: Spec.cbor_map)
+: Tot prop
+= match Spec.unpack vx with
+  | Spec.CMap m' -> m == m'
+  | _ -> False
+
+```pulse
+ghost
+fn cbor_det_map_get_invariant_false_elim
+  (px: perm)
+  (x: cbor_det_t)
+  (vx: Spec.cbor)
+  (vk: Spec.cbor)
+  (m: Spec.cbor_map)
+  (p' : perm)
+  (i: cbor_det_map_iterator_t)
+  (res: option cbor_det_t)
+requires
+  cbor_det_map_get_invariant false px x vx vk m p' i res **
+  pure (cbor_det_map_get_invariant_false_elim_precond vx m)
+ensures
+  map_get_post cbor_det_match x px vx vk res **
+  pure (Spec.CMap? (Spec.unpack vx) /\ (Some? (Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk) == Some? res))
+{
+  match res {
+    None -> {
+      unfold (cbor_det_map_get_invariant false px x vx vk m p' i None);
+      unfold (cbor_det_map_get_invariant_none false px x vx vk m p' i);
+      Trade.elim _ _;
+      fold (map_get_post_none cbor_det_match x px vx vk);
+      fold (map_get_post cbor_det_match x px vx vk res)
+    }
+    Some x' -> {
+      unfold (cbor_det_map_get_invariant false px x vx vk m p' i (Some x'));
+      unfold (cbor_det_map_get_invariant_some px x vx vk m x');
+      fold (map_get_post_some cbor_det_match x px vx vk x');
+      fold (map_get_post cbor_det_match x px vx vk res)
+    }
+  }
+}
+```
+
+```pulse
+fn cbor_det_map_get (_: unit)
+: map_get_t u#0 #_ cbor_det_match
+= (x: _)
+  (k: _)
+  (#px: _)
+  (#vx: _)
+  (#pk: _)
+  (#vk: _)
+{
+  let m : Ghost.erased Spec.cbor_map = Ghost.hide (Spec.CMap?.c (Spec.unpack vx));
+  let i = cbor_det_map_iterator_start' () x;
+  with p' l . assert (cbor_det_map_iterator_match p' i l);
+  let mut pi = i;
+  let mut pres = None #cbor_det_t;
+  let i_is_empty = cbor_det_map_iterator_is_empty () i;
+  let cont = not i_is_empty;
+  let mut pcont = cont;
+  fold (cbor_det_map_get_invariant_none cont px x vx vk m p' i);
+  fold (cbor_det_map_get_invariant cont px x vx vk m p' i None);
+  while (
+    !pcont
+  ) invariant cont . exists* i res .
+    pts_to pi i **
+    pts_to pcont cont **
+    pts_to pres res **
+    cbor_det_match pk k vk **
+    cbor_det_map_get_invariant cont px x vx vk m p' i res **
+    pure (cont ==> None? res)
+  {
+    with gb gi gres . assert (cbor_det_map_get_invariant gb px x vx vk m p' gi gres);
+    unfold (cbor_det_map_get_invariant gb px x vx vk m p' gi None);
+    unfold (cbor_det_map_get_invariant_none gb px x vx vk m p' gi);
+    let entry = cbor_det_map_iterator_next () pi;
+    Trade.trans _ _ (cbor_det_match px x vx);
+    with pentry ventry . assert (cbor_det_map_entry_match pentry entry ventry);
+    let key = cbor_det_map_entry_key () entry;
+    let comp = impl_cbor_det_compare key k;
+    Trade.elim _ (cbor_det_map_entry_match pentry entry ventry);
+    cbor_det_compare_equal (fst ventry) vk;
+    with gi' l' . assert (cbor_det_map_iterator_match p' gi' l');
+    if (comp = 0s) {
+      Trade.elim_hyp_r _ _ (cbor_det_match px x vx);
+      let value = cbor_det_map_entry_value () entry;
+      Trade.trans _ _ (cbor_det_match px x vx);
+      pres := Some value;
+      pcont := false;
+      fold (cbor_det_map_get_invariant_some px x vx vk m value);
+      fold (cbor_det_map_get_invariant false px x vx vk m p' gi' (Some value))
+    } else if (I16.gt comp 0s) {
+      Trade.elim_hyp_l _ _ (cbor_det_match px x vx);
+      cbor_det_compare_swap vk (fst ventry);
+      cbor_det_order_eq vk (fst ventry);
+      Classical.move_requires (Map.list_sorted_map_entry_order_lt_tail cbor_det_order ventry l') vk;
+      List.Tot.assoc_mem (Ghost.reveal vk) l';
+      pcont := false;
+      fold (cbor_det_map_get_invariant_none false px x vx vk m p' gi');
+      fold (cbor_det_map_get_invariant false px x vx vk m p' gi' None);
+    } else {
+      Trade.elim_hyp_l _ _ (cbor_det_match px x vx);
+      let i' = !pi;
+      Trade.rewrite_with_trade (cbor_det_map_iterator_match p' gi' l')
+        (cbor_det_map_iterator_match p' i' l');
+      Trade.trans _ _ (cbor_det_match px x vx);
+      let is_empty = cbor_det_map_iterator_is_empty () i';
+      let cont = not is_empty;
+      pcont := cont;
+      fold (cbor_det_map_get_invariant_none cont px x vx vk m p' i');
+      fold (cbor_det_map_get_invariant cont px x vx vk m p' i' None);
+    }
+  };
+  with gb gi gres . assert (cbor_det_map_get_invariant gb px x vx vk m p' gi gres);
+  cbor_det_map_get_invariant_false_elim px x vx vk m p' gi gres;
+  !pres
 }
 ```

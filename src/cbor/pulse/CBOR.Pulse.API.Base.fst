@@ -584,3 +584,61 @@ let mk_map_t
           cbor_map_length v' == Seq.length va
         )
     )
+
+let map_get_post_none
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (px: perm)
+  (vx: cbor)
+  (vk: cbor)
+: Tot slprop
+=
+  vmatch px x vx ** pure (CMap? (unpack vx) /\ None? (cbor_map_get (CMap?.c (unpack vx)) vk))
+
+let map_get_post_some
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (px: perm)
+  (vx: cbor)
+  (vk: cbor)
+  (x' : t)
+: Tot slprop
+= exists* px' vx' .
+      vmatch px' x' vx' **
+      Trade.trade
+        (vmatch px' x' vx')
+        (vmatch px x vx) **
+      pure (CMap? (unpack vx) /\ cbor_map_get (CMap?.c (unpack vx)) vk == Some vx')
+
+let map_get_post
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (x: t)
+  (px: perm)
+  (vx: cbor)
+  (vk: cbor)
+  (res: option t)
+: Tot slprop
+= match res with
+  | None -> map_get_post_none vmatch x px vx vk
+  | Some x' -> map_get_post_some vmatch x px vx vk x'
+
+inline_for_extraction
+let map_get_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (k: t) ->
+  (#px: perm) ->
+  (#vx: Ghost.erased cbor) ->
+  (#pk: perm) ->
+  (#vk: Ghost.erased cbor) ->
+  stt (option t)
+    (vmatch px x vx ** vmatch pk k vk ** pure (CMap? (unpack vx)))
+    (fun res ->
+      vmatch pk k vk **
+      map_get_post vmatch x px vx vk res **
+      pure (CMap? (unpack vx) /\ (Some? (cbor_map_get (CMap?.c (unpack vx)) vk) == Some? res))
+    )
