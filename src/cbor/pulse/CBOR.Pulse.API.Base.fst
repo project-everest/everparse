@@ -231,6 +231,14 @@ let get_array_length_t
       )
     )
 
+let get_array_item_pre
+  (i: FStar.UInt64.t)
+  (y: cbor)
+: Tot prop
+= match unpack y with
+    | CArray v -> U64.v i < List.Tot.length v
+    | _ -> False
+
 let get_array_item_post
   (i: FStar.UInt64.t)
   (y: cbor)
@@ -238,7 +246,7 @@ let get_array_item_post
 : Tot prop
 = match unpack y with
       | CArray v -> U64.v i < List.Tot.length v /\
-        List.Tot.nth v (U64.v i) == Some y'
+        List.Tot.index v (U64.v i) == y'
       | _ -> False
 
 inline_for_extraction
@@ -250,10 +258,7 @@ let get_array_item_t
   (#p: perm) ->
   (#y: Ghost.erased cbor) ->
   stt t
-    (vmatch p x y ** pure (match unpack y with
-    | CArray v -> U64.v i < List.Tot.length v
-    | _ -> False
-    ))
+    (vmatch p x y ** pure (get_array_item_pre i y))
     (fun res -> exists* p' y' .
       vmatch p' res y' **
       Trade.trade (vmatch p' res y') (vmatch p x y) **

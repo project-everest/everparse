@@ -6,7 +6,7 @@ open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Trade
 
-module PM = Pulse.Lib.SeqMatch
+module PM = Pulse.Lib.SeqMatch.Util
 module A = Pulse.Lib.Array
 module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
@@ -79,6 +79,59 @@ fn cbor_match_array_elim
     fold (cbor_match_array c p r cbor_match)
   };
   Trade.intro _ _ _ aux
+}
+```
+
+```pulse
+fn cbor_array_item
+  (fits: squash (SZ.fits_u64))
+  (c: cbor_raw)
+  (i: U64.t)
+  (#pm: perm)
+  (#r: Ghost.erased raw_data_item { Array? r })
+requires
+    (cbor_match pm c r **
+      pure (U64.v i < List.Tot.length (Array?.v r))
+    )
+returns res: cbor_raw
+ensures exists* p' y .
+      cbor_match p' res y **
+      trade
+        (cbor_match p' res y)
+        (cbor_match pm c r) **
+      pure (
+        U64.v i < List.Tot.length (Array?.v r) /\
+        List.Tot.index (Array?.v r) (U64.v i) == y
+      )
+{
+  cbor_match_cases c;
+  match c {
+    CBOR_Case_Serialized_Array c' -> {
+      Trade.rewrite_with_trade
+        (cbor_match pm c r)
+        (cbor_match_serialized_array c' pm r);
+      let res = cbor_serialized_array_item c' i;
+      Trade.trans _ _ (cbor_match pm c r);
+      res
+    }
+    CBOR_Case_Array c' -> { 
+      assert_norm (cbor_match pm (CBOR_Case_Array c') (Array (Array?.len r) (Array?.v r)) ==
+        cbor_match_array c' pm (Array (Array?.len r) (Array?.v r)) cbor_match
+      );
+      Trade.rewrite_with_trade
+        (cbor_match pm c r)
+        (cbor_match_array c' pm r cbor_match);
+      cbor_match_array_elim c' pm r;
+      Trade.trans _ _ (cbor_match pm c r);
+      A.pts_to_len c'.cbor_array_ptr;
+      PM.seq_list_match_length (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)) _ _;
+      let res = A.op_Array_Access c'.cbor_array_ptr (SZ.uint64_to_sizet i);
+      Trade.elim_hyp_l _ _ (cbor_match pm c r);
+      PM.seq_list_match_index_trade (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)) _ _ (U64.v i);
+      Trade.trans _ _ (cbor_match pm c r);
+      res
+    }
+  }
 }
 ```
 

@@ -131,6 +131,8 @@ val cbor_det_array_iterator_is_empty () : array_iterator_is_empty_t cbor_det_arr
 
 val cbor_det_array_iterator_next () : array_iterator_next_t cbor_det_match cbor_det_array_iterator_match
 
+val cbor_det_get_array_item () : get_array_item_t cbor_det_match
+
 val cbor_det_get_map_length () : get_map_length_t cbor_det_match
 
 val cbor_det_map_iterator_match : perm -> cbor_det_map_iterator_t -> list (Spec.cbor & Spec.cbor) -> slprop

@@ -59,8 +59,6 @@ fn cbor_match_serialized_tagged_get_payload
 }
 ```
 
-let cbor_serialized_array_iterator_match = cbor_raw_serialized_iterator_match serialize_raw_data_item
-
 module LP = LowParse.Pulse.VCList
 
 ```pulse
@@ -90,6 +88,41 @@ fn cbor_match_serialized_array_elim
   intro_trade _ _ _ aux
 }
 ```
+
+```pulse
+fn cbor_serialized_array_item
+  (c: cbor_serialized)
+  (i: U64.t)
+  (#pm: perm)
+  (#r: Ghost.erased raw_data_item { Array? r })
+requires
+    (cbor_match_serialized_array c pm r **
+      pure (U64.v i < List.Tot.length (Array?.v r))
+    )
+returns res: cbor_raw
+ensures exists* y .
+      cbor_match 1.0R res y **
+      trade
+        (cbor_match 1.0R res y)
+        (cbor_match_serialized_array c pm r) **
+      pure (
+        U64.v i < List.Tot.length (Array?.v r) /\
+        List.Tot.index (Array?.v r) (U64.v i) == y
+      )
+{
+  cbor_match_serialized_array_elim c pm r;
+  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
+  let j : SZ.t = SZ.uint64_to_sizet i;
+  let elt = LowParse.Pulse.VCList.nlist_nth _ (jump_raw_data_item ()) (U64.v (Array?.len r).value) c.cbor_serialized_payload j;
+  Trade.trans _ _ (cbor_match_serialized_array c pm r);
+  let res = cbor_read elt;
+  Trade.trans _ _ (cbor_match_serialized_array c pm r);
+  res
+}
+```
+
+let cbor_serialized_array_iterator_match = cbor_raw_serialized_iterator_match serialize_raw_data_item
+
 
 #set-options "--print_implicits"
 

@@ -692,6 +692,48 @@ fn cbor_det_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor
 }
 ```
 
+let rec list_index_map
+  (#t1 #t2: Type)
+  (f: (t1 -> t2))
+  (l: list t1)
+  (i: nat)
+: Lemma
+  (requires (i < List.Tot.length l))
+  (ensures (
+    let l' = List.Tot.map f l in
+    i < List.Tot.length l' /\
+    List.Tot.index l' i == f (List.Tot.index l i)
+  ))
+  [SMTPat (List.Tot.index (List.Tot.map f l) i)]
+= if i = 0
+  then ()
+  else list_index_map f (List.Tot.tl l) (i - 1)
+
+```pulse
+fn cbor_det_get_array_item (_: unit) : get_array_item_t u#0 #_ cbor_det_match
+= (x: _)
+  (i: _)
+  (#p: _)
+  (#v: _)
+{
+  let l : Ghost.erased (list Spec.cbor) = Ghost.hide (Spec.CArray?.v (Spec.unpack v));
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  Trade.rewrite_with_trade
+    (cbor_det_match p x v)
+    (Raw.cbor_match p x (SpecRaw.mk_det_raw_cbor v));
+  let res = Read.cbor_array_item (assume (SZ.fits_u64)) x i;
+  Trade.trans _ _ (cbor_det_match p x v);
+  with p' v' . assert (Raw.cbor_match p' res v');
+  list_map_mk_cbor_mk_det_raw_cbor l;
+  assert (pure (List.Tot.index (List.Tot.map SpecRaw.mk_cbor (List.Tot.map mk_det_raw_cbor l)) (U64.v i) == List.Tot.index l (U64.v i)));
+  Trade.rewrite_with_trade
+    (Raw.cbor_match p' res v')
+    (cbor_det_match p' res (List.Tot.index l (U64.v i)));
+  Trade.trans _ _ (cbor_det_match p x v);
+  res
+}
+```
+
 ```pulse
 fn cbor_det_get_map_length (_: unit) : get_map_length_t u#0 #_ cbor_det_match
 = (x: _)

@@ -26,6 +26,26 @@ val cbor_match_serialized_tagged_get_payload
       (cbor_match_serialized_tagged c pm r)
   )
 
+val cbor_serialized_array_item
+  (c: cbor_serialized)
+  (i: U64.t)
+  (#pm: perm)
+  (#r: Ghost.erased raw_data_item { Array? r })
+: stt cbor_raw
+    (cbor_match_serialized_array c pm r **
+      pure (U64.v i < List.Tot.length (Array?.v r))
+    )
+    (fun res -> exists* y .
+      cbor_match 1.0R res y **
+      trade
+        (cbor_match 1.0R res y)
+        (cbor_match_serialized_array c pm r) **
+      pure (
+        U64.v i < List.Tot.length (Array?.v r) /\
+        List.Tot.index (Array?.v r) (U64.v i) == y
+      )
+    )
+
 val cbor_serialized_array_iterator_match
   (p: perm)
   (i: cbor_raw_serialized_iterator)
