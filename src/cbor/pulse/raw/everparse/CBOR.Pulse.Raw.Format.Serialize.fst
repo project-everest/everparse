@@ -182,7 +182,7 @@ let write_long_argument_other
 =
               l2r_leaf_writer_ext
                 (l2r_leaf_writer_zero_size
-                  (LP.serialize_synth _ (LongArgumentOther #b b.additional_info ()) LP.serialize_empty LongArgumentOther?.v ())
+                  (LP.serialize_synth _ (LongArgumentOther #b ()) LP.serialize_empty LongArgumentOther?.v ())
                   ()
                 )
                 (serialize_long_argument b)
@@ -199,7 +199,7 @@ let size_long_argument_other
 =
               leaf_compute_remaining_size_ext
                 (leaf_compute_remaining_size_zero_size
-                  (LP.serialize_synth _ (LongArgumentOther #b b.additional_info ()) LP.serialize_empty LongArgumentOther?.v ())
+                  (LP.serialize_synth _ (LongArgumentOther #b ()) LP.serialize_empty LongArgumentOther?.v ())
                   ()
                 )
                 (serialize_long_argument b)

@@ -168,7 +168,7 @@ let read_long_argument_other
               reader_ext
                 (read_synth'
                   (reader_of_leaf_reader leaf_read_empty)
-                  (LongArgumentOther #b b.additional_info ())
+                  (LongArgumentOther #b ())
                   LongArgumentOther?.v
                 )
                 (serialize_long_argument b)
@@ -297,7 +297,7 @@ let read_long_argument
               reader_ext
                 (read_synth'
                   (reader_of_leaf_reader leaf_read_empty)
-                  (LongArgumentOther #b b.additional_info ())
+                  (LongArgumentOther #b ())
                   LongArgumentOther?.v
                 )
                 (serialize_long_argument b)
@@ -429,7 +429,7 @@ let validate_long_argument_other
               validate_ext
                 (validate_synth
                   validate_empty
-                  (LongArgumentOther #b b.additional_info ())
+                  (LongArgumentOther #b ())
                 )
                 (parse_long_argument b)
 
@@ -549,7 +549,7 @@ let jump_long_argument_other
               jump_ext
                 (jump_synth
                   jump_empty
-                  (LongArgumentOther #b b.additional_info ())
+                  (LongArgumentOther #b ())
                 )
                 (parse_long_argument b)
 

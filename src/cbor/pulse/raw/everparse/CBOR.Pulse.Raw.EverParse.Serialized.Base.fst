@@ -10,7 +10,7 @@ inline_for_extraction
 let dummy_initial_byte : initial_byte = { major_type = cbor_major_type_simple_value; additional_info = 0uy }
 
 inline_for_extraction
-let dummy_long_argument : long_argument dummy_initial_byte = LongArgumentOther dummy_initial_byte.additional_info () ()
+let dummy_long_argument : long_argument dummy_initial_byte = LongArgumentOther () ()
 
 inline_for_extraction
 let dummy_header : header = (| dummy_initial_byte, dummy_long_argument |)

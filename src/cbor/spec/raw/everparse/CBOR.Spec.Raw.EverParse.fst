@@ -155,9 +155,8 @@ let long_argument_u64_prop
 
 let long_argument_other_prop
   (b: initial_byte)
-  (a: additional_info_t)
 : GTot prop
-= a == b.additional_info /\ (
+= (
     ~ (b.additional_info == additional_info_long_argument_8_bits \/ b.additional_info == additional_info_long_argument_16_bits \/ b.additional_info == additional_info_long_argument_32_bits \/ b.additional_info == additional_info_long_argument_64_bits)
   )
 
@@ -185,8 +184,7 @@ type long_argument
       (v: U64.t) ->
       long_argument b
   | LongArgumentOther:
-      (a: additional_info_t) ->
-      (prf: squash (long_argument_other_prop b a)) ->
+      (prf: squash (long_argument_other_prop b)) ->
       (v: unit) -> // constructors are synth functions, hence this unit argument
       long_argument b
 
@@ -208,8 +206,8 @@ let argument_as_raw_uint64
     { size = 3uy; value = Cast.uint32_to_uint64 v }
   | LongArgumentU64 _ v ->
     { size = 4uy; value = v }
-  | LongArgumentOther v _ _ ->
-    { size = 0uy; value = Cast.uint8_to_uint64 v }
+  | LongArgumentOther _ _ ->
+    { size = 0uy; value = Cast.uint8_to_uint64 b.additional_info }
 
 let argument_as_uint64
   (b: initial_byte { ~ (long_argument_simple_value_prop b) })
@@ -234,7 +232,8 @@ let argument_as_simple_value
     (requires (get_header_argument_as_simple_value_initial_byte_precond b))
     (ensures (fun _ -> True))
 = match x with
-  | LongArgumentOther v _ _
+  | LongArgumentOther _ _ ->
+    b.additional_info
   | LongArgumentSimpleValue _ v ->
     v
 
@@ -362,7 +361,7 @@ let tot_parse_long_argument
     then tot_weaken _ (tot_parse_u32 `tot_parse_synth` LongArgumentU32 ())
     else if b.additional_info = additional_info_long_argument_64_bits
     then tot_weaken _ (tot_parse_u64 `tot_parse_synth` LongArgumentU64 ())
-    else tot_weaken _ (tot_parse_empty `tot_parse_synth` LongArgumentOther b.additional_info ())
+    else tot_weaken _ (tot_parse_empty `tot_parse_synth` LongArgumentOther ())
 
 let parse_long_argument
   (b: initial_byte)
@@ -378,7 +377,7 @@ let parse_long_argument
     then weaken _ (parse_u32 `parse_synth` LongArgumentU32 ())
     else if b.additional_info = additional_info_long_argument_64_bits
     then weaken _ (parse_u64 `parse_synth` LongArgumentU64 ())
-    else weaken _ (parse_empty `parse_synth` LongArgumentOther b.additional_info ())
+    else weaken _ (parse_empty `parse_synth` LongArgumentOther ())
 
 let tot_parse_long_argument_eq
   (b: initial_byte)
@@ -422,8 +421,8 @@ let tot_parse_long_argument_eq
       tot_parse_synth_eq tot_parse_u64 (LongArgumentU64 #b ()) input
     end
     else begin
-      parse_synth_eq parse_empty (LongArgumentOther #b b.additional_info ()) input;
-      tot_parse_synth_eq tot_parse_empty (LongArgumentOther #b b.additional_info ()) input
+      parse_synth_eq parse_empty (LongArgumentOther #b ()) input;
+      tot_parse_synth_eq tot_parse_empty (LongArgumentOther #b ()) input
     end
 
 let parse_header_kind = and_then_kind (parse_filter_kind parse_u8_kind) parse_long_argument_kind
@@ -916,7 +915,7 @@ let raw_uint64_as_argument
       argument_as_raw_uint64 b arg = x
     ))
 = if x.size = 0uy
-  then (| mk_initial_byte t (Cast.uint64_to_uint8 x.value), LongArgumentOther (Cast.uint64_to_uint8 x.value) () () |)
+  then (| mk_initial_byte t (Cast.uint64_to_uint8 x.value), LongArgumentOther () () |)
   else if x.size = 1uy
   then (| mk_initial_byte t additional_info_long_argument_8_bits, LongArgumentU8 () (Cast.uint64_to_uint8 x.value) |)
   else if x.size = 2uy
@@ -938,7 +937,7 @@ let simple_value_as_argument
       argument_as_simple_value b arg == x
     ))
 = if x `U8.lte` max_simple_value_additional_info
-  then (| mk_initial_byte cbor_major_type_simple_value x, LongArgumentOther x () () |)
+  then (| mk_initial_byte cbor_major_type_simple_value x, LongArgumentOther () () |)
   else (| mk_initial_byte cbor_major_type_simple_value additional_info_long_argument_8_bits, LongArgumentSimpleValue () x |)
 
 inline_for_extraction
@@ -994,7 +993,7 @@ let tot_serialize_long_argument
     then tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentU32 ()) (tot_serialize_u32) LongArgumentU32?.v ())
     else if b.additional_info = additional_info_long_argument_64_bits
     then tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentU64 ()) (tot_serialize_u64) LongArgumentU64?.v ())
-    else tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentOther b.additional_info ()) tot_serialize_empty LongArgumentOther?.v ())
+    else tot_serialize_weaken _ (tot_serialize_synth _ (LongArgumentOther ()) tot_serialize_empty LongArgumentOther?.v ())
 
 let serialize_long_argument
   (b: initial_byte)
@@ -1235,7 +1234,7 @@ let cps_simple_value_as_argument
   )
 : Tot t'
 = t'_ifthenelse (x `U8.lte` max_simple_value_additional_info)
-    (fun _then -> k (| mk_initial_byte cbor_major_type_simple_value x, LongArgumentOther x () () |))
+    (fun _then -> k (| mk_initial_byte cbor_major_type_simple_value x, LongArgumentOther () () |))
     (fun _else -> k (| mk_initial_byte cbor_major_type_simple_value additional_info_long_argument_8_bits, LongArgumentSimpleValue () x |))
 
 inline_for_extraction
@@ -1251,7 +1250,7 @@ let cps_raw_uint64_as_argument
   )
 : Tot t'
 = t'_ifthenelse (x.size = 0uy)
-    (fun _ -> k (| mk_initial_byte ty (Cast.uint64_to_uint8 x.value), LongArgumentOther (Cast.uint64_to_uint8 x.value) () () |))
+    (fun _ -> k (| mk_initial_byte ty (Cast.uint64_to_uint8 x.value), LongArgumentOther () () |))
     (fun _ -> t'_ifthenelse (x.size = 1uy)
       (fun _ -> k (| mk_initial_byte ty additional_info_long_argument_8_bits, LongArgumentU8 () (Cast.uint64_to_uint8 x.value) |))
       (fun _ -> t'_ifthenelse (x.size = 2uy)
@@ -2167,13 +2166,13 @@ let lex_compare_with_header_correct
   begin
     lex_compare_with_header_long_argument ty1 x1 ty2 x2;
     let (| _, l2 |) = raw_uint64_as_argument ty2 x2 in
-    let p1' : tot_parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.tot_weaken parse_long_argument_kind (tot_parse_synth tot_parse_empty (LongArgumentOther #b1 a1 ())) in
+    let p1' : tot_parser parse_long_argument_kind (long_argument b1) = LowParse.Spec.Base.tot_weaken parse_long_argument_kind (tot_parse_synth tot_parse_empty (LongArgumentOther #b1 ())) in
     assert (tot_parse_long_argument b1 == p1');
-    let s1_pre = tot_serialize_synth #_ #_ #(long_argument b1) _ (LongArgumentOther #b1 a1 ()) tot_serialize_empty LongArgumentOther?.v () in
+    let s1_pre = tot_serialize_synth #_ #_ #(long_argument b1) _ (LongArgumentOther #b1 ()) tot_serialize_empty LongArgumentOther?.v () in
     let s1' : tot_serializer p1' = tot_serialize_weaken parse_long_argument_kind s1_pre in
     serializer_unique #parse_long_argument_kind (parse_long_argument b1) (serialize_long_argument b1) s1' l1;
     assert (bare_serialize s1' l1 == bare_serialize s1_pre l1);
-    tot_serialize_synth_eq #_ #_ #(long_argument b1) _ (LongArgumentOther #b1 a1 ()) tot_serialize_empty LongArgumentOther?.v () l1;
+    tot_serialize_synth_eq #_ #_ #(long_argument b1) _ (LongArgumentOther #b1 ()) tot_serialize_empty LongArgumentOther?.v () l1;
     assert (bare_serialize s1' l1 `Seq.equal` Seq.empty);
     assert (bare_serialize (serialize_long_argument b1) l1 == Seq.empty);
     serializer_unique #parse_long_argument_kind (parse_long_argument b1) (serialize_long_argument b1) s1' l2;
