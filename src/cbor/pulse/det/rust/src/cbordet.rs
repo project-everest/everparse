@@ -67,14 +67,14 @@ enum long_argument
     LongArgumentU16 { v: u16 },
     LongArgumentU32 { v: u32 },
     LongArgumentU64 { v: u64 },
-    LongArgumentOther { a: u8 }
+    LongArgumentOther
 }
 
 #[derive(PartialEq, Clone, Copy)]
 struct header
 { pub fst: initial_byte_t, pub snd: long_argument }
 
-fn argument_as_uint64(x: long_argument) -> u64
+fn argument_as_uint64(b: initial_byte_t, x: long_argument) -> u64
 {
     match x
     {
@@ -82,7 +82,8 @@ fn argument_as_uint64(x: long_argument) -> u64
         long_argument::LongArgumentU16 { v } => raw_uint64 { size: 2u8, value: v as u64 },
         long_argument::LongArgumentU32 { v } => raw_uint64 { size: 3u8, value: v as u64 },
         long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
-        long_argument::LongArgumentOther { a: v } => raw_uint64 { size: 0u8, value: v as u64 },
+        long_argument::LongArgumentOther =>
+          raw_uint64 { size: 0u8, value: b.additional_info as u64 },
         _ => panic!("Incomplete pattern matching")
     }.value
 }
@@ -94,7 +95,7 @@ fn raw_uint64_as_argument(t: u8, x: raw_uint64) -> header
         header
         {
             fst: initial_byte_t { major_type: t, additional_info: x.value as u8 },
-            snd: long_argument::LongArgumentOther { a: x.value as u8 }
+            snd: long_argument::LongArgumentOther
         }
     }
     else if x.size == 1u8
@@ -142,7 +143,7 @@ fn simple_value_as_argument(x: u8) -> header
         header
         {
             fst: initial_byte_t { major_type: cbor_major_type_simple_value, additional_info: x },
-            snd: long_argument::LongArgumentOther { a: x }
+            snd: long_argument::LongArgumentOther
         }
     }
     else
@@ -679,7 +680,7 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                     let mut pres: [usize; 1] = [res1; 1usize];
                     let mut pi: [usize; 1] = [0usize; 1usize];
                     let i: usize = (&pi)[0];
-                    let mut cond: bool = i < argument_as_uint64(xh1.snd) as usize;
+                    let mut cond: bool = i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
                     while
                     cond
                     {
@@ -694,7 +695,7 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                         (&mut pi)[0] = i·;
                         (&mut pres)[0] = res3;
                         let i1: usize = (&pi)[0];
-                        cond = i1 < argument_as_uint64(xh1.snd) as usize
+                        cond = i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
                     };
                     let res0: usize = (&pres)[0];
                     let res2: usize = res0;
@@ -754,7 +755,7 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                         let mut pres: [usize; 1] = [res1; 1usize];
                         let mut pi: [usize; 1] = [0usize; 1usize];
                         let i: usize = (&pi)[0];
-                        let mut cond: bool = i < argument_as_uint64(xh1.snd) as usize;
+                        let mut cond: bool = i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
                         while
                         cond
                         {
@@ -772,7 +773,7 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                             (&mut pi)[0] = i·;
                             (&mut pres)[0] = res3;
                             let i1: usize = (&pi)[0];
-                            cond = i1 < argument_as_uint64(xh1.snd) as usize
+                            cond = i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
                         };
                         let res0: usize = (&pres)[0];
                         let res2: usize = res0;
@@ -938,7 +939,8 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                             let mut pi: [usize; 1] = [0usize; 1usize];
                             let res0: bool = (&pres)[0];
                             let i: usize = (&pi)[0];
-                            let mut cond: bool = res0 && i < argument_as_uint64(xh1.snd) as usize;
+                            let mut cond: bool =
+                                res0 && i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
                             while
                             cond
                             {
@@ -957,7 +959,7 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                                 { (&mut pres)[0] = false };
                                 let res5: bool = (&pres)[0];
                                 let i1: usize = (&pi)[0];
-                                cond = res5 && i1 < argument_as_uint64(xh1.snd) as usize
+                                cond = res5 && i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
                             };
                             let res2: bool = (&pres)[0];
                             let res3: bool = res2;
@@ -1017,7 +1019,7 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                                 let res0: bool = (&pres)[0];
                                 let i: usize = (&pi)[0];
                                 let mut cond: bool =
-                                    res0 && i < argument_as_uint64(xh1.snd) as usize;
+                                    res0 && i < argument_as_uint64(xh1.fst, xh1.snd) as usize;
                                 while
                                 cond
                                 {
@@ -1045,7 +1047,8 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                                     { (&mut pres)[0] = false };
                                     let res4: bool = (&pres)[0];
                                     let i1: usize = (&pi)[0];
-                                    cond = res4 && i1 < argument_as_uint64(xh1.snd) as usize
+                                    cond =
+                                        res4 && i1 < argument_as_uint64(xh1.fst, xh1.snd) as usize
                                 };
                                 let res2: bool = (&pres)[0];
                                 let res3: bool = res2;
@@ -1290,7 +1293,7 @@ fn read_header(input: &[u8]) -> header
             res3
         }
         else
-        { long_argument::LongArgumentOther { a: x1.additional_info } };
+        { long_argument::LongArgumentOther };
     header { fst: x1, snd: x2 }
 }
 
@@ -1564,15 +1567,17 @@ fn validate_recursive_step_count_leaf(a: &[u8], bound: usize, prem: &mut [usize]
     let typ: u8 = get_header_major_type(h);
     if typ == cbor_major_type_array
     {
+        let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(l);
+        let arg64: u64 = argument_as_uint64(b, l);
         prem[0] = arg64 as usize;
         false
     }
     else if typ == cbor_major_type_map
     {
+        let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(l);
+        let arg64: u64 = argument_as_uint64(b, l);
         let arg: usize = arg64 as usize;
         if arg > bound
         { true }
@@ -1618,14 +1623,16 @@ fn jump_recursive_step_count_leaf(a: &[u8]) -> usize
     let typ: u8 = get_header_major_type(h);
     if typ == cbor_major_type_array
     {
+        let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(l);
+        let arg64: u64 = argument_as_uint64(b, l);
         arg64 as usize
     }
     else if typ == cbor_major_type_map
     {
+        let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(l);
+        let arg64: u64 = argument_as_uint64(b, l);
         let arg: usize = arg64 as usize;
         arg.wrapping_add(arg)
     }
@@ -1692,13 +1699,15 @@ fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
                     b.major_type == cbor_major_type_text_string
                     {
                         let offset2: usize = poffset[0];
+                        let b0: initial_byte_t = x.fst;
                         let l: long_argument = x.snd;
-                        if input.len().wrapping_sub(offset2) < argument_as_uint64(l) as usize
+                        if input.len().wrapping_sub(offset2) < argument_as_uint64(b0, l) as usize
                         { false }
                         else
                         {
+                            let b1: initial_byte_t = x.fst;
                             let l0: long_argument = x.snd;
-                            poffset[0] = offset2.wrapping_add(argument_as_uint64(l0) as usize);
+                            poffset[0] = offset2.wrapping_add(argument_as_uint64(b1, l0) as usize);
                             true
                         }
                     }
@@ -1809,8 +1818,9 @@ fn jump_raw_data_item(input: &[u8], offset: usize) -> usize
             ||
             b.major_type == cbor_major_type_text_string
             {
+                let b0: initial_byte_t = x.fst;
                 let l: long_argument = x.snd;
-                off1.wrapping_add(argument_as_uint64(l) as usize)
+                off1.wrapping_add(argument_as_uint64(b0, l) as usize)
             }
             else
             { off1.wrapping_add(0usize) };
@@ -1862,13 +1872,7 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
             {
                 fst:
                 initial_byte_t { major_type: cbor_major_type_simple_value, additional_info: 0u8 },
-                snd:
-                long_argument::LongArgumentOther
-                {
-                    a:
-                    initial_byte_t
-                    { major_type: cbor_major_type_simple_value, additional_info: 0u8 }.additional_info
-                }
+                snd: long_argument::LongArgumentOther
             };
             1usize];
     let i: usize = jump_header(input, 0usize);
@@ -1897,6 +1901,7 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
     let typ: u8 = h.fst.major_type;
     if typ == cbor_major_type_uint64 || typ == cbor_major_type_neg_int64
     {
+        let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let i0: raw_uint64 =
             match l
@@ -1908,8 +1913,8 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
                 long_argument::LongArgumentU32 { v: v1 } =>
                   raw_uint64 { size: 3u8, value: v1 as u64 },
                 long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
-                long_argument::LongArgumentOther { a: v1 } =>
-                  raw_uint64 { size: 0u8, value: v1 as u64 },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
                 _ => panic!("Incomplete pattern matching")
             };
         let resi: cbor_int =
@@ -1918,6 +1923,7 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
     }
     else if typ == cbor_major_type_text_string || typ == cbor_major_type_byte_string
     {
+        let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let i0: raw_uint64 =
             match l
@@ -1929,8 +1935,8 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
                 long_argument::LongArgumentU32 { v: v1 } =>
                   raw_uint64 { size: 3u8, value: v1 as u64 },
                 long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
-                long_argument::LongArgumentOther { a: v1 } =>
-                  raw_uint64 { size: 0u8, value: v1 as u64 },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
                 _ => panic!("Incomplete pattern matching")
             };
         let ress: cbor_string =
@@ -1939,6 +1945,7 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
     }
     else if typ == cbor_major_type_tagged
     {
+        let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let tag: raw_uint64 =
             match l
@@ -1950,8 +1957,8 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
                 long_argument::LongArgumentU32 { v: v1 } =>
                   raw_uint64 { size: 3u8, value: v1 as u64 },
                 long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
-                long_argument::LongArgumentOther { a: v1 } =>
-                  raw_uint64 { size: 0u8, value: v1 as u64 },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
                 _ => panic!("Incomplete pattern matching")
             };
         let rest: cbor_serialized =
@@ -1960,6 +1967,7 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
     }
     else if typ == cbor_major_type_array
     {
+        let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let len: raw_uint64 =
             match l
@@ -1971,8 +1979,8 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
                 long_argument::LongArgumentU32 { v: v1 } =>
                   raw_uint64 { size: 3u8, value: v1 as u64 },
                 long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
-                long_argument::LongArgumentOther { a: v1 } =>
-                  raw_uint64 { size: 0u8, value: v1 as u64 },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
                 _ => panic!("Incomplete pattern matching")
             };
         let resa: cbor_serialized =
@@ -1981,6 +1989,7 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
     }
     else if typ == cbor_major_type_map
     {
+        let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let len: raw_uint64 =
             match l
@@ -1992,8 +2001,8 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
                 long_argument::LongArgumentU32 { v: v1 } =>
                   raw_uint64 { size: 3u8, value: v1 as u64 },
                 long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
-                long_argument::LongArgumentOther { a: v1 } =>
-                  raw_uint64 { size: 0u8, value: v1 as u64 },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
                 _ => panic!("Incomplete pattern matching")
             };
         let resa: cbor_serialized =
@@ -2002,11 +2011,12 @@ fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
     }
     else
     {
+        let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
         let i0: u8 =
             match l
             {
-                long_argument::LongArgumentOther { a: v1 } => v1,
+                long_argument::LongArgumentOther => b.additional_info,
                 long_argument::LongArgumentSimpleValue { v: v1 } => v1,
                 _ => panic!("Incomplete pattern matching")
             };
@@ -3170,8 +3180,8 @@ fn cbor_raw_ints_optimal(a: &[u8]) -> bool
                 long_argument::LongArgumentU16 { v } => raw_uint64 { size: 2u8, value: v as u64 },
                 long_argument::LongArgumentU32 { v } => raw_uint64 { size: 3u8, value: v as u64 },
                 long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
-                long_argument::LongArgumentOther { a: v } =>
-                  raw_uint64 { size: 0u8, value: v as u64 },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: h.fst.additional_info as u64 },
                 _ => panic!("Incomplete pattern matching")
             }
         )
@@ -3257,8 +3267,9 @@ fn cbor_raw_sorted(a: &[u8]) -> bool
     let h: header = read_header(ah);
     if get_header_major_type(h) == cbor_major_type_map
     {
+        let b: initial_byte_t = h.fst;
         let l: long_argument = h.snd;
-        let n: u64 = argument_as_uint64(l);
+        let n: u64 = argument_as_uint64(b, l);
         if n as usize == 0usize
         { true }
         else
@@ -3478,8 +3489,9 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                     ||
                     b.major_type == cbor_major_type_text_string
                     {
+                        let b0: initial_byte_t = x.fst;
                         let l: long_argument = x.snd;
-                        off1.wrapping_add(argument_as_uint64(l) as usize)
+                        off1.wrapping_add(argument_as_uint64(b0, l) as usize)
                     }
                     else
                     { off1.wrapping_add(0usize) };
@@ -3596,8 +3608,9 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                         ||
                         b.major_type == cbor_major_type_text_string
                         {
+                            let b0: initial_byte_t = x.fst;
                             let l: long_argument = x.snd;
-                            off1.wrapping_add(argument_as_uint64(l) as usize)
+                            off1.wrapping_add(argument_as_uint64(b0, l) as usize)
                         }
                         else
                         { off1.wrapping_add(0usize) };

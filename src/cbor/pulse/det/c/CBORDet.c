@@ -70,7 +70,6 @@ typedef struct long_argument_s
     uint16_t case_LongArgumentU16;
     uint32_t case_LongArgumentU32;
     uint64_t case_LongArgumentU64;
-    uint8_t case_LongArgumentOther;
   }
   ;
 }
@@ -83,7 +82,7 @@ typedef struct header_s
 }
 header;
 
-static uint64_t argument_as_uint64(long_argument x)
+static uint64_t argument_as_uint64(initial_byte_t b, long_argument x)
 {
   CBOR_Spec_Raw_Base_raw_uint64 ite;
   if (x.tag == LongArgumentU8)
@@ -107,10 +106,7 @@ static uint64_t argument_as_uint64(long_argument x)
     ite = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 4U, .value = v });
   }
   else if (x.tag == LongArgumentOther)
-  {
-    uint8_t v = x.case_LongArgumentOther;
-    ite = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)v });
-  }
+    ite = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)b.additional_info });
   else
     ite =
       KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
@@ -125,7 +121,7 @@ static header raw_uint64_as_argument(uint8_t t, CBOR_Spec_Raw_Base_raw_uint64 x)
       (
         (header){
           .fst = { .major_type = t, .additional_info = (uint8_t)x.value },
-          .snd = { .tag = LongArgumentOther, { .case_LongArgumentOther = (uint8_t)x.value } }
+          .snd = { .tag = LongArgumentOther }
         }
       );
   else if (x.size == 1U)
@@ -169,7 +165,7 @@ static header simple_value_as_argument(uint8_t x)
       (
         (header){
           .fst = { .major_type = CBOR_MAJOR_TYPE_SIMPLE_VALUE, .additional_info = x },
-          .snd = { .tag = LongArgumentOther, { .case_LongArgumentOther = x } }
+          .snd = { .tag = LongArgumentOther }
         }
       );
   else
@@ -737,7 +733,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
         size_t pres = res1;
         size_t pi = (size_t)0U;
         size_t i0 = pi;
-        bool cond = i0 < (size_t)argument_as_uint64(xh1.snd);
+        bool cond = i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
         while (cond)
         {
           size_t i = pi;
@@ -751,7 +747,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
           pi = i_;
           pres = res1;
           size_t i0 = pi;
-          cond = i0 < (size_t)argument_as_uint64(xh1.snd);
+          cond = i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
         }
         size_t res = pres;
         size_t res0 = res;
@@ -822,7 +818,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
           size_t pres = res1;
           size_t pi = (size_t)0U;
           size_t i0 = pi;
-          bool cond = i0 < (size_t)argument_as_uint64(xh1.snd);
+          bool cond = i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
           while (cond)
           {
             size_t i = pi;
@@ -839,7 +835,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
             pi = i_;
             pres = res1;
             size_t i0 = pi;
-            cond = i0 < (size_t)argument_as_uint64(xh1.snd);
+            cond = i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
           }
           size_t res = pres;
           size_t res0 = res;
@@ -1019,7 +1015,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
           size_t pi = (size_t)0U;
           bool res = pres;
           size_t i0 = pi;
-          bool cond = res && i0 < (size_t)argument_as_uint64(xh1.snd);
+          bool cond = res && i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
           while (cond)
           {
             size_t i0 = pi;
@@ -1037,7 +1033,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
               pres = false;
             bool res2 = pres;
             size_t i = pi;
-            cond = res2 && i < (size_t)argument_as_uint64(xh1.snd);
+            cond = res2 && i < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
           }
           bool res0 = pres;
           bool res1 = res0;
@@ -1112,7 +1108,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
             size_t pi = (size_t)0U;
             bool res0 = pres;
             size_t i0 = pi;
-            bool cond = res0 && i0 < (size_t)argument_as_uint64(xh1.snd);
+            bool cond = res0 && i0 < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
             while (cond)
             {
               size_t i0 = pi;
@@ -1139,7 +1135,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
                 pres = false;
               bool res1 = pres;
               size_t i = pi;
-              cond = res1 && i < (size_t)argument_as_uint64(xh1.snd);
+              cond = res1 && i < (size_t)argument_as_uint64(xh1.fst, xh1.snd);
             }
             bool res = pres;
             bool res1 = res;
@@ -1386,13 +1382,7 @@ static header read_header(Pulse_Lib_Slice_slice__uint8_t input)
     x2 = res1;
   }
   else
-    x2 =
-      (
-        (long_argument){
-          .tag = LongArgumentOther,
-          { .case_LongArgumentOther = x1.additional_info }
-        }
-      );
+    x2 = ((long_argument){ .tag = LongArgumentOther });
   header res1 = { .fst = x1, .snd = x2 };
   return res1;
 }
@@ -1621,15 +1611,17 @@ validate_recursive_step_count_leaf(
   uint8_t typ = get_header_major_type(h);
   if (typ == CBOR_MAJOR_TYPE_ARRAY)
   {
+    initial_byte_t b = h.fst;
     long_argument l = h.snd;
-    uint64_t arg64 = argument_as_uint64(l);
+    uint64_t arg64 = argument_as_uint64(b, l);
     *prem = (size_t)arg64;
     return false;
   }
   else if (typ == CBOR_MAJOR_TYPE_MAP)
   {
+    initial_byte_t b = h.fst;
     long_argument l = h.snd;
-    uint64_t arg64 = argument_as_uint64(l);
+    uint64_t arg64 = argument_as_uint64(b, l);
     size_t arg = (size_t)arg64;
     if (arg > bound)
       return true;
@@ -1669,14 +1661,16 @@ static size_t jump_recursive_step_count_leaf(Pulse_Lib_Slice_slice__uint8_t a)
   uint8_t typ = get_header_major_type(h);
   if (typ == CBOR_MAJOR_TYPE_ARRAY)
   {
+    initial_byte_t b = h.fst;
     long_argument l = h.snd;
-    uint64_t arg64 = argument_as_uint64(l);
+    uint64_t arg64 = argument_as_uint64(b, l);
     return (size_t)arg64;
   }
   else if (typ == CBOR_MAJOR_TYPE_MAP)
   {
+    initial_byte_t b = h.fst;
     long_argument l = h.snd;
-    uint64_t arg64 = argument_as_uint64(l);
+    uint64_t arg64 = argument_as_uint64(b, l);
     size_t arg = (size_t)arg64;
     return arg + arg;
   }
@@ -1728,18 +1722,24 @@ static bool validate_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t 
         Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
         header res0 = read_header(input_);
         header x = res0;
-        initial_byte_t b = x.fst;
+        initial_byte_t b0 = x.fst;
         if
-        (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
+        (
+          b0.major_type
+          == CBOR_MAJOR_TYPE_BYTE_STRING
+          || b0.major_type == CBOR_MAJOR_TYPE_TEXT_STRING
+        )
         {
           size_t offset2 = *poffset;
-          long_argument l = x.snd;
-          if (len__uint8_t(input) - offset2 < (size_t)argument_as_uint64(l))
+          initial_byte_t b = x.fst;
+          long_argument l0 = x.snd;
+          if (len__uint8_t(input) - offset2 < (size_t)argument_as_uint64(b, l0))
             res1 = false;
           else
           {
+            initial_byte_t b = x.fst;
             long_argument l = x.snd;
-            *poffset = offset2 + (size_t)argument_as_uint64(l);
+            *poffset = offset2 + (size_t)argument_as_uint64(b, l);
             res1 = true;
           }
         }
@@ -1820,12 +1820,14 @@ static size_t jump_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t of
     Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
     header res0 = read_header(input_);
     header x = res0;
-    initial_byte_t b = x.fst;
+    initial_byte_t b0 = x.fst;
     size_t off1;
-    if (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
+    if
+    (b0.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b0.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
     {
+      initial_byte_t b = x.fst;
       long_argument l = x.snd;
-      off1 = off10 + (size_t)argument_as_uint64(l);
+      off1 = off10 + (size_t)argument_as_uint64(b, l);
     }
     else
       off1 = off10 + (size_t)0U;
@@ -1864,14 +1866,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
   ph =
     {
       .fst = { .major_type = CBOR_MAJOR_TYPE_SIMPLE_VALUE, .additional_info = 0U },
-      .snd = {
-        .tag = LongArgumentOther,
-        {
-          .case_LongArgumentOther = (
-            (initial_byte_t){ .major_type = CBOR_MAJOR_TYPE_SIMPLE_VALUE, .additional_info = 0U }
-          ).additional_info
-        }
-      }
+      .snd = { .tag = LongArgumentOther }
     };
   size_t i0 = jump_header(input, (size_t)0U);
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s = split__uint8_t(input, i0);
@@ -1891,6 +1886,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
   uint8_t typ = h.fst.major_type;
   if (typ == CBOR_MAJOR_TYPE_UINT64 || typ == CBOR_MAJOR_TYPE_NEG_INT64)
   {
+    initial_byte_t b = h.fst;
     long_argument l = h.snd;
     CBOR_Spec_Raw_Base_raw_uint64 i;
     if (l.tag == LongArgumentU8)
@@ -1914,10 +1910,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
       i = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 4U, .value = v1 });
     }
     else if (l.tag == LongArgumentOther)
-    {
-      uint8_t v1 = l.case_LongArgumentOther;
-      i = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)v1 });
-    }
+      i = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)b.additional_info });
     else
       i =
         KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
@@ -1927,6 +1920,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
   }
   else if (typ == CBOR_MAJOR_TYPE_TEXT_STRING || typ == CBOR_MAJOR_TYPE_BYTE_STRING)
   {
+    initial_byte_t b = h.fst;
     long_argument l = h.snd;
     CBOR_Spec_Raw_Base_raw_uint64 i;
     if (l.tag == LongArgumentU8)
@@ -1950,10 +1944,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
       i = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 4U, .value = v1 });
     }
     else if (l.tag == LongArgumentOther)
-    {
-      uint8_t v1 = l.case_LongArgumentOther;
-      i = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)v1 });
-    }
+      i = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)b.additional_info });
     else
       i =
         KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
@@ -1964,6 +1955,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
   }
   else if (typ == CBOR_MAJOR_TYPE_TAGGED)
   {
+    initial_byte_t b = h.fst;
     long_argument l = h.snd;
     CBOR_Spec_Raw_Base_raw_uint64 tag;
     if (l.tag == LongArgumentU8)
@@ -1987,10 +1979,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
       tag = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 4U, .value = v1 });
     }
     else if (l.tag == LongArgumentOther)
-    {
-      uint8_t v1 = l.case_LongArgumentOther;
-      tag = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)v1 });
-    }
+      tag = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)b.additional_info });
     else
       tag =
         KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
@@ -2006,6 +1995,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
   }
   else if (typ == CBOR_MAJOR_TYPE_ARRAY)
   {
+    initial_byte_t b = h.fst;
     long_argument l = h.snd;
     CBOR_Spec_Raw_Base_raw_uint64 len;
     if (l.tag == LongArgumentU8)
@@ -2029,10 +2019,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
       len = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 4U, .value = v1 });
     }
     else if (l.tag == LongArgumentOther)
-    {
-      uint8_t v1 = l.case_LongArgumentOther;
-      len = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)v1 });
-    }
+      len = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)b.additional_info });
     else
       len =
         KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
@@ -2043,6 +2030,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
   }
   else if (typ == CBOR_MAJOR_TYPE_MAP)
   {
+    initial_byte_t b = h.fst;
     long_argument l = h.snd;
     CBOR_Spec_Raw_Base_raw_uint64 len;
     if (l.tag == LongArgumentU8)
@@ -2066,10 +2054,7 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
       len = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 4U, .value = v1 });
     }
     else if (l.tag == LongArgumentOther)
-    {
-      uint8_t v1 = l.case_LongArgumentOther;
-      len = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)v1 });
-    }
+      len = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)b.additional_info });
     else
       len =
         KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
@@ -2080,10 +2065,11 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
   }
   else
   {
+    initial_byte_t b = h.fst;
     long_argument l = h.snd;
     uint8_t i;
     if (l.tag == LongArgumentOther)
-      i = l.case_LongArgumentOther;
+      i = b.additional_info;
     else if (l.tag == LongArgumentSimpleValue)
       i = l.case_LongArgumentSimpleValue;
     else
@@ -3401,10 +3387,8 @@ static bool cbor_raw_ints_optimal(Pulse_Lib_Slice_slice__uint8_t a)
       ite = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 4U, .value = v });
     }
     else if (scrut.tag == LongArgumentOther)
-    {
-      uint8_t v = scrut.case_LongArgumentOther;
-      ite = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)v });
-    }
+      ite =
+        ((CBOR_Spec_Raw_Base_raw_uint64){ .size = 0U, .value = (uint64_t)h.fst.additional_info });
     else
       ite =
         KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
@@ -3468,8 +3452,9 @@ static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
   header h = read_header(ah);
   if (get_header_major_type(h) == CBOR_MAJOR_TYPE_MAP)
   {
+    initial_byte_t b = h.fst;
     long_argument l = h.snd;
-    uint64_t n = argument_as_uint64(l);
+    uint64_t n = argument_as_uint64(b, l);
     if ((size_t)n == (size_t)0U)
       return true;
     else
@@ -3625,13 +3610,18 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
         Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
         header res10 = read_header(input_);
         header x = res10;
-        initial_byte_t b = x.fst;
+        initial_byte_t b0 = x.fst;
         size_t i;
         if
-        (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
+        (
+          b0.major_type
+          == CBOR_MAJOR_TYPE_BYTE_STRING
+          || b0.major_type == CBOR_MAJOR_TYPE_TEXT_STRING
+        )
         {
+          initial_byte_t b = x.fst;
           long_argument l = x.snd;
-          i = off1 + (size_t)argument_as_uint64(l);
+          i = off1 + (size_t)argument_as_uint64(b, l);
         }
         else
           i = off1 + (size_t)0U;
@@ -3715,17 +3705,18 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
           Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
           header res10 = read_header(input_);
           header x = res10;
-          initial_byte_t b = x.fst;
+          initial_byte_t b0 = x.fst;
           size_t i;
           if
           (
-            b.major_type
+            b0.major_type
             == CBOR_MAJOR_TYPE_BYTE_STRING
-            || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING
+            || b0.major_type == CBOR_MAJOR_TYPE_TEXT_STRING
           )
           {
+            initial_byte_t b = x.fst;
             long_argument l = x.snd;
-            i = off1 + (size_t)argument_as_uint64(l);
+            i = off1 + (size_t)argument_as_uint64(b, l);
           }
           else
             i = off1 + (size_t)0U;
