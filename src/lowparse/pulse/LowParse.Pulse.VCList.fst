@@ -549,7 +549,7 @@ let seq_slice_append_ijk
   ))
 = Seq.lemma_split (Seq.slice s i k) (j - i)
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 1024 --split_queries always --query_stats --ifuel 8 --fuel 4"
 
 #restart-solver
 
@@ -752,6 +752,251 @@ fn l2r_write_nlist_as_array
   List.Tot.append_l_nil l1;
   Trade.elim _ _;
   fold (nlist_match_array varray vmatch (SZ.v n) arr x);
+  !pres
+}
+```
+
+module S = Pulse.Lib.Slice
+
+let nlist_match_slice
+  (#tslice: Type0)
+  (#telem: Type0)
+  (#t: Type)
+  (vslice: (tslice -> GTot (option (with_perm (S.slice telem)))))
+  (vmatch: (tslice -> telem -> t -> slprop))
+  (n: nat)
+  (a: tslice)
+  (l: LowParse.Spec.VCList.nlist n t)
+: Tot slprop
+= exists* (ar: with_perm (S.slice telem)) c .
+    pts_to ar.v #ar.p c **
+    PM.seq_list_match c l (vmatch a) **
+    pure (vslice a == Some ar)
+
+```pulse
+ghost
+fn nlist_match_slice_intro
+  (#tslice: Type0)
+  (#telem: Type0)
+  (#t: Type0)
+  (vslice: (tslice -> GTot (option (with_perm (S.slice telem)))))
+  (vmatch: (tslice -> telem -> t -> slprop))
+  (n: nat)
+  (a: tslice)
+  (l: nlist n t)
+  (ar: with_perm (S.slice telem))
+  (c: Seq.seq telem)
+requires
+    (pts_to ar.v #ar.p c **
+      PM.seq_list_match c l (vmatch a) **
+      pure (vslice a == Some ar)
+    )
+ensures
+    (nlist_match_slice vslice vmatch n a l)
+{
+  fold (nlist_match_slice vslice vmatch n a l)
+}
+```
+
+inline_for_extraction
+```pulse
+fn compute_remaining_size_nlist_as_slice
+  (#tslice: Type0)
+  (#telem: Type0)
+  (#t: Type0)
+  (vslice: (tslice -> option (with_perm (S.slice telem))))
+  (vmatch: (tslice -> telem -> t -> slprop))
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p  { k.parser_kind_subkind == Some ParserStrong })
+  (w: ((a: tslice) -> compute_remaining_size (vmatch a) s))
+  (n: SZ.t)
+: compute_remaining_size #_ #_ (nlist_match_slice vslice vmatch (SZ.v n)) #_ #_ (LowParse.Spec.VCList.serialize_nlist (SZ.v n) s)
+=
+  (arr: _)
+  (#x: _)
+  (out: _)
+  (#v: _)
+{
+  unfold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
+  let a = Some?.v (vslice arr);
+  with c . assert (pts_to a.v #a.p c);
+  let mut pres = true;
+  let mut pi = 0sz;
+  Trade.refl (PM.seq_list_match c x (vmatch arr));
+  PM.seq_list_match_length (vmatch arr) _ _;
+  while (
+    let res = !pres;
+    let i = !pi;
+    (res && (SZ.lt i n))
+  ) invariant b . exists* res i c2 l2 v1 . (
+    pts_to a.v #a.p c **
+    R.pts_to pres res **
+    R.pts_to pi i **
+    PM.seq_list_match c2 l2 (vmatch arr) **
+    pts_to out v1 **
+    trade
+      (PM.seq_list_match c2 l2 (vmatch arr))
+      (PM.seq_list_match c x (vmatch arr))
+    ** pure (
+      SZ.v i <= SZ.v n /\
+      b == (res && (SZ.v i < SZ.v n)) /\
+      Seq.length c == SZ.v n /\
+      (res == false ==> SZ.v v < Seq.length (serialize (serialize_nlist (SZ.v n) s) x)) /\
+      (res == true ==> (
+        Seq.equal c2 (Seq.slice c (SZ.v i) (SZ.v n)) /\
+        List.Tot.length l2 == SZ.v n - SZ.v i /\
+        SZ.v v - Seq.length (serialize (serialize_nlist (SZ.v n) s) x) == SZ.v v1 - Seq.length (serialize (serialize_nlist (SZ.v n - SZ.v i) s) l2)
+      )) /\
+      True
+    )
+  ) {
+    let i = !pi;
+    PM.seq_list_match_length (vmatch arr) _ _;
+    with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
+    PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
+    let e = S.op_Array_Access a.v i;
+    let c2' : Ghost.erased (Seq.seq telem) = Seq.tail c2;
+    with ve l2' . assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match c2' l2' (vmatch arr));
+    let ni' : Ghost.erased nat = Ghost.hide (SZ.v n - SZ.v i - 1);
+    serialize_nlist_cons' (ni') s ve l2';
+    Trade.rewrite_with_trade
+      (vmatch arr _ _)
+      (vmatch arr e ve);
+    let res = w arr e out;
+    Trade.elim (vmatch arr e ve) _;
+    if (res) {
+      let i' = SZ.add i 1sz;
+      pi := i';
+      Trade.elim_hyp_l _ _ _;
+      Trade.trans _ _ (PM.seq_list_match c x (vmatch arr));
+    } else {
+      Trade.elim _ (PM.seq_list_match c2 l2 (vmatch arr));
+      pres := false;
+    }
+  };
+  Trade.elim _ _;
+  fold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
+  !pres
+}
+```
+
+#restart-solver
+
+inline_for_extraction
+```pulse
+fn l2r_write_nlist_as_slice
+  (#tslice: Type0)
+  (#telem: Type0)
+  (#t: Type0)
+  (vslice: (tslice -> option (with_perm (S.slice telem))))
+  (vmatch: (tslice -> telem -> t -> slprop))
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p  { k.parser_kind_subkind == Some ParserStrong })
+  (w: ((a: tslice) -> l2r_writer (vmatch a) s))
+  (n: SZ.t)
+: l2r_writer #_ #_ (nlist_match_slice vslice vmatch (SZ.v n)) #_ #_ (LowParse.Spec.VCList.serialize_nlist (SZ.v n) s)
+=
+  (arr: _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  unfold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
+  let a = Some?.v (vslice arr);
+  with c . assert (pts_to a.v #a.p c);
+  let pl1 : GR.ref (list t) = GR.alloc #(list t) [];
+  let mut pres = offset;
+  let mut pi = 0sz;
+  Trade.refl (PM.seq_list_match c x (vmatch arr));
+  PM.seq_list_match_length (vmatch arr) _ _;
+  while (
+    let i = !pi;
+    SZ.lt i n
+  ) invariant b . exists* res i l1 c2 l2 v1 . (
+    pts_to a.v #a.p c **
+    R.pts_to pres res **
+    R.pts_to pi i **
+    GR.pts_to pl1 l1 **
+    PM.seq_list_match c2 l2 (vmatch arr) **
+    pts_to out v1 **
+    trade
+      (PM.seq_list_match c2 l2 (vmatch arr))
+      (PM.seq_list_match c x (vmatch arr)) **
+    pure (
+      SZ.v i <= SZ.v n /\
+      b == (SZ.v i < SZ.v n) /\
+      Seq.length c == SZ.v n /\
+      Seq.equal c2 (Seq.slice c (SZ.v i) (SZ.v n)) /\
+      SZ.v offset <= SZ.v res /\
+      SZ.v res <= Seq.length v /\
+      Seq.length v1 == Seq.length v /\
+      Seq.slice v1 0 (SZ.v offset) `Seq.equal` Seq.slice v 0 (SZ.v offset) /\
+      List.Tot.length l1 == SZ.v i /\
+      Seq.slice v1 (SZ.v offset) (SZ.v res) `Seq.equal` bare_serialize (serialize_nlist (SZ.v i) s) l1 /\
+      List.Tot.append l1 l2 == Ghost.reveal x /\
+      True
+    )
+  ) {
+    let i = !pi;
+    let off = !pres;
+    PM.seq_list_match_length (vmatch arr) _ _;
+    with l1 . assert (GR.pts_to pl1 l1);
+    with c2 l2 . assert (PM.seq_list_match c2 l2 (vmatch arr));
+    serialize_nlist_append s (SZ.v i) l1 (SZ.v n - SZ.v i) l2;
+    PM.seq_list_match_cons_elim_trade c2 l2 (vmatch arr);
+    let e = S.op_Array_Access a.v i;
+    let c2' : Ghost.erased (Seq.seq telem) = Seq.tail c2;
+    with ve l2' . assert (vmatch arr (Seq.head c2) ve ** PM.seq_list_match c2' l2' (vmatch arr));
+    List.Tot.append_assoc l1 [ve] l2';
+    let i' = SZ.add i 1sz;
+    let ni' : Ghost.erased nat = Ghost.hide (SZ.v n - SZ.v i');
+    serialize_nlist_cons' (ni') s ve l2';
+    serialize_nlist_singleton s ve;
+    serialize_nlist_append s (SZ.v i) l1 1 [ve];
+    Trade.rewrite_with_trade
+      (vmatch arr _ _)
+      (vmatch arr e ve);
+    with v1 . assert (pts_to out v1);
+    assert (pure (
+      SZ.v off + Seq.length (bare_serialize s ve) <= Seq.length v1
+    ));
+    let res = w arr e out off;
+    with v1' . assert (pts_to out v1');
+    Trade.elim (vmatch arr e ve) _;
+    pi := i';
+    List.Tot.append_length l1 [ve];
+    let l1' : Ghost.erased (list t) = List.Tot.append l1 [ve];
+    GR.op_Colon_Equals pl1 l1';
+    pres := res;
+    Trade.elim_hyp_l _ _ _;
+    Trade.trans _ _ (PM.seq_list_match c x (vmatch arr));
+    assert (pure (Seq.equal c2' (Seq.slice c (SZ.v i') (SZ.v n))));
+    assert (pure (SZ.v offset <= SZ.v res));
+    assert (pure (SZ.v res <= Seq.length v));
+    assert (pure (Seq.length v1' == Seq.length v));
+    Seq.slice_slice v1 0 (SZ.v off) 0 (SZ.v offset);
+    Seq.slice_slice v1' 0 (SZ.v off) 0 (SZ.v offset);
+    assert (pure (Seq.slice v1' 0 (SZ.v offset) `Seq.equal` Seq.slice v 0 (SZ.v offset)));
+    assert (pure (List.Tot.length l1' == SZ.v i'));
+    Seq.slice_slice v1 0 (SZ.v off) (SZ.v offset) (SZ.v off);
+    Seq.slice_slice v1' 0 (SZ.v off) (SZ.v offset) (SZ.v off);
+    seq_slice_append_ijk v1' (SZ.v offset) (SZ.v off) (SZ.v res);
+    assert (pure (Seq.slice v1' (SZ.v offset) (SZ.v off) == bare_serialize (serialize_nlist (SZ.v i) s) l1));
+    assert (pure (Seq.slice v1' (SZ.v off) (SZ.v res) == bare_serialize s ve));
+    assert (pure (Seq.slice v1' (SZ.v offset) (SZ.v res) == Seq.append (Seq.slice v1' (SZ.v offset) (SZ.v off)) (Seq.slice v1' (SZ.v off) (SZ.v res))));
+    assert (pure (Seq.slice v1' (SZ.v offset) (SZ.v res) `Seq.equal` bare_serialize (serialize_nlist (SZ.v i') s) l1'));
+    assert (pure (List.Tot.append l1' l2' == Ghost.reveal x));
+    ()
+  };
+  with l1 . assert (GR.pts_to pl1 l1);
+  GR.free pl1;
+  PM.seq_list_match_length (vmatch arr) _ _;
+  List.Tot.append_l_nil l1;
+  Trade.elim _ _;
+  fold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
   !pres
 }
 ```
