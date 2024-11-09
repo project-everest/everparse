@@ -23,7 +23,7 @@ let gen_string (s: string) (name: string) : rust list =
 let gen_map (gen: Yojson.Safe.t -> string -> rust list) (l: (string * Yojson.Safe.t) list) (name: string) : rust list =
   let len = List.length l in
   let elt i = name ^ "_map[" ^ string_of_int i ^ "]" in
-  let accu = [`Instr ("let " ^ name ^ " : cbor_raw = cbor_det_mk_map(& mut " ^ name ^ "_map[..], " ^ string_of_int len ^ ")")] in
+  let accu = [`Instr ("let " ^ name ^ " : cbor_raw = cbor_det_mk_map(& mut " ^ name ^ "_map[..])")] in
   let rec aux accu i = function
   | [] -> accu
   | (s, x) :: q->
@@ -44,7 +44,7 @@ let gen_map (gen: Yojson.Safe.t -> string -> rust list) (l: (string * Yojson.Saf
 let gen_array (gen: Yojson.Safe.t -> string -> rust list) (l: Yojson.Safe.t list) (name: string) : rust list =
   let len = List.length l in
   let elt i = name ^ "_array[" ^ string_of_int i ^ "]" in
-  let accu = [`Instr ("let " ^ name ^ " : cbor_raw = cbor_det_mk_array(&" ^ name ^ "_array[..], " ^ string_of_int len ^ ")")] in
+  let accu = [`Instr ("let " ^ name ^ " : cbor_raw = cbor_det_mk_array(&" ^ name ^ "_array[..])")] in
   let rec aux accu i = function
   | [] -> accu
   | x :: q->
