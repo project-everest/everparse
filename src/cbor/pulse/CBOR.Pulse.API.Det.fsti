@@ -9,7 +9,6 @@ module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 module R = Pulse.Lib.Reference
-module A = Pulse.Lib.Array
 module PM = Pulse.Lib.SeqMatch
 
 val cbor_det_match: perm -> cbor_det_t -> Spec.cbor -> slprop

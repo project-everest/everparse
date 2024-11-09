@@ -6,7 +6,7 @@ include CBOR.Pulse.Raw.Compare.Iterator
 open CBOR.Pulse.Raw.Format.Serialized
 open Pulse.Lib.Pervasives
 
-module A = Pulse.Lib.Array.MergeSort
+module A = Pulse.Lib.Sort.Base
 module SM = Pulse.Lib.SeqMatch.Util
 module SZ = FStar.SizeT
 module I16 = FStar.Int16

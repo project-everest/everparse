@@ -5,12 +5,12 @@ open Pulse.Lib.Pervasives
 open Pulse.Lib.Trade
 
 module PM = Pulse.Lib.SeqMatch.Util
-module A = Pulse.Lib.Array
 module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module U8 = FStar.SizeT
+module U64 = FStar.UInt64
 
 noeq
 type cbor_raw_slice_iterator (elt: Type0) = {
@@ -106,66 +106,31 @@ ensures
 }
 ```
 
-```pulse
-ghost
-fn slice_from_array_trade_aux (#t: Type0) (a: array t) (p: perm) (v: Ghost.erased (Seq.seq t)) (s: S.slice t) (_: unit)
-requires
-    (S.is_from_array a s ** pts_to s #p v)
-ensures
-    (A.pts_to a #p v)
-{
-  S.to_array s
-}
-```
-
-inline_for_extraction
-```pulse
-fn slice_from_array_trade (#t: Type0) (a: array t) (#p: perm) (#v: Ghost.erased (Seq.seq t)) (alen: SZ.t {
-    SZ.v alen == A.length a
-})
-requires
-    (A.pts_to a #p v)
-returns s: S.slice t
-ensures
-    (
-        pts_to s #p v **
-        trade
-          (pts_to s #p v)
-          (A.pts_to a #p v)
-    )
-{
-  let s = S.from_array a alen;
-  Trade.intro _ _ _ (slice_from_array_trade_aux a p v s);
-  s
-}
-```
-
 inline_for_extraction
 ```pulse
 fn cbor_raw_slice_iterator_init
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
-  (a: A.array elt_low)
-  (alen: SZ.t { SZ.v alen == A.length a })
+  (a: S.slice elt_low)
   (#pm: perm)
   (#pm': perm)
   (#l: Ghost.erased (list elt_high))
   (#sq: Ghost.erased (Seq.seq elt_low))
 requires
-  A.pts_to a #pm sq **
-  PM.seq_list_match sq l (elt_match pm')
+  pts_to a #pm sq **
+  PM.seq_list_match sq l (elt_match pm') **
+  pure (FStar.UInt.fits (SZ.v (S.len a)) U64.n)
 returns res: cbor_raw_slice_iterator elt_low
 ensures exists* p .
   cbor_raw_slice_iterator_match elt_match p res l **
      trade
        (cbor_raw_slice_iterator_match elt_match p res l)
-       (A.pts_to a #pm sq **
+       (pts_to a #pm sq **
          PM.seq_list_match sq l (elt_match pm')
        )
 {
-  let s = slice_from_array_trade a alen;
   let c : cbor_raw_slice_iterator elt_low = {
-    s = s;
+    s = a;
     slice_perm = 1.0R;
     payload_perm = pm' `perm_div` pm;
   };
@@ -174,9 +139,8 @@ ensures exists* p .
   Trade.rewrite_with_trade
     (PM.seq_list_match sq l (elt_match pm'))
     (PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm)));
-  Trade.prod
-    (pts_to s #pm sq)
-    (A.pts_to a #pm sq)
+  Trade.reg_l
+    (pts_to a #pm sq)
     (PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm)))
     (PM.seq_list_match sq l (elt_match pm'))
     ;
@@ -360,29 +324,29 @@ let cbor_raw_iterator_match
 
 inline_for_extraction
 ```pulse
-fn cbor_raw_iterator_init_from_array
+fn cbor_raw_iterator_init_from_slice
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
   (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
-  (a: A.array elt_low)
-  (alen: SZ.t { SZ.v alen == A.length a })
+  (a: S.slice elt_low)
   (#pm: perm)
   (#pm': perm)
   (#l: Ghost.erased (list elt_high))
   (#sq: Ghost.erased (Seq.seq elt_low))
 requires
-  A.pts_to a #pm sq **
-  PM.seq_list_match sq l (elt_match pm')
+  pts_to a #pm sq **
+  PM.seq_list_match sq l (elt_match pm') **
+  pure (FStar.UInt.fits (SZ.v (S.len a)) U64.n)
 returns res: cbor_raw_iterator elt_low
 ensures exists* p .
   cbor_raw_iterator_match elt_match ser_match p res l **
      trade
        (cbor_raw_iterator_match elt_match ser_match p res l)
-       (A.pts_to a #pm sq **
+       (pts_to a #pm sq **
          PM.seq_list_match sq l (elt_match pm')
        )
 {
-  let i = cbor_raw_slice_iterator_init elt_match a alen;
+  let i = cbor_raw_slice_iterator_init elt_match a;
   with p . assert (cbor_raw_slice_iterator_match elt_match p i l);
   let res : cbor_raw_iterator elt_low = CBOR_Raw_Iterator_Slice i;
   Trade.rewrite_with_trade

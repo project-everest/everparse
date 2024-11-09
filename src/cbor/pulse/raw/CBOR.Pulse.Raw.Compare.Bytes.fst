@@ -3,7 +3,6 @@ include CBOR.Pulse.Raw.Compare.Base
 include CBOR.Spec.Raw.Format
 open Pulse.Lib.Pervasives
 
-module A = Pulse.Lib.Array.MergeSort
 module S = Pulse.Lib.Slice
 module SM = Pulse.Lib.SeqMatch.Util
 module SZ = FStar.SizeT

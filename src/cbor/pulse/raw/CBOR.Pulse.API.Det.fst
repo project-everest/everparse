@@ -300,19 +300,31 @@ let rec list_map_mk_cbor_mk_det_raw_cbor
   | [] -> ()
   | _ :: q -> list_map_mk_cbor_mk_det_raw_cbor q
 
+let fits_mod (x: nat) (n: pos) : Lemma
+    (requires (FStar.UInt.fits x n))
+    (ensures (x % pow2 n == x))
+= FStar.Math.Lemmas.small_mod x (pow2 n)
+
+let mk_raw_uint64_post (x: U64.t) : Lemma
+  (let y = SpecRaw.mk_raw_uint64 x in
+    y.value == x /\
+    SpecRaw.raw_uint64_optimal y == true
+  )
+= ()
+
 ```pulse
 fn cbor_det_mk_array (_: unit) : mk_array_t #_ cbor_det_match
 = (a: _)
-  (len: _)
   (#pa: _)
   (#va: _)
   (#pv: _)
   (#vv: _)
 {
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  A.pts_to_len a;
+  S.pts_to_len a;
   SM.seq_list_match_length (cbor_det_match pv) va vv;
-  let len64 = SpecRaw.mk_raw_uint64 len;
+  let len64 = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (S.len a));
+  mk_raw_uint64_post (SZ.sizet_to_uint64 (S.len a));
+  fits_mod (SZ.v (S.len a)) U64.n;
   let vv1 = Ghost.hide (List.Tot.map mk_det_raw_cbor vv);
   let v' : Ghost.erased Spec.cbor = Ghost.hide (Spec.pack (Spec.CArray vv));
   seq_list_array_cbor_det_match_elim _ _ _;
@@ -333,7 +345,7 @@ let cbor_det_map_entry_match p c v =
   Raw.cbor_match_map_entry p c (SpecRaw.mk_det_raw_cbor (fst v), SpecRaw.mk_det_raw_cbor (snd v))
 
 ```pulse
-fn cbor_raw_compare (p: perm) : Pulse.Lib.Array.MergeSort.impl_compare_t u#0 u#0 #_ #_
+fn cbor_raw_compare (p: perm) : Pulse.Lib.Sort.Base.impl_compare_t u#0 u#0 #_ #_
   (Raw.cbor_match p)
   SpecRaw.cbor_compare
 = (x1: _)
@@ -348,7 +360,7 @@ fn cbor_raw_compare (p: perm) : Pulse.Lib.Array.MergeSort.impl_compare_t u#0 u#0
 ```pulse
 fn cbor_map_entry_raw_compare
   (p: perm)
-: Pulse.Lib.Array.MergeSort.impl_compare_t u#0 u#0 #_ #_ (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare
+: Pulse.Lib.Sort.Base.impl_compare_t u#0 u#0 #_ #_ (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare
 = (x1: _)
   (x2: _)
   (#y1: _)
@@ -366,31 +378,29 @@ fn cbor_map_entry_raw_compare
 ```pulse
 fn rec cbor_raw_sort_aux
   (p: perm)
-  (a: A.array Raw.cbor_map_entry)
-  (lo: SZ.t)
-  (hi: SZ.t)
+  (a: S.slice Raw.cbor_map_entry)
   (#c: Ghost.erased (Seq.seq Raw.cbor_map_entry))
   (#l: Ghost.erased (list (SpecRaw.raw_data_item & SpecRaw.raw_data_item)))
 requires
-  A.pts_to_range a (SZ.v lo) (SZ.v hi) c **
+  pts_to a c **
   SM.seq_list_match c l (Raw.cbor_match_map_entry p)
 returns res: bool
 ensures
-  Pulse.Lib.Array.MergeSort.sort_aux_post (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare a lo hi c l res
+  Pulse.Lib.Sort.Merge.Slice.sort_aux_post (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare a c l res
 {
-  Pulse.Lib.Array.MergeSort.sort_aux
+  Pulse.Lib.Sort.Merge.Slice.sort_aux
     (Raw.cbor_match_map_entry p)
     SpecRaw.cbor_map_entry_raw_compare
     (cbor_map_entry_raw_compare p)
     (cbor_raw_sort_aux p)
-    a lo hi
+    a
 }
 ```
 
 let cbor_raw_sort
   (p: perm)
-: Pulse.Lib.Array.MergeSort.sort_t #_ #_ (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare
-= Pulse.Lib.Array.MergeSort.sort _ _ (cbor_raw_sort_aux p)
+: Pulse.Lib.Sort.Merge.Slice.sort_t #_ #_ (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare
+= Pulse.Lib.Sort.Merge.Slice.sort _ _ (cbor_raw_sort_aux p)
 
 ```pulse
 ghost
@@ -438,24 +448,23 @@ fn cbor_det_mk_map
   (_: unit)
 : mk_map_t u#0 #cbor_det_t #cbor_det_map_entry_t cbor_det_match cbor_det_map_entry_match
 = (a: _)
-  (len: _)
   (#va: _)
   (#pv: _)
   (#vv: _)
 {
-  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  A.pts_to_len a;
+  S.pts_to_len a;
   SM.seq_list_match_length (cbor_det_map_entry_match pv) va vv;
   let vv1 = Ghost.hide (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry vv);
-  let v' : Ghost.erased Spec.cbor = Ghost.hide (SpecRaw.mk_det_raw_cbor_map vv len);
+  let v' : Ghost.erased Spec.cbor = Ghost.hide (SpecRaw.mk_det_raw_cbor_map vv (SZ.sizet_to_uint64 (S.len a)));
   seq_list_map_cbor_det_map_entry_match_elim pv va vv;
-  let _ : bool = cbor_raw_sort pv a (SZ.uint64_to_sizet len);
+  let _ : bool = cbor_raw_sort pv a;
   Trade.trans _ _ (SM.seq_list_match va vv (cbor_det_map_entry_match pv));
-  with va' vv' . assert (Pulse.Lib.Array.pts_to a va' ** SM.seq_list_match va' vv' (Raw.cbor_match_map_entry pv));
-  A.pts_to_len a;
+  with va' vv' . assert (pts_to a va' ** SM.seq_list_match va' vv' (Raw.cbor_match_map_entry pv));
+  S.pts_to_len a;
   SM.seq_list_match_length (Raw.cbor_match_map_entry pv) va' vv';
+  SpecRaw.no_repeats_map_fst_mk_det_raw_cbor_map_entry vv;
   SpecRaw.cbor_map_sort_correct vv1;
-  Pulse.Lib.Array.MergeSort.spec_sort_correct
+  Pulse.Lib.Sort.Merge.Spec.spec_sort_correct
     (SpecRaw.map_entry_order SpecRaw.deterministically_encoded_cbor_map_key_order _)
     SpecRaw.cbor_map_entry_raw_compare
     vv1;
@@ -464,7 +473,8 @@ fn cbor_det_mk_map
     (SpecRaw.map_entry_order SpecRaw.deterministically_encoded_cbor_map_key_order _)
     vv'
     (SpecRaw.cbor_map_sort vv1);
-  let raw_len = SpecRaw.mk_raw_uint64 len;
+  let raw_len = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (S.len a));
+  fits_mod (SZ.v (S.len a)) U64.n;
   let res = CBOR.Pulse.Raw.Match.cbor_match_map_intro raw_len a;
   Trade.trans_concl_r _ _ _ (SM.seq_list_match va vv (cbor_det_map_entry_match pv));
   with p' vraw . assert (Raw.cbor_match p' res vraw);

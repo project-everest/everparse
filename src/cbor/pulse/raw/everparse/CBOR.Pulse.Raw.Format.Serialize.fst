@@ -324,7 +324,6 @@ let size_header : leaf_compute_remaining_size serialize_header =
 
 module SZ = FStar.SizeT
 module PM = Pulse.Lib.SeqMatch
-module A = Pulse.Lib.Array
 
 let cbor_match_with_perm
   (x: with_perm cbor_raw)
@@ -616,7 +615,7 @@ let cbor_with_perm_case_array
 inline_for_extraction
 let cbor_with_perm_case_array_get
   (c: with_perm cbor_raw)
-: Tot (option (with_perm (A.array cbor_raw)))
+: Tot (option (with_perm (S.slice cbor_raw)))
 = match c.v with
   | CBOR_Case_Array a -> Some { v = a.cbor_array_ptr; p = perm_mul c.p a.cbor_array_array_perm }
   | _ -> None
@@ -668,13 +667,13 @@ requires
       xl xh
   )
 ensures
-  LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
+  LowParse.Pulse.VCList.nlist_match_slice cbor_with_perm_case_array_get
     cbor_with_perm_case_array_match_elem
     (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
       (get_header_long_argument xh1))))
     xl xh **
   Trade.trade
-    (LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
+    (LowParse.Pulse.VCList.nlist_match_slice cbor_with_perm_case_array_get
       cbor_with_perm_case_array_match_elem
       (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
         (get_header_long_argument xh1))))
@@ -708,7 +707,7 @@ ensures
   Trade.trans (cbor_match_array a xl.p xh0 cbor_match) _ _;
   unfold (cbor_match_array a xl.p xh0 cbor_match);
   let ar = Some?.v (cbor_with_perm_case_array_get xl);
-  LowParse.Pulse.VCList.nlist_match_array_intro cbor_with_perm_case_array_get
+  LowParse.Pulse.VCList.nlist_match_slice_intro cbor_with_perm_case_array_get
     cbor_with_perm_case_array_match_elem
     (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
       (get_header_long_argument xh1))))
@@ -717,7 +716,7 @@ ensures
   ;
   ghost fn aux (_: unit)
   requires emp **
-    LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
+    LowParse.Pulse.VCList.nlist_match_slice cbor_with_perm_case_array_get
       cbor_with_perm_case_array_match_elem
       (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
         (get_header_long_argument xh1))))
@@ -725,7 +724,7 @@ ensures
   ensures
     cbor_match_array a xl.p xh0 cbor_match
   {
-    unfold (    LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
+    unfold (    LowParse.Pulse.VCList.nlist_match_slice cbor_with_perm_case_array_get
       cbor_with_perm_case_array_match_elem
       (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
         (get_header_long_argument xh1))))
@@ -752,7 +751,7 @@ vmatch_lens #_ #_ #_
                       (get_header_long_argument xh1))))
           raw_data_item)
       (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_array))
-  (LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_array_get
+  (LowParse.Pulse.VCList.nlist_match_slice cbor_with_perm_case_array_get
       cbor_with_perm_case_array_match_elem
       (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
                   (get_header_long_argument xh1)))))
@@ -775,7 +774,7 @@ let ser_payload_array_array
 = l2r_writer_ext_gen
     (l2r_writer_lens
       (ser_payload_array_array_lens f64 xh1 sq)
-      (LowParse.Pulse.VCList.l2r_write_nlist_as_array
+      (LowParse.Pulse.VCList.l2r_write_nlist_as_slice
         cbor_with_perm_case_array_get
         cbor_with_perm_case_array_match_elem
         serialize_raw_data_item
@@ -795,7 +794,7 @@ let size_payload_array_array
 = compute_remaining_size_ext_gen
     (compute_remaining_size_lens
       (ser_payload_array_array_lens f64 xh1 sq)
-      (LowParse.Pulse.VCList.compute_remaining_size_nlist_as_array
+      (LowParse.Pulse.VCList.compute_remaining_size_nlist_as_slice
         cbor_with_perm_case_array_get
         cbor_with_perm_case_array_match_elem
         serialize_raw_data_item
@@ -962,7 +961,7 @@ let cbor_with_perm_case_map
 inline_for_extraction
 let cbor_with_perm_case_map_get
   (c: with_perm cbor_raw)
-: Tot (option (with_perm (A.array cbor_map_entry)))
+: Tot (option (with_perm (S.slice cbor_map_entry)))
 = match c.v with
   | CBOR_Case_Map a -> Some { v = a.cbor_map_ptr; p = perm_mul c.p a.cbor_map_array_perm }
   | _ -> None
@@ -1082,13 +1081,13 @@ requires
       xl xh
   )
 ensures
-  LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_map_get
+  LowParse.Pulse.VCList.nlist_match_slice cbor_with_perm_case_map_get
     cbor_with_perm_case_map_match_elem
     (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
       (get_header_long_argument xh1))))
     xl xh **
   Trade.trade
-    (LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_map_get
+    (LowParse.Pulse.VCList.nlist_match_slice cbor_with_perm_case_map_get
       cbor_with_perm_case_map_match_elem
       (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
         (get_header_long_argument xh1))))
@@ -1124,7 +1123,7 @@ ensures
   Trade.trans (cbor_match_map xl.p a xh0) _ _;
   unfold (cbor_match_map xl.p a xh0);
   let ar = Some?.v (cbor_with_perm_case_map_get xl);
-  LowParse.Pulse.VCList.nlist_match_array_intro cbor_with_perm_case_map_get
+  LowParse.Pulse.VCList.nlist_match_slice_intro cbor_with_perm_case_map_get
     cbor_with_perm_case_map_match_elem
     (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
       (get_header_long_argument xh1))))
@@ -1133,7 +1132,7 @@ ensures
   ;
   ghost fn aux (_: unit)
   requires emp **
-    LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_map_get
+    LowParse.Pulse.VCList.nlist_match_slice cbor_with_perm_case_map_get
       cbor_with_perm_case_map_match_elem
       (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
         (get_header_long_argument xh1))))
@@ -1141,7 +1140,7 @@ ensures
   ensures
     cbor_match_map xl.p a xh0
   {
-    unfold (    LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_map_get
+    unfold (    LowParse.Pulse.VCList.nlist_match_slice cbor_with_perm_case_map_get
       cbor_with_perm_case_map_match_elem
       (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
         (get_header_long_argument xh1))))
@@ -1168,7 +1167,7 @@ vmatch_lens #_ #_ #_
                       (get_header_long_argument xh1))))
           (raw_data_item & raw_data_item))
       (vmatch_with_cond (match_cbor_payload xh1) cbor_with_perm_case_map))
-  (LowParse.Pulse.VCList.nlist_match_array cbor_with_perm_case_map_get
+  (LowParse.Pulse.VCList.nlist_match_slice cbor_with_perm_case_map_get
       cbor_with_perm_case_map_match_elem
       (SZ.v (SZ.uint64_to_sizet (argument_as_uint64 (get_header_initial_byte xh1)
                   (get_header_long_argument xh1)))))
@@ -1191,7 +1190,7 @@ let ser_payload_map_map
 = l2r_writer_ext_gen
     (l2r_writer_lens
       (ser_payload_map_map_lens f64 xh1 sq)
-      (LowParse.Pulse.VCList.l2r_write_nlist_as_array
+      (LowParse.Pulse.VCList.l2r_write_nlist_as_slice
         cbor_with_perm_case_map_get
         cbor_with_perm_case_map_match_elem
         (LP.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
@@ -1211,7 +1210,7 @@ let size_payload_map_map
 = compute_remaining_size_ext_gen
     (compute_remaining_size_lens
       (ser_payload_map_map_lens f64 xh1 sq)
-      (LowParse.Pulse.VCList.compute_remaining_size_nlist_as_array
+      (LowParse.Pulse.VCList.compute_remaining_size_nlist_as_slice
         cbor_with_perm_case_map_get
         cbor_with_perm_case_map_match_elem
         (LP.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)

@@ -3,7 +3,7 @@ include CBOR.Pulse.Raw.Iterator
 include CBOR.Pulse.Raw.Compare.Base
 open Pulse.Lib.Pervasives
 
-module A = Pulse.Lib.Array.MergeSort
+module A = Pulse.Lib.Sort.Base
 module SM = Pulse.Lib.SeqMatch.Util
 module SZ = FStar.SizeT
 module I16 = FStar.Int16
@@ -174,6 +174,3 @@ ensures
   res
 }
 ```
-
-  
-  

@@ -7,7 +7,6 @@ open Pulse.Lib.Slice
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
-module A = Pulse.Lib.Array
 
 inline_for_extraction
 noeq
@@ -50,8 +49,11 @@ type cbor_tagged = {
 }
 
 and cbor_array = {
-  cbor_array_length: raw_uint64;
-  cbor_array_ptr: (ar: A.array cbor_raw { A.length ar == U64.v cbor_array_length.value });
+  cbor_array_length_size: integer_size;
+  cbor_array_ptr: (ar: slice cbor_raw { let len = SZ.v (len ar) in
+    FStar.UInt.fits len 64 /\
+    raw_uint64_size_prop cbor_array_length_size (U64.uint_to_t len)
+  });
   cbor_array_array_perm: perm;
   cbor_array_payload_perm: perm;
 }
@@ -62,8 +64,11 @@ and cbor_map_entry = {
 }
 
 and cbor_map = {
-  cbor_map_length: raw_uint64;
-  cbor_map_ptr: (ar: A.array cbor_map_entry { A.length ar == U64.v cbor_map_length.value });
+  cbor_map_length_size: integer_size;
+  cbor_map_ptr: (ar: slice cbor_map_entry { let len = SZ.v (len ar) in
+    FStar.UInt.fits len 64 /\
+    raw_uint64_size_prop cbor_map_length_size (U64.uint_to_t len)
+  });
   cbor_map_array_perm: perm;
   cbor_map_payload_perm: perm;
 }

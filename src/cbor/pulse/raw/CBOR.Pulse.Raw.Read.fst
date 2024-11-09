@@ -7,7 +7,6 @@ open Pulse.Lib.Pervasives
 open Pulse.Lib.Trade
 
 module PM = Pulse.Lib.SeqMatch.Util
-module A = Pulse.Lib.Array
 module S = Pulse.Lib.Slice
 module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
@@ -60,19 +59,21 @@ fn cbor_match_array_elim
   requires
     cbor_match_array c p r cbor_match
   ensures exists* s . 
-    A.pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s **
+    pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s **
     PM.seq_list_match s (Array?.v r) (cbor_match (p `perm_mul` c.cbor_array_payload_perm)) **
     trade
-      (A.pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s **
+      (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s **
         PM.seq_list_match s (Array?.v r) (cbor_match (p `perm_mul` c.cbor_array_payload_perm)))
       (cbor_match_array c p r cbor_match) **
-    pure (c.cbor_array_length == Array?.len r)
+    pure (c.cbor_array_length_size == (Array?.len r).size /\
+      SZ.v (S.len c.cbor_array_ptr) == U64.v (Array?.len r).value
+    )
 {
   unfold (cbor_match_array c p r cbor_match);
-  with s . assert (A.pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s);
+  with s . assert (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s);
   ghost
   fn aux (_: unit)
-    requires emp ** (A.pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s **
+    requires emp ** (pts_to c.cbor_array_ptr #(p `perm_mul` c.cbor_array_array_perm) s **
         PM.seq_list_match s (Array?.v r) (cbor_match (p `perm_mul` c.cbor_array_payload_perm)))
     ensures cbor_match_array c p r cbor_match
   {
@@ -123,9 +124,9 @@ ensures exists* p' y .
         (cbor_match_array c' pm r cbor_match);
       cbor_match_array_elim c' pm r;
       Trade.trans _ _ (cbor_match pm c r);
-      A.pts_to_len c'.cbor_array_ptr;
+      S.pts_to_len c'.cbor_array_ptr;
       PM.seq_list_match_length (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)) _ _;
-      let res = A.op_Array_Access c'.cbor_array_ptr (SZ.uint64_to_sizet i);
+      let res = S.op_Array_Access c'.cbor_array_ptr (SZ.uint64_to_sizet i);
       Trade.elim_hyp_l _ _ (cbor_match pm c r);
       PM.seq_list_match_index_trade (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)) _ _ (U64.v i);
       Trade.trans _ _ (cbor_match pm c r);
@@ -185,13 +186,13 @@ ensures exists* p .
         (cbor_match pm c r)
         (cbor_match_array c' pm r cbor_match);
       cbor_match_array_elim c' pm r;
-      with s . assert (A.pts_to c'.cbor_array_ptr #(pm `perm_mul` c'.cbor_array_array_perm) s);
+      with s . assert (pts_to c'.cbor_array_ptr #(pm `perm_mul` c'.cbor_array_array_perm) s);
       Trade.trans
-        (A.pts_to c'.cbor_array_ptr #(pm `perm_mul` c'.cbor_array_array_perm) s **
+        (pts_to c'.cbor_array_ptr #(pm `perm_mul` c'.cbor_array_array_perm) s **
           PM.seq_list_match s (Array?.v r) (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)))
         (cbor_match_array c' pm r cbor_match)
         (cbor_match pm c r);
-      let res = cbor_raw_iterator_init_from_array cbor_match cbor_serialized_array_iterator_match c'.cbor_array_ptr (SZ.uint64_to_sizet c'.cbor_array_length.value);
+      let res = cbor_raw_iterator_init_from_slice cbor_match cbor_serialized_array_iterator_match c'.cbor_array_ptr;
       Trade.trans _ _ (cbor_match pm c r);
       with p . assert (cbor_raw_iterator_match cbor_match cbor_serialized_array_iterator_match p res (Array?.v r));
       fold (cbor_array_iterator_match p res (Array?.v r));
@@ -266,19 +267,21 @@ fn cbor_match_map_elim
   requires
     cbor_match_map p c r
   ensures exists* s . 
-    A.pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s **
+    pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s **
     PM.seq_list_match s (Map?.v r) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm)) **
     trade
-      (A.pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s **
+      (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s **
         PM.seq_list_match s (Map?.v r) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm)))
       (cbor_match_map p c r) **
-    pure (c.cbor_map_length == Map?.len r)
+    pure (c.cbor_map_length_size == (Map?.len r).size /\
+      SZ.v (S.len c.cbor_map_ptr) == U64.v (Map?.len r).value
+    )
 {
   unfold (cbor_match_map p c r);
-  with s . assert (A.pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s);
+  with s . assert (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s);
   ghost
   fn aux (_: unit)
-    requires emp ** (A.pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s **
+    requires emp ** (pts_to c.cbor_map_ptr #(p `perm_mul` c.cbor_map_array_perm) s **
         PM.seq_list_match s (Map?.v r) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm)))
     ensures cbor_match_map p c r
   {
@@ -340,13 +343,13 @@ ensures exists* p .
       cbor_match_map0_map_trade c' pm r;
       Trade.trans _ _ (cbor_match pm c r);
       cbor_match_map_elim c' pm r;
-      with s . assert (A.pts_to c'.cbor_map_ptr #(pm `perm_mul` c'.cbor_map_array_perm) s);
+      with s . assert (pts_to c'.cbor_map_ptr #(pm `perm_mul` c'.cbor_map_array_perm) s);
       Trade.trans
-        (A.pts_to c'.cbor_map_ptr #(pm `perm_mul` c'.cbor_map_array_perm) s **
+        (pts_to c'.cbor_map_ptr #(pm `perm_mul` c'.cbor_map_array_perm) s **
           PM.seq_list_match s (Map?.v r) (cbor_match_map_entry (pm `perm_mul` c'.cbor_map_payload_perm)))
         (cbor_match_map pm c' r)
         (cbor_match pm c r);
-      let res = cbor_raw_iterator_init_from_array cbor_match_map_entry cbor_serialized_map_iterator_match c'.cbor_map_ptr (SZ.uint64_to_sizet c'.cbor_map_length.value);
+      let res = cbor_raw_iterator_init_from_slice cbor_match_map_entry cbor_serialized_map_iterator_match c'.cbor_map_ptr;
       Trade.trans _ _ (cbor_match pm c r);
       with p . assert (cbor_raw_iterator_match cbor_match_map_entry cbor_serialized_map_iterator_match p res (Map?.v r));
       fold (cbor_map_iterator_match p res (Map?.v r));

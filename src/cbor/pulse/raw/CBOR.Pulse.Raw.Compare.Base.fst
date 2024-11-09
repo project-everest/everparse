@@ -1,7 +1,7 @@
 module CBOR.Pulse.Raw.Compare.Base
 open Pulse.Lib.Pervasives
 module S = Pulse.Lib.Slice
-module A = Pulse.Lib.Array.MergeSort
+module A = Pulse.Lib.Sort.Merge.Slice
 module SM = Pulse.Lib.SeqMatch.Util
 module GR = Pulse.Lib.GhostReference
 module SZ = FStar.SizeT
