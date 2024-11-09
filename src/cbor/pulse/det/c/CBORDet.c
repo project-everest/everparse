@@ -451,6 +451,20 @@ static size_t len__uint8_t(Pulse_Lib_Slice_slice__uint8_t s)
   return s.len;
 }
 
+static size_t
+len__CBOR_Pulse_Raw_Type_cbor_raw(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s)
+{
+  return s.len;
+}
+
+static size_t
+len__CBOR_Pulse_Raw_Type_cbor_map_entry(
+  Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry s
+)
+{
+  return s.len;
+}
+
 static header cbor_raw_get_header(cbor_raw xl)
 {
   bool ite0;
@@ -552,7 +566,13 @@ static header cbor_raw_get_header(cbor_raw xl)
           if (xl.tag == CBOR_Case_Array)
           {
             cbor_array c_ = xl.case_CBOR_Case_Array;
-            len = c_.cbor_array_length;
+            len =
+              (
+                (CBOR_Spec_Raw_Base_raw_uint64){
+                  .size = c_.cbor_array_length_size,
+                  .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_raw(c_.cbor_array_ptr)
+                }
+              );
           }
           else if (xl.tag == CBOR_Case_Serialized_Array)
           {
@@ -585,7 +605,13 @@ static header cbor_raw_get_header(cbor_raw xl)
             if (xl.tag == CBOR_Case_Map)
             {
               cbor_map c_ = xl.case_CBOR_Case_Map;
-              len = c_.cbor_map_length;
+              len =
+                (
+                  (CBOR_Spec_Raw_Base_raw_uint64){
+                    .size = c_.cbor_map_length_size,
+                    .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(c_.cbor_map_ptr)
+                  }
+                );
             }
             else if (xl.tag == CBOR_Case_Serialized_Map)
             {
@@ -642,21 +668,41 @@ copy__uint8_t(Pulse_Lib_Slice_slice__uint8_t dst, Pulse_Lib_Slice_slice__uint8_t
   memcpy(dst.elt, src.elt, src.len * sizeof (uint8_t));
 }
 
-typedef struct option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw__s
+typedef struct
+option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_s
 {
-  FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw__tags
+  FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags
   tag;
-  cbor_raw *v;
+  Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw v;
 }
-option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw_;
+option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw;
 
-typedef struct option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_map_entry__s
+static cbor_raw
+op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(
+  Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw a,
+  size_t i
+)
 {
-  FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw__tags
-  tag;
-  cbor_map_entry *v;
+  return a.elt[i];
 }
-option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_map_entry_;
+
+typedef struct
+option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_s
+{
+  FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags
+  tag;
+  Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry v;
+}
+option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry;
+
+static cbor_map_entry
+op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(
+  Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a,
+  size_t i
+)
+{
+  return a.elt[i];
+}
 
 size_t
 CBOR_Pulse_Raw_Format_Serialize_ser_(
@@ -706,13 +752,14 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
       {
         cbor_raw x2_ = x_;
         cbor_raw scrut0 = x2_;
-        option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw_ scrut;
+        option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw
+        scrut;
         if (scrut0.tag == CBOR_Case_Array)
         {
           cbor_array a = scrut0.case_CBOR_Case_Array;
           scrut =
             (
-              (option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw_){
+              (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw){
                 .tag = FStar_Pervasives_Native_Some,
                 .v = a.cbor_array_ptr
               }
@@ -721,15 +768,17 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
         else
           scrut =
             (
-              (option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw_){
+              (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw){
                 .tag = FStar_Pervasives_Native_None
               }
             );
-        cbor_raw *a;
+        Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw a;
         if (scrut.tag == FStar_Pervasives_Native_Some)
           a = scrut.v;
         else
-          a = KRML_EABORT(cbor_raw *, "unreachable (pattern matches are exhaustive in F*)");
+          a =
+            KRML_EABORT(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw,
+              "unreachable (pattern matches are exhaustive in F*)");
         size_t pres = res1;
         size_t pi = (size_t)0U;
         size_t i0 = pi;
@@ -738,7 +787,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
         {
           size_t i = pi;
           size_t off = pres;
-          cbor_raw e = a[i];
+          cbor_raw e = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(a, i);
           size_t i_ = i + (size_t)1U;
           cbor_raw x2_1 = e;
           size_t res = CBOR_Pulse_Raw_Format_Serialize_ser_(x2_1, out, off);
@@ -791,13 +840,14 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
         {
           cbor_raw x2_ = x_;
           cbor_raw scrut0 = x2_;
-          option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_map_entry_ scrut;
+          option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
+          scrut;
           if (scrut0.tag == CBOR_Case_Map)
           {
             cbor_map a = scrut0.case_CBOR_Case_Map;
             scrut =
               (
-                (option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_map_entry_){
+                (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry){
                   .tag = FStar_Pervasives_Native_Some,
                   .v = a.cbor_map_ptr
                 }
@@ -806,15 +856,17 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
           else
             scrut =
               (
-                (option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_map_entry_){
+                (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry){
                   .tag = FStar_Pervasives_Native_None
                 }
               );
-          cbor_map_entry *a;
+          Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a;
           if (scrut.tag == FStar_Pervasives_Native_Some)
             a = scrut.v;
           else
-            a = KRML_EABORT(cbor_map_entry *, "unreachable (pattern matches are exhaustive in F*)");
+            a =
+              KRML_EABORT(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry,
+                "unreachable (pattern matches are exhaustive in F*)");
           size_t pres = res1;
           size_t pi = (size_t)0U;
           size_t i0 = pi;
@@ -823,7 +875,7 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
           {
             size_t i = pi;
             size_t off = pres;
-            cbor_map_entry e = a[i];
+            cbor_map_entry e = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i);
             size_t i_ = i + (size_t)1U;
             cbor_raw x11 = e.cbor_map_entry_key;
             size_t res = CBOR_Pulse_Raw_Format_Serialize_ser_(x11, out, off);
@@ -987,13 +1039,14 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
         {
           cbor_raw x2_ = x_;
           cbor_raw scrut0 = x2_;
-          option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw_ scrut;
+          option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw
+          scrut;
           if (scrut0.tag == CBOR_Case_Array)
           {
             cbor_array a = scrut0.case_CBOR_Case_Array;
             scrut =
               (
-                (option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw_){
+                (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw){
                   .tag = FStar_Pervasives_Native_Some,
                   .v = a.cbor_array_ptr
                 }
@@ -1002,15 +1055,17 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
           else
             scrut =
               (
-                (option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_raw_){
+                (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw){
                   .tag = FStar_Pervasives_Native_None
                 }
               );
-          cbor_raw *a;
+          Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw a;
           if (scrut.tag == FStar_Pervasives_Native_Some)
             a = scrut.v;
           else
-            a = KRML_EABORT(cbor_raw *, "unreachable (pattern matches are exhaustive in F*)");
+            a =
+              KRML_EABORT(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw,
+                "unreachable (pattern matches are exhaustive in F*)");
           bool pres = true;
           size_t pi = (size_t)0U;
           bool res = pres;
@@ -1019,7 +1074,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
           while (cond)
           {
             size_t i0 = pi;
-            cbor_raw e = a[i0];
+            cbor_raw e = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(a, i0);
             cbor_raw x2_1 = e;
             bool res = CBOR_Pulse_Raw_Format_Serialize_siz_(x2_1, out);
             bool res0 = res;
@@ -1078,13 +1133,14 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
           {
             cbor_raw x2_ = x_;
             cbor_raw scrut0 = x2_;
-            option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_map_entry_ scrut;
+            option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
+            scrut;
             if (scrut0.tag == CBOR_Case_Map)
             {
               cbor_map a = scrut0.case_CBOR_Case_Map;
               scrut =
                 (
-                  (option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_map_entry_){
+                  (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry){
                     .tag = FStar_Pervasives_Native_Some,
                     .v = a.cbor_map_ptr
                   }
@@ -1093,16 +1149,16 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
             else
               scrut =
                 (
-                  (option__LowParse_Pulse_Base_with_perm__CBOR_Pulse_Raw_Type_cbor_map_entry_){
+                  (option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry){
                     .tag = FStar_Pervasives_Native_None
                   }
                 );
-            cbor_map_entry *a;
+            Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a;
             if (scrut.tag == FStar_Pervasives_Native_Some)
               a = scrut.v;
             else
               a =
-                KRML_EABORT(cbor_map_entry *,
+                KRML_EABORT(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry,
                   "unreachable (pattern matches are exhaustive in F*)");
             bool pres = true;
             size_t pi = (size_t)0U;
@@ -1112,7 +1168,7 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
             while (cond)
             {
               size_t i0 = pi;
-              cbor_map_entry e = a[i0];
+              cbor_map_entry e = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i0);
               cbor_raw x11 = e.cbor_map_entry_key;
               bool res0 = CBOR_Pulse_Raw_Format_Serialize_siz_(x11, out);
               bool res11 = res0;
@@ -2349,7 +2405,8 @@ static cbor_raw cbor_array_item(cbor_raw c, uint64_t i)
   else if (c.tag == CBOR_Case_Array)
   {
     cbor_array c_ = c.case_CBOR_Case_Array;
-    return c_.cbor_array_ptr[(size_t)i];
+    cbor_raw res = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(c_.cbor_array_ptr, (size_t)i);
+    return res;
   }
   else
   {
@@ -2359,13 +2416,6 @@ static cbor_raw cbor_array_item(cbor_raw c, uint64_t i)
       "unreachable (pattern matches are exhaustive in F*)");
     KRML_HOST_EXIT(255U);
   }
-}
-
-static Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw
-from_array__CBOR_Pulse_Raw_Type_cbor_raw(cbor_raw *a, size_t alen)
-{
-  cbor_raw *ptr = a;
-  return ((Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw){ .elt = ptr, .len = alen });
 }
 
 static CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
@@ -2386,19 +2436,14 @@ cbor_array_iterator_init(cbor_raw c)
   else if (c.tag == CBOR_Case_Array)
   {
     cbor_array c_ = c.case_CBOR_Case_Array;
-    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw
-    s =
-      from_array__CBOR_Pulse_Raw_Type_cbor_raw(c_.cbor_array_ptr,
-        (size_t)c_.cbor_array_length.value);
-    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s0 = s;
-    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw i = s0;
-    CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-    res =
-      {
-        .tag = CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice,
-        { .case_CBOR_Raw_Iterator_Slice = i }
-      };
-    return res;
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw i = c_.cbor_array_ptr;
+    return
+      (
+        (CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw){
+          .tag = CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice,
+          { .case_CBOR_Raw_Iterator_Slice = i }
+        }
+      );
   }
   else
   {
@@ -2408,12 +2453,6 @@ cbor_array_iterator_init(cbor_raw c)
       "unreachable (pattern matches are exhaustive in F*)");
     KRML_HOST_EXIT(255U);
   }
-}
-
-static size_t
-len__CBOR_Pulse_Raw_Type_cbor_raw(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s)
-{
-  return s.len;
 }
 
 static bool
@@ -2442,15 +2481,6 @@ cbor_array_iterator_is_empty(
       "unreachable (pattern matches are exhaustive in F*)");
     KRML_HOST_EXIT(255U);
   }
-}
-
-static cbor_raw
-op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(
-  Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw a,
-  size_t i
-)
-{
-  return a.elt[i];
 }
 
 typedef struct
@@ -2520,14 +2550,6 @@ cbor_array_iterator_next(
   }
 }
 
-static Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
-from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(cbor_map_entry *a, size_t alen)
-{
-  cbor_map_entry *ptr = a;
-  return
-    ((Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry){ .elt = ptr, .len = alen });
-}
-
 static CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
 cbor_map_iterator_init(cbor_raw c)
 {
@@ -2546,19 +2568,14 @@ cbor_map_iterator_init(cbor_raw c)
   else if (c.tag == CBOR_Case_Map)
   {
     cbor_map c_ = c.case_CBOR_Case_Map;
-    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
-    s =
-      from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(c_.cbor_map_ptr,
-        (size_t)c_.cbor_map_length.value);
-    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry s0 = s;
-    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry i = s0;
-    CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-    res =
-      {
-        .tag = CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice,
-        { .case_CBOR_Raw_Iterator_Slice = i }
-      };
-    return res;
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry i = c_.cbor_map_ptr;
+    return
+      (
+        (CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry){
+          .tag = CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice,
+          { .case_CBOR_Raw_Iterator_Slice = i }
+        }
+      );
   }
   else
   {
@@ -2568,14 +2585,6 @@ cbor_map_iterator_init(cbor_raw c)
       "unreachable (pattern matches are exhaustive in F*)");
     KRML_HOST_EXIT(255U);
   }
-}
-
-static size_t
-len__CBOR_Pulse_Raw_Type_cbor_map_entry(
-  Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry s
-)
-{
-  return s.len;
 }
 
 static bool
@@ -2604,15 +2613,6 @@ cbor_map_iterator_is_empty(
       "unreachable (pattern matches are exhaustive in F*)");
     KRML_HOST_EXIT(255U);
   }
-}
-
-static cbor_map_entry
-op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(
-  Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a,
-  size_t i
-)
-{
-  return a.elt[i];
 }
 
 typedef struct
@@ -2857,7 +2857,13 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
       if (x1.tag == CBOR_Case_Array)
       {
         cbor_array c_ = x1.case_CBOR_Case_Array;
-        len1 = c_.cbor_array_length;
+        len1 =
+          (
+            (CBOR_Spec_Raw_Base_raw_uint64){
+              .size = c_.cbor_array_length_size,
+              .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_raw(c_.cbor_array_ptr)
+            }
+          );
       }
       else if (x1.tag == CBOR_Case_Serialized_Array)
       {
@@ -2872,7 +2878,13 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
       if (x2.tag == CBOR_Case_Array)
       {
         cbor_array c_ = x2.case_CBOR_Case_Array;
-        len2 = c_.cbor_array_length;
+        len2 =
+          (
+            (CBOR_Spec_Raw_Base_raw_uint64){
+              .size = c_.cbor_array_length_size,
+              .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_raw(c_.cbor_array_ptr)
+            }
+          );
       }
       else if (x2.tag == CBOR_Case_Serialized_Array)
       {
@@ -3072,7 +3084,13 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
       if (x1.tag == CBOR_Case_Map)
       {
         cbor_map c_ = x1.case_CBOR_Case_Map;
-        len1 = c_.cbor_map_length;
+        len1 =
+          (
+            (CBOR_Spec_Raw_Base_raw_uint64){
+              .size = c_.cbor_map_length_size,
+              .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(c_.cbor_map_ptr)
+            }
+          );
       }
       else if (x1.tag == CBOR_Case_Serialized_Map)
       {
@@ -3087,7 +3105,13 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
       if (x2.tag == CBOR_Case_Map)
       {
         cbor_map c_ = x2.case_CBOR_Case_Map;
-        len2 = c_.cbor_map_length;
+        len2 =
+          (
+            (CBOR_Spec_Raw_Base_raw_uint64){
+              .size = c_.cbor_map_length_size,
+              .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(c_.cbor_map_ptr)
+            }
+          );
       }
       else if (x2.tag == CBOR_Case_Serialized_Map)
       {
@@ -3911,10 +3935,11 @@ cbor_raw cbor_det_mk_tagged(uint64_t tag, cbor_raw *r)
   return ((cbor_raw){ .tag = CBOR_Case_Tagged, { .case_CBOR_Case_Tagged = res_ } });
 }
 
-cbor_raw cbor_det_mk_array(cbor_raw *a, uint64_t len)
+cbor_raw cbor_det_mk_array(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw a)
 {
-  CBOR_Spec_Raw_Base_raw_uint64 len64 = mk_raw_uint64(len);
-  cbor_array res_ = { .cbor_array_length = len64, .cbor_array_ptr = a };
+  CBOR_Spec_Raw_Base_raw_uint64
+  len64 = mk_raw_uint64((uint64_t)len__CBOR_Pulse_Raw_Type_cbor_raw(a));
+  cbor_array res_ = { .cbor_array_length_size = len64.size, .cbor_array_ptr = a };
   return ((cbor_raw){ .tag = CBOR_Case_Array, { .case_CBOR_Case_Array = res_ } });
 }
 
@@ -3929,38 +3954,53 @@ static int16_t cbor_map_entry_raw_compare(cbor_map_entry x1, cbor_map_entry x2)
   return res;
 }
 
-bool cbor_raw_sort_aux(cbor_map_entry *a, size_t lo, size_t hi)
+static void
+op_Array_Assignment__CBOR_Pulse_Raw_Type_cbor_map_entry(
+  Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a,
+  size_t i,
+  cbor_map_entry v
+)
 {
-  size_t len = hi - lo;
+  a.elt[i] = v;
+}
+
+bool cbor_raw_sort_aux(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a)
+{
+  size_t len = len__CBOR_Pulse_Raw_Type_cbor_map_entry(a);
   if (len < (size_t)2U)
     return true;
   else
   {
     size_t len_half = len / (size_t)2U;
-    size_t mi = lo + len_half;
-    bool res = cbor_raw_sort_aux(a, lo, mi);
+    size_t mi = len_half;
+    __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
+    _letpattern = split__CBOR_Pulse_Raw_Type_cbor_map_entry(a, mi);
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a1 = _letpattern.fst;
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a2 = _letpattern.snd;
+    bool res = cbor_raw_sort_aux(a1);
     if (!res)
       return false;
     else
     {
-      bool res1 = cbor_raw_sort_aux(a, mi, hi);
+      bool res1 = cbor_raw_sort_aux(a2);
       if (!res1)
         return false;
       else
       {
-        size_t pi1 = lo;
+        size_t pi1 = (size_t)0U;
         size_t pi2 = mi;
         bool pres = true;
         size_t i10 = pi1;
         size_t i20 = pi2;
         bool res20 = pres;
-        bool cond = res20 && !(i10 == i20 || i20 == hi);
+        bool cont = res20 && !(i10 == i20 || i20 == len__CBOR_Pulse_Raw_Type_cbor_map_entry(a));
+        bool cond = cont;
         while (cond)
         {
           size_t i1 = pi1;
-          cbor_map_entry x1 = a[i1];
+          cbor_map_entry x1 = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i1);
           size_t i20 = pi2;
-          cbor_map_entry x2 = a[i20];
+          cbor_map_entry x2 = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i20);
           int16_t comp = cbor_map_entry_raw_compare(x1, x2);
           if (comp == (int16_t)0)
             pres = false;
@@ -3972,14 +4012,16 @@ bool cbor_raw_sort_aux(cbor_map_entry *a, size_t lo, size_t hi)
           else
           {
             size_t i2_ = i20 + (size_t)1U;
-            size_t i1_;
-            if (i1 == i20)
-              i1_ = i2_;
-            else if (i20 == i2_)
-              i1_ = i1;
-            else
+            __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
+            _letpattern1 = split__CBOR_Pulse_Raw_Type_cbor_map_entry(a, i2_);
+            Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry ac01 = _letpattern1.fst;
+            __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
+            _letpattern2 = split__CBOR_Pulse_Raw_Type_cbor_map_entry(ac01, i1);
+            Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry ac1 = _letpattern2.snd;
+            if
+            (!(i20 - i1 == (size_t)0U || i20 - i1 == len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1)))
             {
-              size_t pn = i2_ - i1;
+              size_t pn = len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1);
               size_t pl = i20 - i1;
               size_t l30 = pl;
               bool cond = l30 > (size_t)0U;
@@ -3994,14 +4036,14 @@ bool cbor_raw_sort_aux(cbor_map_entry *a, size_t lo, size_t hi)
                 cond = l30 > (size_t)0U;
               }
               size_t d = pn;
-              size_t q = (i2_ - i1) / d;
-              size_t pi = i1;
+              size_t q = len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1) / d;
+              size_t pi = (size_t)0U;
               size_t i0 = pi;
-              bool cond0 = i0 - i1 < d;
+              bool cond0 = i0 < d;
               while (cond0)
               {
                 size_t i = pi;
-                cbor_map_entry save = a[i];
+                cbor_map_entry save = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1, i);
                 size_t pj = (size_t)0U;
                 size_t pidx = i;
                 size_t j0 = pj;
@@ -4011,34 +4053,35 @@ bool cbor_raw_sort_aux(cbor_map_entry *a, size_t lo, size_t hi)
                   size_t j = pj;
                   size_t idx = pidx;
                   size_t idx_;
-                  if (idx - i1 >= i2_ - i20)
-                    idx_ = idx - (i2_ - i20);
+                  if (idx - (size_t)0U >= len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1) - (i20 - i1))
+                    idx_ = idx - (len__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1) - (i20 - i1));
                   else
-                    idx_ = idx + i20 - i1;
-                  cbor_map_entry x = a[idx_];
+                    idx_ = idx + i20 - i1 - (size_t)0U;
+                  cbor_map_entry x = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1, idx_);
                   size_t j_ = j + (size_t)1U;
-                  a[idx] = x;
+                  op_Array_Assignment__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1, idx, x);
                   pj = j_;
                   pidx = idx_;
                   size_t j0 = pj;
                   cond = j0 < q - (size_t)1U;
                 }
                 size_t idx = pidx;
-                a[idx] = save;
+                op_Array_Assignment__CBOR_Pulse_Raw_Type_cbor_map_entry(ac1, idx, save);
                 size_t i_ = i + (size_t)1U;
                 pi = i_;
                 size_t i0 = pi;
-                cond0 = i0 - i1 < d;
+                cond0 = i0 < d;
               }
-              i1_ = i1 + i2_ - i20;
             }
+            size_t i1_ = i1 + (size_t)1U;
             pi1 = i1_;
             pi2 = i2_;
           }
           size_t i10 = pi1;
           size_t i2 = pi2;
           bool res2 = pres;
-          cond = res2 && !(i10 == i2 || i2 == hi);
+          bool cont = res2 && !(i10 == i2 || i2 == len__CBOR_Pulse_Raw_Type_cbor_map_entry(a));
+          cond = cont;
         }
         bool res2 = pres;
         return res2;
@@ -4047,17 +4090,18 @@ bool cbor_raw_sort_aux(cbor_map_entry *a, size_t lo, size_t hi)
   }
 }
 
-static bool cbor_raw_sort(cbor_map_entry *a, size_t len)
+static bool cbor_raw_sort(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a)
 {
-  bool res = cbor_raw_sort_aux(a, (size_t)0U, len);
+  bool res = cbor_raw_sort_aux(a);
   return res;
 }
 
-cbor_raw cbor_det_mk_map(cbor_map_entry *a, uint64_t len)
+cbor_raw cbor_det_mk_map(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a)
 {
-  cbor_raw_sort(a, (size_t)len);
-  CBOR_Spec_Raw_Base_raw_uint64 raw_len = mk_raw_uint64(len);
-  cbor_map res_ = { .cbor_map_length = raw_len, .cbor_map_ptr = a };
+  cbor_raw_sort(a);
+  CBOR_Spec_Raw_Base_raw_uint64
+  raw_len = mk_raw_uint64((uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(a));
+  cbor_map res_ = { .cbor_map_length_size = raw_len.size, .cbor_map_ptr = a };
   return ((cbor_raw){ .tag = CBOR_Case_Map, { .case_CBOR_Case_Map = res_ } });
 }
 
@@ -4140,7 +4184,13 @@ uint64_t cbor_det_get_array_length(cbor_raw x)
   if (x.tag == CBOR_Case_Array)
   {
     cbor_array c_ = x.case_CBOR_Case_Array;
-    res = c_.cbor_array_length;
+    res =
+      (
+        (CBOR_Spec_Raw_Base_raw_uint64){
+          .size = c_.cbor_array_length_size,
+          .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_raw(c_.cbor_array_ptr)
+        }
+      );
   }
   else if (x.tag == CBOR_Case_Serialized_Array)
   {
@@ -4192,7 +4242,13 @@ uint64_t cbor_det_get_map_length(cbor_raw x)
   if (x.tag == CBOR_Case_Map)
   {
     cbor_map c_ = x.case_CBOR_Case_Map;
-    res = c_.cbor_map_length;
+    res =
+      (
+        (CBOR_Spec_Raw_Base_raw_uint64){
+          .size = c_.cbor_map_length_size,
+          .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(c_.cbor_map_ptr)
+        }
+      );
   }
   else if (x.tag == CBOR_Case_Serialized_Map)
   {
@@ -4293,5 +4349,49 @@ cbor_det_map_get(cbor_raw x, cbor_raw k)
     }
   }
   return pres;
+}
+
+static Pulse_Lib_Slice_slice__uint8_t from_array__uint8_t(uint8_t *a, size_t alen)
+{
+  uint8_t *ptr = a;
+  return ((Pulse_Lib_Slice_slice__uint8_t){ .elt = ptr, .len = alen });
+}
+
+cbor_raw cbor_det_mk_string_from_array(uint8_t ty, uint8_t *a, uint64_t len)
+{
+  Pulse_Lib_Slice_slice__uint8_t s = from_array__uint8_t(a, (size_t)len);
+  cbor_raw res = cbor_det_mk_string(ty, s);
+  return res;
+}
+
+static Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw
+from_array__CBOR_Pulse_Raw_Type_cbor_raw(cbor_raw *a, size_t alen)
+{
+  cbor_raw *ptr = a;
+  return ((Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw){ .elt = ptr, .len = alen });
+}
+
+cbor_raw cbor_det_mk_array_from_array(cbor_raw *a, uint64_t len)
+{
+  Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw
+  s = from_array__CBOR_Pulse_Raw_Type_cbor_raw(a, (size_t)len);
+  cbor_raw res = cbor_det_mk_array(s);
+  return res;
+}
+
+static Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
+from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(cbor_map_entry *a, size_t alen)
+{
+  cbor_map_entry *ptr = a;
+  return
+    ((Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry){ .elt = ptr, .len = alen });
+}
+
+cbor_raw cbor_det_mk_map_from_array(cbor_map_entry *a, uint64_t len)
+{
+  Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
+  s = from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(a, (size_t)len);
+  cbor_raw res = cbor_det_mk_map(s);
+  return res;
 }
 

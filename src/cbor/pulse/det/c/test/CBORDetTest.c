@@ -628,7 +628,7 @@ int main(void) {
     printf("Test 15 out of 29\n");
     printf("Testing: ""\"\"""\n");
     uint8_t source_bytes[1] = {0x60};
-    cbor_det_t source_cbor = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"", 0));
+    cbor_det_t source_cbor = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"", 0);
     uint8_t target_bytes[1];
     size_t target_byte_size = cbor_det_size(source_cbor, 1);
     if (target_byte_size != 1)
@@ -671,7 +671,7 @@ int main(void) {
     printf("Test 16 out of 29\n");
     printf("Testing: ""\"a\"""\n");
     uint8_t source_bytes[2] = {0x61, 0x61};
-    cbor_det_t source_cbor = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"a", 1));
+    cbor_det_t source_cbor = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"a", 1);
     uint8_t target_bytes[2];
     size_t target_byte_size = cbor_det_size(source_cbor, 2);
     if (target_byte_size != 2)
@@ -714,7 +714,7 @@ int main(void) {
     printf("Test 17 out of 29\n");
     printf("Testing: ""\"IETF\"""\n");
     uint8_t source_bytes[5] = {0x64, 0x49, 0x45, 0x54, 0x46};
-    cbor_det_t source_cbor = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"IETF", 4));
+    cbor_det_t source_cbor = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"IETF", 4);
     uint8_t target_bytes[5];
     size_t target_byte_size = cbor_det_size(source_cbor, 5);
     if (target_byte_size != 5)
@@ -757,7 +757,7 @@ int main(void) {
     printf("Test 18 out of 29\n");
     printf("Testing: ""\"\\\"\\\\\"""\n");
     uint8_t source_bytes[3] = {0x62, 0x22, 0x5c};
-    cbor_det_t source_cbor = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"\"\\", 2));
+    cbor_det_t source_cbor = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"\"\\", 2);
     uint8_t target_bytes[3];
     size_t target_byte_size = cbor_det_size(source_cbor, 3);
     if (target_byte_size != 3)
@@ -800,7 +800,7 @@ int main(void) {
     printf("Test 19 out of 29\n");
     printf("Testing: ""\"ü\"""\n");
     uint8_t source_bytes[3] = {0x62, 0xc3, 0xbc};
-    cbor_det_t source_cbor = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"ü", 2));
+    cbor_det_t source_cbor = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"ü", 2);
     uint8_t target_bytes[3];
     size_t target_byte_size = cbor_det_size(source_cbor, 3);
     if (target_byte_size != 3)
@@ -843,7 +843,7 @@ int main(void) {
     printf("Test 20 out of 29\n");
     printf("Testing: ""\"水\"""\n");
     uint8_t source_bytes[4] = {0x63, 0xe6, 0xb0, 0xb4};
-    cbor_det_t source_cbor = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"水", 3));
+    cbor_det_t source_cbor = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"水", 3);
     uint8_t target_bytes[4];
     size_t target_byte_size = cbor_det_size(source_cbor, 4);
     if (target_byte_size != 4)
@@ -886,7 +886,7 @@ int main(void) {
     printf("Test 21 out of 29\n");
     printf("Testing: ""\"𐅑\"""\n");
     uint8_t source_bytes[5] = {0x64, 0xf0, 0x90, 0x85, 0x91};
-    cbor_det_t source_cbor = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"𐅑", 4));
+    cbor_det_t source_cbor = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"𐅑", 4);
     uint8_t target_bytes[5];
     size_t target_byte_size = cbor_det_size(source_cbor, 5);
     if (target_byte_size != 5)
@@ -930,7 +930,7 @@ int main(void) {
     printf("Testing: ""[]""\n");
     uint8_t source_bytes[1] = {0x80};
     cbor_det_t source_cbor_array[0];
-    cbor_det_t source_cbor = cbor_det_mk_array(source_cbor_array, 0);
+    cbor_det_t source_cbor = cbor_det_mk_array_from_array(source_cbor_array, 0);
     uint8_t target_bytes[1];
     size_t target_byte_size = cbor_det_size(source_cbor, 1);
     if (target_byte_size != 1)
@@ -980,7 +980,7 @@ int main(void) {
     source_cbor_array[1] = source_cbor_map_1;
     cbor_det_t source_cbor_map_0 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64,1);
     source_cbor_array[0] = source_cbor_map_0;
-    cbor_det_t source_cbor = cbor_det_mk_array(source_cbor_array, 3);
+    cbor_det_t source_cbor = cbor_det_mk_array_from_array(source_cbor_array, 3);
     uint8_t target_bytes[4];
     size_t target_byte_size = cbor_det_size(source_cbor, 4);
     if (target_byte_size != 4)
@@ -1029,18 +1029,18 @@ int main(void) {
     source_cbor_map_2_array[1] = source_cbor_map_2_map_1;
     cbor_det_t source_cbor_map_2_map_0 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64,4);
     source_cbor_map_2_array[0] = source_cbor_map_2_map_0;
-    cbor_det_t source_cbor_map_2 = cbor_det_mk_array(source_cbor_map_2_array, 2);
+    cbor_det_t source_cbor_map_2 = cbor_det_mk_array_from_array(source_cbor_map_2_array, 2);
     source_cbor_array[2] = source_cbor_map_2;
     cbor_det_t source_cbor_map_1_array[2];
     cbor_det_t source_cbor_map_1_map_1 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64,3);
     source_cbor_map_1_array[1] = source_cbor_map_1_map_1;
     cbor_det_t source_cbor_map_1_map_0 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64,2);
     source_cbor_map_1_array[0] = source_cbor_map_1_map_0;
-    cbor_det_t source_cbor_map_1 = cbor_det_mk_array(source_cbor_map_1_array, 2);
+    cbor_det_t source_cbor_map_1 = cbor_det_mk_array_from_array(source_cbor_map_1_array, 2);
     source_cbor_array[1] = source_cbor_map_1;
     cbor_det_t source_cbor_map_0 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64,1);
     source_cbor_array[0] = source_cbor_map_0;
-    cbor_det_t source_cbor = cbor_det_mk_array(source_cbor_array, 3);
+    cbor_det_t source_cbor = cbor_det_mk_array_from_array(source_cbor_array, 3);
     uint8_t target_bytes[8];
     size_t target_byte_size = cbor_det_size(source_cbor, 8);
     if (target_byte_size != 8)
@@ -1134,7 +1134,7 @@ int main(void) {
     source_cbor_array[1] = source_cbor_map_1;
     cbor_det_t source_cbor_map_0 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64,1);
     source_cbor_array[0] = source_cbor_map_0;
-    cbor_det_t source_cbor = cbor_det_mk_array(source_cbor_array, 25);
+    cbor_det_t source_cbor = cbor_det_mk_array_from_array(source_cbor_array, 25);
     uint8_t target_bytes[29];
     size_t target_byte_size = cbor_det_size(source_cbor, 29);
     if (target_byte_size != 29)
@@ -1178,7 +1178,7 @@ int main(void) {
     printf("Testing: ""{}""\n");
     uint8_t source_bytes[1] = {0xa0};
     cbor_map_entry source_cbor_map[0];
-    cbor_det_t source_cbor = cbor_det_mk_map(source_cbor_map, 0);
+    cbor_det_t source_cbor = cbor_det_mk_map_from_array(source_cbor_map, 0);
     uint8_t target_bytes[1];
     size_t target_byte_size = cbor_det_size(source_cbor, 1);
     if (target_byte_size != 1)
@@ -1222,18 +1222,18 @@ int main(void) {
     printf("Testing: ""{\"a\":1,\"b\":[2,3]}""\n");
     uint8_t source_bytes[9] = {0xa2, 0x61, 0x61, 0x01, 0x61, 0x62, 0x82, 0x02, 0x03};
     cbor_map_entry source_cbor_map[2];
-    cbor_det_t source_cbor_map_1_key = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"b", 1));
+    cbor_det_t source_cbor_map_1_key = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"b", 1);
     cbor_det_t source_cbor_map_1_value_array[2];
     cbor_det_t source_cbor_map_1_value_map_1 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64,3);
     source_cbor_map_1_value_array[1] = source_cbor_map_1_value_map_1;
     cbor_det_t source_cbor_map_1_value_map_0 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64,2);
     source_cbor_map_1_value_array[0] = source_cbor_map_1_value_map_0;
-    cbor_det_t source_cbor_map_1_value = cbor_det_mk_array(source_cbor_map_1_value_array, 2);
+    cbor_det_t source_cbor_map_1_value = cbor_det_mk_array_from_array(source_cbor_map_1_value_array, 2);
     source_cbor_map[1] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_1_key, .cbor_map_entry_value = source_cbor_map_1_value};
-    cbor_det_t source_cbor_map_0_key = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"a", 1));
+    cbor_det_t source_cbor_map_0_key = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"a", 1);
     cbor_det_t source_cbor_map_0_value = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64,1);
     source_cbor_map[0] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_0_key, .cbor_map_entry_value = source_cbor_map_0_value};
-    cbor_det_t source_cbor = cbor_det_mk_map(source_cbor_map, 2);
+    cbor_det_t source_cbor = cbor_det_mk_map_from_array(source_cbor_map, 2);
     uint8_t target_bytes[9];
     size_t target_byte_size = cbor_det_size(source_cbor, 9);
     if (target_byte_size != 9)
@@ -1278,14 +1278,14 @@ int main(void) {
     uint8_t source_bytes[8] = {0x82, 0x61, 0x61, 0xa1, 0x61, 0x62, 0x61, 0x63};
     cbor_det_t source_cbor_array[2];
     cbor_map_entry source_cbor_map_1_map[1];
-    cbor_det_t source_cbor_map_1_map_0_key = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"b", 1));
-    cbor_det_t source_cbor_map_1_map_0_value = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"c", 1));
+    cbor_det_t source_cbor_map_1_map_0_key = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"b", 1);
+    cbor_det_t source_cbor_map_1_map_0_value = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"c", 1);
     source_cbor_map_1_map[0] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_1_map_0_key, .cbor_map_entry_value = source_cbor_map_1_map_0_value};
-    cbor_det_t source_cbor_map_1 = cbor_det_mk_map(source_cbor_map_1_map, 1);
+    cbor_det_t source_cbor_map_1 = cbor_det_mk_map_from_array(source_cbor_map_1_map, 1);
     source_cbor_array[1] = source_cbor_map_1;
-    cbor_det_t source_cbor_map_0 = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"a", 1));
+    cbor_det_t source_cbor_map_0 = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"a", 1);
     source_cbor_array[0] = source_cbor_map_0;
-    cbor_det_t source_cbor = cbor_det_mk_array(source_cbor_array, 2);
+    cbor_det_t source_cbor = cbor_det_mk_array_from_array(source_cbor_array, 2);
     uint8_t target_bytes[8];
     size_t target_byte_size = cbor_det_size(source_cbor, 8);
     if (target_byte_size != 8)
@@ -1329,22 +1329,22 @@ int main(void) {
     printf("Testing: ""{\"a\":\"A\",\"b\":\"B\",\"c\":\"C\",\"d\":\"D\",\"e\":\"E\"}""\n");
     uint8_t source_bytes[21] = {0xa5, 0x61, 0x61, 0x61, 0x41, 0x61, 0x62, 0x61, 0x42, 0x61, 0x63, 0x61, 0x43, 0x61, 0x64, 0x61, 0x44, 0x61, 0x65, 0x61, 0x45};
     cbor_map_entry source_cbor_map[5];
-    cbor_det_t source_cbor_map_4_key = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"e", 1));
-    cbor_det_t source_cbor_map_4_value = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"E", 1));
+    cbor_det_t source_cbor_map_4_key = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"e", 1);
+    cbor_det_t source_cbor_map_4_value = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"E", 1);
     source_cbor_map[4] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_4_key, .cbor_map_entry_value = source_cbor_map_4_value};
-    cbor_det_t source_cbor_map_3_key = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"d", 1));
-    cbor_det_t source_cbor_map_3_value = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"D", 1));
+    cbor_det_t source_cbor_map_3_key = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"d", 1);
+    cbor_det_t source_cbor_map_3_value = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"D", 1);
     source_cbor_map[3] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_3_key, .cbor_map_entry_value = source_cbor_map_3_value};
-    cbor_det_t source_cbor_map_2_key = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"c", 1));
-    cbor_det_t source_cbor_map_2_value = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"C", 1));
+    cbor_det_t source_cbor_map_2_key = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"c", 1);
+    cbor_det_t source_cbor_map_2_value = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"C", 1);
     source_cbor_map[2] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_2_key, .cbor_map_entry_value = source_cbor_map_2_value};
-    cbor_det_t source_cbor_map_1_key = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"b", 1));
-    cbor_det_t source_cbor_map_1_value = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"B", 1));
+    cbor_det_t source_cbor_map_1_key = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"b", 1);
+    cbor_det_t source_cbor_map_1_value = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"B", 1);
     source_cbor_map[1] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_1_key, .cbor_map_entry_value = source_cbor_map_1_value};
-    cbor_det_t source_cbor_map_0_key = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"a", 1));
-    cbor_det_t source_cbor_map_0_value = cbor_det_mk_string(CBOR_MAJOR_TYPE_TEXT_STRING, mk_byte_slice((uint8_t *)"A", 1));
+    cbor_det_t source_cbor_map_0_key = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"a", 1);
+    cbor_det_t source_cbor_map_0_value = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *)"A", 1);
     source_cbor_map[0] = (cbor_map_entry) {.cbor_map_entry_key = source_cbor_map_0_key, .cbor_map_entry_value = source_cbor_map_0_value};
-    cbor_det_t source_cbor = cbor_det_mk_map(source_cbor_map, 5);
+    cbor_det_t source_cbor = cbor_det_mk_map_from_array(source_cbor_map, 5);
     uint8_t target_bytes[21];
     size_t target_byte_size = cbor_det_size(source_cbor, 21);
     if (target_byte_size != 21)
