@@ -1609,6 +1609,46 @@ let rec list_length_filter (#t: Type) (f: t -> bool) (l: list t) : Lemma
   | [] -> ()
   | _ :: q -> list_length_filter f q
 
+let rec list_filter_eq_length (#t: Type) (f: t -> bool) (l: list t) : Lemma
+  (requires (List.Tot.length (List.Tot.filter f l) == List.Tot.length l))
+  (ensures (List.Tot.filter f l == l))
+= match l with
+  | [] -> ()
+  | _ :: q ->
+    list_length_filter f q;
+    list_filter_eq_length f q
+
+(* Pigeon-hole principle *)
+
+let rec list_no_repeats_memP_equiv_length_no_repeats
+  (#t: eqtype)
+  (l1 l2: list t)
+: Lemma
+  (requires (
+    List.Tot.no_repeats_p l1 /\
+    List.Tot.length l2 <= List.Tot.length l1 /\
+    (forall x . List.Tot.memP x l2 <==> List.Tot.memP x l1)
+  ))
+  (ensures (
+    List.Tot.length l2 == List.Tot.length l1 /\
+    List.Tot.no_repeats_p l2
+  ))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | a :: q1 ->
+    let (l2l, l2r) = list_memP_extract a l2 in
+    List.Tot.append_length l2l (a :: l2r);
+    List.Tot.append_length l2l l2r;
+    List.Tot.no_repeats_p_append_permut [] l2l [] [a] l2r;
+    List.Tot.append_memP_forall l2l (a :: l2r);
+    List.Tot.append_memP_forall l2l l2r;
+    let q2 = List.Tot.append l2l l2r in
+    let f x = x <> a in
+    let q2' = List.Tot.filter f q2 in
+    list_length_filter f q2;
+    list_no_repeats_memP_equiv_length_no_repeats q1 q2';
+    list_filter_eq_length f q2
 
 (* Well-founded recursion *)
 

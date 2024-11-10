@@ -110,7 +110,10 @@ val cbor_det_map_entry_match: perm -> cbor_det_map_entry_t -> Spec.cbor & Spec.c
 
 val cbor_det_mk_map_entry () : mk_map_entry_t cbor_det_match cbor_det_map_entry_match
 
-val cbor_det_mk_map () : mk_map_t cbor_det_match cbor_det_map_entry_match
+val cbor_det_mk_map_gen () : mk_map_gen_t cbor_det_match cbor_det_map_entry_match
+
+let cbor_det_mk_map () : mk_map_t cbor_det_match cbor_det_map_entry_match =
+  mk_map (cbor_det_mk_map_gen ())
 
 (* Destructors *)
 

@@ -578,6 +578,72 @@ let mk_map_entry_t
         (vmatch pk xk vk ** vmatch pv xv vv)
     )
 
+let mk_map_gen_none_postcond
+  (#t2: Type)
+  (va: Seq.seq t2)
+  (vv: list (cbor & cbor))
+  (va': Seq.seq t2)
+  (vv': list (cbor & cbor))
+: Tot prop
+=
+      (forall x . List.Tot.memP x vv' <==> List.Tot.memP x vv) /\
+      List.Tot.length vv' == List.Tot.length vv /\
+      (List.Tot.length vv > pow2 64 - 1 \/ ~ (List.Tot.no_repeats_p (List.Tot.map fst vv))) /\
+      (List.Tot.length vv > pow2 64 - 1 ==> (va' == va /\ vv' == vv))
+
+let mk_map_gen_post
+  (#t1 #t2: Type)
+  (vmatch1: perm -> t1 -> cbor -> slprop)
+  (vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
+  (a: S.slice t2)
+  (va: (Seq.seq t2))
+  (pv: perm)
+  (vv: (list (cbor & cbor)))
+  (res: option t1)
+: Tot slprop
+= match res with
+  | None -> exists* va' vv' .
+    pts_to a va' **
+    PM.seq_list_match va' vv' (vmatch2 pv) **
+    Trade.trade 
+      (PM.seq_list_match va' vv' (vmatch2 pv))
+      (PM.seq_list_match va vv (vmatch2 pv)) **
+    pure (
+      mk_map_gen_none_postcond va vv va' vv'
+    )
+  | Some res -> exists* p' (v': cbor_map {FStar.UInt.fits (cbor_map_length v') 64}) va' .
+      vmatch1 p' res (pack (CMap v')) **
+      Trade.trade
+        (vmatch1 p' res (pack (CMap v')))
+        (pts_to a va' ** // this function potentially sorts the input array, so we lose the link to the initial array contents
+          PM.seq_list_match va vv (vmatch2 pv) // but we keep the permissions on each element
+        ) **
+        pure (
+          List.Tot.no_repeats_p (List.Tot.map fst vv) /\
+          (forall x . List.Tot.assoc x vv == cbor_map_get v' x) /\
+          cbor_map_length v' == Seq.length va
+        )
+
+inline_for_extraction
+let mk_map_gen_t
+  (#t1 #t2: Type)
+  (vmatch1: perm -> t1 -> cbor -> slprop)
+  (vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
+= (a: S.slice t2) ->
+  (#va: Ghost.erased (Seq.seq t2)) ->
+  (#pv: perm) ->
+  (#vv: Ghost.erased (list (cbor & cbor))) ->
+  stt (option t1)
+    (pts_to a va **
+      PM.seq_list_match va vv (vmatch2 pv)
+    )
+    (fun res -> mk_map_gen_post vmatch1 vmatch2 a va pv vv res **
+      pure (Some? res <==> (
+        FStar.UInt.fits (SZ.v (S.len a)) U64.n /\
+        List.Tot.no_repeats_p (List.Tot.map fst vv)      
+      ))
+    )
+
 inline_for_extraction
 let mk_map_t
   (#t1 #t2: Type)
@@ -606,6 +672,28 @@ let mk_map_t
           cbor_map_length v' == Seq.length va
         )
     )
+
+inline_for_extraction
+```pulse
+fn mk_map
+  (#t1 #t2: Type0)
+  (#vmatch1: perm -> t1 -> cbor -> slprop)
+  (#vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
+  (mk_map_gen: mk_map_gen_t vmatch1 vmatch2)
+: mk_map_t u#0 #_ #_ vmatch1 vmatch2
+= (a: S.slice t2)
+  (#va: Ghost.erased (Seq.seq t2))
+  (#pv: perm)
+  (#vv: Ghost.erased (list (cbor & cbor)))
+{
+  S.pts_to_len a;
+  PM.seq_list_match_length (vmatch2 pv) va vv;
+  let sres = mk_map_gen a;
+  let Some res = sres;
+  unfold (mk_map_gen_post vmatch1 vmatch2 a va pv vv (Some res));
+  res
+}
+```
 
 let map_get_post_none
   (#t: Type)

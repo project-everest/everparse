@@ -91,8 +91,7 @@ let mk_det_raw_cbor_map_entry
 val no_repeats_map_fst_mk_det_raw_cbor_map_entry
   (l: list (cbor & cbor))
 : Lemma
-  (requires (List.Tot.no_repeats_p (List.Tot.map fst l)))
-  (ensures (List.Tot.no_repeats_p (List.Tot.map fst (List.Tot.map mk_det_raw_cbor_map_entry l))))
+  (List.Tot.no_repeats_p (List.Tot.map fst l) <==> List.Tot.no_repeats_p (List.Tot.map fst (List.Tot.map mk_det_raw_cbor_map_entry l)))
 
 val mk_det_raw_cbor_map
   (l: list (cbor & cbor))
