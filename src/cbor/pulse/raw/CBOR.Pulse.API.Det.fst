@@ -444,6 +444,34 @@ decreases v
 ```
 
 ```pulse
+fn cbor_det_mk_map_entry
+  (_: unit)
+: mk_map_entry_t u#0 u#0 #cbor_det_t #cbor_det_map_entry_t cbor_det_match cbor_det_map_entry_match
+= (xk: _)
+  (xv: _)
+  (#pk: _)
+  (#vk: _)
+  (#pv: _)
+  (#vv: _)
+{
+  Trade.rewrite_with_trade
+    (cbor_det_match pk xk vk)
+    (Raw.cbor_match pk xk (SpecRaw.mk_det_raw_cbor vk));
+  Trade.rewrite_with_trade
+    (cbor_det_match pv xv vv)
+    (Raw.cbor_match pv xv (SpecRaw.mk_det_raw_cbor vv));
+  let res = Raw.cbor_mk_map_entry xk xv;
+  Trade.rewrite_with_trade
+    (Raw.cbor_match_map_entry 1.0R res (SpecRaw.mk_det_raw_cbor vk, SpecRaw.mk_det_raw_cbor vv))
+    (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv));
+  Trade.trans (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ _;
+  Trade.trans_concl_l (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ _ _;
+  Trade.trans_concl_r (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ _ _;
+  res
+}
+```
+
+```pulse
 fn cbor_det_mk_map
   (_: unit)
 : mk_map_t u#0 #cbor_det_t #cbor_det_map_entry_t cbor_det_match cbor_det_map_entry_match

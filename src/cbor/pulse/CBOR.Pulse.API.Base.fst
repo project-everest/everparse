@@ -559,6 +559,26 @@ let mk_array_t
     )
 
 inline_for_extraction
+let mk_map_entry_t
+  (#t #t2: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (vmatch2: perm -> t2 -> cbor & cbor -> slprop)
+= (xk: t) ->
+  (xv: t) ->
+  (#pk: perm) ->
+  (#vk: Ghost.erased cbor) ->
+  (#pv: perm) ->
+  (#vv: Ghost.erased cbor) ->
+  stt t2
+    (vmatch pk xk vk ** vmatch pv xv vv)
+    (fun res -> exists* p' .
+      vmatch2 p' res (Ghost.reveal vk, Ghost.reveal vv) **
+      Trade.trade
+        (vmatch2 p' res (Ghost.reveal vk, Ghost.reveal vv))
+        (vmatch pk xk vk ** vmatch pv xv vv)
+    )
+
+inline_for_extraction
 let mk_map_t
   (#t1 #t2: Type)
   (vmatch1: perm -> t1 -> cbor -> slprop)

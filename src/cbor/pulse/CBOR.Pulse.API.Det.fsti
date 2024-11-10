@@ -108,6 +108,8 @@ val cbor_det_mk_array () : mk_array_t cbor_det_match
 
 val cbor_det_map_entry_match: perm -> cbor_det_map_entry_t -> Spec.cbor & Spec.cbor -> slprop
 
+val cbor_det_mk_map_entry () : mk_map_entry_t cbor_det_match cbor_det_map_entry_match
+
 val cbor_det_mk_map () : mk_map_t cbor_det_match cbor_det_map_entry_match
 
 (* Destructors *)
