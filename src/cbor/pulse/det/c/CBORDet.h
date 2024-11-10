@@ -239,6 +239,17 @@ cbor_raw cbor_det_mk_array(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw a
 
 cbor_map_entry cbor_det_mk_map_entry(cbor_raw xk, cbor_raw xv);
 
+typedef struct FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw_s
+{
+  FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags
+  tag;
+  cbor_raw v;
+}
+FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw;
+
+FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw
+cbor_det_mk_map_gen(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a);
+
 cbor_raw cbor_det_mk_map(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a);
 
 bool cbor_det_equal(cbor_raw x1, cbor_raw x2);
@@ -290,14 +301,6 @@ cbor_det_map_iterator_next(
 cbor_raw cbor_det_map_entry_key(cbor_map_entry x2);
 
 cbor_raw cbor_det_map_entry_value(cbor_map_entry x2);
-
-typedef struct FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw_s
-{
-  FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags
-  tag;
-  cbor_raw v;
-}
-FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw;
 
 FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw
 cbor_det_map_get(cbor_raw x, cbor_raw k);

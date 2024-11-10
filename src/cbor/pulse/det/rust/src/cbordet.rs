@@ -4053,12 +4053,43 @@ pub fn cbor_det_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) -> cbor_
     res
 }
 
+#[derive(PartialEq, Clone, Copy)]
+pub enum option__CBOR_Pulse_Raw_Type_cbor_raw <'a>
+{
+    None,
+    Some { v: cbor_raw <'a> }
+}
+
+pub fn cbor_det_mk_map_gen <'a>(a: &'a mut [cbor_map_entry <'a>]) ->
+    option__CBOR_Pulse_Raw_Type_cbor_raw
+    <'a>
+{
+    if a.len() > 18446744073709551615u64 as usize
+    { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
+    else
+    {
+        let correct: bool = cbor_raw_sort(a);
+        if correct
+        {
+            let raw_len: raw_uint64 = mk_raw_uint64(a.len() as u64);
+            let res·: cbor_map = cbor_map { cbor_map_length_size: raw_len.size, cbor_map_ptr: a };
+            let res: cbor_raw = cbor_raw::CBOR_Case_Map { v: res· };
+            option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res }
+        }
+        else
+        { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
+    }
+}
+
 pub fn cbor_det_mk_map <'a>(a: &'a mut [cbor_map_entry <'a>]) -> cbor_raw <'a>
 {
-    crate::lowstar::ignore::ignore::<bool>(cbor_raw_sort(a));
-    let raw_len: raw_uint64 = mk_raw_uint64(a.len() as u64);
-    let res·: cbor_map = cbor_map { cbor_map_length_size: raw_len.size, cbor_map_ptr: a };
-    cbor_raw::CBOR_Case_Map { v: res· }
+    let sres: option__CBOR_Pulse_Raw_Type_cbor_raw = cbor_det_mk_map_gen(a);
+    let _letpattern: option__CBOR_Pulse_Raw_Type_cbor_raw = sres;
+    match _letpattern
+    {
+        option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res } => res,
+        _ => panic!("Incomplete pattern matching")
+    }
 }
 
 pub fn cbor_det_equal <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> bool
@@ -4217,13 +4248,6 @@ pub fn cbor_det_map_entry_key <'a>(x2: cbor_map_entry <'a>) -> cbor_raw <'a>
 
 pub fn cbor_det_map_entry_value <'a>(x2: cbor_map_entry <'a>) -> cbor_raw <'a>
 { x2.cbor_map_entry_value }
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum option__CBOR_Pulse_Raw_Type_cbor_raw <'a>
-{
-    None,
-    Some { v: cbor_raw <'a> }
-}
 
 pub fn cbor_det_map_get <'a>(x: cbor_raw <'a>, k: cbor_raw <'a>) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw

@@ -4231,13 +4231,57 @@ cbor_map_entry cbor_det_mk_map_entry(cbor_raw xk, cbor_raw xv)
   return res;
 }
 
+FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw
+cbor_det_mk_map_gen(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a)
+{
+  if (len__CBOR_Pulse_Raw_Type_cbor_map_entry(a) > (size_t)18446744073709551615ULL)
+    return
+      (
+        (FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw){
+          .tag = FStar_Pervasives_Native_None
+        }
+      );
+  else
+  {
+    bool correct = cbor_raw_sort(a);
+    if (correct)
+    {
+      CBOR_Spec_Raw_Base_raw_uint64
+      raw_len = mk_raw_uint64((uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(a));
+      cbor_map res_ = { .cbor_map_length_size = raw_len.size, .cbor_map_ptr = a };
+      cbor_raw res = { .tag = CBOR_Case_Map, { .case_CBOR_Case_Map = res_ } };
+      return
+        (
+          (FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw){
+            .tag = FStar_Pervasives_Native_Some,
+            .v = res
+          }
+        );
+    }
+    else
+      return
+        (
+          (FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw){
+            .tag = FStar_Pervasives_Native_None
+          }
+        );
+  }
+}
+
 cbor_raw cbor_det_mk_map(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a)
 {
-  cbor_raw_sort(a);
-  CBOR_Spec_Raw_Base_raw_uint64
-  raw_len = mk_raw_uint64((uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(a));
-  cbor_map res_ = { .cbor_map_length_size = raw_len.size, .cbor_map_ptr = a };
-  return ((cbor_raw){ .tag = CBOR_Case_Map, { .case_CBOR_Case_Map = res_ } });
+  FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw sres = cbor_det_mk_map_gen(a);
+  FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw _letpattern = sres;
+  if (_letpattern.tag == FStar_Pervasives_Native_Some)
+    return _letpattern.v;
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
 }
 
 bool cbor_det_equal(cbor_raw x1, cbor_raw x2)
