@@ -19,32 +19,6 @@ typedef struct Pulse_Lib_Slice_slice__uint8_t_s
 }
 Pulse_Lib_Slice_slice__uint8_t;
 
-typedef struct cbor_raw_s cbor_raw;
-
-typedef struct Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_s
-{
-  cbor_raw *elt;
-  size_t len;
-}
-Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw;
-
-typedef struct cbor_map_entry_s cbor_map_entry;
-
-typedef struct Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry_s
-{
-  cbor_map_entry *elt;
-  size_t len;
-}
-Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry;
-
-typedef struct cbor_int_s
-{
-  uint8_t cbor_int_type;
-  uint8_t cbor_int_size;
-  uint64_t cbor_int_value;
-}
-cbor_int;
-
 typedef struct cbor_string_s
 {
   uint8_t cbor_string_type;
@@ -52,6 +26,13 @@ typedef struct cbor_string_s
   Pulse_Lib_Slice_slice__uint8_t cbor_string_ptr;
 }
 cbor_string;
+
+typedef struct cbor_serialized_s
+{
+  CBOR_Spec_Raw_Base_raw_uint64 cbor_serialized_header;
+  Pulse_Lib_Slice_slice__uint8_t cbor_serialized_payload;
+}
+cbor_serialized;
 
 typedef struct cbor_raw_s cbor_raw;
 
@@ -62,12 +43,42 @@ typedef struct cbor_tagged_s
 }
 cbor_tagged;
 
+typedef struct cbor_raw_s cbor_raw;
+
+typedef struct cbor_raw_s cbor_raw;
+
+typedef struct cbor_raw_s cbor_raw;
+
+typedef struct cbor_raw_s cbor_raw;
+
+typedef struct cbor_raw_s cbor_raw;
+
+typedef struct cbor_raw_s cbor_raw;
+
+typedef struct cbor_raw_s cbor_raw;
+
+typedef struct Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_s
+{
+  cbor_raw *elt;
+  size_t len;
+}
+Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw;
+
 typedef struct cbor_array_s
 {
   uint8_t cbor_array_length_size;
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw cbor_array_ptr;
 }
 cbor_array;
+
+typedef struct cbor_map_entry_s cbor_map_entry;
+
+typedef struct Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry_s
+{
+  cbor_map_entry *elt;
+  size_t len;
+}
+Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry;
 
 typedef struct cbor_map_s
 {
@@ -76,12 +87,13 @@ typedef struct cbor_map_s
 }
 cbor_map;
 
-typedef struct cbor_serialized_s
+typedef struct cbor_int_s
 {
-  CBOR_Spec_Raw_Base_raw_uint64 cbor_serialized_header;
-  Pulse_Lib_Slice_slice__uint8_t cbor_serialized_payload;
+  uint8_t cbor_int_type;
+  uint8_t cbor_int_size;
+  uint64_t cbor_int_value;
 }
-cbor_serialized;
+cbor_int;
 
 #define CBOR_Case_Int 0
 #define CBOR_Case_Simple 1
@@ -113,18 +125,18 @@ typedef struct cbor_raw_s
 }
 cbor_raw;
 
-#define FStar_Pervasives_Native_None 0
-#define FStar_Pervasives_Native_Some 1
-
-typedef uint8_t
-FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags;
-
 typedef struct cbor_map_entry_s
 {
   cbor_raw cbor_map_entry_key;
   cbor_raw cbor_map_entry_value;
 }
 cbor_map_entry;
+
+#define FStar_Pervasives_Native_None 0
+#define FStar_Pervasives_Native_Some 1
+
+typedef uint8_t
+FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags;
 
 #define CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice 0
 #define CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Serialized 1
@@ -224,6 +236,8 @@ cbor_raw cbor_det_mk_string(uint8_t ty, Pulse_Lib_Slice_slice__uint8_t s);
 cbor_raw cbor_det_mk_tagged(uint64_t tag, cbor_raw *r);
 
 cbor_raw cbor_det_mk_array(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw a);
+
+cbor_map_entry cbor_det_mk_map_entry(cbor_raw xk, cbor_raw xv);
 
 cbor_raw cbor_det_mk_map(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a);
 

@@ -189,6 +189,135 @@ static uint8_t get_header_major_type(header h)
 
 typedef Pulse_Lib_Slice_slice__uint8_t cbor_raw_serialized_iterator;
 
+static cbor_string cbor_string_reset_perm(cbor_string c)
+{
+  return
+    (
+      (cbor_string){
+        .cbor_string_type = c.cbor_string_type,
+        .cbor_string_size = c.cbor_string_size,
+        .cbor_string_ptr = c.cbor_string_ptr
+      }
+    );
+}
+
+static cbor_serialized cbor_serialized_reset_perm(cbor_serialized c)
+{
+  return
+    (
+      (cbor_serialized){
+        .cbor_serialized_header = c.cbor_serialized_header,
+        .cbor_serialized_payload = c.cbor_serialized_payload
+      }
+    );
+}
+
+static cbor_tagged cbor_tagged_reset_perm(cbor_tagged c)
+{
+  return
+    ((cbor_tagged){ .cbor_tagged_tag = c.cbor_tagged_tag, .cbor_tagged_ptr = c.cbor_tagged_ptr });
+}
+
+static cbor_array cbor_array_reset_perm(cbor_array c)
+{
+  return
+    (
+      (cbor_array){
+        .cbor_array_length_size = c.cbor_array_length_size,
+        .cbor_array_ptr = c.cbor_array_ptr
+      }
+    );
+}
+
+static cbor_map cbor_map_reset_perm(cbor_map c)
+{
+  return
+    ((cbor_map){ .cbor_map_length_size = c.cbor_map_length_size, .cbor_map_ptr = c.cbor_map_ptr });
+}
+
+static cbor_raw cbor_raw_reset_perm_tot(cbor_raw c)
+{
+  if (c.tag == CBOR_Case_String)
+  {
+    cbor_string v = c.case_CBOR_Case_String;
+    return
+      (
+        (cbor_raw){
+          .tag = CBOR_Case_String,
+          { .case_CBOR_Case_String = cbor_string_reset_perm(v) }
+        }
+      );
+  }
+  else if (c.tag == CBOR_Case_Tagged)
+  {
+    cbor_tagged v = c.case_CBOR_Case_Tagged;
+    return
+      (
+        (cbor_raw){
+          .tag = CBOR_Case_Tagged,
+          { .case_CBOR_Case_Tagged = cbor_tagged_reset_perm(v) }
+        }
+      );
+  }
+  else if (c.tag == CBOR_Case_Array)
+  {
+    cbor_array v = c.case_CBOR_Case_Array;
+    return
+      ((cbor_raw){ .tag = CBOR_Case_Array, { .case_CBOR_Case_Array = cbor_array_reset_perm(v) } });
+  }
+  else if (c.tag == CBOR_Case_Map)
+  {
+    cbor_map v = c.case_CBOR_Case_Map;
+    return ((cbor_raw){ .tag = CBOR_Case_Map, { .case_CBOR_Case_Map = cbor_map_reset_perm(v) } });
+  }
+  else if (c.tag == CBOR_Case_Serialized_Tagged)
+  {
+    cbor_serialized v = c.case_CBOR_Case_Serialized_Tagged;
+    return
+      (
+        (cbor_raw){
+          .tag = CBOR_Case_Serialized_Tagged,
+          { .case_CBOR_Case_Serialized_Tagged = cbor_serialized_reset_perm(v) }
+        }
+      );
+  }
+  else if (c.tag == CBOR_Case_Serialized_Array)
+  {
+    cbor_serialized v = c.case_CBOR_Case_Serialized_Array;
+    return
+      (
+        (cbor_raw){
+          .tag = CBOR_Case_Serialized_Array,
+          { .case_CBOR_Case_Serialized_Array = cbor_serialized_reset_perm(v) }
+        }
+      );
+  }
+  else if (c.tag == CBOR_Case_Serialized_Map)
+  {
+    cbor_serialized v = c.case_CBOR_Case_Serialized_Map;
+    return
+      (
+        (cbor_raw){
+          .tag = CBOR_Case_Serialized_Map,
+          { .case_CBOR_Case_Serialized_Map = cbor_serialized_reset_perm(v) }
+        }
+      );
+  }
+  else
+    return c;
+}
+
+static cbor_map_entry cbor_mk_map_entry(cbor_raw xk, cbor_raw xv)
+{
+  cbor_map_entry
+  res =
+    {
+      .cbor_map_entry_key = cbor_raw_reset_perm_tot(xk),
+      .cbor_map_entry_value = cbor_raw_reset_perm_tot(xv)
+    };
+  return res;
+}
+
 static initial_byte_t
 __proj__Mkdtuple2__item___1__CBOR_Spec_Raw_EverParse_initial_byte_t_CBOR_Spec_Raw_EverParse_long_argument(
   header pair
@@ -4093,6 +4222,12 @@ bool cbor_raw_sort_aux(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
 static bool cbor_raw_sort(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a)
 {
   bool res = cbor_raw_sort_aux(a);
+  return res;
+}
+
+cbor_map_entry cbor_det_mk_map_entry(cbor_raw xk, cbor_raw xv)
+{
+  cbor_map_entry res = cbor_mk_map_entry(xk, xv);
   return res;
 }
 
