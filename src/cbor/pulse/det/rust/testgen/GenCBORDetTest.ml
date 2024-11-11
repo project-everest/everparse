@@ -193,7 +193,7 @@ and rust_list_to_string
   | a :: q -> rust_list_to_string indent (accu ^ rust_to_string indent a) q
 
 let mk_prog (x: rust list) = "
-use crate::cbordet::*;
+use cborrs::cbordet::*;
 
 
 "

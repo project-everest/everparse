@@ -10,4 +10,4 @@ dune build
 if ! [[ -e appendix_a.json ]] ; then
     curl https://raw.githubusercontent.com/cbor/test-vectors/master/appendix_a.json -o appendix_a.json
 fi
-_build/default/GenCBORDetTest.exe appendix_a.json > ../src/test.rs
+_build/default/GenCBORDetTest.exe appendix_a.json > ../tests/unit.rs

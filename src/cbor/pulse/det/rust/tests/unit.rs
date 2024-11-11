@@ -1,5 +1,5 @@
 
-use crate::cbordet::*;
+use cborrs::cbordet::*;
 
 
 #[allow(unused_variables)]
