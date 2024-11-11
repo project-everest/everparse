@@ -556,113 +556,140 @@ fn size_header(x: header, out: &mut [usize]) -> bool
 
 fn cbor_raw_get_header <'a>(xl: cbor_raw <'a>) -> header
 {
-    if match xl { cbor_raw::CBOR_Case_Int { .. } => true, _ => false }
+    match xl
     {
-        let c·: cbor_int =
-            match xl
-            { cbor_raw::CBOR_Case_Int { v } => v, _ => panic!("Incomplete pattern matching") };
-        let ty: u8 = c·.cbor_int_type;
-        let c·0: cbor_int =
-            match xl
-            { cbor_raw::CBOR_Case_Int { v } => v, _ => panic!("Incomplete pattern matching") };
-        let v: raw_uint64 = raw_uint64 { size: c·0.cbor_int_size, value: c·0.cbor_int_value };
-        raw_uint64_as_argument(ty, v)
-    }
-    else if match xl { cbor_raw::CBOR_Case_String { .. } => true, _ => false }
-    {
-        let c·: cbor_string =
-            match xl
-            { cbor_raw::CBOR_Case_String { v } => v, _ => panic!("Incomplete pattern matching") };
-        let ty: u8 = c·.cbor_string_type;
-        let c·0: cbor_string =
-            match xl
-            { cbor_raw::CBOR_Case_String { v } => v, _ => panic!("Incomplete pattern matching") };
-        let res: raw_uint64 =
-            raw_uint64 { size: c·0.cbor_string_size, value: c·0.cbor_string_ptr.len() as u64 };
-        let len: raw_uint64 = res;
-        raw_uint64_as_argument(ty, len)
-    }
-    else
-    {
-        let a: bool = match xl { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false };
-        let ite: bool =
-            if a
-            { true }
-            else
-            { match xl { cbor_raw::CBOR_Case_Serialized_Tagged { .. } => true, _ => false } };
-        if ite
-        {
-            let tag: raw_uint64 =
-                match xl
-                {
-                    cbor_raw::CBOR_Case_Tagged { v: c· } => c·.cbor_tagged_tag,
-                    cbor_raw::CBOR_Case_Serialized_Tagged { v: c· } => c·.cbor_serialized_header,
-                    _ => panic!("Incomplete pattern matching")
-                };
-            raw_uint64_as_argument(cbor_major_type_tagged, tag)
-        }
-        else
-        {
-            let a0: bool = match xl { cbor_raw::CBOR_Case_Array { .. } => true, _ => false };
-            let ite0: bool =
-                if a0
-                { true }
-                else
-                { match xl { cbor_raw::CBOR_Case_Serialized_Array { .. } => true, _ => false } };
-            if ite0
-            {
-                let len: raw_uint64 =
-                    match xl
-                    {
-                        cbor_raw::CBOR_Case_Array { v: c· } =>
-                          raw_uint64
-                          {
-                              size: c·.cbor_array_length_size,
-                              value: c·.cbor_array_ptr.len() as u64
-                          },
-                        cbor_raw::CBOR_Case_Serialized_Array { v: c· } =>
-                          c·.cbor_serialized_header,
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                raw_uint64_as_argument(cbor_major_type_array, len)
-            }
-            else
-            {
-                let a1: bool = match xl { cbor_raw::CBOR_Case_Map { .. } => true, _ => false };
-                let ite1: bool =
-                    if a1
-                    { true }
-                    else
-                    { match xl { cbor_raw::CBOR_Case_Serialized_Map { .. } => true, _ => false } };
-                if ite1
-                {
-                    let len: raw_uint64 =
-                        match xl
+        cbor_raw::CBOR_Case_Int { .. } =>
+          {
+              let _letpattern: cbor_raw = xl;
+              let ty: u8 =
+                  match _letpattern
+                  {
+                      cbor_raw::CBOR_Case_Int { v: c· } => c·.cbor_int_type,
+                      _ => panic!("Incomplete pattern matching")
+                  };
+              let _letpattern0: cbor_raw = xl;
+              let v: raw_uint64 =
+                  match _letpattern0
+                  {
+                      cbor_raw::CBOR_Case_Int { v: c· } =>
+                        raw_uint64 { size: c·.cbor_int_size, value: c·.cbor_int_value },
+                      _ => panic!("Incomplete pattern matching")
+                  };
+              raw_uint64_as_argument(ty, v)
+          },
+        cbor_raw::CBOR_Case_String { .. } =>
+          {
+              let _letpattern: cbor_raw = xl;
+              let ty: u8 =
+                  match _letpattern
+                  {
+                      cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_type,
+                      _ => panic!("Incomplete pattern matching")
+                  };
+              let _letpattern0: cbor_raw = xl;
+              let len: raw_uint64 =
+                  match _letpattern0
+                  {
+                      cbor_raw::CBOR_Case_String { v: c· } =>
                         {
-                            cbor_raw::CBOR_Case_Map { v: c· } =>
-                              raw_uint64
-                              {
-                                  size: c·.cbor_map_length_size,
-                                  value: c·.cbor_map_ptr.len() as u64
-                              },
-                            cbor_raw::CBOR_Case_Serialized_Map { v: c· } =>
-                              c·.cbor_serialized_header,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    raw_uint64_as_argument(cbor_major_type_map, len)
-                }
-                else
-                {
-                    let v: u8 =
-                        match xl
-                        {
-                            cbor_raw::CBOR_Case_Simple { v } => v,
-                            _ => panic!("Incomplete pattern matching")
-                        };
-                    simple_value_as_argument(v)
-                }
-            }
-        }
+                            let res: raw_uint64 =
+                                raw_uint64
+                                {
+                                    size: c·.cbor_string_size,
+                                    value: c·.cbor_string_ptr.len() as u64
+                                };
+                            res
+                        },
+                      _ => panic!("Incomplete pattern matching")
+                  };
+              raw_uint64_as_argument(ty, len)
+          },
+        cbor_raw::CBOR_Case_Tagged { .. } =>
+          {
+              let tag: raw_uint64 =
+                  match xl
+                  {
+                      cbor_raw::CBOR_Case_Tagged { v: c· } => c·.cbor_tagged_tag,
+                      cbor_raw::CBOR_Case_Serialized_Tagged { v: c· } => c·.cbor_serialized_header,
+                      _ => panic!("Incomplete pattern matching")
+                  };
+              raw_uint64_as_argument(cbor_major_type_tagged, tag)
+          },
+        cbor_raw::CBOR_Case_Serialized_Tagged { .. } =>
+          {
+              let tag: raw_uint64 =
+                  match xl
+                  {
+                      cbor_raw::CBOR_Case_Tagged { v: c· } => c·.cbor_tagged_tag,
+                      cbor_raw::CBOR_Case_Serialized_Tagged { v: c· } => c·.cbor_serialized_header,
+                      _ => panic!("Incomplete pattern matching")
+                  };
+              raw_uint64_as_argument(cbor_major_type_tagged, tag)
+          },
+        cbor_raw::CBOR_Case_Array { .. } =>
+          {
+              let len: raw_uint64 =
+                  match xl
+                  {
+                      cbor_raw::CBOR_Case_Array { v: c· } =>
+                        raw_uint64
+                        { size: c·.cbor_array_length_size, value: c·.cbor_array_ptr.len() as u64 },
+                      cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
+                      _ => panic!("Incomplete pattern matching")
+                  };
+              raw_uint64_as_argument(cbor_major_type_array, len)
+          },
+        cbor_raw::CBOR_Case_Serialized_Array { .. } =>
+          {
+              let len: raw_uint64 =
+                  match xl
+                  {
+                      cbor_raw::CBOR_Case_Array { v: c· } =>
+                        raw_uint64
+                        { size: c·.cbor_array_length_size, value: c·.cbor_array_ptr.len() as u64 },
+                      cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
+                      _ => panic!("Incomplete pattern matching")
+                  };
+              raw_uint64_as_argument(cbor_major_type_array, len)
+          },
+        cbor_raw::CBOR_Case_Map { .. } =>
+          {
+              let len: raw_uint64 =
+                  match xl
+                  {
+                      cbor_raw::CBOR_Case_Map { v: c· } =>
+                        raw_uint64
+                        { size: c·.cbor_map_length_size, value: c·.cbor_map_ptr.len() as u64 },
+                      cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
+                      _ => panic!("Incomplete pattern matching")
+                  };
+              raw_uint64_as_argument(cbor_major_type_map, len)
+          },
+        cbor_raw::CBOR_Case_Serialized_Map { .. } =>
+          {
+              let len: raw_uint64 =
+                  match xl
+                  {
+                      cbor_raw::CBOR_Case_Map { v: c· } =>
+                        raw_uint64
+                        { size: c·.cbor_map_length_size, value: c·.cbor_map_ptr.len() as u64 },
+                      cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
+                      _ => panic!("Incomplete pattern matching")
+                  };
+              raw_uint64_as_argument(cbor_major_type_map, len)
+          },
+        cbor_raw::CBOR_Case_Simple { .. } =>
+          {
+              let _letpattern: cbor_raw = xl;
+              let v: u8 =
+                  match _letpattern
+                  {
+                      cbor_raw::CBOR_Case_Simple { v: res } => res,
+                      _ => panic!("Incomplete pattern matching")
+                  };
+              simple_value_as_argument(v)
+          },
+        _ => panic!("Incomplete pattern matching")
     }
 }
 
@@ -708,13 +735,13 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
         if
         b.major_type == cbor_major_type_byte_string || b.major_type == cbor_major_type_text_string
         {
-            let c·: cbor_string =
-                match x·
+            let _letpattern: cbor_raw = x·;
+            let x2·: &[u8] =
+                match _letpattern
                 {
-                    cbor_raw::CBOR_Case_String { v: v1 } => v1,
+                    cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
                     _ => panic!("Incomplete pattern matching")
                 };
-            let x2·: &[u8] = c·.cbor_string_ptr;
             let length: usize = x2·.len();
             let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
             let res0: usize =
@@ -781,13 +808,14 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                 }
                 else
                 {
-                    let xs: cbor_serialized =
-                        match x·
+                    let _letpattern: cbor_raw = x·;
+                    let x2·: &[u8] =
+                        match _letpattern
                         {
-                            cbor_raw::CBOR_Case_Serialized_Array { v: v1 } => v1,
+                            cbor_raw::CBOR_Case_Serialized_Array { v: xs } =>
+                              xs.cbor_serialized_payload,
                             _ => panic!("Incomplete pattern matching")
                         };
-                    let x2·: &[u8] = xs.cbor_serialized_payload;
                     let length: usize = x2·.len();
                     let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
                     let res0: usize =
@@ -859,13 +887,14 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                     }
                     else
                     {
-                        let xs: cbor_serialized =
-                            match x·
+                        let _letpattern: cbor_raw = x·;
+                        let x2·: &[u8] =
+                            match _letpattern
                             {
-                                cbor_raw::CBOR_Case_Serialized_Map { v: v1 } => v1,
+                                cbor_raw::CBOR_Case_Serialized_Map { v: xs } =>
+                                  xs.cbor_serialized_payload,
                                 _ => panic!("Incomplete pattern matching")
                             };
-                        let x2·: &[u8] = xs.cbor_serialized_payload;
                         let length: usize = x2·.len();
                         let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
                         let res0: usize =
@@ -891,13 +920,14 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                         let res0: usize =
                             if match x· { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
                             {
-                                let tg: cbor_tagged =
-                                    match x·
+                                let _letpattern: cbor_raw = x·;
+                                let x2·: cbor_raw =
+                                    match _letpattern
                                     {
-                                        cbor_raw::CBOR_Case_Tagged { v: v1 } => v1,
+                                        cbor_raw::CBOR_Case_Tagged { v: tg } =>
+                                          tg.cbor_tagged_ptr[0],
                                         _ => panic!("Incomplete pattern matching")
                                     };
-                                let x2·: cbor_raw = tg.cbor_tagged_ptr[0];
                                 let res0: usize = ser·(x2·, out, res1);
                                 let res2: usize = res0;
                                 let res3: usize = res2;
@@ -905,13 +935,14 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                             }
                             else
                             {
-                                let ser: cbor_serialized =
-                                    match x·
+                                let _letpattern: cbor_raw = x·;
+                                let x2·: &[u8] =
+                                    match _letpattern
                                     {
-                                        cbor_raw::CBOR_Case_Serialized_Tagged { v: v1 } => v1,
+                                        cbor_raw::CBOR_Case_Serialized_Tagged { v: ser } =>
+                                          ser.cbor_serialized_payload,
                                         _ => panic!("Incomplete pattern matching")
                                     };
-                                let x2·: &[u8] = ser.cbor_serialized_payload;
                                 let length: usize = x2·.len();
                                 let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
                                 let res0: usize =
@@ -968,13 +999,13 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                 ||
                 b.major_type == cbor_major_type_text_string
                 {
-                    let c·: cbor_string =
-                        match x·
+                    let _letpattern: cbor_raw = x·;
+                    let x2·: &[u8] =
+                        match _letpattern
                         {
-                            cbor_raw::CBOR_Case_String { v: v1 } => v1,
+                            cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
                             _ => panic!("Incomplete pattern matching")
                         };
-                    let x2·: &[u8] = c·.cbor_string_ptr;
                     let length: usize = x2·.len();
                     let cur: usize = out[0];
                     let res0: bool =
@@ -1045,13 +1076,14 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                         }
                         else
                         {
-                            let xs: cbor_serialized =
-                                match x·
+                            let _letpattern: cbor_raw = x·;
+                            let x2·: &[u8] =
+                                match _letpattern
                                 {
-                                    cbor_raw::CBOR_Case_Serialized_Array { v: v1 } => v1,
+                                    cbor_raw::CBOR_Case_Serialized_Array { v: xs } =>
+                                      xs.cbor_serialized_payload,
                                     _ => panic!("Incomplete pattern matching")
                                 };
-                            let x2·: &[u8] = xs.cbor_serialized_payload;
                             let length: usize = x2·.len();
                             let cur: usize = out[0];
                             let res0: bool =
@@ -1134,13 +1166,14 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                             }
                             else
                             {
-                                let xs: cbor_serialized =
-                                    match x·
+                                let _letpattern: cbor_raw = x·;
+                                let x2·: &[u8] =
+                                    match _letpattern
                                     {
-                                        cbor_raw::CBOR_Case_Serialized_Map { v: v1 } => v1,
+                                        cbor_raw::CBOR_Case_Serialized_Map { v: xs } =>
+                                          xs.cbor_serialized_payload,
                                         _ => panic!("Incomplete pattern matching")
                                     };
-                                let x2·: &[u8] = xs.cbor_serialized_payload;
                                 let length: usize = x2·.len();
                                 let cur: usize = out[0];
                                 let res0: bool =
@@ -1166,13 +1199,14 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                                     match x·
                                     { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false }
                                     {
-                                        let tg: cbor_tagged =
-                                            match x·
+                                        let _letpattern: cbor_raw = x·;
+                                        let x2·: cbor_raw =
+                                            match _letpattern
                                             {
-                                                cbor_raw::CBOR_Case_Tagged { v: v1 } => v1,
+                                                cbor_raw::CBOR_Case_Tagged { v: tg } =>
+                                                  tg.cbor_tagged_ptr[0],
                                                 _ => panic!("Incomplete pattern matching")
                                             };
-                                        let x2·: cbor_raw = tg.cbor_tagged_ptr[0];
                                         let res0: bool = siz·(x2·, out);
                                         let res2: bool = res0;
                                         let res3: bool = res2;
@@ -1180,14 +1214,14 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                                     }
                                     else
                                     {
-                                        let ser1: cbor_serialized =
-                                            match x·
+                                        let _letpattern: cbor_raw = x·;
+                                        let x2·: &[u8] =
+                                            match _letpattern
                                             {
-                                                cbor_raw::CBOR_Case_Serialized_Tagged { v: v1 } =>
-                                                  v1,
+                                                cbor_raw::CBOR_Case_Serialized_Tagged { v: ser1 } =>
+                                                  ser1.cbor_serialized_payload,
                                                 _ => panic!("Incomplete pattern matching")
                                             };
-                                        let x2·: &[u8] = ser1.cbor_serialized_payload;
                                         let length: usize = x2·.len();
                                         let cur: usize = out[0];
                                         let res0: bool =
@@ -2373,23 +2407,15 @@ fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
 
 fn cbor_match_tagged_get_payload <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
 {
-    if match c { cbor_raw::CBOR_Case_Serialized_Tagged { .. } => true, _ => false }
+    match c
     {
-        let cs: cbor_serialized =
-            match c
-            {
-                cbor_raw::CBOR_Case_Serialized_Tagged { v } => v,
-                _ => panic!("Incomplete pattern matching")
-            };
-        let res: cbor_raw = cbor_match_serialized_tagged_get_payload(cs);
-        res
-    }
-    else
-    {
-        let ct: cbor_tagged =
-            match c
-            { cbor_raw::CBOR_Case_Tagged { v } => v, _ => panic!("Incomplete pattern matching") };
-        ct.cbor_tagged_ptr[0]
+        cbor_raw::CBOR_Case_Serialized_Tagged { v: cs } =>
+          {
+              let res: cbor_raw = cbor_match_serialized_tagged_get_payload(cs);
+              res
+          },
+        cbor_raw::CBOR_Case_Tagged { v: ct } => ct.cbor_tagged_ptr[0],
+        _ => panic!("Incomplete pattern matching")
     }
 }
 
@@ -2581,23 +2607,21 @@ fn impl_major_type <'a>(x: cbor_raw <'a>) -> u8
         cbor_raw::CBOR_Case_Simple { .. } => cbor_major_type_simple_value,
         cbor_raw::CBOR_Case_Int { .. } =>
           {
-              let c·: cbor_int =
-                  match x
-                  {
-                      cbor_raw::CBOR_Case_Int { v: v1 } => v1,
-                      _ => panic!("Incomplete pattern matching")
-                  };
-              c·.cbor_int_type
+              let _letpattern: cbor_raw = x;
+              match _letpattern
+              {
+                  cbor_raw::CBOR_Case_Int { v: c· } => c·.cbor_int_type,
+                  _ => panic!("Incomplete pattern matching")
+              }
           },
         cbor_raw::CBOR_Case_String { .. } =>
           {
-              let c·: cbor_string =
-                  match x
-                  {
-                      cbor_raw::CBOR_Case_String { v: v1 } => v1,
-                      _ => panic!("Incomplete pattern matching")
-                  };
-              c·.cbor_string_type
+              let _letpattern: cbor_raw = x;
+              match _letpattern
+              {
+                  cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_type,
+                  _ => panic!("Incomplete pattern matching")
+              }
           },
         cbor_raw::CBOR_Case_Tagged { .. } => cbor_major_type_tagged,
         cbor_raw::CBOR_Case_Serialized_Tagged { .. } => cbor_major_type_tagged,
@@ -2627,56 +2651,77 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
     {
         if ty1 == cbor_major_type_uint64 || ty1 == cbor_major_type_neg_int64
         {
-            let c·: cbor_int =
-                match x1
-                { cbor_raw::CBOR_Case_Int { v } => v, _ => panic!("Incomplete pattern matching") };
-            let i1: raw_uint64 = raw_uint64 { size: c·.cbor_int_size, value: c·.cbor_int_value };
-            let c·0: cbor_int =
-                match x2
-                { cbor_raw::CBOR_Case_Int { v } => v, _ => panic!("Incomplete pattern matching") };
+            let _letpattern: cbor_raw = x1;
+            let i1: raw_uint64 =
+                match _letpattern
+                {
+                    cbor_raw::CBOR_Case_Int { v: c· } =>
+                      raw_uint64 { size: c·.cbor_int_size, value: c·.cbor_int_value },
+                    _ => panic!("Incomplete pattern matching")
+                };
+            let _letpattern0: cbor_raw = x2;
             let i2: raw_uint64 =
-                raw_uint64 { size: c·0.cbor_int_size, value: c·0.cbor_int_value };
+                match _letpattern0
+                {
+                    cbor_raw::CBOR_Case_Int { v: c· } =>
+                      raw_uint64 { size: c·.cbor_int_size, value: c·.cbor_int_value },
+                    _ => panic!("Incomplete pattern matching")
+                };
             impl_raw_uint64_compare(i1, i2)
         }
         else if ty1 == cbor_major_type_byte_string || ty1 == cbor_major_type_text_string
         {
-            let c·: cbor_string =
-                match x1
+            let _letpattern: cbor_raw = x1;
+            let i1: raw_uint64 =
+                match _letpattern
                 {
-                    cbor_raw::CBOR_Case_String { v } => v,
+                    cbor_raw::CBOR_Case_String { v: c· } =>
+                      {
+                          let res: raw_uint64 =
+                              raw_uint64
+                              {
+                                  size: c·.cbor_string_size,
+                                  value: c·.cbor_string_ptr.len() as u64
+                              };
+                          res
+                      },
                     _ => panic!("Incomplete pattern matching")
                 };
-            let res: raw_uint64 =
-                raw_uint64 { size: c·.cbor_string_size, value: c·.cbor_string_ptr.len() as u64 };
-            let i1: raw_uint64 = res;
-            let c·0: cbor_string =
-                match x2
+            let _letpattern0: cbor_raw = x2;
+            let i2: raw_uint64 =
+                match _letpattern0
                 {
-                    cbor_raw::CBOR_Case_String { v } => v,
+                    cbor_raw::CBOR_Case_String { v: c· } =>
+                      {
+                          let res: raw_uint64 =
+                              raw_uint64
+                              {
+                                  size: c·.cbor_string_size,
+                                  value: c·.cbor_string_ptr.len() as u64
+                              };
+                          res
+                      },
                     _ => panic!("Incomplete pattern matching")
                 };
-            let res0: raw_uint64 =
-                raw_uint64 { size: c·0.cbor_string_size, value: c·0.cbor_string_ptr.len() as u64 };
-            let i2: raw_uint64 = res0;
             let c1: i16 = impl_raw_uint64_compare(i1, i2);
             if c1 == 0i16
             {
-                let c·1: cbor_string =
-                    match x1
+                let _letpattern1: cbor_raw = x1;
+                let pl1: &[u8] =
+                    match _letpattern1
                     {
-                        cbor_raw::CBOR_Case_String { v } => v,
+                        cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
                         _ => panic!("Incomplete pattern matching")
                     };
-                let pl1: &[u8] = c·1.cbor_string_ptr;
-                let c·2: cbor_string =
-                    match x2
+                let _letpattern2: cbor_raw = x2;
+                let pl2: &[u8] =
+                    match _letpattern2
                     {
-                        cbor_raw::CBOR_Case_String { v } => v,
+                        cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
                         _ => panic!("Incomplete pattern matching")
                     };
-                let pl2: &[u8] = c·2.cbor_string_ptr;
-                let res1: i16 = lex_compare_bytes(pl1, pl2);
-                res1
+                let res: i16 = lex_compare_bytes(pl1, pl2);
+                res
             }
             else
             { c1 }
@@ -3187,16 +3232,18 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
         }
         else
         {
+            let _letpattern: cbor_raw = x1;
             let val1: u8 =
-                match x1
+                match _letpattern
                 {
-                    cbor_raw::CBOR_Case_Simple { v } => v,
+                    cbor_raw::CBOR_Case_Simple { v: res } => res,
                     _ => panic!("Incomplete pattern matching")
                 };
+            let _letpattern0: cbor_raw = x2;
             let val2: u8 =
-                match x2
+                match _letpattern0
                 {
-                    cbor_raw::CBOR_Case_Simple { v } => v,
+                    cbor_raw::CBOR_Case_Simple { v: res } => res,
                     _ => panic!("Incomplete pattern matching")
                 };
             impl_uint8_compare(val1, val2)
@@ -3788,33 +3835,6 @@ pub const min_simple_value_long_argument: u8 = 32u8;
 
 pub const max_simple_value_additional_info: u8 = 23u8;
 
-pub fn uu___is_CBOR_Case_Int <'a>(projectee: cbor_raw <'a>) -> bool
-{ match projectee { cbor_raw::CBOR_Case_Int { .. } => true, _ => false } }
-
-pub fn uu___is_CBOR_Case_Simple <'a>(projectee: cbor_raw <'a>) -> bool
-{ match projectee { cbor_raw::CBOR_Case_Simple { .. } => true, _ => false } }
-
-pub fn uu___is_CBOR_Case_String <'a>(projectee: cbor_raw <'a>) -> bool
-{ match projectee { cbor_raw::CBOR_Case_String { .. } => true, _ => false } }
-
-pub fn uu___is_CBOR_Case_Tagged <'a>(projectee: cbor_raw <'a>) -> bool
-{ match projectee { cbor_raw::CBOR_Case_Tagged { .. } => true, _ => false } }
-
-pub fn uu___is_CBOR_Case_Array <'a>(projectee: cbor_raw <'a>) -> bool
-{ match projectee { cbor_raw::CBOR_Case_Array { .. } => true, _ => false } }
-
-pub fn uu___is_CBOR_Case_Map <'a>(projectee: cbor_raw <'a>) -> bool
-{ match projectee { cbor_raw::CBOR_Case_Map { .. } => true, _ => false } }
-
-pub fn uu___is_CBOR_Case_Serialized_Tagged <'a>(projectee: cbor_raw <'a>) -> bool
-{ match projectee { cbor_raw::CBOR_Case_Serialized_Tagged { .. } => true, _ => false } }
-
-pub fn uu___is_CBOR_Case_Serialized_Array <'a>(projectee: cbor_raw <'a>) -> bool
-{ match projectee { cbor_raw::CBOR_Case_Serialized_Array { .. } => true, _ => false } }
-
-pub fn uu___is_CBOR_Case_Serialized_Map <'a>(projectee: cbor_raw <'a>) -> bool
-{ match projectee { cbor_raw::CBOR_Case_Serialized_Map { .. } => true, _ => false } }
-
 pub type cbor_array_iterator <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>;
 
 pub type cbor_map_iterator <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>;
@@ -4106,25 +4126,32 @@ pub fn cbor_det_major_type <'a>(x: cbor_raw <'a>) -> u8
 
 pub fn cbor_det_read_simple_value <'a>(x: cbor_raw <'a>) -> u8
 {
-    match x
-    { cbor_raw::CBOR_Case_Simple { v: v1 } => v1, _ => panic!("Incomplete pattern matching") }
+    let _letpattern: cbor_raw = x;
+    match _letpattern
+    { cbor_raw::CBOR_Case_Simple { v: res } => res, _ => panic!("Incomplete pattern matching") }
 }
 
 pub fn cbor_det_read_uint64 <'a>(x: cbor_raw <'a>) -> u64
 {
-    let c·: cbor_int =
-        match x
-        { cbor_raw::CBOR_Case_Int { v: v1 } => v1, _ => panic!("Incomplete pattern matching") };
-    let res: raw_uint64 = raw_uint64 { size: c·.cbor_int_size, value: c·.cbor_int_value };
+    let _letpattern: cbor_raw = x;
+    let res: raw_uint64 =
+        match _letpattern
+        {
+            cbor_raw::CBOR_Case_Int { v: c· } =>
+              raw_uint64 { size: c·.cbor_int_size, value: c·.cbor_int_value },
+            _ => panic!("Incomplete pattern matching")
+        };
     res.value
 }
 
 pub fn cbor_det_get_string <'a>(x: cbor_raw <'a>) -> &'a [u8]
 {
-    let c·: cbor_string =
-        match x
-        { cbor_raw::CBOR_Case_String { v: v1 } => v1, _ => panic!("Incomplete pattern matching") };
-    c·.cbor_string_ptr
+    let _letpattern: cbor_raw = x;
+    match _letpattern
+    {
+        cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
+        _ => panic!("Incomplete pattern matching")
+    }
 }
 
 pub fn cbor_det_get_tagged_tag <'a>(x: cbor_raw <'a>) -> u64

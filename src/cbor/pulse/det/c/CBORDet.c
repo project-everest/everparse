@@ -596,175 +596,211 @@ len__CBOR_Pulse_Raw_Type_cbor_map_entry(
 
 static header cbor_raw_get_header(cbor_raw xl)
 {
-  bool ite0;
   if (xl.tag == CBOR_Case_Int)
-    ite0 = true;
-  else
-    ite0 = false;
-  if (ite0)
   {
-    cbor_int c_;
-    if (xl.tag == CBOR_Case_Int)
-      c_ = xl.case_CBOR_Case_Int;
+    cbor_raw _letpattern0 = xl;
+    uint8_t ty;
+    if (_letpattern0.tag == CBOR_Case_Int)
+    {
+      cbor_int c_ = _letpattern0.case_CBOR_Case_Int;
+      ty = c_.cbor_int_type;
+    }
     else
-      c_ = KRML_EABORT(cbor_int, "unreachable (pattern matches are exhaustive in F*)");
-    uint8_t ty = c_.cbor_int_type;
-    cbor_int c_0;
-    if (xl.tag == CBOR_Case_Int)
-      c_0 = xl.case_CBOR_Case_Int;
+      ty = KRML_EABORT(uint8_t, "unreachable (pattern matches are exhaustive in F*)");
+    cbor_raw _letpattern = xl;
+    CBOR_Spec_Raw_Base_raw_uint64 v;
+    if (_letpattern.tag == CBOR_Case_Int)
+    {
+      cbor_int c_ = _letpattern.case_CBOR_Case_Int;
+      v = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = c_.cbor_int_size, .value = c_.cbor_int_value });
+    }
     else
-      c_0 = KRML_EABORT(cbor_int, "unreachable (pattern matches are exhaustive in F*)");
-    CBOR_Spec_Raw_Base_raw_uint64 v = { .size = c_0.cbor_int_size, .value = c_0.cbor_int_value };
+      v =
+        KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+          "unreachable (pattern matches are exhaustive in F*)");
     return raw_uint64_as_argument(ty, v);
+  }
+  else if (xl.tag == CBOR_Case_String)
+  {
+    cbor_raw _letpattern0 = xl;
+    uint8_t ty;
+    if (_letpattern0.tag == CBOR_Case_String)
+    {
+      cbor_string c_ = _letpattern0.case_CBOR_Case_String;
+      ty = c_.cbor_string_type;
+    }
+    else
+      ty = KRML_EABORT(uint8_t, "unreachable (pattern matches are exhaustive in F*)");
+    cbor_raw _letpattern = xl;
+    CBOR_Spec_Raw_Base_raw_uint64 len;
+    if (_letpattern.tag == CBOR_Case_String)
+    {
+      cbor_string c_ = _letpattern.case_CBOR_Case_String;
+      CBOR_Spec_Raw_Base_raw_uint64
+      res = { .size = c_.cbor_string_size, .value = (uint64_t)len__uint8_t(c_.cbor_string_ptr) };
+      len = res;
+    }
+    else
+      len =
+        KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+          "unreachable (pattern matches are exhaustive in F*)");
+    return raw_uint64_as_argument(ty, len);
+  }
+  else if (xl.tag == CBOR_Case_Tagged)
+  {
+    CBOR_Spec_Raw_Base_raw_uint64 tag;
+    if (xl.tag == CBOR_Case_Tagged)
+    {
+      cbor_tagged c_ = xl.case_CBOR_Case_Tagged;
+      tag = c_.cbor_tagged_tag;
+    }
+    else if (xl.tag == CBOR_Case_Serialized_Tagged)
+    {
+      cbor_serialized c_ = xl.case_CBOR_Case_Serialized_Tagged;
+      tag = c_.cbor_serialized_header;
+    }
+    else
+      tag =
+        KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+          "unreachable (pattern matches are exhaustive in F*)");
+    return raw_uint64_as_argument(CBOR_MAJOR_TYPE_TAGGED, tag);
+  }
+  else if (xl.tag == CBOR_Case_Serialized_Tagged)
+  {
+    CBOR_Spec_Raw_Base_raw_uint64 tag;
+    if (xl.tag == CBOR_Case_Tagged)
+    {
+      cbor_tagged c_ = xl.case_CBOR_Case_Tagged;
+      tag = c_.cbor_tagged_tag;
+    }
+    else if (xl.tag == CBOR_Case_Serialized_Tagged)
+    {
+      cbor_serialized c_ = xl.case_CBOR_Case_Serialized_Tagged;
+      tag = c_.cbor_serialized_header;
+    }
+    else
+      tag =
+        KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+          "unreachable (pattern matches are exhaustive in F*)");
+    return raw_uint64_as_argument(CBOR_MAJOR_TYPE_TAGGED, tag);
+  }
+  else if (xl.tag == CBOR_Case_Array)
+  {
+    CBOR_Spec_Raw_Base_raw_uint64 len;
+    if (xl.tag == CBOR_Case_Array)
+    {
+      cbor_array c_ = xl.case_CBOR_Case_Array;
+      len =
+        (
+          (CBOR_Spec_Raw_Base_raw_uint64){
+            .size = c_.cbor_array_length_size,
+            .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_raw(c_.cbor_array_ptr)
+          }
+        );
+    }
+    else if (xl.tag == CBOR_Case_Serialized_Array)
+    {
+      cbor_serialized c_ = xl.case_CBOR_Case_Serialized_Array;
+      len = c_.cbor_serialized_header;
+    }
+    else
+      len =
+        KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+          "unreachable (pattern matches are exhaustive in F*)");
+    return raw_uint64_as_argument(CBOR_MAJOR_TYPE_ARRAY, len);
+  }
+  else if (xl.tag == CBOR_Case_Serialized_Array)
+  {
+    CBOR_Spec_Raw_Base_raw_uint64 len;
+    if (xl.tag == CBOR_Case_Array)
+    {
+      cbor_array c_ = xl.case_CBOR_Case_Array;
+      len =
+        (
+          (CBOR_Spec_Raw_Base_raw_uint64){
+            .size = c_.cbor_array_length_size,
+            .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_raw(c_.cbor_array_ptr)
+          }
+        );
+    }
+    else if (xl.tag == CBOR_Case_Serialized_Array)
+    {
+      cbor_serialized c_ = xl.case_CBOR_Case_Serialized_Array;
+      len = c_.cbor_serialized_header;
+    }
+    else
+      len =
+        KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+          "unreachable (pattern matches are exhaustive in F*)");
+    return raw_uint64_as_argument(CBOR_MAJOR_TYPE_ARRAY, len);
+  }
+  else if (xl.tag == CBOR_Case_Map)
+  {
+    CBOR_Spec_Raw_Base_raw_uint64 len;
+    if (xl.tag == CBOR_Case_Map)
+    {
+      cbor_map c_ = xl.case_CBOR_Case_Map;
+      len =
+        (
+          (CBOR_Spec_Raw_Base_raw_uint64){
+            .size = c_.cbor_map_length_size,
+            .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(c_.cbor_map_ptr)
+          }
+        );
+    }
+    else if (xl.tag == CBOR_Case_Serialized_Map)
+    {
+      cbor_serialized c_ = xl.case_CBOR_Case_Serialized_Map;
+      len = c_.cbor_serialized_header;
+    }
+    else
+      len =
+        KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+          "unreachable (pattern matches are exhaustive in F*)");
+    return raw_uint64_as_argument(CBOR_MAJOR_TYPE_MAP, len);
+  }
+  else if (xl.tag == CBOR_Case_Serialized_Map)
+  {
+    CBOR_Spec_Raw_Base_raw_uint64 len;
+    if (xl.tag == CBOR_Case_Map)
+    {
+      cbor_map c_ = xl.case_CBOR_Case_Map;
+      len =
+        (
+          (CBOR_Spec_Raw_Base_raw_uint64){
+            .size = c_.cbor_map_length_size,
+            .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(c_.cbor_map_ptr)
+          }
+        );
+    }
+    else if (xl.tag == CBOR_Case_Serialized_Map)
+    {
+      cbor_serialized c_ = xl.case_CBOR_Case_Serialized_Map;
+      len = c_.cbor_serialized_header;
+    }
+    else
+      len =
+        KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+          "unreachable (pattern matches are exhaustive in F*)");
+    return raw_uint64_as_argument(CBOR_MAJOR_TYPE_MAP, len);
+  }
+  else if (xl.tag == CBOR_Case_Simple)
+  {
+    cbor_raw _letpattern = xl;
+    uint8_t v;
+    if (_letpattern.tag == CBOR_Case_Simple)
+      v = _letpattern.case_CBOR_Case_Simple;
+    else
+      v = KRML_EABORT(uint8_t, "unreachable (pattern matches are exhaustive in F*)");
+    return simple_value_as_argument(v);
   }
   else
   {
-    bool ite0;
-    if (xl.tag == CBOR_Case_String)
-      ite0 = true;
-    else
-      ite0 = false;
-    if (ite0)
-    {
-      cbor_string c_;
-      if (xl.tag == CBOR_Case_String)
-        c_ = xl.case_CBOR_Case_String;
-      else
-        c_ = KRML_EABORT(cbor_string, "unreachable (pattern matches are exhaustive in F*)");
-      uint8_t ty = c_.cbor_string_type;
-      cbor_string c_0;
-      if (xl.tag == CBOR_Case_String)
-        c_0 = xl.case_CBOR_Case_String;
-      else
-        c_0 = KRML_EABORT(cbor_string, "unreachable (pattern matches are exhaustive in F*)");
-      CBOR_Spec_Raw_Base_raw_uint64
-      res = { .size = c_0.cbor_string_size, .value = (uint64_t)len__uint8_t(c_0.cbor_string_ptr) };
-      CBOR_Spec_Raw_Base_raw_uint64 len = res;
-      return raw_uint64_as_argument(ty, len);
-    }
-    else
-    {
-      bool a;
-      if (xl.tag == CBOR_Case_Tagged)
-        a = true;
-      else
-        a = false;
-      bool ite0;
-      if (a)
-        ite0 = true;
-      else if (xl.tag == CBOR_Case_Serialized_Tagged)
-        ite0 = true;
-      else
-        ite0 = false;
-      if (ite0)
-      {
-        CBOR_Spec_Raw_Base_raw_uint64 tag;
-        if (xl.tag == CBOR_Case_Tagged)
-        {
-          cbor_tagged c_ = xl.case_CBOR_Case_Tagged;
-          tag = c_.cbor_tagged_tag;
-        }
-        else if (xl.tag == CBOR_Case_Serialized_Tagged)
-        {
-          cbor_serialized c_ = xl.case_CBOR_Case_Serialized_Tagged;
-          tag = c_.cbor_serialized_header;
-        }
-        else
-          tag =
-            KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
-              "unreachable (pattern matches are exhaustive in F*)");
-        return raw_uint64_as_argument(CBOR_MAJOR_TYPE_TAGGED, tag);
-      }
-      else
-      {
-        bool a;
-        if (xl.tag == CBOR_Case_Array)
-          a = true;
-        else
-          a = false;
-        bool ite0;
-        if (a)
-          ite0 = true;
-        else if (xl.tag == CBOR_Case_Serialized_Array)
-          ite0 = true;
-        else
-          ite0 = false;
-        if (ite0)
-        {
-          CBOR_Spec_Raw_Base_raw_uint64 len;
-          if (xl.tag == CBOR_Case_Array)
-          {
-            cbor_array c_ = xl.case_CBOR_Case_Array;
-            len =
-              (
-                (CBOR_Spec_Raw_Base_raw_uint64){
-                  .size = c_.cbor_array_length_size,
-                  .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_raw(c_.cbor_array_ptr)
-                }
-              );
-          }
-          else if (xl.tag == CBOR_Case_Serialized_Array)
-          {
-            cbor_serialized c_ = xl.case_CBOR_Case_Serialized_Array;
-            len = c_.cbor_serialized_header;
-          }
-          else
-            len =
-              KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
-                "unreachable (pattern matches are exhaustive in F*)");
-          return raw_uint64_as_argument(CBOR_MAJOR_TYPE_ARRAY, len);
-        }
-        else
-        {
-          bool a;
-          if (xl.tag == CBOR_Case_Map)
-            a = true;
-          else
-            a = false;
-          bool ite;
-          if (a)
-            ite = true;
-          else if (xl.tag == CBOR_Case_Serialized_Map)
-            ite = true;
-          else
-            ite = false;
-          if (ite)
-          {
-            CBOR_Spec_Raw_Base_raw_uint64 len;
-            if (xl.tag == CBOR_Case_Map)
-            {
-              cbor_map c_ = xl.case_CBOR_Case_Map;
-              len =
-                (
-                  (CBOR_Spec_Raw_Base_raw_uint64){
-                    .size = c_.cbor_map_length_size,
-                    .value = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_map_entry(c_.cbor_map_ptr)
-                  }
-                );
-            }
-            else if (xl.tag == CBOR_Case_Serialized_Map)
-            {
-              cbor_serialized c_ = xl.case_CBOR_Case_Serialized_Map;
-              len = c_.cbor_serialized_header;
-            }
-            else
-              len =
-                KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
-                  "unreachable (pattern matches are exhaustive in F*)");
-            return raw_uint64_as_argument(CBOR_MAJOR_TYPE_MAP, len);
-          }
-          else
-          {
-            uint8_t v;
-            if (xl.tag == CBOR_Case_Simple)
-              v = xl.case_CBOR_Case_Simple;
-            else
-              v = KRML_EABORT(uint8_t, "unreachable (pattern matches are exhaustive in F*)");
-            return simple_value_as_argument(v);
-          }
-        }
-      }
-    }
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
   }
 }
 
@@ -848,13 +884,17 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
   if
   (b0.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b0.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
   {
-    cbor_raw scrut = x_;
-    cbor_string c_;
-    if (scrut.tag == CBOR_Case_String)
-      c_ = scrut.case_CBOR_Case_String;
+    cbor_raw _letpattern = x_;
+    Pulse_Lib_Slice_slice__uint8_t s;
+    if (_letpattern.tag == CBOR_Case_String)
+    {
+      cbor_string c_ = _letpattern.case_CBOR_Case_String;
+      s = c_.cbor_string_ptr;
+    }
     else
-      c_ = KRML_EABORT(cbor_string, "unreachable (pattern matches are exhaustive in F*)");
-    Pulse_Lib_Slice_slice__uint8_t s = c_.cbor_string_ptr;
+      s =
+        KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
+          "unreachable (pattern matches are exhaustive in F*)");
     Pulse_Lib_Slice_slice__uint8_t x2_ = s;
     size_t length = len__uint8_t(x2_);
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t sp1 = split__uint8_t(out, res1);
@@ -934,13 +974,17 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
       }
       else
       {
-        cbor_raw scrut = x_;
-        cbor_serialized xs;
-        if (scrut.tag == CBOR_Case_Serialized_Array)
-          xs = scrut.case_CBOR_Case_Serialized_Array;
+        cbor_raw _letpattern = x_;
+        Pulse_Lib_Slice_slice__uint8_t x2_;
+        if (_letpattern.tag == CBOR_Case_Serialized_Array)
+        {
+          cbor_serialized xs = _letpattern.case_CBOR_Case_Serialized_Array;
+          x2_ = xs.cbor_serialized_payload;
+        }
         else
-          xs = KRML_EABORT(cbor_serialized, "unreachable (pattern matches are exhaustive in F*)");
-        Pulse_Lib_Slice_slice__uint8_t x2_ = xs.cbor_serialized_payload;
+          x2_ =
+            KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
+              "unreachable (pattern matches are exhaustive in F*)");
         size_t length = len__uint8_t(x2_);
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
         sp1 = split__uint8_t(out, res1);
@@ -1025,13 +1069,17 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
         }
         else
         {
-          cbor_raw scrut = x_;
-          cbor_serialized xs;
-          if (scrut.tag == CBOR_Case_Serialized_Map)
-            xs = scrut.case_CBOR_Case_Serialized_Map;
+          cbor_raw _letpattern = x_;
+          Pulse_Lib_Slice_slice__uint8_t x2_;
+          if (_letpattern.tag == CBOR_Case_Serialized_Map)
+          {
+            cbor_serialized xs = _letpattern.case_CBOR_Case_Serialized_Map;
+            x2_ = xs.cbor_serialized_payload;
+          }
           else
-            xs = KRML_EABORT(cbor_serialized, "unreachable (pattern matches are exhaustive in F*)");
-          Pulse_Lib_Slice_slice__uint8_t x2_ = xs.cbor_serialized_payload;
+            x2_ =
+              KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
+                "unreachable (pattern matches are exhaustive in F*)");
           size_t length = len__uint8_t(x2_);
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
           sp1 = split__uint8_t(out, res1);
@@ -1059,13 +1107,15 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
           size_t res;
           if (ite)
           {
-            cbor_raw scrut = x_;
-            cbor_tagged tg;
-            if (scrut.tag == CBOR_Case_Tagged)
-              tg = scrut.case_CBOR_Case_Tagged;
+            cbor_raw _letpattern = x_;
+            cbor_raw x2_;
+            if (_letpattern.tag == CBOR_Case_Tagged)
+            {
+              cbor_tagged tg = _letpattern.case_CBOR_Case_Tagged;
+              x2_ = *tg.cbor_tagged_ptr;
+            }
             else
-              tg = KRML_EABORT(cbor_tagged, "unreachable (pattern matches are exhaustive in F*)");
-            cbor_raw x2_ = *tg.cbor_tagged_ptr;
+              x2_ = KRML_EABORT(cbor_raw, "unreachable (pattern matches are exhaustive in F*)");
             size_t res0 = CBOR_Pulse_Raw_Format_Serialize_ser_(x2_, out, res1);
             size_t res1 = res0;
             size_t res2 = res1;
@@ -1073,15 +1123,17 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
           }
           else
           {
-            cbor_raw scrut = x_;
-            cbor_serialized ser;
-            if (scrut.tag == CBOR_Case_Serialized_Tagged)
-              ser = scrut.case_CBOR_Case_Serialized_Tagged;
+            cbor_raw _letpattern = x_;
+            Pulse_Lib_Slice_slice__uint8_t x2_;
+            if (_letpattern.tag == CBOR_Case_Serialized_Tagged)
+            {
+              cbor_serialized ser = _letpattern.case_CBOR_Case_Serialized_Tagged;
+              x2_ = ser.cbor_serialized_payload;
+            }
             else
-              ser =
-                KRML_EABORT(cbor_serialized,
+              x2_ =
+                KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
                   "unreachable (pattern matches are exhaustive in F*)");
-            Pulse_Lib_Slice_slice__uint8_t x2_ = ser.cbor_serialized_payload;
             size_t length = len__uint8_t(x2_);
             __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
             sp1 = split__uint8_t(out, res1);
@@ -1133,13 +1185,17 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
     if
     (b0.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b0.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
     {
-      cbor_raw scrut = x_;
-      cbor_string c_;
-      if (scrut.tag == CBOR_Case_String)
-        c_ = scrut.case_CBOR_Case_String;
+      cbor_raw _letpattern = x_;
+      Pulse_Lib_Slice_slice__uint8_t s;
+      if (_letpattern.tag == CBOR_Case_String)
+      {
+        cbor_string c_ = _letpattern.case_CBOR_Case_String;
+        s = c_.cbor_string_ptr;
+      }
       else
-        c_ = KRML_EABORT(cbor_string, "unreachable (pattern matches are exhaustive in F*)");
-      Pulse_Lib_Slice_slice__uint8_t s = c_.cbor_string_ptr;
+        s =
+          KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
+            "unreachable (pattern matches are exhaustive in F*)");
       Pulse_Lib_Slice_slice__uint8_t x2_ = s;
       size_t length = len__uint8_t(x2_);
       size_t cur = *out;
@@ -1226,13 +1282,17 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
         }
         else
         {
-          cbor_raw scrut = x_;
-          cbor_serialized xs;
-          if (scrut.tag == CBOR_Case_Serialized_Array)
-            xs = scrut.case_CBOR_Case_Serialized_Array;
+          cbor_raw _letpattern = x_;
+          Pulse_Lib_Slice_slice__uint8_t x2_;
+          if (_letpattern.tag == CBOR_Case_Serialized_Array)
+          {
+            cbor_serialized xs = _letpattern.case_CBOR_Case_Serialized_Array;
+            x2_ = xs.cbor_serialized_payload;
+          }
           else
-            xs = KRML_EABORT(cbor_serialized, "unreachable (pattern matches are exhaustive in F*)");
-          Pulse_Lib_Slice_slice__uint8_t x2_ = xs.cbor_serialized_payload;
+            x2_ =
+              KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
+                "unreachable (pattern matches are exhaustive in F*)");
           size_t length = len__uint8_t(x2_);
           size_t cur = *out;
           bool res;
@@ -1329,15 +1389,17 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
           }
           else
           {
-            cbor_raw scrut = x_;
-            cbor_serialized xs;
-            if (scrut.tag == CBOR_Case_Serialized_Map)
-              xs = scrut.case_CBOR_Case_Serialized_Map;
+            cbor_raw _letpattern = x_;
+            Pulse_Lib_Slice_slice__uint8_t x2_;
+            if (_letpattern.tag == CBOR_Case_Serialized_Map)
+            {
+              cbor_serialized xs = _letpattern.case_CBOR_Case_Serialized_Map;
+              x2_ = xs.cbor_serialized_payload;
+            }
             else
-              xs =
-                KRML_EABORT(cbor_serialized,
+              x2_ =
+                KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
                   "unreachable (pattern matches are exhaustive in F*)");
-            Pulse_Lib_Slice_slice__uint8_t x2_ = xs.cbor_serialized_payload;
             size_t length = len__uint8_t(x2_);
             size_t cur = *out;
             bool res;
@@ -1366,13 +1428,15 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
             bool res0;
             if (ite)
             {
-              cbor_raw scrut = x_;
-              cbor_tagged tg;
-              if (scrut.tag == CBOR_Case_Tagged)
-                tg = scrut.case_CBOR_Case_Tagged;
+              cbor_raw _letpattern = x_;
+              cbor_raw x2_;
+              if (_letpattern.tag == CBOR_Case_Tagged)
+              {
+                cbor_tagged tg = _letpattern.case_CBOR_Case_Tagged;
+                x2_ = *tg.cbor_tagged_ptr;
+              }
               else
-                tg = KRML_EABORT(cbor_tagged, "unreachable (pattern matches are exhaustive in F*)");
-              cbor_raw x2_ = *tg.cbor_tagged_ptr;
+                x2_ = KRML_EABORT(cbor_raw, "unreachable (pattern matches are exhaustive in F*)");
               bool res = CBOR_Pulse_Raw_Format_Serialize_siz_(x2_, out);
               bool res1 = res;
               bool res2 = res1;
@@ -1380,15 +1444,17 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out)
             }
             else
             {
-              cbor_raw scrut = x_;
-              cbor_serialized ser1;
-              if (scrut.tag == CBOR_Case_Serialized_Tagged)
-                ser1 = scrut.case_CBOR_Case_Serialized_Tagged;
+              cbor_raw _letpattern = x_;
+              Pulse_Lib_Slice_slice__uint8_t x2_;
+              if (_letpattern.tag == CBOR_Case_Serialized_Tagged)
+              {
+                cbor_serialized ser1 = _letpattern.case_CBOR_Case_Serialized_Tagged;
+                x2_ = ser1.cbor_serialized_payload;
+              }
               else
-                ser1 =
-                  KRML_EABORT(cbor_serialized,
+                x2_ =
+                  KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
                     "unreachable (pattern matches are exhaustive in F*)");
-              Pulse_Lib_Slice_slice__uint8_t x2_ = ser1.cbor_serialized_payload;
               size_t length = len__uint8_t(x2_);
               size_t cur = *out;
               bool res;
@@ -2497,29 +2563,24 @@ lex_compare_bytes(Pulse_Lib_Slice_slice__uint8_t s1, Pulse_Lib_Slice_slice__uint
 
 static cbor_raw cbor_match_tagged_get_payload(cbor_raw c)
 {
-  bool ite;
   if (c.tag == CBOR_Case_Serialized_Tagged)
-    ite = true;
-  else
-    ite = false;
-  if (ite)
   {
-    cbor_serialized cs;
-    if (c.tag == CBOR_Case_Serialized_Tagged)
-      cs = c.case_CBOR_Case_Serialized_Tagged;
-    else
-      cs = KRML_EABORT(cbor_serialized, "unreachable (pattern matches are exhaustive in F*)");
+    cbor_serialized cs = c.case_CBOR_Case_Serialized_Tagged;
     cbor_raw res = cbor_match_serialized_tagged_get_payload(cs);
     return res;
   }
+  else if (c.tag == CBOR_Case_Tagged)
+  {
+    cbor_tagged ct = c.case_CBOR_Case_Tagged;
+    return *ct.cbor_tagged_ptr;
+  }
   else
   {
-    cbor_tagged ct;
-    if (c.tag == CBOR_Case_Tagged)
-      ct = c.case_CBOR_Case_Tagged;
-    else
-      ct = KRML_EABORT(cbor_tagged, "unreachable (pattern matches are exhaustive in F*)");
-    return *ct.cbor_tagged_ptr;
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
   }
 }
 
@@ -2818,21 +2879,37 @@ static uint8_t impl_major_type(cbor_raw x)
     return CBOR_MAJOR_TYPE_SIMPLE_VALUE;
   else if (x.tag == CBOR_Case_Int)
   {
-    cbor_int c_;
-    if (x.tag == CBOR_Case_Int)
-      c_ = x.case_CBOR_Case_Int;
+    cbor_raw _letpattern = x;
+    if (_letpattern.tag == CBOR_Case_Int)
+    {
+      cbor_int c_ = _letpattern.case_CBOR_Case_Int;
+      return c_.cbor_int_type;
+    }
     else
-      c_ = KRML_EABORT(cbor_int, "unreachable (pattern matches are exhaustive in F*)");
-    return c_.cbor_int_type;
+    {
+      KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+        __FILE__,
+        __LINE__,
+        "unreachable (pattern matches are exhaustive in F*)");
+      KRML_HOST_EXIT(255U);
+    }
   }
   else if (x.tag == CBOR_Case_String)
   {
-    cbor_string c_;
-    if (x.tag == CBOR_Case_String)
-      c_ = x.case_CBOR_Case_String;
+    cbor_raw _letpattern = x;
+    if (_letpattern.tag == CBOR_Case_String)
+    {
+      cbor_string c_ = _letpattern.case_CBOR_Case_String;
+      return c_.cbor_string_type;
+    }
     else
-      c_ = KRML_EABORT(cbor_string, "unreachable (pattern matches are exhaustive in F*)");
-    return c_.cbor_string_type;
+    {
+      KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+        __FILE__,
+        __LINE__,
+        "unreachable (pattern matches are exhaustive in F*)");
+      KRML_HOST_EXIT(255U);
+    }
   }
   else if (x.tag == CBOR_Case_Tagged)
     return CBOR_MAJOR_TYPE_TAGGED;
@@ -2884,53 +2961,85 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
   if (c == (int16_t)0)
     if (ty1 == CBOR_MAJOR_TYPE_UINT64 || ty1 == CBOR_MAJOR_TYPE_NEG_INT64)
     {
-      cbor_int c_;
-      if (x1.tag == CBOR_Case_Int)
-        c_ = x1.case_CBOR_Case_Int;
+      cbor_raw _letpattern0 = x1;
+      CBOR_Spec_Raw_Base_raw_uint64 i1;
+      if (_letpattern0.tag == CBOR_Case_Int)
+      {
+        cbor_int c_ = _letpattern0.case_CBOR_Case_Int;
+        i1 =
+          ((CBOR_Spec_Raw_Base_raw_uint64){ .size = c_.cbor_int_size, .value = c_.cbor_int_value });
+      }
       else
-        c_ = KRML_EABORT(cbor_int, "unreachable (pattern matches are exhaustive in F*)");
-      CBOR_Spec_Raw_Base_raw_uint64 i1 = { .size = c_.cbor_int_size, .value = c_.cbor_int_value };
-      cbor_int c_0;
-      if (x2.tag == CBOR_Case_Int)
-        c_0 = x2.case_CBOR_Case_Int;
+        i1 =
+          KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+            "unreachable (pattern matches are exhaustive in F*)");
+      cbor_raw _letpattern = x2;
+      CBOR_Spec_Raw_Base_raw_uint64 i2;
+      if (_letpattern.tag == CBOR_Case_Int)
+      {
+        cbor_int c_ = _letpattern.case_CBOR_Case_Int;
+        i2 =
+          ((CBOR_Spec_Raw_Base_raw_uint64){ .size = c_.cbor_int_size, .value = c_.cbor_int_value });
+      }
       else
-        c_0 = KRML_EABORT(cbor_int, "unreachable (pattern matches are exhaustive in F*)");
-      CBOR_Spec_Raw_Base_raw_uint64 i2 = { .size = c_0.cbor_int_size, .value = c_0.cbor_int_value };
+        i2 =
+          KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+            "unreachable (pattern matches are exhaustive in F*)");
       return impl_raw_uint64_compare(i1, i2);
     }
     else if (ty1 == CBOR_MAJOR_TYPE_BYTE_STRING || ty1 == CBOR_MAJOR_TYPE_TEXT_STRING)
     {
-      cbor_string c_;
-      if (x1.tag == CBOR_Case_String)
-        c_ = x1.case_CBOR_Case_String;
+      cbor_raw _letpattern0 = x1;
+      CBOR_Spec_Raw_Base_raw_uint64 i1;
+      if (_letpattern0.tag == CBOR_Case_String)
+      {
+        cbor_string c_ = _letpattern0.case_CBOR_Case_String;
+        CBOR_Spec_Raw_Base_raw_uint64
+        res = { .size = c_.cbor_string_size, .value = (uint64_t)len__uint8_t(c_.cbor_string_ptr) };
+        i1 = res;
+      }
       else
-        c_ = KRML_EABORT(cbor_string, "unreachable (pattern matches are exhaustive in F*)");
-      CBOR_Spec_Raw_Base_raw_uint64
-      res = { .size = c_.cbor_string_size, .value = (uint64_t)len__uint8_t(c_.cbor_string_ptr) };
-      CBOR_Spec_Raw_Base_raw_uint64 i1 = res;
-      cbor_string c_0;
-      if (x2.tag == CBOR_Case_String)
-        c_0 = x2.case_CBOR_Case_String;
+        i1 =
+          KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+            "unreachable (pattern matches are exhaustive in F*)");
+      cbor_raw _letpattern1 = x2;
+      CBOR_Spec_Raw_Base_raw_uint64 i2;
+      if (_letpattern1.tag == CBOR_Case_String)
+      {
+        cbor_string c_ = _letpattern1.case_CBOR_Case_String;
+        CBOR_Spec_Raw_Base_raw_uint64
+        res = { .size = c_.cbor_string_size, .value = (uint64_t)len__uint8_t(c_.cbor_string_ptr) };
+        i2 = res;
+      }
       else
-        c_0 = KRML_EABORT(cbor_string, "unreachable (pattern matches are exhaustive in F*)");
-      CBOR_Spec_Raw_Base_raw_uint64
-      res0 = { .size = c_0.cbor_string_size, .value = (uint64_t)len__uint8_t(c_0.cbor_string_ptr) };
-      CBOR_Spec_Raw_Base_raw_uint64 i2 = res0;
+        i2 =
+          KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+            "unreachable (pattern matches are exhaustive in F*)");
       int16_t c1 = impl_raw_uint64_compare(i1, i2);
       if (c1 == (int16_t)0)
       {
-        cbor_string c_;
-        if (x1.tag == CBOR_Case_String)
-          c_ = x1.case_CBOR_Case_String;
+        cbor_raw _letpattern0 = x1;
+        Pulse_Lib_Slice_slice__uint8_t pl1;
+        if (_letpattern0.tag == CBOR_Case_String)
+        {
+          cbor_string c_ = _letpattern0.case_CBOR_Case_String;
+          pl1 = c_.cbor_string_ptr;
+        }
         else
-          c_ = KRML_EABORT(cbor_string, "unreachable (pattern matches are exhaustive in F*)");
-        Pulse_Lib_Slice_slice__uint8_t pl1 = c_.cbor_string_ptr;
-        cbor_string c_0;
-        if (x2.tag == CBOR_Case_String)
-          c_0 = x2.case_CBOR_Case_String;
+          pl1 =
+            KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
+              "unreachable (pattern matches are exhaustive in F*)");
+        cbor_raw _letpattern = x2;
+        Pulse_Lib_Slice_slice__uint8_t pl2;
+        if (_letpattern.tag == CBOR_Case_String)
+        {
+          cbor_string c_ = _letpattern.case_CBOR_Case_String;
+          pl2 = c_.cbor_string_ptr;
+        }
         else
-          c_0 = KRML_EABORT(cbor_string, "unreachable (pattern matches are exhaustive in F*)");
-        Pulse_Lib_Slice_slice__uint8_t pl2 = c_0.cbor_string_ptr;
+          pl2 =
+            KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
+              "unreachable (pattern matches are exhaustive in F*)");
         int16_t res = lex_compare_bytes(pl1, pl2);
         return res;
       }
@@ -3459,14 +3568,16 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
     }
     else
     {
+      cbor_raw _letpattern0 = x1;
       uint8_t val1;
-      if (x1.tag == CBOR_Case_Simple)
-        val1 = x1.case_CBOR_Case_Simple;
+      if (_letpattern0.tag == CBOR_Case_Simple)
+        val1 = _letpattern0.case_CBOR_Case_Simple;
       else
         val1 = KRML_EABORT(uint8_t, "unreachable (pattern matches are exhaustive in F*)");
+      cbor_raw _letpattern = x2;
       uint8_t val2;
-      if (x2.tag == CBOR_Case_Simple)
-        val2 = x2.case_CBOR_Case_Simple;
+      if (_letpattern.tag == CBOR_Case_Simple)
+        val2 = _letpattern.case_CBOR_Case_Simple;
       else
         val2 = KRML_EABORT(uint8_t, "unreachable (pattern matches are exhaustive in F*)");
       return impl_uint8_compare(val1, val2);
@@ -3934,78 +4045,6 @@ static cbor_raw cbor_parse(Pulse_Lib_Slice_slice__uint8_t input, size_t len)
   return res0;
 }
 
-bool uu___is_CBOR_Case_Int(cbor_raw projectee)
-{
-  if (projectee.tag == CBOR_Case_Int)
-    return true;
-  else
-    return false;
-}
-
-bool uu___is_CBOR_Case_Simple(cbor_raw projectee)
-{
-  if (projectee.tag == CBOR_Case_Simple)
-    return true;
-  else
-    return false;
-}
-
-bool uu___is_CBOR_Case_String(cbor_raw projectee)
-{
-  if (projectee.tag == CBOR_Case_String)
-    return true;
-  else
-    return false;
-}
-
-bool uu___is_CBOR_Case_Tagged(cbor_raw projectee)
-{
-  if (projectee.tag == CBOR_Case_Tagged)
-    return true;
-  else
-    return false;
-}
-
-bool uu___is_CBOR_Case_Array(cbor_raw projectee)
-{
-  if (projectee.tag == CBOR_Case_Array)
-    return true;
-  else
-    return false;
-}
-
-bool uu___is_CBOR_Case_Map(cbor_raw projectee)
-{
-  if (projectee.tag == CBOR_Case_Map)
-    return true;
-  else
-    return false;
-}
-
-bool uu___is_CBOR_Case_Serialized_Tagged(cbor_raw projectee)
-{
-  if (projectee.tag == CBOR_Case_Serialized_Tagged)
-    return true;
-  else
-    return false;
-}
-
-bool uu___is_CBOR_Case_Serialized_Array(cbor_raw projectee)
-{
-  if (projectee.tag == CBOR_Case_Serialized_Array)
-    return true;
-  else
-    return false;
-}
-
-bool uu___is_CBOR_Case_Serialized_Map(cbor_raw projectee)
-{
-  if (projectee.tag == CBOR_Case_Serialized_Map)
-    return true;
-  else
-    return false;
-}
-
 size_t cbor_det_validate(Pulse_Lib_Slice_slice__uint8_t input)
 {
   size_t res = cbor_validate_det(input);
@@ -4298,8 +4337,9 @@ uint8_t cbor_det_major_type(cbor_raw x)
 
 uint8_t cbor_det_read_simple_value(cbor_raw x)
 {
-  if (x.tag == CBOR_Case_Simple)
-    return x.case_CBOR_Case_Simple;
+  cbor_raw _letpattern = x;
+  if (_letpattern.tag == CBOR_Case_Simple)
+    return _letpattern.case_CBOR_Case_Simple;
   else
   {
     KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
@@ -4312,23 +4352,36 @@ uint8_t cbor_det_read_simple_value(cbor_raw x)
 
 uint64_t cbor_det_read_uint64(cbor_raw x)
 {
-  cbor_int c_;
-  if (x.tag == CBOR_Case_Int)
-    c_ = x.case_CBOR_Case_Int;
+  cbor_raw _letpattern = x;
+  CBOR_Spec_Raw_Base_raw_uint64 res;
+  if (_letpattern.tag == CBOR_Case_Int)
+  {
+    cbor_int c_ = _letpattern.case_CBOR_Case_Int;
+    res = ((CBOR_Spec_Raw_Base_raw_uint64){ .size = c_.cbor_int_size, .value = c_.cbor_int_value });
+  }
   else
-    c_ = KRML_EABORT(cbor_int, "unreachable (pattern matches are exhaustive in F*)");
-  CBOR_Spec_Raw_Base_raw_uint64 res = { .size = c_.cbor_int_size, .value = c_.cbor_int_value };
+    res =
+      KRML_EABORT(CBOR_Spec_Raw_Base_raw_uint64,
+        "unreachable (pattern matches are exhaustive in F*)");
   return res.value;
 }
 
 Pulse_Lib_Slice_slice__uint8_t cbor_det_get_string(cbor_raw x)
 {
-  cbor_string c_;
-  if (x.tag == CBOR_Case_String)
-    c_ = x.case_CBOR_Case_String;
+  cbor_raw _letpattern = x;
+  if (_letpattern.tag == CBOR_Case_String)
+  {
+    cbor_string c_ = _letpattern.case_CBOR_Case_String;
+    return c_.cbor_string_ptr;
+  }
   else
-    c_ = KRML_EABORT(cbor_string, "unreachable (pattern matches are exhaustive in F*)");
-  return c_.cbor_string_ptr;
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
 }
 
 uint64_t cbor_det_get_tagged_tag(cbor_raw x)

@@ -47,16 +47,6 @@ typedef struct cbor_raw_s cbor_raw;
 
 typedef struct cbor_raw_s cbor_raw;
 
-typedef struct cbor_raw_s cbor_raw;
-
-typedef struct cbor_raw_s cbor_raw;
-
-typedef struct cbor_raw_s cbor_raw;
-
-typedef struct cbor_raw_s cbor_raw;
-
-typedef struct cbor_raw_s cbor_raw;
-
 typedef struct Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_s
 {
   cbor_raw *elt;
@@ -184,24 +174,6 @@ CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
 #define MIN_SIMPLE_VALUE_LONG_ARGUMENT (32U)
 
 #define MAX_SIMPLE_VALUE_ADDITIONAL_INFO (23U)
-
-bool uu___is_CBOR_Case_Int(cbor_raw projectee);
-
-bool uu___is_CBOR_Case_Simple(cbor_raw projectee);
-
-bool uu___is_CBOR_Case_String(cbor_raw projectee);
-
-bool uu___is_CBOR_Case_Tagged(cbor_raw projectee);
-
-bool uu___is_CBOR_Case_Array(cbor_raw projectee);
-
-bool uu___is_CBOR_Case_Map(cbor_raw projectee);
-
-bool uu___is_CBOR_Case_Serialized_Tagged(cbor_raw projectee);
-
-bool uu___is_CBOR_Case_Serialized_Array(cbor_raw projectee);
-
-bool uu___is_CBOR_Case_Serialized_Map(cbor_raw projectee);
 
 typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
 cbor_array_iterator;
