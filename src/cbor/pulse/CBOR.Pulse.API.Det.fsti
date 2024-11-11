@@ -25,6 +25,42 @@ val cbor_det_match_with_size_eq:
       pure (sz == Seq.length (Spec.cbor_det_serialize v))
     )
 
+(* SLProp-to-Prop abstraction vehicle to prove the correctness of type abstraction in the Rust API *)
+
+[@@erasable]
+noeq type cbor_det_case_t =
+| CaseInt64
+| CaseString
+| CaseTagged
+| CaseArray
+| CaseMap
+| CaseSimpleValue
+
+val cbor_det_case: cbor_det_t -> cbor_det_case_t
+
+noextract [@@noextract_to "krml"]
+let cbor_det_case_correct_post
+  (x: cbor_det_t)
+  (v: Spec.cbor)
+: Tot prop
+= match cbor_det_case x, Spec.unpack v with
+  | CaseInt64, Spec.CInt64 _ _
+  | CaseString, Spec.CString _ _
+  | CaseTagged, Spec.CTagged _ _
+  | CaseArray, Spec.CArray _
+  | CaseMap, Spec.CMap _
+  | CaseSimpleValue, Spec.CSimple _
+  -> True
+  | _ -> False
+
+val cbor_det_case_correct
+  (x: cbor_det_t)
+  (#p: perm)
+  (#v: Spec.cbor)
+: stt_ghost unit emp_inames
+    (cbor_det_match p x v)
+    (fun _ -> cbor_det_match p x v ** pure (cbor_det_case_correct_post x v))
+
 (* Validation, parsing and serialization *)
 
 noextract [@@noextract_to "krml"]

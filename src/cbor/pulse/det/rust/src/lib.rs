@@ -9,4 +9,6 @@ mod lowstar {
     }
 }
 
-pub mod cbordet;
+mod cbordetveraux;
+
+pub mod cbordetver;

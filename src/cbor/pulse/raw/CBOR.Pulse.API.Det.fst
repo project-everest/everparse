@@ -38,6 +38,39 @@ ensures
 }
 ```
 
+let cbor_det_case (x: cbor_det_t) : Tot cbor_det_case_t =
+  match x with
+  | Raw.CBOR_Case_Int _ -> CaseInt64
+  | Raw.CBOR_Case_String _ -> CaseString
+  | Raw.CBOR_Case_Tagged _
+  | Raw.CBOR_Case_Serialized_Tagged _
+    -> CaseTagged
+  | Raw.CBOR_Case_Array _
+  | Raw.CBOR_Case_Serialized_Array _
+    -> CaseArray
+  | Raw.CBOR_Case_Map _
+  | Raw.CBOR_Case_Serialized_Map _
+    -> CaseMap
+  | Raw.CBOR_Case_Simple _ -> CaseSimpleValue
+
+```pulse
+ghost
+fn cbor_det_case_correct
+  (x: cbor_det_t)
+  (#p: perm)
+  (#v: Spec.cbor)
+requires
+    (cbor_det_match p x v)
+ensures
+    (cbor_det_match p x v ** pure (cbor_det_case_correct_post x v))
+{
+  unfold (cbor_det_match p x v);
+  Raw.cbor_match_cases x;
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  fold (cbor_det_match p x v);
+}
+```
+
 let cbor_det_validate_post_intro
   (v: Seq.seq U8.t)
   (res: SZ.t)
