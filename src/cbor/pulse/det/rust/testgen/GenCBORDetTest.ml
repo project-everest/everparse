@@ -10,20 +10,20 @@ let instr_assert (s: string) : rust =
 let gen_int (x: int) (name: string) : rust list =
   let major_type, count =
     if x >= 0
-    then ("uint64", x)
-    else ("neg_int64", -1-x)
+    then ("UInt64", x)
+    else ("NegInt64", -1-x)
   in
-  [`Instr ("let " ^ name ^ " : cbor_raw = cbor_det_mk_int64(cbor_major_type_" ^ major_type ^ "," ^ string_of_int count ^ ")")]
+  [`Instr ("let " ^ name ^ " : CborDet = cbor_det_mk_int64(CborDetIntKind::" ^ major_type ^ "," ^ string_of_int count ^ ")")]
 
 let quote_string s = Yojson.Safe.to_string (`String s)
 
 let gen_string (s: string) (name: string) : rust list =
-  [`Instr ("let " ^ name ^ " : cbor_raw = cbor_det_mk_string(cbor_major_type_text_string, str::as_bytes(" ^ quote_string s ^ "))")]
+  [`Instr ("let " ^ name ^ " : CborDet = cbor_det_mk_string(CborDetStringKind::TextString, str::as_bytes(" ^ quote_string s ^ ")).expect(\"Expected string short enough\")")]
 
 let gen_map (gen: Yojson.Safe.t -> string -> rust list) (l: (string * Yojson.Safe.t) list) (name: string) : rust list =
   let len = List.length l in
   let elt i = name ^ "_map[" ^ string_of_int i ^ "]" in
-  let accu = [`Instr ("let " ^ name ^ " : cbor_raw = cbor_det_mk_map(& mut " ^ name ^ "_map[..])")] in
+  let accu = [`Instr ("let " ^ name ^ " : CborDet = (cbor_det_mk_map(& mut " ^ name ^ "_map[..])).expect(\"Expected a well-formed map\")")] in
   let rec aux accu i = function
   | [] -> accu
   | (s, x) :: q->
@@ -32,19 +32,19 @@ let gen_map (gen: Yojson.Safe.t -> string -> rust list) (l: (string * Yojson.Saf
     let accu' =
       gen_string s key_name @
       gen x value_name @
-      `Instr (elt i ^ " = cbor_map_entry {cbor_map_entry_key: " ^ key_name ^ ", cbor_map_entry_value: " ^ value_name ^ "}") ::
+      `Instr (elt i ^ " = cbor_det_mk_map_entry(" ^ key_name ^ ", " ^ value_name ^ ")") ::
       accu
     in
     aux accu' (i + 1) q
   in
   let accu' = aux accu 0 l in
-  let accu' = `Instr ("let mut " ^ name ^ "_map: [cbor_map_entry; " ^ string_of_int len ^ " ] = [dummy_cbor_map_entry; " ^ string_of_int len ^ "]") :: accu' in
+  let accu' = `Instr ("let mut " ^ name ^ "_map: [CborDetMapEntry; " ^ string_of_int len ^ " ] = [dummy_cbor_map_entry; " ^ string_of_int len ^ "]") :: accu' in
   accu'
 
 let gen_array (gen: Yojson.Safe.t -> string -> rust list) (l: Yojson.Safe.t list) (name: string) : rust list =
   let len = List.length l in
   let elt i = name ^ "_array[" ^ string_of_int i ^ "]" in
-  let accu = [`Instr ("let " ^ name ^ " : cbor_raw = cbor_det_mk_array(&" ^ name ^ "_array[..])")] in
+  let accu = [`Instr ("let " ^ name ^ " : CborDet = cbor_det_mk_array(&" ^ name ^ "_array[..]).expect(\"Expected an array small enough\")")] in
   let rec aux accu i = function
   | [] -> accu
   | x :: q->
@@ -57,7 +57,7 @@ let gen_array (gen: Yojson.Safe.t -> string -> rust list) (l: Yojson.Safe.t list
     aux accu' (i + 1) q
   in
   let accu' = aux accu 0 l in
-  let accu' = `Instr ("let mut " ^ name ^ "_array: [cbor_raw; " ^ string_of_int len ^ " ] = [dummy_cbor; " ^ string_of_int len ^ "]") :: accu' in
+  let accu' = `Instr ("let mut " ^ name ^ "_array: [CborDet; " ^ string_of_int len ^ " ] = [dummy_cbor; " ^ string_of_int len ^ "]") :: accu' in
   accu'
 
 exception GenUnsupported
@@ -109,20 +109,19 @@ let gen_encoding_test_c
   `FunDecl("#[test]") ::
   `FunDecl("fn test" ^ string_of_int !num ^ "()") ::
   `Block (
-    `Instr ("let dummy_cbor: cbor_raw = cbor_det_mk_int64(cbor_major_type_uint64, 0)") ::
-    `Instr ("let dummy_cbor_map_entry: cbor_map_entry = cbor_map_entry { cbor_map_entry_key: dummy_cbor, cbor_map_entry_value: dummy_cbor }") ::
+    `Instr ("let dummy_cbor: CborDet = cbor_det_mk_int64(CborDetIntKind::UInt64, 0)") ::
+    `Instr ("let dummy_cbor_map_entry: CborDetMapEntry = cbor_det_mk_map_entry(dummy_cbor, dummy_cbor)") ::
     `Instr source_bytes ::
     `Instr ("let source_bytes = &source_bytes[..]") ::
     decoded_c @
     `Instr ("let mut target_bytes: [u8; " ^ size_s ^ "] = [0xff; " ^ size_s ^ "]") ::
-    `Instr ("let mut target_byte_size: usize = cbor_det_size(source_cbor, " ^ size_s ^ ")") ::
+    `Instr ("let mut target_byte_size: usize = (cbor_det_size(source_cbor, " ^ size_s ^ ")).expect(\"Expected some size to be returned\")") ::
     instr_assert ("target_byte_size == " ^ size_s) ::
-    `Instr ("target_byte_size = cbor_det_serialize (source_cbor, &mut target_bytes[..])") ::
+    `Instr ("target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect(\"Expected serialization to succeed\")") ::
     instr_assert ("target_byte_size == " ^ size_s) ::
     instr_assert ("&target_bytes[0.." ^ size_s ^ "] == source_bytes") ::
-    `Instr ("target_byte_size = cbor_det_validate(source_bytes)") ::
+    `Instr ("let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect(\"Expected to parse successfully\")") ::
     instr_assert ("target_byte_size == " ^ size_s) ::
-    `Instr ("let target_cbor : cbor_raw = cbor_det_parse(source_bytes, target_byte_size)") ::
     instr_assert ("cbor_det_equal(source_cbor, target_cbor)") ::
     []
   ) ::
