@@ -3,9 +3,11 @@
  * FStar attributes), abstract types, references instead of one-sized
  * slices, proper casing of type names, and native Rust
  * `std::Option`. */
-/// This module is a fully formally verified implementation of
-/// Deterministically Encoded CBOR (RFC 8949 Section 4.2.1) minus
-/// floating-point values. This module never allocates into the heap.
+//! This module is an implementation of Deterministically Encoded CBOR
+//! (RFC 8949 Section 4.2.1) minus floating-point values, fully
+//! formally verified for functional correctness and absence of panics
+//! related to breach of abstraction, buffer overruns or arithmetic
+//! overflow/underflow. This module never allocates into the heap.
 
 /* FIXME: `cbordet` to be defined as abstract in cbordetveraux
  * already. I cannot abstract it here since `cbor_det_mk_tagged`,
@@ -73,11 +75,11 @@ pub fn cbor_det_size <'a>(x: CborDet <'a>, bound: usize) -> Option<usize>
 /// Writes the binary representation of the Deterministic CBOR object
 /// `x` into the first bytes of the `output` byte slice, following RFC
 /// 8949 Section 4.2.1. This function first checks the size of `x` and
-/// returns `None` if it is larger than the size of `output`; it
-/// returns `Some(size)` instead, where `size` is the byte size of
-/// `x`, the number of bytes written to `output`. This function uses
-/// stack space in the order of the level of nesting of the use of
-/// "constructor" functions used to build `x`; the serialization of
+/// returns `None` if it is larger than the size of `output`;
+/// otherwise it returns `Some(size)`, where `size` is the byte size
+/// of `x`, the number of bytes written to `output`. This function
+/// uses stack space in the order of the level of nesting of the use
+/// of "constructor" functions used to build `x`; the serialization of
 /// those "subobjects" of `x` obtained from `cbor_det_parse` uses only
 /// constant extra stack space for each such subobject (in the sense
 /// that the serialization does not recursively nest into such
@@ -192,7 +194,7 @@ pub fn cbor_det_mk_tagged <'a>(tag: u64, r: &'a CborDet <'a>) ->
 
 /// Constructs a Deterministic CBOR of "array" type. This function
 /// does not copy its input array. It returns `None` if the input
-/// array has more than $2^64 - 1$ elements, `Some(object)` instead.
+/// array has more than $2^64 - 1$ elements, `Some(object)` otherwise.
 pub fn cbor_det_mk_array <'a>(a: &'a [CborDet <'a>]) ->
     Option<CborDet<'a>>
 {
