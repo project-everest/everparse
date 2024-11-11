@@ -366,40 +366,45 @@ ensures
           pure (res == get_raw_data_item_header xh)
 {
   cbor_match_cases xl;
-  if (CBOR_Case_Int? xl) {
+  match xl {
+    CBOR_Case_Int _ -> {
       let ty = cbor_match_int_elim_type xl;
       let v = cbor_match_int_elim_value xl;
       raw_uint64_as_argument ty v
-  }
-  else if (CBOR_Case_String? xl) {
-    let ty = cbor_match_string_elim_type xl;
-    let len = cbor_match_string_elim_length xl;
-    raw_uint64_as_argument ty len
-  }
-  else if (
-    let a = CBOR_Case_Tagged? xl in
-    if a then true else CBOR_Case_Serialized_Tagged? xl
-  ) {
-    let tag = cbor_match_tagged_get_tag xl;
-    raw_uint64_as_argument cbor_major_type_tagged tag
-  }
-  else if (
-    let a = CBOR_Case_Array? xl in
-    if a then true else CBOR_Case_Serialized_Array? xl
-  ) {
-    let len = cbor_match_array_get_length xl;
-    raw_uint64_as_argument cbor_major_type_array len
-  }
-  else if (
-    let a = CBOR_Case_Map? xl in
-    if a then true else CBOR_Case_Serialized_Map? xl
-  ) {
-    let len = cbor_match_map_get_length xl;
-    raw_uint64_as_argument cbor_major_type_map len
-  }
-  else {
-    let v = cbor_match_simple_elim xl;
-    simple_value_as_argument v
+    }
+    CBOR_Case_String _ -> {
+      let ty = cbor_match_string_elim_type xl;
+      let len = cbor_match_string_elim_length xl;
+      raw_uint64_as_argument ty len
+    }
+    CBOR_Case_Tagged _ -> {
+      let tag = cbor_match_tagged_get_tag xl;
+      raw_uint64_as_argument cbor_major_type_tagged tag
+    }
+    CBOR_Case_Serialized_Tagged _ -> {
+      let tag = cbor_match_tagged_get_tag xl;
+      raw_uint64_as_argument cbor_major_type_tagged tag
+    }
+    CBOR_Case_Array _ -> {
+      let len = cbor_match_array_get_length xl;
+      raw_uint64_as_argument cbor_major_type_array len
+    }
+    CBOR_Case_Serialized_Array _ -> {
+      let len = cbor_match_array_get_length xl;
+      raw_uint64_as_argument cbor_major_type_array len
+    }
+    CBOR_Case_Map _ -> {
+      let len = cbor_match_map_get_length xl;
+      raw_uint64_as_argument cbor_major_type_map len
+    }
+    CBOR_Case_Serialized_Map _ -> {
+      let len = cbor_match_map_get_length xl;
+      raw_uint64_as_argument cbor_major_type_map len
+    }
+    CBOR_Case_Simple _ -> {
+      let v = cbor_match_simple_elim xl;
+      simple_value_as_argument v
+    }
   }
 }
 ```
@@ -610,7 +615,9 @@ inline_for_extraction
 let cbor_with_perm_case_array
   (c: with_perm cbor_raw)
 : Tot bool
-= CBOR_Case_Array? c.v
+= match c.v with
+  | CBOR_Case_Array _ -> true
+  | _ -> false
 
 inline_for_extraction
 let cbor_with_perm_case_array_get
@@ -699,7 +706,7 @@ ensures
     (cbor_match xl.p xl.v xh0);
   Trade.trans (cbor_match _ _ _) _ _;
   cbor_match_cases _;
-  let a = CBOR_Case_Array?.v xl.v;
+  let CBOR_Case_Array a = xl.v;
   cbor_match_eq_array xl.p a xh0;
   Trade.rewrite_with_trade
     (cbor_match xl.p xl.v xh0)
@@ -875,7 +882,7 @@ fn ser_payload_array_not_array_lens
     (cbor_match xl.p xl.v xh0);
   Trade.trans (cbor_match xl.p xl.v xh0) _ _;
   cbor_match_cases xl.v;
-  let xs = CBOR_Case_Serialized_Array?.v xl.v;
+  let CBOR_Case_Serialized_Array xs = xl.v;
   Trade.rewrite_with_trade
     (cbor_match xl.p xl.v xh0)
     (cbor_match_serialized_array xs xl.p xh0);
@@ -956,7 +963,9 @@ inline_for_extraction
 let cbor_with_perm_case_map
   (c: with_perm cbor_raw)
 : Tot bool
-= CBOR_Case_Map? c.v
+= match c.v with
+  | CBOR_Case_Map _ -> true
+  | _ -> false
 
 inline_for_extraction
 let cbor_with_perm_case_map_get
@@ -1113,7 +1122,7 @@ ensures
     (cbor_match xl.p xl.v xh0);
   Trade.trans (cbor_match _ _ _) _ _;
   cbor_match_cases _;
-  let a = CBOR_Case_Map?.v xl.v;
+  let CBOR_Case_Map a = xl.v;
   cbor_match_eq_map0 xl.p a xh0;
   Trade.rewrite_with_trade
     (cbor_match xl.p xl.v xh0)
@@ -1291,7 +1300,7 @@ fn ser_payload_map_not_map_lens
     (cbor_match xl.p xl.v xh0);
   Trade.trans (cbor_match xl.p xl.v xh0) _ _;
   cbor_match_cases xl.v;
-  let xs = CBOR_Case_Serialized_Map?.v xl.v;
+  let CBOR_Case_Serialized_Map xs = xl.v;
   Trade.rewrite_with_trade
     (cbor_match xl.p xl.v xh0)
     (cbor_match_serialized_map xs xl.p xh0);
@@ -1372,7 +1381,9 @@ inline_for_extraction
 let cbor_with_perm_case_tagged
   (c: with_perm cbor_raw)
 : Tot bool
-= CBOR_Case_Tagged? c.v
+= match c.v with
+  | CBOR_Case_Tagged _ -> true
+  | _ -> false
 
 inline_for_extraction
 ```pulse
@@ -1396,7 +1407,7 @@ fn ser_payload_tagged_tagged_lens
     (cbor_match xl.p xl.v xh0);
   Trade.trans (cbor_match xl.p xl.v xh0) _ _;
   cbor_match_cases xl.v;
-  let tg = CBOR_Case_Tagged?.v xl.v;
+  let CBOR_Case_Tagged tg = xl.v;
   cbor_match_eq_tagged xl.p tg xh0;
   Trade.rewrite_with_trade
     (cbor_match xl.p xl.v xh0)
@@ -1475,7 +1486,7 @@ fn ser_payload_tagged_not_tagged_lens
     (cbor_match xl.p xl.v xh0);
   Trade.trans (cbor_match xl.p xl.v xh0) _ _;
   cbor_match_cases xl.v;
-  let ser = CBOR_Case_Serialized_Tagged?.v xl.v;
+  let CBOR_Case_Serialized_Tagged ser = xl.v;
   Trade.rewrite_with_trade
     (cbor_match xl.p xl.v xh0)
     (cbor_match_serialized_tagged ser xl.p xh0);

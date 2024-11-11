@@ -39,7 +39,7 @@ type cbor_string = {
   cbor_string_perm: perm;
 }
 
-inline_for_extraction
+[@@no_auto_projectors]
 noeq
 type cbor_tagged = {
   cbor_tagged_tag: raw_uint64;

@@ -27,25 +27,26 @@ fn cbor_match_tagged_get_payload
       (cbor_match pm c r)
 {
   cbor_match_cases c;
-  if (CBOR_Case_Serialized_Tagged? c) {
-    let cs = CBOR_Case_Serialized_Tagged?.v c;
-    Trade.rewrite_with_trade
-      (cbor_match pm c r)
-      (cbor_match_serialized_tagged cs pm r);
-    let res = cbor_match_serialized_tagged_get_payload cs;
-    Trade.trans _ _ (cbor_match pm c r);
-    res
-  } else {
-    let ct = CBOR_Case_Tagged?.v c;
-    cbor_match_eq_tagged pm ct r;
-    Trade.rewrite_with_trade
-      (cbor_match pm c r)
-      (cbor_match_tagged ct pm r cbor_match);
-    cbor_match_tagged_elim ct pm r;
-    Trade.trans _ _ (cbor_match pm c r);
-    let res = !ct.cbor_tagged_ptr;
-    Trade.elim_hyp_l _ _ (cbor_match pm c r);
-    res
+  match c {
+    CBOR_Case_Serialized_Tagged cs -> {
+      Trade.rewrite_with_trade
+        (cbor_match pm c r)
+        (cbor_match_serialized_tagged cs pm r);
+      let res = cbor_match_serialized_tagged_get_payload cs;
+      Trade.trans _ _ (cbor_match pm c r);
+      res
+    }
+    CBOR_Case_Tagged ct -> {
+      cbor_match_eq_tagged pm ct r;
+      Trade.rewrite_with_trade
+        (cbor_match pm c r)
+        (cbor_match_tagged ct pm r cbor_match);
+      cbor_match_tagged_elim ct pm r;
+      Trade.trans _ _ (cbor_match pm c r);
+      let res = !ct.cbor_tagged_ptr;
+      Trade.elim_hyp_l _ _ (cbor_match pm c r);
+      res
+    }
   }
 }
 ```

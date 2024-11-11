@@ -390,7 +390,7 @@ ensures
   cbor_match p c v ** pure (Int64? v /\ res == Int64?.typ v)
 {
   cbor_match_cases c;
-  let c' = CBOR_Case_Int?.v c;
+  let CBOR_Case_Int c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_int c' v);
   unfold (cbor_match_int c' v);
   fold (cbor_match_int c' v);
@@ -412,7 +412,7 @@ ensures
   cbor_match p c v ** pure (Int64? v /\ res == Int64?.v v)
 {
   cbor_match_cases c;
-  let c' = CBOR_Case_Int?.v c;
+  let CBOR_Case_Int c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_int c' v);
   unfold (cbor_match_int c' v);
   fold (cbor_match_int c' v);
@@ -437,7 +437,7 @@ ensures
   emp
 {
   cbor_match_cases c;
-  let c' = CBOR_Case_Int?.v c;
+  let CBOR_Case_Int c' = c;
   rewrite (cbor_match p c v) as (cbor_match_int c' v);
   unfold (cbor_match_int c' v)
 }
@@ -511,7 +511,7 @@ ensures
   cbor_match p c v ** pure (v == Simple res)
 {
   cbor_match_cases c;
-  let res = CBOR_Case_Simple?.v c;
+  let CBOR_Case_Simple res = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_simple res v);
   unfold (cbor_match_simple res v);
   fold (cbor_match_simple res v);
@@ -532,7 +532,7 @@ ensures
   emp
 {
   cbor_match_cases c;
-  let res = CBOR_Case_Simple?.v c;
+  let CBOR_Case_Simple res = c;
   rewrite (cbor_match p c v) as (cbor_match_simple res v);
   unfold (cbor_match_simple res v)
 }
@@ -615,7 +615,7 @@ ensures
   cbor_match p c v ** pure (String? v /\ res == String?.typ v)
 {
   cbor_match_cases c;
-  let c' = CBOR_Case_String?.v c;
+  let CBOR_Case_String c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
   unfold (cbor_match_string c' p v);
   fold (cbor_match_string c' p v);
@@ -637,7 +637,7 @@ ensures
   cbor_match p c v ** pure (String? v /\ res == String?.len v)
 {
   cbor_match_cases c;
-  let c' = CBOR_Case_String?.v c;
+  let CBOR_Case_String c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
   unfold (cbor_match_string c' p v);
   fold (cbor_match_string c' p v);
@@ -686,7 +686,7 @@ ensures exists* p' (v': Seq.seq U8.t) .
   pure (String? v /\ v' == String?.v v)
 {
   cbor_match_cases c;
-  let c' = CBOR_Case_String?.v c;
+  let CBOR_Case_String c' = c;
   Trade.rewrite_with_trade (cbor_match p c v) (cbor_match_string c' p v);
   unfold (cbor_match_string c' p v);
   Trade.intro _ _ _ (cbor_match_string_elim_payload_aux c' p v _);
