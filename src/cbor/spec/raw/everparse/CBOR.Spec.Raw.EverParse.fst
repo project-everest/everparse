@@ -239,13 +239,22 @@ let argument_as_simple_value
 
 (* Raw data items, disregarding ordering of map entries *)
 
+let lseq_utf8_correct
+  (ty: major_type_byte_string_or_text_string)
+  (len: nat)
+  (x: Seq.lseq U8.t len)
+: Tot bool
+= if ty = cbor_major_type_text_string
+  then CBOR.Spec.API.UTF8.correct x
+  else true
+
 let content
   (h: header)
 : Tot Type
 = match h with
   | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
-      then Seq.lseq byte (U64.v (argument_as_uint64 b long_arg))
+      then parse_filter_refine (lseq_utf8_correct b.major_type (U64.v (argument_as_uint64 b long_arg)))
       else if b.major_type = cbor_major_type_array
       then nlist (U64.v (argument_as_uint64 b long_arg)) raw_data_item
       else if b.major_type = cbor_major_type_map
@@ -489,7 +498,7 @@ let parse_content
 = match h with
   | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
-      then weaken _ (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
+      then weaken _ (parse_filter (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct b.major_type _))
       else if b.major_type = cbor_major_type_array
       then weaken _ (parse_nlist (U64.v (argument_as_uint64 b long_arg)) p)
       else if b.major_type = cbor_major_type_map
@@ -530,7 +539,7 @@ type leaf_content
   (h: header)
 = | LeafContentSeq:
     (prf: squash (leaf_content_seq_cond h)) ->
-    (v: Seq.lseq byte (U64.v (argument_as_uint64 (dfst h) (dsnd h)))) ->
+    (v: parse_filter_refine (lseq_utf8_correct (dfst h).major_type (U64.v (argument_as_uint64 (dfst h) (dsnd h))))) ->
     leaf_content h
   | LeafContentEmpty:
     (prf: squash (~ (leaf_content_seq_cond h))) ->
@@ -543,7 +552,7 @@ let tot_parse_leaf_content
 = match h with
   | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
-      then tot_weaken _ (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)) `tot_parse_synth` LeafContentSeq ())
+      then tot_weaken _ (tot_parse_filter (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) `tot_parse_synth` LeafContentSeq ())
       else tot_weaken _ (tot_parse_empty `tot_parse_synth` LeafContentEmpty ())
 
 let parse_leaf_content
@@ -552,7 +561,7 @@ let parse_leaf_content
 = match h with
   | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
-      then weaken _ (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)) `parse_synth` LeafContentSeq ())
+      then weaken _ (parse_filter (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) `parse_synth` LeafContentSeq ())
       else weaken _ (parse_empty `parse_synth` LeafContentEmpty ())
 
 let tot_parse_leaf_content_eq
@@ -565,8 +574,10 @@ let tot_parse_leaf_content_eq
   | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
       then begin
-        (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)) `tot_parse_synth_eq` LeafContentSeq #h ()) input;
-        (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg)) `parse_synth_eq` LeafContentSeq #h ()) input
+        tot_parse_filter_eq (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) input;
+        parse_filter_eq (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) input;
+        (tot_parse_filter (tot_parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) `tot_parse_synth_eq` LeafContentSeq #h ()) input;
+        (parse_filter (parse_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct (dfst h).major_type _) `parse_synth_eq` LeafContentSeq #h ()) input
       end
       else begin
         (tot_parse_empty `tot_parse_synth_eq` LeafContentEmpty #h ()) input;
@@ -842,7 +853,10 @@ let parse_raw_data_item_eq
     let (| f, l |) = h in
     if f.major_type = cbor_major_type_byte_string || f.major_type = cbor_major_type_text_string
     then begin
-      tot_parse_synth_eq (tot_parse_lseq_bytes (U64.v (argument_as_uint64 (dfst h) (dsnd h)))) (LeafContentSeq #h ()) b1
+        tot_parse_filter_eq (tot_parse_lseq_bytes (U64.v (argument_as_uint64 f l))) (lseq_utf8_correct (dfst h).major_type _) b1;
+        parse_filter_eq (parse_lseq_bytes (U64.v (argument_as_uint64 f l))) (lseq_utf8_correct (dfst h).major_type _) b1;
+        (tot_parse_filter (tot_parse_lseq_bytes (U64.v (argument_as_uint64 f l))) (lseq_utf8_correct (dfst h).major_type _) `tot_parse_synth_eq` LeafContentSeq #h ()) b1;
+        (parse_filter (parse_lseq_bytes (U64.v (argument_as_uint64 f l))) (lseq_utf8_correct (dfst h).major_type _) `parse_synth_eq` LeafContentSeq #h ()) b1
     end
     else begin
       let lc = LeafContentEmpty #h () in
@@ -1070,7 +1084,7 @@ let tot_serialize_leaf_content
 = match h with
   | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
-      then tot_serialize_weaken _ (tot_serialize_synth _ (LeafContentSeq ()) (tot_serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) LeafContentSeq?.v ())
+      then tot_serialize_weaken _ (tot_serialize_synth _ (LeafContentSeq ()) (tot_serialize_filter (tot_serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct b.major_type _)) LeafContentSeq?.v ())
       else tot_serialize_weaken _ (tot_serialize_synth _ (LeafContentEmpty ()) tot_serialize_empty LeafContentEmpty?.v ())
 
 let serialize_leaf_content
@@ -1177,7 +1191,7 @@ let serialize_content
 = match h with
   | (| b, long_arg |) ->
       if b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string
-      then serialize_weaken _ (serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg)))
+      then serialize_weaken _ (serialize_filter (serialize_lseq_bytes (U64.v (argument_as_uint64 b long_arg))) (lseq_utf8_correct b.major_type _))
       else if b.major_type = cbor_major_type_array
       then serialize_weaken _ (serialize_nlist (U64.v (argument_as_uint64 b long_arg)) serialize_raw_data_item)
       else if b.major_type = cbor_major_type_map
@@ -2266,9 +2280,9 @@ let lex_order_int64_correct
 let serialized_lex_compare_string
   (ty: major_type_byte_string_or_text_string)
   (len1: raw_uint64)
-  (x1: Seq.lseq byte (U64.v len1.value))
+  (x1: Seq.lseq byte (U64.v len1.value) { lseq_utf8_correct ty (U64.v len1.value) x1 })
   (len2: raw_uint64)
-  (x2: Seq.lseq byte (U64.v len2.value))
+  (x2: Seq.lseq byte (U64.v len2.value) { lseq_utf8_correct ty (U64.v len2.value) x2 })
 : Lemma
   (ensures (
     tot_serialized_lex_compare tot_serialize_raw_data_item (String ty len1 x1) (String ty len2 x2) == (
@@ -2308,9 +2322,9 @@ let serialized_lex_compare_string
 let deterministically_encoded_cbor_map_key_order_string_correct
   (ty: major_type_byte_string_or_text_string)
   (len1: raw_uint64)
-  (x1: Seq.lseq byte (U64.v len1.value))
+  (x1: Seq.lseq byte (U64.v len1.value) { lseq_utf8_correct ty (U64.v len1.value) x1 })
   (len2: raw_uint64)
-  (x2: Seq.lseq byte (U64.v len2.value))
+  (x2: Seq.lseq byte (U64.v len2.value) { lseq_utf8_correct ty (U64.v len2.value) x2 })
 : Lemma
   (ensures (
     deterministically_encoded_cbor_map_key_order (String ty len1 x1) (String ty len2 x2) ==

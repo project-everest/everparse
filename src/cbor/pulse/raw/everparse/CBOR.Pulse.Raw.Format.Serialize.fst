@@ -491,21 +491,43 @@ ensures
 }
 ```
 
+let ser_payload_string_lens_aux_post
+  (xh1: header)
+  (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string))
+  (xh:
+      (LowParse.Spec.Combinators.parse_filter_refine
+        (lseq_utf8_correct (get_header_initial_byte xh1).major_type
+          (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+        )
+      )
+  )
+  (xh' : raw_data_item)
+: Tot prop
+=
+        synth_raw_data_item_recip xh' == (| xh1, xh |)
+
 ```pulse
 ghost
 fn ser_payload_string_lens_aux
   (xh1: header)
   (sq: squash (let b = get_header_initial_byte xh1 in b.major_type = cbor_major_type_byte_string || b.major_type = cbor_major_type_text_string))
   (xl: with_perm cbor_raw)
-  (xh: Seq.Properties.lseq byte
-                  (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
-                          (get_header_long_argument xh1))))
+  (xh:
+      (LowParse.Spec.Combinators.parse_filter_refine
+        (lseq_utf8_correct (get_header_initial_byte xh1).major_type
+          (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+        )
+      )
+  )
 requires
   (vmatch_ext
-      (Seq.Properties.lseq byte
-                  (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
-                          (get_header_long_argument xh1))))
-      (match_cbor_payload xh1) xl xh
+      (LowParse.Spec.Combinators.parse_filter_refine
+        (lseq_utf8_correct (get_header_initial_byte xh1).major_type
+          (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+        )
+      )
+      (match_cbor_payload xh1)
+      xl xh
   )
 returns xh': Ghost.erased raw_data_item
 ensures
@@ -513,19 +535,25 @@ ensures
     Trade.trade
       (cbor_match_with_perm xl xh')
       (vmatch_ext
-        (Seq.Properties.lseq byte
-          (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
-            (get_header_long_argument xh1))))
+        (LowParse.Spec.Combinators.parse_filter_refine
+          (lseq_utf8_correct (get_header_initial_byte xh1).major_type
+            (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+          )
+        )
         (match_cbor_payload xh1) xl xh
       ) **
-      pure (synth_raw_data_item_recip xh' == (| xh1, xh |))
+      pure (
+        ser_payload_string_lens_aux_post xh1 sq xh xh'
+      )
   )
 {
   let _ = vmatch_ext_elim_trade 
-      (Seq.Properties.lseq byte
-                  (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
-                          (get_header_long_argument xh1))))
-      (match_cbor_payload xh1) xl xh;
+        (LowParse.Spec.Combinators.parse_filter_refine
+          (lseq_utf8_correct (get_header_initial_byte xh1).major_type
+            (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+          )
+        )
+        (match_cbor_payload xh1) xl xh;
   let xh' = match_cbor_payload_elim_trade xh1 xl _;
   Trade.trans (cbor_match_with_perm xl xh') _ _;
   xh'
@@ -540,18 +568,24 @@ fn ser_payload_string_lens
 : 
 vmatch_lens #_ #_ #_
   (vmatch_ext
-      (Seq.Properties.lseq byte
-                  (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
-                          (get_header_long_argument xh1))))
+      (LowParse.Spec.Combinators.parse_filter_refine
+        (lseq_utf8_correct (get_header_initial_byte xh1).major_type
+          (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+        )
+      )
       (match_cbor_payload xh1))
-  (LowParse.Pulse.SeqBytes.pts_to_seqbytes
-              (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
-                      (get_header_long_argument xh1)))
+  (LP.vmatch_filter 
+    (LowParse.Pulse.SeqBytes.pts_to_seqbytes
+      (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+    )
+    (lseq_utf8_correct (get_header_initial_byte xh1).major_type
+          (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+    )
   )
 = (x1': _)
-  (x: _)
+  (z: _)
 {
-  let xh' = ser_payload_string_lens_aux xh1 sq x1' x;
+  let xh' = ser_payload_string_lens_aux xh1 sq x1' z;
   Trade.rewrite_with_trade
     (cbor_match_with_perm x1' xh')
     (cbor_match x1'.p x1'.v xh');
@@ -561,7 +595,7 @@ vmatch_lens #_ #_ #_
   let s = cbor_match_string_elim_payload x1'.v;
   Trade.trans _ (cbor_match _ x1'.v xh') _;
   S.pts_to_len s;
-  with p' . assert (pts_to s #p' (Ghost.reveal x <: Seq.seq U8.t));
+  with p' . assert (pts_to s #p' (Ghost.reveal z <: Seq.seq U8.t));
   let res : with_perm (S.slice byte) = {
     v = s;
     p = p';
@@ -571,7 +605,7 @@ vmatch_lens #_ #_ #_
                           (get_header_long_argument xh1)))
     _
     s
-    x
+    z
     res;
   Trade.trans
     (LowParse.Pulse.SeqBytes.pts_to_seqbytes
@@ -579,6 +613,27 @@ vmatch_lens #_ #_ #_
                       (get_header_long_argument xh1)))
       res x')
     _ _;
+  Trade.rewrite_with_trade
+    (LowParse.Pulse.SeqBytes.pts_to_seqbytes
+              (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                      (get_header_long_argument xh1)))
+      res x')
+    (LowParse.Pulse.Combinators.vmatch_filter
+      (LowParse.Pulse.SeqBytes.pts_to_seqbytes
+              (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                      (get_header_long_argument xh1)))
+      )
+      (lseq_utf8_correct (get_header_initial_byte xh1).major_type
+          (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+      )
+      res z
+    );
+  Trade.trans _ 
+    (LowParse.Pulse.SeqBytes.pts_to_seqbytes
+              (U64.v (argument_as_uint64 (get_header_initial_byte xh1)
+                      (get_header_long_argument xh1)))
+      res x')
+    _;
   res
 }
 ```
@@ -591,8 +646,12 @@ let ser_payload_string
 = l2r_writer_ext_gen
     (l2r_writer_lens
       (ser_payload_string_lens xh1 sq)
-      (LowParse.Pulse.SeqBytes.l2r_write_lseq_bytes_copy
-        (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+      (LowParse.Pulse.Combinators.l2r_write_filter
+        _
+        (LowParse.Pulse.SeqBytes.l2r_write_lseq_bytes_copy
+          (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+        )
+        (lseq_utf8_correct (get_header_initial_byte xh1).major_type _)
       )
     )
     (serialize_content xh1)
@@ -605,8 +664,12 @@ let size_payload_string
 = compute_remaining_size_ext_gen
     (compute_remaining_size_lens
       (ser_payload_string_lens xh1 sq)
-      (LowParse.Pulse.SeqBytes.compute_remaining_size_lseq_bytes_copy
-        (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+      (LowParse.Pulse.Combinators.compute_remaining_size_filter
+        _
+        (LowParse.Pulse.SeqBytes.compute_remaining_size_lseq_bytes_copy
+          (U64.v (argument_as_uint64 (get_header_initial_byte xh1) (get_header_long_argument xh1)))
+        )
+        (lseq_utf8_correct (get_header_initial_byte xh1).major_type _)
       )
     )
     (serialize_content xh1)

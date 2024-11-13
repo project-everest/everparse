@@ -20,7 +20,10 @@ fn cbor_det_mk_string_from_array
   (#p: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
 requires
-    (pts_to a #p v ** pure (Seq.length v == U64.v len))
+    (pts_to a #p v ** pure (
+      Seq.length v == U64.v len /\
+      (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v)
+    ))
 returns res: cbor_det_t
 ensures
     (exists* p' v' .

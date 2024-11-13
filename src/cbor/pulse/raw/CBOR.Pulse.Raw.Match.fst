@@ -35,6 +35,7 @@ let cbor_match_string
 : Tot slprop
 = exists* (v: Seq.seq U8.t) . pts_to c.cbor_string_ptr #(p `perm_mul` c.cbor_string_perm) v ** pure
     (Seq.length v == SZ.v (S.len c.cbor_string_ptr) /\
+      (c.cbor_string_type == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v) /\
       r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) }) v
     )
 
@@ -551,6 +552,7 @@ fn cbor_match_string_intro_aux
       input == c.cbor_string_ptr /\
       pm == c.cbor_string_perm /\
       Seq.length v == SZ.v (S.len c.cbor_string_ptr) /\
+      (c.cbor_string_type == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v) /\
       r == String c.cbor_string_type ({ size = c.cbor_string_size; value = U64.uint_to_t (SZ.v (S.len c.cbor_string_ptr)) }) v
     )
   ensures
@@ -578,6 +580,7 @@ fn cbor_match_string_intro
   (#v: Ghost.erased (Seq.seq U8.t))
   requires
     pts_to input #pm v ** pure (
+      (typ == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v) /\
       Seq.length v == U64.v len.value
     )
   returns c: cbor_raw
@@ -586,6 +589,7 @@ fn cbor_match_string_intro
     trade (cbor_match 1.0R c r) (pts_to input #pm v) **
     pure (
       Seq.length v == U64.v len.value /\
+      (typ == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v) /\
       r == String typ len (Ghost.reveal v)
     )
 {

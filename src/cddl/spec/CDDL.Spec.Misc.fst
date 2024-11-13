@@ -42,7 +42,7 @@ let t_uint_literal (v: U64.t) : typ =
 noextract
 let string64 = (s: Seq.seq U8.t {FStar.UInt.fits (Seq.length s) 64})
 
-let name_as_text_string (s: string64) : typ =
+let name_as_text_string (s: string64 { CBOR.Spec.API.UTF8.correct s }) : typ =
   t_literal (Cbor.pack (Cbor.CString Cbor.cbor_major_type_text_string s))
 
 // Section 3.6: Tags
@@ -130,8 +130,8 @@ let parser_spec_bstr (p: string64 -> bool { forall x . p x }) : parser_spec bstr
 let serializer_spec_bstr (p: string64 -> bool { forall x . p x }) : serializer_spec (parser_spec_bstr p) =
   (fun x -> Cbor.pack (Cbor.CString Cbor.cbor_major_type_byte_string x))
 
-let parser_spec_tstr (p: string64 -> bool { forall x . p x }) : parser_spec tstr string64 p =
+let parser_spec_tstr (p: string64 -> bool { forall x . p x <==> CBOR.Spec.API.UTF8.correct x }) : parser_spec tstr string64 p =
   (fun x -> let Cbor.CString _ v = Cbor.unpack x in v)
 
-let serializer_spec_tstr (p: string64 -> bool { forall x . p x }) : serializer_spec (parser_spec_tstr p) =
+let serializer_spec_tstr (p: string64 -> bool { forall x . p x <==> CBOR.Spec.API.UTF8.correct x }) : serializer_spec (parser_spec_tstr p) =
   (fun x -> Cbor.pack (Cbor.CString Cbor.cbor_major_type_text_string x))

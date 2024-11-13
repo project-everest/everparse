@@ -506,7 +506,10 @@ let mk_string_t
   (#p: perm) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->
   stt t
-    (pts_to s #p v ** pure (FStar.UInt.fits (Seq.length v) 64))
+    (pts_to s #p v ** pure (
+      FStar.UInt.fits (Seq.length v) 64 /\
+      (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v)
+    ))
     (fun res -> exists* p' v' .
       vmatch p' res (pack (CString ty v')) **
       Trade.trade

@@ -211,7 +211,8 @@ fn cbor_det_mk_string
   (s: S.slice U8.t)
   (#p: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
-requires pts_to s #p v
+requires pts_to s #p v **
+  pure (ty == TextString ==> CBOR.Spec.API.UTF8.correct v) // this is true for Rust's str/String
 returns res: option cbordet
 ensures
   cbor_det_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v res **
@@ -326,7 +327,10 @@ noextract [@@noextract_to "krml"]
 let cbor_det_string_match (t: major_type_byte_string_or_text_string) (p: perm) (a: S.slice U8.t) (v: Spec.cbor) : Tot slprop =
   exists* (v': Seq.seq U8.t) .
     pts_to a #p v' **
-    pure (Spec.CString? (Spec.unpack v) /\ v' == Spec.CString?.v (Spec.unpack v) /\ t == Spec.CString?.typ (Spec.unpack v))
+    pure (
+      Spec.CString? (Spec.unpack v) /\ v' == Spec.CString?.v (Spec.unpack v) /\ t == Spec.CString?.typ (Spec.unpack v) /\
+      (t == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v')
+    )
 
 noeq [@@no_auto_projectors]
 type cbor_det_view =

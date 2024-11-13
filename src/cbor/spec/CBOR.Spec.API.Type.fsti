@@ -455,7 +455,7 @@ let cbor_map_fold_union
 type cbor_case =
   | CSimple: (v: simple_value) -> cbor_case
   | CInt64: (typ: major_type_uint64_or_neg_int64) -> (v: U64.t) -> cbor_case
-  | CString: (typ: major_type_byte_string_or_text_string) -> (v: Seq.seq U8.t { FStar.UInt.fits (Seq.length v) U64.n }) -> cbor_case // Section 3.1: "a string containing an invalid UTF-8 sequence is well-formed but invalid", so we don't care about UTF-8 specifics here.
+  | CString: (typ: major_type_byte_string_or_text_string) -> (v: Seq.seq U8.t { FStar.UInt.fits (Seq.length v) U64.n /\ (typ == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v) }) -> cbor_case // Section 3.1: "a string containing an invalid UTF-8 sequence is well-formed but invalid", so we don't care about UTF-8 specifics here.
   | CArray: (v: list cbor { FStar.UInt.fits (List.Tot.length v) U64.n }) -> cbor_case
   | CMap: (c: cbor_map { FStar.UInt.fits (cbor_map_length c) U64.n }) -> cbor_case
   | CTagged: (tag: U64.t) -> (v: cbor) -> cbor_case

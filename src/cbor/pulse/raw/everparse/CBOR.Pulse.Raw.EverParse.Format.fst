@@ -1,6 +1,7 @@
 module CBOR.Pulse.Raw.EverParse.Format
 open LowParse.Pulse.Int
 open LowParse.Pulse.BitSum
+open LowParse.Pulse.SeqBytes
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -641,17 +642,44 @@ let impl_leaf_content_seq_cond
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-let validate_leaf_content_seq
+let validate_leaf_content_seq'
+  (h: header)
+  (prf: squash (impl_leaf_content_seq_cond h == true))
+  (n: SZ.t { SZ.v n == U64.v (get_header_argument_as_uint64 h) })
+: Tot (validator (parse_leaf_content h))
+= validate_ext
+    (validate_synth
+      (validate_filter_gen
+        (validate_total_constant_size
+          (LowParse.Spec.SeqBytes.parse_lseq_bytes (SZ.v n))
+          n
+        )
+        (LowParse.Spec.SeqBytes.serialize_lseq_bytes (SZ.v n))
+        _
+        (CBOR.Pulse.Raw.EverParse.UTF8.impl_lseq_utf8_correct (get_header_major_type h) n)
+      )
+      (LeafContentSeq ())
+    )
+    (parse_leaf_content h)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn validate_leaf_content_seq
   (sq: squash (SZ.fits_u64))
   (h: header)
   (prf: squash (impl_leaf_content_seq_cond h == true))
-: Tot (validator (parse_leaf_content h))
-= validate_ext
-    (validate_total_constant_size
-      (LowParse.Spec.SeqBytes.parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h)) `parse_synth` LeafContentSeq ())
-      (SZ.uint64_to_sizet (get_header_argument_as_uint64 h))
-    )
-    (parse_leaf_content h)
+: validator #_ #_ (parse_leaf_content h)
+= (input: _)
+  (poffset: _)
+  (#offset: _)
+  (#pm: _)
+  (#v: _)
+{
+  let n = SZ.uint64_to_sizet (get_header_argument_as_uint64 h);
+  validate_leaf_content_seq' h prf n input poffset;
+}
+```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -698,7 +726,7 @@ let jump_leaf_content_seq
 : Tot (jumper (parse_leaf_content h))
 = jump_ext
     (jump_constant_size
-      (LowParse.Spec.SeqBytes.parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h)) `parse_synth` LeafContentSeq ())
+      (parse_filter (LowParse.Spec.SeqBytes.parse_lseq_bytes (U64.v (get_header_argument_as_uint64 h))) (lseq_utf8_correct (get_header_major_type h) _) `parse_synth` LeafContentSeq ())
       (SZ.uint64_to_sizet (get_header_argument_as_uint64 h))
     )
     (parse_leaf_content h)
@@ -931,10 +959,12 @@ fn get_string_payload
     trade (pts_to input #pm v') (pts_to_serialized (serialize_content h) input #pm c) **
     pure (String? v /\ v' == String?.v v)
 {
-  pts_to_serialized_ext_trade
+  pts_to_serialized_ext_trade_gen
     (serialize_content h)
-    (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value))
+    (serialize_filter (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value)) (lseq_utf8_correct (get_header_major_type h) _))
     input;
+  pts_to_serialized_filter_elim_trade (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value)) (lseq_utf8_correct (get_header_major_type h) _) input;
+  Trade.trans _ _ (pts_to_serialized (serialize_content h) input #pm c);
   with v1 . assert (pts_to_serialized (LowParse.Spec.SeqBytes.serialize_lseq_bytes (U64.v (String?.len v).value)) input #pm v1);
   let v2 : Ghost.erased bytes = Ghost.hide #bytes (Ghost.reveal #(Seq.lseq byte (U64.v (String?.len v).value)) v1);
   Trade.rewrite_with_trade

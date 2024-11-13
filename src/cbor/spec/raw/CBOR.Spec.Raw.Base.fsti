@@ -28,7 +28,7 @@ let _ = assert_norm (8 * pow2 3 == 64)
 type raw_data_item : eqtype
 = | Simple: (v: simple_value) -> raw_data_item
   | Int64: (typ: major_type_uint64_or_neg_int64) -> (v: raw_uint64) -> raw_data_item
-  | String: (typ: major_type_byte_string_or_text_string) -> (len: raw_uint64) -> (v: Seq.lseq U8.t (U64.v len.value)) -> raw_data_item // Section 3.1: "a string containing an invalid UTF-8 sequence is well-formed but invalid", so we don't care about UTF-8 specifics here.
+  | String: (typ: major_type_byte_string_or_text_string) -> (len: raw_uint64) -> (v: Seq.lseq U8.t (U64.v len.value) { typ == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v}) -> raw_data_item // Section 3.1: "a string containing an invalid UTF-8 sequence is well-formed but invalid", so we don't care about UTF-8 specifics here.
   | Array: (len: raw_uint64) -> (v: nlist raw_data_item (U64.v len.value)) -> raw_data_item
   | Map: (len: raw_uint64) -> (v: nlist (raw_data_item & raw_data_item) (U64.v len.value)) -> raw_data_item
   | Tagged: (tag: raw_uint64) -> (v: raw_data_item) -> raw_data_item
@@ -242,7 +242,7 @@ let holds_on_raw_data_item_eq_string
   (p: (raw_data_item -> bool))
   (typ: major_type_byte_string_or_text_string)
   (len: raw_uint64)
-  (v: Seq.lseq U8.t (U64.v len.value))
+  (v: Seq.lseq U8.t (U64.v len.value) { typ == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v})
 : Lemma
   (holds_on_raw_data_item p (String typ len v) == p (String typ len v))
   [SMTPat (holds_on_raw_data_item p (String typ len v))]
