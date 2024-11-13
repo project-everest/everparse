@@ -7,6 +7,46 @@ module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 
+```pulse
+ghost fn pts_to_serialized_lseq_bytes_intro
+  (n: nat)
+  (p: perm)
+  (s: S.slice byte)
+  (v: Seq.seq byte)
+requires
+  (pts_to s #p v ** pure (Seq.length v == n))
+ensures
+  exists* (v': Seq.lseq byte n) . pts_to_serialized (serialize_lseq_bytes n) s #p v' **
+    Trade.trade (pts_to_serialized (serialize_lseq_bytes n) s #p v') (pts_to s #p v) **
+    pure (v == v')
+{
+  let v' : Seq.lseq byte n = v;
+  Trade.rewrite_with_trade
+    (pts_to s #p v)
+    (pts_to_serialized (serialize_lseq_bytes n) s #p v')
+}
+```
+
+```pulse
+ghost fn pts_to_serialized_lseq_bytes_elim
+  (n: nat)
+  (p: perm)
+  (s: S.slice byte)
+  (v: Seq.lseq byte n)
+requires
+  pts_to_serialized (serialize_lseq_bytes n) s #p v
+ensures
+  exists* (v': Seq.seq byte) . pts_to s #p v' **
+    Trade.trade (pts_to s #p v') (pts_to_serialized (serialize_lseq_bytes n) s #p v) **
+    pure (v' == v)
+{
+  let v' : Seq.seq byte = v;
+  Trade.rewrite_with_trade
+    (pts_to_serialized (serialize_lseq_bytes n) s #p v)
+    (pts_to s #p v')
+}
+```
+
 let pts_to_seqbytes
   (n: nat)
   (s: with_perm (S.slice byte))
