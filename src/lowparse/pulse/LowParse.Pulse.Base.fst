@@ -85,6 +85,51 @@ fn pts_to_serialized_ext
 }
 ```
 
+let pts_to_serialized_ext_trade_gen_precond
+  (#t1 #t2: Type)
+  (#k1 #k2: parser_kind)
+  (p1: parser k1 t1)
+  (p2: parser k2 t2)
+: Tot prop
+=
+  t1 == t2 /\
+  (forall x . parse p1 x == parse p2 x)
+
+```pulse
+ghost
+fn pts_to_serialized_ext_trade_gen
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: t1)
+  requires pts_to_serialized s1 input #pm v ** pure (
+    pts_to_serialized_ext_trade_gen_precond p1 p2
+  )
+  ensures exists* v2 .
+    pts_to_serialized s2 input #pm v2 ** trade (pts_to_serialized s2 input #pm v2) (pts_to_serialized s1 input #pm v) **
+    pure (t1 == t2 /\
+      v == v2
+    )
+{
+  pts_to_serialized_ext s1 s2 input;
+  ghost
+  fn aux
+    (_: unit)
+    requires emp ** pts_to_serialized s2 input #pm v
+    ensures pts_to_serialized s1 input #pm v
+  {
+    pts_to_serialized_ext s2 s1 input
+  };
+  intro_trade _ _ _ aux
+}
+```
+
 ```pulse
 ghost
 fn pts_to_serialized_ext_trade
