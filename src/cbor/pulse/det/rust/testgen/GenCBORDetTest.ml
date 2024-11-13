@@ -18,7 +18,7 @@ let gen_int (x: int) (name: string) : rust list =
 let quote_string s = Yojson.Safe.to_string (`String s)
 
 let gen_string (s: string) (name: string) : rust list =
-  [`Instr ("let " ^ name ^ " : CborDet = cbor_det_mk_string(CborDetStringKind::TextString, str::as_bytes(" ^ quote_string s ^ ")).expect(\"Expected string short enough\")")]
+  [`Instr ("let " ^ name ^ " : CborDet = cbor_det_mk_text_string(" ^ quote_string s ^ ").expect(\"Expected string short enough\")")]
 
 let gen_map (gen: Yojson.Safe.t -> string -> rust list) (l: (string * Yojson.Safe.t) list) (name: string) : rust list =
   let len = List.length l in

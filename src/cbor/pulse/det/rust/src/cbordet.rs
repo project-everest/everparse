@@ -140,31 +140,35 @@ pub fn cbor_det_mk_int64 <'a>(ty: CborDetIntKind, v: u64) ->
     crate::cbordetver::cbor_det_mk_int64(ty·, v)
 }
 
-/// The kind of strings: byte string or text string
-#[derive(PartialEq, Clone, Copy)]
-pub enum CborDetStringKind
-{
-    ByteString,
-    TextString
-}
-
-/// Constructs a Deterministic CBOR object of "string" type, with kind
-/// `ty`, and the contents of `s` as value. This function does not
-/// perform any copy of its input `s`. It returns `None` if the byte
-/// size of `s` is larger than $2^64 - 1$, `Some(object)`
-/// otherwise.
-pub fn cbor_det_mk_string <'a>(ty: CborDetStringKind, s: &'a [u8]) ->
+/// Constructs a Deterministic CBOR object of "text string" type, with
+/// the contents of `s` as value. This function does not perform any
+/// copy of its input `s`. It returns `None` if the byte size of `s`
+/// is larger than $2^64 - 1$, `Some(object)` otherwise. This function
+/// respects the UTF-8 well-formedness invariants.
+pub fn cbor_det_mk_text_string <'a>(s: &'a str) ->
     Option<CborDet<'a>>
 {
     let ty· : crate::cbordetver::cbor_det_string_kind =
-	match ty {
-	    CborDetStringKind::ByteString => {
-		crate::cbordetver::cbor_det_string_kind::ByteString
-	    }
-	    CborDetStringKind::TextString => {
-		crate::cbordetver::cbor_det_string_kind::TextString
-	    }
-	};
+	crate::cbordetver::cbor_det_string_kind::TextString;
+    match crate::cbordetver::cbor_det_mk_string(ty·, s.as_bytes()) {
+	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	    None
+	}
+	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
+	    Some(v)
+	}
+    }
+}
+
+/// Constructs a Deterministic CBOR object of "byte string" type, with
+/// the contents of `s` as value. This function does not perform any
+/// copy of its input `s`. It returns `None` if the byte size of `s`
+/// is larger than $2^64 - 1$, `Some(object)` otherwise.
+pub fn cbor_det_mk_byte_string <'a>(s: &'a [u8]) ->
+    Option<CborDet<'a>>
+{
+    let ty· : crate::cbordetver::cbor_det_string_kind =
+	crate::cbordetver::cbor_det_string_kind::ByteString;
     match crate::cbordetver::cbor_det_mk_string(ty·, s) {
 	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
@@ -287,7 +291,8 @@ pub struct CborDetMap <'a> { map: crate::cbordetver::cbor_det_map <'a> }
 pub enum CborDetView <'a>
 {
     Int64 { kind: CborDetIntKind, value: u64 },
-    String { kind: CborDetStringKind, payload: &'a [u8] },
+    ByteString { payload: &'a [u8] },
+    TextString { payload: &'a str },
     Array { _0: CborDetArray <'a> },
     Map { _0: CborDetMap <'a> },
     Tagged { tag: u64, payload: CborDet <'a> },
@@ -297,7 +302,8 @@ pub enum CborDetView <'a>
 /// Destructs a Deterministic CBOR object by peeling its first layer
 /// of nesting. This function does not recursively descend into array
 /// or map payloads, and only reads the header of a tagged payload. As
-/// such, it consumes constant stack space.
+/// such, it consumes constant stack space. This function respects the
+/// UTF-8 well-formedness invariants.
 pub fn cbor_det_destruct <'a>(c: CborDet <'a>) -> CborDetView <'a>
 {
     match crate::cbordetver::cbor_det_destruct(c) {
@@ -314,16 +320,14 @@ pub fn cbor_det_destruct <'a>(c: CborDet <'a>) -> CborDetView <'a>
 	    CborDetView::Int64 {kind: kind·, value}
 	}
 	crate::cbordetver::cbor_det_view::String { kind, payload } => {
-	    let kind· : CborDetStringKind =
-		match kind {
-		    crate::cbordetver::cbor_det_string_kind::ByteString => {
-			CborDetStringKind::ByteString
-		    }
-		    crate::cbordetver::cbor_det_string_kind::TextString => {
-			CborDetStringKind::TextString
-		    }
-		};
-	    CborDetView::String {kind: kind·, payload}
+	    match kind {
+		crate::cbordetver::cbor_det_string_kind::ByteString => {
+		    CborDetView::ByteString {payload}
+		}
+		crate::cbordetver::cbor_det_string_kind::TextString => {
+		    CborDetView::TextString {payload: std::str::from_utf8(payload).unwrap()}
+		}
+	    }
 	}
 	crate::cbordetver::cbor_det_view::Array { _0 } => {
 	    CborDetView::Array { _0: CborDetArray {array: _0 } }
