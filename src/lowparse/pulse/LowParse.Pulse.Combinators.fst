@@ -441,6 +441,52 @@ let read_synth'
 = read_synth r f2 f1 (fun x -> read_synth_cont_init (f2 x))
 
 inline_for_extraction
+let validate_filter_test_t
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (f: (t -> GTot bool))
+: Tot Type
+= 
+  (x: slice byte) -> (#pm: perm) -> (#v: Ghost.erased t) -> stt bool
+    (requires pts_to_serialized s x #pm v)
+    (ensures fun res -> pts_to_serialized s x #pm v ** pure (res == f v))
+
+inline_for_extraction
+```pulse
+fn validate_filter_gen
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (w: validator p)
+  (s: serializer p)
+  (f: (t -> GTot bool))
+  (f': validate_filter_test_t s f)
+: validator #_ #(parse_filter_kind k) (parse_filter p f)
+=
+  (input: slice byte)
+  (poffset: _)
+  (#offset: _)
+  (#pm: perm)
+  (#v: Ghost.erased bytes)
+{
+  parse_filter_eq p f (Seq.slice v (SZ.v offset) (Seq.length v));
+  let offset = !poffset;
+  let is_valid = w input poffset;
+  if is_valid {
+    let off = !poffset;
+    let x = peek_trade_gen s input offset off;
+    let res = f' x;
+    Trade.elim _ _;
+    res
+  } else {
+    false
+  }
+}
+```
+
+inline_for_extraction
 ```pulse
 fn validate_filter
   (#t: Type0)
@@ -556,6 +602,31 @@ fn pts_to_serialized_filter_elim
 {
   unfold (pts_to_serialized (serialize_filter s f) input #pm v);
   fold (pts_to_serialized s input #pm v);
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_filter_elim_trade
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (f: (t -> GTot bool))
+  (input: slice byte)
+  (#pm: perm)
+  (#v: parse_filter_refine f)
+  requires (pts_to_serialized (serialize_filter s f) input #pm v)
+  ensures exists* (v': t) . pts_to_serialized s input #pm v' ** Trade.trade (pts_to_serialized s input #pm v') (pts_to_serialized (serialize_filter s f) input #pm v) ** pure (v' == v)
+{
+  pts_to_serialized_filter_elim s f input;
+  ghost fn aux (_: unit)
+  requires emp ** pts_to_serialized s input #pm v
+  ensures (pts_to_serialized (serialize_filter s f) input #pm v)
+  {
+    pts_to_serialized_filter_intro s f input
+  };
+  Trade.intro _ _ _ aux
 }
 ```
 
