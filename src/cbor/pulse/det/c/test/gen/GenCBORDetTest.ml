@@ -68,6 +68,7 @@ let rec gen (x: Yojson.Safe.t) (name: string) : c list =
   | _ -> raise GenUnsupported
 
 let gen_hex (l: string) (name: string) : int * string =
+  let l = String.concat "" (String.split_on_char ' ' l) in
   let len = String.length l in
   let (l, len) =
     if len mod 2 = 0
@@ -216,6 +217,82 @@ and c_list_to_string
   | [] -> accu
   | a :: q -> c_list_to_string indent (accu ^ c_to_string indent a) q
 
+let gen_utf8_tests () : c list = In_channel.with_open_bin "./utf8tests.txt" (fun ch ->
+  prerr_endline "Open file succeeded";
+  let rec aux accu =
+    match In_channel.input_line ch with
+    | None -> accu
+    | Some ln ->
+      prerr_endline ("Read: " ^ ln);
+      if String.length ln = 0
+      then aux accu
+      else if ln.[0] = '#'
+      then aux accu
+      else
+        let test = match String.split_on_char ':' ln with
+        | id :: "valid hex" :: hex :: _ -> Some (id, hex, true)
+        | id :: "invalid hex" :: hex :: _ -> Some (id, hex, false)
+        | _ -> None
+        in
+        match test with
+        | None -> prerr_endline ("skipping unsupported UTF-8 test: " ^ ln); aux accu
+        | Some (id, strhex, is_valid) ->
+           let (nlen, hex) = gen_hex strhex "mystr" in
+           let len = string_of_int nlen in
+           let outlen = string_of_int (nlen + 9) in
+           let accu' = `Block begin
+               `Instr ("printf(\"UTF-8 Test " ^ id ^ ". Testing text string encoding and UTF-8 validation for: " ^ strhex ^ "\\n\")") ::
+               `Instr hex ::
+               `Instr ("cbor_det_t mycbor = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, mystr, " ^ len ^ ")") ::
+               `Instr ("size_t size = cbor_det_size(mycbor, " ^ outlen ^ ")") ::
+               `If ("size == 0") ::
+               `Block [
+                   `Instr ("printf(\"UTF-8 test too large\\n\")");
+                   `Instr ("return 1")
+                 ] ::
+               `Instr ("printf(\"Size computation succeeded!\\n\")") ::
+               `Instr ("uint8_t output[" ^ outlen ^ "]") ::
+               `Instr ("size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, " ^ outlen ^ "))") ::
+               `If ("size != serialized_size") ::
+               `Block [
+                   `Instr ("printf(\"Serialized a different size: expected %ld, got %ld\\n\", size, serialized_size)");
+                   `Instr ("return 1")
+                 ] ::
+               `Instr ("printf(\"Serialization succeeded!\\n\")") ::
+               `Instr ("size_t test = cbor_det_validate(mk_byte_slice(output, size))") ::
+               begin
+                 if is_valid
+                 then
+                   `If ("test != size") ::
+                   `Block [
+                       `Instr ("printf(\"Validation failed, but it was expected to succeed\\n\")");
+                       `Instr ("return 1")
+                   ] ::
+                   `Instr ("printf(\"Validation succeeded!\\n\")") ::
+                   `Instr ("cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size)") ::
+                   `If ("! cbor_det_equal(mycbor, outcbor)") ::
+                   `Block [
+                       `Instr ("printf(\"Round-trip failed\\n\")");
+                       `Instr ("return 1")
+                     ] ::
+                   `Instr ("printf(\"Round-trip succeeded!\\n\")") ::
+                   []
+                 else
+                   `If ("test != 0") ::
+                   `Block [
+                       `Instr ("printf(\"Validation succeeded, but it was expected to fail\\n\")");
+                       `Instr ("return 1")
+                   ] ::
+                   `Instr ("printf(\"Validation failed as expected!\\n\")") ::
+                   []
+               end
+             end :: accu
+           in
+           aux accu'
+  in
+  aux []
+)
+
 let mk_prog (x: c list) = "
 #include <string.h>
 #include <stdio.h>
@@ -247,13 +324,9 @@ int main(void) {
 "
 
 let _ =
-  let rec aux accu i =
-    if i = Array.length Sys.argv
-    then accu
-    else
-      let accu' = accu @ gen_encoding_tests (Yojson.Safe.from_file Sys.argv.(i)) in
-      aux accu' (i + 1)
+  let body =
+    gen_encoding_tests (Yojson.Safe.from_file "appendix_a.json")
   in
-  let body = aux [] 1 in (* skip argv[0] *)
+  let body = body @ gen_utf8_tests () in
   let prog = mk_prog body in
   print_endline prog
