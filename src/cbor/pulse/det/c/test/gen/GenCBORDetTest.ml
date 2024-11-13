@@ -221,6 +221,7 @@ let mk_prog (x: c list) = "
 #include <stdio.h>
 #include <inttypes.h>
 #include \"CBORDet.h\"
+#include \"CBORDetTest.h\"
 
 static char * hex_digits[16] = {\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"a\", \"b\", \"c\", \"d\", \"e\", \"f\"};
 
@@ -239,7 +240,7 @@ static void dump_encoding_test_failure (uint8_t *bytes, size_t len) {
   printf(\"\\n\");
 }
 
-int main(void) {
+int gentest(void) {
 "
   ^ c_list_to_string "  " "" x ^ "
   return 0;

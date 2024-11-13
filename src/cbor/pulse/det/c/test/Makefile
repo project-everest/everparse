@@ -9,6 +9,8 @@ EVERPARSE_INCLUDE_PATH = $(realpath ..)
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
+CFLAGS += -Werror -I $(EVERPARSE_INCLUDE_PATH)
+
 .PHONY: all
 
 .PHONY: CBORDetTest
@@ -16,12 +18,14 @@ include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 CBORDetTest: CBORDetTest.exe
 	./CBORDetTest.exe
 
-CBORDetTest.o: CBORDetTest.c
-	$(CC) -Werror -I $(KRML_HOME)/include -I $(KRML_HOME)/krmllib/dist/generic -I $(EVERPARSE_INCLUDE_PATH) -c -o $@ $<
+OBJ_FILES=CBORDetTest.o main.o
+
+$(OBJ_FILES): %.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 # CBORDetTest.c: gen/GenCBORDetTest.ml
 # 	./gen/CBORDetTest.sh
 
 #CBORDetTest.exe: CBORDetTest.o $(EVERPARSE_LIB_PATH)/evercbor.a
-CBORDetTest.exe: CBORDetTest.o $(EVERPARSE_LIB_PATH)/CBORDet.o
+CBORDetTest.exe: $(OBJ_FILES) $(EVERPARSE_LIB_PATH)/CBORDet.o
 	$(CC) -o CBORDetTest.exe $^
