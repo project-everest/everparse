@@ -755,7 +755,8 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                     res1.wrapping_add(length)
                 };
             let res2: usize = res0;
-            res2
+            let res3: usize = res2;
+            res3
         }
         else
         {
@@ -1017,7 +1018,8 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
                             true
                         };
                     let res2: bool = res0;
-                    res2
+                    let res3: bool = res2;
+                    res3
                 }
                 else
                 {
@@ -1269,6 +1271,94 @@ fn cbor_size <'a>(x: cbor_raw <'a>, bound: usize) -> usize
     }
     else
     { 0usize }
+}
+
+fn impl_correct(s: &[u8]) -> bool
+{
+    let mut pres: [bool; 1] = [true; 1usize];
+    let mut pi: [usize; 1] = [0usize; 1usize];
+    let len: usize = s.len();
+    let res: bool = (&pres)[0];
+    let mut cond: bool =
+        if res
+        {
+            let i: usize = (&pi)[0];
+            i < len
+        }
+        else
+        { false };
+    while
+    cond
+    {
+        let i: usize = (&pi)[0];
+        let byte1: u8 = s[i];
+        let i1: usize = i.wrapping_add(1usize);
+        if byte1 <= 0x7Fu8
+        { (&mut pi)[0] = i1 }
+        else if i1 == len
+        { (&mut pres)[0] = false }
+        else
+        {
+            let byte2: u8 = s[i1];
+            let i2: usize = i1.wrapping_add(1usize);
+            if 0xC2u8 <= byte1 && byte1 <= 0xDFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+            { (&mut pi)[0] = i2 }
+            else if i2 == len
+            { (&mut pres)[0] = false }
+            else
+            {
+                let byte3: u8 = s[i2];
+                let i3: usize = i2.wrapping_add(1usize);
+                if ! (0x80u8 <= byte3 && byte3 <= 0xBFu8)
+                { (&mut pres)[0] = false }
+                else if byte1 == 0xE0u8
+                {
+                    if 0xA0u8 <= byte2 && byte2 <= 0xBFu8
+                    { (&mut pi)[0] = i3 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
+                else if byte1 == 0xEDu8
+                {
+                    if 0x80u8 <= byte2 && byte2 <= 0x9Fu8
+                    { (&mut pi)[0] = i3 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
+                else if 0xE1u8 <= byte1 && byte1 <= 0xEFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+                { (&mut pi)[0] = i3 }
+                else if i3 == len
+                { (&mut pres)[0] = false }
+                else
+                {
+                    let byte4: u8 = s[i3];
+                    let i4: usize = i3.wrapping_add(1usize);
+                    if ! (0x80u8 <= byte4 && byte4 <= 0xBFu8)
+                    { (&mut pres)[0] = false }
+                    else if byte1 == 0xF0u8 && 0x90u8 <= byte2 && byte2 <= 0xBFu8
+                    { (&mut pi)[0] = i4 }
+                    else if
+                    0xF1u8 <= byte1 && byte1 <= 0xF3u8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+                    { (&mut pi)[0] = i4 }
+                    else if byte1 == 0xF4u8 && 0x80u8 <= byte2 && byte2 <= 0x8Fu8
+                    { (&mut pi)[0] = i4 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
+            }
+        };
+        let res0: bool = (&pres)[0];
+        let ite: bool =
+            if res0
+            {
+                let i0: usize = (&pi)[0];
+                i0 < len
+            }
+            else
+            { false };
+        cond = ite
+    };
+    (&pres)[0]
 }
 
 fn read_initial_byte_t(input: &[u8]) -> initial_byte_t
@@ -1809,18 +1899,63 @@ fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
                     ||
                     b.major_type == cbor_major_type_text_string
                     {
-                        let offset2: usize = poffset[0];
                         let b0: initial_byte_t = x.fst;
                         let l: long_argument = x.snd;
-                        if input.len().wrapping_sub(offset2) < argument_as_uint64(b0, l) as usize
-                        { false }
-                        else
+                        let n1: usize = argument_as_uint64(b0, l) as usize;
+                        let offset2: usize = poffset[0];
+                        let offset3: usize = poffset[0];
+                        let is_valid: bool =
+                            if input.len().wrapping_sub(offset3) < n1
+                            { false }
+                            else
+                            {
+                                poffset[0] = offset3.wrapping_add(n1);
+                                true
+                            };
+                        if is_valid
                         {
-                            let b1: initial_byte_t = x.fst;
-                            let l0: long_argument = x.snd;
-                            poffset[0] = offset2.wrapping_add(argument_as_uint64(b1, l0) as usize);
-                            true
+                            let off2: usize = poffset[0];
+                            let s·0: (&[u8], &[u8]) = input.split_at(offset2);
+                            let split1230: (&[u8], &[u8]) =
+                                {
+                                    let s1: &[u8] = s·0.0;
+                                    let s2: &[u8] = s·0.1;
+                                    (s1,s2)
+                                };
+                            let x1: &[u8] =
+                                {
+                                    let _input1: &[u8] = split1230.0;
+                                    let input23: &[u8] = split1230.1;
+                                    let consumed: usize = off2.wrapping_sub(offset2);
+                                    let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                                    let res1: (&[u8], &[u8]) =
+                                        {
+                                            let s1: &[u8] = s1s2.0;
+                                            let s2: &[u8] = s1s2.1;
+                                            (s1,s2)
+                                        };
+                                    let split23: (&[u8], &[u8]) =
+                                        {
+                                            let left: &[u8] = res1.0;
+                                            let right: &[u8] = res1.1;
+                                            (left,right)
+                                        };
+                                    let input2: &[u8] = split23.0;
+                                    let _input3: &[u8] = split23.1;
+                                    input2
+                                };
+                            let res1: bool =
+                                if get_header_major_type(x) == cbor_major_type_byte_string
+                                { true }
+                                else
+                                {
+                                    let res1: bool = impl_correct(x1);
+                                    res1
+                                };
+                            res1
                         }
+                        else
+                        { false }
                     }
                     else
                     { true }
