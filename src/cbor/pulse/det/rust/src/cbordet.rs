@@ -32,10 +32,10 @@ pub type CborDet <'a> = crate::cbordetver::cbordet <'a>;
 /// object. As such, it uses constant stack space (including data
 /// validation.) "Destructor" functions are to be used on the returned
 /// object, to examine each level of nesting one at a time. NOTE: This
-/// implementation checks for no validity constraint of Section 5.3
-/// except the absence of duplicate map keys (which is a consequence
-/// of the deterministic encoding.) In particular, this implementation
-/// does not check the well-formedness of UTF-8 text strings.
+/// implementation checks for the basic validity constraints of
+/// Section 5.3.1, i.e. the absence of duplicate map keys (which is a
+/// consequence of the deterministic encoding.), and the
+/// well-formedness of UTF-8 text strings.
 pub fn cbor_det_parse <'a>(input: &'a [u8]) ->
     Option<(CborDet<'a>, usize)>
 {
@@ -152,8 +152,7 @@ pub enum CborDetStringKind
 /// `ty`, and the contents of `s` as value. This function does not
 /// perform any copy of its input `s`. It returns `None` if the byte
 /// size of `s` is larger than $2^64 - 1$, `Some(object)`
-/// otherwise. NOTE: This function DOES NOT check the validity of
-/// UTF-8 text strings.
+/// otherwise.
 pub fn cbor_det_mk_string <'a>(ty: CborDetStringKind, s: &'a [u8]) ->
     Option<CborDet<'a>>
 {
