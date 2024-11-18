@@ -3156,10 +3156,16 @@ fn cbor_raw_ints_optimal(a: &[u8]) -> bool
             let s2: &[u8] = s.1;
             (s1,s2)
         };
-    let spl: (&[u8], &[u8]) =
+    let res0: (&[u8], &[u8]) =
         {
             let input1: &[u8] = res.0;
             let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let spl: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res0.0;
+            let input2: &[u8] = res0.1;
             (input1,input2)
         };
     let input1: &[u8] =
@@ -3190,60 +3196,8 @@ fn cbor_raw_ints_optimal(a: &[u8]) -> bool
 
 fn impl_deterministically_encoded_cbor_map_key_order(a1: &[u8], a2: &[u8]) -> bool
 {
-    let i: usize = jump_raw_data_item(a1, 0usize);
-    let s: (&[u8], &[u8]) = a1.split_at(i);
-    let res: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s.0;
-            let s2: &[u8] = s.1;
-            (s1,s2)
-        };
-    let res0: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res.0;
-            let input2: &[u8] = res.1;
-            (input1,input2)
-        };
-    let spl: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res0.0;
-            let input2: &[u8] = res0.1;
-            (input1,input2)
-        };
-    let k1: &[u8] =
-        {
-            let input1: &[u8] = spl.0;
-            let _input2: &[u8] = spl.1;
-            input1
-        };
-    let i0: usize = jump_raw_data_item(a2, 0usize);
-    let s0: (&[u8], &[u8]) = a2.split_at(i0);
-    let res1: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s0.0;
-            let s2: &[u8] = s0.1;
-            (s1,s2)
-        };
-    let res2: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res1.0;
-            let input2: &[u8] = res1.1;
-            (input1,input2)
-        };
-    let spl0: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res2.0;
-            let input2: &[u8] = res2.1;
-            (input1,input2)
-        };
-    let k2: &[u8] =
-        {
-            let input1: &[u8] = spl0.0;
-            let _input2: &[u8] = spl0.1;
-            input1
-        };
-    let res3: i16 = lex_compare_bytes(k1, k2);
-    res3 < 0i16
+    let res: i16 = lex_compare_bytes(a1, a2);
+    res < 0i16
 }
 
 fn cbor_raw_sorted(a: &[u8]) -> bool
@@ -3256,111 +3210,215 @@ fn cbor_raw_sorted(a: &[u8]) -> bool
             let s2: &[u8] = s.1;
             (s1,s2)
         };
-    let spl: (&[u8], &[u8]) =
+    let res0: (&[u8], &[u8]) =
         {
             let input1: &[u8] = res.0;
             let input2: &[u8] = res.1;
             (input1,input2)
         };
-    let ah: &[u8] = spl.0;
-    let ap: &[u8] = spl.1;
-    let h: header = read_header(ah);
+    let _letpattern: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res0.0;
+            let input2: &[u8] = res0.1;
+            (input1,input2)
+        };
+    let input1: &[u8] = _letpattern.0;
+    let input2: &[u8] = _letpattern.1;
+    let h: header = read_header(input1);
     if get_header_major_type(h) == cbor_major_type_map
     {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let n: u64 = argument_as_uint64(b, l);
-        if n as usize == 0usize
+        let nbpairs: u64 = argument_as_uint64(h.fst, h.snd);
+        if nbpairs < 2u64
         { true }
         else
         {
-            let off1: usize = jump_raw_data_item(ap, 0usize);
-            let i0: usize = jump_raw_data_item(ap, off1);
-            let s1: (&[u8], &[u8]) = ap.split_at(i0);
-            let res0: (&[u8], &[u8]) =
+            let b: initial_byte_t = h.fst;
+            let i0: usize =
+                if
+                b.major_type == cbor_major_type_byte_string
+                ||
+                b.major_type == cbor_major_type_text_string
+                {
+                    let b0: initial_byte_t = h.fst;
+                    let l: long_argument = h.snd;
+                    0usize.wrapping_add(argument_as_uint64(b0, l) as usize)
+                }
+                else
+                { 0usize };
+            let s0: (&[u8], &[u8]) = input2.split_at(i0);
+            let res1: (&[u8], &[u8]) =
+                {
+                    let s1: &[u8] = s0.0;
+                    let s2: &[u8] = s0.1;
+                    (s1,s2)
+                };
+            let res2: (&[u8], &[u8]) =
+                {
+                    let input11: &[u8] = res1.0;
+                    let input21: &[u8] = res1.1;
+                    (input11,input21)
+                };
+            let spl: (&[u8], &[u8]) =
+                {
+                    let input11: &[u8] = res2.0;
+                    let input21: &[u8] = res2.1;
+                    (input11,input21)
+                };
+            let input3: &[u8] =
+                {
+                    let _input11: &[u8] = spl.0;
+                    let input21: &[u8] = spl.1;
+                    input21
+                };
+            let i1: usize = jump_raw_data_item(input3, 0usize);
+            let s1: (&[u8], &[u8]) = input3.split_at(i1);
+            let res3: (&[u8], &[u8]) =
                 {
                     let s11: &[u8] = s1.0;
                     let s2: &[u8] = s1.1;
                     (s11,s2)
                 };
-            let res1: (&[u8], &[u8]) =
+            let res4: (&[u8], &[u8]) =
                 {
-                    let input1: &[u8] = res0.0;
-                    let input2: &[u8] = res0.1;
-                    (input1,input2)
+                    let input11: &[u8] = res3.0;
+                    let input21: &[u8] = res3.1;
+                    (input11,input21)
                 };
-            let res2: (&[u8], &[u8]) =
+            let _letpattern1: (&[u8], &[u8]) =
                 {
-                    let input1: &[u8] = res1.0;
-                    let input2: &[u8] = res1.1;
-                    (input1,input2)
+                    let input11: &[u8] = res4.0;
+                    let input21: &[u8] = res4.1;
+                    (input11,input21)
                 };
-            let pl: (&[u8], &[u8]) =
+            let _letpattern10: (&[u8], &[u8]) =
                 {
-                    let _s1: &[u8] = res2.0;
-                    let _s2: &[u8] = res2.1;
-                    res2
+                    let hd: &[u8] = _letpattern1.0;
+                    let tl: &[u8] = _letpattern1.1;
+                    (hd,tl)
                 };
-            let s10: &[u8] = pl.0;
-            let s2: &[u8] = pl.1;
-            let mut phd: [&[u8]; 1] = [s10; 1usize];
-            let mut ptl: [&[u8]; 1] = [s2; 1usize];
-            let n·: usize = (n as usize).wrapping_sub(1usize);
-            let mut pi: [usize; 1] = [n·; 1usize];
+            let hd4: &[u8] = _letpattern10.0;
+            let input4: &[u8] = _letpattern10.1;
+            let i2: usize = jump_raw_data_item(input4, 0usize);
+            let s10: (&[u8], &[u8]) = input4.split_at(i2);
+            let res5: (&[u8], &[u8]) =
+                {
+                    let s11: &[u8] = s10.0;
+                    let s2: &[u8] = s10.1;
+                    (s11,s2)
+                };
+            let res6: (&[u8], &[u8]) =
+                {
+                    let input11: &[u8] = res5.0;
+                    let input21: &[u8] = res5.1;
+                    (input11,input21)
+                };
+            let _letpattern2: (&[u8], &[u8]) =
+                {
+                    let input11: &[u8] = res6.0;
+                    let input21: &[u8] = res6.1;
+                    (input11,input21)
+                };
+            let _letpattern20: (&[u8], &[u8]) =
+                {
+                    let hd: &[u8] = _letpattern2.0;
+                    let tl: &[u8] = _letpattern2.1;
+                    (hd,tl)
+                };
+            let input5: &[u8] =
+                {
+                    let _hd: &[u8] = _letpattern20.0;
+                    let tl: &[u8] = _letpattern20.1;
+                    tl
+                };
+            let mut pkey: [&[u8]; 1] = [hd4; 1usize];
+            let pairs: u64 = nbpairs.wrapping_sub(1u64);
+            let mut ppairs: [u64; 1] = [pairs; 1usize];
+            let mut ptail: [&[u8]; 1] = [input5; 1usize];
             let mut pres: [bool; 1] = [true; 1usize];
-            let i1: usize = (&pi)[0];
-            let res3: bool = (&pres)[0];
-            let mut cond: bool = res3 && i1 > 0usize;
+            let res7: bool = (&pres)[0];
+            let pairs1: u64 = (&ppairs)[0];
+            let mut cond: bool = res7 && pairs1 > 0u64;
             while
             cond
             {
-                let stl: &[u8] = (&ptl)[0];
-                let off10: usize = jump_raw_data_item(stl, 0usize);
-                let i2: usize = jump_raw_data_item(stl, off10);
-                let s3: (&[u8], &[u8]) = stl.split_at(i2);
-                let res4: (&[u8], &[u8]) =
+                let tail: &[u8] = (&ptail)[0];
+                let i3: usize = jump_raw_data_item(tail, 0usize);
+                let s11: (&[u8], &[u8]) = tail.split_at(i3);
+                let res8: (&[u8], &[u8]) =
                     {
-                        let s11: &[u8] = s3.0;
-                        let s21: &[u8] = s3.1;
-                        (s11,s21)
+                        let s110: &[u8] = s11.0;
+                        let s2: &[u8] = s11.1;
+                        (s110,s2)
                     };
-                let res5: (&[u8], &[u8]) =
+                let res9: (&[u8], &[u8]) =
                     {
-                        let input1: &[u8] = res4.0;
-                        let input2: &[u8] = res4.1;
-                        (input1,input2)
+                        let input11: &[u8] = res8.0;
+                        let input21: &[u8] = res8.1;
+                        (input11,input21)
                     };
-                let res6: (&[u8], &[u8]) =
+                let _letpattern21: (&[u8], &[u8]) =
                     {
-                        let input1: &[u8] = res5.0;
-                        let input2: &[u8] = res5.1;
-                        (input1,input2)
+                        let input11: &[u8] = res9.0;
+                        let input21: &[u8] = res9.1;
+                        (input11,input21)
                     };
-                let pl1: (&[u8], &[u8]) =
+                let _letpattern22: (&[u8], &[u8]) =
                     {
-                        let _s11: &[u8] = res6.0;
-                        let _s21: &[u8] = res6.1;
-                        res6
+                        let hd: &[u8] = _letpattern21.0;
+                        let tl: &[u8] = _letpattern21.1;
+                        (hd,tl)
                     };
                 {
-                    let s11: &[u8] = pl1.0;
-                    let s21: &[u8] = pl1.1;
-                    let shd: &[u8] = (&phd)[0];
-                    let res7: bool = impl_deterministically_encoded_cbor_map_key_order(shd, s11);
-                    if res7
+                    let key2: &[u8] = _letpattern22.0;
+                    let tail2: &[u8] = _letpattern22.1;
+                    let key1: &[u8] = (&pkey)[0];
+                    let res10: bool = impl_deterministically_encoded_cbor_map_key_order(key1, key2);
+                    if res10
                     {
-                        (&mut phd)[0] = s11;
-                        (&mut ptl)[0] = s21;
-                        let i3: usize = (&pi)[0];
-                        let i·: usize = i3.wrapping_sub(1usize);
-                        (&mut pi)[0] = i·
+                        let i4: usize = jump_raw_data_item(tail2, 0usize);
+                        let s12: (&[u8], &[u8]) = tail2.split_at(i4);
+                        let res11: (&[u8], &[u8]) =
+                            {
+                                let s110: &[u8] = s12.0;
+                                let s2: &[u8] = s12.1;
+                                (s110,s2)
+                            };
+                        let res12: (&[u8], &[u8]) =
+                            {
+                                let input11: &[u8] = res11.0;
+                                let input21: &[u8] = res11.1;
+                                (input11,input21)
+                            };
+                        let _letpattern3: (&[u8], &[u8]) =
+                            {
+                                let input11: &[u8] = res12.0;
+                                let input21: &[u8] = res12.1;
+                                (input11,input21)
+                            };
+                        let _letpattern30: (&[u8], &[u8]) =
+                            {
+                                let hd: &[u8] = _letpattern3.0;
+                                let tl: &[u8] = _letpattern3.1;
+                                (hd,tl)
+                            };
+                        let tail·: &[u8] =
+                            {
+                                let _hd: &[u8] = _letpattern30.0;
+                                let tl: &[u8] = _letpattern30.1;
+                                tl
+                            };
+                        (&mut pkey)[0] = key2;
+                        let pairs10: u64 = (&ppairs)[0];
+                        let pairs·: u64 = pairs10.wrapping_sub(1u64);
+                        (&mut ppairs)[0] = pairs·;
+                        (&mut ptail)[0] = tail·
                     }
                     else
                     { (&mut pres)[0] = false }
                 };
-                let i3: usize = (&pi)[0];
-                let res7: bool = (&pres)[0];
-                cond = res7 && i3 > 0usize
+                let res10: bool = (&pres)[0];
+                let pairs10: u64 = (&ppairs)[0];
+                cond = res10 && pairs10 > 0u64
             };
             (&pres)[0]
         }
@@ -3418,35 +3476,8 @@ fn cbor_validate_det·(input: &[u8]) -> usize
         {
             let n0: usize = (&pn)[0];
             let pi: &[u8] = (&ppi)[0];
-            let i: usize = jump_raw_data_item(pi, 0usize);
-            let s: (&[u8], &[u8]) = pi.split_at(i);
-            let res0: (&[u8], &[u8]) =
-                {
-                    let s1: &[u8] = s.0;
-                    let s2: &[u8] = s.1;
-                    (s1,s2)
-                };
-            let res1: (&[u8], &[u8]) =
-                {
-                    let input11: &[u8] = res0.0;
-                    let input2: &[u8] = res0.1;
-                    (input11,input2)
-                };
-            let spl: (&[u8], &[u8]) =
-                {
-                    let input11: &[u8] = res1.0;
-                    let input2: &[u8] = res1.1;
-                    (input11,input2)
-                };
-            let res2: &[u8] =
-                {
-                    let input11: &[u8] = spl.0;
-                    let _input2: &[u8] = spl.1;
-                    input11
-                };
-            let px: &[u8] = res2;
-            let res3: bool = cbor_raw_ints_optimal(px);
-            if ! res3
+            let res0: bool = cbor_raw_ints_optimal(pi);
+            if ! res0
             { (&mut pres)[0] = false }
             else
             {
@@ -3464,7 +3495,7 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                         let input23: &[u8] = split1230.1;
                         let consumed: usize = off1.wrapping_sub(0usize);
                         let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                        let res10: (&[u8], &[u8]) =
+                        let res1: (&[u8], &[u8]) =
                             {
                                 let s1: &[u8] = s1s2.0;
                                 let s2: &[u8] = s1s2.1;
@@ -3472,18 +3503,18 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                             };
                         let split23: (&[u8], &[u8]) =
                             {
-                                let left: &[u8] = res10.0;
-                                let right: &[u8] = res10.1;
+                                let left: &[u8] = res1.0;
+                                let right: &[u8] = res1.1;
                                 (left,right)
                             };
                         let input2: &[u8] = split23.0;
                         let _input3: &[u8] = split23.1;
                         input2
                     };
-                let res10: header = read_header(input·);
-                let x: header = res10;
+                let res1: header = read_header(input·);
+                let x: header = res1;
                 let b: initial_byte_t = x.fst;
-                let i0: usize =
+                let i: usize =
                     if
                     b.major_type == cbor_major_type_byte_string
                     ||
@@ -3495,30 +3526,30 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                     }
                     else
                     { off1.wrapping_add(0usize) };
-                let s0: (&[u8], &[u8]) = pi.split_at(i0);
-                let res11: (&[u8], &[u8]) =
+                let s: (&[u8], &[u8]) = pi.split_at(i);
+                let res10: (&[u8], &[u8]) =
                     {
-                        let s1: &[u8] = s0.0;
-                        let s2: &[u8] = s0.1;
+                        let s1: &[u8] = s.0;
+                        let s2: &[u8] = s.1;
                         (s1,s2)
                     };
-                let spl0: (&[u8], &[u8]) =
+                let spl: (&[u8], &[u8]) =
                     {
-                        let input11: &[u8] = res11.0;
-                        let input2: &[u8] = res11.1;
+                        let input11: &[u8] = res10.0;
+                        let input2: &[u8] = res10.1;
                         (input11,input2)
                     };
-                let ph: &[u8] = spl0.0;
-                let pc: &[u8] = spl0.1;
+                let ph: &[u8] = spl.0;
+                let pc: &[u8] = spl.1;
                 let unused: usize = pc.len();
                 crate::lowstar::ignore::ignore::<usize>(unused);
                 let count: usize = jump_recursive_step_count_leaf(ph);
                 (&mut pn)[0] = n0.wrapping_sub(1usize).wrapping_add(count);
                 (&mut ppi)[0] = pc
             };
-            let res4: bool = (&pres)[0];
+            let res1: bool = (&pres)[0];
             let n1: usize = (&pn)[0];
-            cond = res4 && n1 > 0usize
+            cond = res1 && n1 > 0usize
         };
         let res0: bool = (&pres)[0];
         let check1: bool = res0;
@@ -3537,35 +3568,8 @@ fn cbor_validate_det·(input: &[u8]) -> usize
             {
                 let n1: usize = (&pn0)[0];
                 let pi: &[u8] = (&ppi0)[0];
-                let i: usize = jump_raw_data_item(pi, 0usize);
-                let s: (&[u8], &[u8]) = pi.split_at(i);
-                let res2: (&[u8], &[u8]) =
-                    {
-                        let s1: &[u8] = s.0;
-                        let s2: &[u8] = s.1;
-                        (s1,s2)
-                    };
-                let res3: (&[u8], &[u8]) =
-                    {
-                        let input11: &[u8] = res2.0;
-                        let input2: &[u8] = res2.1;
-                        (input11,input2)
-                    };
-                let spl: (&[u8], &[u8]) =
-                    {
-                        let input11: &[u8] = res3.0;
-                        let input2: &[u8] = res3.1;
-                        (input11,input2)
-                    };
-                let res4: &[u8] =
-                    {
-                        let input11: &[u8] = spl.0;
-                        let _input2: &[u8] = spl.1;
-                        input11
-                    };
-                let px: &[u8] = res4;
-                let res5: bool = cbor_raw_sorted(px);
-                if ! res5
+                let res2: bool = cbor_raw_sorted(pi);
+                if ! res2
                 { (&mut pres0)[0] = false }
                 else
                 {
@@ -3602,7 +3606,7 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                     let res10: header = read_header(input·);
                     let x: header = res10;
                     let b: initial_byte_t = x.fst;
-                    let i0: usize =
+                    let i: usize =
                         if
                         b.major_type == cbor_major_type_byte_string
                         ||
@@ -3614,30 +3618,30 @@ fn cbor_validate_det·(input: &[u8]) -> usize
                         }
                         else
                         { off1.wrapping_add(0usize) };
-                    let s0: (&[u8], &[u8]) = pi.split_at(i0);
+                    let s: (&[u8], &[u8]) = pi.split_at(i);
                     let res11: (&[u8], &[u8]) =
                         {
-                            let s1: &[u8] = s0.0;
-                            let s2: &[u8] = s0.1;
+                            let s1: &[u8] = s.0;
+                            let s2: &[u8] = s.1;
                             (s1,s2)
                         };
-                    let spl0: (&[u8], &[u8]) =
+                    let spl: (&[u8], &[u8]) =
                         {
                             let input11: &[u8] = res11.0;
                             let input2: &[u8] = res11.1;
                             (input11,input2)
                         };
-                    let ph: &[u8] = spl0.0;
-                    let pc: &[u8] = spl0.1;
+                    let ph: &[u8] = spl.0;
+                    let pc: &[u8] = spl.1;
                     let unused: usize = pc.len();
                     crate::lowstar::ignore::ignore::<usize>(unused);
                     let count: usize = jump_recursive_step_count_leaf(ph);
                     (&mut pn0)[0] = n1.wrapping_sub(1usize).wrapping_add(count);
                     (&mut ppi0)[0] = pc
                 };
-                let res6: bool = (&pres0)[0];
+                let res3: bool = (&pres0)[0];
                 let n2: usize = (&pn0)[0];
-                cond0 = res6 && n2 > 0usize
+                cond0 = res3 && n2 > 0usize
             };
             let res2: bool = (&pres0)[0];
             let check2: bool = res2;
