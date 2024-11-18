@@ -40,7 +40,7 @@ and Y coordinates. So we create a file, ``HelloWorld.3d``, with the
 following 3d data format description:
 
 .. literalinclude:: HelloWorld.3d
-    :language: c
+    :language: 3d
 
 This data format is very similar to a C type description, where
 ``UINT16`` denotes the type of unsigned 16-bit integers, represented
@@ -74,7 +74,7 @@ marked with ``entrypoint`` tells 3d to expose its validator in
 Structs can be nested, such as in the following instance:
 
 .. literalinclude:: Triangle.3d
-    :language: c
+    :language: 3d
 
 Then, since in this file the definition of ``point`` is not prefixed
 with ``entrypoint``, only ``triangle`` will have its validator exposed
@@ -90,13 +90,15 @@ There can be multiple definitions marked ``entrypoint`` in a given
   following data format description:
 
   .. literalinclude:: ColoredPoint.3d
-      :language: c
+      :language: 3d
 
   * in ``coloredPoint1``, 3d will not introduce any padding between
     the ``color`` field and the ``pt`` field;
 
   * in ``coloredPoint2``, 3d will not introduce any padding after the
     ``color`` field.
+
+
 
 .. _sec-constraints:
 
@@ -108,7 +110,7 @@ provides a way to actually check for constraints on their field
 values:
 
 .. literalinclude:: Smoker.3d
-    :language: c
+    :language: 3d
 
 In this example, the validator for ``smoker`` will check that the
 value of the ``age`` field is at least 21.
@@ -122,7 +124,7 @@ fields of the struct. For instance, here is a type definition for a
 pair ordered by increasing values:
 
 .. literalinclude:: OrderedPair.3d
-    :language: c
+    :language: 3d
 
 .. warning::
 
@@ -130,7 +132,7 @@ pair ordered by increasing values:
    mathematical integers. Thus, the following naive definition:
 
    .. literalinclude:: BoundedSumConst.3d
-       :language: c
+       :language: 3d
        :start-after: SNIPPET_START: boundedSumNaive
        :end-before: SNIPPET_END: boundedSumNaive
 
@@ -139,7 +141,7 @@ pair ordered by increasing values:
    correct way of stating the condition is as follows:
 
    .. literalinclude:: BoundedSumConst.3d
-       :language: c
+       :language: 3d
        :start-after: SNIPPET_START: boundedSumCorrect
        :end-before: SNIPPET_END: boundedSumCorrect
 
@@ -158,7 +160,7 @@ UINT16, UINT32 and UINT64.
 Consider the following example:
 
 .. literalinclude:: BF.3d
-    :language: c
+    :language: 3d
     :start-after: SNIPPET_START: BF
     :end-before: SNIPPET_END: BF
 
@@ -177,7 +179,7 @@ implements `MSVC's rules for packing bit fields
 least-significant bit first. For instance:
 
 .. literalinclude:: BF.3d
-    :language: c
+    :language: 3d
     :start-after: SNIPPET_START: BF2
     :end-before: SNIPPET_END: BF2
 
@@ -211,12 +213,12 @@ Constants and Enumerations
 3d provides a way to define numerical constants:
 
 .. literalinclude:: ConstColor.3d
-    :language: c
+    :language: 3d
 
 Alternatively, 3d provides a way to define enumerated types:
 
 .. literalinclude:: Color.3d
-    :language: c
+    :language: 3d
 
 The validator for ``coloredPoint`` will check that the value of
 the field ``col`` is either 1, 2 (for ``green``), or 42.
@@ -232,7 +234,7 @@ Due to a limitation in the way 3d currently checks for the absence of
 double-fetches, values with enum type cannot be used in
 constraints. For example, the following code is currently rejected.
 
-.. code-block:: c
+.. code-block:: 3d
                 
   UINT32 enum color {
     red = 1,
@@ -258,6 +260,7 @@ With the following error message:
 One must instead write:
 
 .. literalinclude:: EnumConstraint.3d
+   :language: 3d
 
 We expect to lift this limitation soon.
 
@@ -272,7 +275,7 @@ integers whose sum is bounded by a bound provided by the user as
 argument:
 
 .. literalinclude:: BoundedSum.3d
-    :language: c
+    :language: 3d
     :start-after: SNIPPET_START: boundedSum
     :end-before: SNIPPET_END: boundedSum
 
@@ -289,7 +292,7 @@ Parameterized data types can also be instantiated within the ``.3d``
 file itself, including by the value of the field of a struct:
 
 .. literalinclude:: BoundedSum.3d
-    :language: c
+    :language: 3d
     :start-after: SNIPPET_START: mySum
     :end-before: SNIPPET_END: mySum
 
@@ -297,7 +300,7 @@ A parameterized data type can also check whether a condition on its
 arguments holds before even trying to check its contents:
 
 .. literalinclude:: BoundedSumWhere.3d
-    :language: c
+    :language: 3d
 
 In this case, the validator for ``boundedSum`` would check
 that ``bound <= 1729``, before validating its fields.
@@ -315,7 +318,7 @@ For instance, the following description defines the type of an integer
 prefixed by its size in bits.
 
 .. literalinclude:: TaggedUnion.3d
-    :language: c
+    :language: 3d
 
 .. warning::
 
@@ -395,7 +398,7 @@ byte array contains a pair of integers, and then read them into a
 couple of mutable locations of your choosing. Here's how:
 
 .. literalinclude:: ReadPair.3d
-    :language: c
+    :language: 3d
 
 The struct ``Pair`` takes two out-parameters, ``x`` and ``y``. Out
 parameters are signified by the ``mutable`` keyword and have pointer
@@ -502,7 +505,7 @@ Another example
 Consider the following definition:
 
 .. literalinclude:: GetFieldPtr.3d
-    :language: c
+    :language: 3d
     :start-after: SNIPPET_START: GetFieldPtr.T
     :end-before: SNIPPET_END: GetFieldPtr.T
 
@@ -547,7 +550,7 @@ For example, the listing below shows an integer type that can either
 be represented using 64 bits (if ``ARCH64`` is true) or 32 bits.
 
 .. literalinclude:: PointArch_32_64.3d
-    :language: c
+    :language: 3d
 
 To compile such a file using 3D, we also need to provide a
 ``.3d.config`` file that declares all the compile-time flags used in
@@ -604,7 +607,7 @@ requires to insert.
 To assist with this, 3d provides the following feature:
 
 .. literalinclude:: GetFieldPtr.3d
-    :language: c
+  :language: 3d
 
 Following the type definitions, the ``refining`` section states that
 the type ``S`` defined in the C header file ``GetFieldPtrBase.h`` is
@@ -621,8 +624,8 @@ checking that the ``sizeof(S)`` as computed by the C compiler matches
 
 In generality, the refining declaration takes the following form:
 
-.. code-block:: c
-                
+.. code-block:: 3d
+
   refining "I1.h", ..., "In.h" {
       S1 as T1, ...
       Sm as Tm
@@ -692,7 +695,7 @@ in ``Derived`` to reuse the definitions that are exported in ``Base``.
 For example, in module ``Base`` we could define the following types:
 
 .. literalinclude:: Base.3d
-    :language: c
+    :language: 3d
 
 Note, the ``export`` qualifier indicate that these definitions may be
 referenced from another module. Types that are not exproted (like
@@ -702,7 +705,7 @@ In ``Derived`` we can use the type from ``Base`` by referring to it
 using a fully qualified name of the form ``<MODULE NAME>.<IDENTIFIER>``.
 
 .. literalinclude:: Derived.3d
-   :language: c
+   :language: 3d
    :start-after: SNIPPET_START: Triple
    :end-before: SNIPPET_END: Triple
 
@@ -712,7 +715,7 @@ using a fully qualified name of the form ``<MODULE NAME>.<IDENTIFIER>``.
 ``Base`` for use within the current module.
 
 .. literalinclude:: Derived.3d
-   :language: c
+   :language: 3d
    :start-after: SNIPPET_START: Quad
    :end-before: SNIPPET_END: Quad
 
@@ -865,7 +868,7 @@ set.
 To specify the type of a TCP header, we begin by defining some basic
 types.
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef UINT16 PORT;
   typedef UINT32 SEQ_NUMBER;
@@ -883,7 +886,7 @@ option begins with an option kind tag, an 8-bit value. Depending on
 the option kind, a variable number of bits of an option value can
 follow. The permitted option kinds are:
 
-.. code-block:: c
+.. code-block:: 3d
 
   #define OPTION_KIND_END_OF_OPTION_LIST 0x00
   #define OPTION_KIND_NO_OPERATION 0x01
@@ -899,7 +902,7 @@ be present---it turns out, the ``SYN`` bit in the header must be set
 for this option to be allowed. The general shape of an ``OPTION`` is
 as below.
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _OPTION(Bool MaxSegSizeAllowed)
   {
@@ -913,7 +916,7 @@ depends on the ``OptionKind`` and the ``MaxSegSizeAllowed`` flag.
 Next, to define the ``OPTION_PAYLOAD`` type, we use a ``casetype``, as
 shown below.
 
-.. code-block:: c
+.. code-block:: 3d
 
   casetype _OPTION_PAYLOAD(UINT8 OptionKind, Bool MaxSegSizeAllowed)
   {
@@ -951,7 +954,7 @@ use of the ``where` constraint ensures that this case is present only
 when `MaxSegSizeAllowed == true``. The payload is a length field (4
 bytes) and a 2-byte ``MaxSegSize`` value.
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _MAX_SEG_SIZE_PAYLOAD(Bool MaxSegSizeAllowed)
   where MaxSegSizeAllowed
@@ -967,7 +970,7 @@ The other cases are relatively straightforward, where
 ``SELECTIVE_ACK_PAYLOAD`` and ``TIMESTAMP_PAYLOAD`` illustrate the use
 of variable length arrays.
 
-.. code-block::c
+.. code-block:: 3d
 
   typedef struct _WINDOW_SCALE_PAYLOAD
   {
@@ -1008,7 +1011,7 @@ anywhere in the Options list, rather than as just the last
 element. This can be improved by using a more advanced combinator from
 EverParse, however we leave it as is for simplicity of this example.
 
-.. code-block:: c
+.. code-block:: 3d
 
   /*++
     The top-level type of a TCP Header
@@ -1181,7 +1184,7 @@ the file. The last 7 bytes of the array are padding bytes set to 0. To
 be able to constrain the individual bytes of this array, we specify in
 3d as a struct.
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _E_IDENT
   {
@@ -1216,7 +1219,7 @@ file version, followed by fields of our interest: ``E_PHOFF``,
 ``E_SHOFF`` (offsets of the two tables), and ``E_PHNUM``, ``E_SHNUM``
 (number of entries in the two tables).
 
-.. code-block:: c
+.. code-block:: 3d
 
   // ELF HEADER BEGIN
 
@@ -1275,7 +1278,7 @@ The ELF header is followed by the two optional tables. We specify
 these optional tables using ``casetype``. First, the program header
 table:
 
-.. code-block:: c
+.. code-block:: 3d
 
   casetype _PROGRAM_HEADER_TABLE_OPT (UINT16 PhNum,
     				      OFFSET ElfFileSize)
@@ -1302,7 +1305,7 @@ size ``sizeof (PROGRAM_HEADER_TABLE_ENTRY) * PhNum`` bytes where the type
 ``PROGRAM_HEADER_TABLE_ENTRY`` describes a segment:
 
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _PROGRAM_HEADER_TABLE_ENTRY (OFFSET ElfFileSize)
   {
@@ -1355,7 +1358,7 @@ table, but we still need to check that the file contains enough bytes
 after the program header table so that its total size is
 ``ElfFileSize``. ``NO_SECTION_HEADER_TABLE`` specifies such a type:
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _NO_SECTION_HEADER_TABLE (OFFSET PhTableEnd,
   					   UINT64 ElfFileSize)
@@ -1373,7 +1376,7 @@ bytes between the end of the program header table and the beginning of
 the section header table, (b) the section header table, and (c) final
 check that end of the section header table is the end of the file.
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _SECTION_HEADER_TABLE (OFFSET PhTableEnd,
                                         UINT64 ShOff,
@@ -1396,7 +1399,7 @@ array of entries.
   
 Finally, the top-level ELF format:
 
-.. code-block:: c
+.. code-block:: 3d
 
 
   entrypoint
