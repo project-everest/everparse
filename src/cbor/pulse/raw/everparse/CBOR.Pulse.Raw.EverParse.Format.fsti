@@ -17,6 +17,13 @@ val jump_header (_: unit) : jumper #header #parse_header_kind parse_header
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+val jump_leaf_content
+  (sq: squash (SZ.fits_u64))
+  (h: header)
+: Tot (jumper (parse_leaf_content h))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 val jump_leaf
   (sq: squash (SZ.fits_u64))
 : Tot (jumper parse_leaf)

@@ -355,19 +355,18 @@ fn jump_recursive
 
 inline_for_extraction
 let impl_pred_t
-  (#t: Type0)
-  (#k: parser_kind)
-  (#p: parser k t)
-  (s: serializer p)
-  (base: Ghost.erased (t -> bool))
+  (#p: parse_recursive_param)
+  (s: serialize_recursive_param p)
+  (base: (p.t -> bool))
 : Tot Type
 =
   (a: S.slice byte) ->
+  (n: SZ.t) ->
   (#pm: perm) ->
-  (#va: Ghost.erased t) ->
+  (#va: Ghost.erased (L.nlist (SZ.v n) p.t)) ->
   stt bool
-    (pts_to_serialized s a #pm va)
-    (fun res -> pts_to_serialized s a #pm va ** pure (res == Ghost.reveal base va))
+    (pts_to_serialized (L.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (serialize_recursive s))) a #pm va ** pure (SZ.v n > 0))
+    (fun res -> pts_to_serialized (L.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (serialize_recursive s))) a #pm va ** pure (SZ.v n > 0 /\ res == base (List.Tot.hd va)))
 
 let parse_nlist_recursive_cons_payload_t
   (p: parse_recursive_param)
@@ -589,11 +588,10 @@ inline_for_extraction
 fn impl_nlist_forall_pred_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
-  (w: jumper (parser_of_tot_parser (parse_recursive p))) // for code conciseness purposes
   (j: jumper (parser_of_tot_parser p.parse_header))
   (f: jump_recursive_step_count s)
   (pr: pred_recursive_t s)
-  (g: impl_pred_t (serializer_of_tot_serializer (serialize_recursive s)) pr.base)
+  (g: impl_pred_t s pr.base)
   (n0: SZ.t)
   (input: S.slice byte)
   (#pm: perm)
@@ -625,10 +623,8 @@ fn impl_nlist_forall_pred_recursive
     let n = !pn;
     let pi = !ppi;
     with vi . assert (pts_to_serialized (L.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (serialize_recursive s))) pi #pm vi);
-    let px = L.nlist_hd (serializer_of_tot_serializer (serialize_recursive s)) w (SZ.v n) pi;
     pr.prf (List.Tot.hd vi);
-    let res = g px;
-    elim_trade (pts_to_serialized (serializer_of_tot_serializer (serialize_recursive s)) px #pm _) _;
+    let res = g pi n;
     if not res {
       pres := false
     } else {
@@ -717,11 +713,10 @@ inline_for_extraction
 fn impl_pred_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
-  (w: jumper (parser_of_tot_parser (parse_recursive p))) // for code conciseness purposes
   (j: jumper (parser_of_tot_parser p.parse_header))
   (f: jump_recursive_step_count s)
   (pr: pred_recursive_t s)
-  (g: impl_pred_t (serializer_of_tot_serializer (serialize_recursive s)) pr.base)
+  (g: impl_pred_t s pr.base)
   (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased p.t)
@@ -730,7 +725,7 @@ fn impl_pred_recursive
   ensures pts_to_serialized (serializer_of_tot_serializer (serialize_recursive s)) input #pm v ** pure (res == pr.pred v)
 {
   L.pts_to_serialized_nlist_1 (serializer_of_tot_serializer (serialize_recursive s)) input;
-  let res = impl_nlist_forall_pred_recursive s w j f pr g 1sz input;
+  let res = impl_nlist_forall_pred_recursive s j f pr g 1sz input;
   elim_trade _ _;
   res
 }
