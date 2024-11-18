@@ -1408,6 +1408,74 @@ fn pts_to_serialized_filter_elim_nondep_then_left
 }
 ```
 
+```pulse
+ghost
+fn pts_to_serialized_ext_nondep_then_left'
+  (#t1 #t2 #t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong })
+  (#k3: parser_kind)
+  (#p3: parser k3 t3)
+  (s3: serializer p3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (t1 & t3))
+  requires pts_to_serialized (serialize_nondep_then s1 s3) input #pm v ** pure (
+    pts_to_serialized_ext_trade_gen_precond p1 p2
+  )
+  ensures exists* v23 .
+    pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23 **
+    pure (t1 == t2 /\
+      v == v23
+    )
+{
+  let res = ghost_split_nondep_then s1 s3 input;
+  pts_to_serialized_ext s1 s2 (fst res);
+  join_nondep_then s2 (fst res) s3 (snd res) input;
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_ext_nondep_then_left
+  (#t1 #t2 #t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong })
+  (#k3: parser_kind)
+  (#p3: parser k3 t3)
+  (s3: serializer p3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (t1 & t3))
+  requires pts_to_serialized (serialize_nondep_then s1 s3) input #pm v ** pure (
+    pts_to_serialized_ext_trade_gen_precond p1 p2
+  )
+  ensures exists* v23 .
+    pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23 ** trade (pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23) (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v) **
+    pure (t1 == t2 /\
+      v == v23
+    )
+{
+  pts_to_serialized_ext_nondep_then_left' s1 s2 s3 input;
+  with v23 . assert (pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23);
+  ghost fn aux (_: unit)
+  requires (emp ** pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23)
+  ensures (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v)
+  {
+    pts_to_serialized_ext_nondep_then_left' s2 s1 s3 input;
+  };
+  Trade.intro _ _ _ aux
+}
+```
+
 inline_for_extraction
 ```pulse
 fn nondep_then_fst
