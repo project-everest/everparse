@@ -98,6 +98,8 @@ ensures
 }
 ```
 
+#push-options "--z3rlimit 16"
+
 #restart-solver
 
 ```pulse
@@ -140,3 +142,5 @@ ensures
   !pres
 }
 ```
+
+#pop-options
