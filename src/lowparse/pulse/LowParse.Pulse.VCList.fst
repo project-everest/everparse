@@ -86,6 +86,63 @@ fn jump_nlist
 
 ```pulse
 ghost
+fn nlist_cons_as_nondep_then_intro
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (n: pos)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: nlist n t)
+requires
+  pts_to_serialized (serialize_nlist n s) input #pm v
+ensures exists* v' .
+  pts_to_serialized (serialize_nondep_then s (serialize_nlist (n - 1) s)) input #pm v' **
+  pure (
+    v == (fst v' :: snd v')
+  )
+{
+  synth_inverse_1 t (n - 1);
+  synth_inverse_2 t (n - 1);
+  rewrite
+    (pts_to_serialized (serialize_nlist n s) input #pm v)
+    as
+    (pts_to_serialized (serialize_synth _ (synth_nlist (n - 1)) (serialize_nondep_then s (serialize_nlist' (n - 1) s)) (synth_nlist_recip (n - 1)) ()) input #pm v);
+  pts_to_serialized_synth_l2r
+    (serialize_nondep_then s (serialize_nlist' (n - 1) s))
+    (synth_nlist (n - 1))
+    (synth_nlist_recip (n - 1))
+    input;
+}
+```
+
+```pulse
+ghost
+fn nlist_cons_as_nondep_then_elim
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (n: nat)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (t & nlist n t))
+requires
+  pts_to_serialized (serialize_nondep_then s (serialize_nlist n s)) input #pm v
+ensures
+  pts_to_serialized (serialize_nlist (n + 1) s) input #pm (fst v :: snd v)
+{
+  pts_to_serialized_synth_intro
+    (serialize_nondep_then s (serialize_nlist' n s))
+    (synth_nlist n)
+    (synth_nlist_recip n)
+    input
+}
+```
+
+```pulse
+ghost
 fn nlist_cons_as_nondep_then
   (#t: Type0)
   (#k: parser_kind)
@@ -186,6 +243,133 @@ ensures
 }
 ```
 
+```pulse
+ghost fn nlist_as_nondep_then_nondep_then_left
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (n: pos)
+  (#t': Type0)
+  (#k': parser_kind)
+  (#p': parser k' t')
+  (s': serializer p')
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (nlist n t & t'))
+requires
+  pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v
+ensures (
+  exists* v' .
+  pts_to_serialized (serialize_nondep_then s (serialize_nondep_then (serialize_nlist (n - 1) s) s')) input #pm v' **
+  Trade.trade
+    (pts_to_serialized (serialize_nondep_then s (serialize_nondep_then (serialize_nlist (n - 1) s) s')) input #pm v')
+    (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v) **
+  pure (
+    fst v' == List.Tot.hd (fst v) /\
+    (fst (snd v') <: list t) == List.Tot.tl (fst v) /\
+    snd (snd v') == snd v
+  )
+)
+{
+  let res = ghost_split_nondep_then
+    (serialize_nlist n s)
+    s'
+    input;
+  nlist_cons_as_nondep_then_intro s n (fst res);
+  join_nondep_then (serialize_nondep_then s (serialize_nlist (n - 1) s)) (fst res) s' (snd res) input;
+  with v1 . assert (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s (serialize_nlist (n - 1) s)) s') input #pm v1);
+  ghost fn aux (_: unit)
+  requires emp ** pts_to_serialized (serialize_nondep_then (serialize_nondep_then s (serialize_nlist (n - 1) s)) s') input #pm v1
+  ensures pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v
+  {
+    let res = ghost_split_nondep_then
+      (serialize_nondep_then s (serialize_nlist (n - 1) s))
+      s'
+      input;
+    nlist_cons_as_nondep_then_elim s (n - 1) (fst res);
+    join_nondep_then (serialize_nlist n s) (fst res) s' (snd res) input
+  };
+  Trade.intro _ _ _ aux;
+  pts_to_serialized_nondep_then_assoc_l2r
+    s
+    (serialize_nlist (n - 1) s)
+    s'
+    input;
+  Trade.trans _ _ (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v)
+}
+```
+
+inline_for_extraction
+```pulse
+fn nlist_hd_tl_nondep_then_left
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: jumper p)
+  (n: Ghost.erased nat)
+  (n_pos: squash (n > 0))
+  (#t': Type0)
+  (#k': Ghost.erased parser_kind)
+  (#p': parser k' t')
+  (s': serializer p')
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t & t'))
+requires
+  pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v
+returns res : (slice byte & slice byte)
+ensures (
+  let (hd, tl) = res in
+  exists* v' .
+  pts_to_serialized s hd #pm (List.Tot.hd (fst v)) **
+  pts_to_serialized (serialize_nondep_then (serialize_nlist (n - 1) s) s') tl #pm v' **
+  Trade.trade
+    (pts_to_serialized s hd #pm (List.Tot.hd (fst v)) **
+  pts_to_serialized (serialize_nondep_then (serialize_nlist (n - 1) s) s') tl #pm v')
+    (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v) **
+  pure (
+    (fst v' <: list t) == List.Tot.tl (fst v) /\
+    snd v' == snd v
+  )
+)
+{
+  nlist_as_nondep_then_nondep_then_left s sq n s' input;
+  with v1 . assert (
+    pts_to_serialized (serialize_nondep_then s (serialize_nondep_then (serialize_nlist (n - 1) s) s')) input #pm v1
+  );
+  let Mktuple2 hd tl = split_nondep_then
+    #_ #(nlist (n - 1) t & t')
+    s
+    j
+    #(and_then_kind (parse_nlist_kind (n - 1) k) k')
+    #(coerce_eq () (nondep_then #_ #(nlist (n - 1) t) (parse_nlist (n - 1) p) #_ #t' p'))
+    (coerce_eq () (serialize_nondep_then (serialize_nlist (n - 1) s) s'))
+    input;
+  unfold (split_nondep_then_post 
+    s
+    (serialize_nondep_then (serialize_nlist (n - 1) s) s')
+    input
+    pm
+    v1
+    (Mktuple2 hd tl)
+  );
+  unfold (split_nondep_then_post'
+    s
+    (serialize_nondep_then (serialize_nlist (n - 1) s) s')
+    input
+    pm
+    v1
+    hd tl
+  );
+  Trade.trans _ _ (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v);
+  (Mktuple2 hd tl)
+}
+```
+
 inline_for_extraction
 ```pulse
 fn nlist_hd
@@ -243,6 +427,79 @@ ensures exists* v' .
   let res = nondep_then_snd #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p)) (coerce_eq () (serialize_nlist (n - 1) s <: serializer (parse_nlist (n - 1) p))) input; // FIXME: same as above
   Trade.trans (pts_to_serialized (serialize_nlist (n - 1) s) res #pm _) _ _;
   res
+}
+```
+
+inline_for_extraction
+```pulse
+fn nlist_hd_nondep_then_left
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: jumper p)
+  (n: Ghost.erased nat)
+  (n_pos: squash (n > 0))
+  (#t': Type0)
+  (#k': Ghost.erased parser_kind)
+  (#p': parser k' t')
+  (s': serializer p')
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t & t'))
+requires
+  pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v
+returns hd : slice byte
+ensures (
+  pts_to_serialized s hd #pm (List.Tot.hd (fst v)) **
+  Trade.trade
+    (pts_to_serialized s hd #pm (List.Tot.hd (fst v)))
+    (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v)
+)
+{
+  let Mktuple2 hd tl = nlist_hd_tl_nondep_then_left s sq j n () s' input;
+  Trade.elim_hyp_r _ _ _;
+  hd
+}
+```
+
+inline_for_extraction
+```pulse
+fn nlist_tl_nondep_then_left
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (sq: squash (k.parser_kind_subkind == Some ParserStrong))
+  (j: jumper p)
+  (n: Ghost.erased nat)
+  (n_pos: squash (n > 0))
+  (#t': Type0)
+  (#k': Ghost.erased parser_kind)
+  (#p': parser k' t')
+  (s': serializer p')
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (nlist n t & t'))
+requires
+  pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v
+returns tl : slice byte
+ensures (
+  exists* v' .
+  pts_to_serialized (serialize_nondep_then (serialize_nlist (n - 1) s) s') tl #pm v' **
+  Trade.trade
+    (pts_to_serialized (serialize_nondep_then (serialize_nlist (n - 1) s) s') tl #pm v')
+    (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v) **
+  pure (
+    (fst v' <: list t) == List.Tot.tl (fst v) /\
+    snd v' == snd v
+  )
+)
+{
+  let Mktuple2 hd tl = nlist_hd_tl_nondep_then_left s sq j n () s' input;
+  Trade.elim_hyp_l _ _ _;
+  tl
 }
 ```
 
