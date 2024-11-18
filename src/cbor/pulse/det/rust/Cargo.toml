@@ -5,3 +5,8 @@ edition = "2021"
 
 [dependencies]
 static_assertions = "1.1.0"
+
+[profile.test]
+inherits = "release"
+lto = "fat"
+opt-level = 2

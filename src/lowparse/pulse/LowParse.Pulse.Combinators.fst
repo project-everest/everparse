@@ -879,6 +879,72 @@ fn split_dtuple2
 }
 ```
 
+```pulse
+ghost fn ghost_split_dtuple2
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: ((x: t1) -> parser k2 (t2 x)))
+  (s2: (x: t1) -> serializer (p2 x))
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (dtuple2 t1 t2))
+  requires pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v
+  returns res: Ghost.erased (slice byte & slice byte)
+  ensures
+    pts_to_serialized s1 (fst res) #pm (dfst v) **
+    pts_to_serialized (s2 (dfst v)) (snd res) #pm (dsnd v) **
+    is_split input (fst res) (snd res)
+{
+  serialize_dtuple2_eq s1 s2 v;
+  rewrite
+    (pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v)
+    as
+    (pts_to input #pm (bare_serialize s1 (dfst v) `Seq.append` bare_serialize (s2 (dfst v)) (dsnd v)));
+  parse_serialize_strong_prefix s1 (dfst v) (bare_serialize (s2 (dfst v)) (dsnd v));
+  pts_to_len input;
+  let i = SZ.uint_to_t (Seq.length (bare_serialize s1 (dfst v)));
+  let res = ghost_append_split input i;
+  res
+}
+```
+
+```pulse
+ghost fn join_dtuple2
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (x1: slice byte)
+  (#pm: perm)
+  (#v1: t1)
+  (#k2: parser_kind)
+  (#p2: ((x: t1) -> parser k2 (t2 x)))
+  (s2: (x: t1) -> serializer (p2 x))
+  (x2: slice byte)
+  (x: slice byte)
+  (#v2: t2 v1)
+requires
+  pts_to_serialized s1 x1 #pm v1 **
+  pts_to_serialized (s2 v1) x2 #pm v2 **
+  is_split x x1 x2
+ensures exists* v .
+  pts_to_serialized (serialize_dtuple2 s1 s2) x #pm v **
+  pure (dfst v == v1 /\ dsnd v == v2)
+{
+  unfold (pts_to_serialized s1 x1 #pm v1);
+  unfold (pts_to_serialized (s2 v1) x2 #pm v2);
+  join x1 x2 x;
+  let v : dtuple2 t1 t2 = (| v1, v2 |);
+  serialize_dtuple2_eq s1 s2 v;
+  fold (pts_to_serialized (serialize_dtuple2 s1 s2) x #pm v)
+}
+```
+
 inline_for_extraction
 ```pulse
 fn dtuple2_dfst
@@ -974,7 +1040,29 @@ let split_nondep_then_post
 = let (left, right) = res in
   split_nondep_then_post' s1 s2 input pm v left right
 
-#set-options "--print_implicits"
+```pulse
+ghost
+fn pts_to_serialized_ext'
+  (#t: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t)
+  (s1: serializer p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t)
+  (s2: serializer p2)
+  (input: slice byte)
+  (prf: (x: bytes) -> Lemma
+    (parse p1 x == parse p2 x)
+  )
+  (#pm: perm)
+  (#v: t)
+  requires pts_to_serialized s1 input #pm v
+  ensures pts_to_serialized s2 input #pm v
+{
+  Classical.forall_intro prf;
+  pts_to_serialized_ext s1 s2 input
+}
+```
 
 ```pulse
 ghost
@@ -1044,6 +1132,347 @@ fn split_nondep_then
     fold (split_nondep_then_post s1 s2 input pm v (input1, input2));
     (input1, input2)
   }}
+}
+```
+
+```pulse
+ghost fn ghost_split_nondep_then
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (t1 & t2))
+  requires pts_to_serialized (serialize_nondep_then s1 s2) input #pm v
+  returns res: Ghost.erased (slice byte & slice byte)
+  ensures
+    pts_to_serialized s1 (fst res) #pm (fst v) **
+    pts_to_serialized s2 (snd res) #pm (snd v) **
+    is_split input (fst res) (snd res)
+{
+  pts_to_serialized_ext'
+    (serialize_nondep_then s1 s2)
+    (serialize_synth #(and_then_kind k1 k2) #(_: t1 & t2) #(t1 & t2)
+      (parse_dtuple2 #k1 #t1 p1 #k2 #(const_fun t2) (const_fun p2))
+      (pair_of_dtuple2 #t1 #t2)
+      (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
+      dtuple2_of_pair
+      ()
+    )
+    input
+    (nondep_then_eq_dtuple2 #t1 #t2 #k1 #k2 p1 p2);
+  pts_to_serialized_synth_l2r
+    (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2))
+    pair_of_dtuple2
+    dtuple2_of_pair
+    input;
+  ghost_split_dtuple2 #t1 #(const_fun t2) s1 #_ #(const_fun p2) (const_fun s2) input;
+}
+```
+
+```pulse
+ghost fn join_nondep_then
+  (#t1: Type0)
+  (#t2: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (x1: slice byte)
+  (#pm: perm)
+  (#v1: t1)
+  (#k2: parser_kind)
+  (#p2: (parser k2 (t2)))
+  (s2: serializer (p2))
+  (x2: slice byte)
+  (x: slice byte)
+  (#v2: t2)
+requires
+  pts_to_serialized s1 x1 #pm v1 **
+  pts_to_serialized (s2) x2 #pm v2 **
+  is_split x x1 x2
+ensures exists* v .
+  pts_to_serialized (serialize_nondep_then s1 s2) x #pm v **
+  pure (fst v == v1 /\ snd v == v2)
+{
+  unfold (pts_to_serialized s1 x1 #pm v1);
+  unfold (pts_to_serialized (s2) x2 #pm v2);
+  join x1 x2 x;
+  let v : (t1 & t2) = (v1, v2);
+  serialize_nondep_then_eq s1 s2 v;
+  fold (pts_to_serialized (serialize_nondep_then s1 s2) x #pm v)
+}
+```
+
+```pulse
+ghost fn pts_to_serialized_nondep_then_assoc_l2r
+  (#t1: Type0)
+  (#t2: Type0)
+  (#t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: (parser k2 (t2)))
+  (s2: serializer (p2) { k2.parser_kind_subkind == Some ParserStrong })
+  (#k3: parser_kind)
+  (#p3: (parser k3 (t3)))
+  (s3: serializer (p3))
+  (x: slice byte)
+  (#pm: perm)
+  (#v: ((t1 & t2) & t3))
+requires
+  pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 s2) s3) x #pm v
+ensures exists* v' .
+  pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then s2 s3)) x #pm v' **
+  Trade.trade
+    (pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then s2 s3)) x #pm v')
+    (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 s2) s3) x #pm v) **
+  pure (v' == (fst (fst v), (snd (fst v), snd v)))
+{
+  let v1 = fst (fst v);
+  let v2 = snd (fst v);
+  let v3 = snd v;
+  serialize_nondep_then_eq (serialize_nondep_then s1 s2) s3 v;
+  serialize_nondep_then_eq s1 s2 (fst v);
+  let v23 = (v2, v3);
+  serialize_nondep_then_eq s2 s3 v23;
+  let v' = (v1, v23);
+  serialize_nondep_then_eq s1 (serialize_nondep_then s2 s3) v';
+  Seq.append_assoc (serialize s1 v1) (serialize s2 v2) (serialize s3 v3);
+  Trade.rewrite_with_trade
+    (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 s2) s3) x #pm v)
+    (pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then s2 s3)) x #pm v')
+}
+```
+
+```pulse
+ghost fn pts_to_serialized_dtuple2_as_nondep_then
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: ((x: t1) -> parser k2 (t2 x)))
+  (s2: (x: t1) -> serializer (p2 x))
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (dtuple2 t1 t2))
+  requires pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v
+  ensures exists* v' .
+    pts_to_serialized (serialize_nondep_then s1 (s2 (dfst v))) input #pm v' **
+    Trade.trade
+      (pts_to_serialized (serialize_nondep_then s1 (s2 (dfst v))) input #pm v')
+      (pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v) **
+    pure (fst v' == dfst v /\ snd v' == dsnd v)
+{
+  let v' : (t1 & t2 (dfst v)) = (dfst v, dsnd v);
+  serialize_dtuple2_eq s1 s2 v;
+  serialize_nondep_then_eq s1 (s2 (dfst v)) v';
+  Trade.rewrite_with_trade
+    (pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v)
+    ((pts_to_serialized (serialize_nondep_then s1 (s2 (dfst v))) input #pm v'))
+}
+```
+
+```pulse
+ghost fn pts_to_serialized_dtuple2_nondep_then_assoc_l2r
+  (#t1: Type0)
+  (#t2: t1 -> Type0)
+  (#t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: ((x: t1) -> parser k2 (t2 x)))
+  (s2: ((x: t1) -> serializer (p2 x)) { k2.parser_kind_subkind == Some ParserStrong } ) 
+  (#k3: parser_kind)
+  (#p3: parser k3 t3)
+  (s3: serializer p3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (dtuple2 t1 t2 & t3))
+  requires pts_to_serialized (serialize_nondep_then (serialize_dtuple2 s1 s2) s3) input #pm v
+  ensures exists* v' .
+    pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then (s2 (dfst (fst v))) s3)) input #pm v' **
+    Trade.trade
+      (pts_to_serialized (serialize_nondep_then s1 (serialize_nondep_then (s2 (dfst (fst v))) s3)) input #pm v')
+      (pts_to_serialized (serialize_nondep_then (serialize_dtuple2 s1 s2) s3) input #pm v) **
+    pure (fst v' == dfst (fst v) /\ fst (snd v') == dsnd (fst v) /\ snd (snd v') == snd v)
+{
+  let res = ghost_split_nondep_then (serialize_dtuple2 s1 s2) s3 input;
+  with v12 . assert (pts_to_serialized (serialize_dtuple2 s1 s2) (fst res) #pm v12);
+  let res12 = ghost_split_dtuple2 s1 s2 (fst res);
+  join_nondep_then s1 (fst res12) (s2 (dfst v12)) (snd res12) (fst res);
+  join_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) (fst res) s3 (snd res) input;
+  with v_ . assert (pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) s3) input #pm v_);
+  ghost fn aux (_: unit)
+  requires
+    (emp ** pts_to_serialized (serialize_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) s3) input #pm v_)
+  ensures
+    (pts_to_serialized (serialize_nondep_then (serialize_dtuple2 s1 s2) s3) input #pm v)
+  {
+    let res = ghost_split_nondep_then (serialize_nondep_then s1 (s2 (dfst v12))) s3 input;
+    let res12 = ghost_split_nondep_then s1 (s2 (dfst v12)) (fst res);
+    join_dtuple2 s1 (fst res12) s2 (snd res12) (fst res);
+    join_nondep_then (serialize_dtuple2 s1 s2) (fst res) s3 (snd res) input
+  };
+  Trade.intro _ _ _ aux;
+  pts_to_serialized_nondep_then_assoc_l2r s1 (s2 (dfst v12)) s3 input;
+  Trade.trans _ _ (pts_to_serialized (serialize_nondep_then (serialize_dtuple2 s1 s2) s3) input #pm v)
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_synth_l2r_nondep_then_left
+  (#t: Type0)
+  (#t': Type0)
+  (#t2: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (f: (t -> GTot t') { synth_injective f })
+  (f': (t' -> GTot t) { synth_inverse f f' })
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (t' & t2))
+  requires pts_to_serialized (serialize_nondep_then (serialize_synth p f s f' ()) s2) input #pm v
+  ensures exists* v' .
+    pts_to_serialized (serialize_nondep_then s s2) input #pm v' **
+    Trade.trade
+      (pts_to_serialized (serialize_nondep_then s s2) input #pm v')
+      (pts_to_serialized (serialize_nondep_then (serialize_synth p f s f' ()) s2) input #pm v) **
+    pure (fst v' == f' (fst v) /\ snd v' == snd v)
+{
+  let res = ghost_split_nondep_then (serialize_synth p f s f' ()) s2 input;
+  pts_to_serialized_synth_l2r s f f' (fst res);
+  join_nondep_then s (fst res) s2 (snd res) input;
+  with v' . assert (pts_to_serialized (serialize_nondep_then s s2) input #pm v');
+  ghost
+  fn aux
+    (_: unit)
+    requires emp ** (pts_to_serialized (serialize_nondep_then s s2) input #pm v')
+    ensures pts_to_serialized (serialize_nondep_then (serialize_synth p f s f' ()) s2) input #pm v
+  {
+    let res = ghost_split_nondep_then s s2 input;
+    pts_to_serialized_synth_intro s f f' (fst res);
+    join_nondep_then (serialize_synth p f s f' ()) (fst res) s2 (snd res) input;
+  };
+  intro_trade _ _ _ aux
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_filter_elim_nondep_then_left
+  (#t: Type0)
+  (#t2: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (f: (t -> GTot bool))
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (parse_filter_refine f & t2))
+  requires (pts_to_serialized (serialize_filter s f `serialize_nondep_then` s2) input #pm v)
+  ensures exists* (v': (t & t2)) . pts_to_serialized (s `serialize_nondep_then` s2) input #pm v' **
+    Trade.trade
+      (pts_to_serialized (s `serialize_nondep_then` s2) input #pm v')
+      (pts_to_serialized (serialize_filter s f `serialize_nondep_then` s2) input #pm v) **
+    pure (fst v' == fst v /\ snd v' == snd v)
+{
+  let res = ghost_split_nondep_then (serialize_filter s f) s2 input;
+  pts_to_serialized_filter_elim s f (fst res);
+  join_nondep_then s (fst res) s2 (snd res) input;
+  with v' . assert (pts_to_serialized (s `serialize_nondep_then` s2) input #pm v');
+  ghost fn aux (_: unit)
+  requires emp ** (pts_to_serialized (s `serialize_nondep_then` s2) input #pm v')
+  ensures (pts_to_serialized (serialize_filter s f `serialize_nondep_then` s2) input #pm v)
+  {
+    let res = ghost_split_nondep_then s s2 input;
+    pts_to_serialized_filter_intro s f (fst res);
+    join_nondep_then (serialize_filter s f) (fst res) s2 (snd res) input;
+  };
+  Trade.intro _ _ _ aux
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_ext_nondep_then_left'
+  (#t1 #t2 #t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong })
+  (#k3: parser_kind)
+  (#p3: parser k3 t3)
+  (s3: serializer p3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (t1 & t3))
+  requires pts_to_serialized (serialize_nondep_then s1 s3) input #pm v ** pure (
+    pts_to_serialized_ext_trade_gen_precond p1 p2
+  )
+  ensures exists* v23 .
+    pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23 **
+    pure (t1 == t2 /\
+      v == v23
+    )
+{
+  let res = ghost_split_nondep_then s1 s3 input;
+  pts_to_serialized_ext s1 s2 (fst res);
+  join_nondep_then s2 (fst res) s3 (snd res) input;
+}
+```
+
+```pulse
+ghost
+fn pts_to_serialized_ext_nondep_then_left
+  (#t1 #t2 #t3: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2 { k2.parser_kind_subkind == Some ParserStrong })
+  (#k3: parser_kind)
+  (#p3: parser k3 t3)
+  (s3: serializer p3)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: (t1 & t3))
+  requires pts_to_serialized (serialize_nondep_then s1 s3) input #pm v ** pure (
+    pts_to_serialized_ext_trade_gen_precond p1 p2
+  )
+  ensures exists* v23 .
+    pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23 ** trade (pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23) (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v) **
+    pure (t1 == t2 /\
+      v == v23
+    )
+{
+  pts_to_serialized_ext_nondep_then_left' s1 s2 s3 input;
+  with v23 . assert (pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23);
+  ghost fn aux (_: unit)
+  requires (emp ** pts_to_serialized (serialize_nondep_then s2 s3) input #pm v23)
+  ensures (pts_to_serialized (serialize_nondep_then s1 s3) input #pm v)
+  {
+    pts_to_serialized_ext_nondep_then_left' s2 s1 s3 input;
+  };
+  Trade.intro _ _ _ aux
 }
 ```
 

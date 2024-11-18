@@ -104,20 +104,12 @@ module Trade = Pulse.Lib.Trade.Util
 
 #restart-solver
 
-
-inline_for_extraction
-let coerce_impl_pred_serialize_raw_data_item
-  (p: Ghost.erased (raw_data_item -> bool))
-  (impl_p: LowParse.Pulse.Recursive.impl_pred_t serialize_raw_data_item p)
-: LowParse.Pulse.Recursive.impl_pred_t (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param)) (holds_on_raw_data_item_pred p).base
-= impl_p
-
 inline_for_extraction
 ```pulse
 fn impl_holds_on_raw_data_item
   (f64: squash SZ.fits_u64)
   (p: Ghost.erased (raw_data_item -> bool))
-  (impl_p: LowParse.Pulse.Recursive.impl_pred_t serialize_raw_data_item p)
+  (impl_p: LowParse.Pulse.Recursive.impl_pred_t serialize_raw_data_item_param p)
   (input: slice byte)
   (#pm: perm)
   (#v: Ghost.erased raw_data_item)
@@ -125,7 +117,7 @@ fn impl_holds_on_raw_data_item
   returns res: bool
   ensures pts_to_serialized serialize_raw_data_item input #pm v ** pure (res == holds_on_raw_data_item p v)
 {
-  LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_ext (jump_raw_data_item f64) (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param))) (jump_leaf ()) (jump_recursive_step_count_leaf f64) (holds_on_raw_data_item_pred p) (coerce_impl_pred_serialize_raw_data_item p impl_p) input
+  LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf f64) (holds_on_raw_data_item_pred p) impl_p input
 }
 ```
 
@@ -155,24 +147,137 @@ let impl_raw_uint64_optimal
   else false
 
 ```pulse
-fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t #_ #_ #_ serialize_raw_data_item R.raw_data_item_ints_optimal_elem
+ghost fn pts_to_serialized_nlist_raw_data_item_head_header
+  (a: slice byte)
+  (n: pos)
+  (#pm: perm)
+  (#va: LowParse.Spec.VCList.nlist n raw_data_item)
+requires
+  pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va
+ensures exists* (l: leaf) (h: header) v' .
+  pts_to_serialized
+    (LowParse.Spec.Combinators.serialize_nondep_then
+      serialize_header
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        (serialize_leaf_content h)
+        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n l)
+      )
+    )
+    a #pm v' **
+  Trade.trade
+    (pts_to_serialized
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        serialize_header
+        (LowParse.Spec.Combinators.serialize_nondep_then
+          (serialize_leaf_content h)
+          (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n l)
+        )
+      )
+      a #pm v'
+    )
+    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va) **
+  pure (
+    h == get_raw_data_item_header (List.Tot.hd va) /\
+    l == dfst (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) /\
+    fst v' == h /\
+    fst (snd v') == (dsnd l) /\
+    (fst (snd (snd v')) <: list raw_data_item) == (dsnd (synth_raw_data_item_from_alt_recip (List.Tot.hd va)) <: list raw_data_item) /\
+    (snd (snd (snd v')) <: list raw_data_item) == List.Tot.tl va
+  )
+{
+  pts_to_serialized_ext_trade
+    (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param)))
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons serialize_raw_data_item_param n)
+    a;
+  pts_to_serialized_ext_trade_gen
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons serialize_raw_data_item_param n)
+    (LowParse.Spec.Combinators.serialize_synth
+        (LowParse.Spec.Combinators.parse_dtuple2 (parser_of_tot_parser parse_raw_data_item_param.parse_header) (LowParse.Pulse.Recursive.parse_nlist_recursive_cons_payload parse_raw_data_item_param n))
+        (LowParse.Pulse.Recursive.synth_nlist_recursive_cons parse_raw_data_item_param n)
+        (LowParse.Spec.Combinators.serialize_dtuple2 (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header) (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n))
+        (LowParse.Pulse.Recursive.synth_nlist_recursive_cons_recip serialize_raw_data_item_param n)
+        ()
+    )
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  LowParse.Pulse.Combinators.pts_to_serialized_synth_l2r_trade
+    (LowParse.Spec.Combinators.serialize_dtuple2 (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header) (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n))
+    (LowParse.Pulse.Recursive.synth_nlist_recursive_cons parse_raw_data_item_param n)
+    (LowParse.Pulse.Recursive.synth_nlist_recursive_cons_recip serialize_raw_data_item_param n)
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  with v . assert (pts_to_serialized (LowParse.Pulse.Combinators.serialize_dtuple2 (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header) (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n)) a #pm v);
+  LowParse.Pulse.Combinators.pts_to_serialized_dtuple2_as_nondep_then
+    (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n)
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  LowParse.Pulse.Combinators.pts_to_serialized_ext_nondep_then_left
+    (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
+    (LowParse.Pulse.Combinators.serialize_dtuple2 serialize_header serialize_leaf_content)
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n (dfst v))
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  LowParse.Pulse.Combinators.pts_to_serialized_dtuple2_nondep_then_assoc_l2r
+    serialize_header
+    serialize_leaf_content
+    (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param n (dfst v))
+    a;
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+}
+```
+
+open LowParse.Pulse.Combinators
+
+inline_for_extraction
+```pulse
+fn nondep_then_fst_tot_kind
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t2))
+  requires pts_to_serialized (serialize_nondep_then s1 s2) input #pm v
+  returns res: slice byte
+  ensures pts_to_serialized s1 res #pm (fst v) **
+    trade (pts_to_serialized s1 res #pm (fst v)) (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v)
+{
+  nondep_then_fst s1 j1 s2 input
+}
+```
+
+```pulse
+fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ serialize_raw_data_item_param R.raw_data_item_ints_optimal_elem
 = (a: _)
+  (n: _)
   (#pm: _)
   (#va: _)
 {
-  Classical.forall_intro parse_raw_data_item_eq;
-  pts_to_serialized_ext_trade
-    serialize_raw_data_item
-    serialize_raw_data_item_aux
+  pts_to_serialized_nlist_raw_data_item_head_header a (SZ.v n);
+  with l gh v' . assert (
+  pts_to_serialized
+    (LowParse.Spec.Combinators.serialize_nondep_then
+      serialize_header
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        (serialize_leaf_content gh)
+        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
+      )
+    )
+    a #pm v'
+  );
+  let input1 = nondep_then_fst_tot_kind serialize_header (jump_header ()) // FIXME: WHY WHY WHY do the kinds need to be total here?
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        (serialize_leaf_content gh)
+        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
+      )
     a;
-  LowParse.Pulse.Combinators.pts_to_serialized_synth_l2r_trade
-    (LowParse.Spec.Combinators.serialize_dtuple2 serialize_header serialize_content)
-    synth_raw_data_item
-    synth_raw_data_item_recip
-    a;
-  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item a #pm va);
-  let input1 = LowParse.Pulse.Combinators.dtuple2_dfst serialize_header (jump_header ()) serialize_content a;
-  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item a #pm va);
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
   let h = read_header () input1;
   let res = if get_header_major_type h = cbor_major_type_simple_value then true else impl_raw_uint64_optimal (argument_as_raw_uint64 (get_header_initial_byte h) (get_header_long_argument h));
   Trade.elim _ _;
@@ -180,6 +285,7 @@ fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t #_ #_ 
 }
 ```
 
+(*
 ```pulse
 fn impl_deterministically_encoded_cbor_map_key_order (_: unit)
 : LowParse.Pulse.VCList.impl_order_t #_ #_ #_ (LowParse.Pulse.Combinators.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) (map_entry_order deterministically_encoded_cbor_map_key_order raw_data_item)
@@ -204,52 +310,232 @@ fn impl_deterministically_encoded_cbor_map_key_order (_: unit)
   FStar.Int16.lt res 0s
 }
 ```
+*)
 
 ```pulse
-fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred_t #_ #_ #_ serialize_raw_data_item (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order)
+fn impl_deterministically_encoded_cbor_map_key_order (_: unit)
+: LowParse.Pulse.VCList.impl_order_t #_ #_ #_ (serialize_raw_data_item) (deterministically_encoded_cbor_map_key_order)
+= (a1: _)
+  (a2: _)
+  (#p1: _)
+  (#p2: _)
+  (#v1: _)
+  (#v2: _)
+{
+  deterministically_encoded_cbor_map_key_order_spec (v1) (v2);
+  let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  unfold (pts_to_serialized serialize_raw_data_item a1 #p1 (v1));
+  unfold (pts_to_serialized serialize_raw_data_item a2 #p2 (v2));
+  let res = CompareBytes.lex_compare_bytes a1 a2;
+  fold (pts_to_serialized serialize_raw_data_item a1 #p1 (v1));
+  fold (pts_to_serialized serialize_raw_data_item a2 #p2 (v2));
+  FStar.Int16.lt res 0s
+}
+```
+
+let rec sorted2
+  (#t: Type)
+  (order: t -> t -> bool)
+  (l: list t)
+: Tot bool
+  (decreases l)
+= match l with
+  | [] -> true
+  | [_] -> false
+  | _ :: _ :: [] -> true
+  | _ :: _ :: _ :: [] -> false
+  | a :: _ :: b :: c :: q ->
+    if order a b
+    then sorted2 order (b :: c :: q)
+    else false
+
+let rec sorted2_correct
+  (#t: Type)
+  (order: t -> t -> bool)
+  (n: nat)
+  (l: LowParse.Spec.VCList.nlist n (t & t))
+: Lemma
+  (ensures (List.Tot.sorted (map_entry_order order _) l == sorted2 order (list_of_pair_list t n l)))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | [_] -> ()
+  | _ :: b :: q -> sorted2_correct order (n - 1) (b :: q)
+
+inline_for_extraction
+```pulse
+fn split_nondep_then_tot_kind
+  (#t1 #t2: Type0)
+  (#k1: parser_kind)
+  (#p1: parser k1 t1)
+  (s1: serializer p1 { k1.parser_kind_subkind == Some ParserStrong })
+  (j1: jumper p1)
+  (#k2: parser_kind)
+  (#p2: parser k2 t2)
+  (s2: serializer p2)
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased (t1 & t2))
+  requires pts_to_serialized (serialize_nondep_then s1 s2) input #pm v
+  returns res: (slice byte & slice byte)
+  ensures split_nondep_then_post s1 s2 input pm v res
+{
+  split_nondep_then s1 j1 s2 input
+}
+```
+
+module GR = Pulse.Lib.GhostReference
+module Ref = Pulse.Lib.Reference
+
+#restart-solver
+```pulse
+fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ serialize_raw_data_item_param (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order)
 = (a: _)
+  (n: _)
   (#pm: _)
   (#va: _)
 {
-  Classical.forall_intro parse_raw_data_item_eq;
-  pts_to_serialized_ext_trade
-    serialize_raw_data_item
-    serialize_raw_data_item_aux
+  pts_to_serialized_nlist_raw_data_item_head_header a (SZ.v n);
+  with l gh v' . assert (
+  pts_to_serialized
+    (LowParse.Spec.Combinators.serialize_nondep_then
+      serialize_header
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        (serialize_leaf_content gh)
+        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
+      )
+    )
+    a #pm v'
+  );
+  let Mktuple2 input1 input2 = split_nondep_then_tot_kind serialize_header (jump_header ()) // FIXME: WHY WHY WHY do the kinds need to be total here?
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        (serialize_leaf_content gh)
+        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
+      )
     a;
-  LowParse.Pulse.Combinators.pts_to_serialized_synth_l2r_trade
-    (LowParse.Spec.Combinators.serialize_dtuple2 serialize_header serialize_content)
-    synth_raw_data_item
-    synth_raw_data_item_recip
-    a;
-  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item a #pm va);
-  with va' . assert (pts_to_serialized (LowParse.Spec.Combinators.serialize_dtuple2 serialize_header serialize_content) a #pm va');
-  let spl = LowParse.Pulse.Combinators.split_dtuple2 serialize_header (jump_header ()) serialize_content a;
-  match spl {
-    Mktuple2 ah ap -> {
-      unfold (LowParse.Pulse.Combinators.split_dtuple2_post serialize_header serialize_content a pm va' spl);
-      unfold (LowParse.Pulse.Combinators.split_dtuple2_post' serialize_header serialize_content a pm va' ah ap);
-      Trade.trans _ _ (pts_to_serialized serialize_raw_data_item a #pm va);
-      let h = read_header () ah;
-      if (get_header_major_type h = cbor_major_type_map) {
-        Trade.elim_hyp_l _ _ _;
-        with vp . assert (pts_to_serialized (serialize_content h) ap #pm vp);
-        let n = get_header_argument_as_uint64 h;
-        let k : Ghost.erased parser_kind = LowParse.Spec.Combinators.and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind;
-        let p : parser k (raw_data_item & raw_data_item) = LowParse.Spec.Combinators.nondep_then parse_raw_data_item parse_raw_data_item;
-        let s : serializer p = LowParse.Spec.Combinators.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item;
-        pts_to_serialized_ext_trade
-          (serialize_content h)
-          (LowParse.Spec.VCList.serialize_nlist (SZ.v (SZ.uint64_to_sizet n)) s)
-          ap;
-        Trade.trans _ _ (pts_to_serialized serialize_raw_data_item a #pm va);
-        let res = LowParse.Pulse.VCList.nlist_sorted s () (LowParse.Pulse.Combinators.jump_nondep_then (jump_raw_data_item sq) (jump_raw_data_item sq)) (map_entry_order deterministically_encoded_cbor_map_key_order raw_data_item) (impl_deterministically_encoded_cbor_map_key_order ()) (SZ.uint64_to_sizet n) ap;
-        Trade.elim _ _;
-        res
-      } else {
-        Trade.elim _ _;
-        true
-      }
+  unfold (split_nondep_then_post
+    serialize_header
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        (serialize_leaf_content gh)
+        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
+      )
+      a pm v' (Mktuple2 input1 input2)
+  );
+  unfold (split_nondep_then_post'
+    serialize_header
+      (LowParse.Spec.Combinators.serialize_nondep_then
+        (serialize_leaf_content gh)
+        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
+      )
+      a pm v' input1 input2
+  );
+  Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+  let h = read_header () input1;
+  if (get_header_major_type h = cbor_major_type_map) {
+    let nbpairs = argument_as_uint64 (get_header_initial_byte h) (get_header_long_argument h);
+    if (U64.lt nbpairs 2uL) {
+      Trade.elim _ _;
+      true
+    } else {
+      Trade.elim_hyp_l _ _ _;
+      let input3 = nondep_then_snd
+        (serialize_leaf_content gh)
+        (jump_leaf_content () h)
+        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
+        input2;
+      Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+      with v3 . assert (pts_to_serialized (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l) input3 #pm v3);
+      let l0 : Ghost.erased (list (raw_data_item & raw_data_item)) = Ghost.hide (Map?.v (List.Tot.hd va));
+      assert (pure (list_of_pair_list raw_data_item (U64.v nbpairs) l0 == fst v3));
+      sorted2_correct deterministically_encoded_cbor_map_key_order (U64.v nbpairs) l0;
+      let k : Ghost.erased parser_kind = Ghost.hide (LowParse.Spec.VCList.parse_nlist_kind (SZ.v n - 1) parse_raw_data_item_kind);
+      let p : parser k (LowParse.Spec.VCList.nlist (SZ.v n - 1) raw_data_item) = coerce_eq () ( LowParse.Spec.VCList.parse_nlist (SZ.v n - 1) (parser_of_tot_parser (LowParse.Spec.Recursive.parse_recursive parse_raw_data_item_param)));
+      let s : serializer p = LowParse.Spec.VCList.serialize_nlist (SZ.v n - 1) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param));
+      pts_to_serialized_ext_trade_gen
+        (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
+        (LowParse.Spec.Combinators.serialize_nondep_then
+          (LowParse.Spec.VCList.serialize_nlist (U64.v nbpairs + U64.v nbpairs) serialize_raw_data_item)
+          s
+        )
+        input3;
+      Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+      let Mktuple2 hd4 input4 = LowParse.Pulse.VCList.nlist_hd_tl_nondep_then_left
+        serialize_raw_data_item
+        ()
+        (jump_raw_data_item ())
+        (U64.v nbpairs + U64.v nbpairs)
+        ()
+        s
+        input3;
+      Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+      let input5 = LowParse.Pulse.VCList.nlist_tl_nondep_then_left
+        serialize_raw_data_item
+        ()
+        (jump_raw_data_item ())
+        (U64.v nbpairs + U64.v nbpairs - 1)
+        ()
+        s
+        input4;
+      Trade.trans_hyp_r _ _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+      let mut pkey = hd4;
+      let pvalue = GR.alloc (snd (List.Tot.hd l0));
+      let pairs : U64.t = U64.sub nbpairs 1uL;
+      let mut ppairs = pairs;
+      let mut ptail = input5;
+      let mut pres = true;
+      while (
+        let res = !pres;
+        let pairs = !ppairs;
+        (res && (U64.gt pairs 0uL))
+      ) invariant b . exists* skey vkey vvalue vpairs stail vn vtail vres .
+        Ref.pts_to pkey skey **
+        pts_to_serialized serialize_raw_data_item skey #pm vkey **
+        GR.pts_to pvalue vvalue **
+        Ref.pts_to ppairs vpairs **
+        Ref.pts_to ptail stail **
+        Ref.pts_to pres vres **
+        pts_to_serialized (serialize_nondep_then (LowParse.Spec.VCList.serialize_nlist vn serialize_raw_data_item) s) stail #pm vtail **
+        Trade.trade
+          (pts_to_serialized serialize_raw_data_item skey #pm vkey ** pts_to_serialized (serialize_nondep_then (LowParse.Spec.VCList.serialize_nlist vn serialize_raw_data_item) s) stail #pm vtail)
+          (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va) **
+        pure (
+          vn == U64.v vpairs + U64.v vpairs /\
+          List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l0 == (vres && sorted2 deterministically_encoded_cbor_map_key_order (vkey :: vvalue :: fst vtail)) /\
+          b == (vres && Cons? (fst vtail))
+        )
+      {
+        with vn stail vtail . assert (pts_to_serialized (serialize_nondep_then (LowParse.Spec.VCList.serialize_nlist vn serialize_raw_data_item) s) stail #pm vtail);
+        let tail = !ptail;
+        Trade.rewrite_with_trade
+          (pts_to_serialized (serialize_nondep_then (LowParse.Spec.VCList.serialize_nlist vn serialize_raw_data_item) s) stail #pm vtail)
+          (pts_to_serialized (serialize_nondep_then (LowParse.Spec.VCList.serialize_nlist vn serialize_raw_data_item) s) tail #pm vtail);
+        Trade.trans_hyp_r _ _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+        let Mktuple2 key2 tail2 = LowParse.Pulse.VCList.nlist_hd_tl_nondep_then_left serialize_raw_data_item () (jump_raw_data_item ()) vn () s tail;
+        let key1 = !pkey;
+        let res = impl_deterministically_encoded_cbor_map_key_order () key1 key2;
+        if res {
+          Trade.elim_hyp_l _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+          Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+          let tail' = LowParse.Pulse.VCList.nlist_tl_nondep_then_left serialize_raw_data_item () (jump_raw_data_item ()) (vn - 1) () s tail2;
+          Trade.trans_hyp_r _ _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
+          pkey := key2;
+          GR.op_Colon_Equals pvalue (List.Tot.hd (List.Tot.tl (fst vtail)));
+          let pairs = !ppairs;
+          let pairs' : U64.t = U64.sub pairs 1uL;
+          ppairs := pairs';
+          ptail := tail';
+        } else {
+          Trade.elim _ (pts_to_serialized (serialize_nondep_then (LowParse.Spec.VCList.serialize_nlist vn serialize_raw_data_item) s) tail #pm vtail);
+          pres := false;
+        }
+      };
+      GR.free pvalue;
+      Trade.elim _ _;
+      !pres
     }
+  } else {
+    Trade.elim _ _;
+    true
   }
 }
 ```
