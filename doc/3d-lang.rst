@@ -785,22 +785,6 @@ A fix in this case is to explicitly add the padding bytes, as shown below:
     UINT32 other2;
   } TLV;
 
-
-Meanwhile, it appears as though gcc-13.2 gets the size of a type similar to
-`TLV` (shown below) wrong, claiming its size is 12 instead of 16! This
-illustrates the importance of checking the correspondence between 3d types and C
-types, in case you are trying to model a C type in 3d. 
-
-.. code-block:: c
-
-  typedef struct _tlv16 {
-    UINT8 tag;
-    UINT32 length;
-    UINT8 other;
-    Value payload;
-  } TLV16;
-
-
 Comments
 --------
 
