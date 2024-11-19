@@ -70,7 +70,7 @@ let compute_static_asserts (benv:B.global_env)
               | Inr msg ->
                 Ast.warning 
                   (Printf.sprintf
-                    "No offsetof assertions for type %s because %s\ns"
+                    "No offsetof assertions for type %s because %s\n"
                     (ident_to_string j)
                     msg)
                   i.range;
@@ -134,5 +134,11 @@ let print_static_asserts (sas:static_asserts)
         |> List.map print_static_assert
         |> String.concat "\n"
     in
+    let define_c_assert = 
+      "#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1];"
+    in
+    "#include <stddef.h>\n" ^
     Options.make_includes () ^
-    includes ^ "\n#include <stddef.h>\n" ^ sizeof_assertions
+    includes ^ "\n" ^
+    define_c_assert ^ "\n" ^
+    sizeof_assertions
