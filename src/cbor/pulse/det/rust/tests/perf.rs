@@ -9,7 +9,7 @@ use std::time::Instant;
 fn large_array_test_failure()
 {
     let now = Instant::now();
-    assert!(cbor_det_validate(&large_array_source_bytes[0..2494]) == 0);
+    assert!(cbor_det_parse(&large_array_source_bytes[0..2494]) == None);
     let elapsed = now.elapsed();
     println!("Elapsed time: {:.4?}", elapsed);
 }
@@ -18,7 +18,7 @@ fn large_array_test_failure()
 fn large_array_test_success()
 {
     let now = Instant::now();
-    assert!(cbor_det_validate(&large_array_source_bytes) != 0);
+    assert!(cbor_det_parse(&large_array_source_bytes) != None);
     let elapsed = now.elapsed();
     println!("Elapsed time: {:.4?}", elapsed);
 }
@@ -27,7 +27,7 @@ fn large_array_test_success()
 fn large_array_test_success_250()
 {
     let now = Instant::now();
-    assert!(cbor_det_validate(&large_array_source_bytes[250..]) != 0);
+    assert!(cbor_det_parse(&large_array_source_bytes[250..]) != None);
     let elapsed = now.elapsed();
     println!("Elapsed time: {:.4?}", elapsed);
 }
@@ -36,7 +36,7 @@ fn large_array_test_success_250()
 fn large_array_test_success_500()
 {
     let now = Instant::now();
-    assert!(cbor_det_validate(&large_array_source_bytes[500..]) != 0);
+    assert!(cbor_det_parse(&large_array_source_bytes[500..]) != None);
     let elapsed = now.elapsed();
     println!("Elapsed time: {:.4?}", elapsed);
 }
@@ -45,7 +45,7 @@ fn large_array_test_success_500()
 fn large_array_test_success_1000()
 {
     let now = Instant::now();
-    assert!(cbor_det_validate(&large_array_source_bytes[1000..]) != 0);
+    assert!(cbor_det_parse(&large_array_source_bytes[1000..]) != None);
     let elapsed = now.elapsed();
     println!("Elapsed time: {:.4?}", elapsed);
 }
@@ -54,7 +54,7 @@ fn large_array_test_success_1000()
 fn large_array_test_success_1500()
 {
     let now = Instant::now();
-    assert!(cbor_det_validate(&large_array_source_bytes[1500..]) != 0);
+    assert!(cbor_det_parse(&large_array_source_bytes[1500..]) != None);
     let elapsed = now.elapsed();
     println!("Elapsed time: {:.4?}", elapsed);
 }
@@ -63,7 +63,7 @@ fn large_array_test_success_1500()
 fn large_array_test_success_2000()
 {
     let now = Instant::now();
-    assert!(cbor_det_validate(&large_array_source_bytes[2000..]) != 0);
+    assert!(cbor_det_parse(&large_array_source_bytes[2000..]) != None);
     let elapsed = now.elapsed();
     println!("Elapsed time: {:.4?}", elapsed);
 }
@@ -72,7 +72,7 @@ fn large_array_test_success_2000()
 fn large_array_test_success_2200()
 {
     let now = Instant::now();
-    assert!(cbor_det_validate(&large_array_source_bytes[2200..]) != 0);
+    assert!(cbor_det_parse(&large_array_source_bytes[2200..]) != None);
     let elapsed = now.elapsed();
     println!("Elapsed time: {:.4?}", elapsed);
 }
