@@ -167,6 +167,61 @@ fn get_header_major_type(h: header) -> u8
     b.major_type
 }
 
+fn impl_uint8_compare(x1: u8, x2: u8) -> i16
+{ if x1 < x2 { -1i16 } else if x1 > x2 { 1i16 } else { 0i16 } }
+
+fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
+{
+    let sp1: &[u8] = s1;
+    let sp2: &[u8] = s2;
+    let mut pi1: [usize; 1] = [0usize; 1usize];
+    let mut pi2: [usize; 1] = [0usize; 1usize];
+    let n1: usize = sp1.len();
+    let n2: usize = sp2.len();
+    let ite: i16 =
+        if 0usize < n1
+        { if 0usize < n2 { 0i16 } else { 1i16 } }
+        else if 0usize < n2 { -1i16 } else { 0i16 };
+    let mut pres: [i16; 1] = [ite; 1usize];
+    let res: i16 = (&pres)[0];
+    let i1: usize = (&pi1)[0];
+    let mut cond: bool = res == 0i16 && i1 < n1;
+    while
+    cond
+    {
+        let i10: usize = (&pi1)[0];
+        let x1: u8 = sp1[i10];
+        let i2: usize = (&pi2)[0];
+        let x2: u8 = sp2[i2];
+        let res0: i16 = impl_uint8_compare(x1, x2);
+        let c: i16 = res0;
+        if c == 0i16
+        {
+            let i1·: usize = i10.wrapping_add(1usize);
+            let i2·: usize = i2.wrapping_add(1usize);
+            let ci1·: bool = i1· < n1;
+            let ci2·: bool = i2· < n2;
+            if ci2· && ! ci1·
+            { (&mut pres)[0] = -1i16 }
+            else if ci1· && ! ci2·
+            { (&mut pres)[0] = 1i16 }
+            else
+            {
+                (&mut pi1)[0] = i1·;
+                (&mut pi2)[0] = i2·
+            }
+        }
+        else
+        { (&mut pres)[0] = c };
+        let res1: i16 = (&pres)[0];
+        let i11: usize = (&pi1)[0];
+        cond = res1 == 0i16 && i11 < n1
+    };
+    let res0: i16 = (&pres)[0];
+    let res1: i16 = res0;
+    res1
+}
+
 type cbor_raw_serialized_iterator <'a> = &'a [u8];
 
 #[derive(PartialEq, Clone, Copy)]
@@ -284,6 +339,30 @@ fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) -> cbor_map_entr
             cbor_map_entry_key: cbor_raw_reset_perm_tot(xk),
             cbor_map_entry_value: cbor_raw_reset_perm_tot(xv)
         };
+    res
+}
+
+fn cbor_match_compare_serialized_tagged <'a>(
+    c1: cbor_serialized <'a>,
+    c2: cbor_serialized <'a>
+) ->
+    i16
+{
+    let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
+    res
+}
+
+fn cbor_match_compare_serialized_array <'a>(c1: cbor_serialized <'a>, c2: cbor_serialized <'a>) ->
+    i16
+{
+    let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
+    res
+}
+
+fn cbor_match_compare_serialized_map <'a>(c1: cbor_serialized <'a>, c2: cbor_serialized <'a>) ->
+    i16
+{
+    let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
     res
 }
 
@@ -2485,61 +2564,6 @@ fn cbor_serialized_map_iterator_next <'b, 'a>(
     res3
 }
 
-fn impl_uint8_compare(x1: u8, x2: u8) -> i16
-{ if x1 < x2 { -1i16 } else if x1 > x2 { 1i16 } else { 0i16 } }
-
-fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
-{
-    let sp1: &[u8] = s1;
-    let sp2: &[u8] = s2;
-    let mut pi1: [usize; 1] = [0usize; 1usize];
-    let mut pi2: [usize; 1] = [0usize; 1usize];
-    let n1: usize = sp1.len();
-    let n2: usize = sp2.len();
-    let ite: i16 =
-        if 0usize < n1
-        { if 0usize < n2 { 0i16 } else { 1i16 } }
-        else if 0usize < n2 { -1i16 } else { 0i16 };
-    let mut pres: [i16; 1] = [ite; 1usize];
-    let res: i16 = (&pres)[0];
-    let i1: usize = (&pi1)[0];
-    let mut cond: bool = res == 0i16 && i1 < n1;
-    while
-    cond
-    {
-        let i10: usize = (&pi1)[0];
-        let x1: u8 = sp1[i10];
-        let i2: usize = (&pi2)[0];
-        let x2: u8 = sp2[i2];
-        let res0: i16 = impl_uint8_compare(x1, x2);
-        let c: i16 = res0;
-        if c == 0i16
-        {
-            let i1·: usize = i10.wrapping_add(1usize);
-            let i2·: usize = i2.wrapping_add(1usize);
-            let ci1·: bool = i1· < n1;
-            let ci2·: bool = i2· < n2;
-            if ci2· && ! ci1·
-            { (&mut pres)[0] = -1i16 }
-            else if ci1· && ! ci2·
-            { (&mut pres)[0] = 1i16 }
-            else
-            {
-                (&mut pi1)[0] = i1·;
-                (&mut pi2)[0] = i2·
-            }
-        }
-        else
-        { (&mut pres)[0] = c };
-        let res1: i16 = (&pres)[0];
-        let i11: usize = (&pi1)[0];
-        cond = res1 == 0i16 && i11 < n1
-    };
-    let res0: i16 = (&pres)[0];
-    let res1: i16 = res0;
-    res1
-}
-
 fn cbor_match_tagged_get_payload <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
 {
     match c
@@ -2777,6 +2801,57 @@ fn impl_raw_uint64_compare(x1: raw_uint64, x2: raw_uint64) -> i16
     if c == 0i16 { uint64_compare(x1.value, x2.value) } else { c }
 }
 
+#[derive(PartialEq, Clone, Copy)]
+enum
+option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·
+<'a>
+{
+    None,
+    Some { v: (cbor_serialized <'a>, cbor_serialized <'a>) }
+}
+
+fn cbor_pair_is_serialized <'a>(c1: cbor_raw <'a>, c2: cbor_raw <'a>) ->
+    option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·
+    <'a>
+{
+    match c1
+    {
+        cbor_raw::CBOR_Case_Serialized_Tagged { v: s1 } =>
+          match c2
+          {
+              cbor_raw::CBOR_Case_Serialized_Tagged { v: s2 } =>
+                option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::Some
+                { v: (s1,s2) },
+              _ =>
+                option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::None
+          },
+        _ =>
+          option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::None
+    }
+}
+
+fn fst__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized <'a>(
+    x: (cbor_serialized <'a>, cbor_serialized <'a>)
+) ->
+    cbor_serialized
+    <'a>
+{
+    let _1: cbor_serialized = x.0;
+    let __2: cbor_serialized = x.1;
+    _1
+}
+
+fn snd__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized <'a>(
+    x: (cbor_serialized <'a>, cbor_serialized <'a>)
+) ->
+    cbor_serialized
+    <'a>
+{
+    let __1: cbor_serialized = x.0;
+    let _2: cbor_serialized = x.1;
+    _2
+}
+
 pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i16
 {
     let ty1: u8 = impl_major_type(x1);
@@ -2880,10 +2955,31 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
             let c1: i16 = impl_raw_uint64_compare(tag1, tag2);
             if c1 == 0i16
             {
-                let pl1: cbor_raw = cbor_match_tagged_get_payload(x1);
-                let pl2: cbor_raw = cbor_match_tagged_get_payload(x2);
-                let res: i16 = impl_cbor_compare(pl1, pl2);
-                res
+                match cbor_pair_is_serialized(x1, x2)
+                {
+                    option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::Some
+                    { v: pair }
+                    =>
+                      {
+                          let res: i16 =
+                              cbor_match_compare_serialized_tagged(
+                                  fst__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
+                                      pair
+                                  ),
+                                  snd__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
+                                      pair
+                                  )
+                              );
+                          res
+                      },
+                    _ =>
+                      {
+                          let pl1: cbor_raw = cbor_match_tagged_get_payload(x1);
+                          let pl2: cbor_raw = cbor_match_tagged_get_payload(x2);
+                          let res: i16 = impl_cbor_compare(pl1, pl2);
+                          res
+                      }
+                }
             }
             else
             { c1 }
@@ -2911,208 +3007,249 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
             let c1: i16 = impl_raw_uint64_compare(len1, len2);
             if c1 == 0i16
             {
-                let i1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                    cbor_array_iterator_init(x1);
-                let i2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                    cbor_array_iterator_init(x2);
-                let pl1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = i1;
-                let pl2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = i2;
-                let fin1: bool =
-                    match pl1
-                    {
-                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                        { _0: c· }
-                        =>
-                          {
-                              let res: bool = c·.len() == 0usize;
-                              let res0: bool = res;
-                              res0
-                          },
-                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                        { _0: c· }
-                        =>
-                          {
-                              let res: bool = cbor_serialized_array_iterator_is_empty(c·);
-                              res
-                          },
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                let fin2: bool =
-                    match pl2
-                    {
-                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                        { _0: c· }
-                        =>
-                          {
-                              let res: bool = c·.len() == 0usize;
-                              let res0: bool = res;
-                              res0
-                          },
-                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                        { _0: c· }
-                        =>
-                          {
-                              let res: bool = cbor_serialized_array_iterator_is_empty(c·);
-                              res
-                          },
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                let res: i16 =
-                    if fin1
-                    { if fin2 { 0i16 } else { -1i16 } }
-                    else if fin2
-                    { 1i16 }
-                    else
-                    {
-                        let mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
-                            [pl1; 1usize];
-                        let mut pi2: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
-                            [pl2; 1usize];
-                        let mut pres: [i16; 1] = [0i16; 1usize];
-                        let mut pfin1: [bool; 1] = [false; 1usize];
-                        let res: i16 = (&pres)[0];
-                        let fin11: bool = (&pfin1)[0];
-                        let mut cond: bool = res == 0i16 && ! fin11;
-                        while
-                        cond
-                        {
-                            let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi1)[0];
-                            let elt1: cbor_raw =
-                                match i0
-                                {
-                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                    { _0: i }
-                                    =>
-                                      {
-                                          let res0: cbor_raw = i[0usize];
-                                          let sp: (&[cbor_raw], &[cbor_raw]) = i.split_at(1usize);
-                                          let s·: &[cbor_raw] =
-                                              {
-                                                  let _s1: &[cbor_raw] = sp.0;
-                                                  let s2: &[cbor_raw] = sp.1;
-                                                  s2
-                                              };
-                                          let i11: &[cbor_raw] = s·;
-                                          let i·: &[cbor_raw] = i11;
-                                          (&mut pi1)[0] =
-                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                              { _0: i· };
-                                          let res1: cbor_raw = res0;
-                                          res1
-                                      },
-                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                    { _0: i }
-                                    =>
-                                      {
-                                          let res0: cbor_raw =
-                                              cbor_serialized_array_iterator_next(&mut pi1, i);
-                                          res0
-                                      },
-                                    _ => panic!("Incomplete pattern matching")
-                                };
-                            let i00: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = (&pi2)[0];
-                            let elt2: cbor_raw =
-                                match i00
-                                {
-                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                    { _0: i }
-                                    =>
-                                      {
-                                          let res0: cbor_raw = i[0usize];
-                                          let sp: (&[cbor_raw], &[cbor_raw]) = i.split_at(1usize);
-                                          let s·: &[cbor_raw] =
-                                              {
-                                                  let _s1: &[cbor_raw] = sp.0;
-                                                  let s2: &[cbor_raw] = sp.1;
-                                                  s2
-                                              };
-                                          let i11: &[cbor_raw] = s·;
-                                          let i·: &[cbor_raw] = i11;
-                                          (&mut pi2)[0] =
-                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                              { _0: i· };
-                                          let res1: cbor_raw = res0;
-                                          res1
-                                      },
-                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                    { _0: i }
-                                    =>
-                                      {
-                                          let res0: cbor_raw =
-                                              cbor_serialized_array_iterator_next(&mut pi2, i);
-                                          res0
-                                      },
-                                    _ => panic!("Incomplete pattern matching")
-                                };
-                            let pelt1: cbor_raw = elt1;
-                            let pelt2: cbor_raw = elt2;
-                            let res0: i16 = impl_cbor_compare(pelt1, pelt2);
-                            let c2: i16 = res0;
-                            if c2 == 0i16
-                            {
-                                let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                                    (&pi1)[0];
-                                let fin110: bool =
-                                    match i11
+                match cbor_pair_is_serialized(x1, x2)
+                {
+                    option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::Some
+                    { v: pair }
+                    =>
+                      {
+                          let res: i16 =
+                              cbor_match_compare_serialized_array(
+                                  fst__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
+                                      pair
+                                  ),
+                                  snd__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
+                                      pair
+                                  )
+                              );
+                          res
+                      },
+                    _ =>
+                      {
+                          let i1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
+                              cbor_array_iterator_init(x1);
+                          let i2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
+                              cbor_array_iterator_init(x2);
+                          let pl1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = i1;
+                          let pl2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = i2;
+                          let fin1: bool =
+                              match pl1
+                              {
+                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                  { _0: c· }
+                                  =>
                                     {
-                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                        { _0: c· }
-                                        =>
-                                          {
-                                              let res1: bool = c·.len() == 0usize;
-                                              let res2: bool = res1;
-                                              res2
-                                          },
-                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                        { _0: c· }
-                                        =>
-                                          {
-                                              let res1: bool =
-                                                  cbor_serialized_array_iterator_is_empty(c·);
-                                              res1
-                                          },
-                                        _ => panic!("Incomplete pattern matching")
-                                    };
-                                let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
-                                    (&pi2)[0];
-                                let fin21: bool =
-                                    match i21
+                                        let res: bool = c·.len() == 0usize;
+                                        let res0: bool = res;
+                                        res0
+                                    },
+                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                                  { _0: c· }
+                                  =>
                                     {
-                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                                        { _0: c· }
-                                        =>
+                                        let res: bool =
+                                            cbor_serialized_array_iterator_is_empty(c·);
+                                        res
+                                    },
+                                  _ => panic!("Incomplete pattern matching")
+                              };
+                          let fin2: bool =
+                              match pl2
+                              {
+                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                  { _0: c· }
+                                  =>
+                                    {
+                                        let res: bool = c·.len() == 0usize;
+                                        let res0: bool = res;
+                                        res0
+                                    },
+                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                                  { _0: c· }
+                                  =>
+                                    {
+                                        let res: bool =
+                                            cbor_serialized_array_iterator_is_empty(c·);
+                                        res
+                                    },
+                                  _ => panic!("Incomplete pattern matching")
+                              };
+                          let res: i16 =
+                              if fin1
+                              { if fin2 { 0i16 } else { -1i16 } }
+                              else if fin2
+                              { 1i16 }
+                              else
+                              {
+                                  let
+                                  mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1]
+                                  =
+                                      [pl1; 1usize];
+                                  let
+                                  mut pi2: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw; 1]
+                                  =
+                                      [pl2; 1usize];
+                                  let mut pres: [i16; 1] = [0i16; 1usize];
+                                  let mut pfin1: [bool; 1] = [false; 1usize];
+                                  let res: i16 = (&pres)[0];
+                                  let fin11: bool = (&pfin1)[0];
+                                  let mut cond: bool = res == 0i16 && ! fin11;
+                                  while
+                                  cond
+                                  {
+                                      let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
+                                          (&pi1)[0];
+                                      let elt1: cbor_raw =
+                                          match i0
                                           {
-                                              let res1: bool = c·.len() == 0usize;
-                                              let res2: bool = res1;
-                                              res2
-                                          },
-                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-                                        { _0: c· }
-                                        =>
+                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                              { _0: i }
+                                              =>
+                                                {
+                                                    let res0: cbor_raw = i[0usize];
+                                                    let sp: (&[cbor_raw], &[cbor_raw]) =
+                                                        i.split_at(1usize);
+                                                    let s·: &[cbor_raw] =
+                                                        {
+                                                            let _s1: &[cbor_raw] = sp.0;
+                                                            let s2: &[cbor_raw] = sp.1;
+                                                            s2
+                                                        };
+                                                    let i11: &[cbor_raw] = s·;
+                                                    let i·: &[cbor_raw] = i11;
+                                                    (&mut pi1)[0] =
+                                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                                        { _0: i· };
+                                                    let res1: cbor_raw = res0;
+                                                    res1
+                                                },
+                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                                              { _0: i }
+                                              =>
+                                                {
+                                                    let res0: cbor_raw =
+                                                        cbor_serialized_array_iterator_next(
+                                                            &mut pi1,
+                                                            i
+                                                        );
+                                                    res0
+                                                },
+                                              _ => panic!("Incomplete pattern matching")
+                                          };
+                                      let i00: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
+                                          (&pi2)[0];
+                                      let elt2: cbor_raw =
+                                          match i00
                                           {
-                                              let res1: bool =
-                                                  cbor_serialized_array_iterator_is_empty(c·);
-                                              res1
-                                          },
-                                        _ => panic!("Incomplete pattern matching")
-                                    };
-                                if fin110 == fin21
-                                { (&mut pfin1)[0] = fin110 }
-                                else if fin110
-                                { (&mut pres)[0] = -1i16 }
-                                else
-                                { (&mut pres)[0] = 1i16 }
-                            }
-                            else
-                            { (&mut pres)[0] = c2 };
-                            let res1: i16 = (&pres)[0];
-                            let fin110: bool = (&pfin1)[0];
-                            cond = res1 == 0i16 && ! fin110
-                        };
-                        (&pres)[0]
-                    };
-                let res0: i16 = res;
-                res0
+                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                              { _0: i }
+                                              =>
+                                                {
+                                                    let res0: cbor_raw = i[0usize];
+                                                    let sp: (&[cbor_raw], &[cbor_raw]) =
+                                                        i.split_at(1usize);
+                                                    let s·: &[cbor_raw] =
+                                                        {
+                                                            let _s1: &[cbor_raw] = sp.0;
+                                                            let s2: &[cbor_raw] = sp.1;
+                                                            s2
+                                                        };
+                                                    let i11: &[cbor_raw] = s·;
+                                                    let i·: &[cbor_raw] = i11;
+                                                    (&mut pi2)[0] =
+                                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                                        { _0: i· };
+                                                    let res1: cbor_raw = res0;
+                                                    res1
+                                                },
+                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                                              { _0: i }
+                                              =>
+                                                {
+                                                    let res0: cbor_raw =
+                                                        cbor_serialized_array_iterator_next(
+                                                            &mut pi2,
+                                                            i
+                                                        );
+                                                    res0
+                                                },
+                                              _ => panic!("Incomplete pattern matching")
+                                          };
+                                      let pelt1: cbor_raw = elt1;
+                                      let pelt2: cbor_raw = elt2;
+                                      let res0: i16 = impl_cbor_compare(pelt1, pelt2);
+                                      let c2: i16 = res0;
+                                      if c2 == 0i16
+                                      {
+                                          let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
+                                              (&pi1)[0];
+                                          let fin110: bool =
+                                              match i11
+                                              {
+                                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                                  { _0: c· }
+                                                  =>
+                                                    {
+                                                        let res1: bool = c·.len() == 0usize;
+                                                        let res2: bool = res1;
+                                                        res2
+                                                    },
+                                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                                                  { _0: c· }
+                                                  =>
+                                                    {
+                                                        let res1: bool =
+                                                            cbor_serialized_array_iterator_is_empty(
+                                                                c·
+                                                            );
+                                                        res1
+                                                    },
+                                                  _ => panic!("Incomplete pattern matching")
+                                              };
+                                          let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
+                                              (&pi2)[0];
+                                          let fin21: bool =
+                                              match i21
+                                              {
+                                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                                                  { _0: c· }
+                                                  =>
+                                                    {
+                                                        let res1: bool = c·.len() == 0usize;
+                                                        let res2: bool = res1;
+                                                        res2
+                                                    },
+                                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+                                                  { _0: c· }
+                                                  =>
+                                                    {
+                                                        let res1: bool =
+                                                            cbor_serialized_array_iterator_is_empty(
+                                                                c·
+                                                            );
+                                                        res1
+                                                    },
+                                                  _ => panic!("Incomplete pattern matching")
+                                              };
+                                          if fin110 == fin21
+                                          { (&mut pfin1)[0] = fin110 }
+                                          else if fin110
+                                          { (&mut pres)[0] = -1i16 }
+                                          else
+                                          { (&mut pres)[0] = 1i16 }
+                                      }
+                                      else
+                                      { (&mut pres)[0] = c2 };
+                                      let res1: i16 = (&pres)[0];
+                                      let fin110: bool = (&pfin1)[0];
+                                      cond = res1 == 0i16 && ! fin110
+                                  };
+                                  (&pres)[0]
+                              };
+                          let res0: i16 = res;
+                          res0
+                      }
+                }
             }
             else
             { c1 }
@@ -3140,227 +3277,274 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
             let c1: i16 = impl_raw_uint64_compare(len1, len2);
             if c1 == 0i16
             {
-                let i1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                    cbor_map_iterator_init(x1);
-                let i2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                    cbor_map_iterator_init(x2);
-                let pl1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = i1;
-                let pl2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = i2;
-                let fin1: bool =
-                    match pl1
-                    {
-                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                        { _0: c· }
-                        =>
-                          {
-                              let res: bool = c·.len() == 0usize;
-                              let res0: bool = res;
-                              res0
-                          },
-                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                        { _0: c· }
-                        =>
-                          {
-                              let res: bool = cbor_serialized_map_iterator_is_empty(c·);
-                              res
-                          },
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                let fin2: bool =
-                    match pl2
-                    {
-                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                        { _0: c· }
-                        =>
-                          {
-                              let res: bool = c·.len() == 0usize;
-                              let res0: bool = res;
-                              res0
-                          },
-                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                        { _0: c· }
-                        =>
-                          {
-                              let res: bool = cbor_serialized_map_iterator_is_empty(c·);
-                              res
-                          },
-                        _ => panic!("Incomplete pattern matching")
-                    };
-                let res: i16 =
-                    if fin1
-                    { if fin2 { 0i16 } else { -1i16 } }
-                    else if fin2
-                    { 1i16 }
-                    else
-                    {
-                        let mut pi1: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
-                            [pl1; 1usize];
-                        let mut pi2: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] =
-                            [pl2; 1usize];
-                        let mut pres: [i16; 1] = [0i16; 1usize];
-                        let mut pfin1: [bool; 1] = [false; 1usize];
-                        let res: i16 = (&pres)[0];
-                        let fin11: bool = (&pfin1)[0];
-                        let mut cond: bool = res == 0i16 && ! fin11;
-                        while
-                        cond
-                        {
-                            let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                                (&pi1)[0];
-                            let elt1: cbor_map_entry =
-                                match i0
-                                {
-                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                    { _0: i }
-                                    =>
-                                      {
-                                          let res0: cbor_map_entry = i[0usize];
-                                          let sp: (&[cbor_map_entry], &[cbor_map_entry]) =
-                                              i.split_at(1usize);
-                                          let s·: &[cbor_map_entry] =
-                                              {
-                                                  let _s1: &[cbor_map_entry] = sp.0;
-                                                  let s2: &[cbor_map_entry] = sp.1;
-                                                  s2
-                                              };
-                                          let i11: &[cbor_map_entry] = s·;
-                                          let i·: &[cbor_map_entry] = i11;
-                                          (&mut pi1)[0] =
-                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                              { _0: i· };
-                                          let res1: cbor_map_entry = res0;
-                                          res1
-                                      },
-                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                    { _0: i }
-                                    =>
-                                      {
-                                          let res0: cbor_map_entry =
-                                              cbor_serialized_map_iterator_next(&mut pi1, i);
-                                          res0
-                                      },
-                                    _ => panic!("Incomplete pattern matching")
-                                };
-                            let i00: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                                (&pi2)[0];
-                            let elt2: cbor_map_entry =
-                                match i00
-                                {
-                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                    { _0: i }
-                                    =>
-                                      {
-                                          let res0: cbor_map_entry = i[0usize];
-                                          let sp: (&[cbor_map_entry], &[cbor_map_entry]) =
-                                              i.split_at(1usize);
-                                          let s·: &[cbor_map_entry] =
-                                              {
-                                                  let _s1: &[cbor_map_entry] = sp.0;
-                                                  let s2: &[cbor_map_entry] = sp.1;
-                                                  s2
-                                              };
-                                          let i11: &[cbor_map_entry] = s·;
-                                          let i·: &[cbor_map_entry] = i11;
-                                          (&mut pi2)[0] =
-                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                              { _0: i· };
-                                          let res1: cbor_map_entry = res0;
-                                          res1
-                                      },
-                                    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                    { _0: i }
-                                    =>
-                                      {
-                                          let res0: cbor_map_entry =
-                                              cbor_serialized_map_iterator_next(&mut pi2, i);
-                                          res0
-                                      },
-                                    _ => panic!("Incomplete pattern matching")
-                                };
-                            let pelt1: cbor_map_entry = elt1;
-                            let pelt2: cbor_map_entry = elt2;
-                            let c2: i16 =
-                                impl_cbor_compare(
-                                    pelt1.cbor_map_entry_key,
-                                    pelt2.cbor_map_entry_key
-                                );
-                            let c20: i16 =
-                                if c2 == 0i16
-                                {
-                                    let c3: i16 =
-                                        impl_cbor_compare(
-                                            pelt1.cbor_map_entry_value,
-                                            pelt2.cbor_map_entry_value
-                                        );
-                                    c3
-                                }
-                                else
-                                { c2 };
-                            if c20 == 0i16
-                            {
-                                let i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                                    (&pi1)[0];
-                                let fin110: bool =
-                                    match i11
+                match cbor_pair_is_serialized(x1, x2)
+                {
+                    option__·CBOR_Pulse_Raw_Type_cbor_serialized···CBOR_Pulse_Raw_Type_cbor_serialized·::Some
+                    { v: pair }
+                    =>
+                      {
+                          let res: i16 =
+                              cbor_match_compare_serialized_map(
+                                  fst__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
+                                      pair
+                                  ),
+                                  snd__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized(
+                                      pair
+                                  )
+                              );
+                          res
+                      },
+                    _ =>
+                      {
+                          let i1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                              cbor_map_iterator_init(x1);
+                          let i2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
+                              cbor_map_iterator_init(x2);
+                          let pl1: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = i1;
+                          let pl2: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = i2;
+                          let fin1: bool =
+                              match pl1
+                              {
+                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                  { _0: c· }
+                                  =>
                                     {
-                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                        { _0: c· }
-                                        =>
-                                          {
-                                              let res0: bool = c·.len() == 0usize;
-                                              let res1: bool = res0;
-                                              res1
-                                          },
-                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                        { _0: c· }
-                                        =>
-                                          {
-                                              let res0: bool =
-                                                  cbor_serialized_map_iterator_is_empty(c·);
-                                              res0
-                                          },
-                                        _ => panic!("Incomplete pattern matching")
-                                    };
-                                let i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-                                    (&pi2)[0];
-                                let fin21: bool =
-                                    match i21
+                                        let res: bool = c·.len() == 0usize;
+                                        let res0: bool = res;
+                                        res0
+                                    },
+                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                                  { _0: c· }
+                                  =>
                                     {
-                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                                        { _0: c· }
-                                        =>
+                                        let res: bool = cbor_serialized_map_iterator_is_empty(c·);
+                                        res
+                                    },
+                                  _ => panic!("Incomplete pattern matching")
+                              };
+                          let fin2: bool =
+                              match pl2
+                              {
+                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                  { _0: c· }
+                                  =>
+                                    {
+                                        let res: bool = c·.len() == 0usize;
+                                        let res0: bool = res;
+                                        res0
+                                    },
+                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                                  { _0: c· }
+                                  =>
+                                    {
+                                        let res: bool = cbor_serialized_map_iterator_is_empty(c·);
+                                        res
+                                    },
+                                  _ => panic!("Incomplete pattern matching")
+                              };
+                          let res: i16 =
+                              if fin1
+                              { if fin2 { 0i16 } else { -1i16 } }
+                              else if fin2
+                              { 1i16 }
+                              else
+                              {
+                                  let
+                                  mut
+                                  pi1:
+                                  [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1]
+                                  =
+                                      [pl1; 1usize];
+                                  let
+                                  mut
+                                  pi2:
+                                  [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1]
+                                  =
+                                      [pl2; 1usize];
+                                  let mut pres: [i16; 1] = [0i16; 1usize];
+                                  let mut pfin1: [bool; 1] = [false; 1usize];
+                                  let res: i16 = (&pres)[0];
+                                  let fin11: bool = (&pfin1)[0];
+                                  let mut cond: bool = res == 0i16 && ! fin11;
+                                  while
+                                  cond
+                                  {
+                                      let
+                                      i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                      =
+                                          (&pi1)[0];
+                                      let elt1: cbor_map_entry =
+                                          match i0
                                           {
-                                              let res0: bool = c·.len() == 0usize;
-                                              let res1: bool = res0;
-                                              res1
-                                          },
-                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-                                        { _0: c· }
-                                        =>
+                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                              { _0: i }
+                                              =>
+                                                {
+                                                    let res0: cbor_map_entry = i[0usize];
+                                                    let sp: (&[cbor_map_entry], &[cbor_map_entry]) =
+                                                        i.split_at(1usize);
+                                                    let s·: &[cbor_map_entry] =
+                                                        {
+                                                            let _s1: &[cbor_map_entry] = sp.0;
+                                                            let s2: &[cbor_map_entry] = sp.1;
+                                                            s2
+                                                        };
+                                                    let i11: &[cbor_map_entry] = s·;
+                                                    let i·: &[cbor_map_entry] = i11;
+                                                    (&mut pi1)[0] =
+                                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                                        { _0: i· };
+                                                    let res1: cbor_map_entry = res0;
+                                                    res1
+                                                },
+                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                                              { _0: i }
+                                              =>
+                                                {
+                                                    let res0: cbor_map_entry =
+                                                        cbor_serialized_map_iterator_next(
+                                                            &mut pi1,
+                                                            i
+                                                        );
+                                                    res0
+                                                },
+                                              _ => panic!("Incomplete pattern matching")
+                                          };
+                                      let
+                                      i00: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                      =
+                                          (&pi2)[0];
+                                      let elt2: cbor_map_entry =
+                                          match i00
                                           {
-                                              let res0: bool =
-                                                  cbor_serialized_map_iterator_is_empty(c·);
-                                              res0
-                                          },
-                                        _ => panic!("Incomplete pattern matching")
-                                    };
-                                if fin110 == fin21
-                                { (&mut pfin1)[0] = fin110 }
-                                else if fin110
-                                { (&mut pres)[0] = -1i16 }
-                                else
-                                { (&mut pres)[0] = 1i16 }
-                            }
-                            else
-                            { (&mut pres)[0] = c20 };
-                            let res0: i16 = (&pres)[0];
-                            let fin110: bool = (&pfin1)[0];
-                            cond = res0 == 0i16 && ! fin110
-                        };
-                        (&pres)[0]
-                    };
-                let res0: i16 = res;
-                res0
+                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                              { _0: i }
+                                              =>
+                                                {
+                                                    let res0: cbor_map_entry = i[0usize];
+                                                    let sp: (&[cbor_map_entry], &[cbor_map_entry]) =
+                                                        i.split_at(1usize);
+                                                    let s·: &[cbor_map_entry] =
+                                                        {
+                                                            let _s1: &[cbor_map_entry] = sp.0;
+                                                            let s2: &[cbor_map_entry] = sp.1;
+                                                            s2
+                                                        };
+                                                    let i11: &[cbor_map_entry] = s·;
+                                                    let i·: &[cbor_map_entry] = i11;
+                                                    (&mut pi2)[0] =
+                                                        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                                        { _0: i· };
+                                                    let res1: cbor_map_entry = res0;
+                                                    res1
+                                                },
+                                              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                                              { _0: i }
+                                              =>
+                                                {
+                                                    let res0: cbor_map_entry =
+                                                        cbor_serialized_map_iterator_next(
+                                                            &mut pi2,
+                                                            i
+                                                        );
+                                                    res0
+                                                },
+                                              _ => panic!("Incomplete pattern matching")
+                                          };
+                                      let pelt1: cbor_map_entry = elt1;
+                                      let pelt2: cbor_map_entry = elt2;
+                                      let c2: i16 =
+                                          impl_cbor_compare(
+                                              pelt1.cbor_map_entry_key,
+                                              pelt2.cbor_map_entry_key
+                                          );
+                                      let c20: i16 =
+                                          if c2 == 0i16
+                                          {
+                                              let c3: i16 =
+                                                  impl_cbor_compare(
+                                                      pelt1.cbor_map_entry_value,
+                                                      pelt2.cbor_map_entry_value
+                                                  );
+                                              c3
+                                          }
+                                          else
+                                          { c2 };
+                                      if c20 == 0i16
+                                      {
+                                          let
+                                          i11: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                          =
+                                              (&pi1)[0];
+                                          let fin110: bool =
+                                              match i11
+                                              {
+                                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                                  { _0: c· }
+                                                  =>
+                                                    {
+                                                        let res0: bool = c·.len() == 0usize;
+                                                        let res1: bool = res0;
+                                                        res1
+                                                    },
+                                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                                                  { _0: c· }
+                                                  =>
+                                                    {
+                                                        let res0: bool =
+                                                            cbor_serialized_map_iterator_is_empty(
+                                                                c·
+                                                            );
+                                                        res0
+                                                    },
+                                                  _ => panic!("Incomplete pattern matching")
+                                              };
+                                          let
+                                          i21: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+                                          =
+                                              (&pi2)[0];
+                                          let fin21: bool =
+                                              match i21
+                                              {
+                                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                                                  { _0: c· }
+                                                  =>
+                                                    {
+                                                        let res0: bool = c·.len() == 0usize;
+                                                        let res1: bool = res0;
+                                                        res1
+                                                    },
+                                                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+                                                  { _0: c· }
+                                                  =>
+                                                    {
+                                                        let res0: bool =
+                                                            cbor_serialized_map_iterator_is_empty(
+                                                                c·
+                                                            );
+                                                        res0
+                                                    },
+                                                  _ => panic!("Incomplete pattern matching")
+                                              };
+                                          if fin110 == fin21
+                                          { (&mut pfin1)[0] = fin110 }
+                                          else if fin110
+                                          { (&mut pres)[0] = -1i16 }
+                                          else
+                                          { (&mut pres)[0] = 1i16 }
+                                      }
+                                      else
+                                      { (&mut pres)[0] = c20 };
+                                      let res0: i16 = (&pres)[0];
+                                      let fin110: bool = (&pfin1)[0];
+                                      cond = res0 == 0i16 && ! fin110
+                                  };
+                                  (&pres)[0]
+                              };
+                          let res0: i16 = res;
+                          res0
+                      }
+                }
             }
             else
             { c1 }
