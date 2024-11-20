@@ -539,6 +539,187 @@ Restrictions
 
 * Actions cannot be associated with bit fields.
 
+
+Probing or Following Pointers when Parsing
+------------------------------------------
+
+In some cases, rather than parsing from a flat array of contiguous memory, one
+wants to parse a structure with indirections, i.e., the input buffer may contain
+pointers to other chunks of memory containing sub-structures to be parsed.
+
+Parsing such pointer-rich structures is delicate, since before following a
+pointer, one needs to check that the pointer references valid memory. Given a
+raw pointer (just a memory address), one cannot, in general, check that the
+pointer is valid. However, in some scenarios, such checks are possible, e.g., in
+kernel code, it may be possible to probe a pointer to check that it is valid,
+and only then proceed to read from it. 3d supports parsing structures containing
+pointers, provided safe probing functions can be provided by the caller.
+
+Let's look an an example:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: simple probe$
+  :end-before: SNIPPET_END: simple probe$
+
+The first line declares a `probe` function called `ProbeAndCopy`. This is a
+requirement on the user of the generated parser to link the generated code with
+a function called `ProbeAndCopy`. In fact, the generated code contains and
+extern declaration with the signature shown below:
+
+.. code-block:: c
+
+  extern BOOLEAN ProbeAndCopy(uint64_t base, uint64_t length, EVERPARSE_COPY_BUFFER_T buffer);
+
+where, in `EverParseEndianness.h`, we have
+
+That is, the `ProbeAndCopy` function is expected to take three arguments:
+
+  * A pointer value, represented as a 64-bit unsigned integer, to be probed for validity.
+
+  * A length value, also a `uint64_t`, representing the extent of memory to be
+    checked for validity starting from the base address
+
+  * And a buffer of type `EVERPARSE_COPY_BUFFER_T`. Typically, the
+    implementation of `ProbeAndCopy` may choose to copy the memory starting at
+    the base address into the buffer, so that the parser can then read from the
+    buffer.
+
+The type `EVERPARSE_COPY_BUFFER_T` is also left to the user to define. In
+particular, in `EverParseEndianness.h`, we have
+
+.. code-block:: c
+
+  typedef void* EVERPARSE_COPY_BUFFER_T;
+
+While in `EverParse.h`, we further have:
+
+.. code-block:: c
+
+  extern uint8_t *EverParseStreamOf(EVERPARSE_COPY_BUFFER_T buf);
+
+  extern uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T buf);
+
+That is, the client code can choose any definition for `EVERPARSE_COPY_BUFFER_T`
+(since it is just a `void*`), so long as it can also provide two functions:
+`EverParseStreamOf` to extract a buffer of bytes from a
+`EVERPARSE_COPY_BUFFER_T`; and `EverParseStreamLen` to extract the length of the
+buffer.
+
+Let's return to the example to see how the `ProbeAndCopy` function is used.
+
+The type `T` is just a struct with two fields, constrained by a lower bound. The
+type `S` is more interesting. It starts with a `UINT8 bound` and then contains a
+*pointer* `t` to a `T(bound)` struct. To emphasize the point, the following
+picture illustrates the layout::
+
+     bytes
+     0........1........2........3........4........5........6........7........8........9 
+ S:  { bound  |              tpointer                                                 }
+                                |
+                                |
+      .-------------------------.                            
+      |
+      v 
+     0........1........2........3........4........5........6........7........8.........9 
+ T:  {        x        |        y        }
+
+  
+
+The input buffer represents the `S` structure in 5 bytes, beginning with one
+byte for the `bound`, and following by 8 bytes for the `tpointer`
+field---currently, 3D treats pointer fields as always 8 bytes long.
+
+The `tpointer` field contains a memory address that points to the a `T`
+structure, which is represented in 4 bytes, with 2 bytes each for its `x` and
+`y` fields, as usual.
+
+The 3D notation below:
+
+.. code-block:: 3d
+
+  T(bound) *tpointer probe ProbeAndCopy(length = 8, destination = dest);
+
+Instructs the parser to:
+   
+  * First, use the `ProbeAndCopy` function to check that the 8 bytes starting at
+    the address pointed to by `tpointer` are valid memory, using the `dest`
+    parameter as its copy buffer.
+
+  * If `ProbeAndCopy` succeeds, then validate that `EverParseStreamOf(dest)`
+    buffer contains a valid `T(bound)` structure, in `EverParseStreamLen(dest)`
+    bytes.
+
+One can use multiple probe functions in a specification. Continuing our example
+from above, one can write:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: multi probe$
+  :end-before: SNIPPET_END: multi probe$
+
+
+* We define a second probing function `ProbeAndCopyAlt`
+
+* The a type `U`, that packages a pointer to an  `S` structure with a tag. Note,
+  the `spointer` is probed using `ProbeAndCopyAlt`, while the `tpointer`
+  nested within it is probed using `ProbeAndCopy`.
+
+One can also reuse the same copy buffer for multiple probe, so long as the
+probes are done sequentially. For instance, we use several probes below, reusing
+`destT` multiple times to parser the nested `T` structure within `sptr`, and
+again for `tptr` and `t2ptr`.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: reuse copy buffer$
+  :end-before: SNIPPET_END: reuse copy buffer$
+
+This is allowed since the probes are done sequentially, and the copy buffer is
+not reused before the probe \& validation are complete. On the other hand, if
+one were to try to reuse a copy buffer before its probe \& validation are
+complete (e.g., by using `destT` as the destination buffer for `sptr`) 3D issues
+an error message::
+
+  ./Probe.3d:(30,16): (Error) Nested mutation of the copy buffer [destT]
+
+Finally, there is one more variation in using probes. Consider the following
+type:
+
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: indirect$
+  :end-before: SNIPPET_END: indirect$
+
+
+This type specifies the following layout, with an input buffer containing a
+single pointer which refers to a buffer containing a valid struct with three
+fields.::
+
+
+
+     bytes
+     0........1........2........3........4........5........6........7........8
+   I:{                        pointer                                        }
+                                |
+                                |
+      .-------------------------.                            
+      |
+      v 
+     0........1........2........3........4........5........6........7........8.........9 
+  TT:{        x                          |                 y                 |   tag    }
+
+
+The specification is equivalent to the following, though more concise:
+
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: indirect alt$
+  :end-before: SNIPPET_END: indirect alt$
+
+
 Generating code with for several compile-time configurations
 ------------------------------------------------------------
 
