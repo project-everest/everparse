@@ -2442,17 +2442,17 @@ let rec lex_compare_ext
 
 #push-options "--z3rlimit 32"
 
-let serialized_lex_compare_array
+let serialized_lex_compare_array_aux
   (len1: raw_uint64)
   (x1: list raw_data_item {List.Tot.length x1 == U64.v len1.value})
   (len2: raw_uint64)
   (x2: list raw_data_item {List.Tot.length x2 == U64.v len2.value})
 : Lemma
   (ensures (
-    tot_serialized_lex_compare tot_serialize_raw_data_item (Array len1 x1) (Array len2 x2) == (
+    bytes_lex_compare (serialize serialize_raw_data_item (Array len1 x1)) (serialize serialize_raw_data_item (Array len2 x2)) == (
       let c = raw_uint64_compare len1 len2 in
       if c = 0
-      then lex_compare (tot_serialized_lex_compare tot_serialize_raw_data_item) x1 x2
+      then bytes_lex_compare (serialize (serialize_nlist (U64.v len1.value) serialize_raw_data_item) x1) (serialize (serialize_nlist (U64.v len2.value) serialize_raw_data_item) x2)
       else c
   )))
 = 
@@ -2481,7 +2481,29 @@ let serialized_lex_compare_array
   serialize_dtuple2_eq serialize_header serialize_content v2';
   let (| h2, c2 |) = v2' in
   lex_compare_header_intro cbor_major_type_array len1 len2;
-  bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_content h2) c2);
+  bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_content h2) c2)
+
+let serialized_lex_compare_array
+  (len1: raw_uint64)
+  (x1: list raw_data_item {List.Tot.length x1 == U64.v len1.value})
+  (len2: raw_uint64)
+  (x2: list raw_data_item {List.Tot.length x2 == U64.v len2.value})
+: Lemma
+  (ensures (
+    tot_serialized_lex_compare tot_serialize_raw_data_item (Array len1 x1) (Array len2 x2) == (
+      let c = raw_uint64_compare len1 len2 in
+      if c = 0
+      then lex_compare (tot_serialized_lex_compare tot_serialize_raw_data_item) x1 x2
+      else c
+  )))
+= 
+  let v1 = Array len1 x1 in
+  let v1' = synth_raw_data_item_recip v1 in
+  let (| h1, c1 |) = v1' in
+  let v2 = Array len2 x2 in
+  let v2' = synth_raw_data_item_recip v2 in
+  let (| h2, c2 |) = v2' in
+  serialized_lex_compare_array_aux len1 x1 len2 x2;
   if len1 = len2
   then serialized_lex_compare_nlist tot_serialize_raw_data_item serialize_raw_data_item (U64.v len1.value) c1 c2
   else ()
@@ -2509,17 +2531,17 @@ let tot_nondep_then_eq_gen
 = nondep_then_eq (parser_of_tot_parser pt1) (parser_of_tot_parser pt2) x;
   nondep_then_eq pg1 pg2 x
 
-let serialized_lex_compare_map
+let serialized_lex_compare_map_aux
   (len1: raw_uint64)
   (x1: list (raw_data_item & raw_data_item) {List.Tot.length x1 == U64.v len1.value})
   (len2: raw_uint64)
   (x2: list (raw_data_item & raw_data_item) {List.Tot.length x2 == U64.v len2.value})
 : Lemma
   (ensures (
-    tot_serialized_lex_compare tot_serialize_raw_data_item (Map len1 x1) (Map len2 x2) == (
+    bytes_lex_compare (serialize serialize_raw_data_item (Map len1 x1)) (serialize serialize_raw_data_item (Map len2 x2)) == (
       let c = raw_uint64_compare len1 len2 in
       if c = 0
-      then lex_compare (tot_serialized_lex_compare (tot_serialize_nondep_then tot_serialize_raw_data_item tot_serialize_raw_data_item)) x1 x2
+      then bytes_lex_compare (serialize (serialize_nlist (U64.v len1.value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) x1) (serialize (serialize_nlist (U64.v len2.value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) x2)
       else c
   )))
 = 
@@ -2548,7 +2570,29 @@ let serialized_lex_compare_map
   serialize_dtuple2_eq serialize_header serialize_content v2';
   let (| h2, c2 |) = v2' in
   lex_compare_header_intro cbor_major_type_map len1 len2;
-  bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_content h2) c2);
+  bytes_lex_compare_serialize_strong_prefix serialize_header h1 h2 (bare_serialize (serialize_content h1) c1) (bare_serialize (serialize_content h2) c2)
+
+let serialized_lex_compare_map
+  (len1: raw_uint64)
+  (x1: list (raw_data_item & raw_data_item) {List.Tot.length x1 == U64.v len1.value})
+  (len2: raw_uint64)
+  (x2: list (raw_data_item & raw_data_item) {List.Tot.length x2 == U64.v len2.value})
+: Lemma
+  (ensures (
+    tot_serialized_lex_compare tot_serialize_raw_data_item (Map len1 x1) (Map len2 x2) == (
+      let c = raw_uint64_compare len1 len2 in
+      if c = 0
+      then lex_compare (tot_serialized_lex_compare (tot_serialize_nondep_then tot_serialize_raw_data_item tot_serialize_raw_data_item)) x1 x2
+      else c
+  )))
+= 
+  let v1 = Map len1 x1 in
+  let v1' = synth_raw_data_item_recip v1 in
+  let (| h1, c1 |) = v1' in
+  let v2 = Map len2 x2 in
+  let v2' = synth_raw_data_item_recip v2 in
+  let (| h2, c2 |) = v2' in
+  serialized_lex_compare_map_aux len1 x1 len2 x2;
   if len1 = len2
   then begin
     Classical.forall_intro (tot_nondep_then_eq_gen tot_parse_raw_data_item parse_raw_data_item tot_parse_raw_data_item parse_raw_data_item ());

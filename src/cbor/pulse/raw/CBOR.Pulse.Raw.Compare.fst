@@ -13,6 +13,7 @@ module I16 = FStar.Int16
 module Trade = Pulse.Lib.Trade.Util
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
+module Ser = CBOR.Pulse.Raw.Format.Compare
 
 let rec cbor_compare_array_eq
   (x1 x2: list raw_data_item)
@@ -215,6 +216,17 @@ fn impl_raw_uint64_compare (_: unit) : impl_compare_scalar_t u#0 #_ raw_uint64_c
 }
 ```
 
+let cbor_pair_is_serialized
+  (c1 c2: cbor_raw)
+: Tot (option (cbor_serialized & cbor_serialized))
+= match c1 with
+  | CBOR_Case_Serialized_Tagged s1 ->
+    begin match c2 with
+    | CBOR_Case_Serialized_Tagged s2 -> Some (s1, s2)
+    | _ -> None
+    end
+  | _ -> None
+
 #restart-solver
 inline_for_extraction
 ```pulse
@@ -258,13 +270,28 @@ fn cbor_compare_body
       let tag2 = cbor_match_tagged_get_tag x2;
       let c = impl_raw_uint64_compare () tag1 tag2;
       if (c = 0s) {
-        // FIXME: add a case to compare two serialized tagged objects
-        let pl1 = cbor_match_tagged_get_payload x1;
-        let pl2 = cbor_match_tagged_get_payload x2;
-        let res = ih pl1 pl2;
-        Trade.elim _ (cbor_match p1 x1 v1);
-        Trade.elim _ (cbor_match p2 x2 v2);
-        res
+        match cbor_pair_is_serialized x1 x2 {
+          Some pair -> {
+            Trade.rewrite_with_trade
+              (cbor_match p1 x1 v1)
+              (cbor_match_serialized_tagged (fst pair) p1 v1);
+            Trade.rewrite_with_trade
+              (cbor_match p2 x2 v2)
+              (cbor_match_serialized_tagged (snd pair) p2 v2);
+            let res = Ser.cbor_match_compare_serialized_tagged (fst pair) (snd pair);
+            Trade.elim _ (cbor_match p2 x2 v2);
+            Trade.elim _ (cbor_match p1 x1 v1);
+            res
+          }
+          _ -> {
+            let pl1 = cbor_match_tagged_get_payload x1;
+            let pl2 = cbor_match_tagged_get_payload x2;
+            let res = ih pl1 pl2;
+            Trade.elim _ (cbor_match p1 x1 v1);
+            Trade.elim _ (cbor_match p2 x2 v2);
+            res
+          }
+        }
       } else {
         c
       }
@@ -273,21 +300,36 @@ fn cbor_compare_body
       let len2 = cbor_match_array_get_length x2;
       let c = impl_raw_uint64_compare () len1 len2;
       if (c = 0s) {
-        // FIXME: add a case to compare two serialized arrays
-        cbor_compare_array_eq (Array?.v v1) (Array?.v v2);
-        let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-        let i1 = cbor_array_iterator_init f64 x1;
-        with p1' . assert (cbor_array_iterator_match p1' i1 (Array?.v v1));
-        unfold (cbor_array_iterator_match p1' i1 (Array?.v v1));
-        let i2 = cbor_array_iterator_init f64 x2;
-        with p2' . assert (cbor_array_iterator_match p2' i2 (Array?.v v2));
-        unfold (cbor_array_iterator_match p2' i2 (Array?.v v2));
-        let res = lex_compare_iterator_peel_perm cbor_match cbor_serialized_array_iterator_match cbor_serialized_array_iterator_is_empty (cbor_serialized_array_iterator_next f64) cbor_compare (impl_compare_of_cbor_compare ih) i1 i2;
-        fold (cbor_array_iterator_match p1' i1 (Array?.v v1));
-        fold (cbor_array_iterator_match p2' i2 (Array?.v v2));
-        Trade.elim _ (cbor_match p1 x1 v1);
-        Trade.elim _ (cbor_match p2 x2 v2);
-        res
+        match cbor_pair_is_serialized x1 x2 {
+          Some pair -> {
+            Trade.rewrite_with_trade
+              (cbor_match p1 x1 v1)
+              (cbor_match_serialized_array (fst pair) p1 v1);
+            Trade.rewrite_with_trade
+              (cbor_match p2 x2 v2)
+              (cbor_match_serialized_array (snd pair) p2 v2);
+            let res = Ser.cbor_match_compare_serialized_array (fst pair) (snd pair);
+            Trade.elim _ (cbor_match p2 x2 v2);
+            Trade.elim _ (cbor_match p1 x1 v1);
+            res
+          }
+          _ -> {
+            cbor_compare_array_eq (Array?.v v1) (Array?.v v2);
+            let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+            let i1 = cbor_array_iterator_init f64 x1;
+            with p1' . assert (cbor_array_iterator_match p1' i1 (Array?.v v1));
+            unfold (cbor_array_iterator_match p1' i1 (Array?.v v1));
+            let i2 = cbor_array_iterator_init f64 x2;
+            with p2' . assert (cbor_array_iterator_match p2' i2 (Array?.v v2));
+            unfold (cbor_array_iterator_match p2' i2 (Array?.v v2));
+            let res = lex_compare_iterator_peel_perm cbor_match cbor_serialized_array_iterator_match cbor_serialized_array_iterator_is_empty (cbor_serialized_array_iterator_next f64) cbor_compare (impl_compare_of_cbor_compare ih) i1 i2;
+            fold (cbor_array_iterator_match p1' i1 (Array?.v v1));
+            fold (cbor_array_iterator_match p2' i2 (Array?.v v2));
+            Trade.elim _ (cbor_match p1 x1 v1);
+            Trade.elim _ (cbor_match p2 x2 v2);
+            res
+          }
+        }
       } else {
         c
       }
@@ -296,21 +338,36 @@ fn cbor_compare_body
       let len2 = cbor_match_map_get_length x2;
       let c = impl_raw_uint64_compare () len1 len2;
       if (c = 0s) {
-        // FIXME: add a case to compare two serialized maps
-        cbor_compare_map_eq (Map?.v v1) (Map?.v v2);
-        let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-        let i1 = cbor_map_iterator_init f64 x1;
-        with p1' . assert (cbor_map_iterator_match p1' i1 (Map?.v v1));
-        unfold (cbor_map_iterator_match p1' i1 (Map?.v v1));
-        let i2 = cbor_map_iterator_init f64 x2;
-        with p2' . assert (cbor_map_iterator_match p2' i2 (Map?.v v2));
-        unfold (cbor_map_iterator_match p2' i2 (Map?.v v2));
-        let res = lex_compare_iterator_peel_perm cbor_match_map_entry cbor_serialized_map_iterator_match cbor_serialized_map_iterator_is_empty (cbor_serialized_map_iterator_next f64) cbor_compare_key_value (impl_cbor_compare_key_value ih) i1 i2;
-        fold (cbor_map_iterator_match p1' i1 (Map?.v v1));
-        fold (cbor_map_iterator_match p2' i2 (Map?.v v2));
-        Trade.elim _ (cbor_match p1 x1 v1);
-        Trade.elim _ (cbor_match p2 x2 v2);
-        res
+        match cbor_pair_is_serialized x1 x2 {
+          Some pair -> {
+            Trade.rewrite_with_trade
+              (cbor_match p1 x1 v1)
+              (cbor_match_serialized_map (fst pair) p1 v1);
+            Trade.rewrite_with_trade
+              (cbor_match p2 x2 v2)
+              (cbor_match_serialized_map (snd pair) p2 v2);
+            let res = Ser.cbor_match_compare_serialized_map (fst pair) (snd pair);
+            Trade.elim _ (cbor_match p2 x2 v2);
+            Trade.elim _ (cbor_match p1 x1 v1);
+            res
+          }
+          _ -> {
+            cbor_compare_map_eq (Map?.v v1) (Map?.v v2);
+            let f64 : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+            let i1 = cbor_map_iterator_init f64 x1;
+            with p1' . assert (cbor_map_iterator_match p1' i1 (Map?.v v1));
+            unfold (cbor_map_iterator_match p1' i1 (Map?.v v1));
+            let i2 = cbor_map_iterator_init f64 x2;
+            with p2' . assert (cbor_map_iterator_match p2' i2 (Map?.v v2));
+            unfold (cbor_map_iterator_match p2' i2 (Map?.v v2));
+            let res = lex_compare_iterator_peel_perm cbor_match_map_entry cbor_serialized_map_iterator_match cbor_serialized_map_iterator_is_empty (cbor_serialized_map_iterator_next f64) cbor_compare_key_value (impl_cbor_compare_key_value ih) i1 i2;
+            fold (cbor_map_iterator_match p1' i1 (Map?.v v1));
+            fold (cbor_map_iterator_match p2' i2 (Map?.v v2));
+            Trade.elim _ (cbor_match p1 x1 v1);
+            Trade.elim _ (cbor_match p2 x2 v2);
+            res
+          }
+        }
       } else {
         c
       }

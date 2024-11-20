@@ -228,8 +228,6 @@ pub fn cbor_det_mk_map_entry <'a>(
     return crate::cbordetver::cbor_det_mk_map_entry(xk, xv);
 }
 
-/* TODO: optimize the comparison of two serialized objects to avoid
- * recursive descent. */
 /// Constructs a map from a slice of map entries. This function does
 /// not copy its input array. If the input slice has more than $2^64 -
 /// 1$ entries, then this function returns `None` and does not change
@@ -255,8 +253,6 @@ pub fn cbor_det_mk_map <'a>(a: &'a mut [CborDetMapEntry <'a>]) ->
     }
 }
 
-/* TODO: optimize the comparison of two serialized objects to avoid
- * recursive descent. */
 /// Compares Deterministic CBOR objects for semantic equality. This
 /// function consumes stack space linear in the maximum nesting of its
 /// two arguments.
