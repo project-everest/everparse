@@ -122,6 +122,8 @@ pub fn cbor_det_mk_tagged <'a>(tag: u64, r: &'a [crate::cbordetveraux::cbor_raw 
     <'a>
 { crate::cbordetveraux::cbor_det_mk_tagged(tag, r) }
 
+pub type cbor_det_map_entry <'a> = crate::cbordetveraux::cbor_map_entry <'a>;
+
 pub fn cbor_det_mk_map_entry <'a>(
     xk: crate::cbordetveraux::cbor_raw <'a>,
     xv: crate::cbordetveraux::cbor_raw <'a>
@@ -240,6 +242,9 @@ pub fn cbor_det_get_array_length <'a>(x: crate::cbordetveraux::cbor_raw <'a>) ->
     res
 }
 
+pub type cbor_det_array_iterator_t <'a> =
+crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>;
+
 pub fn cbor_det_array_iterator_start <'a>(x: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
@@ -282,6 +287,9 @@ pub fn cbor_det_map_length <'a>(x: crate::cbordetveraux::cbor_raw <'a>) -> u64
     let res: u64 = crate::cbordetveraux::cbor_det_get_map_length(x);
     res
 }
+
+pub type cbor_det_map_iterator_t <'a> =
+crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>;
 
 pub fn cbor_det_map_iterator_start <'a>(x: crate::cbordetveraux::cbor_raw <'a>) ->
     crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
