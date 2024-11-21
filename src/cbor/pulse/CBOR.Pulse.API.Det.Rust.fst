@@ -1,35 +1,15 @@
 module CBOR.Pulse.API.Det.Rust
-open CBOR.Spec.Constants
-open CBOR.Pulse.API.Det
-open Pulse.Lib.Pervasives
-module Spec = CBOR.Spec.API.Format
-module Trade = Pulse.Lib.Trade.Util
-module U8 = FStar.UInt8
-module U64 = FStar.UInt64
-module S = Pulse.Lib.Slice
-module SZ = FStar.SizeT
+
 module Det = CBOR.Pulse.API.Det
 
 (* Validation, parsing and serialization *)
 
-type cbordet = cbor_det_t
+type cbordet = Det.cbor_det_t
 
-noextract [@@noextract_to "krml"]
-let cbor_det_parse_post
-  (input: S.slice U8.t)
-  (pm: perm)
-  (v: Seq.seq U8.t)
-  (res: option (cbordet & SZ.t))
-: Tot slprop
-= match res with
-  | None -> pts_to input #pm v ** pure (~ (exists v1 v2 . v == Spec.cbor_det_serialize v1 `Seq.append` v2))
-  | Some (res, len) ->
-    exists* v' .
-      cbor_det_match 1.0R res v' **
-      Trade.trade (cbor_det_match 1.0R res v') (pts_to input #pm v) ** pure (
-        SZ.v len <= Seq.length v /\
-        Seq.slice v 0 (SZ.v len) == Spec.cbor_det_serialize v'
-      )
+[@@pulse_unfold]
+let cbor_det_match = Det.cbor_det_match
+
+open CBOR.Pulse.API.Det
 
 ```pulse
 fn cbor_det_parse
@@ -54,17 +34,6 @@ ensures
 }
 ```
 
-noextract [@@noextract_to "krml"]
-let cbor_det_size_postcond
-  (y: Spec.cbor)
-  (bound: SZ.t)
-  (res: option SZ.t)
-: Tot prop
-= let s = Spec.cbor_det_serialize y in
-  match res with
-  | None -> Seq.length s > SZ.v bound
-  | Some len -> Seq.length s == SZ.v len /\ SZ.v len <= SZ.v bound
-
 ```pulse
 fn cbor_det_size
   (x: cbordet)
@@ -86,21 +55,6 @@ ensures
   }
 }
 ```
-
-noextract [@@noextract_to "krml"]
-let cbor_det_serialize_postcond
-  (y: Spec.cbor)
-  (v: Seq.seq U8.t)
-  (v': Seq.seq U8.t)
-  (res: option SZ.t)
-: Tot prop
-= let s = Spec.cbor_det_serialize y in
-  match res with
-  | None -> Seq.length s > Seq.length v /\ v' == v
-  | Some len ->
-    Seq.length s == SZ.v len /\
-    SZ.v len <= Seq.length v /\
-    v' `Seq.equal` (s `Seq.append` Seq.slice v (SZ.v len) (Seq.length v))
 
 ```pulse
 fn cbor_det_serialize
@@ -134,15 +88,6 @@ ensures
 
 (* Constructors *)
 
-noextract [@@noextract_to "krml"]
-let cbor_det_mk_simple_value_post
-  (v: U8.t)
-  (res: option cbordet)
-: Tot slprop
-= match res with
-  | None -> emp
-  | Some res' -> exists* v' . cbor_det_match 1.0R res' v' ** pure (simple_value_wf v /\ v' == Spec.pack (Spec.CSimple v))
-
 ```pulse
 fn cbor_det_mk_simple_value
   (v: U8.t)
@@ -164,11 +109,6 @@ ensures
 }
 ```
 
-[@@no_auto_projectors]
-type cbor_det_int_kind =
- | UInt64
- | NegInt64
-
 ```pulse
 fn cbor_det_mk_int64
   (ty: cbor_det_int_kind)
@@ -180,27 +120,6 @@ ensures cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 (if ty = UInt64 then cbo
   Det.cbor_det_mk_int64 () (if ty = UInt64 then cbor_major_type_uint64 else cbor_major_type_neg_int64) v
 }
 ```
-
-[@@no_auto_projectors]
-type cbor_det_string_kind =
-| ByteString
-| TextString
-
-noextract [@@noextract_to "krml"]
-let cbor_det_mk_string_post
-  (ty: major_type_byte_string_or_text_string)
-  (s: S.slice U8.t)
-  (p: perm)
-  (v: Seq.seq U8.t)
-  (res: option cbordet)
-= match res with
-  | None -> pts_to s #p v
-  | Some res' -> exists* p' v' .
-    cbor_det_match p' res' (Spec.pack (Spec.CString ty v')) **
-    Trade.trade
-      (cbor_det_match p' res' (Spec.pack (Spec.CString ty v')))
-      (pts_to s #p v) **
-    pure (v' == v)
 
 let uint64_max_prop : squash (pow2 64 - 1 == 18446744073709551615) =
   assert_norm (pow2 64 - 1 == 18446744073709551615)
@@ -233,34 +152,12 @@ ensures
 
 let cbor_det_mk_tagged tag r #pr #v #pv #v' = Det.cbor_det_mk_tagged () tag r #pr #v #pv #v'
 
+let cbor_det_map_entry = Det.cbor_det_map_entry_t
+
+[@@pulse_unfold]
+let cbor_det_map_entry_match = Det.cbor_det_map_entry_match
+
 let cbor_det_mk_map_entry xk xv #pk #vk #pv #vv = Det.cbor_det_mk_map_entry () xk xv #pk #vk #pv #vv
-
-module PM = Pulse.Lib.SeqMatch
-
-noextract [@@noextract_to "krml"]
-let cbor_det_mk_array_post
-  (a: S.slice cbordet)
-  (pa: perm)
-  (va: (Seq.seq cbordet))
-  (pv: perm)
-  (vv: (list Spec.cbor))
-  (res: option cbordet)
-: Tot slprop
-= match res with
-  | None ->
-    pts_to a #pa va **
-    PM.seq_list_match va vv (cbor_det_match pv)
-  | Some res ->
-    exists* p' v' .
-      cbor_det_match p' res (Spec.pack (Spec.CArray v')) **
-      Trade.trade
-        (cbor_det_match p' res (Spec.pack (Spec.CArray v')))
-        (pts_to a #pa va **
-          PM.seq_list_match va vv (cbor_det_match pv)
-        ) **
-        pure (
-          v' == vv
-        )
 
 ```pulse
 fn cbor_det_mk_array
@@ -289,17 +186,17 @@ ensures
 }
 ```
 
-let cbor_det_mk_map a #va #pv #vv = Det.cbor_det_mk_map_gen () a #va #pv #vv
+```pulse
+fn cbor_det_mk_map (_: unit) : Base.mk_map_gen_t u#0 #_ #_ cbor_det_match cbor_det_map_entry_match
+= (a: _) (#va: _) (#pv: _) (#vv: _)
+{
+  Det.cbor_det_mk_map_gen () a #va #pv #vv
+}
+```
 
 (* Destructors *)
 
 let cbor_det_equal x1 x2 #p1 #p2 #v1 #v2 = Det.cbor_det_equal () x1 x2 #p1 #p2 #v1 #v2
-
-noextract [@@noextract_to "krml"]
-let cbor_det_tagged_match (p: perm) (tag: U64.t) (payload: cbor_det_t) (v: Spec.cbor) : Tot slprop =
-  exists* v' .
-    cbor_det_match p payload v' **
-    pure (Spec.unpack v == Spec.CTagged tag v')
 
 [@@CAbstractStruct; no_auto_projectors]
 noeq
@@ -307,7 +204,6 @@ type cbor_det_array = {
   array: (array: cbordet { CaseArray? (cbor_det_case array) }) ;
 }
 
-noextract [@@noextract_to "krml"]
 let cbor_det_array_match (p: perm) (a: cbor_det_array) (v: Spec.cbor) : Tot slprop =
   cbor_det_match p a.array v **
   pure (Spec.CArray? (Spec.unpack v))
@@ -322,38 +218,6 @@ noextract [@@noextract_to "krml"]
 let cbor_det_map_match (p: perm) (a: cbor_det_map) (v: Spec.cbor) : Tot slprop =
   cbor_det_match p a.map v **
   pure (Spec.CMap? (Spec.unpack v))
-
-noextract [@@noextract_to "krml"]
-let cbor_det_string_match (t: major_type_byte_string_or_text_string) (p: perm) (a: S.slice U8.t) (v: Spec.cbor) : Tot slprop =
-  exists* (v': Seq.seq U8.t) .
-    pts_to a #p v' **
-    pure (
-      Spec.CString? (Spec.unpack v) /\ v' == Spec.CString?.v (Spec.unpack v) /\ t == Spec.CString?.typ (Spec.unpack v) /\
-      (t == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v')
-    )
-
-noeq [@@no_auto_projectors]
-type cbor_det_view =
-| Int64: (kind: cbor_det_int_kind) -> (value: U64.t) -> cbor_det_view
-| String: (kind: cbor_det_string_kind) -> (payload: S.slice U8.t) -> cbor_det_view
-| Array of cbor_det_array
-| Map of cbor_det_map
-| Tagged: (tag: U64.t) -> (payload: cbor_det_t) -> cbor_det_view
-| SimpleValue of simple_value
-
-noextract [@@noextract_to "krml"]
-let cbor_det_view_match
-  (p: perm)
-  (x: cbor_det_view)
-  (v: Spec.cbor)
-: Tot slprop
-= match x with
-  | Int64 k i -> pure (v == Spec.pack (Spec.CInt64 (if UInt64? k then cbor_major_type_uint64 else cbor_major_type_neg_int64) i))
-  | String k s -> cbor_det_string_match (if ByteString? k then cbor_major_type_byte_string else cbor_major_type_text_string)  p s v
-  | Tagged tag pl -> cbor_det_tagged_match p tag pl v
-  | Array a -> cbor_det_array_match p a v
-  | Map m -> cbor_det_map_match p m v
-  | SimpleValue i -> pure (v == Spec.pack (Spec.CSimple i))
 
 ```pulse
 fn cbor_det_destruct
@@ -503,6 +367,11 @@ ensures cbor_det_match p x.array y **
 }
 ```
 
+let cbor_det_array_iterator_t = cbor_det_array_iterator_t
+
+[@@pulse_unfold]
+let cbor_det_array_iterator_match = cbor_det_array_iterator_match
+
 ```pulse
 fn cbor_det_array_iterator_start
   (x: cbor_det_array)
@@ -532,21 +401,6 @@ ensures
 let cbor_det_array_iterator_is_empty x #p #y = Det.cbor_det_array_iterator_is_empty () x #p #y
 
 let cbor_det_array_iterator_next x #y #py #z = Det.cbor_det_array_iterator_next () x #y #py #z
-
-noextract [@@noextract_to "krml"]
-let safe_get_array_item_post
-  (x: cbor_det_array)
-  (i: U64.t)
-  (p: perm)
-  (y: Spec.cbor)
-  (res: option cbordet)
-: Tot slprop
-= match res with
-  | None -> cbor_det_array_match p x y ** pure (Spec.CArray? (Spec.unpack y) /\ U64.v i >= List.Tot.length (Spec.CArray?.v (Spec.unpack y)))
-  | Some res' -> exists* p' y' .
-    cbor_det_match p' res' y' **
-    Trade.trade (cbor_det_match p' res' y') (cbor_det_array_match p x y) **
-    pure (get_array_item_post i y y')
 
 ```pulse
 fn cbor_det_get_array_item
@@ -616,6 +470,11 @@ ensures cbor_det_match p x.map y **
 }
 ```
 
+let cbor_det_map_iterator_t = Det.cbor_det_map_iterator_t
+
+[@@pulse_unfold]
+let cbor_det_map_iterator_match = Det.cbor_det_map_iterator_match
+
 ```pulse
 fn cbor_det_map_iterator_start
   (x: cbor_det_map)
@@ -648,25 +507,6 @@ let cbor_det_map_iterator_next x #y #py #z = Det.cbor_det_map_iterator_next () x
 let cbor_det_map_entry_key x2 #p #v2 = Det.cbor_det_map_entry_key () x2 #p #v2
 
 let cbor_det_map_entry_value x2 #p #v2 = Det.cbor_det_map_entry_value () x2 #p #v2
-
-noextract [@@noextract_to "krml"]
-let safe_map_get_post
-  (x: cbor_det_map)
-  (px: perm)
-  (vx: Spec.cbor)
-  (vk: Spec.cbor)
-  (res: option cbordet)
-: Tot slprop
-= match res with
-  | None ->
-    cbor_det_map_match px x vx ** pure (Spec.CMap? (Spec.unpack vx) /\ None? (Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk))
-  | Some x' ->
-    exists* px' vx' .
-      cbor_det_match px' x' vx' **
-      Trade.trade
-        (cbor_det_match px' x' vx')
-        (cbor_det_map_match px x vx) **
-      pure (Spec.CMap? (Spec.unpack vx) /\ Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk == Some vx')  
 
 ```pulse
 ghost
