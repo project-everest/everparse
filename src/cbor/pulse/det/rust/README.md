@@ -9,7 +9,7 @@ and Pulse with EverParse.
   user-facing API, its functions are all documented.
 
 * `src/cbordetver.rs` contains the extracted code from the verified
-  API in `../../CBOR.Pulse.API.Det.Rust.fst`
+  API in `../../CBOR.Pulse.API.Det.Rust.fsti`
 
 * `src/cbordetveraux.rs` contains the bulk of the extracted code from
   the verified implementation, which the verified API calls into.

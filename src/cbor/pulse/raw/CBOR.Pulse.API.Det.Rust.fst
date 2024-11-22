@@ -1,5 +1,8 @@
 module CBOR.Pulse.API.Det.Rust
 
+(* NOTE: this .fst file does not need anything from the Raw namespace,
+but it has been moved here to be hidden from verified clients. *)
+
 module Det = CBOR.Pulse.API.Det.Common
 
 (* Validation, parsing and serialization *)

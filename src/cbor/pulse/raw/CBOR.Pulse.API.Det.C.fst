@@ -1,5 +1,8 @@
 module CBOR.Pulse.API.Det.C
 
+(* NOTE: this .fst file does not need anything from the Raw namespace,
+but it has been moved here to be hidden from verified clients. *)
+
 ```pulse
 fn cbor_det_mk_string_from_array (_: unit) : cbor_det_mk_string_from_array_t
 =
