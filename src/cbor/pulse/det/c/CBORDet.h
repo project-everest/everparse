@@ -122,12 +122,6 @@ typedef struct cbor_map_entry_s
 }
 cbor_map_entry;
 
-#define FStar_Pervasives_Native_None 0
-#define FStar_Pervasives_Native_Some 1
-
-typedef uint8_t
-FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags;
-
 #define CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice 0
 #define CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Serialized 1
 
@@ -154,6 +148,12 @@ typedef struct CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cb
   ;
 }
 CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
+
+#define FStar_Pervasives_Native_None 0
+#define FStar_Pervasives_Native_Some 1
+
+typedef uint8_t
+FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags;
 
 #define CBOR_MAJOR_TYPE_SIMPLE_VALUE (7U)
 

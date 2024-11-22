@@ -4,6 +4,19 @@
 #![allow(unused_assignments)]
 #![allow(unreachable_patterns)]
 
+#[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
+
+fn mk_raw_uint64(x: u64) -> raw_uint64
+{
+    let size: u8 =
+        if x <= max_simple_value_additional_info as u64
+        { 0u8 }
+        else if x < 256u64
+        { 1u8 }
+        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
+    raw_uint64 { size, value: x }
+}
+
 fn get_bitfield_gen8(x: u8, lo: u32, hi: u32) -> u8
 {
     let op1: u8 = x.wrapping_shl(8u32.wrapping_sub(hi));
@@ -19,19 +32,6 @@ fn set_bitfield_gen8(x: u8, lo: u32, hi: u32, v: u8) -> u8
     let op4: u8 = x & op3;
     let op5: u8 = v.wrapping_shl(lo);
     op4 | op5
-}
-
-#[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
-
-fn mk_raw_uint64(x: u64) -> raw_uint64
-{
-    let size: u8 =
-        if x <= max_simple_value_additional_info as u64
-        { 0u8 }
-        else if x < 256u64
-        { 1u8 }
-        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
-    raw_uint64 { size, value: x }
 }
 
 const additional_info_long_argument_8_bits: u8 = 24u8;
@@ -167,62 +167,845 @@ fn get_header_major_type(h: header) -> u8
     b.major_type
 }
 
-fn impl_uint8_compare(x1: u8, x2: u8) -> i16
-{ if x1 < x2 { -1i16 } else if x1 > x2 { 1i16 } else { 0i16 } }
+type cbor_raw_serialized_iterator <'a> = &'a [u8];
 
-fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
+fn impl_correct(s: &[u8]) -> bool
 {
-    let sp1: &[u8] = s1;
-    let sp2: &[u8] = s2;
-    let mut pi1: [usize; 1] = [0usize; 1usize];
-    let mut pi2: [usize; 1] = [0usize; 1usize];
-    let n1: usize = sp1.len();
-    let n2: usize = sp2.len();
-    let ite: i16 =
-        if 0usize < n1
-        { if 0usize < n2 { 0i16 } else { 1i16 } }
-        else if 0usize < n2 { -1i16 } else { 0i16 };
-    let mut pres: [i16; 1] = [ite; 1usize];
-    let res: i16 = (&pres)[0];
-    let i1: usize = (&pi1)[0];
-    let mut cond: bool = res == 0i16 && i1 < n1;
+    let mut pres: [bool; 1] = [true; 1usize];
+    let mut pi: [usize; 1] = [0usize; 1usize];
+    let len: usize = s.len();
+    let res: bool = (&pres)[0];
+    let mut cond: bool =
+        if res
+        {
+            let i: usize = (&pi)[0];
+            i < len
+        }
+        else
+        { false };
     while
     cond
     {
-        let i10: usize = (&pi1)[0];
-        let x1: u8 = sp1[i10];
-        let i2: usize = (&pi2)[0];
-        let x2: u8 = sp2[i2];
-        let res0: i16 = impl_uint8_compare(x1, x2);
-        let c: i16 = res0;
-        if c == 0i16
+        let i: usize = (&pi)[0];
+        let byte1: u8 = s[i];
+        let i1: usize = i.wrapping_add(1usize);
+        if byte1 <= 0x7Fu8
+        { (&mut pi)[0] = i1 }
+        else if i1 == len
+        { (&mut pres)[0] = false }
+        else
         {
-            let i1·: usize = i10.wrapping_add(1usize);
-            let i2·: usize = i2.wrapping_add(1usize);
-            let ci1·: bool = i1· < n1;
-            let ci2·: bool = i2· < n2;
-            if ci2· && ! ci1·
-            { (&mut pres)[0] = -1i16 }
-            else if ci1· && ! ci2·
-            { (&mut pres)[0] = 1i16 }
+            let byte2: u8 = s[i1];
+            let i2: usize = i1.wrapping_add(1usize);
+            if 0xC2u8 <= byte1 && byte1 <= 0xDFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+            { (&mut pi)[0] = i2 }
+            else if i2 == len
+            { (&mut pres)[0] = false }
             else
             {
-                (&mut pi1)[0] = i1·;
-                (&mut pi2)[0] = i2·
+                let byte3: u8 = s[i2];
+                let i3: usize = i2.wrapping_add(1usize);
+                if ! (0x80u8 <= byte3 && byte3 <= 0xBFu8)
+                { (&mut pres)[0] = false }
+                else if byte1 == 0xE0u8
+                {
+                    if 0xA0u8 <= byte2 && byte2 <= 0xBFu8
+                    { (&mut pi)[0] = i3 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
+                else if byte1 == 0xEDu8
+                {
+                    if 0x80u8 <= byte2 && byte2 <= 0x9Fu8
+                    { (&mut pi)[0] = i3 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
+                else if 0xE1u8 <= byte1 && byte1 <= 0xEFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+                { (&mut pi)[0] = i3 }
+                else if i3 == len
+                { (&mut pres)[0] = false }
+                else
+                {
+                    let byte4: u8 = s[i3];
+                    let i4: usize = i3.wrapping_add(1usize);
+                    if ! (0x80u8 <= byte4 && byte4 <= 0xBFu8)
+                    { (&mut pres)[0] = false }
+                    else if byte1 == 0xF0u8 && 0x90u8 <= byte2 && byte2 <= 0xBFu8
+                    { (&mut pi)[0] = i4 }
+                    else if
+                    0xF1u8 <= byte1 && byte1 <= 0xF3u8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+                    { (&mut pi)[0] = i4 }
+                    else if byte1 == 0xF4u8 && 0x80u8 <= byte2 && byte2 <= 0x8Fu8
+                    { (&mut pi)[0] = i4 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
+            }
+        };
+        let res0: bool = (&pres)[0];
+        let ite: bool =
+            if res0
+            {
+                let i0: usize = (&pi)[0];
+                i0 < len
+            }
+            else
+            { false };
+        cond = ite
+    };
+    (&pres)[0]
+}
+
+fn read_initial_byte_t(input: &[u8]) -> initial_byte_t
+{
+    let last: u8 = input[0usize];
+    let res: u8 = last;
+    let x: u8 = res;
+    let res0: initial_byte_t =
+        initial_byte_t
+        {
+            major_type: get_bitfield_gen8(x, 5u32, 8u32),
+            additional_info: get_bitfield_gen8(x, 0u32, 5u32)
+        };
+    let res1: initial_byte_t = res0;
+    let res2: initial_byte_t = res1;
+    let res3: initial_byte_t = res2;
+    res3
+}
+
+fn read_header(input: &[u8]) -> header
+{
+    let i: usize = 1usize;
+    let s: (&[u8], &[u8]) = input.split_at(i);
+    let res: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let split12: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let input1: &[u8] = split12.0;
+    let input2: &[u8] = split12.1;
+    let x: initial_byte_t = read_initial_byte_t(input1);
+    let res0: initial_byte_t = x;
+    let x1: initial_byte_t = res0;
+    let x2: long_argument =
+        if x1.additional_info == additional_info_long_argument_8_bits
+        {
+            if x1.major_type == cbor_major_type_simple_value
+            {
+                let last: u8 = input2[0usize];
+                let res1: u8 = last;
+                let x0: u8 = res1;
+                let res2: long_argument = long_argument::LongArgumentSimpleValue { v: x0 };
+                let res3: long_argument = res2;
+                let res4: long_argument = res3;
+                res4
+            }
+            else
+            {
+                let last: u8 = input2[0usize];
+                let res1: u8 = last;
+                let x0: u8 = res1;
+                let res2: long_argument = long_argument::LongArgumentU8 { v: x0 };
+                let res3: long_argument = res2;
+                res3
+            }
+        }
+        else if x1.additional_info == additional_info_long_argument_16_bits
+        {
+            let pos·: usize = 1usize;
+            let last: u8 = input2[pos·];
+            let last1: u8 = input2[0usize];
+            let n: u16 = last1 as u16;
+            let blast: u16 = last as u16;
+            let res1: u16 = blast.wrapping_add(n.wrapping_mul(256u16));
+            let x0: u16 = res1;
+            let res2: long_argument = long_argument::LongArgumentU16 { v: x0 };
+            let res3: long_argument = res2;
+            res3
+        }
+        else if x1.additional_info == additional_info_long_argument_32_bits
+        {
+            let pos·: usize = 3usize;
+            let last: u8 = input2[pos·];
+            let pos·1: usize = pos·.wrapping_sub(1usize);
+            let last1: u8 = input2[pos·1];
+            let pos·2: usize = pos·1.wrapping_sub(1usize);
+            let last2: u8 = input2[pos·2];
+            let last3: u8 = input2[0usize];
+            let n: u32 = last3 as u32;
+            let blast: u32 = last2 as u32;
+            let n0: u32 = blast.wrapping_add(n.wrapping_mul(256u32));
+            let blast0: u32 = last1 as u32;
+            let n1: u32 = blast0.wrapping_add(n0.wrapping_mul(256u32));
+            let blast1: u32 = last as u32;
+            let res1: u32 = blast1.wrapping_add(n1.wrapping_mul(256u32));
+            let x0: u32 = res1;
+            let res2: long_argument = long_argument::LongArgumentU32 { v: x0 };
+            let res3: long_argument = res2;
+            res3
+        }
+        else if x1.additional_info == additional_info_long_argument_64_bits
+        {
+            let pos·: usize = 7usize;
+            let last: u8 = input2[pos·];
+            let pos·1: usize = pos·.wrapping_sub(1usize);
+            let last1: u8 = input2[pos·1];
+            let pos·2: usize = pos·1.wrapping_sub(1usize);
+            let last2: u8 = input2[pos·2];
+            let pos·3: usize = pos·2.wrapping_sub(1usize);
+            let last3: u8 = input2[pos·3];
+            let pos·4: usize = pos·3.wrapping_sub(1usize);
+            let last4: u8 = input2[pos·4];
+            let pos·5: usize = pos·4.wrapping_sub(1usize);
+            let last5: u8 = input2[pos·5];
+            let pos·6: usize = pos·5.wrapping_sub(1usize);
+            let last6: u8 = input2[pos·6];
+            let last7: u8 = input2[0usize];
+            let n: u64 = last7 as u64;
+            let blast: u64 = last6 as u64;
+            let n0: u64 = blast.wrapping_add(n.wrapping_mul(256u64));
+            let blast0: u64 = last5 as u64;
+            let n1: u64 = blast0.wrapping_add(n0.wrapping_mul(256u64));
+            let blast1: u64 = last4 as u64;
+            let n2: u64 = blast1.wrapping_add(n1.wrapping_mul(256u64));
+            let blast2: u64 = last3 as u64;
+            let n3: u64 = blast2.wrapping_add(n2.wrapping_mul(256u64));
+            let blast3: u64 = last2 as u64;
+            let n4: u64 = blast3.wrapping_add(n3.wrapping_mul(256u64));
+            let blast4: u64 = last1 as u64;
+            let n5: u64 = blast4.wrapping_add(n4.wrapping_mul(256u64));
+            let blast5: u64 = last as u64;
+            let res1: u64 = blast5.wrapping_add(n5.wrapping_mul(256u64));
+            let x0: u64 = res1;
+            let res2: long_argument = long_argument::LongArgumentU64 { v: x0 };
+            let res3: long_argument = res2;
+            res3
+        }
+        else
+        { long_argument::LongArgumentOther };
+    header { fst: x1, snd: x2 }
+}
+
+fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
+{
+    let offset1: usize = poffset[0];
+    let offset2: usize = poffset[0];
+    let offset3: usize = poffset[0];
+    let is_valid: bool =
+        if input.len().wrapping_sub(offset3) < 1usize
+        { false }
+        else
+        {
+            poffset[0] = offset3.wrapping_add(1usize);
+            true
+        };
+    let is_valid1: bool =
+        if is_valid
+        {
+            let off: usize = poffset[0];
+            let s·: (&[u8], &[u8]) = input.split_at(offset2);
+            let split123: (&[u8], &[u8]) =
+                {
+                    let s1: &[u8] = s·.0;
+                    let s2: &[u8] = s·.1;
+                    (s1,s2)
+                };
+            let input·: &[u8] =
+                {
+                    let _input1: &[u8] = split123.0;
+                    let input23: &[u8] = split123.1;
+                    let consumed: usize = off.wrapping_sub(offset2);
+                    let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                    let res: (&[u8], &[u8]) =
+                        {
+                            let s1: &[u8] = s1s2.0;
+                            let s2: &[u8] = s1s2.1;
+                            (s1,s2)
+                        };
+                    let split23: (&[u8], &[u8]) =
+                        {
+                            let left: &[u8] = res.0;
+                            let right: &[u8] = res.1;
+                            (left,right)
+                        };
+                    let input2: &[u8] = split23.0;
+                    let _input3: &[u8] = split23.1;
+                    input2
+                };
+            let res: initial_byte_t = read_initial_byte_t(input·);
+            let x: initial_byte_t = res;
+            let ite: bool =
+                if x.major_type == cbor_major_type_simple_value
+                { x.additional_info <= additional_info_long_argument_8_bits }
+                else
+                { true };
+            ite && x.additional_info < additional_info_unassigned_min
+        }
+        else
+        { false };
+    if is_valid1
+    {
+        let off: usize = poffset[0];
+        let s·: (&[u8], &[u8]) = input.split_at(offset1);
+        let split123: (&[u8], &[u8]) =
+            {
+                let s1: &[u8] = s·.0;
+                let s2: &[u8] = s·.1;
+                (s1,s2)
+            };
+        let input·: &[u8] =
+            {
+                let _input1: &[u8] = split123.0;
+                let input23: &[u8] = split123.1;
+                let consumed: usize = off.wrapping_sub(offset1);
+                let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                let res: (&[u8], &[u8]) =
+                    {
+                        let s1: &[u8] = s1s2.0;
+                        let s2: &[u8] = s1s2.1;
+                        (s1,s2)
+                    };
+                let split23: (&[u8], &[u8]) =
+                    {
+                        let left: &[u8] = res.0;
+                        let right: &[u8] = res.1;
+                        (left,right)
+                    };
+                let input2: &[u8] = split23.0;
+                let _input3: &[u8] = split23.1;
+                input2
+            };
+        let x: initial_byte_t = read_initial_byte_t(input·);
+        let res: initial_byte_t = x;
+        let res0: initial_byte_t = res;
+        let x0: initial_byte_t = res0;
+        if x0.additional_info == additional_info_long_argument_8_bits
+        {
+            if x0.major_type == cbor_major_type_simple_value
+            {
+                let offset20: usize = poffset[0];
+                let offset30: usize = poffset[0];
+                let is_valid0: bool =
+                    if input.len().wrapping_sub(offset30) < 1usize
+                    { false }
+                    else
+                    {
+                        poffset[0] = offset30.wrapping_add(1usize);
+                        true
+                    };
+                if is_valid0
+                {
+                    let off1: usize = poffset[0];
+                    let s·0: (&[u8], &[u8]) = input.split_at(offset20);
+                    let split1230: (&[u8], &[u8]) =
+                        {
+                            let s1: &[u8] = s·0.0;
+                            let s2: &[u8] = s·0.1;
+                            (s1,s2)
+                        };
+                    let input·0: &[u8] =
+                        {
+                            let _input1: &[u8] = split1230.0;
+                            let input23: &[u8] = split1230.1;
+                            let consumed: usize = off1.wrapping_sub(offset20);
+                            let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                            let res1: (&[u8], &[u8]) =
+                                {
+                                    let s1: &[u8] = s1s2.0;
+                                    let s2: &[u8] = s1s2.1;
+                                    (s1,s2)
+                                };
+                            let split23: (&[u8], &[u8]) =
+                                {
+                                    let left: &[u8] = res1.0;
+                                    let right: &[u8] = res1.1;
+                                    (left,right)
+                                };
+                            let input2: &[u8] = split23.0;
+                            let _input3: &[u8] = split23.1;
+                            input2
+                        };
+                    let last: u8 = input·0[0usize];
+                    let res1: u8 = last;
+                    let res2: u8 = res1;
+                    let x1: u8 = res2;
+                    min_simple_value_long_argument <= x1
+                }
+                else
+                { false }
+            }
+            else
+            {
+                let offset20: usize = poffset[0];
+                if input.len().wrapping_sub(offset20) < 1usize
+                { false }
+                else
+                {
+                    poffset[0] = offset20.wrapping_add(1usize);
+                    true
+                }
+            }
+        }
+        else if x0.additional_info == additional_info_long_argument_16_bits
+        {
+            let offset20: usize = poffset[0];
+            if input.len().wrapping_sub(offset20) < 2usize
+            { false }
+            else
+            {
+                poffset[0] = offset20.wrapping_add(2usize);
+                true
+            }
+        }
+        else if x0.additional_info == additional_info_long_argument_32_bits
+        {
+            let offset20: usize = poffset[0];
+            if input.len().wrapping_sub(offset20) < 4usize
+            { false }
+            else
+            {
+                poffset[0] = offset20.wrapping_add(4usize);
+                true
+            }
+        }
+        else if x0.additional_info == additional_info_long_argument_64_bits
+        {
+            let offset20: usize = poffset[0];
+            if input.len().wrapping_sub(offset20) < 8usize
+            { false }
+            else
+            {
+                poffset[0] = offset20.wrapping_add(8usize);
+                true
             }
         }
         else
-        { (&mut pres)[0] = c };
-        let res1: i16 = (&pres)[0];
-        let i11: usize = (&pi1)[0];
-        cond = res1 == 0i16 && i11 < n1
-    };
-    let res0: i16 = (&pres)[0];
-    let res1: i16 = res0;
-    res1
+        { true }
+    }
+    else
+    { false }
 }
 
-type cbor_raw_serialized_iterator <'a> = &'a [u8];
+fn jump_header(input: &[u8], offset: usize) -> usize
+{
+    let off1: usize = offset.wrapping_add(1usize);
+    let s·: (&[u8], &[u8]) = input.split_at(offset);
+    let split123: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s·.0;
+            let s2: &[u8] = s·.1;
+            (s1,s2)
+        };
+    let input·: &[u8] =
+        {
+            let _input1: &[u8] = split123.0;
+            let input23: &[u8] = split123.1;
+            let consumed: usize = off1.wrapping_sub(offset);
+            let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+            let res: (&[u8], &[u8]) =
+                {
+                    let s1: &[u8] = s1s2.0;
+                    let s2: &[u8] = s1s2.1;
+                    (s1,s2)
+                };
+            let split23: (&[u8], &[u8]) =
+                {
+                    let left: &[u8] = res.0;
+                    let right: &[u8] = res.1;
+                    (left,right)
+                };
+            let input2: &[u8] = split23.0;
+            let _input3: &[u8] = split23.1;
+            input2
+        };
+    let x: initial_byte_t = read_initial_byte_t(input·);
+    let res: initial_byte_t = x;
+    let res0: initial_byte_t = res;
+    let x0: initial_byte_t = res0;
+    if x0.additional_info == additional_info_long_argument_8_bits
+    { off1.wrapping_add(1usize) }
+    else if x0.additional_info == additional_info_long_argument_16_bits
+    { off1.wrapping_add(2usize) }
+    else if x0.additional_info == additional_info_long_argument_32_bits
+    { off1.wrapping_add(4usize) }
+    else if x0.additional_info == additional_info_long_argument_64_bits
+    { off1.wrapping_add(8usize) }
+    else
+    { off1.wrapping_add(0usize) }
+}
+
+fn validate_recursive_step_count_leaf(a: &[u8], bound: usize, prem: &mut [usize]) -> bool
+{
+    let i: usize = jump_header(a, 0usize);
+    let s: (&[u8], &[u8]) = a.split_at(i);
+    let res: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let spl: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let input1: &[u8] = spl.0;
+    let _input2: &[u8] = spl.1;
+    let h: header = read_header(input1);
+    let typ: u8 = get_header_major_type(h);
+    if typ == cbor_major_type_array
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(b, l);
+        prem[0] = arg64 as usize;
+        false
+    }
+    else if typ == cbor_major_type_map
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(b, l);
+        let arg: usize = arg64 as usize;
+        if arg > bound
+        { true }
+        else if bound.wrapping_sub(arg) < arg
+        { true }
+        else
+        {
+            prem[0] = arg.wrapping_add(arg);
+            false
+        }
+    }
+    else if typ == cbor_major_type_tagged
+    {
+        prem[0] = 1usize;
+        false
+    }
+    else
+    {
+        prem[0] = 0usize;
+        false
+    }
+}
+
+fn jump_recursive_step_count_leaf(a: &[u8]) -> usize
+{
+    let i: usize = jump_header(a, 0usize);
+    let s: (&[u8], &[u8]) = a.split_at(i);
+    let res: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let spl: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let input1: &[u8] = spl.0;
+    let _input2: &[u8] = spl.1;
+    let h: header = read_header(input1);
+    let typ: u8 = get_header_major_type(h);
+    if typ == cbor_major_type_array
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(b, l);
+        arg64 as usize
+    }
+    else if typ == cbor_major_type_map
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let arg64: u64 = argument_as_uint64(b, l);
+        let arg: usize = arg64 as usize;
+        arg.wrapping_add(arg)
+    }
+    else if typ == cbor_major_type_tagged { 1usize } else { 0usize }
+}
+
+fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
+{
+    let mut pn: [usize; 1] = [1usize; 1usize];
+    let mut pres: [bool; 1] = [true; 1usize];
+    let res: bool = (&pres)[0];
+    let n: usize = (&pn)[0];
+    let mut cond: bool = res && n > 0usize;
+    while
+    cond
+    {
+        let off: usize = poffset[0];
+        let n0: usize = (&pn)[0];
+        if n0 > input.len().wrapping_sub(off)
+        { (&mut pres)[0] = false }
+        else
+        {
+            let offset1: usize = poffset[0];
+            let is_valid1: bool = validate_header(input, poffset);
+            let res1: bool =
+                if is_valid1
+                {
+                    let off1: usize = poffset[0];
+                    let s·: (&[u8], &[u8]) = input.split_at(offset1);
+                    let split123: (&[u8], &[u8]) =
+                        {
+                            let s1: &[u8] = s·.0;
+                            let s2: &[u8] = s·.1;
+                            (s1,s2)
+                        };
+                    let input·: &[u8] =
+                        {
+                            let _input1: &[u8] = split123.0;
+                            let input23: &[u8] = split123.1;
+                            let consumed: usize = off1.wrapping_sub(offset1);
+                            let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                            let res0: (&[u8], &[u8]) =
+                                {
+                                    let s1: &[u8] = s1s2.0;
+                                    let s2: &[u8] = s1s2.1;
+                                    (s1,s2)
+                                };
+                            let split23: (&[u8], &[u8]) =
+                                {
+                                    let left: &[u8] = res0.0;
+                                    let right: &[u8] = res0.1;
+                                    (left,right)
+                                };
+                            let input2: &[u8] = split23.0;
+                            let _input3: &[u8] = split23.1;
+                            input2
+                        };
+                    let res0: header = read_header(input·);
+                    let x: header = res0;
+                    let b: initial_byte_t = x.fst;
+                    if
+                    b.major_type == cbor_major_type_byte_string
+                    ||
+                    b.major_type == cbor_major_type_text_string
+                    {
+                        let b0: initial_byte_t = x.fst;
+                        let l: long_argument = x.snd;
+                        let n1: usize = argument_as_uint64(b0, l) as usize;
+                        let offset2: usize = poffset[0];
+                        let offset3: usize = poffset[0];
+                        let is_valid: bool =
+                            if input.len().wrapping_sub(offset3) < n1
+                            { false }
+                            else
+                            {
+                                poffset[0] = offset3.wrapping_add(n1);
+                                true
+                            };
+                        if is_valid
+                        {
+                            let off2: usize = poffset[0];
+                            let s·0: (&[u8], &[u8]) = input.split_at(offset2);
+                            let split1230: (&[u8], &[u8]) =
+                                {
+                                    let s1: &[u8] = s·0.0;
+                                    let s2: &[u8] = s·0.1;
+                                    (s1,s2)
+                                };
+                            let x1: &[u8] =
+                                {
+                                    let _input1: &[u8] = split1230.0;
+                                    let input23: &[u8] = split1230.1;
+                                    let consumed: usize = off2.wrapping_sub(offset2);
+                                    let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                                    let res1: (&[u8], &[u8]) =
+                                        {
+                                            let s1: &[u8] = s1s2.0;
+                                            let s2: &[u8] = s1s2.1;
+                                            (s1,s2)
+                                        };
+                                    let split23: (&[u8], &[u8]) =
+                                        {
+                                            let left: &[u8] = res1.0;
+                                            let right: &[u8] = res1.1;
+                                            (left,right)
+                                        };
+                                    let input2: &[u8] = split23.0;
+                                    let _input3: &[u8] = split23.1;
+                                    input2
+                                };
+                            let res1: bool =
+                                if get_header_major_type(x) == cbor_major_type_byte_string
+                                { true }
+                                else
+                                {
+                                    let res1: bool = impl_correct(x1);
+                                    res1
+                                };
+                            res1
+                        }
+                        else
+                        { false }
+                    }
+                    else
+                    { true }
+                }
+                else
+                { false };
+            if ! res1
+            { (&mut pres)[0] = false }
+            else
+            {
+                let offset10: usize = poffset[0];
+                let s·: (&[u8], &[u8]) = input.split_at(off);
+                let split123: (&[u8], &[u8]) =
+                    {
+                        let s1: &[u8] = s·.0;
+                        let s2: &[u8] = s·.1;
+                        (s1,s2)
+                    };
+                let input1: &[u8] =
+                    {
+                        let _input1: &[u8] = split123.0;
+                        let input23: &[u8] = split123.1;
+                        let consumed: usize = offset10.wrapping_sub(off);
+                        let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                        let res0: (&[u8], &[u8]) =
+                            {
+                                let s1: &[u8] = s1s2.0;
+                                let s2: &[u8] = s1s2.1;
+                                (s1,s2)
+                            };
+                        let split23: (&[u8], &[u8]) =
+                            {
+                                let left: &[u8] = res0.0;
+                                let right: &[u8] = res0.1;
+                                (left,right)
+                            };
+                        let input2: &[u8] = split23.0;
+                        let _input3: &[u8] = split23.1;
+                        input2
+                    };
+                let bound: usize = input.len().wrapping_sub(off).wrapping_sub(n0);
+                let res2: bool = validate_recursive_step_count_leaf(input1, bound, &mut pn);
+                let count: usize = (&pn)[0];
+                if res2 || count > bound
+                { (&mut pres)[0] = false }
+                else
+                {
+                    let n·: usize = n0.wrapping_sub(1usize).wrapping_add(count);
+                    (&mut pn)[0] = n·
+                }
+            }
+        };
+        let res0: bool = (&pres)[0];
+        let n1: usize = (&pn)[0];
+        cond = res0 && n1 > 0usize
+    };
+    (&pres)[0]
+}
+
+fn jump_raw_data_item(input: &[u8], offset: usize) -> usize
+{
+    let mut poffset: [usize; 1] = [offset; 1usize];
+    let mut pn: [usize; 1] = [1usize; 1usize];
+    let n: usize = (&pn)[0];
+    let mut cond: bool = n > 0usize;
+    while
+    cond
+    {
+        let off: usize = (&poffset)[0];
+        let off1: usize = jump_header(input, off);
+        let s·: (&[u8], &[u8]) = input.split_at(off);
+        let split123: (&[u8], &[u8]) =
+            {
+                let s1: &[u8] = s·.0;
+                let s2: &[u8] = s·.1;
+                (s1,s2)
+            };
+        let input·: &[u8] =
+            {
+                let _input1: &[u8] = split123.0;
+                let input23: &[u8] = split123.1;
+                let consumed: usize = off1.wrapping_sub(off);
+                let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                let res: (&[u8], &[u8]) =
+                    {
+                        let s1: &[u8] = s1s2.0;
+                        let s2: &[u8] = s1s2.1;
+                        (s1,s2)
+                    };
+                let split23: (&[u8], &[u8]) =
+                    {
+                        let left: &[u8] = res.0;
+                        let right: &[u8] = res.1;
+                        (left,right)
+                    };
+                let input2: &[u8] = split23.0;
+                let _input3: &[u8] = split23.1;
+                input2
+            };
+        let res: header = read_header(input·);
+        let x: header = res;
+        let b: initial_byte_t = x.fst;
+        let off10: usize =
+            if
+            b.major_type == cbor_major_type_byte_string
+            ||
+            b.major_type == cbor_major_type_text_string
+            {
+                let b0: initial_byte_t = x.fst;
+                let l: long_argument = x.snd;
+                off1.wrapping_add(argument_as_uint64(b0, l) as usize)
+            }
+            else
+            { off1.wrapping_add(0usize) };
+        (&mut poffset)[0] = off10;
+        let s·0: (&[u8], &[u8]) = input.split_at(off);
+        let split1230: (&[u8], &[u8]) =
+            {
+                let s1: &[u8] = s·0.0;
+                let s2: &[u8] = s·0.1;
+                (s1,s2)
+            };
+        let input1: &[u8] =
+            {
+                let _input1: &[u8] = split1230.0;
+                let input23: &[u8] = split1230.1;
+                let consumed: usize = off10.wrapping_sub(off);
+                let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                let res0: (&[u8], &[u8]) =
+                    {
+                        let s1: &[u8] = s1s2.0;
+                        let s2: &[u8] = s1s2.1;
+                        (s1,s2)
+                    };
+                let split23: (&[u8], &[u8]) =
+                    {
+                        let left: &[u8] = res0.0;
+                        let right: &[u8] = res0.1;
+                        (left,right)
+                    };
+                let input2: &[u8] = split23.0;
+                let _input3: &[u8] = split23.1;
+                input2
+            };
+        let n0: usize = (&pn)[0];
+        let unused: usize = input.len().wrapping_sub(off10);
+        crate::lowstar::ignore::ignore::<usize>(unused);
+        let count: usize = jump_recursive_step_count_leaf(input1);
+        (&mut pn)[0] = n0.wrapping_sub(1usize).wrapping_add(count);
+        let n1: usize = (&pn)[0];
+        cond = n1 > 0usize
+    };
+    (&poffset)[0]
+}
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct cbor_string <'a>
@@ -342,28 +1125,573 @@ fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) -> cbor_map_entr
     res
 }
 
-fn cbor_match_compare_serialized_tagged <'a>(
-    c1: cbor_serialized <'a>,
-    c2: cbor_serialized <'a>
+fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
+{
+    let mut ph: [header; 1] =
+        [header
+            {
+                fst:
+                initial_byte_t { major_type: cbor_major_type_simple_value, additional_info: 0u8 },
+                snd: long_argument::LongArgumentOther
+            };
+            1usize];
+    let i: usize = jump_header(input, 0usize);
+    let s: (&[u8], &[u8]) = input.split_at(i);
+    let res: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let spl: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let pc: &[u8] =
+        {
+            let ph1: &[u8] = spl.0;
+            let outc: &[u8] = spl.1;
+            let h: header = read_header(ph1);
+            (&mut ph)[0] = h;
+            outc
+        };
+    let h: header = (&ph)[0];
+    let typ: u8 = h.fst.major_type;
+    if typ == cbor_major_type_uint64 || typ == cbor_major_type_neg_int64
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let i0: raw_uint64 =
+            match l
+            {
+                long_argument::LongArgumentU8 { v: v1 } =>
+                  raw_uint64 { size: 1u8, value: v1 as u64 },
+                long_argument::LongArgumentU16 { v: v1 } =>
+                  raw_uint64 { size: 2u8, value: v1 as u64 },
+                long_argument::LongArgumentU32 { v: v1 } =>
+                  raw_uint64 { size: 3u8, value: v1 as u64 },
+                long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
+                _ => panic!("Incomplete pattern matching")
+            };
+        let resi: cbor_int =
+            cbor_int { cbor_int_type: typ, cbor_int_size: i0.size, cbor_int_value: i0.value };
+        cbor_raw::CBOR_Case_Int { v: resi }
+    }
+    else if typ == cbor_major_type_text_string || typ == cbor_major_type_byte_string
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let i0: raw_uint64 =
+            match l
+            {
+                long_argument::LongArgumentU8 { v: v1 } =>
+                  raw_uint64 { size: 1u8, value: v1 as u64 },
+                long_argument::LongArgumentU16 { v: v1 } =>
+                  raw_uint64 { size: 2u8, value: v1 as u64 },
+                long_argument::LongArgumentU32 { v: v1 } =>
+                  raw_uint64 { size: 3u8, value: v1 as u64 },
+                long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
+                _ => panic!("Incomplete pattern matching")
+            };
+        let ress: cbor_string =
+            cbor_string { cbor_string_type: typ, cbor_string_size: i0.size, cbor_string_ptr: pc };
+        cbor_raw::CBOR_Case_String { v: ress }
+    }
+    else if typ == cbor_major_type_tagged
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let tag: raw_uint64 =
+            match l
+            {
+                long_argument::LongArgumentU8 { v: v1 } =>
+                  raw_uint64 { size: 1u8, value: v1 as u64 },
+                long_argument::LongArgumentU16 { v: v1 } =>
+                  raw_uint64 { size: 2u8, value: v1 as u64 },
+                long_argument::LongArgumentU32 { v: v1 } =>
+                  raw_uint64 { size: 3u8, value: v1 as u64 },
+                long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
+                _ => panic!("Incomplete pattern matching")
+            };
+        let rest: cbor_serialized =
+            cbor_serialized { cbor_serialized_header: tag, cbor_serialized_payload: pc };
+        cbor_raw::CBOR_Case_Serialized_Tagged { v: rest }
+    }
+    else if typ == cbor_major_type_array
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let len: raw_uint64 =
+            match l
+            {
+                long_argument::LongArgumentU8 { v: v1 } =>
+                  raw_uint64 { size: 1u8, value: v1 as u64 },
+                long_argument::LongArgumentU16 { v: v1 } =>
+                  raw_uint64 { size: 2u8, value: v1 as u64 },
+                long_argument::LongArgumentU32 { v: v1 } =>
+                  raw_uint64 { size: 3u8, value: v1 as u64 },
+                long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
+                _ => panic!("Incomplete pattern matching")
+            };
+        let resa: cbor_serialized =
+            cbor_serialized { cbor_serialized_header: len, cbor_serialized_payload: pc };
+        cbor_raw::CBOR_Case_Serialized_Array { v: resa }
+    }
+    else if typ == cbor_major_type_map
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let len: raw_uint64 =
+            match l
+            {
+                long_argument::LongArgumentU8 { v: v1 } =>
+                  raw_uint64 { size: 1u8, value: v1 as u64 },
+                long_argument::LongArgumentU16 { v: v1 } =>
+                  raw_uint64 { size: 2u8, value: v1 as u64 },
+                long_argument::LongArgumentU32 { v: v1 } =>
+                  raw_uint64 { size: 3u8, value: v1 as u64 },
+                long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
+                _ => panic!("Incomplete pattern matching")
+            };
+        let resa: cbor_serialized =
+            cbor_serialized { cbor_serialized_header: len, cbor_serialized_payload: pc };
+        cbor_raw::CBOR_Case_Serialized_Map { v: resa }
+    }
+    else
+    {
+        let b: initial_byte_t = h.fst;
+        let l: long_argument = h.snd;
+        let i0: u8 =
+            match l
+            {
+                long_argument::LongArgumentOther => b.additional_info,
+                long_argument::LongArgumentSimpleValue { v: v1 } => v1,
+                _ => panic!("Incomplete pattern matching")
+            };
+        cbor_raw::CBOR_Case_Simple { v: i0 }
+    }
+}
+
+fn cbor_match_serialized_tagged_get_payload <'a>(c: cbor_serialized <'a>) -> cbor_raw <'a>
+{
+    let res: cbor_raw = cbor_read(c.cbor_serialized_payload);
+    res
+}
+
+fn cbor_serialized_array_item <'a>(c: cbor_serialized <'a>, i: u64) -> cbor_raw <'a>
+{
+    let j: usize = i as usize;
+    let mut pi: [usize; 1] = [0usize; 1usize];
+    let mut pres: [&[u8]; 1] = [c.cbor_serialized_payload; 1usize];
+    let i1: usize = (&pi)[0];
+    let mut cond: bool = i1 < j;
+    while
+    cond
+    {
+        let res: &[u8] = (&pres)[0];
+        let i10: usize = (&pi)[0];
+        let i2: usize = jump_raw_data_item(res, 0usize);
+        let s: (&[u8], &[u8]) = res.split_at(i2);
+        let res1: (&[u8], &[u8]) =
+            {
+                let s1: &[u8] = s.0;
+                let s2: &[u8] = s.1;
+                (s1,s2)
+            };
+        let res10: (&[u8], &[u8]) =
+            {
+                let input1: &[u8] = res1.0;
+                let input2: &[u8] = res1.1;
+                (input1,input2)
+            };
+        let spl: (&[u8], &[u8]) =
+            {
+                let input1: &[u8] = res10.0;
+                let input2: &[u8] = res10.1;
+                (input1,input2)
+            };
+        let res11: &[u8] =
+            {
+                let _input1: &[u8] = spl.0;
+                let input2: &[u8] = spl.1;
+                input2
+            };
+        let res2: &[u8] = res11;
+        (&mut pi)[0] = i10.wrapping_add(1usize);
+        (&mut pres)[0] = res2;
+        let i11: usize = (&pi)[0];
+        cond = i11 < j
+    };
+    let res: &[u8] = (&pres)[0];
+    let i10: usize = jump_raw_data_item(res, 0usize);
+    let s: (&[u8], &[u8]) = res.split_at(i10);
+    let res1: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let res10: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res1.0;
+            let input2: &[u8] = res1.1;
+            (input1,input2)
+        };
+    let spl: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res10.0;
+            let input2: &[u8] = res10.1;
+            (input1,input2)
+        };
+    let res11: &[u8] =
+        {
+            let input1: &[u8] = spl.0;
+            let _input2: &[u8] = spl.1;
+            input1
+        };
+    let res2: &[u8] = res11;
+    let elt: &[u8] = res2;
+    let res0: cbor_raw = cbor_read(elt);
+    res0
+}
+
+fn cbor_serialized_array_iterator_init <'a>(c: cbor_serialized <'a>) -> &'a [u8]
+{ c.cbor_serialized_payload }
+
+fn cbor_serialized_array_iterator_is_empty(c: &[u8]) -> bool { c.len() == 0usize }
+
+#[derive(PartialEq, Clone, Copy)]
+enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags
+{
+    CBOR_Raw_Iterator_Slice,
+    CBOR_Raw_Iterator_Serialized
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
+{
+    CBOR_Raw_Iterator_Slice { _0: &'a [cbor_raw <'a>] },
+    CBOR_Raw_Iterator_Serialized { _0: &'a [u8] }
+}
+
+fn cbor_serialized_array_iterator_next <'b, 'a>(
+    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>],
+    i: &'a [u8]
 ) ->
-    i16
+    cbor_raw
+    <'a>
 {
-    let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
-    res
+    let i1: usize = jump_raw_data_item(i, 0usize);
+    let s: (&[u8], &[u8]) = i.split_at(i1);
+    let res: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let res0: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let sp: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res0.0;
+            let input2: &[u8] = res0.1;
+            (input1,input2)
+        };
+    let s1: &[u8] = sp.0;
+    let s2: &[u8] = sp.1;
+    let res1: cbor_raw = cbor_read(s1);
+    let i·: &[u8] = s2;
+    pi[0] =
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i· };
+    res1
 }
 
-fn cbor_match_compare_serialized_array <'a>(c1: cbor_serialized <'a>, c2: cbor_serialized <'a>) ->
-    i16
+fn cbor_serialized_map_iterator_init <'a>(c: cbor_serialized <'a>) -> &'a [u8]
+{ c.cbor_serialized_payload }
+
+fn cbor_serialized_map_iterator_is_empty(c: &[u8]) -> bool { c.len() == 0usize }
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
 {
-    let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
-    res
+    CBOR_Raw_Iterator_Slice { _0: &'a [cbor_map_entry <'a>] },
+    CBOR_Raw_Iterator_Serialized { _0: &'a [u8] }
 }
 
-fn cbor_match_compare_serialized_map <'a>(c1: cbor_serialized <'a>, c2: cbor_serialized <'a>) ->
-    i16
+fn cbor_serialized_map_iterator_next <'b, 'a>(
+    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>],
+    i: &'a [u8]
+) ->
+    cbor_map_entry
+    <'a>
 {
-    let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
-    res
+    let off1: usize = jump_raw_data_item(i, 0usize);
+    let i1: usize = jump_raw_data_item(i, off1);
+    let s: (&[u8], &[u8]) = i.split_at(i1);
+    let res: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let res0: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let sp: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res0.0;
+            let input2: &[u8] = res0.1;
+            (input1,input2)
+        };
+    let s1: &[u8] = sp.0;
+    let s2: &[u8] = sp.1;
+    let i10: usize = jump_raw_data_item(s1, 0usize);
+    let s0: (&[u8], &[u8]) = s1.split_at(i10);
+    let res1: (&[u8], &[u8]) =
+        {
+            let s11: &[u8] = s0.0;
+            let s21: &[u8] = s0.1;
+            (s11,s21)
+        };
+    let res2: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res1.0;
+            let input2: &[u8] = res1.1;
+            (input1,input2)
+        };
+    let sp1: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res2.0;
+            let input2: &[u8] = res2.1;
+            (input1,input2)
+        };
+    let res3: cbor_map_entry =
+        {
+            let s11: &[u8] = sp1.0;
+            let s21: &[u8] = sp1.1;
+            let res10: cbor_raw = cbor_read(s11);
+            let res20: cbor_raw = cbor_read(s21);
+            cbor_map_entry { cbor_map_entry_key: res10, cbor_map_entry_value: res20 }
+        };
+    let i·: &[u8] = s2;
+    pi[0] =
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+        { _0: i· };
+    res3
+}
+
+fn cbor_match_tagged_get_payload <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Serialized_Tagged { v: cs } =>
+          {
+              let res: cbor_raw = cbor_match_serialized_tagged_get_payload(cs);
+              res
+          },
+        cbor_raw::CBOR_Case_Tagged { v: ct } => ct.cbor_tagged_ptr[0],
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_array_item <'a>(c: cbor_raw <'a>, i: u64) -> cbor_raw <'a>
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Serialized_Array { v: c· } =>
+          {
+              let res: cbor_raw = cbor_serialized_array_item(c·, i);
+              res
+          },
+        cbor_raw::CBOR_Case_Array { v: c· } =>
+          {
+              let res: cbor_raw = c·.cbor_array_ptr[i as usize];
+              res
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_array_iterator_init <'a>(c: cbor_raw <'a>) ->
+    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+    <'a>
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Serialized_Array { v: c· } =>
+          {
+              let i·: &[u8] = cbor_serialized_array_iterator_init(c·);
+              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+              { _0: i· }
+          },
+        cbor_raw::CBOR_Case_Array { v: c· } =>
+          {
+              let i: &[cbor_raw] = c·.cbor_array_ptr;
+              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: i }
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_array_iterator_is_empty <'a>(c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>) ->
+    bool
+{
+    match c
+    {
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: c· } =>
+          {
+              let res: bool = c·.len() == 0usize;
+              let res0: bool = res;
+              res0
+          },
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: c· } =>
+          {
+              let res: bool = cbor_serialized_array_iterator_is_empty(c·);
+              res
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_array_iterator_next <'b, 'a>(
+    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>]
+) ->
+    cbor_raw
+    <'a>
+{
+    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = pi[0];
+    match i0
+    {
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: i1 } =>
+          {
+              let res: cbor_raw = i1[0usize];
+              let sp: (&[cbor_raw], &[cbor_raw]) = i1.split_at(1usize);
+              let s·: &[cbor_raw] =
+                  {
+                      let _s1: &[cbor_raw] = sp.0;
+                      let s2: &[cbor_raw] = sp.1;
+                      s2
+                  };
+              let i11: &[cbor_raw] = s·;
+              let i·: &[cbor_raw] = i11;
+              pi[0] =
+                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
+                  { _0: i· };
+              let res0: cbor_raw = res;
+              res0
+          },
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i1 } =>
+          {
+              let res: cbor_raw = cbor_serialized_array_iterator_next(pi, i1);
+              res
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_map_iterator_init <'a>(c: cbor_raw <'a>) ->
+    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+    <'a>
+{
+    match c
+    {
+        cbor_raw::CBOR_Case_Serialized_Map { v: c· } =>
+          {
+              let i·: &[u8] = cbor_serialized_map_iterator_init(c·);
+              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+              { _0: i· }
+          },
+        cbor_raw::CBOR_Case_Map { v: c· } =>
+          {
+              let i: &[cbor_map_entry] = c·.cbor_map_ptr;
+              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+              { _0: i }
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_map_iterator_is_empty <'a>(
+    c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
+) ->
+    bool
+{
+    match c
+    {
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+        { _0: c· }
+        =>
+          {
+              let res: bool = c·.len() == 0usize;
+              let res0: bool = res;
+              res0
+          },
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+        { _0: c· }
+        =>
+          {
+              let res: bool = cbor_serialized_map_iterator_is_empty(c·);
+              res
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_map_iterator_next <'b, 'a>(
+    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>]
+) ->
+    cbor_map_entry
+    <'a>
+{
+    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = pi[0];
+    match i0
+    {
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice { _0: i1 } =>
+          {
+              let res: cbor_map_entry = i1[0usize];
+              let sp: (&[cbor_map_entry], &[cbor_map_entry]) = i1.split_at(1usize);
+              let s·: &[cbor_map_entry] =
+                  {
+                      let _s1: &[cbor_map_entry] = sp.0;
+                      let s2: &[cbor_map_entry] = sp.1;
+                      s2
+                  };
+              let i11: &[cbor_map_entry] = s·;
+              let i·: &[cbor_map_entry] = i11;
+              pi[0] =
+                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
+                  { _0: i· };
+              let res0: cbor_map_entry = res;
+              res0
+          },
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
+        { _0: i1 }
+        =>
+          {
+              let res: cbor_map_entry = cbor_serialized_map_iterator_next(pi, i1);
+              res
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
 }
 
 fn
@@ -1352,303 +2680,382 @@ fn cbor_size <'a>(x: cbor_raw <'a>, bound: usize) -> usize
     { 0usize }
 }
 
-fn impl_correct(s: &[u8]) -> bool
+fn impl_uint8_compare(x1: u8, x2: u8) -> i16
+{ if x1 < x2 { -1i16 } else if x1 > x2 { 1i16 } else { 0i16 } }
+
+fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
 {
-    let mut pres: [bool; 1] = [true; 1usize];
-    let mut pi: [usize; 1] = [0usize; 1usize];
-    let len: usize = s.len();
-    let res: bool = (&pres)[0];
-    let mut cond: bool =
-        if res
-        {
-            let i: usize = (&pi)[0];
-            i < len
-        }
-        else
-        { false };
+    let sp1: &[u8] = s1;
+    let sp2: &[u8] = s2;
+    let mut pi1: [usize; 1] = [0usize; 1usize];
+    let mut pi2: [usize; 1] = [0usize; 1usize];
+    let n1: usize = sp1.len();
+    let n2: usize = sp2.len();
+    let ite: i16 =
+        if 0usize < n1
+        { if 0usize < n2 { 0i16 } else { 1i16 } }
+        else if 0usize < n2 { -1i16 } else { 0i16 };
+    let mut pres: [i16; 1] = [ite; 1usize];
+    let res: i16 = (&pres)[0];
+    let i1: usize = (&pi1)[0];
+    let mut cond: bool = res == 0i16 && i1 < n1;
     while
     cond
     {
-        let i: usize = (&pi)[0];
-        let byte1: u8 = s[i];
-        let i1: usize = i.wrapping_add(1usize);
-        if byte1 <= 0x7Fu8
-        { (&mut pi)[0] = i1 }
-        else if i1 == len
-        { (&mut pres)[0] = false }
+        let i10: usize = (&pi1)[0];
+        let x1: u8 = sp1[i10];
+        let i2: usize = (&pi2)[0];
+        let x2: u8 = sp2[i2];
+        let res0: i16 = impl_uint8_compare(x1, x2);
+        let c: i16 = res0;
+        if c == 0i16
+        {
+            let i1·: usize = i10.wrapping_add(1usize);
+            let i2·: usize = i2.wrapping_add(1usize);
+            let ci1·: bool = i1· < n1;
+            let ci2·: bool = i2· < n2;
+            if ci2· && ! ci1·
+            { (&mut pres)[0] = -1i16 }
+            else if ci1· && ! ci2·
+            { (&mut pres)[0] = 1i16 }
+            else
+            {
+                (&mut pi1)[0] = i1·;
+                (&mut pi2)[0] = i2·
+            }
+        }
         else
-        {
-            let byte2: u8 = s[i1];
-            let i2: usize = i1.wrapping_add(1usize);
-            if 0xC2u8 <= byte1 && byte1 <= 0xDFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
-            { (&mut pi)[0] = i2 }
-            else if i2 == len
-            { (&mut pres)[0] = false }
-            else
-            {
-                let byte3: u8 = s[i2];
-                let i3: usize = i2.wrapping_add(1usize);
-                if ! (0x80u8 <= byte3 && byte3 <= 0xBFu8)
-                { (&mut pres)[0] = false }
-                else if byte1 == 0xE0u8
-                {
-                    if 0xA0u8 <= byte2 && byte2 <= 0xBFu8
-                    { (&mut pi)[0] = i3 }
-                    else
-                    { (&mut pres)[0] = false }
-                }
-                else if byte1 == 0xEDu8
-                {
-                    if 0x80u8 <= byte2 && byte2 <= 0x9Fu8
-                    { (&mut pi)[0] = i3 }
-                    else
-                    { (&mut pres)[0] = false }
-                }
-                else if 0xE1u8 <= byte1 && byte1 <= 0xEFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
-                { (&mut pi)[0] = i3 }
-                else if i3 == len
-                { (&mut pres)[0] = false }
-                else
-                {
-                    let byte4: u8 = s[i3];
-                    let i4: usize = i3.wrapping_add(1usize);
-                    if ! (0x80u8 <= byte4 && byte4 <= 0xBFu8)
-                    { (&mut pres)[0] = false }
-                    else if byte1 == 0xF0u8 && 0x90u8 <= byte2 && byte2 <= 0xBFu8
-                    { (&mut pi)[0] = i4 }
-                    else if
-                    0xF1u8 <= byte1 && byte1 <= 0xF3u8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
-                    { (&mut pi)[0] = i4 }
-                    else if byte1 == 0xF4u8 && 0x80u8 <= byte2 && byte2 <= 0x8Fu8
-                    { (&mut pi)[0] = i4 }
-                    else
-                    { (&mut pres)[0] = false }
-                }
-            }
-        };
-        let res0: bool = (&pres)[0];
-        let ite: bool =
-            if res0
-            {
-                let i0: usize = (&pi)[0];
-                i0 < len
-            }
-            else
-            { false };
-        cond = ite
+        { (&mut pres)[0] = c };
+        let res1: i16 = (&pres)[0];
+        let i11: usize = (&pi1)[0];
+        cond = res1 == 0i16 && i11 < n1
     };
-    (&pres)[0]
+    let res0: i16 = (&pres)[0];
+    let res1: i16 = res0;
+    res1
 }
 
-fn read_initial_byte_t(input: &[u8]) -> initial_byte_t
+fn cbor_validate(input: &[u8]) -> usize
 {
-    let last: u8 = input[0usize];
-    let res: u8 = last;
-    let x: u8 = res;
-    let res0: initial_byte_t =
-        initial_byte_t
-        {
-            major_type: get_bitfield_gen8(x, 5u32, 8u32),
-            additional_info: get_bitfield_gen8(x, 0u32, 5u32)
-        };
-    let res1: initial_byte_t = res0;
-    let res2: initial_byte_t = res1;
-    let res3: initial_byte_t = res2;
-    res3
+    let mut poffset: [usize; 1] = [0usize; 1usize];
+    let is_valid: bool = validate_raw_data_item(input, &mut poffset);
+    if is_valid { (&poffset)[0] } else { 0usize }
 }
 
-fn read_header(input: &[u8]) -> header
+fn impl_raw_uint64_optimal(x: raw_uint64) -> bool
 {
-    let i: usize = 1usize;
-    let s: (&[u8], &[u8]) = input.split_at(i);
+    if (x.value <= max_simple_value_additional_info as u64) == (x.size == 0u8)
+    {
+        if x.size <= 1u8
+        { true }
+        else if x.size == 2u8
+        { 256u64 <= x.value }
+        else if x.size == 3u8 { 65536u64 <= x.value } else { 4294967296u64 <= x.value }
+    }
+    else
+    { false }
+}
+
+fn cbor_raw_ints_optimal(a: &[u8]) -> bool
+{
+    let i: usize = jump_header(a, 0usize);
+    let s: (&[u8], &[u8]) = a.split_at(i);
     let res: (&[u8], &[u8]) =
         {
             let s1: &[u8] = s.0;
             let s2: &[u8] = s.1;
             (s1,s2)
         };
-    let split12: (&[u8], &[u8]) =
+    let res0: (&[u8], &[u8]) =
         {
             let input1: &[u8] = res.0;
             let input2: &[u8] = res.1;
             (input1,input2)
         };
-    let input1: &[u8] = split12.0;
-    let input2: &[u8] = split12.1;
-    let x: initial_byte_t = read_initial_byte_t(input1);
-    let res0: initial_byte_t = x;
-    let x1: initial_byte_t = res0;
-    let x2: long_argument =
-        if x1.additional_info == additional_info_long_argument_8_bits
+    let spl: (&[u8], &[u8]) =
         {
-            if x1.major_type == cbor_major_type_simple_value
+            let input1: &[u8] = res0.0;
+            let input2: &[u8] = res0.1;
+            (input1,input2)
+        };
+    let input1: &[u8] =
+        {
+            let input1: &[u8] = spl.0;
+            let _input2: &[u8] = spl.1;
+            input1
+        };
+    let h: header = read_header(input1);
+    if get_header_major_type(h) == cbor_major_type_simple_value
+    { true }
+    else
+    {
+        impl_raw_uint64_optimal(
+            match h.snd
             {
-                let last: u8 = input2[0usize];
-                let res1: u8 = last;
-                let x0: u8 = res1;
-                let res2: long_argument = long_argument::LongArgumentSimpleValue { v: x0 };
-                let res3: long_argument = res2;
-                let res4: long_argument = res3;
-                res4
+                long_argument::LongArgumentU8 { v } => raw_uint64 { size: 1u8, value: v as u64 },
+                long_argument::LongArgumentU16 { v } => raw_uint64 { size: 2u8, value: v as u64 },
+                long_argument::LongArgumentU32 { v } => raw_uint64 { size: 3u8, value: v as u64 },
+                long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
+                long_argument::LongArgumentOther =>
+                  raw_uint64 { size: 0u8, value: h.fst.additional_info as u64 },
+                _ => panic!("Incomplete pattern matching")
             }
-            else
-            {
-                let last: u8 = input2[0usize];
-                let res1: u8 = last;
-                let x0: u8 = res1;
-                let res2: long_argument = long_argument::LongArgumentU8 { v: x0 };
-                let res3: long_argument = res2;
-                res3
-            }
-        }
-        else if x1.additional_info == additional_info_long_argument_16_bits
-        {
-            let pos·: usize = 1usize;
-            let last: u8 = input2[pos·];
-            let last1: u8 = input2[0usize];
-            let n: u16 = last1 as u16;
-            let blast: u16 = last as u16;
-            let res1: u16 = blast.wrapping_add(n.wrapping_mul(256u16));
-            let x0: u16 = res1;
-            let res2: long_argument = long_argument::LongArgumentU16 { v: x0 };
-            let res3: long_argument = res2;
-            res3
-        }
-        else if x1.additional_info == additional_info_long_argument_32_bits
-        {
-            let pos·: usize = 3usize;
-            let last: u8 = input2[pos·];
-            let pos·1: usize = pos·.wrapping_sub(1usize);
-            let last1: u8 = input2[pos·1];
-            let pos·2: usize = pos·1.wrapping_sub(1usize);
-            let last2: u8 = input2[pos·2];
-            let last3: u8 = input2[0usize];
-            let n: u32 = last3 as u32;
-            let blast: u32 = last2 as u32;
-            let n0: u32 = blast.wrapping_add(n.wrapping_mul(256u32));
-            let blast0: u32 = last1 as u32;
-            let n1: u32 = blast0.wrapping_add(n0.wrapping_mul(256u32));
-            let blast1: u32 = last as u32;
-            let res1: u32 = blast1.wrapping_add(n1.wrapping_mul(256u32));
-            let x0: u32 = res1;
-            let res2: long_argument = long_argument::LongArgumentU32 { v: x0 };
-            let res3: long_argument = res2;
-            res3
-        }
-        else if x1.additional_info == additional_info_long_argument_64_bits
-        {
-            let pos·: usize = 7usize;
-            let last: u8 = input2[pos·];
-            let pos·1: usize = pos·.wrapping_sub(1usize);
-            let last1: u8 = input2[pos·1];
-            let pos·2: usize = pos·1.wrapping_sub(1usize);
-            let last2: u8 = input2[pos·2];
-            let pos·3: usize = pos·2.wrapping_sub(1usize);
-            let last3: u8 = input2[pos·3];
-            let pos·4: usize = pos·3.wrapping_sub(1usize);
-            let last4: u8 = input2[pos·4];
-            let pos·5: usize = pos·4.wrapping_sub(1usize);
-            let last5: u8 = input2[pos·5];
-            let pos·6: usize = pos·5.wrapping_sub(1usize);
-            let last6: u8 = input2[pos·6];
-            let last7: u8 = input2[0usize];
-            let n: u64 = last7 as u64;
-            let blast: u64 = last6 as u64;
-            let n0: u64 = blast.wrapping_add(n.wrapping_mul(256u64));
-            let blast0: u64 = last5 as u64;
-            let n1: u64 = blast0.wrapping_add(n0.wrapping_mul(256u64));
-            let blast1: u64 = last4 as u64;
-            let n2: u64 = blast1.wrapping_add(n1.wrapping_mul(256u64));
-            let blast2: u64 = last3 as u64;
-            let n3: u64 = blast2.wrapping_add(n2.wrapping_mul(256u64));
-            let blast3: u64 = last2 as u64;
-            let n4: u64 = blast3.wrapping_add(n3.wrapping_mul(256u64));
-            let blast4: u64 = last1 as u64;
-            let n5: u64 = blast4.wrapping_add(n4.wrapping_mul(256u64));
-            let blast5: u64 = last as u64;
-            let res1: u64 = blast5.wrapping_add(n5.wrapping_mul(256u64));
-            let x0: u64 = res1;
-            let res2: long_argument = long_argument::LongArgumentU64 { v: x0 };
-            let res3: long_argument = res2;
-            res3
-        }
-        else
-        { long_argument::LongArgumentOther };
-    header { fst: x1, snd: x2 }
+        )
+    }
 }
 
-fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
+fn impl_deterministically_encoded_cbor_map_key_order(a1: &[u8], a2: &[u8]) -> bool
 {
-    let offset1: usize = poffset[0];
-    let offset2: usize = poffset[0];
-    let offset3: usize = poffset[0];
-    let is_valid: bool =
-        if input.len().wrapping_sub(offset3) < 1usize
-        { false }
+    let res: i16 = lex_compare_bytes(a1, a2);
+    res < 0i16
+}
+
+fn cbor_raw_sorted(a: &[u8]) -> bool
+{
+    let i: usize = jump_header(a, 0usize);
+    let s: (&[u8], &[u8]) = a.split_at(i);
+    let res: (&[u8], &[u8]) =
+        {
+            let s1: &[u8] = s.0;
+            let s2: &[u8] = s.1;
+            (s1,s2)
+        };
+    let res0: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res.0;
+            let input2: &[u8] = res.1;
+            (input1,input2)
+        };
+    let _letpattern: (&[u8], &[u8]) =
+        {
+            let input1: &[u8] = res0.0;
+            let input2: &[u8] = res0.1;
+            (input1,input2)
+        };
+    let input1: &[u8] = _letpattern.0;
+    let input2: &[u8] = _letpattern.1;
+    let h: header = read_header(input1);
+    if get_header_major_type(h) == cbor_major_type_map
+    {
+        let nbpairs: u64 = argument_as_uint64(h.fst, h.snd);
+        if nbpairs < 2u64
+        { true }
         else
         {
-            poffset[0] = offset3.wrapping_add(1usize);
-            true
-        };
-    let is_valid1: bool =
-        if is_valid
-        {
-            let off: usize = poffset[0];
-            let s·: (&[u8], &[u8]) = input.split_at(offset2);
-            let split123: (&[u8], &[u8]) =
+            let b: initial_byte_t = h.fst;
+            let i0: usize =
+                if
+                b.major_type == cbor_major_type_byte_string
+                ||
+                b.major_type == cbor_major_type_text_string
                 {
-                    let s1: &[u8] = s·.0;
-                    let s2: &[u8] = s·.1;
+                    let b0: initial_byte_t = h.fst;
+                    let l: long_argument = h.snd;
+                    0usize.wrapping_add(argument_as_uint64(b0, l) as usize)
+                }
+                else
+                { 0usize };
+            let s0: (&[u8], &[u8]) = input2.split_at(i0);
+            let res1: (&[u8], &[u8]) =
+                {
+                    let s1: &[u8] = s0.0;
+                    let s2: &[u8] = s0.1;
                     (s1,s2)
                 };
-            let input·: &[u8] =
+            let res2: (&[u8], &[u8]) =
                 {
-                    let _input1: &[u8] = split123.0;
-                    let input23: &[u8] = split123.1;
-                    let consumed: usize = off.wrapping_sub(offset2);
-                    let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                    let res: (&[u8], &[u8]) =
-                        {
-                            let s1: &[u8] = s1s2.0;
-                            let s2: &[u8] = s1s2.1;
-                            (s1,s2)
-                        };
-                    let split23: (&[u8], &[u8]) =
-                        {
-                            let left: &[u8] = res.0;
-                            let right: &[u8] = res.1;
-                            (left,right)
-                        };
-                    let input2: &[u8] = split23.0;
-                    let _input3: &[u8] = split23.1;
-                    input2
+                    let input11: &[u8] = res1.0;
+                    let input21: &[u8] = res1.1;
+                    (input11,input21)
                 };
-            let res: initial_byte_t = read_initial_byte_t(input·);
-            let x: initial_byte_t = res;
-            let ite: bool =
-                if x.major_type == cbor_major_type_simple_value
-                { x.additional_info <= additional_info_long_argument_8_bits }
-                else
-                { true };
-            ite && x.additional_info < additional_info_unassigned_min
+            let spl: (&[u8], &[u8]) =
+                {
+                    let input11: &[u8] = res2.0;
+                    let input21: &[u8] = res2.1;
+                    (input11,input21)
+                };
+            let input3: &[u8] =
+                {
+                    let _input11: &[u8] = spl.0;
+                    let input21: &[u8] = spl.1;
+                    input21
+                };
+            let i1: usize = jump_raw_data_item(input3, 0usize);
+            let s1: (&[u8], &[u8]) = input3.split_at(i1);
+            let res3: (&[u8], &[u8]) =
+                {
+                    let s11: &[u8] = s1.0;
+                    let s2: &[u8] = s1.1;
+                    (s11,s2)
+                };
+            let res4: (&[u8], &[u8]) =
+                {
+                    let input11: &[u8] = res3.0;
+                    let input21: &[u8] = res3.1;
+                    (input11,input21)
+                };
+            let _letpattern1: (&[u8], &[u8]) =
+                {
+                    let input11: &[u8] = res4.0;
+                    let input21: &[u8] = res4.1;
+                    (input11,input21)
+                };
+            let _letpattern10: (&[u8], &[u8]) =
+                {
+                    let hd: &[u8] = _letpattern1.0;
+                    let tl: &[u8] = _letpattern1.1;
+                    (hd,tl)
+                };
+            let hd4: &[u8] = _letpattern10.0;
+            let input4: &[u8] = _letpattern10.1;
+            let i2: usize = jump_raw_data_item(input4, 0usize);
+            let s10: (&[u8], &[u8]) = input4.split_at(i2);
+            let res5: (&[u8], &[u8]) =
+                {
+                    let s11: &[u8] = s10.0;
+                    let s2: &[u8] = s10.1;
+                    (s11,s2)
+                };
+            let res6: (&[u8], &[u8]) =
+                {
+                    let input11: &[u8] = res5.0;
+                    let input21: &[u8] = res5.1;
+                    (input11,input21)
+                };
+            let _letpattern2: (&[u8], &[u8]) =
+                {
+                    let input11: &[u8] = res6.0;
+                    let input21: &[u8] = res6.1;
+                    (input11,input21)
+                };
+            let _letpattern20: (&[u8], &[u8]) =
+                {
+                    let hd: &[u8] = _letpattern2.0;
+                    let tl: &[u8] = _letpattern2.1;
+                    (hd,tl)
+                };
+            let input5: &[u8] =
+                {
+                    let _hd: &[u8] = _letpattern20.0;
+                    let tl: &[u8] = _letpattern20.1;
+                    tl
+                };
+            let mut pkey: [&[u8]; 1] = [hd4; 1usize];
+            let pairs: u64 = nbpairs.wrapping_sub(1u64);
+            let mut ppairs: [u64; 1] = [pairs; 1usize];
+            let mut ptail: [&[u8]; 1] = [input5; 1usize];
+            let mut pres: [bool; 1] = [true; 1usize];
+            let res7: bool = (&pres)[0];
+            let pairs1: u64 = (&ppairs)[0];
+            let mut cond: bool = res7 && pairs1 > 0u64;
+            while
+            cond
+            {
+                let tail: &[u8] = (&ptail)[0];
+                let i3: usize = jump_raw_data_item(tail, 0usize);
+                let s11: (&[u8], &[u8]) = tail.split_at(i3);
+                let res8: (&[u8], &[u8]) =
+                    {
+                        let s110: &[u8] = s11.0;
+                        let s2: &[u8] = s11.1;
+                        (s110,s2)
+                    };
+                let res9: (&[u8], &[u8]) =
+                    {
+                        let input11: &[u8] = res8.0;
+                        let input21: &[u8] = res8.1;
+                        (input11,input21)
+                    };
+                let _letpattern21: (&[u8], &[u8]) =
+                    {
+                        let input11: &[u8] = res9.0;
+                        let input21: &[u8] = res9.1;
+                        (input11,input21)
+                    };
+                let _letpattern22: (&[u8], &[u8]) =
+                    {
+                        let hd: &[u8] = _letpattern21.0;
+                        let tl: &[u8] = _letpattern21.1;
+                        (hd,tl)
+                    };
+                {
+                    let key2: &[u8] = _letpattern22.0;
+                    let tail2: &[u8] = _letpattern22.1;
+                    let key1: &[u8] = (&pkey)[0];
+                    let res10: bool = impl_deterministically_encoded_cbor_map_key_order(key1, key2);
+                    if res10
+                    {
+                        let i4: usize = jump_raw_data_item(tail2, 0usize);
+                        let s12: (&[u8], &[u8]) = tail2.split_at(i4);
+                        let res11: (&[u8], &[u8]) =
+                            {
+                                let s110: &[u8] = s12.0;
+                                let s2: &[u8] = s12.1;
+                                (s110,s2)
+                            };
+                        let res12: (&[u8], &[u8]) =
+                            {
+                                let input11: &[u8] = res11.0;
+                                let input21: &[u8] = res11.1;
+                                (input11,input21)
+                            };
+                        let _letpattern3: (&[u8], &[u8]) =
+                            {
+                                let input11: &[u8] = res12.0;
+                                let input21: &[u8] = res12.1;
+                                (input11,input21)
+                            };
+                        let _letpattern30: (&[u8], &[u8]) =
+                            {
+                                let hd: &[u8] = _letpattern3.0;
+                                let tl: &[u8] = _letpattern3.1;
+                                (hd,tl)
+                            };
+                        let tail·: &[u8] =
+                            {
+                                let _hd: &[u8] = _letpattern30.0;
+                                let tl: &[u8] = _letpattern30.1;
+                                tl
+                            };
+                        (&mut pkey)[0] = key2;
+                        let pairs10: u64 = (&ppairs)[0];
+                        let pairs·: u64 = pairs10.wrapping_sub(1u64);
+                        (&mut ppairs)[0] = pairs·;
+                        (&mut ptail)[0] = tail·
+                    }
+                    else
+                    { (&mut pres)[0] = false }
+                };
+                let res10: bool = (&pres)[0];
+                let pairs10: u64 = (&ppairs)[0];
+                cond = res10 && pairs10 > 0u64
+            };
+            (&pres)[0]
         }
-        else
-        { false };
-    if is_valid1
+    }
+    else
+    { true }
+}
+
+fn cbor_validate_det·(input: &[u8]) -> usize
+{
+    let len: usize = cbor_validate(input);
+    if len == 0usize
+    { len }
+    else
     {
-        let off: usize = poffset[0];
-        let s·: (&[u8], &[u8]) = input.split_at(offset1);
+        let s·: (&[u8], &[u8]) = input.split_at(0usize);
         let split123: (&[u8], &[u8]) =
             {
                 let s1: &[u8] = s·.0;
                 let s2: &[u8] = s·.1;
                 (s1,s2)
             };
-        let input·: &[u8] =
+        let input1: &[u8] =
             {
                 let _input1: &[u8] = split123.0;
                 let input23: &[u8] = split123.1;
-                let consumed: usize = off.wrapping_sub(offset1);
+                let consumed: usize = len.wrapping_sub(0usize);
                 let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
                 let res: (&[u8], &[u8]) =
                     {
@@ -1666,41 +3073,131 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
                 let _input3: &[u8] = split23.1;
                 input2
             };
-        let x: initial_byte_t = read_initial_byte_t(input·);
-        let res: initial_byte_t = x;
-        let res0: initial_byte_t = res;
-        let x0: initial_byte_t = res0;
-        if x0.additional_info == additional_info_long_argument_8_bits
+        let check: [bool; 1] = [false; 1usize];
+        crate::lowstar::ignore::ignore::<&[bool]>(&check);
+        let mut pn: [usize; 1] = [1usize; 1usize];
+        let mut pres: [bool; 1] = [true; 1usize];
+        let mut ppi: [&[u8]; 1] = [input1; 1usize];
+        let res: bool = (&pres)[0];
+        let n: usize = (&pn)[0];
+        let mut cond: bool = res && n > 0usize;
+        while
+        cond
         {
-            if x0.major_type == cbor_major_type_simple_value
+            let n0: usize = (&pn)[0];
+            let pi: &[u8] = (&ppi)[0];
+            let res0: bool = cbor_raw_ints_optimal(pi);
+            if ! res0
+            { (&mut pres)[0] = false }
+            else
             {
-                let offset20: usize = poffset[0];
-                let offset30: usize = poffset[0];
-                let is_valid0: bool =
-                    if input.len().wrapping_sub(offset30) < 1usize
-                    { false }
-                    else
+                let off1: usize = jump_header(pi, 0usize);
+                let s·0: (&[u8], &[u8]) = pi.split_at(0usize);
+                let split1230: (&[u8], &[u8]) =
                     {
-                        poffset[0] = offset30.wrapping_add(1usize);
-                        true
+                        let s1: &[u8] = s·0.0;
+                        let s2: &[u8] = s·0.1;
+                        (s1,s2)
                     };
-                if is_valid0
+                let input·: &[u8] =
+                    {
+                        let _input11: &[u8] = split1230.0;
+                        let input23: &[u8] = split1230.1;
+                        let consumed: usize = off1.wrapping_sub(0usize);
+                        let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
+                        let res1: (&[u8], &[u8]) =
+                            {
+                                let s1: &[u8] = s1s2.0;
+                                let s2: &[u8] = s1s2.1;
+                                (s1,s2)
+                            };
+                        let split23: (&[u8], &[u8]) =
+                            {
+                                let left: &[u8] = res1.0;
+                                let right: &[u8] = res1.1;
+                                (left,right)
+                            };
+                        let input2: &[u8] = split23.0;
+                        let _input3: &[u8] = split23.1;
+                        input2
+                    };
+                let res1: header = read_header(input·);
+                let x: header = res1;
+                let b: initial_byte_t = x.fst;
+                let i: usize =
+                    if
+                    b.major_type == cbor_major_type_byte_string
+                    ||
+                    b.major_type == cbor_major_type_text_string
+                    {
+                        let b0: initial_byte_t = x.fst;
+                        let l: long_argument = x.snd;
+                        off1.wrapping_add(argument_as_uint64(b0, l) as usize)
+                    }
+                    else
+                    { off1.wrapping_add(0usize) };
+                let s: (&[u8], &[u8]) = pi.split_at(i);
+                let res10: (&[u8], &[u8]) =
+                    {
+                        let s1: &[u8] = s.0;
+                        let s2: &[u8] = s.1;
+                        (s1,s2)
+                    };
+                let spl: (&[u8], &[u8]) =
+                    {
+                        let input11: &[u8] = res10.0;
+                        let input2: &[u8] = res10.1;
+                        (input11,input2)
+                    };
+                let ph: &[u8] = spl.0;
+                let pc: &[u8] = spl.1;
+                let unused: usize = pc.len();
+                crate::lowstar::ignore::ignore::<usize>(unused);
+                let count: usize = jump_recursive_step_count_leaf(ph);
+                (&mut pn)[0] = n0.wrapping_sub(1usize).wrapping_add(count);
+                (&mut ppi)[0] = pc
+            };
+            let res1: bool = (&pres)[0];
+            let n1: usize = (&pn)[0];
+            cond = res1 && n1 > 0usize
+        };
+        let res0: bool = (&pres)[0];
+        let check1: bool = res0;
+        if ! check1
+        { 0usize }
+        else
+        {
+            let mut pn0: [usize; 1] = [1usize; 1usize];
+            let mut pres0: [bool; 1] = [true; 1usize];
+            let mut ppi0: [&[u8]; 1] = [input1; 1usize];
+            let res1: bool = (&pres0)[0];
+            let n0: usize = (&pn0)[0];
+            let mut cond0: bool = res1 && n0 > 0usize;
+            while
+            cond0
+            {
+                let n1: usize = (&pn0)[0];
+                let pi: &[u8] = (&ppi0)[0];
+                let res2: bool = cbor_raw_sorted(pi);
+                if ! res2
+                { (&mut pres0)[0] = false }
+                else
                 {
-                    let off1: usize = poffset[0];
-                    let s·0: (&[u8], &[u8]) = input.split_at(offset20);
+                    let off1: usize = jump_header(pi, 0usize);
+                    let s·0: (&[u8], &[u8]) = pi.split_at(0usize);
                     let split1230: (&[u8], &[u8]) =
                         {
                             let s1: &[u8] = s·0.0;
                             let s2: &[u8] = s·0.1;
                             (s1,s2)
                         };
-                    let input·0: &[u8] =
+                    let input·: &[u8] =
                         {
-                            let _input1: &[u8] = split1230.0;
+                            let _input11: &[u8] = split1230.0;
                             let input23: &[u8] = split1230.1;
-                            let consumed: usize = off1.wrapping_sub(offset20);
+                            let consumed: usize = off1.wrapping_sub(0usize);
                             let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                            let res1: (&[u8], &[u8]) =
+                            let res10: (&[u8], &[u8]) =
                                 {
                                     let s1: &[u8] = s1s2.0;
                                     let s2: &[u8] = s1s2.1;
@@ -1708,90 +3205,81 @@ fn validate_header(input: &[u8], poffset: &mut [usize]) -> bool
                                 };
                             let split23: (&[u8], &[u8]) =
                                 {
-                                    let left: &[u8] = res1.0;
-                                    let right: &[u8] = res1.1;
+                                    let left: &[u8] = res10.0;
+                                    let right: &[u8] = res10.1;
                                     (left,right)
                                 };
                             let input2: &[u8] = split23.0;
                             let _input3: &[u8] = split23.1;
                             input2
                         };
-                    let last: u8 = input·0[0usize];
-                    let res1: u8 = last;
-                    let res2: u8 = res1;
-                    let x1: u8 = res2;
-                    min_simple_value_long_argument <= x1
-                }
-                else
-                { false }
-            }
-            else
-            {
-                let offset20: usize = poffset[0];
-                if input.len().wrapping_sub(offset20) < 1usize
-                { false }
-                else
-                {
-                    poffset[0] = offset20.wrapping_add(1usize);
-                    true
-                }
-            }
+                    let res10: header = read_header(input·);
+                    let x: header = res10;
+                    let b: initial_byte_t = x.fst;
+                    let i: usize =
+                        if
+                        b.major_type == cbor_major_type_byte_string
+                        ||
+                        b.major_type == cbor_major_type_text_string
+                        {
+                            let b0: initial_byte_t = x.fst;
+                            let l: long_argument = x.snd;
+                            off1.wrapping_add(argument_as_uint64(b0, l) as usize)
+                        }
+                        else
+                        { off1.wrapping_add(0usize) };
+                    let s: (&[u8], &[u8]) = pi.split_at(i);
+                    let res11: (&[u8], &[u8]) =
+                        {
+                            let s1: &[u8] = s.0;
+                            let s2: &[u8] = s.1;
+                            (s1,s2)
+                        };
+                    let spl: (&[u8], &[u8]) =
+                        {
+                            let input11: &[u8] = res11.0;
+                            let input2: &[u8] = res11.1;
+                            (input11,input2)
+                        };
+                    let ph: &[u8] = spl.0;
+                    let pc: &[u8] = spl.1;
+                    let unused: usize = pc.len();
+                    crate::lowstar::ignore::ignore::<usize>(unused);
+                    let count: usize = jump_recursive_step_count_leaf(ph);
+                    (&mut pn0)[0] = n1.wrapping_sub(1usize).wrapping_add(count);
+                    (&mut ppi0)[0] = pc
+                };
+                let res3: bool = (&pres0)[0];
+                let n2: usize = (&pn0)[0];
+                cond0 = res3 && n2 > 0usize
+            };
+            let res2: bool = (&pres0)[0];
+            let check2: bool = res2;
+            if ! check2 { 0usize } else { len }
         }
-        else if x0.additional_info == additional_info_long_argument_16_bits
-        {
-            let offset20: usize = poffset[0];
-            if input.len().wrapping_sub(offset20) < 2usize
-            { false }
-            else
-            {
-                poffset[0] = offset20.wrapping_add(2usize);
-                true
-            }
-        }
-        else if x0.additional_info == additional_info_long_argument_32_bits
-        {
-            let offset20: usize = poffset[0];
-            if input.len().wrapping_sub(offset20) < 4usize
-            { false }
-            else
-            {
-                poffset[0] = offset20.wrapping_add(4usize);
-                true
-            }
-        }
-        else if x0.additional_info == additional_info_long_argument_64_bits
-        {
-            let offset20: usize = poffset[0];
-            if input.len().wrapping_sub(offset20) < 8usize
-            { false }
-            else
-            {
-                poffset[0] = offset20.wrapping_add(8usize);
-                true
-            }
-        }
-        else
-        { true }
     }
-    else
-    { false }
 }
 
-fn jump_header(input: &[u8], offset: usize) -> usize
+fn cbor_validate_det(input: &[u8]) -> usize
 {
-    let off1: usize = offset.wrapping_add(1usize);
-    let s·: (&[u8], &[u8]) = input.split_at(offset);
+    let res: usize = cbor_validate_det·(input);
+    res
+}
+
+fn cbor_parse <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
+{
+    let s·: (&[u8], &[u8]) = input.split_at(0usize);
     let split123: (&[u8], &[u8]) =
         {
             let s1: &[u8] = s·.0;
             let s2: &[u8] = s·.1;
             (s1,s2)
         };
-    let input·: &[u8] =
+    let input1: &[u8] =
         {
             let _input1: &[u8] = split123.0;
             let input23: &[u8] = split123.1;
-            let consumed: usize = off1.wrapping_sub(offset);
+            let consumed: usize = len.wrapping_sub(0usize);
             let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
             let res: (&[u8], &[u8]) =
                 {
@@ -1809,954 +3297,32 @@ fn jump_header(input: &[u8], offset: usize) -> usize
             let _input3: &[u8] = split23.1;
             input2
         };
-    let x: initial_byte_t = read_initial_byte_t(input·);
-    let res: initial_byte_t = x;
-    let res0: initial_byte_t = res;
-    let x0: initial_byte_t = res0;
-    if x0.additional_info == additional_info_long_argument_8_bits
-    { off1.wrapping_add(1usize) }
-    else if x0.additional_info == additional_info_long_argument_16_bits
-    { off1.wrapping_add(2usize) }
-    else if x0.additional_info == additional_info_long_argument_32_bits
-    { off1.wrapping_add(4usize) }
-    else if x0.additional_info == additional_info_long_argument_64_bits
-    { off1.wrapping_add(8usize) }
-    else
-    { off1.wrapping_add(0usize) }
-}
-
-fn validate_recursive_step_count_leaf(a: &[u8], bound: usize, prem: &mut [usize]) -> bool
-{
-    let i: usize = jump_header(a, 0usize);
-    let s: (&[u8], &[u8]) = a.split_at(i);
-    let res: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s.0;
-            let s2: &[u8] = s.1;
-            (s1,s2)
-        };
-    let spl: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res.0;
-            let input2: &[u8] = res.1;
-            (input1,input2)
-        };
-    let input1: &[u8] = spl.0;
-    let _input2: &[u8] = spl.1;
-    let h: header = read_header(input1);
-    let typ: u8 = get_header_major_type(h);
-    if typ == cbor_major_type_array
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(b, l);
-        prem[0] = arg64 as usize;
-        false
-    }
-    else if typ == cbor_major_type_map
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(b, l);
-        let arg: usize = arg64 as usize;
-        if arg > bound
-        { true }
-        else if bound.wrapping_sub(arg) < arg
-        { true }
-        else
-        {
-            prem[0] = arg.wrapping_add(arg);
-            false
-        }
-    }
-    else if typ == cbor_major_type_tagged
-    {
-        prem[0] = 1usize;
-        false
-    }
-    else
-    {
-        prem[0] = 0usize;
-        false
-    }
-}
-
-fn jump_recursive_step_count_leaf(a: &[u8]) -> usize
-{
-    let i: usize = jump_header(a, 0usize);
-    let s: (&[u8], &[u8]) = a.split_at(i);
-    let res: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s.0;
-            let s2: &[u8] = s.1;
-            (s1,s2)
-        };
-    let spl: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res.0;
-            let input2: &[u8] = res.1;
-            (input1,input2)
-        };
-    let input1: &[u8] = spl.0;
-    let _input2: &[u8] = spl.1;
-    let h: header = read_header(input1);
-    let typ: u8 = get_header_major_type(h);
-    if typ == cbor_major_type_array
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(b, l);
-        arg64 as usize
-    }
-    else if typ == cbor_major_type_map
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let arg64: u64 = argument_as_uint64(b, l);
-        let arg: usize = arg64 as usize;
-        arg.wrapping_add(arg)
-    }
-    else if typ == cbor_major_type_tagged { 1usize } else { 0usize }
-}
-
-fn validate_raw_data_item(input: &[u8], poffset: &mut [usize]) -> bool
-{
-    let mut pn: [usize; 1] = [1usize; 1usize];
-    let mut pres: [bool; 1] = [true; 1usize];
-    let res: bool = (&pres)[0];
-    let n: usize = (&pn)[0];
-    let mut cond: bool = res && n > 0usize;
-    while
-    cond
-    {
-        let off: usize = poffset[0];
-        let n0: usize = (&pn)[0];
-        if n0 > input.len().wrapping_sub(off)
-        { (&mut pres)[0] = false }
-        else
-        {
-            let offset1: usize = poffset[0];
-            let is_valid1: bool = validate_header(input, poffset);
-            let res1: bool =
-                if is_valid1
-                {
-                    let off1: usize = poffset[0];
-                    let s·: (&[u8], &[u8]) = input.split_at(offset1);
-                    let split123: (&[u8], &[u8]) =
-                        {
-                            let s1: &[u8] = s·.0;
-                            let s2: &[u8] = s·.1;
-                            (s1,s2)
-                        };
-                    let input·: &[u8] =
-                        {
-                            let _input1: &[u8] = split123.0;
-                            let input23: &[u8] = split123.1;
-                            let consumed: usize = off1.wrapping_sub(offset1);
-                            let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                            let res0: (&[u8], &[u8]) =
-                                {
-                                    let s1: &[u8] = s1s2.0;
-                                    let s2: &[u8] = s1s2.1;
-                                    (s1,s2)
-                                };
-                            let split23: (&[u8], &[u8]) =
-                                {
-                                    let left: &[u8] = res0.0;
-                                    let right: &[u8] = res0.1;
-                                    (left,right)
-                                };
-                            let input2: &[u8] = split23.0;
-                            let _input3: &[u8] = split23.1;
-                            input2
-                        };
-                    let res0: header = read_header(input·);
-                    let x: header = res0;
-                    let b: initial_byte_t = x.fst;
-                    if
-                    b.major_type == cbor_major_type_byte_string
-                    ||
-                    b.major_type == cbor_major_type_text_string
-                    {
-                        let b0: initial_byte_t = x.fst;
-                        let l: long_argument = x.snd;
-                        let n1: usize = argument_as_uint64(b0, l) as usize;
-                        let offset2: usize = poffset[0];
-                        let offset3: usize = poffset[0];
-                        let is_valid: bool =
-                            if input.len().wrapping_sub(offset3) < n1
-                            { false }
-                            else
-                            {
-                                poffset[0] = offset3.wrapping_add(n1);
-                                true
-                            };
-                        if is_valid
-                        {
-                            let off2: usize = poffset[0];
-                            let s·0: (&[u8], &[u8]) = input.split_at(offset2);
-                            let split1230: (&[u8], &[u8]) =
-                                {
-                                    let s1: &[u8] = s·0.0;
-                                    let s2: &[u8] = s·0.1;
-                                    (s1,s2)
-                                };
-                            let x1: &[u8] =
-                                {
-                                    let _input1: &[u8] = split1230.0;
-                                    let input23: &[u8] = split1230.1;
-                                    let consumed: usize = off2.wrapping_sub(offset2);
-                                    let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                                    let res1: (&[u8], &[u8]) =
-                                        {
-                                            let s1: &[u8] = s1s2.0;
-                                            let s2: &[u8] = s1s2.1;
-                                            (s1,s2)
-                                        };
-                                    let split23: (&[u8], &[u8]) =
-                                        {
-                                            let left: &[u8] = res1.0;
-                                            let right: &[u8] = res1.1;
-                                            (left,right)
-                                        };
-                                    let input2: &[u8] = split23.0;
-                                    let _input3: &[u8] = split23.1;
-                                    input2
-                                };
-                            let res1: bool =
-                                if get_header_major_type(x) == cbor_major_type_byte_string
-                                { true }
-                                else
-                                {
-                                    let res1: bool = impl_correct(x1);
-                                    res1
-                                };
-                            res1
-                        }
-                        else
-                        { false }
-                    }
-                    else
-                    { true }
-                }
-                else
-                { false };
-            if ! res1
-            { (&mut pres)[0] = false }
-            else
-            {
-                let offset10: usize = poffset[0];
-                let s·: (&[u8], &[u8]) = input.split_at(off);
-                let split123: (&[u8], &[u8]) =
-                    {
-                        let s1: &[u8] = s·.0;
-                        let s2: &[u8] = s·.1;
-                        (s1,s2)
-                    };
-                let input1: &[u8] =
-                    {
-                        let _input1: &[u8] = split123.0;
-                        let input23: &[u8] = split123.1;
-                        let consumed: usize = offset10.wrapping_sub(off);
-                        let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                        let res0: (&[u8], &[u8]) =
-                            {
-                                let s1: &[u8] = s1s2.0;
-                                let s2: &[u8] = s1s2.1;
-                                (s1,s2)
-                            };
-                        let split23: (&[u8], &[u8]) =
-                            {
-                                let left: &[u8] = res0.0;
-                                let right: &[u8] = res0.1;
-                                (left,right)
-                            };
-                        let input2: &[u8] = split23.0;
-                        let _input3: &[u8] = split23.1;
-                        input2
-                    };
-                let bound: usize = input.len().wrapping_sub(off).wrapping_sub(n0);
-                let res2: bool = validate_recursive_step_count_leaf(input1, bound, &mut pn);
-                let count: usize = (&pn)[0];
-                if res2 || count > bound
-                { (&mut pres)[0] = false }
-                else
-                {
-                    let n·: usize = n0.wrapping_sub(1usize).wrapping_add(count);
-                    (&mut pn)[0] = n·
-                }
-            }
-        };
-        let res0: bool = (&pres)[0];
-        let n1: usize = (&pn)[0];
-        cond = res0 && n1 > 0usize
-    };
-    (&pres)[0]
-}
-
-fn jump_raw_data_item(input: &[u8], offset: usize) -> usize
-{
-    let mut poffset: [usize; 1] = [offset; 1usize];
-    let mut pn: [usize; 1] = [1usize; 1usize];
-    let n: usize = (&pn)[0];
-    let mut cond: bool = n > 0usize;
-    while
-    cond
-    {
-        let off: usize = (&poffset)[0];
-        let off1: usize = jump_header(input, off);
-        let s·: (&[u8], &[u8]) = input.split_at(off);
-        let split123: (&[u8], &[u8]) =
-            {
-                let s1: &[u8] = s·.0;
-                let s2: &[u8] = s·.1;
-                (s1,s2)
-            };
-        let input·: &[u8] =
-            {
-                let _input1: &[u8] = split123.0;
-                let input23: &[u8] = split123.1;
-                let consumed: usize = off1.wrapping_sub(off);
-                let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                let res: (&[u8], &[u8]) =
-                    {
-                        let s1: &[u8] = s1s2.0;
-                        let s2: &[u8] = s1s2.1;
-                        (s1,s2)
-                    };
-                let split23: (&[u8], &[u8]) =
-                    {
-                        let left: &[u8] = res.0;
-                        let right: &[u8] = res.1;
-                        (left,right)
-                    };
-                let input2: &[u8] = split23.0;
-                let _input3: &[u8] = split23.1;
-                input2
-            };
-        let res: header = read_header(input·);
-        let x: header = res;
-        let b: initial_byte_t = x.fst;
-        let off10: usize =
-            if
-            b.major_type == cbor_major_type_byte_string
-            ||
-            b.major_type == cbor_major_type_text_string
-            {
-                let b0: initial_byte_t = x.fst;
-                let l: long_argument = x.snd;
-                off1.wrapping_add(argument_as_uint64(b0, l) as usize)
-            }
-            else
-            { off1.wrapping_add(0usize) };
-        (&mut poffset)[0] = off10;
-        let s·0: (&[u8], &[u8]) = input.split_at(off);
-        let split1230: (&[u8], &[u8]) =
-            {
-                let s1: &[u8] = s·0.0;
-                let s2: &[u8] = s·0.1;
-                (s1,s2)
-            };
-        let input1: &[u8] =
-            {
-                let _input1: &[u8] = split1230.0;
-                let input23: &[u8] = split1230.1;
-                let consumed: usize = off10.wrapping_sub(off);
-                let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                let res0: (&[u8], &[u8]) =
-                    {
-                        let s1: &[u8] = s1s2.0;
-                        let s2: &[u8] = s1s2.1;
-                        (s1,s2)
-                    };
-                let split23: (&[u8], &[u8]) =
-                    {
-                        let left: &[u8] = res0.0;
-                        let right: &[u8] = res0.1;
-                        (left,right)
-                    };
-                let input2: &[u8] = split23.0;
-                let _input3: &[u8] = split23.1;
-                input2
-            };
-        let n0: usize = (&pn)[0];
-        let unused: usize = input.len().wrapping_sub(off10);
-        crate::lowstar::ignore::ignore::<usize>(unused);
-        let count: usize = jump_recursive_step_count_leaf(input1);
-        (&mut pn)[0] = n0.wrapping_sub(1usize).wrapping_add(count);
-        let n1: usize = (&pn)[0];
-        cond = n1 > 0usize
-    };
-    (&poffset)[0]
-}
-
-fn cbor_read <'a>(input: &'a [u8]) -> cbor_raw <'a>
-{
-    let mut ph: [header; 1] =
-        [header
-            {
-                fst:
-                initial_byte_t { major_type: cbor_major_type_simple_value, additional_info: 0u8 },
-                snd: long_argument::LongArgumentOther
-            };
-            1usize];
-    let i: usize = jump_header(input, 0usize);
-    let s: (&[u8], &[u8]) = input.split_at(i);
-    let res: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s.0;
-            let s2: &[u8] = s.1;
-            (s1,s2)
-        };
-    let spl: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res.0;
-            let input2: &[u8] = res.1;
-            (input1,input2)
-        };
-    let pc: &[u8] =
-        {
-            let ph1: &[u8] = spl.0;
-            let outc: &[u8] = spl.1;
-            let h: header = read_header(ph1);
-            (&mut ph)[0] = h;
-            outc
-        };
-    let h: header = (&ph)[0];
-    let typ: u8 = h.fst.major_type;
-    if typ == cbor_major_type_uint64 || typ == cbor_major_type_neg_int64
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let i0: raw_uint64 =
-            match l
-            {
-                long_argument::LongArgumentU8 { v: v1 } =>
-                  raw_uint64 { size: 1u8, value: v1 as u64 },
-                long_argument::LongArgumentU16 { v: v1 } =>
-                  raw_uint64 { size: 2u8, value: v1 as u64 },
-                long_argument::LongArgumentU32 { v: v1 } =>
-                  raw_uint64 { size: 3u8, value: v1 as u64 },
-                long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
-                long_argument::LongArgumentOther =>
-                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
-                _ => panic!("Incomplete pattern matching")
-            };
-        let resi: cbor_int =
-            cbor_int { cbor_int_type: typ, cbor_int_size: i0.size, cbor_int_value: i0.value };
-        cbor_raw::CBOR_Case_Int { v: resi }
-    }
-    else if typ == cbor_major_type_text_string || typ == cbor_major_type_byte_string
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let i0: raw_uint64 =
-            match l
-            {
-                long_argument::LongArgumentU8 { v: v1 } =>
-                  raw_uint64 { size: 1u8, value: v1 as u64 },
-                long_argument::LongArgumentU16 { v: v1 } =>
-                  raw_uint64 { size: 2u8, value: v1 as u64 },
-                long_argument::LongArgumentU32 { v: v1 } =>
-                  raw_uint64 { size: 3u8, value: v1 as u64 },
-                long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
-                long_argument::LongArgumentOther =>
-                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
-                _ => panic!("Incomplete pattern matching")
-            };
-        let ress: cbor_string =
-            cbor_string { cbor_string_type: typ, cbor_string_size: i0.size, cbor_string_ptr: pc };
-        cbor_raw::CBOR_Case_String { v: ress }
-    }
-    else if typ == cbor_major_type_tagged
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let tag: raw_uint64 =
-            match l
-            {
-                long_argument::LongArgumentU8 { v: v1 } =>
-                  raw_uint64 { size: 1u8, value: v1 as u64 },
-                long_argument::LongArgumentU16 { v: v1 } =>
-                  raw_uint64 { size: 2u8, value: v1 as u64 },
-                long_argument::LongArgumentU32 { v: v1 } =>
-                  raw_uint64 { size: 3u8, value: v1 as u64 },
-                long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
-                long_argument::LongArgumentOther =>
-                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
-                _ => panic!("Incomplete pattern matching")
-            };
-        let rest: cbor_serialized =
-            cbor_serialized { cbor_serialized_header: tag, cbor_serialized_payload: pc };
-        cbor_raw::CBOR_Case_Serialized_Tagged { v: rest }
-    }
-    else if typ == cbor_major_type_array
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let len: raw_uint64 =
-            match l
-            {
-                long_argument::LongArgumentU8 { v: v1 } =>
-                  raw_uint64 { size: 1u8, value: v1 as u64 },
-                long_argument::LongArgumentU16 { v: v1 } =>
-                  raw_uint64 { size: 2u8, value: v1 as u64 },
-                long_argument::LongArgumentU32 { v: v1 } =>
-                  raw_uint64 { size: 3u8, value: v1 as u64 },
-                long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
-                long_argument::LongArgumentOther =>
-                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
-                _ => panic!("Incomplete pattern matching")
-            };
-        let resa: cbor_serialized =
-            cbor_serialized { cbor_serialized_header: len, cbor_serialized_payload: pc };
-        cbor_raw::CBOR_Case_Serialized_Array { v: resa }
-    }
-    else if typ == cbor_major_type_map
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let len: raw_uint64 =
-            match l
-            {
-                long_argument::LongArgumentU8 { v: v1 } =>
-                  raw_uint64 { size: 1u8, value: v1 as u64 },
-                long_argument::LongArgumentU16 { v: v1 } =>
-                  raw_uint64 { size: 2u8, value: v1 as u64 },
-                long_argument::LongArgumentU32 { v: v1 } =>
-                  raw_uint64 { size: 3u8, value: v1 as u64 },
-                long_argument::LongArgumentU64 { v: v1 } => raw_uint64 { size: 4u8, value: v1 },
-                long_argument::LongArgumentOther =>
-                  raw_uint64 { size: 0u8, value: b.additional_info as u64 },
-                _ => panic!("Incomplete pattern matching")
-            };
-        let resa: cbor_serialized =
-            cbor_serialized { cbor_serialized_header: len, cbor_serialized_payload: pc };
-        cbor_raw::CBOR_Case_Serialized_Map { v: resa }
-    }
-    else
-    {
-        let b: initial_byte_t = h.fst;
-        let l: long_argument = h.snd;
-        let i0: u8 =
-            match l
-            {
-                long_argument::LongArgumentOther => b.additional_info,
-                long_argument::LongArgumentSimpleValue { v: v1 } => v1,
-                _ => panic!("Incomplete pattern matching")
-            };
-        cbor_raw::CBOR_Case_Simple { v: i0 }
-    }
-}
-
-fn cbor_match_serialized_tagged_get_payload <'a>(c: cbor_serialized <'a>) -> cbor_raw <'a>
-{
-    let res: cbor_raw = cbor_read(c.cbor_serialized_payload);
+    let res: cbor_raw = cbor_read(input1);
     res
 }
 
-fn cbor_serialized_array_item <'a>(c: cbor_serialized <'a>, i: u64) -> cbor_raw <'a>
-{
-    let j: usize = i as usize;
-    let mut pi: [usize; 1] = [0usize; 1usize];
-    let mut pres: [&[u8]; 1] = [c.cbor_serialized_payload; 1usize];
-    let i1: usize = (&pi)[0];
-    let mut cond: bool = i1 < j;
-    while
-    cond
-    {
-        let res: &[u8] = (&pres)[0];
-        let i10: usize = (&pi)[0];
-        let i2: usize = jump_raw_data_item(res, 0usize);
-        let s: (&[u8], &[u8]) = res.split_at(i2);
-        let res1: (&[u8], &[u8]) =
-            {
-                let s1: &[u8] = s.0;
-                let s2: &[u8] = s.1;
-                (s1,s2)
-            };
-        let res10: (&[u8], &[u8]) =
-            {
-                let input1: &[u8] = res1.0;
-                let input2: &[u8] = res1.1;
-                (input1,input2)
-            };
-        let spl: (&[u8], &[u8]) =
-            {
-                let input1: &[u8] = res10.0;
-                let input2: &[u8] = res10.1;
-                (input1,input2)
-            };
-        let res11: &[u8] =
-            {
-                let _input1: &[u8] = spl.0;
-                let input2: &[u8] = spl.1;
-                input2
-            };
-        let res2: &[u8] = res11;
-        (&mut pi)[0] = i10.wrapping_add(1usize);
-        (&mut pres)[0] = res2;
-        let i11: usize = (&pi)[0];
-        cond = i11 < j
-    };
-    let res: &[u8] = (&pres)[0];
-    let i10: usize = jump_raw_data_item(res, 0usize);
-    let s: (&[u8], &[u8]) = res.split_at(i10);
-    let res1: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s.0;
-            let s2: &[u8] = s.1;
-            (s1,s2)
-        };
-    let res10: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res1.0;
-            let input2: &[u8] = res1.1;
-            (input1,input2)
-        };
-    let spl: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res10.0;
-            let input2: &[u8] = res10.1;
-            (input1,input2)
-        };
-    let res11: &[u8] =
-        {
-            let input1: &[u8] = spl.0;
-            let _input2: &[u8] = spl.1;
-            input1
-        };
-    let res2: &[u8] = res11;
-    let elt: &[u8] = res2;
-    let res0: cbor_raw = cbor_read(elt);
-    res0
-}
-
-fn cbor_serialized_array_iterator_init <'a>(c: cbor_serialized <'a>) -> &'a [u8]
-{ c.cbor_serialized_payload }
-
-fn cbor_serialized_array_iterator_is_empty(c: &[u8]) -> bool { c.len() == 0usize }
-
-#[derive(PartialEq, Clone, Copy)]
-enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags
-{
-    CBOR_Raw_Iterator_Slice,
-    CBOR_Raw_Iterator_Serialized
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
-{
-    CBOR_Raw_Iterator_Slice { _0: &'a [cbor_raw <'a>] },
-    CBOR_Raw_Iterator_Serialized { _0: &'a [u8] }
-}
-
-fn cbor_serialized_array_iterator_next <'b, 'a>(
-    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>],
-    i: &'a [u8]
+fn cbor_match_compare_serialized_tagged <'a>(
+    c1: cbor_serialized <'a>,
+    c2: cbor_serialized <'a>
 ) ->
-    cbor_raw
-    <'a>
+    i16
 {
-    let i1: usize = jump_raw_data_item(i, 0usize);
-    let s: (&[u8], &[u8]) = i.split_at(i1);
-    let res: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s.0;
-            let s2: &[u8] = s.1;
-            (s1,s2)
-        };
-    let res0: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res.0;
-            let input2: &[u8] = res.1;
-            (input1,input2)
-        };
-    let sp: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res0.0;
-            let input2: &[u8] = res0.1;
-            (input1,input2)
-        };
-    let s1: &[u8] = sp.0;
-    let s2: &[u8] = sp.1;
-    let res1: cbor_raw = cbor_read(s1);
-    let i·: &[u8] = s2;
-    pi[0] =
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i· };
-    res1
+    let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
+    res
 }
 
-fn cbor_serialized_map_iterator_init <'a>(c: cbor_serialized <'a>) -> &'a [u8]
-{ c.cbor_serialized_payload }
-
-fn cbor_serialized_map_iterator_is_empty(c: &[u8]) -> bool { c.len() == 0usize }
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
+fn cbor_match_compare_serialized_array <'a>(c1: cbor_serialized <'a>, c2: cbor_serialized <'a>) ->
+    i16
 {
-    CBOR_Raw_Iterator_Slice { _0: &'a [cbor_map_entry <'a>] },
-    CBOR_Raw_Iterator_Serialized { _0: &'a [u8] }
+    let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
+    res
 }
 
-fn cbor_serialized_map_iterator_next <'b, 'a>(
-    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>],
-    i: &'a [u8]
-) ->
-    cbor_map_entry
-    <'a>
+fn cbor_match_compare_serialized_map <'a>(c1: cbor_serialized <'a>, c2: cbor_serialized <'a>) ->
+    i16
 {
-    let off1: usize = jump_raw_data_item(i, 0usize);
-    let i1: usize = jump_raw_data_item(i, off1);
-    let s: (&[u8], &[u8]) = i.split_at(i1);
-    let res: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s.0;
-            let s2: &[u8] = s.1;
-            (s1,s2)
-        };
-    let res0: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res.0;
-            let input2: &[u8] = res.1;
-            (input1,input2)
-        };
-    let sp: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res0.0;
-            let input2: &[u8] = res0.1;
-            (input1,input2)
-        };
-    let s1: &[u8] = sp.0;
-    let s2: &[u8] = sp.1;
-    let i10: usize = jump_raw_data_item(s1, 0usize);
-    let s0: (&[u8], &[u8]) = s1.split_at(i10);
-    let res1: (&[u8], &[u8]) =
-        {
-            let s11: &[u8] = s0.0;
-            let s21: &[u8] = s0.1;
-            (s11,s21)
-        };
-    let res2: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res1.0;
-            let input2: &[u8] = res1.1;
-            (input1,input2)
-        };
-    let sp1: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res2.0;
-            let input2: &[u8] = res2.1;
-            (input1,input2)
-        };
-    let res3: cbor_map_entry =
-        {
-            let s11: &[u8] = sp1.0;
-            let s21: &[u8] = sp1.1;
-            let res10: cbor_raw = cbor_read(s11);
-            let res20: cbor_raw = cbor_read(s21);
-            cbor_map_entry { cbor_map_entry_key: res10, cbor_map_entry_value: res20 }
-        };
-    let i·: &[u8] = s2;
-    pi[0] =
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-        { _0: i· };
-    res3
-}
-
-fn cbor_match_tagged_get_payload <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
-{
-    match c
-    {
-        cbor_raw::CBOR_Case_Serialized_Tagged { v: cs } =>
-          {
-              let res: cbor_raw = cbor_match_serialized_tagged_get_payload(cs);
-              res
-          },
-        cbor_raw::CBOR_Case_Tagged { v: ct } => ct.cbor_tagged_ptr[0],
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-fn cbor_array_item <'a>(c: cbor_raw <'a>, i: u64) -> cbor_raw <'a>
-{
-    match c
-    {
-        cbor_raw::CBOR_Case_Serialized_Array { v: c· } =>
-          {
-              let res: cbor_raw = cbor_serialized_array_item(c·, i);
-              res
-          },
-        cbor_raw::CBOR_Case_Array { v: c· } =>
-          {
-              let res: cbor_raw = c·.cbor_array_ptr[i as usize];
-              res
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-fn cbor_array_iterator_init <'a>(c: cbor_raw <'a>) ->
-    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-    <'a>
-{
-    match c
-    {
-        cbor_raw::CBOR_Case_Serialized_Array { v: c· } =>
-          {
-              let i·: &[u8] = cbor_serialized_array_iterator_init(c·);
-              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
-              { _0: i· }
-          },
-        cbor_raw::CBOR_Case_Array { v: c· } =>
-          {
-              let i: &[cbor_raw] = c·.cbor_array_ptr;
-              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: i }
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-fn cbor_array_iterator_is_empty <'a>(c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>) ->
-    bool
-{
-    match c
-    {
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: c· } =>
-          {
-              let res: bool = c·.len() == 0usize;
-              let res0: bool = res;
-              res0
-          },
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: c· } =>
-          {
-              let res: bool = cbor_serialized_array_iterator_is_empty(c·);
-              res
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-fn cbor_array_iterator_next <'b, 'a>(
-    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>]
-) ->
-    cbor_raw
-    <'a>
-{
-    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw = pi[0];
-    match i0
-    {
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: i1 } =>
-          {
-              let res: cbor_raw = i1[0usize];
-              let sp: (&[cbor_raw], &[cbor_raw]) = i1.split_at(1usize);
-              let s·: &[cbor_raw] =
-                  {
-                      let _s1: &[cbor_raw] = sp.0;
-                      let s2: &[cbor_raw] = sp.1;
-                      s2
-                  };
-              let i11: &[cbor_raw] = s·;
-              let i·: &[cbor_raw] = i11;
-              pi[0] =
-                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice
-                  { _0: i· };
-              let res0: cbor_raw = res;
-              res0
-          },
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i1 } =>
-          {
-              let res: cbor_raw = cbor_serialized_array_iterator_next(pi, i1);
-              res
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-fn cbor_map_iterator_init <'a>(c: cbor_raw <'a>) ->
-    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-    <'a>
-{
-    match c
-    {
-        cbor_raw::CBOR_Case_Serialized_Map { v: c· } =>
-          {
-              let i·: &[u8] = cbor_serialized_map_iterator_init(c·);
-              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-              { _0: i· }
-          },
-        cbor_raw::CBOR_Case_Map { v: c· } =>
-          {
-              let i: &[cbor_map_entry] = c·.cbor_map_ptr;
-              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-              { _0: i }
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-fn cbor_map_iterator_is_empty <'a>(
-    c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
-) ->
-    bool
-{
-    match c
-    {
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-        { _0: c· }
-        =>
-          {
-              let res: bool = c·.len() == 0usize;
-              let res0: bool = res;
-              res0
-          },
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-        { _0: c· }
-        =>
-          {
-              let res: bool = cbor_serialized_map_iterator_is_empty(c·);
-              res
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
-}
-
-fn cbor_map_iterator_next <'b, 'a>(
-    pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>]
-) ->
-    cbor_map_entry
-    <'a>
-{
-    let i0: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = pi[0];
-    match i0
-    {
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice { _0: i1 } =>
-          {
-              let res: cbor_map_entry = i1[0usize];
-              let sp: (&[cbor_map_entry], &[cbor_map_entry]) = i1.split_at(1usize);
-              let s·: &[cbor_map_entry] =
-                  {
-                      let _s1: &[cbor_map_entry] = sp.0;
-                      let s2: &[cbor_map_entry] = sp.1;
-                      s2
-                  };
-              let i11: &[cbor_map_entry] = s·;
-              let i·: &[cbor_map_entry] = i11;
-              pi[0] =
-                  cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Slice
-                  { _0: i· };
-              let res0: cbor_map_entry = res;
-              res0
-          },
-        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
-        { _0: i1 }
-        =>
-          {
-              let res: cbor_map_entry = cbor_serialized_map_iterator_next(pi, i1);
-              res
-          },
-        _ => panic!("Incomplete pattern matching")
-    }
+    let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
+    res
 }
 
 fn impl_major_type <'a>(x: cbor_raw <'a>) -> u8
@@ -3570,572 +4136,6 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
     }
     else
     { c }
-}
-
-fn cbor_validate(input: &[u8]) -> usize
-{
-    let mut poffset: [usize; 1] = [0usize; 1usize];
-    let is_valid: bool = validate_raw_data_item(input, &mut poffset);
-    if is_valid { (&poffset)[0] } else { 0usize }
-}
-
-fn impl_raw_uint64_optimal(x: raw_uint64) -> bool
-{
-    if (x.value <= max_simple_value_additional_info as u64) == (x.size == 0u8)
-    {
-        if x.size <= 1u8
-        { true }
-        else if x.size == 2u8
-        { 256u64 <= x.value }
-        else if x.size == 3u8 { 65536u64 <= x.value } else { 4294967296u64 <= x.value }
-    }
-    else
-    { false }
-}
-
-fn cbor_raw_ints_optimal(a: &[u8]) -> bool
-{
-    let i: usize = jump_header(a, 0usize);
-    let s: (&[u8], &[u8]) = a.split_at(i);
-    let res: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s.0;
-            let s2: &[u8] = s.1;
-            (s1,s2)
-        };
-    let res0: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res.0;
-            let input2: &[u8] = res.1;
-            (input1,input2)
-        };
-    let spl: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res0.0;
-            let input2: &[u8] = res0.1;
-            (input1,input2)
-        };
-    let input1: &[u8] =
-        {
-            let input1: &[u8] = spl.0;
-            let _input2: &[u8] = spl.1;
-            input1
-        };
-    let h: header = read_header(input1);
-    if get_header_major_type(h) == cbor_major_type_simple_value
-    { true }
-    else
-    {
-        impl_raw_uint64_optimal(
-            match h.snd
-            {
-                long_argument::LongArgumentU8 { v } => raw_uint64 { size: 1u8, value: v as u64 },
-                long_argument::LongArgumentU16 { v } => raw_uint64 { size: 2u8, value: v as u64 },
-                long_argument::LongArgumentU32 { v } => raw_uint64 { size: 3u8, value: v as u64 },
-                long_argument::LongArgumentU64 { v } => raw_uint64 { size: 4u8, value: v },
-                long_argument::LongArgumentOther =>
-                  raw_uint64 { size: 0u8, value: h.fst.additional_info as u64 },
-                _ => panic!("Incomplete pattern matching")
-            }
-        )
-    }
-}
-
-fn impl_deterministically_encoded_cbor_map_key_order(a1: &[u8], a2: &[u8]) -> bool
-{
-    let res: i16 = lex_compare_bytes(a1, a2);
-    res < 0i16
-}
-
-fn cbor_raw_sorted(a: &[u8]) -> bool
-{
-    let i: usize = jump_header(a, 0usize);
-    let s: (&[u8], &[u8]) = a.split_at(i);
-    let res: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s.0;
-            let s2: &[u8] = s.1;
-            (s1,s2)
-        };
-    let res0: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res.0;
-            let input2: &[u8] = res.1;
-            (input1,input2)
-        };
-    let _letpattern: (&[u8], &[u8]) =
-        {
-            let input1: &[u8] = res0.0;
-            let input2: &[u8] = res0.1;
-            (input1,input2)
-        };
-    let input1: &[u8] = _letpattern.0;
-    let input2: &[u8] = _letpattern.1;
-    let h: header = read_header(input1);
-    if get_header_major_type(h) == cbor_major_type_map
-    {
-        let nbpairs: u64 = argument_as_uint64(h.fst, h.snd);
-        if nbpairs < 2u64
-        { true }
-        else
-        {
-            let b: initial_byte_t = h.fst;
-            let i0: usize =
-                if
-                b.major_type == cbor_major_type_byte_string
-                ||
-                b.major_type == cbor_major_type_text_string
-                {
-                    let b0: initial_byte_t = h.fst;
-                    let l: long_argument = h.snd;
-                    0usize.wrapping_add(argument_as_uint64(b0, l) as usize)
-                }
-                else
-                { 0usize };
-            let s0: (&[u8], &[u8]) = input2.split_at(i0);
-            let res1: (&[u8], &[u8]) =
-                {
-                    let s1: &[u8] = s0.0;
-                    let s2: &[u8] = s0.1;
-                    (s1,s2)
-                };
-            let res2: (&[u8], &[u8]) =
-                {
-                    let input11: &[u8] = res1.0;
-                    let input21: &[u8] = res1.1;
-                    (input11,input21)
-                };
-            let spl: (&[u8], &[u8]) =
-                {
-                    let input11: &[u8] = res2.0;
-                    let input21: &[u8] = res2.1;
-                    (input11,input21)
-                };
-            let input3: &[u8] =
-                {
-                    let _input11: &[u8] = spl.0;
-                    let input21: &[u8] = spl.1;
-                    input21
-                };
-            let i1: usize = jump_raw_data_item(input3, 0usize);
-            let s1: (&[u8], &[u8]) = input3.split_at(i1);
-            let res3: (&[u8], &[u8]) =
-                {
-                    let s11: &[u8] = s1.0;
-                    let s2: &[u8] = s1.1;
-                    (s11,s2)
-                };
-            let res4: (&[u8], &[u8]) =
-                {
-                    let input11: &[u8] = res3.0;
-                    let input21: &[u8] = res3.1;
-                    (input11,input21)
-                };
-            let _letpattern1: (&[u8], &[u8]) =
-                {
-                    let input11: &[u8] = res4.0;
-                    let input21: &[u8] = res4.1;
-                    (input11,input21)
-                };
-            let _letpattern10: (&[u8], &[u8]) =
-                {
-                    let hd: &[u8] = _letpattern1.0;
-                    let tl: &[u8] = _letpattern1.1;
-                    (hd,tl)
-                };
-            let hd4: &[u8] = _letpattern10.0;
-            let input4: &[u8] = _letpattern10.1;
-            let i2: usize = jump_raw_data_item(input4, 0usize);
-            let s10: (&[u8], &[u8]) = input4.split_at(i2);
-            let res5: (&[u8], &[u8]) =
-                {
-                    let s11: &[u8] = s10.0;
-                    let s2: &[u8] = s10.1;
-                    (s11,s2)
-                };
-            let res6: (&[u8], &[u8]) =
-                {
-                    let input11: &[u8] = res5.0;
-                    let input21: &[u8] = res5.1;
-                    (input11,input21)
-                };
-            let _letpattern2: (&[u8], &[u8]) =
-                {
-                    let input11: &[u8] = res6.0;
-                    let input21: &[u8] = res6.1;
-                    (input11,input21)
-                };
-            let _letpattern20: (&[u8], &[u8]) =
-                {
-                    let hd: &[u8] = _letpattern2.0;
-                    let tl: &[u8] = _letpattern2.1;
-                    (hd,tl)
-                };
-            let input5: &[u8] =
-                {
-                    let _hd: &[u8] = _letpattern20.0;
-                    let tl: &[u8] = _letpattern20.1;
-                    tl
-                };
-            let mut pkey: [&[u8]; 1] = [hd4; 1usize];
-            let pairs: u64 = nbpairs.wrapping_sub(1u64);
-            let mut ppairs: [u64; 1] = [pairs; 1usize];
-            let mut ptail: [&[u8]; 1] = [input5; 1usize];
-            let mut pres: [bool; 1] = [true; 1usize];
-            let res7: bool = (&pres)[0];
-            let pairs1: u64 = (&ppairs)[0];
-            let mut cond: bool = res7 && pairs1 > 0u64;
-            while
-            cond
-            {
-                let tail: &[u8] = (&ptail)[0];
-                let i3: usize = jump_raw_data_item(tail, 0usize);
-                let s11: (&[u8], &[u8]) = tail.split_at(i3);
-                let res8: (&[u8], &[u8]) =
-                    {
-                        let s110: &[u8] = s11.0;
-                        let s2: &[u8] = s11.1;
-                        (s110,s2)
-                    };
-                let res9: (&[u8], &[u8]) =
-                    {
-                        let input11: &[u8] = res8.0;
-                        let input21: &[u8] = res8.1;
-                        (input11,input21)
-                    };
-                let _letpattern21: (&[u8], &[u8]) =
-                    {
-                        let input11: &[u8] = res9.0;
-                        let input21: &[u8] = res9.1;
-                        (input11,input21)
-                    };
-                let _letpattern22: (&[u8], &[u8]) =
-                    {
-                        let hd: &[u8] = _letpattern21.0;
-                        let tl: &[u8] = _letpattern21.1;
-                        (hd,tl)
-                    };
-                {
-                    let key2: &[u8] = _letpattern22.0;
-                    let tail2: &[u8] = _letpattern22.1;
-                    let key1: &[u8] = (&pkey)[0];
-                    let res10: bool = impl_deterministically_encoded_cbor_map_key_order(key1, key2);
-                    if res10
-                    {
-                        let i4: usize = jump_raw_data_item(tail2, 0usize);
-                        let s12: (&[u8], &[u8]) = tail2.split_at(i4);
-                        let res11: (&[u8], &[u8]) =
-                            {
-                                let s110: &[u8] = s12.0;
-                                let s2: &[u8] = s12.1;
-                                (s110,s2)
-                            };
-                        let res12: (&[u8], &[u8]) =
-                            {
-                                let input11: &[u8] = res11.0;
-                                let input21: &[u8] = res11.1;
-                                (input11,input21)
-                            };
-                        let _letpattern3: (&[u8], &[u8]) =
-                            {
-                                let input11: &[u8] = res12.0;
-                                let input21: &[u8] = res12.1;
-                                (input11,input21)
-                            };
-                        let _letpattern30: (&[u8], &[u8]) =
-                            {
-                                let hd: &[u8] = _letpattern3.0;
-                                let tl: &[u8] = _letpattern3.1;
-                                (hd,tl)
-                            };
-                        let tail·: &[u8] =
-                            {
-                                let _hd: &[u8] = _letpattern30.0;
-                                let tl: &[u8] = _letpattern30.1;
-                                tl
-                            };
-                        (&mut pkey)[0] = key2;
-                        let pairs10: u64 = (&ppairs)[0];
-                        let pairs·: u64 = pairs10.wrapping_sub(1u64);
-                        (&mut ppairs)[0] = pairs·;
-                        (&mut ptail)[0] = tail·
-                    }
-                    else
-                    { (&mut pres)[0] = false }
-                };
-                let res10: bool = (&pres)[0];
-                let pairs10: u64 = (&ppairs)[0];
-                cond = res10 && pairs10 > 0u64
-            };
-            (&pres)[0]
-        }
-    }
-    else
-    { true }
-}
-
-fn cbor_validate_det·(input: &[u8]) -> usize
-{
-    let len: usize = cbor_validate(input);
-    if len == 0usize
-    { len }
-    else
-    {
-        let s·: (&[u8], &[u8]) = input.split_at(0usize);
-        let split123: (&[u8], &[u8]) =
-            {
-                let s1: &[u8] = s·.0;
-                let s2: &[u8] = s·.1;
-                (s1,s2)
-            };
-        let input1: &[u8] =
-            {
-                let _input1: &[u8] = split123.0;
-                let input23: &[u8] = split123.1;
-                let consumed: usize = len.wrapping_sub(0usize);
-                let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                let res: (&[u8], &[u8]) =
-                    {
-                        let s1: &[u8] = s1s2.0;
-                        let s2: &[u8] = s1s2.1;
-                        (s1,s2)
-                    };
-                let split23: (&[u8], &[u8]) =
-                    {
-                        let left: &[u8] = res.0;
-                        let right: &[u8] = res.1;
-                        (left,right)
-                    };
-                let input2: &[u8] = split23.0;
-                let _input3: &[u8] = split23.1;
-                input2
-            };
-        let check: [bool; 1] = [false; 1usize];
-        crate::lowstar::ignore::ignore::<&[bool]>(&check);
-        let mut pn: [usize; 1] = [1usize; 1usize];
-        let mut pres: [bool; 1] = [true; 1usize];
-        let mut ppi: [&[u8]; 1] = [input1; 1usize];
-        let res: bool = (&pres)[0];
-        let n: usize = (&pn)[0];
-        let mut cond: bool = res && n > 0usize;
-        while
-        cond
-        {
-            let n0: usize = (&pn)[0];
-            let pi: &[u8] = (&ppi)[0];
-            let res0: bool = cbor_raw_ints_optimal(pi);
-            if ! res0
-            { (&mut pres)[0] = false }
-            else
-            {
-                let off1: usize = jump_header(pi, 0usize);
-                let s·0: (&[u8], &[u8]) = pi.split_at(0usize);
-                let split1230: (&[u8], &[u8]) =
-                    {
-                        let s1: &[u8] = s·0.0;
-                        let s2: &[u8] = s·0.1;
-                        (s1,s2)
-                    };
-                let input·: &[u8] =
-                    {
-                        let _input11: &[u8] = split1230.0;
-                        let input23: &[u8] = split1230.1;
-                        let consumed: usize = off1.wrapping_sub(0usize);
-                        let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                        let res1: (&[u8], &[u8]) =
-                            {
-                                let s1: &[u8] = s1s2.0;
-                                let s2: &[u8] = s1s2.1;
-                                (s1,s2)
-                            };
-                        let split23: (&[u8], &[u8]) =
-                            {
-                                let left: &[u8] = res1.0;
-                                let right: &[u8] = res1.1;
-                                (left,right)
-                            };
-                        let input2: &[u8] = split23.0;
-                        let _input3: &[u8] = split23.1;
-                        input2
-                    };
-                let res1: header = read_header(input·);
-                let x: header = res1;
-                let b: initial_byte_t = x.fst;
-                let i: usize =
-                    if
-                    b.major_type == cbor_major_type_byte_string
-                    ||
-                    b.major_type == cbor_major_type_text_string
-                    {
-                        let b0: initial_byte_t = x.fst;
-                        let l: long_argument = x.snd;
-                        off1.wrapping_add(argument_as_uint64(b0, l) as usize)
-                    }
-                    else
-                    { off1.wrapping_add(0usize) };
-                let s: (&[u8], &[u8]) = pi.split_at(i);
-                let res10: (&[u8], &[u8]) =
-                    {
-                        let s1: &[u8] = s.0;
-                        let s2: &[u8] = s.1;
-                        (s1,s2)
-                    };
-                let spl: (&[u8], &[u8]) =
-                    {
-                        let input11: &[u8] = res10.0;
-                        let input2: &[u8] = res10.1;
-                        (input11,input2)
-                    };
-                let ph: &[u8] = spl.0;
-                let pc: &[u8] = spl.1;
-                let unused: usize = pc.len();
-                crate::lowstar::ignore::ignore::<usize>(unused);
-                let count: usize = jump_recursive_step_count_leaf(ph);
-                (&mut pn)[0] = n0.wrapping_sub(1usize).wrapping_add(count);
-                (&mut ppi)[0] = pc
-            };
-            let res1: bool = (&pres)[0];
-            let n1: usize = (&pn)[0];
-            cond = res1 && n1 > 0usize
-        };
-        let res0: bool = (&pres)[0];
-        let check1: bool = res0;
-        if ! check1
-        { 0usize }
-        else
-        {
-            let mut pn0: [usize; 1] = [1usize; 1usize];
-            let mut pres0: [bool; 1] = [true; 1usize];
-            let mut ppi0: [&[u8]; 1] = [input1; 1usize];
-            let res1: bool = (&pres0)[0];
-            let n0: usize = (&pn0)[0];
-            let mut cond0: bool = res1 && n0 > 0usize;
-            while
-            cond0
-            {
-                let n1: usize = (&pn0)[0];
-                let pi: &[u8] = (&ppi0)[0];
-                let res2: bool = cbor_raw_sorted(pi);
-                if ! res2
-                { (&mut pres0)[0] = false }
-                else
-                {
-                    let off1: usize = jump_header(pi, 0usize);
-                    let s·0: (&[u8], &[u8]) = pi.split_at(0usize);
-                    let split1230: (&[u8], &[u8]) =
-                        {
-                            let s1: &[u8] = s·0.0;
-                            let s2: &[u8] = s·0.1;
-                            (s1,s2)
-                        };
-                    let input·: &[u8] =
-                        {
-                            let _input11: &[u8] = split1230.0;
-                            let input23: &[u8] = split1230.1;
-                            let consumed: usize = off1.wrapping_sub(0usize);
-                            let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-                            let res10: (&[u8], &[u8]) =
-                                {
-                                    let s1: &[u8] = s1s2.0;
-                                    let s2: &[u8] = s1s2.1;
-                                    (s1,s2)
-                                };
-                            let split23: (&[u8], &[u8]) =
-                                {
-                                    let left: &[u8] = res10.0;
-                                    let right: &[u8] = res10.1;
-                                    (left,right)
-                                };
-                            let input2: &[u8] = split23.0;
-                            let _input3: &[u8] = split23.1;
-                            input2
-                        };
-                    let res10: header = read_header(input·);
-                    let x: header = res10;
-                    let b: initial_byte_t = x.fst;
-                    let i: usize =
-                        if
-                        b.major_type == cbor_major_type_byte_string
-                        ||
-                        b.major_type == cbor_major_type_text_string
-                        {
-                            let b0: initial_byte_t = x.fst;
-                            let l: long_argument = x.snd;
-                            off1.wrapping_add(argument_as_uint64(b0, l) as usize)
-                        }
-                        else
-                        { off1.wrapping_add(0usize) };
-                    let s: (&[u8], &[u8]) = pi.split_at(i);
-                    let res11: (&[u8], &[u8]) =
-                        {
-                            let s1: &[u8] = s.0;
-                            let s2: &[u8] = s.1;
-                            (s1,s2)
-                        };
-                    let spl: (&[u8], &[u8]) =
-                        {
-                            let input11: &[u8] = res11.0;
-                            let input2: &[u8] = res11.1;
-                            (input11,input2)
-                        };
-                    let ph: &[u8] = spl.0;
-                    let pc: &[u8] = spl.1;
-                    let unused: usize = pc.len();
-                    crate::lowstar::ignore::ignore::<usize>(unused);
-                    let count: usize = jump_recursive_step_count_leaf(ph);
-                    (&mut pn0)[0] = n1.wrapping_sub(1usize).wrapping_add(count);
-                    (&mut ppi0)[0] = pc
-                };
-                let res3: bool = (&pres0)[0];
-                let n2: usize = (&pn0)[0];
-                cond0 = res3 && n2 > 0usize
-            };
-            let res2: bool = (&pres0)[0];
-            let check2: bool = res2;
-            if ! check2 { 0usize } else { len }
-        }
-    }
-}
-
-fn cbor_validate_det(input: &[u8]) -> usize
-{
-    let res: usize = cbor_validate_det·(input);
-    res
-}
-
-fn cbor_parse <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
-{
-    let s·: (&[u8], &[u8]) = input.split_at(0usize);
-    let split123: (&[u8], &[u8]) =
-        {
-            let s1: &[u8] = s·.0;
-            let s2: &[u8] = s·.1;
-            (s1,s2)
-        };
-    let input1: &[u8] =
-        {
-            let _input1: &[u8] = split123.0;
-            let input23: &[u8] = split123.1;
-            let consumed: usize = len.wrapping_sub(0usize);
-            let s1s2: (&[u8], &[u8]) = input23.split_at(consumed);
-            let res: (&[u8], &[u8]) =
-                {
-                    let s1: &[u8] = s1s2.0;
-                    let s2: &[u8] = s1s2.1;
-                    (s1,s2)
-                };
-            let split23: (&[u8], &[u8]) =
-                {
-                    let left: &[u8] = res.0;
-                    let right: &[u8] = res.1;
-                    (left,right)
-                };
-            let input2: &[u8] = split23.0;
-            let _input3: &[u8] = split23.1;
-            input2
-        };
-    let res: cbor_raw = cbor_read(input1);
-    res
 }
 
 pub const cbor_major_type_simple_value: u8 = 7u8;
