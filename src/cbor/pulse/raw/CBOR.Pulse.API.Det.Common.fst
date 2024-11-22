@@ -1,4 +1,4 @@
-module CBOR.Pulse.API.Det
+module CBOR.Pulse.API.Det.Common
 friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
 

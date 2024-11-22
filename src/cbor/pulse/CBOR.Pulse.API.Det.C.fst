@@ -1,5 +1,5 @@
 module CBOR.Pulse.API.Det.C
-include CBOR.Pulse.API.Det
+include CBOR.Pulse.API.Det.Common
 open Pulse.Lib.Pervasives
 open CBOR.Spec.Constants
 

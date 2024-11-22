@@ -1,6 +1,6 @@
 module CBOR.Pulse.API.Det.Rust
 
-module Det = CBOR.Pulse.API.Det
+module Det = CBOR.Pulse.API.Det.Common
 
 (* Validation, parsing and serialization *)
 
@@ -9,7 +9,7 @@ type cbordet = Det.cbor_det_t
 [@@pulse_unfold]
 let cbor_det_match = Det.cbor_det_match
 
-open CBOR.Pulse.API.Det
+open CBOR.Pulse.API.Det.Common
 
 ```pulse
 fn cbor_det_parse

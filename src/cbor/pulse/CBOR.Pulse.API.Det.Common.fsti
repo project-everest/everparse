@@ -1,4 +1,4 @@
-module CBOR.Pulse.API.Det
+module CBOR.Pulse.API.Det.Common
 include CBOR.Pulse.API.Det.Type
 include CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
