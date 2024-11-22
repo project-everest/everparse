@@ -1,0 +1,54 @@
+// SNIPPET_START: structs
+aligned
+typedef struct _point {
+  UINT16 x;
+  UINT16 y;
+} point;
+
+aligned
+entrypoint typedef struct _coloredPoint1 {
+  UINT8 color;
+  point pt;
+} coloredPoint1;
+
+aligned
+typedef struct _coloredPoint2 {
+  point pt;
+  UINT8 color;
+} coloredPoint2;
+
+// SNIPPET_END: structs
+
+// SNIPPET_START: union
+aligned
+casetype _Value (UINT8 tag) {
+    switch (tag) {
+        case 0:
+            coloredPoint1 cp1;
+        case 1:
+            coloredPoint2 cp2;
+        default:
+            struct {
+                point pt;
+                UINT16 other;
+            } cp3;
+    }
+} Value;
+// SNIPPET_END: union
+
+// SNIPPET_START: TLV
+aligned
+typedef struct _tlv {
+  UINT8 tag;
+  UINT32 length;
+  UINT8 other;
+  Value(tag) payload[:byte-size length];
+  UINT32 other2;
+} TLV;
+// SNIPPET_END: TLV
+
+// SNIPPET_START: refining
+refining "AlignBase.h" {
+   TLV, Value, coloredPoint2, coloredPoint1, point
+}
+// SNIPPET_END: refining
