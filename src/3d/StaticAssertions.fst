@@ -125,9 +125,9 @@ let print_static_asserts (sas:static_asserts)
     let print_static_assert (sa:static_assert) =
       match sa with
       | SizeOfAssertion sa ->
-        Printf.sprintf "C_ASSERT(sizeof(%s) == %d);" (ident_to_string sa.type_name) sa.size
+        Printf.sprintf "EVERPARSE_STATIC_ASSERT(sizeof(%s) == %d);" (ident_to_string sa.type_name) sa.size
       | OffsetOfAssertion oa ->
-        Printf.sprintf "C_ASSERT(offsetof(%s, %s) == %d);" (ident_to_string oa.type_name) (ident_to_string oa.field_name) oa.offset
+        Printf.sprintf "EVERPARSE_STATIC_ASSERT(offsetof(%s, %s) == %d);" (ident_to_string oa.type_name) (ident_to_string oa.field_name) oa.offset
     in
     let sizeof_assertions =
         sas.assertions
@@ -135,7 +135,7 @@ let print_static_asserts (sas:static_asserts)
         |> String.concat "\n"
     in
     let define_c_assert = 
-      "#define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1];"
+      "#define EVERPARSE_STATIC_ASSERT(e) typedef char __EVERPARSE_STATIC_ASSERT__[(e)?1:-1];"
     in
     "#include <stddef.h>\n" ^
     Options.make_includes () ^
