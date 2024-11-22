@@ -148,6 +148,7 @@ val cbor_det_mk_map_entry () : mk_map_entry_t cbor_det_match cbor_det_map_entry_
 
 val cbor_det_mk_map_gen () : mk_map_gen_t cbor_det_match cbor_det_map_entry_match
 
+inline_for_extraction [@@noextract_to "krml"]
 let cbor_det_mk_map () : mk_map_t cbor_det_match cbor_det_map_entry_match =
   mk_map (cbor_det_mk_map_gen ())
 
