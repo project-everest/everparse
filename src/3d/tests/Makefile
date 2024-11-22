@@ -29,8 +29,7 @@ modules_static_assertions=TestFieldPtrStaticAssertions.c AlignStaticAssertions.c
 clean_out_files=\
 	$(addsuffix .c,$(modules_or_wrappers)) \
 	$(modules_static_assertions) \
-	$(addsuffix .h,$(modules_or_wrappers))\
-	Probe_ExternalAPI.h
+	$(addsuffix .h,$(modules_or_wrappers))
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
