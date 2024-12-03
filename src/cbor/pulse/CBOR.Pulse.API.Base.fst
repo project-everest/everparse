@@ -574,10 +574,10 @@ let mk_map_entry_t
   (#vv: Ghost.erased cbor) ->
   stt t2
     (vmatch pk xk vk ** vmatch pv xv vv)
-    (fun res -> exists* p' .
-      vmatch2 p' res (Ghost.reveal vk, Ghost.reveal vv) **
+    (fun res ->
+      vmatch2 1.0R res (Ghost.reveal vk, Ghost.reveal vv) **
       Trade.trade
-        (vmatch2 p' res (Ghost.reveal vk, Ghost.reveal vv))
+        (vmatch2 1.0R res (Ghost.reveal vk, Ghost.reveal vv))
         (vmatch pk xk vk ** vmatch pv xv vv)
     )
 
