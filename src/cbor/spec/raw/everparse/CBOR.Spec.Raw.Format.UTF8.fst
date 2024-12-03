@@ -196,3 +196,14 @@ let _ = assert (Success? (check (Seq.cons 0xF4uy (Seq.cons 0x80uy (Seq.cons 0x83
 let _ = assert (Success? (check (Seq.cons 0xEFuy (Seq.cons 0xBBuy (Seq.cons 0xBFuy Seq.empty)))))
 
 let correct s = Success? (check s)
+
+let rec ascii_is_utf8
+  (s: Seq.seq U8.t)
+: Lemma
+  (requires (forall i . i < Seq.length s ==> U8.v (Seq.index s i) < 128))
+  (ensures (correct s))
+  (decreases (Seq.length s))
+=
+  if Seq.length s = 0
+  then ()
+  else ascii_is_utf8 (Seq.slice s 1 (Seq.length s))
