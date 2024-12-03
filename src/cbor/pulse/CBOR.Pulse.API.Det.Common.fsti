@@ -159,10 +159,63 @@ let cbor_det_mk_map () : mk_map_t cbor_det_match cbor_det_map_entry_match =
 val cbor_det_equal () : equal_t cbor_det_match
 val cbor_det_major_type () : get_major_type_t cbor_det_match
 val cbor_det_read_simple_value () : read_simple_value_t cbor_det_match
+val cbor_det_elim_simple () : elim_simple_t cbor_det_match
 val cbor_det_read_uint64 () : read_uint64_t cbor_det_match
+val cbor_det_elim_int64 () : elim_int64_t cbor_det_match
 val cbor_det_get_string () : get_string_t cbor_det_match
 val cbor_det_get_tagged_tag () : get_tagged_tag_t cbor_det_match
 val cbor_det_get_tagged_payload () : get_tagged_payload_t cbor_det_match
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_mk_simple_value'
+  (v: Spec.simple_value)
+requires emp
+returns res: cbor_det_t
+ensures
+    cbor_det_match 1.0R res (Spec.pack (Spec.CSimple v)) **
+    Trade.trade
+      (cbor_det_match 1.0R res (Spec.pack (Spec.CSimple v)))
+      emp
+{
+  let res = cbor_det_mk_simple_value () v;
+  ghost fn aux (_: unit)
+  requires emp ** cbor_det_match 1.0R res (Spec.pack (Spec.CSimple v))
+  ensures emp
+  {
+    cbor_det_elim_simple () res
+  };
+  Trade.intro _ _ _ aux;
+  res
+}
+```
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_mk_int64'
+  (ty: Spec.major_type_uint64_or_neg_int64)
+  (v: U64.t)
+requires emp
+returns res: cbor_det_t
+ensures
+    cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 ty v)) **
+    Trade.trade
+      (cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 ty v)))
+      emp
+{
+  let res = cbor_det_mk_int64 () ty v;
+  ghost fn aux (_: unit)
+  requires emp ** cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 ty v))
+  ensures emp
+  {
+    cbor_det_elim_int64 () res
+  };
+  Trade.intro _ _ _ aux;
+  res
+}
+```
 
 val cbor_det_get_array_length () : get_array_length_t cbor_det_match
 

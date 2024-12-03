@@ -776,6 +776,21 @@ fn cbor_det_read_simple_value (_: unit) : read_simple_value_t u#0 #_ cbor_det_ma
 ```
 
 ```pulse
+fn cbor_det_elim_simple (_: unit) : elim_simple_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  Raw.cbor_match_cases x;
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  rewrite (Raw.cbor_match p x (SpecRaw.mk_det_raw_cbor v))
+    as (Raw.cbor_match_simple (Raw.CBOR_Case_Simple?.v x) (SpecRaw.mk_det_raw_cbor v));
+  unfold (Raw.cbor_match_simple (Raw.CBOR_Case_Simple?.v x) (SpecRaw.mk_det_raw_cbor v))
+}
+```
+
+```pulse
 fn cbor_det_read_uint64 (_: unit) : read_uint64_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -786,6 +801,21 @@ fn cbor_det_read_uint64 (_: unit) : read_uint64_t u#0 #_ cbor_det_match
   let res = Raw.cbor_match_int_elim_value x;
   fold (cbor_det_match p x v);
   res.value
+}
+```
+
+```pulse
+fn cbor_det_elim_int64 (_: unit) : elim_int64_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  Raw.cbor_match_cases x;
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  rewrite (Raw.cbor_match p x (SpecRaw.mk_det_raw_cbor v))
+    as (Raw.cbor_match_int (Raw.CBOR_Case_Int?.v x) (SpecRaw.mk_det_raw_cbor v));
+  unfold (Raw.cbor_match_int (Raw.CBOR_Case_Int?.v x) (SpecRaw.mk_det_raw_cbor v))
 }
 ```
 

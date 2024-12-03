@@ -118,6 +118,17 @@ let read_simple_value_t
     (vmatch p x y ** pure (CSimple? (unpack y)))
     (fun res -> vmatch p x y ** pure (unpack y == CSimple res))
 
+inline_for_extraction
+let elim_simple_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (#p: perm) ->
+  (#y: cbor) ->
+  stt_ghost unit emp_inames
+    (vmatch p x y ** pure (CSimple? (unpack y)))
+    (fun _ -> emp)
+
 let read_uint64_post
   (y: cbor)
   (res: FStar.UInt64.t)
@@ -136,6 +147,17 @@ let read_uint64_t
   stt FStar.UInt64.t
     (vmatch p x y ** pure (CInt64? (unpack y)))
     (fun res -> vmatch p x y ** pure (read_uint64_post y res))
+
+inline_for_extraction
+let elim_int64_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (#p: perm) ->
+  (#y: cbor) ->
+  stt_ghost unit emp_inames
+    (vmatch p x y ** pure (CInt64? (unpack y)))
+    (fun _ -> emp)
 
 let get_string_post
   (y: cbor)
