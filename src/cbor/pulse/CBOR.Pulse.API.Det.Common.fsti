@@ -25,6 +25,8 @@ val cbor_det_match_with_size_eq:
       pure (sz == Seq.length (Spec.cbor_det_serialize v))
     )
 
+val cbor_det_reset_perm () : reset_perm_t cbor_det_match
+
 (* SLProp-to-Prop abstraction vehicle to prove the correctness of type abstraction in the Rust API *)
 
 [@@erasable]

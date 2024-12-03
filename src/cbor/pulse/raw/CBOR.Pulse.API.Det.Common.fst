@@ -38,6 +38,28 @@ ensures
 }
 ```
 
+```pulse
+fn cbor_det_reset_perm
+  (_: unit)
+: reset_perm_t u#0 u#0 #_ #_ cbor_det_match
+=
+  (x1: _)
+  (#p: _)
+  (#x2: _)
+{
+  Trade.rewrite_with_trade
+    (cbor_det_match p x1 x2)
+    (Raw.cbor_match p x1 (SpecRaw.mk_det_raw_cbor x2));
+  let res = Raw.cbor_raw_reset_perm _ x1 _;
+  Trade.trans _ _ (cbor_det_match p x1 x2);
+  Trade.rewrite_with_trade
+    (Raw.cbor_match 1.0R res (SpecRaw.mk_det_raw_cbor x2))
+    (cbor_det_match 1.0R res x2);
+  Trade.trans _ _ (cbor_det_match p x1 x2);
+  res
+}
+```
+
 let cbor_det_case (x: cbor_det_t) : Tot cbor_det_case_t =
   match x with
   | Raw.CBOR_Case_Int _ -> CaseInt64

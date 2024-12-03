@@ -1382,7 +1382,7 @@ inline_for_extraction
 fn cbor_raw_reset_perm
   (p: perm)
   (c: cbor_raw)
-  (r: raw_data_item)
+  (r: Ghost.erased raw_data_item)
   requires
     cbor_match p c r
   returns c' : cbor_raw
