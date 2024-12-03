@@ -532,10 +532,10 @@ let mk_string_t
       FStar.UInt.fits (Seq.length v) 64 /\
       (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v)
     ))
-    (fun res -> exists* p' v' .
-      vmatch p' res (pack (CString ty v')) **
+    (fun res -> exists* v' .
+      vmatch 1.0R res (pack (CString ty v')) **
       Trade.trade
-        (vmatch p' res (pack (CString ty v')))
+        (vmatch 1.0R res (pack (CString ty v')))
         (pts_to s #p v) **
       pure (v' == Ghost.reveal v)
     )
@@ -552,10 +552,10 @@ let mk_tagged_t
   (#v': Ghost.erased cbor) ->
   stt t
     (R.pts_to r #pr v ** vmatch pv v v')
-    (fun res -> exists* p' .
-      vmatch p' res (pack (CTagged tag v')) **
+    (fun res ->
+      vmatch 1.0R res (pack (CTagged tag v')) **
       Trade.trade
-        (vmatch p' res (pack (CTagged tag v')))
+        (vmatch 1.0R res (pack (CTagged tag v')))
         (R.pts_to r #pr v ** vmatch pv v v')
     )
 
@@ -573,10 +573,10 @@ let mk_array_t
       PM.seq_list_match va vv (vmatch pv) **
       pure (FStar.UInt.fits (SZ.v (S.len a)) U64.n)
     )
-    (fun res -> exists* p' v' .
-      vmatch p' res (pack (CArray v')) **
+    (fun res -> exists* v' .
+      vmatch 1.0R res (pack (CArray v')) **
       Trade.trade
-        (vmatch p' res (pack (CArray v')))
+        (vmatch 1.0R res (pack (CArray v')))
         (pts_to a #pa va **
           PM.seq_list_match va vv (vmatch pv)
         ) **
@@ -636,10 +636,10 @@ let mk_map_gen_post
     pure (
       mk_map_gen_none_postcond va vv va' vv'
     )
-  | Some res -> exists* p' (v': cbor_map {FStar.UInt.fits (cbor_map_length v') 64}) va' .
-      vmatch1 p' res (pack (CMap v')) **
+  | Some res -> exists* (v': cbor_map {FStar.UInt.fits (cbor_map_length v') 64}) va' .
+      vmatch1 1.0R res (pack (CMap v')) **
       Trade.trade
-        (vmatch1 p' res (pack (CMap v')))
+        (vmatch1 1.0R res (pack (CMap v')))
         (pts_to a va' ** // this function potentially sorts the input array, so we lose the link to the initial array contents
           PM.seq_list_match va vv (vmatch2 pv) // but we keep the permissions on each element
         ) **
@@ -685,10 +685,10 @@ let mk_map_t
         List.Tot.no_repeats_p (List.Tot.map fst vv)
       )
     )
-    (fun res -> exists* p' (v': cbor_map {FStar.UInt.fits (cbor_map_length v') 64}) va' .
-      vmatch1 p' res (pack (CMap v')) **
+    (fun res -> exists* (v': cbor_map {FStar.UInt.fits (cbor_map_length v') 64}) va' .
+      vmatch1 1.0R res (pack (CMap v')) **
       Trade.trade
-        (vmatch1 p' res (pack (CMap v')))
+        (vmatch1 1.0R res (pack (CMap v')))
         (pts_to a va' ** // this function potentially sorts the input array, so we lose the link to the initial array contents
           PM.seq_list_match va vv (vmatch2 pv) // but we keep the permissions on each element
         ) **

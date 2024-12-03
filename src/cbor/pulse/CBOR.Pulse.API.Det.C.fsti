@@ -25,10 +25,10 @@ let cbor_det_mk_string_from_array_t =
       Seq.length v == U64.v len /\
       (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v)
     ))
-    (fun res -> exists* p' v' .
-      cbor_det_match p' res v' **
+    (fun res -> exists* v' .
+      cbor_det_match 1.0R res v' **
       Trade.trade
-        (cbor_det_match p' res v')
+        (cbor_det_match 1.0R res v')
         (pts_to a #p v) **
       pure (
         Spec.CString? (Spec.unpack v') /\
@@ -52,10 +52,10 @@ let cbor_det_mk_array_from_array_t =
       PM.seq_list_match va vv (cbor_det_match pv) **
       pure (A.length a == U64.v len)
     )
-    (fun res -> exists* p' v' .
-      cbor_det_match p' res v' **
+    (fun res -> exists* v' .
+      cbor_det_match 1.0R res v' **
       Trade.trade
-        (cbor_det_match p' res v')
+        (cbor_det_match 1.0R res v')
         (A.pts_to a #pa va **
           PM.seq_list_match va vv (cbor_det_match pv)
         ) **
@@ -87,10 +87,10 @@ requires
     )
 returns res: cbor_det_t
 ensures
-    (exists* p' v' .
-      cbor_det_match p' res v' **
+    (exists* v' .
+      cbor_det_match 1.0R res v' **
       Trade.trade
-        (cbor_det_match p' res v')
+        (cbor_det_match 1.0R res v')
         (A.pts_to a #pa va **
           PM.seq_list_match va0 vv (cbor_det_match pv)
         ) **
@@ -124,10 +124,10 @@ let cbor_det_mk_map_from_array_t =
         List.Tot.no_repeats_p (List.Tot.map fst vv)
       )
     )
-    (fun res -> exists* p' v' va' .
-      cbor_det_match p' res v' **
+    (fun res -> exists* v' va' .
+      cbor_det_match 1.0R res v' **
       Trade.trade
-        (cbor_det_match p' res v')
+        (cbor_det_match 1.0R res v')
         (A.pts_to a va' **
           PM.seq_list_match va vv (cbor_det_map_entry_match pv)
         ) **
@@ -160,10 +160,10 @@ requires
     )
 returns res: cbor_det_t
 ensures
-    (exists* p' v' va' .
-      cbor_det_match p' res v' **
+    (exists* v' va' .
+      cbor_det_match 1.0R res v' **
       Trade.trade
-        (cbor_det_match p' res v')
+        (cbor_det_match 1.0R res v')
         (A.pts_to a va' **
           PM.seq_list_match va0 vv (cbor_det_map_entry_match pv)
         ) **
