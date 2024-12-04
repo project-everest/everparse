@@ -32,6 +32,7 @@ let cbor_det_mk_string_from_array_t =
         (pts_to a #p v) **
       pure (
         Spec.CString? (Spec.unpack v') /\
+        Spec.CString?.typ (Spec.unpack v') == ty /\
         Ghost.reveal v == Spec.CString?.v (Spec.unpack v')
       )
     )
