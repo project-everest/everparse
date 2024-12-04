@@ -4306,6 +4306,22 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
     return c;
 }
 
+typedef cbor_raw cbor_det_t;
+
+typedef cbor_map_entry cbor_det_map_entry_t;
+
+typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+cbor_det_array_iterator_t;
+
+typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+cbor_det_map_iterator_t;
+
+cbor_raw cbor_det_reset_perm(cbor_raw x1)
+{
+  cbor_raw res = cbor_raw_reset_perm_tot(x1);
+  return res;
+}
+
 size_t cbor_det_validate(Pulse_Lib_Slice_slice__uint8_t input)
 {
   size_t res = cbor_validate_det(input);
@@ -4565,22 +4581,6 @@ cbor_det_mk_map_gen(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a)
             .tag = FStar_Pervasives_Native_None
           }
         );
-  }
-}
-
-cbor_raw cbor_det_mk_map(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a)
-{
-  FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw sres = cbor_det_mk_map_gen(a);
-  FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw _letpattern = sres;
-  if (_letpattern.tag == FStar_Pervasives_Native_Some)
-    return _letpattern.v;
-  else
-  {
-    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
-      __FILE__,
-      __LINE__,
-      "unreachable (pattern matches are exhaustive in F*)");
-    KRML_HOST_EXIT(255U);
   }
 }
 
@@ -4884,7 +4884,17 @@ cbor_raw cbor_det_mk_map_from_array(cbor_map_entry *a, uint64_t len)
 {
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
   s = from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(a, (size_t)len);
-  cbor_raw res = cbor_det_mk_map(s);
-  return res;
+  FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw sres = cbor_det_mk_map_gen(s);
+  FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw _letpattern = sres;
+  if (_letpattern.tag == FStar_Pervasives_Native_Some)
+    return _letpattern.v;
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
 }
 

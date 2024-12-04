@@ -4171,6 +4171,12 @@ pub type cbor_det_array_iterator_t <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type
 pub type cbor_det_map_iterator_t <'a> =
 cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>;
 
+pub fn cbor_det_reset_perm <'a>(x1: cbor_raw <'a>) -> cbor_raw <'a>
+{
+    let res: cbor_raw = cbor_raw_reset_perm_tot(x1);
+    res
+}
+
 pub fn cbor_det_validate(input: &[u8]) -> usize
 {
     let res: usize = cbor_validate_det(input);
@@ -4421,17 +4427,6 @@ pub fn cbor_det_mk_map_gen <'a>(a: &'a mut [cbor_map_entry <'a>]) ->
         }
         else
         { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
-    }
-}
-
-pub fn cbor_det_mk_map <'a>(a: &'a mut [cbor_map_entry <'a>]) -> cbor_raw <'a>
-{
-    let sres: option__CBOR_Pulse_Raw_Type_cbor_raw = cbor_det_mk_map_gen(a);
-    let _letpattern: option__CBOR_Pulse_Raw_Type_cbor_raw = sres;
-    match _letpattern
-    {
-        option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res } => res,
-        _ => panic!("Incomplete pattern matching")
     }
 }
 
