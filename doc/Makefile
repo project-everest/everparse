@@ -79,5 +79,10 @@ all-diffs-nobuild: $(addsuffix -nobuild, $(3D_DIFF))
 
 %.accept:
 	cp  out/$(basename $@) 3d-snapshot/$(basename $@)
+
+accept-all: $(addsuffix .accept, $(subst .diff,,$(3D_DIFF)))
+
 clean:
 	rm -rf out _build
+
+.PHONY: accept-all all-diffs-nobuild
