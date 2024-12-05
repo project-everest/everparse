@@ -40,7 +40,7 @@ and Y coordinates. So we create a file, ``HelloWorld.3d``, with the
 following 3d data format description:
 
 .. literalinclude:: HelloWorld.3d
-    :language: c
+    :language: 3d
 
 This data format is very similar to a C type description, where
 ``UINT16`` denotes the type of unsigned 16-bit integers, represented
@@ -74,7 +74,7 @@ marked with ``entrypoint`` tells 3d to expose its validator in
 Structs can be nested, such as in the following instance:
 
 .. literalinclude:: Triangle.3d
-    :language: c
+    :language: 3d
 
 Then, since in this file the definition of ``point`` is not prefixed
 with ``entrypoint``, only ``triangle`` will have its validator exposed
@@ -85,18 +85,23 @@ There can be multiple definitions marked ``entrypoint`` in a given
 
 .. warning::
 
-  3d does not enforce any alignment constraints, and does not
-  introduce any implicit alignment padding. So, for instance, in the
-  following data format description:
+  By default, 3d does not enforce any alignment constraints, and does not
+  introduce any implicit alignment padding. So, for instance, in the following
+  data format description:
 
   .. literalinclude:: ColoredPoint.3d
-      :language: c
+      :language: 3d
 
   * in ``coloredPoint1``, 3d will not introduce any padding between
     the ``color`` field and the ``pt`` field;
 
   * in ``coloredPoint2``, 3d will not introduce any padding after the
     ``color`` field.
+
+  This is in the spirit of keeping 3d specifications explicit. However, 3d does
+  support an option to add alignment padding to a structure, as described
+  :ref:`below <sec-alignment>`.
+
 
 .. _sec-constraints:
 
@@ -108,7 +113,7 @@ provides a way to actually check for constraints on their field
 values:
 
 .. literalinclude:: Smoker.3d
-    :language: c
+    :language: 3d
 
 In this example, the validator for ``smoker`` will check that the
 value of the ``age`` field is at least 21.
@@ -122,7 +127,7 @@ fields of the struct. For instance, here is a type definition for a
 pair ordered by increasing values:
 
 .. literalinclude:: OrderedPair.3d
-    :language: c
+    :language: 3d
 
 .. warning::
 
@@ -130,7 +135,7 @@ pair ordered by increasing values:
    mathematical integers. Thus, the following naive definition:
 
    .. literalinclude:: BoundedSumConst.3d
-       :language: c
+       :language: 3d
        :start-after: SNIPPET_START: boundedSumNaive
        :end-before: SNIPPET_END: boundedSumNaive
 
@@ -139,7 +144,7 @@ pair ordered by increasing values:
    correct way of stating the condition is as follows:
 
    .. literalinclude:: BoundedSumConst.3d
-       :language: c
+       :language: 3d
        :start-after: SNIPPET_START: boundedSumCorrect
        :end-before: SNIPPET_END: boundedSumCorrect
 
@@ -158,7 +163,7 @@ UINT16, UINT32 and UINT64.
 Consider the following example:
 
 .. literalinclude:: BF.3d
-    :language: c
+    :language: 3d
     :start-after: SNIPPET_START: BF
     :end-before: SNIPPET_END: BF
 
@@ -177,7 +182,7 @@ implements `MSVC's rules for packing bit fields
 least-significant bit first. For instance:
 
 .. literalinclude:: BF.3d
-    :language: c
+    :language: 3d
     :start-after: SNIPPET_START: BF2
     :end-before: SNIPPET_END: BF2
 
@@ -211,12 +216,12 @@ Constants and Enumerations
 3d provides a way to define numerical constants:
 
 .. literalinclude:: ConstColor.3d
-    :language: c
+    :language: 3d
 
 Alternatively, 3d provides a way to define enumerated types:
 
 .. literalinclude:: Color.3d
-    :language: c
+    :language: 3d
 
 The validator for ``coloredPoint`` will check that the value of
 the field ``col`` is either 1, 2 (for ``green``), or 42.
@@ -232,7 +237,7 @@ Due to a limitation in the way 3d currently checks for the absence of
 double-fetches, values with enum type cannot be used in
 constraints. For example, the following code is currently rejected.
 
-.. code-block:: c
+.. code-block:: 3d
                 
   UINT32 enum color {
     red = 1,
@@ -258,6 +263,7 @@ With the following error message:
 One must instead write:
 
 .. literalinclude:: EnumConstraint.3d
+   :language: 3d
 
 We expect to lift this limitation soon.
 
@@ -272,7 +278,7 @@ integers whose sum is bounded by a bound provided by the user as
 argument:
 
 .. literalinclude:: BoundedSum.3d
-    :language: c
+    :language: 3d
     :start-after: SNIPPET_START: boundedSum
     :end-before: SNIPPET_END: boundedSum
 
@@ -289,7 +295,7 @@ Parameterized data types can also be instantiated within the ``.3d``
 file itself, including by the value of the field of a struct:
 
 .. literalinclude:: BoundedSum.3d
-    :language: c
+    :language: 3d
     :start-after: SNIPPET_START: mySum
     :end-before: SNIPPET_END: mySum
 
@@ -297,7 +303,7 @@ A parameterized data type can also check whether a condition on its
 arguments holds before even trying to check its contents:
 
 .. literalinclude:: BoundedSumWhere.3d
-    :language: c
+    :language: 3d
 
 In this case, the validator for ``boundedSum`` would check
 that ``bound <= 1729``, before validating its fields.
@@ -315,7 +321,7 @@ For instance, the following description defines the type of an integer
 prefixed by its size in bits.
 
 .. literalinclude:: TaggedUnion.3d
-    :language: c
+    :language: 3d
 
 .. warning::
 
@@ -323,7 +329,7 @@ prefixed by its size in bits.
   and 3d does not introduce any implicit padding to enforce it. Nor
   does 3d introduce any alignment padding. This is in the spirit of
   keeping 3d specifications explicit: if you want padding, you need to
-  add it explicitly.
+  add it explicitly. See also the section on :ref:`alignment <sec-alignment>`.
 
 A ``casetype`` type actually defines an untagged union type dependent
 on an argument value, which can be reused, e.g. for several types that
@@ -395,7 +401,7 @@ byte array contains a pair of integers, and then read them into a
 couple of mutable locations of your choosing. Here's how:
 
 .. literalinclude:: ReadPair.3d
-    :language: c
+    :language: 3d
 
 The struct ``Pair`` takes two out-parameters, ``x`` and ``y``. Out
 parameters are signified by the ``mutable`` keyword and have pointer
@@ -502,7 +508,7 @@ Another example
 Consider the following definition:
 
 .. literalinclude:: GetFieldPtr.3d
-    :language: c
+    :language: 3d
     :start-after: SNIPPET_START: GetFieldPtr.T
     :end-before: SNIPPET_END: GetFieldPtr.T
 
@@ -533,6 +539,187 @@ Restrictions
 
 * Actions cannot be associated with bit fields.
 
+
+Probing or Following Pointers when Parsing
+------------------------------------------
+
+In some cases, rather than parsing from a flat array of contiguous memory, one
+wants to parse a structure with indirections, i.e., the input buffer may contain
+pointers to other chunks of memory containing sub-structures to be parsed.
+
+Parsing such pointer-rich structures is delicate, since before following a
+pointer, one needs to check that the pointer references valid memory. Given a
+raw pointer (just a memory address), one cannot, in general, check that the
+pointer is valid. However, in some scenarios, such checks are possible, e.g., in
+kernel code, it may be possible to probe a pointer to check that it is valid,
+and only then proceed to read from it. 3d supports parsing structures containing
+pointers, provided safe probing functions can be provided by the caller.
+
+Let's look an an example:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: simple probe$
+  :end-before: SNIPPET_END: simple probe$
+
+The first line declares a `probe` function called `ProbeAndCopy`. This is a
+requirement on the user of the generated parser to link the generated code with
+a function called `ProbeAndCopy`. In fact, the generated code contains and
+extern declaration with the signature shown below:
+
+.. code-block:: c
+
+  extern BOOLEAN ProbeAndCopy(uint64_t base, uint64_t length, EVERPARSE_COPY_BUFFER_T buffer);
+
+where, in `EverParseEndianness.h`, we have
+
+That is, the `ProbeAndCopy` function is expected to take three arguments:
+
+  * A pointer value, represented as a 64-bit unsigned integer, to be probed for validity.
+
+  * A length value, also a `uint64_t`, representing the extent of memory to be
+    checked for validity starting from the base address
+
+  * And a buffer of type `EVERPARSE_COPY_BUFFER_T`. Typically, the
+    implementation of `ProbeAndCopy` may choose to copy the memory starting at
+    the base address into the buffer, so that the parser can then read from the
+    buffer.
+
+The type `EVERPARSE_COPY_BUFFER_T` is also left to the user to define. In
+particular, in `EverParseEndianness.h`, we have
+
+.. code-block:: c
+
+  typedef void* EVERPARSE_COPY_BUFFER_T;
+
+While in `EverParse.h`, we further have:
+
+.. code-block:: c
+
+  extern uint8_t *EverParseStreamOf(EVERPARSE_COPY_BUFFER_T buf);
+
+  extern uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T buf);
+
+That is, the client code can choose any definition for `EVERPARSE_COPY_BUFFER_T`
+(since it is just a `void*`), so long as it can also provide two functions:
+`EverParseStreamOf` to extract a buffer of bytes from a
+`EVERPARSE_COPY_BUFFER_T`; and `EverParseStreamLen` to extract the length of the
+buffer.
+
+Let's return to the example to see how the `ProbeAndCopy` function is used.
+
+The type `T` is just a struct with two fields, constrained by a lower bound. The
+type `S` is more interesting. It starts with a `UINT8 bound` and then contains a
+*pointer* `t` to a `T(bound)` struct. To emphasize the point, the following
+picture illustrates the layout::
+
+     bytes
+     0........1........2........3........4........5........6........7........8........9 
+ S:  { bound  |              tpointer                                                 }
+                                |
+                                |
+      .-------------------------.                            
+      |
+      v 
+     0........1........2........3........4........5........6........7........8.........9 
+ T:  {        x        |        y        }
+
+  
+
+The input buffer represents the `S` structure in 5 bytes, beginning with one
+byte for the `bound`, and following by 8 bytes for the `tpointer`
+field---currently, 3D treats pointer fields as always 8 bytes long.
+
+The `tpointer` field contains a memory address that points to the a `T`
+structure, which is represented in 4 bytes, with 2 bytes each for its `x` and
+`y` fields, as usual.
+
+The 3D notation below:
+
+.. code-block:: 3d
+
+  T(bound) *tpointer probe ProbeAndCopy(length = 8, destination = dest);
+
+Instructs the parser to:
+   
+  * First, use the `ProbeAndCopy` function to check that the 8 bytes starting at
+    the address pointed to by `tpointer` are valid memory, using the `dest`
+    parameter as its copy buffer.
+
+  * If `ProbeAndCopy` succeeds, then validate that `EverParseStreamOf(dest)`
+    buffer contains a valid `T(bound)` structure, in `EverParseStreamLen(dest)`
+    bytes.
+
+One can use multiple probe functions in a specification. Continuing our example
+from above, one can write:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: multi probe$
+  :end-before: SNIPPET_END: multi probe$
+
+
+* We define a second probing function `ProbeAndCopyAlt`
+
+* The a type `U`, that packages a pointer to an  `S` structure with a tag. Note,
+  the `spointer` is probed using `ProbeAndCopyAlt`, while the `tpointer`
+  nested within it is probed using `ProbeAndCopy`.
+
+One can also reuse the same copy buffer for multiple probe, so long as the
+probes are done sequentially. For instance, we use several probes below, reusing
+`destT` multiple times to parser the nested `T` structure within `sptr`, and
+again for `tptr` and `t2ptr`.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: reuse copy buffer$
+  :end-before: SNIPPET_END: reuse copy buffer$
+
+This is allowed since the probes are done sequentially, and the copy buffer is
+not reused before the probe \& validation are complete. On the other hand, if
+one were to try to reuse a copy buffer before its probe \& validation are
+complete (e.g., by using `destT` as the destination buffer for `sptr`) 3D issues
+an error message::
+
+  ./Probe.3d:(30,16): (Error) Nested mutation of the copy buffer [destT]
+
+Finally, there is one more variation in using probes. Consider the following
+type:
+
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: indirect$
+  :end-before: SNIPPET_END: indirect$
+
+
+This type specifies the following layout, with an input buffer containing a
+single pointer which refers to a buffer containing a valid struct with three
+fields.::
+
+
+
+     bytes
+     0........1........2........3........4........5........6........7........8
+   I:{                        pointer                                        }
+                                |
+                                |
+      .-------------------------.                            
+      |
+      v 
+     0........1........2........3........4........5........6........7........8.........9 
+  TT:{        x                          |                 y                 |   tag    }
+
+
+The specification is equivalent to the following, though more concise:
+
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: indirect alt$
+  :end-before: SNIPPET_END: indirect alt$
+
+
 Generating code with for several compile-time configurations
 ------------------------------------------------------------
 
@@ -547,7 +734,7 @@ For example, the listing below shows an integer type that can either
 be represented using 64 bits (if ``ARCH64`` is true) or 32 bits.
 
 .. literalinclude:: PointArch_32_64.3d
-    :language: c
+    :language: 3d
 
 To compile such a file using 3D, we also need to provide a
 ``.3d.config`` file that declares all the compile-time flags used in
@@ -587,6 +774,92 @@ of the the ``Int`` type declared in the source 3d file.
       #endif
    }
 
+.. _sec-alignment:
+
+Alignment
+---------
+
+As mentioned previously, 3d does not introduce any implicit alignment padding.
+However, it is often convenient to use 3d to model the in-memory layout of a C
+structure, including the alignment padding that a C compiler would insert.
+Rather than requiring the user to manually insert padding fields, 3d allows
+decorating a struct with an ``aligned`` attribute, which instructs the 3d
+frontend to add padding between fields modeling the behavior of a C compiler.
+This page provides a useful reference about `alignment padding in C
+<https://learn.microsoft.com/en-us/cpp/c-language/alignment-c?view=msvc-170>`_.
+
+For example, consider the following structs:
+
+.. literalinclude:: Align.3d
+  :language: 3d
+  :start-after: SNIPPET_START: structs
+  :end-before: SNIPPET_END: structs
+
+
+
+The `aligned` attribute to each struct adds alignment padding
+between fields.
+
+  * Both fields of the type `point` are aligned at 2-byte boundaries; so no
+    padding is inserted between them.
+
+  * In type `coloredPoint1` the field `color` is aligned at a 1-byte boundary,
+    while `pr` is aligned at a 2-byte boundary; so 1 byte of padding is inserted
+    between them. So, the whole struct consumes six bytes, aligned at a 2-byte
+    boundary.
+
+  * In type `coloredPoint2` the field `pt` is aligned at a 2-byte boundary, but
+    the type `color` is aligned at a 1-byte boundary. So, no padding is inserted
+    between them. But, the resulting type must be aligned at a 2-byte boundary,
+    so 1 byte of padding is inserted after the `color` field---so, the whole
+    struct consumes six bytes.
+
+The 3d compiler emits diagnostics describing the padding it inserts::
+
+  Adding padding field in Align._coloredPoint1 for 1 bytes at (preceding field Align.point pt;)
+  Adding padding field in Align._coloredPoint2 for 1 bytes at (end padding)
+
+The `aligned` attribute can also be adding to casetypes, though the behavior is
+more limited:
+
+.. literalinclude:: Align.3d
+  :language: 3d
+  :start-after: SNIPPET_START: union
+  :end-before: SNIPPET_END: union
+
+Here, we have an aligned "union". 3d checks that every branch of the union
+describes field with the same size. It *does not* insert padding to make every
+type have the same size. For example, if the `UINT16 other` fields were left out
+of the default case of `Value`, the 3d compiler would emit the following error
+message::
+
+  With the 'aligned' qualifier, all cases of a union with a fixed size must have the same size; union padding is not yet supported
+ 
+The `aligned` attribute is also supported on variable-length types, but it only applies
+to the fixed-size prefix of the type. For example, consider the following type:
+
+.. literalinclude:: Align.3d
+  :language: 3d
+  :start-after: SNIPPET_START: TLV
+  :end-before: SNIPPET_END: TLV
+
+The output from the 3d compiler includes the following diagnostic::
+
+  Adding padding field in Align._tlv for 3 bytes at (preceding field dependent UINT32 length;)
+  Adding padding field in Align._tlv for 1 bytes at (preceding field Align.Value(tag) payload[:byte-size length];)
+
+3d adds 3 bytes after `tag` and preceding `length`, since `length` is 4-byte aligned.
+It adds 1 byte after `other` and preceding the `payload` field, since the payload is a `Value` array and is 2-byte aligned.
+But, notice, it does not add a padding field after `payload` to align the `other2` field, since `other2` follows a variable-length field.
+
+The semantics of alignment padding is subtle and 3d aims to mimic the behavior
+of a C compiler. If you are using alignment padding, it is recommended to check
+that the type described in 3d corresponds to the C type you are modeling, as described
+in the next section.
+
+Note, the `aligned` attribute is not allowed on typedefs, enums, or other kinds
+of 3d declarations.
+
 Checking 3d types for correspondence with existing C types
 ----------------------------------------------------------
 
@@ -604,7 +877,7 @@ requires to insert.
 To assist with this, 3d provides the following feature:
 
 .. literalinclude:: GetFieldPtr.3d
-    :language: c
+  :language: 3d
 
 Following the type definitions, the ``refining`` section states that
 the type ``S`` defined in the C header file ``GetFieldPtrBase.h`` is
@@ -621,8 +894,8 @@ checking that the ``sizeof(S)`` as computed by the C compiler matches
 
 In generality, the refining declaration takes the following form:
 
-.. code-block:: c
-                
+.. code-block:: 3d
+
   refining "I1.h", ..., "In.h" {
       S1 as T1, ...
       Sm as Tm
@@ -634,7 +907,65 @@ where each ``Si`` is a type defined in one of the C header files
 3d file. In case the types have the same names, one can simply write
 ``T`` instead of ``T as T``.
 
+As a second example, let's revisit the type from the `:ref:alignment section
+<sec-alignment>`, aiming to show that the 3d type corresponds to the C types
+defined in the header file `AlignBase.h` shown below:
+
+.. literalinclude:: AlignBase.h
+  :language: c
+
+Let's also decorate the 3d file with the following refining declaration:
+
+.. literalinclude:: Align.3d
+  :language: 3d
+  :start-after: SNIPPET_START: refining
+  :end-before: SNIPPET_END: refining
   
+The 3d compiler emits the following static assertions:
+
+.. code-block:: c
+
+  #include <stddef.h>
+  #include "AlignBase.h"
+  #define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1];
+  C_ASSERT(sizeof(TLV) == 10);
+  C_ASSERT(offsetof(TLV, tag) == 0);
+  C_ASSERT(offsetof(TLV, length) == 4);
+  C_ASSERT(offsetof(TLV, other) == 8);
+  C_ASSERT(offsetof(TLV, payload) == 10);
+  C_ASSERT(sizeof(Value) == 6);
+  C_ASSERT(sizeof(coloredPoint2) == 6);
+  C_ASSERT(offsetof(coloredPoint2, pt) == 0);
+  C_ASSERT(offsetof(coloredPoint2, color) == 4);
+  C_ASSERT(sizeof(coloredPoint1) == 6);
+  C_ASSERT(offsetof(coloredPoint1, color) == 0);
+  C_ASSERT(offsetof(coloredPoint1, pt) == 2);
+  C_ASSERT(sizeof(point) == 4);
+  C_ASSERT(offsetof(point, x) == 0);
+  C_ASSERT(offsetof(point, y) == 2);
+
+If you compile this with clang, you will see that actually, the first assertion
+on the size of `TLV` fails. The C compiler treats the zero-length array
+`payload` in the struct `TLV` as having zero size with alignment of 2 (because
+of the `Value` payload), while 3d does not. Hence the C compiler adds one byte
+of padding after the `other` field and 2 bytes after it, while 3d adds only 1
+before the `padding field`. 
+
+A fix in this case is to explicitly add the padding bytes, as shown below:
+
+.. code-block:: 3d
+
+  aligned
+  typedef struct _tlv {
+    UINT8 tag;
+    UINT32 length;
+    UINT8 other;
+    UINT8 padding;
+    Value(tag) payload[:byte-size length];
+    UINT8 padding2[2]
+    UINT32 other2;
+  } TLV;
+
 Comments
 --------
 
@@ -692,7 +1023,7 @@ in ``Derived`` to reuse the definitions that are exported in ``Base``.
 For example, in module ``Base`` we could define the following types:
 
 .. literalinclude:: Base.3d
-    :language: c
+    :language: 3d
 
 Note, the ``export`` qualifier indicate that these definitions may be
 referenced from another module. Types that are not exproted (like
@@ -702,7 +1033,7 @@ In ``Derived`` we can use the type from ``Base`` by referring to it
 using a fully qualified name of the form ``<MODULE NAME>.<IDENTIFIER>``.
 
 .. literalinclude:: Derived.3d
-   :language: c
+   :language: 3d
    :start-after: SNIPPET_START: Triple
    :end-before: SNIPPET_END: Triple
 
@@ -712,7 +1043,7 @@ using a fully qualified name of the form ``<MODULE NAME>.<IDENTIFIER>``.
 ``Base`` for use within the current module.
 
 .. literalinclude:: Derived.3d
-   :language: c
+   :language: 3d
    :start-after: SNIPPET_START: Quad
    :end-before: SNIPPET_END: Quad
 
@@ -865,7 +1196,7 @@ set.
 To specify the type of a TCP header, we begin by defining some basic
 types.
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef UINT16 PORT;
   typedef UINT32 SEQ_NUMBER;
@@ -883,7 +1214,7 @@ option begins with an option kind tag, an 8-bit value. Depending on
 the option kind, a variable number of bits of an option value can
 follow. The permitted option kinds are:
 
-.. code-block:: c
+.. code-block:: 3d
 
   #define OPTION_KIND_END_OF_OPTION_LIST 0x00
   #define OPTION_KIND_NO_OPERATION 0x01
@@ -899,7 +1230,7 @@ be present---it turns out, the ``SYN`` bit in the header must be set
 for this option to be allowed. The general shape of an ``OPTION`` is
 as below.
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _OPTION(Bool MaxSegSizeAllowed)
   {
@@ -913,7 +1244,7 @@ depends on the ``OptionKind`` and the ``MaxSegSizeAllowed`` flag.
 Next, to define the ``OPTION_PAYLOAD`` type, we use a ``casetype``, as
 shown below.
 
-.. code-block:: c
+.. code-block:: 3d
 
   casetype _OPTION_PAYLOAD(UINT8 OptionKind, Bool MaxSegSizeAllowed)
   {
@@ -951,7 +1282,7 @@ use of the ``where` constraint ensures that this case is present only
 when `MaxSegSizeAllowed == true``. The payload is a length field (4
 bytes) and a 2-byte ``MaxSegSize`` value.
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _MAX_SEG_SIZE_PAYLOAD(Bool MaxSegSizeAllowed)
   where MaxSegSizeAllowed
@@ -967,7 +1298,7 @@ The other cases are relatively straightforward, where
 ``SELECTIVE_ACK_PAYLOAD`` and ``TIMESTAMP_PAYLOAD`` illustrate the use
 of variable length arrays.
 
-.. code-block::c
+.. code-block:: 3d
 
   typedef struct _WINDOW_SCALE_PAYLOAD
   {
@@ -1008,7 +1339,7 @@ anywhere in the Options list, rather than as just the last
 element. This can be improved by using a more advanced combinator from
 EverParse, however we leave it as is for simplicity of this example.
 
-.. code-block:: c
+.. code-block:: 3d
 
   /*++
     The top-level type of a TCP Header
@@ -1181,7 +1512,7 @@ the file. The last 7 bytes of the array are padding bytes set to 0. To
 be able to constrain the individual bytes of this array, we specify in
 3d as a struct.
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _E_IDENT
   {
@@ -1216,7 +1547,7 @@ file version, followed by fields of our interest: ``E_PHOFF``,
 ``E_SHOFF`` (offsets of the two tables), and ``E_PHNUM``, ``E_SHNUM``
 (number of entries in the two tables).
 
-.. code-block:: c
+.. code-block:: 3d
 
   // ELF HEADER BEGIN
 
@@ -1275,7 +1606,7 @@ The ELF header is followed by the two optional tables. We specify
 these optional tables using ``casetype``. First, the program header
 table:
 
-.. code-block:: c
+.. code-block:: 3d
 
   casetype _PROGRAM_HEADER_TABLE_OPT (UINT16 PhNum,
     				      OFFSET ElfFileSize)
@@ -1302,7 +1633,7 @@ size ``sizeof (PROGRAM_HEADER_TABLE_ENTRY) * PhNum`` bytes where the type
 ``PROGRAM_HEADER_TABLE_ENTRY`` describes a segment:
 
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _PROGRAM_HEADER_TABLE_ENTRY (OFFSET ElfFileSize)
   {
@@ -1355,7 +1686,7 @@ table, but we still need to check that the file contains enough bytes
 after the program header table so that its total size is
 ``ElfFileSize``. ``NO_SECTION_HEADER_TABLE`` specifies such a type:
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _NO_SECTION_HEADER_TABLE (OFFSET PhTableEnd,
   					   UINT64 ElfFileSize)
@@ -1373,7 +1704,7 @@ bytes between the end of the program header table and the beginning of
 the section header table, (b) the section header table, and (c) final
 check that end of the section header table is the end of the file.
 
-.. code-block:: c
+.. code-block:: 3d
 
   typedef struct _SECTION_HEADER_TABLE (OFFSET PhTableEnd,
                                         UINT64 ShOff,
@@ -1396,7 +1727,7 @@ array of entries.
   
 Finally, the top-level ELF format:
 
-.. code-block:: c
+.. code-block:: 3d
 
 
   entrypoint
