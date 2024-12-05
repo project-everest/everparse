@@ -5,7 +5,7 @@ OUTPUT_DIRECTORY:=.
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-extract: $(OUTPUT_DIRECTORY)/CBORDet.o
+extract: $(OUTPUT_DIRECTORY)/CBORDet.o $(OUTPUT_DIRECTORY)/CBORDetSizeCheck.o $(OUTPUT_DIRECTORY)/CBORDetAbstract.o
 
 test: extract
 	+$(MAKE) -C $@
