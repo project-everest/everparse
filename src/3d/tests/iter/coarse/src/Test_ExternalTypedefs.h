@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// defining the OUT iterator type declared in Test.3d
+// defining the out_t iterator type declared in Test.3d
 
 typedef struct out_pair {
   uint32_t f1;
@@ -14,6 +14,6 @@ typedef struct out_pair {
 typedef struct out_iterator {
   OUT_PAIR* current;
   size_t remainingCount;
-} OUT;
+} out_t;
 
 #endif // __TEST_EXTERNALTYPEDEFS
