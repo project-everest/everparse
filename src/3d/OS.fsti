@@ -16,6 +16,10 @@ val remove_extension: string -> Tot string
 
 val extension: string -> Tot string
 
+(* The filename where all `\` have been replaced with `/` (because GNU Make uses `/` even on Windows) *)
+
+val replace_backslashes: string -> Tot string
+
 (* Run a command *)
 val run_cmd: string -> list string -> FStar.All.ML unit
 

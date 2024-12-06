@@ -20,6 +20,11 @@ let oext = function
 | HashingOptions.MakefileGMake -> "o"
 | HashingOptions.MakefileNMake -> "obj"
 
+let mk_rule_operand (mtype: HashingOptions.makefile_type) (op: string) : Tot string =
+  match mtype with
+  | HashingOptions.MakefileGMake -> OS.replace_backslashes op // GNU Make uses `/` even on Windows
+  | _ -> op
+
 let print_make_rule
   mtype
   everparse_h
@@ -27,7 +32,7 @@ let print_make_rule
   (r: rule_t)
 : Tot string
 = 
-  let rule = Printf.sprintf "%s : %s\n" r.to (String.concat " " r.from) in
+  let rule = Printf.sprintf "%s : %s\n" (mk_rule_operand mtype r.to) (String.concat " " (List.Tot.map (mk_rule_operand mtype) r.from)) in
   match r.ty with
   | Nop -> Printf.sprintf "%s\n" rule
   | _ ->
