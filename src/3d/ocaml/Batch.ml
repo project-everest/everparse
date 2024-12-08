@@ -40,7 +40,6 @@ let krml out_dir =
       aux false [
           (dir_bin, "krml.exe"); (* binary package *)
           (dir, "krml.exe");
-          (dir, "krml");
         ]
     in
     if candidate <> ""
