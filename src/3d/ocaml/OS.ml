@@ -14,6 +14,12 @@ let remove_extension = Filename.remove_extension
 
 let extension = Filename.extension
 
+(* The filename where all `\` have been replaced with `/` (because GNU Make uses `/` even on Windows) *)
+
+let regexp_backslash = Re.Posix.compile_pat "\\\\" (* because both OCaml and POSIX regular expressions need to quote backslashes *)
+
+let replace_backslashes (s: string) = Re.replace_string regexp_backslash ~by:"/" s
+
 (* Concatenating a dir path and a filename *)
 
 let filename_concat = Filename.concat
