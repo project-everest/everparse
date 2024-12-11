@@ -13,3 +13,4 @@ tests/unit/*
 **/out
 bin/qd.exe
 bin/3d.exe
+.depend.rsp

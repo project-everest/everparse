@@ -22,7 +22,9 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
-3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES))
+# lowparse needed because of .fst behind .fsti for extraction
+3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+	+$(MAKE) -C src/3d prelude
 
 .PHONY: 3d-prelude
 
@@ -32,7 +34,6 @@ lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKE
 .PHONY: 3d-exe
 
 3d: 3d-prelude 3d-exe
-	+$(MAKE) -C src/3d
 
 # filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
 asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.Low.% ASN1Test.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
@@ -123,8 +124,13 @@ endif
 
 .PHONY: cbor-verify
 
+# lowparse needed for extraction because of .fst files behind .fsti
 ifeq (,$(NO_PULSE))
-cbor-test-snapshot: cbor-verify
+cbor-extract-pre: cbor-verify $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/LowParse.Low.%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+
+.PHONY: cbor-extract-pre
+
+cbor-test-snapshot: cbor-extract-pre
 	+$(MAKE) -C src/cbor test-snapshot
 else
 cbor-test-snapshot: cbor-verify
@@ -134,7 +140,7 @@ endif
 
 # This rule is incompatible with `cbor` and `cbor-test-snapshot`
 ifeq (,$(NO_PULSE))
-cbor-snapshot: cbor-verify
+cbor-snapshot: cbor-extract-pre
 	+$(MAKE) -C src/cbor snapshot
 else
 cbor-snapshot:
