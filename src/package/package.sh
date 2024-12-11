@@ -167,7 +167,7 @@ make_everparse() {
     fi
 
     # Rebuild EverParse
-    $MAKE -C "$EVERPARSE_HOME" "$@" package-subset
+    NO_PULSE=1 $MAKE -C "$EVERPARSE_HOME" "$@" package-subset
 
     # Copy dependencies and Z3
     mkdir -p everparse/bin

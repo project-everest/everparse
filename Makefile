@@ -4,14 +4,38 @@ package-subset: quackyducky lowparse 3d
 
 .PHONY: package-subset
 
-lowparse:
-	+$(MAKE) -C src/lowparse
+EVERPARSE_SRC_PATH = $(realpath src)
 
-3d: lowparse
+ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,
+
+SRC_DIRS += src/lowparse src/ASN1 src/3d/prelude src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse
+
+ifeq (,$(NO_PULSE))
+  SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse
+endif
+
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+ifeq (,$(NO_PULSE))
+  include $(EVERPARSE_SRC_PATH)/pulse.Makefile
+endif
+include $(EVERPARSE_SRC_PATH)/common.Makefile
+
+lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+
+3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES))
+
+.PHONY: 3d-prelude
+
+3d-exe:
+	+$(MAKE) -C src/3d 3d
+
+.PHONY: 3d-exe
+
+3d: 3d-prelude 3d-exe
 	+$(MAKE) -C src/3d
 
-asn1: lowparse
-	+$(MAKE) -C src/ASN1 verify
+# filter-out comes from NOT_INCLUDED in src/ASN1/Makefile
+asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.Test.Interpreter.fst ASN1.Low.% ASN1Test.fst ASN1.bak%)),$(filter src/ASN1/%,$(ALL_CHECKED_FILES)))
 
 quackyducky:
 	+$(MAKE) -C src/qd
@@ -56,22 +80,34 @@ quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-samp
 
 test: all lowparse-test quackyducky-test 3d-test asn1-test
 
-lowparse-pulse: lowparse
-	+$(MAKE) -C src/lowparse/pulse
+ifeq (,$(NO_PULSE))
+lowparse-pulse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
+else
+lowparse-pulse:
+endif
 
 .PHONY: lowparse-pulse
 
 cbor:
 	+$(MAKE) -C src/cbor/pulse/det
 
-cbor-interface:
-	+$(MAKE) -C src/cbor interface
+cbor-interface: $(filter-out src/cbor/spec/raw/%,$(filter src/cbor/spec/%,$(ALL_CHECKED_FILES)))
+
+ifeq (,$(NO_PULSE))
+cbor-interface: $(filter-out src/cbor/pulse/raw/%,$(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES)))
+endif
+
+.PHONY: cbor-interface
 
 cbor-det-c-test: cbor
 	+$(MAKE) -C src/cbor/pulse/det/c/test
 
+ifeq (,$(NO_PULSE))
 cbor-det-c-vertest: cbor cbor-interface
 	+$(MAKE) -C src/cbor/pulse/det/vertest/c
+else
+cbor-det-c-vertest:
+endif
 
 .PHONY: cbor-det-c-vertest
 
@@ -79,20 +115,41 @@ cbor-det-c-vertest: cbor cbor-interface
 cbor-det-rust-test: cbor
 	+cd src/cbor/pulse/det/rust && cargo test
 
-cbor-test-snapshot: cbor-interface lowparse-pulse
+cbor-verify: $(filter src/cbor/spec/%,$(ALL_CHECKED_FILES))
+
+ifeq (,$(NO_PULSE))
+cbor-verify: $(filter src/cbor/pulse/%,$(ALL_CHECKED_FILES))
+endif
+
+.PHONY: cbor-verify
+
+ifeq (,$(NO_PULSE))
+cbor-test-snapshot: cbor-verify
 	+$(MAKE) -C src/cbor test-snapshot
+else
+cbor-test-snapshot: cbor-verify
+endif
 
 .PHONY: cbor-test-snapshot
 
 # This rule is incompatible with `cbor` and `cbor-test-snapshot`
-cbor-snapshot: cbor-interface lowparse-pulse
+ifeq (,$(NO_PULSE))
+cbor-snapshot: cbor-verify
 	+$(MAKE) -C src/cbor snapshot
+else
+cbor-snapshot:
+endif
+
 .PHONY: cbor-snapshot
 
 cbor-test: cbor-det-c-test cbor-det-rust-test cbor-det-c-vertest cbor-test-snapshot
 
+ifeq (,$(NO_PULSE))
 cddl: cbor cbor-interface
 	+$(MAKE) -C src/cddl
+else
+cddl:
+endif
 
 .PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
