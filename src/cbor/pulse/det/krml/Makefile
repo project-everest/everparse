@@ -11,8 +11,8 @@ ALREADY_CACHED := '*,'
 OUTPUT_DIRECTORY:=extracted
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 
-C_DIRECTORY:=$(realpath ../c)
-RUST_DIRECTORY:=$(realpath ../rust/src)
+C_DIRECTORY:=$(realpath ../c)/extracted
+RUST_DIRECTORY:=rust-extracted
 
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/everparse.Makefile

@@ -1,4 +1,4 @@
-all: quackyducky lowparse 3d asn1
+all: quackyducky lowparse 3d asn1 cbor
 
 lowparse:
 	+$(MAKE) -C src/lowparse
@@ -57,13 +57,16 @@ lowparse-pulse: lowparse
 
 .PHONY: lowparse-pulse
 
-cbor: lowparse-pulse
-	+$(MAKE) -C src/cbor
+cbor:
+	+$(MAKE) -C src/cbor/pulse/det
+
+cbor-interface:
+	+$(MAKE) -C src/cbor interface
 
 cbor-det-c-test: cbor
 	+$(MAKE) -C src/cbor/pulse/det/c/test
 
-cbor-det-c-vertest: cbor
+cbor-det-c-vertest: cbor cbor-interface
 	+$(MAKE) -C src/cbor/pulse/det/vertest/c
 
 .PHONY: cbor-det-c-vertest
@@ -72,9 +75,19 @@ cbor-det-c-vertest: cbor
 cbor-det-rust-test: cbor
 	+cd src/cbor/pulse/det/rust && cargo test
 
-cbor-test: cbor-det-c-test cbor-det-rust-test cbor-det-c-vertest
+cbor-test-snapshot: cbor-interface lowparse-pulse
+	+$(MAKE) -C src/cbor test-snapshot
 
-cddl: cbor
+.PHONY: cbor-test-snapshot
+
+# This rule is incompatible with `cbor` and `cbor-test-snapshot`
+cbor-snapshot: cbor-interface lowparse-pulse
+	+$(MAKE) -C src/cbor snapshot
+.PHONY: cbor-snapshot
+
+cbor-test: cbor-det-c-test cbor-det-rust-test cbor-det-c-vertest cbor-test-snapshot
+
+cddl: cbor cbor-interface
 	+$(MAKE) -C src/cddl
 
 .PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl

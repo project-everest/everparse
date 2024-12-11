@@ -1,6 +1,12 @@
-all: pulse/det.do
+all: snapshot
 
-test: pulse/det/c/test.do
+interface: spec.do pulse.do
+
+snapshot: pulse/det/krml.do
+	+$(MAKE) -C pulse/det $@
+
+test-snapshot: pulse/det/krml.do
+	+$(MAKE) -C pulse/det $@
 
 spec.do:
 
@@ -14,11 +20,11 @@ pulse/raw.do: spec/raw.do pulse.do
 
 pulse/raw/everparse.do: pulse/raw.do spec/raw/everparse.do
 
-pulse/det.do: pulse/raw/everparse.do
-
-pulse/det/c/test.do: pulse/det.do
+pulse/det/krml.do: pulse/raw/everparse.do
 
 %.do:
 	+$(MAKE) -C $(basename $@)
 
-.PHONY: all test %.do
+.PHONY: all %.do
+
+.PHONY: interface snapshot test-snapshot
