@@ -1,4 +1,8 @@
-all: quackyducky lowparse 3d asn1 cbor
+all: package-subset asn1 cbor cbor-interface
+
+package-subset: quackyducky lowparse 3d
+
+.PHONY: package-subset
 
 lowparse:
 	+$(MAKE) -C src/lowparse
