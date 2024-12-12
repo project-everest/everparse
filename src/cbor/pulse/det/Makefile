@@ -22,7 +22,7 @@ c.snapshot: source_dir=c/extracted
 c.snapshot: target_dir=..
 
 rust.snapshot: source_dir=krml/rust-extracted
-rust.snapshot: target_dir=../../rust
+rust.snapshot: target_dir=../../rust/src
 
 snapshot: c.snapshot rust.snapshot
 
