@@ -116,7 +116,7 @@ let gen_encoding_test_c
         `Instr ("return 1") ::
         []
      ) ::
-    `Instr ("target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, " ^ size_s ^ "))") ::
+    `Instr ("target_byte_size = cbor_det_serialize (source_cbor, target_bytes, " ^ size_s ^ ")") ::
     `If ("target_byte_size != " ^ size_s) ::
     `Block (
         `Instr ("printf(\"Encoding failed: expected " ^ size_s ^ " bytes, wrote %ld\\n\", target_byte_size)") ::
@@ -133,7 +133,7 @@ let gen_encoding_test_c
         []
      ) ::
     `Instr ("printf(\"Encoding succeeded!\\n\")") ::
-    `Instr ("target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, " ^ size_s ^ "))") ::
+    `Instr ("target_byte_size = cbor_det_validate(source_bytes, " ^ size_s ^ ")") ::
     `If ("target_byte_size != " ^ size_s) ::
     `Block (
         `Instr ("printf(\"Validation failed: expected " ^ size_s ^ " bytes, got %ld\\n\", target_byte_size)") ::
@@ -141,7 +141,7 @@ let gen_encoding_test_c
         []
     ) ::
     `Instr ("printf(\"Validation succeeded!\\n\")") ::
-    `Instr ("cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, " ^ size_s ^ "), target_byte_size)") ::
+    `Instr ("cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size)") ::
     `Instr ("printf(\"Parsing succeeded!\\n\")") ::
     `If ("! (cbor_det_equal(source_cbor, target_cbor))") ::
     `Block (
@@ -252,14 +252,14 @@ let gen_utf8_tests () : c list = In_channel.with_open_bin "./utf8tests.txt" (fun
                  ] ::
                `Instr ("printf(\"Size computation succeeded!\\n\")") ::
                `Instr ("uint8_t output[" ^ outlen ^ "]") ::
-               `Instr ("size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, " ^ outlen ^ "))") ::
+               `Instr ("size_t serialized_size = cbor_det_serialize(mycbor, output, " ^ outlen ^ ")") ::
                `If ("size != serialized_size") ::
                `Block [
                    `Instr ("printf(\"Serialized a different size: expected %ld, got %ld\\n\", size, serialized_size)");
                    `Instr ("return 1")
                  ] ::
                `Instr ("printf(\"Serialization succeeded!\\n\")") ::
-               `Instr ("size_t test = cbor_det_validate(mk_byte_slice(output, size))") ::
+               `Instr ("size_t test = cbor_det_validate(output, size)") ::
                begin
                  if is_valid
                  then
@@ -269,7 +269,7 @@ let gen_utf8_tests () : c list = In_channel.with_open_bin "./utf8tests.txt" (fun
                        `Instr ("return 1")
                    ] ::
                    `Instr ("printf(\"Validation succeeded!\\n\")") ::
-                   `Instr ("cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size)") ::
+                   `Instr ("cbor_det_t outcbor = cbor_det_parse(output, size)") ::
                    `If ("! cbor_det_equal(mycbor, outcbor)") ::
                    `Block [
                        `Instr ("printf(\"Round-trip failed\\n\")");
@@ -301,10 +301,6 @@ let mk_prog (x: c list) = "
 #include \"CBORDetTest.h\"
 
 static char * hex_digits[16] = {\"0\", \"1\", \"2\", \"3\", \"4\", \"5\", \"6\", \"7\", \"8\", \"9\", \"a\", \"b\", \"c\", \"d\", \"e\", \"f\"};
-
-static Pulse_Lib_Slice_slice__uint8_t mk_byte_slice (uint8_t *elt, size_t len) {
-  return (Pulse_Lib_Slice_slice__uint8_t) { elt = elt, len = len };
-}
 
 static void dump_encoding_test_failure (uint8_t *bytes, size_t len) {
   size_t pos = 0;

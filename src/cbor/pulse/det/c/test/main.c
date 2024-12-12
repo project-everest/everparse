@@ -4,13 +4,9 @@
 #include "CBORDet.h"
 #include "CBORDetTest.h"
 
-static Pulse_Lib_Slice_slice__uint8_t mk_byte_slice (uint8_t *elt, size_t len) {
-  return (Pulse_Lib_Slice_slice__uint8_t) { elt = elt, len = len };
-}
-
 static int do_test(uint8_t *source_bytes, size_t len, bool success) {
   clock_t start = clock ();
-  size_t validate = cbor_det_validate(mk_byte_slice(source_bytes, len));
+  size_t validate = cbor_det_validate(source_bytes, len);
   clock_t stop = clock ();
   printf("Time elapsed: %f\n", ((double) (stop - start)) / CLOCKS_PER_SEC);
   if ((validate == 0) == success) {
