@@ -36,7 +36,7 @@ typedef struct _V(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) 
 //SNIPPET_END: reuse copy buffer$
 
 //SNIPPET_START: indirect$
-entrypoint probe ProbeAndCopy(length=9)
+entrypoint probe ProbeAndCopy(length=sizeof(this))
 typedef struct _Indirect {
   UINT32 fst;
   UINT32 snd;
@@ -53,8 +53,8 @@ typedef struct _TT {
   UINT8 tag;
 } TT;
 
-entrypoint probe ProbeAndCopy(length=9)
+entrypoint
 typedef struct _I(EVERPARSE_COPY_BUFFER_T dest) {
-  TT *ttptr probe ProbeAndCopy(length=9, destination=dest);
+  TT *ttptr probe ProbeAndCopy(length=sizeof(TT), destination=dest);
 } I;
 //SNIPPET_END: indirect alt$
