@@ -108,6 +108,8 @@ make_everparse() {
     # Verify if F* and KaRaMeL are here
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
+    # GM: Retaining this use of FSTAR_HOME as it is cloning and
+    # uses the repo to figure out commit metadata.
     if [[ -z "$FSTAR_HOME" ]] ; then
         if [[ -d FStar ]] ; then
             export FSTAR_HOME=$(fixpath $PWD/FStar)
@@ -120,6 +122,8 @@ make_everparse() {
     else
         export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
     fi
+    export FSTAR_EXE=$FSTAR_HOME/bin/fstar.exe
+
     if [[ -z "$KRML_HOME" ]] ; then
         { [[ -d karamel ]] || git clone https://github.com/FStarLang/karamel ; }
         export KRML_HOME=$(fixpath $PWD/karamel)
@@ -144,8 +148,8 @@ make_everparse() {
         $MAKE -C "$FSTAR_HOME" "$@"
     fi
     if [[ -z "$fstar_commit_id" ]] ; then
-        fstar_commit_id=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^commit=' | sed 's!^.*=!!')
-        fstar_commit_date_hr=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^date=' | sed 's!^.*=!!')
+        fstar_commit_id=$("$FSTAR_EXE" --version | grep '^commit=' | sed 's!^.*=!!')
+        fstar_commit_date_hr=$("$FSTAR_EXE" --version | grep '^date=' | sed 's!^.*=!!')
     fi
     if $is_windows ; then
         # FIXME: krmllib cannot be built on Windows because the krmllib Makefiles use Cygwin paths, which cannot be used by the krml executable
@@ -211,11 +215,11 @@ make_everparse() {
       # we have a F* source tree
       # TODO: create some `install-minimal` rule in the F* Makefile
       everparse_package_dir=$(fixpath "$(pwd)/everparse")
-      $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/
+      $cp $FSTAR_EXE everparse/bin/
       PREFIX="$everparse_package_dir" $MAKE -C $FSTAR_HOME/ulib install
     else
       # we have a F* binary package, or opam package
-      $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/
+      $cp $FSTAR_EXE everparse/bin/
       mkdir everparse/lib
       $cp -r $FSTAR_HOME/lib/fstar everparse/lib/fstar
     fi

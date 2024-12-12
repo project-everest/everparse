@@ -5,17 +5,7 @@ all: html 3d
 
 export EVERPARSE_HOME?=$(realpath ..)
 
-ifndef FSTAR_HOME
-  FSTAR_EXE=$(shell which fstar.exe)
-  ifeq ($(FSTAR_EXE),)
-    # fstar.exe not found in PATH, assuming Everest source tree
-    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
-  else
-    # fstar.exe found in PATH, assuming directory ending with /bin
-    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
-  endif
-  export FSTAR_HOME
-endif
+FSTAR_EXE ?= fstar.exe
 
 export KRML_HOME?=$(realpath $(EVERPARSE_HOME)/../karamel)
 

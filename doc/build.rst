@@ -211,9 +211,9 @@ fetch and build EverParse sources:
       to run ``eval $(opam env)`` (as instructed during ``opam init``
       or ``./everest opam``), or log out and back in.
 
-4. Set the ``FSTAR_HOME`` environment variable to the ``FStar``
-   subdirectory of your Everest clone, which contains a clone of the
-   latest F\*.
+4. Set the ``FSTAR_EXE`` environment variable to the fstar.exe binary
+   in your Everest clone (in ``FStar/bin/fstar.exe``), or add the 
+   ``FStar/bin`` directory to your ``$PATH``.
 
 5. Set the ``KRML_HOME`` environment variable to the ``karamel``
    subdirectory of your Everest clone, which contains a clone of the

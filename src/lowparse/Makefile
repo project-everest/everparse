@@ -8,6 +8,7 @@ all: verify
 
 EVERPARSE_SRC_PATH = $(realpath ..)
 
+include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
 ALREADY_CACHED := *,-LowParse,

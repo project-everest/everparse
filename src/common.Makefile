@@ -53,7 +53,7 @@ ifneq ($(RESOURCEMONITOR),)
 	RUNLIM=runlim -p -o $@.$(MONPREFIX)runlim
 endif
 
-FSTAR=$(RUNLIM) $(FSTAR_HOME)/bin/fstar.exe $(SIL) $(FSTAR_OPTIONS)
+FSTAR=$(RUNLIM) $(FSTAR_EXE) $(SIL) $(FSTAR_OPTIONS)
 
 FSTAR_DEP_FILE ?= .depend
 

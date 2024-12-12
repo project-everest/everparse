@@ -521,8 +521,8 @@ OCAML
   fi
 
   magenta "Note: you *may* want to add ${xpwd}/FStar/bin and ${xpwd}/karamel to your PATH"
-  [ -n "${FSTAR_HOME}" ] || \
-    magenta "Note: you *may* want to export FSTAR_HOME=${xpwd}/FStar"
+  [ -n "${FSTAR_EXE}" ] || \
+    magenta "Note: you *may* want to export FSTAR_EXE=${xpwd}/FStar/bin/fstar.exe"
   [ -n "${KRML_HOME}" ] || \
     magenta "Note: you *may* want to export KRML_HOME=${xpwd}/karamel"
 }

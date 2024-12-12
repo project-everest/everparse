@@ -1,19 +1,8 @@
-ifndef FSTAR_HOME
-  FSTAR_EXE=$(shell which fstar.exe)
-  ifeq ($(FSTAR_EXE),)
-    # fstar.exe not found in PATH, assuming Everest source tree
-    FSTAR_HOME=$(realpath ../../../FStar)
-  else
-    # fstar.exe found in PATH, assuming directory ending with /bin
-    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
-  endif
-  export FSTAR_HOME
-endif
+FSTAR_EXE ?= fstar.exe
 
 LOWPARSE_HOME ?= ../../src/lowparse
 KRML_HOME ?= ../../../karamel
 
-export FSTAR_HOME
 export LOWPARSE_HOME
 export KRML_HOME
 
@@ -33,7 +22,7 @@ FSTAR_OPTIONS = --odir krml --cache_dir $(CACHE_DIR) $(LAX_OPT) --cache_checked_
 		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
 		--include $(LOWPARSE_HOME) --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --include .. --cmi
 
-FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
+FSTAR = $(FSTAR_EXE) --trace_error $(FSTAR_OPTIONS)
 
 HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 

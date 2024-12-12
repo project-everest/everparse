@@ -1,7 +1,5 @@
-export OCAMLPATH += $(FSTAR_HOME)/lib
-
 all:
-	dune build
+	$(FSTAR_EXE) --ocamlenv dune build
 
 clean:
 	rm -rf _build extracted

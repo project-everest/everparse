@@ -20,8 +20,7 @@ get_everparse_version() {
 
 get_fstar_commit() {
     (
-	cd $FSTAR_HOME
-        git show --no-patch --format=%h
+	$FSTAR_EXE --version | sed -n 's/commit=\(.\{10\}\).*/\1/p'
     )
 }
 

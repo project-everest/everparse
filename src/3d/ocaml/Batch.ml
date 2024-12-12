@@ -2,7 +2,6 @@ open OS
 open HashingOptions
 
 (* paths *)
-let fstar_home = OS.getenv "FSTAR_HOME"
 let krml_home = OS.getenv "KRML_HOME"
 let krmllib = filename_concat krml_home "krmllib"
 let everparse_home = OS.getenv "EVERPARSE_HOME"
@@ -22,7 +21,7 @@ let ddd_actions_c_home input_stream_binding =
   filename_concat ddd_prelude_home (string_of_input_stream_binding input_stream_binding)
 
 (* fstar.exe executable *)
-let fstar_exe = (filename_concat (filename_concat fstar_home "bin") "fstar.exe")
+let fstar_exe = try OS.getenv "FSTAR_EXE" with | OS.Undefined_environment_variable _ -> "fstar.exe"
 
 (* krml: on Windows, needs to be copied into .exe *)
 let krml out_dir =

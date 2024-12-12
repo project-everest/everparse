@@ -3,6 +3,9 @@
 ARG FSTAR_BRANCH=master
 FROM fstar:local-branch-$FSTAR_BRANCH
 
+# A crutch: the image above sets FSTAR_HOME but not FSTAR_EXE
+ENV FSTAR_EXE=$FSTAR_HOME/bin/fstar.exe
+
 ADD --chown=opam:opam ./ $HOME/everparse/
 WORKDIR $HOME/everparse
 
