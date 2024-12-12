@@ -649,6 +649,44 @@ let mk_map_gen_post
           cbor_map_length v' == Seq.length va
         )
 
+let mk_map_gen_by_ref_postcond
+  (#t1: Type)
+  (vdest0: t1)
+  (res: option t1)
+  (vdest: t1)
+  (bres: bool)
+: Tot prop
+= bres == Some? res /\
+  vdest == begin match res with
+  | None -> vdest0
+  | Some v -> v
+  end
+
+inline_for_extraction
+let mk_map_gen_by_ref_t
+  (#t1 #t2: Type)
+  (vmatch1: perm -> t1 -> cbor -> slprop)
+  (vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
+= (a: S.slice t2) ->
+  (dest: R.ref t1) -> 
+  (#va: Ghost.erased (Seq.seq t2)) ->
+  (#pv: perm) ->
+  (#vv: Ghost.erased (list (cbor & cbor))) ->
+  (#vdest0: Ghost.erased t1) ->
+  stt bool
+    (pts_to a va ** pts_to dest vdest0 **
+      PM.seq_list_match va vv (vmatch2 pv)
+    )
+    (fun bres -> exists* res vdest . mk_map_gen_post vmatch1 vmatch2 a va pv vv res **
+      pts_to dest vdest **
+      pure (
+        mk_map_gen_by_ref_postcond (Ghost.reveal vdest0) res vdest bres /\ (
+        Some? res <==> (
+        FStar.UInt.fits (SZ.v (S.len a)) U64.n /\
+        List.Tot.no_repeats_p (List.Tot.map fst vv)      
+      )))
+    )
+
 inline_for_extraction
 let mk_map_gen_t
   (#t1 #t2: Type)
@@ -668,6 +706,33 @@ let mk_map_gen_t
         List.Tot.no_repeats_p (List.Tot.map fst vv)      
       ))
     )
+
+inline_for_extraction
+```pulse
+fn mk_map_gen
+  (#t1 #t2: Type0)
+  (#vmatch1: perm -> t1 -> cbor -> slprop)
+  (#vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
+  (dummy: t1)
+  (mk_map_gen_by_ref: mk_map_gen_by_ref_t vmatch1 vmatch2)
+: mk_map_gen_t u#0 #_ #_ vmatch1 vmatch2
+= (a: S.slice t2)
+  (#va: Ghost.erased (Seq.seq t2))
+  (#pv: perm)
+  (#vv: Ghost.erased (list (cbor & cbor)))
+{
+  let mut dest = dummy;
+  S.pts_to_len a;
+  PM.seq_list_match_length (vmatch2 pv) va vv;
+  let bres = mk_map_gen_by_ref a dest;
+  if bres {
+    let res = !dest;
+    Some res
+  } else {
+    None #t1
+  }
+}
+```
 
 inline_for_extraction
 let mk_map_t
@@ -700,7 +765,7 @@ let mk_map_t
 
 inline_for_extraction
 ```pulse
-fn mk_map
+fn mk_map_from_option
   (#t1 #t2: Type0)
   (#vmatch1: perm -> t1 -> cbor -> slprop)
   (#vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
@@ -715,6 +780,30 @@ fn mk_map
   PM.seq_list_match_length (vmatch2 pv) va vv;
   let sres = mk_map_gen a;
   let Some res = sres;
+  unfold (mk_map_gen_post vmatch1 vmatch2 a va pv vv (Some res));
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn mk_map_from_ref
+  (#t1 #t2: Type0)
+  (#vmatch1: perm -> t1 -> cbor -> slprop)
+  (#vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
+  (dummy: t1)
+  (mk_map_gen: mk_map_gen_by_ref_t vmatch1 vmatch2)
+: mk_map_t u#0 #_ #_ vmatch1 vmatch2
+= (a: S.slice t2)
+  (#va: Ghost.erased (Seq.seq t2))
+  (#pv: perm)
+  (#vv: Ghost.erased (list (cbor & cbor)))
+{
+  let mut dest = dummy;
+  S.pts_to_len a;
+  PM.seq_list_match_length (vmatch2 pv) va vv;
+  let _ = mk_map_gen a dest;
+  let res = !dest;
   unfold (mk_map_gen_post vmatch1 vmatch2 a va pv vv (Some res));
   res
 }
@@ -761,6 +850,29 @@ let map_get_post
   | Some x' -> map_get_post_some vmatch x px vx vk x'
 
 inline_for_extraction
+let map_get_by_ref_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (k: t) ->
+  (dest: R.ref t) ->
+  (#px: perm) ->
+  (#vx: Ghost.erased cbor) ->
+  (#pk: perm) ->
+  (#vk: Ghost.erased cbor) ->
+  (#vdest0: Ghost.erased t) ->
+  stt bool
+    (vmatch px x vx ** vmatch pk k vk ** pts_to dest vdest0 ** pure (CMap? (unpack vx)))
+    (fun bres -> exists* vdest res .
+      vmatch pk k vk **
+      map_get_post vmatch x px vx vk res **
+      pts_to dest vdest **
+      pure (CMap? (unpack vx) /\ (Some? (cbor_map_get (CMap?.c (unpack vx)) vk) == Some? res) /\
+        mk_map_gen_by_ref_postcond (Ghost.reveal vdest0) res vdest bres
+      )
+    )
+
+inline_for_extraction
 let map_get_t
   (#t: Type)
   (vmatch: perm -> t -> cbor -> slprop)
@@ -777,3 +889,29 @@ let map_get_t
       map_get_post vmatch x px vx vk res **
       pure (CMap? (unpack vx) /\ (Some? (cbor_map_get (CMap?.c (unpack vx)) vk) == Some? res))
     )
+
+inline_for_extraction
+```pulse
+fn map_get_as_option
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (m: map_get_by_ref_t vmatch)
+: map_get_t u#0 #t vmatch
+=
+  (x: _)
+  (k: _)
+  (#px: _)
+  (#vx: _)
+  (#pk: _)
+  (#vk: _)
+{
+  let mut dest = k;
+  let bres = m x k dest;
+  if bres {
+    let res = !dest;
+    Some res
+  } else {
+    None #t
+  }
+}
+```

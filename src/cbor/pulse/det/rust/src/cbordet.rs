@@ -104,10 +104,10 @@ pub fn cbor_det_serialize <'a>(x: CborDet <'a>, output: &'a mut [u8]) ->
 pub fn cbor_det_mk_simple_value <'a>(v: u8) -> Option<CborDet<'a>>
 {
     match crate::cbordetver::cbor_det_mk_simple_value(v) {
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    return None;
 	}
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
 	    return Some(v);
 	}
     }
@@ -151,10 +151,10 @@ pub fn cbor_det_mk_text_string <'a>(s: &'a str) ->
     let ty· : crate::cbordetver::cbor_det_string_kind =
 	crate::cbordetver::cbor_det_string_kind::TextString;
     match crate::cbordetver::cbor_det_mk_string(ty·, s.as_bytes()) {
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
 	    Some(v)
 	}
     }
@@ -170,10 +170,10 @@ pub fn cbor_det_mk_byte_string <'a>(s: &'a [u8]) ->
     let ty· : crate::cbordetver::cbor_det_string_kind =
 	crate::cbordetver::cbor_det_string_kind::ByteString;
     match crate::cbordetver::cbor_det_mk_string(ty·, s) {
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v } => {
 	    Some(v)
 	}
     }
@@ -202,10 +202,10 @@ pub fn cbor_det_mk_array <'a>(a: &'a [CborDet <'a>]) ->
     Option<CborDet<'a>>
 {
     match crate::cbordetver::cbor_det_mk_array(a) {
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -244,10 +244,10 @@ pub fn cbor_det_mk_map <'a>(a: &'a mut [CborDetMapEntry <'a>]) ->
     Option<CborDet<'a>>
 {
     match crate::cbordetver::cbor_det_mk_map(a) {
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -377,10 +377,10 @@ pub fn cbor_det_get_array_item <'a>(x: CborDetArray <'a>, i: u64) ->
     Option<CborDet<'a>>
 {
     match crate::cbordetver::cbor_det_get_array_item(x.array, i) {
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }
@@ -438,10 +438,10 @@ pub fn cbor_det_map_get <'a>(
     Option<CborDet<'a>>
 {
     match crate::cbordetver::cbor_det_map_get(x.map, k) {
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::None => {
 	    None
 	}
-	crate::cbordetveraux::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
+	crate::cbordetver::option__CBOR_Pulse_Raw_Type_cbor_raw::Some {v} => {
 	    Some(v)
 	}
     }

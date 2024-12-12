@@ -653,13 +653,16 @@ decreases v
 
 #restart-solver
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_mk_map_gen (_: unit)
-: mk_map_gen_t u#0 #cbor_det_t #cbor_det_map_entry_t cbor_det_match cbor_det_map_entry_match
+: mk_map_gen_by_ref_t #cbor_det_t #cbor_det_map_entry_t cbor_det_match cbor_det_map_entry_match
 = (a: _)
+  (dest: _)
   (#va: _)
   (#pv: _)
   (#vv: _)
+  (#vdest0: _)
 {
   S.pts_to_len a;
   PM.seq_list_match_length (cbor_det_map_entry_match pv) va vv;
@@ -667,7 +670,7 @@ fn cbor_det_mk_map_gen (_: unit)
   if (SZ.gt (S.len a) (SZ.uint64_to_sizet 18446744073709551615uL)) {
     Trade.refl (PM.seq_list_match va vv (cbor_det_map_entry_match pv));
     fold (mk_map_gen_post cbor_det_match cbor_det_map_entry_match a va pv vv None);
-    None #cbor_det_t
+    false
   } else {
     let vv1 = Ghost.hide (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry vv);
     Pulse.Lib.Sort.Merge.Spec.spec_sort_correct (SpecRaw.map_entry_order SpecRaw.deterministically_encoded_cbor_map_key_order _) SpecRaw.cbor_map_entry_raw_compare vv1;
@@ -705,7 +708,8 @@ fn cbor_det_mk_map_gen (_: unit)
         (cbor_det_match p' res (SpecRaw.pack (SpecRaw.CMap (SpecRaw.CMap?.c (SpecRaw.unpack v')))));
       Trade.trans (cbor_det_match p' res (SpecRaw.pack (SpecRaw.CMap (SpecRaw.CMap?.c (SpecRaw.unpack v'))))) _ _;
       fold (mk_map_gen_post cbor_det_match cbor_det_map_entry_match a va pv vv (Some res));
-      Some res
+      dest := res;
+      true
     } else {
       CBOR.Spec.Util.list_memP_map_forall SpecRaw.mk_det_raw_cbor_map_entry vv;
       List.Tot.for_all_mem (CBOR.Spec.Util.holds_on_pair (SpecRaw.holds_on_raw_data_item (SpecRaw.raw_data_item_ints_optimal_elem))) vv';
@@ -721,7 +725,7 @@ fn cbor_det_mk_map_gen (_: unit)
       assert (pure (List.Tot.length vv <= pow2 64 - 1));
       assert (pure (mk_map_gen_none_postcond va vv va' vv2));
       fold (mk_map_gen_post cbor_det_match cbor_det_map_entry_match a va pv vv None);
-      None #cbor_det_t
+      false
     }
   }
 }
@@ -1230,6 +1234,7 @@ let det_map_iterator_start_t
         det_map_iterator_start_post y l'
     ))
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_map_iterator_start' (_: unit) : det_map_iterator_start_t
 = (x: _)
@@ -1448,15 +1453,18 @@ ensures
 }
 ```
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_map_get (_: unit)
-: map_get_t u#0 #_ cbor_det_match
+: map_get_by_ref_t #_ cbor_det_match
 = (x: _)
   (k: _)
+  (dest: _)
   (#px: _)
   (#vx: _)
   (#pk: _)
   (#vk: _)
+  (#vdest0: _)
 {
   let m : Ghost.erased Spec.cbor_map = Ghost.hide (Spec.CMap?.c (Spec.unpack vx));
   let i = cbor_det_map_iterator_start' () x;
@@ -1521,6 +1529,15 @@ fn cbor_det_map_get (_: unit)
   };
   with gb gi gres . assert (cbor_det_map_get_invariant gb px x vx vk m p' gi gres);
   cbor_det_map_get_invariant_false_elim px x vx vk m p' gi gres;
-  !pres
+  let res = !pres;
+  match res {
+    None -> {
+      false
+    }
+    Some vres -> {
+      dest := vres;
+      true
+    }
+  }
 }
 ```

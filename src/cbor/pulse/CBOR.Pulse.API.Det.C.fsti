@@ -183,3 +183,5 @@ ensures
   res
 }
 ```
+
+val cbor_det_map_get () : map_get_by_ref_t cbor_det_match

@@ -193,7 +193,7 @@ ensures
 fn cbor_det_mk_map (_: unit) : Base.mk_map_gen_t u#0 #_ #_ cbor_det_match cbor_det_map_entry_match
 = (a: _) (#va: _) (#pv: _) (#vv: _)
 {
-  Det.cbor_det_mk_map_gen () a #va #pv #vv
+   Base.mk_map_gen (dummy_cbor_det_t ()) (Det.cbor_det_mk_map_gen ()) a #va #pv #vv
 }
 ```
 
@@ -561,7 +561,7 @@ ensures
     )
 {
   cbor_det_map_match_elim x;
-  let res = Det.cbor_det_map_get () x.map k;
+  let res = Base.map_get_as_option (Det.cbor_det_map_get ()) x.map k;
   cbor_det_map_get_post_to_safe x px vx vk res;
   res
 }

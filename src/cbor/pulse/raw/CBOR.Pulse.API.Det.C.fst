@@ -72,7 +72,7 @@ fn cbor_det_mk_map_from_array (_: unit) : cbor_det_mk_map_from_array_t
   let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
   let s = S.from_array a (SZ.uint64_to_sizet len);
   S.pts_to_len s;
-  let res = cbor_det_mk_map () s;
+  let res = CBOR.Pulse.API.Base.mk_map_from_ref (CBOR.Pulse.API.Det.Type.dummy_cbor_det_t ()) (CBOR.Pulse.API.Det.Common.cbor_det_mk_map_gen ()) s;
   with p' v' va' . assert (
       Trade.trade
         (cbor_det_match p' res (Spec.pack (Spec.CMap v')))
@@ -90,5 +90,23 @@ fn cbor_det_mk_map_from_array (_: unit) : cbor_det_mk_map_from_array_t
   Trade.reg_r (pts_to s va') (A.pts_to a va') (PM.seq_list_match va vv (cbor_det_map_entry_match pv));
   Trade.trans (cbor_det_match p' res (Spec.pack (Spec.CMap v'))) _ _;
   res
+}
+```
+
+```pulse
+fn cbor_det_map_get
+  (_: unit)
+: map_get_by_ref_t #_ cbor_det_match
+=
+  (x: _)
+  (k: _)
+  (dest: _)
+  (#px: _)
+  (#vx: _)
+  (#pk: _)
+  (#vk: _)
+  (#vdest0: _)
+{
+  CBOR.Pulse.API.Det.Common.cbor_det_map_get () x k dest
 }
 ```

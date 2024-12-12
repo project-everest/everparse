@@ -148,11 +148,8 @@ val cbor_det_map_entry_match: perm -> cbor_det_map_entry_t -> Spec.cbor & Spec.c
 
 val cbor_det_mk_map_entry () : mk_map_entry_t cbor_det_match cbor_det_map_entry_match
 
-val cbor_det_mk_map_gen () : mk_map_gen_t cbor_det_match cbor_det_map_entry_match
-
-inline_for_extraction [@@noextract_to "krml"]
-let cbor_det_mk_map () : mk_map_t cbor_det_match cbor_det_map_entry_match =
-  mk_map (cbor_det_mk_map_gen ())
+inline_for_extraction noextract [@@noextract_to "krml"]
+val cbor_det_mk_map_gen () : mk_map_gen_by_ref_t cbor_det_match cbor_det_map_entry_match
 
 (* Destructors *)
 
@@ -243,4 +240,5 @@ val cbor_det_map_entry_key () : map_entry_key_t cbor_det_map_entry_match cbor_de
 
 val cbor_det_map_entry_value () : map_entry_value_t cbor_det_map_entry_match cbor_det_match
 
-val cbor_det_map_get () : map_get_t cbor_det_match
+inline_for_extraction noextract [@@noextract_to "krml"]
+val cbor_det_map_get () : map_get_by_ref_t cbor_det_match
