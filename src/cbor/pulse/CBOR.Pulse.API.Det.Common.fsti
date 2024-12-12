@@ -75,6 +75,8 @@ let cbor_det_validate_post
       then (~ (exists v1 v2 . v == Spec.cbor_det_serialize v1 `Seq.append` v2))
       else (exists v1 v2 . v == Spec.cbor_det_serialize v1 `Seq.append` v2 /\ SZ.v res == Seq.length (Spec.cbor_det_serialize v1))
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 val cbor_det_validate
   (input: S.slice U8.t)
   (#pm: perm)
@@ -85,6 +87,8 @@ val cbor_det_validate
       cbor_det_validate_post v res
     ))
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 val cbor_det_parse
   (input: S.slice U8.t)
   (len: SZ.t)
@@ -123,6 +127,19 @@ val cbor_det_size
       cbor_det_size_post bound y res
     ))
 
+noextract [@@noextract_to "krml"]
+let cbor_det_serialize_postcond
+  (y: Spec.cbor)
+  (res: SZ.t)
+  (v: Seq.seq U8.t)
+: Tot prop
+=
+      let s = Spec.cbor_det_serialize y in
+      SZ.v res == Seq.length s /\
+      (exists v' . v `Seq.equal` (s `Seq.append` v'))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 val cbor_det_serialize
   (x: cbor_det_t)
   (output: S.slice U8.t)
@@ -131,17 +148,17 @@ val cbor_det_serialize
 : stt SZ.t
     (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (S.len output)))
     (fun res -> exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
-      let s = Spec.cbor_det_serialize y in
-      SZ.v res == Seq.length s /\
-      (exists v' . v `Seq.equal` (s `Seq.append` v'))
+      cbor_det_serialize_postcond y res v
     ))
 
 (* Constructors *)
 
 val cbor_det_mk_simple_value () : mk_simple_t cbor_det_match
 val cbor_det_mk_int64 () : mk_int64_t cbor_det_match
+inline_for_extraction noextract [@@noextract_to "krml"]
 val cbor_det_mk_string () : mk_string_t cbor_det_match
 val cbor_det_mk_tagged () : mk_tagged_t cbor_det_match
+inline_for_extraction noextract [@@noextract_to "krml"]
 val cbor_det_mk_array () : mk_array_t cbor_det_match
 
 val cbor_det_map_entry_match: perm -> cbor_det_map_entry_t -> Spec.cbor & Spec.cbor -> slprop
@@ -159,6 +176,8 @@ val cbor_det_read_simple_value () : read_simple_value_t cbor_det_match
 val cbor_det_elim_simple () : elim_simple_t cbor_det_match
 val cbor_det_read_uint64 () : read_uint64_t cbor_det_match
 val cbor_det_elim_int64 () : elim_int64_t cbor_det_match
+val cbor_det_get_string_length () : get_string_length_t cbor_det_match
+inline_for_extraction noextract [@@noextract_to "krml"]
 val cbor_det_get_string () : get_string_t cbor_det_match
 val cbor_det_get_tagged_tag () : get_tagged_tag_t cbor_det_match
 val cbor_det_get_tagged_payload () : get_tagged_payload_t cbor_det_match

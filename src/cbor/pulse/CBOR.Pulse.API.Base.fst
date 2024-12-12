@@ -159,6 +159,28 @@ let elim_int64_t
     (vmatch p x y ** pure (CInt64? (unpack y)))
     (fun _ -> emp)
 
+let get_string_length_post
+  (y: cbor)
+  (v' : U64.t)
+: Tot prop
+= match unpack y with
+      | CString _ v -> Seq.length v == U64.v v'
+      | _ -> False
+
+inline_for_extraction
+let get_string_length_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+= (x: t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased cbor) ->
+  stt U64.t
+    (vmatch p x y ** pure (CString? (unpack y)))
+    (fun res ->
+      vmatch p x y ** 
+      pure (get_string_length_post y res)
+    )
+
 let get_string_post
   (y: cbor)
   (v' : Seq.seq FStar.UInt8.t)

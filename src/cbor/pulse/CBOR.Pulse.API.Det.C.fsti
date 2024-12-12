@@ -12,6 +12,47 @@ module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 
+module AP = Pulse.Lib.ArrayPtr
+
+val cbor_det_validate
+  (input: AP.ptr U8.t)
+  (input_len: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+: stt SZ.t
+    (pts_to input #pm v ** pure (SZ.v input_len == Seq.length v))
+    (fun res -> pts_to input #pm v ** pure (
+      cbor_det_validate_post v res
+    ))
+
+val cbor_det_parse
+  (input: AP.ptr U8.t)
+  (len: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+: stt cbor_det_t
+    (pts_to input #pm v ** pure (
+      exists v1 v2 . Ghost.reveal v == Spec.cbor_det_serialize v1 `Seq.append` v2 /\ SZ.v len == Seq.length (Spec.cbor_det_serialize v1)
+    ))
+    (fun res -> exists* v' .
+      cbor_det_match 1.0R res v' **
+      Trade.trade (cbor_det_match 1.0R res v') (pts_to input #pm v) ** pure (
+        SZ.v len <= Seq.length v /\
+        Seq.slice v 0 (SZ.v len) == Spec.cbor_det_serialize v'
+    ))
+
+val cbor_det_serialize
+  (x: cbor_det_t)
+  (output: AP.ptr U8.t)
+  (output_len: SZ.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#pm: perm)
+: stt SZ.t
+    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
+    (fun res -> exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
+      cbor_det_serialize_postcond y res v
+    ))
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let cbor_det_mk_string_from_array_t =
@@ -183,5 +224,23 @@ ensures
   res
 }
 ```
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_det_get_string_t
+= (x: cbor_det_t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased Spec.cbor) ->
+  stt (AP.ptr FStar.UInt8.t)
+    (cbor_det_match p x y ** pure (Spec.CString? (Spec.unpack y)))
+    (fun res -> exists* p' v' .
+      pts_to res #p' v' **
+      Trade.trade
+        (pts_to res #p' v')
+        (cbor_det_match p x y) **
+      pure (get_string_post y v')
+    )
+
+val cbor_det_get_string () : cbor_det_get_string_t
 
 val cbor_det_map_get () : map_get_by_ref_t cbor_det_match

@@ -102,6 +102,7 @@ let cbor_det_validate_post_intro
 = Classical.forall_intro (Classical.move_requires SpecRaw.mk_det_raw_cbor_mk_cbor);
   assert (forall (v1: SpecRaw.raw_data_item) . (SpecRaw.raw_data_item_ints_optimal v1 /\ SpecRaw.raw_data_item_sorted SpecRaw.deterministically_encoded_cbor_map_key_order v1) ==> SpecRaw.serialize_cbor v1 == Spec.cbor_det_serialize (SpecRaw.mk_cbor v1))
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_validate
   (input: S.slice U8.t)
@@ -135,6 +136,7 @@ let cbor_det_parse_aux
 = Seq.lemma_split v len;
   Classical.move_requires (SpecRaw.serialize_cbor_inj (SpecRaw.mk_det_raw_cbor v1) v1' v2) (Seq.slice v (len) (Seq.length v))
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_parse
   (input: S.slice U8.t)
@@ -184,6 +186,7 @@ ensures
 }
 ```
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_serialize
   (x: cbor_det_t)
@@ -230,6 +233,7 @@ fn cbor_det_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_det_match
 }
 ```
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_mk_string (_: unit) : mk_string_t u#0 #_ cbor_det_match
 = (ty: _)
@@ -367,6 +371,7 @@ let mk_raw_uint64_post (x: U64.t) : Lemma
   )
 = ()
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_mk_array (_: unit) : mk_array_t #_ cbor_det_match
 = (a: _)
@@ -823,6 +828,21 @@ fn cbor_det_elim_int64 (_: unit) : elim_int64_t u#0 #_ cbor_det_match
 }
 ```
 
+```pulse
+fn cbor_det_get_string_length (_: unit) : get_string_length_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
+  let res = Raw.cbor_match_string_elim_length x;
+  fold (cbor_det_match p x v);
+  res.value
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_get_string (_: unit) : get_string_t u#0 #_ cbor_det_match
 = (x: _)
