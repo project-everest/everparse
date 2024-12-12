@@ -98,7 +98,7 @@ ensures
         with s . assert (A.pts_to bar_payload s);
         assert (pure (Seq.equal s (spec_bar ())));
         let bar = cbor_det_mk_string_from_array () cbor_major_type_text_string bar_payload 3uL;
-        let ov = cbor_det_map_get () m bar;
+        let ov = cbor_det_map_get_gen () m bar;
         with pm vm vk . assert (map_get_post cbor_det_match m pm vm vk ov);
         Trade.elim (cbor_det_match _ bar _) _;
         match ov {
@@ -258,13 +258,13 @@ ensures emp
       let mut output_bytes = [| 0xFFuy; max_size |];
       let out1 = S.from_array output_bytes max_size;
       S.pts_to_len out1;
-      let size' = cbor_det_serialize test out1;
+      let size' = cbor_det_serialize_to_slice test out1;
       if (size' <> size) {
         S.to_array out1;
         Trade.elim (cbor_det_match _ test _) _;
         intro_res_post_impossible ()
       } else {
-        let size' = cbor_det_validate out1;
+        let size' = cbor_det_validate_from_slice out1;
         if (size' <> size) {
           S.to_array out1;
           Trade.elim (cbor_det_match _ test _) _;
@@ -272,7 +272,7 @@ ensures emp
         } else {
           with w . assert (pts_to out1 w);
           Seq.lemma_split w (SZ.v size');
-          let test1 = cbor_det_parse out1 size';
+          let test1 = cbor_det_parse_from_slice out1 size';
           let b = cbor_det_equal () test test1;
           if (not b) {
             Trade.elim (cbor_det_match _ test1 _) _;
@@ -289,7 +289,7 @@ ensures emp
             } else {
               let Mktuple2 out2 out3 = S.split out1 size';
               Seq.append_empty_r (Seq.slice w 0 (SZ.v size'));
-              let test2 = cbor_det_parse out2 size';
+              let test2 = cbor_det_parse_from_slice out2 size';
               let b = cbor_det_equal () test test2;
               if (not b) {
                  Trade.elim (cbor_det_match _ test2 _) _;
