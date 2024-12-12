@@ -7,10 +7,6 @@
 
 static char * hex_digits[16] = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"};
 
-static Pulse_Lib_Slice_slice__uint8_t mk_byte_slice (uint8_t *elt, size_t len) {
-  return (Pulse_Lib_Slice_slice__uint8_t) { elt = elt, len = len };
-}
-
 static void dump_encoding_test_failure (uint8_t *bytes, size_t len) {
   size_t pos = 0;
   printf("Encoded bytes: ");
@@ -35,7 +31,7 @@ int gentest(void) {
       printf("Size computation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 1));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Encoding failed: expected 1 bytes, wrote %ld\n", target_byte_size);
@@ -50,14 +46,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 1));
+    target_byte_size = cbor_det_validate(source_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 1), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -78,7 +74,7 @@ int gentest(void) {
       printf("Size computation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 1));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Encoding failed: expected 1 bytes, wrote %ld\n", target_byte_size);
@@ -93,14 +89,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 1));
+    target_byte_size = cbor_det_validate(source_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 1), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -121,7 +117,7 @@ int gentest(void) {
       printf("Size computation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 1));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Encoding failed: expected 1 bytes, wrote %ld\n", target_byte_size);
@@ -136,14 +132,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 1));
+    target_byte_size = cbor_det_validate(source_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 1), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -164,7 +160,7 @@ int gentest(void) {
       printf("Size computation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 1));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Encoding failed: expected 1 bytes, wrote %ld\n", target_byte_size);
@@ -179,14 +175,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 1));
+    target_byte_size = cbor_det_validate(source_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 1), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -207,7 +203,7 @@ int gentest(void) {
       printf("Size computation failed: expected 2 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 2));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 2);
     if (target_byte_size != 2)
     {
       printf("Encoding failed: expected 2 bytes, wrote %ld\n", target_byte_size);
@@ -222,14 +218,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 2));
+    target_byte_size = cbor_det_validate(source_bytes, 2);
     if (target_byte_size != 2)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 2), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -250,7 +246,7 @@ int gentest(void) {
       printf("Size computation failed: expected 2 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 2));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 2);
     if (target_byte_size != 2)
     {
       printf("Encoding failed: expected 2 bytes, wrote %ld\n", target_byte_size);
@@ -265,14 +261,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 2));
+    target_byte_size = cbor_det_validate(source_bytes, 2);
     if (target_byte_size != 2)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 2), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -293,7 +289,7 @@ int gentest(void) {
       printf("Size computation failed: expected 2 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 2));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 2);
     if (target_byte_size != 2)
     {
       printf("Encoding failed: expected 2 bytes, wrote %ld\n", target_byte_size);
@@ -308,14 +304,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 2));
+    target_byte_size = cbor_det_validate(source_bytes, 2);
     if (target_byte_size != 2)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 2), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -336,7 +332,7 @@ int gentest(void) {
       printf("Size computation failed: expected 3 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 3));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 3);
     if (target_byte_size != 3)
     {
       printf("Encoding failed: expected 3 bytes, wrote %ld\n", target_byte_size);
@@ -351,14 +347,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 3));
+    target_byte_size = cbor_det_validate(source_bytes, 3);
     if (target_byte_size != 3)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 3), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -379,7 +375,7 @@ int gentest(void) {
       printf("Size computation failed: expected 5 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 5));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 5);
     if (target_byte_size != 5)
     {
       printf("Encoding failed: expected 5 bytes, wrote %ld\n", target_byte_size);
@@ -394,14 +390,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 5));
+    target_byte_size = cbor_det_validate(source_bytes, 5);
     if (target_byte_size != 5)
     {
       printf("Validation failed: expected 5 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 5), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -422,7 +418,7 @@ int gentest(void) {
       printf("Size computation failed: expected 9 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 9));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 9);
     if (target_byte_size != 9)
     {
       printf("Encoding failed: expected 9 bytes, wrote %ld\n", target_byte_size);
@@ -437,14 +433,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 9));
+    target_byte_size = cbor_det_validate(source_bytes, 9);
     if (target_byte_size != 9)
     {
       printf("Validation failed: expected 9 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 9), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -465,7 +461,7 @@ int gentest(void) {
       printf("Size computation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 1));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Encoding failed: expected 1 bytes, wrote %ld\n", target_byte_size);
@@ -480,14 +476,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 1));
+    target_byte_size = cbor_det_validate(source_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 1), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -508,7 +504,7 @@ int gentest(void) {
       printf("Size computation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 1));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Encoding failed: expected 1 bytes, wrote %ld\n", target_byte_size);
@@ -523,14 +519,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 1));
+    target_byte_size = cbor_det_validate(source_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 1), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -551,7 +547,7 @@ int gentest(void) {
       printf("Size computation failed: expected 2 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 2));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 2);
     if (target_byte_size != 2)
     {
       printf("Encoding failed: expected 2 bytes, wrote %ld\n", target_byte_size);
@@ -566,14 +562,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 2));
+    target_byte_size = cbor_det_validate(source_bytes, 2);
     if (target_byte_size != 2)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 2), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -594,7 +590,7 @@ int gentest(void) {
       printf("Size computation failed: expected 3 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 3));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 3);
     if (target_byte_size != 3)
     {
       printf("Encoding failed: expected 3 bytes, wrote %ld\n", target_byte_size);
@@ -609,14 +605,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 3));
+    target_byte_size = cbor_det_validate(source_bytes, 3);
     if (target_byte_size != 3)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 3), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -637,7 +633,7 @@ int gentest(void) {
       printf("Size computation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 1));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Encoding failed: expected 1 bytes, wrote %ld\n", target_byte_size);
@@ -652,14 +648,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 1));
+    target_byte_size = cbor_det_validate(source_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 1), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -680,7 +676,7 @@ int gentest(void) {
       printf("Size computation failed: expected 2 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 2));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 2);
     if (target_byte_size != 2)
     {
       printf("Encoding failed: expected 2 bytes, wrote %ld\n", target_byte_size);
@@ -695,14 +691,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 2));
+    target_byte_size = cbor_det_validate(source_bytes, 2);
     if (target_byte_size != 2)
     {
       printf("Validation failed: expected 2 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 2), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -723,7 +719,7 @@ int gentest(void) {
       printf("Size computation failed: expected 5 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 5));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 5);
     if (target_byte_size != 5)
     {
       printf("Encoding failed: expected 5 bytes, wrote %ld\n", target_byte_size);
@@ -738,14 +734,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 5));
+    target_byte_size = cbor_det_validate(source_bytes, 5);
     if (target_byte_size != 5)
     {
       printf("Validation failed: expected 5 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 5), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -766,7 +762,7 @@ int gentest(void) {
       printf("Size computation failed: expected 3 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 3));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 3);
     if (target_byte_size != 3)
     {
       printf("Encoding failed: expected 3 bytes, wrote %ld\n", target_byte_size);
@@ -781,14 +777,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 3));
+    target_byte_size = cbor_det_validate(source_bytes, 3);
     if (target_byte_size != 3)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 3), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -809,7 +805,7 @@ int gentest(void) {
       printf("Size computation failed: expected 3 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 3));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 3);
     if (target_byte_size != 3)
     {
       printf("Encoding failed: expected 3 bytes, wrote %ld\n", target_byte_size);
@@ -824,14 +820,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 3));
+    target_byte_size = cbor_det_validate(source_bytes, 3);
     if (target_byte_size != 3)
     {
       printf("Validation failed: expected 3 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 3), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -852,7 +848,7 @@ int gentest(void) {
       printf("Size computation failed: expected 4 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 4));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 4);
     if (target_byte_size != 4)
     {
       printf("Encoding failed: expected 4 bytes, wrote %ld\n", target_byte_size);
@@ -867,14 +863,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 4));
+    target_byte_size = cbor_det_validate(source_bytes, 4);
     if (target_byte_size != 4)
     {
       printf("Validation failed: expected 4 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 4), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -895,7 +891,7 @@ int gentest(void) {
       printf("Size computation failed: expected 5 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 5));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 5);
     if (target_byte_size != 5)
     {
       printf("Encoding failed: expected 5 bytes, wrote %ld\n", target_byte_size);
@@ -910,14 +906,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 5));
+    target_byte_size = cbor_det_validate(source_bytes, 5);
     if (target_byte_size != 5)
     {
       printf("Validation failed: expected 5 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 5), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -939,7 +935,7 @@ int gentest(void) {
       printf("Size computation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 1));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Encoding failed: expected 1 bytes, wrote %ld\n", target_byte_size);
@@ -954,14 +950,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 1));
+    target_byte_size = cbor_det_validate(source_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 1), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -989,7 +985,7 @@ int gentest(void) {
       printf("Size computation failed: expected 4 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 4));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 4);
     if (target_byte_size != 4)
     {
       printf("Encoding failed: expected 4 bytes, wrote %ld\n", target_byte_size);
@@ -1004,14 +1000,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 4));
+    target_byte_size = cbor_det_validate(source_bytes, 4);
     if (target_byte_size != 4)
     {
       printf("Validation failed: expected 4 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 4), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -1049,7 +1045,7 @@ int gentest(void) {
       printf("Size computation failed: expected 8 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 8));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 8);
     if (target_byte_size != 8)
     {
       printf("Encoding failed: expected 8 bytes, wrote %ld\n", target_byte_size);
@@ -1064,14 +1060,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 8));
+    target_byte_size = cbor_det_validate(source_bytes, 8);
     if (target_byte_size != 8)
     {
       printf("Validation failed: expected 8 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 8), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -1143,7 +1139,7 @@ int gentest(void) {
       printf("Size computation failed: expected 29 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 29));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 29);
     if (target_byte_size != 29)
     {
       printf("Encoding failed: expected 29 bytes, wrote %ld\n", target_byte_size);
@@ -1158,14 +1154,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 29));
+    target_byte_size = cbor_det_validate(source_bytes, 29);
     if (target_byte_size != 29)
     {
       printf("Validation failed: expected 29 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 29), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -1187,7 +1183,7 @@ int gentest(void) {
       printf("Size computation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 1));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Encoding failed: expected 1 bytes, wrote %ld\n", target_byte_size);
@@ -1202,14 +1198,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 1));
+    target_byte_size = cbor_det_validate(source_bytes, 1);
     if (target_byte_size != 1)
     {
       printf("Validation failed: expected 1 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 1), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -1242,7 +1238,7 @@ int gentest(void) {
       printf("Size computation failed: expected 9 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 9));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 9);
     if (target_byte_size != 9)
     {
       printf("Encoding failed: expected 9 bytes, wrote %ld\n", target_byte_size);
@@ -1257,14 +1253,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 9));
+    target_byte_size = cbor_det_validate(source_bytes, 9);
     if (target_byte_size != 9)
     {
       printf("Validation failed: expected 9 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 9), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -1294,7 +1290,7 @@ int gentest(void) {
       printf("Size computation failed: expected 8 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 8));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 8);
     if (target_byte_size != 8)
     {
       printf("Encoding failed: expected 8 bytes, wrote %ld\n", target_byte_size);
@@ -1309,14 +1305,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 8));
+    target_byte_size = cbor_det_validate(source_bytes, 8);
     if (target_byte_size != 8)
     {
       printf("Validation failed: expected 8 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 8), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -1353,7 +1349,7 @@ int gentest(void) {
       printf("Size computation failed: expected 21 bytes, got %ld\n", target_byte_size);
       return 1;
     }
-    target_byte_size = cbor_det_serialize (source_cbor, mk_byte_slice(target_bytes, 21));
+    target_byte_size = cbor_det_serialize (source_cbor, target_bytes, 21);
     if (target_byte_size != 21)
     {
       printf("Encoding failed: expected 21 bytes, wrote %ld\n", target_byte_size);
@@ -1368,14 +1364,14 @@ int gentest(void) {
       return 1;
     }
     printf("Encoding succeeded!\n");
-    target_byte_size = cbor_det_validate(mk_byte_slice(source_bytes, 21));
+    target_byte_size = cbor_det_validate(source_bytes, 21);
     if (target_byte_size != 21)
     {
       printf("Validation failed: expected 21 bytes, got %ld\n", target_byte_size);
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t target_cbor = cbor_det_parse(mk_byte_slice(source_bytes, 21), target_byte_size);
+    cbor_det_t target_cbor = cbor_det_parse(source_bytes, target_byte_size);
     printf("Parsing succeeded!\n");
     if (! (cbor_det_equal(source_cbor, target_cbor)))
     {
@@ -1396,21 +1392,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -1430,14 +1426,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1457,21 +1453,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -1491,14 +1487,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1518,14 +1514,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1545,14 +1541,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1572,14 +1568,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1599,14 +1595,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1626,14 +1622,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1653,14 +1649,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1680,14 +1676,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1707,14 +1703,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1734,14 +1730,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1761,21 +1757,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -1795,21 +1791,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -1829,21 +1825,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -1863,14 +1859,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[23];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 23));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 23);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1890,14 +1886,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[23];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 23));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 23);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1917,14 +1913,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[27];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 27));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 27);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1944,14 +1940,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1971,14 +1967,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -1998,14 +1994,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2025,14 +2021,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2052,14 +2048,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2079,14 +2075,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2106,14 +2102,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2133,14 +2129,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2160,14 +2156,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2187,14 +2183,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2214,14 +2210,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2241,14 +2237,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2268,14 +2264,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2295,14 +2291,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2322,14 +2318,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2349,14 +2345,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2376,14 +2372,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2403,14 +2399,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2430,14 +2426,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2457,14 +2453,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2484,14 +2480,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2511,14 +2507,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2538,14 +2534,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2565,14 +2561,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2592,14 +2588,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2619,14 +2615,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2646,14 +2642,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2673,14 +2669,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2700,14 +2696,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2727,14 +2723,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2754,14 +2750,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2781,14 +2777,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -2808,21 +2804,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -2842,21 +2838,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -2876,21 +2872,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -2910,21 +2906,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -2944,21 +2940,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -2978,21 +2974,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3012,21 +3008,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3046,21 +3042,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3080,21 +3076,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3114,21 +3110,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3148,21 +3144,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3182,21 +3178,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3216,21 +3212,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3250,21 +3246,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3284,21 +3280,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3318,21 +3314,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3352,21 +3348,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3386,21 +3382,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3420,21 +3416,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3454,21 +3450,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3488,21 +3484,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3522,21 +3518,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3556,21 +3552,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3590,21 +3586,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3624,21 +3620,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3658,21 +3654,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3692,21 +3688,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3726,21 +3722,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3760,21 +3756,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3794,21 +3790,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3828,21 +3824,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3862,21 +3858,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3896,21 +3892,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3930,21 +3926,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3964,21 +3960,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -3998,21 +3994,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4032,21 +4028,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4066,21 +4062,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4100,21 +4096,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4134,21 +4130,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4168,21 +4164,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4202,21 +4198,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4236,21 +4232,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4270,21 +4266,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4304,21 +4300,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4338,21 +4334,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4372,21 +4368,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4406,21 +4402,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4440,21 +4436,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4474,21 +4470,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -4508,14 +4504,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4535,14 +4531,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4562,14 +4558,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4589,14 +4585,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4616,14 +4612,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4643,14 +4639,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4670,14 +4666,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4697,14 +4693,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4724,14 +4720,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4751,14 +4747,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4778,14 +4774,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4805,14 +4801,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4832,14 +4828,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4859,14 +4855,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4886,14 +4882,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[16];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 16));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 16);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4913,14 +4909,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4940,14 +4936,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4967,14 +4963,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[14];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 14));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 14);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -4994,14 +4990,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5021,14 +5017,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5048,14 +5044,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5075,14 +5071,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5102,14 +5098,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[14];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 14));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 14);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5129,14 +5125,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5156,14 +5152,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5183,14 +5179,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5210,14 +5206,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5237,14 +5233,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5264,14 +5260,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5291,14 +5287,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5318,14 +5314,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5345,14 +5341,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5372,14 +5368,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5399,14 +5395,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5426,14 +5422,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[14];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 14));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 14);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5453,14 +5449,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[14];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 14));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 14);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5480,14 +5476,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5507,14 +5503,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5534,14 +5530,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5561,14 +5557,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5588,14 +5584,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[14];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 14));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 14);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5615,14 +5611,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5642,14 +5638,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5669,14 +5665,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5696,14 +5692,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5723,14 +5719,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5750,14 +5746,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5777,14 +5773,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5804,14 +5800,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5831,14 +5827,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5858,14 +5854,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5885,14 +5881,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5912,14 +5908,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5939,14 +5935,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5966,14 +5962,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -5993,14 +5989,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[18];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 18));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 18);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6020,14 +6016,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[18];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 18));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 18);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6047,14 +6043,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[18];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 18));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 18);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6074,14 +6070,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[18];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 18));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 18);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6101,14 +6097,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6128,14 +6124,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6155,14 +6151,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6182,14 +6178,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6209,14 +6205,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6236,14 +6232,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6263,14 +6259,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6290,14 +6286,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6317,14 +6313,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6344,14 +6340,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6371,14 +6367,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6398,14 +6394,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6425,14 +6421,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6452,14 +6448,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6479,14 +6475,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6506,14 +6502,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6533,14 +6529,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6560,14 +6556,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6587,14 +6583,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6614,14 +6610,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[17];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 17));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 17);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6641,14 +6637,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6668,14 +6664,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[14];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 14));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 14);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6695,14 +6691,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6722,14 +6718,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6749,14 +6745,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6776,14 +6772,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6803,14 +6799,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6830,14 +6826,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6857,14 +6853,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[16];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 16));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 16);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6884,14 +6880,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6911,14 +6907,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[15];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 15));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 15);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6938,14 +6934,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[14];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 14));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 14);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6965,14 +6961,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[14];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 14));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 14);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -6992,14 +6988,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -7019,14 +7015,14 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != 0)
     {
       printf("Validation succeeded, but it was expected to fail\n");
@@ -7046,21 +7042,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7080,21 +7076,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7114,21 +7110,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7148,21 +7144,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7182,21 +7178,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7216,21 +7212,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7250,21 +7246,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7284,21 +7280,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7318,21 +7314,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7352,21 +7348,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7386,21 +7382,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7420,21 +7416,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7454,21 +7450,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7488,21 +7484,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7522,21 +7518,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7556,21 +7552,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[13];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 13));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 13);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7590,21 +7586,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[12];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 12));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 12);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7624,21 +7620,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[11];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 11));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 11);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
@@ -7658,21 +7654,21 @@ int gentest(void) {
     }
     printf("Size computation succeeded!\n");
     uint8_t output[10];
-    size_t serialized_size = cbor_det_serialize(mycbor, mk_byte_slice(output, 10));
+    size_t serialized_size = cbor_det_serialize(mycbor, output, 10);
     if (size != serialized_size)
     {
       printf("Serialized a different size: expected %ld, got %ld\n", size, serialized_size);
       return 1;
     }
     printf("Serialization succeeded!\n");
-    size_t test = cbor_det_validate(mk_byte_slice(output, size));
+    size_t test = cbor_det_validate(output, size);
     if (test != size)
     {
       printf("Validation failed, but it was expected to succeed\n");
       return 1;
     }
     printf("Validation succeeded!\n");
-    cbor_det_t outcbor = cbor_det_parse(mk_byte_slice(output, size), size);
+    cbor_det_t outcbor = cbor_det_parse(output, size);
     if (! cbor_det_equal(mycbor, outcbor))
     {
       printf("Round-trip failed\n");
