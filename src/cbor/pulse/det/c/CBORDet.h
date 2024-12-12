@@ -149,12 +149,6 @@ typedef struct CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cb
 }
 CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
 
-#define FStar_Pervasives_Native_None 0
-#define FStar_Pervasives_Native_Some 1
-
-typedef uint8_t
-FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags;
-
 #define CBOR_MAJOR_TYPE_SIMPLE_VALUE (7U)
 
 #define CBOR_MAJOR_TYPE_UINT64 (0U)
@@ -193,36 +187,15 @@ cbor_det_map_iterator_t;
 
 cbor_raw cbor_det_reset_perm(cbor_raw x1);
 
-size_t cbor_det_validate(Pulse_Lib_Slice_slice__uint8_t input);
-
-cbor_raw cbor_det_parse(Pulse_Lib_Slice_slice__uint8_t input, size_t len);
-
 size_t cbor_det_size(cbor_raw x, size_t bound);
-
-size_t cbor_det_serialize(cbor_raw x, Pulse_Lib_Slice_slice__uint8_t output);
 
 cbor_raw cbor_det_mk_simple_value(uint8_t v);
 
 cbor_raw cbor_det_mk_int64(uint8_t ty, uint64_t v);
 
-cbor_raw cbor_det_mk_string(uint8_t ty, Pulse_Lib_Slice_slice__uint8_t s);
-
 cbor_raw cbor_det_mk_tagged(uint64_t tag, cbor_raw *r);
 
-cbor_raw cbor_det_mk_array(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw a);
-
 cbor_map_entry cbor_det_mk_map_entry(cbor_raw xk, cbor_raw xv);
-
-typedef struct FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw_s
-{
-  FStar_Pervasives_Native_option__LowParse_Pulse_Base_with_perm_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_tags
-  tag;
-  cbor_raw v;
-}
-FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw;
-
-FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw
-cbor_det_mk_map_gen(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a);
 
 bool cbor_det_equal(cbor_raw x1, cbor_raw x2);
 
@@ -232,7 +205,7 @@ uint8_t cbor_det_read_simple_value(cbor_raw x);
 
 uint64_t cbor_det_read_uint64(cbor_raw x);
 
-Pulse_Lib_Slice_slice__uint8_t cbor_det_get_string(cbor_raw x);
+uint64_t cbor_det_get_string_length(cbor_raw x);
 
 uint64_t cbor_det_get_tagged_tag(cbor_raw x);
 
@@ -274,14 +247,21 @@ cbor_raw cbor_det_map_entry_key(cbor_map_entry x2);
 
 cbor_raw cbor_det_map_entry_value(cbor_map_entry x2);
 
-FStar_Pervasives_Native_option__CBOR_Pulse_Raw_Type_cbor_raw
-cbor_det_map_get(cbor_raw x, cbor_raw k);
+size_t cbor_det_validate(uint8_t *input, size_t input_len);
+
+cbor_raw cbor_det_parse(uint8_t *input, size_t len);
+
+size_t cbor_det_serialize(cbor_raw x, uint8_t *output, size_t output_len);
 
 cbor_raw cbor_det_mk_string_from_array(uint8_t ty, uint8_t *a, uint64_t len);
 
 cbor_raw cbor_det_mk_array_from_array(cbor_raw *a, uint64_t len);
 
 cbor_raw cbor_det_mk_map_from_array(cbor_map_entry *a, uint64_t len);
+
+uint8_t *cbor_det_get_string(cbor_raw x);
+
+bool cbor_det_map_get(cbor_raw x, cbor_raw k, cbor_raw *dest);
 
 
 #define __CBORDet_H_DEFINED

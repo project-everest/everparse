@@ -6,7 +6,7 @@
 
 #[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
 
-fn mk_raw_uint64(x: u64) -> raw_uint64
+pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
 {
     let size: u8 =
         if x <= max_simple_value_additional_info as u64
@@ -1608,7 +1608,7 @@ fn cbor_array_iterator_next <'b, 'a>(
     }
 }
 
-fn cbor_map_iterator_init <'a>(c: cbor_raw <'a>) ->
+pub(crate) fn cbor_map_iterator_init <'a>(c: cbor_raw <'a>) ->
     cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
     <'a>
 {
@@ -2386,7 +2386,7 @@ fn ser <'a>(x1·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -> usize
     res0
 }
 
-fn cbor_serialize <'a>(x: cbor_raw <'a>, output: &'a mut [u8]) -> usize
+pub(crate) fn cbor_serialize <'a>(x: cbor_raw <'a>, output: &'a mut [u8]) -> usize
 {
     let res: usize = ser(x, output, 0usize);
     res
@@ -3260,13 +3260,13 @@ fn cbor_validate_det·(input: &[u8]) -> usize
     }
 }
 
-fn cbor_validate_det(input: &[u8]) -> usize
+pub(crate) fn cbor_validate_det(input: &[u8]) -> usize
 {
     let res: usize = cbor_validate_det·(input);
     res
 }
 
-fn cbor_parse <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
+pub(crate) fn cbor_parse <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
 {
     let s·: (&[u8], &[u8]) = input.split_at(0usize);
     let split123: (&[u8], &[u8]) =
@@ -4177,27 +4177,9 @@ pub fn cbor_det_reset_perm <'a>(x1: cbor_raw <'a>) -> cbor_raw <'a>
     res
 }
 
-pub fn cbor_det_validate(input: &[u8]) -> usize
-{
-    let res: usize = cbor_validate_det(input);
-    res
-}
-
-pub fn cbor_det_parse <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
-{
-    let res: cbor_raw = cbor_parse(input, len);
-    res
-}
-
 pub fn cbor_det_size <'a>(x: cbor_raw <'a>, bound: usize) -> usize
 {
     let res: usize = cbor_size(x, bound);
-    res
-}
-
-pub fn cbor_det_serialize <'a>(x: cbor_raw <'a>, output: &'a mut [u8]) -> usize
-{
-    let res: usize = cbor_serialize(x, output);
     res
 }
 
@@ -4218,26 +4200,11 @@ pub fn cbor_det_mk_int64 <'a>(ty: u8, v: u64) -> cbor_raw <'a>
     res0
 }
 
-pub fn cbor_det_mk_string <'a>(ty: u8, s: &'a [u8]) -> cbor_raw <'a>
-{
-    let len64: raw_uint64 = mk_raw_uint64(s.len() as u64);
-    let ress: cbor_string =
-        cbor_string { cbor_string_type: ty, cbor_string_size: len64.size, cbor_string_ptr: s };
-    cbor_raw::CBOR_Case_String { v: ress }
-}
-
 pub fn cbor_det_mk_tagged <'a>(tag: u64, r: &'a [cbor_raw <'a>]) -> cbor_raw <'a>
 {
     let tag64: raw_uint64 = mk_raw_uint64(tag);
     let res·: cbor_tagged = cbor_tagged { cbor_tagged_tag: tag64, cbor_tagged_ptr: r };
     cbor_raw::CBOR_Case_Tagged { v: res· }
-}
-
-pub fn cbor_det_mk_array <'a>(a: &'a [cbor_raw <'a>]) -> cbor_raw <'a>
-{
-    let len64: raw_uint64 = mk_raw_uint64(a.len() as u64);
-    let res·: cbor_array = cbor_array { cbor_array_length_size: len64.size, cbor_array_ptr: a };
-    cbor_raw::CBOR_Case_Array { v: res· }
 }
 
 fn cbor_raw_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i16
@@ -4390,7 +4357,7 @@ pub(crate) fn cbor_raw_sort_aux(a: &mut [cbor_map_entry]) -> bool
     }
 }
 
-fn cbor_raw_sort(a: &mut [cbor_map_entry]) -> bool
+pub(crate) fn cbor_raw_sort(a: &mut [cbor_map_entry]) -> bool
 {
     let res: bool = cbor_raw_sort_aux(a);
     res
@@ -4400,34 +4367,6 @@ pub fn cbor_det_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) -> cbor_
 {
     let res: cbor_map_entry = cbor_mk_map_entry(xk, xv);
     res
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum option__CBOR_Pulse_Raw_Type_cbor_raw <'a>
-{
-    None,
-    Some { v: cbor_raw <'a> }
-}
-
-pub fn cbor_det_mk_map_gen <'a>(a: &'a mut [cbor_map_entry <'a>]) ->
-    option__CBOR_Pulse_Raw_Type_cbor_raw
-    <'a>
-{
-    if a.len() > 18446744073709551615u64 as usize
-    { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
-    else
-    {
-        let correct: bool = cbor_raw_sort(a);
-        if correct
-        {
-            let raw_len: raw_uint64 = mk_raw_uint64(a.len() as u64);
-            let res·: cbor_map = cbor_map { cbor_map_length_size: raw_len.size, cbor_map_ptr: a };
-            let res: cbor_raw = cbor_raw::CBOR_Case_Map { v: res· };
-            option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res }
-        }
-        else
-        { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
-    }
 }
 
 pub fn cbor_det_equal <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> bool
@@ -4462,14 +4401,22 @@ pub fn cbor_det_read_uint64 <'a>(x: cbor_raw <'a>) -> u64
     res.value
 }
 
-pub fn cbor_det_get_string <'a>(x: cbor_raw <'a>) -> &'a [u8]
+pub fn cbor_det_get_string_length <'a>(x: cbor_raw <'a>) -> u64
 {
     let _letpattern: cbor_raw = x;
-    match _letpattern
-    {
-        cbor_raw::CBOR_Case_String { v: c· } => c·.cbor_string_ptr,
-        _ => panic!("Incomplete pattern matching")
-    }
+    let res: raw_uint64 =
+        match _letpattern
+        {
+            cbor_raw::CBOR_Case_String { v: c· } =>
+              {
+                  let res: raw_uint64 =
+                      raw_uint64
+                      { size: c·.cbor_string_size, value: c·.cbor_string_ptr.len() as u64 };
+                  res
+              },
+            _ => panic!("Incomplete pattern matching")
+        };
+    res.value
 }
 
 pub fn cbor_det_get_tagged_tag <'a>(x: cbor_raw <'a>) -> u64
@@ -4550,24 +4497,19 @@ pub fn cbor_det_get_map_length <'a>(x: cbor_raw <'a>) -> u64
     res.value
 }
 
-fn impl_cbor_det_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i16
+pub(crate) fn impl_cbor_det_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i16
 {
     let res: i16 = impl_cbor_compare(x1, x2);
-    res
-}
-
-fn cbor_det_map_iterator_start· <'a>(x: cbor_raw <'a>) ->
-    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-    <'a>
-{
-    let res: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = cbor_map_iterator_init(x);
     res
 }
 
 pub fn cbor_det_map_iterator_start <'a>(x: cbor_raw <'a>) ->
     cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
     <'a>
-{ cbor_det_map_iterator_start·(x) }
+{
+    let res: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = cbor_map_iterator_init(x);
+    res
+}
 
 pub fn cbor_det_map_iterator_is_empty <'a>(
     x: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
@@ -4593,40 +4535,3 @@ pub fn cbor_det_map_entry_key <'a>(x2: cbor_map_entry <'a>) -> cbor_raw <'a>
 
 pub fn cbor_det_map_entry_value <'a>(x2: cbor_map_entry <'a>) -> cbor_raw <'a>
 { x2.cbor_map_entry_value }
-
-pub fn cbor_det_map_get <'a>(x: cbor_raw <'a>, k: cbor_raw <'a>) ->
-    option__CBOR_Pulse_Raw_Type_cbor_raw
-    <'a>
-{
-    let i: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry =
-        cbor_det_map_iterator_start·(x);
-    let mut pi: [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry; 1] = [i; 1usize];
-    let mut pres: [option__CBOR_Pulse_Raw_Type_cbor_raw; 1] =
-        [option__CBOR_Pulse_Raw_Type_cbor_raw::None; 1usize];
-    let i_is_empty: bool = cbor_det_map_iterator_is_empty(i);
-    let cont: bool = ! i_is_empty;
-    let mut pcont: [bool; 1] = [cont; 1usize];
-    while
-    (&pcont)[0]
-    {
-        let entry: cbor_map_entry = cbor_det_map_iterator_next(&mut pi);
-        let key: cbor_raw = cbor_det_map_entry_key(entry);
-        let comp: i16 = impl_cbor_det_compare(key, k);
-        if comp == 0i16
-        {
-            let value: cbor_raw = cbor_det_map_entry_value(entry);
-            (&mut pres)[0] = option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: value };
-            (&mut pcont)[0] = false
-        }
-        else if comp > 0i16
-        { (&mut pcont)[0] = false }
-        else
-        {
-            let i·: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry = (&pi)[0];
-            let is_empty: bool = cbor_det_map_iterator_is_empty(i·);
-            let cont1: bool = ! is_empty;
-            (&mut pcont)[0] = cont1
-        }
-    };
-    (&pres)[0]
-}
