@@ -3,8 +3,6 @@ module CBOR.Pulse.API.Det.C
 (* NOTE: this .fst file does not need anything from the Raw namespace,
 but it has been moved here to be hidden from verified clients. *)
 
-module SU = Pulse.Lib.Slice.Util
-
 ```pulse
 fn cbor_det_validate
   (input: AP.ptr U8.t)
@@ -96,12 +94,14 @@ requires
 returns res: SZ.t
 ensures
     (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
+      SZ.v output_len == Seq.length v /\
       cbor_det_serialize_postcond y res v
     ))
 {
   let ou = S.arrayptr_to_slice_intro output output_len;
   S.pts_to_len ou;
   let res = CBOR.Pulse.API.Det.Common.cbor_det_serialize x ou;
+  S.pts_to_len ou;
   assert (pure (SZ.v res == Seq.length (Spec.cbor_det_serialize y)));
   S.arrayptr_to_slice_elim ou;
   res

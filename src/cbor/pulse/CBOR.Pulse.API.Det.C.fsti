@@ -12,6 +12,7 @@ module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
 
+module SU = Pulse.Lib.Slice.Util
 module AP = Pulse.Lib.ArrayPtr
 
 val cbor_det_validate
@@ -24,6 +25,29 @@ val cbor_det_validate
     (fun res -> pts_to input #pm v ** pure (
       cbor_det_validate_post v res
     ))
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_validate_from_slice
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+requires
+    (pts_to input #pm v)
+returns res: SZ.t
+ensures
+    (pts_to input #pm v ** pure (
+      cbor_det_validate_post v res
+    ))
+{
+  S.pts_to_len input;
+  let len = S.len input;
+  let a = SU.slice_to_arrayptr_intro_trade input;
+  let res = cbor_det_validate a len;
+  Trade.elim _ _;
+  res
+}
+```
 
 val cbor_det_parse
   (input: AP.ptr U8.t)
@@ -41,6 +65,35 @@ val cbor_det_parse
         Seq.slice v 0 (SZ.v len) == Spec.cbor_det_serialize v'
     ))
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_parse_from_slice
+  (input: S.slice U8.t) // the length of that slice does not really matter
+  (len: SZ.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+requires
+    (pts_to input #pm v ** pure (
+      exists v1 v2 . Ghost.reveal v == Spec.cbor_det_serialize v1 `Seq.append` v2 /\ SZ.v len == Seq.length (Spec.cbor_det_serialize v1)
+    ))
+returns res: cbor_det_t
+ensures
+    (exists* v' .
+      cbor_det_match 1.0R res v' **
+      Trade.trade (cbor_det_match 1.0R res v') (pts_to input #pm v) ** pure (
+        SZ.v len <= Seq.length v /\
+        Seq.slice v 0 (SZ.v len) == Spec.cbor_det_serialize v'
+    ))
+{
+  S.pts_to_len input;
+  let a = SU.slice_to_arrayptr_intro_trade input;
+  let res = cbor_det_parse a len;
+  Trade.trans _ _ (pts_to input #pm v);
+  res
+}
+```
+
 val cbor_det_serialize
   (x: cbor_det_t)
   (output: AP.ptr U8.t)
@@ -50,8 +103,34 @@ val cbor_det_serialize
 : stt SZ.t
     (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
     (fun res -> exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
+      SZ.v output_len == Seq.length v /\
       cbor_det_serialize_postcond y res v
     ))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_serialize_to_slice
+  (x: cbor_det_t)
+  (output: S.slice U8.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#pm: perm)
+requires
+    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (S.len output)))
+returns res: SZ.t
+ensures
+    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
+      cbor_det_serialize_postcond y res v
+    ))
+{
+  S.pts_to_len output;
+  let len = S.len output;
+  let ou = S.slice_to_arrayptr_intro output;
+  let res = cbor_det_serialize x ou len;
+  S.slice_to_arrayptr_elim ou;
+  res
+}
+```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -244,3 +323,6 @@ let cbor_det_get_string_t
 val cbor_det_get_string () : cbor_det_get_string_t
 
 val cbor_det_map_get () : map_get_by_ref_t cbor_det_match
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_det_map_get_gen () : map_get_t cbor_det_match = map_get_as_option (cbor_det_map_get ())
