@@ -844,6 +844,132 @@ let mk_map_t
         )
     )
 
+module A = Pulse.Lib.Array
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let mk_map_from_array_t
+  (#cbor_t: Type0)
+  (#cbor_map_entry_t: Type0)
+  (cbor_match: perm -> cbor_t -> cbor -> slprop)
+  (cbor_map_entry_match: perm -> cbor_map_entry_t -> (cbor & cbor) -> slprop)
+=
+  (a: A.array cbor_map_entry_t) ->
+  (len: U64.t) ->
+  (#va: Ghost.erased (Seq.seq cbor_map_entry_t)) ->
+  (#pv: perm) ->
+  (#vv: Ghost.erased (list (cbor & cbor))) ->
+  stt cbor_t
+    (A.pts_to a va **
+      PM.seq_list_match va vv (cbor_map_entry_match pv) **
+      pure (A.length a == U64.v len /\
+        List.Tot.no_repeats_p (List.Tot.map fst vv)
+      )
+    )
+    (fun res -> exists* v' va' .
+      cbor_match 1.0R res v' **
+      Trade.trade
+        (cbor_match 1.0R res v')
+        (A.pts_to a va' **
+          PM.seq_list_match va vv (cbor_map_entry_match pv)
+        ) **
+        pure (
+          CMap? (unpack v') /\
+          (forall x . List.Tot.assoc x vv == cbor_map_get (CMap?.c (unpack v')) x) /\
+          cbor_map_length (CMap?.c (unpack v')) == Seq.length va
+        )
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn mk_map_from_array
+  (#cbor_t: Type0)
+  (#cbor_map_entry_t: Type0)
+  (#cbor_match: perm -> cbor_t -> cbor -> slprop)
+  (#cbor_map_entry_match: perm -> cbor_map_entry_t -> (cbor & cbor) -> slprop)
+  (cbor_mk_map: mk_map_t cbor_match cbor_map_entry_match)
+: mk_map_from_array_t #_ #_ cbor_match cbor_map_entry_match
+=
+  (a: A.array cbor_map_entry_t)
+  (len: U64.t)
+  (#va: Ghost.erased (Seq.seq cbor_map_entry_t))
+  (#pv: perm)
+  (#vv: Ghost.erased (list (cbor & cbor)))
+{
+  A.pts_to_len a;
+  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
+  let s = S.from_array a (SZ.uint64_to_sizet len);
+  S.pts_to_len s;
+  let res = cbor_mk_map s;
+  with p' v' va' . assert (
+      Trade.trade
+        (cbor_match p' res (pack (CMap v')))
+        (pts_to s va' **
+          PM.seq_list_match va vv (cbor_map_entry_match pv)
+        )
+  );
+  ghost fn aux (_: unit)
+    requires S.is_from_array a s ** pts_to s va'
+    ensures A.pts_to a va'
+  {
+    S.to_array s;
+  };
+  Trade.intro _ _ _ aux;
+  Trade.reg_r (pts_to s va') (A.pts_to a va') (PM.seq_list_match va vv (cbor_map_entry_match pv));
+  Trade.trans (cbor_match p' res (pack (CMap v'))) _ _;
+  res
+}
+```
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn mk_map_from_array'
+  (#cbor_t: Type0)
+  (#cbor_map_entry_t: Type0)
+  (#cbor_match: perm -> cbor_t -> cbor -> slprop)
+  (#cbor_map_entry_match: perm -> cbor_map_entry_t -> (cbor & cbor) -> slprop)
+  (cbor_mk_map_from_array: mk_map_from_array_t cbor_match cbor_map_entry_match)
+  (a: A.array cbor_map_entry_t)
+  (len: U64.t)
+  (va0: Ghost.erased (Seq.seq cbor_map_entry_t))
+  (#va: Ghost.erased (Seq.seq cbor_map_entry_t))
+  (#pv: perm)
+  (#vv: Ghost.erased (list (cbor & cbor)))
+requires
+    (A.pts_to a va **
+      PM.seq_list_match va0 vv (cbor_map_entry_match pv) **
+      pure (A.length a == U64.v len /\
+        List.Tot.no_repeats_p (List.Tot.map fst vv) /\
+        Seq.equal va0 va
+      )
+    )
+returns res: cbor_t
+ensures
+    (exists* v' va' .
+      cbor_match 1.0R res v' **
+      Trade.trade
+        (cbor_match 1.0R res v')
+        (A.pts_to a va' **
+          PM.seq_list_match va0 vv (cbor_map_entry_match pv)
+        ) **
+        pure (
+          CMap? (unpack v') /\
+          (forall x . List.Tot.assoc x vv == cbor_map_get (CMap?.c (unpack v')) x) /\
+          cbor_map_length (CMap?.c (unpack v')) == Seq.length va
+        )
+    )
+{
+  Trade.rewrite_with_trade
+    (PM.seq_list_match va0 vv (cbor_map_entry_match pv))
+    (PM.seq_list_match va vv (cbor_map_entry_match pv));
+  let res = cbor_mk_map_from_array a len;
+  Trade.trans_concl_r _ _ _ (PM.seq_list_match va0 vv (cbor_map_entry_match pv));
+  res
+}
+```
+
 inline_for_extraction
 ```pulse
 fn mk_map_from_option

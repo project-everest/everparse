@@ -155,37 +155,8 @@ fn cbor_det_mk_array_from_array (_: unit) : cbor_det_mk_array_from_array_t
   res
 }
 
-fn cbor_det_mk_map_from_array (_: unit) : cbor_det_mk_map_from_array_t
-=
-  (a: A.array cbor_det_map_entry_t)
-  (len: U64.t)
-  (#va: Ghost.erased (Seq.seq cbor_det_map_entry_t))
-  (#pv: perm)
-  (#vv: Ghost.erased (list (Spec.cbor & Spec.cbor)))
-{
-  A.pts_to_len a;
-  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
-  let s = S.from_array a (SZ.uint64_to_sizet len);
-  S.pts_to_len s;
-  let res = CBOR.Pulse.API.Base.mk_map_from_ref (CBOR.Pulse.API.Det.Type.dummy_cbor_det_t ()) (CBOR.Pulse.API.Det.Common.cbor_det_mk_map_gen ()) s;
-  with p' v' va' . assert (
-      Trade.trade
-        (cbor_det_match p' res (Spec.pack (Spec.CMap v')))
-        (pts_to s va' **
-          PM.seq_list_match va vv (cbor_det_map_entry_match pv)
-        )
-  );
-  ghost fn aux (_: unit)
-    requires S.is_from_array a s ** pts_to s va'
-    ensures A.pts_to a va'
-  {
-    S.to_array s;
-  };
-  Trade.intro _ _ _ aux;
-  Trade.reg_r (pts_to s va') (A.pts_to a va') (PM.seq_list_match va vv (cbor_det_map_entry_match pv));
-  Trade.trans (cbor_det_match p' res (Spec.pack (Spec.CMap v'))) _ _;
-  res
-}
+let cbor_det_mk_map_from_array : mk_map_from_array_t cbor_det_match cbor_det_map_entry_match =
+  mk_map_from_array (CBOR.Pulse.API.Base.mk_map_from_ref (CBOR.Pulse.API.Det.Type.dummy_cbor_det_t ()) (CBOR.Pulse.API.Det.Common.cbor_det_mk_map_gen ()))
 
 fn cbor_det_get_string
   (_: unit)

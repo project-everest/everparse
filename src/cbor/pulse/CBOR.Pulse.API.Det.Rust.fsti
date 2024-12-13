@@ -161,6 +161,12 @@ val cbor_det_mk_array
 
 val cbor_det_mk_map (_: unit): Base.mk_map_gen_t cbor_det_match cbor_det_map_entry_match
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_det_mk_map_from_array : Base.mk_map_from_array_t cbor_det_match cbor_det_map_entry_match =
+  Base.mk_map_from_array (CBOR.Pulse.API.Base.mk_map_from_option (cbor_det_mk_map ()))
+
+
 (* Destructors *)
 
 val cbor_det_equal : Base.equal_t cbor_det_match

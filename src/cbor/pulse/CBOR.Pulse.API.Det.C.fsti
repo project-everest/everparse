@@ -175,77 +175,11 @@ ensures
   res
 }
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-let cbor_det_mk_map_from_array_t =
-  (a: A.array cbor_det_map_entry_t) ->
-  (len: U64.t) ->
-  (#va: Ghost.erased (Seq.seq cbor_det_map_entry_t)) ->
-  (#pv: perm) ->
-  (#vv: Ghost.erased (list (Spec.cbor & Spec.cbor))) ->
-  stt cbor_det_t
-    (A.pts_to a va **
-      PM.seq_list_match va vv (cbor_det_map_entry_match pv) **
-      pure (A.length a == U64.v len /\
-        List.Tot.no_repeats_p (List.Tot.map fst vv)
-      )
-    )
-    (fun res -> exists* v' va' .
-      cbor_det_match 1.0R res v' **
-      Trade.trade
-        (cbor_det_match 1.0R res v')
-        (A.pts_to a va' **
-          PM.seq_list_match va vv (cbor_det_map_entry_match pv)
-        ) **
-        pure (
-          Spec.CMap? (Spec.unpack v') /\
-          (forall x . List.Tot.assoc x vv == Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack v')) x) /\
-          Spec.cbor_map_length (Spec.CMap?.c (Spec.unpack v')) == Seq.length va
-        )
-    )
-
-val cbor_det_mk_map_from_array (_: unit) : cbor_det_mk_map_from_array_t
+val cbor_det_mk_map_from_array : mk_map_from_array_t cbor_det_match cbor_det_map_entry_match
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-fn cbor_det_mk_map_from_array'
-  (a: A.array cbor_det_map_entry_t)
-  (len: U64.t)
-  (va0: Ghost.erased (Seq.seq cbor_det_map_entry_t))
-  (#va: Ghost.erased (Seq.seq cbor_det_map_entry_t))
-  (#pv: perm)
-  (#vv: Ghost.erased (list (Spec.cbor & Spec.cbor)))
-requires
-    (A.pts_to a va **
-      PM.seq_list_match va0 vv (cbor_det_map_entry_match pv) **
-      pure (A.length a == U64.v len /\
-        List.Tot.no_repeats_p (List.Tot.map fst vv) /\
-        Seq.equal va0 va
-      )
-    )
-returns res: cbor_det_t
-ensures
-    (exists* v' va' .
-      cbor_det_match 1.0R res v' **
-      Trade.trade
-        (cbor_det_match 1.0R res v')
-        (A.pts_to a va' **
-          PM.seq_list_match va0 vv (cbor_det_map_entry_match pv)
-        ) **
-        pure (
-          Spec.CMap? (Spec.unpack v') /\
-          (forall x . List.Tot.assoc x vv == Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack v')) x) /\
-          Spec.cbor_map_length (Spec.CMap?.c (Spec.unpack v')) == Seq.length va
-        )
-    )
-{
-  Trade.rewrite_with_trade
-    (PM.seq_list_match va0 vv (cbor_det_map_entry_match pv))
-    (PM.seq_list_match va vv (cbor_det_map_entry_match pv));
-  let res = cbor_det_mk_map_from_array () a len;
-  Trade.trans_concl_r _ _ _ (PM.seq_list_match va0 vv (cbor_det_map_entry_match pv));
-  res
-}
+let cbor_det_mk_map_from_array' = mk_map_from_array' cbor_det_mk_map_from_array
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
