@@ -532,6 +532,35 @@ let mk_simple_t
     (fun res -> vmatch 1.0R res (pack (CSimple v)))
 
 inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn mk_simple_value_trade
+  (#t: Type0)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (cbor_mk_simple: mk_simple_t vmatch)
+  (cbor_elim_simple: elim_simple_t vmatch)
+  (v: simple_value)
+requires emp
+returns res: t
+ensures
+    vmatch 1.0R res (pack (CSimple v)) **
+    Trade.trade
+      (vmatch 1.0R res (pack (CSimple v)))
+      emp
+{
+  let res = cbor_mk_simple v;
+  ghost fn aux (_: unit)
+  requires emp ** vmatch 1.0R res (pack (CSimple v))
+  ensures emp
+  {
+    cbor_elim_simple res
+  };
+  Trade.intro _ _ _ aux;
+  res
+}
+```
+
+inline_for_extraction
 let mk_int64_t
   (#t: Type)
   (vmatch: perm -> t -> cbor -> slprop)
@@ -540,6 +569,36 @@ let mk_int64_t
   stt t
     (emp)
     (fun res -> vmatch 1.0R res (pack (CInt64 ty v)))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn mk_int64_trade
+  (#t: Type0)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (cbor_mk_int64: mk_int64_t vmatch)
+  (cbor_elim_int64: elim_int64_t vmatch)
+  (ty: major_type_uint64_or_neg_int64)
+  (v: U64.t)
+requires emp
+returns res: t
+ensures
+    vmatch 1.0R res (pack (CInt64 ty v)) **
+    Trade.trade
+      (vmatch 1.0R res (pack (CInt64 ty v)))
+      emp
+{
+  let res = cbor_mk_int64 ty v;
+  ghost fn aux (_: unit)
+  requires emp ** vmatch 1.0R res (pack (CInt64 ty v))
+  ensures emp
+  {
+    cbor_elim_int64 res
+  };
+  Trade.intro _ _ _ aux;
+  res
+}
+```
 
 inline_for_extraction
 let mk_string_t

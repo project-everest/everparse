@@ -235,54 +235,11 @@ val cbor_det_get_tagged_payload () : get_tagged_payload_t cbor_det_match
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
-fn cbor_det_mk_simple_value'
-  (v: Spec.simple_value)
-requires emp
-returns res: cbor_det_t
-ensures
-    cbor_det_match 1.0R res (Spec.pack (Spec.CSimple v)) **
-    Trade.trade
-      (cbor_det_match 1.0R res (Spec.pack (Spec.CSimple v)))
-      emp
-{
-  let res = cbor_det_mk_simple_value () v;
-  ghost fn aux (_: unit)
-  requires emp ** cbor_det_match 1.0R res (Spec.pack (Spec.CSimple v))
-  ensures emp
-  {
-    cbor_det_elim_simple () res
-  };
-  Trade.intro _ _ _ aux;
-  res
-}
-```
+let cbor_det_mk_int64' = mk_int64_trade _ (cbor_det_mk_int64 ()) (cbor_det_elim_int64 ())
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
-fn cbor_det_mk_int64'
-  (ty: Spec.major_type_uint64_or_neg_int64)
-  (v: U64.t)
-requires emp
-returns res: cbor_det_t
-ensures
-    cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 ty v)) **
-    Trade.trade
-      (cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 ty v)))
-      emp
-{
-  let res = cbor_det_mk_int64 () ty v;
-  ghost fn aux (_: unit)
-  requires emp ** cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 ty v))
-  ensures emp
-  {
-    cbor_det_elim_int64 () res
-  };
-  Trade.intro _ _ _ aux;
-  res
-}
-```
+let cbor_det_mk_simple_value' = mk_simple_value_trade _ (cbor_det_mk_simple_value ()) (cbor_det_elim_simple ())
 
 val cbor_det_get_array_length () : get_array_length_t cbor_det_match
 
