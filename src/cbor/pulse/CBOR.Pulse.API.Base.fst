@@ -997,3 +997,34 @@ let cbor_det_parse_t
     (fun res ->
       cbor_det_parse_post cbor_det_match input pm v res
     )
+
+noextract [@@noextract_to "krml"]
+let cbor_det_serialize_postcond
+  (y: Spec.cbor)
+  (v: Seq.seq U8.t)
+  (v': Seq.seq U8.t)
+  (res: option SZ.t)
+: Tot prop
+= let s = Spec.cbor_det_serialize y in
+  match res with
+  | None -> Seq.length s > Seq.length v /\ v' == v
+  | Some len ->
+    Seq.length s == SZ.v len /\
+    SZ.v len <= Seq.length v /\
+    v' `Seq.equal` (s `Seq.append` Seq.slice v (SZ.v len) (Seq.length v))
+
+inline_for_extraction
+let cbor_det_serialize_t
+  (#cbordet: Type)
+  (cbor_det_match: perm -> cbordet -> Spec.cbor -> slprop)
+=
+  (x: cbordet) ->
+  (output: S.slice U8.t) ->
+  (#y: Ghost.erased Spec.cbor) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt (option SZ.t)
+    (cbor_det_match pm x y ** pts_to output v)
+    (fun res -> exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
+      cbor_det_serialize_postcond y v v' res
+    ))

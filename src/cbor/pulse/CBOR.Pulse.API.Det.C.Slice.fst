@@ -91,3 +91,33 @@ fn cbor_det_parse_full
   CBOR.Pulse.API.Det.Common.cbor_det_parse_full (cbor_det_validate_from_slice ()) (cbor_det_parse_valid ())
     input
 }
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_serialize_full
+  (_: unit)
+: cbor_det_serialize_t u#0 #_ cbor_det_match
+=
+  (x: cbor_det_t)
+  (output: S.slice U8.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  S.pts_to_len output;
+  let slen = S.len output;
+  let len = cbor_det_size x slen;
+  if (SZ.gt len 0sz) {
+    let out = S.slice_to_arrayptr_intro output;
+    let out' = AP.ghost_split out len;
+    let len' = cbor_det_serialize x out len;
+    AP.join out out';
+    S.slice_to_arrayptr_elim out;
+    S.pts_to_len output;
+    Some len'
+  } else {
+    None #SZ.t
+  }
+}
+```

@@ -41,18 +41,14 @@ ensures
 
 ```pulse
 fn cbor_det_serialize
+  (_: unit)
+: cbor_det_serialize_t u#0 #_ cbor_det_match
+=
   (x: cbordet)
   (output: S.slice U8.t)
   (#y: Ghost.erased Spec.cbor)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
-requires
-    (cbor_det_match pm x y ** pts_to output v)
-returns res: option SZ.t
-ensures
-    (exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
-      cbor_det_serialize_postcond y v v' res
-    ))
 {
   S.pts_to_len output;
   let len = Det.cbor_det_size x (S.len output);
