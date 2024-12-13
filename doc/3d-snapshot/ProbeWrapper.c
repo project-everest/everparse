@@ -109,13 +109,3 @@ BOOLEAN ProbeCheckI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
-
-BOOLEAN ProbeProbeAndCopyCheckI(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr) {
-	if (ProbeAndCopy(probeAddr, 9U, probeDest)) {
-         uint8_t * base = EverParseStreamOf(probeDest);
-         return ProbeCheckI(dest,  base, 9U);
-       } else {
-         // FIXME: we currently assume that the probe function handles its own error
-         return FALSE;
-       }
-}
