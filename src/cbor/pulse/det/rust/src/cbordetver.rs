@@ -6,8 +6,6 @@
 
 pub type cbordet <'a> = crate::cbordetveraux::cbor_raw <'a>;
 
-pub type cbor_det_parse_postcond_some = ();
-
 #[derive(PartialEq, Clone, Copy)]
 pub enum option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
