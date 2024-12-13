@@ -120,8 +120,8 @@ let gen_encoding_test_c
     `Instr ("target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect(\"Expected serialization to succeed\")") ::
     instr_assert ("target_byte_size == " ^ size_s) ::
     instr_assert ("&target_bytes[0.." ^ size_s ^ "] == source_bytes") ::
-    `Instr ("let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect(\"Expected to parse successfully\")") ::
-    instr_assert ("target_byte_size == " ^ size_s) ::
+    `Instr ("let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect(\"Expected to parse successfully\")") ::
+    instr_assert ("target_rem.len () == 0") ::
     instr_assert ("cbor_det_equal(source_cbor, target_cbor)") ::
     []
   ) ::
