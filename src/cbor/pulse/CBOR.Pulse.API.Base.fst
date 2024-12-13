@@ -665,6 +665,47 @@ let mk_array_t
     )
 
 inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn mk_array'
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mk_array: mk_array_t vmatch)
+  (a: S.slice t)
+  (va0: Ghost.erased (Seq.seq t))
+  (#pa: perm)
+  (#va: Ghost.erased (Seq.seq t))
+  (#pv: perm)
+  (#vv: Ghost.erased (list cbor))
+requires
+    (pts_to a #pa va **
+      PM.seq_list_match va0 vv (vmatch pv) **
+      pure (FStar.UInt.fits (SZ.v (S.len a)) U64.n /\
+        Seq.equal va va0
+      )
+    )
+returns res: t
+ensures
+    (exists* v' .
+      vmatch 1.0R res (pack (CArray v')) **
+      Trade.trade
+        (vmatch 1.0R res (pack (CArray v')))
+        (pts_to a #pa va **
+          PM.seq_list_match va0 vv (vmatch pv)
+        ) **
+        pure ((v' <: list cbor) == Ghost.reveal vv)
+    )
+{
+  Trade.rewrite_with_trade
+    (PM.seq_list_match va0 vv (vmatch pv))
+    (PM.seq_list_match va vv (vmatch pv));
+  let res = mk_array a;
+  Trade.trans_concl_r _ _ _ (PM.seq_list_match va0 vv (vmatch pv));
+  res
+}
+```
+
+inline_for_extraction
 let mk_map_entry_t
   (#t #t2: Type)
   (vmatch: perm -> t -> cbor -> slprop)
