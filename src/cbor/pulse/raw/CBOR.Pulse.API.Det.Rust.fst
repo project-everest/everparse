@@ -29,23 +29,23 @@ fn cbor_det_parse
   (#v: Ghost.erased (Seq.seq U8.t))
 requires
     (pts_to input #pm v)
-returns res: option (cbordet & SZ.t)
+returns res: option (cbordet & S.slice U8.t)
 ensures
   cbor_det_parse_post input pm v res
 {
   let len = cbor_det_validate input;
   if (len = 0sz) {
     fold (cbor_det_parse_post input pm v None);
-    None #(cbordet & SZ.t)
+    None #(cbordet & S.slice U8.t)
   } else {
     let Mktuple2 input2 rem = SU.split_trade input len;
-    Trade.elim_hyp_r _ _ (pts_to input #pm v);
     Classical.forall_intro_2 (seq_length_append_l #U8.t);
     S.pts_to_len input2;
     let res = Det.cbor_det_parse input2;
-    Trade.trans _ _ (pts_to input #pm v);
-    fold (cbor_det_parse_post input pm v (Some (res, len)));
-    Some (res, len)
+    Trade.trans_hyp_l _ _ _ (pts_to input #pm v);
+    fold (cbor_det_parse_post_some input pm v res rem);
+    fold (cbor_det_parse_post input pm v (Some (res, rem)));
+    Some (res, rem)
   }
 }
 ```

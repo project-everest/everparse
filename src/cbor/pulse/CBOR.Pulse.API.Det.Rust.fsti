@@ -14,28 +14,51 @@ val cbordet: Type0
 noextract [@@noextract_to "krml"]
 val cbor_det_match: perm -> cbordet -> Spec.cbor -> slprop
 
+let cbor_det_parse_postcond_some
+  (v: Seq.seq U8.t)
+  (v': Spec.cbor)
+  (vrem: Seq.seq U8.t)
+: Tot prop
+= let s = Spec.cbor_det_serialize v' in
+  let len = Seq.length s in
+  len <= Seq.length v /\
+  Seq.slice v 0 len == s /\
+  Seq.slice v len (Seq.length v) == vrem
+
+noextract [@@noextract_to "krml"]
+let cbor_det_parse_post_some
+  (input: S.slice U8.t)
+  (pm: perm)
+  (v: Seq.seq U8.t)
+  (res: cbordet)
+  (rem: S.slice U8.t)
+: Tot slprop
+= exists* v' vrem .
+     cbor_det_match 1.0R res v' **
+     pts_to rem #pm vrem **
+     Trade.trade // FIXME: I would need a forall_vrem here
+       (cbor_det_match 1.0R res v' ** pts_to rem #pm vrem)
+       (pts_to input #pm v) **
+     pure (
+       cbor_det_parse_postcond_some v v' vrem
+     )
+
 noextract [@@noextract_to "krml"]
 let cbor_det_parse_post
   (input: S.slice U8.t)
   (pm: perm)
   (v: Seq.seq U8.t)
-  (res: option (cbordet & SZ.t))
+  (res: option (cbordet & S.slice U8.t))
 : Tot slprop
 = match res with
   | None -> pts_to input #pm v ** pure (~ (exists v1 v2 . v == Spec.cbor_det_serialize v1 `Seq.append` v2))
-  | Some (res, len) ->
-    exists* v' .
-      cbor_det_match 1.0R res v' **
-      Trade.trade (cbor_det_match 1.0R res v') (pts_to input #pm v) ** pure (
-        SZ.v len <= Seq.length v /\
-        Seq.slice v 0 (SZ.v len) == Spec.cbor_det_serialize v'
-      )
+  | Some (res, rem) -> cbor_det_parse_post_some input pm v res rem
 
 val cbor_det_parse
   (input: S.slice U8.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
-: stt (option (cbordet & SZ.t))
+: stt (option (cbordet & S.slice U8.t))
     (pts_to input #pm v)
     (fun res ->
       cbor_det_parse_post input pm v res
