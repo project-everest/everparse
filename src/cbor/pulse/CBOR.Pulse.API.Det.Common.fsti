@@ -77,11 +77,12 @@ let cbor_det_validate_post
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-val cbor_det_validate
-  (input: S.slice U8.t)
-  (#pm: perm)
-  (#v: Ghost.erased (Seq.seq U8.t))
-: stt SZ.t
+let cbor_det_validate_t
+=
+  (input: S.slice U8.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt SZ.t
     (pts_to input #pm v)
     (fun res -> pts_to input #pm v ** pure (
       cbor_det_validate_post v res
@@ -89,11 +90,21 @@ val cbor_det_validate
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-val cbor_det_parse
-  (input: S.slice U8.t)
-  (#pm: perm)
-  (#v: Ghost.erased (Seq.seq U8.t))
-: stt cbor_det_t
+val cbor_det_validate (_: unit) : cbor_det_validate_t
+
+let cbor_det_parse_aux1
+  (v1: Spec.cbor)
+: Lemma
+  (let s = Spec.cbor_det_serialize v1 in s == s `Seq.append` Seq.empty)
+= Seq.append_empty_r (Spec.cbor_det_serialize v1)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_det_parse_valid_t =
+  (input: S.slice U8.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt cbor_det_t
     (pts_to input #pm v ** pure (
       exists v1 . Ghost.reveal v == Spec.cbor_det_serialize v1 /\ SZ.v (S.len input) == Seq.length (Spec.cbor_det_serialize v1)
     ))
@@ -102,6 +113,48 @@ val cbor_det_parse
       Trade.trade (cbor_det_match 1.0R res v') (pts_to input #pm v) ** pure (
         Ghost.reveal v == Spec.cbor_det_serialize v'
     ))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+val cbor_det_parse_valid (_: unit) : cbor_det_parse_valid_t
+
+let seq_length_append_l
+  (#t: Type)
+  (v1 v2: Seq.seq t)
+: Lemma
+  (Seq.slice (Seq.append v1 v2) 0 (Seq.length v1) == v1)
+= assert (Seq.slice (Seq.append v1 v2) 0 (Seq.length v1) `Seq.equal` v1)
+
+module SU = Pulse.Lib.Slice.Util
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_parse_full
+  (cbor_det_validate: cbor_det_validate_t)
+  (cbor_det_parse: cbor_det_parse_valid_t)
+: cbor_det_parse_t u#0 #_ cbor_det_match
+=
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  let len = cbor_det_validate input;
+  if (len = 0sz) {
+    fold (cbor_det_parse_post cbor_det_match input pm v None);
+    None #(cbor_det_t & S.slice U8.t)
+  } else {
+    let Mktuple2 input2 rem = SU.split_trade input len;
+    Classical.forall_intro_2 (seq_length_append_l #U8.t);
+    S.pts_to_len input2;
+    let res = cbor_det_parse input2;
+    Trade.trans_hyp_l _ _ _ (pts_to input #pm v);
+    fold (cbor_det_parse_post_some cbor_det_match input pm v res rem);
+    fold (cbor_det_parse_post cbor_det_match input pm v (Some (res, rem)));
+    Some (res, rem)
+  }
+}
+```
 
 noextract [@@noextract_to "krml"]
 let cbor_det_size_post

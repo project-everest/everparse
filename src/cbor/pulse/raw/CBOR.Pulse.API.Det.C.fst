@@ -1,9 +1,9 @@
 module CBOR.Pulse.API.Det.C
+#lang-pulse
 
 (* NOTE: this .fst file does not need anything from the Raw namespace,
 but it has been moved here to be hidden from verified clients. *)
 
-```pulse
 fn cbor_det_validate
   (input: AP.ptr U8.t)
   (input_len: SZ.t)
@@ -18,11 +18,10 @@ ensures
     ))
 {
   let s = SU.arrayptr_to_slice_intro_trade input input_len;
-  let res = CBOR.Pulse.API.Det.Common.cbor_det_validate s;
+  let res = CBOR.Pulse.API.Det.Common.cbor_det_validate () s;
   Trade.elim _ (pts_to input #pm v);
   res
 }
-```
 
 module ID = FStar.IndefiniteDescription
 
@@ -41,7 +40,6 @@ let cbor_det_validate_success_elim
   let v2 = FStar.IndefiniteDescription.indefinite_description_tot _ (fun v2 -> p v1 v2) in
   (Ghost.reveal v1, Ghost.reveal v2)
 
-```pulse
 fn cbor_det_parse
   (input: AP.ptr U8.t)
   (len: SZ.t)
@@ -75,14 +73,12 @@ ensures
   let s = SU.arrayptr_to_slice_intro_trade input len;
   Trade.trans _ _ (pts_to input #pm v);
   S.pts_to_len s;
-  let res = CBOR.Pulse.API.Det.Common.cbor_det_parse s;
+  let res = CBOR.Pulse.API.Det.Common.cbor_det_parse_valid () s;
   Trade.trans _ _ (pts_to input #pm v);
   res
 }
-```
 
 #restart-solver
-```pulse
 fn cbor_det_serialize
   (x: cbor_det_t)
   (output: AP.ptr U8.t)
@@ -106,9 +102,7 @@ ensures
   S.arrayptr_to_slice_elim ou;
   res
 }
-```
 
-```pulse
 fn cbor_det_mk_string_from_array (_: unit) : cbor_det_mk_string_from_array_t
 =
   (ty: major_type_byte_string_or_text_string)
@@ -133,9 +127,7 @@ fn cbor_det_mk_string_from_array (_: unit) : cbor_det_mk_string_from_array_t
   Trade.trans (cbor_det_match p' res (Spec.pack (Spec.CString ty v'))) _ _;
   res
 }
-```
 
-```pulse
 fn cbor_det_mk_array_from_array (_: unit) : cbor_det_mk_array_from_array_t
 =
   (a: A.array cbor_det_t)
@@ -162,9 +154,7 @@ fn cbor_det_mk_array_from_array (_: unit) : cbor_det_mk_array_from_array_t
   Trade.trans (cbor_det_match p' res (Spec.pack (Spec.CArray v'))) _ _;
   res
 }
-```
 
-```pulse
 fn cbor_det_mk_map_from_array (_: unit) : cbor_det_mk_map_from_array_t
 =
   (a: A.array cbor_det_map_entry_t)
@@ -196,9 +186,7 @@ fn cbor_det_mk_map_from_array (_: unit) : cbor_det_mk_map_from_array_t
   Trade.trans (cbor_det_match p' res (Spec.pack (Spec.CMap v'))) _ _;
   res
 }
-```
 
-```pulse
 fn cbor_det_get_string
   (_: unit)
 : cbor_det_get_string_t
@@ -212,9 +200,7 @@ fn cbor_det_get_string
   Trade.trans _ _ (cbor_det_match p x y);
   res
 }
-```
 
-```pulse
 fn cbor_det_map_get
   (_: unit)
 : map_get_by_ref_t #_ cbor_det_match
@@ -230,4 +216,3 @@ fn cbor_det_map_get
 {
   CBOR.Pulse.API.Det.Common.cbor_det_map_get () x k dest
 }
-```

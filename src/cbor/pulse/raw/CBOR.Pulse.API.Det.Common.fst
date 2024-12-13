@@ -105,16 +105,12 @@ let cbor_det_validate_post_intro
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_validate
+  (_: unit)
+: cbor_det_validate_t
+=
   (input: S.slice U8.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
-requires
-    (pts_to input #pm v)
-returns res: SZ.t
-ensures
-    (pts_to input #pm v ** pure (
-      cbor_det_validate_post v res
-    ))
 {
   let res = Parse.cbor_validate_det input;
   cbor_det_validate_post_intro v res;
@@ -136,29 +132,15 @@ let cbor_det_parse_aux
 = Seq.lemma_split v len;
   Classical.move_requires (SpecRaw.serialize_cbor_inj (SpecRaw.mk_det_raw_cbor v1) v1' v2) (Seq.slice v (len) (Seq.length v))
 
-let cbor_det_parse_aux1
-  (v1: Spec.cbor)
-: Lemma
-  (let s = Spec.cbor_det_serialize v1 in s == s `Seq.append` Seq.empty)
-= Seq.append_empty_r (Spec.cbor_det_serialize v1)
-
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
-fn cbor_det_parse
+fn cbor_det_parse_valid
+  (_: unit)
+: cbor_det_parse_valid_t
+=
   (input: S.slice U8.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
-requires
-    (pts_to input #pm v ** pure (
-      exists v1 . Ghost.reveal v == Spec.cbor_det_serialize v1 /\ SZ.v (S.len input) == Seq.length (Spec.cbor_det_serialize v1)
-    ))
-returns res: cbor_det_t
-ensures
-    (exists* v' .
-      cbor_det_match 1.0R res v' **
-      Trade.trade (cbor_det_match 1.0R res v') (pts_to input #pm v) ** pure (
-        Ghost.reveal v == Spec.cbor_det_serialize v'
-    ))
 {
   let len = S.len input;
   S.pts_to_len input;

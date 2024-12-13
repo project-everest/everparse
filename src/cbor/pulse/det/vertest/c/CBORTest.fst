@@ -1,6 +1,6 @@
 module CBORTest
 open CBOR.Spec.Constants
-open CBOR.Pulse.API.Det.C
+open CBOR.Pulse.API.Det.C.Slice
 open Pulse.Lib.Pervasives
 module A = Pulse.Lib.Array
 module SZ = FStar.SizeT
@@ -264,7 +264,7 @@ ensures emp
         Trade.elim (cbor_det_match _ test _) _;
         intro_res_post_impossible ()
       } else {
-        let size' = cbor_det_validate_from_slice out1;
+        let size' = cbor_det_validate_from_slice () out1;
         if (size' <> size) {
           S.to_array out1;
           Trade.elim (cbor_det_match _ test _) _;

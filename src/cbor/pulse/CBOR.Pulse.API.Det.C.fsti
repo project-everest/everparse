@@ -1,4 +1,5 @@
 module CBOR.Pulse.API.Det.C
+#lang-pulse
 include CBOR.Pulse.API.Det.Common
 open Pulse.Lib.Pervasives
 open CBOR.Spec.Constants
@@ -26,29 +27,6 @@ val cbor_det_validate
       cbor_det_validate_post v res
     ))
 
-inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
-fn cbor_det_validate_from_slice
-  (input: S.slice U8.t)
-  (#pm: perm)
-  (#v: Ghost.erased (Seq.seq U8.t))
-requires
-    (pts_to input #pm v)
-returns res: SZ.t
-ensures
-    (pts_to input #pm v ** pure (
-      cbor_det_validate_post v res
-    ))
-{
-  S.pts_to_len input;
-  let len = S.len input;
-  let a = SU.slice_to_arrayptr_intro_trade input;
-  let res = cbor_det_validate a len;
-  Trade.elim _ _;
-  res
-}
-```
-
 val cbor_det_parse
   (input: AP.ptr U8.t)
   (len: SZ.t)
@@ -65,35 +43,6 @@ val cbor_det_parse
         Seq.slice v 0 (SZ.v len) == Spec.cbor_det_serialize v'
     ))
 
-inline_for_extraction
-noextract [@@noextract_to "krml"]
-```pulse
-fn cbor_det_parse_from_slice
-  (input: S.slice U8.t) // the length of that slice does not really matter
-  (len: SZ.t)
-  (#pm: perm)
-  (#v: Ghost.erased (Seq.seq U8.t))
-requires
-    (pts_to input #pm v ** pure (
-      exists v1 v2 . Ghost.reveal v == Spec.cbor_det_serialize v1 `Seq.append` v2 /\ SZ.v len == Seq.length (Spec.cbor_det_serialize v1)
-    ))
-returns res: cbor_det_t
-ensures
-    (exists* v' .
-      cbor_det_match 1.0R res v' **
-      Trade.trade (cbor_det_match 1.0R res v') (pts_to input #pm v) ** pure (
-        SZ.v len <= Seq.length v /\
-        Seq.slice v 0 (SZ.v len) == Spec.cbor_det_serialize v'
-    ))
-{
-  S.pts_to_len input;
-  let a = SU.slice_to_arrayptr_intro_trade input;
-  let res = cbor_det_parse a len;
-  Trade.trans _ _ (pts_to input #pm v);
-  res
-}
-```
-
 val cbor_det_serialize
   (x: cbor_det_t)
   (output: AP.ptr U8.t)
@@ -109,7 +58,6 @@ val cbor_det_serialize
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_serialize_to_slice
   (x: cbor_det_t)
   (output: S.slice U8.t)
@@ -130,7 +78,6 @@ ensures
   S.slice_to_arrayptr_elim ou;
   res
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -190,7 +137,6 @@ val cbor_det_mk_array_from_array (_: unit) : cbor_det_mk_array_from_array_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_mk_array_from_array'
   (a: A.array cbor_det_t)
   (len: U64.t)
@@ -228,7 +174,6 @@ ensures
   Trade.trans_concl_r _ _ _ (PM.seq_list_match va0 vv (cbor_det_match pv));
   res
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -263,7 +208,6 @@ val cbor_det_mk_map_from_array (_: unit) : cbor_det_mk_map_from_array_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_mk_map_from_array'
   (a: A.array cbor_det_map_entry_t)
   (len: U64.t)
@@ -302,7 +246,6 @@ ensures
   Trade.trans_concl_r _ _ _ (PM.seq_list_match va0 vv (cbor_det_map_entry_match pv));
   res
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]

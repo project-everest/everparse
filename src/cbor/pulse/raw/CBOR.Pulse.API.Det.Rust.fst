@@ -4,7 +4,6 @@ module CBOR.Pulse.API.Det.Rust
 but it has been moved here to be hidden from verified clients. *)
 
 module Det = CBOR.Pulse.API.Det.Common
-module SU = Pulse.Lib.Slice.Util
 
 (* Validation, parsing and serialization *)
 
@@ -15,40 +14,8 @@ let cbor_det_match = Det.cbor_det_match
 
 open CBOR.Pulse.API.Det.Common
 
-let seq_length_append_l
-  (#t: Type)
-  (v1 v2: Seq.seq t)
-: Lemma
-  (Seq.slice (Seq.append v1 v2) 0 (Seq.length v1) == v1)
-= assert (Seq.slice (Seq.append v1 v2) 0 (Seq.length v1) `Seq.equal` v1)
-
-```pulse
-fn cbor_det_parse
-  (input: S.slice U8.t)
-  (#pm: perm)
-  (#v: Ghost.erased (Seq.seq U8.t))
-requires
-    (pts_to input #pm v)
-returns res: option (cbordet & S.slice U8.t)
-ensures
-  cbor_det_parse_post input pm v res
-{
-  let len = cbor_det_validate input;
-  if (len = 0sz) {
-    fold (cbor_det_parse_post input pm v None);
-    None #(cbordet & S.slice U8.t)
-  } else {
-    let Mktuple2 input2 rem = SU.split_trade input len;
-    Classical.forall_intro_2 (seq_length_append_l #U8.t);
-    S.pts_to_len input2;
-    let res = Det.cbor_det_parse input2;
-    Trade.trans_hyp_l _ _ _ (pts_to input #pm v);
-    fold (cbor_det_parse_post_some input pm v res rem);
-    fold (cbor_det_parse_post input pm v (Some (res, rem)));
-    Some (res, rem)
-  }
-}
-```
+let cbor_det_parse () =
+  cbor_det_parse_full (cbor_det_validate ()) (cbor_det_parse_valid ())
 
 ```pulse
 fn cbor_det_size
