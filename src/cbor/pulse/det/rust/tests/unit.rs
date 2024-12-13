@@ -17,8 +17,8 @@ fn test1()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 1);
   assert!(&target_bytes[0..1] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 1);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -36,8 +36,8 @@ fn test2()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 1);
   assert!(&target_bytes[0..1] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 1);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -55,8 +55,8 @@ fn test3()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 1);
   assert!(&target_bytes[0..1] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 1);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -74,8 +74,8 @@ fn test4()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 1);
   assert!(&target_bytes[0..1] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 1);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -93,8 +93,8 @@ fn test5()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 2);
   assert!(&target_bytes[0..2] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 2);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -112,8 +112,8 @@ fn test6()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 2);
   assert!(&target_bytes[0..2] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 2);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -131,8 +131,8 @@ fn test7()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 2);
   assert!(&target_bytes[0..2] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 2);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -150,8 +150,8 @@ fn test8()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 3);
   assert!(&target_bytes[0..3] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 3);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -169,8 +169,8 @@ fn test9()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 5);
   assert!(&target_bytes[0..5] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 5);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -188,8 +188,8 @@ fn test10()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 9);
   assert!(&target_bytes[0..9] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 9);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -207,8 +207,8 @@ fn test11()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 1);
   assert!(&target_bytes[0..1] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 1);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -226,8 +226,8 @@ fn test12()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 1);
   assert!(&target_bytes[0..1] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 1);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -245,8 +245,8 @@ fn test13()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 2);
   assert!(&target_bytes[0..2] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 2);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -264,8 +264,8 @@ fn test14()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 3);
   assert!(&target_bytes[0..3] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 3);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -283,8 +283,8 @@ fn test15()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 1);
   assert!(&target_bytes[0..1] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 1);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -302,8 +302,8 @@ fn test16()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 2);
   assert!(&target_bytes[0..2] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 2);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -321,8 +321,8 @@ fn test17()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 5);
   assert!(&target_bytes[0..5] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 5);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -340,8 +340,8 @@ fn test18()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 3);
   assert!(&target_bytes[0..3] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 3);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -359,8 +359,8 @@ fn test19()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 3);
   assert!(&target_bytes[0..3] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 3);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -378,8 +378,8 @@ fn test20()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 4);
   assert!(&target_bytes[0..4] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 4);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -397,8 +397,8 @@ fn test21()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 5);
   assert!(&target_bytes[0..5] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 5);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -417,8 +417,8 @@ fn test22()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 1);
   assert!(&target_bytes[0..1] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 1);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -443,8 +443,8 @@ fn test23()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 4);
   assert!(&target_bytes[0..4] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 4);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -479,8 +479,8 @@ fn test24()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 8);
   assert!(&target_bytes[0..8] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 8);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -549,8 +549,8 @@ fn test25()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 29);
   assert!(&target_bytes[0..29] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 29);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -569,8 +569,8 @@ fn test26()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 1);
   assert!(&target_bytes[0..1] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 1);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -600,8 +600,8 @@ fn test27()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 9);
   assert!(&target_bytes[0..9] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 9);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -628,8 +628,8 @@ fn test28()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 8);
   assert!(&target_bytes[0..8] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 8);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 #[allow(unused_variables)]
@@ -663,8 +663,8 @@ fn test29()
   target_byte_size = (cbor_det_serialize (source_cbor, &mut target_bytes[..])).expect("Expected serialization to succeed");
   assert!(target_byte_size == 21);
   assert!(&target_bytes[0..21] == source_bytes);
-  let (target_cbor, target_byte_size) : (CborDet, usize) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
-  assert!(target_byte_size == 21);
+  let (target_cbor, target_rem) : (CborDet, &[u8]) = (cbor_det_parse(source_bytes)).expect("Expected to parse successfully");
+  assert!(target_rem.len () == 0);
   assert!(cbor_det_equal(source_cbor, target_cbor));
 }
 
