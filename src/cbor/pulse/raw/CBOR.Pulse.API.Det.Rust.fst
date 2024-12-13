@@ -4,6 +4,7 @@ module CBOR.Pulse.API.Det.Rust
 but it has been moved here to be hidden from verified clients. *)
 
 module Det = CBOR.Pulse.API.Det.Common
+module SU = Pulse.Lib.Slice.Util
 
 (* Validation, parsing and serialization *)
 
@@ -13,6 +14,13 @@ type cbordet = Det.cbor_det_t
 let cbor_det_match = Det.cbor_det_match
 
 open CBOR.Pulse.API.Det.Common
+
+let seq_length_append_l
+  (#t: Type)
+  (v1 v2: Seq.seq t)
+: Lemma
+  (Seq.slice (Seq.append v1 v2) 0 (Seq.length v1) == v1)
+= assert (Seq.slice (Seq.append v1 v2) 0 (Seq.length v1) `Seq.equal` v1)
 
 ```pulse
 fn cbor_det_parse
@@ -30,7 +38,12 @@ ensures
     fold (cbor_det_parse_post input pm v None);
     None #(cbordet & SZ.t)
   } else {
-    let res = Det.cbor_det_parse input len;
+    let Mktuple2 input2 rem = SU.split_trade input len;
+    Trade.elim_hyp_r _ _ (pts_to input #pm v);
+    Classical.forall_intro_2 (seq_length_append_l #U8.t);
+    S.pts_to_len input2;
+    let res = Det.cbor_det_parse input2;
+    Trade.trans _ _ (pts_to input #pm v);
     fold (cbor_det_parse_post input pm v (Some (res, len)));
     Some (res, len)
   }

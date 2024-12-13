@@ -75,7 +75,7 @@ ensures
   let s = SU.arrayptr_to_slice_intro_trade input len;
   Trade.trans _ _ (pts_to input #pm v);
   S.pts_to_len s;
-  let res = CBOR.Pulse.API.Det.Common.cbor_det_parse s len;
+  let res = CBOR.Pulse.API.Det.Common.cbor_det_parse s;
   Trade.trans _ _ (pts_to input #pm v);
   res
 }

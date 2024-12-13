@@ -91,18 +91,16 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 val cbor_det_parse
   (input: S.slice U8.t)
-  (len: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
 : stt cbor_det_t
     (pts_to input #pm v ** pure (
-      exists v1 v2 . Ghost.reveal v == Spec.cbor_det_serialize v1 `Seq.append` v2 /\ SZ.v len == Seq.length (Spec.cbor_det_serialize v1)
+      exists v1 . Ghost.reveal v == Spec.cbor_det_serialize v1 /\ SZ.v (S.len input) == Seq.length (Spec.cbor_det_serialize v1)
     ))
     (fun res -> exists* v' .
       cbor_det_match 1.0R res v' **
       Trade.trade (cbor_det_match 1.0R res v') (pts_to input #pm v) ** pure (
-        SZ.v len <= Seq.length v /\
-        Seq.slice v 0 (SZ.v len) == Spec.cbor_det_serialize v'
+        Ghost.reveal v == Spec.cbor_det_serialize v'
     ))
 
 noextract [@@noextract_to "krml"]
