@@ -22,6 +22,6 @@ PULSE_BRANCH=$(jq -c -r '.RepoVersions.pulse_version' "$build_home"/config.json 
 # Install Pulse and its dependencies
 [[ -n "$PULSE_HOME" ]]
 git clone --branch $PULSE_BRANCH https://github.com/FStarLang/pulse "$PULSE_HOME"
-OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$PULSE_HOME"
+OTHERFLAGS='--admit_smt_queries true --z3version 4.8.5' make -j 24 -C "$PULSE_HOME"
 
 opam install hex re ctypes sha sexplib
