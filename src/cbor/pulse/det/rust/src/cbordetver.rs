@@ -6,26 +6,39 @@
 
 pub type cbordet <'a> = crate::cbordetveraux::cbor_raw <'a>;
 
+pub type cbor_det_parse_postcond_some = ();
+
 #[derive(PartialEq, Clone, Copy)]
-pub enum option__·CBOR_Pulse_Raw_Type_cbor_raw···size_t· <'a>
+pub enum option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
     None,
-    Some { v: (crate::cbordetveraux::cbor_raw <'a>, usize) }
+    Some { v: (crate::cbordetveraux::cbor_raw <'a>, &'a [u8]) }
 }
 
 pub fn cbor_det_parse <'a>(input: &'a [u8]) ->
-    option__·CBOR_Pulse_Raw_Type_cbor_raw···size_t·
+    option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·
     <'a>
 {
     let res: usize = crate::cbordetveraux::cbor_validate_det(input);
     let len: usize = res;
     if len == 0usize
-    { option__·CBOR_Pulse_Raw_Type_cbor_raw···size_t·::None }
+    { option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None }
     else
     {
-        let res0: crate::cbordetveraux::cbor_raw = crate::cbordetveraux::cbor_parse(input, len);
+        let s·: (&[u8], &[u8]) = input.split_at(len);
+        let _letpattern: (&[u8], &[u8]) =
+            {
+                let s1: &[u8] = s·.0;
+                let s2: &[u8] = s·.1;
+                (s1,s2)
+            };
+        let input2: &[u8] = _letpattern.0;
+        let rem: &[u8] = _letpattern.1;
+        let len1: usize = input2.len();
+        let res0: crate::cbordetveraux::cbor_raw = crate::cbordetveraux::cbor_parse(input2, len1);
         let res1: crate::cbordetveraux::cbor_raw = res0;
-        option__·CBOR_Pulse_Raw_Type_cbor_raw···size_t·::Some { v: (res1,len) }
+        option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some
+        { v: (res1,rem) }
     }
 }
 

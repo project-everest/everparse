@@ -4750,7 +4750,8 @@ cbor_raw cbor_det_parse(uint8_t *input, size_t len)
 {
   Pulse_Lib_Slice_slice__uint8_t s = arrayptr_to_slice_intro__uint8_t(input, len);
   Pulse_Lib_Slice_slice__uint8_t s0 = s;
-  cbor_raw res = cbor_parse(s0, len);
+  size_t len1 = len__uint8_t(s0);
+  cbor_raw res = cbor_parse(s0, len1);
   cbor_raw res0 = res;
   return res0;
 }

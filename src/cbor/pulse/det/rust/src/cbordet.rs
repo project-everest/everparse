@@ -24,9 +24,10 @@ pub type CborDet <'a> = crate::cbordetver::cbordet <'a>;
 
 /// Tries to parse a Deterministic CBOR object from the first bytes of
 /// `input`, following RFC 8949 Section 4.2.1, minus floating-point
-/// values. Returns `None` in case of failure, or `Some(object, size)`
-/// in case of success, where `size` is the byte size of the
-/// representation of `object`, as found in the `size` first bytes of
+/// values. Returns `None` in case of failure, or `Some(object, rem)`
+/// in case of success, where `rem` is the remainder of the input
+/// slice past those first bytes of `input` that contain the valid
+/// binary representation of
 /// `input`. This function does not perform a deep parse of `input`,
 /// it only copies the object type, tag and/or size of the top-most
 /// object. As such, it uses constant stack space (including data
@@ -37,15 +38,15 @@ pub type CborDet <'a> = crate::cbordetver::cbordet <'a>;
 /// consequence of the deterministic encoding.), and the
 /// well-formedness of UTF-8 text strings.
 pub fn cbor_det_parse <'a>(input: &'a [u8]) ->
-    Option<(CborDet<'a>, usize)>
+    Option<(CborDet<'a>, &'a [u8])>
 {
     match crate::cbordetver::cbor_det_parse(input) {
-	crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···size_t·::None => {
+	crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::None => {
 	    return None;
 	}
-	crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···size_t·::Some {v} => {
-	    let (object, size) = v;
-	    return Some((object, size));
+	crate::cbordetver::option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t·::Some {v} => {
+	    let (object, rem) = v;
+	    return Some((object, rem));
 	}
     }
 }
