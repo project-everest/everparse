@@ -57,7 +57,13 @@ fn cbor_det_serialize
     S.pts_to_len out;
     let len' = Det.cbor_det_serialize x out;
     S.pts_to_len out;
+    with v1 . assert (pts_to out v1);
+    assert (pure (Seq.equal v1 (Spec.cbor_det_serialize y)));
     S.join out rem output;
+    with v' . assert (pts_to output v');
+    Seq.lemma_split v' (SZ.v len');
+    assert (pure (Seq.equal (Seq.slice v' 0 (SZ.v len')) (Spec.cbor_det_serialize y)));
+    assert (pure (Seq.equal (Seq.slice v' (SZ.v len) (Seq.length v)) (Seq.slice v (SZ.v len) (Seq.length v))));
     Some len'
   } else {
     None #SZ.t

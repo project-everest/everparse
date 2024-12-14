@@ -45,7 +45,7 @@ let equal_t
   (#v2: Ghost.erased cbor) ->
   stt bool
     (vmatch p1 x1 v1 ** vmatch p2 x2 v2)
-    (fun res -> vmatch p1 x1 v1 ** vmatch p2 x2 v2 ** pure (res == (Ghost.reveal v1 = Ghost.reveal v2)))
+    (fun res -> vmatch p1 x1 v1 ** vmatch p2 x2 v2 ** pure (res == true <==> (Ghost.reveal v1 == Ghost.reveal v2)))
 
 inline_for_extraction
 let ghost_get_size_t
@@ -1175,7 +1175,8 @@ let cbor_det_parse_postcond_some
   let len = Seq.length s in
   len <= Seq.length v /\
   Seq.slice v 0 len == s /\
-  Seq.slice v len (Seq.length v) == vrem
+  Seq.slice v len (Seq.length v) == vrem /\
+  v == Seq.append (Seq.slice v 0 len) (Seq.slice v len (Seq.length v))
 
 noextract [@@noextract_to "krml"]
 let cbor_det_parse_post_some
@@ -1237,6 +1238,9 @@ let cbor_det_serialize_postcond
   | Some len ->
     Seq.length s == SZ.v len /\
     SZ.v len <= Seq.length v /\
+    Seq.length v' == Seq.length v /\
+    Seq.slice v' 0 (SZ.v len) == s /\
+    Seq.slice v' (SZ.v len) (Seq.length v) == Seq.slice v (SZ.v len) (Seq.length v) /\
     v' `Seq.equal` (s `Seq.append` Seq.slice v (SZ.v len) (Seq.length v))
 
 inline_for_extraction

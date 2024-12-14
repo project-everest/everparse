@@ -112,9 +112,15 @@ fn cbor_det_serialize_full
     let out = S.slice_to_arrayptr_intro output;
     let out' = AP.ghost_split out len;
     let len' = cbor_det_serialize x out len;
+    with v1 . assert (pts_to out v1);
+    assert (pure (Seq.equal v1 (Spec.cbor_det_serialize y)));
     AP.join out out';
+    with v' . assert (pts_to out v');
+    Seq.lemma_split v' (SZ.v len');
     S.slice_to_arrayptr_elim out;
     S.pts_to_len output;
+    assert (pure (Seq.equal (Seq.slice v' 0 (SZ.v len')) (Spec.cbor_det_serialize y)));
+    assert (pure (Seq.equal (Seq.slice v' (SZ.v len) (Seq.length v)) (Seq.slice v (SZ.v len) (Seq.length v))));
     Some len'
   } else {
     None #SZ.t

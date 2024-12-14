@@ -127,6 +127,19 @@ let seq_length_append_l
 
 module SU = Pulse.Lib.Slice.Util
 
+unfold
+let cbor_det_parse_postcond_some'
+  (v: Seq.seq U8.t)
+  (v': Spec.cbor)
+  (vrem: Seq.seq U8.t)
+: Tot prop
+= let s = Spec.cbor_det_serialize v' in
+  let len = Seq.length s in
+  len <= Seq.length v /\
+  Seq.slice v 0 len == s /\
+  Seq.slice v len (Seq.length v) == vrem /\
+  v == Seq.append (Seq.slice v 0 len) (Seq.slice v len (Seq.length v))
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 ```pulse
@@ -144,6 +157,7 @@ fn cbor_det_parse_full
     fold (cbor_det_parse_post cbor_det_match input pm v None);
     None #(cbor_det_t & S.slice U8.t)
   } else {
+    Seq.lemma_split v (SZ.v len);
     let Mktuple2 input2 rem = SU.split_trade input len;
     Classical.forall_intro_2 (seq_length_append_l #U8.t);
     S.pts_to_len input2;
