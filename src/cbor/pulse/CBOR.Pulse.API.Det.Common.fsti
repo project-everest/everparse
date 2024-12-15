@@ -127,19 +127,6 @@ let seq_length_append_l
 
 module SU = Pulse.Lib.Slice.Util
 
-unfold
-let cbor_det_parse_postcond_some'
-  (v: Seq.seq U8.t)
-  (v': Spec.cbor)
-  (vrem: Seq.seq U8.t)
-: Tot prop
-= let s = Spec.cbor_det_serialize v' in
-  let len = Seq.length s in
-  len <= Seq.length v /\
-  Seq.slice v 0 len == s /\
-  Seq.slice v len (Seq.length v) == vrem /\
-  v == Seq.append (Seq.slice v 0 len) (Seq.slice v len (Seq.length v))
-
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 ```pulse
