@@ -112,6 +112,15 @@ endif
 
 .PHONY: cbor-det-c-vertest
 
+ifeq (,$(NO_PULSE))
+cbor-det-common-vertest: cbor cbor-interface
+	+$(MAKE) -C src/cbor/pulse/det/vertest/common
+else
+cbor-det-common-vertest:
+endif
+
+.PHONY: cbor-det-common-vertest
+
 # NOTE: I wish we could use `cargo -C ...` but see https://github.com/rust-lang/cargo/pull/11960
 cbor-det-rust-test: cbor
 	+cd src/cbor/pulse/det/rust && cargo test
@@ -148,7 +157,7 @@ endif
 
 .PHONY: cbor-snapshot
 
-cbor-test: cbor-det-c-test cbor-det-rust-test cbor-det-c-vertest cbor-test-snapshot
+cbor-test: cbor-det-c-test cbor-det-rust-test cbor-det-c-vertest cbor-det-common-vertest cbor-test-snapshot
 
 ifeq (,$(NO_PULSE))
 cddl: cbor cbor-interface
