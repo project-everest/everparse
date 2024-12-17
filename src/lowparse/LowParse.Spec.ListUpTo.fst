@@ -64,37 +64,37 @@ let parse_list_up_to_payload
   (cond: (t -> Tot bool))
   (fuel: nat)
   (k: parser_kind { k.parser_kind_subkind <> Some ParserConsumesAll })
-  (ptail: tot_parser (parse_list_up_to_kind k) (parse_list_up_to_fuel_t cond fuel))
+  (ptail: parser (parse_list_up_to_kind k) (parse_list_up_to_fuel_t cond fuel))
   (x: t)
-: Tot (tot_parser (parse_list_up_to_payload_kind k) (parse_list_up_to_payload_t cond fuel x))
+: Tot (parser (parse_list_up_to_payload_kind k) (parse_list_up_to_payload_t cond fuel x))
 = if cond x
-  then tot_weaken (parse_list_up_to_payload_kind k) (tot_parse_ret UP_UNIT)
-  else tot_weaken (parse_list_up_to_payload_kind k) ptail
+  then weaken (parse_list_up_to_payload_kind k) (parse_ret UP_UNIT)
+  else weaken (parse_list_up_to_payload_kind k) ptail
 
 let rec parse_list_up_to_fuel
   (#k: parser_kind)
   (#t: Type)
   (cond: (t -> Tot bool))
-  (p: tot_parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
+  (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (fuel: nat)
-: Tot (tot_parser (parse_list_up_to_kind k) (parse_list_up_to_fuel_t cond fuel))
+: Tot (parser (parse_list_up_to_kind k) (parse_list_up_to_fuel_t cond fuel))
   (decreases fuel)
 = if fuel = 0
-  then tot_fail_parser (parse_list_up_to_kind k) (parse_list_up_to_fuel_t cond fuel)
+  then fail_parser (parse_list_up_to_kind k) (parse_list_up_to_fuel_t cond fuel)
   else
-    tot_parse_dtuple2
-      (tot_weaken (parse_list_up_to_kind k) p)
+    parse_dtuple2
+      (weaken (parse_list_up_to_kind k) p)
       #(parse_list_up_to_payload_kind k)
       #(parse_list_up_to_payload_t cond (fuel - 1))
       (parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1)))
-      `tot_parse_synth`
+      `parse_synth`
       synth_list_up_to_fuel cond (fuel - 1)
 
 let parse_list_up_to_fuel_eq
   (#k: parser_kind)
   (#t: Type)
   (cond: (t -> Tot bool))
-  (p: tot_parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
+  (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (fuel: nat)
   (b: bytes)
 : Lemma
@@ -114,9 +114,15 @@ let parse_list_up_to_fuel_eq
 = if fuel = 0
   then ()
   else begin
-    tot_parse_synth_eq
-      (tot_parse_dtuple2
-        (tot_weaken (parse_list_up_to_kind k) p)
+    parse_dtuple2_eq
+      (weaken (parse_list_up_to_kind k) p)
+      #(parse_list_up_to_payload_kind k)
+      #(parse_list_up_to_payload_t cond (fuel - 1))
+      (parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1)))
+      b;
+    parse_synth_eq
+      (parse_dtuple2
+        (weaken (parse_list_up_to_kind k) p)
         #(parse_list_up_to_payload_kind k)
         #(parse_list_up_to_payload_t cond (fuel - 1))
         (parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1))))
@@ -128,7 +134,7 @@ let rec parse_list_up_to_fuel_indep
   (#k: parser_kind)
   (#t: Type)
   (cond: (t -> Tot bool))
-  (p: tot_parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
+  (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (fuel: nat)
   (b: bytes)
   (xy: parse_list_up_to_fuel_t cond fuel)
@@ -158,7 +164,7 @@ let rec parse_list_up_to_fuel_length
   (#k: parser_kind)
   (#t: Type)
   (cond: (t -> Tot bool))
-  (p: tot_parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
+  (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (prf: (
     (b: bytes) ->
     (x: t) ->
@@ -192,7 +198,7 @@ let rec parse_list_up_to_fuel_ext
   (#k: parser_kind)
   (#t: Type)
   (cond: (t -> Tot bool))
-  (p: tot_parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
+  (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (prf: (
     (b: bytes) ->
     (x: t) ->
@@ -235,10 +241,10 @@ let parse_list_up_to'
   (#k: parser_kind)
   (#t: Type u#r)
   (cond: (t -> Tot bool))
-  (p: tot_parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
+  (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (fuel: nat)
-: Tot (tot_parser (parse_list_up_to_kind k) (parse_list_up_to_t cond))
-= tot_parse_synth
+: Tot (parser (parse_list_up_to_kind k) (parse_list_up_to_t cond))
+= parse_synth
     (parse_list_up_to_fuel cond p fuel)
     (synth_list_up_to' cond fuel)
 
@@ -246,7 +252,7 @@ let parse_list_up_to'_eq
   (#k: parser_kind)
   (#t: Type)
   (cond: (t -> Tot bool))
-  (p: tot_parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
+  (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (fuel: nat)
   (b: bytes)
 : Lemma
@@ -256,7 +262,7 @@ let parse_list_up_to'_eq
     | Some (xy, consumed) -> Some ((fst xy, snd xy), consumed)
   ))
 = 
-  tot_parse_synth_eq
+  parse_synth_eq
     (parse_list_up_to_fuel cond p fuel)
     (synth_list_up_to' cond fuel)
     b
@@ -270,7 +276,7 @@ let parse_list_up_to_correct
   (#k: parser_kind)
   (#t: Type u#r)
   (cond: (t -> Tot bool))
-  (p: tot_parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
+  (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (prf: (
     (b: bytes) ->
     (x: t) ->
@@ -301,8 +307,8 @@ let parse_list_up_to
   (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (prf: consumes_if_not_cond cond p)
 : Tot (parser (parse_list_up_to_kind k) (parse_list_up_to_t cond))
-= parse_list_up_to_correct #k #t cond (tot_parser_of_parser p) prf;
-  close_by_fuel' (parse_list_up_to' cond (tot_parser_of_parser p)) close_parse_list_up_to
+= parse_list_up_to_correct #k #t cond p prf;
+  close_by_fuel' (parse_list_up_to' cond p) close_parse_list_up_to
 
 let parse_list_up_to_eq
   (#k: parser_kind)
@@ -324,8 +330,8 @@ let parse_list_up_to_eq
       end
   ))
 = let fuel = close_parse_list_up_to b in
-  parse_list_up_to'_eq cond (tot_parser_of_parser p) fuel b;
-  parse_list_up_to_fuel_eq cond (tot_parser_of_parser p) fuel b;
+  parse_list_up_to'_eq cond p fuel b;
+  parse_list_up_to_fuel_eq cond p fuel b;
   match parse p b with
   | None -> ()
   | Some (x, consumed) ->
@@ -335,8 +341,8 @@ let parse_list_up_to_eq
       prf b x consumed;
       let b' = Seq.slice b consumed (Seq.length b) in
       let fuel' = close_parse_list_up_to b' in
-      parse_list_up_to'_eq cond (tot_parser_of_parser p) fuel' b' ;
-      parse_list_up_to_fuel_ext cond (tot_parser_of_parser p) prf (fuel - 1) fuel' b'
+      parse_list_up_to'_eq cond p fuel' b' ;
+      parse_list_up_to_fuel_ext cond p prf (fuel - 1) fuel' b'
     end
 
 (* serializer *)
@@ -346,13 +352,13 @@ let serialize_list_up_to_payload
   (cond: (t -> Tot bool))
   (fuel: nat)
   (k: parser_kind { k.parser_kind_subkind <> Some ParserConsumesAll })
-  (#ptail: tot_parser (parse_list_up_to_kind k) (parse_list_up_to_fuel_t cond fuel))
-  (stail: tot_serializer ptail)
+  (#ptail: parser (parse_list_up_to_kind k) (parse_list_up_to_fuel_t cond fuel))
+  (stail: serializer ptail)
   (x: t)
-: Tot (tot_serializer (parse_list_up_to_payload cond fuel k ptail x))
+: Tot (serializer (parse_list_up_to_payload cond fuel k ptail x))
 = if cond x
-  then tot_serialize_weaken (parse_list_up_to_payload_kind k) (tot_serialize_ret UP_UNIT (fun _ -> ()))
-  else tot_serialize_weaken (parse_list_up_to_payload_kind k) stail
+  then serialize_weaken (parse_list_up_to_payload_kind k) (serialize_ret UP_UNIT (fun _ -> ()))
+  else serialize_weaken (parse_list_up_to_payload_kind k) stail
 
 let synth_list_up_to_fuel_recip
   (#t: Type)
@@ -378,23 +384,23 @@ let rec serialize_list_up_to_fuel
   (#k: parser_kind)
   (#t: Type)
   (cond: (t -> Tot bool))
-  (#p: tot_parser k t)
-  (s: tot_serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (fuel: nat)
-: Tot (tot_serializer (parse_list_up_to_fuel cond p fuel))
+: Tot (serializer (parse_list_up_to_fuel cond p fuel))
   (decreases fuel)
 = if fuel = 0
-  then tot_fail_serializer (parse_list_up_to_kind k) (parse_list_up_to_fuel_t cond fuel) (fun _ -> ())
+  then fail_serializer (parse_list_up_to_kind k) (parse_list_up_to_fuel_t cond fuel) (fun _ -> ())
   else
-    tot_serialize_synth
-      (tot_parse_dtuple2
-        (tot_weaken (parse_list_up_to_kind k) p)
+    serialize_synth
+      (parse_dtuple2
+        (weaken (parse_list_up_to_kind k) p)
         #(parse_list_up_to_payload_kind k)
         #(parse_list_up_to_payload_t cond (fuel - 1))
         (parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1))))
       (synth_list_up_to_fuel cond (fuel - 1))
-      (tot_serialize_dtuple2
-        (tot_serialize_weaken (parse_list_up_to_kind k) s)
+      (serialize_dtuple2
+        (serialize_weaken (parse_list_up_to_kind k) s)
         #(parse_list_up_to_payload_kind k)
         #(parse_list_up_to_payload_t cond (fuel - 1))
         #(parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1)))
@@ -406,8 +412,8 @@ let serialize_list_up_to_fuel_eq
   (#k: parser_kind)
   (#t: Type)
   (cond: (t -> Tot bool))
-  (#p: tot_parser k t)
-  (s: tot_serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (fuel: nat)
   (xy: parse_list_up_to_fuel_t cond fuel)
 : Lemma
@@ -418,15 +424,22 @@ let serialize_list_up_to_fuel_eq
     | x :: y -> bare_serialize s x `Seq.append` bare_serialize (serialize_list_up_to_fuel cond s (fuel - 1)) ((y <: llist (refine_with_cond (negate_cond cond)) (fuel - 1)), z)
   ))
 = 
-  tot_serialize_synth_eq
-    (tot_parse_dtuple2
-      (tot_weaken (parse_list_up_to_kind k) p)
+  serialize_dtuple2_eq
+    (serialize_weaken (parse_list_up_to_kind k) s)
+    #(parse_list_up_to_payload_kind k)
+    #(parse_list_up_to_payload_t cond (fuel - 1))
+    #(parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1)))
+    (serialize_list_up_to_payload cond (fuel - 1) k (serialize_list_up_to_fuel cond s (fuel - 1)))
+    (synth_list_up_to_fuel_recip cond (fuel - 1) xy);
+  serialize_synth_eq
+    (parse_dtuple2
+      (weaken (parse_list_up_to_kind k) p)
       #(parse_list_up_to_payload_kind k)
       #(parse_list_up_to_payload_t cond (fuel - 1))
       (parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1))))
     (synth_list_up_to_fuel cond (fuel - 1))
-    (tot_serialize_dtuple2
-      (tot_serialize_weaken (parse_list_up_to_kind k) s)
+    (serialize_dtuple2
+      (serialize_weaken (parse_list_up_to_kind k) s)
       #(parse_list_up_to_payload_kind k)
       #(parse_list_up_to_payload_t cond (fuel - 1))
       #(parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1)))
@@ -434,23 +447,14 @@ let serialize_list_up_to_fuel_eq
     (synth_list_up_to_fuel_recip cond (fuel - 1))
     ()
     xy
-(*
-  serialize_dtuple2_eq' 
-    (tot_serialize_weaken (parse_list_up_to_kind k) s)
-    #(parse_list_up_to_payload_kind k)
-    #(parse_list_up_to_payload_t cond (fuel - 1))
-    #(parse_list_up_to_payload cond (fuel - 1) k (parse_list_up_to_fuel cond p (fuel - 1)))
-    (serialize_list_up_to_payload cond (fuel - 1) k (serialize_list_up_to_fuel cond s (fuel - 1))) 
-    (synth_list_up_to_fuel_recip cond (fuel - 1) xy)
-*)
 
 let serialize_list_up_to'
   (#k: parser_kind)
   (#t: Type)
   (cond: (t -> Tot bool))
-  (#p: tot_parser k t)
-  (s: tot_serializer p { k.parser_kind_subkind == Some ParserStrong })
-: Tot (tot_bare_serializer (parse_list_up_to_t cond))
+  (#p: parser k t)
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
+: Tot (bare_serializer (parse_list_up_to_t cond))
 = fun xy ->
   (serialize_list_up_to_fuel cond s (L.length (fst xy) + 1)) (fst xy, snd xy)
 
@@ -458,9 +462,9 @@ let serialize_list_up_to_correct'
   (#k: parser_kind)
   (#t: Type)
   (cond: (t -> Tot bool))
-  (#p: tot_parser k t)
+  (#p: parser k t)
   (prf: consumes_if_not_cond #k cond p)
-  (s: tot_serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
   (xy: parse_list_up_to_t cond)
 : Lemma
   (
@@ -484,10 +488,10 @@ let serialize_list_up_to_correct
   (xy: parse_list_up_to_t cond)
 : Lemma
   (
-    let sq = serialize_list_up_to' cond (tot_serializer_of_serializer s) xy in
+    let sq = serialize_list_up_to' cond s xy in
     parse (parse_list_up_to #k cond p prf) sq == Some (xy, Seq.length sq)
   )
-= serialize_list_up_to_correct' cond #(tot_parser_of_parser p) prf (tot_serializer_of_serializer s) xy
+= serialize_list_up_to_correct' cond #p prf s xy
 
 let serialize_list_up_to
   (#k: parser_kind)
@@ -498,7 +502,7 @@ let serialize_list_up_to
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
 : Tot (serializer (parse_list_up_to cond p prf))
 = Classical.forall_intro (serialize_list_up_to_correct cond prf s);
-  serialize_list_up_to' cond (tot_serializer_of_serializer s)
+  serialize_list_up_to' cond s
 
 let serialize_list_up_to_eq
   (#k: parser_kind)
@@ -515,4 +519,4 @@ let serialize_list_up_to_eq
     | [] -> serialize s z
     | x :: y -> serialize s x `Seq.append` serialize (serialize_list_up_to cond prf s) (y, z)
   ))
-= serialize_list_up_to_fuel_eq cond (tot_serializer_of_serializer s) (L.length (fst xy) + 1) (fst xy, snd xy)
+= serialize_list_up_to_fuel_eq cond s (L.length (fst xy) + 1) (fst xy, snd xy)
