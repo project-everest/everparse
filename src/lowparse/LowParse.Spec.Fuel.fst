@@ -200,15 +200,15 @@ let parser_kind_prop_fuel_ext
 
 let close_by_fuel'
   (#t: Type)
-  (f: (nat -> Tot (bare_parser t)))
+  (f: (nat -> Tot (tot_bare_parser t)))
   (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
-: Tot (bare_parser t)
+: Tot (tot_bare_parser t)
 = fun x -> f (closure x) x
 
 let close_by_fuel_correct
   (#t: Type)
   (k: parser_kind)
-  (f: (nat -> Tot (bare_parser t)))
+  (f: (nat -> Tot (tot_bare_parser t)))
   (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
   (f_ext: (
     (fuel: nat) ->
@@ -244,7 +244,7 @@ let close_by_fuel_correct
 let close_by_fuel
   (#k: parser_kind)
   (#t: Type)
-  (f: (nat -> Tot (parser k t)))
+  (f: (nat -> Tot (tot_parser k t)))
   (closure: ((b: bytes) -> Tot (n: nat { Seq.length b < n })))
   (f_ext: (
     (fuel: nat) ->
@@ -252,6 +252,6 @@ let close_by_fuel
     Lemma
     (f fuel b == f (closure b) b)
   ))
-: Tot (parser k t)
+: Tot (tot_parser k t)
 = close_by_fuel_correct k f closure f_ext (fun fuel -> parser_kind_prop_equiv k (f fuel));
   close_by_fuel' f closure
