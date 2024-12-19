@@ -6,20 +6,20 @@ module Seq = FStar.Seq
 
 let negate_cond
   (#t: Type)
-  (cond: (t -> Tot bool))
+  (cond: (t -> GTot bool))
   (x: t)
-: Tot bool
+: GTot bool
 = not (cond x)
 
 let refine_with_cond
   (#t: Type)
-  (cond: (t -> Tot bool))
-: Tot Type
+  (cond: (t -> GTot bool))
+: GTot Type
 = (x: t { cond x == true })
 
 let parse_list_up_to_t
   (#t: Type)
-  (cond: (t -> Tot bool))
+  (cond: (t -> GTot bool))
 : Tot Type
 = list (refine_with_cond (negate_cond cond)) & refine_with_cond cond
 
@@ -34,7 +34,7 @@ let parse_list_up_to_kind (k: parser_kind) : Tot (k' : parser_kind {k' `is_weake
 let consumes_if_not_cond
   (#k: parser_kind)
   (#t: Type)
-  (cond: (t -> Tot bool))
+  (cond: (t -> GTot bool))
   (p: parser k t)
 : Tot Type
 = 
@@ -48,7 +48,7 @@ let consumes_if_not_cond
 val parse_list_up_to
   (#k: parser_kind)
   (#t: Type)
-  (cond: (t -> Tot bool))
+  (cond: (t -> GTot bool))
   (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (prf: consumes_if_not_cond cond p)
 : Tot (parser (parse_list_up_to_kind k) (parse_list_up_to_t cond))
@@ -56,7 +56,7 @@ val parse_list_up_to
 val parse_list_up_to_eq
   (#k: parser_kind)
   (#t: Type)
-  (cond: (t -> Tot bool))
+  (cond: (t -> GTot bool))
   (p: parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
   (prf: consumes_if_not_cond cond p)
   (b: bytes)
@@ -73,10 +73,38 @@ val parse_list_up_to_eq
       end
   ))
 
-val serialize_list_up_to
+val tot_parse_list_up_to
   (#k: parser_kind)
   (#t: Type)
   (cond: (t -> Tot bool))
+  (p: tot_parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
+  (prf: consumes_if_not_cond cond (parser_of_tot_parser p))
+: Tot (tot_parser (parse_list_up_to_kind k) (parse_list_up_to_t cond))
+
+val tot_parse_list_up_to_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (cond: (t -> Tot bool))
+  (p: tot_parser k t { k.parser_kind_subkind <> Some ParserConsumesAll })
+  (prf: consumes_if_not_cond cond p)
+  (b: bytes)
+: Lemma
+  (parse (tot_parse_list_up_to cond p prf) b == (
+    match parse p b with
+    | None -> None
+    | Some (x, consumed) ->
+      if cond x
+      then Some (([], x), consumed)
+      else begin match parse (parse_list_up_to cond p prf) (Seq.slice b consumed (Seq.length b)) with
+      | None -> None
+      | Some ((y, z), consumed') -> Some ((x::y, z), consumed + consumed')
+      end
+  ))
+
+val serialize_list_up_to
+  (#k: parser_kind)
+  (#t: Type)
+  (cond: (t -> GTot bool))
   (#p: parser k t)
   (prf: consumes_if_not_cond cond p)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
@@ -85,7 +113,7 @@ val serialize_list_up_to
 val serialize_list_up_to_eq
   (#k: parser_kind)
   (#t: Type)
-  (cond: (t -> Tot bool))
+  (cond: (t -> GTot bool))
   (#p: parser k t)
   (prf: consumes_if_not_cond cond p)
   (s: serializer p { k.parser_kind_subkind == Some ParserStrong })
@@ -96,4 +124,29 @@ val serialize_list_up_to_eq
     match l with
     | [] -> serialize s z
     | x :: y -> serialize s x `Seq.append` serialize (serialize_list_up_to cond prf s) (y, z)
+  ))
+
+val tot_serialize_list_up_to
+  (#k: parser_kind)
+  (#t: Type)
+  (cond: (t -> Tot bool))
+  (#p: tot_parser k t)
+  (prf: consumes_if_not_cond cond p)
+  (s: tot_serializer p { k.parser_kind_subkind == Some ParserStrong })
+: Tot (tot_serializer (tot_parse_list_up_to cond p prf))
+
+val tot_serialize_list_up_to_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (cond: (t -> Tot bool))
+  (#p: tot_parser k t)
+  (prf: consumes_if_not_cond cond p)
+  (s: tot_serializer p { k.parser_kind_subkind == Some ParserStrong })
+  (xy: parse_list_up_to_t cond)
+: Lemma
+  (bare_serialize (tot_serialize_list_up_to cond prf s) xy == (
+    let (l, z) = xy in
+    match l with
+    | [] -> bare_serialize s z
+    | x :: y -> bare_serialize s x `Seq.append` bare_serialize (tot_serialize_list_up_to cond prf s) (y, z)
   ))
