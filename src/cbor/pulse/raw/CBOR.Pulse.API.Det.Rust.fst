@@ -183,6 +183,8 @@ fn cbor_det_mk_map (_: unit) : Base.mk_map_gen_t u#0 #_ #_ cbor_det_match cbor_d
 
 let cbor_det_equal x1 x2 #p1 #p2 #v1 #v2 = Det.cbor_det_equal () x1 x2 #p1 #p2 #v1 #v2
 
+let cbor_det_major_type x #p #v = Det.cbor_det_major_type () x #p #v
+
 [@@CAbstractStruct; no_auto_projectors]
 noeq
 type cbor_det_array = {

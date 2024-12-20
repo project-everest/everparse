@@ -87,10 +87,10 @@ let cbor_det_mk_string_post
   (res: option cbordet)
 = match res with
   | None -> pts_to s #p v
-  | Some res' -> exists* p' v' .
-    cbor_det_match p' res' (Spec.pack (Spec.CString ty v')) **
+  | Some res' -> exists* v' .
+    cbor_det_match 1.0R res' (Spec.pack (Spec.CString ty v')) **
     Trade.trade
-      (cbor_det_match p' res' (Spec.pack (Spec.CString ty v')))
+      (cbor_det_match 1.0R res' (Spec.pack (Spec.CString ty v')))
       (pts_to s #p v) **
     pure (v' == v)
 
@@ -107,6 +107,30 @@ val cbor_det_mk_string
       cbor_det_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v res **
       pure (Some? res <==> FStar.UInt.fits (SZ.v (S.len s)) U64.n)
     )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_mk_string0
+  (_: unit)
+: Base.mk_string_t u#0 #_ cbor_det_match
+= (ty: _)
+  (s: _)
+  (#p: _)
+  (#v: _)
+{
+  S.pts_to_len s;
+  let mty = (if ty = cbor_major_type_byte_string then ByteString else TextString);
+  let res = cbor_det_mk_string mty s;
+  let Some c = res;
+  unfold (cbor_det_mk_string_post ty s p v (Some c));
+  c
+}
+```
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_det_mk_string_from_array = Base.mk_string_from_array (cbor_det_mk_string0 ())
 
 val cbor_det_mk_tagged: Base.mk_tagged_t cbor_det_match
 
@@ -133,10 +157,10 @@ let cbor_det_mk_array_post
     pts_to a #pa va **
     PM.seq_list_match va vv (cbor_det_match pv)
   | Some res ->
-    exists* p' v' .
-      cbor_det_match p' res (Spec.pack (Spec.CArray v')) **
+    exists* v' .
+      cbor_det_match 1.0R res (Spec.pack (Spec.CArray v')) **
       Trade.trade
-        (cbor_det_match p' res (Spec.pack (Spec.CArray v')))
+        (cbor_det_match 1.0R res (Spec.pack (Spec.CArray v')))
         (pts_to a #pa va **
           PM.seq_list_match va vv (cbor_det_match pv)
         ) **
@@ -159,6 +183,30 @@ val cbor_det_mk_array
       pure (Some? res <==> FStar.UInt.fits (SZ.v (S.len a)) U64.n)
     )
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_mk_array0
+  (_: unit)
+: Base.mk_array_t #_ cbor_det_match
+= (a: _)
+  (#pa: _)
+  (#va: _)
+  (#pv: _)
+  (#vv: _)
+{
+  S.pts_to_len a;
+  let res = cbor_det_mk_array a;
+  let Some c = res;
+  unfold (cbor_det_mk_array_post a pa va pv vv (Some c));
+  c
+}
+```
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_det_mk_array_from_array = Base.mk_array_from_array (cbor_det_mk_array0 ())
+
 val cbor_det_mk_map (_: unit): Base.mk_map_gen_t cbor_det_match cbor_det_map_entry_match
 
 inline_for_extraction
@@ -170,6 +218,8 @@ let cbor_det_mk_map_from_array : Base.mk_map_from_array_t cbor_det_match cbor_de
 (* Destructors *)
 
 val cbor_det_equal : Base.equal_t cbor_det_match
+
+val cbor_det_major_type () : Base.get_major_type_t cbor_det_match
 
 noextract [@@noextract_to "krml"]
 let cbor_det_tagged_match (p: perm) (tag: U64.t) (payload: cbordet) (v: Spec.cbor) : Tot slprop =
@@ -221,6 +271,21 @@ let cbor_det_view_match
   | Map m -> cbor_det_map_match p m v
   | SimpleValue i -> pure (v == Spec.pack (Spec.CSimple i))
 
+noextract [@@noextract_to "krml"]
+let cbor_det_destruct_postcond
+  (x: cbor_det_view)
+  (v: Spec.cbor)
+: Tot prop
+= match x, Spec.unpack v with
+  | Int64 _ _, Spec.CInt64 _ _
+  | String _ _, Spec.CString _ _
+  | Tagged _ _, Spec.CTagged _ _
+  | Array _, Spec.CArray _
+  | Map _, Spec.CMap _
+  | SimpleValue _, Spec.CSimple _
+  -> True
+  | _ -> False
+
 val cbor_det_destruct
   (c: cbordet)
   (#p: perm)
@@ -231,8 +296,49 @@ val cbor_det_destruct
       cbor_det_view_match p' w v **
       Trade.trade
         (cbor_det_view_match p' w v)
-        (cbor_det_match p c v)
+        (cbor_det_match p c v) **
+      pure (cbor_det_destruct_postcond w v)
     )
+
+val cbor_det_elim_int64 () : Base.elim_int64_t cbor_det_match
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_read_uint64 () : Base.read_uint64_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#y: _)
+{
+  let v = cbor_det_destruct x;
+  with p' . assert (cbor_det_view_match p' v y);
+  let Int64 ty res = v;
+  unfold (cbor_det_view_match p' (Int64 ty res) y);
+  fold (cbor_det_view_match p' (Int64 ty res) y);
+  Trade.elim _ _;
+  res
+}
+```
+
+val cbor_det_elim_simple_value () : Base.elim_simple_t cbor_det_match
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_read_simple_value () : Base.read_simple_value_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#y: _)
+{
+  let v = cbor_det_destruct x;
+  with p' . assert (cbor_det_view_match p' v y);
+  let SimpleValue res = v;
+  unfold (cbor_det_view_match p' (SimpleValue res) y);
+  fold (cbor_det_view_match p' (SimpleValue res) y);
+  Trade.elim _ _;
+  res
+}
+```
 
 val cbor_det_get_array_length
   (x: cbor_det_array)
@@ -245,6 +351,28 @@ val cbor_det_get_array_length
         Base.get_array_length_post y res
       )
     )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_get_array_length'
+  (_: unit)
+: Base.get_array_length_t u#0 #_ cbor_det_match
+=
+  (x: _)
+  (#p: _)
+  (#y: _)
+{
+  let v = cbor_det_destruct x;
+  with p' . assert (cbor_det_view_match p' v y);
+  let Array a = v;
+  unfold (cbor_det_view_match p' (Array a) y);
+  let res = cbor_det_get_array_length a;
+  fold (cbor_det_view_match p' (Array a) y);
+  Trade.elim _ _;
+  res
+}
+```
 
 val cbor_det_array_iterator_t: Type0
 
@@ -288,6 +416,15 @@ let safe_get_array_item_post
     Trade.trade (cbor_det_match p' res' y') (cbor_det_array_match p x y) **
     pure (Base.get_array_item_post i y y')
 
+noextract [@@noextract_to "krml"]
+let cbor_det_get_array_item_postcond
+  (i: U64.t)
+  (y: Spec.cbor)
+  (res: option cbordet)
+: Tot prop
+= Spec.CArray? (Spec.unpack y) /\
+  (Some? res <==> U64.v i < List.Tot.length (Spec.CArray?.v (Spec.unpack y)))
+
 val cbor_det_get_array_item
   (x: cbor_det_array)
   (i: U64.t)
@@ -296,8 +433,35 @@ val cbor_det_get_array_item
 : stt (option cbordet)
     (cbor_det_array_match p x y)
     (fun res ->
-      safe_get_array_item_post x i p y res
+      safe_get_array_item_post x i p y res **
+      pure (cbor_det_get_array_item_postcond i y res)
     )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_get_array_item'
+  (_: unit)
+: Base.get_array_item_t u#0 #_ cbor_det_match
+= (x: _)
+  (i: _)
+  (#p: _)
+  (#y: _)
+{
+  let v = cbor_det_destruct x;
+  with p' . assert (cbor_det_view_match p' v y);
+  let Array a = v;
+  Trade.rewrite_with_trade
+    (cbor_det_view_match p' v y)
+    (cbor_det_array_match p' a y);
+  Trade.trans _ _ (cbor_det_match p x y);
+  let ores = cbor_det_get_array_item a i;
+  let Some res = ores;
+  unfold (safe_get_array_item_post a i p' y (Some res));
+  Trade.trans _ _ (cbor_det_match p x y);
+  res
+}
+```
 
 val cbor_det_map_length
   (x: cbor_det_map)
