@@ -23,7 +23,7 @@ RUN eval $(opam env) && .docker/build/install-deps.sh
 ARG CI_THREADS=24
 ARG CI_BRANCH=master
 
-RUN eval $(opam env) && OTHERFLAGS="--admit_smt_queries true" make -j $EVEREST_THREADS package-noversion
+RUN eval $(opam env) && OTHERFLAGS="--admit_smt_queries true" make -j $CI_THREADS package-noversion
 
 WORKDIR $HOME
 ENV EVERPARSE_HOME=$HOME/everparse
