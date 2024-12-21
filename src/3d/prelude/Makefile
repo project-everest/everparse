@@ -1,20 +1,33 @@
 all: verify buffer extern
 
-EVERPARSE_HOME=$(realpath ../../..)
+EVERPARSE_HOME := $(realpath ../../..)
+ifeq ($(OS),Windows_NT)
+  EVERPARSE_HOME := $(shell cygpath -m $(EVERPARSE_HOME))
+endif
 
 ifndef FSTAR_HOME
   FSTAR_EXE=$(shell which fstar.exe)
   ifeq ($(FSTAR_EXE),)
     # fstar.exe not found in PATH, assuming Everest source tree
-    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
+    FSTAR_HOME:=$(realpath $(EVERPARSE_HOME)/../FStar)
   else
     # fstar.exe found in PATH, assuming directory ending with /bin
-    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
+    FSTAR_HOME:=$(realpath $(dir $(FSTAR_EXE))/..)
   endif
-  export FSTAR_HOME
 endif
+ifeq ($(OS),Windows_NT)
+  FSTAR_HOME:=$(shell cygpath -m $(FSTAR_HOME))
+endif
+export FSTAR_HOME
 
-KRML_HOME?=$(realpath ../../../../karamel)
+ifeq (,$(KRML_HOME))
+  KRML_HOME := $(realpath ../../../../karamel)
+endif
+ifeq ($(OS),Windows_NT)
+  KRML_HOME := $(shell cygpath -m $(KRML_HOME))
+endif
+export KRML_HOME
+
 OTHERFLAGS?=
 
 FSTAR_OPTIONS=--ext context_pruning $(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj) --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=10'

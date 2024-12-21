@@ -1,22 +1,35 @@
-EVERPARSE_HOME ?= $(realpath ../../..)
+ifeq (,$(EVERPARSE_HOME))
+  EVERPARSE_HOME := $(realpath ../../..)
+endif
+ifeq ($(OS),Windows_NT)
+  EVERPARSE_HOME := $(shell cygpath -m "$(EVERPARSE_HOME)")
+endif
 export EVERPARSE_HOME
 
 3D=$(EVERPARSE_HOME)/bin/3d.exe
 
-KRML_HOME ?= $(realpath ../../../../karamel)
+ifeq (,$(KRML_HOME))
+  KRML_HOME := $(realpath ../../../../karamel)
+endif
+ifeq ($(OS),Windows_NT)
+  KRML_HOME := $(shell cygpath -m "$(KRML_HOME)")
+endif
 export KRML_HOME
 
 ifndef FSTAR_HOME
   FSTAR_EXE=$(shell which fstar.exe)
   ifeq ($(FSTAR_EXE),)
     # fstar.exe not found in PATH, assuming Everest source tree
-    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
+    FSTAR_HOME := $(realpath $(EVERPARSE_HOME)/../FStar)
   else
     # fstar.exe found in PATH, assuming directory ending with /bin
-    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
+    FSTAR_HOME := $(realpath $(dir $(FSTAR_EXE))/..)
   endif
-  export FSTAR_HOME
 endif
+ifeq ($(OS),Windows_NT)
+  FSTAR_HOME := $(shell cygpath -m "$(FSTAR_HOME)")
+endif
+export FSTAR_HOME
 
 INCLUDES=$(EVERPARSE_HOME)/src/3d/prelude $(EVERPARSE_HOME)/src/3d/prelude/buffer $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib/obj $(KRML_HOME)/krmllib
 
@@ -94,7 +107,7 @@ batch-interpret-test:
 elf-test: ELF.3d
 	mkdir -p out.batch
 	$(3D) --odir out.batch --batch ELF.3d
-	g++ -o out.batch/elf-test -I out.batch $(addprefix out.batch/, ELF.c ELFWrapper.c) TestELF.cpp
+	$(CXX) -o out.batch/elf-test -I out.batch $(addprefix out.batch/, ELF.c ELFWrapper.c) TestELF.cpp
 
 %-test: %.3d
 	mkdir -p out.batch

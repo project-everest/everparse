@@ -17,11 +17,11 @@ interpret: $(SOURCE_FILES) interpret.out
 	$(EVERPARSE_CMD) --batch AnonStruct.3d --odir interpret.out
 	$(EVERPARSE_CMD) --batch ExternVector.3d --odir interpret.out
 	$(EVERPARSE_CMD) --batch OutputBitFields.3d --odir interpret.out
-	g++ -o interpret.out/test1 -I interpret.out $(addprefix interpret.out/, AnonStruct_OutputTypes.c AnonStruct.c AnonStructWrapper.c) TestAnonStruct.cpp
+	$(CXX) -o interpret.out/test1 -I interpret.out $(addprefix interpret.out/, AnonStruct_OutputTypes.c AnonStruct.c AnonStructWrapper.c) TestAnonStruct.cpp
 	./interpret.out/test1
-	g++ -o interpret.out/test2 -I interpret.out $(addprefix interpret.out/, TPoint_OutputTypes.c TPoint.c TPointWrapper.c) TestTPoint.cpp
+	$(CXX) -o interpret.out/test2 -I interpret.out $(addprefix interpret.out/, TPoint_OutputTypes.c TPoint.c TPointWrapper.c) TestTPoint.cpp
 	./interpret.out/test2
-	gcc -o interpret.out/test3 -I interpret.out -I . $(addprefix interpret.out/, ExternVector.c ExternVectorWrapper.c) ExternVectorDriver.c
+	$(CC) -o interpret.out/test3 -I interpret.out -I . $(addprefix interpret.out/, ExternVector.c ExternVectorWrapper.c) ExternVectorDriver.c
 	./interpret.out/test3
 
 ifndef FSTAR_HOME
