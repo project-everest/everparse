@@ -219,6 +219,9 @@ pub fn cbor_det_equal <'a>(
     bool
 { crate::cbordetveraux::cbor_det_equal(x1, x2) }
 
+pub fn cbor_det_major_type <'a>(x: crate::cbordetveraux::cbor_raw <'a>) -> u8
+{ crate::cbordetveraux::cbor_det_major_type(x) }
+
 pub type cbor_det_array <'a> = crate::cbordetveraux::cbor_raw <'a>;
 
 pub type cbor_det_map <'a> = crate::cbordetveraux::cbor_raw <'a>;
@@ -247,7 +250,7 @@ pub enum cbor_det_view <'a>
 
 pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_det_view <'a>
 {
-    let ty: u8 = crate::cbordetveraux::cbor_det_major_type(c);
+    let ty: u8 = cbor_det_major_type(c);
     if
     ty == crate::cbordetveraux::cbor_major_type_uint64
     ||
