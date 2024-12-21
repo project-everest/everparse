@@ -183,6 +183,8 @@ fn cbor_det_mk_map (_: unit) : Base.mk_map_gen_t u#0 #_ #_ cbor_det_match cbor_d
 
 let cbor_det_equal x1 x2 #p1 #p2 #v1 #v2 = Det.cbor_det_equal () x1 x2 #p1 #p2 #v1 #v2
 
+let cbor_det_major_type _ x #p #v = Det.cbor_det_major_type () x #p #v
+
 [@@CAbstractStruct; no_auto_projectors]
 noeq
 type cbor_det_array = {
@@ -216,7 +218,8 @@ ensures exists* p' .
   cbor_det_view_match p' w v **
   Trade.trade
     (cbor_det_view_match p' w v)
-    (cbor_det_match p c v)
+    (cbor_det_match p c v) **
+  pure (cbor_det_destruct_postcond w v)
 {
   let ty = cbor_det_major_type () c;
   cbor_det_case_correct c;
@@ -310,6 +313,10 @@ ensures exists* p' .
 }
 ```
 
+let cbor_det_elim_int64 = cbor_det_elim_int64
+
+let cbor_det_elim_simple_value = cbor_det_elim_simple
+
 ```pulse
 fn cbor_det_get_array_length
   (x: cbor_det_array)
@@ -397,7 +404,8 @@ requires
   cbor_det_array_match p x y
 returns res: option cbordet
 ensures
-  safe_get_array_item_post x i p y res
+  safe_get_array_item_post x i p y res **
+  pure (cbor_det_get_array_item_postcond i y res)
 {
   let len = cbor_det_get_array_length x;
   if U64.gte i len {
