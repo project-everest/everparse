@@ -18,13 +18,13 @@ RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 ENV FSTAR_HOME=$HOME/FStar
 ENV KRML_HOME=$HOME/karamel
 ENV PULSE_HOME=$HOME/pulse
-RUN eval $(opam env) && .docker/build/install-deps.sh
+RUN eval $(opam env) && .docker/build/install-deps.sh --skip-build --skip-z3
 
 # CI proper
 ARG CI_THREADS=24
 ARG CI_BRANCH=master
 
-RUN eval $(opam env) && OTHERFLAGS="--admit_smt_queries true" make -j $EVEREST_THREADS package-noversion
+RUN eval $(opam env) && OTHERFLAGS="--admit_smt_queries true" make -j $CI_THREADS package-noversion
 
 WORKDIR $HOME
 ENV EVERPARSE_HOME=$HOME/everparse

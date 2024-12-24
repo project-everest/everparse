@@ -24,8 +24,6 @@ BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len);
 BOOLEAN ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr);
 
 BOOLEAN ProbeCheckI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len);
-
-BOOLEAN ProbeProbeAndCopyCheckI(EVERPARSE_COPY_BUFFER_T dest, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr);
 #ifdef __cplusplus
 }
 #endif

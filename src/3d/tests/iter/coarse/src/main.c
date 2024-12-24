@@ -18,7 +18,7 @@ void TestEverParseError(char *StructName, char *FieldName, char *Reason) {
 int main(void) {
   uint8_t test[testSize];
   OUT_PAIR array[outCount]; // output only, no need to initialize
-  OUT out = {
+  OUT_T out = {
     .current = array,
     .remainingCount = outCount
   };
