@@ -184,19 +184,8 @@ clean: clean-3d clean-lowparse clean-quackyducky
 
 .PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
 
-release:
-	+src/package/release.sh
-
-# Windows binary package
-package:
-	+src/package/package.sh -zip
-
-# Windows binary package
-package-noversion:
-	+src/package/package.sh -zip-noversion
-
-everparse:
-	+src/package/package.sh -make
+release package package-noversion everparse:
+	+$(MAKE) -f package.Makefile $@
 
 # For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
 
