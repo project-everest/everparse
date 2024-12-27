@@ -107,3 +107,23 @@ val fold_eq_idem
   (ensures (
     fold phi x s == List.Tot.fold_left phi x l
   ))
+
+let singleton_elim
+  (s: t)
+: Pure elt
+    (requires cardinality s == 1)
+    (ensures fun x -> equal s (singleton x))
+= let l = Ghost.hide (as_list s) in
+  assert (forall x . List.Tot.memP x l <==> mem x s);
+  assert (List.Tot.length l == 1);
+  assert (forall x . mem x s <==> x == List.Tot.hd l);
+  let t = (x: elt { mem x s }) in
+  let f (accu: option t) (x: elt) : Tot (option t) =
+    if mem x s
+    then Some x
+    else accu
+  in
+  fold_eq f None s l;
+  let ores : option t = fold f None s in
+  assert (Some? ores);
+  Some?.v ores

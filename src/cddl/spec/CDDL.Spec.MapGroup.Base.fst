@@ -199,48 +199,6 @@ let map_group_match_item'_eq (key value: typ) (l: cbor_map) (l': map_group_item)
   [SMTPat (MPS.mem l' (map_group_match_item' key value l))]
 = cbor_map_fold_eq (map_group_match_item_op key value l) MPS.empty l (cbor_map_key_list l)
 
-let mps_singleton_elim
-  (s: MPS.t)
-: Pure map_group_item
-    (requires MPS.cardinality s == 1)
-    (ensures fun x -> MPS.equal s (MPS.singleton x))
-= let l = Ghost.hide (MPS.as_list s) in
-  assert (forall x . List.Tot.memP x l <==> MPS.mem x s);
-  assert (List.Tot.length l == 1);
-  assert (forall x . MPS.mem x s <==> x == List.Tot.hd l);
-  let t = (x: map_group_item { MPS.mem x s }) in
-  let f (accu: option t) (x: map_group_item) : Tot (option t) =
-    if MPS.mem x s
-    then Some x
-    else accu
-  in
-  MPS.fold_eq f None s l;
-  let ores : option t = MPS.fold f None s in
-  assert (Some? ores);
-  Some?.v ores
-
-let cbor_map_singleton_elim
-  (s: cbor_map)
-: Pure (cbor & cbor)
-    (requires cbor_map_length s == 1)
-    (ensures fun x -> cbor_map_equal s (cbor_map_singleton (fst x) (snd x)))
-= let l = Ghost.hide (cbor_map_key_list s) in
-  assert (forall x . List.Tot.memP x l <==> cbor_map_defined x s);
-  assert (List.Tot.length l == 1);
-  assert (forall x . cbor_map_defined x s <==> x == List.Tot.hd l);
-  let t = (x: cbor { cbor_map_defined x s }) in
-  let f (accu: option t) (x: cbor) : Tot (option t) =
-    if cbor_map_defined x s
-    then Some x
-    else accu
-  in
-  cbor_map_fold_eq f None s l;
-  let ores : option t = cbor_map_fold f None s in
-  assert (Some? ores);
-  let k = Some?.v ores in
-  let Some v = cbor_map_get s k in
-  (k, v)
-
 let map_group_match_item'_elim (key value: typ) (l: cbor_map) l' : Pure _
   (requires (MPS.mem l' (map_group_match_item' key value l)))
   (ensures (fun x -> map_group_match_item_witness_pred key value l l' x))
@@ -1284,7 +1242,7 @@ let apply_map_group_det (m: map_group) (l: cbor_map) : Pure map_group_result
       MapGroupFail
     else if MPS.cardinality s = 1
     then
-      let x = mps_singleton_elim s in
+      let x = MPS.singleton_elim s in
       MapGroupDet (fst x) (snd x)
     else
       MapGroupNonDet
@@ -1330,15 +1288,15 @@ let apply_map_group_det_map_group_equiv
     (fun l -> ())
     (fun l l' ->
       let MapGroupDet _ s1 = apply_map_group_det m1 l in
-      let (k1, l1) = mps_singleton_elim (MapGroupResult?._0 (m1 l)) in
-      let (k2, l2) = mps_singleton_elim (MapGroupResult?._0 (m2 l)) in
+      let (k1, l1) = MPS.singleton_elim (MapGroupResult?._0 (m1 l)) in
+      let (k2, l2) = MPS.singleton_elim (MapGroupResult?._0 (m2 l)) in
       assert (l1 == l2);
       cbor_map_equiv k1 k2
     )
     (fun l l' ->
       let MapGroupDet _ s1 = apply_map_group_det m1 l in
-      let (k1, l1) = mps_singleton_elim (MapGroupResult?._0 (m1 l)) in
-      let (k2, l2) = mps_singleton_elim (MapGroupResult?._0 (m2 l)) in
+      let (k1, l1) = MPS.singleton_elim (MapGroupResult?._0 (m1 l)) in
+      let (k2, l2) = MPS.singleton_elim (MapGroupResult?._0 (m2 l)) in
       assert (l1 == l2);
       cbor_map_equiv k1 k2
     )
@@ -1384,7 +1342,7 @@ let apply_map_group_det_concat (m1 m2: map_group) (l: cbor_map) =
     | MapGroupResult s -> s `MPS.equal` MPS.empty
     | _ -> False)
   | MapGroupDet c1 lr1 ->
-    let l1 = mps_singleton_elim (MapGroupResult?._0 (m1 l)) in
+    let l1 = MPS.singleton_elim (MapGroupResult?._0 (m1 l)) in
     assert ((c1, lr1) `MPS.mem` MPS.singleton l1);
     begin match apply_map_group_det m2 lr1 with
     | MapGroupCutFail -> assert (map_group_concat_cut_failure_witness_pred m1 m2 l l1)
@@ -1392,7 +1350,7 @@ let apply_map_group_det_concat (m1 m2: map_group) (l: cbor_map) =
     | MapGroupResult s -> s `MPS.equal` MPS.empty
     | _ -> False)
     | MapGroupDet c2 lr2 ->
-      let l2 = mps_singleton_elim (MapGroupResult?._0 (m2 lr1)) in
+      let l2 = MPS.singleton_elim (MapGroupResult?._0 (m2 lr1)) in
       assert ((c2, lr2) `MPS.mem` MPS.singleton l2);
       let l0 = (cbor_map_union (fst l1) (fst l2), snd l2) in
       assert (map_group_concat_witness_pred m1 m2 l l0
@@ -1418,7 +1376,7 @@ let apply_map_group_det_concat (m1 m2: map_group) (l: cbor_map) =
       | MapGroupResult s ->
         if MPS.cardinality s = 1
         then begin
-          let x = mps_singleton_elim s in
+          let x = MPS.singleton_elim s in
           assert (s `MPS.equal` MPS.singleton l0);
           mps_equal_intro
             (MapGroupResult?._0 (m2 lr1))

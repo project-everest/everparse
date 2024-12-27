@@ -450,6 +450,28 @@ let cbor_map_fold_union
   cbor_map_fold_eq f (cbor_map_fold f x m1) m2 l2;
   U.list_fold_append f x l1 l2
 
+let cbor_map_singleton_elim
+  (s: cbor_map)
+: Pure (cbor & cbor)
+    (requires cbor_map_length s == 1)
+    (ensures fun x -> cbor_map_equal s (cbor_map_singleton (fst x) (snd x)))
+= let l = Ghost.hide (cbor_map_key_list s) in
+  assert (forall x . List.Tot.memP x l <==> cbor_map_defined x s);
+  assert (List.Tot.length l == 1);
+  assert (forall x . cbor_map_defined x s <==> x == List.Tot.hd l);
+  let t = (x: cbor { cbor_map_defined x s }) in
+  let f (accu: option t) (x: cbor) : Tot (option t) =
+    if cbor_map_defined x s
+    then Some x
+    else accu
+  in
+  cbor_map_fold_eq f None s l;
+  let ores : option t = cbor_map_fold f None s in
+  assert (Some? ores);
+  let k = Some?.v ores in
+  let Some v = cbor_map_get s k in
+  (k, v)
+
 (** CBOR objects *)
 
 type cbor_case =
