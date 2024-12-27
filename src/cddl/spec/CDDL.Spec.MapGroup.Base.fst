@@ -261,16 +261,6 @@ let map_group_match_item_cut_pre
   then MPS.singleton (cbor_map_empty, l)
   else s
 
-let cbor_map_exists_op
-  (f: (cbor & cbor) -> bool)
-  (l: cbor_map)
-  (accu: bool)
-  (k: cbor)
-: Tot bool
-= match cbor_map_get l k with
-  | None -> accu
-  | Some v -> accu || f (k, v)
-
 let rec list_fold_cbor_map_exists_op_true
   (f: (cbor & cbor) -> bool)
   (l: cbor_map)
@@ -1275,6 +1265,14 @@ let map_group_zero_or_more_zero_or_one_eq
         ()
     )
 
+let map_group_cut (k: typ) : map_group =
+  FE.on_dom cbor_map #map_group_codom
+    (fun l ->
+      if cbor_map_exists (matches_map_group_entry k any) l
+      then MapGroupCutFailure
+      else map_group_nop l
+    )
+
 let apply_map_group_det (m: map_group) (l: cbor_map) : Pure map_group_result
   (requires True)
   (ensures fun r -> map_group_result_prop l r)
@@ -1892,6 +1890,34 @@ let map_group_zero_or_more_choice
 let apply_map_group_det_productive
   m f
 = ()
+
+let apply_map_group_det_cut
+  (k: typ)
+  (l: cbor_map)
+: Lemma
+  (ensures (apply_map_group_det (map_group_cut k) l == (
+    if cbor_map_exists (matches_map_group_entry k any) l
+    then MapGroupCutFail
+    else MapGroupDet cbor_map_empty l
+  )))
+  [SMTPat (apply_map_group_det (map_group_cut k) l)]
+= ()
+
+let map_group_concat_match_item_cut_eq
+  (k: cbor) (v: typ) (b: bool)
+: Lemma
+  (map_group_match_item_for b k v == map_group_concat (map_group_match_item_for b k v) (map_group_cut (t_literal k)))
+= apply_map_group_det_map_group_equiv
+    (map_group_match_item_for b k v)
+    (map_group_concat (map_group_match_item_for b k v) (map_group_cut (t_literal k)))
+
+let map_group_concat_zero_or_one_match_item_cut_eq
+  (k: cbor) (v: typ) (b: bool)
+: Lemma
+  (map_group_zero_or_one (map_group_match_item_for true k v) == map_group_concat (map_group_zero_or_one (map_group_match_item_for b k v)) (map_group_cut (t_literal k)))
+= apply_map_group_det_map_group_equiv
+    (map_group_zero_or_one (map_group_match_item_for true k v))
+    (map_group_concat (map_group_zero_or_one (map_group_match_item_for b k v)) (map_group_cut (t_literal k)))
 
 let matches_map_group (g: map_group) (m: cbor_map) : Tot bool =
   match g m with

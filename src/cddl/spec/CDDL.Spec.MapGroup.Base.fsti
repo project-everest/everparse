@@ -45,6 +45,28 @@ let matches_map_group_entry
 : Tot bool
 = key (fst x) && value (snd x)
 
+let cbor_map_exists_op
+  (f: (Cbor.cbor & Cbor.cbor) -> bool)
+  (l: Cbor.cbor_map)
+  (accu: bool)
+  (k: Cbor.cbor)
+: Tot bool
+= match Cbor.cbor_map_get l k with
+  | None -> accu
+  | Some v -> accu || f (k, v)
+
+val cbor_map_exists 
+  (f: (Cbor.cbor & Cbor.cbor) -> bool)
+  (l: Cbor.cbor_map)
+: Tot bool
+
+val cbor_map_exists_eq
+  (f: (Cbor.cbor & Cbor.cbor) -> bool)
+  (l: Cbor.cbor_map)
+: Lemma
+  (ensures (cbor_map_exists f l <==> exists k . cbor_map_exists_op f l false k))
+  [SMTPat (cbor_map_exists f l)]
+
 val map_group_match_item (cut: bool) (key value: typ) : map_group
 
 val map_group_match_item_ext (cut: bool) (key value: typ) (key' value' : typ) : Lemma
