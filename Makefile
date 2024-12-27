@@ -1,4 +1,4 @@
-all: package-subset asn1 cbor cbor-interface
+all: package-subset asn1 cbor cddl cbor-interface
 
 package-subset: quackyducky lowparse 3d
 
@@ -6,12 +6,12 @@ package-subset: quackyducky lowparse 3d
 
 EVERPARSE_SRC_PATH = $(realpath src)
 
-ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,
+ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 
-SRC_DIRS += src/lowparse src/ASN1 src/3d/prelude src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse
+SRC_DIRS += src/lowparse src/ASN1 src/3d/prelude src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
 
 ifeq (,$(NO_PULSE))
-  SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse
+  SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse
 endif
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
@@ -159,11 +159,10 @@ endif
 
 cbor-test: cbor-det-c-test cbor-det-rust-test cbor-det-c-vertest cbor-det-common-vertest cbor-test-snapshot
 
+cddl: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
+
 ifeq (,$(NO_PULSE))
-cddl: cbor cbor-interface
-	+$(MAKE) -C src/cddl
-else
-cddl:
+cddl: $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
 endif
 
 .PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
