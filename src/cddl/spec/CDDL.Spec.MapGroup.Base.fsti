@@ -449,6 +449,24 @@ val map_group_concat_zero_or_one_match_item_cut_eq
 : Lemma
   (map_group_zero_or_one (map_group_match_item_for true k v) == map_group_concat (map_group_zero_or_one (map_group_match_item_for b k v)) (map_group_cut (t_literal k)))
 
+let map_group_concat_cut_filter
+  (k: typ)
+  (f: (Cbor.cbor & Cbor.cbor) -> bool)
+: Lemma
+  (map_group_concat (map_group_cut k) (map_group_filter f) == map_group_concat (map_group_filter (orp f (matches_map_group_entry k any))) (map_group_cut k))
+= apply_map_group_det_map_group_equiv0
+    (map_group_concat (map_group_cut k) (map_group_filter f))
+    (map_group_concat (map_group_filter (orp f (matches_map_group_entry k any))) (map_group_cut k))
+    (fun _ -> ())
+    (fun l ->
+      if cbor_map_exists (matches_map_group_entry k any) l
+      then ()
+      else begin
+        assert (Cbor.cbor_map_equal (Cbor.cbor_map_filter (CBOR.Spec.Util.notp f) l) (Cbor.cbor_map_filter (CBOR.Spec.Util.notp (orp f (matches_map_group_entry k any))) l));
+        assert (Cbor.cbor_map_equal (Cbor.cbor_map_filter f l) (Cbor.cbor_map_filter (orp f (matches_map_group_entry k any)) l))
+      end
+    )
+
 val matches_map_group (g: map_group) (m: Cbor.cbor_map) : Tot bool
 
 val matches_map_group_det (g: map_group) (m: Cbor.cbor_map) : Lemma
@@ -458,6 +476,15 @@ val matches_map_group_det (g: map_group) (m: Cbor.cbor_map) : Lemma
   | MapGroupDet _ m' -> matches_map_group g m <==> m' == Cbor.cbor_map_empty
   | _ -> True)
   [SMTPat (matches_map_group g m)]
+
+let matches_map_group_concat_cut_r
+  (g: det_map_group)
+  (k: typ)
+  (m: Cbor.cbor_map)
+: Lemma
+  (ensures (matches_map_group (map_group_concat g (map_group_cut k)) m <==> matches_map_group g m))
+  [SMTPat (matches_map_group (map_group_concat g (map_group_cut k)) m)]
+= ()
 
 val t_map (g: map_group) : typ
 

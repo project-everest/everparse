@@ -286,6 +286,26 @@ let map_group_footprint_zero_or_more_match_item
   [SMTPat (map_group_footprint (map_group_zero_or_more (map_group_match_item false key value)))]
 = ()
 
+let map_group_footprint_match_item_cut
+  (key value: typ)
+: Lemma
+  (map_group_footprint (map_group_match_item true key value) key)
+  [SMTPat (map_group_footprint (map_group_match_item true key value))]
+= map_group_footprint_intro
+    (map_group_match_item true key value)
+    key
+    (fun m m' ->
+      assert (cbor_map_equal (cbor_map_filter (matches_map_group_entry key any) (cbor_map_union m m')) (cbor_map_filter (matches_map_group_entry key any) m));
+      assert (cbor_map_equal (cbor_map_filter (CBOR.Spec.Util.notp (matches_map_group_entry key any)) (cbor_map_union m m')) (cbor_map_union (cbor_map_filter (CBOR.Spec.Util.notp (matches_map_group_entry key any)) m) m'))
+    )
+
+let map_group_footprint_cut
+  (k: typ)
+: Lemma
+  (ensures (map_group_footprint (map_group_cut k) k))
+  [SMTPat (map_group_cut k)]
+= ()
+
 let cbor_map_included (c' c : cbor_map) : Tot prop =
   (forall x . Some? (cbor_map_get c' x) ==> cbor_map_get c' x == cbor_map_get c x)
 
