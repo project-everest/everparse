@@ -202,6 +202,8 @@ let map_group_result_prop (l: Cbor.cbor_map) (r: map_group_result) : Tot prop =
   | MapGroupDet c m -> map_group_item_post l (c, m)
   | _ -> True
 
+val map_group_cut (k: typ) : map_group
+
 val apply_map_group_det (m: map_group) (l: Cbor.cbor_map) : Pure map_group_result
   (requires True)
   (ensures fun r -> map_group_result_prop l r)
@@ -296,6 +298,26 @@ let map_group_is_det_match_item_for
 : Lemma
   (map_group_is_det (map_group_match_item_for cut k ty))
 = ()
+
+val apply_map_group_det_match_item_cut
+  (k: typ)
+  (ty: typ)
+  (l: Cbor.cbor_map)
+: Lemma
+  (ensures (apply_map_group_det (map_group_match_item true k ty) l == (
+    let s = Cbor.cbor_map_filter (matches_map_group_entry k any) l in
+    let n = Cbor.cbor_map_length s in
+    if n = 0
+    then MapGroupFail
+    else if n = 1
+    then
+      let (key, value) = Cbor.cbor_map_singleton_elim s in
+      if ty value
+      then MapGroupDet s (Cbor.cbor_map_filter (CBOR.Spec.Util.notp (matches_map_group_entry k any)) l)
+      else MapGroupCutFail
+    else MapGroupCutFail
+  )))
+  [SMTPat (apply_map_group_det (map_group_match_item true k ty) l)]
 
 val map_group_filter
   (f: (Cbor.cbor & Cbor.cbor) -> Tot bool)
@@ -405,6 +427,27 @@ val apply_map_group_det_productive
   | _ -> True
   ))
   [SMTPat (map_group_is_productive m); SMTPat (apply_map_group_det m f)]
+
+val apply_map_group_det_cut
+  (k: typ)
+  (l: Cbor.cbor_map)
+: Lemma
+  (ensures (apply_map_group_det (map_group_cut k) l == (
+    if cbor_map_exists (matches_map_group_entry k any) l
+    then MapGroupCutFail
+    else MapGroupDet Cbor.cbor_map_empty l
+  )))
+  [SMTPat (apply_map_group_det (map_group_cut k) l)]
+
+val map_group_concat_match_item_cut_eq
+  (k: Cbor.cbor) (v: typ) (b: bool)
+: Lemma
+  (map_group_match_item_for b k v == map_group_concat (map_group_match_item_for b k v) (map_group_cut (t_literal k)))
+
+val map_group_concat_zero_or_one_match_item_cut_eq
+  (k: Cbor.cbor) (v: typ) (b: bool)
+: Lemma
+  (map_group_zero_or_one (map_group_match_item_for true k v) == map_group_concat (map_group_zero_or_one (map_group_match_item_for b k v)) (map_group_cut (t_literal k)))
 
 val matches_map_group (g: map_group) (m: Cbor.cbor_map) : Tot bool
 

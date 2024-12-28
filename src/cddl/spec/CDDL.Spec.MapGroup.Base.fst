@@ -1979,6 +1979,9 @@ let map_group_concat_match_item_cut_eq
     (map_group_match_item_for b k v)
     (map_group_concat (map_group_match_item_for b k v) (map_group_cut (t_literal k)))
 
+#push-options "--z3rlimit 16"
+
+#restart-solver
 let map_group_concat_zero_or_one_match_item_cut_eq
   (k: cbor) (v: typ) (b: bool)
 : Lemma
@@ -1986,6 +1989,8 @@ let map_group_concat_zero_or_one_match_item_cut_eq
 = apply_map_group_det_map_group_equiv
     (map_group_zero_or_one (map_group_match_item_for true k v))
     (map_group_concat (map_group_zero_or_one (map_group_match_item_for b k v)) (map_group_cut (t_literal k)))
+
+#pop-options
 
 let matches_map_group (g: map_group) (m: cbor_map) : Tot bool =
   match g m with
