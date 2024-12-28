@@ -343,6 +343,15 @@ val cbor_map_key_list_length (m: cbor_map) : Lemma
   (ensures (List.Tot.length (cbor_map_key_list m) == cbor_map_length m))
   [SMTPat (List.Tot.length (cbor_map_key_list m))]
 
+let cbor_map_length_empty_equiv
+  (m: cbor_map)
+: Lemma
+  (cbor_map_length m == 0 <==> m == cbor_map_empty)
+= cbor_map_key_list_length m;
+  match cbor_map_key_list m with
+  | [] -> cbor_map_equiv m cbor_map_empty
+  | a :: q -> cbor_map_key_list_mem m a
+
 let cbor_map_disjoint_tot
   (m1 m2: cbor_map)
 : Pure bool

@@ -83,7 +83,7 @@ let cbor_map_singleton_inj
 unfold
 let map_group_match_item_witness_pred (key value: typ) (l: cbor_map) (l': cbor_map & cbor_map) (x: cbor & cbor) : Tot prop =
   map_group_item_post l l' /\
-  fst l' == cbor_map_singleton (fst x) (snd x) /\
+  fst l' `cbor_map_equal` cbor_map_singleton (fst x) (snd x) /\
   key (fst x) /\
   value (snd x)
 
@@ -1423,6 +1423,116 @@ let apply_map_group_det_match_item_for
     end
     else ()
   | _ -> ()
+
+#push-options "--z3rlimit 128"
+
+#restart-solver
+let apply_map_group_det_match_item_cut
+  (k: typ)
+  (ty: typ)
+  (l: cbor_map)
+: Lemma
+  (apply_map_group_det (map_group_match_item true k ty) l == (
+    let s = cbor_map_filter (matches_map_group_entry k any) l in
+    let n = cbor_map_length s in
+    if n = 0
+    then MapGroupFail
+    else if n = 1
+    then
+      let (key, value) = cbor_map_singleton_elim s in
+      if ty value
+      then MapGroupDet s (cbor_map_filter (CBOR.Spec.Util.notp (matches_map_group_entry k any)) l)
+      else MapGroupCutFail
+    else MapGroupCutFail
+  ))
+= let res = map_group_match_item' k ty l in
+  let s = cbor_map_filter (matches_map_group_entry k any) l in
+  cbor_map_length_empty_equiv s;
+  cbor_map_key_list_length s;
+  let n = cbor_map_length s in
+  match cbor_map_key_list s with
+  | [] ->
+      assert (MPS.equal res MPS.empty);
+      assert (map_group_match_item_cut_pre l res == MPS.singleton (cbor_map_empty, l))
+  | key :: q ->
+    cbor_map_key_list_mem s key;
+    let Some value = cbor_map_get s key in
+    if n = 1 && ty value
+    then begin
+      assert (cbor_map_singleton_elim s == (key, value));
+      assert (forall key' . (cbor_map_defined key' l /\ k key') ==> key' == key);
+      let s' = cbor_map_filter (CBOR.Spec.Util.notp (matches_map_group_entry k any)) l in
+      assert (forall l' x . map_group_match_item_witness_pred k ty l l' x ==> (fst l' `cbor_map_equal` s /\ snd l' `cbor_map_equal` s'));
+      assert (MPS.equal res (MPS.singleton (s, s')));
+      assert (map_group_match_item_cut_pre l res == res);
+      assert (~ (mps_exists (map_group_match_item_cut_exists_pred k res) res));
+      ()
+    end
+    else
+      let prf
+        (key1: cbor)
+        (key2: cbor)
+      : Lemma
+        (requires (match cbor_map_get s key1, cbor_map_get s key2 with
+        | Some value1, Some value2 ->
+          ty value1 /\
+          key2 <> key1
+        | _ -> False
+        ))
+        (ensures (
+          apply_map_group_det (map_group_match_item true k ty) l == MapGroupCutFail
+        ))
+      = let Some value1 = cbor_map_get s key1 in
+        let Some value2 = cbor_map_get s key2 in
+        let l1 = cbor_map_singleton key1 value1 in
+        let l' = cbor_map_sub l l1 in
+        assert (MPS.mem (l1, l') res);
+        assert (map_group_match_item_cut_pre l res == res);
+        assert (map_group_match_item_cut_failure_witness_pred k res (l1, l') (key2, value2));
+        assert (map_group_match_item_cut_exists_pred k res (l1, l'));
+        assert (mps_exists (map_group_match_item_cut_exists_pred k res) res);
+        assert (map_group_match_item true k ty l == MapGroupCutFailure);
+        assert (apply_map_group_det (map_group_match_item true k ty) l == MapGroupCutFail)
+      in
+      if ty value
+      then begin
+        let key2 :: _ = q in
+        cbor_map_key_list_no_repeats_p s;
+        cbor_map_key_list_mem s key2;
+        prf key key2;
+        ()
+      end
+      else begin
+        let f (k: cbor) : Tot bool =
+          match cbor_map_get s k with
+          | Some value -> ty value
+          | _ -> false
+        in
+        Classical.forall_intro (List.Tot.mem_filter f q);
+        match List.Tot.filter f q with
+        | [] ->
+          let aux
+            (l': _)
+            (x: _)
+          : Lemma
+            (~ (map_group_match_item_witness_pred k ty l l' x))
+          = if map_group_match_item_witness_bool k ty l l' x
+            then cbor_map_key_list_mem s (fst x)
+            else ()
+          in
+          Classical.forall_intro_2 aux;
+          assert (MPS.equal res MPS.empty);
+          assert (map_group_match_item_cut_pre l res == MPS.singleton (cbor_map_empty, l));
+          ()
+        | key2 :: _ ->
+          cbor_map_key_list_mem s key2;
+          assert (f key == false);
+          assert (f key2 == true);
+          prf key2 key;
+          ()
+      end
+
+#pop-options
 
 let map_group_filter
   f
