@@ -467,6 +467,35 @@ let map_group_concat_cut_filter
       end
     )
 
+let map_group_concat_cut_cut
+  (k1 k2: typ)
+: Lemma
+  (ensures (map_group_concat (map_group_cut k1) (map_group_cut k2) == map_group_cut (orp k1 k2)))
+  [SMTPat (map_group_concat (map_group_cut k1) (map_group_cut k2))]
+= apply_map_group_det_map_group_equiv
+    (map_group_concat (map_group_cut k1) (map_group_cut k2))
+    (map_group_cut (orp k1 k2))
+
+let map_group_concat_cut_choice
+  (k: typ)
+  (g1 g2: det_map_group)
+: Lemma
+  (ensures (map_group_concat (map_group_cut k) (map_group_choice g1 g2) == map_group_choice (map_group_concat (map_group_cut k) g1) (map_group_concat (map_group_cut k) g2)))
+  [SMTPat (map_group_concat (map_group_cut k) (map_group_choice g1 g2))]
+= apply_map_group_det_map_group_equiv
+    (map_group_concat (map_group_cut k) (map_group_choice g1 g2))
+    (map_group_choice (map_group_concat (map_group_cut k) g1) (map_group_concat (map_group_cut k) g2))
+
+let map_group_concat_choice_cut
+  (g1 g2: det_map_group)
+  (k: typ)
+: Lemma
+  (ensures (map_group_concat (map_group_choice g1 g2) (map_group_cut k) == map_group_choice (map_group_concat g1 (map_group_cut k)) (map_group_concat g2 (map_group_cut k))))
+  [SMTPat (map_group_choice (map_group_concat g1 (map_group_cut k)) (map_group_concat g2 (map_group_cut k)))]
+= apply_map_group_det_map_group_equiv
+    (map_group_concat (map_group_choice g1 g2) (map_group_cut k))
+    (map_group_choice (map_group_concat g1 (map_group_cut k)) (map_group_concat g2 (map_group_cut k)))
+
 val matches_map_group (g: map_group) (m: Cbor.cbor_map) : Tot bool
 
 val matches_map_group_det (g: map_group) (m: Cbor.cbor_map) : Lemma
