@@ -1704,7 +1704,7 @@ let target_spec_env_extend
 let cbor_with (t: Spec.typ) : Type0 = (c: Cbor.cbor { t c })
 
 module U8 = FStar.UInt8
-let string64 = (s: Seq.seq U8.t { Seq.length s < pow2 64 })
+let string64 = Spec.string64
 module U64 = FStar.UInt64
 
 let table
@@ -2139,7 +2139,13 @@ let spec_of_elem_typ
 : Tot (Spec.spec (elem_typ_sem e) (target_elem_type_sem (target_type_of_elem_typ e)) true)
 = match e with
   | ELiteral l -> Spec.spec_literal (eval_literal l)
-  | _ -> admit ()
+  | EBool -> Spec.spec_bool (fun _ -> true)
+  | EByteString -> Spec.spec_bstr (fun _ -> true)
+  | ETextString -> Spec.spec_tstr CBOR.Spec.API.UTF8.correct
+  | EUInt -> Spec.spec_uint (fun _ -> true)
+  | ENInt -> Spec.spec_nint (fun _ -> true)
+  | EAlwaysFalse -> Spec.spec_always_false (fun _ -> true)
+  | EAny -> Spec.spec_any (fun _ -> true)
 
 let pair_sum
   (#t1 #t2: Type)
