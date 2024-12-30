@@ -7,7 +7,7 @@ val t
   (#key: Type)
   (#key_s: typ)
   (spec_key: spec key_s key true)
-  (value: Type u#a)
+  ([@@@strictly_positive] value: Type u#a)
 : Tot (Type u#a)
 
 val get
