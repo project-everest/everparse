@@ -2,6 +2,7 @@ module CDDL.Spec.AST.Base
 module Spec = CDDL.Spec.All
 module U64 = FStar.UInt64
 module Cbor = CBOR.Spec.API.Type
+module Map = CDDL.Spec.Map
 
 irreducible let sem_attr : unit = ()
 
@@ -1156,7 +1157,7 @@ and spec_wf_parse_map_group
     )
 | WfMZeroOrOne g s ->
     spec_wf_parse_map_group env g s /\
-    Spec.map_group_is_productive (map_group_sem env g)
+    Spec.MapGroupFail? (Spec.apply_map_group_det (map_group_sem env g) Cbor.cbor_map_empty)
 | WfMLiteral cut key value s ->
     spec_wf_typ env value s
 | WfMZeroOrMore key value s_key s_value ->
@@ -1708,9 +1709,9 @@ let string64 = Spec.string64
 module U64 = FStar.UInt64
 
 let table
-  ([@@@strictly_positive] key: Type)
-  ([@@@strictly_positive] value: Type)
-= (list (key & value)) // { List.Tot.no_repeats_p (List.Tot.map fst l) }) // the refinement is NOT strictly positive, because of `List.Tot.memP`, so we need to use a serializability condition, see below
+  (key: Type0)
+  ([@@@strictly_positive] value: Type0)
+= Map.t key value
 
 let target_elem_type_sem
   (t: target_elem_type)
@@ -1770,37 +1771,98 @@ noeq
 type rectype (f: [@@@strictly_positive] Type -> Type) =
 | Y of f (rectype f)
 
-// FIXME: WHY WHY WHY do I need to do this? It seems that `strictly_positive` heavily impedes normalization and unification
+let rec target_type_positively_bounded
+  (bound: name_env)
+  (kbound: name_env)
+  (t: target_type)
+: GTot bool
+= match t with
+  | TTDef s -> s `name_mem` bound
+  | TTPair t1 t2
+  | TTUnion t1 t2 ->
+    target_type_positively_bounded bound kbound t1 &&
+    target_type_positively_bounded bound kbound t2
+  | TTTable t1 t2 ->
+    target_type_bounded kbound t1 &&
+    target_type_positively_bounded bound kbound t2
+  | TTArray a
+  | TTOption a ->
+    target_type_positively_bounded bound kbound a
+  | TTElem _ -> true
+
+let rec target_type_positively_bounded_incr
+  (bound bound': name_env)
+  (kbound kbound': name_env)
+  (t: target_type)
+: Lemma
+  (requires
+    name_env_included bound bound' /\
+    name_env_included kbound kbound' /\
+    target_type_positively_bounded bound kbound t
+  )
+  (ensures
+    target_type_positively_bounded bound' kbound' t
+  )
+  [SMTPatOr [
+    [SMTPat (name_env_included bound bound'); SMTPat (name_env_included kbound kbound'); SMTPat (target_type_positively_bounded bound kbound t)];
+    [SMTPat (name_env_included bound bound'); SMTPat (name_env_included kbound kbound'); SMTPat (target_type_positively_bounded bound' kbound' t)];
+  ]]
+= match t with
+  | TTPair t1 t2
+  | TTUnion t1 t2 ->
+    target_type_positively_bounded_incr bound bound' kbound kbound' t1;
+    target_type_positively_bounded_incr bound bound' kbound kbound' t2
+  | TTTable t1 t2 ->
+    target_type_positively_bounded_incr bound bound' kbound kbound' t2  
+  | TTArray a
+  | TTOption a ->
+    target_type_positively_bounded_incr bound bound' kbound kbound' a
+  | TTElem _
+  | TTDef _ -> ()
+
 let rec target_type_sem'
   (#bound: name_env)
   ([@@@strictly_positive] env: target_spec_env bound)
+  (#kbound: name_env)
+  (kenv: target_spec_env kbound)
   (t: target_type)
 : Pure Type0
-  (requires target_type_bounded bound t)
+  (requires
+    target_type_positively_bounded bound kbound t
+  )
   (ensures fun _ -> True)
 = match t with
   | TTDef s -> env s
-  | TTPair t1 t2 -> target_type_sem' env t1 & target_type_sem' env t2
-  | TTUnion t1 t2 -> target_type_sem' env t1 `either` target_type_sem' env t2
-  | TTArray a -> list (target_type_sem' env a)
-  | TTTable t1 t2 -> table (target_type_sem' env t1) (target_type_sem' env t2)
-  | TTOption a -> option (target_type_sem' env a)
+  | TTPair t1 t2 -> target_type_sem' env kenv t1 & target_type_sem' env kenv t2
+  | TTUnion t1 t2 -> target_type_sem' env kenv t1 `either` target_type_sem' env kenv t2
+  | TTArray a -> list (target_type_sem' env kenv a)
+  | TTTable t1 t2 -> table (target_type_sem kenv t1) (target_type_sem' env kenv t2)
+  | TTOption a -> option (target_type_sem' env kenv a)
   | TTElem e -> target_elem_type_sem e
 
 let rec target_type_sem'_correct
   (#bound: name_env)
   (env: target_spec_env bound)
+  (#kbound: name_env)
+  (kenv: target_spec_env kbound)
   (t: target_type)
 : Lemma
-  (requires target_type_bounded bound t)
-  (ensures (target_type_sem' env t == target_type_sem env t))
-  [SMTPat (target_type_sem' env t)]
+  (requires
+    target_type_positively_bounded bound kbound t /\
+    target_spec_env_included kenv env
+  )
+  (ensures
+    target_type_bounded bound t /\
+    target_type_sem' env kenv t == target_type_sem env t
+  )
+  [SMTPat (target_type_sem' env kenv t)]
 = match t with
-  | TTTable t1 t2
   | TTPair t1 t2
-  | TTUnion t1 t2 -> target_type_sem'_correct env t1; target_type_sem'_correct env t2
+  | TTUnion t1 t2 -> target_type_sem'_correct env kenv t1; target_type_sem'_correct env kenv t2
+  | TTTable t1 t2 ->
+    target_type_sem'_correct env kenv t2
   | TTOption a
-  | TTArray a -> target_type_sem'_correct env a
+  | TTArray a -> target_type_sem'_correct env kenv a
   | TTElem _
   | TTDef _ -> ()
 
@@ -1809,17 +1871,17 @@ let target_type_sem_rec_body
   (env: target_spec_env bound)
   (new_name: string { ~ (name_mem new_name bound) })
   (s: name_env_elem)
-  (t: target_type { target_type_bounded (extend_name_env bound new_name NType) t })
+  (t: target_type { target_type_positively_bounded (extend_name_env bound new_name NType) bound t })
   ([@@@strictly_positive] t': Type0)
 : Tot Type0
-= target_type_sem' (target_spec_env_extend bound env new_name NType t') t
+= target_type_sem' (target_spec_env_extend bound env new_name NType t') env t
 
 let target_type_sem_rec
   (bound: name_env)
   (env: target_spec_env bound)
   (new_name: string { ~ (name_mem new_name bound) })
   (s: name_env_elem)
-  (t: target_type { target_type_bounded (extend_name_env bound new_name NType) t })
+  (t: target_type { target_type_positively_bounded (extend_name_env bound new_name NType) bound t })
 : Type0
 = rectype (target_type_sem_rec_body bound env new_name s t)
 
@@ -2238,9 +2300,13 @@ and spec_of_wf_map_group
       cut
       (eval_literal key)
       (spec_of_wf_typ env s)
-//  | WfMZeroOrMore key value s_key s_value ->
-//    Spec.mg_zero_or_more_match_item
-  | _ -> admit ()
+  | WfMZeroOrOne _ s' ->
+    Spec.mg_spec_zero_or_one
+      (spec_of_wf_map_group env s')
+  | WfMZeroOrMore key value s_key s_value ->
+    Spec.mg_zero_or_more_match_item
+      (spec_of_wf_typ env s_key)
+      (spec_of_wf_typ env s_value)
 
 let spec_env_extend_typ
   (e: wf_ast_env)

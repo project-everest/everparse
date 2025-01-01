@@ -399,6 +399,27 @@ let rec list_sorted_append_chunk_elim
     end
   | _ :: l1' -> list_sorted_append_chunk_elim order l1' l2 l3
 
+let rec list_for_all_filter
+  (#t: Type)
+  (p: t -> bool)
+  (l: list t)
+: Lemma
+  (requires (List.Tot.for_all p l))
+  (ensures (List.Tot.filter p l == l))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_for_all_filter p q
+
+let list_for_all_mem_filter
+  (#t: Type)
+  (p: t -> bool)
+  (l: list t)
+: Lemma
+  (requires (forall x . List.Tot.memP x l ==> p x))
+  (ensures (List.Tot.filter p l == l))
+= List.Tot.for_all_mem p l;
+  list_for_all_filter p l
+
 let rec list_for_all_filter_invariant
   (#t: Type)
   (p: t -> bool)
@@ -1603,6 +1624,109 @@ let rec list_fold_ext_idem
     list_filter_not_in_fold f a h l2';
     list_fold_ext_idem f (f a h) (list_filter_not_in h q) (list_filter_not_in h l2')
 
+let list_length_as_fold_op
+  (t: Type)
+  (accu: nat)
+  (_: t)
+: Tot nat
+= accu + 1
+
+let rec list_length_as_fold
+  (#t: Type)
+  (l: list t)
+  (accu: nat)
+: Lemma
+  (ensures (
+    List.Tot.fold_left (list_length_as_fold_op _) accu l == List.Tot.length l + accu
+  ))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | _ :: q -> list_length_as_fold q (accu + 1)
+
+let list_for_all_as_fold_op
+  (#t: Type)
+  (f: (t -> bool))
+  (accu: bool)
+  (x: t)
+: Tot bool
+= accu && f x
+
+let rec list_for_all_as_fold
+  (#t: Type)
+  (f: (t -> bool))
+  (accu: bool)
+  (l: list t)
+: Lemma
+  (ensures (List.Tot.fold_left (list_for_all_as_fold_op f) accu l == (accu && List.Tot.for_all f l)))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q -> list_for_all_as_fold f (accu && f a) q
+
+let list_fold_filter_op
+  (#t: Type)
+  (#accu_t: Type)
+  (f: t -> bool)
+  (phi: accu_t -> t -> accu_t)
+  (accu: accu_t)
+  (x: t)
+: Tot accu_t
+= if f x
+  then phi accu x
+  else accu
+
+let rec list_fold_filter
+  (#t: Type)
+  (#accu_t: Type)
+  (f: t -> bool)
+  (l: list t)
+  (phi: accu_t -> t -> accu_t)
+  (accu: accu_t)
+: Lemma
+  (ensures (List.Tot.fold_left phi accu (List.Tot.filter f l) == List.Tot.fold_left (list_fold_filter_op f phi) accu l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    if f a
+    then list_fold_filter f q phi (phi accu a)
+    else list_fold_filter f q phi accu
+
+let notp (#t: Type) (p: t -> bool) (x: t) : Tot bool =
+  not (p x)
+
+let rec list_no_repeats_filter
+  (#t: Type)
+  (f: (t -> bool))
+  (l: list t)
+: Lemma
+  (requires (List.Tot.no_repeats_p l))
+  (ensures (List.Tot.no_repeats_p (List.Tot.filter f l)))
+  [SMTPat (List.Tot.no_repeats_p (List.Tot.filter f l))]
+= match l with
+  | [] -> ()
+  | a :: q -> list_no_repeats_filter f q
+
+let union_as_list
+  (#t: Type)
+  (l1 l2: list t)
+  (f2: (t -> bool))
+: Lemma
+  (requires (
+    List.Tot.no_repeats_p l1 /\
+    List.Tot.no_repeats_p l2 /\
+    (forall x . f2 x == true <==> List.Tot.memP x l2)
+  ))
+  (ensures (
+    let l' = List.Tot.append (List.Tot.filter (notp f2) l1) l2 in
+    List.Tot.no_repeats_p l' /\
+    (forall x . List.Tot.memP x l' <==> (List.Tot.memP x l1 \/ List.Tot.memP x l2))
+  ))
+= Classical.forall_intro (List.Tot.mem_filter (notp f2) l1);
+  Classical.forall_intro (List.Tot.append_memP (List.Tot.filter (notp f2) l1) l2);
+  List.Tot.no_repeats_p_append_intro (List.Tot.filter (notp f2) l1) l2
+
 let rec list_length_filter (#t: Type) (f: t -> bool) (l: list t) : Lemma
   (List.Tot.length (List.Tot.filter f l) <= List.Tot.length l)
 = match l with
@@ -1709,9 +1833,6 @@ let rec wf_list_for_all_exists_eq (#t1 #t2: Type) (p: t1 -> t2 -> bool) (l1: lis
   | a :: q ->
     wf_list_existsb_eq (p a) l2;
     wf_list_for_all_exists_eq p q l2
-
-let notp (#t: Type) (p: t -> bool) (x: t) : Tot bool =
-  not (p x)
 
 let rec wf_list_sum (#t: Type) (l: list t) (f: (x: t { List.Tot.memP x l /\ x << l }) -> nat) : Tot nat (decreases l) =
   match l with
