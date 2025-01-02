@@ -37,6 +37,7 @@ if ! $skip_z3 ; then
     export PATH="$FSTAR_HOME/z3-versions:$PATH"
 fi
 $skip_build || OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$FSTAR_HOME"
+$skip_build || OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$FSTAR_HOME" bootstrap
 
 # Install other EverParse deps
 "$build_home"/install-other-deps.sh "${args[@]}"

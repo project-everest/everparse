@@ -10,8 +10,10 @@ WORKDIR $HOME/everparse
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Dependencies (opam packages)
+# NOTE: $PULSE_HOME is now $PULSE_REPO/out, cf. FStarLang/pulse#246
 ENV KRML_HOME=$HOME/everparse/karamel
-ENV PULSE_HOME=$HOME/everparse/pulse
+ENV PULSE_REPO=$HOME/everparse/pulse
+ENV PULSE_HOME=$PULSE_REPO/out
 RUN sudo apt-get update && eval $(opam env) && .docker/build/install-other-deps.sh
 
 # CI dependencies: sphinx (for the docs)

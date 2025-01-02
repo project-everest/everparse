@@ -8,7 +8,8 @@ ifeq (,$(PULSE_LIB))
     ifeq (,$(PULSE_LIB))
 #      $(error "Pulse should be installed and its lib/ subdirectory should be in ocamlpath; or PULSE_HOME should be defined in the enclosing Makefile as the prefix directory where Pulse was installed, or the root directory of its source repository")
       # assuming Everest layout
-      PULSE_LIB := $(realpath $(EVERPARSE_SRC_PATH)/../../pulse/lib/pulse)
+      # NOTE: $PULSE_HOME is now $PULSE_REPO/out, cf. FStarLang/pulse#246
+      PULSE_LIB := $(realpath $(EVERPARSE_SRC_PATH)/../../pulse/out/lib/pulse)
     endif
     PULSE_HOME := $(realpath $(PULSE_LIB)/../..)
   else

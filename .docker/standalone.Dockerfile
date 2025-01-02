@@ -17,9 +17,11 @@ RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Dependencies (F*, Karamel and opam packages)
+# NOTE: $PULSE_HOME is now $PULSE_REPO/out, cf. FStarLang/pulse#246
 ENV FSTAR_HOME=$HOME/FStar
 ENV KRML_HOME=$HOME/karamel
-ENV PULSE_HOME=$HOME/pulse
+ENV PULSE_REPO=$HOME/pulse
+ENV PULSE_HOME=$PULSE_REPO/out
 RUN eval $(opam env) && .docker/build/install-deps.sh
 
 # CI dependencies: sphinx (for the docs)
