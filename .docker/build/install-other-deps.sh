@@ -31,8 +31,9 @@ $skip_build || OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$KRML_HOME"
 PULSE_BRANCH=$(jq -c -r '.RepoVersions.pulse_version' "$build_home"/config.json | sed 's!^origin/!!')
 
 # Install Pulse and its dependencies
-[[ -n "$PULSE_HOME" ]]
-git clone --branch $PULSE_BRANCH https://github.com/FStarLang/pulse "$PULSE_HOME"
-$skip_build || OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$PULSE_HOME"
+# NOTE: $PULSE_HOME should now be $PULSE_REPO/out, cf. FStarLang/pulse#246
+[[ -n "$PULSE_REPO" ]]
+git clone --branch $PULSE_BRANCH https://github.com/FStarLang/pulse "$PULSE_REPO"
+$skip_build || OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$PULSE_REPO"
 
 opam install hex re ctypes sha sexplib
