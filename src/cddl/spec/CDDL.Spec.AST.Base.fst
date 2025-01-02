@@ -304,6 +304,17 @@ let byte_seq_of_ascii_string
 : Tot (Seq.seq FStar.UInt8.t)
 = Seq.seq_of_list (byte_list_of_char_list (FStar.String.list_of_string s))
 
+let byte_seq_of_ascii_string_diff
+  (s1 s2: ascii_string)
+: Lemma
+  (ensures (byte_seq_of_ascii_string s1 == byte_seq_of_ascii_string s2 ==> s1 == s2))
+= Seq.lemma_seq_to_seq_of_list (byte_list_of_char_list (FStar.String.list_of_string s1));
+  Seq.lemma_seq_to_seq_of_list (byte_list_of_char_list (FStar.String.list_of_string s2));
+  char_list_of_byte_list_of_char_list (FStar.String.list_of_string s1);
+  char_list_of_byte_list_of_char_list (FStar.String.list_of_string s2);
+  FStar.String.string_of_list_of_string s1;
+  FStar.String.string_of_list_of_string s2
+
 module U8 = FStar.UInt8
 
 let rec byte_seq_of_ascii_string_is_utf8'
@@ -587,8 +598,8 @@ type ast0_wf_typ
   ast0_wf_typ (TArray g)
 | WfTMap:
   (g: group NMapGroup) ->
-  (ty1: Spec.typ) ->
-  (ty2: Spec.typ) ->
+//  (ty1: Spec.typ) ->
+//  (ty2: Spec.typ) ->
 //  (s: ast0_wf_validate_map_group Spec.t_always_false Spec.t_always_false g ty1 ty2) ->
 //  (g2: group NMapGroup) ->
 //  (s2: ast0_wf_parse_map_group g2) ->
@@ -746,7 +757,7 @@ let rec bounded_wf_typ
   bounded_wf_array_group env g s
 | WfTTagged _ t' s' ->
   bounded_wf_typ env t' s'
-| WfTMap g1 ty1 ty2 (* s1 g2 *) s2 ->
+| WfTMap g1 (* ty1 ty2 s1 g2 *) s2 ->
     group_bounded NMapGroup env g1 /\
 //    group_bounded NMapGroup env g2 /\
 //    bounded_wf_validate_map_group env Spec.t_always_false Spec.t_always_false g1 ty1 ty2 s1 /\
@@ -865,7 +876,7 @@ let rec bounded_wf_typ_incr
     bounded_wf_array_group_incr env env' g s
   | WfTTagged _ t' s' ->
     bounded_wf_typ_incr env env' t' s'
-  | WfTMap g1 ty1 ty2 (* s1 g2 *) s2 ->
+  | WfTMap g1 (* ty1 ty2 s1 g2 *) s2 ->
 //    bounded_wf_validate_map_group_incr env env' Spec.t_always_false Spec.t_always_false g1 ty1 ty2 s1;
     bounded_wf_parse_map_group_incr env env' _ s2
   | WfTChoice t1 t2 s1 s2 ->
@@ -989,7 +1000,7 @@ let rec bounded_wf_typ_bounded
     bounded_wf_array_group_bounded env g s
   | WfTTagged _ t' s' ->
     bounded_wf_typ_bounded env t' s'
-  | WfTMap g1 ty1 ty2 (* s1 g2 *) s2 ->
+  | WfTMap g1 (* ty1 ty2 s1 g2 *) s2 ->
 //    bounded_wf_validate_map_group_bounded env Spec.t_always_false Spec.t_always_false g1 ty1 ty2 s1;
     bounded_wf_parse_map_group_bounded env _ s2
   | WfTChoice t1 t2 s1 s2 ->
@@ -1092,7 +1103,7 @@ let rec spec_wf_typ
   spec_wf_array_group env g s
 | WfTTagged _ t' s' ->
   spec_wf_typ env t' s'
-| WfTMap g1 ty1 ty2 (* s1 g2 *) s2 ->
+| WfTMap g1 (* ty1 ty2 s1 g2 *) s2 ->
 //    Spec.restrict_map_group (map_group_sem env g1) (map_group_sem env g2) /\
 //    spec_wf_validate_map_group env Spec.t_always_false Spec.t_always_false g1 ty1 ty2 s1 /\
     spec_wf_parse_map_group env _ s2
@@ -1219,7 +1230,7 @@ let rec spec_wf_typ_incr
     spec_wf_array_group_incr env env' g s
   | WfTTagged _ t' s' ->
     spec_wf_typ_incr env env' t' s'
-  | WfTMap g1 ty1 ty2 (* s1 g2 *) s2 ->
+  | WfTMap g1 (* ty1 ty2 s1 g2 *) s2 ->
 //    spec_wf_validate_map_group_incr env env' Spec.t_always_false Spec.t_always_false g1 ty1 ty2 s1;
     spec_wf_parse_map_group_incr env env' _ s2
   | WfTChoice t1 t2 s1 s2 ->
@@ -2022,7 +2033,7 @@ let rec target_type_of_wf_typ
   | WfTRewrite _ _ s -> target_type_of_wf_typ s
   | WfTArray _ s -> target_type_of_wf_array_group s
   | WfTTagged _ _ s -> target_type_of_wf_typ s
-  | WfTMap _ _ _ (* _ _ *) s -> target_type_of_wf_map_group s
+  | WfTMap _ (* _ _ _ _ *) s -> target_type_of_wf_map_group s
   | WfTChoice _ _ s1 s2 -> TTUnion (target_type_of_wf_typ s1) (target_type_of_wf_typ s2)
   | WfTElem e -> TTElem (target_type_of_elem_typ e)
   | WfTDef e -> TTDef e
@@ -2077,7 +2088,7 @@ let rec target_type_of_wf_typ_bounded
   | WfTRewrite _ _ s -> target_type_of_wf_typ_bounded env s
   | WfTArray _ s -> target_type_of_wf_array_group_bounded env s
   | WfTTagged _ _ s -> target_type_of_wf_typ_bounded env s
-  | WfTMap _ _ _ (* _ _ *) s -> target_type_of_wf_map_group_bounded env s
+  | WfTMap _ (* _ _ _ _ *) s -> target_type_of_wf_map_group_bounded env s
   | WfTChoice _ _ s1 s2 ->
     target_type_of_wf_typ_bounded env s1;
     target_type_of_wf_typ_bounded env s2
@@ -2232,7 +2243,7 @@ let rec spec_of_wf_typ
     Spec.spec_array_group (spec_of_wf_array_group env s)
   | WfTTagged tag t' s ->
     Spec.spec_tag tag (spec_of_wf_typ env s)
-  | WfTMap g1 _ _ (* _ _ *) s2 ->
+  | WfTMap g1 (* _ _ _ _ *) s2 ->
     Spec.spec_map_group (spec_of_wf_map_group env s2)
   | WfTChoice _ _ s1 s2 ->
     Spec.spec_choice
