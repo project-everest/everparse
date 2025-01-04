@@ -439,6 +439,11 @@ val apply_map_group_det_cut
   )))
   [SMTPat (apply_map_group_det (map_group_cut k) l)]
 
+let map_group_cut_always_false () : Lemma (map_group_cut t_always_false == map_group_nop) =
+  apply_map_group_det_map_group_equiv
+    (map_group_cut t_always_false)
+    map_group_nop
+
 val map_group_concat_match_item_cut_eq
   (k: Cbor.cbor) (v: typ) (b: bool)
 : Lemma
@@ -470,11 +475,14 @@ let map_group_concat_cut_filter
 let map_group_concat_cut_cut
   (k1 k2: typ)
 : Lemma
-  (ensures (map_group_concat (map_group_cut k1) (map_group_cut k2) == map_group_cut (orp k1 k2)))
-  [SMTPat (map_group_concat (map_group_cut k1) (map_group_cut k2))]
+  (ensures (map_group_concat (map_group_cut k1) (map_group_cut k2) == map_group_cut (t_choice k1 k2)))
+  [SMTPatOr [
+    [SMTPat (map_group_concat (map_group_cut k1) (map_group_cut k2))];
+    [SMTPat (map_group_cut (t_choice k1 k2))]
+  ]]
 = apply_map_group_det_map_group_equiv
     (map_group_concat (map_group_cut k1) (map_group_cut k2))
-    (map_group_cut (orp k1 k2))
+    (map_group_cut (t_choice k1 k2))
 
 let map_group_concat_cut_choice
   (k: typ)
