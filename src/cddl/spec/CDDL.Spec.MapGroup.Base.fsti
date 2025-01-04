@@ -535,3 +535,16 @@ val t_map_eq
     | _ -> False
   end)
   [SMTPat (t_map g x)]
+
+val t_map_ext
+  (g1 g2: map_group)
+: Lemma
+  (requires (forall m . matches_map_group g1 m <==> matches_map_group g2 m))
+  (ensures (t_map g1 == t_map g2))
+
+let t_map_concat_cut_r
+  (g: det_map_group)
+  (k: typ)
+: Lemma
+  (t_map (map_group_concat g (map_group_cut k)) == t_map g)
+= t_map_ext (map_group_concat g (map_group_cut k)) g

@@ -2001,12 +2001,21 @@ let matches_map_group (g: map_group) (m: cbor_map) : Tot bool =
 let matches_map_group_det (g: map_group) m
 = ()
 
-let t_map g = fun x ->
+let t_map'
+  (g: map_group)
+  (x: Cbor.cbor)
+: Tot bool
+=
   match unpack x with
   | CMap m ->
     matches_map_group g m
   | _ -> false
 
+let t_map g = FE.on_dom Cbor.cbor (t_map' g)
+
 let t_map_eq
   g x
 = ()
+
+let t_map_ext g1 g2 =
+  assert (FE.feq (t_map' g1) (t_map' g2))
