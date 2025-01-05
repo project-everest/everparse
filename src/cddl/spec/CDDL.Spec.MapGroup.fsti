@@ -12,6 +12,20 @@ let cbor_map_disjoint_from_footprint
 : Tot prop
 = forall x . Some? (cbor_map_get m x) ==> ~ (f x)
 
+let cbor_map_disjoint_from_footprint_cbor_map_union
+  (m1 m2: cbor_map)
+  (f: typ)
+: Lemma
+  (requires (
+    cbor_map_disjoint_from_footprint m1 f /\
+    cbor_map_disjoint_from_footprint m2 f
+  ))
+  (ensures (
+    cbor_map_disjoint_from_footprint (cbor_map_union m1 m2) f
+  ))
+  [SMTPat (cbor_map_disjoint_from_footprint (cbor_map_union m1 m2) f)]
+= ()
+
 let map_group_footprint
   (g: map_group)
   (f: typ)
@@ -155,6 +169,7 @@ let map_group_footprint_concat
   (ensures (
     map_group_footprint (map_group_concat g1 g2) (t_choice f1 f2)
   ))
+  [SMTPat (map_group_footprint g1 f1); SMTPat (map_group_footprint g2 f2); SMTPat (map_group_concat g1 g2)]
 = ()
 
 #restart-solver
@@ -169,6 +184,7 @@ let map_group_footprint_choice
   (ensures (
     map_group_footprint (map_group_choice g1 g2) (t_choice f1 f2)
   ))
+  [SMTPat (map_group_footprint g1 f1); SMTPat (map_group_footprint g2 f2); SMTPat (map_group_choice g1 g2)]
 = ()
 
 #restart-solver
@@ -778,6 +794,167 @@ let cbor_map_in_footprint
   (f: typ)
 : Tot prop
 = forall x . Some? (cbor_map_get m x) ==> (f x)
+
+#restart-solver
+let matches_map_group_comm_aux'
+  (g2 g3 g4: det_map_group)
+  (t2 t3 t4: typ)
+  (m: cbor_map)
+: Lemma
+  (requires (
+    map_group_footprint g2 t2 /\
+    map_group_footprint g3 t3 /\
+    map_group_footprint g4 t4 /\
+    typ_disjoint t3 t4 /\
+    typ_disjoint t2 (t_choice t3 t4) /\
+    matches_map_group
+      (map_group_concat g2 (map_group_concat g3 g4))
+      m
+  ))
+  (ensures (
+    matches_map_group
+      (map_group_concat g3 (map_group_concat g2 g4))
+      m
+  ))
+= let (m2, m34) = map_group_footprint_concat_consumes_all_recip g2 (map_group_concat g3 g4) t2 (t_choice t3 t4) m in
+  let (m3, m4) = map_group_footprint_concat_consumes_all_recip g3 g4 t3 t4 m34 in
+  assert (m `cbor_map_equal` cbor_map_union m3 (cbor_map_union m2 m4));
+  map_group_footprint_consumed_disjoint g2 t2 t3 m2;
+  map_group_footprint_consumed_disjoint g4 t4 t3 m4;
+  map_group_footprint_elim g3 t3 m3 (cbor_map_union m2 m4);
+  assert (apply_map_group_det g3 m == MapGroupDet m3 (cbor_map_union m2 m4));
+  map_group_footprint_consumed_disjoint g4 t4 t2 m4;
+  map_group_footprint_elim g2 t2 m2 m4;
+  assert (apply_map_group_det g2 (cbor_map_union m2 m4) == MapGroupDet m2 m4);
+  assert (apply_map_group_det g4 m4 == MapGroupDet m4 cbor_map_empty);
+  assert (apply_map_group_det (map_group_concat g2 g4) (cbor_map_union m2 m4) ==
+    MapGroupDet (cbor_map_union m2 m4) cbor_map_empty
+  );
+  assert (apply_map_group_det (map_group_concat g3 (map_group_concat g2 g4)) m ==
+    MapGroupDet (cbor_map_union m3 (cbor_map_union m2 m4)) cbor_map_empty
+  );
+  ()
+
+#restart-solver
+let matches_map_group_comm_aux
+  (g2 g3 g4: det_map_group)
+  (t2 t3 t4: typ)
+  (m: cbor_map)
+: Lemma
+  (requires (
+    map_group_footprint g2 t2 /\
+    map_group_footprint g3 t3 /\
+    map_group_footprint g4 t4 /\
+    typ_disjoint t3 t4 /\
+    typ_disjoint t2 (t_choice t3 t4)
+  ))
+  (ensures (
+    matches_map_group
+      (map_group_concat g2 (map_group_concat g3 g4))
+      m <==>
+    matches_map_group
+      (map_group_concat g3 (map_group_concat g2 g4))
+      m
+  ))
+= Classical.move_requires (matches_map_group_comm_aux' g2 g3 g4 t2 t3 t4) m;
+  Classical.move_requires (matches_map_group_comm_aux' g3 g2 g4 t3 t2 t4) m
+
+let matches_map_group_comm'
+  (g1 g2 g3 g4: det_map_group)
+  (t1 t2 t3 t4: typ)
+  (m: cbor_map)
+: Lemma
+  (requires (
+    map_group_footprint g1 t1 /\
+    map_group_footprint g2 t2 /\
+    map_group_footprint g3 t3 /\
+    map_group_footprint g4 t4 /\
+    typ_disjoint t3 t4 /\ (
+    let t34 = t_choice t3 t4 in
+    typ_disjoint t2 t34 /\
+    typ_disjoint t1 (t_choice t2 t34)
+  )))
+  (ensures (
+    matches_map_group
+      (map_group_concat g1 (map_group_concat g2 (map_group_concat g3 g4)))
+      m <==>
+    matches_map_group
+      (map_group_concat g1 (map_group_concat g3 (map_group_concat g2 g4)))
+      m
+  ))
+= let m1 = cbor_map_filter (matches_map_group_entry t1 any) m in
+  let m1' = cbor_map_sub m m1 in
+  map_group_footprint_elim g1 t1 m1 m1';
+  match apply_map_group_det g1 m1 with
+  | MapGroupDet c1 r1 ->
+    if r1 = cbor_map_empty
+    then begin
+      assert (matches_map_group (map_group_concat g1 (map_group_concat g2 (map_group_concat g3 g4))) m <==> matches_map_group (map_group_concat g2 (map_group_concat g3 g4)) m1');
+      assert (matches_map_group (map_group_concat g1 (map_group_concat g3 (map_group_concat g2 g4))) m <==> matches_map_group (map_group_concat g3 (map_group_concat g2 g4)) m1');
+      matches_map_group_comm_aux g2 g3 g4 t2 t3 t4 m1'
+    end
+    else begin
+      let prf
+        (g2 g3 g4: det_map_group)
+        (t2 t3 t4: typ)
+      : Lemma
+        (requires (
+          map_group_footprint g2 t2 /\
+          map_group_footprint g3 t3 /\
+          map_group_footprint g4 t4 /\
+          typ_disjoint t3 t4 /\ (
+          let t34 = t_choice t3 t4 in
+          typ_disjoint t2 t34 /\
+          typ_disjoint t1 (t_choice t2 t34)
+        )))
+        (ensures (~ (matches_map_group
+          (map_group_concat g1 (map_group_concat g2 (map_group_concat g3 g4)))
+          m
+        )))
+      =
+        map_group_footprint_elim (map_group_concat g2 (map_group_concat g3 g4)) (t_choice t2 (t_choice t3 t4)) m1' r1;
+        match apply_map_group_det (map_group_concat g2 (map_group_concat g3 g4)) m1' with
+        | MapGroupDet _ r234 ->
+          let MapGroupDet _ r234' = apply_map_group_det (map_group_concat g2 (map_group_concat g3 g4)) (m1' `cbor_map_union` r1) in
+          assert (r234' == cbor_map_union r234 r1);
+          assert (r234' == cbor_map_empty ==> cbor_map_equal r1 cbor_map_empty);
+          ()
+        | _ -> ()
+      in
+      prf g2 g3 g4 t2 t3 t4;
+      prf g3 g2 g4 t3 t2 t4
+    end
+  | _ -> ()
+
+let matches_map_group_comm
+  (g1 g2 g3 g4 g5: det_map_group)
+  (t1 t2 t3 t4 t5: typ)
+  (m: cbor_map)
+: Lemma
+  (requires (
+    map_group_footprint g1 t1 /\
+    map_group_footprint g2 t2 /\
+    map_group_footprint g3 t3 /\
+    map_group_footprint g4 t4 /\
+    map_group_footprint g5 t5 /\
+    typ_disjoint t4 t5 /\ (
+    let t45 = t_choice t4 t5 in
+    typ_disjoint t3 t45 /\ (
+    let t345 = t_choice t3 t45 in
+    typ_disjoint t2 t345 /\
+    typ_disjoint t1 (t_choice t2 t345)
+  ))))
+  (ensures (
+    matches_map_group
+      (map_group_concat g1 (map_group_concat g2 (map_group_concat g3 (map_group_concat g4 g5))))
+      m <==>
+    matches_map_group
+      (map_group_concat g1 (map_group_concat g4 (map_group_concat g3 (map_group_concat g2 g5))))
+      m
+  ))
+= matches_map_group_comm' g1 g2 (map_group_concat g3 g4) g5 t1 t2 (t_choice t3 t4) t5 m;
+  matches_map_group_comm' (map_group_concat g1 g3) g4 g2 g5 (t_choice t1 t3) t4 t2 t5 m;
+  matches_map_group_comm' g1 g4 g3 (map_group_concat g2 g5) t1 t4 t3 (t_choice t2 t5) m
 
 unfold
 let map_group_parser_spec_arg_common
