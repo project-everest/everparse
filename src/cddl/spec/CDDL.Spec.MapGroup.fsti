@@ -882,49 +882,8 @@ let matches_map_group_comm'
       (map_group_concat g1 (map_group_concat g3 (map_group_concat g2 g4)))
       m
   ))
-= let m1 = cbor_map_filter (matches_map_group_entry t1 any) m in
-  let m1' = cbor_map_sub m m1 in
-  map_group_footprint_elim g1 t1 m1 m1';
-  match apply_map_group_det g1 m1 with
-  | MapGroupDet c1 r1 ->
-    if r1 = cbor_map_empty
-    then begin
-      assert (matches_map_group (map_group_concat g1 (map_group_concat g2 (map_group_concat g3 g4))) m <==> matches_map_group (map_group_concat g2 (map_group_concat g3 g4)) m1');
-      assert (matches_map_group (map_group_concat g1 (map_group_concat g3 (map_group_concat g2 g4))) m <==> matches_map_group (map_group_concat g3 (map_group_concat g2 g4)) m1');
-      matches_map_group_comm_aux g2 g3 g4 t2 t3 t4 m1'
-    end
-    else begin
-      let prf
-        (g2 g3 g4: det_map_group)
-        (t2 t3 t4: typ)
-      : Lemma
-        (requires (
-          map_group_footprint g2 t2 /\
-          map_group_footprint g3 t3 /\
-          map_group_footprint g4 t4 /\
-          typ_disjoint t3 t4 /\ (
-          let t34 = t_choice t3 t4 in
-          typ_disjoint t2 t34 /\
-          typ_disjoint t1 (t_choice t2 t34)
-        )))
-        (ensures (~ (matches_map_group
-          (map_group_concat g1 (map_group_concat g2 (map_group_concat g3 g4)))
-          m
-        )))
-      =
-        map_group_footprint_elim (map_group_concat g2 (map_group_concat g3 g4)) (t_choice t2 (t_choice t3 t4)) m1' r1;
-        match apply_map_group_det (map_group_concat g2 (map_group_concat g3 g4)) m1' with
-        | MapGroupDet _ r234 ->
-          let MapGroupDet _ r234' = apply_map_group_det (map_group_concat g2 (map_group_concat g3 g4)) (m1' `cbor_map_union` r1) in
-          assert (r234' == cbor_map_union r234 r1);
-          assert (r234' == cbor_map_empty ==> cbor_map_equal r1 cbor_map_empty);
-          ()
-        | _ -> ()
-      in
-      prf g2 g3 g4 t2 t3 t4;
-      prf g3 g2 g4 t3 t2 t4
-    end
-  | _ -> ()
+= matches_map_group_comm_aux g1 g2 (map_group_concat g3 g4) t1 t2 (t_choice t3 t4) m;
+  matches_map_group_comm_aux g2 (map_group_concat g1 g3) g4 t2 (t_choice t1 t3) t4 m
 
 let matches_map_group_comm
   (g1 g2 g3 g4 g5: det_map_group)
