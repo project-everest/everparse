@@ -1448,6 +1448,24 @@ let rec mk_elab_map_group_correct
     Spec.map_group_filter_any ()
   | _ -> ()
 
+let rec elab_map_group_footprint
+  (g: elab_map_group)
+: Tot (typ & typ)
+= match g with
+  | MGNop
+  | MGAlwaysFalse -> (TElem EAlwaysFalse, TElem EAny)
+  | MGMatch _ key _
+    -> (TElem (ELiteral key), TElem EAny)
+  | MGMatchWithCut key _
+  | MGCut key
+    -> (key, TElem EAny)
+  | MGTable key key_except _ -> (key, key_except)
+  | MGConcat g1 g2
+  | MGChoice g1 g2 ->
+    let (t1, _) = elab_map_group_footprint g1 in
+    let (t2, _) = elab_map_group_footprint g2 in
+    (TChoice t1 t2, TElem EAny)
+
 #push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
 
 #restart-solver
