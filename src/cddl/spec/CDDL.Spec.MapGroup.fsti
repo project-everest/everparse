@@ -49,6 +49,17 @@ let map_group_footprint_equiv
   (ensures map_group_footprint g f2)
 = ()
 
+let map_group_footprint_implies
+  (g: map_group)
+  (f1 f2: typ)
+: Lemma
+  (requires
+    map_group_footprint g f1 /\
+    (forall x . f1 x ==> f2 x)
+  )
+  (ensures map_group_footprint g f2)
+= ()
+
 #restart-solver
 let map_group_footprint_elim
   (g: map_group)

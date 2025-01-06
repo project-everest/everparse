@@ -3,6 +3,7 @@ include CDDL.Spec.AST.Base
 module Cbor = CBOR.Spec.API.Type
 module Spec = CDDL.Spec.All
 module U64 = FStar.UInt64
+module Util = CBOR.Spec.Util
 
 noeq
 type result (t: Type) =
@@ -1356,9 +1357,7 @@ let rec elab_map_group_sem
   | MGCut key ->
     Spec.map_group_cut (typ_sem env key)
   | MGTable key key_except value ->
-    Spec.map_group_concat
-      (Spec.map_group_zero_or_more (Spec.map_group_match_item false (typ_sem env key) (typ_sem env value)))
-      (Spec.map_group_filter (Spec.matches_map_group_entry (CBOR.Spec.Util.notp (typ_sem env key_except)) Spec.any) )
+    Spec.map_group_zero_or_more (Spec.map_group_match_item false (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except))) (typ_sem env value))
   | MGConcat g1 g2 ->
     Spec.map_group_concat (elab_map_group_sem env g1) (elab_map_group_sem env g2)
   | MGChoice g1 g2 ->
@@ -1443,9 +1442,8 @@ let rec mk_elab_map_group_correct
     mk_elab_map_group_correct env g_
   | GZeroOrMore (GMapElem _ false key value) ->
     Spec.map_group_filter_ext
-      (Spec.matches_map_group_entry (CBOR.Spec.Util.notp Spec.t_always_false) Spec.any)
-      (Spec.matches_map_group_entry Spec.any Spec.any);
-    Spec.map_group_filter_any ()
+      (Util.notp (Spec.matches_map_group_entry (Util.andp (typ_sem env key) (Util.notp Spec.t_always_false)) (typ_sem env value)))
+      (Util.notp (Spec.matches_map_group_entry (typ_sem env key) (typ_sem env value)))
   | _ -> ()
 
 let rec elab_map_group_footprint
@@ -1453,18 +1451,111 @@ let rec elab_map_group_footprint
 : Tot (typ & typ)
 = match g with
   | MGNop
-  | MGAlwaysFalse -> (TElem EAlwaysFalse, TElem EAny)
+  | MGAlwaysFalse -> (TElem EAlwaysFalse, TElem EAlwaysFalse)
   | MGMatch _ key _
-    -> (TElem (ELiteral key), TElem EAny)
+    -> (TElem (ELiteral key), TElem EAlwaysFalse)
   | MGMatchWithCut key _
   | MGCut key
-    -> (key, TElem EAny)
+    -> (key, TElem EAlwaysFalse)
   | MGTable key key_except _ -> (key, key_except)
   | MGConcat g1 g2
   | MGChoice g1 g2 ->
     let (t1, _) = elab_map_group_footprint g1 in
     let (t2, _) = elab_map_group_footprint g2 in
-    (TChoice t1 t2, TElem EAny)
+    (TChoice t1 t2, TElem EAlwaysFalse)
+
+let elab_map_group_footprint_postcond
+  (env: sem_env)
+  (g: elab_map_group)
+  (fp: typ)
+  (fp_except: typ)
+: Tot prop
+=
+    (fp, fp_except) == elab_map_group_footprint g /\
+    bounded_elab_map_group env.se_bound g /\
+    typ_bounded env.se_bound fp /\
+    typ_bounded env.se_bound fp_except /\
+    Spec.map_group_footprint (elab_map_group_sem env g) (Util.andp (typ_sem env fp) (Util.notp (typ_sem env fp_except)))
+
+let typ_sem'
+  (env: sem_env)
+  (x: typ)
+  (sq: squash (typ_bounded env.se_bound x))
+: Tot Spec.typ
+= typ_sem env x
+
+let elab_map_group_footprint_postcond_intro
+  (env: sem_env)
+  (g: elab_map_group)
+  (fp: typ)
+  (fp_except: typ)
+  (sq1: squash ((fp, fp_except) == elab_map_group_footprint g))
+  (sq2: squash (bounded_elab_map_group env.se_bound g))
+  (sq3: squash (typ_bounded env.se_bound fp))
+  (sq4: squash (typ_bounded env.se_bound fp_except))
+  (sq: squash (Spec.map_group_footprint (elab_map_group_sem env g) (Util.andp (typ_sem' env fp sq3) (Util.notp (typ_sem' env fp_except sq4)))))
+: Lemma
+  (elab_map_group_footprint_postcond env g fp fp_except)
+= ()
+
+#push-options "--z3rlimit 128 --query_stats --fuel 4 --ifuel 4 --split_queries always"
+
+#restart-solver
+let rec elab_map_group_footprint_correct
+  (env: sem_env)
+  (g: elab_map_group)
+: Lemma
+  (requires (bounded_elab_map_group env.se_bound g))
+  (ensures (
+    let (fp, fp_except) = elab_map_group_footprint g in
+    elab_map_group_footprint_postcond env g fp fp_except
+  ))
+= match g with
+  | MGConcat g1 g2 ->
+    let (t1, ex1) = elab_map_group_footprint g1 in
+    elab_map_group_footprint_correct env g1;
+    Spec.map_group_footprint_implies (elab_map_group_sem env g1) (Util.andp (typ_sem env t1) (Util.notp (typ_sem env ex1))) (typ_sem env t1);
+    let (t2, ex2) = elab_map_group_footprint g2 in
+    elab_map_group_footprint_correct env g2;
+    Spec.map_group_footprint_implies (elab_map_group_sem env g2) (Util.andp (typ_sem env t2) (Util.notp (typ_sem env ex2))) (typ_sem env t2);
+    Spec.map_group_footprint_concat (elab_map_group_sem env g1) (elab_map_group_sem env g2) (typ_sem env t1) (typ_sem env t2);
+    let (t, ex) = elab_map_group_footprint g in
+    assert_norm (elab_map_group_footprint (MGConcat g1 g2) == (TChoice t1 t2, TElem EAlwaysFalse));
+    assert (t == TChoice t1 t2);
+    assert_norm (typ_bounded env.se_bound (TChoice t1 t2) == (typ_bounded env.se_bound t1 && typ_bounded env.se_bound t2));
+    assert (typ_bounded env.se_bound (TChoice t1 t2));
+    assert (typ_bounded env.se_bound t);
+    assert_norm (typ_sem env (TChoice t1 t2) == Spec.t_choice (typ_sem env t1) (typ_sem env t2));
+    assert (typ_sem env t == Spec.t_choice (typ_sem env t1) (typ_sem env t2));
+    assert (ex == TElem EAlwaysFalse);
+    assert_norm (typ_sem env (TElem EAlwaysFalse) == Spec.t_always_false);
+    assert_norm (elab_map_group_sem env (MGConcat g1 g2) == Spec.map_group_concat (elab_map_group_sem env g1) (elab_map_group_sem env g2));
+    Spec.map_group_footprint_implies (elab_map_group_sem env g) (typ_sem env t) (Util.andp (typ_sem env t) (Util.notp (typ_sem env ex)));
+    elab_map_group_footprint_postcond_intro env g t ex () () () () ()
+  | MGChoice g1 g2 ->
+    let (t1, ex1) = elab_map_group_footprint g1 in
+    elab_map_group_footprint_correct env g1;
+    Spec.map_group_footprint_implies (elab_map_group_sem env g1) (Util.andp (typ_sem env t1) (Util.notp (typ_sem env ex1))) (typ_sem env t1);
+    let (t2, ex2) = elab_map_group_footprint g2 in
+    elab_map_group_footprint_correct env g2;
+    Spec.map_group_footprint_implies (elab_map_group_sem env g2) (Util.andp (typ_sem env t2) (Util.notp (typ_sem env ex2))) (typ_sem env t2);
+    Spec.map_group_footprint_choice (elab_map_group_sem env g1) (elab_map_group_sem env g2) (typ_sem env t1) (typ_sem env t2);
+    let (t, ex) = elab_map_group_footprint g in
+    assert_norm (elab_map_group_footprint (MGChoice g1 g2) == (TChoice t1 t2, TElem EAlwaysFalse));
+    assert (t == TChoice t1 t2);
+    assert_norm (typ_bounded env.se_bound (TChoice t1 t2) == (typ_bounded env.se_bound t1 && typ_bounded env.se_bound t2));
+    assert (typ_bounded env.se_bound (TChoice t1 t2));
+    assert (typ_bounded env.se_bound t);
+    assert_norm (typ_sem env (TChoice t1 t2) == Spec.t_choice (typ_sem env t1) (typ_sem env t2));
+    assert (typ_sem env t == Spec.t_choice (typ_sem env t1) (typ_sem env t2));
+    assert (ex == TElem EAlwaysFalse);
+    assert_norm (typ_sem env (TElem EAlwaysFalse) == Spec.t_always_false);
+    assert_norm (elab_map_group_sem env (MGChoice g1 g2) == Spec.map_group_choice (elab_map_group_sem env g1) (elab_map_group_sem env g2));
+    Spec.map_group_footprint_implies (elab_map_group_sem env g) (typ_sem env t) (Util.andp (typ_sem env t) (Util.notp (typ_sem env ex)));
+    elab_map_group_footprint_postcond_intro env g t ex () () () () ()
+  | _ -> ()
+
+#pop-options
 
 #push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
 
