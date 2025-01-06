@@ -1266,6 +1266,188 @@ let rec map_group_choice_compatible
 
 #pop-options
 
+type elab_map_group =
+| MGNop
+| MGAlwaysFalse
+| MGMatch:
+  cut: bool ->
+  key: literal ->
+  value: typ ->
+  elab_map_group
+| MGMatchWithCut:
+  key: typ ->
+  value: typ ->
+  elab_map_group
+| MGCut:
+  key: typ ->
+  elab_map_group
+| MGTable:
+  key: typ ->
+  key_except: typ ->
+  value: typ ->
+  elab_map_group
+| MGConcat:
+  g1: elab_map_group ->
+  g2: elab_map_group ->
+  elab_map_group
+| MGChoice:
+  g1: elab_map_group ->
+  g2: elab_map_group ->
+  elab_map_group
+
+let rec bounded_elab_map_group
+  (env: name_env)
+  (g: elab_map_group)
+: Tot bool
+= match g with
+  | MGNop
+  | MGAlwaysFalse -> true
+  | MGMatch _ _ value ->
+    typ_bounded env value
+  | MGMatchWithCut key value ->
+    typ_bounded env key &&
+    typ_bounded env value
+  | MGCut key ->
+    typ_bounded env key
+  | MGTable key key_except value ->
+    typ_bounded env key &&
+    typ_bounded env key_except &&
+    typ_bounded env value
+  | MGConcat g1 g2
+  | MGChoice g1 g2
+    -> bounded_elab_map_group env g1 && bounded_elab_map_group env g2
+
+let rec bounded_elab_map_group_incr
+  (env env': name_env)
+  (g: elab_map_group)
+: Lemma
+  (requires (
+    name_env_included env env' /\
+    bounded_elab_map_group env g
+  ))
+  (ensures (
+    bounded_elab_map_group env' g
+  ))
+  (decreases g)
+  [SMTPatOr [
+    [SMTPat (name_env_included env env'); SMTPat (bounded_elab_map_group env g)];
+    [SMTPat (name_env_included env env'); SMTPat (bounded_elab_map_group env' g)];
+  ]]
+= match g with
+  | MGConcat g1 g2
+  | MGChoice g1 g2
+    -> bounded_elab_map_group_incr env env' g1;
+    bounded_elab_map_group_incr env env' g2
+  | _ -> ()
+
+let rec elab_map_group_sem
+  (env: sem_env)
+  (g: elab_map_group)
+: Pure Spec.det_map_group
+    (requires bounded_elab_map_group env.se_bound g)
+    (ensures fun _ -> True)
+= match g with
+  | MGNop -> Spec.map_group_nop
+  | MGAlwaysFalse -> Spec.map_group_always_false
+  | MGMatch cut key value ->
+    Spec.map_group_match_item_for cut (eval_literal key) (typ_sem env value)
+  | MGMatchWithCut key value ->
+    Spec.map_group_match_item true (typ_sem env key) (typ_sem env value)
+  | MGCut key ->
+    Spec.map_group_cut (typ_sem env key)
+  | MGTable key key_except value ->
+    Spec.map_group_concat
+      (Spec.map_group_zero_or_more (Spec.map_group_match_item false (typ_sem env key) (typ_sem env value)))
+      (Spec.map_group_filter (Spec.matches_map_group_entry (CBOR.Spec.Util.notp (typ_sem env key_except)) Spec.any) )
+  | MGConcat g1 g2 ->
+    Spec.map_group_concat (elab_map_group_sem env g1) (elab_map_group_sem env g2)
+  | MGChoice g1 g2 ->
+    Spec.map_group_choice (elab_map_group_sem env g1) (elab_map_group_sem env g2)
+
+let rec mk_elab_map_group
+  (g: group NMapGroup)
+: Tot (result elab_map_group)
+  (decreases g)
+= match g with
+  | GMapElem _ cut (TElem (ELiteral key)) value ->
+    RSuccess (MGMatch cut key value)
+  | GMapElem _ true key value ->
+    RSuccess (MGMatchWithCut key value)
+  | GAlwaysFalse -> RSuccess MGAlwaysFalse
+  | GNop -> RFailure "mk_elab_map_group: GNop"
+  | GZeroOrOne g ->
+    begin match mk_elab_map_group g with
+    | RSuccess g' -> RSuccess (MGChoice g' MGNop)
+    | err -> err
+    end
+  | GZeroOrMore (GMapElem _ false key value) ->
+    RSuccess (MGTable key (TElem EAlwaysFalse) value)
+  | GConcat g1 g2 ->
+    begin match mk_elab_map_group g1 with
+    | RSuccess g1' ->
+      begin match mk_elab_map_group g2 with
+      | RSuccess g2' -> RSuccess (MGConcat g1' g2')
+      | err -> err
+      end
+    | err -> err
+    end
+  | GChoice g1 g2 ->
+    begin match mk_elab_map_group g1 with
+    | RSuccess g1' ->
+      begin match mk_elab_map_group g2 with
+      | RSuccess g2' -> RSuccess (MGChoice g1' g2')
+      | err -> err
+      end
+    | err -> err
+    end
+  | _ -> RFailure "mk_elab_map_group: unsupported"
+
+let rec mk_elab_map_group_bounded
+  (env: name_env)
+  (g: group NMapGroup)
+: Lemma
+  (requires (group_bounded _ env g))
+  (ensures (match mk_elab_map_group g with
+  | RSuccess g' -> bounded_elab_map_group env g'
+  | _ -> True
+  ))
+  (decreases g)
+  [SMTPat (group_bounded _ env g); SMTPat (mk_elab_map_group g)]
+= match g with
+  | GZeroOrOne g_ -> mk_elab_map_group_bounded env g_
+  | GConcat g1 g2
+  | GChoice g1 g2 ->
+    mk_elab_map_group_bounded env g1;
+    mk_elab_map_group_bounded env g2
+  | _ -> ()
+
+let rec mk_elab_map_group_correct
+  (env: sem_env)
+  (g: group NMapGroup)
+: Lemma
+  (requires (group_bounded _ env.se_bound g))
+  (ensures (match mk_elab_map_group g with
+  | RSuccess g' ->
+    bounded_elab_map_group env.se_bound g' /\
+    elab_map_group_sem env g' == map_group_sem env g
+  | _ -> True
+  ))
+  (decreases g)
+= mk_elab_map_group_bounded env.se_bound g;
+  match g with
+  | GChoice g1 g2
+  | GConcat g1 g2 ->
+    mk_elab_map_group_correct env g1;
+    mk_elab_map_group_correct env g2
+  | GZeroOrOne g_ ->
+    mk_elab_map_group_correct env g_
+  | GZeroOrMore (GMapElem _ false key value) ->
+    Spec.map_group_filter_ext
+      (Spec.matches_map_group_entry (CBOR.Spec.Util.notp Spec.t_always_false) Spec.any)
+      (Spec.matches_map_group_entry Spec.any Spec.any);
+    Spec.map_group_filter_any ()
+  | _ -> ()
+
 #push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
 
 #restart-solver

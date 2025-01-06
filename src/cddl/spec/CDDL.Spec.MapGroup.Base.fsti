@@ -332,6 +332,20 @@ val apply_map_group_det_filter
   )
   [SMTPat (apply_map_group_det (map_group_filter f) l)]
 
+let map_group_filter_any () : Lemma
+  (map_group_filter (matches_map_group_entry any any) == map_group_nop)
+= let prf
+    (m: Cbor.cbor_map)
+  : Lemma
+    (apply_map_group_det (map_group_filter (matches_map_group_entry any any)) m == apply_map_group_det map_group_nop m)
+  = assert (Cbor.cbor_map_equal (Cbor.cbor_map_filter (CBOR.Spec.Util.notp (matches_map_group_entry any any)) m) Cbor.cbor_map_empty);
+    assert (Cbor.cbor_map_equal (Cbor.cbor_map_filter (matches_map_group_entry any any) m) m)
+  in
+  Classical.forall_intro prf;
+  apply_map_group_det_map_group_equiv
+    (map_group_filter (matches_map_group_entry any any))
+    map_group_nop
+
 val map_group_filter_filter (p1 p2: (Cbor.cbor & Cbor.cbor) -> Tot bool) : Lemma
   (map_group_filter p1 `map_group_concat` map_group_filter p2 == map_group_filter (CBOR.Spec.Util.andp p1 p2))
   [SMTPat (map_group_filter p1 `map_group_concat` map_group_filter p2)]
