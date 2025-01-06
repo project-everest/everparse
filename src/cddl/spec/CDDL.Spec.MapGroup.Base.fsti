@@ -548,10 +548,15 @@ val t_map_eq
   end)
   [SMTPat (t_map g x)]
 
+let matches_map_group_equiv
+  (g1 g2: map_group)
+: Tot prop
+= forall m . matches_map_group g1 m <==> matches_map_group g2 m
+
 val t_map_ext
   (g1 g2: map_group)
 : Lemma
-  (requires (forall m . matches_map_group g1 m <==> matches_map_group g2 m))
+  (requires (matches_map_group_equiv g1 g2))
   (ensures (t_map g1 == t_map g2))
 
 let t_map_concat_cut_r

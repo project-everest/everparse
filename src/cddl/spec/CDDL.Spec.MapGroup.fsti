@@ -742,6 +742,50 @@ let map_group_footprint_concat_consumes_all_recip'
   ()
 
 #restart-solver
+let matches_map_group_equiv_concat'
+  (g1 g1' g2 g2': det_map_group)
+  (f1 f1' f2 f2': typ)
+  (m: cbor_map)
+: Lemma
+  (requires (
+    map_group_footprint g1 f1 /\
+    map_group_footprint g1' f1' /\
+    map_group_footprint g2 f2 /\
+    map_group_footprint g2'  f2' /\
+    matches_map_group_equiv g1 g1' /\
+    matches_map_group_equiv g2 g2' /\
+    typ_disjoint f1 f2 /\
+    typ_disjoint f1' f2' /\
+    matches_map_group (map_group_concat g1 g2) m
+  ))
+  (ensures (
+    matches_map_group (map_group_concat g1' g2') m
+  ))
+= let (m1, m2) = map_group_footprint_concat_consumes_all_recip g1 g2 f1 f2 m in
+  map_group_footprint_concat_consumes_all g1' g2' f1' f2' m1 m2
+
+#restart-solver
+let matches_map_group_equiv_concat
+  (g1 g1' g2 g2': det_map_group)
+  (f1 f1' f2 f2': typ)
+: Lemma
+  (requires (
+    map_group_footprint g1 f1 /\
+    map_group_footprint g1' f1' /\
+    map_group_footprint g2 f2 /\
+    map_group_footprint g2'  f2' /\
+    matches_map_group_equiv g1 g1' /\
+    matches_map_group_equiv g2 g2' /\
+    typ_disjoint f1 f2 /\
+    typ_disjoint f1' f2'
+  ))
+  (ensures (
+    matches_map_group_equiv (map_group_concat g1 g2) (map_group_concat g1' g2')
+  ))
+= Classical.forall_intro (Classical.move_requires (matches_map_group_equiv_concat' g1 g1' g2 g2' f1 f1' f2 f2'));
+  Classical.forall_intro (Classical.move_requires (matches_map_group_equiv_concat' g1' g1 g2' g2 f1' f1 f2' f2))
+
+#restart-solver
 let map_group_choice_compatible_match_item_for_concat_right
   (k: cbor)
   (v: typ)
