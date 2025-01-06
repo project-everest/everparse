@@ -2017,5 +2017,7 @@ let t_map_eq
   g x
 = ()
 
+#push-options "--z3rlimit 16"
+
 let t_map_ext g1 g2 =
   assert (FE.feq (t_map' g1) (t_map' g2))
