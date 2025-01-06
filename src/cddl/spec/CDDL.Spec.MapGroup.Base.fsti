@@ -346,6 +346,18 @@ let map_group_filter_ext (p1 p2: _ -> Tot bool) : Lemma
     (map_group_filter p1)
     (map_group_filter p2)
 
+let map_group_concat_choice_filter
+  (g1 g2: det_map_group)
+  (phi: (Cbor.cbor & Cbor.cbor) -> bool)
+: Lemma
+  (ensures (
+    map_group_concat (map_group_choice g1 g2) (map_group_filter phi) ==
+    map_group_choice (map_group_concat g1 (map_group_filter phi)) (map_group_concat g2 (map_group_filter phi))
+  ))
+= apply_map_group_det_map_group_equiv
+    (map_group_concat (map_group_choice g1 g2) (map_group_filter phi))
+    (map_group_choice (map_group_concat g1 (map_group_filter phi)) (map_group_concat g2 (map_group_filter phi)))
+
 val map_group_zero_or_one_match_item_filter (key value: typ) (p: (Cbor.cbor & Cbor.cbor) -> Tot bool) : Lemma
   (requires (
     forall x . p x ==> CBOR.Spec.Util.notp (matches_map_group_entry key value) x
