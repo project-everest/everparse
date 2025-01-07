@@ -680,6 +680,19 @@ let array_group_included_zero_or_more_l
   )
 = Classical.forall_intro (Classical.move_requires (array_group_included_zero_or_more_l_aux al ar al' ar'))
 
+let array_group_included_choice_r_r
+  (#b: _)
+  (a1 a2l a2r a2q: array_group b)
+: Lemma
+  (requires (
+    array_group_disjoint a1 a2l /\
+    array_group_included a1 (array_group_concat a2r a2q)
+  ))
+  (ensures (
+    array_group_included a1 (array_group_concat (array_group_choice a2l a2r) a2q)
+  ))
+= ()
+
 // Recursive type (needed by COSE Section 5.1 "Recipient")
 
 // Inspiring from Barthe et al., Type-Based Termination with Sized

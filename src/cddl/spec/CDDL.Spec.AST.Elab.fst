@@ -561,6 +561,243 @@ and array_group_disjoint
    | _ -> RFailure "array_group_disjoint: array: unsupported pattern"
   end
 
+#restart-solver
+[@@"opaque_to_smt"]
+let rec typ_included
+  (e: ast_env)
+  (fuel: nat)
+  (t1: typ { typ_bounded e.e_sem_env.se_bound t1 })
+  (t2: typ { typ_bounded e.e_sem_env.se_bound t2 })
+: Pure (result unit) // I cannot use `squash` because of unification
+    (requires True)
+    (ensures fun r -> RSuccess? r ==> Spec.typ_included (typ_sem e.e_sem_env t1) (typ_sem e.e_sem_env t2))
+    (decreases fuel)
+= if fuel = 0
+  then ROutOfFuel
+  else let fuel' : nat = fuel - 1 in
+  match t1, t2 with
+  | _, TElem EAny
+  | TElem EAlwaysFalse, _ -> RSuccess ()
+  | _ ->
+    if t1 = t2
+    then RSuccess ()
+    else begin
+  match t1, t2 with
+  | TDef i, t2 ->
+    let s1 = e.e_sem_env.se_env i in
+    let t1' = e.e_env i in
+    typ_included e fuel' t1' t2
+  | t2, TDef i ->
+    let s1 = e.e_sem_env.se_env i in
+    let t1' = e.e_env i in
+    typ_included e fuel' t2 t1'
+  | TElem EAny, _ -> RFailure "typ_included: TElem EAny"
+  | _, TElem EAlwaysFalse -> RFailure "typ_included: TElem EAlwaysFalse"
+  | TChoice t1l t1r, t2 ->
+    let rl = typ_included e fuel' t1l t2 in
+    if not (RSuccess? rl)
+    then rl
+    else typ_included e fuel' t1r t2
+  | t2, TChoice t1l t1r ->
+    let rl = typ_included e fuel' t2 t1l in
+    if RFailure? rl
+    then typ_included e fuel' t2 t1r
+    else rl
+  | TTagged tag1 t1', TTagged tag2 t2' ->
+    if tag1 = tag2
+    then typ_included e fuel' t1' t2'
+    else RFailure "typ_included: TTagged with different tags"
+  | TTagged _ _, _
+  | _, TTagged _ _ -> RFailure "typ_included: TTagged vs. anything"
+  | TElem (ELiteral (LSimple v)), TElem EBool ->
+    if v = Spec.simple_value_true || v = Spec.simple_value_false
+    then RSuccess ()
+    else RFailure "typ_included: TElem EBool"
+  | TElem (ELiteral (LInt ty _)), TElem EUInt ->
+    if ty = Cbor.cbor_major_type_uint64
+    then RSuccess ()
+    else RFailure "typ_included: uint64"
+  | TElem (ELiteral (LInt ty _)), TElem ENInt ->
+    if ty = Cbor.cbor_major_type_neg_int64
+    then RSuccess ()
+    else RFailure "typ_included: neg_int64"
+  | TElem (ELiteral (LString ty _)), TElem EByteString ->
+    if ty = Cbor.cbor_major_type_byte_string
+    then RSuccess ()
+    else RFailure "typ_included: byte string"
+  | TElem (ELiteral (LString ty _)), TElem ETextString ->
+    if ty = Cbor.cbor_major_type_text_string
+    then RSuccess ()
+    else RFailure "typ_included: text string"
+  | TArray a1, TArray a2 ->
+    Spec.array_close_array_group (array_group_sem e.e_sem_env a1);
+    Spec.array_close_array_group (array_group_sem e.e_sem_env a2);
+    array_group_included e fuel' true a1 a2
+  | TElem _, _
+  | _, TElem _
+  | TArray _, _
+  | _, TArray _
+  | TMap _, _
+  | _, TMap _
+    -> RFailure "typ_included: unsupported cases"
+  end
+
+and array_group_included
+  (e: ast_env)
+  (fuel: nat)
+  (close: bool)
+  (a1: group NArrayGroup { group_bounded _ e.e_sem_env.se_bound a1 })
+  (a2: group NArrayGroup { group_bounded _ e.e_sem_env.se_bound a2 })
+: Pure (result unit)
+    (requires True)
+    (ensures fun r ->
+      match r with
+      | RSuccess _ -> Spec.array_group_included (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2) close)
+      | _ -> True
+    )
+    (decreases fuel)
+= let a10 = a1 in
+  let a20 = a2 in
+  if fuel = 0
+  then ROutOfFuel
+  else let fuel' : nat = fuel - 1 in
+  match (a1, destruct_group a1), (a2, destruct_group a2) with
+  | (_, (GAlwaysFalse, _)), _ -> RSuccess ()
+  | w ->
+    if a1 = a2
+    then RSuccess ()
+    else begin
+  match w with
+  | (_, (GAlwaysFalse, _)), _ -> RSuccess ()
+  | (_, (GConcat _ _, _)), _
+  | _, (_, (GConcat _ _, _))
+    -> RFailure "array_group_included: group should have been rewritten beforehand"
+  | (_, (GChoice a1l a1r, a1q)), (a2, _) ->
+    let a1l' = GConcat a1l a1q in
+    rewrite_group_correct e.e_sem_env fuel a1l';
+    let res1 = array_group_included e fuel' close (rewrite_group fuel _ a1l') a2 in
+    if not (RSuccess? res1)
+    then res1
+    else begin
+      let a1r' = GConcat a1r a1q in
+      rewrite_group_correct e.e_sem_env fuel a1r';
+      array_group_included e fuel' close (rewrite_group fuel _ a1r') a2
+    end
+  | (a1, _), (_, (GChoice a2l a2r, a2q)) ->
+    let a2l' = GConcat a2l a2q in
+    rewrite_group_correct e.e_sem_env fuel a2l';
+    let a2l'' = rewrite_group fuel _ a2l' in
+    let resl = array_group_included e fuel' close a1 a2l'' in
+    if RFailure? resl
+    then begin
+      match array_group_disjoint e fuel false a1 a2l with
+      | RSuccess _ ->
+        let a2r' = GConcat a2r a2q in
+        rewrite_group_correct e.e_sem_env fuel a2r';
+        Classical.move_requires
+          (Spec.array_group_included_choice_r_r
+            (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close)
+            (array_group_sem e.e_sem_env a2l)
+            (array_group_sem e.e_sem_env a2r)
+          )
+          (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2q) close);
+        array_group_included e fuel' close a1 (rewrite_group fuel _ a2r')
+      | res -> res
+    end
+    else resl
+  | (_, (GDef _ n, a1r)), (a2, _) ->
+    let a1' = GConcat (e.e_env n) a1r in
+    rewrite_group_correct e.e_sem_env fuel a1';
+    array_group_included e fuel' close (rewrite_group fuel _ a1') a2
+  | (a2, _), (_, (GDef _ n, a1r)) ->
+    let a1' = GConcat (e.e_env n) a1r in
+    rewrite_group_correct e.e_sem_env fuel a1';
+    array_group_included e fuel' close a2 (rewrite_group fuel _ a1')
+  | _, (_, (GAlwaysFalse, _)) -> RFailure "array_group_included: GAlwaysFalse"
+  | (GNop, _), (_, (GZeroOrOne _, a2r))
+  | (GNop, _), (_, (GZeroOrMore _, a2r))
+    ->
+      if close
+      then array_group_included e fuel' close GNop a2r
+      else RFailure "array_group_included: GNop"
+  | (_, (GNop, _)), _
+    -> RFailure "array_group_included: GNop"
+  | (_, (GOneOrMore g, a1r)), (a2, _) ->
+    let a1' = GConcat (GConcat g (GZeroOrMore g)) a1r in
+    rewrite_group_correct e.e_sem_env fuel a1';
+    array_group_included e fuel' close (rewrite_group fuel _ a1') a2
+  | (a1, _), (_, (GOneOrMore g, a2r)) ->
+    let a2' = GConcat (GConcat g (GZeroOrMore g)) a2r in
+    rewrite_group_correct e.e_sem_env fuel a2';
+    array_group_included e fuel' close a1 (rewrite_group fuel _ a2')
+  | (_, (GZeroOrOne g1, a1r)), (a2, _) ->
+    let a1' = GConcat g1 a1r in
+    rewrite_group_correct e.e_sem_env fuel a1';
+    let res1 = array_group_included e fuel' close (rewrite_group fuel _ a1') a2 in
+    if RSuccess? res1
+    then array_group_included e fuel' close a1r a2
+    else res1
+  | (a1, _), (_, (GZeroOrOne g2, a2r)) ->
+    let a2' = GConcat g2 a2r in
+    rewrite_group_correct e.e_sem_env fuel a2';
+    let res2 = array_group_included e fuel' close a1 (rewrite_group fuel _ a2') in
+    if RFailure? res2
+    then begin
+      match array_group_disjoint e fuel false a1 g2 with
+      | RSuccess _ -> array_group_included e fuel' close a1 a2r
+      | res -> res
+    end
+    else res2
+  | (_, (GZeroOrMore g1, a1r)), (a2, (GZeroOrMore g2, a2r)) ->
+    let res1 = array_group_included e fuel' false g1 g2 in
+    if RSuccess? res1
+    then begin
+      Classical.move_requires
+        (Spec.array_group_included_zero_or_more_l
+          (array_group_sem e.e_sem_env g1)
+          (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1r) close)
+          (array_group_sem e.e_sem_env g2)
+        )
+        (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2r) close);
+      array_group_included e fuel' close a1r a2
+    end
+    else res1
+  | (_, (GZeroOrMore _, _)), _ ->
+    RFailure "array_group_included: GZeroOrMore"
+  | (_, (GArrayElem _ t1, a1r)), (_, (GArrayElem _ t2, a2r)) ->
+    let res1 = typ_included e fuel' t1 t2 in
+    if RSuccess? res1
+    then array_group_included e fuel' close a1r a2r
+    else res1
+  | (a1, _), (a2, (GZeroOrMore g2, a2r)) ->
+    let a2' = GConcat g2 a2 in
+    rewrite_group_correct e.e_sem_env fuel a2';
+    begin match array_group_included e fuel' close a1 (rewrite_group fuel _ a2') with
+    | RFailure _ ->
+      begin match array_group_disjoint e fuel false a1 g2 with
+      | RSuccess _ ->
+        Classical.move_requires
+          (Spec.array_group_included_zero_or_more_2
+            (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close)
+            (array_group_sem e.e_sem_env g2)
+          )
+          (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2r) close);
+        array_group_included e fuel' close a1 a2r
+      | res -> res
+      end
+    | res ->
+      Classical.move_requires
+        (Spec.array_group_included_zero_or_more_1
+          (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close)
+          (array_group_sem e.e_sem_env g2)
+        )
+        (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2r) close);
+      res
+    end
+  | (_, (GArrayElem _ _, _)), _ ->
+    RFailure "array_group_included: GArrayElem"
+  end
+
 #pop-options
 
 #restart-solver
