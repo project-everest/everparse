@@ -225,6 +225,21 @@ let rec array_group_zero_or_more' #b (a: array_group b) (l: list Cbor.cbor { opt
 
 let array_group_zero_or_more #b : array_group b -> array_group b = array_group_zero_or_more'
 
+let array_group_zero_or_more_eq #b (a: array_group b) (l: list Cbor.cbor { opt_precedes_list l b }) : Lemma
+  (array_group_zero_or_more a l == (
+  match a l with
+  | None -> Some ([], l)
+  | Some (l1, l2) ->
+    if Nil? l1
+    then Some (l1, l2)
+    else
+      begin match array_group_zero_or_more a l2 with
+      | None -> None
+      | Some (l2', l3) -> Some (List.Tot.append l1 l2', l3)
+      end
+  ))
+= ()
+
 val array_group_zero_or_more_some
   (#b: _)
   (a: array_group b)
@@ -540,6 +555,130 @@ let array_close_array_group
     (t_array (close_array_group a))
   )
 = ()
+
+let array_group_equiv_close_concat
+  #b
+  (a1 a2: array_group b)
+: Lemma
+  (array_group_equiv (close_array_group (array_group_concat a1 a2)) (array_group_concat a1 (close_array_group a2)))
+= ()
+
+let array_group_included #b (a1 a2: array_group b) : Tot prop
+= (forall (l: list Cbor.cbor { opt_precedes_list l b }) .
+    match a1 l with
+    | None -> True
+    | Some _ -> a2 l == a1 l
+  )
+
+let array_group_included_refl
+  (#b: _)
+  (a: array_group b)
+: Lemma
+  (array_group_included a a)
+= ()
+
+let array_group_included_trans
+  (#b: _)
+  (a1 a2 a3: array_group b)
+: Lemma
+  (requires (array_group_included a1 a2 /\ array_group_included a2 a3))
+  (ensures (array_group_included a1 a3))
+= ()
+
+let t_array_included
+  (a1 a2: array_group None)
+: Lemma
+  (requires (array_group_included (close_array_group a1) (close_array_group a2)))
+  (ensures (typ_included (t_array a1) (t_array a2)))
+= ()
+
+let array_group_included_concat_item
+  (t1 t2: typ)
+  (a1 a2: array_group None)
+: Lemma
+  (requires (typ_included t1 t2 /\ array_group_included a1 a2))
+  (ensures (array_group_included (array_group_concat (array_group_item t1) a1) (array_group_concat (array_group_item t2) a2)))
+= ()
+
+let array_group_included_zero_or_more_1_aux
+  (#b: _)
+  (a1 a2: array_group b)
+: Lemma
+  (ensures (
+    array_group_included (array_group_concat a1 (array_group_concat (array_group_zero_or_more a1) a2)) (array_group_concat (array_group_zero_or_more a1) a2)
+  ))
+= array_group_concat_assoc a1 (array_group_zero_or_more a1) a2
+
+let array_group_included_zero_or_more_1
+  (#b: _)
+  (a a1 a2: array_group b)
+: Lemma
+  (requires (
+    array_group_included a (array_group_concat a1 (array_group_concat (array_group_zero_or_more a1) a2))
+  ))
+  (ensures (
+    array_group_included a (array_group_concat (array_group_zero_or_more a1) a2)
+  ))
+= array_group_included_zero_or_more_1_aux a1 a2
+
+let array_group_included_zero_or_more_2
+  (#b: _)
+  (a a1 a2: array_group b)
+: Lemma
+  (requires (
+    array_group_disjoint a a1 /\ // necessary because of the greedy semantics
+    array_group_included a a2
+  ))
+  (ensures (
+    array_group_included a (array_group_concat (array_group_zero_or_more a1) a2)
+  ))
+= ()
+
+let rec array_group_included_zero_or_more_l_aux
+  (#b: _)
+  (al ar al' ar': array_group b)
+  (l: list Cbor.cbor { opt_precedes_list l b })
+: Lemma
+  (requires (
+    array_group_included al al' /\
+    array_group_included ar (array_group_concat (array_group_zero_or_more al') ar') /\
+    Some? (array_group_concat (array_group_zero_or_more al) ar l)
+  ))
+  (ensures
+    array_group_concat (array_group_zero_or_more al) ar l == array_group_concat (array_group_zero_or_more al') ar' l
+  )
+  (decreases (List.Tot.length l))
+= array_group_zero_or_more_eq al l;
+  match al l with
+  | None -> ()
+  | Some (l1, l2) ->
+    List.Tot.append_length l1 l2;
+    if Nil? l1
+    then ()
+    else begin
+      let Some (l3, l4) = array_group_zero_or_more al l2 in
+      let Some (l5, l6) = ar l4 in
+      List.Tot.append_assoc l1 l3 l5;
+      assert (array_group_concat (array_group_zero_or_more al) ar l == Some (List.Tot.append l1 (List.Tot.append l3 l5), l6));
+      array_group_included_zero_or_more_l_aux al ar al' ar' l2;
+      let Some (l3', l4') = array_group_zero_or_more al' l2 in
+      let Some (l5', l6') = ar' l4' in
+      List.Tot.append_assoc l1 l3' l5';
+      ()
+    end
+
+let array_group_included_zero_or_more_l
+  (#b: _)
+  (al ar al' ar': array_group b)
+: Lemma
+  (requires (
+    array_group_included al al' /\
+    array_group_included ar (array_group_concat (array_group_zero_or_more al') ar')
+  ))
+  (ensures
+    array_group_included (array_group_concat (array_group_zero_or_more al) ar) (array_group_concat (array_group_zero_or_more al') ar')
+  )
+= Classical.forall_intro (Classical.move_requires (array_group_included_zero_or_more_l_aux al ar al' ar'))
 
 // Recursive type (needed by COSE Section 5.1 "Recipient")
 
