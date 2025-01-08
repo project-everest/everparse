@@ -14,6 +14,7 @@ ifeq (,$(NO_PULSE))
   SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse
 endif
 
+include $(EVERPARSE_SRC_PATH)/fstar.Makefile
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 ifeq (,$(NO_PULSE))
   include $(EVERPARSE_SRC_PATH)/pulse.Makefile
