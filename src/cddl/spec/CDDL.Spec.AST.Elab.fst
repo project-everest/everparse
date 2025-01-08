@@ -822,6 +822,18 @@ let rec map_group_footprint
   | MGCut key
   | MGMatchWithCut key _ -> RSuccess key
 
+let typ_included_union
+  (a1 a2 b1 b2: Spec.typ)
+: Lemma
+  (requires (
+    Spec.typ_included a1 b1 /\
+    Spec.typ_included a2 b2
+  ))
+  (ensures (
+    Spec.typ_included (Spec.t_choice a1 a2) (Spec.t_choice b1 b2)
+  ))
+= ()
+
 #push-options "--z3rlimit 64 --ifuel 8"
 
 let map_group_footprint_correct_postcond'
@@ -856,7 +868,18 @@ let rec map_group_footprint_correct'
   | MGChoice g1 g2
   | MGConcat g1 g2 ->
     map_group_footprint_correct' env g1;
-    map_group_footprint_correct' env g2
+    map_group_footprint_correct' env g2;
+    begin match map_group_footprint g1 with
+    | RSuccess t1 ->
+      let Some ty1 = spec_map_group_footprint env g1 in
+      begin match map_group_footprint g2 with
+      | RSuccess t2 ->
+        let Some ty2 = spec_map_group_footprint env g2 in
+        typ_included_union ty1 ty2 (typ_sem env t1) (typ_sem env t2)
+      | _ -> ()
+      end
+    | _ -> ()
+    end
   | _ -> ()
 
 let map_group_footprint_correct
@@ -1298,9 +1321,9 @@ let rec map_group_choice_compatible_no_cut
       (typ_sem env.e_sem_env value)
       (elab_map_group_sem env.e_sem_env g2);
     RSuccess ()
-  | WfMZeroOrMore key value _ _ ->
+  | WfMZeroOrMore key key_except value _ _ ->
     Spec.map_group_choice_compatible_no_cut_zero_or_more_match_item_left
-      (typ_sem env.e_sem_env key)
+      (Util.andp (typ_sem env.e_sem_env key) (Util.notp (typ_sem env.e_sem_env key_except)))
       (typ_sem env.e_sem_env value)
       (elab_map_group_sem env.e_sem_env g2);
     RSuccess ()
@@ -1381,7 +1404,7 @@ let rec map_group_choice_compatible
   then ROutOfFuel
   else let fuel' : nat = fuel - 1 in
   match s1 with
-  | WfMZeroOrMore _ _ _ _ ->
+  | WfMZeroOrMore _ _ _ _ _ ->
     RFailure "map_group_choice_compatible: GZeroOrMore never fails"
   | WfMZeroOrOne _ _ ->
     RFailure "map_group_choice_compatible: GZeroOrOne always succeeds or cuts, but never fails"
@@ -1501,7 +1524,7 @@ let rec map_group_choice_compatible
                 RSuccess ()
               end
             end
-          | WfMZeroOrMore _ _ _ _ -> RFailure "map_group_choice_compatible: GZeroOrMore right, not disjoint"
+          | WfMZeroOrMore _ _ _ _ _ -> RFailure "map_group_choice_compatible: GZeroOrMore right, not disjoint"
           end
         end
       end
@@ -1890,16 +1913,15 @@ and mk_wf_parse_map_group
     | RSuccess tvalue -> RSuccess (WfMLiteral cut key value tvalue)
     | res -> coerce_failure res
     end
-  | MGTable key (TElem EAlwaysFalse) value ->
+  | MGTable key key_except value ->
     begin match mk_wf_typ fuel' env key with
     | RSuccess tkey ->
       begin match mk_wf_typ fuel' env value with
-      | RSuccess tvalue -> RSuccess (WfMZeroOrMore key value tkey tvalue)
+      | RSuccess tvalue -> RSuccess (WfMZeroOrMore key key_except value tkey tvalue)
       | res -> coerce_failure res
       end
     | res -> coerce_failure res
     end
-  | MGTable _ _ _ -> RFailure "mk_wf_parse_map_group: MGTable"
   | MGConcat g1 g2 ->
     begin match map_group_footprint g1 with
     | RSuccess fp1 ->

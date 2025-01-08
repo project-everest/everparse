@@ -660,8 +660,8 @@ let rec spec_map_group_footprint
   | MGMatch cut key value
   -> Spec.map_group_footprint_match_item_for cut (eval_literal key) (typ_sem env value);
     Some (Spec.t_literal (eval_literal key))
-  | MGTable key _ _ // TODO: extend to GOneOrMore
-  -> Some (typ_sem env key)
+  | MGTable key key_except _ // TODO: extend to GOneOrMore
+  -> Some (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except)))
   | MGChoice g1 g2
   | MGConcat g1 g2 ->
     begin match spec_map_group_footprint env g1, spec_map_group_footprint env g2 with
@@ -800,10 +800,11 @@ and ast0_wf_parse_map_group
     ast0_wf_parse_map_group (MGMatch cut key value)
 | WfMZeroOrMore:
     key: typ ->
+    key_except: typ ->
     value: typ ->
     s_key: ast0_wf_typ key ->
     s_value: ast0_wf_typ value ->
-    ast0_wf_parse_map_group (MGTable key (TElem EAlwaysFalse) value)
+    ast0_wf_parse_map_group (MGTable key key_except value)
 
 (*
 and ast0_wf_validate_map_group
@@ -939,8 +940,9 @@ and bounded_wf_parse_map_group
     bounded_wf_parse_map_group env g s
 | WfMLiteral cut key value s ->
     bounded_wf_typ env value s
-| WfMZeroOrMore key value s_key s_value ->
+| WfMZeroOrMore key key_except value s_key s_value ->
     bounded_wf_typ env key s_key /\
+    typ_bounded env key_except /\
     bounded_wf_typ env value s_value
 
 (*
@@ -1094,7 +1096,7 @@ and bounded_wf_parse_map_group_incr
     bounded_wf_parse_map_group_incr env env' g s
   | WfMLiteral cut key value s ->
     bounded_wf_typ_incr env env' value s
-  | WfMZeroOrMore key value s_key s_value ->
+  | WfMZeroOrMore key _ value s_key s_value ->
     bounded_wf_typ_incr env env' key s_key;
     bounded_wf_typ_incr env env' value s_value
 
@@ -1197,7 +1199,7 @@ and bounded_wf_parse_map_group_bounded
   (decreases wf)
   [SMTPat (bounded_wf_parse_map_group env g wf)]
 = match wf with
-  | WfMZeroOrMore key value s_key s_value ->
+  | WfMZeroOrMore key _ value s_key s_value ->
     bounded_wf_typ_bounded env key s_key;
     bounded_wf_typ_bounded env value s_value
   | WfMLiteral cut key value s ->
@@ -1290,7 +1292,7 @@ and spec_wf_parse_map_group
     Spec.MapGroupFail? (Spec.apply_map_group_det (elab_map_group_sem env g) Cbor.cbor_map_empty)
 | WfMLiteral cut key value s ->
     spec_wf_typ env value s
-| WfMZeroOrMore key value s_key s_value ->
+| WfMZeroOrMore key _ value s_key s_value ->
     spec_wf_typ env key s_key /\
     spec_wf_typ env value s_value
 end
@@ -1450,7 +1452,7 @@ and spec_wf_parse_map_group_incr
     spec_wf_parse_map_group_incr env env' g s
   | WfMLiteral cut key value s ->
     spec_wf_typ_incr env env' value s
-  | WfMZeroOrMore key value s_key s_value ->
+  | WfMZeroOrMore key _ value s_key s_value ->
     spec_wf_typ_incr env env' key s_key;
     spec_wf_typ_incr env env' value s_value
 
@@ -1475,7 +1477,7 @@ let rec bounded_wf_parse_map_group_det
   | WfMZeroOrOne g s ->
     bounded_wf_parse_map_group_det env g s
   | WfMLiteral _ _ _ _
-  | WfMZeroOrMore _ _ _ _
+  | WfMZeroOrMore _ _ _ _ _
   -> ()
 
 [@@  sem_attr]
@@ -2185,7 +2187,7 @@ and target_type_of_wf_map_group
   | WfMConcat _ s1 _ s2 -> ttpair (target_type_of_wf_map_group s1) (target_type_of_wf_map_group s2)
   | WfMZeroOrOne _ s -> TTOption (target_type_of_wf_map_group s)
   | WfMLiteral _ _ _ s -> target_type_of_wf_typ s
-  | WfMZeroOrMore _ _ s_key s_value -> TTTable (target_type_of_wf_typ s_key) (target_type_of_wf_typ s_value)
+  | WfMZeroOrMore _ _ _ s_key s_value -> TTTable (target_type_of_wf_typ s_key) (target_type_of_wf_typ s_value)
 
 let target_type_of_wf_ast_elem
   (#s: name_env_elem)
@@ -2253,7 +2255,7 @@ and target_type_of_wf_map_group_bounded
     target_type_of_wf_map_group_bounded env s2
   | WfMZeroOrOne _ s -> target_type_of_wf_map_group_bounded env s
   | WfMLiteral _ _ _ s -> target_type_of_wf_typ_bounded env s
-  | WfMZeroOrMore _ _ s_key s_value ->
+  | WfMZeroOrMore _ _ _ s_key s_value ->
     target_type_of_wf_typ_bounded env s_key;
     target_type_of_wf_typ_bounded env s_value
 
@@ -2441,24 +2443,10 @@ and spec_of_wf_map_group
     Spec.mg_spec_ext
       sp
       _ sp.mg_size sp.mg_serializable
-  | WfMZeroOrMore key value s_key s_value ->
-    Spec.map_group_zero_or_more_match_item_filter
-      (Util.andp (typ_sem tp_sem key) (Util.notp Spec.t_always_false))
-      (typ_sem tp_sem value);
-    Spec.map_group_zero_or_more_match_item_filter
-      (typ_sem tp_sem key)
-      (typ_sem tp_sem value);
-    Spec.map_group_filter_ext
-      (Util.notp (Spec.matches_map_group_entry
-        (Util.andp (typ_sem tp_sem key) (Util.notp Spec.t_always_false))
-        (typ_sem tp_sem value)
-      ))
-      (Util.notp (Spec.matches_map_group_entry
-        (typ_sem tp_sem key)
-        (typ_sem tp_sem value)
-      ));
+  | WfMZeroOrMore key key_except value s_key s_value ->
     Spec.mg_zero_or_more_match_item
       (spec_of_wf_typ env s_key)
+      (typ_sem tp_sem key_except)
       (spec_of_wf_typ env s_value)
 
 #pop-options
