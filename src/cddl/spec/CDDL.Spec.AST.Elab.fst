@@ -822,7 +822,7 @@ let rec map_group_footprint
   | MGCut key
   | MGMatchWithCut key _ -> RSuccess key
 
-#push-options "--z3rlimit 32 --ifuel 8"
+#push-options "--z3rlimit 64 --ifuel 8"
 
 let map_group_footprint_correct_postcond'
   (env: sem_env)
@@ -833,7 +833,10 @@ let map_group_footprint_correct_postcond'
     begin match map_group_footprint g with
     | RSuccess t ->
       typ_bounded env.se_bound t /\
-      spec_map_group_footprint env g == Some (typ_sem env t)
+      begin match spec_map_group_footprint env g with
+      | Some ty -> Spec.typ_included ty (typ_sem env t)
+      | None -> False
+      end
     | _ -> spec_map_group_footprint env g == None
     end
 
@@ -867,8 +870,9 @@ let map_group_footprint_correct
     match spec_map_group_footprint env g, map_group_footprint g with
     | Some ty, RSuccess t ->
       typ_bounded env.se_bound t /\
-      ty `Spec.typ_equiv` typ_sem env t /\
-      Spec.map_group_footprint (elab_map_group_sem env g) (typ_sem env t)
+      ty `Spec.typ_included` typ_sem env t /\
+      Spec.map_group_footprint (elab_map_group_sem env g) (typ_sem env t) /\
+      Spec.map_group_footprint (elab_map_group_sem env g) ty
     | _, RSuccess _ -> False
     | Some _, _ -> False
     | _ -> True
@@ -878,7 +882,7 @@ let map_group_footprint_correct
 = map_group_footprint_correct' env g;
   match spec_map_group_footprint env g, map_group_footprint g with
   | Some ty, RSuccess t ->
-    Spec.map_group_footprint_equiv (elab_map_group_sem env g) ty (typ_sem env t)
+    Spec.map_group_footprint_implies (elab_map_group_sem env g) ty (typ_sem env t)
   | _ -> ()
 
 let coerce_failure
