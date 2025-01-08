@@ -16,4 +16,4 @@ include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 .PHONY: extract
 
 extract: $(ALL_KRML_FILES)
-	$(KRML_HOME)/krml -bundle 'CBOR.Pulse.API.Det.Type=\*' -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -tmpdir $(OUTPUT_DIRECTORY) -skip-compilation $^
+	$(KRML) -bundle 'CBOR.Pulse.API.Det.Type=\*' -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -tmpdir $(OUTPUT_DIRECTORY) -skip-compilation $^

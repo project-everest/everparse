@@ -37,7 +37,7 @@ EverParse.rsp: $(ALL_KRML_FILES) ../EverParse.rsp
 	mv $@.tmp $@
 
 EverParse.h: EverParse.rsp
-	$(KRML_HOME)/krml \
+	$(KRML) \
 	  -skip-compilation \
 	  -skip-makefiles \
 	  -bundle 'Prims,C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \

@@ -10,7 +10,7 @@ ALREADY_CACHED := *,-CDDL.Spec,
 
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
-# KRML=$(KRML_HOME)/krml $(KRML_OPTS)
+# KRML=$(KRML) $(KRML_OPTS)
 
 # extract: $(ALL_KRML_FILES)
 # 	$(KRML) -bundle C -bundle CBOR.Spec.Constants+CBOR.Pulse.Type+CBOR.Pulse.Extern=[rename=CBOR] -no-prefix CBOR.Spec.Constants,CBOR.Pulse.Type,CBOR.Pulse.Extern -bundle CDDLExtractionTest.Assume+CDDLExtractionTest.Bytes+CDDLExtractionTest.BytesUnwrapped+CDDLExtractionTest.Choice=*[rename=CDDLExtractionTest] -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY)

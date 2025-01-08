@@ -26,7 +26,7 @@ FSTAR = $(FSTAR_EXE) --trace_error $(FSTAR_OPTIONS)
 
 HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 
-KRML = $(KRML_HOME)/krml \
+KRML = $(KRML_HOME)/krml -fstar $(FSTAR_EXE) \
 	 -ccopt "-Ofast" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out -I .. \
