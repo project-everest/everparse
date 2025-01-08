@@ -572,6 +572,7 @@ val t_map_ext
 : Lemma
   (requires (matches_map_group_equiv g1 g2))
   (ensures (t_map g1 == t_map g2))
+  [SMTPat (matches_map_group_equiv g1 g2)]
 
 let t_map_concat_cut_r
   (g: det_map_group)

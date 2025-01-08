@@ -519,53 +519,173 @@ and typ_sem_incr
     typ_sem_incr env env' t1;
     typ_sem_incr env env' t2
 
+type elab_map_group =
+| MGNop
+| MGAlwaysFalse
+| MGMatch:
+  cut: bool ->
+  key: literal ->
+  value: typ ->
+  elab_map_group
+| MGMatchWithCut:
+  key: typ ->
+  value: typ ->
+  elab_map_group
+| MGCut:
+  key: typ ->
+  elab_map_group
+| MGTable:
+  key: typ ->
+  key_except: typ ->
+  value: typ ->
+  elab_map_group
+| MGConcat:
+  g1: elab_map_group ->
+  g2: elab_map_group ->
+  elab_map_group
+| MGChoice:
+  g1: elab_map_group ->
+  g2: elab_map_group ->
+  elab_map_group
+
+let rec bounded_elab_map_group
+  (env: name_env)
+  (g: elab_map_group)
+: Tot bool
+= match g with
+  | MGNop
+  | MGAlwaysFalse -> true
+  | MGMatch _ _ value ->
+    typ_bounded env value
+  | MGMatchWithCut key value ->
+    typ_bounded env key &&
+    typ_bounded env value
+  | MGCut key ->
+    typ_bounded env key
+  | MGTable key key_except value ->
+    typ_bounded env key &&
+    typ_bounded env key_except &&
+    typ_bounded env value
+  | MGConcat g1 g2
+  | MGChoice g1 g2
+    -> bounded_elab_map_group env g1 && bounded_elab_map_group env g2
+
+let rec bounded_elab_map_group_incr
+  (env env': name_env)
+  (g: elab_map_group)
+: Lemma
+  (requires (
+    name_env_included env env' /\
+    bounded_elab_map_group env g
+  ))
+  (ensures (
+    bounded_elab_map_group env' g
+  ))
+  (decreases g)
+  [SMTPatOr [
+    [SMTPat (name_env_included env env'); SMTPat (bounded_elab_map_group env g)];
+    [SMTPat (name_env_included env env'); SMTPat (bounded_elab_map_group env' g)];
+  ]]
+= match g with
+  | MGConcat g1 g2
+  | MGChoice g1 g2
+    -> bounded_elab_map_group_incr env env' g1;
+    bounded_elab_map_group_incr env env' g2
+  | _ -> ()
+
+module Util = CBOR.Spec.Util
+
+let rec elab_map_group_sem
+  (env: sem_env)
+  (g: elab_map_group)
+: Pure Spec.det_map_group
+    (requires bounded_elab_map_group env.se_bound g)
+    (ensures fun _ -> True)
+= match g with
+  | MGNop -> Spec.map_group_nop
+  | MGAlwaysFalse -> Spec.map_group_always_false
+  | MGMatch cut key value ->
+    Spec.map_group_match_item_for cut (eval_literal key) (typ_sem env value)
+  | MGMatchWithCut key value ->
+    Spec.map_group_match_item true (typ_sem env key) (typ_sem env value)
+  | MGCut key ->
+    Spec.map_group_cut (typ_sem env key)
+  | MGTable key key_except value ->
+    Spec.map_group_zero_or_more (Spec.map_group_match_item false (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except))) (typ_sem env value))
+  | MGConcat g1 g2 ->
+    Spec.map_group_concat (elab_map_group_sem env g1) (elab_map_group_sem env g2)
+  | MGChoice g1 g2 ->
+    Spec.map_group_choice (elab_map_group_sem env g1) (elab_map_group_sem env g2)
+
+let rec elab_map_group_sem_incr
+  (env env': sem_env)
+  (g: elab_map_group)
+: Lemma
+    (requires bounded_elab_map_group env.se_bound g /\
+      sem_env_included env env'
+    )
+    (ensures bounded_elab_map_group env'.se_bound g /\
+      elab_map_group_sem env' g == elab_map_group_sem env g
+    )
+    (decreases g)
+  [SMTPatOr [
+    [SMTPat (sem_env_included env env'); SMTPat (elab_map_group_sem env g)];
+    [SMTPat (sem_env_included env env'); SMTPat (elab_map_group_sem env' g)];
+  ]]
+= bounded_elab_map_group_incr env.se_bound env'.se_bound g;
+  match g with
+  | MGConcat g1 g2
+  | MGChoice g1 g2
+    ->
+    elab_map_group_sem_incr env env' g1;
+    elab_map_group_sem_incr env env' g2
+  | _ -> ()
+
 #push-options "--z3rlimit 32"
 
 #restart-solver
 let rec spec_map_group_footprint
   (env: sem_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
 : Pure (option Spec.typ)
-    (requires group_bounded NMapGroup env.se_bound g)
+    (requires bounded_elab_map_group env.se_bound g)
     (ensures fun res -> match res with
     | None -> True
     | Some ty ->
-      let s = map_group_sem env g in
+      let s = elab_map_group_sem env g in
       Spec.map_group_footprint s ty /\
       Spec.map_group_is_det s
     )
 = match g with
-  | GMapElem _ cut (TElem (ELiteral key)) value
+  | MGMatch cut key value
   -> Spec.map_group_footprint_match_item_for cut (eval_literal key) (typ_sem env value);
     Some (Spec.t_literal (eval_literal key))
-  | GZeroOrMore (GMapElem _ false key _) // TODO: extend to GOneOrMore
+  | MGTable key _ _ // TODO: extend to GOneOrMore
   -> Some (typ_sem env key)
-  | GZeroOrOne g -> spec_map_group_footprint env g
-  | GChoice g1 g2
-  | GConcat g1 g2 ->
+  | MGChoice g1 g2
+  | MGConcat g1 g2 ->
     begin match spec_map_group_footprint env g1, spec_map_group_footprint env g2 with
     | Some ty1, Some ty2 -> Some (ty1 `Spec.t_choice` ty2)
     | _ -> None
     end
-  | GNop
-  | GAlwaysFalse -> Some Spec.t_always_false
-  | GMapElem _ _ _ _
-  | GZeroOrMore _
-  | GOneOrMore _ -> None
+  | MGNop
+  | MGAlwaysFalse -> Some Spec.t_always_false
+  | MGCut key
+  | MGMatchWithCut key _ -> Some (typ_sem env key)
 
 #pop-options
 
 let rec spec_map_group_footprint_incr
   (env env': sem_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
 : Lemma
   (requires
     sem_env_included env env' /\
-    group_bounded NMapGroup env.se_bound g /\
+    bounded_elab_map_group env.se_bound g /\
     Some? (spec_map_group_footprint env g)
   )
   (ensures
-    group_bounded NMapGroup env'.se_bound g /\
+    bounded_elab_map_group env'.se_bound g /\
     spec_map_group_footprint env' g == spec_map_group_footprint env g
   )
   [SMTPatOr [
@@ -573,10 +693,8 @@ let rec spec_map_group_footprint_incr
     [SMTPat (sem_env_included env env'); SMTPat (spec_map_group_footprint env' g)];
   ]]
 = match g with
-  | GZeroOrOne g ->
-    spec_map_group_footprint_incr env env' g
-  | GChoice g1 g2
-  | GConcat g1 g2 ->
+  | MGChoice g1 g2
+  | MGConcat g1 g2 ->
     spec_map_group_footprint_incr env env' g1;
     spec_map_group_footprint_incr env env' g2
   | _ -> ()
@@ -601,9 +719,9 @@ type ast0_wf_typ
 //  (ty1: Spec.typ) ->
 //  (ty2: Spec.typ) ->
 //  (s: ast0_wf_validate_map_group Spec.t_always_false Spec.t_always_false g ty1 ty2) ->
-//  (g2: group NMapGroup) ->
+  (g2: elab_map_group) ->
 //  (s2: ast0_wf_parse_map_group g2) ->
-  (s2: ast0_wf_parse_map_group g) ->
+  (s2: ast0_wf_parse_map_group g2) ->
   ast0_wf_typ (TMap g)
 | WfTTagged:
   (tag: U64.t) ->
@@ -656,36 +774,36 @@ and ast0_wf_array_group
   ast0_wf_array_group (GDef () n) // will be taken into account by the syntax environment
 
 and ast0_wf_parse_map_group
-: group NMapGroup -> Type
+: elab_map_group -> Type
 =
 | WfMChoice:
-    g1': group NMapGroup ->
+    g1': elab_map_group ->
     s1: ast0_wf_parse_map_group g1' ->
-    g2': group NMapGroup ->
+    g2': elab_map_group ->
     s2: ast0_wf_parse_map_group g2' ->
-    ast0_wf_parse_map_group (GChoice g1' g2')
+    ast0_wf_parse_map_group (MGChoice g1' g2')
 | WfMConcat:
-    g1: group NMapGroup ->
+    g1: elab_map_group ->
     s1: ast0_wf_parse_map_group g1 ->
-    g2: group NMapGroup ->
+    g2: elab_map_group ->
     s2: ast0_wf_parse_map_group g2 ->
-    ast0_wf_parse_map_group (GConcat g1 g2)
+    ast0_wf_parse_map_group (MGConcat g1 g2)
 | WfMZeroOrOne:
-    g: group NMapGroup ->
+    g: elab_map_group ->
     s: ast0_wf_parse_map_group g ->
-    ast0_wf_parse_map_group (GZeroOrOne g)
+    ast0_wf_parse_map_group (MGChoice g MGNop)
 | WfMLiteral:
     cut: bool ->
     key: literal ->
     value: typ ->
     s: ast0_wf_typ value ->
-    ast0_wf_parse_map_group (GMapElem () cut (TElem (ELiteral key)) value)
+    ast0_wf_parse_map_group (MGMatch cut key value)
 | WfMZeroOrMore:
     key: typ ->
     value: typ ->
     s_key: ast0_wf_typ key ->
     s_value: ast0_wf_typ value ->
-    ast0_wf_parse_map_group (GZeroOrMore (GMapElem () false key value))
+    ast0_wf_parse_map_group (MGTable key (TElem EAlwaysFalse) value)
 
 (*
 and ast0_wf_validate_map_group
@@ -757,9 +875,9 @@ let rec bounded_wf_typ
   bounded_wf_array_group env g s
 | WfTTagged _ t' s' ->
   bounded_wf_typ env t' s'
-| WfTMap g1 (* ty1 ty2 s1 g2 *) s2 ->
+| WfTMap g1 (* ty1 ty2 s1 *) g2 s2 ->
     group_bounded NMapGroup env g1 /\
-//    group_bounded NMapGroup env g2 /\
+    bounded_elab_map_group env g2 /\
 //    bounded_wf_validate_map_group env Spec.t_always_false Spec.t_always_false g1 ty1 ty2 s1 /\
     bounded_wf_parse_map_group env _ s2
 | WfTChoice t1 t2 s1 s2 ->
@@ -801,23 +919,23 @@ and bounded_wf_array_group
 
 and bounded_wf_parse_map_group
   (env: name_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
   (wf: ast0_wf_parse_map_group g)
 : Tot prop
   (decreases wf)
 = match wf with
 | WfMChoice g1' s1 g2' s2 ->
-    group_bounded NMapGroup env g1' /\
+    bounded_elab_map_group env g1' /\
     bounded_wf_parse_map_group env g1' s1 /\
-    group_bounded NMapGroup env g2' /\
+    bounded_elab_map_group env g2' /\
     bounded_wf_parse_map_group env g2' s2
 | WfMConcat g1 s1 g2 s2 ->
-    group_bounded NMapGroup env g1 /\
+    bounded_elab_map_group env g1 /\
     bounded_wf_parse_map_group env g1 s1 /\
-    group_bounded NMapGroup env g2 /\
+    bounded_elab_map_group env g2 /\
     bounded_wf_parse_map_group env g2 s2
 | WfMZeroOrOne g s ->
-    group_bounded NMapGroup env g /\
+    bounded_elab_map_group env g /\
     bounded_wf_parse_map_group env g s
 | WfMLiteral cut key value s ->
     bounded_wf_typ env value s
@@ -876,7 +994,7 @@ let rec bounded_wf_typ_incr
     bounded_wf_array_group_incr env env' g s
   | WfTTagged _ t' s' ->
     bounded_wf_typ_incr env env' t' s'
-  | WfTMap g1 (* ty1 ty2 s1 g2 *) s2 ->
+  | WfTMap g1 (* ty1 ty2 s1 *) g2 s2 ->
 //    bounded_wf_validate_map_group_incr env env' Spec.t_always_false Spec.t_always_false g1 ty1 ty2 s1;
     bounded_wf_parse_map_group_incr env env' _ s2
   | WfTChoice t1 t2 s1 s2 ->
@@ -953,7 +1071,7 @@ and bounded_wf_validate_map_group_incr
 
 and bounded_wf_parse_map_group_incr
   (env env': name_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
   (wf: ast0_wf_parse_map_group g)
 : Lemma
   (requires name_env_included env env' /\
@@ -1000,7 +1118,7 @@ let rec bounded_wf_typ_bounded
     bounded_wf_array_group_bounded env g s
   | WfTTagged _ t' s' ->
     bounded_wf_typ_bounded env t' s'
-  | WfTMap g1 (* ty1 ty2 s1 g2 *) s2 ->
+  | WfTMap g1 (* ty1 ty2 s1 *) g2 s2 ->
 //    bounded_wf_validate_map_group_bounded env Spec.t_always_false Spec.t_always_false g1 ty1 ty2 s1;
     bounded_wf_parse_map_group_bounded env _ s2
   | WfTChoice t1 t2 s1 s2 ->
@@ -1067,14 +1185,14 @@ and bounded_wf_validate_map_group_bounded
 
 and bounded_wf_parse_map_group_bounded
   (env: name_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
   (wf: ast0_wf_parse_map_group g)
 : Lemma
   (requires
     bounded_wf_parse_map_group env g wf
   )
   (ensures
-      group_bounded NMapGroup env g
+      bounded_elab_map_group env g
   )
   (decreases wf)
   [SMTPat (bounded_wf_parse_map_group env g wf)]
@@ -1103,9 +1221,10 @@ let rec spec_wf_typ
   spec_wf_array_group env g s
 | WfTTagged _ t' s' ->
   spec_wf_typ env t' s'
-| WfTMap g1 (* ty1 ty2 s1 g2 *) s2 ->
+| WfTMap g1 (* ty1 ty2 s1 *) g2 s2 ->
 //    Spec.restrict_map_group (map_group_sem env g1) (map_group_sem env g2) /\
 //    spec_wf_validate_map_group env Spec.t_always_false Spec.t_always_false g1 ty1 ty2 s1 /\
+    Spec.matches_map_group_equiv (map_group_sem env g1) (elab_map_group_sem env g2) /\
     spec_wf_parse_map_group env _ s2
 | WfTChoice t1 t2 s1 s2 ->
   spec_wf_typ env t1 s1 /\
@@ -1147,7 +1266,7 @@ end
 
 and spec_wf_parse_map_group
   (env: sem_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
   (wf: ast0_wf_parse_map_group g)
 : Tot prop
   (decreases wf)
@@ -1156,8 +1275,8 @@ and spec_wf_parse_map_group
     spec_wf_parse_map_group env g1' s1 /\
     spec_wf_parse_map_group env g2' s2 /\
     Spec.map_group_choice_compatible
-      (map_group_sem env g1')
-      (map_group_sem env g2')
+      (elab_map_group_sem env g1')
+      (elab_map_group_sem env g2')
 | WfMConcat g1 s1 g2 s2 ->
     spec_wf_parse_map_group env g1 s1 /\
     spec_wf_parse_map_group env g2 s2 /\
@@ -1168,7 +1287,7 @@ and spec_wf_parse_map_group
     )
 | WfMZeroOrOne g s ->
     spec_wf_parse_map_group env g s /\
-    Spec.MapGroupFail? (Spec.apply_map_group_det (map_group_sem env g) Cbor.cbor_map_empty)
+    Spec.MapGroupFail? (Spec.apply_map_group_det (elab_map_group_sem env g) Cbor.cbor_map_empty)
 | WfMLiteral cut key value s ->
     spec_wf_typ env value s
 | WfMZeroOrMore key value s_key s_value ->
@@ -1207,6 +1326,7 @@ and spec_wf_validate_map_group
 end
 *)
 
+#restart-solver
 let rec spec_wf_typ_incr
   (env env': sem_env)
   (g: typ)
@@ -1230,7 +1350,7 @@ let rec spec_wf_typ_incr
     spec_wf_array_group_incr env env' g s
   | WfTTagged _ t' s' ->
     spec_wf_typ_incr env env' t' s'
-  | WfTMap g1 (* ty1 ty2 s1 g2 *) s2 ->
+  | WfTMap g1 (* ty1 ty2 s1 *) g2 s2 ->
 //    spec_wf_validate_map_group_incr env env' Spec.t_always_false Spec.t_always_false g1 ty1 ty2 s1;
     spec_wf_parse_map_group_incr env env' _ s2
   | WfTChoice t1 t2 s1 s2 ->
@@ -1307,7 +1427,7 @@ and spec_wf_validate_map_group_incr
 
 and spec_wf_parse_map_group_incr
   (env env': sem_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
   (wf: ast0_wf_parse_map_group g)
 : Lemma
   (requires sem_env_included env env' /\
@@ -1336,7 +1456,7 @@ and spec_wf_parse_map_group_incr
 
 let rec bounded_wf_parse_map_group_det
   (env: sem_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
   (wf: ast0_wf_parse_map_group g)
 : Lemma
   (requires bounded_wf_parse_map_group env.se_bound g wf)
@@ -1972,7 +2092,9 @@ let target_type_sem_ttpair
   (env: target_spec_env bound)
   (t1 t2: (t: target_type { target_type_bounded bound t }))
 : Lemma
-  (target_type_sem env (t1 `ttpair` t2) == pair (ttpair_kind t1 t2) (target_type_sem env t1) (target_type_sem env t2))
+  (pair_kind_wf (ttpair_kind t1 t2) (target_type_sem env t1) (target_type_sem env t2) /\
+    target_type_sem env (t1 `ttpair` t2) == pair (ttpair_kind t1 t2) (target_type_sem env t1) (target_type_sem env t2)
+  )
   [SMTPat (target_type_sem env (t1 `ttpair` t2))]
 = ()
 
@@ -2033,7 +2155,7 @@ let rec target_type_of_wf_typ
   | WfTRewrite _ _ s -> target_type_of_wf_typ s
   | WfTArray _ s -> target_type_of_wf_array_group s
   | WfTTagged _ _ s -> target_type_of_wf_typ s
-  | WfTMap _ (* _ _ _ _ *) s -> target_type_of_wf_map_group s
+  | WfTMap _ (* _ _ _ *) _ s -> target_type_of_wf_map_group s
   | WfTChoice _ _ s1 s2 -> TTUnion (target_type_of_wf_typ s1) (target_type_of_wf_typ s2)
   | WfTElem e -> TTElem (target_type_of_elem_typ e)
   | WfTDef e -> TTDef e
@@ -2054,7 +2176,7 @@ and target_type_of_wf_array_group
   | WfADef n -> TTDef n
 
 and target_type_of_wf_map_group
-  (#x: group NMapGroup)
+  (#x: elab_map_group)
   (wf: ast0_wf_parse_map_group x)
 : Tot target_type
   (decreases wf)
@@ -2088,7 +2210,7 @@ let rec target_type_of_wf_typ_bounded
   | WfTRewrite _ _ s -> target_type_of_wf_typ_bounded env s
   | WfTArray _ s -> target_type_of_wf_array_group_bounded env s
   | WfTTagged _ _ s -> target_type_of_wf_typ_bounded env s
-  | WfTMap _ (* _ _ _ _ *) s -> target_type_of_wf_map_group_bounded env s
+  | WfTMap _ (* _ _ _ *) _ s -> target_type_of_wf_map_group_bounded env s
   | WfTChoice _ _ s1 s2 ->
     target_type_of_wf_typ_bounded env s1;
     target_type_of_wf_typ_bounded env s2
@@ -2117,7 +2239,7 @@ and target_type_of_wf_array_group_bounded
 
 and target_type_of_wf_map_group_bounded
   (env: name_env)
-  (#x: group NMapGroup)
+  (#x: elab_map_group)
   (wf: ast0_wf_parse_map_group x)
 : Lemma
   (requires bounded_wf_parse_map_group env x wf)
@@ -2228,6 +2350,9 @@ let pair_sum
 : GTot nat
 = f1 (fst x) + f2 (snd x)
 
+#push-options "--z3rlimit 32"
+
+#restart-solver
 let rec spec_of_wf_typ
   (#tp_sem: sem_env)
   (#tp_tgt: target_spec_env (tp_sem.se_bound))
@@ -2243,7 +2368,7 @@ let rec spec_of_wf_typ
     Spec.spec_array_group (spec_of_wf_array_group env s)
   | WfTTagged tag t' s ->
     Spec.spec_tag tag (spec_of_wf_typ env s)
-  | WfTMap g1 (* _ _ _ _ *) s2 ->
+  | WfTMap g1 (* _ _ _ *) _ s2 ->
     Spec.spec_map_group (spec_of_wf_map_group env s2)
   | WfTChoice _ _ s1 s2 ->
     Spec.spec_choice
@@ -2288,9 +2413,9 @@ and spec_of_wf_map_group
   (#tp_sem: sem_env)
   (#tp_tgt: target_spec_env (tp_sem.se_bound))
   (env: spec_env tp_sem tp_tgt)
-  (#t: group NMapGroup)
+  (#t: elab_map_group)
   (wf: ast0_wf_parse_map_group t { spec_wf_parse_map_group tp_sem t wf })
-: Tot (Spec.mg_spec (map_group_sem tp_sem t) (Some?.v (spec_map_group_footprint tp_sem t)) ((target_type_sem tp_tgt (target_type_of_wf_map_group wf))) true)
+: Tot (Spec.mg_spec (elab_map_group_sem tp_sem t) (Some?.v (spec_map_group_footprint tp_sem t)) ((target_type_sem tp_tgt (target_type_of_wf_map_group wf))) true)
   (decreases wf)
 = match wf with
   | WfMChoice _ s1 _ s2 ->
@@ -2311,13 +2436,32 @@ and spec_of_wf_map_group
       cut
       (eval_literal key)
       (spec_of_wf_typ env s)
-  | WfMZeroOrOne _ s' ->
-    Spec.mg_spec_zero_or_one
-      (spec_of_wf_map_group env s')
+  | WfMZeroOrOne g' s' ->
+    let sp = Spec.mg_spec_zero_or_one (spec_of_wf_map_group env s') in
+    Spec.mg_spec_ext
+      sp
+      _ sp.mg_size sp.mg_serializable
   | WfMZeroOrMore key value s_key s_value ->
+    Spec.map_group_zero_or_more_match_item_filter
+      (Util.andp (typ_sem tp_sem key) (Util.notp Spec.t_always_false))
+      (typ_sem tp_sem value);
+    Spec.map_group_zero_or_more_match_item_filter
+      (typ_sem tp_sem key)
+      (typ_sem tp_sem value);
+    Spec.map_group_filter_ext
+      (Util.notp (Spec.matches_map_group_entry
+        (Util.andp (typ_sem tp_sem key) (Util.notp Spec.t_always_false))
+        (typ_sem tp_sem value)
+      ))
+      (Util.notp (Spec.matches_map_group_entry
+        (typ_sem tp_sem key)
+        (typ_sem tp_sem value)
+      ));
     Spec.mg_zero_or_more_match_item
       (spec_of_wf_typ env s_key)
       (spec_of_wf_typ env s_value)
+
+#pop-options
 
 let spec_env_extend_typ
   (e: wf_ast_env)

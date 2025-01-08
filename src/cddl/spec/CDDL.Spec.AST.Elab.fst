@@ -60,23 +60,21 @@ let rec map_group_is_productive_correct
 
 [@@ sem_attr]
 let rec apply_map_group_det_empty_fail
-  (g: group NMapGroup)
+  (g: elab_map_group)
 : Tot (result bool)
 = match g with
-  | GOneOrMore _ -> RFailure "apply_map_group_det_empty_fail: GOneOrMore"
-  | GAlwaysFalse
-  | GMapElem _ true _ _
-  | GMapElem _ _ (TElem (ELiteral _)) _ -> RSuccess true
-  | GMapElem _ _ _ _ -> RFailure "apply_map_group_det_empty_fail: GMapElem"
-  | GNop -> RSuccess false
-  | GZeroOrOne _
-  | GZeroOrMore _ -> RFailure "this should be `RSuccess false`"
-  | GChoice g1 g2 ->
+  | MGAlwaysFalse
+  | MGMatch _ _ _
+  | MGMatchWithCut _ _ -> RSuccess true
+  | MGCut _
+  | MGTable _ _ _
+  | MGNop -> RSuccess false
+  | MGChoice g1 g2 ->
     begin match apply_map_group_det_empty_fail g1 with
     | RSuccess true -> apply_map_group_det_empty_fail g2
     | res -> res
     end
-  | GConcat g1 g2 ->
+  | MGConcat g1 g2 ->
     begin match apply_map_group_det_empty_fail g1 with
     | RSuccess false -> apply_map_group_det_empty_fail g2
     | res -> res
@@ -84,35 +82,35 @@ let rec apply_map_group_det_empty_fail
 
 let rec apply_map_group_det_empty_fail_correct
   (env: sem_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
 : Lemma
   (requires (
-    group_bounded NMapGroup env.se_bound g /\
+    bounded_elab_map_group env.se_bound g /\
     RSuccess? (apply_map_group_det_empty_fail g)
   ))
   (ensures (
-    match apply_map_group_det_empty_fail g, Spec.apply_map_group_det (map_group_sem env g) Cbor.cbor_map_empty with
+    match apply_map_group_det_empty_fail g, Spec.apply_map_group_det (elab_map_group_sem env g) Cbor.cbor_map_empty with
     | RSuccess true, Spec.MapGroupFail
     | RSuccess false, Spec.MapGroupDet _ _ -> True
     | _ -> False
   ))
 = match g with
-  | GChoice g1 g2 ->
+  | MGChoice g1 g2 ->
     apply_map_group_det_empty_fail_correct env g1;
     begin match apply_map_group_det_empty_fail g1 with
     | RSuccess true -> apply_map_group_det_empty_fail_correct env g2
     | _ -> ()
     end
-  | GConcat g1 g2 ->
+  | MGConcat g1 g2 ->
     apply_map_group_det_empty_fail_correct env g1;
     begin match apply_map_group_det_empty_fail g1 with
     | RSuccess false ->
-      let Spec.MapGroupDet _ rem = Spec.apply_map_group_det (map_group_sem env g1) Cbor.cbor_map_empty in
+      let Spec.MapGroupDet _ rem = Spec.apply_map_group_det (elab_map_group_sem env g1) Cbor.cbor_map_empty in
       assert (Cbor.cbor_map_equal rem Cbor.cbor_map_empty);
       apply_map_group_det_empty_fail_correct env g2
     | _ -> ()
     end
-  | GMapElem _ cut (TElem (ELiteral k)) v ->
+  | MGMatch cut k v ->
     Spec.apply_map_group_det_match_item_for cut (eval_literal k) (typ_sem env v) Cbor.cbor_map_empty
   | _ -> ()
 
@@ -802,16 +800,15 @@ and array_group_included
 
 #restart-solver
 let rec map_group_footprint
-  (g: group NMapGroup)
+  (g: elab_map_group)
 : Tot (result typ)
 = match g with
-  | GMapElem _ cut (TElem (ELiteral key)) value
+  | MGMatch cut key value
   -> RSuccess (TElem (ELiteral key))
-  | GZeroOrMore (GMapElem _ false key _) // TODO: extend to GOneOrMore
+  | MGTable key key_except _ // TODO: extend to GOneOrMore
   -> RSuccess key
-  | GZeroOrOne g -> map_group_footprint g
-  | GChoice g1 g2
-  | GConcat g1 g2 ->
+  | MGChoice g1 g2
+  | MGConcat g1 g2 ->
     begin match map_group_footprint g1 with
     | RSuccess ty1 ->
       begin match map_group_footprint g2 with
@@ -820,54 +817,58 @@ let rec map_group_footprint
       end
     | res -> res
     end
-  | GNop
-  | GAlwaysFalse -> RSuccess (TElem EAlwaysFalse)
-  | GMapElem _ _ _ _
-  | GZeroOrMore _
-  | GOneOrMore _ -> RFailure "map_group_footprint: unsupported cases. Please `rewrite` your map group before calling"
+  | MGNop
+  | MGAlwaysFalse -> RSuccess (TElem EAlwaysFalse)
+  | MGCut key
+  | MGMatchWithCut key _ -> RSuccess key
 
-#push-options "--z3rlimit 32"
+#push-options "--z3rlimit 32 --ifuel 8"
+
+let map_group_footprint_correct_postcond'
+  (env: sem_env)
+  (g: elab_map_group)
+: Tot prop
+=
+    bounded_elab_map_group env.se_bound g /\
+    begin match map_group_footprint g with
+    | RSuccess t ->
+      typ_bounded env.se_bound t /\
+      spec_map_group_footprint env g == Some (typ_sem env t)
+    | _ -> spec_map_group_footprint env g == None
+    end
 
 #restart-solver
 let rec map_group_footprint_correct'
   (env: sem_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
 : Lemma
   (requires (
-    group_bounded _ env.se_bound g
+    bounded_elab_map_group env.se_bound g
   ))
   (ensures (
-    match spec_map_group_footprint env g, map_group_footprint g with
-    | Some ty, RSuccess t ->
-      typ_bounded env.se_bound t /\
-      ty `Spec.typ_equiv` typ_sem env t
-    | _, RSuccess _ -> False
-    | Some _, _ -> False
-    | _ -> True
+    map_group_footprint_correct_postcond' env g
   ))
   (decreases g)
 = match g with
-  | GZeroOrOne g ->
-    map_group_footprint_correct' env g
-  | GChoice g1 g2
-  | GConcat g1 g2 ->
+  | MGChoice g1 g2
+  | MGConcat g1 g2 ->
     map_group_footprint_correct' env g1;
     map_group_footprint_correct' env g2
   | _ -> ()
 
 let map_group_footprint_correct
   (env: sem_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
 : Lemma
   (requires (
-    group_bounded _ env.se_bound g
+    bounded_elab_map_group env.se_bound g
   ))
   (ensures (
     match spec_map_group_footprint env g, map_group_footprint g with
     | Some ty, RSuccess t ->
       typ_bounded env.se_bound t /\
       ty `Spec.typ_equiv` typ_sem env t /\
-      Spec.map_group_footprint (map_group_sem env g) (typ_sem env t)
+      Spec.map_group_footprint (elab_map_group_sem env g) (typ_sem env t)
     | _, RSuccess _ -> False
     | Some _, _ -> False
     | _ -> True
@@ -877,7 +878,7 @@ let map_group_footprint_correct
 = map_group_footprint_correct' env g;
   match spec_map_group_footprint env g, map_group_footprint g with
   | Some ty, RSuccess t ->
-    Spec.map_group_footprint_equiv (map_group_sem env g) ty (typ_sem env t)
+    Spec.map_group_footprint_equiv (elab_map_group_sem env g) ty (typ_sem env t)
   | _ -> ()
 
 let coerce_failure
@@ -1269,9 +1270,9 @@ let rec array_group_concat_unique_weak
 let rec map_group_choice_compatible_no_cut
   (fuel: nat) // to unfold definitions
   (env: ast_env)
-  (#g1: group NMapGroup)
+  (#g1: elab_map_group)
   (s1: ast0_wf_parse_map_group g1)
-  (#g2: group NMapGroup)
+  (#g2: elab_map_group)
   (s2: ast0_wf_parse_map_group g2)
 : Pure (result unit)
     (requires (
@@ -1279,7 +1280,7 @@ let rec map_group_choice_compatible_no_cut
       spec_wf_parse_map_group env.e_sem_env _ s2
     ))
     (ensures fun r -> match r with
-    | RSuccess _ -> Spec.map_group_choice_compatible_no_cut (map_group_sem env.e_sem_env g1) (map_group_sem env.e_sem_env g2)
+    | RSuccess _ -> Spec.map_group_choice_compatible_no_cut (elab_map_group_sem env.e_sem_env g1) (elab_map_group_sem env.e_sem_env g2)
     | _ -> True
     )
     (decreases fuel)
@@ -1291,13 +1292,13 @@ let rec map_group_choice_compatible_no_cut
     Spec.map_group_choice_compatible_no_cut_match_item_for_no_cut
       (eval_literal key)
       (typ_sem env.e_sem_env value)
-      (map_group_sem env.e_sem_env g2);
+      (elab_map_group_sem env.e_sem_env g2);
     RSuccess ()
   | WfMZeroOrMore key value _ _ ->
     Spec.map_group_choice_compatible_no_cut_zero_or_more_match_item_left
       (typ_sem env.e_sem_env key)
       (typ_sem env.e_sem_env value)
-      (map_group_sem env.e_sem_env g2);
+      (elab_map_group_sem env.e_sem_env g2);
     RSuccess ()
   | WfMChoice g1l s1l g1r s1r ->
     let res1 = map_group_choice_compatible_no_cut fuel' env s1l s2 in
@@ -1308,9 +1309,9 @@ let rec map_group_choice_compatible_no_cut
     then res2
     else begin
       Spec.map_group_choice_compatible_no_cut_choice_left
-        (map_group_sem env.e_sem_env g1l)
-        (map_group_sem env.e_sem_env g1r)
-        (map_group_sem env.e_sem_env g2);
+        (elab_map_group_sem env.e_sem_env g1l)
+        (elab_map_group_sem env.e_sem_env g1r)
+        (elab_map_group_sem env.e_sem_env g2);
       RSuccess ()
     end
   | WfMZeroOrOne g s ->
@@ -1319,8 +1320,8 @@ let rec map_group_choice_compatible_no_cut
     then res1
     else begin
       Spec.map_group_choice_compatible_no_cut_zero_or_one_left
-        (map_group_sem env.e_sem_env g)
-        (map_group_sem env.e_sem_env g2);
+        (elab_map_group_sem env.e_sem_env g)
+        (elab_map_group_sem env.e_sem_env g2);
       RSuccess ()
     end
   | WfMLiteral _ key value _ ->
@@ -1333,7 +1334,7 @@ let rec map_group_choice_compatible_no_cut
       Spec.map_group_choice_compatible_no_cut_match_item_for_cut
         (eval_literal key)
         (typ_sem env.e_sem_env value)
-        (map_group_sem env.e_sem_env g2)
+        (elab_map_group_sem env.e_sem_env g2)
         (typ_sem env.e_sem_env f2);
       RSuccess ()
     end
@@ -1346,11 +1347,11 @@ let rec map_group_choice_compatible_no_cut
     then res2
     else begin
       Spec.map_group_choice_compatible_no_cut_concat_left
-        (map_group_sem env.e_sem_env g1l)
+        (elab_map_group_sem env.e_sem_env g1l)
         (Some?.v (spec_map_group_footprint env.e_sem_env g1l))
-        (map_group_sem env.e_sem_env g1r)
+        (elab_map_group_sem env.e_sem_env g1r)
         (Some?.v (spec_map_group_footprint env.e_sem_env g1r))
-        (map_group_sem env.e_sem_env g2);
+        (elab_map_group_sem env.e_sem_env g2);
       RSuccess ()
     end
 
@@ -1358,9 +1359,9 @@ let rec map_group_choice_compatible_no_cut
 let rec map_group_choice_compatible
   (fuel: nat) // to unfold definitions
   (env: ast_env)
-  (#g1: group NMapGroup)
+  (#g1: elab_map_group)
   (s1: ast0_wf_parse_map_group g1)
-  (#g2: group NMapGroup)
+  (#g2: elab_map_group)
   (s2: ast0_wf_parse_map_group g2)
 : Pure (result unit)
     (requires (
@@ -1368,7 +1369,7 @@ let rec map_group_choice_compatible
       spec_wf_parse_map_group env.e_sem_env _ s2
     ))
     (ensures fun r -> match r with
-    | RSuccess _ -> Spec.map_group_choice_compatible (map_group_sem env.e_sem_env g1) (map_group_sem env.e_sem_env g2)
+    | RSuccess _ -> Spec.map_group_choice_compatible (elab_map_group_sem env.e_sem_env g1) (elab_map_group_sem env.e_sem_env g2)
     | _ -> True
     )
     (decreases fuel)
@@ -1389,9 +1390,9 @@ let rec map_group_choice_compatible
     then res2
     else begin
       Spec.map_group_choice_compatible_choice_left
-        (map_group_sem env.e_sem_env g1l)
-        (map_group_sem env.e_sem_env g1r)
-        (map_group_sem env.e_sem_env g2);
+        (elab_map_group_sem env.e_sem_env g1l)
+        (elab_map_group_sem env.e_sem_env g1r)
+        (elab_map_group_sem env.e_sem_env g2);
       RSuccess ()
     end
   | _ ->
@@ -1405,9 +1406,9 @@ let rec map_group_choice_compatible
       then res2
       else begin
         Spec.map_group_choice_compatible_choice_right
-          (map_group_sem env.e_sem_env g1)
-          (map_group_sem env.e_sem_env g2l)
-          (map_group_sem env.e_sem_env g2r);
+          (elab_map_group_sem env.e_sem_env g1)
+          (elab_map_group_sem env.e_sem_env g2l)
+          (elab_map_group_sem env.e_sem_env g2r);
         RSuccess ()
       end
     | _ ->
@@ -1416,11 +1417,11 @@ let rec map_group_choice_compatible
         begin match map_group_choice_compatible fuel' env s1l s2 with
         | RSuccess _ ->
           Spec.map_group_choice_compatible_concat_left
-            (map_group_sem env.e_sem_env g1l)
+            (elab_map_group_sem env.e_sem_env g1l)
             (Some?.v (spec_map_group_footprint env.e_sem_env g1l))
-            (map_group_sem env.e_sem_env g1r)
+            (elab_map_group_sem env.e_sem_env g1r)
             (Some?.v (spec_map_group_footprint env.e_sem_env g1r))
-            (map_group_sem env.e_sem_env g2);
+            (elab_map_group_sem env.e_sem_env g2);
           RSuccess ()
         | ROutOfFuel -> ROutOfFuel
         | RFailure _ ->
@@ -1432,11 +1433,11 @@ let rec map_group_choice_compatible
           then res2
           else begin
             Spec.map_group_choice_compatible_concat_left
-              (map_group_sem env.e_sem_env g1l)
+              (elab_map_group_sem env.e_sem_env g1l)
               (Some?.v (spec_map_group_footprint env.e_sem_env g1l))
-              (map_group_sem env.e_sem_env g1r)
+              (elab_map_group_sem env.e_sem_env g1r)
               (Some?.v (spec_map_group_footprint env.e_sem_env g1r))
-              (map_group_sem env.e_sem_env g2);
+              (elab_map_group_sem env.e_sem_env g2);
             RSuccess ()
           end
         end
@@ -1445,7 +1446,7 @@ let rec map_group_choice_compatible
         let RSuccess f2 = map_group_footprint g2 in
         begin match typ_disjoint env fuel (TElem (ELiteral key)) f2 with
         | RSuccess _ ->
-          Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (map_group_sem env.e_sem_env g2) (typ_sem env.e_sem_env f2);
+          Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g2) (typ_sem env.e_sem_env f2);
           RSuccess ()
         | ROutOfFuel -> ROutOfFuel
         | RFailure _ ->
@@ -1463,8 +1464,8 @@ let rec map_group_choice_compatible
               Spec.map_group_choice_compatible_match_item_for_concat_right
                 (eval_literal key)
                 (typ_sem env.e_sem_env value)
-                (map_group_sem env.e_sem_env g2l)
-                (map_group_sem env.e_sem_env g2r)
+                (elab_map_group_sem env.e_sem_env g2l)
+                (elab_map_group_sem env.e_sem_env g2r)
                 (Some?.v (spec_map_group_footprint env.e_sem_env g2l))
                 (Some?.v (spec_map_group_footprint env.e_sem_env g2r));
               RSuccess ()
@@ -1474,14 +1475,14 @@ let rec map_group_choice_compatible
             if not (RSuccess? res1)
             then res1
             else begin
-              Spec.map_group_choice_compatible_match_item_for_zero_or_one_right cut (eval_literal key) (typ_sem env.e_sem_env value) (map_group_sem env.e_sem_env g);
+              Spec.map_group_choice_compatible_match_item_for_zero_or_one_right cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g);
               RSuccess ()
             end
           | WfMLiteral cut2 key2 value2 _ ->
             if key <> key2
             then begin // this case should already have been eliminated by the typ_disjoint test above
               Classical.forall_intro_2 byte_seq_of_ascii_string_diff;
-              Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (map_group_sem env.e_sem_env g2) (Spec.t_literal (eval_literal key2));
+              Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g2) (Spec.t_literal (eval_literal key2));
               RSuccess ()
             end else begin
               let res1 = typ_disjoint env fuel value value2 in
@@ -1503,102 +1504,6 @@ let rec map_group_choice_compatible
     end
 
 #pop-options
-
-type elab_map_group =
-| MGNop
-| MGAlwaysFalse
-| MGMatch:
-  cut: bool ->
-  key: literal ->
-  value: typ ->
-  elab_map_group
-| MGMatchWithCut:
-  key: typ ->
-  value: typ ->
-  elab_map_group
-| MGCut:
-  key: typ ->
-  elab_map_group
-| MGTable:
-  key: typ ->
-  key_except: typ ->
-  value: typ ->
-  elab_map_group
-| MGConcat:
-  g1: elab_map_group ->
-  g2: elab_map_group ->
-  elab_map_group
-| MGChoice:
-  g1: elab_map_group ->
-  g2: elab_map_group ->
-  elab_map_group
-
-let rec bounded_elab_map_group
-  (env: name_env)
-  (g: elab_map_group)
-: Tot bool
-= match g with
-  | MGNop
-  | MGAlwaysFalse -> true
-  | MGMatch _ _ value ->
-    typ_bounded env value
-  | MGMatchWithCut key value ->
-    typ_bounded env key &&
-    typ_bounded env value
-  | MGCut key ->
-    typ_bounded env key
-  | MGTable key key_except value ->
-    typ_bounded env key &&
-    typ_bounded env key_except &&
-    typ_bounded env value
-  | MGConcat g1 g2
-  | MGChoice g1 g2
-    -> bounded_elab_map_group env g1 && bounded_elab_map_group env g2
-
-let rec bounded_elab_map_group_incr
-  (env env': name_env)
-  (g: elab_map_group)
-: Lemma
-  (requires (
-    name_env_included env env' /\
-    bounded_elab_map_group env g
-  ))
-  (ensures (
-    bounded_elab_map_group env' g
-  ))
-  (decreases g)
-  [SMTPatOr [
-    [SMTPat (name_env_included env env'); SMTPat (bounded_elab_map_group env g)];
-    [SMTPat (name_env_included env env'); SMTPat (bounded_elab_map_group env' g)];
-  ]]
-= match g with
-  | MGConcat g1 g2
-  | MGChoice g1 g2
-    -> bounded_elab_map_group_incr env env' g1;
-    bounded_elab_map_group_incr env env' g2
-  | _ -> ()
-
-let rec elab_map_group_sem
-  (env: sem_env)
-  (g: elab_map_group)
-: Pure Spec.det_map_group
-    (requires bounded_elab_map_group env.se_bound g)
-    (ensures fun _ -> True)
-= match g with
-  | MGNop -> Spec.map_group_nop
-  | MGAlwaysFalse -> Spec.map_group_always_false
-  | MGMatch cut key value ->
-    Spec.map_group_match_item_for cut (eval_literal key) (typ_sem env value)
-  | MGMatchWithCut key value ->
-    Spec.map_group_match_item true (typ_sem env key) (typ_sem env value)
-  | MGCut key ->
-    Spec.map_group_cut (typ_sem env key)
-  | MGTable key key_except value ->
-    Spec.map_group_zero_or_more (Spec.map_group_match_item false (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except))) (typ_sem env value))
-  | MGConcat g1 g2 ->
-    Spec.map_group_concat (elab_map_group_sem env g1) (elab_map_group_sem env g2)
-  | MGChoice g1 g2 ->
-    Spec.map_group_choice (elab_map_group_sem env g1) (elab_map_group_sem env g2)
 
 let rec mk_elab_map_group
   (g: group NMapGroup)
@@ -1820,7 +1725,9 @@ let rec mk_wf_typ
     | res -> coerce_failure res
     end
   | TMap m ->
-    let m2 = m in
+    mk_elab_map_group_correct env.e_sem_env m;
+    begin match mk_elab_map_group m with
+    | RSuccess m2 ->
 (*  
     begin match mk_wf_validate_map_group fuel' env Spec.t_always_false Spec.t_always_false (TElem EAlwaysFalse) (TElem EAlwaysFalse) m with
     | RSuccess s1 ->
@@ -1829,16 +1736,16 @@ let rec mk_wf_typ
         rewrite_group_correct env.e_sem_env fuel m2;
         let m3 = rewrite_group fuel _ m2 in
 *)      
-        begin match mk_wf_parse_map_group fuel' env m with
-        | RSuccess s3 -> RSuccess (WfTMap m (* _ _ s1.wf m3 *) s3)
+        begin match mk_wf_parse_map_group fuel' env m2 with
+        | RSuccess s3 -> RSuccess (WfTMap m (* _ _ s1.wf *) m2 s3)
         | res -> coerce_failure res
         end
 (*
       | res -> coerce_failure res
       end      
+*)      
     | res -> coerce_failure res
     end
-*)
   | TTagged tag t' ->
     begin match mk_wf_typ fuel' env t' with
     | RSuccess s' -> RSuccess (WfTTagged tag t' s')
@@ -1938,9 +1845,9 @@ and mk_wf_array_group
 and mk_wf_parse_map_group
   (fuel: nat) // for typ_disjoint
   (env: ast_env)
-  (g: group NMapGroup)
+  (g: elab_map_group)
 : Pure (result (ast0_wf_parse_map_group g))
-    (requires group_bounded _ env.e_sem_env.se_bound g)
+    (requires bounded_elab_map_group env.e_sem_env.se_bound g)
     (ensures fun r -> match r with
     | RSuccess s -> spec_wf_parse_map_group env.e_sem_env g s
     | _ -> True
@@ -1950,7 +1857,18 @@ and mk_wf_parse_map_group
   then ROutOfFuel
   else let fuel' : nat = fuel - 1 in
   match g with
-  | GChoice g1 g2 ->
+  | MGChoice g' MGNop ->
+    begin match apply_map_group_det_empty_fail g' with
+    | RSuccess true ->
+      apply_map_group_det_empty_fail_correct env.e_sem_env g';
+      begin match mk_wf_parse_map_group fuel' env g' with
+      | RSuccess s' -> RSuccess (WfMZeroOrOne g' s')
+      | res -> coerce_failure res
+      end
+    | RSuccess _ -> RFailure "mk_wf_parse_map_group: group does not fail on empty"
+    | res -> coerce_failure res
+    end
+  | MGChoice g1 g2 ->
     begin match mk_wf_parse_map_group fuel' env g1 with
     | RSuccess s1 ->
       begin match mk_wf_parse_map_group fuel' env g2 with
@@ -1963,12 +1881,12 @@ and mk_wf_parse_map_group
       end
     | res -> coerce_failure res
     end
-  | GMapElem _ cut (TElem (ELiteral key)) value ->
+  | MGMatch cut key value ->
     begin match mk_wf_typ fuel' env value with
     | RSuccess tvalue -> RSuccess (WfMLiteral cut key value tvalue)
     | res -> coerce_failure res
     end
-  | GZeroOrMore (GMapElem _ false key value) ->
+  | MGTable key (TElem EAlwaysFalse) value ->
     begin match mk_wf_typ fuel' env key with
     | RSuccess tkey ->
       begin match mk_wf_typ fuel' env value with
@@ -1977,18 +1895,8 @@ and mk_wf_parse_map_group
       end
     | res -> coerce_failure res
     end
-  | GZeroOrOne g' ->
-    begin match apply_map_group_det_empty_fail g' with
-    | RSuccess true ->
-      apply_map_group_det_empty_fail_correct env.e_sem_env g';
-      begin match mk_wf_parse_map_group fuel' env g' with
-      | RSuccess s' -> RSuccess (WfMZeroOrOne g' s')
-      | res -> coerce_failure res
-      end
-    | RSuccess _ -> RFailure "mk_wf_parse_map_group: group does not fail on empty"
-    | res -> coerce_failure res
-    end
-  | GConcat g1 g2 ->
+  | MGTable _ _ _ -> RFailure "mk_wf_parse_map_group: MGTable"
+  | MGConcat g1 g2 ->
     begin match map_group_footprint g1 with
     | RSuccess fp1 ->
       begin match map_group_footprint g2 with
