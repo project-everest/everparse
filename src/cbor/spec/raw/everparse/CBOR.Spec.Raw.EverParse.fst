@@ -1628,16 +1628,6 @@ let serialized_lex_compare
 : GTot int
 = LowParse.Spec.SeqBytes.bytes_lex_compare (s x1) (s x2)
 
-let serialized_lex_compare_eq_tot
-  (#k: parser_kind)
-  (#t: Type)
-  (#p: parser k t)
-  (s: serializer p)
-  (x1 x2: t)
-: Lemma
-  (serialized_lex_compare s x1 x2 == tot_serialized_lex_compare (tot_serializer_of_serializer s) x1 x2)
-= ()
-
 let tot_serialized_lex_compare_eq_ghost
   (#k: parser_kind)
   (#t: Type)

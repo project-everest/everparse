@@ -74,7 +74,7 @@ let parse_recursive_step_ext
 
 let parse_recursive
   p
-= close_by_fuel (parse_recursive_step p) closure (parse_recursive_step_ext p)
+= (tot_close_by_fuel (parse_recursive_step p) closure (parse_recursive_step_ext p))
 
 let parse_recursive_eq
   (p: parse_recursive_param)
