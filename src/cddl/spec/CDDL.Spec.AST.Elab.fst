@@ -814,6 +814,44 @@ let typ_sub_underapprox_postcond
     | _ -> True
     end
 
+let mk_TChoice
+  (t1 t2: typ)
+: Tot typ
+= match t1 with
+  | TElem EAlwaysFalse -> t2
+  | _ ->
+    begin match t2 with
+    | TElem EAlwaysFalse -> t1
+    | _ -> TChoice t1 t2
+    end
+
+let mk_TChoice_bounded
+  (env: name_env)
+  (t1 t2: typ)
+: Lemma
+  (requires (
+    typ_bounded env t1 /\
+    typ_bounded env t2
+  ))
+  (ensures (
+    typ_bounded env (mk_TChoice t1 t2)
+  ))
+= ()
+
+let mk_TChoice_sem
+  (env: sem_env)
+  (t1 t2: typ)
+: Lemma
+  (requires (
+    typ_bounded env.se_bound t1 /\
+    typ_bounded env.se_bound t2
+  ))
+  (ensures (
+    typ_bounded env.se_bound (mk_TChoice t1 t2) /\
+    typ_sem env (mk_TChoice t1 t2) `Spec.typ_equiv` Spec.t_choice (typ_sem env t1) (typ_sem env t2)
+  ))
+= ()
+
 let rec typ_sub_underapprox
   (fuel: nat)
   (env: ast_env)
@@ -835,7 +873,7 @@ let rec typ_sub_underapprox
     begin match typ_sub_underapprox fuel' env t1l t2 with
     | RSuccess t1l' ->
       begin match typ_sub_underapprox fuel' env t1r t2 with
-      | RSuccess t1r' -> RSuccess (TChoice t1l' t1r')
+      | RSuccess t1r' -> RSuccess (mk_TChoice t1l' t1r')
       | res -> res
       end
     | res -> res
@@ -964,6 +1002,19 @@ let spec_map_group_footprint_choice_or_concat
     spec_map_group_footprint env (MGConcat g1 g2) == Some (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2))
   )
 
+let typ_included_andp_notp_equiv
+  (s t1 t2 t1' t2': Spec.typ)
+: Lemma
+  (requires (
+    Spec.typ_included s (t1 `Util.andp` Util.notp t2) /\
+    t1 `Spec.typ_equiv` t1' /\
+    t2 `Spec.typ_equiv` t2'
+  ))
+  (ensures (
+    Spec.typ_included s (t1' `Util.andp` Util.notp t2')
+  ))
+= ()
+
 #push-options "--z3rlimit 64 --ifuel 8 --fuel 2 --split_queries always --query_stats"
 
 #restart-solver
@@ -1025,12 +1076,16 @@ let rec map_group_footprint'
               (typ_sem env.e_sem_env t2_except)
               (typ_sem env.e_sem_env d1)
               (typ_sem env.e_sem_env d2);
-            let t' = TChoice t1 t2 in
-            assert_norm (typ_bounded env.e_sem_env.se_bound t');
-            assert_norm (typ_sem env.e_sem_env t' == Spec.t_choice (typ_sem env.e_sem_env t1) (typ_sem env.e_sem_env t2));
-            let d' = TChoice d1 d2 in
-            assert_norm (typ_bounded env.e_sem_env.se_bound d');
-            assert_norm (typ_sem env.e_sem_env d' == Spec.t_choice (typ_sem env.e_sem_env d1) (typ_sem env.e_sem_env d2));
+            let t' = mk_TChoice t1 t2 in
+            mk_TChoice_sem env.e_sem_env t1 t2;
+            let d' = mk_TChoice d1 d2 in
+            mk_TChoice_sem env.e_sem_env d1 d2;
+            typ_included_andp_notp_equiv
+              (Spec.t_choice s1 s2)
+              (Spec.t_choice (typ_sem env.e_sem_env t1) (typ_sem env.e_sem_env t2))
+              (Spec.t_choice (typ_sem env.e_sem_env d1) (typ_sem env.e_sem_env d2))
+              (typ_sem env.e_sem_env t')
+              (typ_sem env.e_sem_env d');
             assert (Spec.typ_included
               (Spec.t_choice s1 s2)
               (typ_sem env.e_sem_env t' `Util.andp` Util.notp (typ_sem env.e_sem_env d'))
