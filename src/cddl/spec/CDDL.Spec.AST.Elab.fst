@@ -814,7 +814,7 @@ let typ_sub_underapprox_postcond
     | _ -> True
     end
 
-assume val typ_sub_underapprox
+let rec typ_sub_underapprox
   (fuel: nat)
   (env: ast_env)
   (t1 t2: typ)
@@ -826,6 +826,29 @@ assume val typ_sub_underapprox
   (ensures fun t' ->
     typ_sub_underapprox_postcond env t1 t2 t'
   )
+  (decreases fuel)
+= if fuel = 0
+  then ROutOfFuel
+  else let fuel' : nat = fuel - 1 in
+  match t1 with
+  | TChoice t1l t1r ->
+    begin match typ_sub_underapprox fuel' env t1l t2 with
+    | RSuccess t1l' ->
+      begin match typ_sub_underapprox fuel' env t1r t2 with
+      | RSuccess t1r' -> RSuccess (TChoice t1l' t1r')
+      | res -> res
+      end
+    | res -> res
+    end
+  | TDef i ->
+    let t1' = env.e_env i in
+    typ_sub_underapprox fuel' env t1' t2
+  | _ ->
+    begin match typ_disjoint env fuel t1 t2 with
+    | RSuccess _ -> RSuccess t1
+    | RFailure _ -> RSuccess (TElem EAlwaysFalse)
+    | ROutOfFuel -> ROutOfFuel
+    end
 
 let typ_with_except_union_approx
   (t1 t1'
