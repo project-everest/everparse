@@ -798,29 +798,270 @@ and array_group_included
 
 #pop-options
 
-#restart-solver
-let rec map_group_footprint
-  (g: elab_map_group)
-: Tot (result typ)
-= match g with
-  | MGMatch cut key value
-  -> RSuccess (TElem (ELiteral key))
-  | MGTable key key_except _ // TODO: extend to GOneOrMore
-  -> RSuccess key
-  | MGChoice g1 g2
-  | MGConcat g1 g2 ->
-    begin match map_group_footprint g1 with
-    | RSuccess ty1 ->
-      begin match map_group_footprint g2 with
-      | RSuccess ty2 -> RSuccess (ty1 `TChoice` ty2)
-      | res -> res
-      end
-    | res -> res
+let typ_sub_underapprox_postcond
+  (env: ast_env)
+  (t1 t2: typ)
+  (t': result typ)
+: Tot prop
+=
+    typ_bounded env.e_sem_env.se_bound t1 /\
+    typ_bounded env.e_sem_env.se_bound t2 /\
+    begin match t' with
+    | RSuccess t' ->
+      typ_bounded env.e_sem_env.se_bound t' /\
+      Spec.typ_included (typ_sem env.e_sem_env t') (typ_sem env.e_sem_env t1 `Util.andp` Util.notp (typ_sem env.e_sem_env t2))
+    | RFailure _ -> False
+    | _ -> True
     end
+
+assume val typ_sub_underapprox
+  (fuel: nat)
+  (env: ast_env)
+  (t1 t2: typ)
+: Pure (result typ)
+  (requires (
+    typ_bounded env.e_sem_env.se_bound t1 /\
+    typ_bounded env.e_sem_env.se_bound t2
+  ))
+  (ensures fun t' ->
+    typ_sub_underapprox_postcond env t1 t2 t'
+  )
+
+let typ_with_except_union_approx
+  (t1 t1'
+   t1_except'
+   t2 t2'
+   t2_except'
+   d1 d2: Spec.typ)
+: Lemma
+  (requires (
+    Spec.typ_included t1 (t1' `Util.andp` Util.notp t1_except') /\
+    Spec.typ_included t2 (t2' `Util.andp` Util.notp t2_except') /\
+    Spec.typ_included d1 (t1_except' `Util.andp` Util.notp t2') /\
+    Spec.typ_included d2 (t2_except' `Util.andp` Util.notp t1')
+  ))
+  (ensures (
+    Spec.typ_included (Spec.t_choice t1 t2) (Spec.t_choice t1' t2' `Util.andp` Util.notp (Spec.t_choice d1 d2))
+  ))
+= ()
+
+let coerce_failure
+  (#t1 #t2: Type)
+  (r: result t1 { ~ (RSuccess? r) })
+: Tot (result t2)
+= match r with
+  | RFailure msg -> RFailure msg
+  | ROutOfFuel -> ROutOfFuel
+
+let map_group_footprint'_postcond
+  (env: sem_env)
+  (g: elab_map_group)
+  (res: result (typ & typ))
+: Tot prop
+=
+      begin match res with
+      | RSuccess te ->
+        let t = fst te in
+        let t_except = snd te in
+        bounded_elab_map_group env.se_bound g /\
+        typ_bounded env.se_bound t /\
+        typ_bounded env.se_bound t_except /\
+        begin match spec_map_group_footprint env g with
+        | Some t' -> Spec.typ_included t' (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except))
+        | None -> False
+        end
+      | RFailure _ -> False
+      | _ -> True
+      end
+
+let map_group_footprint'_postcond_intro_success
+  (env: sem_env)
+  (g: elab_map_group)
+  (t: typ)
+  (t_except: typ)
+  (t': Spec.typ)
+: Lemma
+  (requires (
+      bounded_elab_map_group env.se_bound g /\
+      typ_bounded env.se_bound t /\
+      typ_bounded env.se_bound t_except /\
+      spec_map_group_footprint env g == Some t' /\
+      Spec.typ_included t' (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except))
+  ))
+  (ensures (
+    map_group_footprint'_postcond env g (RSuccess (t, t_except))
+  ))
+= ()
+
+let map_group_footprint'_postcond_intro_out_of_fuel
+  (env: sem_env)
+  (g: elab_map_group)
+  (res: result (typ & typ))
+  (sq: squash (~ (RSuccess? res)))
+  (sq_not_fail: squash (~ (RFailure? res)))
+: Lemma
+    (requires True)
+  (ensures (
+    map_group_footprint'_postcond env g res
+  ))
+= ()
+
+#restart-solver
+let spec_map_group_footprint_choice_or_concat
+  (env: sem_env)
+  (g1 g2 g: elab_map_group)
+  (sq1: squash (bounded_elab_map_group env.se_bound g1))
+  (sq2: squash (bounded_elab_map_group env.se_bound g2))
+  (sq3: squash (Some? (spec_map_group_footprint env g1)))
+  (sq4: squash (Some? (spec_map_group_footprint env g2)))
+  (sq': squash (g == MGChoice g1 g2 \/ g == MGConcat g1 g2))
+: Lemma
+  (ensures (
+    bounded_elab_map_group env.se_bound g1 /\
+    bounded_elab_map_group env.se_bound g2 /\
+    Some? (spec_map_group_footprint env g1) /\
+    Some? (spec_map_group_footprint env g2) /\
+    bounded_elab_map_group env.se_bound g /\
+    spec_map_group_footprint env g == Some (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2))
+  ))
+= assert (
+    bounded_elab_map_group env.se_bound g1 /\
+    bounded_elab_map_group env.se_bound g2 /\
+    Some? (spec_map_group_footprint env g1) /\
+    Some? (spec_map_group_footprint env g2) /\
+    bounded_elab_map_group env.se_bound (MGChoice g1 g2) /\
+    spec_map_group_footprint env (MGChoice g1 g2) == Some (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2))
+  );
+ assert (
+    bounded_elab_map_group env.se_bound g1 /\
+    bounded_elab_map_group env.se_bound g2 /\
+    Some? (spec_map_group_footprint env g1) /\
+    Some? (spec_map_group_footprint env g2) /\
+    bounded_elab_map_group env.se_bound (MGChoice g1 g2) /\
+    spec_map_group_footprint env (MGConcat g1 g2) == Some (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2))
+  )
+
+#push-options "--z3rlimit 64 --ifuel 8 --fuel 2 --split_queries always --query_stats"
+
+#restart-solver
+let rec map_group_footprint'
+  (fuel: nat)
+  (env: ast_env)
+  (g: elab_map_group)
+  (sq: squash (bounded_elab_map_group env.e_sem_env.se_bound g))
+: Tot (res: result (typ & typ) & squash (map_group_footprint'_postcond env.e_sem_env g res))
+  (decreases g)
+= match g with
   | MGNop
-  | MGAlwaysFalse -> RSuccess (TElem EAlwaysFalse)
+  | MGAlwaysFalse ->
+    let res = RSuccess (TElem EAlwaysFalse, TElem EAlwaysFalse) in
+    assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
+  | MGMatch _ key _
+    ->
+    let res = RSuccess (TElem (ELiteral key), TElem EAlwaysFalse) in
+    assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
+  | MGMatchWithCut key _
   | MGCut key
-  | MGMatchWithCut key _ -> RSuccess key
+    ->
+    let res = RSuccess (key, TElem EAlwaysFalse) in
+    assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
+  | MGTable key key_except _ ->
+    let res = RSuccess (key, key_except) in
+    assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
+  | MGChoice g1 g2 -> (| ROutOfFuel, () |)
+  | MGConcat g1 g2 ->
+    let sq1: squash (bounded_elab_map_group env.e_sem_env.se_bound g1) = () in
+    let sq2: squash (bounded_elab_map_group env.e_sem_env.se_bound g2) = () in
+    let (| te1, _ |) = map_group_footprint' fuel env g1 sq1 in
+    assert (map_group_footprint'_postcond env.e_sem_env g1 te1);
+    begin match te1 with
+    | RSuccess te1 ->
+      let t1 = fst te1 in
+      let t1_except = snd te1 in
+      let (| te2, _ |) = map_group_footprint' fuel env g2 sq2 in
+      assert (map_group_footprint'_postcond env.e_sem_env g2 te2);
+      begin match te2 with
+      | RSuccess te2 ->
+        let t2 = fst te2 in
+        let t2_except = snd te2 in
+        spec_map_group_footprint_choice_or_concat env.e_sem_env g1 g2 g sq1 sq2 () () ();
+        let s1 = Some?.v (spec_map_group_footprint env.e_sem_env g1) in
+        let s2 = Some?.v (spec_map_group_footprint env.e_sem_env g2) in
+        let u1 = typ_sub_underapprox fuel env t1_except t2 in
+        begin match u1 with
+        | RSuccess d1 ->
+          let u2 = typ_sub_underapprox fuel env t2_except t1 in
+          begin match u2 with
+          | RSuccess d2 ->
+            typ_with_except_union_approx
+              s1
+              (typ_sem env.e_sem_env t1)
+              (typ_sem env.e_sem_env t1_except)
+              s2
+              (typ_sem env.e_sem_env t2)
+              (typ_sem env.e_sem_env t2_except)
+              (typ_sem env.e_sem_env d1)
+              (typ_sem env.e_sem_env d2);
+            let t' = TChoice t1 t2 in
+            assert_norm (typ_bounded env.e_sem_env.se_bound t');
+            assert_norm (typ_sem env.e_sem_env t' == Spec.t_choice (typ_sem env.e_sem_env t1) (typ_sem env.e_sem_env t2));
+            let d' = TChoice d1 d2 in
+            assert_norm (typ_bounded env.e_sem_env.se_bound d');
+            assert_norm (typ_sem env.e_sem_env d' == Spec.t_choice (typ_sem env.e_sem_env d1) (typ_sem env.e_sem_env d2));
+            assert (Spec.typ_included
+              (Spec.t_choice s1 s2)
+              (typ_sem env.e_sem_env t' `Util.andp` Util.notp (typ_sem env.e_sem_env d'))
+            );
+            assert (Spec.typ_included
+              (Some?.v (spec_map_group_footprint env.e_sem_env g))
+              (typ_sem env.e_sem_env t' `Util.andp` Util.notp (typ_sem env.e_sem_env d'))
+            );
+            map_group_footprint'_postcond_intro_success env.e_sem_env g t' d' (Spec.t_choice s1 s2);
+            (| RSuccess (t', d'),  () |)
+          | res -> (| ROutOfFuel, map_group_footprint'_postcond_intro_out_of_fuel env.e_sem_env g (ROutOfFuel) () () |)
+          end
+        | res -> (| ROutOfFuel, map_group_footprint'_postcond_intro_out_of_fuel env.e_sem_env g (ROutOfFuel) () () |)
+        end
+      | res -> (| ROutOfFuel, map_group_footprint'_postcond_intro_out_of_fuel env.e_sem_env g (ROutOfFuel) () () |)
+      end
+    | res -> (| ROutOfFuel, map_group_footprint'_postcond_intro_out_of_fuel env.e_sem_env g (ROutOfFuel) () () |)
+    end
+
+#pop-options
+
+let map_group_footprint_postcond
+  (env: sem_env)
+  (g: elab_map_group)
+  (res: result (typ & typ))
+: Tot prop
+=
+      begin match res with
+      | RSuccess te ->
+        let t = fst te in
+        let t_except = snd te in
+        bounded_elab_map_group env.se_bound g /\
+        typ_bounded env.se_bound t /\
+        typ_bounded env.se_bound t_except /\
+        begin match spec_map_group_footprint env g with
+        | Some t' ->
+          Spec.typ_included t' (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except)) /\
+          Spec.map_group_footprint (elab_map_group_sem env g) t' /\
+          Spec.map_group_footprint (elab_map_group_sem env g) (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except))
+        | None -> False
+        end
+      | RFailure _ -> False
+      | _ -> True
+      end
+
+let map_group_footprint
+  (fuel: nat)
+  (env: ast_env)
+  (g: elab_map_group)
+: Pure (result (typ & typ))
+    (requires (bounded_elab_map_group env.e_sem_env.se_bound g))
+    (ensures fun res -> map_group_footprint_postcond env.e_sem_env g res)
+= let (| res, prf |) = map_group_footprint' fuel env g () in
+  res
 
 let typ_included_union
   (a1 a2 b1 b2: Spec.typ)
@@ -833,88 +1074,6 @@ let typ_included_union
     Spec.typ_included (Spec.t_choice a1 a2) (Spec.t_choice b1 b2)
   ))
 = ()
-
-#push-options "--z3rlimit 64 --ifuel 8"
-
-let map_group_footprint_correct_postcond'
-  (env: sem_env)
-  (g: elab_map_group)
-: Tot prop
-=
-    bounded_elab_map_group env.se_bound g /\
-    begin match map_group_footprint g with
-    | RSuccess t ->
-      typ_bounded env.se_bound t /\
-      begin match spec_map_group_footprint env g with
-      | Some ty -> Spec.typ_included ty (typ_sem env t)
-      | None -> False
-      end
-    | _ -> spec_map_group_footprint env g == None
-    end
-
-#restart-solver
-let rec map_group_footprint_correct'
-  (env: sem_env)
-  (g: elab_map_group)
-: Lemma
-  (requires (
-    bounded_elab_map_group env.se_bound g
-  ))
-  (ensures (
-    map_group_footprint_correct_postcond' env g
-  ))
-  (decreases g)
-= match g with
-  | MGChoice g1 g2
-  | MGConcat g1 g2 ->
-    map_group_footprint_correct' env g1;
-    map_group_footprint_correct' env g2;
-    begin match map_group_footprint g1 with
-    | RSuccess t1 ->
-      let Some ty1 = spec_map_group_footprint env g1 in
-      begin match map_group_footprint g2 with
-      | RSuccess t2 ->
-        let Some ty2 = spec_map_group_footprint env g2 in
-        typ_included_union ty1 ty2 (typ_sem env t1) (typ_sem env t2)
-      | _ -> ()
-      end
-    | _ -> ()
-    end
-  | _ -> ()
-
-let map_group_footprint_correct
-  (env: sem_env)
-  (g: elab_map_group)
-: Lemma
-  (requires (
-    bounded_elab_map_group env.se_bound g
-  ))
-  (ensures (
-    match spec_map_group_footprint env g, map_group_footprint g with
-    | Some ty, RSuccess t ->
-      typ_bounded env.se_bound t /\
-      ty `Spec.typ_included` typ_sem env t /\
-      Spec.map_group_footprint (elab_map_group_sem env g) (typ_sem env t) /\
-      Spec.map_group_footprint (elab_map_group_sem env g) ty
-    | _, RSuccess _ -> False
-    | Some _, _ -> False
-    | _ -> True
-  ))
-  (decreases g)
-  [SMTPat (spec_map_group_footprint env g)]
-= map_group_footprint_correct' env g;
-  match spec_map_group_footprint env g, map_group_footprint g with
-  | Some ty, RSuccess t ->
-    Spec.map_group_footprint_implies (elab_map_group_sem env g) ty (typ_sem env t)
-  | _ -> ()
-
-let coerce_failure
-  (#t1 #t2: Type)
-  (r: result t1 { ~ (RSuccess? r) })
-: Tot (result t2)
-= match r with
-  | RFailure msg -> RFailure msg
-  | ROutOfFuel -> ROutOfFuel
 
 (*
 #restart-solver
@@ -1012,8 +1171,6 @@ let rec restrict_map_group
     end
   | _ -> RFailure "restrict_map_group: unsupported cases"
 *)
-
-#pop-options
 
 (*
 noeq
@@ -1293,6 +1450,84 @@ let rec array_group_concat_unique_weak
       end
     end
 
+let rec typ_diff_disjoint
+  (fuel: nat)
+  (env: ast_env)
+  (t1 d1 t2 d2: typ)
+: Pure (result unit)
+    (requires (
+      typ_bounded env.e_sem_env.se_bound t1 /\
+      typ_bounded env.e_sem_env.se_bound t2 /\
+      typ_bounded env.e_sem_env.se_bound d1 /\
+      typ_bounded env.e_sem_env.se_bound d2
+    ))
+    (ensures (fun res ->
+      match res with
+      | RSuccess _ ->
+        typ_bounded env.e_sem_env.se_bound t1 /\
+        typ_bounded env.e_sem_env.se_bound t2 /\
+        typ_bounded env.e_sem_env.se_bound d1 /\
+        typ_bounded env.e_sem_env.se_bound d2 /\
+        Spec.typ_disjoint (typ_sem env.e_sem_env t1 `Util.andp` Util.notp (typ_sem env.e_sem_env d1)) (typ_sem env.e_sem_env t2 `Util.andp` Util.notp (typ_sem env.e_sem_env d2))
+      | _ -> True
+    ))
+    (decreases fuel)
+= if fuel = 0
+  then ROutOfFuel
+  else let fuel' : nat = fuel - 1 in
+  match t1 with
+  | TChoice t1l t1r ->
+    begin match typ_diff_disjoint fuel' env t1l d1 t2 d2 with
+    | RSuccess _ ->
+      typ_diff_disjoint fuel' env t1r d1 t2 d2
+    | res -> res
+    end
+  | TDef i ->
+    let t1' = env.e_env i in
+    typ_diff_disjoint fuel' env t1' d1 t2 d2
+  | _ ->
+    begin match t2 with
+    | TChoice t2l t2r ->
+      begin match typ_diff_disjoint fuel' env t1 d1 t2l d2 with
+      | RSuccess _ -> typ_diff_disjoint fuel' env t1 d1 t2r d2
+      | res -> res
+      end
+    | TDef i ->
+      let t2' = env.e_env i in
+      typ_diff_disjoint fuel' env t1 d1 t2' d2
+    | _ ->
+      begin match typ_disjoint env fuel t1 t2 with
+      | RFailure _ ->
+        begin match typ_included env fuel t1 d2 with
+        | RFailure _ -> typ_included env fuel t2 d1
+        | res -> res
+        end
+      | res -> res
+      end
+    end
+
+let typ_disjoint_from_diff
+  (fuel: nat)
+  (env: ast_env)
+  (t1 t2 t3: typ)
+: Pure (result unit)
+    (requires (
+      typ_bounded env.e_sem_env.se_bound t1 /\
+      typ_bounded env.e_sem_env.se_bound t2 /\
+      typ_bounded env.e_sem_env.se_bound t3
+    ))
+    (ensures (fun res ->
+      match res with
+      | RSuccess _ ->
+        typ_bounded env.e_sem_env.se_bound t1 /\
+        typ_bounded env.e_sem_env.se_bound t2 /\
+        typ_bounded env.e_sem_env.se_bound t3 /\
+        Spec.typ_disjoint (typ_sem env.e_sem_env t1) (typ_sem env.e_sem_env t2 `Util.andp` Util.notp (typ_sem env.e_sem_env t3))
+      | _ -> True
+    ))
+    (decreases fuel)
+= typ_diff_disjoint fuel env t1 (TElem EAlwaysFalse) t2 t3
+
 #restart-solver
 let rec map_group_choice_compatible_no_cut
   (fuel: nat) // to unfold definitions
@@ -1352,18 +1587,20 @@ let rec map_group_choice_compatible_no_cut
       RSuccess ()
     end
   | WfMLiteral _ key value _ ->
-    map_group_footprint_correct env.e_sem_env g2;
-    let RSuccess f2 = map_group_footprint g2 in
-    let res1 = typ_disjoint env fuel (TElem (ELiteral key)) f2 in
-    if not (RSuccess? res1)
-    then res1
-    else begin
-      Spec.map_group_choice_compatible_no_cut_match_item_for_cut
-        (eval_literal key)
-        (typ_sem env.e_sem_env value)
-        (elab_map_group_sem env.e_sem_env g2)
-        (typ_sem env.e_sem_env f2);
-      RSuccess ()
+    begin match map_group_footprint fuel env g2 with
+    | RSuccess (t2, t_ex2) ->
+      let res1 = typ_disjoint_from_diff fuel env (TElem (ELiteral key)) t2 t_ex2 in
+      if not (RSuccess? res1)
+      then res1
+      else begin
+        Spec.map_group_choice_compatible_no_cut_match_item_for_cut
+          (eval_literal key)
+          (typ_sem env.e_sem_env value)
+          (elab_map_group_sem env.e_sem_env g2)
+          (typ_sem env.e_sem_env t2 `Util.andp` Util.notp (typ_sem env.e_sem_env t_ex2));
+        RSuccess ()
+      end
+    | res -> coerce_failure res
     end
   | WfMConcat g1l s1l g1r s1r ->
     let res1 = map_group_choice_compatible_no_cut fuel' env s1l s2 in
@@ -1382,8 +1619,176 @@ let rec map_group_choice_compatible_no_cut
       RSuccess ()
     end
 
+#pop-options
+
+let map_group_choice_compatible'_postcond
+  (env: sem_env)
+  (#g1: elab_map_group)
+  (s1: ast0_wf_parse_map_group g1)
+  (#g2: elab_map_group)
+  (s2: ast0_wf_parse_map_group g2)
+  (r: result unit)
+: Tot prop
+= 
+      spec_wf_parse_map_group env _ s1 /\
+      spec_wf_parse_map_group env _ s2 /\
+      begin match r with
+      | RSuccess _ -> Spec.map_group_choice_compatible (elab_map_group_sem env g1) (elab_map_group_sem env g2)
+      | _ -> True
+      end
+
+#push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
+
 #restart-solver
-let rec map_group_choice_compatible
+let rec map_group_choice_compatible'
+  (fuel: nat) // to unfold definitions
+  (env: ast_env)
+  (#g1: elab_map_group)
+  (s1: ast0_wf_parse_map_group g1)
+  (#g2: elab_map_group)
+  (s2: ast0_wf_parse_map_group g2)
+  (sq: squash (
+    spec_wf_parse_map_group env.e_sem_env _ s1 /\
+    spec_wf_parse_map_group env.e_sem_env _ s2
+  ))
+: Tot (r: result unit & squash (map_group_choice_compatible'_postcond env.e_sem_env s1 s2 r))
+  (decreases fuel)
+= if fuel = 0
+  then (| ROutOfFuel, () |)
+  else let fuel' : nat = fuel - 1 in
+  match s1 with
+  | WfMZeroOrMore _ _ _ _ _ ->
+    (| RFailure "map_group_choice_compatible: GZeroOrMore never fails", () |)
+  | WfMZeroOrOne _ _ ->
+    (| RFailure "map_group_choice_compatible: GZeroOrOne always succeeds or cuts, but never fails", () |)
+  | WfMChoice g1l s1l g1r s1r ->
+    let (| res1, _ |) = map_group_choice_compatible' fuel' env s1l s2 () in
+    if not (RSuccess? res1)
+    then (| res1, () |)
+    else let (| res2, _ |) = map_group_choice_compatible' fuel' env s1r s2 () in
+    if not (RSuccess? res2)
+    then (| res2, () |)
+    else begin
+      Spec.map_group_choice_compatible_choice_left
+        (elab_map_group_sem env.e_sem_env g1l)
+        (elab_map_group_sem env.e_sem_env g1r)
+        (elab_map_group_sem env.e_sem_env g2);
+      (| RSuccess (), () |)
+    end
+  | _ ->
+    begin match s2 with
+    | WfMChoice g2l s2l g2r s2r ->
+      let (| res1, _ |) = map_group_choice_compatible' fuel' env s1 s2l () in
+      if not (RSuccess? res1)
+      then (| res1, () |)
+      else let (| res2, _ |) = map_group_choice_compatible' fuel' env s1 s2r () in
+      if not (RSuccess? res2)
+      then (| res2, () |)
+      else begin
+        Spec.map_group_choice_compatible_choice_right
+          (elab_map_group_sem env.e_sem_env g1)
+          (elab_map_group_sem env.e_sem_env g2l)
+          (elab_map_group_sem env.e_sem_env g2r);
+        (| RSuccess (), () |)
+      end
+    | _ ->
+      begin match s1 with
+      | WfMConcat g1l s1l g1r s1r ->
+        let (| r1l, _ |) = map_group_choice_compatible' fuel' env s1l s2 () in
+        begin match r1l with
+        | RSuccess _ ->
+          Spec.map_group_choice_compatible_concat_left
+            (elab_map_group_sem env.e_sem_env g1l)
+            (Some?.v (spec_map_group_footprint env.e_sem_env g1l))
+            (elab_map_group_sem env.e_sem_env g1r)
+            (Some?.v (spec_map_group_footprint env.e_sem_env g1r))
+            (elab_map_group_sem env.e_sem_env g2);
+          (| RSuccess (), () |)
+        | ROutOfFuel -> (| ROutOfFuel, () |)
+        | RFailure _ ->
+          let res1 = map_group_choice_compatible_no_cut fuel env s1l s2 in
+          if not (RSuccess? res1)
+          then (| res1, () |)
+          else let (| res2, _ |) = map_group_choice_compatible' fuel' env s1r s2 () in
+          if not (RSuccess? res2)
+          then (| res2,  () |)
+          else begin
+            Spec.map_group_choice_compatible_concat_left
+              (elab_map_group_sem env.e_sem_env g1l)
+              (Some?.v (spec_map_group_footprint env.e_sem_env g1l))
+              (elab_map_group_sem env.e_sem_env g1r)
+              (Some?.v (spec_map_group_footprint env.e_sem_env g1r))
+              (elab_map_group_sem env.e_sem_env g2);
+            (| RSuccess (), () |)
+          end
+        end
+      | WfMLiteral cut key value _ ->
+        begin match map_group_footprint fuel env g2 with
+        | RSuccess (t2, t_ex2) ->
+          begin match typ_disjoint_from_diff fuel env (TElem (ELiteral key)) t2 t_ex2 with
+          | RSuccess _ ->
+            Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g2) (typ_sem env.e_sem_env t2 `Util.andp` Util.notp (typ_sem env.e_sem_env t_ex2));
+            (| RSuccess (), () |)
+          | ROutOfFuel -> (| ROutOfFuel, () |)
+          | RFailure _ ->
+            if cut
+            then (| RFailure "map_group_choice_compatible: GMapElem true (TElem (ELiteral key)) value, not disjoint", () |)
+            else begin match s2 with
+            | WfMConcat g2l s2l g2r s2r ->
+              let (| res1, _ |) = map_group_choice_compatible' fuel' env s1 s2l () in
+              if not (RSuccess? res1)
+              then (| res1, () |)
+              else let (| res2, _ |) = map_group_choice_compatible' fuel' env s1 s2r () in
+              if not (RSuccess? res2)
+              then (| res2, () |)
+              else begin
+                Spec.map_group_choice_compatible_match_item_for_concat_right
+                  (eval_literal key)
+                  (typ_sem env.e_sem_env value)
+                  (elab_map_group_sem env.e_sem_env g2l)
+                  (elab_map_group_sem env.e_sem_env g2r)
+                  (Some?.v (spec_map_group_footprint env.e_sem_env g2l))
+                  (Some?.v (spec_map_group_footprint env.e_sem_env g2r));
+                (| RSuccess (), () |)
+              end
+            | WfMZeroOrOne g s ->
+              let (| res1, _ |) = map_group_choice_compatible' fuel' env s1 s () in
+              if not (RSuccess? res1)
+              then (| res1, () |)
+              else begin
+                Spec.map_group_choice_compatible_match_item_for_zero_or_one_right cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g);
+                (| RSuccess (), () |)
+              end
+            | WfMLiteral cut2 key2 value2 _ ->
+              if key <> key2
+              then begin // this case should already have been eliminated by the typ_disjoint test above
+                Classical.forall_intro_2 byte_seq_of_ascii_string_diff;
+                Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g2) (Spec.t_literal (eval_literal key2));
+                (| RSuccess (), () |)
+              end else begin
+                let res1 = typ_disjoint env fuel value value2 in
+                if not (RSuccess? res1)
+                then (| res1, () |)
+                else begin
+                  Spec.map_group_choice_compatible_match_item_for_same
+                    (eval_literal key)
+                    (typ_sem env.e_sem_env value)
+                    (typ_sem env.e_sem_env value2)
+                    cut2;
+                  (| RSuccess (), () |)
+                end
+              end
+            | WfMZeroOrMore _ _ _ _ _ -> (| RFailure "map_group_choice_compatible: GZeroOrMore right, not disjoint", () |)
+            end
+          end
+        | res -> (| coerce_failure res, () |)
+        end
+      end
+    end
+
+#pop-options
+
+let map_group_choice_compatible
   (fuel: nat) // to unfold definitions
   (env: ast_env)
   (#g1: elab_map_group)
@@ -1395,142 +1800,9 @@ let rec map_group_choice_compatible
       spec_wf_parse_map_group env.e_sem_env _ s1 /\
       spec_wf_parse_map_group env.e_sem_env _ s2
     ))
-    (ensures fun r -> match r with
-    | RSuccess _ -> Spec.map_group_choice_compatible (elab_map_group_sem env.e_sem_env g1) (elab_map_group_sem env.e_sem_env g2)
-    | _ -> True
-    )
-    (decreases fuel)
-= if fuel = 0
-  then ROutOfFuel
-  else let fuel' : nat = fuel - 1 in
-  match s1 with
-  | WfMZeroOrMore _ _ _ _ _ ->
-    RFailure "map_group_choice_compatible: GZeroOrMore never fails"
-  | WfMZeroOrOne _ _ ->
-    RFailure "map_group_choice_compatible: GZeroOrOne always succeeds or cuts, but never fails"
-  | WfMChoice g1l s1l g1r s1r ->
-    let res1 = map_group_choice_compatible fuel' env s1l s2 in
-    if not (RSuccess? res1)
-    then res1
-    else let res2 = map_group_choice_compatible fuel' env s1r s2 in
-    if not (RSuccess? res2)
-    then res2
-    else begin
-      Spec.map_group_choice_compatible_choice_left
-        (elab_map_group_sem env.e_sem_env g1l)
-        (elab_map_group_sem env.e_sem_env g1r)
-        (elab_map_group_sem env.e_sem_env g2);
-      RSuccess ()
-    end
-  | _ ->
-    begin match s2 with
-    | WfMChoice g2l s2l g2r s2r ->
-      let res1 = map_group_choice_compatible fuel' env s1 s2l in
-      if not (RSuccess? res1)
-      then res1
-      else let res2 = map_group_choice_compatible fuel' env s1 s2r in
-      if not (RSuccess? res2)
-      then res2
-      else begin
-        Spec.map_group_choice_compatible_choice_right
-          (elab_map_group_sem env.e_sem_env g1)
-          (elab_map_group_sem env.e_sem_env g2l)
-          (elab_map_group_sem env.e_sem_env g2r);
-        RSuccess ()
-      end
-    | _ ->
-      begin match s1 with
-      | WfMConcat g1l s1l g1r s1r ->
-        begin match map_group_choice_compatible fuel' env s1l s2 with
-        | RSuccess _ ->
-          Spec.map_group_choice_compatible_concat_left
-            (elab_map_group_sem env.e_sem_env g1l)
-            (Some?.v (spec_map_group_footprint env.e_sem_env g1l))
-            (elab_map_group_sem env.e_sem_env g1r)
-            (Some?.v (spec_map_group_footprint env.e_sem_env g1r))
-            (elab_map_group_sem env.e_sem_env g2);
-          RSuccess ()
-        | ROutOfFuel -> ROutOfFuel
-        | RFailure _ ->
-          let res1 = map_group_choice_compatible_no_cut fuel env s1l s2 in
-          if not (RSuccess? res1)
-          then res1
-          else let res2 = map_group_choice_compatible fuel' env s1r s2 in
-          if not (RSuccess? res2)
-          then res2
-          else begin
-            Spec.map_group_choice_compatible_concat_left
-              (elab_map_group_sem env.e_sem_env g1l)
-              (Some?.v (spec_map_group_footprint env.e_sem_env g1l))
-              (elab_map_group_sem env.e_sem_env g1r)
-              (Some?.v (spec_map_group_footprint env.e_sem_env g1r))
-              (elab_map_group_sem env.e_sem_env g2);
-            RSuccess ()
-          end
-        end
-      | WfMLiteral cut key value _ ->
-        map_group_footprint_correct env.e_sem_env g2;
-        let RSuccess f2 = map_group_footprint g2 in
-        begin match typ_disjoint env fuel (TElem (ELiteral key)) f2 with
-        | RSuccess _ ->
-          Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g2) (typ_sem env.e_sem_env f2);
-          RSuccess ()
-        | ROutOfFuel -> ROutOfFuel
-        | RFailure _ ->
-          if cut
-          then RFailure "map_group_choice_compatible: GMapElem true (TElem (ELiteral key)) value, not disjoint"
-          else begin match s2 with
-          | WfMConcat g2l s2l g2r s2r ->
-            let res1 = map_group_choice_compatible fuel' env s1 s2l in
-            if not (RSuccess? res1)
-            then res1
-            else let res2 = map_group_choice_compatible fuel' env s1 s2r in
-            if not (RSuccess? res2)
-            then res2
-            else begin
-              Spec.map_group_choice_compatible_match_item_for_concat_right
-                (eval_literal key)
-                (typ_sem env.e_sem_env value)
-                (elab_map_group_sem env.e_sem_env g2l)
-                (elab_map_group_sem env.e_sem_env g2r)
-                (Some?.v (spec_map_group_footprint env.e_sem_env g2l))
-                (Some?.v (spec_map_group_footprint env.e_sem_env g2r));
-              RSuccess ()
-            end
-          | WfMZeroOrOne g s ->
-            let res1 = map_group_choice_compatible fuel' env s1 s in
-            if not (RSuccess? res1)
-            then res1
-            else begin
-              Spec.map_group_choice_compatible_match_item_for_zero_or_one_right cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g);
-              RSuccess ()
-            end
-          | WfMLiteral cut2 key2 value2 _ ->
-            if key <> key2
-            then begin // this case should already have been eliminated by the typ_disjoint test above
-              Classical.forall_intro_2 byte_seq_of_ascii_string_diff;
-              Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g2) (Spec.t_literal (eval_literal key2));
-              RSuccess ()
-            end else begin
-              let res1 = typ_disjoint env fuel value value2 in
-              if not (RSuccess? res1)
-              then res1
-              else begin
-                Spec.map_group_choice_compatible_match_item_for_same
-                  (eval_literal key)
-                  (typ_sem env.e_sem_env value)
-                  (typ_sem env.e_sem_env value2)
-                  cut2;
-                RSuccess ()
-              end
-            end
-          | WfMZeroOrMore _ _ _ _ _ -> RFailure "map_group_choice_compatible: GZeroOrMore right, not disjoint"
-          end
-        end
-      end
-    end
-
-#pop-options
+    (ensures fun r -> (map_group_choice_compatible'_postcond env.e_sem_env s1 s2 r))
+= let (| res, _ |) = map_group_choice_compatible' fuel env s1 s2 () in
+  res
 
 let rec mk_elab_map_group
   (g: group NMapGroup)
@@ -1614,117 +1886,6 @@ let rec mk_elab_map_group_correct
       (Util.notp (Spec.matches_map_group_entry (Util.andp (typ_sem env key) (Util.notp Spec.t_always_false)) (typ_sem env value)))
       (Util.notp (Spec.matches_map_group_entry (typ_sem env key) (typ_sem env value)))
   | _ -> ()
-
-let rec elab_map_group_footprint
-  (g: elab_map_group)
-: Tot (typ & typ)
-= match g with
-  | MGNop
-  | MGAlwaysFalse -> (TElem EAlwaysFalse, TElem EAlwaysFalse)
-  | MGMatch _ key _
-    -> (TElem (ELiteral key), TElem EAlwaysFalse)
-  | MGMatchWithCut key _
-  | MGCut key
-    -> (key, TElem EAlwaysFalse)
-  | MGTable key key_except _ -> (key, key_except)
-  | MGConcat g1 g2
-  | MGChoice g1 g2 ->
-    let (t1, _) = elab_map_group_footprint g1 in
-    let (t2, _) = elab_map_group_footprint g2 in
-    (TChoice t1 t2, TElem EAlwaysFalse)
-
-let elab_map_group_footprint_postcond
-  (env: sem_env)
-  (g: elab_map_group)
-  (fp: typ)
-  (fp_except: typ)
-: Tot prop
-=
-    (fp, fp_except) == elab_map_group_footprint g /\
-    bounded_elab_map_group env.se_bound g /\
-    typ_bounded env.se_bound fp /\
-    typ_bounded env.se_bound fp_except /\
-    Spec.map_group_footprint (elab_map_group_sem env g) (Util.andp (typ_sem env fp) (Util.notp (typ_sem env fp_except)))
-
-let typ_sem'
-  (env: sem_env)
-  (x: typ)
-  (sq: squash (typ_bounded env.se_bound x))
-: Tot Spec.typ
-= typ_sem env x
-
-let elab_map_group_footprint_postcond_intro
-  (env: sem_env)
-  (g: elab_map_group)
-  (fp: typ)
-  (fp_except: typ)
-  (sq1: squash ((fp, fp_except) == elab_map_group_footprint g))
-  (sq2: squash (bounded_elab_map_group env.se_bound g))
-  (sq3: squash (typ_bounded env.se_bound fp))
-  (sq4: squash (typ_bounded env.se_bound fp_except))
-  (sq: squash (Spec.map_group_footprint (elab_map_group_sem env g) (Util.andp (typ_sem' env fp sq3) (Util.notp (typ_sem' env fp_except sq4)))))
-: Lemma
-  (elab_map_group_footprint_postcond env g fp fp_except)
-= ()
-
-#push-options "--z3rlimit 128 --query_stats --fuel 4 --ifuel 4 --split_queries always"
-
-#restart-solver
-let rec elab_map_group_footprint_correct
-  (env: sem_env)
-  (g: elab_map_group)
-: Lemma
-  (requires (bounded_elab_map_group env.se_bound g))
-  (ensures (
-    let (fp, fp_except) = elab_map_group_footprint g in
-    elab_map_group_footprint_postcond env g fp fp_except
-  ))
-= match g with
-  | MGConcat g1 g2 ->
-    let (t1, ex1) = elab_map_group_footprint g1 in
-    elab_map_group_footprint_correct env g1;
-    Spec.map_group_footprint_implies (elab_map_group_sem env g1) (Util.andp (typ_sem env t1) (Util.notp (typ_sem env ex1))) (typ_sem env t1);
-    let (t2, ex2) = elab_map_group_footprint g2 in
-    elab_map_group_footprint_correct env g2;
-    Spec.map_group_footprint_implies (elab_map_group_sem env g2) (Util.andp (typ_sem env t2) (Util.notp (typ_sem env ex2))) (typ_sem env t2);
-    Spec.map_group_footprint_concat (elab_map_group_sem env g1) (elab_map_group_sem env g2) (typ_sem env t1) (typ_sem env t2);
-    let (t, ex) = elab_map_group_footprint g in
-    assert_norm (elab_map_group_footprint (MGConcat g1 g2) == (TChoice t1 t2, TElem EAlwaysFalse));
-    assert (t == TChoice t1 t2);
-    assert_norm (typ_bounded env.se_bound (TChoice t1 t2) == (typ_bounded env.se_bound t1 && typ_bounded env.se_bound t2));
-    assert (typ_bounded env.se_bound (TChoice t1 t2));
-    assert (typ_bounded env.se_bound t);
-    assert_norm (typ_sem env (TChoice t1 t2) == Spec.t_choice (typ_sem env t1) (typ_sem env t2));
-    assert (typ_sem env t == Spec.t_choice (typ_sem env t1) (typ_sem env t2));
-    assert (ex == TElem EAlwaysFalse);
-    assert_norm (typ_sem env (TElem EAlwaysFalse) == Spec.t_always_false);
-    assert_norm (elab_map_group_sem env (MGConcat g1 g2) == Spec.map_group_concat (elab_map_group_sem env g1) (elab_map_group_sem env g2));
-    Spec.map_group_footprint_implies (elab_map_group_sem env g) (typ_sem env t) (Util.andp (typ_sem env t) (Util.notp (typ_sem env ex)));
-    elab_map_group_footprint_postcond_intro env g t ex () () () () ()
-  | MGChoice g1 g2 ->
-    let (t1, ex1) = elab_map_group_footprint g1 in
-    elab_map_group_footprint_correct env g1;
-    Spec.map_group_footprint_implies (elab_map_group_sem env g1) (Util.andp (typ_sem env t1) (Util.notp (typ_sem env ex1))) (typ_sem env t1);
-    let (t2, ex2) = elab_map_group_footprint g2 in
-    elab_map_group_footprint_correct env g2;
-    Spec.map_group_footprint_implies (elab_map_group_sem env g2) (Util.andp (typ_sem env t2) (Util.notp (typ_sem env ex2))) (typ_sem env t2);
-    Spec.map_group_footprint_choice (elab_map_group_sem env g1) (elab_map_group_sem env g2) (typ_sem env t1) (typ_sem env t2);
-    let (t, ex) = elab_map_group_footprint g in
-    assert_norm (elab_map_group_footprint (MGChoice g1 g2) == (TChoice t1 t2, TElem EAlwaysFalse));
-    assert (t == TChoice t1 t2);
-    assert_norm (typ_bounded env.se_bound (TChoice t1 t2) == (typ_bounded env.se_bound t1 && typ_bounded env.se_bound t2));
-    assert (typ_bounded env.se_bound (TChoice t1 t2));
-    assert (typ_bounded env.se_bound t);
-    assert_norm (typ_sem env (TChoice t1 t2) == Spec.t_choice (typ_sem env t1) (typ_sem env t2));
-    assert (typ_sem env t == Spec.t_choice (typ_sem env t1) (typ_sem env t2));
-    assert (ex == TElem EAlwaysFalse);
-    assert_norm (typ_sem env (TElem EAlwaysFalse) == Spec.t_always_false);
-    assert_norm (elab_map_group_sem env (MGChoice g1 g2) == Spec.map_group_choice (elab_map_group_sem env g1) (elab_map_group_sem env g2));
-    Spec.map_group_footprint_implies (elab_map_group_sem env g) (typ_sem env t) (Util.andp (typ_sem env t) (Util.notp (typ_sem env ex)));
-    elab_map_group_footprint_postcond_intro env g t ex () () () () ()
-  | _ -> ()
-
-#pop-options
 
 #push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
 
@@ -1923,13 +2084,11 @@ and mk_wf_parse_map_group
     | res -> coerce_failure res
     end
   | MGConcat g1 g2 ->
-    begin match map_group_footprint g1 with
-    | RSuccess fp1 ->
-      begin match map_group_footprint g2 with
-      | RSuccess fp2 ->
-        map_group_footprint_correct env.e_sem_env g1;
-        map_group_footprint_correct env.e_sem_env g2;
-        begin match typ_disjoint env fuel fp1 fp2 with
+    begin match map_group_footprint fuel env g1 with
+    | RSuccess (t1, t_ex1) ->
+      begin match map_group_footprint fuel env g2 with
+      | RSuccess (t2, t_ex2) ->
+        begin match typ_diff_disjoint fuel env t1 t_ex1 t2 t_ex2 with
         | RSuccess _ ->
           begin match mk_wf_parse_map_group fuel' env g1 with
           | RSuccess s1 ->
