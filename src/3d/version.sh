@@ -2,6 +2,8 @@
 
 set -e
 
+FSTAR_EXE="${FSTAR_EXE:-fstar.exe}"
+
 everparse_last_version=$(sed 's!\r!!g' $EVERPARSE_HOME/version.txt)
 
 get_everparse_version() {
@@ -20,8 +22,7 @@ get_everparse_version() {
 
 get_fstar_commit() {
     (
-	cd $FSTAR_HOME
-        git show --no-patch --format=%h
+        $FSTAR_EXE --version | sed -n 's/commit=\(.\{10\}\).*/\1/p'
     )
 }
 

@@ -4,15 +4,7 @@ LOWPARSE_HOME ?= ../../src/lowparse
 
 FSTAR_OUT_DIR?=.fstar-out
 
-ifndef FSTAR_HOME
-  FSTAR_EXE:=$(shell which fstar.exe)
-  ifneq ($(.SHELLSTATUS),0)
-    FSTAR_HOME=../../../FStar
-  endif
-endif
-ifdef FSTAR_HOME
-  FSTAR_EXE:=$(FSTAR_HOME)/bin/fstar.exe
-endif
+FSTAR_EXE ?= fstar.exe
 
 ifndef KRML_HOME
   KRMLLIB:=$(shell ocamlfind query karamel)
@@ -86,7 +78,7 @@ $(FSTAR_OUT_DIR)/%.krml:
 $(EXAMPLES): %: %/a.out
 
 %/a.out:
-	$(MY_KRML) $(KRML_ARGS) -tmpdir $(EXAMPLE) -bundle LowParse$(EXAMPLE)'.Aux' -warn-error '@2' -no-prefix LowParse$(EXAMPLE) $(EXAMPLE_KRML_FILES) -o $@
+	$(MY_KRML) -fstar $(FSTAR_EXE) $(KRML_ARGS) -tmpdir $(EXAMPLE) -bundle LowParse$(EXAMPLE)'.Aux' -warn-error '@2' -no-prefix LowParse$(EXAMPLE) $(EXAMPLE_KRML_FILES) -o $@
 	$@
 
 extract-all: $(filter-out $(NOEXTRACT_EXAMPLES), $(EXAMPLES))

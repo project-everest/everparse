@@ -120,6 +120,9 @@ make_everparse() {
     else
         export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
     fi
+    export FSTAR_EXE=$FSTAR_HOME/bin/fstar.exe
+    # ^ This is the variable read by the Makefiles, FSTAR_HOME is ignored.
+
     if [[ -z "$KRML_HOME" ]] ; then
         { [[ -d karamel ]] || git clone https://github.com/FStarLang/karamel ; }
         export KRML_HOME=$(fixpath $PWD/karamel)

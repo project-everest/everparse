@@ -479,12 +479,18 @@ OCAML
 
   do_update_z3
 
+  check_no_slash () {
+    for v; do
+      if echo "${!v}" | grep -q '^/'; then
+        red "You are on windows but your $v is a Cygwin-style path."
+        red "Don't do that, follow the suggestion below."
+        unset $v
+      fi
+    done
+  }
+
   if is_windows; then
-    if [[ $(echo $FSTAR_HOME | cut -c 1 | tr -d '\r\n' ) == "/" ]]; then
-      magenta "You are on windows but your FSTAR_HOME is a Cygwin-style path."
-      magenta "Don't do that, follow the suggestion below, and check all your other *_HOME variables."
-      unset FSTAR_HOME
-    fi
+    check_no_slash FSTAR_EXE KRML_HOME EVERPARSE_HOME
   fi
 
   echo "Checking for gh (GitHub CLI)"
@@ -521,8 +527,8 @@ OCAML
   fi
 
   magenta "Note: you *may* want to add ${xpwd}/FStar/bin and ${xpwd}/karamel to your PATH"
-  [ -n "${FSTAR_HOME}" ] || \
-    magenta "Note: you *may* want to export FSTAR_HOME=${xpwd}/FStar"
+  [ -n "${FSTAR_EXE}" ] || \
+    magenta "Note: you *may* want to export FSTAR_EXE=${xpwd}/FStar/bin/fstar.exe"
   [ -n "${KRML_HOME}" ] || \
     magenta "Note: you *may* want to export KRML_HOME=${xpwd}/karamel"
 }

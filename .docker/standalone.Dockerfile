@@ -16,6 +16,7 @@ RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
 ENV FSTAR_HOME=$HOME/FStar
 ENV KRML_HOME=$HOME/karamel
 RUN eval $(opam env) && .docker/build/install-deps.sh
+ENV FSTAR_EXE=$FSTAR_HOME/bin/fstar.exe
 
 # CI dependencies: sphinx (for the docs)
 # sudo pip3 because of https://bugs.launchpad.net/ubuntu/+source/bash/+bug/1588562
