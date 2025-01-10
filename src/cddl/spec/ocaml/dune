@@ -3,17 +3,17 @@
 (executable
   (name Main)
   (libraries
-    batteries
-    menhirLib
+;    batteries
+;    menhirLib
     fstar.lib
-    process
-    sha
-    yojson
-    ppx_deriving_yojson.runtime
-    re
-    sexplib
+;    process
+;    sha
+;    yojson
+;   ppx_deriving_yojson.runtime
+;    re
+;    sexplib
   )
-  (preprocess (pps ppx_deriving_yojson))
+;  (preprocess (pps ppx_deriving_yojson))
   (flags (:standard -w -8-9-11-26-27-33-39))
 )
 
