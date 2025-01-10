@@ -9,18 +9,21 @@ open FStar.All
    --batch. *)
 
 val pretty_print_source_modules
+  (fstar_exe : string)
   (_: input_stream_binding_t)
   (out_dir: string)
   (files_and_modules: list (string & string))
 : ML unit
 
 val verify_fst_file
+  (fstar_exe : string)
   (_: input_stream_binding_t)
   (out_dir: string)
   (file: string)
 : ML unit
 
 val extract_fst_file
+  (fstar_exe : string)
   (_: input_stream_binding_t)
   (out_dir: string)
   (file: string)
@@ -62,6 +65,7 @@ val postprocess_wrappers
 : ML unit
 
 val postprocess_fst
+  (fstar_exe : string)
   (_: input_stream_binding_t)
   (emit_output_types_defs: bool)
   (add_include: list string)

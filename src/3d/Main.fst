@@ -615,7 +615,7 @@ let go () : ML unit =
     | HashingOptions.MicroStepExtract -> Batch.extract_fst_file
     | HashingOptions.MicroStepVerify -> Batch.verify_fst_file
     in
-    List.iter (f input_stream_binding out_dir) cmd_line_files
+    List.iter (f (Options.get_fstar_exe ()) input_stream_binding out_dir) cmd_line_files
   | None ->
   (* Special mode: --makefile" *)
   match Options.get_makefile () with
@@ -686,13 +686,14 @@ let go () : ML unit =
    (*
     * pretty print only the modules we emitted code for
     *)
-  Batch.pretty_print_source_modules input_stream_binding out_dir
+  Batch.pretty_print_source_modules (Options.get_fstar_exe ()) input_stream_binding out_dir
     (List.filter (fun (_, m) -> should_emit_fstar_code m) all_files_and_modules);
   (* Sub-mode of the default mode: --batch *)
   let _ =
   if batch
   then
   let _ = Batch.postprocess_fst
+        (Options.get_fstar_exe ())
         input_stream_binding
         (Options.get_emit_output_types_defs ())
         (Options.get_add_include ())
