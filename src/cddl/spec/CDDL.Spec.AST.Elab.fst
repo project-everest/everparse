@@ -20,7 +20,7 @@ let rec map_group_is_productive
 = match g with
   | GOneOrMore g' -> map_group_is_productive g'
   | GAlwaysFalse
-  | GMapElem _ _ _ _ -> RSuccess ()
+  | GMapElem _ _ _ -> RSuccess ()
   | GNop -> RFailure "map_group_is_productive: GNop"
   | GZeroOrOne _ -> RFailure "map_group_is_productive: GZeroOrOne"
   | GZeroOrMore _ -> RFailure "map_group_is_productive: GZeroOrMore"
@@ -34,6 +34,8 @@ let rec map_group_is_productive
     | RFailure _ -> map_group_is_productive g2
     | res -> res
     end
+  | GArrayElem _ -> RFailure "map_group_is_productive: GArrayElem"
+  | GDef _ -> RFailure "map_group_is_productive: GDef"
 
 let rec map_group_is_productive_correct
   (env: sem_env)
@@ -162,11 +164,11 @@ and rewrite_group
     if g' = g
     then g'
     else rewrite_group fuel' kind g'
-  | GZeroOrMore (GMapElem sq cut (TElem (ELiteral key)) value) ->
-    rewrite_group fuel' kind (GZeroOrOne (GMapElem sq cut (TElem (ELiteral key)) value))
-  | GZeroOrMore (GChoice (GMapElem sq cut key value) g') ->
-    if RSuccess? (map_group_is_productive g')
-    then rewrite_group fuel' kind (GConcat (GZeroOrMore (GMapElem sq cut key value)) (GZeroOrMore g'))
+  | GZeroOrMore (GMapElem cut (TElem (ELiteral key)) value) ->
+    rewrite_group fuel' kind (GZeroOrOne (GMapElem cut (TElem (ELiteral key)) value))
+  | GZeroOrMore (GChoice (GMapElem cut key value) g') ->
+    if kind = NMapGroup && RSuccess? (map_group_is_productive g')
+    then rewrite_group fuel' kind (GConcat (GZeroOrMore (GMapElem cut key value)) (GZeroOrMore g'))
     else g
   | GZeroOrMore g1 -> 
     let g' = GZeroOrMore (rewrite_group fuel' kind g1) in
@@ -175,9 +177,9 @@ and rewrite_group
     else rewrite_group fuel' kind g'
   | GZeroOrOne g -> GZeroOrOne (rewrite_group fuel' kind g)
   | GOneOrMore g -> GOneOrMore (rewrite_group fuel' kind g)
-  | GArrayElem sq ty -> GArrayElem sq (rewrite_typ fuel' ty)
-  | GMapElem sq cut key value -> GMapElem sq cut (rewrite_typ fuel' key) (rewrite_typ fuel' value)
-  | GDef sq n -> GDef sq n
+  | GArrayElem ty -> GArrayElem (rewrite_typ fuel' ty)
+  | GMapElem cut key value -> GMapElem cut (rewrite_typ fuel' key) (rewrite_typ fuel' value)
+  | GDef n -> GDef n
   | GAlwaysFalse -> GAlwaysFalse
   | GNop -> GNop
 
@@ -270,15 +272,18 @@ and rewrite_group_correct
     rewrite_group_correct env fuel' t1;
     rewrite_group_correct env fuel' t2;
     rewrite_group_correct env fuel' (GChoice t1' t2')
-  | GZeroOrMore (GMapElem sq cut (TElem (ELiteral key)) value) ->
-    Spec.map_group_zero_or_more_map_group_match_item_for cut (eval_literal key) (typ_sem env value);
-    rewrite_group_correct env fuel' (GZeroOrOne (GMapElem sq cut (TElem (ELiteral key)) value))
-  | GZeroOrMore (GChoice (GMapElem sq cut key value) g') ->
+  | GZeroOrMore (GMapElem cut (TElem (ELiteral key)) value) ->
+    if kind = NMapGroup
+    then begin
+      Spec.map_group_zero_or_more_map_group_match_item_for cut (eval_literal key) (typ_sem env value);
+      rewrite_group_correct env fuel' (GZeroOrOne (GMapElem cut (TElem (ELiteral key)) value) <: group kind)
+    end else ()
+  | GZeroOrMore (GChoice (GMapElem cut key value) g') ->
     if RSuccess? (map_group_is_productive g')
     then begin
       map_group_is_productive_correct env g';
       Spec.map_group_zero_or_more_choice (Spec.map_group_match_item cut (typ_sem env key) (typ_sem env value)) (map_group_sem env g');
-      rewrite_group_correct env fuel' (GConcat (GZeroOrMore (GMapElem sq cut key value)) (GZeroOrMore g'))
+      rewrite_group_correct env fuel' (GConcat (GZeroOrMore (GMapElem cut key value)) (GZeroOrMore g'))
     end
   | GZeroOrOne g1 ->
     rewrite_group_correct env fuel' g1
@@ -298,16 +303,16 @@ and rewrite_group_correct
     | NArrayGroup -> Spec.array_group_zero_or_more_equiv (array_group_sem env g1) (array_group_sem env g2)
     | _ -> ()
     end
-  | GArrayElem sq ty ->
+  | GArrayElem ty ->
     rewrite_typ_correct env fuel' ty;
     Spec.array_group_item_equiv (typ_sem env ty) (typ_sem env (rewrite_typ fuel' ty))
-  | GMapElem sq cut key value ->
+  | GMapElem cut key value ->
     rewrite_typ_correct env fuel' key;
     rewrite_typ_correct env fuel' value;
     Spec.map_group_match_item_ext cut (typ_sem env key) (typ_sem env value) (typ_sem env (rewrite_typ fuel' key)) (typ_sem env (rewrite_typ fuel' value))
   | GAlwaysFalse
   | GNop
-  | GDef _ _ -> ()
+  | GDef _ -> ()
 
 #pop-options
 
@@ -429,22 +434,22 @@ let rec typ_disjoint
     else RSuccess ()
   | TElem (ELiteral (LInt ty _)), TElem EUInt
   | TElem EUInt, TElem (ELiteral (LInt ty _)) ->
-    if ty = Cbor.cbor_major_type_uint64
+    if ty = KUInt
     then RFailure "typ_disjoint: uint64"
     else RSuccess ()
   | TElem (ELiteral (LInt ty _)), TElem ENInt
   | TElem ENInt, TElem (ELiteral (LInt ty _)) ->
-    if ty = Cbor.cbor_major_type_neg_int64
+    if ty = KNegInt
     then RFailure "typ_disjoint: neg_int64"
     else RSuccess ()
   | TElem (ELiteral (LString ty _)), TElem EByteString
   | TElem EByteString, TElem (ELiteral (LString ty _)) ->
-    if ty = Cbor.cbor_major_type_byte_string
+    if ty = KByteString
     then RFailure "typ_disjoint: byte string"
     else RSuccess ()
   | TElem (ELiteral (LString ty _)), TElem ETextString
   | TElem ETextString, TElem (ELiteral (LString ty _)) ->
-    if ty = Cbor.cbor_major_type_text_string
+    if ty = KTextString
     then RFailure "typ_disjoint: text string"
     else RSuccess ()
   | TElem (ELiteral (LString ty1 s1)), TElem (ELiteral (LString ty2 s2)) ->
@@ -494,8 +499,8 @@ and array_group_disjoint
     if not (RSuccess? res1)
     then res1
     else array_group_disjoint e fuel' close a1r a2
-  | (_, (GDef _ n, a1r)), (a2, _)
-  | (a2, _), (_, (GDef _ n, a1r)) ->
+  | (_, (GDef n, a1r)), (a2, _)
+  | (a2, _), (_, (GDef n, a1r)) ->
     let a1' = GConcat (e.e_env n) a1r in
     rewrite_group_correct e.e_sem_env fuel' a1';
     array_group_disjoint e fuel' close (rewrite_group fuel' _ a1') a2
@@ -539,10 +544,10 @@ and array_group_disjoint
        rewrite_group_correct e.e_sem_env fuel' a1';
        array_group_disjoint e fuel' close (rewrite_group fuel' _ a1') a2
      end
-   | (GNop, _), (_, (GArrayElem _ _, _))
-   | (_, (GArrayElem _ _, _)), (GNop, _) ->
+   | (GNop, _), (_, (GArrayElem _, _))
+   | (_, (GArrayElem _, _)), (GNop, _) ->
      if close then RSuccess () else RFailure "array_group_disjoint: empty but not close"
-   | (_, (GArrayElem _ a1l, a1r)), (_, (GArrayElem _ a2l, a2r)) ->
+   | (_, (GArrayElem a1l, a1r)), (_, (GArrayElem a2l, a2r)) ->
      let res1 = typ_disjoint e fuel' a1l a2l in
      if RSuccess? res1
      then res1
@@ -614,19 +619,19 @@ let rec typ_included
     then RSuccess ()
     else RFailure "typ_included: TElem EBool"
   | TElem (ELiteral (LInt ty _)), TElem EUInt ->
-    if ty = Cbor.cbor_major_type_uint64
+    if ty = KUInt
     then RSuccess ()
     else RFailure "typ_included: uint64"
   | TElem (ELiteral (LInt ty _)), TElem ENInt ->
-    if ty = Cbor.cbor_major_type_neg_int64
+    if ty = KNegInt
     then RSuccess ()
     else RFailure "typ_included: neg_int64"
   | TElem (ELiteral (LString ty _)), TElem EByteString ->
-    if ty = Cbor.cbor_major_type_byte_string
+    if ty = KByteString
     then RSuccess ()
     else RFailure "typ_included: byte string"
   | TElem (ELiteral (LString ty _)), TElem ETextString ->
-    if ty = Cbor.cbor_major_type_text_string
+    if ty = KTextString
     then RSuccess ()
     else RFailure "typ_included: text string"
   | TArray a1, TArray a2 ->
@@ -705,11 +710,11 @@ and array_group_included
       | res -> res
     end
     else resl
-  | (_, (GDef _ n, a1r)), (a2, _) ->
+  | (_, (GDef n, a1r)), (a2, _) ->
     let a1' = GConcat (e.e_env n) a1r in
     rewrite_group_correct e.e_sem_env fuel a1';
     array_group_included e fuel' close (rewrite_group fuel _ a1') a2
-  | (a2, _), (_, (GDef _ n, a1r)) ->
+  | (a2, _), (_, (GDef n, a1r)) ->
     let a1' = GConcat (e.e_env n) a1r in
     rewrite_group_correct e.e_sem_env fuel a1';
     array_group_included e fuel' close a2 (rewrite_group fuel _ a1')
@@ -764,7 +769,7 @@ and array_group_included
     else res1
   | (_, (GZeroOrMore _, _)), _ ->
     RFailure "array_group_included: GZeroOrMore"
-  | (_, (GArrayElem _ t1, a1r)), (_, (GArrayElem _ t2, a2r)) ->
+  | (_, (GArrayElem t1, a1r)), (_, (GArrayElem t2, a2r)) ->
     let res1 = typ_included e fuel' t1 t2 in
     if RSuccess? res1
     then array_group_included e fuel' close a1r a2r
@@ -794,7 +799,7 @@ and array_group_included
         (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2r) close);
       res
     end
-  | (_, (GArrayElem _ _, _)), _ ->
+  | (_, (GArrayElem _, _)), _ ->
     RFailure "array_group_included: GArrayElem"
   end
 
@@ -1278,7 +1283,7 @@ let rec array_group_is_nonempty
   then ROutOfFuel
   else let fuel' : nat = fuel - 1 in
   match g with
-  | GDef _ n -> array_group_is_nonempty fuel' env (env.e_env n)
+  | GDef n -> array_group_is_nonempty fuel' env (env.e_env n)
   | GOneOrMore g' -> array_group_is_nonempty fuel' env g'
   | GZeroOrOne _ -> RFailure "array_group_is_nonempty: GZeroOrOne"
   | GZeroOrMore _ -> RFailure "array_group_is_nonempty: GZeroOrMore"
@@ -1293,7 +1298,7 @@ let rec array_group_is_nonempty
     | RSuccess _ -> array_group_is_nonempty fuel' env g2
     | res -> res
     end
-  | GArrayElem _ _
+  | GArrayElem _
   | GAlwaysFalse -> RSuccess ()
 
 #push-options "--z3rlimit 64 --split_queries always --query_stats --fuel 4 --ifuel 8"
@@ -1352,7 +1357,7 @@ let rec array_group_concat_unique_strong
     end
   | _ ->
     begin match destruct_group g2 with
-    | (GDef _ i, g2r) ->
+    | (GDef i, g2r) ->
       let g2' = GConcat (env.e_env i) g2r in
       Spec.array_group_concat_equiv
         (env.e_sem_env.se_env i)
@@ -1889,9 +1894,9 @@ let rec mk_elab_map_group
 : Tot (result elab_map_group)
   (decreases g)
 = match g with
-  | GMapElem _ cut (TElem (ELiteral key)) value ->
+  | GMapElem cut (TElem (ELiteral key)) value ->
     RSuccess (MGMatch cut key value)
-  | GMapElem _ true key value ->
+  | GMapElem true key value ->
     RSuccess (MGMatchWithCut key value)
   | GAlwaysFalse -> RSuccess MGAlwaysFalse
   | GNop -> RFailure "mk_elab_map_group: GNop"
@@ -1900,7 +1905,7 @@ let rec mk_elab_map_group
     | RSuccess g' -> RSuccess (MGChoice g' MGNop)
     | err -> err
     end
-  | GZeroOrMore (GMapElem _ false key value) ->
+  | GZeroOrMore (GMapElem false key value) ->
     RSuccess (MGTable key (TElem EAlwaysFalse) value)
   | GConcat g1 g2 ->
     begin match mk_elab_map_group g1 with
@@ -1961,7 +1966,7 @@ let rec mk_elab_map_group_correct
     mk_elab_map_group_correct env g2
   | GZeroOrOne g_ ->
     mk_elab_map_group_correct env g_
-  | GZeroOrMore (GMapElem _ false key value) ->
+  | GZeroOrMore (GMapElem false key value) ->
     Spec.map_group_filter_ext
       (Util.notp (Spec.matches_map_group_entry (Util.andp (typ_sem env key) (Util.notp Spec.t_always_false)) (typ_sem env value)))
       (Util.notp (Spec.matches_map_group_entry (typ_sem env key) (typ_sem env value)))
@@ -2048,6 +2053,9 @@ let cbor_map_disjoint_from_footprint_always_false
   (Spec.cbor_map_disjoint_from_footprint m Spec.t_always_false)
 = ()
 
+#push-options "--z3rlimit 32"
+
+#restart-solver
 let rec extract_cut_correct
   (env: sem_env)
   (g: elab_map_group)
@@ -2067,12 +2075,15 @@ let rec extract_cut_correct
   ))
   (decreases g)
 = let (key) = extract_cut g in
+  assert (typ_bounded env.se_bound key);
   match g with
   | MGChoice g1 _ ->
     extract_cut_correct env g1 m
   | MGMatch true key _ -> ()
   | MGMatchWithCut key _ -> ()
   | _ -> cbor_map_disjoint_from_footprint_always_false m
+
+#pop-options
 
 let rec annot_tables
   (fuel: nat)
@@ -2381,7 +2392,7 @@ and mk_wf_array_group
   then ROutOfFuel
   else let fuel' : nat = fuel - 1 in
   match g with
-  | GArrayElem _ ty ->
+  | GArrayElem ty ->
     begin match mk_wf_typ fuel' env ty with
     | RSuccess s -> RSuccess (WfAElem ty s)
     | res -> coerce_failure res
@@ -2421,7 +2432,7 @@ and mk_wf_array_group
       end
     | res -> coerce_failure res
     end
-  | GDef _ n -> RSuccess (WfADef n)
+  | GDef n -> RSuccess (WfADef n)
   | GNop -> RFailure "mk_wf_array_group: unsupported: GNop"
   | GAlwaysFalse -> RFailure "mk_wf_array_group: unsupported: GAlwaysFalse"
   | g ->

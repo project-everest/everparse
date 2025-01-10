@@ -19,11 +19,14 @@ let mk_ascii_string (s: string) (prf: squash (string_is_ascii s)) : Tot ascii_st
 
 let test_ascii_string: ascii_string = mk_ascii_string "hello" (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.trefl ()))
 
+type int_kind = | KUInt | KNegInt
+type string_kind = | KByteString | KTextString
+
 [@@sem_attr]
 type literal =
-| LSimple of Cbor.simple_value
-| LInt: (ty: Cbor.major_type_uint64_or_neg_int64) -> (v: U64.t) -> literal
-| LString: (ty: Cbor.major_type_byte_string_or_text_string) -> (s: ascii_string { FStar.String.length s < pow2 64 }) -> literal // FIXME: support utf8
+| LSimple of FStar.UInt8.t
+| LInt: (ty: int_kind) -> (v: U64.t) -> literal
+| LString: (ty: string_kind) -> string -> literal
 
 [@@sem_attr]
 let cddl_major_type_uint64 : Cbor.major_type_uint64_or_neg_int64 =
@@ -57,9 +60,9 @@ type name_env_elem =
 | NMapGroup
 
 type group (kind: name_env_elem) =
-| GDef: squash (kind == NArrayGroup) -> string -> group kind // TODO: add back names for map groups that can be kept as is
-| GArrayElem: squash (kind == NArrayGroup) -> typ -> group kind
-| GMapElem: squash (kind == NMapGroup) -> (cut: bool) -> (key: typ) -> (value: typ) -> group kind
+| GDef: string -> group kind
+| GArrayElem: typ -> group kind
+| GMapElem: (cut: bool) -> (key: typ) -> (value: typ) -> group kind
 | GAlwaysFalse
 | GNop
 | GZeroOrOne of group kind
@@ -107,6 +110,22 @@ let extend_name_env (e: name_env) (new_name: string) (elem: name_env_elem) (s: s
 let name_env_included (s1 s2: name_env) : GTot prop =
   (forall (i: name s1) . s2 i == s1 i)
 
+[@@ sem_attr ]
+let wf_literal
+  (l: literal)
+: Tot bool
+= match l with
+| LSimple x -> Cbor.simple_value_wf x
+| LInt _ _ -> true
+| LString _ s -> String.length s < pow2 64 && string_is_ascii s // FIXME: support utf8
+
+let wf_elem_typ
+  (t: elem_typ)
+: Tot bool
+= match t with
+  | ELiteral l -> wf_literal l
+  | _ -> true
+
 [@@ sem_attr]
 let rec group_bounded
   (kind: name_env_elem)
@@ -115,9 +134,9 @@ let rec group_bounded
 : Tot bool
   (decreases g)
 = match g with
-  | GDef _ d -> env d = Some kind
-  | GMapElem _ _ key value -> typ_bounded env key && typ_bounded env value
-  | GArrayElem _ t -> typ_bounded env t
+  | GDef d -> env d = Some kind && kind = NArrayGroup // TODO: add back names for map groups that can be kept as is
+  | GMapElem _ key value -> typ_bounded env key && typ_bounded env value && kind = NMapGroup
+  | GArrayElem t -> typ_bounded env t && kind = NArrayGroup
   | GZeroOrMore g'
   | GZeroOrOne g'
   | GOneOrMore g'
@@ -135,7 +154,7 @@ and typ_bounded
 : Tot bool
   (decreases t)
 = match t with
-  | TElem _ -> true
+  | TElem t -> wf_elem_typ t
   | TDef s -> env s = Some NType
   | TArray g -> group_bounded NArrayGroup env g
   | TMap g -> group_bounded NMapGroup env g
@@ -162,9 +181,9 @@ let rec group_bounded_incr
     [SMTPat (name_env_included env env'); SMTPat (group_bounded kind env' g)];
   ]]
 = match g with
-  | GDef _ _ -> ()
-  | GArrayElem _ t -> typ_bounded_incr env env' t
-  | GMapElem _ _ key value -> typ_bounded_incr env env' key; typ_bounded_incr env env' value
+  | GDef _ -> ()
+  | GArrayElem t -> typ_bounded_incr env env' t
+  | GMapElem _ key value -> typ_bounded_incr env env' key; typ_bounded_incr env env' value
   | GZeroOrMore g'
   | GZeroOrOne g'
   | GOneOrMore g'
@@ -332,21 +351,27 @@ let byte_seq_of_ascii_string_is_utf8
 [@@ sem_attr ]
 let eval_literal
   (l: literal)
-: GTot Cbor.cbor
+: Ghost Cbor.cbor
+  (requires wf_literal l)
+  (ensures (fun _ -> True))
 = match l with
   | LSimple v -> Cbor.pack (Cbor.CSimple v)
-  | LInt ty v -> Cbor.pack (Cbor.CInt64 ty v)
-  | LString ty s -> Cbor.pack (Cbor.CString ty (byte_seq_of_ascii_string s))
+  | LInt ty v -> Cbor.pack (Cbor.CInt64 (if ty = KUInt then cddl_major_type_uint64 else cddl_major_type_neg_int64) v)
+  | LString ty s -> Cbor.pack (Cbor.CString (if ty = KByteString then cddl_major_type_byte_string else cddl_major_type_text_string) (byte_seq_of_ascii_string s))
 
 let spec_type_of_literal
   (l: literal)
-: GTot Spec.typ
+: Ghost Spec.typ
+    (requires wf_literal l)
+    (ensures fun _ -> True)
 = Spec.t_literal (eval_literal l)
 
 [@@ sem_attr ]
 let elem_typ_sem
   (t: elem_typ)
-: GTot Spec.typ
+: Ghost Spec.typ
+    (requires wf_elem_typ t)
+    (ensures fun _ -> True)
 = match t with
   | ELiteral l -> spec_type_of_literal l
   | EBool -> Spec.t_bool
@@ -365,8 +390,8 @@ let rec array_group_sem
     (requires group_bounded NArrayGroup env.se_bound g)
     (ensures fun _ -> True)
 = match g with
-  | GDef _ d -> env.se_env d
-  | GArrayElem _ t -> Spec.array_group_item (typ_sem env t)
+  | GDef d -> env.se_env d
+  | GArrayElem t -> Spec.array_group_item (typ_sem env t)
   | GAlwaysFalse -> Spec.array_group_always_false
   | GNop -> Spec.array_group_empty
   | GZeroOrOne g -> Spec.array_group_zero_or_one (array_group_sem env g)
@@ -382,7 +407,7 @@ and map_group_sem
     (requires group_bounded NMapGroup env.se_bound g)
     (ensures fun _ -> True)
 = match g with
-  | GMapElem _ cut key value -> Spec.map_group_match_item cut (typ_sem env key) (typ_sem env value)
+  | GMapElem cut key value -> Spec.map_group_match_item cut (typ_sem env key) (typ_sem env value)
   | GAlwaysFalse -> Spec.map_group_always_false
   | GNop -> Spec.map_group_nop
   | GZeroOrOne g -> Spec.map_group_zero_or_one (map_group_sem env g)
@@ -430,8 +455,8 @@ let rec array_group_sem_incr
 = match g with
   | GAlwaysFalse
   | GNop
-  | GDef _ _ -> ()
-  | GArrayElem _ t -> typ_sem_incr env env' t
+  | GDef _ -> ()
+  | GArrayElem t -> typ_sem_incr env env' t
   | GZeroOrOne g
   | GZeroOrMore g
   | GOneOrMore g
@@ -461,7 +486,7 @@ and map_group_sem_incr
 = match g with
   | GAlwaysFalse
   | GNop -> ()
-  | GMapElem _ _ key value ->
+  | GMapElem _ key value ->
     typ_sem_incr env env' key;
     typ_sem_incr env env' value
   | GZeroOrOne g
@@ -539,7 +564,8 @@ let rec bounded_elab_map_group
 = match g with
   | MGNop
   | MGAlwaysFalse -> true
-  | MGMatch _ _ value ->
+  | MGMatch _ key value ->
+    wf_literal key &&
     typ_bounded env value
   | MGMatchWithCut key value ->
     typ_bounded env key &&
@@ -731,7 +757,7 @@ and ast0_wf_array_group
 | WfAElem:
   ty: typ ->
   prf: ast0_wf_typ ty ->
-  ast0_wf_array_group (GArrayElem () ty)
+  ast0_wf_array_group (GArrayElem ty)
 | WfAZeroOrOne:
   g: group NArrayGroup ->
   s: ast0_wf_array_group g ->
@@ -755,7 +781,7 @@ and ast0_wf_array_group
   ast0_wf_array_group (GChoice g1 g2)
 | WfADef:
   n: string ->
-  ast0_wf_array_group (GDef () n) // will be taken into account by the syntax environment
+  ast0_wf_array_group (GDef n) // will be taken into account by the syntax environment
 
 and ast0_wf_parse_map_group
 : elab_map_group -> Type
@@ -870,7 +896,7 @@ let rec bounded_wf_typ
   typ_bounded env t2 /\
   bounded_wf_typ env t1 s1 /\
   bounded_wf_typ env t2 s2
-| WfTElem e -> True
+| WfTElem e -> wf_elem_typ e
 | WfTDef n ->
   env n == Some NType
 
@@ -923,6 +949,7 @@ and bounded_wf_parse_map_group
     bounded_elab_map_group env g /\
     bounded_wf_parse_map_group env g s
 | WfMLiteral cut key value s ->
+    wf_literal key /\
     bounded_wf_typ env value s
 | WfMZeroOrMore key key_except value s_key s_value ->
     bounded_wf_typ env key s_key /\
@@ -2325,6 +2352,7 @@ let empty_spec_env (e: target_spec_env empty_name_env) : spec_env empty_sem_env 
 
 let spec_of_elem_typ
   (e: elem_typ)
+  (sq: squash (wf_elem_typ e))
 : GTot (Spec.spec (elem_typ_sem e) (target_elem_type_sem (target_type_of_elem_typ e)) true)
 = match e with
   | ELiteral l -> Spec.spec_literal (eval_literal l)
@@ -2369,7 +2397,7 @@ let rec spec_of_wf_typ
       (spec_of_wf_typ env s1)
       (spec_of_wf_typ env s2)
   | WfTDef n -> env.tp_spec_typ n
-  | WfTElem s -> spec_of_elem_typ s
+  | WfTElem s -> spec_of_elem_typ s ()
 
 and spec_of_wf_array_group
   (#tp_sem: sem_env)
