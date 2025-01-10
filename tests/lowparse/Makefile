@@ -50,13 +50,13 @@ EXCLUDE_KRML_FILES=$(FSTAR_OUT_DIR)/prims.krml
 EXAMPLE_DEPEND_FILES=$(addsuffix .depend,$(EXAMPLES))
 
 $(EXAMPLE_DEPEND_FILES): %.depend: *.fst *.fsti
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full LowParse$(basename $@).fst > $@
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full LowParse$(basename $@).fst --output_deps_to $@
 
 clean:
 	rm -rf $(FSTAR_OUT_DIR) $(EXAMPLES) $(addsuffix .depend, $(EXAMPLES)) .depend
 
 .depend: $(EXAMPLE_DEPEND_FILES)
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(ROOT_FILES) > $@
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(ROOT_FILES) --output_deps_to $@
 	for f in $(EXAMPLES) ; do \
 	 $(MAKE) EXCLUDE_KRML_FILES='$(EXCLUDE_KRML_FILES)' EXAMPLE=$$f -f Makefile.example ; \
 	done

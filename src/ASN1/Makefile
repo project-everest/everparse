@@ -27,8 +27,7 @@ NOT_INCLUDED=ASN1.Tmp.fst ASN1.Test.Interpreter.fst $(wildcard ASN1.Low.*) ASN1T
 ALL_SOURCE_FILES = $(filter-out $(NOT_INCLUDED), $(wildcard *.fst *.fsti))
 
 .depend: $(ALL_SOURCE_FILES) Makefile
-	$(FSTAR) --dep full --extract '* -Prims -FStar -LowParse.Low -ASN1Test -ASN1.Low' $(ALL_SOURCE_FILES) > $@.tmp
-	mv $@.tmp $@
+	$(FSTAR) --dep full --extract '* -Prims -FStar -LowParse.Low -ASN1Test -ASN1.Low' $(ALL_SOURCE_FILES) --output_deps_to $@
 
 depend: .depend
 

@@ -23,7 +23,7 @@ FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(INCLUDES_OPTS) $(OTHERFLAGS)
 all: verify
 
 .depend: $(PREFIX)color.fst Sample.Client.fst
-	$(FSTAR) --dep full $^ > $@
+	$(FSTAR) --dep full $^ --output_deps_to $@
 
 include .depend
 

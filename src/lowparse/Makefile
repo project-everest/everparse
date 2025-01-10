@@ -36,7 +36,7 @@ clean:
 	rm -rf *.checked *.source .depend
 
 .depend: $(LOWPARSE_FILES)
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) > $@
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) --output_deps_to $@
 
 include .depend
 
