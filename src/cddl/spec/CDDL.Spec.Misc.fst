@@ -63,22 +63,38 @@ let rec t_tag_rec
   Cbor.Tagged?.tag x = tag &&
   phi x (t_tag_rec tag phi) (Cbor.Tagged?.v x)
 *)
-let t_tag (tag: U64.t) (t: typ) : typ = fun w -> let x = Cbor.unpack w in
+let t_tag (tag: option U64.t) (t: typ) : typ = fun w -> let x = Cbor.unpack w in
   Cbor.CTagged? x &&
-  Cbor.CTagged?.tag x = tag &&
+  begin match tag with
+  | None -> true
+  | Some tag -> Cbor.CTagged?.tag x = tag
+  end &&
   t (Cbor.CTagged?.v x)
 
-let spec_tag
+let spec_tag_some
   (tag: U64.t)
   (#t: typ)
   (#target: Type)
   (#inj: bool)
   (p: spec t target inj)
-: Tot (spec (t_tag tag t) target inj)
+: Tot (spec (t_tag (Some tag) t) target inj)
 = {
   serializable = p.serializable;
   parser = (function w -> let Cbor.CTagged _ v = Cbor.unpack w in p.parser v);
   serializer = (fun x -> Cbor.pack (Cbor.CTagged tag (p.serializer x)));
+  parser_inj = ();
+}
+
+let spec_tag_none
+  (#t: typ)
+  (#target: Type)
+  (#inj: bool)
+  (p: spec t target inj)
+: Tot (spec (t_tag None t) (U64.t & target) inj)
+= {
+  serializable = (fun x -> p.serializable (snd x));
+  parser = (function w -> let Cbor.CTagged tag v = Cbor.unpack w in (tag, p.parser v));
+  serializer = (fun (tag, x) -> Cbor.pack (Cbor.CTagged tag (p.serializer x)));
   parser_inj = ();
 }
 

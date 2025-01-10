@@ -89,7 +89,7 @@ and typ =
 | TDef of string
 | TArray of group NArrayGroup
 | TMap of group NMapGroup
-| TTagged: (tag: int) -> (body: typ) -> typ
+| TTagged: (tag: option int) -> (body: typ) -> typ
 | TChoice: typ -> typ -> typ
 
 (* Environments and well-formedness constraints *)
@@ -173,7 +173,11 @@ and typ_bounded
   | TDef s -> env s = Some NType
   | TArray g -> group_bounded NArrayGroup env g
   | TMap g -> group_bounded NMapGroup env g
-  | TTagged v t' -> 0 <= v && v < pow2 64 && typ_bounded env t'
+  | TTagged v t' ->
+    begin match v with
+    | None -> true
+    | Some v -> 0 <= v && v < pow2 64
+    end && typ_bounded env t'
   | TChoice t1 t2 ->
     typ_bounded env t1 &&
     typ_bounded env t2
@@ -442,7 +446,13 @@ and typ_sem
 = match x with
   | TElem t -> elem_typ_sem t
   | TDef s -> env.se_env s
-  | TTagged tg t' -> Spec.t_tag (U64.uint_to_t tg) (typ_sem env t')
+  | TTagged tg t' ->
+    Spec.t_tag
+      begin match tg with
+      | None -> None
+      | Some tg -> Some (U64.uint_to_t tg)
+      end
+      (typ_sem env t')
   | TArray g ->
     Spec.t_array (array_group_sem env g)
   | TMap g ->
@@ -754,7 +764,7 @@ type ast0_wf_typ
   (s2: ast0_wf_parse_map_group g2) ->
   ast0_wf_typ (TMap g)
 | WfTTagged:
-  (tag: int) ->
+  (tag: option int) ->
   (t': typ) ->
   (s': ast0_wf_typ t') ->
   ast0_wf_typ (TTagged tag t')
@@ -905,7 +915,11 @@ let rec bounded_wf_typ
 | WfTArray g s ->
   bounded_wf_array_group env g s
 | WfTTagged tag t' s' ->
-  0 <= tag /\ tag < pow2 64 /\
+  begin match tag with
+  | None -> True
+  | Some tag ->
+    0 <= tag /\ tag < pow2 64
+  end /\
   bounded_wf_typ env t' s'
 | WfTMap g1 (* ty1 ty2 s1 *) g2 s2 ->
     group_bounded NMapGroup env g1 /\
@@ -2196,6 +2210,7 @@ let rec target_type_of_wf_typ
 = match wf with
   | WfTRewrite _ _ s -> target_type_of_wf_typ s
   | WfTArray _ s -> target_type_of_wf_array_group s
+  | WfTTagged None _ s -> TTPair (TTElem TTUInt64) (target_type_of_wf_typ s)
   | WfTTagged _ _ s -> target_type_of_wf_typ s
   | WfTMap _ (* _ _ _ *) _ s -> target_type_of_wf_map_group s
   | WfTChoice _ _ s1 s2 -> TTUnion (target_type_of_wf_typ s1) (target_type_of_wf_typ s2)
@@ -2409,8 +2424,10 @@ let rec spec_of_wf_typ
     Spec.spec_ext (spec_of_wf_typ env s) _
   | WfTArray g s ->
     Spec.spec_array_group (spec_of_wf_array_group env s)
-  | WfTTagged tag t' s ->
-    Spec.spec_tag (U64.uint_to_t tag) (spec_of_wf_typ env s)
+  | WfTTagged None t' s ->
+    Spec.spec_tag_none (spec_of_wf_typ env s)
+  | WfTTagged (Some tag) t' s ->
+    Spec.spec_tag_some (U64.uint_to_t tag) (spec_of_wf_typ env s)
   | WfTMap g1 (* _ _ _ *) _ s2 ->
     Spec.spec_map_group (spec_of_wf_map_group env s2)
   | WfTChoice _ _ s1 s2 ->

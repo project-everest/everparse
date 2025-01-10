@@ -422,7 +422,7 @@ let rec typ_disjoint
     then rl
     else typ_disjoint e fuel' t1r t2
   | TTagged tag1 t1', TTagged tag2 t2' ->
-    if tag1 = tag2
+    if tag1 = tag2 || None? tag1 || None? tag2
     then typ_disjoint e fuel' t1' t2'
     else RSuccess ()
   | TTagged _ _, _
@@ -611,7 +611,7 @@ let rec typ_included
     then typ_included e fuel' t2 t1r
     else rl
   | TTagged tag1 t1', TTagged tag2 t2' ->
-    if tag1 = tag2
+    if tag1 = tag2 || None? tag2
     then typ_included e fuel' t1' t2'
     else RFailure "typ_included: TTagged with different tags"
   | TTagged _ _, _
