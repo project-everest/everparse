@@ -1820,13 +1820,12 @@ let target_spec_env_extend
     (ensures fun env' -> target_spec_env_included env env')
 = fun n' -> if n' = n then t else env n'
 
-let cbor_with (t: Spec.typ) : GTot Type0 = (c: Cbor.cbor { t c })
-
 module U8 = FStar.UInt8
 noextract
 let string64 = Spec.string64
 module U64 = FStar.UInt64
 
+noextract
 let table
   (key: Type0)
   ([@@@strictly_positive] value: Type0)
