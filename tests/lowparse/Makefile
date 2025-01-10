@@ -57,6 +57,10 @@ clean:
 
 .depend: $(EXAMPLE_DEPEND_FILES)
 	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(ROOT_FILES) --output_deps_to $@
+	# GM: This chunk below seems ill-placed. And if anything below fails
+	# the target .depend is still created. At least slap a:
+	#   ... || (rm -f $@; exit 1)
+	# at the end?
 	for f in $(EXAMPLES) ; do \
 	 $(MAKE) EXCLUDE_KRML_FILES='$(EXCLUDE_KRML_FILES)' EXAMPLE=$$f -f Makefile.example ; \
 	done
