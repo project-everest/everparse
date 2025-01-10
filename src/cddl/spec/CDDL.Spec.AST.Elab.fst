@@ -373,6 +373,11 @@ let array_group_concat_elem_same_disjoint
 = maybe_close_array_group_concat close (Spec.array_group_item t1) a1;
   maybe_close_array_group_concat close (Spec.array_group_item t1) a2
 
+[@@CMacro]
+let simple_value_false : Cbor.simple_value = 20uy
+[@@CMacro]
+let simple_value_true : Cbor.simple_value = 21uy
+
 #push-options "--z3rlimit 128 --query_stats --split_queries always --fuel 4 --ifuel 8"
 
 #restart-solver
@@ -417,9 +422,9 @@ let rec typ_disjoint
   | _, TTagged _ _ -> RSuccess ()
   | TElem EBool, TElem (ELiteral (LSimple v))
   | TElem (ELiteral (LSimple v)), TElem EBool ->
-    if v = Spec.simple_value_true
+    if v = simple_value_true
     then RFailure "typ_disjoint: Bool vs. simple_value_true"
-    else if v = Spec.simple_value_false
+    else if v = simple_value_false
     then RFailure "typ_disjoint: Bool vs. simple_value_false"
     else RSuccess ()
   | TElem (ELiteral (LInt ty _)), TElem EUInt
@@ -605,7 +610,7 @@ let rec typ_included
   | TTagged _ _, _
   | _, TTagged _ _ -> RFailure "typ_included: TTagged vs. anything"
   | TElem (ELiteral (LSimple v)), TElem EBool ->
-    if v = Spec.simple_value_true || v = Spec.simple_value_false
+    if v = simple_value_true || v = simple_value_false
     then RSuccess ()
     else RFailure "typ_included: TElem EBool"
   | TElem (ELiteral (LInt ty _)), TElem EUInt ->
