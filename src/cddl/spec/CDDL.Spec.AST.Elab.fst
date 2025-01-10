@@ -433,14 +433,14 @@ let rec typ_disjoint
     else if U8.uint_to_t v = simple_value_false
     then RFailure "typ_disjoint: Bool vs. simple_value_false"
     else RSuccess ()
-  | TElem (ELiteral (LInt ty _)), TElem EUInt
-  | TElem EUInt, TElem (ELiteral (LInt ty _)) ->
-    if ty = KUInt
+  | TElem (ELiteral (LInt v)), TElem EUInt
+  | TElem EUInt, TElem (ELiteral (LInt v)) ->
+    if v >= 0
     then RFailure "typ_disjoint: uint64"
     else RSuccess ()
-  | TElem (ELiteral (LInt ty _)), TElem ENInt
-  | TElem ENInt, TElem (ELiteral (LInt ty _)) ->
-    if ty = KNegInt
+  | TElem (ELiteral (LInt v)), TElem ENInt
+  | TElem ENInt, TElem (ELiteral (LInt v)) ->
+    if v < 0
     then RFailure "typ_disjoint: neg_int64"
     else RSuccess ()
   | TElem (ELiteral (LString ty _)), TElem EByteString
@@ -619,12 +619,12 @@ let rec typ_included
     if U8.uint_to_t v = simple_value_true || U8.uint_to_t v = simple_value_false
     then RSuccess ()
     else RFailure "typ_included: TElem EBool"
-  | TElem (ELiteral (LInt ty _)), TElem EUInt ->
-    if ty = KUInt
+  | TElem (ELiteral (LInt v)), TElem EUInt ->
+    if v >= 0
     then RSuccess ()
     else RFailure "typ_included: uint64"
-  | TElem (ELiteral (LInt ty _)), TElem ENInt ->
-    if ty = KNegInt
+  | TElem (ELiteral (LInt v)), TElem ENInt ->
+    if v < 0
     then RSuccess ()
     else RFailure "typ_included: neg_int64"
   | TElem (ELiteral (LString ty _)), TElem EByteString ->
