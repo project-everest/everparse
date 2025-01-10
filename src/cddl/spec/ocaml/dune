@@ -9,11 +9,11 @@
 ;    process
 ;    sha
 ;    yojson
-;   ppx_deriving_yojson.runtime
+     ppxlib
 ;    re
 ;    sexplib
   )
-;  (preprocess (pps ppx_deriving_yojson))
+  (preprocess (pps ppx_deriving.show))
   (flags (:standard -w -8-9-11-26-27-33-39))
 )
 

@@ -3,6 +3,7 @@ module Spec = CDDL.Spec.All
 module U64 = FStar.UInt64
 module Cbor = CBOR.Spec.API.Type
 module Map = CDDL.Spec.Map
+module U8 = FStar.UInt8
 
 irreducible let sem_attr : unit = ()
 
@@ -19,13 +20,25 @@ let mk_ascii_string (s: string) (prf: squash (string_is_ascii s)) : Tot ascii_st
 
 let test_ascii_string: ascii_string = mk_ascii_string "hello" (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.trefl ()))
 
+(* An abstract syntax tree for CDDL. I define it as an OCaml type with
+  no constraints, and I move all constraints to `bounded` or `wf`
+  Boolean functions. I do that for 2 reasons:
+  
+  1. so that I can use PpxDeriving.Show (to this end, I had to replace
+  all integer types with int, since U8.t and U64.t do not support
+  PpxDeriving.Show)
+  
+  2. as a defensive practice wrt. ill-formed source input. *)
+
+[@@sem_attr; PpxDerivingShow]
 type int_kind = | KUInt | KNegInt
+[@@sem_attr; PpxDerivingShow]
 type string_kind = | KByteString | KTextString
 
-[@@sem_attr]
+[@@sem_attr; PpxDerivingShow]
 type literal =
-| LSimple of FStar.UInt8.t
-| LInt: (ty: int_kind) -> (v: U64.t) -> literal
+| LSimple of int
+| LInt: (ty: int_kind) -> (v: int) -> literal
 | LString: (ty: string_kind) -> string -> literal
 
 [@@sem_attr]
@@ -44,6 +57,7 @@ let cddl_major_type_byte_string : Cbor.major_type_byte_string_or_text_string =
 let cddl_major_type_text_string : Cbor.major_type_byte_string_or_text_string =
   (_ by (FStar.Tactics.exact (FStar.Tactics.norm_term [delta] (`Cbor.cbor_major_type_text_string))))
 
+[@@sem_attr; PpxDerivingShow]
 type elem_typ =
 | ELiteral of literal
 | EBool
@@ -59,6 +73,7 @@ type name_env_elem =
 | NArrayGroup
 | NMapGroup
 
+[@@sem_attr; PpxDerivingShow]
 type group (kind: name_env_elem) =
 | GDef: string -> group kind
 | GArrayElem: typ -> group kind
@@ -76,8 +91,10 @@ and typ =
 | TDef of string
 | TArray of group NArrayGroup
 | TMap of group NMapGroup
-| TTagged: (tag: U64.t) -> (body: typ) -> typ
+| TTagged: (tag: int) -> (body: typ) -> typ
 | TChoice: typ -> typ -> typ
+
+(* Environments and well-formedness constraints *)
 
 [@@  sem_attr]
 let tint = TChoice (TElem EUInt) (TElem ENInt)
@@ -115,8 +132,8 @@ let wf_literal
   (l: literal)
 : Tot bool
 = match l with
-| LSimple x -> Cbor.simple_value_wf x
-| LInt _ _ -> true
+| LSimple x -> x >= 0 && x < pow2 8 && Cbor.simple_value_wf (U8.uint_to_t x)
+| LInt _ v -> v >= 0 && v < pow2 64
 | LString _ s -> String.length s < pow2 64 && string_is_ascii s // FIXME: support utf8
 
 let wf_elem_typ
@@ -158,7 +175,7 @@ and typ_bounded
   | TDef s -> env s = Some NType
   | TArray g -> group_bounded NArrayGroup env g
   | TMap g -> group_bounded NMapGroup env g
-  | TTagged _ t' -> typ_bounded env t'
+  | TTagged v t' -> 0 <= v && v < pow2 64 && typ_bounded env t'
   | TChoice t1 t2 ->
     typ_bounded env t1 &&
     typ_bounded env t2
@@ -278,13 +295,15 @@ let sem_env_extend_gen
     se_env = (fun (i: name se_bound') -> if i = new_name then a else se.se_env i);
   }
 
+(* Semantics *)
+
 let byte_list_of_char_list
   (l: list FStar.Char.char)
-: Tot (list FStar.UInt8.t)
+: Tot (list U8.t)
 = List.Tot.map FStar.Int.Cast.uint32_to_uint8 (List.Tot.map FStar.Char.u32_of_char l)
 
 let char_list_of_byte_list
-  (l: list FStar.UInt8.t)
+  (l: list U8.t)
 : Tot (list FStar.Char.char)
 = List.Tot.map FStar.Char.char_of_u32 (List.Tot.map FStar.Int.Cast.uint8_to_uint32 l)
 
@@ -304,7 +323,7 @@ let rec char_list_of_byte_list_of_char_list
 
 let byte_seq_of_ascii_string
   (s: ascii_string)
-: Tot (Seq.seq FStar.UInt8.t)
+: Tot (Seq.seq U8.t)
 = Seq.seq_of_list (byte_list_of_char_list (FStar.String.list_of_string s))
 
 let byte_seq_of_ascii_string_diff
@@ -355,8 +374,8 @@ let eval_literal
   (requires wf_literal l)
   (ensures (fun _ -> True))
 = match l with
-  | LSimple v -> Cbor.pack (Cbor.CSimple v)
-  | LInt ty v -> Cbor.pack (Cbor.CInt64 (if ty = KUInt then cddl_major_type_uint64 else cddl_major_type_neg_int64) v)
+  | LSimple v -> Cbor.pack (Cbor.CSimple (U8.uint_to_t v))
+  | LInt ty v -> Cbor.pack (Cbor.CInt64 (if ty = KUInt then cddl_major_type_uint64 else cddl_major_type_neg_int64) (U64.uint_to_t v))
   | LString ty s -> Cbor.pack (Cbor.CString (if ty = KByteString then cddl_major_type_byte_string else cddl_major_type_text_string) (byte_seq_of_ascii_string s))
 
 let spec_type_of_literal
@@ -425,7 +444,7 @@ and typ_sem
 = match x with
   | TElem t -> elem_typ_sem t
   | TDef s -> env.se_env s
-  | TTagged tg t' -> Spec.t_tag tg (typ_sem env t')
+  | TTagged tg t' -> Spec.t_tag (U64.uint_to_t tg) (typ_sem env t')
   | TArray g ->
     Spec.t_array (array_group_sem env g)
   | TMap g ->
@@ -528,6 +547,9 @@ and typ_sem_incr
     typ_sem_incr env env' t1;
     typ_sem_incr env env' t2
 
+(* Annotated AST and their semantics *)
+
+[@@sem_attr; PpxDerivingShow]
 type elab_map_group =
 | MGNop
 | MGAlwaysFalse
@@ -709,7 +731,7 @@ let rec spec_map_group_footprint_incr
     spec_map_group_footprint_incr env env' g2
   | _ -> ()
 
-[@@ sem_attr]
+[@@sem_attr; PpxDerivingShow]
 noeq
 type ast0_wf_typ
 : typ -> Type
@@ -734,7 +756,7 @@ type ast0_wf_typ
   (s2: ast0_wf_parse_map_group g2) ->
   ast0_wf_typ (TMap g)
 | WfTTagged:
-  (tag: U64.t) ->
+  (tag: int) ->
   (t': typ) ->
   (s': ast0_wf_typ t') ->
   ast0_wf_typ (TTagged tag t')
@@ -884,7 +906,8 @@ let rec bounded_wf_typ
   bounded_wf_typ env _ s'
 | WfTArray g s ->
   bounded_wf_array_group env g s
-| WfTTagged _ t' s' ->
+| WfTTagged tag t' s' ->
+  0 <= tag /\ tag < pow2 64 /\
   bounded_wf_typ env t' s'
 | WfTMap g1 (* ty1 ty2 s1 *) g2 s2 ->
     group_bounded NMapGroup env g1 /\
@@ -2389,7 +2412,7 @@ let rec spec_of_wf_typ
   | WfTArray g s ->
     Spec.spec_array_group (spec_of_wf_array_group env s)
   | WfTTagged tag t' s ->
-    Spec.spec_tag tag (spec_of_wf_typ env s)
+    Spec.spec_tag (U64.uint_to_t tag) (spec_of_wf_typ env s)
   | WfTMap g1 (* _ _ _ *) _ s2 ->
     Spec.spec_map_group (spec_of_wf_map_group env s2)
   | WfTChoice _ _ s1 s2 ->

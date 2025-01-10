@@ -4,6 +4,7 @@ module Cbor = CBOR.Spec.API.Type
 module Spec = CDDL.Spec.All
 module U64 = FStar.UInt64
 module Util = CBOR.Spec.Util
+module U8 = FStar.UInt8
 
 noeq
 type result (t: Type) =
@@ -427,9 +428,9 @@ let rec typ_disjoint
   | _, TTagged _ _ -> RSuccess ()
   | TElem EBool, TElem (ELiteral (LSimple v))
   | TElem (ELiteral (LSimple v)), TElem EBool ->
-    if v = simple_value_true
+    if U8.uint_to_t v = simple_value_true
     then RFailure "typ_disjoint: Bool vs. simple_value_true"
-    else if v = simple_value_false
+    else if U8.uint_to_t v = simple_value_false
     then RFailure "typ_disjoint: Bool vs. simple_value_false"
     else RSuccess ()
   | TElem (ELiteral (LInt ty _)), TElem EUInt
@@ -615,7 +616,7 @@ let rec typ_included
   | TTagged _ _, _
   | _, TTagged _ _ -> RFailure "typ_included: TTagged vs. anything"
   | TElem (ELiteral (LSimple v)), TElem EBool ->
-    if v = simple_value_true || v = simple_value_false
+    if U8.uint_to_t v = simple_value_true || U8.uint_to_t v = simple_value_false
     then RSuccess ()
     else RFailure "typ_included: TElem EBool"
   | TElem (ELiteral (LInt ty _)), TElem EUInt ->
