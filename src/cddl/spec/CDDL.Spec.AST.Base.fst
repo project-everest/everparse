@@ -41,22 +41,6 @@ let cddl_major_type_byte_string : Cbor.major_type_byte_string_or_text_string =
 let cddl_major_type_text_string : Cbor.major_type_byte_string_or_text_string =
   (_ by (FStar.Tactics.exact (FStar.Tactics.norm_term [delta] (`Cbor.cbor_major_type_text_string))))
 
-[@@sem_attr]
-let literal_eq (l1 l2: literal) : Pure bool
-  (requires True)
-  (ensures (fun b -> b == true <==> l1 == l2))
-= match l1, l2 with
-  | LSimple v1, LSimple v2 -> v1 = v2
-  | LInt ty1 v1, LInt ty2 v2 ->
-    if ty1 = ty2
-    then v1 = v2
-    else false
-  | LString ty1 s1, LString ty2 s2 ->
-    if ty1 = ty2
-    then s1 = s2
-    else false
-  | _ -> false
-
 type elem_typ =
 | ELiteral of literal
 | EBool
@@ -120,7 +104,7 @@ let name_empty_elim (t: Type) (x: name empty_name_env) : Tot t = false_elim ()
 let extend_name_env (e: name_env) (new_name: string) (elem: name_env_elem) (s: string) : Tot (option name_env_elem) =
   if s = new_name then Some elem else e s
 
-let name_env_included (s1 s2: name_env) : Tot prop =
+let name_env_included (s1 s2: name_env) : GTot prop =
   (forall (i: name s1) . s2 i == s1 i)
 
 [@@ sem_attr]
@@ -219,7 +203,7 @@ and typ_bounded_incr
 [@@  sem_attr]
 let sem_env_elem
   (kind: name_env_elem)
-: Tot Type
+: GTot Type
 = match kind with
   | NType -> Spec.typ
   | NArrayGroup -> Spec.array_group None
@@ -229,7 +213,7 @@ let sem_env_elem
 noeq
 type sem_env = {
   se_bound: name_env;
-  se_env: ((n: name se_bound) -> sem_env_elem (Some?.v (se_bound n)));
+  se_env: ((n: name se_bound) -> GTot (sem_env_elem (Some?.v (se_bound n))));
 }
 
 [@@"opaque_to_smt"] irreducible // because of false_elim
@@ -244,7 +228,7 @@ let empty_sem_env = {
   se_env = se_env_empty;
 }
 
-let sem_env_included (s1 s2: sem_env) : Tot prop =
+let sem_env_included (s1 s2: sem_env) : GTot prop =
   name_env_included s1.se_bound s2.se_bound /\
   (forall (i: name s1.se_bound) . s1.se_env i == s2.se_env i)
 
@@ -259,7 +243,7 @@ let sem_env_extend_gen
   (se: sem_env)
   (new_name: string)
   (nelem: name_env_elem)
-  (a: sem_env_elem nelem)
+  (a: Ghost.erased (sem_env_elem nelem))
 : Pure sem_env
     (requires
       (~ (name_mem new_name se.se_bound))
@@ -267,7 +251,7 @@ let sem_env_extend_gen
     (ensures fun se' ->
       se'.se_bound == extend_name_env se.se_bound new_name nelem /\
       sem_env_included se se' /\
-      se'.se_env new_name == a
+      se'.se_env new_name == Ghost.reveal a
     )
 = let se_bound' = extend_name_env se.se_bound new_name nelem in
   {
@@ -348,7 +332,7 @@ let byte_seq_of_ascii_string_is_utf8
 [@@ sem_attr ]
 let eval_literal
   (l: literal)
-: Tot Cbor.cbor
+: GTot Cbor.cbor
 = match l with
   | LSimple v -> Cbor.pack (Cbor.CSimple v)
   | LInt ty v -> Cbor.pack (Cbor.CInt64 ty v)
@@ -356,13 +340,13 @@ let eval_literal
 
 let spec_type_of_literal
   (l: literal)
-: Tot Spec.typ
+: GTot Spec.typ
 = Spec.t_literal (eval_literal l)
 
 [@@ sem_attr ]
 let elem_typ_sem
   (t: elem_typ)
-: Tot Spec.typ
+: GTot Spec.typ
 = match t with
   | ELiteral l -> spec_type_of_literal l
   | EBool -> Spec.t_bool
@@ -377,7 +361,7 @@ let elem_typ_sem
 let rec array_group_sem
   (env: sem_env)
   (g: group NArrayGroup)
-: Pure (Spec.array_group None)
+: Ghost (Spec.array_group None)
     (requires group_bounded NArrayGroup env.se_bound g)
     (ensures fun _ -> True)
 = match g with
@@ -394,7 +378,7 @@ let rec array_group_sem
 and map_group_sem
   (env: sem_env)
   (g: group NMapGroup)
-: Pure (Spec.map_group)
+: Ghost (Spec.map_group)
     (requires group_bounded NMapGroup env.se_bound g)
     (ensures fun _ -> True)
 = match g with
@@ -410,7 +394,7 @@ and map_group_sem
 and typ_sem
   (env: sem_env)
   (x: typ)
-: Pure Spec.typ
+: Ghost Spec.typ
     (requires typ_bounded env.se_bound x)
     (ensures (fun _ -> True))
 = match x with
@@ -598,7 +582,7 @@ module Util = CBOR.Spec.Util
 let rec elab_map_group_sem
   (env: sem_env)
   (g: elab_map_group)
-: Pure Spec.det_map_group
+: Ghost Spec.det_map_group
     (requires bounded_elab_map_group env.se_bound g)
     (ensures fun _ -> True)
 = match g with
@@ -647,7 +631,7 @@ let rec elab_map_group_sem_incr
 let rec spec_map_group_footprint
   (env: sem_env)
   (g: elab_map_group)
-: Pure (option Spec.typ)
+: Pure (option (Ghost.erased Spec.typ))
     (requires bounded_elab_map_group env.se_bound g)
     (ensures fun res -> match res with
     | None -> True
@@ -659,19 +643,19 @@ let rec spec_map_group_footprint
 = match g with
   | MGMatch cut key value
   -> Spec.map_group_footprint_match_item_for cut (eval_literal key) (typ_sem env value);
-    Some (Spec.t_literal (eval_literal key))
+    Some (Ghost.hide (Spec.t_literal (eval_literal key)))
   | MGTable key key_except _ // TODO: extend to GOneOrMore
-  -> Some (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except)))
+  -> Some (Ghost.hide (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except))))
   | MGChoice g1 g2
   | MGConcat g1 g2 ->
     begin match spec_map_group_footprint env g1, spec_map_group_footprint env g2 with
-    | Some ty1, Some ty2 -> Some (ty1 `Spec.t_choice` ty2)
+    | Some ty1, Some ty2 -> Some (Ghost.hide (Ghost.reveal ty1 `Spec.t_choice` Ghost.reveal ty2))
     | _ -> None
     end
   | MGNop
-  | MGAlwaysFalse -> Some Spec.t_always_false
+  | MGAlwaysFalse -> Some (Ghost.hide Spec.t_always_false)
   | MGCut key
-  | MGMatchWithCut key _ -> Some (typ_sem env key)
+  | MGMatchWithCut key _ -> Some (Ghost.hide (typ_sem env key))
 
 #pop-options
 
@@ -865,7 +849,7 @@ let rec bounded_wf_typ
   (env: name_env)
   (t: typ)
   (wf: ast0_wf_typ t)
-: Tot prop
+: GTot prop
   (decreases wf)
 = match wf with
 | WfTRewrite t t' s' ->
@@ -894,7 +878,7 @@ and bounded_wf_array_group
   (env: name_env)
   (g: group NArrayGroup)
   (wf: ast0_wf_array_group g)
-: Tot prop
+: GTot prop
   (decreases wf)
 = match wf with
 | WfAElem ty prf ->
@@ -922,7 +906,7 @@ and bounded_wf_parse_map_group
   (env: name_env)
   (g: elab_map_group)
   (wf: ast0_wf_parse_map_group g)
-: Tot prop
+: GTot prop
   (decreases wf)
 = match wf with
 | WfMChoice g1' s1 g2' s2 ->
@@ -1213,7 +1197,7 @@ let rec spec_wf_typ
   (env: sem_env)
   (t: typ)
   (wf: ast0_wf_typ t)
-: Tot prop
+: GTot prop
   (decreases wf)
 = bounded_wf_typ env.se_bound t wf /\ begin match wf with
 | WfTRewrite t t' s' ->
@@ -1240,7 +1224,7 @@ and spec_wf_array_group
   (env: sem_env)
   (g: group NArrayGroup)
   (wf: ast0_wf_array_group g)
-: Tot prop
+: GTot prop
   (decreases wf)
 = bounded_wf_array_group env.se_bound g wf /\ begin match wf with
 | WfAElem ty prf ->
@@ -1270,7 +1254,7 @@ and spec_wf_parse_map_group
   (env: sem_env)
   (g: elab_map_group)
   (wf: ast0_wf_parse_map_group g)
-: Tot prop
+: GTot prop
   (decreases wf)
 = bounded_wf_parse_map_group env.se_bound g wf /\ begin match wf with
 | WfMChoice g1' s1 g2' s2 ->
@@ -1284,7 +1268,7 @@ and spec_wf_parse_map_group
     spec_wf_parse_map_group env g2 s2 /\
     (
       match spec_map_group_footprint env g1, spec_map_group_footprint env g2 with
-      | Some fp1, Some fp2 -> Spec.typ_disjoint fp1 fp2
+      | Some fp1, Some fp2 -> Spec.typ_disjoint (Ghost.reveal fp1) (Ghost.reveal fp2)
       | _ -> False
     )
 | WfMZeroOrOne g s ->
@@ -1481,7 +1465,8 @@ let rec bounded_wf_parse_map_group_det
   -> ()
 
 [@@  sem_attr]
-let ast_env_elem0 (s: name_env_elem) : Type0 =
+inline_for_extraction
+let ast_env_elem0 (s: name_env_elem) : Tot Type0 =
   match s with
   | NType -> typ
   | NArrayGroup -> group NArrayGroup
@@ -1498,7 +1483,7 @@ let ast_env_elem0_bounded (env: name_env) (#s: name_env_elem) (x: ast_env_elem0 
     group_bounded NMapGroup env x
 
 [@@ sem_attr]
-let ast_env_elem0_sem (e_sem_env: sem_env) (#s: name_env_elem) (x: ast_env_elem0 s) : Pure (sem_env_elem s)
+let ast_env_elem0_sem (e_sem_env: sem_env) (#s: name_env_elem) (x: ast_env_elem0 s) : Ghost (sem_env_elem s)
   (requires ast_env_elem0_bounded e_sem_env.se_bound x)
   (ensures fun _ -> True)
 = match s with
@@ -1506,7 +1491,7 @@ let ast_env_elem0_sem (e_sem_env: sem_env) (#s: name_env_elem) (x: ast_env_elem0
   | NArrayGroup -> array_group_sem e_sem_env x
   | NMapGroup -> map_group_sem e_sem_env x
   
-let ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (phi: sem_env_elem s) (x: ast_env_elem0 s) : Tot prop =
+let ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (phi: sem_env_elem s) (x: ast_env_elem0 s) : GTot prop =
   ast_env_elem0_bounded e_sem_env.se_bound x /\
   begin
     let sem = ast_env_elem0_sem e_sem_env x in
@@ -1528,7 +1513,7 @@ let ast_env_elem_prop_included (e1 e2: sem_env) (s: name_env_elem) (phi: sem_env
 = ()
 
 [@@ sem_attr]
-let ast_env_elem (e_sem_env: sem_env) (s: name_env_elem) (phi: sem_env_elem s) =
+let ast_env_elem (e_sem_env: sem_env) (s: name_env_elem) (phi: sem_env_elem s) : Type0 =
   (x: ast_env_elem0 s { ast_env_elem_prop e_sem_env s phi x })
 
 [@@ sem_attr]
@@ -1538,7 +1523,7 @@ let wf_ast_env_elem0 (s: name_env_elem) (x: ast_env_elem0 s) : Type0 =
   | NArrayGroup -> ast0_wf_array_group x
   | NMapGroup -> squash False
 
-let wf_ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (x: ast_env_elem0 s) (y: option (wf_ast_env_elem0 s x)) : Tot prop =
+let wf_ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (x: ast_env_elem0 s) (y: option (wf_ast_env_elem0 s x)) : GTot prop =
   match y with
   | None -> True
   | Some y ->
@@ -1613,7 +1598,7 @@ let ast_env_extend_gen
       e'.e_env new_name == x /\
       None? (e'.e_wf new_name)
     )
-= let s = ast_env_elem0_sem e.e_sem_env x in
+= let s = Ghost.hide (ast_env_elem0_sem e.e_sem_env x) in
   let se' = sem_env_extend_gen e.e_sem_env new_name kind s in
   {
     e_sem_env = se';
@@ -1679,7 +1664,7 @@ let bounded_wf_ast_env_elem
   (#s: name_env_elem)
   (x: ast_env_elem0 s)
   (y: wf_ast_env_elem0 s x)
-: Tot prop
+: GTot prop
 = match s with
   | NType -> bounded_wf_typ env x y
   | NArrayGroup -> bounded_wf_array_group env x y
@@ -1690,7 +1675,7 @@ let wf_ast_env_extend_typ_with_pre
   (new_name: string)
   (t: typ)
   (t_wf: ast0_wf_typ t)
-: Tot prop
+: GTot prop
 =
     e.e_sem_env.se_bound new_name == None /\
     typ_bounded e.e_sem_env.se_bound t /\
@@ -1717,7 +1702,7 @@ let wf_ast_env_extend_typ_with_weak_pre
   (new_name: string)
   (t: typ)
   (t_wf: ast0_wf_typ t)
-: Tot prop
+: GTot prop
 =
     e.e_sem_env.se_bound new_name == None /\
     typ_bounded e.e_sem_env.se_bound t /\
@@ -1773,7 +1758,7 @@ type target_type =
 let rec target_type_bounded
   (bound: name_env)
   (t: target_type)
-: GTot bool
+: Tot bool
 = match t with
   | TTDef s -> s `name_mem` bound
   | TTPair t1 t2
@@ -1814,13 +1799,13 @@ let rec target_type_bounded_incr
   | TTDef _ -> ()
 
 type target_spec_env (bound: name_env) =
-  (name bound -> Type0)
+  (name bound -> GTot Type0)
 
 irreducible [@@"opaque_to_smt"]
 let empty_target_spec_env : target_spec_env empty_name_env =
   fun _ -> false_elim ()
 
-let target_spec_env_included (#bound1: name_env) (t1: target_spec_env bound1) (#bound2: name_env) (t2: target_spec_env bound2) : Tot prop =
+let target_spec_env_included (#bound1: name_env) (t1: target_spec_env bound1) (#bound2: name_env) (t2: target_spec_env bound2) : GTot prop =
   name_env_included bound1 bound2 /\
   (forall (x: name bound1) . t1 x == t2 x)
 
@@ -1835,20 +1820,22 @@ let target_spec_env_extend
     (ensures fun env' -> target_spec_env_included env env')
 = fun n' -> if n' = n then t else env n'
 
-let cbor_with (t: Spec.typ) : Type0 = (c: Cbor.cbor { t c })
+let cbor_with (t: Spec.typ) : GTot Type0 = (c: Cbor.cbor { t c })
 
 module U8 = FStar.UInt8
+noextract
 let string64 = Spec.string64
 module U64 = FStar.UInt64
 
 let table
   (key: Type0)
   ([@@@strictly_positive] value: Type0)
+: GTot Type0
 = Map.t key value
 
 let target_elem_type_sem
   (t: target_elem_type)
-: Tot Type0
+: GTot Type0
 = match t with
   | TTSimple -> Cbor.simple_value
   | TTUInt64 -> U64.t
@@ -1862,7 +1849,7 @@ let rec target_type_sem
   (#bound: name_env)
   (env: target_spec_env bound)
   (t: target_type)
-: Pure Type0
+: Ghost Type0
   (requires target_type_bounded bound t)
   (ensures fun _ -> True)
 = match t with
@@ -1900,6 +1887,7 @@ let rec target_type_sem_incr
   | TTElem _
   | TTDef _ -> ()
 
+noextract
 noeq
 type rectype (f: [@@@strictly_positive] Type -> Type) =
 | Y of f (rectype f)
@@ -1908,7 +1896,7 @@ let rec target_type_positively_bounded
   (bound: name_env)
   (kbound: name_env)
   (t: target_type)
-: GTot bool
+: Tot bool
 = match t with
   | TTDef s -> s `name_mem` bound
   | TTPair t1 t2
@@ -1959,7 +1947,7 @@ let rec target_type_sem'
   (#kbound: name_env)
   (kenv: target_spec_env kbound)
   (t: target_type)
-: Pure Type0
+: Ghost Type0
   (requires
     target_type_positively_bounded bound kbound t
   )
@@ -2006,7 +1994,7 @@ let target_type_sem_rec_body
   (s: name_env_elem)
   (t: target_type { target_type_positively_bounded (extend_name_env bound new_name NType) bound t })
   ([@@@strictly_positive] t': Type0)
-: Tot Type0
+: GTot Type0
 = target_type_sem' (target_spec_env_extend bound env new_name NType t') env t
 
 let target_type_sem_rec
@@ -2015,7 +2003,7 @@ let target_type_sem_rec
   (new_name: string { ~ (name_mem new_name bound) })
   (s: name_env_elem)
   (t: target_type { target_type_positively_bounded (extend_name_env bound new_name NType) bound t })
-: Type0
+: GTot Type0
 = rectype (target_type_sem_rec_body bound env new_name s t)
 
 type pair_kind =
@@ -2026,7 +2014,7 @@ type pair_kind =
 let pair_kind_wf
   (k: pair_kind)
   (t1 t2: Type0)
-: Tot prop
+: GTot prop
 = match k with
   | PEraseLeft -> t1 == unit
   | PEraseRight -> t2 == unit
@@ -2052,6 +2040,7 @@ let ttpair_kind (t1 t2: target_type) : pair_kind = match t1, t2 with
 | _ -> PKeep
 
 #restart-solver
+noextract
 let destruct_pair
   (k: pair_kind)
   (t1: Type0)
@@ -2065,6 +2054,7 @@ let destruct_pair
   | PEraseRight -> (x, ())
   | _ -> x
 
+noextract
 let construct_pair
   (k: pair_kind)
   (t1: Type0)
@@ -2082,7 +2072,7 @@ let pair_bij
   (k: pair_kind)
   (t1: Type0)
   (t2: Type0 { pair_kind_wf k t1 t2 })
-: Tot (Spec.bijection (t1 & t2) (pair k t1 t2))
+: GTot (Spec.bijection (t1 & t2) (pair k t1 t2))
 = Spec.Mkbijection
     (construct_pair k t1 t2)
     (destruct_pair k t1 t2)
@@ -2101,6 +2091,7 @@ let target_type_sem_ttpair
 = ()
 
 #restart-solver
+noextract
 let destruct_ttpair
   (#bound: name_env)
   (env: target_spec_env bound)
@@ -2113,6 +2104,7 @@ let destruct_ttpair
   | _ -> assert (target_type_sem env (t1 `ttpair` t2) == target_type_sem env t1 & target_type_sem env t2);
       coerce_eq () x
 
+noextract
 let ttpair_fst
   (bound: name_env)
   (env: target_spec_env bound)
@@ -2124,6 +2116,7 @@ let ttpair_fst
   | _, TTElem TTUnit -> x
   | _ -> fst #(target_type_sem env t1) #(target_type_sem env t2) (coerce_eq () x)
 
+noextract
 let construct_ttpair
   (bound: name_env)
   (env: target_spec_env bound)
@@ -2307,8 +2300,8 @@ let target_ast_env_extend_typ
   (t_wf: ast0_wf_typ t {
     wf_ast_env_extend_typ_with_weak_pre env.ta_ast new_name t t_wf
   })
-  (t': Type0)
-  (bij: Spec.bijection (target_type_sem env.ta_tgt (target_type_of_wf_typ t_wf)) t')
+  (t': Ghost.erased Type0)
+  (bij: Ghost.erased (Spec.bijection (target_type_sem env.ta_tgt (target_type_of_wf_typ t_wf)) t'))
 : Tot (env': target_ast_env {
     target_ast_env_included env env' /\
     env'.ta_ast.e_sem_env.se_bound new_name == Some NType /\
@@ -2321,8 +2314,8 @@ let target_ast_env_extend_typ
 
 noeq
 type spec_env (tp_sem: sem_env) (tp_tgt: target_spec_env (tp_sem.se_bound)) = {
-  tp_spec_typ: (n: typ_name tp_sem.se_bound) -> Spec.spec (tp_sem.se_env n) (tp_tgt n) true;
-  tp_spec_array_group: (n: array_group_name tp_sem.se_bound) -> Spec.ag_spec (tp_sem.se_env n) (tp_tgt n) true;
+  tp_spec_typ: (n: typ_name tp_sem.se_bound) -> GTot (Spec.spec (tp_sem.se_env n) (tp_tgt n) true);
+  tp_spec_array_group: (n: array_group_name tp_sem.se_bound) -> GTot (Spec.ag_spec (tp_sem.se_env n) (tp_tgt n) true);
 }
 
 [@@"opaque_to_smt"] irreducible
@@ -2333,7 +2326,7 @@ let empty_spec_env (e: target_spec_env empty_name_env) : spec_env empty_sem_env 
 
 let spec_of_elem_typ
   (e: elem_typ)
-: Tot (Spec.spec (elem_typ_sem e) (target_elem_type_sem (target_type_of_elem_typ e)) true)
+: GTot (Spec.spec (elem_typ_sem e) (target_elem_type_sem (target_type_of_elem_typ e)) true)
 = match e with
   | ELiteral l -> Spec.spec_literal (eval_literal l)
   | EBool -> Spec.spec_bool (fun _ -> true)
@@ -2361,7 +2354,7 @@ let rec spec_of_wf_typ
   (env: spec_env tp_sem tp_tgt)
   (#t: typ)
   (wf: ast0_wf_typ t { spec_wf_typ tp_sem t wf })
-: Tot (Spec.spec (typ_sem tp_sem t) (target_type_sem tp_tgt (target_type_of_wf_typ wf)) true)
+: GTot (Spec.spec (typ_sem tp_sem t) (target_type_sem tp_tgt (target_type_of_wf_typ wf)) true)
   (decreases wf)
 = match wf with
   | WfTRewrite _ _ s ->
@@ -2385,7 +2378,7 @@ and spec_of_wf_array_group
   (env: spec_env tp_sem tp_tgt)
   (#t: group NArrayGroup)
   (wf: ast0_wf_array_group t { spec_wf_array_group tp_sem t wf })
-: Tot (Spec.ag_spec (array_group_sem tp_sem t) (target_type_sem tp_tgt (target_type_of_wf_array_group wf)) true)
+: GTot (Spec.ag_spec (array_group_sem tp_sem t) (target_type_sem tp_tgt (target_type_of_wf_array_group wf)) true)
   (decreases wf)
 = match wf with
   | WfAElem _ s ->
@@ -2417,7 +2410,7 @@ and spec_of_wf_map_group
   (env: spec_env tp_sem tp_tgt)
   (#t: elab_map_group)
   (wf: ast0_wf_parse_map_group t { spec_wf_parse_map_group tp_sem t wf })
-: Tot (Spec.mg_spec (elab_map_group_sem tp_sem t) (Some?.v (spec_map_group_footprint tp_sem t)) ((target_type_sem tp_tgt (target_type_of_wf_map_group wf))) true)
+: GTot (Spec.mg_spec (elab_map_group_sem tp_sem t) (Some?.v (spec_map_group_footprint tp_sem t)) ((target_type_sem tp_tgt (target_type_of_wf_map_group wf))) true)
   (decreases wf)
 = match wf with
   | WfMChoice _ s1 _ s2 ->
@@ -2460,8 +2453,8 @@ let spec_env_extend_typ
   })
   (#wft: target_spec_env e.e_sem_env.se_bound)
   (senv: spec_env e.e_sem_env wft)
-  (t': Type0)
-  (bij: Spec.bijection (target_type_sem wft (target_type_of_wf_typ t_wf)) t')
+  (t': Ghost.erased Type0)
+  (bij: Ghost.erased (Spec.bijection (target_type_sem wft (target_type_of_wf_typ t_wf)) t'))
 : Tot (spec_env (wf_ast_env_extend_typ_with_weak e new_name t t_wf).e_sem_env (target_spec_env_extend e.e_sem_env.se_bound wft new_name NType t'))
 = let e' = (wf_ast_env_extend_typ_with_weak e new_name t t_wf) in
   let wft' = target_spec_env_extend e.e_sem_env.se_bound wft new_name NType t' in
@@ -2469,11 +2462,3 @@ let spec_env_extend_typ
     tp_spec_typ = (fun n -> if n = new_name then coerce_eq #_ #(Spec.spec (e'.e_sem_env.se_env n) (wft' n) true) () (Spec.spec_bij (spec_of_wf_typ senv t_wf) bij) else (senv.tp_spec_typ n));
     tp_spec_array_group = (fun n -> (senv.tp_spec_array_group n));
   }
-
-let solve_by_norm () : FStar.Tactics.Tac unit =
-  FStar.Tactics.norm [delta; iota; zeta; primops; nbe];
-  FStar.Tactics.smt ()
-
-let solve_sem () : FStar.Tactics.Tac unit =
-  FStar.Tactics.norm [delta_attr [`%sem_attr]; iota; zeta; primops; nbe];
-  FStar.Tactics.smt ()

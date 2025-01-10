@@ -401,7 +401,6 @@ let rec typ_disjoint
   match t1, t2 with
   | t2, TDef i
   | TDef i, t2 ->
-    let s1 = e.e_sem_env.se_env i in
     let t1' = e.e_env i in
     typ_disjoint e fuel' t1' t2
   | TChoice t1l t1r, t2
@@ -582,11 +581,9 @@ let rec typ_included
     else begin
   match t1, t2 with
   | TDef i, t2 ->
-    let s1 = e.e_sem_env.se_env i in
     let t1' = e.e_env i in
     typ_included e fuel' t1' t2
   | t2, TDef i ->
-    let s1 = e.e_sem_env.se_env i in
     let t1' = e.e_env i in
     typ_included e fuel' t2 t1'
   | TElem EAny, _ -> RFailure "typ_included: TElem EAny"
@@ -802,7 +799,7 @@ let typ_sub_underapprox_postcond
   (env: ast_env)
   (t1 t2: typ)
   (t': result typ)
-: Tot prop
+: GTot prop
 =
     typ_bounded env.e_sem_env.se_bound t1 /\
     typ_bounded env.e_sem_env.se_bound t2 /\
@@ -918,7 +915,7 @@ let map_group_footprint'_postcond
   (env: sem_env)
   (g: elab_map_group)
   (res: result (typ & typ))
-: Tot prop
+: GTot prop
 =
       begin match res with
       | RSuccess te ->
@@ -940,7 +937,7 @@ let map_group_footprint'_postcond_intro_success
   (g: elab_map_group)
   (t: typ)
   (t_except: typ)
-  (t': Spec.typ)
+  (t': Ghost.erased Spec.typ)
 : Lemma
   (requires (
       bounded_elab_map_group env.se_bound g /\
@@ -983,7 +980,7 @@ let spec_map_group_footprint_choice_or_concat
     Some? (spec_map_group_footprint env g1) /\
     Some? (spec_map_group_footprint env g2) /\
     bounded_elab_map_group env.se_bound g /\
-    spec_map_group_footprint env g == Some (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2))
+    spec_map_group_footprint env g == Some (Ghost.hide (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2)))
   ))
 = assert (
     bounded_elab_map_group env.se_bound g1 /\
@@ -991,7 +988,7 @@ let spec_map_group_footprint_choice_or_concat
     Some? (spec_map_group_footprint env g1) /\
     Some? (spec_map_group_footprint env g2) /\
     bounded_elab_map_group env.se_bound (MGChoice g1 g2) /\
-    spec_map_group_footprint env (MGChoice g1 g2) == Some (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2))
+    spec_map_group_footprint env (MGChoice g1 g2) == Some (Ghost.hide (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2)))
   );
  assert (
     bounded_elab_map_group env.se_bound g1 /\
@@ -999,7 +996,7 @@ let spec_map_group_footprint_choice_or_concat
     Some? (spec_map_group_footprint env g1) /\
     Some? (spec_map_group_footprint env g2) /\
     bounded_elab_map_group env.se_bound (MGChoice g1 g2) /\
-    spec_map_group_footprint env (MGConcat g1 g2) == Some (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2))
+    spec_map_group_footprint env (MGConcat g1 g2) == Some (Ghost.hide (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2)))
   )
 
 let typ_included_andp_notp_equiv
@@ -1111,7 +1108,7 @@ let map_group_footprint_postcond
   (env: sem_env)
   (g: elab_map_group)
   (res: result (typ & typ))
-: Tot prop
+: GTot prop
 =
       begin match res with
       | RSuccess te ->
@@ -1706,7 +1703,7 @@ let map_group_choice_compatible'_postcond
   (#g2: elab_map_group)
   (s2: ast0_wf_parse_map_group g2)
   (r: result unit)
-: Tot prop
+: GTot prop
 = 
       spec_wf_parse_map_group env _ s1 /\
       spec_wf_parse_map_group env _ s2 /\
@@ -1969,7 +1966,7 @@ let typ_inter_underapprox_postcond
   (env: ast_env)
   (t1 t2: typ)
   (t': result typ)
-: Tot prop
+: GTot prop
 =
     typ_bounded env.e_sem_env.se_bound t1 /\
     typ_bounded env.e_sem_env.se_bound t2 /\
@@ -2142,7 +2139,7 @@ let annot_tables_correct_postcond
   (cut: typ)
   (g: elab_map_group)
   (m: Cbor.cbor_map)
-: Tot prop
+: GTot prop
 =
     typ_bounded env.e_sem_env.se_bound cut /\
     bounded_elab_map_group env.e_sem_env.se_bound g /\
@@ -2680,7 +2677,7 @@ let wf_ast_env_extend_typ_with_weak_pre'
   (new_name: string)
   (t: typ)
   (t_wf: ast0_wf_typ t)
-: Tot prop
+: GTot prop
 =
     e.e_sem_env.se_bound new_name == None /\
     typ_bounded e.e_sem_env.se_bound t /\
@@ -2715,37 +2712,3 @@ let wf_ast_env_extend_typ
 = let t_wf = RSuccess?._0 (mk_wf_typ' fuel e t) in
   assert (wf_ast_env_extend_typ_with_weak_pre' e new_name t t_wf);
   wf_ast_env_extend_typ_with_weak e new_name t t_wf
-
-exception ExceptionOutOfFuel
-
-let solve_mk_wf_typ_fuel_for () : FStar.Tactics.Tac unit =
-  let rec aux (n: nat) : FStar.Tactics.Tac unit =
-    FStar.Tactics.try_with
-    (fun _ ->
-      FStar.Tactics.print ("solve_mk_wf_typ_fuel_for with fuel " ^ string_of_int n ^ "\n");
-      FStar.Tactics.apply (FStar.Tactics.mk_app (`mk_wf_typ_fuel_for_intro) [quote n, FStar.Tactics.Q_Explicit]);
-      FStar.Tactics.norm [delta; iota; zeta; primops];
-      FStar.Tactics.try_with
-        (fun _ ->
-          FStar.Tactics.trefl ()
-        )
-        (fun e -> 
-          let g = FStar.Tactics.cur_goal () in
-          FStar.Tactics.print ("solve_mk_wf_typ_fuel_for Failure: " ^ FStar.Tactics.term_to_string g ^ "\n");
-          let g0 = quote (squash (ROutOfFuel == RSuccess ())) in
-          FStar.Tactics.print ("Comparing with " ^ FStar.Tactics.term_to_string g0 ^ "\n");
-          let e' =
-            if g `FStar.Tactics.term_eq` g0
-            then ExceptionOutOfFuel
-            else e
-          in
-          FStar.Tactics.raise e'
-        )
-      )
-      (fun e ->
-        match e with
-        | ExceptionOutOfFuel -> aux (n + 1)
-        | _ -> FStar.Tactics.raise e
-      )
-  in
-  aux 0
