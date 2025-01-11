@@ -1272,7 +1272,7 @@ let rec spec_wf_typ
 | WfTMap g1 (* ty1 ty2 s1 *) g2 s2 ->
 //    Spec.restrict_map_group (map_group_sem env g1) (map_group_sem env g2) /\
 //    spec_wf_validate_map_group env Spec.t_always_false Spec.t_always_false g1 ty1 ty2 s1 /\
-    Spec.matches_map_group_equiv (map_group_sem env g1) (elab_map_group_sem env g2) /\
+    map_group_sem env g1 == elab_map_group_sem env g2 /\
     spec_wf_parse_map_group env _ s2
 | WfTChoice t1 t2 s1 s2 ->
   spec_wf_typ env t1 s1 /\
