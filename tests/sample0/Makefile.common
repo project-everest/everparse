@@ -1,9 +1,9 @@
-FSTAR_HOME ?= ../../../FStar
+FSTAR_EXE ?= ../../../FStar/bin/fstar.exe
 KRML_HOME ?= ../../../karamel
 EVERPARSE_HOME ?= ../..
 LOWPARSE_HOME ?= $(EVERPARSE_HOME)/src/lowparse
 
-export FSTAR_HOME
+export FSTAR_EXE
 export LOWPARSE_HOME
 export KRML_HOME
 export EVERPARSE_HOME
@@ -12,11 +12,12 @@ FSTAR_OPTIONS = --odir krml --cache_dir cache --cache_checked_modules \
 		--already_cached +Prims,+FStar,+LowStar,+C,+Spec.Loops,+LowParse \
 		--include $(LOWPARSE_HOME) --include $(KRML_HOME)/krmllib --include $(KRML_HOME)/krmllib/obj --cmi
 
-FSTAR = $(FSTAR_HOME)/bin/fstar.exe --trace_error $(FSTAR_OPTIONS)
+FSTAR = $(FSTAR_EXE) --trace_error $(FSTAR_OPTIONS)
 
 HEADERS = $(addprefix -add-include ,'"krml/internal/compat.h"')
 
 KRML = $(KRML_HOME)/krml \
+	 -fstar $(FSTAR_EXE) \
 	 -ccopt "-Ofast" \
 	 -drop 'FStar.Tactics.\*' -drop FStar.Tactics -drop 'FStar.Reflection.\*' \
 	 -tmpdir out \
