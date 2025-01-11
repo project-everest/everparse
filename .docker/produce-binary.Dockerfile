@@ -15,10 +15,10 @@ RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
     && true
 
 # Dependencies (F*, Karamel and opam packages)
-ENV FSTAR_HOME=$HOME/FStar
+ENV FSTAR_DIR=$HOME/FStar
 ENV KRML_HOME=$HOME/karamel
 RUN eval $(opam env) && .docker/build/install-deps.sh
-ENV FSTAR_EXE=$FSTAR_HOME/bin/fstar.exe
+ENV FSTAR_EXE=$FSTAR_DIR/bin/fstar.exe
 
 # CI proper
 ARG CI_THREADS=24
