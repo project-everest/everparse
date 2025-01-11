@@ -130,10 +130,9 @@ make_everparse() {
         export KRML_HOME=$(fixpath "$KRML_HOME")
     fi
 
-    if fstar_commit_id=$(print_component_commit_id "$FSTAR_HOME") ; then
-        fstar_commit_date_iso=$(print_component_commit_date_iso "$FSTAR_HOME")
-        fstar_commit_date_hr=$(print_date_utc_of_iso_hr "$fstar_commit_date_iso")" UTC+0000"
-    fi
+    fstar_commit_id=$("$FSTAR_EXE" --version | grep '^commit=' | sed 's!^.*=!!')
+    fstar_commit_date_hr=$("$FSTAR_EXE" --version | grep '^date=' | sed 's!^.*=!!')
+
     if karamel_commit_id=$(print_component_commit_id "$KRML_HOME") ; then
         karamel_commit_date_iso=$(print_component_commit_date_iso "$KRML_HOME")
         karamel_commit_date_hr=$(print_date_utc_of_iso_hr "$karamel_commit_date_iso")" UTC+0000"
@@ -145,10 +144,6 @@ make_everparse() {
     if [[ -f "$FSTAR_HOME/Makefile" ]] ; then
         # assume F* source tree
         $MAKE -C "$FSTAR_HOME" "$@"
-    fi
-    if [[ -z "$fstar_commit_id" ]] ; then
-        fstar_commit_id=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^commit=' | sed 's!^.*=!!')
-        fstar_commit_date_hr=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^date=' | sed 's!^.*=!!')
     fi
     if $is_windows ; then
         # FIXME: krmllib cannot be built on Windows because the krmllib Makefiles use Cygwin paths, which cannot be used by the krml executable
