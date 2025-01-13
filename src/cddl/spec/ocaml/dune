@@ -21,4 +21,5 @@
 
 (menhir
   (modules parser)
+  (flags --explain --external-tokens Tokens)
 )

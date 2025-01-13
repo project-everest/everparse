@@ -2,6 +2,11 @@
 
 open Parser
 open CDDL_Spec_AST_Base
+open Tokens
+
+let debug (x: token) =
+  print_endline ("Token: " ^ Tokens.show_token x);
+  x
 
 }
 
@@ -34,28 +39,30 @@ let nonempty_s = ws+
 
 rule token =
   parse
-  | uint as x { (UINT (Prims.parse_int x)) }
-  | ['"'] (schar* as x) ['"'] { (TEXT x) }
-  | nonempty_s { NONEMPTY_S }
-  | raw_id as x { (RAW_ID x) }
-  | "=>" { ARROW }
-  | "=" { EQ }
-  | "$$" { DOLLARDOLLAR }
-  | "$" { DOLLAR }
-  | "//" { SLASHSLASH }
-  | "/" { SLASH }
-  | "(" { LPAREN }
-  | ")" { RPAREN }
-  | "{" { LBRACE }
-  | "}" { RBRACE }
-  | "#6" { POUND6 }
-  | "." { DOT }
-  | "#" { POUND }
-  | "-" { MINUS }
-  | "," { COMMA }
-  | ":" { COLON }
-  | "^" { HAT }
-  | "*" { STAR }
-  | "+" { PLUS }
-  | "?" { QUESTION }
-  | eof { EOF }
+  | uint as x { debug (UINT (Prims.parse_int x)) }
+  | ['"'] (schar* as x) ['"'] { debug (TEXT x) }
+  | nonempty_s { debug NONEMPTY_S }
+  | raw_id as x { debug (RAW_ID x) }
+  | "=>" { debug ARROW }
+  | "=" { debug EQ }
+  | "$$" { debug DOLLARDOLLAR }
+  | "$" { debug DOLLAR }
+  | "//" { debug SLASHSLASH }
+  | "/" { debug SLASH }
+  | "(" { debug LPAREN }
+  | ")" { debug RPAREN }
+  | "{" { debug LBRACE }
+  | "}" { debug RBRACE }
+  | "[" { debug LBRACK }
+  | "]" { debug RBRACK }
+  | "#6" { debug POUND6 }
+  | "." { debug DOT }
+  | "#" { debug POUND }
+  | "-" { debug MINUS }
+  | "," { debug COMMA }
+  | ":" { debug COLON }
+  | "^" { debug HAT }
+  | "*" { debug STAR }
+  | "+" { debug PLUS }
+  | "?" { debug QUESTION }
+  | eof { debug EOF }
