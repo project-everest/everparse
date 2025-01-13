@@ -17,7 +17,7 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 # .PHONY: extract
 
-ocaml:
-	cd ocaml && dune build
+ocaml: $(ALL_CHECKED_FILES)
+	+$(MAKE) -f $@.Makefile
 
 .PHONY: ocaml
