@@ -1,4 +1,4 @@
-type ('a, 'b) parser = 'a TokenBuffer.t -> 'b option
+type ('a, 'b, 'c) parser = ('a, 'b) TokenBuffer.t -> 'c option
 
 let stack_level = ref 0
 
@@ -8,8 +8,8 @@ let print_spaces () =
 
 let debug
       (name: string)
-      (f: ('a, 'b) parser)
-    : ('a, 'b) parser
+      (f: ('a, 'b, 'c) parser)
+    : ('a, 'b, 'c) parser
   = fun buf ->
   print_spaces ();
   print_endline ("Entering: " ^ name);
@@ -27,17 +27,17 @@ let debug
 
 let debug_start
       (name: string)
-      (f: ('a, 'b) parser)
-    : ('a, 'b) parser
+      (f: ('a, 'b, 'c) parser)
+    : ('a, 'b, 'c) parser
   = fun buf ->
     stack_level := 0;
     debug name f buf
 
 let choice
-      (f: 'b TokenBuffer.t -> 'a option)
-      (g: 'b TokenBuffer.t -> 'a option)
-      (x: 'b TokenBuffer.t)
-    : 'a option
+      (f: ('a, 'b, 'c) parser)
+      (g: ('a, 'b, 'c) parser)
+      (x: ('a, 'b) TokenBuffer.t)
+    : 'c option
   = let saved = TokenBuffer.backup x in
     match f x with
     | Some y -> Some y
@@ -45,17 +45,17 @@ let choice
        TokenBuffer.restore x saved;
        g x
 
-let fail : ('a, 'b) parser = (fun _ -> None)
+let fail : ('a, 'b, 'c) parser = (fun _ -> None)
 
 let rec choices l = match l with
   | [] -> fail
   | a :: q -> choice a (choices q)
 
 let concat
-      (f: 'b TokenBuffer.t -> 'a option)
-      (g: 'a -> 'b TokenBuffer.t -> 'c option)
-      (x: 'b TokenBuffer.t)
-    : 'c option
+      (f: ('a, 'b, 'c) parser)
+      (g: 'c -> ('a, 'b, 'd) parser)
+      (x: ('a, 'b) TokenBuffer.t)
+    : 'd option
   = match f x with
   | Some y ->
      incr stack_level;
@@ -66,34 +66,40 @@ let concat
 
 let ret
       (x: 'a)
-      (y: 'b TokenBuffer.t)
+      (y: ('b, 'c) TokenBuffer.t)
     : 'a option
 = Some x
 
+let ret_option
+      (x: 'a option)
+      (y: ('b, 'c) TokenBuffer.t)
+    : 'a option
+= x
+
 let option
-      (f: ('a, 'b) parser)
-    : ('a, 'b option) parser
+      (f: ('a, 'b, 'c) parser)
+    : ('a, 'b, 'c option) parser
 = choice (concat f (fun x -> ret (Some x))) (ret None)
 
 let terminal
       (f: 'a -> 'b option)
-      (x: 'a TokenBuffer.t)
+      (x: ('a, 'c) TokenBuffer.t)
     : 'b option
   = f (TokenBuffer.advance x)
 
 let rec list
-          (f: ('a, 'b) parser)
-: ('a, 'b list) parser
+          (f: ('a, 'b, 'c) parser)
+: ('a, 'b, 'c list) parser
   = choice
       (nonempty_list f)
       (ret [])
 
 and nonempty_list
-(f: ('a, 'b) parser)
-    : ('a, 'b list) parser
+(f: ('a, 'b, 'c) parser)
+    : ('a, 'b, 'c list) parser
   = concat f (fun a -> concat (list f) (fun q -> ret (a :: q)))
 
 let rec ignore_list
-      (f: ('b, 'a) parser)
-    : ('b, unit) parser
+      (f: ('a, 'b, 'c) parser)
+    : ('a, 'b, unit) parser
   = choice (concat f (fun _ -> ignore_list f)) (ret ())

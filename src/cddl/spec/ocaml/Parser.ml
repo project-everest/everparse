@@ -3,6 +3,10 @@ open Tokens
 open FStar_Pervasives
 open CDDL_Spec_AST_Base
 
+type state = unit
+type 'a parser = (token, state, 'a) ABNF.parser
+type symbol = unit parser
+
 let terminal name f =
   terminal (fun x ->
       print_spaces ();
@@ -16,7 +20,7 @@ let terminal name f =
       res
     )
 
-let raw_id = terminal "raw_id" (function RAW_ID s -> Some s | _ -> None)
+let raw_id : string parser = terminal "raw_id" (function RAW_ID s -> Some s | _ -> None)
 let text = terminal "text" (function TEXT s -> Some s | _ -> None)
 let uint = terminal "uint" (function UINT s -> Some s | _ -> None)
 let nonempty_s = terminal "nonempty_s" (function NONEMPTY_S -> Some () | _ -> None)
@@ -44,8 +48,8 @@ let colon = terminal "colon" (function COLON -> Some () | _ -> None)
 let hat = terminal "hat" (function HAT -> Some () | _ -> None)
 let star = terminal "star" (function STAR -> Some () | _ -> None)
 let plus = terminal "plus" (function PLUS -> Some () | _ -> None)
-let dollardollar = terminal "dollardollar" (function DOLLARDOLLAR -> Some () | _ -> None)
-let dollar = terminal "dollar" (function DOLLAR -> Some () | _ -> None)
+let dollardollar : symbol = terminal "dollardollar" (function DOLLARDOLLAR -> Some () | _ -> None)
+let dollar : symbol = terminal "dollar" (function DOLLAR -> Some () | _ -> None)
 let question = terminal "question" (function QUESTION -> Some () | _ -> None)
 let eof = terminal "eof" (function EOF -> Some () | _ -> None)
 
@@ -156,7 +160,7 @@ and type2 () = debug "type2" (
     ]
 )
 
-and group () : (token, group) parser = debug "group" (
+and group () = debug "group" (
   concat (grpchoice ()) (fun a -> concat (group_tail ()) (fun q -> ret (q a)))
 )
 
@@ -196,14 +200,14 @@ and memberkey () = debug "memberkey" (
     ]
 )
 
-let rec cddl () : (token, (string * CDDL_Spec_AST_Base.typ) list) parser = debug_start "cddl" (
+let rec cddl () : ((string * CDDL_Spec_AST_Base.typ) list) parser = debug_start "cddl" (
   concat s (fun _ -> concat (nonempty_list (cddl_item ())) (fun l -> concat eof (fun _ -> ret (List.rev l))))
 )
 
-and cddl_item () = debug "cddl_item" (
+and cddl_item () : ((string * CDDL_Spec_AST_Base.typ)) parser = debug "cddl_item" (
   concat (rule ()) (fun x -> concat s (fun _ -> ret x))
 )
 
-and rule () = debug "rule" (
+and rule () : ((string * CDDL_Spec_AST_Base.typ)) parser = debug "rule" (
   concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assignt (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> ret (f name t))))))
 )

@@ -11,7 +11,7 @@ let parse_with_error filename lexbuf =
 let parse filename =
   let ch = open_in filename in
   let lexbuf = Lexing.from_channel ch in
-  let buf = TokenBuffer.create (fun _ -> Lexer.token lexbuf) in
+  let buf = TokenBuffer.create (fun _ -> Lexer.token lexbuf) () in
   let res = parse_with_error filename buf in
   close_in ch;
   res
