@@ -25,6 +25,14 @@ type decl =
 | DType of typ
 | DGroup of group
 
+let check_name (env: name_env) (name: string) (k: name_env_elem) : Tot (option name_env) =
+  match env name with
+  | None -> Some (extend_name_env env name k)
+  | Some k' ->
+    if k = k'
+    then Some env
+    else None
+
 let rec elab_list'
   (fuel: nat)
   (env: ast_env)

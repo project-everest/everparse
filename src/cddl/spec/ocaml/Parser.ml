@@ -58,10 +58,10 @@ let s = debug "s" (choice (nonempty_s) (ret ()))
 let id = debug "id" raw_id (* TODO: "$$", "$" *)
 
 let typename = debug "typename"
-  (concat id (fun n -> concat (get_state ()) (fun s -> match s n with Some NType -> ret n | _ -> fail)))
+  (concat id (fun n -> concat (get_state ()) (fun s -> match CDDL_Spec_AST_Driver.check_name s n CDDL_Spec_AST_Base.NType with None -> fail | Some s' -> concat (set_state s') (fun _ -> ret n))))
 
 let groupname = debug "groupname"
-  (concat id (fun n -> concat (get_state ()) (fun s -> match s n with Some NGroup -> ret n | _ -> fail)))
+  (concat id (fun n -> concat (get_state ()) (fun s -> match CDDL_Spec_AST_Driver.check_name s n CDDL_Spec_AST_Base.NGroup with None -> fail | Some s' -> concat (set_state s') (fun _ -> ret n))))
 
 let assignt = debug "assignt" (concat eq (fun _ -> ret (fun (x: string) (t: typ) -> (x, CDDL_Spec_AST_Driver.DType t))))
 
@@ -216,6 +216,6 @@ and cddl_item () : ((string * CDDL_Spec_AST_Driver.decl)) parser = debug "cddl_i
 and rule () : ((string * CDDL_Spec_AST_Driver.decl)) parser =
   debug "rule"
     (choice
-       (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assignt (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> concat (get_state ()) (fun st -> concat (set_state (CDDL_Spec_AST_Base.extend_name_env st name CDDL_Spec_AST_Base.NType)) (fun _ -> ret (f name t)))))))))
-       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assigng (fun f -> concat s (fun _ -> concat (group ()) (fun t -> concat (get_state ()) (fun st -> concat (set_state (CDDL_Spec_AST_Base.extend_name_env st name CDDL_Spec_AST_Base.NType)) (fun _ -> ret (f name t)))))))))
+       (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assignt (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> ret (f name t)))))))
+       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assigng (fun f -> concat s (fun _ -> concat (group ()) (fun t -> ret (f name t)))))))
     )
