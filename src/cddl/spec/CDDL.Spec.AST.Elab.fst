@@ -1078,7 +1078,7 @@ let rec map_group_footprint'
   | MGTable key key_except _ ->
     let res = RSuccess (key, key_except) in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
-  | MGChoice g1 g2 -> (| ROutOfFuel, () |)
+  | MGChoice g1 g2
   | MGConcat g1 g2 ->
     let sq1: squash (bounded_elab_map_group env.e_sem_env.se_bound g1) = () in
     let sq2: squash (bounded_elab_map_group env.e_sem_env.se_bound g2) = () in
