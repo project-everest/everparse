@@ -59,6 +59,7 @@ let cddl_major_type_text_string : Cbor.major_type_byte_string_or_text_string =
 type elem_typ =
 | ELiteral of literal
 | EBool
+| ESimple
 | EByteString // TODO: add length constraints, etc.
 | ETextString
 | EUInt // TODO: add range constraints, etc.
@@ -388,6 +389,7 @@ let elem_typ_sem
 = match t with
   | ELiteral l -> spec_type_of_literal l
   | EBool -> Spec.t_bool
+  | ESimple -> Spec.t_simple
   | EByteString -> Spec.bstr
   | ETextString -> Spec.tstr
   | EUInt -> Spec.uint
@@ -1832,6 +1834,7 @@ noeq
 type target_elem_type =
 | TTUnit
 | TTSimple
+| TTUInt8
 | TTUInt64
 | TTString
 | TTBool
@@ -1930,6 +1933,7 @@ let target_elem_type_sem
 : GTot Type0
 = match t with
   | TTSimple -> Cbor.simple_value
+  | TTUInt8 -> U8.t
   | TTUInt64 -> U64.t
   | TTUnit -> unit
   | TTBool -> bool
@@ -2226,6 +2230,7 @@ let target_type_of_elem_typ
 = match x with
   | ELiteral _ -> TTUnit
   | EBool -> TTBool
+  | ESimple -> TTUInt8
   | EByteString
   | ETextString -> TTString
   | EUInt
@@ -2428,6 +2433,7 @@ let spec_of_elem_typ
 = match e with
   | ELiteral l -> Spec.spec_literal (eval_literal l)
   | EBool -> Spec.spec_bool (fun _ -> true)
+  | ESimple -> Spec.spec_simple Cbor.simple_value_wf
   | EByteString -> Spec.spec_bstr (fun _ -> true)
   | ETextString -> Spec.spec_tstr CBOR.Spec.API.UTF8.correct
   | EUInt -> Spec.spec_uint (fun _ -> true)

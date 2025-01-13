@@ -60,6 +60,7 @@ rule token =
   | "#0" { debug POUND0 }
   | "#1" { debug POUND1 }
   | "#6" { debug POUND6 }
+  | "#7" { debug POUND7 }
   | "." { debug DOT }
   | "#" { debug POUND }
   | "-" { debug MINUS }

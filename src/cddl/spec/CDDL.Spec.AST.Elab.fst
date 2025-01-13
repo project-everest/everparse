@@ -453,6 +453,12 @@ let rec typ_disjoint
     else if U8.uint_to_t v = simple_value_false
     then RFailure "typ_disjoint: Bool vs. simple_value_false"
     else RSuccess ()
+  | TElem ESimple, TElem (ELiteral (LSimple _))
+  | TElem (ELiteral (LSimple _)), TElem ESimple ->
+    RFailure "typ_disjoint: Simple vs. simple_value"
+  | TElem ESimple, TElem EBool
+  | TElem EBool, TElem ESimple
+    -> RFailure "typ_disjoint: Bool vs. Simple"
   | TElem (ELiteral (LInt v)), TElem EUInt
   | TElem EUInt, TElem (ELiteral (LInt v)) ->
     if v >= 0
@@ -635,10 +641,12 @@ let rec typ_included
     else RFailure "typ_included: TTagged with different tags"
   | TTagged _ _, _
   | _, TTagged _ _ -> RFailure "typ_included: TTagged vs. anything"
+  | TElem (ELiteral (LSimple v)), TElem ESimple
   | TElem (ELiteral (LSimple v)), TElem EBool ->
     if U8.uint_to_t v = simple_value_true || U8.uint_to_t v = simple_value_false
     then RSuccess ()
     else RFailure "typ_included: TElem EBool"
+  | TElem EBool, TElem ESimple -> RSuccess ()
   | TElem (ELiteral (LInt v)), TElem EUInt ->
     if v >= 0
     then RSuccess ()

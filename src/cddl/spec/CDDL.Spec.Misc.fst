@@ -30,6 +30,7 @@ let t_simple_value_literal (s: Cbor.simple_value) : typ =
 let t_false : typ = t_simple_value_literal simple_value_false
 let t_true : typ = t_simple_value_literal simple_value_true
 let t_bool : typ = t_choice t_false t_true
+let t_simple : typ = (fun w -> let x = Cbor.unpack w in Cbor.CSimple? x)
 let t_nil : typ = t_simple_value_literal simple_value_nil
 let t_null : typ = t_nil
 let t_undefined : typ = t_simple_value_literal simple_value_undefined
@@ -179,6 +180,22 @@ let spec_bool
   serializable = p;
   parser = parser_spec_bool p;
   serializer = serializer_spec_bool p;
+  parser_inj = ();
+}
+
+let parser_spec_simple (p: U8.t -> bool { forall x . p x <==> Cbor.simple_value_wf x }) : parser_spec t_simple U8.t p =
+  (fun x -> let Cbor.CSimple v = Cbor.unpack x in v)
+
+let serializer_spec_simple (p: U8.t -> bool { forall x . p x <==> Cbor.simple_value_wf x }) : serializer_spec (parser_spec_simple p) =
+  (fun x -> Cbor.pack (Cbor.CSimple x))
+
+let spec_simple
+  (p: U8.t -> bool { forall x . p x <==> Cbor.simple_value_wf x })
+: spec t_simple U8.t true
+= {
+  serializable = p;
+  parser = parser_spec_simple p;
+  serializer = serializer_spec_simple p;
   parser_inj = ();
 }
 
