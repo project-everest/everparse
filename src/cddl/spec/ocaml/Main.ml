@@ -16,7 +16,7 @@ let parse filename =
   close_in ch;
   res
 
-let read_buf : (string * CDDL_Spec_AST_Base.typ) list ref = ref []
+let read_buf : (string * CDDL_Spec_AST_Driver.decl) list ref = ref []
 
 let process_file filename =
   match parse filename with

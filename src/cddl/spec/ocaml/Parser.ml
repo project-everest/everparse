@@ -61,7 +61,7 @@ let typename = debug "typename" id (* TODO: check for the environment *)
 
 let groupname = debug "groupname" id (* TODO: check for the environment *)
 
-let assignt = debug "assignt" (concat eq (fun _ -> ret (fun (x: string) (t: typ) -> (x, t))))
+let assignt = debug "assignt" (concat eq (fun _ -> ret (fun (x: string) (t: typ) -> (x, CDDL_Spec_AST_Driver.DType t))))
 
 (* TODO: /= *)
 
@@ -200,14 +200,14 @@ and memberkey () = debug "memberkey" (
     ]
 )
 
-let rec cddl () : ((string * CDDL_Spec_AST_Base.typ) list) parser = debug_start "cddl" (
+let rec cddl () : ((string * CDDL_Spec_AST_Driver.decl) list) parser = debug_start "cddl" (
   concat s (fun _ -> concat (nonempty_list (cddl_item ())) (fun l -> concat eof (fun _ -> ret (List.rev l))))
 )
 
-and cddl_item () : ((string * CDDL_Spec_AST_Base.typ)) parser = debug "cddl_item" (
+and cddl_item () : ((string * CDDL_Spec_AST_Driver.decl)) parser = debug "cddl_item" (
   concat (rule ()) (fun x -> concat s (fun _ -> ret x))
 )
 
-and rule () : ((string * CDDL_Spec_AST_Base.typ)) parser = debug "rule" (
+and rule () : ((string * CDDL_Spec_AST_Driver.decl)) parser = debug "rule" (
   concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assignt (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> ret (f name t))))))
 )
