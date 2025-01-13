@@ -1927,10 +1927,15 @@ let map_group_choice_compatible
   res
 
 let rec mk_elab_map_group
+  (fuel: nat)
+  (env: ast_env)
   (g: group)
 : Tot (result elab_map_group)
-  (decreases g)
-= match g with
+  (decreases fuel)
+= if fuel = 0
+  then ROutOfFuel
+  else let fuel' : nat = fuel - 1 in
+  match g with
   | GElem cut (TElem (ELiteral key)) value ->
     RSuccess (MGMatch cut key value)
   | GElem true key value ->
@@ -1938,75 +1943,92 @@ let rec mk_elab_map_group
   | GAlwaysFalse -> RSuccess MGAlwaysFalse
   | GNop -> RFailure "mk_elab_map_group: GNop"
   | GZeroOrOne g ->
-    begin match mk_elab_map_group g with
+    begin match mk_elab_map_group fuel' env g with
     | RSuccess g' -> RSuccess (MGChoice g' MGNop)
     | err -> err
     end
   | GZeroOrMore (GElem false key value) ->
     RSuccess (MGTable key (TElem EAlwaysFalse) value)
   | GConcat g1 g2 ->
-    begin match mk_elab_map_group g1 with
+    begin match mk_elab_map_group fuel' env g1 with
     | RSuccess g1' ->
-      begin match mk_elab_map_group g2 with
+      begin match mk_elab_map_group fuel' env g2 with
       | RSuccess g2' -> RSuccess (MGConcat g1' g2')
       | err -> err
       end
     | err -> err
     end
   | GChoice g1 g2 ->
-    begin match mk_elab_map_group g1 with
+    begin match mk_elab_map_group fuel' env g1 with
     | RSuccess g1' ->
-      begin match mk_elab_map_group g2 with
+      begin match mk_elab_map_group fuel' env g2 with
       | RSuccess g2' -> RSuccess (MGChoice g1' g2')
       | err -> err
       end
     | err -> err
     end
+  | GDef n ->
+    begin match env.e_sem_env.se_bound n with
+    | Some NGroup -> mk_elab_map_group fuel' env (env.e_env n)
+    | _ -> RFailure ("mk_elab_map_group: undefined group: " ^ n)
+    end
   | _ -> RFailure "mk_elab_map_group: unsupported"
 
 let rec mk_elab_map_group_bounded
-  (env: name_env)
+  (fuel: nat)
+  (env: ast_env)
   (g: group)
 : Lemma
-  (requires (group_bounded env g))
-  (ensures (match mk_elab_map_group g with
-  | RSuccess g' -> bounded_elab_map_group env g'
+  (requires (group_bounded env.e_sem_env.se_bound g))
+  (ensures (match mk_elab_map_group fuel env g with
+  | RSuccess g' -> bounded_elab_map_group env.e_sem_env.se_bound g'
   | _ -> True
   ))
-  (decreases g)
-  [SMTPat (group_bounded env g); SMTPat (mk_elab_map_group g)]
-= match g with
-  | GZeroOrOne g_ -> mk_elab_map_group_bounded env g_
+  (decreases fuel)
+  [SMTPat (group_bounded env.e_sem_env.se_bound g); SMTPat (mk_elab_map_group fuel env g)]
+= if fuel = 0
+  then ()
+  else let fuel' : nat = fuel - 1 in
+  match g with
+  | GZeroOrOne g_ -> mk_elab_map_group_bounded fuel' env g_
   | GConcat g1 g2
   | GChoice g1 g2 ->
-    mk_elab_map_group_bounded env g1;
-    mk_elab_map_group_bounded env g2
+    mk_elab_map_group_bounded fuel' env g1;
+    mk_elab_map_group_bounded fuel' env g2
+  | GDef n ->
+    mk_elab_map_group_bounded fuel' env (env.e_env n)
   | _ -> ()
 
 let rec mk_elab_map_group_correct
-  (env: sem_env)
+  (fuel: nat)
+  (env: ast_env)
   (g: group)
 : Lemma
-  (requires (group_bounded env.se_bound g))
-  (ensures (match mk_elab_map_group g with
+  (requires (group_bounded env.e_sem_env.se_bound g))
+  (ensures (match mk_elab_map_group fuel env g with
   | RSuccess g' ->
-    bounded_elab_map_group env.se_bound g' /\
-    elab_map_group_sem env g' == map_group_sem env g
+    bounded_elab_map_group env.e_sem_env.se_bound g' /\
+    elab_map_group_sem env.e_sem_env g' == map_group_sem env.e_sem_env g
   | _ -> True
   ))
-  (decreases g)
-= mk_elab_map_group_bounded env.se_bound g;
+  (decreases fuel)
+=
+  mk_elab_map_group_bounded fuel env g;
+  if fuel = 0 then () else
+  let fuel' : nat = fuel - 1 in
   match g with
   | GChoice g1 g2
   | GConcat g1 g2 ->
-    mk_elab_map_group_correct env g1;
-    mk_elab_map_group_correct env g2
+    mk_elab_map_group_correct fuel' env g1;
+    mk_elab_map_group_correct fuel' env g2
   | GZeroOrOne g_ ->
-    mk_elab_map_group_correct env g_
+    mk_elab_map_group_correct fuel' env g_
   | GZeroOrMore (GElem false key value) ->
     Spec.map_group_filter_ext
-      (Util.notp (Spec.matches_map_group_entry (Util.andp (typ_sem env key) (Util.notp Spec.t_always_false)) (typ_sem env value)))
-      (Util.notp (Spec.matches_map_group_entry (typ_sem env key) (typ_sem env value)))
+      (Util.notp (Spec.matches_map_group_entry (Util.andp (typ_sem env.e_sem_env key) (Util.notp Spec.t_always_false)) (typ_sem env.e_sem_env value)))
+      (Util.notp (Spec.matches_map_group_entry (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)))
+  | GDef n ->
+    mk_elab_map_group_correct fuel' env (env.e_env n)
   | _ -> ()
 
 let typ_inter_underapprox_postcond
@@ -2372,8 +2394,8 @@ let rec mk_wf_typ
     | res -> coerce_failure res
     end
   | TMap m ->
-    mk_elab_map_group_correct env.e_sem_env m;
-    begin match mk_elab_map_group m with
+    mk_elab_map_group_correct fuel env m;
+    begin match mk_elab_map_group fuel env m with
     | RSuccess m1 ->
 (*  
     begin match mk_wf_validate_map_group fuel' env Spec.t_always_false Spec.t_always_false (TElem EAlwaysFalse) (TElem EAlwaysFalse) m with
