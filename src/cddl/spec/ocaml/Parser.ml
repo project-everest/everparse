@@ -117,7 +117,7 @@ let rec type_ () = debug "type" (
 
 and type_tail () = debug "type_tail" (
   choice
-    (concat s (fun _ -> concat slash (fun _ -> concat (type1 ()) (fun xl -> concat (type_tail ()) (fun xr -> ret (fun (x: typ) -> TChoice (x, xr xl)))))))
+    (concat s (fun _ -> concat slash (fun _ -> concat s (fun _ -> concat (type1 ()) (fun xl -> concat (type_tail ()) (fun xr -> ret (fun (x: typ) -> TChoice (x, xr xl))))))))
     (ret (fun (x: typ) -> x))
 )
 
