@@ -8,10 +8,12 @@ let print_position filename outx lexbuf =
 let parse_with_error filename lexbuf =
   Parser.cddl () lexbuf
 
+let env : CDDL_Spec_AST_Base.name_env ref = ref CDDL_Spec_AST_Base.empty_name_env
+
 let parse filename =
   let ch = open_in filename in
   let lexbuf = Lexing.from_channel ch in
-  let buf = TokenBuffer.create (fun _ -> Lexer.token lexbuf) () in
+  let buf = TokenBuffer.create (fun _ -> Lexer.token lexbuf) !env in
   let res = parse_with_error filename buf in
   close_in ch;
   res
@@ -21,7 +23,7 @@ let read_buf : (string * CDDL_Spec_AST_Driver.decl) list ref = ref []
 let process_file filename =
   match parse filename with
   | None -> print_endline "Syntax error"; exit 1
-  | Some l -> read_buf := List.append l !read_buf
+  | Some (env', l) -> env := env'; read_buf := List.append l !read_buf
 
 let _ =
   Arg.parse [] process_file "Usage: %0 [file1 ...]";

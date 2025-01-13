@@ -3,7 +3,7 @@ open Tokens
 open FStar_Pervasives
 open CDDL_Spec_AST_Base
 
-type state = unit
+type state = CDDL_Spec_AST_Base.name_env
 type 'a parser = (token, state, 'a) ABNF.parser
 type symbol = unit parser
 
@@ -57,9 +57,11 @@ let s = debug "s" (choice (nonempty_s) (ret ()))
 
 let id = debug "id" raw_id (* TODO: "$$", "$" *)
 
-let typename = debug "typename" id (* TODO: check for the environment *)
+let typename = debug "typename"
+  (concat id (fun n -> concat (get_state ()) (fun s -> match s n with Some NType -> ret n | _ -> fail)))
 
-let groupname = debug "groupname" id (* TODO: check for the environment *)
+let groupname = debug "groupname"
+  (concat id (fun n -> concat (get_state ()) (fun s -> match s n with Some NGroup -> ret n | _ -> fail)))
 
 let assignt = debug "assignt" (concat eq (fun _ -> ret (fun (x: string) (t: typ) -> (x, CDDL_Spec_AST_Driver.DType t))))
 
@@ -203,8 +205,8 @@ and memberkey () = debug "memberkey" (
     ]
 )
 
-let rec cddl () : ((string * CDDL_Spec_AST_Driver.decl) list) parser = debug_start "cddl" (
-  concat s (fun _ -> concat (nonempty_list (cddl_item ())) (fun l -> concat eof (fun _ -> ret (List.rev l))))
+let rec cddl () : (state * (string * CDDL_Spec_AST_Driver.decl) list) parser = debug_start "cddl" (
+  concat s (fun _ -> concat (nonempty_list (cddl_item ())) (fun l -> concat eof (fun _ -> concat (get_state ()) (fun st -> ret (st, List.rev l)))))
 )
 
 and cddl_item () : ((string * CDDL_Spec_AST_Driver.decl)) parser = debug "cddl_item" (
@@ -214,6 +216,6 @@ and cddl_item () : ((string * CDDL_Spec_AST_Driver.decl)) parser = debug "cddl_i
 and rule () : ((string * CDDL_Spec_AST_Driver.decl)) parser =
   debug "rule"
     (choice
-       (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assignt (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> ret (f name t)))))))
-       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assigng (fun f -> concat s (fun _ -> concat (group ()) (fun t -> ret (f name t)))))))
+       (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assignt (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> concat (get_state ()) (fun st -> concat (set_state (CDDL_Spec_AST_Base.extend_name_env st name CDDL_Spec_AST_Base.NType)) (fun _ -> ret (f name t)))))))))
+       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assigng (fun f -> concat s (fun _ -> concat (group ()) (fun t -> concat (get_state ()) (fun st -> concat (set_state (CDDL_Spec_AST_Base.extend_name_env st name CDDL_Spec_AST_Base.NType)) (fun _ -> ret (f name t)))))))))
     )
