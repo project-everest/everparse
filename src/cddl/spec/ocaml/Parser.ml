@@ -107,7 +107,7 @@ let occur = debug "occur" (
 
 let option_occur = debug "option_occur" (
   choice
-    occur
+    (concat occur (fun x -> concat s (fun _ -> ret x)))
     (ret (fun (x: group) -> x))
 )
 
