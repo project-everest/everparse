@@ -61,7 +61,10 @@ let rec elab_list'
       aux fuel
     end
 
+let prelude_ast_env =
+  ast_env_extend_typ_with empty_ast_env "bool" (TElem EBool) (WfTElem EBool)
+
 let elab_list
   (l: list (string & typ))
 : ML (result ast_env)
-= elab_list' 1 empty_ast_env l
+= elab_list' 1 prelude_ast_env l
