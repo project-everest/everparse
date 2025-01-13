@@ -4,7 +4,6 @@
   (name Main)
   (libraries
 ;    batteries
-;    menhirLib
     fstar.lib
 ;    process
 ;    sha
@@ -18,8 +17,3 @@
 )
 
 (ocamllex lexer)
-
-(menhir
-  (modules parser)
-  (flags --explain --external-tokens Tokens)
-)

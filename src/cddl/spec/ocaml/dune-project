@@ -1,3 +1,2 @@
 (lang dune 2.8)
 (name cddl-elab)
-(using menhir 2.0)

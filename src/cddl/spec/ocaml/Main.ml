@@ -6,7 +6,7 @@ let print_position filename outx lexbuf =
     pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
 
 let parse_with_error filename lexbuf =
-  Parser2.cddl () lexbuf
+  Parser.cddl () lexbuf
 
 let parse filename =
   let ch = open_in filename in
