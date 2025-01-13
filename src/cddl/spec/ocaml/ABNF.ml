@@ -1,5 +1,38 @@
 type ('a, 'b) parser = 'a TokenBuffer.t -> 'b option
 
+let stack_level = ref 0
+
+let print_spaces () =
+  let spaces = String.make !stack_level ' ' in
+  print_string spaces
+
+let debug
+      (name: string)
+      (f: ('a, 'b) parser)
+    : ('a, 'b) parser
+  = fun buf ->
+  print_spaces ();
+  print_endline ("Entering: " ^ name);
+  incr stack_level;
+  let res = f buf in
+  decr stack_level;
+  print_spaces ();
+  begin match res with
+  | Some a ->
+     print_endline ("Success: " ^ name)
+  | None ->
+     print_endline ("Failure: " ^ name)
+  end;
+  res
+
+let debug_start
+      (name: string)
+      (f: ('a, 'b) parser)
+    : ('a, 'b) parser
+  = fun buf ->
+    stack_level := 0;
+    debug name f buf
+
 let choice
       (f: 'b TokenBuffer.t -> 'a option)
       (g: 'b TokenBuffer.t -> 'a option)
@@ -24,7 +57,11 @@ let concat
       (x: 'b TokenBuffer.t)
     : 'c option
   = match f x with
-  | Some y -> g y x
+  | Some y ->
+     incr stack_level;
+     let res = g y x in
+     decr stack_level;
+     res
   | None -> None
 
 let ret

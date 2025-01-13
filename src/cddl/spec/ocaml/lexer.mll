@@ -5,7 +5,9 @@ open CDDL_Spec_AST_Base
 open Tokens
 
 let debug (x: token) =
+(*
   print_endline ("Token: " ^ Tokens.show_token x);
+*)
   x
 
 }
