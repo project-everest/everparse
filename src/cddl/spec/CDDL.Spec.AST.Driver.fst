@@ -40,7 +40,7 @@ let rec elab_list'
       RFailure (new_name ^ " already in use")
     | _ ->
       let rec aux (fuel': nat) : ML (result ast_env) =
-        let res = mk_wf_typ' fuel env t in
+        let res = mk_wf_typ' fuel' env t in
         print_endline "Result:";
         print_endline (ast0_wf_typ_result_to_string _ res);
         match res with
@@ -64,4 +64,4 @@ let rec elab_list'
 let elab_list
   (l: list (string & typ))
 : ML (result ast_env)
-= elab_list' 0 empty_ast_env l
+= elab_list' 1 empty_ast_env l
