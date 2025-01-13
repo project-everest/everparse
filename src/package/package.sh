@@ -115,11 +115,11 @@ make_everparse() {
     export OTHERFLAGS='--admit_smt_queries true'
     #!!!!!
 
-    # Verify if F* and KaRaMeL are here
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
 
-    ## Setup F*
+    ## Setup F*. We need to locate a package, either it's already
+    # there or we try to build one from the repo.
 
     if ! [ -f fstar.tar.gz ]; then
       if ! [ -d FStar ]; then
