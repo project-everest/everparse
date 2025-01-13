@@ -33,6 +33,12 @@ let debug_start
     stack_level := 0;
     debug name f buf
 
+let get_state () : ('a, 'b, 'b) parser =
+  fun buf -> Some buf.state
+
+let set_state (x: 'b) : ('a, 'b, unit) parser =
+  fun buf -> buf.state <- x; Some ()
+
 let choice
       (f: ('a, 'b, 'c) parser)
       (g: ('a, 'b, 'c) parser)

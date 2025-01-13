@@ -65,8 +65,11 @@ let assignt = debug "assignt" (concat eq (fun _ -> ret (fun (x: string) (t: typ)
 
 (* TODO: /= *)
 
+let assigng = debug "assigng" (concat eq (fun _ -> ret (fun (x: string) (t: group) -> (x, CDDL_Spec_AST_Driver.DGroup t))))
+
+(* TODO: //= *)
+
 (* TODO:
-assigng:
 
 genericparm:
 
@@ -208,6 +211,9 @@ and cddl_item () : ((string * CDDL_Spec_AST_Driver.decl)) parser = debug "cddl_i
   concat (rule ()) (fun x -> concat s (fun _ -> ret x))
 )
 
-and rule () : ((string * CDDL_Spec_AST_Driver.decl)) parser = debug "rule" (
-  concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assignt (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> ret (f name t))))))
-)
+and rule () : ((string * CDDL_Spec_AST_Driver.decl)) parser =
+  debug "rule"
+    (choice
+       (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assignt (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> ret (f name t)))))))
+       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assigng (fun f -> concat s (fun _ -> concat (group ()) (fun t -> ret (f name t)))))))
+    )
