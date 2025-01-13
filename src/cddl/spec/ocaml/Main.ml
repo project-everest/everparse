@@ -16,10 +16,22 @@ let parse filename =
   close_in ch;
   res
 
+let read_buf : (string * CDDL_Spec_AST_Base.typ) list ref = ref []
+
 let process_file filename =
   match parse filename with
-  | None -> print_endline "Syntax error"
-  | Some l -> ignore (elab_list l)
+  | None -> print_endline "Syntax error"; exit 1
+  | Some l -> read_buf := List.append l !read_buf
 
 let _ =
-  Arg.parse [] process_file "Usage: %0 [file1 ...]"
+  Arg.parse [] process_file "Usage: %0 [file1 ...]";
+  begin match elab_list !read_buf with
+  | CDDL_Spec_AST_Elab.RSuccess env' ->
+     print_endline "Success!"
+  | CDDL_Spec_AST_Elab.RFailure msg ->
+     print_endline ("Failure: " ^ msg);
+     exit 2
+  | CDDL_Spec_AST_Elab.ROutOfFuel ->
+     print_endline "Out of fuel! This should not happen";
+     exit 3
+  end
