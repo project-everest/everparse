@@ -187,7 +187,7 @@ and memberkey () = debug "memberkey" (
 )
 
 let rec cddl () : (token, (string * CDDL_Spec_AST_Base.typ) list) parser = debug_start "cddl" (
-  concat s (fun _ -> concat (nonempty_list (cddl_item ())) (fun l -> concat eof (fun _ -> ret l)))
+  concat s (fun _ -> concat (nonempty_list (cddl_item ())) (fun l -> concat eof (fun _ -> ret (List.rev l))))
 )
 
 and cddl_item () = debug "cddl_item" (
