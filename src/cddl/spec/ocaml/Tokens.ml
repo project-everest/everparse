@@ -10,6 +10,8 @@ type token =
   | RBRACE
   | LBRACK
   | RBRACK
+  | POUND0
+  | POUND1
   | POUND6
   | DOT
   | POUND

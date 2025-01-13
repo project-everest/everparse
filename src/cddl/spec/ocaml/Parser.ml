@@ -28,6 +28,8 @@ let lbrace = terminal "lbrace" (function LBRACE -> Some () | _ -> None)
 let rbrace = terminal "rbrace" (function RBRACE -> Some () | _ -> None)
 let lbrack = terminal "lbrack" (function LBRACK -> Some () | _ -> None)
 let rbrack = terminal "rbrack" (function RBRACK -> Some () | _ -> None)
+let pound0 = terminal "pound0" (function POUND0 -> Some () | _ -> None)
+let pound1 = terminal "pound1" (function POUND1 -> Some () | _ -> None)
 let pound6 = terminal "pound6" (function POUND6 -> Some () | _ -> None)
 let dot = terminal "dot" (function DOT -> Some () | _ -> None)
 let pound = terminal "pound"  (function POUND -> Some () | _ -> None)
@@ -141,7 +143,9 @@ and type2 () = debug "type2" (
 (* TODO: "&" s "(" s group s ")" *)
 (* TODO: "&" s groupname option(genericarg) *)
       concat pound6 (fun _ -> concat (option tag) (fun tag -> concat lparen (fun _ -> concat s (fun _ -> concat (type_ ()) (fun x -> concat s (fun _ -> concat rparen (fun _ -> ret (TTagged (tag, x)))))))));
-(* TODO: "#"DIGIT option(tag) *)
+(* TODO: generalize "#"DIGIT option(tag) *)
+      concat pound0 (fun _ -> ret (TElem EUInt));
+      concat pound1 (fun _ -> ret (TElem ENInt));
       concat pound (fun _ -> ret (TElem EAny));
     ]
 )
