@@ -59,6 +59,8 @@ rule token =
   | "]" { debug RBRACK }
   | "#0" { debug POUND0 }
   | "#1" { debug POUND1 }
+  | "#2" { debug POUND2 }
+  | "#3" { debug POUND3 }
   | "#6" { debug POUND6 }
   | "#7" { debug POUND7 }
   | "." { debug DOT }

@@ -12,6 +12,8 @@ type token =
   | RBRACK
   | POUND0
   | POUND1
+  | POUND2
+  | POUND3
   | POUND6
   | POUND7
   | DOT
