@@ -807,9 +807,16 @@ and ast0_wf_array_group
   s1: ast0_wf_array_group g1 ->
   s2: ast0_wf_array_group g2 ->
   ast0_wf_array_group (GChoice g1 g2)
+| WfARewrite:
+  g1: group ->
+  g2: group ->
+  s2: ast0_wf_array_group g2 ->
+  ast0_wf_array_group g1
+(*  
 | WfADef:
   n: string ->
   ast0_wf_array_group (GDef n) // will be taken into account by the syntax environment
+*)
 
 and ast0_wf_parse_map_group
 : elab_map_group -> Type
@@ -959,8 +966,14 @@ and bounded_wf_array_group
   group_bounded env g2 /\
   bounded_wf_array_group env g1 s1 /\
   bounded_wf_array_group env g2 s2
+| WfARewrite g1 g2 s2 ->
+  group_bounded env g1 /\
+  group_bounded env g2 /\
+  bounded_wf_array_group env g2 s2
+(*  
 | WfADef n ->
   env n == Some NGroup
+*)
 
 and bounded_wf_parse_map_group
   (env: name_env)
@@ -1078,7 +1091,12 @@ and bounded_wf_array_group_incr
   | WfAChoice g1 g2 s1 s2 ->
     bounded_wf_array_group_incr env env' g1 s1;
     bounded_wf_array_group_incr env env' g2 s2
+  | WfARewrite _ g2 s2 ->
+    bounded_wf_array_group_incr env env' g2 s2
+    
+(*    
   | WfADef _ -> ()
+*)
 
 (*
 and bounded_wf_validate_map_group_incr
@@ -1195,7 +1213,11 @@ and bounded_wf_array_group_bounded
   | WfAChoice _ _ _ _
   | WfAZeroOrOneOrMore _ _ _
   | WfAZeroOrOne _ _
-  | WfADef _ -> ()
+  | WfARewrite _ _ _
+(*  
+  | WfADef _
+*)  
+    -> ()
 
 (*
 and bounded_wf_validate_map_group_bounded
@@ -1309,7 +1331,12 @@ and spec_wf_array_group
   spec_wf_array_group env g1 s1 /\
   spec_wf_array_group env g2 s2 /\
   Spec.array_group_disjoint (array_group_sem env g1) (array_group_sem env g2)
+| WfARewrite g1 g2 s2 ->
+  Spec.array_group_equiv (array_group_sem env g1) (array_group_sem env g2) /\
+  spec_wf_array_group env g2 s2
+(*
 | WfADef n -> True
+*)
 end
 
 and spec_wf_parse_map_group
@@ -1434,7 +1461,12 @@ and spec_wf_array_group_incr
   | WfAChoice g1 g2 s1 s2 ->
     spec_wf_array_group_incr env env' g1 s1;
     spec_wf_array_group_incr env env' g2 s2
+  | WfARewrite g1 g2 s2 ->
+    spec_wf_array_group_incr env env' g2 s2
+    
+(*    
   | WfADef _ -> ()
+*)
 
 (*
 and spec_wf_validate_map_group_incr
@@ -2266,7 +2298,10 @@ and target_type_of_wf_array_group
     TTArray t'
   | WfAConcat _ _ s1 s2 -> ttpair (target_type_of_wf_array_group s1) (target_type_of_wf_array_group s2)
   | WfAChoice _ _ s1 s2 -> TTUnion (target_type_of_wf_array_group s1) (target_type_of_wf_array_group s2)
+  | WfARewrite _ _ s2 -> target_type_of_wf_array_group s2
+(*  
   | WfADef n -> TTDef n
+*)
 
 and target_type_of_wf_map_group
   (#x: elab_map_group)
@@ -2330,7 +2365,11 @@ and target_type_of_wf_array_group_bounded
   | WfAConcat _ _ s1 s2 -> 
     target_type_of_wf_array_group_bounded env s1;
     target_type_of_wf_array_group_bounded env s2
+  | WfARewrite _ _ s2 ->
+    target_type_of_wf_array_group_bounded env s2
+(*    
   | WfADef _ -> ()
+*)
 
 and target_type_of_wf_map_group_bounded
   (env: name_env)
@@ -2508,7 +2547,13 @@ and spec_of_wf_array_group
     Spec.ag_spec_choice
       (spec_of_wf_array_group env s1)
       (spec_of_wf_array_group env s2)
+  | WfARewrite _ _ s2 ->
+    Spec.ag_spec_ext
+      (spec_of_wf_array_group env s2)
+      _
+(*      
   | WfADef n -> env.tp_spec_array_group n
+*)
 
 and spec_of_wf_map_group
   (#tp_sem: sem_env)

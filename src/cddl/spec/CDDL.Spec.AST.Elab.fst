@@ -1379,11 +1379,15 @@ let rec array_group_concat_unique_strong
       RSuccess ()
     end
   | WfAElem _ _ _ _ -> RSuccess ()
+  | WfARewrite _ _ s1 ->
+    array_group_concat_unique_strong fuel' env s1 g2
+(*  
   | WfADef n ->
     begin match (env.e_wf n).wf_array with
       | None -> RFailure "array_group_concat_unique_strong: unfold left, not proven yet"
       | Some (| _, s |) -> array_group_concat_unique_strong fuel' env #(env.e_env n) s g2
     end
+*)
   | _ ->
     begin match destruct_group g2 with
     | (GDef i, g2r) ->
@@ -1519,12 +1523,16 @@ let rec array_group_concat_unique_weak
             (array_group_sem env.e_sem_env g2);
           RSuccess ()
         end
+      | WfARewrite _ _ s1' ->
+        array_group_concat_unique_weak fuel' env s1' s2
+(*        
       | WfADef n ->
         begin match (env.e_wf n).wf_array with
         | None -> RFailure "array_group_concat_unique_weak: unfold left, not proven yet"
         | Some (| _, s1' |) ->
           array_group_concat_unique_weak fuel' env #(env.e_env n) s1' s2
         end
+*)
       | WfAZeroOrOneOrMore g s g' ->
         let res1 = array_group_disjoint env fuel false g g2 in
         if not (RSuccess? res1)
@@ -2461,7 +2469,12 @@ and mk_wf_array_group
       end
     | res -> coerce_failure res
     end
-  | GDef n -> RSuccess (WfADef n)
+  | GDef n ->
+    let g2 = env.e_env n in
+    begin match mk_wf_array_group fuel' env g2 with
+    | RSuccess s2 -> RSuccess (WfARewrite g g2 s2)
+    | res -> coerce_failure res
+    end
   | GNop -> RFailure "mk_wf_array_group: unsupported: GNop"
   | GAlwaysFalse -> RFailure "mk_wf_array_group: unsupported: GAlwaysFalse"
   | g ->
