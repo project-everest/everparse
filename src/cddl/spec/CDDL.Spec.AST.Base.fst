@@ -8,7 +8,7 @@ module U8 = FStar.UInt8
 irreducible let sem_attr : unit = ()
 
 let char_is_ascii (c: FStar.Char.char) : Tot bool =
-  FStar.UInt32.lt (FStar.Char.u32_of_char c) 128ul
+  FStar.UInt32.lt (FStar.Char.u32_of_char c) 127ul // because 7F is forbidden
 
 let string_is_ascii (s: string) : Tot bool =
   List.Tot.for_all char_is_ascii (FStar.String.list_of_string s)

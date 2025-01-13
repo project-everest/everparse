@@ -17,8 +17,8 @@
   (flags (:standard -w -8-9-11-26-27-33-39))
 )
 
-; (ocamllex lexer)
+(ocamllex lexer)
 
-; (menhir
-;   (modules parser)
-; )
+(menhir
+  (modules parser)
+)
