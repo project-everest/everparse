@@ -19,7 +19,8 @@ export EVERPARSE_HOME
 # Command to run EverParse: path to either the 3d executable or the
 # everparse.sh or everparse.cmd script from the EverParse binary
 # package
-EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe
+FSTAR_EXE ?= fstar.exe
+EVERPARSE_CMD=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
 
 
 # Output directory for .c/.h files as well as temporary files (.fst,

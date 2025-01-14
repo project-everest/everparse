@@ -14,3 +14,9 @@ tests/unit/*
 bin/qd.exe
 bin/3d.exe
 .depend.rsp
+
+# package.sh creates there
+__fstar-install
+everparse/**
+everparse_*.tar.gz
+everparse_*.zip

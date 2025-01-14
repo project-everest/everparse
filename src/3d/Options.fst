@@ -95,6 +95,8 @@ let emit_output_types_defs : ref bool = alloc true
 
 let emit_smt_encoding : ref bool = alloc false
 
+let fstar_exe : ref (option (valid_string always_valid)) = alloc None
+
 let z3_diff_test: ref (option (valid_string valid_equate_types)) = alloc None
 
 let z3_test : ref (option vstring) = alloc None
@@ -338,6 +340,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "config" (OptStringOption "config file" check_config_file_name config_file) "The name of a JSON formatted file containing configuration options" [];    
     CmdOption "emit_output_types_defs" (OptBool emit_output_types_defs) "Emit definitions of output types in a .h file" [];
     CmdOption "emit_smt_encoding" (OptBool emit_smt_encoding) "Emit an SMT encoding of parser specifications" [];
+    CmdOption "fstar" (OptStringOption "executable" always_valid fstar_exe) "The F* command to run. Default: 'fstar.exe'" [];
     CmdOption "input_stream" (OptStringOption "buffer|extern|static" valid_input_stream_binding input_stream_binding) "Input stream binding (default buffer)" [];
     CmdOption "input_stream_include" (OptStringOption ".h file" always_valid input_stream_include) "Include file defining the EverParseInputStreamBase type (only for --input_stream extern or static)" [];
     CmdOption "no_copy_everparse_h" (OptBool no_copy_everparse_h) "Do not Copy EverParse.h (--batch only)" [];
@@ -586,4 +589,9 @@ let get_z3_branch_depth () =
 let get_z3_options () : ML string = 
   match !z3_options with
   | None -> ""
+  | Some s -> s
+
+let get_fstar_exe () : ML string =
+  match !fstar_exe with
+  | None -> "fstar.exe"
   | Some s -> s

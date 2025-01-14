@@ -11,7 +11,8 @@ SHELL ["/bin/bash", "--login", "-c"]
 ARG CI_THREADS=24
 RUN env OPAMYES=1 CI_THREADS=$CI_THREADS NO_INTERACTIVE=1 ./install-everparse.sh
 
-ENV FSTAR_HOME=$HOME/asn1star/everest/FStar
+# TODO: Add F* and krml to path instead
+ENV FSTAR_EXE=$HOME/asn1star/everest/FStar/bin/fstar.exe
 ENV KRML_HOME=$HOME/asn1star/everest/karamel
 ENV EVERPARSE_HOME=$HOME/asn1star/everest/everparse
 
