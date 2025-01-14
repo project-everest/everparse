@@ -119,7 +119,7 @@ jobs:
 
       - name: Everparse CI
         id: cistep
-        run: make -C everparse ci -skj$(nproc)
+        run: . $HOME/.cargo/env && make -C everparse ci -skj$(nproc)
 
       # I'm leaving this disabled as I do not get good incrementality
       # when trying this out by hand due to dependence hash mismatches
