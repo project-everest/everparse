@@ -4,15 +4,7 @@ LOWPARSE_HOME ?= ../../src/lowparse
 
 FSTAR_OUT_DIR?=.fstar-out
 
-ifndef FSTAR_HOME
-  FSTAR_EXE:=$(shell which fstar.exe)
-  ifneq ($(.SHELLSTATUS),0)
-    FSTAR_HOME=../../../FStar
-  endif
-endif
-ifdef FSTAR_HOME
-  FSTAR_EXE:=$(FSTAR_HOME)/bin/fstar.exe
-endif
+FSTAR_EXE ?= fstar.exe
 
 ifndef KRML_HOME
   KRMLLIB:=$(shell ocamlfind query karamel)
@@ -50,13 +42,17 @@ EXCLUDE_KRML_FILES=$(FSTAR_OUT_DIR)/prims.krml
 EXAMPLE_DEPEND_FILES=$(addsuffix .depend,$(EXAMPLES))
 
 $(EXAMPLE_DEPEND_FILES): %.depend: *.fst *.fsti
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full LowParse$(basename $@).fst > $@
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full LowParse$(basename $@).fst --output_deps_to $@
 
 clean:
 	rm -rf $(FSTAR_OUT_DIR) $(EXAMPLES) $(addsuffix .depend, $(EXAMPLES)) .depend
 
 .depend: $(EXAMPLE_DEPEND_FILES)
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(ROOT_FILES) > $@
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(ROOT_FILES) --output_deps_to $@
+	# GM: This chunk below seems ill-placed. And if anything below fails
+	# the target .depend is still created. At least slap a:
+	#   ... || (rm -f $@; exit 1)
+	# at the end?
 	for f in $(EXAMPLES) ; do \
 	 $(MAKE) EXCLUDE_KRML_FILES='$(EXCLUDE_KRML_FILES)' EXAMPLE=$$f -f Makefile.example ; \
 	done
@@ -82,7 +78,7 @@ $(FSTAR_OUT_DIR)/%.krml:
 $(EXAMPLES): %: %/a.out
 
 %/a.out:
-	$(MY_KRML) $(KRML_ARGS) -tmpdir $(EXAMPLE) -bundle LowParse$(EXAMPLE)'.Aux' -warn-error '@2' -no-prefix LowParse$(EXAMPLE) $(EXAMPLE_KRML_FILES) -o $@
+	$(MY_KRML) -fstar $(FSTAR_EXE) $(KRML_ARGS) -tmpdir $(EXAMPLE) -bundle LowParse$(EXAMPLE)'.Aux' -warn-error '@2' -no-prefix LowParse$(EXAMPLE) $(EXAMPLE_KRML_FILES) -o $@
 	$@
 
 extract-all: $(filter-out $(NOEXTRACT_EXAMPLES), $(EXAMPLES))

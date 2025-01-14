@@ -29,15 +29,14 @@ opam depext conf-gmp z3.4.8.5-1 conf-m4
 FSTAR_BRANCH=$(jq -c -r '.BranchName' "$build_home"/config.json)
 
 # Install F*
-[[ -n "$FSTAR_HOME" ]]
-git clone --branch $FSTAR_BRANCH https://github.com/FStarLang/FStar "$FSTAR_HOME"
-opam install --deps-only "$FSTAR_HOME/fstar.opam"
-if ! $skip_z3 ; then
-    "$FSTAR_HOME/bin/get_fstar_z3.sh" "$FSTAR_HOME/z3-versions"
-    export PATH="$FSTAR_HOME/z3-versions:$PATH"
-fi
-$skip_build || OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$FSTAR_HOME"
-$skip_build || OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$FSTAR_HOME" bootstrap
+[[ -n "$FSTAR_DIR" ]]
+git clone --branch $FSTAR_BRANCH https://github.com/FStarLang/FStar "$FSTAR_DIR"
+opam install --deps-only "$FSTAR_DIR/fstar.opam"
+$skip_build || OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$FSTAR_DIR"
+$skip_build || OTHERFLAGS='--admit_smt_queries true' make -j 24 -C "$FSTAR_DIR" bootstrap
+
+# Only to build karamel below. NB the dockerfile also set this to the same value.
+export FSTAR_EXE=$FSTAR_DIR/bin/fstar.exe
 
 # Install other EverParse deps
 "$build_home"/install-other-deps.sh "${args[@]}"

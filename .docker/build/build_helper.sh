@@ -6,8 +6,6 @@ threads=$3
 branchname=$4
 fstarVersion=$5
 
-export FSTAR_HOME=$(pwd)/FStar
-
 eval $(opam config env)
 
 echo $(date -u "+%Y-%m-%d %H:%M:%S") >> $out_file
