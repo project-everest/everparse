@@ -206,7 +206,7 @@ and memberkey () = debug "memberkey" (
 )
 
 let rec cddl () : (state * (string * CDDL_Spec_AST_Driver.decl) list) parser = debug_start "cddl" (
-  concat s (fun _ -> concat (nonempty_list (cddl_item ())) (fun l -> concat eof (fun _ -> concat (get_state ()) (fun st -> ret (st, List.rev l)))))
+  concat s (fun _ -> concat (nonempty_list (cddl_item ())) (fun l -> concat eof (fun _ -> concat (get_state ()) (fun st -> ret (st, l)))))
 )
 
 and cddl_item () : ((string * CDDL_Spec_AST_Driver.decl)) parser = debug "cddl_item" (

@@ -2705,6 +2705,26 @@ and mk_wf_validate_map_group
 
 #pop-options
 
+let mk_wf_typ_bounded
+  (fuel: nat) // for typ_disjoint
+  (env: ast_env)
+  (g: typ)
+: Pure (result (ast0_wf_typ g))
+    (requires (typ_bounded env.e_sem_env.se_bound g))
+    (ensures (fun res -> match res with
+    | RSuccess s' ->
+      typ_bounded env.e_sem_env.se_bound g /\
+      bounded_wf_typ env.e_sem_env.se_bound g s' /\
+      spec_wf_typ env.e_sem_env g s'
+    | _ -> True
+    ))
+=
+    rewrite_typ_correct env.e_sem_env fuel g;
+    let g' = rewrite_typ fuel g in
+    match mk_wf_typ fuel env g' with
+    | RSuccess s' -> RSuccess (WfTRewrite g g' s')
+    | res -> coerce_failure res
+
 let mk_wf_typ'
   (fuel: nat) // for typ_disjoint
   (env: ast_env)
@@ -2719,13 +2739,7 @@ let mk_wf_typ'
     | _ -> True
     ))
 = if typ_bounded env.e_sem_env.se_bound g
-  then begin
-    rewrite_typ_correct env.e_sem_env fuel g;
-    let g' = rewrite_typ fuel g in
-    match mk_wf_typ fuel env g' with
-    | RSuccess s' -> RSuccess (WfTRewrite g g' s')
-    | res -> coerce_failure res
-  end
+  then mk_wf_typ_bounded fuel env g
   else RFailure "mk_wf_typ: not bounded"
 
 let prune_result

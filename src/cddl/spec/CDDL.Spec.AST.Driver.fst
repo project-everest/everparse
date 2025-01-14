@@ -36,13 +36,22 @@ let check_name (env: name_env) (name: string) (k: name_env_elem) : Tot (option n
 let rec elab_list'
   (fuel: nat)
   (env: ast_env)
+  (accu: list (string & decl))
   (l: list (string & decl))
 : ML (result ast_env)
 = match l with
   | [] ->
-    print_endline "Done, no definitions left";
-    RSuccess env
-  | (new_name, tg) :: q ->
+    if Nil? accu
+    then begin
+      print_endline "Done, no definitions left";
+      RSuccess env
+    end else begin
+      let msg = "Some definitions left, but none suitable to choose. They are likely all using undefined types or groups." in
+      print_endline ("ERROR: " ^ msg);
+      RFailure msg
+    end
+  | elt :: q ->
+    let (new_name, tg) = elt in
     begin match env.e_sem_env.se_bound new_name with
     | Some _ ->
       print_endline "ERROR: Name already in use";
@@ -58,35 +67,41 @@ let rec elab_list'
           print_endline "Extending the environment";
           group_bounded_incr (env.e_sem_env.se_bound) (extend_name_env env.e_sem_env.se_bound new_name NGroup) t;
           let env' = ast_env_extend_gen env new_name NGroup t in
-          elab_list' fuel env' q 
+          elab_list' fuel env' [] (List.Tot.rev_acc accu q)
         end else begin
-          print_endline "ERROR: Group uses undefined types/groups";
-          RFailure (new_name ^ " uses undefined types/groups")
+          print_endline "Group uses undefined types/groups. Choosing another one";
+          elab_list' fuel env (elt :: accu) q
         end
       | DType t ->
         print_string "Elaborating type: ";
         print_endline new_name;
         print_endline (typ_to_string t);
-        let rec aux (fuel': nat) : ML (result ast_env) =
-          let res = mk_wf_typ' fuel' env t in
-          print_endline "Result:";
-          print_endline (ast0_wf_typ_result_to_string _ res);
-          match res with
-          | RFailure s ->
-            print_endline "Failure! Aborting";
-            RFailure s
-          | ROutOfFuel ->
-            print_endline "Out of fuel! Trying to increase fuel";
-            aux (fuel' + fuel')
-          | RSuccess t_wf ->
-            print_endline "Success! Extending the environment";
-            assert (bounded_wf_typ (env.e_sem_env.se_bound) t t_wf);
-            bounded_wf_typ_incr (env.e_sem_env.se_bound) (extend_name_env env.e_sem_env.se_bound new_name NType) t t_wf;
-            assert (ast_env_extend_typ_with_pre env new_name t t_wf); // FIXME: WHY WHY WHY?
-            let env' = ast_env_extend_typ_with env new_name t t_wf in
-            elab_list' fuel' env' q
-        in
-        aux fuel
+        if typ_bounded (env.e_sem_env.se_bound) t
+        then
+          let rec aux (fuel': nat) : ML (result ast_env) =
+            let res = mk_wf_typ_bounded fuel' env t in
+            print_endline "Result:";
+            print_endline (ast0_wf_typ_result_to_string _ res);
+            match res with
+            | RFailure s ->
+              print_endline "Failure! Aborting";
+              RFailure s
+            | ROutOfFuel ->
+              print_endline "Out of fuel! Trying to increase fuel";
+              aux (fuel' + fuel')
+            | RSuccess t_wf ->
+              print_endline "Success! Extending the environment";
+              assert (bounded_wf_typ (env.e_sem_env.se_bound) t t_wf);
+              bounded_wf_typ_incr (env.e_sem_env.se_bound) (extend_name_env env.e_sem_env.se_bound new_name NType) t t_wf;
+              assert (ast_env_extend_typ_with_pre env new_name t t_wf); // FIXME: WHY WHY WHY?
+              let env' = ast_env_extend_typ_with env new_name t t_wf in
+              elab_list' fuel' env' [] (List.Tot.rev_acc accu q)
+          in
+          aux fuel
+        else begin
+          print_endline "Type uses undefined types/groups. Choosing another one";
+          elab_list' fuel env (elt :: accu) q
+        end
       end
     end
 
@@ -96,4 +111,4 @@ let prelude_ast_env =
 let elab_list
   (l: list (string & decl))
 : ML (result ast_env)
-= elab_list' 1 prelude_ast_env l
+= elab_list' 1 prelude_ast_env [] l
