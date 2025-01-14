@@ -228,6 +228,106 @@ and rewrite_group
   | GAlwaysFalse -> (GAlwaysFalse, true)
   | GNop -> (GNop, true)
 
+#restart-solver
+let rec rewrite_typ_bounded
+  (env: name_env)
+  (fuel: nat)
+  (t: typ)
+: Lemma
+  (requires (
+    typ_bounded env t
+  ))
+  (ensures (
+    let t' = fst (rewrite_typ fuel t) in
+    typ_bounded env t'
+  ))
+  (decreases fuel)
+= if fuel = 0
+  then ()
+  else let fuel' : nat = fuel - 1 in
+  match t with
+  | TChoice (TChoice t1 t2) t3 ->
+    rewrite_typ_bounded env fuel' (TChoice t1 (TChoice t2 t3))
+  | TChoice t (TElem EAlwaysFalse)
+  | TChoice (TElem EAlwaysFalse) t
+    -> rewrite_typ_bounded env fuel' t
+  | TChoice t1 t2 ->
+    rewrite_typ_bounded env fuel' t1;
+    rewrite_typ_bounded env fuel' t2;
+    rewrite_typ_bounded env fuel' (TChoice (fst (rewrite_typ fuel' t1)) (fst (rewrite_typ fuel' t2)))
+  | TArray g ->
+    rewrite_group_bounded env fuel' false g
+  | TMap g ->
+    rewrite_group_bounded env fuel' true g
+  | _ -> ()
+
+and rewrite_group_bounded
+  (env: name_env)
+  (fuel: nat)
+  (is_map_group: bool)
+  (t: group)
+: Lemma
+  (requires (
+    group_bounded env t
+  ))
+  (ensures (
+    let t' = fst (rewrite_group fuel is_map_group t) in
+    group_bounded env t'
+  ))
+  (decreases fuel)
+= if fuel = 0
+  then ()
+  else let fuel' : nat = fuel - 1 in
+  match t with
+  | GConcat GAlwaysFalse _ -> ()
+  | GConcat GNop g -> rewrite_group_bounded env fuel' is_map_group g
+  | GConcat g GNop -> rewrite_group_bounded env fuel' is_map_group g
+  | GConcat (GConcat t1 t2) t3 ->
+    rewrite_group_bounded env fuel' is_map_group (GConcat t1 (GConcat t2 t3))
+  | GConcat t1 t2 ->
+    let (t1', _) = rewrite_group fuel' is_map_group t1 in
+    let (t2', _) = rewrite_group fuel' is_map_group t2 in
+    rewrite_group_bounded env fuel' is_map_group t1;
+    rewrite_group_bounded env fuel' is_map_group t2;
+    rewrite_group_bounded env fuel' is_map_group (GConcat t1' t2')
+  | GChoice GAlwaysFalse g -> rewrite_group_bounded env fuel' is_map_group g
+  | GChoice g GAlwaysFalse -> rewrite_group_bounded env fuel' is_map_group g
+  | GChoice (GChoice t1 t2) t3 ->
+    rewrite_group_bounded env fuel' is_map_group (GChoice t1 (GChoice t2 t3))
+  | GChoice t1 t2 ->
+    let (t1', _) = rewrite_group fuel' is_map_group t1 in
+    let (t2', _) = rewrite_group fuel' is_map_group t2 in
+    rewrite_group_bounded env fuel' is_map_group t1;
+    rewrite_group_bounded env fuel' is_map_group t2;
+    rewrite_group_bounded env fuel' is_map_group (GChoice t1' t2')
+  | GZeroOrMore g1 ->
+    assert (group_bounded env g1);
+    begin match is_map_group, g1 with
+    | true, GElem cut (TElem (ELiteral key)) value ->
+      rewrite_group_bounded env fuel' is_map_group (GZeroOrOne (GElem cut (TElem (ELiteral key)) value) <: group)
+    | true, GChoice (GElem cut key value) g' ->
+      if RSuccess? (map_group_is_productive g')
+      then begin
+        rewrite_group_bounded env fuel' is_map_group (GConcat (GZeroOrMore (GElem cut key value)) (GZeroOrMore g'))
+      end
+    | _ -> ()
+    end;
+    rewrite_group_bounded env fuel' is_map_group g1;
+    let (g2, _) = rewrite_group fuel' is_map_group g1 in
+    rewrite_group_bounded env fuel' is_map_group (GZeroOrMore g2)
+  | GOneOrMore g1 ->
+    rewrite_group_bounded env fuel' is_map_group g1;
+    let (g2, _) = rewrite_group fuel' is_map_group g1 in
+    rewrite_group_bounded env fuel' is_map_group (GOneOrMore g2)
+  | GElem cut key value ->
+    rewrite_typ_bounded env fuel' key;
+    rewrite_typ_bounded env fuel' value
+  | GZeroOrOne g1 ->
+    rewrite_group_bounded env fuel' is_map_group g1
+  | GAlwaysFalse
+  | GNop
+  | GDef _ -> ()
+
 let rewrite_group_correct_postcond
   (env: sem_env)
   (fuel: nat)
@@ -2046,7 +2146,12 @@ let rec mk_elab_map_group
     end
   | GDef n ->
     begin match env.e_sem_env.se_bound n with
-    | Some NGroup -> mk_elab_map_group fuel' env (env.e_env n)
+    | Some NGroup ->
+      let g1 = env.e_env n in
+      let (g2, res) = rewrite_group fuel true g1 in
+      if res
+      then mk_elab_map_group fuel' env g2
+      else ROutOfFuel
     | _ -> RFailure ("mk_elab_map_group: undefined group: " ^ n)
     end
   | _ -> RFailure "mk_elab_map_group: unsupported"
@@ -2073,7 +2178,9 @@ let rec mk_elab_map_group_bounded
     mk_elab_map_group_bounded fuel' env g1;
     mk_elab_map_group_bounded fuel' env g2
   | GDef n ->
-    mk_elab_map_group_bounded fuel' env (env.e_env n)
+    let g' = (env.e_env n) in
+    rewrite_group_bounded env.e_sem_env.se_bound fuel true g';
+    mk_elab_map_group_bounded fuel' env (fst (rewrite_group fuel true g'))
   | _ -> ()
 
 let rec mk_elab_map_group_correct
@@ -2105,7 +2212,9 @@ let rec mk_elab_map_group_correct
       (Util.notp (Spec.matches_map_group_entry (Util.andp (typ_sem env.e_sem_env key) (Util.notp Spec.t_always_false)) (typ_sem env.e_sem_env value)))
       (Util.notp (Spec.matches_map_group_entry (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)))
   | GDef n ->
-    mk_elab_map_group_correct fuel' env (env.e_env n)
+    let g' = (env.e_env n) in
+    rewrite_group_correct env.e_sem_env fuel true g';
+    mk_elab_map_group_correct fuel' env (fst (rewrite_group fuel true g'))
   | _ -> ()
 
 let typ_inter_underapprox_postcond

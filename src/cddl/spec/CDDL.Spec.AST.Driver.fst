@@ -79,6 +79,8 @@ let rec elab_list'
         if typ_bounded (env.e_sem_env.se_bound) t
         then
           let rec aux (fuel': nat) : ML (result ast_env) =
+            print_endline "Rewritten as:";
+            print_endline (typ_to_string (fst (rewrite_typ fuel' t)));
             let res = mk_wf_typ_bounded fuel' env t in
             print_endline "Result:";
             print_endline (ast0_wf_typ_result_to_string _ res);
