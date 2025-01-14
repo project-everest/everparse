@@ -26,4 +26,4 @@ $(EVERPARSE_CDDL): $(EVERPARSE_CDDL_MAIN)
 	chmod +w $@ # because dune produces read-only executables
 
 $(EVERPARSE_CDDL_MAIN): $(ALL_ML_FILES) $(filter-out %~,$(wildcard ocaml/*.ml*))
-	cd ocaml && dune build
+	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build
