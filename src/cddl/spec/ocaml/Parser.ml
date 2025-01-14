@@ -181,6 +181,20 @@ and grpchoice () = debug "grpchoice" (
     (ret GNop)
 )
 
+(* NOTE: The following `group0` is necessary to avoid backtracking on cases like:
+`foo = bar baz = quux`
+where `group` will parse `foo = bar baz` as a group definition, leaving `=` pending. In a "greedy" ABNF interpretation, this will fail, so this would require backtracking.
+. *)
+and group0 () = debug "group0" (
+  concat (grpent ()) (fun a -> concat (group0_tail ()) (fun q -> ret (q a)))
+)
+
+and group0_tail () = debug "group_tail" (
+  choice
+    (concat s (fun _ -> concat slashslash (fun _ -> concat s (fun _ -> concat (grpent ()) (fun a -> concat (group_tail ()) (fun q -> ret (fun (x: group) -> GChoice (x, q a))))))))
+    (ret (fun (x: group) -> x))
+)
+
 and grpent () = debug "grpent" (
   choices
     [
@@ -217,5 +231,5 @@ and rule () : ((string * CDDL_Spec_AST_Driver.decl)) parser =
   debug "rule"
     (choice
        (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assignt (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> ret (f name t)))))))
-       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assigng (fun f -> concat s (fun _ -> concat (group ()) (fun t -> ret (f name t)))))))
+       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assigng (fun f -> concat s (fun _ -> concat (group0 ()) (fun t -> ret (f name t)))))))
     )
