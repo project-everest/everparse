@@ -696,6 +696,7 @@ let rec list_assoc_filter
     end
     else list_assoc_filter f q k
 
+(* // FIXME
 #push-options "--z3rlimit 16"
 
 #restart-solver
@@ -867,6 +868,7 @@ fn impl_map_group_match_item_for
 ```
 
 #pop-options
+*)
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
