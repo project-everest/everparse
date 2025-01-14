@@ -117,13 +117,21 @@ let rec apply_map_group_det_empty_fail_correct
     Spec.apply_map_group_det_match_item_for cut (eval_literal k) (typ_sem env v) Cbor.cbor_map_empty
   | _ -> ()
 
+let coerce_failure
+  (#t1 #t2: Type)
+  (r: result t1 { ~ (RSuccess? r) })
+: Tot (result t2)
+= match r with
+  | RFailure msg -> RFailure msg
+  | ROutOfFuel -> ROutOfFuel
+
 [@@ sem_attr]
 let rec rewrite_typ
   (fuel: nat)
   (t: typ)
-: Tot typ
+: Tot (typ & bool)
 = if fuel = 0
-  then t
+  then (t, false)
   else let fuel' : nat = fuel - 1 in
   match t with
   | TChoice (TChoice t1 t2) t3 -> rewrite_typ fuel' (TChoice t1 (TChoice t2 t3))
@@ -131,40 +139,59 @@ let rec rewrite_typ
   | TChoice (TElem EAlwaysFalse) t
     -> rewrite_typ fuel' t
   | TChoice t1 t2 ->
-    let t' = TChoice (rewrite_typ fuel' t1) (rewrite_typ fuel' t2) in
-    if t' = t
-    then t'
-    else rewrite_typ fuel' t'
-  | TArray g -> TArray (rewrite_group fuel' false g)
-  | TMap g -> TMap (rewrite_group fuel' true g)
-  | _ -> t
+    let (t1', res1) = rewrite_typ fuel' t1 in
+    let (t2', res2) = rewrite_typ fuel' t2 in
+    if res1 && res2
+    then
+      let t' = TChoice t1' t2' in
+      if t' = t
+      then (t', true)
+      else rewrite_typ fuel' t'
+    else (t, false)
+  | TArray g ->
+    let (g', res) = rewrite_group fuel' false g in
+    (TArray g', res)
+  | TMap g ->
+    let (g', res) = rewrite_group fuel' true g in
+    (TMap g', res)
+  | _ -> (t, true)
 
 and rewrite_group
   (fuel: nat)
   (is_map_group: bool)
   (g: group)
-: Tot (group)
+: Tot (group & bool)
 = if fuel = 0
-  then g
+  then (g, false)
   else let fuel' : nat = fuel - 1 in
   match g with
-  | GConcat GAlwaysFalse _ -> GAlwaysFalse
+  | GConcat GAlwaysFalse _ -> (GAlwaysFalse, true)
   | GConcat GNop g -> rewrite_group fuel' is_map_group g
   | GConcat g GNop -> rewrite_group fuel' is_map_group g
   | GConcat (GConcat t1 t2) t3 -> rewrite_group fuel' is_map_group (GConcat t1 (GConcat t2 t3))
   | GConcat t1 t2 ->
-    let g' = GConcat (rewrite_group fuel' is_map_group t1) (rewrite_group fuel' is_map_group t2) in
-    if g' = g
-    then g'
-    else rewrite_group fuel' is_map_group g'
+    let (t1', res1) = rewrite_group fuel' is_map_group t1 in
+    let (t2', res2) = rewrite_group fuel' is_map_group t2 in
+    if res1 && res2
+    then
+      let g' = GConcat t1' t2' in
+      if g' = g
+      then (g', true)
+      else rewrite_group fuel' is_map_group g'
+    else (g, false)
   | GChoice GAlwaysFalse g -> rewrite_group fuel' is_map_group g
   | GChoice g GAlwaysFalse -> rewrite_group fuel' is_map_group g
   | GChoice (GChoice t1 t2) t3 -> rewrite_group fuel' is_map_group (GChoice t1 (GChoice t2 t3))
   | GChoice t1 t2 ->
-    let g' = GChoice (rewrite_group fuel' is_map_group t1) (rewrite_group fuel' is_map_group t2) in
-    if g' = g
-    then g'
-    else rewrite_group fuel' is_map_group g'
+    let (t1', res1) = rewrite_group fuel' is_map_group t1 in
+    let (t2', res2) = rewrite_group fuel' is_map_group t2 in
+    if res1 && res2
+    then
+      let g' = GChoice t1' t2' in
+      if g' = g
+      then (g', true)
+      else rewrite_group fuel' is_map_group g'
+    else (g, false)
   | GZeroOrMore g1 ->
     let result = match is_map_group, g1 with
     | true, GElem cut (TElem (ELiteral key)) value ->
@@ -178,17 +205,28 @@ and rewrite_group
     begin match result with
     | Some g' -> g'
     | None -> 
-      let g' = GZeroOrMore (rewrite_group fuel' is_map_group g1) in
-      if g' = g
-      then g'
-      else rewrite_group fuel' is_map_group g'
+      let (g1', res1) = rewrite_group fuel' is_map_group g1 in
+      if res1
+      then
+        let g' = GZeroOrMore (g1') in
+        if g' = g
+        then (g', true)
+        else rewrite_group fuel' is_map_group g'
+      else (g, false)
     end
-  | GZeroOrOne g -> GZeroOrOne (rewrite_group fuel' is_map_group g)
-  | GOneOrMore g -> GOneOrMore (rewrite_group fuel' is_map_group g)
-  | GElem cut key value -> GElem cut (rewrite_typ fuel' key) (rewrite_typ fuel' value)
-  | GDef n -> GDef n
-  | GAlwaysFalse -> GAlwaysFalse
-  | GNop -> GNop
+  | GZeroOrOne g ->
+    let (g1, res1) = rewrite_group fuel' is_map_group g in
+    (GZeroOrOne g1, res1)
+  | GOneOrMore g ->
+    let (g1, res1) = rewrite_group fuel' is_map_group g in
+    (GOneOrMore g1, res1)
+  | GElem cut key value ->
+    let (key', res1) = rewrite_typ fuel' key in
+    let (value', res2) = rewrite_typ fuel' value in
+    (GElem cut (key') (value'), res1 && res2)
+  | GDef n -> (GDef n, true)
+  | GAlwaysFalse -> (GAlwaysFalse, true)
+  | GNop -> (GNop, true)
 
 let rewrite_group_correct_postcond
   (env: sem_env)
@@ -199,7 +237,7 @@ let rewrite_group_correct_postcond
 =
   group_bounded env.se_bound t /\
   begin
-    let t' = rewrite_group fuel is_map_group t in
+    let t' = fst (rewrite_group fuel is_map_group t) in
     group_bounded env.se_bound t' /\
     begin if is_map_group
     then map_group_sem env t == map_group_sem env t'
@@ -219,12 +257,11 @@ let rec rewrite_typ_correct
     typ_bounded env.se_bound t
   ))
   (ensures (
-    let t' = rewrite_typ fuel t in
+    let t' = fst (rewrite_typ fuel t) in
     typ_bounded env.se_bound t' /\
     Spec.typ_equiv (typ_sem env t) (typ_sem env t')
   ))
   (decreases fuel)
-  [SMTPat (typ_sem env (rewrite_typ fuel t))]
 = if fuel = 0
   then ()
   else let fuel' : nat = fuel - 1 in
@@ -237,7 +274,7 @@ let rec rewrite_typ_correct
   | TChoice t1 t2 ->
     rewrite_typ_correct env fuel' t1;
     rewrite_typ_correct env fuel' t2;
-    rewrite_typ_correct env fuel' (TChoice (rewrite_typ fuel' t1) (rewrite_typ fuel' t2))
+    rewrite_typ_correct env fuel' (TChoice (fst (rewrite_typ fuel' t1)) (fst (rewrite_typ fuel' t2)))
   | TArray g ->
     rewrite_group_correct env fuel' false g
   | TMap g ->
@@ -254,7 +291,7 @@ and rewrite_group_correct
     group_bounded env.se_bound t
   ))
   (ensures (
-    let t' = rewrite_group fuel is_map_group t in
+    let t' = fst (rewrite_group fuel is_map_group t) in
     group_bounded env.se_bound t' /\
     begin if is_map_group
     then map_group_sem env t == map_group_sem env t'
@@ -262,10 +299,6 @@ and rewrite_group_correct
     end
   ))
   (decreases fuel)
-  [SMTPatOr [
-    [SMTPat (map_group_sem env (rewrite_group fuel is_map_group t))];
-    [SMTPat (array_group_sem env (rewrite_group fuel is_map_group t))];
-  ]]
 = if fuel = 0
   then ()
   else let fuel' : nat = fuel - 1 in
@@ -276,8 +309,8 @@ and rewrite_group_correct
   | GConcat (GConcat t1 t2) t3 ->
     rewrite_group_correct env fuel' is_map_group (GConcat t1 (GConcat t2 t3))
   | GConcat t1 t2 ->
-    let t1' = rewrite_group fuel' is_map_group t1 in
-    let t2' = rewrite_group fuel' is_map_group t2 in
+    let (t1', _) = rewrite_group fuel' is_map_group t1 in
+    let (t2', _) = rewrite_group fuel' is_map_group t2 in
     rewrite_group_correct env fuel' is_map_group t1;
     rewrite_group_correct env fuel' is_map_group t2;
     rewrite_group_correct env fuel' is_map_group (GConcat t1' t2');
@@ -289,8 +322,8 @@ and rewrite_group_correct
   | GChoice (GChoice t1 t2) t3 ->
     rewrite_group_correct env fuel' is_map_group (GChoice t1 (GChoice t2 t3))
   | GChoice t1 t2 ->
-    let t1' = rewrite_group fuel' is_map_group t1 in
-    let t2' = rewrite_group fuel' is_map_group t2 in
+    let (t1', _) = rewrite_group fuel' is_map_group t1 in
+    let (t2', _) = rewrite_group fuel' is_map_group t2 in
     rewrite_group_correct env fuel' is_map_group t1;
     rewrite_group_correct env fuel' is_map_group t2;
     rewrite_group_correct env fuel' is_map_group (GChoice t1' t2')
@@ -312,14 +345,14 @@ and rewrite_group_correct
     | _ -> ()
     end;
     rewrite_group_correct env fuel' is_map_group g1;
-    let g2 = rewrite_group fuel' is_map_group g1 in
+    let (g2, _) = rewrite_group fuel' is_map_group g1 in
     rewrite_group_correct env fuel' is_map_group (GZeroOrMore g2);
     if not is_map_group
     then Spec.array_group_zero_or_more_equiv (array_group_sem env g1) (array_group_sem env g2);
     assert (rewrite_group_correct_postcond env fuel is_map_group t)
   | GOneOrMore g1 ->
     rewrite_group_correct env fuel' is_map_group g1;
-    let g2 = rewrite_group fuel' is_map_group g1 in
+    let (g2, _) = rewrite_group fuel' is_map_group g1 in
     rewrite_group_correct env fuel' is_map_group (GOneOrMore g2);
     if not is_map_group
     then Spec.array_group_zero_or_more_equiv (array_group_sem env g1) (array_group_sem env g2);
@@ -328,8 +361,8 @@ and rewrite_group_correct
     rewrite_typ_correct env fuel' key;
     rewrite_typ_correct env fuel' value;
     if is_map_group
-    then Spec.map_group_match_item_ext cut (typ_sem env key) (typ_sem env value) (typ_sem env (rewrite_typ fuel' key)) (typ_sem env (rewrite_typ fuel' value))
-    else Spec.array_group_item_equiv (typ_sem env value) (typ_sem env (rewrite_typ fuel' value))
+    then Spec.map_group_match_item_ext cut (typ_sem env key) (typ_sem env value) (typ_sem env (fst (rewrite_typ fuel' key))) (typ_sem env (fst (rewrite_typ fuel' value)))
+    else Spec.array_group_item_equiv (typ_sem env value) (typ_sem env (fst (rewrite_typ fuel' value)))
   | GZeroOrOne g1 ->
     rewrite_group_correct env fuel' is_map_group g1
   | GAlwaysFalse
@@ -530,7 +563,10 @@ and array_group_disjoint
   | (a2, _), (_, (GDef n, a1r)) ->
     let a1' = GConcat (e.e_env n) a1r in
     rewrite_group_correct e.e_sem_env fuel' false a1';
-    array_group_disjoint e fuel' close (rewrite_group fuel' false a1') a2
+    let (a1_, res) = rewrite_group fuel' false a1' in
+    if res
+    then array_group_disjoint e fuel' close a1_ a2
+    else ROutOfFuel
   | (a1, (GZeroOrMore g, a1r)), (a2, _)
   | (a2, _), (a1, (GZeroOrMore g, a1r)) ->
     assert (
@@ -546,7 +582,10 @@ and array_group_disjoint
        Spec.array_group_concat_assoc (array_group_sem e.e_sem_env g) (array_group_sem e.e_sem_env (GZeroOrMore g)) (array_group_sem e.e_sem_env a1r);
        let a1' = GConcat g a1 in
        rewrite_group_correct e.e_sem_env fuel' false a1';
-       array_group_disjoint e fuel' close (rewrite_group fuel' false a1') a2 // potential source of loops
+       let (a1_, res) = rewrite_group fuel' false a1' in
+       if res
+       then array_group_disjoint e fuel' close (a1_) a2 // potential source of loops
+       else ROutOfFuel
      end
    | (a1, (GOneOrMore g, a1r)), (a2, _)
    | (a2, _), (a1, (GOneOrMore g, a1r)) ->
@@ -556,7 +595,10 @@ and array_group_disjoint
      );
      let a1' = GConcat (GConcat g (GZeroOrMore g)) a1r in
      rewrite_group_correct e.e_sem_env fuel' false a1';
-     array_group_disjoint e fuel' close (rewrite_group fuel' false a1') a2 // potential source of loops
+     let (a1_, res) = rewrite_group fuel' false a1' in
+     if res
+     then array_group_disjoint e fuel' close (a1_) a2 // potential source of loops
+     else ROutOfFuel
    | (a1, (GZeroOrOne g, a1r)), (a2, _)
    | (a2, _), (a1, (GZeroOrOne g, a1r)) ->
      assert (
@@ -569,7 +611,10 @@ and array_group_disjoint
      else begin
        let a1' = GConcat g a1r in
        rewrite_group_correct e.e_sem_env fuel' false a1';
-       array_group_disjoint e fuel' close (rewrite_group fuel' false a1') a2
+       let (a1_, res) = rewrite_group fuel' false a1' in
+       if res
+       then array_group_disjoint e fuel' close a1_ a2
+       else ROutOfFuel
      end
    | (GNop, _), (_, (GElem _ _ _, _))
    | (_, (GElem _ _ _, _)), (GNop, _) ->
@@ -709,44 +754,64 @@ and array_group_included
   | (_, (GChoice a1l a1r, a1q)), (a2, _) ->
     let a1l' = GConcat a1l a1q in
     rewrite_group_correct e.e_sem_env fuel false a1l';
-    let res1 = array_group_included e fuel' close (rewrite_group fuel false a1l') a2 in
+    let (a1l_, res) = rewrite_group fuel false a1l' in
+    if res
+    then
+    let res1 = array_group_included e fuel' close (a1l_) a2 in
     if not (RSuccess? res1)
     then res1
     else begin
       let a1r' = GConcat a1r a1q in
       rewrite_group_correct e.e_sem_env fuel false a1r';
-      array_group_included e fuel' close (rewrite_group fuel false a1r') a2
+      let (a1r_, res) = rewrite_group fuel false a1r' in
+      if res
+      then array_group_included e fuel' close (a1r_) a2
+      else ROutOfFuel
     end
+    else ROutOfFuel
   | (a1, _), (_, (GChoice a2l a2r, a2q)) ->
     let a2l' = GConcat a2l a2q in
     rewrite_group_correct e.e_sem_env fuel false a2l';
-    let a2l'' = rewrite_group fuel false a2l' in
-    let resl = array_group_included e fuel' close a1 a2l'' in
-    if RFailure? resl
+    let (a2l'', res) = rewrite_group fuel false a2l' in
+    if res
     then begin
-      match array_group_disjoint e fuel false a1 a2l with
-      | RSuccess _ ->
-        let a2r' = GConcat a2r a2q in
-        rewrite_group_correct e.e_sem_env fuel false a2r';
-        Classical.move_requires
-          (Spec.array_group_included_choice_r_r
-            (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close)
-            (array_group_sem e.e_sem_env a2l)
-            (array_group_sem e.e_sem_env a2r)
-          )
-          (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2q) close);
-        array_group_included e fuel' close a1 (rewrite_group fuel false a2r')
-      | res -> res
+      let resl = array_group_included e fuel' close a1 a2l'' in
+      if RFailure? resl
+      then begin
+        match array_group_disjoint e fuel false a1 a2l with
+        | RSuccess _ ->
+          let a2r' = GConcat a2r a2q in
+          rewrite_group_correct e.e_sem_env fuel false a2r';
+          Classical.move_requires
+            (Spec.array_group_included_choice_r_r
+              (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close)
+              (array_group_sem e.e_sem_env a2l)
+              (array_group_sem e.e_sem_env a2r)
+            )
+            (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2q) close);
+          let (a2r_, res) = rewrite_group fuel false a2r' in
+          if res
+          then array_group_included e fuel' close a1 (a2r_)
+          else ROutOfFuel
+        | res -> res
+      end
+      else resl
     end
-    else resl
+    else ROutOfFuel
   | (_, (GDef n, a1r)), (a2, _) ->
     let a1' = GConcat (e.e_env n) a1r in
     rewrite_group_correct e.e_sem_env fuel false a1';
-    array_group_included e fuel' close (rewrite_group fuel false a1') a2
+    let (a1_, res) = rewrite_group fuel false a1' in
+    if res
+    then array_group_included e fuel' close (a1_) a2
+    else ROutOfFuel
   | (a2, _), (_, (GDef n, a1r)) ->
     let a1' = GConcat (e.e_env n) a1r in
     rewrite_group_correct e.e_sem_env fuel false a1';
-    array_group_included e fuel' close a2 (rewrite_group fuel false a1')
+    let (a1_, res) = rewrite_group fuel false a1' in
+    if res
+    then array_group_included e fuel' close a2 (a1_)
+    else ROutOfFuel
   | _, (_, (GAlwaysFalse, _)) -> RFailure "array_group_included: GAlwaysFalse"
   | (GNop, _), (_, (GZeroOrOne _, a2r))
   | (GNop, _), (_, (GZeroOrMore _, a2r))
@@ -759,29 +824,43 @@ and array_group_included
   | (_, (GOneOrMore g, a1r)), (a2, _) ->
     let a1' = GConcat (GConcat g (GZeroOrMore g)) a1r in
     rewrite_group_correct e.e_sem_env fuel false a1';
-    array_group_included e fuel' close (rewrite_group fuel false a1') a2
+    let (a1_, res) = rewrite_group fuel false a1' in
+    if res
+    then array_group_included e fuel' close (a1_) a2
+    else ROutOfFuel
   | (a1, _), (_, (GOneOrMore g, a2r)) ->
     let a2' = GConcat (GConcat g (GZeroOrMore g)) a2r in
     rewrite_group_correct e.e_sem_env fuel false a2';
-    array_group_included e fuel' close a1 (rewrite_group fuel false a2')
+    let (a2_, res) = rewrite_group fuel false a2' in
+    if res
+    then array_group_included e fuel' close a1 (a2_)
+    else ROutOfFuel
   | (_, (GZeroOrOne g1, a1r)), (a2, _) ->
     let a1' = GConcat g1 a1r in
     rewrite_group_correct e.e_sem_env fuel false a1';
-    let res1 = array_group_included e fuel' close (rewrite_group fuel false a1') a2 in
-    if RSuccess? res1
-    then array_group_included e fuel' close a1r a2
-    else res1
+    let (a1_, res) = rewrite_group fuel false a1' in
+    if res
+    then
+      let res1 = array_group_included e fuel' close (a1_) a2 in
+      if RSuccess? res1
+      then array_group_included e fuel' close a1r a2
+      else res1
+    else ROutOfFuel
   | (a1, _), (_, (GZeroOrOne g2, a2r)) ->
     let a2' = GConcat g2 a2r in
     rewrite_group_correct e.e_sem_env fuel false a2';
-    let res2 = array_group_included e fuel' close a1 (rewrite_group fuel false a2') in
-    if RFailure? res2
-    then begin
-      match array_group_disjoint e fuel false a1 g2 with
-      | RSuccess _ -> array_group_included e fuel' close a1 a2r
-      | res -> res
-    end
-    else res2
+    let (a2_, res) = rewrite_group fuel false a2' in
+    if res
+    then
+      let res2 = array_group_included e fuel' close a1 (a2_) in
+      if RFailure? res2
+      then begin
+        match array_group_disjoint e fuel false a1 g2 with
+        | RSuccess _ -> array_group_included e fuel' close a1 a2r
+        | res -> res
+      end
+      else res2
+    else ROutOfFuel
   | (_, (GZeroOrMore g1, a1r)), (a2, (GZeroOrMore g2, a2r)) ->
     let res1 = array_group_included e fuel' false g1 g2 in
     if RSuccess? res1
@@ -806,7 +885,10 @@ and array_group_included
   | (a1, _), (a2, (GZeroOrMore g2, a2r)) ->
     let a2' = GConcat g2 a2 in
     rewrite_group_correct e.e_sem_env fuel false a2';
-    begin match array_group_included e fuel' close a1 (rewrite_group fuel false a2') with
+    let (a2_, res) = rewrite_group fuel false a2' in
+    if res
+    then
+    begin match array_group_included e fuel' close a1 (a2_) with
     | RFailure _ ->
       begin match array_group_disjoint e fuel false a1 g2 with
       | RSuccess _ ->
@@ -828,6 +910,7 @@ and array_group_included
         (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2r) close);
       res
     end
+    else ROutOfFuel
   | (_, (GElem _ _ _, _)), _ ->
     RFailure "array_group_included: GArrayElem"
   end
@@ -941,14 +1024,6 @@ let typ_with_except_union_approx
     Spec.typ_included (Spec.t_choice t1 t2) (Spec.t_choice t1' t2' `Util.andp` Util.notp (Spec.t_choice d1 d2))
   ))
 = ()
-
-let coerce_failure
-  (#t1 #t2: Type)
-  (r: result t1 { ~ (RSuccess? r) })
-: Tot (result t2)
-= match r with
-  | RFailure msg -> RFailure msg
-  | ROutOfFuel -> ROutOfFuel
 
 let map_group_footprint'_postcond
   (env: sem_env)
@@ -1398,13 +1473,15 @@ let rec array_group_concat_unique_strong
         (array_group_sem env.e_sem_env g2r)
         (array_group_sem env.e_sem_env g2r);
       rewrite_group_correct env.e_sem_env fuel false g2';
-      let g22 = rewrite_group fuel false g2' in
+      let (g22, res_) = rewrite_group fuel false g2' in
       Spec.array_group_concat_unique_strong_equiv
         (array_group_sem env.e_sem_env g1)
         (array_group_sem env.e_sem_env g1)
         (array_group_sem env.e_sem_env g2)
         (array_group_sem env.e_sem_env g22);
+      if res_ then
       array_group_concat_unique_strong fuel' env s1 g22
+      else ROutOfFuel
     | _ ->
       begin match s1 with
       | WfAZeroOrOneOrMore g' s' g1' ->
@@ -2720,10 +2797,12 @@ let mk_wf_typ_bounded
     ))
 =
     rewrite_typ_correct env.e_sem_env fuel g;
-    let g' = rewrite_typ fuel g in
+    let (g', res) = rewrite_typ fuel g in
+    if res then
     match mk_wf_typ fuel env g' with
     | RSuccess s' -> RSuccess (WfTRewrite g g' s')
     | res -> coerce_failure res
+    else ROutOfFuel
 
 let mk_wf_typ'
   (fuel: nat) // for typ_disjoint
