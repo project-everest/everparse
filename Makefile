@@ -159,11 +159,21 @@ endif
 
 cbor-test: cbor-det-c-test cbor-det-rust-test cbor-det-c-vertest cbor-det-common-vertest cbor-test-snapshot
 
-cddl: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
+cddl-spec: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
+
+cddl-lib: cddl-spec
 
 ifeq (,$(NO_PULSE))
-cddl: $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
+cddl-pulse: $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
+cddl-lib: cddl-pulse
 endif
+
+cddl-ocaml: cddl-spec
+	+$(MAKE) -C src/cddl/spec ocaml
+
+cddl: cddl-lib cddl-ocaml
+
+.PHONY: cddl-spec cddl-lib cddl-ocaml
 
 .PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
