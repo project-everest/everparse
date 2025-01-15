@@ -168,8 +168,16 @@ and rewrite_group
   | GConcat GAlwaysFalse _ -> (GAlwaysFalse, true)
   | GConcat GNop g -> rewrite_group fuel' is_map_group g
   | GConcat g GNop -> rewrite_group fuel' is_map_group g
-  | GConcat (GConcat t1 t2) t3 -> rewrite_group fuel' is_map_group (GConcat t1 (GConcat t2 t3))
   | GConcat t1 t2 ->
+    if is_map_group && GConcat? t2
+    then
+      let GConcat t2 t3 = t2 in
+      rewrite_group fuel' is_map_group (GConcat (GConcat t1 t2) t3)
+    else if (not is_map_group) && GConcat? t1
+    then
+      let GConcat t0 t1 = t1 in
+      rewrite_group fuel' is_map_group (GConcat t0 (GConcat t1 t2))
+    else
     let (t1', res1) = rewrite_group fuel' is_map_group t1 in
     let (t2', res2) = rewrite_group fuel' is_map_group t2 in
     if res1 && res2
@@ -282,9 +290,16 @@ and rewrite_group_bounded
   | GConcat GAlwaysFalse _ -> ()
   | GConcat GNop g -> rewrite_group_bounded env fuel' is_map_group g
   | GConcat g GNop -> rewrite_group_bounded env fuel' is_map_group g
-  | GConcat (GConcat t1 t2) t3 ->
-    rewrite_group_bounded env fuel' is_map_group (GConcat t1 (GConcat t2 t3))
   | GConcat t1 t2 ->
+    if is_map_group && GConcat? t2
+    then begin
+      let GConcat t2 t3 = t2 in
+      rewrite_group_bounded env fuel' is_map_group (GConcat (GConcat t1 t2) t3)
+    end else if (not is_map_group) && GConcat? t1
+    then begin
+      let GConcat t0 t1 = t1 in
+      rewrite_group_bounded env fuel' is_map_group (GConcat t0 (GConcat t1 t2))
+    end else
     let (t1', _) = rewrite_group fuel' is_map_group t1 in
     let (t2', _) = rewrite_group fuel' is_map_group t2 in
     rewrite_group_bounded env fuel' is_map_group t1;
@@ -406,9 +421,16 @@ and rewrite_group_correct
   | GConcat GAlwaysFalse _ -> ()
   | GConcat GNop g -> rewrite_group_correct env fuel' is_map_group g
   | GConcat g GNop -> rewrite_group_correct env fuel' is_map_group g
-  | GConcat (GConcat t1 t2) t3 ->
-    rewrite_group_correct env fuel' is_map_group (GConcat t1 (GConcat t2 t3))
   | GConcat t1 t2 ->
+    if is_map_group && GConcat? t2
+    then begin
+      let GConcat t2 t3 = t2 in
+      rewrite_group_correct env fuel' is_map_group (GConcat (GConcat t1 t2) t3)
+    end else if (not is_map_group) && GConcat? t1
+    then begin
+      let GConcat t0 t1 = t1 in
+      rewrite_group_correct env fuel' is_map_group (GConcat t0 (GConcat t1 t2))
+    end else
     let (t1', _) = rewrite_group fuel' is_map_group t1 in
     let (t2', _) = rewrite_group fuel' is_map_group t2 in
     rewrite_group_correct env fuel' is_map_group t1;
