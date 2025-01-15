@@ -123,6 +123,101 @@ let bstr_cbor
   | Some (y, consumed) -> consumed = Seq.length (Cbor.CString?.v x) && ty y
   end
 
+let spec_bstr_cbor_small_parser
+  (#t: Type)
+  (#ty: typ)
+  (#inj: bool)
+  (sp: spec ty t inj {
+    forall (x: t) .
+    sp.serializable x ==>
+    Seq.length (Cbor.cbor_det_serialize (sp.serializer x)) < pow2 64
+  })
+: Tot (parser_spec (bstr_cbor ty) t sp.serializable)
+=
+  fun (x: Cbor.cbor { bstr_cbor ty x }) ->
+    let s = Cbor.CString?.v (Cbor.unpack x) in
+    let Some (y, _) = Cbor.cbor_parse s in
+    Cbor.cbor_det_serialize_parse y;
+    (sp.parser y <: t)
+    
+let spec_bstr_cbor_small
+  (#t: Type)
+  (#ty: typ)
+  (#inj: bool)
+  (sp: spec ty t inj {
+    forall (x: t) .
+    sp.serializable x ==>
+    Seq.length (Cbor.cbor_det_serialize (sp.serializer x)) < pow2 64
+  })
+: Tot (spec (bstr_cbor ty) t false)
+= {
+  serializable = sp.serializable;
+  parser = spec_bstr_cbor_small_parser sp;
+  serializer = (fun (x: t { sp.serializable x }) ->
+    let y1 = sp.serializer x in
+    let y2 = Cbor.cbor_det_serialize y1 in
+    let y3 = Cbor.CString Cbor.cbor_major_type_byte_string y2 in
+    let y = Cbor.pack y3 in
+    Cbor.unpack_pack y3;
+    Cbor.cbor_det_serialize_parse y1;
+    y
+  );
+  parser_inj = ();
+}
+
+let spec_bstr_cbor_big_serializable
+  (#t: Type)
+  (#ty: typ)
+  (#inj: bool)
+  (sp: spec ty t inj)
+  (x: t)
+: Tot bool
+= sp.serializable x && Seq.length (Cbor.cbor_det_serialize (sp.serializer x)) < pow2 64 // the length condition imposes `inj = true` for the parser
+
+let cbor_parse_det_serialize_size_t =
+  (x: Seq.seq U8.t) ->
+  Lemma
+  (match Cbor.cbor_parse x with
+  | Some (y, consumed) ->
+    Seq.length (Cbor.cbor_det_serialize y) <= consumed
+  | _ -> True
+  )
+
+let spec_bstr_cbor_big_parser
+  (lemma: cbor_parse_det_serialize_size_t)
+  (#t: Type)
+  (#ty: typ)
+  (sp: spec ty t true)
+: Tot (parser_spec (bstr_cbor ty) t (spec_bstr_cbor_big_serializable sp))
+=
+  fun (x: Cbor.cbor { bstr_cbor ty x }) ->
+    let s = Cbor.CString?.v (Cbor.unpack x) in
+    let Some (y, _) = Cbor.cbor_parse s in
+    lemma s;
+    Cbor.cbor_det_serialize_parse y;
+    (sp.parser y <: t)
+    
+let spec_bstr_cbor_big
+  (lemma: cbor_parse_det_serialize_size_t)
+  (#t: Type)
+  (#ty: typ)
+  (sp: spec ty t true)
+: Tot (spec (bstr_cbor ty) t false)
+= {
+  serializable = spec_bstr_cbor_big_serializable sp;
+  parser = spec_bstr_cbor_big_parser lemma sp;
+  serializer = (fun (x: t { spec_bstr_cbor_big_serializable sp x }) ->
+    let y1 = sp.serializer x in
+    let y2 = Cbor.cbor_det_serialize y1 in
+    let y3 = Cbor.CString Cbor.cbor_major_type_byte_string y2 in
+    let y = Cbor.pack y3 in
+    Cbor.unpack_pack y3;
+    Cbor.cbor_det_serialize_parse y1;
+    y
+  );
+  parser_inj = ();
+}
+
 let bstr_cbor_det
   (ty: typ) // TODO: enable recursion for this construct? If so, we need to replace << with some serialization size
 : typ = fun w -> let x = Cbor.unpack w in
@@ -132,6 +227,44 @@ let bstr_cbor_det
   | None -> false
   | Some (y, consumed) -> consumed = Seq.length (Cbor.CString?.v x) && ty y
   end
+
+let spec_bstr_cbor_det_serializable
+  (#t: Type)
+  (#ty: typ)
+  (sp: spec ty t true)
+  (x: t)
+: Tot bool
+= sp.serializable x && Seq.length (Cbor.cbor_det_serialize (sp.serializer x)) < pow2 64 // the length condition imposes `inj = true`
+
+let spec_bstr_cbor_det_parser
+  (#t: Type)
+  (#ty: typ)
+  (sp: spec ty t true)
+: Tot (parser_spec (bstr_cbor_det ty) t (spec_bstr_cbor_det_serializable sp))
+=
+  fun (x: Cbor.cbor { bstr_cbor_det ty x }) ->
+    let Some (y, _) = Cbor.cbor_det_parse (Cbor.CString?.v (Cbor.unpack x)) in
+    (sp.parser y <: t)
+    
+let spec_bstr_cbor_det
+  (#t: Type)
+  (#ty: typ)
+  (sp: spec ty t true)
+: Tot (spec (bstr_cbor_det ty) t true)
+= {
+  serializable = spec_bstr_cbor_det_serializable sp;
+  parser = spec_bstr_cbor_det_parser sp;
+  serializer = (fun (x: t { spec_bstr_cbor_det_serializable sp x }) ->
+    let y1 = sp.serializer x in
+    let y2 = Cbor.cbor_det_serialize y1 in
+    let y3 = Cbor.CString Cbor.cbor_major_type_byte_string y2 in
+    let y = Cbor.pack y3 in
+    Cbor.unpack_pack y3;
+    Cbor.cbor_det_serialize_parse y1;
+    y
+  );
+  parser_inj = ();
+}
 
 let parser_spec_always_false (p: squash False -> bool) : parser_spec t_always_false (squash False) p =
   (fun x -> false_elim ())
