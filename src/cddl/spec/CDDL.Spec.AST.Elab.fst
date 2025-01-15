@@ -538,14 +538,11 @@ let maybe_close_array_group_sem_destruct_group
 = ()
 
 #restart-solver
-let array_group_concat_elem_same_disjoint
+let array_group_concat_elem_disjoint
   (close: bool)
   (t1 t2: Spec.typ)
   (a1 a2: Spec.array_group None)
 : Lemma
-  (requires
-    Spec.typ_equiv t1 t2
-  )
   (ensures (Spec.array_group_disjoint (Spec.maybe_close_array_group a1 close) (Spec.maybe_close_array_group a2 close) ==>
     Spec.array_group_disjoint
       (Spec.maybe_close_array_group (Spec.array_group_concat (Spec.array_group_item t1) a1) close)
@@ -743,11 +740,10 @@ and array_group_disjoint
      if close then RSuccess () else RFailure "array_group_disjoint: empty but not close"
    | (_, (GElem _ _ a1l, a1r)), (_, (GElem _ _ a2l, a2r)) ->
      let res1 = typ_disjoint e fuel' a1l a2l in
-     if RSuccess? res1
+     if not (RFailure? res1)
      then res1
-     else if a1l = a2l // TODO: replace with equivalence?
-     then begin
-       array_group_concat_elem_same_disjoint
+     else begin
+       array_group_concat_elem_disjoint
          close
          (typ_sem e.e_sem_env a1l)
          (typ_sem e.e_sem_env a2l)
@@ -755,7 +751,6 @@ and array_group_disjoint
          (array_group_sem e.e_sem_env a2r);
        array_group_disjoint e fuel' close a1r a2r
      end
-     else res1
    | (_, (GConcat a11 a12, a13)), (a2, _)
    | (a2, _), (_, (GConcat a11 a12, a13)) ->
      array_group_disjoint e fuel' close (GConcat a11 (GConcat a12 a13)) a2
