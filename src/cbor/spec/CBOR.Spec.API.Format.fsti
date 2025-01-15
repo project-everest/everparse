@@ -31,7 +31,7 @@ val cbor_det_parse (x: Seq.seq U8.t) : Pure (option (cbor & nat))
   (requires True)
   (ensures (fun res -> match res with
   | None -> True
-  | Some (y, n) -> n <= Seq.length x /\ cbor_parse x == res /\ cbor_det_serialize y == Seq.slice x 0 n // unique binary representation
+  | Some (y, n) -> 0 < n /\ n <= Seq.length x /\ cbor_parse x == res /\ cbor_det_serialize y == Seq.slice x 0 n // unique binary representation
   ))
 
 let cbor_det_parse_inj

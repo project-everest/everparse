@@ -14,6 +14,7 @@ let parse_cbor x =
   | Some (y, n) ->
     LP.serializer_correct_implies_complete #F.parse_raw_data_item_kind F.tot_parse_raw_data_item F.tot_serialize_raw_data_item;
     assert (Some? (LP.parse F.tot_parse_raw_data_item x));
+    LP.parser_kind_prop_equiv F.parse_raw_data_item_kind F.tot_parse_raw_data_item;
     Some (y, n)
 
 let parse_cbor_prefix x y =

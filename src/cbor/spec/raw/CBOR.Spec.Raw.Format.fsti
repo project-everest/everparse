@@ -45,7 +45,7 @@ val parse_cbor (x: Seq.seq U8.t) : Pure (option (raw_data_item & nat))
   (requires True)
   (ensures (fun res -> match res with
   | None -> True
-  | Some (y, n) -> n <= Seq.length x /\ serialize_cbor y == Seq.slice x 0 n // unique binary representation
+  | Some (y, n) -> 0 < n /\ n <= Seq.length x /\ serialize_cbor y == Seq.slice x 0 n // unique binary representation
   ))
 
 val parse_cbor_prefix
