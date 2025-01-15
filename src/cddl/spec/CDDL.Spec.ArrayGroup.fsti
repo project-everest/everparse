@@ -781,6 +781,34 @@ let ag_spec_ext
   ag_parser_inj = (spec1.ag_parser_inj; ());
 }
 
+let ag_spec_close_intro
+  (#source1: array_group None)
+  (#target: Type0)
+  (#inj: bool)
+  (spec1: ag_spec source1 target inj)
+: Tot (ag_spec (close_array_group source1) target inj)
+= {
+  ag_size = spec1.ag_size;
+  ag_serializable = spec1.ag_serializable;
+  ag_parser = (fun (x: array_group_parser_spec_arg (close_array_group source1)) -> spec1.ag_parser x);
+  ag_serializer = (fun x -> spec1.ag_serializer x);
+  ag_parser_inj = (spec1.ag_parser_inj; ());
+}
+
+let ag_spec_close_elim
+  (#source1: array_group None)
+  (#target: Type0)
+  (#inj: bool)
+  (spec1: ag_spec (close_array_group source1) target inj)
+: Tot (ag_spec source1 target inj)
+= {
+  ag_size = spec1.ag_size;
+  ag_serializable = spec1.ag_serializable;
+  ag_parser = (fun (x: array_group_parser_spec_arg source1) -> spec1.ag_parser x);
+  ag_serializer = (fun x -> spec1.ag_serializer x);
+  ag_parser_inj = (spec1.ag_parser_inj; ());
+}
+
 let ag_spec_coerce_target_prop
   (#source: array_group None)
   (#target: Type0)
