@@ -539,22 +539,26 @@ let maybe_close_array_group_sem_destruct_group
 
 #restart-solver
 let array_group_concat_elem_disjoint
-  (close: bool)
+  (close1 close2: bool)
   (t1 t2: Spec.typ)
   (a1 a2: Spec.array_group None)
 : Lemma
-  (ensures (Spec.array_group_disjoint (Spec.maybe_close_array_group a1 close) (Spec.maybe_close_array_group a2 close) ==>
+  (ensures (Spec.array_group_disjoint (Spec.maybe_close_array_group a1 close1) (Spec.maybe_close_array_group a2 close2) ==>
     Spec.array_group_disjoint
-      (Spec.maybe_close_array_group (Spec.array_group_concat (Spec.array_group_item t1) a1) close)
-      (Spec.maybe_close_array_group (Spec.array_group_concat (Spec.array_group_item t2) a2) close)
+      (Spec.maybe_close_array_group (Spec.array_group_concat (Spec.array_group_item t1) a1) close1)
+      (Spec.maybe_close_array_group (Spec.array_group_concat (Spec.array_group_item t2) a2) close2)
   ))
-= maybe_close_array_group_concat close (Spec.array_group_item t1) a1;
-  maybe_close_array_group_concat close (Spec.array_group_item t1) a2
+= maybe_close_array_group_concat close1 (Spec.array_group_item t1) a1;
+  maybe_close_array_group_concat close2 (Spec.array_group_item t1) a2
 
 [@@CMacro]
 let simple_value_false : Cbor.simple_value = 20uy
 [@@CMacro]
 let simple_value_true : Cbor.simple_value = 21uy
+
+let array_group_disjoint_sym #b (a1 a2: Spec.array_group b) : Lemma
+  (Spec.array_group_disjoint a1 a2 <==> Spec.array_group_disjoint a2 a1)
+= ()
 
 #push-options "--z3rlimit 128 --query_stats --split_queries always --fuel 4 --ifuel 8"
 
@@ -642,7 +646,7 @@ let rec typ_disjoint
   | TArray a1, TArray a2 ->
     Spec.array_close_array_group (array_group_sem e.e_sem_env a1);
     Spec.array_close_array_group (array_group_sem e.e_sem_env a2);
-    array_group_disjoint e fuel' true a1 a2
+    array_group_disjoint e fuel' true true a1 a2
   | TArray _, _
   | _, TArray _ -> RSuccess ()
   end
@@ -650,17 +654,20 @@ let rec typ_disjoint
 and array_group_disjoint
   (e: ast_env)
   (fuel: nat)
-  (close: bool)
+  (close1: bool)
+  (close2: bool)
   (a1: group { group_bounded e.e_sem_env.se_bound a1 })
   (a2: group { group_bounded e.e_sem_env.se_bound a2 })
 : Pure (result unit)
     (requires True)
     (ensures fun r ->
-      RSuccess? r ==> Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2) close)
+      RSuccess? r ==> Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close1) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2) close2)
     )
     (decreases fuel)
 = let a10 = a1 in
   let a20 = a2 in
+  let close10 = close1 in
+  let close20 = close2 in
   if fuel = 0
   then ROutOfFuel
   else let fuel' : nat = fuel - 1 in
@@ -671,31 +678,32 @@ and array_group_disjoint
     if a1 = a2
     then RFailure "array_group_disjoint: irrefl"
     else begin
-  match (a1, destruct_group a1), (a2, destruct_group a2) with
-  | (GChoice a1l a1r, _), (a2, _)
-  | (a2, _), (GChoice a1l a1r, _) ->
-    let res1 = array_group_disjoint e fuel' close a1l a2 in
+  match (a1, close1, destruct_group a1), (a2, close2, destruct_group a2) with
+  | (GChoice a1l a1r, close1, _), (a2, close2, _)
+  | (a2, close2, _), (GChoice a1l a1r, close1, _) ->
+    let res1 = array_group_disjoint e fuel' close1 close2 a1l a2 in
     if not (RSuccess? res1)
     then res1
-    else array_group_disjoint e fuel' close a1r a2
-  | (_, (GDef n, a1r)), (a2, _)
-  | (a2, _), (_, (GDef n, a1r)) ->
+    else array_group_disjoint e fuel' close1 close2 a1r a2
+  | (_, close1, (GDef n, a1r)), (a2, close2, _)
+  | (a2, close2, _), (_, close1, (GDef n, a1r)) ->
     let a1' = GConcat (e.e_env n) a1r in
     rewrite_group_correct e.e_sem_env fuel' false a1';
     let (a1_, res) = rewrite_group fuel' false a1' in
     if res
-    then array_group_disjoint e fuel' close a1_ a2
+    then array_group_disjoint e fuel' close1 close2 a1_ a2
     else ROutOfFuel
-  | (a1, (GZeroOrMore g, a1r)), (a2, _)
-  | (a2, _), (a1, (GZeroOrMore g, a1r)) ->
+  | (a1, close1, (GZeroOrMore g, a1r)), (a2, close2, _)
+  | (a2, close2, _), (a1, close1, (GZeroOrMore g, a1r)) ->
+    array_group_disjoint_sym (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a10) close10) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a20) close20);
     assert (
-     Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a10) close) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a20) close) <==>
-       Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2) close)
+     Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a10) close10) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a20) close20) <==>
+       Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close1) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2) close2)
      );
-     let res1 = array_group_disjoint e fuel' close a1r a2 in
+     let res1 = array_group_disjoint e fuel' close1 close2 a1r a2 in
      if not (RSuccess? res1)
      then res1
-     else if RSuccess? (array_group_disjoint e fuel' false g a2) // loop-free shortcut, but will miss things like "disjoint? (a* ) (ab)"
+     else if RSuccess? (array_group_disjoint e fuel' false close2 g a2) // loop-free shortcut, but will miss things like "disjoint? (a* ) (ab)"
      then RSuccess ()
      else begin
        Spec.array_group_concat_assoc (array_group_sem e.e_sem_env g) (array_group_sem e.e_sem_env (GZeroOrMore g)) (array_group_sem e.e_sem_env a1r);
@@ -703,28 +711,30 @@ and array_group_disjoint
        rewrite_group_correct e.e_sem_env fuel' false a1';
        let (a1_, res) = rewrite_group fuel' false a1' in
        if res
-       then array_group_disjoint e fuel' close (a1_) a2 // potential source of loops
+       then array_group_disjoint e fuel' close1 close2 (a1_) a2 // potential source of loops
        else ROutOfFuel
      end
-   | (a1, (GOneOrMore g, a1r)), (a2, _)
-   | (a2, _), (a1, (GOneOrMore g, a1r)) ->
+   | (a1, close1, (GOneOrMore g, a1r)), (a2, close2, _)
+   | (a2, close2, _), (a1, close1, (GOneOrMore g, a1r)) ->
+     array_group_disjoint_sym (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a10) close10) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a20) close20);
      assert (
-       Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a10) close) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a20) close) <==>
-       Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2) close)
+       Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a10) close10) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a20) close20) <==>
+       Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close1) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2) close2)
      );
      let a1' = GConcat (GConcat g (GZeroOrMore g)) a1r in
      rewrite_group_correct e.e_sem_env fuel' false a1';
      let (a1_, res) = rewrite_group fuel' false a1' in
      if res
-     then array_group_disjoint e fuel' close (a1_) a2 // potential source of loops
+     then array_group_disjoint e fuel' close1 close2 (a1_) a2 // potential source of loops
      else ROutOfFuel
-   | (a1, (GZeroOrOne g, a1r)), (a2, _)
-   | (a2, _), (a1, (GZeroOrOne g, a1r)) ->
+   | (a1, close1, (GZeroOrOne g, a1r)), (a2, close2, _)
+   | (a2, close2, _), (a1, close1, (GZeroOrOne g, a1r)) ->
+     array_group_disjoint_sym (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a10) close10) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a20) close20);
      assert (
-       Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a10) close) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a20) close) <==>
-       Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2) close)
+       Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a10) close10) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a20) close20) <==>
+       Spec.array_group_disjoint (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a1) close1) (Spec.maybe_close_array_group (array_group_sem e.e_sem_env a2) close2)
      );
-     let res = array_group_disjoint e fuel' close a1r a2 in
+     let res = array_group_disjoint e fuel' close1 close2 a1r a2 in
      if not (RSuccess? res)
      then res
      else begin
@@ -732,28 +742,28 @@ and array_group_disjoint
        rewrite_group_correct e.e_sem_env fuel' false a1';
        let (a1_, res) = rewrite_group fuel' false a1' in
        if res
-       then array_group_disjoint e fuel' close a1_ a2
+       then array_group_disjoint e fuel' close1 close2 a1_ a2
        else ROutOfFuel
      end
-   | (GNop, _), (_, (GElem _ _ _, _))
-   | (_, (GElem _ _ _, _)), (GNop, _) ->
+   | (GNop, close, _), (_, _, (GElem _ _ _, _))
+   | (_, _, (GElem _ _ _, _)), (GNop, close, _) ->
      if close then RSuccess () else RFailure "array_group_disjoint: empty but not close"
-   | (_, (GElem _ _ a1l, a1r)), (_, (GElem _ _ a2l, a2r)) ->
+   | (_, _, (GElem _ _ a1l, a1r)), (_, _, (GElem _ _ a2l, a2r)) ->
      let res1 = typ_disjoint e fuel' a1l a2l in
      if not (RFailure? res1)
      then res1
      else begin
        array_group_concat_elem_disjoint
-         close
+         close1 close2
          (typ_sem e.e_sem_env a1l)
          (typ_sem e.e_sem_env a2l)
          (array_group_sem e.e_sem_env a1r)
          (array_group_sem e.e_sem_env a2r);
-       array_group_disjoint e fuel' close a1r a2r
+       array_group_disjoint e fuel' close1 close2 a1r a2r
      end
-   | (_, (GConcat a11 a12, a13)), (a2, _)
-   | (a2, _), (_, (GConcat a11 a12, a13)) ->
-     array_group_disjoint e fuel' close (GConcat a11 (GConcat a12 a13)) a2
+   | (_, close1, (GConcat a11 a12, a13)), (a2, close2, _)
+   | (a2, close2, _), (_, close1, (GConcat a11 a12, a13)) ->
+     array_group_disjoint e fuel' close1 close2 (GConcat a11 (GConcat a12 a13)) a2
    | _ -> RFailure "array_group_disjoint: array: unsupported pattern"
   end
 
@@ -895,7 +905,7 @@ and array_group_included
       let resl = array_group_included e fuel' close a1 a2l'' in
       if RFailure? resl
       then begin
-        match array_group_disjoint e fuel false a1 a2l with
+        match array_group_disjoint e fuel false false a1 a2l with
         | RSuccess _ ->
           let a2r' = GConcat a2r a2q in
           rewrite_group_correct e.e_sem_env fuel false a2r';
@@ -972,7 +982,7 @@ and array_group_included
       let res2 = array_group_included e fuel' close a1 (a2_) in
       if RFailure? res2
       then begin
-        match array_group_disjoint e fuel false a1 g2 with
+        match array_group_disjoint e fuel false false a1 g2 with
         | RSuccess _ -> array_group_included e fuel' close a1 a2r
         | res -> res
       end
@@ -1007,7 +1017,7 @@ and array_group_included
     then
     begin match array_group_included e fuel' close a1 (a2_) with
     | RFailure _ ->
-      begin match array_group_disjoint e fuel false a1 g2 with
+      begin match array_group_disjoint e fuel false false a1 g2 with
       | RSuccess _ ->
         Classical.move_requires
           (Spec.array_group_included_zero_or_more_2
@@ -1602,7 +1612,7 @@ let rec array_group_concat_unique_strong
     | _ ->
       begin match s1 with
       | WfAZeroOrOneOrMore g' s' g1' ->
-        let res1 = array_group_disjoint env fuel false g' g2 in
+        let res1 = array_group_disjoint env fuel false false g' g2 in
         if not (RSuccess? res1)
         then res1
         else let res2 = array_group_concat_unique_strong fuel' env s' g' in
@@ -1625,7 +1635,7 @@ let rec array_group_concat_unique_strong
             RSuccess ()          
         end
       | WfAZeroOrOne g' s' ->
-        let res1 = array_group_disjoint env fuel false g' g2 in
+        let res1 = array_group_disjoint env fuel false false g' g2 in
         if not (RSuccess? res1)
         then res1
         else let res2 = array_group_concat_unique_strong fuel' env s' g2 in
@@ -1728,7 +1738,7 @@ let rec array_group_concat_unique_weak
         end
 *)
       | WfAZeroOrOneOrMore g s g' ->
-        let res1 = array_group_disjoint env fuel false g g2 in
+        let res1 = array_group_disjoint env fuel false false g g2 in
         if not (RSuccess? res1)
         then res1
         else let res2 = array_group_concat_unique_strong fuel env s g in
@@ -1751,7 +1761,7 @@ let rec array_group_concat_unique_weak
             RSuccess ()
         end
       | WfAZeroOrOne g s ->
-        let res1 = array_group_disjoint env fuel false g g2 in
+        let res1 = array_group_disjoint env fuel false false g g2 in
         if not (RSuccess? res1)
         then res1
         else let res2 = array_group_concat_unique_weak fuel' env s s2 in
@@ -2682,7 +2692,7 @@ and mk_wf_array_group
     | res -> coerce_failure res
     end
   | GChoice g1 g2 ->
-    begin match array_group_disjoint env fuel false g1 g2 with
+    begin match array_group_disjoint env fuel false false g1 g2 with
     | RSuccess _ ->
       begin match mk_wf_array_group fuel' env g1 with
       | RSuccess s1 ->
