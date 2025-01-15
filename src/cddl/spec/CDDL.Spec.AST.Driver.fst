@@ -4,6 +4,24 @@ include CDDL.Spec.AST.Print
 open FStar.All
 open FStar.IO
 
+let mk_GConcat (g1 g2: group) : Tot group =
+  match g1 with
+  | GNop -> g2
+  | _ ->
+    begin match g2 with
+    | GNop -> g1
+    | _ -> GConcat g1 g2
+    end
+
+let mk_GChoice (g1 g2: group) : Tot group =
+  match g1 with
+  | GAlwaysFalse -> g2
+  | _ ->
+    begin match g2 with
+    | GAlwaysFalse -> g1
+    | _ -> GChoice g1 g2
+    end
+
 let print_endline (s: string) : ML unit =
   print_string s;
   print_newline ()

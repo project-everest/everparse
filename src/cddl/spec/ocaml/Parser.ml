@@ -128,7 +128,7 @@ let rec type_ () = debug "type" (
 
 and type_tail () = debug "type_tail" (
   choice
-    (concat s (fun _ -> concat slash (fun _ -> concat s (fun _ -> concat (type1 ()) (fun xl -> concat (type_tail ()) (fun xr -> ret (fun (x: typ) -> TChoice (x, xr xl))))))))
+    (concat s (fun _ -> concat slash (fun _ -> concat s (fun _ -> concat (type1 ()) (fun xl -> concat (type_tail ()) (fun xr -> ret (fun (x: typ) -> CDDL_Spec_AST_Elab.mk_TChoice x (xr xl))))))))
     (ret (fun (x: typ) -> x))
 )
 
@@ -171,13 +171,13 @@ and group () = debug "group" (
 
 and group_tail () = debug "group_tail" (
   choice
-    (concat s (fun _ -> concat slashslash (fun _ -> concat s (fun _ -> concat (grpchoice ()) (fun a -> concat (group_tail ()) (fun q -> ret (fun (x: group) -> GChoice (x, q a))))))))
+    (concat s (fun _ -> concat slashslash (fun _ -> concat s (fun _ -> concat (grpchoice ()) (fun a -> concat (group_tail ()) (fun q -> ret (fun (x: group) -> CDDL_Spec_AST_Driver.mk_GChoice x (q a))))))))
     (ret (fun (x: group) -> x))
 )
 
 and grpchoice () = debug "grpchoice" (
   choice
-    (concat (grpent ()) (fun a -> concat optcom (fun _ -> concat (grpchoice ()) (fun q -> ret (GConcat (a, q))))))
+    (concat (grpent ()) (fun a -> concat optcom (fun _ -> concat (grpchoice ()) (fun q -> ret (CDDL_Spec_AST_Driver.mk_GConcat a q)))))
     (ret GNop)
 )
 
