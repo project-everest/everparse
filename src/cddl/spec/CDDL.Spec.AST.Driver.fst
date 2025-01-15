@@ -107,8 +107,12 @@ let rec elab_list'
       end
     end
 
-let prelude_ast_env =
-  ast_env_extend_typ_with empty_ast_env "bool" (TElem EBool) (WfTElem EBool)
+let prelude_ast_env : ast_env =
+  let env = empty_ast_env in
+  let env = ast_env_extend_typ_with env "bool" (TElem EBool) (WfTElem EBool) in
+  assert_norm (ast_env_extend_typ_with_pre env "everparse-no-match" (TElem EAlwaysFalse) (WfTElem EAlwaysFalse)); // FIXME: WHY WHY WHY?
+  let env = ast_env_extend_typ_with env "everparse-no-match" (TElem EAlwaysFalse) (WfTElem EAlwaysFalse) in
+  env
 
 let elab_list
   (l: list (string & decl))

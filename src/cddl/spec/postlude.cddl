@@ -46,3 +46,6 @@
                   undefined = #7.23
 
                   any = #
+
+; EverParse CDDL also introduces:
+; `everparse-no-match`, a typename to denote empty types that never match
