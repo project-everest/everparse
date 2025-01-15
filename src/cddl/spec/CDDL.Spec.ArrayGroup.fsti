@@ -400,6 +400,28 @@ val array_group_concat_unique_weak_choice_left #b (a1 a2 a3: array_group b) : Le
     array_group_concat_unique_weak (array_group_choice a1 a2) a3
   ))
 
+let close_array_group
+  (#b: _)
+  (t: array_group b)
+: Tot (array_group b)
+= fun l ->
+    let res = t l in
+    match res with
+    | Some (_, []) -> res
+    | _ -> None
+
+let array_group_concat_unique_weak_choice_left' #b (a1 a2 a3: array_group b) : Lemma
+  (requires (
+    array_group_concat_unique_weak a1 a3 /\
+    array_group_concat_unique_weak a2 a3 /\
+    array_group_disjoint a1 (array_group_concat a2 a3) /\
+    array_group_disjoint (a1) (close_array_group a2)
+  ))
+  (ensures (
+    array_group_concat_unique_weak (array_group_choice a1 a2) a3
+  ))
+= ()
+
 #restart-solver
 let array_group_concat_unique_weak_concat_left
   (g1 g2 g3: array_group None)
@@ -526,16 +548,6 @@ let t_array_equiv
   (requires (array_group_equiv a1 a2))
   (ensures (typ_equiv (t_array a1) (t_array a2)))
 = ()
-
-let close_array_group
-  (#b: _)
-  (t: array_group b)
-: Tot (array_group b)
-= fun l ->
-    let res = t l in
-    match res with
-    | Some (_, []) -> res
-    | _ -> None
 
 let maybe_close_array_group
   (#b: _)
