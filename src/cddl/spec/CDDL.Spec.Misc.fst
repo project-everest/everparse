@@ -101,10 +101,30 @@ let spec_tag_none
 
 // Section 3.8.1: Control .size
 
-let str_size (ty: Cbor.major_type_byte_string_or_text_string) (sz: nat) : typ = fun w -> let x = Cbor.unpack w in
+let str_size_serializable
+  (ty: Cbor.major_type_byte_string_or_text_string)
+  (lo hi: nat)
+  (x: string64)
+: Tot bool
+= let len = Seq.length x in
+  lo <= len && len <= hi &&
+  (if ty = Cbor.cbor_major_type_text_string then CBOR.Spec.API.UTF8.correct x else true)
+
+let str_size (ty: Cbor.major_type_byte_string_or_text_string) (lo hi: nat) : typ = fun w -> let x = Cbor.unpack w in
   Cbor.CString? x &&
   Cbor.CString?.typ x = ty &&
-  Seq.length (Cbor.CString?.v x) = sz
+  str_size_serializable ty lo hi (Cbor.CString?.v x)
+
+let spec_str_size
+  (ty: Cbor.major_type_byte_string_or_text_string)
+  (lo hi: U64.t)
+: Tot (spec (str_size ty (U64.v lo) (U64.v hi)) string64 true)
+= {
+  serializable = str_size_serializable ty (U64.v lo) (U64.v hi);
+  parser = (fun x -> let Cbor.CString _ v = Cbor.unpack x in (v <: (v: string64 { str_size_serializable ty (U64.v lo) (U64.v hi) v })));
+  serializer = (fun (x: string64 { str_size_serializable ty (U64.v lo) (U64.v hi) x }) -> Cbor.pack (Cbor.CString ty x));
+  parser_inj = ();
+}
 
 let uint_size (sz: nat) : typ = fun w -> let x = Cbor.unpack w in
   Cbor.CInt64? x &&
