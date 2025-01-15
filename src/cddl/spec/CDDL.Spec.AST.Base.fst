@@ -2488,6 +2488,51 @@ let pair_sum
 : GTot nat
 = f1 (fst x) + f2 (snd x)
 
+let array_group_zero_or_one_maybe_close_equiv
+  (g: Spec.array_group None)
+  (close: bool)
+: Lemma
+  (Spec.array_group_equiv (Spec.maybe_close_array_group (Spec.array_group_zero_or_one g) close) (Spec.maybe_close_array_group (Spec.array_group_zero_or_one (Spec.maybe_close_array_group g close)) close))
+= ()
+
+let array_group_choice_maybe_close_equiv
+  (g1 g2: Spec.array_group None)
+  (close: bool)
+: Lemma
+  (Spec.array_group_equiv
+    (Spec.maybe_close_array_group
+      (Spec.array_group_choice g1 g2)
+      close
+    )
+    (Spec.maybe_close_array_group
+      (Spec.array_group_choice
+        g1 // alas, I cannot close the LHS part of a choice. This is why array group choices should have longer groups (in terms of concat) on their LHS. This is also why array group choices should be written in right-associative form (a // (b // c)), to make disjointness checks more powerful (indeed, if (b // c) is closed, a and b can still be checked for disjointness with b closed, which would not have been possible with ((a // b) // c))
+        (Spec.maybe_close_array_group g2 close)
+      )
+      close
+    )
+  )
+= ()
+
+let array_group_concat_maybe_close_equiv
+  (g1 g2: Spec.array_group None)
+  (close: bool)
+: Lemma
+  (Spec.array_group_equiv
+    (Spec.maybe_close_array_group
+      (Spec.array_group_concat g1 g2)
+      close
+    )
+    (Spec.maybe_close_array_group
+      (Spec.array_group_concat
+        g1
+        (Spec.maybe_close_array_group g2 close)
+      )
+      close
+    )
+  )
+= ()
+
 #push-options "--z3rlimit 32"
 
 #restart-solver

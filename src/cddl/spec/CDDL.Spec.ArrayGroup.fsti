@@ -444,6 +444,12 @@ let array_group_concat_unique_weak_concat_left
       );
     assert (array_group_concat_unique_weak a1 a3)
 
+let array_group_concat_unique_weak_close_right
+  (g1 g2: array_group None)
+: Lemma
+  (array_group_concat_unique_weak g1 (close_array_group g2) <==> array_group_concat_unique_weak g1 g2)
+= ()
+
 let array_group_one_or_more #b (a: array_group b) : array_group b =
   a `array_group_concat` array_group_zero_or_more a
 
@@ -820,6 +826,28 @@ let ag_spec_close_elim
   ag_serializer = (fun x -> spec1.ag_serializer x);
   ag_parser_inj = (spec1.ag_parser_inj; ());
 }
+
+let ag_spec_maybe_close_intro
+  (#source1: array_group None)
+  (#target: Type0)
+  (#inj: bool)
+  (spec1: ag_spec source1 target inj)
+  (close: bool)
+: Tot (ag_spec (maybe_close_array_group source1 close) target inj)
+= if close
+  then ag_spec_close_intro spec1
+  else spec1
+
+let ag_spec_maybe_close_elim
+  (#source1: array_group None)
+  (#target: Type0)
+  (#inj: bool)
+  (#close: bool)
+  (spec1: ag_spec (maybe_close_array_group source1 close) target inj)
+: Tot (ag_spec source1 target inj)
+= if close
+  then ag_spec_close_elim spec1
+  else spec1
 
 let ag_spec_coerce_target_prop
   (#source: array_group None)
