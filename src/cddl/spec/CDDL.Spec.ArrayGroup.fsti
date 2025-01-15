@@ -347,11 +347,21 @@ let list_append_l_nil
   [SMTPat (l `List.Tot.append` [])]
 = List.Tot.append_l_nil l
 
+let close_array_group
+  (#b: _)
+  (t: array_group b)
+: Tot (array_group b)
+= fun l ->
+    let res = t l in
+    match res with
+    | Some (_, []) -> res
+    | _ -> None
+
 val array_group_concat_unique_weak_zero_or_more_left
   (#b: _) (a1 a2: array_group b)
 : Lemma
   (requires (
-    array_group_disjoint a1 a2 /\
+    array_group_disjoint a1 (close_array_group a2) /\
     array_group_concat_unique_strong a1 a1 /\
     array_group_concat_unique_weak a1 a2
   ))
@@ -390,31 +400,11 @@ val array_group_concat_unique_weak_choice_right #b (a1 a2 a3: array_group b) : L
     array_group_concat_unique_weak a1 (array_group_choice a2 a3)
   ))
 
-val array_group_concat_unique_weak_choice_left #b (a1 a2 a3: array_group b) : Lemma
+let array_group_concat_unique_weak_choice_left #b (a1 a2 a3: array_group b) : Lemma
   (requires (
     array_group_concat_unique_weak a1 a3 /\
     array_group_concat_unique_weak a2 a3 /\
-    array_group_disjoint a1 a2
-  ))
-  (ensures (
-    array_group_concat_unique_weak (array_group_choice a1 a2) a3
-  ))
-
-let close_array_group
-  (#b: _)
-  (t: array_group b)
-: Tot (array_group b)
-= fun l ->
-    let res = t l in
-    match res with
-    | Some (_, []) -> res
-    | _ -> None
-
-let array_group_concat_unique_weak_choice_left' #b (a1 a2 a3: array_group b) : Lemma
-  (requires (
-    array_group_concat_unique_weak a1 a3 /\
-    array_group_concat_unique_weak a2 a3 /\
-    array_group_disjoint a1 (array_group_concat a2 a3) /\
+    array_group_disjoint a1 (close_array_group (array_group_concat a2 a3)) /\
     array_group_disjoint (a1) (close_array_group a2)
   ))
   (ensures (
@@ -500,22 +490,24 @@ val array_group_concat_unique_strong_one_or_more_left
     array_group_concat_unique_strong (array_group_one_or_more a1) a2
   ))
 
-val array_group_concat_unique_weak_zero_or_one_left
-  (#b: _) (a1 a2: array_group b)
+#restart-solver
+let array_group_concat_unique_weak_zero_or_one_left
+  #b (a1 a2: array_group b)
 : Lemma
   (requires (
-    array_group_disjoint a1 a2 /\
+    array_group_disjoint a1 (close_array_group a2) /\
     array_group_concat_unique_weak a1 a2
   ))
   (ensures (
     array_group_concat_unique_weak (array_group_zero_or_one a1) a2
   ))
+= ()
 
 val array_group_concat_unique_weak_one_or_more_left
   (#b: _) (a1 a2: array_group b)
 : Lemma
   (requires (
-    array_group_disjoint a1 a2 /\
+    array_group_disjoint a1 (close_array_group a2) /\
     array_group_concat_unique_strong a1 a1 /\
     array_group_concat_unique_weak a1 a2
   ))

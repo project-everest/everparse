@@ -1562,6 +1562,9 @@ let rec array_group_concat_unique_strong
     else let res2 = array_group_concat_unique_strong fuel' env s1r g2 in
     if not (RSuccess? res2)
     then res2
+    else let res3 = array_group_disjoint env fuel false false g1l g1r in
+    if not (RSuccess? res3)
+    then res3
     else begin
       Spec.array_group_concat_unique_strong_choice_left
         (array_group_sem env.e_sem_env g1l)
@@ -1687,6 +1690,9 @@ let rec array_group_concat_unique_weak
     else let res2 = array_group_concat_unique_weak fuel' env s1r s2 in
     if not (RSuccess? res2)
     then res2
+    else let res3 = array_group_disjoint env fuel false true g1l (GConcat g1r g2) in
+    if not (RSuccess? res3)
+    then res3
     else begin
       Spec.array_group_concat_unique_weak_choice_left
         (array_group_sem env.e_sem_env g1l)
@@ -1738,7 +1744,7 @@ let rec array_group_concat_unique_weak
         end
 *)
       | WfAZeroOrOneOrMore g s g' ->
-        let res1 = array_group_disjoint env fuel false false g g2 in
+        let res1 = array_group_disjoint env fuel false true g g2 in
         if not (RSuccess? res1)
         then res1
         else let res2 = array_group_concat_unique_strong fuel env s g in
@@ -1761,7 +1767,7 @@ let rec array_group_concat_unique_weak
             RSuccess ()
         end
       | WfAZeroOrOne g s ->
-        let res1 = array_group_disjoint env fuel false false g g2 in
+        let res1 = array_group_disjoint env fuel false true g g2 in
         if not (RSuccess? res1)
         then res1
         else let res2 = array_group_concat_unique_weak fuel' env s s2 in
@@ -2692,7 +2698,7 @@ and mk_wf_array_group
     | res -> coerce_failure res
     end
   | GChoice g1 g2 ->
-    begin match array_group_disjoint env fuel false false g1 g2 with
+    begin match array_group_disjoint env fuel false true g1 g2 with
     | RSuccess _ ->
       begin match mk_wf_array_group fuel' env g1 with
       | RSuccess s1 ->

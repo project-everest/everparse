@@ -1330,7 +1330,7 @@ and spec_wf_array_group
 | WfAChoice g1 g2 s1 s2 ->
   spec_wf_array_group env g1 s1 /\
   spec_wf_array_group env g2 s2 /\
-  Spec.array_group_disjoint (array_group_sem env g1) (array_group_sem env g2)
+  Spec.array_group_disjoint (array_group_sem env g1) (Spec.close_array_group (array_group_sem env g2))
 | WfARewrite g1 g2 s2 ->
   Spec.array_group_equiv (array_group_sem env g1) (array_group_sem env g2) /\
   spec_wf_array_group env g2 s2
@@ -2579,7 +2579,7 @@ and spec_of_wf_array_group
     Spec.ag_spec_zero_or_more (spec_of_wf_array_group env s)
   | WfAZeroOrOneOrMore g s _ ->
     Spec.ag_spec_one_or_more (spec_of_wf_array_group env s)
-  | WfAConcat _ _ s1 s2 ->
+  | WfAConcat g1 g2 s1 s2 ->
     let t1 = target_type_of_wf_array_group s1 in
     let t2 = target_type_of_wf_array_group s2 in
     Spec.ag_spec_bij
@@ -2588,10 +2588,19 @@ and spec_of_wf_array_group
         (spec_of_wf_array_group env s2)
       )
       (pair_bij (ttpair_kind t1 t2) (target_type_sem tp_tgt t1) (target_type_sem tp_tgt t2))
-  | WfAChoice _ _ s1 s2 ->
-    Spec.ag_spec_choice
-      (spec_of_wf_array_group env s1)
-      (spec_of_wf_array_group env s2)
+  | WfAChoice g1 g2 s1 s2 ->
+    Spec.ag_spec_close_elim
+      (Spec.ag_spec_ext
+        (Spec.ag_spec_close_intro
+          (Spec.ag_spec_choice
+            (spec_of_wf_array_group env s1)
+            (Spec.ag_spec_close_intro
+              (spec_of_wf_array_group env s2)
+            )
+          )
+        )
+        (Spec.close_array_group (Spec.array_group_choice (array_group_sem tp_sem g1) (array_group_sem tp_sem g2)))
+      )
   | WfARewrite _ _ s2 ->
     Spec.ag_spec_ext
       (spec_of_wf_array_group env s2)

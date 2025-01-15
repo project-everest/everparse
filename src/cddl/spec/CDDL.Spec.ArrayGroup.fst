@@ -372,15 +372,6 @@ let array_group_concat_unique_strong'_zero_or_more_left
 
 let array_group_concat_unique_strong_zero_or_more_left
   #b (a1 a2: array_group b)
-: Lemma
-  (requires (
-    array_group_disjoint a1 a2 /\
-    array_group_concat_unique_strong a1 a1 /\
-    array_group_concat_unique_strong a1 a2
-  ))
-  (ensures (
-    array_group_concat_unique_strong (array_group_zero_or_more a1) a2
-  ))
 = array_group_concat_unique_strong'_zero_or_more_left a1 a2
 
 let array_group_concat_unique_weak_intro
@@ -525,16 +516,7 @@ let array_group_concat_unique_weak_zero_or_more_left'
 
 let array_group_concat_unique_weak_zero_or_more_left
   #b (a1 a2: array_group b)
-: Lemma
-  (requires (
-    array_group_disjoint a1 a2 /\
-    array_group_concat_unique_strong a1 a1 /\
-    array_group_concat_unique_weak a1 a2
-  ))
-  (ensures (
-    array_group_concat_unique_weak (array_group_zero_or_more a1) a2
-  ))
-= array_group_concat_unique_weak_zero_or_more_left' a1 a2
+= array_group_concat_unique_weak_zero_or_more_left' a1 (close_array_group a2)
 
 let array_group_concat_unique_weak_zero_or_more_right
   #b (a1 a2: array_group b)
@@ -633,17 +615,6 @@ let array_group_concat_unique_weak_choice_right #b (a1 a2 a3: array_group b) : L
   ))
 = ()
 
-let array_group_concat_unique_weak_choice_left #b (a1 a2 a3: array_group b) : Lemma
-  (requires (
-    array_group_concat_unique_weak a1 a3 /\
-    array_group_concat_unique_weak a2 a3 /\
-    array_group_disjoint a1 a2
-  ))
-  (ensures (
-    array_group_concat_unique_weak (array_group_choice a1 a2) a3
-  ))
-= ()
-
 #push-options "--z3rlimit 16"
 
 let array_group_concat_unique_strong'_concat_left
@@ -725,23 +696,10 @@ let array_group_concat_unique_strong_one_or_more_left
 
 #pop-options
 
-#restart-solver
-let array_group_concat_unique_weak_zero_or_one_left
-  #b (a1 a2: array_group b)
-: Lemma
-  (requires (
-    array_group_disjoint a1 a2 /\
-    array_group_concat_unique_weak a1 a2
-  ))
-  (ensures (
-    array_group_concat_unique_weak (array_group_zero_or_one a1) a2
-  ))
-= ()
-
 #push-options "--z3rlimit 32 --split_queries always"
 
 #restart-solver
-let array_group_concat_unique_weak_one_or_more_left
+let array_group_concat_unique_weak_one_or_more_left'
   #b (a1 a2: array_group b)
 : Lemma
   (requires (
@@ -771,6 +729,10 @@ let array_group_concat_unique_weak_one_or_more_left
         assert (Some? (a1 l));
         ()
       )
+
+let array_group_concat_unique_weak_one_or_more_left
+  #b (a1 a2: array_group b)
+= array_group_concat_unique_weak_one_or_more_left' a1 (close_array_group a2)
 
 let array_group_concat_close
   (#b: _)
