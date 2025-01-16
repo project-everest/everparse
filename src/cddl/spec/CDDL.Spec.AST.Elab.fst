@@ -1693,7 +1693,7 @@ let rec array_group_concat_unique_strong
     | (GDef i, g2r) ->
       let g2' = GConcat (env.e_env i) g2r in
       Spec.array_group_concat_equiv
-        (fst (env.e_sem_env.se_env i <: (Spec.array_group None & Spec.map_group)))
+        (fst (Ghost.reveal (env.e_sem_env.se_env i) <: (Spec.array_group None & Spec.map_group)))
         (array_group_sem env.e_sem_env (env.e_env i))
         (array_group_sem env.e_sem_env g2r)
         (array_group_sem env.e_sem_env g2r);
@@ -2545,7 +2545,7 @@ let annot_tables_correct_postcond
     | _ -> True
     end        
 
-#push-options "--z3rlimit 128 --ifuel 6 --fuel 4 --query_stats --split_queries always"
+#push-options "--z3rlimit 256 --ifuel 8 --fuel 4 --query_stats --split_queries always"
 
 #restart-solver
 let rec annot_tables_correct_aux'

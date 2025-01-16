@@ -246,19 +246,38 @@ and typ_bounded_incr
   | TDetCbor t1 t2
   | TChoice t1 t2 -> typ_bounded_incr env env' t1; typ_bounded_incr env env' t2
 
+type int_value =
+| SUInt of U64.t
+| SNegInt of U64.t
+
+let eval_int_value
+  (x: int_value)
+: Tot int
+= match x with
+  | SUInt v -> U64.v v
+  | SNegInt v -> -1 - U64.v v
+
 [@@  sem_attr]
+noeq
+type type_sem
+= | Sem of Ghost.erased Spec.typ
+  | SInt of int_value
+  | SIntRange: a: int_value -> b: int_value { eval_int_value a <= eval_int_value b } -> type_sem
+// TODO: floats
+
+[@@ sem_attr]
 let sem_env_elem
   (kind: name_env_elem)
-: GTot Type
+: Tot Type
 = match kind with
-  | NType -> Spec.typ
-  | NGroup -> (Spec.array_group None & Spec.map_group)
+  | NType -> type_sem
+  | NGroup -> Ghost.erased (Spec.array_group None & Spec.map_group)
 
 [@@  sem_attr]
 noeq
 type sem_env = {
   se_bound: name_env;
-  se_env: ((n: name se_bound) -> GTot (sem_env_elem (Some?.v (se_bound n))));
+  se_env: ((n: name se_bound) -> Tot (sem_env_elem (Some?.v (se_bound n))));
 }
 
 [@@"opaque_to_smt"] irreducible // because of false_elim
@@ -288,7 +307,7 @@ let sem_env_extend_gen
   (se: sem_env)
   (new_name: string)
   (nelem: name_env_elem)
-  (a: Ghost.erased (sem_env_elem nelem))
+  (a: sem_env_elem nelem)
 : Pure sem_env
     (requires
       (~ (name_mem new_name se.se_bound))
@@ -296,7 +315,7 @@ let sem_env_extend_gen
     (ensures fun se' ->
       se'.se_bound == extend_name_env se.se_bound new_name nelem /\
       sem_env_included se se' /\
-      se'.se_env new_name == Ghost.reveal a
+      se'.se_env new_name == a
     )
 = let se_bound' = extend_name_env se.se_bound new_name nelem in
   {
@@ -411,6 +430,14 @@ let elem_typ_sem
   | EAlwaysFalse -> Spec.t_always_false
   | EAny -> Spec.any
 
+let sem_of_type_sem
+  (x: type_sem)
+: GTot Spec.typ
+= match x with
+  | Sem v -> v
+  | SInt v -> Spec.t_literal (eval_literal (LInt (eval_int_value v)))
+  | SIntRange lo hi -> Spec.t_int_range (eval_int_value lo) (eval_int_value hi)
+
 noextract
 let t_size
   (ty: Spec.typ)
@@ -470,7 +497,7 @@ and typ_sem
     (ensures (fun _ -> True))
 = match x with
   | TElem t -> elem_typ_sem t
-  | TDef s -> env.se_env s
+  | TDef s -> sem_of_type_sem (env.se_env s)
   | TTagged tg t' ->
     Spec.t_tag
       begin match tg with
@@ -588,6 +615,38 @@ and typ_sem_incr
   | TChoice t1 t2 ->
     typ_sem_incr env env' t1;
     typ_sem_incr env env' t2
+
+let typ_sem_elem
+  (env: sem_env)
+  (x: typ)
+: Pure type_sem
+  (requires (typ_bounded env.se_bound x))
+  (ensures (fun y ->
+    typ_bounded env.se_bound x /\
+    Spec.typ_equiv (sem_of_type_sem y) (typ_sem env x)
+  ))
+= match x with
+  | TDef n -> env.se_env n
+  | TElem (ELiteral (LInt x)) ->
+    if x < 0
+    then SInt (SNegInt (U64.uint_to_t (-1 - x)))
+    else SInt (SUInt (U64.uint_to_t x))
+(* TODO: range *)
+  | _ -> Sem (typ_sem env x)
+
+let typ_sem_elem_incr
+  (env env': sem_env)
+  (x: typ)
+: Lemma
+  (requires (typ_bounded env.se_bound x /\
+    sem_env_included env env'
+  ))
+  (ensures (
+    typ_bounded env.se_bound x /\
+    typ_bounded env'.se_bound x /\
+    typ_sem_elem env' x == typ_sem_elem env x
+  ))
+= ()
 
 (* Annotated AST and their semantics *)
 
@@ -1652,12 +1711,12 @@ let ast_env_elem0_bounded (env: name_env) (#s: name_env_elem) (x: ast_env_elem0 
     group_bounded env x
 
 [@@ sem_attr]
-let ast_env_elem0_sem (e_sem_env: sem_env) (#s: name_env_elem) (x: ast_env_elem0 s) : Ghost (sem_env_elem s)
+let ast_env_elem0_sem (e_sem_env: sem_env) (#s: name_env_elem) (x: ast_env_elem0 s) : Pure (sem_env_elem s)
   (requires ast_env_elem0_bounded e_sem_env.se_bound x)
   (ensures fun _ -> True)
 = match s with
-  | NType -> typ_sem e_sem_env x
-  | NGroup -> (array_group_sem e_sem_env x, map_group_sem e_sem_env x)
+  | NType -> typ_sem_elem e_sem_env x
+  | NGroup -> Ghost.hide (array_group_sem e_sem_env x, map_group_sem e_sem_env x)
   
 let ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (phi: sem_env_elem s) (x: ast_env_elem0 s) : GTot prop =
   ast_env_elem0_bounded e_sem_env.se_bound x /\
@@ -1665,10 +1724,10 @@ let ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (phi: sem_env_elem
     let sem = ast_env_elem0_sem e_sem_env x in
     match s with
     | NType ->
-      Spec.typ_equiv #None sem phi
+      Spec.typ_equiv #None (sem_of_type_sem sem) (sem_of_type_sem phi)
     | NGroup ->
-      let sem : Spec.array_group None & Spec.map_group = sem in
-      let phi : Spec.array_group None & Spec.map_group = phi in
+      let sem : Spec.array_group None & Spec.map_group = Ghost.reveal sem in
+      let phi : Spec.array_group None & Spec.map_group = Ghost.reveal phi in
       Spec.array_group_equiv #None (fst sem) (fst phi) /\ snd sem == snd phi
   end
 
@@ -1773,7 +1832,7 @@ let ast_env_extend_gen
       None? (e'.e_wf new_name).wf_typ /\
       None? (e'.e_wf new_name).wf_array
     )
-= let s = Ghost.hide (ast_env_elem0_sem e.e_sem_env x) in
+= let s = ast_env_elem0_sem e.e_sem_env x in
   let se' = sem_env_extend_gen e.e_sem_env new_name kind s in
   {
     e_sem_env = se';
@@ -2539,8 +2598,8 @@ let target_ast_env_extend_typ
 
 noeq
 type spec_env (tp_sem: sem_env) (tp_tgt: target_spec_env (tp_sem.se_bound)) = {
-  tp_spec_typ: (n: typ_name tp_sem.se_bound) -> GTot (Spec.spec (tp_sem.se_env n) (tp_tgt n) true);
-  tp_spec_array_group: (n: group_name tp_sem.se_bound) -> GTot (Spec.ag_spec (fst (tp_sem.se_env n <: (Spec.array_group None & Spec.map_group))) (tp_tgt n) true); // FIXME: may not be always defined
+  tp_spec_typ: (n: typ_name tp_sem.se_bound) -> GTot (Spec.spec (sem_of_type_sem (tp_sem.se_env n)) (tp_tgt n) true);
+  tp_spec_array_group: (n: group_name tp_sem.se_bound) -> GTot (Spec.ag_spec (fst (Ghost.reveal (tp_sem.se_env n) <: (Spec.array_group None & Spec.map_group))) (tp_tgt n) true); // FIXME: may not be always defined
 }
 
 [@@"opaque_to_smt"] irreducible
