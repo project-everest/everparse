@@ -10,9 +10,10 @@ let uint : typ = (fun w -> let x = Cbor.unpack w in Cbor.CInt64? x && Cbor.CInt6
 let nint : typ = (fun w -> let x = Cbor.unpack w in Cbor.CInt64? x && Cbor.CInt64?.typ x = Cbor.cbor_major_type_neg_int64)
 let t_int : typ = uint `t_choice` nint
 
-let bstr : typ = (fun w -> let x = Cbor.unpack w in Cbor.CString? x && Cbor.CString?.typ x = Cbor.cbor_major_type_byte_string)
+let str_gen (k: Cbor.major_type_byte_string_or_text_string) : typ = (fun w -> let x = Cbor.unpack w in Cbor.CString? x && Cbor.CString?.typ x = k)
+let bstr : typ = str_gen Cbor.cbor_major_type_byte_string
 let bytes = bstr
-let tstr : typ = (fun w -> let x = Cbor.unpack w in Cbor.CString? x && Cbor.CString?.typ x = Cbor.cbor_major_type_text_string)
+let tstr : typ = str_gen Cbor.cbor_major_type_text_string
 let text = tstr
 
 [@@CMacro]

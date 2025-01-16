@@ -4,6 +4,7 @@ module U64 = FStar.UInt64
 module Cbor = CBOR.Spec.API.Type
 module Map = CDDL.Spec.Map
 module U8 = FStar.UInt8
+module Util = CBOR.Spec.Util
 
 irreducible let sem_attr : unit = ()
 
@@ -90,6 +91,9 @@ and typ =
 | TMap of group
 | TTagged: (tag: option int) -> (body: typ) -> typ
 | TChoice: typ -> typ -> typ
+(* Controls: their semantics will use `andp` *)
+| TSize: typ -> int -> int -> typ
+| TDetCbor: typ -> typ -> typ
 
 (* Environments and well-formedness constraints *)
 
@@ -177,6 +181,14 @@ and typ_bounded
   | TChoice t1 t2 ->
     typ_bounded env t1 &&
     typ_bounded env t2
+  | TSize base lo hi ->
+    typ_bounded env base &&
+    0 <= lo &&
+    lo <= hi &&
+    hi < pow2 64
+  | TDetCbor base ctl ->
+    typ_bounded env base && // base should be #2 (byte string) but since it can be an alias, such as `bstr` defined in postlude.cddl, this condition cannot be checked without an ast_env
+    typ_bounded env ctl
 
 let rec group_bounded_incr
   (env env': name_env)
@@ -227,9 +239,11 @@ and typ_bounded_incr
   | TElem _
   | TDef _
   -> ()
+  | TSize t' _ _
   | TTagged _ t' -> typ_bounded_incr env env' t'
   | TArray g -> group_bounded_incr env env' g
   | TMap g -> group_bounded_incr env env' g
+  | TDetCbor t1 t2
   | TChoice t1 t2 -> typ_bounded_incr env env' t1; typ_bounded_incr env env' t2
 
 [@@  sem_attr]
@@ -397,6 +411,22 @@ let elem_typ_sem
   | EAlwaysFalse -> Spec.t_always_false
   | EAny -> Spec.any
 
+noextract
+let t_size
+  (ty: Spec.typ)
+  (lo hi: nat)
+: Tot Spec.typ
+=
+    Util.andp
+      ty
+      (Spec.t_choice
+        (Spec.t_choice
+          (Spec.str_size Cbor.cbor_major_type_byte_string lo hi)
+          (Spec.str_size Cbor.cbor_major_type_text_string lo hi)
+        )
+        (if lo = hi then Spec.uint_size lo else Spec.t_always_false) // uint .size is not defined for ranges
+      )
+
 [@@ sem_attr ]
 let rec array_group_sem
   (env: sem_env)
@@ -456,6 +486,12 @@ and typ_sem
     Spec.t_choice
       (typ_sem env t1)
       (typ_sem env t2)
+  | TSize base lo hi ->
+    t_size (typ_sem env base) lo hi
+  | TDetCbor base dest ->
+    Util.andp
+      (typ_sem env base)
+      (Spec.bstr_cbor_det (typ_sem env dest))
 
 let rec array_group_sem_incr
   (env env': sem_env)
@@ -542,11 +578,13 @@ and typ_sem_incr
   | TElem _
   | TDef _
   -> ()
+  | TSize t' _ _
   | TTagged _ t' -> typ_sem_incr env env' t'
   | TArray g ->
     array_group_sem_incr env env' g
   | TMap g ->
     map_group_sem_incr env env' g
+  | TDetCbor t1 t2
   | TChoice t1 t2 ->
     typ_sem_incr env env' t1;
     typ_sem_incr env env' t2
@@ -628,8 +666,6 @@ let rec bounded_elab_map_group_incr
     -> bounded_elab_map_group_incr env env' g1;
     bounded_elab_map_group_incr env env' g2
   | _ -> ()
-
-module Util = CBOR.Spec.Util
 
 let rec elab_map_group_sem
   (env: sem_env)
@@ -773,6 +809,21 @@ type ast0_wf_typ
 | WfTElem:
   (e: elem_typ) ->
   ast0_wf_typ (TElem e)
+| WfTDetCbor:
+  (base: typ) ->
+  (dest: typ) ->
+  (wfdest: ast0_wf_typ dest) ->
+  ast0_wf_typ (TDetCbor base dest)
+| WfTStrSize:
+  (k: int) ->
+  (base: typ) ->
+  (lo: int) ->
+  (hi: int) ->
+  ast0_wf_typ (TSize base lo hi)
+| WfTUIntSize:
+  (base: typ) ->
+  (sz: int) ->
+  ast0_wf_typ (TSize base sz sz)
 | WfTDef:
   (n: string) ->
   ast0_wf_typ (TDef n)
@@ -937,6 +988,17 @@ let rec bounded_wf_typ
   bounded_wf_typ env t1 s1 /\
   bounded_wf_typ env t2 s2
 | WfTElem e -> wf_elem_typ e
+| WfTDetCbor base dest wfdest ->
+  typ_bounded env base /\
+  typ_bounded env dest /\
+  bounded_wf_typ env _ wfdest
+| WfTStrSize k base lo hi ->
+  (k == U8.v Cbor.cbor_major_type_byte_string \/ k == U8.v Cbor.cbor_major_type_text_string) /\
+  typ_bounded env base /\
+  0 <= lo /\ lo <= hi /\ hi < pow2 64
+| WfTUIntSize base sz ->
+  typ_bounded env base /\
+  0 <= sz /\ sz < pow2 64
 | WfTDef n ->
   env n == Some NType
 
@@ -1049,6 +1111,7 @@ let rec bounded_wf_typ_incr
     [SMTPat (name_env_included env env'); SMTPat (bounded_wf_typ env' g wf)];
   ]]
 = match wf with
+  | WfTDetCbor _ _ s'
   | WfTRewrite _ _ s' ->
     bounded_wf_typ_incr env env' _ s'
   | WfTArray g s ->
@@ -1061,6 +1124,8 @@ let rec bounded_wf_typ_incr
   | WfTChoice t1 t2 s1 s2 ->
     bounded_wf_typ_incr env env' t1 s1;
     bounded_wf_typ_incr env env' t2 s2
+  | WfTStrSize _ _ _ _
+  | WfTUIntSize _ _
   | WfTElem _
   | WfTDef _ -> ()
 
@@ -1190,6 +1255,9 @@ let rec bounded_wf_typ_bounded
   | WfTChoice t1 t2 s1 s2 ->
     bounded_wf_typ_bounded env t1 s1;
     bounded_wf_typ_bounded env t2 s2
+  | WfTDetCbor _ _ _ 
+  | WfTStrSize _ _ _ _
+  | WfTUIntSize _ _
   | WfTElem _
   | WfTDef _ -> ()
 
@@ -1300,6 +1368,13 @@ let rec spec_wf_typ
   spec_wf_typ env t1 s1 /\
   spec_wf_typ env t2 s2 /\
   Spec.typ_disjoint (typ_sem env t1) (typ_sem env t2)
+| WfTDetCbor base _ wfdest ->
+  Spec.typ_equiv (typ_sem env base) Spec.bstr /\
+  spec_wf_typ env _ wfdest
+| WfTStrSize k base _ _ ->
+  Spec.typ_equiv (typ_sem env base) (Spec.str_gen (U8.uint_to_t k)) // TODO: support chaining of controls, e.g. bstr .size x..y .cbor ty, with `Spec.typ_included`
+| WfTUIntSize base _ ->
+  Spec.typ_equiv (typ_sem env base) Spec.uint
 | WfTDef _
 | WfTElem _ -> True
 end
@@ -1419,6 +1494,7 @@ let rec spec_wf_typ_incr
     [SMTPat (sem_env_included env env'); SMTPat (spec_wf_typ env' g wf)];
   ]]
 = match wf with
+  | WfTDetCbor _ _ s'
   | WfTRewrite _ _ s' ->
     spec_wf_typ_incr env env' _ s'
   | WfTArray g s ->
@@ -1431,6 +1507,8 @@ let rec spec_wf_typ_incr
   | WfTChoice t1 t2 s1 s2 ->
     spec_wf_typ_incr env env' t1 s1;
     spec_wf_typ_incr env env' t2 s2
+  | WfTUIntSize _ _
+  | WfTStrSize _ _ _ _
   | WfTElem _
   | WfTDef _ -> ()
 
@@ -2276,6 +2354,7 @@ let rec target_type_of_wf_typ
 : Tot target_type
   (decreases wf)
 = match wf with
+  | WfTDetCbor _ _ s
   | WfTRewrite _ _ s -> target_type_of_wf_typ s
   | WfTArray _ s -> target_type_of_wf_array_group s
   | WfTTagged None _ s -> TTPair (TTElem TTUInt64) (target_type_of_wf_typ s)
@@ -2284,6 +2363,8 @@ let rec target_type_of_wf_typ
   | WfTChoice _ _ s1 s2 -> TTUnion (target_type_of_wf_typ s1) (target_type_of_wf_typ s2)
   | WfTElem e -> TTElem (target_type_of_elem_typ e)
   | WfTDef e -> TTDef e
+  | WfTStrSize _ _ _ _ -> TTElem TTString
+  | WfTUIntSize _ _ -> TTElem TTUInt64
 
 and target_type_of_wf_array_group
   (#x: group)
@@ -2337,6 +2418,7 @@ let rec target_type_of_wf_typ_bounded
   (decreases wf)
   [SMTPat (target_type_bounded env (target_type_of_wf_typ wf))]
 = match wf with
+  | WfTDetCbor _ _ s
   | WfTRewrite _ _ s -> target_type_of_wf_typ_bounded env s
   | WfTArray _ s -> target_type_of_wf_array_group_bounded env s
   | WfTTagged _ _ s -> target_type_of_wf_typ_bounded env s
@@ -2344,6 +2426,8 @@ let rec target_type_of_wf_typ_bounded
   | WfTChoice _ _ s1 s2 ->
     target_type_of_wf_typ_bounded env s1;
     target_type_of_wf_typ_bounded env s2
+  | WfTStrSize _ _ _ _
+  | WfTUIntSize _ _
   | WfTElem _
   | WfTDef _ -> ()
 
@@ -2561,6 +2645,20 @@ let rec spec_of_wf_typ
       (spec_of_wf_typ env s2)
   | WfTDef n -> env.tp_spec_typ n
   | WfTElem s -> spec_of_elem_typ s ()
+  | WfTDetCbor base dest wfdest ->
+    Spec.spec_ext
+      (Spec.spec_bstr_cbor_det
+        (spec_of_wf_typ env wfdest)
+      )
+      _
+  | WfTStrSize k base lo hi ->
+    Spec.spec_ext
+      (Spec.spec_str_size (U8.uint_to_t k) (U64.uint_to_t lo) (U64.uint_to_t hi))
+      _
+  | WfTUIntSize base sz ->
+    Spec.spec_ext
+      (Spec.spec_uint_size sz)
+      _
 
 and spec_of_wf_array_group
   (#tp_sem: sem_env)

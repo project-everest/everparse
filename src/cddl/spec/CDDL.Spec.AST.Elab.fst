@@ -154,6 +154,13 @@ let rec rewrite_typ
   | TMap g ->
     let (g', res) = rewrite_group fuel' true g in
     (TMap g', res)
+  | TDetCbor base dest ->
+    let (base', res1) = rewrite_typ fuel' base in
+    let (dest', res2) = rewrite_typ fuel' dest in
+    (TDetCbor base' dest', res1 && res2)
+  | TSize base lo hi ->
+    let (base', res) = rewrite_typ fuel' base in
+    (TSize base' lo hi, res)
   | _ -> (t, true)
 
 and rewrite_group
@@ -258,7 +265,9 @@ let rec rewrite_typ_bounded
     rewrite_typ_bounded env fuel' (TChoice t1 (TChoice t2 t3))
   | TChoice t (TElem EAlwaysFalse)
   | TChoice (TElem EAlwaysFalse) t
+  | TSize t _ _
     -> rewrite_typ_bounded env fuel' t
+  | TDetCbor t1 t2
   | TChoice t1 t2 ->
     rewrite_typ_bounded env fuel' t1;
     rewrite_typ_bounded env fuel' t2;
@@ -383,9 +392,11 @@ let rec rewrite_typ_correct
   match t with
   | TChoice (TChoice t1 t2) t3 ->
     rewrite_typ_correct env fuel' (TChoice t1 (TChoice t2 t3))
+  | TSize t _ _
   | TChoice t (TElem EAlwaysFalse)
   | TChoice (TElem EAlwaysFalse) t
     -> rewrite_typ_correct env fuel' t
+  | TDetCbor t1 t2
   | TChoice t1 t2 ->
     rewrite_typ_correct env fuel' t1;
     rewrite_typ_correct env fuel' t2;
@@ -560,7 +571,7 @@ let array_group_disjoint_sym #b (a1 a2: Spec.array_group b) : Lemma
   (Spec.array_group_disjoint a1 a2 <==> Spec.array_group_disjoint a2 a1)
 = ()
 
-#push-options "--z3rlimit 128 --query_stats --split_queries always --fuel 4 --ifuel 8"
+#push-options "--z3rlimit 256 --query_stats --split_queries always --fuel 4 --ifuel 8"
 
 #restart-solver
 [@@"opaque_to_smt"]
@@ -602,6 +613,52 @@ let rec typ_disjoint
     else RSuccess ()
   | TTagged _ _, _
   | _, TTagged _ _ -> RSuccess ()
+  | TSize base lo hi, t
+  | t, TSize base lo hi ->
+    let res = typ_disjoint e fuel' base t in
+    if not (RFailure? res)
+    then res
+    else
+    begin match t with
+    | TElem (ELiteral (LInt n)) ->
+      if lo <> hi
+      then RSuccess ()
+      else if n >= pow2 lo
+      then RSuccess ()
+      else RFailure "typ_disjoint: TSize vs. Lint"
+    | TElem (ELiteral (LString ty s)) ->
+      let len = String.length s in
+      if len > hi || len < lo
+      then RSuccess ()
+      else RFailure "typ_disjoint: TSize vs. LString"
+    | TDetCbor _ _ ->
+      if hi <= 0
+      then RSuccess () (* needed by COSE empty_or_serialized_map *)
+      else RFailure "typ_disjoint: TSize vs. TDetCbor"
+    | TSize base' lo' hi' ->
+      if hi < lo' || hi' < lo
+      then begin
+        if lo = hi && lo' = hi'
+        then begin
+          let res1 = typ_disjoint e fuel' base (TElem EUInt) in
+          if not (RFailure? res1)
+          then res1
+          else typ_disjoint e fuel' base' (TElem EUInt)
+        end
+        else RSuccess ()
+      end
+      else RFailure "typ_disjoint: TSize vs. TSize"
+    | _ -> RFailure "typ_disjoint: TSize"
+    end
+  | TDetCbor _ dest, t
+  | t, TDetCbor _ dest ->
+    let res = typ_disjoint e fuel' (TElem EByteString) t in
+    if not (RFailure? res)
+    then res
+    else begin match t with
+    | TDetCbor _ dest' -> typ_disjoint e fuel' dest dest'
+    | _ -> RFailure "typ_disjoint: TDetCbor"
+    end
   | TElem EBool, TElem (ELiteral (LSimple v))
   | TElem (ELiteral (LSimple v)), TElem EBool ->
     if U8.uint_to_t v = simple_value_true
@@ -813,6 +870,44 @@ let rec typ_included
     else RFailure "typ_included: TTagged with different tags"
   | TTagged _ _, _
   | _, TTagged _ _ -> RFailure "typ_included: TTagged vs. anything"
+  | TSize base lo hi, t ->
+    let res1 = typ_included e fuel' base t in
+    if not (RFailure? res1)
+    then res1
+    else begin match t with
+    | TSize base' lo' hi' ->
+      let res2 = typ_included e fuel' base base' in
+      if not (RSuccess? res2)
+      then res2
+      else begin match typ_disjoint e fuel base' (TChoice (TElem EByteString) (TElem ETextString)) with
+      | ROutOfFuel -> ROutOfFuel
+      | RSuccess _ ->
+        if lo <> hi
+        then RSuccess ()
+        else if lo' <> hi' || lo > lo'
+        then RFailure "typ_included: TSize integer"
+        else begin
+          FStar.Math.Lemmas.pow2_le_compat lo' lo;
+          RSuccess ()
+        end
+      | RFailure _ ->
+        let res3 = typ_disjoint e fuel base' (TElem EUInt) in
+        if not (RSuccess? res3)
+        then res3
+        else if lo' <= lo && hi <= hi'
+        then RSuccess ()
+        else RFailure "typ_included: TSize string"
+      end
+    | _ -> RFailure "typ_included: TSize vs. something else"
+    end
+  | _, TSize base lo hi -> RFailure "typ_included: something else vs. TSize"
+  | TDetCbor _ _, TElem EByteString -> RSuccess ()
+  | TDetCbor base dest, TDetCbor base' dest' ->
+    let res1 = typ_included e fuel' base base' in
+    if not (RSuccess? res1)
+    then res1
+    else typ_included e fuel' dest dest'
+  | TDetCbor _ _, _ -> RFailure "typ_included: TDetCbor"
   | TElem (ELiteral (LSimple v)), TElem ESimple
   | TElem (ELiteral (LSimple v)), TElem EBool ->
     if U8.uint_to_t v = simple_value_true || U8.uint_to_t v = simple_value_false
@@ -2654,6 +2749,49 @@ let rec mk_wf_typ
     | res -> coerce_failure res
     end
   | TDef n -> RSuccess (WfTDef n)
+  | TDetCbor base dest ->
+    let res1 = typ_included env fuel base (TElem EByteString) in
+    if not (RSuccess? res1)
+    then coerce_failure res1
+    else let res2 = typ_included env fuel (TElem EByteString) base in
+    if not (RSuccess? res2)
+    then coerce_failure res2
+    else begin match mk_wf_typ fuel' env dest with
+    | RSuccess wfdest -> RSuccess (WfTDetCbor base dest wfdest)
+    | res -> coerce_failure res
+    end
+  | TSize base lo hi ->
+    begin match typ_included env fuel base (TElem EUInt) with
+    | ROutOfFuel -> ROutOfFuel
+    | RSuccess _ ->
+      let res2 = typ_included env fuel (TElem EUInt) base in
+      if not (RSuccess? res2)
+      then coerce_failure res2
+      else if lo = hi
+      then RSuccess (WfTUIntSize base lo)
+      else RFailure "mk_wf_typ: uint .size with ranges disallowed"
+    | RFailure _ ->
+      begin match typ_included env fuel base (TElem EByteString) with
+      | ROutOfFuel -> ROutOfFuel
+      | RSuccess _ ->
+        let res3 = typ_included env fuel (TElem EByteString) base in
+        if not (RSuccess? res3)
+        then coerce_failure res3
+        else if 0 <= lo && lo <= hi && hi <= pow2 64
+        then RSuccess (WfTStrSize (U8.v Cbor.cbor_major_type_byte_string) base lo hi)
+        else RFailure "mk_wf_typ: bstr .size with empty range"
+      | RFailure _ ->
+        let res4 = typ_included env fuel base (TElem ETextString) in
+        if not (RSuccess? res4)
+        then coerce_failure res4
+        else let res5 = typ_included env fuel (TElem ETextString) base in
+        if not (RSuccess? res5)
+        then coerce_failure res5
+        else if 0 <= lo && lo <= hi && hi <= pow2 64
+        then RSuccess (WfTStrSize (U8.v Cbor.cbor_major_type_text_string) base lo hi)
+        else RFailure "mk_wf_typ tstr .size with empty range"
+      end
+    end
 
 and mk_wf_array_group
   (fuel: nat) // for typ_disjoint
