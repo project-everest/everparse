@@ -10,6 +10,14 @@ let uint : typ = (fun w -> let x = Cbor.unpack w in Cbor.CInt64? x && Cbor.CInt6
 let nint : typ = (fun w -> let x = Cbor.unpack w in Cbor.CInt64? x && Cbor.CInt64?.typ x = Cbor.cbor_major_type_neg_int64)
 let t_int : typ = uint `t_choice` nint
 
+let t_int_range (lo hi: int) = (fun w -> let x = Cbor.unpack w in
+  match x with
+  | Cbor.CInt64 ty v ->
+    let w = if ty = Cbor.cbor_major_type_uint64 then U64.v v else -1 - U64.v v in
+    lo <= w && w <= hi
+  | _ -> false
+)
+
 let str_gen (k: Cbor.major_type_byte_string_or_text_string) : typ = (fun w -> let x = Cbor.unpack w in Cbor.CString? x && Cbor.CString?.typ x = k)
 let bstr : typ = str_gen Cbor.cbor_major_type_byte_string
 let bytes = bstr
@@ -392,6 +400,54 @@ let spec_nint
   serializable = p;
   parser = parser_spec_nint p;
   serializer = serializer_spec_nint p;
+  parser_inj = ();
+}
+
+let spec_int_range_uint64
+  (lo hi: U64.t)
+: spec (t_int_range (U64.v lo) (U64.v hi)) U64.t true
+= {
+  serializable = (fun x -> U64.lte lo x && U64.lte x hi);
+  parser = (fun (x: Cbor.cbor { t_int_range (U64.v lo) (U64.v hi) x }) -> let Cbor.CInt64 ty v = Cbor.unpack x in
+    v
+  );
+  serializer = (fun x -> Cbor.pack (Cbor.CInt64 Cbor.cbor_major_type_uint64 x));
+  parser_inj = ();
+}
+
+module I64 = FStar.Int64
+
+let uint64_to_int64
+  (x: U64.t { - pow2 63 <= U64.v x /\ U64.v x < pow2 63 })
+: Tot (y: I64.t { I64.v y == U64.v x })
+= FStar.Int.Cast.uint64_to_int64 x
+
+let spec_int_range_int64
+  (lo hi: I64.t)
+: spec (t_int_range (I64.v lo) (I64.v hi)) I64.t true
+= {
+  serializable = (fun x -> I64.lte lo x && I64.lte x hi);
+  parser = (fun (x: Cbor.cbor { t_int_range (I64.v lo) (I64.v hi) x }) -> let Cbor.CInt64 ty v = Cbor.unpack x in
+    let w = uint64_to_int64 v in
+    if ty = Cbor.cbor_major_type_uint64 then w else ((-1L) `I64.sub` w)
+  );
+  serializer = (fun (x: I64.t { I64.lte lo x && I64.lte x hi }) ->
+    if I64.lt x 0L
+    then Cbor.pack (Cbor.CInt64 Cbor.cbor_major_type_neg_int64 (FStar.Int.Cast.int64_to_uint64 ((-1L) `I64.sub` x)))
+    else Cbor.pack (Cbor.CInt64 Cbor.cbor_major_type_uint64 (FStar.Int.Cast.int64_to_uint64 x))
+  );
+  parser_inj = ();
+}
+
+let spec_int_range_neg_int64
+  (lo hi: U64.t)
+: spec (t_int_range (-1 - U64.v lo) (-1 - U64.v hi)) U64.t true
+= {
+  serializable = (fun x -> U64.lte hi x && U64.lte x lo);
+  parser = (fun (x: Cbor.cbor { t_int_range (-1 - U64.v lo) (-1 - U64.v hi) x }) -> let Cbor.CInt64 ty v = Cbor.unpack x in
+    v
+  );
+  serializer = (fun x -> Cbor.pack (Cbor.CInt64 Cbor.cbor_major_type_neg_int64 x));
   parser_inj = ();
 }
 
