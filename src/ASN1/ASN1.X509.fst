@@ -1,4 +1,5 @@
 module ASN1.X509
+#push-options "--split_queries no --fuel 2 --ifuel 0"
 
 module U32 = FStar.UInt32
 module List = FStar.List.Tot
@@ -302,11 +303,12 @@ let id_pe = id_pkix /+ 1
 let id_pe_authorityInformationAccess = id_pe /+ 1
 
 //Warning: Partly using the mitls spec which is loosened from rfc5280
-
+#push-options "--fuel 3 --ifuel 1"
 let mk_expansion (critical : asn1_gen_item_k) (#s : _) (value : asn1_k s)
   (pf : squash (asn1_sequence_k_wf [proj2_of_3 critical; (Set.singleton octetstring_id, PLAIN)]))
 = let items = [critical; "extnValue" *^ (PLAIN ^: (ASN1_ILC octetstring_id (ASN1_PREFIXED value)))] in
   mk_gen_items items pf
+#pop-options
 
 let critical_field
 = mk_default_field asn1_boolean false
@@ -562,8 +564,7 @@ let extension
 let extensions
 = asn1_sequence_of extension
 
-#push-options "--z3rlimit 16"
-
+#push-options "--fuel 0 --z3rlimit_factor 2"
 let x509_TBSCertificate
 = asn1_sequence [
     "version" *^ (PLAIN ^: (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 0) version));
@@ -578,14 +579,13 @@ let x509_TBSCertificate
     "extensions" *^ (OPTION ^: (mk_prefixed (mk_custom_id CONTEXT_SPECIFIC CONSTRUCTED 3) extensions))]
     (_ by (seq_tac ()))
 
-#pop-options
-
 let x509_certificate
 = asn1_sequence [
     "tbsCertificate" *^ (PLAIN ^: x509_TBSCertificate);
     "signatureAlgorithm" *^ (PLAIN ^: algorithmIdentifier);
     "signatureValue" *^ (PLAIN ^: asn1_bitstring)]
     (_ by (seq_tac ()))
+#pop-options
 
 // let's go boom!
 
@@ -605,4 +605,4 @@ let parse_cert (b:bytes) = x509_certificate_parser b
                              iota;
                              primops]]
 let dparse_cert (b:bytes) = dasn1_as_parser x509_certificate b
-
+#show-options

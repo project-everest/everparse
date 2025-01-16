@@ -495,6 +495,8 @@ let bool_or
 : Tot (y: bool { y == (b1 || b2) })
 = if b1 then true else b2
 
+#push-options "--fuel 2 --ifuel 1 --z3rlimit_factor 4"
+#restart-solver
 inline_for_extraction
 let glb
   (k1 k2: parser_kind)
@@ -533,15 +535,15 @@ let glb
     parser_kind_metadata = if k1.parser_kind_metadata = k2.parser_kind_metadata then k1.parser_kind_metadata else None;
     parser_kind_subkind = if k1.parser_kind_subkind = k2.parser_kind_subkind then k1.parser_kind_subkind else None
   }
-
+#pop-options
 #pop-options
 
 #push-options "--warn_error -271"
 let default_parser_kind : (x: parser_kind {
-  forall (t: Type) (p: bare_parser t) . {:pattern (parser_kind_prop x p)}
+  forall (t: Type u#a) (p: bare_parser t) . {:pattern (parser_kind_prop x p)}
   injective p ==> parser_kind_prop x p
 })
-= let aux (t:Type) (k:parser_kind) (p:bare_parser t)
+= let aux (t:Type u#a) (k:parser_kind) (p:bare_parser t)
     : Lemma (parser_kind_prop k p <==> parser_kind_prop' k p)
       [SMTPat ()]
     = parser_kind_prop_equiv k p in

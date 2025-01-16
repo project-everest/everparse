@@ -148,8 +148,8 @@ let valid_nlist_cons_not
 = Classical.move_requires (valid_nlist_cons (n - 1) p h sl) pos;
   Classical.move_requires (valid_nlist_cons_recip n p h sl) pos
 
-#push-options "--z3rlimit 32"
-
+#push-options "--z3rlimit 32 --split_queries no --fuel 0 --ifuel 0"
+#restart-solver
 inline_for_extraction
 let validate_nlist
   (n: U32.t)
