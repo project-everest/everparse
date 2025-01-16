@@ -605,7 +605,7 @@ let rec typ_disjoint
   | TChoice t1l t1r, t2
   | t2, TChoice t1l t1r ->
     let aux = match t2 with
-    | TRange _ _ ->
+    | TRange _ _ _ ->
       begin match extract_range_value e.e_sem_env t2 with
       | None -> RSuccess ()
       | Some (ilo, ihi) ->
@@ -615,10 +615,10 @@ let rec typ_disjoint
         then RSuccess ()
         else if lo < 0 && hi >= 0
         then
-          let res1 = typ_disjoint e fuel' (TRange (TElem (ELiteral (LInt lo))) (TElem (ELiteral (LInt (-1))))) (TChoice t1l t1r) in
+          let res1 = typ_disjoint e fuel' (TRange (TElem (ELiteral (LInt lo))) true (TElem (ELiteral (LInt (-1))))) (TChoice t1l t1r) in
           if not (RSuccess? res1)
           then res1
-          else typ_disjoint e fuel' (TRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt hi)))) (TChoice t1l t1r)
+          else typ_disjoint e fuel' (TRange (TElem (ELiteral (LInt 0))) true (TElem (ELiteral (LInt hi)))) (TChoice t1l t1r)
         else RFailure ""
       end
     | _ -> RFailure ""
@@ -652,7 +652,7 @@ let rec typ_disjoint
         else if vv < 64
         then begin
           FStar.Math.Lemmas.pow2_lt_compat 64 vv;
-          typ_disjoint e fuel' t (TRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt (pow2 vv - 1)))))
+          typ_disjoint e fuel' t (TRange (TElem (ELiteral (LInt 0))) true (TElem (ELiteral (LInt (pow2 vv - 1)))))
         end
         else begin
           FStar.Math.Lemmas.pow2_le_compat vv 64;
@@ -705,44 +705,36 @@ let rec typ_disjoint
     | TDetCbor _ dest' -> typ_disjoint e fuel' dest dest'
     | _ -> RFailure "typ_disjoint: TDetCbor"
     end
-  | TRange tlo thi, t
-  | t, TRange tlo thi ->
-    begin match extract_int_value e.e_sem_env tlo with
+  | TRange _tlo _included _thi, t
+  | t, TRange _tlo _included _thi ->
+    begin match extract_range_value e.e_sem_env (TRange _tlo _included _thi) with
     | None -> RSuccess ()
-    | Some lo ->
+    | Some (lo, hi) ->
       let lo = eval_int_value lo in
-      begin match extract_int_value e.e_sem_env thi with
-      | None -> RSuccess ()
-      | Some hi ->
-        let hi = eval_int_value hi in
-        if lo > hi
+      let hi = eval_int_value hi in
+      if lo > hi
+      then RSuccess ()
+      else begin match t with
+      | TElem (ELiteral (LInt x)) ->
+        if x < lo || x > hi
         then RSuccess ()
-        else begin match t with
-        | TElem (ELiteral (LInt x)) ->
-          if x < lo || x > hi
+        else RFailure "typ_disjoint: TRange vs. TElem ELiteral LInt"
+      | TRange _tlo' _included' _thi' ->
+        begin match extract_range_value e.e_sem_env (TRange _tlo' _included' _thi') with
+        | None -> RSuccess ()
+        | Some (lo', hi') ->
+          let lo' = eval_int_value lo' in
+          let hi' = eval_int_value hi' in
+          if lo' > hi' || hi < lo' || hi' < lo
           then RSuccess ()
-          else RFailure "typ_disjoint: TRange vs. TElem ELiteral LInt"
-        | TRange tlo' thi' ->
-          begin match extract_int_value e.e_sem_env tlo' with
-          | None -> RSuccess ()
-          | Some lo' ->
-            let lo' = eval_int_value lo' in
-            begin match extract_int_value e.e_sem_env thi' with
-            | None -> RSuccess ()
-            | Some hi' ->
-              let hi' = eval_int_value hi' in
-              if lo' > hi' || hi < lo' || hi' < lo
-              then RSuccess ()
-              else RFailure "typ_disjoint: TRange vs. TRange"
-            end
-          end
-        | _ ->
-          if lo >= 0
-          then typ_disjoint e fuel' t (TElem EUInt)
-          else if hi < 0
-          then typ_disjoint e fuel' t (TElem ENInt)
-          else typ_disjoint e fuel' t (TChoice (TElem EUInt) (TElem ENInt))
+          else RFailure "typ_disjoint: TRange vs. TRange"
         end
+      | _ ->
+        if lo >= 0
+        then typ_disjoint e fuel' t (TElem EUInt)
+        else if hi < 0
+        then typ_disjoint e fuel' t (TElem ENInt)
+        else typ_disjoint e fuel' t (TChoice (TElem EUInt) (TElem ENInt))
       end
     end
   | TElem EBool, TElem (ELiteral (LSimple v))
@@ -930,7 +922,7 @@ let rec split_interval
     end
   | _ ->
     let aux = match t with
-    | TRange _ _ ->
+    | TRange _ _ _ ->
       if is_int
       then begin match extract_range_value e t with
       | Some (tlo, thi) -> Some (eval_int_value tlo, eval_int_value thi)
@@ -1003,7 +995,7 @@ let rec typ_included
           end
           else begin
             FStar.Math.Lemmas.pow2_lt_compat 64 i;
-            typ_included e fuel' (TRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt (pow2 i - 1))))) t2
+            typ_included e fuel' (TRange (TElem (ELiteral (LInt 0))) true (TElem (ELiteral (LInt (pow2 i - 1))))) t2
           end
         end
       | RFailure _ ->
@@ -1020,14 +1012,14 @@ let rec typ_included
           else begin match split_interval e.e_sem_env false lo hi t2 with
           | None -> RFailure ""
           | Some mi ->
-            let res2 = typ_included e fuel' (TSize base (TRange (TElem (ELiteral (LInt lo))) (TElem (ELiteral (LInt mi))))) t2 in
+            let res2 = typ_included e fuel' (TSize base (TRange (TElem (ELiteral (LInt lo))) true (TElem (ELiteral (LInt mi))))) t2 in
             if not (RSuccess? res2)
             then res2
-            else typ_included e fuel' (TSize base (TRange (TElem (ELiteral (LInt (mi + 1)))) (TElem (ELiteral (LInt hi))))) t2
+            else typ_included e fuel' (TSize base (TRange (TElem (ELiteral (LInt (mi + 1)))) true (TElem (ELiteral (LInt hi))))) t2
           end
         end
       end
-    | TRange _ _ ->
+    | TRange _ _ _ ->
       begin match extract_range_value e.e_sem_env t1 with
       | None -> RSuccess ()
       | Some (rlo, rhi) ->
@@ -1038,10 +1030,10 @@ let rec typ_included
         else begin match split_interval e.e_sem_env true lo hi t2 with
         | None -> RFailure ""
         | Some mi ->
-          let res1 = typ_included e fuel' (TRange (TElem (ELiteral (LInt lo))) (TElem (ELiteral (LInt mi)))) t2 in
+          let res1 = typ_included e fuel' (TRange (TElem (ELiteral (LInt lo))) true (TElem (ELiteral (LInt mi)))) t2 in
           if not (RSuccess? res1)
           then res1
-          else typ_included e fuel' (TRange (TElem (ELiteral (LInt (mi + 1)))) (TElem (ELiteral (LInt hi)))) t2
+          else typ_included e fuel' (TRange (TElem (ELiteral (LInt (mi + 1)))) true (TElem (ELiteral (LInt hi)))) t2
         end
       end
     | _ -> RFailure ""
@@ -1090,9 +1082,9 @@ and typ_included2
       let hi = eval_int_value hi in
       if lo < 0 && hi >= 0
       then
-        let res1 = typ_included e fuel' (TRange (TElem (ELiteral (LInt lo))) (TElem (ELiteral (LInt (-1))))) t2 in
+        let res1 = typ_included e fuel' (TRange (TElem (ELiteral (LInt lo))) true (TElem (ELiteral (LInt (-1))))) t2 in
         if RSuccess? res1
-        then typ_included e fuel' (TRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt hi)))) t2
+        then typ_included e fuel' (TRange (TElem (ELiteral (LInt 0))) true (TElem (ELiteral (LInt hi)))) t2
         else res1
       else RFailure ""
     in
@@ -1166,58 +1158,46 @@ and typ_included2
           typ_included e fuel' t1 (TElem EUInt)
         end else begin
           FStar.Math.Lemmas.pow2_lt_compat 64 i;
-          typ_included e fuel' t1 (TRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt (pow2 i - 1)))))
+          typ_included e fuel' t1 (TRange (TElem (ELiteral (LInt 0))) true (TElem (ELiteral (LInt (pow2 i - 1)))))
         end
       end
     end
-  | TRange tlo thi, t ->
-    begin match extract_int_value e.e_sem_env tlo with
+  | TRange _tlo _included _thi, t ->
+    begin match extract_range_value e.e_sem_env (TRange _tlo _included _thi) with
     | None -> RSuccess ()
-    | Some lo ->
+    | Some (lo, hi) ->
       let lo = eval_int_value lo in
-      begin match extract_int_value e.e_sem_env thi with
-      | None -> RSuccess ()
-      | Some hi ->
-        let hi = eval_int_value hi in
-        if lo > hi
-        then RSuccess ()
-        else begin match t with
-        | TElem (ELiteral (LInt v)) -> if v = lo && v = hi then RSuccess () else RFailure "typ_included: TRange vs. TElem ELiteral LInt"
-        | TElem EUInt -> if lo >= 0 then RSuccess () else RFailure "typ_included: TRange vs. TElem EUInt"
-        | TElem ENInt -> if hi < 0 then RSuccess () else RFailure "typ_included: TRange vs. TElem ENInt"
-        | TRange tlo' thi' ->
-          begin match extract_int_value e.e_sem_env tlo' with
-          | None -> RFailure "typ_included: TRange vs. TRange lo"
-          | Some lo' ->
-            let lo' = eval_int_value lo' in
-            begin match extract_int_value e.e_sem_env thi' with
-            | None -> RFailure "typ_included: TRange vs. TRange hi"
-            | Some hi' ->
-              let hi' = eval_int_value hi' in
-              if lo' <= lo && hi <= hi'
-              then RSuccess ()
-              else RFailure "typ_included: TRange vs. TRange"
-            end
-          end
-        | _ -> RFailure "typ_included: TRange vs. any"
+      let hi = eval_int_value hi in
+      if lo > hi
+      then RSuccess ()
+      else begin match t with
+      | TElem (ELiteral (LInt v)) -> if v = lo && v = hi then RSuccess () else RFailure "typ_included: TRange vs. TElem ELiteral LInt"
+      | TElem EUInt -> if lo >= 0 then RSuccess () else RFailure "typ_included: TRange vs. TElem EUInt"
+      | TElem ENInt -> if hi < 0 then RSuccess () else RFailure "typ_included: TRange vs. TElem ENInt"
+      | TRange _tlo' _included _thi' ->
+        begin match extract_range_value e.e_sem_env (TRange _tlo' _included _thi') with
+        | None -> RFailure "typ_included: TRange vs. TRange lo"
+        | Some (lo', hi') ->
+          let lo' = eval_int_value lo' in
+          let hi' = eval_int_value hi' in
+          if lo' <= lo && hi <= hi'
+          then RSuccess ()
+          else RFailure "typ_included: TRange vs. TRange"
         end
+      | _ -> RFailure "typ_included: TRange vs. any"
       end
     end
-  | TElem (ELiteral (LInt n)), TRange tlo thi ->
-    begin match extract_int_value e.e_sem_env tlo with
+  | TElem (ELiteral (LInt n)), TRange _tlo _included _thi ->
+    begin match extract_range_value e.e_sem_env (TRange _tlo _included _thi) with
     | None -> RFailure "typ_included: TElem vs. TRange lo"
-    | Some lo ->
+    | Some (lo, hi) ->
       let lo = eval_int_value lo in
-      begin match extract_int_value e.e_sem_env thi with
-      | None -> RFailure "typ_included: TElem vs. TRange hi"
-      | Some hi ->
-        let hi = eval_int_value hi in
-        if lo <= n && n <= hi
-        then RSuccess ()
-        else RFailure "typ_included: TElem vs. TRange"
-      end
+      let hi = eval_int_value hi in
+      if lo <= n && n <= hi
+      then RSuccess ()
+      else RFailure "typ_included: TElem vs. TRange"
     end
-  | _, TRange _ _ -> RFailure "typ_included: any vs. TRange"
+  | _, TRange _ _ _ -> RFailure "typ_included: any vs. TRange"
   | TDetCbor _ _, TElem EByteString -> RSuccess ()
   | TDetCbor base dest, TDetCbor base' dest' ->
     let res1 = typ_included e fuel' base base' in
@@ -3090,36 +3070,32 @@ let rec mk_wf_typ
     | RSuccess wfdest -> RSuccess (WfTDetCbor base dest wfdest)
     | res -> coerce_failure res
     end
-  | TRange tlo thi ->
-    begin match extract_int_value env.e_sem_env tlo with
-    | None -> RFailure "mk_wf_typ: TRange lo"
-    | Some lo ->
+  | TRange tlo included thi ->
+    begin match extract_range_value env.e_sem_env g with
+    | None -> RFailure "mk_wf_typ: TRange: invalid range"
+    | Some (lo, hi) ->
       let lo = eval_int_value lo in
-      begin match extract_int_value env.e_sem_env thi with
-      | None -> RFailure "mk_wf_typ: TRange hi"
-      | Some hi ->
-        let hi = eval_int_value hi in
-        if lo > hi
-        then RFailure "mk_wf_typ: empty range"
-        else if (lo < - pow2 63 && hi >= 0) || (lo < 0 && hi >= pow2 63)
-        then RFailure "mk_wf_typ: TRange too wide, not representable"
-        else begin
-          assert_norm (pow2 64 == pow2 63 + pow2 63);
-          assert (lo >= 0 ==> hi < pow2 64);
-          assert (hi < 0 ==> lo >= - pow2 64);
-          assert ((lo < 0 /\ hi >= 0) ==> (lo >= - pow2 63 /\ hi < pow2 63));
-          assert (
-  begin if lo >= 0
-  then hi < pow2 64
-  else if hi < 0
-  then lo >= - pow2 64
-  else (lo >= - pow2 63 /\ hi < pow2 63)
-  end
-          );
-          let res = WfTIntRange tlo thi lo hi in
-          assert (bounded_wf_typ env.e_sem_env.se_bound _ res);
-          RSuccess res
-        end
+      let hi = eval_int_value hi in
+      if lo > hi
+      then RFailure "mk_wf_typ: empty range"
+      else if (lo < - pow2 63 && hi >= 0) || (lo < 0 && hi >= pow2 63)
+      then RFailure "mk_wf_typ: TRange too wide, not representable"
+      else begin
+        assert_norm (pow2 64 == pow2 63 + pow2 63);
+        assert (lo >= 0 ==> hi < pow2 64);
+        assert (hi < 0 ==> lo >= - pow2 64);
+        assert ((lo < 0 /\ hi >= 0) ==> (lo >= - pow2 63 /\ hi < pow2 63));
+        assert (
+          begin if lo >= 0
+          then hi < pow2 64
+          else if hi < 0
+          then lo >= - pow2 64
+          else (lo >= - pow2 63 /\ hi < pow2 63)
+          end
+        );
+        let res = WfTIntRange tlo included thi lo hi in
+        assert (bounded_wf_typ env.e_sem_env.se_bound _ res);
+        RSuccess res
       end
     end
   | TSize base ti ->
@@ -3142,7 +3118,7 @@ let rec mk_wf_typ
         end
         else begin
           FStar.Math.Lemmas.pow2_lt_compat 64 i;
-          RSuccess (WfTRewrite _ _ (WfTIntRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt (pow2 i - 1)))) 0 (pow2 i - 1)))
+          RSuccess (WfTRewrite _ _ (WfTIntRange (TElem (ELiteral (LInt 0))) true (TElem (ELiteral (LInt (pow2 i - 1)))) 0 (pow2 i - 1)))
         end
       end
     | RFailure _ ->

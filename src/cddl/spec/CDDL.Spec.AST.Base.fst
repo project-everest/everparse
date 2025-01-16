@@ -91,7 +91,7 @@ and typ =
 | TMap of group
 | TTagged: (tag: option int) -> (body: typ) -> typ
 | TChoice: typ -> typ -> typ
-| TRange: typ -> typ -> typ
+| TRange: typ -> inclusive: bool -> typ -> typ
 (* Controls: their semantics will use `andp` *)
 | TSize: typ -> typ -> typ
 | TDetCbor: typ -> typ -> typ
@@ -179,7 +179,7 @@ and typ_bounded
     | None -> true
     | Some v -> 0 <= v && v < pow2 64
     end && typ_bounded env t'
-  | TRange t1 t2
+  | TRange t1 _ t2
   | TChoice t1 t2 ->
     typ_bounded env t1 &&
     typ_bounded env t2
@@ -243,7 +243,7 @@ and typ_bounded_incr
   | TArray g -> group_bounded_incr env env' g
   | TMap g -> group_bounded_incr env env' g
   | TSize t1 t2
-  | TRange t1 t2
+  | TRange t1 _ t2
   | TDetCbor t1 t2
   | TChoice t1 t2 -> typ_bounded_incr env env' t1; typ_bounded_incr env env' t2
 
@@ -257,6 +257,17 @@ let eval_int_value
 = match x with
   | SUInt v -> U64.v v
   | SNegInt v -> -1 - U64.v v
+
+let int_value_minus_one
+  (x: int_value)
+: Pure int_value
+    (requires (eval_int_value x > - pow2 64))
+    (ensures (fun y ->
+      eval_int_value y == eval_int_value x - 1
+    ))
+= match x with
+  | SUInt v -> if v = 0uL then SNegInt (U64.uint_to_t ((-1) - (-1))) else SUInt (U64.sub v 1uL)
+  | SNegInt v -> SNegInt (U64.add v 1uL)
 
 [@@  sem_attr]
 noeq
@@ -506,11 +517,16 @@ let extract_range_value
     | SIntRange a b -> Some (a, b)
     | _ -> None
     end
-  | TRange tlow thigh ->
+  | TRange tlow inclusive thigh ->
     begin match extract_int_value env tlow with
     | Some low ->
       begin match extract_int_value env thigh with
-      | Some high -> Some (low, high)
+      | Some high ->
+        if inclusive
+        then Some (low, high)
+        else if eval_int_value high > - pow2 64
+        then Some (low, int_value_minus_one high)
+        else None
       | _ -> None
       end
     | _ -> None
@@ -583,14 +599,10 @@ and typ_sem
     Util.andp
       (typ_sem env base)
       (Spec.bstr_cbor_det (typ_sem env dest))
-  | TRange tlow thigh ->
-    begin match extract_int_value env tlow with
-    | Some low ->
-      begin match extract_int_value env thigh with
-      | Some high ->
-        Spec.t_int_range (eval_int_value low) (eval_int_value high)
-      | _ -> Spec.t_always_false
-      end
+  | TRange _ _ _ ->
+    begin match extract_range_value env x with
+    | Some (low, high) ->
+      Spec.t_int_range (eval_int_value low) (eval_int_value high)
     | _ -> Spec.t_always_false
     end
 
@@ -685,7 +697,7 @@ and typ_sem_incr
   | TMap g ->
     map_group_sem_incr env env' g
   | TSize t1 t2
-  | TRange t1 t2
+  | TRange t1 _ t2
   | TDetCbor t1 t2
   | TChoice t1 t2 ->
     typ_sem_incr env env' t1;
@@ -957,10 +969,11 @@ type ast0_wf_typ
   ast0_wf_typ (TSize base range)
 | WfTIntRange:
   (base_from: typ) ->
+  (base_inclusive: bool) ->
   (base_to: typ) ->
   (from: int) ->
   (to: int) ->
-  ast0_wf_typ (TRange base_from base_to)
+  ast0_wf_typ (TRange base_from base_inclusive base_to)
 | WfTDef:
   (n: string) ->
   ast0_wf_typ (TDef n)
@@ -1134,7 +1147,7 @@ let rec bounded_wf_typ
   typ_bounded env base /\
   typ_bounded env range /\
   0 <= lo /\ lo <= hi /\ hi < pow2 64
-| WfTIntRange base_from base_to from to ->
+| WfTIntRange base_from base_inclusive base_to from to ->
   typ_bounded env base_from /\
   typ_bounded env base_to /\
   from <= to /\
@@ -1270,7 +1283,7 @@ let rec bounded_wf_typ_incr
     bounded_wf_typ_incr env env' t1 s1;
     bounded_wf_typ_incr env env' t2 s2
   | WfTStrSize _ _ _ _ _
-  | WfTIntRange _ _ _ _
+  | WfTIntRange _ _ _ _ _
   | WfTElem _
   | WfTDef _ -> ()
 
@@ -1400,7 +1413,7 @@ let rec bounded_wf_typ_bounded
   | WfTChoice t1 t2 s1 s2 ->
     bounded_wf_typ_bounded env t1 s1;
     bounded_wf_typ_bounded env t2 s2
-  | WfTIntRange _ _ _ _
+  | WfTIntRange _ _ _ _ _
   | WfTDetCbor _ _ _ 
   | WfTStrSize _ _ _ _ _
   | WfTElem _
@@ -1522,14 +1535,14 @@ let rec spec_wf_typ
   | Some (ilo, ihi) -> lo == eval_int_value ilo /\ hi == eval_int_value ihi
   | _ -> False
   end
-| WfTIntRange base_from base_to from to ->
+| WfTIntRange base_from base_inclusive base_to from to ->
   begin match extract_int_value env base_from with
   | None -> False
   | Some v -> eval_int_value v == from
   end /\
   begin match extract_int_value env base_to with
   | None -> False
-  | Some v -> eval_int_value v == to
+  | Some v -> eval_int_value v == (if base_inclusive then to else to + 1)
   end
 | WfTDef _
 | WfTElem _ -> True
@@ -1663,7 +1676,7 @@ let rec spec_wf_typ_incr
   | WfTChoice t1 t2 s1 s2 ->
     spec_wf_typ_incr env env' t1 s1;
     spec_wf_typ_incr env env' t2 s2
-  | WfTIntRange _ _ _ _
+  | WfTIntRange _ _ _ _ _
   | WfTStrSize _ _ _ _ _
   | WfTElem _
   | WfTDef _ -> ()
@@ -2524,7 +2537,7 @@ let rec target_type_of_wf_typ
   | WfTElem e -> TTElem (target_type_of_elem_typ e)
   | WfTDef e -> TTDef e
   | WfTStrSize _ _ _ _ _ -> TTElem TTString
-  | WfTIntRange _ _ from to ->
+  | WfTIntRange _ _ _ from to ->
     if to < 0 || from >= 0
     then TTElem TTUInt64
     else TTElem TTInt64
@@ -2589,7 +2602,7 @@ let rec target_type_of_wf_typ_bounded
   | WfTChoice _ _ s1 s2 ->
     target_type_of_wf_typ_bounded env s1;
     target_type_of_wf_typ_bounded env s2
-  | WfTIntRange _ _ _ _
+  | WfTIntRange _ _ _ _ _
   | WfTStrSize _ _ _ _ _
   | WfTElem _
   | WfTDef _ -> ()
@@ -2818,7 +2831,7 @@ let rec spec_of_wf_typ
     Spec.spec_ext
       (Spec.spec_str_size (U8.uint_to_t k) (U64.uint_to_t lo) (U64.uint_to_t hi))
       _
-  | WfTIntRange _ _ from to ->
+  | WfTIntRange _ _ _ from to ->
     if from >= 0
     then Spec.spec_ext (Spec.spec_int_range_uint64 (U64.uint_to_t from) (U64.uint_to_t to)) _
     else if to < 0
