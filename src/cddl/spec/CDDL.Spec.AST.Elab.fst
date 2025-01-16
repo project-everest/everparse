@@ -659,6 +659,46 @@ let rec typ_disjoint
     | TDetCbor _ dest' -> typ_disjoint e fuel' dest dest'
     | _ -> RFailure "typ_disjoint: TDetCbor"
     end
+  | TRange tlo thi, t
+  | t, TRange tlo thi ->
+    begin match extract_int_value e.e_sem_env tlo with
+    | None -> RSuccess ()
+    | Some lo ->
+      let lo = eval_int_value lo in
+      begin match extract_int_value e.e_sem_env thi with
+      | None -> RSuccess ()
+      | Some hi ->
+        let hi = eval_int_value hi in
+        if lo > hi
+        then RSuccess ()
+        else begin match t with
+        | TElem (ELiteral (LInt x)) ->
+          if x < lo || x > hi
+          then RSuccess ()
+          else RFailure "typ_disjoint: TRange vs. TElem ELiteral LInt"
+        | TRange tlo' thi' ->
+          begin match extract_int_value e.e_sem_env tlo' with
+          | None -> RSuccess ()
+          | Some lo' ->
+            let lo' = eval_int_value lo' in
+            begin match extract_int_value e.e_sem_env thi' with
+            | None -> RSuccess ()
+            | Some hi' ->
+              let hi' = eval_int_value hi' in
+              if lo' > hi' || hi < lo' || hi' < lo
+              then RSuccess ()
+              else RFailure "typ_disjoint: TRange vs. TRange"
+            end
+          end
+        | _ ->
+          if lo >= 0
+          then typ_disjoint e fuel' t (TElem EUInt)
+          else if hi < 0
+          then typ_disjoint e fuel' t (TElem ENInt)
+          else typ_disjoint e fuel' t (TChoice (TElem EUInt) (TElem ENInt))
+        end
+      end
+    end
   | TElem EBool, TElem (ELiteral (LSimple v))
   | TElem (ELiteral (LSimple v)), TElem EBool ->
     if U8.uint_to_t v = simple_value_true
@@ -853,16 +893,35 @@ let rec typ_included
     let t1' = e.e_env i in
     typ_included e fuel' t2 t1'
   | TElem EAny, _ -> RFailure "typ_included: TElem EAny"
-  | _, TElem EAlwaysFalse -> RFailure "typ_included: TElem EAlwaysFalse"
+  | t1, TElem EAlwaysFalse ->
+    begin match extract_range_value e.e_sem_env t1 with
+    | Some (lo, hi) -> if eval_int_value lo > eval_int_value hi then RSuccess () else RFailure "typ_included: TRange vs. TElem EAlwaysFalse"
+    | None -> RFailure "typ_included: TElem EAlwaysFalse"
+    end
   | TChoice t1l t1r, t2 ->
     let rl = typ_included e fuel' t1l t2 in
     if not (RSuccess? rl)
     then rl
     else typ_included e fuel' t1r t2
-  | t2, TChoice t1l t1r ->
-    let rl = typ_included e fuel' t2 t1l in
+  | t3, TChoice t1l t1r ->
+    let aux = match extract_range_value e.e_sem_env t3 with
+    | None -> RFailure ""
+    | Some (lo, hi) ->
+      let lo = eval_int_value lo in
+      let hi = eval_int_value hi in
+      if lo < 0 && hi >= 0
+      then
+        let res1 = typ_included e fuel' (TRange (TElem (ELiteral (LInt lo))) (TElem (ELiteral (LInt (-1))))) t2 in
+        if RSuccess? res1
+        then typ_included e fuel' (TRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt hi)))) t2
+        else res1
+      else RFailure ""
+    in
+    if not (RFailure? aux)
+    then aux
+    else let rl = typ_included e fuel' t3 t1l in
     if RFailure? rl
-    then typ_included e fuel' t2 t1r
+    then typ_included e fuel' t3 t1r
     else rl
   | TTagged tag1 t1', TTagged tag2 t2' ->
     if tag1 = tag2 || None? tag2
@@ -870,6 +929,55 @@ let rec typ_included
     else RFailure "typ_included: TTagged with different tags"
   | TTagged _ _, _
   | _, TTagged _ _ -> RFailure "typ_included: TTagged vs. anything"
+  | TRange tlo thi, t ->
+    begin match extract_int_value e.e_sem_env tlo with
+    | None -> RSuccess ()
+    | Some lo ->
+      let lo = eval_int_value lo in
+      begin match extract_int_value e.e_sem_env thi with
+      | None -> RSuccess ()
+      | Some hi ->
+        let hi = eval_int_value hi in
+        if lo > hi
+        then RSuccess ()
+        else begin match t with
+        | TElem (ELiteral (LInt v)) -> if v = lo && v = hi then RSuccess () else RFailure "typ_included: TRange vs. TElem ELiteral LInt"
+        | TElem EUInt -> if lo >= 0 then RSuccess () else RFailure "typ_included: TRange vs. TElem EUInt"
+        | TElem ENInt -> if hi < 0 then RSuccess () else RFailure "typ_included: TRange vs. TElem ENInt"
+        | TRange tlo' thi' ->
+          begin match extract_int_value e.e_sem_env tlo' with
+          | None -> RFailure "typ_included: TRange vs. TRange lo"
+          | Some lo' ->
+            let lo' = eval_int_value lo' in
+            begin match extract_int_value e.e_sem_env thi' with
+            | None -> RFailure "typ_included: TRange vs. TRange hi"
+            | Some hi' ->
+              let hi' = eval_int_value hi' in
+              if lo' <= lo && hi <= hi'
+              then RSuccess ()
+              else RFailure "typ_included: TRange vs. TRange"
+            end
+          end
+        | _ -> RFailure "typ_included: TRange vs. any"
+        end
+      end
+    end
+  | TElem (ELiteral (LInt n)), TRange tlo thi ->
+    begin match extract_int_value e.e_sem_env tlo with
+    | None -> RFailure "typ_included: TElem vs. TRange lo"
+    | Some lo ->
+      let lo = eval_int_value lo in
+      begin match extract_int_value e.e_sem_env thi with
+      | None -> RFailure "typ_included: TElem vs. TRange hi"
+      | Some hi ->
+        let hi = eval_int_value hi in
+        if lo <= n && n <= hi
+        then RSuccess ()
+        else RFailure "typ_included: TElem vs. TRange"
+      end
+    end
+  | TDetCbor _ dest, TRange _ _ -> typ_included e fuel' dest (TElem EAlwaysFalse)
+  | _, TRange _ _ -> RFailure "typ_included: any vs. TRange"
   | TSize base lo hi, t ->
     let res1 = typ_included e fuel' base t in
     if not (RFailure? res1)
@@ -1179,6 +1287,9 @@ let mk_TChoice_bounded
   ))
 = ()
 
+#push-options "--z3rlimit 16"
+
+#restart-solver
 let mk_TChoice_sem
   (env: sem_env)
   (t1 t2: typ)
@@ -1192,6 +1303,8 @@ let mk_TChoice_sem
     typ_sem env (mk_TChoice t1 t2) `Spec.typ_equiv` Spec.t_choice (typ_sem env t1) (typ_sem env t2)
   ))
 = ()
+
+#pop-options
 
 let rec typ_sub_underapprox
   (fuel: nat)
@@ -2545,6 +2658,14 @@ let annot_tables_correct_postcond
     | _ -> True
     end        
 
+let cbor_map_filter_ext_strong
+  (f1 f2: (Cbor.cbor & Cbor.cbor) -> Tot bool)
+  (m: Cbor.cbor_map)
+: Lemma
+  (requires forall x . Cbor.cbor_map_mem x m ==> f1 x == f2 x)
+  (ensures Cbor.cbor_map_filter f1 m == Cbor.cbor_map_filter f2 m)
+= Cbor.cbor_map_ext (Cbor.cbor_map_filter f1 m) (Cbor.cbor_map_filter f2 m)
+
 #push-options "--z3rlimit 256 --ifuel 8 --fuel 4 --query_stats --split_queries always"
 
 #restart-solver
@@ -2617,7 +2738,8 @@ let rec annot_tables_correct_aux'
       let mnf' = Cbor.cbor_map_filter nf' m in
       let mnnf' = Cbor.cbor_map_filter (Util.notp nf') m in
       assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g') m == Spec.MapGroupDet mnnf' mnf');
-      assert (Cbor.cbor_map_equal mnf mnf');
+      cbor_map_filter_ext_strong nf nf' m;
+      assert (mnf == mnf');
       assert (Cbor.cbor_map_equal mnnf mnnf');
       assert (Spec.cbor_map_disjoint_from_footprint mnf (typ_sem env.e_sem_env cut));
       assert (annot_tables_correct_postcond fuel env cut g m)
@@ -2759,6 +2881,38 @@ let rec mk_wf_typ
     else begin match mk_wf_typ fuel' env dest with
     | RSuccess wfdest -> RSuccess (WfTDetCbor base dest wfdest)
     | res -> coerce_failure res
+    end
+  | TRange tlo thi ->
+    begin match extract_int_value env.e_sem_env tlo with
+    | None -> RFailure "mk_wf_typ: TRange lo"
+    | Some lo ->
+      let lo = eval_int_value lo in
+      begin match extract_int_value env.e_sem_env thi with
+      | None -> RFailure "mk_wf_typ: TRange hi"
+      | Some hi ->
+        let hi = eval_int_value hi in
+        if lo > hi
+        then RFailure "mk_wf_typ: empty range"
+        else if (lo < - pow2 63 && hi >= 0) || (lo < 0 && hi >= pow2 63)
+        then RFailure "mk_wf_typ: TRange too wide, not representable"
+        else begin
+          assert_norm (pow2 64 == pow2 63 + pow2 63);
+          assert (lo >= 0 ==> hi < pow2 64);
+          assert (hi < 0 ==> lo >= - pow2 64);
+          assert ((lo < 0 /\ hi >= 0) ==> (lo >= - pow2 63 /\ hi < pow2 63));
+          assert (
+  begin if lo >= 0
+  then hi < pow2 64
+  else if hi < 0
+  then lo >= - pow2 64
+  else (lo >= - pow2 63 /\ hi < pow2 63)
+  end
+          );
+          let res = WfTIntRange tlo thi lo hi in
+          assert (bounded_wf_typ env.e_sem_env.se_bound _ res);
+          RSuccess res
+        end
+      end
     end
   | TSize base lo hi ->
     begin match typ_included env fuel base (TElem EUInt) with

@@ -91,6 +91,7 @@ and typ =
 | TMap of group
 | TTagged: (tag: option int) -> (body: typ) -> typ
 | TChoice: typ -> typ -> typ
+| TRange: typ -> typ -> typ
 (* Controls: their semantics will use `andp` *)
 | TSize: typ -> int -> int -> typ
 | TDetCbor: typ -> typ -> typ
@@ -178,6 +179,7 @@ and typ_bounded
     | None -> true
     | Some v -> 0 <= v && v < pow2 64
     end && typ_bounded env t'
+  | TRange t1 t2
   | TChoice t1 t2 ->
     typ_bounded env t1 &&
     typ_bounded env t2
@@ -243,6 +245,7 @@ and typ_bounded_incr
   | TTagged _ t' -> typ_bounded_incr env env' t'
   | TArray g -> group_bounded_incr env env' g
   | TMap g -> group_bounded_incr env env' g
+  | TRange t1 t2
   | TDetCbor t1 t2
   | TChoice t1 t2 -> typ_bounded_incr env env' t1; typ_bounded_incr env env' t2
 
@@ -454,6 +457,53 @@ let t_size
         (if lo = hi then Spec.uint_size lo else Spec.t_always_false) // uint .size is not defined for ranges
       )
 
+let extract_int_value
+  (env: sem_env)
+  (x: typ)
+: Pure (option int_value)
+    (requires (typ_bounded env.se_bound x))
+    (ensures (fun _ -> True))
+= match x with
+  | TDef n ->
+    let s : type_sem = env.se_env n in
+    begin match s with
+    | SInt v -> Some v
+    | _ -> None
+    end
+  | TElem (ELiteral (LInt x)) ->
+    if x < 0
+    then Some (SNegInt (U64.uint_to_t (-1 - x)))
+    else Some (SUInt (U64.uint_to_t x))
+  | _ -> None
+
+let extract_range_value
+  (env: sem_env)
+  (x: typ)
+: Pure (option (int_value & int_value))
+    (requires (typ_bounded env.se_bound x))
+    (ensures (fun _ -> True))
+= match extract_int_value env x with
+  | Some v -> Some (v, v)
+  | _ ->
+  begin match x with
+  | TDef n ->
+    let s : type_sem = env.se_env n in
+    begin match s with
+    | SIntRange a b -> Some (a, b)
+    | _ -> None
+    end
+  | TRange tlow thigh ->
+    begin match extract_int_value env tlow with
+    | Some low ->
+      begin match extract_int_value env thigh with
+      | Some high -> Some (low, high)
+      | _ -> None
+      end
+    | _ -> None
+    end
+  | _ -> None
+  end
+
 [@@ sem_attr ]
 let rec array_group_sem
   (env: sem_env)
@@ -519,6 +569,16 @@ and typ_sem
     Util.andp
       (typ_sem env base)
       (Spec.bstr_cbor_det (typ_sem env dest))
+  | TRange tlow thigh ->
+    begin match extract_int_value env tlow with
+    | Some low ->
+      begin match extract_int_value env thigh with
+      | Some high ->
+        Spec.t_int_range (eval_int_value low) (eval_int_value high)
+      | _ -> Spec.t_always_false
+      end
+    | _ -> Spec.t_always_false
+    end
 
 let rec array_group_sem_incr
   (env env': sem_env)
@@ -611,6 +671,7 @@ and typ_sem_incr
     array_group_sem_incr env env' g
   | TMap g ->
     map_group_sem_incr env env' g
+  | TRange t1 t2
   | TDetCbor t1 t2
   | TChoice t1 t2 ->
     typ_sem_incr env env' t1;
@@ -883,6 +944,12 @@ type ast0_wf_typ
   (base: typ) ->
   (sz: int) ->
   ast0_wf_typ (TSize base sz sz)
+| WfTIntRange:
+  (base_from: typ) ->
+  (base_to: typ) ->
+  (from: int) ->
+  (to: int) ->
+  ast0_wf_typ (TRange base_from base_to)
 | WfTDef:
   (n: string) ->
   ast0_wf_typ (TDef n)
@@ -1058,6 +1125,16 @@ let rec bounded_wf_typ
 | WfTUIntSize base sz ->
   typ_bounded env base /\
   0 <= sz /\ sz < pow2 64
+| WfTIntRange base_from base_to from to ->
+  typ_bounded env base_from /\
+  typ_bounded env base_to /\
+  from <= to /\
+  begin if from >= 0
+  then to < pow2 64
+  else if to < 0
+  then from >= - pow2 64
+  else (from >= - pow2 63 /\ to < pow2 63)
+  end
 | WfTDef n ->
   env n == Some NType
 
@@ -1185,6 +1262,7 @@ let rec bounded_wf_typ_incr
     bounded_wf_typ_incr env env' t2 s2
   | WfTStrSize _ _ _ _
   | WfTUIntSize _ _
+  | WfTIntRange _ _ _ _
   | WfTElem _
   | WfTDef _ -> ()
 
@@ -1314,6 +1392,7 @@ let rec bounded_wf_typ_bounded
   | WfTChoice t1 t2 s1 s2 ->
     bounded_wf_typ_bounded env t1 s1;
     bounded_wf_typ_bounded env t2 s2
+  | WfTIntRange _ _ _ _
   | WfTDetCbor _ _ _ 
   | WfTStrSize _ _ _ _
   | WfTUIntSize _ _
@@ -1434,6 +1513,15 @@ let rec spec_wf_typ
   Spec.typ_equiv (typ_sem env base) (Spec.str_gen (U8.uint_to_t k)) // TODO: support chaining of controls, e.g. bstr .size x..y .cbor ty, with `Spec.typ_included`
 | WfTUIntSize base _ ->
   Spec.typ_equiv (typ_sem env base) Spec.uint
+| WfTIntRange base_from base_to from to ->
+  begin match extract_int_value env base_from with
+  | None -> False
+  | Some v -> eval_int_value v == from
+  end /\
+  begin match extract_int_value env base_to with
+  | None -> False
+  | Some v -> eval_int_value v == to
+  end
 | WfTDef _
 | WfTElem _ -> True
 end
@@ -1566,6 +1654,7 @@ let rec spec_wf_typ_incr
   | WfTChoice t1 t2 s1 s2 ->
     spec_wf_typ_incr env env' t1 s1;
     spec_wf_typ_incr env env' t2 s2
+  | WfTIntRange _ _ _ _
   | WfTUIntSize _ _
   | WfTStrSize _ _ _ _
   | WfTElem _
@@ -2005,6 +2094,7 @@ type target_elem_type =
 | TTSimple
 | TTUInt8
 | TTUInt64
+| TTInt64
 | TTString
 | TTBool
 | TTAny
@@ -2097,6 +2187,8 @@ let table
 : GTot Type0
 = Map.t key value
 
+module I64 = FStar.Int64
+
 let target_elem_type_sem
   (t: target_elem_type)
 : GTot Type0
@@ -2104,6 +2196,7 @@ let target_elem_type_sem
   | TTSimple -> Cbor.simple_value
   | TTUInt8 -> U8.t
   | TTUInt64 -> U64.t
+  | TTInt64 -> I64.t
   | TTUnit -> unit
   | TTBool -> bool
   | TTString -> string64
@@ -2424,6 +2517,10 @@ let rec target_type_of_wf_typ
   | WfTDef e -> TTDef e
   | WfTStrSize _ _ _ _ -> TTElem TTString
   | WfTUIntSize _ _ -> TTElem TTUInt64
+  | WfTIntRange _ _ from to ->
+    if to < 0 || from >= 0
+    then TTElem TTUInt64
+    else TTElem TTInt64
 
 and target_type_of_wf_array_group
   (#x: group)
@@ -2485,6 +2582,7 @@ let rec target_type_of_wf_typ_bounded
   | WfTChoice _ _ s1 s2 ->
     target_type_of_wf_typ_bounded env s1;
     target_type_of_wf_typ_bounded env s2
+  | WfTIntRange _ _ _ _
   | WfTStrSize _ _ _ _
   | WfTUIntSize _ _
   | WfTElem _
@@ -2718,6 +2816,12 @@ let rec spec_of_wf_typ
     Spec.spec_ext
       (Spec.spec_uint_size sz)
       _
+  | WfTIntRange _ _ from to ->
+    if from >= 0
+    then Spec.spec_ext (Spec.spec_int_range_uint64 (U64.uint_to_t from) (U64.uint_to_t to)) _
+    else if to < 0
+    then Spec.spec_ext (Spec.spec_int_range_neg_int64 (U64.uint_to_t (-1 - from)) (U64.uint_to_t (-1 - to))) _
+    else Spec.spec_ext (Spec.spec_int_range_int64 (I64.int_to_t from) (I64.int_to_t to)) _
 
 and spec_of_wf_array_group
   (#tp_sem: sem_env)
