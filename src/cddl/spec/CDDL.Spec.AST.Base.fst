@@ -93,7 +93,7 @@ and typ =
 | TChoice: typ -> typ -> typ
 | TRange: typ -> typ -> typ
 (* Controls: their semantics will use `andp` *)
-| TSize: typ -> int -> int -> typ
+| TSize: typ -> typ -> typ
 | TDetCbor: typ -> typ -> typ
 
 (* Environments and well-formedness constraints *)
@@ -183,11 +183,9 @@ and typ_bounded
   | TChoice t1 t2 ->
     typ_bounded env t1 &&
     typ_bounded env t2
-  | TSize base lo hi ->
+  | TSize base range ->
     typ_bounded env base &&
-    0 <= lo &&
-    lo <= hi &&
-    hi < pow2 64
+    typ_bounded env range
   | TDetCbor base ctl ->
     typ_bounded env base && // base should be #2 (byte string) but since it can be an alias, such as `bstr` defined in postlude.cddl, this condition cannot be checked without an ast_env
     typ_bounded env ctl
@@ -241,10 +239,10 @@ and typ_bounded_incr
   | TElem _
   | TDef _
   -> ()
-  | TSize t' _ _
   | TTagged _ t' -> typ_bounded_incr env env' t'
   | TArray g -> group_bounded_incr env env' g
   | TMap g -> group_bounded_incr env env' g
+  | TSize t1 t2
   | TRange t1 t2
   | TDetCbor t1 t2
   | TChoice t1 t2 -> typ_bounded_incr env env' t1; typ_bounded_incr env env' t2
@@ -444,17 +442,33 @@ let sem_of_type_sem
 noextract
 let t_size
   (ty: Spec.typ)
-  (lo hi: nat)
+  (range: option (int_value & int_value))
+  (v: option int_value)
 : Tot Spec.typ
 =
     Util.andp
       ty
       (Spec.t_choice
-        (Spec.t_choice
-          (Spec.str_size Cbor.cbor_major_type_byte_string lo hi)
-          (Spec.str_size Cbor.cbor_major_type_text_string lo hi)
+        (match range with
+        | Some (lo, hi) ->
+          let lo = eval_int_value lo in
+          let hi = eval_int_value hi in
+          if hi < 0
+          then Spec.t_always_false
+          else let lo = if lo < 0 then 0 else lo in
+          Spec.t_choice
+            (Spec.str_size Cbor.cbor_major_type_byte_string lo hi)
+            (Spec.str_size Cbor.cbor_major_type_text_string lo hi)
+        | _ -> Spec.t_always_false
         )
-        (if lo = hi then Spec.uint_size lo else Spec.t_always_false) // uint .size is not defined for ranges
+        (match v with
+        | Some v ->
+          let v = eval_int_value v in
+          if v < 0
+          then Spec.t_always_false
+          else Spec.uint_size v
+        | _ -> Spec.t_always_false // uint .size is not defined for ranges
+        )
       )
 
 let extract_int_value
@@ -563,8 +577,8 @@ and typ_sem
     Spec.t_choice
       (typ_sem env t1)
       (typ_sem env t2)
-  | TSize base lo hi ->
-    t_size (typ_sem env base) lo hi
+  | TSize base range ->
+    t_size (typ_sem env base) (extract_range_value env range) (extract_int_value env range)
   | TDetCbor base dest ->
     Util.andp
       (typ_sem env base)
@@ -665,12 +679,12 @@ and typ_sem_incr
   | TElem _
   | TDef _
   -> ()
-  | TSize t' _ _
   | TTagged _ t' -> typ_sem_incr env env' t'
   | TArray g ->
     array_group_sem_incr env env' g
   | TMap g ->
     map_group_sem_incr env env' g
+  | TSize t1 t2
   | TRange t1 t2
   | TDetCbor t1 t2
   | TChoice t1 t2 ->
@@ -937,13 +951,10 @@ type ast0_wf_typ
 | WfTStrSize:
   (k: int) ->
   (base: typ) ->
+  (range: typ) ->
   (lo: int) ->
   (hi: int) ->
-  ast0_wf_typ (TSize base lo hi)
-| WfTUIntSize:
-  (base: typ) ->
-  (sz: int) ->
-  ast0_wf_typ (TSize base sz sz)
+  ast0_wf_typ (TSize base range)
 | WfTIntRange:
   (base_from: typ) ->
   (base_to: typ) ->
@@ -1118,13 +1129,11 @@ let rec bounded_wf_typ
   typ_bounded env base /\
   typ_bounded env dest /\
   bounded_wf_typ env _ wfdest
-| WfTStrSize k base lo hi ->
+| WfTStrSize k base range lo hi ->
   (k == U8.v Cbor.cbor_major_type_byte_string \/ k == U8.v Cbor.cbor_major_type_text_string) /\
   typ_bounded env base /\
+  typ_bounded env range /\
   0 <= lo /\ lo <= hi /\ hi < pow2 64
-| WfTUIntSize base sz ->
-  typ_bounded env base /\
-  0 <= sz /\ sz < pow2 64
 | WfTIntRange base_from base_to from to ->
   typ_bounded env base_from /\
   typ_bounded env base_to /\
@@ -1260,8 +1269,7 @@ let rec bounded_wf_typ_incr
   | WfTChoice t1 t2 s1 s2 ->
     bounded_wf_typ_incr env env' t1 s1;
     bounded_wf_typ_incr env env' t2 s2
-  | WfTStrSize _ _ _ _
-  | WfTUIntSize _ _
+  | WfTStrSize _ _ _ _ _
   | WfTIntRange _ _ _ _
   | WfTElem _
   | WfTDef _ -> ()
@@ -1394,8 +1402,7 @@ let rec bounded_wf_typ_bounded
     bounded_wf_typ_bounded env t2 s2
   | WfTIntRange _ _ _ _
   | WfTDetCbor _ _ _ 
-  | WfTStrSize _ _ _ _
-  | WfTUIntSize _ _
+  | WfTStrSize _ _ _ _ _
   | WfTElem _
   | WfTDef _ -> ()
 
@@ -1509,10 +1516,12 @@ let rec spec_wf_typ
 | WfTDetCbor base _ wfdest ->
   Spec.typ_equiv (typ_sem env base) Spec.bstr /\
   spec_wf_typ env _ wfdest
-| WfTStrSize k base _ _ ->
+| WfTStrSize k base range lo hi ->
   Spec.typ_equiv (typ_sem env base) (Spec.str_gen (U8.uint_to_t k)) // TODO: support chaining of controls, e.g. bstr .size x..y .cbor ty, with `Spec.typ_included`
-| WfTUIntSize base _ ->
-  Spec.typ_equiv (typ_sem env base) Spec.uint
+  /\ begin match extract_range_value env range with
+  | Some (ilo, ihi) -> lo == eval_int_value ilo /\ hi == eval_int_value ihi
+  | _ -> False
+  end
 | WfTIntRange base_from base_to from to ->
   begin match extract_int_value env base_from with
   | None -> False
@@ -1655,8 +1664,7 @@ let rec spec_wf_typ_incr
     spec_wf_typ_incr env env' t1 s1;
     spec_wf_typ_incr env env' t2 s2
   | WfTIntRange _ _ _ _
-  | WfTUIntSize _ _
-  | WfTStrSize _ _ _ _
+  | WfTStrSize _ _ _ _ _
   | WfTElem _
   | WfTDef _ -> ()
 
@@ -2515,8 +2523,7 @@ let rec target_type_of_wf_typ
   | WfTChoice _ _ s1 s2 -> TTUnion (target_type_of_wf_typ s1) (target_type_of_wf_typ s2)
   | WfTElem e -> TTElem (target_type_of_elem_typ e)
   | WfTDef e -> TTDef e
-  | WfTStrSize _ _ _ _ -> TTElem TTString
-  | WfTUIntSize _ _ -> TTElem TTUInt64
+  | WfTStrSize _ _ _ _ _ -> TTElem TTString
   | WfTIntRange _ _ from to ->
     if to < 0 || from >= 0
     then TTElem TTUInt64
@@ -2583,8 +2590,7 @@ let rec target_type_of_wf_typ_bounded
     target_type_of_wf_typ_bounded env s1;
     target_type_of_wf_typ_bounded env s2
   | WfTIntRange _ _ _ _
-  | WfTStrSize _ _ _ _
-  | WfTUIntSize _ _
+  | WfTStrSize _ _ _ _ _
   | WfTElem _
   | WfTDef _ -> ()
 
@@ -2808,13 +2814,9 @@ let rec spec_of_wf_typ
         (spec_of_wf_typ env wfdest)
       )
       _
-  | WfTStrSize k base lo hi ->
+  | WfTStrSize k base _ lo hi ->
     Spec.spec_ext
       (Spec.spec_str_size (U8.uint_to_t k) (U64.uint_to_t lo) (U64.uint_to_t hi))
-      _
-  | WfTUIntSize base sz ->
-    Spec.spec_ext
-      (Spec.spec_uint_size sz)
       _
   | WfTIntRange _ _ from to ->
     if from >= 0

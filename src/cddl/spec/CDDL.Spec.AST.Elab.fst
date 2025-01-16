@@ -158,9 +158,10 @@ let rec rewrite_typ
     let (base', res1) = rewrite_typ fuel' base in
     let (dest', res2) = rewrite_typ fuel' dest in
     (TDetCbor base' dest', res1 && res2)
-  | TSize base lo hi ->
+  | TSize base range ->
     let (base', res) = rewrite_typ fuel' base in
-    (TSize base' lo hi, res)
+    // NOTE: I cannot rewrite `range` because it is matched syntactically
+    (TSize base' range, res)
   | _ -> (t, true)
 
 and rewrite_group
@@ -265,7 +266,7 @@ let rec rewrite_typ_bounded
     rewrite_typ_bounded env fuel' (TChoice t1 (TChoice t2 t3))
   | TChoice t (TElem EAlwaysFalse)
   | TChoice (TElem EAlwaysFalse) t
-  | TSize t _ _
+  | TSize t _
     -> rewrite_typ_bounded env fuel' t
   | TDetCbor t1 t2
   | TChoice t1 t2 ->
@@ -392,7 +393,7 @@ let rec rewrite_typ_correct
   match t with
   | TChoice (TChoice t1 t2) t3 ->
     rewrite_typ_correct env fuel' (TChoice t1 (TChoice t2 t3))
-  | TSize t _ _
+  | TSize t _
   | TChoice t (TElem EAlwaysFalse)
   | TChoice (TElem EAlwaysFalse) t
     -> rewrite_typ_correct env fuel' t
@@ -603,7 +604,28 @@ let rec typ_disjoint
     typ_disjoint e fuel' t1' t2
   | TChoice t1l t1r, t2
   | t2, TChoice t1l t1r ->
-    let rl = typ_disjoint e fuel' t1l t2 in
+    let aux = match t2 with
+    | TRange _ _ ->
+      begin match extract_range_value e.e_sem_env t2 with
+      | None -> RSuccess ()
+      | Some (ilo, ihi) ->
+        let lo = eval_int_value ilo in
+        let hi = eval_int_value ihi in
+        if lo > hi
+        then RSuccess ()
+        else if lo < 0 && hi >= 0
+        then
+          let res1 = typ_disjoint e fuel' (TRange (TElem (ELiteral (LInt lo))) (TElem (ELiteral (LInt (-1))))) (TChoice t1l t1r) in
+          if not (RSuccess? res1)
+          then res1
+          else typ_disjoint e fuel' (TRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt hi)))) (TChoice t1l t1r)
+        else RFailure ""
+      end
+    | _ -> RFailure ""
+    in
+    if not (RFailure? aux)
+    then aux
+    else let rl = typ_disjoint e fuel' t1l t2 in
     if not (RSuccess? rl)
     then rl
     else typ_disjoint e fuel' t1r t2
@@ -613,42 +635,66 @@ let rec typ_disjoint
     else RSuccess ()
   | TTagged _ _, _
   | _, TTagged _ _ -> RSuccess ()
-  | TSize base lo hi, t
-  | t, TSize base lo hi ->
+  | TSize base range, t
+  | t, TSize base range ->
     let res = typ_disjoint e fuel' base t in
     if not (RFailure? res)
     then res
-    else
-    begin match t with
-    | TElem (ELiteral (LInt n)) ->
-      if lo <> hi
-      then RSuccess ()
-      else if n >= pow2 lo
-      then RSuccess ()
-      else RFailure "typ_disjoint: TSize vs. Lint"
-    | TElem (ELiteral (LString ty s)) ->
-      let len = String.length s in
-      if len > hi || len < lo
-      then RSuccess ()
-      else RFailure "typ_disjoint: TSize vs. LString"
-    | TDetCbor _ _ ->
-      if hi <= 0
-      then RSuccess () (* needed by COSE empty_or_serialized_map *)
-      else RFailure "typ_disjoint: TSize vs. TDetCbor"
-    | TSize base' lo' hi' ->
-      if hi < lo' || hi' < lo
-      then begin
-        if lo = hi && lo' = hi'
+    else begin match typ_disjoint e fuel' base (TChoice (TElem EByteString) (TElem ETextString)) with
+    | ROutOfFuel -> ROutOfFuel
+    | RSuccess _ ->
+      begin match extract_int_value e.e_sem_env range with
+      | None -> RSuccess ()
+      | Some v ->
+        let vv = eval_int_value v in
+        if vv < 0
+        then RSuccess ()
+        else if vv < 64
         then begin
-          let res1 = typ_disjoint e fuel' base (TElem EUInt) in
-          if not (RFailure? res1)
-          then res1
-          else typ_disjoint e fuel' base' (TElem EUInt)
+          FStar.Math.Lemmas.pow2_lt_compat 64 vv;
+          typ_disjoint e fuel' t (TRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt (pow2 vv - 1)))))
         end
-        else RSuccess ()
+        else begin
+          FStar.Math.Lemmas.pow2_le_compat vv 64;
+          typ_disjoint e fuel' t (TElem EUInt)
+        end
       end
-      else RFailure "typ_disjoint: TSize vs. TSize"
-    | _ -> RFailure "typ_disjoint: TSize"
+    | RFailure _ ->
+      begin match extract_range_value e.e_sem_env range with
+      | None -> RSuccess ()
+      | Some (rlo, rhi) ->
+        let res1 = typ_disjoint e fuel' base (TElem EUInt) in
+        if not (RSuccess? res1)
+        then res1
+        else let lo = eval_int_value rlo in
+        let hi = eval_int_value rhi in
+        if lo > hi
+        then RSuccess ()
+        else begin match t with
+        | TElem (ELiteral (LString ty s)) ->
+          let len = String.length s in
+          if len > hi || len < lo
+          then RSuccess ()
+          else RFailure "typ_disjoint: TSize vs. LString"
+        | TDetCbor _ _ ->
+          if hi <= 0
+          then RSuccess () (* needed by COSE empty_or_serialized_map *)
+          else RFailure "typ_disjoint: TSize vs. TDetCbor"
+        | TSize base' range' ->
+          begin match extract_range_value e.e_sem_env range' with
+          | None -> RSuccess ()
+          | Some (rlo', rhi') ->
+            let lo' = eval_int_value rlo' in
+            let hi' = eval_int_value rhi' in
+            if lo' > hi'
+            then RSuccess ()
+            else if hi < lo' || hi' < lo
+            then RSuccess ()
+            else RFailure "typ_disjoint: TSize vs. TSize string"
+          end
+        | _ -> RFailure "typ_disjoint: TSize"
+        end
+      end
     end
   | TDetCbor _ dest, t
   | t, TDetCbor _ dest ->
@@ -864,6 +910,60 @@ and array_group_disjoint
    | _ -> RFailure "array_group_disjoint: array: unsupported pattern"
   end
 
+let rec split_interval
+  (e: sem_env)
+  (is_int: bool)
+  (lo hi: int)
+  (t: typ)
+: Pure (option int)
+    (requires typ_bounded e.se_bound t)
+    (ensures fun res ->
+      match res with
+      | None -> True
+      | Some mi -> (lo <= mi /\ mi < hi)
+    )
+= match t with
+  | TChoice t1 t2 ->
+    begin match split_interval e is_int lo hi t1 with
+    | None -> split_interval e is_int lo hi t2
+    | r -> r
+    end
+  | _ ->
+    let aux = match t with
+    | TRange _ _ ->
+      if is_int
+      then begin match extract_range_value e t with
+      | Some (tlo, thi) -> Some (eval_int_value tlo, eval_int_value thi)
+      | _ -> None
+      end
+      else None
+    | TSize _ t' ->
+      if is_int
+      then begin match extract_int_value e t' with
+      | Some ti ->
+        let i = eval_int_value ti in
+        if i < 0 then None else Some (0, pow2 i - 1)
+      | _ -> None
+      end
+      else begin match extract_range_value e t' with
+      | Some (rlo, rhi) ->
+        let lo = eval_int_value rlo in
+        let hi = eval_int_value rhi in
+        if lo > hi then None else Some (lo, hi)
+      | _ -> None
+      end
+    | _ -> None
+    in
+    begin match aux with
+    | None -> None
+    | Some (lo', hi') ->
+      if lo' <= lo && lo <= hi' && hi' < hi
+      then Some hi'
+      else if lo < lo' && lo' <= hi && hi <= hi'
+      then Some (lo' - 1)
+      else None
+    end
+
 #restart-solver
 [@@"opaque_to_smt"]
 let rec typ_included
@@ -884,8 +984,87 @@ let rec typ_included
   | _ ->
     if t1 = t2
     then RSuccess ()
-    else begin
+    else
+    let aux = match t1 with
+    | TSize base range ->
+      begin match typ_disjoint e fuel base (TChoice (TElem EByteString) (TElem ETextString)) with
+      | ROutOfFuel -> ROutOfFuel
+      | RSuccess _ ->
+        begin match extract_int_value e.e_sem_env range with
+        | None -> RSuccess ()
+        | Some ti ->
+          let i = eval_int_value ti in
+          if i < 0
+          then RSuccess ()
+          else if i >= 64
+          then begin
+            FStar.Math.Lemmas.pow2_le_compat i 64;
+            typ_included e fuel' (TElem EUInt) t2
+          end
+          else begin
+            FStar.Math.Lemmas.pow2_lt_compat 64 i;
+            typ_included e fuel' (TRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt (pow2 i - 1))))) t2
+          end
+        end
+      | RFailure _ ->
+        let res1 = typ_disjoint e fuel base (TElem EUInt) in
+        if not (RSuccess? res1)
+        then res1
+        else begin match extract_range_value e.e_sem_env range with
+        | None -> RFailure ""
+        | Some (tlo, thi) ->
+          let lo = eval_int_value tlo in
+          let hi = eval_int_value thi in
+          if lo > hi
+          then RSuccess ()
+          else begin match split_interval e.e_sem_env false lo hi t2 with
+          | None -> RFailure ""
+          | Some mi ->
+            let res2 = typ_included e fuel' (TSize base (TRange (TElem (ELiteral (LInt lo))) (TElem (ELiteral (LInt mi))))) t2 in
+            if not (RSuccess? res2)
+            then res2
+            else typ_included e fuel' (TSize base (TRange (TElem (ELiteral (LInt (mi + 1)))) (TElem (ELiteral (LInt hi))))) t2
+          end
+        end
+      end
+    | TRange _ _ ->
+      begin match extract_range_value e.e_sem_env t1 with
+      | None -> RSuccess ()
+      | Some (rlo, rhi) ->
+        let lo = eval_int_value rlo in
+        let hi = eval_int_value rhi in
+        if lo > hi
+        then RSuccess ()
+        else begin match split_interval e.e_sem_env true lo hi t2 with
+        | None -> RFailure ""
+        | Some mi ->
+          let res1 = typ_included e fuel' (TRange (TElem (ELiteral (LInt lo))) (TElem (ELiteral (LInt mi)))) t2 in
+          if not (RSuccess? res1)
+          then res1
+          else typ_included e fuel' (TRange (TElem (ELiteral (LInt (mi + 1)))) (TElem (ELiteral (LInt hi)))) t2
+        end
+      end
+    | _ -> RFailure ""
+    in
+    if not (RFailure? aux)
+    then aux
+    else typ_included2 e fuel' t1 t2
+
+and typ_included2
+  (e: ast_env)
+  (fuel: nat)
+  (t1: typ { typ_bounded e.e_sem_env.se_bound t1 })
+  (t2: typ { typ_bounded e.e_sem_env.se_bound t2 })
+: Pure (result unit) // I cannot use `squash` because of unification
+    (requires True)
+    (ensures fun r -> RSuccess? r ==> Spec.typ_included (typ_sem e.e_sem_env t1) (typ_sem e.e_sem_env t2))
+    (decreases fuel)
+= if fuel = 0
+  then ROutOfFuel
+  else let fuel' : nat = fuel - 1 in
   match t1, t2 with
+  | _, TElem EAny
+  | TElem EAlwaysFalse, _ -> RSuccess ()
   | TDef i, t2 ->
     let t1' = e.e_env i in
     typ_included e fuel' t1' t2
@@ -929,6 +1108,68 @@ let rec typ_included
     else RFailure "typ_included: TTagged with different tags"
   | TTagged _ _, _
   | _, TTagged _ _ -> RFailure "typ_included: TTagged vs. anything"
+  | TSize base range, t ->
+    let res1 = typ_included e fuel' base t in
+    if not (RFailure? res1)
+    then res1
+    else let res0 = typ_included e fuel' base (TChoice (TElem EByteString) (TElem ETextString)) in
+    if not (RSuccess? res0)
+    then res0
+    else begin match extract_range_value e.e_sem_env range with
+    | None -> RSuccess ()
+    | Some (rlo, rhi) ->
+      let lo = eval_int_value rlo in
+      let hi = eval_int_value rhi in
+      if lo > hi
+      then RSuccess ()
+      else begin match t with
+      | TSize base' range' ->
+        let res2 = typ_included e fuel' base base' in
+        if not (RSuccess? res2)
+        then res2
+        else begin match extract_range_value e.e_sem_env range' with
+        | None -> RFailure "typ_included: TSize vs. TSize not range"
+        | Some (rlo', rhi') ->
+          if eval_int_value rlo' <= lo && hi <= eval_int_value rhi'
+          then RSuccess ()
+          else RFailure "typ_included: TSize string"
+        end
+      | _ -> RFailure "typ_included: TSize vs. something else"
+      end
+    end
+  | _, TSize base range ->
+    let res1 = typ_included e fuel' t1 base in
+    if not (RSuccess? res1)
+    then res1
+    else begin match t1 with
+    | TElem (ELiteral (LString ty s)) ->
+      begin match extract_range_value e.e_sem_env range with
+      | None -> RFailure "typ_included: LString vs. TSize not range"
+      | Some (tlo, thi) ->
+        let lo = eval_int_value tlo in
+        let hi = eval_int_value thi in
+        let len = String.length s in
+        if lo <= len && len <= hi
+        then RSuccess ()
+        else RFailure "typ_included: LString vs. TSize"
+      end
+    | _ ->
+      begin match extract_int_value e.e_sem_env range with
+      | None -> RFailure "typ_included: any vs. TSize not int"
+      | Some ri ->
+        let i = eval_int_value ri in
+        if i < 0
+        then RFailure "typ_included: any vs. TSize negative"
+        else if i >= 64
+        then begin
+          FStar.Math.Lemmas.pow2_le_compat i 64;
+          typ_included e fuel' t1 (TElem EUInt)
+        end else begin
+          FStar.Math.Lemmas.pow2_lt_compat 64 i;
+          typ_included e fuel' t1 (TRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt (pow2 i - 1)))))
+        end
+      end
+    end
   | TRange tlo thi, t ->
     begin match extract_int_value e.e_sem_env tlo with
     | None -> RSuccess ()
@@ -976,46 +1217,14 @@ let rec typ_included
         else RFailure "typ_included: TElem vs. TRange"
       end
     end
-  | TDetCbor _ dest, TRange _ _ -> typ_included e fuel' dest (TElem EAlwaysFalse)
   | _, TRange _ _ -> RFailure "typ_included: any vs. TRange"
-  | TSize base lo hi, t ->
-    let res1 = typ_included e fuel' base t in
-    if not (RFailure? res1)
-    then res1
-    else begin match t with
-    | TSize base' lo' hi' ->
-      let res2 = typ_included e fuel' base base' in
-      if not (RSuccess? res2)
-      then res2
-      else begin match typ_disjoint e fuel base' (TChoice (TElem EByteString) (TElem ETextString)) with
-      | ROutOfFuel -> ROutOfFuel
-      | RSuccess _ ->
-        if lo <> hi
-        then RSuccess ()
-        else if lo' <> hi' || lo > lo'
-        then RFailure "typ_included: TSize integer"
-        else begin
-          FStar.Math.Lemmas.pow2_le_compat lo' lo;
-          RSuccess ()
-        end
-      | RFailure _ ->
-        let res3 = typ_disjoint e fuel base' (TElem EUInt) in
-        if not (RSuccess? res3)
-        then res3
-        else if lo' <= lo && hi <= hi'
-        then RSuccess ()
-        else RFailure "typ_included: TSize string"
-      end
-    | _ -> RFailure "typ_included: TSize vs. something else"
-    end
-  | _, TSize base lo hi -> RFailure "typ_included: something else vs. TSize"
   | TDetCbor _ _, TElem EByteString -> RSuccess ()
   | TDetCbor base dest, TDetCbor base' dest' ->
     let res1 = typ_included e fuel' base base' in
     if not (RSuccess? res1)
     then res1
     else typ_included e fuel' dest dest'
-  | TDetCbor _ _, _ -> RFailure "typ_included: TDetCbor"
+  | TDetCbor _ dest, _ -> typ_included e fuel' dest (TElem EAlwaysFalse)
   | TElem (ELiteral (LSimple v)), TElem ESimple
   | TElem (ELiteral (LSimple v)), TElem EBool ->
     if U8.uint_to_t v = simple_value_true || U8.uint_to_t v = simple_value_false
@@ -1049,7 +1258,6 @@ let rec typ_included
   | TMap _, _
   | _, TMap _
     -> RFailure "typ_included: unsupported cases"
-  end
 
 and array_group_included
   (e: ast_env)
@@ -2914,36 +3122,55 @@ let rec mk_wf_typ
         end
       end
     end
-  | TSize base lo hi ->
+  | TSize base ti ->
     begin match typ_included env fuel base (TElem EUInt) with
     | ROutOfFuel -> ROutOfFuel
     | RSuccess _ ->
       let res2 = typ_included env fuel (TElem EUInt) base in
       if not (RSuccess? res2)
       then coerce_failure res2
-      else if lo = hi
-      then RSuccess (WfTUIntSize base lo)
-      else RFailure "mk_wf_typ: uint .size with ranges disallowed"
+      else begin match extract_int_value env.e_sem_env ti with
+      | None -> RFailure "mk_wf_typ: uint .size, not int"
+      | Some ri ->
+        let i = eval_int_value ri in
+        if i < 0
+        then RFailure "mk_wf_typ: uint .size negative"
+        else if i >= 64
+        then begin
+          FStar.Math.Lemmas.pow2_le_compat i 64;
+          RSuccess (WfTRewrite _ _ (WfTElem EUInt))
+        end
+        else begin
+          FStar.Math.Lemmas.pow2_lt_compat 64 i;
+          RSuccess (WfTRewrite _ _ (WfTIntRange (TElem (ELiteral (LInt 0))) (TElem (ELiteral (LInt (pow2 i - 1)))) 0 (pow2 i - 1)))
+        end
+      end
     | RFailure _ ->
-      begin match typ_included env fuel base (TElem EByteString) with
-      | ROutOfFuel -> ROutOfFuel
-      | RSuccess _ ->
-        let res3 = typ_included env fuel (TElem EByteString) base in
-        if not (RSuccess? res3)
-        then coerce_failure res3
-        else if 0 <= lo && lo <= hi && hi <= pow2 64
-        then RSuccess (WfTStrSize (U8.v Cbor.cbor_major_type_byte_string) base lo hi)
-        else RFailure "mk_wf_typ: bstr .size with empty range"
-      | RFailure _ ->
-        let res4 = typ_included env fuel base (TElem ETextString) in
-        if not (RSuccess? res4)
-        then coerce_failure res4
-        else let res5 = typ_included env fuel (TElem ETextString) base in
-        if not (RSuccess? res5)
-        then coerce_failure res5
-        else if 0 <= lo && lo <= hi && hi <= pow2 64
-        then RSuccess (WfTStrSize (U8.v Cbor.cbor_major_type_text_string) base lo hi)
-        else RFailure "mk_wf_typ tstr .size with empty range"
+      begin match extract_range_value env.e_sem_env ti with
+      | None -> RFailure "string .size not range"
+      | Some (rlo, rhi) ->
+        let lo = eval_int_value rlo in
+        let hi = eval_int_value rhi in
+        begin match typ_included env fuel base (TElem EByteString) with
+        | ROutOfFuel -> ROutOfFuel
+        | RSuccess _ ->
+          let res3 = typ_included env fuel (TElem EByteString) base in
+          if not (RSuccess? res3)
+          then coerce_failure res3
+          else if 0 <= lo && lo <= hi
+          then RSuccess (WfTStrSize (U8.v Cbor.cbor_major_type_byte_string) base ti lo hi)
+          else RFailure "mk_wf_typ: bstr .size with empty range"
+        | RFailure _ ->
+          let res4 = typ_included env fuel base (TElem ETextString) in
+          if not (RSuccess? res4)
+          then coerce_failure res4
+          else let res5 = typ_included env fuel (TElem ETextString) base in
+          if not (RSuccess? res5)
+          then coerce_failure res5
+          else if 0 <= lo && lo <= hi
+          then RSuccess (WfTStrSize (U8.v Cbor.cbor_major_type_text_string) base ti lo hi)
+          else RFailure "mk_wf_typ tstr .size with empty range"
+        end
       end
     end
 
