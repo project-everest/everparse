@@ -671,11 +671,11 @@ let rec typ_disjoint
         if lo > hi
         then RSuccess ()
         else begin match t with
-        | TElem (ELiteral (LString ty s)) ->
+        | TElem (ELiteral (LTextString s)) ->
           let len = String.length s in
           if len > hi || len < lo
           then RSuccess ()
-          else RFailure "typ_disjoint: TSize vs. LString"
+          else RFailure "typ_disjoint: TSize vs. LTextString"
         | TDetCbor _ _ ->
           if hi <= 0
           then RSuccess () (* needed by COSE empty_or_serialized_map *)
@@ -760,17 +760,13 @@ let rec typ_disjoint
     if v < 0
     then RFailure "typ_disjoint: neg_int64"
     else RSuccess ()
-  | TElem (ELiteral (LString ty _)), TElem EByteString
-  | TElem EByteString, TElem (ELiteral (LString ty _)) ->
-    if ty = KByteString
-    then RFailure "typ_disjoint: byte string"
-    else RSuccess ()
-  | TElem (ELiteral (LString ty _)), TElem ETextString
-  | TElem ETextString, TElem (ELiteral (LString ty _)) ->
-    if ty = KTextString
-    then RFailure "typ_disjoint: text string"
-    else RSuccess ()
-  | TElem (ELiteral (LString ty1 s1)), TElem (ELiteral (LString ty2 s2)) ->
+  | TElem (ELiteral (LTextString _)), TElem EByteString
+  | TElem EByteString, TElem (ELiteral (LTextString _)) ->
+    RSuccess ()
+  | TElem (ELiteral (LTextString _)), TElem ETextString
+  | TElem ETextString, TElem (ELiteral (LTextString _)) ->
+    RFailure "typ_disjoint: text string"
+  | TElem (ELiteral (LTextString s1)), TElem (ELiteral (LTextString s2)) ->
     byte_seq_of_ascii_string_diff s1 s2;
     RSuccess ()
   | TElem _, _
@@ -1134,16 +1130,16 @@ and typ_included2
     if not (RSuccess? res1)
     then res1
     else begin match t1 with
-    | TElem (ELiteral (LString ty s)) ->
+    | TElem (ELiteral (LTextString s)) ->
       begin match extract_range_value e.e_sem_env range with
-      | None -> RFailure "typ_included: LString vs. TSize not range"
+      | None -> RFailure "typ_included: LTextString vs. TSize not range"
       | Some (tlo, thi) ->
         let lo = eval_int_value tlo in
         let hi = eval_int_value thi in
         let len = String.length s in
         if lo <= len && len <= hi
         then RSuccess ()
-        else RFailure "typ_included: LString vs. TSize"
+        else RFailure "typ_included: LTextString vs. TSize"
       end
     | _ ->
       begin match extract_int_value e.e_sem_env range with
@@ -1219,14 +1215,10 @@ and typ_included2
     if v < 0
     then RSuccess ()
     else RFailure "typ_included: neg_int64"
-  | TElem (ELiteral (LString ty _)), TElem EByteString ->
-    if ty = KByteString
-    then RSuccess ()
-    else RFailure "typ_included: byte string"
-  | TElem (ELiteral (LString ty _)), TElem ETextString ->
-    if ty = KTextString
-    then RSuccess ()
-    else RFailure "typ_included: text string"
+  | TElem (ELiteral (LTextString _)), TElem EByteString ->
+    RFailure "typ_included: byte string"
+  | TElem (ELiteral (LTextString _)), TElem ETextString ->
+    RSuccess ()
   | TArray a1, TArray a2 ->
     Spec.array_close_array_group (array_group_sem e.e_sem_env a1);
     Spec.array_close_array_group (array_group_sem e.e_sem_env a2);

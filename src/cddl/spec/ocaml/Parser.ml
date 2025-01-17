@@ -93,7 +93,7 @@ let number = debug "number" int
 let value = debug "value" (
   choice
     (concat number (fun x -> ret (LInt x)))
-    (concat text (fun x -> ret (LString (KTextString, x))))
+    (concat text (fun x -> ret (LTextString (x))))
 )
 
 let tag = debug "tag" (concat dot (fun _ -> uint))
@@ -237,7 +237,7 @@ and memberkey () = debug "memberkey" (
   choices
     [
       concat (type1 ()) (fun key -> concat s (fun _ -> concat memberkey_cut (fun cut -> concat arrow (fun _ -> ret (fun x -> GElem (cut, key, x))))));
-      concat bareword (fun key -> concat s (fun _ -> concat colon (fun _ -> ret (fun x -> GElem (true, TElem (ELiteral (LString (KTextString, key))), x)))));
+      concat bareword (fun key -> concat s (fun _ -> concat colon (fun _ -> ret (fun x -> GElem (true, TElem (ELiteral (LTextString (key))), x)))));
       concat value (fun key -> concat s (fun _ -> concat colon (fun _ -> ret (fun x -> (GElem (true, TElem (ELiteral key), x))))));
     ]
 )

@@ -38,13 +38,10 @@ let test_ascii_string: ascii_string = mk_ascii_string "hello" (_ by (FStar.Tacti
   2. as a defensive practice wrt. ill-formed source input. *)
 
 [@@sem_attr; PpxDerivingShow]
-type string_kind = | KByteString | KTextString
-
-[@@sem_attr; PpxDerivingShow]
 type literal =
 | LSimple of int
 | LInt: (v: int) -> literal // I deduce the integer type from the sign
-| LString: (ty: string_kind) -> string -> literal
+| LTextString: string -> literal
 
 [@@sem_attr]
 let cddl_major_type_uint64 : Cbor.major_type_uint64_or_neg_int64 =
@@ -141,7 +138,7 @@ let wf_literal
 = match l with
 | LSimple x -> x >= 0 && x < pow2 8 && Cbor.simple_value_wf (U8.uint_to_t x)
 | LInt v -> v >= - pow2 64 && v < pow2 64
-| LString _ s -> String.length s < pow2 64 && string_is_ascii s // FIXME: support utf8
+| LTextString s -> String.length s < pow2 64 && string_is_ascii s // FIXME: support utf8
 
 let wf_elem_typ
   (t: elem_typ)
@@ -426,7 +423,7 @@ let eval_literal
 = match l with
   | LSimple v -> Cbor.pack (Cbor.CSimple (U8.uint_to_t v))
   | LInt v -> Cbor.pack (Cbor.CInt64 (if v < 0 then cddl_major_type_neg_int64 else cddl_major_type_uint64) (U64.uint_to_t (if v < 0 then -1 - v else v)))
-  | LString ty s -> Cbor.pack (Cbor.CString (if ty = KByteString then cddl_major_type_byte_string else cddl_major_type_text_string) (byte_seq_of_ascii_string s))
+  | LTextString s -> Cbor.pack (Cbor.CString (cddl_major_type_text_string) (byte_seq_of_ascii_string s))
 
 let spec_type_of_literal
   (l: literal)
