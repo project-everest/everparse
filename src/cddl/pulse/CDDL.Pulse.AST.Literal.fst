@@ -7,6 +7,7 @@ open CBOR.Pulse.API.Base
 module AST = CDDL.Spec.AST.Base
 module U8 = FStar.UInt8
 module U32 = FStar.UInt32
+module U64 = FStar.UInt64
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
 
@@ -138,3 +139,59 @@ let slice_u8_eq_ascii_string
   (x: AST.ascii_string)
 : Tot (slice_u8_eq_ascii_string_t x)
 = slice_u8_eq_ascii_string_intro x (slice_u8_eq_list_ascii_char (FStar.String.list_of_string x) ())
+
+inline_for_extraction
+```pulse
+fn impl_string_literal
+  (#ty: Type0)
+  (vmatch: (perm -> ty -> cbor -> slprop))
+  (cbor_get_major_type: get_major_type_t vmatch)
+  (cbor_get_string: get_string_t vmatch)
+  (s: Ghost.erased AST.ascii_string)
+  (len: U64.t { String.length s == U64.v len })
+  (f: slice_u8_eq_ascii_string_t s)
+: impl_typ u#0 #_ vmatch #None (t_literal (pack (CString cbor_major_type_text_string (AST.byte_seq_of_ascii_string s))))
+= (c: ty)
+  (#p: perm)
+  (#v: Ghost.erased cbor)
+{
+  assume (pure (SZ.fits_u64));
+  let test = impl_text cbor_get_major_type c;
+  if (test) {
+    let s = cbor_get_string c;
+    S.pts_to_len s;
+    if (S.len s <> SZ.uint64_to_sizet len) {
+      Trade.elim _ _;
+      false
+    } else {
+      with ps vs . assert (pts_to s #ps vs);
+      Seq.slice_length vs;
+      let res = f s 0sz;
+      Trade.elim _ _;
+      res
+    }
+  } else {
+    false
+  }
+}
+```
+
+[@@AST.sem_attr]
+let impl_literal
+  (#ty: Type0)
+  (vmatch: (perm -> ty -> cbor -> slprop))
+  (cbor_get_major_type: get_major_type_t vmatch)
+  (cbor_destr_int64: read_uint64_t vmatch)
+  (cbor_get_string: get_string_t vmatch)
+  (cbor_destr_simple: read_simple_value_t vmatch)
+  (l: AST.literal { AST.wf_literal l })
+: Tot (impl_typ vmatch (AST.spec_type_of_literal l))
+= match l with
+  | AST.LTextString s ->
+    impl_string_literal vmatch cbor_get_major_type cbor_get_string s (U64.uint_to_t (FStar.String.length s)) (slice_u8_eq_ascii_string s)
+  | AST.LInt n ->
+    if n >= 0
+    then impl_uint_literal cbor_get_major_type cbor_destr_int64 (U64.uint_to_t n) 
+    else impl_neg_int_literal cbor_get_major_type cbor_destr_int64 (U64.uint_to_t ((-1) - n))
+  | AST.LSimple n ->
+    impl_simple_literal cbor_get_major_type cbor_destr_simple (U8.uint_to_t n)

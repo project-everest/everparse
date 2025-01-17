@@ -111,6 +111,23 @@ fn impl_bytes
 }
 ```
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_text
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_major_type: get_major_type_t vmatch)
+: impl_typ u#0 #ty vmatch #None text
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+    let mt = cbor_get_major_type c;
+    (mt = cbor_major_type_text_string)
+}
+```
+
 let _ = SZ.t // FIXME: WHY WHY WHY? Pulse will complain otherwise
 
 inline_for_extraction noextract [@@noextract_to "krml"]
