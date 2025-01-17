@@ -7,7 +7,7 @@ on:
         default: 'FStarLang/FStar'
         type: string
         required: true
-      fstar_branch:
+      fstar_ref:
         description: F* ref (branch, or tag, or commit hash)
         default: 'master'
         type: string
@@ -17,7 +17,7 @@ on:
         default: 'FStarLang/karamel'
         type: string
         required: true
-      karamel_branch:
+      karamel_ref:
         description: Karamel ref (branch, or tag, or commit hash)
         default: 'master'
         type: string
