@@ -9,11 +9,14 @@ module U32 = FStar.UInt32
 
 irreducible let sem_attr : unit = ()
 
+[@@sem_attr]
 let u32_of_char (x: FStar.Char.char) : Tot U32.t = FStar.Char.u32_of_char x
 
+[@@sem_attr]
 let char_is_ascii (c: FStar.Char.char) : Tot bool =
   FStar.UInt32.lt (u32_of_char c) 127ul // because 7F is forbidden
 
+[@@sem_attr]
 let string_is_ascii (s: string) : Tot bool =
   List.Tot.for_all char_is_ascii (FStar.String.list_of_string s)
 
@@ -340,6 +343,7 @@ let sem_env_extend_gen
 
 (* Semantics *)
 
+[@@sem_attr]
 let uint32_to_uint8 (x: U32.t) : Tot U8.t =
   FStar.Int.Cast.uint32_to_uint8 x
 
@@ -368,7 +372,7 @@ let rec char_list_of_byte_list_of_char_list
     char_list_of_byte_list_of_char_list q
 
 let byte_seq_of_ascii_string
-  (s: ascii_string)
+  (s: string)
 : Tot (Seq.seq U8.t)
 = Seq.seq_of_list (byte_list_of_char_list (FStar.String.list_of_string s))
 

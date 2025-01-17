@@ -220,6 +220,7 @@ fn slice_u8_eq_list_ascii_char_cons (a: FStar.Char.char) (a' : U8.t) (sq: squash
   }
 ```
 
+[@@AST.sem_attr]
 let rec slice_u8_eq_list_ascii_char
   (l: list FStar.Char.char)
   (sq: squash (List.Tot.for_all AST.char_is_ascii l))
@@ -230,7 +231,7 @@ let rec slice_u8_eq_list_ascii_char
 
 inline_for_extraction noextract
 let slice_u8_eq_ascii_string_t
-  (x: AST.ascii_string)
+  (x: string)
 : Tot Type
 = (s: S.slice U8.t) ->
   (i: SZ.t) ->
@@ -268,6 +269,7 @@ fn slice_u8_eq_ascii_string_intro
 }
 ```
 
+[@@AST.sem_attr]
 let slice_u8_eq_ascii_string
   (x: AST.ascii_string)
 : Tot (slice_u8_eq_ascii_string_t x)
