@@ -141,3 +141,44 @@ fn impl_str_size
     }
 }
 ```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_simple
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_major_type: get_major_type_t vmatch)
+: impl_typ u#0 #ty vmatch #None t_simple
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+    let mt = cbor_get_major_type c;
+    (mt = cbor_major_type_simple_value)
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_simple_literal
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_major_type: get_major_type_t vmatch)
+    (cbor_destr_simple: read_simple_value_t vmatch)
+    (x: simple_value)
+: impl_typ u#0 #ty vmatch #None (t_literal (pack (CSimple x)))
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+    let test = impl_simple cbor_get_major_type c;
+    if (test) {
+      let v = cbor_destr_simple c;
+      (v = x)
+    } else {
+      false
+    }
+}
+```
