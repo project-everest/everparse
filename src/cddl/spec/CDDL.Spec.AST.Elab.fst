@@ -646,10 +646,11 @@ let rec typ_disjoint
       begin match extract_int_value e.e_sem_env range with
       | None -> RSuccess ()
       | Some v ->
-        let vv = eval_int_value v in
-        if vv < 0
+        let j = eval_int_value v in
+        if j < 0
         then RSuccess ()
-        else if vv < 64
+        else let vv = (let open FStar.Mul in 8 * j) in
+        if vv < 64
         then begin
           FStar.Math.Lemmas.pow2_lt_compat 64 vv;
           typ_disjoint e fuel' t (TRange (TElem (ELiteral (LInt 0))) true (TElem (ELiteral (LInt (pow2 vv - 1)))))
@@ -930,7 +931,7 @@ let rec split_interval
       then begin match extract_int_value e t' with
       | Some ti ->
         let i = eval_int_value ti in
-        if i < 0 then None else Some (0, pow2 i - 1)
+        if i < 0 then None else Some (0, pow2 (let open FStar.Mul in 8 * i) - 1)
       | _ -> None
       end
       else begin match extract_range_value e t' with
@@ -981,10 +982,11 @@ let rec typ_included
         begin match extract_int_value e.e_sem_env range with
         | None -> RSuccess ()
         | Some ti ->
-          let i = eval_int_value ti in
-          if i < 0
+          let j = eval_int_value ti in
+          if j < 0
           then RSuccess ()
-          else if i >= 64
+          else let i : nat = (let open FStar.Mul in 8 * j) in
+          if i >= 64
           then begin
             FStar.Math.Lemmas.pow2_le_compat i 64;
             typ_included e fuel' (TElem EUInt) t2
@@ -1145,10 +1147,11 @@ and typ_included2
       begin match extract_int_value e.e_sem_env range with
       | None -> RFailure "typ_included: any vs. TSize not int"
       | Some ri ->
-        let i = eval_int_value ri in
-        if i < 0
+        let j = eval_int_value ri in
+        if j < 0
         then RFailure "typ_included: any vs. TSize negative"
-        else if i >= 64
+        else let i = (let open FStar.Mul in 8 * j) in
+        if i >= 64
         then begin
           FStar.Math.Lemmas.pow2_le_compat i 64;
           typ_included e fuel' t1 (TElem EUInt)
@@ -3100,10 +3103,11 @@ let rec mk_wf_typ
       else begin match extract_int_value env.e_sem_env ti with
       | None -> RFailure "mk_wf_typ: uint .size, not int"
       | Some ri ->
-        let i = eval_int_value ri in
-        if i < 0
+        let j = eval_int_value ri in
+        if j < 0
         then RFailure "mk_wf_typ: uint .size negative"
-        else if i >= 64
+        else let i = (let open FStar.Mul in 8 * j) in
+        if i >= 64
         then begin
           FStar.Math.Lemmas.pow2_le_compat i 64;
           RSuccess (WfTRewrite _ _ (WfTElem EUInt))

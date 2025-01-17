@@ -138,13 +138,13 @@ let spec_str_size
 let uint_size (sz: nat) : typ = fun w -> let x = Cbor.unpack w in
   Cbor.CInt64? x &&
   Cbor.CInt64?.typ x = Cbor.cbor_major_type_uint64 &&
-  U64.v (Cbor.CInt64?.v x) < pow2 sz
+  U64.v (Cbor.CInt64?.v x) < pow2 (let open FStar.Mul in 8 * sz)
 
 let spec_uint_size
   (sz: nat)
 : Tot (spec (uint_size sz) U64.t true)
 = {
-  serializable = (fun x -> U64.v x < pow2 sz);
+  serializable = (fun x -> U64.v x < pow2 (let open FStar.Mul in 8 * sz));
   parser = (fun x -> let Cbor.CInt64 _ v = Cbor.unpack x in v);
   serializer = (fun x -> Cbor.pack (Cbor.CInt64 Cbor.cbor_major_type_uint64 x));
   parser_inj = ();
