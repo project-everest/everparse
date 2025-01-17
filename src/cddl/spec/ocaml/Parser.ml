@@ -212,9 +212,9 @@ and group0 () = debug "group0" (
   concat (grpent ()) (fun a -> concat (group0_tail ()) (fun q -> ret (q a)))
 )
 
-and group0_tail () = debug "group_tail" (
+and group0_tail () = debug "group0_tail" (
   choice
-    (concat s (fun _ -> concat slashslash (fun _ -> concat s (fun _ -> concat (grpent ()) (fun a -> concat (group_tail ()) (fun q -> ret (fun (x: group) -> GChoice (x, q a))))))))
+    (concat s (fun _ -> concat slashslash (fun _ -> concat s (fun _ -> concat (grpent ()) (fun a -> concat (group0_tail ()) (fun q -> ret (fun (x: group) -> GChoice (x, q a))))))))
     (ret (fun (x: group) -> x))
 )
 
