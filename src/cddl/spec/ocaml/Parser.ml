@@ -38,6 +38,8 @@ let pound2 = terminal "pound2" (function POUND2 -> Some () | _ -> None)
 let pound3 = terminal "pound3" (function POUND3 -> Some () | _ -> None)
 let pound6 = terminal "pound6" (function POUND6 -> Some () | _ -> None)
 let pound7 = terminal "pound7" (function POUND7 -> Some () | _ -> None)
+let dotdotdot = terminal "dotdotdot" (function DOTDOTDOT -> Some () | _ -> None)
+let dotdot = terminal "dotdot" (function DOTDOT -> Some () | _ -> None)
 let dot = terminal "dot" (function DOT -> Some () | _ -> None)
 let pound = terminal "pound"  (function POUND -> Some () | _ -> None)
 let minus = terminal "minus" (function MINUS -> Some () | _ -> None)
@@ -122,6 +124,29 @@ let option_occur = debug "option_occur" (
 
 let optcom = debug "optcom" (concat s (fun _ -> option (concat comma (fun _ -> s))))
 
+let rangeop =
+  debug "rangeop"
+    (choice
+      (concat dotdotdot (fun _ -> ret (fun t1 t2 -> TRange (t1, false, t2))))
+      (concat dotdot (fun _ -> ret (fun t1 t2 -> TRange (t1, true, t2))))
+    )
+
+let ctlop =
+  debug "ctlop"
+    (concat dot (fun _ -> concat id (fun s -> match s with
+    | "size" -> ret (fun t1 t2 -> TSize (t1, t2))
+    | "everparse-det-cbor" -> ret (fun t1 t2 -> TDetCbor (t1, t2))
+    (* TODO: (non-injective) cbor *)
+    | _ -> fail
+    )))
+
+let rangeop_or_ctlop =
+  debug "rangeop_or_ctlop"
+    (choice
+      (concat rangeop (fun f -> ret f))
+      (concat ctlop (fun f -> ret f))
+    )
+
 let rec type_ () = debug "type" (
   concat (type1 ()) (fun x -> concat (type_tail ()) (fun xs -> ret (xs x)))
 )
@@ -132,16 +157,14 @@ and type_tail () = debug "type_tail" (
     (ret (fun (x: typ) -> x))
 )
 
-and type1 () = debug "type1" (type2 ()) (* option(type1_tail) *) 
+and type1 () = debug "type1" (concat (type2 ()) (fun t -> concat (type1_tail ()) (fun f -> ret (f t))))
 
-(* TODO
-type1_tail:
-  | s rangeop_or_ctlop s type2
-
-rangeop_or_ctlop: (* TODO *)
-  | rangeop
-  | ctlop
-*)
+and type1_tail () =
+  debug "type1_tail"
+    (choice
+      (concat s (fun _ -> concat rangeop_or_ctlop (fun f -> concat s (fun _ -> concat (type2 ()) (fun t2 -> ret (fun t1 -> f t1 t2))))))
+      (ret (fun t -> t))
+    )
 
 and type2 () = debug "type2" (
   choices

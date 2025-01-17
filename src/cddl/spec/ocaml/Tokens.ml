@@ -16,6 +16,8 @@ type token =
   | POUND3
   | POUND6
   | POUND7
+  | DOTDOTDOT
+  | DOTDOT
   | DOT
   | POUND
   | UINT of Prims.int
