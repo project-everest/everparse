@@ -23,6 +23,23 @@ fn impl_uint
 }
 ```
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_neg_int
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_major_type: get_major_type_t vmatch)
+: impl_typ u#0 #ty vmatch #None nint
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+    let mt = cbor_get_major_type c;
+    (mt = cbor_major_type_neg_int64)
+}
+```
+
 module U64 = FStar.UInt64
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -40,6 +57,30 @@ fn impl_uint_literal
     (#v: Ghost.erased cbor)
 {
     let is_uint = impl_uint cbor_get_major_type c;
+    if (is_uint) {
+        let i = cbor_destr_int64 c;
+        (i = n)
+    } else {
+        false
+    }
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_neg_int_literal
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_major_type: get_major_type_t vmatch)
+    (cbor_destr_int64: read_uint64_t vmatch)
+    (n: U64.t)
+: impl_typ u#0 #ty vmatch #None (t_literal (pack (CInt64 cbor_major_type_neg_int64 n)))
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+    let is_uint = impl_neg_int cbor_get_major_type c;
     if (is_uint) {
         let i = cbor_destr_int64 c;
         (i = n)
