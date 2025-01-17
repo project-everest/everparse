@@ -5,11 +5,14 @@ module Cbor = CBOR.Spec.API.Type
 module Map = CDDL.Spec.Map
 module U8 = FStar.UInt8
 module Util = CBOR.Spec.Util
+module U32 = FStar.UInt32
 
 irreducible let sem_attr : unit = ()
 
+let u32_of_char (x: FStar.Char.char) : Tot U32.t = FStar.Char.u32_of_char x
+
 let char_is_ascii (c: FStar.Char.char) : Tot bool =
-  FStar.UInt32.lt (FStar.Char.u32_of_char c) 127ul // because 7F is forbidden
+  FStar.UInt32.lt (u32_of_char c) 127ul // because 7F is forbidden
 
 let string_is_ascii (s: string) : Tot bool =
   List.Tot.for_all char_is_ascii (FStar.String.list_of_string s)
@@ -337,10 +340,13 @@ let sem_env_extend_gen
 
 (* Semantics *)
 
+let uint32_to_uint8 (x: U32.t) : Tot U8.t =
+  FStar.Int.Cast.uint32_to_uint8 x
+
 let byte_list_of_char_list
   (l: list FStar.Char.char)
 : Tot (list U8.t)
-= List.Tot.map FStar.Int.Cast.uint32_to_uint8 (List.Tot.map FStar.Char.u32_of_char l)
+= List.Tot.map uint32_to_uint8 (List.Tot.map u32_of_char l)
 
 let char_list_of_byte_list
   (l: list U8.t)
@@ -356,9 +362,9 @@ let rec char_list_of_byte_list_of_char_list
 = match l with
   | [] -> ()
   | a :: q ->
-    let a' = FStar.Char.u32_of_char a in
+    let a' = u32_of_char a in
     FStar.Math.Lemmas.small_mod (FStar.UInt32.v a') 256;
-    assert (FStar.Int.Cast.uint8_to_uint32 (FStar.Int.Cast.uint32_to_uint8 a') == a');
+    assert (FStar.Int.Cast.uint8_to_uint32 (uint32_to_uint8 a') == a');
     char_list_of_byte_list_of_char_list q
 
 let byte_seq_of_ascii_string
@@ -392,7 +398,7 @@ let rec byte_seq_of_ascii_string_is_utf8'
   | a :: q ->
     Seq.lemma_seq_of_list_cons a q;
     byte_seq_of_ascii_string_is_utf8' q;
-    let c = FStar.Int.Cast.uint32_to_uint8 (FStar.Char.u32_of_char a) in
+    let c = uint32_to_uint8 (u32_of_char a) in
     assert (U8.v c < 128);
     let s = Seq.seq_of_list (byte_list_of_char_list l) in
     assert (forall i . i < Seq.length s ==>
