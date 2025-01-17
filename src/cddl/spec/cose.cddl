@@ -46,7 +46,12 @@ header_map = {
     * label => values
 }
 
-empty_or_serialized_map = bstr ; TODO: .cbor header_map / bstr .size 0
+; Here I am using an everparse-specific construct to handle only the
+; deterministic CBOR subset. While RFC 9052 Section 9 says that COSE
+; requires the Deterministic CBOR restrictions of RFC 8949 Section
+; 4.2.1, that does not appear in the .cbor construct of the CDDL
+; specification.
+empty_or_serialized_map = bstr .everparse-det-cbor header_map / bstr .size 0
 
 COSE_Sign_Tagged = #6.98(COSE_Sign)
 
