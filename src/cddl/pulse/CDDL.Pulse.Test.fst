@@ -1,6 +1,6 @@
 module CDDL.Pulse.Test
 include CDDL.Spec.AST.Base
-include CDDL.Pulse.Misc
+include CDDL.Pulse.AST.Literal
 
 noextract [@@noextract_to "krml"; sem_attr]
 let mk_ascii_string
