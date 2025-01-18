@@ -1,7 +1,7 @@
 (include_subdirs unqualified)
 (executable
   (name Main)
-  (public_name cddl)
+  (public_name cddl.exe)
   (libraries
     evercddl.lib
   )

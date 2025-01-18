@@ -28,7 +28,6 @@ plugin.done: $(ALL_CHECKED_FILES)
 	touch $@
 
 EVERPARSE_CDDL=$(EVERPARSE_SRC_PATH)/../bin/cddl.exe
-EVERPARSE_CDDL_MAIN=ocaml/_build/default/evercddl-elab/Main.exe
 
 build: $(EVERPARSE_CDDL)
 
@@ -36,8 +35,6 @@ build: $(EVERPARSE_CDDL)
 
 $(EVERPARSE_CDDL): ocaml.done plugin.done $(wildcard ocaml/*/*.ml*)
 	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build
-	mkdir -p $(dir $(EVERPARSE_CDDL))
-	cp $(EVERPARSE_CDDL_MAIN) $(EVERPARSE_CDDL)
-	chmod +w $(EVERPARSE_CDDL) # because dune produces read-only executables
+	cd ocaml && dune install --prefix=$(realpath $(EVERPARSE_SRC_PATH)/..)
 
 .PHONY: build

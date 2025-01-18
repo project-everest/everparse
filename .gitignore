@@ -14,6 +14,7 @@ tests/unit/*
 bin/qd.exe
 bin/3d.exe
 bin/cddl.exe
+lib/evercddl
 .depend.rsp
 
 # package.sh creates there
