@@ -80,7 +80,6 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_any
     (#ty: Type u#0)
     (vmatch: perm -> ty -> cbor -> slprop)
-    (_: unit)
 : impl_typ u#0 #ty vmatch #None any
 =
     (c: ty)
@@ -88,5 +87,22 @@ fn impl_any
     (#v: Ghost.erased cbor)
 {
     true
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_ext
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#t1: typ)
+    (f1: impl_typ vmatch t1)
+    (t2: typ { typ_equiv t1 t2 })
+: impl_typ u#0 #ty vmatch #None t2
+= (c: _)
+  (#p: _)
+  (#v: _)
+{
+  f1 c
 }
 ```

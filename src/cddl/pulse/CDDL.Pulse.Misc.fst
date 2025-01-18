@@ -44,6 +44,21 @@ fn impl_neg_int
 }
 ```
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_always_false
+    (#ty: Type u#0)
+    (vmatch: perm -> ty -> cbor -> slprop)
+: impl_typ u#0 #ty vmatch #None t_always_false
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  false
+}
+```
+
 module U64 = FStar.UInt64
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -199,3 +214,19 @@ fn impl_simple_literal
     }
 }
 ```
+
+[@@CMacro]
+let cddl_simple_value_false : simple_value = 20uy
+[@@CMacro]
+let cddl_simple_value_true : simple_value = 21uy
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_bool
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_major_type: get_major_type_t vmatch)
+    (cbor_destr_simple: read_simple_value_t vmatch)
+: impl_typ vmatch t_bool
+= impl_t_choice
+    (impl_simple_literal cbor_get_major_type cbor_destr_simple cddl_simple_value_false)
+    (impl_simple_literal cbor_get_major_type cbor_destr_simple cddl_simple_value_true)
