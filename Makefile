@@ -177,7 +177,14 @@ cddl: cddl-lib cddl-ocaml
 
 .PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
-ci: test lowparse-pulse cbor-test cddl
+cddl-plugin-test: cddl-ocaml
+	+$(MAKE) -C src/cddl/spec/test
+
+cddl-test: cddl cddl-plugin-test
+
+.PHONY: cddl-test
+
+ci: test lowparse-pulse cbor-test cddl-test
 
 clean-3d:
 	+$(MAKE) -C src/3d clean

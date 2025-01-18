@@ -3,7 +3,6 @@
  (name evercddl_lib)
  (public_name evercddl.lib)
  (libraries
-    fstar.lib
     fstar.pluginlib
     ppxlib
  )

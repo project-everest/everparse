@@ -1,5 +1,6 @@
 open ABNF
 open Tokens
+open Fstar_pluginlib
 open FStar_Pervasives
 open CDDL_Spec_AST_Base
 

@@ -1,3 +1,5 @@
+open Fstar_pluginlib
+
 type token =
   | RAW_ID of string
   | TEXT of string
