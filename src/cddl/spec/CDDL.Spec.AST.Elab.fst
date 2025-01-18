@@ -6,7 +6,7 @@ module U64 = FStar.UInt64
 module Util = CBOR.Spec.Util
 module U8 = FStar.UInt8
 
-[@@PpxDerivingShow; plugin]
+[@@PpxDerivingShow]
 noeq
 type result (t: Type) =
 | RSuccess of t

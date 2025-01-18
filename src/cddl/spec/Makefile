@@ -28,7 +28,7 @@ plugin: $(ALL_CHECKED_FILES)
 .PHONY: plugin
 
 EVERPARSE_CDDL=$(EVERPARSE_SRC_PATH)/../bin/cddl.exe
-EVERPARSE_CDDL_MAIN=ocaml/_build/default/Main.exe
+EVERPARSE_CDDL_MAIN=ocaml/_build/default/evercddl-elab/Main.exe
 
 build:
 	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build
