@@ -169,7 +169,7 @@ cddl-lib: cddl-pulse
 endif
 
 cddl-ocaml: cddl-spec
-	+$(MAKE) -C src/cddl/spec ocaml
+	+$(MAKE) -C src/cddl/spec build
 
 cddl: cddl-lib cddl-ocaml
 

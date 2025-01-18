@@ -17,30 +17,27 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 # .PHONY: extract
 
-ocaml: $(ALL_CHECKED_FILES)
-	+$(MAKE) -f $@.Makefile
+ocaml.done: $(ALL_CHECKED_FILES)
+	rm -f $@
+	+$(MAKE) -f $(basename $@).Makefile
+	touch $@
 
-.PHONY: ocaml
-
-plugin: $(ALL_CHECKED_FILES)
-	+$(MAKE) -f $@.Makefile
-
-.PHONY: plugin
+plugin.done: $(ALL_CHECKED_FILES)
+	rm -f $@
+	+$(MAKE) -f $(basename $@).Makefile
+	touch $@
 
 EVERPARSE_CDDL=$(EVERPARSE_SRC_PATH)/../bin/cddl.exe
 EVERPARSE_CDDL_MAIN=ocaml/_build/default/evercddl-elab/Main.exe
 
-build:
+build: $(EVERPARSE_CDDL)
+
+.PHONY: build
+
+$(EVERPARSE_CDDL): ocaml.done plugin.done
 	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build
 	mkdir -p $(dir $(EVERPARSE_CDDL))
 	cp $(EVERPARSE_CDDL_MAIN) $(EVERPARSE_CDDL)
 	chmod +w $(EVERPARSE_CDDL) # because dune produces read-only executables
-
-.PHONY: build
-
-$(EVERPARSE_CDDL): $(EVERPARSE_CDDL_MAIN)
-
-$(EVERPARSE_CDDL_MAIN): 
-
 
 .PHONY: build
