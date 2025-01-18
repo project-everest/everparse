@@ -1,6 +1,6 @@
 {
 
-open Parser
+open CDDLParser
 open CDDL_Spec_AST_Base
 open Tokens
 

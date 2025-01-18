@@ -1,2 +1,8 @@
 (lang dune 2.8)
-(name cddl-elab)
+(name evercddl)
+(generate_opam_files false)
+
+(package
+  (name evercddl)
+  (synopsis "The EverParse CDDL parser generator")
+)

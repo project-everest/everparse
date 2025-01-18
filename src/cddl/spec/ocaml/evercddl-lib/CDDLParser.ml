@@ -4,7 +4,7 @@ open FStar_Pervasives
 open CDDL_Spec_AST_Base
 
 type state = CDDL_Spec_AST_Base.name_env
-type 'a parser = (token, state, 'a) ABNF.parser
+type 'a parser = (Tokens.token, state, 'a) ABNF.parser
 type symbol = unit parser
 
 let terminal name f =

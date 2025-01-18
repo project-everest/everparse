@@ -1,27 +1,11 @@
 let elab_list = CDDL_Spec_AST_Driver.elab_list
 
-let print_position filename outx lexbuf =
-  let pos = lexbuf.Lexing.lex_curr_p in
-  Printf.fprintf outx "%s:%d:%d" filename
-    pos.pos_lnum (pos.pos_cnum - pos.pos_bol + 1)
-
-let parse_with_error filename lexbuf =
-  Parser.cddl () lexbuf
-
 let env : CDDL_Spec_AST_Base.name_env ref = ref CDDL_Spec_AST_Base.empty_name_env
-
-let parse filename =
-  let ch = open_in filename in
-  let lexbuf = Lexing.from_channel ch in
-  let buf = TokenBuffer.create (fun _ -> Lexer.token lexbuf) !env in
-  let res = parse_with_error filename buf in
-  close_in ch;
-  res
 
 let read_buf : (string * CDDL_Spec_AST_Driver.decl) list ref = ref []
 
 let process_file filename =
-  match parse filename with
+  match ParseFromFile.parse !env filename with
   | None -> print_endline "Syntax error"; exit 1
   | Some (env', l) -> env := env'; read_buf := List.append l !read_buf
 
