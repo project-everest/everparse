@@ -34,7 +34,7 @@ build: $(EVERPARSE_CDDL)
 
 .PHONY: build
 
-$(EVERPARSE_CDDL): ocaml.done plugin.done
+$(EVERPARSE_CDDL): ocaml.done plugin.done $(wildcard ocaml/*/*.ml*)
 	cd ocaml && $(FSTAR_EXE) --ocamlenv dune build
 	mkdir -p $(dir $(EVERPARSE_CDDL))
 	cp $(EVERPARSE_CDDL_MAIN) $(EVERPARSE_CDDL)
