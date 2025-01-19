@@ -128,6 +128,8 @@ jobs:
     needs: fstar-binary
     steps:
       - uses: actions/checkout@master
+
+      - uses: actions/checkout@master
         with:
           path: karamel
           repository: ${{inputs.karamel_repo}}
