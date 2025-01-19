@@ -111,6 +111,28 @@ fn impl_neg_int_literal
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
+fn with_cbor_literal_int
+    (#t: Type0)
+    (vmatch: perm -> t -> cbor -> slprop)
+    (mk_int64: mk_int64_t vmatch)
+    (elim_int64: elim_int64_t vmatch)
+    (k: major_type_uint64_or_neg_int64)
+    (x: U64.t)
+: with_cbor_literal_t #_ vmatch (pack (CInt64 k x))
+= (pre: _)
+  (t': _)
+  (post: _)
+  (cont: _)
+{
+  let c = mk_int64 k x;
+  let res : t' = cont _ c;
+  elim_int64 c;
+  res
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
 fn impl_bytes
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
