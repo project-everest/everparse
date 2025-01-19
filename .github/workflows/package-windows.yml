@@ -161,4 +161,5 @@ jobs:
           path: |
             everparse*.zip
             everparse*.tar.gz
+            everparse*.nupkg
           name: everparse
