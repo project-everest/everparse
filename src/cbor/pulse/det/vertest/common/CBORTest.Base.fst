@@ -17,6 +17,10 @@ noextract [@@noextract_to "krml"]
 let letter (x: U8.t { 1 <= U8.v x /\ U8.v x <= 26 }) : U8.t =
   U8.add 96uy x
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let max_size = 32sz
+
 #push-options "--fuel 8 --z3rlimit 16"
 
 noextract [@@noextract_to "krml"]
@@ -247,7 +251,6 @@ ensures
   if (res <> exit_success) {
     intro_res_post_impossible ()
   } else {
-    let max_size = 32sz;
     let mut output_bytes = [| 0xFFuy; max_size |];
     let out1 = S.from_array output_bytes max_size;
     let osize1 = cbor_serialize_to_slice test out1;

@@ -170,6 +170,10 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 let intro_res_post_impossible (_: squash False) : res_t = exit_impossible
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let max_size = 32sz
+
 #push-options "--fuel 8 --z3rlimit 128"
 
 #restart-solver
@@ -249,7 +253,6 @@ ensures emp
     Trade.elim (cbor_det_match _ test _) _;
     intro_res_post_impossible ()
   } else {
-    let max_size = 32sz;
     let size = cbor_det_size test max_size;
     if (size = 0sz) {
       Trade.elim (cbor_det_match _ test _) _;
