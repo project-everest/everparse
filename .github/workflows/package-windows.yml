@@ -101,7 +101,7 @@ jobs:
       #     path: fstar.zip
       #     key: FStar-${{runner.os}}-${{ hashFiles('/fstar-src.tar.gz') }}
 
-      - run: cd $GITHUB_WORKSPACE && tar xzf fstar-src.tar.gz && echo
+      - run: cd $GITHUB_WORKSPACE && tar xzf fstar-src.tar.gz && echo ""
         # if: steps.check-cache.outputs.cache-hit != 'true'
         shell: C:\cygwin64\bin\bash.exe --login '{0}'
 
@@ -149,12 +149,12 @@ jobs:
         # work with karamel/karamel.opam (without cd'ing).
         shell: C:\cygwin64\bin\bash.exe --login '{0}'
         run: |
-          cd $GITHUB_WORKSPACE && eval $(opam env) && cd karamel && sed -i '/"fstar"/d' karamel.opam && opam install --deps-only karamel.opam && opam install hex re sexplib && echo
+          cd $GITHUB_WORKSPACE && eval $(opam env) && cd karamel && sed -i '/"fstar"/d' karamel.opam && opam install --deps-only karamel.opam && opam install hex re sexplib && echo ""
 
       - name: Build package
         shell: C:\cygwin64\bin\bash.exe --login '{0}'
         run: |
-          cd $GITHUB_WORKSPACE && eval $(opam env) && CC=x86_64-w64-mingw32-gcc.exe make package -kj$(nproc) && echo
+          cd $GITHUB_WORKSPACE && eval $(opam env) && CC=x86_64-w64-mingw32-gcc.exe make package -kj$(nproc) && echo ""
 
       - uses: actions/upload-artifact@v4
         with:
