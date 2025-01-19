@@ -113,7 +113,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn with_cbor_literal_int
     (#t: Type0)
-    (vmatch: perm -> t -> cbor -> slprop)
+    (#vmatch: perm -> t -> cbor -> slprop)
     (mk_int64: mk_int64_t vmatch)
     (elim_int64: elim_int64_t vmatch)
     (k: major_type_uint64_or_neg_int64)
@@ -234,6 +234,27 @@ fn impl_simple_literal
     } else {
       false
     }
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn with_cbor_literal_simple
+    (#t: Type0)
+    (#vmatch: perm -> t -> cbor -> slprop)
+    (mk_simple: mk_simple_t vmatch)
+    (elim_simple: elim_simple_t vmatch)
+    (x: simple_value)
+: with_cbor_literal_t #_ vmatch (pack (CSimple x))
+= (pre: _)
+  (t': _)
+  (post: _)
+  (cont: _)
+{
+  let c = mk_simple x;
+  let res : t' = cont _ c;
+  elim_simple c;
+  res
 }
 ```
 

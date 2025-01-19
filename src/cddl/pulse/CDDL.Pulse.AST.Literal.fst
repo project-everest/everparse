@@ -195,3 +195,147 @@ let impl_literal
     else impl_neg_int_literal cbor_get_major_type cbor_destr_int64 (U64.uint_to_t ((-1) - n))
   | AST.LSimple n ->
     impl_simple_literal cbor_get_major_type cbor_destr_simple (U8.uint_to_t n)
+
+inline_for_extraction noextract
+let slice_u8_fill_list_ascii_char_t
+  (l: list FStar.Char.char)
+: Tot Type
+= (s: S.slice U8.t) ->
+  (i: SZ.t) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt unit
+    (pts_to s v **
+      pure (
+        SZ.v i + List.Tot.length l == Seq.length v
+      )
+    )
+    (fun res -> exists* v' .
+      pts_to s v' **
+      pure (
+        SZ.v i + List.Tot.length l == Seq.length v /\
+        Seq.length v' == Seq.length v /\
+        Seq.equal v' (Seq.append (Seq.slice v 0 (SZ.v i)) (Seq.seq_of_list (AST.byte_list_of_char_list l)))
+      )
+    )
+
+inline_for_extraction
+```pulse
+fn slice_u8_fill_list_ascii_char_nil (_: unit) : slice_u8_fill_list_ascii_char_t []
+= (s: _)
+  (i: _)
+  (#v: _)
+  {
+    ()
+  }
+```
+
+inline_for_extraction
+```pulse
+fn slice_u8_fill_list_ascii_char_cons (a: FStar.Char.char) (a' : U8.t) (sq: squash (a' == AST.uint32_to_uint8 (AST.u32_of_char a) /\ AST.char_is_ascii a)) (q: list FStar.Char.char) (f: slice_u8_fill_list_ascii_char_t q) : slice_u8_fill_list_ascii_char_t (a :: q)
+= (s: _)
+  (i: _)
+  (#v: _)
+  {
+    S.pts_to_len s;
+    S.op_Array_Assignment s i a';
+    let i' = SZ.add i 1sz;
+    f s i'
+  }
+```
+
+[@@AST.sem_attr]
+let rec slice_u8_fill_list_ascii_char
+  (l: list FStar.Char.char)
+  (sq: squash (List.Tot.for_all AST.char_is_ascii l))
+: Tot (slice_u8_fill_list_ascii_char_t l)
+= match l with
+  | [] -> slice_u8_fill_list_ascii_char_nil ()
+  | a :: q -> slice_u8_fill_list_ascii_char_cons a (AST.uint32_to_uint8 (AST.u32_of_char a)) () q (slice_u8_fill_list_ascii_char q ())
+
+inline_for_extraction noextract
+let slice_u8_fill_ascii_string_t
+  (x: string)
+: Tot Type
+= (s: S.slice U8.t) ->
+  stt unit
+    (exists* v . pts_to s v **
+      pure (
+        FStar.String.length x == Seq.length v
+      )
+    )
+    (fun res ->
+      pts_to s (AST.byte_seq_of_ascii_string x)
+    )
+
+inline_for_extraction noextract
+```pulse
+fn slice_u8_fill_ascii_string_intro
+  (x: AST.ascii_string)
+  (f: slice_u8_fill_list_ascii_char_t (FStar.String.list_of_string x))
+: slice_u8_fill_ascii_string_t x
+= (s: S.slice U8.t)
+{
+  f s 0sz;
+  with v' . assert (pts_to s v');
+  assert (pure (Seq.equal v' (AST.byte_seq_of_ascii_string x)));
+  rewrite (pts_to s v') as (pts_to s (AST.byte_seq_of_ascii_string x))
+}
+```
+
+[@@AST.sem_attr]
+let slice_u8_fill_ascii_string
+  (x: AST.ascii_string)
+: Tot (slice_u8_fill_ascii_string_t x)
+= slice_u8_fill_ascii_string_intro x (slice_u8_fill_list_ascii_char (FStar.String.list_of_string x) ())
+
+inline_for_extraction
+```pulse
+fn with_cbor_literal_text_string
+  (#ty: Type0)
+  (#vmatch: (perm -> ty -> cbor -> slprop))
+  (cbor_mk_string: mk_string_t vmatch)
+  (str: Ghost.erased AST.ascii_string)
+  (len: U64.t { String.length str == U64.v len })
+  (f: slice_u8_fill_ascii_string_t str)
+: with_cbor_literal_t #_ vmatch (pack (CString cbor_major_type_text_string (AST.byte_seq_of_ascii_string str)))
+= (pre: _)
+  (t': _)
+  (post: _)
+  (cont: _)
+{
+  assume (pure (SZ.fits_u64));
+  let len_sz = SZ.uint64_to_sizet len;
+  let mut a = [| 0uy; len_sz |];
+  let s = S.from_array a len_sz;
+  f s;
+  let c = cbor_mk_string cbor_major_type_text_string s;
+  with z . assert (vmatch 1.0R c z);
+  Trade.rewrite_with_trade (vmatch 1.0R c z) (vmatch 1.0R c (pack (CString cbor_major_type_text_string (AST.byte_seq_of_ascii_string str))));
+  Trade.trans _ (vmatch 1.0R c z) _;
+  let res = cont _ c;
+  Trade.elim _ _;
+  S.to_array s;
+  res
+}
+```
+
+[@@AST.sem_attr]
+let with_literal
+  (#ty: Type0)
+  (vmatch: (perm -> ty -> cbor -> slprop))
+  (mk_int64: mk_int64_t vmatch)
+  (elim_int64: elim_int64_t vmatch)
+  (mk_simple: mk_simple_t vmatch)
+  (elim_simple: elim_simple_t vmatch)
+  (cbor_mk_string: mk_string_t vmatch)
+  (l: AST.literal { AST.wf_literal l })
+: Tot (with_cbor_literal_t vmatch (AST.eval_literal l))
+= match l with
+  | AST.LTextString s ->
+    with_cbor_literal_text_string cbor_mk_string s (U64.uint_to_t (FStar.String.length s)) (slice_u8_fill_ascii_string s)
+  | AST.LInt n ->
+    if n >= 0
+    then with_cbor_literal_int mk_int64 elim_int64 cbor_major_type_uint64 (U64.uint_to_t n) 
+    else with_cbor_literal_int mk_int64 elim_int64 cbor_major_type_neg_int64 (U64.uint_to_t ((-1) - n))
+  | AST.LSimple n ->
+    with_cbor_literal_simple mk_simple elim_simple (U8.uint_to_t n)
