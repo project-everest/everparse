@@ -106,3 +106,32 @@ fn impl_ext
   f1 c
 }
 ```
+
+inline_for_extraction
+let with_cbor_literal_cont_t
+  (#t: Type0)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (k: cbor)
+  (pre: slprop)
+  (t' : Type0)
+  (post: (t' -> slprop))
+=
+    (pk: perm) ->
+    (ck: t) ->
+    stt t'
+      (vmatch pk ck k ** pre)
+      (fun res -> vmatch pk ck k ** post res)
+
+inline_for_extraction
+let with_cbor_literal_t
+  (#t: Type0)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (k: cbor)
+=
+  (pre: slprop) ->
+  (t' : Type0) ->
+  (post: (t' -> slprop)) ->
+  (cont: (with_cbor_literal_cont_t vmatch k pre t' post)) ->
+  stt t'
+    pre
+    (fun res -> post res)
