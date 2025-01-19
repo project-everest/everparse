@@ -140,6 +140,11 @@ jobs:
       - name: Prepare
         # opam install --deps-only FStar/fstar.opam
         # ^ relying on the fact that F* dependencies are already installed
+        if: false
+        # Disabling this, I get
+        # Error:  Package karamel has no version opam.
+        # but karamel.opam should refer to the file? This also did not
+        # work with karamel/karamel.opam (without cd'ing).
         shell: C:\cygwin64\bin\bash.exe --login '{0}'
         run: |
           cd $GITHUB_WORKSPACE && eval $(opam env) && cd karamel && sed -i '/"fstar"/d' karamel.opam && opam install --deps-only karamel.opam && opam install hex re sexplib && echo
