@@ -1,4 +1,4 @@
-module CDDL.Pulse.AST
+module CDDL.Pulse.AST.Validate
 include CDDL.Pulse.Misc
 include CDDL.Pulse.MapGroup
 include CDDL.Pulse.ArrayGroup
