@@ -9,6 +9,7 @@ module U8 = FStar.UInt8
 module U32 = FStar.UInt32
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
+module U64 = FStar.UInt64
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
@@ -46,6 +47,54 @@ fn impl_neg_int
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
+fn impl_uint_range
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_major_type: get_major_type_t vmatch)
+    (cbor_destr_int64: read_uint64_t vmatch)
+    (lo hi: U64.t)
+: impl_typ u#0 #ty vmatch #None (t_int_range (U64.v lo) (U64.v hi))
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+    let test = impl_uint cbor_get_major_type c;
+    if (test) {
+      let i = cbor_destr_int64 c;
+      (U64.lte lo i && U64.lte i hi)
+    } else {
+      false
+    }
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_neg_int_range
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_major_type: get_major_type_t vmatch)
+    (cbor_destr_int64: read_uint64_t vmatch)
+    (lo hi: U64.t)
+: impl_typ u#0 #ty vmatch #None (t_int_range ((-1) - U64.v lo) ((-1) - U64.v hi))
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+    let test = impl_neg_int cbor_get_major_type c;
+    if (test) {
+      let i = cbor_destr_int64 c;
+      (U64.lte hi i && U64.lte i lo)
+    } else {
+      false
+    }
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
 fn impl_always_false
     (#ty: Type u#0)
     (vmatch: perm -> ty -> cbor -> slprop)
@@ -58,8 +107,6 @@ fn impl_always_false
   false
 }
 ```
-
-module U64 = FStar.UInt64
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
