@@ -872,11 +872,9 @@ let rec elab_map_group_sem_incr
 let rec spec_map_group_footprint
   (env: sem_env)
   (g: elab_map_group)
-: Pure (option (Ghost.erased Spec.typ))
+: Pure (Ghost.erased Spec.typ)
     (requires bounded_elab_map_group env.se_bound g)
-    (ensures fun res -> match res with
-    | None -> True
-    | Some ty ->
+    (ensures fun  ty ->
       let s = elab_map_group_sem env g in
       Spec.map_group_footprint s ty /\
       Spec.map_group_is_det s
@@ -884,19 +882,18 @@ let rec spec_map_group_footprint
 = match g with
   | MGMatch cut key value
   -> Spec.map_group_footprint_match_item_for cut (eval_literal key) (typ_sem env value);
-    Some (Ghost.hide (Spec.t_literal (eval_literal key)))
+    (Ghost.hide (Spec.t_literal (eval_literal key)))
   | MGTable key key_except _ // TODO: extend to GOneOrMore
-  -> Some (Ghost.hide (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except))))
+  -> (Ghost.hide (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except))))
   | MGChoice g1 g2
   | MGConcat g1 g2 ->
-    begin match spec_map_group_footprint env g1, spec_map_group_footprint env g2 with
-    | Some ty1, Some ty2 -> Some (Ghost.hide (Ghost.reveal ty1 `Spec.t_choice` Ghost.reveal ty2))
-    | _ -> None
-    end
+    let ty1 = spec_map_group_footprint env g1 in
+    let ty2 = spec_map_group_footprint env g2 in
+    (Ghost.hide (Ghost.reveal ty1 `Spec.t_choice` Ghost.reveal ty2))
   | MGNop
-  | MGAlwaysFalse -> Some (Ghost.hide Spec.t_always_false)
+  | MGAlwaysFalse -> (Ghost.hide Spec.t_always_false)
   | MGCut key
-  | MGMatchWithCut key _ -> Some (Ghost.hide (typ_sem env key))
+  | MGMatchWithCut key _ -> (Ghost.hide (typ_sem env key))
 
 #pop-options
 
@@ -906,8 +903,7 @@ let rec spec_map_group_footprint_incr
 : Lemma
   (requires
     sem_env_included env env' /\
-    bounded_elab_map_group env.se_bound g /\
-    Some? (spec_map_group_footprint env g)
+    bounded_elab_map_group env.se_bound g
   )
   (ensures
     bounded_elab_map_group env'.se_bound g /\
@@ -1607,9 +1603,9 @@ and spec_wf_parse_map_group
     spec_wf_parse_map_group env g1 s1 /\
     spec_wf_parse_map_group env g2 s2 /\
     (
-      match spec_map_group_footprint env g1, spec_map_group_footprint env g2 with
-      | Some fp1, Some fp2 -> Spec.typ_disjoint (Ghost.reveal fp1) (Ghost.reveal fp2)
-      | _ -> False
+      let fp1 = spec_map_group_footprint env g1 in
+      let fp2 = spec_map_group_footprint env g2 in
+      Spec.typ_disjoint (Ghost.reveal fp1) (Ghost.reveal fp2)
     )
 | WfMZeroOrOne g s ->
     spec_wf_parse_map_group env g s /\
@@ -1787,30 +1783,6 @@ and spec_wf_parse_map_group_incr
   | WfMZeroOrMore key _ value s_key s_value ->
     spec_wf_typ_incr env env' key s_key;
     spec_wf_typ_incr env env' value s_value
-
-let rec bounded_wf_parse_map_group_det
-  (env: sem_env)
-  (g: elab_map_group)
-  (wf: ast0_wf_parse_map_group g)
-: Lemma
-  (requires bounded_wf_parse_map_group env.se_bound g wf)
-  (ensures
-    Some? (spec_map_group_footprint env g)
-  )
-  (decreases wf)
-  [SMTPat (bounded_wf_parse_map_group env.se_bound g wf)]
-= match wf with
-  | WfMChoice g1' s1 g2' s2 ->
-    bounded_wf_parse_map_group_det env g1' s1;
-    bounded_wf_parse_map_group_det env g2' s2
-  | WfMConcat g1 s1 g2 s2 ->
-    bounded_wf_parse_map_group_det env g1 s1;
-    bounded_wf_parse_map_group_det env g2 s2
-  | WfMZeroOrOne g s ->
-    bounded_wf_parse_map_group_det env g s
-  | WfMLiteral _ _ _ _
-  | WfMZeroOrMore _ _ _ _ _
-  -> ()
 
 [@@  sem_attr]
 inline_for_extraction
@@ -2898,7 +2870,7 @@ and spec_of_wf_map_group
   (env: spec_env tp_sem tp_tgt)
   (#t: elab_map_group)
   (wf: ast0_wf_parse_map_group t { spec_wf_parse_map_group tp_sem t wf })
-: GTot (Spec.mg_spec (elab_map_group_sem tp_sem t) (Some?.v (spec_map_group_footprint tp_sem t)) ((target_type_sem tp_tgt (target_type_of_wf_map_group wf))) true)
+: GTot (Spec.mg_spec (elab_map_group_sem tp_sem t) (spec_map_group_footprint tp_sem t) ((target_type_sem tp_tgt (target_type_of_wf_map_group wf))) true)
   (decreases wf)
 = match wf with
   | WfMChoice _ s1 _ s2 ->

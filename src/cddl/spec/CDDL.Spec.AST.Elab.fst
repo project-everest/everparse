@@ -1556,9 +1556,8 @@ let map_group_footprint'_postcond
         bounded_elab_map_group env.se_bound g /\
         typ_bounded env.se_bound t /\
         typ_bounded env.se_bound t_except /\
-        begin match spec_map_group_footprint env g with
-        | Some t' -> Spec.typ_included t' (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except))
-        | None -> False
+        begin let t' = spec_map_group_footprint env g in
+        Spec.typ_included t' (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except))
         end
       | RFailure _ -> False
       | _ -> True
@@ -1575,7 +1574,7 @@ let map_group_footprint'_postcond_intro_success
       bounded_elab_map_group env.se_bound g /\
       typ_bounded env.se_bound t /\
       typ_bounded env.se_bound t_except /\
-      spec_map_group_footprint env g == Some t' /\
+      spec_map_group_footprint env g == t' /\
       Spec.typ_included t' (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except))
   ))
   (ensures (
@@ -1602,33 +1601,25 @@ let spec_map_group_footprint_choice_or_concat
   (g1 g2 g: elab_map_group)
   (sq1: squash (bounded_elab_map_group env.se_bound g1))
   (sq2: squash (bounded_elab_map_group env.se_bound g2))
-  (sq3: squash (Some? (spec_map_group_footprint env g1)))
-  (sq4: squash (Some? (spec_map_group_footprint env g2)))
   (sq': squash (g == MGChoice g1 g2 \/ g == MGConcat g1 g2))
 : Lemma
   (ensures (
     bounded_elab_map_group env.se_bound g1 /\
     bounded_elab_map_group env.se_bound g2 /\
-    Some? (spec_map_group_footprint env g1) /\
-    Some? (spec_map_group_footprint env g2) /\
     bounded_elab_map_group env.se_bound g /\
-    spec_map_group_footprint env g == Some (Ghost.hide (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2)))
+    spec_map_group_footprint env g == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.t_choice` (spec_map_group_footprint env g2)))
   ))
 = assert (
     bounded_elab_map_group env.se_bound g1 /\
     bounded_elab_map_group env.se_bound g2 /\
-    Some? (spec_map_group_footprint env g1) /\
-    Some? (spec_map_group_footprint env g2) /\
     bounded_elab_map_group env.se_bound (MGChoice g1 g2) /\
-    spec_map_group_footprint env (MGChoice g1 g2) == Some (Ghost.hide (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2)))
+    spec_map_group_footprint env (MGChoice g1 g2) == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.t_choice` (spec_map_group_footprint env g2)))
   );
  assert (
     bounded_elab_map_group env.se_bound g1 /\
     bounded_elab_map_group env.se_bound g2 /\
-    Some? (spec_map_group_footprint env g1) /\
-    Some? (spec_map_group_footprint env g2) /\
     bounded_elab_map_group env.se_bound (MGChoice g1 g2) /\
-    spec_map_group_footprint env (MGConcat g1 g2) == Some (Ghost.hide (Some?.v (spec_map_group_footprint env g1) `Spec.t_choice` Some?.v (spec_map_group_footprint env g2)))
+    spec_map_group_footprint env (MGConcat g1 g2) == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.t_choice` (spec_map_group_footprint env g2)))
   )
 
 let typ_included_andp_notp_equiv
@@ -1687,9 +1678,9 @@ let rec map_group_footprint'
       | RSuccess te2 ->
         let t2 = fst te2 in
         let t2_except = snd te2 in
-        spec_map_group_footprint_choice_or_concat env.e_sem_env g1 g2 g sq1 sq2 () () ();
-        let s1 = Some?.v (spec_map_group_footprint env.e_sem_env g1) in
-        let s2 = Some?.v (spec_map_group_footprint env.e_sem_env g2) in
+        spec_map_group_footprint_choice_or_concat env.e_sem_env g1 g2 g sq1 sq2 ();
+        let s1 = (spec_map_group_footprint env.e_sem_env g1) in
+        let s2 = (spec_map_group_footprint env.e_sem_env g2) in
         let u1 = typ_sub_underapprox fuel env t1_except t2 in
         begin match u1 with
         | RSuccess d1 ->
@@ -1720,7 +1711,7 @@ let rec map_group_footprint'
               (typ_sem env.e_sem_env t' `Util.andp` Util.notp (typ_sem env.e_sem_env d'))
             );
             assert (Spec.typ_included
-              (Some?.v (spec_map_group_footprint env.e_sem_env g))
+              ((spec_map_group_footprint env.e_sem_env g))
               (typ_sem env.e_sem_env t' `Util.andp` Util.notp (typ_sem env.e_sem_env d'))
             );
             map_group_footprint'_postcond_intro_success env.e_sem_env g t' d' (Spec.t_choice s1 s2);
@@ -1749,12 +1740,10 @@ let map_group_footprint_postcond
         bounded_elab_map_group env.se_bound g /\
         typ_bounded env.se_bound t /\
         typ_bounded env.se_bound t_except /\
-        begin match spec_map_group_footprint env g with
-        | Some t' ->
+        begin let t' = spec_map_group_footprint env g in
           Spec.typ_included t' (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except)) /\
           Spec.map_group_footprint (elab_map_group_sem env g) t' /\
           Spec.map_group_footprint (elab_map_group_sem env g) (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except))
-        | None -> False
         end
       | RFailure _ -> False
       | _ -> True
@@ -2335,9 +2324,9 @@ let rec map_group_choice_compatible_no_cut
     else begin
       Spec.map_group_choice_compatible_no_cut_concat_left
         (elab_map_group_sem env.e_sem_env g1l)
-        (Some?.v (spec_map_group_footprint env.e_sem_env g1l))
+        ((spec_map_group_footprint env.e_sem_env g1l))
         (elab_map_group_sem env.e_sem_env g1r)
-        (Some?.v (spec_map_group_footprint env.e_sem_env g1r))
+        ((spec_map_group_footprint env.e_sem_env g1r))
         (elab_map_group_sem env.e_sem_env g2);
       RSuccess ()
     end
@@ -2422,9 +2411,9 @@ let rec map_group_choice_compatible'
         | RSuccess _ ->
           Spec.map_group_choice_compatible_concat_left
             (elab_map_group_sem env.e_sem_env g1l)
-            (Some?.v (spec_map_group_footprint env.e_sem_env g1l))
+            ((spec_map_group_footprint env.e_sem_env g1l))
             (elab_map_group_sem env.e_sem_env g1r)
-            (Some?.v (spec_map_group_footprint env.e_sem_env g1r))
+            ((spec_map_group_footprint env.e_sem_env g1r))
             (elab_map_group_sem env.e_sem_env g2);
           (| RSuccess (), () |)
         | ROutOfFuel -> (| ROutOfFuel, () |)
@@ -2438,9 +2427,9 @@ let rec map_group_choice_compatible'
           else begin
             Spec.map_group_choice_compatible_concat_left
               (elab_map_group_sem env.e_sem_env g1l)
-              (Some?.v (spec_map_group_footprint env.e_sem_env g1l))
+              ((spec_map_group_footprint env.e_sem_env g1l))
               (elab_map_group_sem env.e_sem_env g1r)
-              (Some?.v (spec_map_group_footprint env.e_sem_env g1r))
+              ((spec_map_group_footprint env.e_sem_env g1r))
               (elab_map_group_sem env.e_sem_env g2);
             (| RSuccess (), () |)
           end
@@ -2470,8 +2459,8 @@ let rec map_group_choice_compatible'
                   (typ_sem env.e_sem_env value)
                   (elab_map_group_sem env.e_sem_env g2l)
                   (elab_map_group_sem env.e_sem_env g2r)
-                  (Some?.v (spec_map_group_footprint env.e_sem_env g2l))
-                  (Some?.v (spec_map_group_footprint env.e_sem_env g2r));
+                  ((spec_map_group_footprint env.e_sem_env g2l))
+                  ((spec_map_group_footprint env.e_sem_env g2r));
                 (| RSuccess (), () |)
               end
             | WfMZeroOrOne g s ->
