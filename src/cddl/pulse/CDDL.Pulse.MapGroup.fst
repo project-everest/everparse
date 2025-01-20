@@ -280,6 +280,52 @@ fn impl_map_group_choice
 }
 ```
 
+inline_for_extraction
+```pulse
+fn impl_map_group_ext
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#g1: Ghost.erased map_group)
+  (#f1: Ghost.erased typ)
+  (impl1: impl_map_group_t vmatch g1 f1)
+  (g2: Ghost.erased map_group)
+  (f2: Ghost.erased typ)
+  (sq: squash (
+    map_group_footprint g1 f1 /\
+    g2 == g1 /\
+    typ_included f1 f2
+  ))
+: impl_map_group_t #_ vmatch g2 f2
+= (c: _)
+  (#p: _)
+  (#v: _)
+  (v1: _)
+  (v2: _)
+  (pi: _)
+  (#i: _)
+{
+  impl1 c v1 v2 pi
+}
+```
+
+inline_for_extraction
+let impl_map_group_zero_or_one
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#g1: Ghost.erased map_group)
+  (#f1: Ghost.erased typ)
+  (w1: impl_map_group_t vmatch g1 f1)
+  (prf: squash (
+    map_group_footprint g1 f1
+  ))
+: impl_map_group_t #_ vmatch (map_group_zero_or_one g1) f1
+=
+    (impl_map_group_choice
+      w1
+      (impl_map_group_nop ())
+      ()
+    )
+
 let impl_map_group_match_item_for_body_post
   (#t: Type0)
   (vmatch: perm -> t -> cbor -> slprop)
@@ -829,34 +875,6 @@ fn impl_typ_andp
   } else {
     false
   }
-}
-```
-
-inline_for_extraction
-```pulse
-fn impl_map_group_ext
-  (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
-  (#g1: Ghost.erased map_group)
-  (#f1: Ghost.erased typ)
-  (impl1: impl_map_group_t vmatch g1 f1)
-  (g2: Ghost.erased map_group)
-  (f2: Ghost.erased typ)
-  (sq: squash (
-    map_group_footprint g1 f1 /\
-    g2 == g1 /\
-    typ_included f1 f2
-  ))
-: impl_map_group_t #_ vmatch g2 f2
-= (c: _)
-  (#p: _)
-  (#v: _)
-  (v1: _)
-  (v2: _)
-  (pi: _)
-  (#i: _)
-{
-  impl1 c v1 v2 pi
 }
 ```
 

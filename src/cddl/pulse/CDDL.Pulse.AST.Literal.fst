@@ -322,7 +322,7 @@ fn with_cbor_literal_text_string
 [@@AST.sem_attr]
 let with_literal
   (#ty: Type0)
-  (vmatch: (perm -> ty -> cbor -> slprop))
+  (#vmatch: (perm -> ty -> cbor -> slprop))
   (mk_int64: mk_int64_t vmatch)
   (elim_int64: elim_int64_t vmatch)
   (mk_simple: mk_simple_t vmatch)
