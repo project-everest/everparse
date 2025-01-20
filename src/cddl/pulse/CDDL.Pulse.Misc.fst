@@ -333,3 +333,58 @@ fn impl_tagged_none
 }
 ```
 
+inline_for_extraction
+```pulse
+fn impl_det_cbor
+  (#ty #ty': Type u#0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch': perm -> ty' -> cbor -> slprop)
+  (cbor_get_major_type: get_major_type_t vmatch)
+  (cbor_destr_string: get_string_t vmatch)
+  (cbor_det_parse: cbor_det_parse_t vmatch')
+  (#t: Ghost.erased typ)
+  (f: impl_typ vmatch' t)
+: impl_typ u#0 #_ vmatch #None (bstr_cbor_det t)
+= (c: _)
+  (#p: _)
+  (#v: _)
+{
+  let test = impl_bytes cbor_get_major_type c;
+  if (test) {
+    let pl = cbor_destr_string c;
+    with pm pv . assert (pts_to pl #pm pv);
+    let read = cbor_det_parse pl;
+    match read {
+      None -> {
+        unfold (cbor_det_parse_post vmatch' pl pm pv None);
+        CBOR.Spec.API.Format.cbor_det_parse_none_equiv pv;
+        Trade.elim _ _;
+        false
+      }
+      Some r -> {
+        let res = fst r;
+        let rem = snd r;
+        unfold (cbor_det_parse_post vmatch' pl pm pv (Some r));
+        unfold (cbor_det_parse_post_some vmatch' pl pm pv res rem);
+        Trade.trans _ _ (vmatch p c v);
+        with pres vres . assert (vmatch' pres res vres);
+        with prem vrem . assert (pts_to rem #prem vrem);
+        CBOR.Spec.API.Format.cbor_det_serialize_parse' vres vrem;
+        S.pts_to_len rem;
+        if (S.len rem = 0sz) {
+          Seq.slice_length pv;
+          let tres = f res;
+          Trade.elim _ _;
+          tres
+        } else {
+          Trade.elim _ _;
+          false
+        }
+      }
+    }
+  } else {
+    false
+  }
+}
+```
+

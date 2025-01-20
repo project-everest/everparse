@@ -77,6 +77,15 @@ let cbor_det_serialize_parse'
   cbor_det_serialize_parse x;
   cbor_det_parse_prefix s (s `Seq.append` y)
 
+let cbor_det_parse_none_equiv
+  (v: Seq.seq U8.t)
+: Lemma
+  (None? (cbor_det_parse v) <==> ~ (exists v1 v2 . v == cbor_det_serialize v1 `Seq.append` v2))
+= Classical.forall_intro_2 cbor_det_serialize_parse';
+  match cbor_det_parse v with
+  | None -> ()
+  | Some (_, consumed) -> Seq.lemma_split v consumed
+
 let cbor_det_serialize_inj_strong
   (x1 x2: cbor)
   (y1 y2: Seq.seq U8.t)
@@ -90,6 +99,15 @@ let cbor_det_serialize_inj_strong
     y1
     (cbor_det_serialize x2)
     y2
+
+let cbor_det_serialize_inj_strong'
+  (x1: cbor)
+  (y1: Seq.seq U8.t)
+  (x2: cbor)
+  (y2: Seq.seq U8.t)
+: Lemma
+  (cbor_det_serialize x1 `Seq.append` y1 == cbor_det_serialize x2 `Seq.append` y2 ==> (x1 == x2 /\ y1 == y2))
+= Classical.move_requires (cbor_det_serialize_inj_strong x1 x2 y1) y2
 
 let cbor_det_serialize_inj
   (x1 x2: cbor)
