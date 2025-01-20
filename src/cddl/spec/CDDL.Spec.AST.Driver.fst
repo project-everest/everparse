@@ -91,11 +91,10 @@ let rec topological_sort'
       end
     end
 
-let prelude_ast_env : ast_env =
+let prelude_ast_env : wf_ast_env =
   let env = empty_ast_env in
-  let env = ast_env_extend_typ_with env "bool" (TElem EBool) (WfTElem EBool) in
-  assert_norm (ast_env_extend_typ_with_pre env "everparse-no-match" (TElem EAlwaysFalse) (WfTElem EAlwaysFalse)); // FIXME: WHY WHY WHY?
-  let env = ast_env_extend_typ_with env "everparse-no-match" (TElem EAlwaysFalse) (WfTElem EAlwaysFalse) in
+  let env = wf_ast_env_extend_typ_with env "bool" (TElem EBool) (WfTElem EBool) in
+  let env = wf_ast_env_extend_typ_with env "everparse-no-match" (TElem EAlwaysFalse) (WfTElem EAlwaysFalse) in
   env
 
 let topological_sort
@@ -105,10 +104,10 @@ let topological_sort
 
 let rec elab_list'
   (fuel: nat)
-  (env: ast_env)
+  (env: wf_ast_env)
   (accu: list (string & decl))
   (l: list (string & decl))
-: ML (result ast_env)
+: ML (result wf_ast_env)
 = match l with
   | [] ->
     if Nil? accu
@@ -136,7 +135,7 @@ let rec elab_list'
         then begin
           print_endline "Extending the environment";
           group_bounded_incr (env.e_sem_env.se_bound) (extend_name_env env.e_sem_env.se_bound new_name NGroup) t;
-          let env' = ast_env_extend_gen env new_name NGroup t in
+          let env' = wf_ast_env_extend_group env new_name t in
           elab_list' fuel env' [] (List.Tot.rev_acc accu q)
         end else begin
           print_endline "Group uses undefined types/groups. Choosing another one";
@@ -148,7 +147,7 @@ let rec elab_list'
         print_endline (typ_to_string t);
         if typ_bounded (env.e_sem_env.se_bound) t
         then
-          let rec aux (fuel': nat) : ML (result ast_env) =
+          let rec aux (fuel': nat) : ML (result wf_ast_env) =
             print_endline "Rewritten as:";
             print_endline (typ_to_string (fst (rewrite_typ fuel' t)));
             let res = mk_wf_typ_bounded fuel' env t in
@@ -165,8 +164,7 @@ let rec elab_list'
               print_endline "Success! Extending the environment";
               assert (bounded_wf_typ (env.e_sem_env.se_bound) t t_wf);
               bounded_wf_typ_incr (env.e_sem_env.se_bound) (extend_name_env env.e_sem_env.se_bound new_name NType) t t_wf;
-              assert (ast_env_extend_typ_with_pre env new_name t t_wf); // FIXME: WHY WHY WHY?
-              let env' = ast_env_extend_typ_with env new_name t t_wf in
+              let env' = wf_ast_env_extend_typ_with env new_name t t_wf in
               elab_list' fuel' env' [] (List.Tot.rev_acc accu q)
           in
           aux fuel
@@ -179,5 +177,5 @@ let rec elab_list'
 
 let elab_list
   (l: list (string & decl))
-: ML (result ast_env)
+: ML (result wf_ast_env)
 = elab_list' 1 prelude_ast_env [] l

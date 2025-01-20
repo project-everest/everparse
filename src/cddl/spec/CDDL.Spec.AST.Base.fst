@@ -1844,7 +1844,7 @@ noeq
 type wf_ast_env_elem0 (s: name_env_elem) (x: ast_env_elem0 s) : Type0 =
 {
   wf_typ: option (_: squash (s == NType) & ast0_wf_typ x);
-  wf_array: option (_: squash (s == NGroup) & ast0_wf_array_group x);
+//  wf_array: option (_: squash (s == NGroup) & ast0_wf_array_group x);
   // TODO: wf_map
 }
 
@@ -1853,10 +1853,11 @@ let wf_ast_env_elem_prop (e_sem_env: sem_env) (s: name_env_elem) (x: ast_env_ele
   | None -> True
   | Some (| _, y |) -> spec_wf_typ e_sem_env true x y
   end
-  /\ begin match y.wf_array with
+  /\ True (* begin match y.wf_array with
   | None -> True
   | Some (| _, y |) -> spec_wf_array_group e_sem_env x y
   end
+*)
   // TODO: wf_map
 
 let wf_ast_env_elem_prop_included (e1 e2: sem_env) (s: name_env_elem) (x: ast_env_elem0 s) (y: (wf_ast_env_elem0 s x)) : Lemma
@@ -1900,7 +1901,7 @@ let ast_env_included
 = sem_env_included e1.e_sem_env e2.e_sem_env /\
   (forall (i: name e1.e_sem_env.se_bound) . e2.e_env i == e1.e_env i) /\
   (forall (i: name e1.e_sem_env.se_bound) . Some? (e1.e_wf i).wf_typ ==> ((e1.e_wf i).wf_typ == (e2.e_wf i).wf_typ)) /\
-  (forall (i: name e1.e_sem_env.se_bound) . Some? (e1.e_wf i).wf_array ==> ((e1.e_wf i).wf_array == (e2.e_wf i).wf_array))
+  True // (forall (i: name e1.e_sem_env.se_bound) . Some? (e1.e_wf i).wf_array ==> ((e1.e_wf i).wf_array == (e2.e_wf i).wf_array))
 // TODO: wf_map
 
 let ast_env_included_trans (s1 s2 s3: ast_env) : Lemma
@@ -1926,7 +1927,7 @@ let ast_env_extend_gen
       ast_env_included e e' /\
       e'.e_env new_name == x /\
       None? (e'.e_wf new_name).wf_typ /\
-      None? (e'.e_wf new_name).wf_array
+      True // None? (e'.e_wf new_name).wf_array
     )
 = let s = ast_env_elem0_sem e.e_sem_env x in
   let se' = sem_env_extend_gen e.e_sem_env new_name kind s in
@@ -1939,7 +1940,7 @@ let ast_env_extend_gen
     );
     e_wf = (fun (i: name se'.se_bound) ->
       if i = new_name
-      then { wf_typ = None; wf_array = None }
+      then { wf_typ = None; (* wf_array = None *) }
       else e.e_wf i
     );
   }
@@ -1968,7 +1969,7 @@ let ast_env_set_wf
 : Pure ast_env
     (requires
       (Some? (e.e_wf new_name).wf_typ ==> (e.e_wf new_name).wf_typ == wf.wf_typ) /\
-      (Some? (e.e_wf new_name).wf_array ==> (e.e_wf new_name).wf_array == wf.wf_array)
+True //      (Some? (e.e_wf new_name).wf_array ==> (e.e_wf new_name).wf_array == wf.wf_array)
     )
     (ensures fun e' ->
       e'.e_sem_env == e.e_sem_env /\
@@ -2010,24 +2011,12 @@ let ast_env_extend_typ_with
       e'.e_sem_env.se_bound new_name == Some NType /\
       t == e'.e_env new_name
   })
-= ast_env_set_wf (ast_env_extend_gen e new_name NType t) new_name { wf_typ = Some (| (), t_wf |) ; wf_array = None }
+= ast_env_set_wf (ast_env_extend_gen e new_name NType t) new_name { wf_typ = Some (| (), t_wf |) ; (* wf_array = None *) }
 
-(*
-let wf_ast_env = (e: ast_env { forall i . Some? (e.e_wf i) })
+let wf_ast_env = (e: ast_env { forall (i: typ_name e.e_sem_env.se_bound) . Some? (e.e_wf i).wf_typ })
 
 [@@ sem_attr]
 let empty_wf_ast_env : wf_ast_env = empty_ast_env
-
-let bounded_wf_ast_env_elem
-  (env: name_env)
-  (#s: name_env_elem)
-  (x: ast_env_elem0 s)
-  (y: wf_ast_env_elem0 s x)
-: GTot prop
-= match s with
-  | NType -> bounded_wf_typ env x y
-  | -> bounded_wf_array_group env x y
-  | -> bounded_wf_parse_map_group env x y
 
 let wf_ast_env_extend_typ_with_pre
   (e: wf_ast_env)
@@ -2039,7 +2028,7 @@ let wf_ast_env_extend_typ_with_pre
     e.e_sem_env.se_bound new_name == None /\
     typ_bounded e.e_sem_env.se_bound t /\
     bounded_wf_typ (extend_name_env e.e_sem_env.se_bound new_name NType) t t_wf /\
-    spec_wf_typ (ast_env_extend_gen e new_name NType t).e_sem_env t t_wf
+    spec_wf_typ (ast_env_extend_gen e new_name NType t).e_sem_env true t t_wf
 
 [@@sem_attr]
 let wf_ast_env_extend_typ_with
@@ -2051,10 +2040,11 @@ let wf_ast_env_extend_typ_with
   })
 : Tot (e': wf_ast_env {
       ast_env_included e e' /\
+      e'.e_sem_env.se_bound == extend_name_env e.e_sem_env.se_bound new_name NType /\
       e'.e_sem_env.se_bound new_name == Some NType /\
-      t == e'.e_env new_name
+      (e'.e_env new_name <: typ) == t
   })
-= ast_env_set_wf (ast_env_extend_gen e new_name NType t) new_name (Some t_wf)
+= ast_env_set_wf (ast_env_extend_gen e new_name NType t) new_name { wf_typ = (Some (| (), t_wf |)) }
 
 let wf_ast_env_extend_typ_with_weak_pre
   (e: wf_ast_env)
@@ -2066,7 +2056,7 @@ let wf_ast_env_extend_typ_with_weak_pre
     e.e_sem_env.se_bound new_name == None /\
     typ_bounded e.e_sem_env.se_bound t /\
     bounded_wf_typ e.e_sem_env.se_bound t t_wf /\
-    spec_wf_typ e.e_sem_env t t_wf
+    spec_wf_typ e.e_sem_env true t t_wf
 
 let wf_ast_env_extend_typ_with_weak_pre_correct
   (e: wf_ast_env)
@@ -2089,11 +2079,26 @@ let wf_ast_env_extend_typ_with_weak
   })
 : Tot (e': wf_ast_env {
       ast_env_included e e' /\
+      e'.e_sem_env.se_bound == extend_name_env e.e_sem_env.se_bound new_name NType /\
       e'.e_sem_env.se_bound new_name == Some NType /\
-      t == e'.e_env new_name
+      (e'.e_env new_name <: typ) == t
   })
 = wf_ast_env_extend_typ_with e new_name t t_wf
-*)
+
+[@@sem_attr]
+let wf_ast_env_extend_group
+  (e: wf_ast_env)
+  (new_name: string)
+  (t: group {
+    e.e_sem_env.se_bound new_name == None /\
+    group_bounded e.e_sem_env.se_bound t
+  })
+: Tot (e': wf_ast_env {
+      ast_env_included e e' /\
+      e'.e_sem_env.se_bound new_name == Some NGroup /\
+      (e'.e_env new_name <: group) == t
+  })
+= ast_env_extend_gen e new_name NGroup t
 
 noeq
 type target_elem_type =
@@ -2702,13 +2707,13 @@ let target_ast_env_extend_typ
 noeq
 type spec_env (tp_sem: sem_env) (tp_tgt: target_spec_env (tp_sem.se_bound)) = {
   tp_spec_typ: (n: typ_name tp_sem.se_bound) -> GTot (Spec.spec (sem_of_type_sem (tp_sem.se_env n)) (tp_tgt n) true);
-  tp_spec_array_group: (n: group_name tp_sem.se_bound) -> GTot (Spec.ag_spec (fst (Ghost.reveal (tp_sem.se_env n) <: (Spec.array_group None & Spec.map_group))) (tp_tgt n) true); // FIXME: may not be always defined
+//  tp_spec_array_group: (n: group_name tp_sem.se_bound) -> GTot (Spec.ag_spec (fst (Ghost.reveal (tp_sem.se_env n) <: (Spec.array_group None & Spec.map_group))) (tp_tgt n) true); // FIXME: may not be always defined
 }
 
 [@@"opaque_to_smt"] irreducible
 let empty_spec_env (e: target_spec_env empty_name_env) : spec_env empty_sem_env e = {
   tp_spec_typ = (fun _ -> false_elim ());
-  tp_spec_array_group = (fun _ -> false_elim ());
+//  tp_spec_array_group = (fun _ -> false_elim ());
 }
 
 let spec_of_elem_typ
@@ -2911,7 +2916,7 @@ and spec_of_wf_map_group
 
 #pop-options
 
-(*
+#restart-solver
 let spec_env_extend_typ
   (e: wf_ast_env)
   (new_name: string)
@@ -2925,8 +2930,11 @@ let spec_env_extend_typ
   (bij: Ghost.erased (Spec.bijection (target_type_sem wft (target_type_of_wf_typ t_wf)) t'))
 : Tot (spec_env (wf_ast_env_extend_typ_with_weak e new_name t t_wf).e_sem_env (target_spec_env_extend e.e_sem_env.se_bound wft new_name NType t'))
 = let e' = (wf_ast_env_extend_typ_with_weak e new_name t t_wf) in
-  let wft' = target_spec_env_extend e.e_sem_env.se_bound wft new_name NType t' in
-  {
-    tp_spec_typ = (fun n -> if n = new_name then coerce_eq #_ #(Spec.spec (e'.e_sem_env.se_env n) (wft' n) true) () (Spec.spec_bij (spec_of_wf_typ senv t_wf) bij) else (senv.tp_spec_typ n));
-    tp_spec_array_group = (fun n -> (senv.tp_spec_array_group n));
+  assert (e'.e_sem_env.se_bound == extend_name_env e.e_sem_env.se_bound new_name NType);
+  let wft' : target_spec_env e'.e_sem_env.se_bound = coerce_eq () (target_spec_env_extend e.e_sem_env.se_bound wft new_name NType t') in
+  let senv'  = {
+    tp_spec_typ = (fun (n: typ_name e'.e_sem_env.se_bound) -> if n = new_name then coerce_eq #_ #(Spec.spec (sem_of_type_sem (e'.e_sem_env.se_env n)) (wft' n) true) () (Spec.spec_bij (Spec.spec_ext (spec_of_wf_typ senv t_wf) (sem_of_type_sem (e'.e_sem_env.se_env n))) bij) else coerce_eq #_ #(Spec.spec (sem_of_type_sem (e'.e_sem_env.se_env n)) (wft' n) true) () (senv.tp_spec_typ n));
+    // tp_spec_array_group = (fun n -> (senv.tp_spec_array_group n));
   }
+  in
+  senv'

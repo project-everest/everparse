@@ -3479,19 +3479,6 @@ let mk_wf_typ_fuel_for_intro
 : Tot (mk_wf_typ_fuel_for e t)
 = fuel
 
-(*
-unfold
-let wf_ast_env_extend_typ_with_weak_pre'
-  (e: wf_ast_env)
-  (new_name: string)
-  (t: typ)
-  (t_wf: ast0_wf_typ t)
-: GTot prop
-=
-    e.e_sem_env.se_bound new_name == None /\
-    typ_bounded e.e_sem_env.se_bound t /\
-    spec_wf_typ e.e_sem_env t t_wf
-
 [@@sem_attr]
 let compute_wf_typ
   (e: wf_ast_env)
@@ -3503,7 +3490,7 @@ let compute_wf_typ
     wf_ast_env_extend_typ_with_weak_pre e new_name t t_wf
   })
 = let t_wf = RSuccess?._0 (mk_wf_typ' fuel e t) in
-  assert (wf_ast_env_extend_typ_with_weak_pre' e new_name t t_wf);
+  assert (wf_ast_env_extend_typ_with_weak_pre e new_name t t_wf);
   t_wf
 
 [@@sem_attr]
@@ -3519,6 +3506,5 @@ let wf_ast_env_extend_typ
       t == e'.e_env new_name
   })
 = let t_wf = RSuccess?._0 (mk_wf_typ' fuel e t) in
-  assert (wf_ast_env_extend_typ_with_weak_pre' e new_name t t_wf);
+  assert (wf_ast_env_extend_typ_with_weak_pre e new_name t t_wf);
   wf_ast_env_extend_typ_with_weak e new_name t t_wf
-*)
