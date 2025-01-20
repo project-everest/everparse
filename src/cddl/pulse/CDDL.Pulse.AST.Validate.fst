@@ -2,6 +2,7 @@ module CDDL.Pulse.AST.Validate
 include CDDL.Pulse.Misc
 include CDDL.Pulse.MapGroup
 include CDDL.Pulse.ArrayGroup
+include CDDL.Pulse.AST.Base
 include CDDL.Pulse.AST.ElemType
 open Pulse.Lib.Pervasives
 module Trade = Pulse.Lib.Trade.Util
@@ -22,39 +23,6 @@ type validator_env
 = {
   v_sem_env: AST.sem_env;
   v_validator: ((n: AST.typ_name v_sem_env.se_bound) -> impl_typ vmatch (AST.sem_of_type_sem (v_sem_env.se_env n)));
-}
-
-[@@AST.sem_attr]
-noeq
-type cbor_impl
-  (#t #t2 #t_arr #t_map: Type0)
-  (vmatch: (perm -> t -> cbor -> slprop))
-  (vmatch2: (perm -> t2 -> (cbor & cbor) -> slprop))
-  (cbor_array_iterator_match: (perm -> t_arr -> list cbor -> slprop))
-  (cbor_map_iterator_match: (perm -> t_map -> list (cbor & cbor) -> slprop))
-= {
-  cbor_get_major_type: get_major_type_t vmatch;
-  cbor_destr_int64: read_uint64_t vmatch;
-  cbor_get_string: get_string_t vmatch;
-  cbor_destr_simple: read_simple_value_t vmatch;
-  cbor_get_tagged_tag: get_tagged_tag_t vmatch;
-  cbor_get_tagged_payload: get_tagged_payload_t vmatch;
-  cbor_det_parse: cbor_det_parse_t vmatch; // TODO: support mixtures where non-deterministic CBOR objects contain .det-cbor deterministically serialized CBOR objects
-  cbor_array_iterator_init: array_iterator_start_t vmatch cbor_array_iterator_match;
-  cbor_array_iterator_is_done: array_iterator_is_empty_t cbor_array_iterator_match;
-  cbor_array_iterator_next: array_iterator_next_t vmatch cbor_array_iterator_match;
-  cbor_get_map_length: get_map_length_t vmatch;
-  cbor_map_get: map_get_t vmatch;
-  cbor_mk_int64: mk_int64_t vmatch;
-  cbor_elim_int64: elim_int64_t vmatch;
-  cbor_mk_simple: mk_simple_t vmatch;
-  cbor_elim_simple: elim_simple_t vmatch;
-  cbor_mk_string: mk_string_t vmatch;
-  cbor_map_iterator_init: map_iterator_start_t vmatch cbor_map_iterator_match;
-  cbor_map_iterator_is_empty: map_iterator_is_empty_t cbor_map_iterator_match;
-  cbor_map_iterator_next: map_iterator_next_t vmatch2 cbor_map_iterator_match;
-  cbor_map_entry_key: map_entry_key_t vmatch2 vmatch;
-  cbor_map_entry_value: map_entry_value_t vmatch2 vmatch;
 }
 
 [@@AST.sem_attr]
