@@ -5,6 +5,7 @@ open Pulse.Lib.Pervasives
 module Trade = Pulse.Lib.Trade.Util
 open CBOR.Spec.API.Type
 open CBOR.Pulse.API.Base
+module Util = CBOR.Spec.Util
 
 module R = Pulse.Lib.Reference
 module U64 = FStar.UInt64
@@ -384,3 +385,361 @@ fn impl_map_group_match_item_for
   res
 }
 ```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_map_entry_cond
+  (#t: Type)
+  (vmatch2: perm -> t -> cbor & cbor -> slprop)
+  (f: ((cbor & cbor) -> bool))
+=
+  (x: t) ->
+  (#p: perm) ->
+  (#v: Ghost.erased (cbor & cbor)) ->
+  stt bool
+    (vmatch2 p x v)
+    (fun res -> vmatch2 p x v ** pure (res == f v))
+
+let impl_map_group_filter_invariant_prop
+  (f: ((cbor & cbor) -> bool))
+  (v1 v2: cbor_map)
+  (l: list (cbor & cbor))
+  (vconsumed_past vremaining_past v1_future v2_past v2_future: cbor_map)
+  (rem: U64.t)
+  (b: bool)
+: Tot prop
+= b == Cons? l /\
+  List.Tot.no_repeats_p (List.Tot.map fst l) /\
+  (forall k . cbor_map_get (cbor_map_union v1_future v2_future) k == List.Tot.assoc k l) /\
+  cbor_map_disjoint vconsumed_past vremaining_past /\
+  cbor_map_disjoint (cbor_map_union vconsumed_past vremaining_past) v1_future /\
+  v1 `cbor_map_equal` cbor_map_union (cbor_map_union vconsumed_past vremaining_past) v1_future /\
+  cbor_map_disjoint v2_past v2_future /\
+  v2 `cbor_map_equal` cbor_map_union v2_past v2_future /\
+  begin
+    let MapGroupDet vconsumed vremaining = apply_map_group_det (map_group_filter f) v1 in
+    let MapGroupDet vconsumed_future vremaining_future = apply_map_group_det (map_group_filter f) v1_future in
+    cbor_map_equal vconsumed (cbor_map_union vconsumed_past vconsumed_future) /\
+    cbor_map_equal vremaining (cbor_map_union vremaining_past vremaining_future) /\
+    U64.v rem == cbor_map_length vremaining_past + cbor_map_length v1_future
+  end
+
+let impl_map_group_filter_invariant_prop_intro
+  (f: ((cbor & cbor) -> bool))
+  (v1 v2: cbor_map)
+  (l: list (cbor & cbor))
+  (vconsumed_past vremaining_past v1_future v2_past v2_future: cbor_map)
+  (rem: U64.t)
+  (b: bool)
+  (sq1: option (squash (b == Cons? l)))
+  (sq2: option (squash (List.Tot.no_repeats_p (List.Tot.map fst l) /\
+    (forall k . cbor_map_get (cbor_map_union v1_future v2_future) k == List.Tot.assoc k l)
+  )))
+  (sq3: option (squash (cbor_map_disjoint vconsumed_past vremaining_past)))
+  (sq4: option (squash (cbor_map_disjoint (cbor_map_union vconsumed_past vremaining_past) v1_future)))
+  (sq5: option (squash (v1 `cbor_map_equal` cbor_map_union (cbor_map_union vconsumed_past vremaining_past) v1_future)))
+  (sq6: option (squash (cbor_map_disjoint v2_past v2_future)))
+  (sq7: option (squash (v2 `cbor_map_equal` cbor_map_union v2_past v2_future)))
+  (sq8: option (squash (
+    let MapGroupDet vconsumed vremaining = apply_map_group_det (map_group_filter f) v1 in
+    let MapGroupDet vconsumed_future vremaining_future = apply_map_group_det (map_group_filter f) v1_future in
+    cbor_map_equal vconsumed (cbor_map_union vconsumed_past vconsumed_future) /\
+    cbor_map_equal vremaining (cbor_map_union vremaining_past vremaining_future)
+  )))
+  (sq9: option (squash (
+    U64.v rem == cbor_map_length vremaining_past + cbor_map_length v1_future
+  )))
+: Lemma
+  ((Some? sq1 /\ Some? sq2 /\ Some? sq3 /\ Some? sq4 /\ Some? sq5 /\ Some? sq6 /\ Some? sq7 /\ Some? sq8 /\ Some? sq9) ==> impl_map_group_filter_invariant_prop f v1 v2 l vconsumed_past vremaining_past v1_future v2_past v2_future rem b)
+= ()
+
+module GR = Pulse.Lib.GhostReference
+  
+// [@@pulse_unfold]
+let impl_map_group_filter_invariant
+  (#t: Type0)
+  (#cbor_map_iterator_t: Type0)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (f: ((cbor & cbor) -> bool))
+  (c: t)
+  (p: perm)
+  (v: cbor)
+  (prem: R.ref U64.t)
+  (v1 v2: cbor_map)
+  (pj: R.ref cbor_map_iterator_t)
+  (pconsumed_past premaining_past p1_future p2_past p2_future: GR.ref cbor_map)
+  (b: bool)
+: slprop
+=
+  exists* pl l j vconsumed_past vremaining_past v1_future v2_past v2_future rem . (
+    pts_to pj j **
+    cbor_map_iterator_match pl j l **
+    Trade.trade
+      (cbor_map_iterator_match pl j l)
+      (vmatch p c v) **
+    GR.pts_to pconsumed_past vconsumed_past **
+    GR.pts_to premaining_past vremaining_past **
+    GR.pts_to p1_future v1_future **
+    GR.pts_to p2_past v2_past **
+    GR.pts_to p2_future v2_future **
+    R.pts_to prem rem **
+    pure (impl_map_group_filter_invariant_prop f v1 v2 l vconsumed_past vremaining_past v1_future v2_past v2_future rem b)
+  )
+
+let abc_c'ba
+  (a b c c': nat)
+: Lemma
+  (requires (
+    a == b + c /\
+    c' + b == a
+  ))
+  (ensures (
+    c == c'
+  ))
+= ()
+
+let cbor_map_of_list_uncons
+  (k0 v0: cbor)
+  (q: list (cbor & cbor))
+  (m: cbor_map)
+: Lemma
+  (requires (
+    let l = (k0, v0) :: q in
+    List.Tot.no_repeats_p (List.Tot.map fst l) /\
+    (forall k . cbor_map_get m k == List.Tot.assoc k l)
+  ))
+  (ensures (
+    let s = cbor_map_singleton k0 v0 in
+    cbor_map_included s m /\
+    begin let m' = cbor_map_sub m s in
+      cbor_map_disjoint s m' /\
+      cbor_map_union s m' == m /\
+      List.Tot.no_repeats_p (List.Tot.map fst q) /\
+      (forall k . cbor_map_get m' k == List.Tot.assoc k q)
+    end
+  ))
+= Classical.forall_intro (Util.list_assoc_no_repeats_mem q k0);
+  Util.list_memP_map_forall fst q;
+  ()
+
+inline_for_extraction
+let u64_sub
+  (a b: U64.t)
+: Pure U64.t
+  (requires U64.v a >= U64.v b)
+  (ensures fun res -> U64.v res == U64.v a - U64.v b)
+= U64.sub a b
+
+let cbor_map_sub_union_l
+  (a b s: cbor_map)
+: Lemma
+  (requires (cbor_map_included s a /\
+    cbor_map_disjoint a b
+  ))
+  (ensures (
+    cbor_map_included s (cbor_map_union a b) /\
+    cbor_map_sub (cbor_map_union a b) s `cbor_map_equal` cbor_map_union (cbor_map_sub a s) b
+  ))
+= ()
+
+let add_sub_r
+  (a b c: int)
+: Lemma
+  (a + (b - c) == (a + b) - c)
+= ()
+
+let add_sub_cancel
+  (a b c: int)
+: Lemma
+  ((a + c) + (b - c) == a + b)
+= ()
+
+#push-options "--z3rlimit 32 --split_queries always --fuel 8 --ifuel 6"
+
+#restart-solver
+```pulse
+ghost
+fn impl_map_group_filter_aux_skip
+  (f: ((cbor & cbor) -> bool))
+  (phi: typ)
+  (v1 v2: cbor_map)
+  (hd_k hd_v: cbor)
+  (tl: list (cbor & cbor))
+  (pconsumed_past premaining_past p1_future p2_past p2_future: GR.ref cbor_map)
+  (#vconsumed_past #vremaining_past #v1_future #v2_past #v2_future: cbor_map)
+  (prem: R.ref U64.t)
+  (#rem: U64.t)
+requires
+    (
+      GR.pts_to pconsumed_past vconsumed_past **
+      GR.pts_to premaining_past vremaining_past **
+      GR.pts_to p1_future v1_future **
+      GR.pts_to p2_past v2_past **
+      GR.pts_to p2_future v2_future **
+      R.pts_to prem rem **
+      pure (
+        map_group_footprint (map_group_filter f) phi /\
+        cbor_map_disjoint v1 v2 /\
+        cbor_map_disjoint_from_footprint v2 phi /\
+        impl_map_group_filter_invariant_prop f v1 v2 ((hd_k, hd_v) :: tl) vconsumed_past vremaining_past v1_future v2_past v2_future rem true /\
+        f (hd_k, hd_v) == true
+      )
+    )
+ensures
+    (exists* vconsumed_past' vremaining_past' v1_future' v2_past' v2_future' .
+      GR.pts_to pconsumed_past vconsumed_past' **
+      GR.pts_to premaining_past vremaining_past' **
+      GR.pts_to p1_future v1_future' **
+      GR.pts_to p2_past v2_past' **
+      GR.pts_to p2_future v2_future' **
+      R.pts_to prem rem **
+      pure (
+        impl_map_group_filter_invariant_prop f v1 v2 tl vconsumed_past' vremaining_past' v1_future' v2_past' v2_future' rem (Cons? tl)
+      )
+    )
+{
+  cbor_map_of_list_uncons hd_k hd_v tl (cbor_map_union v1_future v2_future);
+  map_group_footprint_elim (map_group_filter f) phi v1_future v2_future;
+  let s = (cbor_map_singleton hd_k hd_v);
+  cbor_map_length_singleton hd_k hd_v;
+  let chk = cbor_map_get v1_future hd_k;
+  match chk {
+    Some hd_v' -> {
+      assert (pure (hd_v' == hd_v));
+      let v1_future' = cbor_map_sub v1_future s;
+      map_group_footprint_elim (map_group_filter f) phi v1_future' v2_future;
+      cbor_map_length_disjoint_union s v1_future';
+      cbor_map_length_disjoint_union vremaining_past s;
+      let vremaining_past' = cbor_map_union vremaining_past s;
+      GR.op_Colon_Equals p1_future v1_future';
+      GR.op_Colon_Equals premaining_past vremaining_past';
+      add_sub_cancel (cbor_map_length vremaining_past) (cbor_map_length v1_future) 1;
+      impl_map_group_filter_invariant_prop_intro f v1 v2 tl vconsumed_past vremaining_past' v1_future' v2_past v2_future rem (Cons? tl) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ());
+      ()
+    }
+    None -> {
+      assert (pure (cbor_map_get v2_future hd_k == Some hd_v));
+      let v2_future' = cbor_map_sub v2_future s;
+      map_group_footprint_elim (map_group_filter f) phi v1_future v2_future';
+      let v2_past' = cbor_map_union v2_past s;
+      GR.op_Colon_Equals p2_future v2_future';
+      GR.op_Colon_Equals p2_past v2_past';
+      impl_map_group_filter_invariant_prop_intro f v1 v2 tl vconsumed_past vremaining_past v1_future v2_past' v2_future' rem (Cons? tl) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ());
+      ()
+    }
+  }
+}
+```
+
+#restart-solver
+inline_for_extraction
+```pulse
+fn impl_map_group_filter
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch2: perm -> t -> cbor & cbor -> slprop)
+  (#cbor_map_iterator_t: Type0)
+  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (cbor_map_iterator_init: map_iterator_start_t vmatch cbor_map_iterator_match)
+  (cbor_map_iterator_is_empty: map_iterator_is_empty_t cbor_map_iterator_match)
+  (cbor_map_iterator_next: map_iterator_next_t vmatch2 cbor_map_iterator_match)
+  (#f: Ghost.erased ((cbor & cbor) -> bool))
+  (implf: impl_map_entry_cond vmatch2 f)
+  (phi: Ghost.erased typ)
+  (sq: squash (map_group_footprint (map_group_filter f) phi))
+: impl_map_group_t #_ vmatch (map_group_filter f) phi
+= (c: _)
+  (#p: _)
+  (#v: _)
+  (v1: _)
+  (v2: _)
+  (pi: _)
+  (#i: _)
+{
+  let j0 = cbor_map_iterator_init c;
+  with pl0 l0 . assert (cbor_map_iterator_match pl0 j0 l0);
+  let mut pj = j0;
+  let pconsumed_past : GR.ref cbor_map = GR.alloc cbor_map_empty;
+  let premaining_past : GR.ref cbor_map = GR.alloc cbor_map_empty;
+  let p1_future : GR.ref cbor_map = GR.alloc (Ghost.reveal v1);
+  let p2_past : GR.ref cbor_map = GR.alloc cbor_map_empty;
+  let p2_future : GR.ref cbor_map = GR.alloc (Ghost.reveal v2);
+  fold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future (Cons? l0));
+  let gres = Ghost.hide (apply_map_group_det (map_group_filter f) v1);
+  let gconsumed = Ghost.hide (MapGroupDet?.consumed gres);
+  let gremaining = Ghost.hide (MapGroupDet?.remaining gres);
+  while (
+    with b . assert (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future b);
+    unfold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future b);
+    with pl j_ l . assert (pts_to pj j_ ** cbor_map_iterator_match pl j_ l ** Trade.trade (cbor_map_iterator_match pl j_ l) (vmatch p c v));
+    let j = !pj;
+    // FIXME: WHY WHY WHY those 2 rewrites?
+    rewrite (cbor_map_iterator_match pl j_ l) as (cbor_map_iterator_match pl j l);
+    rewrite (Trade.trade (cbor_map_iterator_match pl j_ l) (vmatch p c v)) as (Trade.trade (cbor_map_iterator_match pl j l) (vmatch p c v));
+    let is_empty = cbor_map_iterator_is_empty j;
+    let res = not is_empty;
+    fold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future res);
+    res
+  ) invariant b . impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future b
+  {
+    unfold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future true);
+    let chd = cbor_map_iterator_next pj;
+    Trade.trans _ _ (vmatch p c v);
+    with phd hd . assert (vmatch2 phd chd hd);
+    let hd_k = Ghost.hide (fst hd);
+    let hd_v = Ghost.hide (snd hd);
+    with ptl itl tl . assert (cbor_map_iterator_match ptl itl tl);
+    with v1_future . assert (GR.pts_to p1_future v1_future);
+    with v2_future . assert (GR.pts_to p2_future v2_future);
+    cbor_map_of_list_uncons hd_k hd_v tl (cbor_map_union v1_future v2_future);
+    let test = implf chd;
+    Trade.elim_hyp_l _ _ _;
+    let s = Ghost.hide (cbor_map_singleton hd_k hd_v);
+    with vconsumed_past . assert (GR.pts_to pconsumed_past vconsumed_past);
+    with vremaining_past . assert (GR.pts_to premaining_past vremaining_past);
+    map_group_footprint_elim (map_group_filter f) phi v1_future v2_future;
+    with v2_past . assert (GR.pts_to p2_past v2_past);
+    if (test) {
+      impl_map_group_filter_aux_skip f phi v1 v2 hd_k hd_v tl pconsumed_past premaining_past p1_future p2_past p2_future pi;
+      fold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future (Cons? tl))
+    } else {
+      assert (pure (cbor_map_included s (cbor_map_filter (Util.notp f) v1_future)));
+      assert (pure (cbor_map_included s v1_future));
+      let v1_future' = Ghost.hide (cbor_map_sub v1_future s);
+      cbor_map_length_disjoint_union s v1_future';
+      cbor_map_length_singleton hd_k hd_v;
+      assert (pure (cbor_map_length v1_future' == cbor_map_length v1_future - 1));
+      add_sub_r (cbor_map_length vremaining_past) (cbor_map_length v1_future) 1;
+      GR.op_Colon_Equals p1_future v1_future';
+      let vconsumed_past' = Ghost.hide (cbor_map_union s vconsumed_past);
+      GR.op_Colon_Equals pconsumed_past vconsumed_past' ;
+      let i = !pi;
+      let i' = u64_sub i 1uL;
+      pi := i' ;
+      cbor_map_sub_union_l v1_future v2_future s;
+      map_group_footprint_elim (map_group_filter f) phi v1_future' v2_future;
+      impl_map_group_filter_invariant_prop_intro f v1 v2 tl vconsumed_past' vremaining_past v1_future' v2_past v2_future i' (Cons? tl) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ()) (Some ());
+      fold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future (Cons? tl));
+    }
+  };
+  unfold (impl_map_group_filter_invariant vmatch cbor_map_iterator_match f c p v pi v1 v2 pj pconsumed_past premaining_past p1_future p2_past p2_future false);
+  Trade.elim _ _;
+  with vconsumed_past . assert (GR.pts_to pconsumed_past vconsumed_past);
+  GR.free pconsumed_past;
+  with vremaining_past . assert (GR.pts_to premaining_past vremaining_past);
+  GR.free premaining_past;
+  with v1_future . assert (GR.pts_to p1_future v1_future);
+  GR.free p1_future;
+  with v2_past . assert (GR.pts_to p2_past v2_past);
+  GR.free p2_past;
+  with v2_future . assert (GR.pts_to p2_future v2_future);
+  GR.free p2_future;
+  assert (pure (cbor_map_equal v1_future cbor_map_empty));
+  assert (pure (cbor_map_equal v2_future cbor_map_empty));
+  assert (pure (cbor_map_equal vconsumed_past gconsumed));
+  assert (pure (cbor_map_equal vremaining_past gremaining));
+  MGOK
+}
+```
+
+#pop-options
