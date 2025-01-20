@@ -42,3 +42,50 @@ let solve_mk_wf_typ_fuel_for () : FStar.Tactics.Tac unit =
       )
   in
   aux 0
+
+open CDDL.Spec.AST.Driver
+
+[@@sem_attr; noextract_to "krml"] noextract
+let list_hd (#t: Type) (l: list t { Cons? l }) : Tot t =
+  let hd :: _ = l in hd
+
+[@@sem_attr; noextract_to "krml"] noextract
+let list_tl (#t: Type) (l: list t { Cons? l }) : Tot (list t) =
+  let _ :: tl = l in tl
+
+[@@sem_attr; noextract_to "krml"] noextract
+let pair_fst (#t1 #t2: Type) (x: (t1 & t2)) : Tot t1 =
+  let (x1, _) = x in x1
+
+[@@sem_attr; noextract_to "krml"] noextract
+let pair_snd (#t1 #t2: Type) (x: (t1 & t2)) : Tot t2 =
+  let (_, x2) = x in x2
+
+[@@sem_attr; noextract_to "krml"] noextract
+let pull_name
+  (l: list (string & decl) { Cons? l })
+: Tot string
+= (pair_fst (list_hd l))
+
+[@@sem_attr; noextract_to "krml"] noextract
+let pull_type
+  (l: list (string & decl) { Cons? l /\ DType? (snd (List.Tot.hd l)) })
+: Tot typ
+= (DType?._0 (pair_snd (list_hd l)))
+
+[@@sem_attr; noextract_to "krml"] noextract
+let pull_group
+  (l: list (string & decl) { Cons? l /\ DGroup? (snd (List.Tot.hd l)) })
+: Tot group
+= (DGroup?._0 (pair_snd (list_hd l)))
+
+noextract [@@noextract_to "krml"]
+let steps = [
+      zeta; iota; primops;
+      delta_attr [`%sem_attr];
+      delta_only [
+        `%List.Tot.for_all;
+        `%FStar.Int.Cast.uint32_to_uint8;
+        `%pow2;
+      ];
+  ]
