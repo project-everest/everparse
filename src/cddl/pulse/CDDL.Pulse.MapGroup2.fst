@@ -635,9 +635,9 @@ ensures
 inline_for_extraction
 ```pulse
 fn impl_map_group_filter
-  (#t: Type0)
+  (#t #t2: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
-  (#vmatch2: perm -> t -> cbor & cbor -> slprop)
+  (#vmatch2: perm -> t2 -> cbor & cbor -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (cbor_map_iterator_init: map_iterator_start_t vmatch cbor_map_iterator_match)
@@ -743,3 +743,162 @@ fn impl_map_group_filter
 ```
 
 #pop-options
+
+inline_for_extraction
+```pulse
+fn impl_map_entry_cond_matches_map_group_entry
+  (#t #t2: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch2: perm -> t2 -> cbor & cbor -> slprop)
+  (map_entry_key: map_entry_key_t vmatch2 vmatch)
+  (map_entry_value: map_entry_value_t vmatch2 vmatch)
+  (#tkey: Ghost.erased typ)
+  (fkey: impl_typ vmatch tkey)
+  (#tvalue: Ghost.erased typ)
+  (fvalue: impl_typ vmatch tvalue)
+: impl_map_entry_cond u#0 #_ vmatch2 (matches_map_group_entry tkey tvalue)
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  let k = map_entry_key x;
+  let testk = fkey k;
+  Trade.elim _ _;
+  if (testk) {
+    let v = map_entry_value x;
+    let testv = fvalue v;
+    Trade.elim _ _;
+    testv
+  } else {
+    false
+  }
+}
+```
+
+inline_for_extraction
+```pulse
+fn impl_map_entry_cond_notp
+  (#t: Type0)
+  (#vmatch2: perm -> t -> (cbor & cbor) -> slprop)
+  (#f: Ghost.erased ((cbor & cbor) -> bool))
+  (implf: impl_map_entry_cond vmatch2 f)
+: impl_map_entry_cond u#0 #_ vmatch2 (Util.notp f)
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  let test = implf x;
+  not test
+}
+```
+
+inline_for_extraction
+```pulse
+fn impl_typ_notp
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#f: Ghost.erased typ)
+  (implf: impl_typ vmatch f)
+: impl_typ u#0 #_ vmatch #None (Util.notp f)
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  let test = implf x;
+  not test
+}
+```
+
+inline_for_extraction
+```pulse
+fn impl_typ_andp
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#f1: Ghost.erased typ)
+  (#f2: Ghost.erased typ)
+  (implf1: impl_typ vmatch f1)
+  (implf2: impl_typ vmatch f2)
+: impl_typ u#0 #_ vmatch #None (Util.andp f1 f2)
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  let test1 = implf1 x;
+  if (test1) {
+    implf2 x
+  } else {
+    false
+  }
+}
+```
+
+inline_for_extraction
+```pulse
+fn impl_map_group_ext
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#g1: Ghost.erased map_group)
+  (#f1: Ghost.erased typ)
+  (impl1: impl_map_group_t vmatch g1 f1)
+  (g2: Ghost.erased map_group)
+  (f2: Ghost.erased typ)
+  (sq: squash (
+    map_group_footprint g1 f1 /\
+    g2 == g1 /\
+    typ_included f1 f2
+  ))
+: impl_map_group_t #_ vmatch g2 f2
+= (c: _)
+  (#p: _)
+  (#v: _)
+  (v1: _)
+  (v2: _)
+  (pi: _)
+  (#i: _)
+{
+  impl1 c v1 v2 pi
+}
+```
+
+let typ_included_refl
+  (t: typ)
+: Lemma
+  (typ_included t t)
+= ()
+
+inline_for_extraction
+let impl_zero_or_more_map_group_match_item_except
+  (#t #t2: Type0)
+  (#cbor_map_iterator_t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (#vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
+  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (cbor_map_iterator_init: map_iterator_start_t vmatch cbor_map_iterator_match)
+  (cbor_map_iterator_is_empty: map_iterator_is_empty_t cbor_map_iterator_match)
+  (cbor_map_iterator_next: map_iterator_next_t vmatch2 cbor_map_iterator_match)
+  (map_entry_key: map_entry_key_t vmatch2 vmatch)
+  (map_entry_value: map_entry_value_t vmatch2 vmatch)
+  (#tkey #tvalue #texcept: Ghost.erased typ)
+  (fkey: impl_typ vmatch tkey)
+  (fvalue: impl_typ vmatch tvalue)
+  (fexcept: impl_typ vmatch texcept)
+: Tot (impl_map_group_t vmatch (map_group_zero_or_more (map_group_match_item false (Util.andp tkey (Util.notp texcept)) tvalue)) (Util.andp tkey (Util.notp texcept)))
+= impl_map_group_ext
+    (impl_map_group_filter
+      cbor_map_iterator_init
+      cbor_map_iterator_is_empty
+      cbor_map_iterator_next
+      #(Util.notp (matches_map_group_entry (Util.andp tkey (Util.notp texcept)) tvalue))
+      (impl_map_entry_cond_notp
+        (impl_map_entry_cond_matches_map_group_entry
+          map_entry_key
+          map_entry_value
+          (impl_typ_andp fkey (impl_typ_notp fexcept))
+          fvalue
+        )
+      )
+      (Util.andp tkey (Util.notp texcept))
+      ()
+    )
+    _ _
+    ()
