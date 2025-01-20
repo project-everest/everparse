@@ -91,16 +91,15 @@ let rec topological_sort'
       end
     end
 
-let prelude_ast_env : wf_ast_env =
-  let env = empty_ast_env in
-  let env = wf_ast_env_extend_typ_with env "bool" (TElem EBool) (WfTElem EBool) in
-  let env = wf_ast_env_extend_typ_with env "everparse-no-match" (TElem EAlwaysFalse) (WfTElem EAlwaysFalse) in
-  env
+let prelude_list = [
+    ("bool", DType (TElem EBool));
+    ("everparse-no-match", DType (TElem EAlwaysFalse))
+  ]
 
 let topological_sort
   (l: list (string & decl))
 : option (list (string & decl))
-= topological_sort' (List.Tot.length l + 1) prelude_ast_env [] [] l
+= topological_sort' (List.Tot.length l + 3) empty_ast_env [] [] (List.Tot.append prelude_list l)
 
 let rec elab_list_tot
   (fuel: nat)
@@ -220,4 +219,4 @@ let rec elab_list'
 let elab_list
   (l: list (string & decl))
 : ML (result wf_ast_env)
-= elab_list' 1 prelude_ast_env [] l
+= elab_list' 1 empty_ast_env [] (List.Tot.append prelude_list l)
