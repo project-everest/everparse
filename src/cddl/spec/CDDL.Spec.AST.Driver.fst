@@ -37,7 +37,7 @@ let ast_env_extend_typ_with_pre
     e.e_sem_env.se_bound new_name == None /\
     typ_bounded e.e_sem_env.se_bound t /\
     bounded_wf_typ (extend_name_env e.e_sem_env.se_bound new_name NType) t t_wf /\
-    spec_wf_typ (ast_env_extend_gen e new_name NType t).e_sem_env t t_wf
+    spec_wf_typ (ast_env_extend_gen e new_name NType t).e_sem_env true t t_wf
 
 [@@plugin]
 type decl =

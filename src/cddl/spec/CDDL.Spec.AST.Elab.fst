@@ -2268,7 +2268,7 @@ let rec map_group_choice_compatible_no_cut
       (typ_sem env.e_sem_env value)
       (elab_map_group_sem env.e_sem_env g2);
     RSuccess ()
-  | WfMZeroOrMore key key_except value _ _ ->
+  | WfMZeroOrMore key key_except value _ _ _ ->
     Spec.map_group_choice_compatible_no_cut_zero_or_more_match_item_left
       (Util.andp (typ_sem env.e_sem_env key) (Util.notp (typ_sem env.e_sem_env key_except)))
       (typ_sem env.e_sem_env value)
@@ -2369,7 +2369,7 @@ let rec map_group_choice_compatible'
   then (| ROutOfFuel, () |)
   else let fuel' : nat = fuel - 1 in
   match s1 with
-  | WfMZeroOrMore _ _ _ _ _ ->
+  | WfMZeroOrMore _ _ _ _ _ _ ->
     (| RFailure "map_group_choice_compatible: GZeroOrMore never fails", () |)
   | WfMZeroOrOne _ _ ->
     (| RFailure "map_group_choice_compatible: GZeroOrOne always succeeds or cuts, but never fails", () |)
@@ -2490,7 +2490,7 @@ let rec map_group_choice_compatible'
                   (| RSuccess (), () |)
                 end
               end
-            | WfMZeroOrMore _ _ _ _ _ -> (| RFailure "map_group_choice_compatible: GZeroOrMore right, not disjoint", () |)
+            | WfMZeroOrMore _ _ _ _ _ _ -> (| RFailure "map_group_choice_compatible: GZeroOrMore right, not disjoint", () |)
             end
           end
         | res -> (| coerce_failure res, () |)
@@ -2982,11 +2982,12 @@ let annot_tables_correct
 let rec mk_wf_typ
   (fuel: nat) // for typ_disjoint
   (env: ast_env)
+  (guard_choices: bool)
   (g: typ)
 : Pure (result (ast0_wf_typ g))
     (requires typ_bounded env.e_sem_env.se_bound g)
     (ensures fun r -> match r with
-    | RSuccess s -> spec_wf_typ env.e_sem_env g s
+    | RSuccess s -> spec_wf_typ env.e_sem_env guard_choices g s
     | _ -> True
     )
     (decreases fuel) // because of the restrict_map_group computation
@@ -3025,16 +3026,16 @@ let rec mk_wf_typ
     | res -> coerce_failure res
     end
   | TTagged tag t' ->
-    begin match mk_wf_typ fuel' env t' with
+    begin match mk_wf_typ fuel' env true t' with
     | RSuccess s' -> RSuccess (WfTTagged tag t' s')
     | res -> coerce_failure res
     end
   | TChoice t1 t2 ->
-    begin match typ_disjoint env fuel t1 t2 with
+    begin match if guard_choices then typ_disjoint env fuel t1 t2 else RSuccess () with
     | RSuccess _ ->
-      begin match mk_wf_typ fuel' env t1 with
+      begin match mk_wf_typ fuel' env guard_choices t1 with
       | RSuccess s1 ->
-        begin match mk_wf_typ fuel' env t2 with
+        begin match mk_wf_typ fuel' env guard_choices t2 with
         | RSuccess s2 -> RSuccess (WfTChoice t1 t2 s1 s2)
         | res -> coerce_failure res
         end
@@ -3050,7 +3051,7 @@ let rec mk_wf_typ
     else let res2 = typ_included env fuel (TElem EByteString) base in
     if not (RSuccess? res2)
     then coerce_failure res2
-    else begin match mk_wf_typ fuel' env dest with
+    else begin match mk_wf_typ fuel' env true dest with
     | RSuccess wfdest -> RSuccess (WfTDetCbor base dest wfdest)
     | res -> coerce_failure res
     end
@@ -3151,7 +3152,7 @@ and mk_wf_array_group
   else let fuel' : nat = fuel - 1 in
   match g with
   | GElem _cut _key ty ->
-    begin match mk_wf_typ fuel' env ty with
+    begin match mk_wf_typ fuel' env true ty with
     | RSuccess s -> RSuccess (WfAElem _cut _key ty s)
     | res -> coerce_failure res
     end
@@ -3256,15 +3257,19 @@ and mk_wf_parse_map_group
     | res -> coerce_failure res
     end
   | MGMatch cut key value ->
-    begin match mk_wf_typ fuel' env value with
+    begin match mk_wf_typ fuel' env true value with
     | RSuccess tvalue -> RSuccess (WfMLiteral cut key value tvalue)
     | res -> coerce_failure res
     end
   | MGTable key key_except value ->
-    begin match mk_wf_typ fuel' env key with
+    begin match mk_wf_typ fuel' env true key with
     | RSuccess tkey ->
-      begin match mk_wf_typ fuel' env value with
-      | RSuccess tvalue -> RSuccess (WfMZeroOrMore key key_except value tkey tvalue)
+      begin match mk_wf_typ fuel' env false key_except with
+      | RSuccess tkey_except ->
+        begin match mk_wf_typ fuel' env true value with
+        | RSuccess tvalue -> RSuccess (WfMZeroOrMore key key_except value tkey tkey_except tvalue)
+        | res -> coerce_failure res
+        end
       | res -> coerce_failure res
       end
     | res -> coerce_failure res
@@ -3414,14 +3419,14 @@ let mk_wf_typ_bounded
     | RSuccess s' ->
       typ_bounded env.e_sem_env.se_bound g /\
       bounded_wf_typ env.e_sem_env.se_bound g s' /\
-      spec_wf_typ env.e_sem_env g s'
+      spec_wf_typ env.e_sem_env true g s'
     | _ -> True
     ))
 =
     rewrite_typ_correct env.e_sem_env fuel g;
     let (g', res) = rewrite_typ fuel g in
     if res then
-    match mk_wf_typ fuel env g' with
+    match mk_wf_typ fuel env true g' with
     | RSuccess s' -> RSuccess (WfTRewrite g g' s')
     | res -> coerce_failure res
     else ROutOfFuel
@@ -3436,7 +3441,7 @@ let mk_wf_typ'
     | RSuccess s' ->
       typ_bounded env.e_sem_env.se_bound g /\
       bounded_wf_typ env.e_sem_env.se_bound g s' /\
-      spec_wf_typ env.e_sem_env g s'
+      spec_wf_typ env.e_sem_env true g s'
     | _ -> True
     ))
 = if typ_bounded env.e_sem_env.se_bound g
