@@ -102,6 +102,48 @@ let topological_sort
 : option (list (string & decl))
 = topological_sort' (List.Tot.length l + 1) prelude_ast_env [] [] l
 
+let rec elab_list_tot
+  (fuel: nat)
+  (env: wf_ast_env)
+  (l: list (string & decl))
+: Tot (result wf_ast_env)
+  (decreases l)
+= match l with
+  | [] ->
+      RSuccess env
+  | elt :: q ->
+    let (new_name, tg) = elt in
+    begin match env.e_sem_env.se_bound new_name with
+    | Some _ ->
+      RFailure (new_name ^ " already in use")
+    | _ ->
+      begin match tg with
+      | DGroup t ->
+        if group_bounded (env.e_sem_env.se_bound) t
+        then begin
+          group_bounded_incr (env.e_sem_env.se_bound) (extend_name_env env.e_sem_env.se_bound new_name NGroup) t;
+          let env' = wf_ast_env_extend_group env new_name t in
+          elab_list_tot fuel env' q
+        end else begin
+          RFailure "group not bounded, this should not happen if you use topological_sort"
+        end
+      | DType t ->
+        if typ_bounded (env.e_sem_env.se_bound) t
+        then
+            let res = mk_wf_typ_bounded fuel env t in
+            match res with
+            | RSuccess t_wf ->
+              assert (bounded_wf_typ (env.e_sem_env.se_bound) t t_wf);
+              bounded_wf_typ_incr (env.e_sem_env.se_bound) (extend_name_env env.e_sem_env.se_bound new_name NType) t t_wf;
+              let env' = wf_ast_env_extend_typ_with env new_name t t_wf in
+              elab_list_tot fuel env' q
+            | res -> coerce_failure res
+        else begin
+          RFailure "type not bounded, this should not happen if you use topological_sort"
+        end
+      end
+    end
+
 let rec elab_list'
   (fuel: nat)
   (env: wf_ast_env)
