@@ -67,6 +67,27 @@ fn impl_array_group_concat
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
+fn impl_array_group_ext
+  (#cbor_array_iterator_t: Type)
+  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#b: Ghost.erased (option cbor))
+    (#g1: Ghost.erased (array_group b))
+    (f1: impl_array_group cbor_array_iterator_match g1)
+    (g2: Ghost.erased (array_group b))
+    (sq: squash (array_group_equiv g1 g2))
+: impl_array_group #cbor_array_iterator_t cbor_array_iterator_match #b (Ghost.reveal g2)
+=
+    (pi: R.ref cbor_array_iterator_t)
+    (#p: perm)
+    (#gi: Ghost.erased cbor_array_iterator_t)
+    (#l: Ghost.erased (list cbor))
+{
+  f1 pi
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
 fn impl_array_group_choice
   (#cbor_array_iterator_t: Type)
   (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
