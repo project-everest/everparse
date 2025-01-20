@@ -5,7 +5,7 @@ open Pulse.Lib.Pervasives
 open CBOR.Spec.Constants
 
 module Spec = CBOR.Spec.API.Format
-module S = Pulse.Lib.Slice
+module S = Pulse.Lib.Slice.Util
 module A = Pulse.Lib.Array
 module PM = Pulse.Lib.SeqMatch
 module Trade = Pulse.Lib.Trade.Util
@@ -125,5 +125,24 @@ fn cbor_det_serialize_full
   } else {
     None #SZ.t
   }
+}
+```
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_get_string_as_slice
+  (_: unit)
+: get_string_t u#0 #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#y: _)
+{
+  assume (pure (SZ.fits_u64));
+  let len = cbor_det_get_string_length () x;
+  let a = cbor_det_get_string () x;
+  let sl = S.arrayptr_to_slice_intro_trade a (SZ.uint64_to_sizet len);
+  Trade.trans _ _ (cbor_det_match p x y);
+  sl
 }
 ```
