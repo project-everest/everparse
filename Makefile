@@ -178,7 +178,7 @@ cddl: cddl-lib cddl-ocaml
 .PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
 cddl-plugin-test: cddl-ocaml
-	+$(MAKE) -C src/cddl/spec/test
+	+$(MAKE) -C src/cddl/test
 
 cddl-test: cddl cddl-plugin-test
 
