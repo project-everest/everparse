@@ -38,7 +38,7 @@ Generic_Headers = (
   ? 2 : [+label],    ; criticality
   ? 3 : tstr / int,  ; content type
   ? 4 : bstr,        ; key identifier
-  ((5 => bstr, ? 6 : everparse-no-match) // (6 => bstr, ? 5 : everparse-no-match))
+  ((5 => bstr, ? 6 : everparse-no-match) // (6 => bstr, ? 5 : everparse-no-match) // (? 6 : everparse-no-match, ? 5 : everparse-no-match)) ; this expresses the constraint that 5 and 6 must not appear together, but they are allowed to not appear at all; in all cases, 5 and 6 must mot match any further entry beyond Generic_Headers, as enforced by the cuts.
 )
 
 header_map = {
