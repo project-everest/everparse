@@ -39,7 +39,7 @@ let ast_env_extend_typ_with_pre
     bounded_wf_typ (extend_name_env e.e_sem_env.se_bound new_name NType) t t_wf /\
     spec_wf_typ (ast_env_extend_gen e new_name NType t).e_sem_env true t t_wf
 
-[@@plugin]
+[@@plugin; sem_attr]
 type decl =
 | DType of typ
 | DGroup of group
@@ -122,7 +122,7 @@ let rec elab_list_tot
         if group_bounded (env.e_sem_env.se_bound) t
         then begin
           group_bounded_incr (env.e_sem_env.se_bound) (extend_name_env env.e_sem_env.se_bound new_name NGroup) t;
-          let env' = wf_ast_env_extend_group env new_name t in
+          let env' = wf_ast_env_extend_group env new_name t () () in
           elab_list_tot fuel env' q
         end else begin
           RFailure "group not bounded, this should not happen if you use topological_sort"
@@ -177,7 +177,7 @@ let rec elab_list'
         then begin
           print_endline "Extending the environment";
           group_bounded_incr (env.e_sem_env.se_bound) (extend_name_env env.e_sem_env.se_bound new_name NGroup) t;
-          let env' = wf_ast_env_extend_group env new_name t in
+          let env' = wf_ast_env_extend_group env new_name t () () in
           elab_list' fuel env' [] (List.Tot.rev_acc accu q)
         end else begin
           print_endline "Group uses undefined types/groups. Choosing another one";

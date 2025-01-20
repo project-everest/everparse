@@ -2089,10 +2089,9 @@ let wf_ast_env_extend_typ_with_weak
 let wf_ast_env_extend_group
   (e: wf_ast_env)
   (new_name: string)
-  (t: group {
-    e.e_sem_env.se_bound new_name == None /\
-    group_bounded e.e_sem_env.se_bound t
-  })
+  (t: group)
+  (sq1: squash (e.e_sem_env.se_bound new_name == None))
+  (sq2: squash (group_bounded e.e_sem_env.se_bound t))
 : Tot (e': wf_ast_env {
       ast_env_included e e' /\
       e'.e_sem_env.se_bound new_name == Some NGroup /\
