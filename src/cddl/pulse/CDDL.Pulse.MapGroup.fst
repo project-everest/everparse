@@ -1,4 +1,4 @@
-module CDDL.Pulse.MapGroup2
+module CDDL.Pulse.MapGroup
 include CDDL.Spec.MapGroup
 include CDDL.Pulse.Base
 open Pulse.Lib.Pervasives
