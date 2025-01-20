@@ -57,8 +57,9 @@ let extend_validator_env_with_group
   (#v_sem_env: AST.sem_env)
   (env: validator_env vmatch v_sem_env)
   (new_name: string)
+  (g: AST.group)
   (new_name_is_type: squash (v_sem_env.se_bound new_name == None))
-  (g: AST.group { AST.group_bounded v_sem_env.se_bound g })
+  (sq: squash (AST.group_bounded v_sem_env.se_bound g))
 : validator_env vmatch (AST.sem_env_extend_gen v_sem_env new_name AST.NGroup (AST.ast_env_elem0_sem v_sem_env g))
 = let v_sem_env' = AST.sem_env_extend_gen v_sem_env new_name AST.NGroup (AST.ast_env_elem0_sem v_sem_env g) in
   {
