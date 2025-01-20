@@ -41,7 +41,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn impl_array_group_concat
   (#cbor_array_iterator_t: Type)
-  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
     (#b: Ghost.erased (option cbor))
     (#g1: Ghost.erased (array_group b))
     (f1: impl_array_group cbor_array_iterator_match g1)
@@ -69,7 +69,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn impl_array_group_ext
   (#cbor_array_iterator_t: Type)
-  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
     (#b: Ghost.erased (option cbor))
     (#g1: Ghost.erased (array_group b))
     (f1: impl_array_group cbor_array_iterator_match g1)
@@ -88,9 +88,47 @@ fn impl_array_group_ext
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
+fn impl_array_group_empty
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#b: Ghost.erased (option cbor))
+    (_: unit)
+: impl_array_group #cbor_array_iterator_t cbor_array_iterator_match #b (array_group_empty #b)
+=
+    (pi: R.ref cbor_array_iterator_t)
+    (#p: perm)
+    (#gi: Ghost.erased cbor_array_iterator_t)
+    (#l: Ghost.erased (list cbor))
+{
+  Trade.refl (cbor_array_iterator_match p gi l);
+  true
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_array_group_always_false
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#b: Ghost.erased (option cbor))
+    (_: unit)
+: impl_array_group #cbor_array_iterator_t cbor_array_iterator_match #b (array_group_always_false #b)
+=
+    (pi: R.ref cbor_array_iterator_t)
+    (#p: perm)
+    (#gi: Ghost.erased cbor_array_iterator_t)
+    (#l: Ghost.erased (list cbor))
+{
+  Trade.refl (cbor_array_iterator_match p gi l);
+  false
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
 fn impl_array_group_choice
   (#cbor_array_iterator_t: Type)
-  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
     (#b: Ghost.erased (option cbor))
     (#g1: Ghost.erased (array_group b))
     (f1: impl_array_group cbor_array_iterator_match g1)
@@ -122,11 +160,21 @@ fn impl_array_group_choice
 ```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_array_group_zero_or_one
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#b: Ghost.erased (option cbor))
+    (#g1: Ghost.erased (array_group b))
+    (f1: impl_array_group cbor_array_iterator_match g1)
+: impl_array_group #cbor_array_iterator_t cbor_array_iterator_match #b (array_group_zero_or_one g1)
+= impl_array_group_choice f1 (impl_array_group_empty ())
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn impl_array_group_zero_or_more
   (#cbor_array_iterator_t: Type)
-  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
-    (#g1: Ghost.erased (nonempty_array_group))
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#g1: Ghost.erased (array_group None) { array_group_is_nonempty g1 })
     (f1: impl_array_group cbor_array_iterator_match g1)
 : impl_array_group #cbor_array_iterator_t cbor_array_iterator_match #None (array_group_zero_or_more g1)
 =
@@ -174,6 +222,15 @@ fn impl_array_group_zero_or_more
     true
 }
 ```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_array_group_one_or_more
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#g1: Ghost.erased (array_group None) { array_group_is_nonempty g1 })
+    (f1: impl_array_group cbor_array_iterator_match g1)
+: impl_array_group #cbor_array_iterator_t cbor_array_iterator_match #None (array_group_one_or_more g1)
+= (impl_array_group_concat f1 (impl_array_group_zero_or_more f1))
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
@@ -259,4 +316,3 @@ fn impl_t_array
    }
 }
 ```
-
