@@ -273,3 +273,63 @@ let impl_bool
 = impl_t_choice
     (impl_simple_literal cbor_get_major_type cbor_destr_simple cddl_simple_value_false)
     (impl_simple_literal cbor_get_major_type cbor_destr_simple cddl_simple_value_true)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_tagged_some
+  (#ty: Type u#0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (cbor_get_major_type: get_major_type_t vmatch)
+  (cbor_get_tagged_tag: get_tagged_tag_t vmatch)
+  (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
+  (tag: U64.t)
+  (#t: Ghost.erased typ)
+  (f: impl_typ vmatch t)
+: impl_typ u#0 #_ vmatch #None (t_tag (Some tag) t)
+= (c: _)
+  (#p: _)
+  (#v: _)
+{
+  let k = cbor_get_major_type c;
+  if (k = cbor_major_type_tagged) {
+    let tag' = cbor_get_tagged_tag c;
+    if (tag = tag') {
+      let c' = cbor_get_tagged_payload c;
+      let res = f c';
+      Trade.elim _ _;
+      res
+    } else {
+      false
+    }
+  } else {
+    false
+  }
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_tagged_none
+  (#ty: Type u#0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (cbor_get_major_type: get_major_type_t vmatch)
+  (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
+  (#t: Ghost.erased typ)
+  (f: impl_typ vmatch t)
+: impl_typ u#0 #_ vmatch #None (t_tag None t)
+= (c: _)
+  (#p: _)
+  (#v: _)
+{
+  let k = cbor_get_major_type c;
+  if (k = cbor_major_type_tagged) {
+     let c' = cbor_get_tagged_payload c;
+     let res = f c';
+     Trade.elim _ _;
+     res
+  } else {
+    false
+  }
+}
+```
+
