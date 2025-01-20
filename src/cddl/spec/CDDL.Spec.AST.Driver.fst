@@ -52,6 +52,57 @@ let check_name (env: name_env) (name: string) (k: name_env_elem) : Tot (option n
     then Some env
     else None
 
+open FStar.Mul
+
+let rec topological_sort'
+  (bound: Ghost.erased pos)
+  (env: ast_env)
+  (res: list (string & decl))
+  (accu: list (string & decl))
+  (l: list (string & decl) { List.Tot.length accu + List.Tot.length l < bound })
+: Tot (option (list (string & decl)))
+  (decreases ((List.Tot.length l + List.Tot.length accu) * bound + List.Tot.length l))
+= match l with
+  | [] ->
+    if Nil? accu
+    then Some (List.Tot.rev res)
+    else None
+  | elt :: q ->
+    let (new_name, tg) = elt in
+    begin match env.e_sem_env.se_bound new_name with
+    | Some _ -> None
+    | _ ->
+      List.Tot.rev_acc_length accu q;
+      begin match tg with
+      | DGroup g ->
+        if group_bounded (env.e_sem_env.se_bound) g
+        then
+          let env' = ast_env_extend_gen env new_name NGroup g in
+          topological_sort' bound env' (elt :: res) [] (List.Tot.rev_acc accu q)
+        else
+          topological_sort' bound env res (elt :: accu) q
+      | DType t ->
+        if typ_bounded (env.e_sem_env.se_bound) t
+        then
+          let env' = ast_env_extend_gen env new_name NType t in
+          topological_sort' bound env' (elt :: res) [] (List.Tot.rev_acc accu q)
+        else
+          topological_sort' bound env res (elt :: accu) q
+      end
+    end
+
+let prelude_ast_env : ast_env =
+  let env = empty_ast_env in
+  let env = ast_env_extend_typ_with env "bool" (TElem EBool) (WfTElem EBool) in
+  assert_norm (ast_env_extend_typ_with_pre env "everparse-no-match" (TElem EAlwaysFalse) (WfTElem EAlwaysFalse)); // FIXME: WHY WHY WHY?
+  let env = ast_env_extend_typ_with env "everparse-no-match" (TElem EAlwaysFalse) (WfTElem EAlwaysFalse) in
+  env
+
+let topological_sort
+  (l: list (string & decl))
+: option (list (string & decl))
+= topological_sort' (List.Tot.length l + 1) prelude_ast_env [] [] l
+
 let rec elab_list'
   (fuel: nat)
   (env: ast_env)
@@ -125,13 +176,6 @@ let rec elab_list'
         end
       end
     end
-
-let prelude_ast_env : ast_env =
-  let env = empty_ast_env in
-  let env = ast_env_extend_typ_with env "bool" (TElem EBool) (WfTElem EBool) in
-  assert_norm (ast_env_extend_typ_with_pre env "everparse-no-match" (TElem EAlwaysFalse) (WfTElem EAlwaysFalse)); // FIXME: WHY WHY WHY?
-  let env = ast_env_extend_typ_with env "everparse-no-match" (TElem EAlwaysFalse) (WfTElem EAlwaysFalse) in
-  env
 
 let elab_list
   (l: list (string & decl))
