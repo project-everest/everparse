@@ -20,9 +20,49 @@ noeq
 type validator_env
   (#t: Type0)
   (vmatch: (perm -> t -> cbor -> slprop))
+  (v_sem_env: AST.sem_env)
 = {
-  v_sem_env: AST.sem_env;
   v_validator: ((n: AST.typ_name v_sem_env.se_bound) -> impl_typ vmatch (AST.sem_of_type_sem (v_sem_env.se_env n)));
+}
+
+[@@AST.sem_attr]
+let empty_validator_env
+  (#t: Type0)
+  (vmatch: (perm -> t -> cbor -> slprop))
+: validator_env vmatch AST.empty_sem_env
+= {
+  v_validator = (fun _ -> false_elim ());
+}
+
+[@@AST.sem_attr]
+let extend_validator_env_with_typ_weak
+  (#t: Type0)
+  (#vmatch: (perm -> t -> cbor -> slprop))
+  (#v_sem_env: AST.sem_env)
+  (env: validator_env vmatch v_sem_env)
+  (new_name: string)
+  (new_name_is_type: squash (v_sem_env.se_bound new_name == None))
+  (ty: AST.typ { AST.typ_bounded v_sem_env.se_bound ty })
+  (w: impl_typ vmatch (AST.typ_sem v_sem_env ty))
+: validator_env vmatch (AST.sem_env_extend_gen v_sem_env new_name AST.NType (AST.ast_env_elem0_sem v_sem_env ty))
+= let v_sem_env' = AST.sem_env_extend_gen v_sem_env new_name AST.NType (AST.ast_env_elem0_sem v_sem_env ty) in
+  {
+  v_validator = (fun n -> if n = new_name then impl_ext w (AST.sem_of_type_sem (v_sem_env'.se_env n)) else impl_ext (env.v_validator n) (AST.sem_of_type_sem (v_sem_env'.se_env n)));
+}
+
+[@@AST.sem_attr]
+let extend_validator_env_with_group
+  (#t: Type0)
+  (#vmatch: (perm -> t -> cbor -> slprop))
+  (#v_sem_env: AST.sem_env)
+  (env: validator_env vmatch v_sem_env)
+  (new_name: string)
+  (new_name_is_type: squash (v_sem_env.se_bound new_name == None))
+  (g: AST.group { AST.group_bounded v_sem_env.se_bound g })
+: validator_env vmatch (AST.sem_env_extend_gen v_sem_env new_name AST.NGroup (AST.ast_env_elem0_sem v_sem_env g))
+= let v_sem_env' = AST.sem_env_extend_gen v_sem_env new_name AST.NGroup (AST.ast_env_elem0_sem v_sem_env g) in
+  {
+  v_validator = (fun (n: AST.typ_name v_sem_env'.se_bound) -> impl_ext (env.v_validator n) (AST.sem_of_type_sem (v_sem_env'.se_env n)));
 }
 
 [@@AST.sem_attr]
@@ -40,11 +80,12 @@ let rec validate_typ
   (#cbor_array_iterator_match: (perm -> t_arr -> list cbor -> slprop))
   (#cbor_map_iterator_match: (perm -> t_map -> list (cbor & cbor) -> slprop))
   (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
-  (env: validator_env vmatch)
+  (#v_sem_env: AST.sem_env)
+  (env: validator_env vmatch v_sem_env)
   (guard_choices: bool)
   (ty: AST.typ)
-  (wf: AST.ast0_wf_typ ty { AST.spec_wf_typ env.v_sem_env guard_choices ty wf /\ SZ.fits_u64 })
-: Tot (impl_typ vmatch (AST.typ_sem env.v_sem_env ty))
+  (wf: AST.ast0_wf_typ ty { AST.spec_wf_typ v_sem_env guard_choices ty wf /\ SZ.fits_u64 })
+: Tot (impl_typ vmatch (AST.typ_sem v_sem_env ty))
   (decreases wf)
 = match wf with
   | AST.WfTRewrite _ ty' s ->
@@ -114,10 +155,11 @@ and validate_array_group
   (#cbor_array_iterator_match: (perm -> t_arr -> list cbor -> slprop))
   (#cbor_map_iterator_match: (perm -> t_map -> list (cbor & cbor) -> slprop))
   (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
-  (env: validator_env vmatch)
+  (#v_sem_env: AST.sem_env)
+  (env: validator_env vmatch v_sem_env)
   (ty: AST.group)
-  (wf: AST.ast0_wf_array_group ty { AST.spec_wf_array_group env.v_sem_env ty wf /\ SZ.fits_u64 })
-: Tot (impl_array_group cbor_array_iterator_match (AST.array_group_sem env.v_sem_env ty))
+  (wf: AST.ast0_wf_array_group ty { AST.spec_wf_array_group v_sem_env ty wf /\ SZ.fits_u64 })
+: Tot (impl_array_group cbor_array_iterator_match (AST.array_group_sem v_sem_env ty))
   (decreases wf)
 = match wf with
   | AST.WfAElem _ _ _ s' ->
@@ -155,10 +197,11 @@ and validate_map_group
   (#cbor_array_iterator_match: (perm -> t_arr -> list cbor -> slprop))
   (#cbor_map_iterator_match: (perm -> t_map -> list (cbor & cbor) -> slprop))
   (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
-  (env: validator_env vmatch)
+  (#v_sem_env: AST.sem_env)
+  (env: validator_env vmatch v_sem_env)
   (ty: AST.elab_map_group)
-  (wf: AST.ast0_wf_parse_map_group ty { AST.spec_wf_parse_map_group env.v_sem_env ty wf /\ SZ.fits_u64 })
-: Tot (impl_map_group_t vmatch (AST.elab_map_group_sem env.v_sem_env ty) (AST.spec_map_group_footprint env.v_sem_env ty))
+  (wf: AST.ast0_wf_parse_map_group ty { AST.spec_wf_parse_map_group v_sem_env ty wf /\ SZ.fits_u64 })
+: Tot (impl_map_group_t vmatch (AST.elab_map_group_sem v_sem_env ty) (AST.spec_map_group_footprint v_sem_env ty))
   (decreases wf)
 = match wf with
   | AST.WfMChoice _ s1' _ s2' ->

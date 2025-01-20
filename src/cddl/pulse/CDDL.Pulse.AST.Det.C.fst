@@ -2,7 +2,7 @@ module CDDL.Pulse.AST.Det.C
 include CDDL.Pulse.AST.Base
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
-open CBOR.Pulse.API.Det.C.Slice
+include CBOR.Pulse.API.Det.C.Slice
 open CDDL.Spec.AST.Base
 module AST = CDDL.Spec.AST.Base
 
