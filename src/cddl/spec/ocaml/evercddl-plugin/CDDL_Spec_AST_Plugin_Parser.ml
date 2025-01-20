@@ -1,7 +1,17 @@
-let parse filename =
+let parse_one env filename =
   try
-    begin match ParseFromFile.parse CDDL_Spec_AST_Base.empty_name_env filename with
-    | None -> None
-    | Some (_, l) -> Some l
-    end
+    ParseFromFile.parse env filename
   with _ -> None
+
+let rec parse' (env, l) = function
+  | [] -> Some (env, l)
+  | a :: q ->
+     begin match parse_one env a with
+     | Some (env', l_) ->
+        parse' (env', List.append l l_) q
+     | None -> None
+     end
+
+let parse l = match parse' (CDDL_Spec_AST_Base.empty_name_env, []) l with
+  | None -> None
+  | Some (_, res) -> Some res
