@@ -95,10 +95,10 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_ext
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
-    (#t1: typ)
+    (#t1: Ghost.erased typ)
     (f1: impl_typ vmatch t1)
-    (t2: typ { typ_equiv t1 t2 })
-: impl_typ u#0 #ty vmatch #None t2
+    (t2: Ghost.erased typ { typ_equiv t1 t2 })
+: impl_typ u#0 #ty vmatch #None (Ghost.reveal t2)
 = (c: _)
   (#p: _)
   (#v: _)
