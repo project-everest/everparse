@@ -177,8 +177,17 @@ cddl: cddl-lib cddl-ocaml
 
 .PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
-cddl-plugin-test: cddl-ocaml
+.PHONY: cddl-plugin-test-verify
+
+cddl-plugin-test-verify: cddl-ocaml
 	+$(MAKE) -C src/cddl/test
+
+ifeq (,$(NO_PULSE))
+cddl-plugin-test: cddl-plugin-test-verify cbor-interface cddl
+	+$(MAKE) -C src/cddl/test extract
+else
+cddl-plugin-test: cddl-plugin-test-verify
+endif
 
 cddl-test: cddl cddl-plugin-test
 
