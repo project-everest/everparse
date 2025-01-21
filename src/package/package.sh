@@ -115,26 +115,36 @@ make_everparse() {
     export OTHERFLAGS='--admit_smt_queries true'
     #!!!!!
 
-    # Verify if F* and KaRaMeL are here
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
 
-    ## Setup F*
+    ## Setup F*. We need to locate a package, either it's already
+    # there or we try to build one from the repo.
 
-    if ! [ -f fstar.tar.gz ]; then
+    if ! [ -f fstar.tar.gz ] && ! [ -f fstar.zip ]; then
       if ! [ -d FStar ]; then
         git clone https://github.com/FStarLang/FStar --depth 1
       fi
       $MAKE -C FStar "$@" ADMIT=1
       $MAKE -C FStar "$@" FSTAR_TAG= package
-      cp FStar/fstar.tar.gz .
+      cp FStar/fstar.tar.gz . || cp FStar/fstar.zip .
     fi
 
-    FSTAR_PKG=$(realpath fstar.tar.gz)
     FSTAR_PKG_ROOT=__fstar-install
     rm -rf "$FSTAR_PKG_ROOT"
     mkdir -p "$FSTAR_PKG_ROOT"
-    tar xzf $FSTAR_PKG -C "$FSTAR_PKG_ROOT"
+    if [ -f fstar.tar.gz ]; then
+      FSTAR_PKG=$(realpath fstar.tar.gz)
+      tar xzf $FSTAR_PKG -C "$FSTAR_PKG_ROOT"
+    elif [ -f fstar.zip ]; then
+      FSTAR_PKG=$(realpath fstar.zip)
+      pushd "$FSTAR_PKG_ROOT"
+      unzip -q "$FSTAR_PKG"
+      popd
+    else
+      echo "unexpected, no package?" >&2
+      exit 1
+    fi
 
     # The package extracts into a fstar directory, and everything
     # is under there.
