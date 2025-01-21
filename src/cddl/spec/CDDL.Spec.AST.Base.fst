@@ -2102,7 +2102,6 @@ let wf_ast_env_extend_group
 noeq
 type target_elem_type =
 | TTUnit
-| TTSimple
 | TTUInt8
 | TTUInt64
 | TTInt64
@@ -2202,7 +2201,6 @@ let target_elem_type_sem
   (t: target_elem_type)
 : GTot Type0
 = match t with
-  | TTSimple -> Cbor.simple_value
   | TTUInt8 -> U8.t
   | TTUInt64 -> U64.t
   | TTInt64 -> I64.t
