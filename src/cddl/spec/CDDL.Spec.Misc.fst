@@ -47,14 +47,6 @@ let t_undefined : typ = t_simple_value_literal simple_value_undefined
 let t_uint_literal (v: U64.t) : typ =
   t_literal (Cbor.pack (Cbor.CInt64 Cbor.cbor_major_type_uint64 v))
 
-// 2.1 specifies "names that turn into the map key text string"
-
-noextract
-let string64 = (s: Seq.seq U8.t {FStar.UInt.fits (Seq.length s) 64})
-
-let name_as_text_string (s: string64 { CBOR.Spec.API.UTF8.correct s }) : typ =
-  t_literal (Cbor.pack (Cbor.CString Cbor.cbor_major_type_text_string s))
-
 // Section 3.6: Tags
 
 (*
@@ -113,9 +105,10 @@ let spec_tag_none
 let str_size_serializable
   (ty: Cbor.major_type_byte_string_or_text_string)
   (lo hi: nat)
-  (x: string64)
+  (x: Seq.seq U8.t)
 : Tot bool
 = let len = Seq.length x in
+  len < pow2 64 &&
   lo <= len && len <= hi &&
   (if ty = Cbor.cbor_major_type_text_string then CBOR.Spec.API.UTF8.correct x else true)
 
@@ -127,11 +120,11 @@ let str_size (ty: Cbor.major_type_byte_string_or_text_string) (lo hi: nat) : typ
 let spec_str_size
   (ty: Cbor.major_type_byte_string_or_text_string)
   (lo hi: U64.t)
-: Tot (spec (str_size ty (U64.v lo) (U64.v hi)) string64 true)
+: Tot (spec (str_size ty (U64.v lo) (U64.v hi)) (Seq.seq U8.t) true)
 = {
   serializable = str_size_serializable ty (U64.v lo) (U64.v hi);
-  parser = (fun x -> let Cbor.CString _ v = Cbor.unpack x in (v <: (v: string64 { str_size_serializable ty (U64.v lo) (U64.v hi) v })));
-  serializer = (fun (x: string64 { str_size_serializable ty (U64.v lo) (U64.v hi) x }) -> Cbor.pack (Cbor.CString ty x));
+  parser = (fun x -> let Cbor.CString _ v = Cbor.unpack x in (v <: (v: Seq.seq U8.t { str_size_serializable ty (U64.v lo) (U64.v hi) v })));
+  serializer = (fun (x: Seq.seq U8.t { str_size_serializable ty (U64.v lo) (U64.v hi) x }) -> Cbor.pack (Cbor.CString ty x));
   parser_inj = ();
 }
 
@@ -451,15 +444,15 @@ let spec_int_range_neg_int64
   parser_inj = ();
 }
 
-let parser_spec_bstr (p: string64 -> bool { forall x . p x }) : parser_spec bstr string64 p =
+let parser_spec_bstr (p: Seq.seq U8.t -> bool { forall x . p x <==> Seq.length x < pow2 64 }) : parser_spec bstr (Seq.seq U8.t) p =
   (fun x -> let Cbor.CString _ v = Cbor.unpack x in v)
 
-let serializer_spec_bstr (p: string64 -> bool { forall x . p x }) : serializer_spec (parser_spec_bstr p) =
+let serializer_spec_bstr (p: Seq.seq U8.t -> bool { forall x . p x <==> Seq.length x < pow2 64 }) : serializer_spec (parser_spec_bstr p) =
   (fun x -> Cbor.pack (Cbor.CString Cbor.cbor_major_type_byte_string x))
 
 let spec_bstr
-  (p: string64 -> bool { forall x . p x })
-: spec bstr string64 true
+  (p: Seq.seq U8.t -> bool { forall x . p x <==> Seq.length x < pow2 64 })
+: spec bstr (Seq.seq U8.t) true
 = {
   serializable = p;
   parser = parser_spec_bstr p;
@@ -467,15 +460,15 @@ let spec_bstr
   parser_inj = ();
 }
 
-let parser_spec_tstr (p: string64 -> bool { forall x . p x <==> CBOR.Spec.API.UTF8.correct x }) : parser_spec tstr string64 p =
+let parser_spec_tstr (p: Seq.seq U8.t -> bool { forall x . p x <==> (Seq.length x < pow2 64 /\ CBOR.Spec.API.UTF8.correct x) }) : parser_spec tstr (Seq.seq U8.t) p =
   (fun x -> let Cbor.CString _ v = Cbor.unpack x in v)
 
-let serializer_spec_tstr (p: string64 -> bool { forall x . p x <==> CBOR.Spec.API.UTF8.correct x }) : serializer_spec (parser_spec_tstr p) =
+let serializer_spec_tstr (p: Seq.seq U8.t -> bool { forall x . p x <==> (Seq.length x < pow2 64 /\ CBOR.Spec.API.UTF8.correct x) }) : serializer_spec (parser_spec_tstr p) =
   (fun x -> Cbor.pack (Cbor.CString Cbor.cbor_major_type_text_string x))
 
 let spec_tstr
-  (p: string64 -> bool { forall x . p x <==> CBOR.Spec.API.UTF8.correct x })
-: spec tstr string64 true
+  (p: Seq.seq U8.t -> bool { forall x . p x <==> (Seq.length x < pow2 64 /\ CBOR.Spec.API.UTF8.correct x) })
+: spec tstr (Seq.seq U8.t) true
 = {
   serializable = p;
   parser = parser_spec_tstr p;

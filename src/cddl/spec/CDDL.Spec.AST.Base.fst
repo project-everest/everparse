@@ -2187,8 +2187,6 @@ let target_spec_env_extend
 = fun n' -> if n' = n then t else env n'
 
 module U8 = FStar.UInt8
-noextract
-let string64 = Spec.string64
 module U64 = FStar.UInt64
 
 noextract
@@ -2210,7 +2208,7 @@ let target_elem_type_sem
   | TTInt64 -> I64.t
   | TTUnit -> unit
   | TTBool -> bool
-  | TTString -> string64
+  | TTString -> Seq.seq U8.t
   | TTAny -> Cbor.cbor
   | TTAlwaysFalse -> squash False
 
@@ -2715,6 +2713,8 @@ let empty_spec_env (e: target_spec_env empty_name_env) : spec_env empty_sem_env 
 //  tp_spec_array_group = (fun _ -> false_elim ());
 }
 
+let seq_is_bounded64 (s: Seq.seq U8.t) : Tot bool = Seq.length s < pow2 64
+
 let spec_of_elem_typ
   (e: elem_typ)
   (sq: squash (wf_elem_typ e))
@@ -2723,8 +2723,8 @@ let spec_of_elem_typ
   | ELiteral l -> Spec.spec_literal (eval_literal l)
   | EBool -> Spec.spec_bool (fun _ -> true)
   | ESimple -> Spec.spec_simple Cbor.simple_value_wf
-  | EByteString -> Spec.spec_bstr (fun _ -> true)
-  | ETextString -> Spec.spec_tstr CBOR.Spec.API.UTF8.correct
+  | EByteString -> Spec.spec_bstr seq_is_bounded64
+  | ETextString -> Spec.spec_tstr (Util.andp seq_is_bounded64 CBOR.Spec.API.UTF8.correct)
   | EUInt -> Spec.spec_uint (fun _ -> true)
   | ENInt -> Spec.spec_nint (fun _ -> true)
   | EAlwaysFalse -> Spec.spec_always_false (fun _ -> true)
