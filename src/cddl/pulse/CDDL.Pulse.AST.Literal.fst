@@ -177,6 +177,12 @@ fn impl_string_literal
 ```
 
 [@@AST.sem_attr]
+let string_length
+  (x: string)
+: Tot nat
+= List.Tot.length (String.list_of_string x)
+
+[@@AST.sem_attr]
 let impl_literal
   (#ty: Type0)
   (vmatch: (perm -> ty -> cbor -> slprop))
@@ -188,7 +194,7 @@ let impl_literal
 : Tot (impl_typ vmatch (AST.spec_type_of_literal l))
 = match l with
   | AST.LTextString s ->
-    impl_string_literal vmatch cbor_get_major_type cbor_get_string s (U64.uint_to_t (FStar.String.length s)) (slice_u8_eq_ascii_string s)
+    impl_string_literal vmatch cbor_get_major_type cbor_get_string s (U64.uint_to_t (string_length s)) (slice_u8_eq_ascii_string s)
   | AST.LInt n ->
     if n >= 0
     then impl_uint_literal cbor_get_major_type cbor_destr_int64 (U64.uint_to_t n) 
@@ -332,7 +338,7 @@ let with_literal
 : Tot (with_cbor_literal_t vmatch (AST.eval_literal l))
 = match l with
   | AST.LTextString s ->
-    with_cbor_literal_text_string cbor_mk_string s (U64.uint_to_t (FStar.String.length s)) (slice_u8_fill_ascii_string s)
+    with_cbor_literal_text_string cbor_mk_string s (U64.uint_to_t (string_length s)) (slice_u8_fill_ascii_string s)
   | AST.LInt n ->
     if n >= 0
     then with_cbor_literal_int mk_int64 elim_int64 cbor_major_type_uint64 (U64.uint_to_t n) 

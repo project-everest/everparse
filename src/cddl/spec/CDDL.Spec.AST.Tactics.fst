@@ -85,6 +85,7 @@ let steps = [
       delta_attr [`%sem_attr];
       delta_only [
         `%List.Tot.for_all;
+        `%List.Tot.length;
         `%FStar.Int.Cast.uint32_to_uint8;
         `%pow2;
       ];
