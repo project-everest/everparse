@@ -2125,7 +2125,7 @@ let rec target_type_bounded
   (t: target_type)
 : Tot bool
 = match t with
-  | TTDef s -> s `name_mem` bound
+  | TTDef s -> bound s = Some NType
   | TTPair t1 t2
   | TTTable t1 t2
   | TTUnion t1 t2 ->
@@ -2199,7 +2199,7 @@ module I64 = FStar.Int64
 
 let target_elem_type_sem
   (t: target_elem_type)
-: GTot Type0
+: GTot eqtype
 = match t with
   | TTUInt8 -> U8.t
   | TTUInt64 -> U64.t
@@ -2263,7 +2263,7 @@ let rec target_type_positively_bounded
   (t: target_type)
 : Tot bool
 = match t with
-  | TTDef s -> s `name_mem` bound
+  | TTDef s -> bound s = Some NType // s `name_mem` bound
   | TTPair t1 t2
   | TTUnion t1 t2 ->
     target_type_positively_bounded bound kbound t1 &&
@@ -2370,6 +2370,62 @@ let target_type_sem_rec
   (t: target_type { target_type_positively_bounded (extend_name_env bound new_name NType) bound t })
 : GTot Type0
 = rectype (target_type_sem_rec_body bound env new_name s t)
+
+noeq type target_type_env
+  (bound: name_env)
+= {
+  te_type: target_spec_env bound;
+  te_eq: (n: typ_name bound) -> (x1: te_type n) -> (x2: te_type n) -> Pure bool True (fun b -> b == true <==> x1 == x2);
+}
+
+let rec list_eq
+  (#t: Type)
+  (t_eq: (x1: t) -> (x2: t) -> Pure bool True (fun b -> b == true <==> x1 == x2))
+  (x1: list t)
+  (x2: list t)
+: Pure bool True (fun b -> b == true <==> x1 == x2)
+  (decreases x1)
+= match x1, x2 with
+  | [], [] -> true
+  | a1 :: q1, a2 :: q2 -> t_eq a1 a2 && list_eq t_eq q1 q2
+  | _ -> false
+
+noextract
+let rec target_type_eq
+  (#bound: name_env)
+  (env: target_type_env bound)
+  (t: target_type { target_type_bounded bound t })
+: Tot ((x1: target_type_sem env.te_type t) -> (x2: target_type_sem env.te_type t) -> Pure bool True (fun b -> b == true <==> x1 == x2))
+  (decreases t)
+= fun x1 x2 ->
+  match t with
+  | TTElem e ->
+    let x1 = x1 <: target_elem_type_sem e in
+    let x2 = x2 <: target_elem_type_sem e in
+    x1 = x2
+  | TTDef s -> env.te_eq s x1 x2
+  | TTOption t' ->
+    let x1 = x1 <: option (target_type_sem env.te_type t') in
+    let x2 = x2 <: option (target_type_sem env.te_type t') in
+    begin match x1, x2 with
+    | None, None -> true
+    | Some x1', Some x2' -> target_type_eq env t' x1' x2'
+    | _ -> false
+    end
+  | TTPair t1 t2 -> 
+    let (x11, x12) = (x1 <: (target_type_sem env.te_type t1 & target_type_sem env.te_type t2)) in
+    let (x21, x22) = (x2 <: (target_type_sem env.te_type t1 & target_type_sem env.te_type t2)) in
+    target_type_eq env t1 x11 x21 && target_type_eq env t2 x12 x22
+  | TTArray a ->
+    list_eq (target_type_eq env a) (x1 <: list (target_type_sem env.te_type a)) x2
+  | TTUnion t1 t2 ->
+    begin match (x1 <: either (target_type_sem env.te_type t1) (target_type_sem env.te_type t2)), (x2 <: either (target_type_sem env.te_type t1) (target_type_sem env.te_type t2)) with
+    | Inl x1', Inl x2' -> target_type_eq env t1 x1' x2'
+    | Inr x1', Inr x2' -> target_type_eq env t2 x1' x2'
+    | _ -> false
+    end
+  | TTTable tk tv ->
+    Map.equal_bool #(target_type_sem env.te_type tk) (list_eq (target_type_eq env tv)) (x1 <: table (target_type_sem env.te_type tk) (target_type_sem env.te_type tv)) x2
 
 type pair_kind =
 | PEraseLeft
