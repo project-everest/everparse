@@ -2193,7 +2193,7 @@ let table
   (key: Type0)
   ([@@@strictly_positive] value: Type0)
 : GTot Type0
-= Map.t key value
+= Map.t key (list value) // that the list be a singleton is a serialization constraint, see below
 
 module I64 = FStar.Int64
 

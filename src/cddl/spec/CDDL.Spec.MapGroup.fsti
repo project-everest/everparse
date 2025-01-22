@@ -1930,7 +1930,7 @@ let mg_spec_zero_or_one
 
 let map_group_zero_or_more_match_item_length
   (#tkey #tvalue: Type)
-  (x: Map.t tkey tvalue)
+  (x: Map.t tkey (list tvalue))
 : Tot nat
 = Map.length x
 
@@ -1942,11 +1942,12 @@ let map_entry_serializable
   (#inj: bool)
   (#value: typ)
   (pvalue: spec value tvalue inj)
-  (x: (tkey & tvalue))
+  (x: (tkey & list tvalue))
 : Tot bool
 = pkey.serializable (fst x) &&
   not (key_except (pkey.serializer (fst x))) &&
-  pvalue.serializable (snd x)
+  List.Tot.length (snd x) = 1 &&
+  pvalue.serializable (List.Tot.hd (snd x))
 
 let mk_map_singleton
   (#tkey #tvalue: Type)
@@ -1954,7 +1955,7 @@ let mk_map_singleton
   (pkey: spec key tkey true)
   (x: tkey { pkey.serializable x })
   (y: tvalue)
-: Tot (Map.t tkey tvalue)
+: Tot (Map.t tkey (list tvalue))
 = Map.singleton x
       (fun (k: tkey) ->
         if pkey.serializable k
@@ -1964,7 +1965,7 @@ let mk_map_singleton
         end
         else false
       )
-      y
+      [y]
 
 module Util = CBOR.Spec.Util
 
@@ -1976,9 +1977,9 @@ let map_group_zero_or_more_match_item_parser_op
   (#inj: bool)
   (pvalue: spec value tvalue inj)
   (m: map_group_parser_spec_arg (map_group_zero_or_more (map_group_match_item false (Util.andp key (Util.notp key_except)) value)) (Util.andp key (Util.notp key_except)))
-  (accu: Map.t tkey tvalue)
+  (accu: Map.t tkey (list tvalue))
   (x: cbor)
-: Tot (Map.t tkey tvalue)
+: Tot (Map.t tkey (list tvalue))
 = if key_except x
   then accu
   else match cbor_map_get m x with
@@ -1996,7 +1997,7 @@ let map_group_zero_or_more_match_item_parser_op_comm
   (#inj: bool)
   (pvalue: spec value tvalue inj)
   (m: map_group_parser_spec_arg (map_group_zero_or_more (map_group_match_item false (Util.andp key (Util.notp key_except)) value)) (Util.andp key (Util.notp key_except)))
-  (accu: Map.t tkey tvalue)
+  (accu: Map.t tkey (list tvalue))
   (x1 x2: cbor)
 : Lemma
   (ensures (map_group_zero_or_more_match_item_parser_op pkey key_except pvalue m (map_group_zero_or_more_match_item_parser_op pkey key_except pvalue m accu x1) x2 `Map.equal` map_group_zero_or_more_match_item_parser_op pkey key_except pvalue m (map_group_zero_or_more_match_item_parser_op pkey key_except pvalue m accu x2) x1
@@ -2012,10 +2013,10 @@ let rec list_fold_map_group_zero_or_more_match_item_parser_op_mem
   (#inj: bool)
   (pvalue: spec value tvalue inj)
   (m: map_group_parser_spec_arg (map_group_zero_or_more (map_group_match_item false (Util.andp key (Util.notp key_except)) value)) (Util.andp key (Util.notp key_except)))
-  (accu: Map.t tkey tvalue)
+  (accu: Map.t tkey (list tvalue))
   (l: list cbor)
   (k: tkey)
-  (v: tvalue)
+  (v: list tvalue)
 : Lemma
   (ensures (
     let m' = List.Tot.fold_left (map_group_zero_or_more_match_item_parser_op pkey key_except pvalue m) accu l in
@@ -2029,7 +2030,7 @@ let rec list_fold_map_group_zero_or_more_match_item_parser_op_mem
       | None -> False
       | Some v' ->
         value v' /\
-        pvalue.parser v' == v
+        [pvalue.parser v'] == v
       end
     ))
   ))
@@ -2048,7 +2049,7 @@ let map_group_zero_or_more_match_item_parser_op_length
   (#inj: bool)
   (pvalue: spec value tvalue inj)
   (m: map_group_parser_spec_arg (map_group_zero_or_more (map_group_match_item false (Util.andp key (Util.notp key_except)) value)) (Util.andp key (Util.notp key_except)))
-  (accu: Map.t tkey tvalue)
+  (accu: Map.t tkey (list tvalue))
   (l: cbor)
 : Lemma
   (ensures (
@@ -2075,7 +2076,7 @@ let rec list_fold_map_group_zero_or_more_match_item_parser_length
   (#inj: bool)
   (pvalue: spec value tvalue inj)
   (m: map_group_parser_spec_arg (map_group_zero_or_more (map_group_match_item false (Util.andp key (Util.notp key_except)) value)) (Util.andp key (Util.notp key_except)))
-  (accu: Map.t tkey tvalue)
+  (accu: Map.t tkey (list tvalue))
   (l: list cbor)
 : Lemma
   (ensures (
@@ -2097,7 +2098,7 @@ let map_group_zero_or_more_match_item_parser'
   (#inj: bool)
   (pvalue: spec value tvalue inj)
   (x: map_group_parser_spec_arg (map_group_zero_or_more (map_group_match_item false (Util.andp key (Util.notp key_except)) value)) (Util.andp key (Util.notp key_except)))
-: Tot (Map.t tkey tvalue)
+: Tot (Map.t tkey (list tvalue))
 = cbor_map_fold (map_group_zero_or_more_match_item_parser_op pkey key_except pvalue x) (Map.empty _ _) x
 
 let map_group_zero_or_more_match_item_parser'_mem
@@ -2108,7 +2109,7 @@ let map_group_zero_or_more_match_item_parser'_mem
   (#inj: bool)
   (pvalue: spec value tvalue inj)
   (m: map_group_parser_spec_arg (map_group_zero_or_more (map_group_match_item false (Util.andp key (Util.notp key_except)) value)) (Util.andp key (Util.notp key_except)))
-  (kv: (tkey & tvalue))
+  (kv: (tkey & list tvalue))
 : Lemma
   (ensures (
     let m' = map_group_zero_or_more_match_item_parser' pkey key_except pvalue m in
@@ -2119,7 +2120,7 @@ let map_group_zero_or_more_match_item_parser'_mem
       exists kv' . cbor_map_mem kv' m /\
       fst kv' == pkey.serializer k /\
       value (snd kv') /\
-      pvalue.parser (snd kv') == v
+      [pvalue.parser (snd kv')] == v
     ))
   ))
   [SMTPat (Map.mem kv (map_group_zero_or_more_match_item_parser' pkey key_except pvalue m))]
@@ -2161,14 +2162,14 @@ let map_group_zero_or_more_match_item_serializer_op
   (key_except: typ)
   (#inj: bool)
   (pvalue: spec value tvalue inj)
-  (m: Map.t tkey tvalue { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
+  (m: Map.t tkey (list tvalue) { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
   (accu: cbor_map)
   (x: tkey)
 : Tot (cbor_map)
 = match Map.get m x with
   | None -> accu
   | Some y ->
-    cbor_map_union accu (cbor_map_singleton (pkey.serializer x) (pvalue.serializer y))
+    cbor_map_union accu (cbor_map_singleton (pkey.serializer x) (pvalue.serializer (List.Tot.hd y)))
 
 let map_group_zero_or_more_match_item_serializer_op_comm
   (#tkey #tvalue: Type)
@@ -2177,7 +2178,7 @@ let map_group_zero_or_more_match_item_serializer_op_comm
   (key_except: typ)
   (#inj: bool)
   (pvalue: spec value tvalue inj)
-  (m: Map.t tkey tvalue { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
+  (m: Map.t tkey (list tvalue) { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
   (accu: cbor_map)
   (x1 x2: tkey)
 : Lemma
@@ -2193,7 +2194,7 @@ let rec list_fold_map_group_zero_or_more_match_item_serializer_op_mem
   (key_except: typ)
   (#inj: bool)
   (pvalue: spec value tvalue inj)
-  (m: Map.t tkey tvalue { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
+  (m: Map.t tkey (list tvalue) { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
   (accu: cbor_map)
   (l: list tkey)
   (kv: (cbor & cbor))
@@ -2211,7 +2212,8 @@ let rec list_fold_map_group_zero_or_more_match_item_serializer_op_mem
       begin match Map.get m (pkey.parser k) with
       | None -> False
       | Some v' ->
-        v == pvalue.serializer v'
+        List.Tot.length v' == 1 /\
+        v == pvalue.serializer (List.Tot.hd v')
       end
     ))
   ))
@@ -2229,7 +2231,7 @@ let rec list_fold_map_group_zero_or_more_match_item_serializer_length
   (key_except: typ)
   (#inj: bool)
   (pvalue: spec value tvalue inj)
-  (m: Map.t tkey tvalue { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
+  (m: Map.t tkey (list tvalue) { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
   (accu: cbor_map)
   (l: list tkey)
 : Lemma
@@ -2255,7 +2257,7 @@ let map_group_zero_or_more_match_item_serializer'
   (key_except: typ)
   (#inj: bool)
   (pvalue: spec value tvalue inj)
-  (m: Map.t tkey tvalue { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
+  (m: Map.t tkey (list tvalue) { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
 : Tot cbor_map
 = Set.fold (map_group_zero_or_more_match_item_serializer_op pkey key_except pvalue m) cbor_map_empty (Map.key_set pkey m)
 
@@ -2266,7 +2268,7 @@ let map_group_zero_or_more_match_item_serializer'_mem_aux
   (key_except: typ)
   (#inj: bool)
   (pvalue: spec value tvalue inj)
-  (m: Map.t tkey tvalue { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
+  (m: Map.t tkey (list tvalue) { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
   (kv: (cbor & cbor))
 : Tot prop
 =
@@ -2276,7 +2278,8 @@ let map_group_zero_or_more_match_item_serializer'_mem_aux
       value v /\
       exists kv' . Map.mem kv' m /\
       fst kv' == (pkey.parser k) /\
-      v == pvalue.serializer (snd kv')
+      List.Tot.length (snd kv') == 1 /\
+      v == pvalue.serializer (List.Tot.hd (snd kv'))
 
 let map_group_zero_or_more_match_item_serializer'_mem
   (#tkey #tvalue: Type)
@@ -2285,7 +2288,7 @@ let map_group_zero_or_more_match_item_serializer'_mem
   (key_except: typ)
   (#inj: bool)
   (pvalue: spec value tvalue inj)
-  (m: Map.t tkey tvalue { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
+  (m: Map.t tkey (list tvalue) { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
   (kv: (cbor & cbor))
 : Lemma
   (ensures (
@@ -2305,7 +2308,7 @@ let map_group_zero_or_more_match_item_serializer'_length
   (key_except: typ)
   (#inj: bool)
   (pvalue: spec value tvalue inj)
-  (m: Map.t tkey tvalue { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
+  (m: Map.t tkey (list tvalue) { Map.for_all (map_entry_serializable pkey key_except pvalue) m })
 : Lemma
   (ensures (
     cbor_map_length (map_group_zero_or_more_match_item_serializer' pkey key_except pvalue m) == Map.length m
@@ -2329,7 +2332,7 @@ let map_group_zero_or_more_match_item_serializer
   let y = map_group_zero_or_more_match_item_serializer' pkey key_except pvalue x in
   assert (forall x . Some? (cbor_map_get y x) ==> cbor_map_mem (x, Some?.v (cbor_map_get y x)) y);
   let py = map_group_zero_or_more_match_item_parser' pkey key_except pvalue y in
-  assert (forall (kv: (tkey & tvalue)) . Map.mem kv x ==> cbor_map_mem (pkey.serializer (fst kv), pvalue.serializer (snd kv)) y);
+  assert (forall (kv: (tkey & list tvalue)) . Map.mem kv x ==> cbor_map_mem (pkey.serializer (fst kv), pvalue.serializer (List.Tot.hd (snd kv))) y);
   assert (Map.equal' py x);
   y
 
@@ -2352,7 +2355,7 @@ let map_group_zero_or_more_match_item_parser_inj
   assert (forall k . Map.defined k y ==> Map.mem (k, Some?.v (Map.get y k)) y);
   assert (cbor_map_filter (matches_map_group_entry (Util.andp key (Util.notp key_except)) value) m `cbor_map_equal` m);
   assert (forall (kv: (cbor & cbor)) . cbor_map_mem kv m ==> value (snd kv));
-  assert (forall (kv: (cbor & cbor)) . cbor_map_mem kv m ==> (value (snd kv) /\ Map.mem (pkey.parser (fst kv), pvalue.parser (snd kv)) y));
+  assert (forall (kv: (cbor & cbor)) . cbor_map_mem kv m ==> (value (snd kv) /\ Map.mem (pkey.parser (fst kv), [pvalue.parser (snd kv)]) y));
   ()
 
 let mg_zero_or_more_match_item
@@ -2362,7 +2365,7 @@ let mg_zero_or_more_match_item
   (key_except: typ)
   (#inj: bool)
   (pvalue: spec value tvalue inj)
-: Tot (mg_spec (map_group_zero_or_more (map_group_match_item false (Util.andp key (Util.notp key_except)) value)) (Util.andp key (Util.notp key_except)) (Map.t tkey tvalue) inj)
+: Tot (mg_spec (map_group_zero_or_more (map_group_match_item false (Util.andp key (Util.notp key_except)) value)) (Util.andp key (Util.notp key_except)) (Map.t tkey (list tvalue)) inj)
 = {
   mg_size = map_group_zero_or_more_match_item_length;
   mg_serializable = Map.for_all (map_entry_serializable pkey key_except pvalue);
