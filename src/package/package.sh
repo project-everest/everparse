@@ -427,7 +427,7 @@ while [[ -n "$1" ]] && $process_args ; do
     case "$1" in
         -zip)
             shift
-            if [[ -n "$zip_everparse_cmd" ]] ;
+            if [[ -n "$zip_everparse_cmd" ]] ; then
                echo "ERROR: only one of -zip or -zip-noversion can be given"
                print_usage
                exit 1
@@ -437,7 +437,7 @@ while [[ -n "$1" ]] && $process_args ; do
 
         -zip-noversion)
             shift
-            if [[ -n "$zip_everparse_cmd" ]] ;
+            if [[ -n "$zip_everparse_cmd" ]] ; then
                echo "ERROR: only one of -zip or -zip-noversion can be given"
                print_usage
                exit 1
@@ -447,7 +447,7 @@ while [[ -n "$1" ]] && $process_args ; do
 
         -nuget)
             shift
-            if [[ -n "$nuget_everparse_cmd" ]] ;
+            if [[ -n "$nuget_everparse_cmd" ]] ; then
                echo "ERROR: only one of -nuget or -nuget-noversion can be given"
                print_usage
                exit 1
@@ -457,7 +457,7 @@ while [[ -n "$1" ]] && $process_args ; do
 
         -nuget-noversion)
             shift
-            if [[ -n "$nuget_everparse_cmd" ]] ;
+            if [[ -n "$nuget_everparse_cmd" ]] ; then
                echo "ERROR: only one of -nuget or -nuget-noversion can be given"
                print_usage
                exit 1
