@@ -311,3 +311,25 @@ let for_all_keys
     (requires True)
     (ensures fun b -> b <==> (forall k . defined k m ==> f k))
 = for_all (fun kv -> f (fst kv)) m
+
+let included
+  (#key: Type)
+  (#value: Type u#a)
+  (f: (x: value) -> (y: value) -> Pure bool (requires True) (ensures fun z -> z == true <==> x == y))
+  (m1 m2: t key value)
+: Pure bool
+    (requires True)
+    (ensures fun b -> b == true <==> (forall k . defined k m1 ==> get m1 k == get m2 k))
+= for_all (fun (k, v) -> match get m2 k with None -> false | Some v' -> f v v') m1
+
+let equal_bool
+  (#key: Type)
+  (#value: Type u#a)
+  (f: (x: value) -> (y: value) -> Pure bool (requires True) (ensures fun z -> z == true <==> x == y))
+  (m1 m2: t key value)
+: Pure bool
+    (requires True)
+    (ensures fun b -> b == true ==> m1 == m2)
+= let res = included f m1 m2 && included f m2 m1 in
+  assert (res == true <==> equal m1 m2);
+  res
