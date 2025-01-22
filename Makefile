@@ -71,16 +71,21 @@ clean: clean-3d clean-lowparse clean-quackyducky
 release:
 	+src/package/release.sh
 
-# Windows binary package
+# Binary package
 package:
-	+src/package/package.sh -zip
+	+src/package/package.sh -zip -nuget
 
-# Windows binary package
+# Binary package
 package-noversion:
-	+src/package/package.sh -zip-noversion
+	+src/package/package.sh -zip-noversion -nuget-noversion
+
+# Nuget package only (needed by the Windows workflow, since we let
+# GitHub Actions produce the .zip from the everparse directory)
+nuget-noversion:
+	+src/package/package.sh -nuget-noversion
 
 everparse:
-	+src/package/package.sh -make
+	+src/package/package.sh
 
 # For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
 
