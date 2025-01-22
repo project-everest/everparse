@@ -154,12 +154,15 @@ jobs:
       - name: Build package
         shell: C:\cygwin64\bin\bash.exe --login '{0}'
         run: |
-          cd $GITHUB_WORKSPACE && eval $(opam env) && CC=x86_64-w64-mingw32-gcc.exe make package -kj$(nproc) && echo ""
+          cd $GITHUB_WORKSPACE && eval $(opam env) && CC=x86_64-w64-mingw32-gcc.exe make nuget-noversion -kj$(nproc) && echo ""
 
       - uses: actions/upload-artifact@v4
         with:
           path: |
-            everparse*.zip
-            everparse*.tar.gz
-            everparse*.nupkg
+            everparse
           name: everparse
+      - uses: actions/upload-artifact@v4
+        with:
+          path: |
+            EverParse*.nupkg
+          name: everparse-nupkg
