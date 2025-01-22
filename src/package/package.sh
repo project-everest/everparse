@@ -414,13 +414,8 @@ OPTION:
 HELP
 }
 
-noop ()
-{
-    true
-}
-
-zip_everparse_cmd=noop
-nuget_everparse_cmd=noop
+zip_everparse_cmd=
+nuget_everparse_cmd=
 process_args=true
 
 while [[ -n "$1" ]] && $process_args ; do
@@ -485,6 +480,6 @@ done
 
 
 make_everparse "$@"
-$zip_everparse_cmd
-$nuget_everparse_cmd
+if [[ -n "$zip_everparse_cmd" ]] ; then $zip_everparse_cmd ; fi
+if [[ -n "$nuget_everparse_cmd" ]] ; then $nuget_everparse_cmd ; fi
 true
