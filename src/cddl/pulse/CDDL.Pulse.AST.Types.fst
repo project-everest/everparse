@@ -34,7 +34,7 @@ let rel_elem_type_sem
   (t: target_elem_type)
   (freeable: bool)
 : Tot (rel (impl_elem_type_sem cbor_t t) (target_elem_type_sem t))
-= match t with
+= match t returns rel (impl_elem_type_sem cbor_t t) (target_elem_type_sem t) with
   | TTUInt8 -> rel_pure _
   | TTUInt64 -> rel_pure _
   | TTInt64 -> rel_pure _
@@ -88,7 +88,7 @@ let rec rel_type_sem
   (freeable: bool)
 : Tot (rel (impl_type_sem cbor_t env.r_type t) (target_type_sem s_env.te_type t) )
   (decreases t)
-= match t with
+= match t returns rel (impl_type_sem cbor_t env.r_type t) (target_type_sem s_env.te_type t) with
   | TTDef s -> env.r_rel s freeable
   | TTElem elt -> rel_elem_type_sem cbor_t vmatch elt freeable
   | TTOption t -> rel_option (rel_type_sem cbor_t vmatch env t freeable)

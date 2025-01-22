@@ -5,27 +5,57 @@ module S = Pulse.Lib.Slice.Util
 module V = Pulse.Lib.Vec
 module Spec = CDDL.Spec.All
 
-let rel (t1 t2: Type) = t1 -> t2 -> slprop
+module FE = FStar.FunctionalExtensionality
 
-let rel_always_false (t1 t2: Type0) (x1: t1) (x2: t2) : Tot slprop =
-  pure False
+let fe_restricted_arrow (t t': Type) = FE.restricted_t t (fun _ -> t')
+
+let fe_restricted_arrow_eq (#t #t': Type) (f1 f2: fe_restricted_arrow t t') : Lemma
+  (requires (FE.feq f1 f2))
+  (ensures f1 == f2)
+= ()
+
+let fe_restricted_arrow_eq' (#t #t': Type) (f1 f2: fe_restricted_arrow t t')
+  (prf: (x: t) -> Lemma
+    (f1 x == f2 x)
+  )
+: Lemma
+  (f1 == f2)
+= Classical.forall_intro prf;
+  fe_restricted_arrow_eq f1 f2
+
+let feq2 (#t1 #t2 #t: Type) (f g: (t1 -> t2 -> t)) : Tot prop =
+  forall x1 x2 . f x1 x2 == g x1 x2
+
+let rel (t1 t2: Type) = fe_restricted_arrow t1 (fe_restricted_arrow t2 slprop)
+
+let rel_eq (#t #t': Type) (r1 r2: rel t t') : Lemma
+  (requires (feq2 r1 r2))
+  (ensures r1 == r2)
+= fe_restricted_arrow_eq' r1 r2 (fun x ->
+    fe_restricted_arrow_eq' (r1 x) (r2 x) (fun x' -> ())
+  )
+
+[@@pulse_unfold]
+let mk_rel (#t: Type) (#t': Type) (f: (x: t) -> (x': t') -> slprop) : Tot (rel t t') =
+  FE.on_dom t (fun x -> FE.on_dom t' (f x))
+
+let rel_always_false (t1 t2: Type0) : rel t1 t2 = mk_rel (fun _ _ -> pure False)
 
 let rel_pure
     (t: Type)
-    (x y: t)
-: Tot slprop
-= pure (x == y)
+: rel t t
+= mk_rel (fun x y -> pure (x == y))
 
-let rel_unit : rel unit unit = fun _ _ -> emp
+let rel_unit : rel unit unit = mk_rel (fun _ _ -> emp)
 
 let rel_slice_of_list
   (#low #high: Type)
   (r: rel low high)
   (freeable: bool)
-  (x: S.slice low)
-  (y: list high)
-: slprop
-= exists* s . pts_to x s ** seq_list_match s y r ** pure (freeable == false)
+: rel (S.slice low) (list high)
+= mk_rel (fun x y ->
+    exists* s . pts_to x s ** seq_list_match s y r ** pure (freeable == false)
+  )
 
 module U64 = FStar.UInt64
 
@@ -35,13 +65,14 @@ type vec (t: Type) = {
   v: V.vec t;
 }
 
+
 let rel_vec_of_list
   (#low #high: Type)
   (r: rel low high)
-  (x: vec low)
-  (y: list high)
-: slprop
-= exists* s . pts_to x.v s ** seq_list_match s y r ** pure (V.is_full_vec x.v /\ V.length x.v == U64.v x.len)
+: rel (vec low) (list high)
+= mk_rel (fun x y ->
+    exists* s . pts_to x.v s ** seq_list_match s y r ** pure (V.is_full_vec x.v /\ V.length x.v == U64.v x.len)
+  )
 
 noeq
 type vec_or_slice (t: Type) =
@@ -52,12 +83,12 @@ let rel_vec_or_slice_of_list
   (#low #high: Type)
   (r: rel low high)
   (freeable: bool)
-  (x: vec_or_slice low)
-  (y: list high)
-: Tot slprop
-= match x with
+: rel (vec_or_slice low) (list high)
+= mk_rel (fun x y ->
+  match x with
   | Vec v -> rel_vec_of_list r v y
   | Slice s -> rel_slice_of_list r freeable s y
+)
 
 ```pulse
 ghost
@@ -112,32 +143,30 @@ let rel_pair
   (r1: rel low1 high1)
   (#low2 #high2: Type)
   (r2: rel low2 high2)
-  (xlow: (low1 & low2)) (xhigh: (high1 & high2))
-: slprop
-= r1 (fst xlow) (fst xhigh) ** r2 (snd xlow) (snd xhigh)
+: rel (low1 & low2) (high1 & high2)
+= mk_rel (fun xlow xhigh -> r1 (fst xlow) (fst xhigh) ** r2 (snd xlow) (snd xhigh))
 
 let rel_either
   (#low1 #high1: Type)
   (r1: rel low1 high1)
   (#low2 #high2: Type)
   (r2: rel low2 high2)
-  (xlow: (low1 `either` low2)) (xhigh: (high1 `either` high2))
-: slprop
-= match xlow, xhigh with
-| Inl xl, Inl xh -> r1 xl xh
-| Inr xl, Inr xh -> r2 xl xh
-| _ -> pure False
+: rel (either low1 low2) (either high1 high2)
+= mk_rel (fun xlow xhigh -> match xlow, xhigh with
+  | Inl xl, Inl xh -> r1 xl xh
+  | Inr xl, Inr xh -> r2 xl xh
+  | _ -> pure False
+)
 
 let rel_option
   (#low #high: Type)
   (r: rel low high)
-  (x: option low)
-  (y: option high)
-: slprop
-= match x, y with
+: rel (option low) (option high)
+= mk_rel (fun x y -> match x, y with
   | Some x', Some y' -> r x' y'
   | None, None -> emp
   | _ -> pure False
+)
 
 let rel_bij_l
   (#left #right: Type)
@@ -145,10 +174,11 @@ let rel_bij_l
   (#left': Type)
   (bij: Spec.bijection left left')
 : rel left' right
-= fun
+= mk_rel (fun
   (x: left')
   (y: right) ->
    r (bij.bij_to_from x) y
+)
 
 let rel_bij_r
   (#left #right: Type)
@@ -156,36 +186,32 @@ let rel_bij_r
   (#right': Type)
   (bij: Spec.bijection right right')
 : rel left right'
-= fun
+= mk_rel (fun
   (x: left)
   (y: right')
 ->
  r x (bij.bij_to_from y)
-  
+)
+
 let rel_slice_of_seq
   (#t: Type)
   (freeable: bool)
-  (x: S.slice t)
-  (y: Seq.seq t)
-: Tot slprop
-= pts_to x y ** pure (freeable == false)
+: rel (S.slice t) (Seq.seq t)
+= mk_rel (fun x y -> pts_to x y ** pure (freeable == false))
 
 let rel_vec_of_seq
   (#t: Type)
-  (x: vec t)
-  (y: Seq.seq t)
-: Tot slprop
-= pts_to x.v y ** pure (V.is_full_vec x.v /\ V.length x.v == U64.v x.len)
+: rel (vec t) (Seq.seq t)
+= mk_rel (fun x y -> pts_to x.v y ** pure (V.is_full_vec x.v /\ V.length x.v == U64.v x.len))
 
 let rel_vec_or_slice_of_seq
   (#t: Type)
   (freeable: bool)
-  (x: vec_or_slice t)
-  (y: Seq.seq t)
-: Tot slprop
-= match x with
+: rel (vec_or_slice t) (Seq.seq t)
+= mk_rel (fun x y -> match x with
   | Vec v -> rel_vec_of_seq v y
   | Slice s -> rel_slice_of_seq freeable s y
+)
 
 module Map = CDDL.Spec.Map
 
@@ -206,15 +232,14 @@ let rec map_of_list_pair
 let rel_vec_or_slice_of_table
   (#low_key #high_key: Type)
   (#low_value #high_value: Type)
-  (key_eq: (k1: high_key) -> (k2: high_key) -> Pure bool True (fun b -> b == true <==> k1 == k2))
+  (key_eq: (k1: high_key) -> (k2: high_key) -> Pure bool True (fun b -> b == true <==> k1 == k2)) // TODO: also FE-ize this
   (rkey: rel low_key high_key)
   (rvalue: rel low_value high_value)
   (freeable: bool)
-  (x: vec_or_slice (low_key & low_value))
-  (y: Map.t high_key (list high_value))
-: Tot slprop
-= exists* l . rel_vec_or_slice_of_list (rel_pair rkey rvalue) freeable x l **
+: rel (vec_or_slice (low_key & low_value)) (Map.t high_key (list high_value))
+= mk_rel (fun x y -> exists* l . rel_vec_or_slice_of_list (rel_pair rkey rvalue) freeable x l **
     pure (y == map_of_list_pair key_eq l)
+  )
 
 let rec map_of_list_pair_mem
   (#key #value: Type0)
@@ -347,8 +372,9 @@ let rel_cbor_copy
   (cbor_t: Type0)
   (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
   (freeable: bool)
-  (x: cbor_copy_t cbor_t)
-  (y: Cbor.cbor)
-: Tot slprop
-= vmatch 1.0R x.cbor y **
+: rel (cbor_copy_t cbor_t) (Cbor.cbor)
+= mk_rel (fun x y ->
+  vmatch 1.0R x.cbor y **
   rel_cbor_copy_vec cbor_t vmatch freeable x y
+)
+
