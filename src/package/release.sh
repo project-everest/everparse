@@ -53,7 +53,7 @@ export everparse_version
 #strip the v
 export everparse_nuget_version=${everparse_version:1}
 
-package_cmd="src/package/package.sh -zip -nuget"
+src/package/package.sh -zip -nuget
 
 # push my commit and the tag
 git push $remote $branchname $everparse_version

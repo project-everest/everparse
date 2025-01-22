@@ -121,34 +121,43 @@ make_everparse() {
     ## Setup F*. We need to locate a package, either it's already
     # there or we try to build one from the repo.
 
-    if ! [ -f fstar.tar.gz ] && ! [ -f fstar.zip ]; then
-      if ! [ -d FStar ]; then
-        git clone https://github.com/FStarLang/FStar --depth 1
-      fi
-      $MAKE -C FStar "$@" ADMIT=1
-      $MAKE -C FStar "$@" FSTAR_TAG= package
-      cp FStar/fstar.tar.gz . || cp FStar/fstar.zip .
-    fi
-
-    FSTAR_PKG_ROOT=__fstar-install
-    rm -rf "$FSTAR_PKG_ROOT"
-    mkdir -p "$FSTAR_PKG_ROOT"
-    if [ -f fstar.tar.gz ]; then
-      FSTAR_PKG=$(realpath fstar.tar.gz)
-      tar xzf $FSTAR_PKG -C "$FSTAR_PKG_ROOT"
-    elif [ -f fstar.zip ]; then
-      FSTAR_PKG=$(realpath fstar.zip)
-      pushd "$FSTAR_PKG_ROOT"
-      unzip -q "$FSTAR_PKG"
-      popd
-    else
-      echo "unexpected, no package?" >&2
-      exit 1
-    fi
-
+    FSTAR_PKG_ENVELOPE=__fstar-install
     # The package extracts into a fstar directory, and everything
     # is under there.
-    FSTAR_PKG_ROOT="$FSTAR_PKG_ROOT/fstar"
+    FSTAR_PKG_ROOT="$FSTAR_PKG_ENVELOPE/fstar"
+    FSTAR_SRC_PKG_ROOT=fstar-src/fstar
+    if ! [[ -d $FSTAR_PKG_ROOT ]] ; then
+        if [[ -d $FSTAR_SRC_PKG_ROOT ]] ; then
+            # build from a source package
+            $MAKE -C $FSTAR_SRC_PKG_ROOT "$@" ADMIT=1
+            mkdir -p "$FSTAR_PKG_ROOT"
+            PREFIX="$(fixpath "$PWD/$FSTAR_PKG_ROOT")" $MAKE -C $FSTAR_SRC_PKG_ROOT install
+            $cp "$FSTAR_SRC_PKG_ROOT/LICENSE" "$FSTAR_PKG_ROOT/"
+        else
+            if ! [ -f fstar.tar.gz ] && ! [ -f fstar.zip ]; then
+                # build a binary package from a full F* clone
+                if ! [ -d FStar ]; then
+                    git clone https://github.com/FStarLang/FStar --depth 1
+                fi
+                $MAKE -C FStar "$@" ADMIT=1
+                $MAKE -C FStar "$@" FSTAR_TAG= package
+                $cp FStar/fstar.tar.gz . || $cp FStar/fstar.zip .
+            fi
+            mkdir -p "$FSTAR_PKG_ENVELOPE"
+            if [ -f fstar.tar.gz ]; then
+                FSTAR_PKG=$(realpath fstar.tar.gz)
+                tar xzf $FSTAR_PKG -C "$FSTAR_PKG_ENVELOPE"
+            elif [ -f fstar.zip ]; then
+                FSTAR_PKG=$(realpath fstar.zip)
+                pushd "$FSTAR_PKG_ENVELOPE"
+                unzip -q "$FSTAR_PKG"
+                popd
+            else
+                echo "unexpected, no package?" >&2
+                exit 1
+            fi
+        fi
+    fi
 
     export FSTAR_EXE=$(realpath $FSTAR_PKG_ROOT/bin/fstar.exe)
     export FSTAR_EXE=$(fixpath "$FSTAR_EXE")
