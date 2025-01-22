@@ -474,6 +474,7 @@ while [[ -n "$1" ]] && $process_args ; do
         --)
             shift
             process_args=false
+            ;;
 
         *)
             print_usage
