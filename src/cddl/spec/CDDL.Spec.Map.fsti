@@ -293,6 +293,20 @@ let filter_implies
 = filter_filter p1 p2 f;
   filter_ext p1 (p1 `U.andp` p2) f
 
+let set
+  (#key: Type)
+  (#value: Type)
+  (m: t key value)
+  (k: key)
+  (k_eq: ((k' : key) -> Pure bool True (fun res -> res == true <==> k'  == k)))
+  (v: value)
+: Pure (t key value)
+    True
+    (fun m' ->
+      forall k' . {:pattern get m' k'} get m' k' == (if k_eq k' then Some v else get m k')
+    )
+= union (singleton k k_eq v) (filter (fun (k', _) -> not (k_eq k')) m)
+
 val for_all
   (#key: Type)
   (#value: Type u#a)
