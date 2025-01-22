@@ -67,6 +67,45 @@ let rec impl_type_sem
   | TTArray t -> vec_or_slice (impl_type_sem cbor_t env t)
   | TTTable t1 t2 -> vec_or_slice (impl_type_sem cbor_t env t1 & impl_type_sem cbor_t env t2)
 
+let target_impl_env_included
+  (#bound1: name_env)
+  (s_env1: target_impl_env bound1)
+  (#bound2: name_env)
+  (s_env2: target_impl_env bound2)
+: Tot prop
+= name_env_included bound1 bound2 /\
+  (forall (x: typ_name bound1) . s_env1 x == s_env2 x)
+
+let rec impl_type_sem_incr
+  (#bound1: name_env)
+  (cbor_t: Type0)
+  (env1: target_impl_env bound1)
+  (#bound2: name_env)
+  (env2: target_impl_env bound2)
+  (t: target_type)
+: Lemma
+  (requires (target_impl_env_included env1 env2 /\
+    target_type_bounded bound1 t
+  ))
+  (ensures (
+    impl_type_sem cbor_t env1 t == impl_type_sem cbor_t env2 t
+  ))
+  [SMTPatOr [
+    [SMTPat (target_impl_env_included env1 env2); SMTPat (impl_type_sem cbor_t env1 t);];
+    [SMTPat (target_impl_env_included env1 env2); SMTPat (impl_type_sem cbor_t env2 t);];
+  ]]
+= match t with
+  | TTOption t1
+  | TTArray t1
+    -> impl_type_sem_incr cbor_t env1 env2 t1
+  | TTPair t1 t2
+  | TTUnion t1 t2
+  | TTTable t1 t2
+    ->
+      impl_type_sem_incr cbor_t env1 env2 t1;
+      impl_type_sem_incr cbor_t env1 env2 t2
+  | _ -> ()
+
 [@sem_attr]
 noeq
 type rel_env
@@ -96,3 +135,48 @@ let rec rel_type_sem
   | TTUnion t1 t2 -> rel_either (rel_type_sem cbor_t vmatch env t1 freeable) (rel_type_sem cbor_t vmatch env t2 freeable)
   | TTArray t -> rel_vec_or_slice_of_list (rel_type_sem cbor_t vmatch env t freeable) freeable
   | TTTable t1 t2 -> rel_vec_or_slice_of_table (target_type_eq s_env t1) (rel_type_sem cbor_t vmatch env t1 freeable) (rel_type_sem cbor_t vmatch env t2 freeable) freeable
+
+let rel_env_included
+  (#bound1: name_env)
+  (#s_env1: target_type_env bound1)
+  (r1: rel_env s_env1)
+  (#bound2: name_env)
+  (#s_env2: target_type_env bound2)
+  (r2: rel_env s_env2)
+: Tot prop
+= target_spec_env_included s_env1.te_type s_env2.te_type /\
+  target_impl_env_included r1.r_type r2.r_type /\
+  (forall (n: typ_name bound1) (freeable: bool) . r1.r_rel n freeable == coerce_eq () (r2.r_rel n freeable))
+
+let rec rel_type_sem_incr
+  (#bound1: name_env)
+  (cbor_t: Type0)
+  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#s_env1: target_type_env bound1)
+  (env1: rel_env s_env1)
+  (#bound2: name_env)
+  (#s_env2: target_type_env bound2)
+  (env2: rel_env s_env2)
+  (t: target_type)
+  (freeable: bool)
+: Lemma
+  (requires rel_env_included env1 env2 /\
+    target_type_bounded bound1 t
+  )
+  (ensures rel_type_sem cbor_t vmatch env1 t freeable == coerce_eq () (rel_type_sem cbor_t vmatch env2 t freeable)) // FIXME: WHY WHY WHY do we have this coerce_eq?
+  (decreases t)
+  [SMTPatOr [
+    [SMTPat (rel_env_included env1 env2); SMTPat (rel_type_sem cbor_t vmatch env1 t freeable);];
+    [SMTPat (rel_env_included env1 env2); SMTPat (rel_type_sem cbor_t vmatch env2 t freeable);];
+  ]]
+= match t with
+  | TTOption t1
+  | TTArray t1
+    -> rel_type_sem_incr cbor_t vmatch env1 env2 t1 freeable
+  | TTPair t1 t2
+  | TTUnion t1 t2
+  | TTTable t1 t2 ->
+    eq_test_unique (target_type_eq s_env1 t1) (coerce_eq () (target_type_eq s_env2 t1));
+    rel_type_sem_incr cbor_t vmatch env1 env2 t1 freeable;
+    rel_type_sem_incr cbor_t vmatch env1 env2 t2 freeable
+  | _ -> ()
