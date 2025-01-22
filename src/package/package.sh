@@ -327,7 +327,10 @@ zip_everparse() {
         time tar cvzf everparse$ext everparse/*
     fi
     if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi
+}
 
+nuget_everparse() {
+    with_version=$1
     if $is_windows ; then
         # Create the nuget package
 
@@ -375,6 +378,8 @@ zip_everparse() {
         cp EverParse.nupkg ..
         if $with_version ; then mv ../EverParse.nupkg ../EverParse."$everparse_nuget_version".nupkg ; fi
         popd
+    else
+        echo "We are not on Windows, skipping nuget package"
     fi
     # Not doing any cleanup in the spirit of existing package
 
@@ -389,34 +394,96 @@ print_usage ()
   cat <<HELP
 USAGE: $0 [OPTIONS]
 
+By default, this script builds and places all components in the everparse folder
+
 OPTION:
-  -make     Build and place all components in the everparse folder
+  -zip      Also zip on Windows, tar.gz on Linux, the folder and name with the version
 
-  -zip      Like -make, but also zip the folder and name with the version
+  -zip-noversion
+            Like -zip, but without the version. Incompatible with -zip
 
-  -zip-noversion      Like -zip, but without the version
+  -nuget    Also nuget the folder and name with the version.
+            Does nothing on non-Windows platforms.
+
+  -nuget-noversion
+            Like -nuget, but without the version.
+            Incompatible with -nuget
+
+  --        Ends the list of script-specific options. Beyond that option,
+            passes other arguments to 'make'
 HELP
 }
 
-case "$1" in
-    -zip)
-        shift
-        make_everparse "$@"
-            zip_everparse true
-        ;;
+noop ()
+{
+    true
+}
 
-    -zip-noversion)
-        shift
-        make_everparse "$@"
-            zip_everparse false
-        ;;
+zip_everparse_cmd=noop
+nuget_everparse_cmd=noop
+process_args=true
 
-    -make)
-        shift
-        make_everparse "$@"
-        ;;
+while [[ -n "$1" ]] && $process_args ; do
+    case "$1" in
+        -zip)
+            shift
+            if [[ -n "$zip_everparse_cmd" ]] ;
+               echo "ERROR: only one of -zip or -zip-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            zip_everparse_cmd="zip_everparse true"
+            ;;
 
-    *)
-        print_usage
-        ;;
-esac
+        -zip-noversion)
+            shift
+            if [[ -n "$zip_everparse_cmd" ]] ;
+               echo "ERROR: only one of -zip or -zip-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            zip_everparse_cmd="zip_everparse false"
+            ;;
+
+        -nuget)
+            shift
+            if [[ -n "$nuget_everparse_cmd" ]] ;
+               echo "ERROR: only one of -nuget or -nuget-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            nuget_everparse_cmd="nuget_everparse true"
+            ;;
+
+        -nuget-noversion)
+            shift
+            if [[ -n "$nuget_everparse_cmd" ]] ;
+               echo "ERROR: only one of -nuget or -nuget-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            nuget_everparse_cmd="nuget_everparse false"
+            ;;
+
+        -help)
+            shift
+            print_usage
+            exit 0
+            ;;
+
+        --)
+            shift
+            process_args=false
+
+        *)
+            print_usage
+            exit 1
+            ;;
+    esac
+done
+
+
+make_everparse "$@"
+$zip_everparse_cmd
+$nuget_everparse_cmd
+true
