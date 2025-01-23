@@ -164,3 +164,99 @@ let impl_copyful_str_size
     (lo hi: Ghost.erased U64.t)
 : impl_copyful_parse vmatch (spec_str_size mt lo hi).parser (rel_vec_or_slice_of_seq true)
 = impl_copyful_bytes_gen cbor_destr_string _ ()
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_copyful_simple
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_destr_simple: read_simple_value_t vmatch)
+: impl_copyful_parse #ty vmatch #t_simple #U8.t #_ (spec_simple).parser #_ (rel_pure U8.t)
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let res = cbor_destr_simple c;
+  fold (rel_pure U8.t res res);
+  res
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_copyful_bool
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_destr_simple: read_simple_value_t vmatch)
+: impl_copyful_parse #ty vmatch #t_bool #bool #_ (spec_bool).parser #_ (rel_pure bool)
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let w = cbor_destr_simple c;
+  let res = (w = simple_value_true);
+  fold (rel_pure bool res res);
+  res
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_copyful_tagged_some
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
+    (tag: Ghost.erased U64.t)
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (#ser: Ghost.erased (tgt -> bool))
+    (#pl: Ghost.erased (parser_spec (Ghost.reveal t) tgt (Ghost.reveal ser)))
+    (#implt: Type0)
+    (#r: rel implt tgt)
+    (ipl: impl_copyful_parse vmatch pl r)
+: impl_copyful_parse #ty vmatch #(t_tag (Some (Ghost.reveal tag)) (Ghost.reveal t)) #tgt #(Ghost.reveal ser) (parser_spec_tag_some (Ghost.reveal tag) (Ghost.reveal pl)) #implt r
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let cpl = cbor_get_tagged_payload c;
+  let res = ipl cpl;
+  Trade.elim _ _; // release cpl
+  res
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_copyful_tagged_none
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_tagged_tag: get_tagged_tag_t vmatch)
+    (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (#ser: Ghost.erased (tgt -> bool))
+    (#pl: Ghost.erased (parser_spec (Ghost.reveal t) tgt (Ghost.reveal ser)))
+    (#implt: Type0)
+    (#r: rel implt tgt)
+    (ipl: impl_copyful_parse vmatch pl r)
+: impl_copyful_parse #ty vmatch #(t_tag None (Ghost.reveal t)) #(U64.t & tgt) #(serializable_spec_tag_none (Ghost.reveal ser)) (parser_spec_tag_none (Ghost.reveal pl)) #(U64.t & implt) (rel_pair (rel_pure U64.t) r)
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let lhs = cbor_get_tagged_tag c;
+  let rhs : implt = impl_copyful_tagged_some cbor_get_tagged_payload lhs ipl c;
+  with rv . assert (r rhs rv);
+  let resv = Ghost.hide (lhs, rv);
+  let res = (lhs, rhs);
+  rewrite (r rhs rv) as (r (snd res) (snd resv));
+  fold (rel_pure U64.t (fst res) (fst resv));
+  fold (rel_pair (rel_pure U64.t) r res resv);
+  res
+}
+```

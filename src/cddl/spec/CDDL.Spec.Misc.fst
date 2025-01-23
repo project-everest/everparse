@@ -73,6 +73,15 @@ let t_tag (tag: option U64.t) (t: typ) : typ = fun w -> let x = Cbor.unpack w in
   end &&
   t (Cbor.CTagged?.v x)
 
+let parser_spec_tag_some
+  (tag: U64.t)
+  (#t: typ)
+  (#target: Type)
+  (#ser: (target -> bool))
+  (p: parser_spec t target ser)
+: Tot (parser_spec (t_tag (Some tag) t) target ser)
+= (function w -> let Cbor.CTagged _ v = Cbor.unpack w in p v)
+
 let spec_tag_some
   (tag: U64.t)
   (#t: typ)
@@ -82,10 +91,25 @@ let spec_tag_some
 : Tot (spec (t_tag (Some tag) t) target inj)
 = {
   serializable = p.serializable;
-  parser = (function w -> let Cbor.CTagged _ v = Cbor.unpack w in p.parser v);
+  parser = parser_spec_tag_some _ p.parser;
   serializer = (fun x -> Cbor.pack (Cbor.CTagged tag (p.serializer x)));
   parser_inj = ();
 }
+
+let serializable_spec_tag_none
+  (#target: Type)
+  (ser: (target -> bool))
+  (x: (U64.t & target))
+: Tot bool
+= ser (snd x)
+
+let parser_spec_tag_none
+  (#t: typ)
+  (#target: Type)
+  (#ser: (target -> bool))
+  (p: parser_spec t target ser)
+: Tot (parser_spec (t_tag None t) (U64.t & target) (serializable_spec_tag_none ser))
+= (function w -> let Cbor.CTagged tag v = Cbor.unpack w in (tag, p v))
 
 let spec_tag_none
   (#t: typ)
@@ -94,8 +118,8 @@ let spec_tag_none
   (p: spec t target inj)
 : Tot (spec (t_tag None t) (U64.t & target) inj)
 = {
-  serializable = (fun x -> p.serializable (snd x));
-  parser = (function w -> let Cbor.CTagged tag v = Cbor.unpack w in (tag, p.parser v));
+  serializable = serializable_spec_tag_none p.serializable;
+  parser = parser_spec_tag_none p.parser;
   serializer = (fun (tag, x) -> Cbor.pack (Cbor.CTagged tag (p.serializer x)));
   parser_inj = ();
 }
