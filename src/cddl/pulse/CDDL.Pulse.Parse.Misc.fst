@@ -260,3 +260,45 @@ fn impl_copyful_tagged_none
   res
 }
 ```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_copyful_det_cbor
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#ty': Type0)
+    (#vmatch': perm -> ty -> cbor -> slprop)
+    (cbor_destr_string: get_string_t vmatch)
+    (cbor_det_parse: cbor_det_parse_t vmatch')
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (sp: Ghost.erased (spec t tgt true))
+    (#implt: Type0)
+    (#r: rel implt tgt)
+    (ipl: impl_copyful_parse vmatch' (Ghost.reveal sp).parser r)
+: impl_copyful_parse #ty vmatch #(bstr_cbor_det (Ghost.reveal t)) #tgt #(spec_bstr_cbor_det (Ghost.reveal sp)).serializable (spec_bstr_cbor_det (Ghost.reveal sp)).parser #implt r
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let cs = cbor_destr_string c;
+  with ps s . assert (pts_to cs #ps s);
+  Seq.slice_length s;
+  let cp = cbor_det_parse cs;
+  match cp {
+    Some cp_ -> {
+      let cp = fst cp_;
+      let rem = Ghost.hide (snd cp_);
+      unfold (cbor_det_parse_post vmatch' cs ps s (Some (cp, Ghost.reveal rem)));
+      unfold (cbor_det_parse_post_some vmatch' cs ps s cp rem);
+      Trade.trans _ _ (vmatch p c v);
+      with ps vs . assert (vmatch' ps cp vs);
+      CBOR.Spec.API.Format.cbor_det_serialize_parse' vs (Seq.slice s (Seq.length (CBOR.Spec.API.Format.cbor_det_serialize vs)) (Seq.length s));
+      let res = ipl cp;
+      Trade.elim _ _;
+      res
+    }
+  }
+}
+```

@@ -140,6 +140,7 @@ fn cbor_det_parse_full
   (#v: Ghost.erased (Seq.seq U8.t))
 {
   let len = cbor_det_validate input;
+  Spec.cbor_det_parse_none_equiv v;
   if (len = 0sz) {
     fold (cbor_det_parse_post cbor_det_match input pm v None);
     None #(cbor_det_t & S.slice U8.t)

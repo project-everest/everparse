@@ -1393,7 +1393,8 @@ let cbor_det_parse_t
   stt (option (cbordet & S.slice U8.t))
     (pts_to input #pm v)
     (fun res ->
-      cbor_det_parse_post cbor_det_match input pm v res
+      cbor_det_parse_post cbor_det_match input pm v res **
+      pure (Some? res == Some? (Spec.cbor_det_parse v))
     )
 
 noextract [@@noextract_to "krml"]
