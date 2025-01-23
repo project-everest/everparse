@@ -56,6 +56,9 @@ else
     rm -rf "$FSTAR_SRC_PKG_ROOT"
     mkdir -p "$FSTAR_SRC_ENVELOPE"
     tar -x -f FStar/fstar-src.tar.gz -C "$FSTAR_SRC_ENVELOPE/" -z
+    # Remove two empty directories that shouldn't be there, and whose names will clash on Windows
+    if [[ -d "$FSTAR_SRC_PKG_ROOT/none" ]] ; then rmdir "$FSTAR_SRC_PKG_ROOT/none" ; fi
+    if [[ -d "$FSTAR_SRC_PKG_ROOT/None" ]] ; then rmdir "$FSTAR_SRC_PKG_ROOT/None" ; fi
     git add -- "$FSTAR_SRC_PKG_ROOT/"
     if
         ! {
