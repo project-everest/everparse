@@ -48,13 +48,19 @@ let rel_pure
 
 let rel_unit : rel unit unit = mk_rel (fun _ _ -> emp)
 
+noeq
+type slice (t: Type) = {
+  s: S.slice t;
+  p: perm;
+}
+
 let rel_slice_of_list
   (#low #high: Type)
   (r: rel low high)
   (freeable: bool)
-: rel (S.slice low) (list high)
+: rel (slice low) (list high)
 = mk_rel (fun x y ->
-    exists* s . pts_to x s ** seq_list_match s y r ** pure (freeable == false)
+    exists* s . pts_to x.s #x.p s ** seq_list_match s y r ** pure (freeable == false)
   )
 
 module U64 = FStar.UInt64
@@ -77,7 +83,7 @@ let rel_vec_of_list
 noeq
 type vec_or_slice (t: Type) =
 | Vec of vec t
-| Slice of S.slice t
+| Slice of slice t
 
 let rel_vec_or_slice_of_list
   (#low #high: Type)
@@ -196,8 +202,8 @@ let rel_bij_r
 let rel_slice_of_seq
   (#t: Type)
   (freeable: bool)
-: rel (S.slice t) (Seq.seq t)
-= mk_rel (fun x y -> pts_to x y ** pure (freeable == false))
+: rel (slice t) (Seq.seq t)
+= mk_rel (fun x y -> pts_to x.s #x.p y ** pure (freeable == false))
 
 let rel_vec_of_seq
   (#t: Type)

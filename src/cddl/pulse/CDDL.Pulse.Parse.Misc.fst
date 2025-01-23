@@ -167,6 +167,73 @@ let impl_copyful_str_size
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
+fn impl_zero_copy_bytes_gen
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_destr_string: get_string_t vmatch)
+    (#t: Ghost.erased typ)
+    (#ser: Ghost.erased (Seq.seq U8.t -> bool))
+    (par: Ghost.erased (parser_spec t (Seq.seq U8.t) ser))
+    (sq: squash (
+      forall (x: cbor) . Ghost.reveal t x ==> (CString? (unpack x) /\ (Ghost.reveal par x <: Seq.seq U8.t) == CString?.v (unpack x))
+    ))
+: impl_zero_copy_parse #ty vmatch #(Ghost.reveal t) #(Seq.seq U8.t) #(Ghost.reveal ser) (Ghost.reveal par) #_ (rel_vec_or_slice_of_seq false)
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let s = cbor_destr_string c;
+  with ps vs . assert (pts_to s #ps vs);
+  let w : slice U8.t = {
+    p = ps;
+    s = s;
+  };
+  fold (rel_slice_of_seq false w vs);
+  let res : vec_or_slice U8.t = Slice w;
+  fold (rel_vec_or_slice_of_seq false res vs);
+  ghost fn aux (_: unit)
+  requires
+    (Trade.trade (pts_to s #ps vs) (vmatch p c v) ** rel_vec_or_slice_of_seq false res vs)
+  ensures vmatch p c v
+  {
+    unfold (rel_vec_or_slice_of_seq false res vs);
+    unfold (rel_slice_of_seq false w vs);
+    Trade.elim _ _
+  };
+  Trade.intro_trade _ _ _ aux;
+  res
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_zero_copy_bytes
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_destr_string: get_string_t vmatch)
+: impl_zero_copy_parse #ty vmatch #bstr #(Seq.seq U8.t) #_ spec_bstr.parser #_ (rel_vec_or_slice_of_seq false )
+= impl_zero_copy_bytes_gen cbor_destr_string _ ()
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_zero_copy_text
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_destr_string: get_string_t vmatch)
+: impl_zero_copy_parse #ty vmatch #tstr #(Seq.seq U8.t) #_ spec_tstr.parser #_ (rel_vec_or_slice_of_seq false )
+= impl_zero_copy_bytes_gen cbor_destr_string _ ()
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_zero_copy_str_size
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_destr_string: get_string_t vmatch)
+    (mt: Ghost.erased major_type_byte_string_or_text_string)
+    (lo hi: Ghost.erased U64.t)
+: impl_zero_copy_parse vmatch (spec_str_size mt lo hi).parser (rel_vec_or_slice_of_seq false)
+= impl_zero_copy_bytes_gen cbor_destr_string _ ()
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
 fn impl_copyful_simple
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -297,6 +364,49 @@ fn impl_copyful_det_cbor
       CBOR.Spec.API.Format.cbor_det_serialize_parse' vs (Seq.slice s (Seq.length (CBOR.Spec.API.Format.cbor_det_serialize vs)) (Seq.length s));
       let res = ipl cp;
       Trade.elim _ _;
+      res
+    }
+  }
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_det_cbor
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#ty': Type0)
+    (#vmatch': perm -> ty -> cbor -> slprop)
+    (cbor_destr_string: get_string_t vmatch)
+    (cbor_det_parse: cbor_det_parse_t vmatch')
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (sp: Ghost.erased (spec t tgt true))
+    (#implt: Type0)
+    (#r: rel implt tgt)
+    (ipl: impl_zero_copy_parse vmatch' (Ghost.reveal sp).parser r)
+: impl_zero_copy_parse #ty vmatch #(bstr_cbor_det (Ghost.reveal t)) #tgt #(spec_bstr_cbor_det (Ghost.reveal sp)).serializable (spec_bstr_cbor_det (Ghost.reveal sp)).parser #implt r
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let cs = cbor_destr_string c;
+  with ps s . assert (pts_to cs #ps s);
+  Seq.slice_length s;
+  let cp = cbor_det_parse cs;
+  match cp {
+    Some cp_ -> {
+      let cp = fst cp_;
+      let rem = Ghost.hide (snd cp_);
+      unfold (cbor_det_parse_post vmatch' cs ps s (Some (cp, Ghost.reveal rem)));
+      unfold (cbor_det_parse_post_some vmatch' cs ps s cp rem);
+      with ps vs . assert (vmatch' ps cp vs);
+      Trade.elim_hyp_r (vmatch' ps cp vs) _ _;
+      Trade.trans _ _ (vmatch p c v);
+      CBOR.Spec.API.Format.cbor_det_serialize_parse' vs (Seq.slice s (Seq.length (CBOR.Spec.API.Format.cbor_det_serialize vs)) (Seq.length s));
+      let res = ipl cp;
+      Trade.trans _ _ (vmatch p c v);
       res
     }
   }
