@@ -173,3 +173,61 @@ fn impl_copyful_pure_as_zero_copy
   res
 }
 ```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_copyful_ext
+    (#ty: Type0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (#tgt_serializable: Ghost.erased (tgt -> bool))
+    (#ps: Ghost.erased (parser_spec t tgt tgt_serializable))
+    (#impl_tgt: Type0)
+    (#r: rel impl_tgt tgt)
+    (i: impl_copyful_parse vmatch ps r)
+    (#t': Ghost.erased typ)
+    (#tgt_serializable': Ghost.erased (tgt -> bool))
+    (ps': Ghost.erased (parser_spec t' tgt tgt_serializable'))
+    (sq: squash (
+      typ_included t' t /\
+      (forall (x: cbor) . Ghost.reveal t' x ==> ((Ghost.reveal ps' x <: tgt) == Ghost.reveal ps x))
+    ))
+: impl_copyful_parse #_ vmatch #(Ghost.reveal t') #tgt #(Ghost.reveal tgt_serializable') (Ghost.reveal ps') #impl_tgt r
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  i c
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_ext
+    (#ty: Type0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (#tgt_serializable: Ghost.erased (tgt -> bool))
+    (#ps: Ghost.erased (parser_spec t tgt tgt_serializable))
+    (#impl_tgt: Type0)
+    (#r: rel impl_tgt tgt)
+    (i: impl_zero_copy_parse vmatch ps r)
+    (#t': Ghost.erased typ)
+    (#tgt_serializable': Ghost.erased (tgt -> bool))
+    (ps': Ghost.erased (parser_spec t' tgt tgt_serializable'))
+    (sq: squash (
+      typ_included t' t /\
+      (forall (x: cbor) . Ghost.reveal t' x ==> ((Ghost.reveal ps' x <: tgt) == Ghost.reveal ps x))
+    ))
+: impl_zero_copy_parse #_ vmatch #(Ghost.reveal t') #tgt #(Ghost.reveal tgt_serializable') (Ghost.reveal ps') #impl_tgt r
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  i c
+}
+```

@@ -46,23 +46,13 @@ fn impl_copyful_nint
 ```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
-fn impl_copyful_int_range_uint64
+let impl_copyful_int_range_uint64
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (cbor_destr_int64: read_uint64_t vmatch)
     (lo hi: U64.t)
 : impl_copyful_parse #ty vmatch #(t_int_range (U64.v lo) (U64.v hi)) #U64.t #_ (spec_int_range_uint64 lo hi).parser #_ (rel_pure U64.t)
-=
-    (c: ty)
-    (#p: perm)
-    (#v: Ghost.erased cbor)
-{
-  let res = cbor_destr_int64 c;
-  fold (rel_pure U64.t res res);
-  res
-}
-```
+= impl_copyful_ext #_ #_ #_ #_ #(fun _ -> true) (impl_copyful_uint cbor_destr_int64 (fun _ -> true)) (spec_int_range_uint64 lo hi).parser ()
 
 module I64 = FStar.Int64
 
@@ -90,20 +80,10 @@ fn impl_copyful_int_range_int64
 ```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
-fn impl_copyful_int_range_neg_int64
+let impl_copyful_int_range_neg_int64
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (cbor_destr_int64: read_uint64_t vmatch)
     (lo hi: U64.t)
 : impl_copyful_parse #ty vmatch #(t_int_range ((-1) - U64.v lo) ((-1) - U64.v hi)) #U64.t #_ (spec_int_range_neg_int64 lo hi).parser #_ (rel_pure U64.t)
-=
-    (c: ty)
-    (#p: perm)
-    (#v: Ghost.erased cbor)
-{
-  let res = cbor_destr_int64 c;
-  fold (rel_pure U64.t res res);
-  res
-}
-```
+= impl_copyful_ext #_ #_ #_ #_ #(fun _ -> true) (impl_copyful_nint cbor_destr_int64 (fun _ -> true)) (spec_int_range_neg_int64 lo hi).parser ()
