@@ -408,3 +408,9 @@ let rel_cbor_not_freeable
   (freeable: bool)
 : Tot (rel (cbor_with_perm cbor_t) Cbor.cbor)
 = mk_rel (fun x1 x2 -> vmatch x1.p x1.c x2 ** pure (freeable == false))
+
+// A parser implementation that skips some data instead of reading
+// it. This parser implementation has no equivalent serializer
+
+let rel_skip (t: Type) : rel (Ghost.erased t) t =
+  mk_rel (fun x y -> pure (Ghost.reveal x == y))

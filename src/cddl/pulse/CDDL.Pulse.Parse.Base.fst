@@ -231,3 +231,55 @@ fn impl_zero_copy_ext
   i c
 }
 ```
+
+// A parser implementation that skips some data instead of reading
+// it. This parser implementation has no equivalent serializer
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_copyful_skip
+    (#ty: Type0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (#tgt_serializable: Ghost.erased (tgt -> bool))
+    (ps: Ghost.erased (parser_spec t tgt tgt_serializable))
+: impl_copyful_parse #_ vmatch #(Ghost.reveal t) #tgt #(Ghost.reveal tgt_serializable) (Ghost.reveal ps) #(Ghost.erased tgt) (rel_skip tgt)
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let res = Ghost.hide (Ghost.reveal ps v <: tgt);
+  fold (rel_skip tgt res (Ghost.reveal res));
+  res
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_skip
+    (#ty: Type0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (#tgt_serializable: Ghost.erased (tgt -> bool))
+    (ps: Ghost.erased (parser_spec t tgt tgt_serializable))
+: impl_zero_copy_parse #_ vmatch #(Ghost.reveal t) #tgt #(Ghost.reveal tgt_serializable) (Ghost.reveal ps) #(Ghost.erased tgt) (rel_skip tgt)
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let res = Ghost.hide (Ghost.reveal ps v <: tgt);
+  fold (rel_skip tgt res (Ghost.reveal res));
+  ghost fn aux (_: unit)
+  requires vmatch p c v ** rel_skip tgt res (Ghost.reveal res)
+  ensures vmatch p c v
+  {
+    unfold (rel_skip tgt res (Ghost.reveal res));
+  };
+  Trade.intro_trade _ _ _ aux;
+  res
+}
+```
