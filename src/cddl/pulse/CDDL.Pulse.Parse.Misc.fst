@@ -412,3 +412,32 @@ fn impl_zero_copy_det_cbor
   }
 }
 ```
+
+inline_for_extraction
+```pulse
+fn impl_zero_copy_any
+    (#ty: Type u#0)
+    (vmatch: perm -> ty -> cbor -> slprop)
+: impl_zero_copy_parse #ty vmatch #any #cbor #(spec_any).serializable (spec_any).parser #(cbor_with_perm ty) (rel_cbor_not_freeable vmatch false)
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let res : cbor_with_perm ty = {
+    c = c;
+    p = p;
+  };
+  rewrite (vmatch p c v) as (vmatch res.p res.c v);
+  fold (rel_cbor_not_freeable vmatch false res v);
+  ghost fn aux (_: unit)
+  requires emp ** rel_cbor_not_freeable vmatch false res v
+  ensures vmatch p c v
+  {
+    unfold (rel_cbor_not_freeable vmatch false res v);
+    rewrite (vmatch res.p res.c v) as (vmatch p c v);
+  };
+  Trade.intro _ _ _ aux;
+  res
+}
+```

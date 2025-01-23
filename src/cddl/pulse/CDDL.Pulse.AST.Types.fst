@@ -25,7 +25,7 @@ let impl_elem_type_sem
   | TTUnit -> unit
   | TTBool -> bool
   | TTString -> vec U8.t // TODO: allow zero-copy parsing
-  | TTAny -> cbor_copy_t cbor_t // TODO: allow zero_copy parsing
+  | TTAny -> cbor_with_perm cbor_t // zero_copy parsing only, see remark in CDDL.Pulse.Types
   | TTAlwaysFalse -> squash False
 
 let rel_elem_type_sem
@@ -41,7 +41,7 @@ let rel_elem_type_sem
   | TTUnit -> rel_unit
   | TTBool -> rel_pure _
   | TTString -> rel_vec_of_seq #U8.t
-  | TTAny -> rel_cbor_copy cbor_t vmatch freeable
+  | TTAny -> rel_cbor_not_freeable vmatch freeable
   | TTAlwaysFalse -> rel_always_false _ _
 
 [@sem_attr]

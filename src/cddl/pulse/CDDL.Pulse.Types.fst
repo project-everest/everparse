@@ -339,6 +339,13 @@ let map_of_list_pair_no_repeats_key
 = Classical.forall_intro (Classical.move_requires (map_of_list_pair_no_repeats_key_elim key_eq l));
   Classical.move_requires (map_of_list_pair_no_repeats_key_intro key_eq) l
 
+(* FIXME: This DOES NOT work, because a CBOR object is not always
+   guaranteed to be serialized into a slice: what if its size exceeds
+   SIZE_MAX?
+
+   Ideally, we should be able to copy a CBOR object, but then we need
+   to model a `free` function in C.
+
 module U8 = FStar.UInt8
 
 noeq
@@ -384,3 +391,20 @@ let rel_cbor_copy
   rel_cbor_copy_vec cbor_t vmatch freeable x y
 )
 
+*)
+
+noeq type cbor_with_perm
+  (cbor_t: Type0)
+= {
+    c: cbor_t;
+    p: perm;
+  }
+
+module Cbor = CBOR.Spec.API.Format
+
+let rel_cbor_not_freeable
+  (#cbor_t: Type)
+  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (freeable: bool)
+: Tot (rel (cbor_with_perm cbor_t) Cbor.cbor)
+= mk_rel (fun x1 x2 -> vmatch x1.p x1.c x2 ** pure (freeable == false))
