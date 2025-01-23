@@ -48,7 +48,7 @@ let impl_copyful_int_range_uint64
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (cbor_destr_int64: read_uint64_t vmatch)
-    (lo hi: U64.t)
+    (lo hi: Ghost.erased U64.t)
 : impl_copyful_parse vmatch (spec_int_range_uint64 lo hi).parser (rel_pure U64.t)
 = impl_copyful_ext (impl_copyful_uint cbor_destr_int64) (spec_int_range_uint64 lo hi).parser ()
 
@@ -61,7 +61,7 @@ fn impl_copyful_int_range_int64
     (#vmatch: perm -> ty -> cbor -> slprop)
     (cbor_get_major_type: get_major_type_t vmatch)
     (cbor_destr_int64: read_uint64_t vmatch)
-    (lo hi: I64.t)
+    (lo hi: Ghost.erased I64.t)
 : impl_copyful_parse #ty vmatch #(t_int_range (I64.v lo) (I64.v hi)) #I64.t #_ (spec_int_range_int64 lo hi).parser #_ (rel_pure I64.t)
 =
     (c: ty)
@@ -82,6 +82,6 @@ let impl_copyful_int_range_neg_int64
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (cbor_destr_int64: read_uint64_t vmatch)
-    (lo hi: U64.t)
+    (lo hi: Ghost.erased U64.t)
 : impl_copyful_parse vmatch (spec_int_range_neg_int64 lo hi).parser (rel_pure U64.t)
 = impl_copyful_ext (impl_copyful_nint cbor_destr_int64) (spec_int_range_neg_int64 lo hi).parser ()
