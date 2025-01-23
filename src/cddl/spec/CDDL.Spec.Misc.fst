@@ -321,12 +321,11 @@ let serializer_spec_any (p: Cbor.cbor -> bool { forall x . p x }) : serializer_s
   (fun x -> x)
 
 let spec_any
-  (p: Cbor.cbor -> bool { forall x . p x })
 : spec any Cbor.cbor true
 = {
-  serializable = p;
-  parser = parser_spec_any p;
-  serializer = serializer_spec_any p;
+  serializable = (fun _ -> true);
+  parser = parser_spec_any _;
+  serializer = serializer_spec_any _;
   parser_inj = ();
 }
 
@@ -339,12 +338,11 @@ let serializer_spec_bool (p: bool -> bool { forall x . p x }) : serializer_spec 
   (fun x -> Cbor.pack (Cbor.CSimple (if x then simple_value_true else simple_value_false)))
 
 let spec_bool
-  (p: bool -> bool { forall x . p x })
 : spec t_bool bool true
 = {
-  serializable = p;
-  parser = parser_spec_bool p;
-  serializer = serializer_spec_bool p;
+  serializable = (fun _ -> true);
+  parser = parser_spec_bool _;
+  serializer = serializer_spec_bool _;
   parser_inj = ();
 }
 
@@ -355,12 +353,11 @@ let serializer_spec_simple (p: U8.t -> bool { forall x . p x <==> Cbor.simple_va
   (fun x -> Cbor.pack (Cbor.CSimple x))
 
 let spec_simple
-  (p: U8.t -> bool { forall x . p x <==> Cbor.simple_value_wf x })
 : spec t_simple U8.t true
 = {
-  serializable = p;
-  parser = parser_spec_simple p;
-  serializer = serializer_spec_simple p;
+  serializable = Cbor.simple_value_wf;
+  parser = parser_spec_simple _;
+  serializer = serializer_spec_simple _;
   parser_inj = ();
 }
 
@@ -371,12 +368,11 @@ let serializer_spec_uint (p: U64.t -> bool { forall x . p x }) : serializer_spec
   (fun x -> Cbor.pack (Cbor.CInt64 Cbor.cbor_major_type_uint64 x))
 
 let spec_uint
-  (p: U64.t -> bool { forall x . p x })
 : spec uint U64.t true
 = {
-  serializable = p;
-  parser = parser_spec_uint p;
-  serializer = serializer_spec_uint p;
+  serializable = (fun _ -> true);
+  parser = parser_spec_uint _;
+  serializer = serializer_spec_uint _;
   parser_inj = ();
 }
 
@@ -387,12 +383,11 @@ let serializer_spec_nint (p: U64.t -> bool { forall x . p x }) : serializer_spec
   (fun x -> Cbor.pack (Cbor.CInt64 Cbor.cbor_major_type_neg_int64 x))
 
 let spec_nint
-  (p: U64.t -> bool { forall x . p x })
 : spec nint U64.t true
 = {
-  serializable = p;
-  parser = parser_spec_nint p;
-  serializer = serializer_spec_nint p;
+  serializable = (fun _ -> true);
+  parser = parser_spec_nint _;
+  serializer = serializer_spec_nint _;
   parser_inj = ();
 }
 
@@ -451,12 +446,11 @@ let serializer_spec_bstr (p: Seq.seq U8.t -> bool { forall x . p x <==> Seq.leng
   (fun x -> Cbor.pack (Cbor.CString Cbor.cbor_major_type_byte_string x))
 
 let spec_bstr
-  (p: Seq.seq U8.t -> bool { forall x . p x <==> Seq.length x < pow2 64 })
 : spec bstr (Seq.seq U8.t) true
 = {
-  serializable = p;
-  parser = parser_spec_bstr p;
-  serializer = serializer_spec_bstr p;
+  serializable = (fun x -> Seq.length x < pow2 64);
+  parser = parser_spec_bstr _;
+  serializer = serializer_spec_bstr _;
   parser_inj = ();
 }
 
@@ -467,11 +461,10 @@ let serializer_spec_tstr (p: Seq.seq U8.t -> bool { forall x . p x <==> (Seq.len
   (fun x -> Cbor.pack (Cbor.CString Cbor.cbor_major_type_text_string x))
 
 let spec_tstr
-  (p: Seq.seq U8.t -> bool { forall x . p x <==> (Seq.length x < pow2 64 /\ CBOR.Spec.API.UTF8.correct x) })
 : spec tstr (Seq.seq U8.t) true
 = {
-  serializable = p;
-  parser = parser_spec_tstr p;
-  serializer = serializer_spec_tstr p;
+  serializable = (fun x -> Seq.length x < pow2 64 && CBOR.Spec.API.UTF8.correct x);
+  parser = parser_spec_tstr _;
+  serializer = serializer_spec_tstr _;
   parser_inj = ();
 }

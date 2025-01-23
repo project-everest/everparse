@@ -2844,14 +2844,14 @@ let spec_of_elem_typ
 : GTot (Spec.spec (elem_typ_sem e) (target_elem_type_sem (target_type_of_elem_typ e)) true)
 = match e with
   | ELiteral l -> Spec.spec_literal (eval_literal l)
-  | EBool -> Spec.spec_bool (fun _ -> true)
-  | ESimple -> Spec.spec_simple Cbor.simple_value_wf
-  | EByteString -> Spec.spec_bstr seq_is_bounded64
-  | ETextString -> Spec.spec_tstr (Util.andp seq_is_bounded64 CBOR.Spec.API.UTF8.correct)
-  | EUInt -> Spec.spec_uint (fun _ -> true)
-  | ENInt -> Spec.spec_nint (fun _ -> true)
+  | EBool -> Spec.spec_bool
+  | ESimple -> Spec.spec_simple
+  | EByteString -> Spec.spec_bstr
+  | ETextString -> Spec.spec_tstr
+  | EUInt -> Spec.spec_uint
+  | ENInt -> Spec.spec_nint
   | EAlwaysFalse -> Spec.spec_always_false (fun _ -> true)
-  | EAny -> Spec.spec_any (fun _ -> true)
+  | EAny -> Spec.spec_any
 
 let pair_sum
   (#t1 #t2: Type)
