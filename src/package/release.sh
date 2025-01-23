@@ -39,10 +39,42 @@ git diff --exit-code --ignore-cr-at-eol
 git fetch $remote --tags
 git pull $remote $branchname --ff-only
 
+FSTAR_SRC_ENVELOPE=fstar-src
+FSTAR_SRC_PKG_ROOT=$FSTAR_SRC_ENVELOPE/fstar
+if $is_windows ; then
+    # On Windows, abort if the F* source package does not exist
+    if ! [[ -d "$FSTAR_SRC_PKG_ROOT" ]] ; then
+        echo 'Cannot find the F* source package. Please run this script on Linux first.'
+        exit 1
+    fi
+else
+    # On Linux, regenerate the F* source package
+    # FSTAR_TAG must be explicitly defined to an empty string
+    # to prevent the F* build system from mangling the name of
+    # the source archive
+    FSTAR_TAG= make -C FStar package-src ADMIT=1
+    rm -rf "$FSTAR_SRC_PKG_ROOT"
+    mkdir -p "$FSTAR_SRC_ENVELOPE"
+    tar -x -f FStar/fstar-src.tar.gz -C "$FSTAR_SRC_ENVELOPE/" -z
+    git add -- "$FSTAR_SRC_PKG_ROOT/"
+    if
+        ! {
+            git diff --staged --exit-code --ignore-cr-at-eol -- "$FSTAR_SRC_PKG_ROOT/" &&
+                git diff --exit-code --ignore-cr-at-eol -- "$FSTAR_SRC_PKG_ROOT/"
+        }
+    then
+        git commit -m "Refresh fstar-src"
+    fi
+fi
+
 everparse_version=$(sed 's!\r!!g' $EVERPARSE_HOME/version.txt)
 everparse_last_version=$(git show --no-patch --format=%h $everparse_version || true)
 everparse_commit=$(git show --no-patch --format=%h)
 if [[ $everparse_commit != $everparse_last_version ]] ; then
+    if $is_windows ; then
+        echo "This commit does not match the latest release. release.sh must be run on Linux first."
+        exit 1
+    fi
     everparse_version=$($DATE '+v%Y.%m.%d')
     echo $everparse_version > $EVERPARSE_HOME/version.txt
     git add $EVERPARSE_HOME/version.txt
