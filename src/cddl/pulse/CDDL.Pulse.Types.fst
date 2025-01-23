@@ -414,3 +414,15 @@ let rel_cbor_not_freeable
 
 let rel_skip (t: Type) : rel (Ghost.erased t) t =
   mk_rel (fun x y -> pure (Ghost.reveal x == y))
+
+let rel_either_skip
+  (#t: Type0)
+  (#implt: Type0)
+  (r: rel implt t)
+  (skippable: bool)
+: rel (either implt (Ghost.erased t)) t
+= mk_rel (fun x y ->
+  match x with
+  | Inl x -> r x y
+  | Inr x -> pure (Ghost.reveal x == y /\ skippable == true)
+)
