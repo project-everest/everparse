@@ -24,12 +24,12 @@ let impl_elem_type_sem
   | TTInt64 -> I64.t
   | TTUnit -> unit
   | TTBool -> bool
-  | TTString -> vec U8.t // TODO: allow zero-copy parsing
+  | TTString -> vec_or_slice U8.t
   | TTAny -> either (cbor_with_perm cbor_t) (Ghost.erased Cbor.cbor) // zero_copy parsing only, unless skipped, see remark in CDDL.Pulse.Types
   | TTAlwaysFalse -> squash False
 
 let rel_elem_type_sem
-  (cbor_t: Type0)
+  (#cbor_t: Type0)
   (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
   (t: target_elem_type)
   (freeable: bool)
@@ -41,7 +41,7 @@ let rel_elem_type_sem
   | TTInt64 -> rel_pure _
   | TTUnit -> rel_unit
   | TTBool -> rel_pure _
-  | TTString -> rel_vec_of_seq #U8.t
+  | TTString -> rel_vec_or_slice_of_seq #U8.t freeable
   | TTAny -> rel_either_skip (rel_cbor_not_freeable vmatch freeable) skippable
   | TTAlwaysFalse -> rel_always_false _ _
 
@@ -131,7 +131,7 @@ let rec rel_type_sem
   (decreases t)
 = match t returns rel (impl_type_sem cbor_t env.r_type t) (target_type_sem s_env.te_type t) with
   | TTDef s -> env.r_rel s freeable skippable
-  | TTElem elt -> rel_elem_type_sem cbor_t vmatch elt freeable skippable
+  | TTElem elt -> rel_elem_type_sem vmatch elt freeable skippable
   | TTOption t -> rel_option (rel_type_sem cbor_t vmatch env t freeable skippable)
   | TTPair t1 t2 -> rel_pair (rel_type_sem cbor_t vmatch env t1 freeable skippable) (rel_type_sem cbor_t vmatch env t2 freeable skippable)
   | TTUnion t1 t2 -> rel_either (rel_type_sem cbor_t vmatch env t1 freeable skippable) (rel_type_sem cbor_t vmatch env t2 freeable skippable)
