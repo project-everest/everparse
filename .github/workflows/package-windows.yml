@@ -1,5 +1,6 @@
 name: Build everparse package (windows)
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       fstar_repo:
