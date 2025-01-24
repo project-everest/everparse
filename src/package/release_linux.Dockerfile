@@ -20,9 +20,6 @@ RUN { type -p curl >/dev/null || sudo apt-get install curl -y ; } \
 ADD --chown=opam:opam ./ $HOME/everparse/
 WORKDIR $HOME/everparse
 
-# Install opam package dependencies
-RUN eval $(opam env) && src/package/windows/everest.sh opam
-
 # Install other dependencies
 RUN sudo apt-get install --yes wget
 
