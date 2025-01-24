@@ -50,6 +50,11 @@ git submodule update
 git diff --staged --exit-code --ignore-cr-at-eol
 git diff --exit-code --ignore-cr-at-eol
 
+if [[ -d everest ]] ; then
+    # Install the Everest OPAM package dependencies
+    ./everest/everest --yes opam
+fi
+
 FSTAR_SRC_ENVELOPE=fstar-src
 FSTAR_SRC_PKG_ROOT=$FSTAR_SRC_ENVELOPE/fstar
 if $is_windows ; then
