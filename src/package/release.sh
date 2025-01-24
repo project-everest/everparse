@@ -45,6 +45,11 @@ git diff --exit-code --ignore-cr-at-eol
 git fetch $remote --tags
 git pull $remote $branchname --ff-only
 
+git submodule init
+git submodule update
+git diff --staged --exit-code --ignore-cr-at-eol
+git diff --exit-code --ignore-cr-at-eol
+
 FSTAR_SRC_ENVELOPE=fstar-src
 FSTAR_SRC_PKG_ROOT=$FSTAR_SRC_ENVELOPE/fstar
 if $is_windows ; then
