@@ -4,7 +4,7 @@ include CDDL.Pulse.Types
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
 open CBOR.Pulse.API.Base
-module Trade = Pulse.Lib.Trade
+module Trade = Pulse.Lib.Trade.Util
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_parse
@@ -258,6 +258,29 @@ fn impl_copyful_skip
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
+fn impl_copyful_either_skip
+    (#ty: Type0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (#tgt_serializable: Ghost.erased (tgt -> bool))
+    (ps: Ghost.erased (parser_spec t tgt tgt_serializable))
+    (#implt: Type0)
+    (r: rel implt tgt)
+: impl_copyful_parse #_ vmatch #(Ghost.reveal t) #tgt #(Ghost.reveal tgt_serializable) (Ghost.reveal ps) #(either implt (Ghost.erased tgt)) (rel_either_skip r true)
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let w : Ghost.erased tgt = Ghost.hide (Ghost.reveal ps v <: tgt);
+  fold (rel_either_skip r true (Inr w) (Ghost.reveal w));
+  Inr w
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
 fn impl_zero_copy_skip
     (#ty: Type0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -281,5 +304,34 @@ fn impl_zero_copy_skip
   };
   Trade.intro_trade _ _ _ aux;
   res
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_either_skip
+    (#ty: Type0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (skippable: Ghost.erased bool)
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (#tgt_serializable: Ghost.erased (tgt -> bool))
+    (#ps: Ghost.erased (parser_spec t tgt tgt_serializable))
+    (#implt: Type0)
+    (#r: rel implt tgt)
+    (ips: impl_zero_copy_parse vmatch ps r)
+: impl_zero_copy_parse #_ vmatch #(Ghost.reveal t) #tgt #(Ghost.reveal tgt_serializable) (Ghost.reveal ps) #(either implt (Ghost.erased tgt)) (rel_either_skip r (Ghost.reveal skippable))
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let w = ips c;
+  with v' . assert (r w v');
+  Trade.rewrite_with_trade
+    (r w v')
+    (rel_either_skip r skippable (Inl w) v');
+  Trade.trans _ _ (vmatch p c v);
+  Inl w
 }
 ```
