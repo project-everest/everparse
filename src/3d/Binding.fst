@@ -1717,34 +1717,32 @@ let check_entrypoint_probe_length_type
   then true
   else eq_typ e t tuint32
 
-let is_sizeof_not_this (l: expr) : Tot bool =
+let is_sizeof (l: expr) : Tot bool =
   match l.v with
-  | App SizeOf [{v=Identifier _}] ->
+  | App SizeOf _ ->
       true
   | _ -> false
 
 let check_entrypoint_probe_length
-  (e: global_env)
+  (lenv: env)
   (l: expr)
 : ML expr
 = if
     Constant? l.v ||
     Identifier? l.v
   then
-    let lenv = mk_env e in
     let (l', t') = check_expr lenv l in
     if check_entrypoint_probe_length_type lenv t'
     then l'
     else error ("entrypoint probe: expected UINT32, got " ^ print_typ t') l.range
-  else if is_sizeof_not_this l
+  else if is_sizeof l
   then
-    let lenv = mk_env e in
     let (l', t') = check_expr lenv l in
     l'
   else error ("entrypoint probe: expected a constant, #define'd identifier, or sizeof; got " ^ print_expr l) l.range
 
 let check_attribute
-  (e: global_env)
+  (e: env)
   (a: attribute)
 : ML attribute
 = match a with
@@ -1758,10 +1756,11 @@ let check_typedef_names
   (e: global_env)
   (tdnames: Ast.typedef_names)
 : ML Ast.typedef_names
-= {
-    tdnames with
-      typedef_attributes = List.map (check_attribute e) tdnames.typedef_attributes
-}
+= let env = { mk_env e with this=Some tdnames.typedef_name } in
+  {
+      tdnames with
+        typedef_attributes = List.map (check_attribute env) tdnames.typedef_attributes
+  }
 
 let bind_decl (e:global_env) (d:decl) : ML decl =
   match d.d_decl.v with

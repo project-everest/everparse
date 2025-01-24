@@ -15,15 +15,16 @@ RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
     && true
 
 # Dependencies (F*, Karamel and opam packages)
-ENV FSTAR_HOME=$HOME/FStar
+ENV FSTAR_DIR=$HOME/FStar
 ENV KRML_HOME=$HOME/karamel
 RUN eval $(opam env) && .docker/build/install-deps.sh
+ENV FSTAR_EXE=$FSTAR_DIR/bin/fstar.exe
 
 # CI proper
 ARG CI_THREADS=24
 ARG CI_BRANCH=master
 
-RUN eval $(opam env) && OTHERFLAGS="--admit_smt_queries true" make -j $EVEREST_THREADS package-noversion
+RUN eval $(opam env) && OTHERFLAGS="--admit_smt_queries true" make -j $CI_THREADS package-noversion
 
 WORKDIR $HOME
 ENV EVERPARSE_HOME=$HOME/everparse

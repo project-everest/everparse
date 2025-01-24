@@ -1,32 +1,31 @@
 all: verify buffer extern
 
-EVERPARSE_HOME=$(realpath ../../..)
-
-ifndef FSTAR_HOME
-  FSTAR_EXE=$(shell which fstar.exe)
-  ifeq ($(FSTAR_EXE),)
-    # fstar.exe not found in PATH, assuming Everest source tree
-    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
-  else
-    # fstar.exe found in PATH, assuming directory ending with /bin
-    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
-  endif
-  export FSTAR_HOME
+EVERPARSE_HOME := $(realpath ../../..)
+ifeq ($(OS),Windows_NT)
+  EVERPARSE_HOME := $(shell cygpath -m $(EVERPARSE_HOME))
 endif
 
-KRML_HOME?=$(realpath ../../../../karamel)
+FSTAR_EXE ?= fstar.exe
+
+ifeq (,$(KRML_HOME))
+  KRML_HOME := $(realpath ../../../../karamel)
+endif
+ifeq ($(OS),Windows_NT)
+  KRML_HOME := $(shell cygpath -m $(KRML_HOME))
+endif
+export KRML_HOME
+
 OTHERFLAGS?=
 
 FSTAR_OPTIONS=--ext context_pruning $(addprefix --include , $(EVERPARSE_HOME)/src/lowparse $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj) --max_fuel 0 --max_ifuel 2 --initial_ifuel 2 --z3cliopt 'smt.qi.eager_threshold=10'
 #--z3cliopt 'smt.arith.nl=false' --smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr wrapped
-FSTAR=$(FSTAR_HOME)/bin/fstar.exe $(FSTAR_OPTIONS) $(OTHERFLAGS) --cmi
+FSTAR=$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --cmi
 
 ROOT=$(wildcard *.fst) $(wildcard *.fsti)
 ALREADY_CACHED=--already_cached '+Prims +LowStar +FStar +LowParse +C +Spec.Loops'
 
 .depend: $(ROOT)
-	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract 'krml:*,-Prims,-EverParse3d.Interpreter,-FStar.Tactics' > $@.tmp
-	mv $@.tmp $@
+	$(FSTAR) --dep full $(ROOT) $(ALREADY_CACHED) --extract 'krml:*,-Prims,-EverParse3d.Interpreter,-FStar.Tactics' --output_deps_to $@
 
 include .depend
 

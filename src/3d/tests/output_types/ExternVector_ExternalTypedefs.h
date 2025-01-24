@@ -7,16 +7,16 @@
 extern "C" {
 #endif
 
-typedef struct _POINT {
+typedef struct _POINT_S {
   uint32_t x;
   uint32_t y;
-} POINT;
+} POINT_T;
 
 
 typedef struct _VEC {
   uint8_t max;
   uint8_t cur;
-  POINT   *arr;
+  POINT_T   *arr;
 } VEC;
 
 #ifdef __cplusplus

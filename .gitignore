@@ -13,3 +13,10 @@ tests/unit/*
 **/out
 bin/qd.exe
 bin/3d.exe
+
+# package.sh creates there
+__fstar-install
+fstar-src/fstar/*.checked
+everparse/**
+everparse_*.tar.gz
+everparse_*.zip

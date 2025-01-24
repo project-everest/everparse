@@ -2,7 +2,6 @@ open OS
 open HashingOptions
 
 (* paths *)
-let fstar_home = OS.getenv "FSTAR_HOME"
 let krml_home = OS.getenv "KRML_HOME"
 let krmllib = filename_concat krml_home "krmllib"
 let everparse_home = OS.getenv "EVERPARSE_HOME"
@@ -20,9 +19,6 @@ let ddd_actions_home input_stream_binding =
 
 let ddd_actions_c_home input_stream_binding =
   filename_concat ddd_prelude_home (string_of_input_stream_binding input_stream_binding)
-
-(* fstar.exe executable *)
-let fstar_exe = (filename_concat (filename_concat fstar_home "bin") "fstar.exe")
 
 (* krml: on Windows, needs to be copied into .exe *)
 let krml out_dir =
@@ -48,7 +44,7 @@ let krml out_dir =
         let target = Filename.temp_file ~temp_dir:out_dir "krml" ".exe" in
         begin
           (* Here, Windows cannot even read symlinks *)
-          let dir' = filename_concat (filename_concat (filename_concat dir "src") "_build") "default" in
+          let dir' = filename_concat (filename_concat (filename_concat dir "_build") "default") "src" in
           let candidate = aux true [(dir', "Karamel.exe")] in
           copy candidate target
         end;
@@ -85,6 +81,7 @@ let fstar_args
             fstar_args0
 
 let verify_fst_file
+  fstar_exe
   input_stream_binding
   out_dir
   file
@@ -102,6 +99,7 @@ let fstar_extract_args input_stream_binding out_dir fst =
       (list_snoc (fstar_args input_stream_binding out_dir) fst)
 
 let extract_fst_file
+  fstar_exe
   input_stream_binding
   out_dir
   file
@@ -109,6 +107,7 @@ let extract_fst_file
   run_cmd fstar_exe (fstar_extract_args input_stream_binding out_dir file)
 
 let pretty_print_source_file
+  fstar_exe
   input_stream_binding
   out_dir
   file
@@ -117,6 +116,7 @@ let pretty_print_source_file
   run_cmd fstar_exe ("--print_in_place" :: fstar_args)
 
 let pretty_print_source_module
+      fstar_exe
       input_stream_binding
       out_dir
       (file, modul)
@@ -133,16 +133,18 @@ let pretty_print_source_module
                              types_fst_file;
                              fsti_file;
                              fst_file] in
-  List.iter (pretty_print_source_file input_stream_binding out_dir) all_files
+  List.iter (pretty_print_source_file fstar_exe input_stream_binding out_dir) all_files
 
 let pretty_print_source_modules
+      fstar_exe
       input_stream_binding
       (out_dir: string)
       (files_and_modules: (string * string) list)
 =
-  List.iter (pretty_print_source_module input_stream_binding out_dir) files_and_modules
+  List.iter (pretty_print_source_module fstar_exe input_stream_binding out_dir) files_and_modules
 
 let verify_and_extract_module
+      fstar_exe
       input_stream_binding
       out_dir
       (file, modul)
@@ -177,8 +179,8 @@ let verify_and_extract_module
       cfg_fst_name::all_files,
       cfg_fst_name::all_extract_files
   in
-  List.iter (verify_fst_file input_stream_binding out_dir) (List.filter file_exists all_files);
-  List.iter (extract_fst_file input_stream_binding out_dir) (List.filter file_exists all_extract_files)
+  List.iter (verify_fst_file fstar_exe input_stream_binding out_dir) (List.filter file_exists all_files);
+  List.iter (extract_fst_file fstar_exe input_stream_binding out_dir) (List.filter file_exists all_extract_files)
 
 let is_krml
       filename
@@ -824,6 +826,7 @@ let postprocess_wrappers
   postprocess_c input_stream_binding false true clang_format clang_format_executable false true false true false out_dir files_and_modules
 
 let postprocess_fst
+      fstar_exe
       input_stream_binding
       (emit_output_types_defs: bool)
       (add_include: string list)
@@ -839,7 +842,7 @@ let postprocess_fst
   =
   (* produce the .checked and .krml files.
      FIXME: modules can be processed in parallel *)
-  List.iter (verify_and_extract_module input_stream_binding out_dir) files_and_modules;
+  List.iter (verify_and_extract_module fstar_exe input_stream_binding out_dir) files_and_modules;
   (* produce the .c and .h files and format them *)
   produce_and_postprocess_c input_stream_binding emit_output_types_defs add_include clang_format clang_format_executable skip_c_makefiles cleanup no_everparse_h save_hashes_opt out_dir files_and_modules
 

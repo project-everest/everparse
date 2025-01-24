@@ -1,10 +1,10 @@
 
-extern typedef struct out_iterator OUT
-extern UINT8 setCurrentf1(mutable OUT* p, UINT32 f1)
-extern UINT8 setCurrentf2(mutable OUT* p, UINT32 f1)
-extern UINT8 advance(mutable OUT* p)
+extern typedef struct out_iterator OUT_T
+extern UINT8 setCurrentf1(mutable OUT_T* p, UINT32 f1)
+extern UINT8 setCurrentf2(mutable OUT_T* p, UINT32 f1)
+extern UINT8 advance(mutable OUT_T* p)
  
-typedef struct pair (mutable OUT* p) {
+typedef struct pair (mutable OUT_T* p) {
     UINT32 f1{:on-success var err = setCurrentf1(p, f1); return (err == 0); };
     UINT32 f2{:on-success var err1 = setCurrentf2(p, f2);
            if (err1 == 0) {
@@ -17,7 +17,7 @@ typedef struct pair (mutable OUT* p) {
 } PAIR;
 
 entrypoint
-typedef struct container (mutable OUT* p) {
+typedef struct container (mutable OUT_T* p) {
     UINT32 len;
     PAIR(p) pairs[:byte-size len];
 } CONTAINER;

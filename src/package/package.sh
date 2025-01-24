@@ -7,6 +7,12 @@ SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
 MAKE="$(which gmake >/dev/null 2>&1 && echo gmake || echo make) $EVERPARSE_MAKE_OPTS"
 DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
 
+# We do not read any of these from the environment. This builds a
+# package from the current master branches, or the existing checkouts in
+# FStar/ and karamel/.
+unset FSTAR_EXE
+unset FSTAR_HOME
+unset KRML_HOME
 
 if [[ -z "$OS" ]] ; then
     OS=$(uname)
@@ -105,61 +111,78 @@ if [[ -z "$everparse_version" ]] ; then
 fi
 
 make_everparse() {
-    # Verify if F* and KaRaMeL are here
+    #!!!!! NB: We admit queries when building F*, krml, and everparse!
+    export OTHERFLAGS='--admit_smt_queries true'
+    #!!!!!
+
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
-    if [[ -z "$FSTAR_HOME" ]] ; then
-        if [[ -d FStar ]] ; then
-            export FSTAR_HOME=$(fixpath $PWD/FStar)
-        elif find_fstar="$(which fstar.exe)" ; then
-            export FSTAR_HOME=$(fixpath "$(dirname $find_fstar)"/..)
-        else
+
+    ## Setup F*. We need to locate a package, either it's already
+    # there or we try to build one from the repo.
+
+    FSTAR_PKG_ENVELOPE=__fstar-install
+    # The package extracts into a fstar directory, and everything
+    # is under there.
+    FSTAR_PKG_ROOT="$FSTAR_PKG_ENVELOPE/fstar"
+    FSTAR_SRC_PKG_ROOT=fstar-src/fstar
+    if ! [[ -d $FSTAR_PKG_ROOT ]] ; then
+        if [[ -d $FSTAR_SRC_PKG_ROOT ]] ; then
+            # build from a source package
+            dune_sandbox_opt=
             if $is_windows ; then
-                fstar_branch_opt="--branch taramana_dune_3.5"
-            else
-                fstar_branch_opt=
+		# Dune crashes with "cannot delete sandbox." This fix comes
+		# from https://github.com/ocaml/dune/issues/8228#issuecomment-1642104172
+                dune_sandbox_opt=DUNE_CONFIG__BACKGROUND_SANDBOXES=disabled
             fi
-            git clone $fstar_branch_opt https://github.com/FStarLang/FStar
-            export FSTAR_HOME=$(fixpath $PWD/FStar)
+            env $dune_sandbox_opt $MAKE -C $FSTAR_SRC_PKG_ROOT "$@" ADMIT=1
+            mkdir -p "$FSTAR_PKG_ROOT"
+            PREFIX="$(fixpath "$PWD/$FSTAR_PKG_ROOT")" $MAKE -C $FSTAR_SRC_PKG_ROOT install
+            $cp "$FSTAR_SRC_PKG_ROOT/LICENSE" "$FSTAR_PKG_ROOT/"
+        else
+            if ! [ -f fstar.tar.gz ] && ! [ -f fstar.zip ]; then
+                # build a binary package from a full F* clone
+                if ! [ -d FStar ]; then
+                    git clone https://github.com/FStarLang/FStar --depth 1
+                fi
+                $MAKE -C FStar "$@" ADMIT=1
+                $MAKE -C FStar "$@" FSTAR_TAG= package
+                $cp FStar/fstar.tar.gz . || $cp FStar/fstar.zip .
+            fi
+            mkdir -p "$FSTAR_PKG_ENVELOPE"
+            if [ -f fstar.tar.gz ]; then
+                FSTAR_PKG=$(realpath fstar.tar.gz)
+                tar xzf $FSTAR_PKG -C "$FSTAR_PKG_ENVELOPE"
+            elif [ -f fstar.zip ]; then
+                FSTAR_PKG=$(realpath fstar.zip)
+                pushd "$FSTAR_PKG_ENVELOPE"
+                unzip -q "$FSTAR_PKG"
+                popd
+            else
+                echo "unexpected, no package?" >&2
+                exit 1
+            fi
         fi
-    else
-        export FSTAR_HOME=$(fixpath "$FSTAR_HOME")
-    fi
-    if [[ -z "$KRML_HOME" ]] ; then
-        { [[ -d karamel ]] || git clone https://github.com/FStarLang/karamel ; }
-        export KRML_HOME=$(fixpath $PWD/karamel)
-    else
-        export KRML_HOME=$(fixpath "$KRML_HOME")
     fi
 
-    if fstar_commit_id=$(print_component_commit_id "$FSTAR_HOME") ; then
-        fstar_commit_date_iso=$(print_component_commit_date_iso "$FSTAR_HOME")
-        fstar_commit_date_hr=$(print_date_utc_of_iso_hr "$fstar_commit_date_iso")" UTC+0000"
+    export FSTAR_EXE=$(realpath $FSTAR_PKG_ROOT/bin/fstar.exe)
+    export FSTAR_EXE=$(fixpath "$FSTAR_EXE")
+    fstar_commit_id=$("$FSTAR_EXE" --version | grep '^commit=' | sed 's!^.*=!!')
+    fstar_commit_date_hr=$("$FSTAR_EXE" --version | grep '^date=' | sed 's!^.*=!!')
+
+    ## Setup krml
+
+    if ! [ -d karamel ]; then
+      git clone https://github.com/FStarLang/karamel --depth 1
     fi
+    export KRML_HOME=$(fixpath $PWD/karamel)
+    $MAKE -C "$KRML_HOME" "$@"
     if karamel_commit_id=$(print_component_commit_id "$KRML_HOME") ; then
         karamel_commit_date_iso=$(print_component_commit_date_iso "$KRML_HOME")
         karamel_commit_date_hr=$(print_date_utc_of_iso_hr "$karamel_commit_date_iso")" UTC+0000"
     fi
-    z3_version_string=$($Z3_DIR/$z3 --version)
 
-    # Rebuild F* and KaRaMeL
-    export OTHERFLAGS='--admit_smt_queries true'
-    if [[ -f "$FSTAR_HOME/Makefile" ]] ; then
-        # assume F* source tree
-        $MAKE -C "$FSTAR_HOME" "$@"
-    fi
-    if [[ -z "$fstar_commit_id" ]] ; then
-        fstar_commit_id=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^commit=' | sed 's!^.*=!!')
-        fstar_commit_date_hr=$("$FSTAR_HOME/bin/fstar.exe" --version | grep '^date=' | sed 's!^.*=!!')
-    fi
-    if $is_windows ; then
-        # FIXME: krmllib cannot be built on Windows because the krmllib Makefiles use Cygwin paths, which cannot be used by the krml executable
-        # Thus, things like compiling a 3D parser test executable won't work on Windows
-        $MAKE -C "$KRML_HOME" "$@" minimal
-        $MAKE -C "$KRML_HOME/krmllib" "$@" verify-all
-    else
-        $MAKE -C "$KRML_HOME" "$@"
-    fi
+    z3_version_string=$($Z3_DIR/$z3 --version)
 
     # Install ocaml-sha if not found
     if ! ocamlfind query sha ; then
@@ -212,18 +235,11 @@ make_everparse() {
     fi
 
     # Copy F*
-    if [[ -d $FSTAR_HOME/ulib ]] ; then
-      # we have a F* source tree
-      # TODO: create some `install-minimal` rule in the F* Makefile
-      everparse_package_dir=$(fixpath "$(pwd)/everparse")
-      (cd $FSTAR_HOME/ocaml && dune install --prefix="$everparse_package_dir")
-      PREFIX="$everparse_package_dir" $MAKE -C $FSTAR_HOME/ulib install
-    else
-      # we have a F* binary package, or opam package
-      $cp $FSTAR_HOME/bin/fstar.exe everparse/bin/
-      mkdir everparse/lib
-      $cp -r $FSTAR_HOME/lib/fstar everparse/lib/fstar
-    fi
+    cp $FSTAR_PKG_ROOT/bin/* everparse/bin/
+    mkdir -p everparse/lib/fstar/
+    cp $FSTAR_PKG_ROOT/lib/fstar/fstar.include everparse/lib/fstar/
+    cp -r $FSTAR_PKG_ROOT/lib/fstar/ulib everparse/lib/fstar/ulib
+    cp -r $FSTAR_PKG_ROOT/lib/fstar/ulib.checked everparse/lib/fstar/ulib.checked
 
     # Copy KaRaMeL
     $cp -L $KRML_HOME/krml everparse/bin/krml$exe
@@ -278,14 +294,7 @@ make_everparse() {
 
     # licenses
     mkdir -p everparse/licenses
-    if [[ -f $FSTAR_HOME/LICENSE ]] ; then
-        # F* license found in the source tree
-        $cp $FSTAR_HOME/LICENSE everparse/licenses/FStar
-    else
-        # F* license not found, download it from GitHub
-        # TODO: have F* install its license
-        wget --output-document=everparse/licenses/FStar https://raw.githubusercontent/FStarLang/FStar/master/LICENSE
-    fi
+    $cp $FSTAR_PKG_ROOT/LICENSE everparse/licenses/FStar
     $cp $KRML_HOME/LICENSE-APACHE everparse/licenses/KaRaMeL-Apache
     $cp $KRML_HOME/LICENSE-MIT everparse/licenses/KaRaMeL-MIT
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
@@ -333,7 +342,10 @@ zip_everparse() {
         time tar cvzf everparse$ext everparse/*
     fi
     if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi
+}
 
+nuget_everparse() {
+    with_version=$1
     if $is_windows ; then
         # Create the nuget package
 
@@ -381,6 +393,8 @@ zip_everparse() {
         cp EverParse.nupkg ..
         if $with_version ; then mv ../EverParse.nupkg ../EverParse."$everparse_nuget_version".nupkg ; fi
         popd
+    else
+        echo "We are not on Windows, skipping nuget package"
     fi
     # Not doing any cleanup in the spirit of existing package
 
@@ -395,34 +409,92 @@ print_usage ()
   cat <<HELP
 USAGE: $0 [OPTIONS]
 
+By default, this script builds and places all components in the everparse folder
+
 OPTION:
-  -make     Build and place all components in the everparse folder
+  -zip      Also zip on Windows, tar.gz on Linux, the folder and name with the version
 
-  -zip      Like -make, but also zip the folder and name with the version
+  -zip-noversion
+            Like -zip, but without the version. Incompatible with -zip
 
-  -zip-noversion      Like -zip, but without the version
+  -nuget    Also nuget the folder and name with the version.
+            Does nothing on non-Windows platforms.
+
+  -nuget-noversion
+            Like -nuget, but without the version.
+            Incompatible with -nuget
+
+  --        Ends the list of script-specific options. Beyond that option,
+            passes other arguments to 'make'
 HELP
 }
 
-case "$1" in
-    -zip)
-        shift
-        make_everparse "$@"
-            zip_everparse true
-        ;;
+zip_everparse_cmd=
+nuget_everparse_cmd=
+process_args=true
 
-    -zip-noversion)
-        shift
-        make_everparse "$@"
-            zip_everparse false
-        ;;
+while [[ -n "$1" ]] && $process_args ; do
+    case "$1" in
+        -zip)
+            shift
+            if [[ -n "$zip_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -zip or -zip-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            zip_everparse_cmd="zip_everparse true"
+            ;;
 
-    -make)
-        shift
-        make_everparse "$@"
-        ;;
+        -zip-noversion)
+            shift
+            if [[ -n "$zip_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -zip or -zip-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            zip_everparse_cmd="zip_everparse false"
+            ;;
 
-    *)
-        print_usage
-        ;;
-esac
+        -nuget)
+            shift
+            if [[ -n "$nuget_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -nuget or -nuget-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            nuget_everparse_cmd="nuget_everparse true"
+            ;;
+
+        -nuget-noversion)
+            shift
+            if [[ -n "$nuget_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -nuget or -nuget-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            nuget_everparse_cmd="nuget_everparse false"
+            ;;
+
+        -help)
+            shift
+            print_usage
+            exit 0
+            ;;
+
+        --)
+            shift
+            process_args=false
+            ;;
+
+        *)
+            print_usage
+            exit 1
+            ;;
+    esac
+done
+
+
+make_everparse "$@"
+if [[ -n "$zip_everparse_cmd" ]] ; then $zip_everparse_cmd ; fi
+if [[ -n "$nuget_everparse_cmd" ]] ; then $nuget_everparse_cmd ; fi
+true

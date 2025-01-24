@@ -5,21 +5,11 @@ all: html 3d
 
 export EVERPARSE_HOME?=$(realpath ..)
 
-ifndef FSTAR_HOME
-  FSTAR_EXE=$(shell which fstar.exe)
-  ifeq ($(FSTAR_EXE),)
-    # fstar.exe not found in PATH, assuming Everest source tree
-    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
-  else
-    # fstar.exe found in PATH, assuming directory ending with /bin
-    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
-  endif
-  export FSTAR_HOME
-endif
+FSTAR_EXE ?= fstar.exe
 
 export KRML_HOME?=$(realpath $(EVERPARSE_HOME)/../karamel)
 
-3D=$(EVERPARSE_HOME)/bin/3d.exe
+3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
 3D_EXCLUDE=ConstColor.3d
 3D_CONFIG=Arch.3d.config
 3D_FILES_WITH_CONFIG=PointArch_32_64.3d
@@ -79,5 +69,10 @@ all-diffs-nobuild: $(addsuffix -nobuild, $(3D_DIFF))
 
 %.accept:
 	cp  out/$(basename $@) 3d-snapshot/$(basename $@)
+
+accept-all: $(addsuffix .accept, $(subst .diff,,$(3D_DIFF)))
+
 clean:
 	rm -rf out _build
+
+.PHONY: accept-all all-diffs-nobuild

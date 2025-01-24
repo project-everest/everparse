@@ -2,23 +2,13 @@ ROOT=Main.fst
 
 EVERPARSE_HOME=$(realpath ../..)
 
-ifndef FSTAR_HOME
-  FSTAR_EXE=$(shell which fstar.exe)
-  ifeq ($(FSTAR_EXE),)
-    # fstar.exe not found in PATH, assuming Everest source tree
-    FSTAR_HOME=$(realpath $(EVERPARSE_HOME)/../FStar)
-  else
-    # fstar.exe found in PATH, assuming directory ending with /bin
-    FSTAR_HOME=$(realpath $(dir $(FSTAR_EXE))/..)
-  endif
-endif
-export FSTAR_HOME
+FSTAR_EXE ?= fstar.exe
 
 export KRML_HOME?=$(realpath ../../../karamel)
 
 INCLUDE_PATHS=
 OTHERFLAGS?=
-FSTAR=$(FSTAR_HOME)/bin/fstar.exe --ext context_pruning $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached 'Prims FStar -FStarC'
+FSTAR = $(FSTAR_EXE) --ext context_pruning $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached 'Prims FStar -FStarC'
 
 all: 3d prelude
 

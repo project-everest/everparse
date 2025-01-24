@@ -6,15 +6,7 @@
 
 all: verify-all
 
-ifndef FSTAR_HOME
-  FSTAR_EXE:=$(shell which fstar.exe)
-  ifneq ($(.SHELLSTATUS),0)
-    FSTAR_HOME=$(realpath ../../../FStar)
-  endif
-endif
-ifdef FSTAR_HOME
-  FSTAR_EXE:=$(FSTAR_HOME)/bin/fstar.exe
-endif
+FSTAR_EXE ?= fstar.exe
 
 ifndef KRML_HOME
   KRMLLIB:=$(shell ocamlfind query karamel)
@@ -36,7 +28,7 @@ clean:
 	rm -rf *.checked *.source .depend
 
 .depend: $(LOWPARSE_FILES)
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) > $@
+	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) --output_deps_to $@
 
 include .depend
 
