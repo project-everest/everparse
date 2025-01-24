@@ -330,6 +330,75 @@ fn impl_copyful_tagged_none
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
+fn impl_zero_copy_tagged_some
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
+    (tag: Ghost.erased U64.t)
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (#ser: Ghost.erased (tgt -> bool))
+    (#pl: Ghost.erased (parser_spec (Ghost.reveal t) tgt (Ghost.reveal ser)))
+    (#implt: Type0)
+    (#r: rel implt tgt)
+    (ipl: impl_zero_copy_parse vmatch pl r)
+: impl_zero_copy_parse #ty vmatch #(t_tag (Some (Ghost.reveal tag)) (Ghost.reveal t)) #tgt #(Ghost.reveal ser) (parser_spec_tag_some (Ghost.reveal tag) (Ghost.reveal pl)) #implt r
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let cpl = cbor_get_tagged_payload c;
+  let res = ipl cpl;
+  Trade.trans _ _ (vmatch p c v);
+  res
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_tagged_none
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_tagged_tag: get_tagged_tag_t vmatch)
+    (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
+    (#t: Ghost.erased typ)
+    (#tgt: Type0)
+    (#ser: Ghost.erased (tgt -> bool))
+    (#pl: Ghost.erased (parser_spec (Ghost.reveal t) tgt (Ghost.reveal ser)))
+    (#implt: Type0)
+    (#r: rel implt tgt)
+    (ipl: impl_zero_copy_parse vmatch pl r)
+: impl_zero_copy_parse #ty vmatch #(t_tag None (Ghost.reveal t)) #(U64.t & tgt) #(serializable_spec_tag_none (Ghost.reveal ser)) (parser_spec_tag_none (Ghost.reveal pl)) #(U64.t & implt) (rel_pair (rel_pure U64.t) r)
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let lhs = cbor_get_tagged_tag c;
+  let rhs : implt = impl_zero_copy_tagged_some cbor_get_tagged_payload lhs ipl c;
+  with rv . assert (r rhs rv);
+  let resv = Ghost.hide (lhs, rv);
+  let res = (lhs, rhs);
+  rewrite (r rhs rv) as (r (snd res) (snd resv));
+  fold (rel_pure U64.t (fst res) (fst resv));
+  fold (rel_pair (rel_pure U64.t) r res resv);
+  ghost fn aux (_: unit)
+  requires (Trade.trade (r rhs rv) (vmatch p c v) ** rel_pair (rel_pure U64.t) r res resv)
+  ensures vmatch p c v
+  {
+    unfold (rel_pair (rel_pure U64.t) r res resv);
+    unfold (rel_pure U64.t (fst res) (fst resv));
+    rewrite (r (snd res) (snd resv)) as (r rhs rv);
+    Trade.elim _ _
+  };
+  Trade.intro_trade _ _ _ aux;
+  res
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
 fn impl_copyful_det_cbor
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
