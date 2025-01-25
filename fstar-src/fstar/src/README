@@ -1,0 +1,30 @@
+F* is written in F* and bootstrapped in OCaml.
+
+Some files are written directly in OCaml:
+
+ * The parser: uses the OCaml parser generator `menhir`
+
+ * The lexer: uses the OCaml Sedlexing library
+
+ * Some basic system utilities, like FStarC.Util only has an
+   interface in F* and is implemented as FStarC_Util.ml
+
+--------------------------------------------------------------------------------
+
+History:
+
+F* was originally implemented in F#.
+
+Then, once F* could extract F* programs to OCaml, F* was bootstrapped
+in OCaml.
+
+For many years, the F* implementation was written in a language that
+was the intersecton of F* and F#. So, although it was bootstrapped in
+OCaml for typical use, it could also be directly compiled in F#.
+
+Since March 2022, the F* implementation is no longer in the shared
+subset of F* and F# and is compiled using a bootstrapped compiler in
+OCaml.
+
+We maintain an ocaml-snapshot, a last-known-good version of the F*
+compiler bootstrapped in OCaml.
