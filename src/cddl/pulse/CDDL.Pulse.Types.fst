@@ -164,6 +164,17 @@ let rel_either
   | _ -> pure False
 )
 
+let rel_either_left
+  (#low1 #high: Type)
+  (r1: rel low1 high)
+  (#low2: Type)
+  (r2: rel low2 high)
+: rel (either low1 low2) high
+= mk_rel (fun xlow xh -> match xlow with
+  | Inl xl -> r1 xl xh
+  | Inr xl -> r2 xl xh
+)
+
 let rel_option
   (#low #high: Type)
   (r: rel low high)
@@ -173,6 +184,15 @@ let rel_option
   | None, None -> emp
   | _ -> pure False
 )
+
+let rel_option_right
+  (#impl #spec: Type0)
+  (r: rel impl spec)
+: Tot (rel impl (option spec))
+= mk_rel (fun i s -> match s with
+  | None -> pure False
+  | Some s -> r i s
+  )
 
 let rel_bij_l
   (#left #right: Type)
