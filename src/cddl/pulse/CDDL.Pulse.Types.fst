@@ -235,6 +235,17 @@ let rec map_of_list_pair
     | Some l -> Map.set m k (key_eq k) (v :: l)
     end
 
+let rel_slice_of_table
+  (#low_key #high_key: Type)
+  (#low_value #high_value: Type)
+  (key_eq: (k1: high_key) -> (k2: high_key) -> Pure bool True (fun b -> b == true <==> k1 == k2)) // TODO: also FE-ize this
+  (rkey: rel low_key high_key)
+  (rvalue: rel low_value high_value)
+: rel (slice (low_key & low_value)) (Map.t high_key (list high_value))
+= mk_rel (fun x y -> exists* l . rel_slice_of_list (rel_pair rkey rvalue) false x l **
+    pure (y == map_of_list_pair key_eq l)
+  )
+
 let rel_vec_or_slice_of_table
   (#low_key #high_key: Type)
   (#low_value #high_value: Type)

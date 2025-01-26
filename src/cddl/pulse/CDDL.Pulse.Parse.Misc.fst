@@ -181,7 +181,7 @@ fn impl_zero_copy_bytes_gen
     (sq: squash (
       forall (x: cbor) . Ghost.reveal t x ==> (CString? (unpack x) /\ (Ghost.reveal par x <: Seq.seq U8.t) == CString?.v (unpack x))
     ))
-: impl_zero_copy_parse #ty vmatch #(Ghost.reveal t) #(Seq.seq U8.t) #(Ghost.reveal ser) (Ghost.reveal par) #_ (rel_vec_or_slice_of_seq false)
+: impl_zero_copy_parse #ty vmatch #(Ghost.reveal t) #(Seq.seq U8.t) #(Ghost.reveal ser) (Ghost.reveal par) #_ (rel_slice_of_seq false)
 =
     (c: ty)
     (#p: perm)
@@ -194,19 +194,16 @@ fn impl_zero_copy_bytes_gen
     s = s;
   };
   fold (rel_slice_of_seq false w vs);
-  let res : vec_or_slice U8.t = Slice w;
-  fold (rel_vec_or_slice_of_seq false res vs);
   ghost fn aux (_: unit)
   requires
-    (Trade.trade (pts_to s #ps vs) (vmatch p c v) ** rel_vec_or_slice_of_seq false res vs)
+    (Trade.trade (pts_to s #ps vs) (vmatch p c v) ** rel_slice_of_seq false w vs)
   ensures vmatch p c v
   {
-    unfold (rel_vec_or_slice_of_seq false res vs);
     unfold (rel_slice_of_seq false w vs);
     Trade.elim _ _
   };
   Trade.intro_trade _ _ _ aux;
-  res
+  w
 }
 ```
 
@@ -215,7 +212,7 @@ let impl_zero_copy_bytes
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
-: impl_zero_copy_parse #ty vmatch #bstr #(Seq.seq U8.t) #_ spec_bstr.parser #_ (rel_vec_or_slice_of_seq false )
+: impl_zero_copy_parse #ty vmatch #bstr #(Seq.seq U8.t) #_ spec_bstr.parser #_ (rel_slice_of_seq false )
 = impl_zero_copy_bytes_gen cbor_destr_string _ ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -223,7 +220,7 @@ let impl_zero_copy_text
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
-: impl_zero_copy_parse #ty vmatch #tstr #(Seq.seq U8.t) #_ spec_tstr.parser #_ (rel_vec_or_slice_of_seq false )
+: impl_zero_copy_parse #ty vmatch #tstr #(Seq.seq U8.t) #_ spec_tstr.parser #_ (rel_slice_of_seq false )
 = impl_zero_copy_bytes_gen cbor_destr_string _ ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -233,7 +230,7 @@ let impl_zero_copy_str_size
     (cbor_destr_string: get_string_t vmatch)
     (mt: Ghost.erased major_type_byte_string_or_text_string)
     (lo hi: Ghost.erased U64.t)
-: impl_zero_copy_parse vmatch (spec_str_size mt lo hi).parser (rel_vec_or_slice_of_seq false)
+: impl_zero_copy_parse vmatch (spec_str_size mt lo hi).parser (rel_slice_of_seq false)
 = impl_zero_copy_bytes_gen cbor_destr_string _ ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]

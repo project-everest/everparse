@@ -13,6 +13,8 @@ module I64 = FStar.Int64
 module V = Pulse.Lib.Vec
 module Trade = Pulse.Lib.Trade
 
+(* Zero-copy parsing only. (Thus, for serialization, it is the responsibility of the user to build values with the right lifetimes before calling the serializer.) *)
+
 [@@sem_attr]
 let impl_elem_type_sem
   (cbor_t: Type0)
@@ -24,16 +26,14 @@ let impl_elem_type_sem
   | TTInt64 -> I64.t
   | TTUnit -> unit
   | TTBool -> bool
-  | TTString -> vec_or_slice U8.t
-  | TTAny -> either (cbor_with_perm cbor_t) (Ghost.erased Cbor.cbor) // zero_copy parsing only, unless skipped, see remark in CDDL.Pulse.Types
+  | TTString -> slice U8.t // with perm
+  | TTAny -> cbor_with_perm cbor_t
   | TTAlwaysFalse -> squash False
 
 let rel_elem_type_sem
   (#cbor_t: Type0)
   (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
   (t: target_elem_type)
-  (freeable: bool)
-  (skippable: bool)
 : Tot (rel (impl_elem_type_sem cbor_t t) (target_elem_type_sem t))
 = match t returns rel (impl_elem_type_sem cbor_t t) (target_elem_type_sem t) with
   | TTUInt8 -> rel_pure _
@@ -41,8 +41,8 @@ let rel_elem_type_sem
   | TTInt64 -> rel_pure _
   | TTUnit -> rel_unit
   | TTBool -> rel_pure _
-  | TTString -> rel_vec_or_slice_of_seq #U8.t freeable
-  | TTAny -> rel_either_skip (rel_cbor_not_freeable vmatch freeable) skippable
+  | TTString -> rel_slice_of_seq #U8.t false
+  | TTAny -> rel_cbor_not_freeable vmatch false
   | TTAlwaysFalse -> rel_always_false _ _
 
 [@sem_attr]
@@ -65,8 +65,8 @@ let rec impl_type_sem
   | TTOption t -> option (impl_type_sem cbor_t env t)
   | TTPair t1 t2 -> (impl_type_sem cbor_t env t1 & impl_type_sem cbor_t env t2)
   | TTUnion t1 t2 -> either (impl_type_sem cbor_t env t1) (impl_type_sem cbor_t env t2)
-  | TTArray t -> vec_or_slice (impl_type_sem cbor_t env t)
-  | TTTable t1 t2 -> vec_or_slice (impl_type_sem cbor_t env t1 & impl_type_sem cbor_t env t2)
+  | TTArray t -> slice (impl_type_sem cbor_t env t) // TODO: allow iterable CBOR array objects
+  | TTTable t1 t2 -> slice (impl_type_sem cbor_t env t1 & impl_type_sem cbor_t env t2) // TODO: allow iterable CBOR map objects
 
 let target_impl_env_included
   (#bound1: name_env)
@@ -114,8 +114,7 @@ type rel_env
   (s_env: target_type_env bound)
 = {
   r_type: target_impl_env bound;
-  r_rel: (n: typ_name bound) -> (freeable: bool) -> (skippable: bool) -> rel (r_type n) (s_env.te_type n);
-  free: (n: typ_name bound) -> (x: r_type n) -> (y: s_env.te_type n) -> (skippable: bool) -> stt unit (r_rel n true skippable x y) (fun _ -> emp);
+  r_rel: (n: typ_name bound) -> rel (r_type n) (s_env.te_type n);
 }
 
 let rec rel_type_sem
@@ -125,18 +124,16 @@ let rec rel_type_sem
   (#s_env: target_type_env bound)
   (env: rel_env s_env)
   (t: target_type { target_type_bounded bound t })
-  (freeable: bool)
-  (skippable: bool)
 : Tot (rel (impl_type_sem cbor_t env.r_type t) (target_type_sem s_env.te_type t) )
   (decreases t)
 = match t returns rel (impl_type_sem cbor_t env.r_type t) (target_type_sem s_env.te_type t) with
-  | TTDef s -> env.r_rel s freeable skippable
-  | TTElem elt -> rel_elem_type_sem vmatch elt freeable skippable
-  | TTOption t -> rel_option (rel_type_sem cbor_t vmatch env t freeable skippable)
-  | TTPair t1 t2 -> rel_pair (rel_type_sem cbor_t vmatch env t1 freeable skippable) (rel_type_sem cbor_t vmatch env t2 freeable skippable)
-  | TTUnion t1 t2 -> rel_either (rel_type_sem cbor_t vmatch env t1 freeable skippable) (rel_type_sem cbor_t vmatch env t2 freeable skippable)
-  | TTArray t -> rel_vec_or_slice_of_list (rel_type_sem cbor_t vmatch env t freeable skippable) freeable
-  | TTTable t1 t2 -> rel_vec_or_slice_of_table (target_type_eq s_env t1) (rel_type_sem cbor_t vmatch env t1 freeable skippable) (rel_type_sem cbor_t vmatch env t2 freeable skippable) freeable
+  | TTDef s -> env.r_rel s
+  | TTElem elt -> rel_elem_type_sem vmatch elt
+  | TTOption t -> rel_option (rel_type_sem cbor_t vmatch env t)
+  | TTPair t1 t2 -> rel_pair (rel_type_sem cbor_t vmatch env t1) (rel_type_sem cbor_t vmatch env t2)
+  | TTUnion t1 t2 -> rel_either (rel_type_sem cbor_t vmatch env t1) (rel_type_sem cbor_t vmatch env t2)
+  | TTArray t -> rel_slice_of_list (rel_type_sem cbor_t vmatch env t) false
+  | TTTable t1 t2 -> rel_slice_of_table (target_type_eq s_env t1) (rel_type_sem cbor_t vmatch env t1) (rel_type_sem cbor_t vmatch env t2)
 
 let rel_env_included
   (#bound1: name_env)
@@ -148,7 +145,7 @@ let rel_env_included
 : Tot prop
 = target_spec_env_included s_env1.te_type s_env2.te_type /\
   target_impl_env_included r1.r_type r2.r_type /\
-  (forall (n: typ_name bound1) (freeable: bool) (skippable: bool) . r1.r_rel n freeable skippable == coerce_eq () (r2.r_rel n freeable skippable))
+  (forall (n: typ_name bound1) . r1.r_rel n == coerce_eq () (r2.r_rel n))
 
 let rec rel_type_sem_incr
   (#bound1: name_env)
@@ -160,26 +157,24 @@ let rec rel_type_sem_incr
   (#s_env2: target_type_env bound2)
   (env2: rel_env s_env2)
   (t: target_type)
-  (freeable: bool)
-  (skippable: bool)
 : Lemma
   (requires rel_env_included env1 env2 /\
     target_type_bounded bound1 t
   )
-  (ensures rel_type_sem cbor_t vmatch env1 t freeable skippable == coerce_eq () (rel_type_sem cbor_t vmatch env2 t freeable skippable)) // FIXME: WHY WHY WHY do we have this coerce_eq?
+  (ensures rel_type_sem cbor_t vmatch env1 t == coerce_eq () (rel_type_sem cbor_t vmatch env2 t)) // FIXME: WHY WHY WHY do we have this coerce_eq?
   (decreases t)
   [SMTPatOr [
-    [SMTPat (rel_env_included env1 env2); SMTPat (rel_type_sem cbor_t vmatch env1 t freeable skippable);];
-    [SMTPat (rel_env_included env1 env2); SMTPat (rel_type_sem cbor_t vmatch env2 t freeable skippable);];
+    [SMTPat (rel_env_included env1 env2); SMTPat (rel_type_sem cbor_t vmatch env1 t);];
+    [SMTPat (rel_env_included env1 env2); SMTPat (rel_type_sem cbor_t vmatch env2 t);];
   ]]
 = match t with
   | TTOption t1
   | TTArray t1
-    -> rel_type_sem_incr cbor_t vmatch env1 env2 t1 freeable skippable
+    -> rel_type_sem_incr cbor_t vmatch env1 env2 t1
   | TTPair t1 t2
   | TTUnion t1 t2
   | TTTable t1 t2 ->
     eq_test_unique (target_type_eq s_env1 t1) (coerce_eq () (target_type_eq s_env2 t1));
-    rel_type_sem_incr cbor_t vmatch env1 env2 t1 freeable skippable;
-    rel_type_sem_incr cbor_t vmatch env1 env2 t2 freeable skippable
+    rel_type_sem_incr cbor_t vmatch env1 env2 t1;
+    rel_type_sem_incr cbor_t vmatch env1 env2 t2
   | _ -> ()
