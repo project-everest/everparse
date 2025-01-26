@@ -22,4 +22,7 @@ remove_credentials () {
         cat
     fi
 }
+
+export PATH="$FSTAR_HOME/z3-versions:$PATH"
+
 { { { { { { exec_build ; } 3>&1 1>&2 2>&3 ; } | sed -u 's!^![STDERR]!' ; } 3>&1 1>&2 2>&3 ; } | sed -u 's!^![STDOUT]!' ; } 2>&1 ; } | awk '{ print strftime("[%Y-%m-%d %H:%M:%S]"), $0 }' | remove_credentials | tee $out_file
