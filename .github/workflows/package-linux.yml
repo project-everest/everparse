@@ -1,0 +1,73 @@
+name: Build everparse package
+on:
+  workflow_dispatch:
+    inputs:
+      fstar_repo:
+        description: F* repository (use org/repo for Github repos)
+        default: 'FStarLang/FStar'
+        type: string
+        required: true
+      fstar_ref:
+        description: F* ref (branch, or tag, or commit hash)
+        default: 'master'
+        type: string
+        required: true
+      karamel_repo:
+        description: Karamel repository (use org/repo for Github repos)
+        default: 'FStarLang/karamel'
+        type: string
+        required: true
+      karamel_ref:
+        description: Karamel ref (branch, or tag, or commit hash)
+        default: 'master'
+        type: string
+        required: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@master
+
+      - uses: actions/checkout@master
+        with:
+          path: FStar
+          repository: ${{inputs.fstar_repo}}
+          ref: ${{inputs.fstar_ref}}
+
+      - uses: actions/checkout@master
+        with:
+          path: karamel
+          repository: ${{inputs.karamel_repo}}
+          ref: ${{inputs.karamel_ref}}
+
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.2
+
+      - name: Prepare
+        run: |
+          eval $(opam env)
+          sudo apt-get update || true
+          opam install --deps-only FStar/fstar.opam
+          sed -i '/"fstar"/d' karamel/karamel.opam
+          # ^ remove F* dependency of karamel, it is outdated and will conflict.
+          opam install --deps-only karamel/karamel.opam
+          opam install hex re sexplib
+          # ^ everparse deps
+
+      - name: Build package
+        run: |
+          eval $(opam env)
+          make package -kj$(nproc)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: |
+            everparse*.zip
+            everparse*.tar.gz
+          name: everparse

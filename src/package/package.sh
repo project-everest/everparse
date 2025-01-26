@@ -115,30 +115,55 @@ make_everparse() {
     export OTHERFLAGS='--admit_smt_queries true'
     #!!!!!
 
-    # Verify if F* and KaRaMeL are here
     cp0=$(which gcp >/dev/null 2>&1 && echo gcp || echo cp)
     cp="$cp0 --preserve=mode,timestamps"
 
-    ## Setup F*
+    ## Setup F*. We need to locate a package, either it's already
+    # there or we try to build one from the repo.
 
-    if ! [ -f fstar.tar.gz ]; then
-      if ! [ -d FStar ]; then
-        git clone https://github.com/FStarLang/FStar --depth 1
-      fi
-      $MAKE -C FStar "$@" ADMIT=1
-      $MAKE -C FStar "$@" FSTAR_TAG= package
-      cp FStar/fstar.tar.gz .
-    fi
-
-    FSTAR_PKG=$(realpath fstar.tar.gz)
-    FSTAR_PKG_ROOT=__fstar-install
-    rm -rf "$FSTAR_PKG_ROOT"
-    mkdir -p "$FSTAR_PKG_ROOT"
-    tar xzf $FSTAR_PKG -C "$FSTAR_PKG_ROOT"
-
+    FSTAR_PKG_ENVELOPE=__fstar-install
     # The package extracts into a fstar directory, and everything
     # is under there.
-    FSTAR_PKG_ROOT="$FSTAR_PKG_ROOT/fstar"
+    FSTAR_PKG_ROOT="$FSTAR_PKG_ENVELOPE/fstar"
+    FSTAR_SRC_PKG_ROOT=fstar-src/fstar
+    if ! [[ -d $FSTAR_PKG_ROOT ]] ; then
+        if [[ -d $FSTAR_SRC_PKG_ROOT ]] ; then
+            # build from a source package
+            dune_sandbox_opt=
+            if $is_windows ; then
+		# Dune crashes with "cannot delete sandbox." This fix comes
+		# from https://github.com/ocaml/dune/issues/8228#issuecomment-1642104172
+                dune_sandbox_opt=DUNE_CONFIG__BACKGROUND_SANDBOXES=disabled
+            fi
+            env $dune_sandbox_opt $MAKE -C $FSTAR_SRC_PKG_ROOT "$@" ADMIT=1
+            mkdir -p "$FSTAR_PKG_ROOT"
+            PREFIX="$(fixpath "$PWD/$FSTAR_PKG_ROOT")" $MAKE -C $FSTAR_SRC_PKG_ROOT install
+            $cp "$FSTAR_SRC_PKG_ROOT/LICENSE" "$FSTAR_PKG_ROOT/"
+        else
+            if ! [ -f fstar.tar.gz ] && ! [ -f fstar.zip ]; then
+                # build a binary package from a full F* clone
+                if ! [ -d FStar ]; then
+                    git clone https://github.com/FStarLang/FStar --depth 1
+                fi
+                $MAKE -C FStar "$@" ADMIT=1
+                $MAKE -C FStar "$@" FSTAR_TAG= package
+                $cp FStar/fstar.tar.gz . || $cp FStar/fstar.zip .
+            fi
+            mkdir -p "$FSTAR_PKG_ENVELOPE"
+            if [ -f fstar.tar.gz ]; then
+                FSTAR_PKG=$(realpath fstar.tar.gz)
+                tar xzf $FSTAR_PKG -C "$FSTAR_PKG_ENVELOPE"
+            elif [ -f fstar.zip ]; then
+                FSTAR_PKG=$(realpath fstar.zip)
+                pushd "$FSTAR_PKG_ENVELOPE"
+                unzip -q "$FSTAR_PKG"
+                popd
+            else
+                echo "unexpected, no package?" >&2
+                exit 1
+            fi
+        fi
+    fi
 
     export FSTAR_EXE=$(realpath $FSTAR_PKG_ROOT/bin/fstar.exe)
     export FSTAR_EXE=$(fixpath "$FSTAR_EXE")
@@ -317,7 +342,10 @@ zip_everparse() {
         time tar cvzf everparse$ext everparse/*
     fi
     if $with_version ; then mv everparse$ext everparse_"$everparse_version"_"$OS"_"$platform"$ext ; fi
+}
 
+nuget_everparse() {
+    with_version=$1
     if $is_windows ; then
         # Create the nuget package
 
@@ -365,6 +393,8 @@ zip_everparse() {
         cp EverParse.nupkg ..
         if $with_version ; then mv ../EverParse.nupkg ../EverParse."$everparse_nuget_version".nupkg ; fi
         popd
+    else
+        echo "We are not on Windows, skipping nuget package"
     fi
     # Not doing any cleanup in the spirit of existing package
 
@@ -379,34 +409,92 @@ print_usage ()
   cat <<HELP
 USAGE: $0 [OPTIONS]
 
+By default, this script builds and places all components in the everparse folder
+
 OPTION:
-  -make     Build and place all components in the everparse folder
+  -zip      Also zip on Windows, tar.gz on Linux, the folder and name with the version
 
-  -zip      Like -make, but also zip the folder and name with the version
+  -zip-noversion
+            Like -zip, but without the version. Incompatible with -zip
 
-  -zip-noversion      Like -zip, but without the version
+  -nuget    Also nuget the folder and name with the version.
+            Does nothing on non-Windows platforms.
+
+  -nuget-noversion
+            Like -nuget, but without the version.
+            Incompatible with -nuget
+
+  --        Ends the list of script-specific options. Beyond that option,
+            passes other arguments to 'make'
 HELP
 }
 
-case "$1" in
-    -zip)
-        shift
-        make_everparse "$@"
-            zip_everparse true
-        ;;
+zip_everparse_cmd=
+nuget_everparse_cmd=
+process_args=true
 
-    -zip-noversion)
-        shift
-        make_everparse "$@"
-            zip_everparse false
-        ;;
+while [[ -n "$1" ]] && $process_args ; do
+    case "$1" in
+        -zip)
+            shift
+            if [[ -n "$zip_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -zip or -zip-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            zip_everparse_cmd="zip_everparse true"
+            ;;
 
-    -make)
-        shift
-        make_everparse "$@"
-        ;;
+        -zip-noversion)
+            shift
+            if [[ -n "$zip_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -zip or -zip-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            zip_everparse_cmd="zip_everparse false"
+            ;;
 
-    *)
-        print_usage
-        ;;
-esac
+        -nuget)
+            shift
+            if [[ -n "$nuget_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -nuget or -nuget-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            nuget_everparse_cmd="nuget_everparse true"
+            ;;
+
+        -nuget-noversion)
+            shift
+            if [[ -n "$nuget_everparse_cmd" ]] ; then
+               echo "ERROR: only one of -nuget or -nuget-noversion can be given"
+               print_usage
+               exit 1
+            fi
+            nuget_everparse_cmd="nuget_everparse false"
+            ;;
+
+        -help)
+            shift
+            print_usage
+            exit 0
+            ;;
+
+        --)
+            shift
+            process_args=false
+            ;;
+
+        *)
+            print_usage
+            exit 1
+            ;;
+    esac
+done
+
+
+make_everparse "$@"
+if [[ -n "$zip_everparse_cmd" ]] ; then $zip_everparse_cmd ; fi
+if [[ -n "$nuget_everparse_cmd" ]] ; then $nuget_everparse_cmd ; fi
+true

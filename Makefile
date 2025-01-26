@@ -212,6 +212,11 @@ clean: clean-3d clean-lowparse clean-quackyducky
 release package package-noversion everparse:
 	+$(MAKE) -f package.Makefile $@
 
+# Nuget package only (needed by the Windows workflow, since we let
+# GitHub Actions produce the .zip from the everparse directory)
+nuget-noversion:
+	+src/package/package.sh -nuget-noversion
+
 # For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
 
 lowparse-fstar-test:
