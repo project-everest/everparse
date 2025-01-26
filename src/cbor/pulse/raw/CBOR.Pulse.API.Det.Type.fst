@@ -7,3 +7,5 @@ let cbor_det_array_iterator_t = CBOR.Pulse.Raw.Read.cbor_array_iterator
 let cbor_det_map_iterator_t = CBOR.Pulse.Raw.Read.cbor_map_iterator
 
 let dummy_cbor_det_t _ = Raw.CBOR_Case_Simple 0uy
+
+let freeable_cbor_det_t = CBOR.Pulse.Raw.Copy.freeable_cbor

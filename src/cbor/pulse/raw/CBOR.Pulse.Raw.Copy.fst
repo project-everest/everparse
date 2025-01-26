@@ -12,7 +12,7 @@ module B = Pulse.Lib.Box
 
 [@@erasable]
 noeq
-type freeable_tree = // this is necessary to define the freeable slprop by structural recursion, because freeable_cbor' is not structurally recursive because V.vec and B.box may introduce cycles
+type freeable_tree = // this is necessary to define the freeable slprop by structural recursion, because freeable_cbor0 is not structurally recursive because V.vec and B.box may introduce cycles
 | FTBytes
 | FTBox: (b: freeable_tree) -> freeable_tree
 | FTArray: (a: list freeable_tree) -> freeable_tree
@@ -20,27 +20,27 @@ type freeable_tree = // this is necessary to define the freeable slprop by struc
 | FTUnit
 
 noeq
-type freeable_cbor' =
-| FBytes: (v: V.vec U8.t) -> freeable_cbor'
-| FBox: (b: freeable_cbor_box) -> freeable_cbor'
-| FArray: (a: freeable_cbor_array) -> freeable_cbor'
-| FMap: (m: freeable_cbor_map) -> freeable_cbor'
+type freeable_cbor0 =
+| FBytes: (v: V.vec U8.t) -> freeable_cbor0
+| FBox: (b: freeable_cbor_box) -> freeable_cbor0
+| FArray: (a: freeable_cbor_array) -> freeable_cbor0
+| FMap: (m: freeable_cbor_map) -> freeable_cbor0
 | FUnit
 
 and freeable_cbor_box = {
   box_cbor: B.box cbor_raw; // the box turned into ref in cbor_tagged
-  box_footprint: B.box freeable_cbor'; // the freeable_cbor associated to the contents of box_cbor
+  box_footprint: B.box freeable_cbor0; // the freeable_cbor associated to the contents of box_cbor
 }
 
 and freeable_cbor_array = {
   array_cbor: V.vec cbor_raw; // the vec turned into slice in cbor_array
-  array_footprint: V.vec freeable_cbor'; // the freeable_cbor objects associated to each element of array_cbor
+  array_footprint: V.vec freeable_cbor0; // the freeable_cbor objects associated to each element of array_cbor
   array_len: (array_len: SZ.t { SZ.v array_len == V.length array_footprint });
 }
 
 and freeable_cbor_map_entry = {
-  map_entry_key: freeable_cbor';
-  map_entry_value: freeable_cbor';
+  map_entry_key: freeable_cbor0;
+  map_entry_value: freeable_cbor0;
 }
 
 and freeable_cbor_map = {
@@ -52,21 +52,21 @@ and freeable_cbor_map = {
 module SM = Pulse.Lib.SeqMatch.Util
 
 let rec freeable_match'
-  (x: freeable_cbor')
+  (x: freeable_cbor0)
   (ft: freeable_tree)
 : Tot slprop
   (decreases ft)
 = match x, ft with
   | FBytes ve, FTBytes -> exists* (v: Seq.seq U8.t) . pts_to ve v ** pure (V.is_full_vec ve)
-  | FBox bx, FTBox ft' -> exists* (v: cbor_raw) (x': freeable_cbor') . pts_to bx.box_cbor v ** pts_to bx.box_footprint x' ** freeable_match' x' ft'
-  | FArray ar, FTArray ft' -> exists* (v: Seq.seq cbor_raw) (x': Seq.seq freeable_cbor') . pts_to ar.array_cbor v ** pts_to ar.array_footprint x' ** SM.seq_list_match x' ft' freeable_match' ** pure (V.is_full_vec ar.array_cbor /\ V.is_full_vec ar.array_footprint)
+  | FBox bx, FTBox ft' -> exists* (v: cbor_raw) (x': freeable_cbor0) . pts_to bx.box_cbor v ** pts_to bx.box_footprint x' ** freeable_match' x' ft'
+  | FArray ar, FTArray ft' -> exists* (v: Seq.seq cbor_raw) (x': Seq.seq freeable_cbor0) . pts_to ar.array_cbor v ** pts_to ar.array_footprint x' ** SM.seq_list_match x' ft' freeable_match' ** pure (V.is_full_vec ar.array_cbor /\ V.is_full_vec ar.array_footprint)
   | FMap m, FTMap ft' -> exists* (v: Seq.seq cbor_map_entry) (x': Seq.seq freeable_cbor_map_entry) . pts_to m.map_cbor v ** pts_to m.map_footprint x' ** SM.seq_list_match x' ft' (freeable_match_map_entry' ft freeable_match') ** pure (V.is_full_vec m.map_cbor /\ V.is_full_vec m.map_footprint)
   | FUnit, FTUnit -> emp
   | _ -> pure False
     
 and freeable_match_map_entry'
   (r0: freeable_tree)
-  (freeable_match: (freeable_cbor' -> (v': freeable_tree { v' << r0 }) -> slprop))
+  (freeable_match: (freeable_cbor0 -> (v': freeable_tree { v' << r0 }) -> slprop))
   (c: freeable_cbor_map_entry)
   (r: (freeable_tree & freeable_tree) { r << r0 })
 : Tot slprop
@@ -78,7 +78,7 @@ let freeable_match_box
   (bx: freeable_cbor_box)
   (ft': freeable_tree)
 : Tot slprop
-= exists* (v: cbor_raw) (x': freeable_cbor') . pts_to bx.box_cbor v ** pts_to bx.box_footprint x' ** freeable_match' x' ft'
+= exists* (v: cbor_raw) (x': freeable_cbor0) . pts_to bx.box_cbor v ** pts_to bx.box_footprint x' ** freeable_match' x' ft'
 
 let freeable_match_box_eq
   (bx: freeable_cbor_box)
@@ -141,7 +141,7 @@ ensures
 ```
 
 let freeable_match'_cases_pred
-  (x: freeable_cbor')
+  (x: freeable_cbor0)
   (ft: freeable_tree)
 : GTot bool
   (decreases ft)
@@ -157,7 +157,7 @@ let freeable_match'_cases_pred
 ```pulse
 ghost
 fn freeable_match'_cases
-  (x: freeable_cbor')
+  (x: freeable_cbor0)
   (ft: freeable_tree)
 requires
   freeable_match' x ft
@@ -176,7 +176,7 @@ ensures
 
 inline_for_extraction
 let cbor_free'_t =
-  (x: freeable_cbor') ->
+  (x: freeable_cbor0) ->
   (ft: freeable_tree) ->
   stt unit
     (freeable_match' x ft)
@@ -201,7 +201,7 @@ ensures
 
 ```pulse
 fn rec cbor_free'
-  (x: freeable_cbor')
+  (x: freeable_cbor0)
   (ft: freeable_tree)
 requires
   freeable_match' x ft
@@ -299,7 +299,7 @@ ensures
 noeq
 type freeable_cbor = {
   cbor: cbor_raw;
-  footprint: freeable_cbor';
+  footprint: freeable_cbor0;
   tree: freeable_tree;
 }
 
@@ -370,6 +370,12 @@ ensures
 module S = Pulse.Lib.Slice
 
 inline_for_extraction
+let get_cbor_raw_array
+  (x: cbor_raw { CBOR_Case_Array? x })
+: Tot cbor_array
+= let CBOR_Case_Array v = x in v
+
+inline_for_extraction
 ```pulse
 fn rec cbor_copy_array
   (copy: cbor_copy_t)
@@ -390,7 +396,7 @@ ensures
 {
   cbor_match_cases x;
   let len64 = cbor_match_array_get_length x;
-  let a = CBOR_Case_Array?.v x;
+  let a = get_cbor_raw_array x;
   cbor_match_eq_array p a v;
   Trade.rewrite_with_trade
     (cbor_match p x v)
@@ -531,6 +537,12 @@ ensures
 }
 ```
 
+inline_for_extraction
+let get_cbor_raw_map
+  (x: cbor_raw { CBOR_Case_Map? x })
+: Tot cbor_map
+= let CBOR_Case_Map v = x in v
+
 #restart-solver
 
 inline_for_extraction
@@ -554,7 +566,7 @@ ensures
 {
   cbor_match_cases x;
   let len64 = cbor_match_map_get_length x;
-  let a = CBOR_Case_Map?.v x;
+  let a = get_cbor_raw_map x;
   cbor_match_eq_map0 p a v;
   Trade.rewrite_with_trade
     (cbor_match p x v)

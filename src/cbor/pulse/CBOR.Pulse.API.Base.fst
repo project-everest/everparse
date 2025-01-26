@@ -1430,3 +1430,34 @@ let cbor_det_serialize_t
     (fun res -> exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
       cbor_det_serialize_postcond y v v' res
     ))
+
+inline_for_extraction
+let cbor_copy_t
+  (#t: Type)
+  (#tf: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+  (freeable: tf -> slprop)
+  (get_cbor: (tf -> t))
+=
+  (x: t) ->
+  (#p: perm) ->
+  (#v: Ghost.erased cbor) ->
+  stt tf
+    (vmatch p x v)
+    (fun res ->
+      vmatch p x v **
+      vmatch 1.0R (get_cbor res) v **
+      Trade.trade
+        (vmatch 1.0R (get_cbor res) v)
+        (freeable res)
+    )
+
+inline_for_extraction
+let cbor_free_t
+  (#tf: Type)
+  (freeable: tf -> slprop)
+=
+  (x: tf) ->
+  stt unit
+    (freeable x)
+    (fun _ -> emp)

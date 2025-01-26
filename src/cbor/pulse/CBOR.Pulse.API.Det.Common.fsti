@@ -271,3 +271,11 @@ val cbor_det_map_entry_value () : map_entry_value_t cbor_det_map_entry_match cbo
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 val cbor_det_map_get () : map_get_by_ref_t cbor_det_match
+
+val freeable: freeable_cbor_det_t -> slprop
+
+val get_cbor_from_freeable: freeable_cbor_det_t -> cbor_det_t
+
+val cbor_copy () : cbor_copy_t cbor_det_match freeable get_cbor_from_freeable
+
+val cbor_free () : cbor_free_t freeable
