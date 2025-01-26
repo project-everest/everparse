@@ -410,12 +410,9 @@ ensures
   let len = S.len ar;
   let v' = V.alloc (CBOR_Case_Simple 0uy (* dummy *)) len;
   V.pts_to_len v';
-  V.to_array_pts_to v';
-  let ar' = S.from_array (V.vec_to_array v') len;
-  S.pts_to_len ar';
   let vf = V.alloc FUnit (* dummy *) len;
   V.pts_to_len vf;
-  with s0 . assert (pts_to ar' s0);
+  with s0 . assert (pts_to v' s0);
   with sf0 . assert (pts_to vf sf0);
   let sl = Ghost.hide (Seq.seq_of_list l);
   SM.seq_seq_match_empty_intro (cbor_match 1.0R) s0 sl 0;
@@ -434,7 +431,7 @@ ensures
   ) invariant b . exists* i s1 j sf st . (
     pts_to ar #ps s ** SM.seq_list_match s l (cbor_match pl) **
     pts_to pi i **
-    pts_to ar' s1 **
+    pts_to v' s1 **
     SM.seq_seq_match (cbor_match 1.0R) s1 sl 0 j **
     pts_to vf sf **
     Trade.trade
@@ -448,10 +445,10 @@ ensures
     )
   ) {
     S.pts_to_len ar;
-    S.pts_to_len ar';
+    V.pts_to_len v';
     V.pts_to_len vf;
     let i = !pi;
-    with s1 sf st . assert (pts_to ar' s1 ** pts_to vf sf ** Trade.trade
+    with s1 sf st . assert (pts_to v' s1 ** pts_to vf sf ** Trade.trade
       (SM.seq_seq_match (cbor_match 1.0R) s1 sl 0 (SZ.v i))
       (SM.seq_seq_match freeable_match' sf st 0 (SZ.v i))
     );
@@ -460,8 +457,8 @@ ensures
     let c' = copy c;
     Trade.elim _ (SM.seq_list_match s l (cbor_match pl));
     with v1 . assert (cbor_match 1.0R c'.cbor v1 ** Trade.trade (cbor_match 1.0R c'.cbor v1) (freeable c'));
-    S.op_Array_Assignment ar' i c'.cbor;
-    with s1' . assert (pts_to ar' s1');
+    V.op_Array_Assignment v' i c'.cbor;
+    with s1' . assert (pts_to v' s1');
     V.op_Array_Assignment vf i c'.footprint;
     with sf' . assert (pts_to vf sf');
     SM.seq_seq_match_rewrite_seq_trade (cbor_match 1.0R) s1 s1' sl sl 0 (SZ.v i);
@@ -483,13 +480,13 @@ ensures
     pi := (SZ.add i 1sz);
   };
   Trade.elim _ (cbor_match p x v);
-  with s1 sf st . assert (pts_to ar' s1 ** pts_to vf sf ** 
+  with s1 sf st . assert (pts_to v' s1 ** pts_to vf sf ** 
     SM.seq_seq_match (cbor_match 1.0R) s1 sl 0 (SZ.v len) **
     Trade.trade
       (SM.seq_seq_match (cbor_match 1.0R) s1 sl 0 (SZ.v len))
       (SM.seq_seq_match freeable_match' sf st 0 (SZ.v len))
   );
-  S.pts_to_len ar';
+  V.pts_to_len v';
   SM.seq_seq_match_seq_list_match_trade (cbor_match 1.0R) s1 sl;
   Trade.trans _ _ (SM.seq_seq_match freeable_match' sf st 0 (SZ.v len));
   V.pts_to_len vf;
@@ -505,6 +502,9 @@ ensures
   };
   Trade.intro _ _ _ auxf;
   Trade.trans _ _ (SM.seq_list_match sf lt freeable_match');
+  V.to_array_pts_to v';
+  let ar' = S.from_array (V.vec_to_array v') len;
+  S.pts_to_len ar';
   let c' = cbor_match_array_intro len64 ar';
   Trade.trans_concl_r _ _ _ _;
   let fa = {
@@ -587,9 +587,6 @@ ensures
     })
     len;
   V.pts_to_len v';
-  V.to_array_pts_to v';
-  let ar' = S.from_array (V.vec_to_array v') len;
-  S.pts_to_len ar';
   let vf = V.alloc
     ({
       map_entry_key = FUnit;
@@ -597,7 +594,7 @@ ensures
     })
     len;
   V.pts_to_len vf;
-  with s0 . assert (pts_to ar' s0);
+  with s0 . assert (pts_to v' s0);
   with sf0 . assert (pts_to vf sf0);
   let sl = Ghost.hide (Seq.seq_of_list l);
   SM.seq_seq_match_empty_intro (cbor_match_map_entry 1.0R) s0 sl 0;
@@ -616,7 +613,7 @@ ensures
   ) invariant b . exists* i s1 j sf st . (
     pts_to ar #ps s ** SM.seq_list_match s l (cbor_match_map_entry pl) **
     pts_to pi i **
-    pts_to ar' s1 **
+    pts_to v' s1 **
     SM.seq_seq_match (cbor_match_map_entry 1.0R) s1 sl 0 j **
     pts_to vf sf **
     Trade.trade
@@ -630,10 +627,10 @@ ensures
     )
   ) {
     S.pts_to_len ar;
-    S.pts_to_len ar';
+    V.pts_to_len v';
     V.pts_to_len vf;
     let i = !pi;
-    with s1 sf st . assert (pts_to ar' s1 ** pts_to vf sf ** Trade.trade
+    with s1 sf st . assert (pts_to v' s1 ** pts_to vf sf ** Trade.trade
       (SM.seq_seq_match (cbor_match_map_entry 1.0R) s1 sl 0 (SZ.v i))
       (SM.seq_seq_match freeable_match_map_entry sf st 0 (SZ.v i))
     );
@@ -657,8 +654,8 @@ ensures
       )
       (cbor_match_map_entry 1.0R cme' v1);
     Trade.trans (cbor_match_map_entry 1.0R cme' v1) _ _;
-    S.op_Array_Assignment ar' i cme';
-    with s1' . assert (pts_to ar' s1');
+    V.op_Array_Assignment v' i cme';
+    with s1' . assert (pts_to v' s1');
     let cfp' = {
       map_entry_key = (fst c').footprint;
       map_entry_value = (snd c').footprint;
@@ -687,13 +684,13 @@ ensures
     pi := (SZ.add i 1sz);
   };
   Trade.elim _ (cbor_match p x v);
-  with s1 sf st . assert (pts_to ar' s1 ** pts_to vf sf ** 
+  with s1 sf st . assert (pts_to v' s1 ** pts_to vf sf ** 
     SM.seq_seq_match (cbor_match_map_entry 1.0R) s1 sl 0 (SZ.v len) **
     Trade.trade
       (SM.seq_seq_match (cbor_match_map_entry 1.0R) s1 sl 0 (SZ.v len))
       (SM.seq_seq_match freeable_match_map_entry sf st 0 (SZ.v len))
   );
-  S.pts_to_len ar';
+  V.pts_to_len v';
   SM.seq_seq_match_seq_list_match_trade (cbor_match_map_entry 1.0R) s1 sl;
   Trade.trans _ _ (SM.seq_seq_match freeable_match_map_entry sf st 0 (SZ.v len));
   V.pts_to_len vf;
@@ -710,6 +707,9 @@ ensures
   };
   Trade.intro _ _ _ auxf;
   Trade.trans _ _ (SM.seq_list_match sf lt (freeable_match_map_entry' (FTMap lt) freeable_match'));
+  V.to_array_pts_to v';
+  let ar' = S.from_array (V.vec_to_array v') len;
+  S.pts_to_len ar';
   let c' = cbor_match_map_intro len64 ar';
   Trade.trans_concl_r _ _ _ _;
   let fa = {
