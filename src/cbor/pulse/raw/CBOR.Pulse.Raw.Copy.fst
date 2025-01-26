@@ -12,7 +12,7 @@ module B = Pulse.Lib.Box
 
 [@@erasable]
 noeq
-type freeable_tree = // this is necessary to define the freeable slprop by structural recursion, because freeable_cbor0 is not structurally recursive because V.vec and B.box may introduce cycles
+type freeable_tree = // this is necessary to define the freeable slprop by structural recursion, because cbor_freeable0 is not structurally recursive because V.vec and B.box may introduce cycles
 | FTBytes
 | FTBox: (b: freeable_tree) -> freeable_tree
 | FTArray: (a: list freeable_tree) -> freeable_tree
@@ -20,54 +20,54 @@ type freeable_tree = // this is necessary to define the freeable slprop by struc
 | FTUnit
 
 noeq
-type freeable_cbor0 =
-| FBytes: (v: V.vec U8.t) -> freeable_cbor0
-| FBox: (b: freeable_cbor_box) -> freeable_cbor0
-| FArray: (a: freeable_cbor_array) -> freeable_cbor0
-| FMap: (m: freeable_cbor_map) -> freeable_cbor0
-| FUnit
+type cbor_freeable0 =
+| CBOR_Copy_Bytes: (v: V.vec U8.t) -> cbor_freeable0
+| CBOR_Copy_Box: (b: cbor_freeable_box) -> cbor_freeable0
+| CBOR_Copy_Array: (a: cbor_freeable_array) -> cbor_freeable0
+| CBOR_Copy_Map: (m: cbor_freeable_map) -> cbor_freeable0
+| CBOR_Copy_Unit
 
-and freeable_cbor_box = {
+and cbor_freeable_box = {
   box_cbor: B.box cbor_raw; // the box turned into ref in cbor_tagged
-  box_footprint: B.box freeable_cbor0; // the freeable_cbor associated to the contents of box_cbor
+  box_footprint: B.box cbor_freeable0; // the cbor_freeable associated to the contents of box_cbor
 }
 
-and freeable_cbor_array = {
+and cbor_freeable_array = {
   array_cbor: V.vec cbor_raw; // the vec turned into slice in cbor_array
-  array_footprint: V.vec freeable_cbor0; // the freeable_cbor objects associated to each element of array_cbor
+  array_footprint: V.vec cbor_freeable0; // the cbor_freeable objects associated to each element of array_cbor
   array_len: (array_len: SZ.t { SZ.v array_len == V.length array_footprint });
 }
 
-and freeable_cbor_map_entry = {
-  map_entry_key: freeable_cbor0;
-  map_entry_value: freeable_cbor0;
+and cbor_freeable_map_entry = {
+  map_entry_key: cbor_freeable0;
+  map_entry_value: cbor_freeable0;
 }
 
-and freeable_cbor_map = {
+and cbor_freeable_map = {
   map_cbor: V.vec cbor_map_entry; // the vec turned into slice in cbor_map
-  map_footprint: V.vec freeable_cbor_map_entry; // the freeable_cbor objects associated to each map entry key and value of map_cbor
+  map_footprint: V.vec cbor_freeable_map_entry; // the cbor_freeable objects associated to each map entry key and value of map_cbor
   map_len: (map_len: SZ.t { SZ.v map_len == V.length map_footprint });
 }
 
 module SM = Pulse.Lib.SeqMatch.Util
 
 let rec freeable_match'
-  (x: freeable_cbor0)
+  (x: cbor_freeable0)
   (ft: freeable_tree)
 : Tot slprop
   (decreases ft)
 = match x, ft with
-  | FBytes ve, FTBytes -> exists* (v: Seq.seq U8.t) . pts_to ve v ** pure (V.is_full_vec ve)
-  | FBox bx, FTBox ft' -> exists* (v: cbor_raw) (x': freeable_cbor0) . pts_to bx.box_cbor v ** pts_to bx.box_footprint x' ** freeable_match' x' ft'
-  | FArray ar, FTArray ft' -> exists* (v: Seq.seq cbor_raw) (x': Seq.seq freeable_cbor0) . pts_to ar.array_cbor v ** pts_to ar.array_footprint x' ** SM.seq_list_match x' ft' freeable_match' ** pure (V.is_full_vec ar.array_cbor /\ V.is_full_vec ar.array_footprint)
-  | FMap m, FTMap ft' -> exists* (v: Seq.seq cbor_map_entry) (x': Seq.seq freeable_cbor_map_entry) . pts_to m.map_cbor v ** pts_to m.map_footprint x' ** SM.seq_list_match x' ft' (freeable_match_map_entry' ft freeable_match') ** pure (V.is_full_vec m.map_cbor /\ V.is_full_vec m.map_footprint)
-  | FUnit, FTUnit -> emp
+  | CBOR_Copy_Bytes ve, FTBytes -> exists* (v: Seq.seq U8.t) . pts_to ve v ** pure (V.is_full_vec ve)
+  | CBOR_Copy_Box bx, FTBox ft' -> exists* (v: cbor_raw) (x': cbor_freeable0) . pts_to bx.box_cbor v ** pts_to bx.box_footprint x' ** freeable_match' x' ft'
+  | CBOR_Copy_Array ar, FTArray ft' -> exists* (v: Seq.seq cbor_raw) (x': Seq.seq cbor_freeable0) . pts_to ar.array_cbor v ** pts_to ar.array_footprint x' ** SM.seq_list_match x' ft' freeable_match' ** pure (V.is_full_vec ar.array_cbor /\ V.is_full_vec ar.array_footprint)
+  | CBOR_Copy_Map m, FTMap ft' -> exists* (v: Seq.seq cbor_map_entry) (x': Seq.seq cbor_freeable_map_entry) . pts_to m.map_cbor v ** pts_to m.map_footprint x' ** SM.seq_list_match x' ft' (freeable_match_map_entry' ft freeable_match') ** pure (V.is_full_vec m.map_cbor /\ V.is_full_vec m.map_footprint)
+  | CBOR_Copy_Unit, FTUnit -> emp
   | _ -> pure False
     
 and freeable_match_map_entry'
   (r0: freeable_tree)
-  (freeable_match: (freeable_cbor0 -> (v': freeable_tree { v' << r0 }) -> slprop))
-  (c: freeable_cbor_map_entry)
+  (freeable_match: (cbor_freeable0 -> (v': freeable_tree { v' << r0 }) -> slprop))
+  (c: cbor_freeable_map_entry)
   (r: (freeable_tree & freeable_tree) { r << r0 })
 : Tot slprop
   (decreases r)
@@ -75,20 +75,20 @@ and freeable_match_map_entry'
   freeable_match' c.map_entry_value (snd r)
 
 let freeable_match_box
-  (bx: freeable_cbor_box)
+  (bx: cbor_freeable_box)
   (ft': freeable_tree)
 : Tot slprop
-= exists* (v: cbor_raw) (x': freeable_cbor0) . pts_to bx.box_cbor v ** pts_to bx.box_footprint x' ** freeable_match' x' ft'
+= exists* (v: cbor_raw) (x': cbor_freeable0) . pts_to bx.box_cbor v ** pts_to bx.box_footprint x' ** freeable_match' x' ft'
 
 let freeable_match_box_eq
-  (bx: freeable_cbor_box)
+  (bx: cbor_freeable_box)
   (ft': freeable_tree)
 : Lemma
-  (freeable_match' (FBox bx) (FTBox ft') == freeable_match_box bx ft')
-= assert_norm (freeable_match' (FBox bx) (FTBox ft') == freeable_match_box bx ft')
+  (freeable_match' (CBOR_Copy_Box bx) (FTBox ft') == freeable_match_box bx ft')
+= assert_norm (freeable_match' (CBOR_Copy_Box bx) (FTBox ft') == freeable_match_box bx ft')
 
 let freeable_match_map_entry
-  (c: freeable_cbor_map_entry)
+  (c: cbor_freeable_map_entry)
   (r: (freeable_tree & freeable_tree))
 : Tot slprop
   (decreases r)
@@ -99,7 +99,7 @@ let freeable_match_map_entry
 ghost
 fn freeable_match_map_entry_weaken
   (r0: freeable_tree)
-  (c: freeable_cbor_map_entry)
+  (c: cbor_freeable_map_entry)
   (r: (freeable_tree & freeable_tree) { r << r0 })
 requires
   freeable_match_map_entry' r0 freeable_match' c r
@@ -128,7 +128,7 @@ let ftmap_precedes
 ghost
 fn freeable_match_map_entry_weaken_recip
   (r0: list (freeable_tree & freeable_tree))
-  (c: freeable_cbor_map_entry)
+  (c: cbor_freeable_map_entry)
   (r: (freeable_tree & freeable_tree) { r << r0 })
 requires
   freeable_match_map_entry c r
@@ -141,23 +141,23 @@ ensures
 ```
 
 let freeable_match'_cases_pred
-  (x: freeable_cbor0)
+  (x: cbor_freeable0)
   (ft: freeable_tree)
 : GTot bool
   (decreases ft)
 = match x, ft with
-  | FBytes _, FTBytes
-  | FBox _, FTBox _
-  | FArray _, FTArray _
-  | FMap _, FTMap _
-  | FUnit, FTUnit
+  | CBOR_Copy_Bytes _, FTBytes
+  | CBOR_Copy_Box _, FTBox _
+  | CBOR_Copy_Array _, FTArray _
+  | CBOR_Copy_Map _, FTMap _
+  | CBOR_Copy_Unit, FTUnit
    -> true
   | _ -> false
 
 ```pulse
 ghost
 fn freeable_match'_cases
-  (x: freeable_cbor0)
+  (x: cbor_freeable0)
   (ft: freeable_tree)
 requires
   freeable_match' x ft
@@ -176,7 +176,7 @@ ensures
 
 inline_for_extraction
 let cbor_free'_t =
-  (x: freeable_cbor0) ->
+  (x: cbor_freeable0) ->
   (ft: freeable_tree) ->
   stt unit
     (freeable_match' x ft)
@@ -186,7 +186,7 @@ inline_for_extraction
 ```pulse
 fn cbor_free_map_entry
   (cbor_free': cbor_free'_t)
-  (x: freeable_cbor_map_entry)
+  (x: cbor_freeable_map_entry)
   (ft: Ghost.erased (freeable_tree & freeable_tree))
 requires
     (freeable_match_map_entry x ft)
@@ -201,7 +201,7 @@ ensures
 
 ```pulse
 fn rec cbor_free'
-  (x: freeable_cbor0)
+  (x: cbor_freeable0)
   (ft: freeable_tree)
 requires
   freeable_match' x ft
@@ -210,24 +210,24 @@ ensures
 {
   freeable_match'_cases x ft;
   match x {
-    FUnit -> {
-      unfold (freeable_match' FUnit FTUnit);
+    CBOR_Copy_Unit -> {
+      unfold (freeable_match' CBOR_Copy_Unit FTUnit);
     }
-    FBytes v -> {
-      unfold (freeable_match' (FBytes v) FTBytes);
+    CBOR_Copy_Bytes v -> {
+      unfold (freeable_match' (CBOR_Copy_Bytes v) FTBytes);
       V.free v
     }
-    FBox b -> {
+    CBOR_Copy_Box b -> {
       let ft' = Ghost.hide (FTBox?.b ft);
-      unfold (freeable_match' (FBox b) (FTBox ft'));
+      unfold (freeable_match' (CBOR_Copy_Box b) (FTBox ft'));
       B.free b.box_cbor;
       let b' = ((let open Pulse.Lib.Box in ( ! )) b.box_footprint);
       cbor_free' b' _;
       B.free b.box_footprint
     }
-    FArray a -> {
+    CBOR_Copy_Array a -> {
       let ft' = Ghost.hide (FTArray?.a ft);
-      unfold (freeable_match' (FArray a) (FTArray ft'));
+      unfold (freeable_match' (CBOR_Copy_Array a) (FTArray ft'));
       V.free a.array_cbor;
       with s . assert (pts_to a.array_footprint s ** SM.seq_list_match s ft' freeable_match');
       V.pts_to_len a.array_footprint;
@@ -258,9 +258,9 @@ ensures
       SM.seq_seq_match_empty_elim freeable_match' s s' (SZ.v len);
       V.free a.array_footprint
     }
-    FMap a -> {
+    CBOR_Copy_Map a -> {
       let ft' = Ghost.hide (FTMap?.m ft);
-      unfold (freeable_match' (FMap a) (FTMap ft'));
+      unfold (freeable_match' (CBOR_Copy_Map a) (FTMap ft'));
       V.free a.map_cbor;
       with s . assert (pts_to a.map_footprint s ** SM.seq_list_match s ft' (freeable_match_map_entry' ft freeable_match'));
       SM.seq_list_match_weaken s ft' (freeable_match_map_entry' ft freeable_match') freeable_match_map_entry (freeable_match_map_entry_weaken ft);
@@ -297,17 +297,17 @@ ensures
 ```
 
 noeq
-type freeable_cbor = {
+type cbor_freeable = {
   cbor: cbor_raw;
-  footprint: freeable_cbor0;
+  footprint: cbor_freeable0;
   tree: freeable_tree;
 }
 
-let freeable (f: freeable_cbor) : Tot slprop = freeable_match' f.footprint f.tree
+let freeable (f: cbor_freeable) : Tot slprop = freeable_match' f.footprint f.tree
 
 ```pulse
-fn rec cbor_free
-  (x: freeable_cbor)
+fn rec cbor_free0
+  (x: cbor_freeable)
 requires
   freeable x
 ensures
@@ -326,7 +326,7 @@ let cbor_copy_t =
   (x: cbor_raw) ->
   (#p: perm) ->
   (#v: Ghost.erased raw_data_item) ->
-  stt freeable_cbor
+  stt cbor_freeable
     (cbor_match p x v)
     (fun res ->
       cbor_match p x v **
@@ -345,7 +345,7 @@ fn cbor_copy_map_entry
   (#v: Ghost.erased (raw_data_item & raw_data_item))
 requires
     (cbor_match_map_entry p x v)
-returns res: (freeable_cbor & freeable_cbor)
+returns res: (cbor_freeable & cbor_freeable)
 ensures
     (
       cbor_match_map_entry p x v **
@@ -384,7 +384,7 @@ fn rec cbor_copy_array
   (#v: Ghost.erased raw_data_item)
 requires
     (cbor_match p x v ** pure (CBOR_Case_Array? x))
-returns res: freeable_cbor
+returns res: cbor_freeable
 ensures
     (
       cbor_match p x v **
@@ -410,7 +410,7 @@ ensures
   let len = S.len ar;
   let v' = V.alloc (CBOR_Case_Simple 0uy (* dummy *)) len;
   V.pts_to_len v';
-  let vf = V.alloc FUnit (* dummy *) len;
+  let vf = V.alloc CBOR_Copy_Unit (* dummy *) len;
   V.pts_to_len vf;
   with s0 . assert (pts_to v' s0);
   with sf0 . assert (pts_to vf sf0);
@@ -514,7 +514,7 @@ ensures
   };
   let res = {
     cbor = c';
-    footprint = FArray fa;
+    footprint = CBOR_Copy_Array fa;
     tree = FTArray lt;
   };
   ghost fn aux_res (_: unit)
@@ -528,7 +528,7 @@ ensures
    V.to_vec_pts_to v';
    rewrite (pts_to v' s1) as (pts_to fa.array_cbor s1);
    rewrite (pts_to vf sf) as (pts_to fa.array_footprint sf);
-   fold (freeable_match' (FArray fa) (FTArray lt));
+   fold (freeable_match' (CBOR_Copy_Array fa) (FTArray lt));
    fold (freeable res)
   };
   Trade.intro _ _ _ aux_res;
@@ -554,7 +554,7 @@ fn rec cbor_copy_map
   (#v: Ghost.erased raw_data_item)
 requires
     (cbor_match p x v ** pure (CBOR_Case_Map? x))
-returns res: freeable_cbor
+returns res: cbor_freeable
 ensures
     (
       cbor_match p x v **
@@ -589,8 +589,8 @@ ensures
   V.pts_to_len v';
   let vf = V.alloc
     ({
-      map_entry_key = FUnit;
-      map_entry_value = FUnit;
+      map_entry_key = CBOR_Copy_Unit;
+      map_entry_value = CBOR_Copy_Unit;
     })
     len;
   V.pts_to_len vf;
@@ -719,7 +719,7 @@ ensures
   };
   let res = {
     cbor = c';
-    footprint = FMap fa;
+    footprint = CBOR_Copy_Map fa;
     tree = FTMap lt;
   };
   ghost fn aux_res (_: unit)
@@ -733,7 +733,7 @@ ensures
    V.to_vec_pts_to v';
    rewrite (pts_to v' s1) as (pts_to fa.map_cbor s1);
    rewrite (pts_to vf sf) as (pts_to fa.map_footprint sf);
-   fold (freeable_match' (FMap fa) (FTMap lt));
+   fold (freeable_match' (CBOR_Copy_Map fa) (FTMap lt));
    fold (freeable res)
   };
   Trade.intro _ _ _ aux_res;
@@ -743,13 +743,13 @@ ensures
 ```
 
 ```pulse
-fn rec cbor_copy
+fn rec cbor_copy0
   (x: cbor_raw)
   (#p: perm)
   (#v: Ghost.erased raw_data_item)
 requires
     (cbor_match p x v)
-returns res: freeable_cbor
+returns res: cbor_freeable
 ensures
     (
       cbor_match p x v **
@@ -767,7 +767,7 @@ ensures
       let c' = cbor_match_int_intro ty w;
       let res = {
         cbor = c';
-        footprint = FUnit;
+        footprint = CBOR_Copy_Unit;
         tree = FTUnit;
       };
       ghost fn aux (_: unit)
@@ -775,7 +775,7 @@ ensures
       ensures freeable res
       {
         cbor_match_int_free c';
-        fold (freeable_match' FUnit FTUnit);
+        fold (freeable_match' CBOR_Copy_Unit FTUnit);
         fold (freeable res)
       };
       Trade.intro_trade _ _ _ aux;
@@ -786,7 +786,7 @@ ensures
       let c' = cbor_match_simple_intro w;
       let res = {
         cbor = c';
-        footprint = FUnit;
+        footprint = CBOR_Copy_Unit;
         tree = FTUnit;
       };
       ghost fn aux (_: unit)
@@ -794,7 +794,7 @@ ensures
       ensures freeable res
       {
         cbor_match_simple_free c';
-        fold (freeable_match' FUnit FTUnit);
+        fold (freeable_match' CBOR_Copy_Unit FTUnit);
         fold (freeable res)
       };
       Trade.intro_trade _ _ _ aux;
@@ -816,7 +816,7 @@ ensures
       let c' = cbor_match_string_intro ty len s';
       let res = {
         cbor = c';
-        footprint = FBytes v';
+        footprint = CBOR_Copy_Bytes v';
         tree = FTBytes;
       };
       ghost fn aux (_: unit)
@@ -825,7 +825,7 @@ ensures
       {
         S.to_array s';
         V.to_vec_pts_to v';
-        fold (freeable_match' (FBytes v') FTBytes);
+        fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
         fold (freeable res)
       };
       Trade.intro _ _ _ aux;
@@ -835,7 +835,7 @@ ensures
     CBOR_Case_Tagged _ -> {
       let tag = cbor_match_tagged_get_tag x;
       let pl = cbor_match_tagged_get_payload x;
-      let cpl' = cbor_copy pl;
+      let cpl' = cbor_copy0 pl;
       Trade.elim _ (cbor_match p x v);
       let bf = B.alloc cpl'.footprint;
       let b = B.alloc cpl'.cbor;
@@ -848,7 +848,7 @@ ensures
       };
       let res = {
         cbor = c';
-        footprint = FBox fb;
+        footprint = CBOR_Copy_Box fb;
         tree = FTBox cpl'.tree
       };
       ghost fn aux (_: unit)
@@ -863,7 +863,7 @@ ensures
         unfold (freeable cpl');
         fold (freeable_match_box fb cpl'.tree);
         freeable_match_box_eq fb cpl'.tree;
-        rewrite (freeable_match_box fb cpl'.tree) as (freeable_match' (FBox fb) (FTBox cpl'.tree));
+        rewrite (freeable_match_box fb cpl'.tree) as (freeable_match' (CBOR_Copy_Box fb) (FTBox cpl'.tree));
         fold (freeable res)
       };
       Trade.intro _ _ _ aux;
@@ -871,10 +871,10 @@ ensures
       res
     }
     CBOR_Case_Array a -> {
-      cbor_copy_array cbor_copy (CBOR_Case_Array a);
+      cbor_copy_array cbor_copy0 (CBOR_Case_Array a);
     }
     CBOR_Case_Map a -> {
-      cbor_copy_map cbor_copy (CBOR_Case_Map a);
+      cbor_copy_map cbor_copy0 (CBOR_Case_Map a);
     }
     CBOR_Case_Serialized_Array a -> {
       Trade.rewrite_with_trade
@@ -898,7 +898,7 @@ ensures
       fold (cbor_match_serialized_array a' 1.0R v);
       let res = {
         cbor = CBOR_Case_Serialized_Array a';
-        footprint = FBytes v';
+        footprint = CBOR_Copy_Bytes v';
         tree = FTBytes;
       };
       ghost fn aux (_: unit)
@@ -915,7 +915,7 @@ ensures
         Trade.elim _ _;
         S.to_array s';
         V.to_vec_pts_to v';
-        fold (freeable_match' (FBytes v') FTBytes);
+        fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
         fold (freeable res)
       };
       Trade.intro _ _ _ aux;
@@ -947,7 +947,7 @@ ensures
       fold (cbor_match_serialized_map a' 1.0R v);
       let res = {
         cbor = CBOR_Case_Serialized_Map a';
-        footprint = FBytes v';
+        footprint = CBOR_Copy_Bytes v';
         tree = FTBytes;
       };
       ghost fn aux (_: unit)
@@ -964,7 +964,7 @@ ensures
         Trade.elim _ _;
         S.to_array s';
         V.to_vec_pts_to v';
-        fold (freeable_match' (FBytes v') FTBytes);
+        fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
         fold (freeable res)
       };
       Trade.intro _ _ _ aux;
@@ -996,7 +996,7 @@ ensures
       fold (cbor_match_serialized_tagged a' 1.0R v);
       let res = {
         cbor = CBOR_Case_Serialized_Tagged a';
-        footprint = FBytes v';
+        footprint = CBOR_Copy_Bytes v';
         tree = FTBytes;
       };
       ghost fn aux (_: unit)
@@ -1013,7 +1013,7 @@ ensures
         Trade.elim _ _;
         S.to_array s';
         V.to_vec_pts_to v';
-        fold (freeable_match' (FBytes v') FTBytes);
+        fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
         fold (freeable res)
       };
       Trade.intro _ _ _ aux;
