@@ -209,13 +209,8 @@ clean: clean-3d clean-lowparse clean-quackyducky
 
 .PHONY: all gen verify test gen-test clean quackyducky lowparse lowparse-test quackyducky-test lowparse-fstar-test quackyducky-sample-test quackyducky-sample0-test quackyducky-unit-test package 3d 3d-test lowparse-unit-test lowparse-bitfields-test release everparse 3d-unit-test 3d-doc-test ci clean-3d clean-lowparse clean-quackyducky asn1 asn1-test
 
-release package package-noversion everparse:
+release package package-noversion nuget-noversion everparse:
 	+$(MAKE) -f package.Makefile $@
-
-# Nuget package only (needed by the Windows workflow, since we let
-# GitHub Actions produce the .zip from the everparse directory)
-nuget-noversion:
-	+src/package/package.sh -nuget-noversion
 
 # For F* testing purposes, cf. FStarLang/FStar@fc30456a163c749843c50ee5f86fa22de7f8ad7a
 
