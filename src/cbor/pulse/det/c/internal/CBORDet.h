@@ -18,6 +18,10 @@ bool CBOR_Pulse_Raw_Format_Serialize_siz_(cbor_raw x_, size_t *out);
 
 int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2);
 
+void cbor_free_(cbor_freeable0 x);
+
+cbor_freeable cbor_copy0(cbor_raw x);
+
 bool cbor_raw_sort_aux(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a);
 
 

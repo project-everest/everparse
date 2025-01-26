@@ -149,6 +149,70 @@ typedef struct CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cb
 }
 CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry;
 
+typedef struct cbor_freeable0_s cbor_freeable0;
+
+typedef struct cbor_freeable_box_s
+{
+  cbor_raw *box_cbor;
+  cbor_freeable0 *box_footprint;
+}
+cbor_freeable_box;
+
+typedef struct cbor_freeable0_s cbor_freeable0;
+
+typedef struct cbor_freeable_array_s
+{
+  cbor_raw *array_cbor;
+  cbor_freeable0 *array_footprint;
+  size_t array_len;
+}
+cbor_freeable_array;
+
+typedef struct cbor_freeable_map_entry_s cbor_freeable_map_entry;
+
+typedef struct cbor_freeable_map_s
+{
+  cbor_map_entry *map_cbor;
+  cbor_freeable_map_entry *map_footprint;
+  size_t map_len;
+}
+cbor_freeable_map;
+
+#define CBOR_Copy_Bytes 0
+#define CBOR_Copy_Box 1
+#define CBOR_Copy_Array 2
+#define CBOR_Copy_Map 3
+#define CBOR_Copy_Unit 4
+
+typedef uint8_t cbor_freeable0_tags;
+
+typedef struct cbor_freeable0_s
+{
+  cbor_freeable0_tags tag;
+  union {
+    uint8_t *case_CBOR_Copy_Bytes;
+    cbor_freeable_box case_CBOR_Copy_Box;
+    cbor_freeable_array case_CBOR_Copy_Array;
+    cbor_freeable_map case_CBOR_Copy_Map;
+  }
+  ;
+}
+cbor_freeable0;
+
+typedef struct cbor_freeable_map_entry_s
+{
+  cbor_freeable0 map_entry_key;
+  cbor_freeable0 map_entry_value;
+}
+cbor_freeable_map_entry;
+
+typedef struct cbor_freeable_s
+{
+  cbor_raw cbor;
+  cbor_freeable0 footprint;
+}
+cbor_freeable;
+
 #define CBOR_MAJOR_TYPE_SIMPLE_VALUE (7U)
 
 #define CBOR_MAJOR_TYPE_UINT64 (0U)
@@ -262,6 +326,14 @@ cbor_raw cbor_det_mk_map_from_array(cbor_map_entry *a, uint64_t len);
 uint8_t *cbor_det_get_string(cbor_raw x);
 
 bool cbor_det_map_get(cbor_raw x, cbor_raw k, cbor_raw *dest);
+
+typedef cbor_freeable cbor_det_freeable_t;
+
+cbor_raw cbor_get_from_freeable(cbor_freeable x);
+
+cbor_freeable cbor_copy(cbor_raw c);
+
+void cbor_free(cbor_freeable x);
 
 
 #define __CBORDet_H_DEFINED
