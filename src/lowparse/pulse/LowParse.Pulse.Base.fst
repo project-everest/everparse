@@ -1684,3 +1684,28 @@ fn compute_remaining_size_copy
   }
 }
 ```
+
+inline_for_extraction
+```pulse
+fn pts_to_serialized_copy
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (src: S.slice byte)
+  (#psrc: perm)
+  (#vsrc: Ghost.erased t)
+  (dst: S.slice byte)
+requires
+  exists* vdst . pts_to dst vdst ** pts_to_serialized s src #psrc vsrc **
+    pure (S.len src == S.len dst)
+ensures
+  pts_to_serialized s src #psrc vsrc **
+  pts_to_serialized s dst vsrc
+{
+  unfold (pts_to_serialized s src #psrc vsrc);
+  S.copy dst src;
+  fold (pts_to_serialized s src #psrc vsrc);
+  fold (pts_to_serialized s dst vsrc);
+}
+```
