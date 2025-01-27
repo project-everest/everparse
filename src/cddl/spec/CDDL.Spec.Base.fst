@@ -158,6 +158,17 @@ let spec_literal (x: Cbor.cbor) : Tot  (spec (t_literal x) unit true) = {
   parser_inj = ();
 }
 
+let spec_choice_serializable
+  (#target1: Type0)
+  (target1_ser: target1 -> bool)
+  (#target2: Type0)
+  (target2_ser: target2 -> bool)
+  (x: target1 `either` target2)
+: Tot bool
+= match x with
+    | Inl x1 -> target1_ser x1
+    | Inr x2 -> target2_ser x2
+
 let parser_spec_choice
   (#source1: typ)
   (#target1: Type0)
@@ -201,21 +212,6 @@ let serializer_spec_choice
   | Inl y -> s1 y
   | Inr y -> s2 y
 
-let spec_choice_serializable
-  (#source1: typ)
-  (#target1: Type0)
-  (#inj1: bool)
-  (p1: spec source1 target1 inj1)
-  (#source2: typ)
-  (#target2: Type0)
-  (#inj2: bool)
-  (p2: spec source2 target2 inj2)
-  (x: target1 `either` target2)
-: Tot bool
-= match x with
-    | Inl x1 -> p1.serializable x1
-    | Inr x2 -> p2.serializable x2
-
 let spec_choice
   (#source1: typ)
   (#target1: Type0)
@@ -227,7 +223,7 @@ let spec_choice
   (p2: spec source2 target2 inj2 { source1 `typ_disjoint` source2 })
 : Tot (spec (source1 `t_choice` source2) (target1 `either` target2) (inj1 && inj2))
 = {
-  serializable = spec_choice_serializable p1 p2;
+  serializable = spec_choice_serializable p1.serializable p2.serializable;
   parser = parser_spec_choice p1.parser p2.parser _;
   serializer = serializer_spec_choice p1.serializer p2.serializer _;
   parser_inj = ();

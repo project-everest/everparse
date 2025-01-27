@@ -232,6 +232,47 @@ fn impl_zero_copy_ext
 }
 ```
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_choice
+    (#ty: Type u#0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#t1: Ghost.erased typ)
+    (#tgt1: Type0)
+    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#ps1: Ghost.erased (parser_spec t1 tgt1 tgt_serializable1))
+    (#impl1: Type0)
+    (#r1: rel impl1 tgt1)
+    (v1: impl_typ vmatch t1)
+    (p1: impl_zero_copy_parse vmatch ps1 r1)
+    (#t2: Ghost.erased typ)
+    (#tgt2: Type0)
+    (#tgt_serializable2: Ghost.erased (tgt2 -> bool))
+    (#ps2: Ghost.erased (parser_spec t2 tgt2 tgt_serializable2))
+    (#impl2: Type0)
+    (#r2: rel impl2 tgt2)
+    (p2: impl_zero_copy_parse vmatch ps2 r2)
+: impl_zero_copy_parse #_ vmatch #(t_choice (Ghost.reveal t1) (Ghost.reveal t2)) #(either tgt1 tgt2) #(spec_choice_serializable (Ghost.reveal tgt_serializable1) (Ghost.reveal tgt_serializable2)) (parser_spec_choice (Ghost.reveal ps1) (Ghost.reveal ps2) (spec_choice_serializable (Ghost.reveal tgt_serializable1) (Ghost.reveal tgt_serializable2))) #(either impl1 impl2) (rel_either r1 r2)
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let test = v1 c;
+  if test {
+    let res = p1 c;
+    with v' . assert (r1 res v');
+    fold (rel_either r1 r2 (Inl res) (Inl v'));
+    Inl res
+  } else {
+    let res = p2 c;
+    with v' . assert (r2 res v');
+    fold (rel_either r1 r2 (Inr res) (Inr v'));
+    Inr res
+  }
+}
+```
+
 // A parser implementation that skips some data instead of reading
 // it. This parser implementation has no equivalent serializer
 

@@ -446,7 +446,7 @@ fn impl_zero_copy_det_cbor
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (#ty': Type0)
-    (#vmatch': perm -> ty -> cbor -> slprop)
+    (#vmatch': perm -> ty' -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
     (cbor_det_parse: cbor_det_parse_t vmatch')
     (#t: Ghost.erased typ)
