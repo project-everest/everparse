@@ -161,6 +161,36 @@ fn pts_to_serialized_ext_trade
 }
 ```
 
+```pulse
+ghost
+fn pts_to_serialized_share
+  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
+  requires (pts_to_serialized s input #pm v)
+  ensures (pts_to_serialized s input #(pm /. 2.0R) v ** pts_to_serialized s input #(pm /. 2.0R) v)
+{
+  unfold (pts_to_serialized s input #pm v);
+  S.share input;
+  fold (pts_to_serialized s input #(pm /. 2.0R) v);
+  fold (pts_to_serialized s input #(pm /. 2.0R) v)
+}
+```
+
+[@@allow_ambiguous]
+```pulse
+ghost
+fn pts_to_serialized_gather
+  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm0 #pm1: perm) (#v0 #v1: t)
+  requires (pts_to_serialized s input #pm0 v0 ** pts_to_serialized s input #pm1 v1)
+  ensures (pts_to_serialized s input #(pm0 +. pm1) v0 ** pure (v0 == v1))
+{
+  unfold (pts_to_serialized s input #pm0 v0);
+  unfold (pts_to_serialized s input #pm1 v1);
+  S.gather input;
+  serializer_injective _ s v0 v1;
+  fold (pts_to_serialized s input #(pm0 +. pm1) v0)
+}
+```
+
 let validator_success (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t) : GTot bool =
     SZ.v offset <= Seq.length v && (
     let pv = parse p (Seq.slice v (SZ.v offset) (Seq.length v)) in
