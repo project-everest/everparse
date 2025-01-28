@@ -73,7 +73,8 @@ fn cbor_match_serialized_array_elim
     pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) c.cbor_serialized_payload #pm' (Array?.v r) **
     trade
       (pts_to_serialized (LP.serialize_nlist (U64.v (Array?.len r).value) serialize_raw_data_item) c.cbor_serialized_payload #pm' (Array?.v r))
-      (cbor_match_serialized_array c pm r)
+      (cbor_match_serialized_array c pm r) **
+    pure (c.cbor_serialized_header == Array?.len r)
 {
   unfold (cbor_match_serialized_array c pm r);
   unfold (cbor_match_serialized_payload_array c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Array?.v r));
@@ -152,7 +153,9 @@ ensures
   );
   let res : cbor_raw_serialized_iterator = {
     s = c.cbor_serialized_payload;
-    len = U64.v (Array?.len r).value;
+    p = 1.0R;
+    glen = Ghost.hide (U64.v (Array?.len r).value);
+    len = c.cbor_serialized_header.value;
   };
   Trade.rewrite_with_trade
     (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (U64.v (Array?.len (Ghost.reveal r)).value)
@@ -160,7 +163,7 @@ ensures
       c.cbor_serialized_payload
       #p
       (Array?.v (Ghost.reveal r)))
-    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (Ghost.reveal res.len)
+    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (Ghost.reveal res.glen)
           serialize_raw_data_item)
       res.s
       #p
@@ -204,7 +207,8 @@ fn cbor_match_serialized_map_elim
     pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c.cbor_serialized_payload #pm' (Map?.v r) **
     trade
       (pts_to_serialized (LP.serialize_nlist (U64.v (Map?.len r).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c.cbor_serialized_payload #pm' (Map?.v r))
-      (cbor_match_serialized_map c pm r)
+      (cbor_match_serialized_map c pm r) **
+    pure (c.cbor_serialized_header == Map?.len r)
 {
   unfold (cbor_match_serialized_map c pm r);
   unfold (cbor_match_serialized_payload_map c.cbor_serialized_payload (pm `perm_mul` c.cbor_serialized_perm) (Map?.v r));
@@ -246,7 +250,9 @@ ensures
   );
   let res : cbor_raw_serialized_iterator = {
     s = c.cbor_serialized_payload;
-    len = U64.v (Map?.len r).value;
+    p = 1.0R;
+    glen = Ghost.hide (U64.v (Map?.len r).value);
+    len = c.cbor_serialized_header.value;
   };
   Trade.rewrite_with_trade
     (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (U64.v (Map?.len (Ghost.reveal r)).value)
@@ -254,7 +260,7 @@ ensures
       c.cbor_serialized_payload
       #p
       (Map?.v (Ghost.reveal r)))
-    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (Ghost.reveal res.len)
+    (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (Ghost.reveal res.glen)
           (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
       res.s
       #p

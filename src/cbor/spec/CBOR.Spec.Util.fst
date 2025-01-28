@@ -1412,6 +1412,16 @@ let rec list_splitAt_append
   | a :: q ->
     if n = 0 then () else list_splitAt_append (n - 1) q
 
+let rec list_splitAt_append_elim
+  (#t: Type)
+  (l1 l2: list t)
+: Lemma
+  (ensures (List.Tot.splitAt (List.Tot.length l1) (List.Tot.append l1 l2) == (l1, l2)))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | _ :: q -> list_splitAt_append_elim q l2
+
 let op_comm
   (#accu #t: Type)
   (f: accu -> t -> accu)
