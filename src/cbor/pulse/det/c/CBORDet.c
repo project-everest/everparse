@@ -220,6 +220,135 @@ cbor_match_serialized_payload_tagged_copy(
   copy__uint8_t(c_, c);
 }
 
+static cbor_string cbor_string_reset_perm(cbor_string c)
+{
+  return
+    (
+      (cbor_string){
+        .cbor_string_type = c.cbor_string_type,
+        .cbor_string_size = c.cbor_string_size,
+        .cbor_string_ptr = c.cbor_string_ptr
+      }
+    );
+}
+
+static cbor_serialized cbor_serialized_reset_perm(cbor_serialized c)
+{
+  return
+    (
+      (cbor_serialized){
+        .cbor_serialized_header = c.cbor_serialized_header,
+        .cbor_serialized_payload = c.cbor_serialized_payload
+      }
+    );
+}
+
+static cbor_tagged cbor_tagged_reset_perm(cbor_tagged c)
+{
+  return
+    ((cbor_tagged){ .cbor_tagged_tag = c.cbor_tagged_tag, .cbor_tagged_ptr = c.cbor_tagged_ptr });
+}
+
+static cbor_array cbor_array_reset_perm(cbor_array c)
+{
+  return
+    (
+      (cbor_array){
+        .cbor_array_length_size = c.cbor_array_length_size,
+        .cbor_array_ptr = c.cbor_array_ptr
+      }
+    );
+}
+
+static cbor_map cbor_map_reset_perm(cbor_map c)
+{
+  return
+    ((cbor_map){ .cbor_map_length_size = c.cbor_map_length_size, .cbor_map_ptr = c.cbor_map_ptr });
+}
+
+static cbor_raw cbor_raw_reset_perm_tot(cbor_raw c)
+{
+  if (c.tag == CBOR_Case_String)
+  {
+    cbor_string v = c.case_CBOR_Case_String;
+    return
+      (
+        (cbor_raw){
+          .tag = CBOR_Case_String,
+          { .case_CBOR_Case_String = cbor_string_reset_perm(v) }
+        }
+      );
+  }
+  else if (c.tag == CBOR_Case_Tagged)
+  {
+    cbor_tagged v = c.case_CBOR_Case_Tagged;
+    return
+      (
+        (cbor_raw){
+          .tag = CBOR_Case_Tagged,
+          { .case_CBOR_Case_Tagged = cbor_tagged_reset_perm(v) }
+        }
+      );
+  }
+  else if (c.tag == CBOR_Case_Array)
+  {
+    cbor_array v = c.case_CBOR_Case_Array;
+    return
+      ((cbor_raw){ .tag = CBOR_Case_Array, { .case_CBOR_Case_Array = cbor_array_reset_perm(v) } });
+  }
+  else if (c.tag == CBOR_Case_Map)
+  {
+    cbor_map v = c.case_CBOR_Case_Map;
+    return ((cbor_raw){ .tag = CBOR_Case_Map, { .case_CBOR_Case_Map = cbor_map_reset_perm(v) } });
+  }
+  else if (c.tag == CBOR_Case_Serialized_Tagged)
+  {
+    cbor_serialized v = c.case_CBOR_Case_Serialized_Tagged;
+    return
+      (
+        (cbor_raw){
+          .tag = CBOR_Case_Serialized_Tagged,
+          { .case_CBOR_Case_Serialized_Tagged = cbor_serialized_reset_perm(v) }
+        }
+      );
+  }
+  else if (c.tag == CBOR_Case_Serialized_Array)
+  {
+    cbor_serialized v = c.case_CBOR_Case_Serialized_Array;
+    return
+      (
+        (cbor_raw){
+          .tag = CBOR_Case_Serialized_Array,
+          { .case_CBOR_Case_Serialized_Array = cbor_serialized_reset_perm(v) }
+        }
+      );
+  }
+  else if (c.tag == CBOR_Case_Serialized_Map)
+  {
+    cbor_serialized v = c.case_CBOR_Case_Serialized_Map;
+    return
+      (
+        (cbor_raw){
+          .tag = CBOR_Case_Serialized_Map,
+          { .case_CBOR_Case_Serialized_Map = cbor_serialized_reset_perm(v) }
+        }
+      );
+  }
+  else
+    return c;
+}
+
+static cbor_map_entry cbor_mk_map_entry(cbor_raw xk, cbor_raw xv)
+{
+  cbor_map_entry
+  res =
+    {
+      .cbor_map_entry_key = cbor_raw_reset_perm_tot(xk),
+      .cbor_map_entry_value = cbor_raw_reset_perm_tot(xv)
+    };
+  return res;
+}
+
 static size_t len__uint8_t(Pulse_Lib_Slice_slice__uint8_t s)
 {
   return s.len;
@@ -962,135 +1091,6 @@ static size_t jump_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t of
   return poffset;
 }
 
-static cbor_string cbor_string_reset_perm(cbor_string c)
-{
-  return
-    (
-      (cbor_string){
-        .cbor_string_type = c.cbor_string_type,
-        .cbor_string_size = c.cbor_string_size,
-        .cbor_string_ptr = c.cbor_string_ptr
-      }
-    );
-}
-
-static cbor_serialized cbor_serialized_reset_perm(cbor_serialized c)
-{
-  return
-    (
-      (cbor_serialized){
-        .cbor_serialized_header = c.cbor_serialized_header,
-        .cbor_serialized_payload = c.cbor_serialized_payload
-      }
-    );
-}
-
-static cbor_tagged cbor_tagged_reset_perm(cbor_tagged c)
-{
-  return
-    ((cbor_tagged){ .cbor_tagged_tag = c.cbor_tagged_tag, .cbor_tagged_ptr = c.cbor_tagged_ptr });
-}
-
-static cbor_array cbor_array_reset_perm(cbor_array c)
-{
-  return
-    (
-      (cbor_array){
-        .cbor_array_length_size = c.cbor_array_length_size,
-        .cbor_array_ptr = c.cbor_array_ptr
-      }
-    );
-}
-
-static cbor_map cbor_map_reset_perm(cbor_map c)
-{
-  return
-    ((cbor_map){ .cbor_map_length_size = c.cbor_map_length_size, .cbor_map_ptr = c.cbor_map_ptr });
-}
-
-static cbor_raw cbor_raw_reset_perm_tot(cbor_raw c)
-{
-  if (c.tag == CBOR_Case_String)
-  {
-    cbor_string v = c.case_CBOR_Case_String;
-    return
-      (
-        (cbor_raw){
-          .tag = CBOR_Case_String,
-          { .case_CBOR_Case_String = cbor_string_reset_perm(v) }
-        }
-      );
-  }
-  else if (c.tag == CBOR_Case_Tagged)
-  {
-    cbor_tagged v = c.case_CBOR_Case_Tagged;
-    return
-      (
-        (cbor_raw){
-          .tag = CBOR_Case_Tagged,
-          { .case_CBOR_Case_Tagged = cbor_tagged_reset_perm(v) }
-        }
-      );
-  }
-  else if (c.tag == CBOR_Case_Array)
-  {
-    cbor_array v = c.case_CBOR_Case_Array;
-    return
-      ((cbor_raw){ .tag = CBOR_Case_Array, { .case_CBOR_Case_Array = cbor_array_reset_perm(v) } });
-  }
-  else if (c.tag == CBOR_Case_Map)
-  {
-    cbor_map v = c.case_CBOR_Case_Map;
-    return ((cbor_raw){ .tag = CBOR_Case_Map, { .case_CBOR_Case_Map = cbor_map_reset_perm(v) } });
-  }
-  else if (c.tag == CBOR_Case_Serialized_Tagged)
-  {
-    cbor_serialized v = c.case_CBOR_Case_Serialized_Tagged;
-    return
-      (
-        (cbor_raw){
-          .tag = CBOR_Case_Serialized_Tagged,
-          { .case_CBOR_Case_Serialized_Tagged = cbor_serialized_reset_perm(v) }
-        }
-      );
-  }
-  else if (c.tag == CBOR_Case_Serialized_Array)
-  {
-    cbor_serialized v = c.case_CBOR_Case_Serialized_Array;
-    return
-      (
-        (cbor_raw){
-          .tag = CBOR_Case_Serialized_Array,
-          { .case_CBOR_Case_Serialized_Array = cbor_serialized_reset_perm(v) }
-        }
-      );
-  }
-  else if (c.tag == CBOR_Case_Serialized_Map)
-  {
-    cbor_serialized v = c.case_CBOR_Case_Serialized_Map;
-    return
-      (
-        (cbor_raw){
-          .tag = CBOR_Case_Serialized_Map,
-          { .case_CBOR_Case_Serialized_Map = cbor_serialized_reset_perm(v) }
-        }
-      );
-  }
-  else
-    return c;
-}
-
-static cbor_map_entry cbor_mk_map_entry(cbor_raw xk, cbor_raw xv)
-{
-  cbor_map_entry
-  res =
-    {
-      .cbor_map_entry_key = cbor_raw_reset_perm_tot(xk),
-      .cbor_map_entry_value = cbor_raw_reset_perm_tot(xv)
-    };
-  return res;
-}
-
 static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
 {
   header
@@ -1423,6 +1423,15 @@ cbor_serialized_array_iterator_next(
 }
 
 static CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator
+cbor_serialized_array_iterator_truncate(
+  CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator c,
+  uint64_t len
+)
+{
+  return ((CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator){ .s = c.s, .len = len });
+}
+
+static CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator
 cbor_serialized_map_iterator_init(cbor_serialized c)
 {
   return
@@ -1681,6 +1690,56 @@ cbor_array_iterator_next(
     i1 = i0.case_CBOR_Raw_Iterator_Serialized;
     cbor_raw res = cbor_serialized_array_iterator_next(pi, i1);
     return res;
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+}
+
+static CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+cbor_array_iterator_truncate(
+  CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw c,
+  uint64_t len
+)
+{
+  if (c.tag == CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice)
+  {
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw c_ = c.case_CBOR_Raw_Iterator_Slice;
+    __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw
+    s_ = split__CBOR_Pulse_Raw_Type_cbor_raw(c_, (size_t)len);
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s11 = s_.fst;
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s21 = s_.snd;
+    __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw
+    _letpattern = { .fst = s11, .snd = s21 };
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw sl1 = _letpattern.fst;
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw c1 = sl1;
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw c_1 = c1;
+    return
+      (
+        (CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw){
+          .tag = CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice,
+          { .case_CBOR_Raw_Iterator_Slice = c_1 }
+        }
+      );
+  }
+  else if (c.tag == CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Serialized)
+  {
+    CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator
+    c_ = c.case_CBOR_Raw_Iterator_Serialized;
+    CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator
+    sres = cbor_serialized_array_iterator_truncate(c_, len);
+    return
+      (
+        (CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw){
+          .tag = CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Serialized,
+          { .case_CBOR_Raw_Iterator_Serialized = sres }
+        }
+      );
   }
   else
   {
@@ -5151,6 +5210,17 @@ cbor_det_array_iterator_next(
 )
 {
   cbor_raw res = cbor_array_iterator_next(x);
+  return res;
+}
+
+CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+cbor_det_array_iterator_truncate(
+  CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw x,
+  uint64_t len
+)
+{
+  CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+  res = cbor_array_iterator_truncate(x, len);
   return res;
 }
 
