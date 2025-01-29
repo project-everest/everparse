@@ -40,3 +40,11 @@ let perm_half_mult
 : Lemma
   (pm *. (ip /. 2.0R) +. pm *. (ip /. 2.0R) == pm *. ip)
 = ()
+
+let half_mul_l (a b: real) : Lemma
+  ((a *. b) /. 2.0R == (a /. 2.0R) *. b)
+= ()
+
+let perm_mul_add_l (a b c: real) : Lemma
+  ((a +. b) *. c == a *. c +. b *. c)
+= ()

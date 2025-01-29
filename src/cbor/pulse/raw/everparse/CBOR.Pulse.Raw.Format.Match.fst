@@ -21,6 +21,169 @@ let cbor_match_serialized_payload_tagged
   c p r
 = pts_to_serialized serialize_raw_data_item c #p r
 
+```pulse
+ghost
+fn cbor_match_serialized_payload_array_share
+  (c: slice U8.t)
+  (p: perm)
+  (r: list raw_data_item)
+requires
+    (cbor_match_serialized_payload_array c p r)
+ensures
+    (
+      cbor_match_serialized_payload_array c (p /. 2.0R) r **
+      cbor_match_serialized_payload_array c (p /. 2.0R) r
+    )
+{
+  unfold (cbor_match_serialized_payload_array c p r);
+  with n (r': nlist n raw_data_item) .
+    assert (pts_to_serialized (serialize_nlist n serialize_raw_data_item) c #p r');
+  pts_to_serialized_share (serialize_nlist n serialize_raw_data_item) c;
+  fold (cbor_match_serialized_payload_array c (p /. 2.0R) r);
+  fold (cbor_match_serialized_payload_array c (p /. 2.0R) r);
+}
+```
+
+```pulse
+ghost
+fn cbor_match_serialized_payload_array_gather
+  (c: slice U8.t)
+  (p1: perm)
+  (r1: list raw_data_item)
+  (p2: perm)
+  (r2: list raw_data_item)
+requires
+    (cbor_match_serialized_payload_array c p1 r1 **
+      cbor_match_serialized_payload_array c p2 r2
+    )
+ensures
+    (
+      cbor_match_serialized_payload_array c (p1 +. p2) r1 **
+      pure (r1 == r2)
+    )
+{
+  unfold (cbor_match_serialized_payload_array c p1 r1);
+  with n1 (r1': nlist n1 raw_data_item) .
+    assert (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) c #p1 r1');
+  unfold (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) c #p1 r1');
+  serialize_nlist_serialize_list n1 serialize_raw_data_item r1';
+  unfold (cbor_match_serialized_payload_array c p2 r2);
+  with n2 (r2': nlist n2 raw_data_item) .
+    assert (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) c #p2 r2');
+  unfold (pts_to_serialized (serialize_nlist n2 serialize_raw_data_item) c #p2 r2');
+  serialize_nlist_serialize_list n2 serialize_raw_data_item r2';
+  Pulse.Lib.Slice.gather c;
+  serializer_injective _ (serialize_list _ serialize_raw_data_item) r1' r2';
+  fold (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) c #(p1 +. p2) r1');
+  fold (cbor_match_serialized_payload_array c (p1 +. p2) r1);
+}
+```
+
+```pulse
+ghost
+fn cbor_match_serialized_payload_map_share
+  (c: slice U8.t)
+  (p: perm)
+  (r: list (raw_data_item & raw_data_item))
+requires
+    (cbor_match_serialized_payload_map c p r)
+ensures
+    (
+      cbor_match_serialized_payload_map c (p /. 2.0R) r **
+      cbor_match_serialized_payload_map c (p /. 2.0R) r
+    )
+{
+  unfold (cbor_match_serialized_payload_map c p r);
+  with n (r': nlist n (raw_data_item & raw_data_item)) .
+    assert (pts_to_serialized (serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c #p r');
+  pts_to_serialized_share (serialize_nlist n (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c;
+  fold (cbor_match_serialized_payload_map c (p /. 2.0R) r);
+  fold (cbor_match_serialized_payload_map c (p /. 2.0R) r);
+}
+```
+
+```pulse
+ghost
+fn cbor_match_serialized_payload_map_gather
+  (c: slice U8.t)
+  (p1: perm)
+  (r1: list (raw_data_item & raw_data_item))
+  (p2: perm)
+  (r2: list (raw_data_item & raw_data_item))
+requires
+    (cbor_match_serialized_payload_map c p1 r1 **
+      cbor_match_serialized_payload_map c p2 r2
+    )
+ensures
+    (
+      cbor_match_serialized_payload_map c (p1 +. p2) r1 **
+      pure (r1 == r2)
+    )
+{
+  unfold (cbor_match_serialized_payload_map c p1 r1);
+  with n1 (r1': nlist n1 (raw_data_item & raw_data_item)) .
+    assert (pts_to_serialized (serialize_nlist n1 (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c #p1 r1');
+  unfold (pts_to_serialized (serialize_nlist n1 (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c #p1 r1');
+  serialize_nlist_serialize_list n1 (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) r1';
+  unfold (cbor_match_serialized_payload_map c p2 r2);
+  with n2 (r2': nlist n2 (raw_data_item & raw_data_item)) .
+    assert (pts_to_serialized (serialize_nlist n2 (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c #p2 r2');
+  unfold (pts_to_serialized (serialize_nlist n2 (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c #p2 r2');
+  serialize_nlist_serialize_list n2 (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) r2';
+  Pulse.Lib.Slice.gather c;
+  serializer_injective _ (serialize_list _ (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) r1' r2';
+  fold (pts_to_serialized (serialize_nlist n1 (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c #(p1 +. p2) r1');
+  fold (cbor_match_serialized_payload_map c (p1 +. p2) r1);
+}
+```
+
+```pulse
+ghost
+fn cbor_match_serialized_payload_tagged_share
+  (c: slice U8.t)
+  (p: perm)
+  (r: raw_data_item)
+requires
+    (cbor_match_serialized_payload_tagged c p r)
+ensures
+    (
+      cbor_match_serialized_payload_tagged c (p /. 2.0R) r **
+      cbor_match_serialized_payload_tagged c (p /. 2.0R) r
+    )
+{
+  unfold (cbor_match_serialized_payload_tagged c p r);
+  pts_to_serialized_share serialize_raw_data_item c;
+  fold (cbor_match_serialized_payload_tagged c (p /. 2.0R) r);
+  fold (cbor_match_serialized_payload_tagged c (p /. 2.0R) r);
+}
+```
+
+```pulse
+ghost
+fn cbor_match_serialized_payload_tagged_gather
+  (c: slice U8.t)
+  (p1: perm)
+  (r1: raw_data_item)
+  (p2: perm)
+  (r2: raw_data_item)
+requires
+    (cbor_match_serialized_payload_tagged c p1 r1 **
+      cbor_match_serialized_payload_tagged c p2 r2
+    )
+ensures
+    (
+      cbor_match_serialized_payload_tagged c (p1 +. p2) r1 **
+      pure (r1 == r2)
+    )
+{
+  unfold (cbor_match_serialized_payload_tagged c p1 r1);
+  unfold (cbor_match_serialized_payload_tagged c p2 r2);
+  pts_to_serialized_gather serialize_raw_data_item c;
+  fold (pts_to_serialized (serialize_raw_data_item) c #(p1 +. p2) r1);
+  fold (cbor_match_serialized_payload_tagged c (p1 +. p2) r1);
+}
+```
+
 #set-options "--print_implicits"
 
 ```pulse
