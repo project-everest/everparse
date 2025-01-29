@@ -167,7 +167,9 @@ fn get_header_major_type(h: header) -> u8
     b.major_type
 }
 
-type cbor_raw_serialized_iterator <'a> = &'a [u8];
+#[derive(PartialEq, Clone, Copy)]
+pub struct cbor_raw_serialized_iterator <'a>
+{ pub s: &'a [u8], pub len: u64 }
 
 fn impl_correct(s: &[u8]) -> bool
 {
@@ -1367,10 +1369,16 @@ fn cbor_serialized_array_item <'a>(c: cbor_serialized <'a>, i: u64) -> cbor_raw 
     res0
 }
 
-fn cbor_serialized_array_iterator_init <'a>(c: cbor_serialized <'a>) -> &'a [u8]
-{ c.cbor_serialized_payload }
+fn cbor_serialized_array_iterator_init <'a>(c: cbor_serialized <'a>) ->
+    cbor_raw_serialized_iterator
+    <'a>
+{
+    cbor_raw_serialized_iterator
+    { s: c.cbor_serialized_payload, len: c.cbor_serialized_header.value }
+}
 
-fn cbor_serialized_array_iterator_is_empty(c: &[u8]) -> bool { c.len() == 0usize }
+fn cbor_serialized_array_iterator_is_empty <'a>(c: cbor_raw_serialized_iterator <'a>) -> bool
+{ c.len == 0u64 }
 
 #[derive(PartialEq, Clone, Copy)]
 enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags
@@ -1383,18 +1391,18 @@ enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags
 pub enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
 {
     CBOR_Raw_Iterator_Slice { _0: &'a [cbor_raw <'a>] },
-    CBOR_Raw_Iterator_Serialized { _0: &'a [u8] }
+    CBOR_Raw_Iterator_Serialized { _0: cbor_raw_serialized_iterator <'a> }
 }
 
 fn cbor_serialized_array_iterator_next <'b, 'a>(
     pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>],
-    i: &'a [u8]
+    i: cbor_raw_serialized_iterator <'a>
 ) ->
     cbor_raw
     <'a>
 {
-    let i1: usize = jump_raw_data_item(i, 0usize);
-    let s: (&[u8], &[u8]) = i.split_at(i1);
+    let i1: usize = jump_raw_data_item(i.s, 0usize);
+    let s: (&[u8], &[u8]) = i.s.split_at(i1);
     let res: (&[u8], &[u8]) =
         {
             let s1: &[u8] = s.0;
@@ -1416,34 +1424,41 @@ fn cbor_serialized_array_iterator_next <'b, 'a>(
     let s1: &[u8] = sp.0;
     let s2: &[u8] = sp.1;
     let res1: cbor_raw = cbor_read(s1);
-    let i·: &[u8] = s2;
+    let i·: cbor_raw_serialized_iterator =
+        cbor_raw_serialized_iterator { s: s2, len: i.len.wrapping_sub(1u64) };
     pi[0] =
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i· };
     res1
 }
 
-fn cbor_serialized_map_iterator_init <'a>(c: cbor_serialized <'a>) -> &'a [u8]
-{ c.cbor_serialized_payload }
+fn cbor_serialized_map_iterator_init <'a>(c: cbor_serialized <'a>) ->
+    cbor_raw_serialized_iterator
+    <'a>
+{
+    cbor_raw_serialized_iterator
+    { s: c.cbor_serialized_payload, len: c.cbor_serialized_header.value }
+}
 
-fn cbor_serialized_map_iterator_is_empty(c: &[u8]) -> bool { c.len() == 0usize }
+fn cbor_serialized_map_iterator_is_empty <'a>(c: cbor_raw_serialized_iterator <'a>) -> bool
+{ c.len == 0u64 }
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
 {
     CBOR_Raw_Iterator_Slice { _0: &'a [cbor_map_entry <'a>] },
-    CBOR_Raw_Iterator_Serialized { _0: &'a [u8] }
+    CBOR_Raw_Iterator_Serialized { _0: cbor_raw_serialized_iterator <'a> }
 }
 
 fn cbor_serialized_map_iterator_next <'b, 'a>(
     pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>],
-    i: &'a [u8]
+    i: cbor_raw_serialized_iterator <'a>
 ) ->
     cbor_map_entry
     <'a>
 {
-    let off1: usize = jump_raw_data_item(i, 0usize);
-    let i1: usize = jump_raw_data_item(i, off1);
-    let s: (&[u8], &[u8]) = i.split_at(i1);
+    let off1: usize = jump_raw_data_item(i.s, 0usize);
+    let i1: usize = jump_raw_data_item(i.s, off1);
+    let s: (&[u8], &[u8]) = i.s.split_at(i1);
     let res: (&[u8], &[u8]) =
         {
             let s1: &[u8] = s.0;
@@ -1492,7 +1507,8 @@ fn cbor_serialized_map_iterator_next <'b, 'a>(
             let res20: cbor_raw = cbor_read(s21);
             cbor_map_entry { cbor_map_entry_key: res10, cbor_map_entry_value: res20 }
         };
-    let i·: &[u8] = s2;
+    let i·: cbor_raw_serialized_iterator =
+        cbor_raw_serialized_iterator { s: s2, len: i.len.wrapping_sub(1u64) };
     pi[0] =
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
         { _0: i· };
@@ -1539,7 +1555,7 @@ fn cbor_array_iterator_init <'a>(c: cbor_raw <'a>) ->
     {
         cbor_raw::CBOR_Case_Serialized_Array { v: c· } =>
           {
-              let i·: &[u8] = cbor_serialized_array_iterator_init(c·);
+              let i·: cbor_raw_serialized_iterator = cbor_serialized_array_iterator_init(c·);
               cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
               { _0: i· }
           },
@@ -1616,7 +1632,7 @@ pub(crate) fn cbor_map_iterator_init <'a>(c: cbor_raw <'a>) ->
     {
         cbor_raw::CBOR_Case_Serialized_Map { v: c· } =>
           {
-              let i·: &[u8] = cbor_serialized_map_iterator_init(c·);
+              let i·: cbor_raw_serialized_iterator = cbor_serialized_map_iterator_init(c·);
               cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
               { _0: i· }
           },

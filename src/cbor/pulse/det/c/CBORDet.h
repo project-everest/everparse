@@ -19,6 +19,13 @@ typedef struct Pulse_Lib_Slice_slice__uint8_t_s
 }
 Pulse_Lib_Slice_slice__uint8_t;
 
+typedef struct CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator_s
+{
+  Pulse_Lib_Slice_slice__uint8_t s;
+  uint64_t len;
+}
+CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator;
+
 typedef struct cbor_string_s
 {
   uint8_t cbor_string_type;
@@ -132,7 +139,7 @@ typedef struct CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cb
   CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags tag;
   union {
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw case_CBOR_Raw_Iterator_Slice;
-    Pulse_Lib_Slice_slice__uint8_t case_CBOR_Raw_Iterator_Serialized;
+    CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator case_CBOR_Raw_Iterator_Serialized;
   }
   ;
 }
@@ -143,7 +150,7 @@ typedef struct CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cb
   CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags tag;
   union {
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry case_CBOR_Raw_Iterator_Slice;
-    Pulse_Lib_Slice_slice__uint8_t case_CBOR_Raw_Iterator_Serialized;
+    CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator case_CBOR_Raw_Iterator_Serialized;
   }
   ;
 }
