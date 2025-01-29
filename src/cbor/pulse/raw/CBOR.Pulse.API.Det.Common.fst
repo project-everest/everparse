@@ -60,6 +60,42 @@ fn cbor_det_reset_perm
 }
 ```
 
+module RawPerm = CBOR.Pulse.Raw.Match.Perm // necessary because of Pulse's inability to handle first uses of module names 
+
+```pulse
+ghost
+fn cbor_det_share
+  (_: unit)
+: share_t u#0 u#0 #_ #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_match p x v);
+  CBOR.Pulse.Raw.Match.Perm.cbor_raw_share _ x _;
+  fold (cbor_det_match (p /. 2.0R) x v);
+  fold (cbor_det_match (p /. 2.0R) x v);
+}
+```
+
+```pulse
+ghost
+fn cbor_det_gather
+  (_: unit)
+: gather_t u#0 u#0 #_ #_ cbor_det_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+  (#p': _)
+  (#v': _)
+{
+  unfold (cbor_det_match p x v);
+  unfold (cbor_det_match p' x v');
+  CBOR.Pulse.Raw.Match.Perm.cbor_raw_gather p x _ _ _;
+  fold (cbor_det_match (p +. p') x v);
+}
+```
+
 let cbor_det_case (x: cbor_det_t) : Tot cbor_det_case_t =
   match x with
   | Raw.CBOR_Case_Int _ -> CaseInt64

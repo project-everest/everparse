@@ -27,6 +27,9 @@ val cbor_det_match_with_size_eq:
 
 val cbor_det_reset_perm () : reset_perm_t cbor_det_match
 
+val cbor_det_share () : share_t cbor_det_match
+val cbor_det_gather () : gather_t cbor_det_match
+
 (* SLProp-to-Prop abstraction vehicle to prove the correctness of type abstraction in the Rust API *)
 
 [@@erasable]
