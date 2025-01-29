@@ -46,7 +46,7 @@
 #define __sizeof_cbor_det_map_entry_t (2 * __sizeof_cbor_det_t)
 #define __alignof_cbor_det_map_entry_t __alignof_cbor_det_t
 
-#define __sizeof_cbor_det_array_iterator_t (__CBORDetSize_MAX(sizeof(uint8_t), __alignof_Pulse_Lib_Slice_slice) + __sizeof_Pulse_Lib_Slice_slice)
+#define __sizeof_cbor_det_array_iterator_t (__CBORDetSize_MAX(sizeof(uint8_t), __alignof_Pulse_Lib_Slice_slice) + __sizeof_Pulse_Lib_Slice_slice + sizeof(uint64_t))
 #define __alignof_cbor_det_array_iterator_t (__CBORDetSize_MAX(alignof(uint8_t), __alignof_Pulse_Lib_Slice_slice))
 
 #define __sizeof_cbor_det_map_iterator_t __sizeof_cbor_det_array_iterator_t
