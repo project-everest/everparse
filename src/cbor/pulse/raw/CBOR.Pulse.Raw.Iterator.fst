@@ -5,11 +5,11 @@ open Pulse.Lib.Pervasives
 open Pulse.Lib.Trade
 
 module PM = Pulse.Lib.SeqMatch.Util
-module S = Pulse.Lib.Slice
+module S = Pulse.Lib.Slice.Util
 module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
-module U8 = FStar.SizeT
+module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 
 noeq
@@ -520,3 +520,160 @@ ensures
   }
 }
 ```
+
+inline_for_extraction
+let cbor_raw_serialized_iterator_truncate_t
+  (#elt_high: Type0)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
+=
+  (c: cbor_raw_serialized_iterator) ->
+  (len: U64.t) ->
+  (#pm: perm) ->
+  (#r: Ghost.erased (list elt_high)) ->
+  stt cbor_raw_serialized_iterator
+    (ser_match pm c r **
+      pure (U64.v len <= List.Tot.length r)
+    )
+    (fun res ->
+      ser_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)) **
+      Trade.trade
+        (ser_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)))
+        (ser_match pm c r)
+    )
+
+module Util = CBOR.Spec.Util
+
+inline_for_extraction
+```pulse
+fn cbor_raw_iterator_truncate
+  (#elt_low #elt_high: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
+  (phi: cbor_raw_serialized_iterator_truncate_t ser_match)
+  (c: cbor_raw_iterator elt_low)
+  (len: U64.t)
+  (#pm: perm)
+  (#r: Ghost.erased (list elt_high))
+requires
+    cbor_raw_iterator_match elt_match ser_match pm c r **
+    pure (U64.v len <= List.Tot.length r)
+returns res: cbor_raw_iterator elt_low
+ensures
+    cbor_raw_iterator_match elt_match ser_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)) **
+    Trade.trade
+      (cbor_raw_iterator_match elt_match ser_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)))
+      (cbor_raw_iterator_match elt_match ser_match pm c r)
+{
+  match c {
+    CBOR_Raw_Iterator_Slice c' -> {
+      Trade.rewrite_with_trade (cbor_raw_iterator_match elt_match ser_match pm c r)
+        (cbor_raw_slice_iterator_match elt_match pm c' r);
+      cbor_raw_slice_iterator_match_unfold elt_match pm c' r;
+      Trade.trans _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
+      with s l . assert (pts_to c'.s #(pm `perm_mul` c'.slice_perm) s ** PM.seq_list_match s l (elt_match (pm `perm_mul` c'.payload_perm)));
+      S.pts_to_len c'.s;
+      PM.seq_list_match_length (elt_match (pm `perm_mul` c'.payload_perm)) s l;
+      Util.list_splitAt_append (U64.v len) l;
+      Seq.lemma_split s (U64.v len);
+      let l1l2 = Ghost.hide (List.Tot.splitAt (U64.v len) l);
+      let l1 = Ghost.hide (fst l1l2);
+      let l2 = Ghost.hide (snd l1l2);
+      let s1 = Ghost.hide (Seq.slice s 0 (U64.v len));
+      let s2 = Ghost.hide (Seq.slice s (U64.v len) (Seq.length s));
+      PM.seq_list_match_append_elim_trade (elt_match (pm `perm_mul` c'.payload_perm)) s1 l1 s2 l2;
+      Trade.elim_hyp_r _ _ (PM.seq_list_match s l (elt_match (pm `perm_mul` c'.payload_perm)));
+      Trade.trans_hyp_r _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
+      assume (pure (SZ.fits_u64));
+      let Mktuple2 sl1 sl2 = S.split_trade c'.s (SZ.uint64_to_sizet len);
+      Trade.elim_hyp_r _ _ (pts_to c'.s #(pm `perm_mul` c'.slice_perm) s);
+      Trade.trans_hyp_l _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
+      let c1 = {
+        s = sl1;
+        slice_perm = pm `perm_mul` c'.slice_perm;
+        payload_perm = pm `perm_mul` c'.payload_perm;
+      };
+      let c' = {
+        c1 with slice_perm = c1.slice_perm /. 2.0R;
+      };
+      cbor_raw_slice_iterator_match_fold elt_match 1.0R c1 c' _ _;
+      Trade.trans _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
+      let res = CBOR_Raw_Iterator_Slice c';
+      Trade.rewrite_with_trade
+        (cbor_raw_slice_iterator_match elt_match 1.0R c' l1)
+        (cbor_raw_iterator_match elt_match ser_match 1.0R res l1);
+      Trade.trans _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
+      res
+    }
+    CBOR_Raw_Iterator_Serialized c' -> {
+      Trade.rewrite_with_trade (cbor_raw_iterator_match elt_match ser_match pm c r)
+        (ser_match pm c' r);
+      let sres = phi c' len;
+      Trade.trans _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
+      let res : cbor_raw_iterator elt_low = CBOR_Raw_Iterator_Serialized sres;
+      Trade.rewrite_with_trade
+        (ser_match 1.0R sres (fst (List.Tot.splitAt (U64.v len) r)))
+        (cbor_raw_iterator_match elt_match ser_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)));
+      Trade.trans _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
+      res
+    }
+  }
+}
+```
+
+```pulse
+ghost
+fn rec cbor_raw_share_slice // TODO: reuse this proof in CBOR.Pulse.Raw.Match.Perm
+  (#elt_low #elt_high: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (p: perm)
+  (c: Seq.seq elt_low)
+  (r: list elt_high)
+  (elt_share: (
+    (p': perm) ->
+    (c': elt_low) ->
+    (r': elt_high { r' << r }) ->
+    stt_ghost unit emp_inames
+      (elt_match p' c' r')
+      (fun _ -> elt_match (p' /. 2.0R) c' r' **
+        elt_match (p' /. 2.0R) c' r'
+      )
+  ))
+  (_: unit)
+requires
+  PM.seq_list_match c r (elt_match p)
+ensures
+  PM.seq_list_match c r (elt_match (p /. 2.0R)) **
+  PM.seq_list_match c r (elt_match (p /. 2.0R))
+decreases r
+{
+  match r {
+    Nil -> {
+      PM.seq_list_match_nil_elim c r (elt_match p);
+      PM.seq_list_match_nil_intro c r (elt_match (p /. 2.0R));      
+      PM.seq_list_match_nil_intro c r (elt_match (p /. 2.0R))
+    }
+    a :: q -> {
+      PM.seq_list_match_cons_elim c r (elt_match p);
+      elt_share p (Seq.head c) (List.Tot.hd r); // FIXME: WHY WHY WHY does `a` not work if the head symbol is a variable?
+      cbor_raw_share_slice elt_match p (Seq.tail c) q elt_share ();
+      PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd r) (Seq.tail c) q (elt_match (p /. 2.0R));
+      PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd r) (Seq.tail c) q (elt_match (p /. 2.0R));
+    }
+  }
+}
+```
+
+let rec seq_of_list_splitAt
+  (#t: Type)
+  (l: list t)
+  (i: nat)
+: Lemma
+  (requires (i <= List.Tot.length l))
+  (ensures (
+    i <= List.Tot.length l /\
+    Seq.seq_of_list (fst (List.Tot.splitAt i l)) `Seq.equal` Seq.slice (Seq.seq_of_list l) 0 i
+  ))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q -> if i = 0 then () else seq_of_list_splitAt q (i - 1)

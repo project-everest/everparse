@@ -191,6 +191,8 @@ fn cbor_serialized_array_iterator_next_cont (_: unit)
 
 let cbor_serialized_array_iterator_next sq = cbor_raw_serialized_iterator_next _ (jump_raw_data_item sq) cbor_match (cbor_serialized_array_iterator_next_cont ())
 
+let cbor_serialized_array_iterator_truncate = cbor_raw_serialized_iterator_truncate serialize_raw_data_item
+
 let cbor_serialized_map_iterator_match = cbor_raw_serialized_iterator_match (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
 
 module LP = LowParse.Pulse.VCList
@@ -314,3 +316,4 @@ fn cbor_serialized_map_iterator_next_cont (sq: squash SZ.fits_u64)
 ```
 
 let cbor_serialized_map_iterator_next sq = cbor_raw_serialized_iterator_next _ (jump_nondep_then (jump_raw_data_item sq) (jump_raw_data_item sq)) cbor_match_map_entry (cbor_serialized_map_iterator_next_cont sq)
+

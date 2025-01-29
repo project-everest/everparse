@@ -260,6 +260,34 @@ ensures exists* a p i' q .
 ```
 
 ```pulse
+fn cbor_array_iterator_truncate
+  (c: cbor_array_iterator)
+  (len: U64.t)
+  (#pm: perm)
+  (#r: Ghost.erased (list raw_data_item))
+requires
+    cbor_array_iterator_match pm c r **
+    pure (U64.v len <= List.Tot.length r)
+returns res: cbor_array_iterator
+ensures
+    cbor_array_iterator_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)) **
+    Trade.trade
+      (cbor_array_iterator_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)))
+      (cbor_array_iterator_match pm c r)
+{
+  unfold (cbor_array_iterator_match pm c r);
+  let res = cbor_raw_iterator_truncate
+    cbor_match
+    cbor_serialized_array_iterator_match
+    cbor_serialized_array_iterator_truncate
+    c
+    len;
+  fold (cbor_array_iterator_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)));
+  res
+}
+```
+
+```pulse
 ghost
 fn cbor_match_map_elim
   (c: cbor_map)

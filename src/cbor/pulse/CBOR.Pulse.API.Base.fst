@@ -359,6 +359,67 @@ let array_iterator_next_t
       pure (Ghost.reveal z == v' :: z')
     )
 
+inline_for_extraction
+let array_iterator_truncate_t
+  (#t': Type)
+  (iter: perm -> t' -> list cbor -> slprop)
+= (x: t') ->
+  (len: U64.t) ->
+  (#p: perm) ->
+  (#y: Ghost.erased (list cbor)) ->
+  stt t'
+    (iter p x y **
+      pure (U64.v len <= List.Tot.length y)
+    )
+    (fun res ->
+      iter 1.0R res (fst (List.Tot.splitAt (U64.v len) y)) **
+      Trade.trade
+        (iter 1.0R res (fst (List.Tot.splitAt (U64.v len) y)))
+        (iter p x y)
+    )
+
+inline_for_extraction
+let array_iterator_get_length_t
+  (#t': Type)
+  (iter: perm -> t' -> list cbor -> slprop)
+= (x: t') ->
+  (#p: perm) ->
+  (#y: Ghost.erased (list cbor)) ->
+  stt U64.t
+    (iter p x y)
+    (fun res ->
+      iter p x y **
+      pure (U64.v res == List.Tot.length y)
+    )
+
+inline_for_extraction
+let array_iterator_share_t
+  (#t': Type)
+  (iter: perm -> t' -> list cbor -> slprop)
+= (x: t') ->
+  (#p: perm) ->
+  (#y: Ghost.erased (list cbor)) ->
+  stt_ghost unit emp_inames
+    (iter p x y)
+    (fun _ ->
+      iter (p /. 2.0R) x y ** iter (p /. 2.0R) x y
+    )
+
+inline_for_extraction
+let array_iterator_gather_t
+  (#t': Type)
+  (iter: perm -> t' -> list cbor -> slprop)
+= (x: t') ->
+  (#p1: perm) ->
+  (#y1: Ghost.erased (list cbor)) ->
+  (#p2: perm) ->
+  (#y2: Ghost.erased (list cbor)) ->
+  stt_ghost unit emp_inames
+    (iter p1 x y1 ** iter p2 x y2)
+    (fun _ ->
+      iter (p1 +. p2) x y1 ** pure (y1 == y2)
+    )
+
 let get_map_length_post
   (y: cbor)
   (res: FStar.UInt64.t)

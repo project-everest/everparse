@@ -69,6 +69,8 @@ val cbor_serialized_array_iterator_is_empty : cbor_raw_serialized_iterator_is_em
 
 val cbor_serialized_array_iterator_next (_: squash SZ.fits_u64) : cbor_raw_serialized_iterator_next_t cbor_match cbor_serialized_array_iterator_match
 
+val cbor_serialized_array_iterator_truncate : cbor_raw_serialized_iterator_truncate_t cbor_serialized_array_iterator_match
+
 val cbor_serialized_map_iterator_match
   (p: perm)
   (i: cbor_raw_serialized_iterator)

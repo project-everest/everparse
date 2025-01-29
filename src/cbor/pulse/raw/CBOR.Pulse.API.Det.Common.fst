@@ -1020,6 +1020,39 @@ fn cbor_det_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor
 }
 ```
 
+let rec list_map_splitAt
+  (#t1 #t2: Type)
+  (f: t1 -> t2)
+  (l: list t1)
+  (n: nat)
+: Lemma
+  (List.Tot.map f (fst (List.Tot.splitAt n l)) == fst (List.Tot.splitAt n (List.Tot.map f l)))
+= if n = 0 then () else
+  match l with
+  | [] -> ()
+  | a :: q -> list_map_splitAt f q (n - 1)
+
+```pulse
+fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0 #_ cbor_det_array_iterator_match
+= (x: _)
+  (len: _)
+  (#py: _)
+  (#z: _)
+{
+  Trade.rewrite_with_trade
+    (cbor_det_array_iterator_match py x z)
+    (Read.cbor_array_iterator_match py x (List.Tot.map mk_det_raw_cbor z));
+  let res = Read.cbor_array_iterator_truncate x len;
+  Trade.trans _ _ (cbor_det_array_iterator_match py x z);
+  list_map_splitAt mk_det_raw_cbor z (U64.v len);
+  Trade.rewrite_with_trade
+    (Read.cbor_array_iterator_match 1.0R res (fst (List.Tot.splitAt (U64.v len) (List.Tot.map mk_det_raw_cbor z))))
+    (cbor_det_array_iterator_match 1.0R res (fst (List.Tot.splitAt (U64.v len) z)));
+  Trade.trans _ _ (cbor_det_array_iterator_match py x z);
+  res
+}
+```
+
 let rec list_index_map
   (#t1 #t2: Type)
   (f: (t1 -> t2))

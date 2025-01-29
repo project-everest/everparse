@@ -270,3 +270,60 @@ fn cbor_raw_serialized_iterator_next
   }
 }
 ```
+
+let rec list_splitAt_splitAt
+  (#t: Type)
+  (l: list t)
+  (n1 n2: nat)
+: Lemma
+  (requires (n1 >= n2))
+  (ensures (
+    let l1 = fst (List.Tot.splitAt n1 l) in
+    let l2 = fst (List.Tot.splitAt n2 l1) in
+    l2 == fst (List.Tot.splitAt n2 l)
+  ))
+  (decreases n2)
+= if n2 = 0
+  then ()
+  else match l with
+  | [] -> ()
+  | _ :: q -> list_splitAt_splitAt q (n1 - 1) (n2 - 1)
+
+#restart-solver
+
+inline_for_extraction
+```pulse
+fn cbor_raw_serialized_iterator_truncate
+  (#elt_high: Type0)
+  (#k: Ghost.erased LP.parser_kind)
+  (#p: LP.parser k elt_high)
+  (s: LP.serializer p { (Ghost.reveal k).parser_kind_subkind == Some LP.ParserStrong /\ (Ghost.reveal k).parser_kind_low > 0 })
+: cbor_raw_serialized_iterator_truncate_t #elt_high (cbor_raw_serialized_iterator_match s)
+=
+  (c: _)
+  (len: _)
+  (#pm: perm)
+  (#l: Ghost.erased (list elt_high))
+{
+  cbor_raw_serialized_iterator_unfold s pm c l;
+  with l' . assert (LP.pts_to_serialized (LP.serialize_nlist (c.glen) s) c.s #(pm *. c.p) l');
+  list_splitAt_splitAt l' (U64.v c.len) (U64.v len);
+  let c' : cbor_raw_serialized_iterator = {
+    s = c.s;
+    glen = c.glen;
+    len = len;
+    p = (pm *. c.p) /. 2.0R;
+  };
+  cbor_raw_serialized_iterator_fold_with_perm
+    s
+    (Ghost.reveal c.glen)
+    c.s
+    (pm *. c.p)
+    l'
+    c'
+    1.0R
+    (fst (List.Tot.splitAt (U64.v len) l));
+  Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm c l);
+  c'
+}
+```
