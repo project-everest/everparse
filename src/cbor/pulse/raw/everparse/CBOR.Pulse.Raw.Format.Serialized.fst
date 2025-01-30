@@ -193,6 +193,10 @@ let cbor_serialized_array_iterator_next sq = cbor_raw_serialized_iterator_next _
 
 let cbor_serialized_array_iterator_truncate = cbor_raw_serialized_iterator_truncate serialize_raw_data_item
 
+let cbor_serialized_array_iterator_share = cbor_raw_serialized_iterator_share serialize_raw_data_item
+
+let cbor_serialized_array_iterator_gather = cbor_raw_serialized_iterator_gather serialize_raw_data_item
+
 let cbor_serialized_map_iterator_match = cbor_raw_serialized_iterator_match (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)
 
 module LP = LowParse.Pulse.VCList

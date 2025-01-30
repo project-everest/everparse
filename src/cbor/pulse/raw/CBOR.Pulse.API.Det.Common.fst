@@ -1053,6 +1053,36 @@ fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0 #_
 }
 ```
 
+```pulse
+ghost
+fn cbor_det_array_iterator_share (_: unit) : array_iterator_share_t u#0 #_ cbor_det_array_iterator_match
+= (x: _)
+  (#py: _)
+  (#z: _)
+{
+  unfold (cbor_det_array_iterator_match py x z);
+  Read.cbor_array_iterator_share x;
+  fold (cbor_det_array_iterator_match (py /. 2.0R) x z);
+  fold (cbor_det_array_iterator_match (py /. 2.0R) x z);
+}
+```
+
+```pulse
+ghost
+fn cbor_det_array_iterator_gather (_: unit) : array_iterator_gather_t u#0 #_ cbor_det_array_iterator_match
+= (x: _)
+  (#py1: _)
+  (#z1: _)
+  (#py2: _)
+  (#z2: _)
+{
+  unfold (cbor_det_array_iterator_match py1 x z1);
+  unfold (cbor_det_array_iterator_match py2 x z2);
+  Read.cbor_array_iterator_gather x #py1 #_ #py2 #_;
+  fold (cbor_det_array_iterator_match (py1 +. py2) x z1);
+}
+```
+
 let rec list_index_map
   (#t1 #t2: Type)
   (f: (t1 -> t2))

@@ -287,6 +287,58 @@ ensures
 }
 ```
 
+module Perm = CBOR.Pulse.Raw.Match.Perm
+
+```pulse
+ghost
+fn cbor_array_iterator_share
+  (c: cbor_array_iterator)
+  (#pm: perm)
+  (#r: (list raw_data_item))
+requires
+    cbor_array_iterator_match pm c r
+ensures
+    cbor_array_iterator_match (pm /. 2.0R) c r **
+    cbor_array_iterator_match (pm /. 2.0R) c r
+{
+  unfold (cbor_array_iterator_match pm c r);
+  cbor_raw_iterator_share
+    cbor_match
+    Perm.cbor_raw_share
+    cbor_serialized_array_iterator_share
+    c;
+  fold (cbor_array_iterator_match (pm /. 2.0R) c r);
+  fold (cbor_array_iterator_match (pm /. 2.0R) c r);
+}
+```
+
+```pulse
+ghost
+fn cbor_array_iterator_gather
+  (c: cbor_array_iterator)
+  (#pm1: perm)
+  (#r1: (list raw_data_item))
+  (#pm2: perm)
+  (#r2: (list raw_data_item))
+requires
+    cbor_array_iterator_match pm1 c r1 **
+    cbor_array_iterator_match pm2 c r2
+ensures
+    cbor_array_iterator_match (pm1 +. pm2) c r1 **
+    pure (r1 == r2)
+{
+  unfold (cbor_array_iterator_match pm1 c r1);
+  unfold (cbor_array_iterator_match pm2 c r2);
+  cbor_raw_iterator_gather
+    cbor_match
+    Perm.cbor_raw_gather
+    cbor_serialized_array_iterator_gather
+    c
+    #pm1 #r1 #pm2 #r2;
+  fold (cbor_array_iterator_match (pm1 +. pm2) c r1);
+}
+```
+
 ```pulse
 ghost
 fn cbor_match_map_elim

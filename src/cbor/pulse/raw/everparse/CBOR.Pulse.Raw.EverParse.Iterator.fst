@@ -327,3 +327,46 @@ fn cbor_raw_serialized_iterator_truncate
   c'
 }
 ```
+
+```pulse
+ghost
+fn cbor_raw_serialized_iterator_share
+  (#elt_high: Type0)
+  (#k: LP.parser_kind)
+  (#p: LP.parser k elt_high)
+  (s: LP.serializer p { (k).parser_kind_subkind == Some LP.ParserStrong /\ (k).parser_kind_low > 0 })
+: cbor_raw_serialized_iterator_share_t #elt_high (cbor_raw_serialized_iterator_match s)
+=
+  (c: _)
+  (#pm: perm)
+  (#l: (list elt_high))
+{
+  unfold (cbor_raw_serialized_iterator_match s pm c l);
+  LP.pts_to_serialized_share (LP.serialize_nlist (c.glen) s) c.s;
+  fold (cbor_raw_serialized_iterator_match s (pm /. 2.0R) c l);
+  fold (cbor_raw_serialized_iterator_match s (pm /. 2.0R) c l);
+}
+```
+
+```pulse
+ghost
+fn cbor_raw_serialized_iterator_gather
+  (#elt_high: Type0)
+  (#k: LP.parser_kind)
+  (#p: LP.parser k elt_high)
+  (s: LP.serializer p { (k).parser_kind_subkind == Some LP.ParserStrong /\ (k).parser_kind_low > 0 })
+: cbor_raw_serialized_iterator_gather_t #elt_high (cbor_raw_serialized_iterator_match s)
+=
+  (c: _)
+  (#pm1: perm)
+  (#l1: (list elt_high))
+  (#pm2: perm)
+  (#l2: (list elt_high))
+{
+  unfold (cbor_raw_serialized_iterator_match s pm1 c l1);
+  unfold (cbor_raw_serialized_iterator_match s pm2 c l2);
+  LP.pts_to_serialized_gather (LP.serialize_nlist (c.glen) s) c.s;
+  perm_mul_add_l pm1 pm2 c.p;
+  fold (cbor_raw_serialized_iterator_match s (pm1 +. pm2) c l1);
+}
+```

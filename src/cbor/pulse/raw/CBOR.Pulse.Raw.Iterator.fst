@@ -663,6 +663,205 @@ decreases r
 }
 ```
 
+inline_for_extraction
+let cbor_raw_serialized_iterator_share_t
+  (#elt_high: Type0)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
+=
+  (c: cbor_raw_serialized_iterator) ->
+  (#pm: perm) ->
+  (#r: (list elt_high)) ->
+  stt_ghost unit emp_inames
+    (ser_match pm c r)
+    (fun _ ->
+      ser_match (pm /. 2.0R) c r **
+      ser_match (pm /. 2.0R) c r
+    )
+
+```pulse
+ghost
+fn cbor_raw_iterator_share
+  (#elt_low #elt_high: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (elt_share: (
+    (p': perm) ->
+    (c': elt_low) ->
+    (r': elt_high) ->
+    stt_ghost unit emp_inames
+      (elt_match p' c' r')
+      (fun _ -> elt_match (p' /. 2.0R) c' r' **
+        elt_match (p' /. 2.0R) c' r'
+      )
+  ))
+  (#ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
+  (phi: cbor_raw_serialized_iterator_share_t ser_match)
+  (c: cbor_raw_iterator elt_low)
+  (#pm: perm)
+  (#r: (list elt_high))
+requires
+    cbor_raw_iterator_match elt_match ser_match pm c r
+ensures
+    cbor_raw_iterator_match elt_match ser_match (pm /. 2.0R) c r **
+    cbor_raw_iterator_match elt_match ser_match (pm /. 2.0R) c r
+{
+  match c {
+    CBOR_Raw_Iterator_Slice c' -> {
+      rewrite (cbor_raw_iterator_match elt_match ser_match pm c r)
+        as (cbor_raw_slice_iterator_match elt_match pm c' r);
+      unfold (cbor_raw_slice_iterator_match elt_match pm c' r);
+      with cs . assert (pts_to c'.s #(pm *. c'.slice_perm) cs);
+      S.share c'.s;
+      cbor_raw_share_slice elt_match (pm *. c'.payload_perm) cs r elt_share ();
+      half_mul_l pm c'.slice_perm;
+      half_mul_l pm c'.payload_perm;
+      fold (cbor_raw_slice_iterator_match elt_match (pm /. 2.0R) c' r);
+      rewrite (cbor_raw_slice_iterator_match elt_match (pm /. 2.0R) c' r)
+        as (cbor_raw_iterator_match elt_match ser_match (pm /. 2.0R) c r);
+      fold (cbor_raw_slice_iterator_match elt_match (pm /. 2.0R) c' r);
+      rewrite (cbor_raw_slice_iterator_match elt_match (pm /. 2.0R) c' r)
+        as (cbor_raw_iterator_match elt_match ser_match (pm /. 2.0R) c r);
+    }
+    CBOR_Raw_Iterator_Serialized c' -> {
+      rewrite (cbor_raw_iterator_match elt_match ser_match pm c r)
+        as (ser_match pm c' r);
+      phi c';
+      rewrite (ser_match (pm /. 2.0R) c' r)
+        as (cbor_raw_iterator_match elt_match ser_match (pm /. 2.0R) c r);
+      rewrite (ser_match (pm /. 2.0R) c' r)
+        as (cbor_raw_iterator_match elt_match ser_match (pm /. 2.0R) c r);
+    }
+  }
+}
+```
+
+```pulse
+ghost
+fn rec cbor_raw_gather_slice
+  (#elt_low #elt_high: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (p1: perm)
+  (c: Seq.seq elt_low)
+  (r1: list elt_high)
+  (p2: perm)
+  (r2: list elt_high)
+  (elt_gather: (
+    (p1': perm) ->
+    (c': elt_low) ->
+    (r1': elt_high) ->
+    (p2': perm) ->
+    (r2': elt_high { r1' << r1 }) ->
+    stt_ghost unit emp_inames
+      (elt_match p1' c' r1' ** elt_match p2' c' r2')
+      (fun _ -> elt_match (p1' +. p2') c' r1' **
+        pure (r1' == r2')
+      )
+  ))
+  (_: unit)
+requires
+  PM.seq_list_match c r1 (elt_match p1) **
+  PM.seq_list_match c r2 (elt_match p2)
+ensures
+  PM.seq_list_match c r1 (elt_match (p1 +. p2)) **
+  pure (r1 == r2)
+decreases r1
+{
+  PM.seq_list_match_length (elt_match p1) c r1;
+  PM.seq_list_match_length (elt_match p2) c r2;
+  match r1 {
+    Nil -> {
+      PM.seq_list_match_nil_elim c r1 (elt_match p1);
+      PM.seq_list_match_nil_elim c r2 (elt_match p2);
+      PM.seq_list_match_nil_intro c r1 (elt_match (p1 +. p2));
+    }
+    a :: q -> {
+      PM.seq_list_match_cons_elim c r1 (elt_match p1);
+      PM.seq_list_match_cons_elim c r2 (elt_match p2);
+      elt_gather p1 (Seq.head c) (List.Tot.hd r1) p2 (List.Tot.hd r2);
+      cbor_raw_gather_slice elt_match p1 (Seq.tail c) q p2 (List.Tot.tl r2) elt_gather ();
+      PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd r1) (Seq.tail c) q (elt_match (p1 +. p2));
+    }
+  }
+}
+```
+
+inline_for_extraction
+let cbor_raw_serialized_iterator_gather_t
+  (#elt_high: Type0)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
+=
+  (c: cbor_raw_serialized_iterator) ->
+  (#pm1: perm) ->
+  (#r1: (list elt_high)) ->
+  (#pm2: perm) ->
+  (#r2: (list elt_high)) ->
+  stt_ghost unit emp_inames
+    (ser_match pm1 c r1 ** ser_match pm2 c r2)
+    (fun _ ->
+      ser_match (pm1 +. pm2) c r1 **
+      pure (r1 == r2)
+    )
+
+```pulse
+ghost
+fn cbor_raw_iterator_gather
+  (#elt_low #elt_high: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (elt_gather: (
+    (p1': perm) ->
+    (c': elt_low) ->
+    (r1': elt_high) ->
+    (p2': perm) ->
+    (r2': elt_high) ->
+    stt_ghost unit emp_inames
+      (elt_match p1' c' r1' ** elt_match p2' c' r2')
+      (fun _ -> elt_match (p1' +. p2') c' r1' **
+        pure (r1' == r2')
+      )
+  ))
+  (#ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
+  (phi: cbor_raw_serialized_iterator_gather_t ser_match)
+  (c: cbor_raw_iterator elt_low)
+  (#pm1: perm)
+  (#r1: (list elt_high))
+  (#pm2: perm)
+  (#r2: (list elt_high))
+requires
+    cbor_raw_iterator_match elt_match ser_match pm1 c r1 **
+    cbor_raw_iterator_match elt_match ser_match pm2 c r2
+ensures
+    cbor_raw_iterator_match elt_match ser_match (pm1 +. pm2) c r1 **
+    pure (r1 == r2)
+{
+  match c {
+    CBOR_Raw_Iterator_Slice c' -> {
+      rewrite (cbor_raw_iterator_match elt_match ser_match pm1 c r1)
+        as (cbor_raw_slice_iterator_match elt_match pm1 c' r1);
+      unfold (cbor_raw_slice_iterator_match elt_match pm1 c' r1);
+      rewrite (cbor_raw_iterator_match elt_match ser_match pm2 c r2)
+        as (cbor_raw_slice_iterator_match elt_match pm2 c' r2);
+      unfold (cbor_raw_slice_iterator_match elt_match pm2 c' r2);
+      S.gather c'.s;
+      perm_mul_add_l pm1 pm2 c'.slice_perm;
+      with cs . assert (pts_to c'.s #((pm1 +. pm2) *. c'.slice_perm) cs);
+      cbor_raw_gather_slice elt_match (pm1 *. c'.payload_perm) cs r1 (pm2 *. c'.payload_perm) r2 elt_gather ();
+      perm_mul_add_l pm1 pm2 c'.payload_perm;
+      fold (cbor_raw_slice_iterator_match elt_match (pm1 +. pm2) c' r1);
+      rewrite (cbor_raw_slice_iterator_match elt_match (pm1 +. pm2) c' r1)
+        as (cbor_raw_iterator_match elt_match ser_match (pm1 +. pm2) c r1);
+    }
+    CBOR_Raw_Iterator_Serialized c' -> {
+      rewrite (cbor_raw_iterator_match elt_match ser_match pm1 c r1)
+        as (ser_match pm1 c' r1);
+      rewrite (cbor_raw_iterator_match elt_match ser_match pm2 c r2)
+        as (ser_match pm2 c' r2);
+      phi c' #pm1 #r1 #pm2 #r2;
+      rewrite (ser_match (pm1 +. pm2) c' r1)
+        as (cbor_raw_iterator_match elt_match ser_match (pm1 +. pm2) c r1);
+    }
+  }
+}
+```
+
 let rec seq_of_list_splitAt
   (#t: Type)
   (l: list t)
