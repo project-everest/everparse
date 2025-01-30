@@ -1387,6 +1387,14 @@ cbor_serialized_array_iterator_is_empty(
   return c.len == 0ULL;
 }
 
+static uint64_t
+cbor_serialized_array_iterator_length(
+  CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator c
+)
+{
+  return c.len;
+}
+
 static cbor_raw
 cbor_serialized_array_iterator_next(
   CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw *pi,
@@ -1621,6 +1629,35 @@ cbor_array_iterator_is_empty(
     CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator
     c_ = c.case_CBOR_Raw_Iterator_Serialized;
     bool res = cbor_serialized_array_iterator_is_empty(c_);
+    return res;
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+}
+
+static uint64_t
+cbor_array_iterator_length(
+  CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw c
+)
+{
+  if (c.tag == CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Slice)
+  {
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw c_ = c.case_CBOR_Raw_Iterator_Slice;
+    uint64_t res = (uint64_t)len__CBOR_Pulse_Raw_Type_cbor_raw(c_);
+    uint64_t res0 = res;
+    return res0;
+  }
+  else if (c.tag == CBOR_Pulse_Raw_Iterator_CBOR_Raw_Iterator_Serialized)
+  {
+    CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator
+    c_ = c.case_CBOR_Raw_Iterator_Serialized;
+    uint64_t res = cbor_serialized_array_iterator_length(c_);
     return res;
   }
   else
@@ -5201,6 +5238,15 @@ cbor_det_array_iterator_is_empty(
 )
 {
   bool res = cbor_array_iterator_is_empty(x);
+  return res;
+}
+
+uint64_t
+cbor_det_array_iterator_length(
+  CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw x
+)
+{
+  uint64_t res = cbor_array_iterator_length(x);
   return res;
 }
 

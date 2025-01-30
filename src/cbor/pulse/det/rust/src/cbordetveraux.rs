@@ -1380,6 +1380,9 @@ fn cbor_serialized_array_iterator_init <'a>(c: cbor_serialized <'a>) ->
 fn cbor_serialized_array_iterator_is_empty <'a>(c: cbor_raw_serialized_iterator <'a>) -> bool
 { c.len == 0u64 }
 
+fn cbor_serialized_array_iterator_length <'a>(c: cbor_raw_serialized_iterator <'a>) -> u64
+{ c.len }
+
 #[derive(PartialEq, Clone, Copy)]
 enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags
 {
@@ -1587,6 +1590,26 @@ fn cbor_array_iterator_is_empty <'a>(c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_c
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: c· } =>
           {
               let res: bool = cbor_serialized_array_iterator_is_empty(c·);
+              res
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+fn cbor_array_iterator_length <'a>(c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>) ->
+    u64
+{
+    match c
+    {
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: c· } =>
+          {
+              let res: u64 = c·.len() as u64;
+              let res0: u64 = res;
+              res0
+          },
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: c· } =>
+          {
+              let res: u64 = cbor_serialized_array_iterator_length(c·);
               res
           },
         _ => panic!("Incomplete pattern matching")
@@ -4521,6 +4544,15 @@ pub fn cbor_det_array_iterator_is_empty <'a>(
     bool
 {
     let res: bool = cbor_array_iterator_is_empty(x);
+    res
+}
+
+pub fn cbor_det_array_iterator_length <'a>(
+    x: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
+) ->
+    u64
+{
+    let res: u64 = cbor_array_iterator_length(x);
     res
 }
 

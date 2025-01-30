@@ -292,6 +292,11 @@ cbor_det_array_iterator_is_empty(
   CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw x
 );
 
+uint64_t
+cbor_det_array_iterator_length(
+  CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw x
+);
+
 cbor_raw
 cbor_det_array_iterator_next(
   CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw *x
