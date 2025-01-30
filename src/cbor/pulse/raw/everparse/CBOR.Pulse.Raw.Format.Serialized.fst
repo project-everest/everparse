@@ -180,6 +180,8 @@ ensures
 
 let cbor_serialized_array_iterator_is_empty = cbor_raw_serialized_iterator_is_empty _
 
+let cbor_serialized_array_iterator_length = cbor_raw_serialized_iterator_length _
+
 inline_for_extraction
 ```pulse
 fn cbor_serialized_array_iterator_next_cont (_: unit)

@@ -181,6 +181,26 @@ fn cbor_raw_serialized_iterator_is_empty
 }
 ```
 
+inline_for_extraction
+```pulse
+fn cbor_raw_serialized_iterator_length
+  (#elt_high: Type0)
+  (#k: Ghost.erased LP.parser_kind)
+  (#p: LP.parser k elt_high)
+  (s: LP.serializer p { (Ghost.reveal k).parser_kind_subkind == Some LP.ParserStrong /\ (Ghost.reveal k).parser_kind_low > 0 })
+: cbor_raw_serialized_iterator_length_t #elt_high (cbor_raw_serialized_iterator_match s)
+= (c: cbor_raw_serialized_iterator)
+  (#pm: perm)
+  (#l: Ghost.erased (list elt_high))
+{
+  cbor_raw_serialized_iterator_unfold s pm c l;
+  with l' . assert (LP.pts_to_serialized (LP.serialize_nlist c.glen s) c.s #(pm *. c.p) l');
+  CBOR.Spec.Util.list_splitAt_length (U64.v c.len) l';
+  Trade.elim _ _;
+  c.len
+}
+```
+
 let cbor_raw_serialized_iterator_next_cont
   (#elt_low #elt_high: Type0)
   (#k: LP.parser_kind)

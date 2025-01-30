@@ -227,6 +227,29 @@ ensures
 ```
 
 ```pulse
+fn cbor_array_iterator_length
+  (c: cbor_array_iterator)
+  (#pm: perm)
+  (#r: Ghost.erased (list raw_data_item))
+requires
+    cbor_array_iterator_match pm c r
+returns res: U64.t
+ensures
+    cbor_array_iterator_match pm c r **
+    pure ((U64.v res <: nat) == List.Tot.length r)
+{
+  unfold (cbor_array_iterator_match pm c r);
+  let res = cbor_raw_iterator_length
+    cbor_match
+    cbor_serialized_array_iterator_match
+    cbor_serialized_array_iterator_length
+    c;
+  fold (cbor_array_iterator_match pm c r);
+  res
+}
+```
+
+```pulse
 fn cbor_array_iterator_next
   (sq: squash SZ.fits_u64)
   (pi: R.ref cbor_array_iterator)

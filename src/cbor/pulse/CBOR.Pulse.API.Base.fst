@@ -339,6 +339,17 @@ let array_iterator_is_empty_t
     (fun res -> iter p x y ** pure (res == Nil? y))
 
 inline_for_extraction
+let array_iterator_length_t
+  (#t': Type)
+  (iter: perm -> t' -> list cbor -> slprop)
+= (x: t') ->
+  (#p: perm) ->
+  (#y: Ghost.erased (list cbor)) ->
+  stt U64.t
+    (iter p x y)
+    (fun res -> iter p x y ** pure (U64.v res == List.Tot.length y))
+
+inline_for_extraction
 let array_iterator_next_t
   (#t #t': Type)
   (vmatch: perm -> t -> cbor -> slprop)

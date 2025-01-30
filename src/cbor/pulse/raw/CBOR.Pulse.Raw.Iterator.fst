@@ -15,6 +15,7 @@ module U64 = FStar.UInt64
 noeq
 type cbor_raw_slice_iterator (elt: Type0) = {
   s: Pulse.Lib.Slice.slice elt;
+  sq: squash (SZ.v (S.len s) < pow2 64);
   slice_perm: perm;
   payload_perm: perm;
 }
@@ -131,6 +132,7 @@ ensures exists* p .
 {
   let c : cbor_raw_slice_iterator elt_low = {
     s = a;
+    sq = ();
     slice_perm = 1.0R;
     payload_perm = pm' `perm_div` pm;
   };
@@ -169,6 +171,30 @@ ensures
   PM.seq_list_match_length (elt_match (pm `perm_mul` c.payload_perm)) _ _;
   Pulse.Lib.Slice.pts_to_len c.s;
   let res = (Pulse.Lib.Slice.len c.s = 0sz);
+  fold (cbor_raw_slice_iterator_match elt_match pm c r);
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn cbor_raw_slice_iterator_length
+  (#elt_low #elt_high: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (c: cbor_raw_slice_iterator elt_low)
+  (#pm: perm)
+  (#r: Ghost.erased (list elt_high))
+requires
+    cbor_raw_slice_iterator_match elt_match pm c r
+returns res: U64.t
+ensures
+    cbor_raw_slice_iterator_match elt_match pm c r **
+    pure (List.Tot.length r == U64.v res)
+{
+  unfold (cbor_raw_slice_iterator_match elt_match pm c r);
+  PM.seq_list_match_length (elt_match (pm `perm_mul` c.payload_perm)) _ _;
+  Pulse.Lib.Slice.pts_to_len c.s;
+  let res = (SZ.sizet_to_uint64 (S.len c.s));
   fold (cbor_raw_slice_iterator_match elt_match pm c r);
   res
 }
@@ -278,11 +304,13 @@ ensures
 {
   cbor_raw_slice_iterator_match_unfold elt_match pm i l; // 1: (pts_to i.s _ ** PM.seq_list_match _ l _) @==> cbor_raw_slice_iterator_match elt_match pm i l
   with sq . assert (pts_to i.s #(pm `perm_mul` i.slice_perm) sq);
+  S.pts_to_len i.s;
   PM.seq_list_match_length (elt_match (pm `perm_mul` i.payload_perm)) _ _;
   let res = Pulse.Lib.Slice.op_Array_Access i.s 0sz;
   PM.seq_list_match_cons_elim_trade _ l (elt_match (pm `perm_mul` i.payload_perm)); // 2: (elt_match _ (List.Tot.hd l) ** PM.seq_list_match _ (List.Tot.tl l) _) @==> PM.seq_list_match _ l _
 //  assert (elt_match (pm `perm_mul` i.payload_perm) res (List.Tot.hd l)); // FIXME: make this work, without the need for `rewrite ... sq`, see below
   let s' = slice_split_right i.s 1sz; // 3: pts_to s' _ @==> pts_to i.s _
+  S.pts_to_len s';
   let i1 = { i with s = s' };
   let i' = { i1 with slice_perm = i.slice_perm /. 2.0R };
   pi := CBOR_Raw_Iterator_Slice i';
@@ -393,6 +421,58 @@ ensures
       rewrite (cbor_raw_iterator_match elt_match ser_match pm c r)
         as (cbor_raw_slice_iterator_match elt_match pm c' r);
       let res = cbor_raw_slice_iterator_is_empty elt_match c';
+      rewrite (cbor_raw_slice_iterator_match elt_match pm c' r)
+        as (cbor_raw_iterator_match elt_match ser_match pm c r);
+      res
+    }
+    CBOR_Raw_Iterator_Serialized c' -> {
+      rewrite (cbor_raw_iterator_match elt_match ser_match pm c r)
+        as (ser_match pm c' r);
+      let res = phi c';
+      rewrite (ser_match pm c' r)
+        as (cbor_raw_iterator_match elt_match ser_match pm c r);
+      res
+    }
+  }
+}
+```
+
+inline_for_extraction
+let cbor_raw_serialized_iterator_length_t
+  (#elt_high: Type0)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
+=
+  (c: cbor_raw_serialized_iterator) ->
+  (#pm: perm) ->
+  (#r: Ghost.erased (list elt_high)) ->
+  stt U64.t
+    (ser_match pm c r)
+    (fun res -> ser_match pm c r **
+      pure ((U64.v res <: nat) == List.Tot.length r)
+    )
+
+inline_for_extraction
+```pulse
+fn cbor_raw_iterator_length
+  (#elt_low #elt_high: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (ser_match: perm -> cbor_raw_serialized_iterator -> list elt_high -> slprop)
+  (phi: cbor_raw_serialized_iterator_length_t ser_match)
+  (c: cbor_raw_iterator elt_low)
+  (#pm: perm)
+  (#r: Ghost.erased (list elt_high))
+requires
+    cbor_raw_iterator_match elt_match ser_match pm c r
+returns res: U64.t
+ensures
+    cbor_raw_iterator_match elt_match ser_match pm c r **
+    pure ((U64.v res <: nat) == List.Tot.length r)
+{
+  match c {
+    CBOR_Raw_Iterator_Slice c' -> {
+      rewrite (cbor_raw_iterator_match elt_match ser_match pm c r)
+        as (cbor_raw_slice_iterator_match elt_match pm c' r);
+      let res = cbor_raw_slice_iterator_length elt_match c';
       rewrite (cbor_raw_slice_iterator_match elt_match pm c' r)
         as (cbor_raw_iterator_match elt_match ser_match pm c r);
       res
@@ -585,10 +665,12 @@ ensures
       Trade.trans_hyp_r _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
       assume (pure (SZ.fits_u64));
       let Mktuple2 sl1 sl2 = S.split_trade c'.s (SZ.uint64_to_sizet len);
+      S.pts_to_len sl1;
       Trade.elim_hyp_r _ _ (pts_to c'.s #(pm `perm_mul` c'.slice_perm) s);
       Trade.trans_hyp_l _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
       let c1 = {
         s = sl1;
+        sq = ();
         slice_perm = pm `perm_mul` c'.slice_perm;
         payload_perm = pm `perm_mul` c'.payload_perm;
       };

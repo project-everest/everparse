@@ -254,6 +254,8 @@ val cbor_det_array_iterator_start () : array_iterator_start_t cbor_det_match cbo
 
 val cbor_det_array_iterator_is_empty () : array_iterator_is_empty_t cbor_det_array_iterator_match
 
+val cbor_det_array_iterator_length () : array_iterator_length_t cbor_det_array_iterator_match
+
 val cbor_det_array_iterator_next () : array_iterator_next_t cbor_det_match cbor_det_array_iterator_match
 
 val cbor_det_array_iterator_truncate () : array_iterator_truncate_t cbor_det_array_iterator_match

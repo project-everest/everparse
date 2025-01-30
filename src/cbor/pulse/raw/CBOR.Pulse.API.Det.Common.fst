@@ -994,6 +994,19 @@ fn cbor_det_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#0 #_
 ```
 
 ```pulse
+fn cbor_det_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbor_det_array_iterator_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_array_iterator_match p x v);
+  let res = Read.cbor_array_iterator_length x;
+  fold (cbor_det_array_iterator_match p x v);
+  res
+}
+```
+
+```pulse
 fn cbor_det_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor_det_match cbor_det_array_iterator_match
 = (x: _)
   (#y: _)
