@@ -721,13 +721,29 @@ let rec t_array_rec
   Cbor.CArray? x &&
   match_array_group (phi w (t_array_rec phi)) (Cbor.CArray?.v x)
 
+let array_group_parser_spec_refinement
+  (source: array_group None)
+  (x: list Cbor.cbor)
+: Tot prop
+= match source x with
+  | Some (_, []) -> True
+  | _ -> False
+
+let array_group_parser_spec_refinement_equiv
+  (source: array_group None)
+  (x: list Cbor.cbor)
+: Lemma
+  (ensures (array_group_parser_spec_refinement source x <==> source x == Some (x, [])))
+  [SMTPat (array_group_parser_spec_refinement source x)]
+= match source x with
+  | Some (x', []) -> List.Tot.append_l_nil x'
+  | _ -> ()
+
 let array_group_parser_spec_arg
   (source: array_group None)
 : Tot Type0
 = (x: list Cbor.cbor {
-   match source x with
-   | Some (_, []) -> True
-   | _ -> False
+    array_group_parser_spec_refinement source x
   })
 
 let array_group_parser_spec_ret
