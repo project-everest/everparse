@@ -861,6 +861,15 @@ let ag_spec_coerce_target_prop
   ag_parser_inj = ();
 }
 
+let spec_array_group_serializable
+  (#target: Type0)
+  (target_size: target -> Tot nat)
+  (target_prop: target -> bool)
+  (x: target)
+: Tot bool
+= target_prop x &&
+  target_size x < pow2 64
+
 let parser_spec_array_group
   (#source: array_group None)
   (#target: Type0)
@@ -886,16 +895,6 @@ let serializer_spec_array_group
 : Tot (serializer_spec (parser_spec_array_group p target_prop'))
 = fun x -> Cbor.pack (Cbor.CArray (s x))
 
-let spec_array_group_serializable
-  (#source: array_group None)
-  (#target: Type0)
-  (#inj: bool)
-  (p: ag_spec source target inj)
-  (x: target)
-: Tot bool
-= p.ag_serializable x &&
-  p.ag_size x < pow2 64
-
 let spec_array_group
   (#source: array_group None)
   (#target: Type0)
@@ -903,7 +902,7 @@ let spec_array_group
   (p: ag_spec source target inj)
 : Tot (spec (t_array source) target inj)
 = {
-  serializable = spec_array_group_serializable p;
+  serializable = spec_array_group_serializable p.ag_size p.ag_serializable;
   parser = parser_spec_array_group p.ag_parser _;
   serializer = serializer_spec_array_group p.ag_serializer _;
   parser_inj = ();
@@ -1118,30 +1117,22 @@ let array_group_serializer_spec_concat
     res
 
 let ag_spec_concat_size
-  (#source1: array_group None)
   (#target1: Type)
-  (#inj1: bool)
-  (p1: ag_spec source1 target1 inj1)
-  (#source2: array_group None)
+  (p1: target1 -> nat)
   (#target2: Type)
-  (#inj2: bool)
-  (p2: ag_spec source2 target2 inj2)
+  (p2: target2 -> nat)
   (x: (target1 & target2))
 : Tot nat
-= p1.ag_size (fst x) + p2.ag_size (snd x)
+= p1 (fst x) + p2 (snd x)
 
 let ag_spec_concat_serializable
-  (#source1: array_group None)
   (#target1: Type)
-  (#inj1: bool)
-  (p1: ag_spec source1 target1 inj1)
-  (#source2: array_group None)
+  (p1: target1 -> bool)
   (#target2: Type)
-  (#inj2: bool)
-  (p2: ag_spec source2 target2 inj2)
+  (p2: target2 -> bool)
   (x: (target1 & target2))
 : Tot bool
-= p1.ag_serializable (fst x) && p2.ag_serializable (snd x)
+= p1 (fst x) && p2 (snd x)
 
 let ag_spec_concat
   (#source1: array_group None)
@@ -1156,8 +1147,8 @@ let ag_spec_concat
   })
 : Tot (ag_spec (array_group_concat source1 source2) (target1 & target2) (inj1 && inj2))
 = {
-  ag_size = ag_spec_concat_size p1 p2;
-  ag_serializable = ag_spec_concat_serializable p1 p2;
+  ag_size = ag_spec_concat_size p1.ag_size p2.ag_size;
+  ag_serializable = ag_spec_concat_serializable p1.ag_serializable p2.ag_serializable;
   ag_parser = array_group_parser_spec_concat p1.ag_parser p2.ag_parser _ _;
   ag_serializer = array_group_serializer_spec_concat p1.ag_serializer p2.ag_serializer _ _;
   ag_parser_inj = ();
@@ -1501,34 +1492,26 @@ let array_group_serializer_spec_choice
   | Inr y -> s2 y
 
 let ag_spec_choice_size
-  (#source1: array_group None)
   (#target1: Type0)
-  (#inj1: bool)
-  (p1: ag_spec source1 target1 inj1)
-  (#source2: array_group None)
+  (p1: target1 -> nat)
   (#target2: Type0)
-  (#inj2: bool)
-  (p2: ag_spec source2 target2 inj2)
+  (p2: target2 -> nat)
   (x: either target1 target2)
 : Tot nat
 = match x with
-  | Inl x1 -> p1.ag_size x1
-  | Inr x2 -> p2.ag_size x2
+  | Inl x1 -> p1 x1
+  | Inr x2 -> p2 x2
 
 let ag_spec_choice_serializable
-  (#source1: array_group None)
   (#target1: Type0)
-  (#inj1: bool)
-  (p1: ag_spec source1 target1 inj1)
-  (#source2: array_group None)
+  (p1: target1 -> bool)
   (#target2: Type0)
-  (#inj2: bool)
-  (p2: ag_spec source2 target2 inj2)
+  (p2: target2 -> bool)
   (x: either target1 target2)
 : Tot bool
 = match x with
-  | Inl x1 -> p1.ag_serializable x1
-  | Inr x2 -> p2.ag_serializable x2
+  | Inl x1 -> p1 x1
+  | Inr x2 -> p2 x2
 
 let ag_spec_choice
   (#source1: array_group None)
@@ -1541,8 +1524,8 @@ let ag_spec_choice
   (p2: ag_spec source2 target2 inj2 { source1 `array_group_disjoint` source2 })
 : Tot (ag_spec (source1 `array_group_choice` source2) (either target1 target2) (inj1 && inj2))
 = {
-  ag_size = ag_spec_choice_size p1 p2;
-  ag_serializable = ag_spec_choice_serializable p1 p2;
+  ag_size = ag_spec_choice_size p1.ag_size p2.ag_size;
+  ag_serializable = ag_spec_choice_serializable p1.ag_serializable p2.ag_serializable;
   ag_parser = array_group_parser_spec_choice p1.ag_parser p2.ag_parser _ _;
   ag_serializer = array_group_serializer_spec_choice p1.ag_serializer p2.ag_serializer _ _;
   ag_parser_inj = ();
