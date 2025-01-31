@@ -1385,6 +1385,26 @@ let array_group_parser_spec_one_or_more
   List.Tot.append_length l1 l2;
   p l1 :: array_group_parser_spec_zero_or_more p target_size1 target_prop1' l2
 
+let ag_spec_one_or_more_serializable
+  (#target: Type)
+  (p: target -> bool)
+  (x: list target)
+: Tot bool
+= Cons? x &&
+  ag_spec_zero_or_more_serializable p x
+
+let array_group_parser_spec_one_or_more0
+  (#source: array_group None)
+  (#target: Type)
+  (#target_size: target -> Tot nat)
+  (#target_prop: target -> bool)
+  (p: array_group_parser_spec source target_size target_prop)
+  (sq: squash (
+    array_group_concat_unique_strong source source
+  ))
+: Tot (array_group_parser_spec (array_group_one_or_more source) (ag_spec_zero_or_more_size target_size) (ag_spec_one_or_more_serializable target_prop))
+= array_group_parser_spec_one_or_more p _ _ (ag_spec_zero_or_more_serializable target_prop)
+
 let array_group_serializer_spec_one_or_more
   (#source: nonempty_array_group)
   (#target: Type)
@@ -1411,14 +1431,6 @@ let array_group_serializer_spec_one_or_more
   let l2 = array_group_serializer_spec_zero_or_more s target_size1 target_prop1' tl in
   List.Tot.append_length l1 l2;
   l1 `List.Tot.append` l2
-
-let ag_spec_one_or_more_serializable
-  (#target: Type)
-  (p: target -> bool)
-  (x: list target)
-: Tot bool
-= Cons? x &&
-  ag_spec_zero_or_more_serializable p x
 
 let ag_spec_one_or_more_inj
   (#source: nonempty_array_group)
@@ -1447,7 +1459,7 @@ let ag_spec_one_or_more
 = {
   ag_size = ag_spec_zero_or_more_size p.ag_size;
   ag_serializable = ag_spec_one_or_more_serializable p.ag_serializable;
-  ag_parser = array_group_parser_spec_one_or_more p.ag_parser _ _ (ag_spec_zero_or_more_serializable p.ag_serializable);
+  ag_parser = array_group_parser_spec_one_or_more0 p.ag_parser ();
   ag_serializer = array_group_serializer_spec_one_or_more p.ag_serializer _ _ (ag_spec_zero_or_more_serializable p.ag_serializable);
   ag_parser_inj = Classical.forall_intro (Classical.move_requires (ag_spec_one_or_more_inj p));
 }

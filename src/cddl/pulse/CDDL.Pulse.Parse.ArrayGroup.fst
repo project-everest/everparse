@@ -91,6 +91,39 @@ fn impl_zero_copy_array
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
+fn impl_zero_copy_array_group_ext
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#g1: Ghost.erased (array_group None))
+    (#tgt: Type0)
+    (#tgt_size1: Ghost.erased (tgt -> nat))
+    (#tgt_serializable1: Ghost.erased (tgt -> bool))
+    (#ps1: Ghost.erased (array_group_parser_spec g1 tgt_size1 tgt_serializable1))
+    (#impl_tgt: Type0)
+    (#r: rel impl_tgt tgt)
+    (f1: impl_zero_copy_array_group cbor_array_iterator_match ps1 r)
+    (#g2: Ghost.erased (array_group None))
+    (#tgt_size2: Ghost.erased (tgt -> nat))
+    (#tgt_serializable2: Ghost.erased (tgt -> bool))
+    (ps2: Ghost.erased (array_group_parser_spec g2 tgt_size2 tgt_serializable2))
+    (sq: squash (
+      array_group_included g2 g1 /\
+      (forall (x: list cbor) . array_group_parser_spec_refinement g2 x ==> (
+        (Ghost.reveal ps2 x <: tgt) == (Ghost.reveal ps1 x <: tgt)
+      ))
+    ))
+: impl_zero_copy_array_group #cbor_array_iterator_t cbor_array_iterator_match #(Ghost.reveal g2) #tgt #(Ghost.reveal tgt_size2) #(Ghost.reveal tgt_serializable2) (Ghost.reveal ps2) #impl_tgt r
+=
+    (c: cbor_array_iterator_t)
+    (#p: perm)
+    (#l: Ghost.erased (list cbor))
+{
+  f1 c
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
 fn impl_zero_copy_array_group_item
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -669,3 +702,29 @@ fn impl_zero_copy_array_group_zero_or_more
   res
 }
 ```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_zero_copy_array_group_one_or_more
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (share: array_iterator_share_t cbor_array_iterator_match)
+  (gather: array_iterator_gather_t cbor_array_iterator_match)
+    (#t1: Ghost.erased (array_group None))
+    (#tgt1: Type0)
+    (#tgt_size1: Ghost.erased (tgt1 -> nat))
+    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#ps1: Ghost.erased (array_group_parser_spec t1 tgt_size1 tgt_serializable1))
+    (#impl_tgt1: Type0)
+    (#r1: rel impl_tgt1 tgt1)
+    (va1: impl_array_group cbor_array_iterator_match (Ghost.reveal t1)) // MUST be a function pointer
+    (pa1: impl_zero_copy_array_group cbor_array_iterator_match ps1 r1) // MUST be a function pointer
+    (sq: squash (
+      array_group_concat_unique_strong t1 t1 /\
+      array_group_is_nonempty t1
+    ))
+: impl_zero_copy_array_group cbor_array_iterator_match (array_group_parser_spec_one_or_more0 (Ghost.reveal ps1) ())
+  (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
+= impl_zero_copy_array_group_ext
+    (impl_zero_copy_array_group_zero_or_more share gather va1 pa1 ())
+    _
+    ()
