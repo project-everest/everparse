@@ -288,6 +288,48 @@ fn impl_zero_copy_array_group_choice
 }
 ```
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_array_group_zero_or_one
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#t1: Ghost.erased (array_group None))
+    (#tgt1: Type0)
+    (#tgt_size1: Ghost.erased (tgt1 -> nat))
+    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#ps1: Ghost.erased (array_group_parser_spec t1 tgt_size1 tgt_serializable1))
+    (#impl_tgt1: Type0)
+    (#r1: rel impl_tgt1 tgt1)
+    (pa1: impl_zero_copy_array_group cbor_array_iterator_match ps1 r1)
+    (v1: impl_array_group cbor_array_iterator_match t1)
+: impl_zero_copy_array_group #cbor_array_iterator_t cbor_array_iterator_match #(array_group_zero_or_one (Ghost.reveal t1)) #(option tgt1) #(ag_spec_zero_or_one_size (Ghost.reveal tgt_size1)) #(ag_spec_zero_or_one_serializable (Ghost.reveal tgt_serializable1)) (array_group_parser_spec_zero_or_one (Ghost.reveal ps1) (ag_spec_zero_or_one_size (Ghost.reveal tgt_size1)) (ag_spec_zero_or_one_serializable (Ghost.reveal tgt_serializable1))) #(option impl_tgt1) (rel_option r1)
+=
+  (c0: _)
+  (#p: _)
+  (#l: _)
+{
+  let mut pc = c0;
+  let test1 = v1 pc;
+  Trade.elim _ _;
+  if (test1) {
+    let w1 = pa1 c0;
+    with z1 . assert (r1 w1 z1);
+    let res : option impl_tgt1 = Some w1;
+    Trade.rewrite_with_trade (r1 w1 z1) (rel_option r1 res (Some z1));
+    Trade.trans _ (r1 w1 z1) _;
+    res
+  } else {
+    let res : option impl_tgt1 = None #impl_tgt1;
+    emp_unit (cbor_array_iterator_match p c0 l);
+    Trade.rewrite_with_trade
+      (cbor_array_iterator_match p c0 l)
+      (rel_option r1 res None ** cbor_array_iterator_match p c0 l);
+    Trade.elim_hyp_r _ _ _;
+    res
+  }
+}
+```
+
 noeq
 type array_iterator_t (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0)
   (spec: Ghost.erased (src_elt: Type0 & rel impl_elt src_elt)) // hopefully there should be at most one spec per impl_elt, otherwise Karamel monomorphization will introduce conflicts. Anyway, src_elt MUST NOT be extracted (it contains list types, etc.)
