@@ -3003,6 +3003,10 @@ and spec_of_wf_array_group_incr
     spec_of_wf_array_group env wf == spec_of_wf_array_group env' wf
   ))
   (decreases wf)
+  [SMTPatOr [
+    [SMTPat (spec_env_included env env'); SMTPat (spec_of_wf_array_group env wf)];
+    [SMTPat (spec_env_included env env'); SMTPat (spec_of_wf_array_group env' wf)];
+  ]]
 = match wf with
   | WfAElem _ _ _ s ->
     spec_of_wf_typ_incr env env' s

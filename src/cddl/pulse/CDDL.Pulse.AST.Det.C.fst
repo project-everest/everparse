@@ -18,7 +18,11 @@ let cbor_det_impl : cbor_impl cbor_det_match cbor_det_map_entry_match cbor_det_a
   cbor_det_parse = cbor_det_parse_full (); // TODO: support mixtures where non-deterministic CBOR objects contain .det-cbor deterministically serialized CBOR objects
   cbor_array_iterator_init = cbor_det_array_iterator_start ();
   cbor_array_iterator_is_done = cbor_det_array_iterator_is_empty ();
+  cbor_array_iterator_length = cbor_det_array_iterator_length ();
   cbor_array_iterator_next = cbor_det_array_iterator_next ();
+  cbor_array_iterator_truncate = cbor_det_array_iterator_truncate ();
+  cbor_array_iterator_share = cbor_det_array_iterator_share ();
+  cbor_array_iterator_gather = cbor_det_array_iterator_gather ();
   cbor_get_map_length = cbor_det_get_map_length ();
   cbor_map_get = cbor_det_map_get_gen ();
   cbor_mk_int64 = cbor_det_mk_int64 ();

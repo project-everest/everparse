@@ -30,7 +30,11 @@ type cbor_impl
   cbor_det_parse: cbor_det_parse_t vmatch; // TODO: support mixtures where non-deterministic CBOR objects contain .det-cbor deterministically serialized CBOR objects
   cbor_array_iterator_init: array_iterator_start_t vmatch cbor_array_iterator_match;
   cbor_array_iterator_is_done: array_iterator_is_empty_t cbor_array_iterator_match;
+  cbor_array_iterator_length: array_iterator_length_t cbor_array_iterator_match;
   cbor_array_iterator_next: array_iterator_next_t vmatch cbor_array_iterator_match;
+  cbor_array_iterator_truncate: array_iterator_truncate_t cbor_array_iterator_match;
+  cbor_array_iterator_share: array_iterator_share_t cbor_array_iterator_match;
+  cbor_array_iterator_gather: array_iterator_gather_t cbor_array_iterator_match;
   cbor_get_map_length: get_map_length_t vmatch;
   cbor_map_get: map_get_t vmatch;
   cbor_mk_int64: mk_int64_t vmatch;

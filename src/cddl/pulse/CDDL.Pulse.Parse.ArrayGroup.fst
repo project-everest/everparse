@@ -694,7 +694,7 @@ fn cddl_array_iterator_next
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
-fn impl_zero_copy_array_group_zero_or_more
+fn impl_zero_copy_array_group_zero_or_more'
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   (share: array_iterator_share_t cbor_array_iterator_match)
@@ -746,6 +746,44 @@ fn impl_zero_copy_array_group_zero_or_more
 ```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_array_group_zero_or_more
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (share: array_iterator_share_t cbor_array_iterator_match)
+  (gather: array_iterator_gather_t cbor_array_iterator_match)
+    (#t1: Ghost.erased (array_group None))
+    (#tgt1: Type0)
+    (#tgt_size1: Ghost.erased (tgt1 -> nat))
+    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#ps1: Ghost.erased (array_group_parser_spec t1 tgt_size1 tgt_serializable1))
+    (#impl_tgt1: Type0)
+    (#r1: rel impl_tgt1 tgt1)
+    (va1: impl_array_group cbor_array_iterator_match (Ghost.reveal t1)) // MUST be a function pointer
+    (pa1: impl_zero_copy_array_group cbor_array_iterator_match ps1 r1) // MUST be a function pointer
+    (sq: squash (
+      array_group_concat_unique_strong t1 t1
+    ))
+: impl_zero_copy_array_group #cbor_array_iterator_t cbor_array_iterator_match #(array_group_zero_or_more (Ghost.reveal t1)) #(list tgt1) #(ag_spec_zero_or_more_size (Ghost.reveal tgt_size1)) #(ag_spec_zero_or_more_serializable (Ghost.reveal tgt_serializable1)) 
+  (array_group_parser_spec_zero_or_more0 (Ghost.reveal ps1) ())
+  #(either (vec_or_slice impl_tgt1) (array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1))) (rel_either_left (rel_vec_or_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)))
+=
+  (c: _)
+  (#p: _)
+  (#l: _)
+{
+  let i = impl_zero_copy_array_group_zero_or_more' share gather va1 pa1 sq c;
+  with v . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) i v);
+  let res : either (vec_or_slice impl_tgt1) (array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1)) = Inr i;
+  Trade.rewrite_with_trade
+    (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) i v)
+    (rel_either_left (rel_vec_or_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)) res v);
+  Trade.trans _ _ (cbor_array_iterator_match p c l);
+  res
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_zero_copy_array_group_one_or_more
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
@@ -765,7 +803,7 @@ let impl_zero_copy_array_group_one_or_more
       array_group_is_nonempty t1
     ))
 : impl_zero_copy_array_group cbor_array_iterator_match (array_group_parser_spec_one_or_more0 (Ghost.reveal ps1) ())
-  (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
+  (rel_either_left (rel_vec_or_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)))
 = impl_zero_copy_array_group_ext
     (impl_zero_copy_array_group_zero_or_more share gather va1 pa1 ())
     _
