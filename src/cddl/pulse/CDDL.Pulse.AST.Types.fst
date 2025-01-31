@@ -103,7 +103,7 @@ let rec impl_type_sem
       sem_rel =
         rel_either_left
           (rel_slice_of_list it.sem_rel false)
-          (rel_array_iterator cbor_array_iterator_match it.sem_rel)
+          (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec it.sem_rel))
           ;
     }
   | TTTable t1 t2 ->
