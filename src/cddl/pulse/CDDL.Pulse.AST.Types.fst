@@ -1,5 +1,5 @@
 module CDDL.Pulse.AST.Types
-include CDDL.Pulse.Iterator.Array
+include CDDL.Pulse.Parse.ArrayGroup
 include CDDL.Spec.AST.Base
 open Pulse.Lib.Pervasives
 open Pulse.Lib.SeqMatch
@@ -12,6 +12,7 @@ module U64 = FStar.UInt64
 module I64 = FStar.Int64
 module V = Pulse.Lib.Vec
 module Trade = Pulse.Lib.Trade
+module Iterator = CDDL.Pulse.Iterator.Base
 
 (* Zero-copy parsing only. (Thus, for serialization, it is the responsibility of the user to build values with the right lifetimes before calling the serializer.) *)
 
@@ -97,12 +98,12 @@ let rec impl_type_sem
       sem_impl_type =
         either
           (slice it.sem_impl_type)
-          (array_iterator_t vmatch cbor_array_iterator_t it.sem_impl_type (mk_spec it.sem_rel)) // HERE the relation on the element types is used in the implementation array type
+          (array_iterator_t cbor_array_iterator_match it.sem_impl_type (Iterator.mk_spec it.sem_rel)) // HERE the relation on the element types is used in the implementation array type
           ;
       sem_rel =
         rel_either_left
           (rel_slice_of_list it.sem_rel false)
-          (rel_array_iterator vmatch cbor_array_iterator_match it.sem_rel)
+          (rel_array_iterator cbor_array_iterator_match it.sem_rel)
           ;
     }
   | TTTable t1 t2 ->

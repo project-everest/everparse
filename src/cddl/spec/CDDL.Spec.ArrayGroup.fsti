@@ -1283,38 +1283,32 @@ let array_group_serializer_spec_zero_or_more
 = array_group_serializer_spec_zero_or_more' s target_size' target_prop'
 
 let rec ag_spec_zero_or_more_size
-  (#source: array_group None)
   (#target: Type)
-  (#inj: bool)
-  (p: ag_spec source target inj)
+  (p: target -> nat)
   (l: list target)
 : Tot nat
   (decreases l)
 = match l with
   | [] -> 0
-  | hd :: tl -> p.ag_size hd + ag_spec_zero_or_more_size p tl
+  | hd :: tl -> p hd + ag_spec_zero_or_more_size p tl
 
 let ag_spec_zero_or_more_serializable
-  (#source: array_group None)
   (#target: Type)
-  (#inj: bool)
-  (p: ag_spec source target inj)
+  (p: target -> bool)
   (x: list target)
 : Tot bool
-= List.Tot.for_all p.ag_serializable x
+= List.Tot.for_all p x
 
 let ag_spec_zero_or_more_serializable_equiv
-  (#source: array_group None)
   (#target: Type)
-  (#inj: bool)
-  (p: ag_spec source target inj)
+  (p: target -> bool)
   (x: list target)
 : Lemma
   (ensures (ag_spec_zero_or_more_serializable p x <==>
-    (forall y . List.Tot.memP y x ==> p.ag_serializable y)
+    (forall y . List.Tot.memP y x ==> p y)
   ))
   [SMTPat (ag_spec_zero_or_more_serializable p x)]
-= List.Tot.for_all_mem p.ag_serializable x
+= List.Tot.for_all_mem p x
 
 let rec ag_spec_zero_or_more_inj
   (#source: nonempty_array_group)
@@ -1326,7 +1320,7 @@ let rec ag_spec_zero_or_more_inj
   (c: array_group_parser_spec_arg (array_group_zero_or_more source))
 : Lemma
   (requires inj)
-  (ensures (array_group_serializer_spec_zero_or_more p.ag_serializer (ag_spec_zero_or_more_size p) (ag_spec_zero_or_more_serializable p) (array_group_parser_spec_zero_or_more p.ag_parser (ag_spec_zero_or_more_size p) (ag_spec_zero_or_more_serializable p) c) == c))
+  (ensures (array_group_serializer_spec_zero_or_more p.ag_serializer (ag_spec_zero_or_more_size p.ag_size) (ag_spec_zero_or_more_serializable p.ag_serializable) (array_group_parser_spec_zero_or_more p.ag_parser (ag_spec_zero_or_more_size p.ag_size) (ag_spec_zero_or_more_serializable p.ag_serializable) c) == c))
   (decreases (List.Tot.length c))
 = match source c with
   | None -> ()
@@ -1339,6 +1333,18 @@ let rec ag_spec_zero_or_more_inj
       ag_spec_zero_or_more_inj p l2
     end
 
+let array_group_parser_spec_zero_or_more0
+  (#source: array_group None)
+  (#target: Type)
+  (#target_size: target -> Tot nat)
+  (#target_prop: target -> bool)
+  (p: array_group_parser_spec source target_size target_prop)
+  (sq: squash (
+    array_group_concat_unique_strong source source
+  ))
+: Tot (array_group_parser_spec (array_group_zero_or_more source) (ag_spec_zero_or_more_size target_size) (ag_spec_zero_or_more_serializable target_prop))
+= array_group_parser_spec_zero_or_more p _ _
+
 let ag_spec_zero_or_more
   (#source: nonempty_array_group)
   (#target: Type)
@@ -1348,9 +1354,9 @@ let ag_spec_zero_or_more
   })
 : Tot (ag_spec (array_group_zero_or_more source) (list target) inj)
 = {
-  ag_size = ag_spec_zero_or_more_size p;
-  ag_serializable = ag_spec_zero_or_more_serializable p;
-  ag_parser = array_group_parser_spec_zero_or_more p.ag_parser _ _;
+  ag_size = ag_spec_zero_or_more_size p.ag_size;
+  ag_serializable = ag_spec_zero_or_more_serializable p.ag_serializable;
+  ag_parser = array_group_parser_spec_zero_or_more0 p.ag_parser ();
   ag_serializer = array_group_serializer_spec_zero_or_more p.ag_serializer _ _;
   ag_parser_inj = Classical.forall_intro (Classical.move_requires (ag_spec_zero_or_more_inj p));
 }
@@ -1407,10 +1413,8 @@ let array_group_serializer_spec_one_or_more
   l1 `List.Tot.append` l2
 
 let ag_spec_one_or_more_serializable
-  (#source: array_group None)
   (#target: Type)
-  (#inj: bool)
-  (p: ag_spec source target inj)
+  (p: target -> bool)
   (x: list target)
 : Tot bool
 = Cons? x &&
@@ -1426,11 +1430,11 @@ let ag_spec_one_or_more_inj
   (c: array_group_parser_spec_arg (array_group_one_or_more source))
 : Lemma
   (requires inj)
-  (ensures (array_group_serializer_spec_one_or_more p.ag_serializer (ag_spec_zero_or_more_size p) (ag_spec_one_or_more_serializable p) (ag_spec_zero_or_more_serializable p) (array_group_parser_spec_one_or_more p.ag_parser (ag_spec_zero_or_more_size p) (ag_spec_one_or_more_serializable p) (ag_spec_zero_or_more_serializable p) c) == c))
+  (ensures (array_group_serializer_spec_one_or_more p.ag_serializer (ag_spec_zero_or_more_size p.ag_size) (ag_spec_one_or_more_serializable p.ag_serializable) (ag_spec_zero_or_more_serializable p.ag_serializable) (array_group_parser_spec_one_or_more p.ag_parser (ag_spec_zero_or_more_size p.ag_size) (ag_spec_one_or_more_serializable p.ag_serializable) (ag_spec_zero_or_more_serializable p.ag_serializable) c) == c))
 = Classical.forall_intro (Classical.move_requires (ag_spec_zero_or_more_inj p));
   array_group_concat_unique_weak_zero_or_more_right source source;
   let (x1, x2) = (ag_spec_concat p (ag_spec_zero_or_more p)).ag_parser c in
-  assert (array_group_parser_spec_one_or_more p.ag_parser (ag_spec_zero_or_more_size p) (ag_spec_one_or_more_serializable p) (ag_spec_zero_or_more_serializable p) c == x1 :: x2)
+  assert (array_group_parser_spec_one_or_more p.ag_parser (ag_spec_zero_or_more_size p.ag_size) (ag_spec_one_or_more_serializable p.ag_serializable) (ag_spec_zero_or_more_serializable p.ag_serializable) c == x1 :: x2)
 
 let ag_spec_one_or_more
   (#source: nonempty_array_group)
@@ -1441,10 +1445,10 @@ let ag_spec_one_or_more
   })
 : Tot (ag_spec (array_group_one_or_more source) (list target) inj)
 = {
-  ag_size = ag_spec_zero_or_more_size p;
-  ag_serializable = ag_spec_one_or_more_serializable p;
-  ag_parser = array_group_parser_spec_one_or_more p.ag_parser _ _ (ag_spec_zero_or_more_serializable p);
-  ag_serializer = array_group_serializer_spec_one_or_more p.ag_serializer _ _ (ag_spec_zero_or_more_serializable p);
+  ag_size = ag_spec_zero_or_more_size p.ag_size;
+  ag_serializable = ag_spec_one_or_more_serializable p.ag_serializable;
+  ag_parser = array_group_parser_spec_one_or_more p.ag_parser _ _ (ag_spec_zero_or_more_serializable p.ag_serializable);
+  ag_serializer = array_group_serializer_spec_one_or_more p.ag_serializer _ _ (ag_spec_zero_or_more_serializable p.ag_serializable);
   ag_parser_inj = Classical.forall_intro (Classical.move_requires (ag_spec_one_or_more_inj p));
 }
 
@@ -1597,26 +1601,22 @@ let array_group_serializer_spec_zero_or_one
     | Some y -> s y
 
 let ag_spec_zero_or_one_size
-  (#source: nonempty_array_group)
   (#target: Type)
-  (#inj: bool)
-  (p: ag_spec source target inj)
+  (p: target -> nat)
   (x: option target)
 : Tot nat
 = match x with
   | None -> 0
-  | Some x' -> p.ag_size x'
+  | Some x' -> p x'
 
 let ag_spec_zero_or_one_serializable
-  (#source: nonempty_array_group)
   (#target: Type)
-  (#inj: bool)
-  (p: ag_spec source target inj)
+  (p: target -> bool)
   (x: option target)
 : Tot bool
 = match x with
   | None -> true
-  | Some x' -> p.ag_serializable x'
+  | Some x' -> p x'
 
 let ag_spec_zero_or_one
   (#source: nonempty_array_group)
@@ -1625,8 +1625,8 @@ let ag_spec_zero_or_one
   (p: ag_spec source target inj)
 : Tot (ag_spec (array_group_zero_or_one source) (option target) inj)
 = {
-  ag_size = ag_spec_zero_or_one_size p;
-  ag_serializable = ag_spec_zero_or_one_serializable p;
+  ag_size = ag_spec_zero_or_one_size p.ag_size;
+  ag_serializable = ag_spec_zero_or_one_serializable p.ag_serializable;
   ag_parser = array_group_parser_spec_zero_or_one p.ag_parser _ _;
   ag_serializer = array_group_serializer_spec_zero_or_one p.ag_serializer _ _;
   ag_parser_inj = ();

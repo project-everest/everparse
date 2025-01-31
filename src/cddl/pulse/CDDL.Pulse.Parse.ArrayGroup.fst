@@ -266,3 +266,231 @@ fn impl_zero_copy_array_group_choice
   }
 }
 ```
+
+noeq
+type array_iterator_t (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0)
+  (spec: Ghost.erased (src_elt: Type0 & rel impl_elt src_elt)) // hopefully there should be at most one spec per impl_elt, otherwise Karamel monomorphization will introduce conflicts. Anyway, src_elt MUST NOT be extracted (it contains list types, etc.)
+: Type0 = {
+  cddl_array_iterator_contents: cbor_array_iterator_t;
+  pm: perm;
+  ty: Ghost.erased (array_group None);
+  sz: Ghost.erased (dfst spec -> nat);
+  ser: Ghost.erased (dfst spec -> bool);
+  ps: Ghost.erased (array_group_parser_spec ty sz ser);
+  cddl_array_iterator_impl_parse: impl_zero_copy_array_group cbor_array_iterator_match ps (dsnd spec);
+}
+
+module Iterator = CDDL.Pulse.Iterator.Base
+
+inline_for_extraction
+let mk_array_iterator
+  (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
+  (#src_elt: Type0)
+  (#r: rel impl_elt src_elt)
+  (contents: cbor_array_iterator_t)
+  (pm: perm)
+  (#ty: Ghost.erased (array_group None))
+  (#sz: Ghost.erased (src_elt -> nat))
+  (#ser: Ghost.erased (src_elt -> bool))
+  (#ps: Ghost.erased (array_group_parser_spec ty sz ser))
+  (pa: impl_zero_copy_array_group cbor_array_iterator_match ps r)
+: Tot (array_iterator_t cbor_array_iterator_match impl_elt (Iterator.mk_spec r))
+= {
+  cddl_array_iterator_contents = contents;
+  pm = pm;
+  ty = ty;
+  sz = sz;
+  ser = ser;
+  ps = ps;
+  cddl_array_iterator_impl_parse = pa;
+}
+
+let mk_array_iterator_eq
+  (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
+  (#src_elt: Type0)
+  (#r: rel impl_elt src_elt)
+  (contents: cbor_array_iterator_t)
+  (pm: perm)
+  (#ty: Ghost.erased (array_group None))
+  (#sz: Ghost.erased (src_elt -> nat))
+  (#ser: Ghost.erased (src_elt -> bool))
+  (#ps: Ghost.erased (array_group_parser_spec ty sz ser))
+  (pa: impl_zero_copy_array_group cbor_array_iterator_match ps r)
+: Lemma
+  (ensures (let res = mk_array_iterator contents pm pa in
+    res.cddl_array_iterator_contents == contents /\
+    res.pm == pm /\
+    res.ty == ty /\
+    res.sz == sz /\
+    res.ser == ser /\
+    array_group_parser_spec ty sz ser == array_group_parser_spec res.ty res.sz res.ser /\
+    res.ps == coerce_eq () ps /\
+    Ghost.reveal res.ps == coerce_eq () (Ghost.reveal ps)
+  ))
+  [SMTPat (mk_array_iterator contents pm pa)]
+= let res = mk_array_iterator contents pm pa in
+  assert_norm (array_group_parser_spec ty sz ser == array_group_parser_spec res.ty res.sz res.ser);
+  assert_norm (res.ps == coerce_eq () ps)
+
+let array_group_parser_spec_zero_or_more0_mk_array_iterator_eq'
+  (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
+  (#src_elt: Type0)
+  (#r: rel impl_elt src_elt)
+  (contents: cbor_array_iterator_t)
+  (pm: perm)
+  (#ty: Ghost.erased (array_group None))
+  (#sz: Ghost.erased (src_elt -> nat))
+  (#ser: Ghost.erased (src_elt -> bool))
+  (#ps: Ghost.erased (array_group_parser_spec ty sz ser))
+  (pa: impl_zero_copy_array_group cbor_array_iterator_match ps r)
+  (sq: squash (
+    array_group_concat_unique_strong (Ghost.reveal ty) (Ghost.reveal ty)
+  ))
+: Tot (squash (
+    array_group_parser_spec_zero_or_more0 (Ghost.reveal (mk_array_iterator contents pm pa).ps) () == array_group_parser_spec_zero_or_more0 (Ghost.reveal ps) ()
+  ))
+= _ by (FStar.Tactics.trefl ()) // FIXME: WHY WHY WHY tactics? assert_norm does not work
+
+#push-options "--print_implicits"
+
+let array_group_parser_spec_zero_or_more0_mk_array_iterator_eq
+  (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
+  (#src_elt: Type0)
+  (#r: rel impl_elt src_elt)
+  (contents: cbor_array_iterator_t)
+  (pm: perm)
+  (#ty: Ghost.erased (array_group None))
+  (#sz: Ghost.erased (src_elt -> nat))
+  (#ser: Ghost.erased (src_elt -> bool))
+  (#ps: Ghost.erased (array_group_parser_spec ty sz ser))
+  (pa: impl_zero_copy_array_group cbor_array_iterator_match ps r)
+  (sq: squash (
+    array_group_concat_unique_strong (Ghost.reveal ty) (Ghost.reveal ty)
+  ))
+: Lemma
+  (let res = mk_array_iterator contents pm pa in
+    array_group_parser_spec ty sz ser == array_group_parser_spec res.ty res.sz res.ser /\
+    array_group_parser_spec (array_group_zero_or_more ty) (ag_spec_zero_or_more_size sz) (ag_spec_zero_or_more_serializable ser) ==
+      array_group_parser_spec (array_group_zero_or_more res.ty) (ag_spec_zero_or_more_size res.sz) (ag_spec_zero_or_more_serializable res.ser) /\
+    array_group_parser_spec_zero_or_more0 (Ghost.reveal res.ps) () == coerce_eq () (array_group_parser_spec_zero_or_more0 (Ghost.reveal ps) ())
+  )
+= 
+  let _ : squash (
+    let res = mk_array_iterator contents pm pa in
+    array_group_parser_spec (array_group_zero_or_more ty) (ag_spec_zero_or_more_size sz) (ag_spec_zero_or_more_serializable ser) ==
+      array_group_parser_spec (array_group_zero_or_more res.ty) (ag_spec_zero_or_more_size res.sz) (ag_spec_zero_or_more_serializable res.ser) 
+  ) = _ by (
+    FStar.Tactics.norm
+      [
+        delta_only [
+          (`%(Iterator.mk_spec));
+          (`%mk_array_iterator);
+          (`%dfst);
+          (`%Mkdtuple2?._1);
+          (`%Mkdtuple2?._2);
+          (`%Mkarray_iterator_t?.ty);
+          (`%Mkarray_iterator_t?.sz);
+          (`%Mkarray_iterator_t?.ser);
+        ];
+        zeta; iota; primops
+      ];
+    FStar.Tactics.trefl ())
+  in
+  array_group_parser_spec_zero_or_more0_mk_array_iterator_eq' contents pm pa sq
+
+let array_group_parser_spec_zero_or_more0_mk_array_iterator_eq_f
+  (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
+  (#src_elt: Type0)
+  (#r: rel impl_elt src_elt)
+  (contents: cbor_array_iterator_t)
+  (pm: perm)
+  (#ty: Ghost.erased (array_group None))
+  (#sz: Ghost.erased (src_elt -> nat))
+  (#ser: Ghost.erased (src_elt -> bool))
+  (#ps: Ghost.erased (array_group_parser_spec ty sz ser))
+  (pa: impl_zero_copy_array_group cbor_array_iterator_match ps r)
+  (sq: squash (
+    array_group_concat_unique_strong (Ghost.reveal ty) (Ghost.reveal ty)
+  ))
+  (l: array_group_parser_spec_arg (array_group_zero_or_more ty))
+: Lemma
+  (let res = mk_array_iterator contents pm pa in
+    array_group_parser_spec ty sz ser == array_group_parser_spec res.ty res.sz res.ser /\
+    array_group_parser_spec (array_group_zero_or_more ty) (ag_spec_zero_or_more_size sz) (ag_spec_zero_or_more_serializable ser) ==
+      array_group_parser_spec (array_group_zero_or_more res.ty) (ag_spec_zero_or_more_size res.sz) (ag_spec_zero_or_more_serializable res.ser) /\
+    (array_group_parser_spec_zero_or_more0 (Ghost.reveal res.ps) () l <: list src_elt) == (array_group_parser_spec_zero_or_more0 (Ghost.reveal ps) () l <: list src_elt)
+  )
+= array_group_parser_spec_zero_or_more0_mk_array_iterator_eq contents pm pa sq
+
+let rel_array_iterator_cond
+  (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0) (#src_elt: Type0) (r: rel impl_elt src_elt)
+  (i: array_iterator_t cbor_array_iterator_match impl_elt (Iterator.mk_spec r))
+  (s: list src_elt)
+  (l: list cbor)
+: Tot prop
+=
+      array_group_zero_or_more i.ty l == Some (l, []) /\
+      array_group_concat_unique_strong i.ty i.ty /\
+      array_group_parser_spec_zero_or_more0 i.ps () l == (s <: list src_elt)
+
+let rel_array_iterator
+  (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0) (#src_elt: Type0) (r: rel impl_elt src_elt) :
+    rel (array_iterator_t cbor_array_iterator_match impl_elt (Iterator.mk_spec r)) (list src_elt)
+= mk_rel (fun i s -> exists* (l: list cbor) . cbor_array_iterator_match i.pm i.cddl_array_iterator_contents l **
+    pure (rel_array_iterator_cond cbor_array_iterator_match r i s l)
+  )
+
+#restart-solver
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_array_group_zero_or_more
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (share: array_iterator_share_t cbor_array_iterator_match)
+  (gather: array_iterator_gather_t cbor_array_iterator_match)
+    (#t1: Ghost.erased (array_group None))
+    (#tgt1: Type0)
+    (#tgt_size1: Ghost.erased (tgt1 -> nat))
+    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#ps1: Ghost.erased (array_group_parser_spec t1 tgt_size1 tgt_serializable1))
+    (#impl_tgt1: Type0)
+    (#r1: rel impl_tgt1 tgt1)
+    (pa1: impl_zero_copy_array_group cbor_array_iterator_match ps1 r1) // MUST be a function pointer
+    (sq: squash (
+      array_group_concat_unique_strong t1 t1
+    ))
+: impl_zero_copy_array_group #cbor_array_iterator_t cbor_array_iterator_match #(array_group_zero_or_more (Ghost.reveal t1)) #(list tgt1) #(ag_spec_zero_or_more_size (Ghost.reveal tgt_size1)) #(ag_spec_zero_or_more_serializable (Ghost.reveal tgt_serializable1)) 
+  (array_group_parser_spec_zero_or_more0 (Ghost.reveal ps1) ())
+  #(array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match r1)
+=
+  (pc: _)
+  (#gc: _)
+  (#p: _)
+  (#l: _)
+{
+  share gc;
+  let c = !pc;
+  let res : array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1) =
+    mk_array_iterator c (p /. 2.0R) pa1;
+  let v : (v: Ghost.erased (list tgt1) { Ghost.reveal v == (array_group_parser_spec_zero_or_more0 (Ghost.reveal res.ps) () l <: list tgt1) })  = Ghost.hide (array_group_parser_spec_zero_or_more0 (Ghost.reveal res.ps) () l <: list tgt1); // FIXME: WHY WHY WHY do I need this refinement annotation?
+  array_group_parser_spec_zero_or_more0_mk_array_iterator_eq_f c (p /. 2.0R) pa1 () l;
+  rewrite (cbor_array_iterator_match (p /. 2.0R) gc l)
+    as (cbor_array_iterator_match res.pm res.cddl_array_iterator_contents l);
+  fold (rel_array_iterator cbor_array_iterator_match r1 res (Ghost.reveal v));
+  ghost fn aux (_: unit)
+  requires cbor_array_iterator_match (p /. 2.0R) gc l ** rel_array_iterator cbor_array_iterator_match r1 res (Ghost.reveal v)
+  ensures cbor_array_iterator_match p gc l
+  {
+    unfold (rel_array_iterator cbor_array_iterator_match r1 res (Ghost.reveal v));
+    with (l1: list cbor) . assert (cbor_array_iterator_match res.pm res.cddl_array_iterator_contents l1);
+    rewrite (cbor_array_iterator_match res.pm res.cddl_array_iterator_contents l1)
+      as (cbor_array_iterator_match (p /. 2.0R) gc l1);
+    gather gc #(p /. 2.0R) #l #(p /. 2.0R) #l1;
+    rewrite (cbor_array_iterator_match (p /. 2.0R +. p /. 2.0R) gc l) // FIXME: WHY WHY WHY is `rewrite` always needed when head symbol is a variable
+      as (cbor_array_iterator_match p gc l)
+  };
+  Trade.intro _ _ _ aux;
+  res
+}
+```
