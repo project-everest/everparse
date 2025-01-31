@@ -2523,105 +2523,6 @@ let pair (k: pair_kind) (t1 t2: Type0) : Pure Type0
   | PEraseRight -> t1
   | _ -> t1 & t2
 
-let ttpair (t1 t2: target_type) : target_type = match t1, t2 with
-| TTElem TTUnit, _ -> t2
-| _, TTElem TTUnit -> t1
-| _ -> TTPair t1 t2
-
-let ttpair_kind (t1 t2: target_type) : pair_kind = match t1, t2 with
-| TTElem TTUnit, _ -> PEraseLeft
-| _, TTElem TTUnit -> PEraseRight
-| _ -> PKeep
-
-#restart-solver
-noextract
-let destruct_pair
-  (k: pair_kind)
-  (t1: Type0)
-  (t2: Type0 {
-    pair_kind_wf k t1 t2
-  })
-  (x: pair k t1 t2)
-: Tot (t1 & t2)
-= match k with
-  | PEraseLeft -> ((), x)
-  | PEraseRight -> (x, ())
-  | _ -> x
-
-noextract
-let construct_pair
-  (k: pair_kind)
-  (t1: Type0)
-  (t2: Type0 {
-    pair_kind_wf k t1 t2
-  })
-  (x: (t1 & t2))
-: Tot (pair k t1 t2)
-= match k with
-  | PEraseLeft -> snd x
-  | PEraseRight -> fst x
-  | _ -> x
-
-let pair_bij
-  (k: pair_kind)
-  (t1: Type0)
-  (t2: Type0 { pair_kind_wf k t1 t2 })
-: GTot (Spec.bijection (t1 & t2) (pair k t1 t2))
-= Spec.Mkbijection
-    (construct_pair k t1 t2)
-    (destruct_pair k t1 t2)
-    ()
-    ()
-
-let target_type_sem_ttpair
-  (#bound: name_env)
-  (env: target_spec_env bound)
-  (t1 t2: (t: target_type { target_type_bounded bound t }))
-: Lemma
-  (pair_kind_wf (ttpair_kind t1 t2) (target_type_sem env t1) (target_type_sem env t2) /\
-    target_type_sem env (t1 `ttpair` t2) == pair (ttpair_kind t1 t2) (target_type_sem env t1) (target_type_sem env t2)
-  )
-  [SMTPat (target_type_sem env (t1 `ttpair` t2))]
-= ()
-
-#restart-solver
-noextract
-let destruct_ttpair
-  (#bound: name_env)
-  (env: target_spec_env bound)
-  (t1 t2: (t: target_type { target_type_bounded bound t }))
-  (x: target_type_sem env (t1 `ttpair` t2))
-: Tot (target_type_sem env t1 & target_type_sem env t2)
-= match t1, t2 with
-  | TTElem TTUnit, _ -> (coerce_eq () (), x)
-  | _, TTElem TTUnit -> (x, coerce_eq () ())
-  | _ -> assert (target_type_sem env (t1 `ttpair` t2) == target_type_sem env t1 & target_type_sem env t2);
-      coerce_eq () x
-
-noextract
-let ttpair_fst
-  (bound: name_env)
-  (env: target_spec_env bound)
-  (t1 t2: (t: target_type { target_type_bounded bound t }))
-  (x: target_type_sem env (t1 `ttpair` t2))
-: Tot (target_type_sem env t1)
-= match t1, t2 with
-  | TTElem TTUnit, _ -> coerce_eq () ()
-  | _, TTElem TTUnit -> x
-  | _ -> fst #(target_type_sem env t1) #(target_type_sem env t2) (coerce_eq () x)
-
-noextract
-let construct_ttpair
-  (bound: name_env)
-  (env: target_spec_env bound)
-  (t1 t2: (t: target_type { target_type_bounded bound t }))
-  (x: target_type_sem env t1 & target_type_sem env t2)
-: Tot (target_type_sem env (t1 `ttpair` t2))
-= match t1, t2 with
-  | TTElem TTUnit, _ -> snd x
-  | _, TTElem TTUnit -> fst x
-  | _ -> coerce_eq () x
-
 let target_type_of_elem_typ
   (x: elem_typ)
 : Tot target_elem_type
@@ -2668,7 +2569,7 @@ and target_type_of_wf_array_group
   | WfAZeroOrOneOrMore _ s g' ->
     let t' = target_type_of_wf_array_group s in
     TTArray t'
-  | WfAConcat _ _ s1 s2 -> ttpair (target_type_of_wf_array_group s1) (target_type_of_wf_array_group s2)
+  | WfAConcat _ _ s1 s2 -> TTPair (target_type_of_wf_array_group s1) (target_type_of_wf_array_group s2)
   | WfAChoice _ _ s1 s2 -> TTUnion (target_type_of_wf_array_group s1) (target_type_of_wf_array_group s2)
   | WfARewrite _ _ s2 -> target_type_of_wf_array_group s2
 (*  
@@ -2682,7 +2583,7 @@ and target_type_of_wf_map_group
   (decreases wf)
 = match wf with
   | WfMChoice _ s1 _ s2 -> TTUnion (target_type_of_wf_map_group s1) (target_type_of_wf_map_group s2)
-  | WfMConcat _ s1 _ s2 -> ttpair (target_type_of_wf_map_group s1) (target_type_of_wf_map_group s2)
+  | WfMConcat _ s1 _ s2 -> TTPair (target_type_of_wf_map_group s1) (target_type_of_wf_map_group s2)
   | WfMZeroOrOne _ s -> TTOption (target_type_of_wf_map_group s)
   | WfMLiteral _ _ _ s -> target_type_of_wf_typ s
   | WfMZeroOrMore _ _ _ s_key _ s_value -> TTTable (target_type_of_wf_typ s_key) (target_type_of_wf_typ s_value)
@@ -2987,12 +2888,10 @@ and spec_of_wf_array_group
   | WfAConcat g1 g2 s1 s2 ->
     let t1 = target_type_of_wf_array_group s1 in
     let t2 = target_type_of_wf_array_group s2 in
-    Spec.ag_spec_bij
       (Spec.ag_spec_concat
         (spec_of_wf_array_group env s1)
         (spec_of_wf_array_group env s2)
       )
-      (pair_bij (ttpair_kind t1 t2) (target_type_sem tp_tgt t1) (target_type_sem tp_tgt t2))
   | WfAChoice g1 g2 s1 s2 ->
     Spec.ag_spec_close_elim
       (Spec.ag_spec_ext
@@ -3030,12 +2929,10 @@ and spec_of_wf_map_group
   | WfMConcat _ s1 _ s2 ->
     let t1 = target_type_of_wf_map_group s1 in
     let t2 = target_type_of_wf_map_group s2 in
-    Spec.mg_spec_bij
       (Spec.mg_spec_concat
         (spec_of_wf_map_group env s1)
         (spec_of_wf_map_group env s2)
       )
-      (pair_bij (ttpair_kind t1 t2) (target_type_sem tp_tgt t1) (target_type_sem tp_tgt t2))
   | WfMLiteral cut key value s ->
     Spec.mg_spec_match_item_for
       cut
