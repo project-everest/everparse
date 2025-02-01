@@ -21,12 +21,13 @@ let impl_map_group_pre
   (f: typ)
   (v: cbor)
   (m1 m2: cbor_map)
+  (count: bool)
   (i: U64.t)
 : Tot prop
 = map_group_footprint g f /\
   cbor_map_disjoint m1 m2 /\
   cbor_map_disjoint_from_footprint m2 f /\
-  cbor_map_length m1 == U64.v i /\
+  (count ==> cbor_map_length m1 == U64.v i) /\
   begin match unpack v with
   | CMap m ->
     cbor_map_equal m (cbor_map_union m1 m2)
@@ -38,14 +39,15 @@ let impl_map_group_post
   (f: typ)
   (v: cbor)
   (m1 m2: cbor_map)
+  (count: bool)
   (i: U64.t)
   (i': U64.t)
   (res: impl_map_group_result)
 : Tot prop
-= impl_map_group_pre g f v m1 m2 i /\
+= impl_map_group_pre g f v m1 m2 count i /\
   begin match apply_map_group_det g m1, res with
   | MapGroupDet consumed remaining, MGOK ->
-    cbor_map_length remaining == U64.v i'
+    (count ==> cbor_map_length remaining == U64.v i')
   | MapGroupFail, MGFail -> True
   | MapGroupCutFail, MGCutFail -> True
   | _ -> False
@@ -63,18 +65,19 @@ let impl_map_group_t
   (#v: Ghost.erased cbor) ->
   (v1: Ghost.erased cbor_map) ->
   (v2: Ghost.erased cbor_map) ->
+  (count: bool) ->
   (pi: R.ref U64.t) ->
   (#i: Ghost.erased U64.t) ->
   stt impl_map_group_result
         (
           vmatch p c v **
           pts_to pi i **
-          pure (impl_map_group_pre g f v v1 v2 i)
+          pure (impl_map_group_pre g f v v1 v2 count i)
         )
         (fun res -> exists* i' .
           vmatch p c v **
           pts_to pi i' **
-          pure (impl_map_group_post g f v v1 v2 i i' res)
+          pure (impl_map_group_post g f v v1 v2 count i i' res)
         )
 
 inline_for_extraction
@@ -90,10 +93,11 @@ fn apply_impl_map_group
   (#v: Ghost.erased cbor)
   (v1: Ghost.erased cbor_map)
   (v2: Ghost.erased cbor_map)
+  (count: bool)
   (pi: R.ref U64.t)
   (#i: Ghost.erased U64.t)
   (sq: squash (
-    impl_map_group_pre g f v v1 v2 i
+    impl_map_group_pre g f v v1 v2 count i
   ))
 requires
         (
@@ -105,10 +109,10 @@ ensures
         (exists* i' .
           vmatch p c v **
           pts_to pi i' **
-          pure (impl_map_group_post g f v v1 v2 i i' res)
+          pure (impl_map_group_post g f v v1 v2 count i i' res)
         )
 {
-  w c v1 v2 pi
+  w c v1 v2 count pi
 }
 ```
 
@@ -133,7 +137,7 @@ fn impl_t_map_group
     let m = Ghost.hide (CMap?.c (unpack v) <: cbor_map); // coercion needed because of the refinement on CMap?.c
     let rem0 : U64.t = get_map_length c;
     let mut remaining = rem0;
-    let res : impl_map_group_result = w1 c m cbor_map_empty remaining;
+    let res : impl_map_group_result = w1 c m cbor_map_empty true remaining;
     match res {
       MGOK -> {
         let rem = !remaining;
@@ -165,6 +169,7 @@ fn impl_map_group_nop
   (#v: _)
   (v1: _)
   (v2: _)
+  (count: _)
   (pi: _)
   (#i: _)
 {
@@ -184,6 +189,7 @@ fn impl_map_group_always_false
   (#v: _)
   (v1: _)
   (v2: _)
+  (count: _)
   (pi: _)
   (#i: _)
 {
@@ -213,10 +219,11 @@ fn impl_map_group_concat
   (#v: _)
   (v1: _)
   (v2: _)
+  (count: _)
   (pi: _)
   (#i: _)
 {
-  let res1 = w1 c v1 v2 pi;
+  let res1 = w1 c v1 v2 count pi;
   match res1 {
     MGOK -> {
       let m = Ghost.hide (CMap?.c (unpack v));
@@ -225,7 +232,7 @@ fn impl_map_group_concat
       let vremaining = Ghost.hide (MapGroupDet?.remaining vres);
       let v2' = Ghost.hide (cbor_map_union vconsumed v2);
       map_group_footprint_consumed_disjoint g1 f1 f2 v1;
-      let res = w2 c vremaining v2' pi;
+      let res = w2 c vremaining v2' count pi;
       res
     }
     MGFail -> {
@@ -259,18 +266,19 @@ fn impl_map_group_choice
   (#v: _)
   (v1: _)
   (v2: _)
+  (count: _)
   (pi: _)
   (#i: _)
 {
   let i0 = !pi;
-  let res1 = w1 c v1 v2 pi;
+  let res1 = w1 c v1 v2 count pi;
   match res1 {
     MGOK -> {
       MGOK
     }
     MGFail -> {
       pi := i0;
-      let res = w2 c v1 v2 pi;
+      let res = w2 c v1 v2 count pi;
       res
     }
     MGCutFail -> {
@@ -301,10 +309,11 @@ fn impl_map_group_ext
   (#v: _)
   (v1: _)
   (v2: _)
+  (count: _)
   (pi: _)
   (#i: _)
 {
-  impl1 c v1 v2 pi
+  impl1 c v1 v2 count pi
 }
 ```
 
@@ -337,13 +346,14 @@ let impl_map_group_match_item_for_body_post
   (v: Ghost.erased cbor)
   (v1: Ghost.erased cbor_map)
   (v2: Ghost.erased cbor_map)
+  (count: bool)
   (pi: R.ref U64.t)
   (i: Ghost.erased U64.t)
   (res: impl_map_group_result)
 = exists* i' .
           vmatch p c v **
           pts_to pi i' **
-          pure (impl_map_group_post (map_group_match_item_for cut k dest) (t_literal k) v v1 v2 i i' res)
+          pure (impl_map_group_post (map_group_match_item_for cut k dest) (t_literal k) v v1 v2 count i i' res)
 
 inline_for_extraction
 ```pulse
@@ -360,14 +370,15 @@ fn impl_map_group_match_item_for_body
   (v: Ghost.erased cbor)
   (v1: Ghost.erased cbor_map)
   (v2: Ghost.erased cbor_map)
+  (count: bool)
   (pi: R.ref U64.t)
   (i: Ghost.erased U64.t)
 : with_cbor_literal_cont_t #_ vmatch k
           (vmatch p c v ** pts_to pi i **
-            pure (impl_map_group_pre (map_group_match_item_for cut k dest) (t_literal k) v v1 v2 i)
+            pure (impl_map_group_pre (map_group_match_item_for cut k dest) (t_literal k) v v1 v2 count i)
           )
   impl_map_group_result
-  (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 pi i)
+  (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 count pi i)
 = (pk: _)
   (ck: _)
 {
@@ -376,7 +387,7 @@ fn impl_map_group_match_item_for_body
     None -> {
       unfold (map_get_post vmatch c p v k None);
       unfold (map_get_post_none vmatch c p v k);
-      fold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 pi i MGFail);
+      fold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 count pi i MGFail);
       MGFail
     }
     Some cv -> {
@@ -386,19 +397,24 @@ fn impl_map_group_match_item_for_body
       let check_value = vdest cv;
       Trade.elim _ _;
       if (check_value) {
-        let i1 = !pi;
-        cbor_map_length_empty_equiv v1;
-        let i2 = U64.sub i1 1uL;
-        pi := i2;
         let rm' = Ghost.hide (MapGroupDet?.remaining (apply_map_group_det (map_group_match_item_for cut k dest) v1));
-        cbor_map_length_disjoint_union (cbor_map_singleton k vv) rm';
-        fold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 pi i MGOK);
-        MGOK
+        if (count) {
+          let i1 = !pi;
+          cbor_map_length_empty_equiv v1;
+          let i2 = U64.sub i1 1uL;
+          pi := i2;
+          cbor_map_length_disjoint_union (cbor_map_singleton k vv) rm';
+          fold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 count pi i MGOK);
+          MGOK
+        } else {
+          fold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 count pi i MGOK);
+          MGOK
+        }
       } else if cut {
-        fold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 pi i MGCutFail);
+        fold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 count pi i MGCutFail);
         MGCutFail
       } else {
-        fold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 pi i MGFail);
+        fold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 count pi i MGFail);
         MGFail
       }
     }
@@ -423,11 +439,12 @@ fn impl_map_group_match_item_for
   (#v: _)
   (v1: _)
   (v2: _)
+  (count: _)
   (pi: _)
   (#i: _)
 {
-  let res = wk _ _ _ (impl_map_group_match_item_for_body map_get cut k dest vdest c p v v1 v2 pi i);
-  unfold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 pi i);
+  let res = wk _ _ _ (impl_map_group_match_item_for_body map_get cut k dest vdest c p v v1 v2 count pi i);
+  unfold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 count pi i);
   res
 }
 ```
@@ -699,9 +716,13 @@ fn impl_map_group_filter
   (#v: _)
   (v1: _)
   (v2: _)
+  (count: bool)
   (pi: _)
   (#i: _)
 {
+if (not count) {
+    MGOK
+} else {
   let j0 = cbor_map_iterator_init c;
   with pl0 l0 . assert (cbor_map_iterator_match pl0 j0 l0);
   let mut pj = j0;
@@ -785,7 +806,7 @@ fn impl_map_group_filter
   assert (pure (cbor_map_equal vconsumed_past gconsumed));
   assert (pure (cbor_map_equal vremaining_past gremaining));
   MGOK
-}
+}}
 ```
 
 #pop-options
