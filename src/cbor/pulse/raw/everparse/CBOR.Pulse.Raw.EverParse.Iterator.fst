@@ -363,6 +363,7 @@ fn cbor_raw_serialized_iterator_share
 {
   unfold (cbor_raw_serialized_iterator_match s pm c l);
   LP.pts_to_serialized_share (LP.serialize_nlist (c.glen) s) c.s;
+  half_mul_l pm c.p;
   fold (cbor_raw_serialized_iterator_match s (pm /. 2.0R) c l);
   fold (cbor_raw_serialized_iterator_match s (pm /. 2.0R) c l);
 }
