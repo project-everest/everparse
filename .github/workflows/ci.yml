@@ -86,6 +86,34 @@ jobs:
       - run: echo "$(pwd)/karamel" | sudo tee -a $GITHUB_PATH
 
       - uses: actions/checkout@master
+        id: checkout-pulse
+        with:
+          path: pulse
+          repository: FStarLang/pulse
+          ref: main
+
+      - name: Try fetch built pulse
+        id: cache-pulse
+        uses: actions/cache/restore@v4
+        with:
+          path: pulse
+          key: pulse-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-pulse.outputs.commit }}
+
+      - name: Build pulse (if not cached)
+        if: steps.cache-pulse.outputs.cache-hit != 'true'
+        run: |
+          make -C pulse -sj$(nproc) ADMIT=1
+
+      - name: Save built pulse
+        if: steps.cache-pulse.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: pulse
+          key: pulse-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-pulse.outputs.commit }}
+
+      - run: echo "PULSE_HOME=$(pwd)/pulse"/out | sudo tee -a $GITHUB_ENV
+
+      - uses: actions/checkout@master
         with:
           path: everparse
 
