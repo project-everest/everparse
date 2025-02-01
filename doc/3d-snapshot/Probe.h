@@ -7,7 +7,6 @@
 extern "C" {
 #endif
 
-#include "Probe_ExternalAPI.h"
 #include "EverParse.h"
 
 uint64_t

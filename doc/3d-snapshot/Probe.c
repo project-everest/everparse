@@ -2,6 +2,8 @@
 
 #include "Probe.h"
 
+#include "Probe_ExternalAPI.h"
+
 static inline uint64_t
 ValidateT(
   uint32_t Bound,
