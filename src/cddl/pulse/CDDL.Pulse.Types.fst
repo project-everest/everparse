@@ -152,6 +152,19 @@ let rel_pair
 : rel (low1 & low2) (high1 & high2)
 = mk_rel (fun xlow xhigh -> r1 (fst xlow) (fst xhigh) ** r2 (snd xlow) (snd xhigh))
 
+let rel_pair_eq
+  (#low1 #high1: Type)
+  (r1: rel low1 high1)
+  (#low2 #high2: Type)
+  (r2: rel low2 high2)
+  (w1: low1)
+  (w2: low2)
+  (z1: high1)
+  (z2: high2)
+: Lemma
+  (rel_pair r1 r2 (w1, w2) (z1, z2) == r1 w1 z1 ** r2 w2 z2)
+= ()
+
 let rel_either
   (#low1 #high1: Type)
   (r1: rel low1 high1)
@@ -163,6 +176,28 @@ let rel_either
   | Inr xl, Inr xh -> r2 xl xh
   | _ -> pure False
 )
+
+let rel_either_eq_left
+  (#low1 #high1: Type)
+  (r1: rel low1 high1)
+  (#low2 #high2: Type)
+  (r2: rel low2 high2)
+  (w1: low1)
+  (z1: high1)
+: Lemma
+  (rel_either r1 r2 (Inl w1) (Inl z1) == r1 w1 z1)
+= ()
+
+let rel_either_eq_right
+  (#low1 #high1: Type)
+  (r1: rel low1 high1)
+  (#low2 #high2: Type)
+  (r2: rel low2 high2)
+  (w2: low2)
+  (z2: high2)
+: Lemma
+  (rel_either r1 r2 (Inr w2) (Inr z2) == r2 w2 z2)
+= ()
 
 let rel_either_left
   (#low1 #high: Type)
@@ -184,6 +219,22 @@ let rel_option
   | None, None -> emp
   | _ -> pure False
 )
+
+let rel_option_eq_some
+  (#low #high: Type)
+  (r: rel low high)
+  (w: low)
+  (z: high)
+: Lemma
+  (rel_option r (Some w) (Some z) == r w z)
+= ()
+
+let rel_option_eq_none
+  (#low #high: Type)
+  (r: rel low high)
+: Lemma
+  (rel_option r None None == emp)
+= ()
 
 let rel_option_right
   (#impl #spec: Type0)

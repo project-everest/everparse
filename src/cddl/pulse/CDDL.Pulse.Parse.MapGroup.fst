@@ -101,28 +101,6 @@ fn impl_zero_copy_map
 }
 ```
 
-let rel_either_eq_left
-  (#low1 #high1: Type)
-  (r1: rel low1 high1)
-  (#low2 #high2: Type)
-  (r2: rel low2 high2)
-  (w1: low1)
-  (z1: high1)
-: Lemma
-  (rel_either r1 r2 (Inl w1) (Inl z1) == r1 w1 z1)
-= ()
-
-let rel_either_eq_right
-  (#low1 #high1: Type)
-  (r1: rel low1 high1)
-  (#low2 #high2: Type)
-  (r2: rel low2 high2)
-  (w2: low2)
-  (z2: high2)
-: Lemma
-  (rel_either r1 r2 (Inr w2) (Inr z2) == r2 w2 z2)
-= ()
-
 #set-options "--print_implicits"
 
 #push-options "--ifuel 8"
@@ -201,22 +179,6 @@ fn impl_zero_copy_map_choice
 }
 ```
 
-let rel_option_eq_some
-  (#low #high: Type)
-  (r: rel low high)
-  (w: low)
-  (z: high)
-: Lemma
-  (rel_option r (Some w) (Some z) == r w z)
-= ()
-
-let rel_option_eq_none
-  (#low #high: Type)
-  (r: rel low high)
-: Lemma
-  (rel_option r None None == emp)
-= ()
-
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn impl_zero_copy_map_zero_or_one
@@ -270,19 +232,6 @@ fn impl_zero_copy_map_zero_or_one
   }
 }
 ```
-
-let rel_pair_eq
-  (#low1 #high1: Type)
-  (r1: rel low1 high1)
-  (#low2 #high2: Type)
-  (r2: rel low2 high2)
-  (w1: low1)
-  (w2: low2)
-  (z1: high1)
-  (z2: high2)
-: Lemma
-  (rel_pair r1 r2 (w1, w2) (z1, z2) == r1 w1 z1 ** r2 w2 z2)
-= ()
 
 #restart-solver
 
