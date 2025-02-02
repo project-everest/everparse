@@ -318,5 +318,77 @@ fn impl_zero_copy_map_concat
 }
 ```
 
+inline_for_extraction
+```pulse
+fn impl_zero_copy_match_item_for_cont
+  (#ty: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (get: map_get_t vmatch)
+  (key: Ghost.erased cbor)
+  (cut: Ghost.erased bool)
+  (#value: Ghost.erased typ)
+  (#tvalue: Type0)
+  (#tvalue_ser: Ghost.erased (tvalue -> bool))
+  (#pvalue: parser_spec value tvalue tvalue_ser)
+  (#iv: Type0)
+  (#r: rel iv tvalue)
+  (ivalue: impl_zero_copy_parse vmatch pvalue r)
+  (c: ty)
+  (#p: perm)
+  (#v: Ghost.erased cbor)
+  (v1: Ghost.erased cbor_map)
+  (v2: Ghost.erased cbor_map)
+: with_cbor_literal_cont_t #ty vmatch (Ghost.reveal key)
+        (
+          vmatch p c v **
+          pure (impl_zero_copy_map_group_pre (map_group_match_item_for (Ghost.reveal cut) (Ghost.reveal key) (Ghost.reveal value)) (t_literal (Ghost.reveal key)) v v1 v2)
+        )
+        iv
+        (fun res -> exists* v' .
+          r res v' **
+          Trade.trade (r res v') (vmatch p c v) **
+          pure (impl_zero_copy_map_group_post (map_group_parser_spec_match_item_for (Ghost.reveal cut) (Ghost.reveal key) (Ghost.reveal pvalue) (mg_spec_match_item_for_size tvalue)) v v1 v2 v')
+        )
+=
+  (pk: _)
+  (ck: _)
+{
+  let ow = get c ck;
+  let Some w = ow;
+  unfold (map_get_post vmatch c p v key ow);
+  unfold (map_get_post_some vmatch c p v key w);
+  let res = ivalue w;
+  Trade.trans _ _ (vmatch p c v);
+  res
+}
+```
+
+inline_for_extraction
+```pulse
+fn impl_zero_copy_match_item_for
+  (#ty: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (get: map_get_t vmatch)
+  (#key: Ghost.erased cbor)
+  (lkey: with_cbor_literal_t vmatch (Ghost.reveal key))
+  (cut: Ghost.erased bool)
+  (#value: Ghost.erased typ)
+  (#tvalue: Type0)
+  (#tvalue_ser: Ghost.erased (tvalue -> bool))
+  (#pvalue: parser_spec value tvalue tvalue_ser)
+  (#iv: Type0)
+  (#r: rel iv tvalue)
+  (ivalue: impl_zero_copy_parse vmatch pvalue r)
+: impl_zero_copy_map_group #ty vmatch #(map_group_match_item_for (Ghost.reveal cut) (Ghost.reveal key) (Ghost.reveal value)) #(t_literal (Ghost.reveal key)) #tvalue #(mg_spec_match_item_for_size tvalue) #(Ghost.reveal tvalue_ser) (map_group_parser_spec_match_item_for (Ghost.reveal cut) (Ghost.reveal key) (Ghost.reveal pvalue) (mg_spec_match_item_for_size tvalue)) #iv r
+= (c: _)
+  (#p: _)
+  (#v: _)
+  (v1: _)
+  (v2: _)
+{
+  lkey _ _ _ (impl_zero_copy_match_item_for_cont get key cut ivalue c #p #v v1 v2)
+}
+```
+
 #pop-options
 
