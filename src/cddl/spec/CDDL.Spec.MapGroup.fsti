@@ -1179,15 +1179,13 @@ let serializer_spec_map_group
   res
 
 let spec_map_group_serializable
-  (#source: det_map_group)
-  (#source_fp: typ)
   (#target: Type0)
-  (#inj: bool)
-  (p: mg_spec source source_fp target inj)
+  (sz: target -> nat)
+  (ser: target -> bool)
   (x: target)
 : Tot bool
-= p.mg_serializable x &&
-  p.mg_size x < pow2 64
+= ser x &&
+  sz x < pow2 64
 
 let spec_map_group_restrict
   (source0: det_map_group)
@@ -1201,7 +1199,7 @@ let spec_map_group_restrict
   })
 : Tot (spec (t_map source0) target false)
 = {
-  serializable = spec_map_group_serializable p;
+  serializable = spec_map_group_serializable p.mg_size p.mg_serializable;
   parser = parser_spec_map_group source0 p.mg_parser _;
   serializer = serializer_spec_map_group source0 p.mg_serializer _;
   parser_inj = ();
@@ -1218,7 +1216,7 @@ let spec_map_group_inj
   (c: cbor { t_map source c })
 : Lemma
   (requires inj)
-  (ensures serializer_spec_map_group source p.mg_serializer (spec_map_group_serializable p) (parser_spec_map_group source p.mg_parser (spec_map_group_serializable p) c) == c)
+  (ensures serializer_spec_map_group source p.mg_serializer (spec_map_group_serializable p.mg_size p.mg_serializable) (parser_spec_map_group source p.mg_parser (spec_map_group_serializable p.mg_size p.mg_serializable) c) == c)
 = let CMap l = unpack c in
   let f = matches_map_group_entry source_fp any in
   cbor_map_split f l;
@@ -1236,7 +1234,7 @@ let spec_map_group
   })
 : Tot (spec (t_map source) target inj)
 = {
-  serializable = spec_map_group_serializable p;
+  serializable = spec_map_group_serializable p.mg_size p.mg_serializable;
   parser = parser_spec_map_group source p.mg_parser _;
   serializer = serializer_spec_map_group source p.mg_serializer _;
   parser_inj = Classical.forall_intro (Classical.move_requires (spec_map_group_inj p));
@@ -1545,34 +1543,22 @@ let map_group_serializer_spec_concat
     res
 
 let mg_spec_concat_size
-  (#source1: det_map_group)
-  (#source_fp1: typ)
   (#target1: Type)
-  (#inj1: bool)
-  (p1: mg_spec source1 source_fp1 target1 inj1)
-  (#source2: det_map_group)
-  (#source_fp2: typ)
+  (p1: target1 -> nat)
   (#target2: Type)
-  (#inj2: bool)
-  (p2: mg_spec source2 source_fp2 target2 inj2)
+  (p2: target2 -> nat)
   (x: (target1 & target2))
 : Tot nat
-= p1.mg_size (fst x) + p2.mg_size (snd x)
+= p1 (fst x) + p2 (snd x)
 
 let mg_spec_concat_serializable
-  (#source1: det_map_group)
-  (#source_fp1: typ)
   (#target1: Type)
-  (#inj1: bool)
-  (p1: mg_spec source1 source_fp1 target1 inj1)
-  (#source2: det_map_group)
-  (#source_fp2: typ)
+  (p1: target1 -> bool)
   (#target2: Type)
-  (#inj2: bool)
-  (p2: mg_spec source2 source_fp2 target2 inj2)
+  (p2: target2 -> bool)
   (x: (target1 & target2))
 : Tot bool
-= p1.mg_serializable (fst x) && p2.mg_serializable (snd x)
+= p1 (fst x) && p2 (snd x)
 
 let mg_spec_concat_inj
   (#source1: det_map_group)
@@ -1593,7 +1579,7 @@ let mg_spec_concat_inj
 : Lemma
   (requires (inj1 && inj2))
   (ensures (
-    map_group_serializer_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1 p2) (mg_spec_concat_serializable p1 p2) (map_group_parser_spec_concat p1.mg_parser p2.mg_parser (mg_spec_concat_size p1 p2) (mg_spec_concat_serializable p1 p2) m) == m
+    map_group_serializer_spec_concat p1.mg_serializer p2.mg_serializer (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializable p2.mg_serializable) (map_group_parser_spec_concat p1.mg_parser p2.mg_parser (mg_spec_concat_size p1.mg_size p2.mg_size) (mg_spec_concat_serializable p1.mg_serializable p2.mg_serializable) m) == m
   ))
 = map_group_concat_footprint_disjoint source1 source_fp1 source2 source_fp2 m
 
@@ -1614,8 +1600,8 @@ let mg_spec_concat
   })
 : Tot (mg_spec (map_group_concat source1 source2) (source_fp1 `t_choice` source_fp2) (target1 & target2) (inj1 && inj2))
 = {
-  mg_size = mg_spec_concat_size p1 p2;
-  mg_serializable = mg_spec_concat_serializable p1 p2;
+  mg_size = mg_spec_concat_size p1.mg_size p2.mg_size;
+  mg_serializable = mg_spec_concat_serializable p1.mg_serializable p2.mg_serializable;
   mg_parser = map_group_parser_spec_concat p1.mg_parser p2.mg_parser _ _;
   mg_serializer = map_group_serializer_spec_concat p1.mg_serializer p2.mg_serializer _ _;
   mg_inj = Classical.forall_intro (Classical.move_requires (mg_spec_concat_inj p1 p2));
@@ -1766,38 +1752,26 @@ let map_group_serializer_spec_choice
     res
 
 let mg_spec_choice_size
-  (#source1: det_map_group)
-  (#source_fp1: typ)
   (#target1: Type)
-  (#inj1: bool)
-  (p1: mg_spec source1 source_fp1 target1 inj1)
-  (#source2: det_map_group)
-  (#source_fp2: typ)
+  (p1: target1 -> nat)
   (#target2: Type)
-  (#inj2: bool)
-  (p2: mg_spec source2 source_fp2 target2 inj2)
+  (p2: target2 -> nat)
   (x: either target1 target2)
 : Tot nat
 = match x with
-  | Inl x1 -> p1.mg_size x1
-  | Inr x2 -> p2.mg_size x2
+  | Inl x1 -> p1 x1
+  | Inr x2 -> p2 x2
 
 let mg_spec_choice_serializable
-  (#source1: det_map_group)
-  (#source_fp1: typ)
   (#target1: Type)
-  (#inj1: bool)
-  (p1: mg_spec source1 source_fp1 target1 inj1)
-  (#source2: det_map_group)
-  (#source_fp2: typ)
+  (p1: target1 -> bool)
   (#target2: Type)
-  (#inj2: bool)
-  (p2: mg_spec source2 source_fp2 target2 inj2)
+  (p2: target2 -> bool)
   (x: either target1 target2)
 : Tot bool
 = match x with
-  | Inl x1 -> p1.mg_serializable x1
-  | Inr x2 -> p2.mg_serializable x2
+  | Inl x1 -> p1 x1
+  | Inr x2 -> p2 x2
 
 let mg_spec_choice_inj
   (#source1: det_map_group)
@@ -1818,7 +1792,7 @@ let mg_spec_choice_inj
   (c: cbor_map { map_group_serializer_spec_arg_prop (map_group_choice source1 source2) (t_choice source_fp1 source_fp2) c })
 : Lemma
   (requires (inj1 && inj2))
-  (ensures map_group_serializer_spec_choice p1.mg_serializer p2.mg_serializer (mg_spec_choice_size p1 p2) (mg_spec_choice_serializable p1 p2) (map_group_parser_spec_choice p1.mg_parser p2.mg_parser (mg_spec_choice_size p1 p2) (mg_spec_choice_serializable p1 p2) c) == c)
+  (ensures map_group_serializer_spec_choice p1.mg_serializer p2.mg_serializer (mg_spec_choice_size p1.mg_size p2.mg_size) (mg_spec_choice_serializable p1.mg_serializable p2.mg_serializable) (map_group_parser_spec_choice p1.mg_parser p2.mg_parser (mg_spec_choice_size p1.mg_size p2.mg_size) (mg_spec_choice_serializable p1.mg_serializable p2.mg_serializable) c) == c)
 = let f1 = matches_map_group_entry source_fp1 any in
   cbor_map_split f1 c;
   let c1 = cbor_map_filter f1 c in
@@ -1855,8 +1829,8 @@ let mg_spec_choice
   })
 : Tot (mg_spec (map_group_choice source1 source2) (source_fp1 `t_choice` source_fp2) (either target1 target2) (inj1 && inj2))
 = {
-  mg_size = mg_spec_choice_size p1 p2;
-  mg_serializable = mg_spec_choice_serializable p1 p2;
+  mg_size = mg_spec_choice_size p1.mg_size p2.mg_size;
+  mg_serializable = mg_spec_choice_serializable p1.mg_serializable p2.mg_serializable;
   mg_parser = map_group_parser_spec_choice p1.mg_parser p2.mg_parser _ _;
   mg_serializer = map_group_serializer_spec_choice p1.mg_serializer p2.mg_serializer _ _;
   mg_inj = Classical.forall_intro (Classical.move_requires (mg_spec_choice_inj p1 p2));
