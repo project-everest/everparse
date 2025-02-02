@@ -201,6 +201,76 @@ fn impl_zero_copy_map_choice
 }
 ```
 
+let rel_option_eq_some
+  (#low #high: Type)
+  (r: rel low high)
+  (w: low)
+  (z: high)
+: Lemma
+  (rel_option r (Some w) (Some z) == r w z)
+= ()
+
+let rel_option_eq_none
+  (#low #high: Type)
+  (r: rel low high)
+: Lemma
+  (rel_option r None None == emp)
+= ()
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_map_zero_or_one
+  (#ty: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+    (#t1: Ghost.erased (det_map_group))
+    (#fp1: Ghost.erased typ)
+    (#tgt1: Type0)
+    (#tgt_size1: Ghost.erased (tgt1 -> nat))
+    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#ps1: Ghost.erased (map_group_parser_spec t1 fp1 tgt_size1 tgt_serializable1))
+    (#impl_tgt1: Type0)
+    (#r1: rel impl_tgt1 tgt1)
+    (va1: impl_map_group_t vmatch t1 fp1)
+    (pa1: impl_zero_copy_map_group vmatch ps1 r1)
+    (sq: squash (
+      map_group_footprint t1 fp1 /\
+      MapGroupFail? (apply_map_group_det t1 cbor_map_empty)
+    ))
+: impl_zero_copy_map_group #ty vmatch #(map_group_zero_or_one (Ghost.reveal t1)) #(Ghost.reveal fp1)
+#(option tgt1) #(map_group_size_zero_or_one (Ghost.reveal tgt_size1)) #(map_group_serializable_zero_or_one (Ghost.reveal tgt_serializable1)) (map_group_parser_spec_zero_or_one (Ghost.reveal ps1) ()) #(option impl_tgt1) (rel_option r1)
+=
+  (c: _)
+  (#p: _)
+  (#v: _)
+  (v1: _)
+  (v2: _)
+{
+  map_group_footprint_zero_or_one t1 fp1;
+  map_group_parser_spec_choice_eq (Ghost.reveal ps1) mg_spec_nop.mg_parser (mg_spec_choice_size (Ghost.reveal tgt_size1) mg_spec_nop.mg_size) (mg_spec_choice_serializable (Ghost.reveal tgt_serializable1) mg_spec_nop.mg_serializable) v1;
+  let mut dummy = 0uL;
+  let m1 = Ghost.hide (cbor_map_filter (matches_map_group_entry fp1 any) v1);
+  let cm1 = Ghost.hide (cbor_map_sub v1 m1);
+  let v21 = Ghost.hide (cbor_map_union cm1 v2);
+  let test1 = va1 c m1 v21 false dummy;
+  if (MGOK? test1) {
+    let w1 = pa1 c m1 v21;
+    with z1 . assert (r1 w1 z1);
+    let res : option impl_tgt1 = Some w1;
+    rel_option_eq_some r1 w1 z1;
+    Trade.rewrite_with_trade (r1 w1 z1) (rel_option r1 res (Some z1));
+    Trade.trans _ _ (vmatch p c v);
+    res
+  } else {
+    let res : option impl_tgt1 = None #impl_tgt1;
+    emp_unit (vmatch p c v);
+    rel_option_eq_none r1;
+    Trade.rewrite_with_trade (vmatch p c v) (rel_option r1 res None ** vmatch p c v);
+    Trade.elim_hyp_r _ _ _;
+    res
+  }
+}
+```
+
 let rel_pair_eq
   (#low1 #high1: Type)
   (r1: rel low1 high1)

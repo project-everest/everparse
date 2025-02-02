@@ -1877,6 +1877,46 @@ let map_group_serializable_zero_or_one
   | None -> true
   | Some x -> sz x
 
+let bij_from_either_unit_to_option
+  (t: Type)
+: Tot (bijection (either t unit) (option t))
+=
+      {
+        bij_from_to = (fun x -> match x with Inl x -> Some x | _ -> None);
+        bij_to_from = (fun x -> match x with Some x -> Inl x | _ -> Inr ());
+        bij_from_to_from = ();
+        bij_to_from_to = ();
+      }
+
+let map_group_parser_spec_zero_or_one
+  (#source1: det_map_group)
+  (#source_fp1: typ)
+  (#target1: Type)
+  (#target_size1: target1 -> nat)
+  (#target_ser1: target1 -> bool)
+  (p1: map_group_parser_spec source1 source_fp1 target_size1 target_ser1)
+  (_: squash (
+    map_group_footprint source1 source_fp1 /\
+    MapGroupFail? (apply_map_group_det source1 cbor_map_empty)
+  ))
+: Tot (map_group_parser_spec (map_group_zero_or_one source1) source_fp1 (map_group_size_zero_or_one target_size1) (map_group_serializable_zero_or_one target_ser1))
+= map_group_parser_spec_bij
+    (map_group_parser_spec_choice
+      p1
+      mg_spec_nop.mg_parser
+      (mg_spec_choice_size
+        target_size1
+        mg_spec_nop.mg_size
+      )
+      (mg_spec_choice_serializable
+        target_ser1
+        mg_spec_nop.mg_serializable
+      )
+    )
+    (map_group_size_zero_or_one target_size1)
+    (map_group_serializable_zero_or_one target_ser1)
+    (bij_from_either_unit_to_option _)
+
 let mg_spec_zero_or_one
   (#source1: det_map_group)
   (#source_fp1: typ)
@@ -1891,16 +1931,25 @@ let mg_spec_zero_or_one
   mg_spec_ext
     (mg_spec_bij
       (mg_spec_choice p1 mg_spec_nop)
-      {
-        bij_from_to = (fun x -> match x with Inl x -> Some x | _ -> None);
-        bij_to_from = (fun x -> match x with Some x -> Inl x | _ -> Inr ());
-        bij_from_to_from = ();
-        bij_to_from_to = ();
-      }
+      (bij_from_either_unit_to_option _)
     )
     source_fp1
     (map_group_size_zero_or_one p1.mg_size)
     (map_group_serializable_zero_or_one p1.mg_serializable)
+
+let mg_spec_zero_or_one_parser_eq
+  (#source1: det_map_group)
+  (#source_fp1: typ)
+  (#target1: Type)
+  (#inj1: bool)
+  (p1: mg_spec source1 source_fp1 target1 inj1 {
+    map_group_footprint source1 source_fp1 /\
+    MapGroupFail? (apply_map_group_det source1 cbor_map_empty)
+  })
+: Lemma
+  (ensures ((mg_spec_zero_or_one p1).mg_parser == map_group_parser_spec_zero_or_one p1.mg_parser ()))
+  [SMTPat (mg_spec_zero_or_one p1)]
+= assert_norm ((mg_spec_zero_or_one p1).mg_parser == map_group_parser_spec_zero_or_one p1.mg_parser ())
 
 let map_group_zero_or_more_match_item_length
   (#tkey #tvalue: Type)
