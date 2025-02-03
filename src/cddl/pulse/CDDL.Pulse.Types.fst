@@ -291,10 +291,11 @@ let rel_vec_or_slice_of_seq
 )
 
 module Map = CDDL.Spec.Map
+module EqTest = CDDL.Spec.EqTest
 
 let rec map_of_list_pair
   (#key #value: Type0)
-  (key_eq: (k1: key) -> (k2: key) -> Pure bool True (fun b -> b == true <==> k1 == k2))
+  (key_eq: EqTest.eq_test key)
   (l: list (key & value))
 : Tot (Map.t key (list value))
 = match l with
@@ -309,7 +310,7 @@ let rec map_of_list_pair
 let rel_slice_of_table
   (#low_key #high_key: Type)
   (#low_value #high_value: Type)
-  (key_eq: (k1: high_key) -> (k2: high_key) -> Pure bool True (fun b -> b == true <==> k1 == k2)) // TODO: also FE-ize this
+  (key_eq: EqTest.eq_test high_key)
   (rkey: rel low_key high_key)
   (rvalue: rel low_value high_value)
 : rel (slice (low_key & low_value)) (Map.t high_key (list high_value))
@@ -320,7 +321,7 @@ let rel_slice_of_table
 let rel_vec_or_slice_of_table
   (#low_key #high_key: Type)
   (#low_value #high_value: Type)
-  (key_eq: (k1: high_key) -> (k2: high_key) -> Pure bool True (fun b -> b == true <==> k1 == k2)) // TODO: also FE-ize this
+  (key_eq: EqTest.eq_test high_key)
   (rkey: rel low_key high_key)
   (rvalue: rel low_value high_value)
   (freeable: bool)
@@ -331,7 +332,7 @@ let rel_vec_or_slice_of_table
 
 let rec map_of_list_pair_mem
   (#key #value: Type0)
-  (key_eq: (k1: key) -> (k2: key) -> Pure bool True (fun b -> b == true <==> k1 == k2))
+  (key_eq: EqTest.eq_test key)
   (l: list (key & value))
   (kv: (key & value))
 : Lemma
@@ -346,7 +347,7 @@ let rec map_of_list_pair_mem
 
 let rec map_of_list_pair_mem_fst
   (#key #value: Type0)
-  (key_eq: (k1: key) -> (k2: key) -> Pure bool True (fun b -> b == true <==> k1 == k2))
+  (key_eq: EqTest.eq_test key)
   (l: list (key & value))
   (k: key)
 : Lemma
@@ -358,7 +359,7 @@ let rec map_of_list_pair_mem_fst
 
 let rec map_of_list_pair_length
   (#key #value: Type0)
-  (key_eq: (k1: key) -> (k2: key) -> Pure bool True (fun b -> b == true <==> k1 == k2))
+  (key_eq: EqTest.eq_test key)
   (l: list (key & value))
   (k: key)
 : Lemma
@@ -373,7 +374,7 @@ let rec map_of_list_pair_length
 
 let rec map_of_list_pair_no_repeats_key_elim
   (#key #value: Type0)
-  (key_eq: (k1: key) -> (k2: key) -> Pure bool True (fun b -> b == true <==> k1 == k2))
+  (key_eq: EqTest.eq_test key)
   (l: list (key & value))
   (k: key)
 : Lemma
@@ -394,7 +395,7 @@ let rec map_of_list_pair_no_repeats_key_elim
 
 let rec map_of_list_pair_no_repeats_key_intro
   (#key #value: Type0)
-  (key_eq: (k1: key) -> (k2: key) -> Pure bool True (fun b -> b == true <==> k1 == k2))
+  (key_eq: EqTest.eq_test key)
   (l: list (key & value))
 : Lemma
   (requires forall k . (match Map.get (map_of_list_pair key_eq l) k with
@@ -411,7 +412,7 @@ let rec map_of_list_pair_no_repeats_key_intro
 
 let map_of_list_pair_no_repeats_key
   (#key #value: Type0)
-  (key_eq: (k1: key) -> (k2: key) -> Pure bool True (fun b -> b == true <==> k1 == k2))
+  (key_eq: EqTest.eq_test key)
   (l: list (key & value))
 : Lemma
   (List.Tot.no_repeats_p (List.Tot.map fst l) <==> forall k . (match Map.get (map_of_list_pair key_eq l) k with
