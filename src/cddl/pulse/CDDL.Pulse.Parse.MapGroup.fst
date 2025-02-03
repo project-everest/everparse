@@ -417,9 +417,10 @@ type map_iterator_t
   tex: Ghost.erased typ;
   cddl_map_iterator_impl_validate_ex: impl_typ vmatch tex;
   t2: Ghost.erased typ;
-  sp2: Ghost.erased (spec t2 (dfst spec2) true); // same here
+  ser2: Ghost.erased (dfst spec2 -> bool);
+  ps2: Ghost.erased (parser_spec t2 (dfst spec2) ser2);
   cddl_map_iterator_impl_validate2: impl_typ vmatch t2;
-  cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch sp2.parser (dsnd spec2);
+  cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 (dsnd spec2);
 }
 
 inline_for_extraction
@@ -464,7 +465,7 @@ let cddl_map_iterator_impl_parse2
   (#impl_elt1: Type0) (#impl_elt2: Type0)
   (#spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1)) (#spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
   (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
-: Tot (impl_zero_copy_parse vmatch i.sp2.parser (dsnd spec2))
+: Tot (impl_zero_copy_parse vmatch i.ps2 (dsnd spec2))
 = i.cddl_map_iterator_impl_parse2
 
 inline_for_extraction
@@ -487,9 +488,10 @@ let mk_map_iterator
   (#src_elt2: Type0)
   (#r2: rel impl_elt2 src_elt2)
   (#t2: Ghost.erased typ)
-  (sp2: Ghost.erased (spec t2 src_elt2 true))
+  (#ser2: Ghost.erased (src_elt2 -> bool))
+  (#ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
   (cddl_map_iterator_impl_validate2: impl_typ vmatch t2)
-  (cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch sp2.parser r2)
+  (cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 r2)
 : map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 (Iterator.mk_spec r1) (Iterator.mk_spec r2)
 = {
   cddl_map_iterator_contents = cddl_map_iterator_contents;
@@ -502,7 +504,8 @@ let mk_map_iterator
   tex = tex;
   cddl_map_iterator_impl_validate_ex = cddl_map_iterator_impl_validate_ex;
   t2 = t2;
-  sp2 = sp2;
+  ser2 = ser2;
+  ps2 = ps2;
   cddl_map_iterator_impl_validate2 = cddl_map_iterator_impl_validate2;
   cddl_map_iterator_impl_parse2 = cddl_map_iterator_impl_parse2;
 }
@@ -526,22 +529,24 @@ let mk_map_iterator_eq
   (#src_elt2: Type0)
   (#r2: rel impl_elt2 src_elt2)
   (#t2: Ghost.erased typ)
-  (sp2: Ghost.erased (spec t2 src_elt2 true))
+  (#ser2: Ghost.erased (src_elt2 -> bool))
+  (#ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
   (cddl_map_iterator_impl_validate2: impl_typ vmatch t2)
-  (cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch sp2.parser r2)
+  (cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 r2)
 : Lemma
   (ensures (
-    let res = mk_map_iterator cddl_map_iterator_contents pm sp1 eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex sp2 cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2 in
+    let res = mk_map_iterator cddl_map_iterator_contents pm sp1 eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2 in
     res.cddl_map_iterator_contents == cddl_map_iterator_contents /\
     res.pm == pm /\
     res.t1 == t1 /\
     res.sp1 == sp1 /\
     res.tex == tex /\
     res.t2 == t2 /\
-    res.sp2 == sp2 /\
+    res.ser2 == ser2 /\
+    res.ps2 == ps2 /\
     True
   ))
-  [SMTPat (mk_map_iterator cddl_map_iterator_contents pm sp1 eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex sp2 cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2)]
+  [SMTPat (mk_map_iterator cddl_map_iterator_contents pm sp1 eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2)]
 = ()
 
 module Map = CDDL.Spec.Map
@@ -567,6 +572,56 @@ let rec parse_table_entries
     then (ps1 k, ps2 v) :: rq
     else rq
 
+let rec parse_table_entries_memP_key
+  (#src_elt1: Type0)
+  (#t1: typ)
+  (sp1: spec t1 src_elt1 true)
+  (tex: typ)
+  (#src_elt2: Type0)
+  (#t2: typ)
+  (#ser2: (src_elt2 -> bool))
+  (ps2: (parser_spec t2 src_elt2 ser2))
+  (l: list (cbor & cbor))
+  (k: src_elt1)
+: Lemma
+  (requires (List.Tot.memP k (List.Tot.map fst (parse_table_entries sp1.parser tex ps2 l))))
+  (ensures (
+    sp1.serializable k /\
+    List.Tot.memP (sp1.serializer k) (List.Tot.map fst l)
+  ))
+  (decreases l)
+= match l with
+  | (k', v') :: q ->
+    if t1 k' && not (tex k') && t2 v' && FStar.StrongExcludedMiddle.strong_excluded_middle (sp1.parser k' == k)
+    then ()
+    else parse_table_entries_memP_key sp1 tex ps2 q k
+
+let rec parse_table_entries_no_repeats
+  (#src_elt1: Type0)
+  (#t1: typ)
+  (sp1: spec t1 src_elt1 true)
+  (tex: typ)
+  (#src_elt2: Type0)
+  (#t2: typ)
+  (#ser2: (src_elt2 -> bool))
+  (ps2: (parser_spec t2 src_elt2 ser2))
+  (l: list (cbor & cbor))
+: Lemma
+  (requires (
+    List.Tot.no_repeats_p (List.Tot.map fst l)
+  ))
+  (ensures (
+    List.Tot.no_repeats_p (List.Tot.map fst (parse_table_entries sp1.parser tex ps2 l))
+  ))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | (k, v) :: q ->
+    parse_table_entries_no_repeats sp1 tex ps2 q;
+    if t1 k && not (tex k) && t2 v
+    then Classical.move_requires (parse_table_entries_memP_key sp1 tex ps2 q) (sp1.parser k)
+    else ()
+
 let rel_map_iterator_cond
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -576,9 +631,9 @@ let rel_map_iterator_cond
   (s: Map.t (dfst spec1) (list (dfst spec2)))
   (l: list (cbor & cbor))
 : Tot prop
-= let l' = parse_table_entries i.sp1.parser i.tex i.sp2.parser l in
+= let l' = parse_table_entries i.sp1.parser i.tex i.ps2 l in
   s == map_of_list_pair i.eq1 l'
-  /\ map_of_list_singletons s
+  /\ List.Tot.no_repeats_p (List.Tot.map fst l)
 
 let rel_map_iterator
   (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
@@ -608,6 +663,9 @@ ensures
   )
 {
   unfold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i s);
+  with l . assert (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents l);
+  parse_table_entries_no_repeats i.sp1 i.tex i.ps2 l;
+  map_of_list_pair_no_repeats_key i.eq1 (parse_table_entries i.sp1.parser i.tex i.ps2 l);  
   fold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i s)
 }
 ```
@@ -640,28 +698,28 @@ let rec rel_map_iterator_cond_is_empty
   (l: list (cbor & cbor))
 : Lemma
   (requires (
-    let l' = parse_table_entries i.sp1.parser i.tex i.sp2.parser l in
+    let l' = parse_table_entries i.sp1.parser i.tex i.ps2 l in
     s == map_of_list_pair i.eq1 l'
   ))
   (ensures (
-    s `Map.equal` Map.empty (dfst spec1) (list (dfst spec2)) <==> Nil? (parse_table_entries i.sp1.parser i.tex i.sp2.parser l)
+    s `Map.equal` Map.empty (dfst spec1) (list (dfst spec2)) <==> Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 l)
   ))
   (decreases l)
 = match l with
   | [] ->
-    assert_norm (parse_table_entries i.sp1.parser i.tex i.sp2.parser [] == []);
+    assert_norm (parse_table_entries i.sp1.parser i.tex i.ps2 [] == []);
     assert_norm (map_of_list_pair i.eq1 [] == Map.empty (dfst spec1) (list (dfst spec2)))
   | (k, v) :: q ->
-    rel_map_iterator_cond_is_empty i (map_of_list_pair i.eq1 (parse_table_entries i.sp1.parser i.tex i.sp2.parser q)) q;
-    let rq = parse_table_entries i.sp1.parser i.tex i.sp2.parser q in
-    assert_norm (parse_table_entries i.sp1.parser i.tex i.sp2.parser ((k, v) :: q) == (
+    rel_map_iterator_cond_is_empty i (map_of_list_pair i.eq1 (parse_table_entries i.sp1.parser i.tex i.ps2 q)) q;
+    let rq = parse_table_entries i.sp1.parser i.tex i.ps2 q in
+    assert_norm (parse_table_entries i.sp1.parser i.tex i.ps2 ((k, v) :: q) == (
       if Ghost.reveal i.t1 k && not (Ghost.reveal i.tex k) && Ghost.reveal i.t2 v
-      then (i.sp1.parser k, i.sp2.parser v) :: rq
+      then (i.sp1.parser k, Ghost.reveal i.ps2 v) :: rq
       else rq
     ));
     if Ghost.reveal i.t1 k && not (Ghost.reveal i.tex k) && Ghost.reveal i.t2 v
     then begin
-      map_of_list_pair_cons i.eq1 (i.sp1.parser k) (i.sp2.parser v) rq;
+      map_of_list_pair_cons i.eq1 (i.sp1.parser k) (Ghost.reveal i.ps2 v) rq;
       ()
     end
     else ()
@@ -711,7 +769,7 @@ fn cddl_map_iterator_is_empty
     pts_to pres res **
     pure (
       b == (res && Cons? lj) /\
-      Nil? (parse_table_entries i.sp1.parser i.tex i.sp2.parser li) == (res && Nil? (parse_table_entries i.sp1.parser i.tex i.sp2.parser lj))
+      Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 li) == (res && Nil? (parse_table_entries i.sp1.parser i.tex i.ps2 lj))
     )
   ) {
     let elt = map_next pj;
@@ -787,7 +845,7 @@ requires
   cbor_map_iterator_match pm contents li ** pure (
     i.pm == pm /. 2.0R /\
     i.cddl_map_iterator_contents == contents
-    /\ List.Tot.no_repeats_p (List.Tot.map fst (parse_table_entries i.sp1.parser i.tex i.sp2.parser li))
+    /\ List.Tot.no_repeats_p (List.Tot.map fst li)
   )
 ensures exists* l .
   rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l **
@@ -798,9 +856,8 @@ ensures exists* l .
     rel_map_iterator_cond i l li
   )
 {
-  let l' = parse_table_entries i.sp1.parser i.tex i.sp2.parser li;
+  let l' = parse_table_entries i.sp1.parser i.tex i.ps2 li;
   let l = map_of_list_pair i.eq1 l';
-  map_of_list_pair_no_repeats_key i.eq1 l';
   map_share contents;
   rewrite (cbor_map_iterator_match (pm /. 2.0R) contents li)
     as (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li);
@@ -844,7 +901,6 @@ fn cddl_map_iterator_next
 {
   unfold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l);
   with li . assert (cbor_map_iterator_match gi.pm gi.cddl_map_iterator_contents li);
-  map_of_list_pair_no_repeats_key gi.eq1 (parse_table_entries gi.sp1.parser gi.tex gi.sp2.parser li);
   let i = !pi;
   rewrite (cbor_map_iterator_match gi.pm gi.cddl_map_iterator_contents li)
     as (cbor_map_iterator_match gi.pm i.cddl_map_iterator_contents li);
@@ -895,7 +951,8 @@ fn cddl_map_iterator_next
       (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l) **
     pure (
       b == not (Ghost.reveal i.t1 (fst vhd) && not (Ghost.reveal i.tex (fst vhd)) && Ghost.reveal i.t2 (snd vhd)) /\
-      parse_table_entries i.sp1.parser i.tex i.sp2.parser li == parse_table_entries i.sp1.parser i.tex i.sp2.parser (vhd :: lj)
+      List.Tot.no_repeats_p (List.Tot.map fst (vhd :: lj)) /\
+      parse_table_entries i.sp1.parser i.tex i.ps2 li == parse_table_entries i.sp1.parser i.tex i.ps2 (vhd :: lj)
     )
   {
     Trade.elim_hyp_l _ _ _;
@@ -936,7 +993,6 @@ fn cddl_map_iterator_next
   Trade.trans _ _ (vmatch2 pmhd hd vhd);
   Trade.trans_hyp_l _ _ _ _;
   with gj lj . assert (cbor_map_iterator_match gi.pm gj lj);
-  map_of_list_pair_no_repeats_key i.eq1 (parse_table_entries i.sp1.parser i.tex i.sp2.parser lj);
   let j = !pj;
   let i' : map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2 = { i with
     cddl_map_iterator_contents = j;
