@@ -433,15 +433,21 @@ let rec map_of_list_pair_no_repeats_key_intro
     map_of_list_pair_length key_eq q k;
     map_of_list_pair_no_repeats_key_intro key_eq q
 
+let map_of_list_singletons
+  (#key #value: Type0)
+  (m: Map.t key (list value))
+: Tot prop
+= forall k . begin match Map.get m k with
+  | None -> True
+  | Some l -> List.Tot.length l == 1
+  end
+
 let map_of_list_pair_no_repeats_key
   (#key #value: Type0)
   (key_eq: EqTest.eq_test key)
   (l: list (key & value))
 : Lemma
-  (List.Tot.no_repeats_p (List.Tot.map fst l) <==> forall k . (match Map.get (map_of_list_pair key_eq l) k with
-  | None -> True
-  | Some l -> List.Tot.length l == 1
-  ))
+  (List.Tot.no_repeats_p (List.Tot.map fst l) <==> map_of_list_singletons (map_of_list_pair key_eq l))
 = Classical.forall_intro (Classical.move_requires (map_of_list_pair_no_repeats_key_elim key_eq l));
   Classical.move_requires (map_of_list_pair_no_repeats_key_intro key_eq) l
 
