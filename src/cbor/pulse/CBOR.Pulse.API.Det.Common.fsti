@@ -284,5 +284,9 @@ val cbor_det_map_entry_key () : map_entry_key_t cbor_det_map_entry_match cbor_de
 
 val cbor_det_map_entry_value () : map_entry_value_t cbor_det_map_entry_match cbor_det_match
 
+val cbor_det_map_entry_share () : share_t cbor_det_map_entry_match
+
+val cbor_det_map_entry_gather () : gather_t cbor_det_map_entry_match
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 val cbor_det_map_get () : map_get_by_ref_t cbor_det_match

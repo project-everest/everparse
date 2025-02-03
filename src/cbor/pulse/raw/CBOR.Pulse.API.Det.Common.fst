@@ -1520,6 +1520,40 @@ fn cbor_det_map_entry_value (_: unit) : map_entry_value_t u#0 u#0 #_ #_ cbor_det
 }
 ```
 
+```pulse
+ghost
+fn cbor_det_map_entry_share
+  (_: unit)
+: share_t u#0 u#0 #_ #_ cbor_det_map_entry_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  unfold (cbor_det_map_entry_match p x v);
+  Read.cbor_map_entry_share _ x _;
+  fold (cbor_det_map_entry_match (p /. 2.0R) x v);
+  fold (cbor_det_map_entry_match (p /. 2.0R) x v);
+}
+```
+
+```pulse
+ghost
+fn cbor_det_map_entry_gather
+  (_: unit)
+: gather_t u#0 u#0 #_ #_ cbor_det_map_entry_match
+= (x: _)
+  (#p: _)
+  (#v: _)
+  (#p': _)
+  (#v': _)
+{
+  unfold (cbor_det_map_entry_match p x v);
+  unfold (cbor_det_map_entry_match p' x v');
+  Read.cbor_map_entry_gather p x _ _ _;
+  fold (cbor_det_map_entry_match (p +. p') x v);
+}
+```
+
 let cbor_det_map_get_invariant_none
   (b: bool)
   (px: perm)
