@@ -276,6 +276,10 @@ val cbor_det_map_iterator_is_empty () : map_iterator_is_empty_t cbor_det_map_ite
 
 val cbor_det_map_iterator_next () : map_iterator_next_t cbor_det_map_entry_match cbor_det_map_iterator_match
 
+val cbor_det_map_iterator_share () : map_iterator_share_t cbor_det_map_iterator_match
+
+val cbor_det_map_iterator_gather () : map_iterator_gather_t cbor_det_map_iterator_match
+
 val cbor_det_map_entry_key () : map_entry_key_t cbor_det_map_entry_match cbor_det_match
 
 val cbor_det_map_entry_value () : map_entry_value_t cbor_det_map_entry_match cbor_det_match

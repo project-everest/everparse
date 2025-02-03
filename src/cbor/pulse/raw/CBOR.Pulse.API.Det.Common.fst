@@ -1432,6 +1432,50 @@ fn cbor_det_map_iterator_next (_: unit) : map_iterator_next_t u#0 #_ #_ cbor_det
 }
 ```
 
+let rec list_map_mk_det_raw_cbor_map_entry_inj
+  (l1 l2: list (Spec.cbor & Spec.cbor))
+: Lemma
+  (requires (List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry l1 == List.Tot.map SpecRaw.mk_det_raw_cbor_map_entry l2))
+  (ensures (l1 == l2))
+  (decreases l1)
+= match l1, l2 with
+  | [], [] -> ()
+  | a1 :: q1, a2 :: q2 ->
+    SpecRaw.mk_det_raw_cbor_inj (fst a1) (fst a2);
+    SpecRaw.mk_det_raw_cbor_inj (snd a1) (snd a2);
+    list_map_mk_det_raw_cbor_map_entry_inj q1 q2
+
+```pulse
+ghost
+fn cbor_det_map_iterator_share (_: unit) : map_iterator_share_t u#0 #_ cbor_det_map_iterator_match
+= (x: _)
+  (#py: _)
+  (#z: _)
+{
+  unfold (cbor_det_map_iterator_match py x z);
+  Read.cbor_map_iterator_share x;
+  fold (cbor_det_map_iterator_match (py /. 2.0R) x z);
+  fold (cbor_det_map_iterator_match (py /. 2.0R) x z);
+}
+```
+
+```pulse
+ghost
+fn cbor_det_map_iterator_gather (_: unit) : map_iterator_gather_t u#0 #_ cbor_det_map_iterator_match
+= (x: _)
+  (#py1: _)
+  (#z1: _)
+  (#py2: _)
+  (#z2: _)
+{
+  unfold (cbor_det_map_iterator_match py1 x z1);
+  unfold (cbor_det_map_iterator_match py2 x z2);
+  Read.cbor_map_iterator_gather x #py1 #_ #py2 #_;
+  list_map_mk_det_raw_cbor_map_entry_inj z1 z2;
+  fold (cbor_det_map_iterator_match (py1 +. py2) x z1);
+}
+```
+
 ```pulse
 fn cbor_det_map_entry_key (_: unit) : map_entry_key_t u#0 u#0 #_ #_ cbor_det_map_entry_match cbor_det_match
 = (x2: _)

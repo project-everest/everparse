@@ -515,6 +515,34 @@ let map_iterator_next_t
     )
 
 inline_for_extraction
+let map_iterator_share_t
+  (#t': Type)
+  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+= (x: t') ->
+  (#p: perm) ->
+  (#y: Ghost.erased (list (cbor & cbor))) ->
+  stt_ghost unit emp_inames
+    (iter p x y)
+    (fun _ ->
+      iter (p /. 2.0R) x y ** iter (p /. 2.0R) x y
+    )
+
+inline_for_extraction
+let map_iterator_gather_t
+  (#t': Type)
+  (iter: perm -> t' -> list (cbor & cbor) -> slprop)
+= (x: t') ->
+  (#p1: perm) ->
+  (#y1: Ghost.erased (list (cbor & cbor))) ->
+  (#p2: perm) ->
+  (#y2: Ghost.erased (list (cbor & cbor))) ->
+  stt_ghost unit emp_inames
+    (iter p1 x y1 ** iter p2 x y2)
+    (fun _ ->
+      iter (p1 +. p2) x y1 ** pure (y1 == y2)
+    )
+
+inline_for_extraction
 let map_entry_key_t
   (#t2 #t: Type)
   (vmatch2: perm -> t2 -> cbor & cbor -> slprop)

@@ -518,3 +518,104 @@ ensures exists* a p i' q .
   res
 }
 ```
+
+```pulse
+ghost
+fn cbor_map_entry_share
+  (p: perm)
+  (c: cbor_map_entry)
+  (r: (raw_data_item & raw_data_item))
+requires
+  (
+    cbor_match_map_entry p c r
+  )
+ensures
+  (
+    cbor_match_map_entry (p /. 2.0R) c r **
+    cbor_match_map_entry (p /. 2.0R) c r
+  )
+{
+  unfold (cbor_match_map_entry p c r);
+  Perm.cbor_raw_share _ c.cbor_map_entry_key _;
+  Perm.cbor_raw_share _ c.cbor_map_entry_value _;
+  fold (cbor_match_map_entry (p /. 2.0R) c r);
+  fold (cbor_match_map_entry (p /. 2.0R) c r);
+}
+```
+
+```pulse
+ghost
+fn cbor_map_entry_gather
+  (p1: perm)
+  (c: cbor_map_entry)
+  (r1: (raw_data_item & raw_data_item))
+  (p2: perm)
+  (r2: (raw_data_item & raw_data_item))
+requires
+  (
+    cbor_match_map_entry p1 c r1 **
+    cbor_match_map_entry p2 c r2
+  )
+ensures
+  (
+    cbor_match_map_entry (p1 +. p2) c r1 **
+    pure (r1 == r2)
+  )
+{
+  unfold (cbor_match_map_entry p1 c r1);
+  unfold (cbor_match_map_entry p2 c r2);
+  Perm.cbor_raw_gather p1 c.cbor_map_entry_key _ p2 _;
+  Perm.cbor_raw_gather p1 c.cbor_map_entry_value _ p2 _;
+  fold (cbor_match_map_entry (p1 +. p2) c r1);
+}
+```
+
+```pulse
+ghost
+fn cbor_map_iterator_share
+  (c: cbor_map_iterator)
+  (#pm: perm)
+  (#r: (list (raw_data_item & raw_data_item)))
+requires
+    cbor_map_iterator_match pm c r
+ensures
+    cbor_map_iterator_match (pm /. 2.0R) c r **
+    cbor_map_iterator_match (pm /. 2.0R) c r
+{
+  unfold (cbor_map_iterator_match pm c r);
+  cbor_raw_iterator_share
+    cbor_match_map_entry
+    cbor_map_entry_share
+    cbor_serialized_map_iterator_share
+    c;
+  fold (cbor_map_iterator_match (pm /. 2.0R) c r);
+  fold (cbor_map_iterator_match (pm /. 2.0R) c r);
+}
+```
+
+```pulse
+ghost
+fn cbor_map_iterator_gather
+  (c: cbor_map_iterator)
+  (#pm1: perm)
+  (#r1: (list (raw_data_item & raw_data_item)))
+  (#pm2: perm)
+  (#r2: (list (raw_data_item & raw_data_item)))
+requires
+    cbor_map_iterator_match pm1 c r1 **
+    cbor_map_iterator_match pm2 c r2
+ensures
+    cbor_map_iterator_match (pm1 +. pm2) c r1 **
+    pure (r1 == r2)
+{
+  unfold (cbor_map_iterator_match pm1 c r1);
+  unfold (cbor_map_iterator_match pm2 c r2);
+  cbor_raw_iterator_gather
+    cbor_match_map_entry
+    cbor_map_entry_gather
+    cbor_serialized_map_iterator_gather
+    c
+    #pm1 #r1 #pm2 #r2;
+  fold (cbor_map_iterator_match (pm1 +. pm2) c r1);
+}
+```
