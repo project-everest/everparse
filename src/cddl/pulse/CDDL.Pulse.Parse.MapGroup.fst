@@ -233,6 +233,12 @@ fn impl_zero_copy_map_zero_or_one
 }
 ```
 
+let half_plus_half_eq
+  (p: perm)
+: Lemma
+  (p /. 2.0R +. p /. 2.0R == p)
+= ()
+
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -391,4 +397,172 @@ fn impl_zero_copy_match_item_for
 ```
 
 #pop-options
+
+module Iterator = CDDL.Pulse.Iterator.Base
+module EqTest = CDDL.Spec.EqTest
+
+noeq
+type map_iterator_t
+  (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (cbor_map_iterator_t: Type0)
+  (impl_elt1: Type0) (impl_elt2: Type0)
+  (spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1)) (spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2)) // hopefully there should be at most one spec per impl_elt, otherwise Karamel monomorphization will introduce conflicts. Anyway, src_elt MUST NOT be extracted (it contains list types, etc.)
+: Type0 = {
+  cddl_map_iterator_contents: cbor_map_iterator_t;
+  pm: perm;
+  t1: Ghost.erased typ;
+  ser1: Ghost.erased (dfst spec1 -> bool);
+  ps1: Ghost.erased (parser_spec t1 (dfst spec1) ser1);
+  eq1: Ghost.erased (EqTest.eq_test (dfst spec1));
+  cddl_map_iterator_impl_validate1: impl_typ vmatch t1;
+  cddl_map_iterator_impl_parse1: impl_zero_copy_parse vmatch ps1 (dsnd spec1);
+  tex: Ghost.erased typ;
+  cddl_map_iterator_impl_validate_ex: impl_typ vmatch tex;
+  t2: Ghost.erased typ;
+  ser2: Ghost.erased (dfst spec2 -> bool);
+  ps2: Ghost.erased (parser_spec t2 (dfst spec2) ser2);
+  cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 (dsnd spec2);
+}
+
+inline_for_extraction
+let mk_map_iterator
+  (#ty: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#cbor_map_iterator_t: Type0)
+  (cddl_map_iterator_contents: cbor_map_iterator_t)
+  (pm: perm)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#src_elt1: Type0)
+  (#r1: rel impl_elt1 src_elt1)
+  (#t1: Ghost.erased typ)
+  (#ser1: Ghost.erased (src_elt1 -> bool))
+  (#ps1: Ghost.erased (parser_spec t1 src_elt1 ser1))
+  (eq1: Ghost.erased (EqTest.eq_test src_elt1))
+  (cddl_map_iterator_impl_validate1: impl_typ vmatch t1)
+  (cddl_map_iterator_impl_parse1: impl_zero_copy_parse vmatch ps1 r1)
+  (#tex: Ghost.erased typ)
+  (cddl_map_iterator_impl_validate_ex: impl_typ vmatch tex)
+  (#src_elt2: Type0)
+  (#r2: rel impl_elt2 src_elt2)
+  (#t2: Ghost.erased typ)
+  (#ser2: Ghost.erased (src_elt2 -> bool))
+  (#ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
+  (cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 r2)
+: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 (Iterator.mk_spec r1) (Iterator.mk_spec r2)
+= {
+  cddl_map_iterator_contents = cddl_map_iterator_contents;
+  pm = pm;
+  t1 = t1;
+  ser1 = ser1;
+  ps1 = ps1;
+  eq1 = eq1;
+  cddl_map_iterator_impl_validate1 = cddl_map_iterator_impl_validate1;
+  cddl_map_iterator_impl_parse1 = cddl_map_iterator_impl_parse1;
+  tex = tex;
+  cddl_map_iterator_impl_validate_ex = cddl_map_iterator_impl_validate_ex;
+  t2 = t2;
+  ser2 = ser2;
+  ps2 = ps2;
+  cddl_map_iterator_impl_parse2 = cddl_map_iterator_impl_parse2;
+}
+
+let mk_map_iterator_eq
+  (#ty: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#cbor_map_iterator_t: Type0)
+  (cddl_map_iterator_contents: cbor_map_iterator_t)
+  (pm: perm)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#src_elt1: Type0)
+  (#r1: rel impl_elt1 src_elt1)
+  (#t1: Ghost.erased typ)
+  (#ser1: Ghost.erased (src_elt1 -> bool))
+  (#ps1: Ghost.erased (parser_spec t1 src_elt1 ser1))
+  (eq1: Ghost.erased (EqTest.eq_test src_elt1))
+  (cddl_map_iterator_impl_validate1: impl_typ vmatch t1)
+  (cddl_map_iterator_impl_parse1: impl_zero_copy_parse vmatch ps1 r1)
+  (#tex: Ghost.erased typ)
+  (cddl_map_iterator_impl_validate_ex: impl_typ vmatch tex)
+  (#src_elt2: Type0)
+  (#r2: rel impl_elt2 src_elt2)
+  (#t2: Ghost.erased typ)
+  (#ser2: Ghost.erased (src_elt2 -> bool))
+  (#ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
+  (cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 r2)
+: Lemma
+  (ensures (
+    let res = mk_map_iterator cddl_map_iterator_contents pm eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_parse2 in
+    res.cddl_map_iterator_contents == cddl_map_iterator_contents /\
+    res.pm == pm /\
+    res.t1 == t1 /\
+    res.ser1 == ser1 /\
+    res.ps1 == ps1 /\
+    res.tex == tex /\
+    res.t2 == t2 /\
+    res.ser2 == ser2 /\
+    res.ps2 == ps2 /\
+    True
+  ))
+  [SMTPat (mk_map_iterator cddl_map_iterator_contents pm eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_parse2)]
+= ()
+
+module Map = CDDL.Spec.Map
+
+let rec parse_table_entries
+  (#src_elt1: Type0)
+  (#t1: typ)
+  (#ser1: (src_elt1 -> bool))
+  (ps1: (parser_spec t1 src_elt1 ser1))
+  (tex: typ)
+  (#src_elt2: Type0)
+  (#t2: typ)
+  (#ser2: (src_elt2 -> bool))
+  (ps2: (parser_spec t2 src_elt2 ser2))
+  (l: list (cbor & cbor))
+: Tot (list (src_elt1 & src_elt2))
+  (decreases l)
+= match l with
+  | [] -> []
+  | (k, v) :: q ->
+    let rq = parse_table_entries ps1 tex ps2 q in
+    if t1 k && not (tex k) && t2 v
+    then (ps1 k, ps2 v) :: rq
+    else rq
+
+let rel_map_iterator_cond
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1))
+  (#spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
+  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (s: Map.t (dfst spec1) (list (dfst spec2)))
+  (l: list (cbor & cbor))
+: Tot prop
+= let l' = parse_table_entries i.ps1 i.tex i.ps2 l in
+  s == map_of_list_pair i.eq1 l'
+
+let rel_map_iterator
+  (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (impl_elt1: Type0) (impl_elt2: Type0)
+  (spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1))
+  (spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
+: rel (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2) (Map.t (dfst spec1) (list (dfst spec2)))
+= mk_rel (fun i s -> exists* (l: list (cbor & cbor)) . cbor_map_iterator_match i.pm i.cddl_map_iterator_contents l **
+    pure (rel_map_iterator_cond i s l)
+  )
+
+inline_for_extraction
+let cddl_map_iterator_is_empty_t
+  (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (impl_elt1: Type0) (impl_elt2: Type0)
+=
+  (spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1)) ->
+  (spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
+  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2) ->
+  (#l: Ghost.erased (Map.t (dfst spec1) (list (dfst spec2)))) ->
+  stt bool
+    (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l)
+    (fun res ->
+      rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l **
+      pure (res == true <==> Ghost.reveal l == Map.empty (dfst spec1) (list (dfst spec2)))
+    )
 
