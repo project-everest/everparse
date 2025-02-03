@@ -420,8 +420,54 @@ type map_iterator_t
   t2: Ghost.erased typ;
   ser2: Ghost.erased (dfst spec2 -> bool);
   ps2: Ghost.erased (parser_spec t2 (dfst spec2) ser2);
+  cddl_map_iterator_impl_validate2: impl_typ vmatch t2;
   cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 (dsnd spec2);
 }
+
+inline_for_extraction
+let cddl_map_iterator_impl_validate1
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1)) (#spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
+  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+: Tot (impl_typ vmatch i.t1)
+= i.cddl_map_iterator_impl_validate1
+
+inline_for_extraction
+let cddl_map_iterator_impl_parse1
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1)) (#spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
+  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+: Tot (impl_zero_copy_parse vmatch i.ps1 (dsnd spec1))
+= i.cddl_map_iterator_impl_parse1
+
+inline_for_extraction
+let cddl_map_iterator_impl_validate_ex
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1)) (#spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
+  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+: Tot (impl_typ vmatch i.tex)
+= i.cddl_map_iterator_impl_validate_ex
+
+inline_for_extraction
+let cddl_map_iterator_impl_validate2
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1)) (#spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
+  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+: Tot (impl_typ vmatch i.t2)
+= i.cddl_map_iterator_impl_validate2
+
+inline_for_extraction
+let cddl_map_iterator_impl_parse2
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1)) (#spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
+  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+: Tot (impl_zero_copy_parse vmatch i.ps2 (dsnd spec2))
+= i.cddl_map_iterator_impl_parse2
 
 inline_for_extraction
 let mk_map_iterator
@@ -446,6 +492,7 @@ let mk_map_iterator
   (#t2: Ghost.erased typ)
   (#ser2: Ghost.erased (src_elt2 -> bool))
   (#ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
+  (cddl_map_iterator_impl_validate2: impl_typ vmatch t2)
   (cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 r2)
 : map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 (Iterator.mk_spec r1) (Iterator.mk_spec r2)
 = {
@@ -462,6 +509,7 @@ let mk_map_iterator
   t2 = t2;
   ser2 = ser2;
   ps2 = ps2;
+  cddl_map_iterator_impl_validate2 = cddl_map_iterator_impl_validate2;
   cddl_map_iterator_impl_parse2 = cddl_map_iterator_impl_parse2;
 }
 
@@ -487,10 +535,11 @@ let mk_map_iterator_eq
   (#t2: Ghost.erased typ)
   (#ser2: Ghost.erased (src_elt2 -> bool))
   (#ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
+  (cddl_map_iterator_impl_validate2: impl_typ vmatch t2)
   (cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 r2)
 : Lemma
   (ensures (
-    let res = mk_map_iterator cddl_map_iterator_contents pm eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_parse2 in
+    let res = mk_map_iterator cddl_map_iterator_contents pm eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2 in
     res.cddl_map_iterator_contents == cddl_map_iterator_contents /\
     res.pm == pm /\
     res.t1 == t1 /\
@@ -502,7 +551,7 @@ let mk_map_iterator_eq
     res.ps2 == ps2 /\
     True
   ))
-  [SMTPat (mk_map_iterator cddl_map_iterator_contents pm eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_parse2)]
+  [SMTPat (mk_map_iterator cddl_map_iterator_contents pm eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2)]
 = ()
 
 module Map = CDDL.Spec.Map
@@ -566,3 +615,132 @@ let cddl_map_iterator_is_empty_t
       pure (res == true <==> Ghost.reveal l == Map.empty (dfst spec1) (list (dfst spec2)))
     )
 
+#restart-solver
+
+let map_of_list_pair_cons
+  (#key #value: Type0)
+  (key_eq: EqTest.eq_test key)
+  (k: key)
+  (v: value)
+  (q: list (key & value))
+: Lemma
+  (map_of_list_pair key_eq ((k, v) :: q) == (
+    let m = map_of_list_pair key_eq q in
+    begin match Map.get m k with
+    | None -> Map.set m k (key_eq k) [v]
+    | Some l -> Map.set m k (key_eq k) (v :: l)
+    end
+  ))
+= ()
+
+let rec rel_map_iterator_cond_is_empty
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1))
+  (#spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
+  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (s: Map.t (dfst spec1) (list (dfst spec2)))
+  (l: list (cbor & cbor))
+: Lemma
+  (requires (
+    let l' = parse_table_entries i.ps1 i.tex i.ps2 l in
+    s == map_of_list_pair i.eq1 l'
+  ))
+  (ensures (
+    s `Map.equal` Map.empty (dfst spec1) (list (dfst spec2)) <==> Nil? (parse_table_entries i.ps1 i.tex i.ps2 l)
+  ))
+  (decreases l)
+= match l with
+  | [] ->
+    assert_norm (parse_table_entries i.ps1 i.tex i.ps2 [] == []);
+    assert_norm (map_of_list_pair i.eq1 [] == Map.empty (dfst spec1) (list (dfst spec2)))
+  | (k, v) :: q ->
+    rel_map_iterator_cond_is_empty i (map_of_list_pair i.eq1 (parse_table_entries i.ps1 i.tex i.ps2 q)) q;
+    let rq = parse_table_entries i.ps1 i.tex i.ps2 q in
+    assert_norm (parse_table_entries i.ps1 i.tex i.ps2 ((k, v) :: q) == (
+      if Ghost.reveal i.t1 k && not (Ghost.reveal i.tex k) && Ghost.reveal i.t2 v
+      then (Ghost.reveal i.ps1 k, Ghost.reveal i.ps2 v) :: rq
+      else rq
+    ));
+    if Ghost.reveal i.t1 k && not (Ghost.reveal i.tex k) && Ghost.reveal i.t2 v
+    then begin
+      map_of_list_pair_cons i.eq1 (Ghost.reveal i.ps1 k) (Ghost.reveal i.ps2 v) rq;
+      ()
+    end
+    else ()
+
+inline_for_extraction
+```pulse
+fn cddl_map_iterator_is_empty
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (#ty2: Type0) (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
+  (map_is_empty: map_iterator_is_empty_t cbor_map_iterator_match)
+  (map_next: map_iterator_next_t vmatch2 cbor_map_iterator_match)
+  (map_entry_key: map_entry_key_t vmatch2 vmatch)
+  (map_entry_value: map_entry_value_t vmatch2 vmatch)
+  (impl_elt1: Type0) (impl_elt2: Type0)
+: cddl_map_iterator_is_empty_t #ty vmatch #cbor_map_iterator_t cbor_map_iterator_match impl_elt1 impl_elt2
+=
+  (spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1))
+  (spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
+  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (#l: Ghost.erased (Map.t (dfst spec1) (list (dfst spec2))))
+{
+  unfold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l);
+  with li . assert (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li);
+  Trade.refl (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li);
+  let mut pj = i.cddl_map_iterator_contents;
+  let mut pres = true;
+  while (
+    let res = !pres;
+    if (res) {
+      with gj lj . assert (pts_to pj gj ** cbor_map_iterator_match i.pm gj lj);
+      let j = !pj;
+      Trade.rewrite_with_trade (cbor_map_iterator_match i.pm gj lj)
+        (cbor_map_iterator_match i.pm j lj);
+      let test = map_is_empty j;
+      let res = not test;
+      Trade.elim _ (cbor_map_iterator_match i.pm gj lj);
+      res
+    } else {
+      false
+    }
+  ) invariant b . exists* j lj res . (
+    pts_to pj j **
+    cbor_map_iterator_match i.pm j lj **
+    Trade.trade
+      (cbor_map_iterator_match i.pm j lj)
+      (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li) **
+    pts_to pres res **
+    pure (
+      b == (res && Cons? lj) /\
+      Nil? (parse_table_entries i.ps1 i.tex i.ps2 li) == (res && Nil? (parse_table_entries i.ps1 i.tex i.ps2 lj))
+    )
+  ) {
+    let elt = map_next pj;
+    Trade.trans _ _ (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li);
+    let elt_key = map_entry_key elt;
+    let test_key = cddl_map_iterator_impl_validate1 i elt_key;
+    if not test_key {
+      Trade.elim _ (vmatch2 _ elt _);
+      Trade.elim_hyp_l _ _ _;
+    } else {
+      let test_ex = cddl_map_iterator_impl_validate_ex i elt_key;
+      Trade.elim _ (vmatch2 _ elt _);
+      if test_ex {
+        Trade.elim_hyp_l _ _ _;
+      } else {
+        let elt_value = map_entry_value elt;
+        let test_value = cddl_map_iterator_impl_validate2 i elt_value;
+        Trade.elim _ (vmatch2 _ elt _);
+        Trade.elim_hyp_l _ _ _;
+        pres := not test_value;
+      }
+    }
+  };
+  Trade.elim _ _;
+  fold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l);
+  rel_map_iterator_cond_is_empty i l li;
+  !pres
+}
+```
