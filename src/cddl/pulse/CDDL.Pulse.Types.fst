@@ -293,6 +293,19 @@ let rel_vec_or_slice_of_seq
 module Map = CDDL.Spec.Map
 module EqTest = CDDL.Spec.EqTest
 
+let map_of_list_cons
+  (#key #value: Type0)
+  (key_eq: EqTest.eq_test key)
+  (k: key)
+  (v: value)
+  (m: Map.t key (list value))
+: Tot (Map.t key (list value))
+= 
+    begin match Map.get m k with
+    | None -> Map.set m k (key_eq k) [v]
+    | Some l -> Map.set m k (key_eq k) (v :: l)
+    end
+
 let rec map_of_list_pair
   (#key #value: Type0)
   (key_eq: EqTest.eq_test key)
@@ -302,10 +315,20 @@ let rec map_of_list_pair
   | [] -> Map.empty _ _
   | (k, v) :: q ->
     let m = map_of_list_pair key_eq q in
-    begin match Map.get m k with
-    | None -> Map.set m k (key_eq k) [v]
-    | Some l -> Map.set m k (key_eq k) (v :: l)
-    end
+    map_of_list_cons key_eq k v m
+
+let map_of_list_pair_cons
+  (#key #value: Type0)
+  (key_eq: EqTest.eq_test key)
+  (k: key)
+  (v: value)
+  (q: list (key & value))
+: Lemma
+  (map_of_list_pair key_eq ((k, v) :: q) == (
+    let m = map_of_list_pair key_eq q in
+    map_of_list_cons key_eq k v m
+  ))
+= ()
 
 let rel_slice_of_table
   (#low_key #high_key: Type)

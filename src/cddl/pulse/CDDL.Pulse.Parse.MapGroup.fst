@@ -617,22 +617,6 @@ let cddl_map_iterator_is_empty_t
 
 #restart-solver
 
-let map_of_list_pair_cons
-  (#key #value: Type0)
-  (key_eq: EqTest.eq_test key)
-  (k: key)
-  (v: value)
-  (q: list (key & value))
-: Lemma
-  (map_of_list_pair key_eq ((k, v) :: q) == (
-    let m = map_of_list_pair key_eq q in
-    begin match Map.get m k with
-    | None -> Map.set m k (key_eq k) [v]
-    | Some l -> Map.set m k (key_eq k) (v :: l)
-    end
-  ))
-= ()
-
 let rec rel_map_iterator_cond_is_empty
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
@@ -742,5 +726,207 @@ fn cddl_map_iterator_is_empty
   fold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l);
   rel_map_iterator_cond_is_empty i l li;
   !pres
+}
+```
+
+inline_for_extraction
+let cddl_map_iterator_next_t
+  (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (impl_elt1: Type0) (impl_elt2: Type0)
+=
+  (spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1)) ->
+  (spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
+  (pi: R.ref (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)) ->
+  (#i: Ghost.erased (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)) ->
+  (#l: Ghost.erased (Map.t (dfst spec1) (list (dfst spec2)))) ->
+  stt (impl_elt1 & impl_elt2)
+    (pts_to pi i **
+      rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l **
+      pure (~ (Ghost.reveal l == Map.empty (dfst spec1) (list (dfst spec2))))
+    )
+    (fun res -> exists* i' kv' l' .
+      pts_to pi i' **
+      rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i' l' **
+      rel_pair (dsnd spec1) (dsnd spec2) res kv' **
+      Trade.trade
+        (rel_pair (dsnd spec1) (dsnd spec2) res kv' ** rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i' l')
+        (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l) **
+      pure (
+        Ghost.reveal l == map_of_list_cons i.eq1 (fst kv') (snd kv') l'
+      )
+    )
+
+```pulse
+ghost
+fn rel_map_iterator_fold
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) 
+  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (map_share: map_iterator_share_t cbor_map_iterator_match)
+  (map_gather: map_iterator_gather_t cbor_map_iterator_match)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1))
+  (#spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
+  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (pm: perm)
+  (contents: cbor_map_iterator_t)
+  (li: list (cbor & cbor))
+requires
+  cbor_map_iterator_match pm contents li ** pure (
+    i.pm == pm /. 2.0R /\
+    i.cddl_map_iterator_contents == contents
+  )
+ensures exists* l .
+  rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l **
+  Trade.trade
+    (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l)
+    (cbor_map_iterator_match pm contents li) **
+  pure (
+    rel_map_iterator_cond i l li
+  )
+{
+  let l' = parse_table_entries i.ps1 i.tex i.ps2 li;
+  let l = map_of_list_pair i.eq1 l';
+  map_share contents;
+  rewrite (cbor_map_iterator_match (pm /. 2.0R) contents li)
+    as (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li);
+  fold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l);
+  ghost fn aux (_: unit)
+  requires cbor_map_iterator_match (pm /. 2.0R) contents li ** rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l
+  ensures cbor_map_iterator_match pm contents li
+  {
+    unfold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l);
+    with li' . assert (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li');
+    rewrite (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents li')
+      as (cbor_map_iterator_match (pm /. 2.0R) contents li');
+    map_gather contents #(pm /. 2.0R) #li;
+    rewrite (cbor_map_iterator_match (pm /. 2.0R +. pm /. 2.0R) contents li)
+      as (cbor_map_iterator_match pm contents li)
+  };
+  Trade.intro _ _ _ aux
+}
+```
+
+inline_for_extraction
+```pulse
+fn cddl_map_iterator_next
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (#ty2: Type0) (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
+  (map_share: map_iterator_share_t cbor_map_iterator_match)
+  (map_gather: map_iterator_gather_t cbor_map_iterator_match)
+  (map_next: map_iterator_next_t vmatch2 cbor_map_iterator_match)
+  (map_entry_key: map_entry_key_t vmatch2 vmatch)
+  (map_entry_value: map_entry_value_t vmatch2 vmatch)
+  (map_entry_share: share_t vmatch2)
+  (map_entry_gather: gather_t vmatch2)
+  (impl_elt1: Type0) (impl_elt2: Type0)
+: cddl_map_iterator_next_t #ty vmatch #cbor_map_iterator_t cbor_map_iterator_match impl_elt1 impl_elt2
+=
+  (spec1: Ghost.erased (src_elt1: Type0 & rel impl_elt1 src_elt1))
+  (spec2: Ghost.erased (src_elt2: Type0 & rel impl_elt2 src_elt2))
+  (pi: _)
+  (#gi: _)
+  (#l: _)
+{
+  unfold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l);
+  with li . assert (cbor_map_iterator_match gi.pm gi.cddl_map_iterator_contents li);
+  let i = !pi;
+  rewrite (cbor_map_iterator_match gi.pm gi.cddl_map_iterator_contents li)
+    as (cbor_map_iterator_match gi.pm i.cddl_map_iterator_contents li);
+  ghost fn aux (_: unit)
+  requires emp ** cbor_map_iterator_match gi.pm i.cddl_map_iterator_contents li
+  ensures rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l
+  {
+    rewrite (cbor_map_iterator_match gi.pm i.cddl_map_iterator_contents li)
+      as (cbor_map_iterator_match gi.pm gi.cddl_map_iterator_contents li);
+    fold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l)
+  };
+  Trade.intro _ _ _ aux;
+  let mut pj = i.cddl_map_iterator_contents;
+  let hd0 = map_next pj;
+  Trade.trans _ _ (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l);
+  let mut phd = hd0;
+  while (
+    with ghd pmhd vhd . assert (pts_to phd ghd ** vmatch2 pmhd ghd vhd);
+    let hd = !phd;
+    Trade.rewrite_with_trade (vmatch2 pmhd ghd vhd) (vmatch2 pmhd hd vhd);
+    let hd_key = map_entry_key hd;
+    let test_key = cddl_map_iterator_impl_validate1 i hd_key;
+    if not test_key {
+      Trade.elim _ (vmatch2 pmhd hd vhd);
+      Trade.elim (vmatch2 pmhd hd vhd) _;
+      true
+    } else {
+      let test_ex = cddl_map_iterator_impl_validate_ex i hd_key;
+      Trade.elim _ (vmatch2 pmhd hd vhd);
+      if test_ex {
+        Trade.elim (vmatch2 pmhd hd vhd) _;
+        true
+      } else {
+        let hd_value = map_entry_value hd;
+        let test_value = cddl_map_iterator_impl_validate2 i hd_value;
+        Trade.elim _ (vmatch2 pmhd hd vhd);
+        Trade.elim (vmatch2 pmhd hd vhd) _;
+        not test_value
+      }
+    }
+  ) invariant b . exists* hd pmhd vhd j lj .
+    pts_to phd hd **
+    vmatch2 pmhd hd vhd **
+    pts_to pj j **
+    cbor_map_iterator_match gi.pm j lj **
+    Trade.trade
+      (vmatch2 pmhd hd vhd ** cbor_map_iterator_match gi.pm j lj)
+      (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l) **
+    pure (
+      b == not (Ghost.reveal i.t1 (fst vhd) && not (Ghost.reveal i.tex (fst vhd)) && Ghost.reveal i.t2 (snd vhd)) /\
+      parse_table_entries i.ps1 i.tex i.ps2 li == parse_table_entries i.ps1 i.tex i.ps2 (vhd :: lj)
+    )
+  {
+    Trade.elim_hyp_l _ _ _;
+    let hd = map_next pj;
+    Trade.trans _ _ (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 gi l);
+    phd := hd
+  };
+  with pmhd ghd vhd . assert (pts_to phd ghd ** vmatch2 pmhd ghd vhd);
+  let hd = !phd;
+  Trade.rewrite_with_trade
+    (vmatch2 pmhd ghd vhd)
+    (vmatch2 pmhd hd vhd);
+  Trade.trans_hyp_l _ _ _ _;
+  map_entry_share hd;
+  ghost fn aux_hd (_: unit)
+  requires emp ** (vmatch2 (pmhd /. 2.0R) hd vhd ** vmatch2 (pmhd /. 2.0R) hd vhd)
+  ensures vmatch2 pmhd hd vhd
+  {
+    map_entry_gather hd;
+    rewrite (vmatch2 (pmhd /. 2.0R +. pmhd /. 2.0R) hd vhd)
+      as (vmatch2 pmhd hd vhd)
+  };
+  Trade.intro _ _ _ aux_hd;
+  let hd_key = map_entry_key hd;
+  Trade.trans_hyp_l _ _ _ (vmatch2 pmhd hd vhd);
+  let hd_key_res = cddl_map_iterator_impl_parse1 i hd_key;
+  Trade.trans_hyp_l _ _ _ (vmatch2 pmhd hd vhd);
+  with vhd_key_res . assert (dsnd spec1 hd_key_res vhd_key_res);
+  let hd_value = map_entry_value hd;
+  Trade.trans_hyp_r _ _ _ (vmatch2 pmhd hd vhd);
+  let hd_value_res = cddl_map_iterator_impl_parse2 i hd_value;
+  Trade.trans_hyp_r _ _ _ (vmatch2 pmhd hd vhd);
+  with vhd_value_res . assert (dsnd spec2 hd_value_res vhd_value_res);
+  let res = (hd_key_res, hd_value_res);
+  Trade.rewrite_with_trade
+    (dsnd spec1 hd_key_res vhd_key_res ** dsnd spec2 hd_value_res vhd_value_res)
+    (rel_pair (dsnd spec1) (dsnd spec2) res (vhd_key_res, vhd_value_res));
+  Trade.trans _ _ (vmatch2 pmhd hd vhd);
+  Trade.trans_hyp_l _ _ _ _;
+  let j = !pj;
+  let i' : map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2 = { i with
+    cddl_map_iterator_contents = j;
+    pm = gi.pm /. 2.0R;
+  };
+  rel_map_iterator_fold map_share map_gather i' gi.pm _ _;
+  Trade.trans_hyp_r _ _ _ _;
+  pi := i';
+  res
 }
 ```
