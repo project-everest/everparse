@@ -56,3 +56,36 @@ let spec_and_impl_extend_typ_with_weak
     si_sp = spec_env_extend_typ e.si_ast new_name _ t_wf e.si_sp;
     si_r = extend_rel_env_gen e.si_r new_name NType _ eq u;
   }
+
+[@@sem_attr]
+let spec_and_impl_extend_group
+  (#cbor_t: Type0)
+  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#cbor_array_iterator_t: Type0)
+  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)
+  (#cbor_map_iterator_t: Type0)
+  (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
+  (e: spec_and_impl_env)
+  (new_name: string)
+  (t: group)
+  (sq1: squash (e.si_ast.e_sem_env.se_bound new_name == None))
+  (sq2: squash (group_bounded e.si_ast.e_sem_env.se_bound t))
+: Tot (e': spec_and_impl_env {
+      spec_and_impl_env_included e e' /\
+      e'.si_ast == wf_ast_env_extend_group e.si_ast new_name t sq1 sq2
+  })
+=
+  let si_ast' = wf_ast_env_extend_group e.si_ast new_name t sq1 sq2 in
+  let si_st' : target_type_env si_ast'.e_sem_env.se_bound = {
+    te_type = (fun (x: typ_name si_ast'.e_sem_env.se_bound) -> e.si_st.te_type x);
+    te_eq = (fun x -> e.si_st.te_eq x);
+  }
+  in
+  {
+    si_ast = si_ast';
+    si_st = si_st';
+    si_sp = {
+      tp_spec_typ = (fun (n: typ_name si_ast'.e_sem_env.se_bound) -> (e.si_sp.tp_spec_typ n <: spec _ (si_st'.te_type n) true));
+    };
+    si_r = e.si_r;
+  }
