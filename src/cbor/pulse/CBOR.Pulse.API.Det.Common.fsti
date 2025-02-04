@@ -260,9 +260,9 @@ val cbor_det_array_iterator_next () : array_iterator_next_t cbor_det_match cbor_
 
 val cbor_det_array_iterator_truncate () : array_iterator_truncate_t cbor_det_array_iterator_match
 
-val cbor_det_array_iterator_share () : array_iterator_share_t cbor_det_array_iterator_match
+val cbor_det_array_iterator_share () : share_t cbor_det_array_iterator_match
 
-val cbor_det_array_iterator_gather () : array_iterator_gather_t cbor_det_array_iterator_match
+val cbor_det_array_iterator_gather () : gather_t cbor_det_array_iterator_match
 
 val cbor_det_get_array_item () : get_array_item_t cbor_det_match
 
@@ -276,9 +276,9 @@ val cbor_det_map_iterator_is_empty () : map_iterator_is_empty_t cbor_det_map_ite
 
 val cbor_det_map_iterator_next () : map_iterator_next_t cbor_det_map_entry_match cbor_det_map_iterator_match
 
-val cbor_det_map_iterator_share () : map_iterator_share_t cbor_det_map_iterator_match
+val cbor_det_map_iterator_share () : share_t cbor_det_map_iterator_match
 
-val cbor_det_map_iterator_gather () : map_iterator_gather_t cbor_det_map_iterator_match
+val cbor_det_map_iterator_gather () : gather_t cbor_det_map_iterator_match
 
 val cbor_det_map_entry_key () : map_entry_key_t cbor_det_map_entry_match cbor_det_match
 

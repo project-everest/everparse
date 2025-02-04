@@ -1068,7 +1068,7 @@ fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0 #_
 
 ```pulse
 ghost
-fn cbor_det_array_iterator_share (_: unit) : array_iterator_share_t u#0 #_ cbor_det_array_iterator_match
+fn cbor_det_array_iterator_share (_: unit) : share_t u#0 u#0 #_ #_ cbor_det_array_iterator_match
 = (x: _)
   (#py: _)
   (#z: _)
@@ -1082,7 +1082,7 @@ fn cbor_det_array_iterator_share (_: unit) : array_iterator_share_t u#0 #_ cbor_
 
 ```pulse
 ghost
-fn cbor_det_array_iterator_gather (_: unit) : array_iterator_gather_t u#0 #_ cbor_det_array_iterator_match
+fn cbor_det_array_iterator_gather (_: unit) : gather_t u#0 u#0 #_ #_ cbor_det_array_iterator_match
 = (x: _)
   (#py1: _)
   (#z1: _)
@@ -1447,7 +1447,7 @@ let rec list_map_mk_det_raw_cbor_map_entry_inj
 
 ```pulse
 ghost
-fn cbor_det_map_iterator_share (_: unit) : map_iterator_share_t u#0 #_ cbor_det_map_iterator_match
+fn cbor_det_map_iterator_share (_: unit) : share_t u#0 u#0 #_ #_ cbor_det_map_iterator_match
 = (x: _)
   (#py: _)
   (#z: _)
@@ -1461,7 +1461,7 @@ fn cbor_det_map_iterator_share (_: unit) : map_iterator_share_t u#0 #_ cbor_det_
 
 ```pulse
 ghost
-fn cbor_det_map_iterator_gather (_: unit) : map_iterator_gather_t u#0 #_ cbor_det_map_iterator_match
+fn cbor_det_map_iterator_gather (_: unit) : gather_t u#0 u#0 #_ #_ cbor_det_map_iterator_match
 = (x: _)
   (#py1: _)
   (#z1: _)
