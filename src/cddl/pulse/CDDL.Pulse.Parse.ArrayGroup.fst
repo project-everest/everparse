@@ -330,9 +330,11 @@ fn impl_zero_copy_array_group_zero_or_one
 }
 ```
 
+module Iterator = CDDL.Pulse.Iterator.Base
+
 noeq
 type array_iterator_t (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0)
-  (spec: Ghost.erased (src_elt: Type0 & rel impl_elt src_elt)) // hopefully there should be at most one spec per impl_elt, otherwise Karamel monomorphization will introduce conflicts. Anyway, src_elt MUST NOT be extracted (it contains list types, etc.)
+  (spec: Ghost.erased (Iterator.type_spec impl_elt)) // hopefully there should be at most one spec per impl_elt, otherwise Karamel monomorphization will introduce conflicts. Anyway, src_elt MUST NOT be extracted (it contains list types, etc.)
 : Type0 = {
   cddl_array_iterator_contents: cbor_array_iterator_t;
   pm: perm;
@@ -347,12 +349,10 @@ type array_iterator_t (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match
 inline_for_extraction
 let cddl_array_iterator_impl_parse
   (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
-  (#spec: Ghost.erased (src_elt: Type0 & rel impl_elt src_elt))
+  (#spec: Ghost.erased (Iterator.type_spec impl_elt))
   (i: array_iterator_t cbor_array_iterator_match impl_elt spec)
 : Tot (impl_zero_copy_array_group cbor_array_iterator_match i.ps (dsnd spec))
 = i.cddl_array_iterator_impl_parse
-
-module Iterator = CDDL.Pulse.Iterator.Base
 
 inline_for_extraction
 let mk_array_iterator
@@ -502,7 +502,7 @@ let array_group_parser_spec_zero_or_more0_mk_array_iterator_eq_f
 
 let rel_array_iterator_cond
   (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
-  (spec: Ghost.erased (src_elt: Type0 & rel impl_elt src_elt))
+  (spec: Ghost.erased (Iterator.type_spec impl_elt))
   (i: array_iterator_t cbor_array_iterator_match impl_elt spec)
   (s: list (dfst spec))
   (l: list cbor)
@@ -535,7 +535,7 @@ let rel_array_iterator_cond_intro
   ()
 
 let rel_array_iterator
-  (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0) (spec: Ghost.erased (src_elt: Type0 & rel impl_elt src_elt))
+  (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0) (spec: Ghost.erased (Iterator.type_spec impl_elt))
 : rel (array_iterator_t cbor_array_iterator_match impl_elt spec) (list (dfst spec))
 = mk_rel (fun i s -> exists* (l: list cbor) . cbor_array_iterator_match i.pm i.cddl_array_iterator_contents l **
     pure (rel_array_iterator_cond cbor_array_iterator_match spec i s l)
@@ -544,7 +544,7 @@ let rel_array_iterator
 inline_for_extraction
 let cddl_array_iterator_is_empty_t
   (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0) =
-  (#spec: Ghost.erased (src_elt: Type0 & rel impl_elt src_elt)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
+  (#spec: Ghost.erased (Iterator.type_spec impl_elt)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
   (i: array_iterator_t cbor_array_iterator_match impl_elt spec) ->
   (#l: Ghost.erased (list (dfst spec))) ->
   stt bool
@@ -575,7 +575,7 @@ fn cddl_array_iterator_is_empty
 inline_for_extraction
 let cddl_array_iterator_next_t
   (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0) =
-  (#spec: Ghost.erased (src_elt: Type0 & rel impl_elt src_elt)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
+  (#spec: Ghost.erased (Iterator.type_spec impl_elt)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
   (pi: ref (array_iterator_t cbor_array_iterator_match impl_elt spec)) ->
   (#gi: Ghost.erased (array_iterator_t cbor_array_iterator_match impl_elt spec)) ->
   (#l: Ghost.erased (list (dfst spec))) ->
