@@ -2385,6 +2385,28 @@ noeq type target_type_env
 }
 
 noextract
+let empty_target_type_env : target_type_env empty_name_env = {
+  te_type = empty_target_spec_env;
+  te_eq = (fun _ -> mk_eq_test (fun _ _ -> true)); // dummy
+}
+
+noextract
+let target_type_env_extend
+  (bound: name_env)
+  (env: target_type_env bound)
+  (n: string { ~ (name_mem n bound) })
+  (s: name_env_elem)
+  (t: Type0)
+  (eq: eq_test t)
+: Pure (target_type_env (extend_name_env bound n s))
+    (requires True)
+    (ensures fun env' -> target_spec_env_included env.te_type env'.te_type)
+= {
+  te_type = target_spec_env_extend bound env.te_type n s t;
+  te_eq = (fun n' -> if n' = n then coerce_eq () eq else coerce_eq () (env.te_eq n'));
+}
+
+noextract
 let rec list_eq'
   (#t: Type)
   (t_eq: eq_test t)
@@ -3034,18 +3056,28 @@ let spec_env_extend_typ
   })
   (#wft: target_spec_env e.e_sem_env.se_bound)
   (senv: spec_env e.e_sem_env wft)
-  (t': Ghost.erased Type0)
-  (bij: Ghost.erased (Spec.bijection (target_type_sem wft (target_type_of_wf_typ t_wf)) t'))
-: Pure (spec_env (wf_ast_env_extend_typ_with_weak e new_name t t_wf).e_sem_env (target_spec_env_extend e.e_sem_env.se_bound wft new_name NType t'))
+//  (t': Ghost.erased Type0)
+//  (bij: Ghost.erased (Spec.bijection (target_type_sem wft (target_type_of_wf_typ t_wf)) t'))
+: Pure (spec_env (wf_ast_env_extend_typ_with_weak e new_name t t_wf).e_sem_env (target_spec_env_extend e.e_sem_env.se_bound wft new_name NType
+// t'
+(target_type_sem wft (target_type_of_wf_typ t_wf))
+))
     (requires True)
     (ensures fun senv' ->
       spec_env_included senv senv'
     )
 = let e' = (wf_ast_env_extend_typ_with_weak e new_name t t_wf) in
+  let t' = target_type_sem wft (target_type_of_wf_typ t_wf) in
   assert (e'.e_sem_env.se_bound == extend_name_env e.e_sem_env.se_bound new_name NType);
   let wft' : target_spec_env e'.e_sem_env.se_bound = coerce_eq () (target_spec_env_extend e.e_sem_env.se_bound wft new_name NType t') in
   let senv'  = {
-    tp_spec_typ = (fun (n: typ_name e'.e_sem_env.se_bound) -> if n = new_name then coerce_eq #_ #(Spec.spec (sem_of_type_sem (e'.e_sem_env.se_env n)) (wft' n) true) () (Spec.spec_bij (Spec.spec_ext (spec_of_wf_typ senv t_wf) (sem_of_type_sem (e'.e_sem_env.se_env n))) bij) else coerce_eq #_ #(Spec.spec (sem_of_type_sem (e'.e_sem_env.se_env n)) (wft' n) true) () (senv.tp_spec_typ n));
+    tp_spec_typ = (fun (n: typ_name e'.e_sem_env.se_bound) -> if n = new_name then coerce_eq #_ #(Spec.spec (sem_of_type_sem (e'.e_sem_env.se_env n)) (wft' n) true) ()
+//      (Spec.spec_bij
+    (Spec.spec_ext
+      (spec_of_wf_typ senv t_wf)
+      (sem_of_type_sem (e'.e_sem_env.se_env n)))
+// bij)
+    else coerce_eq #_ #(Spec.spec (sem_of_type_sem (e'.e_sem_env.se_env n)) (wft' n) true) () (senv.tp_spec_typ n));
     // tp_spec_array_group = (fun n -> (senv.tp_spec_array_group n));
   }
   in

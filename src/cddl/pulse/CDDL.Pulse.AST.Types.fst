@@ -60,6 +60,8 @@ type rel_env
   (s_env: target_type_env bound)
 = (n: typ_name bound) -> target_impl_sem (s_env.te_type n)
 
+let empty_rel_env : rel_env empty_target_type_env = fun _ -> false_elim ()
+
 [@sem_attr]
 let rec impl_type_sem
   (#bound: name_env)
@@ -134,6 +136,21 @@ let rel_env_included
 : Tot prop
 = target_spec_env_included s_env1.te_type s_env2.te_type /\
   (forall (n: typ_name bound1) . r1 n == coerce_eq () (r2 n))
+
+[@sem_attr]
+let extend_rel_env_gen
+  (#bound: name_env)
+  (#s_env: target_type_env bound)
+  (env: rel_env s_env)
+  (n: string { ~ (name_mem n bound) })
+  (s: name_env_elem)
+  (st: Type0)
+  (st_eq: eq_test st)
+  (tt: target_impl_sem st)
+: Pure (rel_env (target_type_env_extend bound s_env n s st st_eq))
+    (requires True)
+    (ensures fun env'  -> rel_env_included env env' )
+= fun n' -> if n' = n then tt else env n'
 
 let rec impl_type_sem_incr
   (#bound1: name_env)
