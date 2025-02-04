@@ -510,6 +510,36 @@ let mk_map_iterator
   cddl_map_iterator_impl_parse2 = cddl_map_iterator_impl_parse2;
 }
 
+let mk_map_iterator_eq_postcond
+  (#ty: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#cbor_map_iterator_t: Type0)
+  (cddl_map_iterator_contents: cbor_map_iterator_t)
+  (pm: perm)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+  (#src_elt1: Type0)
+  (#r1: rel impl_elt1 src_elt1)
+  (#t1: Ghost.erased typ)
+  (sp1: Ghost.erased (spec t1 src_elt1 true))
+  (eq1: Ghost.erased (EqTest.eq_test src_elt1))
+  (tex: Ghost.erased typ)
+  (#src_elt2: Type0)
+  (#r2: rel impl_elt2 src_elt2)
+  (#t2: Ghost.erased typ)
+  (#ser2: Ghost.erased (src_elt2 -> bool))
+  (ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
+  (res: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+: Tot prop
+=   res.cddl_map_iterator_contents == cddl_map_iterator_contents /\
+    res.pm == pm /\
+    res.t1 == t1 /\
+    res.sp1 == sp1 /\
+    res.tex == tex /\
+    res.t2 == t2 /\
+    res.ser2 == ser2 /\
+    res.ps2 == ps2 /\
+    True
+
 let mk_map_iterator_eq
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -536,15 +566,7 @@ let mk_map_iterator_eq
 : Lemma
   (ensures (
     let res = mk_map_iterator cddl_map_iterator_contents pm sp1 eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2 in
-    res.cddl_map_iterator_contents == cddl_map_iterator_contents /\
-    res.pm == pm /\
-    res.t1 == t1 /\
-    res.sp1 == sp1 /\
-    res.tex == tex /\
-    res.t2 == t2 /\
-    res.ser2 == ser2 /\
-    res.ps2 == ps2 /\
-    True
+    mk_map_iterator_eq_postcond cddl_map_iterator_contents pm sp1 eq1 tex ps2 res
   ))
   [SMTPat (mk_map_iterator cddl_map_iterator_contents pm sp1 eq1 cddl_map_iterator_impl_validate1 cddl_map_iterator_impl_parse1 cddl_map_iterator_impl_validate_ex cddl_map_iterator_impl_validate2 cddl_map_iterator_impl_parse2)]
 = ()
@@ -1005,3 +1027,192 @@ fn cddl_map_iterator_next
 }
 ```
 
+let list_assoc_no_repeats_mem'
+  (#tk: eqtype)
+  (#tv: Type)
+  (l: list (tk & tv))
+  (kv: (tk & tv))
+: Lemma
+  (ensures (List.Tot.no_repeats_p (List.Tot.map fst l) ==> (List.Tot.assoc (fst kv) l == Some (snd kv) <==> List.Tot.memP kv l)))
+= CBOR.Spec.Util.list_assoc_no_repeats_mem l (fst kv) (snd kv)
+
+let rec map_of_list_pair_parse_table_entries_mem
+  (#tkey #tvalue: Type)
+  (key_eq: EqTest.eq_test tkey)
+  (#key #value: typ)
+  (pkey: spec key tkey true)
+  (key_except: typ)
+  (#inj: bool)
+  (pvalue: spec value tvalue inj)
+  (l: list (cbor & cbor))
+  (sq: squash (
+    List.Tot.no_repeats_p (List.Tot.map fst l)
+  ))
+  (kv: (tkey & list tvalue))
+: Lemma
+  (ensures (
+    Map.mem kv (map_of_list_pair key_eq (parse_table_entries pkey.parser key_except pvalue.parser l)) <==> (
+      pkey.serializable (fst kv) /\
+      (~ (key_except (pkey.serializer (fst kv)))) /\ (
+      exists kv' . List.Tot.memP kv' l /\
+      fst kv' == pkey.serializer (fst kv) /\
+      value (snd kv') /\
+      [pvalue.parser (snd kv')] == snd kv
+  ))))
+  (decreases l)
+= parse_table_entries_no_repeats pkey key_except pvalue.parser l;
+  map_of_list_pair_no_repeats_key key_eq (parse_table_entries pkey.parser key_except pvalue.parser l);
+  match l with
+  | [] -> ()
+  | (k1, v1) :: q ->
+    map_of_list_pair_parse_table_entries_mem key_eq pkey key_except pvalue q sq kv
+
+let map_of_list_pair_parse_table_entries_correct
+  (#tkey #tvalue: Type)
+  (key_eq: EqTest.eq_test tkey)
+  (#key #value: typ)
+  (pkey: spec key tkey true)
+  (key_except: typ)
+  (#inj: bool)
+  (pvalue: spec value tvalue inj)
+  (m1: map_group_parser_spec_arg (map_group_zero_or_more (map_group_match_item false (Util.andp key (Util.notp key_except)) value)) (Util.andp key (Util.notp key_except)))
+  (m2: cbor_map)
+  (l: list (cbor & cbor))
+: Lemma
+  (requires (
+    cbor_map_disjoint_from_footprint m2 (Util.andp key (Util.notp key_except)) /\
+    (forall k . cbor_map_get (cbor_map_union m1 m2) k == List.Tot.assoc k l) /\
+    List.Tot.no_repeats_p (List.Tot.map fst l)
+  ))
+  (ensures (
+    map_of_list_pair key_eq (parse_table_entries pkey.parser key_except pvalue.parser l) `Map.equal` map_group_zero_or_more_match_item_parser pkey key_except pvalue m1
+    // this also means that the order of elements in `l` is "erased" in the resulting map
+  ))
+= Classical.forall_intro (list_assoc_no_repeats_mem' l);
+  let prf
+    (kv: (tkey & list tvalue))
+  : Lemma
+    (Map.mem kv (map_of_list_pair key_eq (parse_table_entries pkey.parser key_except pvalue.parser l)) <==> Map.mem kv (map_group_zero_or_more_match_item_parser pkey key_except pvalue m1))
+  = map_of_list_pair_parse_table_entries_mem key_eq pkey key_except pvalue l () kv;
+    map_group_zero_or_more_match_item_parser'_mem pkey key_except pvalue m1 kv;
+    ()
+  in
+  Classical.forall_intro prf
+
+let typ_andp
+  (t1 t2: typ)
+: Tot typ
+= Util.andp t1 t2
+
+let typ_notp
+  (t: typ)
+: Tot typ
+= Util.notp t
+
+let map_group_zero_or_more_match_item
+  (key: typ)
+  (key_except: typ)
+  (value: typ)
+: Tot det_map_group
+= map_group_zero_or_more (map_group_match_item false (Util.andp key (Util.notp key_except)) value)
+
+let impl_zero_copy_map_zero_or_more_aux
+  (#ty: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#cbor_map_iterator_t: Type0)
+    (#key: Ghost.erased typ)
+    (#tkey: Type0)
+    (key_eq: Ghost.erased (EqTest.eq_test tkey))
+    (sp1: Ghost.erased (spec key tkey true))
+    (#ikey: Type0)
+    (r1: rel ikey tkey)
+    (key_except: Ghost.erased typ)
+    (#value: Ghost.erased typ)
+    (#tvalue: Type0)
+    (#inj: Ghost.erased bool)
+    (sp2: Ghost.erased (spec value tvalue inj))
+    (#ivalue: Type0)
+    (r2: rel ivalue tvalue)
+    (v: cbor)
+    (m1 m2: cbor_map)
+    (pm: perm)
+    (i: map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+    (contents: cbor_map_iterator_t)
+    (li: list (cbor & cbor))
+    (s: Map.t (dfst (Iterator.mk_spec r1)) (list (dfst (Iterator.mk_spec r2))))
+: Lemma
+  (requires (
+    impl_zero_copy_map_group_pre
+      (map_group_zero_or_more_match_item key key_except value)
+      (typ_andp key (typ_notp key_except))
+      v m1 m2 /\
+    (forall k . cbor_map_get (cbor_map_union m1 m2) k == List.Tot.assoc k li) /\
+    rel_map_iterator_cond i s li /\
+    mk_map_iterator_eq_postcond contents pm sp1 key_eq key_except sp2.parser i
+  ))
+  (ensures (
+    impl_zero_copy_map_group_post
+      (map_group_zero_or_more_match_item_parser sp1 key_except sp2)
+      v m1 m2 s
+  ))
+= map_of_list_pair_parse_table_entries_correct key_eq sp1 key_except sp2 m1 m2 li;
+  assume (s == map_of_list_pair key_eq (parse_table_entries sp1.parser key_except sp2.parser li));
+  ()
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_map_zero_or_more
+  (#ty: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#cbor_map_iterator_t: Type0)
+  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (map_iterator_start: map_iterator_start_t vmatch cbor_map_iterator_match)
+  (map_share: map_iterator_share_t cbor_map_iterator_match)
+  (map_gather: map_iterator_gather_t cbor_map_iterator_match)
+    (#key: Ghost.erased typ)
+    (#tkey: Type0)
+    (key_eq: Ghost.erased (EqTest.eq_test tkey))
+    (sp1: Ghost.erased (spec key tkey true))
+    (va1: impl_typ vmatch key) // MUST be a function pointer
+    (#ikey: Type0)
+    (#r1: rel ikey tkey)
+    (pa1: impl_zero_copy_parse vmatch sp1.parser r1) // MUST be a function pointer
+    (#key_except: Ghost.erased typ)
+    (va_ex: impl_typ vmatch key_except) // MUST be a function pointer
+    (#value: Ghost.erased typ)
+    (#tvalue: Type0)
+    (#inj: Ghost.erased bool)
+    (sp2: Ghost.erased (spec value tvalue inj))
+    (va2: impl_typ vmatch value) // MUST be a function pointer
+    (#ivalue: Type0)
+    (#r2: rel ivalue tvalue)
+    (pa2: impl_zero_copy_parse vmatch sp2.parser r2) // MUST be a function pointer
+: impl_zero_copy_map_group
+    #ty
+    vmatch
+    #(map_group_zero_or_more_match_item (Ghost.reveal key) (Ghost.reveal key_except) (Ghost.reveal value))
+    #(typ_andp (Ghost.reveal key) (typ_notp (Ghost.reveal key_except)))
+    #(Map.t tkey (list tvalue))
+    #(map_group_zero_or_more_match_item_length #tkey #tvalue)
+    #(map_group_zero_or_more_match_item_serializable (Ghost.reveal sp1) (Ghost.reveal key_except) (Ghost.reveal sp2))
+    (map_group_zero_or_more_match_item_parser (Ghost.reveal sp1) (Ghost.reveal key_except) (Ghost.reveal sp2))
+    #(map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+    (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+=
+  (c: _)
+  (#p: _)
+  (#v: _)
+  (v1: _)
+  (v2: _)
+{
+  let i = map_iterator_start c;
+  with pl l . assert (cbor_map_iterator_match pl i l);
+  let res : map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) = mk_map_iterator i (pl /. 2.0R) sp1 key_eq va1 pa1 va_ex va2 pa2;
+  mk_map_iterator_eq i (pl /. 2.0R) sp1 key_eq va1 pa1 va_ex va2 pa2;
+  rel_map_iterator_fold map_share map_gather res pl i l;
+  Trade.trans _ (cbor_map_iterator_match pl i l) _;
+  with s . assert (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) res s);
+  impl_zero_copy_map_zero_or_more_aux key_eq sp1 r1 key_except sp2 r2 v v1 v2 (pl /. 2.0R) res i l s;
+  res
+}
+```
