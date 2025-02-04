@@ -2169,7 +2169,7 @@ let rec target_type_bounded_incr
   | TTDef _ -> ()
 
 type target_spec_env (bound: name_env) =
-  (name bound -> GTot Type0)
+  (typ_name bound -> GTot Type0)
 
 irreducible [@@"opaque_to_smt"]
 let empty_target_spec_env : target_spec_env empty_name_env =
@@ -2177,7 +2177,7 @@ let empty_target_spec_env : target_spec_env empty_name_env =
 
 let target_spec_env_included (#bound1: name_env) (t1: target_spec_env bound1) (#bound2: name_env) (t2: target_spec_env bound2) : GTot prop =
   name_env_included bound1 bound2 /\
-  (forall (x: name bound1) . t1 x == t2 x)
+  (forall (x: typ_name bound1) . t1 x == t2 x)
 
 let target_spec_env_extend
   (bound: name_env)
