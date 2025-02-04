@@ -3067,15 +3067,16 @@ let spec_env_extend_typ
       spec_env_included senv senv'
     )
 = let e' = (wf_ast_env_extend_typ_with_weak e new_name t t_wf) in
+  assert_norm (sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t);
   let t' = target_type_sem wft (target_type_of_wf_typ t_wf) in
   assert (e'.e_sem_env.se_bound == extend_name_env e.e_sem_env.se_bound new_name NType);
   let wft' : target_spec_env e'.e_sem_env.se_bound = coerce_eq () (target_spec_env_extend e.e_sem_env.se_bound wft new_name NType t') in
   let senv'  = {
     tp_spec_typ = (fun (n: typ_name e'.e_sem_env.se_bound) -> if n = new_name then coerce_eq #_ #(Spec.spec (sem_of_type_sem (e'.e_sem_env.se_env n)) (wft' n) true) ()
 //      (Spec.spec_bij
-    (Spec.spec_ext
+//    (Spec.spec_ext
       (spec_of_wf_typ senv t_wf)
-      (sem_of_type_sem (e'.e_sem_env.se_env n)))
+//      (sem_of_type_sem (e'.e_sem_env.se_env n)))
 // bij)
     else coerce_eq #_ #(Spec.spec (sem_of_type_sem (e'.e_sem_env.se_env n)) (wft' n) true) () (senv.tp_spec_typ n));
     // tp_spec_array_group = (fun n -> (senv.tp_spec_array_group n));
