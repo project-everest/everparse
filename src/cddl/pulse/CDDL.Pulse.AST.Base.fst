@@ -21,6 +21,8 @@ type cbor_impl
   (cbor_array_iterator_match: (perm -> t_arr -> list cbor -> slprop))
   (cbor_map_iterator_match: (perm -> t_map -> list (cbor & cbor) -> slprop))
 = {
+  cbor_share: share_t vmatch;
+  cbor_gather: gather_t vmatch;
   cbor_get_major_type: get_major_type_t vmatch;
   cbor_destr_int64: read_uint64_t vmatch;
   cbor_get_string: get_string_t vmatch;
@@ -33,8 +35,8 @@ type cbor_impl
   cbor_array_iterator_length: array_iterator_length_t cbor_array_iterator_match;
   cbor_array_iterator_next: array_iterator_next_t vmatch cbor_array_iterator_match;
   cbor_array_iterator_truncate: array_iterator_truncate_t cbor_array_iterator_match;
-  cbor_array_iterator_share: array_iterator_share_t cbor_array_iterator_match;
-  cbor_array_iterator_gather: array_iterator_gather_t cbor_array_iterator_match;
+  cbor_array_iterator_share: share_t cbor_array_iterator_match;
+  cbor_array_iterator_gather: gather_t cbor_array_iterator_match;
   cbor_get_map_length: get_map_length_t vmatch;
   cbor_map_get: map_get_t vmatch;
   cbor_mk_int64: mk_int64_t vmatch;
@@ -45,6 +47,8 @@ type cbor_impl
   cbor_map_iterator_init: map_iterator_start_t vmatch cbor_map_iterator_match;
   cbor_map_iterator_is_empty: map_iterator_is_empty_t cbor_map_iterator_match;
   cbor_map_iterator_next: map_iterator_next_t vmatch2 cbor_map_iterator_match;
+  cbor_map_iterator_share: share_t cbor_map_iterator_match;
+  cbor_map_iterator_gather: gather_t cbor_map_iterator_match;
   cbor_map_entry_key: map_entry_key_t vmatch2 vmatch;
   cbor_map_entry_value: map_entry_value_t vmatch2 vmatch;
 }

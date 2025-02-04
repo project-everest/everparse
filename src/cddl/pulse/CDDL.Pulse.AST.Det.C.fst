@@ -9,6 +9,8 @@ module AST = CDDL.Spec.AST.Base
 [@@AST.sem_attr]
 let cbor_det_impl : cbor_impl cbor_det_match cbor_det_map_entry_match cbor_det_array_iterator_match cbor_det_map_iterator_match
 = {
+  cbor_share = cbor_det_share ();
+  cbor_gather = cbor_det_gather ();
   cbor_get_major_type = cbor_det_major_type ();
   cbor_destr_int64 = cbor_det_read_uint64 ();
   cbor_get_string = cbor_det_get_string_as_slice ();
@@ -33,6 +35,8 @@ let cbor_det_impl : cbor_impl cbor_det_match cbor_det_map_entry_match cbor_det_a
   cbor_map_iterator_init = cbor_det_map_iterator_start ();
   cbor_map_iterator_is_empty = cbor_det_map_iterator_is_empty ();
   cbor_map_iterator_next = cbor_det_map_iterator_next ();
+  cbor_map_iterator_share = cbor_det_map_iterator_share ();
+  cbor_map_iterator_gather = cbor_det_map_iterator_gather ();
   cbor_map_entry_key = cbor_det_map_entry_key ();
   cbor_map_entry_value = cbor_det_map_entry_value ();
 }

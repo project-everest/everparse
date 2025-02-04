@@ -101,6 +101,64 @@ fn impl_zero_copy_map
 }
 ```
 
+unfold
+let impl_zero_copy_map_ext_precond
+    (t1: (det_map_group))
+    (#fp1: typ)
+    (#tgt1: Type0)
+    (#tgt_size1: (tgt1 -> nat))
+    (#tgt_serializable1: (tgt1 -> bool))
+    (ps1: (map_group_parser_spec t1 fp1 tgt_size1 tgt_serializable1))
+    (t2: det_map_group)
+    (#fp2: typ)
+    (#tgt_size2: (tgt1 -> nat))
+    (#tgt_serializable2: (tgt1 -> bool))
+    (ps2: (map_group_parser_spec t1 fp2 tgt_size2 tgt_serializable2))
+: Tot prop
+=
+      map_group_footprint t1 fp1 /\
+      t2 == t1 /\
+      typ_equiv fp1 fp2 /\
+      (forall (x: cbor_map) .
+        (map_group_parser_spec_arg_prop t1 fp1 x /\ map_group_parser_spec_arg_prop t2 fp2 x) ==>
+        (ps1 x <: tgt1) == (ps2 (x <: map_group_parser_spec_arg t2 fp2) <: tgt1)
+      )
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_map_ext
+  (#ty: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+    (#t1: Ghost.erased (det_map_group))
+    (#fp1: Ghost.erased typ)
+    (#tgt1: Type0)
+    (#tgt_size1: Ghost.erased (tgt1 -> nat))
+    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#ps1: Ghost.erased (map_group_parser_spec t1 fp1 tgt_size1 tgt_serializable1))
+    (#impl_tgt1: Type0)
+    (#r1: rel impl_tgt1 tgt1)
+    (pa1: impl_zero_copy_map_group vmatch ps1 r1)
+    (#t2: Ghost.erased det_map_group)
+    (#fp2: Ghost.erased typ)
+    (#tgt_size2: Ghost.erased (tgt1 -> nat))
+    (#tgt_serializable2: Ghost.erased (tgt1 -> bool))
+    (ps2: Ghost.erased (map_group_parser_spec t1 fp2 tgt_size2 tgt_serializable2))
+    (sq: squash (
+      impl_zero_copy_map_ext_precond (Ghost.reveal t1) (Ghost.reveal ps1) (Ghost.reveal t2) (Ghost.reveal ps2)
+    ))
+: impl_zero_copy_map_group #ty vmatch #(Ghost.reveal t2) #(Ghost.reveal fp2)
+#(tgt1) #(Ghost.reveal tgt_size2) #(Ghost.reveal tgt_serializable2) (Ghost.reveal ps2) #(impl_tgt1) (r1)
+=
+  (c: _)
+  (#p: _)
+  (#v: _)
+  (v1: _)
+  (v2: _)
+{
+  pa1 c v1 v2
+}
+```
+
 #set-options "--print_implicits"
 
 #push-options "--ifuel 8"
@@ -335,7 +393,7 @@ fn impl_zero_copy_match_item_for_cont
   (#value: Ghost.erased typ)
   (#tvalue: Type0)
   (#tvalue_ser: Ghost.erased (tvalue -> bool))
-  (#pvalue: parser_spec value tvalue tvalue_ser)
+  (#pvalue: Ghost.erased (parser_spec value tvalue tvalue_ser))
   (#iv: Type0)
   (#r: rel iv tvalue)
   (ivalue: impl_zero_copy_parse vmatch pvalue r)
@@ -381,7 +439,7 @@ fn impl_zero_copy_match_item_for
   (#value: Ghost.erased typ)
   (#tvalue: Type0)
   (#tvalue_ser: Ghost.erased (tvalue -> bool))
-  (#pvalue: parser_spec value tvalue tvalue_ser)
+  (#pvalue: Ghost.erased (parser_spec value tvalue tvalue_ser))
   (#iv: Type0)
   (#r: rel iv tvalue)
   (ivalue: impl_zero_copy_parse vmatch pvalue r)
@@ -864,8 +922,8 @@ ghost
 fn rel_map_iterator_fold
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) 
   (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
-  (map_share: map_iterator_share_t cbor_map_iterator_match)
-  (map_gather: map_iterator_gather_t cbor_map_iterator_match)
+  (map_share: share_t cbor_map_iterator_match)
+  (map_gather: gather_t cbor_map_iterator_match)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
   (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
   (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
@@ -914,8 +972,8 @@ inline_for_extraction
 fn cddl_map_iterator_next
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#ty2: Type0) (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
-  (map_share: map_iterator_share_t cbor_map_iterator_match)
-  (map_gather: map_iterator_gather_t cbor_map_iterator_match)
+  (map_share: share_t cbor_map_iterator_match)
+  (map_gather: gather_t cbor_map_iterator_match)
   (map_next: map_iterator_next_t vmatch2 cbor_map_iterator_match)
   (map_entry_key: map_entry_key_t vmatch2 vmatch)
   (map_entry_value: map_entry_value_t vmatch2 vmatch)
@@ -1182,14 +1240,14 @@ let impl_zero_copy_map_zero_or_more_aux
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
-fn impl_zero_copy_map_zero_or_more
+fn impl_zero_copy_map_zero_or_more'
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
   (#cbor_map_iterator_t: Type0)
   (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (map_iterator_start: map_iterator_start_t vmatch cbor_map_iterator_match)
-  (map_share: map_iterator_share_t cbor_map_iterator_match)
-  (map_gather: map_iterator_gather_t cbor_map_iterator_match)
+  (map_share: share_t cbor_map_iterator_match)
+  (map_gather: gather_t cbor_map_iterator_match)
     (#key: Ghost.erased typ)
     (#tkey: Type0)
     (key_eq: Ghost.erased (EqTest.eq_test tkey))
@@ -1234,6 +1292,63 @@ fn impl_zero_copy_map_zero_or_more
   Trade.trans _ (cbor_map_iterator_match pl i l) _;
   with s . assert (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) res s);
   impl_zero_copy_map_zero_or_more_aux key_eq sp1 r1 key_except sp2 r2 v v1 v2 (pl /. 2.0R) res i l s;
+  res
+}
+```
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_zero_copy_map_zero_or_more
+  (#ty: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (#cbor_map_iterator_t: Type0)
+  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (map_iterator_start: map_iterator_start_t vmatch cbor_map_iterator_match)
+  (map_share: share_t cbor_map_iterator_match)
+  (map_gather: gather_t cbor_map_iterator_match)
+    (#key: Ghost.erased typ)
+    (#tkey: Type0)
+    (key_eq: Ghost.erased (EqTest.eq_test tkey))
+    (sp1: Ghost.erased (spec key tkey true))
+    (va1: impl_typ vmatch key) // MUST be a function pointer
+    (#ikey: Type0)
+    (#r1: rel ikey tkey)
+    (pa1: impl_zero_copy_parse vmatch sp1.parser r1) // MUST be a function pointer
+    (#key_except: Ghost.erased typ)
+    (va_ex: impl_typ vmatch key_except) // MUST be a function pointer
+    (#value: Ghost.erased typ)
+    (#tvalue: Type0)
+    (#inj: Ghost.erased bool)
+    (sp2: Ghost.erased (spec value tvalue inj))
+    (va2: impl_typ vmatch value) // MUST be a function pointer
+    (#ivalue: Type0)
+    (#r2: rel ivalue tvalue)
+    (pa2: impl_zero_copy_parse vmatch sp2.parser r2) // MUST be a function pointer
+: impl_zero_copy_map_group
+    #ty
+    vmatch
+    #(map_group_zero_or_more_match_item (Ghost.reveal key) (Ghost.reveal key_except) (Ghost.reveal value))
+    #(typ_andp (Ghost.reveal key) (typ_notp (Ghost.reveal key_except)))
+    #(Map.t tkey (list tvalue))
+    #(map_group_zero_or_more_match_item_length #tkey #tvalue)
+    #(map_group_zero_or_more_match_item_serializable (Ghost.reveal sp1) (Ghost.reveal key_except) (Ghost.reveal sp2))
+    (map_group_zero_or_more_match_item_parser (Ghost.reveal sp1) (Ghost.reveal key_except) (Ghost.reveal sp2))
+    #(either (vec_or_slice (ikey & ivalue)) (map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
+    (rel_either_left (rel_vec_or_slice_of_table key_eq r1 r2 false) (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
+=
+  (c: _)
+  (#p: _)
+  (#v: _)
+  (v1: _)
+  (v2: _)
+{
+  let rres = impl_zero_copy_map_zero_or_more' map_iterator_start map_share map_gather key_eq sp1 va1 pa1 va_ex sp2 va2 pa2 c v1 v2;
+  with vres . assert (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) rres vres);
+  let res : either (vec_or_slice (ikey & ivalue)) (map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)) = Inr rres;
+  Trade.rewrite_with_trade
+    (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) rres vres)
+    (rel_either_left (rel_vec_or_slice_of_table key_eq r1 r2 false) (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)) res vres);
+  Trade.trans _ _ (vmatch p c v);
   res
 }
 ```
