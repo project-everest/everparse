@@ -41,7 +41,7 @@ let "^wf'^" : ast0_wf_typ _ = "^wf^"
 let _ : unit = _ by (FStar.Tactics.print (\"wf_eq\"); FStar.Tactics.exact (`()))
 let "^wf^"_eq : squash ("^wf'^" == "^wf^") = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let "^validator^" = Impl.validate_typ Det.cbor_det_impl v"^env^" true _ "^wf'^"
 let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"; sem_attr] noextract

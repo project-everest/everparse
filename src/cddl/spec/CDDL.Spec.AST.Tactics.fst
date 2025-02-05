@@ -82,6 +82,7 @@ let pull_group
 noextract [@@noextract_to "krml"]
 let steps = [
       zeta; iota; primops;
+      nbe;
       simplify;
       delta_attr [`%sem_attr];
       delta_only [

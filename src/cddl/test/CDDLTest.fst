@@ -41,10 +41,6 @@ let defs = produce_defs sorted_source0
 let _ : unit = _ by (FStar.Tactics.print defs; FStar.Tactics.exact (`()))
 
 (*
-mkdir -p _output
-true   
-fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/everparse/src/cbor/spec --include /home/tahina/everest/everparse/src/cddl/spec --include /home/tahina/everest/everparse/lib/evercddl/lib --include /home/tahina/everest/everparse/lib/evercddl/plugin --include /home/tahina/everest/everparse/src/cbor/pulse --include /home/tahina/everest/everparse/src/cddl/pulse --include /home/tahina/everest/karamel/krmllib --include /home/tahina/everest/karamel/krmllib/obj --include /home/tahina/everest/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice' --dep full @.depend.rsp --output_deps_to .depend.aux
-mv .depend.aux .depend
 fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/everparse/src/cbor/spec --include /home/tahina/everest/everparse/src/cddl/spec --include /home/tahina/everest/everparse/lib/evercddl/lib --include /home/tahina/everest/everparse/lib/evercddl/plugin --include /home/tahina/everest/everparse/src/cbor/pulse --include /home/tahina/everest/everparse/src/cddl/pulse --include /home/tahina/everest/karamel/krmllib --include /home/tahina/everest/karamel/krmllib/obj --include /home/tahina/everest/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning   CDDLTest.fst
 TAC>> 
 *)
@@ -60,7 +56,7 @@ let wf1' : ast0_wf_typ _ = wf1
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf1_eq : squash (wf1' == wf1) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_bool = Impl.validate_typ Det.cbor_det_impl venv0 true _ wf1'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -85,7 +81,7 @@ let wf2' : ast0_wf_typ _ = wf2
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf2_eq : squash (wf2' == wf2) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_everparsenomatch = Impl.validate_typ Det.cbor_det_impl venv1 true _ wf2'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -110,7 +106,7 @@ let wf3' : ast0_wf_typ _ = wf3
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf3_eq : squash (wf3' == wf3) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_uint = Impl.validate_typ Det.cbor_det_impl venv2 true _ wf3'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -135,7 +131,7 @@ let wf4' : ast0_wf_typ _ = wf4
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf4_eq : squash (wf4' == wf4) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_nint = Impl.validate_typ Det.cbor_det_impl venv3 true _ wf4'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -160,7 +156,7 @@ let wf5' : ast0_wf_typ _ = wf5
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf5_eq : squash (wf5' == wf5) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_int = Impl.validate_typ Det.cbor_det_impl venv4 true _ wf5'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -185,7 +181,7 @@ let wf6' : ast0_wf_typ _ = wf6
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf6_eq : squash (wf6' == wf6) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_bstr = Impl.validate_typ Det.cbor_det_impl venv5 true _ wf6'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -210,7 +206,7 @@ let wf7' : ast0_wf_typ _ = wf7
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf7_eq : squash (wf7' == wf7) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_encodedcbor = Impl.validate_typ Det.cbor_det_impl venv6 true _ wf7'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -235,7 +231,7 @@ let wf8' : ast0_wf_typ _ = wf8
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf8_eq : squash (wf8' == wf8) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_bytes = Impl.validate_typ Det.cbor_det_impl venv7 true _ wf8'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -260,7 +256,7 @@ let wf9' : ast0_wf_typ _ = wf9
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf9_eq : squash (wf9' == wf9) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_tstr = Impl.validate_typ Det.cbor_det_impl venv8 true _ wf9'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -285,7 +281,7 @@ let wf10' : ast0_wf_typ _ = wf10
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf10_eq : squash (wf10' == wf10) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_label = Impl.validate_typ Det.cbor_det_impl venv9 true _ wf10'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -324,7 +320,7 @@ let wf12' : ast0_wf_typ _ = wf12
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf12_eq : squash (wf12' == wf12) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_tdate = Impl.validate_typ Det.cbor_det_impl venv11 true _ wf12'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -349,7 +345,7 @@ let wf13' : ast0_wf_typ _ = wf13
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf13_eq : squash (wf13' == wf13) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_uri = Impl.validate_typ Det.cbor_det_impl venv12 true _ wf13'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -374,7 +370,7 @@ let wf14' : ast0_wf_typ _ = wf14
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf14_eq : squash (wf14' == wf14) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_b64url = Impl.validate_typ Det.cbor_det_impl venv13 true _ wf14'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -399,7 +395,7 @@ let wf15' : ast0_wf_typ _ = wf15
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf15_eq : squash (wf15' == wf15) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_b64legacy = Impl.validate_typ Det.cbor_det_impl venv14 true _ wf15'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -424,7 +420,7 @@ let wf16' : ast0_wf_typ _ = wf16
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf16_eq : squash (wf16' == wf16) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_regexp = Impl.validate_typ Det.cbor_det_impl venv15 true _ wf16'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -449,7 +445,7 @@ let wf17' : ast0_wf_typ _ = wf17
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf17_eq : squash (wf17' == wf17) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_mimemessage = Impl.validate_typ Det.cbor_det_impl venv16 true _ wf17'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -474,7 +470,7 @@ let wf18' : ast0_wf_typ _ = wf18
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf18_eq : squash (wf18' == wf18) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_text = Impl.validate_typ Det.cbor_det_impl venv17 true _ wf18'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -499,7 +495,7 @@ let wf19' : ast0_wf_typ _ = wf19
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf19_eq : squash (wf19' == wf19) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_false = Impl.validate_typ Det.cbor_det_impl venv18 true _ wf19'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -524,7 +520,7 @@ let wf20' : ast0_wf_typ _ = wf20
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf20_eq : squash (wf20' == wf20) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_true = Impl.validate_typ Det.cbor_det_impl venv19 true _ wf20'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -549,7 +545,7 @@ let wf21' : ast0_wf_typ _ = wf21
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf21_eq : squash (wf21' == wf21) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_nil = Impl.validate_typ Det.cbor_det_impl venv20 true _ wf21'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -574,7 +570,7 @@ let wf22' : ast0_wf_typ _ = wf22
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf22_eq : squash (wf22' == wf22) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_null = Impl.validate_typ Det.cbor_det_impl venv21 true _ wf22'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -599,7 +595,7 @@ let wf23' : ast0_wf_typ _ = wf23
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf23_eq : squash (wf23' == wf23) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_undefined = Impl.validate_typ Det.cbor_det_impl venv22 true _ wf23'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -624,7 +620,7 @@ let wf24' : ast0_wf_typ _ = wf24
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf24_eq : squash (wf24' == wf24) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_any = Impl.validate_typ Det.cbor_det_impl venv23 true _ wf24'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -649,7 +645,7 @@ let wf25' : ast0_wf_typ _ = wf25
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf25_eq : squash (wf25' == wf25) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_values = Impl.validate_typ Det.cbor_det_impl venv24 true _ wf25'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -674,7 +670,7 @@ let wf26' : ast0_wf_typ _ = wf26
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf26_eq : squash (wf26' == wf26) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_header_map = Impl.validate_typ Det.cbor_det_impl venv25 true _ wf26'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -699,7 +695,7 @@ let wf27' : ast0_wf_typ _ = wf27
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf27_eq : squash (wf27' == wf27) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_empty_or_serialized_map = Impl.validate_typ Det.cbor_det_impl venv26 true _ wf27'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -738,7 +734,7 @@ let wf29' : ast0_wf_typ _ = wf29
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf29_eq : squash (wf29' == wf29) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_COSE_Signature = Impl.validate_typ Det.cbor_det_impl venv28 true _ wf29'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -763,7 +759,7 @@ let wf30' : ast0_wf_typ _ = wf30
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf30_eq : squash (wf30' == wf30) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_COSE_Sign = Impl.validate_typ Det.cbor_det_impl venv29 true _ wf30'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -788,7 +784,7 @@ let wf31' : ast0_wf_typ _ = wf31
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf31_eq : squash (wf31' == wf31) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_COSE_Sign_Tagged = Impl.validate_typ Det.cbor_det_impl venv30 true _ wf31'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -813,7 +809,7 @@ let wf32' : ast0_wf_typ _ = wf32
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf32_eq : squash (wf32' == wf32) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_COSE_Sign1 = Impl.validate_typ Det.cbor_det_impl venv31 true _ wf32'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -838,7 +834,7 @@ let wf33' : ast0_wf_typ _ = wf33
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf33_eq : squash (wf33' == wf33) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_COSE_Untagged_Message = Impl.validate_typ Det.cbor_det_impl venv32 true _ wf33'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -863,7 +859,7 @@ let wf34' : ast0_wf_typ _ = wf34
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf34_eq : squash (wf34' == wf34) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_COSE_Sign1_Tagged = Impl.validate_typ Det.cbor_det_impl venv33 true _ wf34'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -888,7 +884,7 @@ let wf35' : ast0_wf_typ _ = wf35
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf35_eq : squash (wf35' == wf35) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_COSE_Tagged_Message = Impl.validate_typ Det.cbor_det_impl venv34 true _ wf35'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -913,7 +909,7 @@ let wf36' : ast0_wf_typ _ = wf36
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf36_eq : squash (wf36' == wf36) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_COSE_Messages = Impl.validate_typ Det.cbor_det_impl venv35 true _ wf36'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -938,7 +934,7 @@ let wf37' : ast0_wf_typ _ = wf37
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf37_eq : squash (wf37' == wf37) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_Sig_structure = Impl.validate_typ Det.cbor_det_impl venv36 true _ wf37'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -963,7 +959,7 @@ let wf38' : ast0_wf_typ _ = wf38
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf38_eq : squash (wf38' == wf38) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_Internal_Types = Impl.validate_typ Det.cbor_det_impl venv37 true _ wf38'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -988,7 +984,7 @@ let wf39' : ast0_wf_typ _ = wf39
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf39_eq : squash (wf39' == wf39) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_start = Impl.validate_typ Det.cbor_det_impl venv38 true _ wf39'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -1013,7 +1009,7 @@ let wf40' : ast0_wf_typ _ = wf40
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf40_eq : squash (wf40' == wf40) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_eb64url = Impl.validate_typ Det.cbor_det_impl venv39 true _ wf40'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -1038,7 +1034,7 @@ let wf41' : ast0_wf_typ _ = wf41
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf41_eq : squash (wf41' == wf41) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_eb64legacy = Impl.validate_typ Det.cbor_det_impl venv40 true _ wf41'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -1063,7 +1059,7 @@ let wf42' : ast0_wf_typ _ = wf42
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf42_eq : squash (wf42' == wf42) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_eb16 = Impl.validate_typ Det.cbor_det_impl venv41 true _ wf42'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
@@ -1088,7 +1084,7 @@ let wf43' : ast0_wf_typ _ = wf43
 let _ : unit = _ by (FStar.Tactics.print ("wf_eq"); FStar.Tactics.exact (`()))
 let wf43_eq : squash (wf43' == wf43) = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
 let validate_cborany = Impl.validate_typ Det.cbor_det_impl venv42 true _ wf43'
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr] noextract
