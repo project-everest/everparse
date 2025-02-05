@@ -35,19 +35,18 @@ let produce_typ_defs
 let _ : unit = _ by (FStar.Tactics.print (\"wf\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"] noextract
 let "^wf^" = compute_wf_typ "^env^".si_ast (T.pull_name "^source^") (_ by (FStar.Tactics.trefl ())) (T.pull_type "^source^") (_ by (T.solve_mk_wf_typ_fuel_for ()))
-// let _ : unit = _ by (FStar.Tactics.print (\"wf'\"); FStar.Tactics.exact (`()))
-// [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; sem_attr] noextract
-// let "^wf'^" : ast0_wf_typ _ = "^wf^"
-// let _ : unit = _ by (FStar.Tactics.print (\"wf_eq\"); FStar.Tactics.exact (`()))
-//[@@noextract_to "^krml^"] noextract
-// let "^wf^"_eq : squash ("^wf'^" == "^wf^") = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
+let _ : unit = _ by (FStar.Tactics.print (\"wf'\"); FStar.Tactics.exact (`()))
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; sem_attr] noextract
+let "^wf'^" : ast0_wf_typ _ = "^wf^"
+let _ : unit = _ by (FStar.Tactics.print (\"wf_eq\"); FStar.Tactics.exact (`()))
+let "^wf^"_eq : squash ("^wf'^" == "^wf^") = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
-let "^validator^" = Impl.validate_typ Det.cbor_det_impl v"^env^" true _ "^wf^"
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
+let "^validator^" = Impl.validate_typ Det.cbor_det_impl v"^env^" true _ "^wf'^"
 let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"; sem_attr] noextract
 let "^env'^" : spec_and_impl_env =
-  spec_and_impl_env_extend_typ_with_weak Det.cbor_det_impl "^env^" (T.pull_name "^source^") (T.pull_type "^source^") "^wf^"
+  spec_and_impl_env_extend_typ_with_weak Det.cbor_det_impl "^env^" (T.pull_name "^source^") (T.pull_type "^source^") "^wf'^"
 let _ : unit = _ by (FStar.Tactics.print (\"venv'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"; sem_attr] noextract
 let v"^env'^" : Impl.validator_env Det.cbor_det_match "^env'^".si_ast.e_sem_env =

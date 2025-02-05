@@ -16,10 +16,7 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 KRML=$(KRML_HOME)/krml -fstar $(FSTAR_EXE)
 
-# extract: $(ALL_KRML_FILES)
-# 	$(KRML) -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.Common+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]'  -bundle CDDLTest=*[rename=CDDLExtractionTest] -add-include '"CBORDetAbstract.h"'  -no-prefix CBOR.Pulse.API.Det.Common -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
-
-# FIXME: restore extraction
-extract: verify
+extract: $(ALL_KRML_FILES)
+	$(KRML) -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.Common+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]'  -bundle CDDLTest=*[rename=CDDLExtractionTest] -add-include '"CBORDetAbstract.h"'  -no-prefix CBOR.Pulse.API.Det.Common -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
 
 .PHONY: extract

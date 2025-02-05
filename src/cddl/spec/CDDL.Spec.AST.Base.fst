@@ -72,6 +72,7 @@ type elem_typ =
 | EAlwaysFalse
 | EAny
 
+[@@sem_attr]
 type name_env_elem =
 | NType
 | NGroup
@@ -143,6 +144,7 @@ let wf_literal
 | LInt v -> v >= - pow2 64 && v < pow2 64
 | LTextString s -> String.length s < pow2 64 && string_is_ascii s // FIXME: support utf8
 
+[@@sem_attr]
 let wf_elem_typ
   (t: elem_typ)
 : Tot bool
@@ -253,10 +255,12 @@ and typ_bounded_incr
   | TDetCbor t1 t2
   | TChoice t1 t2 -> typ_bounded_incr env env' t1; typ_bounded_incr env env' t2
 
+[@@sem_attr]
 type int_value =
 | SUInt of U64.t
 | SNegInt of U64.t
 
+[@@sem_attr]
 let eval_int_value
   (x: int_value)
 : Tot int
@@ -264,6 +268,7 @@ let eval_int_value
   | SUInt v -> U64.v v
   | SNegInt v -> -1 - U64.v v
 
+[@@sem_attr]
 let int_value_minus_one
   (x: int_value)
 : Pure int_value
@@ -428,6 +433,7 @@ let eval_literal
   | LInt v -> Cbor.pack (Cbor.CInt64 (if v < 0 then cddl_major_type_neg_int64 else cddl_major_type_uint64) (U64.uint_to_t (if v < 0 then -1 - v else v)))
   | LTextString s -> Cbor.pack (Cbor.CString (cddl_major_type_text_string) (byte_seq_of_ascii_string s))
 
+[@@ sem_attr ]
 let spec_type_of_literal
   (l: literal)
 : Ghost Spec.typ
@@ -452,6 +458,7 @@ let elem_typ_sem
   | EAlwaysFalse -> Spec.t_always_false
   | EAny -> Spec.any
 
+[@@ sem_attr ]
 let sem_of_type_sem
   (x: type_sem)
 : GTot Spec.typ
@@ -713,6 +720,7 @@ and typ_sem_incr
     typ_sem_incr env env' t1;
     typ_sem_incr env env' t2
 
+[@@ sem_attr ]
 let typ_sem_elem
   (env: sem_env)
   (x: typ)
@@ -823,6 +831,7 @@ let rec bounded_elab_map_group_incr
     bounded_elab_map_group_incr env env' g2
   | _ -> ()
 
+[@@ sem_attr ]
 let rec elab_map_group_sem
   (env: sem_env)
   (g: elab_map_group)
@@ -872,6 +881,7 @@ let rec elab_map_group_sem_incr
 #push-options "--z3rlimit 32"
 
 #restart-solver
+[@@ sem_attr ]
 let rec spec_map_group_footprint
   (env: sem_env)
   (g: elab_map_group)
@@ -1513,6 +1523,7 @@ and bounded_wf_parse_map_group_bounded
   | WfMChoice _ _ _ _
   -> ()
 
+[@@ sem_attr ]
 let rec spec_wf_typ
   (env: sem_env)
   (guard_choices: bool)
@@ -2106,6 +2117,7 @@ let wf_ast_env_extend_group
   })
 = ast_env_extend_gen e new_name NGroup t
 
+[@@ sem_attr ]
 noeq
 type target_elem_type =
 | TTUnit
@@ -2117,6 +2129,7 @@ type target_elem_type =
 | TTAny
 | TTAlwaysFalse
 
+[@@ sem_attr ]
 noeq
 type target_type =
 | TTElem of target_elem_type
@@ -2127,6 +2140,7 @@ type target_type =
 | TTArray of target_type
 | TTTable: target_type -> target_type -> target_type
 
+[@@ sem_attr ]
 let rec target_type_bounded
   (bound: name_env)
   (t: target_type)
@@ -2170,6 +2184,7 @@ let rec target_type_bounded_incr
   | TTElem _
   | TTDef _ -> ()
 
+[@@ sem_attr ]
 type target_spec_env (bound: name_env) =
   (typ_name bound -> GTot Type0)
 
@@ -2181,7 +2196,7 @@ let target_spec_env_included (#bound1: name_env) (t1: target_spec_env bound1) (#
   name_env_included bound1 bound2 /\
   (forall (x: typ_name bound1) . t1 x == t2 x)
 
-noextract [@@noextract_to "krml"]
+noextract [@@noextract_to "krml"; sem_attr]
 let target_spec_env_extend
   (bound: name_env)
   (env: target_spec_env bound)
@@ -2205,6 +2220,7 @@ let table
 
 module I64 = FStar.Int64
 
+[@@ sem_attr ]
 let target_elem_type_sem
   (t: target_elem_type)
 : GTot eqtype
@@ -2218,6 +2234,7 @@ let target_elem_type_sem
   | TTAny -> Cbor.cbor
   | TTAlwaysFalse -> squash False
 
+[@@ sem_attr ]
 let rec target_type_sem
   (#bound: name_env)
   (env: target_spec_env bound)
@@ -2380,6 +2397,7 @@ let target_type_sem_rec
 : GTot Type0
 = rectype (target_type_sem_rec_body bound env new_name s t)
 
+[@@ sem_attr ]
 noextract
 noeq type target_type_env
   (bound: name_env)
@@ -2388,13 +2406,14 @@ noeq type target_type_env
   te_eq: (n: typ_name bound) -> eq_test (te_type n);
 }
 
+[@@ sem_attr ]
 noextract
 let empty_target_type_env : target_type_env empty_name_env = {
   te_type = empty_target_spec_env;
   te_eq = (fun _ -> mk_eq_test (fun _ _ -> true)); // dummy
 }
 
-noextract [@@noextract_to "krml"]
+noextract [@@noextract_to "krml"; sem_attr]
 let target_type_env_extend
   (bound: name_env)
   (env: target_type_env bound)
@@ -2484,6 +2503,7 @@ let map_eq
     Map.equal_bool #t1 t2_eq x1 x2
   )
 
+[@@ sem_attr ]
 noextract
 let rec target_type_eq
   (#bound: name_env)
@@ -2731,6 +2751,7 @@ let target_ast_env_extend_typ
   }
 *)
 
+[@@ sem_attr ]
 noeq
 type spec_env (tp_sem: sem_env) (tp_tgt: target_spec_env (tp_sem.se_bound)) = {
   tp_spec_typ: (n: typ_name tp_sem.se_bound) -> GTot (Spec.spec (sem_of_type_sem (tp_sem.se_env n)) (tp_tgt n) true);
@@ -2757,6 +2778,7 @@ let spec_env_included
 
 let seq_is_bounded64 (s: Seq.seq U8.t) : Tot bool = Seq.length s < pow2 64
 
+[@@ sem_attr ]
 let spec_of_elem_typ
   (e: elem_typ)
   (sq: squash (wf_elem_typ e))
@@ -2828,6 +2850,7 @@ let array_group_concat_maybe_close_equiv
 #push-options "--z3rlimit 32"
 
 #restart-solver
+[@@ sem_attr ]
 let rec spec_of_wf_typ
   (#tp_sem: sem_env)
   (#tp_tgt: target_spec_env (tp_sem.se_bound))
@@ -3053,7 +3076,7 @@ and spec_of_wf_map_group_incr
     spec_of_wf_typ_incr env env' s2
 
 #restart-solver
-noextract [@@noextract_to "krml"]
+noextract [@@noextract_to "krml"; sem_attr]
 let spec_env_extend_typ
   (e: wf_ast_env)
   (new_name: string)
