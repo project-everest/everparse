@@ -6,23 +6,30 @@ let print_spaces () =
   let spaces = String.make !stack_level ' ' in
   print_string spaces
 
+let enable_debug = false
+
 let debug
       (name: string)
       (f: ('a, 'b, 'c) parser)
     : ('a, 'b, 'c) parser
   = fun buf ->
-  print_spaces ();
-  print_endline ("Entering: " ^ name);
+  if enable_debug
+  then begin
+      print_spaces ();
+      print_endline ("Entering: " ^ name);
+    end;
   incr stack_level;
   let res = f buf in
   decr stack_level;
-  print_spaces ();
-  begin match res with
-  | Some a ->
-     print_endline ("Success: " ^ name)
-  | None ->
-     print_endline ("Failure: " ^ name)
-  end;
+  if enable_debug
+  then begin
+      print_spaces ();
+      match res with
+      | Some a ->
+         print_endline ("Success: " ^ name)
+      | None ->
+         print_endline ("Failure: " ^ name)
+    end;
   res
 
 let debug_start

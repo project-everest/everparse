@@ -10,14 +10,19 @@ type symbol = unit parser
 
 let terminal name f =
   terminal (fun x ->
-      print_spaces ();
-      print_endline ("Entering terminal " ^ name ^ " with token " ^ show_token x);
+      if enable_debug
+      then begin
+          print_spaces ();
+          print_endline ("Entering terminal " ^ name ^ " with token " ^ show_token x);
+        end;
       let res = f x in
-      print_spaces ();
-      begin match res with
-      | Some _ -> print_endline ("Success: " ^ name)
-      | _ -> print_endline ("Failure: " ^ name)
-      end;
+      if enable_debug
+      then begin
+          print_spaces ();
+          match res with
+          | Some _ -> print_endline ("Success: " ^ name)
+          | _ -> print_endline ("Failure: " ^ name)
+        end;
       res
     )
 

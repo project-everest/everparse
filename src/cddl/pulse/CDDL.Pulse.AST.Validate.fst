@@ -42,7 +42,8 @@ let extend_validator_env_with_typ_weak
   (env: validator_env vmatch v_sem_env)
   (new_name: string)
   (new_name_is_type: squash (v_sem_env.se_bound new_name == None))
-  (ty: AST.typ { AST.typ_bounded v_sem_env.se_bound ty })
+  (ty: AST.typ)
+  (ty_bounded: squash (AST.typ_bounded v_sem_env.se_bound ty))
   (w: impl_typ vmatch (AST.typ_sem v_sem_env ty))
 : validator_env vmatch (AST.sem_env_extend_gen v_sem_env new_name AST.NType (AST.ast_env_elem0_sem v_sem_env ty))
 = let v_sem_env' = AST.sem_env_extend_gen v_sem_env new_name AST.NType (AST.ast_env_elem0_sem v_sem_env ty) in

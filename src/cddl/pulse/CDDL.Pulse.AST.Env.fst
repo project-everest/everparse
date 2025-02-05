@@ -10,6 +10,7 @@ type spec_and_impl_env = {
   si_r: rel_env si_st;
 }
 
+[@@sem_attr]
 let empty_spec_and_impl_env: spec_and_impl_env = {
   si_ast = empty_wf_ast_env;
   si_st = empty_target_type_env;
@@ -29,13 +30,13 @@ open Pulse.Lib.Pervasives
 module Cbor = CBOR.Spec.API.Type
 
 [@@sem_attr]
-let spec_and_impl_extend_typ_with_weak
-  (#cbor_t: Type0)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-  (#cbor_array_iterator_t: Type0)
-  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)
-  (#cbor_map_iterator_t: Type0)
-  (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
+let spec_and_impl_env_extend_typ_with_weak
+  (#t1 #t2 #t_arr #t_map: Type0)
+  (#vmatch: (perm -> t1 -> Cbor.cbor -> slprop))
+  (#vmatch2: (perm -> t2 -> (Cbor.cbor & Cbor.cbor) -> slprop))
+  (#cbor_array_iterator_match: (perm -> t_arr -> list Cbor.cbor -> slprop))
+  (#cbor_map_iterator_match: (perm -> t_map -> list (Cbor.cbor & Cbor.cbor) -> slprop))
+  (impl: Ghost.erased (CDDL.Pulse.AST.Base.cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)) // for unification only
   (e: spec_and_impl_env)
   (new_name: string)
   (t: typ)
@@ -58,13 +59,7 @@ let spec_and_impl_extend_typ_with_weak
   }
 
 [@@sem_attr]
-let spec_and_impl_extend_group
-  (#cbor_t: Type0)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-  (#cbor_array_iterator_t: Type0)
-  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)
-  (#cbor_map_iterator_t: Type0)
-  (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
+let spec_and_impl_env_extend_group
   (e: spec_and_impl_env)
   (new_name: string)
   (t: group)

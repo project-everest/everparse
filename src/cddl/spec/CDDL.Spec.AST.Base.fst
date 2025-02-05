@@ -120,12 +120,14 @@ let name_intro (s: string) (e: name_env) (sq: squash (name_mem s e)) : Tot (name
   s
 
 
+[@@sem_attr]
 let empty_name_env (_: string) : Tot (option name_env_elem) = None
 
 [@@"opaque_to_smt"] irreducible
 let name_empty_elim (t: Type) (x: name empty_name_env) : Tot t = false_elim ()
 
 
+[@@sem_attr]
 let extend_name_env (e: name_env) (new_name: string) (elem: name_env_elem) (s: string) : Tot (option name_env_elem) =
   if s = new_name then Some elem else e s
 
@@ -2179,6 +2181,7 @@ let target_spec_env_included (#bound1: name_env) (t1: target_spec_env bound1) (#
   name_env_included bound1 bound2 /\
   (forall (x: typ_name bound1) . t1 x == t2 x)
 
+noextract [@@noextract_to "krml"]
 let target_spec_env_extend
   (bound: name_env)
   (env: target_spec_env bound)
@@ -2357,6 +2360,7 @@ let rec target_type_sem'_correct
   | TTElem _
   | TTDef _ -> ()
 
+noextract [@@noextract_to "krml"]
 let target_type_sem_rec_body
   (bound: name_env)
   (env: target_spec_env bound)
@@ -2390,7 +2394,7 @@ let empty_target_type_env : target_type_env empty_name_env = {
   te_eq = (fun _ -> mk_eq_test (fun _ _ -> true)); // dummy
 }
 
-noextract
+noextract [@@noextract_to "krml"]
 let target_type_env_extend
   (bound: name_env)
   (env: target_type_env bound)
@@ -2519,6 +2523,7 @@ let pair (k: pair_kind) (t1 t2: Type0) : Pure Type0
   | PEraseRight -> t1
   | _ -> t1 & t2
 
+[@sem_attr]
 let target_type_of_elem_typ
   (x: elem_typ)
 : Tot target_elem_type
@@ -2533,6 +2538,7 @@ let target_type_of_elem_typ
   | EAny -> TTAny
   | EAlwaysFalse -> TTAlwaysFalse
 
+[@sem_attr]
 let rec target_type_of_wf_typ
   (#x: typ)
   (wf: ast0_wf_typ x)
@@ -3047,6 +3053,7 @@ and spec_of_wf_map_group_incr
     spec_of_wf_typ_incr env env' s2
 
 #restart-solver
+noextract [@@noextract_to "krml"]
 let spec_env_extend_typ
   (e: wf_ast_env)
   (new_name: string)
