@@ -934,7 +934,6 @@ let rec spec_map_group_footprint_incr
   | _ -> ()
 
 [@@sem_attr; PpxDerivingShow]
-noeq
 type ast0_wf_typ
 : typ -> Type
 = 

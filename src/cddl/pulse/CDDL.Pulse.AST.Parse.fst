@@ -18,6 +18,12 @@ type parse_env
   (sp_env: spec_env se s_env.te_type)
 = (n: typ_name se.se_bound) -> impl_zero_copy_parse vmatch (sp_env.tp_spec_typ n).parser (r_env n).sem_rel
 
+let empty_parse_env
+  (#cbor_t: Type)
+  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+: parse_env vmatch empty_rel_env (empty_spec_env _)
+= fun _ -> false_elim ()
+
 [@@sem_attr]
 let ancillary_validate_env
   (#cbor_t: Type)
@@ -55,6 +61,20 @@ let ancillary_validate_env_extend
     (env1 t)
   end
   else None
+
+[@@sem_attr]
+let ancillary_validate_env_set
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#se: sem_env)
+  (env: ancillary_validate_env vmatch se)
+  (t': typ { typ_bounded se.se_bound t'})
+  (i: impl_typ vmatch (typ_sem se t'))
+: Tot (ancillary_validate_env vmatch se)
+= fun t ->
+  if t = t'
+  then Some i
+  else env t
 
 [@@sem_attr]
 let ancillary_parse_env
@@ -121,6 +141,29 @@ let ancillary_parse_env_extend
   else None
 
 [@@sem_attr]
+let ancillary_parse_env_set
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#cbor_array_iterator_t: Type0)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)  
+  (#cbor_map_iterator_t: Type0)
+  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
+  (#se: sem_env)
+  (#s_env: target_type_env se.se_bound)
+  (#r_env: rel_env s_env)
+  (#sp_env: spec_env se s_env.te_type)
+  (env: ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
+  (t': typ)
+  (t_wf': ast0_wf_typ t' { spec_wf_typ se true t' t_wf' })
+  (iv: impl_typ vmatch (typ_sem se t'))
+  (ip: impl_zero_copy_parse vmatch (spec_of_wf_typ sp_env t_wf').parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match r_env (target_type_of_wf_typ t_wf')).sem_rel)
+: Tot (ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
+= fun t t_wf ->
+  if t = t' && t_wf = t_wf'
+  then Some (iv, ip)
+  else env t t_wf
+
+[@@sem_attr]
 let ancillary_parse_array_group_env
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
@@ -183,6 +226,29 @@ let ancillary_parse_array_group_env_extend
     (env1 t t_wf)
   end
   else None
+
+[@@sem_attr]
+let ancillary_parse_array_group_env_set
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#cbor_array_iterator_t: Type0)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)  
+  (#cbor_map_iterator_t: Type0)
+  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
+  (#se: sem_env)
+  (#s_env: target_type_env se.se_bound)
+  (#r_env: rel_env s_env)
+  (#sp_env: spec_env se s_env.te_type)
+  (env: ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
+  (t: group)
+  (t_wf: ast0_wf_array_group t { spec_wf_array_group se t t_wf })
+  (iv: impl_array_group cbor_array_iterator_match (array_group_sem se t))
+  (ip: impl_zero_copy_array_group cbor_array_iterator_match (spec_of_wf_array_group sp_env t_wf).ag_parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match r_env (target_type_of_wf_array_group t_wf)).sem_rel)
+: Tot (ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
+= fun t' t_wf' ->
+  if t = t' && t_wf = t_wf'
+  then Some (iv, ip)
+  else env t' t_wf'
 
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8

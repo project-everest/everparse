@@ -84,3 +84,30 @@ let spec_and_impl_env_extend_group
     };
     si_r = e.si_r;
   }
+
+module Parse = CDDL.Pulse.AST.Parse
+
+[@@sem_attr]
+let parse_env_extend
+  (#t1 #t2 #t_arr #t_map: Type0)
+  (#vmatch: (perm -> t1 -> Cbor.cbor -> slprop))
+  (#vmatch2: (perm -> t2 -> (Cbor.cbor & Cbor.cbor) -> slprop))
+  (#cbor_array_iterator_match: (perm -> t_arr -> list Cbor.cbor -> slprop))
+  (#cbor_map_iterator_match: (perm -> t_map -> list (Cbor.cbor & Cbor.cbor) -> slprop))
+  (impl: Ghost.erased (CDDL.Pulse.AST.Base.cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)) // for unification only
+  (e: spec_and_impl_env)
+  (pe: Parse.parse_env vmatch e.si_r e.si_sp)
+  (new_name: string)
+  (t: typ)
+  (t_wf: ast0_wf_typ t {
+    wf_ast_env_extend_typ_with_weak_pre e.si_ast new_name t t_wf
+  })
+  (p: impl_zero_copy_parse vmatch (spec_of_wf_typ e.si_sp t_wf).parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match e.si_r (target_type_of_wf_typ t_wf)).sem_rel)
+: Tot (
+    let e' = spec_and_impl_env_extend_typ_with_weak impl e new_name t t_wf in
+    Parse.parse_env vmatch e'.si_r e'.si_sp
+  )
+= fun n ->
+  if n = new_name
+  then p
+  else pe n

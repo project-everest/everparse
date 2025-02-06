@@ -83,7 +83,6 @@ noextract [@@noextract_to "krml"]
 let steps = [
       zeta; iota; primops;
       nbe;
-      simplify;
       delta_attr [`%sem_attr];
       delta_only [
         `%List.Tot.for_all;
@@ -92,5 +91,6 @@ let steps = [
         `%pow2;
         `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2;
         `%fst; `%snd; `%Mktuple2?._1; `%Mktuple2?._2;
+        `%Some?; `%None?;
       ];
   ]
