@@ -94,3 +94,6 @@ let steps = [
         `%Some?; `%None?;
       ];
   ]
+
+[@@noextract_to "krml"; sem_attr] noextract inline_for_extraction
+let inline_coerce_eq (#a:Type) (#b:Type) (_:squash (a == b)) (x:a) : b = x
