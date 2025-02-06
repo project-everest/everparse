@@ -23,12 +23,12 @@ let ancillary_validate_env
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
   (se: sem_env)
-= (t: typ) -> (t_wf: ast0_wf_typ t { spec_wf_typ se false t t_wf }) -> option (impl_typ vmatch (typ_sem se t))
+= (t: typ { typ_bounded se.se_bound t}) -> option (impl_typ vmatch (typ_sem se t))
 
 [@@sem_attr]
 let ancillary_validate_env_bool
-  (se: sem_env)
-= (t: typ) -> (t_wf: ast0_wf_typ t { spec_wf_typ se false t t_wf }) -> bool
+  (se: name_env)
+= (t: typ { typ_bounded se t }) -> bool
 
 [@@sem_attr]
 let ancillary_validate_env_is_some
@@ -36,8 +36,8 @@ let ancillary_validate_env_is_some
   (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
   (#se: sem_env)
   (env: ancillary_validate_env vmatch se)
-: Tot (ancillary_validate_env_bool se)
-= fun t t_wf -> Some? (env t t_wf)
+: Tot (ancillary_validate_env_bool se.se_bound)
+= fun t -> Some? (env t)
 
 [@@sem_attr]
 let ancillary_validate_env_extend
@@ -49,10 +49,10 @@ let ancillary_validate_env_extend
     sem_env_included se se2
   })
 : Tot (ancillary_validate_env vmatch se2)
-= fun t t_wf ->
-  if bounded_wf_typ se.se_bound t t_wf
+= fun t ->
+  if typ_bounded se.se_bound t
   then begin
-    (env1 t t_wf)
+    (env1 t)
   end
   else None
 
@@ -213,7 +213,7 @@ let ask_for
 
 let rec ask_zero_copy_wf_type
   (#se: sem_env)
-  (ancillary_v: ancillary_validate_env_bool se)
+  (ancillary_v: ancillary_validate_env_bool se.se_bound)
   (ancillary: ancillary_parse_env_bool se)
   (ancillary_ag: ancillary_parse_array_group_env_bool se)
   (#t: typ)
@@ -245,7 +245,7 @@ let rec ask_zero_copy_wf_type
 
 and ask_zero_copy_wf_array_group
   (#se: sem_env)
-  (ancillary_v: ancillary_validate_env_bool se)
+  (ancillary_v: ancillary_validate_env_bool se.se_bound)
   (ancillary: ancillary_parse_env_bool se)
   (ancillary_ag: ancillary_parse_array_group_env_bool se)
   (#t: group)
@@ -281,7 +281,7 @@ and ask_zero_copy_wf_array_group
 
 and ask_zero_copy_wf_map_group
   (#se: sem_env)
-  (ancillary_v: ancillary_validate_env_bool se)
+  (ancillary_v: ancillary_validate_env_bool se.se_bound)
   (ancillary: ancillary_parse_env_bool se)
   (ancillary_ag: ancillary_parse_array_group_env_bool se)
   (#t: elab_map_group)
@@ -307,10 +307,10 @@ and ask_zero_copy_wf_map_group
     ask_zero_copy_wf_map_group ancillary_v ancillary ancillary_ag s1
   | WfMLiteral cut key _ s ->
     ask_zero_copy_wf_type ancillary_v ancillary ancillary_ag s
-  | WfMZeroOrMore _ _ _ s_key s_key_except s_value ->
+  | WfMZeroOrMore _ key_except _ s_key s_key_except s_value ->
     if not (ancillary _ s_key)
     then Some (AskForType _ s_key true)
-    else if not (ancillary_v _ s_key_except)
+    else if not (ancillary_v key_except)
     then Some (AskForType _ s_key_except false)
     else if not (ancillary _ s_value)
     then Some (AskForType _ s_value true)
@@ -478,9 +478,9 @@ and impl_zero_copy_wf_map_group
           cut
           ps1
         )
-  | WfMZeroOrMore _ _ _ s_key s_key_except s_value ->
+  | WfMZeroOrMore _ key_except _ s_key s_key_except s_value ->
     let Some (v_key, p_key) = ancillary _ s_key in
-    let Some (v_key_except) = ancillary_v _ s_key_except in
+    let Some (v_key_except) = ancillary_v key_except in
     let Some (v_value, p_value) = ancillary _ s_value in
             (impl_zero_copy_map_zero_or_more
               impl.cbor_map_iterator_init
