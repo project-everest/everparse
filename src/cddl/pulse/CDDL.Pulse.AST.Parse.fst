@@ -5,24 +5,9 @@ include CDDL.Pulse.AST.Parse.ElemType
 include CDDL.Pulse.Parse.ArrayGroup
 include CDDL.Pulse.Parse.MapGroup
 include CDDL.Pulse.AST.Types
+include CDDL.Pulse.AST.Env
 open Pulse.Lib.Pervasives
 module Cbor = CBOR.Spec.API.Format
-
-[@@sem_attr]
-type parse_env
-  (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-  (#se: sem_env)
-  (#s_env: target_type_env se.se_bound)
-  (r_env: rel_env s_env)
-  (sp_env: spec_env se s_env.te_type)
-= (n: typ_name se.se_bound) -> impl_zero_copy_parse vmatch (sp_env.tp_spec_typ n).parser (r_env n).sem_rel
-
-let empty_parse_env
-  (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-: parse_env vmatch empty_rel_env (empty_spec_env _)
-= fun _ -> false_elim ()
 
 [@@sem_attr]
 let ancillary_validate_env

@@ -4,6 +4,7 @@ include CDDL.Pulse.MapGroup
 include CDDL.Pulse.ArrayGroup
 include CDDL.Pulse.AST.Base
 include CDDL.Pulse.AST.ElemType
+include CDDL.Pulse.AST.Env
 open Pulse.Lib.Pervasives
 module Trade = Pulse.Lib.Trade.Util
 open CBOR.Spec.API.Type
@@ -14,58 +15,6 @@ module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module S = Pulse.Lib.Slice
 module SZ = FStar.SizeT
-
-[@@AST.sem_attr]
-noeq
-type validator_env
-  (#t: Type0)
-  (vmatch: (perm -> t -> cbor -> slprop))
-  (v_sem_env: AST.sem_env)
-= {
-  v_validator: ((n: AST.typ_name v_sem_env.se_bound) -> impl_typ vmatch (AST.sem_of_type_sem (v_sem_env.se_env n)));
-}
-
-[@@AST.sem_attr]
-let empty_validator_env
-  (#t: Type0)
-  (vmatch: (perm -> t -> cbor -> slprop))
-: validator_env vmatch AST.empty_sem_env
-= {
-  v_validator = (fun _ -> false_elim ());
-}
-
-[@@AST.sem_attr]
-let extend_validator_env_with_typ_weak
-  (#t: Type0)
-  (#vmatch: (perm -> t -> cbor -> slprop))
-  (#v_sem_env: AST.sem_env)
-  (env: validator_env vmatch v_sem_env)
-  (new_name: string)
-  (new_name_is_type: squash (v_sem_env.se_bound new_name == None))
-  (ty: AST.typ)
-  (ty_bounded: squash (AST.typ_bounded v_sem_env.se_bound ty))
-  (w: impl_typ vmatch (AST.typ_sem v_sem_env ty))
-: validator_env vmatch (AST.sem_env_extend_gen v_sem_env new_name AST.NType (AST.ast_env_elem0_sem v_sem_env ty))
-= let v_sem_env' = AST.sem_env_extend_gen v_sem_env new_name AST.NType (AST.ast_env_elem0_sem v_sem_env ty) in
-  {
-  v_validator = (fun n -> if n = new_name then impl_ext w (AST.sem_of_type_sem (v_sem_env'.se_env n)) else impl_ext (env.v_validator n) (AST.sem_of_type_sem (v_sem_env'.se_env n)));
-}
-
-[@@AST.sem_attr]
-let extend_validator_env_with_group
-  (#t: Type0)
-  (#vmatch: (perm -> t -> cbor -> slprop))
-  (#v_sem_env: AST.sem_env)
-  (env: validator_env vmatch v_sem_env)
-  (new_name: string)
-  (g: AST.group)
-  (new_name_is_type: squash (v_sem_env.se_bound new_name == None))
-  (sq: squash (AST.group_bounded v_sem_env.se_bound g))
-: validator_env vmatch (AST.sem_env_extend_gen v_sem_env new_name AST.NGroup (AST.ast_env_elem0_sem v_sem_env g))
-= let v_sem_env' = AST.sem_env_extend_gen v_sem_env new_name AST.NGroup (AST.ast_env_elem0_sem v_sem_env g) in
-  {
-  v_validator = (fun (n: AST.typ_name v_sem_env'.se_bound) -> impl_ext (env.v_validator n) (AST.sem_of_type_sem (v_sem_env'.se_env n)));
-}
 
 [@@AST.sem_attr]
 let sz_uint_to_t
