@@ -93,7 +93,7 @@ let "^parsertype^" = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ "^e
 let eq"^parsertype^" : squash ("^parsertype^"' == "^parsertype^") = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ "^env^".si_sp "^wf'^").parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match "^env^".si_r (target_type_of_wf_typ "^wf'^")).sem_rel "^impltype^" eq"^impltype^"
 let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let "^parser^" : "^parsertype^" = T.inline_coerce_eq eq"^parsertype^" (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl "^env^".si_v "^env^".si_r "^env^".si_sp "^env^".si_p av"^env^" a"^env^" aa"^env^" "^wf'^" (_ by (T.trefl_or_norm ())))
+let "^parser^" : "^parsertype^" = T.inline_coerce_eq eq"^parsertype^" (Parse.impl_zero_copy_wf_type' "^env^" av"^env^" a"^env^" aa"^env^" "^wf'^" (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print (\"parser'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"]
 let "^parser^"' : "^parsertype^"' = T.inline_coerce_eq_reverse eq"^parsertype^" "^parser^"

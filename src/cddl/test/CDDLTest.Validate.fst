@@ -50,7 +50,11 @@ let defs = produce_defs sorted_source0
 let _ : unit = _ by (FStar.Tactics.print defs; FStar.Tactics.exact (`()))
 
 (*
-fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/everparse/src/cbor/spec --include /home/tahina/everest/everparse/src/cddl/spec --include /home/tahina/everest/everparse/lib/evercddl/lib --include /home/tahina/everest/everparse/lib/evercddl/plugin --include /home/tahina/everest/everparse/src/cbor/pulse --include /home/tahina/everest/everparse/src/cddl/pulse --include /home/tahina/everest/karamel/krmllib --include /home/tahina/everest/karamel/krmllib/obj --include /home/tahina/everest/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning   CDDLTest.Validate.fst
+mkdir -p _output
+true    
+/home/tahina/everest/master/FStar/bin/fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/master/everparse/src/cbor/spec --include /home/tahina/everest/master/everparse/src/cddl/spec --include /home/tahina/everest/master/everparse/lib/evercddl/lib --include /home/tahina/everest/master/everparse/lib/evercddl/plugin --include /home/tahina/everest/master/everparse/src/cbor/pulse --include /home/tahina/everest/master/everparse/src/cddl/pulse --include /home/tahina/everest/master/karamel/krmllib --include /home/tahina/everest/master/karamel/krmllib/obj --include /home/tahina/everest/master/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice' --dep full @.depend.rsp --output_deps_to .depend.aux
+mv .depend.aux .depend
+/home/tahina/everest/master/FStar/bin/fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/master/everparse/src/cbor/spec --include /home/tahina/everest/master/everparse/src/cddl/spec --include /home/tahina/everest/master/everparse/lib/evercddl/lib --include /home/tahina/everest/master/everparse/lib/evercddl/plugin --include /home/tahina/everest/master/everparse/src/cbor/pulse --include /home/tahina/everest/master/everparse/src/cddl/pulse --include /home/tahina/everest/master/karamel/krmllib --include /home/tahina/everest/master/karamel/krmllib/obj --include /home/tahina/everest/master/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning   CDDLTest.Validate.fst
 TAC>> 
 *)
 
@@ -84,7 +88,7 @@ let parsertype_bool = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ en
 let eqparsertype_bool : squash (parsertype_bool' == parsertype_bool) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env0.si_sp wf1').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env0.si_r (target_type_of_wf_typ wf1')).sem_rel impltype_bool eqimpltype_bool
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_bool : parsertype_bool = T.inline_coerce_eq eqparsertype_bool (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env0.si_v env0.si_r env0.si_sp env0.si_p avenv0 aenv0 aaenv0 wf1' (_ by (T.trefl_or_norm ())))
+let parse_bool : parsertype_bool = T.inline_coerce_eq eqparsertype_bool (Parse.impl_zero_copy_wf_type' env0 avenv0 aenv0 aaenv0 wf1' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_bool' : parsertype_bool' = T.inline_coerce_eq_reverse eqparsertype_bool parse_bool
@@ -136,7 +140,7 @@ let parsertype_everparsenomatch = impl_zero_copy_parse Det.cbor_det_match (spec_
 let eqparsertype_everparsenomatch : squash (parsertype_everparsenomatch' == parsertype_everparsenomatch) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env1.si_sp wf2').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env1.si_r (target_type_of_wf_typ wf2')).sem_rel impltype_everparsenomatch eqimpltype_everparsenomatch
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_everparsenomatch : parsertype_everparsenomatch = T.inline_coerce_eq eqparsertype_everparsenomatch (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env1.si_v env1.si_r env1.si_sp env1.si_p avenv1 aenv1 aaenv1 wf2' (_ by (T.trefl_or_norm ())))
+let parse_everparsenomatch : parsertype_everparsenomatch = T.inline_coerce_eq eqparsertype_everparsenomatch (Parse.impl_zero_copy_wf_type' env1 avenv1 aenv1 aaenv1 wf2' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_everparsenomatch' : parsertype_everparsenomatch' = T.inline_coerce_eq_reverse eqparsertype_everparsenomatch parse_everparsenomatch
@@ -188,7 +192,7 @@ let parsertype_uint = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ en
 let eqparsertype_uint : squash (parsertype_uint' == parsertype_uint) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env2.si_sp wf3').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env2.si_r (target_type_of_wf_typ wf3')).sem_rel impltype_uint eqimpltype_uint
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_uint : parsertype_uint = T.inline_coerce_eq eqparsertype_uint (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env2.si_v env2.si_r env2.si_sp env2.si_p avenv2 aenv2 aaenv2 wf3' (_ by (T.trefl_or_norm ())))
+let parse_uint : parsertype_uint = T.inline_coerce_eq eqparsertype_uint (Parse.impl_zero_copy_wf_type' env2 avenv2 aenv2 aaenv2 wf3' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_uint' : parsertype_uint' = T.inline_coerce_eq_reverse eqparsertype_uint parse_uint
@@ -240,7 +244,7 @@ let parsertype_nint = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ en
 let eqparsertype_nint : squash (parsertype_nint' == parsertype_nint) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env3.si_sp wf4').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env3.si_r (target_type_of_wf_typ wf4')).sem_rel impltype_nint eqimpltype_nint
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_nint : parsertype_nint = T.inline_coerce_eq eqparsertype_nint (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env3.si_v env3.si_r env3.si_sp env3.si_p avenv3 aenv3 aaenv3 wf4' (_ by (T.trefl_or_norm ())))
+let parse_nint : parsertype_nint = T.inline_coerce_eq eqparsertype_nint (Parse.impl_zero_copy_wf_type' env3 avenv3 aenv3 aaenv3 wf4' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_nint' : parsertype_nint' = T.inline_coerce_eq_reverse eqparsertype_nint parse_nint
@@ -263,8 +267,8 @@ let _ : unit = _ by (FStar.Tactics.print ("source'"); FStar.Tactics.exact (`()))
 let sorted_source4 = List.Tot.tl sorted_source3
 
 let _ : unit = _ by (FStar.Tactics.print ("39 defs remaining. Producing definitions for int"); FStar.Tactics.exact (`()))
-
 (*
+
 let _ : unit = _ by (FStar.Tactics.print ("wf"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"] noextract
 let wf5 = compute_wf_typ env4.si_ast (T.pull_name sorted_source4) (_ by (FStar.Tactics.trefl ())) (T.pull_type sorted_source4) (_ by (T.solve_mk_wf_typ_fuel_for ()))
@@ -292,8 +296,8 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 let parsertype_int = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ env4.si_sp wf5').parser #impltype_int (coerce_rel (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env4.si_r (target_type_of_wf_typ wf5')).sem_rel impltype_int eqimpltype_int)
 let eqparsertype_int : squash (parsertype_int' == parsertype_int) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env4.si_sp wf5').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env4.si_r (target_type_of_wf_typ wf5')).sem_rel impltype_int eqimpltype_int
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_int : parsertype_int = T.inline_coerce_eq eqparsertype_int (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env4.si_v env4.si_r env4.si_sp env4.si_p avenv4 aenv4 aaenv4 wf5' (_ by (T.trefl_or_norm ())))
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (T.steps); FStar.Tactics.trefl ())]
+let parse_int : parsertype_int = T.inline_coerce_eq eqparsertype_int (Parse.impl_zero_copy_wf_type' env4 avenv4 aenv4 aaenv4 wf5' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_int' : parsertype_int' = T.inline_coerce_eq_reverse eqparsertype_int parse_int
@@ -345,7 +349,7 @@ let parsertype_bstr = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ en
 let eqparsertype_bstr : squash (parsertype_bstr' == parsertype_bstr) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env5.si_sp wf6').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env5.si_r (target_type_of_wf_typ wf6')).sem_rel impltype_bstr eqimpltype_bstr
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_bstr : parsertype_bstr = T.inline_coerce_eq eqparsertype_bstr (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env5.si_v env5.si_r env5.si_sp env5.si_p avenv5 aenv5 aaenv5 wf6' (_ by (T.trefl_or_norm ())))
+let parse_bstr : parsertype_bstr = T.inline_coerce_eq eqparsertype_bstr (Parse.impl_zero_copy_wf_type' env5 avenv5 aenv5 aaenv5 wf6' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_bstr' : parsertype_bstr' = T.inline_coerce_eq_reverse eqparsertype_bstr parse_bstr
@@ -397,7 +401,7 @@ let parsertype_encodedcbor = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf
 let eqparsertype_encodedcbor : squash (parsertype_encodedcbor' == parsertype_encodedcbor) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env6.si_sp wf7').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env6.si_r (target_type_of_wf_typ wf7')).sem_rel impltype_encodedcbor eqimpltype_encodedcbor
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_encodedcbor : parsertype_encodedcbor = T.inline_coerce_eq eqparsertype_encodedcbor (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env6.si_v env6.si_r env6.si_sp env6.si_p avenv6 aenv6 aaenv6 wf7' (_ by (T.trefl_or_norm ())))
+let parse_encodedcbor : parsertype_encodedcbor = T.inline_coerce_eq eqparsertype_encodedcbor (Parse.impl_zero_copy_wf_type' env6 avenv6 aenv6 aaenv6 wf7' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_encodedcbor' : parsertype_encodedcbor' = T.inline_coerce_eq_reverse eqparsertype_encodedcbor parse_encodedcbor
@@ -449,7 +453,7 @@ let parsertype_bytes = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ e
 let eqparsertype_bytes : squash (parsertype_bytes' == parsertype_bytes) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env7.si_sp wf8').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env7.si_r (target_type_of_wf_typ wf8')).sem_rel impltype_bytes eqimpltype_bytes
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_bytes : parsertype_bytes = T.inline_coerce_eq eqparsertype_bytes (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env7.si_v env7.si_r env7.si_sp env7.si_p avenv7 aenv7 aaenv7 wf8' (_ by (T.trefl_or_norm ())))
+let parse_bytes : parsertype_bytes = T.inline_coerce_eq eqparsertype_bytes (Parse.impl_zero_copy_wf_type' env7 avenv7 aenv7 aaenv7 wf8' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_bytes' : parsertype_bytes' = T.inline_coerce_eq_reverse eqparsertype_bytes parse_bytes
@@ -501,7 +505,7 @@ let parsertype_tstr = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ en
 let eqparsertype_tstr : squash (parsertype_tstr' == parsertype_tstr) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env8.si_sp wf9').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env8.si_r (target_type_of_wf_typ wf9')).sem_rel impltype_tstr eqimpltype_tstr
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_tstr : parsertype_tstr = T.inline_coerce_eq eqparsertype_tstr (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env8.si_v env8.si_r env8.si_sp env8.si_p avenv8 aenv8 aaenv8 wf9' (_ by (T.trefl_or_norm ())))
+let parse_tstr : parsertype_tstr = T.inline_coerce_eq eqparsertype_tstr (Parse.impl_zero_copy_wf_type' env8 avenv8 aenv8 aaenv8 wf9' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_tstr' : parsertype_tstr' = T.inline_coerce_eq_reverse eqparsertype_tstr parse_tstr
@@ -553,7 +557,7 @@ let parsertype_label = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ e
 let eqparsertype_label : squash (parsertype_label' == parsertype_label) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env9.si_sp wf10').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env9.si_r (target_type_of_wf_typ wf10')).sem_rel impltype_label eqimpltype_label
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_label : parsertype_label = T.inline_coerce_eq eqparsertype_label (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env9.si_v env9.si_r env9.si_sp env9.si_p avenv9 aenv9 aaenv9 wf10' (_ by (T.trefl_or_norm ())))
+let parse_label : parsertype_label = T.inline_coerce_eq eqparsertype_label (Parse.impl_zero_copy_wf_type' env9 avenv9 aenv9 aaenv9 wf10' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_label' : parsertype_label' = T.inline_coerce_eq_reverse eqparsertype_label parse_label
@@ -625,7 +629,7 @@ let parsertype_tdate = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ e
 let eqparsertype_tdate : squash (parsertype_tdate' == parsertype_tdate) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env11.si_sp wf12').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env11.si_r (target_type_of_wf_typ wf12')).sem_rel impltype_tdate eqimpltype_tdate
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_tdate : parsertype_tdate = T.inline_coerce_eq eqparsertype_tdate (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env11.si_v env11.si_r env11.si_sp env11.si_p avenv11 aenv11 aaenv11 wf12' (_ by (T.trefl_or_norm ())))
+let parse_tdate : parsertype_tdate = T.inline_coerce_eq eqparsertype_tdate (Parse.impl_zero_copy_wf_type' env11 avenv11 aenv11 aaenv11 wf12' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_tdate' : parsertype_tdate' = T.inline_coerce_eq_reverse eqparsertype_tdate parse_tdate
@@ -677,7 +681,7 @@ let parsertype_uri = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ env
 let eqparsertype_uri : squash (parsertype_uri' == parsertype_uri) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env12.si_sp wf13').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env12.si_r (target_type_of_wf_typ wf13')).sem_rel impltype_uri eqimpltype_uri
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_uri : parsertype_uri = T.inline_coerce_eq eqparsertype_uri (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env12.si_v env12.si_r env12.si_sp env12.si_p avenv12 aenv12 aaenv12 wf13' (_ by (T.trefl_or_norm ())))
+let parse_uri : parsertype_uri = T.inline_coerce_eq eqparsertype_uri (Parse.impl_zero_copy_wf_type' env12 avenv12 aenv12 aaenv12 wf13' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_uri' : parsertype_uri' = T.inline_coerce_eq_reverse eqparsertype_uri parse_uri
@@ -729,7 +733,7 @@ let parsertype_b64url = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ 
 let eqparsertype_b64url : squash (parsertype_b64url' == parsertype_b64url) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env13.si_sp wf14').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env13.si_r (target_type_of_wf_typ wf14')).sem_rel impltype_b64url eqimpltype_b64url
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_b64url : parsertype_b64url = T.inline_coerce_eq eqparsertype_b64url (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env13.si_v env13.si_r env13.si_sp env13.si_p avenv13 aenv13 aaenv13 wf14' (_ by (T.trefl_or_norm ())))
+let parse_b64url : parsertype_b64url = T.inline_coerce_eq eqparsertype_b64url (Parse.impl_zero_copy_wf_type' env13 avenv13 aenv13 aaenv13 wf14' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_b64url' : parsertype_b64url' = T.inline_coerce_eq_reverse eqparsertype_b64url parse_b64url
@@ -781,7 +785,7 @@ let parsertype_b64legacy = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_t
 let eqparsertype_b64legacy : squash (parsertype_b64legacy' == parsertype_b64legacy) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env14.si_sp wf15').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env14.si_r (target_type_of_wf_typ wf15')).sem_rel impltype_b64legacy eqimpltype_b64legacy
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_b64legacy : parsertype_b64legacy = T.inline_coerce_eq eqparsertype_b64legacy (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env14.si_v env14.si_r env14.si_sp env14.si_p avenv14 aenv14 aaenv14 wf15' (_ by (T.trefl_or_norm ())))
+let parse_b64legacy : parsertype_b64legacy = T.inline_coerce_eq eqparsertype_b64legacy (Parse.impl_zero_copy_wf_type' env14 avenv14 aenv14 aaenv14 wf15' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_b64legacy' : parsertype_b64legacy' = T.inline_coerce_eq_reverse eqparsertype_b64legacy parse_b64legacy
@@ -833,7 +837,7 @@ let parsertype_regexp = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ 
 let eqparsertype_regexp : squash (parsertype_regexp' == parsertype_regexp) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env15.si_sp wf16').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env15.si_r (target_type_of_wf_typ wf16')).sem_rel impltype_regexp eqimpltype_regexp
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_regexp : parsertype_regexp = T.inline_coerce_eq eqparsertype_regexp (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env15.si_v env15.si_r env15.si_sp env15.si_p avenv15 aenv15 aaenv15 wf16' (_ by (T.trefl_or_norm ())))
+let parse_regexp : parsertype_regexp = T.inline_coerce_eq eqparsertype_regexp (Parse.impl_zero_copy_wf_type' env15 avenv15 aenv15 aaenv15 wf16' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_regexp' : parsertype_regexp' = T.inline_coerce_eq_reverse eqparsertype_regexp parse_regexp
@@ -885,7 +889,7 @@ let parsertype_mimemessage = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf
 let eqparsertype_mimemessage : squash (parsertype_mimemessage' == parsertype_mimemessage) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env16.si_sp wf17').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env16.si_r (target_type_of_wf_typ wf17')).sem_rel impltype_mimemessage eqimpltype_mimemessage
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_mimemessage : parsertype_mimemessage = T.inline_coerce_eq eqparsertype_mimemessage (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env16.si_v env16.si_r env16.si_sp env16.si_p avenv16 aenv16 aaenv16 wf17' (_ by (T.trefl_or_norm ())))
+let parse_mimemessage : parsertype_mimemessage = T.inline_coerce_eq eqparsertype_mimemessage (Parse.impl_zero_copy_wf_type' env16 avenv16 aenv16 aaenv16 wf17' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_mimemessage' : parsertype_mimemessage' = T.inline_coerce_eq_reverse eqparsertype_mimemessage parse_mimemessage
@@ -937,7 +941,7 @@ let parsertype_text = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ en
 let eqparsertype_text : squash (parsertype_text' == parsertype_text) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env17.si_sp wf18').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env17.si_r (target_type_of_wf_typ wf18')).sem_rel impltype_text eqimpltype_text
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_text : parsertype_text = T.inline_coerce_eq eqparsertype_text (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env17.si_v env17.si_r env17.si_sp env17.si_p avenv17 aenv17 aaenv17 wf18' (_ by (T.trefl_or_norm ())))
+let parse_text : parsertype_text = T.inline_coerce_eq eqparsertype_text (Parse.impl_zero_copy_wf_type' env17 avenv17 aenv17 aaenv17 wf18' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_text' : parsertype_text' = T.inline_coerce_eq_reverse eqparsertype_text parse_text
@@ -989,7 +993,7 @@ let parsertype_false = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ e
 let eqparsertype_false : squash (parsertype_false' == parsertype_false) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env18.si_sp wf19').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env18.si_r (target_type_of_wf_typ wf19')).sem_rel impltype_false eqimpltype_false
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_false : parsertype_false = T.inline_coerce_eq eqparsertype_false (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env18.si_v env18.si_r env18.si_sp env18.si_p avenv18 aenv18 aaenv18 wf19' (_ by (T.trefl_or_norm ())))
+let parse_false : parsertype_false = T.inline_coerce_eq eqparsertype_false (Parse.impl_zero_copy_wf_type' env18 avenv18 aenv18 aaenv18 wf19' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_false' : parsertype_false' = T.inline_coerce_eq_reverse eqparsertype_false parse_false
@@ -1041,7 +1045,7 @@ let parsertype_true = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ en
 let eqparsertype_true : squash (parsertype_true' == parsertype_true) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env19.si_sp wf20').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env19.si_r (target_type_of_wf_typ wf20')).sem_rel impltype_true eqimpltype_true
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_true : parsertype_true = T.inline_coerce_eq eqparsertype_true (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env19.si_v env19.si_r env19.si_sp env19.si_p avenv19 aenv19 aaenv19 wf20' (_ by (T.trefl_or_norm ())))
+let parse_true : parsertype_true = T.inline_coerce_eq eqparsertype_true (Parse.impl_zero_copy_wf_type' env19 avenv19 aenv19 aaenv19 wf20' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_true' : parsertype_true' = T.inline_coerce_eq_reverse eqparsertype_true parse_true
@@ -1093,7 +1097,7 @@ let parsertype_nil = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ env
 let eqparsertype_nil : squash (parsertype_nil' == parsertype_nil) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env20.si_sp wf21').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env20.si_r (target_type_of_wf_typ wf21')).sem_rel impltype_nil eqimpltype_nil
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_nil : parsertype_nil = T.inline_coerce_eq eqparsertype_nil (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env20.si_v env20.si_r env20.si_sp env20.si_p avenv20 aenv20 aaenv20 wf21' (_ by (T.trefl_or_norm ())))
+let parse_nil : parsertype_nil = T.inline_coerce_eq eqparsertype_nil (Parse.impl_zero_copy_wf_type' env20 avenv20 aenv20 aaenv20 wf21' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_nil' : parsertype_nil' = T.inline_coerce_eq_reverse eqparsertype_nil parse_nil
@@ -1145,7 +1149,7 @@ let parsertype_null = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ en
 let eqparsertype_null : squash (parsertype_null' == parsertype_null) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env21.si_sp wf22').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env21.si_r (target_type_of_wf_typ wf22')).sem_rel impltype_null eqimpltype_null
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_null : parsertype_null = T.inline_coerce_eq eqparsertype_null (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env21.si_v env21.si_r env21.si_sp env21.si_p avenv21 aenv21 aaenv21 wf22' (_ by (T.trefl_or_norm ())))
+let parse_null : parsertype_null = T.inline_coerce_eq eqparsertype_null (Parse.impl_zero_copy_wf_type' env21 avenv21 aenv21 aaenv21 wf22' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_null' : parsertype_null' = T.inline_coerce_eq_reverse eqparsertype_null parse_null
@@ -1197,7 +1201,7 @@ let parsertype_undefined = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_t
 let eqparsertype_undefined : squash (parsertype_undefined' == parsertype_undefined) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env22.si_sp wf23').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env22.si_r (target_type_of_wf_typ wf23')).sem_rel impltype_undefined eqimpltype_undefined
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_undefined : parsertype_undefined = T.inline_coerce_eq eqparsertype_undefined (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env22.si_v env22.si_r env22.si_sp env22.si_p avenv22 aenv22 aaenv22 wf23' (_ by (T.trefl_or_norm ())))
+let parse_undefined : parsertype_undefined = T.inline_coerce_eq eqparsertype_undefined (Parse.impl_zero_copy_wf_type' env22 avenv22 aenv22 aaenv22 wf23' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_undefined' : parsertype_undefined' = T.inline_coerce_eq_reverse eqparsertype_undefined parse_undefined
@@ -1249,7 +1253,7 @@ let parsertype_any = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ env
 let eqparsertype_any : squash (parsertype_any' == parsertype_any) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env23.si_sp wf24').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env23.si_r (target_type_of_wf_typ wf24')).sem_rel impltype_any eqimpltype_any
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_any : parsertype_any = T.inline_coerce_eq eqparsertype_any (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env23.si_v env23.si_r env23.si_sp env23.si_p avenv23 aenv23 aaenv23 wf24' (_ by (T.trefl_or_norm ())))
+let parse_any : parsertype_any = T.inline_coerce_eq eqparsertype_any (Parse.impl_zero_copy_wf_type' env23 avenv23 aenv23 aaenv23 wf24' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_any' : parsertype_any' = T.inline_coerce_eq_reverse eqparsertype_any parse_any
@@ -1301,7 +1305,7 @@ let parsertype_values = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ 
 let eqparsertype_values : squash (parsertype_values' == parsertype_values) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env24.si_sp wf25').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env24.si_r (target_type_of_wf_typ wf25')).sem_rel impltype_values eqimpltype_values
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_values : parsertype_values = T.inline_coerce_eq eqparsertype_values (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env24.si_v env24.si_r env24.si_sp env24.si_p avenv24 aenv24 aaenv24 wf25' (_ by (T.trefl_or_norm ())))
+let parse_values : parsertype_values = T.inline_coerce_eq eqparsertype_values (Parse.impl_zero_copy_wf_type' env24 avenv24 aenv24 aaenv24 wf25' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_values' : parsertype_values' = T.inline_coerce_eq_reverse eqparsertype_values parse_values
@@ -1322,7 +1326,6 @@ let aaenv25 : Parse.ancillary_parse_array_group_env Det.cbor_det_match Det.cbor_
 let _ : unit = _ by (FStar.Tactics.print ("source'"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "krml"; sem_attr] noextract
 let sorted_source25 = List.Tot.tl sorted_source24
-
 (*
 let _ : unit = _ by (FStar.Tactics.print ("18 defs remaining. Producing definitions for header_map"); FStar.Tactics.exact (`()))
 
@@ -1354,7 +1357,7 @@ let parsertype_header_map = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_
 let eqparsertype_header_map : squash (parsertype_header_map' == parsertype_header_map) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env25.si_sp wf26').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env25.si_r (target_type_of_wf_typ wf26')).sem_rel impltype_header_map eqimpltype_header_map
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_header_map : parsertype_header_map = T.inline_coerce_eq eqparsertype_header_map (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env25.si_v env25.si_r env25.si_sp env25.si_p avenv25 aenv25 aaenv25 wf26' (_ by (T.trefl_or_norm ())))
+let parse_header_map : parsertype_header_map = T.inline_coerce_eq eqparsertype_header_map (Parse.impl_zero_copy_wf_type' env25 avenv25 aenv25 aaenv25 wf26' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_header_map' : parsertype_header_map' = T.inline_coerce_eq_reverse eqparsertype_header_map parse_header_map
@@ -1406,7 +1409,7 @@ let parsertype_empty_or_serialized_map = impl_zero_copy_parse Det.cbor_det_match
 let eqparsertype_empty_or_serialized_map : squash (parsertype_empty_or_serialized_map' == parsertype_empty_or_serialized_map) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env26.si_sp wf27').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env26.si_r (target_type_of_wf_typ wf27')).sem_rel impltype_empty_or_serialized_map eqimpltype_empty_or_serialized_map
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_empty_or_serialized_map : parsertype_empty_or_serialized_map = T.inline_coerce_eq eqparsertype_empty_or_serialized_map (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env26.si_v env26.si_r env26.si_sp env26.si_p avenv26 aenv26 aaenv26 wf27' (_ by (T.trefl_or_norm ())))
+let parse_empty_or_serialized_map : parsertype_empty_or_serialized_map = T.inline_coerce_eq eqparsertype_empty_or_serialized_map (Parse.impl_zero_copy_wf_type' env26 avenv26 aenv26 aaenv26 wf27' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_empty_or_serialized_map' : parsertype_empty_or_serialized_map' = T.inline_coerce_eq_reverse eqparsertype_empty_or_serialized_map parse_empty_or_serialized_map
@@ -1478,7 +1481,7 @@ let parsertype_COSE_Signature = impl_zero_copy_parse Det.cbor_det_match (spec_of
 let eqparsertype_COSE_Signature : squash (parsertype_COSE_Signature' == parsertype_COSE_Signature) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env28.si_sp wf29').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env28.si_r (target_type_of_wf_typ wf29')).sem_rel impltype_COSE_Signature eqimpltype_COSE_Signature
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_COSE_Signature : parsertype_COSE_Signature = T.inline_coerce_eq eqparsertype_COSE_Signature (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env28.si_v env28.si_r env28.si_sp env28.si_p avenv28 aenv28 aaenv28 wf29' (_ by (T.trefl_or_norm ())))
+let parse_COSE_Signature : parsertype_COSE_Signature = T.inline_coerce_eq eqparsertype_COSE_Signature (Parse.impl_zero_copy_wf_type' env28 avenv28 aenv28 aaenv28 wf29' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_COSE_Signature' : parsertype_COSE_Signature' = T.inline_coerce_eq_reverse eqparsertype_COSE_Signature parse_COSE_Signature
@@ -1530,7 +1533,7 @@ let parsertype_COSE_Sign = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_t
 let eqparsertype_COSE_Sign : squash (parsertype_COSE_Sign' == parsertype_COSE_Sign) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env29.si_sp wf30').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env29.si_r (target_type_of_wf_typ wf30')).sem_rel impltype_COSE_Sign eqimpltype_COSE_Sign
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_COSE_Sign : parsertype_COSE_Sign = T.inline_coerce_eq eqparsertype_COSE_Sign (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env29.si_v env29.si_r env29.si_sp env29.si_p avenv29 aenv29 aaenv29 wf30' (_ by (T.trefl_or_norm ())))
+let parse_COSE_Sign : parsertype_COSE_Sign = T.inline_coerce_eq eqparsertype_COSE_Sign (Parse.impl_zero_copy_wf_type' env29 avenv29 aenv29 aaenv29 wf30' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_COSE_Sign' : parsertype_COSE_Sign' = T.inline_coerce_eq_reverse eqparsertype_COSE_Sign parse_COSE_Sign
@@ -1582,7 +1585,7 @@ let parsertype_COSE_Sign_Tagged = impl_zero_copy_parse Det.cbor_det_match (spec_
 let eqparsertype_COSE_Sign_Tagged : squash (parsertype_COSE_Sign_Tagged' == parsertype_COSE_Sign_Tagged) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env30.si_sp wf31').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env30.si_r (target_type_of_wf_typ wf31')).sem_rel impltype_COSE_Sign_Tagged eqimpltype_COSE_Sign_Tagged
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_COSE_Sign_Tagged : parsertype_COSE_Sign_Tagged = T.inline_coerce_eq eqparsertype_COSE_Sign_Tagged (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env30.si_v env30.si_r env30.si_sp env30.si_p avenv30 aenv30 aaenv30 wf31' (_ by (T.trefl_or_norm ())))
+let parse_COSE_Sign_Tagged : parsertype_COSE_Sign_Tagged = T.inline_coerce_eq eqparsertype_COSE_Sign_Tagged (Parse.impl_zero_copy_wf_type' env30 avenv30 aenv30 aaenv30 wf31' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_COSE_Sign_Tagged' : parsertype_COSE_Sign_Tagged' = T.inline_coerce_eq_reverse eqparsertype_COSE_Sign_Tagged parse_COSE_Sign_Tagged
@@ -1634,7 +1637,7 @@ let parsertype_COSE_Sign1 = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_
 let eqparsertype_COSE_Sign1 : squash (parsertype_COSE_Sign1' == parsertype_COSE_Sign1) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env31.si_sp wf32').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env31.si_r (target_type_of_wf_typ wf32')).sem_rel impltype_COSE_Sign1 eqimpltype_COSE_Sign1
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_COSE_Sign1 : parsertype_COSE_Sign1 = T.inline_coerce_eq eqparsertype_COSE_Sign1 (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env31.si_v env31.si_r env31.si_sp env31.si_p avenv31 aenv31 aaenv31 wf32' (_ by (T.trefl_or_norm ())))
+let parse_COSE_Sign1 : parsertype_COSE_Sign1 = T.inline_coerce_eq eqparsertype_COSE_Sign1 (Parse.impl_zero_copy_wf_type' env31 avenv31 aenv31 aaenv31 wf32' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_COSE_Sign1' : parsertype_COSE_Sign1' = T.inline_coerce_eq_reverse eqparsertype_COSE_Sign1 parse_COSE_Sign1
@@ -1686,7 +1689,7 @@ let parsertype_COSE_Untagged_Message = impl_zero_copy_parse Det.cbor_det_match (
 let eqparsertype_COSE_Untagged_Message : squash (parsertype_COSE_Untagged_Message' == parsertype_COSE_Untagged_Message) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env32.si_sp wf33').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env32.si_r (target_type_of_wf_typ wf33')).sem_rel impltype_COSE_Untagged_Message eqimpltype_COSE_Untagged_Message
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_COSE_Untagged_Message : parsertype_COSE_Untagged_Message = T.inline_coerce_eq eqparsertype_COSE_Untagged_Message (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env32.si_v env32.si_r env32.si_sp env32.si_p avenv32 aenv32 aaenv32 wf33' (_ by (T.trefl_or_norm ())))
+let parse_COSE_Untagged_Message : parsertype_COSE_Untagged_Message = T.inline_coerce_eq eqparsertype_COSE_Untagged_Message (Parse.impl_zero_copy_wf_type' env32 avenv32 aenv32 aaenv32 wf33' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_COSE_Untagged_Message' : parsertype_COSE_Untagged_Message' = T.inline_coerce_eq_reverse eqparsertype_COSE_Untagged_Message parse_COSE_Untagged_Message
@@ -1738,7 +1741,7 @@ let parsertype_COSE_Sign1_Tagged = impl_zero_copy_parse Det.cbor_det_match (spec
 let eqparsertype_COSE_Sign1_Tagged : squash (parsertype_COSE_Sign1_Tagged' == parsertype_COSE_Sign1_Tagged) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env33.si_sp wf34').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env33.si_r (target_type_of_wf_typ wf34')).sem_rel impltype_COSE_Sign1_Tagged eqimpltype_COSE_Sign1_Tagged
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_COSE_Sign1_Tagged : parsertype_COSE_Sign1_Tagged = T.inline_coerce_eq eqparsertype_COSE_Sign1_Tagged (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env33.si_v env33.si_r env33.si_sp env33.si_p avenv33 aenv33 aaenv33 wf34' (_ by (T.trefl_or_norm ())))
+let parse_COSE_Sign1_Tagged : parsertype_COSE_Sign1_Tagged = T.inline_coerce_eq eqparsertype_COSE_Sign1_Tagged (Parse.impl_zero_copy_wf_type' env33 avenv33 aenv33 aaenv33 wf34' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_COSE_Sign1_Tagged' : parsertype_COSE_Sign1_Tagged' = T.inline_coerce_eq_reverse eqparsertype_COSE_Sign1_Tagged parse_COSE_Sign1_Tagged
@@ -1790,7 +1793,7 @@ let parsertype_COSE_Tagged_Message = impl_zero_copy_parse Det.cbor_det_match (sp
 let eqparsertype_COSE_Tagged_Message : squash (parsertype_COSE_Tagged_Message' == parsertype_COSE_Tagged_Message) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env34.si_sp wf35').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env34.si_r (target_type_of_wf_typ wf35')).sem_rel impltype_COSE_Tagged_Message eqimpltype_COSE_Tagged_Message
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_COSE_Tagged_Message : parsertype_COSE_Tagged_Message = T.inline_coerce_eq eqparsertype_COSE_Tagged_Message (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env34.si_v env34.si_r env34.si_sp env34.si_p avenv34 aenv34 aaenv34 wf35' (_ by (T.trefl_or_norm ())))
+let parse_COSE_Tagged_Message : parsertype_COSE_Tagged_Message = T.inline_coerce_eq eqparsertype_COSE_Tagged_Message (Parse.impl_zero_copy_wf_type' env34 avenv34 aenv34 aaenv34 wf35' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_COSE_Tagged_Message' : parsertype_COSE_Tagged_Message' = T.inline_coerce_eq_reverse eqparsertype_COSE_Tagged_Message parse_COSE_Tagged_Message
@@ -1842,7 +1845,7 @@ let parsertype_COSE_Messages = impl_zero_copy_parse Det.cbor_det_match (spec_of_
 let eqparsertype_COSE_Messages : squash (parsertype_COSE_Messages' == parsertype_COSE_Messages) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env35.si_sp wf36').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env35.si_r (target_type_of_wf_typ wf36')).sem_rel impltype_COSE_Messages eqimpltype_COSE_Messages
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_COSE_Messages : parsertype_COSE_Messages = T.inline_coerce_eq eqparsertype_COSE_Messages (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env35.si_v env35.si_r env35.si_sp env35.si_p avenv35 aenv35 aaenv35 wf36' (_ by (T.trefl_or_norm ())))
+let parse_COSE_Messages : parsertype_COSE_Messages = T.inline_coerce_eq eqparsertype_COSE_Messages (Parse.impl_zero_copy_wf_type' env35 avenv35 aenv35 aaenv35 wf36' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_COSE_Messages' : parsertype_COSE_Messages' = T.inline_coerce_eq_reverse eqparsertype_COSE_Messages parse_COSE_Messages
@@ -1894,7 +1897,7 @@ let parsertype_Sig_structure = impl_zero_copy_parse Det.cbor_det_match (spec_of_
 let eqparsertype_Sig_structure : squash (parsertype_Sig_structure' == parsertype_Sig_structure) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env36.si_sp wf37').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env36.si_r (target_type_of_wf_typ wf37')).sem_rel impltype_Sig_structure eqimpltype_Sig_structure
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_Sig_structure : parsertype_Sig_structure = T.inline_coerce_eq eqparsertype_Sig_structure (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env36.si_v env36.si_r env36.si_sp env36.si_p avenv36 aenv36 aaenv36 wf37' (_ by (T.trefl_or_norm ())))
+let parse_Sig_structure : parsertype_Sig_structure = T.inline_coerce_eq eqparsertype_Sig_structure (Parse.impl_zero_copy_wf_type' env36 avenv36 aenv36 aaenv36 wf37' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_Sig_structure' : parsertype_Sig_structure' = T.inline_coerce_eq_reverse eqparsertype_Sig_structure parse_Sig_structure
@@ -1946,7 +1949,7 @@ let parsertype_Internal_Types = impl_zero_copy_parse Det.cbor_det_match (spec_of
 let eqparsertype_Internal_Types : squash (parsertype_Internal_Types' == parsertype_Internal_Types) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env37.si_sp wf38').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env37.si_r (target_type_of_wf_typ wf38')).sem_rel impltype_Internal_Types eqimpltype_Internal_Types
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_Internal_Types : parsertype_Internal_Types = T.inline_coerce_eq eqparsertype_Internal_Types (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env37.si_v env37.si_r env37.si_sp env37.si_p avenv37 aenv37 aaenv37 wf38' (_ by (T.trefl_or_norm ())))
+let parse_Internal_Types : parsertype_Internal_Types = T.inline_coerce_eq eqparsertype_Internal_Types (Parse.impl_zero_copy_wf_type' env37 avenv37 aenv37 aaenv37 wf38' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_Internal_Types' : parsertype_Internal_Types' = T.inline_coerce_eq_reverse eqparsertype_Internal_Types parse_Internal_Types
@@ -1998,7 +2001,7 @@ let parsertype_start = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ e
 let eqparsertype_start : squash (parsertype_start' == parsertype_start) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env38.si_sp wf39').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env38.si_r (target_type_of_wf_typ wf39')).sem_rel impltype_start eqimpltype_start
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_start : parsertype_start = T.inline_coerce_eq eqparsertype_start (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env38.si_v env38.si_r env38.si_sp env38.si_p avenv38 aenv38 aaenv38 wf39' (_ by (T.trefl_or_norm ())))
+let parse_start : parsertype_start = T.inline_coerce_eq eqparsertype_start (Parse.impl_zero_copy_wf_type' env38 avenv38 aenv38 aaenv38 wf39' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_start' : parsertype_start' = T.inline_coerce_eq_reverse eqparsertype_start parse_start
@@ -2050,7 +2053,7 @@ let parsertype_eb64url = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ
 let eqparsertype_eb64url : squash (parsertype_eb64url' == parsertype_eb64url) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env39.si_sp wf40').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env39.si_r (target_type_of_wf_typ wf40')).sem_rel impltype_eb64url eqimpltype_eb64url
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_eb64url : parsertype_eb64url = T.inline_coerce_eq eqparsertype_eb64url (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env39.si_v env39.si_r env39.si_sp env39.si_p avenv39 aenv39 aaenv39 wf40' (_ by (T.trefl_or_norm ())))
+let parse_eb64url : parsertype_eb64url = T.inline_coerce_eq eqparsertype_eb64url (Parse.impl_zero_copy_wf_type' env39 avenv39 aenv39 aaenv39 wf40' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_eb64url' : parsertype_eb64url' = T.inline_coerce_eq_reverse eqparsertype_eb64url parse_eb64url
@@ -2102,7 +2105,7 @@ let parsertype_eb64legacy = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_
 let eqparsertype_eb64legacy : squash (parsertype_eb64legacy' == parsertype_eb64legacy) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env40.si_sp wf41').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env40.si_r (target_type_of_wf_typ wf41')).sem_rel impltype_eb64legacy eqimpltype_eb64legacy
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_eb64legacy : parsertype_eb64legacy = T.inline_coerce_eq eqparsertype_eb64legacy (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env40.si_v env40.si_r env40.si_sp env40.si_p avenv40 aenv40 aaenv40 wf41' (_ by (T.trefl_or_norm ())))
+let parse_eb64legacy : parsertype_eb64legacy = T.inline_coerce_eq eqparsertype_eb64legacy (Parse.impl_zero_copy_wf_type' env40 avenv40 aenv40 aaenv40 wf41' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_eb64legacy' : parsertype_eb64legacy' = T.inline_coerce_eq_reverse eqparsertype_eb64legacy parse_eb64legacy
@@ -2154,7 +2157,7 @@ let parsertype_eb16 = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ en
 let eqparsertype_eb16 : squash (parsertype_eb16' == parsertype_eb16) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env41.si_sp wf42').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env41.si_r (target_type_of_wf_typ wf42')).sem_rel impltype_eb16 eqimpltype_eb16
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_eb16 : parsertype_eb16 = T.inline_coerce_eq eqparsertype_eb16 (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env41.si_v env41.si_r env41.si_sp env41.si_p avenv41 aenv41 aaenv41 wf42' (_ by (T.trefl_or_norm ())))
+let parse_eb16 : parsertype_eb16 = T.inline_coerce_eq eqparsertype_eb16 (Parse.impl_zero_copy_wf_type' env41 avenv41 aenv41 aaenv41 wf42' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_eb16' : parsertype_eb16' = T.inline_coerce_eq_reverse eqparsertype_eb16 parse_eb16
@@ -2206,7 +2209,7 @@ let parsertype_cborany = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ
 let eqparsertype_cborany : squash (parsertype_cborany' == parsertype_cborany) = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ env42.si_sp wf43').parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match env42.si_r (target_type_of_wf_typ wf43')).sem_rel impltype_cborany eqimpltype_cborany
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let parse_cborany : parsertype_cborany = T.inline_coerce_eq eqparsertype_cborany (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl env42.si_v env42.si_r env42.si_sp env42.si_p avenv42 aenv42 aaenv42 wf43' (_ by (T.trefl_or_norm ())))
+let parse_cborany : parsertype_cborany = T.inline_coerce_eq eqparsertype_cborany (Parse.impl_zero_copy_wf_type' env42 avenv42 aenv42 aaenv42 wf43' (_ by (T.trefl_or_norm ())))
 let _ : unit = _ by (FStar.Tactics.print ("parser'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"]
 let parse_cborany' : parsertype_cborany' = T.inline_coerce_eq_reverse eqparsertype_cborany parse_cborany
