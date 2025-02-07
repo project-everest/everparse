@@ -6,7 +6,7 @@ include CBOR.Pulse.API.Det.C.Slice
 open CDDL.Spec.AST.Base
 module AST = CDDL.Spec.AST.Base
 
-[@@AST.sem_attr]
+[@@AST.base_attr]
 let cbor_det_impl : cbor_impl cbor_det_match cbor_det_map_entry_match cbor_det_array_iterator_match cbor_det_map_iterator_match
 = {
   cbor_share = cbor_det_share ();

@@ -8,16 +8,17 @@ module U8 = FStar.UInt8
 module Util = CBOR.Spec.Util
 module U32 = FStar.UInt32
 
+irreducible let base_attr : unit = ()
 irreducible let sem_attr : unit = ()
 
-[@@sem_attr]
+[@@base_attr]
 let u32_of_char (x: FStar.Char.char) : Tot U32.t = FStar.Char.u32_of_char x
 
-[@@sem_attr]
+[@@base_attr]
 let char_is_ascii (c: FStar.Char.char) : Tot bool =
   FStar.UInt32.lt (u32_of_char c) 127ul // because 7F is forbidden
 
-[@@sem_attr]
+[@@base_attr]
 let string_is_ascii (s: string) : Tot bool =
   List.Tot.for_all char_is_ascii (FStar.String.list_of_string s)
 
@@ -38,29 +39,29 @@ let test_ascii_string: ascii_string = mk_ascii_string "hello" (_ by (FStar.Tacti
   
   2. as a defensive practice wrt. ill-formed source input. *)
 
-[@@sem_attr; PpxDerivingShow; plugin]
+[@@base_attr; PpxDerivingShow; plugin]
 type literal =
 | LSimple of int
 | LInt: (v: int) -> literal // I deduce the integer type from the sign
 | LTextString: string -> literal
 
-[@@sem_attr]
+[@@base_attr]
 let cddl_major_type_uint64 : Cbor.major_type_uint64_or_neg_int64 =
   (_ by (FStar.Tactics.exact (FStar.Tactics.norm_term [delta] (`Cbor.cbor_major_type_uint64))))
 
-[@@sem_attr]
+[@@base_attr]
 let cddl_major_type_neg_int64 : Cbor.major_type_uint64_or_neg_int64 =
   (_ by (FStar.Tactics.exact (FStar.Tactics.norm_term [delta] (`Cbor.cbor_major_type_neg_int64))))
 
-[@@sem_attr]
+[@@base_attr]
 let cddl_major_type_byte_string : Cbor.major_type_byte_string_or_text_string =
   (_ by (FStar.Tactics.exact (FStar.Tactics.norm_term [delta] (`Cbor.cbor_major_type_byte_string))))
 
-[@@sem_attr]
+[@@base_attr]
 let cddl_major_type_text_string : Cbor.major_type_byte_string_or_text_string =
   (_ by (FStar.Tactics.exact (FStar.Tactics.norm_term [delta] (`Cbor.cbor_major_type_text_string))))
 
-[@@sem_attr; PpxDerivingShow; plugin]
+[@@base_attr; PpxDerivingShow; plugin]
 type elem_typ =
 | ELiteral of literal
 | EBool
@@ -72,12 +73,12 @@ type elem_typ =
 | EAlwaysFalse
 | EAny
 
-[@@sem_attr]
+[@@base_attr]
 type name_env_elem =
 | NType
 | NGroup
 
-[@@sem_attr; PpxDerivingShow; plugin]
+[@@base_attr; PpxDerivingShow; plugin]
 type group =
 | GDef: string -> group
 | GElem: (cut: bool) -> (key: typ) -> (value: typ) -> group
@@ -103,7 +104,7 @@ and typ =
 
 (* Environments and well-formedness constraints *)
 
-[@@  sem_attr]
+[@@  base_attr]
 let tint = TChoice (TElem EUInt) (TElem ENInt)
 
 type name_env = (string -> Tot (option name_env_elem))
@@ -116,26 +117,26 @@ let name (e: name_env) : eqtype = (s: string { name_mem s e })
 let typ_name (e: name_env) : eqtype = (s: string { e s == Some NType })
 let group_name (e: name_env) : eqtype = (s: string { e s == Some NGroup })
 
-[@@  sem_attr]
+[@@  base_attr]
 let name_intro (s: string) (e: name_env) (sq: squash (name_mem s e)) : Tot (name e) =
   s
 
 
-[@@sem_attr]
+[@@base_attr]
 let empty_name_env (_: string) : Tot (option name_env_elem) = None
 
 [@@"opaque_to_smt"] irreducible
 let name_empty_elim (t: Type) (x: name empty_name_env) : Tot t = false_elim ()
 
 
-[@@sem_attr]
+[@@base_attr]
 let extend_name_env (e: name_env) (new_name: string) (elem: name_env_elem) (s: string) : Tot (option name_env_elem) =
   if s = new_name then Some elem else e s
 
 let name_env_included (s1 s2: name_env) : GTot prop =
   (forall (i: name s1) . s2 i == s1 i)
 
-[@@ sem_attr ]
+[@@ base_attr ]
 let wf_literal
   (l: literal)
 : Tot bool
@@ -144,7 +145,7 @@ let wf_literal
 | LInt v -> v >= - pow2 64 && v < pow2 64
 | LTextString s -> String.length s < pow2 64 && string_is_ascii s // FIXME: support utf8
 
-[@@sem_attr]
+[@@base_attr]
 let wf_elem_typ
   (t: elem_typ)
 : Tot bool
@@ -152,7 +153,7 @@ let wf_elem_typ
   | ELiteral l -> wf_literal l
   | _ -> true
 
-[@@ sem_attr]
+[@@ base_attr]
 let rec group_bounded
   (env: name_env)
   (g: group)
@@ -348,7 +349,7 @@ let sem_env_extend_gen
 
 (* Semantics *)
 
-[@@sem_attr]
+[@@base_attr]
 let uint32_to_uint8 (x: U32.t) : Tot U8.t =
   FStar.Int.Cast.uint32_to_uint8 x
 
@@ -755,7 +756,7 @@ let typ_sem_elem_incr
 
 (* Annotated AST and their semantics *)
 
-[@@sem_attr; PpxDerivingShow]
+[@@base_attr; PpxDerivingShow]
 type elab_map_group =
 | MGNop
 | MGAlwaysFalse
@@ -933,7 +934,7 @@ let rec spec_map_group_footprint_incr
     spec_map_group_footprint_incr env env' g2
   | _ -> ()
 
-[@@sem_attr; PpxDerivingShow]
+[@@base_attr; PpxDerivingShow]
 type ast0_wf_typ
 : typ -> Type
 = 
@@ -2116,7 +2117,7 @@ let wf_ast_env_extend_group
   })
 = ast_env_extend_gen e new_name NGroup t
 
-[@@ sem_attr ]
+[@@ base_attr ]
 noeq
 type target_elem_type =
 | TTUnit
@@ -2128,7 +2129,7 @@ type target_elem_type =
 | TTAny
 | TTAlwaysFalse
 
-[@@ sem_attr ]
+[@@ base_attr ]
 noeq
 type target_type =
 | TTElem of target_elem_type
@@ -2139,7 +2140,7 @@ type target_type =
 | TTArray of target_type
 | TTTable: target_type -> target_type -> target_type
 
-[@@ sem_attr ]
+[@@ base_attr ]
 let rec target_type_bounded
   (bound: name_env)
   (t: target_type)
@@ -2542,7 +2543,7 @@ let pair (k: pair_kind) (t1 t2: Type0) : Pure Type0
   | PEraseRight -> t1
   | _ -> t1 & t2
 
-[@sem_attr]
+[@base_attr]
 let target_type_of_elem_typ
   (x: elem_typ)
 : Tot target_elem_type

@@ -85,7 +85,7 @@ fn slice_u8_eq_list_ascii_char_cons (a: FStar.Char.char) (a' : U8.t) (sq: squash
   }
 ```
 
-[@@AST.sem_attr]
+[@@AST.base_attr]
 let rec slice_u8_eq_list_ascii_char
   (l: list FStar.Char.char)
   (sq: squash (List.Tot.for_all AST.char_is_ascii l))
@@ -134,7 +134,7 @@ fn slice_u8_eq_ascii_string_intro
 }
 ```
 
-[@@AST.sem_attr]
+[@@AST.base_attr]
 let slice_u8_eq_ascii_string
   (x: AST.ascii_string)
 : Tot (slice_u8_eq_ascii_string_t x)
@@ -176,13 +176,13 @@ fn impl_string_literal
 }
 ```
 
-[@@AST.sem_attr]
+[@@AST.base_attr]
 let string_length
   (x: string)
 : Tot nat
 = List.Tot.length (String.list_of_string x)
 
-[@@AST.sem_attr]
+[@@AST.base_attr]
 let impl_literal
   (#ty: Type0)
   (vmatch: (perm -> ty -> cbor -> slprop))
@@ -249,7 +249,7 @@ fn slice_u8_fill_list_ascii_char_cons (a: FStar.Char.char) (a' : U8.t) (sq: squa
   }
 ```
 
-[@@AST.sem_attr]
+[@@AST.base_attr]
 let rec slice_u8_fill_list_ascii_char
   (l: list FStar.Char.char)
   (sq: squash (List.Tot.for_all AST.char_is_ascii l))
@@ -288,7 +288,7 @@ fn slice_u8_fill_ascii_string_intro
 }
 ```
 
-[@@AST.sem_attr]
+[@@AST.base_attr]
 let slice_u8_fill_ascii_string
   (x: AST.ascii_string)
 : Tot (slice_u8_fill_ascii_string_t x)
@@ -325,7 +325,7 @@ fn with_cbor_literal_text_string
 }
 ```
 
-[@@AST.sem_attr]
+[@@AST.base_attr]
 let with_literal
   (#ty: Type0)
   (#vmatch: (perm -> ty -> cbor -> slprop))

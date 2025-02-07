@@ -87,9 +87,8 @@ let pull_group
 = (DGroup?._0 (pair_snd (list_hd l)))
 
 noextract [@@noextract_to "krml"]
-let steps = [
+let base_steps0 = [
       zeta; iota; primops;
-      delta_attr [`%sem_attr];
       delta_only [
         `%List.Tot.for_all;
         `%List.Tot.length;
@@ -100,6 +99,16 @@ let steps = [
         `%Some?; `%None?;
       ];
   ]
+
+noextract [@@noextract_to "krml"]
+let base_steps =
+      delta_attr [`%base_attr] ::
+      base_steps0
+
+noextract [@@noextract_to "krml"]
+let steps =
+      delta_attr [`%base_attr; `%sem_attr] ::
+      base_steps0
 
 [@@noextract_to "krml"; sem_attr] noextract inline_for_extraction
 let inline_coerce_eq (#a:Type) (#b:Type) (_:squash (a == b)) (x:a) : b = x

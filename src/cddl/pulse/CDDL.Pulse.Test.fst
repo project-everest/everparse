@@ -10,15 +10,7 @@ let mk_ascii_string
 = s
 
 noextract [@@noextract_to "krml"]
-let steps = [
-      zeta; iota; primops;
-      delta_attr [`%sem_attr];
-      delta_only [
-        `%List.Tot.for_all;
-        `%FStar.Int.Cast.uint32_to_uint8;
-        `%pow2;
-      ];
-  ]
+let steps = CDDL.Spec.AST.Tactics.steps
 
 [@@ FStar.Tactics.postprocess_with (fun _ ->
   FStar.Tactics.norm steps;
