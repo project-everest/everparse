@@ -9,6 +9,13 @@ let solve_sem () : FStar.Tactics.Tac unit =
   FStar.Tactics.norm [delta_attr [`%sem_attr]; iota; zeta; primops; nbe];
   FStar.Tactics.smt ()
 
+let trefl_or_norm () : FStar.Tactics.Tac unit =
+  FStar.Tactics.first [
+    FStar.Tactics.trefl;
+    (fun _ -> FStar.Tactics.norm [nbe; delta; iota; zeta; primops]; FStar.Tactics.trefl ());
+    (fun _ -> FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.trefl ());
+  ]
+
 exception ExceptionOutOfFuel
 
 let solve_mk_wf_typ_fuel_for () : FStar.Tactics.Tac unit =
@@ -82,7 +89,6 @@ let pull_group
 noextract [@@noextract_to "krml"]
 let steps = [
       zeta; iota; primops;
-      nbe;
       delta_attr [`%sem_attr];
       delta_only [
         `%List.Tot.for_all;
@@ -97,3 +103,6 @@ let steps = [
 
 [@@noextract_to "krml"; sem_attr] noextract inline_for_extraction
 let inline_coerce_eq (#a:Type) (#b:Type) (_:squash (a == b)) (x:a) : b = x
+
+[@@noextract_to "krml"; sem_attr] noextract inline_for_extraction
+let inline_coerce_eq_reverse (#a:Type) (#b:Type) (_:squash (b == a)) (x:a) : b = x

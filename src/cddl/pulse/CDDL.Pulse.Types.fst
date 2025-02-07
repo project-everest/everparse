@@ -28,6 +28,8 @@ let feq2 (#t1 #t2 #t: Type) (f g: (t1 -> t2 -> t)) : Tot prop =
 
 let rel (t1 t2: Type) = fe_restricted_arrow t1 (fe_restricted_arrow t2 slprop)
 
+let coerce_rel (#t1 #t': Type) (r: rel t1 t') (t2: Type) (sq: squash (t1 == t2)) : Tot (rel t2 t') = r
+
 let rel_eq (#t #t': Type) (r1 r2: rel t t') : Lemma
   (requires (feq2 r1 r2))
   (ensures r1 == r2)

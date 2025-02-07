@@ -346,6 +346,7 @@ fn impl_zero_copy_map_concat
   ensures vmatch p c v
   {
     gather c #(p /. 2.0R) #v #(p /. 2.0R) #v;
+    half_plus_half_eq p;
     rewrite (vmatch (p /. 2.0R +. p /. 2.0R) c v)
       as (vmatch p c v)
   };

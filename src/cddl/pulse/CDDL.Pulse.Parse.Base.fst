@@ -57,6 +57,20 @@ let impl_zero_copy_parse
           )
         )
 
+let impl_zero_copy_parse_t_eq
+    (#ty: Type0)
+    (vmatch: perm -> ty -> cbor -> slprop)
+    (#t: typ)
+    (#tgt: Type0)
+    (#tgt_serializable: tgt -> bool)
+    (ps: parser_spec t tgt tgt_serializable)
+    (#impl_tgt1: Type0)
+    (r: rel impl_tgt1 tgt)
+    (impl_tgt2: Type0)
+    (ieq: squash (impl_tgt1 == impl_tgt2))
+: Tot (squash (impl_zero_copy_parse vmatch ps #impl_tgt1 r == impl_zero_copy_parse vmatch ps #impl_tgt2 (coerce_rel r impl_tgt2 ieq)))
+= ()
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn impl_copyful_unit
@@ -104,6 +118,7 @@ fn impl_zero_copy_unit
 }
 ```
 
+(*
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn impl_copyful_always_false
@@ -123,6 +138,9 @@ fn impl_copyful_always_false
   res
 }
 ```
+*)
+
+let reveal_squash_false (x: Ghost.hide (squash False)) : Tot (squash False) = Ghost.reveal x
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
@@ -138,7 +156,8 @@ fn impl_zero_copy_always_false
     (#p: _)
     (#v: _)
 {
-  let res : squash False = Ghost.reveal ps v;
+  reveal_squash_false (Ghost.reveal ps v);
+  let res : squash False = ();
   fold (rel_always_false _ _ res res);
   rewrite (vmatch p c v) as (Trade.trade (rel_always_false _ _ res res) (vmatch p c v)); // by contradiction
   res

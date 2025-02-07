@@ -18,72 +18,19 @@ let filter_name (name: string) =
 let mk_validator_name (name: string) : string =
   "validate_" ^ filter_name name
 
+let mk_impltype_name (name: string) : string =
+  "impltype_" ^ filter_name name
+
 let mk_parsertype_name (name: string) : string =
   "parsertype_" ^ filter_name name
 
 let mk_parser_name (name: string) : string =
   "parse_" ^ filter_name name
 
-let produce_typ_defs
-  (index: nat)
-  (name: string)
-: Tot string
-= 
-  let i = string_of_int index in
-  let j = string_of_int (index + 1) in
-  let validator = mk_validator_name name in
-  let parsertype = mk_parsertype_name name in
-  let parser = mk_parser_name name in
-  let wf = "wf" ^ j in
-  let wf' = wf ^ "'" in
-  let env = "env" ^ i in
-  let env' = "env" ^ j in
-  let ask = "ask" ^ j in
-  let source = "sorted_source" ^ i in
-  let source' = "sorted_source" ^ j in
-  let krml = "\"krml\"" in
-  (
-"
-let _ : unit = _ by (FStar.Tactics.print (\"wf\"); FStar.Tactics.exact (`()))
-[@@noextract_to "^krml^"] noextract
-let "^wf^" = compute_wf_typ "^env^".si_ast (T.pull_name "^source^") (_ by (FStar.Tactics.trefl ())) (T.pull_type "^source^") (_ by (T.solve_mk_wf_typ_fuel_for ()))
-let _ : unit = _ by (FStar.Tactics.print (\"wf'\"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; sem_attr] noextract
-let "^wf'^" : ast0_wf_typ _ = "^wf^"
-let _ : unit = _ by (FStar.Tactics.print (\"wf_eq\"); FStar.Tactics.exact (`()))
-let "^wf^"_eq : squash ("^wf'^" == "^wf^") = _ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
-let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ())]
-let "^validator^" = Impl.validate_typ Det.cbor_det_impl v"^env^" true _ "^wf'^"
-let _ : unit = _ by (FStar.Tactics.print (\"ancillaries\"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"] noextract
-let "^ask^" : option _ = Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some av"^env^") (Parse.ancillary_parse_env_is_some a"^env^") (Parse.ancillary_parse_array_group_env_is_some aa"^env^") "^wf'^"
-let _ = assert_norm (None? "^ask^")
-let _ : unit = _ by (FStar.Tactics.print (\"parser type'\"); FStar.Tactics.exact (`()))
-noextract [@@noextract_to "^krml^"; sem_attr]
-let "^parsertype^"' = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ "^env^".si_sp "^wf'^").parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match "^env^".si_r (target_type_of_wf_typ "^wf'^")).sem_rel
-let _ : unit = _ by (FStar.Tactics.print (\"parser type\"); FStar.Tactics.exact (`()))
-inline_for_extraction noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm T.steps; FStar.Tactics.trefl ()); sem_attr]
-let "^parsertype^" = "^parsertype^"'
-let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
-let "^parser^" : "^parsertype^" = T.inline_coerce_eq (_ by (FStar.Tactics.norm [nbe; delta; iota; zeta; primops]; FStar.Tactics.trefl ())) (Parse.impl_zero_copy_wf_type Det.cbor_det_impl v"^env^" "^env^".si_r "^env^".si_sp p"^env^" av"^env^" a"^env^" aa"^env^" "^wf'^")
-let _ : unit = _ by (FStar.Tactics.print (\"parser'\"); FStar.Tactics.exact (`()))
-inline_for_extraction noextract [@@noextract_to "^krml^"]
-let "^parser^"' : "^parsertype^"' = T.inline_coerce_eq (_ by (FStar.Tactics.norm [nbe; delta; iota; zeta; primops]; FStar.Tactics.trefl ())) "^parser^"
-let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
-[@@noextract_to "^krml^"; sem_attr] noextract
-let "^env'^" : spec_and_impl_env =
-  spec_and_impl_env_extend_typ_with_weak Det.cbor_det_impl "^env^" (T.pull_name "^source^") (T.pull_type "^source^") "^wf'^"
-let _ : unit = _ by (FStar.Tactics.print (\"venv'\"); FStar.Tactics.exact (`()))
-[@@noextract_to "^krml^"; sem_attr] noextract
-let v"^env'^" : Impl.validator_env Det.cbor_det_match "^env'^".si_ast.e_sem_env =
-  Impl.extend_validator_env_with_typ_weak v"^env^" (T.pull_name "^source^") (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())) (T.pull_type "^source^") (_ by (FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())) "^validator^"
-let _ : unit = _ by (FStar.Tactics.print (\"penv'\"); FStar.Tactics.exact (`()))
-[@@noextract_to "^krml^"; sem_attr] noextract
-let p"^env'^" : Parse.parse_env Det.cbor_det_match "^env'^".si_r "^env'^".si_sp =
-  parse_env_extend Det.cbor_det_impl "^env^" p"^env^" (T.pull_name "^source^") (T.pull_type "^source^") "^wf'^" "^parser^"'
-let _ : unit = _ by (FStar.Tactics.print (\"ancillary envs\"); FStar.Tactics.exact (`()))
+let krml = "\"krml\""
+
+let extend_ancillaries env env' source source' =
+"let _ : unit = _ by (FStar.Tactics.print (\"ancillary envs\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"; sem_attr] noextract
 let av"^env'^" : Parse.ancillary_validate_env Det.cbor_det_match "^env'^".si_ast.e_sem_env =
   Parse.ancillary_validate_env_extend av"^env^" _
@@ -97,6 +44,64 @@ let _ : unit = _ by (FStar.Tactics.print (\"source'\"); FStar.Tactics.exact (`()
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; sem_attr] noextract
 let "^source'^" = List.Tot.tl "^source^"
 "
+
+let produce_typ_defs
+  (index: nat)
+  (name: string)
+: Tot string
+= 
+  let i = string_of_int index in
+  let j = string_of_int (index + 1) in
+  let validator = mk_validator_name name in
+  let impltype = mk_impltype_name name in
+  let parsertype = mk_parsertype_name name in
+  let parser = mk_parser_name name in
+  let wf = "wf" ^ j in
+  let wf' = wf ^ "'" in
+  let env = "env" ^ i in
+  let env' = "env" ^ j in
+  let ask = "ask" ^ j in
+  let source = "sorted_source" ^ i in
+  let source' = "sorted_source" ^ j in
+  (
+"
+let _ : unit = _ by (FStar.Tactics.print (\"wf\"); FStar.Tactics.exact (`()))
+[@@noextract_to "^krml^"] noextract
+let "^wf^" = compute_wf_typ "^env^".si_ast (T.pull_name "^source^") (_ by (FStar.Tactics.trefl ())) (T.pull_type "^source^") (_ by (T.solve_mk_wf_typ_fuel_for ()))
+let _ : unit = _ by (FStar.Tactics.print (\"wf'\"); FStar.Tactics.exact (`()))
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; sem_attr] noextract
+let "^wf'^" : ast0_wf_typ _ = "^wf^"
+let _ : unit = _ by (FStar.Tactics.print (\"wf_eq\"); FStar.Tactics.exact (`()))
+let "^wf^"_eq : squash ("^wf'^" == "^wf^") = _ by (T.trefl_or_norm ())
+let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
+let "^validator^" = Impl.validate_typ Det.cbor_det_impl "^env^".si_v true _ "^wf'^"
+let _ : unit = _ by (FStar.Tactics.print (\"impltype'\"); FStar.Tactics.exact (`()))
+noextract [@@noextract_to "^krml^"; sem_attr]
+let "^impltype^"' = (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match "^env^".si_r (target_type_of_wf_typ "^wf'^")).sem_impl_type
+let _ : unit = _ by (FStar.Tactics.print (\"impltype\"); FStar.Tactics.exact (`()))
+inline_for_extraction noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (T.steps); FStar.Tactics.trefl ())]
+let "^impltype^" = "^impltype^"'
+let _ : unit = _ by (FStar.Tactics.print (\"eqimpltype\"); FStar.Tactics.exact (`()))
+let eq"^impltype^" : squash ("^impltype^"' == "^impltype^") = _ by (T.trefl_or_norm ())
+let _ : unit = _ by (FStar.Tactics.print (\"parser type'\"); FStar.Tactics.exact (`()))
+noextract [@@noextract_to "^krml^"; sem_attr]
+let "^parsertype^"' = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ "^env^".si_sp "^wf'^").parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match "^env^".si_r (target_type_of_wf_typ "^wf'^")).sem_rel
+let _ : unit = _ by (FStar.Tactics.print (\"parser type\"); FStar.Tactics.exact (`()))
+inline_for_extraction noextract [@@noextract_to "^krml^"]
+let "^parsertype^" = impl_zero_copy_parse Det.cbor_det_match (spec_of_wf_typ "^env^".si_sp "^wf'^").parser #"^impltype^" (coerce_rel (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match "^env^".si_r (target_type_of_wf_typ "^wf'^")).sem_rel "^impltype^" eq"^impltype^")
+let eq"^parsertype^" : squash ("^parsertype^"' == "^parsertype^") = impl_zero_copy_parse_t_eq Det.cbor_det_match (spec_of_wf_typ "^env^".si_sp "^wf'^").parser (impl_type_sem Det.cbor_det_match Det.cbor_det_array_iterator_match Det.cbor_det_map_iterator_match "^env^".si_r (target_type_of_wf_typ "^wf'^")).sem_rel "^impltype^" eq"^impltype^"
+let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`()))
+[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
+let "^parser^" : "^parsertype^" = T.inline_coerce_eq eq"^parsertype^" (Parse.impl_zero_copy_wf_type' Det.cbor_det_impl "^env^".si_v "^env^".si_r "^env^".si_sp "^env^".si_p av"^env^" a"^env^" aa"^env^" "^wf'^" (_ by (T.trefl_or_norm ())))
+let _ : unit = _ by (FStar.Tactics.print (\"parser'\"); FStar.Tactics.exact (`()))
+inline_for_extraction noextract [@@noextract_to "^krml^"]
+let "^parser^"' : "^parsertype^"' = T.inline_coerce_eq_reverse eq"^parsertype^" "^parser^"
+let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
+[@@noextract_to "^krml^"; sem_attr] noextract
+let "^env'^" (* : spec_and_impl_env Det.cbor_det_impl *) =
+  spec_and_impl_env_extend_typ_with_weak "^env^" (T.pull_name "^source^") (T.pull_type "^source^") "^wf'^" "^validator^" "^parser^"'
+" ^ extend_ancillaries env env' source source'
 )
 
 let produce_group_defs
@@ -109,23 +114,14 @@ let produce_group_defs
   let env' = "env" ^ j in
   let source = "sorted_source" ^ i in
   let source' = "sorted_source" ^ j in
-  let krml = "\"krml\"" in
 (
 "
 let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"; sem_attr] noextract
-let "^env'^" : spec_and_impl_env =
-  spec_and_impl_env_extend_group "^env^" (T.pull_name "^source^") (T.pull_group "^source^") (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.trefl ())) (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.trefl ()))
-let _ : unit = _ by (FStar.Tactics.print (\"venv'\"); FStar.Tactics.exact (`()))
-[@@noextract_to "^krml^"; sem_attr] noextract
-let v"^env'^" : Impl.validator_env Det.cbor_det_match "^env'^".si_ast.e_sem_env =
-  Impl.extend_validator_env_with_group v"^env^" (T.pull_name "^source^") (T.pull_group "^source^") (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.trefl ())) (_ by (FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.trefl ()))
-let _ : unit = _ by (FStar.Tactics.print (\"source'\"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; sem_attr] noextract
-let "^source'^" = List.Tot.tl "^source^"
-"
+let "^env'^" (* : spec_and_impl_env Det.cbor_det_impl *) =
+  spec_and_impl_env_extend_group "^env^" (T.pull_name "^source^") (T.pull_group "^source^") (_ by (T.trefl_or_norm ())) (_ by (T.trefl_or_norm ()))
+" ^ extend_ancillaries env env' source source'
 )
-
 
 let rec produce_defs'
   (index: nat)

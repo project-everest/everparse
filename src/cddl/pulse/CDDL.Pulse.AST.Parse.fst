@@ -563,3 +563,28 @@ and impl_zero_copy_wf_map_group
             )
 
 #pop-options
+
+[@@sem_attr]
+let impl_zero_copy_wf_type'
+  (#cbor_t #t2 #t_arr #t_map: Type0)
+  (#vmatch: (perm -> cbor_t -> Cbor.cbor -> slprop))
+  (#vmatch2: (perm -> t2 -> (Cbor.cbor & Cbor.cbor) -> slprop))
+  (#cbor_array_iterator_match: (perm -> t_arr -> list Cbor.cbor -> slprop))
+  (#cbor_map_iterator_match: (perm -> t_map -> list (Cbor.cbor & Cbor.cbor) -> slprop))
+  (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
+  (#se: sem_env)
+  (v_env: V.validator_env vmatch se)
+  (#s_env: target_type_env se.se_bound)
+  (r_env: rel_env s_env)
+  (sp_env: spec_env se s_env.te_type)
+  (p_env: parse_env vmatch r_env sp_env)
+  (ancillary_v: ancillary_validate_env vmatch se)
+  (ancillary: ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
+  (ancillary_ag: ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
+  (#t: typ)
+  (t_wf: ast0_wf_typ t {
+    spec_wf_typ se true t t_wf /\ SZ.fits_u64
+  })
+  (t_wf_sq: squash (None? (ask_zero_copy_wf_type (ancillary_validate_env_is_some ancillary_v) (ancillary_parse_env_is_some ancillary) (ancillary_parse_array_group_env_is_some ancillary_ag) t_wf)))
+: Tot (impl_zero_copy_parse vmatch (spec_of_wf_typ sp_env t_wf).parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match r_env (target_type_of_wf_typ t_wf)).sem_rel)
+= impl_zero_copy_wf_type impl v_env r_env sp_env p_env ancillary_v ancillary ancillary_ag t_wf
