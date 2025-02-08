@@ -4,6 +4,7 @@ include CDDL.Pulse.Parse.ArrayGroup
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
 open CBOR.Pulse.API.Base
+module EqTest = CDDL.Spec.EqTest
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 noeq
@@ -13,6 +14,7 @@ type array_bundle
 = {
   ab_typ: Ghost.erased (array_group None);
   ab_spec_type: Type0;
+  ab_spec_type_eq: Ghost.erased (EqTest.eq_test ab_spec_type);
   ab_spec: Ghost.erased (ag_spec ab_typ ab_spec_type true);
   ab_impl_type: Type0;
   ab_rel: rel ab_impl_type ab_spec_type;
@@ -28,7 +30,7 @@ let get_array_bundle_impl_type
   (requires True)
   (ensures fun t -> t == b.ab_impl_type) // guard if the number of fields changes
 = match b with
-  | Mkarray_bundle _ _ _ ab_impl_type _ _ -> ab_impl_type
+  | Mkarray_bundle _ _ _ _ ab_impl_type _ _ -> ab_impl_type
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr ]
 let bundle_array
@@ -42,6 +44,7 @@ let bundle_array
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = ab.ab_spec_type_eq;
   b_spec = spec_array_group ab.ab_spec;
   b_impl_type = _;
   b_rel = _;
@@ -64,6 +67,7 @@ let bundle_array_group_ext
 = {
   ab_typ = _;
   ab_spec_type = _;
+  ab_spec_type_eq = ab.ab_spec_type_eq;
   ab_spec = sp2;
   ab_impl_type = _;
   ab_rel = _;
@@ -82,6 +86,7 @@ let bundle_array_group_item
 = {
   ab_typ = _;
   ab_spec_type = _;
+  ab_spec_type_eq = b.b_spec_type_eq;
   ab_spec = ag_spec_item b.b_spec;
   ab_impl_type = _;
   ab_rel = _;
@@ -106,6 +111,7 @@ let bundle_array_group_concat
 = {
   ab_typ = _;
   ab_spec_type = _;
+  ab_spec_type_eq = EqTest.pair_eq b1.ab_spec_type_eq b2.ab_spec_type_eq;
   ab_spec = ag_spec_concat b1.ab_spec b2.ab_spec;
   ab_impl_type = _;
   ab_rel = _;
@@ -126,6 +132,7 @@ let bundle_array_group_choice
 = {
   ab_typ = _;
   ab_spec_type = _;
+  ab_spec_type_eq = EqTest.either_eq b1.ab_spec_type_eq b2.ab_spec_type_eq;
   ab_spec = ag_spec_choice b1.ab_spec b2.ab_spec;
   ab_impl_type = _;
   ab_rel = _;
@@ -145,6 +152,7 @@ let bundle_array_group_zero_or_one
 = {
   ab_typ = _;
   ab_spec_type = _;
+  ab_spec_type_eq = EqTest.option_eq b1.ab_spec_type_eq;
   ab_spec = ag_spec_zero_or_one b1.ab_spec;
   ab_impl_type = _;
   ab_rel = _;
@@ -167,6 +175,7 @@ let bundle_array_group_zero_or_more
 = {
   ab_typ = _;
   ab_spec_type = _;
+  ab_spec_type_eq = EqTest.list_eq b1.ab_spec_type_eq;
   ab_spec = ag_spec_zero_or_more b1.ab_spec;
   ab_impl_type = _;
   ab_rel = _;
@@ -189,6 +198,7 @@ let bundle_array_group_one_or_more
 = {
   ab_typ = _;
   ab_spec_type = _;
+  ab_spec_type_eq = EqTest.list_eq b1.ab_spec_type_eq;
   ab_spec = ag_spec_one_or_more b1.ab_spec;
   ab_impl_type = _;
   ab_rel = _;

@@ -4,6 +4,7 @@ include CDDL.Pulse.Parse.MapGroup
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
 open CBOR.Pulse.API.Base
+module EqTest = CDDL.Spec.EqTest
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 noeq
@@ -15,6 +16,7 @@ type map_bundle
   mb_footprint: Ghost.erased typ;
   mb_footprint_correct: squash (map_group_footprint mb_typ mb_footprint);
   mb_spec_type: Type0;
+  mb_spec_type_eq: Ghost.erased (EqTest.eq_test mb_spec_type);
   mb_spec: Ghost.erased (mg_spec mb_typ mb_footprint mb_spec_type true);
   mb_impl_type: Type0;
   mb_rel: rel mb_impl_type mb_spec_type;
@@ -30,6 +32,7 @@ let bundle_map
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = mb.mb_spec_type_eq;
   b_spec = spec_map_group mb.mb_spec;
   b_impl_type = _;
   b_rel = _;
@@ -52,6 +55,7 @@ let bundle_map_ext
   mb_typ = _;
   mb_footprint = _;
   mb_footprint_correct = ();
+  mb_spec_type_eq = mb1.mb_spec_type_eq;
   mb_spec_type = _;
   mb_spec = sp2;
   mb_impl_type = _;
@@ -75,6 +79,7 @@ let bundle_map_choice
   mb_footprint = _;
   mb_footprint_correct = ();
   mb_spec_type = _;
+  mb_spec_type_eq = EqTest.either_eq mb1.mb_spec_type_eq mb2.mb_spec_type_eq;
   mb_spec = mg_spec_choice mb1.mb_spec mb2.mb_spec;
   mb_impl_type = _;
   mb_rel = _;
@@ -96,6 +101,7 @@ let bundle_map_zero_or_one
   mb_footprint = _;
   mb_footprint_correct = ();
   mb_spec_type = _;
+  mb_spec_type_eq = EqTest.option_eq mb1.mb_spec_type_eq;
   mb_spec = mg_spec_zero_or_one mb1.mb_spec;
   mb_impl_type = _;
   mb_rel = _;
@@ -119,6 +125,7 @@ let bundle_map_concat
   mb_footprint = _;
   mb_footprint_correct = ();
   mb_spec_type = _;
+  mb_spec_type_eq = EqTest.pair_eq mb1.mb_spec_type_eq mb2.mb_spec_type_eq;
   mb_spec = mg_spec_concat mb1.mb_spec mb2.mb_spec;
   mb_impl_type = _;
   mb_rel = _;
@@ -140,6 +147,7 @@ let bundle_map_match_item_for
   mb_footprint = _;
   mb_footprint_correct = ();
   mb_spec_type = _;
+  mb_spec_type_eq = value.b_spec_type_eq;
   mb_spec = mg_spec_match_item_for cut key value.b_spec;
   mb_impl_type = _;
   mb_rel = _;
@@ -158,7 +166,6 @@ let bundle_map_zero_or_more
   (map_share: share_t cbor_map_iterator_match)
   (map_gather: gather_t cbor_map_iterator_match)
   (key: bundle vmatch) // MUST contain function pointers ONLY
-  (key_eq: Ghost.erased (EqTest.eq_test key.b_spec_type))
   (va1: impl_typ vmatch key.b_typ) // MUST be a function pointer
   (#key_except: Ghost.erased typ)
   (va_ex: impl_typ vmatch key_except) // MUST be a function pointer
@@ -170,8 +177,9 @@ let bundle_map_zero_or_more
   mb_footprint = _;
   mb_footprint_correct = ();
   mb_spec_type = _;
+  mb_spec_type_eq = EqTest.map_eq _ (EqTest.list_eq value.b_spec_type_eq);
   mb_spec = mg_zero_or_more_match_item key.b_spec key_except value.b_spec;
   mb_impl_type = _;
   mb_rel = _;
-  mb_parser = impl_zero_copy_map_zero_or_more map_iterator_start map_share map_gather key_eq key.b_spec va1 key.b_parser va_ex value.b_spec va2 value.b_parser
+  mb_parser = impl_zero_copy_map_zero_or_more map_iterator_start map_share map_gather key.b_spec_type_eq key.b_spec va1 key.b_parser va_ex value.b_spec va2 value.b_parser
 }

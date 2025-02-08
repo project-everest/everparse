@@ -4,6 +4,7 @@ include CDDL.Pulse.Parse.Misc
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
 open CBOR.Pulse.API.Base
+module EqTest = CDDL.Spec.EqTest
 
 inline_for_extraction [@@bundle_get_impl_type_attr]
 let bundle_uint
@@ -14,6 +15,7 @@ let bundle_uint
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = spec_uint;
   b_impl_type = _;
   b_rel = _;
@@ -29,6 +31,7 @@ let bundle_nint
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = spec_nint;
   b_impl_type = _;
   b_rel = _;
@@ -47,6 +50,7 @@ let bundle_int_range_uint64
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = spec_int_range_uint64 lo hi;
   b_impl_type = _;
   b_rel = _;
@@ -66,6 +70,7 @@ let bundle_int_range_int64
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = spec_int_range_int64 lo hi;
   b_impl_type = _;
   b_rel = _;
@@ -82,6 +87,7 @@ let bundle_int_range_neg_int64
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = spec_int_range_neg_int64 lo hi;
   b_impl_type = _;
   b_rel = _;
@@ -97,6 +103,7 @@ let bundle_bytes
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = spec_bstr;
   b_impl_type = _;
   b_rel = _;
@@ -112,6 +119,7 @@ let bundle_text
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = spec_tstr;
   b_impl_type = _;
   b_rel = _;
@@ -129,6 +137,7 @@ let bundle_str_size
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = (spec_str_size mt lo hi);
   b_impl_type = _;
   b_rel = _;
@@ -144,6 +153,7 @@ let bundle_simple
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = spec_simple;
   b_impl_type = _;
   b_rel = _;
@@ -159,6 +169,7 @@ let bundle_bool
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = spec_bool;
   b_impl_type = _;
   b_rel = _;
@@ -176,6 +187,7 @@ let bundle_tagged_some
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = b.b_spec_type_eq;
   b_spec = spec_tag_some tag b.b_spec;
   b_impl_type = _;
   b_rel = _;
@@ -193,6 +205,7 @@ let bundle_tagged_none
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.pair_eq (EqTest.eqtype_eq _) (b.b_spec_type_eq);
   b_spec = spec_tag_none b.b_spec;
   b_impl_type = _;
   b_rel = _;
@@ -211,6 +224,7 @@ let bundle_det_cbor
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = b.b_spec_type_eq;
   b_spec = spec_bstr_cbor_det b.b_spec;
   b_impl_type = _;
   b_rel = _;
@@ -225,6 +239,7 @@ let bundle_any
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = spec_any;
   b_impl_type = _;
   b_rel = _;

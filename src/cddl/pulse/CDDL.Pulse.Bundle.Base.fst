@@ -2,6 +2,7 @@ module CDDL.Pulse.Bundle.Base
 include CDDL.Pulse.Parse.Base
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
+module EqTest = CDDL.Spec.EqTest
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 noeq
@@ -11,6 +12,7 @@ type bundle
 = {
   b_typ: Ghost.erased typ;
   b_spec_type: Type0;
+  b_spec_type_eq: Ghost.erased (EqTest.eq_test b_spec_type);
   b_spec: Ghost.erased (spec b_typ b_spec_type true);
   b_impl_type: Type0;
   b_rel: rel b_impl_type b_spec_type;
@@ -30,7 +32,7 @@ let get_bundle_impl_type
   (requires True)
   (ensures fun t -> t == b.b_impl_type) // guard if the number of fields changes
 = match b with
-  | Mkbundle _ _ _ b_impl_type _ _ -> b_impl_type
+  | Mkbundle _ _ _ _ b_impl_type _ _ -> b_impl_type
 
 inline_for_extraction [@@bundle_get_impl_type_attr]
 let bundle_always_false
@@ -42,6 +44,7 @@ let bundle_always_false
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
   b_spec = sp;
   b_impl_type = _;
   b_rel = _;
@@ -62,6 +65,7 @@ let bundle_ext
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = b.b_spec_type_eq;
   b_spec = sp';
   b_impl_type = _;
   b_rel = _;
@@ -81,9 +85,9 @@ let bundle_choice
 = {
   b_typ = _;
   b_spec_type = _;
+  b_spec_type_eq = EqTest.either_eq b1.b_spec_type_eq b2.b_spec_type_eq;
   b_spec = spec_choice b1.b_spec b2.b_spec;
   b_impl_type = _;
   b_rel = _;
   b_parser = impl_zero_copy_choice v1 b1.b_parser b2.b_parser;
 }
-
