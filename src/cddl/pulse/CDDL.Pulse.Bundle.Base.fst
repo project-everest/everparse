@@ -1,0 +1,93 @@
+module CDDL.Pulse.Bundle.Base
+include CDDL.Pulse.Parse.Base
+open Pulse.Lib.Pervasives
+open CBOR.Spec.API.Type
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+noeq
+type bundle
+  (#cbor_t: Type)
+  (vmatch: perm -> cbor_t -> cbor -> slprop)
+= {
+  b_typ: Ghost.erased typ;
+  b_spec_type: Type0;
+  b_spec: Ghost.erased (spec b_typ b_spec_type true);
+  b_impl_type: Type0;
+  b_rel: rel b_impl_type b_spec_type;
+  b_parser: impl_zero_copy_parse vmatch b_spec.parser b_rel;
+}
+
+irreducible let bundle_get_impl_type_attr : unit = ()
+
+let bundle_get_impl_type_steps =
+  delta_attr [
+    `%bundle_get_impl_type_attr;
+  ] ::
+  CDDL.Spec.AST.Tactics.steps
+
+inline_for_extraction [@@bundle_get_impl_type_attr]
+let get_bundle_impl_type
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (b: bundle vmatch)
+: Pure Type0
+  (requires True)
+  (ensures fun t -> t == b.b_impl_type) // guard if the number of fields changes
+= match b with
+  | Mkbundle _ _ _ b_impl_type _ _ -> b_impl_type
+
+inline_for_extraction [@@bundle_get_impl_type_attr]
+let bundle_always_false
+  (#cbor_t: Type)
+  (vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#ty: Ghost.erased typ)
+  (sp: spec ty (squash False) true)
+: bundle vmatch
+= {
+  b_typ = _;
+  b_spec_type = _;
+  b_spec = sp;
+  b_impl_type = _;
+  b_rel = _;
+  b_parser = impl_zero_copy_always_false _ _;
+}
+
+inline_for_extraction [@@bundle_get_impl_type_attr]
+let bundle_ext
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (b: bundle vmatch)
+  (#t': Ghost.erased typ)
+  (sp': Ghost.erased (spec t' b.b_spec_type true))
+  (sq: squash (
+    typ_included t' b.b_typ /\
+    (forall (x: cbor) . Ghost.reveal t' x ==> ((sp'.parser x <: b.b_spec_type) == b.b_spec.parser x))
+  ))
+= {
+  b_typ = _;
+  b_spec_type = _;
+  b_spec = sp';
+  b_impl_type = _;
+  b_rel = _;
+  b_parser = impl_zero_copy_ext b.b_parser sp'.parser ();
+}
+
+inline_for_extraction [@@bundle_get_impl_type_attr]
+let bundle_choice
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (b1: bundle vmatch)
+  (v1: impl_typ vmatch b1.b_typ)
+  (b2: bundle vmatch)
+  (sq: squash (
+    typ_disjoint b1.b_typ b2.b_typ
+  ))
+= {
+  b_typ = _;
+  b_spec_type = _;
+  b_spec = spec_choice b1.b_spec b2.b_spec;
+  b_impl_type = _;
+  b_rel = _;
+  b_parser = impl_zero_copy_choice v1 b1.b_parser b2.b_parser;
+}
+

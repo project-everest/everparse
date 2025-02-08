@@ -113,7 +113,7 @@ let impl_zero_copy_map_ext_precond
     (#fp2: typ)
     (#tgt_size2: (tgt1 -> nat))
     (#tgt_serializable2: (tgt1 -> bool))
-    (ps2: (map_group_parser_spec t1 fp2 tgt_size2 tgt_serializable2))
+    (ps2: (map_group_parser_spec t2 fp2 tgt_size2 tgt_serializable2))
 : Tot prop
 =
       map_group_footprint t1 fp1 /\
@@ -142,7 +142,7 @@ fn impl_zero_copy_map_ext
     (#fp2: Ghost.erased typ)
     (#tgt_size2: Ghost.erased (tgt1 -> nat))
     (#tgt_serializable2: Ghost.erased (tgt1 -> bool))
-    (ps2: Ghost.erased (map_group_parser_spec t1 fp2 tgt_size2 tgt_serializable2))
+    (ps2: Ghost.erased (map_group_parser_spec t2 fp2 tgt_size2 tgt_serializable2))
     (sq: squash (
       impl_zero_copy_map_ext_precond (Ghost.reveal t1) (Ghost.reveal ps1) (Ghost.reveal t2) (Ghost.reveal ps2)
     ))
