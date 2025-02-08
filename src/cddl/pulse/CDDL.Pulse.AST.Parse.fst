@@ -8,20 +8,21 @@ include CDDL.Pulse.AST.Types
 include CDDL.Pulse.AST.Env
 open Pulse.Lib.Pervasives
 module Cbor = CBOR.Spec.API.Format
+module Bundle = CDDL.Pulse.Bundle.Base // for bundle_attr
 
-[@@sem_attr]
+[@@sem_attr; Bundle.bundle_attr]
 let ancillary_validate_env
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
   (se: sem_env)
 = (t: typ { typ_bounded se.se_bound t}) -> option (impl_typ vmatch (typ_sem se t))
 
-[@@sem_attr]
+[@@sem_attr; Bundle.bundle_attr]
 let ancillary_validate_env_bool
   (se: name_env)
 = (t: typ { typ_bounded se t }) -> bool
 
-[@@sem_attr]
+[@@sem_attr; Bundle.bundle_attr]
 let ancillary_validate_env_is_some
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
@@ -30,7 +31,7 @@ let ancillary_validate_env_is_some
 : Tot (ancillary_validate_env_bool se.se_bound)
 = fun t -> Some? (env t)
 
-[@@sem_attr]
+[@@sem_attr; Bundle.bundle_attr]
 let ancillary_validate_env_extend
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
@@ -47,7 +48,7 @@ let ancillary_validate_env_extend
   end
   else None
 
-[@@sem_attr]
+[@@sem_attr; Bundle.bundle_attr]
 let ancillary_validate_env_set
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)

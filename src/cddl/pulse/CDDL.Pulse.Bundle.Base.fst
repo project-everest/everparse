@@ -19,11 +19,7 @@ type bundle
 
 irreducible let bundle_get_impl_type_attr : unit = ()
 
-let bundle_get_impl_type_steps =
-  delta_attr [
-    `%bundle_get_impl_type_attr;
-  ] ::
-  CDDL.Spec.AST.Tactics.steps
+irreducible let bundle_attr : unit = ()
 
 inline_for_extraction [@@bundle_get_impl_type_attr]
 let get_bundle_impl_type

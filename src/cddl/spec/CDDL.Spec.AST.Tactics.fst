@@ -87,9 +87,12 @@ let pull_group
 = (DGroup?._0 (pair_snd (list_hd l)))
 
 noextract [@@noextract_to "krml"]
-let base_steps0 = [
+let base_steps = [
       zeta; iota; primops;
-      delta_only [
+  ]
+
+noextract [@@noextract_to "krml"]
+let base_delta_only_steps = [
         `%List.Tot.for_all;
         `%List.Tot.length;
         `%FStar.Int.Cast.uint32_to_uint8;
@@ -97,18 +100,13 @@ let base_steps0 = [
         `%dfst; `%dsnd; `%Mkdtuple2?._1; `%Mkdtuple2?._2;
         `%fst; `%snd; `%Mktuple2?._1; `%Mktuple2?._2;
         `%Some?; `%None?;
-      ];
-  ]
-
-noextract [@@noextract_to "krml"]
-let base_steps =
-      delta_attr [`%base_attr] ::
-      base_steps0
+]
 
 noextract [@@noextract_to "krml"]
 let steps =
       delta_attr [`%base_attr; `%sem_attr] ::
-      base_steps0
+      delta_only base_delta_only_steps ::
+      base_steps
 
 [@@noextract_to "krml"; sem_attr] noextract inline_for_extraction
 let inline_coerce_eq (#a:Type) (#b:Type) (_:squash (a == b)) (x:a) : b = x
