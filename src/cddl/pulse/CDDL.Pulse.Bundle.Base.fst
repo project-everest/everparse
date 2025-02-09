@@ -35,11 +35,28 @@ let get_bundle_impl_type
   | Mkbundle _ _ _ _ b_impl_type _ _ -> b_impl_type
 
 inline_for_extraction [@@bundle_get_impl_type_attr]
+let bundle_unit
+  (#cbor_t: Type)
+  (vmatch: perm -> cbor_t -> cbor -> slprop)
+  (#ty: Ghost.erased typ)
+  (sp: Ghost.erased (spec ty unit true))
+: bundle vmatch
+= {
+  b_typ = _;
+  b_spec_type = _;
+  b_spec_type_eq = EqTest.eqtype_eq _;
+  b_spec = sp;
+  b_impl_type = _;
+  b_rel = _;
+  b_parser = impl_zero_copy_unit _ _;
+}
+
+inline_for_extraction [@@bundle_get_impl_type_attr]
 let bundle_always_false
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> cbor -> slprop)
   (#ty: Ghost.erased typ)
-  (sp: spec ty (squash False) true)
+  (sp: Ghost.erased (spec ty (squash False) true))
 : bundle vmatch
 = {
   b_typ = _;
@@ -71,6 +88,18 @@ let bundle_ext
   b_rel = _;
   b_parser = impl_zero_copy_ext b.b_parser sp'.parser ();
 }
+
+inline_for_extraction [@@bundle_get_impl_type_attr]
+let bundle_type_ext
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (b: bundle vmatch)
+  (t': Ghost.erased typ)
+  (sq: squash (
+    typ_equiv t' b.b_typ
+  ))
+: Tot (bundle vmatch)
+= bundle_ext b (spec_ext b.b_spec t') ()
 
 inline_for_extraction [@@bundle_get_impl_type_attr]
 let bundle_choice

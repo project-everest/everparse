@@ -1124,7 +1124,7 @@ and ast0_wf_validate_map_group
     ast0_wf_validate_map_group left_elems left_tables (GZeroOrMore (GMapElem () false key value)) left_elems (left_tables `Spec.t_choice` v_key)
 *)
 
-[@@sem_env]
+[@@base_attr]
 let rec bounded_wf_typ
   (env: name_env)
   (t: typ)

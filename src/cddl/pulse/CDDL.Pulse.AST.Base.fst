@@ -12,7 +12,7 @@ module SZ = FStar.SizeT
 
 module AST = CDDL.Spec.AST.Base
 
-[@@AST.sem_attr]
+[@@AST.base_attr]
 noeq
 type cbor_impl
   (#t #t2 #t_arr #t_map: Type0)
