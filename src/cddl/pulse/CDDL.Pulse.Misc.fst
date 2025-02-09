@@ -93,20 +93,25 @@ fn impl_neg_int_range
 }
 ```
 
+module I64 = FStar.Int64
+module Cast = FStar.Int.Cast
+
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
-fn impl_always_false
+let impl_int_range
     (#ty: Type u#0)
-    (vmatch: perm -> ty -> cbor -> slprop)
-: impl_typ u#0 #ty vmatch #None t_always_false
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (cbor_get_major_type: get_major_type_t vmatch)
+    (cbor_destr_int64: read_uint64_t vmatch)
+    (lo hi: I64.t)
+    (sq: squash (I64.v lo < 0 /\ I64.v hi > 0))
+: impl_typ u#0 #ty vmatch #None (t_int_range (I64.v lo) (I64.v hi))
 =
-    (c: ty)
-    (#p: perm)
-    (#v: Ghost.erased cbor)
-{
-  false
-}
-```
+      impl_ext
+        (impl_t_choice
+          (impl_neg_int_range cbor_get_major_type cbor_destr_int64 (Cast.int64_to_uint64 (I64.sub (-1L) lo)) 0uL)
+          (impl_uint_range cbor_get_major_type cbor_destr_int64 0uL (Cast.int64_to_uint64 hi))
+        )
+        _
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse

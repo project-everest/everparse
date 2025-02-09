@@ -387,3 +387,19 @@ let map_group_parser_spec_choice_eq
           (l' <: (target1 `either` target2)) == Inr (p2 l2)
         ))
   )
+
+#push-options "--z3rlimit 32"
+
+let map_group_zero_or_more_match_item_serializer_op_comm
+  (#tkey #tvalue: Type)
+  (#key #value: typ)
+  (pkey: spec key tkey true)
+  (key_except: typ)
+  (#inj: bool)
+  (pvalue: spec value tvalue inj)
+  (m: Map.t tkey (list tvalue) { map_group_zero_or_more_match_item_serializable pkey key_except pvalue m })
+  (accu: cbor_map)
+  (x1 x2: tkey)
+= ()
+
+#pop-options

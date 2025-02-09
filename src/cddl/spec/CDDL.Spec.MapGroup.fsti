@@ -2207,7 +2207,7 @@ let map_group_zero_or_more_match_item_serializer_op
   | Some y ->
     cbor_map_union accu (cbor_map_singleton (pkey.serializer x) (pvalue.serializer (List.Tot.hd y)))
 
-let map_group_zero_or_more_match_item_serializer_op_comm
+val map_group_zero_or_more_match_item_serializer_op_comm
   (#tkey #tvalue: Type)
   (#key #value: typ)
   (pkey: spec key tkey true)
@@ -2221,7 +2221,7 @@ let map_group_zero_or_more_match_item_serializer_op_comm
   (ensures (map_group_zero_or_more_match_item_serializer_op pkey key_except pvalue m (map_group_zero_or_more_match_item_serializer_op pkey key_except pvalue m accu x1) x2 `cbor_map_equal` map_group_zero_or_more_match_item_serializer_op pkey key_except pvalue m (map_group_zero_or_more_match_item_serializer_op pkey key_except pvalue m accu x2) x1
   ))
   [SMTPat (map_group_zero_or_more_match_item_serializer_op pkey key_except pvalue m (map_group_zero_or_more_match_item_serializer_op pkey key_except pvalue m accu x1) x2)]
-= ()
+// = ()
 
 let rec list_fold_map_group_zero_or_more_match_item_serializer_op_mem
   (#tkey #tvalue: Type)

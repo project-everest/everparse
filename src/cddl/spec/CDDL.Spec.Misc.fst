@@ -322,22 +322,6 @@ let spec_bstr_cbor_det
   parser_inj = ();
 }
 
-let parser_spec_always_false (p: squash False -> bool) : parser_spec t_always_false (squash False) p =
-  (fun x -> false_elim ())
-
-let serializer_spec_always_false (p: squash False -> bool) : serializer_spec (parser_spec_always_false p) =
-  (fun x -> false_elim ())
-
-let spec_always_false
-  (p: (squash False -> bool))
-: spec t_always_false (squash False) true
-= {
-  serializable = p;
-  parser = parser_spec_always_false p;
-  serializer = serializer_spec_always_false p;
-  parser_inj = ();
-}
-
 let parser_spec_any (p: Cbor.cbor -> bool { forall x . p x }) : parser_spec any Cbor.cbor p =
   (fun x -> x)
 

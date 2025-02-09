@@ -1424,7 +1424,7 @@ let apply_map_group_det_match_item_for
     else ()
   | _ -> ()
 
-#push-options "--z3rlimit 128"
+#push-options "--z3rlimit 256"
 
 #restart-solver
 let apply_map_group_det_match_item_cut
@@ -1849,8 +1849,6 @@ let map_group_fail_shorten_match_item
     end
   )
 
-#pop-options
-
 #restart-solver
 let rec map_group_zero_or_more_choice'
   (g1 g2: map_group)
@@ -1939,6 +1937,8 @@ let rec map_group_zero_or_more_choice'
       map_group_concat_assoc g1 (map_group_zero_or_more g1) (map_group_zero_or_more g2);
       assert (rhs == (g1 `map_group_concat` (map_group_zero_or_more g1 `map_group_concat` map_group_zero_or_more g2)) l)
     end    
+
+#pop-options
 
 let map_group_zero_or_more_choice
   (g1 g2: map_group)

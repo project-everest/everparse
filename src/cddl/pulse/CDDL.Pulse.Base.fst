@@ -135,3 +135,18 @@ let with_cbor_literal_t
   stt t'
     pre
     (fun res -> post res)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+```pulse
+fn impl_always_false
+    (#ty: Type u#0)
+    (vmatch: perm -> ty -> cbor -> slprop)
+: impl_typ u#0 #ty vmatch #None t_always_false
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  false
+}
+```
