@@ -1563,6 +1563,30 @@ let ag_spec_choice
   ag_parser_inj = ();
 }
 
+let ag_spec_choice'
+  (#source1: array_group None)
+  (#target1: Type0)
+  (#inj1: bool)
+  (p1: ag_spec source1 target1 inj1)
+  (#source2: array_group None)
+  (#target2: Type0)
+  (#inj2: bool)
+  (p2: ag_spec source2 target2 inj2 { source1 `array_group_disjoint` close_array_group source2 })
+: Tot (ag_spec (source1 `array_group_choice` source2) (either target1 target2) (inj1 && inj2))
+=
+    ag_spec_close_elim
+      (ag_spec_ext
+        (ag_spec_close_intro
+          (ag_spec_choice
+            p1
+            (ag_spec_close_intro
+              p2
+            )
+          )
+        )
+        (close_array_group (array_group_choice source1 source2))
+      )
+
 let array_group_parser_spec_zero_or_one
   (#source: array_group None)
   (#target: Type)

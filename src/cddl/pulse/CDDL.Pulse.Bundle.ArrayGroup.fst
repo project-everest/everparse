@@ -75,6 +75,20 @@ let bundle_array_group_ext
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
+let bundle_array_group_ext'
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (ab: array_bundle cbor_array_iterator_match)
+  (g2: Ghost.erased (array_group None))
+  (sq: squash (
+    array_group_equiv g2 ab.ab_typ
+  ))
+= bundle_array_group_ext
+    ab
+    (ag_spec_ext ab.ab_spec g2)
+    ()
+
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_array_group_item
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -126,14 +140,14 @@ let bundle_array_group_choice
   (v1: impl_array_group cbor_array_iterator_match b1.ab_typ)
   (b2: array_bundle cbor_array_iterator_match)
   (sq: squash (
-    array_group_disjoint b1.ab_typ b2.ab_typ
+    array_group_disjoint b1.ab_typ (close_array_group b2.ab_typ)
   ))
 : Tot (array_bundle cbor_array_iterator_match)
 = {
   ab_typ = _;
   ab_spec_type = _;
   ab_spec_type_eq = EqTest.either_eq b1.ab_spec_type_eq b2.ab_spec_type_eq;
-  ab_spec = ag_spec_choice b1.ab_spec b2.ab_spec;
+  ab_spec = ag_spec_choice' b1.ab_spec b2.ab_spec;
   ab_impl_type = _;
   ab_rel = _;
   ab_parser = impl_zero_copy_array_group_choice b1.ab_parser v1 b2.ab_parser;

@@ -64,6 +64,18 @@ let bundle_map_ext
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
+let bundle_map_ext'
+  (#ty: Type0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (mb1: map_bundle vmatch)
+  (fp2: Ghost.erased typ)
+  (sq: squash (
+    typ_equiv mb1.mb_footprint fp2
+  ))
+: Tot (map_bundle vmatch)
+= bundle_map_ext mb1 (mg_spec_ext mb1.mb_spec fp2 mb1.mb_spec.mg_size mb1.mb_spec.mg_serializable) ()
+
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_map_choice
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
