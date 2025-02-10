@@ -3431,19 +3431,23 @@ let mk_wf_typ_bounded
     | res -> coerce_failure res
     else ROutOfFuel
 
+let mk_wf_typ_post
+  (e: ast_env)
+  (t: typ)
+  (res: result (ast0_wf_typ t))
+: Tot prop
+= match res with
+    | RSuccess t_wf ->
+      typ_bounded e.e_sem_env.se_bound t /\
+      bounded_wf_typ e.e_sem_env.se_bound t t_wf /\
+      spec_wf_typ e.e_sem_env true t t_wf
+    | _ -> True
+
 let mk_wf_typ'
   (fuel: nat) // for typ_disjoint
   (env: ast_env)
   (g: typ)
-: Pure (result (ast0_wf_typ g))
-    (requires (True))
-    (ensures (fun res -> match res with
-    | RSuccess s' ->
-      typ_bounded env.e_sem_env.se_bound g /\
-      bounded_wf_typ env.e_sem_env.se_bound g s' /\
-      spec_wf_typ env.e_sem_env true g s'
-    | _ -> True
-    ))
+: Tot (res: result (ast0_wf_typ g) { mk_wf_typ_post env g res })
 = if typ_bounded env.e_sem_env.se_bound g
   then mk_wf_typ_bounded fuel env g
   else RFailure "mk_wf_typ: not bounded"
@@ -3492,6 +3496,47 @@ let compute_wf_typ
 = let t_wf = RSuccess?._0 (mk_wf_typ' fuel e t) in
   assert (wf_ast_env_extend_typ_with_weak_pre e new_name t t_wf);
   t_wf
+
+let compute_wf_typ'_post
+  (e: ast_env)
+  (new_name: string)
+  (t: typ)
+  (res: result (ast0_wf_typ t))
+: Tot prop
+= match res with
+    | RSuccess t_wf ->
+      wf_ast_env_extend_typ_with_weak_pre e new_name t t_wf
+    | _ -> True
+
+[@@sem_attr]
+let compute_wf_typ'
+  (e: ast_env)
+  (new_name: string)
+  (new_name_is_type: squash (e.e_sem_env.se_bound new_name == None))
+  (t: typ)
+  (fuel: nat)
+: Tot (res: result (ast0_wf_typ t) {
+    compute_wf_typ'_post e new_name t res
+  })
+= match mk_wf_typ' fuel e t with
+  | RSuccess res -> RSuccess res
+  | RFailure s -> RFailure s
+  | ROutOfFuel -> ROutOfFuel
+
+[@@sem_attr]
+let extract_computed_wf_typ'
+  (e: ast_env)
+  (new_name: string)
+  (t: typ)
+  (fuel: nat)
+  (res: result (ast0_wf_typ t) {
+    compute_wf_typ'_post e new_name t res
+  })
+  (res_success: squash (RSuccess? res))
+: Tot (t_wf: ast0_wf_typ t {
+      wf_ast_env_extend_typ_with_weak_pre e new_name t t_wf
+  })
+= RSuccess?._0 res
 
 [@@sem_attr]
 let wf_ast_env_extend_typ

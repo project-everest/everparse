@@ -116,6 +116,8 @@ let extend_bundle_env'
 : Tot (bundle_env' vmatch (extend_name_env se n NType))
 = fun n' -> if n = n' then b else be n'
 
+#restart-solver
+
 let sem_of_typ_sem_wf_ast_env_extend_typ_with_weak
   (e: wf_ast_env)
   (new_name: string)

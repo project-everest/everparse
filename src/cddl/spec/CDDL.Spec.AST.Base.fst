@@ -2037,7 +2037,7 @@ let wf_ast_env = (e: ast_env { forall (i: typ_name e.e_sem_env.se_bound) . Some?
 let empty_wf_ast_env : wf_ast_env = empty_ast_env
 
 let wf_ast_env_extend_typ_with_pre
-  (e: wf_ast_env)
+  (e: ast_env)
   (new_name: string)
   (t: typ)
   (t_wf: ast0_wf_typ t)
@@ -2065,7 +2065,7 @@ let wf_ast_env_extend_typ_with
 = ast_env_set_wf (ast_env_extend_gen e new_name NType t) new_name { wf_typ = (Some (| (), t_wf |)) }
 
 let wf_ast_env_extend_typ_with_weak_pre
-  (e: wf_ast_env)
+  (e: ast_env)
   (new_name: string)
   (t: typ)
   (t_wf: ast0_wf_typ t)

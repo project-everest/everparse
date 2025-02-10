@@ -30,10 +30,3 @@ let aaenv0 : Parse.ancillary_parse_array_group_env Det.cbor_det_match Det.cbor_d
   fun _ _ -> None
 
 let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64)
-
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "krml"; sem_attr] noextract
-let defs = produce_defs sorted_source0
-
-let _ : unit = _ by (FStar.Tactics.print defs; FStar.Tactics.exact (`()))
-
-(*
