@@ -1,5 +1,6 @@
-module CDDL.Spec.AST.Tactics
+module CDDL.Pulse.AST.Tactics
 include CDDL.Spec.AST.Elab
+include CDDL.Pulse.AST.Bundle
 
 let solve_by_norm () : FStar.Tactics.Tac unit =
   FStar.Tactics.norm [delta; iota; zeta; primops; nbe];
@@ -52,35 +53,35 @@ let solve_mk_wf_typ_fuel_for () : FStar.Tactics.Tac unit =
 
 open CDDL.Spec.AST.Driver
 
-[@@sem_attr; noextract_to "krml"] noextract
+[@@base_attr; noextract_to "krml"] noextract
 let list_hd (#t: Type) (l: list t { Cons? l }) : Tot t =
   let hd :: _ = l in hd
 
-[@@sem_attr; noextract_to "krml"] noextract
+[@@base_attr; noextract_to "krml"] noextract
 let list_tl (#t: Type) (l: list t { Cons? l }) : Tot (list t) =
   let _ :: tl = l in tl
 
-[@@sem_attr; noextract_to "krml"] noextract
+[@@base_attr; noextract_to "krml"] noextract
 let pair_fst (#t1 #t2: Type) (x: (t1 & t2)) : Tot t1 =
   let (x1, _) = x in x1
 
-[@@sem_attr; noextract_to "krml"] noextract
+[@@base_attr; noextract_to "krml"] noextract
 let pair_snd (#t1 #t2: Type) (x: (t1 & t2)) : Tot t2 =
   let (_, x2) = x in x2
 
-[@@sem_attr; noextract_to "krml"] noextract
+[@@base_attr; noextract_to "krml"] noextract
 let pull_name
   (l: list (string & decl) { Cons? l })
 : Tot string
 = (pair_fst (list_hd l))
 
-[@@sem_attr; noextract_to "krml"] noextract
+[@@base_attr; noextract_to "krml"] noextract
 let pull_type
   (l: list (string & decl) { Cons? l /\ DType? (snd (List.Tot.hd l)) })
 : Tot typ
 = (DType?._0 (pair_snd (list_hd l)))
 
-[@@sem_attr; noextract_to "krml"] noextract
+[@@base_attr; noextract_to "krml"] noextract
 let pull_group
   (l: list (string & decl) { Cons? l /\ DGroup? (snd (List.Tot.hd l)) })
 : Tot group
@@ -105,11 +106,40 @@ let base_delta_only_steps = [
 noextract [@@noextract_to "krml"]
 let steps =
       delta_attr [`%base_attr; `%sem_attr] ::
-      delta_only base_delta_only_steps ::
+      delta_only (
+        `%Mkbundle_env?.be_v ::
+        base_delta_only_steps
+      ) ::
       base_steps
+
+let bundle_get_impl_type_steps =
+  delta_attr [
+    `%base_attr;
+    `%bundle_get_impl_type_attr;
+  ] ::
+  delta_only (
+    `%Mkbundle?.b_impl_type ::
+    `%Mkarray_bundle?.ab_impl_type ::
+    `%Mkmap_bundle?.mb_impl_type ::
+    base_delta_only_steps
+  ) ::
+  base_steps
+
+let bundle_steps = 
+  delta_attr [
+    `%base_attr;
+    `%bundle_attr;
+    `%sem_attr; // because there are validators in the middle of bundles
+  ] ::
+  delta_only (
+    `%Mkbundle_env?.be_v ::
+    base_delta_only_steps
+  ) ::
+  base_steps
 
 [@@noextract_to "krml"; sem_attr] noextract inline_for_extraction
 let inline_coerce_eq (#a:Type) (#b:Type) (_:squash (a == b)) (x:a) : b = x
 
 [@@noextract_to "krml"; sem_attr] noextract inline_for_extraction
 let inline_coerce_eq_reverse (#a:Type) (#b:Type) (_:squash (b == a)) (x:a) : b = x
+

@@ -4,7 +4,7 @@ open CDDL.Pulse.AST.GenValidators
 module Det = CDDL.Pulse.AST.Det.C
 module Impl = CDDL.Pulse.AST.Validate
 module Parse = CDDL.Pulse.AST.Parse
-module T = CDDL.Spec.AST.Tactics
+module T = CDDL.Pulse.AST.Tactics
 module SZ = FStar.SizeT
 
   [@@ noextract_to "krml"; sem_attr]

@@ -1,38 +1,15 @@
 module CDDL.Pulse.AST.Bundle
-include CDDL.Pulse.AST.Base
-include CDDL.Pulse.AST.Literal
 include CDDL.Pulse.Bundle.ArrayGroup
 include CDDL.Pulse.Bundle.MapGroup
 include CDDL.Pulse.Bundle.Misc
-open CDDL.Spec.AST.Tactics
+include CDDL.Pulse.AST.Base
+include CDDL.Pulse.AST.Literal
+include CDDL.Spec.AST.Base
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
 
 module Env = CDDL.Pulse.AST.Env // for validator_env
 module Parse = CDDL.Pulse.AST.Parse // for ancillary_validate_env
-
-let bundle_get_impl_type_steps =
-  delta_attr [
-    `%base_attr;
-    `%bundle_get_impl_type_attr;
-  ] ::
-  delta_only (
-    `%Mkbundle?.b_impl_type ::
-    `%Mkarray_bundle?.ab_impl_type ::
-    `%Mkmap_bundle?.mb_impl_type ::
-    base_delta_only_steps
-  ) ::
-  base_steps
-
-let bundle_steps = 
-  delta_attr [
-    `%base_attr;
-    `%bundle_attr;
-  ] ::
-  delta_only (
-    base_delta_only_steps
-  ) ::
-  base_steps
 
 let bundle_env'
   (#t: Type0)
@@ -529,3 +506,30 @@ and impl_bundle_wf_map_group
               p_value
               v_value
             )
+
+#pop-options
+
+[@@bundle_attr]
+let impl_bundle_wf_type' 
+  (#cbor_t #t2 #t_arr #t_map: Type0)
+  (#vmatch: (perm -> cbor_t -> cbor -> slprop))
+  (#vmatch2: (perm -> t2 -> (cbor & cbor) -> slprop))
+  (#cbor_array_iterator_match: (perm -> t_arr -> list cbor -> slprop))
+  (#cbor_map_iterator_match: (perm -> t_map -> list (cbor & cbor) -> slprop))
+  (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
+  (env: bundle_env vmatch)
+  (ancillary_v: Parse.ancillary_validate_env vmatch env.be_ast.e_sem_env)
+  (ancillary: ancillary_bundle_env vmatch env.be_ast.e_sem_env)
+  (ancillary_ag: ancillary_array_bundle_env cbor_array_iterator_match env.be_ast.e_sem_env)
+  (#t: typ)
+  (t_wf: ast0_wf_typ t {
+    spec_wf_typ env.be_ast.e_sem_env true t t_wf /\ SZ.fits_u64
+  })
+  (_: squash (
+    None? (Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some ancillary_v) (ancillary_bundle_env_is_some ancillary) (ancillary_array_bundle_env_is_some ancillary_ag) t_wf)
+  ))
+: Tot (res: bundle vmatch {
+      spec_wf_typ env.be_ast.e_sem_env true t t_wf /\
+      Ghost.reveal res.b_typ == typ_sem env.be_ast.e_sem_env t
+  })
+= impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag t_wf

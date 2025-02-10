@@ -10,7 +10,7 @@ let mk_ascii_string
 = s
 
 noextract [@@noextract_to "krml"]
-let steps = CDDL.Spec.AST.Tactics.steps
+let steps = CDDL.Pulse.AST.Tactics.steps
 
 [@@ FStar.Tactics.postprocess_with (fun _ ->
   FStar.Tactics.norm steps;
