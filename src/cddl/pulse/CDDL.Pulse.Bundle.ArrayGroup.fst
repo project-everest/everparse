@@ -12,12 +12,12 @@ type array_bundle
   (#cbor_array_iterator_t: Type0)
   (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
 = {
-  ab_typ: Ghost.erased (array_group None);
-  ab_spec_type: Type0;
-  ab_spec_type_eq: Ghost.erased (EqTest.eq_test ab_spec_type);
-  ab_spec: Ghost.erased (ag_spec ab_typ ab_spec_type true);
+  [@@@erasable] ab_typ: Ghost.erased (array_group None);
+  [@@@erasable] ab_spec_type: Type0;
+  [@@@erasable] ab_spec_type_eq: Ghost.erased (EqTest.eq_test ab_spec_type);
+  [@@@erasable] ab_spec: Ghost.erased (ag_spec ab_typ ab_spec_type true);
   ab_impl_type: Type0;
-  ab_rel: rel ab_impl_type ab_spec_type;
+  [@@@erasable] ab_rel: rel ab_impl_type ab_spec_type;
   ab_parser: impl_zero_copy_array_group cbor_array_iterator_match ab_spec.ag_parser ab_rel;
 }
 

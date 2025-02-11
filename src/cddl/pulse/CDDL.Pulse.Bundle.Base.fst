@@ -10,12 +10,12 @@ type bundle
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> cbor -> slprop)
 = {
-  b_typ: Ghost.erased typ;
-  b_spec_type: Type0;
-  b_spec_type_eq: Ghost.erased (EqTest.eq_test b_spec_type);
-  b_spec: Ghost.erased (spec b_typ b_spec_type true);
+  [@@@erasable] b_typ: Ghost.erased typ;
+  [@@@erasable] b_spec_type: Type0;
+  [@@@erasable] b_spec_type_eq: Ghost.erased (EqTest.eq_test b_spec_type);
+  [@@@erasable] b_spec: Ghost.erased (spec b_typ b_spec_type true);
   b_impl_type: Type0;
-  b_rel: rel b_impl_type b_spec_type;
+  [@@@erasable] b_rel: rel b_impl_type b_spec_type;
   b_parser: impl_zero_copy_parse vmatch b_spec.parser b_rel;
 }
 
