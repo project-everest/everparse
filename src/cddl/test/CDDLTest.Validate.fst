@@ -83,7 +83,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_bool = b1'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b1 = { b1' with b_parser = parse_bool }
+let b1 = bundle_set_parser b1' parse_bool
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env1 =
@@ -127,7 +127,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_everparsenomatch = b2'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b2 = { b2' with b_parser = parse_everparsenomatch }
+let b2 = bundle_set_parser b2' parse_everparsenomatch
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env2 =
@@ -171,7 +171,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_uint = b3'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b3 = { b3' with b_parser = parse_uint }
+let b3 = bundle_set_parser b3' parse_uint
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env3 =
@@ -215,7 +215,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_nint = b4'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b4 = { b4' with b_parser = parse_nint }
+let b4 = bundle_set_parser b4' parse_nint
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env4 =
@@ -259,7 +259,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_int = b5'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b5 = { b5' with b_parser = parse_int }
+let b5 = bundle_set_parser b5' parse_int
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env5 =
@@ -303,7 +303,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_bstr = b6'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b6 = { b6' with b_parser = parse_bstr }
+let b6 = bundle_set_parser b6' parse_bstr
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env6 =
@@ -347,7 +347,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_encodedcbor = b7'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b7 = { b7' with b_parser = parse_encodedcbor }
+let b7 = bundle_set_parser b7' parse_encodedcbor
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env7 =
@@ -391,7 +391,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_bytes = b8'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b8 = { b8' with b_parser = parse_bytes }
+let b8 = bundle_set_parser b8' parse_bytes
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env8 =
@@ -435,7 +435,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_tstr = b9'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b9 = { b9' with b_parser = parse_tstr }
+let b9 = bundle_set_parser b9' parse_tstr
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env9 =
@@ -479,7 +479,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_label = b10'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b10 = { b10' with b_parser = parse_label }
+let b10 = bundle_set_parser b10' parse_label
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env10 =
@@ -541,7 +541,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_tdate = b12'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b12 = { b12' with b_parser = parse_tdate }
+let b12 = bundle_set_parser b12' parse_tdate
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env12 =
@@ -585,7 +585,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_uri = b13'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b13 = { b13' with b_parser = parse_uri }
+let b13 = bundle_set_parser b13' parse_uri
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env13 =
@@ -629,7 +629,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_b64url = b14'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b14 = { b14' with b_parser = parse_b64url }
+let b14 = bundle_set_parser b14' parse_b64url
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env14 =
@@ -673,7 +673,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_b64legacy = b15'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b15 = { b15' with b_parser = parse_b64legacy }
+let b15 = bundle_set_parser b15' parse_b64legacy
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env15 =
@@ -717,7 +717,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_regexp = b16'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b16 = { b16' with b_parser = parse_regexp }
+let b16 = bundle_set_parser b16' parse_regexp
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env16 =
@@ -761,7 +761,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_mimemessage = b17'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b17 = { b17' with b_parser = parse_mimemessage }
+let b17 = bundle_set_parser b17' parse_mimemessage
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env17 =
@@ -805,7 +805,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_text = b18'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b18 = { b18' with b_parser = parse_text }
+let b18 = bundle_set_parser b18' parse_text
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env18 =
@@ -849,7 +849,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_false = b19'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b19 = { b19' with b_parser = parse_false }
+let b19 = bundle_set_parser b19' parse_false
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env19 =
@@ -893,7 +893,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_true = b20'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b20 = { b20' with b_parser = parse_true }
+let b20 = bundle_set_parser b20' parse_true
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env20 =
@@ -937,7 +937,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_nil = b21'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b21 = { b21' with b_parser = parse_nil }
+let b21 = bundle_set_parser b21' parse_nil
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env21 =
@@ -981,7 +981,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_null = b22'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b22 = { b22' with b_parser = parse_null }
+let b22 = bundle_set_parser b22' parse_null
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env22 =
@@ -1025,7 +1025,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_undefined = b23'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b23 = { b23' with b_parser = parse_undefined }
+let b23 = bundle_set_parser b23' parse_undefined
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env23 =
@@ -1069,7 +1069,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_any = b24'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b24 = { b24' with b_parser = parse_any }
+let b24 = bundle_set_parser b24' parse_any
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env24 =
@@ -1113,7 +1113,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_values = b25'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b25 = { b25' with b_parser = parse_values }
+let b25 = bundle_set_parser b25' parse_values
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env25 =
@@ -1165,7 +1165,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let aux_env25_parse_1 = aux_env25_bundle_1'.ab_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env25_bundle_1 = { aux_env25_bundle_1' with ab_parser = aux_env25_parse_1 }
+let aux_env25_bundle_1 = array_bundle_set_parser aux_env25_bundle_1' aux_env25_parse_1
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_1 = avenv25_0
@@ -1191,7 +1191,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let aux_env25_parse_2 = aux_env25_bundle_2'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env25_bundle_2 = { aux_env25_bundle_2' with b_parser = aux_env25_parse_2 }
+let aux_env25_bundle_2 = bundle_set_parser aux_env25_bundle_2' aux_env25_parse_2
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_2 = avenv25_1
@@ -1234,7 +1234,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let aux_env25_parse_4 = aux_env25_bundle_4'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env25_bundle_4 = { aux_env25_bundle_4' with b_parser = aux_env25_parse_4 }
+let aux_env25_bundle_4 = bundle_set_parser aux_env25_bundle_4' aux_env25_parse_4
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_4 = avenv25_3
@@ -1253,7 +1253,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_header_map = b26'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b26 = { b26' with b_parser = parse_header_map }
+let b26 = bundle_set_parser b26' parse_header_map
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env26 =
@@ -1271,6 +1271,7 @@ let aaenv26_0 : ancillary_array_bundle_env Det.cbor_det_array_iterator_match env
 let _ : unit = _ by (FStar.Tactics.print ("source'"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "krml"; base_attr] noextract
 let sorted_source26 = List.Tot.tl sorted_source25
+(*
 let _ : unit = _ by (FStar.Tactics.print ("17 defs remaining. Producing definitions for empty_or_serialized_map"); FStar.Tactics.exact (`()))
 let _ : unit = _ by (FStar.Tactics.print ("owf'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"] noextract
@@ -1297,7 +1298,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_empty_or_serialized_map = b27'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b27 = { b27' with b_parser = parse_empty_or_serialized_map }
+let b27 = bundle_set_parser b27' parse_empty_or_serialized_map
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env27 =
@@ -1359,7 +1360,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_COSE_Signature = b29'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b29 = { b29' with b_parser = parse_COSE_Signature }
+let b29 = bundle_set_parser b29' parse_COSE_Signature
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env29 =
@@ -1411,7 +1412,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let aux_env29_parse_1 = aux_env29_bundle_1'.ab_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env29_bundle_1 = { aux_env29_bundle_1' with ab_parser = aux_env29_parse_1 }
+let aux_env29_bundle_1 = array_bundle_set_parser aux_env29_bundle_1' aux_env29_parse_1
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv29_1 = avenv29_0
@@ -1430,7 +1431,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_COSE_Sign = b30'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b30 = { b30' with b_parser = parse_COSE_Sign }
+let b30 = bundle_set_parser b30' parse_COSE_Sign
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env30 =
@@ -1474,7 +1475,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_COSE_Sign_Tagged = b31'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b31 = { b31' with b_parser = parse_COSE_Sign_Tagged }
+let b31 = bundle_set_parser b31' parse_COSE_Sign_Tagged
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env31 =
@@ -1518,7 +1519,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_COSE_Sign1 = b32'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b32 = { b32' with b_parser = parse_COSE_Sign1 }
+let b32 = bundle_set_parser b32' parse_COSE_Sign1
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env32 =
@@ -1562,7 +1563,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_COSE_Untagged_Message = b33'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b33 = { b33' with b_parser = parse_COSE_Untagged_Message }
+let b33 = bundle_set_parser b33' parse_COSE_Untagged_Message
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env33 =
@@ -1606,7 +1607,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_COSE_Sign1_Tagged = b34'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b34 = { b34' with b_parser = parse_COSE_Sign1_Tagged }
+let b34 = bundle_set_parser b34' parse_COSE_Sign1_Tagged
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env34 =
@@ -1650,7 +1651,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_COSE_Tagged_Message = b35'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b35 = { b35' with b_parser = parse_COSE_Tagged_Message }
+let b35 = bundle_set_parser b35' parse_COSE_Tagged_Message
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env35 =
@@ -1694,7 +1695,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_COSE_Messages = b36'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b36 = { b36' with b_parser = parse_COSE_Messages }
+let b36 = bundle_set_parser b36' parse_COSE_Messages
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env36 =
@@ -1738,7 +1739,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_Sig_structure = b37'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b37 = { b37' with b_parser = parse_Sig_structure }
+let b37 = bundle_set_parser b37' parse_Sig_structure
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env37 =
@@ -1782,7 +1783,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_Internal_Types = b38'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b38 = { b38' with b_parser = parse_Internal_Types }
+let b38 = bundle_set_parser b38' parse_Internal_Types
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env38 =
@@ -1826,7 +1827,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_start = b39'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b39 = { b39' with b_parser = parse_start }
+let b39 = bundle_set_parser b39' parse_start
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env39 =
@@ -1870,7 +1871,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_eb64url = b40'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b40 = { b40' with b_parser = parse_eb64url }
+let b40 = bundle_set_parser b40' parse_eb64url
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env40 =
@@ -1914,7 +1915,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_eb64legacy = b41'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b41 = { b41' with b_parser = parse_eb64legacy }
+let b41 = bundle_set_parser b41' parse_eb64legacy
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env41 =
@@ -1958,7 +1959,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_eb16 = b42'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b42 = { b42' with b_parser = parse_eb16 }
+let b42 = bundle_set_parser b42' parse_eb16
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env42 =
@@ -2002,7 +2003,7 @@ let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 let parse_cborany = b43'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b43 = { b43' with b_parser = parse_cborany }
+let b43 = bundle_set_parser b43' parse_cborany
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env43 =

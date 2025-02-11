@@ -35,6 +35,17 @@ let get_bundle_impl_type
   | Mkbundle _ _ _ _ b_impl_type _ _ -> b_impl_type
 
 inline_for_extraction [@@bundle_get_impl_type_attr]
+let bundle_set_parser
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> cbor -> slprop)
+  (b: bundle vmatch)
+  (p: impl_zero_copy_parse vmatch b.b_spec.parser b.b_rel)
+: Tot (bundle vmatch)
+= { b with
+    b_parser = p;
+  }
+
+inline_for_extraction [@@bundle_get_impl_type_attr]
 let bundle_unit
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> cbor -> slprop)

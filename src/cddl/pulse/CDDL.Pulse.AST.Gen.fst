@@ -122,7 +122,7 @@ let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`())
 let "^parser^" = "^bundle^"'.b_parser
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
-let "^bundle^" = { "^bundle^"' with b_parser = "^parser^" }"
+let "^bundle^" = bundle_set_parser "^bundle^"' "^parser
 
 let produce_ask_for_validator env wf validator =
 "let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
@@ -139,7 +139,7 @@ let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`())
 let "^parser^" = "^bundle^"'.b_parser
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
-let "^bundle^" = { "^bundle^"' with b_parser = "^parser^" }"
+let "^bundle^" = bundle_set_parser "^bundle^"' "^parser
 
 let produce_ask_for_array_validator env wf validator = "
 let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
@@ -156,7 +156,7 @@ let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`())
 let "^parser^" = "^bundle^"'.ab_parser
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
-let "^bundle^" = { "^bundle^"' with ab_parser = "^parser^" }"
+let "^bundle^" = array_bundle_set_parser "^bundle^"' "^parser
 
 let rec compute_ancillaries_aux
   (#se: sem_env)

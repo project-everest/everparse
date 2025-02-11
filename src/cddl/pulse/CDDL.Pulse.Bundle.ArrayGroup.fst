@@ -32,6 +32,17 @@ let get_array_bundle_impl_type
 = match b with
   | Mkarray_bundle _ _ _ _ ab_impl_type _ _ -> ab_impl_type
 
+inline_for_extraction [@@bundle_get_impl_type_attr]
+let array_bundle_set_parser
+  (#cbor_array_iterator_t: Type0)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (b: array_bundle cbor_array_iterator_match)
+  (p: impl_zero_copy_array_group cbor_array_iterator_match b.ab_spec.ag_parser b.ab_rel)
+: Tot (array_bundle cbor_array_iterator_match)
+= { b with
+    ab_parser = p;
+  }
+
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr ]
 let bundle_array
   (#ty: Type0)
