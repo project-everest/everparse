@@ -44,10 +44,10 @@ let bundle_map_ext
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
   (mb1: map_bundle vmatch)
-  (#t2: Ghost.erased det_map_group)
-  (#fp2: Ghost.erased typ)
-  (sp2: Ghost.erased (mg_spec t2 fp2 mb1.mb_spec_type true))
-  (sq: squash (
+  (#[@@@erasable] t2: Ghost.erased det_map_group)
+  (#[@@@erasable] fp2: Ghost.erased typ)
+  ([@@@erasable] sp2: Ghost.erased (mg_spec t2 fp2 mb1.mb_spec_type true))
+  ([@@@erasable] sq: squash (
     impl_zero_copy_map_ext_precond (Ghost.reveal mb1.mb_typ) (mb1.mb_spec.mg_parser) (Ghost.reveal t2) sp2.mg_parser
   ))
 : Tot (map_bundle vmatch)
@@ -68,8 +68,8 @@ let bundle_map_ext'
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
   (mb1: map_bundle vmatch)
-  (fp2: Ghost.erased typ)
-  (sq: squash (
+  ([@@@erasable] fp2: Ghost.erased typ)
+  ([@@@erasable] sq: squash (
     typ_equiv mb1.mb_footprint fp2
   ))
 : Tot (map_bundle vmatch)
@@ -149,9 +149,9 @@ let bundle_map_match_item_for
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
   (get: map_get_t vmatch)
-  (#key: Ghost.erased cbor)
+  (#[@@@erasable] key: Ghost.erased cbor)
   (lkey: with_cbor_literal_t vmatch (Ghost.reveal key))
-  (cut: Ghost.erased bool)
+  ([@@@erasable] cut: Ghost.erased bool)
   (value: bundle vmatch)
 : Tot (map_bundle vmatch)
 = {
@@ -179,7 +179,7 @@ let bundle_map_zero_or_more
   (map_gather: gather_t cbor_map_iterator_match)
   (key: bundle vmatch) // MUST contain function pointers ONLY
   (va1: impl_typ vmatch key.b_typ) // MUST be a function pointer
-  (#key_except: Ghost.erased typ)
+  (#[@@@erasable] key_except: Ghost.erased typ)
   (va_ex: impl_typ vmatch key_except) // MUST be a function pointer
   (value: bundle vmatch) // MUST contain function pointers ONLY
   (va2: impl_typ vmatch value.b_typ) // MUST be a function pointer

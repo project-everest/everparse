@@ -49,8 +49,8 @@ inline_for_extraction [@@bundle_get_impl_type_attr]
 let bundle_unit
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> cbor -> slprop)
-  (#ty: Ghost.erased typ)
-  (sp: Ghost.erased (spec ty unit true))
+  (#[@@@erasable] ty: Ghost.erased typ)
+  ([@@@erasable] sp: Ghost.erased (spec ty unit true))
 : bundle vmatch
 = {
   b_typ = _;
@@ -66,8 +66,8 @@ inline_for_extraction [@@bundle_get_impl_type_attr]
 let bundle_always_false
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> cbor -> slprop)
-  (#ty: Ghost.erased typ)
-  (sp: Ghost.erased (spec ty (squash False) true))
+  (#[@@@erasable] ty: Ghost.erased typ)
+  ([@@@erasable] sp: Ghost.erased (spec ty (squash False) true))
 : bundle vmatch
 = {
   b_typ = _;
@@ -84,9 +84,9 @@ let bundle_ext
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
   (b: bundle vmatch)
-  (#t': Ghost.erased typ)
-  (sp': Ghost.erased (spec t' b.b_spec_type true))
-  (sq: squash (
+  (#[@@@erasable] t': Ghost.erased typ)
+  ([@@@erasable] sp': Ghost.erased (spec t' b.b_spec_type true))
+  ([@@@erasable] sq: squash (
     typ_included t' b.b_typ /\
     (forall (x: cbor) . Ghost.reveal t' x ==> ((sp'.parser x <: b.b_spec_type) == b.b_spec.parser x))
   ))
@@ -105,8 +105,8 @@ let bundle_type_ext
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
   (b: bundle vmatch)
-  (t': Ghost.erased typ)
-  (sq: squash (
+  ([@@@erasable] t': Ghost.erased typ)
+  ([@@@erasable] sq: squash (
     typ_equiv t' b.b_typ
   ))
 : Tot (bundle vmatch)
@@ -119,7 +119,7 @@ let bundle_choice
   (b1: bundle vmatch)
   (v1: impl_typ vmatch b1.b_typ)
   (b2: bundle vmatch)
-  (sq: squash (
+  ([@@@erasable] sq: squash (
     typ_disjoint b1.b_typ b2.b_typ
   ))
 = {

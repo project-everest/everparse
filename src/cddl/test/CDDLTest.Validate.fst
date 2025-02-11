@@ -1249,8 +1249,9 @@ let _ : unit = _ by (FStar.Tactics.print ("bundle"); FStar.Tactics.exact (`()))
 noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b26' = impl_bundle_wf_type' Det.cbor_det_impl env25 avenv25_4 aenv25_4 aaenv25_4 wf26 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_steps); FStar.Tactics.trefl ()); FStar.Tactics.postprocess_type]
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_steps); FStar.Tactics.trefl ()); FStar.Tactics.postprocess_type]
 let parse_header_map = b26'.b_parser
+(*
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b26 = bundle_set_parser b26' parse_header_map
@@ -1271,7 +1272,6 @@ let aaenv26_0 : ancillary_array_bundle_env Det.cbor_det_array_iterator_match env
 let _ : unit = _ by (FStar.Tactics.print ("source'"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "krml"; base_attr] noextract
 let sorted_source26 = List.Tot.tl sorted_source25
-(*
 let _ : unit = _ by (FStar.Tactics.print ("17 defs remaining. Producing definitions for empty_or_serialized_map"); FStar.Tactics.exact (`()))
 let _ : unit = _ by (FStar.Tactics.print ("owf'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"] noextract

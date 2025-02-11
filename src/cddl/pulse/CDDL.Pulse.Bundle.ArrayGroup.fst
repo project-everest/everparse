@@ -67,9 +67,9 @@ let bundle_array_group_ext
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   (ab: array_bundle cbor_array_iterator_match)
-  (#g2: Ghost.erased (array_group None))
-  (sp2: Ghost.erased (ag_spec g2 ab.ab_spec_type true))
-  (sq: squash (
+  (#[@@@erasable] g2: Ghost.erased (array_group None))
+  ([@@@erasable] sp2: Ghost.erased (ag_spec g2 ab.ab_spec_type true))
+  ([@@@erasable] sq: squash (
     array_group_included g2 ab.ab_typ /\
     (forall (x: list cbor) . array_group_parser_spec_refinement g2 x ==> (
        (sp2.ag_parser x <: ab.ab_spec_type) == (ab.ab_spec.ag_parser x <: ab.ab_spec_type)
@@ -90,8 +90,8 @@ let bundle_array_group_ext'
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   (ab: array_bundle cbor_array_iterator_match)
-  (g2: Ghost.erased (array_group None))
-  (sq: squash (
+  ([@@@erasable] g2: Ghost.erased (array_group None))
+  ([@@@erasable] sq: squash (
     array_group_equiv g2 ab.ab_typ
   ))
 = bundle_array_group_ext
