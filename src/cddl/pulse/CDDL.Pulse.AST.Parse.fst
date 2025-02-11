@@ -96,6 +96,7 @@ let ask_for
   (se: sem_env)
 = (a: ask_for' { ask_for_spec se a })
 
+[@@base_attr]
 let option_ask_for_is_type
   (v_sem_env: sem_env)
   (a: option (ask_for v_sem_env))
@@ -132,6 +133,7 @@ let ancillary_validate_env_set_ask_for
 : Tot (ancillary_validate_env vmatch se)
 = ancillary_validate_env_set env _ i
 
+[@@base_attr]
 let option_ask_for_is_array_group
   (v_sem_env: sem_env)
   (a: option (ask_for v_sem_env))
@@ -160,6 +162,7 @@ let validate_ask_for_array_group
 
 #restart-solver
 
+[@@Bundle.bundle_attr]
 let rec ask_zero_copy_wf_type
   (#se: sem_env)
   (ancillary_v: ancillary_validate_env_bool se.se_bound)
@@ -265,6 +268,7 @@ and ask_zero_copy_wf_map_group
     then Some (AskForType _ s_value true)
     else None
 
+[@@base_attr]
 let option_ask_for_is_guarded_type
   (v_sem_env: sem_env)
   (a: option (ask_for v_sem_env))
@@ -282,6 +286,7 @@ let option_ask_for_is_guarded_type_is_type
   [SMTPat (option_ask_for_is_guarded_type v_sem_env a)]
 = ()
 
+[@@Bundle.bundle_attr]
 let ask_zero_copy_ask_for_option
   (#se: sem_env)
   (ancillary_v: ancillary_validate_env_bool se.se_bound)
