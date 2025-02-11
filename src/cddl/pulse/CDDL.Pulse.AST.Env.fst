@@ -5,23 +5,17 @@ open CBOR.Spec.API.Type
 module Impl = CDDL.Pulse.AST.Base
 
 [@@sem_attr]
-noeq
-type validator_env
+let validator_env
   (#t: Type0)
   (vmatch: (perm -> t -> cbor -> slprop))
   (v_sem_env: sem_env)
-= {
-  v_validator: ((n: typ_name v_sem_env.se_bound) -> impl_typ vmatch (sem_of_type_sem (v_sem_env.se_env n)));
-}
+= ((n: typ_name v_sem_env.se_bound) -> impl_typ vmatch (sem_of_type_sem (v_sem_env.se_env n)))
 
-[@@sem_attr]
 let empty_validator_env
   (#t: Type0)
   (vmatch: (perm -> t -> cbor -> slprop))
 : validator_env vmatch empty_sem_env
-= {
-  v_validator = (fun _ -> false_elim ());
-}
+= (fun _ -> false_elim ())
 
 [@@sem_attr]
 let extend_validator_env_with_typ_weak
@@ -36,9 +30,7 @@ let extend_validator_env_with_typ_weak
   (w: impl_typ vmatch (typ_sem v_sem_env ty))
 : validator_env vmatch (sem_env_extend_gen v_sem_env new_name NType (ast_env_elem0_sem v_sem_env ty))
 = let v_sem_env' = sem_env_extend_gen v_sem_env new_name NType (ast_env_elem0_sem v_sem_env ty) in
-  {
-  v_validator = (fun n -> if n = new_name then impl_ext w (sem_of_type_sem (v_sem_env'.se_env n)) else impl_ext (env.v_validator n) (sem_of_type_sem (v_sem_env'.se_env n)));
-}
+  (fun n -> if n = new_name then w else (env n))
 
 [@@sem_attr]
 let extend_validator_env_with_group
@@ -52,9 +44,7 @@ let extend_validator_env_with_group
   (sq: squash (group_bounded v_sem_env.se_bound g))
 : validator_env vmatch (sem_env_extend_gen v_sem_env new_name NGroup (ast_env_elem0_sem v_sem_env g))
 = let v_sem_env' = sem_env_extend_gen v_sem_env new_name NGroup (ast_env_elem0_sem v_sem_env g) in
-  {
-  v_validator = (fun (n: typ_name v_sem_env'.se_bound) -> impl_ext (env.v_validator n) (sem_of_type_sem (v_sem_env'.se_env n)));
-}
+  (fun (n: typ_name v_sem_env'.se_bound) -> (env n))
 
 [@@sem_attr]
 type parse_env
