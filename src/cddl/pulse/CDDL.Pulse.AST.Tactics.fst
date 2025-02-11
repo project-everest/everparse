@@ -10,11 +10,17 @@ let solve_sem () : FStar.Tactics.Tac unit =
   FStar.Tactics.norm [delta_attr [`%sem_attr]; iota; zeta; primops; nbe];
   FStar.Tactics.smt ()
 
+let trefl_or_trivial () : FStar.Tactics.Tac unit =
+  FStar.Tactics.first [
+    (fun _ -> FStar.Tactics.trefl ());
+    (fun _ -> FStar.Tactics.trivial ());
+  ]
+
 let trefl_or_norm () : FStar.Tactics.Tac unit =
   FStar.Tactics.first [
-    FStar.Tactics.trefl;
-    (fun _ -> FStar.Tactics.norm [nbe; delta; iota; zeta; primops]; FStar.Tactics.trefl ());
-    (fun _ -> FStar.Tactics.norm [delta; iota; zeta; primops]; FStar.Tactics.trefl ());
+    trefl_or_trivial;
+    (fun _ -> FStar.Tactics.norm [nbe; delta; iota; zeta; primops]; trefl_or_trivial ());
+    (fun _ -> FStar.Tactics.norm [delta; iota; zeta; primops]; trefl_or_trivial ());
   ]
 
 exception ExceptionOutOfFuel

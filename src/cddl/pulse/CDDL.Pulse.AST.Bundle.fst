@@ -594,7 +594,7 @@ let ancillary_bundle_env_set_ask_for
 [@@bundle_attr; sem_attr] // sem_attr for ask
 let ancillary_array_bundle_env_set_ask_for
   (#cbor_t: Type)
-  (cbor_array_iterator_match: perm -> cbor_t -> list cbor -> slprop)
+  (#cbor_array_iterator_match: perm -> cbor_t -> list cbor -> slprop)
   (#se: sem_env)
   (env1: ancillary_array_bundle_env cbor_array_iterator_match se)
   (a: option (Parse.ask_for se))

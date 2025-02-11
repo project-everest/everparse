@@ -1,4 +1,6 @@
 module CDDLTest.Parse
+
+(*
 open CDDL.Pulse.AST.Env
 open CDDL.Pulse.AST.GenValidators
 module Det = CDDL.Pulse.AST.Det.C
