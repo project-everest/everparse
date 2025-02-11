@@ -33,7 +33,7 @@ let rec validate_typ
   (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
   (#v_sem_env: AST.sem_env)
   (env: validator_env vmatch v_sem_env)
-  (guard_choices: bool)
+  (guard_choices: Ghost.erased bool)
   (ty: AST.typ)
   (wf: AST.ast0_wf_typ ty { AST.spec_wf_typ v_sem_env guard_choices ty wf /\ SZ.fits_u64 })
 : Tot (impl_typ vmatch (AST.typ_sem v_sem_env ty))

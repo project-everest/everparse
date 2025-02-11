@@ -63,178 +63,14 @@ let ancillary_validate_env_set
   else env t
 
 [@@sem_attr]
-let ancillary_parse_env
-  (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-  (#cbor_array_iterator_t: Type0)
-  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)  
-  (#cbor_map_iterator_t: Type0)
-  (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
-  (#se: sem_env)
-  (#s_env: target_type_env se.se_bound)
-  (r_env: rel_env s_env)
-  (sp_env: spec_env se s_env.te_type)
-= (t: typ) -> (t_wf: ast0_wf_typ t { spec_wf_typ se true t t_wf }) -> option (impl_typ vmatch (typ_sem se t) & impl_zero_copy_parse vmatch (spec_of_wf_typ sp_env t_wf).parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match r_env (target_type_of_wf_typ t_wf)).sem_rel)
-
-[@@sem_attr]
 let ancillary_parse_env_bool
   (se: sem_env)
 = (t: typ) -> (t_wf: ast0_wf_typ t { spec_wf_typ se true t t_wf }) -> bool
 
 [@@sem_attr]
-let ancillary_parse_env_is_some
-  (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-  (#cbor_array_iterator_t: Type0)
-  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)  
-  (#cbor_map_iterator_t: Type0)
-  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
-  (#se: sem_env)
-  (#s_env: target_type_env se.se_bound)
-  (#r_env: rel_env s_env)
-  (#sp_env: spec_env se s_env.te_type)
-  (env: ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
-: Tot (ancillary_parse_env_bool se)
-= fun t t_wf -> Some? (env t t_wf)
-
-[@@sem_attr]
-let ancillary_parse_env_extend
-  (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-  (#cbor_array_iterator_t: Type0)
-  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)  
-  (#cbor_map_iterator_t: Type0)
-  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
-  (#se: sem_env)
-  (#s_env: target_type_env se.se_bound)
-  (#r_env: rel_env s_env)
-  (#sp_env: spec_env se s_env.te_type)
-  (env1: ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
-  (#se2: sem_env)
-  (#s_env2: target_type_env se2.se_bound)
-  (r_env2: rel_env s_env2 {
-    rel_env_included r_env r_env2
-  })
-  (sp_env2: spec_env se2 s_env2.te_type {
-    spec_env_included sp_env sp_env2
-  })
-: Tot (ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env2 sp_env2)
-= fun t t_wf ->
-  if bounded_wf_typ se.se_bound t t_wf
-  then begin
-    (env1 t t_wf)
-  end
-  else None
-
-[@@sem_attr]
-let ancillary_parse_env_set
-  (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-  (#cbor_array_iterator_t: Type0)
-  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)  
-  (#cbor_map_iterator_t: Type0)
-  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
-  (#se: sem_env)
-  (#s_env: target_type_env se.se_bound)
-  (#r_env: rel_env s_env)
-  (#sp_env: spec_env se s_env.te_type)
-  (env: ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
-  (t': typ)
-  (t_wf': ast0_wf_typ t' { spec_wf_typ se true t' t_wf' })
-  (iv: impl_typ vmatch (typ_sem se t'))
-  (ip: impl_zero_copy_parse vmatch (spec_of_wf_typ sp_env t_wf').parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match r_env (target_type_of_wf_typ t_wf')).sem_rel)
-: Tot (ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
-= fun t t_wf ->
-  if t = t' && t_wf = t_wf'
-  then Some (iv, ip)
-  else env t t_wf
-
-[@@sem_attr]
-let ancillary_parse_array_group_env
-  (#cbor_t: Type)
-  (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-  (#cbor_array_iterator_t: Type0)
-  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)  
-  (#cbor_map_iterator_t: Type0)
-  (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
-  (#se: sem_env)
-  (#s_env: target_type_env se.se_bound)
-  (r_env: rel_env s_env)
-  (sp_env: spec_env se s_env.te_type)
-= (t: group) -> (t_wf: ast0_wf_array_group t { spec_wf_array_group se t t_wf }) -> option (impl_array_group cbor_array_iterator_match (array_group_sem se t) & impl_zero_copy_array_group cbor_array_iterator_match (spec_of_wf_array_group sp_env t_wf).ag_parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match r_env (target_type_of_wf_array_group t_wf)).sem_rel)
-
-[@@sem_attr]
 let ancillary_parse_array_group_env_bool
   (se: sem_env)
 = (t: group) -> (t_wf: ast0_wf_array_group t { spec_wf_array_group se t t_wf }) -> bool
-
-[@@sem_attr]
-let ancillary_parse_array_group_env_is_some
-  (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-  (#cbor_array_iterator_t: Type0)
-  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)  
-  (#cbor_map_iterator_t: Type0)
-  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
-  (#se: sem_env)
-  (#s_env: target_type_env se.se_bound)
-  (#r_env: rel_env s_env)
-  (#sp_env: spec_env se s_env.te_type)
-  (env: ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
-: Tot (ancillary_parse_array_group_env_bool se)
-= fun t t_wf -> Some? (env t t_wf)
-
-[@@sem_attr]
-let ancillary_parse_array_group_env_extend
-  (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-  (#cbor_array_iterator_t: Type0)
-  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)  
-  (#cbor_map_iterator_t: Type0)
-  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
-  (#se: sem_env)
-  (#s_env: target_type_env se.se_bound)
-  (#r_env: rel_env s_env)
-  (#sp_env: spec_env se s_env.te_type)
-  (env1: ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
-  (#se2: sem_env)
-  (#s_env2: target_type_env se2.se_bound)
-  (r_env2: rel_env s_env2 {
-    rel_env_included r_env r_env2
-  })
-  (sp_env2: spec_env se2 s_env2.te_type {
-    spec_env_included sp_env sp_env2
-  })
-: Tot (ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env2 sp_env2)
-= fun t t_wf ->
-  if bounded_wf_array_group se.se_bound t t_wf
-  then begin
-    (env1 t t_wf)
-  end
-  else None
-
-[@@sem_attr]
-let ancillary_parse_array_group_env_set
-  (#cbor_t: Type)
-  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
-  (#cbor_array_iterator_t: Type0)
-  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)  
-  (#cbor_map_iterator_t: Type0)
-  (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (Cbor.cbor & Cbor.cbor) -> slprop)
-  (#se: sem_env)
-  (#s_env: target_type_env se.se_bound)
-  (#r_env: rel_env s_env)
-  (#sp_env: spec_env se s_env.te_type)
-  (env: ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
-  (t: group)
-  (t_wf: ast0_wf_array_group t { spec_wf_array_group se t t_wf })
-  (iv: impl_array_group cbor_array_iterator_match (array_group_sem se t))
-  (ip: impl_zero_copy_array_group cbor_array_iterator_match (spec_of_wf_array_group sp_env t_wf).ag_parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match r_env (target_type_of_wf_array_group t_wf)).sem_rel)
-: Tot (ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match r_env sp_env)
-= fun t' t_wf' ->
-  if t = t' && t_wf = t_wf'
-  then Some (iv, ip)
-  else env t' t_wf'
 
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
@@ -242,10 +78,11 @@ module I64 = FStar.Int64
 module V = CDDL.Pulse.AST.Validate
 module SZ = FStar.SizeT
 
+[@@base_attr]
 noeq
 type ask_for' =
-| AskForType: t: typ -> ast0_wf_typ t -> bool -> ask_for'
-| AskForArrayGroup: t: group -> ast0_wf_array_group t -> ask_for'
+| AskForType: t: typ -> t_wf: ast0_wf_typ t -> bool -> ask_for'
+| AskForArrayGroup: t: group -> t_wf: ast0_wf_array_group t -> ask_for'
 
 let ask_for_spec
   (se: sem_env)
@@ -259,6 +96,66 @@ let ask_for
   (se: sem_env)
 = (a: ask_for' { ask_for_spec se a })
 
+let option_ask_for_is_type
+  (v_sem_env: sem_env)
+  (a: option (ask_for v_sem_env))
+: Tot prop
+= match a with
+  | Some (AskForType _ _ _) -> True
+  | _ -> False
+
+[@@sem_attr]
+let validate_ask_for_type
+  (#t #t2 #t_arr #t_map: Type0)
+  (#vmatch: (perm -> t -> Cbor.cbor -> slprop))
+  (#vmatch2: (perm -> t2 -> (Cbor.cbor & Cbor.cbor) -> slprop))
+  (#cbor_array_iterator_match: (perm -> t_arr -> list Cbor.cbor -> slprop))
+  (#cbor_map_iterator_match: (perm -> t_map -> list (Cbor.cbor & Cbor.cbor) -> slprop))
+  (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
+  (#v_sem_env: sem_env)
+  (env: validator_env vmatch v_sem_env { SZ.fits_u64 })
+  (a: option (ask_for v_sem_env))
+  (sq: squash (option_ask_for_is_type v_sem_env a))
+: impl_typ vmatch (typ_sem v_sem_env (AskForType?.t (Some?.v a)))
+= let Some (AskForType t t_wf guarded) = a in
+  V.validate_typ impl env guarded t t_wf
+
+[@@sem_attr; Bundle.bundle_attr]
+let ancillary_validate_env_set_ask_for
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#se: sem_env)
+  (env: ancillary_validate_env vmatch se)
+  (a: option (ask_for se))
+  (sq: squash (option_ask_for_is_type se a))
+  (i: impl_typ vmatch (typ_sem se (AskForType?.t (Some?.v a))))
+: Tot (ancillary_validate_env vmatch se)
+= ancillary_validate_env_set env _ i
+
+let option_ask_for_is_array_group
+  (v_sem_env: sem_env)
+  (a: option (ask_for v_sem_env))
+: Tot prop
+= match a with
+  | Some (AskForArrayGroup _ _) -> True
+  | _ -> False
+
+[@@sem_attr]
+let validate_ask_for_array_group
+  (#t #t2 #t_arr #t_map: Type0)
+  (#vmatch: (perm -> t -> Cbor.cbor -> slprop))
+  (#vmatch2: (perm -> t2 -> (Cbor.cbor & Cbor.cbor) -> slprop))
+  (#cbor_array_iterator_match: (perm -> t_arr -> list Cbor.cbor -> slprop))
+  (#cbor_map_iterator_match: (perm -> t_map -> list (Cbor.cbor & Cbor.cbor) -> slprop))
+  (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
+  (#v_sem_env: sem_env)
+  (env: validator_env vmatch v_sem_env { SZ.fits_u64 })
+  (a: option (ask_for v_sem_env))
+  (sq: squash (option_ask_for_is_array_group v_sem_env a))
+: impl_array_group cbor_array_iterator_match (array_group_sem v_sem_env (AskForArrayGroup?.t (Some?.v a)))
+= let Some (AskForArrayGroup t t_wf) = a in
+  V.validate_array_group impl env t t_wf
+
 #push-options "--z3rlimit 1024 --query_stats"
 
 #restart-solver
@@ -270,7 +167,7 @@ let rec ask_zero_copy_wf_type
   (ancillary_ag: ancillary_parse_array_group_env_bool se)
   (#t: typ)
   (t_wf: ast0_wf_typ t {
-    spec_wf_typ se true t t_wf /\ SZ.fits_u64
+    spec_wf_typ se true t t_wf
   })
 : Tot (option (ask_for se))
     (decreases t_wf)
@@ -302,7 +199,7 @@ and ask_zero_copy_wf_array_group
   (ancillary_ag: ancillary_parse_array_group_env_bool se)
   (#t: group)
   (t_wf: ast0_wf_array_group t {
-    spec_wf_array_group se t t_wf /\ SZ.fits_u64
+    spec_wf_array_group se t t_wf
   })
 : Tot (option (ask_for se))
     (decreases t_wf)
@@ -338,7 +235,7 @@ and ask_zero_copy_wf_map_group
   (ancillary_ag: ancillary_parse_array_group_env_bool se)
   (#t: elab_map_group)
   (t_wf: ast0_wf_parse_map_group t {
-    spec_wf_parse_map_group se t t_wf /\ SZ.fits_u64
+    spec_wf_parse_map_group se t t_wf
   })
 : Tot (option (ask_for se))
     (decreases t_wf)
@@ -368,189 +265,36 @@ and ask_zero_copy_wf_map_group
     then Some (AskForType _ s_value true)
     else None
 
-[@@sem_attr]
-let rec impl_zero_copy_wf_type
-  (#cbor_t #t2 #t_arr #t_map: Type0)
-  (#vmatch: (perm -> cbor_t -> Cbor.cbor -> slprop))
-  (#vmatch2: (perm -> t2 -> (Cbor.cbor & Cbor.cbor) -> slprop))
-  (#cbor_array_iterator_match: (perm -> t_arr -> list Cbor.cbor -> slprop))
-  (#cbor_map_iterator_match: (perm -> t_map -> list (Cbor.cbor & Cbor.cbor) -> slprop))
-  (#impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
-  (env: spec_and_impl_env impl)
-  (ancillary_v: ancillary_validate_env vmatch env.si_ast.e_sem_env)
-  (ancillary: ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r env.si_sp)
-  (ancillary_ag: ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r env.si_sp)
-  (#t: typ)
-  (t_wf: ast0_wf_typ t {
-    spec_wf_typ env.si_ast.e_sem_env true t t_wf /\ SZ.fits_u64
-    /\ None? (ask_zero_copy_wf_type (ancillary_validate_env_is_some ancillary_v) (ancillary_parse_env_is_some ancillary) (ancillary_parse_array_group_env_is_some ancillary_ag) t_wf)
-  })
-: Tot (impl_zero_copy_parse vmatch (spec_of_wf_typ env.si_sp t_wf).parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r (target_type_of_wf_typ t_wf)).sem_rel)
-    (decreases t_wf)
-= match t_wf with
-  | WfTRewrite _ _ s ->
-    impl_zero_copy_wf_type env ancillary_v ancillary ancillary_ag s
-  | WfTTagged tg _ s ->
-    let p = impl_zero_copy_wf_type env ancillary_v ancillary ancillary_ag s in
-      begin match tg with
-      | None -> (impl_zero_copy_tagged_none impl.cbor_get_tagged_tag impl.cbor_get_tagged_payload p)
-      | Some tag -> (impl_zero_copy_tagged_some impl.cbor_get_tagged_payload (U64.uint_to_t tag) p)
-      end
-  | WfTChoice _ _ s1 s2 ->
-    let p1 = impl_zero_copy_wf_type env ancillary_v ancillary ancillary_ag s1 in
-    let p2 = impl_zero_copy_wf_type env ancillary_v ancillary ancillary_ag s2 in
-    (impl_zero_copy_choice (V.validate_typ impl env.si_v true _ s1) p1 p2)
-  | WfTElem e -> (impl_zero_copy_elem_type vmatch impl.cbor_get_major_type impl.cbor_destr_int64 impl.cbor_get_string impl.cbor_destr_simple e)
-  | WfTDetCbor _ _ s ->
-    let p = impl_zero_copy_wf_type env ancillary_v ancillary ancillary_ag s in
-    (impl_zero_copy_det_cbor impl.cbor_get_string impl.cbor_det_parse _ p)
-  | WfTStrSize k _ _ lo hi ->
-    (impl_zero_copy_str_size impl.cbor_get_string (U8.uint_to_t k) (U64.uint_to_t lo) (U64.uint_to_t hi))
-  | WfTIntRange _ _ _ lo hi ->
-    if hi < 0
-    then (impl_copyful_pure_as_zero_copy (impl_copyful_int_range_neg_int64 impl.cbor_destr_int64 (U64.uint_to_t ((-1) - lo)) (U64.uint_to_t ((-1) - hi))))
-    else if lo >= 0
-    then (impl_copyful_pure_as_zero_copy (impl_copyful_int_range_uint64 impl.cbor_destr_int64 (U64.uint_to_t lo) (U64.uint_to_t hi)))
-    else (impl_copyful_pure_as_zero_copy (impl_copyful_int_range_int64 impl.cbor_get_major_type impl.cbor_destr_int64 (I64.int_to_t lo) (I64.int_to_t hi)))
-  | WfTDef n -> (env.si_p n)
-  | WfTArray _ s ->
-    let ps = impl_zero_copy_wf_array_group env ancillary_v ancillary ancillary_ag s in
-    (impl_zero_copy_array impl.cbor_array_iterator_init ps)
-  | WfTMap _ _ s ->
-    let ps = impl_zero_copy_wf_map_group env ancillary_v ancillary ancillary_ag s in
-    (impl_zero_copy_map ps ())
+let option_ask_for_is_guarded_type
+  (v_sem_env: sem_env)
+  (a: option (ask_for v_sem_env))
+: Tot prop
+= match a with
+  | Some (AskForType _ _ true) -> True
+  | _ -> False
 
-and impl_zero_copy_wf_array_group
-  (#cbor_t #t2 #t_arr #t_map: Type0)
-  (#vmatch: (perm -> cbor_t -> Cbor.cbor -> slprop))
-  (#vmatch2: (perm -> t2 -> (Cbor.cbor & Cbor.cbor) -> slprop))
-  (#cbor_array_iterator_match: (perm -> t_arr -> list Cbor.cbor -> slprop))
-  (#cbor_map_iterator_match: (perm -> t_map -> list (Cbor.cbor & Cbor.cbor) -> slprop))
-  (#impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
-  (env: spec_and_impl_env impl)
-  (ancillary_v: ancillary_validate_env vmatch env.si_ast.e_sem_env)
-  (ancillary: ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r env.si_sp)
-  (ancillary_ag: ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r env.si_sp)
-  (#t: group)
-  (t_wf: ast0_wf_array_group t {
-    spec_wf_array_group env.si_ast.e_sem_env t t_wf /\ SZ.fits_u64
-    /\ None? (ask_zero_copy_wf_array_group (ancillary_validate_env_is_some ancillary_v) (ancillary_parse_env_is_some ancillary) (ancillary_parse_array_group_env_is_some ancillary_ag) t_wf)
-  })
-: Tot (impl_zero_copy_array_group cbor_array_iterator_match (spec_of_wf_array_group env.si_sp t_wf).ag_parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r (target_type_of_wf_array_group t_wf)).sem_rel)
-    (decreases t_wf)
-= match t_wf with
-  | WfAElem _ _ _ t_wf' ->
-    let pt = impl_zero_copy_wf_type env ancillary_v ancillary ancillary_ag t_wf' in
-    (impl_zero_copy_array_group_item impl.cbor_array_iterator_next pt)
-  | WfAZeroOrOne _ t_wf' ->
-    let pe = impl_zero_copy_wf_array_group env ancillary_v ancillary ancillary_ag t_wf' in
-    (impl_zero_copy_array_group_zero_or_one pe (V.validate_array_group impl env.si_v _ t_wf'))
-  | WfAZeroOrOneOrMore _ t_wf' g' ->
-    // HERE I need function pointers, so I MUST NOT do a recursive call
-    let Some (ve, pe) = ancillary_ag _ t_wf' in
-      begin match g' with
-      | GZeroOrMore _ ->
-        (impl_zero_copy_array_group_zero_or_more impl.cbor_array_iterator_share impl.cbor_array_iterator_gather ve pe ())
-      | _ ->
-        (impl_zero_copy_array_group_one_or_more impl.cbor_array_iterator_share impl.cbor_array_iterator_gather ve pe ())
-      end
-  | WfAConcat _ _ t_wf1 t_wf2 ->
-    let pg1 = impl_zero_copy_wf_array_group env ancillary_v ancillary ancillary_ag t_wf1 in
-    let pg2 = impl_zero_copy_wf_array_group env ancillary_v ancillary ancillary_ag t_wf2 in
-    (impl_zero_copy_array_group_concat impl.cbor_array_iterator_length impl.cbor_array_iterator_share impl.cbor_array_iterator_gather impl.cbor_array_iterator_truncate pg1 (V.validate_array_group impl env.si_v _ t_wf1) pg2 ())
-  | WfAChoice _ _ t_wf1 t_wf2 ->
-    let pg1 = impl_zero_copy_wf_array_group env ancillary_v ancillary ancillary_ag t_wf1 in
-    let pg2 = impl_zero_copy_wf_array_group env ancillary_v ancillary ancillary_ag t_wf2 in
-    (impl_zero_copy_array_group_choice pg1 (V.validate_array_group impl env.si_v _ t_wf1) pg2)
-  | WfARewrite _ _ t_wf2 ->
-    impl_zero_copy_wf_array_group env ancillary_v ancillary ancillary_ag t_wf2
+let option_ask_for_is_guarded_type_is_type
+  (v_sem_env: sem_env)
+  (a: option (ask_for v_sem_env))
+: Lemma
+  (requires (option_ask_for_is_guarded_type v_sem_env a))
+  (ensures (option_ask_for_is_type v_sem_env a))
+  [SMTPat (option_ask_for_is_guarded_type v_sem_env a)]
+= ()
 
-and impl_zero_copy_wf_map_group
-  (#cbor_t #t2 #t_arr #t_map: Type0)
-  (#vmatch: (perm -> cbor_t -> Cbor.cbor -> slprop))
-  (#vmatch2: (perm -> t2 -> (Cbor.cbor & Cbor.cbor) -> slprop))
-  (#cbor_array_iterator_match: (perm -> t_arr -> list Cbor.cbor -> slprop))
-  (#cbor_map_iterator_match: (perm -> t_map -> list (Cbor.cbor & Cbor.cbor) -> slprop))
-  (#impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
-  (env: spec_and_impl_env impl)
-  (ancillary_v: ancillary_validate_env vmatch env.si_ast.e_sem_env)
-  (ancillary: ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r env.si_sp)
-  (ancillary_ag: ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r env.si_sp)
-  (#t: elab_map_group)
-  (t_wf: ast0_wf_parse_map_group t {
-    spec_wf_parse_map_group env.si_ast.e_sem_env t t_wf /\ SZ.fits_u64
-    /\ None? (ask_zero_copy_wf_map_group (ancillary_validate_env_is_some ancillary_v) (ancillary_parse_env_is_some ancillary) (ancillary_parse_array_group_env_is_some ancillary_ag) t_wf)
-  })
-: Tot (impl_zero_copy_map_group vmatch (spec_of_wf_map_group env.si_sp t_wf).mg_parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r (target_type_of_wf_map_group t_wf)).sem_rel)
-    (decreases t_wf)
-= match t_wf with
-  | WfMChoice _ s1 _ s2 ->
-    let ps1 = impl_zero_copy_wf_map_group env ancillary_v ancillary ancillary_ag s1 in
-    let ps2 = impl_zero_copy_wf_map_group env ancillary_v ancillary ancillary_ag s2 in
-    (impl_zero_copy_map_choice (V.validate_map_group impl env.si_v _ s1) ps1 ps2 ())
-  | WfMConcat _ s1 _ s2 ->
-    let ps1 = impl_zero_copy_wf_map_group env ancillary_v ancillary ancillary_ag s1 in
-    let ps2 = impl_zero_copy_wf_map_group env ancillary_v ancillary ancillary_ag s2 in
-    (impl_zero_copy_map_concat impl.cbor_share impl.cbor_gather ps1 ps2 ())
-  | WfMZeroOrOne _ s1 ->
-    let ps1 = impl_zero_copy_wf_map_group env ancillary_v ancillary ancillary_ag s1 in
-        (impl_zero_copy_map_ext
-          (impl_zero_copy_map_zero_or_one (V.validate_map_group impl env.si_v _ s1) ps1 ())
-          #_ #_ #(spec_of_wf_map_group env.si_sp t_wf).mg_size #(spec_of_wf_map_group env.si_sp t_wf).mg_serializable
-          (spec_of_wf_map_group env.si_sp t_wf).mg_parser
-          ()
-        )
-  | WfMLiteral cut key _ s ->
-    let ps1 = impl_zero_copy_wf_type env ancillary_v ancillary ancillary_ag s in
-        (impl_zero_copy_match_item_for
-          impl.cbor_map_get
-          (with_literal
-            impl.cbor_mk_int64
-            impl.cbor_elim_int64
-            impl.cbor_mk_simple
-            impl.cbor_elim_simple
-            impl.cbor_mk_string
-            key
-          )
-          cut
-          ps1
-        )
-  | WfMZeroOrMore _ key_except _ s_key s_key_except s_value ->
-    let Some (v_key, p_key) = ancillary _ s_key in
-    let Some (v_key_except) = ancillary_v key_except in
-    let Some (v_value, p_value) = ancillary _ s_value in
-            (impl_zero_copy_map_zero_or_more
-              impl.cbor_map_iterator_init
-              impl.cbor_map_iterator_share
-              impl.cbor_map_iterator_gather
-              (target_type_eq env.si_st (target_type_of_wf_typ s_key))
-              (spec_of_wf_typ env.si_sp s_key)
-              v_key
-              p_key
-              v_key_except
-              (spec_of_wf_typ env.si_sp s_value)
-              v_value
-              p_value
-            )
+let ask_zero_copy_ask_for_option
+  (#se: sem_env)
+  (ancillary_v: ancillary_validate_env_bool se.se_bound)
+  (ancillary: ancillary_parse_env_bool se)
+  (ancillary_ag: ancillary_parse_array_group_env_bool se)
+  (a: option (ask_for se))
+: Tot (option (ask_for se))
+= match a with
+  | None -> None
+  | Some (AskForType _ _ false) -> None
+  | Some (AskForType t t_wf _) ->
+    ask_zero_copy_wf_type ancillary_v ancillary ancillary_ag t_wf
+  | Some (AskForArrayGroup t t_wf) ->
+    ask_zero_copy_wf_array_group ancillary_v ancillary ancillary_ag t_wf
 
 #pop-options
-
-[@@sem_attr]
-let impl_zero_copy_wf_type'
-  (#cbor_t #t2 #t_arr #t_map: Type0)
-  (#vmatch: (perm -> cbor_t -> Cbor.cbor -> slprop))
-  (#vmatch2: (perm -> t2 -> (Cbor.cbor & Cbor.cbor) -> slprop))
-  (#cbor_array_iterator_match: (perm -> t_arr -> list Cbor.cbor -> slprop))
-  (#cbor_map_iterator_match: (perm -> t_map -> list (Cbor.cbor & Cbor.cbor) -> slprop))
-  (#impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
-  (env: spec_and_impl_env impl)
-  (ancillary_v: ancillary_validate_env vmatch env.si_ast.e_sem_env)
-  (ancillary: ancillary_parse_env vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r env.si_sp)
-  (ancillary_ag: ancillary_parse_array_group_env vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r env.si_sp)
-  (#t: typ)
-  (t_wf: ast0_wf_typ t {
-    spec_wf_typ env.si_ast.e_sem_env true t t_wf /\ SZ.fits_u64
-  })
-  (t_wf_h: squash (None? (ask_zero_copy_wf_type (ancillary_validate_env_is_some ancillary_v) (ancillary_parse_env_is_some ancillary) (ancillary_parse_array_group_env_is_some ancillary_ag) t_wf)))
-: Tot (impl_zero_copy_parse vmatch (spec_of_wf_typ env.si_sp t_wf).parser (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env.si_r (target_type_of_wf_typ t_wf)).sem_rel)
-= impl_zero_copy_wf_type env ancillary_v ancillary ancillary_ag t_wf
