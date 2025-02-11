@@ -28,7 +28,7 @@ let option_sorted_source = topological_sort source
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "krml"; base_attr] noextract
 let sorted_source0 = Some?.v option_sorted_source
 
-[@@noextract_to "krml"] noextract
+[@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env0 : bundle_env Det.cbor_det_match = empty_bundle_env _
 
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
@@ -51,9 +51,9 @@ let _ : unit = _ by (produce_defs sorted_source0)
 (*
 mkdir -p _output
 true    
-fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/everparse/src/cbor/spec --include /home/tahina/everest/everparse/src/cddl/spec --include /home/tahina/everest/everparse/lib/evercddl/lib --include /home/tahina/everest/everparse/lib/evercddl/plugin --include /home/tahina/everest/everparse/src/cbor/pulse --include /home/tahina/everest/everparse/src/cddl/pulse --include /home/tahina/everest/karamel/krmllib --include /home/tahina/everest/karamel/krmllib/obj --include /home/tahina/everest/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice' --dep full @.depend.rsp --output_deps_to .depend.aux
+/home/tahina/everest/master/FStar/bin/fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/master/everparse/src/cbor/spec --include /home/tahina/everest/master/everparse/src/cddl/spec --include /home/tahina/everest/master/everparse/lib/evercddl/lib --include /home/tahina/everest/master/everparse/lib/evercddl/plugin --include /home/tahina/everest/master/everparse/src/cbor/pulse --include /home/tahina/everest/master/everparse/src/cddl/pulse --include /home/tahina/everest/master/karamel/krmllib --include /home/tahina/everest/master/karamel/krmllib/obj --include /home/tahina/everest/master/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice' --dep full @.depend.rsp --output_deps_to .depend.aux
 mv .depend.aux .depend
-fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/everparse/src/cbor/spec --include /home/tahina/everest/everparse/src/cddl/spec --include /home/tahina/everest/everparse/lib/evercddl/lib --include /home/tahina/everest/everparse/lib/evercddl/plugin --include /home/tahina/everest/everparse/src/cbor/pulse --include /home/tahina/everest/everparse/src/cddl/pulse --include /home/tahina/everest/karamel/krmllib --include /home/tahina/everest/karamel/krmllib/obj --include /home/tahina/everest/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning   CDDLTest.Validate.fst
+/home/tahina/everest/master/FStar/bin/fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/master/everparse/src/cbor/spec --include /home/tahina/everest/master/everparse/src/cddl/spec --include /home/tahina/everest/master/everparse/lib/evercddl/lib --include /home/tahina/everest/master/everparse/lib/evercddl/plugin --include /home/tahina/everest/master/everparse/src/cbor/pulse --include /home/tahina/everest/master/everparse/src/cddl/pulse --include /home/tahina/everest/master/karamel/krmllib --include /home/tahina/everest/master/karamel/krmllib/obj --include /home/tahina/everest/master/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning   CDDLTest.Validate.fst
 TAC>> 
 *)
 
@@ -1146,12 +1146,14 @@ let _ : unit = _ by (FStar.Tactics.print ("wf"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "krml"; base_attr] noextract
 let wf26 = wf26'
 let _ : squash (wf26 == wf26') = _ by (T.trefl_or_norm ())
-[@@noextract_to "krml"] noextract
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_1'"); FStar.Tactics.exact (`()))
+[@@noextract_to "krml"; bundle_attr] noextract
 let aux_env25_wf_1' = Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some avenv25_0) (ancillary_bundle_env_is_some aenv25_0) (ancillary_array_bundle_env_is_some aaenv25_0) wf26
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_1"); FStar.Tactics.exact (`()))
 [@@base_attr; noextract_to "krml"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_steps); FStar.Tactics.trefl ())] noextract
 let aux_env25_wf_1 = aux_env25_wf_1'
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_1_eq"); FStar.Tactics.exact (`()))
 let _ : squash (aux_env25_wf_1 == aux_env25_wf_1') = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
-let _ : unit = _ by (FStar.Tactics.print ("ancillary env25_1"); FStar.Tactics.exact (`()))
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
 let aux_env25_validate_1 = Parse.validate_ask_for_array_group Det.cbor_det_impl env25.be_v aux_env25_wf_1 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
@@ -1164,19 +1166,21 @@ let aux_env25_parse_1 = aux_env25_bundle_1'.ab_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let aux_env25_bundle_1 = { aux_env25_bundle_1' with ab_parser = aux_env25_parse_1 }
-let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
+let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_1 = avenv25_0
 [@@bundle_attr; noextract_to "krml"] noextract
 let aenv25_1 = aenv25_0
 [@@bundle_attr; noextract_to "krml"] noextract
 let aaenv25_1 = ancillary_array_bundle_env_set_ask_for aaenv25_0 aux_env25_wf_1 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) aux_env25_validate_1 aux_env25_bundle_1
-[@@noextract_to "krml"] noextract
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_2'"); FStar.Tactics.exact (`()))
+[@@noextract_to "krml"; bundle_attr] noextract
 let aux_env25_wf_2' = Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some avenv25_1) (ancillary_bundle_env_is_some aenv25_1) (ancillary_array_bundle_env_is_some aaenv25_1) wf26
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_2"); FStar.Tactics.exact (`()))
 [@@base_attr; noextract_to "krml"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_steps); FStar.Tactics.trefl ())] noextract
 let aux_env25_wf_2 = aux_env25_wf_2'
-let _ : squash (aux_env25_wf_2 == aux_env25_wf_2') = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
-let _ : unit = _ by (FStar.Tactics.print ("ancillary env25_2"); FStar.Tactics.exact (`()))let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_2_eq"); FStar.Tactics.exact (`()))
+let _ : squash (aux_env25_wf_2 == aux_env25_wf_2') = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
 let aux_env25_validate_2 = Parse.validate_ask_for_type Det.cbor_det_impl env25.be_v aux_env25_wf_2 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let _ : unit = _ by (FStar.Tactics.print ("bundle"); FStar.Tactics.exact (`()))
@@ -1188,33 +1192,38 @@ let aux_env25_parse_2 = aux_env25_bundle_2'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let aux_env25_bundle_2 = { aux_env25_bundle_2' with b_parser = aux_env25_parse_2 }
-let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
+let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_2 = avenv25_1
 [@@bundle_attr; noextract_to "krml"] noextract
 let aenv25_2 = ancillary_bundle_env_set_ask_for aenv25_1 aux_env25_wf_2 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) aux_env25_validate_2 aux_env25_bundle_2
 [@@bundle_attr; noextract_to "krml"] noextract
 let aaenv25_2 = aaenv25_1
-[@@noextract_to "krml"] noextract
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_3'"); FStar.Tactics.exact (`()))
+[@@noextract_to "krml"; bundle_attr] noextract
 let aux_env25_wf_3' = Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some avenv25_2) (ancillary_bundle_env_is_some aenv25_2) (ancillary_array_bundle_env_is_some aaenv25_2) wf26
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_3"); FStar.Tactics.exact (`()))
 [@@base_attr; noextract_to "krml"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_steps); FStar.Tactics.trefl ())] noextract
 let aux_env25_wf_3 = aux_env25_wf_3'
-let _ : squash (aux_env25_wf_3 == aux_env25_wf_3') = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
-let _ : unit = _ by (FStar.Tactics.print ("ancillary env25_3"); FStar.Tactics.exact (`()))let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_3_eq"); FStar.Tactics.exact (`()))
+let _ : squash (aux_env25_wf_3 == aux_env25_wf_3') = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
 let aux_env25_validate_3 = Parse.validate_ask_for_type Det.cbor_det_impl env25.be_v aux_env25_wf_3 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
+let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_3 = Parse.ancillary_validate_env_set_ask_for avenv25_2 aux_env25_wf_3 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) aux_env25_validate_3
 [@@bundle_attr; noextract_to "krml"] noextract
 let aenv25_3 = aenv25_2
 [@@bundle_attr; noextract_to "krml"] noextract
 let aaenv25_3 = aaenv25_2
-[@@noextract_to "krml"] noextract
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_4'"); FStar.Tactics.exact (`()))
+[@@noextract_to "krml"; bundle_attr] noextract
 let aux_env25_wf_4' = Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some avenv25_3) (ancillary_bundle_env_is_some aenv25_3) (ancillary_array_bundle_env_is_some aaenv25_3) wf26
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_4"); FStar.Tactics.exact (`()))
 [@@base_attr; noextract_to "krml"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_steps); FStar.Tactics.trefl ())] noextract
 let aux_env25_wf_4 = aux_env25_wf_4'
-let _ : squash (aux_env25_wf_4 == aux_env25_wf_4') = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
-let _ : unit = _ by (FStar.Tactics.print ("ancillary env25_4"); FStar.Tactics.exact (`()))let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env25_wf_4_eq"); FStar.Tactics.exact (`()))
+let _ : squash (aux_env25_wf_4 == aux_env25_wf_4') = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
 let aux_env25_validate_4 = Parse.validate_ask_for_type Det.cbor_det_impl env25.be_v aux_env25_wf_4 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let _ : unit = _ by (FStar.Tactics.print ("bundle"); FStar.Tactics.exact (`()))
@@ -1226,7 +1235,7 @@ let aux_env25_parse_4 = aux_env25_bundle_4'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let aux_env25_bundle_4 = { aux_env25_bundle_4' with b_parser = aux_env25_parse_4 }
-let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
+let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_4 = avenv25_3
 [@@bundle_attr; noextract_to "krml"] noextract
@@ -1383,12 +1392,14 @@ let _ : unit = _ by (FStar.Tactics.print ("wf"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "krml"; base_attr] noextract
 let wf30 = wf30'
 let _ : squash (wf30 == wf30') = _ by (T.trefl_or_norm ())
-[@@noextract_to "krml"] noextract
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env29_wf_1'"); FStar.Tactics.exact (`()))
+[@@noextract_to "krml"; bundle_attr] noextract
 let aux_env29_wf_1' = Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some avenv29_0) (ancillary_bundle_env_is_some aenv29_0) (ancillary_array_bundle_env_is_some aaenv29_0) wf30
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env29_wf_1"); FStar.Tactics.exact (`()))
 [@@base_attr; noextract_to "krml"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_steps); FStar.Tactics.trefl ())] noextract
 let aux_env29_wf_1 = aux_env29_wf_1'
+let _ : unit = _ by (FStar.Tactics.print ("ancillary aux_env29_wf_1_eq"); FStar.Tactics.exact (`()))
 let _ : squash (aux_env29_wf_1 == aux_env29_wf_1') = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
-let _ : unit = _ by (FStar.Tactics.print ("ancillary env29_1"); FStar.Tactics.exact (`()))
 let _ : unit = _ by (FStar.Tactics.print ("validator"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_for_extraction_with (fun _ -> FStar.Tactics.norm (nbe :: T.steps); FStar.Tactics.trefl ())]
 let aux_env29_validate_1 = Parse.validate_ask_for_array_group Det.cbor_det_impl env29.be_v aux_env29_wf_1 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
@@ -1401,7 +1412,7 @@ let aux_env29_parse_1 = aux_env29_bundle_1'.ab_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let aux_env29_bundle_1 = { aux_env29_bundle_1' with ab_parser = aux_env29_parse_1 }
-let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
+let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv29_1 = avenv29_0
 [@@bundle_attr; noextract_to "krml"] noextract

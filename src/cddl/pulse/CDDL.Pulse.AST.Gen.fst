@@ -122,8 +122,7 @@ let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`())
 let "^parser^" = "^bundle^"'.b_parser
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
-let "^bundle^" = { "^bundle^"' with b_parser = "^parser^" }
-let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))"
+let "^bundle^" = { "^bundle^"' with b_parser = "^parser^" }"
 
 let produce_ask_for_validator env wf validator =
 "let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
@@ -140,8 +139,7 @@ let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`())
 let "^parser^" = "^bundle^"'.b_parser
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
-let "^bundle^" = { "^bundle^"' with b_parser = "^parser^" }
-let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))"
+let "^bundle^" = { "^bundle^"' with b_parser = "^parser^" }"
 
 let produce_ask_for_array_validator env wf validator = "
 let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
@@ -158,8 +156,7 @@ let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`())
 let "^parser^" = "^bundle^"'.ab_parser
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
-let "^bundle^" = { "^bundle^"' with ab_parser = "^parser^" }
-let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))"
+let "^bundle^" = { "^bundle^"' with ab_parser = "^parser^" }"
 
 let rec compute_ancillaries_aux
   (#se: sem_env)
@@ -177,13 +174,11 @@ let rec compute_ancillaries_aux
   | None ->
     let env_index' = anc.env_index + 1 in
     let anc_env' = env ^ "_" ^ string_of_int env_index' in
-    let msg0 = "
-let _ : unit = _ by (FStar.Tactics.print (\"ancillary "^anc_env'^"\"); FStar.Tactics.exact (`()))"
-    in
     begin match ask with
     | None -> anc
     | Some (P.AskForType t _ false) ->
       let msg = produce_ask_for_validator env wf validator ^ "
+let _ : unit = _ by (FStar.Tactics.print (\"ancillary env'\"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "^krml^"] noextract
 let av"^anc_env'^" = Parse.ancillary_validate_env_set_ask_for av"^anc_env^" "^wf^" (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) "^validator^"
 [@@bundle_attr; noextract_to "^krml^"] noextract
@@ -197,10 +192,11 @@ let aa"^anc_env'^" = aa" ^ anc_env
           validators = (fun v -> if v = t then true else anc.anc.validators v);
         };
         env_index = env_index';
-        output = anc.output ^ msg0 ^ msg;
+        output = anc.output ^ msg;
       }
     | Some (P.AskForType t t_wf true) ->
       let msg = produce_ask_for_parser env anc_env wf validator parser bundle ^ "
+let _ : unit = _ by (FStar.Tactics.print (\"ancillary env'\"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "^krml^"] noextract
 let av"^anc_env'^" = av"^anc_env^"
 [@@bundle_attr; noextract_to "^krml^"] noextract
@@ -214,10 +210,11 @@ let aa"^anc_env'^" = aa" ^ anc_env
           parsers = (fun t' t_wf' -> if t = t' && t_wf = t_wf' then true else anc.anc.parsers t' t_wf');
         };
         env_index = env_index';
-        output = anc.output ^ msg0 ^ msg;
+        output = anc.output ^ msg;
       }
     | Some (P.AskForArrayGroup t t_wf) ->
       let msg = produce_ask_for_array_parser env anc_env wf validator parser bundle ^ "
+let _ : unit = _ by (FStar.Tactics.print (\"ancillary env'\"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "^krml^"] noextract
 let av"^anc_env'^" = av"^anc_env^"
 [@@bundle_attr; noextract_to "^krml^"] noextract
@@ -231,12 +228,12 @@ let aa"^anc_env'^" = ancillary_array_bundle_env_set_ask_for aa"^anc_env^" "^wf^"
           array_parsers = (fun t' t_wf' -> if t = t' && t_wf = t_wf' then true else anc.anc.array_parsers t' t_wf');
         };
         env_index = env_index';
-        output = anc.output ^ msg0 ^ msg;
+        output = anc.output ^ msg;
       }
     end
   | ask' ->
     let msg wf' = "
-[@@noextract_to "^krml^"] noextract
+[@@noextract_to "^krml^"; bundle_attr] noextract
 let "^wf'^"' = Parse.ask_zero_copy_ask_for_option (Parse.ancillary_validate_env_is_some av"^anc_env^") (ancillary_bundle_env_is_some a"^anc_env^") (ancillary_array_bundle_env_is_some aa"^anc_env^") "^wf
     in
     let anc2 = init_compute_ancillaries_aux anc ask' env msg in
@@ -252,9 +249,12 @@ and init_compute_ancillaries_aux
 =
     let candidate = string_of_int anc.next_candidate_index in
     let wf' = "aux_" ^ env ^ "_wf_" ^ candidate in
-    let msg' = msg wf'^"
+    let msg' = "
+let _ : unit = _ by (FStar.Tactics.print (\"ancillary "^wf'^"'\"); FStar.Tactics.exact (`()))"^msg wf'^"
+let _ : unit = _ by (FStar.Tactics.print (\"ancillary "^wf'^"\"); FStar.Tactics.exact (`()))
 [@@base_attr; noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_steps); FStar.Tactics.trefl ())] noextract
 let "^wf'^" = "^wf'^"'
+let _ : unit = _ by (FStar.Tactics.print (\"ancillary "^wf'^"_eq\"); FStar.Tactics.exact (`()))
 let _ : squash ("^wf'^" == "^wf'^"') = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))"
     in
     let validator' = "aux_" ^ env ^ "_validate_" ^ candidate in
@@ -282,7 +282,7 @@ let rec compute_ancillaries
   | ask ->
     let anc_env = env ^ "_" ^ string_of_int anc.env_index in
     let msg wf' = "
-[@@noextract_to "^krml^"] noextract
+[@@noextract_to "^krml^"; bundle_attr] noextract
 let "^wf'^"' = Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some av"^anc_env^") (ancillary_bundle_env_is_some a"^anc_env^") (ancillary_array_bundle_env_is_some aa"^anc_env^") "^wf
     in
     let anc2 = init_compute_ancillaries_aux anc ask env msg in
@@ -362,6 +362,7 @@ let _ : unit = _ by (FStar.Tactics.print (\"wf\"); FStar.Tactics.exact (`()))
 let "^wf^" = "^wf^"'
 let _ : squash ("^wf^" == "^wf^"') = _ by (T.trefl_or_norm ())"^
 anc1.output^produce_parser env env_anc' wf validator parser bundle ^"
+let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
 let "^env'^" =
   bundle_env_extend_typ_with_weak "^env^" (T.pull_name "^source^") (T.pull_type "^source^") "^wf^" "^validator^" "^bundle^
