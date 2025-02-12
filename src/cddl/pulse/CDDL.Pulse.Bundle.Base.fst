@@ -41,7 +41,7 @@ let bundle_set_parser
   ([@@@erasable] b: Ghost.erased (bundle vmatch))
   (t: Type0)
   ([@@@erasable] t_eq: squash (t == b.b_impl_type))
-  (#t': Type)
+  (#[@@@erasable] t': Type)
   (p: t')
   ([@@@erasable] p_eq: squash (t' == impl_zero_copy_parse vmatch b.b_spec.parser b.b_rel))
 : Tot (bundle vmatch)

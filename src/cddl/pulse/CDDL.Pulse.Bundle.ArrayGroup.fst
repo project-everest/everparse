@@ -39,7 +39,7 @@ let array_bundle_set_parser
   ([@@@erasable] b: Ghost.erased (array_bundle cbor_array_iterator_match))
   (t: Type0)
   ([@@@erasable] t_eq: squash (t == b.ab_impl_type))
-  (#t': Type)
+  (#[@@@erasable] t': Type)
   (p: t')
   ([@@@erasable] p_eq: squash (t' == impl_zero_copy_array_group cbor_array_iterator_match b.ab_spec.ag_parser b.ab_rel))
 : Tot (array_bundle cbor_array_iterator_match)
