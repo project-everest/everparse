@@ -6,7 +6,7 @@ open CBOR.Spec.API.Type
 open CBOR.Pulse.API.Base
 module EqTest = CDDL.Spec.EqTest
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_uint
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -22,7 +22,7 @@ let bundle_uint
   b_parser = impl_copyful_pure_as_zero_copy (impl_copyful_uint cbor_destr_int64);
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_nint
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -40,7 +40,7 @@ let bundle_nint
 
 module U64 = FStar.UInt64
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_int_range_uint64
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -59,7 +59,7 @@ let bundle_int_range_uint64
 
 module I64 = FStar.Int64
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_int_range_int64
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -77,7 +77,7 @@ let bundle_int_range_int64
   b_parser = impl_copyful_pure_as_zero_copy (impl_copyful_int_range_int64 cbor_get_major_type cbor_destr_int64 lo hi);
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_int_range_neg_int64
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -94,7 +94,7 @@ let bundle_int_range_neg_int64
   b_parser = impl_copyful_pure_as_zero_copy (impl_copyful_int_range_neg_int64 cbor_destr_int64 lo hi);
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_bytes
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -110,7 +110,7 @@ let bundle_bytes
   b_parser = impl_zero_copy_bytes cbor_destr_string;
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_text
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -126,7 +126,7 @@ let bundle_text
   b_parser = impl_zero_copy_text cbor_destr_string;
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_str_size
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -144,7 +144,7 @@ let bundle_str_size
   b_parser = impl_zero_copy_str_size cbor_destr_string mt lo hi;
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_simple
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -160,7 +160,7 @@ let bundle_simple
   b_parser = impl_copyful_pure_as_zero_copy (impl_copyful_simple cbor_destr_simple);
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_bool
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -176,7 +176,7 @@ let bundle_bool
   b_parser = impl_copyful_pure_as_zero_copy (impl_copyful_bool cbor_destr_simple);
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_tagged_some
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -184,17 +184,19 @@ let bundle_tagged_some
   (tag: Ghost.erased U64.t)
   (b: bundle vmatch)
 : bundle vmatch
-= {
+= match b with
+  | Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel b_parser ->
+{
   b_typ = _;
   b_spec_type = _;
-  b_spec_type_eq = b.b_spec_type_eq;
-  b_spec = spec_tag_some tag b.b_spec;
-  b_impl_type = _;
+  b_spec_type_eq = b_spec_type_eq;
+  b_spec = spec_tag_some tag b_spec;
+  b_impl_type = b_impl_type;
   b_rel = _;
-  b_parser = impl_zero_copy_tagged_some cbor_get_tagged_payload tag b.b_parser;
+  b_parser = impl_zero_copy_tagged_some cbor_get_tagged_payload tag b_parser;
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_tagged_none
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -202,17 +204,19 @@ let bundle_tagged_none
   (cbor_get_tagged_payload: get_tagged_payload_t vmatch)
   (b: bundle vmatch)
 : bundle vmatch
-= {
+= match b with
+  | Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel b_parser ->
+{
   b_typ = _;
   b_spec_type = _;
-  b_spec_type_eq = EqTest.pair_eq (EqTest.eqtype_eq _) (b.b_spec_type_eq);
-  b_spec = spec_tag_none b.b_spec;
-  b_impl_type = _;
+  b_spec_type_eq = EqTest.pair_eq (EqTest.eqtype_eq _) (b_spec_type_eq);
+  b_spec = spec_tag_none b_spec;
+  b_impl_type = (U64.t & b_impl_type);
   b_rel = _;
-  b_parser = impl_zero_copy_tagged_none cbor_get_tagged_tag cbor_get_tagged_payload b.b_parser;
+  b_parser = impl_zero_copy_tagged_none cbor_get_tagged_tag cbor_get_tagged_payload b_parser;
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_det_cbor
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -221,17 +225,19 @@ let bundle_det_cbor
   (cbor_det_parse: cbor_det_parse_t vmatch')
   (b: bundle vmatch')
 : bundle vmatch
-= {
+= match b with
+  | Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel b_parser ->
+{
   b_typ = _;
   b_spec_type = _;
-  b_spec_type_eq = b.b_spec_type_eq;
-  b_spec = spec_bstr_cbor_det b.b_spec;
-  b_impl_type = _;
+  b_spec_type_eq = b_spec_type_eq;
+  b_spec = spec_bstr_cbor_det b_spec;
+  b_impl_type = b_impl_type;
   b_rel = _;
-  b_parser = impl_zero_copy_det_cbor cbor_destr_string cbor_det_parse b.b_spec b.b_parser;
+  b_parser = impl_zero_copy_det_cbor cbor_destr_string cbor_det_parse b_spec b_parser;
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_any
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> cbor -> slprop)

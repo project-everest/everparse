@@ -23,7 +23,7 @@ irreducible let bundle_get_impl_type_attr : unit = ()
 
 irreducible let bundle_attr : unit = ()
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let get_bundle_impl_type
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -34,18 +34,18 @@ let get_bundle_impl_type
 = match b with
   | Mkbundle _ _ _ _ b_impl_type _ _ -> b_impl_type
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_set_parser
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
   (b: bundle vmatch)
   (p: impl_zero_copy_parse vmatch b.b_spec.parser b.b_rel)
 : Tot (bundle vmatch)
-= { b with
-    b_parser = p;
-  }
+= match b with
+  | Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel b_parser ->
+    Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel p
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_unit
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -62,7 +62,7 @@ let bundle_unit
   b_parser = impl_zero_copy_unit _ _;
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_always_false
   (#cbor_t: Type)
   (vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -79,7 +79,7 @@ let bundle_always_false
   b_parser = impl_zero_copy_always_false _ _;
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_ext
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -90,17 +90,19 @@ let bundle_ext
     typ_included t' b.b_typ /\
     (forall (x: cbor) . Ghost.reveal t' x ==> ((sp'.parser x <: b.b_spec_type) == b.b_spec.parser x))
   ))
-= {
-  b_typ = _;
-  b_spec_type = _;
-  b_spec_type_eq = b.b_spec_type_eq;
+= match b with
+  | Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel b_parser ->
+  {
+  b_typ = t';
+  b_spec_type = b_spec_type;
+  b_spec_type_eq = b_spec_type_eq;
   b_spec = sp';
-  b_impl_type = _;
-  b_rel = _;
-  b_parser = impl_zero_copy_ext b.b_parser sp'.parser ();
+  b_impl_type = b_impl_type;
+  b_rel = b_rel;
+  b_parser = impl_zero_copy_ext b_parser #_ #sp'.serializable sp'.parser ();
 }
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_type_ext
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -112,7 +114,7 @@ let bundle_type_ext
 : Tot (bundle vmatch)
 = bundle_ext b (spec_ext b.b_spec t') ()
 
-inline_for_extraction [@@bundle_get_impl_type_attr]
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_choice
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
@@ -122,12 +124,16 @@ let bundle_choice
   ([@@@erasable] sq: squash (
     typ_disjoint b1.b_typ b2.b_typ
   ))
-= {
+= match b1 with
+  | Mkbundle b_typ1 b_spec_type1 b_spec_type_eq1 b_spec1 b_impl_type1 b_rel1 b_parser1 ->
+  match b2 with
+  | Mkbundle b_typ2 b_spec_type2 b_spec_type_eq2 b_spec2 b_impl_type2 b_rel2 b_parser2 ->
+  {
   b_typ = _;
   b_spec_type = _;
-  b_spec_type_eq = EqTest.either_eq b1.b_spec_type_eq b2.b_spec_type_eq;
-  b_spec = spec_choice b1.b_spec b2.b_spec;
-  b_impl_type = _;
+  b_spec_type_eq = EqTest.either_eq b_spec_type_eq1 b_spec_type_eq2;
+  b_spec = spec_choice b_spec1 b_spec2;
+  b_impl_type = either b_impl_type1 b_impl_type2;
   b_rel = _;
-  b_parser = impl_zero_copy_choice v1 b1.b_parser b2.b_parser;
+  b_parser = impl_zero_copy_choice #_ #_ #_ #_ #_ #b_spec1.parser v1 b_parser1 b_parser2;
 }

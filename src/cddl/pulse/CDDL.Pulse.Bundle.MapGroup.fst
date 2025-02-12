@@ -29,14 +29,16 @@ let bundle_map
   (#vmatch: perm -> ty -> cbor -> slprop)
   (mb: map_bundle vmatch)
 : Tot (bundle vmatch)
-= {
+= match mb with
+  | Mkmap_bundle mb_typ mb_footprint mb_footprint_correct mb_spec_type mb_spec_type_eq mb_spec mb_impl_type mb_rel mb_parser ->
+{
   b_typ = _;
   b_spec_type = _;
-  b_spec_type_eq = mb.mb_spec_type_eq;
-  b_spec = spec_map_group mb.mb_spec;
+  b_spec_type_eq = mb_spec_type_eq;
+  b_spec = spec_map_group mb_spec;
   b_impl_type = _;
   b_rel = _;
-  b_parser = impl_zero_copy_map mb.mb_parser ();
+  b_parser = impl_zero_copy_map mb_parser ();
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
@@ -51,16 +53,18 @@ let bundle_map_ext
     impl_zero_copy_map_ext_precond (Ghost.reveal mb1.mb_typ) (mb1.mb_spec.mg_parser) (Ghost.reveal t2) sp2.mg_parser
   ))
 : Tot (map_bundle vmatch)
-= {
+= match mb1 with
+  | Mkmap_bundle mb_typ mb_footprint mb_footprint_correct mb_spec_type mb_spec_type_eq mb_spec mb_impl_type mb_rel mb_parser ->
+{
   mb_typ = _;
   mb_footprint = _;
   mb_footprint_correct = ();
-  mb_spec_type_eq = mb1.mb_spec_type_eq;
+  mb_spec_type_eq = mb_spec_type_eq;
   mb_spec_type = _;
   mb_spec = sp2;
   mb_impl_type = _;
   mb_rel = _;
-  mb_parser = impl_zero_copy_map_ext mb1.mb_parser sp2.mg_parser ()
+  mb_parser = impl_zero_copy_map_ext #_ #_ #_ #_ #_ #_ #_ #mb_spec.mg_parser mb_parser #_ #_ #sp2.mg_size #sp2.mg_serializable sp2.mg_parser ()
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
@@ -86,16 +90,20 @@ let bundle_map_choice
     map_group_choice_compatible mb1.mb_typ mb2.mb_typ
   ))
 : Tot (map_bundle vmatch)
-= {
+= match mb1 with
+  | Mkmap_bundle mb_typ1 mb_footprint1 mb_footprint_correct1 mb_spec_type1 mb_spec_type_eq1 mb_spec1 mb_impl_type1 mb_rel1 mb_parser1 ->
+  match mb2 with
+  | Mkmap_bundle mb_typ2 mb_footprint2 mb_footprint_correct2 mb_spec_type2 mb_spec_type_eq2 mb_spec2 mb_impl_type2 mb_rel2 mb_parser2 ->
+{
   mb_typ = _;
   mb_footprint = _;
   mb_footprint_correct = ();
   mb_spec_type = _;
-  mb_spec_type_eq = EqTest.either_eq mb1.mb_spec_type_eq mb2.mb_spec_type_eq;
-  mb_spec = mg_spec_choice mb1.mb_spec mb2.mb_spec;
+  mb_spec_type_eq = EqTest.either_eq mb_spec_type_eq1 mb_spec_type_eq2;
+  mb_spec = mg_spec_choice mb_spec1 mb_spec2;
   mb_impl_type = _;
   mb_rel = _;
-  mb_parser = impl_zero_copy_map_choice v1 mb1.mb_parser mb2.mb_parser ();
+  mb_parser = impl_zero_copy_map_choice #_ #_ #_ #_ #_ #_ #_ #mb_spec1.mg_parser v1 mb_parser1 mb_parser2 ();
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
@@ -108,16 +116,18 @@ let bundle_map_zero_or_one
     MapGroupFail? (apply_map_group_det mb1.mb_typ cbor_map_empty)
   ))
 : Tot (map_bundle vmatch)
-= {
+= match mb1 with
+  | Mkmap_bundle mb_typ mb_footprint mb_footprint_correct mb_spec_type mb_spec_type_eq mb_spec mb_impl_type mb_rel mb_parser ->
+{
   mb_typ = _;
   mb_footprint = _;
   mb_footprint_correct = ();
   mb_spec_type = _;
-  mb_spec_type_eq = EqTest.option_eq mb1.mb_spec_type_eq;
-  mb_spec = mg_spec_zero_or_one mb1.mb_spec;
+  mb_spec_type_eq = EqTest.option_eq mb_spec_type_eq;
+  mb_spec = mg_spec_zero_or_one mb_spec;
   mb_impl_type = _;
   mb_rel = _;
-  mb_parser = impl_zero_copy_map_zero_or_one v1 mb1.mb_parser ();
+  mb_parser = impl_zero_copy_map_zero_or_one #_ #_ #_ #_ #_ #_ #_ #mb_spec.mg_parser v1 mb_parser ();
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
@@ -132,16 +142,20 @@ let bundle_map_concat
     typ_disjoint mb1.mb_footprint mb2.mb_footprint
   ))
 : Tot (map_bundle vmatch)
-= {
+= match mb1 with
+  | Mkmap_bundle mb_typ1 mb_footprint1 mb_footprint_correct1 mb_spec_type1 mb_spec_type_eq1 mb_spec1 mb_impl_type1 mb_rel1 mb_parser1 ->
+  match mb2 with
+  | Mkmap_bundle mb_typ2 mb_footprint2 mb_footprint_correct2 mb_spec_type2 mb_spec_type_eq2 mb_spec2 mb_impl_type2 mb_rel2 mb_parser2 ->
+{
   mb_typ = _;
   mb_footprint = _;
   mb_footprint_correct = ();
   mb_spec_type = _;
-  mb_spec_type_eq = EqTest.pair_eq mb1.mb_spec_type_eq mb2.mb_spec_type_eq;
-  mb_spec = mg_spec_concat mb1.mb_spec mb2.mb_spec;
+  mb_spec_type_eq = EqTest.pair_eq mb_spec_type_eq1 mb_spec_type_eq2;
+  mb_spec = mg_spec_concat mb_spec1 mb_spec2;
   mb_impl_type = _;
   mb_rel = _;
-  mb_parser = impl_zero_copy_map_concat share gather mb1.mb_parser mb2.mb_parser ();
+  mb_parser = impl_zero_copy_map_concat share gather mb_parser1 mb_parser2 ();
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
@@ -154,16 +168,18 @@ let bundle_map_match_item_for
   ([@@@erasable] cut: Ghost.erased bool)
   (value: bundle vmatch)
 : Tot (map_bundle vmatch)
-= {
+= match value with
+  | Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel b_parser ->
+{
   mb_typ = _;
   mb_footprint = _;
   mb_footprint_correct = ();
   mb_spec_type = _;
-  mb_spec_type_eq = value.b_spec_type_eq;
-  mb_spec = mg_spec_match_item_for cut key value.b_spec;
+  mb_spec_type_eq = b_spec_type_eq;
+  mb_spec = mg_spec_match_item_for cut key b_spec;
   mb_impl_type = _;
   mb_rel = _;
-  mb_parser = impl_zero_copy_match_item_for get lkey cut value.b_parser;
+  mb_parser = impl_zero_copy_match_item_for get lkey cut b_parser;
 }
 
 module EqTest = CDDL.Spec.EqTest
@@ -184,14 +200,18 @@ let bundle_map_zero_or_more
   (value: bundle vmatch) // MUST contain function pointers ONLY
   (va2: impl_typ vmatch value.b_typ) // MUST be a function pointer
 : Tot (map_bundle vmatch)
-= {
+= match key with
+  | Mkbundle b_typ1 b_spec_type1 b_spec_type_eq1 b_spec1 b_impl_type1 b_rel1 b_parser1 ->
+  match value with
+  | Mkbundle b_typ2 b_spec_type2 b_spec_type_eq2 b_spec2 b_impl_type2 b_rel2 b_parser2 ->
+{
   mb_typ = _;
   mb_footprint = _;
   mb_footprint_correct = ();
   mb_spec_type = _;
-  mb_spec_type_eq = EqTest.map_eq _ (EqTest.list_eq value.b_spec_type_eq);
-  mb_spec = mg_zero_or_more_match_item key.b_spec key_except value.b_spec;
+  mb_spec_type_eq = EqTest.map_eq _ (EqTest.list_eq b_spec_type_eq2);
+  mb_spec = mg_zero_or_more_match_item b_spec1 key_except b_spec2;
   mb_impl_type = _;
   mb_rel = _;
-  mb_parser = impl_zero_copy_map_zero_or_more map_iterator_start map_share map_gather key.b_spec_type_eq key.b_spec va1 key.b_parser va_ex value.b_spec va2 value.b_parser
+  mb_parser = impl_zero_copy_map_zero_or_more map_iterator_start map_share map_gather b_spec_type_eq1 b_spec1 va1 b_parser1 va_ex b_spec2 va2 b_parser2
 }
