@@ -122,6 +122,7 @@ let steps =
 let bundle_get_impl_type_steps =
   delta_attr [
     `%base_attr;
+    `%bundle_attr;
     `%bundle_get_impl_type_attr;
   ] ::
   delta_only (

@@ -36,12 +36,22 @@ inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_att
 let array_bundle_set_parser
   (#cbor_array_iterator_t: Type0)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
-  (b: array_bundle cbor_array_iterator_match)
-  (p: impl_zero_copy_array_group cbor_array_iterator_match b.ab_spec.ag_parser b.ab_rel)
+  ([@@@erasable] b: Ghost.erased (array_bundle cbor_array_iterator_match))
+  (t: Type0)
+  ([@@@erasable] t_eq: squash (t == b.ab_impl_type))
+  (#t': Type)
+  (p: t')
+  ([@@@erasable] p_eq: squash (t' == impl_zero_copy_array_group cbor_array_iterator_match b.ab_spec.ag_parser b.ab_rel))
 : Tot (array_bundle cbor_array_iterator_match)
-= match b with
-  | Mkarray_bundle ab_typ ab_spec_type ab_spec_type_eq ab_spec ab_impl_type ab_rel ab_parser ->
-    Mkarray_bundle ab_typ ab_spec_type ab_spec_type_eq ab_spec ab_impl_type ab_rel p
+= {
+    ab_typ = b.ab_typ;
+    ab_spec_type = b.ab_spec_type;
+    ab_spec_type_eq = b.ab_spec_type_eq;
+    ab_spec = b.ab_spec;
+    ab_impl_type = t;
+    ab_rel = coerce_eq () b.ab_rel;
+    ab_parser = p;
+  }
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr ]
 let bundle_array

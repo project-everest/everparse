@@ -38,12 +38,22 @@ inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_att
 let bundle_set_parser
   (#cbor_t: Type)
   (#vmatch: perm -> cbor_t -> cbor -> slprop)
-  (b: bundle vmatch)
-  (p: impl_zero_copy_parse vmatch b.b_spec.parser b.b_rel)
+  ([@@@erasable] b: Ghost.erased (bundle vmatch))
+  (t: Type0)
+  ([@@@erasable] t_eq: squash (t == b.b_impl_type))
+  (#t': Type)
+  (p: t')
+  ([@@@erasable] p_eq: squash (t' == impl_zero_copy_parse vmatch b.b_spec.parser b.b_rel))
 : Tot (bundle vmatch)
-= match b with
-  | Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel b_parser ->
-    Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel p
+= {
+    b_typ = b.b_typ;
+    b_spec_type = b.b_spec_type;
+    b_spec_type_eq = b.b_spec_type_eq;
+    b_spec = b.b_spec;
+    b_impl_type = t;
+    b_rel = coerce_eq () b.b_rel;
+    b_parser = p
+  }
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_unit
