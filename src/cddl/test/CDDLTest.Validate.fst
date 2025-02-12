@@ -1248,9 +1248,8 @@ let validate_header_map = Impl.validate_typ Det.cbor_det_impl env25.be_v true _ 
 let _ : unit = _ by (FStar.Tactics.print ("bundle"); FStar.Tactics.exact (`()))
 noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b26' = impl_bundle_wf_type' Det.cbor_det_impl env25 avenv25_4 aenv25_4 aaenv25_4 wf26 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
-let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_steps); FStar.Tactics.trefl ()); FStar.Tactics.postprocess_type]
-let parse_header_map = b26'.b_parser
+
+
 (*
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
