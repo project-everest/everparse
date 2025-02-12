@@ -486,7 +486,7 @@ inline_for_extraction
 let cddl_map_iterator_impl_validate1
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
-  (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
+  (#[@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#[@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
   (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
 : Tot (impl_typ vmatch i.t1)
 = i.cddl_map_iterator_impl_validate1
@@ -495,7 +495,7 @@ inline_for_extraction
 let cddl_map_iterator_impl_parse1
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
-  (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
+  (#[@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#[@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
   (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
 : Tot (impl_zero_copy_parse vmatch i.sp1.parser (dsnd spec1))
 = i.cddl_map_iterator_impl_parse1
@@ -504,7 +504,7 @@ inline_for_extraction
 let cddl_map_iterator_impl_validate_ex
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
-  (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
+  (#[@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#[@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
   (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
 : Tot (impl_typ vmatch i.tex)
 = i.cddl_map_iterator_impl_validate_ex
@@ -513,7 +513,7 @@ inline_for_extraction
 let cddl_map_iterator_impl_validate2
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
-  (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
+  (#[@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#[@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
   (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
 : Tot (impl_typ vmatch i.t2)
 = i.cddl_map_iterator_impl_validate2
@@ -522,7 +522,7 @@ inline_for_extraction
 let cddl_map_iterator_impl_parse2
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
-  (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
+  (#[@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#[@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
   (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
 : Tot (impl_zero_copy_parse vmatch i.ps2 (dsnd spec2))
 = i.cddl_map_iterator_impl_parse2
@@ -533,22 +533,22 @@ let mk_map_iterator
   (#vmatch: perm -> ty -> cbor -> slprop)
   (#cbor_map_iterator_t: Type0)
   (cddl_map_iterator_contents: cbor_map_iterator_t)
-  (pm: perm)
+  ([@@@erasable]pm: perm)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
-  (#src_elt1: Type0)
-  (#r1: rel impl_elt1 src_elt1)
-  (#t1: Ghost.erased typ)
-  (sp1: Ghost.erased (spec t1 src_elt1 true))
-  (eq1: Ghost.erased (EqTest.eq_test src_elt1))
+  (#[@@@erasable]src_elt1: Type0)
+  (#[@@@erasable]r1: rel impl_elt1 src_elt1)
+  (#[@@@erasable]t1: Ghost.erased typ)
+  ([@@@erasable]sp1: Ghost.erased (spec t1 src_elt1 true))
+  ([@@@erasable]eq1: Ghost.erased (EqTest.eq_test src_elt1))
   (cddl_map_iterator_impl_validate1: impl_typ vmatch t1)
   (cddl_map_iterator_impl_parse1: impl_zero_copy_parse vmatch sp1.parser r1)
-  (#tex: Ghost.erased typ)
+  (#[@@@erasable]tex: Ghost.erased typ)
   (cddl_map_iterator_impl_validate_ex: impl_typ vmatch tex)
-  (#src_elt2: Type0)
-  (#r2: rel impl_elt2 src_elt2)
-  (#t2: Ghost.erased typ)
-  (#ser2: Ghost.erased (src_elt2 -> bool))
-  (#ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
+  (#[@@@erasable]src_elt2: Type0)
+  (#[@@@erasable]r2: rel impl_elt2 src_elt2)
+  (#[@@@erasable]t2: Ghost.erased typ)
+  (#[@@@erasable]ser2: Ghost.erased (src_elt2 -> bool))
+  (#[@@@erasable]ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
   (cddl_map_iterator_impl_validate2: impl_typ vmatch t2)
   (cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 r2)
 : map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 (Iterator.mk_spec r1) (Iterator.mk_spec r2)
@@ -1249,23 +1249,23 @@ fn impl_zero_copy_map_zero_or_more'
   (map_iterator_start: map_iterator_start_t vmatch cbor_map_iterator_match)
   (map_share: share_t cbor_map_iterator_match)
   (map_gather: gather_t cbor_map_iterator_match)
-    (#key: Ghost.erased typ)
-    (#tkey: Type0)
-    (key_eq: Ghost.erased (EqTest.eq_test tkey))
-    (sp1: Ghost.erased (spec key tkey true))
+    (#[@@@erasable]key: Ghost.erased typ)
+    (#[@@@erasable]tkey: Type0)
+    ([@@@erasable]key_eq: Ghost.erased (EqTest.eq_test tkey))
+    ([@@@erasable]sp1: Ghost.erased (spec key tkey true))
     (va1: impl_typ vmatch key) // MUST be a function pointer
     (#ikey: Type0)
-    (#r1: rel ikey tkey)
+    (#[@@@erasable]r1: rel ikey tkey)
     (pa1: impl_zero_copy_parse vmatch sp1.parser r1) // MUST be a function pointer
-    (#key_except: Ghost.erased typ)
+    (#[@@@erasable]key_except: Ghost.erased typ)
     (va_ex: impl_typ vmatch key_except) // MUST be a function pointer
-    (#value: Ghost.erased typ)
-    (#tvalue: Type0)
-    (#inj: Ghost.erased bool)
-    (sp2: Ghost.erased (spec value tvalue inj))
+    (#[@@@erasable]value: Ghost.erased typ)
+    (#[@@@erasable]tvalue: Type0)
+    (#[@@@erasable]inj: Ghost.erased bool)
+    ([@@@erasable]sp2: Ghost.erased (spec value tvalue inj))
     (va2: impl_typ vmatch value) // MUST be a function pointer
     (#ivalue: Type0)
-    (#r2: rel ivalue tvalue)
+    (#[@@@erasable]r2: rel ivalue tvalue)
     (pa2: impl_zero_copy_parse vmatch sp2.parser r2) // MUST be a function pointer
 : impl_zero_copy_map_group
     #ty
@@ -1307,23 +1307,23 @@ fn impl_zero_copy_map_zero_or_more
   (map_iterator_start: map_iterator_start_t vmatch cbor_map_iterator_match)
   (map_share: share_t cbor_map_iterator_match)
   (map_gather: gather_t cbor_map_iterator_match)
-    (#key: Ghost.erased typ)
-    (#tkey: Type0)
-    (key_eq: Ghost.erased (EqTest.eq_test tkey))
-    (sp1: Ghost.erased (spec key tkey true))
+    (#[@@@erasable]key: Ghost.erased typ)
+    (#[@@@erasable]tkey: Type0)
+    ([@@@erasable]key_eq: Ghost.erased (EqTest.eq_test tkey))
+    ([@@@erasable]sp1: Ghost.erased (spec key tkey true))
     (va1: impl_typ vmatch key) // MUST be a function pointer
     (#ikey: Type0)
-    (#r1: rel ikey tkey)
+    (#[@@@erasable]r1: rel ikey tkey)
     (pa1: impl_zero_copy_parse vmatch sp1.parser r1) // MUST be a function pointer
-    (#key_except: Ghost.erased typ)
+    (#[@@@erasable]key_except: Ghost.erased typ)
     (va_ex: impl_typ vmatch key_except) // MUST be a function pointer
-    (#value: Ghost.erased typ)
-    (#tvalue: Type0)
-    (#inj: Ghost.erased bool)
-    (sp2: Ghost.erased (spec value tvalue inj))
+    (#[@@@erasable]value: Ghost.erased typ)
+    (#[@@@erasable]tvalue: Type0)
+    (#[@@@erasable]inj: Ghost.erased bool)
+    ([@@@erasable]sp2: Ghost.erased (spec value tvalue inj))
     (va2: impl_typ vmatch value) // MUST be a function pointer
     (#ivalue: Type0)
-    (#r2: rel ivalue tvalue)
+    (#[@@@erasable]r2: rel ivalue tvalue)
     (pa2: impl_zero_copy_parse vmatch sp2.parser r2) // MUST be a function pointer
 : impl_zero_copy_map_group
     #ty

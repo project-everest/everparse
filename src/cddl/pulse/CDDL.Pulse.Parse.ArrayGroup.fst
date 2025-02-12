@@ -347,6 +347,14 @@ type array_iterator_t (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match
 }
 
 inline_for_extraction
+let cddl_array_iterator_impl_validate
+  (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
+  (#[@@@erasable]spec: Ghost.erased (Iterator.type_spec impl_elt))
+  (i: array_iterator_t cbor_array_iterator_match impl_elt spec)
+: Tot (impl_array_group cbor_array_iterator_match i.ty)
+= i.cddl_array_iterator_impl_validate
+
+inline_for_extraction
 let cddl_array_iterator_impl_parse
   (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
   (#[@@@erasable]spec: Ghost.erased (Iterator.type_spec impl_elt))
@@ -643,8 +651,7 @@ fn cddl_array_iterator_next
   Trade.trans _ _ (rel_array_iterator cbor_array_iterator_match spec gi l);
   let len0 = length i.cddl_array_iterator_contents;
   let mut pj = i.cddl_array_iterator_contents;
-  let w = i.cddl_array_iterator_impl_validate; // FIXME: WHY WHY WHY do I need this separate let binding?
-  let _test : bool = w pj;
+  let _test : bool = cddl_array_iterator_impl_validate i pj;
   assert (pure (_test == true));
   Trade.trans_hyp_r _ _ _ _;
   with pmj gj lj . assert (pts_to pj gj ** cbor_array_iterator_match pmj gj lj);
