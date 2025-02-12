@@ -179,7 +179,7 @@ cddl: cddl-lib cddl-ocaml
 
 .PHONY: cddl-plugin-test-verify
 
-cddl-plugin-test-verify: cddl-ocaml
+cddl-plugin-test-verify: cddl
 	+$(MAKE) -C src/cddl/test
 
 ifeq (,$(NO_PULSE))
