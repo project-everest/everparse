@@ -129,7 +129,7 @@ let bundle_array_group_concat
   (b1: array_bundle cbor_array_iterator_match)
   (v1: impl_array_group cbor_array_iterator_match b1.ab_typ)
   (b2: array_bundle cbor_array_iterator_match)
-  (sq: squash (
+  ([@@@erasable] sq: squash (
     array_group_concat_unique_weak b1.ab_typ b2.ab_typ
   ))
 : Tot (array_bundle cbor_array_iterator_match)
@@ -150,7 +150,7 @@ let bundle_array_group_choice
   (b1: array_bundle cbor_array_iterator_match)
   (v1: impl_array_group cbor_array_iterator_match b1.ab_typ)
   (b2: array_bundle cbor_array_iterator_match)
-  (sq: squash (
+  ([@@@erasable] sq: squash (
     array_group_disjoint b1.ab_typ (close_array_group b2.ab_typ)
   ))
 : Tot (array_bundle cbor_array_iterator_match)
@@ -170,7 +170,7 @@ let bundle_array_group_zero_or_one
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   (b1: array_bundle cbor_array_iterator_match)
   (v1: impl_array_group cbor_array_iterator_match b1.ab_typ)
-  (sq: squash (
+  ([@@@erasable] sq: squash (
     array_group_is_nonempty b1.ab_typ
   ))
 : Tot (array_bundle cbor_array_iterator_match)
@@ -192,7 +192,7 @@ let bundle_array_group_zero_or_more
   (gather: gather_t cbor_array_iterator_match)
   (b1: array_bundle cbor_array_iterator_match)
   (v1: impl_array_group cbor_array_iterator_match b1.ab_typ)
-  (sq: squash (
+  ([@@@erasable] sq: squash (
     array_group_concat_unique_strong b1.ab_typ b1.ab_typ /\
     array_group_is_nonempty b1.ab_typ
   ))
@@ -215,7 +215,7 @@ let bundle_array_group_one_or_more
   (gather: gather_t cbor_array_iterator_match)
   (b1: array_bundle cbor_array_iterator_match)
   (v1: impl_array_group cbor_array_iterator_match b1.ab_typ)
-  (sq: squash (
+  ([@@@erasable] sq: squash (
     array_group_concat_unique_strong b1.ab_typ b1.ab_typ /\
     array_group_is_nonempty b1.ab_typ
   ))

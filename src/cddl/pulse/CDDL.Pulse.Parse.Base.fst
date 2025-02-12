@@ -76,9 +76,9 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_unit
     (#ty: Type0)
     (vmatch: perm -> ty -> cbor -> slprop)
-    (#t: Ghost.erased typ)
-    (#tgt_serializable: Ghost.erased (unit -> bool))
-    (ps: Ghost.erased (parser_spec t unit tgt_serializable))
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt_serializable: Ghost.erased (unit -> bool))
+    ([@@@erasable]ps: Ghost.erased (parser_spec t unit tgt_serializable))
 : impl_copyful_parse #ty vmatch #(Ghost.reveal t) #unit #(Ghost.reveal tgt_serializable) (Ghost.reveal ps) #unit rel_unit // FIXME: WHY WHY WHY do I need to fill in all implicits by hand?
 =
     (c: _)
@@ -96,9 +96,9 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_unit
     (#ty: Type0)
     (vmatch: perm -> ty -> cbor -> slprop)
-    (#t: Ghost.erased typ)
-    (#tgt_serializable: Ghost.erased (unit -> bool))
-    (ps: Ghost.erased (parser_spec t unit tgt_serializable))
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt_serializable: Ghost.erased (unit -> bool))
+    ([@@@erasable]ps: Ghost.erased (parser_spec t unit tgt_serializable))
 : impl_zero_copy_parse #ty vmatch #(Ghost.reveal t) #unit #(Ghost.reveal tgt_serializable) (Ghost.reveal ps) #unit rel_unit // FIXME: WHY WHY WHY do I need to fill in all implicits by hand?
 =
     (c: _)
@@ -147,9 +147,9 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_always_false
     (#ty: Type0)
     (vmatch: perm -> ty -> cbor -> slprop)
-    (#t: Ghost.erased typ)
-    (#tgt_serializable: Ghost.erased (squash False -> bool))
-    (ps: Ghost.erased (parser_spec t (squash False) tgt_serializable))
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt_serializable: Ghost.erased (squash False -> bool))
+    ([@@@erasable]ps: Ghost.erased (parser_spec t (squash False) tgt_serializable))
 : impl_zero_copy_parse #ty vmatch #(Ghost.reveal t) #(squash False) #(Ghost.reveal tgt_serializable) (Ghost.reveal ps) #(squash False) (rel_always_false (squash False) (squash False)) // FIXME: WHY WHY WHY do I need to fill in all implicits by hand?
 =
     (c: _)
@@ -169,10 +169,10 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_pure_as_zero_copy
     (#ty: Type0)
     (#vmatch: perm -> ty -> cbor -> slprop)
-    (#t: Ghost.erased typ)
-    (#tgt: Type0)
-    (#tgt_serializable: Ghost.erased (tgt -> bool))
-    (#ps: Ghost.erased (parser_spec t tgt tgt_serializable))
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable]tgt_serializable: Ghost.erased (tgt -> bool))
+    (#[@@@erasable]ps: Ghost.erased (parser_spec t tgt tgt_serializable))
     (i: impl_copyful_parse vmatch ps (rel_pure tgt))
 : impl_zero_copy_parse #_ vmatch #(Ghost.reveal t) #tgt #(Ghost.reveal tgt_serializable) (Ghost.reveal ps) #tgt (rel_pure tgt) 
 =
@@ -198,17 +198,17 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_copyful_ext
     (#ty: Type0)
     (#vmatch: perm -> ty -> cbor -> slprop)
-    (#t: Ghost.erased typ)
-    (#tgt: Type0)
-    (#tgt_serializable: Ghost.erased (tgt -> bool))
-    (#ps: Ghost.erased (parser_spec t tgt tgt_serializable))
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable]tgt_serializable: Ghost.erased (tgt -> bool))
+    (#[@@@erasable]ps: Ghost.erased (parser_spec t tgt tgt_serializable))
     (#impl_tgt: Type0)
-    (#r: rel impl_tgt tgt)
+    (#[@@@erasable]r: rel impl_tgt tgt)
     (i: impl_copyful_parse vmatch ps r)
-    (#t': Ghost.erased typ)
-    (#tgt_serializable': Ghost.erased (tgt -> bool))
-    (ps': Ghost.erased (parser_spec t' tgt tgt_serializable'))
-    (sq: squash (
+    (#[@@@erasable]t': Ghost.erased typ)
+    (#[@@@erasable]tgt_serializable': Ghost.erased (tgt -> bool))
+    ([@@@erasable]ps': Ghost.erased (parser_spec t' tgt tgt_serializable'))
+    ([@@@erasable]sq: squash (
       typ_included t' t /\
       (forall (x: cbor) . Ghost.reveal t' x ==> ((Ghost.reveal ps' x <: tgt) == Ghost.reveal ps x))
     ))
@@ -227,17 +227,17 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_ext
     (#ty: Type0)
     (#vmatch: perm -> ty -> cbor -> slprop)
-    (#t: Ghost.erased typ)
-    (#tgt: Type0)
-    (#tgt_serializable: Ghost.erased (tgt -> bool))
-    (#ps: Ghost.erased (parser_spec t tgt tgt_serializable))
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable]tgt_serializable: Ghost.erased (tgt -> bool))
+    (#[@@@erasable]ps: Ghost.erased (parser_spec t tgt tgt_serializable))
     (#impl_tgt: Type0)
-    (#r: rel impl_tgt tgt)
+    (#[@@@erasable]r: rel impl_tgt tgt)
     (i: impl_zero_copy_parse vmatch ps r)
-    (#t': Ghost.erased typ)
-    (#tgt_serializable': Ghost.erased (tgt -> bool))
-    (ps': Ghost.erased (parser_spec t' tgt tgt_serializable'))
-    (sq: squash (
+    (#[@@@erasable]t': Ghost.erased typ)
+    (#[@@@erasable]tgt_serializable': Ghost.erased (tgt -> bool))
+    ([@@@erasable]ps': Ghost.erased (parser_spec t' tgt tgt_serializable'))
+    ([@@@erasable]sq: squash (
       typ_included t' t /\
       (forall (x: cbor) . Ghost.reveal t' x ==> ((Ghost.reveal ps' x <: tgt) == Ghost.reveal ps x))
     ))
@@ -256,20 +256,20 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_choice
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
-    (#t1: Ghost.erased typ)
-    (#tgt1: Type0)
-    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
-    (#ps1: Ghost.erased (parser_spec t1 tgt1 tgt_serializable1))
+    (#[@@@erasable]t1: Ghost.erased typ)
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable]tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#[@@@erasable]ps1: Ghost.erased (parser_spec t1 tgt1 tgt_serializable1))
     (#impl1: Type0)
-    (#r1: rel impl1 tgt1)
+    (#[@@@erasable]r1: rel impl1 tgt1)
     (v1: impl_typ vmatch t1)
     (p1: impl_zero_copy_parse vmatch ps1 r1)
-    (#t2: Ghost.erased typ)
-    (#tgt2: Type0)
-    (#tgt_serializable2: Ghost.erased (tgt2 -> bool))
-    (#ps2: Ghost.erased (parser_spec t2 tgt2 tgt_serializable2))
+    (#[@@@erasable]t2: Ghost.erased typ)
+    (#[@@@erasable]tgt2: Type0)
+    (#[@@@erasable]tgt_serializable2: Ghost.erased (tgt2 -> bool))
+    (#[@@@erasable]ps2: Ghost.erased (parser_spec t2 tgt2 tgt_serializable2))
     (#impl2: Type0)
-    (#r2: rel impl2 tgt2)
+    (#[@@@erasable]r2: rel impl2 tgt2)
     (p2: impl_zero_copy_parse vmatch ps2 r2)
 : impl_zero_copy_parse #_ vmatch #(t_choice (Ghost.reveal t1) (Ghost.reveal t2)) #(either tgt1 tgt2) #(spec_choice_serializable (Ghost.reveal tgt_serializable1) (Ghost.reveal tgt_serializable2)) (parser_spec_choice (Ghost.reveal ps1) (Ghost.reveal ps2) (spec_choice_serializable (Ghost.reveal tgt_serializable1) (Ghost.reveal tgt_serializable2))) #(either impl1 impl2) (rel_either r1 r2)
 =

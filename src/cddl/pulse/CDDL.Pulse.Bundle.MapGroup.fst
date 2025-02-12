@@ -104,7 +104,7 @@ let bundle_map_zero_or_one
   (#vmatch: perm -> ty -> cbor -> slprop)
   (mb1: map_bundle vmatch)
   (v1: impl_map_group_t vmatch mb1.mb_typ mb1.mb_footprint)
-  (sq: squash (
+  ([@@@erasable] sq: squash (
     MapGroupFail? (apply_map_group_det mb1.mb_typ cbor_map_empty)
   ))
 : Tot (map_bundle vmatch)
@@ -128,7 +128,7 @@ let bundle_map_concat
   (gather: gather_t vmatch)
   (mb1: map_bundle vmatch)
   (mb2: map_bundle vmatch)
-  (sq: squash (
+  ([@@@erasable] sq: squash (
     typ_disjoint mb1.mb_footprint mb2.mb_footprint
   ))
 : Tot (map_bundle vmatch)

@@ -75,16 +75,16 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
-    (#t: Ghost.erased (det_map_group))
-    (#fp: Ghost.erased typ)
-    (#tgt: Type0)
-    (#tgt_size: Ghost.erased (tgt -> nat))
-    (#tgt_serializable: Ghost.erased (tgt -> bool))
-    (#ps: Ghost.erased (map_group_parser_spec t fp tgt_size tgt_serializable))
+    (#[@@@erasable]t: Ghost.erased (det_map_group))
+    (#[@@@erasable]fp: Ghost.erased typ)
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable]tgt_size: Ghost.erased (tgt -> nat))
+    (#[@@@erasable]tgt_serializable: Ghost.erased (tgt -> bool))
+    (#[@@@erasable]ps: Ghost.erased (map_group_parser_spec t fp tgt_size tgt_serializable))
     (#impl_tgt: Type0)
-    (#r: rel impl_tgt tgt)
+    (#[@@@erasable]r: rel impl_tgt tgt)
     (pa: impl_zero_copy_map_group vmatch ps r)
-    (sq: squash (
+    ([@@@erasable]sq: squash (
       map_group_footprint t fp
     ))
 : impl_zero_copy_parse #ty vmatch #(t_map (Ghost.reveal t)) #tgt #(spec_map_group_serializable (Ghost.reveal tgt_size) (Ghost.reveal tgt_serializable)) (parser_spec_map_group (Ghost.reveal t) (Ghost.reveal ps) (spec_map_group_serializable (Ghost.reveal tgt_size) (Ghost.reveal tgt_serializable))) #impl_tgt r
@@ -129,21 +129,21 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_ext
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
-    (#t1: Ghost.erased (det_map_group))
-    (#fp1: Ghost.erased typ)
-    (#tgt1: Type0)
-    (#tgt_size1: Ghost.erased (tgt1 -> nat))
-    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
-    (#ps1: Ghost.erased (map_group_parser_spec t1 fp1 tgt_size1 tgt_serializable1))
+    (#[@@@erasable]t1: Ghost.erased (det_map_group))
+    (#[@@@erasable]fp1: Ghost.erased typ)
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable]tgt_size1: Ghost.erased (tgt1 -> nat))
+    (#[@@@erasable]tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#[@@@erasable]ps1: Ghost.erased (map_group_parser_spec t1 fp1 tgt_size1 tgt_serializable1))
     (#impl_tgt1: Type0)
-    (#r1: rel impl_tgt1 tgt1)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
     (pa1: impl_zero_copy_map_group vmatch ps1 r1)
-    (#t2: Ghost.erased det_map_group)
-    (#fp2: Ghost.erased typ)
-    (#tgt_size2: Ghost.erased (tgt1 -> nat))
-    (#tgt_serializable2: Ghost.erased (tgt1 -> bool))
-    (ps2: Ghost.erased (map_group_parser_spec t2 fp2 tgt_size2 tgt_serializable2))
-    (sq: squash (
+    (#[@@@erasable]t2: Ghost.erased det_map_group)
+    (#[@@@erasable]fp2: Ghost.erased typ)
+    (#[@@@erasable]tgt_size2: Ghost.erased (tgt1 -> nat))
+    (#[@@@erasable]tgt_serializable2: Ghost.erased (tgt1 -> bool))
+    ([@@@erasable]ps2: Ghost.erased (map_group_parser_spec t2 fp2 tgt_size2 tgt_serializable2))
+    ([@@@erasable]sq: squash (
       impl_zero_copy_map_ext_precond (Ghost.reveal t1) (Ghost.reveal ps1) (Ghost.reveal t2) (Ghost.reveal ps2)
     ))
 : impl_zero_copy_map_group #ty vmatch #(Ghost.reveal t2) #(Ghost.reveal fp2)
@@ -170,26 +170,26 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_choice
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
-    (#t1: Ghost.erased (det_map_group))
-    (#fp1: Ghost.erased typ)
-    (#tgt1: Type0)
-    (#tgt_size1: Ghost.erased (tgt1 -> nat))
-    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
-    (#ps1: Ghost.erased (map_group_parser_spec t1 fp1 tgt_size1 tgt_serializable1))
+    (#[@@@erasable]t1: Ghost.erased (det_map_group))
+    (#[@@@erasable]fp1: Ghost.erased typ)
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable]tgt_size1: Ghost.erased (tgt1 -> nat))
+    (#[@@@erasable]tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#[@@@erasable]ps1: Ghost.erased (map_group_parser_spec t1 fp1 tgt_size1 tgt_serializable1))
     (#impl_tgt1: Type0)
-    (#r1: rel impl_tgt1 tgt1)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
     (va1: impl_map_group_t vmatch t1 fp1)
     (pa1: impl_zero_copy_map_group vmatch ps1 r1)
-    (#t2: Ghost.erased (det_map_group))
-    (#fp2: Ghost.erased typ)
-    (#tgt2: Type0)
-    (#tgt_size2: Ghost.erased (tgt2 -> nat))
-    (#tgt_serializable2: Ghost.erased (tgt2 -> bool))
-    (#ps2: Ghost.erased (map_group_parser_spec t2 fp2 tgt_size2 tgt_serializable2))
+    (#[@@@erasable]t2: Ghost.erased (det_map_group))
+    (#[@@@erasable]fp2: Ghost.erased typ)
+    (#[@@@erasable]tgt2: Type0)
+    (#[@@@erasable]tgt_size2: Ghost.erased (tgt2 -> nat))
+    (#[@@@erasable]tgt_serializable2: Ghost.erased (tgt2 -> bool))
+    (#[@@@erasable]ps2: Ghost.erased (map_group_parser_spec t2 fp2 tgt_size2 tgt_serializable2))
     (#impl_tgt2: Type0)
-    (#r2: rel impl_tgt2 tgt2)
+    (#[@@@erasable]r2: rel impl_tgt2 tgt2)
     (pa2: impl_zero_copy_map_group vmatch ps2 r2)
-    (sq: squash (
+    ([@@@erasable]sq: squash (
       map_group_footprint t1 fp1 /\
       map_group_footprint t2 fp2
     ))
@@ -242,17 +242,17 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_map_zero_or_one
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
-    (#t1: Ghost.erased (det_map_group))
-    (#fp1: Ghost.erased typ)
-    (#tgt1: Type0)
-    (#tgt_size1: Ghost.erased (tgt1 -> nat))
-    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
-    (#ps1: Ghost.erased (map_group_parser_spec t1 fp1 tgt_size1 tgt_serializable1))
+    (#[@@@erasable]t1: Ghost.erased (det_map_group))
+    (#[@@@erasable]fp1: Ghost.erased typ)
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable]tgt_size1: Ghost.erased (tgt1 -> nat))
+    (#[@@@erasable]tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#[@@@erasable]ps1: Ghost.erased (map_group_parser_spec t1 fp1 tgt_size1 tgt_serializable1))
     (#impl_tgt1: Type0)
-    (#r1: rel impl_tgt1 tgt1)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
     (va1: impl_map_group_t vmatch t1 fp1)
     (pa1: impl_zero_copy_map_group vmatch ps1 r1)
-    (sq: squash (
+    ([@@@erasable]sq: squash (
       map_group_footprint t1 fp1 /\
       MapGroupFail? (apply_map_group_det t1 cbor_map_empty)
     ))
@@ -306,25 +306,25 @@ fn impl_zero_copy_map_concat
   (#vmatch: perm -> ty -> cbor -> slprop)
   (share: share_t vmatch)
   (gather: gather_t vmatch)
-    (#t1: Ghost.erased (det_map_group))
-    (#fp1: Ghost.erased typ)
-    (#tgt1: Type0)
-    (#tgt_size1: Ghost.erased (tgt1 -> nat))
-    (#tgt_serializable1: Ghost.erased (tgt1 -> bool))
-    (#ps1: Ghost.erased (map_group_parser_spec t1 fp1 tgt_size1 tgt_serializable1))
+    (#[@@@erasable]t1: Ghost.erased (det_map_group))
+    (#[@@@erasable]fp1: Ghost.erased typ)
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable]tgt_size1: Ghost.erased (tgt1 -> nat))
+    (#[@@@erasable]tgt_serializable1: Ghost.erased (tgt1 -> bool))
+    (#[@@@erasable]ps1: Ghost.erased (map_group_parser_spec t1 fp1 tgt_size1 tgt_serializable1))
     (#impl_tgt1: Type0)
-    (#r1: rel impl_tgt1 tgt1)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
     (pa1: impl_zero_copy_map_group vmatch ps1 r1)
-    (#t2: Ghost.erased (det_map_group))
-    (#fp2: Ghost.erased typ)
-    (#tgt2: Type0)
-    (#tgt_size2: Ghost.erased (tgt2 -> nat))
-    (#tgt_serializable2: Ghost.erased (tgt2 -> bool))
-    (#ps2: Ghost.erased (map_group_parser_spec t2 fp2 tgt_size2 tgt_serializable2))
+    (#[@@@erasable]t2: Ghost.erased (det_map_group))
+    (#[@@@erasable]fp2: Ghost.erased typ)
+    (#[@@@erasable]tgt2: Type0)
+    (#[@@@erasable]tgt_size2: Ghost.erased (tgt2 -> nat))
+    (#[@@@erasable]tgt_serializable2: Ghost.erased (tgt2 -> bool))
+    (#[@@@erasable]ps2: Ghost.erased (map_group_parser_spec t2 fp2 tgt_size2 tgt_serializable2))
     (#impl_tgt2: Type0)
-    (#r2: rel impl_tgt2 tgt2)
+    (#[@@@erasable]r2: rel impl_tgt2 tgt2)
     (pa2: impl_zero_copy_map_group vmatch ps2 r2)
-    (sq: squash (
+    ([@@@erasable]sq: squash (
       map_group_footprint t1 fp1 /\
       map_group_footprint t2 fp2 /\
       typ_disjoint fp1 fp2
@@ -389,14 +389,14 @@ fn impl_zero_copy_match_item_for_cont
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
   (get: map_get_t vmatch)
-  (key: Ghost.erased cbor)
-  (cut: Ghost.erased bool)
-  (#value: Ghost.erased typ)
-  (#tvalue: Type0)
-  (#tvalue_ser: Ghost.erased (tvalue -> bool))
-  (#pvalue: Ghost.erased (parser_spec value tvalue tvalue_ser))
+  ([@@@erasable]key: Ghost.erased cbor)
+  ([@@@erasable]cut: Ghost.erased bool)
+  (#[@@@erasable]value: Ghost.erased typ)
+  (#[@@@erasable]tvalue: Type0)
+  (#[@@@erasable]tvalue_ser: Ghost.erased (tvalue -> bool))
+  (#[@@@erasable]pvalue: Ghost.erased (parser_spec value tvalue tvalue_ser))
   (#iv: Type0)
-  (#r: rel iv tvalue)
+  (#[@@@erasable]r: rel iv tvalue)
   (ivalue: impl_zero_copy_parse vmatch pvalue r)
   (c: ty)
   (#p: perm)
@@ -434,15 +434,15 @@ fn impl_zero_copy_match_item_for
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
   (get: map_get_t vmatch)
-  (#key: Ghost.erased cbor)
+  (#[@@@erasable]key: Ghost.erased cbor)
   (lkey: with_cbor_literal_t vmatch (Ghost.reveal key))
-  (cut: Ghost.erased bool)
-  (#value: Ghost.erased typ)
-  (#tvalue: Type0)
-  (#tvalue_ser: Ghost.erased (tvalue -> bool))
-  (#pvalue: Ghost.erased (parser_spec value tvalue tvalue_ser))
+  ([@@@erasable]cut: Ghost.erased bool)
+  (#[@@@erasable]value: Ghost.erased typ)
+  (#[@@@erasable]tvalue: Type0)
+  (#[@@@erasable]tvalue_ser: Ghost.erased (tvalue -> bool))
+  (#[@@@erasable]pvalue: Ghost.erased (parser_spec value tvalue tvalue_ser))
   (#iv: Type0)
-  (#r: rel iv tvalue)
+  (#[@@@erasable]r: rel iv tvalue)
   (ivalue: impl_zero_copy_parse vmatch pvalue r)
 : impl_zero_copy_map_group #ty vmatch #(map_group_match_item_for (Ghost.reveal cut) (Ghost.reveal key) (Ghost.reveal value)) #(t_literal (Ghost.reveal key)) #tvalue #(mg_spec_match_item_for_size tvalue) #(Ghost.reveal tvalue_ser) (map_group_parser_spec_match_item_for (Ghost.reveal cut) (Ghost.reveal key) (Ghost.reveal pvalue) (mg_spec_match_item_for_size tvalue)) #iv r
 = (c: _)
@@ -464,20 +464,20 @@ noeq
 type map_iterator_t
   (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (cbor_map_iterator_t: Type0)
   (impl_elt1: Type0) (impl_elt2: Type0)
-  (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (spec2: Ghost.erased (Iterator.type_spec impl_elt2)) // hopefully there should be at most one spec per impl_elt, otherwise Karamel monomorphization will introduce conflicts. Anyway, src_elt MUST NOT be extracted (it contains list types, etc.)
+  ([@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) ([@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2)) // hopefully there should be at most one spec per impl_elt, otherwise Karamel monomorphization will introduce conflicts. Anyway, src_elt MUST NOT be extracted (it contains list types, etc.)
 : Type0 = {
   cddl_map_iterator_contents: cbor_map_iterator_t;
-  pm: perm;
-  t1: Ghost.erased typ;
-  sp1: Ghost.erased (spec t1 (dfst spec1) true); // I need to know that the parser is injective, to maintain the invariant on maps in rel_map_iterator
-  eq1: Ghost.erased (EqTest.eq_test (dfst spec1));
+  [@@@erasable]pm: perm;
+  [@@@erasable]t1: Ghost.erased typ;
+  [@@@erasable]sp1: Ghost.erased (spec t1 (dfst spec1) true); // I need to know that the parser is injective, to maintain the invariant on maps in rel_map_iterator
+  [@@@erasable]eq1: Ghost.erased (EqTest.eq_test (dfst spec1));
   cddl_map_iterator_impl_validate1: impl_typ vmatch t1;
   cddl_map_iterator_impl_parse1: impl_zero_copy_parse vmatch sp1.parser (dsnd spec1);
-  tex: Ghost.erased typ;
+  [@@@erasable]tex: Ghost.erased typ;
   cddl_map_iterator_impl_validate_ex: impl_typ vmatch tex;
-  t2: Ghost.erased typ;
-  ser2: Ghost.erased (dfst spec2 -> bool);
-  ps2: Ghost.erased (parser_spec t2 (dfst spec2) ser2);
+  [@@@erasable]t2: Ghost.erased typ;
+  [@@@erasable]ser2: Ghost.erased (dfst spec2 -> bool);
+  [@@@erasable]ps2: Ghost.erased (parser_spec t2 (dfst spec2) ser2);
   cddl_map_iterator_impl_validate2: impl_typ vmatch t2;
   cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 (dsnd spec2);
 }
