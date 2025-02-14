@@ -1,20 +1,20 @@
 module LowParse.Pulse.Base
 open FStar.Tactics.V2
-open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
-open Pulse.Lib.Slice
+open Pulse.Lib.Pervasives open Pulse.Lib.Trade
 open LowParse.Spec.Base
 
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
-module S = Pulse.Lib.Slice
+module S = Pulse.Lib.Slice.Util
+module MS = Pulse.Lib.MutableSlice.Util
 
-let pts_to_serialized (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (input: slice byte) (#[exact (`1.0R)] pm: perm) (v: t) : slprop =
+let pts_to_serialized (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (input: S.slice byte) (#[exact (`1.0R)] pm: perm) (v: t) : slprop =
   pts_to input #pm (bare_serialize s v)
 
 ```pulse
 ghost
 fn pts_to_serialized_intro_trade
-  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v0: bytes) (v: t)
+  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: S.slice byte) (#pm: perm) (#v0: bytes) (v: t)
   requires (pts_to input #pm v0 ** pure (v0 == bare_serialize s v))
   ensures (pts_to_serialized s input #pm v ** (trade (pts_to_serialized s input #pm v) (pts_to input #pm v0)))
 {
@@ -25,7 +25,7 @@ fn pts_to_serialized_intro_trade
 ```pulse
 ghost
 fn pts_to_serialized_elim_trade
-  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
+  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: S.slice byte) (#pm: perm) (#v: t)
   requires (pts_to_serialized s input #pm v)
   ensures (pts_to input #pm (bare_serialize s v) ** (trade (pts_to input #pm (bare_serialize s v)) (pts_to_serialized s input #pm v)))
 {
@@ -36,12 +36,12 @@ fn pts_to_serialized_elim_trade
 ```pulse
 ghost
 fn pts_to_serialized_length
-  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
+  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: S.slice byte) (#pm: perm) (#v: t)
   requires (pts_to_serialized s input #pm v)
-  ensures (pts_to_serialized s input #pm v ** pure (Seq.length (bare_serialize s v) == SZ.v (len input)))
+  ensures (pts_to_serialized s input #pm v ** pure (Seq.length (bare_serialize s v) == SZ.v (S.len input)))
 {
   unfold (pts_to_serialized s input #pm v);
-  pts_to_len input;
+  S.pts_to_len input;
   fold (pts_to_serialized s input #pm v)
 }
 ```
@@ -71,7 +71,7 @@ fn pts_to_serialized_ext
   (#k2: parser_kind)
   (#p2: parser k2 t)
   (s2: serializer p2)
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: t)
   requires pts_to_serialized s1 input #pm v ** pure (
@@ -105,7 +105,7 @@ fn pts_to_serialized_ext_trade_gen
   (#k2: parser_kind)
   (#p2: parser k2 t2)
   (s2: serializer p2)
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: t1)
   requires pts_to_serialized s1 input #pm v ** pure (
@@ -140,7 +140,7 @@ fn pts_to_serialized_ext_trade
   (#k2: parser_kind)
   (#p2: parser k2 t)
   (s2: serializer p2)
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: t)
   requires pts_to_serialized s1 input #pm v ** pure (
@@ -164,7 +164,7 @@ fn pts_to_serialized_ext_trade
 ```pulse
 ghost
 fn pts_to_serialized_share
-  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
+  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: S.slice byte) (#pm: perm) (#v: t)
   requires (pts_to_serialized s input #pm v)
   ensures (pts_to_serialized s input #(pm /. 2.0R) v ** pts_to_serialized s input #(pm /. 2.0R) v)
 {
@@ -179,7 +179,7 @@ fn pts_to_serialized_share
 ```pulse
 ghost
 fn pts_to_serialized_gather
-  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm0 #pm1: perm) (#v0 #v1: t)
+  (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: S.slice byte) (#pm0 #pm1: perm) (#v0 #v1: t)
   requires (pts_to_serialized s input #pm0 v0 ** pts_to_serialized s input #pm1 v1)
   ensures (pts_to_serialized s input #(pm0 +. pm1) v0 ** pure (v0 == v1))
 {
@@ -213,7 +213,7 @@ module R = Pulse.Lib.Reference
 
 inline_for_extraction
 let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
-  (input: slice byte) ->
+  (input: S.slice byte) ->
   (poffset: R.ref SZ.t) ->
   (#offset: Ghost.erased SZ.t) ->
   (#pm: perm) ->
@@ -226,7 +226,7 @@ inline_for_extraction
 ```pulse
 fn validate
   (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (w: validator p)
-  (input: slice byte)
+  (input: S.slice byte)
   (poffset: R.ref SZ.t)
   (#offset: Ghost.erased SZ.t)
   (#pm: perm)
@@ -248,7 +248,7 @@ fn ifthenelse_validator
   (wfalse: squash (cond == false) -> validator p)
 : validator #t #k p
 =
-  (input: slice byte)
+  (input: S.slice byte)
   (poffset: R.ref SZ.t)
   (#offset: Ghost.erased SZ.t)
   (#pm: perm)
@@ -272,7 +272,7 @@ let validate_nonempty_post
 inline_for_extraction
 ```pulse
 fn validate_nonempty (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (w: validator p { k.parser_kind_low > 0 })
-  (input: slice byte)
+  (input: S.slice byte)
   (offset: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased bytes)
@@ -307,16 +307,16 @@ fn validate_total_constant_size (#t: Type0) (#k: Ghost.erased parser_kind) (p: p
     k.parser_kind_metadata == Some ParserKindMetadataTotal
 })
 : validator #_ #k p =
-  (input: slice byte)
+  (input: S.slice byte)
   (poffset: _)
   (#offset: _)
   (#pm: perm)
   (#v: Ghost.erased bytes)
 {
   parser_kind_prop_equiv k p;
-  pts_to_len input;
+  S.pts_to_len input;
   let offset = !poffset;
-  if SZ.lt (SZ.sub (len input) offset) sz
+  if SZ.lt (SZ.sub (S.len input) offset) sz
   {
     false
   } else {
@@ -348,7 +348,7 @@ let jumper_pre'
 
 inline_for_extraction
 let jumper (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
-  (input: slice byte) ->
+  (input: S.slice byte) ->
   (offset: SZ.t) ->
   (#pm: perm) ->
   (#v: Ghost.erased bytes) ->
@@ -361,7 +361,7 @@ inline_for_extraction
 fn ifthenelse_jumper (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t) (cond: bool) (jtrue: squash (cond == true) -> jumper p) (jfalse: squash (cond == false) -> jumper p)
 : jumper #t #k p
 =
-  (input: slice byte)
+  (input: S.slice byte)
   (offset: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased bytes)
@@ -377,7 +377,7 @@ fn ifthenelse_jumper (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t) 
 inline_for_extraction
 ```pulse
 fn jump_ext (#t: Type0) (#k1: Ghost.erased parser_kind) (#p1: parser k1 t) (v1: jumper p1) (#k2: Ghost.erased parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : jumper #_ #k2 p2 =
-  (input: slice byte)
+  (input: S.slice byte)
   (offset: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased bytes)
@@ -393,26 +393,26 @@ fn jump_constant_size (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t)
     k.parser_kind_low == SZ.v sz
 })
 : jumper #_ #k p =
-  (input: slice byte)
+  (input: S.slice byte)
   (offset: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased bytes)
 {
   parser_kind_prop_equiv k p;
-  pts_to_len input;
+  S.pts_to_len input;
   SZ.add offset sz
 }
 ```
 
 let peek_post'
   (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p)
-  (input: slice byte)
+  (input: S.slice byte)
   (pm: perm)
   (v: bytes)
   (consumed: SZ.t)
-  (left right: slice byte)
+  (left right: S.slice byte)
 : Tot slprop
-= exists* v1 v2 . pts_to_serialized s left #pm v1 ** pts_to right #pm v2 ** is_split input left right ** pure (
+= exists* v1 v2 . pts_to_serialized s left #pm v1 ** pts_to right #pm v2 ** S.is_split input left right ** pure (
     bare_serialize s v1 `Seq.append` v2 == v /\
     Seq.length (bare_serialize s v1) == SZ.v consumed /\
     begin match parse p v with
@@ -423,11 +423,11 @@ let peek_post'
 
 let peek_post
   (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p)
-  (input: slice byte)
+  (input: S.slice byte)
   (pm: perm)
   (v: bytes)
   (consumed: SZ.t)
-  (res: (slice byte & slice byte))
+  (res: (S.slice byte & S.slice byte))
 : Tot slprop
 = let (left, right) = res in
   peek_post' s input pm v consumed left right
@@ -436,15 +436,15 @@ inline_for_extraction
 ```pulse
 fn peek
   (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased bytes)
   (consumed: SZ.t)
   requires (pts_to input #pm v ** pure (validator_success #k #t p 0sz v (consumed)))
-  returns res: (slice byte & slice byte)
+  returns res: (S.slice byte & S.slice byte)
   ensures peek_post s input pm v consumed res
 {
-  let s1s2 = split input consumed;
+  let s1s2 = S.split input consumed;
   match s1s2 {
     Mktuple2 s1 s2 -> {
       Seq.lemma_split v (SZ.v consumed);
@@ -462,11 +462,11 @@ fn peek
 
 let peek_trade_post'
   (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p)
-  (input: slice byte)
+  (input: S.slice byte)
   (pm: perm)
   (v: bytes)
   (consumed: SZ.t)
-  (left right: slice byte)
+  (left right: S.slice byte)
 : Tot slprop
 = exists* v1 v2 . pts_to_serialized s left #pm v1 ** pts_to right #pm v2 ** trade (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) ** pure (
     bare_serialize s v1 `Seq.append` v2 == v /\
@@ -479,11 +479,11 @@ let peek_trade_post'
 
 let peek_trade_post
   (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p)
-  (input: slice byte)
+  (input: S.slice byte)
   (pm: perm)
   (v: bytes)
   (consumed: SZ.t)
-  (res: (slice byte & slice byte))
+  (res: (S.slice byte & S.slice byte))
 : Tot slprop
 = let (left, right) = res in
   peek_trade_post' s input pm v consumed left right
@@ -492,22 +492,22 @@ let peek_trade_post
 ghost
 fn peek_trade_aux
   (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
-  (input: slice byte)
+  (input: S.slice byte)
   (pm: perm)
   (consumed: SZ.t)
   (v: bytes)
-  (left right: slice byte)
+  (left right: S.slice byte)
   (v1: t)
   (v2: bytes)
   (hyp: squash (
     bare_serialize s v1 `Seq.append` v2 == v
   ))
   (_: unit)
-  requires (is_split input left right ** (pts_to_serialized s left #pm v1 ** pts_to right #pm v2))
+  requires (S.is_split input left right ** (pts_to_serialized s left #pm v1 ** pts_to right #pm v2))
   ensures pts_to input #pm v
 {
   unfold (pts_to_serialized s left #pm v1);
-  join left right input
+  S.join left right input
 }
 ```
 
@@ -515,12 +515,12 @@ inline_for_extraction
 ```pulse
 fn peek_trade
   (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased bytes)
   (consumed: SZ.t)
   requires (pts_to input #pm v ** pure (validator_success #k #t p 0sz v (consumed)))
-  returns res: (slice byte & slice byte)
+  returns res: (S.slice byte & S.slice byte)
   ensures peek_trade_post s input pm v consumed res
 {
   let res = peek s input consumed;
@@ -528,7 +528,7 @@ fn peek_trade
     unfold (peek_post s input pm v consumed res);
     unfold (peek_post' s input pm v consumed left right);
     with v1 v2 . assert (pts_to_serialized s left #pm v1 ** pts_to right #pm v2);
-    intro_trade (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) (is_split input left right) (peek_trade_aux s input pm consumed v left right v1 v2 ());
+    intro_trade (pts_to_serialized s left #pm v1 ** pts_to right #pm v2) (pts_to input #pm v) (S.is_split input left right) (peek_trade_aux s input pm consumed v left right v1 v2 ());
     fold (peek_trade_post' s input pm v consumed left right);
     fold (peek_trade_post s input pm v consumed (left, right));
     (left, right)
@@ -540,19 +540,19 @@ inline_for_extraction
 ```pulse
 fn peek_trade_gen
   (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased bytes)
   (offset: SZ.t)
   (off: SZ.t)
   requires (pts_to input #pm v ** pure (validator_success #k #t p offset v (off)))
-  returns input': slice byte
+  returns input': S.slice byte
   ensures exists* v' . pts_to_serialized s input' #pm v' ** trade (pts_to_serialized s input' #pm v') (pts_to input #pm v) ** pure (
     validator_success #k #t p offset v off /\
     parse p (Seq.slice v (SZ.v offset) (Seq.length v)) == Some (v', SZ.v off - SZ.v offset)
   )
 {
-  let split123 = split_trade input offset;
+  let split123 = S.split_trade input offset;
   match split123 { Mktuple2 input1 input23 -> {
     with v23 . assert (pts_to input23 #pm v23);
     Trade.elim_hyp_l (pts_to input1 #pm _) (pts_to input23 #pm v23) _;
@@ -577,7 +577,7 @@ let leaf_reader
   (#p: parser k t)
   (s: serializer p)
 : Tot Type
-= (input: slice byte) ->
+= (input: S.slice byte) ->
   (#pm: perm) ->
   (#v: Ghost.erased t) ->
   stt t (pts_to_serialized s input #pm v) (fun res ->
@@ -592,7 +592,7 @@ let leaf_read
   (#p: parser k t)
   (#s: serializer p)
   (r: leaf_reader s)
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased t)
 : stt t (pts_to_serialized s input #pm v) (fun res ->
@@ -609,7 +609,7 @@ fn read_from_validator_success
   (#p: parser k t)
   (#s: serializer p)
   (r: leaf_reader s)
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased bytes)
   (offset: SZ.t)
@@ -635,7 +635,7 @@ let reader
   (#p: parser k t)
   (s: serializer p)
 : Tot Type
-= (input: slice byte) ->
+= (input: S.slice byte) ->
   (#pm: perm) ->
   (#v: Ghost.erased t) ->
   (t': Type0) ->
@@ -652,7 +652,7 @@ fn leaf_reader_of_reader
   (r: reader s)
 : leaf_reader #t #k #p s
 =
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased t)
 {
@@ -672,7 +672,7 @@ fn ifthenelse_reader
   (iffalse: squash (cond == false) -> reader s)
 :reader #t #k #p s
 =
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased t)
   (t': Type0)
@@ -699,7 +699,7 @@ fn reader_ext
   (s2: serializer p2 { forall x . parse p1 x == parse p2 x })
 :reader #t #k2 #p2 s2
 =
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased t)
   (t': Type0)
@@ -722,7 +722,7 @@ fn reader_of_leaf_reader
   (r: leaf_reader s)
 : reader #t #k #p s
 =
-  (input: slice byte)
+  (input: S.slice byte)
   (#pm: perm)
   (#v: Ghost.erased t)
   (t': Type0)
@@ -743,7 +743,7 @@ let l2r_writer_for
   (x': t')
   (x: Ghost.erased t)
 =
-  (out: slice byte) ->
+  (out: MS.slice byte) ->
   (offset: SZ.t) ->
   (#v: Ghost.erased bytes) ->
   stt SZ.t
@@ -786,7 +786,7 @@ fn l2r_writer_ext
 : l2r_writer #t' #t vmatch #k2 #p2 s2
 = (x': t')
   (#x: Ghost.erased t)
-  (out: slice byte)
+  (out: MS.slice byte)
   (offset: SZ.t)
   (#v: Ghost.erased bytes)
 {
@@ -846,7 +846,7 @@ fn l2r_writer_ext_gen
 : l2r_writer #t' #t2 vmatch #k2 #p2 s2
 = (x': t')
   (#x: Ghost.erased t2)
-  (out: slice byte)
+  (out: MS.slice byte)
   (offset: SZ.t)
   (#v: Ghost.erased bytes)
 {
@@ -999,7 +999,7 @@ fn l2r_writer_frame
 : l2r_writer #t' #t (vmatch_and_const const vmatch) #k1 #p1 s1
 = (x': t')
   (#x: Ghost.erased t)
-  (out: slice byte)
+  (out: MS.slice byte)
   (offset: SZ.t)
   (#v: Ghost.erased bytes)
 {
@@ -1054,7 +1054,7 @@ fn l2r_writer_lens
 : l2r_writer #t1' #t vmatch1 #k #p s
 = (x1': t1')
   (#x: Ghost.erased t)
-  (out: slice byte)
+  (out: MS.slice byte)
   (offset: SZ.t)
   (#v: Ghost.erased bytes)
 {
@@ -1112,7 +1112,7 @@ let l2r_leaf_writer
   (#p: parser k t)
   (s: serializer p)
 = (x: t) ->
-  (out: slice byte) ->
+  (out: MS.slice byte) ->
   (offset: SZ.t) ->
   (#v: Ghost.erased bytes) ->
   stt SZ.t
@@ -1142,7 +1142,7 @@ fn l2r_leaf_writer_ext
   (s2: serializer p2 { forall x . parse p1 x == parse p2 x })
 : l2r_leaf_writer u#0 #t #k2 #p2 s2
 = (x: t)
-  (out: slice byte)
+  (out: MS.slice byte)
   (offset: SZ.t)
   (#v: Ghost.erased bytes)
 {
@@ -1163,7 +1163,7 @@ fn l2r_leaf_writer_ifthenelse
   (iffalse: (squash (cond == false) -> l2r_leaf_writer s))
 : l2r_leaf_writer u#0 #t #k #p s
 = (x: t)
-  (out: slice byte)
+  (out: MS.slice byte)
   (offset: SZ.t)
   (#v: Ghost.erased bytes)
 {
@@ -1186,7 +1186,7 @@ fn l2r_writer_of_leaf_writer
 : l2r_writer #t #t (eq_as_slprop t) #k #p s
 = (x': t)
   (#x: Ghost.erased t)
-  (out: slice byte)
+  (out: MS.slice byte)
   (offset: SZ.t)
   (#v: Ghost.erased bytes)
 {
@@ -1206,7 +1206,7 @@ fn l2r_leaf_writer_of_writer
   (w: l2r_writer #t #t (eq_as_slprop t) #k #p s)
 : l2r_leaf_writer u#0 #t #k #p s
 = (x: t)
-  (out: slice byte)
+  (out: MS.slice byte)
   (offset: SZ.t)
   (#v: Ghost.erased bytes)
 {
@@ -1661,20 +1661,20 @@ fn l2r_write_copy
     (pts_to_serialized s x.v #x.p v);
   pts_to_serialized_elim_trade s x.v;
   Trade.trans _ _ (pts_to_serialized_with_perm s x v);
-  S.pts_to_len out;
+  MS.pts_to_len out;
   S.pts_to_len x.v;
   let length = S.len x.v;
-  let sp1 = S.split out offset;
+  let sp1 = MS.split out offset;
   match sp1 {
     Mktuple2 sp11 sp12 -> {
       with v12 . assert (pts_to sp12 v12);
-      let sp2 = S.split sp12 length;
+      let sp2 = MS.split sp12 length;
       match sp2 {
         Mktuple2 sp21 sp22 -> {
-          S.pts_to_len sp21;
-          S.copy sp21 x.v;
-          S.join sp21 sp22 sp12;
-          S.join sp11 sp12 out;
+          MS.pts_to_len sp21;
+          MS.copy sp21 x.v;
+          MS.join sp21 sp22 sp12;
+          MS.join sp11 sp12 out;
           Trade.elim _ _;
           SZ.add offset length;
         }
@@ -1725,17 +1725,32 @@ fn pts_to_serialized_copy
   (src: S.slice byte)
   (#psrc: perm)
   (#vsrc: Ghost.erased t)
-  (dst: S.slice byte)
+  (dst: MS.slice byte)
 requires
   exists* vdst . pts_to dst vdst ** pts_to_serialized s src #psrc vsrc **
-    pure (S.len src == S.len dst)
+    pure (S.len src == MS.len dst)
+returns res: S.slice byte
 ensures
   pts_to_serialized s src #psrc vsrc **
-  pts_to_serialized s dst vsrc
+  pts_to_serialized s res vsrc **
+  Trade.trade
+    (pts_to_serialized s res vsrc)
+    (exists* vdst . pts_to dst vdst)
 {
   unfold (pts_to_serialized s src #psrc vsrc);
-  S.copy dst src;
+  MS.copy dst src;
   fold (pts_to_serialized s src #psrc vsrc);
-  fold (pts_to_serialized s dst vsrc);
+  with vdst . assert (pts_to dst vdst);
+  let res = MS.to_slice dst;
+  pts_to_serialized_intro_trade s res vsrc;
+  Trade.trans _ _ (pts_to dst vdst);
+  ghost fn aux (_: unit)
+  requires Trade.trade (pts_to_serialized s res vsrc) (pts_to dst vdst) ** pts_to_serialized s res vsrc
+  ensures exists* vdst . pts_to dst vdst
+  {
+    Trade.elim _ (pts_to dst vdst)
+  };
+  Trade.intro _ _ _ aux;
+  res
 }
 ```
