@@ -43,3 +43,9 @@ typedef struct _F
   uint8_t f1;
   E f2;
 } F;
+
+typedef struct _USE_T
+{
+   uint64_t pt;
+   uint16_t other;
+} USE_T;

@@ -87,7 +87,9 @@ let extend_with_size_of_typedef_names (env:env_t) (names:typedef_names) (size:si
   : ML unit
   = extend_with_size_of_ident env names.typedef_name size a;
     extend_with_size_of_ident env names.typedef_abbrev size a;
-    extend_with_size_of_ident env names.typedef_ptr_abbrev Variable a
+    (match names.typedef_ptr_abbrev with
+     | None -> ()
+     | Some nm -> extend_with_size_of_ident env nm Variable a)
 
 let size_and_alignment_of_typ (env:env_t) (t:typ)
   : ML (size & alignment)
