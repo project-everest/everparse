@@ -20,11 +20,6 @@
   let with_range (x:'a) (l:Lexing.position) : 'a with_meta_t =
       Ast.with_range x (mk_pos l, mk_pos l)
 
-  let pointer_name j p =
-      match p with
-      | None -> {j with v={j.v with name="P"^j.v.name}}
-      | Some k -> k
-
   let parse_int_and_type r (s:string) : Z.t * string * integer_type =
       let r = mk_pos r, mk_pos r in
       let s', t = parse_int_suffix s in
@@ -509,8 +504,8 @@ decl_no_range:
   | b=attributes TYPEDEF STRUCT i=IDENT ps=parameters w=where_opt
     LBRACE fields=fields
     RBRACE j=IDENT p=typedef_pointer_name_opt SEMICOLON
-    {  let k = pointer_name j p in
-       Record(mk_td b i j k, ps, w, fields)
+    {  
+        Record(mk_td b i j p, ps, w, fields)
     }
   | b=attributes CASETYPE i=IDENT ps=parameters
     LBRACE SWITCH LPAREN e=IDENT RPAREN
@@ -518,21 +513,20 @@ decl_no_range:
            RBRACE
     RBRACE j=IDENT p=typedef_pointer_name_opt SEMICOLON
     {
-        let k = pointer_name j p in
-        let td = mk_td b i j k in
+        let td = mk_td b i j p in
         CaseType(td, ps, (with_range (Identifier e) ($startpos(i)), cs))
     }
 
   | OUTPUT TYPEDEF STRUCT i=IDENT
     LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE
     j=IDENT p=typedef_pointer_name_opt SEMICOLON
-    {  let k = pointer_name j p in
-       let td = mk_td [] i j k in       
-       OutputType ({out_typ_names=td; out_typ_fields=out_flds; out_typ_is_union=false}) }
+    {
+       let td = mk_td [] i j p in
+       OutputType ({out_typ_names=td; out_typ_fields=out_flds; out_typ_is_union=false})
+    }
 
   | EXTERN TYPEDEF STRUCT i=IDENT j=IDENT
-    {  let k = pointer_name j None in
-       let td = mk_td [] i j k in
+    {  let td = mk_td [] i j None in
        ExternType td
     }
 

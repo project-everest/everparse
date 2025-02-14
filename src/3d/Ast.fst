@@ -530,7 +530,7 @@ noeq
 type typedef_names = {
   typedef_name: ident;
   typedef_abbrev: ident;
-  typedef_ptr_abbrev: ident;
+  typedef_ptr_abbrev: option ident;
   typedef_attributes: list attribute
 }
 
@@ -1174,6 +1174,11 @@ and print_switch_case (s:switch_case) : ML string =
                  (print_expr head)
                  (String.concat "\n" (List.map print_case cases))
 
+let option_to_string (f:'a -> ML string) (x:option 'a) : ML string =
+  match x with
+  | Some x -> f x
+  | _ -> ""
+
 let print_decl' (d:decl') : ML string =
   match d with
   | ModuleAbbrev i m -> Printf.sprintf "module %s = %s" (print_ident i) (print_ident m)
@@ -1205,7 +1210,7 @@ let print_decl' (d:decl') : ML string =
                     (match wopt with | None -> "" | Some e -> " where " ^ print_expr e)
                     (String.concat "\n" (List.map print_field fields))
                     (ident_to_string td.typedef_abbrev)
-                    (ident_to_string td.typedef_ptr_abbrev)
+                    (option_to_string ident_to_string td.typedef_ptr_abbrev)
   | CaseType td params switch_case ->
     Printf.sprintf "casetype %s%s {\n\
                         %s \n\
@@ -1214,7 +1219,7 @@ let print_decl' (d:decl') : ML string =
                     (print_params params)
                     (print_switch_case switch_case)
                     (ident_to_string td.typedef_abbrev)
-                    (ident_to_string td.typedef_ptr_abbrev)
+                    (option_to_string ident_to_string td.typedef_ptr_abbrev)
   | OutputType out_t -> "Printing for output types is TBD"
   | ExternType _ -> "Printing for extern types is TBD"
   | ExternFn _ _ _

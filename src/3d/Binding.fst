@@ -1892,7 +1892,7 @@ let initial_global_env () =
   in
   let nullary_decl i =
     let td_name =
-      { typedef_name = i; typedef_abbrev = i; typedef_ptr_abbrev = i; typedef_attributes = [] }
+      { typedef_name = i; typedef_abbrev = i; typedef_ptr_abbrev = None; typedef_attributes = [] }
     in
     mk_decl (Record td_name [] None []) dummy_range [] true
   in
@@ -2059,7 +2059,7 @@ let initial_global_env () =
             ({
                 typedef_name = void_ident;
                 typedef_abbrev = void_ident;
-                typedef_ptr_abbrev = void_ident;
+                typedef_ptr_abbrev = None;
                 typedef_attributes = []
               }))
           dummy_range
