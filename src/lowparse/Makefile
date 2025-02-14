@@ -4,35 +4,18 @@
 # of rebuilding them. This Makefile assumes that everything else from
 # the F* standard library and KRMLLib is already built (and fails otherwise)
 
-all: verify-all
+all: verify
 
-FSTAR_EXE ?= fstar.exe
+EVERPARSE_SRC_PATH = $(realpath ..)
 
-ifndef KRML_HOME
-  KRMLLIB:=$(shell ocamlfind query karamel)
-  ifneq ($(.SHELLSTATUS),0)
-    KRML_HOME=$(realpath ../../../karamel)
-  endif
-endif
-ifdef KRML_HOME
-  KRMLLIB:=$(KRML_HOME)/krmllib
-endif
-INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-ALREADY_CACHED = --already_cached *,-LowParse
-FSTAR_OPTIONS += --ext context_pruning --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED)
+ALREADY_CACHED := *,-LowParse,
 
-LOWPARSE_FILES=$(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
+include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 clean:
 	rm -rf *.checked *.source .depend
-
-.depend: $(LOWPARSE_FILES)
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) --dep full $(LOWPARSE_FILES) --output_deps_to $@
-
-include .depend
-
-verify-all: $(ALL_CHECKED_FILES)
 
 tot: $(filter LowParse.Tot.%,$(ALL_CHECKED_FILES))
 
@@ -44,11 +27,7 @@ low: $(filter LowParse.Low.%,$(ALL_CHECKED_FILES))
 
 .PHONY: tot spec slow low
 
-$(ALL_CHECKED_FILES): %.checked:
-	$(FSTAR_EXE) $(FSTAR_OPTIONS) $(OTHERFLAGS) $<
-	touch $@
-
-.PHONY: all verify-all clean %.fst-in %.fsti-in fstar-test
+.PHONY: all verify clean %.fst-in %.fsti-in fstar-test
 
 %.fst-in %.fsti-in:
 	@echo $(FSTAR_OPTIONS) $(OTHERFLAGS)
