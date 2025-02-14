@@ -4,6 +4,7 @@ include LowParse.Spec.SeqBytes
 open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 
 module S = Pulse.Lib.Slice
+module MS = Pulse.Lib.MutableSlice
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 
@@ -98,21 +99,21 @@ fn l2r_write_lseq_bytes_copy
   (#v: _)
 {
   unfold (pts_to_seqbytes n x' x);
-  pts_to_len out;
+  MS.pts_to_len out;
   pts_to_len x'.v;
   let length = S.len x'.v;
-  let sp1 = S.split out offset;
+  let sp1 = MS.split out offset;
   match sp1 {
     Mktuple2 sp11 sp12 -> {
       with v12 . assert (pts_to sp12 v12);
-      let sp2 = S.split sp12 length;
+      let sp2 = MS.split sp12 length;
       match sp2 {
         Mktuple2 sp21 sp22 -> {
-          pts_to_len sp21;
-          S.copy sp21 x'.v;
+          MS.pts_to_len sp21;
+          MS.copy sp21 x'.v;
           fold (pts_to_seqbytes n x' x);
-          S.join sp21 sp22 sp12;
-          S.join sp11 sp12 out;
+          MS.join sp21 sp22 sp12;
+          MS.join sp11 sp12 out;
           SZ.add offset length;
         }
       }

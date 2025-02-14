@@ -6,6 +6,7 @@ module U8 = FStar.UInt8
 module E = LowParse.Endianness
 module SZ = FStar.SizeT
 module S = Pulse.Lib.Slice
+module MS = Pulse.Lib.MutableSlice
 
 inline_for_extraction
 noextract
@@ -131,7 +132,7 @@ let n_to_be_t
   (len: nat { len <= tot })
 : Tot Type
 = (n: t) ->
-  (x: S.slice U8.t) ->
+  (x: MS.slice U8.t) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->
   (pos: SZ.t) ->
   stt unit
@@ -159,7 +160,7 @@ fn n_to_be_0
   (u: uinttype t tot)
 : (n_to_be_t #t #tot u 0)
 = (n: t)
-  (x: S.slice U8.t)
+  (x: MS.slice U8.t)
   (#v: Ghost.erased (Seq.seq U8.t))
   (pos: SZ.t)
 {
@@ -177,14 +178,14 @@ fn n_to_be_1
   (u: uinttype t tot { tot > 0 })
 : (n_to_be_t #t #tot u 1)
 = (n: t)
-  (x: S.slice U8.t)
+  (x: MS.slice U8.t)
   (#v: Ghost.erased (Seq.seq U8.t))
   (pos: SZ.t)
 {
   E.reveal_n_to_be 1 (u.v n);
   E.reveal_n_to_be 0 (u.v n / pow2 8);
   let n' = u.to_byte n;
-  S.op_Array_Assignment x (pos `SZ.sub` 1sz) n'
+  MS.op_Array_Assignment x (pos `SZ.sub` 1sz) n'
 }
 ```
 
@@ -199,7 +200,7 @@ fn n_to_be_S
   (ih: n_to_be_t #t #tot u len)
 : (n_to_be_t #t #tot u (len + 1))
 = (n: t)
-  (x: S.slice U8.t)
+  (x: MS.slice U8.t)
   (#v: Ghost.erased (Seq.seq U8.t))
   (pos: SZ.t)
 {
@@ -211,7 +212,7 @@ fn n_to_be_S
   with v1 . assert (pts_to x v1);
   Seq.lemma_split (Seq.slice v1 (SZ.v pos - 1) (Seq.length v1)) 1;
   let _ = ih hi x pos';
-  S.op_Array_Assignment x pos' lo;
+  MS.op_Array_Assignment x pos' lo;
   with v2 . assert (pts_to x v2);
   Seq.lemma_split (Seq.slice v2 (SZ.v pos - 1) (Seq.length v2)) 1;
 }
