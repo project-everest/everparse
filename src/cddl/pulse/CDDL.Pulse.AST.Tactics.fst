@@ -146,7 +146,7 @@ let bundle_steps =
   base_steps
 
 [@@noextract_to "krml"; sem_attr] noextract inline_for_extraction
-let inline_coerce_eq (#a:Type) (#b:Type) (_:squash (a == b)) (x:a) : b = x
+let inline_coerce_eq (#[@@@erasable] a:Type) (#[@@@erasable]b:Type) ([@@@erasable] peq:squash (a == b)) (x:a) : b = x
 
 [@@noextract_to "krml"; sem_attr] noextract inline_for_extraction
 let inline_coerce_eq_reverse (#a:Type) (#b:Type) (_:squash (b == a)) (x:a) : b = x

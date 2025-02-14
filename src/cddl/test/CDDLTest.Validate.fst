@@ -49,7 +49,11 @@ let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64)
 let _ : unit = _ by (produce_defs sorted_source0)
 
 (*
-fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/everparse/src/cbor/spec --include /home/tahina/everest/everparse/src/cddl/spec --include /home/tahina/everest/everparse/lib/evercddl/lib --include /home/tahina/everest/everparse/lib/evercddl/plugin --include /home/tahina/everest/everparse/src/cbor/pulse --include /home/tahina/everest/everparse/src/cddl/pulse --include /home/tahina/everest/karamel/krmllib --include /home/tahina/everest/karamel/krmllib/obj --include /home/tahina/everest/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning   CDDLTest.Validate.fst
+mkdir -p _output
+true    
+/home/tahina/everest/master/FStar/bin/fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/master/everparse/src/cbor/spec --include /home/tahina/everest/master/everparse/src/cddl/spec --include /home/tahina/everest/master/everparse/lib/evercddl/lib --include /home/tahina/everest/master/everparse/lib/evercddl/plugin --include /home/tahina/everest/master/everparse/src/cbor/pulse --include /home/tahina/everest/master/everparse/src/cddl/pulse --include /home/tahina/everest/master/karamel/krmllib --include /home/tahina/everest/master/karamel/krmllib/obj --include /home/tahina/everest/master/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle' --dep full @.depend.rsp --output_deps_to .depend.aux
+mv .depend.aux .depend
+/home/tahina/everest/master/FStar/bin/fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/master/everparse/src/cbor/spec --include /home/tahina/everest/master/everparse/src/cddl/spec --include /home/tahina/everest/master/everparse/lib/evercddl/lib --include /home/tahina/everest/master/everparse/lib/evercddl/plugin --include /home/tahina/everest/master/everparse/src/cbor/pulse --include /home/tahina/everest/master/everparse/src/cddl/pulse --include /home/tahina/everest/master/karamel/krmllib --include /home/tahina/everest/master/karamel/krmllib/obj --include /home/tahina/everest/master/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning   CDDLTest.Validate.fst
 TAC>> 
 *)
 
@@ -76,15 +80,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b1' = impl_bundle_wf_type' Det.cbor_det_impl env0 avenv0_0 aenv0_0 aaenv0_0 wf1 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb1' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b1'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb1' = b1'.b_impl_type
-let _ : squash (tb1' == b1'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_bool = b1'.b_impl_type
+let teqb1 : squash (b1'.b_impl_type == evercddl_bool) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb1 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b1'.b_spec.parser b1'.b_rel evercddl_bool teqb1
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_bool = b1'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_bool = T.inline_coerce_eq peqb1 b1'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b1 = bundle_set_parser gb1' tb1' () parse_bool ()
+let b1 = bundle_set_parser gb1' evercddl_bool () parse_bool ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env1 =
@@ -125,15 +130,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b2' = impl_bundle_wf_type' Det.cbor_det_impl env1 avenv1_0 aenv1_0 aaenv1_0 wf2 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb2' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b2'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb2' = b2'.b_impl_type
-let _ : squash (tb2' == b2'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_everparsenomatch = b2'.b_impl_type
+let teqb2 : squash (b2'.b_impl_type == evercddl_everparsenomatch) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb2 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b2'.b_spec.parser b2'.b_rel evercddl_everparsenomatch teqb2
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_everparsenomatch = b2'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_everparsenomatch = T.inline_coerce_eq peqb2 b2'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b2 = bundle_set_parser gb2' tb2' () parse_everparsenomatch ()
+let b2 = bundle_set_parser gb2' evercddl_everparsenomatch () parse_everparsenomatch ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env2 =
@@ -174,15 +180,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b3' = impl_bundle_wf_type' Det.cbor_det_impl env2 avenv2_0 aenv2_0 aaenv2_0 wf3 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb3' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b3'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb3' = b3'.b_impl_type
-let _ : squash (tb3' == b3'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_uint = b3'.b_impl_type
+let teqb3 : squash (b3'.b_impl_type == evercddl_uint) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb3 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b3'.b_spec.parser b3'.b_rel evercddl_uint teqb3
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_uint = b3'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_uint = T.inline_coerce_eq peqb3 b3'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b3 = bundle_set_parser gb3' tb3' () parse_uint ()
+let b3 = bundle_set_parser gb3' evercddl_uint () parse_uint ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env3 =
@@ -223,15 +230,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b4' = impl_bundle_wf_type' Det.cbor_det_impl env3 avenv3_0 aenv3_0 aaenv3_0 wf4 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb4' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b4'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb4' = b4'.b_impl_type
-let _ : squash (tb4' == b4'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_nint = b4'.b_impl_type
+let teqb4 : squash (b4'.b_impl_type == evercddl_nint) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb4 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b4'.b_spec.parser b4'.b_rel evercddl_nint teqb4
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_nint = b4'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_nint = T.inline_coerce_eq peqb4 b4'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b4 = bundle_set_parser gb4' tb4' () parse_nint ()
+let b4 = bundle_set_parser gb4' evercddl_nint () parse_nint ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env4 =
@@ -272,15 +280,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b5' = impl_bundle_wf_type' Det.cbor_det_impl env4 avenv4_0 aenv4_0 aaenv4_0 wf5 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb5' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b5'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb5' = b5'.b_impl_type
-let _ : squash (tb5' == b5'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_int = b5'.b_impl_type
+let teqb5 : squash (b5'.b_impl_type == evercddl_int) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb5 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b5'.b_spec.parser b5'.b_rel evercddl_int teqb5
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_int = b5'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_int = T.inline_coerce_eq peqb5 b5'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b5 = bundle_set_parser gb5' tb5' () parse_int ()
+let b5 = bundle_set_parser gb5' evercddl_int () parse_int ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env5 =
@@ -321,15 +330,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b6' = impl_bundle_wf_type' Det.cbor_det_impl env5 avenv5_0 aenv5_0 aaenv5_0 wf6 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb6' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b6'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb6' = b6'.b_impl_type
-let _ : squash (tb6' == b6'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_bstr = b6'.b_impl_type
+let teqb6 : squash (b6'.b_impl_type == evercddl_bstr) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb6 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b6'.b_spec.parser b6'.b_rel evercddl_bstr teqb6
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_bstr = b6'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_bstr = T.inline_coerce_eq peqb6 b6'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b6 = bundle_set_parser gb6' tb6' () parse_bstr ()
+let b6 = bundle_set_parser gb6' evercddl_bstr () parse_bstr ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env6 =
@@ -370,15 +380,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b7' = impl_bundle_wf_type' Det.cbor_det_impl env6 avenv6_0 aenv6_0 aaenv6_0 wf7 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb7' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b7'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb7' = b7'.b_impl_type
-let _ : squash (tb7' == b7'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_encodedcbor = b7'.b_impl_type
+let teqb7 : squash (b7'.b_impl_type == evercddl_encodedcbor) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb7 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b7'.b_spec.parser b7'.b_rel evercddl_encodedcbor teqb7
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_encodedcbor = b7'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_encodedcbor = T.inline_coerce_eq peqb7 b7'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b7 = bundle_set_parser gb7' tb7' () parse_encodedcbor ()
+let b7 = bundle_set_parser gb7' evercddl_encodedcbor () parse_encodedcbor ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env7 =
@@ -419,15 +430,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b8' = impl_bundle_wf_type' Det.cbor_det_impl env7 avenv7_0 aenv7_0 aaenv7_0 wf8 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb8' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b8'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb8' = b8'.b_impl_type
-let _ : squash (tb8' == b8'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_bytes = b8'.b_impl_type
+let teqb8 : squash (b8'.b_impl_type == evercddl_bytes) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb8 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b8'.b_spec.parser b8'.b_rel evercddl_bytes teqb8
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_bytes = b8'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_bytes = T.inline_coerce_eq peqb8 b8'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b8 = bundle_set_parser gb8' tb8' () parse_bytes ()
+let b8 = bundle_set_parser gb8' evercddl_bytes () parse_bytes ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env8 =
@@ -468,15 +480,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b9' = impl_bundle_wf_type' Det.cbor_det_impl env8 avenv8_0 aenv8_0 aaenv8_0 wf9 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb9' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b9'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb9' = b9'.b_impl_type
-let _ : squash (tb9' == b9'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_tstr = b9'.b_impl_type
+let teqb9 : squash (b9'.b_impl_type == evercddl_tstr) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb9 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b9'.b_spec.parser b9'.b_rel evercddl_tstr teqb9
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_tstr = b9'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_tstr = T.inline_coerce_eq peqb9 b9'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b9 = bundle_set_parser gb9' tb9' () parse_tstr ()
+let b9 = bundle_set_parser gb9' evercddl_tstr () parse_tstr ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env9 =
@@ -517,15 +530,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b10' = impl_bundle_wf_type' Det.cbor_det_impl env9 avenv9_0 aenv9_0 aaenv9_0 wf10 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb10' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b10'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb10' = b10'.b_impl_type
-let _ : squash (tb10' == b10'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_label = b10'.b_impl_type
+let teqb10 : squash (b10'.b_impl_type == evercddl_label) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb10 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b10'.b_spec.parser b10'.b_rel evercddl_label teqb10
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_label = b10'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_label = T.inline_coerce_eq peqb10 b10'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b10 = bundle_set_parser gb10' tb10' () parse_label ()
+let b10 = bundle_set_parser gb10' evercddl_label () parse_label ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env10 =
@@ -584,15 +598,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b12' = impl_bundle_wf_type' Det.cbor_det_impl env11 avenv11_0 aenv11_0 aaenv11_0 wf12 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb12' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b12'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb12' = b12'.b_impl_type
-let _ : squash (tb12' == b12'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_tdate = b12'.b_impl_type
+let teqb12 : squash (b12'.b_impl_type == evercddl_tdate) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb12 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b12'.b_spec.parser b12'.b_rel evercddl_tdate teqb12
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_tdate = b12'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_tdate = T.inline_coerce_eq peqb12 b12'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b12 = bundle_set_parser gb12' tb12' () parse_tdate ()
+let b12 = bundle_set_parser gb12' evercddl_tdate () parse_tdate ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env12 =
@@ -633,15 +648,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b13' = impl_bundle_wf_type' Det.cbor_det_impl env12 avenv12_0 aenv12_0 aaenv12_0 wf13 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb13' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b13'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb13' = b13'.b_impl_type
-let _ : squash (tb13' == b13'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_uri = b13'.b_impl_type
+let teqb13 : squash (b13'.b_impl_type == evercddl_uri) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb13 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b13'.b_spec.parser b13'.b_rel evercddl_uri teqb13
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_uri = b13'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_uri = T.inline_coerce_eq peqb13 b13'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b13 = bundle_set_parser gb13' tb13' () parse_uri ()
+let b13 = bundle_set_parser gb13' evercddl_uri () parse_uri ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env13 =
@@ -682,15 +698,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b14' = impl_bundle_wf_type' Det.cbor_det_impl env13 avenv13_0 aenv13_0 aaenv13_0 wf14 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb14' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b14'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb14' = b14'.b_impl_type
-let _ : squash (tb14' == b14'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_b64url = b14'.b_impl_type
+let teqb14 : squash (b14'.b_impl_type == evercddl_b64url) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb14 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b14'.b_spec.parser b14'.b_rel evercddl_b64url teqb14
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_b64url = b14'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_b64url = T.inline_coerce_eq peqb14 b14'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b14 = bundle_set_parser gb14' tb14' () parse_b64url ()
+let b14 = bundle_set_parser gb14' evercddl_b64url () parse_b64url ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env14 =
@@ -731,15 +748,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b15' = impl_bundle_wf_type' Det.cbor_det_impl env14 avenv14_0 aenv14_0 aaenv14_0 wf15 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb15' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b15'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb15' = b15'.b_impl_type
-let _ : squash (tb15' == b15'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_b64legacy = b15'.b_impl_type
+let teqb15 : squash (b15'.b_impl_type == evercddl_b64legacy) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb15 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b15'.b_spec.parser b15'.b_rel evercddl_b64legacy teqb15
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_b64legacy = b15'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_b64legacy = T.inline_coerce_eq peqb15 b15'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b15 = bundle_set_parser gb15' tb15' () parse_b64legacy ()
+let b15 = bundle_set_parser gb15' evercddl_b64legacy () parse_b64legacy ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env15 =
@@ -780,15 +798,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b16' = impl_bundle_wf_type' Det.cbor_det_impl env15 avenv15_0 aenv15_0 aaenv15_0 wf16 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb16' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b16'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb16' = b16'.b_impl_type
-let _ : squash (tb16' == b16'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_regexp = b16'.b_impl_type
+let teqb16 : squash (b16'.b_impl_type == evercddl_regexp) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb16 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b16'.b_spec.parser b16'.b_rel evercddl_regexp teqb16
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_regexp = b16'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_regexp = T.inline_coerce_eq peqb16 b16'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b16 = bundle_set_parser gb16' tb16' () parse_regexp ()
+let b16 = bundle_set_parser gb16' evercddl_regexp () parse_regexp ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env16 =
@@ -829,15 +848,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b17' = impl_bundle_wf_type' Det.cbor_det_impl env16 avenv16_0 aenv16_0 aaenv16_0 wf17 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb17' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b17'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb17' = b17'.b_impl_type
-let _ : squash (tb17' == b17'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_mimemessage = b17'.b_impl_type
+let teqb17 : squash (b17'.b_impl_type == evercddl_mimemessage) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb17 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b17'.b_spec.parser b17'.b_rel evercddl_mimemessage teqb17
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_mimemessage = b17'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_mimemessage = T.inline_coerce_eq peqb17 b17'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b17 = bundle_set_parser gb17' tb17' () parse_mimemessage ()
+let b17 = bundle_set_parser gb17' evercddl_mimemessage () parse_mimemessage ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env17 =
@@ -878,15 +898,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b18' = impl_bundle_wf_type' Det.cbor_det_impl env17 avenv17_0 aenv17_0 aaenv17_0 wf18 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb18' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b18'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb18' = b18'.b_impl_type
-let _ : squash (tb18' == b18'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_text = b18'.b_impl_type
+let teqb18 : squash (b18'.b_impl_type == evercddl_text) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb18 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b18'.b_spec.parser b18'.b_rel evercddl_text teqb18
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_text = b18'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_text = T.inline_coerce_eq peqb18 b18'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b18 = bundle_set_parser gb18' tb18' () parse_text ()
+let b18 = bundle_set_parser gb18' evercddl_text () parse_text ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env18 =
@@ -927,15 +948,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b19' = impl_bundle_wf_type' Det.cbor_det_impl env18 avenv18_0 aenv18_0 aaenv18_0 wf19 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb19' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b19'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb19' = b19'.b_impl_type
-let _ : squash (tb19' == b19'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_false = b19'.b_impl_type
+let teqb19 : squash (b19'.b_impl_type == evercddl_false) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb19 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b19'.b_spec.parser b19'.b_rel evercddl_false teqb19
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_false = b19'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_false = T.inline_coerce_eq peqb19 b19'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b19 = bundle_set_parser gb19' tb19' () parse_false ()
+let b19 = bundle_set_parser gb19' evercddl_false () parse_false ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env19 =
@@ -976,15 +998,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b20' = impl_bundle_wf_type' Det.cbor_det_impl env19 avenv19_0 aenv19_0 aaenv19_0 wf20 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb20' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b20'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb20' = b20'.b_impl_type
-let _ : squash (tb20' == b20'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_true = b20'.b_impl_type
+let teqb20 : squash (b20'.b_impl_type == evercddl_true) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb20 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b20'.b_spec.parser b20'.b_rel evercddl_true teqb20
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_true = b20'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_true = T.inline_coerce_eq peqb20 b20'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b20 = bundle_set_parser gb20' tb20' () parse_true ()
+let b20 = bundle_set_parser gb20' evercddl_true () parse_true ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env20 =
@@ -1025,15 +1048,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b21' = impl_bundle_wf_type' Det.cbor_det_impl env20 avenv20_0 aenv20_0 aaenv20_0 wf21 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb21' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b21'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb21' = b21'.b_impl_type
-let _ : squash (tb21' == b21'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_nil = b21'.b_impl_type
+let teqb21 : squash (b21'.b_impl_type == evercddl_nil) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb21 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b21'.b_spec.parser b21'.b_rel evercddl_nil teqb21
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_nil = b21'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_nil = T.inline_coerce_eq peqb21 b21'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b21 = bundle_set_parser gb21' tb21' () parse_nil ()
+let b21 = bundle_set_parser gb21' evercddl_nil () parse_nil ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env21 =
@@ -1074,15 +1098,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b22' = impl_bundle_wf_type' Det.cbor_det_impl env21 avenv21_0 aenv21_0 aaenv21_0 wf22 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb22' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b22'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb22' = b22'.b_impl_type
-let _ : squash (tb22' == b22'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_null = b22'.b_impl_type
+let teqb22 : squash (b22'.b_impl_type == evercddl_null) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb22 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b22'.b_spec.parser b22'.b_rel evercddl_null teqb22
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_null = b22'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_null = T.inline_coerce_eq peqb22 b22'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b22 = bundle_set_parser gb22' tb22' () parse_null ()
+let b22 = bundle_set_parser gb22' evercddl_null () parse_null ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env22 =
@@ -1123,15 +1148,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b23' = impl_bundle_wf_type' Det.cbor_det_impl env22 avenv22_0 aenv22_0 aaenv22_0 wf23 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb23' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b23'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb23' = b23'.b_impl_type
-let _ : squash (tb23' == b23'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_undefined = b23'.b_impl_type
+let teqb23 : squash (b23'.b_impl_type == evercddl_undefined) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb23 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b23'.b_spec.parser b23'.b_rel evercddl_undefined teqb23
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_undefined = b23'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_undefined = T.inline_coerce_eq peqb23 b23'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b23 = bundle_set_parser gb23' tb23' () parse_undefined ()
+let b23 = bundle_set_parser gb23' evercddl_undefined () parse_undefined ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env23 =
@@ -1172,15 +1198,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b24' = impl_bundle_wf_type' Det.cbor_det_impl env23 avenv23_0 aenv23_0 aaenv23_0 wf24 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb24' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b24'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb24' = b24'.b_impl_type
-let _ : squash (tb24' == b24'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_any = b24'.b_impl_type
+let teqb24 : squash (b24'.b_impl_type == evercddl_any) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb24 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b24'.b_spec.parser b24'.b_rel evercddl_any teqb24
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_any = b24'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_any = T.inline_coerce_eq peqb24 b24'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b24 = bundle_set_parser gb24' tb24' () parse_any ()
+let b24 = bundle_set_parser gb24' evercddl_any () parse_any ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env24 =
@@ -1221,15 +1248,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b25' = impl_bundle_wf_type' Det.cbor_det_impl env24 avenv24_0 aenv24_0 aaenv24_0 wf25 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb25' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b25'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb25' = b25'.b_impl_type
-let _ : squash (tb25' == b25'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_values = b25'.b_impl_type
+let teqb25 : squash (b25'.b_impl_type == evercddl_values) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb25 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b25'.b_spec.parser b25'.b_rel evercddl_values teqb25
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_values = b25'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_values = T.inline_coerce_eq peqb25 b25'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b25 = bundle_set_parser gb25' tb25' () parse_values ()
+let b25 = bundle_set_parser gb25' evercddl_values () parse_values ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env25 =
@@ -1278,15 +1306,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let aux_env25_bundle_1' = impl_bundle_wf_ask_for_array_group Det.cbor_det_impl env25 avenv25_0 aenv25_0 aaenv25_0 aux_env25_wf_1 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gaux_env25_bundle_1' : Ghost.erased (array_bundle Det.cbor_det_array_iterator_match) = Ghost.hide aux_env25_bundle_1'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let taux_env25_bundle_1' = aux_env25_bundle_1'.ab_impl_type
-let _ : squash (taux_env25_bundle_1' == aux_env25_bundle_1'.ab_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let aux_env25_type_1 = aux_env25_bundle_1'.ab_impl_type
+let teqaux_env25_bundle_1 : squash (aux_env25_bundle_1'.ab_impl_type == aux_env25_type_1) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqaux_env25_bundle_1 = CDDL.Pulse.Parse.ArrayGroup.impl_zero_copy_array_group_t_eq Det.cbor_det_array_iterator_match aux_env25_bundle_1'.ab_spec.ag_parser aux_env25_bundle_1'.ab_rel aux_env25_type_1 teqaux_env25_bundle_1
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let aux_env25_parse_1 = aux_env25_bundle_1'.ab_parser
+let aux_env25_parse_1 = T.inline_coerce_eq peqaux_env25_bundle_1 aux_env25_bundle_1'.ab_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env25_bundle_1 = array_bundle_set_parser gaux_env25_bundle_1' taux_env25_bundle_1' () aux_env25_parse_1 ()
+let aux_env25_bundle_1 = array_bundle_set_parser gaux_env25_bundle_1' aux_env25_type_1 () aux_env25_parse_1 ()
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_1 = avenv25_0
@@ -1309,15 +1338,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let aux_env25_bundle_2' = impl_bundle_wf_ask_for_guarded_type Det.cbor_det_impl env25 avenv25_1 aenv25_1 aaenv25_1 aux_env25_wf_2 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gaux_env25_bundle_2' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide aux_env25_bundle_2'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let taux_env25_bundle_2' = aux_env25_bundle_2'.b_impl_type
-let _ : squash (taux_env25_bundle_2' == aux_env25_bundle_2'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let aux_env25_type_2 = aux_env25_bundle_2'.b_impl_type
+let teqaux_env25_bundle_2 : squash (aux_env25_bundle_2'.b_impl_type == aux_env25_type_2) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqaux_env25_bundle_2 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match aux_env25_bundle_2'.b_spec.parser aux_env25_bundle_2'.b_rel aux_env25_type_2 teqaux_env25_bundle_2
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let aux_env25_parse_2 = aux_env25_bundle_2'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let aux_env25_parse_2 = T.inline_coerce_eq peqaux_env25_bundle_2 aux_env25_bundle_2'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env25_bundle_2 = bundle_set_parser gaux_env25_bundle_2' taux_env25_bundle_2' () aux_env25_parse_2 ()
+let aux_env25_bundle_2 = bundle_set_parser gaux_env25_bundle_2' aux_env25_type_2 () aux_env25_parse_2 ()
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_2 = avenv25_1
@@ -1357,15 +1387,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let aux_env25_bundle_4' = impl_bundle_wf_ask_for_guarded_type Det.cbor_det_impl env25 avenv25_3 aenv25_3 aaenv25_3 aux_env25_wf_4 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gaux_env25_bundle_4' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide aux_env25_bundle_4'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let taux_env25_bundle_4' = aux_env25_bundle_4'.b_impl_type
-let _ : squash (taux_env25_bundle_4' == aux_env25_bundle_4'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let aux_env25_type_4 = aux_env25_bundle_4'.b_impl_type
+let teqaux_env25_bundle_4 : squash (aux_env25_bundle_4'.b_impl_type == aux_env25_type_4) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqaux_env25_bundle_4 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match aux_env25_bundle_4'.b_spec.parser aux_env25_bundle_4'.b_rel aux_env25_type_4 teqaux_env25_bundle_4
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let aux_env25_parse_4 = aux_env25_bundle_4'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let aux_env25_parse_4 = T.inline_coerce_eq peqaux_env25_bundle_4 aux_env25_bundle_4'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env25_bundle_4 = bundle_set_parser gaux_env25_bundle_4' taux_env25_bundle_4' () aux_env25_parse_4 ()
+let aux_env25_bundle_4 = bundle_set_parser gaux_env25_bundle_4' aux_env25_type_4 () aux_env25_parse_4 ()
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_4 = avenv25_3
@@ -1381,15 +1412,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b26' = impl_bundle_wf_type' Det.cbor_det_impl env25 avenv25_4 aenv25_4 aaenv25_4 wf26 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb26' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b26'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb26' = b26'.b_impl_type
-let _ : squash (tb26' == b26'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_header_map = b26'.b_impl_type
+let teqb26 : squash (b26'.b_impl_type == evercddl_header_map) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb26 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b26'.b_spec.parser b26'.b_rel evercddl_header_map teqb26
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_header_map = b26'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_header_map = T.inline_coerce_eq peqb26 b26'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b26 = bundle_set_parser gb26' tb26' () parse_header_map ()
+let b26 = bundle_set_parser gb26' evercddl_header_map () parse_header_map ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env26 =
@@ -1430,15 +1462,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b27' = impl_bundle_wf_type' Det.cbor_det_impl env26 avenv26_0 aenv26_0 aaenv26_0 wf27 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb27' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b27'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb27' = b27'.b_impl_type
-let _ : squash (tb27' == b27'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_empty_or_serialized_map = b27'.b_impl_type
+let teqb27 : squash (b27'.b_impl_type == evercddl_empty_or_serialized_map) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb27 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b27'.b_spec.parser b27'.b_rel evercddl_empty_or_serialized_map teqb27
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_empty_or_serialized_map = b27'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_empty_or_serialized_map = T.inline_coerce_eq peqb27 b27'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b27 = bundle_set_parser gb27' tb27' () parse_empty_or_serialized_map ()
+let b27 = bundle_set_parser gb27' evercddl_empty_or_serialized_map () parse_empty_or_serialized_map ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env27 =
@@ -1497,15 +1530,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b29' = impl_bundle_wf_type' Det.cbor_det_impl env28 avenv28_0 aenv28_0 aaenv28_0 wf29 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb29' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b29'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb29' = b29'.b_impl_type
-let _ : squash (tb29' == b29'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_COSE_Signature = b29'.b_impl_type
+let teqb29 : squash (b29'.b_impl_type == evercddl_COSE_Signature) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb29 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b29'.b_spec.parser b29'.b_rel evercddl_COSE_Signature teqb29
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_COSE_Signature = b29'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_COSE_Signature = T.inline_coerce_eq peqb29 b29'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b29 = bundle_set_parser gb29' tb29' () parse_COSE_Signature ()
+let b29 = bundle_set_parser gb29' evercddl_COSE_Signature () parse_COSE_Signature ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env29 =
@@ -1554,15 +1588,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let aux_env29_bundle_1' = impl_bundle_wf_ask_for_array_group Det.cbor_det_impl env29 avenv29_0 aenv29_0 aaenv29_0 aux_env29_wf_1 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gaux_env29_bundle_1' : Ghost.erased (array_bundle Det.cbor_det_array_iterator_match) = Ghost.hide aux_env29_bundle_1'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let taux_env29_bundle_1' = aux_env29_bundle_1'.ab_impl_type
-let _ : squash (taux_env29_bundle_1' == aux_env29_bundle_1'.ab_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let aux_env29_type_1 = aux_env29_bundle_1'.ab_impl_type
+let teqaux_env29_bundle_1 : squash (aux_env29_bundle_1'.ab_impl_type == aux_env29_type_1) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqaux_env29_bundle_1 = CDDL.Pulse.Parse.ArrayGroup.impl_zero_copy_array_group_t_eq Det.cbor_det_array_iterator_match aux_env29_bundle_1'.ab_spec.ag_parser aux_env29_bundle_1'.ab_rel aux_env29_type_1 teqaux_env29_bundle_1
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let aux_env29_parse_1 = aux_env29_bundle_1'.ab_parser
+let aux_env29_parse_1 = T.inline_coerce_eq peqaux_env29_bundle_1 aux_env29_bundle_1'.ab_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env29_bundle_1 = array_bundle_set_parser gaux_env29_bundle_1' taux_env29_bundle_1' () aux_env29_parse_1 ()
+let aux_env29_bundle_1 = array_bundle_set_parser gaux_env29_bundle_1' aux_env29_type_1 () aux_env29_parse_1 ()
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv29_1 = avenv29_0
@@ -1578,15 +1613,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b30' = impl_bundle_wf_type' Det.cbor_det_impl env29 avenv29_1 aenv29_1 aaenv29_1 wf30 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb30' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b30'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb30' = b30'.b_impl_type
-let _ : squash (tb30' == b30'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_COSE_Sign = b30'.b_impl_type
+let teqb30 : squash (b30'.b_impl_type == evercddl_COSE_Sign) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb30 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b30'.b_spec.parser b30'.b_rel evercddl_COSE_Sign teqb30
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_COSE_Sign = b30'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_COSE_Sign = T.inline_coerce_eq peqb30 b30'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b30 = bundle_set_parser gb30' tb30' () parse_COSE_Sign ()
+let b30 = bundle_set_parser gb30' evercddl_COSE_Sign () parse_COSE_Sign ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env30 =
@@ -1627,15 +1663,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b31' = impl_bundle_wf_type' Det.cbor_det_impl env30 avenv30_0 aenv30_0 aaenv30_0 wf31 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb31' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b31'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb31' = b31'.b_impl_type
-let _ : squash (tb31' == b31'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_COSE_Sign_Tagged = b31'.b_impl_type
+let teqb31 : squash (b31'.b_impl_type == evercddl_COSE_Sign_Tagged) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb31 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b31'.b_spec.parser b31'.b_rel evercddl_COSE_Sign_Tagged teqb31
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_COSE_Sign_Tagged = b31'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_COSE_Sign_Tagged = T.inline_coerce_eq peqb31 b31'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b31 = bundle_set_parser gb31' tb31' () parse_COSE_Sign_Tagged ()
+let b31 = bundle_set_parser gb31' evercddl_COSE_Sign_Tagged () parse_COSE_Sign_Tagged ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env31 =
@@ -1676,15 +1713,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b32' = impl_bundle_wf_type' Det.cbor_det_impl env31 avenv31_0 aenv31_0 aaenv31_0 wf32 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb32' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b32'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb32' = b32'.b_impl_type
-let _ : squash (tb32' == b32'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_COSE_Sign1 = b32'.b_impl_type
+let teqb32 : squash (b32'.b_impl_type == evercddl_COSE_Sign1) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb32 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b32'.b_spec.parser b32'.b_rel evercddl_COSE_Sign1 teqb32
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_COSE_Sign1 = b32'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_COSE_Sign1 = T.inline_coerce_eq peqb32 b32'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b32 = bundle_set_parser gb32' tb32' () parse_COSE_Sign1 ()
+let b32 = bundle_set_parser gb32' evercddl_COSE_Sign1 () parse_COSE_Sign1 ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env32 =
@@ -1725,15 +1763,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b33' = impl_bundle_wf_type' Det.cbor_det_impl env32 avenv32_0 aenv32_0 aaenv32_0 wf33 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb33' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b33'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb33' = b33'.b_impl_type
-let _ : squash (tb33' == b33'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_COSE_Untagged_Message = b33'.b_impl_type
+let teqb33 : squash (b33'.b_impl_type == evercddl_COSE_Untagged_Message) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb33 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b33'.b_spec.parser b33'.b_rel evercddl_COSE_Untagged_Message teqb33
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_COSE_Untagged_Message = b33'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_COSE_Untagged_Message = T.inline_coerce_eq peqb33 b33'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b33 = bundle_set_parser gb33' tb33' () parse_COSE_Untagged_Message ()
+let b33 = bundle_set_parser gb33' evercddl_COSE_Untagged_Message () parse_COSE_Untagged_Message ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env33 =
@@ -1774,15 +1813,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b34' = impl_bundle_wf_type' Det.cbor_det_impl env33 avenv33_0 aenv33_0 aaenv33_0 wf34 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb34' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b34'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb34' = b34'.b_impl_type
-let _ : squash (tb34' == b34'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_COSE_Sign1_Tagged = b34'.b_impl_type
+let teqb34 : squash (b34'.b_impl_type == evercddl_COSE_Sign1_Tagged) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb34 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b34'.b_spec.parser b34'.b_rel evercddl_COSE_Sign1_Tagged teqb34
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_COSE_Sign1_Tagged = b34'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_COSE_Sign1_Tagged = T.inline_coerce_eq peqb34 b34'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b34 = bundle_set_parser gb34' tb34' () parse_COSE_Sign1_Tagged ()
+let b34 = bundle_set_parser gb34' evercddl_COSE_Sign1_Tagged () parse_COSE_Sign1_Tagged ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env34 =
@@ -1823,15 +1863,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b35' = impl_bundle_wf_type' Det.cbor_det_impl env34 avenv34_0 aenv34_0 aaenv34_0 wf35 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb35' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b35'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb35' = b35'.b_impl_type
-let _ : squash (tb35' == b35'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_COSE_Tagged_Message = b35'.b_impl_type
+let teqb35 : squash (b35'.b_impl_type == evercddl_COSE_Tagged_Message) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb35 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b35'.b_spec.parser b35'.b_rel evercddl_COSE_Tagged_Message teqb35
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_COSE_Tagged_Message = b35'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_COSE_Tagged_Message = T.inline_coerce_eq peqb35 b35'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b35 = bundle_set_parser gb35' tb35' () parse_COSE_Tagged_Message ()
+let b35 = bundle_set_parser gb35' evercddl_COSE_Tagged_Message () parse_COSE_Tagged_Message ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env35 =
@@ -1872,15 +1913,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b36' = impl_bundle_wf_type' Det.cbor_det_impl env35 avenv35_0 aenv35_0 aaenv35_0 wf36 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb36' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b36'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb36' = b36'.b_impl_type
-let _ : squash (tb36' == b36'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_COSE_Messages = b36'.b_impl_type
+let teqb36 : squash (b36'.b_impl_type == evercddl_COSE_Messages) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb36 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b36'.b_spec.parser b36'.b_rel evercddl_COSE_Messages teqb36
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_COSE_Messages = b36'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_COSE_Messages = T.inline_coerce_eq peqb36 b36'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b36 = bundle_set_parser gb36' tb36' () parse_COSE_Messages ()
+let b36 = bundle_set_parser gb36' evercddl_COSE_Messages () parse_COSE_Messages ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env36 =
@@ -1921,15 +1963,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b37' = impl_bundle_wf_type' Det.cbor_det_impl env36 avenv36_0 aenv36_0 aaenv36_0 wf37 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb37' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b37'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb37' = b37'.b_impl_type
-let _ : squash (tb37' == b37'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_Sig_structure = b37'.b_impl_type
+let teqb37 : squash (b37'.b_impl_type == evercddl_Sig_structure) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb37 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b37'.b_spec.parser b37'.b_rel evercddl_Sig_structure teqb37
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_Sig_structure = b37'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_Sig_structure = T.inline_coerce_eq peqb37 b37'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b37 = bundle_set_parser gb37' tb37' () parse_Sig_structure ()
+let b37 = bundle_set_parser gb37' evercddl_Sig_structure () parse_Sig_structure ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env37 =
@@ -1970,15 +2013,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b38' = impl_bundle_wf_type' Det.cbor_det_impl env37 avenv37_0 aenv37_0 aaenv37_0 wf38 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb38' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b38'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb38' = b38'.b_impl_type
-let _ : squash (tb38' == b38'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_Internal_Types = b38'.b_impl_type
+let teqb38 : squash (b38'.b_impl_type == evercddl_Internal_Types) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb38 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b38'.b_spec.parser b38'.b_rel evercddl_Internal_Types teqb38
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_Internal_Types = b38'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_Internal_Types = T.inline_coerce_eq peqb38 b38'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b38 = bundle_set_parser gb38' tb38' () parse_Internal_Types ()
+let b38 = bundle_set_parser gb38' evercddl_Internal_Types () parse_Internal_Types ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env38 =
@@ -2019,15 +2063,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b39' = impl_bundle_wf_type' Det.cbor_det_impl env38 avenv38_0 aenv38_0 aaenv38_0 wf39 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb39' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b39'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb39' = b39'.b_impl_type
-let _ : squash (tb39' == b39'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_start = b39'.b_impl_type
+let teqb39 : squash (b39'.b_impl_type == evercddl_start) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb39 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b39'.b_spec.parser b39'.b_rel evercddl_start teqb39
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_start = b39'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_start = T.inline_coerce_eq peqb39 b39'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b39 = bundle_set_parser gb39' tb39' () parse_start ()
+let b39 = bundle_set_parser gb39' evercddl_start () parse_start ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env39 =
@@ -2068,15 +2113,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b40' = impl_bundle_wf_type' Det.cbor_det_impl env39 avenv39_0 aenv39_0 aaenv39_0 wf40 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb40' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b40'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb40' = b40'.b_impl_type
-let _ : squash (tb40' == b40'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_eb64url = b40'.b_impl_type
+let teqb40 : squash (b40'.b_impl_type == evercddl_eb64url) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb40 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b40'.b_spec.parser b40'.b_rel evercddl_eb64url teqb40
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_eb64url = b40'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_eb64url = T.inline_coerce_eq peqb40 b40'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b40 = bundle_set_parser gb40' tb40' () parse_eb64url ()
+let b40 = bundle_set_parser gb40' evercddl_eb64url () parse_eb64url ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env40 =
@@ -2117,15 +2163,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b41' = impl_bundle_wf_type' Det.cbor_det_impl env40 avenv40_0 aenv40_0 aaenv40_0 wf41 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb41' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b41'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb41' = b41'.b_impl_type
-let _ : squash (tb41' == b41'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_eb64legacy = b41'.b_impl_type
+let teqb41 : squash (b41'.b_impl_type == evercddl_eb64legacy) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb41 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b41'.b_spec.parser b41'.b_rel evercddl_eb64legacy teqb41
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_eb64legacy = b41'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_eb64legacy = T.inline_coerce_eq peqb41 b41'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b41 = bundle_set_parser gb41' tb41' () parse_eb64legacy ()
+let b41 = bundle_set_parser gb41' evercddl_eb64legacy () parse_eb64legacy ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env41 =
@@ -2166,15 +2213,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b42' = impl_bundle_wf_type' Det.cbor_det_impl env41 avenv41_0 aenv41_0 aaenv41_0 wf42 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb42' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b42'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb42' = b42'.b_impl_type
-let _ : squash (tb42' == b42'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_eb16 = b42'.b_impl_type
+let teqb42 : squash (b42'.b_impl_type == evercddl_eb16) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb42 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b42'.b_spec.parser b42'.b_rel evercddl_eb16 teqb42
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_eb16 = b42'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_eb16 = T.inline_coerce_eq peqb42 b42'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b42 = bundle_set_parser gb42' tb42' () parse_eb16 ()
+let b42 = bundle_set_parser gb42' evercddl_eb16 () parse_eb16 ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env42 =
@@ -2215,15 +2263,16 @@ noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
 let b43' = impl_bundle_wf_type' Det.cbor_det_impl env42 avenv42_0 aenv42_0 aaenv42_0 wf43 (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let gb43' : Ghost.erased (bundle Det.cbor_det_match) = Ghost.hide b43'
 let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
-[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ()); noextract_to "krml"] noextract inline_for_extraction
-let tb43' = b43'.b_impl_type
-let _ : squash (tb43' == b43'.b_impl_type) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let evercddl_cborany = b43'.b_impl_type
+let teqb43 : squash (b43'.b_impl_type == evercddl_cborany) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+let peqb43 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b43'.b_spec.parser b43'.b_rel evercddl_cborany teqb43
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
-let parse_cborany = b43'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let parse_cborany = T.inline_coerce_eq peqb43 b43'.b_parser
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b43 = bundle_set_parser gb43' tb43' () parse_cborany ()
+let b43 = bundle_set_parser gb43' evercddl_cborany () parse_cborany ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env43 =

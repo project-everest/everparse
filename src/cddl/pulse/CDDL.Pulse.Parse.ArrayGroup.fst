@@ -53,6 +53,21 @@ let impl_zero_copy_array_group
           pure (impl_zero_copy_array_group_postcond ps l v)
         )
 
+let impl_zero_copy_array_group_t_eq
+  (#cbor_array_iterator_t: Type0)
+  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#t: array_group None)
+    (#tgt: Type0)
+    (#tgt_size: tgt -> nat)
+    (#tgt_serializable: tgt -> bool)
+    (ps: array_group_parser_spec t tgt_size tgt_serializable)
+    (#impl_tgt: Type0)
+    (r: rel impl_tgt tgt)
+    (impl_tgt2: Type0)
+    (ieq: squash (impl_tgt == impl_tgt2))
+: Tot (squash (impl_zero_copy_array_group cbor_array_iterator_match ps #impl_tgt r == impl_zero_copy_array_group cbor_array_iterator_match ps #impl_tgt2 (coerce_rel r impl_tgt2 ieq)))
+= ()
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn impl_zero_copy_array
