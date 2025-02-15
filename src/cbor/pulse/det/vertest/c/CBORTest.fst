@@ -9,7 +9,7 @@ module SM = Pulse.Lib.SeqMatch.Util
 module Trade = Pulse.Lib.Trade.Util
 module Spec = CBOR.Spec.API.Format
 module I32 = FStar.Int32
-module S = Pulse.Lib.Slice
+module S = Pulse.Lib.MutableSlice
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -267,15 +267,18 @@ ensures emp
         Trade.elim (cbor_det_match _ test _) _;
         intro_res_post_impossible ()
       } else {
-        let size' = cbor_det_validate_from_slice () out1;
+        let in1 = S.to_slice out1;
+        let size' = cbor_det_validate_from_slice () in1;
         if (size' <> size) {
+          Trade.elim (pts_to in1 _) _;
           S.to_array out1;
           Trade.elim (cbor_det_match _ test _) _;
           intro_res_post_impossible ()
         } else {
-          with w . assert (pts_to out1 w);
+          with w . assert (pts_to in1 w);
           Seq.lemma_split w (SZ.v size');
-          let test1 = cbor_det_parse_from_slice out1 size';
+          let test1 = cbor_det_parse_from_slice in1 size';
+          Trade.trans _ (pts_to in1 _) _;
           let b = cbor_det_equal () test test1;
           if (not b) {
             Trade.elim (cbor_det_match _ test1 _) _;
@@ -292,7 +295,9 @@ ensures emp
             } else {
               let Mktuple2 out2 out3 = S.split out1 size';
               Seq.append_empty_r (Seq.slice w 0 (SZ.v size'));
-              let test2 = cbor_det_parse_from_slice out2 size';
+              let in2 = S.to_slice out2;
+              let test2 = cbor_det_parse_from_slice in2 size';
+              Trade.trans _ (pts_to in2 _) _;
               let b = cbor_det_equal () test test2;
               if (not b) {
                  Trade.elim (cbor_det_match _ test2 _) _;
