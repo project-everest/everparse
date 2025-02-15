@@ -9,8 +9,9 @@ module Trade = Pulse.Lib.Trade.Util
 module Spec = CBOR.Spec.API.Format
 module I32 = FStar.Int32
 module S = Pulse.Lib.Slice
+module MS = Pulse.Lib.MutableSlice
 module Base = CBOR.Pulse.API.Base
-module SU = Pulse.Lib.Slice.Util
+module MSU = Pulse.Lib.MutableSlice.Util
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -68,32 +69,6 @@ let exit_serialization_failure : I32.t = 1l
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let exit_impossible : I32.t = 2l
-
-inline_for_extraction
-```pulse
-fn slice_from_array_trade
-  (#t: Type) (a: A.array t) (#p: perm) (alen: SZ.t) (#v: Ghost.erased (Seq.seq t))
-  requires
-    (pts_to a #p v ** pure (SZ.v alen == A.length a))
-  returns s: S.slice t
-  ensures
-    (pts_to s #p v **
-      Trade.trade
-        (pts_to s #p v)
-        (pts_to a #p v)
-    )
-{
-  let s = S.from_array a alen;
-  ghost fn aux (_: unit)
-    requires S.is_from_array a s ** pts_to s #p v
-    ensures pts_to a #p v
-  {
-    S.to_array s
-  };
-  Trade.intro _ _ _ aux;
-  s
-}
-```
 
 #restart-solver
 inline_for_extraction
@@ -252,32 +227,35 @@ ensures
     intro_res_post_impossible ()
   } else {
     let mut output_bytes = [| 0xFFuy; max_size |];
-    let out1 = S.from_array output_bytes max_size;
+    let out1 = MS.from_array output_bytes max_size;
     let osize1 = cbor_serialize_to_slice test out1;
     match osize1 {
       None -> {
-        S.to_array out1;
+        MS.to_array out1;
         intro_res_post_serialization_failure // I cannot prove that this case cannot happen
       }
       Some size1 -> {
         with v1 . assert (pts_to out1 v1);
-        let ps1 = cbor_parse_from_slice out1;
+        let in1 = MS.to_slice out1;
+        let ps1 = cbor_parse_from_slice in1;
         match ps1 {
           None -> {
-            unfold (Base.cbor_det_parse_post cbor_match out1 1.0R v1 None);
-            S.to_array out1;
+            unfold (Base.cbor_det_parse_post cbor_match in1 1.0R v1 None);
+            Trade.elim (pts_to in1 _) _;
+            MS.to_array out1;
             intro_res_post_impossible ()
           }
           Some sr1 -> {
             let Mktuple2 test1 r1 = sr1;
-            unfold (Base.cbor_det_parse_post cbor_match out1 1.0R v1 (Some (test1, r1)));
-            unfold (Base.cbor_det_parse_post_some cbor_match out1 1.0R v1 test1 r1);
+            unfold (Base.cbor_det_parse_post cbor_match in1 1.0R v1 (Some (test1, r1)));
+            unfold (Base.cbor_det_parse_post_some cbor_match in1 1.0R v1 test1 r1);
             with vtest1 . assert (cbor_match 1.0R test1 vtest1);
+            Trade.trans _ (pts_to in1 _) _;
             Spec.cbor_det_serialize_inj_strong vtest1 v (Seq.slice v1 (SZ.v size1) (Seq.length v1)) (Seq.slice v1 (Seq.length (Spec.cbor_det_serialize vtest1)) (Seq.length v1));
             let eq1 = cbor_equal test1 test;
             if (not eq1) {
               Trade.elim _ _;
-              S.to_array out1;
+              MS.to_array out1;
               intro_res_post_impossible ()
             } else {
               let res1 = test_on
@@ -291,24 +269,27 @@ ensures
                 test1;
               Trade.elim _ _;
               if (res1 <> exit_success) {
-                S.to_array out1;
+                MS.to_array out1;
                 intro_res_post_impossible ()
               } else {
-                let Mktuple2 out2 rem2 = SU.split_trade out1 size1;
+                let Mktuple2 out2 rem2 = MSU.split_trade out1 size1;
                 with v2 . assert (pts_to out2 v2);
                 Seq.append_empty_r (Spec.cbor_det_serialize v);
-                let ps2 = cbor_parse_from_slice out2;
+                let in2 = MS.to_slice out2;
+                let ps2 = cbor_parse_from_slice in2;
                 match ps2 {
                   None -> {
-                    unfold (Base.cbor_det_parse_post cbor_match out2 1.0R v2 None);
+                    unfold (Base.cbor_det_parse_post cbor_match in2 1.0R v2 None);
+                    Trade.elim (pts_to in2 _) _;
                     Trade.elim _ _;
-                    S.to_array out1;
+                    MS.to_array out1;
                     intro_res_post_impossible ()
                   }
                   Some sr2 -> {
                     let Mktuple2 test2 r2 = sr2;
-                    unfold (Base.cbor_det_parse_post cbor_match out2 1.0R v2 (Some (test2, r2)));
-                    unfold (Base.cbor_det_parse_post_some cbor_match out2 1.0R v2 test2 r2);
+                    unfold (Base.cbor_det_parse_post cbor_match in2 1.0R v2 (Some (test2, r2)));
+                    unfold (Base.cbor_det_parse_post_some cbor_match in2 1.0R v2 test2 r2);
+                    Trade.trans _ (pts_to in2 _) _;
                     Trade.trans_hyp_l _ _ _ (pts_to out1 _);
                     S.pts_to_len r2;
                     with vtest2 . assert (cbor_match 1.0R test2 vtest2);
@@ -318,7 +299,7 @@ ensures
                     let len2 = S.len r2;
                     if ((not eq2) || (len2 <> 0sz)) {
                       Trade.elim _ _;
-                      S.to_array out1;
+                      MS.to_array out1;
                       intro_res_post_impossible ()
                     } else {
                       let res2 = test_on
@@ -331,7 +312,7 @@ ensures
                         cbor_read_uint64
                         test2;
                       Trade.elim _ _;
-                      S.to_array out1;
+                      MS.to_array out1;
                       if (res2 <> exit_success) {
                         intro_res_post_impossible ()
                       } else {
