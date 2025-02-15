@@ -62,7 +62,7 @@ pub fn cbor_det_serialize <'a>(x: crate::cbordetveraux::cbor_raw <'a>, output: &
     {
         let _letpattern: (&mut [u8], &mut [u8]) = output.split_at_mut(len);
         let out: &mut [u8] = _letpattern.0;
-        let _rem: &[u8] = _letpattern.1;
+        let _rem: &mut [u8] = _letpattern.1;
         let res: usize = crate::cbordetveraux::cbor_serialize(x, out);
         let len·: usize = res;
         option__size_t::Some { v: len· }
@@ -192,9 +192,10 @@ pub fn cbor_det_mk_map <'a>(a: &'a mut [crate::cbordetveraux::cbor_map_entry <'a
             {
                 let raw_len: crate::cbordetveraux::raw_uint64 =
                     crate::cbordetveraux::mk_raw_uint64(a.len() as u64);
+                let a·: &[crate::cbordetveraux::cbor_map_entry] = a;
                 let res·: crate::cbordetveraux::cbor_map =
                     crate::cbordetveraux::cbor_map
-                    { cbor_map_length_size: raw_len.size, cbor_map_ptr: a };
+                    { cbor_map_length_size: raw_len.size, cbor_map_ptr: a· };
                 let res: crate::cbordetveraux::cbor_raw =
                     crate::cbordetveraux::cbor_raw::CBOR_Case_Map { v: res· };
                 (&mut dest)[0] = res;

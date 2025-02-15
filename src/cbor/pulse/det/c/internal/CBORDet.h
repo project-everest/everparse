@@ -7,10 +7,17 @@
 
 #include "../CBORDet.h"
 
+typedef struct Pulse_Lib_MutableSlice_slice__uint8_t_s
+{
+  uint8_t *elt;
+  size_t len;
+}
+Pulse_Lib_MutableSlice_slice__uint8_t;
+
 size_t
 CBOR_Pulse_Raw_Format_Serialize_ser_(
   cbor_raw x_,
-  Pulse_Lib_Slice_slice__uint8_t out,
+  Pulse_Lib_MutableSlice_slice__uint8_t out,
   size_t offset
 );
 
@@ -22,7 +29,14 @@ void cbor_free_(cbor_freeable0 x);
 
 cbor_freeable cbor_copy0(cbor_raw x);
 
-bool cbor_raw_sort_aux(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a);
+typedef struct Pulse_Lib_MutableSlice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry_s
+{
+  cbor_map_entry *elt;
+  size_t len;
+}
+Pulse_Lib_MutableSlice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry;
+
+bool cbor_raw_sort_aux(Pulse_Lib_MutableSlice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a);
 
 
 #define __internal_CBORDet_H_DEFINED

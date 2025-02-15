@@ -14,7 +14,7 @@ CBOR_Spec_Raw_Base_raw_uint64;
 
 typedef struct Pulse_Lib_Slice_slice__uint8_t_s
 {
-  uint8_t *elt;
+  const uint8_t *elt;
   size_t len;
 }
 Pulse_Lib_Slice_slice__uint8_t;
@@ -56,7 +56,7 @@ typedef struct cbor_raw_s cbor_raw;
 
 typedef struct Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw_s
 {
-  cbor_raw *elt;
+  const cbor_raw *elt;
   size_t len;
 }
 Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw;
@@ -72,7 +72,7 @@ typedef struct cbor_map_entry_s cbor_map_entry;
 
 typedef struct Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry_s
 {
-  cbor_map_entry *elt;
+  const cbor_map_entry *elt;
   size_t len;
 }
 Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry;
@@ -329,9 +329,9 @@ cbor_raw cbor_det_map_entry_key(cbor_map_entry x2);
 
 cbor_raw cbor_det_map_entry_value(cbor_map_entry x2);
 
-size_t cbor_det_validate(uint8_t *input, size_t input_len);
+size_t cbor_det_validate(const uint8_t *input, size_t input_len);
 
-cbor_raw cbor_det_parse(uint8_t *input, size_t len);
+cbor_raw cbor_det_parse(const uint8_t *input, size_t len);
 
 size_t cbor_det_serialize(cbor_raw x, uint8_t *output, size_t output_len);
 
@@ -341,7 +341,7 @@ cbor_raw cbor_det_mk_array_from_array(cbor_raw *a, uint64_t len);
 
 cbor_raw cbor_det_mk_map_from_array(cbor_map_entry *a, uint64_t len);
 
-uint8_t *cbor_det_get_string(cbor_raw x);
+const uint8_t *cbor_det_get_string(cbor_raw x);
 
 bool cbor_det_map_get(cbor_raw x, cbor_raw k, cbor_raw *dest);
 

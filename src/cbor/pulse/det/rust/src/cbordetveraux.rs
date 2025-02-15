@@ -2232,11 +2232,11 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
             let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
             let res0: usize =
                 {
-                    let _sp11: &[u8] = sp1.0;
+                    let _sp11: &mut [u8] = sp1.0;
                     let sp12: &mut [u8] = sp1.1;
                     let sp2: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
                     let sp21: &mut [u8] = sp2.0;
-                    let _sp22: &[u8] = sp2.1;
+                    let _sp22: &mut [u8] = sp2.1;
                     sp21.copy_from_slice(x2·);
                     res1.wrapping_add(length)
                 };
@@ -2307,11 +2307,11 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                     let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
                     let res0: usize =
                         {
-                            let _sp11: &[u8] = sp1.0;
+                            let _sp11: &mut [u8] = sp1.0;
                             let sp12: &mut [u8] = sp1.1;
                             let sp2: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
                             let sp21: &mut [u8] = sp2.0;
-                            let _sp22: &[u8] = sp2.1;
+                            let _sp22: &mut [u8] = sp2.1;
                             sp21.copy_from_slice(x2·);
                             res1.wrapping_add(length)
                         };
@@ -2386,11 +2386,11 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                         let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
                         let res0: usize =
                             {
-                                let _sp11: &[u8] = sp1.0;
+                                let _sp11: &mut [u8] = sp1.0;
                                 let sp12: &mut [u8] = sp1.1;
                                 let sp2: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
                                 let sp21: &mut [u8] = sp2.0;
-                                let _sp22: &[u8] = sp2.1;
+                                let _sp22: &mut [u8] = sp2.1;
                                 sp21.copy_from_slice(x2·);
                                 res1.wrapping_add(length)
                             };
@@ -2434,11 +2434,11 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
                                 let sp1: (&mut [u8], &mut [u8]) = out.split_at_mut(res1);
                                 let res0: usize =
                                     {
-                                        let _sp11: &[u8] = sp1.0;
+                                        let _sp11: &mut [u8] = sp1.0;
                                         let sp12: &mut [u8] = sp1.1;
                                         let sp2: (&mut [u8], &mut [u8]) = sp12.split_at_mut(length);
                                         let sp21: &mut [u8] = sp2.0;
-                                        let _sp22: &[u8] = sp2.1;
+                                        let _sp22: &mut [u8] = sp2.1;
                                         sp21.copy_from_slice(x2·);
                                         res1.wrapping_add(length)
                                     };
@@ -4346,10 +4346,10 @@ pub(crate) fn cbor_raw_sort_aux(a: &mut [cbor_map_entry]) -> bool
                         let _letpattern1: (&mut [cbor_map_entry], &mut [cbor_map_entry]) =
                             a.split_at_mut(i2·);
                         let ac01: &mut [cbor_map_entry] = _letpattern1.0;
-                        let _ac2: &[cbor_map_entry] = _letpattern1.1;
+                        let _ac2: &mut [cbor_map_entry] = _letpattern1.1;
                         let _letpattern2: (&mut [cbor_map_entry], &mut [cbor_map_entry]) =
                             ac01.split_at_mut(i10);
-                        let _ac: &[cbor_map_entry] = _letpattern2.0;
+                        let _ac: &mut [cbor_map_entry] = _letpattern2.0;
                         let ac1: &mut [cbor_map_entry] = _letpattern2.1;
                         if ! (i20.wrapping_sub(i10) == 0usize || i20.wrapping_sub(i10) == ac1.len())
                         {
