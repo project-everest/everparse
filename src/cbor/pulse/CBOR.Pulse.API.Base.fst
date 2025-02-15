@@ -3,6 +3,7 @@ open CBOR.Spec.API.Type
 open Pulse.Lib.Pervasives
 module T = CBOR.Spec.API.Type
 module S = Pulse.Lib.Slice
+module MS = Pulse.Lib.MutableSlice
 module Trade = Pulse.Lib.Trade.Util
 module SZ = FStar.SizeT
 module U64 = FStar.UInt64
@@ -961,7 +962,7 @@ let mk_map_gen_post
   (#t1 #t2: Type)
   (vmatch1: perm -> t1 -> cbor -> slprop)
   (vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
-  (a: S.slice t2)
+  (a: MS.slice t2)
   (va: (Seq.seq t2))
   (pv: perm)
   (vv: (list (cbor & cbor)))
@@ -1008,7 +1009,7 @@ let mk_map_gen_by_ref_t
   (#t1 #t2: Type)
   (vmatch1: perm -> t1 -> cbor -> slprop)
   (vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
-= (a: S.slice t2) ->
+= (a: MS.slice t2) ->
   (dest: R.ref t1) -> 
   (#va: Ghost.erased (Seq.seq t2)) ->
   (#pv: perm) ->
@@ -1023,7 +1024,7 @@ let mk_map_gen_by_ref_t
       pure (
         mk_map_gen_by_ref_postcond (Ghost.reveal vdest0) res vdest bres /\ (
         Some? res <==> (
-        FStar.UInt.fits (SZ.v (S.len a)) U64.n /\
+        FStar.UInt.fits (SZ.v (MS.len a)) U64.n /\
         List.Tot.no_repeats_p (List.Tot.map fst vv)      
       )))
     )
@@ -1033,7 +1034,7 @@ let mk_map_gen_t
   (#t1 #t2: Type)
   (vmatch1: perm -> t1 -> cbor -> slprop)
   (vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
-= (a: S.slice t2) ->
+= (a: MS.slice t2) ->
   (#va: Ghost.erased (Seq.seq t2)) ->
   (#pv: perm) ->
   (#vv: Ghost.erased (list (cbor & cbor))) ->
@@ -1043,7 +1044,7 @@ let mk_map_gen_t
     )
     (fun res -> mk_map_gen_post vmatch1 vmatch2 a va pv vv res **
       pure (Some? res <==> (
-        FStar.UInt.fits (SZ.v (S.len a)) U64.n /\
+        FStar.UInt.fits (SZ.v (MS.len a)) U64.n /\
         List.Tot.no_repeats_p (List.Tot.map fst vv)      
       ))
     )
@@ -1057,13 +1058,13 @@ fn mk_map_gen
   (dummy: t1)
   (mk_map_gen_by_ref: mk_map_gen_by_ref_t vmatch1 vmatch2)
 : mk_map_gen_t u#0 #_ #_ vmatch1 vmatch2
-= (a: S.slice t2)
+= (a: MS.slice t2)
   (#va: Ghost.erased (Seq.seq t2))
   (#pv: perm)
   (#vv: Ghost.erased (list (cbor & cbor)))
 {
   let mut dest = dummy;
-  S.pts_to_len a;
+  MS.pts_to_len a;
   PM.seq_list_match_length (vmatch2 pv) va vv;
   let bres = mk_map_gen_by_ref a dest;
   if bres {
@@ -1080,14 +1081,14 @@ let mk_map_t
   (#t1 #t2: Type)
   (vmatch1: perm -> t1 -> cbor -> slprop)
   (vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
-= (a: S.slice t2) ->
+= (a: MS.slice t2) ->
   (#va: Ghost.erased (Seq.seq t2)) ->
   (#pv: perm) ->
   (#vv: Ghost.erased (list (cbor & cbor))) ->
   stt t1
     (pts_to a va **
       PM.seq_list_match va vv (vmatch2 pv) **
-      pure (FStar.UInt.fits (SZ.v (S.len a)) U64.n /\
+      pure (FStar.UInt.fits (SZ.v (MS.len a)) U64.n /\
         List.Tot.no_repeats_p (List.Tot.map fst vv)
       )
     )
@@ -1157,8 +1158,8 @@ fn mk_map_from_array
 {
   A.pts_to_len a;
   let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
-  let s = S.from_array a (SZ.uint64_to_sizet len);
-  S.pts_to_len s;
+  let s = MS.from_array a (SZ.uint64_to_sizet len);
+  MS.pts_to_len s;
   let res = cbor_mk_map s;
   with p' v' va' . assert (
       Trade.trade
@@ -1168,10 +1169,10 @@ fn mk_map_from_array
         )
   );
   ghost fn aux (_: unit)
-    requires S.is_from_array a s ** pts_to s va'
+    requires MS.is_from_array a s ** pts_to s va'
     ensures A.pts_to a va'
   {
-    S.to_array s;
+    MS.to_array s;
   };
   Trade.intro _ _ _ aux;
   Trade.reg_r (pts_to s va') (A.pts_to a va') (PM.seq_list_match va vv (cbor_map_entry_match pv));
@@ -1236,12 +1237,12 @@ fn mk_map_from_option
   (#vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
   (mk_map_gen: mk_map_gen_t vmatch1 vmatch2)
 : mk_map_t u#0 #_ #_ vmatch1 vmatch2
-= (a: S.slice t2)
+= (a: MS.slice t2)
   (#va: Ghost.erased (Seq.seq t2))
   (#pv: perm)
   (#vv: Ghost.erased (list (cbor & cbor)))
 {
-  S.pts_to_len a;
+  MS.pts_to_len a;
   PM.seq_list_match_length (vmatch2 pv) va vv;
   let sres = mk_map_gen a;
   let Some res = sres;
@@ -1259,13 +1260,13 @@ fn mk_map_from_ref
   (dummy: t1)
   (mk_map_gen: mk_map_gen_by_ref_t vmatch1 vmatch2)
 : mk_map_t u#0 #_ #_ vmatch1 vmatch2
-= (a: S.slice t2)
+= (a: MS.slice t2)
   (#va: Ghost.erased (Seq.seq t2))
   (#pv: perm)
   (#vv: Ghost.erased (list (cbor & cbor)))
 {
   let mut dest = dummy;
-  S.pts_to_len a;
+  MS.pts_to_len a;
   PM.seq_list_match_length (vmatch2 pv) va vv;
   let _ = mk_map_gen a dest;
   let res = !dest;
@@ -1467,7 +1468,7 @@ let cbor_det_serialize_t
   (cbor_det_match: perm -> cbordet -> Spec.cbor -> slprop)
 =
   (x: cbordet) ->
-  (output: S.slice U8.t) ->
+  (output: MS.slice U8.t) ->
   (#y: Ghost.erased Spec.cbor) ->
   (#pm: perm) ->
   (#v: Ghost.erased (Seq.seq U8.t)) ->

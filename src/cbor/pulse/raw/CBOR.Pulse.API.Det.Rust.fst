@@ -39,27 +39,29 @@ ensures
 }
 ```
 
+module MS = Pulse.Lib.MutableSlice
+
 ```pulse
 fn cbor_det_serialize
   (_: unit)
 : cbor_det_serialize_t u#0 #_ cbor_det_match
 =
   (x: cbordet)
-  (output: S.slice U8.t)
+  (output: MS.slice U8.t)
   (#y: Ghost.erased Spec.cbor)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
 {
-  S.pts_to_len output;
-  let len = Det.cbor_det_size x (S.len output);
+  MS.pts_to_len output;
+  let len = Det.cbor_det_size x (MS.len output);
   if (SZ.gt len 0sz) {
-    let Mktuple2 out rem = S.split output len;
-    S.pts_to_len out;
+    let Mktuple2 out rem = MS.split output len;
+    MS.pts_to_len out;
     let len' = Det.cbor_det_serialize x out;
-    S.pts_to_len out;
+    MS.pts_to_len out;
     with v1 . assert (pts_to out v1);
     assert (pure (Seq.equal v1 (Spec.cbor_det_serialize y)));
-    S.join out rem output;
+    MS.join out rem output;
     with v' . assert (pts_to output v');
     Seq.lemma_split v' (SZ.v len');
     assert (pure (Seq.equal (Seq.slice v' 0 (SZ.v len')) (Spec.cbor_det_serialize y)));

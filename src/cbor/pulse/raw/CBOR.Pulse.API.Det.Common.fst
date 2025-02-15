@@ -214,11 +214,11 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_serialize
   (x: cbor_det_t)
-  (output: S.slice U8.t)
+  (output: MS.slice U8.t)
   (#y: Ghost.erased Spec.cbor)
   (#pm: perm)
 requires
-    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (S.len output)))
+    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (MS.len output)))
 returns res: SZ.t
 ensures
     (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
@@ -462,7 +462,7 @@ fn cbor_map_entry_raw_compare
 ```pulse
 fn rec cbor_raw_sort_aux
   (p: perm)
-  (a: S.slice Raw.cbor_map_entry)
+  (a: MS.slice Raw.cbor_map_entry)
   (#c: Ghost.erased (Seq.seq Raw.cbor_map_entry))
   (#l: Ghost.erased (list (SpecRaw.raw_data_item & SpecRaw.raw_data_item)))
 requires
@@ -693,10 +693,10 @@ fn cbor_det_mk_map_gen (_: unit)
   (#vv: _)
   (#vdest0: _)
 {
-  S.pts_to_len a;
+  MS.pts_to_len a;
   PM.seq_list_match_length (cbor_det_map_entry_match pv) va vv;
   let _ : squash SZ.fits_u64 = assume (SZ.fits_u64);
-  if (SZ.gt (S.len a) (SZ.uint64_to_sizet 18446744073709551615uL)) {
+  if (SZ.gt (MS.len a) (SZ.uint64_to_sizet 18446744073709551615uL)) {
     Trade.refl (PM.seq_list_match va vv (cbor_det_map_entry_match pv));
     fold (mk_map_gen_post cbor_det_match cbor_det_map_entry_match a va pv vv None);
     false
@@ -708,7 +708,7 @@ fn cbor_det_mk_map_gen (_: unit)
     let correct : bool = cbor_raw_sort pv a;
     Trade.trans _ _ (SM.seq_list_match va vv (cbor_det_map_entry_match pv));
     with va' vv' . assert (pts_to a va' ** SM.seq_list_match va' vv' (Raw.cbor_match_map_entry pv));
-    S.pts_to_len a;
+    MS.pts_to_len a;
     SM.seq_list_match_length (Raw.cbor_match_map_entry pv) va' vv';
     CBOR.Spec.Util.list_memP_map_forall fst vv';
     if (correct) {
@@ -716,8 +716,8 @@ fn cbor_det_mk_map_gen (_: unit)
       CBOR.Spec.Util.list_memP_map_forall fst vv1;
       CBOR.Spec.Util.list_no_repeats_memP_equiv_length_no_repeats (List.Tot.map fst vv') (List.Tot.map fst vv1);
       SpecRaw.cbor_map_sort_correct vv1;
-      fits_mod (SZ.v (S.len a)) U64.n;
-      let v' : Ghost.erased Spec.cbor = Ghost.hide (SpecRaw.mk_det_raw_cbor_map vv (SZ.sizet_to_uint64 (S.len a)));
+      fits_mod (SZ.v (MS.len a)) U64.n;
+      let v' : Ghost.erased Spec.cbor = Ghost.hide (SpecRaw.mk_det_raw_cbor_map vv (SZ.sizet_to_uint64 (MS.len a)));
       Pulse.Lib.Sort.Merge.Spec.spec_sort_correct
         (SpecRaw.map_entry_order SpecRaw.deterministically_encoded_cbor_map_key_order _)
         SpecRaw.cbor_map_entry_raw_compare
@@ -727,8 +727,10 @@ fn cbor_det_mk_map_gen (_: unit)
         (SpecRaw.map_entry_order SpecRaw.deterministically_encoded_cbor_map_key_order _)
         vv'
         (SpecRaw.cbor_map_sort vv1);
-      let raw_len = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (S.len a));
-      let res = CBOR.Pulse.Raw.Match.cbor_match_map_intro raw_len a;
+      let raw_len = SpecRaw.mk_raw_uint64 (SZ.sizet_to_uint64 (MS.len a));
+      let a' = MS.to_slice a;
+      let res = CBOR.Pulse.Raw.Match.cbor_match_map_intro raw_len a';
+      Trade.trans_concl_l _ _ _ _;
       Trade.trans_concl_r _ _ _ (SM.seq_list_match va vv (cbor_det_map_entry_match pv));
       with p' vraw . assert (Raw.cbor_match p' res vraw);
       SpecRaw.pack_unpack v';

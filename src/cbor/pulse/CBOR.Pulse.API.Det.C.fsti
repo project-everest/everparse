@@ -6,6 +6,7 @@ open CBOR.Spec.Constants
 
 module Spec = CBOR.Spec.API.Format
 module S = Pulse.Lib.Slice
+module MS = Pulse.Lib.MutableSlice
 module A = Pulse.Lib.Array
 module PM = Pulse.Lib.SeqMatch
 module Trade = Pulse.Lib.Trade.Util
@@ -15,9 +16,10 @@ module U8 = FStar.UInt8
 
 module SU = Pulse.Lib.Slice.Util
 module AP = Pulse.Lib.ArrayPtr
+module CAP = Pulse.Lib.ConstArrayPtr
 
 val cbor_det_validate
-  (input: AP.ptr U8.t)
+  (input: CAP.ptr U8.t)
   (input_len: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
@@ -28,7 +30,7 @@ val cbor_det_validate
     ))
 
 val cbor_det_parse
-  (input: AP.ptr U8.t)
+  (input: CAP.ptr U8.t)
   (len: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
@@ -60,22 +62,22 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn cbor_det_serialize_to_slice
   (x: cbor_det_t)
-  (output: S.slice U8.t)
+  (output: MS.slice U8.t)
   (#y: Ghost.erased Spec.cbor)
   (#pm: perm)
 requires
-    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (S.len output)))
+    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (MS.len output)))
 returns res: SZ.t
 ensures
     (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
       cbor_det_serialize_postcond y res v
     ))
 {
-  S.pts_to_len output;
-  let len = S.len output;
-  let ou = S.slice_to_arrayptr_intro output;
+  MS.pts_to_len output;
+  let len = MS.len output;
+  let ou = MS.slice_to_arrayptr_intro output;
   let res = cbor_det_serialize x ou len;
-  S.slice_to_arrayptr_elim ou;
+  MS.slice_to_arrayptr_elim ou;
   res
 }
 
@@ -99,7 +101,7 @@ let cbor_det_get_string_t
 = (x: cbor_det_t) ->
   (#p: perm) ->
   (#y: Ghost.erased Spec.cbor) ->
-  stt (AP.ptr FStar.UInt8.t)
+  stt (CAP.ptr FStar.UInt8.t)
     (cbor_det_match p x y ** pure (Spec.CString? (Spec.unpack y)))
     (fun res -> exists* p' v' .
       pts_to res #p' v' **

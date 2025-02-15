@@ -9,6 +9,7 @@ module U8 = FStar.UInt8
 module U64 = FStar.UInt64
 module V = Pulse.Lib.Vec
 module B = Pulse.Lib.Box
+module MS = Pulse.Lib.MutableSlice
 
 [@@erasable]
 noeq
@@ -808,22 +809,24 @@ ensures
       let len_sz = S.len pl;
       let v' = V.alloc 0uy len_sz;
       V.to_array_pts_to v';
-      let s' = S.from_array (V.vec_to_array v') len_sz;
-      S.pts_to_len s';
-      S.copy s' pl;
+      let s' = MS.from_array (V.vec_to_array v') len_sz;
+      MS.pts_to_len s';
+      MS.copy s' pl;
       Trade.elim _ _;
       with vs' . assert (pts_to s' vs');
-      let c' = cbor_match_string_intro ty len s';
+      let s2 = MS.to_slice s';
+      let c' = cbor_match_string_intro ty len s2;
+      Trade.trans _ _ (pts_to s' vs');
       let res = {
         cbor = c';
         footprint = CBOR_Copy_Bytes v';
         tree = FTBytes;
       };
       ghost fn aux (_: unit)
-      requires S.is_from_array (V.vec_to_array v') s' ** pts_to s' vs'
+      requires MS.is_from_array (V.vec_to_array v') s' ** pts_to s' vs'
       ensures freeable res
       {
-        S.to_array s';
+        MS.to_array s';
         V.to_vec_pts_to v';
         fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
         fold (freeable res)
@@ -885,14 +888,14 @@ ensures
       let v' = V.alloc 0uy len;
       V.pts_to_len v';
       V.to_array_pts_to v';
-      let s' = S.from_array (V.vec_to_array v') len;
-      S.pts_to_len s';
-      cbor_match_serialized_payload_array_copy a.cbor_serialized_payload _ _ s';
+      let s' = MS.from_array (V.vec_to_array v') len;
+      MS.pts_to_len s';
+      let s2 = cbor_match_serialized_payload_array_copy a.cbor_serialized_payload _ _ s';
       fold (cbor_match_serialized_array a p v);
       Trade.elim _ (cbor_match p x v);
       let a' = {
         cbor_serialized_header = a.cbor_serialized_header;
-        cbor_serialized_payload = s';
+        cbor_serialized_payload = s2;
         cbor_serialized_perm = 1.0R;
       };
       fold (cbor_match_serialized_array a' 1.0R v);
@@ -905,15 +908,15 @@ ensures
       requires
         (
           Trade.trade
-            (cbor_match_serialized_payload_array s' 1.0R (Array?.v v))
+            (cbor_match_serialized_payload_array s2 1.0R (Array?.v v))
             (exists* v_ . pts_to s' v_) **
-          S.is_from_array (V.vec_to_array v') s'
+          MS.is_from_array (V.vec_to_array v') s'
         ) ** cbor_match_serialized_array a' 1.0R v
       ensures freeable res
       {
         unfold (cbor_match_serialized_array a' 1.0R v);
         Trade.elim _ _;
-        S.to_array s';
+        MS.to_array s';
         V.to_vec_pts_to v';
         fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
         fold (freeable res)
@@ -934,14 +937,14 @@ ensures
       let v' = V.alloc 0uy len;
       V.pts_to_len v';
       V.to_array_pts_to v';
-      let s' = S.from_array (V.vec_to_array v') len;
-      S.pts_to_len s';
-      cbor_match_serialized_payload_map_copy a.cbor_serialized_payload _ _ s';
+      let s' = MS.from_array (V.vec_to_array v') len;
+      MS.pts_to_len s';
+      let s2 = cbor_match_serialized_payload_map_copy a.cbor_serialized_payload _ _ s';
       fold (cbor_match_serialized_map a p v);
       Trade.elim _ (cbor_match p x v);
       let a' = {
         cbor_serialized_header = a.cbor_serialized_header;
-        cbor_serialized_payload = s';
+        cbor_serialized_payload = s2;
         cbor_serialized_perm = 1.0R;
       };
       fold (cbor_match_serialized_map a' 1.0R v);
@@ -954,15 +957,15 @@ ensures
       requires
         (
           Trade.trade
-            (cbor_match_serialized_payload_map s' 1.0R (Map?.v v))
+            (cbor_match_serialized_payload_map s2 1.0R (Map?.v v))
             (exists* v_ . pts_to s' v_) **
-          S.is_from_array (V.vec_to_array v') s'
+          MS.is_from_array (V.vec_to_array v') s'
         ) ** cbor_match_serialized_map a' 1.0R v
       ensures freeable res
       {
         unfold (cbor_match_serialized_map a' 1.0R v);
         Trade.elim _ _;
-        S.to_array s';
+        MS.to_array s';
         V.to_vec_pts_to v';
         fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
         fold (freeable res)
@@ -983,14 +986,14 @@ ensures
       let v' = V.alloc 0uy len;
       V.pts_to_len v';
       V.to_array_pts_to v';
-      let s' = S.from_array (V.vec_to_array v') len;
-      S.pts_to_len s';
-      cbor_match_serialized_payload_tagged_copy a.cbor_serialized_payload _ _ s';
+      let s' = MS.from_array (V.vec_to_array v') len;
+      MS.pts_to_len s';
+      let s2 = cbor_match_serialized_payload_tagged_copy a.cbor_serialized_payload _ _ s';
       fold (cbor_match_serialized_tagged a p v);
       Trade.elim _ (cbor_match p x v);
       let a' = {
         cbor_serialized_header = a.cbor_serialized_header;
-        cbor_serialized_payload = s';
+        cbor_serialized_payload = s2;
         cbor_serialized_perm = 1.0R;
       };
       fold (cbor_match_serialized_tagged a' 1.0R v);
@@ -1003,15 +1006,15 @@ ensures
       requires
         (
           Trade.trade
-            (cbor_match_serialized_payload_tagged s' 1.0R (Tagged?.v v))
+            (cbor_match_serialized_payload_tagged s2 1.0R (Tagged?.v v))
             (exists* v_ . pts_to s' v_) **
-          S.is_from_array (V.vec_to_array v') s'
+          MS.is_from_array (V.vec_to_array v') s'
         ) ** cbor_match_serialized_tagged a' 1.0R v
       ensures freeable res
       {
         unfold (cbor_match_serialized_tagged a' 1.0R v);
         Trade.elim _ _;
-        S.to_array s';
+        MS.to_array s';
         V.to_vec_pts_to v';
         fold (freeable_match' (CBOR_Copy_Bytes v') FTBytes);
         fold (freeable res)

@@ -6,6 +6,7 @@ open CBOR.Spec.Constants
 
 module Spec = CBOR.Spec.API.Format
 module S = Pulse.Lib.Slice.Util
+module MS = Pulse.Lib.MutableSlice.Util
 module A = Pulse.Lib.Array
 module PM = Pulse.Lib.SeqMatch
 module Trade = Pulse.Lib.Trade.Util
@@ -15,6 +16,7 @@ module U8 = FStar.UInt8
 
 module SU = Pulse.Lib.Slice.Util
 module AP = Pulse.Lib.ArrayPtr
+module CAP = Pulse.Lib.ConstArrayPtr
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_validate_from_slice
@@ -100,16 +102,16 @@ fn cbor_det_serialize_full
 : cbor_det_serialize_t u#0 #_ cbor_det_match
 =
   (x: cbor_det_t)
-  (output: S.slice U8.t)
+  (output: MS.slice U8.t)
   (#y: Ghost.erased Spec.cbor)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
 {
-  S.pts_to_len output;
-  let slen = S.len output;
+  MS.pts_to_len output;
+  let slen = MS.len output;
   let len = cbor_det_size x slen;
   if (SZ.gt len 0sz) {
-    let out = S.slice_to_arrayptr_intro output;
+    let out = MS.slice_to_arrayptr_intro output;
     let out' = AP.ghost_split out len;
     let len' = cbor_det_serialize x out len;
     with v1 . assert (pts_to out v1);
@@ -117,8 +119,8 @@ fn cbor_det_serialize_full
     AP.join out out';
     with v' . assert (pts_to out v');
     Seq.lemma_split v' (SZ.v len');
-    S.slice_to_arrayptr_elim out;
-    S.pts_to_len output;
+    MS.slice_to_arrayptr_elim out;
+    MS.pts_to_len output;
     assert (pure (Seq.equal (Seq.slice v' 0 (SZ.v len')) (Spec.cbor_det_serialize y)));
     assert (pure (Seq.equal (Seq.slice v' (SZ.v len) (Seq.length v)) (Seq.slice v (SZ.v len) (Seq.length v))));
     Some len'

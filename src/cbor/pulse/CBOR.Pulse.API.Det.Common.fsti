@@ -4,6 +4,7 @@ include CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
 module Spec = CBOR.Spec.API.Format
 module S = Pulse.Lib.Slice
+module MS = Pulse.Lib.MutableSlice
 module Trade = Pulse.Lib.Trade.Util
 module SZ = FStar.SizeT
 module U64 = FStar.UInt64
@@ -198,11 +199,11 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 val cbor_det_serialize
   (x: cbor_det_t)
-  (output: S.slice U8.t)
+  (output: MS.slice U8.t)
   (#y: Ghost.erased Spec.cbor)
   (#pm: perm)
 : stt SZ.t
-    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (S.len output)))
+    (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (Seq.length (Spec.cbor_det_serialize y) <= SZ.v (MS.len output)))
     (fun res -> exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
       cbor_det_serialize_postcond y res v
     ))

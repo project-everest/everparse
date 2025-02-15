@@ -7,6 +7,7 @@ open Pulse.Lib.Slice
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade
+module MS = Pulse.Lib.MutableSlice
 
 val cbor_match_serialized_payload_array
   (c: slice U8.t)
@@ -108,17 +109,17 @@ val cbor_match_serialized_payload_array_copy
   (c: slice U8.t)
   (p: perm)
   (r: Ghost.erased (list raw_data_item))
-  (c': slice U8.t)
-: stt unit
+  (c': MS.slice U8.t)
+: stt (slice U8.t)
     (exists* v' . pts_to c' v' **
       cbor_match_serialized_payload_array c p r **
-      pure (len c == len c')
+      pure (len c == MS.len c')
     )
-    (fun _ ->
+    (fun res ->
       cbor_match_serialized_payload_array c p r **
-      cbor_match_serialized_payload_array c' 1.0R r **
+      cbor_match_serialized_payload_array res 1.0R r **
       Trade.trade
-        (cbor_match_serialized_payload_array c' 1.0R r)
+        (cbor_match_serialized_payload_array res 1.0R r)
         (exists* v' . pts_to c' v')
     )
 
@@ -126,17 +127,17 @@ val cbor_match_serialized_payload_map_copy
   (c: slice U8.t)
   (p: perm)
   (r: Ghost.erased (list (raw_data_item & raw_data_item)))
-  (c': slice U8.t)
-: stt unit
+  (c': MS.slice U8.t)
+: stt (slice U8.t)
     (exists* v' . pts_to c' v' **
       cbor_match_serialized_payload_map c p r **
-      pure (len c == len c')
+      pure (len c == MS.len c')
     )
-    (fun _ ->
+    (fun res ->
       cbor_match_serialized_payload_map c p r **
-      cbor_match_serialized_payload_map c' 1.0R r **
+      cbor_match_serialized_payload_map res 1.0R r **
       Trade.trade
-        (cbor_match_serialized_payload_map c' 1.0R r)
+        (cbor_match_serialized_payload_map res 1.0R r)
         (exists* v' . pts_to c' v')
     )
 
@@ -144,16 +145,16 @@ val cbor_match_serialized_payload_tagged_copy
   (c: slice U8.t)
   (p: perm)
   (r: Ghost.erased raw_data_item)
-  (c': slice U8.t)
-: stt unit
+  (c': MS.slice U8.t)
+: stt (slice U8.t)
     (exists* v' . pts_to c' v' **
       cbor_match_serialized_payload_tagged c p r **
-      pure (len c == len c')
+      pure (len c == MS.len c')
     )
-    (fun _ ->
+    (fun res ->
       cbor_match_serialized_payload_tagged c p r **
-      cbor_match_serialized_payload_tagged c' 1.0R r **
+      cbor_match_serialized_payload_tagged res 1.0R r **
       Trade.trade
-        (cbor_match_serialized_payload_tagged c' 1.0R r)
+        (cbor_match_serialized_payload_tagged res 1.0R r)
         (exists* v' . pts_to c' v')
     )

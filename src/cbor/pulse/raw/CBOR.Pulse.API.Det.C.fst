@@ -5,7 +5,7 @@ module CBOR.Pulse.API.Det.C
 but it has been moved here to be hidden from verified clients. *)
 
 fn cbor_det_validate
-  (input: AP.ptr U8.t)
+  (input: CAP.ptr U8.t)
   (input_len: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
@@ -41,7 +41,7 @@ let cbor_det_validate_success_elim
   (Ghost.reveal v1, Ghost.reveal v2)
 
 fn cbor_det_parse
-  (input: AP.ptr U8.t)
+  (input: CAP.ptr U8.t)
   (len: SZ.t)
   (#pm: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
@@ -60,13 +60,13 @@ ensures
 {
   let v1v2 = cbor_det_validate_success_elim len v;
   assert (pure (Seq.equal (Seq.slice v 0 (SZ.v len)) (Spec.cbor_det_serialize (fst v1v2))));
-  let gr : Ghost.erased (AP.ptr U8.t) = AP.ghost_split input len;
+  let gr : Ghost.erased (CAP.ptr U8.t) = CAP.ghost_split input len;
   ghost fn aux (_: unit)
   requires pts_to (Ghost.reveal gr) #pm (Seq.slice v (SZ.v len) (Seq.length v)) ** pts_to input #pm (Seq.slice v 0 (SZ.v len))
   ensures pts_to input #pm v
   {
     Seq.lemma_split v (SZ.v len);
-    AP.join input gr
+    CAP.join input gr
   };
   Trade.intro _ _ _ aux;
   Seq.append_empty_r (Spec.cbor_det_serialize (fst v1v2));
@@ -94,12 +94,12 @@ ensures
       cbor_det_serialize_postcond y res v
     ))
 {
-  let ou = S.arrayptr_to_slice_intro output output_len;
-  S.pts_to_len ou;
+  let ou = MS.arrayptr_to_slice_intro output output_len;
+  MS.pts_to_len ou;
   let res = CBOR.Pulse.API.Det.Common.cbor_det_serialize x ou;
-  S.pts_to_len ou;
+  MS.pts_to_len ou;
   assert (pure (SZ.v res == Seq.length (Spec.cbor_det_serialize y)));
-  S.arrayptr_to_slice_elim ou;
+  MS.arrayptr_to_slice_elim ou;
   res
 }
 

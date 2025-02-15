@@ -9,6 +9,7 @@ open LowParse.Pulse.Base
 open CBOR.Pulse.Raw.Match
 module LP = LowParse.Pulse.Combinators
 module LPI = LowParse.Pulse.Int
+module S = Pulse.Lib.Slice
 
 inline_for_extraction
 let write_initial_byte' : l2r_leaf_writer serialize_initial_byte_t =
@@ -1777,7 +1778,7 @@ let size_body
 let ser_pre
   (x': with_perm cbor_raw)
   (x: raw_data_item)
-  (out: S.slice LP.byte)
+  (out: MS.slice LP.byte)
   (offset: SZ.t)
   (v: Ghost.erased LP.bytes)
 : Tot slprop
@@ -1789,7 +1790,7 @@ let ser_pre
 let ser_post
   (x': with_perm cbor_raw)
   (x: raw_data_item)
-  (out: S.slice LP.byte)
+  (out: MS.slice LP.byte)
   (offset: SZ.t)
   (v: Ghost.erased LP.bytes)
   (res: SZ.t)
@@ -1808,10 +1809,10 @@ let ser_post
 inline_for_extraction
 ```pulse
 fn ser_fold
-  (f: (x': with_perm cbor_raw) -> (x: Ghost.erased raw_data_item) -> (out: S.slice LP.byte) -> (offset: SZ.t) -> (v: Ghost.erased LP.bytes) -> stt SZ.t (ser_pre x' x out offset v) (fun res -> ser_post x' x out offset v res))
+  (f: (x': with_perm cbor_raw) -> (x: Ghost.erased raw_data_item) -> (out: MS.slice LP.byte) -> (offset: SZ.t) -> (v: Ghost.erased LP.bytes) -> stt SZ.t (ser_pre x' x out offset v) (fun res -> ser_post x' x out offset v res))
 : LP.l2r_writer #_ #raw_data_item (cbor_match_with_perm) #parse_raw_data_item_kind #parse_raw_data_item serialize_raw_data_item
 =
-  (x': with_perm cbor_raw) (#x: raw_data_item) (out: S.slice LP.byte) (offset: SZ.t) (#v: Ghost.erased LP.bytes)
+  (x': with_perm cbor_raw) (#x: raw_data_item) (out: MS.slice LP.byte) (offset: SZ.t) (#v: Ghost.erased LP.bytes)
 {
   fold (ser_pre x' x out offset v);
   let res = f x' x out offset v;
@@ -1826,7 +1827,7 @@ fn ser_unfold
   (f: LP.l2r_writer (cbor_match_with_perm) serialize_raw_data_item)
   (x': with_perm cbor_raw)
   (x: Ghost.erased raw_data_item)
-  (out: S.slice LP.byte)
+  (out: MS.slice LP.byte)
   (offset: SZ.t)
   (v: Ghost.erased LP.bytes)
 requires
@@ -1846,10 +1847,10 @@ inline_for_extraction
 ```pulse
 fn ser_body'
   (f64: squash SZ.fits_u64)
-  (f: (x': with_perm cbor_raw) -> (x: Ghost.erased raw_data_item) -> (out: S.slice LP.byte) -> (offset: SZ.t) -> (v: Ghost.erased LP.bytes) -> stt SZ.t (ser_pre x' x out offset v) (fun res -> ser_post x' x out offset v res))
+  (f: (x': with_perm cbor_raw) -> (x: Ghost.erased raw_data_item) -> (out: MS.slice LP.byte) -> (offset: SZ.t) -> (v: Ghost.erased LP.bytes) -> stt SZ.t (ser_pre x' x out offset v) (fun res -> ser_post x' x out offset v res))
   (x': with_perm cbor_raw)
   (x: Ghost.erased raw_data_item)
-  (out: S.slice LP.byte)
+  (out: MS.slice LP.byte)
   (offset: SZ.t)
   (v: Ghost.erased LP.bytes)
 requires
@@ -1867,7 +1868,7 @@ fn rec ser'
   (f64: squash SZ.fits_u64)
   (x': with_perm cbor_raw)
   (x: Ghost.erased raw_data_item)
-  (out: S.slice LP.byte)
+  (out: MS.slice LP.byte)
   (offset: SZ.t)
   (v: Ghost.erased LP.bytes)
 requires
@@ -1888,11 +1889,11 @@ let ser (f64: squash SZ.fits_u64) (p: perm) : l2r_writer (cbor_match p) serializ
 ```pulse
 fn cbor_serialize
   (x: cbor_raw)
-  (output: S.slice U8.t)
+  (output: MS.slice U8.t)
   (#y: Ghost.erased raw_data_item)
   (#pm: perm)
 requires
-    (exists* v . cbor_match pm x y ** pts_to output v ** pure (Seq.length (serialize_cbor y) <= SZ.v (S.len output)))
+    (exists* v . cbor_match pm x y ** pts_to output v ** pure (Seq.length (serialize_cbor y) <= SZ.v (MS.len output)))
 returns res: SZ.t
 ensures exists* v . cbor_match pm x y ** pts_to output v ** pure (
       let s = serialize_cbor y in
@@ -1901,7 +1902,7 @@ ensures exists* v . cbor_match pm x y ** pts_to output v ** pure (
     )
 {
   let sq : squash (SZ.fits_u64) = assume (SZ.fits_u64);
-  S.pts_to_len output;
+  MS.pts_to_len output;
   let res = ser sq _ x output 0sz;
   with v . assert (pts_to output v);
   Seq.lemma_split v (SZ.v res);
