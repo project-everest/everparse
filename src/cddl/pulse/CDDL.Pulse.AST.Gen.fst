@@ -312,6 +312,73 @@ let extend_ancillaries_t
     array_parsers = (fun t t_wf -> if group_bounded ne t && bounded_wf_array_group ne _ t_wf then anc.array_parsers t t_wf else false);
   }
 
+noeq
+type record_type = {
+  rt_type: list target_type;
+  rt_pair: string;
+  rt_record: string;
+}
+
+noeq
+type union_case = {
+  ut_type: target_type;
+  ut_either: string;
+  ut_union: string;
+}
+
+noeq
+type toplevel_type =
+| ToTSimple of target_type
+| ToTUnion of list union_case
+| ToTRecord of record_type
+
+let rec record_of_target_type (typename: string) (t: target_type) (n: nat) : Tot (nat & record_type) =
+  match t with
+  | TTElem TTUnit -> (n, {
+    rt_type = [];
+    rt_pair = "()";
+    rt_record = "";
+  })
+  | TTPair t1 t2 ->
+    let (n1, r1) = record_of_target_type typename t1 n in
+    let (n2, r2) = record_of_target_type typename t2 n1 in
+    (n2, {
+      rt_type = r1.rt_type `List.Tot.append` r2.rt_type;
+      rt_pair = "(" ^ r1.rt_pair ^ "," ^ r2.rt_pair ^ ")";
+      rt_record = r1.rt_record ^ r2.rt_record;
+    })
+  | _ ->
+    let casename = typename ^ "_case" ^ string_of_int n in
+    (n + 1, {
+      rt_type = [t];
+      rt_pair = casename;
+      rt_record = casename ^ " = " ^ casename ^ ";\n";
+    })
+
+let rec union_of_target_type (typename: string) (t: target_type) (n: nat) : Tot (nat & list union_case) =
+  match t with
+  | TTElem TTAlwaysFalse -> (n, [])
+  | TTUnion t1 t2 ->
+    let (n1, u1) = union_of_target_type typename t1 n in
+    let (n2, u2) = union_of_target_type typename t2 n1 in
+    (n2,
+      List.Tot.map (fun u -> {u with ut_either = "Inl (" ^ u.ut_either ^ ")"}) u1 `List.Tot.append`
+      List.Tot.map (fun u -> {u with ut_either = "Inr (" ^ u.ut_either ^ ")"}) u2
+    )
+  | _ ->
+    let casename = "Case" ^ string_of_int n ^ "_" ^ typename in
+    (n + 1, [{
+      ut_type = t;
+      ut_either = "x";
+      ut_union = casename;
+    }])
+
+let toplevel_of_target_type (typename: string) (t: target_type) : Tot toplevel_type =
+  match t with
+  | TTUnion _ _ -> ToTUnion (snd (union_of_target_type typename t 0))
+  | TTPair _ _ -> ToTRecord (snd (record_of_target_type typename t 0))
+  | _ -> ToTSimple t
+
 let produce_typ_defs_t : Type0
 = result (string & (wenv': wf_ast_env & ancillaries_t wenv'.e_sem_env))
 
