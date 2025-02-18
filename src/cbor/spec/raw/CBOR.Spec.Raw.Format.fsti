@@ -345,3 +345,18 @@ let deterministically_encoded_cbor_map_key_order_int64
   [SMTPat (Ghost.reveal deterministically_encoded_cbor_map_key_order (Int64 ty v1) (Int64 ty v2))]
 = deterministically_encoded_cbor_map_key_order_spec (Int64 ty v1) (Int64 ty v2);
   cbor_compare_correct (Int64 ty v1) (Int64 ty v2)
+
+val serialize_cbor_tag
+  (tag: raw_uint64)
+: Tot (Seq.seq U8.t)
+
+val serialize_cbor_tag_length
+  (tag: raw_uint64)
+: Lemma
+  (Seq.length (serialize_cbor_tag tag) > 0)
+
+val serialize_cbor_tag_correct
+  (tag: raw_uint64)
+  (payload: raw_data_item)
+: Lemma
+  (serialize_cbor (Tagged tag payload) == serialize_cbor_tag tag `Seq.append` serialize_cbor payload)

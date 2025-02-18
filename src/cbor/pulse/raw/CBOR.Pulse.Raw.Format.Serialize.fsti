@@ -43,3 +43,23 @@ val cbor_size
     (fun res -> cbor_match pm x y ** pure (
       cbor_size_post bound y res
     ))
+
+noextract [@@noextract_to "krml"]
+let cbor_serialize_tag_postcond
+  (tag: raw_uint64)
+  (output: S.slice U8.t)
+  (res: SZ.t)
+  (v': Seq.seq U8.t)
+: Tot prop
+= let s = serialize_cbor_tag tag in
+  let len = Seq.length s in
+  SZ.v (S.len output) == Seq.length v' /\
+  (res == 0sz <==> len > Seq.length v') /\
+  (len <= Seq.length v' ==> Seq.slice v' 0 len == s)
+
+val cbor_serialize_tag
+  (tag: raw_uint64)
+  (output: S.slice U8.t)
+: stt SZ.t
+  (exists* v . pts_to output v)
+  (fun res -> exists* v . pts_to output v ** pure (cbor_serialize_tag_postcond tag output res v))

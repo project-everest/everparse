@@ -234,6 +234,25 @@ ensures
 }
 ```
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_serialize_tag
+  (tag: U64.t)
+  (output: S.slice U8.t)
+requires
+    (exists* v . pts_to output v)
+returns res: SZ.t
+ensures
+    (exists* v . pts_to output v ** pure (
+      cbor_det_serialize_tag_postcond tag output res v
+    ))
+{
+  let tag' = SpecRaw.mk_raw_uint64 tag;
+  Serialize.cbor_serialize_tag tag' output
+}
+```
+
 ```pulse
 fn cbor_det_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_det_match
 = (v: _)

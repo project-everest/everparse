@@ -2036,3 +2036,28 @@ ensures cbor_match pm x y ** pure (
 }
 ```
 
+```pulse
+fn cbor_serialize_tag
+  (tag: raw_uint64)
+  (output: S.slice U8.t)
+requires
+  (exists* v . pts_to output v)
+returns res: SZ.t
+ensures
+  (exists* v . pts_to output v ** pure (cbor_serialize_tag_postcond tag output res v))
+{
+  serialize_cbor_tag_length tag;
+  let h = raw_uint64_as_argument cbor_major_type_tagged tag;
+  let mut slen = S.len output;
+  let fits = size_header h slen;
+  S.pts_to_len output;
+  if (fits) {
+    let res = write_header h output 0sz;
+    S.pts_to_len output;
+    res
+  } else {
+    0sz
+  }
+}
+```
+

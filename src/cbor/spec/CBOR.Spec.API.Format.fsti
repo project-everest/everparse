@@ -2,6 +2,7 @@ module CBOR.Spec.API.Format
 include CBOR.Spec.API.Type
 
 module U8 = FStar.UInt8
+module U64 = FStar.UInt64
 
 (** Parsing *)
 
@@ -117,3 +118,18 @@ let cbor_det_serialize_inj
 = Seq.append_empty_r (cbor_det_serialize x1);
   Seq.append_empty_r (cbor_det_serialize x2);
   cbor_det_serialize_inj_strong x1 x2 Seq.empty Seq.empty
+
+val cbor_det_serialize_tag
+  (tag: U64.t)
+: Tot (Seq.seq U8.t)
+
+val cbor_det_serialize_tag_length
+  (tag: U64.t)
+: Lemma
+  (Seq.length (cbor_det_serialize_tag tag) > 0)
+
+val cbor_det_serialize_tag_correct
+  (tag: U64.t)
+  (payload: cbor)
+: Lemma
+  (cbor_det_serialize (pack (CTagged tag payload)) == cbor_det_serialize_tag tag `Seq.append` cbor_det_serialize payload)

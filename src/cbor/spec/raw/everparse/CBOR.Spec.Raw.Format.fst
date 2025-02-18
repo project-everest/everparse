@@ -1,7 +1,7 @@
 module CBOR.Spec.Raw.Format
 module F = CBOR.Spec.Raw.EverParse
 module M = CBOR.Spec.Raw.Map
-module LP = LowParse.Spec.Base
+module LP = LowParse.Spec.Combinators
 
 let serialize_cbor c = F.tot_serialize_raw_data_item c
 
@@ -143,3 +143,23 @@ and cbor_compare_map_correct
 #pop-options
 
 let cbor_compare_correct = cbor_compare_correct'
+
+let serialize_cbor_tag tag =
+  F.tot_serialize_header (F.raw_uint64_as_argument cbor_major_type_tagged tag)
+
+let serialize_cbor_tag_length tag =
+  LP.serialize_length F.serialize_header (F.raw_uint64_as_argument cbor_major_type_tagged tag)
+
+let serialize_cbor_tag_correct tag payload =
+  let v1 = Tagged tag payload in
+  F.serialize_raw_data_item_aux_correct v1;
+  LP.serialize_synth_eq
+    _
+    F.synth_raw_data_item
+    (LP.serialize_dtuple2 F.serialize_header F.serialize_content)
+    F.synth_raw_data_item_recip
+    ()
+    v1;
+  let v1' = F.synth_raw_data_item_recip v1 in
+  LP.serialize_dtuple2_eq F.serialize_header F.serialize_content v1'
+
