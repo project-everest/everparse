@@ -773,41 +773,40 @@ fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (serialize_dtuple2 serialize_header serialize_leaf_content)
     a;
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
-  match spl { Mktuple2 input1 input2 -> {
-    unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
-    unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
-    let h = read_header () input1;
-    elim_trade
-      (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
-      (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
-    elim_trade _ _;
-    let typ = get_header_major_type h;
-    if (typ = cbor_major_type_array) {
-      let arg64 = get_header_argument_as_uint64 h;
-      prem := SZ.uint64_to_sizet arg64;
+  let input1, input2 = spl;
+  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
+  unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
+  let h = read_header () input1;
+  elim_trade
+    (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
+    (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  elim_trade _ _;
+  let typ = get_header_major_type h;
+  if (typ = cbor_major_type_array) {
+    let arg64 = get_header_argument_as_uint64 h;
+    prem := SZ.uint64_to_sizet arg64;
+    false
+  }
+  else if (typ = cbor_major_type_map) {
+    let arg64 = get_header_argument_as_uint64 h;
+    let arg = SZ.uint64_to_sizet arg64;
+    if SZ.gt arg bound {
+      true
+    } else if SZ.lt (SZ.sub bound arg) arg {
+      true
+    } else {
+      prem := (SZ.add arg arg);
       false
     }
-    else if (typ = cbor_major_type_map) {
-      let arg64 = get_header_argument_as_uint64 h;
-      let arg = SZ.uint64_to_sizet arg64;
-      if SZ.gt arg bound {
-        true
-      } else if SZ.lt (SZ.sub bound arg) arg {
-        true
-      } else {
-        prem := (SZ.add arg arg);
-        false
-      }
-    }
-    else if (typ = cbor_major_type_tagged) {
-      prem := 1sz;
-      false
-    }
-    else {
-      prem := 0sz;
-      false
-    }
-  }}
+  }
+  else if (typ = cbor_major_type_tagged) {
+    prem := 1sz;
+    false
+  }
+  else {
+    prem := 0sz;
+    false
+  }
 }
 
 fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
@@ -823,31 +822,30 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (serialize_dtuple2 serialize_header serialize_leaf_content)
     a;
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
-  match spl { Mktuple2 input1 input2 -> {
-    unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
-    unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
-    let h = read_header () input1;
-    elim_trade
-      (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
-      (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
-    elim_trade _ _;
-    let typ = get_header_major_type h;
-    if (typ = cbor_major_type_array) {
-      let arg64 = get_header_argument_as_uint64 h;
-      SZ.uint64_to_sizet arg64
-    }
-    else if (typ = cbor_major_type_map) {
-      let arg64 = get_header_argument_as_uint64 h;
-      let arg = SZ.uint64_to_sizet arg64;
-      SZ.add arg arg
-    }
-    else if (typ = cbor_major_type_tagged) {
-      1sz
-    }
-    else {
-      0sz
-    }
-  }}
+  let input1, input2 = spl;
+  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
+  unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
+  let h = read_header () input1;
+  elim_trade
+    (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
+    (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  elim_trade _ _;
+  let typ = get_header_major_type h;
+  if (typ = cbor_major_type_array) {
+    let arg64 = get_header_argument_as_uint64 h;
+    SZ.uint64_to_sizet arg64
+  }
+  else if (typ = cbor_major_type_map) {
+    let arg64 = get_header_argument_as_uint64 h;
+    let arg = SZ.uint64_to_sizet arg64;
+    SZ.add arg arg
+  }
+  else if (typ = cbor_major_type_tagged) {
+    1sz
+  }
+  else {
+    0sz
+  }
 }
 
 inline_for_extraction
@@ -915,15 +913,14 @@ fn get_header_and_contents
   Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
   with v' . assert (pts_to_serialized (serialize_dtuple2 serialize_header serialize_content) input #pm v');
   let spl = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
-  match spl { Mktuple2 ph outc -> {
-    unfold (split_dtuple2_post serialize_header serialize_content input pm v' spl);
-    unfold (split_dtuple2_post' serialize_header serialize_content input pm v' ph outc);
-    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
-    let h = read_header () ph;
-    Trade.elim_hyp_l _ _ _;
-    outh := h;
-    outc
-  }}
+  let ph, outc = spl;
+  unfold (split_dtuple2_post serialize_header serialize_content input pm v' spl);
+  unfold (split_dtuple2_post' serialize_header serialize_content input pm v' ph outc);
+  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+  let h = read_header () ph;
+  Trade.elim_hyp_l _ _ _;
+  outh := h;
+  outc
 }
 
 ghost

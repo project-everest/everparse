@@ -648,47 +648,46 @@ fn impl_nlist_forall_pred_recursive
         j
         (serialize_nlist_recursive_cons_payload s (SZ.v n))
         pi;
-      match spl { Mktuple2 ph pc -> {
-        unfold (C.split_dtuple2_post (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi spl);
-        unfold (C.split_dtuple2_post' (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi ph pc);
-        Trade.trans
-          _ _
-          (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
-        with h c . assert (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) ph #pm h ** pts_to_serialized (serialize_nlist_recursive_cons_payload s (SZ.v n) h) pc #pm c);
-        List.Tot.for_all_append pr.pred (fst c) (snd c);
-        synth_nlist_append_recip_inverse p.t (p.count h) (SZ.v n - 1); // FIXME: WHY WHY WHY does this pattern not trigger?
-        C.pts_to_serialized_synth_trade
-          (serialize_nlist_recursive_cons_payload s (SZ.v n) h)
+      let ph, pc = spl;
+      unfold (C.split_dtuple2_post (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi spl);
+      unfold (C.split_dtuple2_post' (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi ph pc);
+      Trade.trans
+        _ _
+        (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
+      with h c . assert (pts_to_serialized (serializer_of_tot_serializer s.serialize_header) ph #pm h ** pts_to_serialized (serialize_nlist_recursive_cons_payload s (SZ.v n) h) pc #pm c);
+      List.Tot.for_all_append pr.pred (fst c) (snd c);
+      synth_nlist_append_recip_inverse p.t (p.count h) (SZ.v n - 1); // FIXME: WHY WHY WHY does this pattern not trigger?
+      C.pts_to_serialized_synth_trade
+        (serialize_nlist_recursive_cons_payload s (SZ.v n) h)
+        (synth_nlist_append p.t (p.count h) (SZ.v n - 1))
+        (synth_nlist_append_recip p.t (p.count h) (SZ.v n - 1))
+        pc;
+      Classical.forall_intro (parse_recursive_cons_payload_eq_nlist p (SZ.v n) h);
+      C.pts_to_serialized_ext_trade
+        (C.serialize_synth
+          _
           (synth_nlist_append p.t (p.count h) (SZ.v n - 1))
+          (serialize_nlist_recursive_cons_payload s (SZ.v n) h)
           (synth_nlist_append_recip p.t (p.count h) (SZ.v n - 1))
-          pc;
-        Classical.forall_intro (parse_recursive_cons_payload_eq_nlist p (SZ.v n) h);
-        C.pts_to_serialized_ext_trade
-          (C.serialize_synth
-            _
-            (synth_nlist_append p.t (p.count h) (SZ.v n - 1))
-            (serialize_nlist_recursive_cons_payload s (SZ.v n) h)
-            (synth_nlist_append_recip p.t (p.count h) (SZ.v n - 1))
-            ()
-          )
-          (L.serialize_nlist (p.count h + (SZ.v n - 1)) (serializer_of_tot_serializer (serialize_recursive s)))
-          pc;
-        with c' . assert (pts_to_serialized (L.serialize_nlist (p.count h + (SZ.v n - 1)) (serializer_of_tot_serializer (serialize_recursive s))) pc #pm c');
-        pts_to_serialized_length
-          (L.serialize_nlist (p.count h + (SZ.v n - 1)) (serializer_of_tot_serializer (serialize_recursive s)))
-          pc;
-        serialize_recursive_bound_correct s (p.count h + (SZ.v n - 1)) c';
-        let count = f ph (S.len pc);
-        Trade.elim_hyp_l _ _ _;
-        Trade.trans
-          _ _
-          (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
-        Trade.trans
-          _ _
-          (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
-        pn := SZ.add (SZ.sub n 1sz) count;
-        ppi := pc;
-      }}
+          ()
+        )
+        (L.serialize_nlist (p.count h + (SZ.v n - 1)) (serializer_of_tot_serializer (serialize_recursive s)))
+        pc;
+      with c' . assert (pts_to_serialized (L.serialize_nlist (p.count h + (SZ.v n - 1)) (serializer_of_tot_serializer (serialize_recursive s))) pc #pm c');
+      pts_to_serialized_length
+        (L.serialize_nlist (p.count h + (SZ.v n - 1)) (serializer_of_tot_serializer (serialize_recursive s)))
+        pc;
+      serialize_recursive_bound_correct s (p.count h + (SZ.v n - 1)) c';
+      let count = f ph (S.len pc);
+      Trade.elim_hyp_l _ _ _;
+      Trade.trans
+        _ _
+        (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
+      Trade.trans
+        _ _
+        (pts_to_serialized (L.serialize_nlist (SZ.v n0) (serializer_of_tot_serializer (serialize_recursive s))) input #pm v);
+      pn := SZ.add (SZ.sub n 1sz) count;
+      ppi := pc;
     }
   };
   elim_trade _ _;

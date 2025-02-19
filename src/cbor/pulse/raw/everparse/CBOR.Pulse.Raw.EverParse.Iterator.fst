@@ -247,35 +247,32 @@ fn cbor_raw_serialized_iterator_next
     #p'
     s'
     i.s;
-  match sp {
-    Mktuple2 s1 s2 -> {
-      unfold (LPC.split_nondep_then_post s s' i.s (pm *. i.p) v' sp);
-      unfold (LPC.split_nondep_then_post' s s' i.s (pm *. i.p) v' s1 s2);
-      Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
-      let res = phi s1;
-      with pm' . assert (elt_match pm' res (fst v'));
-      Trade.rewrite_with_trade
-        (elt_match pm' res (fst v'))
-        (elt_match pm' res (List.Tot.hd l));
-      Trade.trans (elt_match pm' res (List.Tot.hd l)) _ _;
-      let i' : cbor_raw_serialized_iterator = {
-        s = s2;
-        p = i.p /. 2.0R;
-        len = U64.sub i.len 1uL;
-        glen = glen';
-      };
-      pi := CBOR_Raw_Iterator_Serialized i';
-      perm_half_mult pm i.p;
-      cbor_raw_serialized_iterator_fold_with_perm s glen' s2 (pm *. i.p) (List.Tot.tl l') i' pm (List.Tot.tl l);
-      Trade.prod
-        (elt_match _ res (List.Tot.hd l))
-        _
-        (cbor_raw_serialized_iterator_match s pm i' (List.Tot.tl l))
-        _;
-      Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
-      res
-    }
-  }
+  let s1, s2 = sp;
+  unfold (LPC.split_nondep_then_post s s' i.s (pm *. i.p) v' sp);
+  unfold (LPC.split_nondep_then_post' s s' i.s (pm *. i.p) v' s1 s2);
+  Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
+  let res = phi s1;
+  with pm' . assert (elt_match pm' res (fst v'));
+  Trade.rewrite_with_trade
+    (elt_match pm' res (fst v'))
+    (elt_match pm' res (List.Tot.hd l));
+  Trade.trans (elt_match pm' res (List.Tot.hd l)) _ _;
+  let i' : cbor_raw_serialized_iterator = {
+    s = s2;
+    p = i.p /. 2.0R;
+    len = U64.sub i.len 1uL;
+    glen = glen';
+  };
+  pi := CBOR_Raw_Iterator_Serialized i';
+  perm_half_mult pm i.p;
+  cbor_raw_serialized_iterator_fold_with_perm s glen' s2 (pm *. i.p) (List.Tot.tl l') i' pm (List.Tot.tl l);
+  Trade.prod
+    (elt_match _ res (List.Tot.hd l))
+    _
+    (cbor_raw_serialized_iterator_match s pm i' (List.Tot.tl l))
+    _;
+  Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
+  res
 }
 
 let rec list_splitAt_splitAt

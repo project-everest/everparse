@@ -809,19 +809,15 @@ fn split_dtuple2
     (pts_to input #pm (bare_serialize s1 (dfst v) `Seq.append` bare_serialize (s2 (dfst v)) (dsnd v)));
   parse_serialize_strong_prefix s1 (dfst v) (bare_serialize (s2 (dfst v)) (dsnd v));
   let i = j1 input 0sz;
-  let res = append_split_trade input i;
-  match res {
-    Mktuple2 input1 input2 -> {
-      Trade.trans (_ ** _) _ _;
-      pts_to_serialized_intro_trade s1 input1 (dfst v);
-      pts_to_serialized_intro_trade (s2 (dfst v)) input2 (dsnd v);
-      Trade.prod (pts_to_serialized s1 input1 #pm _) (pts_to input1 #pm _) (pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input2 #pm _);
-      Trade.trans (pts_to_serialized s1 input1 #pm _ ** pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input1 #pm _ ** pts_to input2 #pm _) _;
-      fold (split_dtuple2_post' s1 s2 input pm v input1 input2);
-      fold (split_dtuple2_post s1 s2 input pm v (input1, input2));
-      (input1, input2)
-    }
-  }
+  let input1, input2 = append_split_trade input i;
+  Trade.trans (_ ** _) _ _;
+  pts_to_serialized_intro_trade s1 input1 (dfst v);
+  pts_to_serialized_intro_trade (s2 (dfst v)) input2 (dsnd v);
+  Trade.prod (pts_to_serialized s1 input1 #pm _) (pts_to input1 #pm _) (pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input2 #pm _);
+  Trade.trans (pts_to_serialized s1 input1 #pm _ ** pts_to_serialized (s2 (dfst v)) input2 #pm _) (pts_to input1 #pm _ ** pts_to input2 #pm _) _;
+  fold (split_dtuple2_post' s1 s2 input pm v input1 input2);
+  fold (split_dtuple2_post s1 s2 input pm v (input1, input2));
+  (input1, input2)
 }
 
 ghost fn ghost_split_dtuple2
@@ -905,13 +901,11 @@ fn dtuple2_dfst
   ensures pts_to_serialized s1 res #pm (dfst v) **
     trade (pts_to_serialized s1 res #pm (dfst v)) (pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v)
 {
-  let spl = split_dtuple2 s1 j1 s2 input;
-  match spl { Mktuple2 input1 input2 -> {
-    unfold (split_dtuple2_post s1 s2 input pm v spl);
-    unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
-    Trade.elim_hyp_r _ _ _;
-    input1
-  }}
+  let input1, input2 = split_dtuple2 s1 j1 s2 input;
+  unfold (split_dtuple2_post s1 s2 input pm v (input1, input2));
+  unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
+  Trade.elim_hyp_r _ _ _;
+  input1
 }
 
 inline_for_extraction
@@ -933,13 +927,11 @@ fn dtuple2_dsnd
   ensures pts_to_serialized (s2 (dfst v)) res #pm (dsnd v) **
     trade (pts_to_serialized (s2 (dfst v)) res #pm (dsnd v)) (pts_to_serialized (serialize_dtuple2 s1 s2) input #pm v)
 {
-  let spl = split_dtuple2 s1 j1 s2 input;
-  match spl { Mktuple2 input1 input2 -> {
-    unfold (split_dtuple2_post s1 s2 input pm v spl);
-    unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
-    Trade.elim_hyp_l _ _ _;
-    input2
-  }}
+  let input1, input2 = split_dtuple2 s1 j1 s2 input;
+  unfold (split_dtuple2_post s1 s2 input pm v (input1, input2));
+  unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
+  Trade.elim_hyp_l _ _ _;
+  input2
 }
 
 let split_nondep_then_post'
@@ -1055,15 +1047,13 @@ fn split_nondep_then
     dtuple2_of_pair
     input;
   Trade.trans (pts_to_serialized (serialize_dtuple2 s1 #k2 #(const_fun t2) #(const_fun p2) (const_fun s2)) _ #pm _) _ _;
-  let res = split_dtuple2 #t1 #(const_fun t2) s1 j1 #_ #(const_fun p2) (const_fun s2) input;
-  match res { Mktuple2 input1 input2 -> {
-    unfold (split_dtuple2_post #t1 #(const_fun t2) s1 #k2 #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) res);
-    unfold (split_dtuple2_post' #t1 #(const_fun t2) s1 #_ #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) input1 input2);
-    Trade.trans (_ ** _) _ _;
-    fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
-    fold (split_nondep_then_post s1 s2 input pm v (input1, input2));
-    (input1, input2)
-  }}
+  let input1, input2 = split_dtuple2 #t1 #(const_fun t2) s1 j1 #_ #(const_fun p2) (const_fun s2) input;
+  unfold (split_dtuple2_post #t1 #(const_fun t2) s1 #k2 #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) (input1, input2));
+  unfold (split_dtuple2_post' #t1 #(const_fun t2) s1 #_ #(const_fun p2) (const_fun s2) input pm (dtuple2_of_pair v) input1 input2);
+  Trade.trans (_ ** _) _ _;
+  fold (split_nondep_then_post' s1 s2 input pm v input1 input2);
+  fold (split_nondep_then_post s1 s2 input pm v (input1, input2));
+  (input1, input2)
 }
 
 ghost fn ghost_split_nondep_then
@@ -1407,13 +1397,11 @@ fn nondep_then_fst
   ensures pts_to_serialized s1 res #pm (fst v) **
     trade (pts_to_serialized s1 res #pm (fst v)) (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v)
 {
-  let spl = split_nondep_then s1 j1 s2 input;
-  match spl { Mktuple2 input1 input2 -> {
-    unfold (split_nondep_then_post s1 s2 input pm v spl);
-    unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
-    Trade.elim_hyp_r _ _ _;
-    input1
-  }}
+  let input1, input2 = split_nondep_then s1 j1 s2 input;
+  unfold (split_nondep_then_post s1 s2 input pm v (input1, input2));
+  unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
+  Trade.elim_hyp_r _ _ _;
+  input1
 }
 
 inline_for_extraction
@@ -1434,13 +1422,11 @@ fn nondep_then_snd
   ensures pts_to_serialized s2 res #pm (snd v) **
     trade (pts_to_serialized s2 res #pm (snd v)) (pts_to_serialized (serialize_nondep_then s1 s2) input #pm v)
 {
-  let spl = split_nondep_then s1 j1 s2 input;
-  match spl { Mktuple2 input1 input2 -> {
-    unfold (split_nondep_then_post s1 s2 input pm v spl);
-    unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
-    Trade.elim_hyp_l _ _ _;
-    input2
-  }}
+  let input1, input2 = split_nondep_then s1 j1 s2 input;
+  unfold (split_nondep_then_post s1 s2 input pm v (input1, input2));
+  unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
+  Trade.elim_hyp_l _ _ _;
+  input2
 }
 
 inline_for_extraction
@@ -1464,15 +1450,13 @@ fn read_dtuple2
   (t': Type0)
   (f: _)
 {
-  let split12 = split_dtuple2 s1 j1 s2 input;
-  match split12 { Mktuple2 input1 input2 -> {
-    unfold (split_dtuple2_post s1 s2 input pm v split12);
-    unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
-    let x1 = leaf_reader_of_reader r1 input1;
-    let x2 = leaf_reader_of_reader (r2 x1) input2;
-    elim_trade _ _;
-    f (Mkdtuple2 x1 x2)
-  }}
+  let input1, input2 = split_dtuple2 s1 j1 s2 input;
+  unfold (split_dtuple2_post s1 s2 input pm v (input1, input2));
+  unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
+  let x1 = leaf_reader_of_reader r1 input1;
+  let x2 = leaf_reader_of_reader (r2 x1) input2;
+  elim_trade _ _;
+  f (|x1, x2|)
 }
 
 inline_for_extraction // because Karamel does not like tuple2

@@ -222,16 +222,13 @@ ensures
   nlist_cons_as_nondep_then s n input;
   with v' . assert (pts_to_serialized (serialize_nondep_then s (serialize_nlist (n - 1) s)) input #pm v');
   let res = split_nondep_then #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p)) (coerce_eq () (serialize_nlist (n - 1) s <: serializer (parse_nlist (n - 1) p))) input; // FIXME: same as above
-  match res {
-    Mktuple2 s1 s2 -> {
-      unfold (split_nondep_then_post s (serialize_nlist (n - 1) s) input pm v' res);
-      unfold (split_nondep_then_post' s (serialize_nlist (n - 1) s) input pm v' s1 s2);
-      Trade.trans _ _ (pts_to_serialized (serialize_nlist n s) input #pm v);
-      fold (nlist_hd_tl_post' s sq n input pm v s1 s2);
-      fold (nlist_hd_tl_post s sq n input pm v res);
-      res
-    }
-  }
+  let s1, s2 = res;
+  unfold (split_nondep_then_post s (serialize_nlist (n - 1) s) input pm v' res);
+  unfold (split_nondep_then_post' s (serialize_nlist (n - 1) s) input pm v' s1 s2);
+  Trade.trans _ _ (pts_to_serialized (serialize_nlist n s) input #pm v);
+  fold (nlist_hd_tl_post' s sq n input pm v s1 s2);
+  fold (nlist_hd_tl_post s sq n input pm v res);
+  res
 }
 
 ghost fn nlist_as_nondep_then_nondep_then_left
@@ -329,7 +326,7 @@ ensures (
   with v1 . assert (
     pts_to_serialized (serialize_nondep_then s (serialize_nondep_then (serialize_nlist (n - 1) s) s')) input #pm v1
   );
-  let Mktuple2 hd tl = split_nondep_then
+  let hd, tl = split_nondep_then
     #_ #(nlist (n - 1) t & t')
     s
     j
@@ -343,7 +340,7 @@ ensures (
     input
     pm
     v1
-    (Mktuple2 hd tl)
+    (hd, tl)
   );
   unfold (split_nondep_then_post'
     s
@@ -354,7 +351,7 @@ ensures (
     hd tl
   );
   Trade.trans _ _ (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v);
-  (Mktuple2 hd tl)
+  (hd, tl)
 }
 
 inline_for_extraction
@@ -440,7 +437,7 @@ ensures (
     (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v)
 )
 {
-  let Mktuple2 hd tl = nlist_hd_tl_nondep_then_left s sq j n () s' input;
+  let hd, tl = nlist_hd_tl_nondep_then_left s sq j n () s' input;
   Trade.elim_hyp_r _ _ _;
   hd
 }
@@ -477,7 +474,7 @@ ensures (
   )
 )
 {
-  let Mktuple2 hd tl = nlist_hd_tl_nondep_then_left s sq j n () s' input;
+  let hd, tl = nlist_hd_tl_nondep_then_left s sq j n () s' input;
   Trade.elim_hyp_l _ _ _;
   tl
 }
@@ -581,64 +578,58 @@ ensures
     true
   } else {
     let pl = nlist_hd_tl s sq j (SZ.v n) a;
-    match pl {
-      Mktuple2 s1 s2 -> {
-        unfold (nlist_hd_tl_post s sq (SZ.v n) a pm v pl);
-        unfold (nlist_hd_tl_post' s sq (SZ.v n) a pm v s1 s2);
-        let mut phd = s1;
-        let mut ptl = s2;
-        let n' : SZ.t = SZ.sub n 1sz;
-        let mut pi = n';
-        let mut pres = true;
-        while (
-          let i = !pi;
-          let res = !pres;
-          (res && SZ.gt i 0sz)
-        ) invariant cont . exists* shd stl i res hd tl .
-          R.pts_to phd shd **
-          R.pts_to ptl stl **
-          R.pts_to pi i **
-          R.pts_to pres res **
-          pts_to_serialized s shd #pm hd **
-          pts_to_serialized (serialize_nlist (SZ.v i) s) stl #pm tl **
-          Trade.trade
-            (pts_to_serialized s shd #pm hd **
-              pts_to_serialized (serialize_nlist (SZ.v i) s) stl #pm tl)
-            (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v) **
-          pure (
-            List.Tot.sorted order v == (res && List.Tot.sorted order (hd :: tl)) /\
-            cont == (res && SZ.gt i 0sz)
-          )
-        {
-          with gi . assert (R.pts_to pi gi);
-          let stl = !ptl;
-          with tl . assert (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
-          let pl = nlist_hd_tl s sq j (SZ.v gi) stl;
-          match pl {
-            Mktuple2 s1 s2 -> {
-              unfold (nlist_hd_tl_post s sq (SZ.v gi) stl pm tl pl);
-              unfold (nlist_hd_tl_post' s sq (SZ.v gi) stl pm tl s1 s2);
-              let shd = !phd;
-              let res = impl_order shd s1;
-              if (res) {
-                Trade.elim_hyp_l _ _ (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v);
-                Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v);
-                phd := s1;
-                ptl := s2;
-                let i = !pi;
-                let i' : SZ.t = SZ.sub i 1sz;
-                pi := i';
-              } else {
-                Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
-                pres := false;
-              }
-            }
-          }
-        };
-        Trade.elim _ _;
-        !pres
+    let s1, s2 = pl;
+    unfold (nlist_hd_tl_post s sq (SZ.v n) a pm v pl);
+    unfold (nlist_hd_tl_post' s sq (SZ.v n) a pm v s1 s2);
+    let mut phd = s1;
+    let mut ptl = s2;
+    let n' : SZ.t = SZ.sub n 1sz;
+    let mut pi = n';
+    let mut pres = true;
+    while (
+      let i = !pi;
+      let res = !pres;
+      (res && SZ.gt i 0sz)
+    ) invariant cont . exists* shd stl i res hd tl .
+      R.pts_to phd shd **
+      R.pts_to ptl stl **
+      R.pts_to pi i **
+      R.pts_to pres res **
+      pts_to_serialized s shd #pm hd **
+      pts_to_serialized (serialize_nlist (SZ.v i) s) stl #pm tl **
+      Trade.trade
+        (pts_to_serialized s shd #pm hd **
+          pts_to_serialized (serialize_nlist (SZ.v i) s) stl #pm tl)
+        (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v) **
+      pure (
+        List.Tot.sorted order v == (res && List.Tot.sorted order (hd :: tl)) /\
+        cont == (res && SZ.gt i 0sz)
+      )
+    {
+      with gi . assert (R.pts_to pi gi);
+      let stl = !ptl;
+      with tl . assert (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
+      let pl = nlist_hd_tl s sq j (SZ.v gi) stl;
+      let s1, s2 = pl;
+      unfold (nlist_hd_tl_post s sq (SZ.v gi) stl pm tl pl);
+      unfold (nlist_hd_tl_post' s sq (SZ.v gi) stl pm tl s1 s2);
+      let shd = !phd;
+      let res = impl_order shd s1;
+      if (res) {
+        Trade.elim_hyp_l _ _ (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v);
+        Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v);
+        phd := s1;
+        ptl := s2;
+        let i = !pi;
+        let i' : SZ.t = SZ.sub i 1sz;
+        pi := i';
+      } else {
+        Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
+        pres := false;
       }
-    }
+    };
+    Trade.elim _ _;
+    !pres
   }
 }
 

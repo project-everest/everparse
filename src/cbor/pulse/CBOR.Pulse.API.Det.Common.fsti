@@ -149,7 +149,7 @@ fn cbor_det_parse_full
     None #(cbor_det_t & S.slice U8.t)
   } else {
     Seq.lemma_split v (SZ.v len);
-    let Mktuple2 input2 rem = SU.split_trade input len;
+    let input2, rem = SU.split_trade input len;
     Classical.forall_intro_2 (seq_length_append_l #U8.t);
     S.pts_to_len input2;
     let res = cbor_det_parse input2;

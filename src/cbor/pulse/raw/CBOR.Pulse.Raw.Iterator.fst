@@ -222,15 +222,12 @@ fn slice_split_right (#t: Type0) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Se
       pure (slice_split_right_postcond p v i v')
 {
   let sp = S.split s i;
-  match sp {
-    Mktuple2 s1 s2 -> {
-      with v1 . assert (pts_to s1 #p v1);
-      with v2 . assert (pts_to s2 #p v2);
-      let sq : squash (Ghost.reveal v == v1 `Seq.append` v2) = Seq.lemma_split v (SZ.v i);
-      Trade.intro _ _ _ (slice_split_right_aux s1 p v1 s2 v2 i s v sq);
-      s2
-    }
-  }
+  let s1, s2 = sp;
+  with v1 . assert (pts_to s1 #p v1);
+  with v2 . assert (pts_to s2 #p v2);
+  let sq : squash (Ghost.reveal v == v1 `Seq.append` v2) = Seq.lemma_split v (SZ.v i);
+  Trade.intro _ _ _ (slice_split_right_aux s1 p v1 s2 v2 i s v sq);
+  s2
 }
 
 ghost
@@ -634,7 +631,7 @@ ensures
       Trade.elim_hyp_r _ _ (PM.seq_list_match s l (elt_match (pm `perm_mul` c'.payload_perm)));
       Trade.trans_hyp_r _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
       assume (pure (SZ.fits_u64));
-      let Mktuple2 sl1 sl2 = S.split_trade c'.s (SZ.uint64_to_sizet len);
+      let sl1, sl2 = S.split_trade c'.s (SZ.uint64_to_sizet len);
       S.pts_to_len sl1;
       Trade.elim_hyp_r _ _ (pts_to c'.s #(pm `perm_mul` c'.slice_perm) s);
       Trade.trans_hyp_l _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);

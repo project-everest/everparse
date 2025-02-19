@@ -95,23 +95,15 @@ fn l2r_write_lseq_bytes_copy
   pts_to_len out;
   pts_to_len x'.v;
   let length = S.len x'.v;
-  let sp1 = S.split out offset;
-  match sp1 {
-    Mktuple2 sp11 sp12 -> {
-      with v12 . assert (pts_to sp12 v12);
-      let sp2 = S.split sp12 length;
-      match sp2 {
-        Mktuple2 sp21 sp22 -> {
-          pts_to_len sp21;
-          S.copy sp21 x'.v;
-          fold (pts_to_seqbytes n x' x);
-          S.join sp21 sp22 sp12;
-          S.join sp11 sp12 out;
-          SZ.add offset length;
-        }
-      }
-    }
-  }
+  let sp11, sp12 = S.split out offset;
+  with v12 . assert (pts_to sp12 v12);
+  let sp21, sp22 = S.split sp12 length;
+  pts_to_len sp21;
+  S.copy sp21 x'.v;
+  fold (pts_to_seqbytes n x' x);
+  S.join sp21 sp22 sp12;
+  S.join sp11 sp12 out;
+  SZ.add offset length;
 }
 
 inline_for_extraction
