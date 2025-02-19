@@ -288,7 +288,7 @@ ensures emp
               Trade.elim (cbor_det_match _ test _) _;
               intro_res_post_impossible ()
             } else {
-              let Mktuple2 out2 out3 = S.split out1 size';
+              let out2, out3 = S.split out1 size';
               Seq.append_empty_r (Seq.slice w 0 (SZ.v size'));
               let test2 = cbor_det_parse_from_slice out2 size';
               let b = cbor_det_equal () test test2;

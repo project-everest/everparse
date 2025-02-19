@@ -265,7 +265,7 @@ ensures
             intro_res_post_impossible ()
           }
           Some sr1 -> {
-            let Mktuple2 test1 r1 = sr1;
+            let test1, r1 = sr1;
             unfold (Base.cbor_det_parse_post cbor_match out1 1.0R v1 (Some (test1, r1)));
             unfold (Base.cbor_det_parse_post_some cbor_match out1 1.0R v1 test1 r1);
             with vtest1 . assert (cbor_match 1.0R test1 vtest1);
@@ -290,7 +290,7 @@ ensures
                 S.to_array out1;
                 intro_res_post_impossible ()
               } else {
-                let Mktuple2 out2 rem2 = SU.split_trade out1 size1;
+                let out2, rem2 = SU.split_trade out1 size1;
                 with v2 . assert (pts_to out2 v2);
                 Seq.append_empty_r (Spec.cbor_det_serialize v);
                 let ps2 = cbor_parse_from_slice out2;
@@ -302,7 +302,7 @@ ensures
                     intro_res_post_impossible ()
                   }
                   Some sr2 -> {
-                    let Mktuple2 test2 r2 = sr2;
+                    let test2, r2 = sr2;
                     unfold (Base.cbor_det_parse_post cbor_match out2 1.0R v2 (Some (test2, r2)));
                     unfold (Base.cbor_det_parse_post_some cbor_match out2 1.0R v2 test2 r2);
                     Trade.trans_hyp_l _ _ _ (pts_to out1 _);

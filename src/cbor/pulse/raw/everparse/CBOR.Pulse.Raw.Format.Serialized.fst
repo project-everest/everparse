@@ -281,27 +281,24 @@ fn cbor_serialized_map_iterator_next_cont (sq: squash SZ.fits_u64)
     (jump_raw_data_item sq)
     serialize_raw_data_item
     x;
-  match sp {
-    Mktuple2 s1 s2 -> {
-      unfold (LPC.split_nondep_then_post serialize_raw_data_item serialize_raw_data_item x pm v sp);
-      unfold (LPC.split_nondep_then_post' serialize_raw_data_item serialize_raw_data_item x pm v s1 s2);
-      with v1 . assert (pts_to_serialized serialize_raw_data_item s1 #pm v1);
-      with v2 . assert (pts_to_serialized serialize_raw_data_item s2 #pm v2);
-      let res1 = cbor_read s1;
-      let res2 = cbor_read s2;
-      Trade.prod _ (pts_to_serialized serialize_raw_data_item s1 #pm v1) _ (pts_to_serialized serialize_raw_data_item s2 #pm v2);
-      Trade.trans _ _ (pts_to_serialized (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) x #pm v);
-      let res : cbor_map_entry = {
-        cbor_map_entry_key = res1;
-        cbor_map_entry_value = res2;
-      };
-      Trade.rewrite_with_trade
-        (cbor_match 1.0R res1 v1 ** cbor_match 1.0R res2 v2)
-        (cbor_match_map_entry 1.0R res v);
-      Trade.trans _ _ (pts_to_serialized (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) x #pm v);
-      res
-    }
-  }
+  let s1, s2 = sp;
+  unfold (LPC.split_nondep_then_post serialize_raw_data_item serialize_raw_data_item x pm v sp);
+  unfold (LPC.split_nondep_then_post' serialize_raw_data_item serialize_raw_data_item x pm v s1 s2);
+  with v1 . assert (pts_to_serialized serialize_raw_data_item s1 #pm v1);
+  with v2 . assert (pts_to_serialized serialize_raw_data_item s2 #pm v2);
+  let res1 = cbor_read s1;
+  let res2 = cbor_read s2;
+  Trade.prod _ (pts_to_serialized serialize_raw_data_item s1 #pm v1) _ (pts_to_serialized serialize_raw_data_item s2 #pm v2);
+  Trade.trans _ _ (pts_to_serialized (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) x #pm v);
+  let res : cbor_map_entry = {
+    cbor_map_entry_key = res1;
+    cbor_map_entry_value = res2;
+  };
+  Trade.rewrite_with_trade
+    (cbor_match 1.0R res1 v1 ** cbor_match 1.0R res2 v2)
+    (cbor_match_map_entry 1.0R res v);
+  Trade.trans _ _ (pts_to_serialized (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) x #pm v);
+  res
 }
 
 let cbor_serialized_map_iterator_next sq = cbor_raw_serialized_iterator_next _ (jump_nondep_then (jump_raw_data_item sq) (jump_raw_data_item sq)) cbor_match_map_entry (cbor_serialized_map_iterator_next_cont sq)

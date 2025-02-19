@@ -51,7 +51,7 @@ fn cbor_det_serialize
   S.pts_to_len output;
   let len = Det.cbor_det_size x (S.len output);
   if (SZ.gt len 0sz) {
-    let Mktuple2 out rem = S.split output len;
+    let out, rem = S.split output len;
     S.pts_to_len out;
     let len' = Det.cbor_det_serialize x out;
     S.pts_to_len out;
