@@ -10,6 +10,7 @@ module Parse = CBOR.Pulse.Raw.Format.Parse
 module Serialize = CBOR.Pulse.Raw.Format.Serialize
 module Read = CBOR.Pulse.Raw.Read
 module Map = CBOR.Spec.Raw.Map
+module AF = CBOR.Spec.API.Format
 
 let cbor_det_match
   p c v
@@ -330,8 +331,8 @@ fn cbor_det_mk_tagged (_: unit) : mk_tagged_t #_ cbor_det_match
 ```
 
 noextract [@@noextract_to "krml"]
-let mk_det_raw_cbor (c: Spec.cbor) : Tot SpecRaw.raw_data_item = // FIXME: WHY WHY WHY do I need that? Pulse cannot typecheck `Pure _ True (fun _ -> _)` functions into `Tot` functions
-  SpecRaw.mk_det_raw_cbor c
+let mk_det_raw_cbor : (c: Spec.cbor) -> Tot SpecRaw.raw_data_item = // FIXME: WHY WHY WHY do I need that? Pulse cannot typecheck `Pure _ True (fun _ -> _)` functions into `Tot` functions
+  SpecRaw.mk_det_raw_cbor
 
 ```pulse
 ghost
@@ -374,7 +375,7 @@ decreases v
 }
 ```
 
-let rec list_map_mk_det_raw_cbor_correct
+let list_map_mk_det_raw_cbor_correct
   (l: list Spec.cbor)
 : Lemma
   (ensures (
@@ -383,20 +384,20 @@ let rec list_map_mk_det_raw_cbor_correct
     List.Tot.for_all (SpecRaw.raw_data_item_sorted SpecRaw.deterministically_encoded_cbor_map_key_order) l'
   ))
   [SMTPat (List.Tot.map mk_det_raw_cbor l)]
-= match l with
-  | [] -> ()
-  | _ :: q -> list_map_mk_det_raw_cbor_correct q
+= let l' = List.Tot.map mk_det_raw_cbor l in
+  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+  AF.list_map_mk_det_raw_cbor_correct l
 
-let rec list_map_mk_cbor_mk_det_raw_cbor
+let list_map_mk_cbor_mk_det_raw_cbor
   (l: list Spec.cbor)
 : Lemma
   (ensures (
     List.Tot.map SpecRaw.mk_cbor (List.Tot.map mk_det_raw_cbor l) == l
   ))
   [SMTPat (List.Tot.map mk_det_raw_cbor l)]
-= match l with
-  | [] -> ()
-  | _ :: q -> list_map_mk_cbor_mk_det_raw_cbor q
+= let l' = List.Tot.map mk_det_raw_cbor l in
+  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+  AF.list_map_mk_cbor_mk_det_raw_cbor l
 
 let fits_mod (x: nat) (n: pos) : Lemma
     (requires (FStar.UInt.fits x n))

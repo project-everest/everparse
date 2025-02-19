@@ -360,3 +360,11 @@ val serialize_cbor_tag_correct
   (payload: raw_data_item)
 : Lemma
   (serialize_cbor (Tagged tag payload) == serialize_cbor_tag tag `Seq.append` serialize_cbor payload)
+
+val serialize_cbor_list : list raw_data_item -> Seq.seq U8.t
+
+val serialize_cbor_list_nil (_: unit) : Lemma
+  (serialize_cbor_list [] == Seq.empty)
+
+val serialize_cbor_list_cons (a: raw_data_item) (q: list raw_data_item) : Lemma
+  (serialize_cbor_list (a :: q) == serialize_cbor a `Seq.append` serialize_cbor_list q)

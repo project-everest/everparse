@@ -133,3 +133,24 @@ val cbor_det_serialize_tag_correct
   (payload: cbor)
 : Lemma
   (cbor_det_serialize (pack (CTagged tag payload)) == cbor_det_serialize_tag tag `Seq.append` cbor_det_serialize payload)
+
+val cbor_det_serialize_list
+  (l: list cbor)
+: Tot (Seq.seq U8.t)
+
+val cbor_det_serialize_list_nil (_: unit) : Lemma
+  (cbor_det_serialize_list [] == Seq.empty)
+
+val cbor_det_serialize_list_cons (a: cbor) (q: list cbor) : Lemma
+  (cbor_det_serialize_list (a :: q) == cbor_det_serialize a `Seq.append` cbor_det_serialize_list q)
+
+let rec cbor_det_serialize_list_snoc (h: list cbor) (a: cbor) : Lemma
+  (ensures (cbor_det_serialize_list (h `List.Tot.append` [a]) `Seq.equal` (cbor_det_serialize_list h `Seq.append` cbor_det_serialize a)))
+  (decreases h)
+= match h with
+  | [] -> cbor_det_serialize_list_cons a []; cbor_det_serialize_list_nil ()
+  | b :: q ->
+    List.Tot.append_assoc [b] q [a];
+    cbor_det_serialize_list_snoc q a;
+    cbor_det_serialize_list_cons b (List.Tot.append q [a]);
+    cbor_det_serialize_list_cons b q

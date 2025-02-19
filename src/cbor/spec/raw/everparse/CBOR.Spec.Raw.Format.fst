@@ -163,3 +163,12 @@ let serialize_cbor_tag_correct tag payload =
   let v1' = F.synth_raw_data_item_recip v1 in
   LP.serialize_dtuple2_eq F.serialize_header F.serialize_content v1'
 
+module LPL = LowParse.Spec.VCList
+
+let serialize_cbor_list l =
+  LPL.tot_serialize_nlist (List.Tot.length l) F.tot_serialize_raw_data_item l
+
+let serialize_cbor_list_nil () = ()
+
+let serialize_cbor_list_cons a q =
+  LPL.tot_serialize_nlist_cons (List.Tot.length q) F.tot_serialize_raw_data_item a q
