@@ -12,6 +12,7 @@ module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
+module Util = CBOR.Spec.Util
 
 noeq
 type cbor_raw_slice_iterator (elt: Type0) = {
@@ -221,8 +222,7 @@ fn slice_split_right (#t: Type0) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Se
       trade (pts_to res #p v') (pts_to s #p v) **
       pure (slice_split_right_postcond p v i v')
 {
-  let sp = S.split s i;
-  let s1, s2 = sp;
+  let s1, s2 = S.split s i;
   with v1 . assert (pts_to s1 #p v1);
   with v2 . assert (pts_to s2 #p v2);
   let sq : squash (Ghost.reveal v == v1 `Seq.append` v2) = Seq.lemma_split v (SZ.v i);
@@ -588,8 +588,6 @@ let cbor_raw_serialized_iterator_truncate_t
         (ser_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)))
         (ser_match pm c r)
     )
-
-module Util = CBOR.Spec.Util
 
 inline_for_extraction
 fn cbor_raw_iterator_truncate

@@ -5,6 +5,7 @@ include LowParse.Pulse.Combinators
 open FStar.Tactics.V2
 open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 open Pulse.Lib.Slice
+open Pulse { pts_to } (* Slice.pts_to shadows this *)
 
 module SZ = FStar.SizeT
 module R = Pulse.Lib.Reference
