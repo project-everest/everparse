@@ -1,4 +1,5 @@
 module CDDL.Pulse.MapGroup
+#lang-pulse
 include CDDL.Spec.MapGroup
 include CDDL.Pulse.Base
 open Pulse.Lib.Pervasives
@@ -81,7 +82,6 @@ let impl_map_group_t
         )
 
 inline_for_extraction
-```pulse
 fn apply_impl_map_group
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -114,10 +114,8 @@ ensures
 {
   w c v1 v2 count pi
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_t_map_group
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -155,10 +153,8 @@ fn impl_t_map_group
     false
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_map_group_nop
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -175,10 +171,8 @@ fn impl_map_group_nop
 {
   MGOK
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_map_group_always_false
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -195,10 +189,8 @@ fn impl_map_group_always_false
 {
   MGFail
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_map_group_concat
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -243,10 +235,8 @@ fn impl_map_group_concat
     }
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_map_group_choice
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -286,10 +276,8 @@ fn impl_map_group_choice
     }
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_map_group_ext
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -315,7 +303,6 @@ fn impl_map_group_ext
 {
   impl1 c v1 v2 count pi
 }
-```
 
 inline_for_extraction
 let impl_map_group_zero_or_one
@@ -356,7 +343,6 @@ let impl_map_group_match_item_for_body_post
           pure (impl_map_group_post (map_group_match_item_for cut k dest) (t_literal k) v v1 v2 count i i' res)
 
 inline_for_extraction
-```pulse
 fn impl_map_group_match_item_for_body
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -420,10 +406,8 @@ fn impl_map_group_match_item_for_body
     }
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_map_group_match_item_for
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -447,7 +431,6 @@ fn impl_map_group_match_item_for
   unfold (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 count pi i);
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_map_entry_cond
@@ -620,7 +603,6 @@ let add_sub_cancel
 #push-options "--z3rlimit 32 --split_queries always --fuel 8 --ifuel 6"
 
 #restart-solver
-```pulse
 ghost
 fn impl_map_group_filter_aux_skip
   (f: ((cbor & cbor) -> bool))
@@ -692,11 +674,9 @@ ensures
     }
   }
 }
-```
 
 #restart-solver
 inline_for_extraction
-```pulse
 fn impl_map_group_filter
   (#t #t2: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -807,12 +787,10 @@ if (not count) {
   assert (pure (cbor_map_equal vremaining_past gremaining));
   MGOK
 }}
-```
 
 #pop-options
 
 inline_for_extraction
-```pulse
 fn impl_map_entry_cond_matches_map_group_entry
   (#t #t2: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -840,10 +818,8 @@ fn impl_map_entry_cond_matches_map_group_entry
     false
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_map_entry_cond_notp
   (#t: Type0)
   (#vmatch2: perm -> t -> (cbor & cbor) -> slprop)
@@ -857,10 +833,8 @@ fn impl_map_entry_cond_notp
   let test = implf x;
   not test
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_typ_notp
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -874,10 +848,8 @@ fn impl_typ_notp
   let test = implf x;
   not test
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_typ_andp
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -897,7 +869,6 @@ fn impl_typ_andp
     false
   }
 }
-```
 
 let typ_included_refl
   (t: typ)

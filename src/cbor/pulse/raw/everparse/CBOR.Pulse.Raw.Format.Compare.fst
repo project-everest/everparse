@@ -1,9 +1,9 @@
 module CBOR.Pulse.Raw.Format.Compare
+#lang-pulse
 friend CBOR.Pulse.Raw.Format.Match
 friend CBOR.Spec.Raw.Format
 module Bytes = CBOR.Pulse.Raw.Compare.Bytes
 
-```pulse
 fn cbor_match_compare_serialized_tagged
   (c1 c2: cbor_serialized)
   (#pm1: perm)
@@ -39,11 +39,9 @@ ensures
   fold (cbor_match_serialized_tagged c2 pm2 r2);
   res
 }
-```
 
 module F = CBOR.Spec.Raw.EverParse
 
-```pulse
 fn cbor_match_compare_serialized_array
   (c1 c2: cbor_serialized)
   (#pm1: perm)
@@ -79,9 +77,7 @@ ensures
   fold (cbor_match_serialized_array c2 pm2 r2);
   res
 }
-```
 
-```pulse
 fn cbor_match_compare_serialized_map
   (c1 c2: cbor_serialized)
   (#pm1: perm)
@@ -117,4 +113,3 @@ ensures
   fold (cbor_match_serialized_map c2 pm2 r2);
   res
 }
-```

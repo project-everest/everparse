@@ -1,4 +1,5 @@
 module CBOR.Pulse.API.Det.Rust
+#lang-pulse
 
 (* NOTE: this .fst file does not need anything from the Raw namespace,
 but it has been moved here to be hidden from verified clients. *)
@@ -17,7 +18,6 @@ open CBOR.Pulse.API.Det.Common
 let cbor_det_parse () =
   cbor_det_parse_full (cbor_det_validate ()) (cbor_det_parse_valid ())
 
-```pulse
 fn cbor_det_size
   (x: cbordet)
   (bound: SZ.t)
@@ -37,9 +37,7 @@ ensures
     Some size
   }
 }
-```
 
-```pulse
 fn cbor_det_serialize
   (_: unit)
 : cbor_det_serialize_t u#0 #_ cbor_det_match
@@ -69,11 +67,9 @@ fn cbor_det_serialize
     None #SZ.t
   }
 }
-```
 
 (* Constructors *)
 
-```pulse
 fn cbor_det_mk_simple_value
   (v: U8.t)
 requires emp
@@ -92,9 +88,7 @@ ensures
     None #cbordet
   }
 }
-```
 
-```pulse
 fn cbor_det_mk_int64
   (ty: cbor_det_int_kind)
   (v: U64.t)
@@ -104,12 +98,10 @@ ensures cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 (if ty = UInt64 then cbo
 {
   Det.cbor_det_mk_int64 () (if ty = UInt64 then cbor_major_type_uint64 else cbor_major_type_neg_int64) v
 }
-```
 
 let uint64_max_prop : squash (pow2 64 - 1 == 18446744073709551615) =
   assert_norm (pow2 64 - 1 == 18446744073709551615)
 
-```pulse
 fn cbor_det_mk_string
   (ty: cbor_det_string_kind)
   (s: S.slice U8.t)
@@ -133,7 +125,6 @@ ensures
     Some res
   }
 }
-```
 
 let cbor_det_mk_tagged tag r #pr #v #pv #v' = Det.cbor_det_mk_tagged () tag r #pr #v #pv #v'
 
@@ -144,7 +135,6 @@ let cbor_det_map_entry_match = Det.cbor_det_map_entry_match
 
 let cbor_det_mk_map_entry xk xv #pk #vk #pv #vv = Det.cbor_det_mk_map_entry () xk xv #pk #vk #pv #vv
 
-```pulse
 fn cbor_det_mk_array
   (a: S.slice cbordet)
   (#pa: perm)
@@ -169,15 +159,12 @@ ensures
     Some res
   }
 }
-```
 
-```pulse
 fn cbor_det_mk_map (_: unit) : Base.mk_map_gen_t u#0 #_ #_ cbor_det_match cbor_det_map_entry_match
 = (a: _) (#va: _) (#pv: _) (#vv: _)
 {
    Base.mk_map_gen (dummy_cbor_det_t ()) (Det.cbor_det_mk_map_gen ()) a #va #pv #vv
 }
-```
 
 (* Destructors *)
 
@@ -206,7 +193,6 @@ let cbor_det_map_match (p: perm) (a: cbor_det_map) (v: Spec.cbor) : Tot slprop =
   cbor_det_match p a.map v **
   pure (Spec.CMap? (Spec.unpack v))
 
-```pulse
 fn cbor_det_destruct
   (c: cbordet)
   (#p: perm)
@@ -311,13 +297,11 @@ ensures exists* p' .
     SimpleValue i
   }
 }
-```
 
 let cbor_det_elim_int64 = cbor_det_elim_int64
 
 let cbor_det_elim_simple_value = cbor_det_elim_simple
 
-```pulse
 fn cbor_det_get_array_length
   (x: cbor_det_array)
   (#p: perm)
@@ -335,9 +319,7 @@ ensures
   fold (cbor_det_array_match p x y);
   res
 }
-```
 
-```pulse
 ghost
 fn cbor_det_array_match_elim
   (x: cbor_det_array)
@@ -357,14 +339,12 @@ ensures cbor_det_match p x.array y **
   };
   Trade.intro _ _ _ aux;
 }
-```
 
 let cbor_det_array_iterator_t = cbor_det_array_iterator_t
 
 [@@pulse_unfold]
 let cbor_det_array_iterator_match = cbor_det_array_iterator_match
 
-```pulse
 fn cbor_det_array_iterator_start
   (x: cbor_det_array)
   (#p: perm)
@@ -388,13 +368,11 @@ ensures
   Trade.trans _ _ (cbor_det_array_match p x y);
   res
 }
-```
 
 let cbor_det_array_iterator_is_empty x #p #y = Det.cbor_det_array_iterator_is_empty () x #p #y
 
 let cbor_det_array_iterator_next x #y #py #z = Det.cbor_det_array_iterator_next () x #y #py #z
 
-```pulse
 fn cbor_det_get_array_item
   (x: cbor_det_array)
   (i: U64.t)
@@ -419,9 +397,7 @@ ensures
     Some res
   }
 }
-```
 
-```pulse
 fn cbor_det_map_length
   (x: cbor_det_map)
   (#p: perm)
@@ -439,9 +415,7 @@ ensures
   fold (cbor_det_map_match p x y);
   res
 }
-```
 
-```pulse
 ghost
 fn cbor_det_map_match_elim
   (x: cbor_det_map)
@@ -461,14 +435,12 @@ ensures cbor_det_match p x.map y **
   };
   Trade.intro _ _ _ aux;
 }
-```
 
 let cbor_det_map_iterator_t = Det.cbor_det_map_iterator_t
 
 [@@pulse_unfold]
 let cbor_det_map_iterator_match = Det.cbor_det_map_iterator_match
 
-```pulse
 fn cbor_det_map_iterator_start
   (x: cbor_det_map)
   (#p: perm)
@@ -491,7 +463,6 @@ ensures
   Trade.trans _ _ (cbor_det_map_match p x y);
   res
 }
-```
 
 let cbor_det_map_iterator_is_empty x #p #y = Det.cbor_det_map_iterator_is_empty () x #p #y
 
@@ -501,7 +472,6 @@ let cbor_det_map_entry_key x2 #p #v2 = Det.cbor_det_map_entry_key () x2 #p #v2
 
 let cbor_det_map_entry_value x2 #p #v2 = Det.cbor_det_map_entry_value () x2 #p #v2
 
-```pulse
 ghost
 fn cbor_det_map_get_post_to_safe
   (x: cbor_det_map)
@@ -530,9 +500,7 @@ ensures
     }
   }
 }
-```
 
-```pulse
 fn cbor_det_map_get
   (x: cbor_det_map)
   (k: cbordet)
@@ -555,4 +523,3 @@ ensures
   cbor_det_map_get_post_to_safe x px vx vk res;
   res
 }
-```

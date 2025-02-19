@@ -1,4 +1,5 @@
 module LowParse.Pulse.Endianness
+#lang-pulse
 open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 include LowParse.Spec.Endianness
 
@@ -32,7 +33,6 @@ let be_to_n_t
 
 inline_for_extraction
 noextract
-```pulse
 fn be_to_n_0
   (#t: Type0)
   (#tot: nat)
@@ -46,14 +46,12 @@ fn be_to_n_0
   E.reveal_be_to_n (Seq.slice (v) 0 0);
   UIntType?.zero u
 }
-```
 
 open FStar.Math.Lemmas
 open FStar.Mul
 
 inline_for_extraction
 noextract
-```pulse
 fn be_to_n_1
   (#t: Type)
   (#tot: nat)
@@ -69,11 +67,9 @@ fn be_to_n_1
   let last = S.op_Array_Access x 0sz;
   UIntType?.from_byte u last
 }
-```
 
 inline_for_extraction
 noextract
-```pulse
 fn be_to_n_S
   (#t: Type)
   (#tot: nat)
@@ -98,7 +94,6 @@ fn be_to_n_S
   let blast = UIntType?.from_byte u last;
   UIntType?.add u blast (u.mul256 n)
 }
-```
 
 // attribute for use with delta_attr
 noextract
@@ -152,7 +147,6 @@ let n_to_be_t
 
 inline_for_extraction
 noextract
-```pulse
 fn n_to_be_0
   (#t: Type0)
   (#tot: nat)
@@ -166,11 +160,9 @@ fn n_to_be_0
   E.reveal_be_to_n (Seq.slice (v) 0 0);
   ()
 }
-```
 
 inline_for_extraction
 noextract
-```pulse
 fn n_to_be_1
   (#t: Type)
   (#tot: nat)
@@ -186,11 +178,9 @@ fn n_to_be_1
   let n' = u.to_byte n;
   S.op_Array_Assignment x (pos `SZ.sub` 1sz) n'
 }
-```
 
 inline_for_extraction
 noextract
-```pulse
 fn n_to_be_S
   (#t: Type)
   (#tot: nat)
@@ -215,7 +205,6 @@ fn n_to_be_S
   with v2 . assert (pts_to x v2);
   Seq.lemma_split (Seq.slice v2 (SZ.v pos - 1) (Seq.length v2)) 1;
 }
-```
 
 [@must_reduce]
 noextract

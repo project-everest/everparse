@@ -1,4 +1,5 @@
 module CDDL.Interpreter.Pulse
+#lang-pulse
 include CDDL.Interpreter.AST
 
 module Spec = CDDL.Spec
@@ -128,7 +129,6 @@ let impl_rel_array_of_list
 : vprop
 = exists* s . A.pts_to x s ** seq_list_match s y r
 
-```pulse
 ghost
 fn rec seq_list_match_pure_elim
   (#t: Type0)
@@ -149,9 +149,7 @@ decreases l
     seq_list_match_pure_elim (Seq.tail s) (List.Tot.tl l)
   }
 }
-```
 
-```pulse
 ghost
 fn rec seq_list_match_pure_intro
   (#t: Type0)
@@ -174,7 +172,6 @@ decreases l
     ) as (seq_list_match s l (impl_rel_pure _))
   }
 }
-```
 
 let impl_rel_elem
     (t: target_elem_type)

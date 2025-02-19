@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Match
+#lang-pulse
 include CBOR.Pulse.Raw.Format.Match
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
@@ -166,7 +167,6 @@ let seq_list_match_implies
   (decreases v)
 = fun _ -> PM.seq_list_match_weaken c v item_match1 item_match2 (fun v0 v' -> imp v0 v' ())
 
-```pulse
 fn cbor_match_map_entry0_entry
   (r0: raw_data_item)
   (p: perm)
@@ -177,9 +177,7 @@ fn cbor_match_map_entry0_entry
   rewrite (cbor_match_map_entry0 r0 (cbor_match p) c r)
     as (cbor_match_map_entry p c r)
 }
-```
 
-```pulse
 ghost
 fn cbor_match_map0_map
   (c: cbor_map)
@@ -195,9 +193,7 @@ ensures
   slprop_implies_elim (seq_list_match_implies v (Map?.v r) (cbor_match_map_entry0 r (cbor_match (p `perm_mul` c.cbor_map_payload_perm))) (cbor_match_map_entry (p `perm_mul` c.cbor_map_payload_perm)) (cbor_match_map_entry0_entry r (p `perm_mul` c.cbor_map_payload_perm)));
   fold (cbor_match_map p c r)
 }
-```
 
-```pulse
 fn cbor_match_map_entry_entry0
   (r0: raw_data_item)
   (p: perm)
@@ -208,9 +204,7 @@ fn cbor_match_map_entry_entry0
   rewrite (cbor_match_map_entry p c r)
     as (cbor_match_map_entry0 r0 (cbor_match p) c r)
 }
-```
 
-```pulse
 ghost
 fn cbor_match_map_map0
   (c: cbor_map)
@@ -230,9 +224,7 @@ ensures
   );
   fold (cbor_match_map0 c p r cbor_match)
 }
-```
 
-```pulse
 ghost
 fn cbor_match_map0_map_trade
   (c: cbor_map)
@@ -249,9 +241,7 @@ ensures
   };
   Trade.intro _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn cbor_match_map_map0_trade
   (c: cbor_map)
@@ -268,7 +258,6 @@ ensures
   };
   Trade.intro _ _ _ aux
 }
-```
 
 let cbor_match_cases_pred
   (c: cbor_raw)
@@ -288,7 +277,6 @@ let cbor_match_cases_pred
       true
     | _ -> false
 
-```pulse
 ghost
 fn cbor_match_cases
   (c: cbor_raw)
@@ -304,9 +292,7 @@ fn cbor_match_cases
     rewrite emp as (cbor_match pm c r)
   }
 }
-```
 
-```pulse
 ghost
 fn cbor_match_int_intro_trade_aux
   (q: slprop)
@@ -326,10 +312,8 @@ fn cbor_match_int_intro_trade_aux
   };
   intro_trade _ _ _ aux
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_int_intro_aux
   (typ: major_type_uint64_or_neg_int64)
   (i: raw_uint64)
@@ -341,10 +325,8 @@ fn cbor_match_int_intro_aux
   fold (cbor_match_int res (Int64 typ i));
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_int_intro
   (typ: major_type_uint64_or_neg_int64)
   (i: raw_uint64)
@@ -357,10 +339,8 @@ fn cbor_match_int_intro
   fold (cbor_match 1.0R res (Int64 typ i));
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_int_intro_trade
   (q: slprop)
   (typ: major_type_uint64_or_neg_int64)
@@ -376,10 +356,8 @@ fn cbor_match_int_intro_trade
   Trade.trans _ _ q;
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_int_elim_type
   (c: cbor_raw)
   (#p: perm)
@@ -398,10 +376,8 @@ ensures
   Trade.elim _ _;
   c'.cbor_int_type
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_int_elim_value
   (c: cbor_raw)
   (#p: perm)
@@ -424,9 +400,7 @@ ensures
   };
   res
 }
-```
 
-```pulse
 ghost
 fn cbor_match_int_free
   (c: cbor_raw)
@@ -442,9 +416,7 @@ ensures
   rewrite (cbor_match p c v) as (cbor_match_int c' v);
   unfold (cbor_match_int c' v)
 }
-```
 
-```pulse
 ghost
 fn cbor_match_simple_intro_trade_aux
   (q: slprop)
@@ -464,10 +436,8 @@ fn cbor_match_simple_intro_trade_aux
   };
   intro_trade _ _ _ aux
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_simple_intro
   (i: simple_value)
   requires emp
@@ -479,10 +449,8 @@ fn cbor_match_simple_intro
   fold (cbor_match 1.0R res (Simple i));
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_simple_intro_trade
   (q: slprop)
   (i: simple_value)
@@ -497,10 +465,8 @@ fn cbor_match_simple_intro_trade
   Trade.trans _ _ q;
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_simple_elim
   (c: cbor_raw)
   (#p: perm)
@@ -519,9 +485,7 @@ ensures
   Trade.elim _ _;
   res
 }
-```
 
-```pulse
 ghost
 fn cbor_match_simple_free
   (c: cbor_raw)
@@ -537,9 +501,7 @@ ensures
   rewrite (cbor_match p c v) as (cbor_match_simple res v);
   unfold (cbor_match_simple res v)
 }
-```
 
-```pulse
 ghost
 fn cbor_match_string_intro_aux
   (input: S.slice U8.t)
@@ -568,10 +530,8 @@ fn cbor_match_string_intro_aux
   };
   intro_trade _ _ _ aux
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_string_intro
   (typ: major_type_byte_string_or_text_string)
   (len: raw_uint64)
@@ -604,10 +564,8 @@ fn cbor_match_string_intro
   Trade.trans _ _ (pts_to input #pm v);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_string_elim_type
   (c: cbor_raw)
   (#p: perm)
@@ -626,10 +584,8 @@ ensures
   Trade.elim _ _;
   c'.cbor_string_type
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_string_elim_length
   (c: cbor_raw)
   (#p: perm)
@@ -652,9 +608,7 @@ ensures
   };
   res
 }
-```
 
-```pulse
 ghost fn cbor_match_string_elim_payload_aux
   (c: cbor_string)
   (p: perm)
@@ -673,10 +627,8 @@ ensures
 {
   fold (cbor_match_string c p r)
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_string_elim_payload
   (c: cbor_raw)
   (#p: perm)
@@ -697,7 +649,6 @@ ensures exists* p' (v': Seq.seq U8.t) .
   Trade.trans _ _ (cbor_match p c v);
   c'.cbor_string_ptr
 }
-```
 
 let cbor_match_eq_tagged
   (pm: perm)
@@ -717,7 +668,6 @@ let cbor_match_eq_tagged
   )
 
 inline_for_extraction
-```pulse
 fn cbor_match_tagged_get_tag
   (c: cbor_raw)
   (#p: perm)
@@ -747,9 +697,7 @@ ensures
     }
   }
 }
-```
 
-```pulse
 ghost
 fn cbor_match_tagged_elim
   (c: cbor_tagged)
@@ -776,10 +724,8 @@ fn cbor_match_tagged_elim
   };
   intro_trade _ _ _ aux
 }
-```
 
 inline_for_extraction
-```pulse
 ghost
 fn cbor_match_tagged_intro_aux
   (tag: raw_uint64)
@@ -810,10 +756,8 @@ ensures
     as (R.pts_to pc #(pr /. 2.0R) c');
   R.gather pc
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_tagged_intro
   (tag: raw_uint64)
   (pc: R.ref cbor_raw)
@@ -848,7 +792,6 @@ fn cbor_match_tagged_intro
   Trade.trans (cbor_match 1.0R res (Tagged tag r)) _ _;
   res
 }
-```
 
 let cbor_match_eq_array
   (pm: perm)
@@ -866,7 +809,6 @@ let cbor_match_eq_array
   )
 
 inline_for_extraction
-```pulse
 fn cbor_match_array_get_length
   (c: cbor_raw)
   (#p: perm)
@@ -896,9 +838,7 @@ ensures
     }
   }
 }
-```
 
-```pulse
 ghost
 fn cbor_match_array_intro_aux
   (len: raw_uint64)
@@ -931,10 +871,8 @@ ensures
     as (pts_to pc #(pr /. 2.0R) c');
   S.gather pc
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_array_intro
   (len: raw_uint64)
   (pc: S.slice cbor_raw)
@@ -972,7 +910,6 @@ fn cbor_match_array_intro
   Trade.trans (cbor_match 1.0R res (Array len r)) _ _;
   res
 }
-```
 
 let cbor_match_eq_map0
   (pm: perm)
@@ -990,7 +927,6 @@ let cbor_match_eq_map0
   )
 
 inline_for_extraction
-```pulse
 fn cbor_match_map_get_length
   (c: cbor_raw)
   (#p: perm)
@@ -1020,9 +956,7 @@ ensures
     }
   }
 }
-```
 
-```pulse
 ghost
 fn cbor_match_map_intro_aux
   (len: raw_uint64)
@@ -1055,10 +989,8 @@ ensures
     as (pts_to pc #(pr /. 2.0R) c');
   S.gather pc
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_match_map_intro
   (len: raw_uint64)
   (pc: S.slice cbor_map_entry)
@@ -1098,7 +1030,6 @@ fn cbor_match_map_intro
   Trade.trans (cbor_match 1.0R res (Map len r)) _ _;
   res
 }
-```
 
 let cbor_string_reset_perm (p: perm) (c: cbor_string) : cbor_string = {
   c with cbor_string_perm = p `perm_mul` c.cbor_string_perm
@@ -1136,7 +1067,6 @@ let cbor_raw_reset_perm_tot (p: perm) (c: cbor_raw) : cbor_raw = match c with
 | CBOR_Case_Serialized_Map v -> CBOR_Case_Serialized_Map (cbor_serialized_reset_perm p v)
 | _ -> c
 
-```pulse
 ghost
 fn cbor_string_reset_perm_correct
   (p: perm)
@@ -1163,9 +1093,7 @@ fn cbor_string_reset_perm_correct
   };
   intro_trade _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn cbor_tagged_reset_perm_correct
   (p: perm)
@@ -1199,9 +1127,7 @@ fn cbor_tagged_reset_perm_correct
   };
   intro_trade _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn cbor_array_reset_perm_correct
   (p: perm)
@@ -1235,9 +1161,7 @@ fn cbor_array_reset_perm_correct
   };
   intro_trade _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn cbor_map_reset_perm_correct
   (p: perm)
@@ -1271,9 +1195,7 @@ fn cbor_map_reset_perm_correct
   };
   intro_trade _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_reset_perm_correct
   (p: perm)
@@ -1375,10 +1297,8 @@ fn cbor_raw_reset_perm_correct
     }
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_reset_perm
   (p: perm)
   (c: cbor_raw)
@@ -1395,9 +1315,7 @@ fn cbor_raw_reset_perm
   cbor_raw_reset_perm_correct p c r;
   cbor_raw_reset_perm_tot p c
 }
-```
 
-```pulse
 fn cbor_mk_map_entry
   (xk: cbor_raw)
   (xv: cbor_raw)
@@ -1429,4 +1347,3 @@ ensures
   Trade.trans_concl_r (cbor_match_map_entry 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ _ _; 
   res
 }
-```

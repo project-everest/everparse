@@ -1,4 +1,5 @@
 module CDDL.Pulse.Base
+#lang-pulse
 include CDDL.Spec.Base
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
@@ -24,7 +25,6 @@ let impl_typ
         ))
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_coerce_to_bounded_typ
     (#ty: Type u#0)
     (vmatch: perm -> ty -> cbor -> slprop)
@@ -38,10 +38,8 @@ fn impl_coerce_to_bounded_typ
 {
     f c;
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_t_choice
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -63,7 +61,6 @@ fn impl_t_choice
         f2 c
     }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_t_choice_none // FIXME: WHY WHY WHY can F* not automatically infer t1 and t2 by reducing (reveal (hide None)) to None?
@@ -76,7 +73,6 @@ let impl_t_choice_none // FIXME: WHY WHY WHY can F* not automatically infer t1 a
 = impl_t_choice #_ #_ #None #t1 #t2 f1 f2
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_any
     (#ty: Type u#0)
     (vmatch: perm -> ty -> cbor -> slprop)
@@ -88,10 +84,8 @@ fn impl_any
 {
     true
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_ext
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -105,7 +99,6 @@ fn impl_ext
 {
   f1 c
 }
-```
 
 inline_for_extraction
 let with_cbor_literal_cont_t
@@ -137,7 +130,6 @@ let with_cbor_literal_t
     (fun res -> post res)
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_always_false
     (#ty: Type u#0)
     (vmatch: perm -> ty -> cbor -> slprop)
@@ -149,4 +141,3 @@ fn impl_always_false
 {
   false
 }
-```

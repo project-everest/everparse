@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.EverParse.UTF8
+#lang-pulse
 friend CBOR.Spec.API.UTF8
 friend CBOR.Spec.Raw.Format.UTF8
 
@@ -24,7 +25,6 @@ let u8_in_80_BF
 = U8.lte 0x80uy x && U8.lte x 0xBFuy
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_fetch_utf8_correct
   (s: S.slice U8.t)
   (len: SZ.t { len == S.len s })
@@ -96,13 +96,11 @@ ensures
     }
   }
 }
-```
 
 #push-options "--z3rlimit 16"
 
 #restart-solver
 
-```pulse
 fn impl_correct
   (s: S.slice U8.t)
   (#p: perm)
@@ -141,6 +139,5 @@ ensures
   };
   !pres
 }
-```
 
 #pop-options

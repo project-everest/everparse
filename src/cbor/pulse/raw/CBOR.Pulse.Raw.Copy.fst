@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Copy
+#lang-pulse
 include CBOR.Pulse.Raw.Type
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
@@ -95,7 +96,6 @@ let freeable_match_map_entry
 = freeable_match' c.map_entry_key (fst r) **
   freeable_match' c.map_entry_value (snd r)
 
-```pulse
 ghost
 fn freeable_match_map_entry_weaken
   (r0: freeable_tree)
@@ -109,7 +109,6 @@ ensures
   unfold (freeable_match_map_entry' r0 freeable_match' c r);
   fold (freeable_match_map_entry c r)
 }
-```
 
 let ftmap_precedes'
   (r: freeable_tree { FTMap? r })
@@ -124,7 +123,6 @@ let ftmap_precedes
   [SMTPat (FTMap r0)]
 = ftmap_precedes' (FTMap r0)
 
-```pulse
 ghost
 fn freeable_match_map_entry_weaken_recip
   (r0: list (freeable_tree & freeable_tree))
@@ -138,7 +136,6 @@ ensures
   unfold (freeable_match_map_entry c r);
   fold (freeable_match_map_entry' (FTMap r0) freeable_match' c r);
 }
-```
 
 let freeable_match'_cases_pred
   (x: cbor_freeable0)
@@ -154,7 +151,6 @@ let freeable_match'_cases_pred
    -> true
   | _ -> false
 
-```pulse
 ghost
 fn freeable_match'_cases
   (x: cbor_freeable0)
@@ -172,7 +168,6 @@ ensures
     rewrite emp as (freeable_match' x ft); //  by contradiction
   }
 }
-```
 
 inline_for_extraction
 let cbor_free'_t =
@@ -183,7 +178,6 @@ let cbor_free'_t =
     (fun _ -> emp)
 
 inline_for_extraction
-```pulse
 fn cbor_free_map_entry
   (cbor_free': cbor_free'_t)
   (x: cbor_freeable_map_entry)
@@ -197,9 +191,7 @@ ensures
   cbor_free' x.map_entry_key _;
   cbor_free' x.map_entry_value _;
 }
-```
 
-```pulse
 fn rec cbor_free'
   (x: cbor_freeable0)
   (ft: freeable_tree)
@@ -294,7 +286,6 @@ ensures
     }
   }
 }
-```
 
 noeq
 type cbor_freeable = {
@@ -305,7 +296,6 @@ type cbor_freeable = {
 
 let freeable (f: cbor_freeable) : Tot slprop = freeable_match' f.footprint f.tree
 
-```pulse
 fn rec cbor_free0
   (x: cbor_freeable)
 requires
@@ -316,7 +306,6 @@ ensures
   unfold (freeable x);
   cbor_free' x.footprint _
 }
-```
 
 open CBOR.Pulse.Raw.Read
 module Trade = Pulse.Lib.Trade.Util
@@ -337,7 +326,6 @@ let cbor_copy_t =
     )
 
 inline_for_extraction
-```pulse
 fn cbor_copy_map_entry
   (copy: cbor_copy_t)
   (x: cbor_map_entry)
@@ -365,7 +353,6 @@ ensures
   fold (cbor_match_map_entry p x v);
   (key, value)
 }
-```
 
 module S = Pulse.Lib.Slice
 
@@ -376,7 +363,6 @@ let get_cbor_raw_array
 = let CBOR_Case_Array v = x in v
 
 inline_for_extraction
-```pulse
 fn rec cbor_copy_array
   (copy: cbor_copy_t)
   (x: cbor_raw)
@@ -535,7 +521,6 @@ ensures
   Trade.trans _ _ (freeable res);
   res
 }
-```
 
 inline_for_extraction
 let get_cbor_raw_map
@@ -546,7 +531,6 @@ let get_cbor_raw_map
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn rec cbor_copy_map
   (copy: cbor_copy_t)
   (x: cbor_raw)
@@ -740,9 +724,7 @@ ensures
   Trade.trans _ _ (freeable res);
   res
 }
-```
 
-```pulse
 fn rec cbor_copy0
   (x: cbor_raw)
   (#p: perm)
@@ -1025,4 +1007,3 @@ ensures
     }
   }
 }
-```

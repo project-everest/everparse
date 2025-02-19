@@ -1,4 +1,5 @@
 module CDDL.Pulse.Parse.Base
+#lang-pulse
 include CDDL.Pulse.Base
 include CDDL.Pulse.Types
 open Pulse.Lib.Pervasives
@@ -72,7 +73,6 @@ let impl_zero_copy_parse_t_eq
 = ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_unit
     (#ty: Type0)
     (vmatch: perm -> ty -> cbor -> slprop)
@@ -89,10 +89,8 @@ fn impl_copyful_unit
   fold (rel_unit res ());
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_unit
     (#ty: Type0)
     (vmatch: perm -> ty -> cbor -> slprop)
@@ -116,11 +114,9 @@ fn impl_zero_copy_unit
   Trade.intro_trade _ _ _ aux;
   res
 }
-```
 
 (*
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_always_false
     (#ty: Type0)
     (vmatch: perm -> ty -> cbor -> slprop)
@@ -137,13 +133,11 @@ fn impl_copyful_always_false
   fold (rel_always_false _ _ res res);
   res
 }
-```
 *)
 
 let reveal_squash_false (x: Ghost.hide (squash False)) : Tot (squash False) = Ghost.reveal x
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_always_false
     (#ty: Type0)
     (vmatch: perm -> ty -> cbor -> slprop)
@@ -162,10 +156,8 @@ fn impl_zero_copy_always_false
   rewrite (vmatch p c v) as (Trade.trade (rel_always_false _ _ res res) (vmatch p c v)); // by contradiction
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_pure_as_zero_copy
     (#ty: Type0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -191,10 +183,8 @@ fn impl_copyful_pure_as_zero_copy
   Trade.intro_trade _ _ _ aux;
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_ext
     (#ty: Type0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -220,10 +210,8 @@ fn impl_copyful_ext
 {
   i c
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_ext
     (#ty: Type0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -249,10 +237,8 @@ fn impl_zero_copy_ext
 {
   i c
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_choice
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -290,13 +276,11 @@ fn impl_zero_copy_choice
     Inr res
   }
 }
-```
 
 // A parser implementation that skips some data instead of reading
 // it. This parser implementation has no equivalent serializer
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_skip
     (#ty: Type0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -314,10 +298,8 @@ fn impl_copyful_skip
   fold (rel_skip tgt res (Ghost.reveal res));
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_either_skip
     (#ty: Type0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -337,10 +319,8 @@ fn impl_copyful_either_skip
   fold (rel_either_skip r true (Inr w) (Ghost.reveal w));
   Inr w
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_skip
     (#ty: Type0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -365,10 +345,8 @@ fn impl_zero_copy_skip
   Trade.intro_trade _ _ _ aux;
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_either_skip
     (#ty: Type0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -394,4 +372,3 @@ fn impl_zero_copy_either_skip
   Trade.trans _ _ (vmatch p c v);
   Inl w
 }
-```

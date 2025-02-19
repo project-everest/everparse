@@ -1,4 +1,5 @@
 module CDDL.Pulse.Types
+#lang-pulse
 open Pulse.Lib.Pervasives
 open Pulse.Lib.SeqMatch
 module S = Pulse.Lib.Slice.Util
@@ -98,7 +99,6 @@ let rel_vec_or_slice_of_list
   | Slice s -> rel_slice_of_list r freeable s y
 )
 
-```pulse
 ghost
 fn rec seq_list_match_pure_elim
   (#t: Type0)
@@ -119,9 +119,7 @@ decreases l
     seq_list_match_pure_elim (Seq.tail s) (List.Tot.tl l)
   }
 }
-```
 
-```pulse
 ghost
 fn rec seq_list_match_pure_intro
   (#t: Type0)
@@ -144,7 +142,6 @@ decreases l
     ) as (seq_list_match s l (rel_pure _))
   }
 }
-```
 
 let rel_pair
   (#low1 #high1: Type)

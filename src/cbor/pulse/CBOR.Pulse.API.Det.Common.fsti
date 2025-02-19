@@ -1,4 +1,5 @@
 module CBOR.Pulse.API.Det.Common
+#lang-pulse
 include CBOR.Pulse.API.Det.Type
 include CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
@@ -132,7 +133,6 @@ module SU = Pulse.Lib.Slice.Util
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_parse_full
   (cbor_det_validate: cbor_det_validate_t)
   (cbor_det_parse: cbor_det_parse_valid_t)
@@ -159,7 +159,6 @@ fn cbor_det_parse_full
     Some (res, rem)
   }
 }
-```
 
 noextract [@@noextract_to "krml"]
 let cbor_det_size_post

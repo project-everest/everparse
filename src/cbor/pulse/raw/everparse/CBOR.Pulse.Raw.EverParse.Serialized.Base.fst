@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.EverParse.Serialized.Base
+#lang-pulse
 friend CBOR.Pulse.Raw.Format.Match
 
 open CBOR.Pulse.Raw.EverParse.Format
@@ -15,7 +16,6 @@ let dummy_long_argument : long_argument dummy_initial_byte = LongArgumentOther (
 inline_for_extraction
 let dummy_header : header = (| dummy_initial_byte, dummy_long_argument |)
 
-```pulse
 ghost
 fn cbor_match_serialized_tagged_intro_aux
   (tag: raw_uint64)
@@ -48,9 +48,7 @@ fn cbor_match_serialized_tagged_intro_aux
   };
   intro_trade _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn cbor_match_serialized_array_intro_aux
   (len: raw_uint64)
@@ -86,9 +84,7 @@ fn cbor_match_serialized_array_intro_aux
   };
   intro_trade _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn cbor_match_serialized_map_intro_aux
   (len: raw_uint64)
@@ -124,9 +120,7 @@ fn cbor_match_serialized_map_intro_aux
   };
   intro_trade _ _ _ aux
 }
-```
 
-```pulse
 fn cbor_read
   (input: S.slice byte)
   (#pm: perm)
@@ -218,4 +212,3 @@ fn cbor_read
     cbor_match_simple_intro_trade (pts_to_serialized serialize_raw_data_item input #pm v) i
   }
 }
-```

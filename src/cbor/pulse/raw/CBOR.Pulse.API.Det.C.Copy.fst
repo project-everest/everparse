@@ -1,4 +1,5 @@
 module CBOR.Pulse.API.Det.C.Copy
+#lang-pulse
 friend CBOR.Pulse.API.Det.Common
 friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
@@ -14,7 +15,6 @@ let freeable = Copy.freeable
 
 let cbor_get_from_freeable x = Copy.Mkcbor_freeable?.cbor x
 
-```pulse
   fn cbor_copy (_: unit)
 : cbor_copy_t u#0 u#0 #_ #_ cbor_det_match freeable cbor_get_from_freeable
 =
@@ -31,6 +31,5 @@ let cbor_get_from_freeable x = Copy.Mkcbor_freeable?.cbor x
   Trade.trans _ _ (freeable res);
   res
 }
-```
 
 let cbor_free _ x = Copy.cbor_free0 x
