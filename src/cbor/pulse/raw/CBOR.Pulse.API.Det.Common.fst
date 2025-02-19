@@ -238,15 +238,11 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 ```pulse
 fn cbor_det_serialize_tag
+  (_: unit)
+: cbor_det_serialize_tag_t
+=
   (tag: U64.t)
   (output: S.slice U8.t)
-requires
-    (exists* v . pts_to output v)
-returns res: SZ.t
-ensures
-    (exists* v . pts_to output v ** pure (
-      cbor_det_serialize_tag_postcond tag output res v
-    ))
 {
   let tag' = SpecRaw.mk_raw_uint64 tag;
   Serialize.cbor_serialize_tag tag' output

@@ -207,29 +207,9 @@ val cbor_det_serialize
       cbor_det_serialize_postcond y res v
     ))
 
-noextract [@@noextract_to "krml"]
-let cbor_det_serialize_tag_postcond
-  (tag: U64.t)
-  (output: S.slice U8.t)
-  (res: SZ.t)
-  (v': Seq.seq U8.t)
-: Tot prop
-= let s = Spec.cbor_det_serialize_tag tag in
-  let len = Seq.length s in
-  SZ.v (S.len output) == Seq.length v' /\
-  (res == 0sz <==> len > Seq.length v') /\
-  (len <= Seq.length v' ==> Seq.slice v' 0 len == s)
-
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-val cbor_det_serialize_tag
-  (tag: U64.t)
-  (output: S.slice U8.t)
-: stt SZ.t
-    (exists* v . pts_to output v)
-    (fun res -> exists* v . pts_to output v ** pure (
-      cbor_det_serialize_tag_postcond tag output res v
-    ))
+val cbor_det_serialize_tag (_: unit) : cbor_det_serialize_tag_t
 
 (* Constructors *)
 
