@@ -1,5 +1,6 @@
 module CBOR.Pulse.API.Det.C.Slice
 #lang-pulse
+#lang-pulse
 include CBOR.Pulse.API.Det.C
 open Pulse.Lib.Pervasives
 open CBOR.Spec.Constants
@@ -94,7 +95,6 @@ fn cbor_det_parse_full
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_serialize_full
   (_: unit)
 : cbor_det_serialize_t u#0 #_ cbor_det_match
@@ -126,11 +126,9 @@ fn cbor_det_serialize_full
     None #SZ.t
   }
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_get_string_as_slice
   (_: unit)
 : get_string_t u#0 #_ cbor_det_match
@@ -145,4 +143,3 @@ fn cbor_det_get_string_as_slice
   Trade.trans _ _ (cbor_det_match p x y);
   sl
 }
-```

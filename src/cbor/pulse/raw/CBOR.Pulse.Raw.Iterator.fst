@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Iterator
+#lang-pulse
 include CBOR.Pulse.Raw.Iterator.Base
 open CBOR.Pulse.Raw.Util
 open Pulse.Lib.Pervasives
@@ -11,6 +12,7 @@ module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
+module Util = CBOR.Spec.Util
 
 noeq
 type cbor_raw_slice_iterator (elt: Type0) = {
@@ -31,7 +33,6 @@ let cbor_raw_slice_iterator_match
      pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
      PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
 
-```pulse
 ghost
 fn cbor_raw_slice_iterator_match_unfold
   (#elt_low #elt_high: Type0)
@@ -66,9 +67,7 @@ ensures
   };
   Trade.intro _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_slice_iterator_match_fold
   (#elt_low #elt_high: Type0)
@@ -105,10 +104,8 @@ ensures
   };
   Trade.intro _ _ _ aux
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_slice_iterator_init
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -150,10 +147,8 @@ ensures exists* p .
   Trade.trans (cbor_raw_slice_iterator_match elt_match pm c' l) _ _;
   c'
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_slice_iterator_is_empty
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -174,10 +169,8 @@ ensures
   fold (cbor_raw_slice_iterator_match elt_match pm c r);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_slice_iterator_length
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -198,7 +191,6 @@ ensures
   fold (cbor_raw_slice_iterator_match elt_match pm c r);
   res
 }
-```
 
 noeq
 type cbor_raw_iterator (elt: Type0) =
@@ -212,7 +204,6 @@ let slice_split_right_postcond
   v' == Seq.slice v (SZ.v i) (Seq.length v)
 
 
-```pulse
 ghost
 fn slice_split_right_aux (#t: Type0) (s1: S.slice t) (p: perm) (v1: Seq.seq t) (s2: S.slice t) (v2: Seq.seq t) (i: SZ.t) (s: S.slice t) (v: Seq.seq t) (sq: squash (v == v1 `Seq.append` v2)) (_: unit)
 requires
@@ -222,10 +213,8 @@ ensures
 {
   S.join s1 s2 s
 }
-```
 
 inline_for_extraction
-```pulse
 fn slice_split_right (#t: Type0) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Seq.seq t)) (i: SZ.t)
     requires pts_to s #p v ** pure (SZ.v i <= Seq.length v)
     returns res: S.slice t
@@ -233,20 +222,14 @@ fn slice_split_right (#t: Type0) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Se
       trade (pts_to res #p v') (pts_to s #p v) **
       pure (slice_split_right_postcond p v i v')
 {
-  let sp = S.split s i;
-  match sp {
-    Mktuple2 s1 s2 -> {
-      with v1 . assert (pts_to s1 #p v1);
-      with v2 . assert (pts_to s2 #p v2);
-      let sq : squash (Ghost.reveal v == v1 `Seq.append` v2) = Seq.lemma_split v (SZ.v i);
-      Trade.intro _ _ _ (slice_split_right_aux s1 p v1 s2 v2 i s v sq);
-      s2
-    }
-  }
+  let s1, s2 = S.split s i;
+  with v1 . assert (pts_to s1 #p v1);
+  with v2 . assert (pts_to s2 #p v2);
+  let sq : squash (Ghost.reveal v == v1 `Seq.append` v2) = Seq.lemma_split v (SZ.v i);
+  Trade.intro _ _ _ (slice_split_right_aux s1 p v1 s2 v2 i s v sq);
+  s2
 }
-```
 
-```pulse
 ghost
 fn trade_partial_trans
   (a b c d e: slprop)
@@ -261,9 +244,7 @@ ensures
   Trade.reg_r (d ** c) e b;
   Trade.trans (d ** a) ((d ** c) ** b) (e ** b)
 }
-```
 
-```pulse
 ghost
 fn trade_partial_trans_2
   (a b c d: slprop)
@@ -275,10 +256,8 @@ ensures
   Trade.reg_l b c d;
   Trade.trans a (b ** c) (b ** d)
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_slice_iterator_next
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -336,7 +315,6 @@ ensures
   rewrite (elt_match (pm `perm_mul` i.payload_perm) (Seq.head sq) (List.Tot.hd l)) as (elt_match (pm `perm_mul` i.payload_perm) res (List.Tot.hd l)); // FIXME: automate this step away; it is the only occurrence of `sq`, see the `assert` above
   res
 }
-```
 
 let cbor_raw_iterator_match
   (#elt_low #elt_high: Type0)
@@ -351,7 +329,6 @@ let cbor_raw_iterator_match
   | CBOR_Raw_Iterator_Serialized c' -> ser_match pm c' l
 
 inline_for_extraction
-```pulse
 fn cbor_raw_iterator_init_from_slice
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -383,7 +360,6 @@ ensures exists* p .
   Trade.trans (cbor_raw_iterator_match elt_match ser_match p res l) _ _;
   res
 }
-```
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_is_empty_t
@@ -400,7 +376,6 @@ let cbor_raw_serialized_iterator_is_empty_t
     )
 
 inline_for_extraction
-```pulse
 fn cbor_raw_iterator_is_empty
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -435,7 +410,6 @@ ensures
     }
   }
 }
-```
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_length_t
@@ -452,7 +426,6 @@ let cbor_raw_serialized_iterator_length_t
     )
 
 inline_for_extraction
-```pulse
 fn cbor_raw_iterator_length
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -487,7 +460,6 @@ ensures
     }
   }
 }
-```
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_next_t
@@ -515,7 +487,6 @@ let cbor_raw_serialized_iterator_next_t
     pure (Ghost.reveal l == a :: q)
   )
 
-```pulse
 ghost
 fn trade_partial_trans_3
   (a b c d: slprop)
@@ -527,10 +498,8 @@ ensures
   Trade.reg_l a d b;
   Trade.trans (a ** d) (a ** b) c
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_iterator_next
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -599,7 +568,6 @@ ensures
     }
   }
 }
-```
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_truncate_t
@@ -621,10 +589,7 @@ let cbor_raw_serialized_iterator_truncate_t
         (ser_match pm c r)
     )
 
-module Util = CBOR.Spec.Util
-
 inline_for_extraction
-```pulse
 fn cbor_raw_iterator_truncate
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -664,7 +629,7 @@ ensures
       Trade.elim_hyp_r _ _ (PM.seq_list_match s l (elt_match (pm `perm_mul` c'.payload_perm)));
       Trade.trans_hyp_r _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
       assume (pure (SZ.fits_u64));
-      let Mktuple2 sl1 sl2 = S.split_trade c'.s (SZ.uint64_to_sizet len);
+      let sl1, sl2 = S.split_trade c'.s (SZ.uint64_to_sizet len);
       S.pts_to_len sl1;
       Trade.elim_hyp_r _ _ (pts_to c'.s #(pm `perm_mul` c'.slice_perm) s);
       Trade.trans_hyp_l _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
@@ -700,9 +665,7 @@ ensures
     }
   }
 }
-```
 
-```pulse
 ghost
 fn rec cbor_raw_share_slice // TODO: reuse this proof in CBOR.Pulse.Raw.Match.Perm
   (#elt_low #elt_high: Type0)
@@ -743,7 +706,6 @@ decreases r
     }
   }
 }
-```
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_share_t
@@ -760,7 +722,6 @@ let cbor_raw_serialized_iterator_share_t
       ser_match (pm /. 2.0R) c r
     )
 
-```pulse
 ghost
 fn cbor_raw_iterator_share
   (#elt_low #elt_high: Type0)
@@ -814,9 +775,7 @@ ensures
     }
   }
 }
-```
 
-```pulse
 ghost
 fn rec cbor_raw_gather_slice
   (#elt_low #elt_high: Type0)
@@ -864,7 +823,6 @@ decreases r1
     }
   }
 }
-```
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_gather_t
@@ -883,7 +841,6 @@ let cbor_raw_serialized_iterator_gather_t
       pure (r1 == r2)
     )
 
-```pulse
 ghost
 fn cbor_raw_iterator_gather
   (#elt_low #elt_high: Type0)
@@ -942,7 +899,6 @@ ensures
     }
   }
 }
-```
 
 let rec seq_of_list_splitAt
   (#t: Type)

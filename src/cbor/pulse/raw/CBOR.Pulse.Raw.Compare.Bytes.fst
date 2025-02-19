@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Compare.Bytes
+#lang-pulse
 include CBOR.Pulse.Raw.Compare.Base
 include CBOR.Spec.Raw.Format
 open Pulse.Lib.Pervasives
@@ -32,7 +33,6 @@ let rec bytes_lex_compare_lex_compare
     then bytes_lex_compare_lex_compare (Seq.tail s1) (Seq.tail s2)
     else ()
 
-```pulse
 fn impl_uint8_compare (_: unit)
 : impl_compare_scalar_t u#0 #_ uint8_compare
 = (x1: _)
@@ -46,9 +46,7 @@ fn impl_uint8_compare (_: unit)
     0s
   }
 }
-```
 
-```pulse
 fn lex_compare_bytes
   (s1: S.slice U8.t)
   (s2: S.slice U8.t)
@@ -67,5 +65,4 @@ ensures
   bytes_lex_compare_lex_compare v1 v2;
   lex_compare_slices uint8_compare (impl_uint8_compare ()) s1 s2
 }
-```
 

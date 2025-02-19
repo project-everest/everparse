@@ -1,9 +1,11 @@
 module LowParse.Pulse.VCList
+#lang-pulse
 include LowParse.Spec.VCList
 include LowParse.Pulse.Combinators
 open FStar.Tactics.V2
 open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 open Pulse.Lib.Slice
+open Pulse { pts_to } (* Slice.pts_to shadows this *)
 
 module SZ = FStar.SizeT
 module R = Pulse.Lib.Reference
@@ -45,7 +47,6 @@ let rec serialize_nlist_append
 #pop-options
 
 inline_for_extraction
-```pulse
 fn jump_nlist
    (#t: Type0)
    (#k: Ghost.erased parser_kind)
@@ -82,9 +83,7 @@ fn jump_nlist
   };
   !poffset
 }
-```
 
-```pulse
 ghost
 fn nlist_cons_as_nondep_then_intro
   (#t: Type0)
@@ -115,9 +114,7 @@ ensures exists* v' .
     (synth_nlist_recip (n - 1))
     input;
 }
-```
 
-```pulse
 ghost
 fn nlist_cons_as_nondep_then_elim
   (#t: Type0)
@@ -139,9 +136,7 @@ ensures
     (synth_nlist_recip n)
     input
 }
-```
 
-```pulse
 ghost
 fn nlist_cons_as_nondep_then
   (#t: Type0)
@@ -173,7 +168,6 @@ ensures exists* v' .
     input;
   Trade.trans (pts_to_serialized (serialize_nondep_then s (serialize_nlist (n - 1) s)) input #pm _) _ _
 }
-```
 
 let nlist_hd_tl_post'
   (#t: Type0)
@@ -209,7 +203,6 @@ let nlist_hd_tl_post
 = nlist_hd_tl_post' s sq n input pm v (fst hd_tl) (snd hd_tl)
 
 inline_for_extraction
-```pulse
 fn nlist_hd_tl
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -230,20 +223,15 @@ ensures
   nlist_cons_as_nondep_then s n input;
   with v' . assert (pts_to_serialized (serialize_nondep_then s (serialize_nlist (n - 1) s)) input #pm v');
   let res = split_nondep_then #_ #(nlist (n - 1) t) s j #(parse_nlist_kind (n - 1) k) #(coerce_eq () (parse_nlist (n - 1) p)) (coerce_eq () (serialize_nlist (n - 1) s <: serializer (parse_nlist (n - 1) p))) input; // FIXME: same as above
-  match res {
-    Mktuple2 s1 s2 -> {
-      unfold (split_nondep_then_post s (serialize_nlist (n - 1) s) input pm v' res);
-      unfold (split_nondep_then_post' s (serialize_nlist (n - 1) s) input pm v' s1 s2);
-      Trade.trans _ _ (pts_to_serialized (serialize_nlist n s) input #pm v);
-      fold (nlist_hd_tl_post' s sq n input pm v s1 s2);
-      fold (nlist_hd_tl_post s sq n input pm v res);
-      res
-    }
-  }
+  let s1, s2 = res;
+  unfold (split_nondep_then_post s (serialize_nlist (n - 1) s) input pm v' res);
+  unfold (split_nondep_then_post' s (serialize_nlist (n - 1) s) input pm v' s1 s2);
+  Trade.trans _ _ (pts_to_serialized (serialize_nlist n s) input #pm v);
+  fold (nlist_hd_tl_post' s sq n input pm v s1 s2);
+  fold (nlist_hd_tl_post s sq n input pm v res);
+  res
 }
-```
 
-```pulse
 ghost fn nlist_as_nondep_then_nondep_then_left
   (#t: Type0)
   (#k: parser_kind)
@@ -299,10 +287,8 @@ ensures (
     input;
   Trade.trans _ _ (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v)
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_hd_tl_nondep_then_left
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -341,7 +327,7 @@ ensures (
   with v1 . assert (
     pts_to_serialized (serialize_nondep_then s (serialize_nondep_then (serialize_nlist (n - 1) s) s')) input #pm v1
   );
-  let Mktuple2 hd tl = split_nondep_then
+  let hd, tl = split_nondep_then
     #_ #(nlist (n - 1) t & t')
     s
     j
@@ -355,7 +341,7 @@ ensures (
     input
     pm
     v1
-    (Mktuple2 hd tl)
+    (hd, tl)
   );
   unfold (split_nondep_then_post'
     s
@@ -366,12 +352,10 @@ ensures (
     hd tl
   );
   Trade.trans _ _ (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v);
-  (Mktuple2 hd tl)
+  (hd, tl)
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_hd
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -398,10 +382,8 @@ ensures exists* v' .
   Trade.trans (pts_to_serialized s res #pm _) _ _;
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_tl
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -428,10 +410,8 @@ ensures exists* v' .
   Trade.trans (pts_to_serialized (serialize_nlist (n - 1) s) res #pm _) _ _;
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_hd_nondep_then_left
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -458,14 +438,12 @@ ensures (
     (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v)
 )
 {
-  let Mktuple2 hd tl = nlist_hd_tl_nondep_then_left s sq j n () s' input;
+  let hd, tl = nlist_hd_tl_nondep_then_left s sq j n () s' input;
   Trade.elim_hyp_r _ _ _;
   hd
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_tl_nondep_then_left
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -497,14 +475,12 @@ ensures (
   )
 )
 {
-  let Mktuple2 hd tl = nlist_hd_tl_nondep_then_left s sq j n () s' input;
+  let hd, tl = nlist_hd_tl_nondep_then_left s sq j n () s' input;
   Trade.elim_hyp_l _ _ _;
   tl
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_nth
    (#t: Type0)
    (#k: Ghost.erased parser_kind)
@@ -556,7 +532,6 @@ ensures exists* v .
     (pts_to_serialized s res2 #pm _) _ _;
   res2
 }
-```
 
 inline_for_extraction
 let impl_order_t
@@ -581,7 +556,6 @@ let impl_order_t
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn nlist_sorted
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -605,67 +579,60 @@ ensures
     true
   } else {
     let pl = nlist_hd_tl s sq j (SZ.v n) a;
-    match pl {
-      Mktuple2 s1 s2 -> {
-        unfold (nlist_hd_tl_post s sq (SZ.v n) a pm v pl);
-        unfold (nlist_hd_tl_post' s sq (SZ.v n) a pm v s1 s2);
-        let mut phd = s1;
-        let mut ptl = s2;
-        let n' : SZ.t = SZ.sub n 1sz;
-        let mut pi = n';
-        let mut pres = true;
-        while (
-          let i = !pi;
-          let res = !pres;
-          (res && SZ.gt i 0sz)
-        ) invariant cont . exists* shd stl i res hd tl .
-          R.pts_to phd shd **
-          R.pts_to ptl stl **
-          R.pts_to pi i **
-          R.pts_to pres res **
-          pts_to_serialized s shd #pm hd **
-          pts_to_serialized (serialize_nlist (SZ.v i) s) stl #pm tl **
-          Trade.trade
-            (pts_to_serialized s shd #pm hd **
-              pts_to_serialized (serialize_nlist (SZ.v i) s) stl #pm tl)
-            (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v) **
-          pure (
-            List.Tot.sorted order v == (res && List.Tot.sorted order (hd :: tl)) /\
-            cont == (res && SZ.gt i 0sz)
-          )
-        {
-          with gi . assert (R.pts_to pi gi);
-          let stl = !ptl;
-          with tl . assert (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
-          let pl = nlist_hd_tl s sq j (SZ.v gi) stl;
-          match pl {
-            Mktuple2 s1 s2 -> {
-              unfold (nlist_hd_tl_post s sq (SZ.v gi) stl pm tl pl);
-              unfold (nlist_hd_tl_post' s sq (SZ.v gi) stl pm tl s1 s2);
-              let shd = !phd;
-              let res = impl_order shd s1;
-              if (res) {
-                Trade.elim_hyp_l _ _ (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v);
-                Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v);
-                phd := s1;
-                ptl := s2;
-                let i = !pi;
-                let i' : SZ.t = SZ.sub i 1sz;
-                pi := i';
-              } else {
-                Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
-                pres := false;
-              }
-            }
-          }
-        };
-        Trade.elim _ _;
-        !pres
+    let s1, s2 = pl;
+    unfold (nlist_hd_tl_post s sq (SZ.v n) a pm v pl);
+    unfold (nlist_hd_tl_post' s sq (SZ.v n) a pm v s1 s2);
+    let mut phd = s1;
+    let mut ptl = s2;
+    let n' : SZ.t = SZ.sub n 1sz;
+    let mut pi = n';
+    let mut pres = true;
+    while (
+      let i = !pi;
+      let res = !pres;
+      (res && SZ.gt i 0sz)
+    ) invariant cont . exists* shd stl i res hd tl .
+      R.pts_to phd shd **
+      R.pts_to ptl stl **
+      R.pts_to pi i **
+      R.pts_to pres res **
+      pts_to_serialized s shd #pm hd **
+      pts_to_serialized (serialize_nlist (SZ.v i) s) stl #pm tl **
+      Trade.trade
+        (pts_to_serialized s shd #pm hd **
+          pts_to_serialized (serialize_nlist (SZ.v i) s) stl #pm tl)
+        (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v) **
+      pure (
+        List.Tot.sorted order v == (res && List.Tot.sorted order (hd :: tl)) /\
+        cont == (res && SZ.gt i 0sz)
+      )
+    {
+      with gi . assert (R.pts_to pi gi);
+      let stl = !ptl;
+      with tl . assert (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
+      let pl = nlist_hd_tl s sq j (SZ.v gi) stl;
+      let s1, s2 = pl;
+      unfold (nlist_hd_tl_post s sq (SZ.v gi) stl pm tl pl);
+      unfold (nlist_hd_tl_post' s sq (SZ.v gi) stl pm tl s1 s2);
+      let shd = !phd;
+      let res = impl_order shd s1;
+      if (res) {
+        Trade.elim_hyp_l _ _ (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v);
+        Trade.trans _ _ (pts_to_serialized (serialize_nlist (SZ.v n) s) a #pm v);
+        phd := s1;
+        ptl := s2;
+        let i = !pi;
+        let i' : SZ.t = SZ.sub i 1sz;
+        pi := i';
+      } else {
+        Trade.elim _ (pts_to_serialized (serialize_nlist (SZ.v gi) s) stl #pm tl);
+        pres := false;
       }
-    }
+    };
+    Trade.elim _ _;
+    !pres
   }
 }
-```
 
 #pop-options
 
@@ -691,7 +658,6 @@ let parse_nlist_1_eq
 = parse_nlist_eq 1 p b;
   parse_synth_eq p synth_nlist_1 b
 
-```pulse
 ghost
 fn pts_to_serialized_nlist_1
   (#t: Type0)
@@ -717,7 +683,6 @@ fn pts_to_serialized_nlist_1
     (pts_to_serialized (serialize_nlist 1 s) input #pm _)
     _ _
 }
-```
 
 module A = Pulse.Lib.Array
 module PM = Pulse.Lib.SeqMatch.Util
@@ -737,7 +702,6 @@ let nlist_match_array
     PM.seq_list_match c l (vmatch a) **
     pure (varray a == Some ar)
 
-```pulse
 ghost
 fn nlist_match_array_intro
   (#tarray: Type0)
@@ -760,7 +724,6 @@ ensures
 {
   fold (nlist_match_array varray vmatch n a l)
 }
-```
 
 module GR = Pulse.Lib.GhostReference
 
@@ -811,7 +774,6 @@ let seq_slice_append_ijk
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_nlist_as_array
   (#tarray: Type0)
   (#telem: Type0)
@@ -891,12 +853,10 @@ fn compute_remaining_size_nlist_as_array
   fold (nlist_match_array varray vmatch (SZ.v n) arr x);
   !pres
 }
-```
 
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn l2r_write_nlist_as_array
   (#tarray: Type0)
   (#telem: Type0)
@@ -1011,7 +971,6 @@ fn l2r_write_nlist_as_array
   fold (nlist_match_array varray vmatch (SZ.v n) arr x);
   !pres
 }
-```
 
 module S = Pulse.Lib.Slice
 
@@ -1030,7 +989,6 @@ let nlist_match_slice
     PM.seq_list_match c l (vmatch a) **
     pure (vslice a == Some ar)
 
-```pulse
 ghost
 fn nlist_match_slice_intro
   (#tslice: Type0)
@@ -1053,10 +1011,8 @@ ensures
 {
   fold (nlist_match_slice vslice vmatch n a l)
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_nlist_as_slice
   (#tslice: Type0)
   (#telem: Type0)
@@ -1136,12 +1092,10 @@ fn compute_remaining_size_nlist_as_slice
   fold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
   !pres
 }
-```
 
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn l2r_write_nlist_as_slice
   (#tslice: Type0)
   (#telem: Type0)
@@ -1256,6 +1210,5 @@ fn l2r_write_nlist_as_slice
   fold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
   !pres
 }
-```
 
 #pop-options

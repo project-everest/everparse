@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.EverParse.UTF8
+#lang-pulse
 include CBOR.Spec.API.UTF8
 open Pulse.Lib.Pervasives
 open CBOR.Spec.Constants
@@ -21,7 +22,6 @@ val impl_correct
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn impl_lseq_utf8_correct (ty: major_type_byte_string_or_text_string) (n: SZ.t) :
   validate_filter_test_t #_ #_ #_ (serialize_lseq_bytes (SZ.v n)) (lseq_utf8_correct ty (SZ.v n))
 = (x: _) (#pm: _) (#v: _)
@@ -35,4 +35,3 @@ fn impl_lseq_utf8_correct (ty: major_type_byte_string_or_text_string) (n: SZ.t) 
     res
   }
 }
-```

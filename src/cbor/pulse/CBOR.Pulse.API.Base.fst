@@ -1,4 +1,5 @@
 module CBOR.Pulse.API.Base
+#lang-pulse
 open CBOR.Spec.API.Type
 open Pulse.Lib.Pervasives
 module T = CBOR.Spec.API.Type
@@ -579,7 +580,6 @@ let mk_simple_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn mk_simple_value_trade
   (#t: Type0)
   (vmatch: perm -> t -> cbor -> slprop)
@@ -604,7 +604,6 @@ ensures
   Trade.intro _ _ _ aux;
   res
 }
-```
 
 inline_for_extraction
 let mk_int64_t
@@ -618,7 +617,6 @@ let mk_int64_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn mk_int64_trade
   (#t: Type0)
   (vmatch: perm -> t -> cbor -> slprop)
@@ -644,7 +642,6 @@ ensures
   Trade.intro _ _ _ aux;
   res
 }
-```
 
 inline_for_extraction
 let mk_string_t
@@ -699,7 +696,6 @@ let mk_string_from_array_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn mk_string_from_array
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -728,7 +724,6 @@ fn mk_string_from_array
   Trade.trans (vmatch p' res (pack (CString ty v'))) _ _;
   res
 }
-```
 
 inline_for_extraction
 let mk_tagged_t
@@ -781,7 +776,6 @@ let mk_array_from_array_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn mk_array_from_array'
   (#t: Type)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -822,7 +816,6 @@ ensures
   Trade.trans_concl_r _ _ _ (PM.seq_list_match va0 vv (vmatch pv));
   res
 }
-```
 
 inline_for_extraction
 let mk_array_t
@@ -850,7 +843,6 @@ let mk_array_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn mk_array'
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -887,11 +879,9 @@ ensures
   Trade.trans_concl_r _ _ _ (PM.seq_list_match va0 vv (vmatch pv));
   res
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn mk_array_from_array
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -922,7 +912,6 @@ fn mk_array_from_array
   Trade.trans (vmatch p' res (pack (CArray v'))) _ _;
   res
 }
-```
 
 inline_for_extraction
 let mk_map_entry_t
@@ -1049,7 +1038,6 @@ let mk_map_gen_t
     )
 
 inline_for_extraction
-```pulse
 fn mk_map_gen
   (#t1 #t2: Type0)
   (#vmatch1: perm -> t1 -> cbor -> slprop)
@@ -1073,7 +1061,6 @@ fn mk_map_gen
     None #t1
   }
 }
-```
 
 inline_for_extraction
 let mk_map_t
@@ -1140,7 +1127,6 @@ let mk_map_from_array_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn mk_map_from_array
   (#cbor_t: Type0)
   (#cbor_map_entry_t: Type0)
@@ -1178,11 +1164,9 @@ fn mk_map_from_array
   Trade.trans (cbor_match p' res (pack (CMap v'))) _ _;
   res
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn mk_map_from_array'
   (#cbor_t: Type0)
   (#cbor_map_entry_t: Type0)
@@ -1226,10 +1210,8 @@ ensures
   Trade.trans_concl_r _ _ _ (PM.seq_list_match va0 vv (cbor_map_entry_match pv));
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn mk_map_from_option
   (#t1 #t2: Type0)
   (#vmatch1: perm -> t1 -> cbor -> slprop)
@@ -1248,10 +1230,8 @@ fn mk_map_from_option
   unfold (mk_map_gen_post vmatch1 vmatch2 a va pv vv (Some res));
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn mk_map_from_ref
   (#t1 #t2: Type0)
   (#vmatch1: perm -> t1 -> cbor -> slprop)
@@ -1272,7 +1252,6 @@ fn mk_map_from_ref
   unfold (mk_map_gen_post vmatch1 vmatch2 a va pv vv (Some res));
   res
 }
-```
 
 let map_get_post_none
   (#t: Type)
@@ -1356,7 +1335,6 @@ let map_get_t
     )
 
 inline_for_extraction
-```pulse
 fn map_get_as_option
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
@@ -1379,7 +1357,6 @@ fn map_get_as_option
     None #t
   }
 }
-```
 
 module Spec = CBOR.Spec.API.Format
 

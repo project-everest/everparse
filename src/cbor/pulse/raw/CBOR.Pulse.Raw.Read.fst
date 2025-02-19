@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Read
+#lang-pulse
 include CBOR.Pulse.Raw.Match
 open CBOR.Pulse.Raw.Iterator
 open CBOR.Pulse.Raw.Format.Serialized
@@ -13,7 +14,6 @@ module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 module Trade = Pulse.Lib.Trade.Util
 
-```pulse
 fn cbor_match_tagged_get_payload
   (c: cbor_raw)
   (#pm: perm)
@@ -49,9 +49,7 @@ fn cbor_match_tagged_get_payload
     }
   }
 }
-```
 
-```pulse
 ghost
 fn cbor_match_array_elim
   (c: cbor_array)
@@ -82,9 +80,7 @@ fn cbor_match_array_elim
   };
   Trade.intro _ _ _ aux
 }
-```
 
-```pulse
 fn cbor_array_item
   (fits: squash (SZ.fits_u64))
   (c: cbor_raw)
@@ -135,14 +131,12 @@ ensures exists* p' y .
     }
   }
 }
-```
 
 let cbor_array_iterator_match
 = cbor_raw_iterator_match
     cbor_match
     cbor_serialized_array_iterator_match
 
-```pulse
 fn cbor_array_iterator_init
   (fits: squash (SZ.fits_u64))
   (c: cbor_raw)
@@ -201,9 +195,7 @@ ensures exists* p .
     }
   }
 }
-```
 
-```pulse
 fn cbor_array_iterator_is_empty
   (c: cbor_array_iterator)
   (#pm: perm)
@@ -224,9 +216,7 @@ ensures
   fold (cbor_array_iterator_match pm c r);
   res
 }
-```
 
-```pulse
 fn cbor_array_iterator_length
   (c: cbor_array_iterator)
   (#pm: perm)
@@ -247,9 +237,7 @@ ensures
   fold (cbor_array_iterator_match pm c r);
   res
 }
-```
 
-```pulse
 fn cbor_array_iterator_next
   (sq: squash SZ.fits_u64)
   (pi: R.ref cbor_array_iterator)
@@ -280,9 +268,7 @@ ensures exists* a p i' q .
   fold (cbor_array_iterator_match pm i' (List.Tot.tl l));
   res
 }
-```
 
-```pulse
 fn cbor_array_iterator_truncate
   (c: cbor_array_iterator)
   (len: U64.t)
@@ -308,11 +294,9 @@ ensures
   fold (cbor_array_iterator_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)));
   res
 }
-```
 
 module Perm = CBOR.Pulse.Raw.Match.Perm
 
-```pulse
 ghost
 fn cbor_array_iterator_share
   (c: cbor_array_iterator)
@@ -333,9 +317,7 @@ ensures
   fold (cbor_array_iterator_match (pm /. 2.0R) c r);
   fold (cbor_array_iterator_match (pm /. 2.0R) c r);
 }
-```
 
-```pulse
 ghost
 fn cbor_array_iterator_gather
   (c: cbor_array_iterator)
@@ -360,9 +342,7 @@ ensures
     #pm1 #r1 #pm2 #r2;
   fold (cbor_array_iterator_match (pm1 +. pm2) c r1);
 }
-```
 
-```pulse
 ghost
 fn cbor_match_map_elim
   (c: cbor_map)
@@ -393,14 +373,12 @@ fn cbor_match_map_elim
   };
   Trade.intro _ _ _ aux
 }
-```
 
 let cbor_map_iterator_match
 = cbor_raw_iterator_match
     cbor_match_map_entry
     cbor_serialized_map_iterator_match
 
-```pulse
 fn cbor_map_iterator_init
   (fits: squash (SZ.fits_u64))
   (c: cbor_raw)
@@ -461,9 +439,7 @@ ensures exists* p .
     }
   }
 }
-```
 
-```pulse
 fn cbor_map_iterator_is_empty
   (c: cbor_map_iterator)
   (#pm: perm)
@@ -484,9 +460,7 @@ ensures
   fold (cbor_map_iterator_match pm c r);
   res
 }
-```
 
-```pulse
 fn cbor_map_iterator_next
   (sq: squash SZ.fits_u64)
   (pi: R.ref cbor_map_iterator)
@@ -517,9 +491,7 @@ ensures exists* a p i' q .
   fold (cbor_map_iterator_match pm i' (List.Tot.tl l));
   res
 }
-```
 
-```pulse
 ghost
 fn cbor_map_entry_share
   (p: perm)
@@ -541,9 +513,7 @@ ensures
   fold (cbor_match_map_entry (p /. 2.0R) c r);
   fold (cbor_match_map_entry (p /. 2.0R) c r);
 }
-```
 
-```pulse
 ghost
 fn cbor_map_entry_gather
   (p1: perm)
@@ -568,9 +538,7 @@ ensures
   Perm.cbor_raw_gather p1 c.cbor_map_entry_value _ p2 _;
   fold (cbor_match_map_entry (p1 +. p2) c r1);
 }
-```
 
-```pulse
 ghost
 fn cbor_map_iterator_share
   (c: cbor_map_iterator)
@@ -591,9 +559,7 @@ ensures
   fold (cbor_map_iterator_match (pm /. 2.0R) c r);
   fold (cbor_map_iterator_match (pm /. 2.0R) c r);
 }
-```
 
-```pulse
 ghost
 fn cbor_map_iterator_gather
   (c: cbor_map_iterator)
@@ -618,4 +584,3 @@ ensures
     #pm1 #r1 #pm2 #r2;
   fold (cbor_map_iterator_match (pm1 +. pm2) c r1);
 }
-```

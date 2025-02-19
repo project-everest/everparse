@@ -1,4 +1,5 @@
 module CBORTest
+#lang-pulse
 open CBOR.Spec.Constants
 open CBOR.Pulse.API.Det.C.Slice
 open Pulse.Lib.Pervasives
@@ -65,7 +66,6 @@ noextract [@@noextract_to "krml"]
 let exit_impossible : I32.t = 2l
 
 #restart-solver
-```pulse
 fn test_on
   (test: cbor_det_t)
   (#p: perm)
@@ -134,7 +134,6 @@ ensures
     }
   }
 }
-```
 
 #pop-options
 
@@ -177,7 +176,6 @@ let max_size = 32sz
 #push-options "--fuel 8 --z3rlimit 128"
 
 #restart-solver
-```pulse
 fn main (_: unit)
 requires emp
 returns res: res_t
@@ -290,7 +288,7 @@ ensures emp
               Trade.elim (cbor_det_match _ test _) _;
               intro_res_post_impossible ()
             } else {
-              let Mktuple2 out2 out3 = S.split out1 size';
+              let out2, out3 = S.split out1 size';
               Seq.append_empty_r (Seq.slice w 0 (SZ.v size'));
               let test2 = cbor_det_parse_from_slice out2 size';
               let b = cbor_det_equal () test test2;
@@ -319,6 +317,5 @@ ensures emp
     }
   }
 }
-```
 
 #pop-options

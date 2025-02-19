@@ -1,4 +1,5 @@
 module CDDL.Pulse.Parse.ArrayGroup
+#lang-pulse
 include CDDL.Pulse.ArrayGroup
 include CDDL.Pulse.Parse.Base
 open Pulse.Lib.Pervasives
@@ -69,7 +70,6 @@ let impl_zero_copy_array_group_t_eq
 = ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_array
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -102,10 +102,8 @@ fn impl_zero_copy_array
   Trade.trans _ _ (vmatch p c v);
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_array_group_ext
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
@@ -135,10 +133,8 @@ fn impl_zero_copy_array_group_ext
 {
   f1 c
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_array_group_item
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -165,7 +161,6 @@ fn impl_zero_copy_array_group_item
   Trade.trans _ _ (cbor_array_iterator_match p c l);
   res
 }
-```
 
 module U64 = FStar.UInt64
 
@@ -178,7 +173,6 @@ let list_append_length_pat
 = List.Tot.append_length l1 l2
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_array_group_concat
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
@@ -252,10 +246,8 @@ fn impl_zero_copy_array_group_concat
   Trade.trans (rel_pair r1 r2 res (z1, z2)) _ _;
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_array_group_choice
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
@@ -301,10 +293,8 @@ fn impl_zero_copy_array_group_choice
     res
   }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_array_group_zero_or_one
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
@@ -343,7 +333,6 @@ fn impl_zero_copy_array_group_zero_or_one
     res
   }
 }
-```
 
 module Iterator = CDDL.Pulse.Iterator.Base
 
@@ -578,7 +567,6 @@ let cddl_array_iterator_is_empty_t
     )
 
 inline_for_extraction
-```pulse
 fn cddl_array_iterator_is_empty
   (#cbor_array_iterator_t: Type0)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0)
@@ -593,7 +581,6 @@ fn cddl_array_iterator_is_empty
   fold (rel_array_iterator cbor_array_iterator_match spec i l);
   res
 }
-```
 
 inline_for_extraction
 let cddl_array_iterator_next_t
@@ -619,7 +606,6 @@ let cddl_array_iterator_next_t
     )
 
 inline_for_extraction
-```pulse
 fn cddl_array_iterator_next
   (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   (length: array_iterator_length_t cbor_array_iterator_match)
@@ -710,12 +696,10 @@ fn cddl_array_iterator_next
   Trade.trans_hyp_l _ _ _ _;
   res;
 }
-```
 
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_array_group_zero_or_more'
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
@@ -765,10 +749,8 @@ fn impl_zero_copy_array_group_zero_or_more'
   Trade.intro _ _ _ aux;
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_array_group_zero_or_more
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
@@ -803,7 +785,6 @@ fn impl_zero_copy_array_group_zero_or_more
   Trade.trans _ _ (cbor_array_iterator_match p c l);
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_zero_copy_array_group_one_or_more

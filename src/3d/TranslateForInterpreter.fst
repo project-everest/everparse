@@ -950,7 +950,7 @@ let make_tdn (i:A.ident) =
   {
     typedef_name = i;
     typedef_abbrev = with_dummy_range (to_ident' "");
-    typedef_ptr_abbrev = with_dummy_range (to_ident' "");
+    typedef_ptr_abbrev = None;
     typedef_attributes = []
   }
 

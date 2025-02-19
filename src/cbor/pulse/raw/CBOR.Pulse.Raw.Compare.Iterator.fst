@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Compare.Iterator
+#lang-pulse
 include CBOR.Pulse.Raw.Iterator
 include CBOR.Pulse.Raw.Compare.Base
 open Pulse.Lib.Pervasives
@@ -18,7 +19,6 @@ let vmatch_with_perm
 = vmatch xl.p xl.v xh
 
 inline_for_extraction
-```pulse
 fn lex_compare_iterator
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -131,12 +131,10 @@ fn lex_compare_iterator
     !pres
   }
 }
-```
 
 #push-options "--print_implicits"
 
 inline_for_extraction
-```pulse
 fn lex_compare_iterator_peel_perm
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -173,4 +171,3 @@ ensures
   Trade.elim _ (cbor_raw_iterator_match elt_match ser_match p2 x2 v2);
   res
 }
-```

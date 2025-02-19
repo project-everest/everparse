@@ -1,4 +1,5 @@
 module LowParse.Pulse.Int
+#lang-pulse
 include LowParse.Spec.Int
 include LowParse.Pulse.Base
 open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
@@ -22,7 +23,6 @@ noextract
 let be_to_n_1 =  (E.mk_be_to_n EI.uint8 1)
 
 inline_for_extraction
-```pulse
 fn read_u8' (_: unit) : leaf_reader #FStar.UInt8.t #parse_u8_kind #parse_u8 serialize_u8
 = (input: S.slice byte)
   (#pm: perm)
@@ -34,7 +34,6 @@ fn read_u8' (_: unit) : leaf_reader #FStar.UInt8.t #parse_u8_kind #parse_u8 seri
   fold (pts_to_serialized serialize_u8 input #pm v);
   res
 }
-```
 
 inline_for_extraction
 let read_u8 : reader serialize_u8 = reader_of_leaf_reader (read_u8' ())
@@ -49,7 +48,6 @@ noextract
 let n_to_be_1 =  (E.mk_n_to_be EI.uint8 1)
 
 inline_for_extraction
-```pulse
 fn l2r_leaf_write_u8 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt8.t #parse_u8_kind #parse_u8 serialize_u8
 = (n: _)
   (x: _)
@@ -62,7 +60,6 @@ fn l2r_leaf_write_u8 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt8.t #parse_u8_ki
   n_to_be_1 n x pos';
   pos'
 }
-```
 
 inline_for_extraction
 let validate_u16 : validator parse_u16 =
@@ -78,7 +75,6 @@ noextract
 let be_to_n_2 = (E.mk_be_to_n EI.uint16 2)
 
 inline_for_extraction
-```pulse
 fn read_u16' (_: unit) : leaf_reader #FStar.UInt16.t #parse_u16_kind #parse_u16 serialize_u16
 = (input: S.slice byte)
   (#pm: perm)
@@ -90,7 +86,6 @@ fn read_u16' (_: unit) : leaf_reader #FStar.UInt16.t #parse_u16_kind #parse_u16 
   fold (pts_to_serialized serialize_u16 input #pm v);
   res
 }
-```
 
 inline_for_extraction
 let read_u16 : reader serialize_u16 = reader_of_leaf_reader (read_u16' ())
@@ -105,7 +100,6 @@ noextract
 let n_to_be_2 =  (E.mk_n_to_be EI.uint16 2)
 
 inline_for_extraction
-```pulse
 fn l2r_leaf_write_u16 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt16.t #parse_u16_kind #parse_u16 serialize_u16
 = (n: _)
   (x: _)
@@ -118,7 +112,6 @@ fn l2r_leaf_write_u16 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt16.t #parse_u16
   n_to_be_2 n x pos';
   pos'
 }
-```
 
 inline_for_extraction
 let validate_u32 : validator parse_u32 =
@@ -134,7 +127,6 @@ noextract
 let be_to_n_4 = (E.mk_be_to_n EI.uint32 4)
 
 inline_for_extraction
-```pulse
 fn read_u32' (_: unit) : leaf_reader #FStar.UInt32.t #parse_u32_kind #parse_u32 serialize_u32
 = (input: S.slice byte)
   (#pm: perm)
@@ -146,7 +138,6 @@ fn read_u32' (_: unit) : leaf_reader #FStar.UInt32.t #parse_u32_kind #parse_u32 
   fold (pts_to_serialized serialize_u32 input #pm v);
   res
 }
-```
 
 inline_for_extraction
 let read_u32 : reader serialize_u32 = reader_of_leaf_reader (read_u32' ())
@@ -161,7 +152,6 @@ noextract
 let n_to_be_4 =  (E.mk_n_to_be EI.uint32 4)
 
 inline_for_extraction
-```pulse
 fn l2r_leaf_write_u32 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt32.t #parse_u32_kind #parse_u32 serialize_u32
 = (n: _)
   (x: _)
@@ -174,7 +164,6 @@ fn l2r_leaf_write_u32 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt32.t #parse_u32
   n_to_be_4 n x pos';
   pos'
 }
-```
 
 inline_for_extraction
 let validate_u64 : validator parse_u64 =
@@ -190,7 +179,6 @@ noextract
 let be_to_n_8 = (E.mk_be_to_n EI.uint64 8)
 
 inline_for_extraction
-```pulse
 fn read_u64' (_: unit) : leaf_reader #FStar.UInt64.t #parse_u64_kind #parse_u64 serialize_u64
 = (input: S.slice byte)
   (#pm: perm)
@@ -202,7 +190,6 @@ fn read_u64' (_: unit) : leaf_reader #FStar.UInt64.t #parse_u64_kind #parse_u64 
   fold (pts_to_serialized serialize_u64 input #pm v);
   res
 }
-```
 
 inline_for_extraction
 let read_u64 : reader serialize_u64 = reader_of_leaf_reader (read_u64' ())
@@ -217,7 +204,6 @@ noextract
 let n_to_be_8 =  (E.mk_n_to_be EI.uint64 8)
 
 inline_for_extraction
-```pulse
 fn l2r_leaf_write_u64 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt64.t #parse_u64_kind #parse_u64 serialize_u64
 = (n: _)
   (x: _)
@@ -230,4 +216,3 @@ fn l2r_leaf_write_u64 (_: unit) : l2r_leaf_writer u#0 #FStar.UInt64.t #parse_u64
   n_to_be_8 n x pos';
   pos'
 }
-```

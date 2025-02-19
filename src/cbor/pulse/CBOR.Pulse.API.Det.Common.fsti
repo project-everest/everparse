@@ -1,4 +1,5 @@
 module CBOR.Pulse.API.Det.Common
+#lang-pulse
 include CBOR.Pulse.API.Det.Type
 include CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
@@ -132,7 +133,6 @@ module SU = Pulse.Lib.Slice.Util
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_parse_full
   (cbor_det_validate: cbor_det_validate_t)
   (cbor_det_parse: cbor_det_parse_valid_t)
@@ -149,7 +149,7 @@ fn cbor_det_parse_full
     None #(cbor_det_t & S.slice U8.t)
   } else {
     Seq.lemma_split v (SZ.v len);
-    let Mktuple2 input2 rem = SU.split_trade input len;
+    let input2, rem = SU.split_trade input len;
     Classical.forall_intro_2 (seq_length_append_l #U8.t);
     S.pts_to_len input2;
     let res = cbor_det_parse input2;
@@ -159,7 +159,6 @@ fn cbor_det_parse_full
     Some (res, rem)
   }
 }
-```
 
 noextract [@@noextract_to "krml"]
 let cbor_det_size_post
