@@ -1,4 +1,5 @@
 module CDDL.Pulse.AST.Literal
+#lang-pulse
 include CDDL.Pulse.Misc
 open Pulse.Lib.Pervasives
 module Trade = Pulse.Lib.Trade.Util
@@ -37,7 +38,6 @@ let slice_u8_eq_list_ascii_char_t
     )
 
 inline_for_extraction
-```pulse
 fn slice_u8_eq_list_ascii_char_nil (_: unit) : slice_u8_eq_list_ascii_char_t []
 = (s: _)
   (i: _)
@@ -46,7 +46,6 @@ fn slice_u8_eq_list_ascii_char_nil (_: unit) : slice_u8_eq_list_ascii_char_t []
   {
     true
   }
-```
 
 let list_map_cons
   (#t #t': Type)
@@ -58,7 +57,6 @@ let list_map_cons
 = ()
 
 inline_for_extraction
-```pulse
 fn slice_u8_eq_list_ascii_char_cons (a: FStar.Char.char) (a' : U8.t) (sq: squash (a' == AST.uint32_to_uint8 (AST.u32_of_char a) /\ AST.char_is_ascii a)) (q: list FStar.Char.char) (f: slice_u8_eq_list_ascii_char_t q) : slice_u8_eq_list_ascii_char_t (a :: q)
 = (s: _)
   (i: _)
@@ -83,7 +81,6 @@ fn slice_u8_eq_list_ascii_char_cons (a: FStar.Char.char) (a' : U8.t) (sq: squash
       false
     }
   }
-```
 
 [@@AST.base_attr]
 let rec slice_u8_eq_list_ascii_char
@@ -120,7 +117,6 @@ let slice_u8_eq_ascii_string_t
     )
 
 inline_for_extraction noextract
-```pulse
 fn slice_u8_eq_ascii_string_intro
   (x: AST.ascii_string)
   (f: slice_u8_eq_list_ascii_char_t (FStar.String.list_of_string x))
@@ -132,7 +128,6 @@ fn slice_u8_eq_ascii_string_intro
 {
   f s i
 }
-```
 
 [@@AST.base_attr]
 let slice_u8_eq_ascii_string
@@ -141,7 +136,6 @@ let slice_u8_eq_ascii_string
 = slice_u8_eq_ascii_string_intro x (slice_u8_eq_list_ascii_char (FStar.String.list_of_string x) ())
 
 inline_for_extraction
-```pulse
 fn impl_string_literal
   (#ty: Type0)
   (vmatch: (perm -> ty -> cbor -> slprop))
@@ -174,7 +168,6 @@ fn impl_string_literal
     false
   }
 }
-```
 
 [@@AST.base_attr]
 let string_length
@@ -225,7 +218,6 @@ let slice_u8_fill_list_ascii_char_t
     )
 
 inline_for_extraction
-```pulse
 fn slice_u8_fill_list_ascii_char_nil (_: unit) : slice_u8_fill_list_ascii_char_t []
 = (s: _)
   (i: _)
@@ -233,10 +225,8 @@ fn slice_u8_fill_list_ascii_char_nil (_: unit) : slice_u8_fill_list_ascii_char_t
   {
     ()
   }
-```
 
 inline_for_extraction
-```pulse
 fn slice_u8_fill_list_ascii_char_cons (a: FStar.Char.char) (a' : U8.t) (sq: squash (a' == AST.uint32_to_uint8 (AST.u32_of_char a) /\ AST.char_is_ascii a)) (q: list FStar.Char.char) (f: slice_u8_fill_list_ascii_char_t q) : slice_u8_fill_list_ascii_char_t (a :: q)
 = (s: _)
   (i: _)
@@ -247,7 +237,6 @@ fn slice_u8_fill_list_ascii_char_cons (a: FStar.Char.char) (a' : U8.t) (sq: squa
     let i' = SZ.add i 1sz;
     f s i'
   }
-```
 
 [@@AST.base_attr]
 let rec slice_u8_fill_list_ascii_char
@@ -274,7 +263,6 @@ let slice_u8_fill_ascii_string_t
     )
 
 inline_for_extraction noextract
-```pulse
 fn slice_u8_fill_ascii_string_intro
   (x: AST.ascii_string)
   (f: slice_u8_fill_list_ascii_char_t (FStar.String.list_of_string x))
@@ -286,7 +274,6 @@ fn slice_u8_fill_ascii_string_intro
   assert (pure (Seq.equal v' (AST.byte_seq_of_ascii_string x)));
   rewrite (pts_to s v') as (pts_to s (AST.byte_seq_of_ascii_string x))
 }
-```
 
 [@@AST.base_attr]
 let slice_u8_fill_ascii_string
@@ -295,7 +282,6 @@ let slice_u8_fill_ascii_string
 = slice_u8_fill_ascii_string_intro x (slice_u8_fill_list_ascii_char (FStar.String.list_of_string x) ())
 
 inline_for_extraction
-```pulse
 fn with_cbor_literal_text_string
   (#ty: Type0)
   (#vmatch: (perm -> ty -> cbor -> slprop))
@@ -323,7 +309,6 @@ fn with_cbor_literal_text_string
   S.to_array s;
   res
 }
-```
 
 [@@AST.base_attr]
 let with_literal

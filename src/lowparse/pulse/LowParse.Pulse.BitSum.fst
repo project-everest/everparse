@@ -1,4 +1,5 @@
 module LowParse.Pulse.BitSum
+#lang-pulse
 include LowParse.Spec.BitSum
 include LowParse.Pulse.Combinators
 open FStar.Tactics.V2
@@ -58,7 +59,6 @@ let read_bitsum'
     )
 
 inline_for_extraction
-```pulse
 fn l2r_write_bitsum'
   (#t: eqtype)
   (#tot: pos)
@@ -80,10 +80,8 @@ fn l2r_write_bitsum'
   synth_bitsum'_recip_inverse b;
   w (sr x) out offset
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_bitsum'
   (#t: eqtype)
   (#tot: pos)
@@ -104,4 +102,3 @@ fn compute_remaining_size_bitsum'
   synth_bitsum'_recip_inverse b;
   w (sr x) out
 }
-```

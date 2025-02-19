@@ -1,7 +1,7 @@
 module CBOR.Pulse.Raw.Match.Perm
+#lang-pulse
 open CBOR.Pulse.Raw.Util
 
-```pulse
 ghost
 fn rec cbor_raw_share_array
   (p: perm)
@@ -40,9 +40,7 @@ decreases r
     }
   }
 }
-```
 
-```pulse
 ghost
 fn rec cbor_raw_share_map
   (r0: raw_data_item)
@@ -86,9 +84,7 @@ decreases r
     }
   }
 }
-```
 
-```pulse
 ghost
 fn rec cbor_raw_share
   (p: perm)
@@ -230,9 +226,7 @@ fn rec cbor_raw_share
     }
   }
 }
-```
 
-```pulse
 ghost
 fn rec cbor_raw_gather_array
   (p1: perm)
@@ -278,9 +272,7 @@ decreases r1
     }
   }
 }
-```
 
-```pulse
 ghost
 fn rec cbor_raw_gather_map
   (r01: raw_data_item)
@@ -332,9 +324,7 @@ decreases r1
     }
   }
 }
-```
 
-```pulse
 ghost
 fn rec cbor_raw_gather
   (p1: perm)
@@ -483,4 +473,3 @@ fn rec cbor_raw_gather
     }
   }
 }
-```

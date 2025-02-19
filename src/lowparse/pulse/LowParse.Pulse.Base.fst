@@ -1,4 +1,5 @@
 module LowParse.Pulse.Base
+#lang-pulse
 open FStar.Tactics.V2
 open Pulse.Lib.Pervasives open Pulse.Lib.Slice.Util open Pulse.Lib.Trade
 open Pulse.Lib.Slice
@@ -11,7 +12,6 @@ module S = Pulse.Lib.Slice
 let pts_to_serialized (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (input: slice byte) (#[exact (`1.0R)] pm: perm) (v: t) : slprop =
   pts_to input #pm (bare_serialize s v)
 
-```pulse
 ghost
 fn pts_to_serialized_intro_trade
   (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v0: bytes) (v: t)
@@ -20,9 +20,7 @@ fn pts_to_serialized_intro_trade
 {
   Trade.rewrite_with_trade (pts_to input #pm v0) (pts_to_serialized s input #pm v)
 }
-```
 
-```pulse
 ghost
 fn pts_to_serialized_elim_trade
   (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
@@ -31,9 +29,7 @@ fn pts_to_serialized_elim_trade
 {
   Trade.rewrite_with_trade (pts_to_serialized s input #pm v) (pts_to input #pm (bare_serialize s v))
 }
-```
 
-```pulse
 ghost
 fn pts_to_serialized_length
   (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
@@ -44,7 +40,6 @@ fn pts_to_serialized_length
   pts_to_len input;
   fold (pts_to_serialized s input #pm v)
 }
-```
 
 let serializer_ext_eq
   (#t: Type0)
@@ -61,7 +56,6 @@ let serializer_ext_eq
 = let s2' = serialize_ext #k1 p1 s1 #k2 p2 in
   serializer_unique p2 s2 s2' v
 
-```pulse
 ghost
 fn pts_to_serialized_ext
   (#t: Type0)
@@ -83,7 +77,6 @@ fn pts_to_serialized_ext
   unfold (pts_to_serialized s1 input #pm v);
   fold (pts_to_serialized s2 input #pm v)
 }
-```
 
 let pts_to_serialized_ext_trade_gen_precond
   (#t1 #t2: Type)
@@ -95,7 +88,6 @@ let pts_to_serialized_ext_trade_gen_precond
   t1 == t2 /\
   (forall x . parse p1 x == parse p2 x)
 
-```pulse
 ghost
 fn pts_to_serialized_ext_trade_gen
   (#t1 #t2: Type0)
@@ -128,9 +120,7 @@ fn pts_to_serialized_ext_trade_gen
   };
   intro_trade _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn pts_to_serialized_ext_trade
   (#t: Type0)
@@ -159,9 +149,7 @@ fn pts_to_serialized_ext_trade
   };
   intro_trade _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn pts_to_serialized_share
   (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm: perm) (#v: t)
@@ -173,10 +161,8 @@ fn pts_to_serialized_share
   fold (pts_to_serialized s input #(pm /. 2.0R) v);
   fold (pts_to_serialized s input #(pm /. 2.0R) v)
 }
-```
 
 [@@allow_ambiguous]
-```pulse
 ghost
 fn pts_to_serialized_gather
   (#k: parser_kind) (#t: Type0) (#p: parser k t) (s: serializer p) (input: slice byte) (#pm0 #pm1: perm) (#v0 #v1: t)
@@ -189,7 +175,6 @@ fn pts_to_serialized_gather
   serializer_injective _ s v0 v1;
   fold (pts_to_serialized s input #(pm0 +. pm1) v0)
 }
-```
 
 let validator_success (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t) : GTot bool =
     SZ.v offset <= Seq.length v && (
@@ -223,7 +208,6 @@ let validator (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
     (fun res -> pts_to input #pm v ** (exists* off . R.pts_to poffset off ** pure (validator_postcond p offset v off res)))
 
 inline_for_extraction
-```pulse
 fn validate
   (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (w: validator p)
   (input: slice byte)
@@ -237,10 +221,8 @@ fn validate
 {
   w input poffset #offset #pm #v
 }
-```
 
 inline_for_extraction
-```pulse
 fn ifthenelse_validator
   (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t)
   (cond: bool)
@@ -260,7 +242,6 @@ fn ifthenelse_validator
     wfalse () input poffset
   }
 }
-```
 
 let validate_nonempty_post
   (#k: parser_kind) (#t: Type) (p: parser k t) (offset: SZ.t) (v: bytes) (off: SZ.t)
@@ -270,7 +251,6 @@ let validate_nonempty_post
   (if off = 0sz then validator_failure p offset v else validator_success p offset v off)
 
 inline_for_extraction
-```pulse
 fn validate_nonempty (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (w: validator p { k.parser_kind_low > 0 })
   (input: slice byte)
   (offset: SZ.t)
@@ -289,7 +269,6 @@ fn validate_nonempty (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t)
     0sz
   }
 }
-```
 
 inline_for_extraction
 let validate_ext (#t: Type0) (#k1: Ghost.erased parser_kind) (#p1: parser k1 t) (v1: validator p1) (#k2: Ghost.erased parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : validator #_ #k2 p2 =
@@ -300,7 +279,6 @@ let validate_weaken (#t: Type0) (#k1: Ghost.erased parser_kind) (k2: Ghost.erase
   validate_ext v1 (weaken k2 p1)
 
 inline_for_extraction
-```pulse
 fn validate_total_constant_size (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t) (sz: SZ.t {
     k.parser_kind_high == Some k.parser_kind_low /\
     k.parser_kind_low == SZ.v sz /\
@@ -324,7 +302,6 @@ fn validate_total_constant_size (#t: Type0) (#k: Ghost.erased parser_kind) (p: p
     true
   }
 }
-```
 
 let jumper_pre
   (#t: Type0)
@@ -357,7 +334,6 @@ let jumper (#t: Type0) (#k: parser_kind) (p: parser k t) : Tot Type =
     (fun res -> pts_to input #pm v ** pure (validator_success p offset v res))
 
 inline_for_extraction
-```pulse
 fn ifthenelse_jumper (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t) (cond: bool) (jtrue: squash (cond == true) -> jumper p) (jfalse: squash (cond == false) -> jumper p)
 : jumper #t #k p
 =
@@ -372,10 +348,8 @@ fn ifthenelse_jumper (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t) 
     jfalse () input offset
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn jump_ext (#t: Type0) (#k1: Ghost.erased parser_kind) (#p1: parser k1 t) (v1: jumper p1) (#k2: Ghost.erased parser_kind) (p2: parser k2 t { forall x . parse p1 x == parse p2 x }) : jumper #_ #k2 p2 =
   (input: slice byte)
   (offset: SZ.t)
@@ -384,10 +358,8 @@ fn jump_ext (#t: Type0) (#k1: Ghost.erased parser_kind) (#p1: parser k1 t) (v1: 
 {
   v1 input offset #pm #v
 }
-```
 
 inline_for_extraction
-```pulse
 fn jump_constant_size (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t) (sz: SZ.t {
     k.parser_kind_high == Some k.parser_kind_low /\
     k.parser_kind_low == SZ.v sz
@@ -402,7 +374,6 @@ fn jump_constant_size (#t: Type0) (#k: Ghost.erased parser_kind) (p: parser k t)
   pts_to_len input;
   SZ.add offset sz
 }
-```
 
 let peek_post'
   (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p)
@@ -433,7 +404,6 @@ let peek_post
   peek_post' s input pm v consumed left right
 
 inline_for_extraction
-```pulse
 fn peek
   (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
   (input: slice byte)
@@ -458,7 +428,6 @@ fn peek
     }
   }
 }
-```
 
 let peek_trade_post'
   (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p)
@@ -488,7 +457,6 @@ let peek_trade_post
 = let (left, right) = res in
   peek_trade_post' s input pm v consumed left right
 
-```pulse
 ghost
 fn peek_trade_aux
   (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
@@ -509,10 +477,8 @@ fn peek_trade_aux
   unfold (pts_to_serialized s left #pm v1);
   join left right input
 }
-```
 
 inline_for_extraction
-```pulse
 fn peek_trade
   (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
   (input: slice byte)
@@ -534,10 +500,8 @@ fn peek_trade
     (left, right)
   }}
 }
-```
 
 inline_for_extraction
-```pulse
 fn peek_trade_gen
   (#t: Type0) (#k: Ghost.erased parser_kind) (#p: parser k t) (s: serializer p)
   (input: slice byte)
@@ -568,7 +532,6 @@ fn peek_trade_gen
     }}
   }}
 }
-```
 
 inline_for_extraction
 let leaf_reader
@@ -602,7 +565,6 @@ let leaf_read
 = r input #pm #v
 
 inline_for_extraction
-```pulse
 fn read_from_validator_success
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -626,7 +588,6 @@ fn read_from_validator_success
   Trade.elim _ _;
   res
 }
-```
 
 inline_for_extraction
 let reader
@@ -643,7 +604,6 @@ let reader
   stt t' (pts_to_serialized s input #pm v) (fun x' -> pts_to_serialized s input #pm v ** pure (x' == f v))
 
 inline_for_extraction
-```pulse
 fn leaf_reader_of_reader
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -658,10 +618,8 @@ fn leaf_reader_of_reader
 {
   r input #pm #v t id
 }
-```
 
 inline_for_extraction
-```pulse
 fn ifthenelse_reader
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -684,10 +642,8 @@ fn ifthenelse_reader
     iffalse () input #pm #v t' f
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn reader_ext
   (#t: Type0)
   (#k1: Ghost.erased parser_kind)
@@ -710,10 +666,8 @@ fn reader_ext
   elim_trade _ _;
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn reader_of_leaf_reader
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -731,7 +685,6 @@ fn reader_of_leaf_reader
   let x = r input #pm #v;
   f x
 }
-```
 
 inline_for_extraction
 let l2r_writer_for
@@ -772,7 +725,6 @@ let l2r_writer
   l2r_writer_for vmatch s x' x
 
 inline_for_extraction
-```pulse
 fn l2r_writer_ext
   (#t' #t: Type0)
   (#vmatch: t' -> t -> slprop)
@@ -793,7 +745,6 @@ fn l2r_writer_ext
   serializer_unique_strong s1 s2 x;
   w x' out offset
 }
-```
 
 let vmatch_ext
   (#t' #t1 t2: Type)
@@ -803,7 +754,6 @@ let vmatch_ext
 : Tot slprop
 = exists* (x1: t1) . vmatch x' x1 ** pure (t1 == t2 /\ x1 == x2)
 
-```pulse
 ghost
 fn vmatch_ext_elim_trade
   (#t' #t1 t2: Type0)
@@ -829,10 +779,8 @@ ensures
   Trade.intro _ _ _ aux;
   x1
 }
-```
 
 inline_for_extraction
-```pulse
 fn l2r_writer_ext_gen
   (#t' #t1 #t2: Type0)
   (#vmatch: t' -> t2 -> slprop)
@@ -859,10 +807,8 @@ fn l2r_writer_ext_gen
   rewrite (vmatch x' x2) as (vmatch x' x);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn l2r_writer_ifthenelse
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
@@ -885,10 +831,8 @@ fn l2r_writer_ifthenelse
     iffalse () x' out offset
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn l2r_writer_zero_size
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
@@ -906,7 +850,6 @@ fn l2r_writer_zero_size
   serialize_length s x;
   offset
 }
-```
 
 let vmatch_with_cond
   (#tl #th: Type)
@@ -917,7 +860,6 @@ let vmatch_with_cond
 : Tot slprop
 = vmatch xl xh ** pure (cond xl)
 
-```pulse
 ghost
 fn vmatch_with_cond_elim_trade
   (#tl #th: Type0)
@@ -941,12 +883,10 @@ ensures
   };
   Trade.intro _ _ _ aux
 }
-```
 
 let pnot (#t: Type) (cond: t -> GTot bool) (x: t) : GTot bool = not (cond x)
 
 inline_for_extraction
-```pulse
 fn l2r_writer_ifthenelse_low
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
@@ -975,7 +915,6 @@ fn l2r_writer_ifthenelse_low
     res
   }
 }
-```
 
 let vmatch_and_const
   (#tl #th: Type)
@@ -987,7 +926,6 @@ let vmatch_and_const
 = const ** vmatch xl xh
 
 inline_for_extraction
-```pulse
 fn l2r_writer_frame
   (#t' #t: Type0)
   (#vmatch: t' -> t -> slprop)
@@ -1008,7 +946,6 @@ fn l2r_writer_frame
   fold (vmatch_and_const const vmatch);
   res
 }
-```
 
 inline_for_extraction
 let vmatch_lens
@@ -1021,7 +958,6 @@ let vmatch_lens
     (fun x2' -> vmatch2 x2' x ** trade (vmatch2 x2' x) (vmatch1 x1' x))
 
 inline_for_extraction
-```pulse
 fn vmatch_lens_compose
   (#t1' #t2' #t3' #t: Type0)
   (#vmatch1: t1' -> t -> slprop)
@@ -1038,10 +974,8 @@ fn vmatch_lens_compose
   Trade.trans _ _ (vmatch1 x1' x);
   x3'
 }
-```
 
 inline_for_extraction
-```pulse
 fn l2r_writer_lens
   (#t1' #t2' #t: Type0)
   (#vmatch1: t1' -> t -> slprop)
@@ -1063,14 +997,12 @@ fn l2r_writer_lens
   elim_trade _ _;
   res
 }
-```
 
 let eq_as_slprop (t: Type) (x x': t) : slprop = pure (x == x')
 
 let ref_pts_to (t: Type0) (p: perm) (r: ref t) (v: t) : slprop =
   R.pts_to r #p v
 
-```pulse
 ghost
 fn ref_pts_to_lens_aux
   (#t: Type)
@@ -1084,10 +1016,8 @@ fn ref_pts_to_lens_aux
 {
   unfold (eq_as_slprop t x v)
 }
-```
 
 inline_for_extraction
-```pulse
 fn ref_pts_to_lens
   (t: Type0)
   (p: perm)
@@ -1103,7 +1033,6 @@ fn ref_pts_to_lens
   Trade.intro _ _ _ (ref_pts_to_lens_aux p r v x);
   x
 }
-```
 
 inline_for_extraction
 let l2r_leaf_writer
@@ -1130,7 +1059,6 @@ let l2r_leaf_writer
     ))
 
 inline_for_extraction
-```pulse
 fn l2r_leaf_writer_ext
   (#t: Type0)
   (#k1: Ghost.erased parser_kind)
@@ -1149,10 +1077,8 @@ fn l2r_leaf_writer_ext
   serializer_unique_strong s1 s2 x;
   w1 x out offset
 }
-```
 
 inline_for_extraction
-```pulse
 fn l2r_leaf_writer_ifthenelse
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -1173,10 +1099,8 @@ fn l2r_leaf_writer_ifthenelse
     iffalse () x out offset;
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn l2r_writer_of_leaf_writer
   (#t: Type)
   (#k: Ghost.erased parser_kind)
@@ -1194,10 +1118,8 @@ fn l2r_writer_of_leaf_writer
   fold (eq_as_slprop t x' x);
   w x' out offset
 }
-```
 
 inline_for_extraction
-```pulse
 fn l2r_leaf_writer_of_writer
   (#t: Type)
   (#k: Ghost.erased parser_kind)
@@ -1215,7 +1137,6 @@ fn l2r_leaf_writer_of_writer
   unfold (eq_as_slprop t x x);
   res
 }
-```
 
 inline_for_extraction
 let l2r_leaf_writer_zero_size
@@ -1249,7 +1170,6 @@ let compute_remaining_size
     ))
 
 inline_for_extraction
-```pulse
 fn compute_size
   (#t' #t: Type0)
   (#vmatch: t' -> t -> slprop)
@@ -1281,10 +1201,8 @@ fn compute_size
     false
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_ext
   (#t' #t: Type0)
   (#vmatch: t' -> t -> slprop)
@@ -1307,10 +1225,8 @@ fn compute_remaining_size_ext
   serializer_unique_strong s1 s2 x;
   cr1 x' out
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_ext_gen
   (#t' #t1 #t2: Type0)
   (#vmatch: t' -> t2 -> slprop)
@@ -1336,10 +1252,8 @@ fn compute_remaining_size_ext_gen
   rewrite (vmatch x' x2) as (vmatch x' x);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_frame
   (#t' #t: Type0)
   (#vmatch: t' -> t -> slprop)
@@ -1360,10 +1274,8 @@ fn compute_remaining_size_frame
   fold (vmatch_and_const const vmatch);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_lens
   (#t1' #t2' #t: Type0)
   (#vmatch1: t1' -> t -> slprop)
@@ -1385,10 +1297,8 @@ fn compute_remaining_size_lens
   elim_trade _ _;
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_constant_size
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
@@ -1415,10 +1325,8 @@ fn compute_remaining_size_constant_size
     true
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_zero_size
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
@@ -1438,10 +1346,8 @@ fn compute_remaining_size_zero_size
   serialize_length s x;
   true
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_ifthenelse
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
@@ -1463,10 +1369,8 @@ fn compute_remaining_size_ifthenelse
     iffalse () x' out
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_ifthenelse_low
   (#t' #t: Type0)
   (vmatch: t' -> t -> slprop)
@@ -1494,7 +1398,6 @@ fn compute_remaining_size_ifthenelse_low
     res
   }
 }
-```
 
 inline_for_extraction
 let leaf_compute_remaining_size
@@ -1515,7 +1418,6 @@ let leaf_compute_remaining_size
     ))
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_of_leaf_compute_remaining_size
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -1532,10 +1434,8 @@ fn compute_remaining_size_of_leaf_compute_remaining_size
   fold (eq_as_slprop t x v);
   w x out;
 }
-```
 
 inline_for_extraction
-```pulse
 fn leaf_compute_remaining_size_of_compute_remaining_size
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -1552,10 +1452,8 @@ fn leaf_compute_remaining_size_of_compute_remaining_size
   unfold (eq_as_slprop t x x);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn leaf_compute_remaining_size_ext
   (#t: Type0)
   (#k1: Ghost.erased parser_kind)
@@ -1573,10 +1471,8 @@ fn leaf_compute_remaining_size_ext
   serializer_unique_strong s1 s2 x;
   w1 x out
 }
-```
 
 inline_for_extraction
-```pulse
 fn leaf_compute_remaining_size_ifthenelse
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -1596,7 +1492,6 @@ fn leaf_compute_remaining_size_ifthenelse
     iffalse () x out;
   }
 }
-```
 
 inline_for_extraction
 let leaf_compute_remaining_size_constant_size
@@ -1643,7 +1538,6 @@ let pts_to_serialized_with_perm
 = pts_to_serialized s input.v #input.p v
 
 inline_for_extraction
-```pulse
 fn l2r_write_copy
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -1682,10 +1576,8 @@ fn l2r_write_copy
     }
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_copy
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -1713,10 +1605,8 @@ fn compute_remaining_size_copy
     true
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn pts_to_serialized_copy
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -1738,4 +1628,3 @@ ensures
   fold (pts_to_serialized s src #psrc vsrc);
   fold (pts_to_serialized s dst vsrc);
 }
-```

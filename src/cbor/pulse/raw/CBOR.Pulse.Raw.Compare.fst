@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Compare
+#lang-pulse
 include CBOR.Pulse.Raw.Read
 include CBOR.Spec.Raw.Format
 include CBOR.Pulse.Raw.Compare.Bytes
@@ -68,7 +69,6 @@ let cbor_compare_t =
       )
 
 inline_for_extraction
-```pulse
 fn cbor_compare_of_impl_compare
   (ih: A.impl_compare_t (vmatch_with_perm cbor_match) cbor_compare)
 : cbor_compare_t
@@ -93,10 +93,8 @@ fn cbor_compare_of_impl_compare
   Trade.elim _ (cbor_match p2 x2 v2);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_compare_of_cbor_compare
   (ih: cbor_compare_t)
 : A.impl_compare_t u#0 u#0 #_ #_ (vmatch_with_perm cbor_match) cbor_compare
@@ -113,10 +111,8 @@ fn impl_compare_of_cbor_compare
   fold (vmatch_with_perm cbor_match x2 v2);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_cbor_compare_key_value
   (ih: cbor_compare_t)
 : A.impl_compare_t u#0 u#0 #_ #_
@@ -147,9 +143,7 @@ fn impl_cbor_compare_key_value
     c
   }
 }
-```
 
-```pulse
 fn impl_major_type
   (x: cbor_raw)
   (#p: perm)
@@ -193,7 +187,6 @@ ensures
     }
   }
 }
-```
 
 let uint64_compare (x1 x2: U64.t) : Tot I16.t =
   if U64.lt x1 x2
@@ -202,7 +195,6 @@ let uint64_compare (x1 x2: U64.t) : Tot I16.t =
   then 1s
   else 0s
 
-```pulse
 fn impl_raw_uint64_compare (_: unit) : impl_compare_scalar_t u#0 #_ raw_uint64_compare
 = (x1: _)
   (x2: _)
@@ -214,7 +206,6 @@ fn impl_raw_uint64_compare (_: unit) : impl_compare_scalar_t u#0 #_ raw_uint64_c
     c
   }
 }
-```
 
 let cbor_pair_is_serialized
   (c1 c2: cbor_raw)
@@ -229,7 +220,6 @@ let cbor_pair_is_serialized
 
 #restart-solver
 inline_for_extraction
-```pulse
 fn cbor_compare_body
   (ih: cbor_compare_t)
 : cbor_compare_t
@@ -381,9 +371,7 @@ fn cbor_compare_body
     c
   }
 }
-```
 
-```pulse
 fn rec impl_cbor_compare
   (x1: cbor_raw)
   (x2: cbor_raw)
@@ -403,4 +391,3 @@ ensures
 {
   cbor_compare_body impl_cbor_compare x1 x2
 }
-```

@@ -1,4 +1,5 @@
 module CBOR.Pulse.API.Det.Common
+#lang-pulse
 friend CBOR.Pulse.API.Det.Type
 friend CBOR.Spec.API.Format
 
@@ -19,7 +20,6 @@ let cbor_det_match_with_size
   sz p c v
 = cbor_det_match p c v ** pure (sz == Seq.length (Spec.cbor_det_serialize v))
 
-```pulse
 ghost
 fn cbor_det_match_with_size_eq
   (sz: nat)
@@ -36,9 +36,7 @@ ensures
     unfold (cbor_det_match_with_size sz p c v);
     fold (cbor_det_match_with_size sz p c v)
 }
-```
 
-```pulse
 fn cbor_det_reset_perm
   (_: unit)
 : reset_perm_t u#0 u#0 #_ #_ cbor_det_match
@@ -58,11 +56,9 @@ fn cbor_det_reset_perm
   Trade.trans _ _ (cbor_det_match p x1 x2);
   res
 }
-```
 
 module RawPerm = CBOR.Pulse.Raw.Match.Perm // necessary because of Pulse's inability to handle first uses of module names 
 
-```pulse
 ghost
 fn cbor_det_share
   (_: unit)
@@ -76,9 +72,7 @@ fn cbor_det_share
   fold (cbor_det_match (p /. 2.0R) x v);
   fold (cbor_det_match (p /. 2.0R) x v);
 }
-```
 
-```pulse
 ghost
 fn cbor_det_gather
   (_: unit)
@@ -94,7 +88,6 @@ fn cbor_det_gather
   CBOR.Pulse.Raw.Match.Perm.cbor_raw_gather p x _ _ _;
   fold (cbor_det_match (p +. p') x v);
 }
-```
 
 let cbor_det_case (x: cbor_det_t) : Tot cbor_det_case_t =
   match x with
@@ -111,7 +104,6 @@ let cbor_det_case (x: cbor_det_t) : Tot cbor_det_case_t =
     -> CaseMap
   | Raw.CBOR_Case_Simple _ -> CaseSimpleValue
 
-```pulse
 ghost
 fn cbor_det_case_correct
   (x: cbor_det_t)
@@ -127,7 +119,6 @@ ensures
   SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor v);
   fold (cbor_det_match p x v);
 }
-```
 
 let cbor_det_validate_post_intro
   (v: Seq.seq U8.t)
@@ -139,7 +130,6 @@ let cbor_det_validate_post_intro
   assert (forall (v1: SpecRaw.raw_data_item) . (SpecRaw.raw_data_item_ints_optimal v1 /\ SpecRaw.raw_data_item_sorted SpecRaw.deterministically_encoded_cbor_map_key_order v1) ==> SpecRaw.serialize_cbor v1 == Spec.cbor_det_serialize (SpecRaw.mk_cbor v1))
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_validate
   (_: unit)
 : cbor_det_validate_t
@@ -152,7 +142,6 @@ fn cbor_det_validate
   cbor_det_validate_post_intro v res;
   res
 }
-```
 
 let cbor_det_parse_aux
   (v: Seq.seq U8.t)
@@ -169,7 +158,6 @@ let cbor_det_parse_aux
   Classical.move_requires (SpecRaw.serialize_cbor_inj (SpecRaw.mk_det_raw_cbor v1) v1' v2) (Seq.slice v (len) (Seq.length v))
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_parse_valid
   (_: unit)
 : cbor_det_parse_valid_t
@@ -187,9 +175,7 @@ fn cbor_det_parse_valid
   fold (cbor_det_match 1.0R res (SpecRaw.mk_cbor v1'));
   res
 }
-```
 
-```pulse
 fn cbor_det_size
   (x: cbor_det_t)
   (bound: SZ.t)
@@ -208,10 +194,8 @@ ensures
   fold (cbor_det_match pm x y);
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_serialize
   (x: cbor_det_t)
   (output: S.slice U8.t)
@@ -232,11 +216,9 @@ ensures
   fold (cbor_det_match pm x y);
   res
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_serialize_tag
   (tag: U64.t)
   (output: S.slice U8.t)
@@ -251,9 +233,7 @@ ensures
   let tag' = SpecRaw.mk_raw_uint64 tag;
   Serialize.cbor_serialize_tag tag' output
 }
-```
 
-```pulse
 fn cbor_det_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_det_match
 = (v: _)
 {
@@ -262,9 +242,7 @@ fn cbor_det_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_det_match
   fold (cbor_det_match 1.0R res (Spec.pack (Spec.CSimple v)));
   res
 }
-```
 
-```pulse
 fn cbor_det_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_det_match
 = (ty: _)
   (v: _)
@@ -274,10 +252,8 @@ fn cbor_det_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_det_match
   fold (cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 ty v)));
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_mk_string (_: unit) : mk_string_t u#0 #_ cbor_det_match
 = (ty: _)
   (s: _)
@@ -300,9 +276,7 @@ fn cbor_det_mk_string (_: unit) : mk_string_t u#0 #_ cbor_det_match
   fold (cbor_det_match 1.0R res (Spec.pack (Spec.CString ty v)));
   res
 }
-```
 
-```pulse
 fn cbor_det_mk_tagged (_: unit) : mk_tagged_t #_ cbor_det_match
 = (tag: _)
   (r: _)
@@ -331,13 +305,11 @@ fn cbor_det_mk_tagged (_: unit) : mk_tagged_t #_ cbor_det_match
   fold (cbor_det_match 1.0R res (Spec.pack (Spec.CTagged tag v')));
   res
 }
-```
 
 noextract [@@noextract_to "krml"]
 let mk_det_raw_cbor (c: Spec.cbor) : Tot SpecRaw.raw_data_item = // FIXME: WHY WHY WHY do I need that? Pulse cannot typecheck `Pure _ True (fun _ -> _)` functions into `Tot` functions
   SpecRaw.mk_det_raw_cbor c
 
-```pulse
 ghost
 fn rec seq_list_array_cbor_det_match_elim
   (p: perm)
@@ -376,7 +348,6 @@ decreases v
     Trade.trans _ _ (SM.seq_list_match c v (cbor_det_match p));
   }
 }
-```
 
 let rec list_map_mk_det_raw_cbor_correct
   (l: list Spec.cbor)
@@ -415,7 +386,6 @@ let mk_raw_uint64_post (x: U64.t) : Lemma
 = ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_mk_array (_: unit) : mk_array_t #_ cbor_det_match
 = (a: _)
   (#pa: _)
@@ -442,12 +412,10 @@ fn cbor_det_mk_array (_: unit) : mk_array_t #_ cbor_det_match
   fold (cbor_det_match 1.0R res (Spec.pack (Spec.CArray vv)));
   res
 }
-```
 
 let cbor_det_map_entry_match p c v =
   Raw.cbor_match_map_entry p c (SpecRaw.mk_det_raw_cbor (fst v), SpecRaw.mk_det_raw_cbor (snd v))
 
-```pulse
 fn cbor_raw_compare (p: perm) : Pulse.Lib.Sort.Base.impl_compare_t u#0 u#0 #_ #_
   (Raw.cbor_match p)
   SpecRaw.cbor_compare
@@ -458,9 +426,7 @@ fn cbor_raw_compare (p: perm) : Pulse.Lib.Sort.Base.impl_compare_t u#0 u#0 #_ #_
 {
   Compare.impl_cbor_compare x1 x2
 }
-```
 
-```pulse
 fn cbor_map_entry_raw_compare
   (p: perm)
 : Pulse.Lib.Sort.Base.impl_compare_t u#0 u#0 #_ #_ (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare
@@ -476,9 +442,7 @@ fn cbor_map_entry_raw_compare
   fold (Raw.cbor_match_map_entry p x2 y2);
   res
 }
-```
 
-```pulse
 fn rec cbor_raw_sort_aux
   (p: perm)
   (a: S.slice Raw.cbor_map_entry)
@@ -498,14 +462,12 @@ ensures
     (cbor_raw_sort_aux p)
     a
 }
-```
 
 let cbor_raw_sort
   (p: perm)
 : Pulse.Lib.Sort.Merge.Slice.sort_t #_ #_ (Raw.cbor_match_map_entry p) SpecRaw.cbor_map_entry_raw_compare
 = Pulse.Lib.Sort.Merge.Slice.sort _ _ (cbor_raw_sort_aux p)
 
-```pulse
 ghost
 fn rec seq_list_map_cbor_det_map_entry_match_elim
   (p: perm)
@@ -544,9 +506,7 @@ decreases v
     Trade.trans _ _ (SM.seq_list_match c v (cbor_det_map_entry_match p));
   }
 }
-```
 
-```pulse
 fn cbor_det_mk_map_entry
   (_: unit)
 : mk_map_entry_t u#0 u#0 #cbor_det_t #cbor_det_map_entry_t cbor_det_match cbor_det_map_entry_match
@@ -572,7 +532,6 @@ fn cbor_det_mk_map_entry
   Trade.trans_concl_r (cbor_det_map_entry_match 1.0R res (Ghost.reveal vk, Ghost.reveal vv)) _ _ _;
   res
 }
-```
 
 let _ : squash (pow2 64 - 1 == 18446744073709551615) = assert (pow2 64 - 1 == 18446744073709551615)
 
@@ -653,7 +612,6 @@ let list_no_repeats_map_fst_intro_mk_det_raw_cbor
   ))
 = Classical.forall_intro_4 (list_no_repeats_map_fst_intro_mk_det_raw_cbor2 vv)
 
-```pulse
 ghost
 fn rec seq_list_map_mk_cbor_map_entry_intro
   (p: perm)
@@ -697,12 +655,10 @@ decreases v
     Trade.trans _ _ (SM.seq_list_match c v (Raw.cbor_match_map_entry p));
   }
 }
-```
 
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_mk_map_gen (_: unit)
 : mk_map_gen_by_ref_t #cbor_det_t #cbor_det_map_entry_t cbor_det_match cbor_det_map_entry_match
 = (a: _)
@@ -777,9 +733,7 @@ fn cbor_det_mk_map_gen (_: unit)
     }
   }
 }
-```
 
-```pulse
 fn cbor_det_equal (_: unit) : equal_t u#0 #_ cbor_det_match
 = (x1: _)
   (x2: _)
@@ -797,9 +751,7 @@ fn cbor_det_equal (_: unit) : equal_t u#0 #_ cbor_det_match
   fold (cbor_det_match p2 x2 v2);
   (comp = 0s)
 }
-```
 
-```pulse
 fn cbor_det_major_type (_: unit) : get_major_type_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -811,9 +763,7 @@ fn cbor_det_major_type (_: unit) : get_major_type_t u#0 #_ cbor_det_match
   fold (cbor_det_match p x v);
   res
 }
-```
 
-```pulse
 fn cbor_det_read_simple_value (_: unit) : read_simple_value_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -825,9 +775,7 @@ fn cbor_det_read_simple_value (_: unit) : read_simple_value_t u#0 #_ cbor_det_ma
   fold (cbor_det_match p x v);
   res
 }
-```
 
-```pulse
 fn cbor_det_elim_simple (_: unit) : elim_simple_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -840,9 +788,7 @@ fn cbor_det_elim_simple (_: unit) : elim_simple_t u#0 #_ cbor_det_match
     as (Raw.cbor_match_simple (Raw.CBOR_Case_Simple?.v x) (SpecRaw.mk_det_raw_cbor v));
   unfold (Raw.cbor_match_simple (Raw.CBOR_Case_Simple?.v x) (SpecRaw.mk_det_raw_cbor v))
 }
-```
 
-```pulse
 fn cbor_det_read_uint64 (_: unit) : read_uint64_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -854,9 +800,7 @@ fn cbor_det_read_uint64 (_: unit) : read_uint64_t u#0 #_ cbor_det_match
   fold (cbor_det_match p x v);
   res.value
 }
-```
 
-```pulse
 fn cbor_det_elim_int64 (_: unit) : elim_int64_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -869,9 +813,7 @@ fn cbor_det_elim_int64 (_: unit) : elim_int64_t u#0 #_ cbor_det_match
     as (Raw.cbor_match_int (Raw.CBOR_Case_Int?.v x) (SpecRaw.mk_det_raw_cbor v));
   unfold (Raw.cbor_match_int (Raw.CBOR_Case_Int?.v x) (SpecRaw.mk_det_raw_cbor v))
 }
-```
 
-```pulse
 fn cbor_det_get_string_length (_: unit) : get_string_length_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -883,10 +825,8 @@ fn cbor_det_get_string_length (_: unit) : get_string_length_t u#0 #_ cbor_det_ma
   fold (cbor_det_match p x v);
   res.value
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_get_string (_: unit) : get_string_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -900,9 +840,7 @@ fn cbor_det_get_string (_: unit) : get_string_t u#0 #_ cbor_det_match
   Trade.trans _ _ (cbor_det_match p x v);
   res
 }
-```
 
-```pulse
 fn cbor_det_get_tagged_tag (_: unit) : get_tagged_tag_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -914,9 +852,7 @@ fn cbor_det_get_tagged_tag (_: unit) : get_tagged_tag_t u#0 #_ cbor_det_match
   fold (cbor_det_match p x v);
   res.value
 }
-```
 
-```pulse
 fn cbor_det_get_tagged_payload (_: unit) : get_tagged_payload_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -936,9 +872,7 @@ fn cbor_det_get_tagged_payload (_: unit) : get_tagged_payload_t u#0 #_ cbor_det_
   Trade.trans _ _ (cbor_det_match p x v);
   res
 }
-```
 
-```pulse
 fn cbor_det_get_array_length (_: unit) : get_array_length_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -950,7 +884,6 @@ fn cbor_det_get_array_length (_: unit) : get_array_length_t u#0 #_ cbor_det_matc
   fold (cbor_det_match p x v);
   res.value
 }
-```
 
 let cbor_det_array_iterator_match
   (p: perm)
@@ -976,7 +909,6 @@ let rec list_map_mk_det_raw_cbor_mk_cbor
     SpecRaw.mk_det_raw_cbor_mk_cbor a;
     list_map_mk_det_raw_cbor_mk_cbor q
 
-```pulse
 fn cbor_det_array_iterator_start (_: unit) : array_iterator_start_t u#0 u#0 #_ #_ cbor_det_match cbor_det_array_iterator_match
 = (x: _)
   (#p: _)
@@ -997,9 +929,7 @@ fn cbor_det_array_iterator_start (_: unit) : array_iterator_start_t u#0 u#0 #_ #
   Trade.trans _ _ (cbor_det_match p x v);
   res
 }
-```
 
-```pulse
 fn cbor_det_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#0 #_ cbor_det_array_iterator_match
 = (x: _)
   (#p: _)
@@ -1010,9 +940,7 @@ fn cbor_det_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#0 #_
   fold (cbor_det_array_iterator_match p x v);
   res
 }
-```
 
-```pulse
 fn cbor_det_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbor_det_array_iterator_match
 = (x: _)
   (#p: _)
@@ -1023,9 +951,7 @@ fn cbor_det_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbo
   fold (cbor_det_array_iterator_match p x v);
   res
 }
-```
 
-```pulse
 fn cbor_det_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor_det_match cbor_det_array_iterator_match
 = (x: _)
   (#y: _)
@@ -1050,7 +976,6 @@ fn cbor_det_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor
   Trade.trans_hyp_l _ _ _ (cbor_det_array_iterator_match py y z);
   res
 }
-```
 
 let rec list_map_splitAt
   (#t1 #t2: Type)
@@ -1064,7 +989,6 @@ let rec list_map_splitAt
   | [] -> ()
   | a :: q -> list_map_splitAt f q (n - 1)
 
-```pulse
 fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0 #_ cbor_det_array_iterator_match
 = (x: _)
   (len: _)
@@ -1083,9 +1007,7 @@ fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0 #_
   Trade.trans _ _ (cbor_det_array_iterator_match py x z);
   res
 }
-```
 
-```pulse
 ghost
 fn cbor_det_array_iterator_share (_: unit) : share_t u#0 u#0 #_ #_ cbor_det_array_iterator_match
 = (x: _)
@@ -1097,9 +1019,7 @@ fn cbor_det_array_iterator_share (_: unit) : share_t u#0 u#0 #_ #_ cbor_det_arra
   fold (cbor_det_array_iterator_match (py /. 2.0R) x z);
   fold (cbor_det_array_iterator_match (py /. 2.0R) x z);
 }
-```
 
-```pulse
 ghost
 fn cbor_det_array_iterator_gather (_: unit) : gather_t u#0 u#0 #_ #_ cbor_det_array_iterator_match
 = (x: _)
@@ -1113,7 +1033,6 @@ fn cbor_det_array_iterator_gather (_: unit) : gather_t u#0 u#0 #_ #_ cbor_det_ar
   Read.cbor_array_iterator_gather x #py1 #_ #py2 #_;
   fold (cbor_det_array_iterator_match (py1 +. py2) x z1);
 }
-```
 
 let rec list_index_map
   (#t1 #t2: Type)
@@ -1132,7 +1051,6 @@ let rec list_index_map
   then ()
   else list_index_map f (List.Tot.tl l) (i - 1)
 
-```pulse
 fn cbor_det_get_array_item (_: unit) : get_array_item_t u#0 #_ cbor_det_match
 = (x: _)
   (i: _)
@@ -1155,9 +1073,7 @@ fn cbor_det_get_array_item (_: unit) : get_array_item_t u#0 #_ cbor_det_match
   Trade.trans _ _ (cbor_det_match p x v);
   res
 }
-```
 
-```pulse
 fn cbor_det_get_map_length (_: unit) : get_map_length_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -1169,7 +1085,6 @@ fn cbor_det_get_map_length (_: unit) : get_map_length_t u#0 #_ cbor_det_match
   fold (cbor_det_match p x v);
   res.value
 }
-```
 
 let cbor_det_map_iterator_match
   (p: perm)
@@ -1305,7 +1220,6 @@ let cbor_det_order_trans : squash (U.order_trans cbor_det_order) = ()
 
 module I16 = FStar.Int16
 
-```pulse
 fn impl_cbor_det_compare
   (x1: cbor_det_t)
   (x2: cbor_det_t)
@@ -1324,7 +1238,6 @@ ensures cbor_det_match px1 x1 vx1 ** cbor_det_match px2 x2 vx2 ** pure (Compare.
   fold (cbor_det_match px2 x2 vx2);
   res
 }
-```
 
 let rec list_sorted_map_mk_cbor_map_entry
   (r: list (SpecRaw.raw_data_item & SpecRaw.raw_data_item))
@@ -1374,7 +1287,6 @@ let det_map_iterator_start_t
     ))
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_map_iterator_start' (_: unit) : det_map_iterator_start_t
 = (x: _)
   (#p: _)
@@ -1399,9 +1311,7 @@ fn cbor_det_map_iterator_start' (_: unit) : det_map_iterator_start_t
   Trade.trans _ _ (cbor_det_match p x y);
   res
 }
-```
 
-```pulse
 fn cbor_det_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cbor_det_match cbor_det_map_iterator_match
 = (x: _)
   (#p: _)
@@ -1409,9 +1319,7 @@ fn cbor_det_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cb
 {
   cbor_det_map_iterator_start' () x;
 }
-```
 
-```pulse
 fn cbor_det_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t u#0 #_ cbor_det_map_iterator_match
 = (x: _)
   (#p: _)
@@ -1422,9 +1330,7 @@ fn cbor_det_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t u#0 #_ cbo
   fold (cbor_det_map_iterator_match p x v);
   res
 }
-```
 
-```pulse
 fn cbor_det_map_iterator_next (_: unit) : map_iterator_next_t u#0 #_ #_ cbor_det_map_entry_match cbor_det_map_iterator_match
 = (x: _)
   (#y: _)
@@ -1449,7 +1355,6 @@ fn cbor_det_map_iterator_next (_: unit) : map_iterator_next_t u#0 #_ #_ cbor_det
   Trade.trans_hyp_l _ _ _ (cbor_det_map_iterator_match py y z);
   res
 }
-```
 
 let rec list_map_mk_det_raw_cbor_map_entry_inj
   (l1 l2: list (Spec.cbor & Spec.cbor))
@@ -1464,7 +1369,6 @@ let rec list_map_mk_det_raw_cbor_map_entry_inj
     SpecRaw.mk_det_raw_cbor_inj (snd a1) (snd a2);
     list_map_mk_det_raw_cbor_map_entry_inj q1 q2
 
-```pulse
 ghost
 fn cbor_det_map_iterator_share (_: unit) : share_t u#0 u#0 #_ #_ cbor_det_map_iterator_match
 = (x: _)
@@ -1476,9 +1380,7 @@ fn cbor_det_map_iterator_share (_: unit) : share_t u#0 u#0 #_ #_ cbor_det_map_it
   fold (cbor_det_map_iterator_match (py /. 2.0R) x z);
   fold (cbor_det_map_iterator_match (py /. 2.0R) x z);
 }
-```
 
-```pulse
 ghost
 fn cbor_det_map_iterator_gather (_: unit) : gather_t u#0 u#0 #_ #_ cbor_det_map_iterator_match
 = (x: _)
@@ -1493,9 +1395,7 @@ fn cbor_det_map_iterator_gather (_: unit) : gather_t u#0 u#0 #_ #_ cbor_det_map_
   list_map_mk_det_raw_cbor_map_entry_inj z1 z2;
   fold (cbor_det_map_iterator_match (py1 +. py2) x z1);
 }
-```
 
-```pulse
 fn cbor_det_map_entry_key (_: unit) : map_entry_key_t u#0 u#0 #_ #_ cbor_det_map_entry_match cbor_det_match
 = (x2: _)
   (#p: _)
@@ -1515,9 +1415,7 @@ fn cbor_det_map_entry_key (_: unit) : map_entry_key_t u#0 u#0 #_ #_ cbor_det_map
   Trade.intro _ _ _ aux;
   x2.cbor_map_entry_key
 }
-```
 
-```pulse
 fn cbor_det_map_entry_value (_: unit) : map_entry_value_t u#0 u#0 #_ #_ cbor_det_map_entry_match cbor_det_match
 = (x2: _)
   (#p: _)
@@ -1537,9 +1435,7 @@ fn cbor_det_map_entry_value (_: unit) : map_entry_value_t u#0 u#0 #_ #_ cbor_det
   Trade.intro _ _ _ aux;
   x2.cbor_map_entry_value
 }
-```
 
-```pulse
 ghost
 fn cbor_det_map_entry_share
   (_: unit)
@@ -1553,9 +1449,7 @@ fn cbor_det_map_entry_share
   fold (cbor_det_map_entry_match (p /. 2.0R) x v);
   fold (cbor_det_map_entry_match (p /. 2.0R) x v);
 }
-```
 
-```pulse
 ghost
 fn cbor_det_map_entry_gather
   (_: unit)
@@ -1571,7 +1465,6 @@ fn cbor_det_map_entry_gather
   Read.cbor_map_entry_gather p x _ _ _;
   fold (cbor_det_map_entry_match (p +. p') x v);
 }
-```
 
 let cbor_det_map_get_invariant_none
   (b: bool)
@@ -1634,7 +1527,6 @@ let cbor_det_map_get_invariant_false_elim_precond
   | Spec.CMap m' -> m == m'
   | _ -> False
 
-```pulse
 ghost
 fn cbor_det_map_get_invariant_false_elim
   (px: perm)
@@ -1668,10 +1560,8 @@ ensures
     }
   }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_map_get (_: unit)
 : map_get_by_ref_t #_ cbor_det_match
 = (x: _)
@@ -1757,4 +1647,3 @@ fn cbor_det_map_get (_: unit)
     }
   }
 }
-```

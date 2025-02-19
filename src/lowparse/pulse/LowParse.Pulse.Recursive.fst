@@ -1,4 +1,5 @@
 module LowParse.Pulse.Recursive
+#lang-pulse
 open LowParse.Spec.Base
 include LowParse.Spec.Recursive
 open Pulse.Lib.Slice.Util open Pulse.Lib.Trade open Pulse.Lib.Pervasives
@@ -121,7 +122,6 @@ let validate_tot_nlist_recursive_overflow
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn validate_tot_nlist_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
@@ -197,10 +197,8 @@ fn validate_tot_nlist_recursive
   } ;
   !pres
 }
-```
 
 inline_for_extraction
-```pulse
 fn validate_nlist_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
@@ -218,10 +216,8 @@ fn validate_nlist_recursive
   L.tot_parse_nlist_parse_nlist (SZ.v n0) (parse_recursive p) (Seq.slice (Ghost.reveal v) (SZ.v offset0) (Seq.length (Ghost.reveal v)));
   validate_tot_nlist_recursive s w f n0 input poffset
 }
-```
 
 inline_for_extraction
-```pulse
 fn validate_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
@@ -239,7 +235,6 @@ fn validate_recursive
   Classical.forall_intro (L.parse_nlist_eq 0 (parser_of_tot_parser (parse_recursive p)));
   validate_nlist_recursive s w f 1sz input poffset
 }
-```
 
 inline_for_extraction
 let jump_recursive_step_count
@@ -259,7 +254,6 @@ let jump_recursive_step_count
 
 #restart-solver
 inline_for_extraction
-```pulse
 fn jump_tot_nlist_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
@@ -308,13 +302,11 @@ fn jump_tot_nlist_recursive
   } ;
   !poffset
 }
-```
 
 #pop-options
 
 #restart-solver
 inline_for_extraction
-```pulse
 fn jump_nlist_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
@@ -331,10 +323,8 @@ fn jump_nlist_recursive
   L.tot_parse_nlist_parse_nlist (SZ.v n0) (parse_recursive p) (Seq.slice (Ghost.reveal v) (SZ.v offset0) (Seq.length (Ghost.reveal v)));
   jump_tot_nlist_recursive s w f n0 input offset0
 }
-```
 
 inline_for_extraction
-```pulse
 fn jump_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
@@ -351,7 +341,6 @@ fn jump_recursive
   Classical.forall_intro (L.parse_nlist_eq 0 (parser_of_tot_parser (parse_recursive p)));
   jump_nlist_recursive s w f 1sz input offset
 }
-```
 
 inline_for_extraction
 let impl_pred_t
@@ -584,7 +573,6 @@ let serialize_recursive_bound_correct
 = parse_nlist_recursive_bound_correct' p count (L.serialize_nlist count (serializer_of_tot_serializer (serialize_recursive s)) c)
 
 inline_for_extraction
-```pulse
 fn impl_nlist_forall_pred_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
@@ -706,10 +694,8 @@ fn impl_nlist_forall_pred_recursive
   elim_trade _ _;
   !pres
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_pred_recursive
   (#p: Ghost.erased parse_recursive_param)
   (s: Ghost.erased (serialize_recursive_param p))
@@ -729,4 +715,3 @@ fn impl_pred_recursive
   elim_trade _ _;
   res
 }
-```

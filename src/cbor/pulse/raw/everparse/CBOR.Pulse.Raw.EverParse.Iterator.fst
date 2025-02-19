@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.EverParse.Iterator
+#lang-pulse
 open CBOR.Spec.Util
 open CBOR.Pulse.Raw.Util
 open CBOR.Pulse.Raw.Iterator
@@ -27,7 +28,6 @@ let cbor_raw_serialized_iterator_match
      l == fst (List.Tot.splitAt (U64.v c.len) l')
   )
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_unfold
   (#elt_high: Type0)
@@ -60,9 +60,7 @@ ensures exists* l' .
   Trade.intro _ _ _ aux;
   ()
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_fold // this function cannot be used to truncate iterators since we want to preserve the list l.
   (#elt_high: Type0)
@@ -99,9 +97,7 @@ ensures
   Trade.intro _ _ _ aux;
   ()
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_fold_with_perm
   (#elt_high: Type0)
@@ -142,9 +138,7 @@ ensures
   };
   Trade.intro _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_is_empty_equiv
   (#elt_high: Type0)
@@ -162,10 +156,8 @@ ensures
   cbor_raw_serialized_iterator_unfold s pm c l;
   Trade.elim _ _;
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_serialized_iterator_is_empty
   (#elt_high: Type0)
   (#k: Ghost.erased LP.parser_kind)
@@ -179,10 +171,8 @@ fn cbor_raw_serialized_iterator_is_empty
   cbor_raw_serialized_iterator_is_empty_equiv s pm c l;
   (c.len = 0uL)
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_serialized_iterator_length
   (#elt_high: Type0)
   (#k: Ghost.erased LP.parser_kind)
@@ -199,7 +189,6 @@ fn cbor_raw_serialized_iterator_length
   Trade.elim _ _;
   c.len
 }
-```
 
 let cbor_raw_serialized_iterator_next_cont
   (#elt_low #elt_high: Type0)
@@ -221,7 +210,6 @@ let cbor_raw_serialized_iterator_next_cont
 module LPC = LowParse.Pulse.Combinators
 
 inline_for_extraction
-```pulse
 fn cbor_raw_serialized_iterator_next
   (#elt_low #elt_high: Type0)
   (#k: Ghost.erased LP.parser_kind)
@@ -289,7 +277,6 @@ fn cbor_raw_serialized_iterator_next
     }
   }
 }
-```
 
 let rec list_splitAt_splitAt
   (#t: Type)
@@ -312,7 +299,6 @@ let rec list_splitAt_splitAt
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn cbor_raw_serialized_iterator_truncate
   (#elt_high: Type0)
   (#k: Ghost.erased LP.parser_kind)
@@ -346,9 +332,7 @@ fn cbor_raw_serialized_iterator_truncate
   Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm c l);
   c'
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_share
   (#elt_high: Type0)
@@ -367,9 +351,7 @@ fn cbor_raw_serialized_iterator_share
   fold (cbor_raw_serialized_iterator_match s (pm /. 2.0R) c l);
   fold (cbor_raw_serialized_iterator_match s (pm /. 2.0R) c l);
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_gather
   (#elt_high: Type0)
@@ -390,4 +372,3 @@ fn cbor_raw_serialized_iterator_gather
   perm_mul_add_l pm1 pm2 c.p;
   fold (cbor_raw_serialized_iterator_match s (pm1 +. pm2) c l1);
 }
-```

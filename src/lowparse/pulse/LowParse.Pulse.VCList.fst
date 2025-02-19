@@ -1,4 +1,5 @@
 module LowParse.Pulse.VCList
+#lang-pulse
 include LowParse.Spec.VCList
 include LowParse.Pulse.Combinators
 open FStar.Tactics.V2
@@ -45,7 +46,6 @@ let rec serialize_nlist_append
 #pop-options
 
 inline_for_extraction
-```pulse
 fn jump_nlist
    (#t: Type0)
    (#k: Ghost.erased parser_kind)
@@ -82,9 +82,7 @@ fn jump_nlist
   };
   !poffset
 }
-```
 
-```pulse
 ghost
 fn nlist_cons_as_nondep_then_intro
   (#t: Type0)
@@ -115,9 +113,7 @@ ensures exists* v' .
     (synth_nlist_recip (n - 1))
     input;
 }
-```
 
-```pulse
 ghost
 fn nlist_cons_as_nondep_then_elim
   (#t: Type0)
@@ -139,9 +135,7 @@ ensures
     (synth_nlist_recip n)
     input
 }
-```
 
-```pulse
 ghost
 fn nlist_cons_as_nondep_then
   (#t: Type0)
@@ -173,7 +167,6 @@ ensures exists* v' .
     input;
   Trade.trans (pts_to_serialized (serialize_nondep_then s (serialize_nlist (n - 1) s)) input #pm _) _ _
 }
-```
 
 let nlist_hd_tl_post'
   (#t: Type0)
@@ -209,7 +202,6 @@ let nlist_hd_tl_post
 = nlist_hd_tl_post' s sq n input pm v (fst hd_tl) (snd hd_tl)
 
 inline_for_extraction
-```pulse
 fn nlist_hd_tl
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -241,9 +233,7 @@ ensures
     }
   }
 }
-```
 
-```pulse
 ghost fn nlist_as_nondep_then_nondep_then_left
   (#t: Type0)
   (#k: parser_kind)
@@ -299,10 +289,8 @@ ensures (
     input;
   Trade.trans _ _ (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v)
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_hd_tl_nondep_then_left
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -368,10 +356,8 @@ ensures (
   Trade.trans _ _ (pts_to_serialized (serialize_nondep_then (serialize_nlist n s) s') input #pm v);
   (Mktuple2 hd tl)
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_hd
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -398,10 +384,8 @@ ensures exists* v' .
   Trade.trans (pts_to_serialized s res #pm _) _ _;
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_tl
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -428,10 +412,8 @@ ensures exists* v' .
   Trade.trans (pts_to_serialized (serialize_nlist (n - 1) s) res #pm _) _ _;
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_hd_nondep_then_left
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -462,10 +444,8 @@ ensures (
   Trade.elim_hyp_r _ _ _;
   hd
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_tl_nondep_then_left
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -501,10 +481,8 @@ ensures (
   Trade.elim_hyp_l _ _ _;
   tl
 }
-```
 
 inline_for_extraction
-```pulse
 fn nlist_nth
    (#t: Type0)
    (#k: Ghost.erased parser_kind)
@@ -556,7 +534,6 @@ ensures exists* v .
     (pts_to_serialized s res2 #pm _) _ _;
   res2
 }
-```
 
 inline_for_extraction
 let impl_order_t
@@ -581,7 +558,6 @@ let impl_order_t
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn nlist_sorted
   (#t: Type0)
   (#k: Ghost.erased parser_kind)
@@ -665,7 +641,6 @@ ensures
     }
   }
 }
-```
 
 #pop-options
 
@@ -691,7 +666,6 @@ let parse_nlist_1_eq
 = parse_nlist_eq 1 p b;
   parse_synth_eq p synth_nlist_1 b
 
-```pulse
 ghost
 fn pts_to_serialized_nlist_1
   (#t: Type0)
@@ -717,7 +691,6 @@ fn pts_to_serialized_nlist_1
     (pts_to_serialized (serialize_nlist 1 s) input #pm _)
     _ _
 }
-```
 
 module A = Pulse.Lib.Array
 module PM = Pulse.Lib.SeqMatch.Util
@@ -737,7 +710,6 @@ let nlist_match_array
     PM.seq_list_match c l (vmatch a) **
     pure (varray a == Some ar)
 
-```pulse
 ghost
 fn nlist_match_array_intro
   (#tarray: Type0)
@@ -760,7 +732,6 @@ ensures
 {
   fold (nlist_match_array varray vmatch n a l)
 }
-```
 
 module GR = Pulse.Lib.GhostReference
 
@@ -811,7 +782,6 @@ let seq_slice_append_ijk
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_nlist_as_array
   (#tarray: Type0)
   (#telem: Type0)
@@ -891,12 +861,10 @@ fn compute_remaining_size_nlist_as_array
   fold (nlist_match_array varray vmatch (SZ.v n) arr x);
   !pres
 }
-```
 
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn l2r_write_nlist_as_array
   (#tarray: Type0)
   (#telem: Type0)
@@ -1011,7 +979,6 @@ fn l2r_write_nlist_as_array
   fold (nlist_match_array varray vmatch (SZ.v n) arr x);
   !pres
 }
-```
 
 module S = Pulse.Lib.Slice
 
@@ -1030,7 +997,6 @@ let nlist_match_slice
     PM.seq_list_match c l (vmatch a) **
     pure (vslice a == Some ar)
 
-```pulse
 ghost
 fn nlist_match_slice_intro
   (#tslice: Type0)
@@ -1053,10 +1019,8 @@ ensures
 {
   fold (nlist_match_slice vslice vmatch n a l)
 }
-```
 
 inline_for_extraction
-```pulse
 fn compute_remaining_size_nlist_as_slice
   (#tslice: Type0)
   (#telem: Type0)
@@ -1136,12 +1100,10 @@ fn compute_remaining_size_nlist_as_slice
   fold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
   !pres
 }
-```
 
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn l2r_write_nlist_as_slice
   (#tslice: Type0)
   (#telem: Type0)
@@ -1256,6 +1218,5 @@ fn l2r_write_nlist_as_slice
   fold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
   !pres
 }
-```
 
 #pop-options

@@ -1,4 +1,5 @@
 module CBORTest.Base
+#lang-pulse
 open CBOR.Spec.Constants
 open Pulse.Lib.Pervasives
 module A = Pulse.Lib.Array
@@ -70,7 +71,6 @@ noextract [@@noextract_to "krml"]
 let exit_impossible : I32.t = 2l
 
 inline_for_extraction
-```pulse
 fn slice_from_array_trade
   (#t: Type) (a: A.array t) (#p: perm) (alen: SZ.t) (#v: Ghost.erased (Seq.seq t))
   requires
@@ -93,12 +93,10 @@ fn slice_from_array_trade
   Trade.intro _ _ _ aux;
   s
 }
-```
 
 #restart-solver
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn test_on
   (#cbor_t: Type0)
   (cbor_match: perm -> cbor_t -> Spec.cbor -> slprop)
@@ -175,7 +173,6 @@ ensures
     }
   }
 }
-```
 
 #pop-options
 
@@ -216,7 +213,6 @@ let intro_res_post_impossible (_: squash False) : res_t = exit_impossible
 #restart-solver
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn aux
   (#cbor_t: Type0)
   (#cbor_match: perm -> cbor_t -> Spec.cbor -> slprop)
@@ -348,12 +344,10 @@ ensures
     }
   }
 }
-```
 
 #restart-solver
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn main
   (#cbor_t: Type0)
   (#cbor_map_entry_t: Type0)
@@ -457,6 +451,5 @@ ensures emp
   Trade.elim (cbor_match _ test _) _;
   res
 }
-```
 
 #pop-options
