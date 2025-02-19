@@ -848,6 +848,8 @@ ghost fn ghost_split_dtuple2
   pts_to_len input;
   let i = SZ.uint_to_t (Seq.length (bare_serialize s1 (dfst v)));
   let res = ghost_append_split input i;
+  fold pts_to_serialized s1 (fst res) #pm (dfst v);
+  fold pts_to_serialized (s2 (dfst v)) (snd res) #pm (dsnd v);
   res
 }
 
