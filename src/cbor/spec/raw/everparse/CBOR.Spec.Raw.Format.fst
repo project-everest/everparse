@@ -172,3 +172,18 @@ let serialize_cbor_list_nil () = ()
 
 let serialize_cbor_list_cons a q =
   LPL.tot_serialize_nlist_cons (List.Tot.length q) F.tot_serialize_raw_data_item a q
+
+let serialize_cbor_array_length_gt_list len l =
+  let v1 = Array len l in
+  F.serialize_raw_data_item_aux_correct v1;
+  LP.serialize_synth_eq
+    _
+    F.synth_raw_data_item
+    (LP.serialize_dtuple2 F.serialize_header F.serialize_content)
+    F.synth_raw_data_item_recip
+    ()
+    v1;
+  let v1' = F.synth_raw_data_item_recip v1 in
+  LP.serialize_dtuple2_eq F.serialize_header F.serialize_content v1';
+  LP.serialize_length F.serialize_header (dfst v1');
+  LPL.tot_serialize_nlist_serialize_nlist (List.Tot.length l) F.tot_serialize_raw_data_item l

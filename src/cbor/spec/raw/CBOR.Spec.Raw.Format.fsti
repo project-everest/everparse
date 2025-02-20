@@ -368,3 +368,13 @@ val serialize_cbor_list_nil (_: unit) : Lemma
 
 val serialize_cbor_list_cons (a: raw_data_item) (q: list raw_data_item) : Lemma
   (serialize_cbor_list (a :: q) == serialize_cbor a `Seq.append` serialize_cbor_list q)
+
+val serialize_cbor_array_length_gt_list
+  (len: raw_uint64)
+  (l: list raw_data_item)
+: Lemma
+  (requires (List.Tot.length l == U64.v len.value))
+  (ensures (
+    List.Tot.length l == U64.v len.value /\
+    Seq.length (serialize_cbor (Array len l)) > Seq.length (serialize_cbor_list l)
+  ))

@@ -154,3 +154,12 @@ let rec cbor_det_serialize_list_snoc (h: list cbor) (a: cbor) : Lemma
     cbor_det_serialize_list_snoc q a;
     cbor_det_serialize_list_cons b (List.Tot.append q [a]);
     cbor_det_serialize_list_cons b q
+
+val cbor_det_serialize_array_length_gt_list
+  (l: list cbor)
+: Lemma
+  (requires (FStar.UInt.fits (List.Tot.length l) 64))
+  (ensures (
+    FStar.UInt.fits (List.Tot.length l) 64 /\
+    Seq.length (cbor_det_serialize (pack (CArray l))) > Seq.length (cbor_det_serialize_list l)
+  ))

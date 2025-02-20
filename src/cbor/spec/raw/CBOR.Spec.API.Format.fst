@@ -78,3 +78,17 @@ let cbor_det_serialize_list_nil () =
 
 let cbor_det_serialize_list_cons a q =
   R.serialize_cbor_list_cons (R.mk_det_raw_cbor a) (List.Tot.map R.mk_det_raw_cbor q)
+
+let cbor_det_serialize_array_length_gt_list l =
+  let len = R.mk_raw_uint64 (U64.uint_to_t (List.Tot.length l)) in
+  assert (RV.raw_uint64_optimal len);
+  let l' = List.Tot.map R.mk_det_raw_cbor l in
+  R.serialize_cbor_array_length_gt_list len l';
+  let x = R.Array len l' in
+  list_map_mk_cbor_mk_det_raw_cbor l;
+  list_map_mk_det_raw_cbor_correct l;
+  assert_norm (R.raw_data_item_ints_optimal == R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem); // FIXME: WHY WHY WHY?
+  R.raw_data_item_sorted_optimal_valid R.deterministically_encoded_cbor_map_key_order x;
+  R.mk_cbor_eq x;
+  R.mk_det_raw_cbor_mk_cbor x;
+  assert (R.mk_det_raw_cbor (pack (CArray l)) == x)
