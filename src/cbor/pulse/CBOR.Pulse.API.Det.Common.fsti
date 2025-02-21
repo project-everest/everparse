@@ -211,6 +211,10 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 val cbor_det_serialize_tag (_: unit) : cbor_det_serialize_tag_t
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+val cbor_det_serialize_array (_: unit) : cbor_det_serialize_array_t
+
 (* Constructors *)
 
 val cbor_det_mk_simple_value () : mk_simple_t cbor_det_match

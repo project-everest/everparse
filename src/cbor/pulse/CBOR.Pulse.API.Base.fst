@@ -1531,3 +1531,37 @@ let cbor_det_serialize_tag_t =
       cbor_det_serialize_tag_postcond tag output res v
     ))
 
+let cbor_det_serialize_array_precond
+  (len: U64.t)
+  (l: list cbor)
+  (off: SZ.t)
+  (v: Seq.seq U8.t)
+: Tot prop
+= U64.v len == List.Tot.length l /\
+  SZ.v off <= Seq.length v /\
+  Seq.slice v 0 (SZ.v off) == Spec.cbor_det_serialize_list l
+
+let cbor_det_serialize_array_postcond
+  (l: list cbor)
+  (res: SZ.t)
+  (v: Seq.seq U8.t)
+: Tot prop
+= FStar.UInt.fits (List.Tot.length l) 64 /\
+  SZ.v res <= Seq.length v /\
+  (res == 0sz <==> Seq.length (Spec.cbor_det_serialize (pack (CArray l))) > Seq.length v) /\
+  (SZ.v res > 0 ==> Seq.slice v 0 (SZ.v res) `Seq.equal` Spec.cbor_det_serialize (pack (CArray l)))
+
+inline_for_extraction
+let cbor_det_serialize_array_t =
+  (len: U64.t) ->
+  (out: S.slice U8.t) ->
+  (l: Ghost.erased (list cbor)) ->
+  (off: SZ.t) ->
+  stt SZ.t
+  (exists* v . pts_to out v **
+    pure (cbor_det_serialize_array_precond len l off v)
+  )
+  (fun res -> exists* v .
+    pts_to out v **
+    pure (cbor_det_serialize_array_postcond l res v)
+  )

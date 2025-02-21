@@ -250,6 +250,98 @@ fn cbor_det_serialize_tag
 }
 ```
 
+#restart-solver
+
+noextract [@@noextract_to "krml"]
+let mk_det_raw_cbor : (c: Spec.cbor) -> Tot SpecRaw.raw_data_item = // FIXME: WHY WHY WHY do I need that? Pulse cannot typecheck `Pure _ True (fun _ -> _)` functions into `Tot` functions
+  SpecRaw.mk_det_raw_cbor
+
+let list_map_mk_det_raw_cbor_correct
+  (l: list Spec.cbor)
+: Lemma
+  (ensures (
+    let l' = List.Tot.map mk_det_raw_cbor l in
+    List.Tot.for_all SpecRaw.raw_data_item_ints_optimal l' /\
+    List.Tot.for_all (SpecRaw.raw_data_item_sorted SpecRaw.deterministically_encoded_cbor_map_key_order) l'
+  ))
+  [SMTPat (List.Tot.map mk_det_raw_cbor l)]
+= let l' = List.Tot.map mk_det_raw_cbor l in
+  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+  AF.list_map_mk_det_raw_cbor_correct l
+
+let list_map_mk_cbor_mk_det_raw_cbor
+  (l: list Spec.cbor)
+: Lemma
+  (ensures (
+    List.Tot.map SpecRaw.mk_cbor (List.Tot.map mk_det_raw_cbor l) == l
+  ))
+  [SMTPat (List.Tot.map mk_det_raw_cbor l)]
+= let l' = List.Tot.map mk_det_raw_cbor l in
+  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+  AF.list_map_mk_cbor_mk_det_raw_cbor l
+
+let cbor_det_serialize_array_precond_elim
+  (len: U64.t)
+  (l: list Spec.cbor)
+  (off: SZ.t)
+  (v: Seq.seq U8.t)
+: Lemma
+  (requires (
+    cbor_det_serialize_array_precond len l off v
+  ))
+  (ensures (
+    let rlen = SpecRaw.mk_raw_uint64 len in
+    Serialize.cbor_serialize_array_precond rlen (List.Tot.map mk_det_raw_cbor l) off v
+  ))
+= let l' = List.Tot.map mk_det_raw_cbor l in
+  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+  ()
+
+let cbor_det_serialize_array_postcond_intro
+  (len: U64.t)
+  (l: list Spec.cbor)
+  (res: SZ.t)
+  (v: Seq.seq U8.t)
+: Lemma
+  (requires (
+    U64.v len == List.Tot.length l /\
+    Serialize.cbor_serialize_array_postcond (SpecRaw.mk_raw_uint64 len) (List.Tot.map mk_det_raw_cbor l) res v
+  ))
+  (ensures (
+    cbor_det_serialize_array_postcond l res v
+  ))
+= let l' = List.Tot.map mk_det_raw_cbor l in
+  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+  let x = SpecRaw.Array (SpecRaw.mk_raw_uint64 len) (List.Tot.map mk_det_raw_cbor l) in
+  assert_norm (SpecRaw.raw_data_item_ints_optimal == SpecRaw.holds_on_raw_data_item SpecRaw.raw_data_item_ints_optimal_elem); // FIXME: WHY WHY WHY?
+  SpecRaw.raw_data_item_sorted_optimal_valid SpecRaw.deterministically_encoded_cbor_map_key_order x;
+  SpecRaw.mk_cbor_eq x;
+  SpecRaw.mk_det_raw_cbor_mk_cbor x;
+  assert (Spec.cbor_det_serialize (Spec.pack (Spec.CArray l)) == SpecRaw.serialize_cbor x);
+  ()
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+```pulse
+fn cbor_det_serialize_array
+  (_: unit)
+: cbor_det_serialize_array_t
+=
+  (len: _)
+  (out: _)
+  (l: _)
+  (off: _)
+{
+  let rlen = SpecRaw.mk_raw_uint64 len;
+  with v . assert (pts_to out v);
+  cbor_det_serialize_array_precond_elim len l off v;
+  let res = Serialize.cbor_serialize_array rlen out (List.Tot.map mk_det_raw_cbor l) off;
+  with v . assert (pts_to out v);
+  cbor_det_serialize_array_postcond_intro len l res v;
+  res
+}
+```
+
 ```pulse
 fn cbor_det_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_det_match
 = (v: _)
@@ -330,10 +422,6 @@ fn cbor_det_mk_tagged (_: unit) : mk_tagged_t #_ cbor_det_match
 }
 ```
 
-noextract [@@noextract_to "krml"]
-let mk_det_raw_cbor : (c: Spec.cbor) -> Tot SpecRaw.raw_data_item = // FIXME: WHY WHY WHY do I need that? Pulse cannot typecheck `Pure _ True (fun _ -> _)` functions into `Tot` functions
-  SpecRaw.mk_det_raw_cbor
-
 ```pulse
 ghost
 fn rec seq_list_array_cbor_det_match_elim
@@ -374,30 +462,6 @@ decreases v
   }
 }
 ```
-
-let list_map_mk_det_raw_cbor_correct
-  (l: list Spec.cbor)
-: Lemma
-  (ensures (
-    let l' = List.Tot.map mk_det_raw_cbor l in
-    List.Tot.for_all SpecRaw.raw_data_item_ints_optimal l' /\
-    List.Tot.for_all (SpecRaw.raw_data_item_sorted SpecRaw.deterministically_encoded_cbor_map_key_order) l'
-  ))
-  [SMTPat (List.Tot.map mk_det_raw_cbor l)]
-= let l' = List.Tot.map mk_det_raw_cbor l in
-  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
-  AF.list_map_mk_det_raw_cbor_correct l
-
-let list_map_mk_cbor_mk_det_raw_cbor
-  (l: list Spec.cbor)
-: Lemma
-  (ensures (
-    List.Tot.map SpecRaw.mk_cbor (List.Tot.map mk_det_raw_cbor l) == l
-  ))
-  [SMTPat (List.Tot.map mk_det_raw_cbor l)]
-= let l' = List.Tot.map mk_det_raw_cbor l in
-  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
-  AF.list_map_mk_cbor_mk_det_raw_cbor l
 
 let fits_mod (x: nat) (n: pos) : Lemma
     (requires (FStar.UInt.fits x n))
