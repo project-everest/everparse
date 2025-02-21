@@ -173,8 +173,14 @@ let serialize_cbor_list_nil () = ()
 let serialize_cbor_list_cons a q =
   LPL.tot_serialize_nlist_cons (List.Tot.length q) F.tot_serialize_raw_data_item a q
 
-let serialize_cbor_array_length_gt_list len l =
-  let v1 = Array len l in
+let serialize_array_eq
+  (len1: raw_uint64)
+  (x1: list raw_data_item {List.Tot.length x1 == U64.v len1.value})
+: Lemma
+  (ensures (
+    serialize_cbor (Array len1 x1) == F.serialize_header (F.raw_uint64_as_argument cbor_major_type_array len1) `Seq.append` serialize_cbor_list x1
+  ))
+= let v1 = Array len1 x1 in
   F.serialize_raw_data_item_aux_correct v1;
   LP.serialize_synth_eq
     _
@@ -185,5 +191,8 @@ let serialize_cbor_array_length_gt_list len l =
     v1;
   let v1' = F.synth_raw_data_item_recip v1 in
   LP.serialize_dtuple2_eq F.serialize_header F.serialize_content v1';
-  LP.serialize_length F.serialize_header (dfst v1');
-  LPL.tot_serialize_nlist_serialize_nlist (List.Tot.length l) F.tot_serialize_raw_data_item l
+  LowParse.Spec.VCList.tot_serialize_nlist_serialize_nlist (List.Tot.length x1) F.tot_serialize_raw_data_item x1
+
+let serialize_cbor_array_length_gt_list len l =
+  serialize_array_eq len l;
+  LP.serialize_length F.serialize_header (F.raw_uint64_as_argument cbor_major_type_array len)

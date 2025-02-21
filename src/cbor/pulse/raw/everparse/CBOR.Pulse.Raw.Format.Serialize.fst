@@ -2061,3 +2061,159 @@ ensures
 }
 ```
 
+let seq_length_append_slice_left
+  (#t: Type)
+  (s1 s2: Seq.seq t)
+: Lemma
+  (Seq.slice (Seq.append s1 s2) 0 (Seq.length s1) == s1)
+= assert (Seq.slice (Seq.append s1 s2) 0 (Seq.length s1) `Seq.equal` s1)
+
+module Swap = Pulse.Lib.Swap.Slice
+
+#push-options "--z3rlimit 64"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let sz_zero : SZ.t = 0sz
+
+let cbor_serialize_array_postcond_zero
+  (len: raw_uint64)
+  (l: list raw_data_item)
+  (off: SZ.t)
+  (v: Seq.seq U8.t)
+: Lemma
+  (requires (
+    cbor_serialize_array_precond len l off v /\
+    Seq.length (serialize_header (raw_uint64_as_argument cbor_major_type_array len)) > Seq.length v - SZ.v off
+  ))
+  (ensures (
+    cbor_serialize_array_postcond len l sz_zero v
+  ))
+= serialize_array_eq len l;
+  ()
+
+let cbor_serialize_array_postcond_nonzero
+  (len: raw_uint64)
+  (l: list raw_data_item)
+  (off: SZ.t)
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+  (v2: Seq.seq U8.t)
+  (v': Seq.seq U8.t)
+: Lemma
+  (requires (
+    cbor_serialize_array_precond len l off v /\
+    SZ.v res == Seq.length (Seq.append (serialize_header (raw_uint64_as_argument cbor_major_type_array len)) (serialize_cbor_list l)) /\
+    Seq.length v == SZ.v res + Seq.length v2 /\
+    v' == Seq.append (Seq.append (serialize_header (raw_uint64_as_argument cbor_major_type_array len)) (serialize_cbor_list l)) v2
+  ))
+  (ensures (
+    cbor_serialize_array_postcond len l res v'
+  ))
+=
+  serialize_array_eq len l;
+  let h = raw_uint64_as_argument cbor_major_type_array len in
+  serialize_length serialize_header h;
+  seq_length_append_slice_left (Seq.append (serialize_header h) (serialize_cbor_list l)) v2;
+  ()
+
+#restart-solver
+
+let cbor_serialize_array_post
+  (len: raw_uint64)
+  (out: S.slice U8.t)
+  (l: Ghost.erased (list raw_data_item))
+  (off: SZ.t)
+  (res: SZ.t)
+: Tot slprop
+=
+  exists* v .
+    pts_to out v **
+    pure (cbor_serialize_array_postcond len l res v)
+
+let cbor_serialize_array_t =
+  (len: raw_uint64) ->
+  (out: S.slice U8.t) ->
+  (l: Ghost.erased (list raw_data_item)) ->
+  (off: SZ.t) ->
+  stt SZ.t
+  (exists* v . pts_to out v **
+    pure (cbor_serialize_array_precond len l off v)
+  )
+  (fun res -> cbor_serialize_array_post len out l off res)
+
+#restart-solver
+
+```pulse
+fn cbor_serialize_array'
+  (len: raw_uint64)
+  (out: S.slice U8.t)
+  (l: Ghost.erased (list raw_data_item))
+  (off: SZ.t)
+requires
+  exists* v . pts_to out v **
+    pure (cbor_serialize_array_precond len l off v)
+returns res: SZ.t
+ensures
+  cbor_serialize_array_post len out l off res
+{
+  let sq_len : squash (SZ.v off == Seq.length (serialize_cbor_list l)) = ();
+  with v . assert (pts_to out v);
+  S.pts_to_len out;
+  Seq.lemma_split v (SZ.v off);
+  serialize_array_eq len l;
+  let slen = S.len out;
+  let mut rem = (SZ.sub slen off <: SZ.t);
+  let h = raw_uint64_as_argument cbor_major_type_array len;
+  serialize_length serialize_header h;
+  let hfits = size_header h rem;
+  if (hfits) {
+    let llen = write_header h out off;
+    let sp = S.split out llen;
+    match sp {
+      Mktuple2 sp1 sp2 -> {
+        S.pts_to_len sp1;
+        with v1 . assert (pts_to sp1 v1);
+        with v2 . assert (pts_to sp2 v2);
+        Seq.lemma_split v1 (SZ.v off);
+        assert (pure (Seq.equal v1 (Seq.append (serialize_cbor_list l) (serialize_header h))));
+        rewrite (pts_to sp1 v1) as (pts_to sp1 (Seq.append (serialize_cbor_list l) (serialize_header h)));
+        Swap.slice_swap' sp1 off (serialize_cbor_list l) (serialize_header h);
+        seq_length_append_slice_left (Seq.append (serialize_header h) (serialize_cbor_list l)) v2;
+        S.join sp1 sp2 out;
+        with v' . assert (pts_to out v');
+        cbor_serialize_array_postcond_nonzero len l off v llen v2 v';
+        assert (pure (cbor_serialize_array_postcond len l llen v'));
+        fold (cbor_serialize_array_post len out l off llen);
+        llen
+      }
+    }
+  } else {
+    cbor_serialize_array_postcond_zero len (Ghost.reveal l) off v;
+    fold (cbor_serialize_array_post len out l off sz_zero);
+    sz_zero
+  }
+}
+```
+
+#pop-options
+
+```pulse
+fn cbor_serialize_array
+  (len: raw_uint64)
+  (out: S.slice U8.t)
+  (l: Ghost.erased (list raw_data_item))
+  (off: SZ.t)
+requires
+  exists* v . pts_to out v **
+    pure (cbor_serialize_array_precond len l off v)
+returns res: SZ.t
+ensures
+  exists* v .
+    pts_to out v **
+    pure (cbor_serialize_array_postcond len l res v)
+{
+  let res = cbor_serialize_array' len out l off;
+  unfold (cbor_serialize_array_post len out l off res);
+  res
+}
+```
