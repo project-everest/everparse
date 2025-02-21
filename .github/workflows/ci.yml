@@ -89,8 +89,8 @@ jobs:
         id: checkout-pulse
         with:
           path: pulse
-          repository: FStarLang/pulse
-          ref: main
+          repository: mtzguido/pulse
+          ref: no_smt_backtracking
 
       - name: Try fetch built pulse
         id: cache-pulse
