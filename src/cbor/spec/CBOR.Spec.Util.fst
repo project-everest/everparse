@@ -1384,6 +1384,26 @@ let list_assoc_no_repeats_equiv
   (ensures (forall k . List.Tot.assoc k l1 == List.Tot.assoc k l2))
 = Classical.forall_intro (Classical.move_requires (list_assoc_no_repeats_equiv' l1 l2))
 
+let list_assoc_no_repeats_equiv_recip
+  (#tk: eqtype)
+  (#tv: Type)
+  (l1 l2: list (tk & tv))
+: Lemma
+  (requires (
+    List.Tot.no_repeats_p (List.Tot.map fst l1) /\
+    List.Tot.no_repeats_p (List.Tot.map fst l2) /\
+    (forall k . List.Tot.assoc k l1 == List.Tot.assoc k l2)
+  ))
+  (ensures (forall kv . List.Tot.memP kv l1 <==> List.Tot.memP kv l2))
+= let prf
+    (kv: (tk & tv))
+  : Lemma
+    (List.Tot.memP kv l1 <==> List.Tot.memP kv l2)
+  = list_assoc_no_repeats_mem l1 (fst kv) (snd kv);
+    list_assoc_no_repeats_mem l2 (fst kv) (snd kv)    
+  in
+  Classical.forall_intro prf
+
 let rec list_splitAt_length
   (#t: Type)
   (n: nat)

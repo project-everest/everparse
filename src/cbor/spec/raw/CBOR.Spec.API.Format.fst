@@ -92,3 +92,20 @@ let cbor_det_serialize_array_length_gt_list l =
   R.mk_cbor_eq x;
   R.mk_det_raw_cbor_mk_cbor x;
   assert (R.mk_det_raw_cbor (pack (CArray l)) == x)
+
+let cbor_det_serialize_map m =
+  R.serialize_cbor_map (R.mk_det_raw_cbor_map_raw m)
+
+let cbor_det_serialize_map_empty () =
+  R.serialize_cbor_map_nil ()
+
+let cbor_det_serialize_map_singleton key value =
+  R.mk_det_raw_cbor_map_raw_singleton key value;
+  R.serialize_cbor_map_singleton (R.mk_det_raw_cbor key) (R.mk_det_raw_cbor value)
+
+let cbor_det_serialize_map_append_length m1 m2 = admit ()
+
+let cbor_det_serialize_map_length_gt_list l =
+  R.mk_cbor_eq_map (pack (CMap l));
+  R.cbor_serialize_map_length_gt_list (R.mk_raw_uint64 (U64.uint_to_t (cbor_map_length l))) (R.mk_det_raw_cbor_map_raw l);
+  ()
