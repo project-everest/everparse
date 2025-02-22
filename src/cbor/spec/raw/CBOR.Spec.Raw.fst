@@ -169,3 +169,107 @@ let mk_det_raw_cbor_map
   Classical.forall_intro prf;
   assert (mk_det_raw_cbor res == R.Map (R.mk_raw_uint64 len) l');
   res
+
+let mk_det_raw_cbor_map_raw m =
+  cbor_map_length_eq m;
+  m
+
+let mk_det_raw_cbor_map_raw_singleton key value = ()
+
+let mk_det_raw_cbor_map_raw_assoc m k =
+  let x = mk_det_raw_cbor k in
+  RS.list_setoid_assoc_sorted_optimal R.deterministically_encoded_cbor_map_key_order x m;
+  assert (U.list_setoid_assoc R.raw_equiv x m == List.Tot.assoc x m);
+  match List.Tot.assoc x m, cbor_map_get m (mk_cbor x) with
+  | Some v1, Some v2 ->
+    list_assoc_cbor m x;
+    R.raw_data_item_sorted_optimal_valid R.deterministically_encoded_cbor_map_key_order v1;
+    assert (R.valid_raw_data_item v1);
+    mk_det_raw_cbor_mk_cbor v1;
+    assert (mk_cbor v1 == v2)
+  | _ -> ()
+
+let mk_det_raw_cbor_map_raw_mem m x =
+  let l = mk_det_raw_cbor_map_raw m in
+  List.Tot.for_all_mem (U.holds_on_pair (R.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order)) l;
+  List.Tot.for_all_mem (U.holds_on_pair R.raw_data_item_ints_optimal) l;
+  CBOR.Spec.Raw.Map.list_sorted_map_entry_order_no_repeats RS.deterministically_encoded_cbor_map_key_order l;
+  U.list_assoc_no_repeats_mem l (fst x) (snd x);
+  let prf1 () : Lemma
+    (requires (
+      List.Tot.memP x l
+    ))
+    (ensures (
+      U.holds_on_pair (R.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order) x /\
+      U.holds_on_pair R.raw_data_item_ints_optimal x /\
+      cbor_map_get m (mk_cbor (fst x)) == Some (mk_cbor (snd x))
+    ))
+  = assert (U.holds_on_pair (R.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order) x);
+    assert (U.holds_on_pair R.raw_data_item_ints_optimal x);
+    mk_det_raw_cbor_mk_cbor (fst x);
+    mk_det_raw_cbor_mk_cbor (snd x);
+    assert (cbor_map_get m (mk_cbor (fst x)) == Some (mk_cbor (snd x)))
+  in
+  let prf2 () : Lemma
+    (requires (
+      U.holds_on_pair (R.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order) x /\
+      U.holds_on_pair R.raw_data_item_ints_optimal x /\
+      cbor_map_get m (mk_cbor (fst x)) == Some (mk_cbor (snd x))
+    ))
+    (ensures (
+      List.Tot.memP x l
+    ))
+  =
+    mk_det_raw_cbor_mk_cbor (fst x);
+    mk_det_raw_cbor_mk_cbor (snd x)
+  in
+  Classical.move_requires prf1 ();
+  Classical.move_requires prf2 ()
+
+let mk_cbor_eq_map x = ()
+
+#push-options "--z3rlimit 32 --split_queries always"
+
+#restart-solver
+
+let mk_det_raw_cbor_map_raw_snoc m key value =
+  mk_det_raw_cbor_map_raw_assoc m key;
+  let l = mk_det_raw_cbor_map_raw m in
+  R.list_setoid_assoc_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_det_raw_cbor key) l;
+  List.Tot.assoc_mem (mk_det_raw_cbor key) l;
+  assert (Some? (List.Tot.assoc (mk_det_raw_cbor key) l) <==> cbor_map_defined key m);
+  let kv = (mk_det_raw_cbor key, mk_det_raw_cbor value) in
+  cbor_map_insert_sorted l kv;
+  match cbor_map_insert l kv with
+  | None -> ()
+  | Some l' ->
+    let m' = cbor_map_union m (cbor_map_singleton key value) in
+    let l2 = (mk_det_raw_cbor_map_raw m') in
+    let prf
+      (x: (raw_data_item & raw_data_item))
+    : Lemma
+      (List.Tot.memP x l' <==> List.Tot.memP x l2)
+    =
+      cbor_map_insert_mem m kv x;
+      mk_det_raw_cbor_map_raw_mem m' x;
+      mk_det_raw_cbor_map_raw_mem m x;
+      if
+        U.holds_on_pair (R.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order) x &&
+        U.holds_on_pair R.raw_data_item_ints_optimal x
+      then begin
+        mk_det_raw_cbor_mk_cbor (fst x);
+        mk_det_raw_cbor_mk_cbor (snd x)
+      end
+      else ()
+    in
+    Classical.forall_intro prf;
+    U.list_sorted_ext_eq
+      (map_entry_order RS.deterministically_encoded_cbor_map_key_order _)
+      l'
+      l2;
+    List.Tot.assoc_mem (mk_det_raw_cbor key) l;
+    assert (Some? (List.Tot.assoc (mk_det_raw_cbor key) l) <==> List.Tot.memP (mk_det_raw_cbor key) (List.Tot.map fst l));
+    assert (mk_det_raw_cbor_map_raw_snoc_post m key value);
+    ()
+
+#pop-options

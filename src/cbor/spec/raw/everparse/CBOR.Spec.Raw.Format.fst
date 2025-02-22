@@ -196,3 +196,145 @@ let serialize_array_eq
 let serialize_cbor_array_length_gt_list len l =
   serialize_array_eq len l;
   LP.serialize_length F.serialize_header (F.raw_uint64_as_argument cbor_major_type_array len)
+
+let serialize_cbor_map l =
+  LPL.tot_serialize_nlist (List.Tot.length l) (LP.tot_serialize_nondep_then  F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item) l
+
+let serialize_cbor_map_nil () = ()
+
+let serialize_cbor_map_cons key value q =
+  LPL.tot_serialize_nlist_cons (List.Tot.length q) (LP.tot_serialize_nondep_then  F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item) (key, value) q;
+  LPL.tot_serialize_nondep_then_eq F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item (key, value);
+  ()
+
+let rec cbor_map_insert_sorted'
+  (m: list (raw_data_item & raw_data_item))
+  (kv: (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m
+  ))
+  (ensures (
+    let ol' = cbor_map_insert m kv in
+    (None? ol' <==> List.Tot.memP (fst kv) (List.Tot.map fst m)) /\
+    begin match ol' with
+    | None -> True
+    | Some l' -> List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l'
+    end
+  ))
+  (decreases m)
+= match m with
+  | [] -> ()
+  | kv' :: q ->
+    let c = cbor_map_entry_raw_compare kv' kv in
+    if c < 0
+    then begin
+      cbor_map_insert_sorted' q kv;
+      ()
+    end
+    else if c > 0
+    then begin
+      assert (map_entry_order deterministically_encoded_cbor_map_key_order _ kv kv');
+      CBOR.Spec.Raw.Map.list_sorted_map_entry_order_not_memP_tail deterministically_encoded_cbor_map_key_order kv m;
+      ()
+    end
+    else cbor_compare_equal (fst kv') (fst kv)
+
+let cbor_map_insert_sorted m kv = cbor_map_insert_sorted' m kv
+
+#push-options "--z3rlimit 32"
+
+#restart-solver
+
+let rec serialize_cbor_map_insert_length'
+  (m: list (raw_data_item & raw_data_item))
+  (kv: (raw_data_item & raw_data_item))
+: Lemma
+  (ensures (match cbor_map_insert m kv with
+  | None -> True
+  | Some m' ->
+    Seq.length (serialize_cbor_map m') == Seq.length (serialize_cbor_map m) + Seq.length (serialize_cbor (fst kv)) + Seq.length (serialize_cbor (snd kv))
+  ))
+  (decreases m)
+= match m with
+  | [] ->
+    serialize_cbor_map_singleton (fst kv) (snd kv)
+  | kv' :: q ->
+    let c = cbor_map_entry_raw_compare kv' kv in
+    if c < 0
+    then begin
+      match cbor_map_insert q kv with
+      | Some q' ->
+        assert (cbor_map_insert m kv == Some (kv' :: q'));
+        serialize_cbor_map_cons (fst kv') (snd kv') q';
+        serialize_cbor_map_insert_length' q kv;
+        serialize_cbor_map_cons (fst kv') (snd kv') q;
+        ()
+      | _ -> ()
+    end
+    else if c > 0
+    then begin
+      assert (cbor_map_insert m kv == Some (kv :: m));
+      serialize_cbor_map_cons (fst kv) (snd kv) m
+    end
+    else assert (cbor_map_insert m kv == None)
+
+#pop-options
+
+let serialize_cbor_map_insert_length m kv = serialize_cbor_map_insert_length' m kv
+
+let parse_nlist_ext'
+  (n: nat)
+  (#k: LP.parser_kind)
+  (#t: Type)
+  (p: (LP.parser k t))
+  (#k': LP.parser_kind)
+  (p' : LP.parser k' t)
+  (sq: squash (forall x . LP.parse p x == LP.parse p' x))
+  (b: LP.bytes)
+: Lemma
+  (ensures (LP.parse (LowParse.Spec.VCList.parse_nlist n p) b == LP.parse (LowParse.Spec.VCList.parse_nlist n p') b))
+= LowParse.Spec.VCList.parse_nlist_ext n p p' b (fun x -> ())
+
+#push-options "--z3rlimit 32 --split_queries always"
+
+#restart-solver
+
+let serialize_map_eq
+  (len1: raw_uint64)
+  (x1: list (raw_data_item & raw_data_item) {List.Tot.length x1 == U64.v len1.value})
+: Lemma
+  (ensures (
+    serialize_cbor (Map len1 x1) == F.serialize_header (F.raw_uint64_as_argument cbor_major_type_map len1) `Seq.append` serialize_cbor_map x1
+  ))
+= let v1 = Map len1 x1 in
+  F.serialize_raw_data_item_aux_correct v1;
+  LP.serialize_synth_eq
+    _
+    F.synth_raw_data_item
+    (LP.serialize_dtuple2 F.serialize_header F.serialize_content)
+    F.synth_raw_data_item_recip
+    ()
+    v1;
+  let v1' = F.synth_raw_data_item_recip v1 in
+  LP.serialize_dtuple2_eq F.serialize_header F.serialize_content v1';
+  assert (serialize_cbor (Map len1 x1) == F.serialize_header (F.raw_uint64_as_argument cbor_major_type_map len1) `Seq.append` F.serialize_content (dfst v1') (dsnd v1'));
+  assert (F.serialize_content (dfst v1') (dsnd v1') == LowParse.Spec.VCList.serialize_nlist (List.Tot.length x1) #(LP.and_then_kind F.parse_raw_data_item_kind F.parse_raw_data_item_kind) #_ #(LP.nondep_then  F.parse_raw_data_item F.parse_raw_data_item) (LP.serialize_nondep_then  F.serialize_raw_data_item F.serialize_raw_data_item) x1);
+  Classical.forall_intro (F.tot_nondep_then_eq_gen F.tot_parse_raw_data_item F.parse_raw_data_item F.tot_parse_raw_data_item F.parse_raw_data_item ());
+  Classical.forall_intro (parse_nlist_ext' (List.Tot.length x1) #(LP.and_then_kind F.parse_raw_data_item_kind F.parse_raw_data_item_kind) (LP.tot_nondep_then  F.tot_parse_raw_data_item F.tot_parse_raw_data_item) (LP.nondep_then  F.parse_raw_data_item F.parse_raw_data_item) ());
+  LP.serializer_unique_strong
+    (LowParse.Spec.VCList.serialize_nlist (List.Tot.length x1) #(LP.and_then_kind F.parse_raw_data_item_kind F.parse_raw_data_item_kind) #_ #(LP.tot_nondep_then  F.tot_parse_raw_data_item F.tot_parse_raw_data_item) (LP.tot_serialize_nondep_then  F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item))
+    (LowParse.Spec.VCList.serialize_nlist (List.Tot.length x1) (LP.serialize_nondep_then  F.serialize_raw_data_item F.serialize_raw_data_item))
+    x1;
+  assert (F.serialize_content (dfst v1') (dsnd v1') == LowParse.Spec.VCList.serialize_nlist (List.Tot.length x1) #(LP.and_then_kind F.parse_raw_data_item_kind F.parse_raw_data_item_kind) #_ #(LP.tot_nondep_then  F.tot_parse_raw_data_item F.tot_parse_raw_data_item) (LP.tot_serialize_nondep_then  F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item) x1);
+  LowParse.Spec.VCList.tot_serialize_nlist_serialize_nlist (List.Tot.length x1) (LP.tot_serialize_nondep_then  F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item) x1;
+  ()
+
+let cbor_serialize_map_length_gt_list
+  len
+  l
+= serialize_map_eq len l;
+  LP.serialize_length F.serialize_header (F.raw_uint64_as_argument cbor_major_type_map len)
+
+#pop-options
+

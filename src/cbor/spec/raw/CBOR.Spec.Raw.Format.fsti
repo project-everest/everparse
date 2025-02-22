@@ -378,3 +378,104 @@ val serialize_cbor_array_length_gt_list
     List.Tot.length l == U64.v len.value /\
     Seq.length (serialize_cbor (Array len l)) > Seq.length (serialize_cbor_list l)
   ))
+
+val serialize_cbor_map : list (raw_data_item & raw_data_item) -> Seq.seq U8.t
+
+val serialize_cbor_map_nil (_: unit) : Lemma
+  (serialize_cbor_map [] == Seq.empty)
+
+val serialize_cbor_map_cons (key: raw_data_item) (value: raw_data_item) (q: list (raw_data_item & raw_data_item)) : Lemma
+  (serialize_cbor_map ((key, value) :: q) == (serialize_cbor key `Seq.append` serialize_cbor value) `Seq.append` serialize_cbor_map q)
+
+let serialize_cbor_map_singleton (key: raw_data_item) (value: raw_data_item) : Lemma
+  (serialize_cbor_map [key, value] == serialize_cbor key `Seq.append` serialize_cbor value)
+= serialize_cbor_map_nil ();
+  serialize_cbor_map_cons key value [];
+  Seq.append_empty_r (serialize_cbor key `Seq.append` serialize_cbor value)
+
+let rec serialize_cbor_map_append (l1 l2: list (raw_data_item & raw_data_item)) : Lemma
+  (ensures (serialize_cbor_map (l1 `List.Tot.append` l2) == serialize_cbor_map l1 `Seq.append` serialize_cbor_map l2))
+  (decreases l1)
+= match l1 with
+  | [] ->
+    serialize_cbor_map_nil ();
+    Seq.append_empty_l (serialize_cbor_map l2)
+  | (k, v) :: l1' ->
+    serialize_cbor_map_append l1' l2;
+    serialize_cbor_map_cons k v l1';
+    serialize_cbor_map_cons k v (l1' `List.Tot.append` l2);
+    Seq.append_assoc (serialize_cbor k `Seq.append` serialize_cbor v) (serialize_cbor_map l1') (serialize_cbor_map l2)
+
+let rec cbor_map_insert
+  (m: list (raw_data_item & raw_data_item))
+  (kv: (raw_data_item & raw_data_item))
+: Tot (option (list (raw_data_item & raw_data_item)))
+= match m with
+  | [] -> Some [kv]
+  | kv' :: q ->
+    let c = cbor_map_entry_raw_compare kv' kv in
+    if c < 0
+    then begin
+      match cbor_map_insert q kv with
+      | None -> None
+      | Some l' -> Some (kv' :: l')
+    end
+    else if c > 0
+    then begin
+      Some (kv :: m)
+    end
+    else None
+
+let rec cbor_map_insert_mem
+  (m: list (raw_data_item & raw_data_item))
+  (kv: (raw_data_item & raw_data_item))
+  (x: (raw_data_item & raw_data_item))
+: Lemma
+  (ensures (match cbor_map_insert m kv with
+  | None -> True
+  | Some l' -> List.Tot.memP x l' <==> List.Tot.memP x (kv :: m)
+  ))
+  (decreases m)
+= match m with
+  | [] -> ()
+  | kv' :: q ->
+    let c = cbor_map_entry_raw_compare kv' kv in
+    if c < 0
+    then cbor_map_insert_mem q kv x
+    else ()
+
+val cbor_map_insert_sorted
+  (m: list (raw_data_item & raw_data_item))
+  (kv: (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m
+  ))
+  (ensures (
+    let ol' = cbor_map_insert m kv in
+    (None? ol' <==> List.Tot.memP (fst kv) (List.Tot.map fst m)) /\
+    begin match ol' with
+    | None -> True
+    | Some l' -> List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l'
+    end
+  ))
+
+val serialize_cbor_map_insert_length
+  (m: list (raw_data_item & raw_data_item))
+  (kv: (raw_data_item & raw_data_item))
+: Lemma
+  (ensures (match cbor_map_insert m kv with
+  | None -> True
+  | Some m' ->
+    Seq.length (serialize_cbor_map m') == Seq.length (serialize_cbor_map m) + Seq.length (serialize_cbor (fst kv)) + Seq.length (serialize_cbor (snd kv))
+  ))
+
+val cbor_serialize_map_length_gt_list
+  (len: raw_uint64)
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (U64.v len.value == List.Tot.length l))
+  (ensures (
+    U64.v len.value == List.Tot.length l /\
+    Seq.length (serialize_cbor (Map len l)) > Seq.length (serialize_cbor_map l)
+  ))

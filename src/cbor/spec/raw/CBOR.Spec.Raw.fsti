@@ -5,6 +5,7 @@ include CBOR.Spec.API.Type
 module R = CBOR.Spec.Raw.Valid
 module RS = CBOR.Spec.Raw.Sort
 module U = CBOR.Spec.Util
+module U64 = FStar.UInt64
 
 val mk_cbor (r: R.raw_data_item) : Tot cbor
 
@@ -113,3 +114,69 @@ val mk_det_raw_cbor_map
       mk_det_raw_cbor res == R.Map (R.mk_raw_uint64 len) l'
     | _ -> False
   ))
+
+val mk_det_raw_cbor_map_raw
+  (m: cbor_map)
+: Pure (list (raw_data_item & raw_data_item))
+    (requires True)
+    (ensures (fun res ->
+      List.Tot.sorted (map_entry_order RS.deterministically_encoded_cbor_map_key_order _) res /\
+      List.Tot.length res == cbor_map_length m /\
+      List.Tot.for_all (U.holds_on_pair (R.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order)) res /\
+      List.Tot.for_all (U.holds_on_pair R.raw_data_item_ints_optimal) res
+    ))
+
+val mk_det_raw_cbor_map_raw_singleton
+  (key: cbor)
+  (value: cbor)
+: Lemma
+  (mk_det_raw_cbor_map_raw (cbor_map_singleton key value) == [mk_det_raw_cbor key, mk_det_raw_cbor value])
+
+val mk_det_raw_cbor_map_raw_assoc
+  (m: cbor_map)
+  (k: cbor)
+: Lemma
+  (mk_cbor_match_map_elem (mk_det_raw_cbor_map_raw m) m (mk_det_raw_cbor k))
+
+val mk_det_raw_cbor_map_raw_mem
+  (m: cbor_map)
+  (x: (raw_data_item & raw_data_item))
+: Lemma
+  (let l = mk_det_raw_cbor_map_raw m in
+  List.Tot.memP x l <==> (
+    U.holds_on_pair (R.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order) x /\
+    U.holds_on_pair R.raw_data_item_ints_optimal x /\
+    cbor_map_get m (mk_cbor (fst x)) == Some (mk_cbor (snd x))
+  ))
+
+val mk_cbor_eq_map
+  (x: cbor)
+: Lemma
+  (requires (CMap? (unpack x)))
+  (ensures (match mk_det_raw_cbor x, unpack x with
+  | Map len l, CMap m ->
+    len == mk_raw_uint64 (U64.uint_to_t (cbor_map_length m)) /\
+    l == mk_det_raw_cbor_map_raw m
+  | _ -> False
+  ))
+
+unfold
+let mk_det_raw_cbor_map_raw_snoc_post
+  (m: cbor_map)
+  (key: cbor)
+  (value: cbor)
+: Tot prop
+=
+    let l = mk_det_raw_cbor_map_raw m in
+    let ol' = cbor_map_insert l (mk_det_raw_cbor key, mk_det_raw_cbor value) in
+    (None? ol' <==> cbor_map_defined key m) /\
+    (Some? ol' ==> ol' == Some (mk_det_raw_cbor_map_raw (cbor_map_union m (cbor_map_singleton key value))))
+
+val mk_det_raw_cbor_map_raw_snoc
+  (m: cbor_map)
+  (key: cbor)
+  (value: cbor)
+: Lemma
+  (
+    mk_det_raw_cbor_map_raw_snoc_post m key value
+  )

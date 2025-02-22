@@ -64,6 +64,28 @@ let rec list_sorted_map_entry_order_no_repeats
     list_sorted_map_entry_order_no_repeats key_order q;
     list_sorted_map_entry_order_not_memP_tail key_order a q
 
+let list_sorted_map_assoc_ext
+  (#t: eqtype)
+  (#t': Type)
+  (order: t -> t -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (l1 l2: list (t & t'))
+: Lemma
+  (requires (
+    List.Tot.sorted (map_entry_order order _) l1 == true /\
+    List.Tot.sorted (map_entry_order order _) l2 == true /\
+    (forall x . List.Tot.assoc x l1 == List.Tot.assoc x l2)
+  ))
+  (ensures (
+    l1 == l2
+  ))
+= list_sorted_map_entry_order_no_repeats order l1;
+  list_sorted_map_entry_order_no_repeats order l2;
+  list_assoc_no_repeats_equiv_recip l1 l2;
+  list_sorted_ext_eq (map_entry_order order _) l1 l2
+
 val list_sortWith: ('a -> 'a -> Tot bool) -> l:list 'a -> Tot (list 'a) (decreases (List.Tot.length l))
 let rec list_sortWith f = function
   | [] -> []

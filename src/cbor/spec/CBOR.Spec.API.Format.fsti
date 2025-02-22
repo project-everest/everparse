@@ -163,3 +163,31 @@ val cbor_det_serialize_array_length_gt_list
     FStar.UInt.fits (List.Tot.length l) 64 /\
     Seq.length (cbor_det_serialize (pack (CArray l))) > Seq.length (cbor_det_serialize_list l)
   ))
+
+val cbor_det_serialize_map
+  (m: cbor_map)
+: Tot (Seq.seq U8.t)
+
+val cbor_det_serialize_map_empty (_: unit) : Lemma
+  (cbor_det_serialize_map cbor_map_empty == Seq.empty)
+
+val cbor_det_serialize_map_singleton
+  (key: cbor)
+  (value: cbor)
+: Lemma
+  (cbor_det_serialize_map (cbor_map_singleton key value) == cbor_det_serialize key `Seq.append` cbor_det_serialize value)
+
+val cbor_det_serialize_map_append_length
+  (m1 m2: cbor_map)
+: Lemma
+  (requires (cbor_map_disjoint m1 m2))
+  (ensures (Seq.length (cbor_det_serialize_map (cbor_map_union m1 m2)) == Seq.length (cbor_det_serialize_map m1) + Seq.length (cbor_det_serialize_map m2)))
+
+val cbor_det_serialize_map_length_gt_list
+  (l: cbor_map)
+: Lemma
+  (requires (FStar.UInt.fits (cbor_map_length l) 64))
+  (ensures (
+    FStar.UInt.fits (cbor_map_length l) 64 /\
+    Seq.length (cbor_det_serialize (pack (CMap l))) > Seq.length (cbor_det_serialize_map l)
+  ))
