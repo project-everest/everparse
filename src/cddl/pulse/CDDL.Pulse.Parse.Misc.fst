@@ -131,7 +131,8 @@ fn impl_copyful_bytes_gen
   rewrite (pts_to v vs) as (pts_to w.v vs);
   fold (rel_vec_of_seq w vs);
   let res : vec_or_slice U8.t = Vec w;
-  fold (rel_vec_or_slice_of_seq freeable res vs);
+  fold (rel_vec_or_slice_of_seq freeable (Vec w) vs);
+  rewrite each Vec w as res;
   res
 }
 
@@ -187,14 +188,15 @@ fn impl_zero_copy_bytes_gen
     p = ps;
     s = s;
   };
+  rewrite each s as w.s;
   fold (rel_slice_of_seq false w vs);
   ghost fn aux (_: unit)
   requires
-    (Trade.trade (pts_to s #ps vs) (vmatch p c v) ** rel_slice_of_seq false w vs)
+    (Trade.trade (pts_to w.s #ps vs) (vmatch p c v) ** rel_slice_of_seq false w vs)
   ensures vmatch p c v
   {
     unfold (rel_slice_of_seq false w vs);
-    Trade.elim _ _
+    Trade.elim _ _;
   };
   Trade.intro_trade _ _ _ aux;
   w

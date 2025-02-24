@@ -276,13 +276,12 @@ inline_for_extraction
 fn cbor_serialized_map_iterator_next_cont (sq: squash SZ.fits_u64)
 : cbor_raw_serialized_iterator_next_cont #cbor_map_entry #(raw_data_item & raw_data_item) #(and_then_kind parse_raw_data_item_kind parse_raw_data_item_kind) #(nondep_then parse_raw_data_item parse_raw_data_item) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) cbor_match_map_entry
 = (x: _) (#pm: _) (#v: _) {
-  let sp = LPC.split_nondep_then
+  let s1, s2 = LPC.split_nondep_then
     serialize_raw_data_item
     (jump_raw_data_item sq)
     serialize_raw_data_item
     x;
-  let s1, s2 = sp;
-  unfold (LPC.split_nondep_then_post serialize_raw_data_item serialize_raw_data_item x pm v sp);
+  unfold (LPC.split_nondep_then_post serialize_raw_data_item serialize_raw_data_item x pm v (s1, s2));
   unfold (LPC.split_nondep_then_post' serialize_raw_data_item serialize_raw_data_item x pm v s1 s2);
   with v1 . assert (pts_to_serialized serialize_raw_data_item s1 #pm v1);
   with v2 . assert (pts_to_serialized serialize_raw_data_item s2 #pm v2);

@@ -13,6 +13,7 @@ module R = Pulse.Lib.Reference
 module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 module Trade = Pulse.Lib.Trade.Util
+module Perm = CBOR.Pulse.Raw.Match.Perm
 
 fn cbor_match_tagged_get_payload
   (c: cbor_raw)
@@ -181,13 +182,11 @@ ensures exists* p .
         (cbor_match pm c r)
         (cbor_match_array c' pm r cbor_match);
       cbor_match_array_elim c' pm r;
-      with s . assert (pts_to c'.cbor_array_ptr #(pm `perm_mul` c'.cbor_array_array_perm) s);
-      Trade.trans
-        (pts_to c'.cbor_array_ptr #(pm `perm_mul` c'.cbor_array_array_perm) s **
-          PM.seq_list_match s (Array?.v r) (cbor_match (pm `perm_mul` c'.cbor_array_payload_perm)))
-        (cbor_match_array c' pm r cbor_match)
-        (cbor_match pm c r);
+      Trade.trans _ _ (cbor_match pm c r);
       let res = cbor_raw_iterator_init_from_slice cbor_match cbor_serialized_array_iterator_match c'.cbor_array_ptr;
+      with p _post.
+        rewrite trade (cbor_raw_iterator_match cbor_match cbor_serialized_array_iterator_match p res (Array?.v r)) _post
+             as trade (cbor_array_iterator_match p res (Array?.v r)) _post;
       Trade.trans _ _ (cbor_match pm c r);
       with p . assert (cbor_raw_iterator_match cbor_match cbor_serialized_array_iterator_match p res (Array?.v r));
       fold (cbor_array_iterator_match p res (Array?.v r));
@@ -238,6 +237,8 @@ ensures
   res
 }
 
+#set-options "--print_universes --print_implicits"
+
 fn cbor_array_iterator_next
   (sq: squash SZ.fits_u64)
   (pi: R.ref cbor_array_iterator)
@@ -264,8 +265,11 @@ ensures exists* a p i' q .
     cbor_serialized_array_iterator_match
     (cbor_serialized_array_iterator_next sq)
     pi;
-  with i' . assert (R.pts_to pi i');
+  with i'. assert (R.pts_to pi i');
   fold (cbor_array_iterator_match pm i' (List.Tot.tl l));
+  with _pre _post.
+    rewrite trade _pre _post
+         as trade _pre (cbor_array_iterator_match pm i l);
   res
 }
 
@@ -294,8 +298,6 @@ ensures
   fold (cbor_array_iterator_match 1.0R res (fst (List.Tot.splitAt (U64.v len) r)));
   res
 }
-
-module Perm = CBOR.Pulse.Raw.Match.Perm
 
 ghost
 fn cbor_array_iterator_share

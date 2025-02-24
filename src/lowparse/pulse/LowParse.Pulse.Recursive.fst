@@ -609,7 +609,9 @@ fn impl_nlist_forall_pred_recursive
       List.Tot.for_all pr.pred v == (res && List.Tot.for_all pr.pred vi)
   )) {
     let n = !pn;
+    with pi'. assert pts_to ppi pi';
     let pi = !ppi;
+    rewrite each pi' as pi;
     with vi . assert (pts_to_serialized (L.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (serialize_recursive s))) pi #pm vi);
     pr.prf (List.Tot.hd vi);
     let res = g pi n;
@@ -643,13 +645,12 @@ fn impl_nlist_forall_pred_recursive
           )
           pi #pm vi
       );
-      let spl = C.split_dtuple2
+      let ph, pc = C.split_dtuple2
         (serializer_of_tot_serializer s.serialize_header)
         j
         (serialize_nlist_recursive_cons_payload s (SZ.v n))
         pi;
-      let ph, pc = spl;
-      unfold (C.split_dtuple2_post (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi spl);
+      unfold (C.split_dtuple2_post (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi (ph, pc));
       unfold (C.split_dtuple2_post' (serializer_of_tot_serializer s.serialize_header) (serialize_nlist_recursive_cons_payload s (SZ.v n)) pi pm vi ph pc);
       Trade.trans
         _ _

@@ -169,7 +169,6 @@ ensures
   unfold (cbor_match_serialized_payload_tagged c p1 r1);
   unfold (cbor_match_serialized_payload_tagged c p2 r2);
   pts_to_serialized_gather serialize_raw_data_item c;
-  fold (pts_to_serialized (serialize_raw_data_item) c #(p1 +. p2) r1);
   fold (cbor_match_serialized_payload_tagged c (p1 +. p2) r1);
 }
 

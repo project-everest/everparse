@@ -268,11 +268,13 @@ fn impl_zero_copy_choice
     let res = p1 c;
     with v' . assert (r1 res v');
     fold (rel_either r1 r2 (Inl res) (Inl v'));
+    rewrite each r1 res v' as rel_either r1 r2 (Inl res) (Inl v');
     Inl res
   } else {
     let res = p2 c;
     with v' . assert (r2 res v');
     fold (rel_either r1 r2 (Inr res) (Inr v'));
+    rewrite each r2 res v' as rel_either r1 r2 (Inr res) (Inr v');
     Inr res
   }
 }

@@ -12,12 +12,12 @@ module Spec = CBOR.Spec.API.Format
 module I32 = FStar.Int32
 module S = Pulse.Lib.Slice
 
+#set-options "--fuel 8 --z3rlimit 16"
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let letter (x: U8.t { 1 <= U8.v x /\ U8.v x <= 26 }) : U8.t =
   U8.add 96uy x
-
-#push-options "--fuel 8 --z3rlimit 16"
 
 noextract [@@noextract_to "krml"]
 let spec_bar () : Pure (Seq.seq U8.t)
@@ -135,8 +135,6 @@ ensures
   }
 }
 
-#pop-options
-
 let cbor_det_serialize_inj_strong
   (x1 x2: Spec.cbor)
   (y1 y2: Seq.seq U8.t)
@@ -173,9 +171,8 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 let max_size = 32sz
 
-#push-options "--fuel 8 --z3rlimit 128"
 
-#restart-solver
+#push-options "--z3rlimit 64"
 fn main (_: unit)
 requires emp
 returns res: res_t
@@ -307,7 +304,7 @@ ensures emp
                 if (res <> exit_success) {
                    intro_res_post_impossible ()
                 } else {
-                  intro_res_post_success
+                  intro_res_post_success;
                 }
               }
             }
@@ -317,5 +314,4 @@ ensures emp
     }
   }
 }
-
 #pop-options

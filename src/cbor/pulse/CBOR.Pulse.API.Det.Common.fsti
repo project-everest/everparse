@@ -13,6 +13,7 @@ module R = Pulse.Lib.Reference
 module PM = Pulse.Lib.SeqMatch
 
 val cbor_det_match: perm -> cbor_det_t -> Spec.cbor -> slprop
+
 val cbor_det_match_with_size: nat -> perm -> cbor_det_t -> Spec.cbor -> slprop
 
 val cbor_det_match_with_size_eq:

@@ -384,9 +384,8 @@ fn impl_det_cbor
         false
       }
       Some r -> {
-        let res = fst r;
-        let rem = snd r;
-        unfold (cbor_det_parse_post vmatch' pl pm pv (Some r));
+        let res, rem = r;
+        unfold (cbor_det_parse_post vmatch' pl pm pv (Some (res, rem)));
         unfold (cbor_det_parse_post_some vmatch' pl pm pv res rem);
         Trade.trans _ _ (vmatch p c v);
         with pres vres . assert (vmatch' pres res vres);

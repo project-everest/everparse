@@ -9,8 +9,14 @@ module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module S = Pulse.Lib.Slice
 
-let pts_to_serialized (#k: parser_kind) (#t: Type) (#p: parser k t) (s: serializer p) (input: slice byte) (#[exact (`1.0R)] pm: perm) (v: t) : slprop =
-  pts_to input #pm (bare_serialize s v)
+let pts_to_serialized
+  (#k: parser_kind) (#t: Type) (#p: parser k t)
+  (s: serializer p)
+  ([@@@mkey]input: slice byte)
+  (#[exact (`1.0R)] pm: perm)
+  (v: t)
+: slprop =
+  S.pts_to input #pm (bare_serialize s v)
 
 ghost
 fn pts_to_serialized_intro_trade

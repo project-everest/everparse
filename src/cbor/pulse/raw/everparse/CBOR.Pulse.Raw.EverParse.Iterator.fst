@@ -125,18 +125,22 @@ ensures
     (cbor_raw_serialized_iterator_match s pm c l)
     (LP.pts_to_serialized (LP.serialize_nlist (glen) s) sl #(pm') l')
 {
-  LP.pts_to_serialized_share (LP.serialize_nlist (glen) s) sl;
+  rewrite each sl as c.s;
+  LP.pts_to_serialized_share (LP.serialize_nlist (glen) s) c.s;
   fold (cbor_raw_serialized_iterator_match s pm c l);
   ghost fn aux (_: unit)
   requires
-    LP.pts_to_serialized (LP.serialize_nlist (glen) s) sl #(pm' /. 2.0R) l' ** cbor_raw_serialized_iterator_match s pm c l
+    LP.pts_to_serialized (LP.serialize_nlist (glen) s) c.s #(pm' /. 2.0R) l' ** cbor_raw_serialized_iterator_match s pm c l
   ensures
-    LP.pts_to_serialized (LP.serialize_nlist (glen) s) sl #(pm') l'
+    LP.pts_to_serialized (LP.serialize_nlist (glen) s) c.s #(pm') l'
   {
     unfold (cbor_raw_serialized_iterator_match s pm c l);
-    LP.pts_to_serialized_gather (LP.serialize_nlist (glen) s) sl
+    LP.pts_to_serialized_gather (LP.serialize_nlist (glen) s) c.s;
+    ()
   };
-  Trade.intro _ _ _ aux
+  Trade.intro _ _ _ aux;
+  rewrite each c.s as sl;
+  ()
 }
 
 ghost
@@ -240,15 +244,14 @@ fn cbor_raw_serialized_iterator_next
     #(pm *. i.p)
     v'
   );
-  let sp = LowParse.Pulse.Combinators.split_nondep_then
+  let s1, s2 = LowParse.Pulse.Combinators.split_nondep_then
     s
     j
     #k'
     #p'
     s'
     i.s;
-  let s1, s2 = sp;
-  unfold (LPC.split_nondep_then_post s s' i.s (pm *. i.p) v' sp);
+  unfold (LPC.split_nondep_then_post s s' i.s (pm *. i.p) v' (s1, s2));
   unfold (LPC.split_nondep_then_post' s s' i.s (pm *. i.p) v' s1 s2);
   Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
   let res = phi s1;

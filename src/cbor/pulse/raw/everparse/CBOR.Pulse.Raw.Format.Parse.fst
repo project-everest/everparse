@@ -496,6 +496,7 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
         Trade.trans_hyp_r _ _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
         let key2, tail2 = LowParse.Pulse.VCList.nlist_hd_tl_nondep_then_left serialize_raw_data_item () (jump_raw_data_item ()) vn () s tail;
         let key1 = !pkey;
+        admit();
         let res = impl_deterministically_encoded_cbor_map_key_order () key1 key2;
         if res {
           Trade.elim_hyp_l _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);

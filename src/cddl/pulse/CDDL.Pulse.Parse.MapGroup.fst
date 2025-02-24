@@ -410,7 +410,7 @@ fn impl_zero_copy_match_item_for_cont
 {
   let ow = get c ck;
   let Some w = ow;
-  unfold (map_get_post vmatch c p v key ow);
+  unfold (map_get_post vmatch c p v key (Some w));
   unfold (map_get_post_some vmatch c p v key w);
   let res = ivalue w;
   Trade.trans _ _ (vmatch p c v);

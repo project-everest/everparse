@@ -772,9 +772,8 @@ fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
     (serialize_dtuple2 serialize_header serialize_leaf_content)
     a;
-  let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
-  let input1, input2 = spl;
-  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
+  let input1, input2 = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
+  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va (input1, input2));
   unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
   let h = read_header () input1;
   elim_trade
@@ -821,9 +820,8 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
     (serialize_dtuple2 serialize_header serialize_leaf_content)
     a;
-  let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
-  let input1, input2 = spl;
-  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
+  let input1, input2 = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
+  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va (input1, input2));
   unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
   let h = read_header () input1;
   elim_trade
@@ -912,9 +910,8 @@ fn get_header_and_contents
     input;
   Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
   with v' . assert (pts_to_serialized (serialize_dtuple2 serialize_header serialize_content) input #pm v');
-  let spl = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
-  let ph, outc = spl;
-  unfold (split_dtuple2_post serialize_header serialize_content input pm v' spl);
+  let ph, outc = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
+  unfold (split_dtuple2_post serialize_header serialize_content input pm v' (ph, outc));
   unfold (split_dtuple2_post' serialize_header serialize_content input pm v' ph outc);
   Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
   let h = read_header () ph;

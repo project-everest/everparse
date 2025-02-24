@@ -7,7 +7,7 @@ let perm_div (p1 p2: perm) : Tot perm = p1 /. p2
 
 let perm_mul (p1 p2: perm) : Tot perm = p1 *. p2
 
-#reset-options "--z3cliopt smt.arith.nl=true --smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr native --z3rlimit 16"
+#push-options "--z3cliopt smt.arith.nl=true --smtencoding.elim_box true --smtencoding.l_arith_repr native --smtencoding.nl_arith_repr native --z3rlimit 16"
 
 #restart-solver
 
@@ -48,3 +48,5 @@ let half_mul_l (a b: real) : Lemma
 let perm_mul_add_l (a b c: real) : Lemma
   ((a +. b) *. c == a *. c +. b *. c)
 = ()
+
+#pop-options // F* #3782, though it's fixed now

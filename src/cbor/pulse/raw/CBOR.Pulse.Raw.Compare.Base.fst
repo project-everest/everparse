@@ -285,14 +285,20 @@ ensures
   SM.seq_list_match s l (eq_as_slprop th)
 decreases l
 {
-  if (Nil? l) {
-    SM.seq_list_match_nil_intro s l (eq_as_slprop th)
-  } else {
-    Seq.cons_head_tail s;
-    assert (pure (Seq.equal (Seq.tail s) (Seq.seq_of_list (List.Tot.tl l))));
-    eq_as_slprop_seq_list_match (Seq.tail s) (List.Tot.tl l);
-    fold (eq_as_slprop th (Seq.head s) (List.Tot.hd l));
-    SM.seq_list_match_cons_intro (Seq.head s) (List.Tot.hd l) (Seq.tail s) (List.Tot.tl l) (eq_as_slprop th)
+  match l {
+    [] -> {
+      SM.seq_list_match_nil_intro s l (eq_as_slprop th)
+    }
+    hd :: tl -> {
+      Seq.cons_head_tail s;
+      assert (pure (Seq.equal (Seq.tail s) (Seq.seq_of_list tl)));
+      eq_as_slprop_seq_list_match (Seq.tail s) tl;
+      fold (eq_as_slprop th (Seq.head s) hd);
+      SM.seq_list_match_cons_intro (Seq.head s) hd (Seq.tail s) tl (eq_as_slprop th);
+      rewrite each (hd :: tl) as l;
+      rewrite each Seq.cons (Seq.head s) (Seq.tail s) as s;
+      ()
+    }
   }
 }
 

@@ -69,12 +69,14 @@ ensures
   pure (v == Ghost.reveal v')
 {
   let v' : Seq.lseq byte n = v;
+  rewrite each s as res.v;
   fold (pts_to_seqbytes n res v');
   ghost fn aux (_: unit)
     requires emp ** pts_to_seqbytes n res v'
     ensures pts_to s #p v
   {
-    unfold (pts_to_seqbytes n res v')
+    unfold (pts_to_seqbytes n res v');
+    rewrite each res.v as s;
   };
   Trade.intro _ _ _ aux;
   v'

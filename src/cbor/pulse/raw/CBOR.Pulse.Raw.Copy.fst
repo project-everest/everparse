@@ -4,6 +4,7 @@ include CBOR.Pulse.Raw.Type
 open CBOR.Spec.Raw.Base
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Slice
+open Pulse { pts_to }
 
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
@@ -390,6 +391,7 @@ ensures
   cbor_match_array_elim a p v;
   Trade.trans _ _ (cbor_match p x v);
   let ar = a.cbor_array_ptr;
+  rewrite each a.cbor_array_ptr as ar;
   S.pts_to_len ar;
   with ps s pl l . assert (pts_to ar #ps s ** SM.seq_list_match s l (cbor_match pl));
   SM.seq_list_match_length (cbor_match pl) s l;
@@ -438,9 +440,10 @@ ensures
       (SM.seq_seq_match (cbor_match 1.0R) s1 sl 0 (SZ.v i))
       (SM.seq_seq_match freeable_match' sf st 0 (SZ.v i))
     );
-    let c = S.op_Array_Access ar i;
+    let c = ar.(i);
     SM.seq_list_match_index_trade (cbor_match pl) s l (SZ.v i);
     let c' = copy c;
+    rewrite each Seq.index s (SZ.v i) as c;
     Trade.elim _ (SM.seq_list_match s l (cbor_match pl));
     with v1 . assert (cbor_match 1.0R c'.cbor v1 ** Trade.trade (cbor_match 1.0R c'.cbor v1) (freeable c'));
     V.op_Array_Assignment v' i c'.cbor;
@@ -560,6 +563,7 @@ ensures
   cbor_match_map_elim a p v;
   Trade.trans _ _ (cbor_match p x v);
   let ar = a.cbor_map_ptr;
+  rewrite each a.cbor_map_ptr as ar;
   S.pts_to_len ar;
   with ps s pl l . assert (pts_to ar #ps s ** SM.seq_list_match s l (cbor_match_map_entry pl));
   SM.seq_list_match_length (cbor_match_map_entry pl) s l;
@@ -621,28 +625,28 @@ ensures
     let c = S.op_Array_Access ar i;
     SM.seq_list_match_index_trade (cbor_match_map_entry pl) s l (SZ.v i);
     with v1 . assert (cbor_match_map_entry pl c v1);
-    let c' = cbor_copy_map_entry copy c;
+    let key', value' = cbor_copy_map_entry copy c;
     Trade.elim _ (SM.seq_list_match s l (cbor_match_map_entry pl));
     Trade.prod
-      (cbor_match 1.0R (fst c').cbor (fst v1))
-      (freeable (fst c'))
-      (cbor_match 1.0R (snd c').cbor (snd v1))
-      (freeable (snd c'));
+      (cbor_match 1.0R key'.cbor (fst v1))
+      (freeable key')
+      (cbor_match 1.0R value'.cbor (snd v1))
+      (freeable value');
     let cme' = {
-      cbor_map_entry_key = (fst c').cbor;
-      cbor_map_entry_value = (snd c').cbor;
+      cbor_map_entry_key = key'.cbor;
+      cbor_map_entry_value = value'.cbor;
     };
     Trade.rewrite_with_trade
-      (cbor_match 1.0R (fst c').cbor (fst v1) **
-        cbor_match 1.0R (snd c').cbor (snd v1)
+      (cbor_match 1.0R key'.cbor (fst v1) **
+        cbor_match 1.0R value'.cbor (snd v1)
       )
       (cbor_match_map_entry 1.0R cme' v1);
     Trade.trans (cbor_match_map_entry 1.0R cme' v1) _ _;
     V.op_Array_Assignment v' i cme';
     with s1' . assert (pts_to v' s1');
     let cfp' = {
-      map_entry_key = (fst c').footprint;
-      map_entry_value = (snd c').footprint;
+      map_entry_key = key'.footprint;
+      map_entry_value = value'.footprint;
     };
     V.op_Array_Assignment vf i cfp';
     with sf' . assert (pts_to vf sf');
@@ -651,17 +655,19 @@ ensures
     Trade.prod (SM.seq_seq_match (cbor_match_map_entry 1.0R) s1' sl 0 (SZ.v i)) _ (cbor_match_map_entry 1.0R cme' v1) _;
     SM.seq_seq_match_enqueue_right_trade (cbor_match_map_entry 1.0R) s1' sl 0 (SZ.v i) cme' v1;
     Trade.trans (SM.seq_seq_match (cbor_match_map_entry 1.0R) s1' sl 0 (SZ.v i + 1)) _ _;
-    let tree = Ghost.hide ((fst c').tree, (snd c').tree);
+    let tree = Ghost.hide (key'.tree, value'.tree);
     let st' = Ghost.hide (Seq.upd st (SZ.v i) tree);
     ghost fn aux (_: unit)
-    requires emp ** (SM.seq_seq_match freeable_match_map_entry sf st 0 (SZ.v i) ** (freeable (fst c') ** freeable (snd c')))
+    requires emp ** (SM.seq_seq_match freeable_match_map_entry sf st 0 (SZ.v i) ** (freeable key' ** freeable value'))
     ensures SM.seq_seq_match freeable_match_map_entry sf' st' 0 (SZ.v i + 1)
     {
       SM.seq_seq_match_rewrite_seq freeable_match_map_entry sf sf' st st' 0 (SZ.v i);
-      unfold (freeable (fst c'));
-      unfold (freeable (snd c'));
-      fold (freeable_match_map_entry cfp' tree);
-      SM.seq_seq_match_enqueue_right freeable_match_map_entry sf' st' 0 (SZ.v i) cfp' tree;
+      unfold (freeable key');
+      unfold (freeable value');
+      rewrite each key'.footprint as cfp'.map_entry_key;
+      rewrite each value'.footprint as cfp'.map_entry_value;
+      fold (freeable_match_map_entry cfp' (key'.tree, value'.tree));
+      SM.seq_seq_match_enqueue_right freeable_match_map_entry sf' st' 0 (SZ.v i) cfp' (key'.tree, value'.tree);
     };
     Trade.intro _ _ _ aux;
     Trade.trans (SM.seq_seq_match (cbor_match_map_entry 1.0R) s1' sl 0 (SZ.v i + 1)) _ _;
