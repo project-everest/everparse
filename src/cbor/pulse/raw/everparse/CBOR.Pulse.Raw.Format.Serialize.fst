@@ -947,7 +947,41 @@ fn ser_payload_array_not_array_lens
                   (get_header_long_argument xh1)))
     res;
   Trade.trans _ (cbor_match_serialized_array xs xl.p xh0) _;
-  admit();
+  with w . assert (
+    pts_to_serialized_with_perm (LowParse.Spec.VCList.serialize_nlist (U64.v (argument_as_uint64
+                  (get_header_initial_byte xh1)
+                  (get_header_long_argument xh1)))
+          serialize_raw_data_item)
+      res
+      w
+  );
+  assert (pure (w == Ghost.reveal v));
+  Trade.rewrite_with_trade
+    (    pts_to_serialized_with_perm (LowParse.Spec.VCList.serialize_nlist (U64.v (argument_as_uint64
+                  (get_header_initial_byte xh1)
+                  (get_header_long_argument xh1)))
+          serialize_raw_data_item)
+      res
+      w
+    )
+    (
+        pts_to_serialized_with_perm (LowParse.Spec.VCList.serialize_nlist (U64.v (argument_as_uint64
+                  (get_header_initial_byte xh1)
+                  (get_header_long_argument xh1)))
+          serialize_raw_data_item)
+      res
+      v
+    );
+  Trade.trans 
+    (
+        pts_to_serialized_with_perm (LowParse.Spec.VCList.serialize_nlist (U64.v (argument_as_uint64
+                  (get_header_initial_byte xh1)
+                  (get_header_long_argument xh1)))
+          serialize_raw_data_item)
+      res
+      v
+    )
+    _ _;
   res
 }
 
@@ -1116,7 +1150,6 @@ let size_payload_map_map_elem
     (ser_payload_map_map_elem_snd a)
 
 #restart-solver
-#set-options "--print_implicits"
 ghost
 fn ser_payload_map_map_lens_aux
   (f64: squash SZ.fits_u64)
@@ -1359,7 +1392,46 @@ fn ser_payload_map_not_map_lens
                   (get_header_long_argument xh1)))
     res;
   Trade.trans _ (cbor_match_serialized_map xs xl.p xh0) _;
-  admit();
+  with w . assert (
+      pts_to_serialized_with_perm (LowParse.Spec.VCList.serialize_nlist (U64.v (argument_as_uint64
+                  (get_header_initial_byte xh1)
+                  (get_header_long_argument xh1)))
+          (LowParse.Spec.Combinators.serialize_nondep_then serialize_raw_data_item
+              serialize_raw_data_item))
+      res
+      w
+  );
+  assert (pure (w == Ghost.reveal v));
+  Trade.rewrite_with_trade
+    (
+      pts_to_serialized_with_perm (LowParse.Spec.VCList.serialize_nlist (U64.v (argument_as_uint64
+                  (get_header_initial_byte xh1)
+                  (get_header_long_argument xh1)))
+          (LowParse.Spec.Combinators.serialize_nondep_then serialize_raw_data_item
+              serialize_raw_data_item))
+      res
+      w
+    )
+    (
+      pts_to_serialized_with_perm (LowParse.Spec.VCList.serialize_nlist (U64.v (argument_as_uint64
+                  (get_header_initial_byte xh1)
+                  (get_header_long_argument xh1)))
+          (LowParse.Spec.Combinators.serialize_nondep_then serialize_raw_data_item
+              serialize_raw_data_item))
+      res
+      v
+    );
+  Trade.trans
+    (
+      pts_to_serialized_with_perm (LowParse.Spec.VCList.serialize_nlist (U64.v (argument_as_uint64
+                  (get_header_initial_byte xh1)
+                  (get_header_long_argument xh1)))
+          (LowParse.Spec.Combinators.serialize_nondep_then serialize_raw_data_item
+              serialize_raw_data_item))
+      res
+      v
+    )
+    _ _;
   res
 }
 
