@@ -171,6 +171,29 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 let max_size = 32sz
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn slice_split 
+  (#t: Type) (s: S.slice t) (#p: perm) (i: SZ.t)
+  (#v: Ghost.erased (Seq.seq t) { SZ.v i <= Seq.length v })
+requires pts_to s #p v
+returns res: (S.slice t & S.slice t)
+ensures (
+  let (s1, s2) = res in
+    exists* v1 v2 .
+      pts_to s1 #p v1 **
+      pts_to s2 #p v2 **
+      S.is_split s s1 s2 **
+      pure (
+        v1 == (Seq.slice v 0 (SZ.v i)) /\
+        v2 == (Seq.slice v (SZ.v i) (Seq.length v))
+      )
+)
+{
+  // FIXME: WHY WHY WHY?
+  let (s1, s2) = S.split s i;
+  (s1, s2)
+}
 
 #push-options "--z3rlimit 64"
 fn main (_: unit)
@@ -285,7 +308,7 @@ ensures emp
               Trade.elim (cbor_det_match _ test _) _;
               intro_res_post_impossible ()
             } else {
-              let out2, out3 = S.split out1 size';
+              let out2, out3 = slice_split out1 size';
               Seq.append_empty_r (Seq.slice w 0 (SZ.v size'));
               let test2 = cbor_det_parse_from_slice out2 size';
               let b = cbor_det_equal () test test2;
