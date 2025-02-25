@@ -14,6 +14,11 @@ let mk_state:
   Tot string
 = Printf.sprintf "(mk-state %s %s %s)"
 
+let choose:
+  (index: string) ->
+  Tot string
+= Printf.sprintf "(choose %s)"
+
 let prelude : string =
 "
 (set-option :produce-models true)
@@ -34,7 +39,7 @@ let prelude : string =
 
 (declare-fun choose (Int) Int)
 (assert (forall ((i Int))
-  (and (<= 0 (choose i)) (< (choose i) 256))
+  (and (<= 0 "^choose "i" ^ ") (< "^choose "i" ^ "256))
 ))
 
 (declare-fun branch-trace (Int) Int)
@@ -54,16 +59,16 @@ let prelude : string =
   (if (<= (input-size x) 0)
     x
     "^mk_state
-      "(if
+      ("(if
         (forall ((j Int))
           (if (and (<= 0 j) (< j (input-size x)))
-            (= (choose (+ (choice-index x) j)) 0)
+            (= "^choose "(+ (choice-index x) j)" ^" 0)
             true
           )
         )
         0
         -1
-      )"
+      )")
       "(+ (choice-index x) (input-size x))"
       "(branch-index x)"
     ^ "
@@ -72,7 +77,7 @@ let prelude : string =
 
 (define-fun parse-u8 ((x State)) Result
   (mk-result
-    (choose (choice-index x))
+    "^choose "(choice-index x)" ^ "
     (let ((new-size (- (input-size x) 1)))
       " ^ mk_state
         "(if (< new-size 0)
@@ -88,9 +93,9 @@ let prelude : string =
 
 (define-fun parse-u16-be ((x State)) Result
   (mk-result
-    (+ (choose (+ 1 (choice-index x)))
-      (* 256
-        (choose (+ 0 (choice-index x)))
+    (+ "^choose "(+ 1 (choice-index x))"^"
+      ( * 256
+        "^choose "(+ 0 (choice-index x))"^"
       )
     )
     (let ((new-size (- (input-size x) 2)))
@@ -108,9 +113,9 @@ let prelude : string =
 
 (define-fun parse-u16-le ((x State)) Result
   (mk-result
-    (+ (choose (+ 0 (choice-index x)))
-      (* 256
-        (choose (+ 1 (choice-index x)))
+    (+ "^choose "(+ 0 (choice-index x))"^"
+      ( * 256
+        "^choose "(+ 1 (choice-index x))"^"
       )
     )
     (let ((new-size (- (input-size x) 2)))
@@ -128,13 +133,13 @@ let prelude : string =
 
 (define-fun parse-u32-be ((x State)) Result
   (mk-result
-    (+ (choose (+ 3 (choice-index x)))
-      (* 256
-        (+ (choose (+ 2 (choice-index x)))
-          (* 256
-            (+ (choose (+ 1 (choice-index x)))
-              (* 256
-                (choose (+ 0 (choice-index x)))
+    (+ "^choose "(+ 3 (choice-index x))"^"
+      ( * 256
+        (+ "^choose "(+ 2 (choice-index x))"^"
+          ( * 256
+            (+ "^choose "(+ 1 (choice-index x))"^"
+              ( * 256
+                "^choose "(+ 0 (choice-index x))"^"
               )
             )
           )
@@ -156,13 +161,13 @@ let prelude : string =
 
 (define-fun parse-u32-le ((x State)) Result
   (mk-result
-    (+ (choose (+ 0 (choice-index x)))
-      (* 256
-        (+ (choose (+ 1 (choice-index x)))
-          (* 256
-            (+ (choose (+ 2 (choice-index x)))
-              (* 256
-                (choose (+ 3 (choice-index x)))
+    (+ "^choose "(+ 0 (choice-index x))"^"
+      ( * 256
+        (+ "^choose "(+ 1 (choice-index x))"^"
+          ( * 256
+            (+ "^choose "(+ 2 (choice-index x))"^"
+              ( * 256
+                "^choose "(+ 3 (choice-index x))"^"
               )
             )
           )
@@ -184,21 +189,21 @@ let prelude : string =
 
 (define-fun parse-u64-be ((x State)) Result
   (mk-result
-    (+ (choose (+ 7 (choice-index x)))
-      (* 256
-        (+ (choose (+ 6 (choice-index x)))
-          (* 256
-            (+ (choose (+ 5 (choice-index x)))
-              (* 256
-                (+ (choose (+ 4 (choice-index x)))
-                  (* 256
-                    (+ (choose (+ 3 (choice-index x)))
-                      (* 256
-                        (+ (choose (+ 2 (choice-index x)))
-                          (* 256
-                            (+ (choose (+ 1 (choice-index x)))
-                              (* 256
-                                (choose (+ 0 (choice-index x)))
+    (+ "^choose "(+ 7 (choice-index x))"^"
+      ( * 256
+        (+ "^choose "(+ 6 (choice-index x))"^"
+          ( * 256
+            (+ "^choose "(+ 5 (choice-index x))"^"
+              ( * 256
+                (+ "^choose "(+ 4 (choice-index x))"^"
+                  ( * 256
+                    (+ "^choose "(+ 3 (choice-index x))"^"
+                      ( * 256
+                        (+ "^choose "(+ 2 (choice-index x))"^"
+                          ( * 256
+                            (+ "^choose "(+ 1 (choice-index x))"^"
+                              ( * 256
+                                "^choose "(+ 0 (choice-index x))"^"
                               )
                             )
                           )
@@ -228,21 +233,21 @@ let prelude : string =
 
 (define-fun parse-u64-le ((x State)) Result
   (mk-result
-    (+ (choose (+ 0 (choice-index x)))
-      (* 256
-        (+ (choose (+ 1 (choice-index x)))
-          (* 256
-            (+ (choose (+ 2 (choice-index x)))
-              (* 256
-                (+ (choose (+ 3 (choice-index x)))
-                  (* 256
-                    (+ (choose (+ 4 (choice-index x)))
-                      (* 256
-                        (+ (choose (+ 5 (choice-index x)))
-                          (* 256
-                            (+ (choose (+ 6 (choice-index x)))
-                              (* 256
-                                (choose (+ 7 (choice-index x)))
+    (+ "^choose "(+ 0 (choice-index x))"^"
+      ( * 256
+        (+ "^choose "(+ 1 (choice-index x))"^"
+          ( * 256
+            (+ "^choose "(+ 2 (choice-index x))"^"
+              ( * 256
+                (+ "^choose "(+ 3 (choice-index x))"^"
+                  ( * 256
+                    (+ "^choose "(+ 4 (choice-index x))"^"
+                      ( * 256
+                        (+ "^choose "(+ 5 (choice-index x))"^"
+                          ( * 256
+                            (+ "^choose "(+ 6 (choice-index x))"^"
+                              ( * 256
+                                "^choose "(+ 7 (choice-index x))"^"
                               )
                             )
                           )
@@ -1179,7 +1184,7 @@ let read_witness (z3: Z3.z3) : ML (Seq.seq int) =
     then accu
     else
       let index = remaining - 1 in
-      let _ = z3.to_z3 (Printf.sprintf "(eval (choose %d))\n" index) in
+      let _ = z3.to_z3 (Printf.sprintf "(eval %s)\n" (choose (string_of_int index))) in
       let v = Lisp.read_bare_int_from z3.from_z3 in
       aux (Seq.cons v accu) index
   in
@@ -1507,7 +1512,7 @@ let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot stri
   (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
 = if i >= Seq.length witness
   then accu
-  else mk_choose_conj witness ("(and (= (choose "^string_of_int i^") "^string_of_int (Seq.index witness i)^") "^accu^")") (i + 1)
+  else mk_choose_conj witness ("(and (= "^choose (string_of_int i) ^ " " ^ string_of_int (Seq.index witness i)^") "^accu^")") (i + 1)
 
 let rec mk_arg_conj (accu: string) (i: nat) (l: list string) : Tot string (decreases l) =
   match l with
