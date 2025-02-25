@@ -7,10 +7,17 @@ module A = Ast
 module T = Target
 module I = InterpreterTarget
 
+let mk_state:
+  (input_size: string) ->
+  (choice_index: string) ->
+  (branch_index: string) ->
+  Tot string
+= Printf.sprintf "(mk-state %s %s %s)"
+
 let prelude : string =
 "
 (set-option :produce-models true)
-(declare-datatypes () ((State (mk-state (input-size Int) (choice-index Int) (branch-index Int)))))
+(declare-datatypes () ((State "^mk_state "(input-size Int)" "(choice-index Int)" "(branch-index Int)" ^ ")))
 (declare-datatypes () ((Result (mk-result (return-value Int) (after-state State)))))
 
 ; From EverParse3d.ErrorCode.is_range_okay
@@ -33,21 +40,21 @@ let prelude : string =
 (declare-fun branch-trace (Int) Int)
 
 (define-fun parse-false ((x State)) State
-  (mk-state -1 (choice-index x) (branch-index x))
+  " ^ mk_state "-1" "(choice-index x)" "(branch-index x)" ^ "
 )
 
 (define-fun parse-all-bytes ((x State)) State
   (if (<= (input-size x) 0)
     x
-    (mk-state 0 (+ (choice-index x) (input-size x)) (branch-index x))
+    " ^ mk_state "0" "(+ (choice-index x) (input-size x))" "(branch-index x)" ^ "
   )
 )
 
 (define-fun parse-all-zeros ((x State)) State
   (if (<= (input-size x) 0)
     x
-    (mk-state
-      (if
+    "^mk_state
+      "(if
         (forall ((j Int))
           (if (and (<= 0 j) (< j (input-size x)))
             (= (choose (+ (choice-index x) j)) 0)
@@ -56,10 +63,10 @@ let prelude : string =
         )
         0
         -1
-      )
-      (+ (choice-index x) (input-size x))
-      (branch-index x)
-    )
+      )"
+      "(+ (choice-index x) (input-size x))"
+      "(branch-index x)"
+    ^ "
   )
 )
 
@@ -67,14 +74,14 @@ let prelude : string =
   (mk-result
     (choose (choice-index x))
     (let ((new-size (- (input-size x) 1)))
-      (mk-state
-        (if (< new-size 0)
+      " ^ mk_state
+        "(if (< new-size 0)
           -1
           new-size
-        )
-        (+ (choice-index x) (if (< new-size 0) (input-size x) 1))
-        (branch-index x)
-      )
+        )"
+        "(+ (choice-index x) (if (< new-size 0) (input-size x) 1))"
+        "(branch-index x)"
+      ^ "
     )
   )
 )
@@ -87,14 +94,14 @@ let prelude : string =
       )
     )
     (let ((new-size (- (input-size x) 2)))
-      (mk-state
-        (if (< new-size 0)
+      " ^ mk_state
+        "(if (< new-size 0)
           -1
           new-size
-        )
-        (+ (choice-index x) (if (< new-size 0) (input-size x) 2))
-        (branch-index x)
-      )
+        )"
+        "(+ (choice-index x) (if (< new-size 0) (input-size x) 2))"
+        "(branch-index x)"
+      ^ "
     )
   )
 )
@@ -107,14 +114,14 @@ let prelude : string =
       )
     )
     (let ((new-size (- (input-size x) 2)))
-      (mk-state
-        (if (< new-size 0)
+      " ^ mk_state
+        "(if (< new-size 0)
           -1
           new-size
-        )
-        (+ (choice-index x) (if (< new-size 0) (input-size x) 2))
-        (branch-index x)
-      )
+        )"
+        "(+ (choice-index x) (if (< new-size 0) (input-size x) 2))"
+        "(branch-index x)"
+      ^ "
     )
   )
 )
@@ -135,14 +142,14 @@ let prelude : string =
       )
     )
     (let ((new-size (- (input-size x) 4)))
-      (mk-state
-        (if (< new-size 0)
+      " ^ mk_state
+        "(if (< new-size 0)
           -1
           new-size
-        )
-        (+ (choice-index x) (if (< new-size 0) (input-size x) 4))
-        (branch-index x)
-      )
+        )"
+        "(+ (choice-index x) (if (< new-size 0) (input-size x) 4))"
+        "(branch-index x)"
+      ^ "
     )
   )
 )
@@ -163,14 +170,14 @@ let prelude : string =
       )
     )
     (let ((new-size (- (input-size x) 4)))
-      (mk-state
-        (if (< new-size 0)
+      " ^ mk_state
+        "(if (< new-size 0)
           -1
           new-size
-        )
-        (+ (choice-index x) (if (< new-size 0) (input-size x) 4))
-        (branch-index x)
-      )
+        )"
+        "(+ (choice-index x) (if (< new-size 0) (input-size x) 4))"
+        "(branch-index x)"
+      ^ "
     )
   )
 )
@@ -207,14 +214,14 @@ let prelude : string =
       )
     )
     (let ((new-size (- (input-size x) 8)))
-      (mk-state
-        (if (< new-size 0)
+      " ^ mk_state
+        "(if (< new-size 0)
           -1
           new-size
-        )
-        (+ (choice-index x) (if (< new-size 0) (input-size x) 8))
-        (branch-index x)
-      )
+        )"
+        "(+ (choice-index x) (if (< new-size 0) (input-size x) 8))"
+        "(branch-index x)"
+      ^ "
     )
   )
 )
@@ -251,14 +258,14 @@ let prelude : string =
       )
     )
     (let ((new-size (- (input-size x) 8)))
-      (mk-state
-        (if (< new-size 0)
+      " ^ mk_state
+        "(if (< new-size 0)
           -1
           new-size
-        )
-        (+ (choice-index x) (if (< new-size 0) (input-size x) 8))
-        (branch-index x)
-      )
+        )"
+        "(+ (choice-index x) (if (< new-size 0) (input-size x) 8))"
+        "(branch-index x)"
+      ^ "
     )
   )
 )
@@ -285,23 +292,23 @@ let prelude : string =
   (if (< (input-size x) 0)
     x
     (if (and (= 0 (mod size eltSize)) (>= (input-size x) size))
-      (mk-state
-        (- (input-size x) size)
-        (+ (choice-index x) size)
-        (branch-index x)
-      )
-      (mk-state
-        -1
-        (+ (choice-index x) (input-size x))
-        (branch-index x)
-      )
+      " ^  mk_state
+        "(- (input-size x) size)"
+        "(+ (choice-index x) size)"
+        "(branch-index x)"
+      ^ "
+      " ^ mk_state
+        "-1"
+        "(+ (choice-index x) (input-size x))"
+        "(branch-index x)"
+      ^ "
     )
   )
 )
 
 (declare-const initial-input-size Int)
 (assert (>= initial-input-size 0))
-(define-fun initial-state () State (mk-state initial-input-size 0 0))
+(define-fun initial-state () State " ^ mk_state "initial-input-size" "0" "0" ^ ")
 
 "
 
@@ -598,24 +605,24 @@ let mk_parse_dep_pair_with_refinement
          (if (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 0))
            (let (("^dsnd_binder_name^" (return-value "^tmp^")))
              ("^dsnd^"
-               (mk-state
-                 (input-size (after-state "^tmp^"))
-                 (choice-index (after-state "^tmp^"))
-                 (+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))
-               )
+               "^mk_state
+                 ("(input-size (after-state "^tmp^"))")
+                 ("(choice-index (after-state "^tmp^"))")
+                 ("(+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))")
+               ^"
              )
            )
-           (mk-state
-             -2
-             (choice-index (after-state "^tmp^"))
-             (+ 1 (branch-index (after-state "^tmp^")))
-           )
+           "^mk_state
+             "-2"
+             ("(choice-index (after-state "^tmp^"))")
+             ("(+ 1 (branch-index (after-state "^tmp^")))")
+           ^"
          )
-         (mk-state
-           (if (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 1)) -1 -2)
-           (choice-index (after-state "^tmp^"))
-           (+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))
-         )
+         "^mk_state
+           ("(if (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 1)) -1 -2)")
+           ("(choice-index (after-state "^tmp^"))")
+           ("(+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))")
+         ^"
        )
      )
    )
@@ -681,10 +688,10 @@ let mk_parse_ifthenelse_cons
 = let input = Printf.sprintf "%s-input" name in
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
    (if (and "^cond^" (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int counter^")))
-     ("^f_then^" (if (< (branch-index "^input^") 0) "^input^" (mk-state (input-size "^input^") (choice-index "^input^") (+ 1 (branch-index "^input^")))))
+     ("^f_then^" (if (< (branch-index "^input^") 0) "^input^" "^mk_state ("(input-size "^input^")") ("(choice-index "^input^")") ("(+ 1 (branch-index "^input^"))")^"))
      (if (not "^cond^")
        ("^f_else^" "^input^")
-       (mk-state -2 (choice-index "^input^") (+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))) ; this is a Z3 encoding artifact, not a parsing failure
+       "^mk_state "-2" ("(choice-index "^input^")") ("(+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))") ^ " ; this is a Z3 encoding artifact, not a parsing failure
      )
    )
  )
@@ -710,12 +717,12 @@ let mk_parse_ifthenelse_nil
 = let input = Printf.sprintf "%s-input" name in
   let tmp = Printf.sprintf "%s-tmp" name in
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
-   (let (("^tmp^" (if (< (branch-index "^input^") 0) "^input^" (mk-state (input-size "^input^") (choice-index "^input^") (+ 1 (branch-index "^input^"))))))
+   (let (("^tmp^" (if (< (branch-index "^input^") 0) "^input^" "^mk_state ("(input-size "^input^")") ("(choice-index "^input^")") ("(+ 1 (branch-index "^input^"))") ^ ")))
      (if (and "^cond^" (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int counter^")))
        ("^f_then^" "^tmp^")
        (if (and (not "^cond^") (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int (1 + counter)^")))
          ("^f_else^" "^tmp^")
-         (mk-state -2 (choice-index "^tmp^") (+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))) ; this is a Z3 encoding artifact, not a parsing failure
+         "^mk_state "-2" ("(choice-index "^tmp^")") ("(+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))") ^ " ; this is a Z3 encoding artifact, not a parsing failure
        )
      )
    )
@@ -743,19 +750,19 @@ let mk_parse_exact
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
   (let (("^sz^" "^size^"))
     (if (< (input-size "^input^") "^sz^")
-      (mk-state -1 (choice-index "^input^") (branch-index "^input^"))
-      (let (("^res^" ("^body^" (mk-state "^sz^" (choice-index "^input^") (branch-index "^input^")))))
-        (mk-state
-          (if (= (input-size "^res^") 0)
+      "^mk_state "-1" ("(choice-index "^input^")") ("(branch-index "^input^")") ^ "
+      (let (("^res^" ("^body^" "^mk_state sz ("(choice-index "^input^")") ("(branch-index "^input^")")^")))
+        " ^ mk_state
+          ("(if (= (input-size "^res^") 0)
             (- (input-size "^input^") "^sz^")
             (if (> (input-size "^res^") 0)
               -1
               (input-size "^res^")
             )
-          )
-          (choice-index "^res^")
-          (branch-index "^res^")
-        )
+          )")
+          ("(choice-index "^res^")")
+          ("(branch-index "^res^")")
+        ^"
       )
     )
   )
@@ -886,7 +893,7 @@ let mk_parse_string
 "(define-fun-rec "^name^" ("^binders^"("^input^" State)) State
   (let (("^tmp^" ("^body^" "^input^")))
     (if (< (choice-index (after-state "^tmp^")) 0)
-      (mk-state -1 (choice-index (after-state "^tmp^")) (branch-index (after-state "^tmp^")))
+      "^mk_state "-1" ("(choice-index (after-state "^tmp^"))") ("(branch-index (after-state "^tmp^"))") ^ "
       (if (= (return-value "^tmp^") "^terminator^")
         (after-state "^tmp^")
         ("^rec_call^" (after-state "^tmp^"))
@@ -1766,12 +1773,13 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
   Printf.sprintf
 "
 %s
-(define-fun negative-state-witness () State (%s (mk-state initial-input-size 0 -1))) ; branch trace is ignored for the second parser
+(define-fun negative-state-witness () State (%s %s)) ; branch trace is ignored for the second parser
 (assert (not (= (input-size negative-state-witness) 0))) ; test cases that do not consume everything are considered failing
 (assert (>= (input-size negative-state-witness) -1)) ; do not record tests that artificially fail due to SMT2 encoding
 "
   (mk_get_positive_test_witness name1 l)
   call2
+  (mk_state "initial-input-size" "0" "-1")
 
 let do_diff_test_for
   (out_dir: string) (counter: ref nat) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 (args: list (string & arg_type)) (nargs: nat { nargs == count_args (List.Tot.map snd args) }) validator_name1 validator_name2 nbwitnesses depth =
