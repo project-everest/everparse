@@ -1,4 +1,5 @@
 module CDDL.Pulse.Misc
+#lang-pulse
 include CDDL.Spec.Misc
 include CDDL.Pulse.Base
 open Pulse.Lib.Pervasives
@@ -12,7 +13,6 @@ module SZ = FStar.SizeT
 module U64 = FStar.UInt64
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_uint
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -26,10 +26,8 @@ fn impl_uint
     let mt = cbor_get_major_type c;
     (mt = cbor_major_type_uint64)
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_neg_int
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -43,10 +41,8 @@ fn impl_neg_int
     let mt = cbor_get_major_type c;
     (mt = cbor_major_type_neg_int64)
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_uint_range
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -67,10 +63,8 @@ fn impl_uint_range
       false
     }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_neg_int_range
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -91,7 +85,6 @@ fn impl_neg_int_range
       false
     }
 }
-```
 
 module I64 = FStar.Int64
 module Cast = FStar.Int.Cast
@@ -114,7 +107,6 @@ let impl_int_range
         _
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_uint_literal
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -135,10 +127,8 @@ fn impl_uint_literal
         false
     }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_neg_int_literal
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -159,10 +149,8 @@ fn impl_neg_int_literal
         false
     }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn with_cbor_literal_int
     (#t: Type0)
     (#vmatch: perm -> t -> cbor -> slprop)
@@ -181,10 +169,8 @@ fn with_cbor_literal_int
   elim_int64 c;
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_bytes
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -198,10 +184,8 @@ fn impl_bytes
     let mt = cbor_get_major_type c;
     (mt = cbor_major_type_byte_string)
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_text
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -215,12 +199,10 @@ fn impl_text
     let mt = cbor_get_major_type c;
     (mt = cbor_major_type_text_string)
 }
-```
 
 let _ = SZ.t // FIXME: WHY WHY WHY? Pulse will complain otherwise
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_str_size
     (#t: Type u#0)
     (#vmatch: perm -> t -> cbor -> slprop)
@@ -246,10 +228,8 @@ fn impl_str_size
         false
     }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_simple
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -263,10 +243,8 @@ fn impl_simple
     let mt = cbor_get_major_type c;
     (mt = cbor_major_type_simple_value)
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_simple_literal
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -287,10 +265,8 @@ fn impl_simple_literal
       false
     }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn with_cbor_literal_simple
     (#t: Type0)
     (#vmatch: perm -> t -> cbor -> slprop)
@@ -308,7 +284,6 @@ fn with_cbor_literal_simple
   elim_simple c;
   res
 }
-```
 
 [@@CMacro]
 let cddl_simple_value_false : simple_value = 20uy
@@ -327,7 +302,6 @@ let impl_bool
     (impl_simple_literal cbor_get_major_type cbor_destr_simple cddl_simple_value_true)
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_tagged_some
   (#ty: Type u#0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -357,10 +331,8 @@ fn impl_tagged_some
     false
   }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_tagged_none
   (#ty: Type u#0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -383,10 +355,8 @@ fn impl_tagged_none
     false
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_det_cbor
   (#ty #ty': Type u#0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -414,9 +384,8 @@ fn impl_det_cbor
         false
       }
       Some r -> {
-        let res = fst r;
-        let rem = snd r;
-        unfold (cbor_det_parse_post vmatch' pl pm pv (Some r));
+        let res, rem = r;
+        unfold (cbor_det_parse_post vmatch' pl pm pv (Some (res, rem)));
         unfold (cbor_det_parse_post_some vmatch' pl pm pv res rem);
         Trade.trans _ _ (vmatch p c v);
         with pres vres . assert (vmatch' pres res vres);
@@ -438,5 +407,4 @@ fn impl_det_cbor
     false
   }
 }
-```
 

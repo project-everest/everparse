@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Iterator
+#lang-pulse
 include CBOR.Pulse.Raw.Iterator.Base
 open CBOR.Pulse.Raw.Util
 open Pulse.Lib.Pervasives
@@ -11,6 +12,7 @@ module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
 module U8 = FStar.UInt8
 module U64 = FStar.UInt64
+module Util = CBOR.Spec.Util
 
 noeq
 type cbor_raw_slice_iterator (elt: Type0) = {
@@ -28,10 +30,9 @@ let cbor_raw_slice_iterator_match
   (l: list elt_high)
 : Tot slprop
 = exists* sq .
-     pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
+     S.pts_to c.s #(pm `perm_mul` c.slice_perm) sq **
      PM.seq_list_match sq l (elt_match (pm `perm_mul` c.payload_perm))
 
-```pulse
 ghost
 fn cbor_raw_slice_iterator_match_unfold
   (#elt_low #elt_high: Type0)
@@ -66,9 +67,7 @@ ensures
   };
   Trade.intro _ _ _ aux
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_slice_iterator_match_fold
   (#elt_low #elt_high: Type0)
@@ -91,6 +90,9 @@ ensures
 {
   S.share c.s;
   half_mul pm c.slice_perm;
+  with _pm _sq.
+    rewrite pts_to c.s #_pm _sq as pts_to c'.s #_pm _sq;
+  rewrite each _sq as sq;
   fold (cbor_raw_slice_iterator_match elt_match pm c' l);
   ghost
   fn aux ()
@@ -101,14 +103,18 @@ ensures
        )
   {
     unfold (cbor_raw_slice_iterator_match elt_match pm c' l);
-    S.gather c.s
+    with _pm _sq.
+      rewrite S.pts_to c'.s #_pm (reveal _sq) as S.pts_to c.s #_pm _sq;
+    S.gather c.s;
+    with c v m.
+      assert PM.seq_list_match #elt_low #elt_high c v m;
+    rewrite each c as sq;
+    ();
   };
   Trade.intro _ _ _ aux
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_slice_iterator_init
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -136,6 +142,7 @@ ensures exists* p .
     slice_perm = 1.0R;
     payload_perm = pm' `perm_div` pm;
   };
+  rewrite each a as c.s;
   let c' = { c with slice_perm = 0.5R };
   perm_mul_div pm pm';
   Trade.rewrite_with_trade
@@ -150,10 +157,8 @@ ensures exists* p .
   Trade.trans (cbor_raw_slice_iterator_match elt_match pm c' l) _ _;
   c'
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_slice_iterator_is_empty
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -174,10 +179,8 @@ ensures
   fold (cbor_raw_slice_iterator_match elt_match pm c r);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_slice_iterator_length
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -198,7 +201,6 @@ ensures
   fold (cbor_raw_slice_iterator_match elt_match pm c r);
   res
 }
-```
 
 noeq
 type cbor_raw_iterator (elt: Type0) =
@@ -212,7 +214,6 @@ let slice_split_right_postcond
   v' == Seq.slice v (SZ.v i) (Seq.length v)
 
 
-```pulse
 ghost
 fn slice_split_right_aux (#t: Type0) (s1: S.slice t) (p: perm) (v1: Seq.seq t) (s2: S.slice t) (v2: Seq.seq t) (i: SZ.t) (s: S.slice t) (v: Seq.seq t) (sq: squash (v == v1 `Seq.append` v2)) (_: unit)
 requires
@@ -222,10 +223,8 @@ ensures
 {
   S.join s1 s2 s
 }
-```
 
 inline_for_extraction
-```pulse
 fn slice_split_right (#t: Type0) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Seq.seq t)) (i: SZ.t)
     requires pts_to s #p v ** pure (SZ.v i <= Seq.length v)
     returns res: S.slice t
@@ -233,20 +232,14 @@ fn slice_split_right (#t: Type0) (s: S.slice t) (#p: perm) (#v: Ghost.erased (Se
       trade (pts_to res #p v') (pts_to s #p v) **
       pure (slice_split_right_postcond p v i v')
 {
-  let sp = S.split s i;
-  match sp {
-    Mktuple2 s1 s2 -> {
-      with v1 . assert (pts_to s1 #p v1);
-      with v2 . assert (pts_to s2 #p v2);
-      let sq : squash (Ghost.reveal v == v1 `Seq.append` v2) = Seq.lemma_split v (SZ.v i);
-      Trade.intro _ _ _ (slice_split_right_aux s1 p v1 s2 v2 i s v sq);
-      s2
-    }
-  }
+  let s1, s2 = S.split s i;
+  with v1 . assert (pts_to s1 #p v1);
+  with v2 . assert (pts_to s2 #p v2);
+  let sq : squash (Ghost.reveal v == v1 `Seq.append` v2) = Seq.lemma_split v (SZ.v i);
+  Trade.intro _ _ _ (slice_split_right_aux s1 p v1 s2 v2 i s v sq);
+  s2
 }
-```
 
-```pulse
 ghost
 fn trade_partial_trans
   (a b c d e: slprop)
@@ -261,9 +254,7 @@ ensures
   Trade.reg_r (d ** c) e b;
   Trade.trans (d ** a) ((d ** c) ** b) (e ** b)
 }
-```
 
-```pulse
 ghost
 fn trade_partial_trans_2
   (a b c d: slprop)
@@ -275,10 +266,8 @@ ensures
   Trade.reg_l b c d;
   Trade.trans a (b ** c) (b ** d)
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_slice_iterator_next
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -312,6 +301,7 @@ ensures
   let s' = slice_split_right i.s 1sz; // 3: pts_to s' _ @==> pts_to i.s _
   S.pts_to_len s';
   let i1 = { i with s = s' };
+  rewrite each s' as i1.s;
   let i' = { i1 with slice_perm = i.slice_perm /. 2.0R };
   pi := CBOR_Raw_Iterator_Slice i';
   cbor_raw_slice_iterator_match_fold elt_match pm i1 i' (List.Tot.tl l) _; // 4: cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l) @==> (pts_to s' _ ** PM.seq_list_match _ (List.Tot.tl l) _)
@@ -325,7 +315,7 @@ ensures
   trade_partial_trans_2 // uses 3, 5
     (elt_match (pm `perm_mul` i.payload_perm) res (List.Tot.hd l) ** cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l))
     (PM.seq_list_match _ l (elt_match (pm `perm_mul` i.payload_perm)))
-    (pts_to s' #(pm `perm_mul` i.slice_perm) _)
+    (pts_to i1.s #(pm `perm_mul` i.slice_perm) _)
     (pts_to i.s #(pm `perm_mul` i.slice_perm) _); // 6: elt_match _ _ (List.Tot.hd l) ** cbor_raw_slice_iterator_match elt_match pm i' (List.Tot.tl l) @==> PM.seq_list_match _ l _ ** pts_to i.s _
   slprop_equivs ();
   Trade.trans
@@ -336,7 +326,6 @@ ensures
   rewrite (elt_match (pm `perm_mul` i.payload_perm) (Seq.head sq) (List.Tot.hd l)) as (elt_match (pm `perm_mul` i.payload_perm) res (List.Tot.hd l)); // FIXME: automate this step away; it is the only occurrence of `sq`, see the `assert` above
   res
 }
-```
 
 let cbor_raw_iterator_match
   (#elt_low #elt_high: Type0)
@@ -351,7 +340,6 @@ let cbor_raw_iterator_match
   | CBOR_Raw_Iterator_Serialized c' -> ser_match pm c' l
 
 inline_for_extraction
-```pulse
 fn cbor_raw_iterator_init_from_slice
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -383,7 +371,6 @@ ensures exists* p .
   Trade.trans (cbor_raw_iterator_match elt_match ser_match p res l) _ _;
   res
 }
-```
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_is_empty_t
@@ -400,7 +387,6 @@ let cbor_raw_serialized_iterator_is_empty_t
     )
 
 inline_for_extraction
-```pulse
 fn cbor_raw_iterator_is_empty
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -435,7 +421,6 @@ ensures
     }
   }
 }
-```
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_length_t
@@ -452,7 +437,6 @@ let cbor_raw_serialized_iterator_length_t
     )
 
 inline_for_extraction
-```pulse
 fn cbor_raw_iterator_length
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -487,7 +471,6 @@ ensures
     }
   }
 }
-```
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_next_t
@@ -515,7 +498,6 @@ let cbor_raw_serialized_iterator_next_t
     pure (Ghost.reveal l == a :: q)
   )
 
-```pulse
 ghost
 fn trade_partial_trans_3
   (a b c d: slprop)
@@ -527,10 +509,8 @@ ensures
   Trade.reg_l a d b;
   Trade.trans (a ** d) (a ** b) c
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_iterator_next
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -599,7 +579,6 @@ ensures
     }
   }
 }
-```
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_truncate_t
@@ -621,10 +600,7 @@ let cbor_raw_serialized_iterator_truncate_t
         (ser_match pm c r)
     )
 
-module Util = CBOR.Spec.Util
-
 inline_for_extraction
-```pulse
 fn cbor_raw_iterator_truncate
   (#elt_low #elt_high: Type0)
   (elt_match: perm -> elt_low -> elt_high -> slprop)
@@ -660,11 +636,12 @@ ensures
       let l2 = Ghost.hide (snd l1l2);
       let s1 = Ghost.hide (Seq.slice s 0 (U64.v len));
       let s2 = Ghost.hide (Seq.slice s (U64.v len) (Seq.length s));
+      rewrite each s as (s1 `Seq.append` s2);
       PM.seq_list_match_append_elim_trade (elt_match (pm `perm_mul` c'.payload_perm)) s1 l1 s2 l2;
-      Trade.elim_hyp_r _ _ (PM.seq_list_match s l (elt_match (pm `perm_mul` c'.payload_perm)));
+      Trade.elim_hyp_r _ _ (PM.seq_list_match (s1 `Seq.append` s2) l (elt_match (pm `perm_mul` c'.payload_perm)));
       Trade.trans_hyp_r _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
       assume (pure (SZ.fits_u64));
-      let Mktuple2 sl1 sl2 = S.split_trade c'.s (SZ.uint64_to_sizet len);
+      let sl1, sl2 = S.split_trade c'.s (SZ.uint64_to_sizet len);
       S.pts_to_len sl1;
       Trade.elim_hyp_r _ _ (pts_to c'.s #(pm `perm_mul` c'.slice_perm) s);
       Trade.trans_hyp_l _ _ _ (cbor_raw_iterator_match elt_match ser_match pm c r);
@@ -674,6 +651,7 @@ ensures
         slice_perm = pm `perm_mul` c'.slice_perm;
         payload_perm = pm `perm_mul` c'.payload_perm;
       };
+      rewrite each sl1 as c1.s;
       let c' = {
         c1 with slice_perm = c1.slice_perm /. 2.0R;
       };
@@ -700,9 +678,7 @@ ensures
     }
   }
 }
-```
 
-```pulse
 ghost
 fn rec cbor_raw_share_slice // TODO: reuse this proof in CBOR.Pulse.Raw.Match.Perm
   (#elt_low #elt_high: Type0)
@@ -735,15 +711,20 @@ decreases r
       PM.seq_list_match_nil_intro c r (elt_match (p /. 2.0R))
     }
     a :: q -> {
-      PM.seq_list_match_cons_elim c r (elt_match p);
-      elt_share p (Seq.head c) (List.Tot.hd r); // FIXME: WHY WHY WHY does `a` not work if the head symbol is a variable?
+      rewrite each r as (a :: q);
+      PM.seq_list_match_cons_elim c (a :: q) (elt_match p);
+      rewrite each List.Tot.hd (a :: q) as a;
+      (* ^ Why!? *)
+
+      elt_share p (Seq.head c) a;
       cbor_raw_share_slice elt_match p (Seq.tail c) q elt_share ();
-      PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd r) (Seq.tail c) q (elt_match (p /. 2.0R));
-      PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd r) (Seq.tail c) q (elt_match (p /. 2.0R));
+      PM.seq_list_match_cons_intro (Seq.head c) a (Seq.tail c) q (elt_match (p /. 2.0R));
+      PM.seq_list_match_cons_intro (Seq.head c) a (Seq.tail c) q (elt_match (p /. 2.0R));
+      rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+      ();
     }
   }
 }
-```
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_share_t
@@ -760,7 +741,6 @@ let cbor_raw_serialized_iterator_share_t
       ser_match (pm /. 2.0R) c r
     )
 
-```pulse
 ghost
 fn cbor_raw_iterator_share
   (#elt_low #elt_high: Type0)
@@ -814,9 +794,7 @@ ensures
     }
   }
 }
-```
 
-```pulse
 ghost
 fn rec cbor_raw_gather_slice
   (#elt_low #elt_high: Type0)
@@ -850,21 +828,61 @@ decreases r1
   PM.seq_list_match_length (elt_match p1) c r1;
   PM.seq_list_match_length (elt_match p2) c r2;
   match r1 {
-    Nil -> {
-      PM.seq_list_match_nil_elim c r1 (elt_match p1);
+    [] -> {
+      PM.seq_list_match_nil_elim c Nil (elt_match p1);
       PM.seq_list_match_nil_elim c r2 (elt_match p2);
       PM.seq_list_match_nil_intro c r1 (elt_match (p1 +. p2));
     }
     a :: q -> {
-      PM.seq_list_match_cons_elim c r1 (elt_match p1);
+      PM.seq_list_match_cons_elim c (a :: q) (elt_match p1);
+      rewrite each List.Tot.hd (a :: q) as a;
       PM.seq_list_match_cons_elim c r2 (elt_match p2);
-      elt_gather p1 (Seq.head c) (List.Tot.hd r1) p2 (List.Tot.hd r2);
+      elt_gather p1 (Seq.head c) a p2 (List.Tot.hd r2);
       cbor_raw_gather_slice elt_match p1 (Seq.tail c) q p2 (List.Tot.tl r2) elt_gather ();
-      PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd r1) (Seq.tail c) q (elt_match (p1 +. p2));
+      PM.seq_list_match_cons_intro (Seq.head c) a (Seq.tail c) q (elt_match (p1 +. p2));
+      rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
+      ()
     }
   }
 }
-```
+
+(* This is a hack to deal with ambiguity. *)
+
+let tag (s: slprop) = s
+
+ghost
+fn cbor_raw_gather_slice_TAGGED
+  (#elt_low #elt_high: Type0)
+  (elt_match: perm -> elt_low -> elt_high -> slprop)
+  (p1: perm)
+  (c: Seq.seq elt_low)
+  (r1: list elt_high)
+  (p2: perm)
+  (r2: list elt_high)
+  (elt_gather: (
+    (p1': perm) ->
+    (c': elt_low) ->
+    (r1': elt_high) ->
+    (p2': perm) ->
+    (r2': elt_high { r1' << r1 }) ->
+    stt_ghost unit emp_inames
+      (elt_match p1' c' r1' ** elt_match p2' c' r2')
+      (fun _ -> elt_match (p1' +. p2') c' r1' **
+        pure (r1' == r2')
+      )
+  ))
+  (_: unit)
+requires
+  tag (PM.seq_list_match c r1 (elt_match p1)) **
+  PM.seq_list_match c r2 (elt_match p2)
+ensures
+  PM.seq_list_match c r1 (elt_match (p1 +. p2)) **
+  pure (r1 == r2)
+{
+  unfold tag;
+  cbor_raw_gather_slice elt_match p1 c r1 p2 r2 elt_gather ();
+}
+
 
 inline_for_extraction
 let cbor_raw_serialized_iterator_gather_t
@@ -883,7 +901,6 @@ let cbor_raw_serialized_iterator_gather_t
       pure (r1 == r2)
     )
 
-```pulse
 ghost
 fn cbor_raw_iterator_gather
   (#elt_low #elt_high: Type0)
@@ -914,35 +931,31 @@ ensures
     cbor_raw_iterator_match elt_match ser_match (pm1 +. pm2) c r1 **
     pure (r1 == r2)
 {
+  unfold (cbor_raw_iterator_match elt_match ser_match pm1 c r1);
+  unfold (cbor_raw_iterator_match elt_match ser_match pm2 c r2);
   match c {
     CBOR_Raw_Iterator_Slice c' -> {
-      rewrite (cbor_raw_iterator_match elt_match ser_match pm1 c r1)
-        as (cbor_raw_slice_iterator_match elt_match pm1 c' r1);
-      unfold (cbor_raw_slice_iterator_match elt_match pm1 c' r1);
-      rewrite (cbor_raw_iterator_match elt_match ser_match pm2 c r2)
-        as (cbor_raw_slice_iterator_match elt_match pm2 c' r2);
-      unfold (cbor_raw_slice_iterator_match elt_match pm2 c' r2);
+      unfold cbor_raw_slice_iterator_match elt_match pm1 c' r1;
+      with gs1. assert PM.seq_list_match gs1 r1 (elt_match (perm_mul pm1 c'.payload_perm));
+      rewrite PM.seq_list_match gs1 r1 (elt_match (perm_mul pm1 c'.payload_perm))
+           as tag (PM.seq_list_match gs1 r1 (elt_match (perm_mul pm1 c'.payload_perm)));
+
+      unfold cbor_raw_slice_iterator_match elt_match pm2 c' r2;
       S.gather c'.s;
       perm_mul_add_l pm1 pm2 c'.slice_perm;
-      with cs . assert (pts_to c'.s #((pm1 +. pm2) *. c'.slice_perm) cs);
-      cbor_raw_gather_slice elt_match (pm1 *. c'.payload_perm) cs r1 (pm2 *. c'.payload_perm) r2 elt_gather ();
+
+      cbor_raw_gather_slice_TAGGED
+        elt_match (pm1 *. c'.payload_perm) _ r1 (pm2 *. c'.payload_perm) r2 elt_gather ();
       perm_mul_add_l pm1 pm2 c'.payload_perm;
       fold (cbor_raw_slice_iterator_match elt_match (pm1 +. pm2) c' r1);
-      rewrite (cbor_raw_slice_iterator_match elt_match (pm1 +. pm2) c' r1)
-        as (cbor_raw_iterator_match elt_match ser_match (pm1 +. pm2) c r1);
+      fold (cbor_raw_iterator_match elt_match ser_match (pm1 +. pm2) (CBOR_Raw_Iterator_Slice c') r1);
     }
     CBOR_Raw_Iterator_Serialized c' -> {
-      rewrite (cbor_raw_iterator_match elt_match ser_match pm1 c r1)
-        as (ser_match pm1 c' r1);
-      rewrite (cbor_raw_iterator_match elt_match ser_match pm2 c r2)
-        as (ser_match pm2 c' r2);
       phi c' #pm1 #r1 #pm2 #r2;
-      rewrite (ser_match (pm1 +. pm2) c' r1)
-        as (cbor_raw_iterator_match elt_match ser_match (pm1 +. pm2) c r1);
+      fold (cbor_raw_iterator_match elt_match ser_match (pm1 +. pm2) (CBOR_Raw_Iterator_Serialized c') r1);
     }
   }
 }
-```
 
 let rec seq_of_list_splitAt
   (#t: Type)

@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.EverParse.Format
+#lang-pulse
 open LowParse.Pulse.Int
 open LowParse.Pulse.BitSum
 open LowParse.Pulse.SeqBytes
@@ -22,7 +23,6 @@ let read_initial_byte_t : leaf_reader serialize_initial_byte_t =
   leaf_reader_of_reader read_initial_byte_t'
 *)
 
-```pulse
 fn read_initial_byte_t (_: unit) : leaf_reader #initial_byte_t #(parse_filter_kind parse_u8_kind) #parse_initial_byte_t serialize_initial_byte_t =
   (input: Pulse.Lib.Slice.slice byte)
   (#pm: perm)
@@ -30,7 +30,6 @@ fn read_initial_byte_t (_: unit) : leaf_reader #initial_byte_t #(parse_filter_ki
 {
   leaf_reader_of_reader read_initial_byte_t' input #pm #v
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -319,7 +318,6 @@ let read_header' : reader serialize_header =
     )
     _
 
-```pulse
 fn read_header (_: unit) : leaf_reader #header #parse_header_kind #parse_header serialize_header =
   (input: Pulse.Lib.Slice.slice byte)
   (#pm: perm)
@@ -327,7 +325,6 @@ fn read_header (_: unit) : leaf_reader #header #parse_header_kind #parse_header 
 {
   leaf_reader_of_reader read_header' input #pm #v
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -604,7 +601,6 @@ let jump_long_argument
       (jump_long_argument_8 b)
       (jump_long_argument_not_8 b)
 
-```pulse
 fn validate_header (_: unit) : validator #header #parse_header_kind parse_header =
   (input: _)
   (poffset: _)
@@ -615,9 +611,7 @@ fn validate_header (_: unit) : validator #header #parse_header_kind parse_header
   validate_dtuple2 validate_initial_byte (leaf_reader_of_reader read_initial_byte) validate_long_argument
     input poffset #offset #pm #v
 }
-```
 
-```pulse
 fn jump_header (_: unit) : jumper #header #parse_header_kind parse_header =
   (input: _)
   (offset: _)
@@ -627,7 +621,6 @@ fn jump_header (_: unit) : jumper #header #parse_header_kind parse_header =
   jump_dtuple2 jump_initial_byte (leaf_reader_of_reader read_initial_byte) jump_long_argument
     input offset #pm #v
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -664,7 +657,6 @@ let validate_leaf_content_seq'
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn validate_leaf_content_seq
   (sq: squash (SZ.fits_u64))
   (h: header)
@@ -679,7 +671,6 @@ fn validate_leaf_content_seq
   let n = SZ.uint64_to_sizet (get_header_argument_as_uint64 h);
   validate_leaf_content_seq' h prf n input poffset;
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -767,7 +758,6 @@ let jump_leaf
     (read_header ())
     (jump_leaf_content sq)
 
-```pulse
 fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   validate_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
 =
@@ -782,46 +772,42 @@ fn validate_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
     (serialize_dtuple2 serialize_header serialize_leaf_content)
     a;
-  let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
-  match spl { Mktuple2 input1 input2 -> {
-    unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
-    unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
-    let h = read_header () input1;
-    elim_trade
-      (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
-      (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
-    elim_trade _ _;
-    let typ = get_header_major_type h;
-    if (typ = cbor_major_type_array) {
-      let arg64 = get_header_argument_as_uint64 h;
-      prem := SZ.uint64_to_sizet arg64;
+  let input1, input2 = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
+  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va (input1, input2));
+  unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
+  let h = read_header () input1;
+  elim_trade
+    (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
+    (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  elim_trade _ _;
+  let typ = get_header_major_type h;
+  if (typ = cbor_major_type_array) {
+    let arg64 = get_header_argument_as_uint64 h;
+    prem := SZ.uint64_to_sizet arg64;
+    false
+  }
+  else if (typ = cbor_major_type_map) {
+    let arg64 = get_header_argument_as_uint64 h;
+    let arg = SZ.uint64_to_sizet arg64;
+    if SZ.gt arg bound {
+      true
+    } else if SZ.lt (SZ.sub bound arg) arg {
+      true
+    } else {
+      prem := (SZ.add arg arg);
       false
     }
-    else if (typ = cbor_major_type_map) {
-      let arg64 = get_header_argument_as_uint64 h;
-      let arg = SZ.uint64_to_sizet arg64;
-      if SZ.gt arg bound {
-        true
-      } else if SZ.lt (SZ.sub bound arg) arg {
-        true
-      } else {
-        prem := (SZ.add arg arg);
-        false
-      }
-    }
-    else if (typ = cbor_major_type_tagged) {
-      prem := 1sz;
-      false
-    }
-    else {
-      prem := 0sz;
-      false
-    }
-  }}
+  }
+  else if (typ = cbor_major_type_tagged) {
+    prem := 1sz;
+    false
+  }
+  else {
+    prem := 0sz;
+    false
+  }
 }
-```
 
-```pulse
 fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
   jump_recursive_step_count #parse_raw_data_item_param serialize_raw_data_item_param
 =
@@ -834,34 +820,31 @@ fn jump_recursive_step_count_leaf (_: squash SZ.fits_u64) :
     (serializer_of_tot_serializer serialize_raw_data_item_param.serialize_header)
     (serialize_dtuple2 serialize_header serialize_leaf_content)
     a;
-  let spl = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
-  match spl { Mktuple2 input1 input2 -> {
-    unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va spl);
-    unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
-    let h = read_header () input1;
-    elim_trade
-      (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
-      (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
-    elim_trade _ _;
-    let typ = get_header_major_type h;
-    if (typ = cbor_major_type_array) {
-      let arg64 = get_header_argument_as_uint64 h;
-      SZ.uint64_to_sizet arg64
-    }
-    else if (typ = cbor_major_type_map) {
-      let arg64 = get_header_argument_as_uint64 h;
-      let arg = SZ.uint64_to_sizet arg64;
-      SZ.add arg arg
-    }
-    else if (typ = cbor_major_type_tagged) {
-      1sz
-    }
-    else {
-      0sz
-    }
-  }}
+  let input1, input2 = split_dtuple2 serialize_header (jump_header ()) serialize_leaf_content a;
+  unfold (split_dtuple2_post serialize_header serialize_leaf_content a pm va (input1, input2));
+  unfold (split_dtuple2_post' serialize_header serialize_leaf_content a pm va input1 input2);
+  let h = read_header () input1;
+  elim_trade
+    (pts_to_serialized serialize_header input1 #pm (dfst va) ** pts_to_serialized (serialize_leaf_content (dfst va)) input2 #pm (dsnd va))
+    (pts_to_serialized (serialize_dtuple2 serialize_header serialize_leaf_content) a #pm va);
+  elim_trade _ _;
+  let typ = get_header_major_type h;
+  if (typ = cbor_major_type_array) {
+    let arg64 = get_header_argument_as_uint64 h;
+    SZ.uint64_to_sizet arg64
+  }
+  else if (typ = cbor_major_type_map) {
+    let arg64 = get_header_argument_as_uint64 h;
+    let arg = SZ.uint64_to_sizet arg64;
+    SZ.add arg arg
+  }
+  else if (typ = cbor_major_type_tagged) {
+    1sz
+  }
+  else {
+    0sz
+  }
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -871,7 +854,6 @@ let validate_raw_data_item' (_: squash SZ.fits_u64) : validator #raw_data_item #
     (validate_leaf ())
     (validate_recursive_step_count_leaf ())
 
-```pulse
 fn validate_raw_data_item (_: squash SZ.fits_u64) : validator #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
   (input: _)
   (poffset: _)
@@ -882,7 +864,6 @@ fn validate_raw_data_item (_: squash SZ.fits_u64) : validator #raw_data_item #pa
   validate_raw_data_item' ()
     input poffset #offset #pm #v
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -892,7 +873,6 @@ let jump_raw_data_item' (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_r
     (jump_leaf ())
     (jump_recursive_step_count_leaf ())
 
-```pulse
 fn jump_raw_data_item (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_raw_data_item_kind parse_raw_data_item =
   (input: _)
   (offset: _)
@@ -902,11 +882,9 @@ fn jump_raw_data_item (_: squash SZ.fits_u64) : jumper #raw_data_item #parse_raw
   jump_raw_data_item' ()
     input offset #pm #v
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn get_header_and_contents
   (input: S.slice byte)
   (outh: R.ref header)
@@ -932,20 +910,16 @@ fn get_header_and_contents
     input;
   Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
   with v' . assert (pts_to_serialized (serialize_dtuple2 serialize_header serialize_content) input #pm v');
-  let spl = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
-  match spl { Mktuple2 ph outc -> {
-    unfold (split_dtuple2_post serialize_header serialize_content input pm v' spl);
-    unfold (split_dtuple2_post' serialize_header serialize_content input pm v' ph outc);
-    Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
-    let h = read_header () ph;
-    Trade.elim_hyp_l _ _ _;
-    outh := h;
-    outc
-  }}
+  let ph, outc = split_dtuple2 serialize_header (jump_header ()) serialize_content input;
+  unfold (split_dtuple2_post serialize_header serialize_content input pm v' (ph, outc));
+  unfold (split_dtuple2_post' serialize_header serialize_content input pm v' ph outc);
+  Trade.trans _ _ (pts_to_serialized serialize_raw_data_item input #pm v);
+  let h = read_header () ph;
+  Trade.elim_hyp_l _ _ _;
+  outh := h;
+  outc
 }
-```
 
-```pulse
 ghost
 fn get_string_payload
   (input: S.slice byte)
@@ -972,9 +946,7 @@ fn get_string_payload
     (pts_to input #pm v2);
   Trade.trans _ _ (pts_to_serialized (serialize_content h) input #pm c)
 }
-```
 
-```pulse
 ghost
 fn get_tagged_payload
   (input: S.slice byte)
@@ -993,9 +965,7 @@ fn get_tagged_payload
     serialize_raw_data_item
     input
 }
-```
 
-```pulse
 ghost
 fn get_array_payload'
   (input: S.slice byte)
@@ -1014,9 +984,7 @@ fn get_array_payload'
     (L.serialize_nlist (U64.v (Array?.len v).value) serialize_raw_data_item)
     input
 }
-```
 
-```pulse
 ghost
 fn get_array_payload
   (input: S.slice byte)
@@ -1029,9 +997,7 @@ fn get_array_payload
 {
   get_array_payload' input v
 }
-```
 
-```pulse
 ghost
 fn get_map_payload'
   (input: S.slice byte)
@@ -1050,9 +1016,7 @@ fn get_map_payload'
     (L.serialize_nlist (U64.v (Map?.len v).value) (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item))
     input
 }
-```
 
-```pulse
 ghost
 fn get_map_payload
   (input: S.slice byte)
@@ -1065,4 +1029,3 @@ fn get_map_payload
 {
   get_map_payload' input v
 }
-```

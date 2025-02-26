@@ -1,4 +1,5 @@
 module CBORTest.Base
+#lang-pulse
 open CBOR.Spec.Constants
 open Pulse.Lib.Pervasives
 module A = Pulse.Lib.Array
@@ -70,7 +71,6 @@ noextract [@@noextract_to "krml"]
 let exit_impossible : I32.t = 2l
 
 inline_for_extraction
-```pulse
 fn slice_from_array_trade
   (#t: Type) (a: A.array t) (#p: perm) (alen: SZ.t) (#v: Ghost.erased (Seq.seq t))
   requires
@@ -93,12 +93,10 @@ fn slice_from_array_trade
   Trade.intro _ _ _ aux;
   s
 }
-```
 
 #restart-solver
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn test_on
   (#cbor_t: Type0)
   (cbor_match: perm -> cbor_t -> Spec.cbor -> slprop)
@@ -175,7 +173,6 @@ ensures
     }
   }
 }
-```
 
 #pop-options
 
@@ -216,7 +213,6 @@ let intro_res_post_impossible (_: squash False) : res_t = exit_impossible
 #restart-solver
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn aux
   (#cbor_t: Type0)
   (#cbor_match: perm -> cbor_t -> Spec.cbor -> slprop)
@@ -269,7 +265,7 @@ ensures
             intro_res_post_impossible ()
           }
           Some sr1 -> {
-            let Mktuple2 test1 r1 = sr1;
+            let test1, r1 = sr1;
             unfold (Base.cbor_det_parse_post cbor_match out1 1.0R v1 (Some (test1, r1)));
             unfold (Base.cbor_det_parse_post_some cbor_match out1 1.0R v1 test1 r1);
             with vtest1 . assert (cbor_match 1.0R test1 vtest1);
@@ -294,7 +290,7 @@ ensures
                 S.to_array out1;
                 intro_res_post_impossible ()
               } else {
-                let Mktuple2 out2 rem2 = SU.split_trade out1 size1;
+                let out2, rem2 = SU.split_trade out1 size1;
                 with v2 . assert (pts_to out2 v2);
                 Seq.append_empty_r (Spec.cbor_det_serialize v);
                 let ps2 = cbor_parse_from_slice out2;
@@ -306,7 +302,7 @@ ensures
                     intro_res_post_impossible ()
                   }
                   Some sr2 -> {
-                    let Mktuple2 test2 r2 = sr2;
+                    let test2, r2 = sr2;
                     unfold (Base.cbor_det_parse_post cbor_match out2 1.0R v2 (Some (test2, r2)));
                     unfold (Base.cbor_det_parse_post_some cbor_match out2 1.0R v2 test2 r2);
                     Trade.trans_hyp_l _ _ _ (pts_to out1 _);
@@ -348,12 +344,10 @@ ensures
     }
   }
 }
-```
 
 #restart-solver
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn main
   (#cbor_t: Type0)
   (#cbor_map_entry_t: Type0)
@@ -457,6 +451,5 @@ ensures emp
   Trade.elim (cbor_match _ test _) _;
   res
 }
-```
 
 #pop-options

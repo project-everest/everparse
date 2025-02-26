@@ -15,6 +15,7 @@
 *)
 
 module CDDLExtractionTest.Assume
+#lang-pulse
 open CBOR.Spec
 open CDDL.Spec
 open CBOR.Pulse
@@ -24,7 +25,6 @@ assume val mytype: typ
 
 assume val impl_mytype: impl_typ mytype
 
-```pulse
 fn test
     (c: cbor)
     (v: Ghost.erased raw_data_item)
@@ -37,4 +37,3 @@ ensures
     let unused = impl_mytype c;
     ()
 }
-```

@@ -1,4 +1,5 @@
 module CDDL.Pulse.Parse.MapGroup
+#lang-pulse
 include CDDL.Pulse.MapGroup
 include CDDL.Pulse.Parse.Base
 open Pulse.Lib.Pervasives
@@ -71,7 +72,6 @@ let impl_zero_copy_map_group
 module Util = CBOR.Spec.Util
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_map
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -99,7 +99,6 @@ fn impl_zero_copy_map
   parser_spec_map_group_eq t ps (spec_map_group_serializable (Ghost.reveal tgt_size) (Ghost.reveal tgt_serializable)) v; // FIXME: WHY WHY WHY does the pattern not trigger?
   pa c m1 m2
 }
-```
 
 unfold
 let impl_zero_copy_map_ext_precond
@@ -125,7 +124,6 @@ let impl_zero_copy_map_ext_precond
       )
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_map_ext
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -157,7 +155,6 @@ fn impl_zero_copy_map_ext
 {
   pa1 c v1 v2
 }
-```
 
 #set-options "--print_implicits"
 
@@ -166,7 +163,6 @@ fn impl_zero_copy_map_ext
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_map_choice
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -235,10 +231,8 @@ fn impl_zero_copy_map_choice
     res
   }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_map_zero_or_one
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -289,7 +283,6 @@ fn impl_zero_copy_map_zero_or_one
     res
   }
 }
-```
 
 let half_plus_half_eq
   (p: perm)
@@ -300,7 +293,6 @@ let half_plus_half_eq
 #restart-solver
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_map_concat
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -381,10 +373,8 @@ fn impl_zero_copy_map_concat
   Trade.trans _ _ (vmatch p c v);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_zero_copy_match_item_for_cont
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -420,16 +410,14 @@ fn impl_zero_copy_match_item_for_cont
 {
   let ow = get c ck;
   let Some w = ow;
-  unfold (map_get_post vmatch c p v key ow);
+  unfold (map_get_post vmatch c p v key (Some w));
   unfold (map_get_post_some vmatch c p v key w);
   let res = ivalue w;
   Trade.trans _ _ (vmatch p c v);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_zero_copy_match_item_for
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -453,7 +441,6 @@ fn impl_zero_copy_match_item_for
 {
   lkey _ _ _ (impl_zero_copy_match_item_for_cont get key cut ivalue c #p #v v1 v2)
 }
-```
 
 #pop-options
 
@@ -738,7 +725,6 @@ let rel_map_iterator
     pure (rel_map_iterator_cond i s l)
   )
 
-```pulse
 ghost
 fn rel_map_iterator_prop
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
@@ -760,7 +746,6 @@ ensures
   map_of_list_pair_no_repeats_key i.eq1 (parse_table_entries i.sp1.parser i.tex i.ps2 l);  
   fold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i s)
 }
-```
 
 inline_for_extraction
 let cddl_map_iterator_is_empty_t
@@ -816,7 +801,6 @@ let rec rel_map_iterator_cond_is_empty
     else ()
 
 inline_for_extraction
-```pulse
 fn cddl_map_iterator_is_empty
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#ty2: Type0) (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
@@ -889,7 +873,6 @@ fn cddl_map_iterator_is_empty
   rel_map_iterator_cond_is_empty i l li;
   !pres
 }
-```
 
 inline_for_extraction
 let cddl_map_iterator_next_t
@@ -918,7 +901,6 @@ let cddl_map_iterator_next_t
       )
     )
 
-```pulse
 ghost
 fn rel_map_iterator_fold
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) 
@@ -966,10 +948,8 @@ ensures exists* l .
   };
   Trade.intro _ _ _ aux
 }
-```
 
 inline_for_extraction
-```pulse
 fn cddl_map_iterator_next
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#ty2: Type0) (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
@@ -1093,7 +1073,6 @@ fn cddl_map_iterator_next
   pi := i';
   res
 }
-```
 
 let list_assoc_no_repeats_mem'
   (#tk: eqtype)
@@ -1240,7 +1219,6 @@ let impl_zero_copy_map_zero_or_more_aux
   ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_map_zero_or_more'
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -1295,10 +1273,8 @@ fn impl_zero_copy_map_zero_or_more'
   impl_zero_copy_map_zero_or_more_aux key_eq sp1 r1 key_except sp2 r2 v v1 v2 (pl /. 2.0R) res i l s;
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_map_zero_or_more
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -1352,4 +1328,3 @@ fn impl_zero_copy_map_zero_or_more
   Trade.trans _ _ (vmatch p c v);
   res
 }
-```

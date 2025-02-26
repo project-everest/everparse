@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.EverParse.Iterator
+#lang-pulse
 open CBOR.Spec.Util
 open CBOR.Pulse.Raw.Util
 open CBOR.Pulse.Raw.Iterator
@@ -27,7 +28,6 @@ let cbor_raw_serialized_iterator_match
      l == fst (List.Tot.splitAt (U64.v c.len) l')
   )
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_unfold
   (#elt_high: Type0)
@@ -60,9 +60,7 @@ ensures exists* l' .
   Trade.intro _ _ _ aux;
   ()
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_fold // this function cannot be used to truncate iterators since we want to preserve the list l.
   (#elt_high: Type0)
@@ -99,9 +97,7 @@ ensures
   Trade.intro _ _ _ aux;
   ()
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_fold_with_perm
   (#elt_high: Type0)
@@ -129,22 +125,24 @@ ensures
     (cbor_raw_serialized_iterator_match s pm c l)
     (LP.pts_to_serialized (LP.serialize_nlist (glen) s) sl #(pm') l')
 {
-  LP.pts_to_serialized_share (LP.serialize_nlist (glen) s) sl;
+  rewrite each sl as c.s;
+  LP.pts_to_serialized_share (LP.serialize_nlist (glen) s) c.s;
   fold (cbor_raw_serialized_iterator_match s pm c l);
   ghost fn aux (_: unit)
   requires
-    LP.pts_to_serialized (LP.serialize_nlist (glen) s) sl #(pm' /. 2.0R) l' ** cbor_raw_serialized_iterator_match s pm c l
+    LP.pts_to_serialized (LP.serialize_nlist (glen) s) c.s #(pm' /. 2.0R) l' ** cbor_raw_serialized_iterator_match s pm c l
   ensures
-    LP.pts_to_serialized (LP.serialize_nlist (glen) s) sl #(pm') l'
+    LP.pts_to_serialized (LP.serialize_nlist (glen) s) c.s #(pm') l'
   {
     unfold (cbor_raw_serialized_iterator_match s pm c l);
-    LP.pts_to_serialized_gather (LP.serialize_nlist (glen) s) sl
+    LP.pts_to_serialized_gather (LP.serialize_nlist (glen) s) c.s;
+    ()
   };
-  Trade.intro _ _ _ aux
+  Trade.intro _ _ _ aux;
+  rewrite each c.s as sl;
+  ()
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_is_empty_equiv
   (#elt_high: Type0)
@@ -162,10 +160,8 @@ ensures
   cbor_raw_serialized_iterator_unfold s pm c l;
   Trade.elim _ _;
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_serialized_iterator_is_empty
   (#elt_high: Type0)
   (#k: Ghost.erased LP.parser_kind)
@@ -179,10 +175,8 @@ fn cbor_raw_serialized_iterator_is_empty
   cbor_raw_serialized_iterator_is_empty_equiv s pm c l;
   (c.len = 0uL)
 }
-```
 
 inline_for_extraction
-```pulse
 fn cbor_raw_serialized_iterator_length
   (#elt_high: Type0)
   (#k: Ghost.erased LP.parser_kind)
@@ -199,7 +193,6 @@ fn cbor_raw_serialized_iterator_length
   Trade.elim _ _;
   c.len
 }
-```
 
 let cbor_raw_serialized_iterator_next_cont
   (#elt_low #elt_high: Type0)
@@ -221,7 +214,6 @@ let cbor_raw_serialized_iterator_next_cont
 module LPC = LowParse.Pulse.Combinators
 
 inline_for_extraction
-```pulse
 fn cbor_raw_serialized_iterator_next
   (#elt_low #elt_high: Type0)
   (#k: Ghost.erased LP.parser_kind)
@@ -252,44 +244,39 @@ fn cbor_raw_serialized_iterator_next
     #(pm *. i.p)
     v'
   );
-  let sp = LowParse.Pulse.Combinators.split_nondep_then
+  let s1, s2 = LowParse.Pulse.Combinators.split_nondep_then
     s
     j
     #k'
     #p'
     s'
     i.s;
-  match sp {
-    Mktuple2 s1 s2 -> {
-      unfold (LPC.split_nondep_then_post s s' i.s (pm *. i.p) v' sp);
-      unfold (LPC.split_nondep_then_post' s s' i.s (pm *. i.p) v' s1 s2);
-      Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
-      let res = phi s1;
-      with pm' . assert (elt_match pm' res (fst v'));
-      Trade.rewrite_with_trade
-        (elt_match pm' res (fst v'))
-        (elt_match pm' res (List.Tot.hd l));
-      Trade.trans (elt_match pm' res (List.Tot.hd l)) _ _;
-      let i' : cbor_raw_serialized_iterator = {
-        s = s2;
-        p = i.p /. 2.0R;
-        len = U64.sub i.len 1uL;
-        glen = glen';
-      };
-      pi := CBOR_Raw_Iterator_Serialized i';
-      perm_half_mult pm i.p;
-      cbor_raw_serialized_iterator_fold_with_perm s glen' s2 (pm *. i.p) (List.Tot.tl l') i' pm (List.Tot.tl l);
-      Trade.prod
-        (elt_match _ res (List.Tot.hd l))
-        _
-        (cbor_raw_serialized_iterator_match s pm i' (List.Tot.tl l))
-        _;
-      Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
-      res
-    }
-  }
+  unfold (LPC.split_nondep_then_post s s' i.s (pm *. i.p) v' (s1, s2));
+  unfold (LPC.split_nondep_then_post' s s' i.s (pm *. i.p) v' s1 s2);
+  Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
+  let res = phi s1;
+  with pm' . assert (elt_match pm' res (fst v'));
+  Trade.rewrite_with_trade
+    (elt_match pm' res (fst v'))
+    (elt_match pm' res (List.Tot.hd l));
+  Trade.trans (elt_match pm' res (List.Tot.hd l)) _ _;
+  let i' : cbor_raw_serialized_iterator = {
+    s = s2;
+    p = i.p /. 2.0R;
+    len = U64.sub i.len 1uL;
+    glen = glen';
+  };
+  pi := CBOR_Raw_Iterator_Serialized i';
+  perm_half_mult pm i.p;
+  cbor_raw_serialized_iterator_fold_with_perm s glen' s2 (pm *. i.p) (List.Tot.tl l') i' pm (List.Tot.tl l);
+  Trade.prod
+    (elt_match _ res (List.Tot.hd l))
+    _
+    (cbor_raw_serialized_iterator_match s pm i' (List.Tot.tl l))
+    _;
+  Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm i l);
+  res
 }
-```
 
 let rec list_splitAt_splitAt
   (#t: Type)
@@ -312,7 +299,6 @@ let rec list_splitAt_splitAt
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn cbor_raw_serialized_iterator_truncate
   (#elt_high: Type0)
   (#k: Ghost.erased LP.parser_kind)
@@ -346,9 +332,7 @@ fn cbor_raw_serialized_iterator_truncate
   Trade.trans _ _ (cbor_raw_serialized_iterator_match s pm c l);
   c'
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_share
   (#elt_high: Type0)
@@ -367,9 +351,7 @@ fn cbor_raw_serialized_iterator_share
   fold (cbor_raw_serialized_iterator_match s (pm /. 2.0R) c l);
   fold (cbor_raw_serialized_iterator_match s (pm /. 2.0R) c l);
 }
-```
 
-```pulse
 ghost
 fn cbor_raw_serialized_iterator_gather
   (#elt_high: Type0)
@@ -390,4 +372,3 @@ fn cbor_raw_serialized_iterator_gather
   perm_mul_add_l pm1 pm2 c.p;
   fold (cbor_raw_serialized_iterator_match s (pm1 +. pm2) c l1);
 }
-```

@@ -1,11 +1,11 @@
 module CBORTest.C
+#lang-pulse
 open CBOR.Spec.Constants
 open Pulse.Lib.Pervasives
 module Base = CBORTest.Base
 module Cbor = CBOR.Pulse.API.Det.C.Slice
 module CborBase = CBOR.Pulse.API.Base
 
-```pulse
 fn main
   (_: unit)
 requires emp
@@ -31,4 +31,3 @@ ensures emp
     (CborBase.map_get_as_option (Cbor.cbor_det_map_get ()))
     (Cbor.cbor_det_mk_map_entry ())
 }
-```

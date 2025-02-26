@@ -1,4 +1,5 @@
 module CDDL.Pulse.Parse.Misc
+#lang-pulse
 include CDDL.Pulse.Parse.Base
 include CDDL.Spec.Misc
 open Pulse.Lib.Pervasives
@@ -8,7 +9,6 @@ module Trade = Pulse.Lib.Trade.Util
 module U64 = FStar.UInt64
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_uint64_gen
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -29,7 +29,6 @@ fn impl_copyful_uint64_gen
   fold (rel_pure U64.t res res);
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_uint
@@ -59,7 +58,6 @@ let impl_copyful_int_range_uint64
 module I64 = FStar.Int64
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_int_range_int64
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -79,7 +77,6 @@ fn impl_copyful_int_range_int64
   fold (rel_pure I64.t res res);
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_int_range_neg_int64
@@ -97,7 +94,6 @@ module V = Pulse.Lib.Vec
 module A = Pulse.Lib.Array
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_bytes_gen
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -135,10 +131,10 @@ fn impl_copyful_bytes_gen
   rewrite (pts_to v vs) as (pts_to w.v vs);
   fold (rel_vec_of_seq w vs);
   let res : vec_or_slice U8.t = Vec w;
-  fold (rel_vec_or_slice_of_seq freeable res vs);
+  fold (rel_vec_or_slice_of_seq freeable (Vec w) vs);
+  rewrite each Vec w as res;
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_bytes
@@ -170,7 +166,6 @@ let impl_copyful_str_size
 = impl_copyful_bytes_gen cbor_destr_string _ _ ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_bytes_gen
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -193,19 +188,19 @@ fn impl_zero_copy_bytes_gen
     p = ps;
     s = s;
   };
+  rewrite each s as w.s;
   fold (rel_slice_of_seq false w vs);
   ghost fn aux (_: unit)
   requires
-    (Trade.trade (pts_to s #ps vs) (vmatch p c v) ** rel_slice_of_seq false w vs)
+    (Trade.trade (pts_to w.s #ps vs) (vmatch p c v) ** rel_slice_of_seq false w vs)
   ensures vmatch p c v
   {
     unfold (rel_slice_of_seq false w vs);
-    Trade.elim _ _
+    Trade.elim _ _;
   };
   Trade.intro_trade _ _ _ aux;
   w
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_zero_copy_bytes
@@ -234,7 +229,6 @@ let impl_zero_copy_str_size
 = impl_zero_copy_bytes_gen cbor_destr_string _ ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_simple
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -249,10 +243,8 @@ fn impl_copyful_simple
   fold (rel_pure U8.t res res);
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_bool
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -268,10 +260,8 @@ fn impl_copyful_bool
   fold (rel_pure bool res res);
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_tagged_some
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -295,10 +285,8 @@ fn impl_copyful_tagged_some
   Trade.elim _ _; // release cpl
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_tagged_none
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -327,10 +315,8 @@ fn impl_copyful_tagged_none
   fold (rel_pair (rel_pure U64.t) r res resv);
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_tagged_some
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -354,10 +340,8 @@ fn impl_zero_copy_tagged_some
   Trade.trans _ _ (vmatch p c v);
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_tagged_none
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -396,10 +380,8 @@ fn impl_zero_copy_tagged_none
   Trade.intro_trade _ _ _ aux;
   res
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_copyful_det_cbor
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -438,10 +420,8 @@ fn impl_copyful_det_cbor
     }
   }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_zero_copy_det_cbor
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
@@ -481,10 +461,8 @@ fn impl_zero_copy_det_cbor
     }
   }
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_zero_copy_any
     (#ty: Type u#0)
     (vmatch: perm -> ty -> cbor -> slprop)
@@ -510,4 +488,3 @@ fn impl_zero_copy_any
   Trade.intro _ _ _ aux;
   res
 }
-```

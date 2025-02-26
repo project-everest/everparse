@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Compare.Base
+#lang-pulse
 open Pulse.Lib.Pervasives
 module S = Pulse.Lib.Slice
 module A = Pulse.Lib.Sort.Merge.Slice
@@ -121,7 +122,6 @@ let same_sign (x1 x2: int) : Tot prop =
   (x1 == 0 <==> x2 == 0)
 
 inline_for_extraction
-```pulse
 fn impl_lex_compare
   (#tl #th: Type0)
   (vmatch: tl -> th -> slprop)
@@ -204,7 +204,6 @@ fn impl_lex_compare
   fold (vmatch_slice_list vmatch s2 v2);
   !pres
 }
-```
 
 module I16 = FStar.Int16
 
@@ -225,7 +224,6 @@ let impl_compare_scalar_t
 let eq_as_slprop (t: Type) (x x': t) : slprop = pure (x == x')
 
 inline_for_extraction
-```pulse
 fn impl_compare_of_impl_compare_scalar
   (#th: Type0)
   (compare: Ghost.erased (th -> th -> int))
@@ -243,7 +241,6 @@ fn impl_compare_of_impl_compare_scalar
   fold (eq_as_slprop th x2 v2);
   res
 }
-```
 
 let vmatch_slice_list_scalar
   (#th: Type)
@@ -254,7 +251,6 @@ let vmatch_slice_list_scalar
 
 module Trade = Pulse.Lib.Trade.Util
 
-```pulse
 ghost
 fn rec seq_list_match_eq_as_slprop
   (#th: Type0)
@@ -277,9 +273,7 @@ decreases l
     seq_list_match_eq_as_slprop (Seq.tail s) (List.Tot.tl l)
   }
 }
-```
 
-```pulse
 ghost
 fn rec eq_as_slprop_seq_list_match
   (#th: Type0)
@@ -291,19 +285,23 @@ ensures
   SM.seq_list_match s l (eq_as_slprop th)
 decreases l
 {
-  if (Nil? l) {
-    SM.seq_list_match_nil_intro s l (eq_as_slprop th)
-  } else {
-    Seq.cons_head_tail s;
-    assert (pure (Seq.equal (Seq.tail s) (Seq.seq_of_list (List.Tot.tl l))));
-    eq_as_slprop_seq_list_match (Seq.tail s) (List.Tot.tl l);
-    fold (eq_as_slprop th (Seq.head s) (List.Tot.hd l));
-    SM.seq_list_match_cons_intro (Seq.head s) (List.Tot.hd l) (Seq.tail s) (List.Tot.tl l) (eq_as_slprop th)
+  match l {
+    [] -> {
+      SM.seq_list_match_nil_intro s l (eq_as_slprop th)
+    }
+    hd :: tl -> {
+      Seq.cons_head_tail s;
+      assert (pure (Seq.equal (Seq.tail s) (Seq.seq_of_list tl)));
+      eq_as_slprop_seq_list_match (Seq.tail s) tl;
+      fold (eq_as_slprop th (Seq.head s) hd);
+      SM.seq_list_match_cons_intro (Seq.head s) hd (Seq.tail s) tl (eq_as_slprop th);
+      rewrite each (hd :: tl) as l;
+      rewrite each Seq.cons (Seq.head s) (Seq.tail s) as s;
+      ()
+    }
   }
 }
-```
 
-```pulse
 ghost
 fn vmatch_slice_list_of_vmatch_slice_list_scalar
   (#th: Type)
@@ -318,9 +316,7 @@ ensures
   eq_as_slprop_seq_list_match (Seq.seq_of_list sh) sh;
   fold (vmatch_slice_list (eq_as_slprop th) sl sh)
 }
-```
 
-```pulse
 ghost
 fn vmatch_slice_list_scalar_of_vmatch_slice_list
   (#th: Type)
@@ -335,9 +331,7 @@ ensures
   seq_list_match_eq_as_slprop _ sh;
   fold (vmatch_slice_list_scalar sl sh)
 }
-```
 
-```pulse
 ghost
 fn vmatch_slice_list_of_vmatch_slice_list_scalar_trade
   (#th: Type)
@@ -360,10 +354,8 @@ ensures
   };
   Trade.intro _ _ _ aux;
 }
-```
 
 inline_for_extraction
-```pulse
 fn impl_lex_compare_scalar
   (#th: Type0)
   (compare: Ghost.erased (th -> th -> int))
@@ -384,10 +376,8 @@ fn impl_lex_compare_scalar
   Trade.elim _ (vmatch_slice_list_scalar s2 _);
   res
 }
-```
 
 inline_for_extraction
-```pulse
 fn lex_compare_slices
   (#th: Type0)
   (compare: Ghost.erased (th -> th -> int))
@@ -419,4 +409,3 @@ ensures
   Trade.elim _ (pts_to s2 #p2 v2);
   res
 }
-```

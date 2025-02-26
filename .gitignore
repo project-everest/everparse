@@ -23,3 +23,6 @@ fstar-src/fstar/*.checked
 everparse/**
 everparse_*.tar.gz
 everparse_*.zip
+
+# make touchfiles
+.*.touch

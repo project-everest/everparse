@@ -41,10 +41,15 @@ asn1: $(filter-out $(addprefix src/ASN1/,$(addsuffix .checked,ASN1.Tmp.fst ASN1.
 quackyducky:
 	+$(MAKE) -C src/qd
 
-gen-test: quackyducky
-	-rm tests/unit/*.fst tests/unit/*.fsti || true
+bin/qd.exe: quackyducky
+
+.gen-test.touch: bin/qd.exe tests/unittests.rfc tests/bitcoin.rfc
+	rm -f tests/unit/*.fst tests/unit/*.fsti
 	bin/qd.exe -odir tests/unit tests/unittests.rfc
 	bin/qd.exe -low -odir tests/unit tests/bitcoin.rfc
+	touch $@
+
+gen-test: .gen-test.touch
 
 lowparse-unit-test: lowparse
 	+$(MAKE) -C tests/lowparse

@@ -478,16 +478,17 @@ static header read_header(Pulse_Lib_Slice_slice__uint8_t input)
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s = split__uint8_t(input, i);
   Pulse_Lib_Slice_slice__uint8_t s1 = s.fst;
   Pulse_Lib_Slice_slice__uint8_t s2 = s.snd;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res = { .fst = s1, .snd = s2 };
-  Pulse_Lib_Slice_slice__uint8_t input10 = res.fst;
-  Pulse_Lib_Slice_slice__uint8_t input20 = res.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  split12 = { .fst = input10, .snd = input20 };
-  Pulse_Lib_Slice_slice__uint8_t input1 = split12.fst;
-  Pulse_Lib_Slice_slice__uint8_t input2 = split12.snd;
+  _letpattern = { .fst = s1, .snd = s2 };
+  Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern.fst;
+  Pulse_Lib_Slice_slice__uint8_t input20 = _letpattern.snd;
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  _letpattern0 = { .fst = input10, .snd = input20 };
+  Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern0.fst;
+  Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern0.snd;
   initial_byte_t x = read_initial_byte_t(input1);
-  initial_byte_t res0 = x;
-  initial_byte_t x1 = res0;
+  initial_byte_t res = x;
+  initial_byte_t x1 = res;
   long_argument x2;
   if (x1.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
     if (x1.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
@@ -583,8 +584,8 @@ static header read_header(Pulse_Lib_Slice_slice__uint8_t input)
   }
   else
     x2 = ((long_argument){ .tag = LongArgumentOther });
-  header res1 = { .fst = x1, .snd = x2 };
-  return res1;
+  header res0 = { .fst = x1, .snd = x2 };
+  return res0;
 }
 
 static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffset)
@@ -609,21 +610,22 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
     Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
     Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    split123 = { .fst = s10, .snd = s20 };
-    Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+    _letpattern = { .fst = s10, .snd = s20 };
+    Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
     size_t consumed = off - offset2;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    s1s2 = split__uint8_t(input23, consumed);
-    Pulse_Lib_Slice_slice__uint8_t s1 = s1s2.fst;
-    Pulse_Lib_Slice_slice__uint8_t s2 = s1s2.snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res = { .fst = s1, .snd = s2 };
-    Pulse_Lib_Slice_slice__uint8_t left = res.fst;
-    Pulse_Lib_Slice_slice__uint8_t right = res.snd;
+    _letpattern1 = split__uint8_t(input23, consumed);
+    Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern1.fst;
+    Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern1.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    split23 = { .fst = left, .snd = right };
-    Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
-    initial_byte_t res0 = read_initial_byte_t(input_);
-    initial_byte_t x = res0;
+    _letpattern10 = { .fst = s1, .snd = s2 };
+    Pulse_Lib_Slice_slice__uint8_t left = _letpattern10.fst;
+    Pulse_Lib_Slice_slice__uint8_t right = _letpattern10.snd;
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    _letpattern11 = { .fst = left, .snd = right };
+    Pulse_Lib_Slice_slice__uint8_t input_ = _letpattern11.fst;
+    initial_byte_t res = read_initial_byte_t(input_);
+    initial_byte_t x = res;
     bool ite;
     if (x.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
       ite = x.additional_info <= ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS;
@@ -641,23 +643,24 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
     Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
     Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    split123 = { .fst = s10, .snd = s20 };
-    Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+    _letpattern = { .fst = s10, .snd = s20 };
+    Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
     size_t consumed0 = off - offset1;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    s1s2 = split__uint8_t(input23, consumed0);
-    Pulse_Lib_Slice_slice__uint8_t s11 = s1s2.fst;
-    Pulse_Lib_Slice_slice__uint8_t s21 = s1s2.snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res = { .fst = s11, .snd = s21 };
-    Pulse_Lib_Slice_slice__uint8_t left0 = res.fst;
-    Pulse_Lib_Slice_slice__uint8_t right0 = res.snd;
+    _letpattern1 = split__uint8_t(input23, consumed0);
+    Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern1.fst;
+    Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern1.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    split23 = { .fst = left0, .snd = right0 };
-    Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
+    _letpattern10 = { .fst = s11, .snd = s21 };
+    Pulse_Lib_Slice_slice__uint8_t left0 = _letpattern10.fst;
+    Pulse_Lib_Slice_slice__uint8_t right0 = _letpattern10.snd;
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    _letpattern11 = { .fst = left0, .snd = right0 };
+    Pulse_Lib_Slice_slice__uint8_t input_ = _letpattern11.fst;
     initial_byte_t x = read_initial_byte_t(input_);
-    initial_byte_t res0 = x;
-    initial_byte_t res1 = res0;
-    initial_byte_t x0 = res1;
+    initial_byte_t res = x;
+    initial_byte_t res0 = res;
+    initial_byte_t x0 = res0;
     if (x0.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
       if (x0.major_type == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
       {
@@ -679,24 +682,24 @@ static bool validate_header(Pulse_Lib_Slice_slice__uint8_t input, size_t *poffse
           Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
           Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          split123 = { .fst = s10, .snd = s20 };
-          Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+          _letpattern = { .fst = s10, .snd = s20 };
+          Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
           size_t consumed = off1 - offset2;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          s1s2 = split__uint8_t(input23, consumed);
-          Pulse_Lib_Slice_slice__uint8_t s1 = s1s2.fst;
-          Pulse_Lib_Slice_slice__uint8_t s2 = s1s2.snd;
+          _letpattern1 = split__uint8_t(input23, consumed);
+          Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern1.fst;
+          Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern1.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          res = { .fst = s1, .snd = s2 };
-          Pulse_Lib_Slice_slice__uint8_t left = res.fst;
-          Pulse_Lib_Slice_slice__uint8_t right = res.snd;
+          _letpattern10 = { .fst = s1, .snd = s2 };
+          Pulse_Lib_Slice_slice__uint8_t left = _letpattern10.fst;
+          Pulse_Lib_Slice_slice__uint8_t right = _letpattern10.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          split23 = { .fst = left, .snd = right };
-          Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
+          _letpattern11 = { .fst = left, .snd = right };
+          Pulse_Lib_Slice_slice__uint8_t input_ = _letpattern11.fst;
           uint8_t last = op_Array_Access__uint8_t(input_, (size_t)0U);
-          uint8_t res0 = last;
-          uint8_t res1 = res0;
-          uint8_t x1 = res1;
+          uint8_t res = last;
+          uint8_t res0 = res;
+          uint8_t x1 = res0;
           return MIN_SIMPLE_VALUE_LONG_ARGUMENT <= x1;
         }
         else
@@ -761,23 +764,24 @@ static size_t jump_header(Pulse_Lib_Slice_slice__uint8_t input, size_t offset)
   Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
   Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  split123 = { .fst = s10, .snd = s20 };
-  Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+  _letpattern = { .fst = s10, .snd = s20 };
+  Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
   size_t consumed = off1 - offset;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  s1s2 = split__uint8_t(input23, consumed);
-  Pulse_Lib_Slice_slice__uint8_t s1 = s1s2.fst;
-  Pulse_Lib_Slice_slice__uint8_t s2 = s1s2.snd;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res = { .fst = s1, .snd = s2 };
-  Pulse_Lib_Slice_slice__uint8_t left = res.fst;
-  Pulse_Lib_Slice_slice__uint8_t right = res.snd;
+  _letpattern1 = split__uint8_t(input23, consumed);
+  Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern1.fst;
+  Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern1.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  split23 = { .fst = left, .snd = right };
-  Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
+  _letpattern10 = { .fst = s1, .snd = s2 };
+  Pulse_Lib_Slice_slice__uint8_t left = _letpattern10.fst;
+  Pulse_Lib_Slice_slice__uint8_t right = _letpattern10.snd;
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  _letpattern11 = { .fst = left, .snd = right };
+  Pulse_Lib_Slice_slice__uint8_t input_ = _letpattern11.fst;
   initial_byte_t x = read_initial_byte_t(input_);
-  initial_byte_t res0 = x;
-  initial_byte_t res1 = res0;
-  initial_byte_t x0 = res1;
+  initial_byte_t res = x;
+  initial_byte_t res0 = res;
+  initial_byte_t x0 = res0;
   if (x0.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_8_BITS)
     return off1 + (size_t)1U;
   else if (x0.additional_info == ADDITIONAL_INFO_LONG_ARGUMENT_16_BITS)
@@ -801,12 +805,13 @@ validate_recursive_step_count_leaf(
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s = split__uint8_t(a, i);
   Pulse_Lib_Slice_slice__uint8_t s1 = s.fst;
   Pulse_Lib_Slice_slice__uint8_t s2 = s.snd;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res = { .fst = s1, .snd = s2 };
-  Pulse_Lib_Slice_slice__uint8_t input1 = res.fst;
-  Pulse_Lib_Slice_slice__uint8_t input2 = res.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  spl = { .fst = input1, .snd = input2 };
-  Pulse_Lib_Slice_slice__uint8_t input10 = spl.fst;
+  _letpattern = { .fst = s1, .snd = s2 };
+  Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern.fst;
+  Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern.snd;
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  _letpattern0 = { .fst = input1, .snd = input2 };
+  Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern0.fst;
   header h = read_header(input10);
   uint8_t typ = get_header_major_type(h);
   if (typ == CBOR_MAJOR_TYPE_ARRAY)
@@ -851,12 +856,13 @@ static size_t jump_recursive_step_count_leaf(Pulse_Lib_Slice_slice__uint8_t a)
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s = split__uint8_t(a, i);
   Pulse_Lib_Slice_slice__uint8_t s1 = s.fst;
   Pulse_Lib_Slice_slice__uint8_t s2 = s.snd;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res = { .fst = s1, .snd = s2 };
-  Pulse_Lib_Slice_slice__uint8_t input1 = res.fst;
-  Pulse_Lib_Slice_slice__uint8_t input2 = res.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  spl = { .fst = input1, .snd = input2 };
-  Pulse_Lib_Slice_slice__uint8_t input10 = spl.fst;
+  _letpattern = { .fst = s1, .snd = s2 };
+  Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern.fst;
+  Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern.snd;
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  _letpattern0 = { .fst = input1, .snd = input2 };
+  Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern0.fst;
   header h = read_header(input10);
   uint8_t typ = get_header_major_type(h);
   if (typ == CBOR_MAJOR_TYPE_ARRAY)
@@ -906,22 +912,22 @@ static bool validate_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t 
         Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
         Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        split123 = { .fst = s10, .snd = s20 };
-        Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+        _letpattern = { .fst = s10, .snd = s20 };
+        Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
         size_t consumed0 = off1 - offset1;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        s1s2 = split__uint8_t(input23, consumed0);
-        Pulse_Lib_Slice_slice__uint8_t s11 = s1s2.fst;
-        Pulse_Lib_Slice_slice__uint8_t s21 = s1s2.snd;
+        _letpattern1 = split__uint8_t(input23, consumed0);
+        Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern1.fst;
+        Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern1.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        res0 = { .fst = s11, .snd = s21 };
-        Pulse_Lib_Slice_slice__uint8_t left0 = res0.fst;
-        Pulse_Lib_Slice_slice__uint8_t right0 = res0.snd;
+        _letpattern10 = { .fst = s11, .snd = s21 };
+        Pulse_Lib_Slice_slice__uint8_t left0 = _letpattern10.fst;
+        Pulse_Lib_Slice_slice__uint8_t right0 = _letpattern10.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        split23 = { .fst = left0, .snd = right0 };
-        Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
-        header res2 = read_header(input_);
-        header x = res2;
+        _letpattern11 = { .fst = left0, .snd = right0 };
+        Pulse_Lib_Slice_slice__uint8_t input_ = _letpattern11.fst;
+        header res0 = read_header(input_);
+        header x = res0;
         initial_byte_t b = x.fst;
         if
         (b.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
@@ -947,29 +953,29 @@ static bool validate_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t 
             Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
             Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
             __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-            split123 = { .fst = s10, .snd = s20 };
-            Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+            _letpattern = { .fst = s10, .snd = s20 };
+            Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
             size_t consumed = off2 - offset2;
             __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-            s1s2 = split__uint8_t(input23, consumed);
-            Pulse_Lib_Slice_slice__uint8_t s1 = s1s2.fst;
-            Pulse_Lib_Slice_slice__uint8_t s2 = s1s2.snd;
+            _letpattern1 = split__uint8_t(input23, consumed);
+            Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern1.fst;
+            Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern1.snd;
             __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-            res0 = { .fst = s1, .snd = s2 };
-            Pulse_Lib_Slice_slice__uint8_t left = res0.fst;
-            Pulse_Lib_Slice_slice__uint8_t right = res0.snd;
+            _letpattern10 = { .fst = s1, .snd = s2 };
+            Pulse_Lib_Slice_slice__uint8_t left = _letpattern10.fst;
+            Pulse_Lib_Slice_slice__uint8_t right = _letpattern10.snd;
             __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-            split23 = { .fst = left, .snd = right };
-            Pulse_Lib_Slice_slice__uint8_t x1 = split23.fst;
-            bool res2;
+            _letpattern11 = { .fst = left, .snd = right };
+            Pulse_Lib_Slice_slice__uint8_t x1 = _letpattern11.fst;
+            bool res0;
             if (get_header_major_type(x) == CBOR_MAJOR_TYPE_BYTE_STRING)
-              res2 = true;
+              res0 = true;
             else
             {
               bool res = impl_correct(x1);
-              res2 = res;
+              res0 = res;
             }
-            res1 = res2;
+            res1 = res0;
           }
           else
             res1 = false;
@@ -989,20 +995,20 @@ static bool validate_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t 
         Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
         Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        split123 = { .fst = s10, .snd = s20 };
-        Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+        _letpattern = { .fst = s10, .snd = s20 };
+        Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
         size_t consumed = offset1 - off;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        s1s2 = split__uint8_t(input23, consumed);
-        Pulse_Lib_Slice_slice__uint8_t s1 = s1s2.fst;
-        Pulse_Lib_Slice_slice__uint8_t s2 = s1s2.snd;
+        _letpattern1 = split__uint8_t(input23, consumed);
+        Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern1.fst;
+        Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern1.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        res = { .fst = s1, .snd = s2 };
-        Pulse_Lib_Slice_slice__uint8_t left = res.fst;
-        Pulse_Lib_Slice_slice__uint8_t right = res.snd;
+        _letpattern10 = { .fst = s1, .snd = s2 };
+        Pulse_Lib_Slice_slice__uint8_t left = _letpattern10.fst;
+        Pulse_Lib_Slice_slice__uint8_t right = _letpattern10.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        split23 = { .fst = left, .snd = right };
-        Pulse_Lib_Slice_slice__uint8_t input1 = split23.fst;
+        _letpattern11 = { .fst = left, .snd = right };
+        Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern11.fst;
         size_t bound = len__uint8_t(input) - off - n0;
         bool res2 = validate_recursive_step_count_leaf(input1, bound, &pn);
         size_t count = pn;
@@ -1036,21 +1042,22 @@ static size_t jump_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t of
     Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
     Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    split123 = { .fst = s10, .snd = s20 };
-    Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+    _letpattern = { .fst = s10, .snd = s20 };
+    Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
     size_t consumed0 = off10 - off;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    s1s2 = split__uint8_t(input23, consumed0);
-    Pulse_Lib_Slice_slice__uint8_t s11 = s1s2.fst;
-    Pulse_Lib_Slice_slice__uint8_t s21 = s1s2.snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res = { .fst = s11, .snd = s21 };
-    Pulse_Lib_Slice_slice__uint8_t left0 = res.fst;
-    Pulse_Lib_Slice_slice__uint8_t right0 = res.snd;
+    _letpattern1 = split__uint8_t(input23, consumed0);
+    Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern1.fst;
+    Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern1.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    split23 = { .fst = left0, .snd = right0 };
-    Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
-    header res0 = read_header(input_);
-    header x = res0;
+    _letpattern10 = { .fst = s11, .snd = s21 };
+    Pulse_Lib_Slice_slice__uint8_t left0 = _letpattern10.fst;
+    Pulse_Lib_Slice_slice__uint8_t right0 = _letpattern10.snd;
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    _letpattern11 = { .fst = left0, .snd = right0 };
+    Pulse_Lib_Slice_slice__uint8_t input_ = _letpattern11.fst;
+    header res = read_header(input_);
+    header x = res;
     initial_byte_t b0 = x.fst;
     size_t off1;
     if
@@ -1067,19 +1074,20 @@ static size_t jump_raw_data_item(Pulse_Lib_Slice_slice__uint8_t input, size_t of
     Pulse_Lib_Slice_slice__uint8_t s12 = s_0.fst;
     Pulse_Lib_Slice_slice__uint8_t s22 = s_0.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    split1230 = { .fst = s12, .snd = s22 };
-    Pulse_Lib_Slice_slice__uint8_t input230 = split1230.snd;
+    _letpattern0 = { .fst = s12, .snd = s22 };
+    Pulse_Lib_Slice_slice__uint8_t input230 = _letpattern0.snd;
     size_t consumed = off1 - off;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    s1s20 = split__uint8_t(input230, consumed);
-    Pulse_Lib_Slice_slice__uint8_t s1 = s1s20.fst;
-    Pulse_Lib_Slice_slice__uint8_t s2 = s1s20.snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res1 = { .fst = s1, .snd = s2 };
-    Pulse_Lib_Slice_slice__uint8_t left = res1.fst;
-    Pulse_Lib_Slice_slice__uint8_t right = res1.snd;
+    _letpattern12 = split__uint8_t(input230, consumed);
+    Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern12.fst;
+    Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern12.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    split230 = { .fst = left, .snd = right };
-    Pulse_Lib_Slice_slice__uint8_t input1 = split230.fst;
+    _letpattern13 = { .fst = s1, .snd = s2 };
+    Pulse_Lib_Slice_slice__uint8_t left = _letpattern13.fst;
+    Pulse_Lib_Slice_slice__uint8_t right = _letpattern13.snd;
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    _letpattern14 = { .fst = left, .snd = right };
+    Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern14.fst;
     size_t n = pn;
     size_t unused = len__uint8_t(input) - off1;
     KRML_MAYBE_UNUSED_VAR(unused);
@@ -1103,13 +1111,14 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s = split__uint8_t(input, i0);
   Pulse_Lib_Slice_slice__uint8_t s1 = s.fst;
   Pulse_Lib_Slice_slice__uint8_t s2 = s.snd;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res = { .fst = s1, .snd = s2 };
-  Pulse_Lib_Slice_slice__uint8_t input1 = res.fst;
-  Pulse_Lib_Slice_slice__uint8_t input2 = res.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  spl = { .fst = input1, .snd = input2 };
-  Pulse_Lib_Slice_slice__uint8_t ph1 = spl.fst;
-  Pulse_Lib_Slice_slice__uint8_t outc = spl.snd;
+  _letpattern = { .fst = s1, .snd = s2 };
+  Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern.fst;
+  Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern.snd;
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  _letpattern0 = { .fst = input1, .snd = input2 };
+  Pulse_Lib_Slice_slice__uint8_t ph1 = _letpattern0.fst;
+  Pulse_Lib_Slice_slice__uint8_t outc = _letpattern0.snd;
   header h0 = read_header(ph1);
   ph = h0;
   Pulse_Lib_Slice_slice__uint8_t pc = outc;
@@ -1330,17 +1339,18 @@ static cbor_raw cbor_serialized_array_item(cbor_serialized c, uint64_t i)
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s = split__uint8_t(res, i2);
     Pulse_Lib_Slice_slice__uint8_t s1 = s.fst;
     Pulse_Lib_Slice_slice__uint8_t s2 = s.snd;
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res1 = { .fst = s1, .snd = s2 };
-    Pulse_Lib_Slice_slice__uint8_t input10 = res1.fst;
-    Pulse_Lib_Slice_slice__uint8_t input20 = res1.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    res10 = { .fst = input10, .snd = input20 };
-    Pulse_Lib_Slice_slice__uint8_t input1 = res10.fst;
-    Pulse_Lib_Slice_slice__uint8_t input2 = res10.snd;
+    _letpattern = { .fst = s1, .snd = s2 };
+    Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern.fst;
+    Pulse_Lib_Slice_slice__uint8_t input20 = _letpattern.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    spl = { .fst = input1, .snd = input2 };
-    Pulse_Lib_Slice_slice__uint8_t res11 = spl.snd;
-    Pulse_Lib_Slice_slice__uint8_t res2 = res11;
+    _letpattern0 = { .fst = input10, .snd = input20 };
+    Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern0.fst;
+    Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern0.snd;
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    _letpattern1 = { .fst = input1, .snd = input2 };
+    Pulse_Lib_Slice_slice__uint8_t res1 = _letpattern1.snd;
+    Pulse_Lib_Slice_slice__uint8_t res2 = res1;
     pi = i1 + (size_t)1U;
     pres = res2;
     size_t i10 = pi;
@@ -1351,17 +1361,18 @@ static cbor_raw cbor_serialized_array_item(cbor_serialized c, uint64_t i)
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s = split__uint8_t(res, i1);
   Pulse_Lib_Slice_slice__uint8_t s1 = s.fst;
   Pulse_Lib_Slice_slice__uint8_t s2 = s.snd;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res1 = { .fst = s1, .snd = s2 };
-  Pulse_Lib_Slice_slice__uint8_t input10 = res1.fst;
-  Pulse_Lib_Slice_slice__uint8_t input20 = res1.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  res10 = { .fst = input10, .snd = input20 };
-  Pulse_Lib_Slice_slice__uint8_t input1 = res10.fst;
-  Pulse_Lib_Slice_slice__uint8_t input2 = res10.snd;
+  _letpattern = { .fst = s1, .snd = s2 };
+  Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern.fst;
+  Pulse_Lib_Slice_slice__uint8_t input20 = _letpattern.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  spl = { .fst = input1, .snd = input2 };
-  Pulse_Lib_Slice_slice__uint8_t res11 = spl.fst;
-  Pulse_Lib_Slice_slice__uint8_t res2 = res11;
+  _letpattern0 = { .fst = input10, .snd = input20 };
+  Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern0.fst;
+  Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern0.snd;
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  _letpattern1 = { .fst = input1, .snd = input2 };
+  Pulse_Lib_Slice_slice__uint8_t res1 = _letpattern1.fst;
+  Pulse_Lib_Slice_slice__uint8_t res2 = res1;
   Pulse_Lib_Slice_slice__uint8_t elt = res2;
   cbor_raw res0 = cbor_read(elt);
   return res0;
@@ -1406,17 +1417,17 @@ cbor_serialized_array_iterator_next(
   Pulse_Lib_Slice_slice__uint8_t s10 = s.fst;
   Pulse_Lib_Slice_slice__uint8_t s20 = s.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  res0 = { .fst = s10, .snd = s20 };
-  Pulse_Lib_Slice_slice__uint8_t input10 = res0.fst;
-  Pulse_Lib_Slice_slice__uint8_t input20 = res0.snd;
+  _letpattern = { .fst = s10, .snd = s20 };
+  Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern.fst;
+  Pulse_Lib_Slice_slice__uint8_t input20 = _letpattern.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  res1 = { .fst = input10, .snd = input20 };
-  Pulse_Lib_Slice_slice__uint8_t input1 = res1.fst;
-  Pulse_Lib_Slice_slice__uint8_t input2 = res1.snd;
+  _letpattern0 = { .fst = input10, .snd = input20 };
+  Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern0.fst;
+  Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern0.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  sp = { .fst = input1, .snd = input2 };
-  Pulse_Lib_Slice_slice__uint8_t s1 = sp.fst;
-  Pulse_Lib_Slice_slice__uint8_t s2 = sp.snd;
+  _letpattern1 = { .fst = input1, .snd = input2 };
+  Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern1.fst;
+  Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern1.snd;
   cbor_raw res = cbor_read(s1);
   CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator
   i_ = { .s = s2, .len = i.len - 1ULL };
@@ -1470,36 +1481,37 @@ cbor_serialized_map_iterator_next(
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s = split__uint8_t(i.s, i10);
   Pulse_Lib_Slice_slice__uint8_t s10 = s.fst;
   Pulse_Lib_Slice_slice__uint8_t s20 = s.snd;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res = { .fst = s10, .snd = s20 };
-  Pulse_Lib_Slice_slice__uint8_t input10 = res.fst;
-  Pulse_Lib_Slice_slice__uint8_t input20 = res.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  res0 = { .fst = input10, .snd = input20 };
-  Pulse_Lib_Slice_slice__uint8_t input11 = res0.fst;
-  Pulse_Lib_Slice_slice__uint8_t input21 = res0.snd;
+  _letpattern = { .fst = s10, .snd = s20 };
+  Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern.fst;
+  Pulse_Lib_Slice_slice__uint8_t input20 = _letpattern.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  sp = { .fst = input11, .snd = input21 };
-  Pulse_Lib_Slice_slice__uint8_t s1 = sp.fst;
-  Pulse_Lib_Slice_slice__uint8_t s2 = sp.snd;
+  _letpattern0 = { .fst = input10, .snd = input20 };
+  Pulse_Lib_Slice_slice__uint8_t input11 = _letpattern0.fst;
+  Pulse_Lib_Slice_slice__uint8_t input21 = _letpattern0.snd;
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  _letpattern1 = { .fst = input11, .snd = input21 };
+  Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern1.fst;
+  Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern1.snd;
   size_t i1 = jump_raw_data_item(s1, (size_t)0U);
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s0 = split__uint8_t(s1, i1);
   Pulse_Lib_Slice_slice__uint8_t s110 = s0.fst;
   Pulse_Lib_Slice_slice__uint8_t s210 = s0.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  res3 = { .fst = s110, .snd = s210 };
-  Pulse_Lib_Slice_slice__uint8_t input12 = res3.fst;
-  Pulse_Lib_Slice_slice__uint8_t input22 = res3.snd;
+  _letpattern10 = { .fst = s110, .snd = s210 };
+  Pulse_Lib_Slice_slice__uint8_t input12 = _letpattern10.fst;
+  Pulse_Lib_Slice_slice__uint8_t input22 = _letpattern10.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  res4 = { .fst = input12, .snd = input22 };
-  Pulse_Lib_Slice_slice__uint8_t input1 = res4.fst;
-  Pulse_Lib_Slice_slice__uint8_t input2 = res4.snd;
+  _letpattern11 = { .fst = input12, .snd = input22 };
+  Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern11.fst;
+  Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern11.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  sp1 = { .fst = input1, .snd = input2 };
-  Pulse_Lib_Slice_slice__uint8_t s11 = sp1.fst;
-  Pulse_Lib_Slice_slice__uint8_t s21 = sp1.snd;
+  _letpattern12 = { .fst = input1, .snd = input2 };
+  Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern12.fst;
+  Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern12.snd;
   cbor_raw res1 = cbor_read(s11);
   cbor_raw res2 = cbor_read(s21);
-  cbor_map_entry res5 = { .cbor_map_entry_key = res1, .cbor_map_entry_value = res2 };
+  cbor_map_entry res = { .cbor_map_entry_key = res1, .cbor_map_entry_value = res2 };
   CBOR_Pulse_Raw_Iterator_Base_cbor_raw_serialized_iterator
   i_ = { .s = s2, .len = i.len - 1ULL };
   *pi =
@@ -1509,7 +1521,7 @@ cbor_serialized_map_iterator_next(
         { .case_CBOR_Raw_Iterator_Serialized = i_ }
       }
     );
-  return res5;
+  return res;
 }
 
 static cbor_raw cbor_match_tagged_get_payload(cbor_raw c)
@@ -1707,8 +1719,8 @@ cbor_array_iterator_next(
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw i1 = i0.case_CBOR_Raw_Iterator_Slice;
     cbor_raw res = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(i1, (size_t)0U);
     __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw
-    sp = split__CBOR_Pulse_Raw_Type_cbor_raw(i1, (size_t)1U);
-    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s_ = sp.snd;
+    _letpattern = split__CBOR_Pulse_Raw_Type_cbor_raw(i1, (size_t)1U);
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s_ = _letpattern.snd;
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw i11 = s_;
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw i_ = i11;
     *pi =
@@ -1910,8 +1922,8 @@ cbor_map_iterator_next(
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry i1 = i0.case_CBOR_Raw_Iterator_Slice;
     cbor_map_entry res = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(i1, (size_t)0U);
     __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
-    sp = split__CBOR_Pulse_Raw_Type_cbor_map_entry(i1, (size_t)1U);
-    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry s_ = sp.snd;
+    _letpattern = split__CBOR_Pulse_Raw_Type_cbor_map_entry(i1, (size_t)1U);
+    Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry s_ = _letpattern.snd;
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry i11 = s_;
     Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry i_ = i11;
     *pi =
@@ -2453,11 +2465,11 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
   if
   (b0.major_type == CBOR_MAJOR_TYPE_BYTE_STRING || b0.major_type == CBOR_MAJOR_TYPE_TEXT_STRING)
   {
-    cbor_raw _letpattern = x_;
+    cbor_raw _letpattern0 = x_;
     Pulse_Lib_Slice_slice__uint8_t s;
-    if (_letpattern.tag == CBOR_Case_String)
+    if (_letpattern0.tag == CBOR_Case_String)
     {
-      cbor_string c_ = _letpattern.case_CBOR_Case_String;
+      cbor_string c_ = _letpattern0.case_CBOR_Case_String;
       s = c_.cbor_string_ptr;
     }
     else
@@ -2466,11 +2478,12 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
           "unreachable (pattern matches are exhaustive in F*)");
     Pulse_Lib_Slice_slice__uint8_t x2_ = s;
     size_t length = len__uint8_t(x2_);
-    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t sp1 = split__uint8_t(out, res1);
-    Pulse_Lib_Slice_slice__uint8_t sp12 = sp1.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    sp2 = split__uint8_t(sp12, length);
-    Pulse_Lib_Slice_slice__uint8_t sp21 = sp2.fst;
+    _letpattern = split__uint8_t(out, res1);
+    Pulse_Lib_Slice_slice__uint8_t sp12 = _letpattern.snd;
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    _letpattern1 = split__uint8_t(sp12, length);
+    Pulse_Lib_Slice_slice__uint8_t sp21 = _letpattern1.fst;
     copy__uint8_t(sp21, x2_);
     size_t res = res1 + length;
     size_t res0 = res;
@@ -2544,11 +2557,11 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
       }
       else
       {
-        cbor_raw _letpattern = x_;
+        cbor_raw _letpattern0 = x_;
         Pulse_Lib_Slice_slice__uint8_t x2_;
-        if (_letpattern.tag == CBOR_Case_Serialized_Array)
+        if (_letpattern0.tag == CBOR_Case_Serialized_Array)
         {
-          cbor_serialized xs = _letpattern.case_CBOR_Case_Serialized_Array;
+          cbor_serialized xs = _letpattern0.case_CBOR_Case_Serialized_Array;
           x2_ = xs.cbor_serialized_payload;
         }
         else
@@ -2557,11 +2570,11 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
               "unreachable (pattern matches are exhaustive in F*)");
         size_t length = len__uint8_t(x2_);
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        sp1 = split__uint8_t(out, res1);
-        Pulse_Lib_Slice_slice__uint8_t sp12 = sp1.snd;
+        _letpattern = split__uint8_t(out, res1);
+        Pulse_Lib_Slice_slice__uint8_t sp12 = _letpattern.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        sp2 = split__uint8_t(sp12, length);
-        Pulse_Lib_Slice_slice__uint8_t sp21 = sp2.fst;
+        _letpattern1 = split__uint8_t(sp12, length);
+        Pulse_Lib_Slice_slice__uint8_t sp21 = _letpattern1.fst;
         copy__uint8_t(sp21, x2_);
         size_t res = res1 + length;
         size_t res0 = res;
@@ -2639,11 +2652,11 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
         }
         else
         {
-          cbor_raw _letpattern = x_;
+          cbor_raw _letpattern0 = x_;
           Pulse_Lib_Slice_slice__uint8_t x2_;
-          if (_letpattern.tag == CBOR_Case_Serialized_Map)
+          if (_letpattern0.tag == CBOR_Case_Serialized_Map)
           {
-            cbor_serialized xs = _letpattern.case_CBOR_Case_Serialized_Map;
+            cbor_serialized xs = _letpattern0.case_CBOR_Case_Serialized_Map;
             x2_ = xs.cbor_serialized_payload;
           }
           else
@@ -2652,11 +2665,11 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
                 "unreachable (pattern matches are exhaustive in F*)");
           size_t length = len__uint8_t(x2_);
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          sp1 = split__uint8_t(out, res1);
-          Pulse_Lib_Slice_slice__uint8_t sp12 = sp1.snd;
+          _letpattern = split__uint8_t(out, res1);
+          Pulse_Lib_Slice_slice__uint8_t sp12 = _letpattern.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          sp2 = split__uint8_t(sp12, length);
-          Pulse_Lib_Slice_slice__uint8_t sp21 = sp2.fst;
+          _letpattern1 = split__uint8_t(sp12, length);
+          Pulse_Lib_Slice_slice__uint8_t sp21 = _letpattern1.fst;
           copy__uint8_t(sp21, x2_);
           size_t res = res1 + length;
           size_t res0 = res;
@@ -2693,11 +2706,11 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
           }
           else
           {
-            cbor_raw _letpattern = x_;
+            cbor_raw _letpattern0 = x_;
             Pulse_Lib_Slice_slice__uint8_t x2_;
-            if (_letpattern.tag == CBOR_Case_Serialized_Tagged)
+            if (_letpattern0.tag == CBOR_Case_Serialized_Tagged)
             {
-              cbor_serialized ser = _letpattern.case_CBOR_Case_Serialized_Tagged;
+              cbor_serialized ser = _letpattern0.case_CBOR_Case_Serialized_Tagged;
               x2_ = ser.cbor_serialized_payload;
             }
             else
@@ -2706,11 +2719,11 @@ CBOR_Pulse_Raw_Format_Serialize_ser_(
                   "unreachable (pattern matches are exhaustive in F*)");
             size_t length = len__uint8_t(x2_);
             __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-            sp1 = split__uint8_t(out, res1);
-            Pulse_Lib_Slice_slice__uint8_t sp12 = sp1.snd;
+            _letpattern = split__uint8_t(out, res1);
+            Pulse_Lib_Slice_slice__uint8_t sp12 = _letpattern.snd;
             __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-            sp2 = split__uint8_t(sp12, length);
-            Pulse_Lib_Slice_slice__uint8_t sp21 = sp2.fst;
+            _letpattern1 = split__uint8_t(sp12, length);
+            Pulse_Lib_Slice_slice__uint8_t sp21 = _letpattern1.fst;
             copy__uint8_t(sp21, x2_);
             size_t res0 = res1 + length;
             size_t res1 = res0;
@@ -3174,16 +3187,17 @@ static bool cbor_raw_ints_optimal(Pulse_Lib_Slice_slice__uint8_t a)
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s = split__uint8_t(a, i);
   Pulse_Lib_Slice_slice__uint8_t s1 = s.fst;
   Pulse_Lib_Slice_slice__uint8_t s2 = s.snd;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res = { .fst = s1, .snd = s2 };
-  Pulse_Lib_Slice_slice__uint8_t input10 = res.fst;
-  Pulse_Lib_Slice_slice__uint8_t input20 = res.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  res0 = { .fst = input10, .snd = input20 };
-  Pulse_Lib_Slice_slice__uint8_t input1 = res0.fst;
-  Pulse_Lib_Slice_slice__uint8_t input2 = res0.snd;
+  _letpattern = { .fst = s1, .snd = s2 };
+  Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern.fst;
+  Pulse_Lib_Slice_slice__uint8_t input20 = _letpattern.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  spl = { .fst = input1, .snd = input2 };
-  Pulse_Lib_Slice_slice__uint8_t input11 = spl.fst;
+  _letpattern0 = { .fst = input10, .snd = input20 };
+  Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern0.fst;
+  Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern0.snd;
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  _letpattern1 = { .fst = input1, .snd = input2 };
+  Pulse_Lib_Slice_slice__uint8_t input11 = _letpattern1.fst;
   header h = read_header(input11);
   if (get_header_major_type(h) == CBOR_MAJOR_TYPE_SIMPLE_VALUE)
     return true;
@@ -3239,17 +3253,17 @@ static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
   Pulse_Lib_Slice_slice__uint8_t s10 = s.fst;
   Pulse_Lib_Slice_slice__uint8_t s20 = s.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  res0 = { .fst = s10, .snd = s20 };
-  Pulse_Lib_Slice_slice__uint8_t input10 = res0.fst;
-  Pulse_Lib_Slice_slice__uint8_t input20 = res0.snd;
+  _letpattern = { .fst = s10, .snd = s20 };
+  Pulse_Lib_Slice_slice__uint8_t input10 = _letpattern.fst;
+  Pulse_Lib_Slice_slice__uint8_t input20 = _letpattern.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  res1 = { .fst = input10, .snd = input20 };
-  Pulse_Lib_Slice_slice__uint8_t input12 = res1.fst;
-  Pulse_Lib_Slice_slice__uint8_t input22 = res1.snd;
+  _letpattern0 = { .fst = input10, .snd = input20 };
+  Pulse_Lib_Slice_slice__uint8_t input12 = _letpattern0.fst;
+  Pulse_Lib_Slice_slice__uint8_t input22 = _letpattern0.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  _letpattern = { .fst = input12, .snd = input22 };
-  Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern.fst;
-  Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern.snd;
+  _letpattern1 = { .fst = input12, .snd = input22 };
+  Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern1.fst;
+  Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern1.snd;
   header h = read_header(input1);
   if (get_header_major_type(h) == CBOR_MAJOR_TYPE_MAP)
   {
@@ -3273,57 +3287,57 @@ static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
       Pulse_Lib_Slice_slice__uint8_t s1 = s.fst;
       Pulse_Lib_Slice_slice__uint8_t s20 = s.snd;
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-      res0 = { .fst = s1, .snd = s20 };
-      Pulse_Lib_Slice_slice__uint8_t input110 = res0.fst;
-      Pulse_Lib_Slice_slice__uint8_t input210 = res0.snd;
+      _letpattern1 = { .fst = s1, .snd = s20 };
+      Pulse_Lib_Slice_slice__uint8_t input110 = _letpattern1.fst;
+      Pulse_Lib_Slice_slice__uint8_t input210 = _letpattern1.snd;
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-      res1 = { .fst = input110, .snd = input210 };
-      Pulse_Lib_Slice_slice__uint8_t input111 = res1.fst;
-      Pulse_Lib_Slice_slice__uint8_t input211 = res1.snd;
+      _letpattern10 = { .fst = input110, .snd = input210 };
+      Pulse_Lib_Slice_slice__uint8_t input111 = _letpattern10.fst;
+      Pulse_Lib_Slice_slice__uint8_t input211 = _letpattern10.snd;
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-      spl = { .fst = input111, .snd = input211 };
-      Pulse_Lib_Slice_slice__uint8_t input3 = spl.snd;
+      _letpattern11 = { .fst = input111, .snd = input211 };
+      Pulse_Lib_Slice_slice__uint8_t input3 = _letpattern11.snd;
       size_t i1 = jump_raw_data_item(input3, (size_t)0U);
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
       s10 = split__uint8_t(input3, i1);
       Pulse_Lib_Slice_slice__uint8_t s110 = s10.fst;
       Pulse_Lib_Slice_slice__uint8_t s21 = s10.snd;
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-      res2 = { .fst = s110, .snd = s21 };
-      Pulse_Lib_Slice_slice__uint8_t input112 = res2.fst;
-      Pulse_Lib_Slice_slice__uint8_t input212 = res2.snd;
+      _letpattern12 = { .fst = s110, .snd = s21 };
+      Pulse_Lib_Slice_slice__uint8_t input112 = _letpattern12.fst;
+      Pulse_Lib_Slice_slice__uint8_t input212 = _letpattern12.snd;
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-      res3 = { .fst = input112, .snd = input212 };
-      Pulse_Lib_Slice_slice__uint8_t input113 = res3.fst;
-      Pulse_Lib_Slice_slice__uint8_t input213 = res3.snd;
+      _letpattern13 = { .fst = input112, .snd = input212 };
+      Pulse_Lib_Slice_slice__uint8_t input113 = _letpattern13.fst;
+      Pulse_Lib_Slice_slice__uint8_t input213 = _letpattern13.snd;
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-      _letpattern1 = { .fst = input113, .snd = input213 };
-      Pulse_Lib_Slice_slice__uint8_t hd0 = _letpattern1.fst;
-      Pulse_Lib_Slice_slice__uint8_t tl0 = _letpattern1.snd;
+      _letpattern14 = { .fst = input113, .snd = input213 };
+      Pulse_Lib_Slice_slice__uint8_t hd0 = _letpattern14.fst;
+      Pulse_Lib_Slice_slice__uint8_t tl0 = _letpattern14.snd;
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-      _letpattern10 = { .fst = hd0, .snd = tl0 };
-      Pulse_Lib_Slice_slice__uint8_t hd4 = _letpattern10.fst;
-      Pulse_Lib_Slice_slice__uint8_t input4 = _letpattern10.snd;
+      _letpattern15 = { .fst = hd0, .snd = tl0 };
+      Pulse_Lib_Slice_slice__uint8_t hd4 = _letpattern15.fst;
+      Pulse_Lib_Slice_slice__uint8_t input4 = _letpattern15.snd;
       size_t i2 = jump_raw_data_item(input4, (size_t)0U);
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
       s12 = split__uint8_t(input4, i2);
       Pulse_Lib_Slice_slice__uint8_t s111 = s12.fst;
       Pulse_Lib_Slice_slice__uint8_t s22 = s12.snd;
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-      res4 = { .fst = s111, .snd = s22 };
-      Pulse_Lib_Slice_slice__uint8_t input114 = res4.fst;
-      Pulse_Lib_Slice_slice__uint8_t input214 = res4.snd;
+      _letpattern2 = { .fst = s111, .snd = s22 };
+      Pulse_Lib_Slice_slice__uint8_t input114 = _letpattern2.fst;
+      Pulse_Lib_Slice_slice__uint8_t input214 = _letpattern2.snd;
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-      res5 = { .fst = input114, .snd = input214 };
-      Pulse_Lib_Slice_slice__uint8_t input115 = res5.fst;
-      Pulse_Lib_Slice_slice__uint8_t input215 = res5.snd;
+      _letpattern20 = { .fst = input114, .snd = input214 };
+      Pulse_Lib_Slice_slice__uint8_t input115 = _letpattern20.fst;
+      Pulse_Lib_Slice_slice__uint8_t input215 = _letpattern20.snd;
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-      _letpattern2 = { .fst = input115, .snd = input215 };
-      Pulse_Lib_Slice_slice__uint8_t hd1 = _letpattern2.fst;
-      Pulse_Lib_Slice_slice__uint8_t tl1 = _letpattern2.snd;
+      _letpattern21 = { .fst = input115, .snd = input215 };
+      Pulse_Lib_Slice_slice__uint8_t hd1 = _letpattern21.fst;
+      Pulse_Lib_Slice_slice__uint8_t tl1 = _letpattern21.snd;
       __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-      _letpattern20 = { .fst = hd1, .snd = tl1 };
-      Pulse_Lib_Slice_slice__uint8_t input5 = _letpattern20.snd;
+      _letpattern22 = { .fst = hd1, .snd = tl1 };
+      Pulse_Lib_Slice_slice__uint8_t input5 = _letpattern22.snd;
       Pulse_Lib_Slice_slice__uint8_t pkey = hd4;
       uint64_t pairs = nbpairs - 1ULL;
       uint64_t ppairs = pairs;
@@ -3340,24 +3354,24 @@ static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
         Pulse_Lib_Slice_slice__uint8_t s110 = s1.fst;
         Pulse_Lib_Slice_slice__uint8_t s20 = s1.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        res = { .fst = s110, .snd = s20 };
-        Pulse_Lib_Slice_slice__uint8_t input110 = res.fst;
-        Pulse_Lib_Slice_slice__uint8_t input210 = res.snd;
+        _letpattern2 = { .fst = s110, .snd = s20 };
+        Pulse_Lib_Slice_slice__uint8_t input110 = _letpattern2.fst;
+        Pulse_Lib_Slice_slice__uint8_t input210 = _letpattern2.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        res0 = { .fst = input110, .snd = input210 };
-        Pulse_Lib_Slice_slice__uint8_t input111 = res0.fst;
-        Pulse_Lib_Slice_slice__uint8_t input211 = res0.snd;
+        _letpattern20 = { .fst = input110, .snd = input210 };
+        Pulse_Lib_Slice_slice__uint8_t input111 = _letpattern20.fst;
+        Pulse_Lib_Slice_slice__uint8_t input211 = _letpattern20.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        _letpattern2 = { .fst = input111, .snd = input211 };
-        Pulse_Lib_Slice_slice__uint8_t hd0 = _letpattern2.fst;
-        Pulse_Lib_Slice_slice__uint8_t tl0 = _letpattern2.snd;
+        _letpattern21 = { .fst = input111, .snd = input211 };
+        Pulse_Lib_Slice_slice__uint8_t hd0 = _letpattern21.fst;
+        Pulse_Lib_Slice_slice__uint8_t tl0 = _letpattern21.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        _letpattern20 = { .fst = hd0, .snd = tl0 };
-        Pulse_Lib_Slice_slice__uint8_t key2 = _letpattern20.fst;
-        Pulse_Lib_Slice_slice__uint8_t tail2 = _letpattern20.snd;
+        _letpattern22 = { .fst = hd0, .snd = tl0 };
+        Pulse_Lib_Slice_slice__uint8_t key2 = _letpattern22.fst;
+        Pulse_Lib_Slice_slice__uint8_t tail2 = _letpattern22.snd;
         Pulse_Lib_Slice_slice__uint8_t key1 = pkey;
-        bool res1 = impl_deterministically_encoded_cbor_map_key_order(key1, key2);
-        if (res1)
+        bool res = impl_deterministically_encoded_cbor_map_key_order(key1, key2);
+        if (res)
         {
           size_t i = jump_raw_data_item(tail2, (size_t)0U);
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
@@ -3365,20 +3379,20 @@ static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
           Pulse_Lib_Slice_slice__uint8_t s11 = s1.fst;
           Pulse_Lib_Slice_slice__uint8_t s2 = s1.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          res1 = { .fst = s11, .snd = s2 };
-          Pulse_Lib_Slice_slice__uint8_t input110 = res1.fst;
-          Pulse_Lib_Slice_slice__uint8_t input210 = res1.snd;
+          _letpattern3 = { .fst = s11, .snd = s2 };
+          Pulse_Lib_Slice_slice__uint8_t input110 = _letpattern3.fst;
+          Pulse_Lib_Slice_slice__uint8_t input210 = _letpattern3.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          res10 = { .fst = input110, .snd = input210 };
-          Pulse_Lib_Slice_slice__uint8_t input11 = res10.fst;
-          Pulse_Lib_Slice_slice__uint8_t input21 = res10.snd;
+          _letpattern30 = { .fst = input110, .snd = input210 };
+          Pulse_Lib_Slice_slice__uint8_t input11 = _letpattern30.fst;
+          Pulse_Lib_Slice_slice__uint8_t input21 = _letpattern30.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          _letpattern3 = { .fst = input11, .snd = input21 };
-          Pulse_Lib_Slice_slice__uint8_t hd = _letpattern3.fst;
-          Pulse_Lib_Slice_slice__uint8_t tl = _letpattern3.snd;
+          _letpattern31 = { .fst = input11, .snd = input21 };
+          Pulse_Lib_Slice_slice__uint8_t hd = _letpattern31.fst;
+          Pulse_Lib_Slice_slice__uint8_t tl = _letpattern31.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          _letpattern30 = { .fst = hd, .snd = tl };
-          Pulse_Lib_Slice_slice__uint8_t tail_ = _letpattern30.snd;
+          _letpattern32 = { .fst = hd, .snd = tl };
+          Pulse_Lib_Slice_slice__uint8_t tail_ = _letpattern32.snd;
           pkey = key2;
           uint64_t pairs1 = ppairs;
           uint64_t pairs_ = pairs1 - 1ULL;
@@ -3387,9 +3401,9 @@ static bool cbor_raw_sorted(Pulse_Lib_Slice_slice__uint8_t a)
         }
         else
           pres = false;
-        bool res2 = pres;
+        bool res0 = pres;
         uint64_t pairs1 = ppairs;
-        cond = res2 && pairs1 > 0ULL;
+        cond = res0 && pairs1 > 0ULL;
       }
       return pres;
     }
@@ -3410,28 +3424,28 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
     Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
     Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    split123 = { .fst = s10, .snd = s20 };
-    Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+    _letpattern = { .fst = s10, .snd = s20 };
+    Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
     size_t consumed0 = len - (size_t)0U;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    s1s2 = split__uint8_t(input23, consumed0);
-    Pulse_Lib_Slice_slice__uint8_t s11 = s1s2.fst;
-    Pulse_Lib_Slice_slice__uint8_t s21 = s1s2.snd;
+    _letpattern1 = split__uint8_t(input23, consumed0);
+    Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern1.fst;
+    Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern1.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    res0 = { .fst = s11, .snd = s21 };
-    Pulse_Lib_Slice_slice__uint8_t left0 = res0.fst;
-    Pulse_Lib_Slice_slice__uint8_t right0 = res0.snd;
+    _letpattern10 = { .fst = s11, .snd = s21 };
+    Pulse_Lib_Slice_slice__uint8_t left0 = _letpattern10.fst;
+    Pulse_Lib_Slice_slice__uint8_t right0 = _letpattern10.snd;
     __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-    split23 = { .fst = left0, .snd = right0 };
-    Pulse_Lib_Slice_slice__uint8_t input1 = split23.fst;
+    _letpattern11 = { .fst = left0, .snd = right0 };
+    Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern11.fst;
     bool check = false;
     KRML_HOST_IGNORE(&check);
     size_t pn = (size_t)1U;
     bool pres0 = true;
     Pulse_Lib_Slice_slice__uint8_t ppi0 = input1;
-    bool res1 = pres0;
+    bool res0 = pres0;
     size_t n0 = pn;
-    bool cond = res1 && n0 > (size_t)0U;
+    bool cond = res0 && n0 > (size_t)0U;
     while (cond)
     {
       size_t n0 = pn;
@@ -3447,22 +3461,22 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
         Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
         Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        split123 = { .fst = s10, .snd = s20 };
-        Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+        _letpattern = { .fst = s10, .snd = s20 };
+        Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
         size_t consumed = off1 - (size_t)0U;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        s1s2 = split__uint8_t(input23, consumed);
-        Pulse_Lib_Slice_slice__uint8_t s11 = s1s2.fst;
-        Pulse_Lib_Slice_slice__uint8_t s21 = s1s2.snd;
+        _letpattern1 = split__uint8_t(input23, consumed);
+        Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern1.fst;
+        Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern1.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        res1 = { .fst = s11, .snd = s21 };
-        Pulse_Lib_Slice_slice__uint8_t left = res1.fst;
-        Pulse_Lib_Slice_slice__uint8_t right = res1.snd;
+        _letpattern10 = { .fst = s11, .snd = s21 };
+        Pulse_Lib_Slice_slice__uint8_t left = _letpattern10.fst;
+        Pulse_Lib_Slice_slice__uint8_t right = _letpattern10.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        split23 = { .fst = left, .snd = right };
-        Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
-        header res10 = read_header(input_);
-        header x = res10;
+        _letpattern11 = { .fst = left, .snd = right };
+        Pulse_Lib_Slice_slice__uint8_t input_ = _letpattern11.fst;
+        header res1 = read_header(input_);
+        header x = res1;
         initial_byte_t b0 = x.fst;
         size_t i;
         if
@@ -3482,13 +3496,13 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
         Pulse_Lib_Slice_slice__uint8_t s1 = s.fst;
         Pulse_Lib_Slice_slice__uint8_t s2 = s.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        res11 = { .fst = s1, .snd = s2 };
-        Pulse_Lib_Slice_slice__uint8_t input11 = res11.fst;
-        Pulse_Lib_Slice_slice__uint8_t input2 = res11.snd;
+        _letpattern0 = { .fst = s1, .snd = s2 };
+        Pulse_Lib_Slice_slice__uint8_t input11 = _letpattern0.fst;
+        Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern0.snd;
         __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-        spl = { .fst = input11, .snd = input2 };
-        Pulse_Lib_Slice_slice__uint8_t ph = spl.fst;
-        Pulse_Lib_Slice_slice__uint8_t pc = spl.snd;
+        _letpattern2 = { .fst = input11, .snd = input2 };
+        Pulse_Lib_Slice_slice__uint8_t ph = _letpattern2.fst;
+        Pulse_Lib_Slice_slice__uint8_t pc = _letpattern2.snd;
         size_t unused = len__uint8_t(pc);
         KRML_MAYBE_UNUSED_VAR(unused);
         size_t count = jump_recursive_step_count_leaf(ph);
@@ -3499,8 +3513,8 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
       size_t n = pn;
       cond = res0 && n > (size_t)0U;
     }
-    bool res2 = pres0;
-    bool check1 = res2;
+    bool res1 = pres0;
+    bool check1 = res1;
     if (!check1)
       return (size_t)0U;
     else
@@ -3526,22 +3540,22 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
           Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
           Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          split123 = { .fst = s10, .snd = s20 };
-          Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+          _letpattern = { .fst = s10, .snd = s20 };
+          Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
           size_t consumed = off1 - (size_t)0U;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          s1s2 = split__uint8_t(input23, consumed);
-          Pulse_Lib_Slice_slice__uint8_t s11 = s1s2.fst;
-          Pulse_Lib_Slice_slice__uint8_t s21 = s1s2.snd;
+          _letpattern1 = split__uint8_t(input23, consumed);
+          Pulse_Lib_Slice_slice__uint8_t s11 = _letpattern1.fst;
+          Pulse_Lib_Slice_slice__uint8_t s21 = _letpattern1.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          res1 = { .fst = s11, .snd = s21 };
-          Pulse_Lib_Slice_slice__uint8_t left = res1.fst;
-          Pulse_Lib_Slice_slice__uint8_t right = res1.snd;
+          _letpattern10 = { .fst = s11, .snd = s21 };
+          Pulse_Lib_Slice_slice__uint8_t left = _letpattern10.fst;
+          Pulse_Lib_Slice_slice__uint8_t right = _letpattern10.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          split23 = { .fst = left, .snd = right };
-          Pulse_Lib_Slice_slice__uint8_t input_ = split23.fst;
-          header res10 = read_header(input_);
-          header x = res10;
+          _letpattern11 = { .fst = left, .snd = right };
+          Pulse_Lib_Slice_slice__uint8_t input_ = _letpattern11.fst;
+          header res1 = read_header(input_);
+          header x = res1;
           initial_byte_t b0 = x.fst;
           size_t i;
           if
@@ -3561,13 +3575,13 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
           Pulse_Lib_Slice_slice__uint8_t s1 = s.fst;
           Pulse_Lib_Slice_slice__uint8_t s2 = s.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          res11 = { .fst = s1, .snd = s2 };
-          Pulse_Lib_Slice_slice__uint8_t input11 = res11.fst;
-          Pulse_Lib_Slice_slice__uint8_t input2 = res11.snd;
+          _letpattern0 = { .fst = s1, .snd = s2 };
+          Pulse_Lib_Slice_slice__uint8_t input11 = _letpattern0.fst;
+          Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern0.snd;
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-          spl = { .fst = input11, .snd = input2 };
-          Pulse_Lib_Slice_slice__uint8_t ph = spl.fst;
-          Pulse_Lib_Slice_slice__uint8_t pc = spl.snd;
+          _letpattern2 = { .fst = input11, .snd = input2 };
+          Pulse_Lib_Slice_slice__uint8_t ph = _letpattern2.fst;
+          Pulse_Lib_Slice_slice__uint8_t pc = _letpattern2.snd;
           size_t unused = len__uint8_t(pc);
           KRML_MAYBE_UNUSED_VAR(unused);
           size_t count = jump_recursive_step_count_leaf(ph);
@@ -3601,21 +3615,22 @@ static cbor_raw cbor_parse(Pulse_Lib_Slice_slice__uint8_t input, size_t len)
   Pulse_Lib_Slice_slice__uint8_t s10 = s_.fst;
   Pulse_Lib_Slice_slice__uint8_t s20 = s_.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  split123 = { .fst = s10, .snd = s20 };
-  Pulse_Lib_Slice_slice__uint8_t input23 = split123.snd;
+  _letpattern = { .fst = s10, .snd = s20 };
+  Pulse_Lib_Slice_slice__uint8_t input23 = _letpattern.snd;
   size_t consumed = len - (size_t)0U;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  s1s2 = split__uint8_t(input23, consumed);
-  Pulse_Lib_Slice_slice__uint8_t s1 = s1s2.fst;
-  Pulse_Lib_Slice_slice__uint8_t s2 = s1s2.snd;
-  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t res = { .fst = s1, .snd = s2 };
-  Pulse_Lib_Slice_slice__uint8_t left = res.fst;
-  Pulse_Lib_Slice_slice__uint8_t right = res.snd;
+  _letpattern1 = split__uint8_t(input23, consumed);
+  Pulse_Lib_Slice_slice__uint8_t s1 = _letpattern1.fst;
+  Pulse_Lib_Slice_slice__uint8_t s2 = _letpattern1.snd;
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
-  split23 = { .fst = left, .snd = right };
-  Pulse_Lib_Slice_slice__uint8_t input1 = split23.fst;
-  cbor_raw res0 = cbor_read(input1);
-  return res0;
+  _letpattern10 = { .fst = s1, .snd = s2 };
+  Pulse_Lib_Slice_slice__uint8_t left = _letpattern10.fst;
+  Pulse_Lib_Slice_slice__uint8_t right = _letpattern10.snd;
+  __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+  _letpattern11 = { .fst = left, .snd = right };
+  Pulse_Lib_Slice_slice__uint8_t input1 = _letpattern11.fst;
+  cbor_raw res = cbor_read(input1);
+  return res;
 }
 
 static int16_t cbor_match_compare_serialized_tagged(cbor_serialized c1, cbor_serialized c2)
@@ -4061,8 +4076,8 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
                 i = i00.case_CBOR_Raw_Iterator_Slice;
                 cbor_raw res = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(i, (size_t)0U);
                 __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw
-                sp = split__CBOR_Pulse_Raw_Type_cbor_raw(i, (size_t)1U);
-                Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s_ = sp.snd;
+                _letpattern = split__CBOR_Pulse_Raw_Type_cbor_raw(i, (size_t)1U);
+                Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s_ = _letpattern.snd;
                 Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw i11 = s_;
                 Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw i_ = i11;
                 pi1 =
@@ -4092,8 +4107,8 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
                 i = i0.case_CBOR_Raw_Iterator_Slice;
                 cbor_raw res = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_raw(i, (size_t)0U);
                 __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_raw
-                sp = split__CBOR_Pulse_Raw_Type_cbor_raw(i, (size_t)1U);
-                Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s_ = sp.snd;
+                _letpattern = split__CBOR_Pulse_Raw_Type_cbor_raw(i, (size_t)1U);
+                Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw s_ = _letpattern.snd;
                 Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw i11 = s_;
                 Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw i_ = i11;
                 pi2 =
@@ -4312,8 +4327,8 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
                 cbor_map_entry
                 res = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(i, (size_t)0U);
                 __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
-                sp = split__CBOR_Pulse_Raw_Type_cbor_map_entry(i, (size_t)1U);
-                Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry s_ = sp.snd;
+                _letpattern = split__CBOR_Pulse_Raw_Type_cbor_map_entry(i, (size_t)1U);
+                Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry s_ = _letpattern.snd;
                 Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry i11 = s_;
                 Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry i_ = i11;
                 pi1 =
@@ -4347,8 +4362,8 @@ int16_t CBOR_Pulse_Raw_Compare_impl_cbor_compare(cbor_raw x1, cbor_raw x2)
                 cbor_map_entry
                 res = op_Array_Access__CBOR_Pulse_Raw_Type_cbor_map_entry(i, (size_t)0U);
                 __Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry_Pulse_Lib_Slice_slice_CBOR_Pulse_Raw_Type_cbor_map_entry
-                sp = split__CBOR_Pulse_Raw_Type_cbor_map_entry(i, (size_t)1U);
-                Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry s_ = sp.snd;
+                _letpattern = split__CBOR_Pulse_Raw_Type_cbor_map_entry(i, (size_t)1U);
+                Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry s_ = _letpattern.snd;
                 Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry i11 = s_;
                 Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry i_ = i11;
                 pi2 =
@@ -4556,29 +4571,6 @@ from_array__CBOR_Pulse_Raw_Type_cbor_raw(cbor_raw *a, size_t alen)
   return ((Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_raw){ .elt = ptr, .len = alen });
 }
 
-typedef struct __CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable_s
-{
-  cbor_freeable fst;
-  cbor_freeable snd;
-}
-__CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable;
-
-static cbor_freeable
-fst__CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable(
-  __CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable x
-)
-{
-  return x.fst;
-}
-
-static cbor_freeable
-snd__CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable(
-  __CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable x
-)
-{
-  return x.snd;
-}
-
 static Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
 from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(cbor_map_entry *a, size_t alen)
 {
@@ -4586,6 +4578,13 @@ from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(cbor_map_entry *a, size_t alen)
   return
     ((Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry){ .elt = ptr, .len = alen });
 }
+
+typedef struct __CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable_s
+{
+  cbor_freeable fst;
+  cbor_freeable snd;
+}
+__CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable;
 
 cbor_freeable cbor_copy0(cbor_raw x)
 {
@@ -4808,20 +4807,14 @@ cbor_freeable cbor_copy0(cbor_raw x)
       cbor_freeable key = cbor_copy0(c.cbor_map_entry_key);
       cbor_freeable value = cbor_copy0(c.cbor_map_entry_value);
       __CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable
-      c_ = { .fst = key, .snd = value };
+      _letpattern = { .fst = key, .snd = value };
+      cbor_freeable key_ = _letpattern.fst;
+      cbor_freeable value_ = _letpattern.snd;
       cbor_map_entry
-      cme_ =
-        {
-          .cbor_map_entry_key = fst__CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable(c_).cbor,
-          .cbor_map_entry_value = snd__CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable(c_).cbor
-        };
+      cme_ = { .cbor_map_entry_key = key_.cbor, .cbor_map_entry_value = value_.cbor };
       v_[i] = cme_;
       cbor_freeable_map_entry
-      cfp_ =
-        {
-          .map_entry_key = fst__CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable(c_).footprint,
-          .map_entry_value = snd__CBOR_Pulse_Raw_Copy_cbor_freeable_CBOR_Pulse_Raw_Copy_cbor_freeable(c_).footprint
-        };
+      cfp_ = { .map_entry_key = key_.footprint, .map_entry_value = value_.footprint };
       vf[i] = cfp_;
       pi = i + (size_t)1U;
       size_t i0 = pi;

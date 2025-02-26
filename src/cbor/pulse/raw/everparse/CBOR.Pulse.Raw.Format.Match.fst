@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Format.Match
+#lang-pulse
 open CBOR.Spec.Raw.EverParse
 open LowParse.Spec.VCList
 open LowParse.Pulse.Base
@@ -21,7 +22,6 @@ let cbor_match_serialized_payload_tagged
   c p r
 = pts_to_serialized serialize_raw_data_item c #p r
 
-```pulse
 ghost
 fn cbor_match_serialized_payload_array_share
   (c: slice U8.t)
@@ -42,9 +42,7 @@ ensures
   fold (cbor_match_serialized_payload_array c (p /. 2.0R) r);
   fold (cbor_match_serialized_payload_array c (p /. 2.0R) r);
 }
-```
 
-```pulse
 ghost
 fn cbor_match_serialized_payload_array_gather
   (c: slice U8.t)
@@ -77,9 +75,7 @@ ensures
   fold (pts_to_serialized (serialize_nlist n1 serialize_raw_data_item) c #(p1 +. p2) r1');
   fold (cbor_match_serialized_payload_array c (p1 +. p2) r1);
 }
-```
 
-```pulse
 ghost
 fn cbor_match_serialized_payload_map_share
   (c: slice U8.t)
@@ -100,9 +96,7 @@ ensures
   fold (cbor_match_serialized_payload_map c (p /. 2.0R) r);
   fold (cbor_match_serialized_payload_map c (p /. 2.0R) r);
 }
-```
 
-```pulse
 ghost
 fn cbor_match_serialized_payload_map_gather
   (c: slice U8.t)
@@ -135,9 +129,7 @@ ensures
   fold (pts_to_serialized (serialize_nlist n1 (serialize_nondep_then serialize_raw_data_item serialize_raw_data_item)) c #(p1 +. p2) r1');
   fold (cbor_match_serialized_payload_map c (p1 +. p2) r1);
 }
-```
 
-```pulse
 ghost
 fn cbor_match_serialized_payload_tagged_share
   (c: slice U8.t)
@@ -156,9 +148,7 @@ ensures
   fold (cbor_match_serialized_payload_tagged c (p /. 2.0R) r);
   fold (cbor_match_serialized_payload_tagged c (p /. 2.0R) r);
 }
-```
 
-```pulse
 ghost
 fn cbor_match_serialized_payload_tagged_gather
   (c: slice U8.t)
@@ -179,14 +169,11 @@ ensures
   unfold (cbor_match_serialized_payload_tagged c p1 r1);
   unfold (cbor_match_serialized_payload_tagged c p2 r2);
   pts_to_serialized_gather serialize_raw_data_item c;
-  fold (pts_to_serialized (serialize_raw_data_item) c #(p1 +. p2) r1);
   fold (cbor_match_serialized_payload_tagged c (p1 +. p2) r1);
 }
-```
 
 #set-options "--print_implicits"
 
-```pulse
 fn cbor_match_serialized_payload_array_copy
   (c: slice U8.t)
   (p: perm)
@@ -225,9 +212,7 @@ ensures
   };
   Trade.intro_trade _ _ _ aux
 }
-```
 
-```pulse
 fn cbor_match_serialized_payload_map_copy
   (c: slice U8.t)
   (p: perm)
@@ -266,9 +251,7 @@ ensures
   };
   Trade.intro_trade _ _ _ aux
 }
-```
 
-```pulse
 fn cbor_match_serialized_payload_tagged_copy
   (c: slice U8.t)
   (p: perm)
@@ -307,4 +290,3 @@ ensures
   };
   Trade.intro_trade _ _ _ aux
 }
-```

@@ -15,6 +15,7 @@
 *)
 
 module CDDLExtractionTest.Bytes
+#lang-pulse
 open Pulse.Lib.Pervasives
 open CBOR.Spec
 open CDDL.Spec
@@ -24,7 +25,6 @@ open CDDL.Pulse
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_mytype = impl_bytes ()
 
-```pulse
 fn test
     (c: cbor)
     (v: Ghost.erased raw_data_item)
@@ -38,4 +38,3 @@ ensures
     let unused = impl_bytes () c;
     ()
 }
-```

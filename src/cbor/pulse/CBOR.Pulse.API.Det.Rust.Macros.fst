@@ -1,4 +1,5 @@
 module CBOR.Pulse.API.Det.Rust.Macros
+#lang-pulse
 include CBOR.Pulse.API.Det.Rust
 open CBOR.Spec.Constants
 open Pulse.Lib.Pervasives
@@ -12,7 +13,6 @@ module Base = CBOR.Pulse.API.Base
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_mk_int64'
   (_: unit)
 : Base.mk_int64_t u#0 #_ cbor_det_match
@@ -22,11 +22,9 @@ fn cbor_det_mk_int64'
   let mty = (if ty = cbor_major_type_uint64 then UInt64 else NegInt64);
   cbor_det_mk_int64 mty v
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_mk_string0
   (_: unit)
 : Base.mk_string_t u#0 #_ cbor_det_match
@@ -42,7 +40,6 @@ fn cbor_det_mk_string0
   unfold (cbor_det_mk_string_post ty s p v (Some c));
   c
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -50,7 +47,6 @@ let cbor_det_mk_string_from_array = Base.mk_string_from_array (cbor_det_mk_strin
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_mk_array0
   (_: unit)
 : Base.mk_array_t #_ cbor_det_match
@@ -66,7 +62,6 @@ fn cbor_det_mk_array0
   unfold (cbor_det_mk_array_post a pa va pv vv (Some c));
   c
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -74,7 +69,6 @@ let cbor_det_mk_array_from_array = Base.mk_array_from_array (cbor_det_mk_array0 
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_read_uint64 () : Base.read_uint64_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -88,11 +82,9 @@ fn cbor_det_read_uint64 () : Base.read_uint64_t u#0 #_ cbor_det_match
   Trade.elim _ _;
   res
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_read_simple_value () : Base.read_simple_value_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -106,11 +98,9 @@ fn cbor_det_read_simple_value () : Base.read_simple_value_t u#0 #_ cbor_det_matc
   Trade.elim _ _;
   res
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_get_array_length'
   (_: unit)
 : Base.get_array_length_t u#0 #_ cbor_det_match
@@ -128,11 +118,9 @@ fn cbor_det_get_array_length'
   Trade.elim _ _;
   res
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_get_array_item'
   (_: unit)
 : Base.get_array_item_t u#0 #_ cbor_det_match
@@ -154,9 +142,7 @@ fn cbor_det_get_array_item'
   Trade.trans _ _ (cbor_det_match p x y);
   res
 }
-```
 
-```pulse
 ghost
 fn cbor_det_map_get'_aux
   (x: cbordet)
@@ -190,11 +176,9 @@ ensures
     }
   }
 }
-```
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_map_get'
   (_: unit)
 : Base.map_get_t u#0 #_ cbor_det_match
@@ -216,4 +200,3 @@ fn cbor_det_map_get'
   cbor_det_map_get'_aux x m res;
   res
 }
-```
