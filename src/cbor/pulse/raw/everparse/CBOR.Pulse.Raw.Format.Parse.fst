@@ -1,4 +1,5 @@
 module CBOR.Pulse.Raw.Format.Parse
+#lang-pulse
 open CBOR.Pulse.Raw.EverParse.Serialized.Base
 friend CBOR.Spec.Raw.Format
 open CBOR.Spec.Raw.EverParse
@@ -44,7 +45,6 @@ let cbor_validate_aux
     assert (v == serialize_cbor v' `Seq.append` Seq.slice v (SZ.v res) (Seq.length v))
   end
 
-```pulse
 fn cbor_validate
   (input: slice U8.t)
   (#pm: perm)
@@ -61,7 +61,6 @@ fn cbor_validate
   cbor_validate_aux res v;
   res
 }
-```
 
 let cbor_parse_aux
   (len: SZ.t)
@@ -105,7 +104,6 @@ module Trade = Pulse.Lib.Trade.Util
 #restart-solver
 
 inline_for_extraction
-```pulse
 fn impl_holds_on_raw_data_item
   (f64: squash SZ.fits_u64)
   (p: Ghost.erased (raw_data_item -> bool))
@@ -119,7 +117,6 @@ fn impl_holds_on_raw_data_item
 {
   LowParse.Pulse.Recursive.impl_pred_recursive serialize_raw_data_item_param (jump_leaf ()) (jump_recursive_step_count_leaf f64) (holds_on_raw_data_item_pred p) impl_p input
 }
-```
 
 module U64 = FStar.UInt64
 module U8 = FStar.UInt8
@@ -146,7 +143,6 @@ let impl_raw_uint64_optimal
     end
   else false
 
-```pulse
 ghost fn pts_to_serialized_nlist_raw_data_item_head_header
   (a: slice byte)
   (n: pos)
@@ -225,12 +221,10 @@ ensures exists* (l: leaf) (h: header) v' .
     a;
   Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist n (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
 }
-```
 
 open LowParse.Pulse.Combinators
 
 inline_for_extraction
-```pulse
 fn nondep_then_fst_tot_kind
   (#t1 #t2: Type0)
   (#k1: parser_kind)
@@ -250,9 +244,7 @@ fn nondep_then_fst_tot_kind
 {
   nondep_then_fst s1 j1 s2 input
 }
-```
 
-```pulse
 fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ serialize_raw_data_item_param R.raw_data_item_ints_optimal_elem
 = (a: _)
   (n: _)
@@ -283,10 +275,8 @@ fn cbor_raw_ints_optimal (_: unit) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#
   Trade.elim _ _;
   res
 }
-```
 
 (*
-```pulse
 fn impl_deterministically_encoded_cbor_map_key_order (_: unit)
 : LowParse.Pulse.VCList.impl_order_t #_ #_ #_ (LowParse.Pulse.Combinators.serialize_nondep_then serialize_raw_data_item serialize_raw_data_item) (map_entry_order deterministically_encoded_cbor_map_key_order raw_data_item)
 = (a1: _)
@@ -309,10 +299,8 @@ fn impl_deterministically_encoded_cbor_map_key_order (_: unit)
   Trade.elim (pts_to_serialized serialize_raw_data_item k2 #p2 (fst v2)) _;
   FStar.Int16.lt res 0s
 }
-```
 *)
 
-```pulse
 fn impl_deterministically_encoded_cbor_map_key_order (_: unit)
 : LowParse.Pulse.VCList.impl_order_t #_ #_ #_ (serialize_raw_data_item) (deterministically_encoded_cbor_map_key_order)
 = (a1: _)
@@ -331,7 +319,6 @@ fn impl_deterministically_encoded_cbor_map_key_order (_: unit)
   fold (pts_to_serialized serialize_raw_data_item a2 #p2 (v2));
   FStar.Int16.lt res 0s
 }
-```
 
 let rec sorted2
   (#t: Type)
@@ -363,7 +350,6 @@ let rec sorted2_correct
   | _ :: b :: q -> sorted2_correct order (n - 1) (b :: q)
 
 inline_for_extraction
-```pulse
 fn split_nondep_then_tot_kind
   (#t1 #t2: Type0)
   (#k1: parser_kind)
@@ -382,13 +368,11 @@ fn split_nondep_then_tot_kind
 {
   split_nondep_then s1 j1 s2 input
 }
-```
 
 module GR = Pulse.Lib.GhostReference
 module Ref = Pulse.Lib.Reference
 
 #restart-solver
-```pulse
 fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred_t u#0 u#0 #_ serialize_raw_data_item_param (R.raw_data_item_sorted_elem deterministically_encoded_cbor_map_key_order)
 = (a: _)
   (n: _)
@@ -407,7 +391,7 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
     )
     a #pm v'
   );
-  let Mktuple2 input1 input2 = split_nondep_then_tot_kind serialize_header (jump_header ()) // FIXME: WHY WHY WHY do the kinds need to be total here?
+  let input1, input2 = split_nondep_then_tot_kind serialize_header (jump_header ()) // FIXME: WHY WHY WHY do the kinds need to be total here?
       (LowParse.Spec.Combinators.serialize_nondep_then
         (serialize_leaf_content gh)
         (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
@@ -419,7 +403,7 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
         (serialize_leaf_content gh)
         (LowParse.Pulse.Recursive.serialize_nlist_recursive_cons_payload serialize_raw_data_item_param (SZ.v n) l)
       )
-      a pm v' (Mktuple2 input1 input2)
+      a pm v' (input1, input2)
   );
   unfold (split_nondep_then_post'
     serialize_header
@@ -459,7 +443,7 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
         )
         input3;
       Trade.trans _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
-      let Mktuple2 hd4 input4 = LowParse.Pulse.VCList.nlist_hd_tl_nondep_then_left
+      let hd4, input4 = LowParse.Pulse.VCList.nlist_hd_tl_nondep_then_left
         serialize_raw_data_item
         ()
         (jump_raw_data_item ())
@@ -510,8 +494,10 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
           (pts_to_serialized (serialize_nondep_then (LowParse.Spec.VCList.serialize_nlist vn serialize_raw_data_item) s) stail #pm vtail)
           (pts_to_serialized (serialize_nondep_then (LowParse.Spec.VCList.serialize_nlist vn serialize_raw_data_item) s) tail #pm vtail);
         Trade.trans_hyp_r _ _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
-        let Mktuple2 key2 tail2 = LowParse.Pulse.VCList.nlist_hd_tl_nondep_then_left serialize_raw_data_item () (jump_raw_data_item ()) vn () s tail;
+        let key2, tail2 = LowParse.Pulse.VCList.nlist_hd_tl_nondep_then_left serialize_raw_data_item () (jump_raw_data_item ()) vn () s tail;
+        with skey . assert (Pulse.Lib.Reference.pts_to pkey skey);
         let key1 = !pkey;
+        rewrite each skey as key1;
         let res = impl_deterministically_encoded_cbor_map_key_order () key1 key2;
         if res {
           Trade.elim_hyp_l _ _ (pts_to_serialized (LowParse.Spec.VCList.serialize_nlist (SZ.v n) (serializer_of_tot_serializer (LowParse.Spec.Recursive.serialize_recursive serialize_raw_data_item_param))) a #pm va);
@@ -538,7 +524,6 @@ fn cbor_raw_sorted (sq: squash SZ.fits_u64) : LowParse.Pulse.Recursive.impl_pred
     true
   }
 }
-```
 
 #restart-solver
 
@@ -586,7 +571,6 @@ let cbor_validate_det_fail
 
 #restart-solver
 
-```pulse
 fn cbor_validate_det'
   (input: slice U8.t)
   (#pm: perm)
@@ -623,9 +607,7 @@ fn cbor_validate_det'
     }
   }
 }
-```
 
-```pulse
 fn cbor_validate_det
   (input: slice U8.t)
   (#pm: perm)
@@ -637,11 +619,9 @@ fn cbor_validate_det
   let res = cbor_validate_det' input;
   res
 }
-```
 
 #pop-options
 
-```pulse
 fn cbor_parse
   (input: slice U8.t)
   (len: SZ.t)
@@ -665,4 +645,3 @@ fn cbor_parse
   Trade.trans _ _ (pts_to input #pm v);
   res
 }
-```

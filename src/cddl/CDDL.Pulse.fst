@@ -15,6 +15,7 @@
 *)
 
 module CDDL.Pulse
+#lang-pulse
 open Pulse.Lib.Pervasives
 open Pulse.Lib.Stick
 open CBOR.Spec
@@ -109,7 +110,6 @@ let mk_cbor_read_error
 = {res with cbor_read_is_success = false}
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_read_with_typ
   (#t: typ)
   (ft: impl_typ t)
@@ -152,7 +152,6 @@ ensures cbor_read_with_typ_post t a p va res
         res
     }
 }
-```
 noextract [@@noextract_to "krml"]
 let cbor_read_deterministically_encoded_with_typ_success_postcond
   (t: typ)
@@ -228,7 +227,6 @@ let cbor_read_deterministically_encoded_with_typ_post
 module SZ = FStar.SizeT
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_read_deterministically_encoded_with_typ
   (#t: typ)
   (ft: impl_typ t)
@@ -271,7 +269,6 @@ ensures cbor_read_deterministically_encoded_with_typ_post t a p va res
         res
     }
 }
-```
 
 noextract
 let cbor_map_get_with_typ_post_found
@@ -323,7 +320,6 @@ let cbor_map_get_post_eq_found
   ))
 = ()
 
-```pulse
 ghost
 fn manurewrite
     (pre post: vprop)
@@ -335,9 +331,7 @@ ensures
     rewrite pre as post
 }
 
-```
 
-```pulse
 ghost
 fn cbor_map_get_found_elim
   (p: perm)
@@ -355,10 +349,8 @@ ensures
     manurewrite (cbor_map_get_post p vkey vmap map res) (cbor_map_get_post_found p vkey vmap map fres)
     // rewrite ... as ... fails: WHY WHY WHY??
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_map_get_with_typ
   (#t: typ)
   (ft: impl_typ t)
@@ -404,7 +396,6 @@ ensures
         res
     }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_matches_map_group
@@ -425,7 +416,6 @@ let impl_matches_map_group
         )
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_t_map
     (#b: Ghost.erased (option raw_data_item))
     (#g: map_group b)
@@ -443,7 +433,6 @@ fn impl_t_map
         false
     }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_matches_map_entry_zero_or_more
@@ -467,7 +456,6 @@ let impl_matches_map_entry_zero_or_more
 (* FIXME: WHY WHY WHY does this one not work?
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_matches_map_entry_zero_or_more_nil
     (b: Ghost.erased (option raw_data_item))
 : impl_matches_map_entry_zero_or_more #b map_group_empty
@@ -478,11 +466,9 @@ fn impl_matches_map_entry_zero_or_more_nil
 {
     false
 }
-```
 
 *)
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_matches_map_entry_zero_or_more_nil'
     (b: Ghost.erased (option raw_data_item))
     (c: cbor_map_entry)
@@ -503,7 +489,6 @@ ensures
 {
     false
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_matches_map_entry_zero_or_more_nil
@@ -512,7 +497,6 @@ let impl_matches_map_entry_zero_or_more_nil
 = impl_matches_map_entry_zero_or_more_nil' b
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_matches_map_entry_zero_or_more_cons
     (#b: Ghost.erased (option raw_data_item))
     (e: map_group_entry b)
@@ -546,10 +530,8 @@ fn impl_matches_map_entry_zero_or_more_cons
         f_g c;
     }
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn impl_matches_map_group_no_restricted
     (#b: Ghost.erased (option raw_data_item))
     (#g: map_group b)
@@ -603,7 +585,6 @@ fn impl_matches_map_group_no_restricted
     elim_stick0 ();
     !pres
 }
-```
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_parse
@@ -677,7 +658,6 @@ let cbor_parse_object_post
   | None -> cbor_parse_object_error_post source va
 
 inline_for_extraction noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_parse_object
   (#source: typ)
   (ft: impl_typ source)
@@ -718,7 +698,6 @@ ensures
         None #impl
     }
 }
-```
 
 // Right-to-left serialization
 

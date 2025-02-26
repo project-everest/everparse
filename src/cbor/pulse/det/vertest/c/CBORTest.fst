@@ -1,4 +1,5 @@
 module CBORTest
+#lang-pulse
 open CBOR.Spec.Constants
 open CBOR.Pulse.API.Det.C.Slice
 open Pulse.Lib.Pervasives
@@ -11,12 +12,12 @@ module Spec = CBOR.Spec.API.Format
 module I32 = FStar.Int32
 module S = Pulse.Lib.Slice
 
+#set-options "--fuel 8 --z3rlimit 16"
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let letter (x: U8.t { 1 <= U8.v x /\ U8.v x <= 26 }) : U8.t =
   U8.add 96uy x
-
-#push-options "--fuel 8 --z3rlimit 16"
 
 noextract [@@noextract_to "krml"]
 let spec_bar () : Pure (Seq.seq U8.t)
@@ -65,7 +66,6 @@ noextract [@@noextract_to "krml"]
 let exit_impossible : I32.t = 2l
 
 #restart-solver
-```pulse
 fn test_on
   (test: cbor_det_t)
   (#p: perm)
@@ -134,9 +134,6 @@ ensures
     }
   }
 }
-```
-
-#pop-options
 
 let cbor_det_serialize_inj_strong
   (x1 x2: Spec.cbor)
@@ -174,10 +171,31 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 let max_size = 32sz
 
-#push-options "--fuel 8 --z3rlimit 128"
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn slice_split 
+  (#t: Type) (s: S.slice t) (#p: perm) (i: SZ.t)
+  (#v: Ghost.erased (Seq.seq t) { SZ.v i <= Seq.length v })
+requires pts_to s #p v
+returns res: (S.slice t & S.slice t)
+ensures (
+  let (s1, s2) = res in
+    exists* v1 v2 .
+      pts_to s1 #p v1 **
+      pts_to s2 #p v2 **
+      S.is_split s s1 s2 **
+      pure (
+        v1 == (Seq.slice v 0 (SZ.v i)) /\
+        v2 == (Seq.slice v (SZ.v i) (Seq.length v))
+      )
+)
+{
+  // FIXME: WHY WHY WHY?
+  let (s1, s2) = S.split s i;
+  (s1, s2)
+}
 
-#restart-solver
-```pulse
+#push-options "--z3rlimit 64"
 fn main (_: unit)
 requires emp
 returns res: res_t
@@ -290,7 +308,7 @@ ensures emp
               Trade.elim (cbor_det_match _ test _) _;
               intro_res_post_impossible ()
             } else {
-              let Mktuple2 out2 out3 = S.split out1 size';
+              let out2, out3 = slice_split out1 size';
               Seq.append_empty_r (Seq.slice w 0 (SZ.v size'));
               let test2 = cbor_det_parse_from_slice out2 size';
               let b = cbor_det_equal () test test2;
@@ -309,7 +327,7 @@ ensures emp
                 if (res <> exit_success) {
                    intro_res_post_impossible ()
                 } else {
-                  intro_res_post_success
+                  intro_res_post_success;
                 }
               }
             }
@@ -319,6 +337,4 @@ ensures emp
     }
   }
 }
-```
-
 #pop-options
