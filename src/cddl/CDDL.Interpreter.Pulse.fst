@@ -6,7 +6,7 @@ module Spec = CDDL.Spec
 module CP = CDDL.Pulse
 
 open Pulse.Lib.Pervasives
-open Pulse.Lib.Stick
+open Pulse.Lib.Trade
 open Pulse.Lib.SeqMatch
 
 module U8 = FStar.UInt8
