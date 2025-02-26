@@ -6,6 +6,8 @@
 
 #[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
 
+pub(crate) const _zero_for_deref: u32 = 0u32;
+
 pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
 {
     let size: u8 =
