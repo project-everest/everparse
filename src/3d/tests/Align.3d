@@ -54,6 +54,30 @@ typedef struct _F
    E(false) f2; //4 byte aligned; needs 3 bytes of padding
 } F;
 
+
+typedef UINT64 PCASE_T;
+
+#define KK 1000 
+
+casetype _CASE_T
+{
+    switch (KK)
+    {
+        case 1:
+            UINT64 f;
+        case 2:
+            UINT16 g;
+    }
+} CASE_T;
+
+entrypoint
+aligned
+typedef struct _USE_T
+{
+    PCASE_T pt;
+    UINT16   other;
+} USE_T;
+
 refining "AlignC.h" {
- A, B, C, D, E, F
+ A, B, C, D, E, F, USE_T
 }
