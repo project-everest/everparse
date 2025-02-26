@@ -6,6 +6,8 @@ but it has been moved here to be hidden from verified clients. *)
 
 module Det = CBOR.Pulse.API.Det.Common
 
+module C = C // necessary to pull C.krml into extraction, otherwise Karamel fails with "`C._zero_for_deref`: impossible", believing that it is a non-function external symbol, which Karamel extraction to Rust does not support
+
 (* Validation, parsing and serialization *)
 
 type cbordet = Det.cbor_det_t
