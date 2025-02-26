@@ -307,7 +307,6 @@ let cbor_det_serialize_array_postcond_intro
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
-```pulse
 fn cbor_det_serialize_array
   (_: unit)
 : cbor_det_serialize_array_t
@@ -325,9 +324,7 @@ fn cbor_det_serialize_array
   cbor_det_serialize_array_postcond_intro len l res v;
   res
 }
-```
 
-```pulse
 fn cbor_det_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_det_match
 = (v: _)
 {
@@ -410,7 +407,6 @@ fn cbor_det_mk_tagged (_: unit) : mk_tagged_t #_ cbor_det_match
   res
 }
 
-```pulse
 ghost
 fn rec seq_list_array_cbor_det_match_elim
   (p: perm)

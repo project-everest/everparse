@@ -2168,7 +2168,6 @@ let cbor_serialize_array_t =
 
 #restart-solver
 
-```pulse
 fn cbor_serialize_array'
   (len: raw_uint64)
   (out: S.slice U8.t)
@@ -2218,11 +2217,9 @@ ensures
     sz_zero
   }
 }
-```
 
 #pop-options
 
-```pulse
 fn cbor_serialize_array
   (len: raw_uint64)
   (out: S.slice U8.t)
@@ -2241,4 +2238,3 @@ ensures
   unfold (cbor_serialize_array_post len out l off res);
   res
 }
-```
