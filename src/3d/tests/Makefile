@@ -98,7 +98,7 @@ elf-test: ELF.3d
 
 z3-testgen-test: ELF.3d
 	mkdir -p out.z3-testgen
-	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir out.z3-testgen ELF.3d --z3_test ELF._ELF --z3_witnesses 2 --z3_branch_depth 2
+	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir out.z3-testgen ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
 
 .PHONY: z3-testgen-test
 
