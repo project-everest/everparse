@@ -17,7 +17,7 @@
 module CDDL.Pulse
 #lang-pulse
 open Pulse.Lib.Pervasives
-open Pulse.Lib.Stick
+open Pulse.Lib.Trade
 open CBOR.Spec
 include CBOR.Pulse
 open CDDL.Spec
@@ -137,7 +137,7 @@ ensures cbor_read_with_typ_post t a p va res
             with v . assert (raw_data_item_match 1.0R res.cbor_read_payload v);
             with vrem . assert (A.pts_to res.cbor_read_remainder #p vrem);
             cbor_read_with_typ_error_postcond_intro_typ_fail t va res v vrem;
-            elim_stick0 ()
+            elim_trade0 ()
                 #(raw_data_item_match 1.0R res.cbor_read_payload v ** A.pts_to res.cbor_read_remainder #p vrem);
             fold (cbor_read_with_typ_error_post t a p va);
             let res = mk_cbor_read_error res;
@@ -254,7 +254,7 @@ ensures cbor_read_deterministically_encoded_with_typ_post t a p va res
             with v . assert (raw_data_item_match 1.0R res.cbor_read_payload v);
             with vrem . assert (A.pts_to res.cbor_read_remainder #p vrem);
             cbor_read_deterministically_encoded_with_typ_error_postcond_intro_typ_fail t va res v vrem;
-            elim_stick0 ()
+            elim_trade0 ()
                 #(raw_data_item_match 1.0R res.cbor_read_payload v ** A.pts_to res.cbor_read_remainder #p vrem);
             let res = mk_cbor_read_error res;
             fold (cbor_read_deterministically_encoded_with_typ_error_post t a p va);
@@ -385,7 +385,7 @@ ensures
             fold (cbor_map_get_with_typ_post t pmap vkey vmap map (Found fres));
             res
         } else {
-            elim_stick0 ();
+            elim_trade0 ();
             fold (cbor_map_get_with_typ_post t pmap vkey vmap map NotFound);
             NotFound
         }
@@ -566,23 +566,23 @@ fn impl_matches_map_group_no_restricted
     )
     {   
         let x = cbor_map_iterator_next pi;
-        stick_trans ();
+        trade_trans ();
         let res = ig x;
         with vx gi l . assert (pts_to pi gi ** raw_data_item_map_entry_match p x vx ** cbor_map_iterator_match p gi l ** ((raw_data_item_map_entry_match p x vx ** cbor_map_iterator_match p gi l) @==> raw_data_item_match p c v)) ;
-        stick_consume_l ()
+        trade_consume_l ()
             #(raw_data_item_map_entry_match p x vx)
             #(cbor_map_iterator_match p gi l);
         pres := res;
         if (res) {
             let i = !pi;
-            rewrite each gi as i; // FIXME: HOW HOW HOW to do that once the issue with the use of stick_consume_l above is solved and the `with` above is removed?
+            rewrite each gi as i; // FIXME: HOW HOW HOW to do that once the issue with the use of trade_consume_l above is solved and the `with` above is removed?
             let done = cbor_map_iterator_is_done i;
             pcont := not done;
         } else {
             pcont := false;
         }
     };
-    elim_stick0 ();
+    elim_trade0 ();
     !pres
 }
 
@@ -685,7 +685,7 @@ ensures
         rewrite (cbor_read_with_typ_post source a p va tmp) as (cbor_read_with_typ_success_post source a p va tmp);
         unfold (cbor_read_with_typ_success_post source a p va tmp);
         let w = ip tmp.cbor_read_payload;
-        elim_stick0 ();
+        elim_trade0 ();
         let res = Some w;
         fold (cbor_parse_object_success_post parse r va w);
         rewrite (cbor_parse_object_success_post parse r va w) as (cbor_parse_object_post parse r va res);
