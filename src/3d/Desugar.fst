@@ -391,7 +391,7 @@ let resolve_typedef_names (env:qenv) (td_names:typedef_names) : ML typedef_names
   {
     typedef_name = resolve_ident env td_names.typedef_name;
     typedef_abbrev = resolve_ident env td_names.typedef_abbrev;
-    typedef_ptr_abbrev = resolve_ident env td_names.typedef_ptr_abbrev;
+    typedef_ptr_abbrev = map_opt (resolve_ident env) td_names.typedef_ptr_abbrev;
     typedef_attributes = List.map (resolve_typedef_attribute env) td_names.typedef_attributes;
   }
 
