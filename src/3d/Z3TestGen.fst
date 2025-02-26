@@ -311,9 +311,9 @@ let prelude : string =
   )
 )
 
-(declare-const initial-input-size Int)
-(assert (>= initial-input-size 0))
-(define-fun initial-state () State " ^ mk_state "initial-input-size" "0" "0" ^ ")
+(declare-const state-witness-size Int)
+(assert (>= state-witness-size 0))
+(define-fun initial-state () State " ^ mk_state "state-witness-size" "0" "0" ^ ")
 
 "
 
@@ -1577,7 +1577,6 @@ Printf.sprintf "
 %s
 (define-fun state-witness () State (%s initial-state))
 (define-fun state-witness-input-size () Int (input-size state-witness))
-(declare-fun state-witness-size () Int)
 (assert (<= state-witness-size (choice-index state-witness)))
 (assert (>= state-witness-size (choice-index state-witness)))
 "
@@ -1784,7 +1783,7 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
 "
   (mk_get_positive_test_witness name1 l)
   call2
-  (mk_state "initial-input-size" "0" "-1")
+  (mk_state "state-witness-size" "0" "-1")
 
 let do_diff_test_for
   (out_dir: string) (counter: ref nat) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 (args: list (string & arg_type)) (nargs: nat { nargs == count_args (List.Tot.map snd args) }) validator_name1 validator_name2 nbwitnesses depth =
