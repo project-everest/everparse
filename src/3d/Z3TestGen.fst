@@ -10,19 +10,22 @@ module I = InterpreterTarget
 let mk_state:
   (input_size: string) ->
   (choice_index: string) ->
+  (array_index: string) ->
+  (next_array_index: string) ->
   (branch_index: string) ->
   Tot string
-= Printf.sprintf "(mk-state %s %s %s)"
+= Printf.sprintf "(mk-state %s %s %s %s %s)"
 
 let choose:
+  (array_index: string) ->
   (index: string) ->
   Tot string
-= Printf.sprintf "(choose %s)"
+= Printf.sprintf "(choose %s %s)"
 
 let prelude : string =
 "
 (set-option :produce-models true)
-(declare-datatypes () ((State "^mk_state "(input-size Int)" "(choice-index Int)" "(branch-index Int)" ^ ")))
+(declare-datatypes () ((State "^mk_state "(input-size Int)" "(choice-index Int)" "(array-index Int)" "(next-array-index Int)" "(branch-index Int)" ^ ")))
 (declare-datatypes () ((Result (mk-result (return-value Int) (after-state State)))))
 
 ; From EverParse3d.ErrorCode.is_range_okay
@@ -37,21 +40,21 @@ let prelude : string =
   (mk-result 0 x)
 )
 
-(declare-fun choose (Int) Int)
-(assert (forall ((i Int))
-  (and (<= 0 "^choose "i" ^ ") (< "^choose "i" ^ "256))
+(declare-fun choose (Int Int) Int)
+(assert (forall ((arr Int) (i Int))
+  (and (<= 0 "^choose "arr" "i" ^ ") (< "^choose "arr" "i" ^ "256))
 ))
 
 (declare-fun branch-trace (Int) Int)
 
 (define-fun parse-false ((x State)) State
-  " ^ mk_state "-1" "(choice-index x)" "(branch-index x)" ^ "
+  " ^ mk_state "-1" "(choice-index x)" "(array-index x)" "(next-array-index x)" "(branch-index x)" ^ "
 )
 
 (define-fun parse-all-bytes ((x State)) State
   (if (<= (input-size x) 0)
     x
-    " ^ mk_state "0" "(+ (choice-index x) (input-size x))" "(branch-index x)" ^ "
+    " ^ mk_state "0" "(+ (choice-index x) (input-size x))" "(array-index x)" "(next-array-index x)" "(branch-index x)" ^ "
   )
 )
 
@@ -62,7 +65,7 @@ let prelude : string =
       ("(if
         (forall ((j Int))
           (if (and (<= 0 j) (< j (input-size x)))
-            (= "^choose "(+ (choice-index x) j)" ^" 0)
+            (= "^choose "(array-index x)" "(+ (choice-index x) j)" ^" 0)
             true
           )
         )
@@ -70,6 +73,8 @@ let prelude : string =
         -1
       )")
       "(+ (choice-index x) (input-size x))"
+      "(array-index x)"
+      "(next-array-index x)"
       "(branch-index x)"
     ^ "
   )
@@ -77,7 +82,7 @@ let prelude : string =
 
 (define-fun parse-u8 ((x State)) Result
   (mk-result
-    "^choose "(choice-index x)" ^ "
+    "^choose "(array-index x)" "(choice-index x)" ^ "
     (let ((new-size (- (input-size x) 1)))
       " ^ mk_state
         "(if (< new-size 0)
@@ -85,6 +90,8 @@ let prelude : string =
           new-size
         )"
         "(+ (choice-index x) (if (< new-size 0) (input-size x) 1))"
+        "(array-index x)"
+        "(next-array-index x)"
         "(branch-index x)"
       ^ "
     )
@@ -93,9 +100,9 @@ let prelude : string =
 
 (define-fun parse-u16-be ((x State)) Result
   (mk-result
-    (+ "^choose "(+ 1 (choice-index x))"^"
+    (+ "^choose "(array-index x)" "(+ 1 (choice-index x))"^"
       ( * 256
-        "^choose "(+ 0 (choice-index x))"^"
+        "^choose "(array-index x)" "(+ 0 (choice-index x))"^"
       )
     )
     (let ((new-size (- (input-size x) 2)))
@@ -105,6 +112,8 @@ let prelude : string =
           new-size
         )"
         "(+ (choice-index x) (if (< new-size 0) (input-size x) 2))"
+        "(array-index x)"
+        "(next-array-index x)"
         "(branch-index x)"
       ^ "
     )
@@ -113,9 +122,9 @@ let prelude : string =
 
 (define-fun parse-u16-le ((x State)) Result
   (mk-result
-    (+ "^choose "(+ 0 (choice-index x))"^"
+    (+ "^choose "(array-index x)" "(+ 0 (choice-index x))"^"
       ( * 256
-        "^choose "(+ 1 (choice-index x))"^"
+        "^choose "(array-index x)" "(+ 1 (choice-index x))"^"
       )
     )
     (let ((new-size (- (input-size x) 2)))
@@ -125,6 +134,8 @@ let prelude : string =
           new-size
         )"
         "(+ (choice-index x) (if (< new-size 0) (input-size x) 2))"
+        "(array-index x)"
+        "(next-array-index x)"
         "(branch-index x)"
       ^ "
     )
@@ -133,13 +144,13 @@ let prelude : string =
 
 (define-fun parse-u32-be ((x State)) Result
   (mk-result
-    (+ "^choose "(+ 3 (choice-index x))"^"
+    (+ "^choose "(array-index x)" "(+ 3 (choice-index x))"^"
       ( * 256
-        (+ "^choose "(+ 2 (choice-index x))"^"
+        (+ "^choose "(array-index x)" "(+ 2 (choice-index x))"^"
           ( * 256
-            (+ "^choose "(+ 1 (choice-index x))"^"
+            (+ "^choose "(array-index x)" "(+ 1 (choice-index x))"^"
               ( * 256
-                "^choose "(+ 0 (choice-index x))"^"
+                "^choose "(array-index x)" "(+ 0 (choice-index x))"^"
               )
             )
           )
@@ -153,6 +164,8 @@ let prelude : string =
           new-size
         )"
         "(+ (choice-index x) (if (< new-size 0) (input-size x) 4))"
+        "(array-index x)"
+        "(next-array-index x)"
         "(branch-index x)"
       ^ "
     )
@@ -161,13 +174,13 @@ let prelude : string =
 
 (define-fun parse-u32-le ((x State)) Result
   (mk-result
-    (+ "^choose "(+ 0 (choice-index x))"^"
+    (+ "^choose "(array-index x)" "(+ 0 (choice-index x))"^"
       ( * 256
-        (+ "^choose "(+ 1 (choice-index x))"^"
+        (+ "^choose "(array-index x)" "(+ 1 (choice-index x))"^"
           ( * 256
-            (+ "^choose "(+ 2 (choice-index x))"^"
+            (+ "^choose "(array-index x)" "(+ 2 (choice-index x))"^"
               ( * 256
-                "^choose "(+ 3 (choice-index x))"^"
+                "^choose "(array-index x)" "(+ 3 (choice-index x))"^"
               )
             )
           )
@@ -181,6 +194,8 @@ let prelude : string =
           new-size
         )"
         "(+ (choice-index x) (if (< new-size 0) (input-size x) 4))"
+        "(array-index x)"
+        "(next-array-index x)"
         "(branch-index x)"
       ^ "
     )
@@ -189,21 +204,21 @@ let prelude : string =
 
 (define-fun parse-u64-be ((x State)) Result
   (mk-result
-    (+ "^choose "(+ 7 (choice-index x))"^"
+    (+ "^choose "(array-index x)" "(+ 7 (choice-index x))"^"
       ( * 256
-        (+ "^choose "(+ 6 (choice-index x))"^"
+        (+ "^choose "(array-index x)" "(+ 6 (choice-index x))"^"
           ( * 256
-            (+ "^choose "(+ 5 (choice-index x))"^"
+            (+ "^choose "(array-index x)" "(+ 5 (choice-index x))"^"
               ( * 256
-                (+ "^choose "(+ 4 (choice-index x))"^"
+                (+ "^choose "(array-index x)" "(+ 4 (choice-index x))"^"
                   ( * 256
-                    (+ "^choose "(+ 3 (choice-index x))"^"
+                    (+ "^choose "(array-index x)" "(+ 3 (choice-index x))"^"
                       ( * 256
-                        (+ "^choose "(+ 2 (choice-index x))"^"
+                        (+ "^choose "(array-index x)" "(+ 2 (choice-index x))"^"
                           ( * 256
-                            (+ "^choose "(+ 1 (choice-index x))"^"
+                            (+ "^choose "(array-index x)" "(+ 1 (choice-index x))"^"
                               ( * 256
-                                "^choose "(+ 0 (choice-index x))"^"
+                                "^choose "(array-index x)" "(+ 0 (choice-index x))"^"
                               )
                             )
                           )
@@ -225,6 +240,8 @@ let prelude : string =
           new-size
         )"
         "(+ (choice-index x) (if (< new-size 0) (input-size x) 8))"
+        "(array-index x)"
+        "(next-array-index x)"
         "(branch-index x)"
       ^ "
     )
@@ -233,21 +250,21 @@ let prelude : string =
 
 (define-fun parse-u64-le ((x State)) Result
   (mk-result
-    (+ "^choose "(+ 0 (choice-index x))"^"
+    (+ "^choose "(array-index x)" "(+ 0 (choice-index x))"^"
       ( * 256
-        (+ "^choose "(+ 1 (choice-index x))"^"
+        (+ "^choose "(array-index x)" "(+ 1 (choice-index x))"^"
           ( * 256
-            (+ "^choose "(+ 2 (choice-index x))"^"
+            (+ "^choose "(array-index x)" "(+ 2 (choice-index x))"^"
               ( * 256
-                (+ "^choose "(+ 3 (choice-index x))"^"
+                (+ "^choose "(array-index x)" "(+ 3 (choice-index x))"^"
                   ( * 256
-                    (+ "^choose "(+ 4 (choice-index x))"^"
+                    (+ "^choose "(array-index x)" "(+ 4 (choice-index x))"^"
                       ( * 256
-                        (+ "^choose "(+ 5 (choice-index x))"^"
+                        (+ "^choose "(array-index x)" "(+ 5 (choice-index x))"^"
                           ( * 256
-                            (+ "^choose "(+ 6 (choice-index x))"^"
+                            (+ "^choose "(array-index x)" "(+ 6 (choice-index x))"^"
                               ( * 256
-                                "^choose "(+ 7 (choice-index x))"^"
+                                "^choose "(array-index x)" "(+ 7 (choice-index x))"^"
                               )
                             )
                           )
@@ -269,6 +286,8 @@ let prelude : string =
           new-size
         )"
         "(+ (choice-index x) (if (< new-size 0) (input-size x) 8))"
+        "(array-index x)"
+        "(next-array-index x)"
         "(branch-index x)"
       ^ "
     )
@@ -300,20 +319,24 @@ let prelude : string =
       " ^  mk_state
         "(- (input-size x) size)"
         "(+ (choice-index x) size)"
+        "(array-index x)"
+        "(next-array-index x)"
         "(branch-index x)"
       ^ "
       " ^ mk_state
         "-1"
         "(+ (choice-index x) (input-size x))"
+        "(array-index x)"
+        "(next-array-index x)"
         "(branch-index x)"
       ^ "
     )
   )
 )
 
-(declare-const state-witness-size Int)
-(assert (>= state-witness-size 0))
-(define-fun initial-state () State " ^ mk_state "state-witness-size" "0" "0" ^ ")
+(declare-fun state-witness-size (Int) Int)
+(assert (forall ((x Int)) (>= (state-witness-size x) 0)))
+(define-fun initial-state () State " ^ mk_state "(state-witness-size 0)" "0" "0" "1" "0" ^ ")
 
 "
 
@@ -613,6 +636,8 @@ let mk_parse_dep_pair_with_refinement
                "^mk_state
                  ("(input-size (after-state "^tmp^"))")
                  ("(choice-index (after-state "^tmp^"))")
+                 ("(array-index (after-state "^tmp^"))")
+                 ("(next-array-index (after-state "^tmp^"))")
                  ("(+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))")
                ^"
              )
@@ -620,12 +645,16 @@ let mk_parse_dep_pair_with_refinement
            "^mk_state
              "-2"
              ("(choice-index (after-state "^tmp^"))")
+             ("(array-index (after-state "^tmp^"))")
+             ("(next-array-index (after-state "^tmp^"))")
              ("(+ 1 (branch-index (after-state "^tmp^")))")
            ^"
          )
          "^mk_state
            ("(if (or (< (branch-index (after-state "^tmp^")) 0) (= (branch-trace (branch-index (after-state "^tmp^"))) 1)) -1 -2)")
            ("(choice-index (after-state "^tmp^"))")
+           ("(array-index (after-state "^tmp^"))")
+           ("(next-array-index (after-state "^tmp^"))")
            ("(+ (if (< (branch-index (after-state "^tmp^")) 0) 0 1) (branch-index (after-state "^tmp^")))")
          ^"
        )
@@ -693,10 +722,10 @@ let mk_parse_ifthenelse_cons
 = let input = Printf.sprintf "%s-input" name in
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
    (if (and "^cond^" (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int counter^")))
-     ("^f_then^" (if (< (branch-index "^input^") 0) "^input^" "^mk_state ("(input-size "^input^")") ("(choice-index "^input^")") ("(+ 1 (branch-index "^input^"))")^"))
+     ("^f_then^" (if (< (branch-index "^input^") 0) "^input^" "^mk_state ("(input-size "^input^")") ("(choice-index "^input^")") ("(array-index "^input^")") ("(next-array-index "^input^")") ("(+ 1 (branch-index "^input^"))")^"))
      (if (not "^cond^")
        ("^f_else^" "^input^")
-       "^mk_state "-2" ("(choice-index "^input^")") ("(+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))") ^ " ; this is a Z3 encoding artifact, not a parsing failure
+       "^mk_state "-2" ("(choice-index "^input^")") ("(array-index "^input^")") ("(next-array-index "^input^")") ("(+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))") ^ " ; this is a Z3 encoding artifact, not a parsing failure
      )
    )
  )
@@ -722,12 +751,12 @@ let mk_parse_ifthenelse_nil
 = let input = Printf.sprintf "%s-input" name in
   let tmp = Printf.sprintf "%s-tmp" name in
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
-   (let (("^tmp^" (if (< (branch-index "^input^") 0) "^input^" "^mk_state ("(input-size "^input^")") ("(choice-index "^input^")") ("(+ 1 (branch-index "^input^"))") ^ ")))
+   (let (("^tmp^" (if (< (branch-index "^input^") 0) "^input^" "^mk_state ("(input-size "^input^")") ("(choice-index "^input^")") ("(array-index "^input^")") ("(next-array-index "^input^")") ("(+ 1 (branch-index "^input^"))") ^ ")))
      (if (and "^cond^" (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int counter^")))
        ("^f_then^" "^tmp^")
        (if (and (not "^cond^") (or (< (branch-index "^input^") 0) (= (branch-trace (branch-index "^input^")) "^string_of_int (1 + counter)^")))
          ("^f_else^" "^tmp^")
-         "^mk_state "-2" ("(choice-index "^tmp^")") ("(+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))") ^ " ; this is a Z3 encoding artifact, not a parsing failure
+         "^mk_state "-2" ("(choice-index "^tmp^")") ("(array-index "^tmp^")") ("(next-array-index "^tmp^")") ("(+ (if (< (branch-index "^input^") 0) 0 1) (branch-index "^input^"))") ^ " ; this is a Z3 encoding artifact, not a parsing failure
        )
      )
    )
@@ -755,8 +784,8 @@ let mk_parse_exact
 "(define-fun "^name^" ("^binders^"("^input^" State)) State
   (let (("^sz^" "^size^"))
     (if (< (input-size "^input^") "^sz^")
-      "^mk_state "-1" ("(choice-index "^input^")") ("(branch-index "^input^")") ^ "
-      (let (("^res^" ("^body^" "^mk_state sz ("(choice-index "^input^")") ("(branch-index "^input^")")^")))
+      "^mk_state "-1" ("(choice-index "^input^")") ("(array-index "^input^")") ("(next-array-index "^input^")") ("(branch-index "^input^")") ^ "
+      (let (("^res^" ("^body^" "^mk_state sz ("(choice-index "^input^")") ("(array-index "^input^")") ("(next-array-index "^input^")") ("(branch-index "^input^")")^")))
         " ^ mk_state
           ("(if (= (input-size "^res^") 0)
             (- (input-size "^input^") "^sz^")
@@ -766,6 +795,8 @@ let mk_parse_exact
             )
           )")
           ("(choice-index "^res^")")
+          ("(array-index "^res^")")
+          ("(next-array-index "^res^")") 
           ("(branch-index "^res^")")
         ^"
       )
@@ -898,7 +929,7 @@ let mk_parse_string
 "(define-fun-rec "^name^" ("^binders^"("^input^" State)) State
   (let (("^tmp^" ("^body^" "^input^")))
     (if (< (choice-index (after-state "^tmp^")) 0)
-      "^mk_state "-1" ("(choice-index (after-state "^tmp^"))") ("(branch-index (after-state "^tmp^"))") ^ "
+      "^mk_state "-1" ("(choice-index (after-state "^tmp^"))") ("(array-index (after-state "^tmp^"))") ("(next-array-index (after-state "^tmp^"))") ("(branch-index (after-state "^tmp^"))") ^ "
       (if (= (return-value "^tmp^") "^terminator^")
         (after-state "^tmp^")
         ("^rec_call^" (after-state "^tmp^"))
@@ -1176,19 +1207,36 @@ let with_option_out_file
 
 (* Ask Z3 for test witnesses *)
 
-let read_witness (z3: Z3.z3) : ML (Seq.seq int) =
-  z3.to_z3 "(get-value (state-witness-size))\n";
-  let (_, witness_size) = Lisp.read_int_from z3.from_z3 "state-witness-size" in
+let read_witness_layer (z3: Z3.z3) (array_index: nat) : ML (Seq.seq int) =
+  let array_index_s = string_of_int array_index in
+  z3.to_z3 (Printf.sprintf "(eval (state-witness-size %s))\n" array_index_s);
+  let witness_size = Lisp.read_bare_int_from z3.from_z3 in
   let rec aux (accu: Seq.seq int) (remaining: int) : ML (Seq.seq int) =
     if remaining <= 0
     then accu
     else
       let index = remaining - 1 in
-      let _ = z3.to_z3 (Printf.sprintf "(eval %s)\n" (choose (string_of_int index))) in
+      let _ = z3.to_z3 (Printf.sprintf "(eval %s)\n" (choose array_index_s (string_of_int index))) in
       let v = Lisp.read_bare_int_from z3.from_z3 in
       aux (Seq.cons v accu) index
   in
   aux Seq.empty witness_size
+
+let read_witness (z3: Z3.z3) : ML (Seq.seq (Seq.seq int)) =
+  z3.to_z3 "(eval (next-array-index state-witness))\n";
+  let nb_layers = Lisp.read_bare_int_from z3.from_z3 in
+  if nb_layers < 1
+  then failwith "read_witness: impossible: less than 1 layer";
+  let rec aux (accu: Seq.seq (Seq.seq int)) (remaining: nat) : ML (Seq.seq (Seq.seq int)) =
+    if remaining = 0
+    then accu
+    else
+      let layer = remaining - 1 in
+      let wl = read_witness_layer z3 layer in
+      let accu' = Seq.cons wl accu in
+      aux accu' layer
+  in
+  aux Seq.empty nb_layers
 
 let read_branch_trace (z3: Z3.z3) : ML (Seq.seq int) =
   z3.to_z3 "(eval (branch-index state-witness))\n";
@@ -1251,7 +1299,7 @@ let print_witness_call_as_c_aux
   print_witness_args_as_c out arg_types args;
   out "&context, &TestErrorHandler, witness";
   out (string_of_int num);
-  out ", ";
+  out "[0], ";
   out (string_of_int witness_length);
   out ", 0);"
 
@@ -1382,14 +1430,15 @@ let print_witness_call_as_c
   };
 "
 
-let print_witness_as_c_aux
+let print_witness_layer_as_c_aux
   (out: (string -> ML unit))
   (witness: Seq.seq int)
   (len: int { len == Seq.length witness })
   (num: nat)
-: ML unit
+  (lid: int)
+: ML string
 =
-  let layer_name = "witness" ^ string_of_int num in
+  let layer_name = "witness" ^ string_of_int num ^ "_" ^ string_of_int lid in
   out "  uint8_t ";
   if len > 0
   then begin
@@ -1410,11 +1459,41 @@ let print_witness_as_c_aux
     out layer_name;
     out " = NULL;"
   end;
-  ()
+  layer_name
+
+let print_witness_as_c_aux
+  (out: (string -> ML unit))
+  (witness: Seq.seq (Seq.seq int))
+  (len: int { len == Seq.length witness })
+  (num: nat)
+: ML unit
+=
+  let rec aux accu (i: nat) : ML string =
+    if i >= len
+    then accu
+    else begin
+      let w = Seq.index witness i in
+      let layer_name = print_witness_layer_as_c_aux out w (Seq.length w) num i in
+      let accu' =
+        if accu = ""
+        then layer_name
+        else accu ^ "," ^ layer_name
+      in
+      aux accu' (i + 1)
+    end
+  in
+  let layer_name = aux "" 0 in
+  out "  uint8_t* witness";
+  out (string_of_int num);
+  out "[";
+  out (string_of_int len);
+  out "] = {";
+  out layer_name;
+  out "};"
 
 let print_witness_as_c_gen
   (out: (string -> ML unit))
-  (witness: Seq.seq int)
+  (witness: Seq.seq (Seq.seq int))
   (f: (len: int { len == Seq.length witness }) -> ML unit)
   (num: nat)
 : ML unit
@@ -1446,6 +1525,21 @@ let mk_output_filename
   counter := i + 1;
   OS.concat out_dir (mk_args_as_file_name ("witness." ^ string_of_int i ^ "." ^ validator_name) args ^ ".dat")
 
+let write_witness_to_file
+  (witness: Seq.seq (Seq.seq int))
+  (mk_output_filename: (int -> ML string))
+: ML unit
+= let rec aux (i: nat) : ML unit =
+    if i >= Seq.length witness
+    then ()
+    else begin
+      let witness = Seq.index witness i in
+      OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename i);
+      aux (i + 1)
+    end
+  in
+  aux 0
+
 let print_witness_as_c
   (out_dir: string)
   (out: (string -> ML unit))
@@ -1454,13 +1548,15 @@ let print_witness_as_c
   (validator_name: string)
   (arg_types: list (string & arg_type))
   (counter: ref nat)
-  (witness: Seq.seq int)
+  (witness: Seq.seq (Seq.seq int))
   (args: list string)
 : ML unit
-= OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ((if positive then "POS." else "NEG.") ^ validator_name) args);
+= write_witness_to_file witness (fun i -> mk_output_filename counter out_dir ((if positive then "POS." else "NEG.") ^ string_of_int i ^ "." ^ validator_name) args);
   let num = !counter in
   print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out p positive validator_name arg_types len args num
+    if len = 0
+    then failwith "print_witness_as_c: no witness layers. This should not happen.";
+    print_witness_call_as_c out p positive validator_name arg_types (Seq.length (Seq.index witness 0)) args num
   ) num
 
 let print_diff_witness_as_c
@@ -1471,20 +1567,24 @@ let print_diff_witness_as_c
   (validator_name2: string)
   (arg_types: list (string & arg_type))
   (counter: ref nat)
-  (witness: Seq.seq int)
+  (witness: Seq.seq (Seq.seq int))
   (args: list string)
 : ML unit
-= OS.write_witness_to_file (Seq.seq_to_list witness) (mk_output_filename counter out_dir ("POS." ^ validator_name1 ^ ".NEG." ^ validator_name2) args);
+= write_witness_to_file witness (fun i -> mk_output_filename counter out_dir ("POS." ^ string_of_int i ^ "." ^ validator_name1 ^ ".NEG." ^ validator_name2) args);
   let num = !counter in
   print_witness_as_c_gen out witness (fun len ->
-    print_witness_call_as_c out p true validator_name1 arg_types len args num;
-    print_witness_call_as_c out p false validator_name2 arg_types len args num
+    if len = 0
+    then failwith "print_witness_as_c: no witness layers. This should not happen.";
+    let wlen = Seq.length (Seq.index witness 0) in
+    print_witness_call_as_c out p true validator_name1 arg_types wlen args num;
+    print_witness_call_as_c out p false validator_name2 arg_types wlen args num
   )
   num
 
-let print_witness (witness: Seq.seq int) : ML unit =
+let print_witness (witness: Seq.seq (Seq.seq int)) : ML unit =
   FStar.IO.print_string " produced witness: [";
-  List.iter (fun i -> FStar.IO.print_string (string_of_int i); FStar.IO.print_string "; ") (Seq.seq_to_list witness);
+  let p witness = List.iter (fun i -> FStar.IO.print_string (string_of_int i); FStar.IO.print_string "; ") (Seq.seq_to_list witness) in
+  List.iter (fun i -> FStar.IO.print_string "["; p i; FStar.IO.print_string "] ") (Seq.seq_to_list witness);
   FStar.IO.print_string "]"
 
 let print_branch_trace (witness: Seq.seq int) : ML unit =
@@ -1498,7 +1598,7 @@ let rec mk_witness_call (accu: string) (l: list arg_type) (args: list string) : 
   | _ :: ql, a :: qargs -> mk_witness_call (Printf.sprintf "%s %s" accu a) ql qargs
   | _ -> Printf.sprintf "(%s)" accu
 
-let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq int) (input_size: string) (branch_trace: Seq.seq int) (args: list string) : ML unit =
+let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq (Seq.seq int)) (input_size: string) (branch_trace: Seq.seq int) (args: list string) : ML unit =
   FStar.IO.print_string ";; call ";
   FStar.IO.print_string (mk_witness_call name l args);
   print_witness witness;
@@ -1508,11 +1608,21 @@ let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq i
 
 let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer _ -> false | _ -> true) l)
 
-let rec mk_choose_conj (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
+let rec mk_choose_conj_layer (array_index: string) (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
   (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
 = if i >= Seq.length witness
   then accu
-  else mk_choose_conj witness ("(and (= "^choose (string_of_int i) ^ " " ^ string_of_int (Seq.index witness i)^") "^accu^")") (i + 1)
+  else mk_choose_conj_layer array_index witness ("(and (= "^choose array_index (string_of_int i) ^ " " ^ string_of_int (Seq.index witness i)^") "^accu^")") (i + 1)
+
+let rec mk_choose_conj (witness: Seq.seq (Seq.seq int)) (accu: string) (i: nat) : Tot string
+  (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
+= if i >= Seq.length witness
+  then accu
+  else
+    let w = Seq.index witness i in
+    let accu1 = mk_choose_conj_layer (string_of_int i) w accu 0 in
+    let accu2 = Printf.sprintf "(and (= (state-witness-size %d) %d) %s)" i (Seq.length w) accu1 in
+    mk_choose_conj witness accu2 (i + 1)
 
 let rec mk_arg_conj (accu: string) (i: nat) (l: list string) : Tot string (decreases l) =
   match l with
@@ -1524,9 +1634,9 @@ let mk_want_another_distinct_witness witness witness_args : Tot string =
   Printf.sprintf
 "(assert (not %s))
 "
-  (mk_arg_conj (mk_choose_conj witness ("(= (choice-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
+  (mk_arg_conj (mk_choose_conj witness ("(= (next-array-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
 
-let rec want_witnesses (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i : ML unit =
+let rec want_witnesses (print_test_case: (Seq.seq (Seq.seq int) -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i : ML unit =
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
@@ -1577,8 +1687,8 @@ Printf.sprintf "
 %s
 (define-fun state-witness () State (%s initial-state))
 (define-fun state-witness-input-size () Int (input-size state-witness))
-(assert (<= state-witness-size (choice-index state-witness)))
-(assert (>= state-witness-size (choice-index state-witness)))
+(assert (<= (state-witness-size 0) (choice-index state-witness)))
+(assert (>= (state-witness-size 0) (choice-index state-witness)))
 "
   (mk_assert_args "" 0 l)
   (mk_call_args name 0 l)
@@ -1660,7 +1770,7 @@ let enumerate_branch_traces
   res
 
 let rec want_witnesses_with_depth
-  (print_test_case: (Seq.seq int -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
+  (print_test_case: (Seq.seq (Seq.seq int) -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
   cur_depth (tree: list branch_trace_node) (branch_trace: string)
 : ML unit
 =
@@ -1678,13 +1788,13 @@ let rec want_witnesses_with_depth
   in
   aux tree
 
-let witnesses_for (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq int -> list string -> ML unit) & (unit -> ML string))) nbwitnesses max_depth =
+let witnesses_for (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq (Seq.seq int) -> list string -> ML unit) & (unit -> ML string))) nbwitnesses max_depth =
   z3.to_z3 "(push)\n";
   z3.to_z3 (mk_get_witness name l);
   let traces = enumerate_branch_traces z3 max_depth in
   z3.to_z3 assert_valid_state;
   List.iter
-    #((Seq.seq int -> list string -> ML unit) & (unit -> ML string))
+    #((Seq.seq (Seq.seq int) -> list string -> ML unit) & (unit -> ML string))
     (fun (ptc, f) ->
       z3.to_z3 "(push)\n";
       z3.to_z3 (f ());
@@ -1783,7 +1893,7 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
 "
   (mk_get_positive_test_witness name1 l)
   call2
-  (mk_state "state-witness-size" "0" "-1")
+  (mk_state "(state-witness-size 0)" "0" "0" "1" "-1")
 
 let do_diff_test_for
   (out_dir: string) (counter: ref nat) (cout: string -> ML unit) (z3: Z3.z3) (prog: prog) name1 name2 (args: list (string & arg_type)) (nargs: nat { nargs == count_args (List.Tot.map snd args) }) validator_name1 validator_name2 nbwitnesses depth =
