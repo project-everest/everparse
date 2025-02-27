@@ -1848,6 +1848,40 @@ typedef struct {
 } witness_layer_t;
 "
 
+let test_probe_functions = "
+typedef struct {
+  witness_layer_t *layers;
+  uint64_t count;
+  uint64_t cur;
+} copy_buffer_t;
+
+uint8_t * EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return state->layers[state->cur].buf;
+}
+
+uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return state->layers[state->cur].len;
+}
+
+BOOLEAN ProbeAndCopy(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+  copy_buffer_t *state = (copy_buffer_t * ) dst;
+  if (src < state->count) {
+    if (len != state->layers[src].len) {
+      printf(\"ProbeAndCopy: layer length does not match spec\\n\");
+      return false;
+    } else {
+      state->cur = src;
+      return true;
+    }
+  } else {
+    printf(\"ProbeAndCopy: incorrect pointer\\n\");
+    return false;
+  }
+}
+"
+
 let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
   let def = List.assoc name1 prog in
   begin match def with
@@ -1866,6 +1900,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
   cout ".h\"
 ";
   cout test_error_handler;
+  cout test_probe_functions;
   cout "
   int main(void) {
 ";
@@ -1940,6 +1975,7 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: 
   cout ".h\"
 ";
   cout test_error_handler;
+  cout test_probe_functions;
   cout "
   int main(void) {
 ";
