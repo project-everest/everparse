@@ -1106,6 +1106,8 @@ type prog_def =
 | ProgOutput:
   args: list (string & simple_arg_type true) ->
   prog_def
+| ProgProbe:
+  prog_def
 
 let prog = list (string & prog_def)
 
@@ -1176,9 +1178,17 @@ let produce_output_type_decl
 : Tot prog
 = (ident_to_string ot.out_typ_names.typedef_name, ProgOutput (prog_out_fields_of_ast_out_fields [] ot.out_typ_fields)) :: accu
 
+let produce_probe_decl (accu: prog) (probe: A.ident) : Tot prog =
+    let name = ident_to_string probe in
+    let x = (name, ProgProbe) in
+    if List.Tot.mem x accu
+    then accu
+    else x :: accu
+
 let produce_decl (out: string -> ML unit) (accu: prog) (a: I.decl) : ML prog =
   match a with
   | Inl (T.Output_type ot, _) -> produce_output_type_decl accu ot
+  | Inl (T.Extern_probe probe, _) -> produce_probe_decl accu probe
   | Inl a -> produce_not_type_decl a out; accu
   | Inr a -> produce_type_decl out accu a
 
@@ -1864,8 +1874,10 @@ uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
   copy_buffer_t *state = ((copy_buffer_t * ) x);
   return state->layers[state->cur].len;
 }
+"
 
-BOOLEAN ProbeAndCopy(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+let generate_probe_function (name: string) : Tot string = "
+BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   copy_buffer_t *state = (copy_buffer_t * ) dst;
   if (src < state->count) {
     if (len != state->layers[src].len) {
@@ -1881,6 +1893,19 @@ BOOLEAN ProbeAndCopy(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   }
 }
 "
+
+let cout_test_probe_functions
+  (cout: string -> ML unit)
+  (prog: prog)
+: ML unit
+= cout test_probe_functions;
+  List.iter
+    (fun x -> match x with
+    | (name, ProgProbe) ->
+      cout (generate_probe_function name)
+    | _ -> ()
+    )
+    prog
 
 let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
   let def = List.assoc name1 prog in
@@ -1900,7 +1925,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog)
   cout ".h\"
 ";
   cout test_error_handler;
-  cout test_probe_functions;
+  cout_test_probe_functions cout prog;
   cout "
   int main(void) {
 ";
@@ -1975,7 +2000,7 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: 
   cout ".h\"
 ";
   cout test_error_handler;
-  cout test_probe_functions;
+  cout_test_probe_functions cout prog;
   cout "
   int main(void) {
 ";
