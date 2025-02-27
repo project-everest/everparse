@@ -950,6 +950,74 @@ let parse_string
     out (mk_parse_string name rec_call binders.bind body.call (terminator ()));
     { call = rec_call }
 
+let mk_parse_probe
+  (name: string)
+  (binders: string)
+  (body: string)
+  (size: string)
+: Tot string
+= let input = Printf.sprintf "%s-input" name in
+  let sz = Printf.sprintf "%s-size" name in
+  let res = Printf.sprintf "%s-res" name in
+  let ptr = Printf.sprintf "%s-tmpptr" name in
+  let tmp = Printf.sprintf "%s-tmp" name in
+"(define-fun "^name^" ("^binders^"("^input^" State)) State
+  (let (("^ptr^" (parse-u64-le "^input^"))) ; FIXME: generalize to user-specified pointer value type
+    (if (< (input-size (after-state "^ptr^")) 0)
+      (after-state "^ptr^")
+      (if (= (return-value "^ptr^") (next-array-index (after-state "^ptr^")))
+        (if
+          (and
+            (= (state-witness-size (next-array-index (after-state "^ptr^"))) "^size^") ; we always constrain Z3 to produce probe buffers whose size is equal to the user-specified probe size
+            (or (< (branch-index (after-state "^ptr^")) 0) (= (branch-trace (branch-index (after-state "^ptr^"))) 0))
+          )
+          (let (("^tmp^" ("^body^" "^
+            mk_state
+              ("(state-witness-size (next-array-index (after-state "^ptr^")))")
+              "0"
+              ("(next-array-index (after-state "^ptr^"))")
+              ("(+ 1 (next-array-index (after-state "^ptr^")))")
+              ("(+ (if (< (branch-index (after-state "^ptr^")) 0) 0 1) (branch-index (after-state "^ptr^")))")
+            ^")))
+            "^mk_state // NOTE: we follow EverParse3d.Actions.Base.probe_then_validate, which DOES NOT check whether everything was consumed
+              ("(if (< (input-size "^tmp^") 0) (input-size "^tmp^") (input-size (after-state "^ptr^")))")
+              ("(choice-index (after-state "^ptr^"))")
+              ("(array-index (after-state "^ptr^"))")
+              ("(next-array-index "^tmp^")")
+              ("(branch-index "^tmp^")")
+            ^"
+          )
+          "^mk_state
+            "-2"
+            ("(choice-index (after-state "^ptr^"))")
+            ("(array-index (after-state "^ptr^"))")
+            ("(next-array-index (after-state "^ptr^"))")
+            ("(+ (if (< (branch-index (after-state "^ptr^")) 0) 0 1) (branch-index (after-state "^ptr^")))")
+          ^"
+        )
+        "^mk_state
+          ("(if (or (< (branch-index (after-state "^ptr^")) 0) (= (branch-trace (branch-index (after-state "^ptr^"))) 1)) -1 -2)")
+          ("(choice-index (after-state "^ptr^"))")
+          ("(array-index (after-state "^ptr^"))")
+          ("(next-array-index (after-state "^ptr^"))")
+          ("(+ (if (< (branch-index (after-state "^ptr^")) 0) 0 1) (branch-index (after-state "^ptr^")))")
+        ^"
+      )
+    )
+  )
+)
+"
+
+let parse_probe
+  (size: unit -> ML string)
+  (body: parser not_reading)
+: Tot (parser not_reading)
+= fun name binders _ out ->
+    let body_name = Printf.sprintf "%s-body" name in
+    let body = body body_name binders false out in
+    out (mk_parse_probe name binders.bind body.call (size ()));
+    { call = mk_function_call name binders }
+
 let rec typ_depth (t: I.typ) : GTot nat
   (decreases t)
 = match t with
@@ -1007,7 +1075,8 @@ let rec parse_typ (t : I.typ) : Tot (parser not_reading)
       parse_nlist_total_constant_size i size
     else
       parse_nlist (fun _ -> mk_expr size) (parse_typ body)
-  | I.T_probe_then_validate _ _ _ _ _ -> unsupported_parser "probe_then_validate" _
+  | I.T_probe_then_validate _ body _ size _ -> 
+    parse_probe (fun _ -> mk_expr size) (parse_denoted body)
 
 and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Tot (int -> parser not_reading)
   (decreases (1 + typ_depth tthen + typ_depth telse))
