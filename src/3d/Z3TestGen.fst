@@ -1285,11 +1285,18 @@ let rec print_witness_args_as_c
     print_witness_args_as_c out ql qargs
   | _ -> ()
 
+let out_witness_len
+  (out: (string -> ML unit))
+  (num: nat)
+: ML unit
+= out "witness";
+  out (string_of_int num);
+  out "[0].len"
+
 let print_witness_call_as_c_aux
   (out: (string -> ML unit))
   (validator_name: string)
   (arg_types: list (string & arg_type))
-  (witness_length: nat)
   (args: list string)
   (num: nat)
 : ML unit
@@ -1299,8 +1306,8 @@ let print_witness_call_as_c_aux
   print_witness_args_as_c out arg_types args;
   out "&context, &TestErrorHandler, witness";
   out (string_of_int num);
-  out "[0], ";
-  out (string_of_int witness_length);
+  out "[0].buf, ";
+  out_witness_len out num;
   out ", 0);"
 
 let pointer_elt_type_as_c (x: simple_arg_type true) : Tot (option string) =
@@ -1380,7 +1387,6 @@ let print_witness_call_as_c
   (positive: bool)
   (validator_name: string)
   (arg_types: list (string & arg_type))
-  (witness_length: nat)
   (args: list string)
   (num: nat)
 : ML unit
@@ -1398,17 +1404,17 @@ let print_witness_call_as_c
     arg_types;
   out "
     uint64_t output = ";
-  print_witness_call_as_c_aux out validator_name arg_types witness_length args num;
+  print_witness_call_as_c_aux out validator_name arg_types args num;
   out "
     printf(\"  // ";
-  print_witness_call_as_c_aux out validator_name arg_types witness_length args num;
+  print_witness_call_as_c_aux out validator_name arg_types args num;
   out " // \");
     BOOLEAN result = !EverParseIsError(output);
     BOOLEAN consumes_all_bytes_if_successful = true;
     if (result) {
       consumes_all_bytes_if_successful = (output == ";
-  out (string_of_int witness_length);
-  out "U);
+  out_witness_len out num;
+  out ");
       result = consumes_all_bytes_if_successful;
     }
     if (result) {
@@ -1473,22 +1479,24 @@ let print_witness_as_c_aux
     then accu
     else begin
       let w = Seq.index witness i in
-      let layer_name = print_witness_layer_as_c_aux out w (Seq.length w) num i in
+      let wlen = Seq.length w in
+      let layer_name = print_witness_layer_as_c_aux out w wlen num i in
+      let layer = "{ .buf = " ^ layer_name ^ ", .len = " ^ string_of_int wlen ^ "}" in
       let accu' =
         if accu = ""
-        then layer_name
-        else accu ^ "," ^ layer_name
+        then layer
+        else accu ^ "," ^ layer
       in
       aux accu' (i + 1)
     end
   in
-  let layer_name = aux "" 0 in
-  out "  uint8_t* witness";
+  let layers = aux "" 0 in
+  out "  witness_layer_t witness";
   out (string_of_int num);
   out "[";
   out (string_of_int len);
   out "] = {";
-  out layer_name;
+  out layers;
   out "};"
 
 let print_witness_as_c_gen
@@ -1556,7 +1564,7 @@ let print_witness_as_c
   print_witness_as_c_gen out witness (fun len ->
     if len = 0
     then failwith "print_witness_as_c: no witness layers. This should not happen.";
-    print_witness_call_as_c out p positive validator_name arg_types (Seq.length (Seq.index witness 0)) args num
+    print_witness_call_as_c out p positive validator_name arg_types args num
   ) num
 
 let print_diff_witness_as_c
@@ -1575,9 +1583,8 @@ let print_diff_witness_as_c
   print_witness_as_c_gen out witness (fun len ->
     if len = 0
     then failwith "print_witness_as_c: no witness layers. This should not happen.";
-    let wlen = Seq.length (Seq.index witness 0) in
-    print_witness_call_as_c out p true validator_name1 arg_types wlen args num;
-    print_witness_call_as_c out p false validator_name2 arg_types wlen args num
+    print_witness_call_as_c out p true validator_name1 arg_types args num;
+    print_witness_call_as_c out p false validator_name2 arg_types args num
   )
   num
 
@@ -1834,6 +1841,11 @@ static void TestErrorHandler (
     *context = 1;
   }
 }
+
+typedef struct {
+  uint8_t *buf;
+  uint64_t len;
+} witness_layer_t;
 "
 
 let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
