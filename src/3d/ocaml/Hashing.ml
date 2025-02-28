@@ -56,7 +56,7 @@ let hash_file h f =
   hash_int h len;
   hash_debug_print (Printf.sprintf "hash_file %s" f);
   let buf = Bytes.create len in
-  let _ = input ch buf 0 len in
+  let _ = really_input ch buf 0 len in
   close_in ch;
   hash_update h buf
 
