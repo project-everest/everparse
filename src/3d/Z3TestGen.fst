@@ -965,42 +965,33 @@ let mk_parse_probe
   (let (("^ptr^" (parse-u64-le "^input^"))) ; FIXME: generalize to user-specified pointer value type
     (if (< (input-size (after-state "^ptr^")) 0)
       (after-state "^ptr^")
-      (if (= (return-value "^ptr^") (next-array-index (after-state "^ptr^")))
-        (if
-          (and
-            (= (state-witness-size (next-array-index (after-state "^ptr^"))) "^size^") ; we always constrain Z3 to produce probe buffers whose size is equal to the user-specified probe size
-            (or (< (branch-index (after-state "^ptr^")) 0) (= (branch-trace (branch-index (after-state "^ptr^"))) 0))
-          )
-          (let (("^tmp^" ("^body^" "^
-            mk_state
-              ("(state-witness-size (next-array-index (after-state "^ptr^")))")
-              "0"
-              ("(next-array-index (after-state "^ptr^"))")
-              ("(+ 1 (next-array-index (after-state "^ptr^")))")
-              ("(+ (if (< (branch-index (after-state "^ptr^")) 0) 0 1) (branch-index (after-state "^ptr^")))")
-            ^")))
-            "^mk_state // NOTE: we follow EverParse3d.Actions.Base.probe_then_validate, which DOES NOT check whether everything was consumed
-              ("(if (< (input-size "^tmp^") 0) (input-size "^tmp^") (input-size (after-state "^ptr^")))")
-              ("(choice-index (after-state "^ptr^"))")
-              ("(array-index (after-state "^ptr^"))")
-              ("(next-array-index "^tmp^")")
-              ("(branch-index "^tmp^")")
-            ^"
-          )
-          "^mk_state
-            "-2"
+      (if
+        (and
+          (= (return-value "^ptr^") (next-array-index (after-state "^ptr^"))) ; we always constrain Z3 to produce a test case with correct probe pointers
+          (= (state-witness-size (next-array-index (after-state "^ptr^"))) "^size^") ; we always constrain Z3 to produce probe buffers whose size is equal to the user-specified probe size
+        )
+        (let (("^tmp^" ("^body^" "^
+          mk_state
+            ("(state-witness-size (next-array-index (after-state "^ptr^")))")
+            "0"
+            ("(next-array-index (after-state "^ptr^"))")
+            ("(+ 1 (next-array-index (after-state "^ptr^")))")
+            ("(branch-index (after-state "^ptr^"))")
+          ^")))
+          "^mk_state // NOTE: we follow EverParse3d.Actions.Base.probe_then_validate, which DOES NOT check whether everything was consumed
+            ("(if (< (input-size "^tmp^") 0) (input-size "^tmp^") (input-size (after-state "^ptr^")))")
             ("(choice-index (after-state "^ptr^"))")
             ("(array-index (after-state "^ptr^"))")
-            ("(next-array-index (after-state "^ptr^"))")
-            ("(+ (if (< (branch-index (after-state "^ptr^")) 0) 0 1) (branch-index (after-state "^ptr^")))")
+            ("(next-array-index "^tmp^")")
+            ("(branch-index "^tmp^")")
           ^"
         )
         "^mk_state
-          ("(if (or (< (branch-index (after-state "^ptr^")) 0) (= (branch-trace (branch-index (after-state "^ptr^"))) 1)) -1 -2)")
+          "-2"
           ("(choice-index (after-state "^ptr^"))")
           ("(array-index (after-state "^ptr^"))")
           ("(next-array-index (after-state "^ptr^"))")
-          ("(+ (if (< (branch-index (after-state "^ptr^")) 0) 0 1) (branch-index (after-state "^ptr^")))")
+          ("(branch-index (after-state "^ptr^"))")
         ^"
       )
     )
@@ -1987,8 +1978,9 @@ let generate_probe_function (name: string) : Tot string = "
 BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   copy_buffer_t *state = (copy_buffer_t * ) dst;
   if (src < state->count) {
-    if (len != state->layers[src].len) {
-      printf(\"ProbeAndCopy: layer length does not match spec\\n\");
+    uint64_t got_len = state->layers[src].len;
+    if (len != got_len) {
+      printf(\"ProbeAndCopy: layer length does not match spec. Expected %ld, got %ld\\n\", len, got_len);
       exit(4);
     } else {
       state->cur = src;
@@ -1996,7 +1988,7 @@ BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
     }
   } else {
     printf(\"ProbeAndCopy: incorrect pointer\\n\");
-    return false;
+    exit(4);
   }
 }
 "
