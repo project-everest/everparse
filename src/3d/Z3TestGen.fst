@@ -1986,7 +1986,7 @@ BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   if (src < state->count) {
     if (len != state->layers[src].len) {
       printf(\"ProbeAndCopy: layer length does not match spec\\n\");
-      return false;
+      exit(4);
     } else {
       state->cur = src;
       return true;
