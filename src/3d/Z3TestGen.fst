@@ -1251,7 +1251,7 @@ let produce_output_type_decl
 = (ident_to_string ot.out_typ_names.typedef_name, ProgOutput (prog_out_fields_of_ast_out_fields [] ot.out_typ_fields)) :: accu
 
 let produce_probe_decl (accu: prog) (probe: A.ident) : Tot prog =
-    let name = ident_to_string probe in
+    let name = probe.v.name in // ignore module qualifier
     let x = (name, ProgProbe) in
     if List.Tot.mem x accu
     then accu
