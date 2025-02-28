@@ -89,6 +89,27 @@ $(EVERPARSE_OUTPUT_DIR)/test.exe: $(all_o_files)
 test: $(EVERPARSE_OUTPUT_DIR)/test.exe
 	$<
 
+#############################
+# Test case generation      #
+#############################
+
+3D_Z3_EXECUTABLE ?= z3
+
+$(EVERPARSE_OUTPUT_DIR)/testcases.c: $(EVERPARSE_INPUT_DIR)/Probe.3d
+	$(EVERPARSE_CMD) --no_batch --z3_executable $(3D_Z3_EXECUTABLE) --odir $(EVERPARSE_OUTPUT_DIR) $< --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5
+	test -f $@
+
+$(EVERPARSE_OUTPUT_DIR)/testcases.o: $(EVERPARSE_OUTPUT_DIR)/testcases.c $(EVERPARSE_ALL_H_FILES)
+	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
+
+$(EVERPARSE_OUTPUT_DIR)/testgen.exe: $(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/testcases.o $(EVERPARSE_OUTPUT_DIR)/error_handling.o
+	$(CC) $(LDFLAGS) -o $@ $^
+
+testgen: $(EVERPARSE_OUTPUT_DIR)/testgen.exe
+	$<
+
+.PHONY: testgen
+
 ###########
 # Cleanup #
 ###########
@@ -103,7 +124,7 @@ clean:
 #######################################################
 
 # Specify the behavior of the default rule
-world: test
+world: test testgen
 
 # Declare all phony rules.
 # Cf. https://www.gnu.org/software/make/manual/html_node/Phony-Targets.html
