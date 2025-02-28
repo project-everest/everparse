@@ -82,4 +82,6 @@ val get_test_checker: unit -> ML (option string)
 
 val get_z3_branch_depth: unit -> ML nat
 
+val get_produce_testcases_c: unit -> ML bool
+
 val get_fstar_exe: unit -> ML string

@@ -475,13 +475,13 @@ let build_and_run_test_exe
   end
 
 let with_z3_thread_or
-  (batch: bool)
+  (batch_and_produce_testcases_c: bool)
   (out_dir: string)
   (debug: bool)
   (transcript: option string)
   (f: (Z3.z3 -> ML unit))
 : ML (option (unit -> ML unit))
-= if batch
+= if batch_and_produce_testcases_c
   then
     let thr = Z3.with_z3_thread debug transcript f in
     Some (fun _ ->
@@ -495,6 +495,7 @@ let with_z3_thread_or
 
 let produce_z3_and_test_gen
   (batch: bool)
+  (produce_testcases_c: bool)
   (out_dir: string)
   (do_test: option string -> int -> Z3TestGen.prog -> Z3.z3 -> ML unit)
 : Tot process_files_t
@@ -506,28 +507,30 @@ let produce_z3_and_test_gen
   let nbwitnesses = Options.get_z3_witnesses () in
   let buf : ref string = alloc "" in
   let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
-  with_z3_thread_or batch out_dir (Options.get_debug ()) (Options.get_save_z3_transcript ()) (fun z3 ->
+  with_z3_thread_or (batch && produce_testcases_c) out_dir (Options.get_debug ()) (Options.get_save_z3_transcript ()) (fun z3 ->
     z3.to_z3 !buf;
-    do_test (if batch then Some (OS.concat out_dir "testcases.c") else None) nbwitnesses prog z3
+    do_test (if produce_testcases_c then Some (OS.concat out_dir "testcases.c") else None) nbwitnesses prog z3
   )
 
 let produce_z3_and_test
   (batch: bool)
+  (produce_testcases_c: bool)
   (out_dir: string)
   (name: string)
 : Tot process_files_t
-= produce_z3_and_test_gen batch out_dir (fun out_file nbwitnesses prog z3 ->
+= produce_z3_and_test_gen batch produce_testcases_c out_dir (fun out_file nbwitnesses prog z3 ->
     Z3TestGen.do_test out_dir out_file z3 prog name nbwitnesses (Options.get_z3_branch_depth ()) (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
 
 let produce_z3_and_diff_test
   (batch: bool)
+  (produce_testcases_c: bool)
   (out_dir: string)
   (names: (string & string))
 : Tot process_files_t
 =
   let (name1, name2) = names in
-  produce_z3_and_test_gen batch out_dir (fun out_file nbwitnesses prog z3 ->
+  produce_z3_and_test_gen batch produce_testcases_c out_dir (fun out_file nbwitnesses prog z3 ->
     Z3TestGen.do_diff_test out_dir out_file z3 prog name1 name2 nbwitnesses (Options.get_z3_branch_depth ())
   )
 
@@ -669,12 +672,12 @@ let go () : ML unit =
     (* Special mode: --z3_diff_test *)
     let z3_diff_test = Options.get_z3_diff_test () in
     if Some? z3_diff_test
-    then produce_z3_and_diff_test batch out_dir (Some?.v z3_diff_test)
+    then produce_z3_and_diff_test batch (Options.get_produce_testcases_c ()) out_dir (Some?.v z3_diff_test)
     else
     (* Special mode: --z3_test *)
     let z3_test = Options.get_z3_test () in
     if Some? z3_test
-    then produce_z3_and_test batch out_dir (Some?.v z3_test)
+    then produce_z3_and_test batch (Options.get_produce_testcases_c ()) out_dir (Some?.v z3_test)
     else process_files
   in
   match process all_files_and_modules should_emit_fstar_code (Options.get_emit_output_types_defs ()) with
