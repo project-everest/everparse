@@ -92,9 +92,9 @@ batch-interpret-test:
 	./test-cpp.exe
 
 elf-test: ELF.3d
-	mkdir -p out.batch
-	$(3D) --odir out.batch --batch ELF.3d
-	$(CXX) -o out.batch/elf-test -I out.batch $(addprefix out.batch/, ELF.c ELFWrapper.c) TestELF.cpp
+	mkdir -p out.elf
+	$(3D) --odir out.elf --batch ELF.3d
+	$(CXX) -o out.elf/elf-test -I out.elf $(addprefix out.elf/, ELF.c ELFWrapper.c) TestELF.cpp
 
 z3-testgen-test: ELF.3d
 	mkdir -p out.z3-testgen
@@ -106,10 +106,6 @@ z3-testgen-probe-test: probe/src/Probe.3d
 	+$(MAKE) -C probe/src
 
 .PHONY: z3-testgen-probe-test
-
-%-test: %.3d
-	mkdir -p out.batch
-	$(3D) $(FLAGS3D) --odir out.batch --batch $^
 
 inplace-hash-test:
 	mkdir -p out.inplace-hash
@@ -129,6 +125,6 @@ batch-cleanup-test:
 	$(3D) --batch $^
 
 clean:
-	rm -rf out.batch out.fail.batch out.cleanup out.inplace-hash test-cpp.exe out.batch-interpret
+	rm -rf out.batch out.fail.batch out.cleanup out.elf out.inplace-hash out.pos test-cpp.exe out.batch-interpret out.z3-testgen
 
 .PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs
