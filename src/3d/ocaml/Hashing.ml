@@ -20,7 +20,7 @@ let hex_of_bytes buf =
     ) buf;
   Bytes.to_string hex
 
-let hash_debug = true
+let hash_debug = false
 
 let hash_debug_print s =
   if hash_debug
