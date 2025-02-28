@@ -1,39 +1,5 @@
 (* Hash a boolean *)
 
-let hash_bool h b =
-  let buf = Bytes.make 1 (char_of_int (if b then 1 else 0)) in
-  HashingBase.update h buf
-
-(* Hash an integer *)
-
-let hash_int h i =
-  let i32 = Int32.of_int i in
-  let buf = Bytes.create 4 in
-  Bytes.set_int32_be buf 0 i32;
-  HashingBase.update h buf
-
-(* Hash a file *)
-
-let hash_file h f =
-  let ch = open_in_bin f in
-  let len = in_channel_length ch in
-  hash_int h len;
-  let buf = Bytes.create len in
-  let _ = input ch buf 0 len in
-  close_in ch;
-  HashingBase.update h buf
-
-let hash_file_option h = function
-  | None -> hash_bool h false
-  | Some f -> hash_bool h true; hash_file h f
-
-(* Hash a string *)
-
-let hash_string h s =
-  hash_int h (String.length s);
-  HashingBase.update h (Bytes.of_string s)
-
-
 let char_of_int4 x =
   assert (0 <= x && x < 16);
   if x < 10
@@ -54,6 +20,58 @@ let hex_of_bytes buf =
     ) buf;
   Bytes.to_string hex
 
+let hash_debug = true
+
+let hash_debug_print s =
+  if hash_debug
+  then print_endline s
+
+let hash_debug_print_current_digest h =
+  if hash_debug
+  then hash_debug_print (Printf.sprintf ("Current hash: %s") (hex_of_bytes (HashingBase.get_current_digest h)))
+
+let hash_update h buf =
+  HashingBase.update h buf;
+  hash_debug_print_current_digest h
+
+let hash_bool h b =
+  hash_debug_print (Printf.sprintf "hash_bool %s" (if b then "true" else "false"));
+  let buf = Bytes.make 1 (char_of_int (if b then 1 else 0)) in
+  hash_update h buf
+
+(* Hash an integer *)
+
+let hash_int h i =
+  let i32 = Int32.of_int i in
+  hash_debug_print (Printf.sprintf "hash_int %d" (Int32.to_int i32));
+  let buf = Bytes.create 4 in
+  Bytes.set_int32_be buf 0 i32;
+  hash_update h buf
+
+(* Hash a file *)
+
+let hash_file h f =
+  let ch = open_in_bin f in
+  let len = in_channel_length ch in
+  hash_int h len;
+  hash_debug_print (Printf.sprintf "hash_file %s" f);
+  let buf = Bytes.create len in
+  let _ = input ch buf 0 len in
+  close_in ch;
+  hash_update h buf
+
+let hash_file_option h = function
+  | None -> hash_bool h false
+  | Some f -> hash_bool h true; hash_file h f
+
+(* Hash a string *)
+
+let hash_string h s =
+  hash_int h (String.length s);
+  hash_debug_print (Printf.sprintf "hash_string \"%s\"" s);
+  hash_update h (Bytes.of_string s)
+
+
 type c_files = {
     wrapper_h: string option;
     wrapper_c: string option;
@@ -63,6 +81,7 @@ type c_files = {
   }
 
 let hash f opt_c =
+  hash_debug_print "hash_init";
   let h = HashingBase.init () in
   hash_string h Version.everparse_version;
   hash_string h Version.fstar_commit;
@@ -84,6 +103,7 @@ let hash f opt_c =
         hash_file h assertions
      end
   end;
+  hash_debug_print "hash_finish";
   hex_of_bytes (HashingBase.finish h)
 
 (* load, check and save weak hashes from a C file *)
@@ -167,13 +187,13 @@ let load_hash file is_weak =
 let check_hash f opt_c f_json =
   match load_hash f_json (opt_c = None) with
   | None ->
-     Printf.printf "No hashes found for %s\n" f;
+     Printf.printf "No hashes found in %s for %s\n" f_json f;
      false
   | Some h0 ->
      let h = hash f opt_c in
      let res = (h0 = h) in
      if not res
-     then Printf.printf "%s hash check failed for %s\nOriginal: %s\nComputed: %s\n" (if opt_c = None then "weak" else "strong") f h0 h;
+     then Printf.printf "%s hash check failed for %s from %s\nOriginal: %s\nComputed: %s\n" (if opt_c = None then "weak" else "strong") f f_json h0 h;
      res
 
 let save_hashes f opt_c f_json =
