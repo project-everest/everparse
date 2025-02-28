@@ -1131,7 +1131,10 @@ let arg_type_of_typ (t: T.typ) : Tot (option arg_type) =
 let smt_type_of_typ (t: T.typ) : Tot string =
   match arg_type_of_typ t with
   | Some (ArgSimple ArgBool) -> "Bool"
-  | _ -> "Int"
+  | Some (ArgSimple _)
+  | Some (ArgPointer _)
+  | None
+    -> "Int"
 
 let rec binders_of_params = function
 | [] -> empty_binders
@@ -1362,7 +1365,9 @@ let rec print_witness_args_as_c
     (if ArgInt? ty then out "U" else ());
     out ", ";
     print_witness_args_as_c out ql qargs
-  | _ -> ()
+  | _, []
+  | [], _
+    -> ()
 
 let out_witness_len
   (out: (string -> ML unit))
@@ -1456,7 +1461,7 @@ let print_outparameters
     (fun (name, ty) ->
       match ty with
       | ArgPointer ty -> print_outparameter out p ("(*" ^ name ^ ")") ty
-      | _ -> ()
+      | ArgSimple _ -> ()
     )
     arg_types
 
@@ -1478,7 +1483,7 @@ let print_witness_call_as_c
     (fun arg_ty ->
       match arg_ty with
       | (arg_var, ArgPointer ty) -> out (alloc_ptr_arg arg_var ty)
-      | _ -> ()
+      | (_, ArgSimple _) -> ()
     )
     arg_types;
   out "
@@ -1681,8 +1686,10 @@ let print_branch_trace (witness: Seq.seq int) : ML unit =
 let rec mk_witness_call (accu: string) (l: list arg_type) (args: list string) : Tot string (decreases l) =
   match l, args with
   | ArgPointer _ :: q, _ -> mk_witness_call (Printf.sprintf "%s 0" accu) q args
-  | _ :: ql, a :: qargs -> mk_witness_call (Printf.sprintf "%s %s" accu a) ql qargs
-  | _ -> Printf.sprintf "(%s)" accu
+  | ArgSimple _ :: ql, a :: qargs -> mk_witness_call (Printf.sprintf "%s %s" accu a) ql qargs
+  | ArgSimple _ :: _, []
+  | [], _
+    -> Printf.sprintf "(%s)" accu
 
 let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq (Seq.seq int)) (input_size: string) (branch_trace: Seq.seq int) (args: list string) : ML unit =
   FStar.IO.print_string ";; call ";
@@ -1692,7 +1699,7 @@ let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq (
   print_branch_trace branch_trace;
   FStar.IO.print_string "\n"
 
-let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer _ -> false | _ -> true) l)
+let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer _ -> false | ArgSimple _ -> true) l)
 
 let rec mk_choose_conj_layer (array_index: string) (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
   (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
@@ -1759,7 +1766,7 @@ let rec mk_call_args (accu: string) (i: nat) (l: list arg_type) : Tot string (de
   match l with
   | [] -> accu
   | ArgPointer _ :: q -> mk_call_args (Printf.sprintf "%s 0" accu) i q
-  | _ :: q -> mk_call_args (Printf.sprintf "%s arg-%d" accu i) (i + 1) q
+  | ArgSimple _ :: q -> mk_call_args (Printf.sprintf "%s arg-%d" accu i) (i + 1) q
 
 let rec mk_assert_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
   match l with
@@ -2091,7 +2098,7 @@ let test_exe_mk_arg
   let cur_arg_s = string_of_int cur_arg in
   let cur_arg' = cur_arg + begin match p with
   | ArgPointer _ -> 0
-  | _ -> 1
+  | ArgSimple _ -> 1
   end
   in
   let read_args' = read_args ^
