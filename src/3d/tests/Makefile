@@ -35,7 +35,7 @@ clean_out_files=\
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter z3-testgen-test
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter z3-testgen-test z3-testgen-probe-test
 
 .PHONY: iter
 
@@ -101,6 +101,11 @@ z3-testgen-test: ELF.3d
 	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir out.z3-testgen ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
 
 .PHONY: z3-testgen-test
+
+z3-testgen-probe-test: probe/src/Probe.3d
+	+$(MAKE) -C probe/src
+
+.PHONY: z3-testgen-probe-test
 
 %-test: %.3d
 	mkdir -p out.batch
