@@ -1095,6 +1095,7 @@ type simple_arg_type (allow_out: bool) =
 type arg_type =
 | ArgSimple of simple_arg_type false
 | ArgPointer of simple_arg_type true
+| ArgCopyBuffer // for probe destination buffers
 
 let output_type_name_to_string (i: A.ident) : Tot string = ident_to_string i
 
@@ -1120,6 +1121,8 @@ let arg_type_of_typ (t: T.typ) : Tot (option arg_type) =
     | Some t' -> Some (ArgPointer t')
     | _ -> None
     end
+  | T.T_app {v = {modul_name = None; name = "EVERPARSE_COPY_BUFFER_T"}} _ _
+    -> Some ArgCopyBuffer
   | T.T_app {v = {modul_name = None; name = "PUINT8"}} _ _
     -> Some (ArgPointer (ArgInt A.UInt8))
   | _ ->
@@ -1131,6 +1134,7 @@ let arg_type_of_typ (t: T.typ) : Tot (option arg_type) =
 let smt_type_of_typ (t: T.typ) : Tot string =
   match arg_type_of_typ t with
   | Some (ArgSimple ArgBool) -> "Bool"
+  | Some ArgCopyBuffer
   | Some (ArgSimple _)
   | Some (ArgPointer _)
   | None
@@ -1356,6 +1360,7 @@ let rec print_witness_args_as_c
   (l: list (string & arg_type)) (args: list string)
 : ML unit
 = match l, args with
+  | (name, ArgCopyBuffer) :: q, _
   | (name, ArgPointer _) :: q, _ ->
     out name;
     out ", ";
@@ -1461,9 +1466,27 @@ let print_outparameters
     (fun (name, ty) ->
       match ty with
       | ArgPointer ty -> print_outparameter out p ("(*" ^ name ^ ")") ty
+      | ArgCopyBuffer
       | ArgSimple _ -> ()
     )
     arg_types
+
+let alloc_copy_buffer
+  (wid: nat)
+  (nblayers: nat)
+  (arg_var: string)
+: Tot string
+=
+  Printf.sprintf
+"
+  copy_buffer_t _contents_%s = { .layers = witness%d, .count = %d, .cur = 0U };
+  EVERPARSE_COPY_BUFFER_T %s = (void* ) &_contents_%s;
+"
+  arg_var
+  wid
+  nblayers
+  arg_var
+  arg_var
 
 let print_witness_call_as_c
   (out: (string -> ML unit))
@@ -1473,6 +1496,7 @@ let print_witness_call_as_c
   (arg_types: list (string & arg_type))
   (args: list string)
   (num: nat)
+  (nblayers: nat)
 : ML unit
 =
   out "
@@ -1482,6 +1506,7 @@ let print_witness_call_as_c
   List.iter
     (fun arg_ty ->
       match arg_ty with
+      | (arg_var, ArgCopyBuffer) -> out (alloc_copy_buffer num nblayers arg_var)
       | (arg_var, ArgPointer ty) -> out (alloc_ptr_arg arg_var ty)
       | (_, ArgSimple _) -> ()
     )
@@ -1648,7 +1673,7 @@ let print_witness_as_c
   print_witness_as_c_gen out witness (fun len ->
     if len = 0
     then failwith "print_witness_as_c: no witness layers. This should not happen.";
-    print_witness_call_as_c out p positive validator_name arg_types args num
+    print_witness_call_as_c out p positive validator_name arg_types args num len
   ) num
 
 let print_diff_witness_as_c
@@ -1667,8 +1692,8 @@ let print_diff_witness_as_c
   print_witness_as_c_gen out witness (fun len ->
     if len = 0
     then failwith "print_witness_as_c: no witness layers. This should not happen.";
-    print_witness_call_as_c out p true validator_name1 arg_types args num;
-    print_witness_call_as_c out p false validator_name2 arg_types args num
+    print_witness_call_as_c out p true validator_name1 arg_types args num len;
+    print_witness_call_as_c out p false validator_name2 arg_types args num len
   )
   num
 
@@ -1685,6 +1710,7 @@ let print_branch_trace (witness: Seq.seq int) : ML unit =
 
 let rec mk_witness_call (accu: string) (l: list arg_type) (args: list string) : Tot string (decreases l) =
   match l, args with
+  | ArgCopyBuffer :: q, _
   | ArgPointer _ :: q, _ -> mk_witness_call (Printf.sprintf "%s 0" accu) q args
   | ArgSimple _ :: ql, a :: qargs -> mk_witness_call (Printf.sprintf "%s %s" accu a) ql qargs
   | ArgSimple _ :: _, []
@@ -1699,7 +1725,7 @@ let print_witness_and_call (name: string) (l: list arg_type) (witness: Seq.seq (
   print_branch_trace branch_trace;
   FStar.IO.print_string "\n"
 
-let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgPointer _ -> false | ArgSimple _ -> true) l)
+let count_args (l: list arg_type) : Tot nat = List.Tot.length (List.Tot.filter (function ArgCopyBuffer | ArgPointer _ -> false | ArgSimple _ -> true) l)
 
 let rec mk_choose_conj_layer (array_index: string) (witness: Seq.seq int) (accu: string) (i: nat) : Tot string
   (decreases (if i >= Seq.length witness then 0 else Seq.length witness - i))
@@ -1765,12 +1791,14 @@ let rec want_witnesses (print_test_case: (Seq.seq (Seq.seq int) -> list string -
 let rec mk_call_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
   match l with
   | [] -> accu
+  | ArgCopyBuffer :: q
   | ArgPointer _ :: q -> mk_call_args (Printf.sprintf "%s 0" accu) i q
   | ArgSimple _ :: q -> mk_call_args (Printf.sprintf "%s arg-%d" accu i) (i + 1) q
 
 let rec mk_assert_args (accu: string) (i: nat) (l: list arg_type) : Tot string (decreases l) =
   match l with
   | [] -> accu
+  | ArgCopyBuffer :: q
   | ArgPointer _ :: q -> mk_assert_args accu i q
   | ArgSimple ArgBool :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Bool)\n" accu i) (i + 1) q
   | ArgSimple (ArgInt it) :: q -> mk_assert_args (Printf.sprintf "%s(declare-fun arg-%d () Int)\n(assert (and (<= 0 arg-%d) (< arg-%d %d)))\n" accu i i i (pow2 (integer_type_bit_size it))) (i + 1) q
@@ -2097,6 +2125,7 @@ let test_exe_mk_arg
   let (cur_arg, read_args, call_args_lhs, call_args_rhs) = accu in
   let cur_arg_s = string_of_int cur_arg in
   let cur_arg' = cur_arg + begin match p with
+  | ArgCopyBuffer
   | ArgPointer _ -> 0
   | ArgSimple _ -> 1
   end
@@ -2113,6 +2142,7 @@ let test_exe_mk_arg
     return 1;
   }
 "
+  | ArgCopyBuffer -> "" // FIXME: support probe in generic test executable
   | ArgPointer pt -> alloc_ptr_arg arg_var pt
   end
   in
