@@ -56,3 +56,31 @@ val cbor_parse
         SZ.v len <= Seq.length v /\
         Seq.slice v 0 (SZ.v len) == serialize_cbor v'
     ))
+
+let cbor_jump_pre
+  (off: SZ.t)
+  (c: raw_data_item)
+  (v: Seq.seq U8.t)
+: Tot prop
+= let s = serialize_cbor c in
+  let off' = SZ.v off + Seq.length s in
+  off' <= Seq.length v /\
+  Seq.slice v (SZ.v off) off' == s
+
+inline_for_extraction
+let cbor_jump_t =
+  (input: slice U8.t) ->
+  (off: SZ.t) ->
+  (c: Ghost.erased raw_data_item) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt SZ.t
+    (pts_to input #pm v ** pure (
+      cbor_jump_pre off c v
+    ))
+    (fun res ->
+      pts_to input #pm v ** pure (
+      SZ.v res == SZ.v off + Seq.length (serialize_cbor c)
+    ))
+
+val cbor_jump (_: unit) : cbor_jump_t

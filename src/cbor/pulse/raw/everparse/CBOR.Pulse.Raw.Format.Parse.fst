@@ -645,3 +645,53 @@ fn cbor_parse
   Trade.trans _ _ (pts_to input #pm v);
   res
 }
+
+#restart-solver
+
+let cbor_jump_aux_pre
+  (off: SZ.t)
+  (c: raw_data_item)
+  (v: Seq.seq U8.t)
+: Lemma
+  (requires (
+    SZ.v off + Seq.length (serialize_cbor c) <= Seq.length v /\
+    Seq.slice v (SZ.v off) (SZ.v off + Seq.length (serialize_cbor c)) `Seq.equal` serialize_cbor c
+  ))
+  (ensures (
+    jumper_pre parse_raw_data_item off v
+  ))
+= parse_strong_prefix parse_raw_data_item (serialize_cbor c) (Seq.slice v (SZ.v off) (Seq.length v))
+
+let cbor_jump_aux_post
+  (off: SZ.t)
+  (c: raw_data_item)
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+: Lemma
+  (requires (
+    SZ.v off + Seq.length (serialize_cbor c) <= Seq.length v /\
+    Seq.slice v (SZ.v off) (SZ.v off + Seq.length (serialize_cbor c)) `Seq.equal` serialize_cbor c /\
+    jumper_pre parse_raw_data_item off v /\
+    validator_success parse_raw_data_item off v res
+  ))
+  (ensures (
+    SZ.v res == SZ.v off + Seq.length (serialize_cbor c)
+  ))
+= parse_strong_prefix parse_raw_data_item (serialize_cbor c) (Seq.slice v (SZ.v off) (Seq.length v))
+
+fn cbor_jump
+  (_: unit)
+: cbor_jump_t
+=
+  (input: slice U8.t)
+  (off: SZ.t)
+  (c: Ghost.erased raw_data_item)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  let sq: squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  cbor_jump_aux_pre off c v;
+  let res = jump_raw_data_item () input off;
+  cbor_jump_aux_post off c v res;
+  res
+}
