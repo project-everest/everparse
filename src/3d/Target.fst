@@ -367,13 +367,13 @@ let print_expr_lam (mname:string) (x:lam expr) : ML string =
 let rec is_output_type (t:typ) : bool =
   match t with
   | T_app _ A.KindOutput [] -> true
-  | T_pointer t -> is_output_type t
+  | T_pointer t A.UInt64 -> is_output_type t
   | _ -> false
 
 let rec is_extern_type (t:typ) : bool =
   match t with
   | T_app _ A.KindExtern [] -> true
-  | T_pointer t -> is_extern_type t
+  | T_pointer t A.UInt64 -> is_extern_type t
   | _ -> false
 
 (*
@@ -387,7 +387,7 @@ let print_output_type (qual:bool) (t:typ) : ML string =
     = match t with
       | T_app id _ _ ->
         id.v.modul_name, print_ident id
-      | T_pointer t ->
+      | T_pointer t A.UInt64 ->
         let m, i = aux t in
         m, Printf.sprintf "p_%s" i
       | _ -> failwith "Print: not an output type"
@@ -436,11 +436,11 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_expr mname e)
       (print_typ mname t1)
       (print_typ mname t2)
-  | T_pointer t -> Printf.sprintf "bpointer (%s)" (print_typ mname t)
+  | T_pointer t i -> Printf.sprintf "bpointer(%s) (%s)" (A.print_integer_type i) (print_typ mname t)
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
-  | T_with_probe t _ _ _ -> Printf.sprintf "bpointer (%s)" (print_typ mname t)
+  | T_with_probe t _ _ _ _ -> Printf.sprintf "%s probe" (print_typ mname t)
 
 and print_indexes (mname:string) (is:list index) : ML (list string) = //(decreases is) =
   match is with
@@ -745,7 +745,7 @@ let uppercase (name:string) : string = String.uppercase name
 let rec print_as_c_type (t:typ) : ML string =
     let open Ast in
     match t with
-    | T_pointer t ->
+    | T_pointer t A.UInt64 ->
           Printf.sprintf "%s*" (print_as_c_type t)
     | T_app {v={name="Bool"}} _ [] ->
           "BOOLEAN"
@@ -782,7 +782,7 @@ let rec get_output_typ_dep (modul:string) (t:typ) : ML (option string) =
   | T_app {v={modul_name=Some m}} _ _ ->
     if m = modul then None
     else Some m
-  | T_pointer t -> get_output_typ_dep modul t
+  | T_pointer t _ -> get_output_typ_dep modul t
   | _ -> failwith "get_typ_deps: unexpected output type"
 
 let wrapper_name
@@ -1155,7 +1155,7 @@ let print_c_entry
 let rec out_bt_name (t:typ) : ML string =
   match t with
   | T_app i _ _ -> A.ident_name i
-  | T_pointer t -> out_bt_name t
+  | T_pointer t A.UInt64 -> out_bt_name t
   | _ -> failwith "Impossible, out_bt_name received a non output type!"
 
 let out_expr_bt_name (oe:output_expr) : ML string = out_bt_name oe.oe_bt
@@ -1184,7 +1184,7 @@ type set = H.t string unit
 let rec base_output_type (t:typ) : ML A.ident =
   match t with
   | T_app id A.KindOutput [] -> id
-  | T_pointer t -> base_output_type t
+  | T_pointer t A.UInt64 -> base_output_type t
   | _ -> failwith "Target.base_output_type called with a non-output type"
 #push-options "--fuel 1"
 let rec print_output_type_val (tbl:set) (t:typ) : ML string =
@@ -1197,7 +1197,7 @@ let rec print_output_type_val (tbl:set) (t:typ) : ML string =
             match t with
             | T_app id KindOutput [] ->
               Printf.sprintf "\n\nval %s : Type0\n\n" s
-            | T_pointer bt ->
+            | T_pointer bt A.UInt64 ->
               let bs = print_output_type_val tbl bt in
               bs ^ (Printf.sprintf "\n\ninline_for_extraction noextract type %s = bpointer %s\n\n" s (print_output_type false bt))
   else ""
@@ -1327,7 +1327,7 @@ let print_external_types_fstar_interpreter (modul:string) (ds:decls) : ML string
       let t = T_app ot.out_typ_names.typedef_abbrev A.KindOutput [] in
       Printf.sprintf "%s%s"
         (print_output_type_val tbl t)
-        (print_output_type_val tbl (T_pointer t))
+        (print_output_type_val tbl (T_pointer t A.UInt64))
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
     | _ -> "")) in
@@ -1442,9 +1442,11 @@ let print_out_exprs_c modul (ds:decls) : ML string =
 
 let rec atyp_to_ttyp (t:A.typ) : ML typ =
   match t.v with
-  | A.Pointer t ->
+  | A.Pointer t pq ->
     let t = atyp_to_ttyp t in
-    T_pointer t
+    
+    T_pointer t A.UInt64
+
   | A.Type_app hd _b _args ->
     T_app hd _b []
 

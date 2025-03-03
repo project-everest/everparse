@@ -124,11 +124,11 @@ type typ =
   | T_dep_pair : dfst:typ -> dsnd:(A.ident & typ) -> typ
   | T_refine   : base:typ -> refinement:lam expr -> typ
   | T_if_else  : e:expr -> t:typ -> f:typ -> typ
-  | T_pointer  : typ -> typ
+  | T_pointer  : typ -> pointer_size:A.integer_type -> typ
   | T_with_action: typ -> action -> typ
   | T_with_dep_action: typ -> a:lam action -> typ
   | T_with_comment: typ -> A.comments -> typ
-  | T_with_probe: typ -> probe_fn:A.ident -> len:expr -> dest:A.ident -> typ
+  | T_with_probe: content_typ:typ -> pointer_size:A.integer_type -> probe_fn:A.ident -> len:expr -> dest:A.ident -> typ
 
 (* An index is an F* type or an expression
    -- we reuse Ast expressions for this

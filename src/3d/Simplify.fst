@@ -56,7 +56,7 @@ let rec simplify_typ_param (env:T.env_t) (p:typ_param) : ML typ_param =
 and simplify_typ (env:T.env_t) (t:typ)
   : ML typ
   = match t.v with
-    | Pointer t -> {t with v=Pointer (simplify_typ env t)}
+    | Pointer t q -> {t with v=Pointer (simplify_typ env t) q}
     | Type_app s b ps ->
       let ps = List.map (simplify_typ_param env) ps in
       let s = B.resolve_record_case_output_extern_type_name (fst env) s in

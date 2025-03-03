@@ -363,7 +363,11 @@ and typ_param = either expr out_expr
 
 and typ' =
   | Type_app : ident -> t_kind -> list typ_param -> typ'
-  | Pointer : typ -> typ'
+  | Pointer : typ -> option pointer_qualifier -> typ'
+
+and pointer_qualifier =
+  | PQ of integer_type
+
 and typ = with_meta_t typ'
 
 let field_typ = t:typ { Type_app? t.v }
@@ -784,14 +788,25 @@ let rec eq_typ_params (ps1 ps2:list typ_param) : bool =
   | p1::ps1, p2::ps2 -> eq_typ_param p1 p2 && eq_typ_params ps1 ps2
   | _ -> false
 
+let eq_opt (f:'a -> 'a -> bool) (x y:option 'a) =
+  match x, y with
+  | None, None -> true
+  | Some x, Some y -> f x y
+  | _ -> false
+
+let eq_pointer_qualifier (q1 q2:pointer_qualifier) =
+  let PQ a1, PQ a2 = q1, q2 in
+  a1=a2
+
 let rec eq_typ (t1 t2:typ) : Tot bool =
   match t1.v, t2.v with
   | Type_app hd1 k1 ps1, Type_app hd2 k2 ps2 ->
     eq_idents hd1 hd2
     && k1 = k2
     && eq_typ_params ps1 ps2
-  | Pointer t1, Pointer t2 ->
+  | Pointer t1 q1, Pointer t2 q2 ->
     eq_typ t1 t2
+    && eq_opt eq_pointer_qualifier q1 q2
   | _ -> false
 
 (** Common AST constants and builders **)
@@ -807,6 +822,11 @@ let puint8 = mk_prim_t "PUINT8"
 let tuint16 = mk_prim_t "UINT16"
 let tuint32 = mk_prim_t "UINT32"
 let tuint64 = mk_prim_t "UINT64"
+let type_of_integer_type = function
+  | UInt8  -> tuint8
+  | UInt16 -> tuint16
+  | UInt32 -> tuint32
+  | UInt64 -> tuint64
 let tcopybuffer = mk_prim_t "EVERPARSE_COPY_BUFFER_T"
 let tunknown = mk_prim_t "?"
 let unit_atomic_field rng = 
@@ -875,7 +895,8 @@ let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =
 let rec subst_typ (s:subst) (t:typ) : ML typ =
   match t.v with
   | Type_app hd k ps -> { t with v = Type_app hd k (List.map (subst_typ_param s) ps) }
-  | Pointer t -> {t with v = Pointer (subst_typ s t) }
+  | Pointer t q -> {t with v = Pointer (subst_typ s t) q }
+
 let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   match f with
   | FieldScalar -> f
@@ -1062,9 +1083,13 @@ let rec print_typ t : ML string =
         (ident_to_string i)
         (String.concat ", " (List.map print_typ_param ps))
     end
-  | Pointer t ->
+  | Pointer t None ->
      Printf.sprintf "(pointer %s)"
        (print_typ t)
+  | Pointer t (Some (PQ q)) ->
+     Printf.sprintf "(pointer %s (%s))"
+       (print_typ t)
+       (print_integer_type q)
 
 let typ_as_integer_type (t:typ) : ML integer_type =
   match t.v with

@@ -226,12 +226,6 @@ let is_used (e:env) (i:ident) : ML bool =
   | Some (_, t, b) -> b
   | _ ->  error (Printf.sprintf "Variable %s not found" (ident_to_string i)) i.range
 
-let type_of_integer_type = function
-  | UInt8  -> tuint8
-  | UInt16 -> tuint16
-  | UInt32 -> tuint32
-  | UInt64 -> tuint64
-
 let check_integer_bounds t i =
     match t with
     | UInt8  -> FStar.UInt.fits i 8
@@ -253,7 +247,7 @@ let type_of_constant rng (c:constant) : ML typ =
 
 let parser_may_fail (env:env) (t:typ) : ML bool =
   match t.v with
-  | Pointer _ -> true
+  | Pointer _ _ -> true
   | Type_app hd _ _ ->
     match lookup env hd with
     | Inr (d, Inl attrs) -> attrs.may_fail
@@ -261,7 +255,7 @@ let parser_may_fail (env:env) (t:typ) : ML bool =
 
 let typ_is_integral env (t:typ) : ML bool =
   match t.v with
-  | Pointer _ -> false
+  | Pointer _ _ -> false
   | Type_app hd _ _ ->
     match lookup env hd with
     | Inr (d, Inl attrs) -> Some? attrs.integral
@@ -269,7 +263,7 @@ let typ_is_integral env (t:typ) : ML bool =
 
 let tag_of_integral_typ env (t:typ) : ML (option _) =
   match t.v with
-  | Pointer _ -> None
+  | Pointer _ _ -> None
   | Type_app hd _ _ ->
     match lookup env hd with
     | Inr (_, Inl attrs) -> attrs.integral
@@ -277,7 +271,7 @@ let tag_of_integral_typ env (t:typ) : ML (option _) =
 
 let tag_and_bit_order_of_integral_typ env (t:typ) : ML (tag_and_bit_order: (option integer_type & option bitfield_bit_order) { Some? (snd tag_and_bit_order) ==> Some? (fst tag_and_bit_order) }) =
   match t.v with
-  | Pointer _ -> None, None
+  | Pointer _ _ -> None, None
   | Type_app hd _ _ ->
     match lookup env hd with
     | Inr (_, Inl attrs) -> attrs.integral, attrs.bit_order
@@ -300,12 +294,13 @@ let parser_weak_kind (env:global_env) (id:ident) : ML (option _) =
 
 let rec typ_weak_kind env (t:typ) : ML (option weak_kind) =
   match t.v with
-  | Pointer _ -> typ_weak_kind env tuint64
+  | Pointer t None -> typ_weak_kind env {t with v=Pointer t (Some <| PQ UInt64)}
+  | Pointer _ (Some (PQ i)) -> typ_weak_kind env (type_of_integer_type i)
   | Type_app hd _ _ -> parser_weak_kind env.globals hd
 
 let typ_has_reader env (t:typ) : ML bool =
   match t.v with
-  | Pointer _ -> false
+  | Pointer _ _ -> false
   | Type_app hd _ _ ->
     has_reader env.globals hd
 
@@ -550,7 +545,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
           out_expr_t = oe_t;
           out_expr_bit_width = bopt } = Some?.v oe.out_expr_meta in
     (match oe_t.v, bopt with
-     | Pointer t, None ->
+     | Pointer t None, None ->
        {oe0 with
         out_expr_node={oe0.out_expr_node with v=OE_star oe};
         out_expr_meta=Some ({ out_expr_base_t = oe_bt;
@@ -558,7 +553,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
                               out_expr_bit_width = None })}
      | _ ->
        error
-         (Printf.sprintf "Output expression %s is ill-typed since base type %s is not a pointer type"
+         (Printf.sprintf "Output expression %s is ill-typed since base type %s is not an unqualified pointer type"
            (print_out_expr oe0) (print_typ oe_t)) oe.out_expr_node.range)
   | OE_addrof oe ->
     let oe = check_out_expr env oe in
@@ -572,7 +567,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
 
         out_expr_meta=Some ({
           out_expr_base_t = oe_bt;
-          out_expr_t = with_range (Pointer oe_t) oe.out_expr_node.range;
+          out_expr_t = with_range (Pointer oe_t None) oe.out_expr_node.range;
           out_expr_bit_width = None })}
      | _ ->
        error
@@ -584,7 +579,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
           out_expr_t = oe_t;
           out_expr_bit_width = bopt }  = Some?.v oe.out_expr_meta in
     (match oe_t.v, bopt with
-     | Pointer t, None ->
+     | Pointer t None, None ->
        let i = check_output_type (global_env_of_env env) t in
        let out_expr_t, out_expr_bit_width = lookup_output_type_field
          (global_env_of_env env)
@@ -597,7 +592,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
           out_expr_bit_width = out_expr_bit_width})}
      | _ -> 
        error
-         (Printf.sprintf "Output expression %s is ill-typed since base type %s is not a pointer type"
+         (Printf.sprintf "Output expression %s is ill-typed since base type %s is not an unqualified pointer type"
            (print_out_expr oe0) (print_typ oe_t)) oe.out_expr_node.range)
   | OE_dot oe f ->
     let oe = check_out_expr env oe in
@@ -629,9 +624,19 @@ let range_of_typ_param (p:typ_param) = match p with
 let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
   : ML typ
   = match t.v with
-    | Pointer t0 ->
+    | Pointer t0 pq ->
+      let check_pointer_qualifier : option pointer_qualifier -> ML (option pointer_qualifier) =
+        function
+        | None -> Some (PQ UInt64) //default pointer qualifier is u64
+        | Some (PQ a) ->
+          match a with
+          | UInt32
+          | UInt64 ->
+            Some (PQ a)
+          | _ -> error (Printf.sprintf "Pointer qualifier %s must be either UINT32 or UINT64" (print_integer_type a)) t.range
+      in
       if pointer_ok
-      then { t with v = Pointer (check_typ pointer_ok env t0) }
+      then { t with v = Pointer (check_typ pointer_ok env t0) (check_pointer_qualifier pq) }
       else error (Printf.sprintf "Pointer types are not permissible here; got %s" (print_typ t)) t.range
 
     | Type_app s KindSpec ps ->
@@ -1005,7 +1010,7 @@ let rec check_field_action (env:env) (f:atomic_field) (a:action)
           let t = lookup_expr_name env i in
           begin
           match t.v with
-          | Pointer t -> Action_deref i, t
+          | Pointer t None -> Action_deref i, t
           | _ -> error "Dereferencing a non-pointer" i.range
           end
 
@@ -1193,7 +1198,7 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
             sf.field_constraint, sf.field_bitwidth,
             sf.field_action, sf.field_probe
       with
-      | Pointer _, FieldScalar,
+      | Pointer _ _, FieldScalar,
         None, None,
         None, Some _ ->
         ()
@@ -1286,7 +1291,7 @@ let check_switch (check_field:check_field_t) (env:env) (s:switch_case)
     in
     let tags_t_opt =
       match scrutinee_t.v with
-      | Pointer _ -> fail_non_equality_type ()
+      | Pointer _ _ -> fail_non_equality_type ()
       | Type_app hd KindSpec es ->
         (match try_lookup_enum_cases env hd with
          | Some enum -> Some enum
@@ -1597,7 +1602,7 @@ let rec check_mutable_param_type (env:env) (t:typ) : ML unit =
        (i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types)
     then ()
     else err (Some i)
-  | Pointer t -> check_mutable_param_type env t
+  | Pointer t None -> check_mutable_param_type env t
   | _ -> err None
     
 let rec check_integer_or_output_type (env:env) (t:typ) : ML unit =
@@ -1607,7 +1612,7 @@ let rec check_integer_or_output_type (env:env) (t:typ) : ML unit =
     if i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types
     then ()
     else if not (k = KindOutput) then error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
-  | Pointer t -> check_integer_or_output_type env t
+  | Pointer t None -> check_integer_or_output_type env t
   | _ -> error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
 
 let check_mutable_param (env:env) (p:param) : ML unit =
@@ -1615,7 +1620,7 @@ let check_mutable_param (env:env) (p:param) : ML unit =
   //and the base type may be a base type or an output type
   let t, _, _ = p in
   match t.v with
-  | Pointer bt ->
+  | Pointer bt None ->
     check_mutable_param_type env bt
   | _ ->
     error (Printf.sprintf "%s is not a valid mutable parameter type, it is not a pointer type" (print_typ t)) t.range

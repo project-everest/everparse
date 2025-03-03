@@ -175,7 +175,7 @@ let rec is_compile_time_fixed_size (env:global_env) (t:T.typ)
         TS.Fixed? size
       with _ -> false
     end
-  | T.T_pointer _ -> true
+  | T.T_pointer _ _ -> true
   | T.T_refine base _ -> is_compile_time_fixed_size env base
   | T.T_with_comment t _ -> is_compile_time_fixed_size env t
   | T.T_nlist elt n -> // this is the main reason why we need T.T_pair
@@ -330,7 +330,7 @@ let rec translate_expr (e:A.expr) : ML T.expr =
 
 let rec translate_output_type (t:A.typ) : ML T.typ =
   match t.v with
-  | Pointer t -> T.T_pointer (translate_output_type t)
+  | Pointer t (Some (PQ A.UInt64)) -> T.T_pointer (translate_output_type t) A.UInt64
   | Type_app id b [] -> T.T_app id b []
   | _ -> failwith "Impossible, translate_output_type did not get an output type!"
 
@@ -390,9 +390,11 @@ let translate_typ_param (p:typ_param) : ML (T.expr & T.decls) =
 
 let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
   match t.v with
-  | Pointer t ->
+  | Pointer t (Some (PQ a)) ->
     let t', decls = translate_typ t in
-    T.T_pointer t', decls
+    T.T_pointer t' a, decls
+  | Pointer t None ->
+    failwith "Pointer sizes should have already been resolved"
   | Type_app hd b args ->
     let args, decls = args |> List.map translate_typ_param |> List.split in
     T.T_app hd b (List.map Inr args), List.flatten decls
@@ -589,15 +591,15 @@ let rec parse_typ (env:global_env)
     let p = parse_typ env typename fieldname t in
     { p with p_parser = T.Parse_with_comment p c }
 
-  | T.T_pointer _ ->
+  | T.T_pointer _ _ ->
     failwith "No parsers for pointer types"
 
-  | T.T_with_probe content_type probe len dest -> 
+  | T.T_with_probe content_type integer_type probe len dest -> 
     let p = parse_typ env typename fieldname content_type in
     let q = T.Parse_with_probe p probe len dest in
-    let u64_t, _ = translate_typ A.tuint64 in
-    let u64_parser = parse_typ env typename fieldname u64_t in
-    { p_kind = u64_parser.p_kind;
+    let u64_or_u32, _ = translate_typ (A.type_of_integer_type integer_type) in
+    let u64_or_u32_parser = parse_typ env typename fieldname u64_or_u32 in
+    { p_kind = u64_or_u32_parser.p_kind;
       p_typ = t;
       p_parser = q;
       p_typename = typename;
@@ -781,11 +783,11 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
   match f.v.field_probe with
   | Some probe_call -> (
     match f.v.field_type.v, probe_call.probe_fn with
-    | Pointer t, Some probe_fn ->
+    | Pointer t (Some (PQ a)), Some probe_fn ->
       let t, ds1 = translate_typ t in
       let len = translate_expr probe_call.probe_length in
       let dest = probe_call.probe_dest in
-      let sf_typ = T.T_with_probe t probe_fn len dest in
+      let sf_typ = T.T_with_probe t a probe_fn len dest in
       T.({ sf_dependence=sf.field_dependence;
            sf_ident=sf.field_ident;
            sf_typ=sf_typ }), 
@@ -1059,8 +1061,8 @@ let rec hoist_typ
       let d, t = hoist_typ fn genv env t in
       d, T_with_comment t c
 
-    | T_pointer _
-    | T_with_probe _ _ _ _ ->
+    | T_pointer _ _
+    | T_with_probe _ _ _ _ _ ->
       [], t
 
 let add_parser_kind_nz (genv:global_env) (id:A.ident) (nz:bool) (wk: weak_kind) =

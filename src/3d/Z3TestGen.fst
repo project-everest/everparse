@@ -1003,7 +1003,7 @@ let simple_arg_type_of_typ (t: T.typ) (allow_out: bool) : Tot (option (simple_ar
 
 let arg_type_of_typ (t: T.typ) : Tot (option arg_type) =
   match t with
-  | T.T_pointer t ->
+  | T.T_pointer t _ ->
     begin match simple_arg_type_of_typ t true with
     | Some t' -> Some (ArgPointer t')
     | _ -> None
@@ -1104,7 +1104,7 @@ let simple_arg_type_of_ast_typ
   (a: Ast.typ)
 : Tot (simple_arg_type true)
 = match a.v with
-  | A.Pointer _ -> ArgExtern ()
+  | A.Pointer _ _ -> ArgExtern ()
   | A.Type_app i _ _ ->
     begin match A.maybe_as_integer_typ i with
     | Some it -> ArgInt it

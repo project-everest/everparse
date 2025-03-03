@@ -57,7 +57,7 @@
 %token          MODULE EXPORT OUTPUT UNION EXTERN
 %token          ENTRYPOINT REFINING ALIGNED
 %token          HASH_IF HASH_ELSE HASH_ENDIF HASH_ELIF
-%token          PROBE
+%token          PROBE POINTER
 
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
@@ -232,8 +232,18 @@ maybe_pointer_typ:
   | t=typ { t }
   | t=pointer_typ { t }
 
+pointer_qualifier:
+  | POINTER LPAREN t=IDENT RPAREN
+    { 
+      match t.v.name with
+      | "UINT32" -> PQ UInt32 
+      | "UINT64" -> PQ UInt64
+      | _ -> error "Unexpected pointer qualifier; expected UINT32 or UINT64" t.range
+    }
+
 pointer_typ:
-  | t=maybe_pointer_typ STAR { with_range (Pointer t) $startpos }
+  | t=maybe_pointer_typ STAR qopt=option_of(pointer_qualifier) { with_range (Pointer(t,qopt)) $startpos }
+
 
 refinement:
   | LBRACE e=expr RBRACE { e }

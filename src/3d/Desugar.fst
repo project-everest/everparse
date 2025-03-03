@@ -268,7 +268,7 @@ let rec resolve_typ' (env:qenv) (t:typ') : ML typ' =
     //Set is_out argument to the Type_app appropriately
     let k = kind_of_ident env hd in
     Type_app hd k (List.map (resolve_typ_param env) args)
-  | Pointer t -> Pointer (resolve_typ env t)
+  | Pointer t q -> Pointer (resolve_typ env t) q
 
 and resolve_typ (env:qenv) (t:typ) : ML typ = { t with v = resolve_typ' env t.v }
 

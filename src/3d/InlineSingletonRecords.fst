@@ -41,7 +41,7 @@ let simplify_atomic_field (env:env) (f:atomic_field)
   = let field = f.v in
     let field = 
       match field.field_type.v with
-      | Pointer _ -> (
+      | Pointer _ _ -> (
         if Some? field.field_probe
         then field
         else failwith "Impossible: field types cannot be pointers"
