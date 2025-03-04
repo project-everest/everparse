@@ -1488,13 +1488,13 @@ let cbor_free_t
 noextract [@@noextract_to "krml"]
 let cbor_det_serialize_tag_postcond
   (tag: U64.t)
-  (output: S.slice U8.t)
+  (output_len: SZ.t)
   (res: SZ.t)
   (v': Seq.seq U8.t)
 : Tot prop
 = let s = Spec.cbor_det_serialize_tag tag in
   let len = Seq.length s in
-  SZ.v (S.len output) == Seq.length v' /\
+  SZ.v output_len == Seq.length v' /\
   (res == 0sz <==> len > Seq.length v') /\
   (len <= Seq.length v' ==> Seq.slice v' 0 len == s)
 
@@ -1505,7 +1505,7 @@ let cbor_det_serialize_tag_t =
   stt SZ.t
     (exists* v . pts_to output v)
     (fun res -> exists* v . pts_to output v ** pure (
-      cbor_det_serialize_tag_postcond tag output res v
+      cbor_det_serialize_tag_postcond tag (S.len output) res v
     ))
 
 let cbor_det_serialize_array_precond

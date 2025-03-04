@@ -115,3 +115,86 @@ val cbor_det_map_get () : map_get_by_ref_t cbor_det_match
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let cbor_det_map_get_gen () : map_get_t cbor_det_match = map_get_as_option (cbor_det_map_get ())
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_det_serialize_tag_to_array_t
+=
+  (tag: U64.t) ->
+  (out: AP.ptr U8.t) ->
+  (out_len: SZ.t) ->
+  stt SZ.t
+  (exists* v . pts_to out v ** pure (SZ.v out_len == Seq.length v))
+  (fun res -> exists* v . pts_to out v ** pure (
+     cbor_det_serialize_tag_postcond tag out_len res v
+  ))
+
+val cbor_det_serialize_tag_to_array (_: unit) : cbor_det_serialize_tag_to_array_t
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_det_serialize_array_to_array_t
+= (len: U64.t) ->
+  (out: AP.ptr U8.t) ->
+  (out_len: SZ.t) ->
+  (l: Ghost.erased (list Spec.cbor)) ->
+  (off: SZ.t) ->
+  stt SZ.t
+  (exists* v . pts_to out v **
+    pure (cbor_det_serialize_array_precond len l off v /\
+      Seq.length v == SZ.v out_len
+    )
+  )
+  (fun res -> exists* v .
+    pts_to out v **
+    pure (cbor_det_serialize_array_postcond l res v /\
+      Seq.length v == SZ.v out_len
+    )
+  )
+
+val cbor_det_serialize_array_to_array (_: unit) : cbor_det_serialize_array_to_array_t
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_det_serialize_map_insert_to_array_t =
+  (out: AP.ptr U8.t) ->
+  (out_len: SZ.t) ->
+  (m: Ghost.erased Spec.cbor_map) ->
+  (off2: SZ.t) ->
+  (key: Ghost.erased Spec.cbor) ->
+  (off3: SZ.t) ->
+  (value: Ghost.erased Spec.cbor) ->
+  stt bool
+    (exists* v .
+      pts_to out v **
+      pure (cbor_det_serialize_map_insert_pre m off2 key off3 value v /\
+        SZ.v out_len == Seq.length v
+      )
+    )
+    (fun res -> exists* v .
+      pts_to out v **
+      pure (cbor_det_serialize_map_insert_post m key value res v /\
+        SZ.v out_len == Seq.length v
+      )
+    )
+
+val cbor_det_serialize_map_insert_to_array (_: unit) : cbor_det_serialize_map_insert_to_array_t
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_det_serialize_map_to_array_t =
+  (len: U64.t) ->
+  (out: AP.ptr U8.t) ->
+  (out_len: SZ.t) ->
+  (l: Ghost.erased (Spec.cbor_map)) ->
+  (off: SZ.t) ->
+  stt SZ.t
+  (exists* v . pts_to out v **
+    pure (cbor_det_serialize_map_precond len l off v /\
+      SZ.v out_len == Seq.length v
+    )
+  )
+  (fun res -> exists* v .
+    pts_to out v **
+    pure (cbor_det_serialize_map_postcond l res v /\
+      SZ.v out_len == Seq.length v
+    )
+  )
+
+val cbor_det_serialize_map_to_array (_: unit) : cbor_det_serialize_map_to_array_t

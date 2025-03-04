@@ -141,3 +141,70 @@ fn cbor_det_map_get
 {
   CBOR.Pulse.API.Det.Common.cbor_det_map_get () x k dest
 }
+
+fn cbor_det_serialize_tag_to_array (_: unit)
+: cbor_det_serialize_tag_to_array_t
+=
+  (tag: _)
+  (out: _)
+  (out_len: _)
+{
+  let sout = S.arrayptr_to_slice_intro out out_len;
+  S.pts_to_len sout;
+  let res = CBOR.Pulse.API.Det.Common.cbor_det_serialize_tag () tag sout;
+  S.arrayptr_to_slice_elim sout;
+  res
+}
+
+fn cbor_det_serialize_array_to_array (_: unit)
+: cbor_det_serialize_array_to_array_t
+=
+  (len: _)
+  (out: _)
+  (out_len: _)
+  (l: _)
+  (off: _)
+{
+  let sout = S.arrayptr_to_slice_intro out out_len;
+  S.pts_to_len sout;
+  let res = CBOR.Pulse.API.Det.Common.cbor_det_serialize_array () len sout l off;
+  S.pts_to_len sout;
+  S.arrayptr_to_slice_elim sout;
+  res
+}
+
+fn cbor_det_serialize_map_insert_to_array (_: unit)
+: cbor_det_serialize_map_insert_to_array_t
+=
+  (out: _)
+  (out_len: _)
+  (m: _)
+  (off2: _)
+  (key: _)
+  (off3: _)
+  (value: _)
+{
+  let sout = S.arrayptr_to_slice_intro out out_len;
+  S.pts_to_len sout;
+  let res = CBOR.Pulse.API.Det.Common.cbor_det_serialize_map_insert () sout m off2 key off3 value;
+  S.pts_to_len sout;
+  S.arrayptr_to_slice_elim sout;
+  res
+}
+
+fn cbor_det_serialize_map_to_array (_: unit)
+: cbor_det_serialize_map_to_array_t
+=
+  (len: _)
+  (out: _)
+  (out_len: _)
+  (l: _)
+  (off: _)
+{
+  let sout = S.arrayptr_to_slice_intro out out_len;
+  S.pts_to_len sout;
+  let res = CBOR.Pulse.API.Det.Common.cbor_det_serialize_map () len sout l off;
+  S.pts_to_len sout;
+  S.arrayptr_to_slice_elim sout;
+  res
+}
