@@ -10,6 +10,7 @@ module Compare = CBOR.Pulse.Raw.Compare
 module Parse = CBOR.Pulse.Raw.Format.Parse
 module Serialize = CBOR.Pulse.Raw.Format.Serialize
 module Read = CBOR.Pulse.Raw.Read
+module Insert = CBOR.Pulse.Raw.Insert
 module Map = CBOR.Spec.Raw.Map
 module AF = CBOR.Spec.API.Format
 
@@ -322,6 +323,77 @@ fn cbor_det_serialize_array
   let res = Serialize.cbor_serialize_array rlen out (List.Tot.map mk_det_raw_cbor l) off;
   with v . assert (pts_to out v);
   cbor_det_serialize_array_postcond_intro len l res v;
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_map_insert
+  (_: unit)
+: cbor_det_serialize_map_insert_t
+=
+  (out: _)
+  (m: _)
+  (off2: _)
+  (key: _)
+  (off3: _)
+  (value: _)
+{
+  SpecRaw.mk_det_raw_cbor_map_raw_snoc m key value;
+  Insert.cbor_raw_map_insert out (SpecRaw.mk_det_raw_cbor_map_raw m) off2 (SpecRaw.mk_det_raw_cbor key) off3 (SpecRaw.mk_det_raw_cbor value)
+}
+
+let cbor_det_serialize_map_precond_elim
+  (len: U64.t)
+  (l: Spec.cbor_map)
+  (off: SZ.t)
+  (v: Seq.seq U8.t)
+: Lemma
+  (requires (
+    cbor_det_serialize_map_precond len l off v
+  ))
+  (ensures (
+    let rlen = SpecRaw.mk_raw_uint64 len in
+    Serialize.cbor_serialize_map_precond rlen (SpecRaw.mk_det_raw_cbor_map_raw l) off v
+  ))
+= ()
+
+let cbor_det_serialize_map_postcond_intro
+  (len: U64.t)
+  (l: Spec.cbor_map)
+  (res: SZ.t)
+  (v: Seq.seq U8.t)
+: Lemma
+  (requires (
+    U64.v len == Spec.cbor_map_length l /\
+    Serialize.cbor_serialize_map_postcond (SpecRaw.mk_raw_uint64 len) (SpecRaw.mk_det_raw_cbor_map_raw l) res v
+  ))
+  (ensures (
+    cbor_det_serialize_map_postcond l res v
+  ))
+= let w = Spec.pack (Spec.CMap l) in
+  SpecRaw.mk_cbor_eq_map w;
+  let x = SpecRaw.Map (SpecRaw.mk_raw_uint64 len) (SpecRaw.mk_det_raw_cbor_map_raw l) in
+  assert (Spec.cbor_det_serialize w == SpecRaw.serialize_cbor x);
+  ()
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_map
+  (_: unit)
+: cbor_det_serialize_map_t
+=
+  (len: _)
+  (out: _)
+  (l: _)
+  (off: _)
+{
+  let rlen = SpecRaw.mk_raw_uint64 len;
+  with v . assert (pts_to out v);
+  cbor_det_serialize_map_precond_elim len l off v;
+  let res = Serialize.cbor_serialize_map rlen out (SpecRaw.mk_det_raw_cbor_map_raw l) off;
+  with v . assert (pts_to out v);
+  cbor_det_serialize_map_postcond_intro len l res v;
   res
 }
 

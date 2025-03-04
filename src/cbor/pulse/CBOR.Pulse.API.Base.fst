@@ -1542,3 +1542,84 @@ let cbor_det_serialize_array_t =
     pts_to out v **
     pure (cbor_det_serialize_array_postcond l res v)
   )
+
+let cbor_det_serialize_map_insert_pre
+  (m: cbor_map)
+  (off2: SZ.t)
+  (key: cbor)
+  (off3: SZ.t)
+  (value: cbor)
+  (v: Seq.seq U8.t)
+: Tot prop
+= let sm = Spec.cbor_det_serialize_map m in
+  let sk = Spec.cbor_det_serialize key in
+  let sv = Spec.cbor_det_serialize value in
+  Seq.length sm == SZ.v off2 /\
+  SZ.v off2 + Seq.length sk == SZ.v off3 /\
+  SZ.v off3 + Seq.length sv == Seq.length v /\
+  Seq.slice v 0 (SZ.v off2) `Seq.equal` sm /\
+  Seq.slice v (SZ.v off2) (SZ.v off3) `Seq.equal` sk /\
+  Seq.slice v (SZ.v off3) (Seq.length v) `Seq.equal` sv
+
+let cbor_det_serialize_map_insert_post
+  (m: cbor_map)
+  (key: cbor)
+  (value: cbor)
+  (res: bool)
+  (v': Seq.seq U8.t)
+: Tot prop
+= (res == false <==> cbor_map_defined key m) /\
+  (res == true ==> v' == Spec.cbor_det_serialize_map (cbor_map_union m (cbor_map_singleton key value)))
+
+inline_for_extraction
+let cbor_det_serialize_map_insert_t =
+  (out: S.slice U8.t) ->
+  (m: Ghost.erased cbor_map) ->
+  (off2: SZ.t) ->
+  (key: Ghost.erased cbor) ->
+  (off3: SZ.t) ->
+  (value: Ghost.erased cbor) ->
+  stt bool
+    (exists* v .
+      pts_to out v **
+      pure (cbor_det_serialize_map_insert_pre m off2 key off3 value v)
+    )
+    (fun res -> exists* v .
+      pts_to out v **
+      pure (cbor_det_serialize_map_insert_post m key value res v)
+    )
+
+let cbor_det_serialize_map_precond
+  (len: U64.t)
+  (l: cbor_map)
+  (off: SZ.t)
+  (v: Seq.seq U8.t)
+: Tot prop
+= U64.v len == cbor_map_length l /\
+  SZ.v off <= Seq.length v /\
+  Seq.slice v 0 (SZ.v off) == Spec.cbor_det_serialize_map l
+
+let cbor_det_serialize_map_postcond
+  (l: cbor_map)
+  (res: SZ.t)
+  (v: Seq.seq U8.t)
+: Tot prop
+= FStar.UInt.fits (cbor_map_length l) 64 /\
+  SZ.v res <= Seq.length v /\
+  (res == 0sz <==> Seq.length (Spec.cbor_det_serialize (pack (CMap l))) > Seq.length v) /\
+  (SZ.v res > 0 ==> Seq.slice v 0 (SZ.v res) `Seq.equal` Spec.cbor_det_serialize (pack (CMap l)))
+
+inline_for_extraction
+let cbor_det_serialize_map_t =
+  (len: U64.t) ->
+  (out: S.slice U8.t) ->
+  (l: Ghost.erased (cbor_map)) ->
+  (off: SZ.t) ->
+  stt SZ.t
+  (exists* v . pts_to out v **
+    pure (cbor_det_serialize_map_precond len l off v)
+  )
+  (fun res -> exists* v .
+    pts_to out v **
+    pure (cbor_det_serialize_map_postcond l res v)
+  )
