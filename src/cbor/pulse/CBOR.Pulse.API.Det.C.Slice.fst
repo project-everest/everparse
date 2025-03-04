@@ -143,3 +143,79 @@ fn cbor_det_get_string_as_slice
   Trade.trans _ _ (cbor_det_match p x y);
   sl
 }
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_tag
+  (_: unit)
+: cbor_det_serialize_tag_t
+=
+  (tag: _)
+  (out: _)
+{
+  S.pts_to_len out;
+  let aout_len = S.len out;
+  let aout = S.slice_to_arrayptr_intro out;
+  let res = cbor_det_serialize_tag_to_array () tag aout aout_len;
+  S.slice_to_arrayptr_elim aout;
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_array
+  (_: unit)
+: cbor_det_serialize_array_t
+=
+  (len: _)
+  (out: _)
+  (l: _)
+  (off: _)
+{
+  S.pts_to_len out;
+  let aout_len = S.len out;
+  let aout = S.slice_to_arrayptr_intro out;
+  let res = cbor_det_serialize_array_to_array () len aout aout_len l off;
+  S.slice_to_arrayptr_elim aout;
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_map_insert
+  (_: unit)
+: cbor_det_serialize_map_insert_t
+=
+  (out: _)
+  (m: _)
+  (off2: _)
+  (key: _)
+  (off3: _)
+  (value: _)
+{
+  S.pts_to_len out;
+  let aout_len = S.len out;
+  let aout = S.slice_to_arrayptr_intro out;
+  let res = cbor_det_serialize_map_insert_to_array () aout aout_len m off2 key off3 value;
+  S.slice_to_arrayptr_elim aout;
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_map
+  (_: unit)
+: cbor_det_serialize_map_t
+=
+  (len: _)
+  (out: _)
+  (l: _)
+  (off: _)
+{
+  S.pts_to_len out;
+  let aout_len = S.len out;
+  let aout = S.slice_to_arrayptr_intro out;
+  let res = cbor_det_serialize_map_to_array () len aout aout_len l off;
+  S.slice_to_arrayptr_elim aout;
+  res
+}
