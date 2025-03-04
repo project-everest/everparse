@@ -345,6 +345,16 @@ uint8_t *cbor_det_get_string(cbor_raw x);
 
 bool cbor_det_map_get(cbor_raw x, cbor_raw k, cbor_raw *dest);
 
+size_t cbor_det_serialize_tag_to_array(uint64_t tag, uint8_t *out, size_t out_len);
+
+size_t
+cbor_det_serialize_array_to_array(uint64_t len, uint8_t *out, size_t out_len, size_t off);
+
+bool
+cbor_det_serialize_map_insert_to_array(uint8_t *out, size_t out_len, size_t off2, size_t off3);
+
+size_t cbor_det_serialize_map_to_array(uint64_t len, uint8_t *out, size_t out_len, size_t off);
+
 typedef cbor_freeable cbor_det_freeable_t;
 
 cbor_raw cbor_get_from_freeable(cbor_freeable x);
