@@ -474,11 +474,22 @@ type field_array_t =
 
 [@@ PpxDerivingYoJson ]
 noeq
-type probe_call = {
-  probe_fn:option ident;
-  probe_length:expr;
-  probe_dest:ident
-}
+type probe_field =
+  | ProbeLength of expr
+  | ProbeDest of expr
+
+[@@ PpxDerivingYoJson ]
+noeq
+type probe_call =
+| SimpleCall {
+    probe_fn:option ident;
+    probe_length: expr;
+    probe_dest: ident; 
+  }
+| CompositeCall {
+    probe_dest:ident;
+    probe_block:action
+  }
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -1118,7 +1129,7 @@ let print_params (ps:list param) =
                (print_typ t)
                (print_ident p))))
 
-let print_opt (o:option 'a) (f:'a -> string) : string =
+let print_opt (o:option 'a) (f:'a -> ML string) : ML string =
   match o with
   | None -> ""
   | Some x -> f x
@@ -1167,6 +1178,10 @@ and print_atomic_field (f:atomic_field) : ML string =
     | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-byte-size-at-most %s]" (print_expr sz)
     | FieldConsumeAll -> Printf.sprintf "[:consume-all]"
   in
+  let print_probe_field = function
+    | ProbeLength e -> Printf.sprintf "length=%s" (print_expr e)
+    | ProbeDest e -> Printf.sprintf "destination=%s" (print_expr e)
+  in
   let sf = f.v in
     Printf.sprintf "%s%s %s%s%s%s%s;"
       (if sf.field_dependence then "dependent " else "")
@@ -1176,10 +1191,40 @@ and print_atomic_field (f:atomic_field) : ML string =
       (print_array sf.field_array_opt)
       (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
       (print_opt sf.field_probe
-        (fun p -> Printf.sprintf "probe %s (length=%s, destination=%s)"
-          (print_opt p.probe_fn print_ident)
-          (print_expr p.probe_length)
-          (print_ident p.probe_dest)))
+        (fun p -> Printf.sprintf "probe %s" (print_probe_call p)))
+
+and print_probe_call (p:probe_call) : ML string =
+  match p with
+  | SimpleCall { probe_fn; probe_length; probe_dest } ->
+    Printf.sprintf "%s(length=%s, destination=%s)"
+          (print_opt probe_fn print_ident)
+          (print_expr probe_length)
+          (print_ident probe_dest)
+  | CompositeCall { probe_dest; probe_block } ->
+    Printf.sprintf "(destination=%s) { %s }"
+          (print_ident probe_dest)
+          (print_action probe_block)
+
+and print_action (a:action) : ML string =
+  let print_atomic_action (a:atomic_action) : ML string =
+    match a with
+    | Action_return e -> Printf.sprintf "return %s;" (print_expr e)
+    | Action_abort ->  "abort;" 
+    | Action_field_pos_64 -> "field_pos_64;"
+    | Action_field_pos_32 -> "field_pos_32;"
+    | Action_field_ptr -> "field_ptr;"
+    | Action_field_ptr_after sz write_to -> Printf.sprintf "field_ptr_after(%s, %s);" (print_expr sz) (print_out_expr write_to)
+    | Action_deref i -> Printf.sprintf "deref %s;" (print_ident i)
+    | Action_assignment lhs rhs -> Printf.sprintf "%s = %s;" (print_out_expr lhs) (print_expr rhs)
+    | Action_call f args -> Printf.sprintf "%s(%s);" (print_ident f) (String.concat ", " (List.map print_expr args))
+  in
+  match a.v with
+  | Atomic_action a -> print_atomic_action a
+  | Action_seq hd tl -> Printf.sprintf "%s\n%s" (print_atomic_action hd) (print_action tl)
+  | Action_ite hd then_ (Some else_) -> Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (print_expr hd) (print_action then_) (print_action else_)
+  | Action_ite hd then_ None -> Printf.sprintf "if (%s) {\n%s\n}" (print_expr hd) (print_action then_)
+  | Action_let i a k -> Printf.sprintf "let %s = %s in\n%s" (print_ident i) (print_atomic_action a) (print_action k)
+  | Action_act a -> Printf.sprintf "{\n%s\n}" (print_action a)
 
 and print_switch_case (s:switch_case) : ML string =
   let head, cases = s in
@@ -1199,10 +1244,7 @@ and print_switch_case (s:switch_case) : ML string =
                  (print_expr head)
                  (String.concat "\n" (List.map print_case cases))
 
-let option_to_string (f:'a -> ML string) (x:option 'a) : ML string =
-  match x with
-  | Some x -> f x
-  | _ -> ""
+let option_to_string (f:'a -> ML string) (x:option 'a) : ML string = print_opt x f
 
 let print_decl' (d:decl') : ML string =
   match d with

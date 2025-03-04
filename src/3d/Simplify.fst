@@ -113,13 +113,22 @@ let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   | FieldString sz -> FieldString (map_opt (simplify_expr env) sz)
   | FieldConsumeAll -> FieldConsumeAll
 
+let simplify_probe (env:T.env_t) (p:probe_call) : ML probe_call =
+  match p with
+  | SimpleCall { probe_fn; probe_length; probe_dest } ->
+    let probe_length = simplify_expr env probe_length in
+    SimpleCall { probe_fn; probe_length; probe_dest }
+  | CompositeCall { probe_dest; probe_block } ->
+    let probe_block = simplify_action env probe_block in
+    CompositeCall { probe_dest; probe_block }
+
 let simplify_atomic_field (env:T.env_t) (f:atomic_field)
   : ML atomic_field
   = let sf = f.v in
     let ft = simplify_typ env sf.field_type in
     let fa = simplify_field_array env sf.field_array_opt in
     let fc = sf.field_constraint |> map_opt (simplify_expr env) in
-    let fp = sf.field_probe |> map_opt (fun fp -> { fp with probe_length=simplify_expr env fp.probe_length } ) in
+    let fp = sf.field_probe |> map_opt (simplify_probe env) in
     let fact =
       match sf.field_action with
       | None -> None

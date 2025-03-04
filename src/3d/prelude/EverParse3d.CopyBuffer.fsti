@@ -111,19 +111,20 @@ let probe_and_read_at_offset_t (t:Type0) (size_t:U64.t) =
       U64.fits (U64.v read_offset + U64.v size_t) /\
       h0 == h1)
 
-type probe_m_result = {
+type probe_m_result a = {
   next_read_offset:  U64.t;
   next_write_offset: U64.t;
-  failed: bool;
+  result: option a;
 }
+let failed #a (r:probe_m_result a) = None? r.result
 
 inline_for_extraction
-let probe_m =
+let probe_m a =
   read_offset:U64.t ->
   write_offset:U64.t ->
   src:U64.t ->
   dest:copy_buffer_t ->
-  Stack probe_m_result
+  Stack (probe_m_result a)
     (fun h0 ->
       I.live (stream_of dest) h0)
     (fun h0 res h1 ->
@@ -134,13 +135,13 @@ let probe_m =
       (if res.next_write_offset <> write_offset
        then
         modifies (I.footprint sl) h0 h1 /\
-        (not res.failed ==> Seq.length (I.get_read sl h1) == 0)
+        (not (failed res) ==> Seq.length (I.get_read sl h1) == 0)
       else h0 == h1))
 
 inline_for_extraction
 noextract
 let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.t { bytes_to_read <> 0uL}) 
-: probe_m
+: probe_m unit
 = fun read_offset write_offset src dest ->
     let h0  = get () in
     let ok = f bytes_to_read read_offset write_offset src dest in
@@ -150,19 +151,19 @@ let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.
       {
         next_read_offset  = U64.(read_offset +^ bytes_to_read);
         next_write_offset = U64.(write_offset +^ bytes_to_read);
-        failed = false 
+        result = Some ()
       }
     else
       {
         next_read_offset  = read_offset;
         next_write_offset = write_offset;
-        failed = true 
+        result = None;
       }
 
 inline_for_extraction
 noextract
 let write_at_offset_m (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
-: probe_m
+: probe_m unit
 = fun read_offset write_offset src dest ->
     let ok = f v write_offset dest in
     if ok
@@ -170,19 +171,50 @@ let write_at_offset_m (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t 
       {
         next_read_offset  = read_offset;
         next_write_offset = U64.(write_offset +^ w);
-        failed = false
+        result = Some ()
       }
     )
     else (
       {
         next_read_offset  = read_offset;
         next_write_offset = write_offset;
-        failed = true
+        result = None
       }
     )
 
 inline_for_extraction
 noextract
+let probe_and_read_at_offset_m (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t t s)
+: probe_m t
+= fun read_offset write_offset src dest ->
+  let v = reader read_offset src in
+  match v with
+  | None ->
+    { next_read_offset = read_offset; next_write_offset = write_offset; result = None }
+  | Some v ->
+    { next_read_offset = U64.(read_offset +^ s); next_write_offset = write_offset; result = Some v }
+
+inline_for_extraction
+noextract
+let seq_probe_m (#a:Type) (m1:probe_m unit) (m2:probe_m a)
+: probe_m a
+= fun read_offset write_offset src dest ->
+    let res1 = m1 read_offset write_offset src dest in
+    if failed res1
+    then { res1 with result = None }
+    else m2 res1.next_read_offset res1.next_write_offset src dest
+
+inline_for_extraction
+noextract
+let bind_probe_m (#a #b:Type) (m1:probe_m a) (m2:a -> probe_m b)
+: probe_m b
+= fun read_offset write_offset src dest ->
+    let res1 = m1 read_offset write_offset src dest in
+    if failed res1
+    then { res1 with result = None }
+    else let Some v = res1.result in
+         m2 v res1.next_read_offset res1.next_write_offset src dest
+
 let probe_read_t0_and_write_t1
     (t0 t1:Type0)
     (size_t0:U64.t { size_t0 <> 0uL })
@@ -190,32 +222,10 @@ let probe_read_t0_and_write_t1
     (reader:probe_and_read_at_offset_t t0 size_t0)
     (writer:write_at_offset_t t1 size_t1)
     (coerce_t0_t1:coerce_value_t t0 t1)
-: probe_m
-= fun read_offset write_offset src dest ->
-    let h0 = get () in
-    let v = reader read_offset src in
-    let h1 = get () in
-    assert (h0 == h1);
-    match v with
-    | None ->
-      { next_read_offset = read_offset; next_write_offset = write_offset; failed = true }
-    | Some v ->
-      let ok = writer (coerce_t0_t1 v) write_offset dest in
-      if ok
-      then 
-        { next_read_offset = U64.(read_offset +^ size_t0); next_write_offset = U64.(write_offset +^ size_t1); failed = false }
-      else
-        { next_read_offset = read_offset; next_write_offset = write_offset; failed = true }
-
-inline_for_extraction
-noextract
-let seq_probe_m (m1:probe_m) (m2:probe_m)
-: probe_m
-= fun read_offset write_offset src dest ->
-    let res1 = m1 read_offset write_offset src dest in
-    if res1.failed
-    then res1
-    else m2 res1.next_read_offset res1.next_write_offset src dest
+: probe_m unit
+= bind_probe_m
+    (probe_and_read_at_offset_m reader)
+    (fun v -> write_at_offset_m writer (coerce_t0_t1 v)) 
 
 inline_for_extraction
 let check_overflow_add (x:U64.t) (y:U64.t)
@@ -225,11 +235,13 @@ let check_overflow_add (x:U64.t) (y:U64.t)
 
 inline_for_extraction
 let probe_fn_as_probe_m (bytes_to_read:U64.t { bytes_to_read <> 0uL}) (f:probe_fn)
-: probe_m
+: probe_m unit
 = fun read_offset write_offset src dest ->
     if read_offset <> 0uL
     || write_offset <> 0uL
-    then { next_read_offset = read_offset; next_write_offset = write_offset; failed = true }
+    then { next_read_offset = read_offset;
+           next_write_offset = write_offset;
+           result = None }
     else ( 
       let h0 = get () in
       let ok = f src bytes_to_read dest in
@@ -239,19 +251,19 @@ let probe_fn_as_probe_m (bytes_to_read:U64.t { bytes_to_read <> 0uL}) (f:probe_f
         {
           next_read_offset  = bytes_to_read;
           next_write_offset = bytes_to_read;
-          failed = false
+          result = Some ()
         }
       else
         {
           next_read_offset  = read_offset;
           next_write_offset = write_offset;
-          failed = true
+          result = None
         }
     )
 
 inline_for_extraction
 noextract
-let run_probe_m (m:probe_m) (src:U64.t) (dest:copy_buffer_t)
+let run_probe_m (m:probe_m unit) (src:U64.t) (dest:copy_buffer_t)
 : Stack U64.t
     (fun h0 ->
       let sl = stream_of dest in
@@ -262,6 +274,6 @@ let run_probe_m (m:probe_m) (src:U64.t) (dest:copy_buffer_t)
       modifies (I.footprint sl) h0 h1 /\
       (b <> 0uL ==> Seq.length (I.get_read sl h1) == 0))
 = let res = m 0uL 0uL src dest in
-  if res.failed
+  if failed res
   then 0uL
   else res.next_write_offset

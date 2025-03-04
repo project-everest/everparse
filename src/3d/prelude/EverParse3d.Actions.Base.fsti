@@ -920,7 +920,7 @@ val probe_then_validate
       (v:validate_with_action_t p inv disj l ha allow_reading)
       (src:U64.t)
       (dest:CP.copy_buffer_t)
-      (probe:CP.probe_m)
+      (probe:CP.probe_m unit)
   : action (conj_inv inv (copy_buffer_inv dest))
            (conj_disjointness disj (disjoint (copy_buffer_loc dest) l))
            (eloc_union l (copy_buffer_loc dest)) 

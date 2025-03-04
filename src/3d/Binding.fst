@@ -1144,9 +1144,18 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
         a, dependent)
     in
     let f_probe =
+      let check_dest env (d:ident) : ML ident =
+        let dest, dest_typ = check_ident env d in
+        if not (eq_typ env dest_typ tcopybuffer)
+        then error (Printf.sprintf "Probe destination expression %s has type %s instead of EVERPARSE_COPY_BUFFER_T"
+                            (print_ident dest)
+                            (print_typ dest_typ))
+                            dest.range;
+        dest
+      in
       match sf.field_probe with
       | None -> None
-      | Some p ->
+      | Some (SimpleCall p) ->
         let length, typ = check_expr env p.probe_length in
         let length =
           if not (eq_typ env typ tuint64)
@@ -1158,12 +1167,7 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
                             length.range
           else length
         in
-        let dest, dest_typ = check_ident env p.probe_dest in
-        if not (eq_typ env dest_typ tcopybuffer)
-        then error (Printf.sprintf "Probe destination expression %s has type %s instead of EVERPARSE_COPY_BUFFER_T"
-                            (print_ident dest)
-                            (print_typ dest_typ))
-                            dest.range;
+        let dest = check_dest env p.probe_dest in
         let probe_fn =
           match p.probe_fn with
           | None -> (
@@ -1182,7 +1186,14 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
               i
           )
         in
-        Some { probe_fn=Some probe_fn; probe_length=length; probe_dest=dest }
+        Some (SimpleCall { probe_fn=Some probe_fn; probe_length=length; probe_dest=dest })
+
+      | Some (CompositeCall p) ->
+        let check_probe_block env a = a in
+        let probe_dest = check_dest env p.probe_dest in
+        let probe_block = check_probe_block env p.probe_block in
+        Some (CompositeCall { probe_dest; probe_block })
+      
     in        
     if extend_scope then add_local env sf.field_ident sf.field_type;
     let sf = {

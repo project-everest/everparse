@@ -271,17 +271,38 @@ field_action:
   | LBRACE_CHECK a=action RBRACE { a, false }
   | LBRACE_ACT a=action RBRACE { with_range (Action_act a) $startpos(a), false }
 
+probe_field:
+| field_name=IDENT EQ e=expr 
+  {
+    match field_name.v with
+    | {modul_name=None; name="length"} -> ("length", e)
+    | {modul_name=None; name="destination"} -> ("destination", e)
+    | _ -> error "Unexpected field name in probe" field_name.range
+  }
+
 with_probe:
-  | PROBE probe_fn_opt=option_of(i=IDENT { i })
-          LPAREN length=IDENT EQ len=expr COMMA
-                 destination=IDENT EQ dest=IDENT
-          RPAREN
+| PROBE
+  probe_fn_opt=option_of(i=IDENT { i })
+  LPAREN fields=separated_list(COMMA, probe_field) RPAREN
+  block=option_of(LBRACE a=action RBRACE { a })
     {
-      if length.v.name <> "length" || length.v.modul_name <> None
-      then error "Expected 'length' as the first argument to 'with probe'" length.range;
-      if destination.v.name <> "destination" || destination.v.modul_name <> None
-      then error "Expected 'destination' as the second argument to 'with probe'" destination.range;
-      { probe_fn=probe_fn_opt; probe_length=len; probe_dest=dest }
+      let p = mk_pos $startpos in
+      let rng = p,p in
+      match probe_fn_opt, block with
+      | Some _, Some _ ->
+        error "Composite probe blocks do not have a probe function" rng
+      | _, None -> (
+        match fields with 
+        | [("length", l); ("destination", {v=Identifier d})] ->
+           SimpleCall { probe_fn=probe_fn_opt; probe_length=l; probe_dest=d }
+        | _ ->
+          error "Expected 'length' and 'destination' fields in probe" rng
+      )
+      | None, Some a -> (
+        match fields with
+        | [("destination", {v=Identifier e})] -> CompositeCall { probe_dest1=e; probe_block=a }
+        | _ -> error "Expected 'destination' field in probe" rng
+      )        
     }
 
 atomic_field:

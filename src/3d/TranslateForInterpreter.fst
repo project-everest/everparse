@@ -781,7 +781,8 @@ let make_zero (r: range) (t: typ) : ML T.expr =
 let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
   let sf = f.v in
   match f.v.field_probe with
-  | Some probe_call -> (
+  | Some (CompositeCall _) -> failwith ""
+  | Some (SimpleCall probe_call) -> (
     match f.v.field_type.v, probe_call.probe_fn with
     | Pointer t (Some (PQ a)), Some probe_fn ->
       let t, ds1 = translate_typ t in

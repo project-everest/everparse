@@ -331,12 +331,23 @@ let resolve_field_array_t (env:qenv) (farr:field_array_t) : ML field_array_t =
   | FieldString (Some e) -> FieldString (Some (resolve_expr env e))
   | FieldConsumeAll -> farr
 
+let resolve_probe_field env = function
+  | ProbeLength e -> ProbeLength (resolve_expr env e)
+  | ProbeDest e -> ProbeDest (resolve_expr env e)
+
 let resolve_probe_call env pc =
-  {
-    probe_fn = map_opt (resolve_ident env) pc.probe_fn;
-    probe_length = resolve_expr env pc.probe_length;
-    probe_dest = resolve_ident env pc.probe_dest;
-  }
+  match pc with
+  | SimpleCall { probe_fn; probe_length; probe_dest } ->
+    SimpleCall {
+      probe_fn = map_opt (resolve_ident env) probe_fn;
+      probe_length = resolve_expr env probe_length;
+      probe_dest = resolve_ident env probe_dest;
+    }
+  | CompositeCall { probe_dest; probe_block } ->
+    CompositeCall {
+      probe_dest = resolve_ident env probe_dest;
+      probe_block = resolve_action env probe_block;
+    }
 
 let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
   match ff.v with

@@ -598,7 +598,7 @@ type atomic_action
       dt:dtyp k ha has_reader inv disj l ->
       src:U64.t ->
       dest:CP.copy_buffer_t ->
-      probe:CP.probe_m ->
+      probe:CP.probe_m unit ->
       atomic_action (join_inv inv (NonTrivial (A.copy_buffer_inv dest)))
                     (join_disj disj (disjoint (NonTrivial (A.copy_buffer_loc dest)) l))
                     (join_loc l (NonTrivial (A.copy_buffer_loc dest)))
@@ -969,7 +969,7 @@ let coerce (#[@@@erasable]a:Type)
 [@@specialize]
 let t_probe_then_validate
       (fieldname:string)
-      (probe:CP.probe_m)
+      (probe:CP.probe_m unit)
       (dest:CP.copy_buffer_t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
       (#ha #has_reader #i #disj:_)
