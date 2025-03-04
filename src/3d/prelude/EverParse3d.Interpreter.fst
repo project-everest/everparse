@@ -597,9 +597,8 @@ type atomic_action
       #l:loc_index ->
       dt:dtyp k ha has_reader inv disj l ->
       src:U64.t ->
-      len:U64.t ->
       dest:CP.copy_buffer_t ->
-      probe:CP.probe_fn ->
+      probe:CP.probe_m ->
       atomic_action (join_inv inv (NonTrivial (A.copy_buffer_inv dest)))
                     (join_disj disj (disjoint (NonTrivial (A.copy_buffer_loc dest)) l))
                     (join_loc l (NonTrivial (A.copy_buffer_loc dest)))
@@ -635,10 +634,10 @@ let atomic_action_as_action
       A.action_assignment x rhs
     | Action_call c ->
       c
-    | Action_probe_then_validate #nz #wk #k #_hr #inv #l dt src len dest probe ->
+    | Action_probe_then_validate #nz #wk #k #_hr #inv #l dt src dest probe ->
       A.index_equations();
       let v = dtyp_as_validator dt in
-      A.probe_then_validate v src len dest probe
+      A.probe_then_validate v src dest probe
 
 (* A sub-language of monadic actions.
 
@@ -970,8 +969,7 @@ let coerce (#[@@@erasable]a:Type)
 [@@specialize]
 let t_probe_then_validate
       (fieldname:string)
-      (probe:CP.probe_fn)
-      (len:U64.t)
+      (probe:CP.probe_m)
       (dest:CP.copy_buffer_t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
       (#ha #has_reader #i #disj:_)
@@ -986,7 +984,7 @@ let t_probe_then_validate
  = T_with_dep_action fieldname
      (DT_IType UInt64)
      (fun src ->
-        Atomic_action (Action_probe_then_validate td src len dest probe))
+        Atomic_action (Action_probe_then_validate td src dest probe))
     
 
 (* Type denotation of `typ` *)

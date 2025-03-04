@@ -1952,16 +1952,15 @@ let probe_then_validate
       (#ha #allow_reading:bool)
       (v:validate_with_action_t p inv disj l ha allow_reading)
       (src:U64.t)
-      (len:U64.t)
       (dest:CP.copy_buffer_t)
-      (probe:CP.probe_fn)
+      (probe:CP.probe_m)
   = fun ctxt error_handler_fn input input_length pos posf ->
       CP.properties dest;
       let h0 = HST.get () in
-      let b = probe src len dest in
+      let b = CP.run_probe_m probe src dest in
       let h1 = HST.get () in
       modifies_address_liveness_insensitive_unused_in h0 h1;
-      if b
+      if b <> 0uL
       then (
         let result = v ctxt error_handler_fn (CP.stream_of dest) (CP.stream_len dest) 0uL in
         not (LPE.is_error result)
