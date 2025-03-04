@@ -99,3 +99,38 @@ val cbor_serialize_array
     pts_to out v **
     pure (cbor_serialize_array_postcond len l res v)
   )
+
+let cbor_serialize_map_precond
+  (len: raw_uint64)
+  (l: list (raw_data_item & raw_data_item))
+  (off: SZ.t)
+  (v: Seq.seq U8.t)
+: Tot prop
+= SZ.v off <= Seq.length v /\
+  Seq.slice v 0 (SZ.v off) == serialize_cbor_map l /\
+  List.Tot.length l == U64.v len.value
+
+let cbor_serialize_map_postcond
+  (len: raw_uint64)
+  (l: list (raw_data_item & raw_data_item))
+  (res: SZ.t)
+  (v: Seq.seq U8.t)
+: Tot prop
+= List.Tot.length l == U64.v len.value /\
+  SZ.v res <= Seq.length v /\
+  (res == 0sz <==> Seq.length (serialize_cbor (Map len l)) > Seq.length v) /\
+  (SZ.v res > 0 ==> Seq.slice v 0 (SZ.v res) `Seq.equal` serialize_cbor (Map len l))
+
+val cbor_serialize_map
+  (len: raw_uint64)
+  (out: S.slice U8.t)
+  (l: Ghost.erased (list (raw_data_item & raw_data_item)))
+  (off: SZ.t)
+: stt SZ.t
+  (exists* v . pts_to out v **
+    pure (cbor_serialize_map_precond len l off v)
+  )
+  (fun res -> exists* v .
+    pts_to out v **
+    pure (cbor_serialize_map_postcond len l res v)
+  )
