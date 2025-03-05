@@ -1,15 +1,16 @@
-aligned
-typedef struct _A {
-	UINT32 a1;
-	UINT32 a2;
-} A;
-
 extern probe ProbeAndCopy
 extern probe (WITH_OFFSETS) ProbeAndCopyLen
 extern probe (WRITE UINT32) WriteU32
 extern probe (WRITE UINT64) WriteU64
 extern probe (READ UINT32) ProbeAndReadU32
 extern PURE UINT64 UlongToPtr(UINT32 ptr)
+
+aligned
+typedef struct _A {
+	UINT32 a1;
+	UINT32 a2;
+} A;
+
 
 aligned
 typedef struct _B (EVERPARSE_COPY_BUFFER_T a_out) {
@@ -25,9 +26,7 @@ aligned
 typedef struct _C (EVERPARSE_COPY_BUFFER_T a_out, EVERPARSE_COPY_BUFFER_T b_out)
 {
 	UINT32 c1;
-	B(a_out) *
-    // pointer(UINT32)
-    pb
+	B(a_out) *pb
 	   probe (destination=b_out) {
         ProbeAndCopyLen(4);
         WriteU32(0);
