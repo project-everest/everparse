@@ -7,6 +7,8 @@ SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
 MAKE="$(which gmake >/dev/null 2>&1 && echo gmake || echo make) $EVERPARSE_MAKE_OPTS"
 DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
 
+Z3_LATEST_VERSION=4.13.0
+
 # We do not read any of these from the environment. This builds a
 # package from the current master branches, or the existing checkouts in
 # FStar/ and karamel/.
@@ -279,9 +281,17 @@ make_everparse() {
     fi
 
     # Download and build the latest z3 for test case generation purposes
-    if ! $is_windows ; then
+    if $is_windows ; then
+        z3_tagged=z3-$Z3_LATEST_VERSION
+	z3_basename=z3-$Z3_LATEST_VERSION-x64-win
+	! [[ -e $z3_basename ]]
+        z3_archive=$z3_basename.zip
+	[[ -f $z3_archive ]] ||	wget --output-document=$z3_archive https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive
+        unzip $z3_archive
+        mv $z3_basename "$PWD/everparse/z3-latest"
+    else
         if ! [[ -d z3-latest ]] ; then
-            git clone --branch z3-4.13.0 https://github.com/Z3Prover/z3 z3-latest
+            git clone --branch z3-$Z3_LATEST_VERSION https://github.com/Z3Prover/z3 z3-latest
         fi
         z3_latest_dir="$PWD/everparse/z3-latest"
         mkdir -p "$z3_latest_dir"
@@ -324,7 +334,7 @@ EOF
     
     # Reset permissions and build the package
     if $is_windows ; then
-        chmod a+x everparse/bin/*.exe everparse/bin/*.dll
+        chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/z3-latest/bin/*.exe everparse/z3-latest/bin/*.dll
     fi
 }
 
