@@ -49,6 +49,13 @@ let rel_pure
 : rel t t
 = mk_rel (fun x y -> pure (x == y))
 
+let rel_pure_eq
+  (#t: Type)
+  (x1 x2: t)
+: Lemma
+  (rel_pure t x1 x2 == pure (x1 == x2))
+= ()
+
 let rel_unit : rel unit unit = mk_rel (fun _ _ -> emp)
 
 noeq

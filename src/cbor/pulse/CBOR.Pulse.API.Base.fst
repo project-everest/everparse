@@ -1504,8 +1504,9 @@ let cbor_det_serialize_tag_postcond
 = let s = Spec.cbor_det_serialize_tag tag in
   let len = Seq.length s in
   SZ.v output_len == Seq.length v' /\
+  SZ.v res <= Seq.length v' /\
   (res == 0sz <==> len > Seq.length v') /\
-  (len <= Seq.length v' ==> Seq.slice v' 0 len == s)
+  (len <= Seq.length v' ==> (Seq.slice v' 0 (SZ.v res) == s))
 
 inline_for_extraction
 let cbor_det_serialize_tag_t =

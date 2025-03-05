@@ -55,8 +55,9 @@ let cbor_serialize_tag_postcond
 = let s = serialize_cbor_tag tag in
   let len = Seq.length s in
   SZ.v (S.len output) == Seq.length v' /\
+  SZ.v res <= Seq.length v' /\
   (res == 0sz <==> len > Seq.length v') /\
-  (len <= Seq.length v' ==> Seq.slice v' 0 len == s)
+  (len <= Seq.length v' ==> Seq.slice v' 0 (SZ.v res) == s)
 
 val cbor_serialize_tag
   (tag: raw_uint64)
