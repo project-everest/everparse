@@ -145,7 +145,7 @@ type typ =
   | T_with_comment: typ -> A.comments -> typ
   | T_with_probe: 
       content_typ:typ ->
-      pointer_size:A.integer_type ->
+      pointer_size:A.pointer_size_t ->
       probe_fn:probe_action ->
       dest:A.ident ->
       typ
@@ -244,7 +244,7 @@ type parser' =
   | Parse_impos     : parser'
   | Parse_with_comment: p:parser -> c:A.comments -> parser'
   | Parse_string    : p:parser -> zero:expr -> parser'
-  | Parse_with_probe : p:parser -> probe:probe_action -> dest:A.ident -> parser'
+  | Parse_with_probe : p:parser -> pointer_size:A.pointer_size_t -> probe:probe_action -> dest:A.ident -> parser'
   
 and parser = {
   p_kind:parser_kind;

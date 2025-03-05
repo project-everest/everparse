@@ -156,6 +156,9 @@ type integer_type =
   | UInt32
   | UInt64
 
+[@@ PpxDerivingYoJson ]
+let pointer_size_t = i:integer_type { i == UInt32 \/ i == UInt64 }
+
 let parse_int_suffix (i:string) : string * option integer_type =
     let l = String.length i in
     if l >= 2
@@ -366,7 +369,7 @@ and typ' =
   | Pointer : typ -> option pointer_qualifier -> typ'
 
 and pointer_qualifier =
-  | PQ of integer_type
+  | PQ of pointer_size_t
 
 and typ = with_meta_t typ'
 

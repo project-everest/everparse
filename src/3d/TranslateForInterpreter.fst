@@ -596,7 +596,7 @@ let rec parse_typ (env:global_env)
 
   | T.T_with_probe content_type integer_type probe dest -> 
     let p = parse_typ env typename fieldname content_type in
-    let q = T.Parse_with_probe p probe dest in
+    let q = T.Parse_with_probe p integer_type probe dest in
     let u64_or_u32, _ = translate_typ (A.type_of_integer_type integer_type) in
     let u64_or_u32_parser = parse_typ env typename fieldname u64_or_u32 in
     { p_kind = u64_or_u32_parser.p_kind;
@@ -756,7 +756,7 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_with_action _ _ _
   | T.Parse_if_else _ _ _
   | T.Parse_string _ _
-  | T.Parse_with_probe _ _ _
+  | T.Parse_with_probe _ _ _ _
     -> false
   | T.Parse_map p _
   | T.Parse_refinement _ p _

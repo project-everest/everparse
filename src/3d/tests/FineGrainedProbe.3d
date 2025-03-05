@@ -26,7 +26,7 @@ aligned
 typedef struct _C (EVERPARSE_COPY_BUFFER_T a_out, EVERPARSE_COPY_BUFFER_T b_out)
 {
 	UINT32 c1;
-	B(a_out) *pb
+	B(a_out) *pointer(UINT32) pb
 	   probe (destination=b_out) {
         ProbeAndCopyLen(4);
         WriteU32(0);

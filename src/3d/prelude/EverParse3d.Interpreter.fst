@@ -77,6 +77,8 @@ type itype =
   | AllBytes
   | AllZeros
 
+let pointer_size_t = i:itype { i == UInt32 \/ i == UInt64 }
+
 (* Interpretation of itype as an F* type *)
 [@@specialize]
 let itype_as_type (i:itype)
@@ -669,8 +671,9 @@ type atomic_action
       #inv:inv_index ->
       #disj:disj_index ->
       #l:loc_index ->
+      sz:pointer_size_t ->
       dt:dtyp k ha has_reader inv disj l ->
-      src:U64.t ->
+      src:itype_as_type sz ->
       dest:CP.copy_buffer_t ->
       probe:probe_action ->
       atomic_action (join_inv inv (NonTrivial (A.copy_buffer_inv dest)))
@@ -708,10 +711,10 @@ let atomic_action_as_action
       A.action_assignment x rhs
     | Action_call c ->
       c
-    | Action_probe_then_validate #nz #wk #k #_hr #inv #l dt src dest probe ->
+    | Action_probe_then_validate #nz #wk #k #_hr #inv #l sz dt src dest probe ->
       A.index_equations();
       let v = dtyp_as_validator dt in
-      A.probe_then_validate v src dest (probe_action_as_probe_m probe)
+      A.probe_then_validate v (sz=UInt32) src dest (probe_action_as_probe_m probe)
 
 (* A sub-language of monadic actions.
 
@@ -1042,6 +1045,7 @@ let coerce (#[@@@erasable]a:Type)
 
 [@@specialize]
 let t_probe_then_validate
+      (pointer_size:pointer_size_t)
       (fieldname:string)
       (probe:probe_action)
       (dest:CP.copy_buffer_t)
@@ -1049,16 +1053,16 @@ let t_probe_then_validate
       (#ha #has_reader #i #disj:_)
       (#l:_)
       (td:dtyp pk ha has_reader i disj l)
- : typ (parser_kind_of_itype UInt64)
+ : typ (parser_kind_of_itype pointer_size)
        (join_inv i (NonTrivial (A.copy_buffer_inv dest)))
        (join_disj disj (disjoint (NonTrivial (A.copy_buffer_loc dest)) l))
        (join_loc l (NonTrivial (A.copy_buffer_loc dest)))
        true
        false
  = T_with_dep_action fieldname
-     (DT_IType UInt64)
+     (DT_IType pointer_size)
      (fun src ->
-        Atomic_action (Action_probe_then_validate td src dest probe))
+        Atomic_action (Action_probe_then_validate pointer_size td src dest probe))
     
 
 (* Type denotation of `typ` *)
