@@ -23,7 +23,7 @@ let impl_serialize_post
 = (SZ.v res > 0 <==> (s.serializable v /\ Seq.length (Cbor.cbor_det_serialize (s.serializer v)) <= Seq.length w)) /\
   (SZ.v res > 0 ==> (
     SZ.v res <= Seq.length w /\
-    Seq.slice w 0 (SZ.v res) == Cbor.cbor_det_serialize (s.serializer v)
+    Seq.slice w 0 (SZ.v res) `Seq.equal` Cbor.cbor_det_serialize (s.serializer v)
   ))
 
 inline_for_extraction noextract [@@noextract_to "krml"]
