@@ -98,14 +98,13 @@ fn impl_copyful_bytes_gen
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
-    (freeable: Ghost.erased bool)
     (#t: Ghost.erased typ)
     (#ser: Ghost.erased (Seq.seq U8.t -> bool))
     (par: Ghost.erased (parser_spec t (Seq.seq U8.t) ser))
     (sq: squash (
       forall (x: cbor) . Ghost.reveal t x ==> (CString? (unpack x) /\ (Ghost.reveal par x <: Seq.seq U8.t) == CString?.v (unpack x))
     ))
-: impl_copyful_parse #ty vmatch #(Ghost.reveal t) #(Seq.seq U8.t) #(Ghost.reveal ser) (Ghost.reveal par) #_ (rel_vec_or_slice_of_seq (Ghost.reveal freeable))
+: impl_copyful_parse #ty vmatch #(Ghost.reveal t) #(Seq.seq U8.t) #(Ghost.reveal ser) (Ghost.reveal par) #_ (rel_vec_of_seq)
 =
     (c: ty)
     (#p: perm)
@@ -130,10 +129,7 @@ fn impl_copyful_bytes_gen
   };
   rewrite (pts_to v vs) as (pts_to w.v vs);
   fold (rel_vec_of_seq w vs);
-  let res : vec_or_slice U8.t = Vec w;
-  fold (rel_vec_or_slice_of_seq freeable (Vec w) vs);
-  rewrite each Vec w as res;
-  res
+  w
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -141,29 +137,26 @@ let impl_copyful_bytes
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
-    (freeable: Ghost.erased bool)
-: impl_copyful_parse #ty vmatch #bstr #(Seq.seq U8.t) #_ spec_bstr.parser #_ (rel_vec_or_slice_of_seq freeable)
-= impl_copyful_bytes_gen cbor_destr_string _ _ ()
+: impl_copyful_parse #ty vmatch #bstr #(Seq.seq U8.t) #_ spec_bstr.parser #_ (rel_vec_of_seq)
+= impl_copyful_bytes_gen cbor_destr_string _ ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_text
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
-    (freeable: Ghost.erased bool)
-: impl_copyful_parse #ty vmatch #tstr #(Seq.seq U8.t) #_ spec_tstr.parser #_ (rel_vec_or_slice_of_seq freeable)
-= impl_copyful_bytes_gen cbor_destr_string _ _ ()
+: impl_copyful_parse #ty vmatch #tstr #(Seq.seq U8.t) #_ spec_tstr.parser #_ (rel_vec_of_seq)
+= impl_copyful_bytes_gen cbor_destr_string _ ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_copyful_str_size
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)
     (cbor_destr_string: get_string_t vmatch)
-    (freeable: Ghost.erased bool)
     (mt: Ghost.erased major_type_byte_string_or_text_string)
     (lo hi: Ghost.erased U64.t)
-: impl_copyful_parse vmatch (spec_str_size mt lo hi).parser (rel_vec_or_slice_of_seq freeable)
-= impl_copyful_bytes_gen cbor_destr_string _ _ ()
+: impl_copyful_parse vmatch (spec_str_size mt lo hi).parser (rel_vec_of_seq)
+= impl_copyful_bytes_gen cbor_destr_string _ ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_bytes_gen

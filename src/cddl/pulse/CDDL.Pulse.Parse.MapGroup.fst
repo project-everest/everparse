@@ -1310,8 +1310,8 @@ fn impl_zero_copy_map_zero_or_more
     #(map_group_zero_or_more_match_item_length #tkey #tvalue)
     #(map_group_zero_or_more_match_item_serializable (Ghost.reveal sp1) (Ghost.reveal key_except) (Ghost.reveal sp2))
     (map_group_zero_or_more_match_item_parser (Ghost.reveal sp1) (Ghost.reveal key_except) (Ghost.reveal sp2))
-    #(either (vec_or_slice (ikey & ivalue)) (map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
-    (rel_either_left (rel_vec_or_slice_of_table key_eq r1 r2 false) (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
+    #(either (slice (ikey & ivalue)) (map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
+    (rel_either_left (rel_slice_of_table key_eq r1 r2) (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
 =
   (c: _)
   (#p: _)
@@ -1321,10 +1321,10 @@ fn impl_zero_copy_map_zero_or_more
 {
   let rres = impl_zero_copy_map_zero_or_more' map_iterator_start map_share map_gather key_eq sp1 va1 pa1 va_ex sp2 va2 pa2 c v1 v2;
   with vres . assert (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) rres vres);
-  let res : either (vec_or_slice (ikey & ivalue)) (map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)) = Inr rres;
+  let res : either (slice (ikey & ivalue)) (map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)) = Inr rres;
   Trade.rewrite_with_trade
     (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) rres vres)
-    (rel_either_left (rel_vec_or_slice_of_table key_eq r1 r2 false) (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)) res vres);
+    (rel_either_left (rel_slice_of_table key_eq r1 r2) (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)) res vres);
   Trade.trans _ _ (vmatch p c v);
   res
 }

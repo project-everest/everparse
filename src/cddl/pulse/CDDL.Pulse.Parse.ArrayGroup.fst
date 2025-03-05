@@ -770,7 +770,7 @@ fn impl_zero_copy_array_group_zero_or_more
     ))
 : impl_zero_copy_array_group #cbor_array_iterator_t cbor_array_iterator_match #(array_group_zero_or_more (Ghost.reveal t1)) #(list tgt1) #(ag_spec_zero_or_more_size (Ghost.reveal tgt_size1)) #(ag_spec_zero_or_more_serializable (Ghost.reveal tgt_serializable1)) 
   (array_group_parser_spec_zero_or_more0 (Ghost.reveal ps1) ())
-  #(either (vec_or_slice impl_tgt1) (array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1))) (rel_either_left (rel_vec_or_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)))
+  #(either (slice impl_tgt1) (array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1))) (rel_either_left (rel_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)))
 =
   (c: _)
   (#p: _)
@@ -778,10 +778,10 @@ fn impl_zero_copy_array_group_zero_or_more
 {
   let i = impl_zero_copy_array_group_zero_or_more' share gather va1 pa1 sq c;
   with v . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) i v);
-  let res : either (vec_or_slice impl_tgt1) (array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1)) = Inr i;
+  let res : either (slice impl_tgt1) (array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1)) = Inr i;
   Trade.rewrite_with_trade
     (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) i v)
-    (rel_either_left (rel_vec_or_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)) res v);
+    (rel_either_left (rel_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)) res v);
   Trade.trans _ _ (cbor_array_iterator_match p c l);
   res
 }
@@ -806,7 +806,7 @@ let impl_zero_copy_array_group_one_or_more
       array_group_is_nonempty t1
     ))
 : impl_zero_copy_array_group cbor_array_iterator_match (array_group_parser_spec_one_or_more0 (Ghost.reveal ps1) ())
-  (rel_either_left (rel_vec_or_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)))
+  (rel_either_left (rel_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)))
 = impl_zero_copy_array_group_ext
     (impl_zero_copy_array_group_zero_or_more share gather va1 pa1 ())
     _

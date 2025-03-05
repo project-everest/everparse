@@ -102,12 +102,12 @@ let rec impl_type_sem
     let it = impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env t in {
       sem_impl_type =
         either
-          (vec_or_slice it.sem_impl_type)
+          (slice it.sem_impl_type)
           (array_iterator_t cbor_array_iterator_match it.sem_impl_type (Iterator.mk_spec it.sem_rel)) // HERE the relation on the element types is used in the implementation array type
           ;
       sem_rel =
         rel_either_left
-          (rel_vec_or_slice_of_list it.sem_rel false)
+          (rel_slice_of_list it.sem_rel false)
           (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec it.sem_rel))
           ;
     }
@@ -116,12 +116,12 @@ let rec impl_type_sem
     let it2 = impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env t2 in {
       sem_impl_type =
         either
-          (vec_or_slice (it1.sem_impl_type & it2.sem_impl_type))
+          (slice (it1.sem_impl_type & it2.sem_impl_type))
           (map_iterator_t vmatch cbor_map_iterator_t it1.sem_impl_type it2.sem_impl_type (Iterator.mk_spec it1.sem_rel) (Iterator.mk_spec it2.sem_rel))
           ; // HERE the relation on the element types is used in the implementation map type
       sem_rel = 
         rel_either_left
-          (rel_vec_or_slice_of_table (target_type_eq s_env t1) it1.sem_rel it2.sem_rel false)
+          (rel_slice_of_table (target_type_eq s_env t1) it1.sem_rel it2.sem_rel)
           (rel_map_iterator vmatch cbor_map_iterator_match it1.sem_impl_type it2.sem_impl_type (Iterator.mk_spec it1.sem_rel) (Iterator.mk_spec it2.sem_rel))
           ;
     }

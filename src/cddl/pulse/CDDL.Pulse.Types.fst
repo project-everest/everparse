@@ -74,7 +74,6 @@ type vec (t: Type) = {
   v: V.vec t;
 }
 
-
 let rel_vec_of_list
   (#low #high: Type)
   (r: rel low high)
@@ -82,22 +81,6 @@ let rel_vec_of_list
 = mk_rel (fun x y ->
     exists* s . pts_to x.v s ** seq_list_match s y r ** pure (V.is_full_vec x.v /\ V.length x.v == U64.v x.len)
   )
-
-noeq
-type vec_or_slice (t: Type) =
-| Vec of vec t
-| Slice of slice t
-
-let rel_vec_or_slice_of_list
-  (#low #high: Type)
-  (r: rel low high)
-  (freeable: bool)
-: rel (vec_or_slice low) (list high)
-= mk_rel (fun x y ->
-  match x with
-  | Vec v -> rel_vec_of_list r v y
-  | Slice s -> rel_slice_of_list r freeable s y
-)
 
 ghost
 fn rec seq_list_match_pure_elim
@@ -322,15 +305,6 @@ let rel_vec_of_seq
 : rel (vec t) (Seq.seq t)
 = mk_rel (fun x y -> pts_to x.v y ** pure (V.is_full_vec x.v /\ V.length x.v == U64.v x.len))
 
-let rel_vec_or_slice_of_seq
-  (#t: Type)
-  (freeable: bool)
-: rel (vec_or_slice t) (Seq.seq t)
-= mk_rel (fun x y -> match x with
-  | Vec v -> rel_vec_of_seq v y
-  | Slice s -> rel_slice_of_seq freeable s y
-)
-
 module Map = CDDL.Spec.Map
 module EqTest = CDDL.Spec.EqTest
 
@@ -379,18 +353,6 @@ let rel_slice_of_table
   (rvalue: rel low_value high_value)
 : rel (slice (low_key & low_value)) (Map.t high_key (list high_value))
 = mk_rel (fun x y -> exists* l . rel_slice_of_list (rel_pair rkey rvalue) false x l **
-    pure (y == map_of_list_pair key_eq l)
-  )
-
-let rel_vec_or_slice_of_table
-  (#low_key #high_key: Type)
-  (#low_value #high_value: Type)
-  (key_eq: EqTest.eq_test high_key)
-  (rkey: rel low_key high_key)
-  (rvalue: rel low_value high_value)
-  (freeable: bool)
-: rel (vec_or_slice (low_key & low_value)) (Map.t high_key (list high_value))
-= mk_rel (fun x y -> exists* l . rel_vec_or_slice_of_list (rel_pair rkey rvalue) freeable x l **
     pure (y == map_of_list_pair key_eq l)
   )
 
