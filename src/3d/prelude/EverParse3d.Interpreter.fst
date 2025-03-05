@@ -22,6 +22,7 @@ module A = EverParse3d.Actions.All
 module P = EverParse3d.Prelude
 module T = FStar.Tactics
 module CP = EverParse3d.CopyBuffer
+module PA = EverParse3d.ProbeActions
 open FStar.List.Tot
 
 inline_for_extraction
@@ -508,6 +509,79 @@ let mk_action_binding
   : action_binding inv_none l false t
   = mk_extern_action f
 
+(* Type type of atomic probe actions *)
+noeq
+type atomic_probe_action : Type0 -> Type u#1 =
+  | Probe_and_copy :
+      bytes_to_read : U64.t { bytes_to_read <> 0uL }->
+      probe_fn: PA.probe_fn_incremental ->
+      atomic_probe_action unit
+  | Probe_and_read :
+      #t:Type0 ->
+      #sz:U64.t { sz <> 0uL } ->
+      reader : PA.probe_and_read_at_offset_t t sz ->
+      atomic_probe_action t
+  | Write_at_offset :
+      #t:Type0 ->
+      #sz:U64.t { sz <> 0uL } ->
+      v:t ->
+      writer : PA.write_at_offset_t t sz ->
+      atomic_probe_action unit
+  | Probe_call_pure :
+      #t:Type0 ->
+      f:PA.pure_external_action t ->
+      atomic_probe_action t
+  | Return_probe_m :
+      #t:Type0 ->
+      v:t ->
+      atomic_probe_action t
+
+[@@specialize]
+let atomic_probe_action_as_probe_m (#t:Type) (p:atomic_probe_action t)
+: PA.probe_m t
+= match p with
+  | Probe_and_copy bytes_to_read probe_fn_incremental ->
+    PA.probe_fn_incremental_as_probe_m probe_fn_incremental bytes_to_read 
+  | Probe_and_read reader ->
+    PA.probe_and_read_at_offset_m reader
+  | Write_at_offset v writer ->
+    PA.write_at_offset_m writer v
+  | Probe_call_pure f ->
+    PA.lift_pure_external_action f
+  | Return_probe_m v ->
+    PA.return_probe_m v
+
+noeq
+type probe_action : Type u#1 =
+  | Probe_action_atomic of atomic_probe_action unit
+  | Probe_action_simple:
+      bytes_to_read : U64.t { bytes_to_read <> 0uL } ->
+      probe_fn: PA.probe_fn ->
+      probe_action
+  | Probe_action_seq:
+      m1: atomic_probe_action unit ->
+      m2: probe_action ->
+      probe_action
+  | Probe_action_let:
+      #t:Type0 ->
+      m1: atomic_probe_action t ->
+      m2: (t -> probe_action) ->
+      probe_action
+
+[@@specialize]
+let rec probe_action_as_probe_m (p:probe_action)
+: PA.probe_m unit
+= match p with
+  | Probe_action_atomic a ->
+    atomic_probe_action_as_probe_m a
+  | Probe_action_simple bytes_to_read probe_fn ->
+    PA.probe_fn_as_probe_m bytes_to_read probe_fn
+  | Probe_action_seq m1 m2 ->
+    PA.seq_probe_m (atomic_probe_action_as_probe_m m1) (probe_action_as_probe_m m2)
+  | Probe_action_let m1 m2 ->
+    let k x : PA.probe_m unit = probe_action_as_probe_m (m2 x) in
+    PA.bind_probe_m (atomic_probe_action_as_probe_m m1) k
+
 (* The type of atomic actions.
 
    `atomic_action l i b t`: is an atomic action that
@@ -598,7 +672,7 @@ type atomic_action
       dt:dtyp k ha has_reader inv disj l ->
       src:U64.t ->
       dest:CP.copy_buffer_t ->
-      probe:CP.probe_m unit ->
+      probe:probe_action ->
       atomic_action (join_inv inv (NonTrivial (A.copy_buffer_inv dest)))
                     (join_disj disj (disjoint (NonTrivial (A.copy_buffer_loc dest)) l))
                     (join_loc l (NonTrivial (A.copy_buffer_loc dest)))
@@ -637,7 +711,7 @@ let atomic_action_as_action
     | Action_probe_then_validate #nz #wk #k #_hr #inv #l dt src dest probe ->
       A.index_equations();
       let v = dtyp_as_validator dt in
-      A.probe_then_validate v src dest probe
+      A.probe_then_validate v src dest (probe_action_as_probe_m probe)
 
 (* A sub-language of monadic actions.
 
@@ -969,7 +1043,7 @@ let coerce (#[@@@erasable]a:Type)
 [@@specialize]
 let t_probe_then_validate
       (fieldname:string)
-      (probe:CP.probe_m unit)
+      (probe:probe_action)
       (dest:CP.copy_buffer_t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
       (#ha #has_reader #i #disj:_)

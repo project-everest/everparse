@@ -9,6 +9,7 @@ module I = EverParse3d.InputStream.Base
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module CP = EverParse3d.CopyBuffer
+module PA = EverParse3d.ProbeActions
 module AppCtxt = EverParse3d.AppCtxt
 module LPE = EverParse3d.ErrorCode
 open FStar.Tactics.Typeclasses
@@ -1953,11 +1954,11 @@ let probe_then_validate
       (v:validate_with_action_t p inv disj l ha allow_reading)
       (src:U64.t)
       (dest:CP.copy_buffer_t)
-      (probe:CP.probe_m unit)
+      (probe:PA.probe_m unit)
   = fun ctxt error_handler_fn input input_length pos posf ->
       CP.properties dest;
       let h0 = HST.get () in
-      let b = CP.run_probe_m probe src dest in
+      let b = PA.run_probe_m probe src dest in
       let h1 = HST.get () in
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if b <> 0uL

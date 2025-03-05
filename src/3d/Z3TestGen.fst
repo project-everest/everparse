@@ -931,7 +931,7 @@ let rec typ_depth (t: I.typ) : GTot nat
   | I.T_false _
   | I.T_string _ _ _
   | I.T_denoted _ _
-  | I.T_probe_then_validate _ _ _ _ _
+  | I.T_probe_then_validate _ _ _ _
     -> 0
 
 let rec parse_typ (t : I.typ) : Tot (parser not_reading)
@@ -964,7 +964,7 @@ let rec parse_typ (t : I.typ) : Tot (parser not_reading)
       parse_nlist_total_constant_size i size
     else
       parse_nlist (fun _ -> mk_expr size) (parse_typ body)
-  | I.T_probe_then_validate _ _ _ _ _ -> unsupported_parser "probe_then_validate" _
+  | I.T_probe_then_validate _ _ _ _ -> unsupported_parser "probe_then_validate" _
 
 and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Tot (int -> parser not_reading)
   (decreases (1 + typ_depth tthen + typ_depth telse))
@@ -1051,8 +1051,8 @@ let produce_not_type_decl (a: I.not_type_decl) (out: string -> ML unit) : ML uni
   | T.Output_type _
   | T.Output_type_expr _ _
   | T.Extern_type _
-  | T.Extern_fn _ _ _
-  | T.Extern_probe _
+  | T.Extern_fn _ _ _ _
+  | T.Extern_probe _ _
   -> ()
 
 type prog_def =

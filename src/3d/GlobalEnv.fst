@@ -86,15 +86,22 @@ let default_probe_fn (g:global_env)
     then None 
     else (
       match H.fold (fun k v _ -> Some v) g.ge_probe_fn (None #decl) with
-      | Some {d_decl={v=ExternProbe id}} -> Some id
+      | Some {d_decl={v=ExternProbe id None}} -> Some id
       | _ -> None
     )
 
-let resolve_probe_fn (g:global_env) (id:ident)
-  : ML (option ident)
+let resolve_probe_fn_any (g:global_env) (id:ident)
+  : ML (option (ident & option probe_qualifier))
   = match H.try_find g.ge_probe_fn id.v with
-    | Some {d_decl={v=ExternProbe id}} -> Some id
+    | Some {d_decl={v=ExternProbe id pq}} ->
+      Some (id, pq)
     | _ -> None
+
+let resolve_probe_fn (g:global_env) (id:ident) (pq:option probe_qualifier)
+  : ML (option ident)
+  = match resolve_probe_fn_any g id with
+    | None -> None
+    | Some (id, pq') -> if pq=pq' then Some id else None
 
 let fields_of_type (g:global_env) (typename:ident)
 : ML (option (list field))

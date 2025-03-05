@@ -105,7 +105,26 @@ and simplify_action_opt (env:T.env_t) (a:option action) : ML (option action) =
   | None -> None
   | Some a -> Some (simplify_action env a)
 
-
+let simplify_probe_atomic_action (env:T.env_t) (a:probe_atomic_action)
+  : ML probe_atomic_action
+  = match a with
+    | Probe_action_return e ->
+      Probe_action_return (simplify_expr env e)
+    | Probe_action_call f args ->
+      Probe_action_call f (List.map (simplify_expr env) args)
+    | Probe_action_read f ->
+      Probe_action_read f
+    | Probe_action_write f v ->
+      Probe_action_write f (simplify_expr env v)
+    | Probe_action_copy f v ->
+      Probe_action_copy f (simplify_expr env v)
+    
+let rec simplify_probe_action (env:T.env_t) (a:probe_action) : ML probe_action =
+  match a.v with
+  | Probe_atomic_action aa -> {a with v = Probe_atomic_action (simplify_probe_atomic_action env aa)}
+  | Probe_action_seq hd tl -> {a with v = Probe_action_seq (simplify_probe_atomic_action env hd) (simplify_probe_action env tl) }
+  | Probe_action_let i aa k -> {a with v = Probe_action_let i (simplify_probe_atomic_action env aa) (simplify_probe_action env k) }
+ 
 let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   match f with
   | FieldScalar -> FieldScalar
@@ -119,7 +138,7 @@ let simplify_probe (env:T.env_t) (p:probe_call) : ML probe_call =
     let probe_length = simplify_expr env probe_length in
     SimpleCall { probe_fn; probe_length; probe_dest }
   | CompositeCall { probe_dest; probe_block } ->
-    let probe_block = simplify_action env probe_block in
+    let probe_block = simplify_probe_action env probe_block in
     CompositeCall { probe_dest; probe_block }
 
 let simplify_atomic_field (env:T.env_t) (f:atomic_field)
@@ -231,12 +250,12 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
 
   | ExternType tdnames -> d
 
-  | ExternFn f ret params ->
+  | ExternFn f ret params pure ->
     let ret = simplify_typ env ret in
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
-    decl_with_v d (ExternFn f ret params)
+    decl_with_v d (ExternFn f ret params pure)
 
-  | ExternProbe _ -> d
+  | ExternProbe _ _ -> d
   
 
 let simplify_prog benv senv (p:list decl) =

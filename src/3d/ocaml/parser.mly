@@ -57,7 +57,7 @@
 %token          MODULE EXPORT OUTPUT UNION EXTERN
 %token          ENTRYPOINT REFINING ALIGNED
 %token          HASH_IF HASH_ELSE HASH_ENDIF HASH_ELIF
-%token          PROBE POINTER
+%token          PROBE POINTER PURE
 
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
@@ -207,7 +207,7 @@ expr:
   | e=expr_no_range { with_range e $startpos }
 
 arguments:
-  | es=right_flexible_nonempty_list(COMMA, expr)  { es }
+  | es=right_flexible_list(COMMA, expr)  { es }
 
 typ_param:
   | e=expr  { Inl e }
@@ -284,7 +284,7 @@ with_probe:
 | PROBE
   probe_fn_opt=option_of(i=IDENT { i })
   LPAREN fields=separated_list(COMMA, probe_field) RPAREN
-  block=option_of(LBRACE a=action RBRACE { a })
+  block=option_of(LBRACE a=probe_action RBRACE { a })
     {
       let p = mk_pos $startpos in
       let rng = p,p in
@@ -497,6 +497,18 @@ action_no_range:
 action:
   | a=action_no_range { with_range a ($startpos(a)) }
 
+probe_atomic_action:
+  | RETURN e=expr SEMICOLON { Probe_action_return e }
+  | f=IDENT LPAREN args=arguments RPAREN SEMICOLON { Probe_action_call(f, args) }
+
+probe_action_no_range:
+  | a=probe_atomic_action { Probe_atomic_action a }
+  | a1=probe_atomic_action a=probe_action { Probe_action_seq (a1, a) }
+  | VAR i=IDENT EQ a1=probe_atomic_action a2=probe_action  { Probe_action_let (i, a1, a2) }
+
+probe_action:
+  | a=probe_action_no_range { with_range a ($startpos(a)) }
+
 enum_case:
   | i=IDENT            { i, None }
   | i=IDENT EQ j=INT   { i, Some (Inl (Z.of_string j)) }
@@ -561,11 +573,25 @@ decl_no_range:
        ExternType td
     }
 
-  | EXTERN ret=typ i=IDENT ps=parameters
-    { ExternFn (i, ret, ps) }
+  | EXTERN pure=option_of(PURE) ret=typ i=IDENT ps=parameters
+    { ExternFn (i, ret, ps, pure <> None) }
 
-  | EXTERN PROBE i=IDENT
-    { ExternProbe i }
+  | EXTERN PROBE q=option_of(probe_qualifier) i=IDENT
+    { ExternProbe (i, q) }
+
+probe_qualifier:
+  | LPAREN q=IDENT 
+          t=option_of(t=qident{ match maybe_as_integer_typ t with
+                               | None -> error "Expected integer type" t.range
+                               | Some t -> t })
+    RPAREN
+    {
+      match q.v.name, t with
+      | "WITH_OFFSETS", None -> PQWithOffsets
+      | "READ", Some t -> PQRead t
+      | "WRITE", Some t -> PQWrite t
+      | _ -> error "Unexpected probe qualifier" q.range
+    }
 
 block_comment_opt:
   |                 {

@@ -467,8 +467,8 @@ let decl_size_with_alignment (env:env_t) (d:decl)
 
     | OutputType _
     | ExternType _
-    | ExternFn _ _ _
-    | ExternProbe _ -> d
+    | ExternFn _ _ _ _
+    | ExternProbe _ _ -> d
 
 let idents_of_decl (d:decl) =
   match d.d_decl.v with
@@ -476,8 +476,8 @@ let idents_of_decl (d:decl) =
   | Define i _ _ 
   | TypeAbbrev _ i 
   | Enum _ i _
-  | ExternFn i _ _
-  | ExternProbe i -> [i]
+  | ExternFn i _ _ _
+  | ExternProbe i _ -> [i]
   | Record names _ _ _
   | CaseType names _ _
   | OutputType { out_typ_names = names } 

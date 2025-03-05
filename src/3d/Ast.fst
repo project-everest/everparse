@@ -480,6 +480,24 @@ type probe_field =
 
 [@@ PpxDerivingYoJson ]
 noeq
+type probe_atomic_action =
+  | Probe_action_return of expr
+  | Probe_action_call : f:ident -> args:list expr -> probe_atomic_action
+  | Probe_action_read : f:ident -> probe_atomic_action
+  | Probe_action_write : f:ident -> value:expr -> probe_atomic_action
+  | Probe_action_copy : f:ident -> len:expr -> probe_atomic_action
+noeq
+[@@ PpxDerivingYoJson ]
+type probe_action' =
+  | Probe_atomic_action of probe_atomic_action
+  | Probe_action_seq : hd:probe_atomic_action -> tl:probe_action -> probe_action'
+  | Probe_action_let : i:ident -> a:probe_atomic_action -> k:probe_action -> probe_action'
+and probe_action = with_meta_t probe_action'
+
+open FStar.List.Tot
+
+[@@ PpxDerivingYoJson ]
+noeq
 type probe_call =
 | SimpleCall {
     probe_fn:option ident;
@@ -488,7 +506,7 @@ type probe_call =
   }
 | CompositeCall {
     probe_dest:ident;
-    probe_block:action
+    probe_block:probe_action
   }
 
 [@@ PpxDerivingYoJson ]
@@ -571,6 +589,12 @@ type out_typ = {
   out_typ_is_union : bool;  //TODO: unclear if this field is needed
 }
 
+[@@ PpxDerivingYoJson ]
+type probe_qualifier =
+  | PQWithOffsets
+  | PQRead of integer_type
+  | PQWrite of integer_type
+
 /// A 3d specification a list of declarations
 ///   - Define: macro definitions for constants
 ///   - TypeAbbrev: macro definition of types
@@ -596,8 +620,8 @@ type decl' =
 
   | OutputType : out_typ -> decl'
   | ExternType : typedef_names -> decl'
-  | ExternFn   : ident -> typ -> list param -> decl'
-  | ExternProbe : ident -> decl'
+  | ExternFn   : ident -> typ -> list param -> pure:bool -> decl'
+  | ExternProbe : ident -> option probe_qualifier -> decl'
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -957,8 +981,9 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
     CaseType names (subst_params s params) (subst_switch_case s cases)
   | OutputType _
   | ExternType _
-  | ExternFn _ _ _ 
-  | ExternProbe _ -> d
+  | ExternFn _ _ _ _
+  | ExternProbe _ _ -> d
+  
 let subst_decl (s:subst) (d:decl) : ML decl = decl_with_v d (subst_decl' s d.d_decl.v)
 
 (*** Printing the source AST; for debugging only **)
@@ -1193,6 +1218,9 @@ and print_atomic_field (f:atomic_field) : ML string =
       (print_opt sf.field_probe
         (fun p -> Printf.sprintf "probe %s" (print_probe_call p)))
 
+and print_probe_action (p:probe_action) : ML string =
+  "<probe action TBD>" //TODO
+
 and print_probe_call (p:probe_call) : ML string =
   match p with
   | SimpleCall { probe_fn; probe_length; probe_dest } ->
@@ -1203,7 +1231,7 @@ and print_probe_call (p:probe_call) : ML string =
   | CompositeCall { probe_dest; probe_block } ->
     Printf.sprintf "(destination=%s) { %s }"
           (print_ident probe_dest)
-          (print_action probe_block)
+          (print_probe_action probe_block)
 
 and print_action (a:action) : ML string =
   let print_atomic_action (a:atomic_action) : ML string =
@@ -1289,8 +1317,8 @@ let print_decl' (d:decl') : ML string =
                     (option_to_string ident_to_string td.typedef_ptr_abbrev)
   | OutputType out_t -> "Printing for output types is TBD"
   | ExternType _ -> "Printing for extern types is TBD"
-  | ExternFn _ _ _
-  | ExternProbe _ -> "Printing for extern functions is TBD"
+  | ExternFn _ _ _ _
+  | ExternProbe _ _ -> "Printing for extern functions is TBD"
 
 let print_decl (d:decl) : ML string =
   match d.d_decl.comments with

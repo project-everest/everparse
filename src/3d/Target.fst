@@ -440,7 +440,7 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
-  | T_with_probe t _ _ _ _ -> Printf.sprintf "%s probe" (print_typ mname t)
+  | T_with_probe t _ _ _ -> Printf.sprintf "%s probe" (print_typ mname t)
 
 and print_indexes (mname:string) (is:list index) : ML (list string) = //(decreases is) =
   match is with
@@ -528,6 +528,45 @@ let rec print_action (mname:string) (a:action) : ML string =
     Printf.sprintf "(action_act %s)" 
       (print_action mname a)
       
+let rec print_probe_action (mname:string) (p:probe_action) : ML string =
+  let print_atomic_probe_action (p:atomic_probe_action) : ML string =
+    match p with
+    | Probe_and_copy  { bytes_to_read; probe_fn } ->
+      Printf.sprintf "(Probe_and_copy %s %s)"
+        (print_expr mname bytes_to_read)
+        (print_ident probe_fn)
+    | Probe_and_read  { reader } ->
+      Printf.sprintf "(Probe_and_read %s)"
+        (print_ident reader)    
+    | Write_at_offset { value; writer } ->
+      Printf.sprintf "(Write_at_offset %s %s)"
+        (print_expr mname value)
+        (print_ident writer)
+    | Probe_call_pure { f; args } ->
+      Printf.sprintf "(Probe_call_pure (%s %s))"
+        (print_ident f)
+        (String.concat " " (List.map (print_expr mname) args))
+    | Probe_return { value } ->
+      Printf.sprintf "(Return_probe_m %s)"
+        (print_expr mname value)
+  in
+  match p with
+  | Probe_fn_as_probe_m { bytes_to_read; probe_fn } ->
+    Printf.sprintf "(Probe_action_simple %s %s)"
+      (print_expr mname bytes_to_read)
+      (print_ident probe_fn)
+  | Probe_atomic a ->
+    Printf.sprintf "(Probe_action_atomic %s)"
+      (print_atomic_probe_action a)
+  | Probe_seq { hd; tl } ->
+    Printf.sprintf "(Probe_action_seq %s %s)"
+      (print_atomic_probe_action hd)
+      (print_probe_action mname tl)
+  | Probe_let { i; a; tl } ->
+    Printf.sprintf "(Probe_action_let %s (fun %s -> %s))"
+      (print_atomic_probe_action a)
+      (print_ident i)
+      (print_probe_action mname tl)
 
 let print_typedef_name (mname:string) (tdn:typedef_name) : ML string =
   Printf.sprintf "%s %s"
@@ -684,9 +723,9 @@ let print_decl_for_types (mname:string) (d:decl) : ML string =
 
   | Extern_type _
 
-  | Extern_fn _ _ _
+  | Extern_fn _ _ _ _
   
-  | Extern_probe _ -> ""
+  | Extern_probe _ _ -> ""
 
 /// Print a decl for M.fst
 ///
@@ -1355,15 +1394,32 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
          else print_out_expr_get_fstar tbl modul oe)
     | Extern_type i ->
       Printf.sprintf "\n\nval %s : Type0\n\n" (print_ident i)
-    | Extern_fn f ret params ->
+    | Extern_fn f ret params false ->
       Printf.sprintf "\n\nval %s %s : extern_action %s (NonTrivial output_loc)\n"
         (print_ident f)
         (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
           (print_ident i)
           (print_typ modul t))))
         (print_typ modul ret)
-    | Extern_probe f ->
-      Printf.sprintf "\n\nval %s : EverParse3d.CopyBuffer.probe_fn\n\n" (print_ident f)
+    | Extern_fn f ret params true ->
+      Printf.sprintf "\n\nval %s %s : EverParse3d.ProbeActions.pure_external_action %s\n"
+        (print_ident f)
+        (String.concat " " (params |> List.map (fun (i, t) -> Printf.sprintf "(%s:%s)"
+          (print_ident i)
+          (print_typ modul t))))
+        (print_typ modul ret)
+    | Extern_probe f PQSimple ->
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_fn\n\n" (print_ident f)
+    | Extern_probe f PQWithOffsets ->
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_fn_incremental\n\n" (print_ident f)
+    | Extern_probe f (PQRead t) ->
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_and_read_at_offset_%s \n\n" 
+              (print_ident f)
+              (print_integer_type t)
+    | Extern_probe f (PQWrite t) ->
+      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.write_at_offset_%s \n\n" 
+              (print_ident f)
+              (print_integer_type t)
     | _ -> "")) in
 
    let external_types_include =

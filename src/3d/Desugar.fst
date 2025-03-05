@@ -301,6 +301,26 @@ let rec resolve_action' (env:qenv) (act:action') : ML action' =
 and resolve_action (env:qenv) (act:action) : ML action =
   { act with v = resolve_action' env act.v }
 
+let resolve_probe_atomic_action (env:qenv) (ac:probe_atomic_action) : ML probe_atomic_action =
+  match ac with
+  | Probe_action_return e -> Probe_action_return (resolve_expr env e)
+  | Probe_action_call f args ->
+    Probe_action_call (resolve_ident env f) (List.map (resolve_expr env) args)
+  | Probe_action_read f -> Probe_action_read (resolve_ident env f)
+  | Probe_action_write f v -> Probe_action_write (resolve_ident env f) (resolve_expr env v)
+  | Probe_action_copy f v -> Probe_action_copy (resolve_ident env f) (resolve_expr env v)
+
+let rec resolve_probe_action' (env:qenv) (act:probe_action') : ML probe_action' =
+  match act with
+  | Probe_atomic_action ac -> Probe_atomic_action (resolve_probe_atomic_action env ac)
+  | Probe_action_seq hd tl ->
+    Probe_action_seq (resolve_probe_atomic_action env hd) (resolve_probe_action env tl)
+  | Probe_action_let i a k ->
+    Probe_action_let i (resolve_probe_atomic_action env a) (resolve_probe_action (push_name env i.v.name) k)
+
+and resolve_probe_action (env:qenv) (act:probe_action) : ML probe_action =
+  { act with v = resolve_probe_action' env act.v }
+
 let resolve_param (env:qenv) (p:param) : ML (param & qenv) =
   let t, i, q = p in
   (resolve_typ env t, i, q),
@@ -346,7 +366,7 @@ let resolve_probe_call env pc =
   | CompositeCall { probe_dest; probe_block } ->
     CompositeCall {
       probe_dest = resolve_ident env probe_dest;
-      probe_block = resolve_action env probe_block;
+      probe_block = resolve_probe_action env probe_block;
     }
 
 let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
@@ -452,14 +472,14 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let td_names = resolve_typedef_names env td_names in
     push_extern_type env td_names;
     ExternType td_names
-  | ExternFn id ret params ->
+  | ExternFn id ret params pure ->
     let id = resolve_ident env id in
     let ret = resolve_typ env ret in
     let params, _ = resolve_params env params in
-    ExternFn id ret params
-  | ExternProbe id ->
+    ExternFn id ret params pure
+  | ExternProbe id q ->
     let id = resolve_ident env id in
-    ExternProbe id
+    ExternProbe id q
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 

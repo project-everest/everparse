@@ -246,7 +246,7 @@ let tag_of_parser p
     | Parse_impos -> "Parse_impos"
     | Parse_with_comment _ _ -> "Parse_with_comment"
     | Parse_string _ _ -> "Parse_string"
-    | Parse_with_probe _ _ _ _ -> "Parse_with_probe"
+    | Parse_with_probe _ _ _ -> "Parse_with_probe"
 
 let as_lam (x:T.lam 'a)
   : lam 'a
@@ -379,7 +379,7 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
         (typ_indexes_of_parser p)
         (typ_indexes_of_action a)
 
-    | T.Parse_with_probe p _ _ dest ->
+    | T.Parse_with_probe p _ dest ->
       let i, l, d, s = typ_indexes_of_parser p in 
       typ_indexes_union
            (i, l, d, s)
@@ -517,9 +517,9 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
     | T.Parse_weaken_right p _ ->
       typ_of_parser p
 
-    | T.Parse_with_probe p probe_fn len dest ->
+    | T.Parse_with_probe p probe_fn dest ->
       let d = dtyp_of_parser p in
-      T_probe_then_validate fn d probe_fn len dest
+      T_probe_then_validate fn d probe_fn dest
 
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
@@ -573,7 +573,7 @@ let rec has_action_of_typ (t:typ)
   | T_at_most _ _ t -> has_action_of_typ t
   | T_exact _ _ t -> has_action_of_typ t
   | T_string _ t _ -> has_action_of_dtyp t
-  | T_probe_then_validate _ t _ _ _ -> true
+  | T_probe_then_validate _ _ _ _ -> true
 
 let check_validity_of_typ_indexes (td:T.type_decl) indexes =
   let rec atomic_locs_of l =
@@ -893,11 +893,10 @@ let rec print_typ (mname:string) (t:typ)
                      (print_dtyp mname d)
                      (T.print_expr mname z)
 
-    | T_probe_then_validate fn dt probe_fn len dest ->
-      Printf.sprintf "(t_probe_then_validate \"%s\" %s %s %s %s)"
+    | T_probe_then_validate fn dt probe_fn dest ->
+      Printf.sprintf "(t_probe_then_validate \"%s\" %s %s %s)"
                      fn
-                     (T.print_maybe_qualified_ident mname probe_fn)
-                     (T.print_expr mname len)
+                     (T.print_probe_action mname probe_fn)
                      (T.print_maybe_qualified_ident mname dest)
                      (print_dtyp mname dt)
 

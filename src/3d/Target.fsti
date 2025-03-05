@@ -116,6 +116,21 @@ type action =
   
 (* A subset of F* types that the translation targets *)
 noeq
+type atomic_probe_action =
+  | Probe_and_copy  { bytes_to_read : expr; probe_fn: A.ident }
+  | Probe_and_read  { reader : A.ident }
+  | Write_at_offset { value: expr; writer: A.ident }
+  | Probe_call_pure { f: A.ident; args: list expr }
+  | Probe_return    { value: expr }
+
+noeq
+type probe_action =
+  | Probe_fn_as_probe_m { bytes_to_read : expr; probe_fn: A.ident }
+  | Probe_atomic of atomic_probe_action
+  | Probe_seq { hd:atomic_probe_action; tl:probe_action }
+  | Probe_let { i:A.ident; a:atomic_probe_action; tl:probe_action }
+  
+noeq
 type typ =
   | T_false    : typ
   | T_app      : hd:A.ident -> A.t_kind -> args:list index -> typ
@@ -128,7 +143,12 @@ type typ =
   | T_with_action: typ -> action -> typ
   | T_with_dep_action: typ -> a:lam action -> typ
   | T_with_comment: typ -> A.comments -> typ
-  | T_with_probe: content_typ:typ -> pointer_size:A.integer_type -> probe_fn:A.ident -> len:expr -> dest:A.ident -> typ
+  | T_with_probe: 
+      content_typ:typ ->
+      pointer_size:A.integer_type ->
+      probe_fn:probe_action ->
+      dest:A.ident ->
+      typ
 
 (* An index is an F* type or an expression
    -- we reuse Ast expressions for this
@@ -224,7 +244,7 @@ type parser' =
   | Parse_impos     : parser'
   | Parse_with_comment: p:parser -> c:A.comments -> parser'
   | Parse_string    : p:parser -> zero:expr -> parser'
-  | Parse_with_probe : p:parser -> probe:A.ident -> len:expr -> dest:A.ident -> parser'
+  | Parse_with_probe : p:parser -> probe:probe_action -> dest:A.ident -> parser'
   
 and parser = {
   p_kind:parser_kind;
@@ -292,6 +312,14 @@ and output_expr = {
  *)
 
 noeq
+type probe_qualifier =
+  | PQSimple
+  | PQWithOffsets
+  | PQRead of A.integer_type
+  | PQWrite of A.integer_type
+
+
+noeq
 type decl' =
   | Assumption : assumption -> decl'
   | Definition : definition -> decl' //the bool marks it for inline_for_extraction
@@ -301,8 +329,8 @@ type decl' =
   | Output_type_expr : output_expr -> is_get:bool -> decl'  //is_get boolean indicates that the output expression appears in a getter position, i.e. in a type parameter, it is false when the output expression is an assignment action lhs
 
   | Extern_type : A.ident -> decl'
-  | Extern_fn : A.ident -> typ -> list param -> decl'
-  | Extern_probe : A.ident -> decl'
+  | Extern_fn : A.ident -> typ -> list param -> pure:bool -> decl'
+  | Extern_probe : A.ident -> probe_qualifier -> decl'
 
 type decl = decl' * decl_attributes
 
@@ -321,6 +349,7 @@ val print_expr (mname:string) (e:expr) : ML string
 val print_typ (mname:string) (t:typ) : ML string
 val print_kind (mname:string) (k:parser_kind) : Tot string
 val print_action (mname:string) (a:action) : ML string
+val print_probe_action  (mname:string) (a:probe_action) : ML string
 val print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
 val print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML string
 val wrapper_name (modul: string) (fn: string) : ML string
