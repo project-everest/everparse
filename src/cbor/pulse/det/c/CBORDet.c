@@ -187,6 +187,98 @@ static uint8_t get_header_major_type(header h)
   return b.major_type;
 }
 
+static size_t len__uint8_t(Pulse_Lib_Slice_slice__uint8_t s)
+{
+  return s.len;
+}
+
+static uint8_t op_Array_Access__uint8_t(Pulse_Lib_Slice_slice__uint8_t a, size_t i)
+{
+  return a.elt[i];
+}
+
+static bool impl_correct(Pulse_Lib_Slice_slice__uint8_t s)
+{
+  bool pres = true;
+  size_t pi = (size_t)0U;
+  size_t len = len__uint8_t(s);
+  bool res = pres;
+  bool cond;
+  if (res)
+  {
+    size_t i = pi;
+    cond = i < len;
+  }
+  else
+    cond = false;
+  while (cond)
+  {
+    size_t i0 = pi;
+    uint8_t byte1 = op_Array_Access__uint8_t(s, i0);
+    size_t i1 = i0 + (size_t)1U;
+    if (byte1 <= 0x7FU)
+      pi = i1;
+    else if (i1 == len)
+      pres = false;
+    else
+    {
+      uint8_t byte2 = op_Array_Access__uint8_t(s, i1);
+      size_t i2 = i1 + (size_t)1U;
+      if (0xC2U <= byte1 && byte1 <= 0xDFU && 0x80U <= byte2 && byte2 <= 0xBFU)
+        pi = i2;
+      else if (i2 == len)
+        pres = false;
+      else
+      {
+        uint8_t byte3 = op_Array_Access__uint8_t(s, i2);
+        size_t i3 = i2 + (size_t)1U;
+        if (!(0x80U <= byte3 && byte3 <= 0xBFU))
+          pres = false;
+        else if (byte1 == 0xE0U)
+          if (0xA0U <= byte2 && byte2 <= 0xBFU)
+            pi = i3;
+          else
+            pres = false;
+        else if (byte1 == 0xEDU)
+          if (0x80U <= byte2 && byte2 <= 0x9FU)
+            pi = i3;
+          else
+            pres = false;
+        else if (0xE1U <= byte1 && byte1 <= 0xEFU && 0x80U <= byte2 && byte2 <= 0xBFU)
+          pi = i3;
+        else if (i3 == len)
+          pres = false;
+        else
+        {
+          uint8_t byte4 = op_Array_Access__uint8_t(s, i3);
+          size_t i4 = i3 + (size_t)1U;
+          if (!(0x80U <= byte4 && byte4 <= 0xBFU))
+            pres = false;
+          else if (byte1 == 0xF0U && 0x90U <= byte2 && byte2 <= 0xBFU)
+            pi = i4;
+          else if (0xF1U <= byte1 && byte1 <= 0xF3U && 0x80U <= byte2 && byte2 <= 0xBFU)
+            pi = i4;
+          else if (byte1 == 0xF4U && 0x80U <= byte2 && byte2 <= 0x8FU)
+            pi = i4;
+          else
+            pres = false;
+        }
+      }
+    }
+    bool res = pres;
+    bool ite;
+    if (res)
+    {
+      size_t i = pi;
+      ite = i < len;
+    }
+    else
+      ite = false;
+    cond = ite;
+  }
+  return pres;
+}
+
 static void
 copy__uint8_t(Pulse_Lib_Slice_slice__uint8_t dst, Pulse_Lib_Slice_slice__uint8_t src)
 {
@@ -359,16 +451,6 @@ static int16_t impl_uint8_compare(uint8_t x1, uint8_t x2)
     return (int16_t)0;
 }
 
-static size_t len__uint8_t(Pulse_Lib_Slice_slice__uint8_t s)
-{
-  return s.len;
-}
-
-static uint8_t op_Array_Access__uint8_t(Pulse_Lib_Slice_slice__uint8_t a, size_t i)
-{
-  return a.elt[i];
-}
-
 static int16_t
 lex_compare_bytes(Pulse_Lib_Slice_slice__uint8_t s1, Pulse_Lib_Slice_slice__uint8_t s2)
 {
@@ -425,88 +507,6 @@ lex_compare_bytes(Pulse_Lib_Slice_slice__uint8_t s1, Pulse_Lib_Slice_slice__uint
   int16_t res0 = pres;
   int16_t res1 = res0;
   return res1;
-}
-
-static bool impl_correct(Pulse_Lib_Slice_slice__uint8_t s)
-{
-  bool pres = true;
-  size_t pi = (size_t)0U;
-  size_t len = len__uint8_t(s);
-  bool res = pres;
-  bool cond;
-  if (res)
-  {
-    size_t i = pi;
-    cond = i < len;
-  }
-  else
-    cond = false;
-  while (cond)
-  {
-    size_t i0 = pi;
-    uint8_t byte1 = op_Array_Access__uint8_t(s, i0);
-    size_t i1 = i0 + (size_t)1U;
-    if (byte1 <= 0x7FU)
-      pi = i1;
-    else if (i1 == len)
-      pres = false;
-    else
-    {
-      uint8_t byte2 = op_Array_Access__uint8_t(s, i1);
-      size_t i2 = i1 + (size_t)1U;
-      if (0xC2U <= byte1 && byte1 <= 0xDFU && 0x80U <= byte2 && byte2 <= 0xBFU)
-        pi = i2;
-      else if (i2 == len)
-        pres = false;
-      else
-      {
-        uint8_t byte3 = op_Array_Access__uint8_t(s, i2);
-        size_t i3 = i2 + (size_t)1U;
-        if (!(0x80U <= byte3 && byte3 <= 0xBFU))
-          pres = false;
-        else if (byte1 == 0xE0U)
-          if (0xA0U <= byte2 && byte2 <= 0xBFU)
-            pi = i3;
-          else
-            pres = false;
-        else if (byte1 == 0xEDU)
-          if (0x80U <= byte2 && byte2 <= 0x9FU)
-            pi = i3;
-          else
-            pres = false;
-        else if (0xE1U <= byte1 && byte1 <= 0xEFU && 0x80U <= byte2 && byte2 <= 0xBFU)
-          pi = i3;
-        else if (i3 == len)
-          pres = false;
-        else
-        {
-          uint8_t byte4 = op_Array_Access__uint8_t(s, i3);
-          size_t i4 = i3 + (size_t)1U;
-          if (!(0x80U <= byte4 && byte4 <= 0xBFU))
-            pres = false;
-          else if (byte1 == 0xF0U && 0x90U <= byte2 && byte2 <= 0xBFU)
-            pi = i4;
-          else if (0xF1U <= byte1 && byte1 <= 0xF3U && 0x80U <= byte2 && byte2 <= 0xBFU)
-            pi = i4;
-          else if (byte1 == 0xF4U && 0x80U <= byte2 && byte2 <= 0x8FU)
-            pi = i4;
-          else
-            pres = false;
-        }
-      }
-    }
-    bool res = pres;
-    bool ite;
-    if (res)
-    {
-      size_t i = pi;
-      ite = i < len;
-    }
-    else
-      ite = false;
-    cond = ite;
-  }
-  return pres;
 }
 
 static initial_byte_t read_initial_byte_t(Pulse_Lib_Slice_slice__uint8_t input)
@@ -5715,6 +5715,13 @@ size_t cbor_det_serialize(cbor_raw x, uint8_t *output, size_t output_len)
   size_t res = cbor_serialize(x, ou);
   size_t res0 = res;
   return res0;
+}
+
+bool cbor_det_impl_utf8_correct_from_array(uint8_t *s, size_t len)
+{
+  Pulse_Lib_Slice_slice__uint8_t sl = arrayptr_to_slice_intro__uint8_t(s, len);
+  bool res = impl_correct(sl);
+  return res;
 }
 
 cbor_raw cbor_det_mk_string_from_array(uint8_t ty, uint8_t *a, uint64_t len)

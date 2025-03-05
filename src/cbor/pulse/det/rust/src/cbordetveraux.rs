@@ -4,9 +4,9 @@
 #![allow(unused_assignments)]
 #![allow(unreachable_patterns)]
 
-#[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
-
 pub(crate) const _zero_for_deref: u32 = 0u32;
+
+#[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
 
 pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
 {
@@ -167,6 +167,94 @@ fn get_header_major_type(h: header) -> u8
 {
     let b: initial_byte_t = h.fst;
     b.major_type
+}
+
+fn impl_correct(s: &[u8]) -> bool
+{
+    let mut pres: [bool; 1] = [true; 1usize];
+    let mut pi: [usize; 1] = [0usize; 1usize];
+    let len: usize = s.len();
+    let res: bool = (&pres)[0];
+    let mut cond: bool =
+        if res
+        {
+            let i: usize = (&pi)[0];
+            i < len
+        }
+        else
+        { false };
+    while
+    cond
+    {
+        let i: usize = (&pi)[0];
+        let byte1: u8 = s[i];
+        let i1: usize = i.wrapping_add(1usize);
+        if byte1 <= 0x7Fu8
+        { (&mut pi)[0] = i1 }
+        else if i1 == len
+        { (&mut pres)[0] = false }
+        else
+        {
+            let byte2: u8 = s[i1];
+            let i2: usize = i1.wrapping_add(1usize);
+            if 0xC2u8 <= byte1 && byte1 <= 0xDFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+            { (&mut pi)[0] = i2 }
+            else if i2 == len
+            { (&mut pres)[0] = false }
+            else
+            {
+                let byte3: u8 = s[i2];
+                let i3: usize = i2.wrapping_add(1usize);
+                if ! (0x80u8 <= byte3 && byte3 <= 0xBFu8)
+                { (&mut pres)[0] = false }
+                else if byte1 == 0xE0u8
+                {
+                    if 0xA0u8 <= byte2 && byte2 <= 0xBFu8
+                    { (&mut pi)[0] = i3 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
+                else if byte1 == 0xEDu8
+                {
+                    if 0x80u8 <= byte2 && byte2 <= 0x9Fu8
+                    { (&mut pi)[0] = i3 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
+                else if 0xE1u8 <= byte1 && byte1 <= 0xEFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+                { (&mut pi)[0] = i3 }
+                else if i3 == len
+                { (&mut pres)[0] = false }
+                else
+                {
+                    let byte4: u8 = s[i3];
+                    let i4: usize = i3.wrapping_add(1usize);
+                    if ! (0x80u8 <= byte4 && byte4 <= 0xBFu8)
+                    { (&mut pres)[0] = false }
+                    else if byte1 == 0xF0u8 && 0x90u8 <= byte2 && byte2 <= 0xBFu8
+                    { (&mut pi)[0] = i4 }
+                    else if
+                    0xF1u8 <= byte1 && byte1 <= 0xF3u8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
+                    { (&mut pi)[0] = i4 }
+                    else if byte1 == 0xF4u8 && 0x80u8 <= byte2 && byte2 <= 0x8Fu8
+                    { (&mut pi)[0] = i4 }
+                    else
+                    { (&mut pres)[0] = false }
+                }
+            }
+        };
+        let res0: bool = (&pres)[0];
+        let ite: bool =
+            if res0
+            {
+                let i0: usize = (&pi)[0];
+                i0 < len
+            }
+            else
+            { false };
+        cond = ite
+    };
+    (&pres)[0]
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -344,94 +432,6 @@ fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
     let res0: i16 = (&pres)[0];
     let res1: i16 = res0;
     res1
-}
-
-fn impl_correct(s: &[u8]) -> bool
-{
-    let mut pres: [bool; 1] = [true; 1usize];
-    let mut pi: [usize; 1] = [0usize; 1usize];
-    let len: usize = s.len();
-    let res: bool = (&pres)[0];
-    let mut cond: bool =
-        if res
-        {
-            let i: usize = (&pi)[0];
-            i < len
-        }
-        else
-        { false };
-    while
-    cond
-    {
-        let i: usize = (&pi)[0];
-        let byte1: u8 = s[i];
-        let i1: usize = i.wrapping_add(1usize);
-        if byte1 <= 0x7Fu8
-        { (&mut pi)[0] = i1 }
-        else if i1 == len
-        { (&mut pres)[0] = false }
-        else
-        {
-            let byte2: u8 = s[i1];
-            let i2: usize = i1.wrapping_add(1usize);
-            if 0xC2u8 <= byte1 && byte1 <= 0xDFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
-            { (&mut pi)[0] = i2 }
-            else if i2 == len
-            { (&mut pres)[0] = false }
-            else
-            {
-                let byte3: u8 = s[i2];
-                let i3: usize = i2.wrapping_add(1usize);
-                if ! (0x80u8 <= byte3 && byte3 <= 0xBFu8)
-                { (&mut pres)[0] = false }
-                else if byte1 == 0xE0u8
-                {
-                    if 0xA0u8 <= byte2 && byte2 <= 0xBFu8
-                    { (&mut pi)[0] = i3 }
-                    else
-                    { (&mut pres)[0] = false }
-                }
-                else if byte1 == 0xEDu8
-                {
-                    if 0x80u8 <= byte2 && byte2 <= 0x9Fu8
-                    { (&mut pi)[0] = i3 }
-                    else
-                    { (&mut pres)[0] = false }
-                }
-                else if 0xE1u8 <= byte1 && byte1 <= 0xEFu8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
-                { (&mut pi)[0] = i3 }
-                else if i3 == len
-                { (&mut pres)[0] = false }
-                else
-                {
-                    let byte4: u8 = s[i3];
-                    let i4: usize = i3.wrapping_add(1usize);
-                    if ! (0x80u8 <= byte4 && byte4 <= 0xBFu8)
-                    { (&mut pres)[0] = false }
-                    else if byte1 == 0xF0u8 && 0x90u8 <= byte2 && byte2 <= 0xBFu8
-                    { (&mut pi)[0] = i4 }
-                    else if
-                    0xF1u8 <= byte1 && byte1 <= 0xF3u8 && (0x80u8 <= byte2 && byte2 <= 0xBFu8)
-                    { (&mut pi)[0] = i4 }
-                    else if byte1 == 0xF4u8 && 0x80u8 <= byte2 && byte2 <= 0x8Fu8
-                    { (&mut pi)[0] = i4 }
-                    else
-                    { (&mut pres)[0] = false }
-                }
-            }
-        };
-        let res0: bool = (&pres)[0];
-        let ite: bool =
-            if res0
-            {
-                let i0: usize = (&pi)[0];
-                i0 < len
-            }
-            else
-            { false };
-        cond = ite
-    };
-    (&pres)[0]
 }
 
 fn read_initial_byte_t(input: &[u8]) -> initial_byte_t
