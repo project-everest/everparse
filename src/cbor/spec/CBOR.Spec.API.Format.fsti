@@ -144,16 +144,22 @@ val cbor_det_serialize_list_nil (_: unit) : Lemma
 val cbor_det_serialize_list_cons (a: cbor) (q: list cbor) : Lemma
   (cbor_det_serialize_list (a :: q) == cbor_det_serialize a `Seq.append` cbor_det_serialize_list q)
 
-let rec cbor_det_serialize_list_snoc (h: list cbor) (a: cbor) : Lemma
-  (ensures (cbor_det_serialize_list (h `List.Tot.append` [a]) `Seq.equal` (cbor_det_serialize_list h `Seq.append` cbor_det_serialize a)))
-  (decreases h)
-= match h with
-  | [] -> cbor_det_serialize_list_cons a []; cbor_det_serialize_list_nil ()
+let rec cbor_det_serialize_list_append (l1 l2: list cbor) : Lemma
+  (ensures (cbor_det_serialize_list (l1 `List.Tot.append` l2) `Seq.equal` (cbor_det_serialize_list l1 `Seq.append` cbor_det_serialize_list l2)))
+  (decreases l1)
+= match l1 with
+  | [] -> cbor_det_serialize_list_nil ()
   | b :: q ->
-    List.Tot.append_assoc [b] q [a];
-    cbor_det_serialize_list_snoc q a;
-    cbor_det_serialize_list_cons b (List.Tot.append q [a]);
+    List.Tot.append_assoc [b] q l2;
+    cbor_det_serialize_list_append q l2;
+    cbor_det_serialize_list_cons b (List.Tot.append q l2);
     cbor_det_serialize_list_cons b q
+
+let cbor_det_serialize_list_snoc (h: list cbor) (a: cbor) : Lemma
+  (ensures (cbor_det_serialize_list (h `List.Tot.append` [a]) `Seq.equal` (cbor_det_serialize_list h `Seq.append` cbor_det_serialize a)))
+= cbor_det_serialize_list_nil ();
+  cbor_det_serialize_list_cons a [];
+  cbor_det_serialize_list_append h [a]
 
 val cbor_det_serialize_array_length_gt_list
   (l: list cbor)

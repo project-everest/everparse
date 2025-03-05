@@ -198,6 +198,48 @@ let rel_either_eq_right
   (rel_either r1 r2 (Inr w2) (Inr z2) == r2 w2 z2)
 = ()
 
+ghost fn rel_either_cases
+  (#t1 #t2 #it1 #it2: Type0)
+  (r1: rel it1 t1)
+  (r2: rel it2 t2)
+  (x: either it1 it2)
+  (y: either t1 t2)
+requires
+  rel_either r1 r2 x y
+ensures
+  rel_either r1 r2 x y **
+  pure (Inl? x <==> Inl? y)
+{
+  match x {
+    Inl x1 -> {
+      match y {
+        Inl y1 -> {
+          rewrite (rel_either r1 r2 (Inl x1) (Inl y1))
+            as (rel_either r1 r2 x y)
+        }
+        Inr y2 -> {
+          unfold (rel_either r1 r2 (Inl x1) (Inr y2));
+          assert (pure False);
+          rewrite emp as (rel_either r1 r2 x y)
+        }
+      }
+    }
+    Inr x2 -> {
+      match y {
+        Inl y1 -> {
+          unfold (rel_either r1 r2 (Inr x2) (Inl y1));
+          assert (pure False);
+          rewrite emp as (rel_either r1 r2 x y)
+        }
+        Inr y2 -> {
+          rewrite (rel_either r1 r2 (Inr x2) (Inr y2))
+            as (rel_either r1 r2 x y)
+        }
+      }
+    }
+  }
+}
+
 let rel_either_left
   (#low1 #high: Type)
   (r1: rel low1 high)
