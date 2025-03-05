@@ -644,6 +644,15 @@ ensures
 }
 
 inline_for_extraction
+let impl_utf8_correct_t =
+  (s: S.slice U8.t) ->
+  (#p: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt bool
+    (pts_to s #p v)
+    (fun res -> pts_to s #p v ** pure (res == CBOR.Spec.API.UTF8.correct v))
+
+inline_for_extraction
 let mk_string_t
   (#t: Type)
   (vmatch: perm -> t -> cbor -> slprop)

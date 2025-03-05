@@ -219,3 +219,19 @@ fn cbor_det_serialize_map
   S.slice_to_arrayptr_elim aout;
   res
 }
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_impl_utf8_correct (_: unit)
+: impl_utf8_correct_t
+=
+  (s: _)
+  (#p: _)
+  (#v: _)
+{
+  S.pts_to_len s;
+  let alen = S.len s;
+  let a = S.slice_to_arrayptr_intro s;
+  let res = cbor_det_impl_utf8_correct_from_array () a alen;
+  S.slice_to_arrayptr_elim a;
+  res
+}

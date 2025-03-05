@@ -240,6 +240,9 @@ val cbor_det_mk_map_entry () : mk_map_entry_t cbor_det_match cbor_det_map_entry_
 inline_for_extraction noextract [@@noextract_to "krml"]
 val cbor_det_mk_map_gen () : mk_map_gen_by_ref_t cbor_det_match cbor_det_map_entry_match
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+val cbor_det_utf8_correct () : impl_utf8_correct_t
+
 (* Destructors *)
 
 val cbor_det_equal () : equal_t cbor_det_match

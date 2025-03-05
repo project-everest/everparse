@@ -79,6 +79,18 @@ ensures
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_det_impl_utf8_correct_from_array_t =
+  (s: AP.ptr U8.t) ->
+  (len: SZ.t) ->
+  (#p: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt bool
+    (pts_to s #p v ** pure (SZ.v len == Seq.length v))
+    (fun res -> pts_to s #p v ** pure (res == CBOR.Spec.API.UTF8.correct v))
+
+val cbor_det_impl_utf8_correct_from_array (_: unit) : cbor_det_impl_utf8_correct_from_array_t
+
 val cbor_det_mk_string_from_array (_: unit) : mk_string_from_array_t cbor_det_match
 
 val cbor_det_mk_array_from_array (_: unit) : mk_array_from_array_t cbor_det_match

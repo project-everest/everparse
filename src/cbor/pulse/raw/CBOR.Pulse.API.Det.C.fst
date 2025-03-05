@@ -103,6 +103,20 @@ ensures
   res
 }
 
+fn cbor_det_impl_utf8_correct_from_array (_: unit) : cbor_det_impl_utf8_correct_from_array_t
+=
+  (s: _)
+  (len: _)
+  (#p: _)
+  (#v: _)
+{
+  let sl = S.arrayptr_to_slice_intro s len;
+  S.pts_to_len sl;
+  let res = CBOR.Pulse.Raw.UTF8.impl_utf8_correct sl;
+  S.arrayptr_to_slice_elim sl;
+  res
+}
+
 let cbor_det_mk_string_from_array (_: unit) =
   mk_string_from_array (cbor_det_mk_string ())
 

@@ -891,6 +891,9 @@ fn cbor_det_mk_map_gen (_: unit)
   }
 }
 
+let cbor_det_utf8_correct () =
+  CBOR.Pulse.Raw.UTF8.impl_utf8_correct
+
 fn cbor_det_equal (_: unit) : equal_t u#0 #_ cbor_det_match
 = (x1: _)
   (x2: _)
