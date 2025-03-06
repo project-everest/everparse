@@ -352,6 +352,9 @@ size_t cbor_det_serialize_tag_to_array(uint64_t tag, uint8_t *out, size_t out_le
 size_t
 cbor_det_serialize_array_to_array(uint64_t len, uint8_t *out, size_t out_len, size_t off);
 
+size_t
+cbor_det_serialize_string_to_array(uint8_t ty, uint64_t off, uint8_t *out, size_t out_len);
+
 bool
 cbor_det_serialize_map_insert_to_array(uint8_t *out, size_t out_len, size_t off2, size_t off3);
 

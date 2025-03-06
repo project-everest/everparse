@@ -3895,6 +3895,83 @@ cbor_serialize_array(
 }
 
 static size_t
+cbor_serialize_string(
+  uint8_t ty,
+  CBOR_Spec_Raw_Base_raw_uint64 off,
+  Pulse_Lib_Slice_slice__uint8_t out
+)
+{
+  size_t soff = (size_t)off.value;
+  size_t slen = len__uint8_t(out);
+  size_t rem = slen - soff;
+  header h = raw_uint64_as_argument(ty, off);
+  bool hfits = size_header(h, &rem);
+  if (hfits)
+  {
+    size_t llen = write_header(h, out, soff);
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t sp = split__uint8_t(out, llen);
+    Pulse_Lib_Slice_slice__uint8_t sp1 = sp.fst;
+    if (!(soff == (size_t)0U || soff == len__uint8_t(sp1)))
+    {
+      size_t pn = len__uint8_t(sp1);
+      size_t pl = soff;
+      size_t l0 = pl;
+      bool cond = l0 > (size_t)0U;
+      while (cond)
+      {
+        size_t n = pn;
+        size_t l = pl;
+        size_t l_ = n % l;
+        pn = l;
+        pl = l_;
+        size_t l0 = pl;
+        cond = l0 > (size_t)0U;
+      }
+      size_t d = pn;
+      size_t q = len__uint8_t(sp1) / d;
+      size_t pi = (size_t)0U;
+      size_t i0 = pi;
+      bool cond0 = i0 < d;
+      while (cond0)
+      {
+        size_t i = pi;
+        uint8_t save = op_Array_Access__uint8_t(sp1, i);
+        size_t pj = (size_t)0U;
+        size_t pidx = i;
+        size_t j0 = pj;
+        bool cond = j0 < q - (size_t)1U;
+        while (cond)
+        {
+          size_t j = pj;
+          size_t idx = pidx;
+          size_t idx_;
+          if (idx - (size_t)0U >= len__uint8_t(sp1) - soff)
+            idx_ = idx - (len__uint8_t(sp1) - soff);
+          else
+            idx_ = idx + soff - (size_t)0U;
+          uint8_t x = op_Array_Access__uint8_t(sp1, idx_);
+          size_t j_ = j + (size_t)1U;
+          op_Array_Assignment__uint8_t(sp1, idx, x);
+          pj = j_;
+          pidx = idx_;
+          size_t j0 = pj;
+          cond = j0 < q - (size_t)1U;
+        }
+        size_t idx = pidx;
+        op_Array_Assignment__uint8_t(sp1, idx, save);
+        size_t i_ = i + (size_t)1U;
+        pi = i_;
+        size_t i0 = pi;
+        cond0 = i0 < d;
+      }
+    }
+    return llen;
+  }
+  else
+    return (size_t)0U;
+}
+
+static size_t
 cbor_serialize_map_(
   CBOR_Spec_Raw_Base_raw_uint64 len,
   Pulse_Lib_Slice_slice__uint8_t out,
@@ -5868,6 +5945,16 @@ cbor_det_serialize_array_to_array(uint64_t len, uint8_t *out, size_t out_len, si
   Pulse_Lib_Slice_slice__uint8_t sout = arrayptr_to_slice_intro__uint8_t(out, out_len);
   CBOR_Spec_Raw_Base_raw_uint64 rlen = mk_raw_uint64(len);
   size_t res = cbor_serialize_array(rlen, sout, off);
+  size_t res0 = res;
+  return res0;
+}
+
+size_t
+cbor_det_serialize_string_to_array(uint8_t ty, uint64_t off, uint8_t *out, size_t out_len)
+{
+  Pulse_Lib_Slice_slice__uint8_t sout = arrayptr_to_slice_intro__uint8_t(out, out_len);
+  CBOR_Spec_Raw_Base_raw_uint64 roff = mk_raw_uint64(off);
+  size_t res = cbor_serialize_string(ty, roff, sout);
   size_t res0 = res;
   return res0;
 }
