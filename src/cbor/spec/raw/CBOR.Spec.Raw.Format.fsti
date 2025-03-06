@@ -379,6 +379,20 @@ val serialize_cbor_array_length_gt_list
     Seq.length (serialize_cbor (Array len l)) > Seq.length (serialize_cbor_list l)
   ))
 
+val serialize_cbor_string_length_gt
+  (ty: major_type_byte_string_or_text_string)
+  (len: raw_uint64)
+  (l: Seq.seq U8.t)
+: Lemma
+  (requires (Seq.length l == U64.v len.value /\
+    (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct l)
+  ))
+  (ensures (
+    Seq.length l == U64.v len.value /\
+    (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct l) /\
+    Seq.length (serialize_cbor (String ty len l)) > Seq.length l
+  ))
+
 val serialize_cbor_map : list (raw_data_item & raw_data_item) -> Seq.seq U8.t
 
 val serialize_cbor_map_nil (_: unit) : Lemma

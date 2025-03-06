@@ -424,3 +424,28 @@ fn impl_serialize_tagged_some
   Trade.elim _ _;
   res
 }
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_bstr_cbor_det
+  (cbor_det_serialize_string: cbor_det_serialize_string_t)
+    (#[@@@erasable]t1: Ghost.erased typ)
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable]ps1: Ghost.erased (spec t1 tgt1 true))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize ps1 r1)
+: impl_serialize #_ #_ #_ (spec_bstr_cbor_det ps1) #_ r1
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+{
+  Classical.forall_intro (Classical.move_requires (Cbor.cbor_det_serialize_string_length_gt cbor_major_type_byte_string));
+  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let sz = i1 c out;
+  if (sz = 0sz || SZ.gt sz (SZ.uint64_to_sizet pow2_64_m1)) {
+    0sz
+  } else {
+    cbor_det_serialize_string cbor_major_type_byte_string (SZ.sizet_to_uint64 sz) out;
+  }
+}

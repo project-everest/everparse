@@ -170,6 +170,19 @@ val cbor_det_serialize_array_length_gt_list
     Seq.length (cbor_det_serialize (pack (CArray l))) > Seq.length (cbor_det_serialize_list l)
   ))
 
+val cbor_det_serialize_string_length_gt
+  (ty: major_type_byte_string_or_text_string)
+  (l: Seq.seq U8.t)
+: Lemma
+  (requires (FStar.UInt.fits (Seq.length l) 64 /\
+    (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct l)
+  ))
+  (ensures (
+    FStar.UInt.fits (Seq.length l) 64 /\
+    (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct l) /\
+    Seq.length (cbor_det_serialize (pack (CString ty l))) > Seq.length l
+  ))
+
 val cbor_det_serialize_map
   (m: cbor_map)
 : Tot (Seq.seq U8.t)

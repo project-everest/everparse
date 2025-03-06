@@ -93,6 +93,15 @@ let cbor_det_serialize_array_length_gt_list l =
   R.mk_det_raw_cbor_mk_cbor x;
   assert (R.mk_det_raw_cbor (pack (CArray l)) == x)
 
+let cbor_det_serialize_string_length_gt ty l =
+  let len = R.mk_raw_uint64 (U64.uint_to_t (Seq.length l)) in
+  assert (RV.raw_uint64_optimal len);
+  let x = R.String ty len l in
+  R.mk_cbor_eq x;
+  R.mk_det_raw_cbor_mk_cbor x;
+  RF.serialize_cbor_string_length_gt ty len l;
+  ()
+
 let cbor_det_serialize_map m =
   R.serialize_cbor_map (R.mk_det_raw_cbor_map_raw m)
 
