@@ -101,6 +101,46 @@ val cbor_serialize_array
     pure (cbor_serialize_array_postcond len l res v)
   )
 
+let cbor_serialize_string_precond
+  (ty: major_type_byte_string_or_text_string)
+  (off: raw_uint64)
+  (v: Seq.seq U8.t)
+: Tot prop
+= U64.v off.value <= Seq.length v /\
+  (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct (Seq.slice v 0 (U64.v off.value)))
+
+let cbor_serialize_string_postcond
+  (ty: major_type_byte_string_or_text_string)
+  (off: raw_uint64)
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+  (v': Seq.seq U8.t)
+: Tot prop
+= cbor_serialize_string_precond ty off v /\
+  begin let l = Seq.slice v 0 (U64.v off.value) in
+  Seq.length v' == Seq.length v /\
+  SZ.v res <= Seq.length v' /\
+  (res == 0sz <==> Seq.length (serialize_cbor (String ty off l)) > Seq.length v') /\
+  (SZ.v res > 0 ==> Seq.slice v' 0 (SZ.v res) `Seq.equal` serialize_cbor (String ty off l))
+  end
+
+inline_for_extraction
+let cbor_serialize_string_t =
+  (ty: major_type_byte_string_or_text_string) ->
+  (off: raw_uint64) ->
+  (out: S.slice U8.t) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt SZ.t
+  (pts_to out v **
+    pure (cbor_serialize_string_precond ty off v)
+  )
+  (fun res -> exists* v' .
+    pts_to out v' **
+    pure (cbor_serialize_string_postcond ty off v res v')
+  )
+
+val cbor_serialize_string (_: unit) : cbor_serialize_string_t
+
 let cbor_serialize_map_precond
   (len: raw_uint64)
   (l: list (raw_data_item & raw_data_item))

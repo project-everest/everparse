@@ -197,6 +197,29 @@ let serialize_cbor_array_length_gt_list len l =
   serialize_array_eq len l;
   LP.serialize_length F.serialize_header (F.raw_uint64_as_argument cbor_major_type_array len)
 
+let serialize_string_eq
+  (ty: major_type_byte_string_or_text_string)
+  (len1: raw_uint64)
+  (x1: Seq.lseq U8.t (U64.v len1.value) {
+    ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct x1
+  })
+: Lemma
+  (ensures (
+    serialize_cbor (String ty len1 x1) == F.serialize_header (F.raw_uint64_as_argument ty len1) `Seq.append` x1
+  ))
+= let v1 = String ty len1 x1 in
+  F.serialize_raw_data_item_aux_correct v1;
+  LP.serialize_synth_eq
+    _
+    F.synth_raw_data_item
+    (LP.serialize_dtuple2 F.serialize_header F.serialize_content)
+    F.synth_raw_data_item_recip
+    ()
+    v1;
+  let v1' = F.synth_raw_data_item_recip v1 in
+  LP.serialize_dtuple2_eq F.serialize_header F.serialize_content v1';
+  ()
+
 let serialize_cbor_map l =
   LPL.tot_serialize_nlist (List.Tot.length l) (LP.tot_serialize_nondep_then  F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item) l
 

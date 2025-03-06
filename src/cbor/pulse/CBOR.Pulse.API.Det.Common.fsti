@@ -217,6 +217,10 @@ val cbor_det_serialize_array (_: unit) : cbor_det_serialize_array_t
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+val cbor_det_serialize_string (_: unit) : cbor_det_serialize_string_t
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 val cbor_det_serialize_map_insert (_: unit) : cbor_det_serialize_map_insert_t
 
 inline_for_extraction

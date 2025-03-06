@@ -328,6 +328,25 @@ fn cbor_det_serialize_array
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_string
+  (_: unit)
+: cbor_det_serialize_string_t
+=
+  (ty: _)
+  (off: _)
+  (out: _)
+  (#v: _)
+{
+  let roff = SpecRaw.mk_raw_uint64 off;
+  let res = Serialize.cbor_serialize_string () ty roff out;
+  let x = Ghost.hide (SpecRaw.String ty roff (Seq.slice v 0 (U64.v off)));
+  SpecRaw.mk_cbor_eq x;
+  SpecRaw.mk_det_raw_cbor_mk_cbor x;
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 fn cbor_det_serialize_map_insert
   (_: unit)
 : cbor_det_serialize_map_insert_t

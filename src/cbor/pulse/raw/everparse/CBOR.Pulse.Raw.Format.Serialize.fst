@@ -2239,6 +2239,49 @@ ensures
 
 #restart-solver
 
+fn cbor_serialize_string
+  (_: unit)
+: cbor_serialize_string_t
+=
+  (ty: _)
+  (off: _)
+  (out: _)
+  (#v: _)
+{
+  with v . assert (pts_to out v);
+  S.pts_to_len out;
+  Seq.lemma_split v (U64.v off.value);
+  let w = Ghost.hide (Seq.slice v 0 (U64.v off.value));
+  serialize_string_eq ty off w;
+  let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64);
+  let soff = SZ.uint64_to_sizet off.value;
+  let slen = S.len out;
+  let mut rem = (SZ.sub slen soff <: SZ.t);
+  let h = raw_uint64_as_argument ty off;
+  serialize_length serialize_header h;
+  let hfits = size_header h rem;
+  if (hfits) {
+    let llen = write_header h out soff;
+    let sp = S.split out llen;
+    match sp {
+      Mktuple2 sp1 sp2 -> {
+        S.pts_to_len sp1;
+        with v1 . assert (pts_to sp1 v1);
+        with v2 . assert (pts_to sp2 v2);
+        Seq.lemma_split v1 (SZ.v soff);
+        assert (pure (Seq.equal v1 (Seq.append w (serialize_header h))));
+        rewrite (pts_to sp1 v1) as (pts_to sp1 (Seq.append w (serialize_header h)));
+        Swap.slice_swap' sp1 soff w (serialize_header h);
+        seq_length_append_slice_left (Seq.append (serialize_header h) w) v2;
+        S.join sp1 sp2 out;
+        llen
+      }
+    }
+  } else {
+    sz_zero
+  }
+}
+
 let cbor_serialize_map_postcond_zero
   (len: raw_uint64)
   (l: list (raw_data_item & raw_data_item))
