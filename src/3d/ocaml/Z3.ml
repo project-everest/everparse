@@ -32,6 +32,7 @@ let with_z3 (debug: bool) (transcript: string option) (f: (z3 -> 'a)) : 'a =
         is_from := true
       end;
       let s = input_line ch_from_z3 in
+      let s = String.trim s in (* eliminate remaining line ending on Windows *)
       if debug then print_endline s;
       maybe_output_string ch_transcript "; ";
       maybe_output_line ch_transcript s;
