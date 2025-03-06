@@ -182,6 +182,25 @@ fn cbor_det_serialize_array
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+fn cbor_det_serialize_string
+  (_: unit)
+: cbor_det_serialize_string_t
+=
+  (ty: _)
+  (off: _)
+  (out: _)
+  (#v: _)
+{
+  S.pts_to_len out;
+  let aout_len = S.len out;
+  let aout = S.slice_to_arrayptr_intro out;
+  let res = cbor_det_serialize_string_to_array () ty off aout aout_len;
+  S.slice_to_arrayptr_elim aout;
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 fn cbor_det_serialize_map_insert
   (_: unit)
 : cbor_det_serialize_map_insert_t

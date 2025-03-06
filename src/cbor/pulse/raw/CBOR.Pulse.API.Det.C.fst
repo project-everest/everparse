@@ -187,6 +187,23 @@ fn cbor_det_serialize_array_to_array (_: unit)
   res
 }
 
+fn cbor_det_serialize_string_to_array (_: unit)
+: cbor_det_serialize_string_to_array_t
+=
+  (ty: _)
+  (off: _)
+  (out: _)
+  (out_len: _)
+  (#v: _)
+{
+  let sout = S.arrayptr_to_slice_intro out out_len;
+  S.pts_to_len sout;
+  let res = CBOR.Pulse.API.Det.Common.cbor_det_serialize_string () ty off sout;
+  S.pts_to_len sout;
+  S.arrayptr_to_slice_elim sout;
+  res
+}
+
 fn cbor_det_serialize_map_insert_to_array (_: unit)
 : cbor_det_serialize_map_insert_to_array_t
 =

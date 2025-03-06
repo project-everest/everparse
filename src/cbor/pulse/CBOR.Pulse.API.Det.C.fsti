@@ -165,6 +165,28 @@ let cbor_det_serialize_array_to_array_t
 val cbor_det_serialize_array_to_array (_: unit) : cbor_det_serialize_array_to_array_t
 
 inline_for_extraction noextract [@@noextract_to "krml"]
+let cbor_det_serialize_string_to_array_t
+= (ty: major_type_byte_string_or_text_string) ->
+  (off: U64.t) ->
+  (out: AP.ptr U8.t) ->
+  (out_len: SZ.t) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt SZ.t
+  (pts_to out v **
+    pure (cbor_det_serialize_string_precond ty off v /\
+      Seq.length v == SZ.v out_len
+    )
+  )
+  (fun res -> exists* v' .
+    pts_to out v' **
+    pure (cbor_det_serialize_string_postcond ty off v res v' /\
+      Seq.length v' == SZ.v out_len
+    )
+  )
+
+val cbor_det_serialize_string_to_array (_: unit) : cbor_det_serialize_string_to_array_t
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 let cbor_det_serialize_map_insert_to_array_t =
   (out: AP.ptr U8.t) ->
   (out_len: SZ.t) ->
