@@ -449,3 +449,28 @@ fn impl_serialize_bstr_cbor_det
     cbor_det_serialize_string cbor_major_type_byte_string (SZ.sizet_to_uint64 sz) out;
   }
 }
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_any
+  (#ty: Type u#0)
+  (#vmatch: perm -> ty -> cbor -> slprop)
+  (cbor_det_serialize: cbor_det_serialize_t vmatch)
+: impl_serialize #_ #_ #_ spec_any #_ (rel_cbor_not_freeable vmatch false)
+=
+  (c: _)
+  (#v: _)
+  (out: _)
+{
+  unfold (rel_cbor_not_freeable vmatch false c v);
+  let ser = cbor_det_serialize c.c out;
+  Cbor.cbor_det_serialize_parse v;  
+  fold (rel_cbor_not_freeable vmatch false c v);
+  match ser {
+    None -> {
+      0sz
+    }
+    Some sz -> {
+      sz
+    }
+  }
+}
