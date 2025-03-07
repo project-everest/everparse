@@ -308,6 +308,11 @@ make_everparse() {
         popd
     fi
 
+    # Set executable permissions on EXE and DLL on Windows
+    if $is_windows ; then
+        chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/z3-latest/bin/*.exe everparse/z3-latest/bin/*.dll
+    fi
+
     # licenses
     mkdir -p everparse/licenses
     $cp $FSTAR_PKG_ROOT/LICENSE everparse/licenses/FStar
@@ -336,12 +341,7 @@ EOF
         download https://www.gnu.org/licenses/gpl-3.0.txt everparse/licenses/gnugplv3
         cat everparse/licenses/gnugplv3 >> everparse/licenses/libgmp10
         rm everparse/licenses/gnugplv3
-    fi
-    
-    # Reset permissions and build the package
-    if $is_windows ; then
-        chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/z3-latest/bin/*.exe everparse/z3-latest/bin/*.dll
-    fi
+    fi    
 }
 
 zip_everparse() {
