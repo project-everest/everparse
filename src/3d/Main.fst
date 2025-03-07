@@ -493,6 +493,11 @@ let with_z3_thread_or
     None
   end
 
+let testcases_c_file
+  (out_dir: string)
+: Tot string
+= (OS.concat out_dir "testcases.c")
+
 let produce_z3_and_test_gen
   (batch: bool)
   (produce_testcases_c: bool)
@@ -505,11 +510,13 @@ let produce_z3_and_test_gen
   (emit_output_types_defs:bool)
 ->
   let nbwitnesses = Options.get_z3_witnesses () in
+  let testcases_c = testcases_c_file out_dir in
+  if produce_testcases_c then OS.overwrite_file testcases_c; // because Batch.krml_args will add the testcase file only if it exists, so we need to create it before generating the parser, otherwise we might have a race
   let buf : ref string = alloc "" in
   let prog = process_files_for_z3 (fun s -> buf := !buf ^ s) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
   with_z3_thread_or (batch && produce_testcases_c) out_dir (Options.get_debug ()) (Options.get_save_z3_transcript ()) (fun z3 ->
     z3.to_z3 !buf;
-    do_test (if produce_testcases_c then Some (OS.concat out_dir "testcases.c") else None) nbwitnesses prog z3
+    do_test (if produce_testcases_c then Some testcases_c else None) nbwitnesses prog z3
   )
 
 let produce_z3_and_test
@@ -544,8 +551,10 @@ let produce_test_checker_exe
   (emit_fstar:string -> ML bool)
   (emit_output_types_defs:bool)
 ->
+  let testcases_c = testcases_c_file out_dir in
+  OS.overwrite_file testcases_c; // because Batch.krml_args will add the testcase file only if it exists, so we need to create it before generating the parser, otherwise we might have a race
   let prog = process_files_for_z3 (fun _ -> ()) files_and_modules (if batch then Some emit_fstar else None) emit_output_types_defs in
-  Z3TestGen.produce_test_checker_exe (OS.concat out_dir "testcases.c") prog name1;
+  Z3TestGen.produce_test_checker_exe testcases_c prog name1;
   Some (fun _ ->
     if batch then
     build_test_exe out_dir

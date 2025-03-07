@@ -29,6 +29,8 @@ val file_exists: string -> FStar.All.ML bool
 
 val file_contents: string -> FStar.All.ML string
 
+val overwrite_file: string -> FStar.All.ML unit
+
 (* Write a witness into a binary file *)
 
 val write_witness_to_file: list int -> string -> FStar.All.ML unit

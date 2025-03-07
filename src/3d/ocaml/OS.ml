@@ -127,6 +127,9 @@ let file_contents f =
   close_in ic;
   s
 
+let overwrite_file filename =
+  BatFile.with_file_out filename (fun _ -> ())
+
 let write_witness_to_file w filename =
   BatFile.with_file_out filename (fun out ->
     List.iter
