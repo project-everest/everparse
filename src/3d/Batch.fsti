@@ -2,6 +2,8 @@ module Batch
 open HashingOptions
 open FStar.All
 
+val cl_wrapper: unit -> ML string
+
 (* The --print_in_place step has to be performed at source generation
    time, not at verification time, because if the user requests files
    to be processed by a Makefile, they must not be modified again
