@@ -294,6 +294,7 @@ make_everparse() {
         z3_archive=$z3_basename.zip
 	[[ -f $z3_archive ]] ||	download https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive $z3_archive
         unzip $z3_archive
+        rm -rf $z3_basename/bin/*.pdb
         mv $z3_basename "$PWD/everparse/z3-latest"
     else
         if ! [[ -d z3-latest ]] ; then
