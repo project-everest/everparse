@@ -1,3 +1,5 @@
+let is_windows () = Sys.win32
+
 let dirname = Filename.dirname
 
 (* The filename without its path *)

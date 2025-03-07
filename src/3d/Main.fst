@@ -461,7 +461,8 @@ let build_test_exe
 =
   if not (Options.get_skip_c_makefiles ())
   then begin
-    OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
+    if not (OS.is_windows ())
+    then OS.run_cmd "make" ["-C"; out_dir; "-f"; "Makefile.basic"; "USER_TARGET=test.exe"; "USER_CFLAGS=-Wno-type-limits"]
   end
 
 let build_and_run_test_exe
@@ -470,8 +471,11 @@ let build_and_run_test_exe
 =
   if not (Options.get_skip_c_makefiles ())
   then begin
-    build_test_exe out_dir;
-    OS.run_cmd (OS.concat out_dir "test.exe") []
+    if not (OS.is_windows ())
+    then begin
+        build_test_exe out_dir;
+    	OS.run_cmd (OS.concat out_dir "test.exe") []
+    end
   end
 
 let with_z3_thread_or
