@@ -106,5 +106,5 @@ let resolve_probe_fn (g:global_env) (id:ident) (pq:option probe_qualifier)
 let fields_of_type (g:global_env) (typename:ident)
 : ML (option (list field))
 = match H.try_find g.ge_h typename.v with
-  | Some ({d_decl={v=Record _ _ _ fields}}, _) -> Some fields
+  | Some ({d_decl={v=Record _ _ _ _ fields}}, _) -> Some fields
   | _ -> None

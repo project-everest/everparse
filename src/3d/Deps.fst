@@ -111,7 +111,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
 
   let rec deps_of_typ (t:typ) : ML (list string) =
     match t.v with
-    | Type_app hd _ args -> (maybe_dep hd)@(List.collect deps_of_typ_param args)
+    | Type_app hd _ gs args -> (maybe_dep hd)@(List.collect deps_of_expr gs)@(List.collect deps_of_typ_param args)
     | Pointer t _ -> deps_of_typ t in
 
   let deps_of_atomic_action (ac:atomic_action) : ML (list string) =
@@ -134,6 +134,19 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Action_let _i a k -> (deps_of_atomic_action a)@(deps_of_action k)
     | Action_act a -> deps_of_action a in
 
+  let deps_of_probe_atomic_action (a:probe_atomic_action) : ML (list string) =
+    match a with
+    | Probe_action_return e -> deps_of_expr e
+    | Probe_action_call f args -> List.collect deps_of_expr args
+    | Probe_action_read f -> []
+    | Probe_action_write f v -> deps_of_expr v
+    | Probe_action_copy f len -> deps_of_expr len in
+  let rec deps_of_probe_action (a:probe_action) : ML (list string) =
+    match a.v with
+    | Probe_atomic_action a -> deps_of_probe_atomic_action a
+    | Probe_action_var i -> []
+    | Probe_action_seq hd tl -> (deps_of_probe_atomic_action hd)@(deps_of_probe_action tl)
+    | Probe_action_let i a k -> (deps_of_probe_atomic_action a)@(deps_of_probe_action k) in
   let deps_of_params params : ML (list string) =
     params |> List.collect (fun (t, _, _) -> deps_of_typ t) in
 
@@ -196,17 +209,20 @@ let scan_deps (fn:string) : ML scan_deps_t =
       [m.v.name]
     | Define _ None _ -> []
     | Define _ (Some t) _ -> deps_of_typ t
-    | TypeAbbrev t _ -> deps_of_typ t
+    | TypeAbbrev t _ _ _ -> deps_of_typ t
     | Enum _base_t _ l -> List.collect deps_of_enum_case l
-    | Record tdnames params wopt flds ->
+    | Record tdnames _generics params wopt flds ->
       (deps_of_typedef_names tdnames)@
       (deps_of_params params)@
       (deps_of_opt deps_of_expr wopt)@
       (List.collect deps_of_field flds)
-    | CaseType tdnames params sc ->
+    | CaseType tdnames _generics params sc ->
       (deps_of_typedef_names tdnames)@
       (deps_of_params params)@
       (deps_of_switch_case sc)
+    | ProbeFunction f params probe_action ->
+      (deps_of_params params)@
+      (deps_of_probe_action probe_action)
     | OutputType _
     | ExternType _
     | ExternFn _ _ _ _

@@ -166,7 +166,7 @@ let rec rewrite_field (env:B.global_env) (f:field)
    
 let eliminate_one_decl (env:B.global_env) (d:decl) : ML decl =
   match d.d_decl.v with
-  | Record names params where fields ->
+  | Record names generics params where fields ->
     let i = with_dummy_range (to_ident' "_") in
     let { v = RecordField fields _ } = rewrite_field env (with_range (RecordField fields i) d.d_decl.range) in
     List.iter (fun f ->
@@ -183,7 +183,7 @@ let eliminate_one_decl (env:B.global_env) (d:decl) : ML decl =
         [{v=AtomicField af; range; comments}]
       | _ -> fields
     in
-    decl_with_v d (Record names params where fields)
+    decl_with_v d (Record names generics params where fields)
   | _ -> d
 
 let eliminate_decls (env:B.global_env) (ds:list decl) : ML (list decl) =

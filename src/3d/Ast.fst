@@ -352,6 +352,7 @@ and out_expr = { out_expr_node: with_meta_t out_expr';
 
 and typ_param = either expr out_expr
 
+and generic_inst = expr
 /// Types: all types are named and fully instantiated to expressions only
 ///   i.e., no type-parameterized types
 ///
@@ -365,7 +366,7 @@ and typ_param = either expr out_expr
 
 
 and typ' =
-  | Type_app : ident -> t_kind -> list typ_param -> typ'
+  | Type_app : ident -> t_kind -> list generic_inst -> list typ_param -> typ'
   | Pointer : typ -> option pointer_qualifier -> typ'
 
 and pointer_qualifier =
@@ -493,6 +494,7 @@ noeq
 [@@ PpxDerivingYoJson ]
 type probe_action' =
   | Probe_atomic_action of probe_atomic_action
+  | Probe_action_var of ident
   | Probe_action_seq : hd:probe_atomic_action -> tl:probe_action -> probe_action'
   | Probe_action_let : i:ident -> a:probe_atomic_action -> k:probe_action -> probe_action'
 and probe_action = with_meta_t probe_action'
@@ -505,10 +507,10 @@ type probe_call =
 | SimpleCall {
     probe_fn:option ident;
     probe_length: expr;
-    probe_dest: ident; 
+    probe_dest: expr; 
   }
 | CompositeCall {
-    probe_dest:ident;
+    probe_dest:expr;
     probe_block:probe_action
   }
 
@@ -598,6 +600,11 @@ type probe_qualifier =
   | PQRead of integer_type
   | PQWrite of integer_type
 
+[@@ PpxDerivingYoJson ]
+noeq
+type generic_param =
+  | GenericProbeFunction of ident
+
 /// A 3d specification a list of declarations
 ///   - Define: macro definitions for constants
 ///   - TypeAbbrev: macro definition of types
@@ -614,17 +621,68 @@ type probe_qualifier =
 [@@ PpxDerivingYoJson ]
 noeq
 type decl' =
-  | ModuleAbbrev: ident -> ident -> decl'
-  | Define: ident -> option typ -> constant -> decl'
-  | TypeAbbrev: typ -> ident -> decl'
-  | Enum: typ -> ident -> list enum_case -> decl'
-  | Record: names:typedef_names -> params:list param -> where:option expr -> fields:record -> decl'
-  | CaseType: typedef_names -> list param -> switch_case -> decl'
+  | ModuleAbbrev:
+      ident ->
+      ident ->
+      decl'
+  
+  | Define:
+      ident ->
+      option typ ->
+      constant ->
+      decl'
 
-  | OutputType : out_typ -> decl'
-  | ExternType : typedef_names -> decl'
-  | ExternFn   : ident -> typ -> list param -> pure:bool -> decl'
-  | ExternProbe : ident -> option probe_qualifier -> decl'
+  | TypeAbbrev:
+      typ ->
+      ident ->
+      list generic_param ->
+      list param ->
+      decl'
+
+  | Enum:
+      typ ->
+      ident ->
+      list enum_case ->
+      decl'
+
+  | Record:
+      names:typedef_names ->
+      generics:list generic_param ->
+      params:list param ->
+      where:option expr ->
+      fields:record -> decl'
+  
+  | CaseType:
+      names:typedef_names ->
+      generics:list generic_param ->
+      params:list param ->
+      switch_case -> decl'
+
+  | ProbeFunction:
+      ident ->
+      list param ->
+      probe_action ->
+      decl'
+
+  | OutputType:
+      out_typ ->
+      decl'
+
+  | ExternType :
+      typedef_names ->
+      decl'
+
+  | ExternFn   :
+      ident ->
+      typ ->
+      list param ->
+      pure:bool ->
+      decl'
+
+  | ExternProbe :
+      ident ->
+      option probe_qualifier ->
+      decl'
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -669,16 +727,16 @@ let get_entrypoint_probes (l: list attribute) : Tot (list probe_entrypoint) =
   get_entrypoint_probes' l []
 
 let is_entrypoint_or_export d = match d.d_decl.v with
-  | Record names _ _ _
-  | CaseType names _ _ ->
+  | Record names _ _ _ _
+  | CaseType names _ _ _ ->
     if has_entrypoint (names.typedef_attributes)
     then true
     else d.d_exported
   | _ -> d.d_exported
 
 let is_entrypoint d = match d.d_decl.v with
-  | Record names _ _ _
-  | CaseType names _ _ ->
+  | Record names _ _ _ _
+  | CaseType names _ _ _ ->
     has_entrypoint (names.typedef_attributes)
   | _ -> false
 
@@ -773,9 +831,9 @@ and case_has_out_expr (c: case) : Tot bool =
 /// Matches parse_field
 let decl_has_out_expr (d: decl) : Tot bool =
   match d.d_decl.v with
-  | Record _ _ _ ast_fields ->
+  | Record _ _ _ _ ast_fields ->
     record_has_out_expr ast_fields
-  | CaseType _ _ switch_case ->
+  | CaseType _ _ _ switch_case ->
     switch_case_has_out_expr switch_case
   | _ -> false
 
@@ -838,9 +896,10 @@ let eq_pointer_qualifier (q1 q2:pointer_qualifier) =
 
 let rec eq_typ (t1 t2:typ) : Tot bool =
   match t1.v, t2.v with
-  | Type_app hd1 k1 ps1, Type_app hd2 k2 ps2 ->
+  | Type_app hd1 k1 gs1 ps1, Type_app hd2 k2 gs2 ps2 ->
     eq_idents hd1 hd2
     && k1 = k2
+    && eq_exprs gs1 gs2
     && eq_typ_params ps1 ps2
   | Pointer t1 q1, Pointer t2 q2 ->
     eq_typ t1 t2
@@ -851,7 +910,7 @@ let rec eq_typ (t1 t2:typ) : Tot bool =
 let dummy_range = dummy_pos, dummy_pos
 let with_dummy_range x = with_range x dummy_range
 let to_ident' x = {modul_name=None;name=x}
-let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) KindSpec [])
+let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) KindSpec [] [])
 let tbool = mk_prim_t "Bool"
 let tunit = mk_prim_t "unit"
 let tuint8 = mk_prim_t "UINT8"
@@ -866,6 +925,7 @@ let type_of_integer_type = function
   | UInt32 -> tuint32
   | UInt64 -> tuint64
 let tcopybuffer = mk_prim_t "EVERPARSE_COPY_BUFFER_T"
+let probe_m_t = mk_prim_t "PROBE_M"
 let tunknown = mk_prim_t "?"
 let unit_atomic_field rng = 
     let dummy_identifier = with_range (to_ident' "_empty_") rng in
@@ -923,7 +983,19 @@ and subst_action_opt (s:subst) (a:option action) : ML (option action) =
   match a with
   | None -> None
   | Some a -> Some (subst_action s a)
-
+let subst_probe_atomic_action (s:subst) (aa:probe_atomic_action) : ML probe_atomic_action =
+  match aa with
+  | Probe_action_return e -> Probe_action_return (subst_expr s e)
+  | Probe_action_call f args -> Probe_action_call f (List.map (subst_expr s) args)
+  | Probe_action_read f -> Probe_action_read f
+  | Probe_action_write f value -> Probe_action_write f (subst_expr s value)
+  | Probe_action_copy f len -> Probe_action_copy f (subst_expr s len)
+let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
+  match a.v with
+  | Probe_atomic_action aa -> {a with v = Probe_atomic_action (subst_probe_atomic_action s aa)}
+  | Probe_action_var i -> a
+  | Probe_action_seq hd tl -> {a with v = Probe_action_seq (subst_probe_atomic_action s hd) (subst_probe_action s tl) }
+  | Probe_action_let i aa k -> {a with v = Probe_action_let i (subst_probe_atomic_action s aa) (subst_probe_action s k) }
 //No need to substitute in output expressions
 let subst_out_expr (s:subst) (o:out_expr) : out_expr = o
 let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =
@@ -932,7 +1004,7 @@ let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =
   | Inr oe -> Inr (subst_out_expr s oe)
 let rec subst_typ (s:subst) (t:typ) : ML typ =
   match t.v with
-  | Type_app hd k ps -> { t with v = Type_app hd k (List.map (subst_typ_param s) ps) }
+  | Type_app hd k gs ps -> { t with v = Type_app hd k (List.map (subst_expr s) gs)  (List.map (subst_typ_param s) ps) }
   | Pointer t q -> {t with v = Pointer (subst_typ s t) q }
 
 let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
@@ -953,6 +1025,24 @@ and subst_atomic_field (s:subst) (f:atomic_field) : ML atomic_field =
     | None -> None
     | Some (a, b) -> Some (subst_action s a, b)
   in
+  let pa =
+    match sf.field_probe with
+    | None -> None
+    | Some (SimpleCall { probe_fn; probe_length; probe_dest }) ->
+      Some <|
+      SimpleCall { 
+          probe_fn;
+          probe_length = subst_expr s probe_length;
+          probe_dest=subst_expr s probe_dest 
+      }
+    | Some (CompositeCall { probe_dest; probe_block }) ->
+      Some <|
+      CompositeCall {
+        probe_dest=subst_expr s probe_dest;
+        probe_block=subst_probe_action s probe_block 
+      }
+  in
+      // CompositeCall { probe_dest; probe_block = subst_probe_action s probe_block }
   let sf = {
       sf with
       field_type = subst_typ s sf.field_type;
@@ -976,12 +1066,14 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
   | ModuleAbbrev _ _ -> d
   | Define i None _ -> d
   | Define i (Some t) c -> Define i (Some (subst_typ s t)) c
-  | TypeAbbrev t i -> TypeAbbrev (subst_typ s t) i
+  | TypeAbbrev t i generics params ->
+    TypeAbbrev (subst_typ s t) i generics (subst_params s params)
   | Enum t i is -> Enum (subst_typ s t) i is
-  | Record names params where fields ->
-    Record names (subst_params s params) (map_opt (subst_expr s) where) (List.map (subst_field s) fields)
-  | CaseType names params cases ->
-    CaseType names (subst_params s params) (subst_switch_case s cases)
+  | Record names generics params where fields ->
+    Record names generics (subst_params s params) (map_opt (subst_expr s) where) (List.map (subst_field s) fields)
+  | CaseType names generics params cases ->
+    CaseType names generics (subst_params s params) (subst_switch_case s cases)
+  | ProbeFunction i params a -> ProbeFunction i (subst_params s params) (subst_probe_action s a)
   | OutputType _
   | ExternType _
   | ExternFn _ _ _ _
@@ -1111,15 +1203,20 @@ let print_typ_param p : ML string =
   | Inl e -> print_expr e
   | Inr o -> print_out_expr o
 
+let print_generic_inst = print_expr
+let print_generic_insts = function
+  | [] -> ""
+  | gs -> Printf.sprintf "<%s>" (String.concat ", " (List.map print_generic_inst gs))
 let rec print_typ t : ML string =
   match t.v with
-  | Type_app i _k ps ->
+  | Type_app i _k gs ps ->
     begin
     match ps with
     | [] -> ident_to_string i
     | _ ->
-      Printf.sprintf "%s(%s)"
+      Printf.sprintf "%s%s(%s)"
         (ident_to_string i)
+        (print_generic_insts gs)
         (String.concat ", " (List.map print_typ_param ps))
     end
   | Pointer t None ->
@@ -1132,12 +1229,12 @@ let rec print_typ t : ML string =
 
 let typ_as_integer_type (t:typ) : ML integer_type =
   match t.v with
-  | Type_app i _k [] -> as_integer_typ i
+  | Type_app i _k [] [] -> as_integer_typ i
   | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
 
 let bit_order_of_typ (t:typ) : ML bitfield_bit_order =
   match t.v with
-  | Type_app i _k [] -> bit_order_of i
+  | Type_app i _k [] [] -> bit_order_of i
   | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
 
 let print_qual = function
@@ -1230,10 +1327,10 @@ and print_probe_call (p:probe_call) : ML string =
     Printf.sprintf "%s(length=%s, destination=%s)"
           (print_opt probe_fn print_ident)
           (print_expr probe_length)
-          (print_ident probe_dest)
+          (print_expr probe_dest)
   | CompositeCall { probe_dest; probe_block } ->
     Printf.sprintf "(destination=%s) { %s }"
-          (print_ident probe_dest)
+          (print_expr probe_dest)
           (print_probe_action probe_block)
 
 and print_action (a:action) : ML string =
@@ -1277,6 +1374,15 @@ and print_switch_case (s:switch_case) : ML string =
 
 let option_to_string (f:'a -> ML string) (x:option 'a) : ML string = print_opt x f
 
+let print_generics generics =
+  let print_generic = function
+    | GenericProbeFunction i -> print_ident i
+  in
+  match generics with
+  | [] -> ""
+  | _ -> 
+    Printf.sprintf "<%s>" (String.concat ", " (List.map print_generic generics))
+
 let print_decl' (d:decl') : ML string =
   match d with
   | ModuleAbbrev i m -> Printf.sprintf "module %s = %s" (print_ident i) (print_ident m)
@@ -1284,7 +1390,7 @@ let print_decl' (d:decl') : ML string =
     Printf.sprintf "#define %s %s;" (print_ident i) (print_constant c)
   | Define i (Some t) c ->
     Printf.sprintf "#define %s : %s %s;" (print_ident i) (print_typ t) (print_constant c)
-  | TypeAbbrev t i ->
+  | TypeAbbrev t i generics params ->
     Printf.sprintf "typedef %s %s;" (print_typ t) (print_ident i)
   | Enum t i ls ->
     let print_enum_case (i, jopt) =
@@ -1299,25 +1405,34 @@ let print_decl' (d:decl') : ML string =
                    (print_typ t)
                    (ident_to_string i)
                    (String.concat ",\n" (List.map print_enum_case ls))
-  | Record td params wopt fields ->
-    Printf.sprintf "typedef struct %s%s%s {\n\
+  | Record td generics params wopt fields ->
+    Printf.sprintf "typedef struct %s%s%s%s {\n\
                         %s \n\
                     } %s, *%s"
                     (ident_to_string td.typedef_name)
+                    (print_generics generics)
                     (print_params params)
                     (match wopt with | None -> "" | Some e -> " where " ^ print_expr e)
                     (String.concat "\n" (List.map print_field fields))
                     (ident_to_string td.typedef_abbrev)
                     (option_to_string ident_to_string td.typedef_ptr_abbrev)
-  | CaseType td params switch_case ->
-    Printf.sprintf "casetype %s%s {\n\
+  | CaseType td generics params switch_case ->
+    Printf.sprintf "casetype %s%s%s {\n\
                         %s \n\
                     } %s, *%s"
                     (ident_to_string td.typedef_name)
+                    (print_generics generics)
                     (print_params params)
                     (print_switch_case switch_case)
                     (ident_to_string td.typedef_abbrev)
                     (option_to_string ident_to_string td.typedef_ptr_abbrev)
+  | ProbeFunction i params a ->
+    Printf.sprintf "probe %s(%s) {\n\
+                        %s \n\
+                    }"
+                    (print_ident i)
+                    (print_params params)
+                    (print_probe_action a)
   | OutputType out_t -> "Printing for output types is TBD"
   | ExternType _ -> "Printing for extern types is TBD"
   | ExternFn _ _ _ _
@@ -1357,3 +1472,21 @@ let field_tag_equal (f0 f1:field) =
   | RecordField _ _, RecordField _ _
   | SwitchCaseField _ _, SwitchCaseField _ _ -> true
   | _ -> false
+
+let extend_substitute (s:list (ident & expr)) 
+                      (g:list generic_inst & list generic_param)
+                      (p:list typ_param & list param)
+: ML subst
+= let (gs, gs') = g in
+  let (ps, ps') = p in
+  if List.existsb Inr? ps //it contains out-exprs
+  then failwith "Type abbreviations instantiated with out-exprs are not supported";
+  let ps = List.collect (function Inl v -> [v] | _ -> [] ) ps in
+  if List.length gs <> List.length gs' || List.length ps <> List.length ps'
+  then failwith "Substitution lists must have the same length";
+  s @
+  List.map2 (fun g (GenericProbeFunction x) -> (x, g)) gs gs' @
+  List.map2 (fun p (_, x, _) -> (x, p)) ps ps' |>
+  mk_subst
+
+let substitute = extend_substitute []

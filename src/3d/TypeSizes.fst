@@ -449,21 +449,21 @@ let decl_size_with_alignment (env:env_t) (d:decl)
       extend_with_size_of_ident env i s a;
       d
 
-    | Record names params where fields ->
+    | Record names generics params where fields ->
       let dummy_ident = with_dummy_range (to_ident' "_") in
       let { v = RecordField fields _ }, size, max_align = 
         size_and_alignment_of_field env (should_align names) names.typedef_name (with_dummy_range (RecordField fields dummy_ident))
       in
       extend_with_size_of_typedef_names env names size max_align;
-      decl_with_v d (Record names params where fields)
+      decl_with_v d (Record names generics params where fields)
 
-    | CaseType names params cases ->
+    | CaseType names generics params cases ->
       let dummy_ident = with_dummy_range (to_ident' "_") in    
       let { v = SwitchCaseField cases _ }, size, alignment = 
         size_and_alignment_of_field env (should_align names) names.typedef_name (with_dummy_range (SwitchCaseField cases dummy_ident))
       in
       extend_with_size_of_typedef_names env names size alignment;
-      decl_with_v d (CaseType names params cases)
+      decl_with_v d (CaseType names generics params cases)
 
     | OutputType _
     | ExternType _
@@ -478,8 +478,8 @@ let idents_of_decl (d:decl) =
   | Enum _ i _
   | ExternFn i _ _ _
   | ExternProbe i _ -> [i]
-  | Record names _ _ _
-  | CaseType names _ _
+  | Record names _ _ _ _
+  | CaseType names _ _ _
   | OutputType { out_typ_names = names } 
   | ExternType names -> [names.typedef_name; names.typedef_abbrev]
 

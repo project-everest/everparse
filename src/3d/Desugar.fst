@@ -146,6 +146,7 @@ type qenv = {
   output_types : H.t ident' unit;
   extern_types : H.t ident' unit;
   local_names : list string;
+  generic_names : list string;
   global_env: GlobalEnv.global_env;
 }
 
@@ -163,6 +164,17 @@ let push_extern_type (env:qenv) (td:typedef_names) : ML unit =
 let push_name (env:qenv) (name:string) : qenv =
   { env with local_names = name::env.local_names }
 
+let push_generic (env:qenv) (g:generic_param)
+: ML qenv
+= let GenericProbeFunction p = g in
+  if List.mem p.v.name env.generic_names
+  then error (Printf.sprintf "Generic name %s already in scope" p.v.name) p.range
+  else { env with generic_names = p.v.name::env.generic_names }
+
+let push_generics (env:qenv) (g:list generic_param) : ML qenv =
+  List.fold_left push_generic env g
+
+
 let prim_consts = [
   "unit"; "Bool"; "UINT8"; "UINT16"; "UINT32"; "UINT64";
   "UINT8BE"; "UINT16BE"; "UINT32BE"; "UINT64BE";
@@ -170,6 +182,11 @@ let prim_consts = [
   "all_bytes"; "all_zeros";
   "is_range_okay";
   "void" ]
+
+let resolve_generic (env:qenv) (i:ident) : ML ident =
+  if List.mem i.v.name env.generic_names
+  then i
+  else error (Printf.sprintf "Generic name %s not in scope" i.v.name) i.range
 
 let resolve_ident (env:qenv) (i:ident) : ML ident =
   let resolve_to_current_module i =
@@ -263,11 +280,12 @@ let kind_of_ident (env:qenv) (i:ident)
     
 let rec resolve_typ' (env:qenv) (t:typ') : ML typ' =
   match t with
-  | Type_app hd _ args ->
+  | Type_app hd _ gs args ->
     let hd = resolve_ident env hd in
+    let gs = List.map (resolve_expr env) gs in
     //Set is_out argument to the Type_app appropriately
     let k = kind_of_ident env hd in
-    Type_app hd k (List.map (resolve_typ_param env) args)
+    Type_app hd k gs (List.map (resolve_typ_param env) args)
   | Pointer t q -> Pointer (resolve_typ env t) q
 
 and resolve_typ (env:qenv) (t:typ) : ML typ = { t with v = resolve_typ' env t.v }
@@ -313,6 +331,7 @@ let resolve_probe_atomic_action (env:qenv) (ac:probe_atomic_action) : ML probe_a
 let rec resolve_probe_action' (env:qenv) (act:probe_action') : ML probe_action' =
   match act with
   | Probe_atomic_action ac -> Probe_atomic_action (resolve_probe_atomic_action env ac)
+  | Probe_action_var i -> Probe_action_var (resolve_generic env i)
   | Probe_action_seq hd tl ->
     Probe_action_seq (resolve_probe_atomic_action env hd) (resolve_probe_action env tl)
   | Probe_action_let i a k ->
@@ -361,11 +380,11 @@ let resolve_probe_call env pc =
     SimpleCall {
       probe_fn = map_opt (resolve_ident env) probe_fn;
       probe_length = resolve_expr env probe_length;
-      probe_dest = resolve_ident env probe_dest;
+      probe_dest = resolve_expr env probe_dest;
     }
   | CompositeCall { probe_dest; probe_block } ->
     CompositeCall {
-      probe_dest = resolve_ident env probe_dest;
+      probe_dest = resolve_expr env probe_dest;
       probe_block = resolve_probe_action env probe_block;
     }
 
@@ -449,21 +468,29 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
   | ModuleAbbrev i m -> push_module_abbrev env i.v.name m.v.name; d
   | Define i topt c ->
     Define (resolve_ident env i) (map_opt (resolve_typ env) topt) c
-  | TypeAbbrev t i ->
-    TypeAbbrev (resolve_typ env t) (resolve_ident env i)
+  | TypeAbbrev t i gs ps ->
+    let env = push_generics env gs in    
+    let params, env = resolve_params env ps in
+    TypeAbbrev (resolve_typ env t) (resolve_ident env i) gs ps
   | Enum t i ecs ->
     Enum (resolve_typ env t) (resolve_ident env i) (List.map (resolve_enum_case env) ecs)
-  | Record td_names params where flds ->
+  | Record td_names generics params where flds ->
     let td_names = resolve_typedef_names env td_names in
+    let env = push_generics env generics in
     let params, env = resolve_params env params in
     let where = map_opt (resolve_expr env) where in
     let flds, _ = resolve_fields env flds in
-    Record td_names params where flds
-  | CaseType td_names params sc ->
+    Record td_names generics params where flds
+  | CaseType td_names generics params sc ->
     let td_names = resolve_typedef_names env td_names in
+    let env = push_generics env generics in
     let params, env = resolve_params env params in
     let sc = resolve_switch_case env sc in
-    CaseType td_names params sc
+    CaseType td_names generics params sc
+  | ProbeFunction f params act ->
+    let params, env = resolve_params env params in
+    let act = resolve_probe_action env act in
+    ProbeFunction f params act
   | OutputType out_t ->
     let out_t = resolve_out_type env out_t in
     push_output_type env out_t;
@@ -492,6 +519,7 @@ let desugar (genv:GlobalEnv.global_env) (mname:string) (p:prog) : ML prog =
     output_types=H.create 10;
     extern_types=H.create 10;
     local_names=[];
+    generic_names=[];
     global_env=genv
   } in
   H.insert env.extern_types (Ast.to_ident' "void") ();

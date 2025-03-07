@@ -121,6 +121,7 @@ let simplify_probe_atomic_action (env:T.env_t) (a:probe_atomic_action)
     
 let rec simplify_probe_action (env:T.env_t) (a:probe_action) : ML probe_action =
   match a.v with
+  | Probe_action_var i -> a
   | Probe_atomic_action aa -> {a with v = Probe_atomic_action (simplify_probe_atomic_action env aa)}
   | Probe_action_seq hd tl -> {a with v = Probe_action_seq (simplify_probe_atomic_action env hd) (simplify_probe_action env tl) }
   | Probe_action_let i aa k -> {a with v = Probe_action_let i (simplify_probe_atomic_action env aa) (simplify_probe_action env k) }
@@ -232,18 +233,18 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     let t = simplify_typ env t in
     decl_with_v d (Enum t i cases)
 
-  | Record tdnames params wopt fields ->
+  | Record tdnames generics params wopt fields ->
     let tdnames = simplify_typedef_names env tdnames in
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
     let fields = List.map (simplify_field env) fields in
     let wopt = match wopt with | None -> None | Some w -> Some (simplify_expr env w) in
-    decl_with_v d (Record tdnames params wopt fields)
+    decl_with_v d (Record tdnames generics params wopt fields)
 
-  | CaseType tdnames params switch ->
+  | CaseType tdnames generics params switch ->
     let tdnames = simplify_typedef_names env tdnames in
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in 
     let switch = simplify_switch_case env switch in
-    decl_with_v d (CaseType tdnames params switch)
+    decl_with_v d (CaseType tdnames generics params switch)
 
   | OutputType out_t ->
     decl_with_v d (OutputType ({out_t with out_typ_fields=simplify_out_fields env out_t.out_typ_fields}))

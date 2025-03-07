@@ -42,12 +42,14 @@ let local_env = H.t ident' (ident' & typ & bool)
 noeq
 type env = {
   this: option ident;
+  generics: list ident;
   locals: local_env;
   globals: global_env;
 }
 
 let mk_env (g:global_env) =
   { this = None;
+    generics = [];
     locals = H.create 10;
     globals = g }
 
@@ -56,6 +58,7 @@ let copy_env (e:env) =
   H.iter (fun k v -> H.insert locals k v) e.locals;
   {
     this = e.this;
+    generics = e.generics;
     globals = e.globals;
     locals = locals
   }
@@ -64,23 +67,38 @@ let copy_env (e:env) =
 let env_of_global_env 
   : global_env -> env
   = let locals = H.create 1 in
-    fun g -> { this = None; locals; globals = g }
+    fun g -> { this = None; generics=[]; locals; globals = g }
 #pop-options
 
 let global_env_of_env e = e.globals
 
-let params_of_decl (d:decl) : list param =
+let generics_of_decl (d:decl) : list generic_param =
   match d.d_decl.v with
   | ModuleAbbrev _ _
   | Define _ _ _
-  | TypeAbbrev _ _
   | Enum _ _ _ -> []
-  | Record _ params _ _
-  | CaseType _ params _ -> params
-  | OutputType _ -> []
-  | ExternType _ -> []
-  | ExternFn _ _ ps _ -> ps
+  | TypeAbbrev _ _ gs _
+  | Record _ gs _ _ _
+  | CaseType _ gs _ _ -> gs
+  | ProbeFunction _ _ _
+  | OutputType _
+  | ExternType _
+  | ExternFn _ _ _ _
   | ExternProbe _ _ -> []
+
+let params_of_decl (d:decl) : list generic_param & list param =
+  match d.d_decl.v with
+  | ModuleAbbrev _ _
+  | Define _ _ _
+  | Enum _ _ _ -> [], []
+  | TypeAbbrev _ _ gs params
+  | Record _ gs params _ _
+  | CaseType _ gs params _ -> gs, params
+  | ProbeFunction _ params _ -> [], params
+  | OutputType _ -> [],[]
+  | ExternType _ -> [],[]
+  | ExternFn _ _ ps _ -> [],ps
+  | ExternProbe _ _ -> [],[]
 
 let check_shadow (e:H.t ident' 'a) (i:ident) (r:range) =
   match H.try_find e i.v with
@@ -91,8 +109,8 @@ let check_shadow (e:H.t ident' 'a) (i:ident) (r:range) =
 
 let typedef_names (d:decl) : option typedef_names =
   match d.d_decl.v with
-  | Record td _ _ _
-  | CaseType td _ _ -> Some td
+  | Record td _ _ _ _
+  | CaseType td _ _ _ -> Some td
   | _ -> None
 
 let format_identifier (e:env) (i:ident) : ML ident =
@@ -145,6 +163,13 @@ let add_local (e:env) (i:ident) (t:typ) : ML unit =
   H.insert e.locals i.v (i'.v, t, false);
   H.insert e.locals i'.v (i'.v, t, false)
 
+let push_generic (e:env) (g:generic_param) : ML env =
+  let GenericProbeFunction i = g in
+  { e with generics = i::e.generics }
+let lookup_generic (e:env) (i:ident) : ML ident =
+  if List.existsb (fun i' -> i.v.name = i'.v.name) e.generics
+  then i
+  else error (Printf.sprintf "Generic %s not found" (ident_to_string i)) i.range
 let try_lookup (e:env) (i:ident) : ML (option (either typ (decl & either decl_attributes macro_signature))) =
   match H.try_find e.locals i.v with
   | Some (_, t, true) ->
@@ -178,8 +203,8 @@ let resolve_record_case_output_extern_type_name (env:env) (i:ident) =
      | Some ({d_decl={v=ExternType td_names}}) -> td_names.typedef_abbrev
      | _ ->
        (match lookup env i with
-        | Inr ({d_decl={v=Record names _ _ _}}, _)
-        | Inr ({d_decl={v=CaseType names _ _}}, _) ->
+        | Inr ({d_decl={v=Record names _ _ _ _}}, _)
+        | Inr ({d_decl={v=CaseType names _ _ _}}, _) ->
           names.typedef_name
         | _ -> i))
 
@@ -217,7 +242,7 @@ let lookup_enum_cases (e:env) (i:ident)
 
 let is_enum (e:env) (t:typ) =
   match t.v with
-  | Type_app i KindSpec [] ->
+  | Type_app i KindSpec [] [] ->
     Some? (try_lookup_enum_cases e i)
   | _ -> false
 
@@ -248,7 +273,7 @@ let type_of_constant rng (c:constant) : ML typ =
 let parser_may_fail (env:env) (t:typ) : ML bool =
   match t.v with
   | Pointer _ _ -> true
-  | Type_app hd _ _ ->
+  | Type_app hd _ _ _ ->
     match lookup env hd with
     | Inr (d, Inl attrs) -> attrs.may_fail
     | _ -> false
@@ -256,7 +281,7 @@ let parser_may_fail (env:env) (t:typ) : ML bool =
 let typ_is_integral env (t:typ) : ML bool =
   match t.v with
   | Pointer _ _ -> false
-  | Type_app hd _ _ ->
+  | Type_app hd _ _ _ ->
     match lookup env hd with
     | Inr (d, Inl attrs) -> Some? attrs.integral
     | _ -> false
@@ -264,7 +289,7 @@ let typ_is_integral env (t:typ) : ML bool =
 let tag_of_integral_typ env (t:typ) : ML (option _) =
   match t.v with
   | Pointer _ _ -> None
-  | Type_app hd _ _ ->
+  | Type_app hd _ _ _ ->
     match lookup env hd with
     | Inr (_, Inl attrs) -> attrs.integral
     | _ -> None
@@ -272,7 +297,7 @@ let tag_of_integral_typ env (t:typ) : ML (option _) =
 let tag_and_bit_order_of_integral_typ env (t:typ) : ML (tag_and_bit_order: (option integer_type & option bitfield_bit_order) { Some? (snd tag_and_bit_order) ==> Some? (fst tag_and_bit_order) }) =
   match t.v with
   | Pointer _ _ -> None, None
-  | Type_app hd _ _ ->
+  | Type_app hd _ _ _ ->
     match lookup env hd with
     | Inr (_, Inl attrs) -> attrs.integral, attrs.bit_order
     | _ -> None, None
@@ -296,27 +321,27 @@ let rec typ_weak_kind env (t:typ) : ML (option weak_kind) =
   match t.v with
   | Pointer t None -> typ_weak_kind env {t with v=Pointer t (Some <| PQ UInt64)}
   | Pointer _ (Some (PQ i)) -> typ_weak_kind env (type_of_integer_type i)
-  | Type_app hd _ _ -> parser_weak_kind env.globals hd
+  | Type_app hd _ _ _ -> parser_weak_kind env.globals hd
 
 let typ_has_reader env (t:typ) : ML bool =
   match t.v with
   | Pointer _ _ -> false
-  | Type_app hd _ _ ->
+  | Type_app hd _ _ _ ->
     has_reader env.globals hd
 
 let rec unfold_typ_abbrev_only (env:env) (t:typ) : ML typ =
   match t.v with
-  | Type_app hd _ [] -> //type abbreviations are not parameterized
-    begin
+  | Type_app hd _ gs ps -> (
     match try_lookup env hd with
-    | Some (Inr (d, _)) ->
-      begin
+    | Some (Inr (d, _)) -> (
       match d.d_decl.v with
-      | TypeAbbrev t _ -> unfold_typ_abbrev_only env t
+      | TypeAbbrev t _ gs' ps' ->
+        let s = substitute (gs, gs') (ps, ps') in
+        unfold_typ_abbrev_only env (subst_typ s t)
       | _ -> t
-      end
+    )
     | _ -> t
-    end
+  )
   | _ -> t
 
 let update_typ_abbrev (env:env) (i:ident) (t:typ) 
@@ -325,7 +350,7 @@ let update_typ_abbrev (env:env) (i:ident) (t:typ)
     | Some (d, ms) ->
       let d_decl =
         match d.d_decl.v with
-        | TypeAbbrev _ _ -> {d.d_decl with v = TypeAbbrev t i }
+        | TypeAbbrev _ _ gs ps -> {d.d_decl with v = TypeAbbrev t i gs ps }
         | _ -> failwith "Expected a type abbreviation"
       in
       let d = {d with d_decl = d_decl } in
@@ -337,14 +362,20 @@ let update_typ_abbrev (env:env) (i:ident) (t:typ)
 
 let rec unfold_typ_abbrev_and_enum (env:env) (t:typ) : ML typ =
   match t.v with
-  | Type_app hd _ [] -> //type abbreviations are not parameterized
+  | Type_app hd _ gs ts -> //type abbreviations are not parameterized
     begin
     match lookup env hd with
     | Inr (d, _) ->
       begin
       match d.d_decl.v with
-      | TypeAbbrev t _ -> unfold_typ_abbrev_and_enum env t
-      | Enum t _ _ -> unfold_typ_abbrev_and_enum env t
+      | TypeAbbrev t _ gs' ts' ->
+        let s = substitute (gs, gs') (ts, ts') in
+        unfold_typ_abbrev_and_enum env (subst_typ s t)
+      | Enum t _ _ -> (
+        match gs, ts with
+        | [], [] -> unfold_typ_abbrev_and_enum env t
+        | _ -> failwith "Impossible: Enum's cannot be paramterized"
+      )
       | _ -> t
       end
     | _ -> t
@@ -469,8 +500,12 @@ let add_extern_type (ge:global_env) (i:ident) (d:decl{ExternType? d.d_decl.v}) :
  *
  * TODO: check shadow
  *)
-let add_extern_probe (ge:global_env) (i:ident) (d:decl{ExternProbe? d.d_decl.v}) : ML unit =
-  H.insert ge.ge_probe_fn i.v d
+let add_probe_function
+      (ge:global_env)
+      (i:ident) 
+      (d:decl{ExternProbe? d.d_decl.v \/ ProbeFunction? d.d_decl.v })
+: ML unit
+= H.insert ge.ge_probe_fn i.v d
 
 
 (*
@@ -520,7 +555,7 @@ let check_output_type (ge:global_env) (t:typ) : ML ident =
   let err () : ML ident =
     error (Printf.sprintf "Type %s is not an output type" (print_typ t)) t.range in
   match t.v with
-  | Type_app i KindOutput [] -> i
+  | Type_app i KindOutput [] [] -> i
   | _ -> err ()
 
 
@@ -639,15 +674,25 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
       then { t with v = Pointer (check_typ pointer_ok env t0) (check_pointer_qualifier pq) }
       else error (Printf.sprintf "Pointer types are not permissible here; got %s" (print_typ t)) t.range
 
-    | Type_app s KindSpec ps ->
+    | Type_app s KindSpec gs ps ->
       (match lookup env s with
        | Inl _ ->
          error (Printf.sprintf "%s is not a type" (ident_to_string s)) s.range
 
        | Inr (d, _) ->
-         let params = params_of_decl d in
-         if List.length params <> List.length ps
+         let gparams, params = params_of_decl d in
+         if List.length gparams <> List.length gs 
+         || List.length params <> List.length ps
          then error (Printf.sprintf "Not enough arguments to %s" (ident_to_string s)) s.range;
+         let gs =
+           List.map 
+            (fun e ->
+              let e, t = check_expr env e in
+              if not (eq_typ env t probe_m_t)
+              then error (Printf.sprintf "Expected a generic instantiation of a probe function; got %s of type %s" (print_expr e) (print_typ t)) e.range;
+              e)
+            gs
+         in
          let ps =
            List.map2 (fun (t, _, _) p ->
              let p, t' = check_typ_param env p in
@@ -666,14 +711,15 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
              params
              ps
          in
-         {t with v = Type_app s KindSpec ps})
+         {t with v = Type_app s KindSpec gs ps})
 
-    | Type_app i KindExtern args ->
-      if List.length args <> 0
+    | Type_app i KindExtern gs args ->
+      if List.length gs <> 0
+      || List.length args <> 0
       then error (Printf.sprintf "Cannot apply the extern type %s" (ident_to_string i)) i.range
       else t
 
-    | Type_app _ KindOutput _ ->
+    | Type_app _ KindOutput _ _ ->
       error "Impossible, check_typ is not supposed to typecheck output types!" t.range
 
 and check_ident (env:env) (i:ident)
@@ -725,7 +771,7 @@ and check_expr (env:env) (e:expr)
       then error (Printf.sprintf "Casts are only supported on integral types; %s is not integral"
                     (print_typ from)) e.range
       else match from.v with
-           | Type_app i KindSpec _ ->
+           | Type_app i KindSpec _ _ ->
              let from_t = as_integer_typ i in
              // if integer_type_lub to from_t <> to
              // then error (Printf.sprintf "Only widening casts are supported; casting %s to %s loses precision"
@@ -755,8 +801,8 @@ and check_expr (env:env) (e:expr)
       begin
       match lookup env i with
       | Inr ({d_decl={v=Enum _ _ _}}, _)
-      | Inr ({d_decl={v=Record _ _ _ _ }}, _)
-      | Inr ({d_decl={v=CaseType _ _ _}}, _)
+      | Inr ({d_decl={v=Record _ _ _ _ _}}, _)
+      | Inr ({d_decl={v=CaseType _ _ _ _}}, _)
       | Inr (_, Inl _) ->  //has decl-attributes
         e, tuint32
       | _ ->
@@ -1102,6 +1148,121 @@ let rec check_field_action (env:env) (f:atomic_field) (a:action)
 
 #pop-options
 
+let rec check_probe env a : ML (probe_action & typ) =
+  let rec check_atomic_probe env (a:probe_atomic_action) 
+  : ML (probe_atomic_action & typ) =
+    match a with
+    | Probe_action_return e ->
+      let e, t= check_expr env e in
+      Probe_action_return e, t
+    | Probe_action_read f -> (
+      match GlobalEnv.resolve_probe_fn_any env.globals f with
+      | Some (id, Some (PQRead i)) ->
+        Probe_action_read id, type_of_integer_type i
+      | _ ->
+        error (Printf.sprintf "Probe function %s not found or not a read function" (print_ident f))
+              f.range
+    )
+    | Probe_action_write f v -> (
+      match GlobalEnv.resolve_probe_fn_any env.globals f with
+      | Some (id, Some (PQWrite i)) -> (
+        let v, t = check_expr env v in
+        match try_cast_integer env (v, t) (type_of_integer_type i) with
+        | Some v ->
+          Probe_action_write id v, tunit
+        | None -> 
+          error (Printf.sprintf "Probe write value %s has type %s instead of %s"
+                    (print_expr v)
+                    (print_typ t)
+                    (print_integer_type i))
+                    v.range
+      )
+      | _ ->
+        error (Printf.sprintf "Probe function %s not found or not a read function" (print_ident f))
+              f.range
+    )
+    | Probe_action_copy f v -> (
+      match GlobalEnv.resolve_probe_fn env.globals f (Some PQWithOffsets) with
+      | None ->
+        error (Printf.sprintf "Probe function %s not found" (print_ident f))
+              f.range
+      | Some id ->
+        let v, t = check_expr env v in
+        match try_cast_integer env (v, t) (type_of_integer_type UInt64) with
+        | None ->
+          error (Printf.sprintf "Probe length value %s has type %s instead of UINT64"
+                    (print_expr v)
+                    (print_typ t))
+                    v.range
+        | Some v ->
+          Probe_action_copy id v, tunit
+    )
+
+    | Probe_action_call f args -> (
+      match GlobalEnv.resolve_probe_fn_any env.globals f, args with
+      | Some (_, Some (PQWrite _)), [v] ->
+        check_atomic_probe env (Probe_action_write f v)
+      | Some (_, Some (PQRead _)), [] ->
+        check_atomic_probe env (Probe_action_read f)
+      | Some (_, Some PQWithOffsets), [l] ->
+        check_atomic_probe env (Probe_action_copy f l)
+      | Some _, _ ->
+        error (Printf.sprintf "Unexpected probe function in block: %s" (print_ident f)) f.range
+      | None, _ ->
+        let t, params, pure = lookup_extern_fn env.globals f in
+        if not pure
+        then error (Printf.sprintf "Unexpected probe function in block: %s" (print_ident f)) f.range;
+        let check_arg e p : ML expr =
+          let t, _, _ = p in
+          let type_error #a e t t' : ML a =
+              error (Printf.sprintf "Expected argument of type %s, got %s of type %s"
+                      (print_typ t)
+                      (print_expr e)
+                      (print_typ t'))
+                      e.range
+          in
+          let e, t' = check_expr env e in
+          if eq_typ env t t'
+          then e
+          else if typ_is_integral env t
+          then (
+            match try_cast_integer env (e, t') t with
+            | None -> type_error e t t'
+            | Some e -> e
+          )
+          else type_error e t' t'
+        in
+        let args = List.map2 check_arg args params in
+        Probe_action_call f args, t
+    )
+  in
+  match a.v with
+  | Probe_atomic_action aa ->
+    let aa, t = check_atomic_probe env aa in
+    { a with v=Probe_atomic_action aa }, t
+
+  | Probe_action_var i ->
+    let i = lookup_generic env i in
+    { a with v=Probe_action_var i }, tunit
+
+  | Probe_action_seq a0 rest ->
+    let a0, t0 = check_atomic_probe env a0 in
+    if not (eq_typ env t0 tunit)
+    then (
+      error (Printf.sprintf "Probe action has type %s instead of unit"
+              (print_typ t0))
+            a.range
+    );
+    let rest, t = check_probe env rest in
+    { a with v=Probe_action_seq a0 rest }, t
+
+  | Probe_action_let i aa k ->
+    let aa, t = check_atomic_probe env aa in
+    add_local env i t;
+    let k, t = check_probe env k in
+    remove_local env i;
+    { a with v = Probe_action_let i aa k }, t
+
 #push-options "--z3rlimit_factor 4"
 let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
   : ML atomic_field
@@ -1144,11 +1305,11 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
         a, dependent)
     in
     let f_probe =
-      let check_dest env (d:ident) : ML ident =
-        let dest, dest_typ = check_ident env d in
+      let check_dest env (d:expr) : ML expr =
+        let dest, dest_typ = check_expr env d in
         if not (eq_typ env dest_typ tcopybuffer)
         then error (Printf.sprintf "Probe destination expression %s has type %s instead of EVERPARSE_COPY_BUFFER_T"
-                            (print_ident dest)
+                            (print_expr dest)
                             (print_typ dest_typ))
                             dest.range;
         dest
@@ -1189,117 +1350,6 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
         Some (SimpleCall { probe_fn=Some probe_fn; probe_length=length; probe_dest=dest })
 
       | Some (CompositeCall p) ->
-        let rec check_probe env a : ML (probe_action & typ) =
-          let rec check_atomic_probe env (a:probe_atomic_action) 
-          : ML (probe_atomic_action & typ) =
-            match a with
-            | Probe_action_return e ->
-              let e, t= check_expr env e in
-              Probe_action_return e, t
-            | Probe_action_read f -> (
-              match GlobalEnv.resolve_probe_fn_any env.globals f with
-              | Some (id, Some (PQRead i)) ->
-                Probe_action_read id, type_of_integer_type i
-              | _ ->
-                error (Printf.sprintf "Probe function %s not found or not a read function" (print_ident f))
-                      f.range
-            )
-            | Probe_action_write f v -> (
-              match GlobalEnv.resolve_probe_fn_any env.globals f with
-              | Some (id, Some (PQWrite i)) -> (
-                let v, t = check_expr env v in
-                match try_cast_integer env (v, t) (type_of_integer_type i) with
-                | Some v ->
-                  Probe_action_write id v, tunit
-                | None -> 
-                  error (Printf.sprintf "Probe write value %s has type %s instead of %s"
-                            (print_expr v)
-                            (print_typ t)
-                            (print_integer_type i))
-                            v.range
-              )
-              | _ ->
-                error (Printf.sprintf "Probe function %s not found or not a read function" (print_ident f))
-                      f.range
-            )
-            | Probe_action_copy f v -> (
-              match GlobalEnv.resolve_probe_fn env.globals f (Some PQWithOffsets) with
-              | None ->
-                error (Printf.sprintf "Probe function %s not found" (print_ident f))
-                      f.range
-              | Some id ->
-                let v, t = check_expr env v in
-                match try_cast_integer env (v, t) (type_of_integer_type UInt64) with
-                | None ->
-                  error (Printf.sprintf "Probe length value %s has type %s instead of UINT64"
-                            (print_expr v)
-                            (print_typ t))
-                            v.range
-                | Some v ->
-                  Probe_action_copy id v, tunit
-            )
-
-            | Probe_action_call f args -> (
-              match GlobalEnv.resolve_probe_fn_any env.globals f, args with
-              | Some (_, Some (PQWrite _)), [v] ->
-                check_atomic_probe env (Probe_action_write f v)
-              | Some (_, Some (PQRead _)), [] ->
-                check_atomic_probe env (Probe_action_read f)
-              | Some (_, Some PQWithOffsets), [l] ->
-                check_atomic_probe env (Probe_action_copy f l)
-              | Some _, _ ->
-                error (Printf.sprintf "Unexpected probe function in block: %s" (print_ident f)) f.range
-              | None, _ ->
-                let t, params, pure = lookup_extern_fn env.globals f in
-                if not pure
-                then error (Printf.sprintf "Unexpected probe function in block: %s" (print_ident f)) f.range;
-                let check_arg e p : ML expr =
-                  let t, _, _ = p in
-                  let type_error #a e t t' : ML a =
-                      error (Printf.sprintf "Expected argument of type %s, got %s of type %s"
-                              (print_typ t)
-                              (print_expr e)
-                              (print_typ t'))
-                             e.range
-                  in
-                  let e, t' = check_expr env e in
-                  if eq_typ env t t'
-                  then e
-                  else if typ_is_integral env t
-                  then (
-                    match try_cast_integer env (e, t') t with
-                    | None -> type_error e t t'
-                    | Some e -> e
-                  )
-                  else type_error e t' t'
-                in
-                let args = List.map2 check_arg args params in
-                Probe_action_call f args, t
-            )
-          in
-          match a.v with
-          | Probe_atomic_action aa ->
-            let aa, t = check_atomic_probe env aa in
-            { a with v=Probe_atomic_action aa }, t
-
-          | Probe_action_seq a0 rest ->
-            let a0, t0 = check_atomic_probe env a0 in
-            if not (eq_typ env t0 tunit)
-            then (
-              error (Printf.sprintf "Probe action has type %s instead of unit"
-                      (print_typ t0))
-                    a.range
-            );
-            let rest, t = check_probe env rest in
-            { a with v=Probe_action_seq a0 rest }, t
-
-          | Probe_action_let i aa k ->
-            let aa, t = check_atomic_probe env aa in
-            add_local env i t;
-            let k, t = check_probe env k in
-            remove_local env i;
-            { a with v = Probe_action_let i aa k }, t
-        in
         let probe_dest = check_dest env p.probe_dest in
         let probe_block, t = check_probe env p.probe_block in
         if not (eq_typ env t tunit)
@@ -1416,11 +1466,11 @@ let check_switch (check_field:check_field_t) (env:env) (s:switch_case)
     let tags_t_opt =
       match scrutinee_t.v with
       | Pointer _ _ -> fail_non_equality_type ()
-      | Type_app hd KindSpec es ->
+      | Type_app hd KindSpec _ _ ->
         (match try_lookup_enum_cases env hd with
          | Some enum -> Some enum
          | _ -> fail_non_equality_type ())
-      | Type_app _ _ _ ->
+      | Type_app _ _ _ _ ->
         error "Impossible, check_switch is not supposed to typecheck output/extern types!" head.range
 
     in
@@ -1721,7 +1771,7 @@ let rec check_mutable_param_type (env:env) (t:typ) : ML unit =
     error (Printf.sprintf "%s is not an integer or output or extern type (found decl %s)" (print_typ t) otype) t.range in
   let t = unfold_typ_abbrev_only env t in
   match t.v with
-  | Type_app i k [] ->
+  | Type_app i k [] [] ->
     if k = KindOutput || k = KindExtern ||
        (i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types)
     then ()
@@ -1732,7 +1782,7 @@ let rec check_mutable_param_type (env:env) (t:typ) : ML unit =
 let rec check_integer_or_output_type (env:env) (t:typ) : ML unit =
   let t = unfold_typ_abbrev_only env t in
   match t.v with
-  | Type_app i k [] ->  //either it should be a base type, or an output type
+  | Type_app i k [] [] ->  //either it should be a base type, or an output type
     if i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types
     then ()
     else if not (k = KindOutput) then error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
@@ -1758,6 +1808,7 @@ let check_params (env:env) (ps:list param) : ML unit =
 
 let elaborate_record_decl (e:global_env)
                           (tdnames:Ast.typedef_names)
+                          (generics:list generic_param)
                           (params:list param)
                           (where:option expr)
                           (fields:list field)
@@ -1767,10 +1818,12 @@ let elaborate_record_decl (e:global_env)
   : ML decl
   = let env = { mk_env e with this=Some tdnames.typedef_name } in
 
+    let env = List.fold_left push_generic env generics in
+
     (* Check parameters, that their types are well-formed;
        extend the environments with them *)
     check_params env params;
-
+    
     (* If a where-clause is present, elaborate it into a refined unit field *)
     let where, maybe_unit_field =
       match where with
@@ -1806,7 +1859,7 @@ let elaborate_record_decl (e:global_env)
 
     let fields = elaborate_bit_fields env fields in
 
-    let d = mk_decl (Record tdnames params where fields) range comments is_exported in
+    let d = mk_decl (Record tdnames generics params where fields) range comments is_exported in
 
     let attrs = {
         may_fail = false; //only its fields may fail; not the struct itself
@@ -1911,8 +1964,10 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
           d)
     else error "Ill-typed constant" d.d_decl.range
 
-  | TypeAbbrev t i ->
+  | TypeAbbrev t i gs ps ->
     let env = mk_env e in
+    let env = List.fold_left push_generic env gs in
+    check_params env ps;
     let t = check_typ false env t in
     let wk =
       match typ_weak_kind env t with
@@ -1930,7 +1985,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
         parser_kind_nz = None
       }
     in
-    let d = decl_with_v d (TypeAbbrev t i) in
+    let d = decl_with_v d (TypeAbbrev t i gs ps) in
     add_global e i d (Inl attrs);
     d
 
@@ -1961,13 +2016,14 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     add_global e i d (Inl attrs);
     d
 
-  | Record tdnames params where fields ->
+  | Record tdnames generics params where fields ->
     let tdnames = check_typedef_names e tdnames in
-    elaborate_record_decl e tdnames params where fields d.d_decl.range d.d_decl.comments d.d_exported
+    elaborate_record_decl e tdnames generics params where fields d.d_decl.range d.d_decl.comments d.d_exported
 
-  | CaseType tdnames params switch ->
+  | CaseType tdnames generics params switch ->
     let tdnames = check_typedef_names e tdnames in
     let env = { mk_env e with this=Some tdnames.typedef_name } in
+    let env = List.fold_left push_generic env generics in
     check_params env params;
     let switch = check_switch check_field env switch in
     let wk = weak_kind_of_switch_case env switch in 
@@ -1979,8 +2035,18 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
       parser_weak_kind = wk;
       parser_kind_nz = None
     } in
-    let d = mk_decl (CaseType tdnames params switch) d.d_decl.range d.d_decl.comments d.d_exported in
+    let d = mk_decl (CaseType tdnames generics params switch) d.d_decl.range d.d_decl.comments d.d_exported in
     add_global e tdnames.typedef_name d (Inl attrs);
+    d
+
+  | ProbeFunction id ps body ->
+    let env = mk_env e in
+    check_params env ps;
+    let body, t = check_probe env body in
+    if not (eq_typ env t tunit)
+    then error (Printf.sprintf "Probe function body has type %s instead of unit" (print_typ t)) body.range;
+    let d = mk_decl (ProbeFunction id ps body) d.d_decl.range d.d_decl.comments d.d_exported in
+    add_probe_function e id d;
     d
 
   | OutputType out_t ->
@@ -2002,7 +2068,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
 
   | ExternProbe i pq ->
     let d = mk_decl (ExternProbe i pq) d.d_decl.range d.d_decl.comments d.d_exported in
-    add_extern_probe e i d;
+    add_probe_function e i d;
     d
 
 let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
@@ -2024,7 +2090,7 @@ let initial_global_env () =
     let td_name =
       { typedef_name = i; typedef_abbrev = i; typedef_ptr_abbrev = None; typedef_attributes = [] }
     in
-    mk_decl (Record td_name [] None []) dummy_range [] true
+    mk_decl (Record td_name [] [] None []) dummy_range [] true
   in
   let _type_names =
     [
