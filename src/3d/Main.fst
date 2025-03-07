@@ -624,6 +624,7 @@ let go () : ML unit =
   then let _ = Options.display_usage () in exit 1
   else
   let out_dir = Options.get_output_dir () in
+  let _ = OS.mkdir out_dir in
   (* Special mode: --__micro_step *)
   match micro_step with
   | Some step ->

@@ -2,6 +2,11 @@ let is_windows () = Sys.win32
 
 let dirname = Filename.dirname
 
+let mkdir dir =
+  if Sys.file_exists dir && Sys.is_directory dir
+  then ()
+  else Sys.mkdir dir 0o755
+
 (* The filename without its path *)
 
 let basename = Filename.basename

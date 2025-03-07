@@ -2,6 +2,8 @@ module OS
 
 val is_windows : unit -> FStar.All.ML bool
 
+val mkdir : string -> FStar.All.ML unit
+
 val dirname : string -> Tot string
 
 (* The filename without its path *)
