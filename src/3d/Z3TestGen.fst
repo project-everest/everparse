@@ -1706,9 +1706,9 @@ static void TestErrorHandler (
   (void) error_code;
   (void) input;
   if (*context) {
-    printf(\"Reached from position %ld: type name %s, field name %s\\n\", start_pos, typename_s, fieldname);
+    printf(\"// Reached from position %ld: type name %s, field name %s\\n\", start_pos, typename_s, fieldname);
   } else {
-    printf(\"Parsing failed at position %ld: type name %s, field name %s. Reason: %s\\n\", start_pos, typename_s, fieldname, reason);
+    printf(\"// Parsing failed at position %ld: type name %s, field name %s. Reason: %s\\n\", start_pos, typename_s, fieldname, reason);
     *context = 1;
   }
 }
@@ -1913,14 +1913,14 @@ int main(int argc, char** argv) {
     munmap(vbuf, len);
   close(testfile);
   if (EverParseIsError(result)) {
-    printf(\"Witness from %s REJECTED because validator failed\\n\", filename);
+    printf(\"// Witness from %s REJECTED because validator failed\\n\", filename);
     return 2;
   };
   if (result != (uint64_t) len) { // consistent with the postcondition of validate_with_action_t' (see also valid_length)
-    printf(\"Witness from %s REJECTED because validator only consumed %ld out of %ld bytes\\n\", filename, result, len);
+    printf(\"// Witness from %s REJECTED because validator only consumed %ld out of %ld bytes\\n\", filename, result, len);
     return 1;
   }
-  printf(\"Witness from %s ACCEPTED\\n\", filename);
+  printf(\"// Witness from %s ACCEPTED\\n\", filename);
   "^outparameters^"
   return 0;
 }
