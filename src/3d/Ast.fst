@@ -1320,7 +1320,7 @@ and print_atomic_field (f:atomic_field) : ML string =
       (print_array sf.field_array_opt)
       (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
       (print_opt sf.field_probe
-        (fun p -> Printf.sprintf "probe %s" (print_probe_call p)))
+        (fun p -> Printf.sprintf " probe %s" (print_probe_call p)))
 
 and print_probe_action (p:probe_action) : ML string =
   match p.v with
@@ -1490,7 +1490,7 @@ let print_decl (d:decl) : ML string =
 
 let print_decls (ds:list decl) : ML string =
   List.map print_decl ds
-  |> String.concat "\n"
+  |> String.concat "\n/*------------------------------------*/\n"
 
 type weak_kind =
   | WeakKindWeak

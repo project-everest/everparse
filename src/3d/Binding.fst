@@ -166,10 +166,14 @@ let add_local (e:env) (i:ident) (t:typ) : ML unit =
 let push_generic (e:env) (g:generic_param) : ML env =
   let GenericProbeFunction i = g in
   { e with generics = i::e.generics }
-let lookup_generic (e:env) (i:ident) : ML ident =
+let try_lookup_generic (e:env) (i:ident) : ML (option ident) =
   if List.existsb (fun i' -> i.v.name = i'.v.name) e.generics
-  then i
-  else error (Printf.sprintf "Generic %s not found" (ident_to_string i)) i.range
+  then Some i
+  else None
+let lookup_generic e i =
+  match try_lookup_generic e i with
+  | None -> error (Printf.sprintf "Generic %s not found" (ident_to_string i)) i.range
+  | Some i -> i
 let try_lookup (e:env) (i:ident) : ML (option (either typ (decl & either decl_attributes macro_signature))) =
   match H.try_find e.locals i.v with
   | Some (_, t, true) ->
@@ -179,12 +183,15 @@ let try_lookup (e:env) (i:ident) : ML (option (either typ (decl & either decl_at
     H.insert e.locals i.v (j, t, true);
     Some (Inl t)
   | None ->
-    match H.try_find e.globals.ge_h i.v with
-    | Some d -> Some (Inr d)
-    | None ->
-      match resolve_probe_fn_any e.globals i with
-      | Some (id, Inl t) -> Some (Inl t)
-      | _ -> None
+    match try_lookup_generic e i with
+    | Some _ -> Some (Inl probe_m_t)
+    | _ -> 
+      match H.try_find e.globals.ge_h i.v with
+      | Some d -> Some (Inr d)
+      | None ->
+        match resolve_probe_fn_any e.globals i with
+        | Some (id, Inl t) -> Some (Inl t)
+        | _ -> None
 
 let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes macro_signature)) =
   match try_lookup e i with

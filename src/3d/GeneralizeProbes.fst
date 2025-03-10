@@ -31,19 +31,69 @@ module H = Hashtable
 module B = Binding
 open GlobalEnv
 
-type env = Binding.env & list ident'
+let generalized_signature = list ident
+
+noeq
+type env = {
+  benv:Binding.env;
+  needs_probe:list ident';
+  should_generalize:H.t ident' (option (list ident))
+}
+
 let simple_probe_name_for_type (e:env) (type_name:ident)
 : option ident
-= if List.mem type_name.v (snd e)
+= if List.mem type_name.v e.needs_probe
   then (
     let name = reserved_prefix ^ "probe_" ^ type_name.v.name in
     let id = { type_name with v = { type_name.v with name } } in
     Some id
   )
   else None
-let mark_for_probe (e:env) (id:ident) : ML env = fst e, id.v :: snd e
+
+let should_generate_probe (e:env) (n:typedef_names) = List.mem n.typedef_abbrev.v e.needs_probe
+let should_generalize_ident (e:env) (id:ident) =
+  Some? <| H.try_find e.should_generalize id.v
+let should_generalize (e:env) (n:typedef_names) = should_generalize_ident e n.typedef_abbrev
+let gen_signature (e:env) (id:ident) : ML generalized_signature = 
+  match H.try_find e.should_generalize id.v with
+  | None -> failwith "No generalization signature for this type"
+  | Some None -> failwith "No generalization signature for this type"
+  | Some (Some sig) -> sig
+
+let mark_for_probe (e:env) (id:ident) 
+: ML env 
+= { e with needs_probe = id.v :: e.needs_probe }
+
+let mark_for_generalize (e:env) (id:ident)
+: ML env
+= if should_generalize_ident e id
+  then e
+  else (
+    H.insert e.should_generalize id.v None;
+    e
+  )
+
+let set_generalization_signature (e:env) (id:ident) (sig:generalized_signature)
+: ML env
+= if should_generalize_ident e id
+  then (
+    FStar.IO.print_string
+      (Printf.sprintf "Setting generalization signature for %s to %s\n"
+        (print_ident id)
+        (String.concat ", " (List.map print_ident sig)));
+    H.remove e.should_generalize id.v;
+    H.insert e.should_generalize id.v (Some sig);
+    e
+  )
+  else (
+    failwith
+     (Printf.sprintf 
+      "Cannot set generalization signature for a type %s that is not marked for generalization"
+      (print_ident id))
+  )
+
 let rec head_type (e:env) (t:typ) : ML ident =
-  match (Binding.unfold_typ_abbrev_only (fst e) t).v with
+  match (Binding.unfold_typ_abbrev_only e.benv t).v with
   | Type_app hd _ _ _ -> hd
   | Pointer t _ -> head_type e t
   | _ -> failwith 
@@ -59,38 +109,38 @@ let atomic_field_has_simple_probe (e:env) (f:atomic_field)
   )
   | _ -> false
 
-let rec needs_probe_field (e:env) (f:field)
+let rec needs_probe_field (enclosing_type:ident) (e:env) (f:field)
 : ML env
 = match f.v with
   | AtomicField f -> 
     if atomic_field_has_simple_probe e f
-    then mark_for_probe e (head_type e f.v.field_type)
+    then (let e = mark_for_probe e (head_type e f.v.field_type) in
+          mark_for_generalize e enclosing_type)
     else e
-  | RecordField r _ -> List.fold_left needs_probe_field e r
-  | SwitchCaseField sw _ -> List.fold_left needs_probe_case e (snd sw)
+  | RecordField r _ -> List.fold_left (needs_probe_field enclosing_type) e r
+  | SwitchCaseField sw _ -> List.fold_left (needs_probe_case enclosing_type) e (snd sw)
 
-and needs_probe_case (e:env) (c:case)
+and needs_probe_case (enclosing_type:ident) (e:env) (c:case)
 : ML env
 = match c with
-  | Case _ f -> needs_probe_field e f
-  | DefaultCase f -> needs_probe_field e f
+  | Case _ f -> needs_probe_field enclosing_type e f
+  | DefaultCase f -> needs_probe_field enclosing_type e f
 
 let need_probe_decl (e:env) (d:decl) 
 : ML env
 = match d.d_decl.v with
-  | Record _ _ _ _ fields -> List.fold_left needs_probe_field e fields
-  | CaseType _ _ _ sw -> List.fold_left needs_probe_case e (snd sw)
+  | Record names _ _ _ fields -> List.fold_left (needs_probe_field names.typedef_abbrev) e fields
+  | CaseType names _ _ sw -> List.fold_left (needs_probe_case names.typedef_abbrev) e (snd sw)
   | _ -> e
 
 let need_probe_decls (e:env) (ds:list decl) = List.fold_left need_probe_decl e ds
 
-let should_generalize (e:env) (n:typedef_names) = List.mem n.typedef_abbrev.v (snd e)
 
 let generate_probe_functions (e:env) (d:decl)
 : ML (list decl)
 = match d.d_decl.v with
   | Record names gs params w fields -> (
-    if not <| should_generalize e names
+    if not <| should_generate_probe e names
     then [d]
     else (
       let Some simple_probe_name = simple_probe_name_for_type e names.typedef_abbrev in 
@@ -123,23 +173,62 @@ let generate_probe_functions (e:env) (d:decl)
   )
   | _ -> [d]
 
+let generalized_name (e:env) (head_name:ident) : ident =
+  let gen = reserved_prefix ^ "generalized_" ^ head_name.v.name in
+  {head_name with v = { head_name.v with name = gen }}
+
 let generalized_record_name (e:env) (n:typedef_names)
 : ML typedef_names
-= let name = reserved_prefix ^ "generalized_" ^ n.typedef_name.v.name in
-  let name = { n.typedef_name with v = { n.typedef_name.v with name } } in
-  let abbrev = reserved_prefix ^ "generalized_" ^ n.typedef_abbrev.v.name in
-  let abbrev = { n.typedef_abbrev with v = { n.typedef_abbrev.v with name = abbrev } } in
+= let name = generalized_name e n.typedef_name in
+  let abbrev = generalized_name e n.typedef_abbrev in
   { typedef_name = name;
     typedef_abbrev = abbrev;
     typedef_ptr_abbrev = None;
     typedef_attributes = List.filter Aligned? n.typedef_attributes }
 
+let generalize_atomic_field (e:env) (path_prefix:string) (af:atomic_field)
+: ML (atomic_field & list generic_param & generalized_signature)
+= let head_type = head_type e af.v.field_type in
+  if not <| should_generalize_ident e head_type
+  then af, [], []
+  else (
+    let sig = gen_signature e head_type in
+    let generic_name i = 
+        with_range (
+          to_ident' <|
+          Printf.sprintf "%sprobe_%s_%s_%d"
+            reserved_prefix
+            path_prefix
+            head_type.v.name
+            i
+        ) af.range
+    in
+    let gen_name = generalized_name e head_type in
+    let generic_params = List.mapi (fun i _ -> generic_name i) sig in
+    let generic_insts = List.map (fun i -> with_range (Identifier i) af.range) generic_params in
+    let rec field_type ft : ML typ =
+      match ft.v with
+      | Type_app id k [] args ->
+        { ft with v = Type_app gen_name k generic_insts args }
+      | Pointer t pq ->
+        { ft with v = Pointer (field_type t) pq }
+      | _ -> failwith "field_type: already partially generalized!"
+    in
+    let af = { af with v = { af.v with field_type = field_type af.v.field_type } } in
+    af,
+    List.map GenericProbeFunction generic_params,
+    sig
+  )
+
 let rec generalize_probe_field (e:env) (path_prefix:string) (f:field) 
-: ML (field & list generic_param & list generic_inst)
+: ML (field & list generic_param & generalized_signature)
 = match f.v with
   | AtomicField af -> (
+    let head_type = head_type e af.v.field_type in
+    let af, gs0, sig0 = generalize_atomic_field e path_prefix af in
+    let f = { f with v = AtomicField af } in
     if not <| atomic_field_has_simple_probe e af
-    then f, [], []
+    then f, gs0, sig0
     else (
       let Some probe_call = af.v.field_probe in
       let generic_name = 
@@ -149,15 +238,12 @@ let rec generalize_probe_field (e:env) (path_prefix:string) (f:field)
         ) f.range
       in
       let probe = with_range (Probe_action_var generic_name) f.range in
-      let head_type = head_type e af.v.field_type in
-      match simple_probe_name_for_type e head_type with
-      | None -> f, [], []
-      | Some probe_inst ->
-        let probe_inst = with_range (Identifier probe_inst) f.range in
-        let probe_call = { probe_call with probe_block = probe } in
-        let af = { af with v = { af.v with field_probe = Some probe_call } } in
-        let f = { f with v = AtomicField af } in
-        f, [GenericProbeFunction generic_name], [ probe_inst]
+      let probe_call = { probe_call with probe_block = probe } in
+      let af = { af with v = { af.v with field_probe = Some probe_call } } in
+      let f = { f with v = AtomicField af } in
+      f,
+      gs0@[GenericProbeFunction generic_name],
+      sig0@[head_type]
     )
   )
   | RecordField r i ->
@@ -170,7 +256,7 @@ let rec generalize_probe_field (e:env) (path_prefix:string) (f:field)
     { f with v = SwitchCaseField (fst sw, cs) i }, gs, insts
   
 and generalize_probe_case (e:env) (path_prefix:string) (c:case)
-: ML (case & list generic_param & list generic_inst)
+: ML (case & list generic_param & generalized_signature)
 = match c with
   | Case ex f ->
     let f, gs, insts = generalize_probe_field e path_prefix f in
@@ -180,7 +266,7 @@ and generalize_probe_case (e:env) (path_prefix:string) (c:case)
     DefaultCase f, gs, insts
 
 and generalize_probe_fields (e:env) (path_prefix:string) (fs:list field) 
-: ML (list field & list generic_param & list generic_inst)
+: ML (list field & list generic_param & generalized_signature)
 = List.fold_right 
     (fun f (fs, gs, is) -> 
        let f, gs', is' = generalize_probe_field e path_prefix f in
@@ -188,7 +274,7 @@ and generalize_probe_fields (e:env) (path_prefix:string) (fs:list field)
     fs ([], [], [])
 
 and generalize_probe_cases (e:env) (path_prefix:string) (cs:list case)
-: ML (list case & list generic_param & list generic_inst)
+: ML (list case & list generic_param & generalized_signature)
 = List.fold_right 
     (fun f (fs, gs, is) -> 
        let f, gs', is' = generalize_probe_case e path_prefix f in
@@ -199,10 +285,11 @@ let generalize_probes_decl (e:env) (d:decl)
 : ML (list decl)
 = match d.d_decl.v with
   | Record names gs params w fields -> (
-    let fields, gs', insts = generalize_probe_fields e "" fields in
+    let fields, gs', sig = generalize_probe_fields e "" fields in
     match gs' with
     | [] -> [d]
     | _ -> (
+      let _ = set_generalization_signature e names.typedef_abbrev sig in
       let gen_name = generalized_record_name e names in
       let gen_name = { 
           gen_name with 
@@ -215,6 +302,16 @@ let generalize_probes_decl (e:env) (d:decl)
       in
       let instantiated_type =
         let head = gen_name.typedef_abbrev in
+        let default_instantiation (head_type:ident)
+          : ML expr 
+          = match simple_probe_name_for_type e head_type with
+            | None ->
+              failwith (Printf.sprintf "Could not find probe instantiation for %s\n"
+                          (print_ident head_type))
+            | Some probe_inst ->
+              with_range (Identifier probe_inst) d.d_decl.range
+        in
+        let insts = List.map default_instantiation sig in
         let instantiations =
           insts @
           List.map
@@ -242,12 +339,12 @@ let generalize_probes_decl (e:env) (d:decl)
 
 let generalize_probe_decls (e:GlobalEnv.global_env) (ds:list decl)
 : ML (list decl)
-= let e = Binding.mk_env e, [] in
+= let e = { benv = Binding.mk_env e; needs_probe = []; should_generalize = H.create 10 } in
   let e = need_probe_decls e ds in
   let print_ident (i:ident') = i.name in
   FStar.IO.print_string 
     (Printf.sprintf "Probes needed for: %s\n" 
-      (String.concat ", " (List.map print_ident (snd e))));
+      (String.concat ", " (List.map print_ident e.needs_probe)));
   let ds = List.collect (generate_probe_functions e) ds in
   FStar.IO.print_string
     (Printf.sprintf "Generated probe functions\n%s\n" (print_decls ds));
