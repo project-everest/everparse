@@ -364,7 +364,7 @@ let output_types_attributes = {
   T.is_if_def = false;
   T.is_exported = false;
   T.should_inline = false;
-  T.comments = [] 
+  T.comments = [] ;
 }
 
 (*
@@ -431,7 +431,8 @@ let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param)
   { td_name = tdn.typedef_name;
     td_params = params;
     td_entrypoint_probes = entrypoint_probes;
-    td_entrypoint = has_entrypoint tdn.typedef_attributes }, ds
+    td_entrypoint = has_entrypoint tdn.typedef_attributes;
+    td_noextract = List.existsb Noextract? tdn.typedef_attributes }, ds
 
 let make_enum_typ (t:T.typ) (ids:list ident) =
   let refinement i =
@@ -996,12 +997,12 @@ let parse_grouped_fields (env:global_env) (typename:A.ident) (gfs:grouped_fields
     aux gfs
 
 
-let make_tdn (i:A.ident) =
+let make_tdn (i:A.ident) (attrs:list A.attribute) =
   {
     typedef_name = i;
     typedef_abbrev = with_dummy_range (to_ident' "");
     typedef_ptr_abbrev = None;
-    typedef_attributes = []
+    typedef_attributes = attrs
   }
 
 let env_t = list (A.ident * T.typ)
@@ -1040,13 +1041,34 @@ let rec free_vars_expr (genv:global_env)
     | Record _ fields ->
       List.fold_left (fun out (_, e) -> free_vars_expr genv env out e) out fields
 
-let with_attrs (d:T.decl') (h:bool) (is_entrypoint: bool) (ifdef:bool) (e:bool) (i:bool) (c:list string)
+let with_attrs 
+      (d:T.decl')
+      (h:bool)
+      (is_entrypoint: bool)
+      (ifdef:bool)
+      (e:bool)
+      (i:bool)
+      (c:list string)
   : T.decl
-  = d, T.({ is_hoisted = h; is_entrypoint = is_entrypoint; is_if_def = ifdef; is_exported = e; should_inline = i; comments = c } )
+  = d, T.({ 
+      is_hoisted = h;
+      is_entrypoint;
+      is_if_def = ifdef;
+      is_exported = e;
+      should_inline = i;
+      comments = c
+    } )
 
 let with_comments (d:T.decl') (is_entrypoint: bool) (e:bool) (c:list string)
   : T.decl
-  = d, T.({ is_hoisted = false; is_entrypoint = is_entrypoint; is_if_def=false; is_exported = e; should_inline = false; comments = c } )
+  = d, T.({
+      is_hoisted = false;
+      is_entrypoint;
+      is_if_def=false;
+      is_exported = e;
+      should_inline = false;
+      comments = c;
+    } )
 
 let rec hoist_typ
           (fn:string)
@@ -1143,10 +1165,11 @@ let hoist_one_type_definition (should_inline:bool)
                                    prefix
                                    (ident_to_string orig_tdn.td_name) in
       let tdn = {
+        orig_tdn with
           td_name = id;
           td_params = List.rev env;
           td_entrypoint_probes = [];
-          td_entrypoint = false
+          td_entrypoint = false;
       } in
       let t_parser = parse_typ orig_tdn.td_name type_name body in
       add_parser_kind_nz genv tdn.td_name t_parser.p_kind.pk_nz t_parser.p_kind.pk_weak_kind;
@@ -1300,7 +1323,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     ds@[with_comments (T.Definition (i, [], t, T.mk_expr (T.Constant s))) (A.is_entrypoint d) d.d_exported d.d_decl.comments]
 
   | TypeAbbrev attrs t i gs ps ->
-    let tdn = make_tdn i in
+    let tdn = make_tdn i attrs in
     let t, ds1 = translate_typ t in
     let params =  generics_as_params gs @ ps in
     let tdn, ds2 = translate_typedef_name tdn params in
@@ -1318,7 +1341,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
 
   | Enum t i ids ->
     let ids = Desugar.check_desugared_enum_cases ids in
-    let tdn = make_tdn i in
+    let tdn = make_tdn i [] in
     let typ, ds1 = translate_typ t in
     let tdn, ds2 = translate_typedef_name tdn [] in
     let refined_typ = make_enum_typ typ ids in

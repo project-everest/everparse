@@ -695,7 +695,8 @@ let print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string
       td_name = x;
       td_params = params;
       td_entrypoint_probes = [];
-      td_entrypoint = false
+      td_entrypoint = false;
+      td_noextract = false;
     } in
     Printf.sprintf "%slet %s : %s = %s\n\n"
       (print_attributes false (snd d))

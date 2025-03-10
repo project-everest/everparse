@@ -36,5 +36,5 @@ typedef struct _D (
 )
 {
 	UINT32 c1;
-	C(a_out, b_out) *pb probe (length=sizeof(C), destination=c_out);
+	C(a_out, b_out) *pc probe (length=sizeof(C), destination=c_out);
 } D;

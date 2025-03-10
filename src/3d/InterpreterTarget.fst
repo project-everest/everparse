@@ -1056,15 +1056,22 @@ let print_binding mname (td:type_decl)
         args
   in
   let validate_binding =
-    let cinline =
-      if td.name.td_entrypoint
-      || td.attrs.is_exported
-      then ""
-      else "; CInline"
+    let attribs =
+      if tdn.td_noextract
+      then "[@@ specialize; noextract_to \"krml\"]\nnoextract\ninline_for_extraction"
+      else (
+        let cinline =
+          if td.name.td_entrypoint
+          || td.attrs.is_exported
+          then ""
+          else "; CInline"
+        in
+        Printf.sprintf "[@@normalize_for_extraction specialization_steps%s]" cinline
+      )
     in
-    Printf.sprintf "[@@normalize_for_extraction specialization_steps%s]\n\
-                            let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
-                    cinline
+    Printf.sprintf "%s\n\
+                    let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
+                    attribs
                     root_name
                     binders
                     root_name

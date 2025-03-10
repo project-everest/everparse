@@ -204,6 +204,10 @@ let generalize_probes_decl (e:env) (d:decl)
     | [] -> [d]
     | _ -> (
       let gen_name = generalized_record_name e names in
+      let gen_name = { 
+          gen_name with 
+          typedef_attributes = Noextract :: gen_name.typedef_attributes
+      } in
       let generalized_record =
         { d with 
           d_decl = { d.d_decl with 

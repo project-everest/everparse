@@ -562,6 +562,7 @@ noeq
 type attribute =
   | Entrypoint: (probe: option probe_entrypoint) -> attribute
   | Aligned
+  | Noextract
 
 /// Typedefs are given 2 names by convention and can be tagged as an
 /// "entrypoint" for the validator
@@ -1412,6 +1413,7 @@ let print_attribute (a:attribute) : ML string =
   | Entrypoint None -> "entrypoint"
   | Entrypoint (Some p) -> Printf.sprintf "entrypoint(probe(%s, length=%s)" (print_ident p.probe_ep_fn) (print_expr p.probe_ep_length)
   | Aligned -> "aligned"
+  | Noextract -> "noextract"
 let print_attributes (a:list attribute) : ML string =
   match a with
   | [] -> ""

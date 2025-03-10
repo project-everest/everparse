@@ -192,7 +192,8 @@ type typedef_name = {
   td_name:A.ident;
   td_params:list param;
   td_entrypoint_probes: list probe_entrypoint;
-  td_entrypoint:bool
+  td_entrypoint:bool;
+  td_noextract:bool;
 }
 type typedef = typedef_name & typedef_body
 
