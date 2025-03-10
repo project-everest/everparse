@@ -57,10 +57,11 @@ and simplify_typ (env:T.env_t) (t:typ)
   : ML typ
   = match t.v with
     | Pointer t q -> {t with v=Pointer (simplify_typ env t) q}
-    | Type_app s b ps ->
+    | Type_app s b gs ps ->
+      let gs = List.map (simplify_expr env) gs in
       let ps = List.map (simplify_typ_param env) ps in
       let s = B.resolve_record_case_output_extern_type_name (fst env) s in
-      let t = { t with v = Type_app s b ps } in
+      let t = { t with v = Type_app s b gs ps } in
       B.unfold_typ_abbrev_only (fst env) t
 
 and simplify_out_expr_node (env:T.env_t) (oe:with_meta_t out_expr')
@@ -122,6 +123,7 @@ let simplify_probe_atomic_action (env:T.env_t) (a:probe_atomic_action)
 let rec simplify_probe_action (env:T.env_t) (a:probe_action) : ML probe_action =
   match a.v with
   | Probe_action_var i -> a
+  | Probe_action_simple f l -> {a with v = Probe_action_simple f (simplify_expr env l) }
   | Probe_atomic_action aa -> {a with v = Probe_atomic_action (simplify_probe_atomic_action env aa)}
   | Probe_action_seq hd tl -> {a with v = Probe_action_seq (simplify_probe_atomic_action env hd) (simplify_probe_action env tl) }
   | Probe_action_let i aa k -> {a with v = Probe_action_let i (simplify_probe_atomic_action env aa) (simplify_probe_action env k) }
@@ -135,12 +137,9 @@ let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
 
 let simplify_probe (env:T.env_t) (p:probe_call) : ML probe_call =
   match p with
-  | SimpleCall { probe_fn; probe_length; probe_dest } ->
-    let probe_length = simplify_expr env probe_length in
-    SimpleCall { probe_fn; probe_length; probe_dest }
-  | CompositeCall { probe_dest; probe_block } ->
+  | { probe_dest; probe_block } ->
     let probe_block = simplify_probe_action env probe_block in
-    CompositeCall { probe_dest; probe_block }
+    { probe_dest; probe_block }
 
 let simplify_atomic_field (env:T.env_t) (f:atomic_field)
   : ML atomic_field
@@ -218,16 +217,22 @@ let simplify_typedef_names (env: T.env_t) (tdnames: typedef_names) : ML typedef_
       typedef_attributes = List.map (simplify_attribute env) tdnames.typedef_attributes;
   }
 
+let simplify_params (env: T.env_t) (params: list param)
+: ML (list param)
+= List.map (fun (t, i, q) -> simplify_typ env t, i, q) params
+
 let simplify_decl (env:T.env_t) (d:decl) : ML decl =
   match d.d_decl.v with
   | ModuleAbbrev _ _ -> d
   | Define i None c -> d
   | Define i (Some t) c -> decl_with_v d (Define i (Some (simplify_typ env t)) c)
 
-  | TypeAbbrev t i ->
+  | TypeAbbrev attrs t i gs ps ->
+    let attrs = List.map (simplify_attribute env) attrs in
+    let ps = simplify_params env ps in
     let t' = simplify_typ env t in
     B.update_typ_abbrev (fst env) i t';
-    decl_with_v d (TypeAbbrev t' i)
+    decl_with_v d (TypeAbbrev attrs t' i gs ps)
 
   | Enum t i cases ->
     let t = simplify_typ env t in
@@ -235,7 +240,7 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
 
   | Record tdnames generics params wopt fields ->
     let tdnames = simplify_typedef_names env tdnames in
-    let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
+    let params = simplify_params env params in
     let fields = List.map (simplify_field env) fields in
     let wopt = match wopt with | None -> None | Some w -> Some (simplify_expr env w) in
     decl_with_v d (Record tdnames generics params wopt fields)
@@ -246,6 +251,11 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     let switch = simplify_switch_case env switch in
     decl_with_v d (CaseType tdnames generics params switch)
 
+  | ProbeFunction id ps b ->
+    let ps = simplify_params env ps in
+    let b = simplify_probe_action env b in
+    decl_with_v d (ProbeFunction id ps b)
+    
   | OutputType out_t ->
     decl_with_v d (OutputType ({out_t with out_typ_fields=simplify_out_fields env out_t.out_typ_fields}))
 

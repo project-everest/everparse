@@ -81,28 +81,32 @@ type global_env = {
 }
 
 let default_probe_fn (g:global_env)
-  : ML (option ident)
-  = if H.length g.ge_probe_fn <> 1
-    then None 
-    else (
-      match H.fold (fun k v _ -> Some v) g.ge_probe_fn (None #decl) with
-      | Some {d_decl={v=ExternProbe id None}} -> Some id
-      | _ -> None
-    )
-
+: ML (option ident)
+= let finder k v out =
+      match out with
+      | Some _ -> out
+      | None -> 
+        match v.d_decl.v with
+        | ExternProbe id None -> Some id
+        | _ -> None
+  in
+  H.fold finder g.ge_probe_fn None
+  
 let resolve_probe_fn_any (g:global_env) (id:ident)
-  : ML (option (ident & option probe_qualifier))
+  : ML (option (ident & either typ (option probe_qualifier)))
   = match H.try_find g.ge_probe_fn id.v with
     | Some {d_decl={v=ExternProbe id pq}} ->
-      Some (id, pq)
+      Some (id, Inr pq)
+    | Some {d_decl={v=ProbeFunction id [] pq}} ->
+      Some (id, Inl probe_m_t)      
     | _ -> None
 
 let resolve_probe_fn (g:global_env) (id:ident) (pq:option probe_qualifier)
   : ML (option ident)
   = match resolve_probe_fn_any g id with
-    | None -> None
-    | Some (id, pq') -> if pq=pq' then Some id else None
-
+    | Some (id, Inr pq') -> if pq=pq' then Some id else None
+    | _ -> None
+    
 let fields_of_type (g:global_env) (typename:ident)
 : ML (option (list field))
 = match H.try_find g.ge_h typename.v with

@@ -145,6 +145,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
     match a.v with
     | Probe_atomic_action a -> deps_of_probe_atomic_action a
     | Probe_action_var i -> []
+    | Probe_action_simple _i len -> deps_of_expr len
     | Probe_action_seq hd tl -> (deps_of_probe_atomic_action hd)@(deps_of_probe_action tl)
     | Probe_action_let i a k -> (deps_of_probe_atomic_action a)@(deps_of_probe_action k) in
   let deps_of_params params : ML (list string) =
@@ -172,7 +173,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
       (deps_of_field_array_t af.field_array_opt)@
       (deps_of_opt deps_of_expr af.field_constraint)@
       (deps_of_opt deps_of_field_bitwidth_t af.field_bitwidth)@
-      (deps_of_opt (fun (a, _) -> deps_of_action a) af.field_action) in
+      (deps_of_opt (fun (a, _) -> deps_of_action a) af.field_action)@
+      (deps_of_opt (fun pc -> deps_of_probe_action pc.probe_block @ maybe_dep pc.probe_dest) af.field_probe)
+  in
 
   let rec deps_of_field (f:field) : ML (list string) = 
     match f.v with
@@ -209,7 +212,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
       [m.v.name]
     | Define _ None _ -> []
     | Define _ (Some t) _ -> deps_of_typ t
-    | TypeAbbrev t _ _ _ -> deps_of_typ t
+    | TypeAbbrev attrs t _ _ _ ->
+      List.collect deps_of_attribute attrs @
+      deps_of_typ t
     | Enum _base_t _ l -> List.collect deps_of_enum_case l
     | Record tdnames _generics params wopt flds ->
       (deps_of_typedef_names tdnames)@

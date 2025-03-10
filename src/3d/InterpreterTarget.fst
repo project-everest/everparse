@@ -946,9 +946,12 @@ let print_eloc mname = print_index (print_eloc' mname)
 let rec print_disj' mname (d:disj)
   : ML string
   = match d with
-    | Disj_pair i j -> Printf.sprintf "(A.disjoint %s %s)" (print_eloc' mname i) (print_eloc' mname j)
+    | Disj_pair i j -> Printf.sprintf "(NonTrivial <| A.disjoint %s %s)" (print_eloc' mname i) (print_eloc' mname j)
     | Disj_conj i j -> Printf.sprintf "(join_disj %s %s)" (print_disj' mname i) (print_disj' mname j)
-let print_disj mname = print_index (print_disj' mname)
+let print_disj mname (i:index disj) =
+  match i with
+  | None -> "Trivial"
+  | Some i -> print_disj' mname i
 
 let print_td_iface is_entrypoint mname root_name binders args
                    inv eloc disj ha ar pk_wk pk_nz =
@@ -1153,6 +1156,14 @@ let print_decl mname (d:decl)
     match fst d with
     | T.Assumption _ -> T.print_assumption mname d, ""
     | T.Definition _ -> "", T.print_definition mname d
+    | T.Probe_function id params body ->
+      let impl =
+          Printf.sprintf "noextract\ninline_for_extraction\nlet %s %s = %s\n\n"
+            (T.print_ident id)
+            (T.print_params mname params)
+            (T.print_probe_action mname body)
+      in
+      impl, ""
     | _ -> "", ""
     end
   | Inr td -> print_binding mname td

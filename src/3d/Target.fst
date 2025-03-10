@@ -15,10 +15,11 @@
 *)
 module Target
 (* The abstract syntax for the code produced by 3d *)
+#set-options "--warn_error -290"
 open FStar.All
 module A = Ast
 open Binding
-
+open FStar.List.Tot
 let lookup (s:subst) (i:A.ident) : option expr =
   List.Tot.assoc i.v s
 
@@ -482,6 +483,21 @@ let rec print_kind (mname:string) (k:parser_kind) : Tot string =
   | PK_string ->
     "parse_string_kind"
 
+let print_params (mname:string) (params:list param) : ML string =
+  String.concat " " <|
+  List.map 
+    (fun (id, t) -> 
+      Printf.sprintf "(%s:%s)"
+                    (print_ident id)
+                    (print_typ mname t))
+    params
+
+let print_typedef_name (mname:string) (tdn:typedef_name) : ML string =
+  Printf.sprintf "%s %s"
+                 (print_ident tdn.td_name)
+                 (print_params mname tdn.td_params)
+
+
 let rec print_action (mname:string) (a:action) : ML string =
   let print_atomic_action (a:atomic_action)
     : ML string
@@ -555,6 +571,8 @@ let rec print_probe_action (mname:string) (p:probe_action) : ML string =
     Printf.sprintf "(Probe_action_simple %s %s)"
       (print_expr mname bytes_to_read)
       (print_ident probe_fn)
+  | Probe_action_var i ->
+      (print_expr mname i)
   | Probe_atomic a ->
     Printf.sprintf "(Probe_action_atomic %s)"
       (print_atomic_probe_action a)
@@ -568,16 +586,6 @@ let rec print_probe_action (mname:string) (p:probe_action) : ML string =
       (print_ident i)
       (print_probe_action mname tl)
 
-let print_typedef_name (mname:string) (tdn:typedef_name) : ML string =
-  Printf.sprintf "%s %s"
-                 (print_ident tdn.td_name)
-                 (String.concat " "
-                   (List.map 
-                     (fun (id, t) -> 
-                       Printf.sprintf "(%s:%s)"
-                                      (print_ident id)
-                                      (print_typ mname t))
-                     tdn.td_params))
 
 let print_typedef_typ (tdn:typedef_name) : ML string =
   Printf.sprintf "%s %s"
@@ -702,30 +710,6 @@ let print_assumption (mname:string) (d:decl { Assumption? (fst d) } ) : ML strin
       (if (snd d).is_if_def then "[@@ CIfDef ]\n" else "")
       (print_ident x)      
       (print_typ mname t) 
-
-let print_decl_for_types (mname:string) (d:decl) : ML string =
-  match fst d with
-  | Assumption _ -> ""
-  
-  | Definition _ ->
-    print_definition mname d
-
-  | Type_decl td ->
-    Printf.sprintf "noextract\ninline_for_extraction\ntype %s = %s\n\n"
-      (print_typedef_name mname td.decl_name)
-      (print_typedef_body mname td.decl_typ)
-    `strcat`
-    maybe_print_type_equality mname td
-
-  | Output_type _
-
-  | Output_type_expr _ _
-
-  | Extern_type _
-
-  | Extern_fn _ _ _ _
-  
-  | Extern_probe _ _ -> ""
 
 /// Print a decl for M.fst
 ///
@@ -1503,7 +1487,7 @@ let rec atyp_to_ttyp (t:A.typ) : ML typ =
     
     T_pointer t A.UInt64
 
-  | A.Type_app hd _b _args ->
+  | A.Type_app hd _b _gs _args ->
     T_app hd _b []
 
 let rec print_output_types_fields (flds:list A.out_field) : ML string =

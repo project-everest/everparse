@@ -1048,6 +1048,7 @@ let produce_not_type_decl (a: I.not_type_decl) (out: string -> ML unit) : ML uni
   | T.Definition (i, param, typ, body) ->
     produce_definition i param typ body out
   | T.Assumption _ -> failwith "produce_not_type_decl: unsupported"
+  | T.Probe_function _ _ _
   | T.Output_type _
   | T.Output_type_expr _ _
   | T.Extern_type _
@@ -1105,7 +1106,7 @@ let simple_arg_type_of_ast_typ
 : Tot (simple_arg_type true)
 = match a.v with
   | A.Pointer _ _ -> ArgExtern ()
-  | A.Type_app i _ _ ->
+  | A.Type_app i _ _ _->
     begin match A.maybe_as_integer_typ i with
     | Some it -> ArgInt it
     | None ->

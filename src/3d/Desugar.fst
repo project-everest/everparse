@@ -332,6 +332,8 @@ let rec resolve_probe_action' (env:qenv) (act:probe_action') : ML probe_action' 
   match act with
   | Probe_atomic_action ac -> Probe_atomic_action (resolve_probe_atomic_action env ac)
   | Probe_action_var i -> Probe_action_var (resolve_generic env i)
+  | Probe_action_simple f n ->
+    Probe_action_simple (map_opt (resolve_ident env) f) (resolve_expr env n)
   | Probe_action_seq hd tl ->
     Probe_action_seq (resolve_probe_atomic_action env hd) (resolve_probe_action env tl)
   | Probe_action_let i a k ->
@@ -375,18 +377,11 @@ let resolve_probe_field env = function
   | ProbeDest e -> ProbeDest (resolve_expr env e)
 
 let resolve_probe_call env pc =
-  match pc with
-  | SimpleCall { probe_fn; probe_length; probe_dest } ->
-    SimpleCall {
-      probe_fn = map_opt (resolve_ident env) probe_fn;
-      probe_length = resolve_expr env probe_length;
-      probe_dest = resolve_expr env probe_dest;
-    }
-  | CompositeCall { probe_dest; probe_block } ->
-    CompositeCall {
-      probe_dest = resolve_expr env probe_dest;
-      probe_block = resolve_probe_action env probe_block;
-    }
+  let { probe_dest; probe_block } = pc in
+  {
+    probe_dest = resolve_ident env probe_dest;
+    probe_block = resolve_probe_action env probe_block;
+  }
 
 let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =
   match ff.v with
@@ -468,10 +463,11 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
   | ModuleAbbrev i m -> push_module_abbrev env i.v.name m.v.name; d
   | Define i topt c ->
     Define (resolve_ident env i) (map_opt (resolve_typ env) topt) c
-  | TypeAbbrev t i gs ps ->
+  | TypeAbbrev attrs t i gs ps ->
+    let attrs = List.map (resolve_typedef_attribute env) attrs in
     let env = push_generics env gs in    
     let params, env = resolve_params env ps in
-    TypeAbbrev (resolve_typ env t) (resolve_ident env i) gs ps
+    TypeAbbrev attrs (resolve_typ env t) (resolve_ident env i) gs ps
   | Enum t i ecs ->
     Enum (resolve_typ env t) (resolve_ident env i) (List.map (resolve_enum_case env) ecs)
   | Record td_names generics params where flds ->

@@ -222,8 +222,9 @@ qident:
  *   It is set properly in the desugaring phase
  *)
 typ_no_range:
-  | i=qident { Type_app(i, KindSpec, []) }
-  | hd=qident LPAREN a=right_flexible_nonempty_list(COMMA, typ_param) RPAREN { Type_app(hd, KindSpec, a) }
+  | i=qident { Type_app(i, KindSpec, [], []) }
+  | hd=qident LPAREN a=right_flexible_nonempty_list(COMMA, typ_param) RPAREN 
+    { Type_app(hd, KindSpec, [], a) }
 
 typ:
   | t=typ_no_range { with_range t $startpos }
@@ -294,13 +295,15 @@ with_probe:
       | _, None -> (
         match fields with 
         | [("length", l); ("destination", {v=Identifier d})] ->
-           SimpleCall { probe_fn=probe_fn_opt; probe_length=l; probe_dest=d }
+          let p = with_range (Probe_action_simple (probe_fn_opt, l)) $startpos in
+          { probe_block = p; probe_dest=d }
         | _ ->
           error "Expected 'length' and 'destination' fields in probe" rng
       )
       | None, Some a -> (
         match fields with
-        | [("destination", {v=Identifier e})] -> CompositeCall { probe_dest1=e; probe_block=a }
+        | [("destination", {v=Identifier e})] ->
+          { probe_dest=e; probe_block=a }
         | _ -> error "Expected 'destination' field in probe" rng
       )        
     }
@@ -541,14 +544,14 @@ decl_no_range:
   | MODULE i=IDENT EQ m=IDENT { ModuleAbbrev (i, m) }
   | DEFINE i=IDENT c=constant { Define (i, None, c) }
   | t=IDENT ENUM i=IDENT LBRACE es=right_flexible_nonempty_list(COMMA, enum_case) RBRACE maybe_semi
-    { Enum(with_range (Type_app (t, KindSpec, [])) ($startpos(t)), i, es) }
+    { Enum(with_range (Type_app (t, KindSpec, [], [])) ($startpos(t)), i, es) }
   | b=attributes TYPEDEF t=typ i=IDENT SEMICOLON
-    { TypeAbbrev (t, i) }
+    { TypeAbbrev ([], t, i, [], []) }
   | b=attributes TYPEDEF STRUCT i=IDENT ps=parameters w=where_opt
     LBRACE fields=fields
     RBRACE j=IDENT p=typedef_pointer_name_opt SEMICOLON
     {  
-        Record(mk_td b i j p, ps, w, fields)
+        Record(mk_td b i j p, [], ps, w, fields)
     }
   | b=attributes CASETYPE i=IDENT ps=parameters
     LBRACE SWITCH LPAREN e=IDENT RPAREN
@@ -557,7 +560,7 @@ decl_no_range:
     RBRACE j=IDENT p=typedef_pointer_name_opt SEMICOLON
     {
         let td = mk_td b i j p in
-        CaseType(td, ps, (with_range (Identifier e) ($startpos(i)), cs))
+        CaseType(td, [], ps, (with_range (Identifier e) ($startpos(i)), cs))
     }
 
   | OUTPUT TYPEDEF STRUCT i=IDENT

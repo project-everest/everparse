@@ -94,7 +94,7 @@ let extend_with_size_of_typedef_names (env:env_t) (names:typedef_names) (size:si
 let size_and_alignment_of_typ (env:env_t) (t:typ)
   : ML (size & alignment)
   = match t.v with
-    | Type_app i _ _ -> size_and_alignment_of_typename env i
+    | Type_app i _ _ _ -> size_and_alignment_of_typename env i
     | Pointer _ (Some (PQ UInt64)) -> Fixed 8, Some 8 //pointers are 64 bit and aligned
     | Pointer _ (Some (PQ UInt32)) -> Fixed 4, Some 4 //u32 pointers are 32 bit and aligned
     | Pointer _ _ -> failwith "Pointer sizes should already have been resolved to UInt32 or UInt64"
@@ -139,7 +139,7 @@ let rec value_of_const_expr (env:env_t) (e:expr)
   | App SizeOf [{v=Identifier t}] ->
     begin
     try
-      match size_of_typ env (with_range (Type_app t KindSpec []) t.range) with
+      match size_of_typ env (with_range (Type_app t KindSpec [] []) t.range) with
       | Fixed n
       | WithVariableSuffix n -> Some (Inr (UInt32, n))
       | _ -> None
@@ -443,7 +443,7 @@ let decl_size_with_alignment (env:env_t) (d:decl)
     | ModuleAbbrev _ _ -> d
     | Define _ _ _ -> d
 
-    | TypeAbbrev t i
+    | TypeAbbrev _ t i _ _
     | Enum t i _ ->
       let s, a = size_and_alignment_of_typ env t in
       extend_with_size_of_ident env i s a;
@@ -465,6 +465,7 @@ let decl_size_with_alignment (env:env_t) (d:decl)
       extend_with_size_of_typedef_names env names size alignment;
       decl_with_v d (CaseType names generics params cases)
 
+    | ProbeFunction _ _ _
     | OutputType _
     | ExternType _
     | ExternFn _ _ _ _
@@ -474,10 +475,11 @@ let idents_of_decl (d:decl) =
   match d.d_decl.v with
   | ModuleAbbrev i _
   | Define i _ _ 
-  | TypeAbbrev _ i 
+  | TypeAbbrev _ _ i _ _
   | Enum _ i _
   | ExternFn i _ _ _
-  | ExternProbe i _ -> [i]
+  | ExternProbe i _
+  | ProbeFunction i _ _ -> [i]
   | Record names _ _ _ _
   | CaseType names _ _ _
   | OutputType { out_typ_names = names } 

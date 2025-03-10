@@ -495,24 +495,29 @@ noeq
 type probe_action' =
   | Probe_atomic_action of probe_atomic_action
   | Probe_action_var of ident
-  | Probe_action_seq : hd:probe_atomic_action -> tl:probe_action -> probe_action'
-  | Probe_action_let : i:ident -> a:probe_atomic_action -> k:probe_action -> probe_action'
+  | Probe_action_simple : 
+    probe_fn: option ident ->
+    bytes_to_read : expr -> 
+    probe_action'
+  | Probe_action_seq :
+    hd:probe_atomic_action ->
+    tl:probe_action ->
+    probe_action'
+  | Probe_action_let :
+    i:ident ->
+    a:probe_atomic_action ->
+    k:probe_action ->
+    probe_action'
 and probe_action = with_meta_t probe_action'
 
 open FStar.List.Tot
 
 [@@ PpxDerivingYoJson ]
 noeq
-type probe_call =
-| SimpleCall {
-    probe_fn:option ident;
-    probe_length: expr;
-    probe_dest: expr; 
-  }
-| CompositeCall {
-    probe_dest:expr;
-    probe_block:probe_action
-  }
+type probe_call = {
+  probe_dest:ident;
+  probe_block:probe_action
+}
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -633,6 +638,7 @@ type decl' =
       decl'
 
   | TypeAbbrev:
+      list attribute ->
       typ ->
       ident ->
       list generic_param ->
@@ -925,7 +931,7 @@ let type_of_integer_type = function
   | UInt32 -> tuint32
   | UInt64 -> tuint64
 let tcopybuffer = mk_prim_t "EVERPARSE_COPY_BUFFER_T"
-let probe_m_t = mk_prim_t "PROBE_M"
+let probe_m_t = mk_prim_t "probe_action"
 let tunknown = mk_prim_t "?"
 let unit_atomic_field rng = 
     let dummy_identifier = with_range (to_ident' "_empty_") rng in
@@ -992,10 +998,15 @@ let subst_probe_atomic_action (s:subst) (aa:probe_atomic_action) : ML probe_atom
   | Probe_action_copy f len -> Probe_action_copy f (subst_expr s len)
 let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
   match a.v with
-  | Probe_atomic_action aa -> {a with v = Probe_atomic_action (subst_probe_atomic_action s aa)}
+  | Probe_atomic_action aa ->
+    {a with v = Probe_atomic_action (subst_probe_atomic_action s aa)}
   | Probe_action_var i -> a
-  | Probe_action_seq hd tl -> {a with v = Probe_action_seq (subst_probe_atomic_action s hd) (subst_probe_action s tl) }
-  | Probe_action_let i aa k -> {a with v = Probe_action_let i (subst_probe_atomic_action s aa) (subst_probe_action s k) }
+  | Probe_action_simple f n -> 
+    {a with v = Probe_action_simple f (subst_expr s n) }
+  | Probe_action_seq hd tl ->
+    {a with v = Probe_action_seq (subst_probe_atomic_action s hd) (subst_probe_action s tl) }
+  | Probe_action_let i aa k ->
+    {a with v = Probe_action_let i (subst_probe_atomic_action s aa) (subst_probe_action s k) }
 //No need to substitute in output expressions
 let subst_out_expr (s:subst) (o:out_expr) : out_expr = o
 let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =
@@ -1028,17 +1039,9 @@ and subst_atomic_field (s:subst) (f:atomic_field) : ML atomic_field =
   let pa =
     match sf.field_probe with
     | None -> None
-    | Some (SimpleCall { probe_fn; probe_length; probe_dest }) ->
-      Some <|
-      SimpleCall { 
-          probe_fn;
-          probe_length = subst_expr s probe_length;
-          probe_dest=subst_expr s probe_dest 
-      }
-    | Some (CompositeCall { probe_dest; probe_block }) ->
-      Some <|
-      CompositeCall {
-        probe_dest=subst_expr s probe_dest;
+    | Some { probe_dest; probe_block } ->
+      Some {
+        probe_dest;
         probe_block=subst_probe_action s probe_block 
       }
   in
@@ -1066,8 +1069,8 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
   | ModuleAbbrev _ _ -> d
   | Define i None _ -> d
   | Define i (Some t) c -> Define i (Some (subst_typ s t)) c
-  | TypeAbbrev t i generics params ->
-    TypeAbbrev (subst_typ s t) i generics (subst_params s params)
+  | TypeAbbrev attrs t i generics params ->
+    TypeAbbrev attrs (subst_typ s t) i generics (subst_params s params)
   | Enum t i is -> Enum (subst_typ s t) i is
   | Record names generics params where fields ->
     Record names generics (subst_params s params) (map_opt (subst_expr s) where) (List.map (subst_field s) fields)
@@ -1319,18 +1322,39 @@ and print_atomic_field (f:atomic_field) : ML string =
         (fun p -> Printf.sprintf "probe %s" (print_probe_call p)))
 
 and print_probe_action (p:probe_action) : ML string =
-  "<probe action TBD>" //TODO
+  match p.v with
+  | Probe_atomic_action a ->
+    print_probe_atomic_action a
+  | Probe_action_var i ->
+    Printf.sprintf "%s" (print_ident i)
+  | Probe_action_simple f n ->
+    Printf.sprintf "(Probe_action_simple %s %s)"
+      (print_opt f print_ident)
+      (print_expr n)
+  | Probe_action_seq hd tl ->
+    Printf.sprintf "%s; %s" 
+      (print_probe_atomic_action hd)
+      (print_probe_action tl)
+  | Probe_action_let i hd tl ->
+    Printf.sprintf "var %s = %s; %s"
+      (print_ident i)
+      (print_probe_atomic_action hd)
+      (print_probe_action tl)
+
+and print_probe_atomic_action (p:probe_atomic_action)
+: ML string
+= match p with
+  | Probe_action_return e -> Printf.sprintf "return %s;" (print_expr e)
+  | Probe_action_call f args -> Printf.sprintf "%s(%s);" (print_ident f) (String.concat ", " (List.map print_expr args))
+  | Probe_action_read f -> Printf.sprintf "%s();" (print_ident f)
+  | Probe_action_write f v
+  | Probe_action_copy f v -> Printf.sprintf "%s(%s);" (print_ident f) (print_expr v)
 
 and print_probe_call (p:probe_call) : ML string =
   match p with
-  | SimpleCall { probe_fn; probe_length; probe_dest } ->
-    Printf.sprintf "%s(length=%s, destination=%s)"
-          (print_opt probe_fn print_ident)
-          (print_expr probe_length)
-          (print_expr probe_dest)
-  | CompositeCall { probe_dest; probe_block } ->
+  | { probe_dest; probe_block } ->
     Printf.sprintf "(destination=%s) { %s }"
-          (print_expr probe_dest)
+          (print_ident probe_dest)
           (print_probe_action probe_block)
 
 and print_action (a:action) : ML string =
@@ -1383,6 +1407,16 @@ let print_generics generics =
   | _ -> 
     Printf.sprintf "<%s>" (String.concat ", " (List.map print_generic generics))
 
+let print_attribute (a:attribute) : ML string =
+  match a with
+  | Entrypoint None -> "entrypoint"
+  | Entrypoint (Some p) -> Printf.sprintf "entrypoint(probe(%s, length=%s)" (print_ident p.probe_ep_fn) (print_expr p.probe_ep_length)
+  | Aligned -> "aligned"
+let print_attributes (a:list attribute) : ML string =
+  match a with
+  | [] -> ""
+  | _ -> Printf.sprintf "[%s]" (String.concat ", " (List.map print_attribute a)) ^ " "
+
 let print_decl' (d:decl') : ML string =
   match d with
   | ModuleAbbrev i m -> Printf.sprintf "module %s = %s" (print_ident i) (print_ident m)
@@ -1390,8 +1424,13 @@ let print_decl' (d:decl') : ML string =
     Printf.sprintf "#define %s %s;" (print_ident i) (print_constant c)
   | Define i (Some t) c ->
     Printf.sprintf "#define %s : %s %s;" (print_ident i) (print_typ t) (print_constant c)
-  | TypeAbbrev t i generics params ->
-    Printf.sprintf "typedef %s %s;" (print_typ t) (print_ident i)
+  | TypeAbbrev attrs t i generics params ->
+    Printf.sprintf "%stypedef %s %s%s%s;" 
+      (print_attributes attrs)
+      (print_typ t)
+      (print_ident i)
+      (print_generics generics)
+      (print_params params)
   | Enum t i ls ->
     let print_enum_case (i, jopt) =
       match jopt with
@@ -1406,9 +1445,10 @@ let print_decl' (d:decl') : ML string =
                    (ident_to_string i)
                    (String.concat ",\n" (List.map print_enum_case ls))
   | Record td generics params wopt fields ->
-    Printf.sprintf "typedef struct %s%s%s%s {\n\
+    Printf.sprintf "%stypedef struct %s%s%s%s {\n\
                         %s \n\
                     } %s, *%s"
+                    (print_attributes td.typedef_attributes)
                     (ident_to_string td.typedef_name)
                     (print_generics generics)
                     (print_params params)
@@ -1417,9 +1457,10 @@ let print_decl' (d:decl') : ML string =
                     (ident_to_string td.typedef_abbrev)
                     (option_to_string ident_to_string td.typedef_ptr_abbrev)
   | CaseType td generics params switch_case ->
-    Printf.sprintf "casetype %s%s%s {\n\
+    Printf.sprintf "%scasetype %s%s%s {\n\
                         %s \n\
                     } %s, *%s"
+                    (print_attributes td.typedef_attributes)
                     (ident_to_string td.typedef_name)
                     (print_generics generics)
                     (print_params params)

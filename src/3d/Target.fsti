@@ -126,6 +126,7 @@ type atomic_probe_action =
 noeq
 type probe_action =
   | Probe_fn_as_probe_m { bytes_to_read : expr; probe_fn: A.ident }
+  | Probe_action_var of expr
   | Probe_atomic of atomic_probe_action
   | Probe_seq { hd:atomic_probe_action; tl:probe_action }
   | Probe_let { i:A.ident; a:atomic_probe_action; tl:probe_action }
@@ -324,6 +325,11 @@ type decl' =
   | Assumption : assumption -> decl'
   | Definition : definition -> decl' //the bool marks it for inline_for_extraction
   | Type_decl  : type_decl -> decl'
+  | Probe_function :
+      A.ident ->
+      params:list param ->
+      probe_action ->
+      decl'
   | Output_type: A.out_typ -> decl'  //output types specifications, we keep them if we need to print them to C
 
   | Output_type_expr : output_expr -> is_get:bool -> decl'  //is_get boolean indicates that the output expression appears in a getter position, i.e. in a type parameter, it is false when the output expression is an assignment action lhs
@@ -348,6 +354,7 @@ val print_maybe_qualified_ident (mname:string) (i:A.ident) : ML string
 val print_expr (mname:string) (e:expr) : ML string
 val print_typ (mname:string) (t:typ) : ML string
 val print_kind (mname:string) (k:parser_kind) : Tot string
+val print_params (mname:string) (ps:list param) : ML string
 val print_action (mname:string) (a:action) : ML string
 val print_probe_action  (mname:string) (a:probe_action) : ML string
 val print_definition (mname:string) (d:decl { Definition? (fst d)} ) : ML string

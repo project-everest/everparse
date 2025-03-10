@@ -134,7 +134,7 @@ let simplify_decl (env:env) (d:decl) : ML decl =
   | Define _ _ _ ->
     d
 
-  | TypeAbbrev _ _ _ _ ->
+  | TypeAbbrev _ _ _ _ _ ->
     d
 
   | Enum t i cases ->

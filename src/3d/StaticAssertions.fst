@@ -86,7 +86,7 @@ let compute_static_asserts (benv:B.global_env)
                             field_name = fst offset;
                             offset = snd offset }])
             in
-            let t_j = with_dummy_range (Type_app j KindSpec []) in
+            let t_j = with_dummy_range (Type_app j KindSpec [] []) in
             let sizeof_assertion =
               match TypeSizes.size_of_typ env t_j with
               | TypeSizes.Fixed n

@@ -1,17 +1,17 @@
 (*
-   Copyright 2019 Microsoft Research
+  Copyright 2019 Microsoft Research
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain as copy of the License at
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain as copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+      http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
 *)
 module Binding
 
@@ -77,7 +77,7 @@ let generics_of_decl (d:decl) : list generic_param =
   | ModuleAbbrev _ _
   | Define _ _ _
   | Enum _ _ _ -> []
-  | TypeAbbrev _ _ gs _
+  | TypeAbbrev _ _ _ gs _
   | Record _ gs _ _ _
   | CaseType _ gs _ _ -> gs
   | ProbeFunction _ _ _
@@ -91,7 +91,7 @@ let params_of_decl (d:decl) : list generic_param & list param =
   | ModuleAbbrev _ _
   | Define _ _ _
   | Enum _ _ _ -> [], []
-  | TypeAbbrev _ _ gs params
+  | TypeAbbrev _ _ _ gs params
   | Record _ gs params _ _
   | CaseType _ gs params _ -> gs, params
   | ProbeFunction _ params _ -> [], params
@@ -181,7 +181,10 @@ let try_lookup (e:env) (i:ident) : ML (option (either typ (decl & either decl_at
   | None ->
     match H.try_find e.globals.ge_h i.v with
     | Some d -> Some (Inr d)
-    | None -> None
+    | None ->
+      match resolve_probe_fn_any e.globals i with
+      | Some (id, Inl t) -> Some (Inl t)
+      | _ -> None
 
 let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes macro_signature)) =
   match try_lookup e i with
@@ -335,7 +338,7 @@ let rec unfold_typ_abbrev_only (env:env) (t:typ) : ML typ =
     match try_lookup env hd with
     | Some (Inr (d, _)) -> (
       match d.d_decl.v with
-      | TypeAbbrev t _ gs' ps' ->
+      | TypeAbbrev _ t _ gs' ps' ->
         let s = substitute (gs, gs') (ps, ps') in
         unfold_typ_abbrev_only env (subst_typ s t)
       | _ -> t
@@ -350,7 +353,7 @@ let update_typ_abbrev (env:env) (i:ident) (t:typ)
     | Some (d, ms) ->
       let d_decl =
         match d.d_decl.v with
-        | TypeAbbrev _ _ gs ps -> {d.d_decl with v = TypeAbbrev t i gs ps }
+        | TypeAbbrev attrs _ _ gs ps -> {d.d_decl with v = TypeAbbrev attrs t i gs ps }
         | _ -> failwith "Expected a type abbreviation"
       in
       let d = {d with d_decl = d_decl } in
@@ -368,7 +371,7 @@ let rec unfold_typ_abbrev_and_enum (env:env) (t:typ) : ML typ =
     | Inr (d, _) ->
       begin
       match d.d_decl.v with
-      | TypeAbbrev t _ gs' ts' ->
+      | TypeAbbrev _ t _ gs' ts' ->
         let s = substitute (gs, gs') (ts, ts') in
         unfold_typ_abbrev_and_enum env (subst_typ s t)
       | Enum t _ _ -> (
@@ -1157,7 +1160,7 @@ let rec check_probe env a : ML (probe_action & typ) =
       Probe_action_return e, t
     | Probe_action_read f -> (
       match GlobalEnv.resolve_probe_fn_any env.globals f with
-      | Some (id, Some (PQRead i)) ->
+      | Some (id, Inr (Some (PQRead i))) ->
         Probe_action_read id, type_of_integer_type i
       | _ ->
         error (Printf.sprintf "Probe function %s not found or not a read function" (print_ident f))
@@ -1165,7 +1168,7 @@ let rec check_probe env a : ML (probe_action & typ) =
     )
     | Probe_action_write f v -> (
       match GlobalEnv.resolve_probe_fn_any env.globals f with
-      | Some (id, Some (PQWrite i)) -> (
+      | Some (id, Inr (Some (PQWrite i))) -> (
         let v, t = check_expr env v in
         match try_cast_integer env (v, t) (type_of_integer_type i) with
         | Some v ->
@@ -1200,13 +1203,15 @@ let rec check_probe env a : ML (probe_action & typ) =
 
     | Probe_action_call f args -> (
       match GlobalEnv.resolve_probe_fn_any env.globals f, args with
-      | Some (_, Some (PQWrite _)), [v] ->
+      | Some (_, Inr (Some (PQWrite _))), [v] ->
         check_atomic_probe env (Probe_action_write f v)
-      | Some (_, Some (PQRead _)), [] ->
+      | Some (_, Inr (Some (PQRead _))), [] ->
         check_atomic_probe env (Probe_action_read f)
-      | Some (_, Some PQWithOffsets), [l] ->
+      | Some (_, Inr (Some PQWithOffsets)), [l] ->
         check_atomic_probe env (Probe_action_copy f l)
-      | Some _, _ ->
+      | Some (_, Inl _), [] ->
+        Probe_action_call f args, tunit
+      | Some _, _ -> 
         error (Printf.sprintf "Unexpected probe function in block: %s" (print_ident f)) f.range
       | None, _ ->
         let t, params, pure = lookup_extern_fn env.globals f in
@@ -1244,6 +1249,38 @@ let rec check_probe env a : ML (probe_action & typ) =
   | Probe_action_var i ->
     let i = lookup_generic env i in
     { a with v=Probe_action_var i }, tunit
+
+  | Probe_action_simple probe_fn length ->
+    let length, typ = check_expr env length in
+    let length =
+      if not (eq_typ env typ tuint64)
+      then match try_cast_integer env (length, typ) tuint64 with
+          | Some e -> e
+          | _ -> error (Printf.sprintf "Probe length expression %s has type %s instead of UInt64"
+                        (print_expr length)
+                        (print_typ typ))
+                        length.range
+      else length
+    in
+    let probe_fn =
+      match probe_fn with
+      | None -> (
+        match GlobalEnv.default_probe_fn env.globals with
+        | None -> 
+          error (Printf.sprintf "Probe function not specified and no default probe function found")
+                length.range
+        | Some i -> i
+      )
+      | Some p -> (
+        match GlobalEnv.resolve_probe_fn env.globals p None with
+        | None -> 
+          error (Printf.sprintf "Probe function %s not found" (print_ident p))
+                p.range
+        | Some i -> 
+          i
+      )
+    in
+    { a with v=Probe_action_simple (Some probe_fn) length}, tunit
 
   | Probe_action_seq a0 rest ->
     let a0, t0 = check_atomic_probe env a0 in
@@ -1305,57 +1342,24 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
         a, dependent)
     in
     let f_probe =
-      let check_dest env (d:expr) : ML expr =
-        let dest, dest_typ = check_expr env d in
+      let check_dest env (d:ident) : ML ident =
+        let dest, dest_typ = check_ident env d in
         if not (eq_typ env dest_typ tcopybuffer)
         then error (Printf.sprintf "Probe destination expression %s has type %s instead of EVERPARSE_COPY_BUFFER_T"
-                            (print_expr dest)
+                            (print_ident dest)
                             (print_typ dest_typ))
                             dest.range;
         dest
       in
       match sf.field_probe with
       | None -> None
-      | Some (SimpleCall p) ->
-        let length, typ = check_expr env p.probe_length in
-        let length =
-          if not (eq_typ env typ tuint64)
-          then match try_cast_integer env (length, typ) tuint64 with
-              | Some e -> e
-              | _ -> error (Printf.sprintf "Probe length expression %s has type %s instead of UInt64"
-                            (print_expr length)
-                            (print_typ typ))
-                            length.range
-          else length
-        in
-        let dest = check_dest env p.probe_dest in
-        let probe_fn =
-          match p.probe_fn with
-          | None -> (
-            match GlobalEnv.default_probe_fn env.globals with
-            | None -> 
-              error (Printf.sprintf "Probe function not specified and no default probe function found")
-                    p.probe_length.range
-            | Some i -> i
-          )
-          | Some p -> (
-            match GlobalEnv.resolve_probe_fn env.globals p None with
-            | None -> 
-              error (Printf.sprintf "Probe function %s not found" (print_ident p))
-                    p.range
-            | Some i -> 
-              i
-          )
-        in
-        Some (SimpleCall { probe_fn=Some probe_fn; probe_length=length; probe_dest=dest })
-
-      | Some (CompositeCall p) ->
+      | Some p ->
         let probe_dest = check_dest env p.probe_dest in
         let probe_block, t = check_probe env p.probe_block in
         if not (eq_typ env t tunit)
         then error (Printf.sprintf "Probe block has type %s instead of unit" (print_typ t)) 
                   p.probe_block.range;
-        Some (CompositeCall { probe_dest; probe_block })
+        Some { probe_dest; probe_block }
       
     in        
     if extend_scope then add_local env sf.field_ident sf.field_type;
@@ -1964,8 +1968,9 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
           d)
     else error "Ill-typed constant" d.d_decl.range
 
-  | TypeAbbrev t i gs ps ->
+  | TypeAbbrev attribs t i gs ps ->
     let env = mk_env e in
+    let attribs = List.map (check_attribute env) attribs in
     let env = List.fold_left push_generic env gs in
     check_params env ps;
     let t = check_typ false env t in
@@ -1985,7 +1990,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
         parser_kind_nz = None
       }
     in
-    let d = decl_with_v d (TypeAbbrev t i gs ps) in
+    let d = decl_with_v d (TypeAbbrev attribs t i gs ps) in
     add_global e i d (Inl attrs);
     d
 

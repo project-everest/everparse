@@ -23,6 +23,7 @@ module P = EverParse3d.Prelude
 module T = FStar.Tactics
 module CP = EverParse3d.CopyBuffer
 module PA = EverParse3d.ProbeActions
+include EverParse3d.ProbeActions
 open FStar.List.Tot
 
 inline_for_extraction
@@ -556,6 +557,7 @@ let atomic_probe_action_as_probe_m (#t:Type) (p:atomic_probe_action t)
 noeq
 type probe_action : Type u#1 =
   | Probe_action_atomic of atomic_probe_action unit
+  | Probe_action_var of probe_m unit
   | Probe_action_simple:
       bytes_to_read : U64.t { bytes_to_read <> 0uL } ->
       probe_fn: PA.probe_fn ->
@@ -576,6 +578,8 @@ let rec probe_action_as_probe_m (p:probe_action)
 = match p with
   | Probe_action_atomic a ->
     atomic_probe_action_as_probe_m a
+  | Probe_action_var m ->
+    m
   | Probe_action_simple bytes_to_read probe_fn ->
     PA.probe_fn_as_probe_m bytes_to_read probe_fn
   | Probe_action_seq m1 m2 ->

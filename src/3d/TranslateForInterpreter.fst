@@ -331,7 +331,7 @@ let rec translate_expr (e:A.expr) : ML T.expr =
 let rec translate_output_type (t:A.typ) : ML T.typ =
   match t.v with
   | Pointer t (Some (PQ A.UInt64)) -> T.T_pointer (translate_output_type t) A.UInt64
-  | Type_app id b [] -> T.T_app id b []
+  | Type_app id b [] [] -> T.T_app id b []
   | _ -> failwith "Impossible, translate_output_type did not get an output type!"
 
 let rec translate_out_expr_node (oe:with_meta_t out_expr')
@@ -395,9 +395,10 @@ let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
     T.T_pointer t' a, decls
   | Pointer t None ->
     failwith "Pointer sizes should have already been resolved"
-  | Type_app hd b args ->
+  | Type_app hd b gs args ->
+    let gs = gs |> List.map translate_expr |> List.map Inr in
     let args, decls = args |> List.map translate_typ_param |> List.split in
-    T.T_app hd b (List.map Inr args), List.flatten decls
+    T.T_app hd b (gs@List.map Inr args), List.flatten decls
 
 let translate_probe_entrypoint
   (p: A.probe_entrypoint)
@@ -407,20 +408,30 @@ let translate_probe_entrypoint
     probe_ep_length = translate_expr p.probe_ep_length;
   }
 
+let translate_params (params:list Ast.param)
+: ML (list T.param & T.decls)
+= let ps, ds =
+    params
+    |> List.map
+        (fun (t, id, _) ->  //TODO: ignores qualifier
+          let t, ds = translate_typ t in
+          (id, t), ds)
+    |> List.split
+  in
+  ps, List.flatten ds
+
+ 
 let translate_typedef_name (tdn:A.typedef_names) (params:list Ast.param)
   : ML (T.typedef_name & T.decls) =
 
-  let params, ds = params |> List.map (fun (t, id, _) ->  //TODO: ignores qualifier
-    let t, ds = translate_typ t in
-    (id, t), ds) |> List.split in
-
+  let params, ds = translate_params params in
   let entrypoint_probes = List.map translate_probe_entrypoint (A.get_entrypoint_probes tdn.typedef_attributes) in
 
   let open T in
   { td_name = tdn.typedef_name;
     td_params = params;
     td_entrypoint_probes = entrypoint_probes;
-    td_entrypoint = has_entrypoint tdn.typedef_attributes }, List.flatten ds
+    td_entrypoint = has_entrypoint tdn.typedef_attributes }, ds
 
 let make_enum_typ (t:T.typ) (ids:list ident) =
   let refinement i =
@@ -777,7 +788,7 @@ let make_zero (r: range) (t: typ) : ML T.expr =
   let it = typ_as_integer_type t in
   (T.Constant (Int it 0), r)
 
-let rec translate_action_as_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls) =
+let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls) =
   let translate_atomic (a:A.probe_atomic_action) : ML T.atomic_probe_action =
     match a with
     | A.Probe_action_return e ->
@@ -794,29 +805,29 @@ let rec translate_action_as_probe_action (a:A.probe_action) : ML (T.probe_action
   match a.v with
   | A.Probe_atomic_action a ->
     T.Probe_atomic (translate_atomic a), []
+  | A.Probe_action_var i ->
+    T.Probe_action_var (T.Identifier i, a.A.range), []
+  | A.Probe_action_simple f n ->
+    if None? f
+    then failwith "Probe action name should have already been resolved";
+    let Some f = f in
+    T.Probe_fn_as_probe_m { bytes_to_read = translate_expr n; probe_fn = f }, []
   | A.Probe_action_seq hd tl ->
     let hd = translate_atomic hd in
-    let tl, ds2 = translate_action_as_probe_action tl in
+    let tl, ds2 = translate_probe_action tl in
     T.Probe_seq {hd; tl}, ds2
   | A.Probe_action_let i a k ->
     let a = translate_atomic a in
-    let tl, ds2 = translate_action_as_probe_action k in
+    let tl, ds2 = translate_probe_action k in
     T.Probe_let {i; a; tl}, ds2
 
 #push-options "--z3rlimit_factor 4"
 let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
   let sf = f.v in
   let translate_probe_call (p:probe_call) : ML (T.probe_action & A.ident & T.decls) =
-    match p with
-    | SimpleCall { probe_dest; probe_length; probe_fn = Some probe_fn } ->
-      let len = translate_expr probe_length in
-      let probe_action = T.Probe_fn_as_probe_m { bytes_to_read = len; probe_fn } in
-      probe_action, probe_dest, []
-    | CompositeCall { probe_dest; probe_block } ->
-      let probe_block, ds = translate_action_as_probe_action probe_block in
-      probe_block, probe_dest, ds
-    | _ ->
-      failwith "Impossible: probe function must be resolved"
+    let { probe_dest; probe_block } = p in
+    let probe_block, ds = translate_probe_action probe_block in
+    probe_block, probe_dest, ds
   in
   match f.v.field_probe with
   | Some probe_call -> (
@@ -1275,7 +1286,9 @@ let parse_field (env:global_env)
   = let _, gfs, decls = field_as_grouped_fields f in
     parse_grouped_fields env typename gfs, decls
 
-  
+let generics_as_params (gs:list generic_param) =
+  List.map (function GenericProbeFunction i -> probe_m_t, i, Immutable) gs
+
 let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
   match d.d_decl.v with
   | ModuleAbbrev _ _ -> []
@@ -1286,10 +1299,11 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let t, ds = translate_typ t in
     ds@[with_comments (T.Definition (i, [], t, T.mk_expr (T.Constant s))) (A.is_entrypoint d) d.d_exported d.d_decl.comments]
 
-  | TypeAbbrev t i ->
+  | TypeAbbrev attrs t i gs ps ->
     let tdn = make_tdn i in
     let t, ds1 = translate_typ t in
-    let tdn, ds2 = translate_typedef_name tdn [] in
+    let params =  generics_as_params gs @ ps in
+    let tdn, ds2 = translate_typedef_name tdn params in
     let p = parse_typ env i "" t in
     let open T in
     add_parser_kind_nz env tdn.td_name p.p_kind.pk_nz p.p_kind.pk_weak_kind;
@@ -1300,7 +1314,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_parser = p;
         decl_is_enum = false
     } in
-    ds1@ds2@[with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
+    ds1@ds2@[with_comments (Type_decl td) (A.has_entrypoint attrs) d.d_exported A.(d.d_decl.comments)]
 
   | Enum t i ids ->
     let ids = Desugar.check_desugared_enum_cases ids in
@@ -1320,8 +1334,8 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     } in
     ds1@ds2@[with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
-  | Record tdn params _ ast_fields ->
-    let tdn, ds1 = translate_typedef_name tdn params in
+  | Record tdn gs params _ ast_fields ->
+    let tdn, ds1 = translate_typedef_name tdn (generics_as_params gs @ params) in
     let dummy_ident = with_dummy_range (to_ident' "_") in
     let p, ds2 = parse_field env tdn.td_name (with_dummy_range (RecordField ast_fields dummy_ident)) in
     let open T in
@@ -1334,10 +1348,10 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
           decl_parser = p;
           decl_is_enum = false
     } in
-   ds1@ds2 @ [with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
+    ds1@ds2 @ [with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
-  | CaseType tdn0 params switch_case ->
-    let tdn, ds1 = translate_typedef_name tdn0 params in
+  | CaseType tdn0 gs params switch_case ->
+    let tdn, ds1 = translate_typedef_name tdn0 (generics_as_params gs @ params) in
     let dummy_ident = with_dummy_range (to_ident' "_") in    
     let p, ds2 = parse_field env tdn.td_name (with_dummy_range (SwitchCaseField switch_case dummy_ident)) in
     let open T in
@@ -1351,6 +1365,11 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
         decl_is_enum = false
     } in
     ds1 @ ds2 @ [with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
+
+  | ProbeFunction id ps pb ->
+    let ps, ds = translate_params ps in
+    let pb, ds' = translate_probe_action pb in
+    ds@ds'@[with_comments (T.Probe_function id ps pb) false false A.(d.d_decl.comments)]
 
   | OutputType out_t -> [with_comments (T.Output_type out_t) (A.is_entrypoint d) false []]  //No decl for output type specifications
 

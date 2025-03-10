@@ -15,24 +15,26 @@ typedef struct _A {
 aligned
 typedef struct _B (EVERPARSE_COPY_BUFFER_T a_out) {
 	UINT32 b1;
-	A *pa probe
-	   ProbeAndCopy(length=sizeof(A), destination=a_out);
+	A *pa probe (length=sizeof(A), destination=a_out);
 	UINT32 b2;
 	UINT32 b3;
 } B;
 
-entrypoint
 aligned
 typedef struct _C (EVERPARSE_COPY_BUFFER_T a_out, EVERPARSE_COPY_BUFFER_T b_out)
 {
 	UINT32 c1;
-	B(a_out) *pointer(UINT32) pb
-	   probe (destination=b_out) {
-        ProbeAndCopyLen(4);
-        WriteU32(0);
-        var p32 = ProbeAndReadU32();
-        var p64 = UlongToPtr(p32);
-        WriteU64(p64);
-        ProbeAndCopyLen(8);
-   };
+	B(a_out) *pb probe (length=sizeof(B), destination=b_out);
 } C;
+
+entrypoint
+aligned
+typedef struct _D (
+	EVERPARSE_COPY_BUFFER_T a_out,
+	EVERPARSE_COPY_BUFFER_T b_out,
+	EVERPARSE_COPY_BUFFER_T c_out,
+)
+{
+	UINT32 c1;
+	C(a_out, b_out) *pb probe (length=sizeof(C), destination=c_out);
+} D;
