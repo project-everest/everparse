@@ -1340,7 +1340,7 @@ let print_witness_call_as_c
     uint64_t output = ";
   print_witness_call_as_c_aux out validator_name arg_types witness_length args num;
   out "
-    printf(\"  ";
+    printf(\"  // ";
   print_witness_call_as_c_aux out validator_name arg_types witness_length args num;
   out " // \");
     BOOLEAN result = !EverParseIsError(output);
