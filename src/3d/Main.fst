@@ -468,7 +468,7 @@ let build_test_exe
   if OS.is_windows ()
   then begin
     let cl_wrapper = Batch.cl_wrapper () in
-    OS.run_cmd "cmd" ("/C" :: "call" :: cl_wrapper :: "/Fe:" :: OS.concat out_dir "test.exe" :: testcases_c_file out_dir :: List.Tot.map (OS.concat out_dir) (List.Tot.map (fun x -> x ^ ".c") modules))
+    OS.run_cmd "cmd" ("/C" :: "cd" :: out_dir :: "&&" :: "call" :: cl_wrapper :: "/Fe:" :: OS.concat "." "test.exe" :: testcases_c_file "." :: List.Tot.map (fun x -> x ^ ".c") modules)
   end else
   if not (Options.get_skip_c_makefiles ())
   then begin
