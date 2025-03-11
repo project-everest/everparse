@@ -1,7 +1,7 @@
 module CDDL.Pulse.Serialize.Misc
 #lang-pulse
 include CDDL.Pulse.Serialize.Base
-include CDDL.Spec.Misc
+include CDDL.Pulse.Misc
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
 open CBOR.Pulse.API.Base
@@ -161,6 +161,54 @@ fn impl_serialize_int_range_neg_int64
   } else {
     0sz
   }
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_literal_cont
+  (#ty: Type u#0)
+  (#[@@@erasable] vmatch: perm -> ty -> cbor -> slprop)
+  (cbor_det_serialize: cbor_det_serialize_t vmatch)
+  (#[@@@erasable] u: Ghost.erased cbor)
+  (c: unit)
+  ([@@@erasable] v: Ghost.erased unit)
+  (out: S.slice U8.t)
+: with_cbor_literal_cont_t #_ vmatch u
+  (exists* w . rel_unit c v ** pts_to out w)
+  SZ.t
+    (fun res -> exists* w .
+      rel_unit c v ** pts_to out w **
+      pure (impl_serialize_post (spec_literal u) v w res)
+    )
+=
+  (pk: _)
+  (ck: _)
+{
+  let res = cbor_det_serialize ck out;
+  Cbor.cbor_det_serialize_parse u;
+  match res {
+    None -> {
+      0sz
+    }
+    Some r -> {
+      r
+    }
+  }
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_literal
+  (#ty: Type u#0)
+  (#[@@@erasable] vmatch: perm -> ty -> cbor -> slprop)
+  (cbor_det_serialize: cbor_det_serialize_t vmatch)
+  (#[@@@erasable] u: Ghost.erased cbor)
+  (w: with_cbor_literal_t vmatch u)
+: impl_serialize #_ #_ #_ (spec_literal u) #_ (rel_unit)
+=
+  (c: _)
+  (#v: _)
+  (out: _)
+{
+  w _ _ _ (impl_serialize_literal_cont cbor_det_serialize c v out)
 }
 
 inline_for_extraction noextract [@@noextract_to "krml";
