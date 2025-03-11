@@ -131,3 +131,43 @@ fn impl_serialize_choice
     }
   }
 }
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_either_left
+    (#[@@@erasable]t1: Ghost.erased typ)
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize ps1 r1)
+    (#impl_tgt2: Type0)
+    (#[@@@erasable]r2: rel impl_tgt2 tgt1)
+    (i2: impl_serialize ps1 r2)
+: impl_serialize #_ #_ #_ (ps1) #_ (rel_either_left r1 r2)
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+{
+  match c {
+    norewrite
+    Inl c1 -> {
+      Trade.rewrite_with_trade
+        (rel_either_left r1 r2 c v)
+        (r1 c1 v);
+      let res = i1 c1 out;
+      Trade.elim _ _;
+      res
+    }
+    norewrite
+    Inr c2 -> {
+      Trade.rewrite_with_trade
+        (rel_either_left r1 r2 c v)
+        (r2 c2 v);
+      let res = i2 c2 out;
+      Trade.elim _ _;
+      res
+    }
+  }
+}

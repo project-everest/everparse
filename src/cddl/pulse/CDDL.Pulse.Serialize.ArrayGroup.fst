@@ -687,3 +687,67 @@ impl_serialize_array_group_zero_or_more_iterator
   GR.free pl1;
   !pres
 }
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_array_group_either_left
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (#impl_tgt2: Type0)
+    (#[@@@erasable]r2: rel impl_tgt2 tgt1)
+    (i2: impl_serialize_array_group ps1 r2)
+: impl_serialize_array_group #_ #_ #_ (ps1) #_ (rel_either_left r1 r2)
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  match c {
+    norewrite
+    Inl c1 -> {
+      Trade.rewrite_with_trade (rel_either_left r1 r2 c v) (r1 c1 v);
+      let res = i1 c1 out out_count out_size l;
+      Trade.elim _ _;
+      res
+    }
+    norewrite
+    Inr c2 -> {
+      Trade.rewrite_with_trade (rel_either_left r1 r2 c v) (r2 c2 v);
+      let res = i2 c2 out out_count out_size l;
+      Trade.elim _ _;
+      res
+    }
+  }
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_serialize_array_group_zero_or_more
+  (#cbor_array_iterator_t: Type)
+  (#[@@@erasable]cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (is_empty: array_iterator_is_empty_t cbor_array_iterator_match)
+  (length: array_iterator_length_t cbor_array_iterator_match)
+  (share: share_t cbor_array_iterator_match)
+  (gather: gather_t cbor_array_iterator_match)
+  (truncate: array_iterator_truncate_t cbor_array_iterator_match)
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (sq: squash (
+      array_group_is_nonempty t1 /\
+      array_group_concat_unique_strong t1 t1
+    ))
+: impl_serialize_array_group #_ #_ #_ (ag_spec_zero_or_more ps1) #_ (rel_either_left (rel_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)))
+= impl_serialize_array_group_either_left
+    (impl_serialize_array_group_zero_or_more_slice i1 sq)
+    (impl_serialize_array_group_zero_or_more_iterator is_empty length share gather truncate i1 sq)
