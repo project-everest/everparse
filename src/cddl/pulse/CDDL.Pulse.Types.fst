@@ -251,6 +251,47 @@ let rel_option
   | _ -> pure False
 )
 
+ghost fn rel_option_cases
+  (#t1 #it1: Type0)
+  (r1: rel it1 t1)
+  (x: option it1)
+  (y: option t1)
+requires
+  rel_option r1 x y
+ensures
+  rel_option r1 x y **
+  pure (Some? x <==> Some? y)
+{
+  match x {
+    Some x1 -> {
+      match y {
+        Some y1 -> {
+          rewrite (rel_option r1 (Some x1) (Some y1))
+            as (rel_option r1 x y)
+        }
+        None -> {
+          unfold (rel_option r1 (Some x1) None);
+          assert (pure False);
+          rewrite emp as (rel_option r1 x y)
+        }
+      }
+    }
+    None -> {
+      match y {
+        Some y1 -> {
+          unfold (rel_option r1 None (Some y1));
+          assert (pure False);
+          rewrite emp as (rel_option r1 x y)
+        }
+        None -> {
+          rewrite (rel_option r1 None None)
+            as (rel_option r1 x y)
+        }
+      }
+    }
+  }
+}
+
 let rel_option_eq_some
   (#low #high: Type)
   (r: rel low high)

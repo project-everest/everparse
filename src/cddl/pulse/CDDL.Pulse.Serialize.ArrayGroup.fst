@@ -263,6 +263,43 @@ fn impl_serialize_array_group_choice
   }
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_array_group_zero_or_one
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (sq: squash (
+      array_group_is_nonempty t1
+    ))
+: impl_serialize_array_group #_ #_ #_ (ag_spec_zero_or_one ps1) #_ (rel_option r1)
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  rel_option_cases r1 c v;
+  match c {
+    norewrite
+    Some c1 -> {
+      Trade.rewrite_with_trade (rel_option r1 c v) (r1 c1 (Some?.v v));
+      let res = i1 c1 out out_count out_size l;
+      Trade.elim _ _;
+      res
+    }
+    norewrite
+    None -> {
+      true
+    }
+  }
+}
+
 module SM = Pulse.Lib.SeqMatch.Util
 module GR = Pulse.Lib.GhostReference
 
