@@ -11,6 +11,7 @@ module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module Cbor = CBOR.Spec.API.Format
 module U64 = FStar.UInt64
+module Iterator = CDDL.Pulse.Iterator.Base
 
 let impl_serialize_array_group_pre
   (count: U64.t)
@@ -137,3 +138,82 @@ val impl_serialize_array_group_concat
       array_group_concat_unique_weak t1 t2
     ))
 : impl_serialize_array_group #_ #_ #_ (ag_spec_concat ps1 ps2) #_ (rel_pair r1 r2)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+val impl_serialize_array_group_choice
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (#[@@@erasable]t2: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt2: Type0)
+    (#[@@@erasable] inj2: Ghost.erased bool)
+    (#[@@@erasable]ps2: Ghost.erased (ag_spec t2 tgt2 inj2))
+    (#impl_tgt2: Type0)
+    (#[@@@erasable]r2: rel impl_tgt2 tgt2)
+    (i2: impl_serialize_array_group ps2 r2)
+    (sq: squash (
+      array_group_disjoint t1 t2
+    ))
+: impl_serialize_array_group #_ #_ #_ (ag_spec_choice ps1 ps2) #_ (rel_either r1 r2)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+val impl_serialize_array_group_zero_or_one
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (sq: squash (
+      array_group_is_nonempty t1
+    ))
+: impl_serialize_array_group #_ #_ #_ (ag_spec_zero_or_one ps1) #_ (rel_option r1)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+val impl_serialize_array_group_zero_or_more
+  (#cbor_array_iterator_t: Type)
+  (#[@@@erasable]cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (is_empty: array_iterator_is_empty_t cbor_array_iterator_match)
+  (length: array_iterator_length_t cbor_array_iterator_match)
+  (share: share_t cbor_array_iterator_match)
+  (gather: gather_t cbor_array_iterator_match)
+  (truncate: array_iterator_truncate_t cbor_array_iterator_match)
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (sq: squash (
+      array_group_is_nonempty t1 /\
+      array_group_concat_unique_strong t1 t1
+    ))
+: impl_serialize_array_group #_ #_ #_ (ag_spec_zero_or_more ps1) #_ (rel_either_left (rel_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)))
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+val impl_serialize_array_group_one_or_more
+  (#cbor_array_iterator_t: Type)
+  (#[@@@erasable]cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (is_empty: array_iterator_is_empty_t cbor_array_iterator_match)
+  (length: array_iterator_length_t cbor_array_iterator_match)
+  (share: share_t cbor_array_iterator_match)
+  (gather: gather_t cbor_array_iterator_match)
+  (truncate: array_iterator_truncate_t cbor_array_iterator_match)
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (sq: squash (
+      array_group_is_nonempty t1 /\
+      array_group_concat_unique_strong t1 t1
+    ))
+: impl_serialize_array_group #_ #_ #_ (ag_spec_one_or_more ps1) #_ (rel_either_left (rel_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)))

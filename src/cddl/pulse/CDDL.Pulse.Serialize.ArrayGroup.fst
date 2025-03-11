@@ -601,8 +601,6 @@ fn impl_serialize_array_group_zero_or_more_slice
   !pres
 }
 
-module Iterator = CDDL.Pulse.Iterator.Base
-
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_serialize_array_group_zero_or_more_iterator_t
   (#cbor_array_iterator_t: Type)
