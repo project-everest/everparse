@@ -1352,11 +1352,12 @@ let print_witness_call_as_c
       result = consumes_all_bytes_if_successful;
     }
     if (result) {
-      printf (\"ACCEPTED\\n\\n\");
+      printf (\"ACCEPTED\\n\");
 ";
   print_outparameters out p arg_types;
   out
 "
+      printf (\"\\n\");
     }
     else if (!consumes_all_bytes_if_successful)
       printf (\"REJECTED (not all bytes consumed)\\n\\n\");
