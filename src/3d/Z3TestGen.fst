@@ -1267,7 +1267,7 @@ let alloc_ptr_arg
 Printf.sprintf "
   %s _contents_%s;
   %s *%s = &_contents_%s;
-  bzero((void*)%s, sizeof(%s));
+  memset((void*)%s, 0, sizeof(%s));
 "
   ty arg_var
   ty arg_var arg_var
