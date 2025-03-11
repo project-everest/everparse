@@ -5322,16 +5322,6 @@ cbor_freeable cbor_copy0(cbor_raw x)
   }
 }
 
-typedef cbor_raw cbor_det_t;
-
-typedef cbor_map_entry cbor_det_map_entry_t;
-
-typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-cbor_det_array_iterator_t;
-
-typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
-cbor_det_map_iterator_t;
-
 cbor_raw cbor_det_reset_perm(cbor_raw x1)
 {
   cbor_raw res = cbor_raw_reset_perm_tot(x1);
@@ -5975,8 +5965,6 @@ size_t cbor_det_serialize_map_to_array(uint64_t len, uint8_t *out, size_t out_le
   size_t res0 = res;
   return res0;
 }
-
-typedef cbor_freeable cbor_det_freeable_t;
 
 cbor_raw cbor_get_from_freeable(cbor_freeable x)
 {

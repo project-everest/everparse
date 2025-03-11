@@ -3,6 +3,7 @@
 #ifndef __internal_CBORDet_H
 #define __internal_CBORDet_H
 
+
 #include "krmllib.h"
 
 #include "../CBORDet.h"
@@ -22,7 +23,19 @@ void cbor_free_(cbor_freeable0 x);
 
 cbor_freeable cbor_copy0(cbor_raw x);
 
+typedef cbor_raw cbor_det_t;
+
+typedef cbor_map_entry cbor_det_map_entry_t;
+
+typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+cbor_det_array_iterator_t;
+
+typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
+cbor_det_map_iterator_t;
+
 bool cbor_raw_sort_aux(Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry a);
+
+typedef cbor_freeable cbor_det_freeable_t;
 
 
 #define __internal_CBORDet_H_DEFINED
