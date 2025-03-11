@@ -22,6 +22,19 @@ let impl_serialize_array_group_pre
   SZ.v size <= Seq.length w /\
   Seq.slice w 0 (SZ.v size) `Seq.equal` Cbor.cbor_det_serialize_list l
 
+let impl_serialize_array_group_valid
+  (l: list Cbor.cbor)
+  (#t: array_group None)
+  (#tgt: Type0)
+  (#inj: bool)
+  (s: ag_spec t tgt inj)
+  (v: tgt)
+  (len: nat)
+: Tot bool
+=   s.ag_serializable v &&
+    FStar.UInt.fits (List.Tot.length l + List.Tot.length (s.ag_serializer v)) 64 &&
+    Seq.length (Cbor.cbor_det_serialize_list (List.Tot.append l (s.ag_serializer v))) <= len
+
 let impl_serialize_array_group_post
   (count: U64.t)
   (size: SZ.t)
@@ -34,11 +47,7 @@ let impl_serialize_array_group_post
   (w: Seq.seq U8.t)
   (res: bool)
 : Tot prop
-= (res == true <==> (
-    s.ag_serializable v /\
-    FStar.UInt.fits (List.Tot.length l + List.Tot.length (s.ag_serializer v)) 64 /\
-    Seq.length (Cbor.cbor_det_serialize_list (List.Tot.append l (s.ag_serializer v))) <= Seq.length w
-  )) /\
+= (res == true <==> impl_serialize_array_group_valid l s v (Seq.length w)) /\
   (res == true ==> (
     impl_serialize_array_group_pre count size (List.Tot.append l (s.ag_serializer v)) w
   ))

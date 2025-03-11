@@ -262,3 +262,304 @@ fn impl_serialize_array_group_choice
     }
   }
 }
+
+module SM = Pulse.Lib.SeqMatch.Util
+module GR = Pulse.Lib.GhostReference
+
+let list_append_nil_r_pat
+  (#t: Type)
+  (l1: list t)
+: Lemma
+  (List.Tot.append l1 [] == l1)
+  [SMTPat (List.Tot.append l1 [])]
+= List.Tot.append_l_nil l1
+
+let rec ag_spec_zero_or_more_size_append
+  (#target: Type)
+  (p: target -> nat)
+  (l1 l2: list target)
+: Lemma
+  (ensures (ag_spec_zero_or_more_size p (List.Tot.append l1 l2) == ag_spec_zero_or_more_size p l1 + ag_spec_zero_or_more_size p l2))
+  (decreases l1)
+= match l1 with
+  | [] -> ()
+  | hd :: tl -> ag_spec_zero_or_more_size_append p tl l2
+
+let rec ag_spec_zero_or_more_serializer_append
+  (#source: nonempty_array_group)
+  (#target: Type)
+  (#inj: bool)
+  (ps1: (ag_spec source target inj) {
+    array_group_concat_unique_strong source source
+  })
+  (l1 l2: list target)
+: Lemma
+  (requires (
+    ag_spec_zero_or_more_serializable ps1.ag_serializable l1 /\
+    ag_spec_zero_or_more_serializable ps1.ag_serializable l2
+  ))
+  (ensures (
+    ag_spec_zero_or_more_serializable ps1.ag_serializable l1 /\
+    ag_spec_zero_or_more_serializable ps1.ag_serializable l2 /\
+    ag_spec_zero_or_more_serializable ps1.ag_serializable (List.Tot.append l1 l2) /\
+    (ag_spec_zero_or_more ps1).ag_serializer (List.Tot.append l1 l2) ==
+      List.Tot.append
+        ((ag_spec_zero_or_more ps1).ag_serializer l1)
+        ((ag_spec_zero_or_more ps1).ag_serializer l2)
+  ))
+  (decreases l1)
+= 
+  match l1 with
+  | [] -> ()
+  | hd :: tl -> ag_spec_zero_or_more_serializer_append ps1 tl l2
+
+let ag_serializable_zero_or_more_append
+    (#t1: (array_group None))
+    (#tgt1: Type0)
+    (#inj1: bool)
+    (ps1: (ag_spec t1 tgt1 inj1))
+    (l1 l2: list tgt1)
+: Lemma
+  (requires (array_group_is_nonempty t1 /\ array_group_concat_unique_strong t1 t1))
+  (ensures (
+    array_group_is_nonempty t1 /\ array_group_concat_unique_strong t1 t1 /\ (
+    let ps = ag_spec_zero_or_more ps1 in (
+    ps.ag_size (List.Tot.append l1 l2) == ps.ag_size l1 + ps.ag_size l2 /\
+    ps.ag_serializable (List.Tot.append l1 l2) == (ps.ag_serializable l1 && ps.ag_serializable l2)) /\
+    ((ps.ag_serializable l1 /\ ps.ag_serializable l2) ==>
+      ps.ag_serializer (List.Tot.append l1 l2) == List.Tot.append (ps.ag_serializer l1) (ps.ag_serializer l2)
+    )
+  )))
+= ag_spec_zero_or_more_size_append ps1.ag_size l1 l2;
+  List.Tot.for_all_append ps1.ag_serializable l1 l2;
+  let ps = ag_spec_zero_or_more ps1 in
+  if ps.ag_serializable l1 && ps.ag_serializable l2
+  then begin
+    ag_spec_zero_or_more_serializer_append ps1 l1 l2
+  end;
+  ()
+
+let impl_serialize_array_group_valid_zero_or_more_false_intro
+  (l: list Cbor.cbor)
+  (#t: array_group None)
+  (#tgt: Type0)
+  (#inj: bool)
+  (ps1: ag_spec t tgt inj)
+  (l1: list tgt)
+  (x: tgt)
+  (l2: list tgt)
+  (len: nat)
+: Lemma
+  (requires (
+    array_group_is_nonempty t /\ array_group_concat_unique_strong t t /\ (
+    let ps = ag_spec_zero_or_more ps1 in (
+    ps.ag_serializable l1 /\
+    impl_serialize_array_group_valid (List.Tot.append l (ps.ag_serializer l1)) ps1 x len == false
+  ))))
+  (ensures (
+    array_group_is_nonempty t /\ array_group_concat_unique_strong t t /\ (
+    let ps = ag_spec_zero_or_more ps1 in (
+    ps.ag_serializable l1 /\
+    impl_serialize_array_group_valid (List.Tot.append l (ps.ag_serializer l1)) ps (x :: l2) len == false
+  ))))
+= ag_serializable_zero_or_more_append ps1 l1 (x :: l2)
+
+let impl_serialize_array_group_valid_zero_or_more_true_intro_length
+  (x1 x2 x3 x4: nat)
+: Lemma
+  ((x1 + x2) + (x3 + x4) == (x1 + (x2 + x3)) + x4)
+= ()
+
+let impl_serialize_array_group_valid_zero_or_more_true_intro
+  (l: list Cbor.cbor)
+  (#t: array_group None)
+  (#tgt: Type0)
+  (#inj: bool)
+  (ps1: ag_spec t tgt inj)
+  (l1: list tgt)
+  (x: tgt)
+  (l2: list tgt)
+  (count: U64.t)
+  (size: SZ.t)
+  (w: Seq.seq U8.t)
+: Lemma
+  (requires (
+    array_group_is_nonempty t /\ array_group_concat_unique_strong t t /\ (
+    let ps = ag_spec_zero_or_more ps1 in (
+    ps.ag_serializable l1 /\
+    impl_serialize_array_group_post count size (List.Tot.append l (ps.ag_serializer l1)) ps1 x w true
+  ))))
+  (ensures (
+    array_group_is_nonempty t /\ array_group_concat_unique_strong t t /\ (
+    let ps = ag_spec_zero_or_more ps1 in (
+    ps.ag_serializable l1 /\
+    ps.ag_serializable (List.Tot.append l1 [x]) /\
+    impl_serialize_array_group_post count size (List.Tot.append l (ps.ag_serializer l1)) ps1 x w true /\
+    impl_serialize_array_group_post count size l ps (List.Tot.append l1 [x]) w true /\
+    impl_serialize_array_group_valid (List.Tot.append l (ps.ag_serializer l1)) ps (x :: l2) (Seq.length w) ==
+    impl_serialize_array_group_valid (List.Tot.append l (ps.ag_serializer (List.Tot.append l1 [x]))) ps (l2) (Seq.length w)
+  ))))
+= let ps = ag_spec_zero_or_more ps1 in
+  ag_serializable_zero_or_more_append ps1 l1 [x];
+  assert (ps.ag_serializable (List.Tot.append l1 [x]));
+  ag_spec_zero_or_more_serializer_append ps1 l1 [x];
+  assert ((ps.ag_serializer [x] <: list cbor) == List.Tot.append (ps1.ag_serializer x) [])
+    by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+  List.Tot.append_l_nil (ps1.ag_serializer x);
+  assert ((ps.ag_serializer [x] <: list cbor) == ps1.ag_serializer x);
+  assert ((ps.ag_size [x] <: nat) == ps1.ag_size x);
+  ag_spec_zero_or_more_size_append ps1.ag_size l1 [x];
+  List.Tot.append_assoc l (ps.ag_serializer l1) (ps1.ag_serializer x);
+  assert (impl_serialize_array_group_post count size l ps (List.Tot.append l1 [x]) w true);
+  List.Tot.append_length l (ps.ag_serializer l1);
+  List.Tot.append_length l (ps.ag_serializer (List.Tot.append l1 [x]));
+  List.Tot.append_length (ps.ag_serializer l1) (ps1.ag_serializer x);
+  ag_serializable_zero_or_more_append ps1 [x] l2;
+  assert (ps.ag_serializable (x :: l2) == ps.ag_serializable l2);
+  if ps.ag_serializable l2
+  then begin
+    assert ((ps.ag_serializer (x :: l2) <: list cbor) == List.Tot.append (ps1.ag_serializer x) (ps.ag_serializer l2))
+      by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+    List.Tot.append_length (ps1.ag_serializer x) (ps.ag_serializer l2);
+    let a = (List.Tot.length l + List.Tot.length (ps.ag_serializer l1)) + (List.Tot.length (ps1.ag_serializer x) + List.Tot.length (ps.ag_serializer l2)) in
+    assert (
+      List.Tot.length (List.Tot.append l (ps.ag_serializer l1)) + List.Tot.length (ps.ag_serializer (x :: l2)) ==
+      a
+    );
+    let b = (List.Tot.length l + (List.Tot.length (ps.ag_serializer l1) + List.Tot.length (ps1.ag_serializer x))) + List.Tot.length (ps.ag_serializer l2) in
+    assert (
+      List.Tot.length (List.Tot.append l (ps.ag_serializer (List.Tot.append l1 [x]))) + List.Tot.length (ps.ag_serializer l2) ==
+      b
+    );
+    impl_serialize_array_group_valid_zero_or_more_true_intro_length
+      (List.Tot.length l)
+      (List.Tot.length (ps.ag_serializer l1))
+      (List.Tot.length (ps1.ag_serializer x))
+      (List.Tot.length (ps.ag_serializer l2));
+    assert (a == b);
+    assert (
+      List.Tot.length (List.Tot.append l (ps.ag_serializer l1)) + List.Tot.length (ps.ag_serializer (x :: l2)) ==
+      List.Tot.length (List.Tot.append l (ps.ag_serializer (List.Tot.append l1 [x]))) + List.Tot.length (ps.ag_serializer l2)
+    );
+    assert (
+      impl_serialize_array_group_valid (List.Tot.append l (ps.ag_serializer l1)) ps (x :: l2) (Seq.length w) ==
+      impl_serialize_array_group_valid (List.Tot.append l (ps.ag_serializer (List.Tot.append l1 [x]))) ps (l2) (Seq.length w)
+    );
+    ()
+  end
+  else ()
+
+#restart-solver
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_array_group_zero_or_more_slice
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (sq: squash (
+      array_group_is_nonempty t1 /\
+      array_group_concat_unique_strong t1 t1
+    ))
+: impl_serialize_array_group #_ #_ #_ (ag_spec_zero_or_more ps1) #_ (rel_slice_of_list r1 false)
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  let ps = Ghost.hide (ag_spec_zero_or_more ps1);
+  unfold (rel_slice_of_list r1 false c v);
+  with s . assert (pts_to c.s #c.p s ** SM.seq_list_match s v r1);
+  ghost fn aux (_: unit)
+  requires emp ** (pts_to c.s #c.p s ** SM.seq_list_match s v r1)
+  ensures rel_slice_of_list r1 false c v
+  {
+    fold (rel_slice_of_list r1 false c v)
+  };
+  Trade.intro _ _ _ aux;
+  let pl1 : GR.ref (list tgt1) = GR.alloc (Nil #tgt1);
+  let mut pres = true;
+  let mut pi = 0sz;
+  let slen = S.len c.s;
+  Cbor.cbor_det_serialize_list_nil ();
+  while (
+    let res = !pres;
+    if (res) {
+      let i = !pi;
+      S.pts_to_len c.s;
+      (SZ.lt i slen)
+    } else {
+      false
+    }
+  ) invariant b. exists* l1 res i s2 l2 w count size . (
+    GR.pts_to pl1 l1 **
+    pts_to c.s #c.p s **
+    pts_to pi i **
+    SM.seq_list_match s2 l2 r1 **
+    pts_to pres res **
+    pts_to out w **
+    pts_to out_count count **
+    pts_to out_size size **
+    Trade.trade
+      (pts_to c.s #c.p s ** SM.seq_list_match s2 l2 r1)
+      (rel_slice_of_list r1 false c v)
+      **
+    pure (
+      SZ.v i <= Seq.length s /\
+      Seq.equal s2 (Seq.slice s (SZ.v i) (Seq.length s)) /\
+      Ghost.reveal v == List.Tot.append l1 l2 /\
+      ps.ag_serializable l1 /\
+      (impl_serialize_array_group_valid l ps v (Seq.length w) == (res && impl_serialize_array_group_valid (l `List.Tot.append` ps.ag_serializer l1) ps l2 (Seq.length w))) /\
+      (res == true ==> impl_serialize_array_group_post count size l ps l1 w true) /\
+      b == (res && (SZ.v i < Seq.length s))
+    )
+  ) {
+    with s2 l2 . assert (SM.seq_list_match s2 l2 r1);
+    S.pts_to_len c.s;
+    SM.seq_list_match_length r1 s2 l2;
+    let _ = SM.seq_list_match_cons_elim_trade s2 l2 r1;
+    with s2' l2' . assert (SM.seq_list_match s2' l2' r1);
+    let y = Ghost.hide (List.Tot.hd l2);
+    let i = !pi;
+    let x = S.op_Array_Access c.s i;
+    Trade.rewrite_with_trade (r1 _ _) (r1 x y);
+    Trade.trans_hyp_l (r1 x y) _ _ _;
+    with l1 . assert (GR.pts_to pl1 l1);
+    let res = i1 x out out_count out_size (List.Tot.append l (ps.ag_serializer l1));
+    with w . assert (pts_to out w);
+    S.pts_to_len c.s;
+    ag_serializable_zero_or_more_append ps1 l1 l2;
+    if (res) {
+      ag_serializable_zero_or_more_append ps1 l1 [Ghost.reveal y];
+      let i' = SZ.add i 1sz;
+      pi := i';
+      let l1' = Ghost.hide (List.Tot.append l1 [Ghost.reveal y]);
+      GR.op_Colon_Equals pl1 l1';
+      Trade.elim_hyp_l (r1 _ _) _ _;
+      Trade.trans_hyp_r _ _ _ (rel_slice_of_list r1 false c v);
+      with gcount . assert (pts_to out_count gcount);
+      with gsize . assert (pts_to out_size gsize);
+      impl_serialize_array_group_valid_zero_or_more_true_intro l ps1 l1 y l2' gcount gsize w;
+      assert (pure (Seq.equal s2' (Seq.slice s (SZ.v i') (Seq.length s))));
+      List.Tot.append_assoc l1 [Ghost.reveal y] l2';
+      assert (pure (Ghost.reveal v == List.Tot.append l1' l2'));
+      assert (pure (ps.ag_serializable l1'));
+      assert (pure (impl_serialize_array_group_valid l ps v (Seq.length w) == (res && impl_serialize_array_group_valid (l `List.Tot.append` ps.ag_serializer l1') ps l2' (Seq.length w))));
+      assert (pure (impl_serialize_array_group_post gcount gsize l ps l1' w true));
+      ()
+    } else {
+      Trade.elim _ (SM.seq_list_match s2 l2 r1);
+      impl_serialize_array_group_valid_zero_or_more_false_intro l ps1 l1 y l2' (Seq.length w);
+      pres := false
+    }
+  };
+  SM.seq_list_match_length r1 _ _;
+  Trade.elim _ _;
+  GR.free pl1;
+  !pres
+}
