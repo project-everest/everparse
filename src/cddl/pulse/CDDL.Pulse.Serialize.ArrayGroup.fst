@@ -563,3 +563,127 @@ fn impl_serialize_array_group_zero_or_more_slice
   GR.free pl1;
   !pres
 }
+
+module Iterator = CDDL.Pulse.Iterator.Base
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_serialize_array_group_zero_or_more_iterator_t
+  (#cbor_array_iterator_t: Type)
+  (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (sq: squash (
+      array_group_is_nonempty t1 /\
+      array_group_concat_unique_strong t1 t1
+    ))
+=
+  impl_serialize_array_group #_ #_ #_ (ag_spec_zero_or_more ps1) #(array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
+
+#push-options "--print_implicits"
+
+#restart-solver
+inline_for_extraction noextract [@@noextract_to "krml"] fn 
+impl_serialize_array_group_zero_or_more_iterator
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (is_empty: array_iterator_is_empty_t cbor_array_iterator_match)
+  (length: array_iterator_length_t cbor_array_iterator_match)
+  (share: share_t cbor_array_iterator_match)
+  (gather: gather_t cbor_array_iterator_match)
+  (truncate: array_iterator_truncate_t cbor_array_iterator_match)
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (sq: squash (
+      array_group_is_nonempty t1 /\
+      array_group_concat_unique_strong t1 t1
+    ))
+: impl_serialize_array_group_zero_or_more_iterator_t #cbor_array_iterator_t cbor_array_iterator_match #t1 #tgt1 #inj1 #ps1 #impl_tgt1 #r1 i1 sq
+=
+    (c0: array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1))
+    (#v: Ghost.erased (list tgt1))
+    (out: S.slice U8.t)
+    (out_count: R.ref U64.t)
+    (out_size: R.ref SZ.t)
+    (l: Ghost.erased (list Cbor.cbor))
+{
+  let ps = Ghost.hide (ag_spec_zero_or_more ps1);
+  let mut pc = c0;
+  let pl1 : GR.ref (list tgt1) = GR.alloc (Nil #tgt1);
+  let mut pres = true;
+  Cbor.cbor_det_serialize_list_nil ();
+  Trade.refl (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c0 v);
+  while (
+    let res = !pres;
+    if (res) {
+      with gc l2 . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc l2);
+      let c = !pc;
+      rewrite each gc as c;
+      let em = cddl_array_iterator_is_empty impl_tgt1 is_empty c;
+      not em
+    } else {
+      false
+    }
+  ) invariant b. exists* l1 c res l2 w count size . (
+    GR.pts_to pl1 l1 **
+    pts_to pc c **
+    rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c l2 **
+    pts_to pres res **
+    pts_to out w **
+    pts_to out_count count **
+    pts_to out_size size **
+    Trade.trade
+      (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c l2)
+      (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c0 v)
+      **
+    pure (
+      (res == true ==> Ghost.reveal v == List.Tot.append l1 l2) /\
+      ps.ag_serializable l1 /\
+      (impl_serialize_array_group_valid l ps v (Seq.length w) == (res && impl_serialize_array_group_valid (l `List.Tot.append` ps.ag_serializer l1) ps l2 (Seq.length w))) /\
+      (res == true ==> impl_serialize_array_group_post count size l ps l1 w true) /\
+      b == (res && (Cons? l2))
+    )
+  ) {
+    with gc l2 . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc l2);
+    let x : impl_tgt1 = cddl_array_iterator_next length share gather truncate impl_tgt1 pc;
+    with gc' l2' . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc' l2');
+    let z : Ghost.erased tgt1 = Ghost.hide (List.Tot.hd l2);
+    Trade.rewrite_with_trade (dsnd (Iterator.mk_spec r1) _ _) (r1 x z);
+    Trade.trans_hyp_l (r1 x z) _ _ _;
+    with l1 . assert (GR.pts_to pl1 l1);
+    let res = i1 x #z out out_count out_size (List.Tot.append l (ps.ag_serializer l1));
+    Trade.elim_hyp_l _ _ _;
+    Trade.trans _ _ (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c0 v);
+    with w . assert (pts_to out w);
+    ag_serializable_zero_or_more_append ps1 l1 l2;
+    if (res) {
+      ag_serializable_zero_or_more_append ps1 l1 [Ghost.reveal z];
+      let l1' = Ghost.hide (List.Tot.append l1 [Ghost.reveal z]);
+      GR.op_Colon_Equals pl1 l1';
+      with gcount . assert (pts_to out_count gcount);
+      with gsize . assert (pts_to out_size gsize);
+      impl_serialize_array_group_valid_zero_or_more_true_intro l ps1 l1 z l2' gcount gsize w;
+      List.Tot.append_assoc l1 [Ghost.reveal z] l2';
+      assert (pure (Ghost.reveal v == List.Tot.append l1' l2'));
+      assert (pure (ps.ag_serializable l1'));
+      assert (pure (impl_serialize_array_group_valid l ps v (Seq.length w) == (res && impl_serialize_array_group_valid (l `List.Tot.append` ps.ag_serializer l1') ps l2' (Seq.length w))));
+      assert (pure (impl_serialize_array_group_post gcount gsize l ps l1' w true));
+      ()
+    } else {
+      impl_serialize_array_group_valid_zero_or_more_false_intro l ps1 l1 z l2' (Seq.length w);
+      pres := false
+    }
+  };
+  Trade.elim _ _;
+  GR.free pl1;
+  !pres
+}
