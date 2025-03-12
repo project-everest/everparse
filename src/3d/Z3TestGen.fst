@@ -1577,6 +1577,7 @@ let print_witness_layer_as_c_aux
 
 let print_witness_as_c_aux
   (out: (string -> ML unit))
+  (print_c_initializer: bool)
   (flight: string)
   (witness: Seq.seq (Seq.seq int))
   (len: int { len == Seq.length witness })
@@ -1590,7 +1591,12 @@ let print_witness_as_c_aux
       let w = Seq.index witness i in
       let wlen = Seq.length w in
       let layer_name = print_witness_layer_as_c_aux out flight w wlen num i in
-      let layer = "{ .buf = " ^ layer_name ^ ", .len = " ^ string_of_int wlen ^ "}" in
+      let layer = Printf.sprintf "{ %s%s, %s%d }"
+        (if print_c_initializer then ".buf = " else "")
+        layer_name
+        (if print_c_initializer then ".len = " else "")
+        wlen
+      in
       let accu' =
         if accu = ""
         then layer
@@ -1611,6 +1617,7 @@ let print_witness_as_c_aux
 
 let print_witness_as_c_gen
   (out: (string -> ML unit))
+  (print_c_initializer: bool)
   (flight: string)
   (witness: Seq.seq (Seq.seq int))
   (f: (len: int { len == Seq.length witness }) -> ML unit)
@@ -1618,10 +1625,10 @@ let print_witness_as_c_gen
 : ML unit
 = let len = Seq.length witness in
   out "{\n";
-  print_witness_as_c_aux out flight witness len num;
+  print_witness_as_c_aux out true flight witness len num;
   out "
   printf(\"";
-  print_witness_as_c_aux out flight witness len num;
+  print_witness_as_c_aux out print_c_initializer flight witness len num;
   out "\\n\");
 ";
   f len;
@@ -1665,6 +1672,7 @@ let incr (x: ref nat) : ML nat =
 let print_witness_as_c
   (out_dir: string)
   (out: (string -> ML unit))
+  (print_c_initializer: bool)
   (p: prog)
   (positive: bool)
   (flight: string)
@@ -1676,7 +1684,7 @@ let print_witness_as_c
 : ML unit
 = let num = incr counter in
   write_witness_to_file witness (fun i -> mk_output_filename num out_dir ((if positive then "POS." else "NEG.") ^ string_of_int i ^ "." ^ validator_name) args);
-  print_witness_as_c_gen out flight witness (fun len ->
+  print_witness_as_c_gen out print_c_initializer flight witness (fun len ->
     if len = 0
     then failwith "print_witness_as_c: no witness layers. This should not happen.";
     print_witness_call_as_c out p positive flight validator_name arg_types args num len
@@ -1685,6 +1693,7 @@ let print_witness_as_c
 let print_diff_witness_as_c
   (out_dir: string)
   (out: (string -> ML unit))
+  (print_c_initializer: bool)
   (p: prog)
   (flight: string)
   (validator_name1: string)
@@ -1696,7 +1705,7 @@ let print_diff_witness_as_c
 : ML unit
 = let num = incr counter in
   write_witness_to_file witness (fun i -> mk_output_filename num out_dir ("POS." ^ string_of_int i ^ "." ^ validator_name1 ^ ".NEG." ^ validator_name2) args);
-  print_witness_as_c_gen out flight witness (fun len ->
+  print_witness_as_c_gen out print_c_initializer flight witness (fun len ->
     if len = 0
     then failwith "print_witness_as_c: no witness layers. This should not happen.";
     print_witness_call_as_c out p true flight validator_name1 arg_types args num len;
@@ -2019,7 +2028,9 @@ let cout_test_probe_functions
     )
     prog
 
-let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (flight: string) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
+let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
+  (print_c_initializer: bool)
+  (flight: string) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
   let def = List.assoc name1 prog in
   begin match def with
   | Some (ProgDef _ _) -> ()
@@ -2045,7 +2056,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (flight: str
   let tasks =
     begin
       if pos
-      then [print_witness_as_c out_dir cout prog true flight validator_name args counter, (fun _ -> (
+      then [print_witness_as_c out_dir cout print_c_initializer prog true flight validator_name args counter, (fun _ -> (
         FStar.IO.print_string (Printf.sprintf ";; Positive test witnesses for %s\n" name1);
         mk_get_positive_test_witness name1 sargs
       ))]
@@ -2053,7 +2064,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (flight: str
     end `List.Tot.append`
     begin
       if neg
-      then [print_witness_as_c out_dir cout prog false flight validator_name args counter, (fun _ -> (
+      then [print_witness_as_c out_dir cout print_c_initializer prog false flight validator_name args counter, (fun _ -> (
         FStar.IO.print_string (Printf.sprintf ";; Negative test witnesses for %s\n" name1);
         mk_get_negative_test_witness name1 sargs
       ))]
@@ -2080,12 +2091,16 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
   (mk_state "(state-witness-size 0)" "0" "0" "1" "-1")
 
 let do_diff_test_for
-  (out_dir: string) (counter: ref nat) (cout: string -> ML unit) (z3: Z3.z3) (flight: string) (prog: prog) name1 name2 (args: list (string & arg_type)) (nargs: nat { nargs == count_args (List.Tot.map snd args) }) validator_name1 validator_name2 nbwitnesses depth =
+  (out_dir: string) (counter: ref nat) (cout: string -> ML unit) (z3: Z3.z3)
+  (print_c_initializer: bool)
+  (flight: string) (prog: prog) name1 name2 (args: list (string & arg_type)) (nargs: nat { nargs == count_args (List.Tot.map snd args) }) validator_name1 validator_name2 nbwitnesses depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
   let sargs = List.Tot.map snd args in
-  witnesses_for z3 name1 sargs nargs ([print_diff_witness_as_c out_dir cout prog flight validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 sargs name2)]) nbwitnesses depth
+  witnesses_for z3 name1 sargs nargs ([print_diff_witness_as_c out_dir cout print_c_initializer prog flight validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 sargs name2)]) nbwitnesses depth
 
-let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (flight: string) (prog: prog) name1 name2 nbwitnesses depth =
+let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
+  (print_c_initializer: bool)
+  (flight: string) (prog: prog) name1 name2 nbwitnesses depth =
   let def = List.assoc name1 prog in
   begin match def with
   | Some (ProgDef _ _) -> ()
@@ -2117,8 +2132,8 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3) (flight
   int main(void) {
 ";
   let counter = alloc 0 in
-  do_diff_test_for out_dir counter cout z3 flight prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
-  do_diff_test_for out_dir counter cout z3 flight prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
+  do_diff_test_for out_dir counter cout z3 print_c_initializer flight prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
+  do_diff_test_for out_dir counter cout z3 print_c_initializer flight prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
   cout "  return 0;
   }
 "

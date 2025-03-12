@@ -535,8 +535,9 @@ let produce_z3_and_test
   (name: string)
 : Tot process_files_t
 = produce_z3_and_test_gen batch produce_testcases_c out_dir (fun out_file nbwitnesses prog z3 ->
+    let print_c_initializers = not (Options.get_z3_skip_c_initializers ()) in
     let flight = Options.get_z3_flight_name () in
-    Z3TestGen.do_test out_dir out_file z3 flight prog name nbwitnesses (Options.get_z3_branch_depth ()) (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
+    Z3TestGen.do_test out_dir out_file z3 print_c_initializers flight prog name nbwitnesses (Options.get_z3_branch_depth ()) (Options.get_z3_pos_test ()) (Options.get_z3_neg_test ())
   )
 
 let produce_z3_and_diff_test
@@ -547,8 +548,9 @@ let produce_z3_and_diff_test
 : Tot process_files_t
 = let (name1, name2) = names in
   produce_z3_and_test_gen batch produce_testcases_c out_dir (fun out_file nbwitnesses prog z3 ->
+    let print_c_initializers = not (Options.get_z3_skip_c_initializers ()) in
     let flight = Options.get_z3_flight_name () in
-    Z3TestGen.do_diff_test out_dir out_file z3 flight prog name1 name2 nbwitnesses (Options.get_z3_branch_depth ())
+    Z3TestGen.do_diff_test out_dir out_file z3 print_c_initializers flight prog name1 name2 nbwitnesses (Options.get_z3_branch_depth ())
   )
 
 let produce_test_checker_exe
