@@ -279,3 +279,121 @@ fn impl_serialize_map_group_concat
 }
 
 #pop-options
+
+inline_for_extraction noextract [@@noextract_to "krml";
+  FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
+]
+let pow2_64_m1 : U64.t = U64.uint_to_t (pow2 64 - 1)
+
+let pow2_64_m1_eq : squash (U64.v pow2_64_m1 == pow2 64 - 1) = _ by (
+  FStar.Tactics.norm [delta; zeta; iota; primops];
+  FStar.Tactics.trefl ()
+)
+
+let mg_spec_match_item_for_serializer_eq
+  (cut: bool)
+  (k: cbor)
+  (#ty: typ)
+  (#target: Type)
+  (#inj: bool)
+  (p: spec ty target inj)
+  (v: target)
+: Lemma
+  (ensures (p.serializable v ==> (
+    let p' = mg_spec_match_item_for cut k p in
+    p'.mg_serializable v /\
+    p'.mg_serializer v == cbor_map_singleton k (p.serializer v)
+  )))
+= ()
+
+let cbor_det_serialize_map_singleton_pat
+  (key: cbor)
+  (value: cbor)
+: Lemma
+  (ensures (Cbor.cbor_det_serialize_map (cbor_map_singleton key value) == Cbor.cbor_det_serialize key `Seq.append` Cbor.cbor_det_serialize value))
+  [SMTPat (cbor_map_singleton key value)]
+= Cbor.cbor_det_serialize_map_singleton key value
+
+let seq_slice_append_pat
+  (#t: Type)
+  (s1 s2: Seq.seq t)
+: Lemma
+  (ensures
+    Seq.slice (Seq.append s1 s2) 0 (Seq.length s1) `Seq.equal` s1 /\
+    Seq.slice (Seq.append s1 s2) (Seq.length s1) (Seq.length s1 + Seq.length s2) `Seq.equal` s2
+  )
+  [SMTPat (Seq.append s1 s2)]
+= ()
+
+#push-options "--z3rlimit 16"
+#restart-solver
+
+inline_for_extraction
+fn impl_serialize_match_item_for
+  (insert: cbor_det_serialize_map_insert_t)
+  (#[@@@erasable]key: Ghost.erased cbor)
+  (ik: impl_serialize (spec_literal key) rel_unit)
+  ([@@@erasable]cut: Ghost.erased bool)
+  (#[@@@erasable]value: Ghost.erased typ)
+  (#[@@@erasable]tvalue: Type0)
+  (#[@@@erasable]vinj: Ghost.erased bool)
+  (#[@@@erasable]pvalue: Ghost.erased (spec value tvalue vinj))
+  (#iv: Type0)
+  (#[@@@erasable]r: rel iv tvalue)
+  (ivalue: impl_serialize pvalue r)
+: impl_serialize_map_group #_ #_ #_ #_ (mg_spec_match_item_for cut key pvalue) #_ r
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  let count = !out_count;
+  if (U64.lt count pow2_64_m1) {
+    mg_spec_match_item_for_serializer_eq cut key pvalue v;
+    with w0 . assert (pts_to out w0);
+    let size0 = !out_size;
+    Seq.lemma_split w0 (SZ.v size0);
+    let (out0, out1) = S.split out size0;
+    fold (rel_unit () ());
+    let res1 = ik () out1;
+    S.pts_to_len out1;
+    unfold (rel_unit () ());
+    S.join _ _ out;
+    S.pts_to_len out;
+    if (SZ.gt res1 0sz) {
+      let size1 = SZ.add size0 res1;
+      let (out01, out2) = S.split out size1;
+      let res2 = ivalue c out2;
+      S.pts_to_len out2;
+      S.join _ _ out;
+      S.pts_to_len out;
+      if (SZ.gt res2 0sz) {
+        let size2 = SZ.add size1 res2;
+        let (out012, _) = S.split out size2;
+        S.pts_to_len out012;
+        let res = insert out012 l size0 key size1 (pvalue.serializer (Ghost.reveal v));
+        S.pts_to_len out012;
+        S.join _ _ out;
+        S.pts_to_len out;
+        if (res) {
+          out_size := size2;
+          out_count := U64.add count 1uL;
+          true
+        } else {
+          false
+        }
+      } else {
+        false
+      }
+    } else {
+      false
+    }
+  } else {
+    false
+  }
+}
+
+#pop-options

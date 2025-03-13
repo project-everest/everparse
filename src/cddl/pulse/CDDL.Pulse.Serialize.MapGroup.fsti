@@ -1,6 +1,5 @@
 module CDDL.Pulse.Serialize.MapGroup
 include CDDL.Pulse.Serialize.Base
-open CDDL.Pulse.Serialize.Misc // for literals
 include CDDL.Pulse.Parse.MapGroup
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
