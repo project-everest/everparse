@@ -1299,10 +1299,20 @@ let rec check_probe env a : ML (probe_action & typ) =
     let aa, t = check_atomic_probe env aa in
     { a with v=Probe_atomic_action aa }, t
 
-  | Probe_action_var i ->
-    let _ = lookup_generic env i in
+  | Probe_action_var i -> (
+    let _ = 
+      match lookup env i with 
+      | Inl t ->
+        if eq_typ env t probe_m_t
+        then ()
+        else error (Printf.sprintf "Expected a probe, but %s is a type %s" (print_ident i) (print_typ t))
+              i.range
+      | Inr (d, _) ->
+        error (Printf.sprintf "Expected a probe, but %s is a declaration %s" (print_ident i) (print_decl d))
+              i.range
+    in
     { a with v=Probe_action_var i }, tunit
-
+  )
   | Probe_action_simple probe_fn length ->
     let length, typ = check_expr env length in
     let length =

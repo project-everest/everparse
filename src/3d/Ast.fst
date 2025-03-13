@@ -951,7 +951,7 @@ let type_of_integer_type = function
   | UInt32 -> tuint32
   | UInt64 -> tuint64
 let tcopybuffer = mk_prim_t "EVERPARSE_COPY_BUFFER_T"
-let probe_m_t = mk_prim_t "probe_action"
+let probe_m_t = mk_prim_t "probe_m_unit"
 let tunknown = mk_prim_t "?"
 let unit_atomic_field rng = 
     let dummy_identifier = with_range (to_ident' "_empty_") rng in

@@ -37,11 +37,9 @@ let specialize_atomic_field (e:B.env) (af:atomic_field)
       Some { 
         pc with probe_block =
           with_dummy_range <| 
-          Probe_atomic_action <|
-          Probe_action_call 
+          Probe_action_var <|
             (G32.coercion_for_type 
               (GeneralizeProbes.ungeneralize_name ht))
-            []
       }
   in
   let af' = {af with v = {af.v with field_type = ft; field_probe=pc}} in

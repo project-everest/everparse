@@ -1165,7 +1165,7 @@ let print_decl mname (d:decl)
     | T.Definition _ -> "", T.print_definition mname d
     | T.Probe_function id params body ->
       let impl =
-          Printf.sprintf "noextract\ninline_for_extraction\nlet %s %s = %s\n\n"
+          Printf.sprintf "[@@ normalize_for_extraction specialization_steps]\nlet %s %s = probe_action_as_probe_m <| %s\n\n"
             (T.print_ident id)
             (T.print_params mname params)
             (T.print_probe_action mname body)

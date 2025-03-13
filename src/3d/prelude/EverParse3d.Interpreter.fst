@@ -29,7 +29,7 @@ open FStar.List.Tot
 inline_for_extraction
 noextract
 let ___EVERPARSE_COPY_BUFFER_T = CP.copy_buffer_t
-
+let probe_m_unit = probe_m unit
 (* This module defines a strongly typed abstract syntax for an
    intermediate representation of 3D programs. This is the type `typ`.
 
