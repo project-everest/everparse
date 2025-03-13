@@ -490,6 +490,7 @@ type probe_atomic_action =
   | Probe_action_read : f:ident -> probe_atomic_action
   | Probe_action_write : f:ident -> value:expr -> probe_atomic_action
   | Probe_action_copy : f:ident -> len:expr -> probe_atomic_action
+  | Probe_action_skip : len:expr -> probe_atomic_action
 noeq
 [@@ PpxDerivingYoJson ]
 type probe_action' =
@@ -609,7 +610,13 @@ type probe_qualifier =
 [@@ PpxDerivingYoJson ]
 noeq
 type generic_param =
-  | GenericProbeFunction of ident
+  | GenericProbeFunction : param_name:ident -> probe_for_type:ident -> generic_param
+
+[@@ PpxDerivingYoJson ]
+noeq
+type probe_function_type =
+  | SimpleProbeFunction of ident
+  | CoerceProbeFunction of ident & ident
 
 /// A 3d specification a list of declarations
 ///   - Define: macro definitions for constants
@@ -669,6 +676,18 @@ type decl' =
       ident ->
       list param ->
       probe_action ->
+      probe_function_type ->
+      decl'
+
+  | Specialize :
+      list (integer_type & integer_type) ->
+      ident ->
+      ident ->
+      decl' 
+      
+  | CoerceProbeFunctionStub:
+      ident ->
+      p:probe_function_type { CoerceProbeFunction? p } ->
       decl'
 
   | OutputType:
@@ -997,6 +1016,7 @@ let subst_probe_atomic_action (s:subst) (aa:probe_atomic_action) : ML probe_atom
   | Probe_action_read f -> Probe_action_read f
   | Probe_action_write f value -> Probe_action_write f (subst_expr s value)
   | Probe_action_copy f len -> Probe_action_copy f (subst_expr s len)
+  | Probe_action_skip len -> Probe_action_skip (subst_expr s len)
 let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
   match a.v with
   | Probe_atomic_action aa ->
@@ -1077,7 +1097,9 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
     Record names generics (subst_params s params) (map_opt (subst_expr s) where) (List.map (subst_field s) fields)
   | CaseType names generics params cases ->
     CaseType names generics (subst_params s params) (subst_switch_case s cases)
-  | ProbeFunction i params a -> ProbeFunction i (subst_params s params) (subst_probe_action s a)
+  | ProbeFunction i params a tn -> ProbeFunction i (subst_params s params) (subst_probe_action s a) tn
+  | Specialize _ _ _
+  | CoerceProbeFunctionStub _ _
   | OutputType _
   | ExternType _
   | ExternFn _ _ _ _
@@ -1329,7 +1351,7 @@ and print_probe_action (p:probe_action) : ML string =
   | Probe_action_var i ->
     Printf.sprintf "%s" (print_ident i)
   | Probe_action_simple f n ->
-    Printf.sprintf "(Probe_action_simple %s %s)"
+    Printf.sprintf "(Probe_action_simple %s (%s))"
       (print_opt f print_ident)
       (print_expr n)
   | Probe_action_seq hd tl ->
@@ -1346,10 +1368,11 @@ and print_probe_atomic_action (p:probe_atomic_action)
 : ML string
 = match p with
   | Probe_action_return e -> Printf.sprintf "return %s;" (print_expr e)
-  | Probe_action_call f args -> Printf.sprintf "%s(%s);" (print_ident f) (String.concat ", " (List.map print_expr args))
-  | Probe_action_read f -> Printf.sprintf "%s();" (print_ident f)
-  | Probe_action_write f v
-  | Probe_action_copy f v -> Printf.sprintf "%s(%s);" (print_ident f) (print_expr v)
+  | Probe_action_call f args -> Printf.sprintf "(Probe_action_call %s(%s));" (print_ident f) (String.concat ", " (List.map print_expr args))
+  | Probe_action_read f -> Printf.sprintf "(Probe_action_read %s);" (print_ident f)
+  | Probe_action_write f v ->Printf.sprintf "(Probe_action_write %s(%s));" (print_ident f) (print_expr v)
+  | Probe_action_copy f v -> Printf.sprintf "(Probe_action_copy %s(%s));" (print_ident f) (print_expr v)
+  | Probe_action_skip n -> Printf.sprintf "(Probe_action_skip %s);" (print_expr n)
 
 and print_probe_call (p:probe_call) : ML string =
   match p with
@@ -1401,7 +1424,7 @@ let option_to_string (f:'a -> ML string) (x:option 'a) : ML string = print_opt x
 
 let print_generics generics =
   let print_generic = function
-    | GenericProbeFunction i -> print_ident i
+    | GenericProbeFunction i t -> Printf.sprintf "(%s : probe for %s)" (print_ident i) (print_ident t)
   in
   match generics with
   | [] -> ""
@@ -1418,7 +1441,9 @@ let print_attributes (a:list attribute) : ML string =
   match a with
   | [] -> ""
   | _ -> Printf.sprintf "[%s]" (String.concat ", " (List.map print_attribute a)) ^ " "
-
+let print_probe_function_type = function
+  | SimpleProbeFunction i -> print_ident i
+  | CoerceProbeFunction (i,j) -> Printf.sprintf "%s -> %s" (print_ident i) (print_ident j)
 let print_decl' (d:decl') : ML string =
   match d with
   | ModuleAbbrev i m -> Printf.sprintf "module %s = %s" (print_ident i) (print_ident m)
@@ -1469,13 +1494,22 @@ let print_decl' (d:decl') : ML string =
                     (print_switch_case switch_case)
                     (ident_to_string td.typedef_abbrev)
                     (option_to_string ident_to_string td.typedef_ptr_abbrev)
-  | ProbeFunction i params a ->
-    Printf.sprintf "probe %s(%s) {\n\
+  | ProbeFunction i params a tn ->
+    Printf.sprintf "probe %s(%s) (for %s) {\n\
                         %s \n\
                     }"
                     (print_ident i)
                     (print_params params)
+                    (print_probe_function_type tn)
                     (print_probe_action a)
+  | CoerceProbeFunctionStub i j ->
+    Printf.sprintf "stub probe %s (for %s)" (print_ident i) (print_probe_function_type j)
+  | Specialize pqs i j ->
+    let print_pointer_qual i = Printf.sprintf "pointer(%s)" (print_integer_type i) in
+    Printf.sprintf "specialize (%s) %s %s"
+      (String.concat ", " (List.map (fun (q1, q2) -> print_pointer_qual q1 ^ ", " ^ print_pointer_qual q2) pqs))
+      (print_ident i)
+      (print_ident j)
   | OutputType out_t -> "Printing for output types is TBD"
   | ExternType _ -> "Printing for extern types is TBD"
   | ExternFn _ _ _ _
@@ -1528,8 +1562,24 @@ let extend_substitute (s:list (ident & expr))
   if List.length gs <> List.length gs' || List.length ps <> List.length ps'
   then failwith "Substitution lists must have the same length";
   s @
-  List.map2 (fun g (GenericProbeFunction x) -> (x, g)) gs gs' @
+  List.map2 (fun g (GenericProbeFunction x _) -> (x, g)) gs gs' @
   List.map2 (fun p (_, x, _) -> (x, p)) ps ps' |>
   mk_subst
 
 let substitute = extend_substitute []
+
+let idents_of_decl (d:decl) =
+  match d.d_decl.v with
+  | ModuleAbbrev i _
+  | Define i _ _ 
+  | TypeAbbrev _ _ i _ _
+  | Enum _ i _
+  | ExternFn i _ _ _
+  | ExternProbe i _
+  | ProbeFunction i _ _ _
+  | CoerceProbeFunctionStub i _
+  | Specialize _ _ i -> [i]
+  | Record names _ _ _ _
+  | CaseType names _ _ _
+  | OutputType { out_typ_names = names } 
+  | ExternType names -> [names.typedef_name; names.typedef_abbrev]

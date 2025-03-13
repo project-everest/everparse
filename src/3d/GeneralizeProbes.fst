@@ -40,14 +40,15 @@ type env = {
   should_generalize:H.t ident' (option (list ident))
 }
 
+let simple_probe_function_for_type (type_name:ident) : ML ident =
+  let name = reserved_prefix ^ "probe_" ^ type_name.v.name in
+  let id = { type_name with v = { type_name.v with name } } in
+  id
+
 let simple_probe_name_for_type (e:env) (type_name:ident)
-: option ident
+: ML (option ident)
 = if List.mem type_name.v e.needs_probe
-  then (
-    let name = reserved_prefix ^ "probe_" ^ type_name.v.name in
-    let id = { type_name with v = { type_name.v with name } } in
-    Some id
-  )
+  then Some (simple_probe_function_for_type type_name)
   else None
 
 let should_generate_probe (e:env) (n:typedef_names) = List.mem n.typedef_abbrev.v e.needs_probe
@@ -100,12 +101,28 @@ let rec head_type (e:env) (t:typ) : ML ident =
           (Printf.sprintf "head_type: not a type application; got %s" (print_typ t))
 
 let atomic_field_has_simple_probe (e:env) (f:atomic_field)
-: bool
+: ML bool
 = match f.v.field_probe with
-  | Some { probe_block = { v = Probe_action_simple _ l } } -> (
-    match l.v with
-    | App SizeOf [_] -> true
-    | _ -> false
+  | Some fp -> (
+    FStar.IO.print_string
+      (Printf.sprintf "Field %s has a probe %s\n"
+         (print_ident f.v.field_ident)
+         (print_probe_call fp)
+      );
+    match fp with 
+    | { probe_block = { v = Probe_action_simple _ l } } -> (
+        match l.v with
+        | App (Cast _ _) [{ v = App SizeOf _ }]
+        | App SizeOf [_] -> true
+        | _ -> 
+          FStar.IO.print_string
+            (Printf.sprintf "But not a sizeof probe\n");
+          false
+      )
+    | _ -> 
+      FStar.IO.print_string
+        (Printf.sprintf "But not a simple probe\n");
+      false
   )
   | _ -> false
 
@@ -143,39 +160,56 @@ let generate_probe_functions (e:env) (d:decl)
     if not <| should_generate_probe e names
     then [d]
     else (
-      let Some simple_probe_name = simple_probe_name_for_type e names.typedef_abbrev in 
-      let probe_size =
-        with_range (
-          App SizeOf [with_range (Identifier names.typedef_abbrev) names.typedef_name.range]
-        ) d.d_decl.range
-      in
-      let simple_probe =
-        with_range (
-          Probe_action_simple None probe_size
-        ) d.d_decl.range
-      in
-      let d' = 
-        mk_decl 
-          (ProbeFunction simple_probe_name [] simple_probe)
-          dummy_range
-          []
-          false
-      in
-      [d;d']
+      match simple_probe_name_for_type e names.typedef_abbrev with
+      | None -> failwith "Impossible"
+      | Some simple_probe_name ->
+        let probe_size =
+          with_range (
+            App SizeOf [with_range (Identifier names.typedef_abbrev) names.typedef_name.range]
+          ) d.d_decl.range
+        in
+        let simple_probe =
+          with_range (
+            Probe_action_simple None probe_size
+          ) d.d_decl.range
+        in
+        let d' = 
+          mk_decl 
+            (ProbeFunction simple_probe_name [] simple_probe 
+              (SimpleProbeFunction names.typedef_abbrev))
+            dummy_range
+            []
+            false
+        in
+        [d;d']
     )
   )
   | CaseType names gs params sw -> (
-    if not <| should_generalize e names
+    if should_generalize e names
     then failwith "Cannot automatically generate a probe function for a case type"
-    else (
-      [d]
-    )
+    else [d]
   )
   | _ -> [d]
 
 let generalized_name (e:env) (head_name:ident) : ident =
   let gen = reserved_prefix ^ "generalized_" ^ head_name.v.name in
   {head_name with v = { head_name.v with name = gen }}
+
+let starts_with (long:string) (short:string) 
+: option string
+= let long_len = String.length long in
+  let short_len = String.length short in
+  if long_len < short_len
+  then None
+  else if String.sub long 0 short_len = short
+  then Some (String.sub long short_len (long_len - short_len))
+  else None
+
+let ungeneralize_name (n:ident) : ident =
+  let gen = reserved_prefix ^ "generalized_" in
+  match starts_with n.v.name gen with
+  | None -> n
+  | Some x ->  {n with v = { n.v with name=x }}
 
 let generalized_record_name (e:env) (n:typedef_names)
 : ML typedef_names
@@ -204,8 +238,8 @@ let generalize_atomic_field (e:env) (path_prefix:string) (af:atomic_field)
         ) af.range
     in
     let gen_name = generalized_name e head_type in
-    let generic_params = List.mapi (fun i _ -> generic_name i) sig in
-    let generic_insts = List.map (fun i -> with_range (Identifier i) af.range) generic_params in
+    let generic_params = List.mapi (fun i t -> generic_name i, t) sig in
+    let generic_insts = List.map (fun (i, _) -> with_range (Identifier i) af.range) generic_params in
     let rec field_type ft : ML typ =
       match ft.v with
       | Type_app id k [] args ->
@@ -216,7 +250,7 @@ let generalize_atomic_field (e:env) (path_prefix:string) (af:atomic_field)
     in
     let af = { af with v = { af.v with field_type = field_type af.v.field_type } } in
     af,
-    List.map GenericProbeFunction generic_params,
+    List.map (fun (i,t) -> GenericProbeFunction i t) generic_params,
     sig
   )
 
@@ -230,20 +264,22 @@ let rec generalize_probe_field (e:env) (path_prefix:string) (f:field)
     if not <| atomic_field_has_simple_probe e af
     then f, gs0, sig0
     else (
-      let Some probe_call = af.v.field_probe in
-      let generic_name = 
-        with_range (
-          to_ident' <|
-          reserved_prefix ^ "probe_" ^ path_prefix ^ print_ident af.v.field_ident
-        ) f.range
-      in
-      let probe = with_range (Probe_action_var generic_name) f.range in
-      let probe_call = { probe_call with probe_block = probe } in
-      let af = { af with v = { af.v with field_probe = Some probe_call } } in
-      let f = { f with v = AtomicField af } in
-      f,
-      gs0@[GenericProbeFunction generic_name],
-      sig0@[head_type]
+      match af.v.field_probe with
+      | None -> failwith "Impossible"
+      | Some probe_call ->
+        let generic_name = 
+          with_range (
+            to_ident' <|
+            reserved_prefix ^ "probe_" ^ path_prefix ^ print_ident af.v.field_ident
+          ) f.range
+        in
+        let probe = with_range (Probe_action_var generic_name) f.range in
+        let probe_call = { probe_call with probe_block = probe } in
+        let af = { af with v = { af.v with field_probe = Some probe_call } } in
+        let f = { f with v = AtomicField af } in
+        f,
+        gs0@[GenericProbeFunction generic_name head_type],
+        sig0@[head_type]
     )
   )
   | RecordField r i ->
@@ -315,7 +351,7 @@ let generalize_probes_decl (e:env) (d:decl)
         let instantiations =
           insts @
           List.map
-            (function GenericProbeFunction i ->
+            (function GenericProbeFunction i _ ->
               with_range (Identifier i) i.range)
             gs
         in

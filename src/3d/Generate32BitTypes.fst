@@ -49,6 +49,9 @@ let name32 (head_name:ident) : ident =
   let gen = reserved_prefix ^ "specialized32_" ^ head_name.v.name in
   {head_name with v = { head_name.v with name = gen }}
 
+let coercion_for_type (t:ident) : ML ident =
+  name32 (GeneralizeProbes.simple_probe_function_for_type t)
+
 let gen_name_32 (n:typedef_names) 
 : ML typedef_names
 = let name = name32 n.typedef_name in
@@ -152,11 +155,28 @@ let rec gen_decl (e:Binding.env) (d:decl) : ML (option decl) =
 let gen_decls (e:Binding.env) (d: decl)
 : ML (list decl)
 = match d.d_decl.v with
-  | ProbeFunction id ps v tn -> (
+  | ProbeFunction id ps v (SimpleProbeFunction tn) -> (
+    FStar.IO.print_string <|
+      Printf.sprintf
+       "Generating 32-bit types for probe function:\n\t%s\n" 
+        (print_decl d);
     let decl, _ = Binding.lookup_type_decl e tn in
     match gen_decl e decl with
-    | None -> [d]
-    | Some d' -> [d'; d]
+    | None -> 
+      let c = ProbeFunction (name32 id) ps v (SimpleProbeFunction tn) in
+      let c = mk_decl c d.d_decl.range [] false in
+      [d;c]
+    | Some d' ->
+      let src::_ = idents_of_decl d' in
+      let name = name32 id in
+      let c =
+        mk_decl 
+          (CoerceProbeFunctionStub (name32 id) (CoerceProbeFunction (src, tn)))
+          d.d_decl.range 
+          [] 
+          false
+      in
+      [d'; d; c]
   )
   | _ ->
     [d]

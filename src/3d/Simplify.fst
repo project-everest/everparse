@@ -119,6 +119,8 @@ let simplify_probe_atomic_action (env:T.env_t) (a:probe_atomic_action)
       Probe_action_write f (simplify_expr env v)
     | Probe_action_copy f v ->
       Probe_action_copy f (simplify_expr env v)
+    | Probe_action_skip e ->
+      Probe_action_skip (simplify_expr env e)
     
 let rec simplify_probe_action (env:T.env_t) (a:probe_action) : ML probe_action =
   match a.v with
@@ -251,11 +253,17 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     let switch = simplify_switch_case env switch in
     decl_with_v d (CaseType tdnames generics params switch)
 
-  | ProbeFunction id ps b ->
+  | ProbeFunction id ps b tn ->
     let ps = simplify_params env ps in
     let b = simplify_probe_action env b in
-    decl_with_v d (ProbeFunction id ps b)
+    decl_with_v d (ProbeFunction id ps b tn)
     
+  | CoerceProbeFunctionStub id tn ->
+    decl_with_v d (CoerceProbeFunctionStub id tn)
+
+  | Specialize qs t0 t1 ->
+    decl_with_v d (Specialize qs t0 t1)
+
   | OutputType out_t ->
     decl_with_v d (OutputType ({out_t with out_typ_fields=simplify_out_fields env out_t.out_typ_fields}))
 

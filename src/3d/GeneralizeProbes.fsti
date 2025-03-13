@@ -16,5 +16,7 @@
 module GeneralizeProbes
 open FStar.All
 open Ast
+val simple_probe_function_for_type (t:ident) : ML ident 
+val ungeneralize_name (t:ident) : ML ident
 val generalize_probe_decls (e:GlobalEnv.global_env) (ds:list decl)
 : ML (list decl)

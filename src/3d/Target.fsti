@@ -122,6 +122,7 @@ type atomic_probe_action =
   | Write_at_offset { value: expr; writer: A.ident }
   | Probe_call_pure { f: A.ident; args: list expr }
   | Probe_return    { value: expr }
+  | Skip            { bytes_to_skip: expr }
 
 noeq
 type probe_action =

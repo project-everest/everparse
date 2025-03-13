@@ -44,7 +44,7 @@ val field_offsets_of_type (env:env_t) (typ:ident)
 : ML (either (list (ident & int)) string)
 
 val is_alignment_field (fieldname:ident)
-: ML bool
+: bool
 
 val size_of_decls (env:B.global_env) (senv:size_env) (d:list decl)
   : ML (list decl)

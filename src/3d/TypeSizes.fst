@@ -434,7 +434,7 @@ let field_offsets_of_type (env:env_t) (typ:ident)
     in
     field_offsets 0 [] fields
 
-let is_alignment_field (fieldname:ident) =
+let is_alignment_field (fieldname:ident) : Tot bool =
   Utils.string_starts_with (ident_to_string fieldname) alignment_prefix
 
 let decl_size_with_alignment (env:env_t) (d:decl)
@@ -465,25 +465,13 @@ let decl_size_with_alignment (env:env_t) (d:decl)
       extend_with_size_of_typedef_names env names size alignment;
       decl_with_v d (CaseType names generics params cases)
 
-    | ProbeFunction _ _ _
+    | Specialize _ _ _
+    | ProbeFunction _ _ _ _
+    | CoerceProbeFunctionStub _ _
     | OutputType _
     | ExternType _
     | ExternFn _ _ _ _
     | ExternProbe _ _ -> d
-
-let idents_of_decl (d:decl) =
-  match d.d_decl.v with
-  | ModuleAbbrev i _
-  | Define i _ _ 
-  | TypeAbbrev _ _ i _ _
-  | Enum _ i _
-  | ExternFn i _ _ _
-  | ExternProbe i _
-  | ProbeFunction i _ _ -> [i]
-  | Record names _ _ _ _
-  | CaseType names _ _ _
-  | OutputType { out_typ_names = names } 
-  | ExternType names -> [names.typedef_name; names.typedef_abbrev]
 
 let size_of_decls (genv:B.global_env) (senv:size_env) (ds:list decl) =
   let env = B.mk_env genv, senv in

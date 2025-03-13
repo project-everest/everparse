@@ -57,7 +57,7 @@
 %token          MODULE EXPORT OUTPUT UNION EXTERN
 %token          ENTRYPOINT REFINING ALIGNED
 %token          HASH_IF HASH_ELSE HASH_ENDIF HASH_ELIF
-%token          PROBE POINTER PURE
+%token          PROBE POINTER PURE SPECIALIZE 
 
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
@@ -562,6 +562,11 @@ decl_no_range:
         let td = mk_td b i j p in
         CaseType(td, [], ps, (with_range (Identifier e) ($startpos(i)), cs))
     }
+
+  | SPECIALIZE LPAREN p1=pointer_qualifier COMMA p2=pointer_qualifier RPAREN i=IDENT j=IDENT SEMICOLON
+    { let PQ p1 = p1 in
+      let PQ p2 = p2 in
+      Specialize ([p1, p2], i, j) }
 
   | OUTPUT TYPEDEF STRUCT i=IDENT
     LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE

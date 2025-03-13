@@ -140,7 +140,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Probe_action_call f args -> List.collect deps_of_expr args
     | Probe_action_read f -> []
     | Probe_action_write f v -> deps_of_expr v
-    | Probe_action_copy f len -> deps_of_expr len in
+    | Probe_action_copy f len -> deps_of_expr len
+    | Probe_action_skip len -> deps_of_expr len in
+
   let rec deps_of_probe_action (a:probe_action) : ML (list string) =
     match a.v with
     | Probe_atomic_action a -> deps_of_probe_atomic_action a
@@ -225,9 +227,11 @@ let scan_deps (fn:string) : ML scan_deps_t =
       (deps_of_typedef_names tdnames)@
       (deps_of_params params)@
       (deps_of_switch_case sc)
-    | ProbeFunction f params probe_action ->
+    | ProbeFunction f params probe_action _ ->
       (deps_of_params params)@
       (deps_of_probe_action probe_action)
+    | Specialize _ _ _
+    | CoerceProbeFunctionStub _ _
     | OutputType _
     | ExternType _
     | ExternFn _ _ _ _

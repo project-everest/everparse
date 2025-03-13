@@ -565,6 +565,9 @@ let rec print_probe_action (mname:string) (p:probe_action) : ML string =
     | Probe_return { value } ->
       Printf.sprintf "(Return_probe_m %s)"
         (print_expr mname value)
+    | Skip { bytes_to_skip } ->
+      Printf.sprintf "(Skip_probe %s)"
+        (print_expr mname bytes_to_skip)
   in
   match p with
   | Probe_fn_as_probe_m { bytes_to_read; probe_fn } ->

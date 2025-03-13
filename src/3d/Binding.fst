@@ -42,7 +42,7 @@ let local_env = H.t ident' (ident' & typ & bool)
 noeq
 type env = {
   this: option ident;
-  generics: list ident;
+  generics: list generic_param;
   locals: local_env;
   globals: global_env;
 }
@@ -71,34 +71,6 @@ let env_of_global_env
 #pop-options
 
 let global_env_of_env e = e.globals
-
-let generics_of_decl (d:decl) : list generic_param =
-  match d.d_decl.v with
-  | ModuleAbbrev _ _
-  | Define _ _ _
-  | Enum _ _ _ -> []
-  | TypeAbbrev _ _ _ gs _
-  | Record _ gs _ _ _
-  | CaseType _ gs _ _ -> gs
-  | ProbeFunction _ _ _
-  | OutputType _
-  | ExternType _
-  | ExternFn _ _ _ _
-  | ExternProbe _ _ -> []
-
-let params_of_decl (d:decl) : list generic_param & list param =
-  match d.d_decl.v with
-  | ModuleAbbrev _ _
-  | Define _ _ _
-  | Enum _ _ _ -> [], []
-  | TypeAbbrev _ _ _ gs params
-  | Record _ gs params _ _
-  | CaseType _ gs params _ -> gs, params
-  | ProbeFunction _ params _ -> [], params
-  | OutputType _ -> [],[]
-  | ExternType _ -> [],[]
-  | ExternFn _ _ ps _ -> [],ps
-  | ExternProbe _ _ -> [],[]
 
 let check_shadow (e:H.t ident' 'a) (i:ident) (r:range) =
   match H.try_find e i.v with
@@ -164,12 +136,9 @@ let add_local (e:env) (i:ident) (t:typ) : ML unit =
   H.insert e.locals i'.v (i'.v, t, false)
 
 let push_generic (e:env) (g:generic_param) : ML env =
-  let GenericProbeFunction i = g in
-  { e with generics = i::e.generics }
-let try_lookup_generic (e:env) (i:ident) : ML (option ident) =
-  if List.existsb (fun i' -> i.v.name = i'.v.name) e.generics
-  then Some i
-  else None
+  { e with generics = g::e.generics }
+let try_lookup_generic (e:env) (i:ident) : ML (option generic_param) =
+  List.tryFind (function GenericProbeFunction i' _ -> i.v.name = i'.v.name) e.generics
 let lookup_generic e i =
   match try_lookup_generic e i with
   | None -> error (Printf.sprintf "Generic %s not found" (ident_to_string i)) i.range
@@ -197,7 +166,7 @@ let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes mac
   match try_lookup e i with
   | None -> error (Printf.sprintf "Variable %s not found" (ident_to_string i)) i.range
   | Some v -> v
-  
+    
 let remove_local (e:env) (i:ident) : ML unit =
   match H.try_find e.locals i.v with
   | Some (j, _, _) ->
@@ -217,6 +186,67 @@ let resolve_record_case_output_extern_type_name (env:env) (i:ident) =
         | Inr ({d_decl={v=CaseType names _ _ _}}, _) ->
           names.typedef_name
         | _ -> i))
+
+let lookup_type_decl (e:env) (i:ident) 
+: ML (decl & decl_attributes)
+= match lookup e i with
+  | Inr (d, Inl attrs) -> d, attrs
+  | _ -> error (Printf.sprintf "Variable %s is not a type declaration" (ident_to_string i)) i.range
+
+let resolve_record_type (e:env) (i:ident)
+: ML (res:(decl & decl_attributes) { Record? (fst res).d_decl.v })
+= let fail #a id : ML a =
+    error (
+      Printf.sprintf "Expected a record type; got %s"
+        (print_ident id)
+    ) id.range
+  in
+  let rec resolve_type (id:ident) 
+    : ML (res:(decl & decl_attributes) { Record? (fst res).d_decl.v })
+    = let d, attrs = lookup_type_decl e id in
+      match d.d_decl.v with
+      | Record _ _ _ _ _ -> d, attrs
+      | TypeAbbrev _ t _ _ _ -> (
+        match t.v with
+        | Type_app hd _ _ _ -> resolve_type hd
+        | _ -> fail id
+      )
+      | _ -> fail id
+  in
+  resolve_type i 
+
+let generics_of_decl (d:decl) : list generic_param =
+  match d.d_decl.v with
+  | ModuleAbbrev _ _
+  | Define _ _ _
+  | Enum _ _ _ -> []
+  | TypeAbbrev _ _ _ gs _
+  | Record _ gs _ _ _
+  | CaseType _ gs _ _ -> gs
+  | Specialize _ _ _
+  | ProbeFunction _ _ _ _
+  | CoerceProbeFunctionStub _ _
+  | OutputType _
+  | ExternType _
+  | ExternFn _ _ _ _
+  | ExternProbe _ _ -> []
+
+let params_of_decl (d:decl) : list generic_param & list param =
+  match d.d_decl.v with
+  | ModuleAbbrev _ _
+  | Define _ _ _
+  | Enum _ _ _ -> [], []
+  | TypeAbbrev _ _ _ gs params
+  | Record _ gs params _ _
+  | CaseType _ gs params _ -> gs, params
+  | ProbeFunction _ params _ _ -> [], params
+  | Specialize _ _ _
+  | CoerceProbeFunctionStub _ _
+  | OutputType _ -> [],[]
+  | ExternType _ -> [],[]
+  | ExternFn _ _ ps _ -> [],ps
+  | ExternProbe _ _ -> [],[]
+
 
 let lookup_expr_name (e:env) (i:ident) : ML typ =
   match lookup e i with
@@ -513,7 +543,9 @@ let add_extern_type (ge:global_env) (i:ident) (d:decl{ExternType? d.d_decl.v}) :
 let add_probe_function
       (ge:global_env)
       (i:ident) 
-      (d:decl{ExternProbe? d.d_decl.v \/ ProbeFunction? d.d_decl.v })
+      (d:decl{ExternProbe? d.d_decl.v \/
+              ProbeFunction? d.d_decl.v \/
+              CoerceProbeFunctionStub? d.d_decl.v})
 : ML unit
 = H.insert ge.ge_probe_fn i.v d
 
@@ -690,7 +722,13 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
          error (Printf.sprintf "%s is not a type" (ident_to_string s)) s.range
 
        | Inr (d, _) ->
-         let gparams, params = params_of_decl d in
+         let gparams, params =
+          match d.d_decl.v with
+          | Specialize _ id _ ->
+            let d, _ = lookup_type_decl env id in
+            params_of_decl d
+          | _ -> params_of_decl d
+        in
          if List.length gparams <> List.length gs 
          || List.length params <> List.length ps
          then error (Printf.sprintf "Not enough arguments to %s" (ident_to_string s)) s.range;
@@ -1165,6 +1203,14 @@ let rec check_probe env a : ML (probe_action & typ) =
     | Probe_action_return e ->
       let e, t= check_expr env e in
       Probe_action_return e, t
+    | Probe_action_skip n ->
+      let n, t = check_expr env n in
+      if not (eq_typ env t tuint64)
+      then error (Printf.sprintf "Skip value %s has type %s instead of UInt64"
+                    (print_expr n)
+                    (print_typ t))
+                    n.range
+      else Probe_action_skip n, tunit
     | Probe_action_read f -> (
       match GlobalEnv.resolve_probe_fn_any env.globals f with
       | Some (id, Inr (Some (PQRead i))) ->
@@ -1254,7 +1300,7 @@ let rec check_probe env a : ML (probe_action & typ) =
     { a with v=Probe_atomic_action aa }, t
 
   | Probe_action_var i ->
-    let i = lookup_generic env i in
+    let _ = lookup_generic env i in
     { a with v=Probe_action_var i }, tunit
 
   | Probe_action_simple probe_fn length ->
@@ -1955,6 +2001,19 @@ let check_typedef_names
         typedef_attributes = List.map (check_attribute env) tdnames.typedef_attributes
   }
 
+let check_probe_function_type
+     (e: env)
+     (p: probe_function_type)
+: ML probe_function_type
+= match p with
+  | SimpleProbeFunction tn ->
+    let _ = lookup_type_decl e tn in
+    SimpleProbeFunction tn
+  | CoerceProbeFunction (t, u) ->
+    let _ = lookup_type_decl e t in
+    let _ = lookup_type_decl e u in
+    CoerceProbeFunction (t, u)
+  
 let bind_decl (e:global_env) (d:decl) : ML decl =
   match d.d_decl.v with
   | ModuleAbbrev i m -> d
@@ -2051,15 +2110,36 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     add_global e tdnames.typedef_name d (Inl attrs);
     d
 
-  | ProbeFunction id ps body ->
+  | ProbeFunction id ps body tn ->
     let env = mk_env e in
+    let tn = check_probe_function_type env tn in
     check_params env ps;
     let body, t = check_probe env body in
     if not (eq_typ env t tunit)
     then error (Printf.sprintf "Probe function body has type %s instead of unit" (print_typ t)) body.range;
-    let d = mk_decl (ProbeFunction id ps body) d.d_decl.range d.d_decl.comments d.d_exported in
+    let d = mk_decl (ProbeFunction id ps body tn) d.d_decl.range d.d_decl.comments d.d_exported in
     add_probe_function e id d;
     d
+
+  | CoerceProbeFunctionStub id t ->
+    let env = mk_env e in
+    let tn = check_probe_function_type env t in
+    add_probe_function e id d;
+    d
+
+  | Specialize qs t0 t1 -> (
+    match qs with
+    | [UInt64, UInt32] ->
+      let _, attrs = lookup_type_decl (mk_env e) t0 in
+      FStar.IO.print_string 
+        (Printf.sprintf "Adding global %s: %s\n"
+          (print_ident t1)
+          (print_decl d));
+      add_global e t1 d (Inl attrs);
+      d
+    | _ -> 
+      error ("Unexpected specialization types") d.d_decl.range
+  )
 
   | OutputType out_t ->
     check_output_fields e out_t.out_typ_fields;

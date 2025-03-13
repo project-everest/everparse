@@ -27,9 +27,8 @@ typedef struct _C (EVERPARSE_COPY_BUFFER_T a_out, EVERPARSE_COPY_BUFFER_T b_out)
 	B(a_out) *pb probe (length=sizeof(B), destination=b_out);
 } C;
 
-entrypoint
 aligned
-typedef struct _D (
+typedef struct _D64 (
 	EVERPARSE_COPY_BUFFER_T a_out,
 	EVERPARSE_COPY_BUFFER_T b_out,
 	EVERPARSE_COPY_BUFFER_T c_out,
@@ -37,4 +36,21 @@ typedef struct _D (
 {
 	UINT32 c1;
 	C(a_out, b_out) *pc probe (length=sizeof(C), destination=c_out);
+} D64;
+
+specialize (pointer(UINT64), pointer(UINT32)) D64 D32;
+
+entrypoint
+casetype _D (
+	Bool requestor32,
+	EVERPARSE_COPY_BUFFER_T a_out,
+	EVERPARSE_COPY_BUFFER_T b_out,
+	EVERPARSE_COPY_BUFFER_T c_out
+)
+{
+	switch (requestor32) 
+	{
+		case true:  D32(a_out, b_out, c_out) d32;
+		case false: D64(a_out, b_out, c_out) d64;
+	}
 } D;

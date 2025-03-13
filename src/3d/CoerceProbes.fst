@@ -253,25 +253,8 @@ let rec optimize_coercion (p:probe_action)
 let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
 : ML decl
 = let CoerceProbeFunctionStub i (CoerceProbeFunction (t0, t1)) = d.d_decl.v in
-  let fail #a id : ML a =
-    failwith <|
-      Printf.sprintf "Cannot coerce a non-record type: %s"
-        (print_ident id)
-  in
-  let rec resolve_type (id:ident) 
-    : ML (d:decl { Record? d.d_decl.v })
-    = let d, _ = B.lookup_type_decl e id in
-      match d.d_decl.v with
-      | Record _ _ _ _ _ -> d
-      | TypeAbbrev _ t _ _ _ -> (
-        match t.v with
-        | Type_app hd _ _ _ -> resolve_type hd
-        | _ -> fail id
-      )
-      | _ -> fail id
-  in
-  let d0 = resolve_type t0 in
-  let d1 = resolve_type t1 in
+  let d0, _ = B.resolve_record_type e t0 in
+  let d1, _ = B.resolve_record_type e t1 in
   let Record _ _ _ _ r0 = d0.d_decl.v in
   let Record _ _ _ _ r1 = d1.d_decl.v in
   let probe_action = optimize_coercion <| coerce_record e r0 r1 in

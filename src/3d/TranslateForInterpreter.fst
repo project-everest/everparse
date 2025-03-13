@@ -802,6 +802,8 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
       T.Write_at_offset { writer=f; value=translate_expr v }
     | A.Probe_action_copy f v ->
       T.Probe_and_copy { bytes_to_read=translate_expr v; probe_fn=f }
+    | A.Probe_action_skip n ->
+      T.Skip { bytes_to_skip=translate_expr n }
   in
   match a.v with
   | A.Probe_atomic_action a ->
@@ -1310,7 +1312,7 @@ let parse_field (env:global_env)
     parse_grouped_fields env typename gfs, decls
 
 let generics_as_params (gs:list generic_param) =
-  List.map (function GenericProbeFunction i -> probe_m_t, i, Immutable) gs
+  List.map (function GenericProbeFunction i _ -> probe_m_t, i, Immutable) gs
 
 let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
   match d.d_decl.v with
@@ -1389,10 +1391,16 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     } in
     ds1 @ ds2 @ [with_comments (Type_decl td) (A.is_entrypoint d) d.d_exported A.(d.d_decl.comments)]
 
-  | ProbeFunction id ps pb ->
+  | ProbeFunction id ps pb _ ->
     let ps, ds = translate_params ps in
     let pb, ds' = translate_probe_action pb in
     ds@ds'@[with_comments (T.Probe_function id ps pb) false false A.(d.d_decl.comments)]
+
+  | CoerceProbeFunctionStub _ _ ->
+    failwith "Coerce probe function stub: should have been eliminated before translation"
+
+  | Specialize _ _ _ ->
+    failwith "Specialize: should have been eliminated before translation"
 
   | OutputType out_t -> [with_comments (T.Output_type out_t) (A.is_entrypoint d) false []]  //No decl for output type specifications
 

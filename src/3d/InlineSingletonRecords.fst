@@ -202,7 +202,9 @@ let simplify_decl (env:env) (d:decl) : ML decl =
     let switch = simplify_switch_case env switch in
     decl_with_v d (CaseType tdnames generics params switch)
 
-  | ProbeFunction _ _ _
+  | Specialize _ _ _
+  | ProbeFunction _ _ _ _
+  | CoerceProbeFunctionStub _ _
   | OutputType _
   | ExternType _
   | ExternFn _ _ _ _

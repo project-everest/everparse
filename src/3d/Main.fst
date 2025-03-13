@@ -45,6 +45,7 @@ let right (x:either 'a 'b)
     | Inr x -> x
     | _ -> failwith "Expected right"
 
+let fail () : ML unit = failwith "stop"
 let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   : ML (list Ast.decl &
         StaticAssertions.static_asserts &
@@ -57,20 +58,39 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   Options.debug_print_string "=============After parsing=============\n";
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";
-
   let decls, refinement = Desugar.desugar en.binding_env mname (decls, refinement) in
 
   Options.debug_print_string "=============After desugaring=============\n";
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";
+  let benv0 = GlobalEnv.copy_global_env en.binding_env in
+  let check_decls decls =
+    Binding.bind_decls (GlobalEnv.copy_global_env benv0) decls
+  in
+  let decls, benv = check_decls decls in
+  Options.debug_print_string "=============After binding (1) =============\n";
+  Options.debug_print_string (print_decls decls);
+  Options.debug_print_string "\n";
 
-  let decls = GeneralizeProbes.generalize_probe_decls en.binding_env decls in
-
+  let decls = GeneralizeProbes.generalize_probe_decls benv decls in
   Options.debug_print_string "=============After probe generalization=============\n";
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";
 
-  let decls, benv = Binding.bind_decls en.binding_env decls in
+  let decls = Generate32BitTypes.generate_32_bit_types benv decls in
+
+  Options.debug_print_string "=============After generate 32-bit types=============\n";
+  Options.debug_print_string (print_decls decls);
+  Options.debug_print_string "\n";
+
+  let decls, benv = check_decls decls in
+  let decls = Specialize.specialize benv decls in
+
+  Options.debug_print_string "=============After specialization=============\n";
+  Options.debug_print_string (print_decls decls);
+  Options.debug_print_string "\n";
+
+  let decls, benv = check_decls decls in
 
   Options.debug_print_string "=============After binding=============\n";
   Options.debug_print_string (print_decls decls);
@@ -91,6 +111,14 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   let decls = TypeSizes.size_of_decls benv en.typesizes_env decls in
 
   Options.debug_print_string "=============Finished typesizes pass=============\n";
+
+  let decls = CoerceProbes.replace_stubs benv decls in
+
+  Options.debug_print_string "=============After coerce probes =============\n";
+  Options.debug_print_string (print_decls decls);
+  Options.debug_print_string "\n";
+
+  let decls, benv = Binding.bind_decls (GlobalEnv.copy_global_env benv0) decls in
 
   let static_asserts = StaticAssertions.compute_static_asserts benv en.typesizes_env refinement in
 

@@ -24,5 +24,8 @@ open Ast
 open FStar.All
 module B = Binding
 
+val coercion_for_type (t:ident)
+: ML ident
+
 val generate_32_bit_types (e:GlobalEnv.global_env) (d: list decl)
 : ML (list decl)

@@ -1051,7 +1051,7 @@ let coerce (#[@@@erasable]a:Type)
 let t_probe_then_validate
       (pointer_size:pointer_size_t)
       (fieldname:string)
-      (probe:probe_action)
+      (probe:probe_m unit)
       (dest:CP.copy_buffer_t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
       (#ha #has_reader #i #disj:_)
@@ -1066,7 +1066,7 @@ let t_probe_then_validate
  = T_with_dep_action fieldname
      (DT_IType pointer_size)
      (fun src ->
-        Atomic_action (Action_probe_then_validate pointer_size td src dest probe))
+        Atomic_action (Action_probe_then_validate pointer_size td src dest (Probe_action_var probe)))
     
 
 (* Type denotation of `typ` *)
