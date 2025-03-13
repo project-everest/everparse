@@ -1,5 +1,6 @@
 module CDDL.Pulse.Serialize.MapGroup
 include CDDL.Pulse.Serialize.Base
+open CDDL.Pulse.Serialize.Misc // for literals
 include CDDL.Pulse.Parse.MapGroup
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
@@ -34,8 +35,8 @@ let impl_serialize_map_group_valid
   (len: nat)
 : Tot bool
 =   s.mg_serializable v &&
-    FStar.UInt.fits (cbor_map_length l + cbor_map_length (s.mg_serializer v)) 64 &&
     cbor_map_disjoint_tot l (s.mg_serializer v) &&
+    FStar.UInt.fits (cbor_map_length l + cbor_map_length (s.mg_serializer v)) 64 &&
     Seq.length (Cbor.cbor_det_serialize_map (cbor_map_union l (s.mg_serializer v))) <= len
 
 let impl_serialize_map_group_post
