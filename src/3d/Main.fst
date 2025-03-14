@@ -76,6 +76,7 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   Options.debug_print_string "=============After probe generalization=============\n";
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";
+  let decls, benv = check_decls decls in
 
   let decls = Generate32BitTypes.generate_32_bit_types benv decls in
 

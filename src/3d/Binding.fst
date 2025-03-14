@@ -726,7 +726,8 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
           match d.d_decl.v with
           | Specialize _ id _ ->
             let d, _ = lookup_type_decl env id in
-            params_of_decl d
+            //specialized types are not generic
+            [], snd <| params_of_decl d
           | _ -> params_of_decl d
         in
          if List.length gparams <> List.length gs 
