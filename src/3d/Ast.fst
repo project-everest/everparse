@@ -766,6 +766,14 @@ let is_entrypoint d = match d.d_decl.v with
     has_entrypoint (names.typedef_attributes)
   | _ -> false
 
+let attribs_of_decl d = match d.d_decl.v with
+  | Record names _ _ _ _
+  | CaseType names _ _ _ -> names.typedef_attributes
+  | TypeAbbrev attribs _ _ _ _ -> attribs
+  | _ -> []
+
+let is_noextract d = List.existsb Noextract? (attribs_of_decl d)
+
 (** Determine if there are output type expressions: which cases in
    TranslateForInterpreter introduce the Output_type_expr constructor?
    *)

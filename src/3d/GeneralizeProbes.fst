@@ -40,14 +40,14 @@ type env = {
   should_generalize:H.t ident' (option (list ident))
 }
 
-let simple_probe_function_for_type (type_name:ident) : ML ident =
+let simple_probe_function_for_type (type_name:ident) : ident =
   let name = reserved_prefix ^ "probe_" ^ type_name.v.name in
   let id = { type_name with v = { type_name.v with name } } in
   id
 
 let simple_probe_name_for_type (e:env) (type_name:ident)
-: ML (option ident)
-= if List.mem type_name.v e.needs_probe
+: option ident
+= if List.Tot.mem type_name.v e.needs_probe
   then Some (simple_probe_function_for_type type_name)
   else None
 
@@ -78,10 +78,6 @@ let set_generalization_signature (e:env) (id:ident) (sig:generalized_signature)
 : ML env
 = if should_generalize_ident e id
   then (
-    FStar.IO.print_string
-      (Printf.sprintf "Setting generalization signature for %s to %s\n"
-        (print_ident id)
-        (String.concat ", " (List.map print_ident sig)));
     H.remove e.should_generalize id.v;
     H.insert e.should_generalize id.v (Some sig);
     e
@@ -97,31 +93,19 @@ let rec head_type (e:env) (t:typ) : ML ident =
   match (Binding.unfold_typ_abbrev_only e.benv t).v with
   | Type_app hd _ _ _ -> hd
   | Pointer t _ -> head_type e t
-  | _ -> failwith 
-          (Printf.sprintf "head_type: not a type application; got %s" (print_typ t))
 
 let atomic_field_has_simple_probe (e:env) (f:atomic_field)
 : ML bool
 = match f.v.field_probe with
   | Some fp -> (
-    FStar.IO.print_string
-      (Printf.sprintf "Field %s has a probe %s\n"
-         (print_ident f.v.field_ident)
-         (print_probe_call fp)
-      );
     match fp with 
     | { probe_block = { v = Probe_action_simple _ l } } -> (
         match l.v with
         | App (Cast _ _) [{ v = App SizeOf _ }]
         | App SizeOf [_] -> true
-        | _ -> 
-          FStar.IO.print_string
-            (Printf.sprintf "But not a sizeof probe\n");
-          false
+        | _ -> false
       )
     | _ -> 
-      FStar.IO.print_string
-        (Printf.sprintf "But not a simple probe\n");
       false
   )
   | _ -> false
@@ -201,24 +185,6 @@ let generate_probe_functions (e:env) (d:decl)
   | _ -> [d]
 
 let generalized_name (e:env) (head_name:ident) : ident = head_name
-  // let gen = reserved_prefix ^ "generalized_" ^ head_name.v.name in
-  // {head_name with v = { head_name.v with name = gen }}
-
-let starts_with (long:string) (short:string) 
-: option string
-= let long_len = String.length long in
-  let short_len = String.length short in
-  if long_len < short_len
-  then None
-  else if String.sub long 0 short_len = short
-  then Some (String.sub long short_len (long_len - short_len))
-  else None
-
-let ungeneralize_name (n:ident) : ident = n
-  // let gen = reserved_prefix ^ "generalized_" in
-  // match starts_with n.v.name gen with
-  // | None -> n
-  // | Some x ->  {n with v = { n.v with name=x }}
 
 let generalized_record_name (e:env) (n:typedef_names)
 : ML typedef_names
@@ -357,7 +323,7 @@ let generalize_probes_decl (e:env) (d:decl)
     let gen_name = generalized_record_name e names in
     let gen_name = { 
         gen_name with 
-        typedef_attributes = Noextract :: gen_name.typedef_attributes
+        typedef_attributes = gen_name.typedef_attributes
     } in
     let instantiated_type =
       let head = gen_name.typedef_abbrev in
@@ -434,7 +400,7 @@ let generalize_probe_decls (e:GlobalEnv.global_env) (ds:list decl)
 = let e = { benv = Binding.mk_env e; needs_probe = []; should_generalize = H.create 10 } in
   let e = need_probe_decls e ds in
   let print_ident (i:ident') = i.name in
-  FStar.IO.print_string 
+  Options.debug_print_string
     (Printf.sprintf "Probes needed for: %s\nShould generalize: %s\n" 
       (String.concat ", " (List.map print_ident e.needs_probe))
       (String.concat ", " (H.fold (fun k _ out -> print_ident k::out) e.should_generalize [])));

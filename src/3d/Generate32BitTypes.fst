@@ -59,7 +59,7 @@ let gen_name_32 (n:typedef_names)
   { typedef_name = name;
     typedef_abbrev = abbrev;
     typedef_ptr_abbrev = None;
-    typedef_attributes = List.filter Aligned? n.typedef_attributes }
+    typedef_attributes = Noextract :: List.filter Aligned? n.typedef_attributes }
 
 let maybe_gen_l 
       (gen_a: ('a -> ML (bool & 'a)))
@@ -156,10 +156,6 @@ let gen_decls (e:Binding.env) (d: decl)
 : ML (list decl)
 = match d.d_decl.v with
   | ProbeFunction id ps v (SimpleProbeFunction tn) -> (
-    FStar.IO.print_string <|
-      Printf.sprintf
-       "Generating 32-bit types for probe function:\n\t%s\n" 
-        (print_decl d);
     let decl, _ = Binding.lookup_type_decl e tn in
     match gen_decl e decl with
     | None -> 

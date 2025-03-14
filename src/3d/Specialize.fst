@@ -38,15 +38,10 @@ let specialize_atomic_field (e:B.env) (af:atomic_field)
         pc with probe_block =
           with_dummy_range <| 
           Probe_action_var <|
-            (G32.coercion_for_type 
-              (GeneralizeProbes.ungeneralize_name ht))
+            (G32.coercion_for_type ht)
       }
   in
   let af' = {af with v = {af.v with field_type = ft; field_probe=pc}} in
-  FStar.IO.print_string
-  <| Printf.sprintf "Specialized field %s\nto %s\n" 
-        (print_atomic_field af)
-        (print_atomic_field af');
   af'
   
 

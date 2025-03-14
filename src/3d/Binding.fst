@@ -2142,14 +2142,10 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     match qs with
     | [UInt64, UInt32] ->
       let _, attrs = lookup_type_decl (mk_env e) t0 in
-      FStar.IO.print_string 
-        (Printf.sprintf "Adding global %s: %s\n"
-          (print_ident t1)
-          (print_decl d));
       add_global e t1 d (Inl attrs);
       d
     | _ -> 
-      error ("Unexpected specialization types") d.d_decl.range
+      error ("Unexpected specialization types; currently only support specialization of pointer(UINT64) to pointer(UINT32)") d.d_decl.range
   )
 
   | OutputType out_t ->

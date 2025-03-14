@@ -1315,6 +1315,7 @@ let generics_as_params (gs:list generic_param) =
   List.map (function GenericProbeFunction i _ -> probe_m_t, i, Immutable) gs
 
 let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
+  if A.is_noextract d then [] else
   match d.d_decl.v with
   | ModuleAbbrev _ _ -> []
   | Define i None s ->
