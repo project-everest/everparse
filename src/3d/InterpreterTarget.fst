@@ -1057,9 +1057,10 @@ let print_binding mname (td:type_decl)
   in
   let validate_binding =
     let attribs =
-      if tdn.td_noextract
-      then "[@@ specialize; noextract_to \"krml\"]\nnoextract\ninline_for_extraction"
-      else (
+      // if tdn.td_noextract
+      // then "[@@ specialize; noextract_to \"krml\"]\nnoextract\ninline_for_extraction"
+      // else 
+      (
         let cinline =
           if td.name.td_entrypoint
           || td.attrs.is_exported
