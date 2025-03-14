@@ -35,7 +35,21 @@ let liveness_preserved (x:copy_buffer_t) =
 
 val properties (x:copy_buffer_t)
   : Lemma (
+      //copy buffer is disjoint from fresh stack frame
+      (forall h0 h1.
+        I.live (stream_of x) h0 /\
+        HS.fresh_frame h0 h1 /\
+        B.loc_disjoint (loc_of x) (B.loc_region_only true (HS.get_tip h1))) /\
+      //popping the top-most frame does not change the liveness or permissions of the copy buffer
+      (forall h0 h1.
+        HS.popped h0 h1 /\
+        I.live (stream_of x) h0 ==>
+        I.live (stream_of x) h1 /\
+        I.get_read (stream_of x) h1 == I.get_read (stream_of x) h0) /\
+      // modifying a liveness insensitive location does not change the liveness of the copy buffer
       liveness_preserved x /\
+      // copy buffers live in the distinct `region` constant
       B.loc_region_only true region `loc_includes` loc_of x /\
+      // and that region is disjoint from the AppCtxt region
       region `HS.disjoint` AppCtxt.region
     )
