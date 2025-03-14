@@ -224,3 +224,53 @@ let filter
     (requires True)
     (ensures fun s' -> forall x . mem x s' <==> (mem x s /\ f x))
 = Cbor.cbor_map_filter (filter_op sp f) s
+
+let rec fold_inv'
+  (#target: Type) (#source: typ) (#sp: spec source target true)
+  (#a: Type)
+  (inv: (t sp -> a -> prop))
+  (f: a -> target -> a)
+  (succ: (
+    (accu: a) ->
+    (k: target) ->
+    (s: t sp) ->
+    Lemma
+    (requires (inv s accu /\ sp.serializable k))
+    (ensures (inv (union s (singleton sp k)) (f accu k)))
+  ))
+  (accu: a)
+  (s1: t sp)
+  (l1: list target)
+  (s2: t sp)
+  (l2: list target)
+: Lemma
+  (requires (
+    U.op_comm f /\
+    (forall (x: target) . List.Tot.memP x l1 <==> mem x s1) /\
+    (forall (x: target) . List.Tot.memP x l2 <==> mem x s2) /\
+    List.Tot.no_repeats_p l1 /\
+    List.Tot.no_repeats_p l2 /\
+    disjoint s1 s2 /\
+    inv s1 accu
+  ))
+  (ensures (
+    inv (union s1 s2) (fold f accu s2)
+  ))
+  (decreases l2)
+= fold_eq f accu s2 l2;
+  match l2 with
+  | [] -> assert (equal (union s1 s2) s1)
+  | x :: l2' ->
+    let s1' = union s1 (singleton sp x) in
+    let l1' = x :: l1 in
+    let s2' = filter (fun x' -> not (mem x' (singleton sp x))) s2 in
+    let accu' = f accu x in
+    succ accu x s1;
+    fold_inv' inv f succ accu' s1' l1' s2' l2';
+    assert (equal (union s1' s2') (union s1 s2));
+    fold_eq f accu' s2' l2';
+    ()
+
+let fold_inv
+  inv f succ accu s
+= fold_inv' inv f succ accu (emptyset _) [] s (set_as_list s)

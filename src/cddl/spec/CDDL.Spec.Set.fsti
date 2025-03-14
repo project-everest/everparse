@@ -128,3 +128,25 @@ val filter
 : Pure (t sp)
     (requires True)
     (ensures fun s' -> forall x . mem x s' <==> (mem x s /\ f x))
+
+val fold_inv
+  (#target: Type) (#source: typ) (#sp: spec source target true)
+  (#a: Type)
+  (inv: (t sp -> a -> prop))
+  (f: a -> target -> a)
+  (succ: (
+    (accu: a) ->
+    (k: target) ->
+    (s: t sp) ->
+    Lemma
+    (requires (inv s accu /\ sp.serializable k))
+    (ensures (inv (union s (singleton sp k)) (f accu k)))
+  ))
+  (accu: a)
+  (s: t sp)
+: Lemma
+  (requires (
+    U.op_comm f /\
+    inv (emptyset sp) accu
+  ))
+  (ensures (inv s (fold f accu s)))
