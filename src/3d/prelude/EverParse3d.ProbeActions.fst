@@ -264,13 +264,14 @@ let check_overflow_add (x:U64.t) (y:U64.t)
   x <=^ (0xffffffffffffffffuL -^ y)
 
 inline_for_extraction
-let probe_fn_as_probe_m (bytes_to_read:U64.t { bytes_to_read <> 0uL}) (f:probe_fn)
+let probe_fn_as_probe_m (bytes_to_read:U64.t) (f:probe_fn)
 : probe_m unit
 = fun read_offset write_offset failed src dest ->
     let rd = !*read_offset in
     let wr = !*write_offset in
     if rd <> 0uL
     || wr <> 0uL
+    || bytes_to_read = 0uL
     then (
       failed *= true
     )

@@ -561,7 +561,7 @@ type probe_action : Type u#1 =
   | Probe_action_atomic of atomic_probe_action unit
   | Probe_action_var of probe_m unit
   | Probe_action_simple:
-      bytes_to_read : U64.t { bytes_to_read <> 0uL } ->
+      bytes_to_read : U64.t ->
       probe_fn: PA.probe_fn ->
       probe_action
   | Probe_action_seq:
@@ -1069,7 +1069,29 @@ let t_probe_then_validate
      (DT_IType pointer_size)
      (fun src ->
         Atomic_action (Action_probe_then_validate pointer_size td src dest (Probe_action_var probe)))
-    
+
+[@@specialize]
+let t_probe_then_validate_alt
+      (pointer_size:pointer_size_t)
+      (fieldname:string)
+      (probe:probe_action)
+      (dest:CP.copy_buffer_t)
+      (#nz #wk:_) (#pk:P.parser_kind nz wk)
+      (#ha #has_reader #i #disj:_)
+      (#l:_)
+      (td:dtyp pk ha has_reader i disj l)
+ : typ (parser_kind_of_itype pointer_size)
+       (join_inv i (NonTrivial (A.copy_buffer_inv dest)))
+       (join_disj disj (disjoint (NonTrivial (A.copy_buffer_loc dest)) l))
+       (join_loc l (NonTrivial (A.copy_buffer_loc dest)))
+       true
+       false
+ = t_probe_then_validate
+      pointer_size
+      fieldname
+      (probe_action_as_probe_m probe)
+      dest
+      td
 
 (* Type denotation of `typ` *)
 let rec as_type

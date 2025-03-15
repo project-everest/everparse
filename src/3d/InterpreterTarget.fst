@@ -893,8 +893,16 @@ let rec print_typ (mname:string) (t:typ)
                      (print_dtyp mname d)
                      (T.print_expr mname z)
 
-    | T_probe_then_validate fn dt sz probe_fn dest ->
+    | T_probe_then_validate fn dt sz (T.Probe_action_var probe_fn) dest ->
       Printf.sprintf "(t_probe_then_validate %s \"%s\" %s %s %s)"
+                     (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
+                     fn
+                     (T.print_expr mname probe_fn)
+                     (T.print_maybe_qualified_ident mname dest)
+                     (print_dtyp mname dt)
+
+    | T_probe_then_validate fn dt sz probe_fn dest ->
+      Printf.sprintf "(t_probe_then_validate_alt %s \"%s\" %s %s %s)"
                      (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
                      fn
                      (T.print_probe_action mname probe_fn)
