@@ -1721,7 +1721,7 @@ let elaborate_bit_fields env (fields:list field)
   = let bf_index : ref int = ST.alloc 0 in
     let get_bf_index () = !bf_index in
     let next_bf_index () = bf_index := !bf_index + 1 in
-    let new_bit_field (sf:atomic_field') bw r : ML (atomic_field & option (typ & int & int)) =
+    let new_bit_field (sf:atomic_field') bw r : ML (atomic_field & option (int & typ & int & int)) =
         let index = get_bf_index () in
         let size = size_of_integral_typ env sf.field_type r in
         let bit_size = 8 * size in
@@ -1737,7 +1737,7 @@ let elaborate_bit_fields env (fields:list field)
         } in
         let sf = { sf with field_bitwidth = Some (Inr (with_range bf_attr r)) } in
         with_range sf r,
-        Some (sf.field_type, to, remaining_size)
+        Some (index, sf.field_type, to, remaining_size)
     in
     let rec aux open_bit_field fields
       : ML (out:list field { List.length out == List.length fields } )
@@ -1775,6 +1775,20 @@ let elaborate_bit_fields env (fields:list field)
 
          | AtomicField af ->
            let sf = af.v in
+           let check_new_bf bf =
+             if bf.v.bitfield_from <> 0
+             then error ("Bitfield must start at position 0")
+                        bf.range
+             else if bf.v.bitfield_width <> (bf.v.bitfield_to - bf.v.bitfield_from)
+             then error ("Incorrect bitfield width")
+                        bf.range
+             else (
+              let size = size_of_integral_typ env af.v.field_type af.range in
+              let remaining_size = 8 * size - bf.v.bitfield_width in
+              let open_bit_field = Some (bf.v.bitfield_identifier, bf.v.bitfield_type, bf.v.bitfield_to, remaining_size) in
+              open_bit_field
+             )
+           in
            match sf.field_bitwidth, open_bit_field with
            | None, None ->
              hd :: aux open_bit_field tl
@@ -1783,15 +1797,68 @@ let elaborate_bit_fields env (fields:list field)
              next_bf_index();
              hd :: aux None tl
 
-           | Some (Inr _), _ ->
-             failwith "Bitfield is already elaborated"
+           | Some (Inr bf), None -> (
+             let open_bit_field = check_new_bf bf in
+             let tl = aux open_bit_field tl in
+             { hd with v = AtomicField af } :: tl
+            )
+
+           | Some (Inr bf), Some (bf_index, bit_field_typ, pos, remaining_size) -> (
+             let rng = bf.range in
+             if bf.v.bitfield_identifier <> bf_index
+             then (
+              let open_bit_field = check_new_bf bf in
+              let tl = aux open_bit_field tl in
+              { hd with v = AtomicField af } :: tl
+             )
+             else (
+                let bf = bf.v in
+                let tok = eq_typ env bit_field_typ bf.bitfield_type in 
+                if bf.bitfield_from <> pos
+                || bf.bitfield_width > remaining_size
+                || not tok
+                || bf.bitfield_width <> (bf.bitfield_to - bf.bitfield_from)
+                then (
+                  error 
+                    (Printf.sprintf 
+                      "Incorrect bitfield elaboration:\n\tField %s\n\texpected open bit field %s, %d, %d"
+                      (print_atomic_field af)
+                      (print_typ bit_field_typ)
+                      pos
+                      remaining_size)
+                    rng
+                )
+                else (
+                  let remaining_size = remaining_size - bf.bitfield_width in
+                  if remaining_size > 0
+                  then (
+                    let open_bit_field =
+                      Some (bf.bitfield_identifier,
+                            bf.bitfield_type,
+                            bf.bitfield_to,
+                            remaining_size)
+                    in
+                    let tl = aux open_bit_field tl in
+                    { hd with v = AtomicField af } :: tl
+                  )
+                  else if remaining_size = 0
+                  then (
+                    let tl = aux None tl in
+                    { hd with v = AtomicField af } :: tl
+                  )
+                  else (
+                    error "Incorrect bitfield elaboration: left over space in bitfield" rng
+                  )
+                )
+              )
+           )
 
            | Some (Inl bw), None ->
              let af, open_bit_field = new_bit_field sf bw hd.range in
              let tl = aux open_bit_field tl in
              { hd with v = AtomicField af } :: tl
 
-           | Some (Inl bw), Some (bit_field_typ, pos, remaining_size) ->
+           | Some (Inl bw), Some (bf_index, bit_field_typ, pos, remaining_size) ->
              Options.debug_print_string
                (Printf.sprintf
                  "Field type = %s; bit_field_type = %s\n"
@@ -1821,7 +1888,7 @@ let elaborate_bit_fields env (fields:list field)
                    let sf = { sf with field_bitwidth = Some (Inr (with_range bf_attr bw.range)) } in
                    let af = { af with v = sf } in
                    let hd = { hd with v = AtomicField af } in
-                   let open_bit_field = Some (bit_field_typ, to, remaining_size) in
+                   let open_bit_field = Some (index, bit_field_typ, to, remaining_size) in
                    let tl = aux open_bit_field tl in
                    hd :: tl
                  end
