@@ -622,7 +622,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
           out_expr_t = oe_t;
           out_expr_bit_width = bopt } = Some?.v oe.out_expr_meta in
     (match oe_t.v, bopt with
-     | Pointer t None, None ->
+     | Pointer t (Some (PQ UInt64)), None ->
        {oe0 with
         out_expr_node={oe0.out_expr_node with v=OE_star oe};
         out_expr_meta=Some ({ out_expr_base_t = oe_bt;
@@ -742,19 +742,25 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
               e)
             gs
          in
+         let err t t' p : ML typ_param =
+            error (Printf.sprintf 
+                          "Argument type mismatch (%s has type %s, expected %s)"
+                          (Ast.print_typ_param p)
+                          (Ast.print_typ t) (Ast.print_typ t')) (range_of_typ_param p)
+         in
          let ps =
            List.map2 (fun (t, _, _) p ->
              let p, t' = check_typ_param env p in
              if not (eq_typ env t t')
              then begin
                match p with
-               | Inl e -> (match try_cast_integer env (e, t') t with
-                          | Some e -> Inl e
-                          | _ -> error "Argument type mismatch after trying integer cast" (range_of_typ_param p))
-               | _ ->
-                 error (Printf.sprintf
-                          "Argument type mismatch (%s vs %s)"
-                          (Ast.print_typ t) (Ast.print_typ t')) (range_of_typ_param p)
+               | Inl e -> (
+                  match try_cast_integer env (e, t') t with
+                  | Some e -> Inl e
+                  | _ -> err t' t p
+                )
+               | Inr o ->
+                 err t' t p
              end
              else p)
              params
@@ -819,7 +825,7 @@ and check_expr (env:env) (e:expr)
       if not (typ_is_integral env from)
       then error (Printf.sprintf "Casts are only supported on integral types; %s is not integral"
                     (print_typ from)) e.range
-      else match from.v with
+      else match (unfold_typ_abbrev_only env from).v with
            | Type_app i KindSpec _ _ ->
              let from_t = as_integer_typ i in
              // if integer_type_lub to from_t <> to
@@ -846,17 +852,23 @@ and check_expr (env:env) (e:expr)
       in
       e, tuint32
 
-    | App SizeOf [{v=Identifier i;range=r}] ->
+    | App SizeOf [{v=Identifier i;range=r}] -> (
+      let dflt () : ML _ = 
+        match lookup env i with
+        | Inr ({d_decl={v=Enum _ _ _}}, _)
+        | Inr ({d_decl={v=Record _ _ _ _ _}}, _)
+        | Inr ({d_decl={v=CaseType _ _ _ _}}, _)
+        | Inr (_, Inl _) ->  //has decl-attributes
+          e, tuint32
+        | _ ->
+          error "`sizeof` applied to a non-sized-typed" r
+      in
       begin
-      match lookup env i with
-      | Inr ({d_decl={v=Enum _ _ _}}, _)
-      | Inr ({d_decl={v=Record _ _ _ _ _}}, _)
-      | Inr ({d_decl={v=CaseType _ _ _ _}}, _)
-      | Inr (_, Inl _) ->  //has decl-attributes
-        e, tuint32
-      | _ ->
-        error "`sizeof` applied to a non-sized-typed" r
+      match env.this with
+      | None -> dflt()
+      | Some j -> if eq_idents i j then e, tuint32 else dflt()
       end
+    )
 
     | App (Ext s) es ->
       //TODO: AR: not sure about this Ext node
@@ -1105,7 +1117,7 @@ let rec check_field_action (env:env) (f:atomic_field) (a:action)
           let t = lookup_expr_name env i in
           begin
           match t.v with
-          | Pointer t None -> Action_deref i, t
+          | Pointer t (Some (PQ UInt64)) -> Action_deref i, t
           | _ -> error "Dereferencing a non-pointer" i.range
           end
 
@@ -1825,8 +1837,8 @@ let allowed_base_types_as_output_types = [
   "Bool"
 ]
 
-let rec check_mutable_param_type (env:env) (t:typ) : ML unit =
-  let err iopt : ML unit =
+let rec check_mutable_param_type (env:env) (t:typ) : ML typ =
+  let err iopt : ML typ =
     let otype = 
       match iopt with
       | None -> "None"
@@ -1842,9 +1854,9 @@ let rec check_mutable_param_type (env:env) (t:typ) : ML unit =
   | Type_app i k [] [] ->
     if k = KindOutput || k = KindExtern ||
        (i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types)
-    then ()
+    then t
     else err (Some i)
-  | Pointer t None -> check_mutable_param_type env t
+  | Pointer t None -> { t with v = Pointer (check_mutable_param_type env t) (Some (PQ UInt64)) }
   | _ -> err None
     
 let rec check_integer_or_output_type (env:env) (t:typ) : ML unit =
@@ -1857,21 +1869,27 @@ let rec check_integer_or_output_type (env:env) (t:typ) : ML unit =
   | Pointer t None -> check_integer_or_output_type env t
   | _ -> error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
 
-let check_mutable_param (env:env) (p:param) : ML unit =
+let check_mutable_param (env:env) (p:param) : ML param =
   //a mutable parameter should have a pointer type
   //and the base type may be a base type or an output type
-  let t, _, _ = p in
+  let t, i, q = p in
   match t.v with
-  | Pointer bt None ->
-    check_mutable_param_type env bt
+  | Pointer bt None
+  | Pointer bt (Some (PQ UInt64)) ->
+    let t = { t with v = Pointer (check_mutable_param_type env bt) (Some (PQ UInt64)) } in
+    t, i, q 
   | _ ->
     error (Printf.sprintf "%s is not a valid mutable parameter type, it is not a pointer type" (print_typ t)) t.range
 
-let check_params (env:env) (ps:list param) : ML unit =
-  ps |> List.iter (fun (t, p, q) ->
-        if q = Mutable then check_mutable_param env (t, p, q)
-        else ignore (check_typ true env t);
-        add_local env p t)
+let check_params (env:env) (ps:list param) : ML (list param) =
+  ps |> List.map (fun (t, p, q) ->
+        let (t, p, q) =
+          if q = Mutable 
+          then check_mutable_param env (t, p, q)
+          else check_typ true env t, p, q
+        in
+        add_local env p t;
+        t, p, q)
 
 
 let elaborate_record_decl (e:global_env)
@@ -1890,7 +1908,7 @@ let elaborate_record_decl (e:global_env)
 
     (* Check parameters, that their types are well-formed;
        extend the environments with them *)
-    check_params env params;
+    let params = check_params env params in
     
     (* If a where-clause is present, elaborate it into a refined unit field *)
     let where, maybe_unit_field =
@@ -1927,7 +1945,7 @@ let elaborate_record_decl (e:global_env)
 
     let fields = elaborate_bit_fields env fields in
 
-    let d = mk_decl (Record tdnames generics params where fields) range comments is_exported in
+    let d = mk_decl (Record tdnames generics params None fields) range comments is_exported in
 
     let attrs = {
         may_fail = false; //only its fields may fail; not the struct itself
@@ -2049,7 +2067,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     let env = mk_env e in
     let attribs = List.map (check_attribute env) attribs in
     let env = List.fold_left push_generic env gs in
-    check_params env ps;
+    let ps = check_params env ps in
     let t = check_typ false env t in
     let wk =
       match typ_weak_kind env t with
@@ -2106,7 +2124,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     let tdnames = check_typedef_names e tdnames in
     let env = { mk_env e with this=Some tdnames.typedef_name } in
     let env = List.fold_left push_generic env generics in
-    check_params env params;
+    let params = check_params env params in
     let switch = check_switch check_field env switch in
     let wk = weak_kind_of_switch_case env switch in 
     let attrs = {
@@ -2124,7 +2142,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
   | ProbeFunction id ps body tn ->
     let env = mk_env e in
     let tn = check_probe_function_type env tn in
-    check_params env ps;
+    let ps = check_params env ps in
     let body, t = check_probe env body in
     if not (eq_typ env t tunit)
     then error (Printf.sprintf "Probe function body has type %s instead of unit" (print_typ t)) body.range;
@@ -2160,7 +2178,7 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
   | ExternFn f ret params pure ->
     let env = mk_env e in
     let ret = check_typ true env ret in
-    check_params env params;
+    let params = check_params env params in
     let d = mk_decl (ExternFn f ret params pure) d.d_decl.range d.d_decl.comments d.d_exported in
     add_extern_fn e f d;
     d

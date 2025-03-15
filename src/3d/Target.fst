@@ -437,7 +437,7 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
       (print_expr mname e)
       (print_typ mname t1)
       (print_typ mname t2)
-  | T_pointer t i -> Printf.sprintf "bpointer(%s) (%s)" (A.print_integer_type i) (print_typ mname t)
+  | T_pointer t i -> Printf.sprintf "bpointer (%s)" (print_typ mname t)
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t

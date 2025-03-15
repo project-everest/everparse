@@ -212,7 +212,7 @@ let maybe_as_integer_typ (i:ident) : Tot (option integer_type) =
 
 let as_integer_typ (i:ident) : ML integer_type =
   match maybe_as_integer_typ i with
-  | None -> error ("Unknown integer type: " ^ ident_to_string i) i.range
+  | None -> failwith ("Unknown integer type: " ^ ident_to_string i) //i.range
   | Some t -> t
 
 /// Bit order for bitfields
@@ -734,6 +734,427 @@ type type_refinement = {
 [@@ PpxDerivingYoJson ]
 let prog = list decl & option type_refinement
 
+
+
+(*** Printing the source AST; for debugging only **)
+let print_constant (c:constant) =
+
+  let print_tag = function
+    | UInt8 -> "uy"
+    | UInt16 -> "us"
+    | UInt32 -> "ul"
+    | UInt64 -> "uL"
+  in
+  match c with
+  | Unit -> "()"
+  | Int tag i  -> Printf.sprintf "%d%s" i (print_tag tag)
+  | XInt tag x ->
+    let tag = print_tag tag in
+    if String.length x >= 2
+    && String.sub x (String.length x - 2) 2 = tag
+    then x
+    else Printf.sprintf "%s%s" x tag
+  | Bool b -> Printf.sprintf "%b" b
+
+let print_ident (i:ident) = ident_to_string i
+
+let print_integer_type = function
+  | UInt8 -> "UINT8"
+  | UInt16 -> "UINT16"
+  | UInt32 -> "UINT32"
+  | UInt64 -> "UINT64"
+
+let print_bitfield_bit_order = function
+  | LSBFirst -> "LSBFirst"
+  | MSBFirst -> "MSBFirst"
+
+let print_op = function
+  | Eq -> "="
+  | Neq -> "!="
+  | And -> "&&"
+  | Or -> "||"
+  | Not -> "!"
+  | Plus _ -> "+"
+  | Minus _ -> "-"
+  | Mul _ -> "*"
+  | Division _ -> "/"
+  | Remainder _ -> "%"
+  | BitwiseAnd _ -> "&"
+  | BitwiseOr _ -> "|"
+  | BitwiseXor _ -> "^"
+  | BitwiseNot _ -> "~"
+  | ShiftLeft _ -> "<<"
+  | ShiftRight _ -> ">>"
+  | LT _ -> "<"
+  | GT _ -> ">"
+  | LE _ -> "<="
+  | GE _ -> ">="
+  | IfThenElse -> "ifthenelse"
+  | BitFieldOf i o -> Printf.sprintf "bitfield_of(%d, %s)" i (print_bitfield_bit_order o)
+  | SizeOf -> "sizeof"
+  | Cast _ t -> "(" ^ print_integer_type t ^ ")"
+  | Ext s -> s
+
+let rec print_expr (e:expr) : Tot string =
+  match e.v with
+  | Constant c ->
+    print_constant c
+  | Identifier i ->
+    print_ident i
+  | This ->
+    "this"
+  | Static e -> 
+    Printf.sprintf "static(%s)" (print_expr e)
+  | App Eq [e1; e2] ->
+    Printf.sprintf "(%s = %s)" (print_expr e1) (print_expr e2)
+  | App And [e1; e2] ->
+    Printf.sprintf "(%s && %s)" (print_expr e1) (print_expr e2)
+  | App Or [e1; e2] ->
+    Printf.sprintf "(%s || %s)" (print_expr e1) (print_expr e2)
+  | App Not [e1] ->
+    Printf.sprintf "(! %s)" (print_expr e1)
+  | App (BitwiseNot _) [e1] ->
+    Printf.sprintf "(~ %s)" (print_expr e1)
+  | App (Plus _) [e1; e2]
+  | App (Minus _) [e1; e2]
+  | App (Mul _) [e1; e2]
+  | App (Division _) [e1; e2]
+  | App (Remainder _) [e1; e2]
+  | App (BitwiseAnd _) [e1; e2]
+  | App (BitwiseOr _) [e1; e2]
+  | App (BitwiseXor _) [e1; e2]
+  | App (ShiftLeft _) [e1; e2]
+  | App (ShiftRight _) [e1; e2]
+  | App (LT _) [e1; e2]
+  | App (GT _) [e1; e2]
+  | App (LE _) [e1; e2]
+  | App (GE _) [e1; e2] ->
+    let op = App?._0 e.v in
+    Printf.sprintf "(%s %s %s)" (print_expr e1) (print_op op) (print_expr e2)
+  | App SizeOf [e1] ->
+    Printf.sprintf "(sizeof %s)" (print_expr e1)
+  | App (Cast i j) [e] ->
+    Printf.sprintf "%s %s" (print_op (Cast i j)) (print_expr e)
+  | App (Ext s) es ->
+    Printf.sprintf "%s(%s)" (print_op (Ext s)) (String.concat ", " (print_exprs es))
+  | App op es ->
+    Printf.sprintf "(?? %s %s)" (print_op op) (String.concat ", " (print_exprs es))
+
+and print_exprs (es:list expr) : Tot (list string) =
+  match es with
+  | [] -> []
+  | hd::tl -> print_expr hd :: print_exprs tl
+
+let rec print_out_expr o : ML string =
+  match o.out_expr_node.v with
+  | OE_id i -> ident_to_string i
+  | OE_star o -> Printf.sprintf "*(%s)" (print_out_expr o)
+  | OE_addrof o -> Printf.sprintf "&(%s)" (print_out_expr o)
+  | OE_deref o i -> Printf.sprintf "(%s)->(%s)" (print_out_expr o) (ident_to_string i)
+  | OE_dot o i -> Printf.sprintf "(%s).(%s)" (print_out_expr o) (ident_to_string i)
+
+let print_typ_param p : ML string =
+  match p with
+  | Inl e -> print_expr e
+  | Inr o -> print_out_expr o
+
+let print_generic_inst = print_expr
+let print_generic_insts = function
+  | [] -> ""
+  | gs -> Printf.sprintf "<%s>" (String.concat ", " (List.map print_generic_inst gs))
+let rec print_typ t : ML string =
+  match t.v with
+  | Type_app i _k gs ps ->
+    begin
+    match ps with
+    | [] -> ident_to_string i
+    | _ ->
+      Printf.sprintf "%s%s(%s)"
+        (ident_to_string i)
+        (print_generic_insts gs)
+        (String.concat ", " (List.map print_typ_param ps))
+    end
+  | Pointer t None ->
+     Printf.sprintf "(pointer %s)"
+       (print_typ t)
+  | Pointer t (Some (PQ q)) ->
+     Printf.sprintf "(pointer %s (%s))"
+       (print_typ t)
+       (print_integer_type q)
+
+let typ_as_integer_type (t:typ) : ML integer_type =
+  match t.v with
+  | Type_app i _k [] [] -> as_integer_typ i
+  | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
+
+let bit_order_of_typ (t:typ) : ML bitfield_bit_order =
+  match t.v with
+  | Type_app i _k [] [] -> bit_order_of i
+  | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
+
+let print_qual = function
+  | Mutable -> "mutable"
+  | Immutable -> ""
+
+let print_params (ps:list param) =
+  match ps with
+  | [] -> ""
+  | _ ->
+    Printf.sprintf "(%s)"
+      (String.concat ", "
+        (ps |> List.map
+          (fun (t, p, q) ->
+             Printf.sprintf "%s%s %s"
+               (print_qual q)
+               (print_typ t)
+               (print_ident p))))
+
+let print_opt (o:option 'a) (f:'a -> ML string) : ML string =
+  match o with
+  | None -> ""
+  | Some x -> f x
+
+let print_bitfield (bf:option field_bitwidth_t) =
+  match bf with
+  | None -> ""
+  | Some (Inl x) -> Printf.sprintf ": %d " x.v
+  | Some (Inr {v=a}) ->
+    Printf.sprintf ": (|width=%d, id=%d, type=%s, from=%d, to=%d|) "
+     a.bitfield_width a.bitfield_identifier
+     (print_typ a.bitfield_type)
+     a.bitfield_from a.bitfield_to
+
+let rec print_field' (f:field) (with_comments:bool) : ML string =
+  let field = 
+    match f.v with
+    | AtomicField f -> print_atomic_field f
+    | RecordField f i -> Printf.sprintf "%s %s" (print_record f) i.v.name
+    | SwitchCaseField f i -> Printf.sprintf "%s %s" (print_switch_case f) i.v. name
+  in
+  if with_comments then 
+    match f.comments with 
+    | [] -> field
+    | comms -> Printf.sprintf "//%s\n%s" (String.concat "; " comms) field
+  else field
+
+and print_field f : ML string = print_field' f true 
+
+and print_record (f:record) : ML string = 
+  List.map print_field f |>
+  String.concat ";\n"
+
+and print_atomic_field (f:atomic_field) : ML string =
+  let print_array eq : Tot string =
+    match eq with
+    | FieldScalar -> ""
+    | FieldArrayQualified (e, q) ->
+      begin match q with
+      | ByteArrayByteSize -> Printf.sprintf "[%s]" (print_expr e)
+      | ArrayByteSize -> Printf.sprintf "[:byte-size %s]" (print_expr e)
+      | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-single-element-array-at-most %s]" (print_expr e)
+      | ArrayByteSizeSingleElementArray -> Printf.sprintf "[:byte-size-single-element-array %s]" (print_expr e)
+      end
+    | FieldString None -> Printf.sprintf "[::zeroterm]"
+    | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-byte-size-at-most %s]" (print_expr sz)
+    | FieldConsumeAll -> Printf.sprintf "[:consume-all]"
+  in
+  let print_probe_field = function
+    | ProbeLength e -> Printf.sprintf "length=%s" (print_expr e)
+    | ProbeDest e -> Printf.sprintf "destination=%s" (print_expr e)
+  in
+  let sf = f.v in
+    Printf.sprintf "%s%s %s%s%s%s%s;"
+      (if sf.field_dependence then "dependent " else "")
+      (print_typ sf.field_type)
+      (print_ident sf.field_ident)
+      (print_bitfield sf.field_bitwidth)
+      (print_array sf.field_array_opt)
+      (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
+      (print_opt sf.field_probe
+        (fun p -> Printf.sprintf " probe %s" (print_probe_call p)))
+
+and print_probe_action (p:probe_action) : ML string =
+  match p.v with
+  | Probe_atomic_action a ->
+    print_probe_atomic_action a
+  | Probe_action_var i ->
+    Printf.sprintf "(Probe_action_var %s)" (print_ident i)
+  | Probe_action_simple f n ->
+    Printf.sprintf "(Probe_action_simple %s (%s))"
+      (print_opt f print_ident)
+      (print_expr n)
+  | Probe_action_seq hd tl ->
+    Printf.sprintf "%s; %s" 
+      (print_probe_atomic_action hd)
+      (print_probe_action tl)
+  | Probe_action_let i hd tl ->
+    Printf.sprintf "var %s = %s; %s"
+      (print_ident i)
+      (print_probe_atomic_action hd)
+      (print_probe_action tl)
+
+and print_probe_atomic_action (p:probe_atomic_action)
+: ML string
+= match p with
+  | Probe_action_return e -> Printf.sprintf "return %s;" (print_expr e)
+  | Probe_action_call f args -> Printf.sprintf "(Probe_action_call %s(%s));" (print_ident f) (String.concat ", " (List.map print_expr args))
+  | Probe_action_read f -> Printf.sprintf "(Probe_action_read %s);" (print_ident f)
+  | Probe_action_write f v ->Printf.sprintf "(Probe_action_write %s(%s));" (print_ident f) (print_expr v)
+  | Probe_action_copy f v -> Printf.sprintf "(Probe_action_copy %s(%s));" (print_ident f) (print_expr v)
+  | Probe_action_skip n -> Printf.sprintf "(Probe_action_skip %s);" (print_expr n)
+
+and print_probe_call (p:probe_call) : ML string =
+  match p with
+  | { probe_dest; probe_block } ->
+    Printf.sprintf "(destination=%s) { %s }"
+          (print_ident probe_dest)
+          (print_probe_action probe_block)
+
+and print_action (a:action) : ML string =
+  let print_atomic_action (a:atomic_action) : ML string =
+    match a with
+    | Action_return e -> Printf.sprintf "return %s;" (print_expr e)
+    | Action_abort ->  "abort;" 
+    | Action_field_pos_64 -> "field_pos_64;"
+    | Action_field_pos_32 -> "field_pos_32;"
+    | Action_field_ptr -> "field_ptr;"
+    | Action_field_ptr_after sz write_to -> Printf.sprintf "field_ptr_after(%s, %s);" (print_expr sz) (print_out_expr write_to)
+    | Action_deref i -> Printf.sprintf "deref %s;" (print_ident i)
+    | Action_assignment lhs rhs -> Printf.sprintf "%s = %s;" (print_out_expr lhs) (print_expr rhs)
+    | Action_call f args -> Printf.sprintf "%s(%s);" (print_ident f) (String.concat ", " (List.map print_expr args))
+  in
+  match a.v with
+  | Atomic_action a -> print_atomic_action a
+  | Action_seq hd tl -> Printf.sprintf "%s\n%s" (print_atomic_action hd) (print_action tl)
+  | Action_ite hd then_ (Some else_) -> Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (print_expr hd) (print_action then_) (print_action else_)
+  | Action_ite hd then_ None -> Printf.sprintf "if (%s) {\n%s\n}" (print_expr hd) (print_action then_)
+  | Action_let i a k -> Printf.sprintf "let %s = %s in\n%s" (print_ident i) (print_atomic_action a) (print_action k)
+  | Action_act a -> Printf.sprintf "{\n%s\n}" (print_action a)
+
+and print_switch_case (s:switch_case) : ML string =
+  let head, cases = s in
+  let print_case (c:case) : ML string =
+    match c with
+    | Case e f ->
+      Printf.sprintf "case %s: %s;"
+        (print_expr e)
+        (print_field f)
+    | DefaultCase f ->
+      Printf.sprintf "default: %s;"
+        (print_field f)
+  in
+  Printf.sprintf "switch (%s) {\n
+                  %s\n\
+                 }"
+                 (print_expr head)
+                 (String.concat "\n" (List.map print_case cases))
+
+let option_to_string (f:'a -> ML string) (x:option 'a) : ML string = print_opt x f
+
+let print_generics generics =
+  let print_generic = function
+    | GenericProbeFunction i t -> Printf.sprintf "(%s : probe for %s)" (print_ident i) (print_ident t)
+  in
+  match generics with
+  | [] -> ""
+  | _ -> 
+    Printf.sprintf "<%s>" (String.concat ", " (List.map print_generic generics))
+
+let print_attribute (a:attribute) : ML string =
+  match a with
+  | Entrypoint None -> "entrypoint"
+  | Entrypoint (Some p) -> Printf.sprintf "entrypoint(probe(%s, length=%s)" (print_ident p.probe_ep_fn) (print_expr p.probe_ep_length)
+  | Aligned -> "aligned"
+  | Noextract -> "noextract"
+let print_attributes (a:list attribute) : ML string =
+  match a with
+  | [] -> ""
+  | _ -> Printf.sprintf "[%s]" (String.concat ", " (List.map print_attribute a)) ^ " "
+let print_probe_function_type = function
+  | SimpleProbeFunction i -> print_ident i
+  | CoerceProbeFunction (i,j) -> Printf.sprintf "%s -> %s" (print_ident i) (print_ident j)
+let print_decl' (d:decl') : ML string =
+  match d with
+  | ModuleAbbrev i m -> Printf.sprintf "module %s = %s" (print_ident i) (print_ident m)
+  | Define i None c ->
+    Printf.sprintf "#define %s %s;" (print_ident i) (print_constant c)
+  | Define i (Some t) c ->
+    Printf.sprintf "#define %s : %s %s;" (print_ident i) (print_typ t) (print_constant c)
+  | TypeAbbrev attrs t i generics params ->
+    Printf.sprintf "%stypedef %s %s%s%s;" 
+      (print_attributes attrs)
+      (print_typ t)
+      (print_ident i)
+      (print_generics generics)
+      (print_params params)
+  | Enum t i ls ->
+    let print_enum_case (i, jopt) =
+      match jopt with
+      | None -> print_ident i
+      | Some (Inl j) -> Printf.sprintf "%s = %d" (print_ident i) j
+      | Some (Inr j) -> Printf.sprintf "%s = %s" (print_ident i) (print_ident j)
+    in
+    Printf.sprintf "%s enum %s {\n\
+                       %s \n\
+                   }"
+                   (print_typ t)
+                   (ident_to_string i)
+                   (String.concat ",\n" (List.map print_enum_case ls))
+  | Record td generics params wopt fields ->
+    Printf.sprintf "%stypedef struct %s%s%s%s {\n\
+                        %s \n\
+                    } %s, *%s"
+                    (print_attributes td.typedef_attributes)
+                    (ident_to_string td.typedef_name)
+                    (print_generics generics)
+                    (print_params params)
+                    (match wopt with | None -> "" | Some e -> " where " ^ print_expr e)
+                    (String.concat "\n" (List.map print_field fields))
+                    (ident_to_string td.typedef_abbrev)
+                    (option_to_string ident_to_string td.typedef_ptr_abbrev)
+  | CaseType td generics params switch_case ->
+    Printf.sprintf "%scasetype %s%s%s {\n\
+                        %s \n\
+                    } %s, *%s"
+                    (print_attributes td.typedef_attributes)
+                    (ident_to_string td.typedef_name)
+                    (print_generics generics)
+                    (print_params params)
+                    (print_switch_case switch_case)
+                    (ident_to_string td.typedef_abbrev)
+                    (option_to_string ident_to_string td.typedef_ptr_abbrev)
+  | ProbeFunction i params a tn ->
+    Printf.sprintf "probe %s(%s) (for %s) {\n\
+                        %s \n\
+                    }"
+                    (print_ident i)
+                    (print_params params)
+                    (print_probe_function_type tn)
+                    (print_probe_action a)
+  | CoerceProbeFunctionStub i j ->
+    Printf.sprintf "stub probe %s (for %s)" (print_ident i) (print_probe_function_type j)
+  | Specialize pqs i j ->
+    let print_pointer_qual i = Printf.sprintf "pointer(%s)" (print_integer_type i) in
+    Printf.sprintf "specialize (%s) %s %s"
+      (String.concat ", " (List.map (fun (q1, q2) -> print_pointer_qual q1 ^ ", " ^ print_pointer_qual q2) pqs))
+      (print_ident i)
+      (print_ident j)
+  | OutputType out_t -> "Printing for output types is TBD"
+  | ExternType _ -> "Printing for extern types is TBD"
+  | ExternFn _ _ _ _
+  | ExternProbe _ _ -> "Printing for extern functions is TBD"
+
+let print_decl (d:decl) : ML string =
+  match d.d_decl.comments with
+  | [] -> print_decl' d.d_decl.v
+  | cs -> Printf.sprintf "/* %s */\n%s"
+          (String.concat "\n" cs)
+          (print_decl' d.d_decl.v)
+
+let print_decls (ds:list decl) : ML string =
+  List.map print_decl ds
+  |> String.concat "\n/*------------------------------------*/\n"
+
 ////////////////////////////////////////////////////////////////////////////////
 // Utilities
 ////////////////////////////////////////////////////////////////////////////////
@@ -1025,11 +1446,18 @@ let subst_probe_atomic_action (s:subst) (aa:probe_atomic_action) : ML probe_atom
   | Probe_action_write f value -> Probe_action_write f (subst_expr s value)
   | Probe_action_copy f len -> Probe_action_copy f (subst_expr s len)
   | Probe_action_skip len -> Probe_action_skip (subst_expr s len)
+
+
+
 let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
   match a.v with
   | Probe_atomic_action aa ->
     {a with v = Probe_atomic_action (subst_probe_atomic_action s aa)}
-  | Probe_action_var i -> a
+  | Probe_action_var i -> (
+    match apply s i with
+    | {v=Identifier i} -> {a with v = Probe_action_var i }
+    | _ -> failwith "subst_probe_action: expected an identifier"
+  )
   | Probe_action_simple f n -> 
     {a with v = Probe_action_simple f (subst_expr s n) }
   | Probe_action_seq hd tl ->
@@ -1074,13 +1502,13 @@ and subst_atomic_field (s:subst) (f:atomic_field) : ML atomic_field =
         probe_block=subst_probe_action s probe_block 
       }
   in
-      // CompositeCall { probe_dest; probe_block = subst_probe_action s probe_block }
   let sf = {
       sf with
       field_type = subst_typ s sf.field_type;
       field_array_opt = subst_field_array s sf.field_array_opt;
       field_constraint = map_opt (subst_expr s) sf.field_constraint;
-      field_action = a
+      field_action = a;
+      field_probe = pa
   } in
   { f with v = sf }  
 and subst_record (s:subst) (f:record) : ML record   
@@ -1114,425 +1542,6 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
   | ExternProbe _ _ -> d
   
 let subst_decl (s:subst) (d:decl) : ML decl = decl_with_v d (subst_decl' s d.d_decl.v)
-
-(*** Printing the source AST; for debugging only **)
-let print_constant (c:constant) =
-
-  let print_tag = function
-    | UInt8 -> "uy"
-    | UInt16 -> "us"
-    | UInt32 -> "ul"
-    | UInt64 -> "uL"
-  in
-  match c with
-  | Unit -> "()"
-  | Int tag i  -> Printf.sprintf "%d%s" i (print_tag tag)
-  | XInt tag x ->
-    let tag = print_tag tag in
-    if String.length x >= 2
-    && String.sub x (String.length x - 2) 2 = tag
-    then x
-    else Printf.sprintf "%s%s" x tag
-  | Bool b -> Printf.sprintf "%b" b
-
-let print_ident (i:ident) = ident_to_string i
-
-let print_integer_type = function
-  | UInt8 -> "UINT8"
-  | UInt16 -> "UINT16"
-  | UInt32 -> "UINT32"
-  | UInt64 -> "UINT64"
-
-let print_bitfield_bit_order = function
-  | LSBFirst -> "LSBFirst"
-  | MSBFirst -> "MSBFirst"
-
-let print_op = function
-  | Eq -> "="
-  | Neq -> "!="
-  | And -> "&&"
-  | Or -> "||"
-  | Not -> "!"
-  | Plus _ -> "+"
-  | Minus _ -> "-"
-  | Mul _ -> "*"
-  | Division _ -> "/"
-  | Remainder _ -> "%"
-  | BitwiseAnd _ -> "&"
-  | BitwiseOr _ -> "|"
-  | BitwiseXor _ -> "^"
-  | BitwiseNot _ -> "~"
-  | ShiftLeft _ -> "<<"
-  | ShiftRight _ -> ">>"
-  | LT _ -> "<"
-  | GT _ -> ">"
-  | LE _ -> "<="
-  | GE _ -> ">="
-  | IfThenElse -> "ifthenelse"
-  | BitFieldOf i o -> Printf.sprintf "bitfield_of(%d, %s)" i (print_bitfield_bit_order o)
-  | SizeOf -> "sizeof"
-  | Cast _ t -> "(" ^ print_integer_type t ^ ")"
-  | Ext s -> s
-
-let rec print_expr (e:expr) : Tot string =
-  match e.v with
-  | Constant c ->
-    print_constant c
-  | Identifier i ->
-    print_ident i
-  | This ->
-    "this"
-  | Static e -> 
-    Printf.sprintf "static(%s)" (print_expr e)
-  | App Eq [e1; e2] ->
-    Printf.sprintf "(%s = %s)" (print_expr e1) (print_expr e2)
-  | App And [e1; e2] ->
-    Printf.sprintf "(%s && %s)" (print_expr e1) (print_expr e2)
-  | App Or [e1; e2] ->
-    Printf.sprintf "(%s || %s)" (print_expr e1) (print_expr e2)
-  | App Not [e1] ->
-    Printf.sprintf "(! %s)" (print_expr e1)
-  | App (BitwiseNot _) [e1] ->
-    Printf.sprintf "(~ %s)" (print_expr e1)
-  | App (Plus _) [e1; e2]
-  | App (Minus _) [e1; e2]
-  | App (Mul _) [e1; e2]
-  | App (Division _) [e1; e2]
-  | App (Remainder _) [e1; e2]
-  | App (BitwiseAnd _) [e1; e2]
-  | App (BitwiseOr _) [e1; e2]
-  | App (BitwiseXor _) [e1; e2]
-  | App (ShiftLeft _) [e1; e2]
-  | App (ShiftRight _) [e1; e2]
-  | App (LT _) [e1; e2]
-  | App (GT _) [e1; e2]
-  | App (LE _) [e1; e2]
-  | App (GE _) [e1; e2] ->
-    let op = App?._0 e.v in
-    Printf.sprintf "(%s %s %s)" (print_expr e1) (print_op op) (print_expr e2)
-  | App SizeOf [e1] ->
-    Printf.sprintf "(sizeof %s)" (print_expr e1)
-  | App (Cast i j) [e] ->
-    Printf.sprintf "%s %s" (print_op (Cast i j)) (print_expr e)
-  | App (Ext s) es ->
-    Printf.sprintf "%s(%s)" (print_op (Ext s)) (String.concat ", " (print_exprs es))
-  | App op es ->
-    Printf.sprintf "(?? %s %s)" (print_op op) (String.concat ", " (print_exprs es))
-
-and print_exprs (es:list expr) : Tot (list string) =
-  match es with
-  | [] -> []
-  | hd::tl -> print_expr hd :: print_exprs tl
-
-let rec print_out_expr o : ML string =
-  match o.out_expr_node.v with
-  | OE_id i -> ident_to_string i
-  | OE_star o -> Printf.sprintf "*(%s)" (print_out_expr o)
-  | OE_addrof o -> Printf.sprintf "&(%s)" (print_out_expr o)
-  | OE_deref o i -> Printf.sprintf "(%s)->(%s)" (print_out_expr o) (ident_to_string i)
-  | OE_dot o i -> Printf.sprintf "(%s).(%s)" (print_out_expr o) (ident_to_string i)
-
-let print_typ_param p : ML string =
-  match p with
-  | Inl e -> print_expr e
-  | Inr o -> print_out_expr o
-
-let print_generic_inst = print_expr
-let print_generic_insts = function
-  | [] -> ""
-  | gs -> Printf.sprintf "<%s>" (String.concat ", " (List.map print_generic_inst gs))
-let rec print_typ t : ML string =
-  match t.v with
-  | Type_app i _k gs ps ->
-    begin
-    match ps with
-    | [] -> ident_to_string i
-    | _ ->
-      Printf.sprintf "%s%s(%s)"
-        (ident_to_string i)
-        (print_generic_insts gs)
-        (String.concat ", " (List.map print_typ_param ps))
-    end
-  | Pointer t None ->
-     Printf.sprintf "(pointer %s)"
-       (print_typ t)
-  | Pointer t (Some (PQ q)) ->
-     Printf.sprintf "(pointer %s (%s))"
-       (print_typ t)
-       (print_integer_type q)
-
-let typ_as_integer_type (t:typ) : ML integer_type =
-  match t.v with
-  | Type_app i _k [] [] -> as_integer_typ i
-  | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
-
-let bit_order_of_typ (t:typ) : ML bitfield_bit_order =
-  match t.v with
-  | Type_app i _k [] [] -> bit_order_of i
-  | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
-
-let print_qual = function
-  | Mutable -> "mutable"
-  | Immutable -> ""
-
-let print_params (ps:list param) =
-  match ps with
-  | [] -> ""
-  | _ ->
-    Printf.sprintf "(%s)"
-      (String.concat ", "
-        (ps |> List.map
-          (fun (t, p, q) ->
-             Printf.sprintf "%s%s %s"
-               (print_qual q)
-               (print_typ t)
-               (print_ident p))))
-
-let print_opt (o:option 'a) (f:'a -> ML string) : ML string =
-  match o with
-  | None -> ""
-  | Some x -> f x
-
-let print_bitfield (bf:option field_bitwidth_t) =
-  match bf with
-  | None -> ""
-  | Some (Inl x) -> Printf.sprintf ": %d " x.v
-  | Some (Inr {v=a}) ->
-    Printf.sprintf ": (|width=%d, id=%d, type=%s, from=%d, to=%d|) "
-     a.bitfield_width a.bitfield_identifier
-     (print_typ a.bitfield_type)
-     a.bitfield_from a.bitfield_to
-
-let rec print_field' (f:field) (with_comments:bool) : ML string =
-  let field = 
-    match f.v with
-    | AtomicField f -> print_atomic_field f
-    | RecordField f i -> Printf.sprintf "%s %s" (print_record f) i.v.name
-    | SwitchCaseField f i -> Printf.sprintf "%s %s" (print_switch_case f) i.v. name
-  in
-  if with_comments then 
-    match f.comments with 
-    | [] -> field
-    | comms -> Printf.sprintf "//%s\n%s" (String.concat "; " comms) field
-  else field
-
-and print_field f : ML string = print_field' f true 
-
-and print_record (f:record) : ML string = 
-  List.map print_field f |>
-  String.concat ";\n"
-
-and print_atomic_field (f:atomic_field) : ML string =
-  let print_array eq : Tot string =
-    match eq with
-    | FieldScalar -> ""
-    | FieldArrayQualified (e, q) ->
-      begin match q with
-      | ByteArrayByteSize -> Printf.sprintf "[%s]" (print_expr e)
-      | ArrayByteSize -> Printf.sprintf "[:byte-size %s]" (print_expr e)
-      | ArrayByteSizeAtMost -> Printf.sprintf "[:byte-size-single-element-array-at-most %s]" (print_expr e)
-      | ArrayByteSizeSingleElementArray -> Printf.sprintf "[:byte-size-single-element-array %s]" (print_expr e)
-      end
-    | FieldString None -> Printf.sprintf "[::zeroterm]"
-    | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-byte-size-at-most %s]" (print_expr sz)
-    | FieldConsumeAll -> Printf.sprintf "[:consume-all]"
-  in
-  let print_probe_field = function
-    | ProbeLength e -> Printf.sprintf "length=%s" (print_expr e)
-    | ProbeDest e -> Printf.sprintf "destination=%s" (print_expr e)
-  in
-  let sf = f.v in
-    Printf.sprintf "%s%s %s%s%s%s%s;"
-      (if sf.field_dependence then "dependent " else "")
-      (print_typ sf.field_type)
-      (print_ident sf.field_ident)
-      (print_bitfield sf.field_bitwidth)
-      (print_array sf.field_array_opt)
-      (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
-      (print_opt sf.field_probe
-        (fun p -> Printf.sprintf " probe %s" (print_probe_call p)))
-
-and print_probe_action (p:probe_action) : ML string =
-  match p.v with
-  | Probe_atomic_action a ->
-    print_probe_atomic_action a
-  | Probe_action_var i ->
-    Printf.sprintf "%s" (print_ident i)
-  | Probe_action_simple f n ->
-    Printf.sprintf "(Probe_action_simple %s (%s))"
-      (print_opt f print_ident)
-      (print_expr n)
-  | Probe_action_seq hd tl ->
-    Printf.sprintf "%s; %s" 
-      (print_probe_atomic_action hd)
-      (print_probe_action tl)
-  | Probe_action_let i hd tl ->
-    Printf.sprintf "var %s = %s; %s"
-      (print_ident i)
-      (print_probe_atomic_action hd)
-      (print_probe_action tl)
-
-and print_probe_atomic_action (p:probe_atomic_action)
-: ML string
-= match p with
-  | Probe_action_return e -> Printf.sprintf "return %s;" (print_expr e)
-  | Probe_action_call f args -> Printf.sprintf "(Probe_action_call %s(%s));" (print_ident f) (String.concat ", " (List.map print_expr args))
-  | Probe_action_read f -> Printf.sprintf "(Probe_action_read %s);" (print_ident f)
-  | Probe_action_write f v ->Printf.sprintf "(Probe_action_write %s(%s));" (print_ident f) (print_expr v)
-  | Probe_action_copy f v -> Printf.sprintf "(Probe_action_copy %s(%s));" (print_ident f) (print_expr v)
-  | Probe_action_skip n -> Printf.sprintf "(Probe_action_skip %s);" (print_expr n)
-
-and print_probe_call (p:probe_call) : ML string =
-  match p with
-  | { probe_dest; probe_block } ->
-    Printf.sprintf "(destination=%s) { %s }"
-          (print_ident probe_dest)
-          (print_probe_action probe_block)
-
-and print_action (a:action) : ML string =
-  let print_atomic_action (a:atomic_action) : ML string =
-    match a with
-    | Action_return e -> Printf.sprintf "return %s;" (print_expr e)
-    | Action_abort ->  "abort;" 
-    | Action_field_pos_64 -> "field_pos_64;"
-    | Action_field_pos_32 -> "field_pos_32;"
-    | Action_field_ptr -> "field_ptr;"
-    | Action_field_ptr_after sz write_to -> Printf.sprintf "field_ptr_after(%s, %s);" (print_expr sz) (print_out_expr write_to)
-    | Action_deref i -> Printf.sprintf "deref %s;" (print_ident i)
-    | Action_assignment lhs rhs -> Printf.sprintf "%s = %s;" (print_out_expr lhs) (print_expr rhs)
-    | Action_call f args -> Printf.sprintf "%s(%s);" (print_ident f) (String.concat ", " (List.map print_expr args))
-  in
-  match a.v with
-  | Atomic_action a -> print_atomic_action a
-  | Action_seq hd tl -> Printf.sprintf "%s\n%s" (print_atomic_action hd) (print_action tl)
-  | Action_ite hd then_ (Some else_) -> Printf.sprintf "if (%s) {\n%s\n} else {\n%s\n}" (print_expr hd) (print_action then_) (print_action else_)
-  | Action_ite hd then_ None -> Printf.sprintf "if (%s) {\n%s\n}" (print_expr hd) (print_action then_)
-  | Action_let i a k -> Printf.sprintf "let %s = %s in\n%s" (print_ident i) (print_atomic_action a) (print_action k)
-  | Action_act a -> Printf.sprintf "{\n%s\n}" (print_action a)
-
-and print_switch_case (s:switch_case) : ML string =
-  let head, cases = s in
-  let print_case (c:case) : ML string =
-    match c with
-    | Case e f ->
-      Printf.sprintf "case %s: %s;"
-        (print_expr e)
-        (print_field f)
-    | DefaultCase f ->
-      Printf.sprintf "default: %s;"
-        (print_field f)
-  in
-  Printf.sprintf "switch (%s) {\n
-                  %s\n\
-                 }"
-                 (print_expr head)
-                 (String.concat "\n" (List.map print_case cases))
-
-let option_to_string (f:'a -> ML string) (x:option 'a) : ML string = print_opt x f
-
-let print_generics generics =
-  let print_generic = function
-    | GenericProbeFunction i t -> Printf.sprintf "(%s : probe for %s)" (print_ident i) (print_ident t)
-  in
-  match generics with
-  | [] -> ""
-  | _ -> 
-    Printf.sprintf "<%s>" (String.concat ", " (List.map print_generic generics))
-
-let print_attribute (a:attribute) : ML string =
-  match a with
-  | Entrypoint None -> "entrypoint"
-  | Entrypoint (Some p) -> Printf.sprintf "entrypoint(probe(%s, length=%s)" (print_ident p.probe_ep_fn) (print_expr p.probe_ep_length)
-  | Aligned -> "aligned"
-  | Noextract -> "noextract"
-let print_attributes (a:list attribute) : ML string =
-  match a with
-  | [] -> ""
-  | _ -> Printf.sprintf "[%s]" (String.concat ", " (List.map print_attribute a)) ^ " "
-let print_probe_function_type = function
-  | SimpleProbeFunction i -> print_ident i
-  | CoerceProbeFunction (i,j) -> Printf.sprintf "%s -> %s" (print_ident i) (print_ident j)
-let print_decl' (d:decl') : ML string =
-  match d with
-  | ModuleAbbrev i m -> Printf.sprintf "module %s = %s" (print_ident i) (print_ident m)
-  | Define i None c ->
-    Printf.sprintf "#define %s %s;" (print_ident i) (print_constant c)
-  | Define i (Some t) c ->
-    Printf.sprintf "#define %s : %s %s;" (print_ident i) (print_typ t) (print_constant c)
-  | TypeAbbrev attrs t i generics params ->
-    Printf.sprintf "%stypedef %s %s%s%s;" 
-      (print_attributes attrs)
-      (print_typ t)
-      (print_ident i)
-      (print_generics generics)
-      (print_params params)
-  | Enum t i ls ->
-    let print_enum_case (i, jopt) =
-      match jopt with
-      | None -> print_ident i
-      | Some (Inl j) -> Printf.sprintf "%s = %d" (print_ident i) j
-      | Some (Inr j) -> Printf.sprintf "%s = %s" (print_ident i) (print_ident j)
-    in
-    Printf.sprintf "%s enum %s {\n\
-                       %s \n\
-                   }"
-                   (print_typ t)
-                   (ident_to_string i)
-                   (String.concat ",\n" (List.map print_enum_case ls))
-  | Record td generics params wopt fields ->
-    Printf.sprintf "%stypedef struct %s%s%s%s {\n\
-                        %s \n\
-                    } %s, *%s"
-                    (print_attributes td.typedef_attributes)
-                    (ident_to_string td.typedef_name)
-                    (print_generics generics)
-                    (print_params params)
-                    (match wopt with | None -> "" | Some e -> " where " ^ print_expr e)
-                    (String.concat "\n" (List.map print_field fields))
-                    (ident_to_string td.typedef_abbrev)
-                    (option_to_string ident_to_string td.typedef_ptr_abbrev)
-  | CaseType td generics params switch_case ->
-    Printf.sprintf "%scasetype %s%s%s {\n\
-                        %s \n\
-                    } %s, *%s"
-                    (print_attributes td.typedef_attributes)
-                    (ident_to_string td.typedef_name)
-                    (print_generics generics)
-                    (print_params params)
-                    (print_switch_case switch_case)
-                    (ident_to_string td.typedef_abbrev)
-                    (option_to_string ident_to_string td.typedef_ptr_abbrev)
-  | ProbeFunction i params a tn ->
-    Printf.sprintf "probe %s(%s) (for %s) {\n\
-                        %s \n\
-                    }"
-                    (print_ident i)
-                    (print_params params)
-                    (print_probe_function_type tn)
-                    (print_probe_action a)
-  | CoerceProbeFunctionStub i j ->
-    Printf.sprintf "stub probe %s (for %s)" (print_ident i) (print_probe_function_type j)
-  | Specialize pqs i j ->
-    let print_pointer_qual i = Printf.sprintf "pointer(%s)" (print_integer_type i) in
-    Printf.sprintf "specialize (%s) %s %s"
-      (String.concat ", " (List.map (fun (q1, q2) -> print_pointer_qual q1 ^ ", " ^ print_pointer_qual q2) pqs))
-      (print_ident i)
-      (print_ident j)
-  | OutputType out_t -> "Printing for output types is TBD"
-  | ExternType _ -> "Printing for extern types is TBD"
-  | ExternFn _ _ _ _
-  | ExternProbe _ _ -> "Printing for extern functions is TBD"
-
-let print_decl (d:decl) : ML string =
-  match d.d_decl.comments with
-  | [] -> print_decl' d.d_decl.v
-  | cs -> Printf.sprintf "/* %s */\n%s"
-          (String.concat "\n" cs)
-          (print_decl' d.d_decl.v)
-
-let print_decls (ds:list decl) : ML string =
-  List.map print_decl ds
-  |> String.concat "\n/*------------------------------------*/\n"
 
 type weak_kind =
   | WeakKindWeak
