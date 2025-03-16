@@ -26,10 +26,12 @@ positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck
 positive_tests_nosuffix=$(basename $(positive_tests))
 modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
 modules_static_assertions=TestFieldPtrStaticAssertions.c AlignStaticAssertions.c
+module_extern_apis=$(addsuffix _ExternalAPI.h, Specialize2 FineGrainedProbe FineGrainedProbeSpecialize)
 clean_out_files=\
 	$(addsuffix .c,$(modules_or_wrappers)) \
 	$(modules_static_assertions) \
-	$(addsuffix .h,$(modules_or_wrappers))
+	$(addsuffix .h,$(modules_or_wrappers)) \
+	$(module_extern_apis)
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
@@ -105,6 +107,12 @@ inplace-hash-test:
 	$(3D) --odir out.inplace-hash --batch --no_copy_everparse_h Comments.3d
 	$(3D) --odir out.inplace-hash --batch --check_hashes inplace Comments.3d
 	$(3D) --check_inplace_hash Comments.3d=out.inplace-hash/Comments.h
+
+echo-clean-out-files:
+	echo "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
+
+echo-out-files:
+	echo "$$(ls out.cleanup | sort)"
 
 batch-cleanup-test:
 	mkdir -p out.cleanup
