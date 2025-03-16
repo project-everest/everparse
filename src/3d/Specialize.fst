@@ -24,7 +24,7 @@ let rec specialize_type (e:B.env) (t:typ)
   )
   | Pointer t _ ->
     let i, t' = specialize_type e t in
-    i, {t with v = Pointer t' (Some (PQ UInt32))}
+    i, {t with v = Pointer t' (PQ UInt32)}
   
 
 let specialize_atomic_field (e:B.env) (af:atomic_field)

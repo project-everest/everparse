@@ -178,12 +178,12 @@ let rec coerce_record (e:B.env) (r0 r1:record)
         then (
           let t0_is_u32 =
             match af0.v.field_type.v with
-            | Pointer _ (Some (PQ UInt32)) -> true
+            | Pointer _ (PQ UInt32) -> true
             | _ -> eq_typ af0.v.field_type tuint32
           in
           let t1_is_ptr64 =
             match af1.v.field_type.v with
-            | Pointer _ (Some (PQ UInt64)) -> true
+            | Pointer _ (PQ UInt64) -> true
             | _ -> false
           in
           if t0_is_u32 && t1_is_ptr64

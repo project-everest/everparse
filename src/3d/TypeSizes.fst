@@ -95,8 +95,8 @@ let size_and_alignment_of_typ (env:env_t) (t:typ)
   : ML (size & alignment)
   = match t.v with
     | Type_app i _ _ _ -> size_and_alignment_of_typename env i
-    | Pointer _ (Some (PQ UInt64)) -> Fixed 8, Some 8 //pointers are 64 bit and aligned
-    | Pointer _ (Some (PQ UInt32)) -> Fixed 4, Some 4 //u32 pointers are 32 bit and aligned
+    | Pointer _ (PQ UInt64) -> Fixed 8, Some 8 //pointers are 64 bit and aligned
+    | Pointer _ (PQ UInt32) -> Fixed 4, Some 4 //u32 pointers are 32 bit and aligned
     | Pointer _ _ -> failwith "Pointer sizes should already have been resolved to UInt32 or UInt64"
 
 let size_of_typ (env:env_t) (t:typ)

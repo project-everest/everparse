@@ -330,7 +330,7 @@ let rec translate_expr (e:A.expr) : ML T.expr =
 
 let rec translate_output_type (t:A.typ) : ML T.typ =
   match t.v with
-  | Pointer t (Some (PQ A.UInt64)) -> T.T_pointer (translate_output_type t) A.UInt64
+  | Pointer t (PQ A.UInt64) -> T.T_pointer (translate_output_type t) A.UInt64
   | Type_app id b [] [] -> T.T_app id b []
   | _ -> failwith "Impossible, translate_output_type did not get an output type!"
 
@@ -390,11 +390,9 @@ let translate_typ_param (p:typ_param) : ML (T.expr & T.decls) =
 
 let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
   match t.v with
-  | Pointer t (Some (PQ a)) ->
+  | Pointer t (PQ a) ->
     let t', decls = translate_typ t in
     T.T_pointer t' a, decls
-  | Pointer t None ->
-    failwith "Pointer sizes should have already been resolved"
   | Type_app hd b gs args ->
     let gs = gs |> List.map translate_expr |> List.map Inr in
     let args, decls = args |> List.map translate_typ_param |> List.split in
@@ -836,7 +834,7 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
   | Some probe_call -> (
     let probe_action, dest, ds = translate_probe_call probe_call in
     match f.v.field_type.v with
-    | Pointer t (Some (PQ a)) ->
+    | Pointer t (PQ a) ->
       let t, ds1 = translate_typ t in
       let sf_typ = T.T_with_probe t a probe_action dest in
       T.({ sf_dependence=sf.field_dependence;

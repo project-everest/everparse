@@ -367,7 +367,7 @@ and generic_inst = expr
 
 and typ' =
   | Type_app : ident -> t_kind -> list generic_inst -> list typ_param -> typ'
-  | Pointer : typ -> option pointer_qualifier -> typ'
+  | Pointer : typ -> pointer_qualifier -> typ'
 
 and pointer_qualifier =
   | PQ of pointer_size_t
@@ -874,10 +874,7 @@ let rec print_typ t : ML string =
         (print_generic_insts gs)
         (String.concat ", " (List.map print_typ_param ps))
     end
-  | Pointer t None ->
-     Printf.sprintf "(pointer %s)"
-       (print_typ t)
-  | Pointer t (Some (PQ q)) ->
+  | Pointer t (PQ q) ->
      Printf.sprintf "(pointer %s (%s))"
        (print_typ t)
        (print_integer_type q)
@@ -1358,7 +1355,7 @@ let rec eq_typ (t1 t2:typ) : Tot bool =
     && eq_typ_params ps1 ps2
   | Pointer t1 q1, Pointer t2 q2 ->
     eq_typ t1 t2
-    && eq_opt eq_pointer_qualifier q1 q2
+    && eq_pointer_qualifier q1 q2
   | _ -> false
 
 (** Common AST constants and builders **)

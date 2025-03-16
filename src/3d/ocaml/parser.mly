@@ -243,7 +243,14 @@ pointer_qualifier:
     }
 
 pointer_typ:
-  | t=maybe_pointer_typ STAR qopt=option_of(pointer_qualifier) { with_range (Pointer(t,qopt)) $startpos }
+  | t=maybe_pointer_typ STAR qopt=option_of(pointer_qualifier) 
+    { 
+      let q =
+        match qopt with
+        | None -> PQ UInt64
+        | Some q -> q 
+      in
+      with_range (Pointer(t,q)) $startpos }
 
 
 refinement:

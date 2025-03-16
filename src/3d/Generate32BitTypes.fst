@@ -33,7 +33,7 @@ let rec maybe_specialize_32 (t:typ)
   | Pointer t0 pq -> (
     let t0' = maybe_specialize_32 t0 in
     match pq, t0' with
-    | Some (PQ UInt32), None ->
+    | PQ UInt32, None ->
       None
     | _, _ ->
       let t0 = 

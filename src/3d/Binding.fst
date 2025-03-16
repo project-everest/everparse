@@ -359,8 +359,7 @@ let parser_weak_kind (env:global_env) (id:ident) : ML (option _) =
 
 let rec typ_weak_kind env (t:typ) : ML (option weak_kind) =
   match t.v with
-  | Pointer t None -> typ_weak_kind env {t with v=Pointer t (Some <| PQ UInt64)}
-  | Pointer _ (Some (PQ i)) -> typ_weak_kind env (type_of_integer_type i)
+  | Pointer _ (PQ i) -> typ_weak_kind env (type_of_integer_type i)
   | Type_app hd _ _ _ -> parser_weak_kind env.globals hd
 
 let typ_has_reader env (t:typ) : ML bool =
@@ -622,7 +621,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
           out_expr_t = oe_t;
           out_expr_bit_width = bopt } = Some?.v oe.out_expr_meta in
     (match oe_t.v, bopt with
-     | Pointer t (Some (PQ UInt64)), None ->
+     | Pointer t (PQ UInt64), None ->
        {oe0 with
         out_expr_node={oe0.out_expr_node with v=OE_star oe};
         out_expr_meta=Some ({ out_expr_base_t = oe_bt;
@@ -630,7 +629,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
                               out_expr_bit_width = None })}
      | _ ->
        error
-         (Printf.sprintf "Output expression %s is ill-typed since base type %s is not an unqualified pointer type"
+         (Printf.sprintf "Output expression %s is ill-typed since base type %s is not a 64-bit pointer"
            (print_out_expr oe0) (print_typ oe_t)) oe.out_expr_node.range)
   | OE_addrof oe ->
     let oe = check_out_expr env oe in
@@ -644,7 +643,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
 
         out_expr_meta=Some ({
           out_expr_base_t = oe_bt;
-          out_expr_t = with_range (Pointer oe_t None) oe.out_expr_node.range;
+          out_expr_t = with_range (Pointer oe_t (PQ UInt64)) oe.out_expr_node.range;
           out_expr_bit_width = None })}
      | _ ->
        error
@@ -656,7 +655,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
           out_expr_t = oe_t;
           out_expr_bit_width = bopt }  = Some?.v oe.out_expr_meta in
     (match oe_t.v, bopt with
-     | Pointer t None, None ->
+     | Pointer t (PQ UInt64), None ->
        let i = check_output_type (global_env_of_env env) t in
        let out_expr_t, out_expr_bit_width = lookup_output_type_field
          (global_env_of_env env)
@@ -669,7 +668,7 @@ let rec check_out_expr (env:env) (oe0:out_expr)
           out_expr_bit_width = out_expr_bit_width})}
      | _ -> 
        error
-         (Printf.sprintf "Output expression %s is ill-typed since base type %s is not an unqualified pointer type"
+         (Printf.sprintf "Output expression %s is ill-typed since base type %s is not a 64-bit pointer"
            (print_out_expr oe0) (print_typ oe_t)) oe.out_expr_node.range)
   | OE_dot oe f ->
     let oe = check_out_expr env oe in
@@ -702,14 +701,13 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
   : ML typ
   = match t.v with
     | Pointer t0 pq ->
-      let check_pointer_qualifier : option pointer_qualifier -> ML (option pointer_qualifier) =
+      let check_pointer_qualifier : pointer_qualifier -> ML pointer_qualifier =
         function
-        | None -> Some (PQ UInt64) //default pointer qualifier is u64
-        | Some (PQ a) ->
+        | PQ a ->
           match a with
           | UInt32
           | UInt64 ->
-            Some (PQ a)
+            PQ a
           | _ -> error (Printf.sprintf "Pointer qualifier %s must be either UINT32 or UINT64" (print_integer_type a)) t.range
       in
       if pointer_ok
@@ -1117,7 +1115,7 @@ let rec check_field_action (env:env) (f:atomic_field) (a:action)
           let t = lookup_expr_name env i in
           begin
           match t.v with
-          | Pointer t (Some (PQ UInt64)) -> Action_deref i, t
+          | Pointer t (PQ UInt64) -> Action_deref i, t
           | _ -> error "Dereferencing a non-pointer" i.range
           end
 
@@ -1923,7 +1921,8 @@ let rec check_mutable_param_type (env:env) (t:typ) : ML typ =
        (i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types)
     then t
     else err (Some i)
-  | Pointer t None -> { t with v = Pointer (check_mutable_param_type env t) (Some (PQ UInt64)) }
+  | Pointer t (PQ UInt64) -> 
+    { t with v = Pointer (check_mutable_param_type env t) (PQ UInt64) }
   | _ -> err None
     
 let rec check_integer_or_output_type (env:env) (t:typ) : ML unit =
@@ -1933,7 +1932,7 @@ let rec check_integer_or_output_type (env:env) (t:typ) : ML unit =
     if i.v.modul_name = None && List.Tot.mem i.v.name allowed_base_types_as_output_types
     then ()
     else if not (k = KindOutput) then error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
-  | Pointer t None -> check_integer_or_output_type env t
+  | Pointer t (PQ UInt64) -> check_integer_or_output_type env t
   | _ -> error (Printf.sprintf "%s is not an integer or output type" (print_typ t)) t.range
 
 let check_mutable_param (env:env) (p:param) : ML param =
@@ -1941,9 +1940,8 @@ let check_mutable_param (env:env) (p:param) : ML param =
   //and the base type may be a base type or an output type
   let t, i, q = p in
   match t.v with
-  | Pointer bt None
-  | Pointer bt (Some (PQ UInt64)) ->
-    let t = { t with v = Pointer (check_mutable_param_type env bt) (Some (PQ UInt64)) } in
+  | Pointer bt (PQ UInt64) ->
+    let t = { t with v = Pointer (check_mutable_param_type env bt) (PQ UInt64) } in
     t, i, q 
   | _ ->
     error (Printf.sprintf "%s is not a valid mutable parameter type, it is not a pointer type" (print_typ t)) t.range
