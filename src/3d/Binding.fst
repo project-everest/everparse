@@ -453,7 +453,8 @@ let eq_typ env t1 t2 =
 let eq_typs env ts =
   List.for_all (fun (t1, t2) -> eq_typ env t1 t2) ts
 
-let cast e t t' = { e with v = App (Cast (Some t) t') [e] }
+let cast e t t' = 
+  if t=t' then e else { e with v = App (Cast (Some t) t') [e] }
 
 let try_cast_integer env et to : ML (option expr) =
   let e, from = et in
@@ -488,7 +489,6 @@ let try_retype_arith_exprs (env:env) e1 e2 rng : ML (option (expr & expr & typ))
     then fail 1;
     let tt1 = typ_as_integer_type t1 in
     let tt2 = typ_as_integer_type t2 in
-    let cast e t t' = { e with v = App (Cast (Some t) t') [e] } in
     let e1, e2, t =
       if integer_type_leq tt1 tt2
       then cast e1 tt1 tt2,
@@ -832,7 +832,7 @@ and check_expr (env:env) (e:expr)
              //                    (print_integer_type to))
              //            e.range
              // else
-             let e = {e with v = App (Cast (Some from_t) to) [n]} in
+             let e = cast n from_t to in
              let t = type_of_integer_type to in
              Options.debug_print_string
                (Printf.sprintf "--------------- %s has type %s\n" (print_expr e) (print_typ t));
