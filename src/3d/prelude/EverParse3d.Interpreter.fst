@@ -565,7 +565,7 @@ type probe_action : Type u#1 =
       probe_fn: PA.probe_fn ->
       probe_action
   | Probe_action_seq:
-      m1: atomic_probe_action unit ->
+      m1: probe_action ->
       m2: probe_action ->
       probe_action
   | Probe_action_let:
@@ -585,7 +585,7 @@ let rec probe_action_as_probe_m (p:probe_action)
   | Probe_action_simple bytes_to_read probe_fn ->
     PA.probe_fn_as_probe_m bytes_to_read probe_fn
   | Probe_action_seq m1 m2 ->
-    PA.seq_probe_m () (atomic_probe_action_as_probe_m m1) (probe_action_as_probe_m m2)
+    PA.seq_probe_m () (probe_action_as_probe_m m1) (probe_action_as_probe_m m2)
   | Probe_action_let m1 m2 ->
     let k x : PA.probe_m unit = probe_action_as_probe_m (m2 x) in
     PA.bind_probe_m () (atomic_probe_action_as_probe_m m1) k

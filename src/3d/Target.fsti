@@ -129,7 +129,7 @@ type probe_action =
   | Probe_fn_as_probe_m { bytes_to_read : expr; probe_fn: A.ident }
   | Probe_action_var of expr
   | Probe_atomic of atomic_probe_action
-  | Probe_seq { hd:atomic_probe_action; tl:probe_action }
+  | Probe_seq { hd:probe_action; tl:probe_action }
   | Probe_let { i:A.ident; a:atomic_probe_action; tl:probe_action }
   
 noeq

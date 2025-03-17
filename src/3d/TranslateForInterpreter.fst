@@ -815,9 +815,9 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
     let Some f = f in
     T.Probe_fn_as_probe_m { bytes_to_read = translate_expr n; probe_fn = f }, []
   | A.Probe_action_seq hd tl ->
-    let hd = translate_atomic hd in
+    let hd, ds1 = translate_probe_action hd in
     let tl, ds2 = translate_probe_action tl in
-    T.Probe_seq {hd; tl}, ds2
+    T.Probe_seq {hd; tl}, ds1@ds2
   | A.Probe_action_let i a k ->
     let a = translate_atomic a in
     let tl, ds2 = translate_probe_action k in

@@ -501,7 +501,7 @@ type probe_action' =
     bytes_to_read : expr -> 
     probe_action'
   | Probe_action_seq :
-    hd:probe_atomic_action ->
+    hd:probe_action ->
     tl:probe_action ->
     probe_action'
   | Probe_action_let :
@@ -982,7 +982,7 @@ and print_probe_action (p:probe_action) : ML string =
       (print_expr n)
   | Probe_action_seq hd tl ->
     Printf.sprintf "%s; %s" 
-      (print_probe_atomic_action hd)
+      (print_probe_action hd)
       (print_probe_action tl)
   | Probe_action_let i hd tl ->
     Printf.sprintf "var %s = %s; %s"
@@ -1458,7 +1458,7 @@ let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
   | Probe_action_simple f n -> 
     {a with v = Probe_action_simple f (subst_expr s n) }
   | Probe_action_seq hd tl ->
-    {a with v = Probe_action_seq (subst_probe_atomic_action s hd) (subst_probe_action s tl) }
+    {a with v = Probe_action_seq (subst_probe_action s hd) (subst_probe_action s tl) }
   | Probe_action_let i aa k ->
     {a with v = Probe_action_let i (subst_probe_atomic_action s aa) (subst_probe_action s k) }
 //No need to substitute in output expressions

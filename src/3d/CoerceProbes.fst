@@ -73,7 +73,7 @@ let read_and_coerce_pointer (e:B.env) (fid:ident) (k:probe_action)
       Probe_action_let fid64
         (Probe_action_call coercion [fid_expr])
         (with_dummy_range <| 
-          Probe_action_seq (Probe_action_write writer fid64_expr) k))
+          Probe_action_seq (with_dummy_range <| Probe_atomic_action (Probe_action_write writer fid64_expr)) k))
 
 let integer_type_of_type t
 : option integer_type
@@ -83,26 +83,42 @@ let integer_type_of_type t
   else if eq_typ t tuint64 then Some UInt64
   else None 
 
+let rec head_type (e:B.env) (t:typ) : ML ident =
+  match (Binding.unfold_typ_abbrev_only e t).v with
+  | Type_app hd _ _ _ -> hd
+  | Pointer t _ -> head_type e t
+
 let probe_and_copy_type (e:B.env) (t:typ) (k:probe_action)
 : ML probe_action
 = let probe_and_copy_n = find_probe_fn e PQWithOffsets in
-  let size : int =
-    let t = B.unfold_typ_abbrev_and_enum e t in
-    match integer_type_of_type t with
-    | None ->
-      error 
-        (Printf.sprintf "Cannot probe and copy a non-integer type yet; got %s"
-          (print_typ t))
-        t.range
-    | Some UInt8 -> 1
-    | Some UInt16 -> 2
-    | Some UInt32 -> 4
-    | Some UInt64 -> 8
-  in
-  with_dummy_range <|
-  Probe_action_seq
-    (Probe_action_copy probe_and_copy_n (with_dummy_range <| Constant (Int UInt64 size)))
-    k
+  let t = B.unfold_typ_abbrev_and_enum e t in
+  match integer_type_of_type t with
+  | None -> (
+      if eq_typ t tunit then k else
+      let id = head_type e t in
+      match GlobalEnv.find_probe_fn (B.global_env_of_env e) (SimpleProbeFunction id) with
+      | None ->
+        error 
+          (Printf.sprintf "Cannot find probe function for type %s" (print_typ t))
+          t.range
+      | Some id ->
+        with_dummy_range <|
+        Probe_action_seq
+          (with_dummy_range <| (Probe_action_var id))
+          k
+  )
+  | Some i -> 
+    let size =
+      match i with
+      | UInt8 -> 1
+      | UInt16 -> 2
+      | UInt32 -> 4
+      | UInt64 -> 8
+    in
+    with_dummy_range <|
+    Probe_action_seq
+      (with_dummy_range <| Probe_atomic_action (Probe_action_copy probe_and_copy_n (with_dummy_range <| Constant (Int UInt64 size))))
+      k
   
 let rec write_n_bytes_zero (e:B.env) (n:int) (k:probe_action)
 : ML probe_action
@@ -111,7 +127,7 @@ let rec write_n_bytes_zero (e:B.env) (n:int) (k:probe_action)
     = let writer = find_probe_fn e (PQWrite t) in
       with_dummy_range <|
       Probe_action_seq
-        (Probe_action_write writer (with_dummy_range <| Constant (Int t 0)))
+        (with_dummy_range <| Probe_atomic_action (Probe_action_write writer (with_dummy_range <| Constant (Int t 0))))
         k
   in
   match n with
@@ -133,7 +149,7 @@ let skip_bytes (n:int) (k:probe_action)
 : ML probe_action
 = with_dummy_range <|
     Probe_action_seq 
-      (Probe_action_skip (with_dummy_range <| Constant (Int UInt64 n)))
+      (with_dummy_range <| Probe_atomic_action (Probe_action_skip (with_dummy_range <| Constant (Int UInt64 n))))
       k
 
 let probe_and_copy_alignment 
@@ -146,7 +162,8 @@ let probe_and_copy_alignment
     let probe_and_copy_n = find_probe_fn e PQWithOffsets in
     with_dummy_range <|
       Probe_action_seq
-        (Probe_action_call probe_and_copy_n [with_dummy_range <| Constant (Int UInt64 n0)])
+        (with_dummy_range <| Probe_atomic_action 
+          (Probe_action_call probe_and_copy_n [with_dummy_range <| Constant (Int UInt64 n0)]))
         k
   )
   else (
@@ -203,13 +220,10 @@ let rec coerce_record (e:B.env) (r0 r1:record)
           else (
             match Generate32BitTypes.has_32bit_coercion e af0.v.field_type af1.v.field_type with
             | Some id ->
-              failwith <|
-                Printf.sprintf
-                  "Cannot yet coerce field %s of type %s to %s; found 32-bit coercion %s"
-                  (print_ident af0.v.field_ident)
-                  (print_typ af0.v.field_type)
-                  (print_typ af1.v.field_type)
-                  (print_ident id)
+              with_dummy_range <|
+              Probe_action_seq 
+                (with_dummy_range <| Probe_action_var id)
+                (coerce_record e tl0 tl1)
             | None ->
               failwith <|
                 Printf.sprintf
@@ -231,19 +245,19 @@ let rec coerce_record (e:B.env) (r0 r1:record)
 let rec optimize_coercion (p:probe_action)
 : ML probe_action
 = match p.v with
-  | Probe_action_seq (Probe_action_copy f len) k -> (
+  | Probe_action_seq {v=Probe_atomic_action (Probe_action_copy f len)} k -> (
     let k = optimize_coercion k in
-    let def () = { p with v = Probe_action_seq (Probe_action_copy f len) k } in
+    let def () = { p with v = Probe_action_seq (with_dummy_range <| Probe_atomic_action (Probe_action_copy f len)) k } in
     match len.v with
     | Constant (Int UInt64 l0) -> (
       match k.v with
-      | Probe_action_seq (Probe_action_copy g {v=Constant (Int UInt64 l1)}) k -> 
+      | Probe_action_seq {v=Probe_atomic_action (Probe_action_copy g {v=Constant (Int UInt64 l1)})} k -> 
         if eq_idents f g || true
         then (
 
           { k with v = 
             Probe_action_seq 
-              (Probe_action_copy g {len with v=Constant (Int UInt64 (l0 + l1))})
+              (with_dummy_range <| Probe_atomic_action (Probe_action_copy g {len with v=Constant (Int UInt64 (l0 + l1))}))
               k }
         )
         else def ()

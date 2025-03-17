@@ -1358,7 +1358,7 @@ let rec check_probe env a : ML (probe_action & typ) =
     { a with v=Probe_action_simple (Some probe_fn) length}, tunit
 
   | Probe_action_seq a0 rest ->
-    let a0, t0 = check_atomic_probe env a0 in
+    let a0, t0 = check_probe env a0 in
     if not (eq_typ env t0 tunit)
     then (
       error (Printf.sprintf "Probe action has type %s instead of unit"

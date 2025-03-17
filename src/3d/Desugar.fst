@@ -336,7 +336,7 @@ let rec resolve_probe_action' (env:qenv) (act:probe_action') : ML probe_action' 
   | Probe_action_simple f n ->
     Probe_action_simple (map_opt (resolve_ident env) f) (resolve_expr env n)
   | Probe_action_seq hd tl ->
-    Probe_action_seq (resolve_probe_atomic_action env hd) (resolve_probe_action env tl)
+    Probe_action_seq (resolve_probe_action env hd) (resolve_probe_action env tl)
   | Probe_action_let i a k ->
     Probe_action_let i (resolve_probe_atomic_action env a) (resolve_probe_action (push_name env i.v.name) k)
 

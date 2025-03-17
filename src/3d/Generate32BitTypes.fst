@@ -26,6 +26,9 @@ module H = Hashtable
 module B = Binding
 open GlobalEnv
 
+type env_t = B.env & list ident 
+let should_specialize (e:env_t) (id:ident) : ML bool = 
+  List.existsb (fun id' -> eq_idents id id') (snd e)
 let name32 (head_name:ident) : ident =
   let gen = reserved_prefix ^ "specialized32_" ^ head_name.v.name in
   {head_name with v = { head_name.v with name = gen }}
@@ -43,7 +46,7 @@ let gen_name_32 (n:typedef_names)
     typedef_attributes = Noextract :: List.filter Aligned? n.typedef_attributes }
 
 //only specializing pointer types to 32 bit
-let rec maybe_specialize_32 (e:B.env) (t:typ)
+let rec maybe_specialize_32 (e:env_t) (t:typ)
 : ML (option typ)
 = match t.v with
   | Pointer t0 pq -> (
@@ -60,12 +63,14 @@ let rec maybe_specialize_32 (e:B.env) (t:typ)
       Some tuint32
   )
   | Type_app id ts gs ps -> (
-    let t = B.unfold_typ_abbrev_and_enum e t in
-    if B.typ_is_integral e t
+    let t = B.unfold_typ_abbrev_and_enum (fst e) t in
+    if B.typ_is_integral (fst e) t
     then None
-    else (
+    else if should_specialize e id
+    then (
       Some { t with v = Type_app (name32 id) ts gs ps }
     )
+    else None
   )
   | _ -> None
 
@@ -86,7 +91,7 @@ let maybe_gen_l
   else false, l
   
 
-let rec gen_field (e:B.env) (f:field) 
+let rec gen_field (e:env_t) (f:field) 
 : ML (bool & field)
 = match f.v with
   | AtomicField af -> (
@@ -110,7 +115,7 @@ let rec gen_field (e:B.env) (f:field)
     else false, f
   )
 
-and gen_case (env:B.env) (c:case)
+and gen_case (env:env_t) (c:case)
 : ML (bool & case)
 = match c with
   | Case e f -> (
@@ -126,7 +131,7 @@ and gen_case (env:B.env) (c:case)
     else false, c
   )
 
-let rec gen_decl (env:Binding.env) (d:decl) : ML (option decl) =
+let rec gen_decl (env:env_t) (d:decl) : ML (option decl) =
   match d.d_decl.v with
   | Record names gs params w fields ->
     let changed, fields32 = maybe_gen_l (gen_field env) fields in
@@ -152,7 +157,7 @@ let rec gen_decl (env:Binding.env) (d:decl) : ML (option decl) =
   | TypeAbbrev attrs t i gs ps -> (
     match t.v with
     | Type_app id _ _ _ -> (
-      let decl, _ = Binding.lookup_type_decl env id in
+      let decl, _ = Binding.lookup_type_decl (fst env) id in
       gen_decl env decl
       ) 
     | _ -> None
@@ -160,16 +165,16 @@ let rec gen_decl (env:Binding.env) (d:decl) : ML (option decl) =
 
   | _ -> None
 
-let gen_decls (e:Binding.env) (d: decl)
-: ML (list decl)
+let gen_decls (e:env_t) (d: decl)
+: ML (list decl & env_t)
 = match d.d_decl.v with
   | ProbeFunction id ps v (SimpleProbeFunction tn) -> (
-    let decl, _ = Binding.lookup_type_decl e tn in
+    let decl, _ = Binding.lookup_type_decl (fst e) tn in
     match gen_decl e decl with
     | None -> 
       let c = ProbeFunction (name32 id) ps v (SimpleProbeFunction tn) in
       let c = mk_decl c d.d_decl.range [] false in
-      [d;c]
+      [d;c], e
     | Some d' ->
       let src =
         match idents_of_decl d' with
@@ -185,10 +190,10 @@ let gen_decls (e:Binding.env) (d: decl)
           [] 
           false
       in
-      [d'; d; c]
+      [d'; d; c], (fst e, tn :: snd e)
   )
   | _ ->
-    [d]
+    [d], e
 
 let has_32bit_coercion (e:B.env) (t32 t:typ) : ML (option ident) =
   let t32 = B.unfold_typ_abbrev_only e t32 in
@@ -203,4 +208,14 @@ let has_32bit_coercion (e:B.env) (t32 t:typ) : ML (option ident) =
 
 let generate_32_bit_types (e:GlobalEnv.global_env) (d: list decl)
 : ML (list decl)
-= List.collect (gen_decls (Binding.mk_env e)) d
+= let env : env_t = B.mk_env e, [] in
+  let env, ds =
+    List.fold_left 
+      (fun (env, out) d ->
+        let d, env = gen_decls env d in
+        (env, List.rev d @ out))
+      (env, [])
+      d
+  in
+  List.rev ds
+ 

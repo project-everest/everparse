@@ -575,13 +575,13 @@ let rec print_probe_action (mname:string) (p:probe_action) : ML string =
       (print_expr mname bytes_to_read)
       (print_ident probe_fn)
   | Probe_action_var i ->
-      (print_expr mname i)
+    Printf.sprintf "(Probe_action_var %s)" (print_expr mname i)
   | Probe_atomic a ->
     Printf.sprintf "(Probe_action_atomic %s)"
       (print_atomic_probe_action a)
   | Probe_seq { hd; tl } ->
     Printf.sprintf "(Probe_action_seq %s %s)"
-      (print_atomic_probe_action hd)
+      (print_probe_action mname hd)
       (print_probe_action mname tl)
   | Probe_let { i; a; tl } ->
     Printf.sprintf "(Probe_action_let %s (fun %s -> %s))"
