@@ -601,8 +601,9 @@ let rec parse_typ (env:global_env)
     let p = parse_typ env typename fieldname t in
     { p with p_parser = T.Parse_with_comment p c }
 
-  | T.T_pointer _ _ ->
-    failwith "No parsers for pointer types"
+  | T.T_pointer _ pointer_size ->
+    let u64_or_u32, _ = translate_typ (A.type_of_integer_type pointer_size) in
+    parse_typ env typename fieldname u64_or_u32
 
   | T.T_with_probe content_type integer_type probe dest -> 
     let p = parse_typ env typename fieldname content_type in

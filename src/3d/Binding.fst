@@ -383,22 +383,6 @@ let rec unfold_typ_abbrev_only (env:env) (t:typ) : ML typ =
   )
   | _ -> t
 
-let update_typ_abbrev (env:env) (i:ident) (t:typ) 
-  : ML unit
-  = match H.try_find env.globals.ge_h i.v with
-    | Some (d, ms) ->
-      let d_decl =
-        match d.d_decl.v with
-        | TypeAbbrev attrs _ _ gs ps -> {d.d_decl with v = TypeAbbrev attrs t i gs ps }
-        | _ -> failwith "Expected a type abbreviation"
-      in
-      let d = {d with d_decl = d_decl } in
-      let entry = (d, ms) in
-      H.insert env.globals.ge_h i.v entry
-      
-   | _ -> 
-     failwith "Type abbreviation not found"
-
 let rec unfold_typ_abbrev_and_enum (env:env) (t:typ) : ML typ =
   match t.v with
   | Type_app hd _ gs ts -> //type abbreviations are not parameterized
@@ -420,6 +404,23 @@ let rec unfold_typ_abbrev_and_enum (env:env) (t:typ) : ML typ =
     | _ -> t
     end
   | _ -> t
+
+let update_typ_abbrev (env:env) (i:ident) (t:typ) 
+  : ML unit
+  = match H.try_find env.globals.ge_h i.v with
+    | Some (d, ms) ->
+      let d_decl =
+        match d.d_decl.v with
+        | TypeAbbrev attrs _ _ gs ps -> {d.d_decl with v = TypeAbbrev attrs t i gs ps }
+        | _ -> failwith "Expected a type abbreviation"
+      in
+      let d = {d with d_decl = d_decl } in
+      let entry = (d, ms) in
+      H.insert env.globals.ge_h i.v entry
+      
+   | _ -> 
+     failwith "Type abbreviation not found"
+
 
 let size_of_integral_typ (env:env) (t:typ) r
   : ML int
@@ -1378,7 +1379,7 @@ let rec check_probe env a : ML (probe_action & typ) =
 let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
   : ML atomic_field
   = let sf = f.v in
-    let sf_field_type = check_typ (Some? sf.field_probe) env sf.field_type in
+    let sf_field_type = check_typ true env sf.field_type in
     let check_annot (e: expr) : ML expr =
         let e, t = check_expr env e in
         if not (eq_typ env t tuint32)

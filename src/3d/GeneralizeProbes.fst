@@ -62,16 +62,18 @@ let gen_signature (e:env) (id:ident) : ML generalized_signature =
   | Some (Some sig) -> sig
 
 let mark_for_probe (e:env) (id:ident) 
-: ML env 
-= { e with needs_probe = id.v :: e.needs_probe }
+: ML (env & bool) 
+= if List.mem id.v e.needs_probe
+  then e, false
+  else { e with needs_probe = id.v :: e.needs_probe }, true
 
 let mark_for_generalize (e:env) (id:ident)
-: ML env
+: ML (env & bool)
 = if should_generalize_ident e id
-  then e
+  then e, false
   else (
     H.insert e.should_generalize id.v None;
-    e
+    e, true
   )
 
 let set_generalization_signature (e:env) (id:ident) (sig:generalized_signature)
@@ -119,16 +121,21 @@ let atomic_field_has_simple_probe (e:env) head_type (f:atomic_field)
 : bool
 = let b, _ = atomic_field_has_simple_probe_aux e head_type f in b
 
-let rec needs_probe_field (maybe_gen:bool) (enclosing_type:ident) (e:env) (f:field)
-: ML env
-= let maybe_generalize e t = if maybe_gen then mark_for_generalize e t else e in
+let fold_left_changed (#a #b:Type) (f: a -> b -> ML (a & bool)) (x:a) (l:list b) 
+: ML (a & bool)
+= List.fold_left (fun (a, changed) b -> let a', changed' = f a b in a', changed || changed') (x, false) l
+
+let rec needs_probe_field (maybe_gen:bool) (enclosing_type:typedef_names) (e:env) (f:field)
+: ML (env & bool)
+= let maybe_generalize e t = if maybe_gen then mark_for_generalize e t.typedef_abbrev else e, false in
   match f.v with
   | AtomicField f ->
     let head_type = head_type e f.v.field_type in
     let has_simple_probe, field_type_ident = atomic_field_has_simple_probe_aux e head_type f in
     if has_simple_probe
-    then (let e = mark_for_probe e head_type  in
-          maybe_generalize e enclosing_type)
+    then (let e, changed = mark_for_probe e head_type  in
+          let e, changed' = maybe_generalize e enclosing_type in
+          e, changed || changed')
     else (
       match field_type_ident with
       | Some x ->
@@ -139,31 +146,41 @@ let rec needs_probe_field (maybe_gen:bool) (enclosing_type:ident) (e:env) (f:fie
             (print_ident x))
           f.range
       | None -> 
-        if should_generalize_ident e head_type
-        then maybe_generalize e enclosing_type
-        else e
+        let e, changed = 
+          if should_generate_probe e enclosing_type
+          then mark_for_probe e head_type // struct A { B b; } should probe B if A is probed
+          else e, false
+        in
+        if should_generalize_ident e head_type 
+        then let e, changed' = maybe_generalize e enclosing_type in // struct A { B <...> b; } should generalize A if B is generalized
+              e, changed || changed'
+        else e, changed
     )
-  | RecordField r _ -> List.fold_left (needs_probe_field maybe_gen enclosing_type) e r
-  | SwitchCaseField sw _ -> List.fold_left (needs_probe_case maybe_gen enclosing_type) e (snd sw)
+  | RecordField r _ ->
+    fold_left_changed (needs_probe_field maybe_gen enclosing_type) e r
+  | SwitchCaseField sw _ ->
+    fold_left_changed (needs_probe_case maybe_gen enclosing_type) e (snd sw)
 
-and needs_probe_case (maybe_generalize:bool) (enclosing_type:ident) (e:env) (c:case)
-: ML env
+and needs_probe_case (maybe_generalize:bool) (enclosing_type:typedef_names) (e:env) (c:case)
+: ML (env & bool)
 = match c with
   | Case _ f -> needs_probe_field maybe_generalize enclosing_type e f
   | DefaultCase f -> needs_probe_field maybe_generalize enclosing_type e f
 
 let need_probe_decl (e:env) (d:decl) 
-: ML env
+: ML (env & bool)
 = let maybe_generalize = not (is_entrypoint d) in
   match d.d_decl.v with
   | Record names _ _ _ fields ->
-    List.fold_left (needs_probe_field maybe_generalize names.typedef_abbrev) e fields
+    fold_left_changed (needs_probe_field maybe_generalize names) e fields
   | CaseType names _ _ sw ->
-    List.fold_left (needs_probe_case maybe_generalize names.typedef_abbrev) e (snd sw)
-  | _ -> e
+    fold_left_changed (needs_probe_case maybe_generalize names) e (snd sw)
+  | _ -> e, false
 
-let need_probe_decls (e:env) (ds:list decl) = List.fold_left need_probe_decl e ds
-
+let rec need_probe_decls (e:env) (ds:list decl)
+: ML env
+= let e, changed = fold_left_changed need_probe_decl e ds in
+  if changed then need_probe_decls e ds else e
 
 let generate_probe_functions (e:env) (d:decl)
 : ML (list decl)

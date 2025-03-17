@@ -136,6 +136,29 @@ let resolve_probe_fn (g:global_env) (id:ident) (pq:option probe_qualifier)
     | Some (id, Inr pq') -> if pq=pq' then Some id else None
     | _ -> None
 
+let eq_probe_function_type pq0 pq1 : ML bool =
+  match pq0, pq1 with
+  | SimpleProbeFunction t0, SimpleProbeFunction t1 -> eq_idents t0 t1
+  | CoerceProbeFunction (t0, t1), CoerceProbeFunction (t0', t1') ->
+    FStar.IO.print_string <|
+      Printf.sprintf "Comparing %s to %s\n" (print_probe_function_type pq0) (print_probe_function_type pq1);
+    eq_idents t0 t0' && eq_idents t1 t1'
+  | _, _ -> false
+
+let find_probe_fn (g:global_env) (pq:probe_function_type)
+: ML (option ident)
+= let finder k v out : ML (option ident) =
+      match out with
+      | Some _ -> out
+      | None -> 
+        match v.d_decl.v with
+        | ProbeFunction id _ _ pq' 
+        | CoerceProbeFunctionStub id pq' ->
+          if eq_probe_function_type pq pq' then Some id else None
+        | _ -> None
+  in
+  H.fold finder g.ge_probe_fn None
+
 let fields_of_type (g:global_env) (typename:ident)
 : ML (option (list field))
 = match H.try_find g.ge_h typename.v with

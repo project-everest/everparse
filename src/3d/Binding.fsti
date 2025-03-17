@@ -29,10 +29,12 @@ val resolve_record_type (_:env) (_:ident)
 val params_of_decl (d:decl) : list generic_param & list param
 val lookup_expr_name (_:env) (_:ident) : ML typ
 val lookup_macro_definition (_:env) (_:ident) : ML (option expr)
+val typ_is_integral (_:env) (_:typ) : ML bool
 val has_reader (_:global_env) (_:ident) : ML bool
 val parser_kind_nz (env:global_env) (id:ident) : ML (option bool)
 val parser_weak_kind  (env:global_env) (id:ident) : ML (option weak_kind)
 val unfold_typ_abbrev_only (_:env) (t:typ) : ML typ
+val unfold_typ_abbrev_and_enum (env:env) (t:typ) : ML typ
 val update_typ_abbrev (_:env) (id:ident) (t:typ) : ML unit
 val size_of_integral_typ (_:env) (_:typ) (_:range) : ML int
 val bit_order_of_integral_typ (_:env) (_:typ) (_:range) : ML bitfield_bit_order

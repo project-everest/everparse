@@ -12,12 +12,18 @@ typedef struct _A {
 } A;
 
 
+
+aligned
+typedef struct _BB {
+	UINT32 b1_1;
+	UINT8 *b1_2;
+} BB;
+
 aligned
 typedef struct _B (EVERPARSE_COPY_BUFFER_T a_out) {
 	UINT32 b1;
 	A *pa probe (length=sizeof(A), destination=a_out);
-	UINT32 b2;
-	UINT32 b3;
+	BB b2;
 } B;
 
 aligned

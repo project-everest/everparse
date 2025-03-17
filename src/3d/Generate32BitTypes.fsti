@@ -27,5 +27,7 @@ module B = Binding
 val coercion_for_type (t:ident)
 : ML ident
 
+val has_32bit_coercion (e:B.env) (t32 t:typ) : ML (option ident)
+
 val generate_32_bit_types (e:GlobalEnv.global_env) (d: list decl)
 : ML (list decl)

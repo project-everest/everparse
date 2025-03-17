@@ -41,11 +41,7 @@ let simplify_atomic_field (env:env) (f:atomic_field)
   = let field = f.v in
     let field = 
       match field.field_type.v with
-      | Pointer _ _ -> (
-        if Some? field.field_probe
-        then field
-        else failwith "Impossible: field types cannot be pointers"
-      ) 
+      | Pointer _ _ -> field
       | Type_app hd _ gs args ->
         begin
         match H.try_find env hd.v with
@@ -185,7 +181,8 @@ let simplify_decl (env:env) (d:decl) : ML decl =
     match field.v with
     | { field_array_opt = FieldArrayQualified _ }
     | { field_array_opt = FieldString _ }
-    | { field_bitwidth = Some _ } ->
+    | { field_bitwidth = Some _ }
+    | { field_probe = Some _ } ->
        d
     | _ -> 
       let af = simplify_atomic_field env field in

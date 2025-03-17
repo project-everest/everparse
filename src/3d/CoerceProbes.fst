@@ -87,8 +87,13 @@ let probe_and_copy_type (e:B.env) (t:typ) (k:probe_action)
 : ML probe_action
 = let probe_and_copy_n = find_probe_fn e PQWithOffsets in
   let size : int =
+    let t = B.unfold_typ_abbrev_and_enum e t in
     match integer_type_of_type t with
-    | None -> failwith "Cannot probe and copy a non-integer type yet"
+    | None ->
+      error 
+        (Printf.sprintf "Cannot probe and copy a non-integer type yet; got %s"
+          (print_typ t))
+        t.range
     | Some UInt8 -> 1
     | Some UInt16 -> 2
     | Some UInt32 -> 4
@@ -174,8 +179,13 @@ let rec coerce_record (e:B.env) (r0 r1:record)
         let n1 = alignment_bytes af1 in
         write_n_bytes_zero e n1 (coerce_record e r0 tl1)
       | false, false -> (
-        if eq_idents af0.v.field_ident af1.v.field_ident
-        then (
+        if not (eq_idents af0.v.field_ident af1.v.field_ident)
+        then failwith <|
+              Printf.sprintf
+                "Unexpected fields: cannot coerce field %s to %s"
+                (print_ident af0.v.field_ident)
+                (print_ident af1.v.field_ident)
+        else (
           let t0_is_u32 =
             match af0.v.field_type.v with
             | Pointer _ (PQ UInt32) -> true
@@ -190,20 +200,24 @@ let rec coerce_record (e:B.env) (r0 r1:record)
           then read_and_coerce_pointer e af0.v.field_ident (coerce_record e tl0 tl1)
           else if eq_typ af0.v.field_type af1.v.field_type
           then probe_and_copy_type e af0.v.field_type (coerce_record e tl0 tl1)
-          else 
-            failwith <|
-              Printf.sprintf
-                "Unexpected fields: cannot coerce field %s of type %s to %s"
-                (print_ident af0.v.field_ident)
-                (print_typ af0.v.field_type)
-                (print_typ af1.v.field_type)
-        )
-        else (
-          failwith <|
-            Printf.sprintf
-              "Unexpected fields: cannot coerce field %s to %s"
-              (print_ident af0.v.field_ident)
-              (print_ident af1.v.field_ident)
+          else (
+            match Generate32BitTypes.has_32bit_coercion e af0.v.field_type af1.v.field_type with
+            | Some id ->
+              failwith <|
+                Printf.sprintf
+                  "Cannot yet coerce field %s of type %s to %s; found 32-bit coercion %s"
+                  (print_ident af0.v.field_ident)
+                  (print_typ af0.v.field_type)
+                  (print_typ af1.v.field_type)
+                  (print_ident id)
+            | None ->
+              failwith <|
+                Printf.sprintf
+                  "Unexpected fields: cannot coerce field %s of type %s to %s"
+                  (print_ident af0.v.field_ident)
+                  (print_typ af0.v.field_type)
+                  (print_typ af1.v.field_type)
+          )
         )
       )
     )
