@@ -189,9 +189,40 @@ ProbeValidateS(
   else
   {
     uint64_t tpointer = Load64Le(Input + (uint32_t)positionAfterbound);
-    BOOLEAN b = ProbeAndCopy(tpointer, (uint64_t)8U, Dest);
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    uint64_t rd = readOffset;
+    uint64_t wr = writeOffset;
+    if (rd != 0ULL || wr != 0ULL || (uint64_t)8U == 0ULL)
+    {
+      failed = TRUE;
+    }
+    else
+    {
+      BOOLEAN ok = ProbeAndCopy(tpointer, (uint64_t)8U, Dest);
+      if (ok)
+      {
+        readOffset = (uint64_t)8U;
+        writeOffset = (uint64_t)8U;
+      }
+      else
+      {
+        failed = TRUE;
+      }
+    }
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
+    if (hasFailed)
+    {
+      b = 0ULL;
+    }
+    else
+    {
+      b = writeOffset;
+    }
     BOOLEAN actionResult;
-    if (b)
+    if (b != 0ULL)
     {
       uint64_t
       result =
@@ -308,9 +339,40 @@ ProbeValidateU(
   else
   {
     uint64_t spointer = Load64Le(Input + (uint32_t)positionAftertag);
-    BOOLEAN b = ProbeAndCopyAlt(spointer, (uint64_t)9U, DestS);
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    uint64_t rd = readOffset;
+    uint64_t wr = writeOffset;
+    if (rd != 0ULL || wr != 0ULL || (uint64_t)9U == 0ULL)
+    {
+      failed = TRUE;
+    }
+    else
+    {
+      BOOLEAN ok = ProbeAndCopyAlt(spointer, (uint64_t)9U, DestS);
+      if (ok)
+      {
+        readOffset = (uint64_t)9U;
+        writeOffset = (uint64_t)9U;
+      }
+      else
+      {
+        failed = TRUE;
+      }
+    }
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
+    if (hasFailed)
+    {
+      b = 0ULL;
+    }
+    else
+    {
+      b = writeOffset;
+    }
     BOOLEAN actionResult;
-    if (b)
+    if (b != 0ULL)
     {
       uint64_t
       result =
@@ -426,9 +488,40 @@ ProbeValidateV(
   else
   {
     uint64_t sptr = Load64Le(Input + (uint32_t)positionAftertag);
-    BOOLEAN b = ProbeAndCopy(sptr, (uint64_t)9U, DestS);
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    uint64_t rd = readOffset;
+    uint64_t wr = writeOffset;
+    if (rd != 0ULL || wr != 0ULL || (uint64_t)9U == 0ULL)
+    {
+      failed = TRUE;
+    }
+    else
+    {
+      BOOLEAN ok = ProbeAndCopy(sptr, (uint64_t)9U, DestS);
+      if (ok)
+      {
+        readOffset = (uint64_t)9U;
+        writeOffset = (uint64_t)9U;
+      }
+      else
+      {
+        failed = TRUE;
+      }
+    }
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
+    if (hasFailed)
+    {
+      b = 0ULL;
+    }
+    else
+    {
+      b = writeOffset;
+    }
     BOOLEAN actionResult;
-    if (b)
+    if (b != 0ULL)
     {
       uint64_t
       result =
@@ -496,9 +589,40 @@ ProbeValidateV(
   else
   {
     uint64_t tptr = Load64Le(Input + (uint32_t)positionAftersptr);
-    BOOLEAN b = ProbeAndCopyAlt(tptr, (uint64_t)8U, DestT);
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    uint64_t rd = readOffset;
+    uint64_t wr = writeOffset;
+    if (rd != 0ULL || wr != 0ULL || (uint64_t)8U == 0ULL)
+    {
+      failed = TRUE;
+    }
+    else
+    {
+      BOOLEAN ok = ProbeAndCopyAlt(tptr, (uint64_t)8U, DestT);
+      if (ok)
+      {
+        readOffset = (uint64_t)8U;
+        writeOffset = (uint64_t)8U;
+      }
+      else
+      {
+        failed = TRUE;
+      }
+    }
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
+    if (hasFailed)
+    {
+      b = 0ULL;
+    }
+    else
+    {
+      b = writeOffset;
+    }
     BOOLEAN actionResult;
-    if (b)
+    if (b != 0ULL)
     {
       uint64_t
       result =
@@ -566,9 +690,40 @@ ProbeValidateV(
   else
   {
     uint64_t t2ptr = Load64Le(Input + (uint32_t)positionAftertptr);
-    BOOLEAN b = ProbeAndCopy(t2ptr, (uint64_t)8U, DestT);
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    uint64_t rd = readOffset;
+    uint64_t wr = writeOffset;
+    if (rd != 0ULL || wr != 0ULL || (uint64_t)8U == 0ULL)
+    {
+      failed = TRUE;
+    }
+    else
+    {
+      BOOLEAN ok = ProbeAndCopy(t2ptr, (uint64_t)8U, DestT);
+      if (ok)
+      {
+        readOffset = (uint64_t)8U;
+        writeOffset = (uint64_t)8U;
+      }
+      else
+      {
+        failed = TRUE;
+      }
+    }
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
+    if (hasFailed)
+    {
+      b = 0ULL;
+    }
+    else
+    {
+      b = writeOffset;
+    }
     BOOLEAN actionResult;
-    if (b)
+    if (b != 0ULL)
     {
       uint64_t
       result =
@@ -648,6 +803,32 @@ static inline uint64_t ValidateTt(uint64_t InputLength, uint64_t StartPosition)
   return EverParseSetValidatorErrorPos(EVERPARSE_VALIDATOR_ERROR_NOT_ENOUGH_DATA, StartPosition);
 }
 
+static void
+ProbeTt(
+  uint64_t *ReadOffset,
+  uint64_t *WriteOffset,
+  BOOLEAN *Failed,
+  uint64_t Src,
+  EVERPARSE_COPY_BUFFER_T Dest
+)
+{
+  uint64_t rd = *ReadOffset;
+  uint64_t wr = *WriteOffset;
+  if (rd != 0ULL || wr != 0ULL || (uint64_t)9U == 0ULL)
+  {
+    *Failed = TRUE;
+    return;
+  }
+  BOOLEAN ok = ProbeAndCopy(Src, (uint64_t)9U, Dest);
+  if (ok)
+  {
+    *ReadOffset = (uint64_t)9U;
+    *WriteOffset = (uint64_t)9U;
+    return;
+  }
+  *Failed = TRUE;
+}
+
 uint64_t
 ProbeValidateI(
   EVERPARSE_COPY_BUFFER_T Dest,
@@ -688,9 +869,22 @@ ProbeValidateI(
   else
   {
     uint64_t ttptr = Load64Le(Input + (uint32_t)StartPosition);
-    BOOLEAN b = ProbeAndCopy(ttptr, (uint64_t)9U, Dest);
+    uint64_t readOffset = 0ULL;
+    uint64_t writeOffset = 0ULL;
+    BOOLEAN failed = FALSE;
+    ProbeTt(&readOffset, &writeOffset, &failed, ttptr, Dest);
+    BOOLEAN hasFailed = failed;
+    uint64_t b;
+    if (hasFailed)
+    {
+      b = 0ULL;
+    }
+    else
+    {
+      b = writeOffset;
+    }
     BOOLEAN actionResult;
-    if (b)
+    if (b != 0ULL)
     {
       uint8_t *unused = EverParseStreamOf(Dest);
       KRML_MAYBE_UNUSED_VAR(unused);
