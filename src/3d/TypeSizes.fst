@@ -393,11 +393,14 @@ let rec size_and_alignment_of_field (env:env_t)
         in
         if all_cases_fixed
         && not (Fixed? size)
-        then error
-              "With the 'aligned' qualifier, \
-               all cases of a union with a fixed size \
-               must have the same size; \
-               union padding is not yet supported"
+        then error 
+              (Printf.sprintf
+                "Type %s is a union with an 'aligned' qualifier. \
+                All cases of a union with a fixed size \
+                must have the same size; \
+                union padding is not yet supported"
+               (ident_to_string diag_enclosing_type_name)
+              )
                f.range
       );
       let swc = fst swc, cases in

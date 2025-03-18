@@ -215,10 +215,6 @@ let seq_probe_m (#a:Type) (dflt:a) (m1:probe_m unit) (m2:probe_m a)
     if has_failed
     then dflt
     else m2 read_offset write_offset failed src dest
-    // )
-    // if failed res1
-    // then { res1 with result = Nothing }
-    // else m2 res1.next_read_offset res1.next_write_offset src dest
 
 inline_for_extraction
 noextract
@@ -236,6 +232,35 @@ let return_probe_m (#a:Type) (v:a)
 : probe_m a
 = fun read_offset write_offset failed src dest -> v
 
+inline_for_extraction
+let check_overflow_add (x:U64.t) (y:U64.t)
+: bool
+= let open U64 in
+  x <=^ (0xffffffffffffffffuL -^ y)
+
+inline_for_extraction
+noextract
+let skip (bytes_to_skip:U64.t)
+: probe_m unit
+= fun read_offset write_offset failed src dest ->
+    let rd = !*read_offset in
+    if check_overflow_add rd bytes_to_skip
+    then (
+      read_offset *= U64.(rd +^ bytes_to_skip)
+    )
+    else (
+      failed *= true
+    )  
+
+inline_for_extraction
+noextract
+let if_then_else (b:bool) (m0 m1:probe_m unit)
+: probe_m unit
+= fun read_offset write_offset failed src dest ->
+    if b
+    then m0 read_offset write_offset failed src dest
+    else m1 read_offset write_offset failed src dest
+ 
 let pure_external_action t =
   unit -> Stack t (fun _ -> True) (fun h0 _ h1 -> h0==h1)
 
@@ -257,11 +282,6 @@ let probe_read_t0_and_write_t1
     (probe_and_read_at_offset_m reader)
     (fun v -> write_at_offset_m writer (coerce_t0_t1 v)) 
 
-inline_for_extraction
-let check_overflow_add (x:U64.t) (y:U64.t)
-: bool
-= let open U64 in
-  x <=^ (0xffffffffffffffffuL -^ y)
 
 inline_for_extraction
 let probe_fn_as_probe_m (bytes_to_read:U64.t) (f:probe_fn)

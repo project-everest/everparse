@@ -184,44 +184,45 @@ let rec need_probe_decls (e:env) (ds:list decl)
 
 let generate_probe_functions (e:env) (d:decl)
 : ML (list decl)
-= match d.d_decl.v with
+= let simple_probe (names:_{should_generate_probe e names}) 
+    : ML decl
+    = let simple_probe_name = simple_probe_function_for_type names.typedef_abbrev in
+      let probe_size =
+          with_range (
+            App SizeOf [with_range (Identifier names.typedef_abbrev) names.typedef_name.range]
+          ) d.d_decl.range
+      in
+      let simple_probe =
+        with_range (
+          Probe_action_simple None probe_size
+        ) d.d_decl.range
+      in
+      let d' = 
+        mk_decl 
+          (ProbeFunction simple_probe_name [] simple_probe 
+            (SimpleProbeFunction names.typedef_abbrev))
+          dummy_range
+          []
+          false
+      in
+      d'
+  in
+  match d.d_decl.v with
   | Record names gs params w fields -> (
     if not <| should_generate_probe e names
     then [d]
     else (
-      match simple_probe_name_for_type e names.typedef_abbrev with
-      | Some simple_probe_name ->
-        let probe_size =
-          with_range (
-            App SizeOf [with_range (Identifier names.typedef_abbrev) names.typedef_name.range]
-          ) d.d_decl.range
-        in
-        let simple_probe =
-          with_range (
-            Probe_action_simple None probe_size
-          ) d.d_decl.range
-        in
-        let d' = 
-          mk_decl 
-            (ProbeFunction simple_probe_name [] simple_probe 
-              (SimpleProbeFunction names.typedef_abbrev))
-            dummy_range
-            []
-            false
-        in
-        [d;d']
+      let d' = simple_probe names in
+      [d;d']
     )
   )
   | CaseType names gs params sw -> (
-    if should_generalize e names
-    then (
-      error 
-        (Printf.sprintf 
-          "Cannot automatically generate a probe function for a case type: %s"
-          (print_ident names.typedef_abbrev))
-        d.d_decl.range
-    ) 
-    else [d]
+    if not <| should_generate_probe e names
+    then [d]
+    else (
+      let d' = simple_probe names in
+      [d;d']
+    )
   )
   | _ -> [d]
 
@@ -425,16 +426,8 @@ let generalize_probes_decl (e:env) (d:decl)
     | _ -> (
       if not <| should_generalize e names
       then (
-        Options.debug_print_string
-          (Printf.sprintf "**************************Instantiations with signature %s for fields: %s\n"
-                (print_generics gs')
-                (print_switch_case (v, cases)));
         let s = default_instantiation_subst e d.d_decl.range gs' sig in
         let cases' = List.map (subst_case s) cases in
-        Options.debug_print_string
-          (Printf.sprintf "**************************Substituted fields: \n\tbefore %s\n\tafter %s\n"
-                (print_switch_case (v, cases))
-                (print_switch_case (v, cases')));
         [ { d with 
             d_decl = { d.d_decl with 
             v=CaseType names gs params (v, cases') }} ]

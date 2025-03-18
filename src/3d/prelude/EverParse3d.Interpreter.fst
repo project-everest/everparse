@@ -536,6 +536,9 @@ type atomic_probe_action : Type0 -> Type u#1 =
       #t:Type0 ->
       f:PA.pure_external_action t ->
       atomic_probe_action t
+  | Probe_action_skip:
+      n:U64.t ->
+      atomic_probe_action unit
   | Return_probe_m :
       #t:Type0 ->
       v:t ->
@@ -553,13 +556,19 @@ let atomic_probe_action_as_probe_m (#t:Type) (p:atomic_probe_action t)
     PA.write_at_offset_m writer v
   | Probe_call_pure f ->
     PA.lift_pure_external_action f
+  | Probe_action_skip n ->
+    PA.skip n
   | Return_probe_m v ->
     PA.return_probe_m v
 
 noeq
 type probe_action : Type u#1 =
-  | Probe_action_atomic of atomic_probe_action unit
-  | Probe_action_var of probe_m unit
+  | Probe_action_atomic :
+      atomic_probe_action unit ->
+      probe_action
+  | Probe_action_var :
+      probe_m unit ->
+      probe_action
   | Probe_action_simple:
       bytes_to_read : U64.t ->
       probe_fn: PA.probe_fn ->
@@ -572,6 +581,11 @@ type probe_action : Type u#1 =
       #t:Type0 ->
       m1: atomic_probe_action t ->
       m2: (t -> probe_action) ->
+      probe_action
+  | Probe_action_ite:
+      cond: bool ->
+      m1: probe_action ->
+      m2: probe_action ->
       probe_action
 
 [@@specialize]
@@ -589,6 +603,8 @@ let rec probe_action_as_probe_m (p:probe_action)
   | Probe_action_let m1 m2 ->
     let k x : PA.probe_m unit = probe_action_as_probe_m (m2 x) in
     PA.bind_probe_m () (atomic_probe_action_as_probe_m m1) k
+  | Probe_action_ite cond m1 m2 ->
+    PA.if_then_else cond (probe_action_as_probe_m m1) (probe_action_as_probe_m m2)
 
 (* The type of atomic actions.
 

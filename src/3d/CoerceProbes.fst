@@ -281,11 +281,21 @@ let rec optimize_coercion (p:probe_action)
 let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
 : ML decl
 = let CoerceProbeFunctionStub i (CoerceProbeFunction (t0, t1)) = d.d_decl.v in
-  let d0, _ = B.resolve_record_type e t0 in
-  let d1, _ = B.resolve_record_type e t1 in
-  let Record _ _ _ _ r0 = d0.d_decl.v in
-  let Record _ _ _ _ r1 = d1.d_decl.v in
-  let probe_action = optimize_coercion <| coerce_record e r0 r1 in
+  FStar.IO.print_string <|
+    Printf.sprintf "Replacing stub %s (from %s to %s)\n" i.v.name (print_ident t0) (print_ident t1);
+  let d0, _ = B.lookup_type_decl e t0 in
+  let d1, _ = B.lookup_type_decl e t1 in
+  let coercion =
+    match d0.d_decl.v, d1.d_decl.v with
+    | Record _ _ _ _ r0, Record _ _ _ _ r1 -> coerce_record e r0 r1
+    | CaseType _ _ _ r0, CaseType _ _ _ r1 -> 
+      failwith "Cannot yet coerce case types"
+    | _ ->
+      error
+        (Printf.sprintf "Type %s is not coercible to %s" (print_ident t0) (print_ident t1))
+        d.d_decl.range
+  in
+  let probe_action = optimize_coercion coercion in
   let probe_fn = { 
       d.d_decl with
       v = ProbeFunction i [] probe_action (CoerceProbeFunction(t0, t1)) 

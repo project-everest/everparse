@@ -149,7 +149,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Probe_action_var i -> []
     | Probe_action_simple _i len -> deps_of_expr len
     | Probe_action_seq hd tl -> (deps_of_probe_action hd)@(deps_of_probe_action tl)
-    | Probe_action_let i a k -> (deps_of_probe_atomic_action a)@(deps_of_probe_action k) in
+    | Probe_action_let i a k -> (deps_of_probe_atomic_action a)@(deps_of_probe_action k)
+    | Probe_action_ite e th el -> deps_of_expr e @ deps_of_probe_action th @ deps_of_probe_action el
+  in
   let deps_of_params params : ML (list string) =
     params |> List.collect (fun (t, _, _) -> deps_of_typ t) in
 

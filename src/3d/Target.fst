@@ -588,6 +588,11 @@ let rec print_probe_action (mname:string) (p:probe_action) : ML string =
       (print_atomic_probe_action a)
       (print_ident i)
       (print_probe_action mname tl)
+  | Probe_ite { e; then_; else_ } ->
+    Printf.sprintf "(Probe_action_ite %s (fun _ -> %s) (fun _ -> %s))"
+      (print_expr mname e)
+      (print_probe_action mname then_)
+      (print_probe_action mname else_)
 
 
 let print_typedef_typ (tdn:typedef_name) : ML string =

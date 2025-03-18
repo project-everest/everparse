@@ -131,6 +131,7 @@ type probe_action =
   | Probe_atomic of atomic_probe_action
   | Probe_seq { hd:probe_action; tl:probe_action }
   | Probe_let { i:A.ident; a:atomic_probe_action; tl:probe_action }
+  | Probe_ite { e:expr; then_:probe_action; else_:probe_action }
   
 noeq
 type typ =

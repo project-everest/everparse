@@ -822,6 +822,10 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
     let a = translate_atomic a in
     let tl, ds2 = translate_probe_action k in
     T.Probe_let {i; a; tl}, ds2
+  | A.Probe_action_ite e th el ->
+    let th, ds1 = translate_probe_action th in
+    let el, ds2 = translate_probe_action el in
+    T.Probe_ite {e=translate_expr e; then_=th; else_=el}, ds1@ds2
 
 #push-options "--z3rlimit_factor 4"
 let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =

@@ -1207,7 +1207,7 @@ let rec check_field_action (env:env) (f:atomic_field) (a:action)
                  a.range
 
 #pop-options
-
+let or (a:bool) (b:bool) : bool = a || b
 let rec check_probe env a : ML (probe_action & typ) =
   let rec check_atomic_probe env (a:probe_atomic_action) 
   : ML (probe_atomic_action & typ) =
@@ -1374,6 +1374,24 @@ let rec check_probe env a : ML (probe_action & typ) =
     let k, t = check_probe env k in
     remove_local env i;
     { a with v = Probe_action_let i aa k }, t
+
+  | Probe_action_ite e th el ->
+    let e, t = check_expr env e in
+    if not (eq_typ env t tbool)
+    then error (Printf.sprintf "Expected a boolean expression, got %s of type %s"
+                  (print_expr e)
+                  (print_typ t))
+                e.range;
+    let th, t = check_probe env th in
+    let el, t' = check_probe env el in
+    
+    if not (eq_typ env t t')
+    `or` not (eq_typ env t tunit)
+    then error (Printf.sprintf "The branches of a conditional must both have type unit; got %s and %s"
+                  (print_typ t)
+                  (print_typ t'))
+                a.range;
+    { a with v = Probe_action_ite e th el }, t
 
 #push-options "--z3rlimit_factor 4"
 let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
