@@ -431,16 +431,22 @@ let rec map_of_list_pair_mem_fst
   | [] -> ()
   | _ :: q -> map_of_list_pair_mem_fst key_eq q k
 
+let map_of_list_maps_to_nonempty_at
+  (#key #value: Type0)
+  (m: Map.t key (list value))
+  (k: key)
+: Tot prop
+= match Map.get m k with
+  | None -> True
+  | Some lv -> List.Tot.length lv >= 1
+
 let rec map_of_list_pair_length
   (#key #value: Type0)
   (key_eq: EqTest.eq_test key)
   (l: list (key & value))
   (k: key)
 : Lemma
-  (ensures (match Map.get (map_of_list_pair key_eq l) k with
-  | None -> True
-  | Some lv -> List.Tot.length lv >= 1
-  ))
+  (ensures (map_of_list_maps_to_nonempty_at (map_of_list_pair key_eq l) k))
   (decreases l)
 = match l with
   | [] -> ()
@@ -501,6 +507,74 @@ let map_of_list_pair_no_repeats_key
   (List.Tot.no_repeats_p (List.Tot.map fst l) <==> map_of_list_singletons (map_of_list_pair key_eq l))
 = Classical.forall_intro (Classical.move_requires (map_of_list_pair_no_repeats_key_elim key_eq l));
   Classical.move_requires (map_of_list_pair_no_repeats_key_intro key_eq) l
+
+let map_of_list_snoc
+  (#key #value: Type0)
+  (key_eq: EqTest.eq_test key)
+  (m: Map.t key (list value))
+  (k: key)
+  (v: value)
+: Tot (Map.t key (list value))
+= 
+    begin match Map.get m k with
+    | None -> Map.set m k (key_eq k) [v]
+    | Some l -> Map.set m k (key_eq k) (l `List.Tot.append` [v])
+    end
+
+let map_of_list_is_append
+  (#key #value: Type)
+  (m1 m2 m: Map.t key (list value))
+: Tot prop
+= forall (x: key) . {:pattern (Map.get m x)} Map.get m x == begin match Map.get m1 x, Map.get m2 x with
+    | None, None -> None
+    | Some y1, None
+    | None, Some y1 -> Some y1
+    | Some y1, Some y2 -> Some (List.Tot.append y1 y2)
+    end
+
+let map_of_list_is_append_nil_l_intro
+  (#key #value: Type)
+  (m: Map.t key (list value))
+: Lemma
+  (map_of_list_is_append (Map.empty _ _) m m)
+= ()
+
+let map_of_list_is_append_nil_r_elim
+  (#key #value: Type)
+  (m1 m2: Map.t key (list value))
+: Lemma
+  (requires (map_of_list_is_append m1 (Map.empty _ _) m2))
+  (ensures (m1 == m2))
+= assert (Map.equal m1 m2)
+
+let map_of_list_is_append_cons_snoc_equiv
+  (#key #value: Type)
+  (key_eq: EqTest.eq_test key)
+  (m1: Map.t key (list value))
+  (k: key)
+  (v: value)
+  (m2: Map.t key (list value))
+  (m: Map.t key (list value))
+: Lemma
+  (map_of_list_is_append m1 (map_of_list_cons key_eq k v m2) m <==> map_of_list_is_append (map_of_list_snoc key_eq m1 k v) m2 m)
+= match Map.get m1 k, Map.get m2 k with
+  | Some l1, Some l2 -> List.Tot.append_assoc l1 [v] l2
+  | _ -> ()
+
+let map_of_list_maps_to_nonempty
+  (#key #value: Type0)
+  (m: Map.t key (list value))
+: Tot prop
+= forall (k: key) . {:pattern (Map.get m k)} map_of_list_maps_to_nonempty_at m k
+
+let map_of_list_pair_length_forall
+  (#key #value: Type0)
+  (key_eq: EqTest.eq_test key)
+  (l: list (key & value))
+: Lemma
+  (ensures (map_of_list_maps_to_nonempty (map_of_list_pair key_eq l)))
+  [SMTPat (map_of_list_pair key_eq l)]
+= Classical.forall_intro (map_of_list_pair_length key_eq l)
 
 (* FIXME: This DOES NOT work, because a CBOR object is not always
    guaranteed to be serialized into a slice: what if its size exceeds

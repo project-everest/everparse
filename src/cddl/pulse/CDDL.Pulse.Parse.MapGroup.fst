@@ -889,15 +889,16 @@ let cddl_map_iterator_next_t
       rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l **
       pure (~ (Ghost.reveal l == Map.empty (dfst spec1) (list (dfst spec2))))
     )
-    (fun res -> exists* i' kv' l' .
+    (fun res -> exists* i' k v l' .
       pts_to pi i' **
       rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i' l' **
-      rel_pair (dsnd spec1) (dsnd spec2) res kv' **
+      dsnd spec1 (fst res) k **
+      dsnd spec2 (snd res) v **
       Trade.trade
-        (rel_pair (dsnd spec1) (dsnd spec2) res kv' ** rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i' l')
+        ((dsnd spec1 (fst res) k ** dsnd spec2 (snd res) v) ** rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i' l')
         (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l) **
       pure (
-        Ghost.reveal l == map_of_list_cons i.eq1 (fst kv') (snd kv') l'
+        Ghost.reveal l == map_of_list_cons i'.eq1 k v l'
       )
     )
 
@@ -1056,12 +1057,7 @@ fn cddl_map_iterator_next
   let hd_value_res = cddl_map_iterator_impl_parse2 i hd_value;
   Trade.trans_hyp_r _ _ _ (vmatch2 pmhd hd vhd);
   with vhd_value_res . assert (dsnd spec2 hd_value_res vhd_value_res);
-  let res = (hd_key_res, hd_value_res);
-  Trade.rewrite_with_trade
-    (dsnd spec1 hd_key_res vhd_key_res ** dsnd spec2 hd_value_res vhd_value_res)
-    (rel_pair (dsnd spec1) (dsnd spec2) res (vhd_key_res, vhd_value_res));
-  Trade.trans _ _ (vmatch2 pmhd hd vhd);
-  Trade.trans_hyp_l _ _ _ _;
+  Trade.trans_hyp_l _ (vmatch2 _ _ _) _ _;
   with gj lj . assert (cbor_map_iterator_match gi.pm gj lj);
   let j = !pj;
   let i' : map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2 = { i with
@@ -1071,7 +1067,7 @@ fn cddl_map_iterator_next
   rel_map_iterator_fold map_share map_gather i' gi.pm _ _;
   Trade.trans_hyp_r _ _ _ _;
   pi := i';
-  res
+  (hd_key_res, hd_value_res)
 }
 
 let list_assoc_no_repeats_mem'
