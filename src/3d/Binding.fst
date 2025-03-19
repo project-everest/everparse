@@ -321,7 +321,7 @@ let parser_may_fail (env:env) (t:typ) : ML bool =
 
 let typ_is_integral env (t:typ) : ML bool =
   match t.v with
-  | Pointer _ _ -> false
+  | Pointer _ _ -> true
   | Type_app hd _ _ _ -> (
     match lookup env hd with
     | Inr (d, Inl attrs) -> Some? attrs.integral
@@ -331,7 +331,7 @@ let typ_is_integral env (t:typ) : ML bool =
 
 let tag_of_integral_typ env (t:typ) : ML (option _) =
   match t.v with
-  | Pointer _ _ -> None
+  | Pointer _ (PQ a) -> Some a
   | Type_app hd _ _ _ -> (
     match lookup env hd with
     | Inr (_, Inl attrs) -> attrs.integral
@@ -341,7 +341,7 @@ let tag_of_integral_typ env (t:typ) : ML (option _) =
 
 let tag_and_bit_order_of_integral_typ env (t:typ) : ML (tag_and_bit_order: (option integer_type & option bitfield_bit_order) { Some? (snd tag_and_bit_order) ==> Some? (fst tag_and_bit_order) }) =
   match t.v with
-  | Pointer _ _ -> None, None
+  | Pointer _ (PQ a) -> Some a, None
   | Type_app hd _ _ _ -> (
     match lookup env hd with
     | Inr (_, Inl attrs) -> attrs.integral, attrs.bit_order
@@ -372,7 +372,7 @@ let rec typ_weak_kind env (t:typ) : ML (option weak_kind) =
 
 let typ_has_reader env (t:typ) : ML bool =
   match t.v with
-  | Pointer _ _ -> false
+  | Pointer _ _ -> true
   | Type_app hd _ _ _ ->
     has_reader env.globals hd
   | _ -> false

@@ -910,6 +910,7 @@ let rec print_typ t : ML string =
 let typ_as_integer_type (t:typ) : ML integer_type =
   match t.v with
   | Type_app i _k [] [] -> as_integer_typ i
+  | Pointer _ (PQ i) -> i
   | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
 
 let bit_order_of_typ (t:typ) : ML bitfield_bit_order =
