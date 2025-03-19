@@ -183,6 +183,33 @@ let rec need_probe_decls (e:env) (ds:list decl)
 = let e, changed = fold_left_changed need_probe_decl e ds in
   if changed then need_probe_decls e ds else e
 
+let should_retain_param_for_probe (e:B.env) (p:param)
+: bool
+= let t, _, q = p in
+  not (eq_typ t tcopybuffer || q = Mutable)
+  
+
+let rec generic_instantiations_for_type (e:B.env) (tt:typ)
+: ML (list expr & typ)
+= match tt.v with
+  | Pointer t _ -> generic_instantiations_for_type e t
+  | Type_app hd _ _ args ->
+    let _, params = B.params_of_decl (fst <| B.lookup_type_decl e hd) in
+    let args, params =
+      List.map2
+        (fun a p -> 
+          match a with
+          | Inr _ -> []
+          | Inl x ->
+            if should_retain_param_for_probe e p
+            then [x,p]
+            else []) args params
+      |> List.flatten
+      |> List.split
+    in
+    args, mk_arrow_ps params probe_m_t
+  | _ -> failwith "Impossible: field type is an arrow"
+
 let generate_probe_functions (e:env) (d:decl)
 : ML (list decl)
 = let simple_probe (names:_{should_generate_probe e names}) params
@@ -198,6 +225,7 @@ let generate_probe_functions (e:env) (d:decl)
           Probe_action_simple None probe_size
         ) d.d_decl.range
       in
+      let params = List.Tot.filter (should_retain_param_for_probe e.benv) params in
       let d' = 
         mk_decl 
           (ProbeFunction simple_probe_name params simple_probe 
@@ -271,28 +299,6 @@ let generalize_atomic_field (e:env) (path_prefix:string) (af:atomic_field)
     List.map (fun (i,(h,t)) -> GenericProbeFunction i t h) generic_params,
     sig
   )
-
-let rec generic_instantiations_for_type (e:B.env) (tt:typ)
-: ML (list expr & typ)
-= match tt.v with
-  | Pointer t _ -> generic_instantiations_for_type e t
-  | Type_app hd _ _ args ->
-    let _, params = B.params_of_decl (fst <| B.lookup_type_decl e hd) in
-    let args, params =
-      List.map2
-        (fun a p -> 
-          match a with
-          | Inr _ -> []
-          | Inl x ->
-            let t, _, _ = p in
-            if false && eq_typ t tcopybuffer
-            then []
-            else [x, p]) args params
-      |> List.flatten
-      |> List.split
-    in
-    args, mk_arrow_ps params probe_m_t
-  | _ -> failwith "Impossible: field type is an arrow"
 
 let rec generalize_probe_field (e:env) (path_prefix:string) (f:field) 
 : ML (field & list generic_param & generalized_signature)

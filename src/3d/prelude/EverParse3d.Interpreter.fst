@@ -517,49 +517,53 @@ let mk_action_binding
 (* Type type of atomic probe actions *)
 noeq
 type atomic_probe_action : Type0 -> Type u#1 =
-  | Probe_and_copy :
+  | Atomic_probe_and_copy :
       bytes_to_read : U64.t { bytes_to_read <> 0uL }->
       probe_fn: PA.probe_fn_incremental ->
       atomic_probe_action unit
-  | Probe_and_read :
+  | Atomic_probe_and_read :
       #t:Type0 ->
       #sz:U64.t { sz <> 0uL } ->
       reader : PA.probe_and_read_at_offset_t t sz ->
       atomic_probe_action t
-  | Write_at_offset :
+  | Atomic_probe_write_at_offset :
       #t:Type0 ->
       #sz:U64.t { sz <> 0uL } ->
       v:t ->
       writer : PA.write_at_offset_t t sz ->
       atomic_probe_action unit
-  | Probe_call_pure :
+  | Atomic_probe_call_pure :
       #t:Type0 ->
       f:PA.pure_external_action t ->
       atomic_probe_action t
-  | Probe_action_skip:
+  | Atomic_probe_skip:
       n:U64.t ->
       atomic_probe_action unit
-  | Return_probe_m :
+  | Atomic_probe_return:
       #t:Type0 ->
       v:t ->
       atomic_probe_action t
+  | Atomic_probe_fail:
+      atomic_probe_action unit
 
 [@@specialize]
 let atomic_probe_action_as_probe_m (#t:Type) (p:atomic_probe_action t)
 : PA.probe_m t
 = match p with
-  | Probe_and_copy bytes_to_read probe_fn_incremental ->
+  | Atomic_probe_and_copy bytes_to_read probe_fn_incremental ->
     PA.probe_fn_incremental_as_probe_m probe_fn_incremental bytes_to_read 
-  | Probe_and_read reader ->
+  | Atomic_probe_and_read reader ->
     PA.probe_and_read_at_offset_m reader
-  | Write_at_offset v writer ->
+  | Atomic_probe_write_at_offset v writer ->
     PA.write_at_offset_m writer v
-  | Probe_call_pure f ->
+  | Atomic_probe_call_pure f ->
     PA.lift_pure_external_action f
-  | Probe_action_skip n ->
+  | Atomic_probe_skip n ->
     PA.skip n
-  | Return_probe_m v ->
+  | Atomic_probe_return v ->
     PA.return_probe_m v
+  | Atomic_probe_fail ->
+    PA.fail
 
 noeq
 type probe_action : Type u#1 =

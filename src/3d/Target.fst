@@ -581,52 +581,43 @@ let rec print_action (mname:string) (a:action) : ML string =
 let rec print_probe_action (mname:string) (p:probe_action) : ML string =
   let print_atomic_probe_action (p:atomic_probe_action) : ML string =
     match p with
-    | Probe_and_copy  { bytes_to_read; probe_fn } ->
-      Printf.sprintf "(Probe_and_copy %s %s)"
-        (print_expr mname bytes_to_read)
-        (print_ident probe_fn)
-    | Probe_and_read  { reader } ->
-      Printf.sprintf "(Probe_and_read %s)"
-        (print_ident reader)    
-    | Write_at_offset { value; writer } ->
-      Printf.sprintf "(Write_at_offset %s %s)"
-        (print_expr mname value)
-        (print_ident writer)
-    | Probe_call_pure { f; args } ->
-      Printf.sprintf "(Probe_call_pure (%s %s))"
-        (print_ident f)
-        (String.concat " " (List.map (print_expr mname) args))
-    | Probe_return { value } ->
-      Printf.sprintf "(Return_probe_m %s)"
-        (print_expr mname value)
-    | Skip { bytes_to_skip } ->
-      Printf.sprintf "(Probe_action_skip %s)"
-        (print_expr mname bytes_to_skip)
-  in
-  match p with
-  | Probe_fn_as_probe_m { bytes_to_read; probe_fn } ->
-    Printf.sprintf "(Probe_action_simple %s %s)"
+    | Atomic_probe_and_copy bytes_to_read probe_fn ->
+      Printf.sprintf "(Atomic_probe_and_copy %s %s)"
       (print_expr mname bytes_to_read)
       (print_ident probe_fn)
-  | Probe_action_var i ->
-    Printf.sprintf "(Probe_action_var %s)" (print_expr mname i)
-  | Probe_atomic a ->
-    Printf.sprintf "(Probe_action_atomic %s)"
-      (print_atomic_probe_action a)
-  | Probe_seq { hd; tl } ->
-    Printf.sprintf "(Probe_action_seq %s %s)"
-      (print_probe_action mname hd)
-      (print_probe_action mname tl)
-  | Probe_let { i; a; tl } ->
-    Printf.sprintf "(Probe_action_let %s (fun %s -> %s))"
-      (print_atomic_probe_action a)
-      (print_ident i)
-      (print_probe_action mname tl)
-  | Probe_ite { e; then_; else_ } ->
-    Printf.sprintf "(Probe_action_ite %s %s %s)"
-      (print_expr mname e)
-      (print_probe_action mname then_)
-      (print_probe_action mname else_)
+    | Atomic_probe_and_read reader ->
+      Printf.sprintf "(Atomic_probe_and_read %s)"
+      (print_ident reader)
+    | Atomic_probe_write_at_offset v writer ->
+      Printf.sprintf "(Atomic_probe_write_at_offset %s %s)"
+      (print_expr mname v)
+      (print_ident writer)
+    | Atomic_probe_call_pure f args ->
+      Printf.sprintf "(Atomic_probe_call_pure (%s %s))"
+      (print_ident f)
+      (String.concat " " (List.map (print_expr mname) args))
+    | Atomic_probe_skip n ->
+      Printf.sprintf "(Atomic_probe_skip %s)"
+      (print_expr mname n)
+    | Atomic_probe_return v ->
+      Printf.sprintf "(Atomic_probe_return %s)"
+      (print_expr mname v)
+    | Atomic_probe_fail ->
+      "(Atomic_probe_fail)"
+  in
+  match p with
+  | Probe_action_atomic a ->
+    Printf.sprintf "(Probe_action_atomic %s)" (print_atomic_probe_action a)
+  | Probe_action_var e ->
+    Printf.sprintf "(Probe_action_var %s)" (print_expr mname e)
+  | Probe_action_simple bytes_to_read probe_fn ->
+    Printf.sprintf "(Probe_action_simple %s %s)" (print_expr mname bytes_to_read) (print_ident probe_fn)
+  | Probe_action_seq p1 p2 ->
+    Printf.sprintf "(Probe_action_seq %s %s)" (print_probe_action mname p1) (print_probe_action mname p2)
+  | Probe_action_let i m1 m2 ->
+    Printf.sprintf "(Probe_action_let %s (fun %s -> %s))" (print_atomic_probe_action m1) (print_ident i) (print_probe_action mname m2)
+  | Probe_action_ite cond m1 m2 ->
+    Printf.sprintf "(Probe_action_ite %s %s %s)" (print_expr mname cond) (print_probe_action mname m1) (print_probe_action mname m2)
 
 
 let print_typedef_typ (tdn:typedef_name) : ML string =

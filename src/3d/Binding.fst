@@ -1267,6 +1267,8 @@ let rec check_probe env a : ML (probe_action & typ) =
   let rec check_atomic_probe env (a:probe_atomic_action) 
   : ML (probe_atomic_action & typ) =
     match a with
+    | Probe_action_fail ->
+      Probe_action_fail, tunit
     | Probe_action_return e ->
       let e, t= check_expr env e in
       Probe_action_return e, t

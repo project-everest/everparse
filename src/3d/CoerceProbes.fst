@@ -27,6 +27,12 @@ module H = Hashtable
 module B = Binding
 open GlobalEnv
 
+let probe_fail
+: probe_action
+= with_dummy_range <|
+  Probe_atomic_action <|
+  Probe_action_fail
+
 let probe_return_unit 
 : probe_action
 = with_dummy_range <|
@@ -322,7 +328,7 @@ and coerce_switch_case (e:B.env) (sw0 sw1:switch_case)
       | _ -> failwith "Cannot coerce switch cases with different case types"
     )
     cases
-    (probe_return_unit)
+    probe_fail
 
 let rec optimize_coercion (p:probe_action)
 : ML probe_action

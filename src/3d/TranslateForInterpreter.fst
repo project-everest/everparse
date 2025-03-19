@@ -800,40 +800,42 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
   let translate_atomic (a:A.probe_atomic_action) : ML T.atomic_probe_action =
     match a with
     | A.Probe_action_return e ->
-      T.Probe_return { value = translate_expr e }
+      T.Atomic_probe_return (translate_expr e)
     | A.Probe_action_call f args ->
-      T.Probe_call_pure { f; args = List.map translate_expr args }
+      T.Atomic_probe_call_pure f (List.map translate_expr args)
     | A.Probe_action_read f ->
-      T.Probe_and_read { reader=f }
+      T.Atomic_probe_and_read f
     | A.Probe_action_write f v ->
-      T.Write_at_offset { writer=f; value=translate_expr v }
+      T.Atomic_probe_write_at_offset (translate_expr v) f
     | A.Probe_action_copy f v ->
-      T.Probe_and_copy { bytes_to_read=translate_expr v; probe_fn=f }
+      T.Atomic_probe_and_copy (translate_expr v) f
     | A.Probe_action_skip n ->
-      T.Skip { bytes_to_skip=translate_expr n }
+      T.Atomic_probe_skip (translate_expr n)
+    | A.Probe_action_fail ->
+      T.Atomic_probe_fail
   in
   match a.v with
   | A.Probe_atomic_action a ->
-    T.Probe_atomic (translate_atomic a), []
+    T.Probe_action_atomic (translate_atomic a), []
   | A.Probe_action_var i ->
     T.Probe_action_var (translate_expr i), []
   | A.Probe_action_simple f n ->
     if None? f
     then failwith "Probe action name should have already been resolved";
     let Some f = f in
-    T.Probe_fn_as_probe_m { bytes_to_read = translate_expr n; probe_fn = f }, []
+    T.Probe_action_simple (translate_expr n) f, []
   | A.Probe_action_seq hd tl ->
     let hd, ds1 = translate_probe_action hd in
     let tl, ds2 = translate_probe_action tl in
-    T.Probe_seq {hd; tl}, ds1@ds2
+    T.Probe_action_seq hd tl, ds1@ds2
   | A.Probe_action_let i a k ->
     let a = translate_atomic a in
     let tl, ds2 = translate_probe_action k in
-    T.Probe_let {i; a; tl}, ds2
+    T.Probe_action_let i a tl, ds2
   | A.Probe_action_ite e th el ->
     let th, ds1 = translate_probe_action th in
     let el, ds2 = translate_probe_action el in
-    T.Probe_ite {e=translate_expr e; then_=th; else_=el}, ds1@ds2
+    T.Probe_action_ite (translate_expr e) th el, ds1@ds2
 
 #push-options "--z3rlimit_factor 4"
 let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =

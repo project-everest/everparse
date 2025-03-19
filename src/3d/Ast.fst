@@ -494,6 +494,7 @@ type probe_atomic_action =
   | Probe_action_write : f:ident -> value:expr -> probe_atomic_action
   | Probe_action_copy : f:ident -> len:expr -> probe_atomic_action
   | Probe_action_skip : len:expr -> probe_atomic_action
+  | Probe_action_fail : probe_atomic_action
 noeq
 [@@ PpxDerivingYoJson ]
 type probe_action' =
@@ -1030,6 +1031,7 @@ and print_probe_atomic_action (p:probe_atomic_action)
   | Probe_action_write f v ->Printf.sprintf "(Probe_action_write %s(%s));" (print_ident f) (print_expr v)
   | Probe_action_copy f v -> Printf.sprintf "(Probe_action_copy %s(%s));" (print_ident f) (print_expr v)
   | Probe_action_skip n -> Printf.sprintf "(Probe_action_skip %s);" (print_expr n)
+  | Probe_action_fail -> "(Probe_action_fail);"
 
 and print_probe_call (p:probe_call) : ML string =
   match p with
@@ -1519,8 +1521,7 @@ let subst_probe_atomic_action (s:subst) (aa:probe_atomic_action) : ML probe_atom
   | Probe_action_write f value -> Probe_action_write f (subst_expr s value)
   | Probe_action_copy f len -> Probe_action_copy f (subst_expr s len)
   | Probe_action_skip len -> Probe_action_skip (subst_expr s len)
-
-
+  | Probe_action_fail -> Probe_action_fail
 
 let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
   match a.v with

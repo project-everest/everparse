@@ -119,21 +119,56 @@ type action =
 (* A subset of F* types that the translation targets *)
 noeq
 type atomic_probe_action =
-  | Probe_and_copy  { bytes_to_read : expr; probe_fn: A.ident }
-  | Probe_and_read  { reader : A.ident }
-  | Write_at_offset { value: expr; writer: A.ident }
-  | Probe_call_pure { f: A.ident; args: list expr }
-  | Probe_return    { value: expr }
-  | Skip            { bytes_to_skip: expr }
-
+  | Atomic_probe_and_copy :
+      bytes_to_read : expr ->
+      probe_fn: A.ident ->
+      atomic_probe_action
+  | Atomic_probe_and_read :
+      reader : A.ident ->
+      atomic_probe_action
+  | Atomic_probe_write_at_offset :
+      v:expr ->
+      writer : A.ident ->
+      atomic_probe_action
+  | Atomic_probe_call_pure :
+      f: A.ident ->
+      args: list expr ->
+      atomic_probe_action
+  | Atomic_probe_skip:
+      n:expr ->
+      atomic_probe_action
+  | Atomic_probe_return:
+      v:expr ->
+      atomic_probe_action
+  | Atomic_probe_fail:
+      atomic_probe_action
+      
 noeq
 type probe_action =
-  | Probe_fn_as_probe_m { bytes_to_read : expr; probe_fn: A.ident }
-  | Probe_action_var of expr
-  | Probe_atomic of atomic_probe_action
-  | Probe_seq { hd:probe_action; tl:probe_action }
-  | Probe_let { i:A.ident; a:atomic_probe_action; tl:probe_action }
-  | Probe_ite { e:expr; then_:probe_action; else_:probe_action }
+  | Probe_action_atomic :
+      atomic_probe_action ->
+      probe_action
+  | Probe_action_var :
+      expr ->
+      probe_action
+  | Probe_action_simple:
+      bytes_to_read : expr ->
+      probe_fn: A.ident ->
+      probe_action
+  | Probe_action_seq:
+      probe_action ->
+      probe_action ->
+      probe_action
+  | Probe_action_let:
+      i:A.ident ->
+      m1: atomic_probe_action ->
+      m2: probe_action ->
+      probe_action
+  | Probe_action_ite:
+      cond: expr ->
+      m1: probe_action ->
+      m2: probe_action ->
+      probe_action
   
 noeq
 type typ =

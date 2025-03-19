@@ -254,6 +254,13 @@ let skip (bytes_to_skip:U64.t)
 
 inline_for_extraction
 noextract
+let fail
+: probe_m unit
+= fun read_offset write_offset failed src dest ->
+    failed *= true
+
+inline_for_extraction
+noextract
 let if_then_else (b:bool) (m0 m1:probe_m unit)
 : probe_m unit
 = fun read_offset write_offset failed src dest ->
