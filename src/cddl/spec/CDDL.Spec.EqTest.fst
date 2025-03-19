@@ -1,8 +1,11 @@
 module CDDL.Spec.EqTest
 module FE = FStar.FunctionalExtensionality
 
+let eq_test_for (#t: Type) (x1: t) : Type =
+  FE.restricted_t t (fun x2 -> (y: bool { y == true <==> x1 == x2 }))
+
 let eq_test (t: Type) : Type =
-  FE.restricted_t t (fun x1 -> FE.restricted_t t (fun x2 -> (y: bool { y == true <==> x1 == x2 })))
+  FE.restricted_t t (fun x1 -> eq_test_for x1)
 
 let feq2 (#t1 #t2 #t: Type) (f g: (t1 -> t2 -> t)) : Tot prop =
   forall x1 x2 . f x1 x2 == g x1 x2
@@ -98,3 +101,12 @@ let map_eq
 = mk_eq_test (fun x1 x2 ->
     Map.equal_bool #t1 t2_eq x1 x2
   )
+
+let map_singleton
+  (#key: Type)
+  (#value: Type u#a)
+  (k: key)
+  (k_eq: eq_test_for k)
+  (v: value)
+: Map.t key value
+= Map.singleton k k_eq v
