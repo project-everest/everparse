@@ -106,11 +106,7 @@ let format_identifier (e:env) (i:ident) : ML ident =
     error msg i.range
 
 let add_global (e:global_env) (i:ident) (d:decl) (t:either decl_attributes macro_signature) : ML unit =
-  let insert k v =
-    Options.debug_print_string
-      (Printf.sprintf "Inserting global: %s\n" (ident_to_string k));
-    H.insert e.ge_h k.v v
-  in
+  let insert k v = H.insert e.ge_h k.v v in
 
   check_shadow e.ge_h i d.d_decl.range;
   let env = mk_env e in
@@ -138,13 +134,14 @@ let add_local (e:env) (i:ident) (t:typ) : ML unit =
 let push_generic (e:env) (g:generic_param) : ML env =
   { e with generics = g::e.generics }
 let try_lookup_generic (e:env) (i:ident) : ML (option generic_param) =
-  List.tryFind (function GenericProbeFunction i' _ -> i.v.name = i'.v.name) e.generics
+  List.tryFind (function GenericProbeFunction i' _ _ -> i.v.name = i'.v.name) e.generics
 let lookup_generic e i =
   match try_lookup_generic e i with
   | None -> error (Printf.sprintf "Generic %s not found" (ident_to_string i)) i.range
   | Some i -> i
-let try_lookup (e:env) (i:ident) : ML (option (either typ (decl & either decl_attributes macro_signature))) =
-  match H.try_find e.locals i.v with
+let try_lookup (e:env) (i:ident)
+: ML (option (either typ (decl & either decl_attributes macro_signature)))
+= match H.try_find e.locals i.v with
   | Some (_, t, true) ->
     Some (Inl t)
   | Some (j, t, false) ->  //mark it as used
@@ -153,16 +150,17 @@ let try_lookup (e:env) (i:ident) : ML (option (either typ (decl & either decl_at
     Some (Inl t)
   | None ->
     match try_lookup_generic e i with
-    | Some _ -> Some (Inl probe_m_t)
+    | Some (GenericProbeFunction _ ty _) -> Some (Inl ty)
     | _ -> 
       match H.try_find e.globals.ge_h i.v with
       | Some d -> Some (Inr d)
       | None ->
         match resolve_probe_fn_any e.globals i with
-        | Some (id, Inl t) -> Some (Inl t)
+        | Some (id, Inl ty) -> Some (Inl ty)
         | _ -> None
 
-let lookup (e:env) (i:ident) : ML (either typ (decl & either decl_attributes macro_signature)) =
+let lookup (e:env) (i:ident)
+: ML (either typ (decl & either decl_attributes macro_signature)) =
   match try_lookup e i with
   | None -> error (Printf.sprintf "Variable %s not found" (ident_to_string i)) i.range
   | Some v -> v
@@ -225,7 +223,7 @@ let generics_of_decl (d:decl) : list generic_param =
   | CaseType _ gs _ _ -> gs
   | Specialize _ _ _
   | ProbeFunction _ _ _ _
-  | CoerceProbeFunctionStub _ _
+  | CoerceProbeFunctionStub _ _ _
   | OutputType _
   | ExternType _
   | ExternFn _ _ _ _
@@ -239,17 +237,18 @@ let params_of_decl (d:decl) : list generic_param & list param =
   | TypeAbbrev _ _ _ gs params
   | Record _ gs params _ _
   | CaseType _ gs params _ -> gs, params
-  | ProbeFunction _ params _ _ -> [], params
+  | ProbeFunction _ params _ _
+  | CoerceProbeFunctionStub _ params _ -> [], params
   | Specialize _ _ _
-  | CoerceProbeFunctionStub _ _
   | OutputType _ -> [],[]
   | ExternType _ -> [],[]
   | ExternFn _ _ ps _ -> [],ps
   | ExternProbe _ _ -> [],[]
 
 
-let lookup_expr_name (e:env) (i:ident) : ML typ =
-  match lookup e i with
+let lookup_expr_name (e:env) (i:ident) 
+: ML typ
+= match lookup e i with
   | Inl t -> t
   | Inr (_, Inr ({ macro_arguments_t=[]; macro_result_t=t })) -> t
   | Inr _ ->
@@ -313,34 +312,42 @@ let type_of_constant rng (c:constant) : ML typ =
 let parser_may_fail (env:env) (t:typ) : ML bool =
   match t.v with
   | Pointer _ _ -> true
-  | Type_app hd _ _ _ ->
+  | Type_app hd _ _ _ -> (
     match lookup env hd with
     | Inr (d, Inl attrs) -> attrs.may_fail
     | _ -> false
+  )
+  | Type_arrow _ _ -> true 
 
 let typ_is_integral env (t:typ) : ML bool =
   match t.v with
   | Pointer _ _ -> false
-  | Type_app hd _ _ _ ->
+  | Type_app hd _ _ _ -> (
     match lookup env hd with
     | Inr (d, Inl attrs) -> Some? attrs.integral
     | _ -> false
+  )
+  | Type_arrow _ _ -> false
 
 let tag_of_integral_typ env (t:typ) : ML (option _) =
   match t.v with
   | Pointer _ _ -> None
-  | Type_app hd _ _ _ ->
+  | Type_app hd _ _ _ -> (
     match lookup env hd with
     | Inr (_, Inl attrs) -> attrs.integral
     | _ -> None
+  )
+  | _ -> None
 
 let tag_and_bit_order_of_integral_typ env (t:typ) : ML (tag_and_bit_order: (option integer_type & option bitfield_bit_order) { Some? (snd tag_and_bit_order) ==> Some? (fst tag_and_bit_order) }) =
   match t.v with
   | Pointer _ _ -> None, None
-  | Type_app hd _ _ _ ->
+  | Type_app hd _ _ _ -> (
     match lookup env hd with
     | Inr (_, Inl attrs) -> attrs.integral, attrs.bit_order
     | _ -> None, None
+  )
+  | _ -> None, None
 
 let has_reader (env:global_env) (id:ident) : ML bool =
   match H.try_find env.ge_h id.v with
@@ -361,12 +368,14 @@ let rec typ_weak_kind env (t:typ) : ML (option weak_kind) =
   match t.v with
   | Pointer _ (PQ i) -> typ_weak_kind env (type_of_integer_type i)
   | Type_app hd _ _ _ -> parser_weak_kind env.globals hd
+  | _ -> None
 
 let typ_has_reader env (t:typ) : ML bool =
   match t.v with
   | Pointer _ _ -> false
   | Type_app hd _ _ _ ->
     has_reader env.globals hd
+  | _ -> false
 
 let rec unfold_typ_abbrev_only (env:env) (t:typ) : ML typ =
   match t.v with
@@ -701,6 +710,11 @@ let range_of_typ_param (p:typ_param) = match p with
 let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
   : ML typ
   = match t.v with
+    | Type_arrow ts t2 ->
+      let ts = List.map (check_typ false env) ts in
+      let t2 = check_typ false env t2 in
+      { t with v = (mk_arrow ts t2).v }
+
     | Pointer t0 pq ->
       let check_pointer_qualifier : pointer_qualifier -> ML pointer_qualifier =
         function
@@ -733,13 +747,18 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
          || List.length params <> List.length ps
          then error (Printf.sprintf "Not enough arguments to %s" (ident_to_string s)) s.range;
          let gs =
-           List.map 
-            (fun e ->
+           List.map2 
+            (fun e (GenericProbeFunction _ gt _) ->
               let e, t = check_expr env e in
-              if not (eq_typ env t probe_m_t)
-              then error (Printf.sprintf "Expected a generic instantiation of a probe function; got %s of type %s" (print_expr e) (print_typ t)) e.range;
+              if not (eq_typ env t gt)
+              then 
+                error (
+                  Printf.sprintf "Expected a generic instantiation of a probe function of type %s; got %s of type %s" 
+                    (print_typ gt) (print_expr e) (print_typ t)
+                ) e.range;
               e)
             gs
+            gparams
          in
          let err t t' p : ML typ_param =
             error (Printf.sprintf 
@@ -890,6 +909,42 @@ and check_expr (env:env) (e:expr)
       let es = List.map2 check_arg es m.macro_arguments_t in
       with_range (App (Ext s) es) e.range,
       m.macro_result_t
+
+    | App (ProbeFunctionName f) es -> (
+      let ets = List.map (check_expr env) es in
+      match try_lookup env f with
+      | Some (Inl pft) ->
+        let params, probe_m_t' = destruct_arrow pft in
+        if List.length es <> List.length params
+        then 
+          error (
+            Printf.sprintf "Probe function %s expects %d arguments; got %d" (ident_to_string f) (List.length params) (List.length es)
+          ) e.range
+        else if not (eq_typ env probe_m_t' probe_m_t)
+        then error (
+            Printf.sprintf "Probe function %s expects return type %s; got %s"
+               (ident_to_string f)
+               (print_typ probe_m_t)
+               (print_typ probe_m_t')
+          ) e.range
+        else (
+          let check_arg e (t':typ) : ML expr =
+            let e, t = check_expr env e in
+            if not (eq_typ env t t')
+            then error (
+                Printf.sprintf "Probe function %s expects argument of type %s; got %s"
+                   (ident_to_string f)
+                   (print_typ t') 
+                   (print_typ t)
+              ) e.range
+            else e
+          in
+          let es = List.map2 check_arg es params in
+          with_range (App (ProbeFunctionName f) es) e.range, probe_m_t
+        )
+      | _ ->
+        error (Printf.sprintf "Probe function %s not found" (ident_to_string f)) e.range
+    )
 
     | App op es ->
       let ets = List.map (check_expr env) es in
@@ -1311,19 +1366,12 @@ let rec check_probe env a : ML (probe_action & typ) =
     let aa, t = check_atomic_probe env aa in
     { a with v=Probe_atomic_action aa }, t
 
-  | Probe_action_var i -> (
-    let _ = 
-      match lookup env i with 
-      | Inl t ->
-        if eq_typ env t probe_m_t
-        then ()
-        else error (Printf.sprintf "Expected a probe, but %s is a type %s" (print_ident i) (print_typ t))
-              i.range
-      | Inr (d, _) ->
-        error (Printf.sprintf "Expected a probe, but %s is a declaration %s" (print_ident i) (print_decl d))
-              i.range
-    in
-    { a with v=Probe_action_var i }, tunit
+  | Probe_action_var e -> (
+    let e, t = check_expr env e in
+    if not <| eq_typ env t probe_m_t
+    then error (Printf.sprintf "Expected a probe, but %s has type %s" (print_expr e) (print_typ t))
+              e.range;
+    { a with v=Probe_action_var e }, tunit
   )
   | Probe_action_simple probe_fn length ->
     let length, typ = check_expr env length in
@@ -1567,7 +1615,8 @@ let check_switch (check_field:check_field_t) (env:env) (s:switch_case)
         (match try_lookup_enum_cases env hd with
          | Some enum -> Some enum
          | _ -> fail_non_equality_type ())
-      | Type_app _ _ _ _ ->
+      | Type_app _ _ _ _
+      | Type_arrow _ _ ->
         error "Impossible, check_switch is not supposed to typecheck output/extern types!" head.range
 
     in
@@ -2234,8 +2283,9 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
     add_probe_function e id d;
     d
 
-  | CoerceProbeFunctionStub id t ->
+  | CoerceProbeFunctionStub id ps t ->
     let env = mk_env e in
+    let ps = check_params env ps in
     let tn = check_probe_function_type env t in
     add_probe_function e id d;
     d
@@ -2430,6 +2480,16 @@ let initial_global_env () =
           parser_weak_kind = WeakKindStrongPrefix;
           parser_kind_nz = Some true
         });
+      ("probe_m_unit",
+        {
+          may_fail = true;
+          integral = None;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindWeak;
+          parser_kind_nz = None
+        });
+
     ] |>
     List.iter (fun (i, attrs) ->
           let i = with_dummy_range (to_ident' i) in

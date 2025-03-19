@@ -13,11 +13,20 @@ let rec specialize_type (e:B.env) (t:typ)
 : ML (ident & typ)
 = match t.v with
   | Type_app i k gs ps -> (
+    // let insts = 
+    //   List.map (fun g ->
+    //     match g.v with
+    //     | Identifier i -> 
+    //       { g with v = Identifier (G32.name32 i) }
+    //     | App (ProbeFunctionName f) args -> 
+    //       { g with v = App (ProbeFunctionName (G32.name32 f)) args }
+    //     | _ -> failwith "Unexpected generic instantiation") gs
+    // in
     let d, _ = B.lookup_type_decl e i in
     let gs', _ = B.params_of_decl d in
     let instantiations =
       List.map
-        (function GenericProbeFunction _ t -> G32.coercion_for_type t) gs'
+        (fun (GenericProbeFunction _ _ t) -> G32.coercion_for_type t) gs'
     in
     let insts = List.map (fun i -> with_dummy_range <| Identifier i) instantiations in
     i, {t with v = Type_app i k insts ps}
@@ -25,6 +34,7 @@ let rec specialize_type (e:B.env) (t:typ)
   | Pointer t _ ->
     let i, t' = specialize_type e t in
     i, {t with v = Pointer t' (PQ UInt32)}
+  | Type_arrow _ _ -> failwith "Cannot specialize function types"
   
 
 let specialize_atomic_field (e:B.env) (af:atomic_field)
@@ -33,13 +43,18 @@ let specialize_atomic_field (e:B.env) (af:atomic_field)
   let pc =
     match af.v.field_probe with
     | None -> None
-    | Some pc ->
-      Some { 
-        pc with probe_block =
-          with_dummy_range <| 
-          Probe_action_var <|
-            (G32.coercion_for_type ht)
-      }
+    | Some pc -> (
+      let coercion = G32.coercion_for_type ht in
+      let pb =
+        match pc.probe_block.v with
+        | Probe_action_var { v = Identifier i } -> 
+          with_dummy_range <| Identifier coercion
+        | Probe_action_var { v = App (ProbeFunctionName f) args } -> 
+          with_dummy_range <| App (ProbeFunctionName coercion) args
+        | _ -> failwith "Unexpected probe block"
+      in
+      Some { pc with probe_block = with_dummy_range <| Probe_action_var pb }
+    )
   in
   let af' = {af with v = {af.v with field_type = ft; field_probe=pc}} in
   af'

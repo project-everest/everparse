@@ -47,11 +47,40 @@ and subst_fields s fs =
   | [] -> []
   | (i, e)::fs -> (i, subst_expr s e)::subst_fields s fs
 
+let eq_op (o1 o2:op) : bool =
+match o1, o2 with
+| Eq, Eq -> true
+| Neq, Neq -> true
+| And, And -> true
+| Or, Or -> true
+| Not, Not -> true
+| Plus t1, Plus t2
+| Minus t1, Minus t2
+| Mul t1, Mul t2
+| Division t1, Division t2
+| Remainder t1, Remainder t2
+| BitwiseAnd t1, BitwiseAnd t2
+| BitwiseXor t1, BitwiseXor t2
+| BitwiseOr t1, BitwiseOr t2
+| BitwiseNot t1, BitwiseNot t2
+| ShiftRight t1, ShiftRight t2
+| ShiftLeft t1, ShiftLeft t2
+| LT t1, LT t2
+| GT t1, GT t2
+| LE t1, LE t2
+| GE t1, GE t2 -> t1 = t2
+| IfThenElse, IfThenElse -> true
+| BitFieldOf s1 o1, BitFieldOf s2 o2 -> s1 = s2 && o1 = o2
+| Cast f1 t1, Cast f2 t2 -> f1 = f2 && t1 = t2
+| Ext s1, Ext s2 -> s1 = s2
+| ProbeFunctionName i1, ProbeFunctionName i2 -> A.(eq_idents i1 i2)
+| _, _ -> false
+
 let rec expr_eq e1 e2 =
   match fst e1, fst e2 with
   | Constant c1, Constant c2 -> c1=c2
   | Identifier i1, Identifier i2 -> A.(i1.v = i2.v)
-  | App hd1 args1, App hd2 args2 -> hd1 = hd2 && exprs_eq args1 args2
+  | App hd1 args1, App hd2 args2 -> eq_op hd1 hd2 && exprs_eq args1 args2
   | Record t1 fields1, Record t2 fields2 -> A.(t1.v = t2.v) && fields_eq fields1 fields2
   | _ -> false
 and exprs_eq es1 es2 =
@@ -303,6 +332,7 @@ let print_op_with_range ropt o =
     then "EverParse3d.Prelude.id"
     else Printf.sprintf "EverParse3d.Prelude.%s_to_%s" tfrom tto
   | Ext s -> s
+  | ProbeFunctionName i -> print_ident i
 
 let print_op = print_op_with_range None
 
@@ -442,7 +472,11 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
   | T_with_probe t _ _ _ -> Printf.sprintf "%s probe" (print_typ mname t)
-
+  | T_arrow [] t -> print_typ mname t
+  | T_arrow ts t ->
+    Printf.sprintf "(%s -> %s)"
+      (String.concat " -> " (List.map (print_typ mname) ts))
+      (print_typ mname t)
 and print_indexes (mname:string) (is:list index) : ML (list string) = //(decreases is) =
   match is with
   | [] -> []
@@ -566,7 +600,7 @@ let rec print_probe_action (mname:string) (p:probe_action) : ML string =
       Printf.sprintf "(Return_probe_m %s)"
         (print_expr mname value)
     | Skip { bytes_to_skip } ->
-      Printf.sprintf "(Skip_probe %s)"
+      Printf.sprintf "(Probe_action_skip %s)"
         (print_expr mname bytes_to_skip)
   in
   match p with
@@ -589,7 +623,7 @@ let rec print_probe_action (mname:string) (p:probe_action) : ML string =
       (print_ident i)
       (print_probe_action mname tl)
   | Probe_ite { e; then_; else_ } ->
-    Printf.sprintf "(Probe_action_ite %s (fun _ -> %s) (fun _ -> %s))"
+    Printf.sprintf "(Probe_action_ite %s %s %s)"
       (print_expr mname e)
       (print_probe_action mname then_)
       (print_probe_action mname else_)
@@ -1492,12 +1526,16 @@ let print_out_exprs_c modul (ds:decls) : ML string =
 let rec atyp_to_ttyp (t:A.typ) : ML typ =
   match t.v with
   | A.Pointer t pq ->
-    let t = atyp_to_ttyp t in
-    
+    let t = atyp_to_ttyp t in    
     T_pointer t A.UInt64
 
   | A.Type_app hd _b _gs _args ->
     T_app hd _b []
+  
+  | A.Type_arrow ts t ->
+    let ts = List.map atyp_to_ttyp ts in
+    let t = atyp_to_ttyp t in
+    T_arrow ts t
 
 let rec print_output_types_fields (flds:list A.out_field) : ML string =
   List.fold_left (fun s fld ->

@@ -87,11 +87,12 @@ let rec head_type (e:B.env) (t:typ) : ML ident =
   match (Binding.unfold_typ_abbrev_only e t).v with
   | Type_app hd _ _ _ -> hd
   | Pointer t _ -> head_type e t
+  | _ -> error "Cannot find head type of an arrow" t.range
 
-let probe_and_copy_type (e:B.env) (t:typ) (k:probe_action)
+let probe_and_copy_type (e:B.env) (t0:typ) (k:probe_action)
 : ML probe_action
 = let probe_and_copy_n = find_probe_fn e PQWithOffsets in
-  let t = B.unfold_typ_abbrev_and_enum e t in
+  let t = B.unfold_typ_abbrev_and_enum e t0 in
   match integer_type_of_type t with
   | None -> (
       if eq_typ t tunit then k else
@@ -101,11 +102,24 @@ let probe_and_copy_type (e:B.env) (t:typ) (k:probe_action)
         error 
           (Printf.sprintf "Cannot find probe function for type %s" (print_typ t))
           t.range
-      | Some id ->
+      | Some id -> (
+        let insts, _ = GeneralizeProbes.generic_instantiations_for_type e t in
+        FStar.IO.print_string <|
+          Printf.sprintf "****Instantiating probe function for type %s unfolded to %s with %s\n" 
+            (print_typ t0)
+            (print_typ t)
+            (String.concat ", " (List.map print_expr insts));
+        let hd =
+          match insts with
+          | [] ->
+            with_dummy_range <| Identifier id
+          | _ ->
+            with_dummy_range <| App (ProbeFunctionName id) insts
+        in
+        let hd = with_dummy_range <| Probe_action_var hd in
         with_dummy_range <|
-        Probe_action_seq
-          (with_dummy_range <| (Probe_action_var id))
-          k
+        Probe_action_seq hd k
+      )
   )
   | Some i -> 
     let size =
@@ -176,11 +190,35 @@ let alignment_bytes (af:atomic_field)
   | FieldArrayQualified ({v=Constant (Int _ n)}, ByteArrayByteSize) -> n
   | _ -> failwith "Not an alignment field"
 
-let rec coerce_record (e:B.env) (r0 r1:record)
+let rec coerce_fields (e:B.env) (r0 r1:record)
 : ML probe_action
 = match r0, r1 with
   | hd0::tl0, hd1::tl1 -> (
     match hd0.v, hd1.v with
+    | RecordField r0 i0, RecordField r1 i1 -> (
+      if not (eq_idents i0 i1)
+      then failwith <|
+            Printf.sprintf
+              "Unexpected fields: cannot coerce field %s to %s"
+              (print_ident i0)
+              (print_ident i1);
+      with_dummy_range <|
+      Probe_action_seq
+        (coerce_fields e r0 r1)
+        (coerce_fields e tl0 tl1)
+     )
+    | SwitchCaseField sw0 i0, SwitchCaseField sw1 i1 -> (
+      if not (eq_idents i0 i1)
+      then failwith <|
+            Printf.sprintf
+              "Unexpected fields: cannot coerce field %s to %s"
+              (print_ident i0)
+              (print_ident i1);
+      with_dummy_range <|
+      Probe_action_seq
+        (coerce_switch_case e sw0 sw1)
+        (coerce_fields e tl0 tl1)
+    )
     | AtomicField af0, AtomicField af1 -> (
       match TypeSizes.is_alignment_field af0.v.field_ident,
             TypeSizes.is_alignment_field af1.v.field_ident
@@ -188,13 +226,13 @@ let rec coerce_record (e:B.env) (r0 r1:record)
       | true, true ->
         let n0 = alignment_bytes af0 in
         let n1 = alignment_bytes af1 in
-        probe_and_copy_alignment e n0 n1 (coerce_record e tl0 tl1)
+        probe_and_copy_alignment e n0 n1 (coerce_fields e tl0 tl1)
       | true, false ->
         let n0 = alignment_bytes af0 in
-        skip_bytes n0 (coerce_record e tl0 r1)
+        skip_bytes n0 (coerce_fields e tl0 r1)
       | false, true ->
         let n1 = alignment_bytes af1 in
-        write_n_bytes_zero e n1 (coerce_record e r0 tl1)
+        write_n_bytes_zero e n1 (coerce_fields e r0 tl1)
       | false, false -> (
         if not (eq_idents af0.v.field_ident af1.v.field_ident)
         then failwith <|
@@ -214,16 +252,29 @@ let rec coerce_record (e:B.env) (r0 r1:record)
             | _ -> false
           in
           if t0_is_u32 && t1_is_ptr64
-          then read_and_coerce_pointer e af0.v.field_ident (coerce_record e tl0 tl1)
+          then read_and_coerce_pointer e af0.v.field_ident (coerce_fields e tl0 tl1)
           else if eq_typ af0.v.field_type af1.v.field_type
-          then probe_and_copy_type e af0.v.field_type (coerce_record e tl0 tl1)
+          then probe_and_copy_type e af0.v.field_type (coerce_fields e tl0 tl1)
           else (
             match Generate32BitTypes.has_32bit_coercion e af0.v.field_type af1.v.field_type with
-            | Some id ->
+            | Some id -> (
+              let insts, _ = GeneralizeProbes.generic_instantiations_for_type e af0.v.field_type in
+              FStar.IO.print_string <|
+                Printf.sprintf "****Instantiating probe function for type %s with %s\n" 
+                  (print_typ af0.v.field_type)
+                  (String.concat ", " (List.map print_expr insts));
+              let hd =
+                match insts with
+                | [] ->
+                  with_dummy_range <| Identifier id
+                | _ ->
+                  with_dummy_range <| App (ProbeFunctionName id) insts
+              in
               with_dummy_range <|
               Probe_action_seq 
-                (with_dummy_range <| Probe_action_var id)
-                (coerce_record e tl0 tl1)
+                (with_dummy_range <| Probe_action_var hd)
+                (coerce_fields e tl0 tl1)
+            )
             | None ->
               failwith <|
                 Printf.sprintf
@@ -236,11 +287,42 @@ let rec coerce_record (e:B.env) (r0 r1:record)
       )
     )
     | _ -> 
-      failwith "Cannot yet coerce structs with non-atomic fields"
+      failwith "Cannot yet coerce structs with non-structurally similar fields"
   )
   | [], [] ->
     probe_return_unit
   | _ -> failwith "Unexpected number of fields"
+
+and coerce_switch_case (e:B.env) (sw0 sw1:switch_case)
+: ML probe_action
+= let scrutinee0, cases0 = sw0 in
+  let scrutinee1, cases1 = sw1 in
+  if not (eq_expr scrutinee0 scrutinee1)
+  then failwith "Cannot coerce switch cases with different scrutinees";
+  if List.length cases0 <> List.length cases1
+  then failwith "Cannot coerce switch cases with different number of cases";
+  let cases = List.zip cases0 cases1 in
+  List.fold_right
+    (fun (c0, c1) k ->
+      FStar.IO.print_string <|
+        Printf.sprintf "Coercing switch case %s to %s\n" (print_case c0) (print_case c1);
+      match c0, c1 with
+      | Case e0 f0, Case e1 f1 -> (
+        if not (eq_expr e0 e1)
+        then failwith "Cannot coerce switch cases with different case expressions";
+        with_dummy_range <|
+        Probe_action_ite 
+          (with_range (App Eq [scrutinee0; e0]) e0.range)
+          (coerce_fields e [f0] [f1])
+          k
+      )
+      | DefaultCase f0, DefaultCase f1 -> (
+        coerce_fields e [f0] [f1]
+      )
+      | _ -> failwith "Cannot coerce switch cases with different case types"
+    )
+    cases
+    (probe_return_unit)
 
 let rec optimize_coercion (p:probe_action)
 : ML probe_action
@@ -275,21 +357,26 @@ let rec optimize_coercion (p:probe_action)
     { p with v = Probe_action_seq a (optimize_coercion k) }
   | Probe_action_let i a k ->
     { p with v = Probe_action_let i a (optimize_coercion k) }
+  | Probe_action_ite e t f ->
+    { p with v = Probe_action_ite e (optimize_coercion t) (optimize_coercion f) }
   | _ -> p
   
 
 let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
 : ML decl
-= let CoerceProbeFunctionStub i (CoerceProbeFunction (t0, t1)) = d.d_decl.v in
+= let CoerceProbeFunctionStub i params (CoerceProbeFunction (t0, t1)) = d.d_decl.v in
   FStar.IO.print_string <|
     Printf.sprintf "Replacing stub %s (from %s to %s)\n" i.v.name (print_ident t0) (print_ident t1);
   let d0, _ = B.lookup_type_decl e t0 in
   let d1, _ = B.lookup_type_decl e t1 in
   let coercion =
     match d0.d_decl.v, d1.d_decl.v with
-    | Record _ _ _ _ r0, Record _ _ _ _ r1 -> coerce_record e r0 r1
-    | CaseType _ _ _ r0, CaseType _ _ _ r1 -> 
-      failwith "Cannot yet coerce case types"
+    | Record _ _ _ _ r0, Record _ _ _ _ r1 ->
+      coerce_fields e r0 r1
+    | CaseType _ _ params0 r0, CaseType _ _ params1 r1 ->
+      if List.length params0 <> List.length params1
+      then failwith "Cannot coerce case types with different number of parameters";
+      coerce_switch_case e r0 r1
     | _ ->
       error
         (Printf.sprintf "Type %s is not coercible to %s" (print_ident t0) (print_ident t1))
@@ -298,7 +385,7 @@ let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
   let probe_action = optimize_coercion coercion in
   let probe_fn = { 
       d.d_decl with
-      v = ProbeFunction i [] probe_action (CoerceProbeFunction(t0, t1)) 
+      v = ProbeFunction i params probe_action (CoerceProbeFunction(t0, t1)) 
     }
   in
   { d with d_decl = probe_fn }

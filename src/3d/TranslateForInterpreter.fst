@@ -313,6 +313,7 @@ let translate_op : A.op -> ML T.op =
   | Cast None _
   | SizeOf -> failwith (Printf.sprintf "Operator `%s` should have been eliminated already"
                                   (Ast.print_op op))
+  | ProbeFunctionName i -> T.ProbeFunctionName i
 
 
 let rec translate_expr (e:A.expr) : ML T.expr =
@@ -397,6 +398,10 @@ let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
     let gs = gs |> List.map translate_expr |> List.map Inr in
     let args, decls = args |> List.map translate_typ_param |> List.split in
     T.T_app hd b (gs@List.map Inr args), List.flatten decls
+  | Type_arrow ts t ->
+    let ts, ds = ts |> List.map translate_typ |> List.split in
+    let t, d = translate_typ t in
+    T.T_arrow ts t, List.flatten ds @ d
 
 let translate_probe_entrypoint
   (p: A.probe_entrypoint)
@@ -615,6 +620,9 @@ let rec parse_typ (env:global_env)
       p_parser = q;
       p_typename = typename;
       p_fieldname = fieldname }
+  
+  | T.T_arrow _ _ ->
+    failwith "Impossible, did not expect parse_typ to be called with an arrow type!"
 
 
 let rec read_typ (env:global_env) (t:T.typ) : ML (option T.reader) =
@@ -808,7 +816,7 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
   | A.Probe_atomic_action a ->
     T.Probe_atomic (translate_atomic a), []
   | A.Probe_action_var i ->
-    T.Probe_action_var (T.Identifier i, a.A.range), []
+    T.Probe_action_var (translate_expr i), []
   | A.Probe_action_simple f n ->
     if None? f
     then failwith "Probe action name should have already been resolved";
@@ -1137,7 +1145,8 @@ let rec hoist_typ
       d, T_with_comment t c
 
     | T_pointer _ _
-    | T_with_probe _ _ _ _ ->
+    | T_with_probe _ _ _ _
+    | T_arrow _ _ ->
       [], t
 
 let add_parser_kind_nz (genv:global_env) (id:A.ident) (nz:bool) (wk: weak_kind) =
@@ -1315,7 +1324,7 @@ let parse_field (env:global_env)
     parse_grouped_fields env typename gfs, decls
 
 let generics_as_params (gs:list generic_param) =
-  List.map (function GenericProbeFunction i _ -> probe_m_t, i, Immutable) gs
+  List.map (function GenericProbeFunction i ty _ -> ty, i, Immutable) gs
 
 let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
   if A.is_noextract d then [] else
@@ -1400,7 +1409,7 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     let pb, ds' = translate_probe_action pb in
     ds@ds'@[with_comments (T.Probe_function id ps pb) false false A.(d.d_decl.comments)]
 
-  | CoerceProbeFunctionStub _ _ ->
+  | CoerceProbeFunctionStub _ _ _ ->
     failwith "Coerce probe function stub: should have been eliminated before translation"
 
   | Specialize _ _ _ ->

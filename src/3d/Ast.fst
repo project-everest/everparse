@@ -255,6 +255,7 @@ type constant =
 
 /// Operators supported in refinement expressions
 [@@ PpxDerivingYoJson ]
+noeq
 type op =
   | Eq
   | Neq
@@ -281,6 +282,7 @@ type op =
   | SizeOf
   | Cast : from:option integer_type -> to:integer_type -> op
   | Ext of string
+  | ProbeFunctionName of ident
   //OffsetOf ?
 
 /// Expressions used in refinements
@@ -368,6 +370,7 @@ and generic_inst = expr
 and typ' =
   | Type_app : ident -> t_kind -> list generic_inst -> list typ_param -> typ'
   | Pointer : typ -> pointer_qualifier -> typ'
+  | Type_arrow : args:list typ { Cons? args } -> typ -> typ'
 
 and pointer_qualifier =
   | PQ of pointer_size_t
@@ -495,7 +498,7 @@ noeq
 [@@ PpxDerivingYoJson ]
 type probe_action' =
   | Probe_atomic_action of probe_atomic_action
-  | Probe_action_var of ident
+  | Probe_action_var of expr
   | Probe_action_simple : 
     probe_fn: option ident ->
     bytes_to_read : expr -> 
@@ -615,7 +618,7 @@ type probe_qualifier =
 [@@ PpxDerivingYoJson ]
 noeq
 type generic_param =
-  | GenericProbeFunction : param_name:ident -> probe_for_type:ident -> generic_param
+  | GenericProbeFunction : param_name:ident -> k:typ -> probe_for_type:ident -> generic_param
 
 [@@ PpxDerivingYoJson ]
 noeq
@@ -692,6 +695,7 @@ type decl' =
       
   | CoerceProbeFunctionStub:
       ident ->
+      list param ->
       p:probe_function_type { CoerceProbeFunction? p } ->
       decl'
 
@@ -739,8 +743,18 @@ type type_refinement = {
 [@@ PpxDerivingYoJson ]
 let prog = list decl & option type_refinement
 
+let mk_arrow (xs:list typ) (ty:typ) : typ =
+  match xs with
+  | [] -> ty
+  | _ -> with_range (Type_arrow xs ty) ty.range
 
+let mk_arrow_ps (xs:list param) (ty:typ) : typ =
+  mk_arrow (List.Tot.map (fun (x, _, _) -> x) xs) ty
 
+let destruct_arrow (t:typ) : Tot (list typ & typ) =
+  match t.v with
+  | Type_arrow xs ty -> xs, ty
+  | _ -> [], t
 (*** Printing the source AST; for debugging only **)
 let print_constant (c:constant) =
 
@@ -799,6 +813,7 @@ let print_op = function
   | SizeOf -> "sizeof"
   | Cast _ t -> "(" ^ print_integer_type t ^ ")"
   | Ext s -> s
+  | ProbeFunctionName s -> print_ident s
 
 let rec print_expr (e:expr) : Tot string =
   match e.v with
@@ -842,6 +857,8 @@ let rec print_expr (e:expr) : Tot string =
     Printf.sprintf "%s %s" (print_op (Cast i j)) (print_expr e)
   | App (Ext s) es ->
     Printf.sprintf "%s(%s)" (print_op (Ext s)) (String.concat ", " (print_exprs es))
+  | App (ProbeFunctionName f) es ->
+    Printf.sprintf "(probe-fun %s %s)" (print_ident f) (String.concat ", " (print_exprs es))
   | App op es ->
     Printf.sprintf "(?? %s %s)" (print_op op) (String.concat ", " (print_exprs es))
 
@@ -883,6 +900,10 @@ let rec print_typ t : ML string =
      Printf.sprintf "(pointer %s (%s))"
        (print_typ t)
        (print_integer_type q)
+  | Type_arrow ts t ->
+    Printf.sprintf "%s -> %s"
+      (String.concat " -> " (List.map print_typ ts))
+      (print_typ t)
 
 let typ_as_integer_type (t:typ) : ML integer_type =
   match t.v with
@@ -980,7 +1001,7 @@ and print_probe_action (p:probe_action) : ML string =
   | Probe_atomic_action a ->
     print_probe_atomic_action a
   | Probe_action_var i ->
-    Printf.sprintf "(Probe_action_var %s)" (print_ident i)
+    Printf.sprintf "(Probe_action_var %s)" (print_expr i)
   | Probe_action_simple f n ->
     Printf.sprintf "(Probe_action_simple %s (%s))"
       (print_opt f print_ident)
@@ -1040,7 +1061,13 @@ and print_action (a:action) : ML string =
 
 and print_switch_case (s:switch_case) : ML string =
   let head, cases = s in
-  let print_case (c:case) : ML string =
+  Printf.sprintf "switch (%s) {\n
+                  %s\n\
+                 }"
+                 (print_expr head)
+                 (String.concat "\n" (List.map print_case cases))
+
+and print_case (c:case) : ML string =
     match c with
     | Case e f ->
       Printf.sprintf "case %s: %s;"
@@ -1049,23 +1076,19 @@ and print_switch_case (s:switch_case) : ML string =
     | DefaultCase f ->
       Printf.sprintf "default: %s;"
         (print_field f)
-  in
-  Printf.sprintf "switch (%s) {\n
-                  %s\n\
-                 }"
-                 (print_expr head)
-                 (String.concat "\n" (List.map print_case cases))
 
 let option_to_string (f:'a -> ML string) (x:option 'a) : ML string = print_opt x f
 
+let print_generic_param (g:generic_param)
+: ML string
+= match g with
+  | GenericProbeFunction i tt t ->
+    Printf.sprintf "(%s : (%s) probe for %s)" (print_ident i) (print_typ tt) (print_ident t)
 let print_generics generics =
-  let print_generic = function
-    | GenericProbeFunction i t -> Printf.sprintf "(%s : probe for %s)" (print_ident i) (print_ident t)
-  in
   match generics with
   | [] -> ""
   | _ -> 
-    Printf.sprintf "<%s>" (String.concat ", " (List.map print_generic generics))
+    Printf.sprintf "<%s>" (String.concat ", " (List.map print_generic_param generics))
 
 let print_attribute (a:attribute) : ML string =
   match a with
@@ -1138,8 +1161,11 @@ let print_decl' (d:decl') : ML string =
                     (print_params params)
                     (print_probe_function_type tn)
                     (print_probe_action a)
-  | CoerceProbeFunctionStub i j ->
-    Printf.sprintf "stub probe %s (for %s)" (print_ident i) (print_probe_function_type j)
+  | CoerceProbeFunctionStub i params j ->
+    Printf.sprintf "stub probe %s(%s) (for %s)" 
+      (print_ident i)
+      (print_params params)
+      (print_probe_function_type j)
   | Specialize pqs i j ->
     let print_pointer_qual i = Printf.sprintf "pointer(%s)" (print_integer_type i) in
     Printf.sprintf "specialize (%s) %s %s"
@@ -1304,13 +1330,48 @@ let decl_has_out_expr (d: decl) : Tot bool =
 /// eq_expr partially decides equality on expressions, by requiring
 /// syntactic equality
 
+let eq_idents (i1 i2:ident) : Tot bool =
+  i1.v.modul_name = i2.v.modul_name && i1.v.name = i2.v.name
+
+
+let eq_op (o1 o2:op) : bool =
+  match o1, o2 with
+  | Eq, Eq
+  | Neq, Neq
+  | And, And
+  | Or, Or
+  | Not, Not
+  | SizeOf, SizeOf
+  | IfThenElse, IfThenElse -> true
+  | BitFieldOf sz0 o0, BitFieldOf sz1 o1 -> sz0 = sz1 && o0 = o1
+  | Plus i, Plus j
+  | Minus i, Minus j 
+  | Mul i, Mul j
+  | Division i, Division j
+  | Remainder i, Remainder j
+  | BitwiseAnd i, BitwiseAnd j
+  | BitwiseOr i, BitwiseOr j
+  | BitwiseXor i, BitwiseXor j
+  | BitwiseNot i, BitwiseNot j
+  | ShiftLeft i, ShiftLeft j
+  | ShiftRight i, ShiftRight j
+  | LT i, LT j
+  | GT i, GT j
+  | LE i, LE j
+  | GE i, GE j
+    -> i = j
+  | Cast i1 t1, Cast i2 t2 -> i1 = i2 && t1 = t2
+  | Ext s1, Ext s2 -> s1 = s2
+  | ProbeFunctionName i1, ProbeFunctionName i2 -> eq_idents i1 i2
+  | _ -> false
+
 let rec eq_expr (e1 e2:expr) : Tot bool (decreases e1) =
   match e1.v, e2.v with
   | Constant i, Constant j -> i = j
   | Identifier i, Identifier j -> i.v = j.v
   | This, This -> true
   | App op1 es1, App op2 es2 ->
-    op1 = op2
+    eq_op op1 op2
     && eq_exprs es1 es2
   | _ -> false
 
@@ -1319,9 +1380,6 @@ and eq_exprs (es1 es2:list expr) : Tot bool =
   | [], [] -> true
   | hd1::es1, hd2::es2 -> eq_expr hd1 hd2 && eq_exprs es1 es2
   | _ -> false
-
-let eq_idents (i1 i2:ident) : Tot bool =
-  i1.v.modul_name = i2.v.modul_name && i1.v.name = i2.v.name
 
 /// eq_typ: syntactic equalty of types
 
@@ -1366,6 +1424,14 @@ let rec eq_typ (t1 t2:typ) : Tot bool =
   | Pointer t1 q1, Pointer t2 q2 ->
     eq_typ t1 t2
     && eq_pointer_qualifier q1 q2
+  | Type_arrow ts1 t1, Type_arrow ts2 t2 ->
+    eq_typs ts1 ts2
+    && eq_typ t1 t2
+  | _ -> false
+and eq_typs (ts1 ts2:list typ) : Tot bool =
+  match ts1, ts2 with
+  | [], [] -> true
+  | t1::ts1, t2::ts2 -> eq_typ t1 t2 && eq_typs ts1 ts2
   | _ -> false
 
 (** Common AST constants and builders **)
@@ -1460,11 +1526,8 @@ let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
   match a.v with
   | Probe_atomic_action aa ->
     {a with v = Probe_atomic_action (subst_probe_atomic_action s aa)}
-  | Probe_action_var i -> (
-    match apply s i with
-    | {v=Identifier i} -> {a with v = Probe_action_var i }
-    | _ -> failwith "subst_probe_action: expected an identifier"
-  )
+  | Probe_action_var i ->
+    { a with v = Probe_action_var (subst_expr s i) }
   | Probe_action_simple f n -> 
     {a with v = Probe_action_simple f (subst_expr s n) }
   | Probe_action_seq hd tl ->
@@ -1483,6 +1546,7 @@ let rec subst_typ (s:subst) (t:typ) : ML typ =
   match t.v with
   | Type_app hd k gs ps -> { t with v = Type_app hd k (List.map (subst_expr s) gs)  (List.map (subst_typ_param s) ps) }
   | Pointer t q -> {t with v = Pointer (subst_typ s t) q }
+  | Type_arrow ts t -> mk_arrow (List.map (subst_typ s) ts) (subst_typ s t)
 
 let subst_field_array (s:subst) (f:field_array_t) : ML field_array_t =
   match f with
@@ -1543,8 +1607,9 @@ let subst_decl' (s:subst) (d:decl') : ML decl' =
   | CaseType names generics params cases ->
     CaseType names generics (subst_params s params) (subst_switch_case s cases)
   | ProbeFunction i params a tn -> ProbeFunction i (subst_params s params) (subst_probe_action s a) tn
+  | CoerceProbeFunctionStub i params tn -> 
+    CoerceProbeFunctionStub i (subst_params s params) tn
   | Specialize _ _ _
-  | CoerceProbeFunctionStub _ _
   | OutputType _
   | ExternType _
   | ExternFn _ _ _ _
@@ -1588,7 +1653,7 @@ let extend_substitute (s:list (ident & expr))
   if List.length gs <> List.length gs' || List.length ps <> List.length ps'
   then failwith "Substitution lists must have the same length";
   s @
-  List.map2 (fun g (GenericProbeFunction x _) -> (x, g)) gs gs' @
+  List.map2 (fun g (GenericProbeFunction x _ _) -> (x, g)) gs gs' @
   List.map2 (fun p (_, x, _) -> (x, p)) ps ps' |>
   mk_subst
 
@@ -1603,7 +1668,7 @@ let idents_of_decl (d:decl) =
   | ExternFn i _ _ _
   | ExternProbe i _
   | ProbeFunction i _ _ _
-  | CoerceProbeFunctionStub i _
+  | CoerceProbeFunctionStub i _ _
   | Specialize _ _ i -> [i]
   | Record names _ _ _ _
   | CaseType names _ _ _

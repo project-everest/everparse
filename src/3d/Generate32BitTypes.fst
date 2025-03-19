@@ -169,6 +169,7 @@ let gen_decls (e:env_t) (d: decl)
 : ML (list decl & env_t)
 = match d.d_decl.v with
   | ProbeFunction id ps v (SimpleProbeFunction tn) -> (
+    
     let decl, _ = Binding.lookup_type_decl (fst e) tn in
     match gen_decl e decl with
     | None -> 
@@ -185,7 +186,7 @@ let gen_decls (e:env_t) (d: decl)
       let name = name32 id in
       let c =
         mk_decl 
-          (CoerceProbeFunctionStub (name32 id) (CoerceProbeFunction (src, tn)))
+          (CoerceProbeFunctionStub (name32 id) ps (CoerceProbeFunction (src, tn)))
           d.d_decl.range 
           [] 
           false

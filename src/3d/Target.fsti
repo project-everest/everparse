@@ -21,6 +21,7 @@ open Binding
 
 /// The same as A.op, but with `SizeOf` removed
 /// and arithmetic operators resolved to their types
+noeq
 type op =
   | Eq
   | Neq
@@ -46,6 +47,7 @@ type op =
   | BitFieldOf: size: int -> order: A.bitfield_bit_order -> op //BitFieldOf(i, from, to)
   | Cast : from:A.integer_type -> to:A.integer_type -> op
   | Ext of string
+  | ProbeFunctionName of A.ident
 
 /// Same as A.expr, but with `This` removed
 ///
@@ -152,6 +154,7 @@ type typ =
       probe_fn:probe_action ->
       dest:A.ident ->
       typ
+  | T_arrow : list typ -> typ -> typ
 
 (* An index is an F* type or an expression
    -- we reuse Ast expressions for this

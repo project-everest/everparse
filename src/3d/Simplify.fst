@@ -63,6 +63,10 @@ and simplify_typ (env:T.env_t) (t:typ)
       let s = B.resolve_record_case_output_extern_type_name (fst env) s in
       let t = { t with v = Type_app s b gs ps } in
       B.unfold_typ_abbrev_only (fst env) t
+    | Type_arrow ts t1 ->
+      let ts = List.map (simplify_typ env) ts in
+      let t1 = simplify_typ env t1 in
+      { t with v = (mk_arrow ts t1).v }
 
 and simplify_out_expr_node (env:T.env_t) (oe:with_meta_t out_expr')
   : ML (with_meta_t out_expr')
@@ -230,6 +234,12 @@ let simplify_params (env: T.env_t) (params: list param)
 : ML (list param)
 = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params
 
+let simplify_generic (env: T.env_t) (g: generic_param)
+: ML generic_param
+= let GenericProbeFunction p k i = g in
+  let k = simplify_typ env k in
+  GenericProbeFunction p k i
+
 let simplify_decl (env:T.env_t) (d:decl) : ML decl =
   match d.d_decl.v with
   | ModuleAbbrev _ _ -> d
@@ -248,6 +258,7 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     decl_with_v d (Enum t i cases)
 
   | Record tdnames generics params wopt fields ->
+    let generics = List.map (simplify_generic env) generics in
     let tdnames = simplify_typedef_names env tdnames in
     let params = simplify_params env params in
     let fields = List.map (simplify_field env) fields in
@@ -255,6 +266,7 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     decl_with_v d (Record tdnames generics params wopt fields)
 
   | CaseType tdnames generics params switch ->
+    let generics = List.map (simplify_generic env) generics in
     let tdnames = simplify_typedef_names env tdnames in
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in 
     let switch = simplify_switch_case env switch in
@@ -265,8 +277,9 @@ let simplify_decl (env:T.env_t) (d:decl) : ML decl =
     let b = simplify_probe_action env b in
     decl_with_v d (ProbeFunction id ps b tn)
     
-  | CoerceProbeFunctionStub id tn ->
-    decl_with_v d (CoerceProbeFunctionStub id tn)
+  | CoerceProbeFunctionStub id ps tn ->
+    let ps = simplify_params env ps in
+    decl_with_v d (CoerceProbeFunctionStub id ps tn)
 
   | Specialize qs t0 t1 ->
     decl_with_v d (Specialize qs t0 t1)

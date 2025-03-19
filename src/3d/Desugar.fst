@@ -166,7 +166,7 @@ let push_name (env:qenv) (name:string) : qenv =
 
 let push_generic (env:qenv) (g:generic_param)
 : ML qenv
-= let GenericProbeFunction p _ = g in
+= let GenericProbeFunction p _ _ = g in
   if List.mem p.v.name env.generic_names
   then error (Printf.sprintf "Generic name %s already in scope" p.v.name) p.range
   else { env with generic_names = p.v.name::env.generic_names }
@@ -287,6 +287,7 @@ let rec resolve_typ' (env:qenv) (t:typ') : ML typ' =
     let k = kind_of_ident env hd in
     Type_app hd k gs (List.map (resolve_typ_param env) args)
   | Pointer t q -> Pointer (resolve_typ env t) q
+  | Type_arrow ts t -> (mk_arrow (List.map (resolve_typ env) ts) (resolve_typ env t)).v
 
 and resolve_typ (env:qenv) (t:typ) : ML typ = { t with v = resolve_typ' env t.v }
 
@@ -332,7 +333,7 @@ let resolve_probe_atomic_action (env:qenv) (ac:probe_atomic_action) : ML probe_a
 let rec resolve_probe_action' (env:qenv) (act:probe_action') : ML probe_action' =
   match act with
   | Probe_atomic_action ac -> Probe_atomic_action (resolve_probe_atomic_action env ac)
-  | Probe_action_var i -> Probe_action_var (resolve_generic env i)
+  | Probe_action_var i -> Probe_action_var (resolve_expr env i)
   | Probe_action_simple f n ->
     Probe_action_simple (map_opt (resolve_ident env) f) (resolve_expr env n)
   | Probe_action_seq hd tl ->
@@ -494,9 +495,10 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
     let params, env = resolve_params env params in
     let act = resolve_probe_action env act in
     ProbeFunction f params act tn
-  | CoerceProbeFunctionStub id tn ->
+  | CoerceProbeFunctionStub id params tn ->
     let tn = resolve_probe_function_type env tn in
-    CoerceProbeFunctionStub id tn
+    let params, env = resolve_params env params in
+    CoerceProbeFunctionStub id params tn
   | Specialize qs t0 t1 ->
     Specialize qs (resolve_ident env t0) (resolve_ident env t1)
   | OutputType out_t ->

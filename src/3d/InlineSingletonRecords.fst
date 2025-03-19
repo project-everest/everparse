@@ -41,6 +41,7 @@ let simplify_atomic_field (env:env) (f:atomic_field)
   = let field = f.v in
     let field = 
       match field.field_type.v with
+      | Type_arrow _ _
       | Pointer _ _ -> field
       | Type_app hd _ gs args ->
         begin
@@ -201,7 +202,7 @@ let simplify_decl (env:env) (d:decl) : ML decl =
 
   | Specialize _ _ _
   | ProbeFunction _ _ _ _
-  | CoerceProbeFunctionStub _ _
+  | CoerceProbeFunctionStub _ _ _
   | OutputType _
   | ExternType _
   | ExternFn _ _ _ _

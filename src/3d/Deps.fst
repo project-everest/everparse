@@ -112,7 +112,8 @@ let scan_deps (fn:string) : ML scan_deps_t =
   let rec deps_of_typ (t:typ) : ML (list string) =
     match t.v with
     | Type_app hd _ gs args -> (maybe_dep hd)@(List.collect deps_of_expr gs)@(List.collect deps_of_typ_param args)
-    | Pointer t _ -> deps_of_typ t in
+    | Pointer t _ -> deps_of_typ t
+    | Type_arrow ts t -> List.collect deps_of_typ (t::ts) in
 
   let deps_of_atomic_action (ac:atomic_action) : ML (list string) =
     match ac with
@@ -146,7 +147,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
   let rec deps_of_probe_action (a:probe_action) : ML (list string) =
     match a.v with
     | Probe_atomic_action a -> deps_of_probe_atomic_action a
-    | Probe_action_var i -> []
+    | Probe_action_var e -> deps_of_expr e
     | Probe_action_simple _i len -> deps_of_expr len
     | Probe_action_seq hd tl -> (deps_of_probe_action hd)@(deps_of_probe_action tl)
     | Probe_action_let i a k -> (deps_of_probe_atomic_action a)@(deps_of_probe_action k)
@@ -232,8 +233,8 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | ProbeFunction f params probe_action _ ->
       (deps_of_params params)@
       (deps_of_probe_action probe_action)
+    | CoerceProbeFunctionStub _ ps _ -> deps_of_params ps
     | Specialize _ _ _
-    | CoerceProbeFunctionStub _ _
     | OutputType _
     | ExternType _
     | ExternFn _ _ _ _

@@ -345,6 +345,8 @@ let mk_bitwise_not (a: A.integer_type) (bitvec_arg: option string) : ML string =
   | None -> failwith "ill-formed bitwise_not"
   | Some arg -> "(bv2int (bvxor "^arg^" #b"^String.make (integer_type_bit_size a) '1'^"))"
 
+let ident_to_string = A.ident_to_string
+
 let mk_op : T.op -> option string -> ML string = function
   | T.Eq -> mk_app "="
   | T.Neq -> (fun s -> mk_app "not" (Some (mk_app "=" s)))
@@ -370,8 +372,7 @@ let mk_op : T.op -> option string -> ML string = function
   | T.BitFieldOf size order -> (fun arg -> Printf.sprintf "(get-bitfield-%ssb %d %s)" (match order with A.LSBFirst -> "l" | A.MSBFirst -> "m") size (assert_some arg))
   | T.Cast _ _ -> assert_some (* casts allowed only if they are proven not to lose precision *)
   | T.Ext s -> mk_app s
-
-let ident_to_string = A.ident_to_string
+  | T.ProbeFunctionName s -> mk_app (ident_to_string s)
 
 let mk_bitwise_arg (t: A.integer_type) (arg: string) : Tot string =
   mk_app ("(_ int2bv "^string_of_int (integer_type_bit_size t)^")") (Some arg)
@@ -1114,6 +1115,7 @@ let simple_arg_type_of_ast_typ
       then ArgBool
       else ArgOutput () (output_type_name_to_string i)
     end
+  | A.Type_arrow _ _ -> ArgExtern() //Exclude this case somehow?
 
 let rec prog_out_fields_of_ast_out_fields
   (accu: list (string & simple_arg_type true))

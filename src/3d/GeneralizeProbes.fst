@@ -31,13 +31,13 @@ module H = Hashtable
 module B = Binding
 open GlobalEnv
 
-let generalized_signature = list ident
+let generalized_signature = list (ident & typ)
 
 noeq
 type env = {
   benv:Binding.env;
   needs_probe:list ident';
-  should_generalize:H.t ident' (option (list ident))
+  should_generalize:H.t ident' (option generalized_signature)
 }
 
 let simple_probe_function_for_type (type_name:ident) : ident =
@@ -91,10 +91,11 @@ let set_generalization_signature (e:env) (id:ident) (sig:generalized_signature)
       (print_ident id))
   )
 
-let rec head_type (e:env) (t:typ) : ML ident =
+let rec head_type (e:env) (t:typ) : ML (ident & list typ_param) =
   match (Binding.unfold_typ_abbrev_only e.benv t).v with
-  | Type_app hd _ _ _ -> hd
+  | Type_app hd _ _ params -> hd, params
   | Pointer t _ -> head_type e t
+  | _ -> failwith "head_type: unexpected arrow type"
 
 let atomic_field_has_simple_probe_aux (e:env) head_type (f:atomic_field)
 : bool & option ident
@@ -130,7 +131,7 @@ let rec needs_probe_field (maybe_gen:bool) (enclosing_type:typedef_names) (e:env
 = let maybe_generalize e t = if maybe_gen then mark_for_generalize e t.typedef_abbrev else e, false in
   match f.v with
   | AtomicField f ->
-    let head_type = head_type e f.v.field_type in
+    let head_type, _ = head_type e f.v.field_type in
     let has_simple_probe, field_type_ident = atomic_field_has_simple_probe_aux e head_type f in
     if has_simple_probe
     then (let e, changed = mark_for_probe e head_type  in
@@ -184,7 +185,7 @@ let rec need_probe_decls (e:env) (ds:list decl)
 
 let generate_probe_functions (e:env) (d:decl)
 : ML (list decl)
-= let simple_probe (names:_{should_generate_probe e names}) 
+= let simple_probe (names:_{should_generate_probe e names}) params
     : ML decl
     = let simple_probe_name = simple_probe_function_for_type names.typedef_abbrev in
       let probe_size =
@@ -199,7 +200,7 @@ let generate_probe_functions (e:env) (d:decl)
       in
       let d' = 
         mk_decl 
-          (ProbeFunction simple_probe_name [] simple_probe 
+          (ProbeFunction simple_probe_name params simple_probe 
             (SimpleProbeFunction names.typedef_abbrev))
           dummy_range
           []
@@ -212,7 +213,7 @@ let generate_probe_functions (e:env) (d:decl)
     if not <| should_generate_probe e names
     then [d]
     else (
-      let d' = simple_probe names in
+      let d' = simple_probe names params in
       [d;d']
     )
   )
@@ -220,7 +221,7 @@ let generate_probe_functions (e:env) (d:decl)
     if not <| should_generate_probe e names
     then [d]
     else (
-      let d' = simple_probe names in
+      let d' = simple_probe names params in
       [d;d']
     )
   )
@@ -239,7 +240,7 @@ let generalized_record_name (e:env) (n:typedef_names)
 
 let generalize_atomic_field (e:env) (path_prefix:string) (af:atomic_field)
 : ML (atomic_field & list generic_param & generalized_signature)
-= let head_type = head_type e af.v.field_type in
+= let head_type, params = head_type e af.v.field_type in
   if not <| should_generalize_ident e head_type
   then af, [], []
   else (
@@ -267,15 +268,38 @@ let generalize_atomic_field (e:env) (path_prefix:string) (af:atomic_field)
     in
     let af = { af with v = { af.v with field_type = field_type af.v.field_type } } in
     af,
-    List.map (fun (i,t) -> GenericProbeFunction i t) generic_params,
+    List.map (fun (i,(h,t)) -> GenericProbeFunction i t h) generic_params,
     sig
   )
+
+let rec generic_instantiations_for_type (e:B.env) (tt:typ)
+: ML (list expr & typ)
+= match tt.v with
+  | Pointer t _ -> generic_instantiations_for_type e t
+  | Type_app hd _ _ args ->
+    let _, params = B.params_of_decl (fst <| B.lookup_type_decl e hd) in
+    let args, params =
+      List.map2
+        (fun a p -> 
+          match a with
+          | Inr _ -> []
+          | Inl x ->
+            let t, _, _ = p in
+            if false && eq_typ t tcopybuffer
+            then []
+            else [x, p]) args params
+      |> List.flatten
+      |> List.split
+    in
+    args, mk_arrow_ps params probe_m_t
+  | _ -> failwith "Impossible: field type is an arrow"
 
 let rec generalize_probe_field (e:env) (path_prefix:string) (f:field) 
 : ML (field & list generic_param & generalized_signature)
 = match f.v with
   | AtomicField af -> (
-    let head_type = head_type e af.v.field_type in
+    let head_type, params = head_type e af.v.field_type in
+    let params = List.collect (function Inl t -> [t] | _ -> []) params in
     let af, gs0, sig0 = generalize_atomic_field e path_prefix af in
     let f = { f with v = AtomicField af } in
     if not <| atomic_field_has_simple_probe e head_type af
@@ -290,13 +314,19 @@ let rec generalize_probe_field (e:env) (path_prefix:string) (f:field)
             reserved_prefix ^ "probe_" ^ path_prefix ^ print_ident af.v.field_ident
           ) f.range
         in
-        let probe = with_range (Probe_action_var generic_name) f.range in
+        let probe_inst, probe_sig = generic_instantiations_for_type e.benv af.v.field_type in
+        let probe =
+          match probe_inst with
+          | [] -> with_range (Identifier generic_name) f.range
+          | _ -> with_range (App (ProbeFunctionName generic_name) probe_inst) f.range
+        in
+        let probe = with_range (Probe_action_var probe) f.range in
         let probe_call = { probe_call with probe_block = probe } in
         let af = { af with v = { af.v with field_probe = Some probe_call } } in
         let f = { f with v = AtomicField af } in
         f,
-        gs0@[GenericProbeFunction generic_name head_type],
-        sig0@[head_type]
+        gs0@[GenericProbeFunction generic_name probe_sig head_type],
+        sig0@[head_type, probe_sig]
     )
   )
   | RecordField r i ->
@@ -347,7 +377,7 @@ let default_instantiation_subst (e:env) (r:range) (gs:list generic_param) (sig:g
 : ML subst
 = let insts = 
     List.map2 
-      (fun (GenericProbeFunction id _) s -> id, default_instantiation e r s)
+      (fun (GenericProbeFunction id _ _) (s, _) -> id, default_instantiation e r s)
       gs sig
   in
   Options.debug_print_string

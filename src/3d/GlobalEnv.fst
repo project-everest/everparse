@@ -124,10 +124,10 @@ let resolve_probe_fn_any (g:global_env) (id:ident)
   = match H.try_find g.ge_probe_fn id.v with
     | Some {d_decl={v=ExternProbe id pq}} ->
       Some (id, Inr pq)
-    | Some {d_decl={v=ProbeFunction id [] pq _}} ->
-      Some (id, Inl probe_m_t) 
-    | Some {d_decl={v=CoerceProbeFunctionStub id _}} ->
-      Some (id, Inl probe_m_t) 
+    | Some {d_decl={v=ProbeFunction id ps pq _}} ->
+      Some (id, Inl (mk_arrow_ps ps probe_m_t))
+    | Some {d_decl={v=CoerceProbeFunctionStub id ps _}} ->
+      Some (id, Inl (mk_arrow_ps ps probe_m_t) )
     | _ -> None
 
 let resolve_probe_fn (g:global_env) (id:ident) (pq:option probe_qualifier)
@@ -153,7 +153,7 @@ let find_probe_fn (g:global_env) (pq:probe_function_type)
       | None -> 
         match v.d_decl.v with
         | ProbeFunction id _ _ pq' 
-        | CoerceProbeFunctionStub id pq' ->
+        | CoerceProbeFunctionStub id _ pq' ->
           if eq_probe_function_type pq pq' then Some id else None
         | _ -> None
   in
