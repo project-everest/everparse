@@ -142,7 +142,7 @@ type atomic_probe_action =
       atomic_probe_action
   | Atomic_probe_fail:
       atomic_probe_action
-      
+
 noeq
 type probe_action =
   | Probe_action_atomic :
@@ -188,6 +188,7 @@ type typ =
       pointer_size:A.pointer_size_t ->
       probe_fn:probe_action ->
       dest:A.ident ->
+      as_u64:A.ident ->
       typ
   | T_arrow : list typ -> typ -> typ
 
@@ -286,7 +287,12 @@ type parser' =
   | Parse_impos     : parser'
   | Parse_with_comment: p:parser -> c:A.comments -> parser'
   | Parse_string    : p:parser -> zero:expr -> parser'
-  | Parse_with_probe : p:parser -> pointer_size:A.pointer_size_t -> probe:probe_action -> dest:A.ident -> parser'
+  | Parse_with_probe :
+      p:parser ->
+      pointer_size:A.pointer_size_t ->
+      probe:probe_action ->
+      dest:A.ident ->
+      as_u64:A.ident -> parser'
   
 and parser = {
   p_kind:parser_kind;

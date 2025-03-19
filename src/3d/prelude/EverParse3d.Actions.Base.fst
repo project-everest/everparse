@@ -1939,15 +1939,6 @@ let copy_buffer_loc (x:CP.copy_buffer_t)
 : eloc
 = CP.loc_of x
 
-let ptr_t (sz32:bool) = if sz32 then U32.t else U64.t
-
-inline_for_extraction
-noextract
-let as_u64 (#b:bool) (p:ptr_t b) : U64.t =
-  if b
-  then FStar.Int.Cast.uint32_to_uint64 p
-  else p
-
 inline_for_extraction
 noextract
 let probe_then_validate 
@@ -1960,15 +1951,17 @@ let probe_then_validate
       (#disj:_)
       (#l:eloc)
       (#ha #allow_reading:bool)
+      (#ptr_t:Type0)
       (v:validate_with_action_t p inv disj l ha allow_reading)
-      (ptr_size_32:bool)
-      (src:ptr_t ptr_size_32)
+      (src:ptr_t)
+      (as_u64:ptr_t -> PA.pure_external_action U64.t)
       (dest:CP.copy_buffer_t)
       (probe:PA.probe_m unit)
   = fun ctxt error_handler_fn input input_length pos posf ->
       CP.properties dest;
       let h0 = HST.get () in
-      let b = PA.run_probe_m probe (as_u64 src) dest in
+      let src64 = as_u64 src () in
+      let b = PA.run_probe_m probe src64 dest in
       let h1 = HST.get () in
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if b <> 0uL

@@ -526,7 +526,8 @@ open FStar.List.Tot
 noeq
 type probe_call = {
   probe_dest:ident;
-  probe_block:probe_action
+  probe_block:probe_action;
+  probe_ptr_as_u64: option ident
 }
 
 [@@ PpxDerivingYoJson ]
@@ -1455,6 +1456,7 @@ let type_of_integer_type = function
   | UInt32 -> tuint32
   | UInt64 -> tuint64
 let tcopybuffer = mk_prim_t "EVERPARSE_COPY_BUFFER_T"
+let as_u64_identity = with_dummy_range <| to_ident' "as_u64_identity"
 let probe_m_t = mk_prim_t "probe_m_unit"
 let tunknown = mk_prim_t "?"
 let unit_atomic_field rng = 
@@ -1570,10 +1572,11 @@ and subst_atomic_field (s:subst) (f:atomic_field) : ML atomic_field =
   let pa =
     match sf.field_probe with
     | None -> None
-    | Some { probe_dest; probe_block } ->
+    | Some { probe_dest; probe_block; probe_ptr_as_u64 } ->
       Some {
         probe_dest;
-        probe_block=subst_probe_action s probe_block 
+        probe_block=subst_probe_action s probe_block; 
+        probe_ptr_as_u64
       }
   in
   let sf = {

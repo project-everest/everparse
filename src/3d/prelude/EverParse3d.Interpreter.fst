@@ -32,6 +32,11 @@ let ___EVERPARSE_COPY_BUFFER_T = CP.copy_buffer_t
 
 inline_for_extraction
 let probe_m_unit = probe_m unit
+
+inline_for_extraction
+noextract
+let as_u64_identity (x:U64.t) : PA.pure_external_action U64.t = fun _ -> x
+
 (* This module defines a strongly typed abstract syntax for an
    intermediate representation of 3D programs. This is the type `typ`.
 
@@ -697,9 +702,10 @@ type atomic_action
       #inv:inv_index ->
       #disj:disj_index ->
       #l:loc_index ->
-      sz:pointer_size_t ->
+      #ptr_t:Type0 ->
       dt:dtyp k ha has_reader inv disj l ->
-      src:itype_as_type sz ->
+      src:ptr_t ->
+      as_u64:(ptr_t -> PA.pure_external_action U64.t) ->
       dest:CP.copy_buffer_t ->
       probe:probe_action ->
       atomic_action (join_inv inv (NonTrivial (A.copy_buffer_inv dest)))
@@ -737,10 +743,10 @@ let atomic_action_as_action
       A.action_assignment x rhs
     | Action_call c ->
       c
-    | Action_probe_then_validate #nz #wk #k #_hr #inv #l sz dt src dest probe ->
+    | Action_probe_then_validate #nz #wk #k #_hr #inv #l dt src as_u64 dest probe ->
       A.index_equations();
       let v = dtyp_as_validator dt in
-      A.probe_then_validate v (sz=UInt32) src dest (probe_action_as_probe_m probe)
+      A.probe_then_validate v src as_u64 dest (probe_action_as_probe_m probe)
 
 (* A sub-language of monadic actions.
 
@@ -1075,6 +1081,7 @@ let t_probe_then_validate
       (fieldname:string)
       (probe:probe_m unit)
       (dest:CP.copy_buffer_t)
+      (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
       (#ha #has_reader #i #disj:_)
       (#l:_)
@@ -1088,7 +1095,7 @@ let t_probe_then_validate
  = T_with_dep_action fieldname
      (DT_IType pointer_size)
      (fun src ->
-        Atomic_action (Action_probe_then_validate pointer_size td src dest (Probe_action_var probe)))
+        Atomic_action (Action_probe_then_validate td src as_u64 dest (Probe_action_var probe)))
 
 [@@specialize]
 let t_probe_then_validate_alt
@@ -1096,6 +1103,7 @@ let t_probe_then_validate_alt
       (fieldname:string)
       (probe:probe_action)
       (dest:CP.copy_buffer_t)
+      (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
       (#ha #has_reader #i #disj:_)
       (#l:_)
@@ -1111,6 +1119,7 @@ let t_probe_then_validate_alt
       fieldname
       (probe_action_as_probe_m probe)
       dest
+      as_u64
       td
 
 (* Type denotation of `typ` *)

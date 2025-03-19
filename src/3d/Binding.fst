@@ -1494,15 +1494,43 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
                             dest.range;
         dest
       in
+      let check_probe_ptr_as_u64 env (as_u64:option ident) 
+        : ML (option ident)
+        = let ptr_size =
+            match sf.field_type.v with
+            | Pointer _ (PQ sz) -> sz
+            | _ ->
+              error (
+                  Printf.sprintf "Probes are only allowed on pointer fields, got %s"
+                    (print_typ sf.field_type)
+              ) f.range
+          in
+          let coercion =
+            match ptr_size with
+            | UInt64 -> Some as_u64_identity
+            | UInt32 -> (
+              match GlobalEnv.resolve_extern_coercion (global_env_of_env env) tuint32 tuint64 with
+              | None ->
+                error (Printf.sprintf "Could not find a coercion from 32-bit to 64-bit pointers; please add an `extern PURE UINT64 <CoercionName> (UINT33 ptr)`")
+                      f.range
+              | Some i -> Some i
+            )
+            | _ ->
+              error (Printf.sprintf "Probes are only allowed on 32-bit or 64-bit pointers, got %s"
+                      (print_integer_type ptr_size)) f.range
+          in
+          coercion
+      in
       match sf.field_probe with
       | None -> None
       | Some p ->
         let probe_dest = check_dest env p.probe_dest in
         let probe_block, t = check_probe env p.probe_block in
+        let probe_ptr_as_u64 = check_probe_ptr_as_u64 env p.probe_ptr_as_u64 in
         if not (eq_typ env t tunit)
         then error (Printf.sprintf "Probe block has type %s instead of unit" (print_typ t)) 
                   p.probe_block.range;
-        Some { probe_dest; probe_block }
+        Some { probe_dest; probe_block; probe_ptr_as_u64 }
       
     in        
     if extend_scope then add_local env sf.field_ident sf.field_type;
@@ -1530,10 +1558,6 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
               f.range
       | _ -> ()
     in
-    Options.debug_print_string
-      (Printf.sprintf "Field %s has comments <%s>\n"
-                  (print_ident sf.field_ident)
-                  (String.concat "\n" f.comments));
     { f with v = sf }
 
 let is_strong_prefix_field_array (a: field_array_t) : Tot bool =

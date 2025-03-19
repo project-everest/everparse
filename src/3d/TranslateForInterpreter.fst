@@ -610,9 +610,9 @@ let rec parse_typ (env:global_env)
     let u64_or_u32, _ = translate_typ (A.type_of_integer_type pointer_size) in
     parse_typ env typename fieldname u64_or_u32
 
-  | T.T_with_probe content_type integer_type probe dest -> 
+  | T.T_with_probe content_type integer_type probe as_u64 dest -> 
     let p = parse_typ env typename fieldname content_type in
-    let q = T.Parse_with_probe p integer_type probe dest in
+    let q = T.Parse_with_probe p integer_type probe as_u64 dest in
     let u64_or_u32, _ = translate_typ (A.type_of_integer_type integer_type) in
     let u64_or_u32_parser = parse_typ env typename fieldname u64_or_u32 in
     { p_kind = u64_or_u32_parser.p_kind;
@@ -775,7 +775,7 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_with_action _ _ _
   | T.Parse_if_else _ _ _
   | T.Parse_string _ _
-  | T.Parse_with_probe _ _ _ _
+  | T.Parse_with_probe _ _ _ _ _
     -> false
   | T.Parse_map p _
   | T.Parse_refinement _ p _
@@ -847,11 +847,16 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
   in
   match f.v.field_probe with
   | Some probe_call -> (
+    let as_u64 =
+      match probe_call.probe_ptr_as_u64 with
+      | None -> failwith "Impossible: probe_ptr_as_u64 should have been resolved"
+      | Some i -> i
+    in
     let probe_action, dest, ds = translate_probe_call probe_call in
     match f.v.field_type.v with
     | Pointer t (PQ a) ->
       let t, ds1 = translate_typ t in
-      let sf_typ = T.T_with_probe t a probe_action dest in
+      let sf_typ = T.T_with_probe t a probe_action dest as_u64 in
       T.({ sf_dependence=sf.field_dependence;
            sf_ident=sf.field_ident;
            sf_typ=sf_typ }), 
@@ -1147,7 +1152,7 @@ let rec hoist_typ
       d, T_with_comment t c
 
     | T_pointer _ _
-    | T_with_probe _ _ _ _
+    | T_with_probe _ _ _ _ _
     | T_arrow _ _ ->
       [], t
 

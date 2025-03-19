@@ -303,14 +303,14 @@ with_probe:
         match fields with 
         | [("length", l); ("destination", {v=Identifier d})] ->
           let p = with_range (Probe_action_simple (probe_fn_opt, l)) $startpos in
-          { probe_block = p; probe_dest=d }
+          { probe_block = p; probe_dest=d; probe_ptr_as_u64=None }
         | _ ->
           error "Expected 'length' and 'destination' fields in probe" rng
       )
       | None, Some a -> (
         match fields with
         | [("destination", {v=Identifier e})] ->
-          { probe_dest=e; probe_block=a }
+          { probe_dest=e; probe_block=a; probe_ptr_as_u64=None }
         | _ -> error "Expected 'destination' field in probe" rng
       )        
     }

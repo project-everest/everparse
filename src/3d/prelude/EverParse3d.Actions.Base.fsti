@@ -906,6 +906,7 @@ val mk_external_action
 val copy_buffer_inv (x:CP.copy_buffer_t) : slice_inv
 val copy_buffer_loc (x:CP.copy_buffer_t) : eloc
 
+
 inline_for_extraction
 noextract
 val probe_then_validate
@@ -918,9 +919,10 @@ val probe_then_validate
       (#disj:disjointness_pre)
       (#l:eloc)
       (#ha #allow_reading:bool)
+      (#ptr_t:Type0)
       (v:validate_with_action_t p inv disj l ha allow_reading)
-      (ptr_size_32:bool)
-      (src:(if ptr_size_32 then U32.t else U64.t))
+      (src:ptr_t)
+      (as_u64: ptr_t -> PA.pure_external_action U64.t)
       (dest:CP.copy_buffer_t)
       (probe:PA.probe_m unit)
   : action (conj_inv inv (copy_buffer_inv dest))

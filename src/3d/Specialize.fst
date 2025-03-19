@@ -13,15 +13,6 @@ let rec specialize_type (e:B.env) (t:typ)
 : ML (ident & typ)
 = match t.v with
   | Type_app i k gs ps -> (
-    // let insts = 
-    //   List.map (fun g ->
-    //     match g.v with
-    //     | Identifier i -> 
-    //       { g with v = Identifier (G32.name32 i) }
-    //     | App (ProbeFunctionName f) args -> 
-    //       { g with v = App (ProbeFunctionName (G32.name32 f)) args }
-    //     | _ -> failwith "Unexpected generic instantiation") gs
-    // in
     let d, _ = B.lookup_type_decl e i in
     let gs', _ = B.params_of_decl d in
     let instantiations =
