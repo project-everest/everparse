@@ -7,6 +7,8 @@ SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
 MAKE="$(which gmake >/dev/null 2>&1 && echo gmake || echo make) $EVERPARSE_MAKE_OPTS"
 DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
 
+Z3_LATEST_VERSION=4.13.0
+
 # We do not read any of these from the environment. This builds a
 # package from the current master branches, or the existing checkouts in
 # FStar/ and karamel/.
@@ -44,6 +46,12 @@ else
     exe=
 fi
 
+download () {
+    source="$1"
+    target="$2"
+    curl -L -o "$target" "$source"
+}
+
 platform=$(uname -m)
 z3=z3$exe
 if ! Z3_DIR=$(dirname $(which $z3)) ; then
@@ -51,7 +59,7 @@ if ! Z3_DIR=$(dirname $(which $z3)) ; then
         if ! [[ -d z3 ]] ; then
             z3_tagged=Z3-4.8.5
             z3_archive=z3-4.8.5-x64-win.zip
-            wget --output-document=$z3_archive https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive
+            download https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive $z3_archive
             unzip $z3_archive
             mv z3-4.8.5-x64-win z3
             chmod +x z3/bin/z3.exe
@@ -64,7 +72,7 @@ if ! Z3_DIR=$(dirname $(which $z3)) ; then
             # Download a dependency-free z3
             z3_tagged=z3-4.8.5-linux-clang
             z3_archive=$z3_tagged-$platform.tar.gz
-            wget --output-document=$z3_archive https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive
+            download https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive $z3_archive
             tar xzf $z3_archive
         fi
         Z3_DIR="$PWD/z3"
@@ -275,13 +283,22 @@ make_everparse() {
 
     # Download and copy clang-format
     if $is_windows ; then
-        wget --output-document=everparse/bin/clang-format.exe https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe
+        download https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe everparse/bin/clang-format.exe
     fi
 
     # Download and build the latest z3 for test case generation purposes
-    if ! $is_windows ; then
+    if $is_windows ; then
+        z3_tagged=z3-$Z3_LATEST_VERSION
+	z3_basename=z3-$Z3_LATEST_VERSION-x64-win
+	! [[ -e $z3_basename ]]
+        z3_archive=$z3_basename.zip
+	[[ -f $z3_archive ]] ||	download https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive $z3_archive
+        unzip $z3_archive
+        rm -rf $z3_basename/bin/*.pdb
+        mv $z3_basename "$PWD/everparse/z3-latest"
+    else
         if ! [[ -d z3-latest ]] ; then
-            git clone --branch z3-4.13.0 https://github.com/Z3Prover/z3 z3-latest
+            git clone --branch z3-$Z3_LATEST_VERSION https://github.com/Z3Prover/z3 z3-latest
         fi
         z3_latest_dir="$PWD/everparse/z3-latest"
         mkdir -p "$z3_latest_dir"
@@ -292,16 +309,21 @@ make_everparse() {
         popd
     fi
 
+    # Set executable permissions on EXE and DLL on Windows
+    if $is_windows ; then
+        chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/z3-latest/bin/*.exe everparse/z3-latest/bin/*.dll
+    fi
+
     # licenses
     mkdir -p everparse/licenses
     $cp $FSTAR_PKG_ROOT/LICENSE everparse/licenses/FStar
     $cp $KRML_HOME/LICENSE-APACHE everparse/licenses/KaRaMeL-Apache
     $cp $KRML_HOME/LICENSE-MIT everparse/licenses/KaRaMeL-MIT
     $cp $EVERPARSE_HOME/LICENSE everparse/licenses/EverParse
-    wget --output-document=everparse/licenses/z3 https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt
-    wget --output-document=everparse/licenses/libffi6 https://raw.githubusercontent.com/libffi/libffi/master/LICENSE
+    download https://raw.githubusercontent.com/Z3Prover/z3/master/LICENSE.txt everparse/licenses/z3
+    download https://raw.githubusercontent.com/libffi/libffi/master/LICENSE everparse/licenses/libffi6
     if $is_windows ; then
-        wget --output-document=everparse/licenses/clang-format https://raw.githubusercontent.com/llvm/llvm-project/main/clang/LICENSE.TXT
+        download https://raw.githubusercontent.com/llvm/llvm-project/main/clang/LICENSE.TXT everparse/licenses/clang-format
     fi
     if $is_windows ; then
         {
@@ -314,18 +336,13 @@ in accordance with Section 4.d.1 of the GNU LGPL v3.
 
 EOF
         }
-        wget --output-document=everparse/licenses/gnulgplv3 https://www.gnu.org/licenses/lgpl-3.0.txt
+        download https://www.gnu.org/licenses/lgpl-3.0.txt everparse/licenses/gnulgplv3
         cat everparse/licenses/gnulgplv3 >> everparse/licenses/libgmp10
         rm everparse/licenses/gnulgplv3
-        wget --output-document=everparse/licenses/gnugplv3 https://www.gnu.org/licenses/gpl-3.0.txt
+        download https://www.gnu.org/licenses/gpl-3.0.txt everparse/licenses/gnugplv3
         cat everparse/licenses/gnugplv3 >> everparse/licenses/libgmp10
         rm everparse/licenses/gnugplv3
-    fi
-    
-    # Reset permissions and build the package
-    if $is_windows ; then
-        chmod a+x everparse/bin/*.exe everparse/bin/*.dll
-    fi
+    fi    
 }
 
 zip_everparse() {
@@ -378,7 +395,7 @@ nuget_everparse() {
 
         # Download nuget.exe to create the package
         nuget_exe_url=https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
-        wget $nuget_exe_url
+        download $nuget_exe_url nuget.exe
         chmod a+x nuget.exe
 
         # Run the pack command

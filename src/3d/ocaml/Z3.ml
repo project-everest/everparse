@@ -32,6 +32,7 @@ let with_z3 (debug: bool) (transcript: string option) (f: (z3 -> 'a)) : 'a =
         is_from := true
       end;
       let s = input_line ch_from_z3 in
+      let s = String.trim s in (* eliminate remaining line ending on Windows *)
       if debug then print_endline s;
       maybe_output_string ch_transcript "; ";
       maybe_output_line ch_transcript s;
@@ -68,14 +69,29 @@ let with_z3 (debug: bool) (transcript: string option) (f: (z3 -> 'a)) : 'a =
 type z3_thread = int
 
 let with_z3_thread (debug: bool) (transcript: string option) (f: (z3 -> unit)) : z3_thread =
-  let pid = Unix.fork () in
-  if pid = 0
-  then begin
-    with_z3 debug transcript f;
-    exit 0
-  end
-  else pid
-
+  let phi () = with_z3 debug transcript f in
+  if Sys.win32
+  then
+    begin
+      phi ();
+      0
+    end
+  else
+    begin
+      let pid = Unix.fork () in
+      if pid = 0
+      then begin
+          phi ();
+          exit 0
+        end
+      else pid
+    end
+      
 let wait_for_z3_thread pid =
-  print_endline "Waiting for Z3...";
-  ignore (Unix.waitpid [] pid)
+  if Sys.win32
+  then ()
+  else
+    begin
+      print_endline "Waiting for Z3...";
+      ignore (Unix.waitpid [] pid)
+    end

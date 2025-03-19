@@ -10,6 +10,8 @@ FSTAR_EXE ?= fstar.exe
 
 3D=$(EVERPARSE_HOME)/bin/3d.exe --fstar $(FSTAR_EXE)
 
+3D_Z3_EXECUTABLE ?= z3-4.13.3
+
 ifeq (,$(KRML_HOME))
   KRML_HOME := $(realpath ../../../../karamel)
 endif
@@ -33,7 +35,7 @@ clean_out_files=\
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter z3-testgen-test
 
 .PHONY: iter
 
@@ -93,6 +95,12 @@ elf-test: ELF.3d
 	mkdir -p out.batch
 	$(3D) --odir out.batch --batch ELF.3d
 	$(CXX) -o out.batch/elf-test -I out.batch $(addprefix out.batch/, ELF.c ELFWrapper.c) TestELF.cpp
+
+z3-testgen-test: ELF.3d
+	mkdir -p out.z3-testgen
+	$(3D) --z3_executable $(3D_Z3_EXECUTABLE) --batch --odir out.z3-testgen ELFTestGen.3d --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+
+.PHONY: z3-testgen-test
 
 %-test: %.3d
 	mkdir -p out.batch

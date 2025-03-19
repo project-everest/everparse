@@ -1,4 +1,11 @@
+let is_windows () = Sys.win32
+
 let dirname = Filename.dirname
+
+let mkdir dir =
+  if Sys.file_exists dir && Sys.is_directory dir
+  then ()
+  else Sys.mkdir dir 0o755
 
 (* The filename without its path *)
 
@@ -126,6 +133,9 @@ let file_contents f =
   let s = really_input_string ic l in
   close_in ic;
   s
+
+let overwrite_file filename =
+  BatFile.with_file_out filename (fun _ -> ())
 
 let write_witness_to_file w filename =
   BatFile.with_file_out filename (fun out ->
