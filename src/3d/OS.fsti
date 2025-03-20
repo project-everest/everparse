@@ -12,6 +12,8 @@ val basename : string -> Tot string
 
 val concat : string -> string -> Tot string
 
+val concat_if_not_absolute: string -> string -> Tot string
+
 (* The filename without its extension *)
 
 val remove_extension: string -> Tot string
