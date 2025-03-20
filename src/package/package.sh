@@ -7,8 +7,6 @@ SED=$(which gsed >/dev/null 2>&1 && echo gsed || echo sed)
 MAKE="$(which gmake >/dev/null 2>&1 && echo gmake || echo make) $EVERPARSE_MAKE_OPTS"
 DATE=$(which gdate >/dev/null 2>&1 && echo gdate || echo date)
 
-Z3_LATEST_VERSION=4.13.0
-
 # We do not read any of these from the environment. This builds a
 # package from the current master branches, or the existing checkouts in
 # FStar/ and karamel/.
@@ -53,35 +51,6 @@ download () {
 }
 
 platform=$(uname -m)
-z3=z3$exe
-if ! Z3_DIR=$(dirname $(which $z3)) ; then
-    if $is_windows ; then
-        if ! [[ -d z3 ]] ; then
-            z3_tagged=Z3-4.8.5
-            z3_archive=z3-4.8.5-x64-win.zip
-            download https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive $z3_archive
-            unzip $z3_archive
-            mv z3-4.8.5-x64-win z3
-            chmod +x z3/bin/z3.exe
-            for f in z3/bin/*.dll ; do if [[ -f $f ]] ; then chmod +x $f ; fi ; done
-            if [[ -f z3/lib/*.dll ]] ; then chmod +x z3/lib/*.dll ; fi
-        fi
-        Z3_DIR="$PWD/z3/bin"
-    elif [[ "$OS" = "Linux" ]] && [[ "$platform" = x86_64 ]] ; then
-        if ! [[ -d z3 ]] ; then
-            # Download a dependency-free z3
-            z3_tagged=z3-4.8.5-linux-clang
-            z3_archive=$z3_tagged-$platform.tar.gz
-            download https://github.com/tahina-pro/z3/releases/download/$z3_tagged/$z3_archive $z3_archive
-            tar xzf $z3_archive
-        fi
-        Z3_DIR="$PWD/z3"
-    else
-        echo "z3 4.8.5 is missing, please add it to your PATH"
-        exit 1
-    fi
-    export PATH="$Z3_DIR:$PATH"
-fi
 
 if $is_windows ; then
     LIBGMP10_DLL=$(which libgmp-10.dll)
@@ -190,8 +159,6 @@ make_everparse() {
         karamel_commit_date_hr=$(print_date_utc_of_iso_hr "$karamel_commit_date_iso")" UTC+0000"
     fi
 
-    z3_version_string=$($Z3_DIR/$z3 --version)
-
     # Install ocaml-sha if not found
     if ! ocamlfind query sha ; then
         opam install --yes sha
@@ -200,13 +167,11 @@ make_everparse() {
     # Rebuild EverParse
     $MAKE -C "$EVERPARSE_HOME" "$@"
 
-    # Copy dependencies and Z3
+    # Copy dependencies
     mkdir -p everparse/bin
     if $is_windows
     then
         $cp $LIBGMP10_DLL everparse/bin/
-        $cp $Z3_DIR/*.exe everparse/bin/
-	find $Z3_DIR/.. -name *.dll -exec cp {} everparse/bin \;
         # copy libffi-6 in all cases (ocaml-sha also seems to need it)
         $cp $(which libffi-6.dll) everparse/bin/
     else
@@ -239,7 +204,6 @@ make_everparse() {
             }
             $cp $libffi everparse/bin/
         }
-        $cp $Z3_DIR/z3 everparse/bin/
     fi
 
     # Copy F*
@@ -248,6 +212,8 @@ make_everparse() {
     cp $FSTAR_PKG_ROOT/lib/fstar/fstar.include everparse/lib/fstar/
     cp -r $FSTAR_PKG_ROOT/lib/fstar/ulib everparse/lib/fstar/ulib
     cp -r $FSTAR_PKG_ROOT/lib/fstar/ulib.checked everparse/lib/fstar/ulib.checked
+    cp -r $FSTAR_PKG_ROOT/lib/fstar/z3-4.8.5 everparse/lib/fstar/
+    cp -r $FSTAR_PKG_ROOT/lib/fstar/z3-4.13.3 everparse/lib/fstar/
 
     # Copy KaRaMeL
     $cp -L $KRML_HOME/krml everparse/bin/krml$exe
@@ -279,39 +245,15 @@ make_everparse() {
     echo "This is EverParse $everparse_version" >> everparse/README
     echo "Running with F* $fstar_commit_id ($fstar_commit_date_hr)" >> everparse/README
     echo "Running with KaRaMeL $karamel_commit_id ($karamel_commit_date_hr)" >> everparse/README
-    echo -n "Running with $z3_version_string" >> everparse/README
 
     # Download and copy clang-format
     if $is_windows ; then
         download https://prereleases.llvm.org/win-snapshots/clang-format-2663a25f.exe everparse/bin/clang-format.exe
     fi
 
-    # Download and build the latest z3 for test case generation purposes
-    if $is_windows ; then
-        z3_tagged=z3-$Z3_LATEST_VERSION
-	z3_basename=z3-$Z3_LATEST_VERSION-x64-win
-	! [[ -e $z3_basename ]]
-        z3_archive=$z3_basename.zip
-	[[ -f $z3_archive ]] ||	download https://github.com/Z3Prover/z3/releases/download/$z3_tagged/$z3_archive $z3_archive
-        unzip $z3_archive
-        rm -rf $z3_basename/bin/*.pdb
-        mv $z3_basename "$PWD/everparse/z3-latest"
-    else
-        if ! [[ -d z3-latest ]] ; then
-            git clone --branch z3-$Z3_LATEST_VERSION https://github.com/Z3Prover/z3 z3-latest
-        fi
-        z3_latest_dir="$PWD/everparse/z3-latest"
-        mkdir -p "$z3_latest_dir"
-        pushd z3-latest
-        python scripts/mk_make.py --prefix="$z3_latest_dir"
-        $MAKE -C build "$@"
-        $MAKE -C build install "$@"
-        popd
-    fi
-
     # Set executable permissions on EXE and DLL on Windows
     if $is_windows ; then
-        chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/z3-latest/bin/*.exe everparse/z3-latest/bin/*.dll
+        chmod a+x everparse/bin/*.exe everparse/bin/*.dll everparse/lib/fstar/z3-*/bin/*.exe everparse/lib/fstar/z3-*/bin/*.dll
     fi
 
     # licenses
