@@ -40,14 +40,14 @@ jobs:
       - uses: actions/checkout@master
         with:
           path: FStar
-          repository: ${{inputs.fstar_repo}}
-          ref: ${{inputs.fstar_ref}}
+          repository: ${{ inputs.fstar_repo || 'FStarLang/FStar' }}
+          ref: ${{ inputs.fstar_ref || 'master' }}
 
       - uses: actions/checkout@master
         with:
           path: karamel
-          repository: ${{inputs.karamel_repo}}
-          ref: ${{inputs.karamel_ref}}
+          repository: ${{ inputs.karamel_repo || 'FStarLang/karamel' }}
+          ref: ${{ inputs.karamel_ref || 'master' }}
 
       - uses: ocaml/setup-ocaml@v3
         with:
