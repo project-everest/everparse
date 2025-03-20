@@ -1121,16 +1121,33 @@ let print_c_entry
                 else ";")
     else ""
   in
+  let external_api_from_decl (accu: list string) (d: decl) : Tot (list string) =
+    match fst d with
+      | Type_decl d ->
+        let probe_modules = List.Tot.map (fun ep -> match ep.probe_ep_fn.v.modul_name with Some s -> s | _ -> "") d.decl_name.td_entrypoint_probes in
+        List.Tot.filter (fun x -> x <> "" && not (List.Tot.mem x accu)) probe_modules `List.Tot.append` accu
+      | _ -> accu
+  in
+  let include_external_api_from_module (accu: string) (modu: string) : Tot string =
+    Printf.sprintf "%s#include \"%s_ExternalAPI.h\"\n" accu modu
+  in
+  let include_external_api =
+    ds
+    |> List.Tot.fold_left external_api_from_decl []
+    |> List.Tot.fold_left include_external_api_from_module ""
+  in
   let impl =
     Printf.sprintf
       "#include \"%sWrapper.h\"\n\
        #include \"EverParse.h\"\n\
        #include \"%s.h\"\n\
+       %s\
        %s\n\n\
        %s\n\n\
        %s\n"
       modul
       modul
+      include_external_api
       error_callback_proto
       default_error_handler
       (impls |> String.concat "\n\n")
