@@ -582,8 +582,9 @@ let write_makefile
   (files: list string)
 : FStar.All.ML unit
 =
-  let makefile = Options.get_makefile_name () in
-  let file = FStar.IO.open_write_file makefile in
+  let makefile_final = Options.get_makefile_name () in
+  let makefile_tmp = makefile_final ^ ".tmp" in
+  let file = FStar.IO.open_write_file makefile_tmp in
   let {graph = g; rules; all_files} = produce_makefile mtype everparse_h emit_output_types_defs skip_o_rules clang_format files in
   FStar.IO.write_string file (String.concat "" (List.Tot.map (print_make_rule mtype everparse_h input_stream_binding) rules));
   let write_all_ext_files (ext_cap: string) (ext: string) : FStar.All.ML unit =
@@ -618,4 +619,5 @@ let write_makefile
   write_all_ext_files "H" "h";
   write_all_ext_files "C" "c";
   write_all_ext_files "O" (oext mtype);
-  FStar.IO.close_write_file file
+  FStar.IO.close_write_file file;
+  OS.rename makefile_tmp makefile_final

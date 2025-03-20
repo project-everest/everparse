@@ -29,6 +29,8 @@ val run_cmd: string -> list string -> FStar.All.ML unit
 
 (* Probe a file *)
 
+val rename: (src: string) -> (dst: string) -> FStar.All.ML unit
+
 val file_exists: string -> FStar.All.ML bool
 
 val file_contents: string -> FStar.All.ML string
