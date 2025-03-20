@@ -439,9 +439,8 @@ let produce_output_types_o_rule
       to = o;
       args = c_to_o mtype o c; }]
   else
-    let _ = FStar.IO.print_string (Printf.sprintf "%s has no output types\n" modul) in
     []
-    
+
 let produce_o_rule
   mtype
   (everparse_h: bool)
