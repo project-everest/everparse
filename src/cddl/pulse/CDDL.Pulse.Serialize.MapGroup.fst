@@ -1314,4 +1314,73 @@ let impl_serialize_map_zero_or_more_iterator
     (cddl_map_iterator_next map_share map_gather map_next map_entry_key map_entry_value map_entry_share map_entry_gather _ _)
     (rel_map_iterator_prop cbor_map_iterator_match)
     
-    
+inline_for_extraction noextract [@@noextract_to "krml"]
+noeq
+type map_slice_iterator_t
+  (impl_elt1: Type0) (impl_elt2: Type0)
+  ([@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) ([@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
+: Type0
+= {
+  base: R.ref (slice (impl_elt1 & impl_elt2));
+  key_eq: Ghost.erased (EqTest.eq_test (dfst spec1));
+}
+
+let rel_map_slice_iterator
+  (impl_elt1: Type0) (impl_elt2: Type0)
+  (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (spec2: Ghost.erased (Iterator.type_spec impl_elt2))
+: rel (map_slice_iterator_t impl_elt1 impl_elt2 spec1 spec2) (Map.t (dfst spec1) (list (dfst spec2)))
+= mk_rel (fun i l -> exists* s . R.pts_to i.base s ** rel_slice_of_table i.key_eq (dsnd spec1) (dsnd spec2) s l)
+
+module SM = Pulse.Lib.SeqMatch
+
+#push-options "--print_implicits"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn map_slice_iterator_is_empty
+  (impl_elt1: Type0) (impl_elt2: Type0)
+: cddl_map_iterator_is_empty_gen_t _ _ (map_slice_iterator_t impl_elt1 impl_elt2) (rel_map_slice_iterator _ _)
+= (spec1: _)
+  (spec2: _)
+  (i: _)
+  (#l: _)
+{
+  unfold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
+  with gs . assert (R.pts_to i.base gs);
+  let s = !(i.base);
+  rewrite each gs as s;
+  unfold (rel_slice_of_table i.key_eq (dsnd spec1) (dsnd spec2) s l);
+  with l' . assert (rel_slice_of_list (rel_pair (dsnd spec1) (dsnd spec2)) false s l');
+  S.pts_to_len s.s;
+  SM.seq_list_match_length (rel_pair (dsnd spec1) (dsnd spec2)) _ _;
+  fold (rel_slice_of_table i.key_eq (dsnd spec1) (dsnd spec2) s l);
+  fold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
+  admit ()
+}
+
+(*
+    rel_slice_of_list #(impl_elt1 & impl_elt2)
+      #(Mkdtuple2?._1 #Type0
+          #(rel impl_elt1)
+          (reveal #(Iterator.type_spec impl_elt1) spec1) &
+        Mkdtuple2?._1 #Type0
+          #(rel impl_elt2)
+          (reveal #(Iterator.type_spec impl_elt2) spec2))
+      (rel_pair #impl_elt1
+          #(Mkdtuple2?._1 #Type0
+              #(rel impl_elt1)
+              (reveal #(Iterator.type_spec impl_elt1) spec1))
+          (dsnd #Type0
+              #(rel impl_elt1)
+              (reveal #(Iterator.type_spec impl_elt1) spec1))
+          #impl_elt2
+          #(Mkdtuple2?._1 #Type0
+              #(rel impl_elt2)
+              (reveal #(Iterator.type_spec impl_elt2) spec2))
+          (dsnd #Type0
+              #(rel impl_elt2)
+              (reveal #(Iterator.type_spec impl_elt2) spec2)))
+      false
+      s
+      l’
+
+
