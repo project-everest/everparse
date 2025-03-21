@@ -1270,7 +1270,7 @@ let alloc_ptr_arg
 Printf.sprintf "
   %s _contents_%s;
   %s *%s = &_contents_%s;
-  bzero((void*)%s, sizeof(%s));
+  memset((void*)%s, 0, sizeof(%s));
 "
   ty arg_var
   ty arg_var arg_var
@@ -1287,7 +1287,7 @@ let rec print_outparameter
   | ArgBool
   | ArgInt _ ->
     out "
-  printf(\"";
+  printf(\"// ";
     out expr;
     out " = %ld\\n\", ((uint64_t) (";
     out expr;
@@ -1343,7 +1343,7 @@ let print_witness_call_as_c
     uint64_t output = ";
   print_witness_call_as_c_aux out validator_name arg_types witness_length args num;
   out "
-    printf(\"  ";
+    printf(\"  // ";
   print_witness_call_as_c_aux out validator_name arg_types witness_length args num;
   out " // \");
     BOOLEAN result = !EverParseIsError(output);
@@ -1355,11 +1355,12 @@ let print_witness_call_as_c
       result = consumes_all_bytes_if_successful;
     }
     if (result) {
-      printf (\"ACCEPTED\\n\\n\");
+      printf (\"ACCEPTED\\n\");
 ";
   print_outparameters out p arg_types;
   out
 "
+      printf (\"\\n\");
     }
     else if (!consumes_all_bytes_if_successful)
       printf (\"REJECTED (not all bytes consumed)\\n\\n\");
@@ -1379,18 +1380,28 @@ let print_witness_as_c_aux
   (num: nat)
 : ML unit
 =
-  out "  uint8_t witness";
-  out (string_of_int num);
-  out "[";
-  out (string_of_int len);
-  out "] = {";
-  begin match Seq.seq_to_list witness with
-  | [] -> ()
-  | a :: q ->
-    out (string_of_int a);
-    List.iter (fun i -> out ", "; out (string_of_int i)) q
+  let layer_name = "witness" ^ string_of_int num in
+  out "  uint8_t ";
+  if len > 0
+  then begin
+    out layer_name;
+    out "[";
+    out (string_of_int len);
+    out "] = {";
+    begin match Seq.seq_to_list witness with
+    | [] -> ()
+    | a :: q ->
+      out (string_of_int a);
+      List.iter (fun i -> out ", "; out (string_of_int i)) q
+    end;
+    out "};"
+  end
+  else begin
+    out "*";
+    out layer_name;
+    out " = NULL;"
   end;
-  out "};"
+  ()
 
 let print_witness_as_c_gen
   (out: (string -> ML unit))
@@ -1699,9 +1710,9 @@ static void TestErrorHandler (
   (void) error_code;
   (void) input;
   if (*context) {
-    printf(\"Reached from position %ld: type name %s, field name %s\\n\", start_pos, typename_s, fieldname);
+    printf(\"// Reached from position %ld: type name %s, field name %s\\n\", start_pos, typename_s, fieldname);
   } else {
-    printf(\"Parsing failed at position %ld: type name %s, field name %s. Reason: %s\\n\", start_pos, typename_s, fieldname, reason);
+    printf(\"// Parsing failed at position %ld: type name %s, field name %s. Reason: %s\\n\", start_pos, typename_s, fieldname, reason);
     *context = 1;
   }
 }
@@ -1906,14 +1917,14 @@ int main(int argc, char** argv) {
     munmap(vbuf, len);
   close(testfile);
   if (EverParseIsError(result)) {
-    printf(\"Witness from %s REJECTED because validator failed\\n\", filename);
+    printf(\"// Witness from %s REJECTED because validator failed\\n\", filename);
     return 2;
   };
   if (result != (uint64_t) len) { // consistent with the postcondition of validate_with_action_t' (see also valid_length)
-    printf(\"Witness from %s REJECTED because validator only consumed %ld out of %ld bytes\\n\", filename, result, len);
+    printf(\"// Witness from %s REJECTED because validator only consumed %ld out of %ld bytes\\n\", filename, result, len);
     return 1;
   }
-  printf(\"Witness from %s ACCEPTED\\n\", filename);
+  printf(\"// Witness from %s ACCEPTED\\n\", filename);
   "^outparameters^"
   return 0;
 }
