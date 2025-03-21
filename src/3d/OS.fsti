@@ -12,6 +12,8 @@ val basename : string -> Tot string
 
 val concat : string -> string -> Tot string
 
+val concat_if_not_absolute: string -> string -> Tot string
+
 (* The filename without its extension *)
 
 val remove_extension: string -> Tot string
@@ -28,6 +30,8 @@ val replace_backslashes: string -> Tot string
 val run_cmd: string -> list string -> FStar.All.ML unit
 
 (* Probe a file *)
+
+val rename: (src: string) -> (dst: string) -> FStar.All.ML unit
 
 val file_exists: string -> FStar.All.ML bool
 
