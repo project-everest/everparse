@@ -1,0 +1,62 @@
+extern probe ProbeAndCopy
+extern probe (WITH_OFFSETS) ProbeAndCopyLen
+extern probe (READ UINT32) ProbeAndReadU32
+extern probe (WRITE UINT32) WriteU32
+extern probe (WRITE UINT64) WriteU64
+extern PURE UINT64 UlongToPtr(UINT32 ptr)
+
+aligned
+typedef struct _A {
+	UINT32 a1;
+	UINT32 a2;
+} A;
+
+
+
+aligned
+typedef struct _BB {
+	UINT32 b1_1;
+	UINT8 *b1_2;
+} BB;
+
+aligned
+typedef struct _B (EVERPARSE_COPY_BUFFER_T a_out) {
+	UINT32 b1;
+	A *pa probe (length=sizeof(A), destination=a_out);
+	BB b2;
+} B;
+
+aligned
+typedef struct _C (EVERPARSE_COPY_BUFFER_T a_out, EVERPARSE_COPY_BUFFER_T b_out)
+{
+	UINT32 c1;
+	B(a_out) *pb probe (length=sizeof(B), destination=b_out);
+} C;
+
+aligned
+typedef struct _D64 (
+	EVERPARSE_COPY_BUFFER_T a_out,
+	EVERPARSE_COPY_BUFFER_T b_out,
+	EVERPARSE_COPY_BUFFER_T c_out,
+)
+{
+	UINT32 c1;
+	C(a_out, b_out) *pc probe (length=sizeof(C), destination=c_out);
+} D64;
+
+specialize (pointer(UINT64), pointer(UINT32)) D64 D32;
+
+entrypoint
+casetype _D (
+	Bool requestor32,
+	EVERPARSE_COPY_BUFFER_T a_out,
+	EVERPARSE_COPY_BUFFER_T b_out,
+	EVERPARSE_COPY_BUFFER_T c_out
+)
+{
+	switch (requestor32) 
+	{
+		case true:  D32(a_out, b_out, c_out) d32;
+		case false: D64(a_out, b_out, c_out) d64;
+	}
+} D;

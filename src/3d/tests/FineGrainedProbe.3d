@@ -1,0 +1,38 @@
+extern probe ProbeAndCopy
+extern probe (WITH_OFFSETS) ProbeAndCopyLen
+extern probe (READ UINT32) ProbeAndReadU32
+extern probe (WRITE UINT32) WriteU32
+extern probe (WRITE UINT64) WriteU64
+extern PURE UINT64 UlongToPtr(UINT32 ptr)
+
+aligned
+typedef struct _A {
+	UINT32 a1;
+	UINT32 a2;
+} A;
+
+
+aligned
+typedef struct _B (EVERPARSE_COPY_BUFFER_T a_out) {
+	UINT32 b1;
+	A *pa probe
+	   ProbeAndCopy(length=sizeof(A), destination=a_out);
+	UINT32 b2;
+	UINT32 b3;
+} B;
+
+entrypoint
+aligned
+typedef struct _C (EVERPARSE_COPY_BUFFER_T a_out, EVERPARSE_COPY_BUFFER_T b_out)
+{
+	UINT32 c1;
+	B(a_out) *pointer(UINT32) pb
+	   probe (destination=b_out) {
+        ProbeAndCopyLen(4);
+        WriteU32(0);
+        var p32 = ProbeAndReadU32();
+        var p64 = UlongToPtr(p32);
+        WriteU64(p64);
+        ProbeAndCopyLen(8);
+   };
+} C;

@@ -56,12 +56,17 @@ let rec simplify_typ_param (env:T.env_t) (p:typ_param) : ML typ_param =
 and simplify_typ (env:T.env_t) (t:typ)
   : ML typ
   = match t.v with
-    | Pointer t -> {t with v=Pointer (simplify_typ env t)}
-    | Type_app s b ps ->
+    | Pointer t q -> {t with v=Pointer (simplify_typ env t) q}
+    | Type_app s b gs ps ->
+      let gs = List.map (simplify_expr env) gs in
       let ps = List.map (simplify_typ_param env) ps in
       let s = B.resolve_record_case_output_extern_type_name (fst env) s in
-      let t = { t with v = Type_app s b ps } in
+      let t = { t with v = Type_app s b gs ps } in
       B.unfold_typ_abbrev_only (fst env) t
+    | Type_arrow ts t1 ->
+      let ts = List.map (simplify_typ env) ts in
+      let t1 = simplify_typ env t1 in
+      { t with v = (mk_arrow ts t1).v }
 
 and simplify_out_expr_node (env:T.env_t) (oe:with_meta_t out_expr')
   : ML (with_meta_t out_expr')
@@ -105,7 +110,39 @@ and simplify_action_opt (env:T.env_t) (a:option action) : ML (option action) =
   | None -> None
   | Some a -> Some (simplify_action env a)
 
-
+let simplify_probe_atomic_action (env:T.env_t) (a:probe_atomic_action)
+  : ML probe_atomic_action
+  = match a with
+    | Probe_action_return e ->
+      Probe_action_return (simplify_expr env e)
+    | Probe_action_call f args ->
+      Probe_action_call f (List.map (simplify_expr env) args)
+    | Probe_action_read f ->
+      Probe_action_read f
+    | Probe_action_write f v ->
+      Probe_action_write f (simplify_expr env v)
+    | Probe_action_copy f v ->
+      Probe_action_copy f (simplify_expr env v)
+    | Probe_action_skip e ->
+      Probe_action_skip (simplify_expr env e)
+    | Probe_action_fail ->
+      Probe_action_fail
+    
+let rec simplify_probe_action (env:T.env_t) (a:probe_action) : ML probe_action =
+  match a.v with
+  | Probe_action_var i -> a
+  | Probe_action_simple f l -> 
+    {a with v = Probe_action_simple f (simplify_expr env l) }
+  | Probe_atomic_action aa ->
+    {a with v = Probe_atomic_action (simplify_probe_atomic_action env aa)}
+  | Probe_action_seq hd tl ->
+    {a with v = Probe_action_seq (simplify_probe_action env hd) (simplify_probe_action env tl) }
+  | Probe_action_let i aa k ->
+    {a with v = Probe_action_let i (simplify_probe_atomic_action env aa) (simplify_probe_action env k) }
+  | Probe_action_ite hd then_ else_ ->
+    {a with v = Probe_action_ite (simplify_expr env hd) (simplify_probe_action env then_)
+                                 (simplify_probe_action env else_) }
+ 
 let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   match f with
   | FieldScalar -> FieldScalar
@@ -113,13 +150,19 @@ let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   | FieldString sz -> FieldString (map_opt (simplify_expr env) sz)
   | FieldConsumeAll -> FieldConsumeAll
 
+let simplify_probe (env:T.env_t) (p:probe_call) : ML probe_call =
+  match p with
+  | { probe_dest; probe_block; probe_ptr_as_u64 } ->
+    let probe_block = simplify_probe_action env probe_block in
+    { probe_dest; probe_block; probe_ptr_as_u64 }
+
 let simplify_atomic_field (env:T.env_t) (f:atomic_field)
   : ML atomic_field
   = let sf = f.v in
     let ft = simplify_typ env sf.field_type in
     let fa = simplify_field_array env sf.field_array_opt in
     let fc = sf.field_constraint |> map_opt (simplify_expr env) in
-    let fp = sf.field_probe |> map_opt (fun fp -> { fp with probe_length=simplify_expr env fp.probe_length } ) in
+    let fp = sf.field_probe |> map_opt (simplify_probe env) in
     let fact =
       match sf.field_action with
       | None -> None
@@ -189,45 +232,71 @@ let simplify_typedef_names (env: T.env_t) (tdnames: typedef_names) : ML typedef_
       typedef_attributes = List.map (simplify_attribute env) tdnames.typedef_attributes;
   }
 
+let simplify_params (env: T.env_t) (params: list param)
+: ML (list param)
+= List.map (fun (t, i, q) -> simplify_typ env t, i, q) params
+
+let simplify_generic (env: T.env_t) (g: generic_param)
+: ML generic_param
+= let GenericProbeFunction p k i = g in
+  let k = simplify_typ env k in
+  GenericProbeFunction p k i
+
 let simplify_decl (env:T.env_t) (d:decl) : ML decl =
   match d.d_decl.v with
   | ModuleAbbrev _ _ -> d
   | Define i None c -> d
   | Define i (Some t) c -> decl_with_v d (Define i (Some (simplify_typ env t)) c)
 
-  | TypeAbbrev t i ->
+  | TypeAbbrev attrs t i gs ps ->
+    let attrs = List.map (simplify_attribute env) attrs in
+    let ps = simplify_params env ps in
     let t' = simplify_typ env t in
     B.update_typ_abbrev (fst env) i t';
-    decl_with_v d (TypeAbbrev t' i)
+    decl_with_v d (TypeAbbrev attrs t' i gs ps)
 
   | Enum t i cases ->
     let t = simplify_typ env t in
     decl_with_v d (Enum t i cases)
 
-  | Record tdnames params wopt fields ->
+  | Record tdnames generics params wopt fields ->
+    let generics = List.map (simplify_generic env) generics in
     let tdnames = simplify_typedef_names env tdnames in
-    let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
+    let params = simplify_params env params in
     let fields = List.map (simplify_field env) fields in
     let wopt = match wopt with | None -> None | Some w -> Some (simplify_expr env w) in
-    decl_with_v d (Record tdnames params wopt fields)
+    decl_with_v d (Record tdnames generics params wopt fields)
 
-  | CaseType tdnames params switch ->
+  | CaseType tdnames generics params switch ->
+    let generics = List.map (simplify_generic env) generics in
     let tdnames = simplify_typedef_names env tdnames in
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in 
     let switch = simplify_switch_case env switch in
-    decl_with_v d (CaseType tdnames params switch)
+    decl_with_v d (CaseType tdnames generics params switch)
+
+  | ProbeFunction id ps b tn ->
+    let ps = simplify_params env ps in
+    let b = simplify_probe_action env b in
+    decl_with_v d (ProbeFunction id ps b tn)
+    
+  | CoerceProbeFunctionStub id ps tn ->
+    let ps = simplify_params env ps in
+    decl_with_v d (CoerceProbeFunctionStub id ps tn)
+
+  | Specialize qs t0 t1 ->
+    decl_with_v d (Specialize qs t0 t1)
 
   | OutputType out_t ->
     decl_with_v d (OutputType ({out_t with out_typ_fields=simplify_out_fields env out_t.out_typ_fields}))
 
   | ExternType tdnames -> d
 
-  | ExternFn f ret params ->
+  | ExternFn f ret params pure ->
     let ret = simplify_typ env ret in
     let params = List.map (fun (t, i, q) -> simplify_typ env t, i, q) params in
-    decl_with_v d (ExternFn f ret params)
+    decl_with_v d (ExternFn f ret params pure)
 
-  | ExternProbe _ -> d
+  | ExternProbe _ _ -> d
   
 
 let simplify_prog benv senv (p:list decl) =

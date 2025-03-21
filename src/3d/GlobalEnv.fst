@@ -80,24 +80,103 @@ type global_env = {
   ge_cfg: option (Config.config & string)
 }
 
-let default_probe_fn (g:global_env)
-  : ML (option ident)
-  = if H.length g.ge_probe_fn <> 1
-    then None 
-    else (
-      match H.fold (fun k v _ -> Some v) g.ge_probe_fn (None #decl) with
-      | Some {d_decl={v=ExternProbe id}} -> Some id
-      | _ -> None
-    )
+let copy_hash_table #k #v (h:H.t k v) : ML (H.t k v) =
+  let h' = H.create 100 in
+  let f k v = H.insert h' k v in
+  H.iter f h;
+  h'
 
-let resolve_probe_fn (g:global_env) (id:ident)
-  : ML (option ident)
+let copy_global_env (g:global_env) : ML global_env =
+  let h = copy_hash_table g.ge_h in
+  let out_t = copy_hash_table g.ge_out_t in
+  let extern_t = copy_hash_table g.ge_extern_t in
+  let extern_fn = copy_hash_table g.ge_extern_fn in
+  let probe_fn = copy_hash_table g.ge_probe_fn in
+  let cfg = g.ge_cfg in
+  { 
+    ge_h=h;
+    ge_out_t=out_t; 
+    ge_extern_t=extern_t;
+    ge_extern_fn=extern_fn;
+    ge_probe_fn=probe_fn;
+    ge_cfg=cfg
+  }
+  
+let extern_probe_fn_qual (g:global_env) (pq:option probe_qualifier)
+: ML (option ident)
+= let finder k v out =
+      match out with
+      | Some _ -> out
+      | None -> 
+        match v.d_decl.v with
+        | ExternProbe id pq' ->
+          if pq=pq' then Some id else None
+        | _ -> None
+  in
+  H.fold finder g.ge_probe_fn None
+
+let default_probe_fn (g:global_env)
+: ML (option ident)
+= extern_probe_fn_qual g None
+
+let resolve_probe_fn_any (g:global_env) (id:ident)
+  : ML (option (ident & either typ (option probe_qualifier)))
   = match H.try_find g.ge_probe_fn id.v with
-    | Some {d_decl={v=ExternProbe id}} -> Some id
+    | Some {d_decl={v=ExternProbe id pq}} ->
+      Some (id, Inr pq)
+    | Some {d_decl={v=ProbeFunction id ps pq _}} ->
+      Some (id, Inl (mk_arrow_ps ps probe_m_t))
+    | Some {d_decl={v=CoerceProbeFunctionStub id ps _}} ->
+      Some (id, Inl (mk_arrow_ps ps probe_m_t) )
     | _ -> None
+
+let resolve_probe_fn (g:global_env) (id:ident) (pq:option probe_qualifier)
+  : ML (option ident)
+  = match resolve_probe_fn_any g id with
+    | Some (id, Inr pq') -> if pq=pq' then Some id else None
+    | _ -> None
+
+let eq_probe_function_type pq0 pq1 : ML bool =
+  match pq0, pq1 with
+  | SimpleProbeFunction t0, SimpleProbeFunction t1 -> eq_idents t0 t1
+  | CoerceProbeFunction (t0, t1), CoerceProbeFunction (t0', t1') ->
+    FStar.IO.print_string <|
+      Printf.sprintf "Comparing %s to %s\n" (print_probe_function_type pq0) (print_probe_function_type pq1);
+    eq_idents t0 t0' && eq_idents t1 t1'
+  | _, _ -> false
+
+let find_probe_fn (g:global_env) (pq:probe_function_type)
+: ML (option ident)
+= let finder k v out : ML (option ident) =
+      match out with
+      | Some _ -> out
+      | None -> 
+        match v.d_decl.v with
+        | ProbeFunction id _ _ pq' 
+        | CoerceProbeFunctionStub id _ pq' ->
+          if eq_probe_function_type pq pq' then Some id else None
+        | _ -> None
+  in
+  H.fold finder g.ge_probe_fn None
 
 let fields_of_type (g:global_env) (typename:ident)
 : ML (option (list field))
 = match H.try_find g.ge_h typename.v with
-  | Some ({d_decl={v=Record _ _ _ fields}}, _) -> Some fields
+  | Some ({d_decl={v=Record _ _ _ _ fields}}, _) -> Some fields
   | _ -> None
+
+let resolve_extern_coercion (g:global_env) (t0 t1:typ)
+: ML (option ident)
+= let finder k v out =
+      match out with
+      | Some _ -> out
+      | None -> 
+        match v.d_decl.v with
+        | ExternFn id t1' [(t0', _, _)] true ->
+          if eq_typ t0 t0' && eq_typ t1 t1' 
+          then Some id
+          else None
+        | _ -> None
+  in
+  H.fold finder g.ge_extern_fn None
+

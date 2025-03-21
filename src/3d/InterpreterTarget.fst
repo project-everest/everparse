@@ -246,7 +246,7 @@ let tag_of_parser p
     | Parse_impos -> "Parse_impos"
     | Parse_with_comment _ _ -> "Parse_with_comment"
     | Parse_string _ _ -> "Parse_string"
-    | Parse_with_probe _ _ _ _ -> "Parse_with_probe"
+    | Parse_with_probe _ _ _ _ _ -> "Parse_with_probe"
 
 let as_lam (x:T.lam 'a)
   : lam 'a
@@ -379,7 +379,7 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
         (typ_indexes_of_parser p)
         (typ_indexes_of_action a)
 
-    | T.Parse_with_probe p _ _ dest ->
+    | T.Parse_with_probe p _ _ dest _ ->
       let i, l, d, s = typ_indexes_of_parser p in 
       typ_indexes_union
            (i, l, d, s)
@@ -517,9 +517,9 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
     | T.Parse_weaken_right p _ ->
       typ_of_parser p
 
-    | T.Parse_with_probe p probe_fn len dest ->
+    | T.Parse_with_probe p sz probe_fn dest as_u64 ->
       let d = dtyp_of_parser p in
-      T_probe_then_validate fn d probe_fn len dest
+      T_probe_then_validate fn d sz probe_fn dest as_u64
 
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
@@ -573,7 +573,7 @@ let rec has_action_of_typ (t:typ)
   | T_at_most _ _ t -> has_action_of_typ t
   | T_exact _ _ t -> has_action_of_typ t
   | T_string _ t _ -> has_action_of_dtyp t
-  | T_probe_then_validate _ t _ _ _ -> true
+  | T_probe_then_validate _ _ _ _ _ _ -> true
 
 let check_validity_of_typ_indexes (td:T.type_decl) indexes =
   let rec atomic_locs_of l =
@@ -893,12 +893,22 @@ let rec print_typ (mname:string) (t:typ)
                      (print_dtyp mname d)
                      (T.print_expr mname z)
 
-    | T_probe_then_validate fn dt probe_fn len dest ->
-      Printf.sprintf "(t_probe_then_validate \"%s\" %s %s %s %s)"
+    | T_probe_then_validate fn dt sz (T.Probe_action_var probe_fn) dest as_u64 ->
+      Printf.sprintf "(t_probe_then_validate %s \"%s\" %s %s %s %s)"
+                     (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
                      fn
-                     (T.print_maybe_qualified_ident mname probe_fn)
-                     (T.print_expr mname len)
+                     (T.print_expr mname probe_fn)
                      (T.print_maybe_qualified_ident mname dest)
+                     (print_ident mname as_u64)
+                     (print_dtyp mname dt)
+
+    | T_probe_then_validate fn dt sz probe_fn dest as_u64 ->
+      Printf.sprintf "(t_probe_then_validate_alt %s \"%s\" %s %s %s %s)"
+                     (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
+                     fn
+                     (T.print_probe_action mname probe_fn)
+                     (T.print_maybe_qualified_ident mname dest)
+                     (print_ident mname as_u64)
                      (print_dtyp mname dt)
 
 let print_param mname (p:T.param) =
@@ -946,9 +956,12 @@ let print_eloc mname = print_index (print_eloc' mname)
 let rec print_disj' mname (d:disj)
   : ML string
   = match d with
-    | Disj_pair i j -> Printf.sprintf "(A.disjoint %s %s)" (print_eloc' mname i) (print_eloc' mname j)
+    | Disj_pair i j -> Printf.sprintf "(NonTrivial <| A.disjoint %s %s)" (print_eloc' mname i) (print_eloc' mname j)
     | Disj_conj i j -> Printf.sprintf "(join_disj %s %s)" (print_disj' mname i) (print_disj' mname j)
-let print_disj mname = print_index (print_disj' mname)
+let print_disj mname (i:index disj) =
+  match i with
+  | None -> "Trivial"
+  | Some i -> print_disj' mname i
 
 let print_td_iface is_entrypoint mname root_name binders args
                    inv eloc disj ha ar pk_wk pk_nz =
@@ -1053,15 +1066,23 @@ let print_binding mname (td:type_decl)
         args
   in
   let validate_binding =
-    let cinline =
-      if td.name.td_entrypoint
-      || td.attrs.is_exported
-      then ""
-      else "; CInline"
+    let attribs =
+      // if tdn.td_noextract
+      // then "[@@ specialize; noextract_to \"krml\"]\nnoextract\ninline_for_extraction"
+      // else 
+      (
+        let cinline =
+          if td.name.td_entrypoint
+          || td.attrs.is_exported
+          then ""
+          else "; CInline"
+        in
+        Printf.sprintf "[@@normalize_for_extraction specialization_steps%s]" cinline
+      )
     in
-    Printf.sprintf "[@@normalize_for_extraction specialization_steps%s]\n\
-                            let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
-                    cinline
+    Printf.sprintf "%s\n\
+                    let validate_%s %s = as_validator \"%s\" (def'_%s %s)\n"
+                    attribs
                     root_name
                     binders
                     root_name
@@ -1153,6 +1174,14 @@ let print_decl mname (d:decl)
     match fst d with
     | T.Assumption _ -> T.print_assumption mname d, ""
     | T.Definition _ -> "", T.print_definition mname d
+    | T.Probe_function id params body ->
+      let impl =
+          Printf.sprintf "[@@ normalize_for_extraction specialization_steps]\nlet %s %s = probe_action_as_probe_m <| %s\n\n"
+            (T.print_ident id)
+            (T.print_params mname params)
+            (T.print_probe_action mname body)
+      in
+      impl, ""
     | _ -> "", ""
     end
   | Inr td -> print_binding mname td

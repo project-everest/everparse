@@ -190,9 +190,10 @@ type typ : Type =
   | T_probe_then_validate:
       fn:non_empty_string ->
       t:dtyp ->
-      probe:A.ident ->
-      len:expr ->
+      sz:A.pointer_size_t ->
+      probe:T.probe_action ->
       dest:A.ident ->
+      as_u64:A.ident ->
       typ
 
 val typ_indexes : Type0

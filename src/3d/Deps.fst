@@ -111,8 +111,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
 
   let rec deps_of_typ (t:typ) : ML (list string) =
     match t.v with
-    | Type_app hd _ args -> (maybe_dep hd)@(List.collect deps_of_typ_param args)
-    | Pointer t -> deps_of_typ t in
+    | Type_app hd _ gs args -> (maybe_dep hd)@(List.collect deps_of_expr gs)@(List.collect deps_of_typ_param args)
+    | Pointer t _ -> deps_of_typ t
+    | Type_arrow ts t -> List.collect deps_of_typ (t::ts) in
 
   let deps_of_atomic_action (ac:atomic_action) : ML (list string) =
     match ac with
@@ -134,6 +135,25 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Action_let _i a k -> (deps_of_atomic_action a)@(deps_of_action k)
     | Action_act a -> deps_of_action a in
 
+  let deps_of_probe_atomic_action (a:probe_atomic_action) : ML (list string) =
+    match a with
+    | Probe_action_return e -> deps_of_expr e
+    | Probe_action_call f args -> List.collect deps_of_expr args
+    | Probe_action_read f -> []
+    | Probe_action_write f v -> deps_of_expr v
+    | Probe_action_copy f len -> deps_of_expr len
+    | Probe_action_skip len -> deps_of_expr len
+    | Probe_action_fail -> [] in
+
+  let rec deps_of_probe_action (a:probe_action) : ML (list string) =
+    match a.v with
+    | Probe_atomic_action a -> deps_of_probe_atomic_action a
+    | Probe_action_var e -> deps_of_expr e
+    | Probe_action_simple _i len -> deps_of_expr len
+    | Probe_action_seq hd tl -> (deps_of_probe_action hd)@(deps_of_probe_action tl)
+    | Probe_action_let i a k -> (deps_of_probe_atomic_action a)@(deps_of_probe_action k)
+    | Probe_action_ite e th el -> deps_of_expr e @ deps_of_probe_action th @ deps_of_probe_action el
+  in
   let deps_of_params params : ML (list string) =
     params |> List.collect (fun (t, _, _) -> deps_of_typ t) in
 
@@ -159,7 +179,9 @@ let scan_deps (fn:string) : ML scan_deps_t =
       (deps_of_field_array_t af.field_array_opt)@
       (deps_of_opt deps_of_expr af.field_constraint)@
       (deps_of_opt deps_of_field_bitwidth_t af.field_bitwidth)@
-      (deps_of_opt (fun (a, _) -> deps_of_action a) af.field_action) in
+      (deps_of_opt (fun (a, _) -> deps_of_action a) af.field_action)@
+      (deps_of_opt (fun pc -> deps_of_probe_action pc.probe_block @ maybe_dep pc.probe_dest) af.field_probe)
+  in
 
   let rec deps_of_field (f:field) : ML (list string) = 
     match f.v with
@@ -196,21 +218,28 @@ let scan_deps (fn:string) : ML scan_deps_t =
       [m.v.name]
     | Define _ None _ -> []
     | Define _ (Some t) _ -> deps_of_typ t
-    | TypeAbbrev t _ -> deps_of_typ t
+    | TypeAbbrev attrs t _ _ _ ->
+      List.collect deps_of_attribute attrs @
+      deps_of_typ t
     | Enum _base_t _ l -> List.collect deps_of_enum_case l
-    | Record tdnames params wopt flds ->
+    | Record tdnames _generics params wopt flds ->
       (deps_of_typedef_names tdnames)@
       (deps_of_params params)@
       (deps_of_opt deps_of_expr wopt)@
       (List.collect deps_of_field flds)
-    | CaseType tdnames params sc ->
+    | CaseType tdnames _generics params sc ->
       (deps_of_typedef_names tdnames)@
       (deps_of_params params)@
       (deps_of_switch_case sc)
+    | ProbeFunction f params probe_action _ ->
+      (deps_of_params params)@
+      (deps_of_probe_action probe_action)
+    | CoerceProbeFunctionStub _ ps _ -> deps_of_params ps
+    | Specialize _ _ _
     | OutputType _
     | ExternType _
-    | ExternFn _ _ _
-    | ExternProbe _ -> []  //AR: no dependencies from the output/extern types yet
+    | ExternFn _ _ _ _
+    | ExternProbe _ _ -> []  //AR: no dependencies from the output/extern types yet
   in
 
   let has_output_types (ds:list decl) : bool =

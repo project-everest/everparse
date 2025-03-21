@@ -22,11 +22,20 @@ module A = EverParse3d.Actions.All
 module P = EverParse3d.Prelude
 module T = FStar.Tactics
 module CP = EverParse3d.CopyBuffer
+module PA = EverParse3d.ProbeActions
+include EverParse3d.ProbeActions
 open FStar.List.Tot
 
 inline_for_extraction
 noextract
 let ___EVERPARSE_COPY_BUFFER_T = CP.copy_buffer_t
+
+inline_for_extraction
+let probe_m_unit = probe_m unit
+
+inline_for_extraction
+noextract
+let as_u64_identity (x:U64.t) : PA.pure_external_action U64.t = fun _ -> x
 
 (* This module defines a strongly typed abstract syntax for an
    intermediate representation of 3D programs. This is the type `typ`.
@@ -75,6 +84,8 @@ type itype =
   | Unit
   | AllBytes
   | AllZeros
+
+let pointer_size_t = i:itype { i == UInt32 \/ i == UInt64 }
 
 (* Interpretation of itype as an F* type *)
 [@@specialize]
@@ -508,6 +519,102 @@ let mk_action_binding
   : action_binding inv_none l false t
   = mk_extern_action f
 
+(* Type type of atomic probe actions *)
+noeq
+type atomic_probe_action : Type0 -> Type u#1 =
+  | Atomic_probe_and_copy :
+      bytes_to_read : U64.t { bytes_to_read <> 0uL }->
+      probe_fn: PA.probe_fn_incremental ->
+      atomic_probe_action unit
+  | Atomic_probe_and_read :
+      #t:Type0 ->
+      #sz:U64.t { sz <> 0uL } ->
+      reader : PA.probe_and_read_at_offset_t t sz ->
+      atomic_probe_action t
+  | Atomic_probe_write_at_offset :
+      #t:Type0 ->
+      #sz:U64.t { sz <> 0uL } ->
+      v:t ->
+      writer : PA.write_at_offset_t t sz ->
+      atomic_probe_action unit
+  | Atomic_probe_call_pure :
+      #t:Type0 ->
+      f:PA.pure_external_action t ->
+      atomic_probe_action t
+  | Atomic_probe_skip:
+      n:U64.t ->
+      atomic_probe_action unit
+  | Atomic_probe_return:
+      #t:Type0 ->
+      v:t ->
+      atomic_probe_action t
+  | Atomic_probe_fail:
+      atomic_probe_action unit
+
+[@@specialize]
+let atomic_probe_action_as_probe_m (#t:Type) (p:atomic_probe_action t)
+: PA.probe_m t
+= match p with
+  | Atomic_probe_and_copy bytes_to_read probe_fn_incremental ->
+    PA.probe_fn_incremental_as_probe_m probe_fn_incremental bytes_to_read 
+  | Atomic_probe_and_read reader ->
+    PA.probe_and_read_at_offset_m reader
+  | Atomic_probe_write_at_offset v writer ->
+    PA.write_at_offset_m writer v
+  | Atomic_probe_call_pure f ->
+    PA.lift_pure_external_action f
+  | Atomic_probe_skip n ->
+    PA.skip n
+  | Atomic_probe_return v ->
+    PA.return_probe_m v
+  | Atomic_probe_fail ->
+    PA.fail
+
+noeq
+type probe_action : Type u#1 =
+  | Probe_action_atomic :
+      atomic_probe_action unit ->
+      probe_action
+  | Probe_action_var :
+      probe_m unit ->
+      probe_action
+  | Probe_action_simple:
+      bytes_to_read : U64.t ->
+      probe_fn: PA.probe_fn ->
+      probe_action
+  | Probe_action_seq:
+      m1: probe_action ->
+      m2: probe_action ->
+      probe_action
+  | Probe_action_let:
+      #t:Type0 ->
+      m1: atomic_probe_action t ->
+      m2: (t -> probe_action) ->
+      probe_action
+  | Probe_action_ite:
+      cond: bool ->
+      m1: probe_action ->
+      m2: probe_action ->
+      probe_action
+
+[@@specialize]
+let rec probe_action_as_probe_m (p:probe_action)
+: PA.probe_m unit
+= match p with
+  | Probe_action_atomic a ->
+    atomic_probe_action_as_probe_m a
+  | Probe_action_var m ->
+    m
+  | Probe_action_simple bytes_to_read probe_fn ->
+    PA.probe_fn_as_probe_m bytes_to_read probe_fn
+  | Probe_action_seq m1 m2 ->
+    PA.seq_probe_m () (probe_action_as_probe_m m1) (probe_action_as_probe_m m2)
+  | Probe_action_let m1 m2 ->
+    let k x : PA.probe_m unit = probe_action_as_probe_m (m2 x) in
+    PA.bind_probe_m () (atomic_probe_action_as_probe_m m1) k
+  | Probe_action_ite cond m1 m2 ->
+    PA.if_then_else cond (probe_action_as_probe_m m1) (probe_action_as_probe_m m2)
+
 (* The type of atomic actions.
 
    `atomic_action l i b t`: is an atomic action that
@@ -595,11 +702,12 @@ type atomic_action
       #inv:inv_index ->
       #disj:disj_index ->
       #l:loc_index ->
+      #ptr_t:Type0 ->
       dt:dtyp k ha has_reader inv disj l ->
-      src:U64.t ->
-      len:U64.t ->
+      src:ptr_t ->
+      as_u64:(ptr_t -> PA.pure_external_action U64.t) ->
       dest:CP.copy_buffer_t ->
-      probe:CP.probe_fn ->
+      probe:probe_action ->
       atomic_action (join_inv inv (NonTrivial (A.copy_buffer_inv dest)))
                     (join_disj disj (disjoint (NonTrivial (A.copy_buffer_loc dest)) l))
                     (join_loc l (NonTrivial (A.copy_buffer_loc dest)))
@@ -635,10 +743,10 @@ let atomic_action_as_action
       A.action_assignment x rhs
     | Action_call c ->
       c
-    | Action_probe_then_validate #nz #wk #k #_hr #inv #l dt src len dest probe ->
+    | Action_probe_then_validate #nz #wk #k #_hr #inv #l dt src as_u64 dest probe ->
       A.index_equations();
       let v = dtyp_as_validator dt in
-      A.probe_then_validate v src len dest probe
+      A.probe_then_validate v src as_u64 dest (probe_action_as_probe_m probe)
 
 (* A sub-language of monadic actions.
 
@@ -969,25 +1077,50 @@ let coerce (#[@@@erasable]a:Type)
 
 [@@specialize]
 let t_probe_then_validate
+      (pointer_size:pointer_size_t)
       (fieldname:string)
-      (probe:CP.probe_fn)
-      (len:U64.t)
+      (probe:probe_m unit)
       (dest:CP.copy_buffer_t)
+      (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
       (#nz #wk:_) (#pk:P.parser_kind nz wk)
       (#ha #has_reader #i #disj:_)
       (#l:_)
       (td:dtyp pk ha has_reader i disj l)
- : typ (parser_kind_of_itype UInt64)
+ : typ (parser_kind_of_itype pointer_size)
        (join_inv i (NonTrivial (A.copy_buffer_inv dest)))
        (join_disj disj (disjoint (NonTrivial (A.copy_buffer_loc dest)) l))
        (join_loc l (NonTrivial (A.copy_buffer_loc dest)))
        true
        false
  = T_with_dep_action fieldname
-     (DT_IType UInt64)
+     (DT_IType pointer_size)
      (fun src ->
-        Atomic_action (Action_probe_then_validate td src len dest probe))
-    
+        Atomic_action (Action_probe_then_validate td src as_u64 dest (Probe_action_var probe)))
+
+[@@specialize]
+let t_probe_then_validate_alt
+      (pointer_size:pointer_size_t)
+      (fieldname:string)
+      (probe:probe_action)
+      (dest:CP.copy_buffer_t)
+      (as_u64:itype_as_type pointer_size -> PA.pure_external_action U64.t)
+      (#nz #wk:_) (#pk:P.parser_kind nz wk)
+      (#ha #has_reader #i #disj:_)
+      (#l:_)
+      (td:dtyp pk ha has_reader i disj l)
+ : typ (parser_kind_of_itype pointer_size)
+       (join_inv i (NonTrivial (A.copy_buffer_inv dest)))
+       (join_disj disj (disjoint (NonTrivial (A.copy_buffer_loc dest)) l))
+       (join_loc l (NonTrivial (A.copy_buffer_loc dest)))
+       true
+       false
+ = t_probe_then_validate
+      pointer_size
+      fieldname
+      (probe_action_as_probe_m probe)
+      dest
+      as_u64
+      td
 
 (* Type denotation of `typ` *)
 let rec as_type
