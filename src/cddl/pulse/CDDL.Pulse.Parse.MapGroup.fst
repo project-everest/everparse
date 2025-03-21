@@ -747,21 +747,31 @@ ensures
   fold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i s)
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+let cddl_map_iterator_is_empty_gen_t
+  (impl_elt1: Type0) (impl_elt2: Type0)
+  (iterator: ([@@@erasable] Ghost.erased (Iterator.type_spec impl_elt1) -> [@@@erasable] Ghost.erased (Iterator.type_spec impl_elt2) -> Type0))
+  (r: (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) -> (spec2: Ghost.erased (Iterator.type_spec impl_elt2)) -> iterator spec1 spec2 -> Map.t (dfst spec1) (list (dfst spec2)) -> slprop)
+=
+  (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) ->
+  (spec2: Ghost.erased (Iterator.type_spec impl_elt2)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
+  (i: iterator spec1 spec2) ->
+  (#l: Ghost.erased (Map.t (dfst spec1) (list (dfst spec2)))) ->
+  stt bool
+    (r spec1 spec2 i l)
+    (fun res ->
+      r spec1 spec2 i l **
+      pure (res == true <==> Ghost.reveal l == Map.empty (dfst spec1) (list (dfst spec2)))
+    )
+
 inline_for_extraction
 let cddl_map_iterator_is_empty_t
   (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (impl_elt1: Type0) (impl_elt2: Type0)
 =
-  (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) ->
-  (spec2: Ghost.erased (Iterator.type_spec impl_elt2)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
-  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2) ->
-  (#l: Ghost.erased (Map.t (dfst spec1) (list (dfst spec2)))) ->
-  stt bool
-    (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l)
-    (fun res ->
-      rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l **
-      pure (res == true <==> Ghost.reveal l == Map.empty (dfst spec1) (list (dfst spec2)))
-    )
+  cddl_map_iterator_is_empty_gen_t impl_elt1 impl_elt2
+    (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2)
+    (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2)
 
 #restart-solver
 
@@ -875,32 +885,42 @@ fn cddl_map_iterator_is_empty
 }
 
 inline_for_extraction
-let cddl_map_iterator_next_t
-  (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+let cddl_map_iterator_next_gen_t
   (impl_elt1: Type0) (impl_elt2: Type0)
+  (iterator: ([@@@erasable] Ghost.erased (Iterator.type_spec impl_elt1) -> [@@@erasable] Ghost.erased (Iterator.type_spec impl_elt2) -> Type0))
+  (r: (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) -> (spec2: Ghost.erased (Iterator.type_spec impl_elt2)) -> iterator spec1 spec2 -> Map.t (dfst spec1) (list (dfst spec2)) -> slprop)
 =
   (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) ->
   (spec2: Ghost.erased (Iterator.type_spec impl_elt2)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
-  (pi: R.ref (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)) ->
-  (#i: Ghost.erased (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)) ->
+  (pi: R.ref (iterator spec1 spec2)) ->
+  (#i: Ghost.erased (iterator spec1 spec2)) ->
   (#l: Ghost.erased (Map.t (dfst spec1) (list (dfst spec2)))) ->
   stt (impl_elt1 & impl_elt2)
     (pts_to pi i **
-      rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l **
+      r spec1 spec2 i l **
       pure (~ (Ghost.reveal l == Map.empty (dfst spec1) (list (dfst spec2))))
     )
     (fun res -> exists* i' k v l' .
       pts_to pi i' **
-      rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i' l' **
+      r spec1 spec2 i' l' **
       dsnd spec1 (fst res) k **
       dsnd spec2 (snd res) v **
       Trade.trade
-        ((dsnd spec1 (fst res) k ** dsnd spec2 (snd res) v) ** rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i' l')
-        (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i l) **
-      pure (
-        Ghost.reveal l == map_of_list_cons i'.eq1 k v l'
+        ((dsnd spec1 (fst res) k ** dsnd spec2 (snd res) v) ** r spec1 spec2 i' l')
+        (r spec1 spec2 i l) **
+      pure (exists eqtest .
+        Ghost.reveal l == map_of_list_cons eqtest k v l'
       )
     )
+
+inline_for_extraction
+let cddl_map_iterator_next_t
+  (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (impl_elt1: Type0) (impl_elt2: Type0)
+=
+  cddl_map_iterator_next_gen_t impl_elt1 impl_elt2
+    (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2)
+    (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2)
 
 ghost
 fn rel_map_iterator_fold

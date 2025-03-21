@@ -1099,9 +1099,9 @@ fn impl_serialize_map_zero_or_more_iterator
     S.pts_to_len out;
     with m1 . assert (GR.pts_to pm1 m1);
     let count = !out_count;
+    with c2_ m2_ . assert (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) c2_ m2_);
     if (count = pow2_64_m1) {
-      with c2 m2 . assert (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) c2 m2);
-      impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow sp1 c2.eq1 key_except sp2 l m1 m2 (SZ.v (S.len out));
+      impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow sp1 c2_.eq1 key_except sp2 l m1 m2_ (SZ.v (S.len out));
       pres := false
     } else {
       let count' = U64.add count 1uL;
@@ -1119,6 +1119,8 @@ fn impl_serialize_map_zero_or_more_iterator
       impl_serialize_map_group_valid_map_zero_or_more_snoc sp1 c2.eq1 key_except sp2 l m1 ke va m2 (SZ.v (S.len out));
       let mkv : Ghost.erased (Map.t tkey (list tvalue)) = EqTest.map_singleton (Ghost.reveal ke) (Ghost.reveal c2.eq1 ke) [Ghost.reveal va];
       let m2' : Ghost.erased (Map.t tkey (list tvalue)) = map_of_list_cons c2.eq1 (Ghost.reveal ke) (Ghost.reveal va) m2;
+      Classical.forall_intro (EqTest.eq_test_unique c2.eq1);
+      assert (pure (m2' == m2_));
 //    map_of_list_is_append_serializable_elim sp1 key_except sp2 m1 m2' v0;
 //    map_of_list_is_append_serializable_elim sp1 key_except sp2 mkv m2 m2';
       map_of_list_is_append_cons_snoc_equiv c2.eq1 m1 ke va m2 v0;
