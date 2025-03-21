@@ -725,20 +725,34 @@ let rel_map_iterator
     pure (rel_map_iterator_cond i s l)
   )
 
+inline_for_extraction
+let rel_map_iterator_singletons
+  (impl_elt1: Type0) (impl_elt2: Type0)
+  (iterator: ([@@@erasable] Ghost.erased (Iterator.type_spec impl_elt1) -> [@@@erasable] Ghost.erased (Iterator.type_spec impl_elt2) -> Type0))
+  (r: (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) -> (spec2: Ghost.erased (Iterator.type_spec impl_elt2)) -> iterator spec1 spec2 -> Map.t (dfst spec1) (list (dfst spec2)) -> slprop)
+=
+  (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) ->
+  (#spec2: Ghost.erased (Iterator.type_spec impl_elt2)) ->
+  (i: iterator spec1 spec2) ->
+  (s: Map.t (dfst spec1) (list (dfst spec2))) ->
+  stt_ghost unit emp_inames
+    (r spec1 spec2 i s)
+    (fun _ -> r spec1 spec2 i s **
+      pure (
+        map_of_list_singletons s
+      )
+    )
+
 ghost
 fn rel_map_iterator_prop
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
-  (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
+: rel_map_iterator_singletons impl_elt1 impl_elt2 (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2) (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2)
+=
+  (#spec1: Ghost.erased (Iterator.type_spec impl_elt1))
+  (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
   (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
   (s: Map.t (dfst spec1) (list (dfst spec2)))
-requires
-  rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i s
-ensures
-  rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i s **
-  pure (
-    map_of_list_singletons s
-  )
 {
   unfold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i s);
   with l . assert (cbor_map_iterator_match i.pm i.cddl_map_iterator_contents l);
