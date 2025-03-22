@@ -112,10 +112,8 @@ make_everparse() {
 		# from https://github.com/ocaml/dune/issues/8228#issuecomment-1642104172
                 dune_sandbox_opt=DUNE_CONFIG__BACKGROUND_SANDBOXES=disabled
             fi
-            env $dune_sandbox_opt $MAKE -C $FSTAR_SRC_PKG_ROOT "$@" ADMIT=1
-            mkdir -p "$FSTAR_PKG_ROOT"
-            PREFIX="$(fixpath "$PWD/$FSTAR_PKG_ROOT")" $MAKE -C $FSTAR_SRC_PKG_ROOT install
-            $cp "$FSTAR_SRC_PKG_ROOT/LICENSE" "$FSTAR_PKG_ROOT/"
+            env $dune_sandbox_opt $MAKE -C $FSTAR_SRC_PKG_ROOT "$@" ADMIT=1 package
+            $cp $FSTAR_SRC_PKG_ROOT/fstar.tar.gz . || $cp $FSTAR_SRC_PKG_ROOT/fstar.zip .
         else
             if ! [ -f fstar.tar.gz ] && ! [ -f fstar.zip ]; then
                 # build a binary package from a full F* clone
@@ -126,6 +124,8 @@ make_everparse() {
                 $MAKE -C FStar "$@" FSTAR_TAG= package
                 $cp FStar/fstar.tar.gz . || $cp FStar/fstar.zip .
             fi
+        fi
+	{
             mkdir -p "$FSTAR_PKG_ENVELOPE"
             if [ -f fstar.tar.gz ]; then
                 FSTAR_PKG=$(realpath fstar.tar.gz)
@@ -139,7 +139,7 @@ make_everparse() {
                 echo "unexpected, no package?" >&2
                 exit 1
             fi
-        fi
+	}
     fi
 
     export FSTAR_EXE=$(realpath $FSTAR_PKG_ROOT/bin/fstar.exe)
