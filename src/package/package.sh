@@ -278,10 +278,10 @@ in accordance with Section 4.d.1 of the GNU LGPL v3.
 
 EOF
         }
-        download https://www.gnu.org/licenses/lgpl-3.0.txt everparse/licenses/gnulgplv3
+        download https://raw.githubusercontent.com/github/choosealicense.com/refs/heads/gh-pages/_licenses/lgpl-3.0.txt everparse/licenses/gnulgplv3
         cat everparse/licenses/gnulgplv3 >> everparse/licenses/libgmp10
         rm everparse/licenses/gnulgplv3
-        download https://www.gnu.org/licenses/gpl-3.0.txt everparse/licenses/gnugplv3
+        download https://raw.githubusercontent.com/github/choosealicense.com/refs/heads/gh-pages/_licenses/gpl-3.0.txt everparse/licenses/gnugplv3
         cat everparse/licenses/gnugplv3 >> everparse/licenses/libgmp10
         rm everparse/licenses/gnugplv3
     fi    
