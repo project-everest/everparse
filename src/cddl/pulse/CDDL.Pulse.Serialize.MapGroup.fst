@@ -1005,12 +1005,7 @@ fn slice_split (#t: Type) (s: S.slice t) (#p: perm) (i: SZ.t) (#v: Ghost.erased 
   (s1, s2)
 }
 
-#push-options "--z3rlimit 256 --fuel 2 --ifuel 1 --query_stats"
-
 module Util = CBOR.Spec.Util
-
-let andt (p1 p2: typ) : Tot typ = Util.andp p1 p2
-let nott (p: typ) : Tot typ = Util.notp p
 
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -1030,6 +1025,37 @@ let impl_serialize_map_zero_or_more_iterator_gen_t
     (iterator: ([@@@erasable] Ghost.erased (Iterator.type_spec ikey) -> [@@@erasable] Ghost.erased (Iterator.type_spec ivalue) -> Type0))
     (r: (spec1: Ghost.erased (Iterator.type_spec ikey)) -> (spec2: Ghost.erased (Iterator.type_spec ivalue)) -> rel (iterator spec1 spec2) (Map.t (dfst spec1) (list (dfst spec2))))
 = impl_serialize_map_group #(map_group_zero_or_more_match_item key key_except value) #_ #_ #_ (mg_zero_or_more_match_item sp1 key_except sp2) #_ (r (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+
+let impl_serialize_map_zero_or_more_iterator_inv
+    (#key: typ)
+    (#tkey: Type0)
+    (sp1: (spec key tkey true))
+    (key_except: typ)
+    (#value: typ)
+    (#tvalue: Type0)
+    (#inj: bool)
+    (sp2: (spec value tvalue inj))
+  (v0: Map.t tkey (list tvalue))
+  (l: cbor_map)
+  (res: bool)
+  (w: Seq.seq U8.t)
+  (m1 m2 m2': Map.t tkey (list tvalue))
+  (count: U64.t)
+  (size: SZ.t)
+: Tot prop
+=
+  let sp = (mg_zero_or_more_match_item sp1 key_except sp2) in
+      map_of_list_is_append m1 m2' v0 /\
+      map_of_list_maps_to_nonempty m1 /\
+      sp.mg_serializable m1 /\
+      cbor_map_disjoint l (sp.mg_serializer m1) /\
+      (res == true ==> (
+        m2' == m2 /\
+        impl_serialize_map_group_pre count size (cbor_map_union l (sp.mg_serializer m1)) w
+      )) /\
+      impl_serialize_map_group_valid l sp v0 (Seq.length w) == (res && impl_serialize_map_group_valid (cbor_map_union l (sp.mg_serializer m1)) sp m2' (Seq.length w))
+
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 1 --query_stats --print_implicits --split_queries no"
 
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -1057,7 +1083,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     (r: (spec1: Ghost.erased (Iterator.type_spec ikey)) -> (spec2: Ghost.erased (Iterator.type_spec ivalue)) -> rel (iterator spec1 spec2) (Map.t (dfst spec1) (list (dfst spec2))))
     (is_empty: cddl_map_iterator_is_empty_gen_t _ _ iterator r)
     (next: cddl_map_iterator_next_gen_t _ _ iterator r)
-    (singletons: rel_map_iterator_singletons _ _ iterator r)
+    (rel_len: rel_map_iterator_length _ _ iterator r)
 : impl_serialize_map_zero_or_more_iterator_gen_t #key #tkey sp1 #ikey r1 key_except #value #tvalue #inj sp2 #ivalue r2 iterator r
 =
     (c0: _)
@@ -1083,7 +1109,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     if (res) {
       with gc . assert (pts_to pc gc);
       let c = !pc;
-      rewrite each gc as c;
+      rewrite each (Ghost.reveal gc) as c;
       let em = is_empty (Iterator.mk_spec r1) (Iterator.mk_spec r2) c;
       not em
     } else {
@@ -1102,19 +1128,11 @@ fn impl_serialize_map_zero_or_more_iterator_gen
       (r (Iterator.mk_spec r1) (Iterator.mk_spec r2) c m2)
       (r (Iterator.mk_spec r1) (Iterator.mk_spec r2) c0 v0) **
     pure (
-      map_of_list_is_append m1 m2' v0 /\
-      map_of_list_maps_to_nonempty m1 /\
-      sp.mg_serializable m1 /\
-      cbor_map_disjoint l (sp.mg_serializer m1) /\
-      (res == true ==> (
-        m2' == m2 /\
-        impl_serialize_map_group_pre count size (cbor_map_union l (sp.mg_serializer m1)) w
-      )) /\
-      impl_serialize_map_group_valid l sp v0 (Seq.length w) == (res && impl_serialize_map_group_valid (cbor_map_union l (sp.mg_serializer m1)) sp m2' (Seq.length w)) /\
+      impl_serialize_map_zero_or_more_iterator_inv sp1 key_except sp2 v0 l res w m1 (Ghost.hide (Ghost.reveal m2)) m2' count size /\
       b == (res && not (FStar.StrongExcludedMiddle.strong_excluded_middle (m2 == Map.empty _ _)))
     )
   ) {
-    singletons #(Iterator.mk_spec r1) #(Iterator.mk_spec r2) _ _;
+    rel_len #(Iterator.mk_spec r1) #(Iterator.mk_spec r2) _ _;
     S.pts_to_len out;
     with m1 . assert (GR.pts_to pm1 m1);
     let count = !out_count;
@@ -1134,7 +1152,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
       Trade.trans_hyp_l (r1 ck ke ** r2 cv va) _ _ _;
       Trade.trans _ _ (r (Iterator.mk_spec r1) (Iterator.mk_spec r2) c0 v0);
       with c2 m2 . assert (r (Iterator.mk_spec r1) (Iterator.mk_spec r2) c2 m2);
-      singletons #(Iterator.mk_spec r1) #(Iterator.mk_spec r2) _ _;
+      rel_len #(Iterator.mk_spec r1) #(Iterator.mk_spec r2) _ _;
       impl_serialize_map_group_valid_map_zero_or_more_snoc sp1 key_eq key_except sp2 l m1 ke va m2 (SZ.v (S.len out));
       let mkv : Ghost.erased (Map.t tkey (list tvalue)) = EqTest.map_singleton (Ghost.reveal ke) (Ghost.reveal key_eq ke) [Ghost.reveal va];
       let m2' : Ghost.erased (Map.t tkey (list tvalue)) = map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2;
@@ -1312,6 +1330,77 @@ let impl_serialize_map_zero_or_more_iterator
     (rel_map_iterator vmatch cbor_map_iterator_match _ _)
     (cddl_map_iterator_is_empty map_is_empty map_next map_entry_key map_entry_value _ _)
     (cddl_map_iterator_next map_share map_gather map_next map_entry_key map_entry_value map_entry_share map_entry_gather _ _)
-    (rel_map_iterator_prop cbor_map_iterator_match)
+    (rel_map_iterator_prop' cbor_map_iterator_match)
     
-    
+inline_for_extraction noextract [@@noextract_to "krml"]
+noeq
+type map_slice_iterator_t
+  (impl_elt1: Type0) (impl_elt2: Type0)
+  ([@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) ([@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
+: Type0
+= {
+  base: R.ref (slice (impl_elt1 & impl_elt2));
+  key_eq: Ghost.erased (EqTest.eq_test (dfst spec1));
+}
+
+let rel_map_slice_iterator
+  (impl_elt1: Type0) (impl_elt2: Type0)
+  (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (spec2: Ghost.erased (Iterator.type_spec impl_elt2))
+: rel (map_slice_iterator_t impl_elt1 impl_elt2 spec1 spec2) (Map.t (dfst spec1) (list (dfst spec2)))
+= mk_rel (fun i l -> exists* s . R.pts_to i.base s ** rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i.key_eq (dsnd spec1) (dsnd spec2) s l)
+
+module SM = Pulse.Lib.SeqMatch
+
+#push-options "--print_implicits"
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn map_slice_iterator_is_empty
+  (impl_elt1: Type0) (impl_elt2: Type0)
+: cddl_map_iterator_is_empty_gen_t _ _ (map_slice_iterator_t impl_elt1 impl_elt2) (rel_map_slice_iterator _ _)
+= (spec1: _)
+  (spec2: _)
+  (i: _)
+  (#l: _)
+{
+  unfold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
+  with gs . assert (R.pts_to i.base gs);
+  let s = !(i.base);
+  rewrite each gs as s;
+  unfold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) s l);
+  with l' . assert (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
+  unfold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
+  S.pts_to_len s.s;
+  SM.seq_list_match_length (rel_pair (dsnd spec1) (dsnd spec2)) _ _;
+  fold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
+  fold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) s l);
+  fold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
+  Classical.forall_intro (map_of_list_pair_mem_fst i.key_eq l');
+  (S.len s.s = 0sz)
+}
+
+(*
+ghost
+fn map_slice_iterator_length
+  (impl_elt1: Type0) (impl_elt2: Type0)
+: rel_map_iterator_length _ _ (map_slice_iterator_t impl_elt1 impl_elt2) (rel_map_slice_iterator _ _)
+= (#spec1: _)
+  (#spec2: _)
+  (i: _)
+  (l: _)
+{
+  unfold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
+  with gs . assert (R.pts_to i.base gs);
+  let s = !(i.base);
+  rewrite each gs as s;
+  unfold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) s l);
+  with l' . assert (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
+  unfold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
+  S.pts_to_len s.s;
+  SM.seq_list_match_length (rel_pair (dsnd spec1) (dsnd spec2)) _ _;
+  fold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
+  fold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) s l);
+  fold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
+  ()
+}
+
+

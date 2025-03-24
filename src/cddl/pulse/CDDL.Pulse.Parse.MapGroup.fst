@@ -743,6 +743,24 @@ let rel_map_iterator_singletons
       )
     )
 
+inline_for_extraction
+let rel_map_iterator_length
+  (impl_elt1: Type0) (impl_elt2: Type0)
+  (iterator: ([@@@erasable] Ghost.erased (Iterator.type_spec impl_elt1) -> [@@@erasable] Ghost.erased (Iterator.type_spec impl_elt2) -> Type0))
+  (r: (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) -> (spec2: Ghost.erased (Iterator.type_spec impl_elt2)) -> iterator spec1 spec2 -> Map.t (dfst spec1) (list (dfst spec2)) -> slprop)
+=
+  (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) ->
+  (#spec2: Ghost.erased (Iterator.type_spec impl_elt2)) ->
+  (i: iterator spec1 spec2) ->
+  (s: Map.t (dfst spec1) (list (dfst spec2))) ->
+  stt_ghost unit emp_inames
+    (r spec1 spec2 i s)
+    (fun _ -> r spec1 spec2 i s **
+      pure (
+        map_of_list_maps_to_nonempty s
+      )
+    )
+
 ghost
 fn rel_map_iterator_prop
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
@@ -759,6 +777,20 @@ fn rel_map_iterator_prop
   parse_table_entries_no_repeats i.sp1 i.tex i.ps2 l;
   map_of_list_pair_no_repeats_key i.eq1 (parse_table_entries i.sp1.parser i.tex i.ps2 l);  
   fold (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2 spec1 spec2 i s)
+}
+
+ghost
+fn rel_map_iterator_prop'
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (#impl_elt1: Type0) (#impl_elt2: Type0)
+: rel_map_iterator_length impl_elt1 impl_elt2 (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2) (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2)
+=
+  (#spec1: Ghost.erased (Iterator.type_spec impl_elt1))
+  (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
+  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (s: Map.t (dfst spec1) (list (dfst spec2)))
+{
+  rel_map_iterator_prop cbor_map_iterator_match i s
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"]
