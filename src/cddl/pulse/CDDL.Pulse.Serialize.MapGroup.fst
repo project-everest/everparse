@@ -1478,3 +1478,63 @@ fn map_slice_iterator_next
   pi := i';
   res
 }
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_map_zero_or_more_slice
+  (#ty': Type0) (#vmatch': perm -> ty' -> cbor -> slprop)
+  (parse: cbor_det_parse_t vmatch')
+  (insert: cbor_det_serialize_map_insert_t)
+    (#[@@@erasable]key: Ghost.erased typ)
+    (#[@@@erasable]tkey: Type0)
+    ([@@@erasable]key_eq: Ghost.erased (EqTest.eq_test tkey))
+    (#[@@@erasable]sp1: Ghost.erased (spec key tkey true))
+    (#ikey: Type0)
+    (#[@@@erasable]r1: rel ikey tkey)
+    (pa1: impl_serialize sp1 r1)
+    (#[@@@erasable]key_except: Ghost.erased typ)
+    (va_ex: impl_typ vmatch' key_except)
+    (#[@@@erasable]value: Ghost.erased typ)
+    (#[@@@erasable]tvalue: Type0)
+    (#[@@@erasable]inj: Ghost.erased bool)
+    (#[@@@erasable]sp2: Ghost.erased (spec value tvalue inj))
+    (#ivalue: Type0)
+    (#[@@@erasable]r2: rel ivalue tvalue)
+    (pa2: impl_serialize sp2 r2)
+: impl_serialize_map_group #(map_group_zero_or_more_match_item key key_except value) #_ #_ #_ (mg_zero_or_more_match_item sp1 key_except sp2) #_ (rel_slice_of_table key_eq r1 r2)
+=
+    (c0: _)
+    (#v0: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  let i : map_slice_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) = {
+    base = c0;
+    key_eq = key_eq;
+  };
+  Trade.rewrite_with_trade
+    (rel_slice_of_table key_eq r1 r2 c0 v0)
+    (rel_map_slice_iterator ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) i v0);
+  let mut pi = i;
+  let res = impl_serialize_map_zero_or_more_iterator_gen
+    parse
+    insert
+    key_eq
+    pa1
+    va_ex
+    pa2
+    (map_slice_iterator_t _ _)
+    (rel_map_slice_iterator _ _)
+    (map_slice_iterator_is_empty _ _)
+    (map_slice_iterator_next _ _)
+    (map_slice_iterator_length _ _)
+    i
+    out
+    out_count
+    out_size
+    l;
+  Trade.elim _ _;
+  res
+}
+
