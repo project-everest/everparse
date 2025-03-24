@@ -1339,7 +1339,7 @@ type map_slice_iterator_t
   ([@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) ([@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
 : Type0
 = {
-  base: R.ref (slice (impl_elt1 & impl_elt2));
+  base: (slice (impl_elt1 & impl_elt2));
   key_eq: Ghost.erased (EqTest.eq_test (dfst spec1));
 }
 
@@ -1347,7 +1347,7 @@ let rel_map_slice_iterator
   (impl_elt1: Type0) (impl_elt2: Type0)
   (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (spec2: Ghost.erased (Iterator.type_spec impl_elt2))
 : rel (map_slice_iterator_t impl_elt1 impl_elt2 spec1 spec2) (Map.t (dfst spec1) (list (dfst spec2)))
-= mk_rel (fun i l -> exists* s . R.pts_to i.base s ** rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i.key_eq (dsnd spec1) (dsnd spec2) s l)
+= mk_rel (fun s l -> rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) s.key_eq (dsnd spec1) (dsnd spec2) s.base l)
 
 module SM = Pulse.Lib.SeqMatch
 
@@ -1359,23 +1359,20 @@ fn map_slice_iterator_is_empty
 : cddl_map_iterator_is_empty_gen_t _ _ (map_slice_iterator_t impl_elt1 impl_elt2) (rel_map_slice_iterator _ _)
 = (spec1: _)
   (spec2: _)
-  (i: _)
+  (s: _)
   (#l: _)
 {
-  unfold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
-  with gs . assert (R.pts_to i.base gs);
-  let s = !(i.base);
-  rewrite each gs as s;
-  unfold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) s l);
-  with l' . assert (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
-  unfold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
-  S.pts_to_len s.s;
+  unfold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 s l);
+  unfold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  s.key_eq (dsnd spec1) (dsnd spec2) s.base l);
+  with l' . assert (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s.base l');
+  unfold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s.base l');
+  S.pts_to_len s.base.s;
   SM.seq_list_match_length (rel_pair (dsnd spec1) (dsnd spec2)) _ _;
-  fold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
-  fold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) s l);
-  fold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
-  Classical.forall_intro (map_of_list_pair_mem_fst i.key_eq l');
-  (S.len s.s = 0sz)
+  fold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s.base l');
+  fold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  s.key_eq (dsnd spec1) (dsnd spec2) s.base l);
+  fold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 s l);
+  Classical.forall_intro (map_of_list_pair_mem_fst s.key_eq l');
+  (S.len s.base.s = 0sz)
 }
 
 ghost
@@ -1388,14 +1385,13 @@ fn map_slice_iterator_length
   (l: _)
 {
   unfold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
-  with gs . assert (R.pts_to i.base gs);
-  unfold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) gs l);
-  with l' . assert (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false gs l');
-  unfold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false gs l');
-  S.pts_to_len gs.s;
+  unfold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) i.base l);
+  with l' . assert (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false i.base l');
+  unfold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false i.base l');
+  S.pts_to_len i.base.s;
   SM.seq_list_match_length (rel_pair (dsnd spec1) (dsnd spec2)) _ _;
-  fold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false gs l');
-  fold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) gs l);
+  fold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false i.base l');
+  fold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) i.base l);
   fold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
   ()
 }
