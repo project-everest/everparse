@@ -43,6 +43,7 @@ let print_probe_qualifier = function
   | PQWithOffsets -> "WithOffsets"
   | PQRead i -> Printf.sprintf "Read %s" (print_integer_type i)
   | PQWrite i -> Printf.sprintf "Write %s" (print_integer_type i)
+  | PQInit -> "Init"
 
 
 let find_probe_fn (e:B.env) (q:probe_qualifier)
@@ -110,7 +111,7 @@ let probe_and_copy_type (e:B.env) (t0:typ) (k:probe_action)
           t.range
       | Some id -> (
         let insts, _ = GeneralizeProbes.generic_instantiations_for_type e t in
-        FStar.IO.print_string <|
+        Options.debug_print_string <|
           Printf.sprintf "****Instantiating probe function for type %s unfolded to %s with %s\n" 
             (print_typ t0)
             (print_typ t)
@@ -249,12 +250,12 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
         else (
           let t0_is_u32 =
             match af0.v.field_type.v with
-            | Pointer _ (PQ UInt32) -> true
+            | Pointer _ pq -> pq_as_integer_type pq = UInt32
             | _ -> eq_typ af0.v.field_type tuint32
           in
           let t1_is_ptr64 =
             match af1.v.field_type.v with
-            | Pointer _ (PQ UInt64) -> true
+            | Pointer _ pq -> pq_as_integer_type pq = UInt64
             | _ -> false
           in
           if t0_is_u32 && t1_is_ptr64
@@ -265,7 +266,7 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
             match Generate32BitTypes.has_32bit_coercion e af0.v.field_type af1.v.field_type with
             | Some id -> (
               let insts, _ = GeneralizeProbes.generic_instantiations_for_type e af0.v.field_type in
-              FStar.IO.print_string <|
+              Options.debug_print_string <|
                 Printf.sprintf "****Instantiating probe function for type %s with %s\n" 
                   (print_typ af0.v.field_type)
                   (String.concat ", " (List.map print_expr insts));
@@ -310,7 +311,7 @@ and coerce_switch_case (e:B.env) (sw0 sw1:switch_case)
   let cases = List.zip cases0 cases1 in
   List.fold_right
     (fun (c0, c1) k ->
-      FStar.IO.print_string <|
+      Options.debug_print_string <|
         Printf.sprintf "Coercing switch case %s to %s\n" (print_case c0) (print_case c1);
       match c0, c1 with
       | Case e0 f0, Case e1 f1 -> (
@@ -371,7 +372,7 @@ let rec optimize_coercion (p:probe_action)
 let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
 : ML decl
 = let CoerceProbeFunctionStub i params (CoerceProbeFunction (t0, t1)) = d.d_decl.v in
-  FStar.IO.print_string <|
+  Options.debug_print_string <|
     Printf.sprintf "Replacing stub %s (from %s to %s)\n" i.v.name (print_ident t0) (print_ident t1);
   let d0, _ = B.lookup_type_decl e t0 in
   let d1, _ = B.lookup_type_decl e t1 in
@@ -389,6 +390,21 @@ let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
         d.d_decl.range
   in
   let probe_action = optimize_coercion coercion in
+  let probe_action =
+    match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e) (Some PQInit) with
+    | None ->
+      error (Printf.sprintf "Cannot find init probe function to coerce %s to %s"
+              (print_ident t0) (print_ident t1))
+            d.d_decl.range
+    | Some init_fn ->
+      let hd = 
+        with_dummy_range <|
+        Probe_atomic_action <|
+        Probe_action_init init_fn (with_dummy_range <| App SizeOf [with_dummy_range <| Identifier t1])
+      in
+      with_dummy_range <|
+      Probe_action_seq hd probe_action
+  in
   let probe_fn = { 
       d.d_decl with
       v = ProbeFunction i params probe_action (CoerceProbeFunction(t0, t1)) 

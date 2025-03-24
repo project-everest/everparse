@@ -137,6 +137,10 @@ type atomic_probe_action =
   | Atomic_probe_skip:
       n:expr ->
       atomic_probe_action
+  | Atomic_probe_init:
+      f:A.ident ->
+      n:expr ->
+      atomic_probe_action
   | Atomic_probe_return:
       v:expr ->
       atomic_probe_action
@@ -363,6 +367,7 @@ noeq
 type probe_qualifier =
   | PQSimple
   | PQWithOffsets
+  | PQInit
   | PQRead of A.integer_type
   | PQWrite of A.integer_type
 

@@ -3,6 +3,7 @@ extern probe (WITH_OFFSETS) ProbeAndCopyLen
 extern probe (READ UINT32) ProbeAndReadU32
 extern probe (WRITE UINT32) WriteU32
 extern probe (WRITE UINT64) WriteU64
+extern probe (INIT) ProbeInit
 extern PURE UINT64 UlongToPtr(UINT32 ptr)
 
 aligned
@@ -40,9 +41,10 @@ typedef struct _D64 (
 	EVERPARSE_COPY_BUFFER_T c_out,
 )
 {
-	UINT32 c1;
-	C(a_out, b_out) *pc probe (length=sizeof(C), destination=c_out);
+	C(a_out, b_out) *pointer(UINT64)
+		pc probe (length=sizeof(C), destination=c_out);
 } D64;
+
 
 specialize (pointer(UINT64), pointer(UINT32)) D64 D32;
 
@@ -56,7 +58,7 @@ casetype _D (
 {
 	switch (requestor32) 
 	{
-		case true:  D32(a_out, b_out, c_out) d32;
+		case true: D32(a_out, b_out, c_out) d32;
 		case false: D64(a_out, b_out, c_out) d64;
 	}
 } D;

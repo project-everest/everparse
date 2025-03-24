@@ -140,7 +140,7 @@ let eq_probe_function_type pq0 pq1 : ML bool =
   match pq0, pq1 with
   | SimpleProbeFunction t0, SimpleProbeFunction t1 -> eq_idents t0 t1
   | CoerceProbeFunction (t0, t1), CoerceProbeFunction (t0', t1') ->
-    FStar.IO.print_string <|
+    Options.debug_print_string <|
       Printf.sprintf "Comparing %s to %s\n" (print_probe_function_type pq0) (print_probe_function_type pq1);
     eq_idents t0 t0' && eq_idents t1 t1'
   | _, _ -> false

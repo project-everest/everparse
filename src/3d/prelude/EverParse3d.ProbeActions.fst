@@ -52,6 +52,19 @@ let probe_fn_incremental =
        )))
 
 inline_for_extraction
+let init_probe_dest_t =
+  sz:U64.t ->
+  dest:copy_buffer_t ->
+  Stack bool
+    (fun h0 ->
+      I.live (stream_of dest) h0)
+    (fun h0 b h1 ->
+      let sl = stream_of dest in
+      I.live sl h1 /\
+      modifies (I.footprint sl) h0 h1 /\
+      Seq.length (I.get_read sl h1) == Seq.length (I.get_read sl h0))
+
+inline_for_extraction
 let write_at_offset_t (t:Type0) (n:U64.t) =
   v:t ->
   write_offset:U64.t ->
@@ -80,11 +93,14 @@ let probe_and_read_at_offset_t (t:Type0) (size_t:U64.t) =
   failed:B.pointer bool ->
   read_offset:U64.t ->
   src:U64.t ->
+  dest:copy_buffer_t ->
   Stack t
     (fun h0 ->
       B.live h0 failed /\
-      B.get h0 failed 0 == false)
+      B.get h0 failed 0 == false /\
+      I.live (stream_of dest) h0)
     (fun h0 _ h1 ->
+      I.live (stream_of dest) h1 /\
       B.live h1 failed /\ 
       B.modifies (B.loc_buffer failed) h0 h1 /\ (
         let has_failed = B.get h1 failed 0 in
@@ -178,6 +194,19 @@ let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.
 
 inline_for_extraction
 noextract
+let init_probe_m (f:init_probe_dest_t) (sz:U64.t)
+: probe_m unit
+= fun read_offset write_offset failed src dest ->
+    let ok = f sz dest in
+    if ok
+    then ()
+    else (
+      failed *= true
+    )
+
+
+inline_for_extraction
+noextract
 let write_at_offset_m (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
 : probe_m unit
 = fun read_offset write_offset failed src dest ->
@@ -197,7 +226,7 @@ let probe_and_read_at_offset_m (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_
 : probe_m t
 = fun read_offset write_offset failed src dest ->
     let rd = !*read_offset in
-    let v = reader failed rd src in
+    let v = reader failed rd src dest in
     let has_failed = !*failed in
     if has_failed then v
     else (

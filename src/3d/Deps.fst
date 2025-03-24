@@ -138,6 +138,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
   let deps_of_probe_atomic_action (a:probe_atomic_action) : ML (list string) =
     match a with
     | Probe_action_return e -> deps_of_expr e
+    | Probe_action_init f len -> deps_of_expr len
     | Probe_action_call f args -> List.collect deps_of_expr args
     | Probe_action_read f -> []
     | Probe_action_write f v -> deps_of_expr v

@@ -123,6 +123,8 @@ let simplify_probe_atomic_action (env:T.env_t) (a:probe_atomic_action)
       Probe_action_write f (simplify_expr env v)
     | Probe_action_copy f v ->
       Probe_action_copy f (simplify_expr env v)
+    | Probe_action_init f n ->
+      Probe_action_init f (simplify_expr env n)
     | Probe_action_skip e ->
       Probe_action_skip (simplify_expr env e)
     | Probe_action_fail ->

@@ -522,6 +522,10 @@ let mk_action_binding
 (* Type type of atomic probe actions *)
 noeq
 type atomic_probe_action : Type0 -> Type u#1 =
+  | Atomic_probe_init:
+      init_cb:PA.init_probe_dest_t ->
+      sz:U64.t ->
+      atomic_probe_action unit
   | Atomic_probe_and_copy :
       bytes_to_read : U64.t { bytes_to_read <> 0uL }->
       probe_fn: PA.probe_fn_incremental ->
@@ -555,6 +559,8 @@ type atomic_probe_action : Type0 -> Type u#1 =
 let atomic_probe_action_as_probe_m (#t:Type) (p:atomic_probe_action t)
 : PA.probe_m t
 = match p with
+  | Atomic_probe_init sz init_cb ->
+    PA.init_probe_m sz init_cb
   | Atomic_probe_and_copy bytes_to_read probe_fn_incremental ->
     PA.probe_fn_incremental_as_probe_m probe_fn_incremental bytes_to_read 
   | Atomic_probe_and_read reader ->

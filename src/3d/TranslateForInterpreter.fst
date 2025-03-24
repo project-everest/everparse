@@ -331,7 +331,7 @@ let rec translate_expr (e:A.expr) : ML T.expr =
 
 let rec translate_output_type (t:A.typ) : ML T.typ =
   match t.v with
-  | Pointer t (PQ A.UInt64) -> T.T_pointer (translate_output_type t) A.UInt64
+  | Pointer t (PQ A.UInt64 _) -> T.T_pointer (translate_output_type t) A.UInt64
   | Type_app id b [] [] -> T.T_app id b []
   | _ -> failwith "Impossible, translate_output_type did not get an output type!"
 
@@ -391,7 +391,7 @@ let translate_typ_param (p:typ_param) : ML (T.expr & T.decls) =
 
 let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
   match t.v with
-  | Pointer t (PQ a) ->
+  | Pointer t (PQ a _) ->
     let t', decls = translate_typ t in
     T.T_pointer t' a, decls
   | Type_app hd b gs args ->
@@ -811,6 +811,8 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
       T.Atomic_probe_and_copy (translate_expr v) f
     | A.Probe_action_skip n ->
       T.Atomic_probe_skip (translate_expr n)
+    | A.Probe_action_init f n ->
+      T.Atomic_probe_init f (translate_expr n)
     | A.Probe_action_fail ->
       T.Atomic_probe_fail
   in
@@ -854,7 +856,7 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
     in
     let probe_action, dest, ds = translate_probe_call probe_call in
     match f.v.field_type.v with
-    | Pointer t (PQ a) ->
+    | Pointer t (PQ a _) ->
       let t, ds1 = translate_typ t in
       let sf_typ = T.T_with_probe t a probe_action dest as_u64 in
       T.({ sf_dependence=sf.field_dependence;
@@ -1438,10 +1440,9 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
       match pq with
       | None -> T.PQSimple
       | Some A.PQWithOffsets -> T.PQWithOffsets
-      | Some (A.PQRead t) -> 
-        T.PQRead t
-      | Some (A.PQWrite t) ->
-        T.PQWrite t
+      | Some A.PQInit -> T.PQInit
+      | Some (A.PQRead t) -> T.PQRead t
+      | Some (A.PQWrite t) -> T.PQWrite t
     in
     let pq = translate_qualifier pq in
     [with_comments (T.Extern_probe f pq) (A.is_entrypoint d) false []]

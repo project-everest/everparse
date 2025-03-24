@@ -46,22 +46,15 @@ let gen_name_32 (n:typedef_names)
     typedef_attributes = Noextract :: List.filter Aligned? n.typedef_attributes }
 
 //only specializing pointer types to 32 bit
-let rec maybe_specialize_32 (e:env_t) (t:typ)
+let maybe_specialize_32 (e:env_t) (t:typ)
 : ML (option typ)
 = match t.v with
-  | Pointer t0 pq -> (
-    let t0' = maybe_specialize_32 e t0 in
-    match pq, t0' with
-    | PQ UInt32, None ->
-      None
-    | _, _ ->
-      let t0 = 
-        match t0' with
-        | None -> t0
-        | Some t0' -> t0'
-      in
-      Some tuint32
-  )
+  | Pointer _ (PQ UInt64 false) -> //implicit U64 pointer
+    Some tuint32
+
+  | Pointer _ pq ->
+    None
+
   | Type_app id ts gs ps -> (
     let t = B.unfold_typ_abbrev_and_enum (fst e) t in
     if B.typ_is_integral (fst e) t
@@ -201,7 +194,7 @@ let has_32bit_coercion (e:B.env) (t32 t:typ) : ML (option ident) =
   let t = B.unfold_typ_abbrev_only e t in
   match t.v, t32.v with
   | Type_app id _ _ _, Type_app id32 _ _ _ -> 
-    FStar.IO.print_string <|
+    Options.debug_print_string <|
       Printf.sprintf "Checking for coercion from %s to %s\n" (print_ident id32) (print_ident id);
     GlobalEnv.find_probe_fn (B.global_env_of_env e) (CoerceProbeFunction (id32, id))
   | _ ->

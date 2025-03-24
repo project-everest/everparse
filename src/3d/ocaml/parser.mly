@@ -237,8 +237,8 @@ pointer_qualifier:
   | POINTER LPAREN t=IDENT RPAREN
     { 
       match t.v.name with
-      | "UINT32" -> PQ UInt32 
-      | "UINT64" -> PQ UInt64
+      | "UINT32" -> PQ(UInt32, true)
+      | "UINT64" -> PQ(UInt64, true)
       | _ -> error "Unexpected pointer qualifier; expected UINT32 or UINT64" t.range
     }
 
@@ -247,7 +247,7 @@ pointer_typ:
     { 
       let q =
         match qopt with
-        | None -> PQ UInt64
+        | None -> PQ(UInt64, false)
         | Some q -> q 
       in
       with_range (Pointer(t,q)) $startpos }
@@ -571,8 +571,8 @@ decl_no_range:
     }
 
   | SPECIALIZE LPAREN p1=pointer_qualifier COMMA p2=pointer_qualifier RPAREN i=IDENT j=IDENT SEMICOLON
-    { let PQ p1 = p1 in
-      let PQ p2 = p2 in
+    { let PQ(p1, _) = p1 in
+      let PQ(p2, _) = p2 in
       Specialize ([p1, p2], i, j) }
 
   | OUTPUT TYPEDEF STRUCT i=IDENT
@@ -603,6 +603,7 @@ probe_qualifier:
     {
       match q.v.name, t with
       | "WITH_OFFSETS", None -> PQWithOffsets
+      | "INIT", None -> PQInit
       | "READ", Some t -> PQRead t
       | "WRITE", Some t -> PQWrite t
       | _ -> error "Unexpected probe qualifier" q.range

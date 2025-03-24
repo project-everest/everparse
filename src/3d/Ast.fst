@@ -373,8 +373,11 @@ and typ' =
   | Type_arrow : args:list typ { Cons? args } -> typ -> typ'
 
 and pointer_qualifier =
-  | PQ of pointer_size_t
-
+  | PQ : 
+    pq:pointer_size_t ->
+    explicit:bool { not explicit ==> pq==UInt64 } ->
+    pointer_qualifier
+  
 and typ = with_meta_t typ'
 
 let field_typ = t:typ { Type_app? t.v }
@@ -489,6 +492,7 @@ type probe_field =
 noeq
 type probe_atomic_action =
   | Probe_action_return of expr
+  | Probe_action_init : f:ident -> len:expr -> probe_atomic_action
   | Probe_action_call : f:ident -> args:list expr -> probe_atomic_action
   | Probe_action_read : f:ident -> probe_atomic_action
   | Probe_action_write : f:ident -> value:expr -> probe_atomic_action
@@ -614,6 +618,7 @@ type out_typ = {
 [@@ PpxDerivingYoJson ]
 type probe_qualifier =
   | PQWithOffsets
+  | PQInit
   | PQRead of integer_type
   | PQWrite of integer_type
 
@@ -898,19 +903,24 @@ let rec print_typ t : ML string =
         (print_generic_insts gs)
         (String.concat ", " (List.map print_typ_param ps))
     end
-  | Pointer t (PQ q) ->
-     Printf.sprintf "(pointer %s (%s))"
+  | Pointer t (PQ q explicit) ->
+     Printf.sprintf "(pointer %s (%b %s))"
        (print_typ t)
+        explicit
        (print_integer_type q)
   | Type_arrow ts t ->
     Printf.sprintf "%s -> %s"
       (String.concat " -> " (List.map print_typ ts))
       (print_typ t)
 
+let pq_as_integer_type (pq:pointer_qualifier) : ML integer_type =
+  match pq with
+  | PQ i _ -> i
+
 let typ_as_integer_type (t:typ) : ML integer_type =
   match t.v with
   | Type_app i _k [] [] -> as_integer_typ i
-  | Pointer _ (PQ i) -> i
+  | Pointer _ pq -> pq_as_integer_type pq
   | _ -> error ("Expected an integer type; got: " ^ (print_typ t)) t.range
 
 let bit_order_of_typ (t:typ) : ML bitfield_bit_order =
@@ -1028,6 +1038,7 @@ and print_probe_atomic_action (p:probe_atomic_action)
 : ML string
 = match p with
   | Probe_action_return e -> Printf.sprintf "return %s;" (print_expr e)
+  | Probe_action_init f len -> Printf.sprintf "init %s(%s);" (print_ident f) (print_expr len)
   | Probe_action_call f args -> Printf.sprintf "(Probe_action_call %s(%s));" (print_ident f) (String.concat ", " (List.map print_expr args))
   | Probe_action_read f -> Printf.sprintf "(Probe_action_read %s);" (print_ident f)
   | Probe_action_write f v ->Printf.sprintf "(Probe_action_write %s(%s));" (print_ident f) (print_expr v)
@@ -1415,8 +1426,8 @@ let eq_opt (f:'a -> 'a -> bool) (x y:option 'a) =
   | _ -> false
 
 let eq_pointer_qualifier (q1 q2:pointer_qualifier) =
-  let PQ a1, PQ a2 = q1, q2 in
-  a1=a2
+  match q1, q2 with
+  | PQ i1 x1, PQ i2 x2 -> i1 = i2 && x1 = x2
 
 let rec eq_typ (t1 t2:typ) : Tot bool =
   match t1.v, t2.v with
@@ -1519,6 +1530,7 @@ and subst_action_opt (s:subst) (a:option action) : ML (option action) =
 let subst_probe_atomic_action (s:subst) (aa:probe_atomic_action) : ML probe_atomic_action =
   match aa with
   | Probe_action_return e -> Probe_action_return (subst_expr s e)
+  | Probe_action_init f len -> Probe_action_init f (subst_expr s len)
   | Probe_action_call f args -> Probe_action_call f (List.map (subst_expr s) args)
   | Probe_action_read f -> Probe_action_read f
   | Probe_action_write f value -> Probe_action_write f (subst_expr s value)
