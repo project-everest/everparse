@@ -175,6 +175,50 @@ fn impl_serialize_map_group_zero_or_one
   }
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_map_group_either_left
+    (#[@@@erasable]t1: Ghost.erased det_map_group)
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] fp1: Ghost.erased typ)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (mg_spec t1 fp1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_map_group ps1 r1)
+    (#impl_tgt2: Type0)
+    (#[@@@erasable]r2: rel impl_tgt2 tgt1)
+    (i2: impl_serialize_map_group ps1 r2)
+: impl_serialize_map_group #_ #_ #_ #_ ps1 #_ (rel_either_left r1 r2)
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  match c {
+    norewrite
+    Inl c1 -> {
+      Trade.rewrite_with_trade
+        (rel_either_left r1 r2 c v)
+        (r1 c1 v);
+      let res = i1 c1 out out_count out_size l;
+      Trade.elim _ _;
+      res
+    }
+    norewrite
+    Inr c2 -> {
+      Trade.rewrite_with_trade
+        (rel_either_left r1 r2 c v)
+        (r2 c2 v);
+      let res = i2 c2 out out_count out_size l;
+      Trade.elim _ _;
+      res
+    }
+  }
+}
+
 let cbor_det_serialize_map_append_length_pat
   (m1 m2: cbor_map)
 : Lemma
@@ -1538,3 +1582,56 @@ fn impl_serialize_map_zero_or_more_slice
   res
 }
 
+#pop-options
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_serialize_map_zero_or_more
+  (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (#cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (#ty2: Type0) (#vmatch2: perm -> ty2 -> (cbor & cbor) -> slprop)
+  (map_share: share_t cbor_map_iterator_match)
+  (map_gather: gather_t cbor_map_iterator_match)
+  (map_is_empty: map_iterator_is_empty_t cbor_map_iterator_match)
+  (map_next: map_iterator_next_t vmatch2 cbor_map_iterator_match)
+  (map_entry_key: map_entry_key_t vmatch2 vmatch)
+  (map_entry_value: map_entry_value_t vmatch2 vmatch)
+  (map_entry_share: share_t vmatch2)
+  (map_entry_gather: gather_t vmatch2)
+  (#ty': Type0) (#vmatch': perm -> ty' -> cbor -> slprop)
+  (parse: cbor_det_parse_t vmatch')
+  (insert: cbor_det_serialize_map_insert_t)
+    (#[@@@erasable]key: Ghost.erased typ)
+    (#[@@@erasable]tkey: Type0)
+    ([@@@erasable]key_eq: Ghost.erased (EqTest.eq_test tkey))
+    (#[@@@erasable]sp1: Ghost.erased (spec key tkey true))
+    (#ikey: Type0)
+    (#[@@@erasable]r1: rel ikey tkey)
+    (pa1: impl_serialize sp1 r1)
+    (#[@@@erasable]key_except: Ghost.erased typ)
+    (va_ex: impl_typ vmatch' key_except)
+    (#[@@@erasable]value: Ghost.erased typ)
+    (#[@@@erasable]tvalue: Type0)
+    (#[@@@erasable]inj: Ghost.erased bool)
+    (#[@@@erasable]sp2: Ghost.erased (spec value tvalue inj))
+    (#ivalue: Type0)
+    (#[@@@erasable]r2: rel ivalue tvalue)
+    (pa2: impl_serialize sp2 r2)
+: impl_serialize_map_group #(map_group_zero_or_more_match_item key key_except value) #_ #_ #_ (mg_zero_or_more_match_item sp1 key_except sp2) #_ (rel_either_left (rel_slice_of_table key_eq r1 r2) (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
+= impl_serialize_map_group_either_left
+    (impl_serialize_map_zero_or_more_slice
+      parse
+      insert
+      key_eq
+      pa1
+      va_ex
+      pa2
+    )
+    (impl_serialize_map_zero_or_more_iterator
+      map_share map_gather map_is_empty map_next map_entry_key map_entry_value map_entry_share map_entry_gather
+      parse
+      insert
+      key_eq
+      pa1
+      va_ex
+      pa2
+    )
+    
