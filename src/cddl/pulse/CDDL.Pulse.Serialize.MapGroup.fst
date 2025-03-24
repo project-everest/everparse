@@ -1395,3 +1395,86 @@ fn map_slice_iterator_length
   fold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
   ()
 }
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn map_slice_iterator_next
+  (impl_elt1: Type0) (impl_elt2: Type0)
+: cddl_map_iterator_next_gen_t _ _ (map_slice_iterator_t impl_elt1 impl_elt2) (rel_map_slice_iterator _ _)
+= (spec1: _)
+  (spec2: _)
+  (pi: _)
+  (#gi: _)
+  (#m: _)
+{
+  let i = !pi;
+  let r : rel (impl_elt1 & impl_elt2) (dfst spec1 & dfst spec2) = (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2));
+  Trade.rewrite_with_trade
+    (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 gi m)
+    (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i.key_eq (dsnd spec1) (dsnd spec2) i.base m);
+  unfold (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i.key_eq (dsnd spec1) (dsnd spec2) i.base m);
+  with l . assert (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false i.base l);
+  rewrite (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false i.base l)
+    as (rel_slice_of_list r false i.base l);
+  unfold (rel_slice_of_list r false i.base l);
+  S.pts_to_len i.base.s;
+  with s . assert (pts_to i.base.s #i.base.p s);
+  SM.seq_list_match_length r _ _;
+  Seq.lemma_split s 1;
+  SM.seq_list_match_cons_elim _ _ r;
+  with gres gv . assert (r gres gv);
+  let res = S.op_Array_Access i.base.s 0sz;
+  rewrite each gres as res;
+//  rewrite (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2) gres gv)
+//  rel_pair (dsnd spec1) (dsnd spec2) gres gv)
+//    as (rel_pair (dsnd spec1) (dsnd spec2) res gv);
+  let (il, ir) = S.split i.base.s 1sz;
+  with sl . assert (pts_to il #i.base.p sl);
+  with sr . assert (pts_to ir #i.base.p sr);
+//  S.share ir;
+  let i' : map_slice_iterator_t impl_elt1 impl_elt2 spec1 spec2 = {
+    base = {
+      s = ir;
+      p = i.base.p (* /. 2.0R *) ;
+    };
+    key_eq = i.key_eq;
+  };
+  rewrite (pts_to ir #(i.base.p (* /. 2.0R *) ) sr) as (pts_to i'.base.s #i'.base.p (Seq.tail s));
+  fold (rel_slice_of_list r false i'.base (List.Tot.tl l));
+  rewrite (rel_slice_of_list r false i'.base (List.Tot.tl l))
+    as (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false i'.base (List.Tot.tl l));
+  let m' = Ghost.hide (map_of_list_pair i'.key_eq (List.Tot.tl l));
+  fold (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i'.key_eq (dsnd spec1) (dsnd spec2) i'.base m');
+  Trade.rewrite_with_trade
+    (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i'.key_eq (dsnd spec1) (dsnd spec2) i'.base m')
+    (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i' m');
+  ghost fn aux (_: unit)
+  requires (S.is_split i.base.s il ir ** pts_to il #i.base.p sl (* ** pts_to ir #(i.base.p /. 2.0R) sr *) ) ** (
+    r res gv ** rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i'.key_eq (dsnd spec1) (dsnd spec2) i'.base m')
+  ensures (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i.key_eq (dsnd spec1) (dsnd spec2) i.base m)
+  {
+    unfold (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i'.key_eq (dsnd spec1) (dsnd spec2) i'.base m');
+    with l' . assert (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false i'.base l');
+    rewrite (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false i'.base l')
+      as (rel_slice_of_list r false i'.base l');
+    unfold (rel_slice_of_list r false i'.base l');
+    with s' . assert (pts_to i'.base.s #i'.base.p s');
+    SM.seq_list_match_cons_intro res (Ghost.reveal gv) s' l' r;
+    S.join il i'.base.s i.base.s;
+    fold (rel_slice_of_list
+      (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2))
+      false
+      i.base
+      (Ghost.reveal gv :: l')
+    );
+    fold (rel_slice_of_table #_ #(dfst spec1) #_ #(dfst spec2) i.key_eq (dsnd spec1) (dsnd spec2) i.base m);
+  };
+  Trade.intro _ _ _ aux;
+  Trade.trans_hyp_r _ _ _ _;
+  Trade.trans _ _ (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 gi m);
+  Trade.rewrite_with_trade
+    (r res gv)
+    (dsnd spec1 (fst res) (fst gv) ** dsnd spec2 (snd res) (snd gv));
+  Trade.trans_hyp_l _ (r res gv) _ _;
+  pi := i';
+  res
+}
