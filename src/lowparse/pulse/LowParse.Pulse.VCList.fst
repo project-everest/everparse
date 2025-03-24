@@ -174,7 +174,7 @@ ensures exists* v' .
     (synth_nlist (n - 1))
     (synth_nlist_recip (n - 1))
     input;
-  Trade.trans (pts_to_serialized (serialize_nondep_then s (serialize_nlist (n - 1) s)) input #pm _) _ _
+  Trade.trans (pts_to_serialized (serialize_nondep_then s (serialize_nlist (n - 1) s)) input #pm _) _ (pts_to_serialized (serialize_nlist n s) input #pm v)
 }
 
 let nlist_hd_tl_post'
