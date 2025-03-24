@@ -1378,7 +1378,6 @@ fn map_slice_iterator_is_empty
   (S.len s.s = 0sz)
 }
 
-(*
 ghost
 fn map_slice_iterator_length
   (impl_elt1: Type0) (impl_elt2: Type0)
@@ -1390,17 +1389,13 @@ fn map_slice_iterator_length
 {
   unfold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
   with gs . assert (R.pts_to i.base gs);
-  let s = !(i.base);
-  rewrite each gs as s;
-  unfold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) s l);
-  with l' . assert (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
-  unfold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
-  S.pts_to_len s.s;
+  unfold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) gs l);
+  with l' . assert (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false gs l');
+  unfold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false gs l');
+  S.pts_to_len gs.s;
   SM.seq_list_match_length (rel_pair (dsnd spec1) (dsnd spec2)) _ _;
-  fold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false s l');
-  fold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) s l);
+  fold (rel_slice_of_list (rel_pair #_ #(dfst spec1) (dsnd spec1) #_ #(dfst spec2) (dsnd spec2)) false gs l');
+  fold (rel_slice_of_table  #_ #(dfst spec1) #_ #(dfst spec2)  i.key_eq (dsnd spec1) (dsnd spec2) gs l);
   fold (rel_map_slice_iterator impl_elt1 impl_elt2 spec1 spec2 i l);
   ()
 }
-
-
