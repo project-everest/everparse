@@ -1,5 +1,9 @@
-name: Build everparse package
+name: Build everparse package (Linux)
 on:
+  push:
+    branches-ignore:
+    - _**
+  pull_request:
   workflow_dispatch:
     inputs:
       fstar_repo:
@@ -36,14 +40,14 @@ jobs:
       - uses: actions/checkout@master
         with:
           path: FStar
-          repository: ${{inputs.fstar_repo}}
-          ref: ${{inputs.fstar_ref}}
+          repository: ${{ inputs.fstar_repo || 'FStarLang/FStar' }}
+          ref: ${{ inputs.fstar_ref || 'master' }}
 
       - uses: actions/checkout@master
         with:
           path: karamel
-          repository: ${{inputs.karamel_repo}}
-          ref: ${{inputs.karamel_ref}}
+          repository: ${{ inputs.karamel_repo || 'FStarLang/karamel' }}
+          ref: ${{ inputs.karamel_ref || 'master' }}
 
       - uses: ocaml/setup-ocaml@v3
         with:
@@ -63,11 +67,32 @@ jobs:
       - name: Build package
         run: |
           eval $(opam env)
-          make package -kj$(nproc)
+          make everparse -kj$(nproc)
 
       - uses: actions/upload-artifact@v4
         with:
+          include-hidden-files: true
           path: |
-            everparse*.zip
-            everparse*.tar.gz
+            everparse
           name: everparse
+
+  test:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download and extract artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: everparse
+          path: ${{ github.workspace }}/test
+      - name: Check out repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: src/3d/tests
+          path: ${{ github.workspace }}/everparse
+      - name: Test EverParse
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Arithmetic.3d ${{ github.workspace }}/everparse/src/3d/tests/FieldDependence0.3d && bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/Comments.3d && bash ${{ github.workspace }}/test/everparse.sh --check_hashes inplace ${{ github.workspace }}/everparse/src/3d/tests/Comments.3d
+      - name: Test EverParse test case generation
+        run: |
+          bash ${{ github.workspace }}/test/everparse.sh ${{ github.workspace }}/everparse/src/3d/tests/ELFTestGen.3d --odir ${{ github.workspace }}/test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5

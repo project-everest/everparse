@@ -9,6 +9,8 @@ let lowparse_home = filename_concat (filename_concat everparse_home "src") "lowp
 let ddd_home = filename_concat (filename_concat everparse_home "src") "3d"
 let ddd_prelude_home = filename_concat (filename_concat (filename_concat everparse_home "src") "3d") "prelude"
 
+let cl_wrapper () = filename_concat krml_home (filename_concat "misc" "cl-wrapper.bat")
+
 let ddd_actions_home input_stream_binding =
   let input_stream_dir =
     match string_of_input_stream_binding input_stream_binding with

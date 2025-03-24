@@ -377,6 +377,7 @@ casetype _SECTION_HEADER_TABLE_OPT (OFFSET PhTableEnd,
   * UINT64 ElfFileSize: the size of the ELF file
   --*/
 
+export
 entrypoint
 typedef struct _ELF (UINT64 ElfFileSize)
 {
