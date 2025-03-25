@@ -348,7 +348,7 @@ fn cbor_array_reset_perm <'a>(c: cbor_array <'a>) -> cbor_array <'a>
 fn cbor_map_reset_perm <'a>(c: cbor_map <'a>) -> cbor_map <'a>
 { cbor_map { cbor_map_length_size: c.cbor_map_length_size, cbor_map_ptr: c.cbor_map_ptr } }
 
-fn cbor_raw_reset_perm_tot <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
+pub(crate) fn cbor_raw_reset_perm_tot <'a>(c: cbor_raw <'a>) -> cbor_raw <'a>
 {
     match c
     {
@@ -1911,6 +1911,154 @@ pub(crate) fn cbor_parse <'a>(input: &'a [u8], len: usize) -> cbor_raw <'a>
     res
 }
 
+fn cbor_jump(input: &[u8], off: usize) -> usize
+{
+    let res: usize = jump_raw_data_item(input, off);
+    res
+}
+
+#[derive(PartialEq, Clone, Copy)]
+enum cbor_raw_map_insert_result
+{
+    CFailure,
+    CInProgress,
+    CSuccess
+}
+
+fn uu___is_CInProgress(projectee: cbor_raw_map_insert_result) -> bool
+{ match projectee { cbor_raw_map_insert_result::CInProgress => true, _ => false } }
+
+pub(crate) fn cbor_raw_map_insert(out: &mut [u8], off2: usize, off3: usize) -> bool
+{
+    let mut poff: [usize; 1] = [0usize; 1usize];
+    let mut pres: [cbor_raw_map_insert_result; 1] =
+        [cbor_raw_map_insert_result::CInProgress; 1usize];
+    let res: cbor_raw_map_insert_result = (&pres)[0];
+    let mut cond: bool =
+        if uu___is_CInProgress(res)
+        {
+            let off: usize = (&poff)[0];
+            off < off2
+        }
+        else
+        { false };
+    while
+    cond
+    {
+        let off: usize = (&poff)[0];
+        let _letpattern: (&mut [u8], &mut [u8]) = out.split_at_mut(off);
+        {
+            let _out1: &[u8] = _letpattern.0;
+            let out2kv: &mut [u8] = _letpattern.1;
+            let _letpattern1: (&[u8], &[u8]) = out2kv.split_at(off2.wrapping_sub(off));
+            let out2: &[u8] = _letpattern1.0;
+            let outkv: &[u8] = _letpattern1.1;
+            let _letpattern2: (&[u8], &[u8]) = outkv.split_at(off3.wrapping_sub(off2));
+            let outk: &[u8] = _letpattern2.0;
+            let _outv: &[u8] = _letpattern2.1;
+            let offk: usize = cbor_jump(out2, 0usize);
+            let _letpattern3: (&[u8], &[u8]) = out2.split_at(offk);
+            let outk·: &[u8] = _letpattern3.0;
+            let outvq: &[u8] = _letpattern3.1;
+            let c: i16 = lex_compare_bytes(outk·, outk);
+            if c < 0i16
+            {
+                let offq: usize = cbor_jump(outvq, 0usize);
+                let off·: usize = off.wrapping_add(offk.wrapping_add(offq));
+                (&mut poff)[0] = off·
+            }
+            else if c > 0i16
+            {
+                if ! (off2.wrapping_sub(off) == 0usize || off2.wrapping_sub(off) == out2kv.len())
+                {
+                    let mut pn: [usize; 1] = [out2kv.len(); 1usize];
+                    let mut pl: [usize; 1] = [off2.wrapping_sub(off); 1usize];
+                    let l: usize = (&pl)[0];
+                    let mut cond0: bool = l > 0usize;
+                    while
+                    cond0
+                    {
+                        let n: usize = (&pn)[0];
+                        let l0: usize = (&pl)[0];
+                        let l·: usize = n.wrapping_rem(l0);
+                        (&mut pn)[0] = l0;
+                        (&mut pl)[0] = l·;
+                        let l1: usize = (&pl)[0];
+                        cond0 = l1 > 0usize
+                    };
+                    let d: usize = (&pn)[0];
+                    let q: usize = out2kv.len().wrapping_div(d);
+                    let mut pi: [usize; 1] = [0usize; 1usize];
+                    let i: usize = (&pi)[0];
+                    let mut cond1: bool = i < d;
+                    while
+                    cond1
+                    {
+                        let i0: usize = (&pi)[0];
+                        let save: u8 = out2kv[i0];
+                        let mut pj: [usize; 1] = [0usize; 1usize];
+                        let mut pidx: [usize; 1] = [i0; 1usize];
+                        let j: usize = (&pj)[0];
+                        let mut cond2: bool = j < q.wrapping_sub(1usize);
+                        while
+                        cond2
+                        {
+                            let j0: usize = (&pj)[0];
+                            let idx: usize = (&pidx)[0];
+                            let idx·: usize =
+                                if
+                                idx.wrapping_sub(0usize)
+                                >=
+                                out2kv.len().wrapping_sub(off2.wrapping_sub(off))
+                                {
+                                    idx.wrapping_sub(
+                                        out2kv.len().wrapping_sub(off2.wrapping_sub(off))
+                                    )
+                                }
+                                else
+                                { idx.wrapping_add(off2.wrapping_sub(off).wrapping_sub(0usize)) };
+                            let x: u8 = out2kv[idx·];
+                            let j·: usize = j0.wrapping_add(1usize);
+                            out2kv[idx] = x;
+                            (&mut pj)[0] = j·;
+                            (&mut pidx)[0] = idx·;
+                            let j1: usize = (&pj)[0];
+                            cond2 = j1 < q.wrapping_sub(1usize)
+                        };
+                        let idx: usize = (&pidx)[0];
+                        out2kv[idx] = save;
+                        let i·: usize = i0.wrapping_add(1usize);
+                        (&mut pi)[0] = i·;
+                        let i1: usize = (&pi)[0];
+                        cond1 = i1 < d
+                    }
+                };
+                (&mut pres)[0] = cbor_raw_map_insert_result::CSuccess
+            }
+            else
+            { (&mut pres)[0] = cbor_raw_map_insert_result::CFailure }
+        };
+        let res0: cbor_raw_map_insert_result = (&pres)[0];
+        let ite: bool =
+            if uu___is_CInProgress(res0)
+            {
+                let off0: usize = (&poff)[0];
+                off0 < off2
+            }
+            else
+            { false };
+        cond = ite
+    };
+    let res0: cbor_raw_map_insert_result = (&pres)[0];
+    match res0
+    {
+        cbor_raw_map_insert_result::CSuccess => true,
+        cbor_raw_map_insert_result::CFailure => false,
+        cbor_raw_map_insert_result::CInProgress => true,
+        _ => panic!("Precondition of the function most likely violated")
+    }
+}
+
 fn cbor_match_serialized_tagged_get_payload <'a>(c: cbor_serialized <'a>) -> cbor_raw <'a>
 {
     let res: cbor_raw = cbor_read(c.cbor_serialized_payload);
@@ -2005,6 +2153,9 @@ fn cbor_serialized_array_iterator_init <'a>(c: cbor_serialized <'a>) ->
 fn cbor_serialized_array_iterator_is_empty <'a>(c: cbor_raw_serialized_iterator <'a>) -> bool
 { c.len == 0u64 }
 
+fn cbor_serialized_array_iterator_length <'a>(c: cbor_raw_serialized_iterator <'a>) -> u64
+{ c.len }
+
 #[derive(PartialEq, Clone, Copy)]
 enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags
 {
@@ -2055,6 +2206,11 @@ fn cbor_serialized_array_iterator_next <'b, 'a>(
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i· };
     res
 }
+
+fn cbor_serialized_array_iterator_truncate <'a>(c: cbor_raw_serialized_iterator <'a>, len: u64) ->
+    cbor_raw_serialized_iterator
+    <'a>
+{ cbor_raw_serialized_iterator { s: c.s, len } }
 
 fn cbor_serialized_map_iterator_init <'a>(c: cbor_serialized <'a>) ->
     cbor_raw_serialized_iterator
@@ -2215,6 +2371,28 @@ pub(crate) fn cbor_array_iterator_is_empty <'a>(
     }
 }
 
+pub(crate) fn cbor_array_iterator_length <'a>(
+    c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
+) ->
+    u64
+{
+    match c
+    {
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: c· } =>
+          {
+              let res: u64 = c·.len() as u64;
+              let res0: u64 = res;
+              res0
+          },
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: c· } =>
+          {
+              let res: u64 = cbor_serialized_array_iterator_length(c·);
+              res
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
 pub(crate) fn cbor_array_iterator_next <'b, 'a>(
     pi: &'b mut [cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>]
 ) ->
@@ -2246,6 +2424,41 @@ pub(crate) fn cbor_array_iterator_next <'b, 'a>(
           {
               let res: cbor_raw = cbor_serialized_array_iterator_next(pi, i1);
               res
+          },
+        _ => panic!("Incomplete pattern matching")
+    }
+}
+
+pub(crate) fn cbor_array_iterator_truncate <'a>(
+    c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>,
+    len: u64
+) ->
+    cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+    <'a>
+{
+    match c
+    {
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: c· } =>
+          {
+              let s·: (&[cbor_raw], &[cbor_raw]) = c·.split_at(len as usize);
+              let _letpattern: (&[cbor_raw], &[cbor_raw]) =
+                  {
+                      let s11: &[cbor_raw] = s·.0;
+                      let s21: &[cbor_raw] = s·.1;
+                      (s11,s21)
+                  };
+              let sl1: &[cbor_raw] = _letpattern.0;
+              let _sl2: &[cbor_raw] = _letpattern.1;
+              let c1: &[cbor_raw] = sl1;
+              let c·1: &[cbor_raw] = c1;
+              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Slice { _0: c·1 }
+          },
+        cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: c· } =>
+          {
+              let sres: cbor_raw_serialized_iterator =
+                  cbor_serialized_array_iterator_truncate(c·, len);
+              cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized
+              { _0: sres }
           },
         _ => panic!("Incomplete pattern matching")
     }
@@ -3323,6 +3536,258 @@ pub(crate) fn cbor_size <'a>(x: cbor_raw <'a>, bound: usize) -> usize
     }
     else
     { 0usize }
+}
+
+pub(crate) fn cbor_serialize_tag(tag: raw_uint64, output: &mut [u8]) -> usize
+{
+    let h: header = raw_uint64_as_argument(cbor_major_type_tagged, tag);
+    let mut slen: [usize; 1] = [output.len(); 1usize];
+    let fits: bool = size_header(h, &mut slen);
+    if fits
+    {
+        let res: usize = write_header(h, output, 0usize);
+        res
+    }
+    else
+    { 0usize }
+}
+
+fn cbor_serialize_array·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
+{
+    let slen: usize = out.len();
+    let mut rem: [usize; 1] = [slen.wrapping_sub(off); 1usize];
+    let h: header = raw_uint64_as_argument(cbor_major_type_array, len);
+    let hfits: bool = size_header(h, &mut rem);
+    if hfits
+    {
+        let llen: usize = write_header(h, out, off);
+        let sp: (&mut [u8], &mut [u8]) = out.split_at_mut(llen);
+        let sp1: &mut [u8] = sp.0;
+        let _sp2: &[u8] = sp.1;
+        if ! (off == 0usize || off == sp1.len())
+        {
+            let mut pn: [usize; 1] = [sp1.len(); 1usize];
+            let mut pl: [usize; 1] = [off; 1usize];
+            let l1: usize = (&pl)[0];
+            let mut cond: bool = l1 > 0usize;
+            while
+            cond
+            {
+                let n: usize = (&pn)[0];
+                let l10: usize = (&pl)[0];
+                let l·: usize = n.wrapping_rem(l10);
+                (&mut pn)[0] = l10;
+                (&mut pl)[0] = l·;
+                let l11: usize = (&pl)[0];
+                cond = l11 > 0usize
+            };
+            let d: usize = (&pn)[0];
+            let q: usize = sp1.len().wrapping_div(d);
+            let mut pi: [usize; 1] = [0usize; 1usize];
+            let i: usize = (&pi)[0];
+            let mut cond0: bool = i < d;
+            while
+            cond0
+            {
+                let i0: usize = (&pi)[0];
+                let save: u8 = sp1[i0];
+                let mut pj: [usize; 1] = [0usize; 1usize];
+                let mut pidx: [usize; 1] = [i0; 1usize];
+                let j: usize = (&pj)[0];
+                let mut cond1: bool = j < q.wrapping_sub(1usize);
+                while
+                cond1
+                {
+                    let j0: usize = (&pj)[0];
+                    let idx: usize = (&pidx)[0];
+                    let idx·: usize =
+                        if idx.wrapping_sub(0usize) >= sp1.len().wrapping_sub(off)
+                        { idx.wrapping_sub(sp1.len().wrapping_sub(off)) }
+                        else
+                        { idx.wrapping_add(off.wrapping_sub(0usize)) };
+                    let x: u8 = sp1[idx·];
+                    let j·: usize = j0.wrapping_add(1usize);
+                    sp1[idx] = x;
+                    (&mut pj)[0] = j·;
+                    (&mut pidx)[0] = idx·;
+                    let j1: usize = (&pj)[0];
+                    cond1 = j1 < q.wrapping_sub(1usize)
+                };
+                let idx: usize = (&pidx)[0];
+                sp1[idx] = save;
+                let i·: usize = i0.wrapping_add(1usize);
+                (&mut pi)[0] = i·;
+                let i1: usize = (&pi)[0];
+                cond0 = i1 < d
+            }
+        };
+        llen
+    }
+    else
+    { 0usize }
+}
+
+pub(crate) fn cbor_serialize_array(len: raw_uint64, out: &mut [u8], off: usize) -> usize
+{
+    let res: usize = cbor_serialize_array·(len, out, off);
+    res
+}
+
+pub(crate) fn cbor_serialize_string(ty: u8, off: raw_uint64, out: &mut [u8]) -> usize
+{
+    let soff: usize = off.value as usize;
+    let slen: usize = out.len();
+    let mut rem: [usize; 1] = [slen.wrapping_sub(soff); 1usize];
+    let h: header = raw_uint64_as_argument(ty, off);
+    let hfits: bool = size_header(h, &mut rem);
+    if hfits
+    {
+        let llen: usize = write_header(h, out, soff);
+        let sp: (&mut [u8], &mut [u8]) = out.split_at_mut(llen);
+        let sp1: &mut [u8] = sp.0;
+        let _sp2: &[u8] = sp.1;
+        if ! (soff == 0usize || soff == sp1.len())
+        {
+            let mut pn: [usize; 1] = [sp1.len(); 1usize];
+            let mut pl: [usize; 1] = [soff; 1usize];
+            let l: usize = (&pl)[0];
+            let mut cond: bool = l > 0usize;
+            while
+            cond
+            {
+                let n: usize = (&pn)[0];
+                let l0: usize = (&pl)[0];
+                let l·: usize = n.wrapping_rem(l0);
+                (&mut pn)[0] = l0;
+                (&mut pl)[0] = l·;
+                let l1: usize = (&pl)[0];
+                cond = l1 > 0usize
+            };
+            let d: usize = (&pn)[0];
+            let q: usize = sp1.len().wrapping_div(d);
+            let mut pi: [usize; 1] = [0usize; 1usize];
+            let i: usize = (&pi)[0];
+            let mut cond0: bool = i < d;
+            while
+            cond0
+            {
+                let i0: usize = (&pi)[0];
+                let save: u8 = sp1[i0];
+                let mut pj: [usize; 1] = [0usize; 1usize];
+                let mut pidx: [usize; 1] = [i0; 1usize];
+                let j: usize = (&pj)[0];
+                let mut cond1: bool = j < q.wrapping_sub(1usize);
+                while
+                cond1
+                {
+                    let j0: usize = (&pj)[0];
+                    let idx: usize = (&pidx)[0];
+                    let idx·: usize =
+                        if idx.wrapping_sub(0usize) >= sp1.len().wrapping_sub(soff)
+                        { idx.wrapping_sub(sp1.len().wrapping_sub(soff)) }
+                        else
+                        { idx.wrapping_add(soff.wrapping_sub(0usize)) };
+                    let x: u8 = sp1[idx·];
+                    let j·: usize = j0.wrapping_add(1usize);
+                    sp1[idx] = x;
+                    (&mut pj)[0] = j·;
+                    (&mut pidx)[0] = idx·;
+                    let j1: usize = (&pj)[0];
+                    cond1 = j1 < q.wrapping_sub(1usize)
+                };
+                let idx: usize = (&pidx)[0];
+                sp1[idx] = save;
+                let i·: usize = i0.wrapping_add(1usize);
+                (&mut pi)[0] = i·;
+                let i1: usize = (&pi)[0];
+                cond0 = i1 < d
+            }
+        };
+        llen
+    }
+    else
+    { 0usize }
+}
+
+fn cbor_serialize_map·(len: raw_uint64, out: &mut [u8], off: usize) -> usize
+{
+    let slen: usize = out.len();
+    let mut rem: [usize; 1] = [slen.wrapping_sub(off); 1usize];
+    let h: header = raw_uint64_as_argument(cbor_major_type_map, len);
+    let hfits: bool = size_header(h, &mut rem);
+    if hfits
+    {
+        let llen: usize = write_header(h, out, off);
+        let sp: (&mut [u8], &mut [u8]) = out.split_at_mut(llen);
+        let sp1: &mut [u8] = sp.0;
+        let _sp2: &[u8] = sp.1;
+        if ! (off == 0usize || off == sp1.len())
+        {
+            let mut pn: [usize; 1] = [sp1.len(); 1usize];
+            let mut pl: [usize; 1] = [off; 1usize];
+            let l1: usize = (&pl)[0];
+            let mut cond: bool = l1 > 0usize;
+            while
+            cond
+            {
+                let n: usize = (&pn)[0];
+                let l10: usize = (&pl)[0];
+                let l·: usize = n.wrapping_rem(l10);
+                (&mut pn)[0] = l10;
+                (&mut pl)[0] = l·;
+                let l11: usize = (&pl)[0];
+                cond = l11 > 0usize
+            };
+            let d: usize = (&pn)[0];
+            let q: usize = sp1.len().wrapping_div(d);
+            let mut pi: [usize; 1] = [0usize; 1usize];
+            let i: usize = (&pi)[0];
+            let mut cond0: bool = i < d;
+            while
+            cond0
+            {
+                let i0: usize = (&pi)[0];
+                let save: u8 = sp1[i0];
+                let mut pj: [usize; 1] = [0usize; 1usize];
+                let mut pidx: [usize; 1] = [i0; 1usize];
+                let j: usize = (&pj)[0];
+                let mut cond1: bool = j < q.wrapping_sub(1usize);
+                while
+                cond1
+                {
+                    let j0: usize = (&pj)[0];
+                    let idx: usize = (&pidx)[0];
+                    let idx·: usize =
+                        if idx.wrapping_sub(0usize) >= sp1.len().wrapping_sub(off)
+                        { idx.wrapping_sub(sp1.len().wrapping_sub(off)) }
+                        else
+                        { idx.wrapping_add(off.wrapping_sub(0usize)) };
+                    let x: u8 = sp1[idx·];
+                    let j·: usize = j0.wrapping_add(1usize);
+                    sp1[idx] = x;
+                    (&mut pj)[0] = j·;
+                    (&mut pidx)[0] = idx·;
+                    let j1: usize = (&pj)[0];
+                    cond1 = j1 < q.wrapping_sub(1usize)
+                };
+                let idx: usize = (&pidx)[0];
+                sp1[idx] = save;
+                let i·: usize = i0.wrapping_add(1usize);
+                (&mut pi)[0] = i·;
+                let i1: usize = (&pi)[0];
+                cond0 = i1 < d
+            }
+        };
+        llen
+    }
+    else
+    { 0usize }
+}
+
+pub(crate) fn cbor_serialize_map(len: raw_uint64, out: &mut [u8], off: usize) -> usize
+{
+    let res: usize = cbor_serialize_map·(len, out, off);
+    res
 }
 
 fn cbor_match_compare_serialized_tagged <'a>(

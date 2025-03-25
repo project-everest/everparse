@@ -6,6 +6,14 @@
 
 pub type cbordet <'a> = crate::cbordetveraux::cbor_raw <'a>;
 
+pub fn cbor_det_reset_perm <'a>(x1: crate::cbordetveraux::cbor_raw <'a>) ->
+    crate::cbordetveraux::cbor_raw
+    <'a>
+{
+    let res: crate::cbordetveraux::cbor_raw = crate::cbordetveraux::cbor_raw_reset_perm_tot(x1);
+    res
+}
+
 #[derive(PartialEq, Clone, Copy)]
 pub enum option__·CBOR_Pulse_Raw_Type_cbor_raw···Pulse_Lib_Slice_slice·uint8_t· <'a>
 {
@@ -131,6 +139,8 @@ pub enum cbor_det_string_kind
     TextString
 }
 
+pub fn cbor_impl_utf8_correct(s: &[u8]) -> bool { crate::cbordetveraux::impl_correct(s) }
+
 pub fn cbor_det_mk_string <'a>(ty: cbor_det_string_kind, s: &'a [u8]) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
@@ -140,10 +150,7 @@ pub fn cbor_det_mk_string <'a>(ty: cbor_det_string_kind, s: &'a [u8]) ->
     else
     {
         let correct: bool =
-            if ty == cbor_det_string_kind::TextString
-            { crate::cbordetveraux::impl_correct(s) }
-            else
-            { true };
+            if ty == cbor_det_string_kind::TextString { cbor_impl_utf8_correct(s) } else { true };
         if correct
         {
             let len64: crate::cbordetveraux::raw_uint64 =
@@ -417,6 +424,27 @@ pub fn cbor_det_array_iterator_next <'b, 'a>(
     res
 }
 
+pub fn cbor_det_array_iterator_length <'a>(
+    x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
+) ->
+    u64
+{
+    let res: u64 = crate::cbordetveraux::cbor_array_iterator_length(x);
+    res
+}
+
+pub fn cbor_det_array_iterator_truncate <'a>(
+    x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>,
+    len: u64
+) ->
+    crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+    <'a>
+{
+    let res: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw =
+        crate::cbordetveraux::cbor_array_iterator_truncate(x, len);
+    res
+}
+
 pub fn cbor_det_get_array_item <'a>(x: crate::cbordetveraux::cbor_raw <'a>, i: u64) ->
     option__CBOR_Pulse_Raw_Type_cbor_raw
     <'a>
@@ -556,4 +584,34 @@ pub fn cbor_det_map_get <'a>(
     }
     else
     { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
+}
+
+pub fn cbor_det_serialize_string(ty: u8, off: u64, out: &mut [u8]) -> usize
+{
+    let roff: crate::cbordetveraux::raw_uint64 = crate::cbordetveraux::mk_raw_uint64(off);
+    let res: usize = crate::cbordetveraux::cbor_serialize_string(ty, roff, out);
+    res
+}
+
+pub fn cbor_det_serialize_tag(tag: u64, output: &mut [u8]) -> usize
+{
+    let tag·: crate::cbordetveraux::raw_uint64 = crate::cbordetveraux::mk_raw_uint64(tag);
+    crate::cbordetveraux::cbor_serialize_tag(tag·, output)
+}
+
+pub fn cbor_det_serialize_array(len: u64, out: &mut [u8], off: usize) -> usize
+{
+    let rlen: crate::cbordetveraux::raw_uint64 = crate::cbordetveraux::mk_raw_uint64(len);
+    let res: usize = crate::cbordetveraux::cbor_serialize_array(rlen, out, off);
+    res
+}
+
+pub fn cbor_det_serialize_map_insert(out: &mut [u8], off2: usize, off3: usize) -> bool
+{ crate::cbordetveraux::cbor_raw_map_insert(out, off2, off3) }
+
+pub fn cbor_det_serialize_map(len: u64, out: &mut [u8], off: usize) -> usize
+{
+    let rlen: crate::cbordetveraux::raw_uint64 = crate::cbordetveraux::mk_raw_uint64(len);
+    let res: usize = crate::cbordetveraux::cbor_serialize_map(rlen, out, off);
+    res
 }
