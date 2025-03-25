@@ -169,7 +169,7 @@ fn get_header_major_type(h: header) -> u8
     b.major_type
 }
 
-fn impl_correct(s: &[u8]) -> bool
+pub(crate) fn impl_correct(s: &[u8]) -> bool
 {
     let mut pres: [bool; 1] = [true; 1usize];
     let mut pi: [usize; 1] = [0usize; 1usize];

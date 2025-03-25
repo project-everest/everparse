@@ -139,19 +139,29 @@ pub fn cbor_det_mk_string <'a>(ty: cbor_det_string_kind, s: &'a [u8]) ->
     { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
     else
     {
-        let len64: crate::cbordetveraux::raw_uint64 =
-            crate::cbordetveraux::mk_raw_uint64(s.len() as u64);
-        let ite: u8 =
-            if ty == cbor_det_string_kind::ByteString
-            { crate::cbordetveraux::cbor_major_type_byte_string }
+        let correct: bool =
+            if ty == cbor_det_string_kind::TextString
+            { crate::cbordetveraux::impl_correct(s) }
             else
-            { crate::cbordetveraux::cbor_major_type_text_string };
-        let ress: crate::cbordetveraux::cbor_string =
-            crate::cbordetveraux::cbor_string
-            { cbor_string_type: ite, cbor_string_size: len64.size, cbor_string_ptr: s };
-        let res: crate::cbordetveraux::cbor_raw =
-            crate::cbordetveraux::cbor_raw::CBOR_Case_String { v: ress };
-        option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res }
+            { true };
+        if correct
+        {
+            let len64: crate::cbordetveraux::raw_uint64 =
+                crate::cbordetveraux::mk_raw_uint64(s.len() as u64);
+            let ite: u8 =
+                if ty == cbor_det_string_kind::ByteString
+                { crate::cbordetveraux::cbor_major_type_byte_string }
+                else
+                { crate::cbordetveraux::cbor_major_type_text_string };
+            let ress: crate::cbordetveraux::cbor_string =
+                crate::cbordetveraux::cbor_string
+                { cbor_string_type: ite, cbor_string_size: len64.size, cbor_string_ptr: s };
+            let res: crate::cbordetveraux::cbor_raw =
+                crate::cbordetveraux::cbor_raw::CBOR_Case_String { v: ress };
+            option__CBOR_Pulse_Raw_Type_cbor_raw::Some { v: res }
+        }
+        else
+        { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
     }
 }
 
