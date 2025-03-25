@@ -1,4 +1,4 @@
-let elab_list = CDDL_Spec_AST_Driver.elab_list
+let elab_list = CDDL_Tool_Elab.elab_list
 
 let env : CDDL_Spec_AST_Base.name_env ref = ref CDDL_Spec_AST_Base.empty_name_env
 

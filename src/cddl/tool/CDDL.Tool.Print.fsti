@@ -1,4 +1,4 @@
-module CDDL.Spec.AST.Print
+module CDDL.Tool.Print
 include CDDL.Spec.AST.Elab
 
 val typ_to_string

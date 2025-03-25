@@ -9,7 +9,7 @@ module T = CDDL.Pulse.AST.Tactics
 module SZ = FStar.SizeT
 
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [primops]; FStar.Tactics.trefl ()); noextract_to "krml"] noextract
-let option_source = CDDL.Spec.AST.Plugin.parse ["cose.cddl"; "../spec/postlude.cddl"]
+let option_source = CDDL.Tool.Plugin.parse ["cose.cddl"; "../spec/postlude.cddl"]
 (*
     Some
     [
