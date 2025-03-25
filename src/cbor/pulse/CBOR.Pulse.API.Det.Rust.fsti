@@ -100,12 +100,10 @@ val cbor_det_mk_string
   (#p: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
 : stt (option cbordet)
-    (pts_to s #p v **
-      pure (ty == TextString ==> CBOR.Spec.API.UTF8.correct v) // this is true for Rust's str/String
-    )
+    (pts_to s #p v)
     (fun res ->
       cbor_det_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v res **
-      pure (Some? res <==> FStar.UInt.fits (SZ.v (S.len s)) U64.n)
+      pure (Some? res <==> (FStar.UInt.fits (SZ.v (S.len s)) U64.n /\ (ty == TextString ==> CBOR.Spec.API.UTF8.correct v))) // this is true for Rust's str/String, but we will check anyway
     )
 
 val cbor_det_mk_tagged: Base.mk_tagged_t cbor_det_match

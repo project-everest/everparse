@@ -104,17 +104,37 @@ ensures cbor_det_match 1.0R res (Spec.pack (Spec.CInt64 (if ty = UInt64 then cbo
 let uint64_max_prop : squash (pow2 64 - 1 == 18446744073709551615) =
   assert_norm (pow2 64 - 1 == 18446744073709551615)
 
+module UTF8 = CBOR.Pulse.Raw.UTF8
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn cbor_det_mk_string_is_correct
+  (ty: cbor_det_string_kind)
+  (s: S.slice U8.t)
+  (#p: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+requires pts_to s #p v
+returns res: bool
+ensures 
+  pts_to s #p v **
+  pure (res == true <==> (ty == TextString ==> CBOR.Spec.API.UTF8.correct v)) // this is true for Rust's str/String, but we will check anyway
+{
+  if (ty = TextString) {
+    UTF8.impl_utf8_correct s
+  } else {
+    true
+  }
+}
+
 fn cbor_det_mk_string
   (ty: cbor_det_string_kind)
   (s: S.slice U8.t)
   (#p: perm)
   (#v: Ghost.erased (Seq.seq U8.t))
-requires pts_to s #p v **
-  pure (ty == TextString ==> CBOR.Spec.API.UTF8.correct v) // this is true for Rust's str/String
+requires pts_to s #p v
 returns res: option cbordet
 ensures
   cbor_det_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v res **
-  pure (Some? res <==> FStar.UInt.fits (SZ.v (S.len s)) U64.n)
+  pure (Some? res <==> (FStar.UInt.fits (SZ.v (S.len s)) U64.n /\ (ty == TextString ==> CBOR.Spec.API.UTF8.correct v))) // this is true for Rust's str/String, but we will check anyway
 {
   let sq: squash (SZ.fits_u64) = assume (SZ.fits_u64);
   S.pts_to_len s;
@@ -122,9 +142,15 @@ ensures
     fold (cbor_det_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v None);
     None #cbordet
   } else {
-    let res = Det.cbor_det_mk_string () (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s;
-    fold (cbor_det_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v (Some res));
-    Some res
+    let correct = cbor_det_mk_string_is_correct ty s;
+    if correct {
+      let res = Det.cbor_det_mk_string () (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s;
+      fold (cbor_det_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v (Some res));
+      Some res
+    } else {
+      fold (cbor_det_mk_string_post (if ty = ByteString then cbor_major_type_byte_string else cbor_major_type_text_string) s p v None);
+      None #cbordet
+    }
   }
 }
 
