@@ -3,7 +3,6 @@
 #ifndef __CBORDet_H
 #define __CBORDet_H
 
-
 #include "krmllib.h"
 
 typedef struct CBOR_Spec_Raw_Base_raw_uint64_s
@@ -259,7 +258,15 @@ cbor_det_map_iterator_t;
 
 cbor_raw cbor_det_reset_perm(cbor_raw x1);
 
+size_t cbor_det_validate(uint8_t *input, size_t input_len);
+
+cbor_raw cbor_det_parse(uint8_t *input, size_t len);
+
 size_t cbor_det_size(cbor_raw x, size_t bound);
+
+size_t cbor_det_serialize(cbor_raw x, uint8_t *output, size_t output_len);
+
+bool cbor_det_impl_utf8_correct_from_array(uint8_t *s, size_t len);
 
 cbor_raw cbor_det_mk_simple_value(uint8_t v);
 
@@ -267,7 +274,13 @@ cbor_raw cbor_det_mk_int64(uint8_t ty, uint64_t v);
 
 cbor_raw cbor_det_mk_tagged(uint64_t tag, cbor_raw *r);
 
+cbor_raw cbor_det_mk_string_from_array(uint8_t ty, uint8_t *a, uint64_t len);
+
+cbor_raw cbor_det_mk_array_from_array(cbor_raw *a, uint64_t len);
+
 cbor_map_entry cbor_det_mk_map_entry(cbor_raw xk, cbor_raw xv);
+
+cbor_raw cbor_det_mk_map_from_array(cbor_map_entry *a, uint64_t len);
 
 bool cbor_det_equal(cbor_raw x1, cbor_raw x2);
 
@@ -282,6 +295,8 @@ uint64_t cbor_det_get_string_length(cbor_raw x);
 uint64_t cbor_det_get_tagged_tag(cbor_raw x);
 
 cbor_raw cbor_det_get_tagged_payload(cbor_raw x);
+
+uint8_t *cbor_det_get_string(cbor_raw x);
 
 uint64_t cbor_det_get_array_length(cbor_raw x);
 
@@ -329,22 +344,6 @@ cbor_det_map_iterator_next(
 cbor_raw cbor_det_map_entry_key(cbor_map_entry x2);
 
 cbor_raw cbor_det_map_entry_value(cbor_map_entry x2);
-
-size_t cbor_det_validate(uint8_t *input, size_t input_len);
-
-cbor_raw cbor_det_parse(uint8_t *input, size_t len);
-
-size_t cbor_det_serialize(cbor_raw x, uint8_t *output, size_t output_len);
-
-bool cbor_det_impl_utf8_correct_from_array(uint8_t *s, size_t len);
-
-cbor_raw cbor_det_mk_string_from_array(uint8_t ty, uint8_t *a, uint64_t len);
-
-cbor_raw cbor_det_mk_array_from_array(cbor_raw *a, uint64_t len);
-
-cbor_raw cbor_det_mk_map_from_array(cbor_map_entry *a, uint64_t len);
-
-uint8_t *cbor_det_get_string(cbor_raw x);
 
 bool cbor_det_map_get(cbor_raw x, cbor_raw k, cbor_raw *dest);
 
