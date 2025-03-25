@@ -98,7 +98,7 @@ let rec compute_wf_typ
   (name: string)
   (t: typ)
   (fuel: nat)
-: FStar.Tactics.Tac (res: compute_wf_typ_ret env.e_sem_env { compute_wf_typ_post env res })
+: Dv (res: compute_wf_typ_ret env.e_sem_env { compute_wf_typ_post env res })
 = if None? (env.e_sem_env.se_bound name)
   then match mk_wf_typ' fuel env t with
   | RFailure s -> RFailure s
@@ -188,7 +188,7 @@ let rec compute_ancillaries_aux
   (parser: string)
   (serializer: string)
   (typename: string)
-: FStar.Tactics.Tac (ancillaries_aux_t se)
+: Dv (ancillaries_aux_t se)
 =
   let anc_env = env ^ "_" ^ string_of_int anc.env_index in
   match P.ask_zero_copy_ask_for_option anc.anc.validators anc.anc.parsers anc.anc.array_parsers ask with
@@ -266,7 +266,7 @@ and init_compute_ancillaries_aux
   (ask': option (P.ask_for se))
   (env: string)
   (msg: (string -> string))
-: FStar.Tactics.Tac (ancillaries_aux_t se)
+: Dv (ancillaries_aux_t se)
 =
     let candidate = string_of_int anc.next_candidate_index in
     let wf' = "aux_" ^ env ^ "_wf_" ^ candidate in
@@ -297,7 +297,7 @@ let rec compute_ancillaries
   (anc: ancillaries_aux_t se)
   (env: string)
   (wf: string)
-: FStar.Tactics.Tac (anc': ancillaries_aux_t se {
+: Dv (anc': ancillaries_aux_t se {
     None? (init anc'.anc)
   })
 = match init anc.anc with
@@ -408,7 +408,7 @@ let produce_typ_defs
   (anc: ancillaries_t wenv.e_sem_env)
   (name: string)
   (t: typ)
-: FStar.Tactics.Tac (res: produce_typ_defs_t { produce_typ_defs_post wenv res })
+: Dv (res: produce_typ_defs_t { produce_typ_defs_post wenv res })
 = match compute_wf_typ wenv name t 0 with
   | RFailure s -> RFailure s
   | RSuccess (fuel, (f, wenv')) ->
@@ -497,7 +497,7 @@ let rec produce_defs'
   (env: wf_ast_env)
   (anc: ancillaries_t env.e_sem_env)
   (l: list (string & decl))
-: FStar.Tactics.Tac (res: result string { ~ (ROutOfFuel? res) })
+: Dv (res: result string { ~ (ROutOfFuel? res) })
 = match l with
   | [] -> RSuccess accu
   | (name, def) :: q ->
