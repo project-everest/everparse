@@ -65,7 +65,7 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn cbor_det_parse_valid
   (_: unit)
-: cbor_det_parse_valid_t
+: cbor_det_parse_valid_t u#0 #_ cbor_det_match
 =
   (input: S.slice U8.t)
   (#pm: perm)
@@ -89,7 +89,7 @@ fn cbor_det_parse_full
   (#pm: _)
   (#v: _)
 {
-  CBOR.Pulse.API.Det.Common.cbor_det_parse_full (cbor_det_validate_from_slice ()) (cbor_det_parse_valid ())
+  CBOR.Pulse.API.Base.cbor_det_parse_full (cbor_det_validate_from_slice ()) (cbor_det_parse_valid ())
     input
 }
 

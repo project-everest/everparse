@@ -39,6 +39,7 @@ ensures
     fold (cbor_det_match_with_size sz p c v)
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_reset_perm
   (_: unit)
 : reset_perm_t u#0 u#0 #_ #_ cbor_det_match
@@ -162,7 +163,7 @@ let cbor_det_parse_aux
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_parse_valid
   (_: unit)
-: cbor_det_parse_valid_t
+: cbor_det_parse_valid_t u#0 #_ cbor_det_match
 =
   (input: S.slice U8.t)
   (#pm: perm)
@@ -182,6 +183,7 @@ fn cbor_det_parse_valid
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_size
   (x: cbor_det_t)
   (bound: SZ.t)
@@ -416,6 +418,7 @@ fn cbor_det_serialize_map
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_det_match
 = (v: _)
 {
@@ -425,6 +428,7 @@ fn cbor_det_mk_simple_value (_: unit) : mk_simple_t u#0 #_ cbor_det_match
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_mk_int64 (_: unit) : mk_int64_t u#0 #_ cbor_det_match
 = (ty: _)
   (v: _)
@@ -464,6 +468,7 @@ fn cbor_det_mk_string (_: unit) : mk_string_t u#0 #_ cbor_det_match
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_mk_tagged (_: unit) : mk_tagged_t #_ cbor_det_match
 = (tag: _)
   (r: _)
@@ -681,6 +686,7 @@ decreases v
   }
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_mk_map_entry
   (_: unit)
 : mk_map_entry_t u#0 u#0 #cbor_det_t #cbor_det_map_entry_t cbor_det_match cbor_det_map_entry_match
@@ -913,6 +919,7 @@ fn cbor_det_mk_map_gen (_: unit)
 let cbor_det_utf8_correct () =
   CBOR.Pulse.Raw.UTF8.impl_utf8_correct
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_equal (_: unit) : equal_t u#0 #_ cbor_det_match
 = (x1: _)
   (x2: _)
@@ -931,6 +938,7 @@ fn cbor_det_equal (_: unit) : equal_t u#0 #_ cbor_det_match
   (comp = 0s)
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_major_type (_: unit) : get_major_type_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -943,6 +951,7 @@ fn cbor_det_major_type (_: unit) : get_major_type_t u#0 #_ cbor_det_match
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_read_simple_value (_: unit) : read_simple_value_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -955,6 +964,7 @@ fn cbor_det_read_simple_value (_: unit) : read_simple_value_t u#0 #_ cbor_det_ma
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_elim_simple (_: unit) : elim_simple_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -968,6 +978,7 @@ fn cbor_det_elim_simple (_: unit) : elim_simple_t u#0 #_ cbor_det_match
   unfold (Raw.cbor_match_simple (Raw.CBOR_Case_Simple?.v x) (SpecRaw.mk_det_raw_cbor v))
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_read_uint64 (_: unit) : read_uint64_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -993,6 +1004,7 @@ fn cbor_det_elim_int64 (_: unit) : elim_int64_t u#0 #_ cbor_det_match
   unfold (Raw.cbor_match_int (Raw.CBOR_Case_Int?.v x) (SpecRaw.mk_det_raw_cbor v))
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_get_string_length (_: unit) : get_string_length_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -1020,6 +1032,7 @@ fn cbor_det_get_string (_: unit) : get_string_t u#0 #_ cbor_det_match
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_get_tagged_tag (_: unit) : get_tagged_tag_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -1032,6 +1045,7 @@ fn cbor_det_get_tagged_tag (_: unit) : get_tagged_tag_t u#0 #_ cbor_det_match
   res.value
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_get_tagged_payload (_: unit) : get_tagged_payload_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -1052,6 +1066,7 @@ fn cbor_det_get_tagged_payload (_: unit) : get_tagged_payload_t u#0 #_ cbor_det_
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_get_array_length (_: unit) : get_array_length_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -1088,6 +1103,7 @@ let rec list_map_mk_det_raw_cbor_mk_cbor
     SpecRaw.mk_det_raw_cbor_mk_cbor a;
     list_map_mk_det_raw_cbor_mk_cbor q
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_array_iterator_start (_: unit) : array_iterator_start_t u#0 u#0 #_ #_ cbor_det_match cbor_det_array_iterator_match
 = (x: _)
   (#p: _)
@@ -1109,6 +1125,7 @@ fn cbor_det_array_iterator_start (_: unit) : array_iterator_start_t u#0 u#0 #_ #
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#0 #_ cbor_det_array_iterator_match
 = (x: _)
   (#p: _)
@@ -1120,6 +1137,7 @@ fn cbor_det_array_iterator_is_empty (_: unit) : array_iterator_is_empty_t u#0 #_
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbor_det_array_iterator_match
 = (x: _)
   (#p: _)
@@ -1131,6 +1149,7 @@ fn cbor_det_array_iterator_length (_: unit) : array_iterator_length_t u#0 #_ cbo
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_array_iterator_next (_: unit) : array_iterator_next_t u#0 #_ #_ cbor_det_match cbor_det_array_iterator_match
 = (x: _)
   (#y: _)
@@ -1168,6 +1187,7 @@ let rec list_map_splitAt
   | [] -> ()
   | a :: q -> list_map_splitAt f q (n - 1)
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_array_iterator_truncate (_: unit) : array_iterator_truncate_t u#0 #_ cbor_det_array_iterator_match
 = (x: _)
   (len: _)
@@ -1230,6 +1250,7 @@ let rec list_index_map
   then ()
   else list_index_map f (List.Tot.tl l) (i - 1)
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_get_array_item (_: unit) : get_array_item_t u#0 #_ cbor_det_match
 = (x: _)
   (i: _)
@@ -1253,6 +1274,7 @@ fn cbor_det_get_array_item (_: unit) : get_array_item_t u#0 #_ cbor_det_match
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_get_map_length (_: unit) : get_map_length_t u#0 #_ cbor_det_match
 = (x: _)
   (#p: _)
@@ -1491,6 +1513,7 @@ fn cbor_det_map_iterator_start' (_: unit) : det_map_iterator_start_t
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cbor_det_match cbor_det_map_iterator_match
 = (x: _)
   (#p: _)
@@ -1499,6 +1522,7 @@ fn cbor_det_map_iterator_start (_: unit) : map_iterator_start_t u#0 u#0 #_ #_ cb
   cbor_det_map_iterator_start' () x;
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t u#0 #_ cbor_det_map_iterator_match
 = (x: _)
   (#p: _)
@@ -1510,6 +1534,7 @@ fn cbor_det_map_iterator_is_empty (_: unit) : map_iterator_is_empty_t u#0 #_ cbo
   res
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_map_iterator_next (_: unit) : map_iterator_next_t u#0 #_ #_ cbor_det_map_entry_match cbor_det_map_iterator_match
 = (x: _)
   (#y: _)
@@ -1575,6 +1600,7 @@ fn cbor_det_map_iterator_gather (_: unit) : gather_t u#0 u#0 #_ #_ cbor_det_map_
   fold (cbor_det_map_iterator_match (py1 +. py2) x z1);
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_map_entry_key (_: unit) : map_entry_key_t u#0 u#0 #_ #_ cbor_det_map_entry_match cbor_det_match
 = (x2: _)
   (#p: _)
@@ -1595,6 +1621,7 @@ fn cbor_det_map_entry_key (_: unit) : map_entry_key_t u#0 u#0 #_ #_ cbor_det_map
   x2.cbor_map_entry_key
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_map_entry_value (_: unit) : map_entry_value_t u#0 u#0 #_ #_ cbor_det_map_entry_match cbor_det_match
 = (x2: _)
   (#p: _)

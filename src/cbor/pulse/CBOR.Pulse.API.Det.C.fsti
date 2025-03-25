@@ -1,6 +1,7 @@
 module CBOR.Pulse.API.Det.C
 #lang-pulse
-include CBOR.Pulse.API.Det.Common
+include CBOR.Pulse.API.Det.Type
+include CBOR.Pulse.API.Base
 open Pulse.Lib.Pervasives
 open CBOR.Spec.Constants
 
@@ -15,6 +16,13 @@ module U8 = FStar.UInt8
 
 module SU = Pulse.Lib.Slice.Util
 module AP = Pulse.Lib.ArrayPtr
+
+val cbor_det_match: perm -> cbor_det_t -> Spec.cbor -> slprop
+
+val cbor_det_reset_perm () : reset_perm_t cbor_det_match
+
+val cbor_det_share () : share_t cbor_det_match
+val cbor_det_gather () : gather_t cbor_det_match
 
 val cbor_det_validate
   (input: AP.ptr U8.t)
@@ -43,6 +51,17 @@ val cbor_det_parse
         Seq.slice v 0 (SZ.v len) == Spec.cbor_det_serialize v'
     ))
 
+val cbor_det_size
+  (x: cbor_det_t)
+  (bound: SZ.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#pm: perm)
+: stt SZ.t
+    (cbor_det_match pm x y)
+    (fun res -> cbor_det_match pm x y ** pure (
+      cbor_det_size_post bound y res
+    ))
+
 val cbor_det_serialize
   (x: cbor_det_t)
   (output: AP.ptr U8.t)
@@ -53,7 +72,7 @@ val cbor_det_serialize
     (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
     (fun res -> exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
       SZ.v output_len == Seq.length v /\
-      cbor_det_serialize_postcond y res v
+      cbor_det_serialize_fits_postcond y res v
     ))
 
 inline_for_extraction
@@ -68,7 +87,7 @@ requires
 returns res: SZ.t
 ensures
     (exists* v . cbor_det_match pm x y ** pts_to output v ** pure (
-      cbor_det_serialize_postcond y res v
+      cbor_det_serialize_fits_postcond y res v
     ))
 {
   S.pts_to_len output;
@@ -91,6 +110,12 @@ let cbor_det_impl_utf8_correct_from_array_t =
 
 val cbor_det_impl_utf8_correct_from_array (_: unit) : cbor_det_impl_utf8_correct_from_array_t
 
+(* Constructors *)
+
+val cbor_det_mk_simple_value () : mk_simple_t cbor_det_match
+val cbor_det_mk_int64 () : mk_int64_t cbor_det_match
+val cbor_det_mk_tagged () : mk_tagged_t cbor_det_match
+
 val cbor_det_mk_string_from_array (_: unit) : mk_string_from_array_t cbor_det_match
 
 val cbor_det_mk_array_from_array (_: unit) : mk_array_from_array_t cbor_det_match
@@ -99,11 +124,27 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 let cbor_det_mk_array_from_array' = mk_array_from_array' (cbor_det_mk_array_from_array ())
 
+val cbor_det_map_entry_match: perm -> cbor_det_map_entry_t -> Spec.cbor & Spec.cbor -> slprop
+
+val cbor_det_mk_map_entry () : mk_map_entry_t cbor_det_match cbor_det_map_entry_match
+
 val cbor_det_mk_map_from_array : mk_map_from_array_t cbor_det_match cbor_det_map_entry_match
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 let cbor_det_mk_map_from_array' = mk_map_from_array' cbor_det_mk_map_from_array
+
+(* Destructors *)
+
+val cbor_det_equal () : equal_t cbor_det_match
+val cbor_det_major_type () : get_major_type_t cbor_det_match
+val cbor_det_read_simple_value () : read_simple_value_t cbor_det_match
+val cbor_det_elim_simple () : elim_simple_t cbor_det_match
+val cbor_det_read_uint64 () : read_uint64_t cbor_det_match
+val cbor_det_elim_int64 () : elim_int64_t cbor_det_match
+val cbor_det_get_string_length () : get_string_length_t cbor_det_match
+val cbor_det_get_tagged_tag () : get_tagged_tag_t cbor_det_match
+val cbor_det_get_tagged_payload () : get_tagged_payload_t cbor_det_match
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -122,6 +163,49 @@ let cbor_det_get_string_t
     )
 
 val cbor_det_get_string () : cbor_det_get_string_t
+
+
+val cbor_det_get_array_length () : get_array_length_t cbor_det_match
+
+val cbor_det_array_iterator_match : perm -> cbor_det_array_iterator_t -> list Spec.cbor -> slprop
+
+val cbor_det_array_iterator_start () : array_iterator_start_t cbor_det_match cbor_det_array_iterator_match
+
+val cbor_det_array_iterator_is_empty () : array_iterator_is_empty_t cbor_det_array_iterator_match
+
+val cbor_det_array_iterator_length () : array_iterator_length_t cbor_det_array_iterator_match
+
+val cbor_det_array_iterator_next () : array_iterator_next_t cbor_det_match cbor_det_array_iterator_match
+
+val cbor_det_array_iterator_truncate () : array_iterator_truncate_t cbor_det_array_iterator_match
+
+val cbor_det_array_iterator_share () : share_t cbor_det_array_iterator_match
+
+val cbor_det_array_iterator_gather () : gather_t cbor_det_array_iterator_match
+
+val cbor_det_get_array_item () : get_array_item_t cbor_det_match
+
+val cbor_det_get_map_length () : get_map_length_t cbor_det_match
+
+val cbor_det_map_iterator_match : perm -> cbor_det_map_iterator_t -> list (Spec.cbor & Spec.cbor) -> slprop
+
+val cbor_det_map_iterator_start () : map_iterator_start_t cbor_det_match cbor_det_map_iterator_match
+
+val cbor_det_map_iterator_is_empty () : map_iterator_is_empty_t cbor_det_map_iterator_match
+
+val cbor_det_map_iterator_next () : map_iterator_next_t cbor_det_map_entry_match cbor_det_map_iterator_match
+
+val cbor_det_map_iterator_share () : share_t cbor_det_map_iterator_match
+
+val cbor_det_map_iterator_gather () : gather_t cbor_det_map_iterator_match
+
+val cbor_det_map_entry_key () : map_entry_key_t cbor_det_map_entry_match cbor_det_match
+
+val cbor_det_map_entry_value () : map_entry_value_t cbor_det_map_entry_match cbor_det_match
+
+val cbor_det_map_entry_share () : share_t cbor_det_map_entry_match
+
+val cbor_det_map_entry_gather () : gather_t cbor_det_map_entry_match
 
 val cbor_det_map_get () : map_get_by_ref_t cbor_det_match
 

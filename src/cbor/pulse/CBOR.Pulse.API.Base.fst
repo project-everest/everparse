@@ -3,7 +3,7 @@ module CBOR.Pulse.API.Base
 open CBOR.Spec.API.Type
 open Pulse.Lib.Pervasives
 module T = CBOR.Spec.API.Type
-module S = Pulse.Lib.Slice
+module S = Pulse.Lib.Slice.Util
 module Trade = Pulse.Lib.Trade.Util
 module SZ = FStar.SizeT
 module U64 = FStar.UInt64
@@ -1369,6 +1369,29 @@ fn map_get_as_option
 
 module Spec = CBOR.Spec.API.Format
 
+noextract [@@noextract_to "krml"]
+let cbor_det_validate_post
+  (v: Seq.seq U8.t)
+  (res: SZ.t)
+: Tot prop
+=
+      if SZ.v res = 0
+      then (~ (exists v1 v2 . v == Spec.cbor_det_serialize v1 `Seq.append` v2))
+      else (exists v1 v2 . v == Spec.cbor_det_serialize v1 `Seq.append` v2 /\ SZ.v res == Seq.length (Spec.cbor_det_serialize v1))
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_det_validate_t
+=
+  (input: S.slice U8.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt SZ.t
+    (pts_to input #pm v)
+    (fun res -> pts_to input #pm v ** pure (
+      cbor_det_validate_post v res
+    ))
+
 let cbor_det_parse_postcond_some
   (v: Seq.seq U8.t)
   (v': Spec.cbor)
@@ -1428,6 +1451,91 @@ let cbor_det_parse_t
       cbor_det_parse_post cbor_det_match input pm v res **
       pure (Some? res == Some? (Spec.cbor_det_parse v))
     )
+
+let cbor_det_parse_aux1
+  (v1: Spec.cbor)
+: Lemma
+  (let s = Spec.cbor_det_serialize v1 in s == s `Seq.append` Seq.empty)
+= Seq.append_empty_r (Spec.cbor_det_serialize v1)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_det_parse_valid_t
+  (#cbor_det_t: Type)
+  (cbor_det_match: perm -> cbor_det_t -> Spec.cbor -> slprop)
+=
+  (input: S.slice U8.t) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt cbor_det_t
+    (pts_to input #pm v ** pure (
+      exists v1 . Ghost.reveal v == Spec.cbor_det_serialize v1 /\ SZ.v (S.len input) == Seq.length (Spec.cbor_det_serialize v1)
+    ))
+    (fun res -> exists* v' .
+      cbor_det_match 1.0R res v' **
+      Trade.trade (cbor_det_match 1.0R res v') (pts_to input #pm v) ** pure (
+        Ghost.reveal v == Spec.cbor_det_serialize v'
+    ))
+
+let seq_length_append_l
+  (#t: Type)
+  (v1 v2: Seq.seq t)
+: Lemma
+  (Seq.slice (Seq.append v1 v2) 0 (Seq.length v1) == v1)
+= assert (Seq.slice (Seq.append v1 v2) 0 (Seq.length v1) `Seq.equal` v1)
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_parse_full
+  (#cbor_det_t: Type)
+  (#cbor_det_match: perm -> cbor_det_t -> Spec.cbor -> slprop)
+  (cbor_det_validate: cbor_det_validate_t)
+  (cbor_det_parse: cbor_det_parse_valid_t cbor_det_match)
+: cbor_det_parse_t u#0 #_ cbor_det_match
+=
+  (input: S.slice U8.t)
+  (#pm: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  let len = cbor_det_validate input;
+  Spec.cbor_det_parse_none_equiv v;
+  if (len = 0sz) {
+    fold (cbor_det_parse_post cbor_det_match input pm v None);
+    None #(cbor_det_t & S.slice U8.t)
+  } else {
+    Seq.lemma_split v (SZ.v len);
+    let input2, rem = S.split_trade input len;
+    Classical.forall_intro_2 (seq_length_append_l #U8.t);
+    S.pts_to_len input2;
+    let res = cbor_det_parse input2;
+    Trade.trans_hyp_l _ _ _ (pts_to input #pm v);
+    fold (cbor_det_parse_post_some cbor_det_match input pm v res rem);
+    fold (cbor_det_parse_post cbor_det_match input pm v (Some (res, rem)));
+    Some (res, rem)
+  }
+}
+
+noextract [@@noextract_to "krml"]
+let cbor_det_size_post
+  (bound: SZ.t)
+  (y: Spec.cbor)
+  (res: SZ.t)
+: Tot prop
+=
+      let s = Seq.length (Spec.cbor_det_serialize y) in
+      (SZ.v res == 0 <==> s > SZ.v bound) /\
+      (SZ.v res > 0 ==> SZ.v res == s)
+
+noextract [@@noextract_to "krml"]
+let cbor_det_serialize_fits_postcond
+  (y: Spec.cbor)
+  (res: SZ.t)
+  (v: Seq.seq U8.t)
+: Tot prop
+=
+      let s = Spec.cbor_det_serialize y in
+      SZ.v res == Seq.length s /\
+      (exists v' . v `Seq.equal` (s `Seq.append` v'))
 
 noextract [@@noextract_to "krml"]
 let cbor_det_serialize_postcond
