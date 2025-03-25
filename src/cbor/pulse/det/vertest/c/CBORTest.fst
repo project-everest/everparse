@@ -65,6 +65,11 @@ inline_for_extraction
 noextract [@@noextract_to "krml"]
 let exit_impossible : I32.t = 2l
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_det_mk_string_from_array () =
+  mk_string_from_array (mk_string_from_slice (cbor_det_mk_string_from_arrayptr ()))
+
 #restart-solver
 fn test_on
   (test: cbor_det_t)

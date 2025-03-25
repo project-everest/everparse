@@ -15,7 +15,7 @@ let gen_int (x: int) (name: string) : c list =
 let quote_string s = Yojson.Safe.to_string (`String s)
 
 let gen_string (s: string) (name: string) : c list =
-  [`Instr ("cbor_det_t " ^ name ^ " = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *" ^ ")" ^ quote_string s ^ ", " ^ string_of_int (String.length s) ^ ")")]
+  [`Instr ("cbor_det_t " ^ name ^ " = cbor_det_mk_string_from_arrayptr(CBOR_MAJOR_TYPE_TEXT_STRING, (uint8_t *" ^ ")" ^ quote_string s ^ ", " ^ string_of_int (String.length s) ^ ")")]
 
 let gen_map (gen: Yojson.Safe.t -> string -> c list) (l: (string * Yojson.Safe.t) list) (name: string) : c list =
   let len = List.length l in
@@ -243,7 +243,7 @@ let gen_utf8_tests () : c list = In_channel.with_open_bin "./utf8tests.txt" (fun
            let accu' = `Block begin
                `Instr ("printf(\"UTF-8 Test " ^ id ^ ". Testing text string encoding and UTF-8 validation for: " ^ strhex ^ "\\n\")") ::
                `Instr hex ::
-               `Instr ("cbor_det_t mycbor = cbor_det_mk_string_from_array(CBOR_MAJOR_TYPE_TEXT_STRING, mystr, " ^ len ^ ")") ::
+               `Instr ("cbor_det_t mycbor = cbor_det_mk_string_from_arrayptr(CBOR_MAJOR_TYPE_TEXT_STRING, mystr, " ^ len ^ ")") ::
                `Instr ("size_t size = cbor_det_size(mycbor, " ^ outlen ^ ")") ::
                `If ("size == 0") ::
                `Block [

@@ -132,8 +132,8 @@ let cbor_det_mk_simple_value = CBOR.Pulse.API.Det.Common.cbor_det_mk_simple_valu
 let cbor_det_mk_int64 = CBOR.Pulse.API.Det.Common.cbor_det_mk_int64
 let cbor_det_mk_tagged = CBOR.Pulse.API.Det.Common.cbor_det_mk_tagged
 
-let cbor_det_mk_string_from_array (_: unit) =
-  mk_string_from_array (CBOR.Pulse.API.Det.Common.cbor_det_mk_string ())
+let cbor_det_mk_string_from_arrayptr (_: unit) =
+  mk_string_from_arrayptr (CBOR.Pulse.API.Det.Common.cbor_det_mk_string ())
 
 let cbor_det_mk_array_from_array (_: unit) =
   mk_array_from_array (CBOR.Pulse.API.Det.Common.cbor_det_mk_array ())

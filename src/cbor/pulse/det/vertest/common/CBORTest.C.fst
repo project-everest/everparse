@@ -6,6 +6,11 @@ module Base = CBORTest.Base
 module Cbor = CBOR.Pulse.API.Det.C.Slice
 module CborBase = CBOR.Pulse.API.Base
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_det_mk_string_from_array () =
+  Cbor.mk_string_from_array (Cbor.mk_string_from_slice (Cbor.cbor_det_mk_string_from_arrayptr ()))
+
 fn main
   (_: unit)
 requires emp
@@ -19,7 +24,7 @@ ensures emp
     (Cbor.cbor_det_equal ())
     (Cbor.cbor_det_parse_full ())
     (Cbor.cbor_det_serialize_full ())
-    (Cbor.cbor_det_mk_string_from_array ())
+    (cbor_det_mk_string_from_array ())
     (Cbor.cbor_det_mk_array_from_array ())
     (Cbor.cbor_det_get_array_length ())
     (Cbor.cbor_det_get_array_item ())

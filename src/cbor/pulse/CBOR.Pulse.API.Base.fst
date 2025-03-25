@@ -674,6 +674,7 @@ let mk_string_t
     )
 
 module A = Pulse.Lib.Array
+module AP = Pulse.Lib.ArrayPtr
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
@@ -731,6 +732,82 @@ fn mk_string_from_array
   let res = mk_string ty s;
   with p' v' . assert (vmatch p' res (pack (CString ty v')));
   Trade.trans (vmatch p' res (pack (CString ty v'))) _ _;
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let mk_string_from_arrayptr_t
+  (#t: Type)
+  (vmatch: perm -> t -> cbor -> slprop)
+=
+  (ty: major_type_byte_string_or_text_string) ->
+  (a: AP.ptr U8.t) ->
+  (len: U64.t) ->
+  (#p: perm) ->
+  (#v: Ghost.erased (Seq.seq U8.t)) ->
+  stt t
+    (pts_to a #p v ** pure (
+      Seq.length v == U64.v len /\
+      (ty == cbor_major_type_text_string ==> CBOR.Spec.API.UTF8.correct v)
+    ))
+    (fun res -> exists* v' .
+      vmatch 1.0R res v' **
+      Trade.trade
+        (vmatch 1.0R res v')
+        (pts_to a #p v) **
+      pure (
+        CString? (unpack v') /\
+        CString?.typ (unpack v') == ty /\
+        Ghost.reveal v == CString?.v (unpack v')
+      )
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn mk_string_from_arrayptr
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mk_string: mk_string_t vmatch)
+: mk_string_from_arrayptr_t u#0 #_ vmatch
+=
+  (ty: major_type_byte_string_or_text_string)
+  (a: AP.ptr U8.t)
+  (len: U64.t)
+  (#p: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;
+  let s = S.arrayptr_to_slice_intro_trade a (SZ.uint64_to_sizet len);
+  S.pts_to_len s;
+  let res = mk_string ty s;
+  with p' v' . assert (vmatch p' res (pack (CString ty v')));
+  Trade.trans (vmatch p' res (pack (CString ty v'))) _ _;
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn mk_string_from_slice
+  (#t: Type0)
+  (#vmatch: perm -> t -> cbor -> slprop)
+  (mk_string: mk_string_from_arrayptr_t vmatch)
+: mk_string_t u#0 #_ vmatch
+=
+  (ty: major_type_byte_string_or_text_string)
+  (s: S.slice U8.t)
+  (#p: perm)
+  (#v: Ghost.erased (Seq.seq U8.t))
+{
+  S.pts_to_len s;
+  let a = S.slice_to_arrayptr_intro_trade s;
+  let res = mk_string ty a (SZ.sizet_to_uint64 (S.len s));
+  Trade.trans _ _ (S.pts_to s #p v);
+  with v' . assert (vmatch 1.0R res v');
+  Trade.rewrite_with_trade
+    (vmatch 1.0R res v')
+    (vmatch 1.0R res (pack (CString ty v)));
+  Trade.trans _ _ (S.pts_to s #p v);
   res
 }
 
