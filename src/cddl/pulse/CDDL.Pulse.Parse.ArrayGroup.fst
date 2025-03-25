@@ -337,7 +337,7 @@ fn impl_zero_copy_array_group_zero_or_one
 module Iterator = CDDL.Pulse.Iterator.Base
 
 noeq
-type array_iterator_t (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0)
+type array_iterator_t (#cbor_array_iterator_t: Type0) (impl_elt: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   ([@@@erasable]spec: Ghost.erased (Iterator.type_spec impl_elt)) // hopefully there should be at most one spec per impl_elt, otherwise Karamel monomorphization will introduce conflicts. Anyway, src_elt MUST NOT be extracted (it contains list types, etc.)
 : Type0 = {
   cddl_array_iterator_contents: cbor_array_iterator_t;
@@ -354,7 +354,7 @@ inline_for_extraction
 let cddl_array_iterator_impl_validate
   (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
   (#[@@@erasable]spec: Ghost.erased (Iterator.type_spec impl_elt))
-  (i: array_iterator_t cbor_array_iterator_match impl_elt spec)
+  (i: array_iterator_t impl_elt cbor_array_iterator_match spec)
 : Tot (impl_array_group cbor_array_iterator_match i.ty)
 = i.cddl_array_iterator_impl_validate
 
@@ -362,7 +362,7 @@ inline_for_extraction
 let cddl_array_iterator_impl_parse
   (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
   (#[@@@erasable]spec: Ghost.erased (Iterator.type_spec impl_elt))
-  (i: array_iterator_t cbor_array_iterator_match impl_elt spec)
+  (i: array_iterator_t impl_elt cbor_array_iterator_match spec)
 : Tot (impl_zero_copy_array_group cbor_array_iterator_match i.ps (dsnd spec))
 = i.cddl_array_iterator_impl_parse
 
@@ -379,7 +379,7 @@ let mk_array_iterator
   (#[@@@erasable]ps: Ghost.erased (array_group_parser_spec ty sz ser))
   (va: impl_array_group cbor_array_iterator_match (Ghost.reveal ty))
   (pa: impl_zero_copy_array_group cbor_array_iterator_match ps r)
-: Tot (array_iterator_t cbor_array_iterator_match impl_elt (Iterator.mk_spec r))
+: Tot (array_iterator_t impl_elt cbor_array_iterator_match (Iterator.mk_spec r))
 = {
   cddl_array_iterator_contents = contents;
   pm = pm;
@@ -515,7 +515,7 @@ let array_group_parser_spec_zero_or_more0_mk_array_iterator_eq_f
 let rel_array_iterator_cond
   (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
   (spec: Ghost.erased (Iterator.type_spec impl_elt))
-  (i: array_iterator_t cbor_array_iterator_match impl_elt spec)
+  (i: array_iterator_t impl_elt cbor_array_iterator_match spec)
   (s: list (dfst spec))
   (l: list cbor)
 : Tot prop
@@ -528,7 +528,7 @@ let rel_array_iterator_cond_intro
   (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)
   (#src_elt: Type0)
   (r: rel impl_elt src_elt)
-  (i: array_iterator_t cbor_array_iterator_match impl_elt (Iterator.mk_spec r))
+  (i: array_iterator_t impl_elt cbor_array_iterator_match (Iterator.mk_spec r))
   (s: list src_elt)
   (l: list cbor)
 : Lemma
@@ -548,7 +548,7 @@ let rel_array_iterator_cond_intro
 
 let rel_array_iterator
   (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0) (spec: Ghost.erased (Iterator.type_spec impl_elt))
-: rel (array_iterator_t cbor_array_iterator_match impl_elt spec) (list (dfst spec))
+: rel (array_iterator_t impl_elt cbor_array_iterator_match spec) (list (dfst spec))
 = mk_rel (fun i s -> exists* (l: list cbor) . cbor_array_iterator_match i.pm i.cddl_array_iterator_contents l **
     pure (rel_array_iterator_cond cbor_array_iterator_match spec i s l)
   )
@@ -557,7 +557,7 @@ inline_for_extraction
 let cddl_array_iterator_is_empty_t
   (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0) =
   (#spec: Ghost.erased (Iterator.type_spec impl_elt)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
-  (i: array_iterator_t cbor_array_iterator_match impl_elt spec) ->
+  (i: array_iterator_t impl_elt cbor_array_iterator_match spec) ->
   (#l: Ghost.erased (list (dfst spec))) ->
   stt bool
     (rel_array_iterator cbor_array_iterator_match spec i l)
@@ -586,8 +586,8 @@ inline_for_extraction
 let cddl_array_iterator_next_t
   (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0) =
   (#spec: Ghost.erased (Iterator.type_spec impl_elt)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
-  (pi: ref (array_iterator_t cbor_array_iterator_match impl_elt spec)) ->
-  (#gi: Ghost.erased (array_iterator_t cbor_array_iterator_match impl_elt spec)) ->
+  (pi: ref (array_iterator_t impl_elt cbor_array_iterator_match spec)) ->
+  (#gi: Ghost.erased (array_iterator_t impl_elt cbor_array_iterator_match spec)) ->
   (#l: Ghost.erased (list (dfst spec))) ->
   stt impl_elt
     (
@@ -595,7 +595,7 @@ let cddl_array_iterator_next_t
       rel_array_iterator cbor_array_iterator_match (spec) gi l **
       pure (Cons? l)
     )
-    (fun res -> exists* a (gi': array_iterator_t cbor_array_iterator_match impl_elt spec) q .
+    (fun res -> exists* a (gi': array_iterator_t impl_elt cbor_array_iterator_match spec) q .
       pts_to pi gi' **
       dsnd spec res a **
       rel_array_iterator cbor_array_iterator_match (spec) gi' q **
@@ -663,7 +663,7 @@ fn cddl_array_iterator_next
     (cbor_array_iterator_match pmj ji lj);
   Trade.trans_hyp_r _ _ _ _;
   let len1 = length ji;
-  let j : array_iterator_t cbor_array_iterator_match impl_elt spec = { i with
+  let j : array_iterator_t impl_elt cbor_array_iterator_match spec = { i with
     cddl_array_iterator_contents = ji;
     pm = pmj /. 2.0R;
   };
@@ -719,14 +719,14 @@ fn impl_zero_copy_array_group_zero_or_more'
     ))
 : impl_zero_copy_array_group #cbor_array_iterator_t cbor_array_iterator_match #(array_group_zero_or_more (Ghost.reveal t1)) #(list tgt1) #(ag_spec_zero_or_more_size (Ghost.reveal tgt_size1)) #(ag_spec_zero_or_more_serializable (Ghost.reveal tgt_serializable1)) 
   (array_group_parser_spec_zero_or_more0 (Ghost.reveal ps1) ())
-  #(array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
+  #(array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
 =
   (c: _)
   (#p: _)
   (#l: _)
 {
   share c;
-  let res : array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1) =
+  let res : array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1) =
     mk_array_iterator c (p /. 2.0R) va1 pa1;
   let v : (v: Ghost.erased (list tgt1) { Ghost.reveal v == (array_group_parser_spec_zero_or_more0 (Ghost.reveal res.ps) () l <: list tgt1) })  = Ghost.hide (array_group_parser_spec_zero_or_more0 (Ghost.reveal res.ps) () l <: list tgt1); // FIXME: WHY WHY WHY do I need this refinement annotation?
   array_group_parser_spec_zero_or_more0_mk_array_iterator_eq_f c (p /. 2.0R) va1 pa1 () l;
@@ -770,7 +770,7 @@ fn impl_zero_copy_array_group_zero_or_more
     ))
 : impl_zero_copy_array_group #cbor_array_iterator_t cbor_array_iterator_match #(array_group_zero_or_more (Ghost.reveal t1)) #(list tgt1) #(ag_spec_zero_or_more_size (Ghost.reveal tgt_size1)) #(ag_spec_zero_or_more_serializable (Ghost.reveal tgt_serializable1)) 
   (array_group_parser_spec_zero_or_more0 (Ghost.reveal ps1) ())
-  #(either (slice impl_tgt1) (array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1))) (rel_either_left (rel_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)))
+  #(either (slice impl_tgt1) (array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1))) (rel_either_left (rel_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)))
 =
   (c: _)
   (#p: _)
@@ -778,7 +778,7 @@ fn impl_zero_copy_array_group_zero_or_more
 {
   let i = impl_zero_copy_array_group_zero_or_more' share gather va1 pa1 sq c;
   with v . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) i v);
-  let res : either (slice impl_tgt1) (array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1)) = Inr i;
+  let res : either (slice impl_tgt1) (array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1)) = Inr i;
   Trade.rewrite_with_trade
     (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) i v)
     (rel_either_left (rel_slice_of_list r1 false) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1)) res v);

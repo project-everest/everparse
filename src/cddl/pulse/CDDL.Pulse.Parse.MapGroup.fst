@@ -449,8 +449,9 @@ module EqTest = CDDL.Spec.EqTest
 
 noeq
 type map_iterator_t
-  (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (cbor_map_iterator_t: Type0)
+  (#ty: Type0) (cbor_map_iterator_t: Type0)
   (impl_elt1: Type0) (impl_elt2: Type0)
+  (vmatch: perm -> ty -> cbor -> slprop)
   ([@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) ([@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2)) // hopefully there should be at most one spec per impl_elt, otherwise Karamel monomorphization will introduce conflicts. Anyway, src_elt MUST NOT be extracted (it contains list types, etc.)
 : Type0 = {
   cddl_map_iterator_contents: cbor_map_iterator_t;
@@ -474,7 +475,7 @@ let cddl_map_iterator_impl_validate1
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
   (#[@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#[@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
-  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (i: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch spec1 spec2)
 : Tot (impl_typ vmatch i.t1)
 = i.cddl_map_iterator_impl_validate1
 
@@ -483,7 +484,7 @@ let cddl_map_iterator_impl_parse1
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
   (#[@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#[@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
-  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (i: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch spec1 spec2)
 : Tot (impl_zero_copy_parse vmatch i.sp1.parser (dsnd spec1))
 = i.cddl_map_iterator_impl_parse1
 
@@ -492,7 +493,7 @@ let cddl_map_iterator_impl_validate_ex
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
   (#[@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#[@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
-  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (i: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch spec1 spec2)
 : Tot (impl_typ vmatch i.tex)
 = i.cddl_map_iterator_impl_validate_ex
 
@@ -501,7 +502,7 @@ let cddl_map_iterator_impl_validate2
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
   (#[@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#[@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
-  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (i: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch spec1 spec2)
 : Tot (impl_typ vmatch i.t2)
 = i.cddl_map_iterator_impl_validate2
 
@@ -510,7 +511,7 @@ let cddl_map_iterator_impl_parse2
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
   (#[@@@erasable]spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#[@@@erasable]spec2: Ghost.erased (Iterator.type_spec impl_elt2))
-  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (i: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch spec1 spec2)
 : Tot (impl_zero_copy_parse vmatch i.ps2 (dsnd spec2))
 = i.cddl_map_iterator_impl_parse2
 
@@ -538,7 +539,7 @@ let mk_map_iterator
   (#[@@@erasable]ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
   (cddl_map_iterator_impl_validate2: impl_typ vmatch t2)
   (cddl_map_iterator_impl_parse2: impl_zero_copy_parse vmatch ps2 r2)
-: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 (Iterator.mk_spec r1) (Iterator.mk_spec r2)
+: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch (Iterator.mk_spec r1) (Iterator.mk_spec r2)
 = {
   cddl_map_iterator_contents = cddl_map_iterator_contents;
   pm = pm;
@@ -574,7 +575,7 @@ let mk_map_iterator_eq_postcond
   (#t2: Ghost.erased typ)
   (#ser2: Ghost.erased (src_elt2 -> bool))
   (ps2: Ghost.erased (parser_spec t2 src_elt2 ser2))
-  (res: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+  (res: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch (Iterator.mk_spec r1) (Iterator.mk_spec r2))
 : Tot prop
 =   res.cddl_map_iterator_contents == cddl_map_iterator_contents /\
     res.pm == pm /\
@@ -694,7 +695,7 @@ let rel_map_iterator_cond
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
   (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
-  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (i: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch spec1 spec2)
   (s: Map.t (dfst spec1) (list (dfst spec2)))
   (l: list (cbor & cbor))
 : Tot prop
@@ -706,7 +707,7 @@ let rel_map_iterator_cond_post
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
   (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
-  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (i: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch spec1 spec2)
   (s: Map.t (dfst spec1) (list (dfst spec2)))
   (l: list (cbor & cbor))
 : Lemma
@@ -720,7 +721,7 @@ let rel_map_iterator
   (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (impl_elt1: Type0) (impl_elt2: Type0)
   (spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (spec2: Ghost.erased (Iterator.type_spec impl_elt2))
-: rel (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2) (Map.t (dfst spec1) (list (dfst spec2)))
+: rel (map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch spec1 spec2) (Map.t (dfst spec1) (list (dfst spec2)))
 = mk_rel (fun i s -> exists* (l: list (cbor & cbor)) . cbor_map_iterator_match i.pm i.cddl_map_iterator_contents l **
     pure (rel_map_iterator_cond i s l)
   )
@@ -765,7 +766,7 @@ ghost
 fn rel_map_iterator_prop
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
-: rel_map_iterator_singletons impl_elt1 impl_elt2 (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2) (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2)
+: rel_map_iterator_singletons impl_elt1 impl_elt2 (map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch) (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2)
 =
   (#spec1: Ghost.erased (Iterator.type_spec impl_elt1))
   (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
@@ -783,7 +784,7 @@ ghost
 fn rel_map_iterator_prop'
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
-: rel_map_iterator_length impl_elt1 impl_elt2 (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2) (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2)
+: rel_map_iterator_length impl_elt1 impl_elt2 (map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch) (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2)
 =
   (#spec1: Ghost.erased (Iterator.type_spec impl_elt1))
   (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
@@ -816,7 +817,7 @@ let cddl_map_iterator_is_empty_t
   (impl_elt1: Type0) (impl_elt2: Type0)
 =
   cddl_map_iterator_is_empty_gen_t impl_elt1 impl_elt2
-    (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2)
+    (map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch)
     (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2)
 
 #restart-solver
@@ -825,7 +826,7 @@ let rec rel_map_iterator_cond_is_empty
   (#ty: Type0) (#vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
   (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
-  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (i: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch spec1 spec2)
   (s: Map.t (dfst spec1) (list (dfst spec2)))
   (l: list (cbor & cbor))
 : Lemma
@@ -965,7 +966,7 @@ let cddl_map_iterator_next_t
   (impl_elt1: Type0) (impl_elt2: Type0)
 =
   cddl_map_iterator_next_gen_t impl_elt1 impl_elt2
-    (map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2)
+    (map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch)
     (rel_map_iterator vmatch cbor_map_iterator_match impl_elt1 impl_elt2)
 
 ghost
@@ -976,7 +977,7 @@ fn rel_map_iterator_fold
   (map_gather: gather_t cbor_map_iterator_match)
   (#impl_elt1: Type0) (#impl_elt2: Type0)
   (#spec1: Ghost.erased (Iterator.type_spec impl_elt1)) (#spec2: Ghost.erased (Iterator.type_spec impl_elt2))
-  (i: map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2)
+  (i: map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch spec1 spec2)
   (pm: perm)
   (contents: cbor_map_iterator_t)
   (li: list (cbor & cbor))
@@ -1126,7 +1127,7 @@ fn cddl_map_iterator_next
   Trade.trans_hyp_l _ (vmatch2 _ _ _) _ _;
   with gj lj . assert (cbor_map_iterator_match gi.pm gj lj);
   let j = !pj;
-  let i' : map_iterator_t vmatch cbor_map_iterator_t impl_elt1 impl_elt2 spec1 spec2 = { i with
+  let i' : map_iterator_t cbor_map_iterator_t impl_elt1 impl_elt2 vmatch spec1 spec2 = { i with
     cddl_map_iterator_contents = j;
     pm = gi.pm /. 2.0R;
   };
@@ -1246,7 +1247,7 @@ let impl_zero_copy_map_zero_or_more_aux
     (v: cbor)
     (m1 m2: cbor_map)
     (pm: perm)
-    (i: map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+    (i: map_iterator_t cbor_map_iterator_t ikey ivalue vmatch (Iterator.mk_spec r1) (Iterator.mk_spec r2))
     (contents: cbor_map_iterator_t)
     (li: list (cbor & cbor))
     (s: Map.t (dfst (Iterator.mk_spec r1)) (list (dfst (Iterator.mk_spec r2))))
@@ -1316,7 +1317,7 @@ fn impl_zero_copy_map_zero_or_more'
     #(map_group_zero_or_more_match_item_length #tkey #tvalue)
     #(map_group_zero_or_more_match_item_serializable (Ghost.reveal sp1) (Ghost.reveal key_except) (Ghost.reveal sp2))
     (map_group_zero_or_more_match_item_parser (Ghost.reveal sp1) (Ghost.reveal key_except) (Ghost.reveal sp2))
-    #(map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+    #(map_iterator_t cbor_map_iterator_t ikey ivalue vmatch (Iterator.mk_spec r1) (Iterator.mk_spec r2))
     (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2))
 =
   (c: _)
@@ -1327,7 +1328,7 @@ fn impl_zero_copy_map_zero_or_more'
 {
   let i = map_iterator_start c;
   with pl l . assert (cbor_map_iterator_match pl i l);
-  let res : map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) = mk_map_iterator i (pl /. 2.0R) sp1 key_eq va1 pa1 va_ex va2 pa2;
+  let res : map_iterator_t cbor_map_iterator_t ikey ivalue vmatch (Iterator.mk_spec r1) (Iterator.mk_spec r2) = mk_map_iterator i (pl /. 2.0R) sp1 key_eq va1 pa1 va_ex va2 pa2;
   mk_map_iterator_eq i (pl /. 2.0R) sp1 key_eq va1 pa1 va_ex va2 pa2;
   rel_map_iterator_fold map_share map_gather res pl i l;
   Trade.trans _ (cbor_map_iterator_match pl i l) _;
@@ -1372,7 +1373,7 @@ fn impl_zero_copy_map_zero_or_more
     #(map_group_zero_or_more_match_item_length #tkey #tvalue)
     #(map_group_zero_or_more_match_item_serializable (Ghost.reveal sp1) (Ghost.reveal key_except) (Ghost.reveal sp2))
     (map_group_zero_or_more_match_item_parser (Ghost.reveal sp1) (Ghost.reveal key_except) (Ghost.reveal sp2))
-    #(either (slice (ikey & ivalue)) (map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
+    #(either (slice (ikey & ivalue)) (map_iterator_t cbor_map_iterator_t ikey ivalue vmatch (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
     (rel_either_left (rel_slice_of_table key_eq r1 r2) (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
 =
   (c: _)
@@ -1383,7 +1384,7 @@ fn impl_zero_copy_map_zero_or_more
 {
   let rres = impl_zero_copy_map_zero_or_more' map_iterator_start map_share map_gather key_eq sp1 va1 pa1 va_ex sp2 va2 pa2 c v1 v2;
   with vres . assert (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) rres vres);
-  let res : either (slice (ikey & ivalue)) (map_iterator_t vmatch cbor_map_iterator_t ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)) = Inr rres;
+  let res : either (slice (ikey & ivalue)) (map_iterator_t cbor_map_iterator_t ikey ivalue vmatch (Iterator.mk_spec r1) (Iterator.mk_spec r2)) = Inr rres;
   Trade.rewrite_with_trade
     (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2) rres vres)
     (rel_either_left (rel_slice_of_table key_eq r1 r2) (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)) res vres);

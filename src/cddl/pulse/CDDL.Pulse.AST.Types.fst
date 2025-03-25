@@ -103,7 +103,7 @@ let rec impl_type_sem
       sem_impl_type =
         either
           (slice it.sem_impl_type)
-          (array_iterator_t cbor_array_iterator_match it.sem_impl_type (Iterator.mk_spec it.sem_rel)) // HERE the relation on the element types is used in the implementation array type
+          (array_iterator_t it.sem_impl_type cbor_array_iterator_match (Iterator.mk_spec it.sem_rel)) // HERE the relation on the element types is used in the implementation array type
           ;
       sem_rel =
         rel_either_left
@@ -117,7 +117,7 @@ let rec impl_type_sem
       sem_impl_type =
         either
           (slice (it1.sem_impl_type & it2.sem_impl_type))
-          (map_iterator_t vmatch cbor_map_iterator_t it1.sem_impl_type it2.sem_impl_type (Iterator.mk_spec it1.sem_rel) (Iterator.mk_spec it2.sem_rel))
+          (map_iterator_t cbor_map_iterator_t it1.sem_impl_type it2.sem_impl_type vmatch (Iterator.mk_spec it1.sem_rel) (Iterator.mk_spec it2.sem_rel))
           ; // HERE the relation on the element types is used in the implementation map type
       sem_rel = 
         rel_either_left

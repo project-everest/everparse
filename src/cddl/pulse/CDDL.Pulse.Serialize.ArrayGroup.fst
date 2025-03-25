@@ -717,7 +717,7 @@ let impl_serialize_array_group_zero_or_more_iterator_t
       array_group_concat_unique_strong t1 t1
     ))
 =
-  impl_serialize_array_group #_ #_ #_ (ag_spec_zero_or_more ps1) #(array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
+  impl_serialize_array_group #_ #_ #_ (ag_spec_zero_or_more ps1) #(array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
 
 #push-options "--print_implicits"
 
@@ -744,7 +744,7 @@ impl_serialize_array_group_zero_or_more_iterator
     ))
 : impl_serialize_array_group_zero_or_more_iterator_t #cbor_array_iterator_t cbor_array_iterator_match #t1 #tgt1 #inj1 #ps1 #impl_tgt1 #r1 i1 sq
 =
-    (c0: array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1))
+    (c0: array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1))
     (#v: Ghost.erased (list tgt1))
     (out: S.slice U8.t)
     (out_count: R.ref U64.t)
@@ -936,7 +936,7 @@ let impl_serialize_array_group_one_or_more_iterator_t
       array_group_concat_unique_strong t1 t1
     ))
 =
-  impl_serialize_array_group #_ #(list tgt1) #_ (ag_spec_one_or_more ps1) #(array_iterator_t cbor_array_iterator_match impl_tgt1 (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
+  impl_serialize_array_group #_ #(list tgt1) #_ (ag_spec_one_or_more ps1) #(array_iterator_t impl_tgt1 cbor_array_iterator_match (Iterator.mk_spec r1)) (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1))
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_array_group_one_or_more_iterator

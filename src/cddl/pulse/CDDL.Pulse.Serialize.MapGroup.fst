@@ -1369,7 +1369,7 @@ let impl_serialize_map_zero_or_more_iterator
     pa1
     va_ex
     pa2
-    (map_iterator_t vmatch cbor_map_iterator_t _ _)
+    (map_iterator_t cbor_map_iterator_t _ _ vmatch)
     (rel_map_iterator vmatch cbor_map_iterator_match _ _)
     (cddl_map_iterator_is_empty map_is_empty map_next map_entry_key map_entry_value _ _)
     (cddl_map_iterator_next map_share map_gather map_next map_entry_key map_entry_value map_entry_share map_entry_gather _ _)
