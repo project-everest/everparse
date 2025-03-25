@@ -195,6 +195,10 @@ ensures (
   (s1, s2)
 }
 
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let cbor_det_mk_int64' = mk_int64_trade _ (cbor_det_mk_int64 ()) (cbor_det_elim_int64 ())
+
 #push-options "--z3rlimit 64"
 fn main (_: unit)
 requires emp
