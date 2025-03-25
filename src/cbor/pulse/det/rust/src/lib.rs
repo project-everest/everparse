@@ -11,6 +11,6 @@ mod lowstar {
 
 mod cbordetveraux;
 
-mod cbordetver;
+pub mod cbordetver;
 
 pub mod cbordet;

@@ -17,6 +17,12 @@ let cbor_det_match = Det.cbor_det_match
 
 open CBOR.Pulse.API.Det.Common
 
+let cbor_det_reset_perm () = Det.cbor_det_reset_perm ()
+
+let cbor_det_share () = Det.cbor_det_share ()
+
+let cbor_det_gather () = Det.cbor_det_gather ()
+
 let cbor_det_parse () =
   cbor_det_parse_full (cbor_det_validate ()) (cbor_det_parse_valid ())
 
@@ -106,6 +112,14 @@ let uint64_max_prop : squash (pow2 64 - 1 == 18446744073709551615) =
 
 module UTF8 = CBOR.Pulse.Raw.UTF8
 
+fn cbor_impl_utf8_correct () : Base.impl_utf8_correct_t =
+  (s: _)
+  (#p: _)
+  (#v: _)
+{
+  UTF8.impl_utf8_correct s
+}
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn cbor_det_mk_string_is_correct
   (ty: cbor_det_string_kind)
@@ -119,7 +133,7 @@ ensures
   pure (res == true <==> (ty == TextString ==> CBOR.Spec.API.UTF8.correct v)) // this is true for Rust's str/String, but we will check anyway
 {
   if (ty = TextString) {
-    UTF8.impl_utf8_correct s
+    cbor_impl_utf8_correct () s
   } else {
     true
   }
@@ -401,6 +415,14 @@ let cbor_det_array_iterator_is_empty x #p #y = Det.cbor_det_array_iterator_is_em
 
 let cbor_det_array_iterator_next x #y #py #z = Det.cbor_det_array_iterator_next () x #y #py #z
 
+let cbor_det_array_iterator_share = Det.cbor_det_array_iterator_share ()
+
+let cbor_det_array_iterator_gather = Det.cbor_det_array_iterator_gather ()
+
+let cbor_det_array_iterator_length = Det.cbor_det_array_iterator_length ()
+
+let cbor_det_array_iterator_truncate = Det.cbor_det_array_iterator_truncate ()
+
 fn cbor_det_get_array_item
   (x: cbor_det_array)
   (i: U64.t)
@@ -496,9 +518,17 @@ let cbor_det_map_iterator_is_empty x #p #y = Det.cbor_det_map_iterator_is_empty 
 
 let cbor_det_map_iterator_next x #y #py #z = Det.cbor_det_map_iterator_next () x #y #py #z
 
+let cbor_det_map_iterator_share = Det.cbor_det_map_iterator_share ()
+
+let cbor_det_map_iterator_gather = Det.cbor_det_map_iterator_gather ()
+
 let cbor_det_map_entry_key x2 #p #v2 = Det.cbor_det_map_entry_key () x2 #p #v2
 
 let cbor_det_map_entry_value x2 #p #v2 = Det.cbor_det_map_entry_value () x2 #p #v2
+
+let cbor_det_map_entry_share = Det.cbor_det_map_entry_share ()
+
+let cbor_det_map_entry_gather = Det.cbor_det_map_entry_gather ()
 
 ghost
 fn cbor_det_map_get_post_to_safe
@@ -551,3 +581,9 @@ ensures
   cbor_det_map_get_post_to_safe x px vx vk res;
   res
 }
+
+let cbor_det_serialize_string = Det.cbor_det_serialize_string ()
+let cbor_det_serialize_tag = Det.cbor_det_serialize_tag ()
+let cbor_det_serialize_array = Det.cbor_det_serialize_array ()
+let cbor_det_serialize_map_insert = Det.cbor_det_serialize_map_insert ()
+let cbor_det_serialize_map = Det.cbor_det_serialize_map ()

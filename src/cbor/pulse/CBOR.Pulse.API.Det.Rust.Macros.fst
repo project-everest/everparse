@@ -25,6 +25,18 @@ fn cbor_det_mk_int64'
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+fn cbor_det_mk_simple'
+  (_: unit)
+: Base.mk_simple_t u#0 #_ cbor_det_match
+= (v: _)
+{
+  let Some res = cbor_det_mk_simple_value v;
+  unfold (cbor_det_mk_simple_value_post v (Some res));
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 fn cbor_det_mk_string0
   (_: unit)
 : Base.mk_string_t u#0 #_ cbor_det_match
@@ -101,6 +113,86 @@ fn cbor_det_read_simple_value () : Base.read_simple_value_t u#0 #_ cbor_det_matc
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
+fn cbor_det_get_string'
+  (_: unit)
+: Base.get_string_t u#0 #_ cbor_det_match
+=
+  (x: _)
+  (#p: _)
+  (#y: _)
+{
+  let v = cbor_det_destruct x;
+  with p' . assert (cbor_det_view_match p' v y);
+  let String kd a = v;
+  let t' : Ghost.erased major_type_byte_string_or_text_string = Ghost.hide (if ByteString? kd then cbor_major_type_byte_string else cbor_major_type_text_string);
+  Trade.rewrite_with_trade
+    (cbor_det_view_match p' (String kd a) y)
+    (cbor_det_string_match t' p' a y);
+  Trade.trans _ _ (cbor_det_match p x y);
+  unfold (cbor_det_string_match t' p' a y);
+  with v' . assert (pts_to a #p' v');
+  ghost fn aux (_: unit)
+  requires emp ** pts_to a #p' v'
+  ensures cbor_det_string_match t' p' a y
+  {
+    fold (cbor_det_string_match t' p' a y);
+  };
+  Trade.intro _ _ _ aux;
+  Trade.trans _ _ (cbor_det_match p x y);
+  a
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_get_tagged_tag'
+  (_: unit)
+: Base.get_tagged_tag_t u#0 #_ cbor_det_match
+=
+  (x: _)
+  (#p: _)
+  (#y: _)
+{
+  let v = cbor_det_destruct x;
+  with p' . assert (cbor_det_view_match p' v y);
+  let Tagged tag a = v;
+  unfold (cbor_det_view_match p' (Tagged tag a) y);
+  unfold (cbor_det_tagged_match p' tag a y);
+  fold (cbor_det_tagged_match p' tag a y);
+  fold (cbor_det_view_match p' (Tagged tag a) y);
+  Trade.elim _ _;
+  tag
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_get_tagged_payload'
+  (_: unit)
+: Base.get_tagged_payload_t u#0 #_ cbor_det_match
+=
+  (x: _)
+  (#p: _)
+  (#y: _)
+{
+  let v = cbor_det_destruct x;
+  with p' . assert (cbor_det_view_match p' v y);
+  let Tagged tag a = v;
+  unfold (cbor_det_view_match p' (Tagged tag a) y);
+  unfold (cbor_det_tagged_match p' tag a y);
+  with v' . assert (cbor_det_match p' a v');
+  ghost fn aux (_: unit)
+  requires emp ** cbor_det_match p' a v'
+  ensures cbor_det_view_match p' (Tagged tag a) y
+  {
+    fold (cbor_det_tagged_match p' tag a y);
+    fold (cbor_det_view_match p' (Tagged tag a) y);
+  };
+  Trade.intro _ _ _ aux;
+  Trade.trans _ _ (cbor_det_match p x y);
+  a
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
 fn cbor_det_get_array_length'
   (_: unit)
 : Base.get_array_length_t u#0 #_ cbor_det_match
@@ -116,6 +208,27 @@ fn cbor_det_get_array_length'
   let res = cbor_det_get_array_length a;
   fold (cbor_det_view_match p' (Array a) y);
   Trade.elim _ _;
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_array_iterator_start'
+  (_: unit)
+: Base.array_iterator_start_t u#0 u#0 #_ #_ cbor_det_match cbor_det_array_iterator_match
+= (x: _)
+  (#p: _)
+  (#y: _)
+{
+  let v = cbor_det_destruct x;
+  with p' . assert (cbor_det_view_match p' v y);
+  let Array a = v;
+  Trade.rewrite_with_trade
+    (cbor_det_view_match p' v y)
+    (cbor_det_array_match p' a y);
+  Trade.trans _ _ (cbor_det_match p x y);
+  let res = cbor_det_array_iterator_start a;
+  Trade.trans _ _ (cbor_det_match p x y);
   res
 }
 
@@ -139,6 +252,47 @@ fn cbor_det_get_array_item'
   let ores = cbor_det_get_array_item a i;
   let Some res = ores;
   unfold (safe_get_array_item_post a i p' y (Some res));
+  Trade.trans _ _ (cbor_det_match p x y);
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_get_map_length'
+  (_: unit)
+: Base.get_map_length_t u#0 #_ cbor_det_match
+=
+  (x: _)
+  (#p: _)
+  (#y: _)
+{
+  let v = cbor_det_destruct x;
+  with p' . assert (cbor_det_view_match p' v y);
+  let Map a = v;
+  unfold (cbor_det_view_match p' (Map a) y);
+  let res = cbor_det_map_length a;
+  fold (cbor_det_view_match p' (Map a) y);
+  Trade.elim _ _;
+  res
+}
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+fn cbor_det_map_iterator_start'
+  (_: unit)
+: Base.map_iterator_start_t u#0 u#0 #_ #_ cbor_det_match cbor_det_map_iterator_match
+= (x: _)
+  (#p: _)
+  (#y: _)
+{
+  let v = cbor_det_destruct x;
+  with p' . assert (cbor_det_view_match p' v y);
+  let Map a = v;
+  Trade.rewrite_with_trade
+    (cbor_det_view_match p' v y)
+    (cbor_det_map_match p' a y);
+  Trade.trans _ _ (cbor_det_match p x y);
+  let res = cbor_det_map_iterator_start a;
   Trade.trans _ _ (cbor_det_match p x y);
   res
 }

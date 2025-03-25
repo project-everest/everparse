@@ -14,6 +14,11 @@ val cbordet: Type0
 noextract [@@noextract_to "krml"]
 val cbor_det_match: perm -> cbordet -> Spec.cbor -> slprop
 
+val cbor_det_reset_perm () : Base.reset_perm_t cbor_det_match
+
+val cbor_det_share () : Base.share_t cbor_det_match
+val cbor_det_gather () : Base.gather_t cbor_det_match
+
 val cbor_det_parse (_: unit) : Base.cbor_det_parse_t cbor_det_match
 
 noextract [@@noextract_to "krml"]
@@ -93,6 +98,8 @@ let cbor_det_mk_string_post
       (cbor_det_match 1.0R res' (Spec.pack (Spec.CString ty v')))
       (pts_to s #p v) **
     pure (v' == v)
+
+val cbor_impl_utf8_correct (_: unit) : Base.impl_utf8_correct_t
 
 val cbor_det_mk_string
   (ty: cbor_det_string_kind)
@@ -293,6 +300,14 @@ val cbor_det_array_iterator_is_empty  : Base.array_iterator_is_empty_t cbor_det_
 
 val cbor_det_array_iterator_next : Base.array_iterator_next_t cbor_det_match cbor_det_array_iterator_match
 
+val cbor_det_array_iterator_share : Base.share_t cbor_det_array_iterator_match
+
+val cbor_det_array_iterator_gather : Base.gather_t cbor_det_array_iterator_match
+
+val cbor_det_array_iterator_length: Base.array_iterator_length_t cbor_det_array_iterator_match
+
+val cbor_det_array_iterator_truncate : Base.array_iterator_truncate_t cbor_det_array_iterator_match
+
 noextract [@@noextract_to "krml"]
 let safe_get_array_item_post
   (x: cbor_det_array)
@@ -367,9 +382,17 @@ val cbor_det_map_iterator_is_empty : Base.map_iterator_is_empty_t cbor_det_map_i
 
 val cbor_det_map_iterator_next : Base.map_iterator_next_t cbor_det_map_entry_match cbor_det_map_iterator_match
 
+val cbor_det_map_iterator_share : Base.share_t cbor_det_map_iterator_match
+
+val cbor_det_map_iterator_gather : Base.gather_t cbor_det_map_iterator_match
+
 val cbor_det_map_entry_key : Base.map_entry_key_t cbor_det_map_entry_match cbor_det_match
 
 val cbor_det_map_entry_value : Base.map_entry_value_t cbor_det_map_entry_match cbor_det_match
+
+val cbor_det_map_entry_share : Base.share_t cbor_det_map_entry_match
+
+val cbor_det_map_entry_gather : Base.gather_t cbor_det_map_entry_match
 
 noextract [@@noextract_to "krml"]
 let safe_map_get_post
@@ -404,3 +427,11 @@ val cbor_det_map_get
       safe_map_get_post x px vx vk res **
       pure (Spec.CMap? (Spec.unpack vx) /\ (Some? (Spec.cbor_map_get (Spec.CMap?.c (Spec.unpack vx)) vk) == Some? res))
     )
+
+(* NOTE: the following functions have nontrivial hypotheses. They are intended to be used only by the CDDL code generator, or by verified code. *)
+
+val cbor_det_serialize_string: Base.cbor_det_serialize_string_t
+val cbor_det_serialize_tag: Base.cbor_det_serialize_tag_t
+val cbor_det_serialize_array: Base.cbor_det_serialize_array_t
+val cbor_det_serialize_map_insert: Base.cbor_det_serialize_map_insert_t
+val cbor_det_serialize_map: Base.cbor_det_serialize_map_t
