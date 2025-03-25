@@ -274,7 +274,7 @@ cbor_raw cbor_det_mk_int64(uint8_t ty, uint64_t v);
 
 cbor_raw cbor_det_mk_tagged(uint64_t tag, cbor_raw *r);
 
-cbor_raw cbor_det_mk_string_from_array(uint8_t ty, uint8_t *a, uint64_t len);
+cbor_raw cbor_det_mk_string_from_arrayptr(uint8_t ty, uint8_t *a, uint64_t len);
 
 cbor_raw cbor_det_mk_array_from_array(cbor_raw *a, uint64_t len);
 

@@ -5561,12 +5561,13 @@ cbor_raw cbor_det_mk_tagged(uint64_t tag, cbor_raw *r)
   return ((cbor_raw){ .tag = CBOR_Case_Tagged, { .case_CBOR_Case_Tagged = res_ } });
 }
 
-cbor_raw cbor_det_mk_string_from_array(uint8_t ty, uint8_t *a, uint64_t len)
+cbor_raw cbor_det_mk_string_from_arrayptr(uint8_t ty, uint8_t *a, uint64_t len)
 {
-  Pulse_Lib_Slice_slice__uint8_t s = from_array__uint8_t(a, (size_t)len);
-  CBOR_Spec_Raw_Base_raw_uint64 len64 = mk_raw_uint64((uint64_t)len__uint8_t(s));
+  Pulse_Lib_Slice_slice__uint8_t s = arrayptr_to_slice_intro__uint8_t(a, (size_t)len);
+  Pulse_Lib_Slice_slice__uint8_t s0 = s;
+  CBOR_Spec_Raw_Base_raw_uint64 len64 = mk_raw_uint64((uint64_t)len__uint8_t(s0));
   cbor_string
-  ress = { .cbor_string_type = ty, .cbor_string_size = len64.size, .cbor_string_ptr = s };
+  ress = { .cbor_string_type = ty, .cbor_string_size = len64.size, .cbor_string_ptr = s0 };
   cbor_raw res = { .tag = CBOR_Case_String, { .case_CBOR_Case_String = ress } };
   return res;
 }
