@@ -296,8 +296,8 @@ fn with_cbor_literal_text_string
   (cont: _)
 {
   assume (pure (SZ.fits_u64));
+  let mut a = [| 0uy; SZ.uint64_to_sizet len |]; // I cannot use `len_sz` here because of non-constant-size C stack arrays; `inline_let` would solve that
   let len_sz = SZ.uint64_to_sizet len;
-  let mut a = [| 0uy; len_sz |];
   let s = S.from_array a len_sz;
   f s;
   let c = cbor_mk_string cbor_major_type_text_string s;
