@@ -76,6 +76,18 @@ let impl_serialize_array_group
       impl_serialize_array_group_post count' size' l s v w res
     ))
 
+let impl_serialize_array_group_t_eq
+    (#t: array_group None)
+    (#tgt: Type0)
+    (#inj: bool)
+    (s: ag_spec t tgt inj)
+    (#impl_tgt: Type0)
+    (r: rel impl_tgt tgt)
+    (impl_tgt2: Type0)
+    (ieq: squash (impl_tgt == impl_tgt2))
+: Tot (squash (impl_serialize_array_group s #impl_tgt r == impl_serialize_array_group s #impl_tgt2 (coerce_rel r impl_tgt2 ieq)))
+= ()
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_array
    (cbor_det_serialize_array: cbor_det_serialize_array_t)

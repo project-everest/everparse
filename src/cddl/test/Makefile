@@ -14,6 +14,8 @@ include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
+KRML_OPTS += -warn-error @4
+
 KRML=$(KRML_HOME)/krml -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
 extract: $(ALL_KRML_FILES)

@@ -1375,7 +1375,8 @@ let impl_serialize_map_zero_or_more_iterator
     (cddl_map_iterator_next map_share map_gather map_next map_entry_key map_entry_value map_entry_share map_entry_gather _ _)
     (rel_map_iterator_prop' cbor_map_iterator_match)
     
-inline_for_extraction noextract [@@noextract_to "krml"]
+inline_for_extraction
+// noextract [@@noextract_to "krml"]
 noeq
 type map_slice_iterator_t
   (impl_elt1: Type0) (impl_elt2: Type0)

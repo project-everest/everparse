@@ -45,6 +45,18 @@ let impl_serialize
       pure (impl_serialize_post s v w res)
     )
 
+let impl_serialize_t_eq
+    (#t: typ)
+    (#tgt: Type0)
+    (#inj: bool)
+    (s: spec t tgt inj)
+    (#impl_tgt: Type0)
+    (r: rel impl_tgt tgt)
+    (impl_tgt2: Type0)
+    (ieq: squash (impl_tgt == impl_tgt2))
+: Tot (squash (impl_serialize s #impl_tgt r == impl_serialize s #impl_tgt2 (coerce_rel r impl_tgt2 ieq)))
+= ()
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_always_false
     (#t: Ghost.erased typ)

@@ -51,9 +51,9 @@ let _ : unit = _ by (produce_defs sorted_source0)
 (*
 mkdir -p _output
 true    
-/home/tahina/everest/master/FStar/bin/fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/master/everparse/src/cbor/spec --include /home/tahina/everest/master/everparse/src/cddl/spec --include /home/tahina/everest/master/everparse/lib/evercddl/lib --include /home/tahina/everest/master/everparse/lib/evercddl/plugin --include /home/tahina/everest/master/everparse/src/cbor/pulse --include /home/tahina/everest/master/everparse/src/cddl/pulse --include /home/tahina/everest/master/karamel/krmllib --include /home/tahina/everest/master/karamel/krmllib/obj --include /home/tahina/everest/master/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle' --dep full @.depend.rsp --output_deps_to .depend.aux
+/home/tahina/everest/master/FStar/bin/fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /mnt/data/tahina/everest/master/everparse/src/cbor/spec --include /mnt/data/tahina/everest/master/everparse/src/cddl/spec --include /mnt/data/tahina/everest/master/everparse/lib/evercddl/lib --include /mnt/data/tahina/everest/master/everparse/lib/evercddl/plugin --include /mnt/data/tahina/everest/master/everparse/src/cbor/pulse --include /mnt/data/tahina/everest/master/everparse/src/cddl/pulse --include /home/tahina/everest/master/karamel/krmllib --include /home/tahina/everest/master/karamel/krmllib/obj --include /home/tahina/everest/master/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle' --dep full @.depend.rsp --output_deps_to .depend.aux
 mv .depend.aux .depend
-/home/tahina/everest/master/FStar/bin/fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /home/tahina/everest/master/everparse/src/cbor/spec --include /home/tahina/everest/master/everparse/src/cddl/spec --include /home/tahina/everest/master/everparse/lib/evercddl/lib --include /home/tahina/everest/master/everparse/lib/evercddl/plugin --include /home/tahina/everest/master/everparse/src/cbor/pulse --include /home/tahina/everest/master/everparse/src/cddl/pulse --include /home/tahina/everest/master/karamel/krmllib --include /home/tahina/everest/master/karamel/krmllib/obj --include /home/tahina/everest/master/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning   CDDLTest.Validate.fst
+/home/tahina/everest/master/FStar/bin/fstar.exe  --load_cmxs evercddl_lib --load_cmxs evercddl_plugin --warn_error -342 --odir _output   --include /mnt/data/tahina/everest/master/everparse/src/cbor/spec --include /mnt/data/tahina/everest/master/everparse/src/cddl/spec --include /mnt/data/tahina/everest/master/everparse/lib/evercddl/lib --include /mnt/data/tahina/everest/master/everparse/lib/evercddl/plugin --include /mnt/data/tahina/everest/master/everparse/src/cbor/pulse --include /mnt/data/tahina/everest/master/everparse/src/cddl/pulse --include /home/tahina/everest/master/karamel/krmllib --include /home/tahina/everest/master/karamel/krmllib/obj --include /home/tahina/everest/master/pulse/out/lib/pulse --include . --cache_checked_modules --warn_error @241 --already_cached PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar --cmi --ext context_pruning   CDDLTest.Validate.fst
 TAC>> 
 *)
 
@@ -84,12 +84,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_bool = b1'.b_impl_type
 let teqb1 : squash (b1'.b_impl_type == evercddl_bool) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb1 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b1'.b_spec.parser b1'.b_rel evercddl_bool teqb1
+let seqb1 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b1'.b_spec b1'.b_rel evercddl_bool teqb1
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_bool = T.inline_coerce_eq peqb1 b1'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_bool = T.inline_coerce_eq seqb1 b1'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b1 = bundle_set_parser gb1' evercddl_bool () parse_bool ()
+let b1 = bundle_set_parser_and_serializer gb1' evercddl_bool () parse_bool () serialize_bool ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env1 =
@@ -134,12 +137,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_everparsenomatch = b2'.b_impl_type
 let teqb2 : squash (b2'.b_impl_type == evercddl_everparsenomatch) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb2 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b2'.b_spec.parser b2'.b_rel evercddl_everparsenomatch teqb2
+let seqb2 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b2'.b_spec b2'.b_rel evercddl_everparsenomatch teqb2
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_everparsenomatch = T.inline_coerce_eq peqb2 b2'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_everparsenomatch = T.inline_coerce_eq seqb2 b2'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b2 = bundle_set_parser gb2' evercddl_everparsenomatch () parse_everparsenomatch ()
+let b2 = bundle_set_parser_and_serializer gb2' evercddl_everparsenomatch () parse_everparsenomatch () serialize_everparsenomatch ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env2 =
@@ -184,12 +190,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_uint = b3'.b_impl_type
 let teqb3 : squash (b3'.b_impl_type == evercddl_uint) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb3 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b3'.b_spec.parser b3'.b_rel evercddl_uint teqb3
+let seqb3 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b3'.b_spec b3'.b_rel evercddl_uint teqb3
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_uint = T.inline_coerce_eq peqb3 b3'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_uint = T.inline_coerce_eq seqb3 b3'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b3 = bundle_set_parser gb3' evercddl_uint () parse_uint ()
+let b3 = bundle_set_parser_and_serializer gb3' evercddl_uint () parse_uint () serialize_uint ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env3 =
@@ -234,12 +243,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_nint = b4'.b_impl_type
 let teqb4 : squash (b4'.b_impl_type == evercddl_nint) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb4 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b4'.b_spec.parser b4'.b_rel evercddl_nint teqb4
+let seqb4 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b4'.b_spec b4'.b_rel evercddl_nint teqb4
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_nint = T.inline_coerce_eq peqb4 b4'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_nint = T.inline_coerce_eq seqb4 b4'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b4 = bundle_set_parser gb4' evercddl_nint () parse_nint ()
+let b4 = bundle_set_parser_and_serializer gb4' evercddl_nint () parse_nint () serialize_nint ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env4 =
@@ -284,12 +296,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_int = b5'.b_impl_type
 let teqb5 : squash (b5'.b_impl_type == evercddl_int) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb5 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b5'.b_spec.parser b5'.b_rel evercddl_int teqb5
+let seqb5 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b5'.b_spec b5'.b_rel evercddl_int teqb5
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_int = T.inline_coerce_eq peqb5 b5'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_int = T.inline_coerce_eq seqb5 b5'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b5 = bundle_set_parser gb5' evercddl_int () parse_int ()
+let b5 = bundle_set_parser_and_serializer gb5' evercddl_int () parse_int () serialize_int ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env5 =
@@ -334,12 +349,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_bstr = b6'.b_impl_type
 let teqb6 : squash (b6'.b_impl_type == evercddl_bstr) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb6 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b6'.b_spec.parser b6'.b_rel evercddl_bstr teqb6
+let seqb6 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b6'.b_spec b6'.b_rel evercddl_bstr teqb6
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_bstr = T.inline_coerce_eq peqb6 b6'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_bstr = T.inline_coerce_eq seqb6 b6'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b6 = bundle_set_parser gb6' evercddl_bstr () parse_bstr ()
+let b6 = bundle_set_parser_and_serializer gb6' evercddl_bstr () parse_bstr () serialize_bstr ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env6 =
@@ -384,12 +402,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_encodedcbor = b7'.b_impl_type
 let teqb7 : squash (b7'.b_impl_type == evercddl_encodedcbor) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb7 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b7'.b_spec.parser b7'.b_rel evercddl_encodedcbor teqb7
+let seqb7 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b7'.b_spec b7'.b_rel evercddl_encodedcbor teqb7
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_encodedcbor = T.inline_coerce_eq peqb7 b7'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_encodedcbor = T.inline_coerce_eq seqb7 b7'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b7 = bundle_set_parser gb7' evercddl_encodedcbor () parse_encodedcbor ()
+let b7 = bundle_set_parser_and_serializer gb7' evercddl_encodedcbor () parse_encodedcbor () serialize_encodedcbor ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env7 =
@@ -434,12 +455,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_bytes = b8'.b_impl_type
 let teqb8 : squash (b8'.b_impl_type == evercddl_bytes) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb8 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b8'.b_spec.parser b8'.b_rel evercddl_bytes teqb8
+let seqb8 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b8'.b_spec b8'.b_rel evercddl_bytes teqb8
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_bytes = T.inline_coerce_eq peqb8 b8'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_bytes = T.inline_coerce_eq seqb8 b8'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b8 = bundle_set_parser gb8' evercddl_bytes () parse_bytes ()
+let b8 = bundle_set_parser_and_serializer gb8' evercddl_bytes () parse_bytes () serialize_bytes ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env8 =
@@ -484,12 +508,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_tstr = b9'.b_impl_type
 let teqb9 : squash (b9'.b_impl_type == evercddl_tstr) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb9 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b9'.b_spec.parser b9'.b_rel evercddl_tstr teqb9
+let seqb9 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b9'.b_spec b9'.b_rel evercddl_tstr teqb9
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_tstr = T.inline_coerce_eq peqb9 b9'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_tstr = T.inline_coerce_eq seqb9 b9'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b9 = bundle_set_parser gb9' evercddl_tstr () parse_tstr ()
+let b9 = bundle_set_parser_and_serializer gb9' evercddl_tstr () parse_tstr () serialize_tstr ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env9 =
@@ -534,12 +561,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_label = b10'.b_impl_type
 let teqb10 : squash (b10'.b_impl_type == evercddl_label) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb10 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b10'.b_spec.parser b10'.b_rel evercddl_label teqb10
+let seqb10 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b10'.b_spec b10'.b_rel evercddl_label teqb10
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_label = T.inline_coerce_eq peqb10 b10'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_label = T.inline_coerce_eq seqb10 b10'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b10 = bundle_set_parser gb10' evercddl_label () parse_label ()
+let b10 = bundle_set_parser_and_serializer gb10' evercddl_label () parse_label () serialize_label ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env10 =
@@ -602,12 +632,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_tdate = b12'.b_impl_type
 let teqb12 : squash (b12'.b_impl_type == evercddl_tdate) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb12 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b12'.b_spec.parser b12'.b_rel evercddl_tdate teqb12
+let seqb12 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b12'.b_spec b12'.b_rel evercddl_tdate teqb12
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_tdate = T.inline_coerce_eq peqb12 b12'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_tdate = T.inline_coerce_eq seqb12 b12'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b12 = bundle_set_parser gb12' evercddl_tdate () parse_tdate ()
+let b12 = bundle_set_parser_and_serializer gb12' evercddl_tdate () parse_tdate () serialize_tdate ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env12 =
@@ -652,12 +685,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_uri = b13'.b_impl_type
 let teqb13 : squash (b13'.b_impl_type == evercddl_uri) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb13 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b13'.b_spec.parser b13'.b_rel evercddl_uri teqb13
+let seqb13 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b13'.b_spec b13'.b_rel evercddl_uri teqb13
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_uri = T.inline_coerce_eq peqb13 b13'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_uri = T.inline_coerce_eq seqb13 b13'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b13 = bundle_set_parser gb13' evercddl_uri () parse_uri ()
+let b13 = bundle_set_parser_and_serializer gb13' evercddl_uri () parse_uri () serialize_uri ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env13 =
@@ -702,12 +738,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_b64url = b14'.b_impl_type
 let teqb14 : squash (b14'.b_impl_type == evercddl_b64url) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb14 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b14'.b_spec.parser b14'.b_rel evercddl_b64url teqb14
+let seqb14 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b14'.b_spec b14'.b_rel evercddl_b64url teqb14
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_b64url = T.inline_coerce_eq peqb14 b14'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_b64url = T.inline_coerce_eq seqb14 b14'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b14 = bundle_set_parser gb14' evercddl_b64url () parse_b64url ()
+let b14 = bundle_set_parser_and_serializer gb14' evercddl_b64url () parse_b64url () serialize_b64url ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env14 =
@@ -752,12 +791,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_b64legacy = b15'.b_impl_type
 let teqb15 : squash (b15'.b_impl_type == evercddl_b64legacy) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb15 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b15'.b_spec.parser b15'.b_rel evercddl_b64legacy teqb15
+let seqb15 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b15'.b_spec b15'.b_rel evercddl_b64legacy teqb15
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_b64legacy = T.inline_coerce_eq peqb15 b15'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_b64legacy = T.inline_coerce_eq seqb15 b15'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b15 = bundle_set_parser gb15' evercddl_b64legacy () parse_b64legacy ()
+let b15 = bundle_set_parser_and_serializer gb15' evercddl_b64legacy () parse_b64legacy () serialize_b64legacy ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env15 =
@@ -802,12 +844,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_regexp = b16'.b_impl_type
 let teqb16 : squash (b16'.b_impl_type == evercddl_regexp) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb16 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b16'.b_spec.parser b16'.b_rel evercddl_regexp teqb16
+let seqb16 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b16'.b_spec b16'.b_rel evercddl_regexp teqb16
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_regexp = T.inline_coerce_eq peqb16 b16'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_regexp = T.inline_coerce_eq seqb16 b16'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b16 = bundle_set_parser gb16' evercddl_regexp () parse_regexp ()
+let b16 = bundle_set_parser_and_serializer gb16' evercddl_regexp () parse_regexp () serialize_regexp ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env16 =
@@ -852,12 +897,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_mimemessage = b17'.b_impl_type
 let teqb17 : squash (b17'.b_impl_type == evercddl_mimemessage) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb17 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b17'.b_spec.parser b17'.b_rel evercddl_mimemessage teqb17
+let seqb17 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b17'.b_spec b17'.b_rel evercddl_mimemessage teqb17
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_mimemessage = T.inline_coerce_eq peqb17 b17'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_mimemessage = T.inline_coerce_eq seqb17 b17'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b17 = bundle_set_parser gb17' evercddl_mimemessage () parse_mimemessage ()
+let b17 = bundle_set_parser_and_serializer gb17' evercddl_mimemessage () parse_mimemessage () serialize_mimemessage ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env17 =
@@ -902,12 +950,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_text = b18'.b_impl_type
 let teqb18 : squash (b18'.b_impl_type == evercddl_text) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb18 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b18'.b_spec.parser b18'.b_rel evercddl_text teqb18
+let seqb18 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b18'.b_spec b18'.b_rel evercddl_text teqb18
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_text = T.inline_coerce_eq peqb18 b18'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_text = T.inline_coerce_eq seqb18 b18'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b18 = bundle_set_parser gb18' evercddl_text () parse_text ()
+let b18 = bundle_set_parser_and_serializer gb18' evercddl_text () parse_text () serialize_text ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env18 =
@@ -952,12 +1003,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_false = b19'.b_impl_type
 let teqb19 : squash (b19'.b_impl_type == evercddl_false) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb19 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b19'.b_spec.parser b19'.b_rel evercddl_false teqb19
+let seqb19 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b19'.b_spec b19'.b_rel evercddl_false teqb19
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_false = T.inline_coerce_eq peqb19 b19'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_false = T.inline_coerce_eq seqb19 b19'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b19 = bundle_set_parser gb19' evercddl_false () parse_false ()
+let b19 = bundle_set_parser_and_serializer gb19' evercddl_false () parse_false () serialize_false ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env19 =
@@ -1002,12 +1056,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_true = b20'.b_impl_type
 let teqb20 : squash (b20'.b_impl_type == evercddl_true) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb20 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b20'.b_spec.parser b20'.b_rel evercddl_true teqb20
+let seqb20 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b20'.b_spec b20'.b_rel evercddl_true teqb20
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_true = T.inline_coerce_eq peqb20 b20'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_true = T.inline_coerce_eq seqb20 b20'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b20 = bundle_set_parser gb20' evercddl_true () parse_true ()
+let b20 = bundle_set_parser_and_serializer gb20' evercddl_true () parse_true () serialize_true ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env20 =
@@ -1052,12 +1109,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_nil = b21'.b_impl_type
 let teqb21 : squash (b21'.b_impl_type == evercddl_nil) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb21 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b21'.b_spec.parser b21'.b_rel evercddl_nil teqb21
+let seqb21 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b21'.b_spec b21'.b_rel evercddl_nil teqb21
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_nil = T.inline_coerce_eq peqb21 b21'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_nil = T.inline_coerce_eq seqb21 b21'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b21 = bundle_set_parser gb21' evercddl_nil () parse_nil ()
+let b21 = bundle_set_parser_and_serializer gb21' evercddl_nil () parse_nil () serialize_nil ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env21 =
@@ -1102,12 +1162,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_null = b22'.b_impl_type
 let teqb22 : squash (b22'.b_impl_type == evercddl_null) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb22 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b22'.b_spec.parser b22'.b_rel evercddl_null teqb22
+let seqb22 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b22'.b_spec b22'.b_rel evercddl_null teqb22
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_null = T.inline_coerce_eq peqb22 b22'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_null = T.inline_coerce_eq seqb22 b22'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b22 = bundle_set_parser gb22' evercddl_null () parse_null ()
+let b22 = bundle_set_parser_and_serializer gb22' evercddl_null () parse_null () serialize_null ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env22 =
@@ -1152,12 +1215,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_undefined = b23'.b_impl_type
 let teqb23 : squash (b23'.b_impl_type == evercddl_undefined) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb23 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b23'.b_spec.parser b23'.b_rel evercddl_undefined teqb23
+let seqb23 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b23'.b_spec b23'.b_rel evercddl_undefined teqb23
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_undefined = T.inline_coerce_eq peqb23 b23'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_undefined = T.inline_coerce_eq seqb23 b23'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b23 = bundle_set_parser gb23' evercddl_undefined () parse_undefined ()
+let b23 = bundle_set_parser_and_serializer gb23' evercddl_undefined () parse_undefined () serialize_undefined ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env23 =
@@ -1202,12 +1268,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_any = b24'.b_impl_type
 let teqb24 : squash (b24'.b_impl_type == evercddl_any) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb24 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b24'.b_spec.parser b24'.b_rel evercddl_any teqb24
+let seqb24 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b24'.b_spec b24'.b_rel evercddl_any teqb24
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_any = T.inline_coerce_eq peqb24 b24'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_any = T.inline_coerce_eq seqb24 b24'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b24 = bundle_set_parser gb24' evercddl_any () parse_any ()
+let b24 = bundle_set_parser_and_serializer gb24' evercddl_any () parse_any () serialize_any ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env24 =
@@ -1252,12 +1321,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_values = b25'.b_impl_type
 let teqb25 : squash (b25'.b_impl_type == evercddl_values) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb25 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b25'.b_spec.parser b25'.b_rel evercddl_values teqb25
+let seqb25 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b25'.b_spec b25'.b_rel evercddl_values teqb25
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_values = T.inline_coerce_eq peqb25 b25'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_values = T.inline_coerce_eq seqb25 b25'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b25 = bundle_set_parser gb25' evercddl_values () parse_values ()
+let b25 = bundle_set_parser_and_serializer gb25' evercddl_values () parse_values () serialize_values ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env25 =
@@ -1310,12 +1382,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let aux_env25_type_1 = aux_env25_bundle_1'.ab_impl_type
 let teqaux_env25_bundle_1 : squash (aux_env25_bundle_1'.ab_impl_type == aux_env25_type_1) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqaux_env25_bundle_1 = CDDL.Pulse.Parse.ArrayGroup.impl_zero_copy_array_group_t_eq Det.cbor_det_array_iterator_match aux_env25_bundle_1'.ab_spec.ag_parser aux_env25_bundle_1'.ab_rel aux_env25_type_1 teqaux_env25_bundle_1
+let seqaux_env25_bundle_1 = CDDL.Pulse.Serialize.ArrayGroup.impl_serialize_array_group_t_eq aux_env25_bundle_1'.ab_spec aux_env25_bundle_1'.ab_rel aux_env25_type_1 teqaux_env25_bundle_1
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
 let aux_env25_parse_1 = T.inline_coerce_eq peqaux_env25_bundle_1 aux_env25_bundle_1'.ab_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let aux_env25_serialize_1 = T.inline_coerce_eq seqaux_env25_bundle_1 aux_env25_bundle_1'.ab_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env25_bundle_1 = array_bundle_set_parser gaux_env25_bundle_1' aux_env25_type_1 () aux_env25_parse_1 ()
+let aux_env25_bundle_1 = array_bundle_set_parser_and_serializer gaux_env25_bundle_1' aux_env25_type_1 () aux_env25_parse_1 () aux_env25_serialize_1 ()
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_1 = avenv25_0
@@ -1342,12 +1417,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let aux_env25_type_2 = aux_env25_bundle_2'.b_impl_type
 let teqaux_env25_bundle_2 : squash (aux_env25_bundle_2'.b_impl_type == aux_env25_type_2) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqaux_env25_bundle_2 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match aux_env25_bundle_2'.b_spec.parser aux_env25_bundle_2'.b_rel aux_env25_type_2 teqaux_env25_bundle_2
+let seqaux_env25_bundle_2 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq aux_env25_bundle_2'.b_spec aux_env25_bundle_2'.b_rel aux_env25_type_2 teqaux_env25_bundle_2
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let aux_env25_parse_2 = T.inline_coerce_eq peqaux_env25_bundle_2 aux_env25_bundle_2'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let aux_env25_serialize_2 = T.inline_coerce_eq seqaux_env25_bundle_2 aux_env25_bundle_2'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env25_bundle_2 = bundle_set_parser gaux_env25_bundle_2' aux_env25_type_2 () aux_env25_parse_2 ()
+let aux_env25_bundle_2 = bundle_set_parser_and_serializer gaux_env25_bundle_2' aux_env25_type_2 () aux_env25_parse_2 () aux_env25_serialize_2 ()
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_2 = avenv25_1
@@ -1391,12 +1469,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let aux_env25_type_4 = aux_env25_bundle_4'.b_impl_type
 let teqaux_env25_bundle_4 : squash (aux_env25_bundle_4'.b_impl_type == aux_env25_type_4) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqaux_env25_bundle_4 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match aux_env25_bundle_4'.b_spec.parser aux_env25_bundle_4'.b_rel aux_env25_type_4 teqaux_env25_bundle_4
+let seqaux_env25_bundle_4 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq aux_env25_bundle_4'.b_spec aux_env25_bundle_4'.b_rel aux_env25_type_4 teqaux_env25_bundle_4
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let aux_env25_parse_4 = T.inline_coerce_eq peqaux_env25_bundle_4 aux_env25_bundle_4'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let aux_env25_serialize_4 = T.inline_coerce_eq seqaux_env25_bundle_4 aux_env25_bundle_4'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env25_bundle_4 = bundle_set_parser gaux_env25_bundle_4' aux_env25_type_4 () aux_env25_parse_4 ()
+let aux_env25_bundle_4 = bundle_set_parser_and_serializer gaux_env25_bundle_4' aux_env25_type_4 () aux_env25_parse_4 () aux_env25_serialize_4 ()
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv25_4 = avenv25_3
@@ -1416,12 +1497,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_header_map = b26'.b_impl_type
 let teqb26 : squash (b26'.b_impl_type == evercddl_header_map) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb26 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b26'.b_spec.parser b26'.b_rel evercddl_header_map teqb26
+let seqb26 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b26'.b_spec b26'.b_rel evercddl_header_map teqb26
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_header_map = T.inline_coerce_eq peqb26 b26'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_header_map = T.inline_coerce_eq seqb26 b26'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b26 = bundle_set_parser gb26' evercddl_header_map () parse_header_map ()
+let b26 = bundle_set_parser_and_serializer gb26' evercddl_header_map () parse_header_map () serialize_header_map ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env26 =
@@ -1466,12 +1550,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_empty_or_serialized_map = b27'.b_impl_type
 let teqb27 : squash (b27'.b_impl_type == evercddl_empty_or_serialized_map) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb27 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b27'.b_spec.parser b27'.b_rel evercddl_empty_or_serialized_map teqb27
+let seqb27 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b27'.b_spec b27'.b_rel evercddl_empty_or_serialized_map teqb27
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_empty_or_serialized_map = T.inline_coerce_eq peqb27 b27'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_empty_or_serialized_map = T.inline_coerce_eq seqb27 b27'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b27 = bundle_set_parser gb27' evercddl_empty_or_serialized_map () parse_empty_or_serialized_map ()
+let b27 = bundle_set_parser_and_serializer gb27' evercddl_empty_or_serialized_map () parse_empty_or_serialized_map () serialize_empty_or_serialized_map ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env27 =
@@ -1534,12 +1621,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_COSE_Signature = b29'.b_impl_type
 let teqb29 : squash (b29'.b_impl_type == evercddl_COSE_Signature) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb29 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b29'.b_spec.parser b29'.b_rel evercddl_COSE_Signature teqb29
+let seqb29 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b29'.b_spec b29'.b_rel evercddl_COSE_Signature teqb29
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_COSE_Signature = T.inline_coerce_eq peqb29 b29'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_COSE_Signature = T.inline_coerce_eq seqb29 b29'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b29 = bundle_set_parser gb29' evercddl_COSE_Signature () parse_COSE_Signature ()
+let b29 = bundle_set_parser_and_serializer gb29' evercddl_COSE_Signature () parse_COSE_Signature () serialize_COSE_Signature ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env29 =
@@ -1592,12 +1682,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let aux_env29_type_1 = aux_env29_bundle_1'.ab_impl_type
 let teqaux_env29_bundle_1 : squash (aux_env29_bundle_1'.ab_impl_type == aux_env29_type_1) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqaux_env29_bundle_1 = CDDL.Pulse.Parse.ArrayGroup.impl_zero_copy_array_group_t_eq Det.cbor_det_array_iterator_match aux_env29_bundle_1'.ab_spec.ag_parser aux_env29_bundle_1'.ab_rel aux_env29_type_1 teqaux_env29_bundle_1
+let seqaux_env29_bundle_1 = CDDL.Pulse.Serialize.ArrayGroup.impl_serialize_array_group_t_eq aux_env29_bundle_1'.ab_spec aux_env29_bundle_1'.ab_rel aux_env29_type_1 teqaux_env29_bundle_1
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps); normalize_for_extraction_type]
 let aux_env29_parse_1 = T.inline_coerce_eq peqaux_env29_bundle_1 aux_env29_bundle_1'.ab_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let aux_env29_serialize_1 = T.inline_coerce_eq seqaux_env29_bundle_1 aux_env29_bundle_1'.ab_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let aux_env29_bundle_1 = array_bundle_set_parser gaux_env29_bundle_1' aux_env29_type_1 () aux_env29_parse_1 ()
+let aux_env29_bundle_1 = array_bundle_set_parser_and_serializer gaux_env29_bundle_1' aux_env29_type_1 () aux_env29_parse_1 () aux_env29_serialize_1 ()
 let _ : unit = _ by (FStar.Tactics.print ("ancillary env'"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "krml"] noextract
 let avenv29_1 = avenv29_0
@@ -1617,12 +1710,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_COSE_Sign = b30'.b_impl_type
 let teqb30 : squash (b30'.b_impl_type == evercddl_COSE_Sign) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb30 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b30'.b_spec.parser b30'.b_rel evercddl_COSE_Sign teqb30
+let seqb30 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b30'.b_spec b30'.b_rel evercddl_COSE_Sign teqb30
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_COSE_Sign = T.inline_coerce_eq peqb30 b30'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_COSE_Sign = T.inline_coerce_eq seqb30 b30'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b30 = bundle_set_parser gb30' evercddl_COSE_Sign () parse_COSE_Sign ()
+let b30 = bundle_set_parser_and_serializer gb30' evercddl_COSE_Sign () parse_COSE_Sign () serialize_COSE_Sign ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env30 =
@@ -1667,12 +1763,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_COSE_Sign_Tagged = b31'.b_impl_type
 let teqb31 : squash (b31'.b_impl_type == evercddl_COSE_Sign_Tagged) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb31 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b31'.b_spec.parser b31'.b_rel evercddl_COSE_Sign_Tagged teqb31
+let seqb31 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b31'.b_spec b31'.b_rel evercddl_COSE_Sign_Tagged teqb31
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_COSE_Sign_Tagged = T.inline_coerce_eq peqb31 b31'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_COSE_Sign_Tagged = T.inline_coerce_eq seqb31 b31'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b31 = bundle_set_parser gb31' evercddl_COSE_Sign_Tagged () parse_COSE_Sign_Tagged ()
+let b31 = bundle_set_parser_and_serializer gb31' evercddl_COSE_Sign_Tagged () parse_COSE_Sign_Tagged () serialize_COSE_Sign_Tagged ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env31 =
@@ -1717,12 +1816,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_COSE_Sign1 = b32'.b_impl_type
 let teqb32 : squash (b32'.b_impl_type == evercddl_COSE_Sign1) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb32 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b32'.b_spec.parser b32'.b_rel evercddl_COSE_Sign1 teqb32
+let seqb32 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b32'.b_spec b32'.b_rel evercddl_COSE_Sign1 teqb32
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_COSE_Sign1 = T.inline_coerce_eq peqb32 b32'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_COSE_Sign1 = T.inline_coerce_eq seqb32 b32'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b32 = bundle_set_parser gb32' evercddl_COSE_Sign1 () parse_COSE_Sign1 ()
+let b32 = bundle_set_parser_and_serializer gb32' evercddl_COSE_Sign1 () parse_COSE_Sign1 () serialize_COSE_Sign1 ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env32 =
@@ -1767,12 +1869,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_COSE_Untagged_Message = b33'.b_impl_type
 let teqb33 : squash (b33'.b_impl_type == evercddl_COSE_Untagged_Message) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb33 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b33'.b_spec.parser b33'.b_rel evercddl_COSE_Untagged_Message teqb33
+let seqb33 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b33'.b_spec b33'.b_rel evercddl_COSE_Untagged_Message teqb33
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_COSE_Untagged_Message = T.inline_coerce_eq peqb33 b33'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_COSE_Untagged_Message = T.inline_coerce_eq seqb33 b33'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b33 = bundle_set_parser gb33' evercddl_COSE_Untagged_Message () parse_COSE_Untagged_Message ()
+let b33 = bundle_set_parser_and_serializer gb33' evercddl_COSE_Untagged_Message () parse_COSE_Untagged_Message () serialize_COSE_Untagged_Message ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env33 =
@@ -1817,12 +1922,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_COSE_Sign1_Tagged = b34'.b_impl_type
 let teqb34 : squash (b34'.b_impl_type == evercddl_COSE_Sign1_Tagged) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb34 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b34'.b_spec.parser b34'.b_rel evercddl_COSE_Sign1_Tagged teqb34
+let seqb34 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b34'.b_spec b34'.b_rel evercddl_COSE_Sign1_Tagged teqb34
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_COSE_Sign1_Tagged = T.inline_coerce_eq peqb34 b34'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_COSE_Sign1_Tagged = T.inline_coerce_eq seqb34 b34'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b34 = bundle_set_parser gb34' evercddl_COSE_Sign1_Tagged () parse_COSE_Sign1_Tagged ()
+let b34 = bundle_set_parser_and_serializer gb34' evercddl_COSE_Sign1_Tagged () parse_COSE_Sign1_Tagged () serialize_COSE_Sign1_Tagged ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env34 =
@@ -1867,12 +1975,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_COSE_Tagged_Message = b35'.b_impl_type
 let teqb35 : squash (b35'.b_impl_type == evercddl_COSE_Tagged_Message) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb35 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b35'.b_spec.parser b35'.b_rel evercddl_COSE_Tagged_Message teqb35
+let seqb35 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b35'.b_spec b35'.b_rel evercddl_COSE_Tagged_Message teqb35
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_COSE_Tagged_Message = T.inline_coerce_eq peqb35 b35'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_COSE_Tagged_Message = T.inline_coerce_eq seqb35 b35'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b35 = bundle_set_parser gb35' evercddl_COSE_Tagged_Message () parse_COSE_Tagged_Message ()
+let b35 = bundle_set_parser_and_serializer gb35' evercddl_COSE_Tagged_Message () parse_COSE_Tagged_Message () serialize_COSE_Tagged_Message ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env35 =
@@ -1917,12 +2028,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_COSE_Messages = b36'.b_impl_type
 let teqb36 : squash (b36'.b_impl_type == evercddl_COSE_Messages) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb36 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b36'.b_spec.parser b36'.b_rel evercddl_COSE_Messages teqb36
+let seqb36 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b36'.b_spec b36'.b_rel evercddl_COSE_Messages teqb36
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_COSE_Messages = T.inline_coerce_eq peqb36 b36'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_COSE_Messages = T.inline_coerce_eq seqb36 b36'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b36 = bundle_set_parser gb36' evercddl_COSE_Messages () parse_COSE_Messages ()
+let b36 = bundle_set_parser_and_serializer gb36' evercddl_COSE_Messages () parse_COSE_Messages () serialize_COSE_Messages ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env36 =
@@ -1967,12 +2081,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_Sig_structure = b37'.b_impl_type
 let teqb37 : squash (b37'.b_impl_type == evercddl_Sig_structure) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb37 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b37'.b_spec.parser b37'.b_rel evercddl_Sig_structure teqb37
+let seqb37 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b37'.b_spec b37'.b_rel evercddl_Sig_structure teqb37
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_Sig_structure = T.inline_coerce_eq peqb37 b37'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_Sig_structure = T.inline_coerce_eq seqb37 b37'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b37 = bundle_set_parser gb37' evercddl_Sig_structure () parse_Sig_structure ()
+let b37 = bundle_set_parser_and_serializer gb37' evercddl_Sig_structure () parse_Sig_structure () serialize_Sig_structure ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env37 =
@@ -2017,12 +2134,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_Internal_Types = b38'.b_impl_type
 let teqb38 : squash (b38'.b_impl_type == evercddl_Internal_Types) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb38 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b38'.b_spec.parser b38'.b_rel evercddl_Internal_Types teqb38
+let seqb38 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b38'.b_spec b38'.b_rel evercddl_Internal_Types teqb38
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_Internal_Types = T.inline_coerce_eq peqb38 b38'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_Internal_Types = T.inline_coerce_eq seqb38 b38'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b38 = bundle_set_parser gb38' evercddl_Internal_Types () parse_Internal_Types ()
+let b38 = bundle_set_parser_and_serializer gb38' evercddl_Internal_Types () parse_Internal_Types () serialize_Internal_Types ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env38 =
@@ -2067,12 +2187,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_start = b39'.b_impl_type
 let teqb39 : squash (b39'.b_impl_type == evercddl_start) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb39 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b39'.b_spec.parser b39'.b_rel evercddl_start teqb39
+let seqb39 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b39'.b_spec b39'.b_rel evercddl_start teqb39
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_start = T.inline_coerce_eq peqb39 b39'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_start = T.inline_coerce_eq seqb39 b39'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b39 = bundle_set_parser gb39' evercddl_start () parse_start ()
+let b39 = bundle_set_parser_and_serializer gb39' evercddl_start () parse_start () serialize_start ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env39 =
@@ -2117,12 +2240,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_eb64url = b40'.b_impl_type
 let teqb40 : squash (b40'.b_impl_type == evercddl_eb64url) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb40 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b40'.b_spec.parser b40'.b_rel evercddl_eb64url teqb40
+let seqb40 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b40'.b_spec b40'.b_rel evercddl_eb64url teqb40
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_eb64url = T.inline_coerce_eq peqb40 b40'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_eb64url = T.inline_coerce_eq seqb40 b40'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b40 = bundle_set_parser gb40' evercddl_eb64url () parse_eb64url ()
+let b40 = bundle_set_parser_and_serializer gb40' evercddl_eb64url () parse_eb64url () serialize_eb64url ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env40 =
@@ -2167,12 +2293,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_eb64legacy = b41'.b_impl_type
 let teqb41 : squash (b41'.b_impl_type == evercddl_eb64legacy) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb41 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b41'.b_spec.parser b41'.b_rel evercddl_eb64legacy teqb41
+let seqb41 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b41'.b_spec b41'.b_rel evercddl_eb64legacy teqb41
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_eb64legacy = T.inline_coerce_eq peqb41 b41'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_eb64legacy = T.inline_coerce_eq seqb41 b41'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b41 = bundle_set_parser gb41' evercddl_eb64legacy () parse_eb64legacy ()
+let b41 = bundle_set_parser_and_serializer gb41' evercddl_eb64legacy () parse_eb64legacy () serialize_eb64legacy ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env41 =
@@ -2217,12 +2346,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_eb16 = b42'.b_impl_type
 let teqb42 : squash (b42'.b_impl_type == evercddl_eb16) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb42 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b42'.b_spec.parser b42'.b_rel evercddl_eb16 teqb42
+let seqb42 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b42'.b_spec b42'.b_rel evercddl_eb16 teqb42
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_eb16 = T.inline_coerce_eq peqb42 b42'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_eb16 = T.inline_coerce_eq seqb42 b42'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b42 = bundle_set_parser gb42' evercddl_eb16 () parse_eb16 ()
+let b42 = bundle_set_parser_and_serializer gb42' evercddl_eb16 () parse_eb16 () serialize_eb16 ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env42 =
@@ -2267,12 +2399,15 @@ let _ : unit = _ by (FStar.Tactics.print ("type"); FStar.Tactics.exact (`()))
 let evercddl_cborany = b43'.b_impl_type
 let teqb43 : squash (b43'.b_impl_type == evercddl_cborany) = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
 let peqb43 = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match b43'.b_spec.parser b43'.b_rel evercddl_cborany teqb43
+let seqb43 = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq b43'.b_spec b43'.b_rel evercddl_cborany teqb43
 let _ : unit = _ by (FStar.Tactics.print ("parser"); FStar.Tactics.exact (`()))
 [@@normalize_for_extraction (nbe :: T.bundle_steps)]
 let parse_cborany = T.inline_coerce_eq peqb43 b43'.b_parser
+[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+let serialize_cborany = T.inline_coerce_eq seqb43 b43'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print ("bundle'"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_attr; bundle_get_impl_type_attr]
-let b43 = bundle_set_parser gb43' evercddl_cborany () parse_cborany ()
+let b43 = bundle_set_parser_and_serializer gb43' evercddl_cborany () parse_cborany () serialize_cborany ()
 let _ : unit = _ by (FStar.Tactics.print ("env'"); FStar.Tactics.exact (`()))
 [@@noextract_to "krml"; sem_attr; bundle_attr] noextract
 let env43 =
