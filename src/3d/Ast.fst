@@ -913,7 +913,7 @@ let rec print_typ t : ML string =
       (String.concat " -> " (List.map print_typ ts))
       (print_typ t)
 
-let pq_as_integer_type (pq:pointer_qualifier) : ML integer_type =
+let pq_as_integer_type (pq:pointer_qualifier) : integer_type =
   match pq with
   | PQ i _ -> i
 

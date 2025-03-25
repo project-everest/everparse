@@ -456,9 +456,26 @@ let bit_order_of_integral_typ (env:env) (t:typ) r
     | _, None -> failwith "Impossible"
     | _, Some order -> order
 
+let rec convertible_typ (t1 t2:typ) : Tot bool =
+  match t1.v, t2.v with
+  | Type_app hd1 k1 gs1 ps1, Type_app hd2 k2 gs2 ps2 ->
+    Ast.eq_typ t1 t2
+  | Pointer t1 q1, Pointer t2 q2 ->
+    convertible_typ t1 t2 &&
+    pq_as_integer_type q1 = pq_as_integer_type q2
+  | Type_arrow ts1 t1, Type_arrow ts2 t2 ->
+    convertible_typs ts1 ts2
+    && convertible_typ t1 t2
+  | _ -> false
+and convertible_typs (ts1 ts2:list typ) : Tot bool =
+  match ts1, ts2 with
+  | [], [] -> true
+  | t1::ts1, t2::ts2 -> convertible_typ t1 t2 && convertible_typs ts1 ts2
+  | _ -> false
+
 let eq_typ env t1 t2 =
-  if Ast.eq_typ t1 t2 then true
-  else Ast.eq_typ (unfold_typ_abbrev_and_enum env t1) (unfold_typ_abbrev_and_enum env t2)
+  if convertible_typ t1 t2 then true
+  else convertible_typ (unfold_typ_abbrev_and_enum env t1) (unfold_typ_abbrev_and_enum env t2)
 
 let eq_typs env ts =
   List.for_all (fun (t1, t2) -> eq_typ env t1 t2) ts
