@@ -1,4 +1,4 @@
-module CDDL.Pulse.AST.Gen
+module CDDL.Tool.Gen
 include CDDL.Spec.AST.Driver
 module U32 = FStar.UInt32
 
@@ -526,13 +526,16 @@ let empty_ancillaries : ancillaries_t empty_sem_env = {
   array_parsers = (fun _ _ -> false);
 }
 
+let produce_defs0 accu l =
+  produce_defs' 0 accu empty_wf_ast_env empty_ancillaries l  
+
 let produce_defs
   (l: list (string & decl))
 : FStar.Tactics.Tac unit
 = let accu = "
 *)
 " in
-  match produce_defs' 0 accu empty_wf_ast_env empty_ancillaries l with
+  match produce_defs0 accu l with
   | RFailure s -> FStar.Tactics.fail s
   | RSuccess msg -> let msg = msg ^ "
 (*

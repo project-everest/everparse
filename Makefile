@@ -170,11 +170,14 @@ cddl-lib: cddl-spec
 
 ifeq (,$(NO_PULSE))
 cddl-pulse: $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
-cddl-lib: cddl-pulse
-endif
 
-cddl-ocaml: cddl-spec
+cddl-ocaml: cddl-pulse
 	+$(MAKE) -C src/cddl/tool
+
+cddl-lib: cddl-pulse
+else
+cddl-ocaml:
+endif
 
 cddl: cddl-lib cddl-ocaml
 
@@ -184,14 +187,15 @@ cddl: cddl-lib cddl-ocaml
 
 .PHONY: cddl-plugin-test-verify
 
+ifeq (,$(NO_PULSE))
+
 cddl-plugin-test-verify: cddl
 	+$(MAKE) -C src/cddl/test
 
-ifeq (,$(NO_PULSE))
 cddl-plugin-test: cddl-plugin-test-verify cbor-interface cddl
 	+$(MAKE) -C src/cddl/test extract
 else
-cddl-plugin-test: cddl-plugin-test-verify
+cddl-plugin-test:
 endif
 
 cddl-test: cddl cddl-plugin-test

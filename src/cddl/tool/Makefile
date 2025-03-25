@@ -1,10 +1,11 @@
 all: build
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
-INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec
+INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/pulse $(EVERPARSE_SRC_PATH)/cbor/pulse
 
 ALREADY_CACHED := *,-CDDL.Tool,
 
+include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
 ocaml.done: $(ALL_CHECKED_FILES)

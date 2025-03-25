@@ -1,6 +1,6 @@
 module CDDLTest.Validate
 open CDDL.Pulse.AST.Bundle
-open CDDL.Pulse.AST.Gen
+open CDDL.Tool.Gen
 module Det = CDDL.Pulse.AST.Det.C
 module Impl = CDDL.Pulse.AST.Validate
 module Env = CDDL.Pulse.AST.Env
