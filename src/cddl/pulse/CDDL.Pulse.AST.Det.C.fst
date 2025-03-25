@@ -39,4 +39,13 @@ let cbor_det_impl : cbor_impl cbor_det_match cbor_det_map_entry_match cbor_det_a
   cbor_map_iterator_gather = cbor_det_map_iterator_gather ();
   cbor_map_entry_key = cbor_det_map_entry_key ();
   cbor_map_entry_value = cbor_det_map_entry_value ();
+  cbor_map_entry_share = cbor_det_map_entry_share ();
+  cbor_map_entry_gather = cbor_det_map_entry_gather ();
+  cbor_impl_utf8_correct = cbor_det_impl_utf8_correct ();
+  cbor_det_serialize = cbor_det_serialize_full ();
+  cbor_det_serialize_string = cbor_det_serialize_string ();
+  cbor_det_serialize_tag = cbor_det_serialize_tag ();
+  cbor_det_serialize_array = cbor_det_serialize_array ();
+  cbor_det_serialize_map = cbor_det_serialize_map ();
+  cbor_det_serialize_map_insert = cbor_det_serialize_map_insert ();
 }

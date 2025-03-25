@@ -60,6 +60,31 @@ fn impl_serialize_array_group_ext
   i c out out_count out_size l
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_array_group_ext'
+    (#[@@@erasable]t: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable] inj: Ghost.erased bool)
+    (#[@@@erasable]ps: Ghost.erased (ag_spec t tgt inj))
+    (#impl_tgt: Type0)
+    (#[@@@erasable]r: rel impl_tgt tgt)
+    (i: impl_serialize_array_group ps r)
+    ([@@@erasable]t': Ghost.erased (array_group None))
+    ([@@@erasable]sq: squash (
+      array_group_equiv t' t
+    ))
+: impl_serialize_array_group #(Ghost.reveal t') #tgt #inj (ag_spec_ext ps t') #impl_tgt r
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  i c out out_count out_size l
+}
+
 inline_for_extraction noextract [@@noextract_to "krml";
   FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 ]
@@ -217,6 +242,48 @@ fn impl_serialize_array_group_concat
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_array_group_close_intro
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+: impl_serialize_array_group #_ #_ #_ (ag_spec_close_intro ps1) #_ r1
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  i1 c out out_count out_size l
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_array_group_close_elim
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec (close_array_group t1) tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+: impl_serialize_array_group #_ #_ #_ (ag_spec_close_elim ps1) #_ r1
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  i1 c out out_count out_size l
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_array_group_choice
     (#[@@@erasable]t1: Ghost.erased (array_group None))
     (#[@@@erasable]tgt1: Type0)
@@ -262,6 +329,39 @@ fn impl_serialize_array_group_choice
     }
   }
 }
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_serialize_array_group_choice'
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (#[@@@erasable]t2: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt2: Type0)
+    (#[@@@erasable] inj2: Ghost.erased bool)
+    (#[@@@erasable]ps2: Ghost.erased (ag_spec t2 tgt2 inj2))
+    (#impl_tgt2: Type0)
+    (#[@@@erasable]r2: rel impl_tgt2 tgt2)
+    (i2: impl_serialize_array_group ps2 r2)
+    (sq: squash (
+      array_group_disjoint t1 (close_array_group t2)
+    ))
+: impl_serialize_array_group #_ #_ #_ (ag_spec_choice' ps1 ps2) #_ (rel_either r1 r2)
+= impl_serialize_array_group_close_elim
+    (impl_serialize_array_group_ext'
+      (impl_serialize_array_group_close_intro
+        (impl_serialize_array_group_choice
+          i1
+          (impl_serialize_array_group_close_intro i2)
+          ()
+        )
+      )
+      (close_array_group (array_group_choice t1 t2))
+      ()
+    )
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_array_group_zero_or_one

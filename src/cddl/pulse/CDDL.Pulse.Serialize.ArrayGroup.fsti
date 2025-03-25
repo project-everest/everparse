@@ -161,6 +161,27 @@ val impl_serialize_array_group_choice
 : impl_serialize_array_group #_ #_ #_ (ag_spec_choice ps1 ps2) #_ (rel_either r1 r2)
 
 inline_for_extraction noextract [@@noextract_to "krml"]
+val impl_serialize_array_group_choice'
+    (#[@@@erasable]t1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt1: Type0)
+    (#[@@@erasable] inj1: Ghost.erased bool)
+    (#[@@@erasable]ps1: Ghost.erased (ag_spec t1 tgt1 inj1))
+    (#impl_tgt1: Type0)
+    (#[@@@erasable]r1: rel impl_tgt1 tgt1)
+    (i1: impl_serialize_array_group ps1 r1)
+    (#[@@@erasable]t2: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt2: Type0)
+    (#[@@@erasable] inj2: Ghost.erased bool)
+    (#[@@@erasable]ps2: Ghost.erased (ag_spec t2 tgt2 inj2))
+    (#impl_tgt2: Type0)
+    (#[@@@erasable]r2: rel impl_tgt2 tgt2)
+    (i2: impl_serialize_array_group ps2 r2)
+    (sq: squash (
+      array_group_disjoint t1 (close_array_group t2)
+    ))
+: impl_serialize_array_group #_ #_ #_ (ag_spec_choice' ps1 ps2) #_ (rel_either r1 r2)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_array_group_zero_or_one
     (#[@@@erasable]t1: Ghost.erased (array_group None))
     (#[@@@erasable]tgt1: Type0)

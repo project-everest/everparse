@@ -51,5 +51,14 @@ type cbor_impl
   cbor_map_iterator_gather: gather_t cbor_map_iterator_match;
   cbor_map_entry_key: map_entry_key_t vmatch2 vmatch;
   cbor_map_entry_value: map_entry_value_t vmatch2 vmatch;
+  cbor_map_entry_share: share_t vmatch2;
+  cbor_map_entry_gather: gather_t vmatch2;
+  cbor_impl_utf8_correct: impl_utf8_correct_t;
+  cbor_det_serialize: cbor_det_serialize_t vmatch;
+  cbor_det_serialize_string: cbor_det_serialize_string_t;
+  cbor_det_serialize_tag: cbor_det_serialize_tag_t;
+  cbor_det_serialize_array: cbor_det_serialize_array_t;
+  cbor_det_serialize_map_insert: cbor_det_serialize_map_insert_t;
+  cbor_det_serialize_map: cbor_det_serialize_map_t;
 }
 

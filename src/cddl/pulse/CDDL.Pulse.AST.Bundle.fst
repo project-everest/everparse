@@ -303,6 +303,13 @@ let impl_bundle_elem_type
   (cbor_destr_int64: read_uint64_t vmatch)
   (cbor_get_string: get_string_t vmatch)
   (cbor_destr_simple: read_simple_value_t vmatch)
+  (cbor_serialize: cbor_det_serialize_t vmatch)
+  (mk_int64: mk_int64_t vmatch)
+  (elim_int64: elim_int64_t vmatch)
+  (mk_simple: mk_simple_t vmatch)
+  (elim_simple: elim_simple_t vmatch)
+  (cbor_mk_string: mk_string_t vmatch)
+  (impl_utf8_correct: impl_utf8_correct_t)
   (l: elem_typ)
 : Pure (bundle vmatch)
     (requires wf_elem_typ l)
@@ -311,15 +318,15 @@ let impl_bundle_elem_type
       Ghost.reveal res.b_typ == elem_typ_sem l
     )
 = match l with
-  | ELiteral l -> bundle_unit _ (spec_literal (eval_literal l))
-  | EBool -> bundle_bool cbor_destr_simple
-  | ESimple -> bundle_simple cbor_destr_simple
-  | EByteString -> bundle_bytes cbor_get_string
-  | ETextString -> bundle_text cbor_get_string
-  | EUInt -> bundle_uint cbor_destr_int64
-  | ENInt -> bundle_nint cbor_destr_int64
+  | ELiteral l -> bundle_literal vmatch cbor_serialize (with_literal mk_int64 elim_int64 mk_simple elim_simple cbor_mk_string l)
+  | EBool -> bundle_bool cbor_destr_simple cbor_serialize mk_simple elim_simple
+  | ESimple -> bundle_simple cbor_destr_simple cbor_serialize mk_simple elim_simple
+  | EByteString -> bundle_bytes cbor_get_string cbor_serialize cbor_mk_string
+  | ETextString -> bundle_text cbor_get_string impl_utf8_correct cbor_serialize cbor_mk_string
+  | EUInt -> bundle_uint cbor_destr_int64 cbor_serialize mk_int64 elim_int64
+  | ENInt -> bundle_nint cbor_destr_int64 cbor_serialize mk_int64 elim_int64
   | EAlwaysFalse -> bundle_always_false _ (spec_always_false (fun _ -> true))
-  | EAny -> bundle_any _
+  | EAny -> bundle_any _ cbor_serialize
 
 #push-options "--z3rlimit 1024 --query_stats --ifuel 4 --fuel 4 --split_queries always"
 
@@ -353,36 +360,36 @@ let rec impl_bundle_wf_type
   | WfTTagged tg _ s ->
     let p = impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag s in
     begin match tg with
-    | None -> bundle_tagged_none impl.cbor_get_tagged_tag impl.cbor_get_tagged_payload p
-    | Some tag -> bundle_tagged_some impl.cbor_get_tagged_payload (U64.uint_to_t tag) p
+    | None -> bundle_tagged_none impl.cbor_get_tagged_tag impl.cbor_get_tagged_payload impl.cbor_det_serialize_tag p
+    | Some tag -> bundle_tagged_some impl.cbor_get_tagged_payload impl.cbor_det_serialize_tag (U64.uint_to_t tag) p
     end
   | WfTChoice _ _ s1 s2 ->
     let p1 = impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag s1 in
     let p2 = impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag s2 in
     (bundle_choice p1 (V.validate_typ impl env.be_v true _ s1) p2 ())
-  | WfTElem e -> (impl_bundle_elem_type vmatch impl.cbor_get_major_type impl.cbor_destr_int64 impl.cbor_get_string impl.cbor_destr_simple e)
+  | WfTElem e -> (impl_bundle_elem_type vmatch impl.cbor_get_major_type impl.cbor_destr_int64 impl.cbor_get_string impl.cbor_destr_simple impl.cbor_det_serialize impl.cbor_mk_int64 impl.cbor_elim_int64 impl.cbor_mk_simple impl.cbor_elim_simple impl.cbor_mk_string impl.cbor_impl_utf8_correct e)
   | WfTDetCbor _ _ s ->
     let p = impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag s in
     bundle_type_ext
-      (bundle_det_cbor impl.cbor_get_string impl.cbor_det_parse p)
+      (bundle_det_cbor impl.cbor_get_string impl.cbor_det_parse impl.cbor_det_serialize_string p)
       (typ_sem env.be_ast.e_sem_env t) ()
   | WfTStrSize k base range lo hi ->
     bundle_type_ext
-      (bundle_str_size impl.cbor_get_string (U8.uint_to_t k) (U64.uint_to_t lo) (U64.uint_to_t hi))
+      (bundle_str_size impl.cbor_get_string impl.cbor_impl_utf8_correct impl.cbor_det_serialize impl.cbor_mk_string (U8.uint_to_t k) (U64.uint_to_t lo) (U64.uint_to_t hi))
       (typ_sem env.be_ast.e_sem_env t) ()
   | WfTIntRange _ _ _ lo hi ->
     if hi < 0
-    then (bundle_int_range_neg_int64 impl.cbor_destr_int64 (U64.uint_to_t ((-1) - lo)) (U64.uint_to_t ((-1) - hi)))
+    then (bundle_int_range_neg_int64 impl.cbor_destr_int64 impl.cbor_det_serialize impl.cbor_mk_int64 impl.cbor_elim_int64 (U64.uint_to_t ((-1) - lo)) (U64.uint_to_t ((-1) - hi)))
     else if lo >= 0
-    then (bundle_int_range_uint64 impl.cbor_destr_int64 (U64.uint_to_t lo) (U64.uint_to_t hi))
-    else (bundle_int_range_int64 impl.cbor_get_major_type impl.cbor_destr_int64 (I64.int_to_t lo) (I64.int_to_t hi))
+    then (bundle_int_range_uint64 impl.cbor_destr_int64 impl.cbor_det_serialize impl.cbor_mk_int64 impl.cbor_elim_int64(U64.uint_to_t lo) (U64.uint_to_t hi))
+    else (bundle_int_range_int64 impl.cbor_get_major_type impl.cbor_destr_int64 impl.cbor_det_serialize impl.cbor_mk_int64 impl.cbor_elim_int64 (I64.int_to_t lo) (I64.int_to_t hi))
   | WfTDef n -> env.be_b n
   | WfTArray _ s ->
     let ps = impl_bundle_wf_array_group impl env ancillary_v ancillary ancillary_ag s in
-    (bundle_array impl.cbor_array_iterator_init ps)
+    (bundle_array impl.cbor_array_iterator_init impl.cbor_det_serialize_array ps)
   | WfTMap _ _ s ->
     let ps = impl_bundle_wf_map_group impl env ancillary_v ancillary ancillary_ag s in
-    (bundle_map ps)
+    (bundle_map impl.cbor_det_serialize_map ps)
 
 and impl_bundle_wf_array_group
   (#cbor_t #t2 #t_arr #t_map: Type0)
@@ -419,9 +426,9 @@ and impl_bundle_wf_array_group
     let Some (ve, be) = ancillary_ag _ t_wf' in
       begin match g' with
       | GZeroOrMore _ ->
-        (bundle_array_group_zero_or_more impl.cbor_array_iterator_share impl.cbor_array_iterator_gather be ve ())
+        (bundle_array_group_zero_or_more impl.cbor_array_iterator_is_done  impl.cbor_array_iterator_length impl.cbor_array_iterator_share impl.cbor_array_iterator_gather impl.cbor_array_iterator_truncate be ve ())
       | _ ->
-        (bundle_array_group_one_or_more impl.cbor_array_iterator_share impl.cbor_array_iterator_gather be ve ())
+        (bundle_array_group_one_or_more impl.cbor_array_iterator_is_done        impl.cbor_array_iterator_length impl.cbor_array_iterator_share impl.cbor_array_iterator_gather impl.cbor_array_iterator_truncate be ve ())
       end
   | WfAConcat _ _ t_wf1 t_wf2 ->
     let pg1 = impl_bundle_wf_array_group impl env ancillary_v ancillary ancillary_ag t_wf1 in
@@ -483,6 +490,8 @@ and impl_bundle_wf_map_group
     let ps1 = impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag s in
         (bundle_map_match_item_for
           impl.cbor_map_get
+          impl.cbor_det_serialize_map_insert
+          impl.cbor_det_serialize
           (with_literal
             impl.cbor_mk_int64
             impl.cbor_elim_int64
@@ -502,6 +511,14 @@ and impl_bundle_wf_map_group
               impl.cbor_map_iterator_init
               impl.cbor_map_iterator_share
               impl.cbor_map_iterator_gather
+              impl.cbor_map_iterator_is_empty
+              impl.cbor_map_iterator_next
+              impl.cbor_map_entry_key
+              impl.cbor_map_entry_value
+              impl.cbor_map_entry_share
+              impl.cbor_map_entry_gather
+              impl.cbor_det_parse
+              impl.cbor_det_serialize_map_insert
               p_key
               v_key
               v_key_except

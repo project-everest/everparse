@@ -461,7 +461,6 @@ let impl_serialize_map_zero_or_more_iterator_t
 
 module GR = Pulse.Lib.GhostReference
 module Map = CDDL.Spec.Map
-module EqTest = CDDL.Spec.EqTest
 
 #push-options "--z3rlimit 32 --split_queries always"
 
