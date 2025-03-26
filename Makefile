@@ -185,15 +185,10 @@ cddl: cddl-lib cddl-ocaml
 
 .PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
-.PHONY: cddl-plugin-test-verify
-
 ifeq (,$(NO_PULSE))
 
-cddl-plugin-test-verify: cddl
+cddl-plugin-test: cbor-interface cddl
 	+$(MAKE) -C src/cddl/test
-
-cddl-plugin-test: cddl-plugin-test-verify cbor-interface cddl
-	+$(MAKE) -C src/cddl/test extract
 else
 cddl-plugin-test:
 endif

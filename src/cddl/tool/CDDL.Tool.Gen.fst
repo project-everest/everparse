@@ -63,7 +63,7 @@ let compute_ancillary_env env ancillary_index =
   let env_ancillary_index = env ^ "_" ^ string_of_int ancillary_index in
   "av"^env_ancillary_index^" a"^env_ancillary_index^" aa"^env_ancillary_index
 
-module P = CDDL.Pulse.AST.Parse
+module P = CDDL.Pulse.AST.Ancillaries
 
 noeq
 type ancillaries_t (se: sem_env) = {
@@ -438,6 +438,7 @@ let produce_typ_defs
   let env_anc' = env ^ "_" ^ string_of_int anc1.env_index in
   let anc' : ancillaries_t wenv'.e_sem_env = extend_ancillaries_t anc1.anc wenv'.e_sem_env in
   let msg = "
+let _ : squash (\""^name^"\" == T.pull_name "^source^") = _ by (T.trefl_or_norm ())
 let _ : unit = _ by (FStar.Tactics.print (\"owf'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"] noextract
 let o"^wf^"' = compute_wf_typ' "^env^".be_ast (T.pull_name "^source^") (_ by (T.trefl_or_norm ())) (T.pull_type "^source^") "^fuel^"
@@ -483,6 +484,7 @@ let produce_group_defs
   let msg =
 (
 "
+let _ : squash (\""^name^"\" == T.pull_name "^source^") = _ by (T.trefl_or_norm ())
 let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
 let "^env'^" =
@@ -503,7 +505,8 @@ let rec produce_defs'
   | (name, def) :: q ->
     let accu = accu ^
 "
-let _ : unit = _ by (FStar.Tactics.print (\"" ^ string_of_int (List.Tot.length l) ^ " defs remaining. Producing definitions for "^name^"\"); FStar.Tactics.exact (`()))"
+let _ : unit = _ by (FStar.Tactics.print (\"" ^ string_of_int (List.Tot.length l) ^ " defs remaining. Producing definitions for "^name^"\"); FStar.Tactics.exact (`()))
+"
     in
     begin match def with
     | DType t ->
@@ -528,6 +531,49 @@ let empty_ancillaries : ancillaries_t empty_sem_env = {
 
 let produce_defs0 accu l =
   produce_defs' 0 accu empty_wf_ast_env empty_ancillaries l  
+
+let prelude_fst mname lang filenames = "
+module "^mname^"
+open CDDL.Pulse.AST.Bundle
+open CDDL.Tool.Gen
+module Det = CDDL.Pulse.AST.Det."^lang^"
+module Impl = CDDL.Pulse.AST.Validate
+module Env = CDDL.Pulse.AST.Env
+module Parse = CDDL.Pulse.AST.Parse
+module T = CDDL.Pulse.AST.Tactics
+module SZ = FStar.SizeT
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"] noextract
+let option_source = CDDL.Tool.Plugin.parse ["^filenames^"]
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"] noextract
+let source = Some?.v option_source
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"] noextract
+let option_sorted_source = topological_sort source
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; base_attr] noextract
+let sorted_source0 = Some?.v option_sorted_source
+[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+let env0 : bundle_env Det.cbor_det_match = empty_bundle_env _
+[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+let avenv0_0 : Parse.ancillary_validate_env Det.cbor_det_match env0.be_ast.e_sem_env =
+  fun _ -> None
+[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+let aenv0_0 : ancillary_bundle_env Det.cbor_det_match env0.be_ast.e_sem_env =
+  fun _ _ -> None
+[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+let aaenv0_0 : ancillary_array_bundle_env Det.cbor_det_array_iterator_match env0.be_ast.e_sem_env =
+  fun _ _ -> None
+let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64)
+"
+
+let produce_defs_fst
+  mname lang filenames (l: list (string & decl))
+: Dv string
+= match CDDL.Spec.AST.Driver.topological_sort l with
+  | None -> "Error: topological sort failed"
+  | Some l ->
+    let accu = prelude_fst mname lang filenames in
+    match produce_defs0 accu l with
+    | RSuccess s -> s
+    | RFailure msg -> "Error: " ^ msg
 
 let produce_defs
   (l: list (string & decl))

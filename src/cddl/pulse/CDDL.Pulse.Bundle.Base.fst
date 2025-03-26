@@ -1,4 +1,5 @@
 module CDDL.Pulse.Bundle.Base
+include CDDL.Pulse.Attr
 include CDDL.Pulse.Parse.Base
 include CDDL.Pulse.Serialize.Base
 open Pulse.Lib.Pervasives
@@ -20,10 +21,6 @@ type bundle
   b_parser: impl_zero_copy_parse vmatch b_spec.parser b_rel;
   b_serializer: impl_serialize b_spec b_rel;
 }
-
-irreducible let bundle_get_impl_type_attr : unit = ()
-
-irreducible let bundle_attr : unit = ()
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let get_bundle_impl_type
