@@ -11,7 +11,19 @@ let mname = ref "CDDLTest.Test"
 let lang = ref "C"
 
 let _ =
-  Arg.parse [] process_file "Usage: %0 [file1 ...]";
+  let argspec = ref [
+      ("--rust", Arg.Unit (fun _ -> lang := "Rust"), "Use the Rust EverCBOR library");
+      ("--mname", Arg.String (fun m -> mname := m), "Set the module name");
+    ]
+  in
+  let usagemsg = "EverCDDL: Produces a F* file to generate formally verified parsers and serializers from CDDL specifications.\nUsage: "^Sys.argv.(0) ^" [options] file1 [file2 ...]" in
+  let help () =
+    Arg.usage !argspec usagemsg;
+    exit 0
+  in
+  argspec := ("--help", Arg.Unit help, "Display this help message") :: !argspec;
+  Arg.parse !argspec process_file usagemsg;
+  if List.is_empty !rev_filenames then help ();
   let filenames = List.rev !rev_filenames in
   match ParseFromFile.parse_from_files filenames with
   | None -> failwith "Parsing failed"
