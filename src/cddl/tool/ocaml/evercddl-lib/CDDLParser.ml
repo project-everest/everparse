@@ -72,11 +72,11 @@ let typename = debug "typename"
 let groupname = debug "groupname"
   (concat id (fun n -> concat (get_state ()) (fun s -> match CDDL_Spec_AST_Driver.check_name s n CDDL_Spec_AST_Base.NGroup with None -> fail | Some s' -> concat (set_state s') (fun _ -> ret n))))
 
-let assignt = debug "assignt" (concat eq (fun _ -> ret (fun (x: string) (t: typ) -> (x, CDDL_Spec_AST_Driver.DType t))))
+let assignt = debug "assignt" (concat eq (fun _ -> ret (fun (x: string) (t: typ) (l: (string * CDDL_Spec_AST_Driver.decl) list) -> (x, CDDL_Spec_AST_Driver.DType t) :: l)))
 
 (* TODO: /= *)
 
-let assigng = debug "assigng" (concat eq (fun _ -> ret (fun (x: string) (t: group) -> (x, CDDL_Spec_AST_Driver.DGroup t))))
+let assigng = debug "assigng" (concat eq (fun _ -> ret (fun (x: string) (t: group) (l: (string * CDDL_Spec_AST_Driver.decl) list) -> (x, CDDL_Spec_AST_Driver.DGroup t) :: l)))
 
 (* TODO: //= *)
 
@@ -250,14 +250,15 @@ and memberkey () = debug "memberkey" (
 )
 
 let rec cddl () : cddl_t parser = debug_start "cddl" (
-  concat s (fun _ -> concat (nonempty_list (cddl_item ())) (fun l -> concat eof (fun _ -> concat (get_state ()) (fun st -> ret (st, l)))))
+                                      (* rev needed because assignment operators cons definitions in the reverse order of their parsing *)
+  concat s (fun _ -> concat (nonempty_fold_left (cddl_item ())) (fun l -> concat eof (fun _ -> concat (get_state ()) (fun st -> ret (st, List.rev (l []))))))
 )
 
-and cddl_item () : ((string * CDDL_Spec_AST_Driver.decl)) parser = debug "cddl_item" (
+and cddl_item () : ((string * CDDL_Spec_AST_Driver.decl) list -> (string * CDDL_Spec_AST_Driver.decl) list) parser = debug "cddl_item" (
   concat (rule ()) (fun x -> concat s (fun _ -> ret x))
 )
 
-and rule () : ((string * CDDL_Spec_AST_Driver.decl)) parser =
+and rule () : ((string * CDDL_Spec_AST_Driver.decl) list -> (string * CDDL_Spec_AST_Driver.decl) list) parser =
   debug "rule"
     (choice
        (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assignt (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> ret (f name t)))))))

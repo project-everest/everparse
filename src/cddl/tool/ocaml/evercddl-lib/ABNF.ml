@@ -113,6 +113,18 @@ and nonempty_list
     : ('a, 'b, 'c list, 'd) parser
   = concat f (fun a -> concat (list f) (fun q -> ret (a :: q)))
 
+let rec fold_left
+          (f: ('a, 'b, ('c -> 'c), 'd) parser)
+: ('a, 'b, ('c -> 'c), 'd) parser
+  = choice
+      (nonempty_fold_left f)
+      (ret (fun x -> x))
+
+and nonempty_fold_left
+(f: ('a, 'b, ('c -> 'c), 'd) parser)
+    : ('a, 'b, ('c -> 'c), 'd) parser
+  = concat f (fun a -> concat (fold_left f) (fun q -> ret (fun x -> q (a x))))
+
 let rec ignore_list
       (f: ('a, 'b, 'c, 'd) parser)
     : ('a, 'b, unit, 'd) parser

@@ -10,7 +10,9 @@ let parse (env: CDDLParser.state) filename =
 let parse_one env filename =
   try
     parse env filename
-  with _ -> None
+  with e ->
+    print_endline (Printexc.to_string e);
+    None
 
 let rec parse' (env, l) = function
   | [] -> Some (env, l)
