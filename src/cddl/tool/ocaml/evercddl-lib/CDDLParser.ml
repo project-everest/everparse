@@ -5,7 +5,8 @@ open FStar_Pervasives
 open CDDL_Spec_AST_Base
 
 type state = CDDL_Spec_AST_Base.name_env
-type 'a parser = (Tokens.token, state, 'a) ABNF.parser
+type cddl_t = (state * (string * CDDL_Spec_AST_Driver.decl) list)
+type 'a parser = (Tokens.token, state, 'a, cddl_t) ABNF.parser
 type symbol = unit parser
 
 let terminal name f =
@@ -248,7 +249,7 @@ and memberkey () = debug "memberkey" (
     ]
 )
 
-let rec cddl () : (state * (string * CDDL_Spec_AST_Driver.decl) list) parser = debug_start "cddl" (
+let rec cddl () : cddl_t parser = debug_start "cddl" (
   concat s (fun _ -> concat (nonempty_list (cddl_item ())) (fun l -> concat eof (fun _ -> concat (get_state ()) (fun st -> ret (st, l)))))
 )
 
