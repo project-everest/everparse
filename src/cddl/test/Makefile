@@ -3,8 +3,7 @@ all: extract-all
 EVERPARSE_SRC_PATH = $(realpath ../..)
 
 CDDLTest.Test.fst: cose.cddl ../spec/postlude.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ > $@.tmp
-	mv $@.tmp $@
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^
 
 extract-all: CDDLTest.Test.fst
 	+$(MAKE) -f extract.Makefile extract
