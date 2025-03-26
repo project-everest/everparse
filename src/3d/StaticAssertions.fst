@@ -115,7 +115,7 @@ let no_static_asserts (sas: static_asserts) : Tot bool =
 let has_static_asserts (sas: static_asserts) : Tot bool =
   not (no_static_asserts sas)
 
-let print_static_asserts (sas:static_asserts)
+let print_static_asserts (ctypes:string) (sas:static_asserts)
   : ML string
   = let includes =
         sas.includes
@@ -137,8 +137,20 @@ let print_static_asserts (sas:static_asserts)
     let define_c_assert = 
       "#define EVERPARSE_STATIC_ASSERT(e) typedef char __EVERPARSE_STATIC_ASSERT__[(e)?1:-1];"
     in
-    "#include <stddef.h>\n" ^
-    Options.make_includes () ^
-    includes ^ "\n" ^
-    define_c_assert ^ "\n" ^
+    Printf.sprintf
+    "#include <stddef.h>\n\
+     #include <stdint.h>\n\
+     %s\n\
+     %s\n\
+     typedef uint8_t UINT8;\n\
+     typedef uint16_t UINT16;\n\
+     typedef uint32_t UINT32;\n\
+     typedef uint64_t UINT64;\n\
+     %s\n\
+     %s\n\
+     %s\n"
+    (Options.make_includes ())
+    includes
+    ctypes
+    define_c_assert
     sizeof_assertions

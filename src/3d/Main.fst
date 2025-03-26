@@ -377,9 +377,11 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
         (Printf.sprintf "%s/%sStaticAssertions.c"
           (Options.get_output_dir())
           modul) in
-    FStar.IO.write_string c_static_asserts_file (RefineCStruct.print_ctypes ctypes);
     FStar.IO.write_string c_static_asserts_file "\n\n";
-    FStar.IO.write_string c_static_asserts_file (StaticAssertions.print_static_asserts static_asserts);
+    FStar.IO.write_string c_static_asserts_file 
+    (StaticAssertions.print_static_asserts 
+       (RefineCStruct.print_ctypes ctypes)
+       static_asserts);
     FStar.IO.close_write_file c_static_asserts_file
   end
 
