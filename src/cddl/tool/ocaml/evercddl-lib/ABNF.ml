@@ -49,9 +49,9 @@ let set_state (x: 'b) : ('a, 'b, unit) parser =
 let choice
       (f: ('a, 'b, 'c) parser)
       (g: ('a, 'b, 'c) parser)
-      (x: ('a, 'b) TokenBuffer.t)
-    : 'c option
-  = let saved = TokenBuffer.backup x in
+    : ('a, 'b, 'c) parser
+= fun x ->
+  let saved = TokenBuffer.backup x in
     match f x with
     | Some y -> Some y
     | None ->
@@ -67,9 +67,9 @@ let rec choices l = match l with
 let concat
       (f: ('a, 'b, 'c) parser)
       (g: 'c -> ('a, 'b, 'd) parser)
-      (x: ('a, 'b) TokenBuffer.t)
-    : 'd option
-  = match f x with
+    : ('a, 'b, 'd) parser
+= fun x ->
+  match f x with
   | Some y ->
      incr stack_level;
      let res = g y x in
@@ -79,15 +79,13 @@ let concat
 
 let ret
       (x: 'a)
-      (y: ('b, 'c) TokenBuffer.t)
-    : 'a option
-= Some x
+    : ('b, 'c, 'a) parser
+= fun y -> Some x
 
 let ret_option
       (x: 'a option)
-      (y: ('b, 'c) TokenBuffer.t)
-    : 'a option
-= x
+    : ('b, 'c, 'a) parser
+= fun y -> x
 
 let option
       (f: ('a, 'b, 'c) parser)
@@ -96,9 +94,9 @@ let option
 
 let terminal
       (f: 'a -> 'b option)
-      (x: ('a, 'c) TokenBuffer.t)
-    : 'b option
-  = f (TokenBuffer.advance x)
+    : ('a, 'c, 'b) parser
+= fun x ->
+  f (TokenBuffer.advance x)
 
 let rec list
           (f: ('a, 'b, 'c) parser)
