@@ -408,6 +408,12 @@ let rec size_and_alignment_of_field (env:env_t)
       let f = { f with v = SwitchCaseField swc field_name } in
       f, size, alignment
         
+let should_skip (f:field) : bool =
+  match f.v with
+  | AtomicField af ->
+    eq_typ af.v.field_type tunit
+  | _ -> false
+  
 let field_offsets_of_type (env:env_t) (typ:ident)
 : ML (either (list (ident & int)) string)
 = let ge = Binding.global_env_of_env (fst env) in
@@ -420,21 +426,25 @@ let field_offsets_of_type (env:env_t) (typ:ident)
     = match fields with
       | [] -> Inl <| List.rev acc
       | field :: fields ->
-        let _, size, _ = size_and_alignment_of_field env false typ field in
-        let id =
-          match field.v with
-          | AtomicField af -> af.v.field_ident
-          | RecordField _ id
-          | SwitchCaseField _ id -> id
-        in
-        match size with
-        | Fixed n ->
-          let next_offset = n + current_offset in
-          field_offsets next_offset ((id, current_offset) :: acc) fields
+        if should_skip field
+        then field_offsets current_offset acc fields
+        else (
+          let _, size, _ = size_and_alignment_of_field env false typ field in
+          let id =
+            match field.v with
+            | AtomicField af -> af.v.field_ident
+            | RecordField _ id
+            | SwitchCaseField _ id -> id
+          in
+          match size with
+          | Fixed n ->
+            let next_offset = n + current_offset in
+            field_offsets next_offset ((id, current_offset) :: acc) fields
 
-        | WithVariableSuffix _
-        | Variable ->
-          Inl <| List.rev ((id, current_offset) :: acc)
+          | WithVariableSuffix _
+          | Variable ->
+            Inl <| List.rev ((id, current_offset) :: acc)
+        )
     in
     field_offsets 0 [] fields
 

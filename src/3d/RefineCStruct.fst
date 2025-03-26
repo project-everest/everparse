@@ -47,33 +47,81 @@ let cname_of_names (names:typedef_names)
 : ML (ident & ident)
 = names.typedef_name, names.typedef_abbrev
 
+let number_field (i:int) (cf:cfield)
+: ML cfield
+= let ct, id, arr = cf in
+
+  ct, { id with v = { id.v with name = Printf.sprintf "%s_%d" id.v.name i } }, arr
+
 let ctype_of_typ (e:env_t) (t:typ)
-: ML (option ctype)
+: ML (either ctype string)
 = match t.v with
-  | Pointer _ (PQ UInt32 _) -> Some <| Ty tuint32
-  | Pointer _ (PQ UInt64 _) -> Some <| Ty tuint64
-  | Type_arrow _ _ -> None // no Ctype analog for function types
+  | Pointer _ (PQ UInt32 _) -> Inl <| Ty tuint32
+  | Pointer _ (PQ UInt64 _) -> Inl <| Ty tuint64
+  | Type_arrow _ _ -> Inr "No arrow types in C"
   | _ ->
     let t = Binding.unfold_typ_abbrev_and_enum (fst e) t in
-    Some <| Ty t
+    let known_types = [tuint8; tuint16; tuint32; tuint64 ] in
+    if List.existsb (eq_typ t) known_types
+    then Inl <| Ty t
+    else (
+      match t.v with
+      | Type_app id k _ _ -> (
+        let d, _ = B.lookup_type_decl (fst e) id in
+        let name =
+          match idents_of_decl d with
+          | [n]
+          | [_;n] -> n
+          | _ -> raise (Failure "Expected one or two names")
+        in
+        Inl <| Ty { t with v = Type_app name k [] [] }
+      )
+      | _ -> Inr "Not a type application"
+    )
 
-let rec cfield_of_field (e:env_t) (f:field)
+exception UnsupportedField of (field & string)
+
+let rec expr_const (e:expr)
+: ML (option int)
+= match e.v with
+  | Constant (Int _ n) -> Some n
+  | App (Cast _ _) [e0] -> expr_const e0
+  | App (Mul _) [e0; e1] -> (
+    match expr_const e0, expr_const e1 with
+    | Some n0, Some n1 -> Some (n0 * n1)
+    | _ -> None
+  )
+  | App (Plus _) [e0; e1] -> (
+    match expr_const e0, expr_const e1 with
+    | Some n0, Some n1 -> Some (n0 + n1)
+    | _ -> None
+  )
+  | _ -> None
+
+let rec cfield_of_field (e:env_t) (f0:field)
 : ML (list cfield)
-= match f.v with
+= match f0.v with
   | AtomicField f ->
-    if TS.is_alignment_field f.v.field_ident then []
+    if eq_typ f.v.field_type tunit then [] 
+    else if TS.is_alignment_field f.v.field_ident then []
     else (
       match f.v.field_array_opt with
       | FieldScalar -> (
         match ctype_of_typ e f.v.field_type with
-        | Some ct -> [ct, f.v.field_ident, None]
-        | _ -> []
+        | Inl ct -> [ct, f.v.field_ident, None]
+        | Inr reason ->
+          raise (UnsupportedField (f0, reason))
       )
-      | FieldArrayQualified ({v=Constant (Int _ n)}, ByteArrayByteSize) ->
-        [Ty tuint8, f.v.field_ident, Some n]
+      | FieldArrayQualified (e, ByteArrayByteSize)
+      | FieldArrayQualified (e, ArrayByteSize) -> (
+        match expr_const e with
+        | Some n -> [Ty tuint8, f.v.field_ident, Some n]
+        | None -> raise (UnsupportedField (f0, "Unsupported variable-length field"))
+      )
       | FieldArrayQualified _
       | FieldString _
-      | FieldConsumeAll -> [] // no Ctype analog for these fields
+      | FieldConsumeAll ->
+        raise (UnsupportedField(f0, "Unsupported variable-length field"))
     )
   | RecordField fields i ->
     let cfields = List.collect (cfield_of_field e) fields in
@@ -86,9 +134,10 @@ and cfields_of_switch_case (e:env_t) (sw:switch_case)
 : ML (list cfield)
 = let fields = List.map (function Case _ f -> f | DefaultCase f -> f) (snd sw) in 
   let cfields = List.collect (cfield_of_field e) fields in
+  let cfields = List.mapi (fun i cf -> number_field i cf) cfields in
   cfields
 
-let ctype_of_decl (e:env_t) (d:decl)
+let ctype_of_decl' (e:env_t) (d:decl)
 : ML (list ctype_decl)
 = match d.d_decl.v with
   | Record names _gs _ps _w fields ->
@@ -111,6 +160,21 @@ let ctype_of_decl (e:env_t) (d:decl)
 
   | _ -> []
 
+let ctype_of_decl (e:env_t) (d:decl)
+: ML (list ctype_decl)
+= try
+    ctype_of_decl' e d
+  with
+  | UnsupportedField (f, reason) -> 
+    error (
+      Printf.sprintf "Cannot confirm field offsets and alignment because \
+      the field %s of type %s could not be translated to C, because %s"
+        (print_field f)
+        (print_ident (List.hd (idents_of_decl d)))
+        reason
+    ) f.range
+  | ex -> raise ex
+
 let refine_records (e:GlobalEnv.global_env) (t:TS.size_env) (p:prog)
 : ML (list ctype_decl & prog)
 = let e = B.mk_env e, t in
@@ -129,6 +193,9 @@ let refine_records (e:GlobalEnv.global_env) (t:TS.size_env) (p:prog)
   in
   ctypes, (decls, type_refinements)
 
+///////////////////////////////////////////
+// Printing C types
+///////////////////////////////////////////
 let print_indent (n:nat)
 : ML string
 = String.make (2 * n) ' '

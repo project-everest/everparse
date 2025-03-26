@@ -122,19 +122,6 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
 
   let decls, benv = Binding.bind_decls (GlobalEnv.copy_global_env benv0) decls in
 
-
-  let cstructs, (decls, refinement) =
-    if specialized
-    then RefineCStruct.refine_records benv en.typesizes_env (decls, refinement)
-    else [], (decls, refinement)
-  in
-
-  Options.debug_print_string "=============After refining records =============\n";
-
-  let static_asserts = StaticAssertions.compute_static_asserts benv en.typesizes_env refinement in
-
-  Options.debug_print_string "=============Finished static asserts pass=============\n";
-
   let decls = Simplify.simplify_prog benv en.typesizes_env decls in
   
   Options.debug_print_string "=============After simplify============\n";
@@ -146,6 +133,19 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   Options.debug_print_string "=============After inline singletons============\n";
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";
+
+  let cstructs, (decls, refinement) =
+    if specialized
+    then (
+      FStar.IO.print_string "Refining records\n";
+      RefineCStruct.refine_records benv en.typesizes_env (decls, refinement)
+    )
+    else [], (decls, refinement)
+  in
+  Options.debug_print_string "=============After refining records =============\n";
+
+  let static_asserts = StaticAssertions.compute_static_asserts benv en.typesizes_env refinement in
+  Options.debug_print_string "=============Finished static asserts pass=============\n";
 
   let en = {
     en with 
