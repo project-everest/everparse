@@ -89,6 +89,18 @@ let specialize_one (e:GlobalEnv.global_env) (d: decl { Specialize? d.d_decl.v })
   let d = { d with d_decl = { d.d_decl with v = dj }} in
   d
 
-let specialize (e:GlobalEnv.global_env) (d: list decl)
-: ML (list decl)
-= List.map (fun (d:decl) -> if Specialize? d.d_decl.v then specialize_one e d else d) d
+let specialize (e:GlobalEnv.global_env) (ds: list decl)
+: ML (list decl & bool)
+= let specialized : ref bool = alloc false in
+  let ds = 
+    List.map
+      (fun (d:decl) ->
+        if Specialize? d.d_decl.v 
+        then (
+          specialized := true;
+          specialize_one e d
+        )
+        else d)
+      ds
+  in
+  ds, !specialized

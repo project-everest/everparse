@@ -10,4 +10,4 @@ open FStar.All
 module B = Binding
 
 val specialize (e:GlobalEnv.global_env) (d: list decl)
-: ML (list decl)
+: ML (list decl & bool) // bool is true if any specialization occurred

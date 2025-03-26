@@ -49,6 +49,7 @@ let fail () : ML unit = failwith "stop"
 let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   : ML (list Ast.decl &
         StaticAssertions.static_asserts &
+        list RefineCStruct.ctype_decl &
         env) =
   Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn mname);
   let decls, refinement =
@@ -85,7 +86,7 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   Options.debug_print_string "\n";
 
   let decls, benv = check_decls decls in
-  let decls = Specialize.specialize benv decls in
+  let decls, specialized = Specialize.specialize benv decls in
 
   Options.debug_print_string "=============After specialization=============\n";
   Options.debug_print_string (print_decls decls);
@@ -121,6 +122,15 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
 
   let decls, benv = Binding.bind_decls (GlobalEnv.copy_global_env benv0) decls in
 
+
+  let cstructs, (decls, refinement) =
+    if specialized
+    then RefineCStruct.refine_records benv en.typesizes_env (decls, refinement)
+    else [], (decls, refinement)
+  in
+
+  Options.debug_print_string "=============After refining records =============\n";
+
   let static_asserts = StaticAssertions.compute_static_asserts benv en.typesizes_env refinement in
 
   Options.debug_print_string "=============Finished static asserts pass=============\n";
@@ -143,15 +153,17 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   } in
   decls,
   static_asserts,
+  cstructs,
   en
   
 let translate_module (en:env) (mname:string) (fn:string)
   : ML (list Target.decl &
         list InterpreterTarget.decl &
         StaticAssertions.static_asserts &
+        list RefineCStruct.ctype_decl &
         env) =
 
-  let decls, static_asserts, en = 
+  let decls, static_asserts, ctypes, en = 
       parse_check_and_desugar en mname fn
   in      
       
@@ -167,6 +179,7 @@ let translate_module (en:env) (mname:string) (fn:string)
   t_decls,
   i_decls,
   static_asserts,
+  ctypes,
   en
 
 let emit_fstar_code_for_interpreter (en:env)
@@ -245,6 +258,7 @@ let emit_fstar_code_for_interpreter (en:env)
 let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
                     (en:env) (modul:string) (t_decls:list Target.decl)
                     (static_asserts:StaticAssertions.static_asserts)
+                    (ctypes:list RefineCStruct.ctype_decl)
                     (emit_output_types_defs:bool)
   : ML unit =
   //print wrapper only if there is an entrypoint
@@ -363,6 +377,8 @@ let emit_entrypoint (produce_ep_error: Target.opt_produce_everparse_error)
         (Printf.sprintf "%s/%sStaticAssertions.c"
           (Options.get_output_dir())
           modul) in
+    FStar.IO.write_string c_static_asserts_file (RefineCStruct.print_ctypes ctypes);
+    FStar.IO.write_string c_static_asserts_file "\n\n";
     FStar.IO.write_string c_static_asserts_file (StaticAssertions.print_static_asserts static_asserts);
     FStar.IO.close_write_file c_static_asserts_file
   end
@@ -377,13 +393,13 @@ let process_file_gen
                  (all_modules:list string)
   : ML (env & list InterpreterTarget.decl) =
   
-  let t_decls, interpreter_decls, static_asserts, en =
+  let t_decls, interpreter_decls, static_asserts, ctypes, en =
       translate_module en modul fn
   in
   if emit_fstar 
   then (
     emit_fstar_code_for_interpreter en modul t_decls interpreter_decls all_modules;
-    emit_entrypoint produce_ep_error en modul t_decls static_asserts emit_output_types_defs
+    emit_entrypoint produce_ep_error en modul t_decls static_asserts ctypes emit_output_types_defs
   )
   else IO.print_string (Printf.sprintf "Not emitting F* code for %s\n" fn);
 
