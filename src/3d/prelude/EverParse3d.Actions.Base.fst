@@ -1941,6 +1941,15 @@ let copy_buffer_loc (x:CP.copy_buffer_t)
 
 inline_for_extraction
 noextract
+let init_and_probe 
+      (init:PA.init_probe_dest_t)
+      (prep_dest_sz:U64.t)
+      (probe:PA.probe_m unit true)
+: PA.probe_m unit false
+= PA.seq_probe_m () (PA.init_probe_m init prep_dest_sz) probe
+
+inline_for_extraction
+noextract
 let probe_then_validate 
       (#nz:bool)
       (#wk: _)
@@ -1956,12 +1965,14 @@ let probe_then_validate
       (src:ptr_t)
       (as_u64:ptr_t -> PA.pure_external_action U64.t)
       (dest:CP.copy_buffer_t)
-      (probe:PA.probe_m unit)
+      (init:PA.init_probe_dest_t)
+      (prep_dest_sz:U64.t)
+      (probe:PA.probe_m unit true)
   = fun ctxt error_handler_fn input input_length pos posf ->
       CP.properties dest;
       let h0 = HST.get () in
       let src64 = as_u64 src () in
-      let b = PA.run_probe_m probe src64 dest in
+      let b = PA.run_probe_m (init_and_probe init prep_dest_sz probe) src64 dest in
       let h1 = HST.get () in
       modifies_address_liveness_insensitive_unused_in h0 h1;
       if b <> 0uL
