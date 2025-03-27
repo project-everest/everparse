@@ -40,11 +40,11 @@ let _ =
      if String.starts_with ~prefix:"Error: " str
      then failwith str
      else begin
-         let filename = !mname ^ ".fst" in
-         let filename_tmp = filename ^ ".tmp" in
          let dir = !odir in
+         let filename = Filename.concat dir (!mname ^ ".fst") in
+         let filename_tmp = filename ^ ".tmp" in
          if not (Sys.file_exists dir && Sys.is_directory dir) then Sys.mkdir dir 0o755;
-         let ch = open_out (Filename.concat dir filename_tmp) in
+         let ch = open_out filename_tmp in
          output_string ch str;
          close_out ch;
          Sys.rename filename_tmp filename;
