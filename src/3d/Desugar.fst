@@ -328,7 +328,8 @@ let resolve_probe_atomic_action (env:qenv) (ac:probe_atomic_action) : ML probe_a
   | Probe_action_read f -> Probe_action_read (resolve_ident env f)
   | Probe_action_write f v -> Probe_action_write (resolve_ident env f) (resolve_expr env v)
   | Probe_action_copy f v -> Probe_action_copy (resolve_ident env f) (resolve_expr env v)
-  | Probe_action_skip n -> Probe_action_skip (resolve_expr env n)
+  | Probe_action_skip_read n -> Probe_action_skip_read (resolve_expr env n)
+  | Probe_action_skip_write n -> Probe_action_skip_write (resolve_expr env n)
   | Probe_action_fail -> Probe_action_fail
 
 let rec resolve_probe_action' (env:qenv) (act:probe_action') : ML probe_action' =

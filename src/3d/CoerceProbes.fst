@@ -141,36 +141,18 @@ let probe_and_copy_type (e:B.env) (t0:typ) (k:probe_action)
       (with_dummy_range <| Probe_atomic_action (Probe_action_copy probe_and_copy_n (with_dummy_range <| Constant (Int UInt64 size))))
       k
   
-let rec write_n_bytes_zero (e:B.env) (n:int) (k:probe_action)
-: ML probe_action
-= let writei t
-    : ML probe_action
-    = let writer = find_probe_fn e (PQWrite t) in
-      with_dummy_range <|
-      Probe_action_seq
-        (with_dummy_range <| Probe_atomic_action (Probe_action_write writer (with_dummy_range <| Constant (Int t 0))))
-        k
-  in
-  match n with
-  | 0 -> k
-  | 1 -> writei UInt8
-  | 2 -> writei UInt16
-  | 4 -> writei UInt32
-  | 8 -> writei UInt64
-  | _ -> 
-    if n > 8
-    then write_n_bytes_zero e (n - 8) (write_n_bytes_zero e 8 k)
-    else if n > 4
-    then write_n_bytes_zero e (n - 4) (write_n_bytes_zero e 4 k)
-    else if n > 2
-    then write_n_bytes_zero e (n - 2) (write_n_bytes_zero e 2 k)
-    else write_n_bytes_zero e (n - 1) (write_n_bytes_zero e 1 k)
-
-let skip_bytes (n:int) (k:probe_action)
+let skip_bytes_read (n:int) (k:probe_action)
 : ML probe_action
 = with_dummy_range <|
     Probe_action_seq 
-      (with_dummy_range <| Probe_atomic_action (Probe_action_skip (with_dummy_range <| Constant (Int UInt64 n))))
+      (with_dummy_range <| Probe_atomic_action (Probe_action_skip_read (with_dummy_range <| Constant (Int UInt64 n))))
+      k
+
+let skip_bytes_write (n:int) (k:probe_action)
+: ML probe_action
+= with_dummy_range <|
+    Probe_action_seq 
+      (with_dummy_range <| Probe_atomic_action (Probe_action_skip_write (with_dummy_range <| Constant (Int UInt64 n))))
       k
 
 let probe_and_copy_alignment 
@@ -188,7 +170,7 @@ let probe_and_copy_alignment
         k
   )
   else (
-    skip_bytes n0 (write_n_bytes_zero e n1 k)
+    skip_bytes_read n0 (skip_bytes_write n1 k)
   )
 
 let alignment_bytes (af:atomic_field)
@@ -236,10 +218,10 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
         probe_and_copy_alignment e n0 n1 (coerce_fields e tl0 tl1)
       | true, false ->
         let n0 = alignment_bytes af0 in
-        skip_bytes n0 (coerce_fields e tl0 r1)
+        skip_bytes_read n0 (coerce_fields e tl0 r1)
       | false, true ->
         let n1 = alignment_bytes af1 in
-        write_n_bytes_zero e n1 (coerce_fields e r0 tl1)
+        skip_bytes_write n1 (coerce_fields e r0 tl1)
       | false, false -> (
         if not (eq_idents af0.v.field_ident af1.v.field_ident)
         then failwith <|
@@ -390,21 +372,6 @@ let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
         d.d_decl.range
   in
   let probe_action = optimize_coercion coercion in
-  // let probe_action =
-  //   match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e) (Some PQInit) with
-  //   | None ->
-  //     error (Printf.sprintf "Cannot find init probe function to coerce %s to %s"
-  //             (print_ident t0) (print_ident t1))
-  //           d.d_decl.range
-  //   | Some init_fn ->
-  //     let hd = 
-  //       with_dummy_range <|
-  //       Probe_atomic_action <|
-  //       Probe_action_init init_fn (with_dummy_range <| App SizeOf [with_dummy_range <| Identifier t1])
-  //     in
-  //     with_dummy_range <|
-  //     Probe_action_seq hd probe_action
-  // in
   let probe_fn = { 
       d.d_decl with
       v = ProbeFunction i params probe_action (CoerceProbeFunction(t0, t1)) 

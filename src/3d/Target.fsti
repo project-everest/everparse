@@ -134,7 +134,10 @@ type atomic_probe_action =
       f: A.ident ->
       args: list expr ->
       atomic_probe_action
-  | Atomic_probe_skip:
+  | Atomic_probe_skip_read:
+      n:expr ->
+      atomic_probe_action
+  | Atomic_probe_skip_write:
       n:expr ->
       atomic_probe_action
   | Atomic_probe_init:

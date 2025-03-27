@@ -142,7 +142,8 @@ let scan_deps (fn:string) : ML scan_deps_t =
     | Probe_action_read f -> []
     | Probe_action_write f v -> deps_of_expr v
     | Probe_action_copy f len -> deps_of_expr len
-    | Probe_action_skip len -> deps_of_expr len
+    | Probe_action_skip_read len
+    | Probe_action_skip_write len -> deps_of_expr len
     | Probe_action_fail -> [] in
 
   let rec deps_of_probe_action (a:probe_action) : ML (list string) =

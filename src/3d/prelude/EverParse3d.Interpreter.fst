@@ -603,7 +603,6 @@ type probe_action : Type u#1 =
       m2: (t -> probe_action) ->
       probe_action
   | Probe_action_ite:
-      #req:bool ->
       cond:bool ->
       m1: probe_action ->
       m2: probe_action ->

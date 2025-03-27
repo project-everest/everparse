@@ -809,8 +809,10 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
       T.Atomic_probe_write_at_offset (translate_expr v) f
     | A.Probe_action_copy f v ->
       T.Atomic_probe_and_copy (translate_expr v) f
-    | A.Probe_action_skip n ->
-      T.Atomic_probe_skip (translate_expr n)
+    | A.Probe_action_skip_read n ->
+      T.Atomic_probe_skip_read (translate_expr n)
+    | A.Probe_action_skip_write n ->
+      T.Atomic_probe_skip_write (translate_expr n)
     | A.Probe_action_fail ->
       T.Atomic_probe_fail
   in

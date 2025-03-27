@@ -596,8 +596,11 @@ let rec print_probe_action (mname:string) (p:probe_action) : ML string =
       Printf.sprintf "(Atomic_probe_call_pure (%s %s))"
       (print_ident f)
       (String.concat " " (List.map (print_expr mname) args))
-    | Atomic_probe_skip n ->
-      Printf.sprintf "(Atomic_probe_skip %s)"
+    | Atomic_probe_skip_read n ->
+      Printf.sprintf "(Atomic_probe_skip_read %s)"
+      (print_expr mname n)
+    | Atomic_probe_skip_write n ->
+      Printf.sprintf "(Atomic_probe_skip_write %s)"
       (print_expr mname n)
     | Atomic_probe_init f n ->
       Printf.sprintf "(Atomic_probe_init %s %s)"
