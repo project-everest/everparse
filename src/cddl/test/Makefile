@@ -2,10 +2,12 @@ all: extract-all
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
 
-CDDLTest.Test.fst: cose.cddl ../spec/postlude.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^
+OUTPUT=_output/CDDLTest.Test.fst
 
-extract-all: CDDLTest.Test.fst
+$(OUTPUT): cose.cddl ../spec/postlude.cddl
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $(dir $(OUTPUT))
+
+extract-all: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile extract
 
 .PHONY: extract-all all
