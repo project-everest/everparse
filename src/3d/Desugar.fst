@@ -323,7 +323,6 @@ and resolve_action (env:qenv) (act:action) : ML action =
 let resolve_probe_atomic_action (env:qenv) (ac:probe_atomic_action) : ML probe_atomic_action =
   match ac with
   | Probe_action_return e -> Probe_action_return (resolve_expr env e)
-  | Probe_action_init f len -> Probe_action_init (resolve_ident env f) (resolve_expr env len)
   | Probe_action_call f args ->
     Probe_action_call (resolve_ident env f) (List.map (resolve_expr env) args)
   | Probe_action_read f -> Probe_action_read (resolve_ident env f)

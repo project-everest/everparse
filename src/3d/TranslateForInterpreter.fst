@@ -811,8 +811,6 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
       T.Atomic_probe_and_copy (translate_expr v) f
     | A.Probe_action_skip n ->
       T.Atomic_probe_skip (translate_expr n)
-    | A.Probe_action_init f n ->
-      T.Atomic_probe_init f (translate_expr n)
     | A.Probe_action_fail ->
       T.Atomic_probe_fail
   in

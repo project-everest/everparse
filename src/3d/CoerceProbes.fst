@@ -390,21 +390,21 @@ let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
         d.d_decl.range
   in
   let probe_action = optimize_coercion coercion in
-  let probe_action =
-    match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e) (Some PQInit) with
-    | None ->
-      error (Printf.sprintf "Cannot find init probe function to coerce %s to %s"
-              (print_ident t0) (print_ident t1))
-            d.d_decl.range
-    | Some init_fn ->
-      let hd = 
-        with_dummy_range <|
-        Probe_atomic_action <|
-        Probe_action_init init_fn (with_dummy_range <| App SizeOf [with_dummy_range <| Identifier t1])
-      in
-      with_dummy_range <|
-      Probe_action_seq hd probe_action
-  in
+  // let probe_action =
+  //   match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e) (Some PQInit) with
+  //   | None ->
+  //     error (Printf.sprintf "Cannot find init probe function to coerce %s to %s"
+  //             (print_ident t0) (print_ident t1))
+  //           d.d_decl.range
+  //   | Some init_fn ->
+  //     let hd = 
+  //       with_dummy_range <|
+  //       Probe_atomic_action <|
+  //       Probe_action_init init_fn (with_dummy_range <| App SizeOf [with_dummy_range <| Identifier t1])
+  //     in
+  //     with_dummy_range <|
+  //     Probe_action_seq hd probe_action
+  // in
   let probe_fn = { 
       d.d_decl with
       v = ProbeFunction i params probe_action (CoerceProbeFunction(t0, t1)) 

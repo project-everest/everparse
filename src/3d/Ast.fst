@@ -492,7 +492,6 @@ type probe_field =
 noeq
 type probe_atomic_action =
   | Probe_action_return of expr
-  | Probe_action_init : f:ident -> len:expr -> probe_atomic_action
   | Probe_action_call : f:ident -> args:list expr -> probe_atomic_action
   | Probe_action_read : f:ident -> probe_atomic_action
   | Probe_action_write : f:ident -> value:expr -> probe_atomic_action
@@ -1038,7 +1037,6 @@ and print_probe_atomic_action (p:probe_atomic_action)
 : ML string
 = match p with
   | Probe_action_return e -> Printf.sprintf "return %s;" (print_expr e)
-  | Probe_action_init f len -> Printf.sprintf "init %s(%s);" (print_ident f) (print_expr len)
   | Probe_action_call f args -> Printf.sprintf "(Probe_action_call %s(%s));" (print_ident f) (String.concat ", " (List.map print_expr args))
   | Probe_action_read f -> Printf.sprintf "(Probe_action_read %s);" (print_ident f)
   | Probe_action_write f v ->Printf.sprintf "(Probe_action_write %s(%s));" (print_ident f) (print_expr v)
@@ -1530,7 +1528,6 @@ and subst_action_opt (s:subst) (a:option action) : ML (option action) =
 let subst_probe_atomic_action (s:subst) (aa:probe_atomic_action) : ML probe_atomic_action =
   match aa with
   | Probe_action_return e -> Probe_action_return (subst_expr s e)
-  | Probe_action_init f len -> Probe_action_init f (subst_expr s len)
   | Probe_action_call f args -> Probe_action_call f (List.map (subst_expr s) args)
   | Probe_action_read f -> Probe_action_read f
   | Probe_action_write f value -> Probe_action_write f (subst_expr s value)

@@ -1283,25 +1283,25 @@ let rec check_probe env a : ML (probe_action & typ) =
     | Probe_action_return e ->
       let e, t= check_expr env e in
       Probe_action_return e, t
-    | Probe_action_init f n -> (
-      let n, t = check_expr env n in
-      let n =
-        match try_cast_integer env (n, t) tuint64 with
-        | None ->
-          error (Printf.sprintf "Probe length value %s has type %s instead of UINT64"
-                    (print_expr n)
-                    (print_typ t))
-                    n.range
-        | Some n ->
-          n
-      in
-      match GlobalEnv.resolve_probe_fn_any env.globals f with
-      | Some (id, Inr (Some PQInit)) ->
-        Probe_action_init f n, tunit
-      | _ ->
-        error (Printf.sprintf "Probe function %s not found or not an init function" (print_ident f))
-              f.range
-    )        
+    // | Probe_action_init f n -> (
+    //   let n, t = check_expr env n in
+    //   let n =
+    //     match try_cast_integer env (n, t) tuint64 withP
+    //     | None ->
+    //       error (Printf.sprintf "Probe length value %s has type %s instead of UINT64"
+    //                 (print_expr n)
+    //                 (print_typ t))
+    //                 n.range
+    //     | Some n ->
+    //       n
+    //   in
+    //   match GlobalEnv.resolve_probe_fn_any env.globals f with
+    //   | Some (id, Inr (Some PQInit)) ->
+    //     Probe_action_init f n, tunit
+    //   | _ ->
+    //     error (Printf.sprintf "Probe function %s not found or not an init function" (print_ident f))
+    //           f.range
+    // )        
     
     | Probe_action_skip n ->
       let n, t = check_expr env n in
