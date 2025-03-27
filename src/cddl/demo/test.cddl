@@ -1,0 +1,13 @@
+test1 = {
+  foo: bstr,
+  ? bar: uint
+}
+
+test2 = [
+  * uint, bstr
+]
+
+test3 = test1 / test2
+
+bstr = #2
+uint = #0
