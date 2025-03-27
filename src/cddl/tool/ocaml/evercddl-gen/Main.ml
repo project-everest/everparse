@@ -1,8 +1,14 @@
 let rev_filenames : string list ref = ref []
 
+let get_absolute_path name =
+  if Filename.is_relative name
+  then Filename.concat (Sys.getcwd ()) name
+  else name
+
 let process_file filename =
+  let filename = get_absolute_path filename in
   if String.contains filename '"'
-  then failwith "ERROR: Filenames with \" are disallowed";
+  then failwith ("ERROR: Absolute filename is " ^ filename ^ ". Filenames with \" are disallowed");
   rev_filenames := filename :: !rev_filenames;
   ()
 
