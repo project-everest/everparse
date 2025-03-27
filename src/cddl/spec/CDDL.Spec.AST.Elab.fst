@@ -2531,7 +2531,7 @@ let rec mk_elab_map_group
   | GElem true key value ->
     RSuccess (MGMatchWithCut key value)
   | GAlwaysFalse -> RSuccess MGAlwaysFalse
-  | GNop -> RFailure "mk_elab_map_group: GNop"
+  | GNop -> RSuccess MGNop
   | GZeroOrOne g ->
     begin match mk_elab_map_group fuel' env g with
     | RSuccess g' -> RSuccess (MGChoice g' MGNop)
