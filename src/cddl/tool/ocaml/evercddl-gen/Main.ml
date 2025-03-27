@@ -12,6 +12,10 @@ let lang = ref "C"
 
 let odir = ref "."
 
+let list_is_empty = function
+  | [] -> true
+  | _ -> false
+
 let _ =
   let argspec = ref [
       ("--rust", Arg.Unit (fun _ -> lang := "Rust"), "Use the Rust EverCBOR library");
@@ -26,7 +30,7 @@ let _ =
   in
   argspec := ("--help", Arg.Unit help, "Display this help message") :: !argspec;
   Arg.parse !argspec process_file usagemsg;
-  if List.is_empty !rev_filenames then help ();
+  if list_is_empty !rev_filenames then help ();
   let filenames = List.rev !rev_filenames in
   match ParseFromFile.parse_from_files filenames with
   | None -> failwith "Parsing failed"
