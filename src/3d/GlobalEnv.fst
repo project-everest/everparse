@@ -72,6 +72,7 @@ type global_hash_t = H.t ident' (decl & either decl_attributes macro_signature)
 
 noeq
 type global_env = {
+  mname: string;
   ge_h: global_hash_t;
   ge_out_t: H.t ident' decl;  //a table for output types declarations
   ge_extern_t: H.t ident' decl;  //a table for extern type declarations
@@ -94,6 +95,7 @@ let copy_global_env (g:global_env) : ML global_env =
   let probe_fn = copy_hash_table g.ge_probe_fn in
   let cfg = g.ge_cfg in
   { 
+    mname=g.mname;
     ge_h=h;
     ge_out_t=out_t; 
     ge_extern_t=extern_t;
@@ -102,15 +104,22 @@ let copy_global_env (g:global_env) : ML global_env =
     ge_cfg=cfg
   }
   
+let module_name_matches (g:global_env) (id:ident) : ML bool =
+  match id.v.modul_name with
+  | None -> true
+  | Some m -> m = g.mname
+
+let _and_ (x:bool) (y:bool) : ML bool = x && y
+
 let extern_probe_fn_qual (g:global_env) (pq:option probe_qualifier)
 : ML (option ident)
-= let finder k v out =
+= let finder k v out : ML _ =
       match out with
       | Some _ -> out
       | None -> 
         match v.d_decl.v with
         | ExternProbe id pq' ->
-          if pq=pq' then Some id else None
+          if (pq=pq') `_and_` module_name_matches g id then Some id else None
         | _ -> None
   in
   H.fold finder g.ge_probe_fn None
@@ -154,7 +163,7 @@ let find_probe_fn (g:global_env) (pq:probe_function_type)
         match v.d_decl.v with
         | ProbeFunction id _ _ pq' 
         | CoerceProbeFunctionStub id _ pq' ->
-          if eq_probe_function_type pq pq' then Some id else None
+          if eq_probe_function_type pq pq' `_and_` module_name_matches g id then Some id else None
         | _ -> None
   in
   H.fold finder g.ge_probe_fn None
@@ -167,15 +176,17 @@ let fields_of_type (g:global_env) (typename:ident)
 
 let resolve_extern_coercion (g:global_env) (t0 t1:typ)
 : ML (option ident)
-= let finder k v out =
+= let finder k v out : ML _ =
       match out with
       | Some _ -> out
       | None -> 
         match v.d_decl.v with
         | ExternFn id t1' [(t0', _, _)] true ->
-          if eq_typ t0 t0' && eq_typ t1 t1' 
+          if eq_typ t0 t0' `_and_` eq_typ t1 t1'
+          `_and_` module_name_matches g id 
           then Some id
           else None
+          
         | _ -> None
   in
   H.fold finder g.ge_extern_fn None

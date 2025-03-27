@@ -27,11 +27,15 @@ type env = {
 }
 
 let initial_env () : ML env = {
-  binding_env = Binding.initial_global_env ();
+  binding_env = Binding.initial_global_env "<nomodule>";
   typesizes_env = TypeSizes.initial_senv ();
   translate_env = 
     (TranslateForInterpreter.initial_translate_env(), InterpreterTarget.create_env());
 }
+
+let set_mname (en:env) (mname:string) =
+  let b = {en.binding_env with mname} in
+  {en with binding_env = b}
 
 let left (x:either 'a 'b)
   : ML 'a
@@ -52,10 +56,8 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
         list RefineCStruct.ctype_decl &
         env) =
   Options.debug_print_string (FStar.Printf.sprintf "Processing file: %s\nModule name: %s\n" fn mname);
-  let decls, refinement =
-    parse_prog fn
-  in
-
+  let decls, refinement = parse_prog fn in
+  let en = set_mname en mname in
   Options.debug_print_string "=============After parsing=============\n";
   Options.debug_print_string (print_decls decls);
   Options.debug_print_string "\n";

@@ -2395,10 +2395,11 @@ let bind_decl (e:global_env) (d:decl) : ML decl =
 let bind_decls (g:global_env) (p:list decl) : ML (list decl & global_env) =
   List.map (bind_decl g) p, g
 
-let initial_global_env () =
+let initial_global_env mname =
   let cfg = Deps.get_config () in
   let e =
     {
+      mname;
       ge_h = H.create 10;
       ge_out_t = H.create 10;
       ge_extern_t = H.create 10;
