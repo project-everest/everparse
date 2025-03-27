@@ -542,6 +542,7 @@ module Env = CDDL.Pulse.AST.Env
 module Parse = CDDL.Pulse.AST.Parse
 module T = CDDL.Pulse.AST.Tactics
 module SZ = FStar.SizeT
+module C = C // for _zero_for_deref
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"] noextract
 let option_source = CDDL.Tool.Plugin.parse ["^filenames^"]
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"] noextract
