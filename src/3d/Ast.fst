@@ -530,7 +530,9 @@ noeq
 type probe_call = {
   probe_dest:ident;
   probe_block:probe_action;
-  probe_ptr_as_u64: option ident
+  probe_ptr_as_u64: option ident;
+  probe_dest_sz: expr;
+  probe_init: option ident
 }
 
 [@@ PpxDerivingYoJson ]
@@ -1582,11 +1584,13 @@ and subst_atomic_field (s:subst) (f:atomic_field) : ML atomic_field =
   let pa =
     match sf.field_probe with
     | None -> None
-    | Some { probe_dest; probe_block; probe_ptr_as_u64 } ->
+    | Some { probe_dest; probe_block; probe_ptr_as_u64; probe_dest_sz; probe_init } ->
       Some {
         probe_dest;
         probe_block=subst_probe_action s probe_block; 
-        probe_ptr_as_u64
+        probe_ptr_as_u64;
+        probe_dest_sz=subst_expr s probe_dest_sz;
+        probe_init
       }
   in
   let sf = {

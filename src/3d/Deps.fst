@@ -180,7 +180,7 @@ let scan_deps (fn:string) : ML scan_deps_t =
       (deps_of_opt deps_of_expr af.field_constraint)@
       (deps_of_opt deps_of_field_bitwidth_t af.field_bitwidth)@
       (deps_of_opt (fun (a, _) -> deps_of_action a) af.field_action)@
-      (deps_of_opt (fun pc -> deps_of_probe_action pc.probe_block @ maybe_dep pc.probe_dest) af.field_probe)
+      (deps_of_opt (fun pc -> deps_of_probe_action pc.probe_block @ maybe_dep pc.probe_dest @ deps_of_expr pc.probe_dest_sz) af.field_probe)
   in
 
   let rec deps_of_field (f:field) : ML (list string) = 

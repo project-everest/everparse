@@ -194,6 +194,8 @@ type typ : Type =
       probe:T.probe_action ->
       dest:A.ident ->
       as_u64:A.ident ->
+      probe_init:A.ident ->
+      dest_sz:expr ->
       typ
 
 val typ_indexes : Type0

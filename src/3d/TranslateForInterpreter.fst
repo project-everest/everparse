@@ -610,9 +610,9 @@ let rec parse_typ (env:global_env)
     let u64_or_u32, _ = translate_typ (A.type_of_integer_type pointer_size) in
     parse_typ env typename fieldname u64_or_u32
 
-  | T.T_with_probe content_type integer_type probe as_u64 dest -> 
+  | T.T_with_probe content_type integer_type probe as_u64 dest init dest_sz -> 
     let p = parse_typ env typename fieldname content_type in
-    let q = T.Parse_with_probe p integer_type probe as_u64 dest in
+    let q = T.Parse_with_probe p integer_type probe as_u64 dest init dest_sz in
     let u64_or_u32, _ = translate_typ (A.type_of_integer_type integer_type) in
     let u64_or_u32_parser = parse_typ env typename fieldname u64_or_u32 in
     { p_kind = u64_or_u32_parser.p_kind;
@@ -775,7 +775,7 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_with_action _ _ _
   | T.Parse_if_else _ _ _
   | T.Parse_string _ _
-  | T.Parse_with_probe _ _ _ _ _
+  | T.Parse_with_probe _ _ _ _ _ _ _
     -> false
   | T.Parse_map p _
   | T.Parse_refinement _ p _
@@ -840,10 +840,14 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
 #push-options "--z3rlimit_factor 4"
 let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
   let sf = f.v in
-  let translate_probe_call (p:probe_call) : ML (T.probe_action & A.ident & T.decls) =
-    let { probe_dest; probe_block } = p in
+  let translate_probe_call (p:probe_call) 
+    : ML (T.probe_action & A.ident & T.decls & A.ident & T.expr) =
+    let { probe_dest; probe_block; probe_init; probe_dest_sz } = p in
     let probe_block, ds = translate_probe_action probe_block in
-    probe_block, probe_dest, ds
+    match probe_init with
+    | None -> failwith "Impossible: probe_init should have been resolved"
+    | Some probe_init ->
+      probe_block, probe_dest, ds, probe_init, translate_expr probe_dest_sz
   in
   match f.v.field_probe with
   | Some probe_call -> (
@@ -852,11 +856,11 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
       | None -> failwith "Impossible: probe_ptr_as_u64 should have been resolved"
       | Some i -> i
     in
-    let probe_action, dest, ds = translate_probe_call probe_call in
+    let probe_action, dest, ds, probe_init, dest_sz = translate_probe_call probe_call in
     match f.v.field_type.v with
     | Pointer t (PQ a _) ->
       let t, ds1 = translate_typ t in
-      let sf_typ = T.T_with_probe t a probe_action dest as_u64 in
+      let sf_typ = T.T_with_probe t a probe_action dest as_u64 probe_init dest_sz in
       T.({ sf_dependence=sf.field_dependence;
            sf_ident=sf.field_ident;
            sf_typ=sf_typ }), 
@@ -1152,7 +1156,7 @@ let rec hoist_typ
       d, T_with_comment t c
 
     | T_pointer _ _
-    | T_with_probe _ _ _ _ _
+    | T_with_probe _ _ _ _ _ _ _
     | T_arrow _ _ ->
       [], t
 

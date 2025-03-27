@@ -152,9 +152,11 @@ let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
 
 let simplify_probe (env:T.env_t) (p:probe_call) : ML probe_call =
   match p with
-  | { probe_dest; probe_block; probe_ptr_as_u64 } ->
+  | { probe_dest; probe_block; probe_ptr_as_u64; probe_dest_sz; probe_init } ->
     let probe_block = simplify_probe_action env probe_block in
-    { probe_dest; probe_block; probe_ptr_as_u64 }
+    { probe_dest; probe_block; probe_ptr_as_u64; 
+      probe_dest_sz=simplify_expr env probe_dest_sz;
+      probe_init }
 
 let simplify_atomic_field (env:T.env_t) (f:atomic_field)
   : ML atomic_field

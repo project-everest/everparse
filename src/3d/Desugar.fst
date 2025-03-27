@@ -386,6 +386,8 @@ let resolve_probe_call env pc =
     probe_dest = resolve_ident env probe_dest;
     probe_block = resolve_probe_action env probe_block;
     probe_ptr_as_u64 = map_opt (resolve_ident env) probe_ptr_as_u64;
+    probe_dest_sz = resolve_expr env pc.probe_dest_sz;
+    probe_init = map_opt (resolve_ident env) pc.probe_init;
   }
 
 let rec resolve_field (env:qenv) (ff:field) : ML (field & qenv) =

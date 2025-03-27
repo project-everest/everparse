@@ -1474,6 +1474,76 @@ let rec check_probe env a : ML (probe_action & typ) =
                 a.range;
     { a with v = Probe_action_ite e th el }, t
 
+let check_probe_call (env:env) (ft:typ) (p:probe_call)
+: ML probe_call
+= let check_dest env (d:ident) : ML ident =
+    let dest, dest_typ = check_ident env d in
+    if not (eq_typ env dest_typ tcopybuffer)
+    then error (Printf.sprintf "Probe destination expression %s has type %s instead of EVERPARSE_COPY_BUFFER_T"
+                        (print_ident dest)
+                        (print_typ dest_typ))
+                        dest.range;
+    dest
+  in
+  let check_probe_ptr_as_u64 env (as_u64:option ident) 
+    : ML (option ident)
+    = let ptr_size =
+        match ft.v with
+        | Pointer _ pq -> pq_as_integer_type pq
+        | _ ->
+          error (
+              Printf.sprintf "Probes are only allowed on pointer fields, got %s"
+                (print_typ ft)
+          ) ft.range
+      in
+      let coercion =
+        match ptr_size with
+        | UInt64 -> Some as_u64_identity
+        | UInt32 -> (
+          match GlobalEnv.resolve_extern_coercion (global_env_of_env env) tuint32 tuint64 with
+          | None ->
+            error (Printf.sprintf "Could not find a coercion from 32-bit to 64-bit pointers; please add an `extern PURE UINT64 <CoercionName> (UINT33 ptr)`")
+                  ft.range
+          | Some i -> Some i
+        )
+        | _ ->
+          error (Printf.sprintf "Probes are only allowed on 32-bit or 64-bit pointers, got %s"
+                  (print_integer_type ptr_size)) ft.range
+      in
+      coercion
+  in
+  let check_probe_init (init:option ident) : ML (option ident) =
+    match init with
+    | None -> (
+      match GlobalEnv.extern_probe_fn_qual env.globals (Some PQInit) with
+      | Some id -> Some id
+      | _ ->
+        error (Printf.sprintf "Probe init function not found")
+              ft.range
+    )
+    | Some f -> (
+      match GlobalEnv.resolve_probe_fn_any env.globals f with
+      | Some (id, Inr (Some PQInit)) -> Some id
+      | _ ->
+        error (Printf.sprintf "Probe function %s not found or not an init function" (print_ident f))
+              f.range
+    )
+  in
+  let probe_dest = check_dest env p.probe_dest in
+  let probe_block, t = check_probe env p.probe_block in
+  let probe_ptr_as_u64 = check_probe_ptr_as_u64 env p.probe_ptr_as_u64 in
+  if not (eq_typ env t tunit)
+  then error (Printf.sprintf "Probe block has type %s instead of unit" (print_typ t)) 
+            p.probe_block.range;
+  let probe_dest_sz, ty = check_expr env p.probe_dest_sz in
+  match try_cast_integer env (probe_dest_sz, ty) tuint64 with
+  | None -> error (Printf.sprintf "Probe destination size %s has type %s instead of UINT64"
+                    (print_expr probe_dest_sz)
+                    (print_typ ty))
+              probe_dest_sz.range
+  | Some probe_dest_sz ->
+   { probe_dest; probe_block; probe_ptr_as_u64; probe_dest_sz; probe_init=check_probe_init p.probe_init }
+
 #push-options "--z3rlimit_factor 4"
 let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
   : ML atomic_field
@@ -1515,55 +1585,7 @@ let check_atomic_field (env:env) (extend_scope: bool) (f:atomic_field)
         remove_local env sf.field_ident;
         a, dependent)
     in
-    let f_probe =
-      let check_dest env (d:ident) : ML ident =
-        let dest, dest_typ = check_ident env d in
-        if not (eq_typ env dest_typ tcopybuffer)
-        then error (Printf.sprintf "Probe destination expression %s has type %s instead of EVERPARSE_COPY_BUFFER_T"
-                            (print_ident dest)
-                            (print_typ dest_typ))
-                            dest.range;
-        dest
-      in
-      let check_probe_ptr_as_u64 env (as_u64:option ident) 
-        : ML (option ident)
-        = let ptr_size =
-            match sf.field_type.v with
-            | Pointer _ pq -> pq_as_integer_type pq
-            | _ ->
-              error (
-                  Printf.sprintf "Probes are only allowed on pointer fields, got %s"
-                    (print_typ sf.field_type)
-              ) f.range
-          in
-          let coercion =
-            match ptr_size with
-            | UInt64 -> Some as_u64_identity
-            | UInt32 -> (
-              match GlobalEnv.resolve_extern_coercion (global_env_of_env env) tuint32 tuint64 with
-              | None ->
-                error (Printf.sprintf "Could not find a coercion from 32-bit to 64-bit pointers; please add an `extern PURE UINT64 <CoercionName> (UINT33 ptr)`")
-                      f.range
-              | Some i -> Some i
-            )
-            | _ ->
-              error (Printf.sprintf "Probes are only allowed on 32-bit or 64-bit pointers, got %s"
-                      (print_integer_type ptr_size)) f.range
-          in
-          coercion
-      in
-      match sf.field_probe with
-      | None -> None
-      | Some p ->
-        let probe_dest = check_dest env p.probe_dest in
-        let probe_block, t = check_probe env p.probe_block in
-        let probe_ptr_as_u64 = check_probe_ptr_as_u64 env p.probe_ptr_as_u64 in
-        if not (eq_typ env t tunit)
-        then error (Printf.sprintf "Probe block has type %s instead of unit" (print_typ t)) 
-                  p.probe_block.range;
-        Some { probe_dest; probe_block; probe_ptr_as_u64 }
-      
-    in        
+    let f_probe = map_opt (check_probe_call env sf.field_type) sf.field_probe in
     if extend_scope then add_local env sf.field_ident sf.field_type;
     let sf = {
         sf with

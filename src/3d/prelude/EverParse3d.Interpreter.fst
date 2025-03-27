@@ -31,7 +31,7 @@ noextract
 let ___EVERPARSE_COPY_BUFFER_T = CP.copy_buffer_t
 
 inline_for_extraction
-let probe_m_unit = probe_m unit
+let probe_m_unit = probe_m unit true
 
 inline_for_extraction
 noextract

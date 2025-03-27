@@ -193,6 +193,8 @@ type typ =
       probe_fn:probe_action ->
       dest:A.ident ->
       as_u64:A.ident ->
+      init:A.ident ->
+      dest_sz:expr ->
       typ
   | T_arrow : list typ -> typ -> typ
 
@@ -296,7 +298,10 @@ type parser' =
       pointer_size:A.pointer_size_t ->
       probe:probe_action ->
       dest:A.ident ->
-      as_u64:A.ident -> parser'
+      as_u64:A.ident ->
+      probe_init:A.ident ->
+      dest_sz:expr ->
+      parser'
   
 and parser = {
   p_kind:parser_kind;
