@@ -24,6 +24,8 @@ type token =
   | POUND
   | UINT of Prims.int
   | MINUS
+  | SLASHSLASHEQ
+  | SLASHEQ
   | SLASHSLASH
   | COMMA
   | ARROW

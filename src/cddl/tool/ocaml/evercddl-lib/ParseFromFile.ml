@@ -23,6 +23,30 @@ let rec parse' (env, l) = function
      | None -> None
      end
 
-let parse_from_files l = match parse' (CDDL_Spec_AST_Base.empty_name_env, []) l with
+let empty_env = {
+    CDDLParser.env = CDDL_Spec_AST_Base.empty_name_env;
+    sockets = [];
+}
+
+let plug_empty_socket
+  (st: CDDLParser.state)
+  (accu: (string * CDDL_Spec_AST_Driver.decl) list)
+  (name: string)
+= if List.mem_assoc name accu
+  then accu
+  else
+    let def = match st.env name with
+    | Some CDDL_Spec_AST_Base.NType -> CDDL_Spec_AST_Driver.DType (CDDL_Spec_AST_Base.TElem CDDL_Spec_AST_Base.EAlwaysFalse)
+    | Some CDDL_Spec_AST_Base.NGroup -> CDDL_Spec_AST_Driver.DGroup CDDL_Spec_AST_Base.GAlwaysFalse
+    | _ -> failwith "plug_empty_socket: this should not happen. Please report"
+    in
+    (name, def) :: accu
+
+let plug_empty_sockets
+  (st: CDDLParser.state)
+  (l: (string * CDDL_Spec_AST_Driver.decl) list)
+= List.fold_left (plug_empty_socket st) l st.sockets
+
+let parse_from_files l = match parse' (empty_env, []) l with
   | None -> None
-  | Some (_, res) -> Some res
+  | Some (env, res) -> Some (plug_empty_sockets env res)

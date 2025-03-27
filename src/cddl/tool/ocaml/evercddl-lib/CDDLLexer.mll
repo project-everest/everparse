@@ -50,7 +50,9 @@ rule token =
   | "=" { debug EQ }
   | "$$" { debug DOLLARDOLLAR }
   | "$" { debug DOLLAR }
+  | "//=" { debug SLASHSLASHEQ }
   | "//" { debug SLASHSLASH }
+  | "/=" { debug SLASHEQ }
   | "/" { debug SLASH }
   | "(" { debug LPAREN }
   | ")" { debug RPAREN }

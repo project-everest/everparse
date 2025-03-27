@@ -1,6 +1,7 @@
- start = COSE_Messages
+ $start /= COSE_Messages
+ $start /= Internal_Types
 ; / COSE_Key / COSE_KeySet
-  / Internal_Types
+;  / Internal_Types
 
 Internal_Types = Sig_structure ; / Enc_structure / MAC_structure
 

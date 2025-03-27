@@ -4,10 +4,18 @@ open Fstar_pluginlib
 open FStar_Pervasives
 open CDDL_Spec_AST_Base
 
-type state = CDDL_Spec_AST_Base.name_env
+type state = {
+  env: CDDL_Spec_AST_Base.name_env;
+  sockets: string list;
+}
 type cddl_t = (state * (string * CDDL_Spec_AST_Driver.decl) list)
 type 'a parser = (Tokens.token, state, 'a, cddl_t) ABNF.parser
 type symbol = unit parser
+
+type id_kind =
+| Regular
+| SocketType
+| SocketGroup
 
 let terminal name f =
   terminal (fun x ->
@@ -51,6 +59,8 @@ let dot = terminal "dot" (function DOT -> Some () | _ -> None)
 let pound = terminal "pound"  (function POUND -> Some () | _ -> None)
 let minus = terminal "minus" (function MINUS -> Some () | _ -> None)
 let slashslash = terminal "slashslash" (function SLASHSLASH -> Some () | _ -> None)
+let slashslasheq = terminal "slashslasheq" (function SLASHSLASHEQ -> Some () | _ -> None)
+let slasheq = terminal "slasheq" (function SLASHEQ -> Some () | _ -> None)
 let comma = terminal "comma" (function COMMA -> Some () | _ -> None)
 let arrow = terminal "arrow" (function ARROW -> Some () | _ -> None)
 let colon = terminal "colon" (function COLON -> Some () | _ -> None)
@@ -64,21 +74,112 @@ let eof = terminal "eof" (function EOF -> Some () | _ -> None)
 
 let s = debug "s" (choice (nonempty_s) (ret ()))
 
-let id = debug "id" raw_id (* TODO: "$$", "$" *)
+let id = debug "id"
+  (choices [
+    concat raw_id (fun s -> ret (Regular, s));
+    concat dollar (fun _ -> concat raw_id (fun s -> ret (SocketType, s)));
+    concat dollardollar (fun _ -> concat raw_id (fun s -> ret (SocketGroup, s)));
+  ])
 
 let typename = debug "typename"
-  (concat id (fun n -> concat (get_state ()) (fun s -> match CDDL_Spec_AST_Driver.check_name s n CDDL_Spec_AST_Base.NType with None -> fail | Some s' -> concat (set_state s') (fun _ -> ret n))))
+  (concat id (fun ((k, n) as res) -> concat (get_state ()) (fun s ->
+    match k with
+    | Regular ->
+      if List.mem n s.sockets
+      then fail
+      else begin match CDDL_Spec_AST_Driver.check_name s.env n CDDL_Spec_AST_Base.NType with
+      | None -> fail
+      | Some s' ->
+        let s' = { s with env = s' } in
+        concat (set_state s') (fun _ -> ret res)
+      end
+    | SocketType ->
+      if not (List.mem n s.sockets)
+      then begin match s.env n with
+      | None ->
+        let s' = {
+          env = CDDL_Spec_AST_Base.extend_name_env s.env n CDDL_Spec_AST_Base.NType;
+          sockets = n :: s.sockets;
+        }
+        in
+        concat (set_state s') (fun _ -> ret res)
+      | _ -> fail
+      end
+      else begin match s.env n with
+      | Some CDDL_Spec_AST_Base.NType -> ret res
+      | _ -> fail
+      end
+    | _ -> fail
+  )))
 
 let groupname = debug "groupname"
-  (concat id (fun n -> concat (get_state ()) (fun s -> match CDDL_Spec_AST_Driver.check_name s n CDDL_Spec_AST_Base.NGroup with None -> fail | Some s' -> concat (set_state s') (fun _ -> ret n))))
+  (concat id (fun ((k, n) as res) -> concat (get_state ()) (fun s ->
+    match k with
+    | Regular ->
+      if List.mem n s.sockets
+      then fail
+      else begin match CDDL_Spec_AST_Driver.check_name s.env n CDDL_Spec_AST_Base.NGroup with
+      | None -> fail
+      | Some s' ->
+        let s' = { s with env = s' } in
+        concat (set_state s') (fun _ -> ret res)
+      end
+    | SocketGroup ->
+      if not (List.mem n s.sockets)
+      then begin match s.env n with
+      | None ->
+        let s' = {
+          env = CDDL_Spec_AST_Base.extend_name_env s.env n CDDL_Spec_AST_Base.NGroup;
+          sockets = n :: s.sockets;
+        }
+        in
+        concat (set_state s') (fun _ -> ret res)
+      | _ -> fail
+      end
+      else begin match s.env n with
+      | Some CDDL_Spec_AST_Base.NGroup -> ret res
+      | _ -> fail
+      end
+    | _ -> fail
+  )))
 
-let assignt = debug "assignt" (concat eq (fun _ -> ret (fun (x: string) (t: typ) (l: (string * CDDL_Spec_AST_Driver.decl) list) -> (x, CDDL_Spec_AST_Driver.DType t) :: l)))
+let assignt ((k, x): (id_kind * string)) = debug "assignt"
+  (choice
+    (concat eq (fun _ ->
+      if k = Regular
+      then ret (fun (t: typ) (l: (string * CDDL_Spec_AST_Driver.decl) list) -> (x, CDDL_Spec_AST_Driver.DType t) :: l)
+      else fail
+    ))
+    (concat slasheq (fun _ ->
+      if k = SocketType
+      then ret (fun (t: typ) (l: (string * CDDL_Spec_AST_Driver.decl) list) ->
+        match List.assoc_opt x l with
+        | None -> (x, CDDL_Spec_AST_Driver.DType t) :: l
+        | Some (CDDL_Spec_AST_Driver.DType t0) -> (x, CDDL_Spec_AST_Driver.DType (CDDL_Spec_AST_Elab.mk_TChoice t0 t)) :: List.remove_assoc x l
+        | _ -> failwith "assignt: this should not happen. Please report"
+      )
+      else fail
+    ))
+  )
 
-(* TODO: /= *)
-
-let assigng = debug "assigng" (concat eq (fun _ -> ret (fun (x: string) (t: group) (l: (string * CDDL_Spec_AST_Driver.decl) list) -> (x, CDDL_Spec_AST_Driver.DGroup t) :: l)))
-
-(* TODO: //= *)
+let assigng ((k, x) : (id_kind * string)) = debug "assignt"
+  (choice
+    (concat eq (fun _ ->
+      if k = Regular
+      then ret (fun (t: group) (l: (string * CDDL_Spec_AST_Driver.decl) list) -> (x, CDDL_Spec_AST_Driver.DGroup t) :: l)
+      else fail
+    ))
+    (concat slashslasheq (fun _ ->
+      if k = SocketGroup
+      then ret (fun (t: group) (l: (string * CDDL_Spec_AST_Driver.decl) list) ->
+        match List.assoc_opt x l with
+        | None -> (x, CDDL_Spec_AST_Driver.DGroup t) :: l
+        | Some (CDDL_Spec_AST_Driver.DGroup t0) -> (x, CDDL_Spec_AST_Driver.DGroup (CDDL_Spec_AST_Driver.mk_GChoice t0 t)) :: List.remove_assoc x l
+        | _ -> failwith "assigng: this should not happen. Please report"
+      )
+      else fail
+    ))
+  )
 
 (* TODO:
 
@@ -141,8 +242,8 @@ let rangeop =
 let ctlop =
   debug "ctlop"
     (concat dot (fun _ -> concat id (fun s -> match s with
-    | "size" -> ret (fun t1 t2 -> TSize (t1, t2))
-    | "everparse-det-cbor" -> ret (fun t1 t2 -> TDetCbor (t1, t2))
+    | (Regular, "size") -> ret (fun t1 t2 -> TSize (t1, t2))
+    | (Regular, "everparse-det-cbor") -> ret (fun t1 t2 -> TDetCbor (t1, t2))
     (* TODO: (non-injective) cbor *)
     | _ -> fail
     )))
@@ -177,7 +278,7 @@ and type2 () = debug "type2" (
   choices
     [
       concat value (fun x -> ret (TElem (ELiteral x)));
-      concat typename (fun x -> (* option(genericarg) *) ret (TDef x));
+      concat typename (fun (_, x) -> (* option(genericarg) *) ret (TDef x));
       concat lparen (fun _ -> concat s (fun _ -> concat (type_ ()) (fun x -> concat s (fun _ -> concat rparen (fun _ -> ret x)))));
       concat lbrace (fun _ -> concat s (fun _ -> concat (group ()) (fun x -> concat s (fun _ -> concat rbrace (fun _ -> ret (TMap x))))));
       concat lbrack (fun _ -> concat s (fun _ -> concat (group ()) (fun x -> concat s (fun _ -> concat rbrack (fun _ -> ret (TArray x))))));
@@ -229,7 +330,7 @@ and grpent () = debug "grpent" (
   choices
     [
       concat option_occur (fun f -> concat (option_memberkey ()) (fun g -> concat (type_ ()) (fun x -> ret (f (g x)))));
-      concat option_occur (fun f -> concat groupname (* option(genericarg) *) (fun g -> ret (f (GDef g))));
+      concat option_occur (fun f -> concat groupname (* option(genericarg) *) (fun (_, g) -> ret (f (GDef g))));
       concat option_occur (fun f -> concat lparen (fun _ -> concat s (fun _ -> concat (group ()) (fun g -> concat s (fun _ -> concat rparen (fun _ -> ret (f g)))))));
     ]
 )
@@ -244,7 +345,7 @@ and memberkey () = debug "memberkey" (
   choices
     [
       concat (type1 ()) (fun key -> concat s (fun _ -> concat memberkey_cut (fun cut -> concat arrow (fun _ -> ret (fun x -> GElem (cut, key, x))))));
-      concat bareword (fun key -> concat s (fun _ -> concat colon (fun _ -> ret (fun x -> GElem (true, TElem (ELiteral (LTextString (key))), x)))));
+      concat bareword (fun (k, key) -> if k <> Regular then fail else concat s (fun _ -> concat colon (fun _ -> ret (fun x -> GElem (true, TElem (ELiteral (LTextString (key))), x)))));
       concat value (fun key -> concat s (fun _ -> concat colon (fun _ -> ret (fun x -> (GElem (true, TElem (ELiteral key), x))))));
     ]
 )
@@ -261,6 +362,6 @@ and cddl_item () : ((string * CDDL_Spec_AST_Driver.decl) list -> (string * CDDL_
 and rule () : ((string * CDDL_Spec_AST_Driver.decl) list -> (string * CDDL_Spec_AST_Driver.decl) list) parser =
   debug "rule"
     (choice
-       (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assignt (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> ret (f name t)))))))
-       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat assigng (fun f -> concat s (fun _ -> concat (group0 ()) (fun t -> ret (f name t)))))))
+       (concat typename (* option(genericparm) *) (fun name -> concat s (fun _ -> concat (assignt name) (fun f -> concat s (fun _ -> concat (type_ ()) (fun t -> ret (f t)))))))
+       (concat groupname (* option(genericparm) *) (fun name -> concat s (fun _ -> concat (assigng name) (fun f -> concat s (fun _ -> concat (group0 ()) (fun t -> ret (f t)))))))
     )
