@@ -155,7 +155,7 @@ let assignt ((k, x): (id_kind * string)) = debug "assignt"
       then ret (fun (t: typ) (l: (string * CDDL_Spec_AST_Driver.decl) list) ->
         match List.assoc_opt x l with
         | None -> (x, CDDL_Spec_AST_Driver.DType t) :: l
-        | Some (CDDL_Spec_AST_Driver.DType t0) -> (x, CDDL_Spec_AST_Driver.DType (CDDL_Spec_AST_Elab.mk_TChoice t0 t)) :: List.remove_assoc x l
+        | Some (CDDL_Spec_AST_Driver.DType t0) -> (x, CDDL_Spec_AST_Driver.DType (CDDL_Spec_AST_Elab_Base.mk_TChoice t0 t)) :: List.remove_assoc x l
         | _ -> failwith "assignt: this should not happen. Please report"
       )
       else fail
@@ -261,7 +261,7 @@ let rec type_ () = debug "type" (
 
 and type_tail () = debug "type_tail" (
   choice
-    (concat s (fun _ -> concat slash (fun _ -> concat s (fun _ -> concat (type1 ()) (fun xl -> concat (type_tail ()) (fun xr -> ret (fun (x: typ) -> CDDL_Spec_AST_Elab.mk_TChoice x (xr xl))))))))
+    (concat s (fun _ -> concat slash (fun _ -> concat s (fun _ -> concat (type1 ()) (fun xl -> concat (type_tail ()) (fun xr -> ret (fun (x: typ) -> CDDL_Spec_AST_Elab_Base.mk_TChoice x (xr xl))))))))
     (ret (fun (x: typ) -> x))
 )
 

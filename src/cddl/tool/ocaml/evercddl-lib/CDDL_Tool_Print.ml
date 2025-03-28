@@ -1,4 +1,4 @@
-type result = unit CDDL_Spec_AST_Base.ast0_wf_typ CDDL_Spec_AST_Elab.result [@@deriving show]
+type result = unit CDDL_Spec_AST_Base.ast0_wf_typ CDDL_Spec_AST_Elab_Base.result [@@deriving show]
 
 let typ_to_string = CDDL_Spec_AST_Base.show_typ
 
