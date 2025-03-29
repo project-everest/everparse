@@ -11,7 +11,7 @@ ALREADY_CACHED := *,-LowParse,-EverParse3d,-ASN1,-CBOR,-CDDL,
 SRC_DIRS += src/lowparse src/ASN1 src/3d/prelude src/cbor/spec src/cbor/spec/raw src/cbor/spec/raw/everparse src/cddl/spec
 
 ifeq (,$(NO_PULSE))
-  SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse
+  SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
 endif
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
@@ -166,34 +166,40 @@ cbor-test: cbor-det-c-test cbor-det-rust-test cbor-det-c-vertest cbor-det-common
 
 cddl-spec: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
 
-cddl-lib: cddl-spec
-
 ifeq (,$(NO_PULSE))
-cddl-pulse: $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
+cddl-pulse: cddl-spec $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
 
-cddl-ocaml: cddl-pulse
+cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES))
 	+$(MAKE) -C src/cddl/tool
-
-cddl-lib: cddl-pulse
 else
-cddl-ocaml:
+cddl-tool:
 endif
 
-cddl: cddl-lib cddl-ocaml
+cddl: cbor cbor-interface cddl-spec cddl-tool
 
-.PHONY: cddl-spec cddl-lib cddl-ocaml
+.PHONY: cddl-spec cddl-tool
 
 .PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
 ifeq (,$(NO_PULSE))
-
-cddl-plugin-test: cbor-interface cddl
+cddl-plugin-test: cddl
 	+$(MAKE) -C src/cddl/test
 else
 cddl-plugin-test:
 endif
 
-cddl-test: cddl cddl-plugin-test
+.PHONY: cddl-plugin-test
+
+ifeq (,$(NO_PULSE))
+cddl-demo: cddl
+	+$(MAKE) -C src/cddl/demo
+else
+cddl-demo:
+endif
+
+.PHONY: cddl-demo
+
+cddl-test: cddl cddl-plugin-test cddl-demo
 
 .PHONY: cddl-test
 
