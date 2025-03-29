@@ -86,6 +86,21 @@ let impl_serialize_map_group_ext'
 = impl_serialize_map_group_ext i _ ()
 
 inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_map_group_nop
+  (_: unit)
+: impl_serialize_map_group #_ #_ #_ #_ mg_spec_nop #_ rel_unit
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  true
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_choice
     (#[@@@erasable]t1: Ghost.erased det_map_group)
     (#[@@@erasable]tgt1: Type0)

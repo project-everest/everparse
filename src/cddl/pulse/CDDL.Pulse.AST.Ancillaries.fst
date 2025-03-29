@@ -139,6 +139,7 @@ and ask_zero_copy_wf_map_group
 : Tot (option (ask_for se))
     (decreases t_wf)
 = match t_wf with
+  | WfMNop _ -> None
   | WfMChoice _ s1 _ s2 ->
     begin match ask_zero_copy_wf_map_group ancillary_v ancillary ancillary_ag s1 with
     | Some a -> Some a

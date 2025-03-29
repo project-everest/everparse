@@ -137,6 +137,11 @@ val impl_serialize_map_group_ext'
 : impl_serialize_map_group #(Ghost.reveal t) #(Ghost.reveal fp') #tgt #inj (mg_spec_ext ps fp' ps.mg_size ps.mg_serializable) #impl_tgt r
 
 inline_for_extraction noextract [@@noextract_to "krml"]
+val impl_serialize_map_group_nop
+  (_: unit)
+: impl_serialize_map_group mg_spec_nop rel_unit
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_map_group_choice
     (#[@@@erasable]t1: Ghost.erased det_map_group)
     (#[@@@erasable]tgt1: Type0)

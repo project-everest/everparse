@@ -107,6 +107,24 @@ let bundle_map_ext'
 = bundle_map_ext mb1 (mg_spec_ext mb1.mb_spec fp2 mb1.mb_spec.mg_size mb1.mb_spec.mg_serializable) ()
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
+let bundle_map_nop
+  (#ty: Type0)
+  (vmatch: perm -> ty -> cbor -> slprop)
+: Tot (map_bundle vmatch)
+= {
+  mb_typ = _;
+  mb_footprint = _;
+  mb_footprint_correct = ();
+  mb_spec_type = _;
+  mb_spec_type_eq = EqTest.eqtype_eq unit;
+  mb_spec = mg_spec_nop;
+  mb_impl_type = _;
+  mb_rel = rel_unit;
+  mb_parser = impl_zero_copy_map_nop vmatch;
+  mb_serializer = impl_serialize_map_group_nop ();
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_map_choice
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
@@ -162,9 +180,9 @@ let bundle_map_zero_or_one
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_map_concat
   (#ty: Type0)
-  (#vmatch: perm -> ty -> cbor -> slprop)
-  (share: share_t vmatch)
-  (gather: gather_t vmatch)
+  (#[@@@erasable] vmatch: perm -> ty -> cbor -> slprop)
+  ([@@@erasable] share: share_t vmatch)
+  ([@@@erasable] gather: gather_t vmatch)
   (mb1: map_bundle vmatch)
   (mb2: map_bundle vmatch)
   ([@@@erasable] sq: squash (

@@ -562,6 +562,43 @@ let map_group_choice_compatible_concat_left
   ))
 = Classical.forall_intro (Classical.move_requires (map_group_fail_concat_intro g1 f1 g2 f2))
 
+let map_group_choice_compatible_concat_left1
+  (g1: det_map_group)
+  (f1: typ)
+  (g2: det_map_group)
+  (f2: typ)
+  (g: map_group)
+: Lemma
+  (requires (
+    map_group_footprint g1 f1 /\
+    map_group_footprint g2 f2 /\
+    typ_disjoint f1 f2 /\
+    map_group_choice_compatible g1 g
+  ))
+  (ensures (
+    map_group_choice_compatible (g1 `map_group_concat` g2) g
+  ))
+= map_group_choice_compatible_concat_left g1 f1 g2 f2 g
+
+let map_group_choice_compatible_concat_left2
+  (g1: det_map_group)
+  (f1: typ)
+  (g2: det_map_group)
+  (f2: typ)
+  (g: map_group)
+: Lemma
+  (requires (
+    map_group_footprint g1 f1 /\
+    map_group_footprint g2 f2 /\
+    typ_disjoint f1 f2 /\
+    map_group_choice_compatible_no_cut g1 g /\
+    map_group_choice_compatible g2 g
+  ))
+  (ensures (
+    map_group_choice_compatible (g1 `map_group_concat` g2) g
+  ))
+= map_group_choice_compatible_concat_left g1 f1 g2 f2 g
+
 #restart-solver
 let map_group_concat_no_cut_intro
   (g1: det_map_group)

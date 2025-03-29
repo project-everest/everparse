@@ -855,6 +855,37 @@ let rec elab_map_group_sem
   | MGChoice g1 g2 ->
     Spec.map_group_choice (elab_map_group_sem env g1) (elab_map_group_sem env g2)
 
+let elab_map_group_sem_concat
+  (env: sem_env)
+  (g1l g1r: elab_map_group)
+: Lemma
+  (requires
+    bounded_elab_map_group env.se_bound g1l /\
+    bounded_elab_map_group env.se_bound g1r
+  )
+  (ensures
+    bounded_elab_map_group env.se_bound g1l /\
+    bounded_elab_map_group env.se_bound g1r /\
+    (elab_map_group_sem env (MGConcat g1l g1r) == Spec.map_group_concat (elab_map_group_sem env g1l) (elab_map_group_sem env g1r))
+  )
+//  [SMTPat (elab_map_group_sem env (MGConcat g1l g1r))]
+=
+  assert_norm (elab_map_group_sem env (MGConcat g1l g1r) == Spec.map_group_concat (elab_map_group_sem env g1l) (elab_map_group_sem env g1r)) // FIXME: WHY WHY WHY?
+
+let elab_map_group_sem_choice
+  (env: sem_env)
+  (g1l g1r: elab_map_group)
+: Lemma
+  (requires bounded_elab_map_group env.se_bound g1l /\
+    bounded_elab_map_group env.se_bound g1r
+  )
+  (ensures
+    (elab_map_group_sem env (MGChoice g1l g1r) == Spec.map_group_choice (elab_map_group_sem env g1l) (elab_map_group_sem env g1r))
+  )
+//  [SMTPat (elab_map_group_sem env (MGChoice g1l g1r))]
+=
+  assert_norm (elab_map_group_sem env (MGChoice g1l g1r) == Spec.map_group_choice (elab_map_group_sem env g1l) (elab_map_group_sem env g1r)) // FIXME: WHY WHY WHY?
+
 let rec elab_map_group_sem_incr
   (env env': sem_env)
   (g: elab_map_group)
@@ -910,6 +941,28 @@ let rec spec_map_group_footprint
   | MGMatchWithCut key _ -> (Ghost.hide (typ_sem env key))
 
 #pop-options
+
+let spec_map_group_footprint_concat
+  (env: sem_env)
+  (g1 g2: elab_map_group)
+: Lemma
+  (requires (
+    bounded_elab_map_group env.se_bound g1 /\
+    bounded_elab_map_group env.se_bound g2
+  ))
+  (ensures (
+    bounded_elab_map_group env.se_bound (MGConcat g1 g2) /\
+    bounded_elab_map_group env.se_bound g1 /\
+    bounded_elab_map_group env.se_bound g2 /\
+    spec_map_group_footprint env (MGConcat g1 g2) == Ghost.hide (
+      spec_map_group_footprint env g1 `Spec.t_choice`
+      spec_map_group_footprint env g2
+  )))
+= assert_norm (
+    spec_map_group_footprint env (MGConcat g1 g2) == Ghost.hide (
+      spec_map_group_footprint env g1 `Spec.t_choice`
+      spec_map_group_footprint env g2
+  ))
 
 let rec spec_map_group_footprint_incr
   (env env': sem_env)
@@ -1038,6 +1091,9 @@ and ast0_wf_array_group
 and ast0_wf_parse_map_group
 : elab_map_group -> Type
 =
+| WfMNop:
+    unit ->
+    ast0_wf_parse_map_group MGNop
 | WfMChoice:
     g1': elab_map_group ->
     s1: ast0_wf_parse_map_group g1' ->
@@ -1240,6 +1296,7 @@ and bounded_wf_parse_map_group
     bounded_wf_typ env key s_key &&
     bounded_wf_typ env key_except s_key_except &&
     bounded_wf_typ env value s_value
+| WfMNop _ -> true
 // TODO: recover named map groups
 
 (*
@@ -1393,6 +1450,7 @@ and bounded_wf_parse_map_group_incr
     [SMTPat (name_env_included env env'); SMTPat (bounded_wf_parse_map_group env' g wf)];
   ]]
 = match wf with
+  | WfMNop _ -> ()
   | WfMConcat g1' s1 g2' s2
   | WfMChoice g1' s1 g2' s2 ->
     bounded_wf_parse_map_group_incr env env' g1' s1;
@@ -1521,7 +1579,10 @@ and bounded_wf_parse_map_group_bounded
   | WfMZeroOrOne _ _
   | WfMConcat _ _ _ _
   | WfMChoice _ _ _ _
+  | WfMNop _
   -> ()
+
+let spec_true : prop = True
 
 [@@ sem_attr ]
 let rec spec_wf_typ
@@ -1622,9 +1683,7 @@ and spec_wf_parse_map_group
     spec_wf_parse_map_group env g1 s1 /\
     spec_wf_parse_map_group env g2 s2 /\
     (
-      let fp1 = spec_map_group_footprint env g1 in
-      let fp2 = spec_map_group_footprint env g2 in
-      Spec.typ_disjoint (Ghost.reveal fp1) (Ghost.reveal fp2)
+      Spec.typ_disjoint (spec_map_group_footprint env g1) (spec_map_group_footprint env g2)
     )
 | WfMZeroOrOne g s ->
     spec_wf_parse_map_group env g s /\
@@ -1635,6 +1694,7 @@ and spec_wf_parse_map_group
     spec_wf_typ env true key s_key /\
     spec_wf_typ env false key_except s_key_except /\
     spec_wf_typ env true value s_value
+| WfMNop _ -> spec_true
 end
 
 (*
@@ -1667,6 +1727,41 @@ and spec_wf_validate_map_group
     Spec.typ_disjoint left_tables v_key
 end
 *)
+
+let spec_wf_parse_map_group_concat
+  (env: sem_env)
+  (g1: elab_map_group)
+  (s1: ast0_wf_parse_map_group g1)
+  (g2: elab_map_group)
+  (s2: ast0_wf_parse_map_group g2)
+: Lemma
+  (spec_wf_parse_map_group env (MGConcat g1 g2) (WfMConcat g1 s1 g2 s2) <==> (
+    bounded_wf_parse_map_group env.se_bound (g1) (s1) /\
+    bounded_wf_parse_map_group env.se_bound (g2) (s2) /\ (
+    spec_wf_parse_map_group env g1 s1 /\
+    spec_wf_parse_map_group env g2 s2 /\
+    (
+      Spec.typ_disjoint (spec_map_group_footprint env g1) (spec_map_group_footprint env g2)
+    )
+  )))
+= ()
+
+let spec_wf_parse_map_group_choice
+  (env: sem_env)
+  (g1: elab_map_group)
+  (s1: ast0_wf_parse_map_group g1)
+  (g2: elab_map_group)
+  (s2: ast0_wf_parse_map_group g2)
+: Lemma
+  (spec_wf_parse_map_group env (MGChoice g1 g2) (WfMChoice g1 s1 g2 s2) <==> (
+    bounded_wf_parse_map_group env.se_bound (MGChoice g1 g2) (WfMChoice g1 s1 g2 s2) /\ (
+    spec_wf_parse_map_group env g1 s1 /\
+    spec_wf_parse_map_group env g2 s2 /\
+    (
+      Spec.map_group_choice_compatible (elab_map_group_sem env g1) (elab_map_group_sem env g2)
+    )
+  )))
+= ()
 
 #restart-solver
 let rec spec_wf_typ_incr
@@ -1796,6 +1891,7 @@ and spec_wf_parse_map_group_incr
     [SMTPat (sem_env_included env env'); SMTPat (spec_wf_parse_map_group env' g wf)];
   ]]
 = match wf with
+  | WfMNop _ -> ()
   | WfMConcat g1' s1 g2' s2
   | WfMChoice g1' s1 g2' s2 ->
     spec_wf_parse_map_group_incr env env' g1' s1;
@@ -2530,6 +2626,7 @@ and target_type_of_wf_map_group
 : Tot target_type
   (decreases wf)
 = match wf with
+  | WfMNop _ -> TTElem TTUnit
   | WfMChoice _ s1 _ s2 -> TTUnion (target_type_of_wf_map_group s1) (target_type_of_wf_map_group s2)
   | WfMConcat _ s1 _ s2 -> TTPair (target_type_of_wf_map_group s1) (target_type_of_wf_map_group s2)
   | WfMZeroOrOne _ s -> TTOption (target_type_of_wf_map_group s)
@@ -2605,6 +2702,7 @@ and target_type_of_wf_map_group_bounded
   (decreases wf)
   [SMTPat (target_type_bounded env (target_type_of_wf_map_group wf))]
 = match wf with
+  | WfMNop _ -> ()
   | WfMConcat _ s1 _ s2
   | WfMChoice _ s1 _ s2 ->
     target_type_of_wf_map_group_bounded env s1;

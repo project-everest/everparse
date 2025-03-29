@@ -155,6 +155,8 @@ and validate_map_group
 : Tot (impl_map_group_t vmatch (AST.elab_map_group_sem v_sem_env ty) (AST.spec_map_group_footprint v_sem_env ty))
   (decreases wf)
 = match wf with
+  | AST.WfMNop _ ->
+    impl_map_group_nop ()
   | AST.WfMChoice _ s1' _ s2' ->
     impl_map_group_ext
       (impl_map_group_choice
@@ -163,7 +165,11 @@ and validate_map_group
         ()
       )
       _ _ ()
-  | AST.WfMConcat _ s1' _ s2' ->
+  | AST.WfMConcat g1 s1' g2 s2' ->
+    [@@inline_let]
+    let _ = AST.elab_map_group_sem_concat v_sem_env g1 g2 in
+    [@@inline_let]
+    let _ = AST.spec_map_group_footprint_concat v_sem_env g1 g2 in
     impl_map_group_concat
       (validate_map_group impl env _ s1')
       (validate_map_group impl env _ s2')

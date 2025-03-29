@@ -62,6 +62,50 @@ let rec map_group_is_productive_correct
   | _ -> ()
 
 [@@ sem_attr]
+let rec elab_map_group_is_productive
+  (g: elab_map_group)
+: Tot (result unit)
+= match g with
+  | MGAlwaysFalse
+  | MGMatch _ _ _
+  | MGMatchWithCut _ _
+    -> RSuccess ()
+  | MGNop -> RFailure "elab_map_group_is_productive: MGNop"
+  | MGTable _ _ _ -> RFailure "elab_map_group_is_productive: MGTable"
+  | MGCut _ -> RFailure "elab_map_group_is_productive: MGCut"
+  | MGChoice g1 g2 ->
+    begin match elab_map_group_is_productive g1 with
+    | RSuccess _ -> elab_map_group_is_productive g2
+    | res -> res
+    end
+  | MGConcat g1 g2 ->
+    begin match elab_map_group_is_productive g1 with
+    | RFailure _ -> elab_map_group_is_productive g2
+    | res -> res
+    end
+
+let rec elab_map_group_is_productive_correct
+  (env: sem_env)
+  (g: elab_map_group)
+: Lemma
+  (requires (
+    bounded_elab_map_group env.se_bound g /\
+    RSuccess? (elab_map_group_is_productive g)
+  ))
+  (ensures (
+    Spec.map_group_is_productive (elab_map_group_sem env g)
+  ))
+= match g with
+  | MGChoice g1 g2 ->
+    elab_map_group_is_productive_correct env g1;
+    elab_map_group_is_productive_correct env g2
+  | MGConcat g1 g2 ->
+    if RSuccess? (elab_map_group_is_productive g1)
+    then elab_map_group_is_productive_correct env g1
+    else elab_map_group_is_productive_correct env g2
+  | _ -> ()
+
+[@@ sem_attr]
 let rec apply_map_group_det_empty_fail
   (g: elab_map_group)
 : Tot (result bool)
@@ -1290,6 +1334,7 @@ let map_group_footprint_postcond
       | _ -> True
       end
 
+[@@"opaque_to_smt"]
 let map_group_footprint
   (typ_disjoint: typ_disjoint_t)
   (fuel: nat)
@@ -1346,6 +1391,22 @@ let typ_disjoint_from_diff
     ))
 = typ_diff_disjoint env t1 (TElem EAlwaysFalse) t2 t3
 
+let map_group_choice_compatible_no_cut_postcond
+  (env: sem_env)
+  (#g1: elab_map_group)
+  (s1: ast0_wf_parse_map_group g1)
+  (#g2: elab_map_group)
+  (s2: ast0_wf_parse_map_group g2)
+  (r: result unit)
+: Tot prop
+=
+      spec_wf_parse_map_group env _ s1 /\
+      spec_wf_parse_map_group env _ s2 /\
+  ((RSuccess? r) ==> Spec.map_group_choice_compatible_no_cut
+    (elab_map_group_sem env g1)
+    (elab_map_group_sem env g2)
+  )
+
 let map_group_choice_compatible_no_cut_t =
   (env: ast_env) ->
   (#g1: elab_map_group) ->
@@ -1357,9 +1418,10 @@ let map_group_choice_compatible_no_cut_t =
       spec_wf_parse_map_group env.e_sem_env _ s1 /\
       spec_wf_parse_map_group env.e_sem_env _ s2
     ))
-    (ensures fun r -> match r with
-    | RSuccess _ -> Spec.map_group_choice_compatible_no_cut (elab_map_group_sem env.e_sem_env g1) (elab_map_group_sem env.e_sem_env g2)
-    | _ -> True
+    (ensures fun r -> 
+      map_group_choice_compatible_no_cut_postcond
+        env.e_sem_env s1 s2
+        r
     )
 
 let map_group_choice_compatible'_postcond
@@ -1373,10 +1435,7 @@ let map_group_choice_compatible'_postcond
 = 
       spec_wf_parse_map_group env _ s1 /\
       spec_wf_parse_map_group env _ s2 /\
-      begin match r with
-      | RSuccess _ -> Spec.map_group_choice_compatible (elab_map_group_sem env g1) (elab_map_group_sem env g2)
-      | _ -> True
-      end
+      (RSuccess? r ==> Spec.map_group_choice_compatible (elab_map_group_sem env g1) (elab_map_group_sem env g2))
 
 let map_group_choice_compatible_t =
   (env: ast_env) ->

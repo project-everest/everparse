@@ -897,6 +897,7 @@ and mk_wf_parse_map_group
       end
     | res -> coerce_failure res
     end
+  | MGNop -> RSuccess (WfMNop ())
   | _ -> RFailure "mk_wf_parse_map_group: unsupported"
 
 (*

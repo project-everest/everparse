@@ -6,7 +6,13 @@ module U64 = FStar.UInt64
 module Util = CBOR.Spec.Util
 module U8 = FStar.UInt8
 
-#push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
+let squash_modus_ponens
+  (p1: prop)
+  (p2: prop)
+  (sq_implies: squash (p1 ==> p2))
+  (sq1: squash p1)
+: Tot (squash p2)
+= ()
 
 #restart-solver
 let rec map_group_choice_compatible'
@@ -66,7 +72,10 @@ let rec map_group_choice_compatible'
       end
     | _ ->
       begin match s1 with
+      | WfMNop _ -> (| RFailure "map_group_choice_compatible: WfMNop left", () |)
       | WfMConcat g1l s1l g1r s1r ->
+        elab_map_group_sem_concat env.e_sem_env g1l g1r;
+        spec_wf_parse_map_group_concat env.e_sem_env g1l s1l g1r s1r;
         let (| r1l, _ |) = map_group_choice_compatible' env s1l s2 () in
         begin match r1l with
         | RSuccess _ ->
@@ -80,12 +89,17 @@ let rec map_group_choice_compatible'
         | ROutOfFuel -> (| ROutOfFuel, () |)
         | RFailure _ ->
           let res1 = map_group_choice_compatible_no_cut env s1l s2 in
+          let _ : squash (RSuccess? res1 ==> Spec.map_group_choice_compatible_no_cut (elab_map_group_sem env.e_sem_env g1l) (elab_map_group_sem env.e_sem_env g2)) = () in
           if not (RSuccess? res1)
           then (| res1, () |)
           else let (| res2, _ |) = map_group_choice_compatible' env s1r s2 () in
+          let sq_imp2 : squash (RSuccess? res2 ==> Spec.map_group_choice_compatible (elab_map_group_sem env.e_sem_env g1r) (elab_map_group_sem env.e_sem_env g2)) = () in
           if not (RSuccess? res2)
           then (| res2,  () |)
           else begin
+            let _ : squash (Spec.map_group_choice_compatible_no_cut (elab_map_group_sem env.e_sem_env g1l) (elab_map_group_sem env.e_sem_env g2)) = () in
+            let sq2 : squash (RSuccess? res2) = () in
+            let _ : squash (Spec.map_group_choice_compatible (elab_map_group_sem env.e_sem_env g1r) (elab_map_group_sem env.e_sem_env g2)) = squash_modus_ponens (RSuccess? res2) (Spec.map_group_choice_compatible (elab_map_group_sem env.e_sem_env g1r) (elab_map_group_sem env.e_sem_env g2)) sq_imp2 sq2 in
             Spec.map_group_choice_compatible_concat_left
               (elab_map_group_sem env.e_sem_env g1l)
               ((spec_map_group_footprint env.e_sem_env g1l))
@@ -107,7 +121,11 @@ let rec map_group_choice_compatible'
             if cut
             then (| RFailure "map_group_choice_compatible: GMapElem true (TElem (ELiteral key)) value, not disjoint", () |)
             else begin match s2 with
+            | WfMNop _ -> (| RSuccess (), () |)
             | WfMConcat g2l s2l g2r s2r ->
+              let _ : squash (elab_map_group_sem env.e_sem_env g1 == Spec.map_group_match_item_for false (eval_literal key) (typ_sem env.e_sem_env value)) = assert_norm (elab_map_group_sem env.e_sem_env (MGMatch cut key value) == Spec.map_group_match_item_for false (eval_literal key) (typ_sem env.e_sem_env value)) in
+              elab_map_group_sem_concat env.e_sem_env g2l g2r;
+              spec_wf_parse_map_group_concat env.e_sem_env g2l s2l g2r s2r;
               let (| res1, _ |) = map_group_choice_compatible' env s1 s2l () in
               if not (RSuccess? res1)
               then (| res1, () |)
@@ -115,6 +133,8 @@ let rec map_group_choice_compatible'
               if not (RSuccess? res2)
               then (| res2, () |)
               else begin
+                squash_modus_ponens (RSuccess? res1) (Spec.map_group_choice_compatible (elab_map_group_sem env.e_sem_env g1) (elab_map_group_sem env.e_sem_env g2l)) () ();
+                squash_modus_ponens (RSuccess? res2) (Spec.map_group_choice_compatible (elab_map_group_sem env.e_sem_env g1) (elab_map_group_sem env.e_sem_env g2r)) () ();
                 Spec.map_group_choice_compatible_match_item_for_concat_right
                   (eval_literal key)
                   (typ_sem env.e_sem_env value)
@@ -158,8 +178,6 @@ let rec map_group_choice_compatible'
         end
       end
     end
-
-#pop-options
 
 let map_group_choice_compatible
   (map_group_choice_compatible_no_cut: map_group_choice_compatible_no_cut_t)

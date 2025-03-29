@@ -156,6 +156,36 @@ fn impl_zero_copy_map_ext
   pa1 c v1 v2
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+let impl_zero_copy_map_nop_t
+  (#ty: Type0)
+  (vmatch: perm -> ty -> cbor -> slprop)
+= impl_zero_copy_map_group #ty vmatch #_ #_
+#unit #_ #_ mg_spec_nop.mg_parser  #(unit) (rel_unit)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_zero_copy_map_nop
+  (#ty: Type0)
+  (vmatch: perm -> ty -> cbor -> slprop)
+: impl_zero_copy_map_nop_t #_ vmatch
+=
+  (c: _)
+  (#p: _)
+  (#v: _)
+  (v1: _)
+  (v2: _)
+{
+  rewrite emp as (rel_unit () ());
+  ghost fn aux (_: unit)
+  requires vmatch p c v ** rel_unit () ()
+  ensures vmatch p c v
+  {
+    rewrite (rel_unit () ()) as emp
+  };
+  Trade.intro _ _ _ aux;
+  ()
+}
+
 #set-options "--print_implicits"
 
 #push-options "--ifuel 8"

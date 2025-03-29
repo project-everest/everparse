@@ -6,9 +6,8 @@ module U64 = FStar.UInt64
 module Util = CBOR.Spec.Util
 module U8 = FStar.UInt8
 
-#push-options "--z3rlimit 64 --split_queries always --query_stats --fuel 4 --ifuel 8"
-
 #restart-solver
+[@@"opaque_to_smt"]
 let map_group_choice_compatible_no_cut
   (map_group_choice_compatible_no_cut: map_group_choice_compatible_no_cut_t)
   (typ_disjoint: typ_disjoint_t)
@@ -17,6 +16,7 @@ let map_group_choice_compatible_no_cut
 : map_group_choice_compatible_no_cut_t
 = fun env #g1 s1 #g2 s2 ->
   match s1 with
+  | WfMNop _ -> RSuccess ()
   | WfMLiteral false key value _ ->
     Spec.map_group_choice_compatible_no_cut_match_item_for_no_cut
       (eval_literal key)
@@ -30,6 +30,8 @@ let map_group_choice_compatible_no_cut
       (elab_map_group_sem env.e_sem_env g2);
     RSuccess ()
   | WfMChoice g1l s1l g1r s1r ->
+    assert (g1 == MGChoice g1l g1r);
+    spec_wf_parse_map_group_choice env.e_sem_env g1l s1l g1r s1r;
     let res1 = map_group_choice_compatible_no_cut env s1l s2 in
     if not (RSuccess? res1)
     then res1
@@ -53,13 +55,17 @@ let map_group_choice_compatible_no_cut
         (elab_map_group_sem env.e_sem_env g2);
       RSuccess ()
     end
-  | WfMLiteral _ key value _ ->
+  | WfMLiteral _cut key value _s ->
     begin match map_group_footprint typ_disjoint fuel env g2 with
     | RSuccess (t2, t_ex2) ->
       let res1 = typ_disjoint_from_diff typ_diff_disjoint env (TElem (ELiteral key)) t2 t_ex2 in
       if not (RSuccess? res1)
       then res1
       else begin
+        Spec.map_group_choice_compatible_no_cut_match_item_for_no_cut
+          (eval_literal key)
+          (typ_sem env.e_sem_env value)
+          (elab_map_group_sem env.e_sem_env g2);
         Spec.map_group_choice_compatible_no_cut_match_item_for_cut
           (eval_literal key)
           (typ_sem env.e_sem_env value)
@@ -70,13 +76,15 @@ let map_group_choice_compatible_no_cut
     | res -> coerce_failure res
     end
   | WfMConcat g1l s1l g1r s1r ->
+    elab_map_group_sem_concat env.e_sem_env g1l g1r;
     let res1 = map_group_choice_compatible_no_cut env s1l s2 in
     if not (RSuccess? res1)
     then res1
     else let res2 = map_group_choice_compatible_no_cut env s1r s2 in
     if not (RSuccess? res2)
     then res2
-    else begin
+    else
+    begin
       Spec.map_group_choice_compatible_no_cut_concat_left
         (elab_map_group_sem env.e_sem_env g1l)
         ((spec_map_group_footprint env.e_sem_env g1l))
