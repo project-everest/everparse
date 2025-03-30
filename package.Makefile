@@ -2,7 +2,7 @@
 # to be present.
 
 everparse:
-	+src/package/package.sh -make
+	+src/package/package.sh
 
 .PHONY: everparse
 
