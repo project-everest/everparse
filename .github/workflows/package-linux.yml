@@ -67,7 +67,7 @@ jobs:
       - name: Build package
         run: |
           eval $(opam env)
-          make everparse -kj$(nproc)
+          make -f package.Makefile everparse -kj$(nproc)
 
       - uses: actions/upload-artifact@v4
         with:
