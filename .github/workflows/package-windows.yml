@@ -187,3 +187,7 @@ jobs:
         shell: cmd
         run: |
           ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\Arithmetic.3d ${{ github.workspace }}\everparse\src\3d\tests\FieldDependence0.3d && ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\Comments.3d && ${{ github.workspace }}\test\everparse.cmd --check_hashes inplace ${{ github.workspace }}\everparse\src\3d\tests\Comments.3d
+      - name: Test EverParse test case generation
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\ELFTestGen.3d --odir ${{ github.workspace }}\test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5

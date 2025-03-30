@@ -9,3 +9,5 @@ val init : unit -> t
 val update : t -> Bytes.t -> unit
 
 val finish : t -> Bytes.t
+
+val get_current_digest : t -> Bytes.t

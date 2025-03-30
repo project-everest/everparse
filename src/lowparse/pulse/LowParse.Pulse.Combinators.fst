@@ -872,7 +872,7 @@ requires
   pts_to_serialized s1 x1 #pm v1 **
   pts_to_serialized (s2 v1) x2 #pm v2 **
   is_split x x1 x2
-ensures exists* v .
+ensures exists* (v: dtuple2 t1 t2) .
   pts_to_serialized (serialize_dtuple2 s1 s2) x #pm v **
   pure (dfst v == v1 /\ dsnd v == v2)
 {

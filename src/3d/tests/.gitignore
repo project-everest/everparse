@@ -3,6 +3,7 @@ out.batch
 out.batch-interpret
 out.fail.batch
 out.cleanup
+out.z3-testgen
 test-cpp.exe
 *.out
 *.err
