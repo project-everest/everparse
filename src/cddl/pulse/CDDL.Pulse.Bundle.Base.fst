@@ -40,6 +40,10 @@ let bundle_set_parser_and_serializer
   ([@@@erasable] b: Ghost.erased (bundle vmatch))
   (t: Type0)
   ([@@@erasable] t_eq: squash (t == b.b_impl_type))
+  ([@@@erasable] spect: Type0)
+  ([@@@erasable] spect_eq: squash (spect == b.b_spec_type))
+  ([@@@erasable] r: rel t spect)
+  ([@@@erasable] r_eq: squash (b.b_rel == coerce_eq () r))
   (#[@@@erasable] t': Type)
   (p: t')
   ([@@@erasable] p_eq: squash (t' == impl_zero_copy_parse vmatch b.b_spec.parser b.b_rel))
@@ -49,11 +53,11 @@ let bundle_set_parser_and_serializer
 : Tot (bundle vmatch)
 = {
     b_typ = b.b_typ;
-    b_spec_type = b.b_spec_type;
+    b_spec_type = spect;
     b_spec_type_eq = b.b_spec_type_eq;
     b_spec = b.b_spec;
     b_impl_type = t;
-    b_rel = coerce_eq () b.b_rel;
+    b_rel = r;
     b_parser = p;
     b_serializer = s;
   }

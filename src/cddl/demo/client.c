@@ -28,5 +28,5 @@ int main(void) {
   CDDLTest_Test_evercddl_test1 ret = CDDLTest_Test_parse_test1(obj);
   if (! (ret.fst == test.fst && ret.snd.tag == test.snd.tag && ret.snd.v == test.snd.v))
     return 4;
-  return 0;
+  return CDDLTest_Client_main();
 }

@@ -41,6 +41,10 @@ let array_bundle_set_parser_and_serializer
   ([@@@erasable] b: Ghost.erased (array_bundle cbor_array_iterator_match))
   (t: Type0)
   ([@@@erasable] t_eq: squash (t == b.ab_impl_type))
+  ([@@@erasable] spect: Type0)
+  ([@@@erasable] spect_eq: squash (spect == b.ab_spec_type))
+  ([@@@erasable] r: rel t spect)
+  ([@@@erasable] r_eq: squash (b.ab_rel == coerce_eq () r))
   (#[@@@erasable] t': Type)
   (p: t')
   ([@@@erasable] p_eq: squash (t' == impl_zero_copy_array_group cbor_array_iterator_match b.ab_spec.ag_parser b.ab_rel))
@@ -50,11 +54,11 @@ let array_bundle_set_parser_and_serializer
 : Tot (array_bundle cbor_array_iterator_match)
 = {
     ab_typ = b.ab_typ;
-    ab_spec_type = b.ab_spec_type;
+    ab_spec_type = spect;
     ab_spec_type_eq = b.ab_spec_type_eq;
     ab_spec = b.ab_spec;
     ab_impl_type = t;
-    ab_rel = coerce_eq () b.ab_rel;
+    ab_rel = r;
     ab_parser = p;
     ab_serializer = s;
   }

@@ -3,8 +3,8 @@ include CDDL.Spec.AST.Elab
 include CDDL.Pulse.AST.Bundle
 
 let solve_by_norm () : FStar.Tactics.Tac unit =
-  FStar.Tactics.norm [delta; iota; zeta; primops; nbe];
-  FStar.Tactics.smt ()
+  FStar.Tactics.norm [delta; iota; zeta; primops];
+  FStar.Tactics.trefl ()
 
 let solve_sem () : FStar.Tactics.Tac unit =
   FStar.Tactics.norm [delta_attr [`%sem_attr]; iota; zeta; primops; nbe];
@@ -129,6 +129,40 @@ let bundle_get_impl_type_steps =
     `%Mkbundle?.b_impl_type ::
     `%Mkarray_bundle?.ab_impl_type ::
     `%Mkmap_bundle?.mb_impl_type ::
+    base_delta_only_steps
+  ) ::
+  base_steps
+
+let bundle_get_spec_type_steps =
+  delta_attr [
+    `%base_attr;
+    `%bundle_attr;
+    `%bundle_get_impl_type_attr;
+  ] ::
+  delta_only (
+    `%Mkbundle?.b_spec_type ::
+    `%Mkarray_bundle?.ab_spec_type ::
+    `%Mkmap_bundle?.mb_spec_type ::
+    base_delta_only_steps
+  ) ::
+  base_steps
+
+let bundle_get_rel_steps =
+  delta_attr [
+    `%base_attr;
+    `%bundle_attr;
+    `%bundle_get_impl_type_attr;
+  ] ::
+  delta_only (
+    `%Mkbundle?.b_spec_type ::
+    `%Mkarray_bundle?.ab_spec_type ::
+    `%Mkmap_bundle?.mb_spec_type ::
+    `%Mkbundle?.b_impl_type ::
+    `%Mkarray_bundle?.ab_impl_type ::
+    `%Mkmap_bundle?.mb_impl_type ::
+    `%Mkbundle?.b_rel ::
+    `%Mkarray_bundle?.ab_rel ::
+    `%Mkmap_bundle?.mb_rel ::
     base_delta_only_steps
   ) ::
   base_steps

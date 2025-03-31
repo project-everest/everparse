@@ -30,6 +30,9 @@ let mk_parser_name (name: string) : string =
 let mk_serializer_name (name: string) : string =
   "serialize_" ^ filter_name name
 
+let mk_bundle_name (name: string) : string =
+  "bundle_" ^ filter_name name
+
 let krml = "\"krml\""
 
 let extend_ancillaries' env' ancillary_env source source' = "
@@ -121,6 +124,12 @@ let _ : unit = _ by (FStar.Tactics.print (\"type\"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
 let "^typename^" = "^bundle^"'.b_impl_type
 let teq"^bundle^" : squash ("^bundle^"'.b_impl_type == "^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())]
+let spect_"^typename^" = "^bundle^"'.b_spec_type
+let specteq"^bundle^" : squash ("^bundle^"'.b_spec_type == spect_"^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())
+noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())]
+let rel_"^typename^" : rel "^typename^" spect_"^typename^" = coerce_eq (_ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())) "^bundle^"'.b_rel
+let releq"^bundle^" : squash ("^bundle^"'.b_rel == coerce_eq (_ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())) rel_"^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())
 let peq"^bundle^" = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match "^bundle^"'.b_spec.parser "^bundle^"'.b_rel "^typename^" teq"^bundle^"
 let seq"^bundle^" = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq "^bundle^"'.b_spec "^bundle^"'.b_rel "^typename^" teq"^bundle^"
 let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`()))
@@ -130,7 +139,11 @@ let "^parser^" = T.inline_coerce_eq peq"^bundle^" "^bundle^"'.b_parser
 let "^serializer^" = T.inline_coerce_eq seq"^bundle^" "^bundle^"'.b_serializer
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
-let "^bundle^" = bundle_set_parser_and_serializer g"^bundle^"' "^typename^" () "^parser^" () "^serializer^" ()"
+let "^bundle^" = bundle_set_parser_and_serializer g"^bundle^"' "^typename^" () spect_"^typename^" () rel_"^typename^" () "^parser^" () "^serializer^" ()
+inline_for_extraction noextract [@@noextract_to "^krml^"]
+let "^parser^"' = "^bundle^".b_parser
+inline_for_extraction noextract [@@noextract_to "^krml^"]
+let "^serializer^"' = "^bundle^".b_serializer"
 
 let produce_parser env env_anc' wf validator parser serializer typename bundle =
 produce_validator env wf validator^"
@@ -166,6 +179,12 @@ let _ : unit = _ by (FStar.Tactics.print (\"type\"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
 let "^typename^" = "^bundle^"'.ab_impl_type
 let teq"^bundle^" : squash ("^bundle^"'.ab_impl_type == "^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())
+noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())]
+let spect_"^typename^" = "^bundle^"'.ab_spec_type
+let specteq"^bundle^" : squash ("^bundle^"'.ab_spec_type == spect_"^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())
+noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())]
+let rel_"^typename^" : rel "^typename^" spect_"^typename^" = coerce_eq (_ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())) "^bundle^"'.ab_rel
+let releq"^bundle^" : squash ("^bundle^"'.ab_rel == coerce_eq (_ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())) rel_"^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_rel_steps); FStar.Tactics.trefl ())
 let peq"^bundle^" = CDDL.Pulse.Parse.ArrayGroup.impl_zero_copy_array_group_t_eq Det.cbor_det_array_iterator_match "^bundle^"'.ab_spec.ag_parser "^bundle^"'.ab_rel "^typename^" teq"^bundle^"
 let seq"^bundle^" = CDDL.Pulse.Serialize.ArrayGroup.impl_serialize_array_group_t_eq "^bundle^"'.ab_spec "^bundle^"'.ab_rel "^typename^" teq"^bundle^"
 let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`()))
@@ -175,7 +194,11 @@ let "^parser^" = T.inline_coerce_eq peq"^bundle^" "^bundle^"'.ab_parser
 let "^serializer^" = T.inline_coerce_eq seq"^bundle^" "^bundle^"'.ab_serializer
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
-let "^bundle^" = array_bundle_set_parser_and_serializer g"^bundle^"' "^typename^" () "^parser^" () "^serializer^" ()"
+let "^bundle^" = array_bundle_set_parser_and_serializer g"^bundle^"' "^typename^" () spect_"^typename^" () rel_"^typename^" () "^parser^" () "^serializer^" ()
+inline_for_extraction noextract [@@noextract_to "^krml^"]
+let "^parser^"' = "^bundle^".ab_parser
+inline_for_extraction noextract [@@noextract_to "^krml^"]
+let "^serializer^"' = "^bundle^".ab_serializer"
 
 let rec compute_ancillaries_aux
   (#se: sem_env)
@@ -425,7 +448,7 @@ let produce_typ_defs
   let ask = "ask" ^ j in
   let source = "sorted_source" ^ i in
   let source' = "sorted_source" ^ j in
-  let bundle = "b" ^ j in
+  let bundle = mk_bundle_name name in
   let fuel = string_of_int fuel in
   let anc1 = compute_ancillaries f {
     anc = anc;

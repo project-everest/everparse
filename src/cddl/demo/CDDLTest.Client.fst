@@ -47,7 +47,6 @@ ensures rel_pair r1 r2 (x1, x2) (y1, y2)
   rewrite (r1 x1 y1 ** r2 x2 y2) as (rel_pair r1 r2 (x1, x2) (y1, y2))
 }
 
-(*
 fn main
   (_: unit)
 requires emp
@@ -61,13 +60,13 @@ ensures emp
   rel_pure_intro 42uL;
   rel_option_some_intro (rel_pure U64.t) 42uL 42uL;
   rel_pair_intro (rel_pure U64.t) 18uL 18uL (rel_option (rel_pure U64.t)) (Some 42uL) (Some 42uL);
+  let wi : bundle_test1.b_impl_type = w;
+  let ws : Ghost.erased bundle_test1.b_spec_type = Ghost.hide w;
   rewrite
     (rel_pair (rel_pure U64.t) (rel_option (rel_pure U64.t)) (18uL, Some 42uL) (18uL, Some 42uL))
-    as (b5.b_rel (coerce_eq (_ by (FStar.Tactics.trefl  ())) w) (coerce_eq () w));
-  admit ()
-(*
-  serialize_test1 w out;
+    as (bundle_test1.b_rel wi ws);
+  let _ = serialize_test1' wi out;
+  drop_ (bundle_test1.b_rel wi ws);
   S.to_array out;
   0l
-  *)
 }
