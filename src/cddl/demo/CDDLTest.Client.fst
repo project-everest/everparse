@@ -1,5 +1,6 @@
 module CDDLTest.Client
 #lang-pulse
+open CDDL.Pulse.Types
 open CDDLTest.Test
 open Pulse.Lib.Pervasives
 
@@ -9,43 +10,6 @@ module U64 = FStar.UInt64
 module S = Pulse.Lib.Slice
 
 open CDDL.Pulse.Types
-
-ghost fn rel_pure_intro
-  (#t: Type0)
-  (x: t)
-requires emp
-ensures rel_pure t x x
-{
-  rel_pure_eq x x;
-  fold (rel_pure _ x x)
-}
-
-ghost fn rel_option_some_intro
-  (#t1 #t2: Type0)
-  (r: rel t1 t2)
-  (x: t1)
-  (y: t2)
-requires r x y
-ensures rel_option r (Some x) (Some y)
-{
-  rel_option_eq_some r x y;
-  rewrite (r x y) as (rel_option r (Some x) (Some y))
-}
-
-ghost fn rel_pair_intro
-  (#tl1 #th1 #tl2 #th2: Type0)
-  (r1: rel tl1 th1)
-  (x1: tl1)
-  (y1: th1)
-  (r2: rel tl2 th2)
-  (x2: tl2)
-  (y2: th2)
-requires r1 x1 y1 ** r2 x2 y2
-ensures rel_pair r1 r2 (x1, x2) (y1, y2)
-{
-  rel_pair_eq r1 r2 x1 x2 y1 y2;
-  rewrite (r1 x1 y1 ** r2 x2 y2) as (rel_pair r1 r2 (x1, x2) (y1, y2))
-}
 
 fn main
   (_: unit)
