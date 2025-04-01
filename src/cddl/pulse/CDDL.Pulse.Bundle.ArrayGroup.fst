@@ -14,11 +14,11 @@ type array_bundle
   (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
 = {
   [@@@erasable] ab_typ: Ghost.erased (array_group None);
-  [@@@erasable] ab_spec_type: Type0;
+  ab_spec_type: Type0;
   [@@@erasable] ab_spec_type_eq: Ghost.erased (EqTest.eq_test ab_spec_type);
   [@@@erasable] ab_spec: Ghost.erased (ag_spec ab_typ ab_spec_type true);
   ab_impl_type: Type0;
-  [@@@erasable] ab_rel: rel ab_impl_type ab_spec_type;
+  ab_rel: rel ab_impl_type ab_spec_type;
   ab_parser: impl_zero_copy_array_group cbor_array_iterator_match ab_spec.ag_parser ab_rel;
   ab_serializer: impl_serialize_array_group ab_spec ab_rel;
 }
@@ -39,12 +39,12 @@ let bundle_array_group_bij
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   (b: array_bundle cbor_array_iterator_match)
-  (#[@@@erasable]tgt: Type0)
-  (#[@@@erasable]tgt' : Type0)
-  (#[@@@erasable]f12: Ghost.erased (tgt -> tgt'))
-  (#[@@@erasable]f21: Ghost.erased (tgt' -> tgt))
-  ([@@@erasable]fprf_21_12: (x: tgt) -> squash (Ghost.reveal f21 (Ghost.reveal f12 x) == x))
-  ([@@@erasable]fprf_12_21: (x: tgt') -> squash (Ghost.reveal f12 (Ghost.reveal f21 x) == x))
+  (#tgt: Type0)
+  (#tgt' : Type0)
+  (f12: (tgt -> tgt'))
+  (f21: (tgt' -> tgt))
+  ([@@@erasable]fprf_21_12: (x: tgt) -> squash (f21 (f12 x) == x))
+  ([@@@erasable]fprf_12_21: (x: tgt') -> squash (f12 (f21 x) == x))
   ([@@@erasable] tgt_eq: squash (tgt == b.ab_spec_type))
   (#impl_tgt: Type0)
   (#impl_tgt' : Type0)
@@ -59,7 +59,7 @@ let bundle_array_group_bij
     {
       ab_typ = b_typ;
       ab_spec_type = tgt';
-      ab_spec_type_eq = Ghost.hide (let eq' = Ghost.reveal b_spec_type_eq in let f21' = Ghost.reveal f21 in EqTest.mk_eq_test (fun x1' x2' -> fprf_12_21 x1'; fprf_12_21 x2'; eq' (f21' x1') (f21' x2')));
+      ab_spec_type_eq = Ghost.hide (let eq' = Ghost.reveal b_spec_type_eq in EqTest.mk_eq_test (fun x1' x2' -> fprf_12_21 x1'; fprf_12_21 x2'; eq' (f21 x1') (f21 x2')));
       ab_spec = ag_spec_inj b_spec f12 f21 fprf_21_12 fprf_12_21;
       ab_impl_type = impl_tgt';
       ab_rel = rel_fun b_rel g21 f21;
@@ -73,17 +73,17 @@ let array_bundle_set_parser_and_serializer
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   ([@@@erasable] b: Ghost.erased (array_bundle cbor_array_iterator_match))
   (t: Type0)
-  ([@@@erasable] t_eq: squash (t == b.ab_impl_type))
-  ([@@@erasable] spect: Type0)
-  ([@@@erasable] spect_eq: squash (spect == b.ab_spec_type))
-  ([@@@erasable] r: rel t spect)
+  ([@@@erasable] t_eq: squash (b.ab_impl_type == t))
+  (spect: Type0)
+  ([@@@erasable] spect_eq: squash (b.ab_spec_type == spect))
+  (r: rel t spect)
   ([@@@erasable] r_eq: squash (b.ab_rel == coerce_eq () r))
   (#[@@@erasable] t': Type)
   (p: t')
-  ([@@@erasable] p_eq: squash (t' == impl_zero_copy_array_group cbor_array_iterator_match b.ab_spec.ag_parser b.ab_rel))
+  ([@@@erasable] p_eq: squash (impl_zero_copy_array_group cbor_array_iterator_match b.ab_spec.ag_parser b.ab_rel == t'))
   (#[@@@erasable] ts: Type)
   (s: ts)
-  ([@@@erasable] s_eq: squash (ts == impl_serialize_array_group b.ab_spec b.ab_rel))
+  ([@@@erasable] s_eq: squash (impl_serialize_array_group b.ab_spec b.ab_rel == ts))
 : Tot (array_bundle cbor_array_iterator_match)
 = {
     ab_typ = b.ab_typ;

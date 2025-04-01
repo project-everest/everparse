@@ -16,11 +16,11 @@ type map_bundle
   [@@@erasable] mb_typ: Ghost.erased (det_map_group);
   [@@@erasable] mb_footprint: Ghost.erased typ;
   [@@@erasable] mb_footprint_correct: squash (map_group_footprint mb_typ mb_footprint);
-  [@@@erasable] mb_spec_type: Type0;
+  mb_spec_type: Type0;
   [@@@erasable] mb_spec_type_eq: Ghost.erased (EqTest.eq_test mb_spec_type);
   [@@@erasable] mb_spec: Ghost.erased (mg_spec mb_typ mb_footprint mb_spec_type true);
   mb_impl_type: Type0;
-  [@@@erasable] mb_rel: rel mb_impl_type mb_spec_type;
+  mb_rel: rel mb_impl_type mb_spec_type;
   mb_parser: impl_zero_copy_map_group vmatch mb_spec.mg_parser mb_rel;
   mb_serializer: impl_serialize_map_group mb_spec mb_rel;
 }
