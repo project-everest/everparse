@@ -1,0 +1,12 @@
+
+initialize-context-input-args = { 
+  ? &(simulation:1) ^=> bool,  ; Default = false 
+  ? &(use-default-context:2) ^=> bool,  ; Default = false 
+  ? &(seed:3) ^=> bytes, 
+  * &(tstr:uint) => any 
+} 
+
+initialize-context-output-args = { 
+? &(new-context-handle:1) ^=> bytes, 
+* &(tstr:uint) => any 
+}
