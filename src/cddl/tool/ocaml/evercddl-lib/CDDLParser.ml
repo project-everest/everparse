@@ -49,6 +49,7 @@ let lbrack = terminal "lbrack" (function LBRACK -> Some () | _ -> None)
 let rbrack = terminal "rbrack" (function RBRACK -> Some () | _ -> None)
 let pound0 = terminal "pound0" (function POUND0 -> Some () | _ -> None)
 let pound1 = terminal "pound1" (function POUND1 -> Some () | _ -> None)
+let amp = terminal "amp" (function AMP -> Some () | _ -> None)
 let pound2 = terminal "pound2" (function POUND2 -> Some () | _ -> None)
 let pound3 = terminal "pound3" (function POUND3 -> Some () | _ -> None)
 let pound6 = terminal "pound6" (function POUND6 -> Some () | _ -> None)
@@ -284,6 +285,7 @@ and type2 () = debug "type2" (
       concat lbrack (fun _ -> concat s (fun _ -> concat (group ()) (fun x -> concat s (fun _ -> concat rbrack (fun _ -> ret (TArray x))))));
 (* TODO: "~" s typename option(genericarg) *)
 (* TODO: "&" s "(" s group s ")" *)
+      concat amp (fun _ -> concat lparen (fun _ -> concat bareword (fun _ -> concat colon (fun _ -> concat (type_ ()) (fun ty -> concat rparen (fun _ -> ret ty))))));
 (* TODO: "&" s groupname option(genericarg) *)
       concat pound6 (fun _ -> concat (option tag) (fun tag -> concat lparen (fun _ -> concat s (fun _ -> concat (type_ ()) (fun x -> concat s (fun _ -> concat rparen (fun _ -> ret (TTagged (tag, x)))))))));
 (* TODO: generalize "#"DIGIT option(tag) *)

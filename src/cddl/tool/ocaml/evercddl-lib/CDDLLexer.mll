@@ -66,6 +66,7 @@ rule token =
   | "#3" { debug POUND3 }
   | "#6" { debug POUND6 }
   | "#7" { debug POUND7 }
+  | "&"  { debug AMP }
   | "..." { debug DOTDOTDOT }
   | ".." { debug DOTDOT }
   | "." { debug DOT }

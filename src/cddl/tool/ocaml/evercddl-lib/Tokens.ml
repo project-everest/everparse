@@ -21,6 +21,7 @@ type token =
   | DOTDOTDOT
   | DOTDOT
   | DOT
+  | AMP
   | POUND
   | UINT of Prims.int
   | MINUS
