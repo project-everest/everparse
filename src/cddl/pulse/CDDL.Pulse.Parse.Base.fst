@@ -58,6 +58,128 @@ let impl_zero_copy_parse
           )
         )
 
+module S = Pulse.Lib.Slice
+module U8 = FStar.UInt8
+module Cbor = CBOR.Spec.API.Format
+
+let validate_and_parse_postcond_none
+  (t: typ)
+  (w: Seq.seq U8.t)
+: Tot prop
+= match Cbor.cbor_det_parse w with
+  | None -> True
+  | Some (c, _) -> not (t c)
+
+let validate_and_parse_postcond_some
+  (#t: typ)
+  (#tgt: Type0)
+  (#tgt_serializable: (tgt -> bool))
+  (ps: parser_spec t tgt tgt_serializable)
+  (w: Seq.seq U8.t)
+  (wx: tgt)
+  (wr: Seq.seq U8.t)
+: Tot prop
+= match Cbor.cbor_det_parse w with
+  | None -> False
+  | Some (c, len) ->
+    t c /\
+    wx == ps c /\
+    wr == Seq.slice w len (Seq.length w) /\
+    w == Seq.append (Cbor.cbor_det_serialize c) wr
+
+[@@pulse_unfold]
+let validate_and_parse_post_some
+  (#t: typ)
+  (#tgt: Type0)
+  (#tgt_serializable: (tgt -> bool))
+  (ps: parser_spec t tgt tgt_serializable)
+  (#impl_tgt: Type0)
+  (r: rel impl_tgt tgt)
+  (s: S.slice U8.t)
+  (p: perm)
+  (w: Seq.seq U8.t)
+  (x: impl_tgt)
+  (rem: S.slice U8.t)
+  (wx: tgt)
+  (wr: Seq.seq U8.t)
+: Tot slprop
+=
+  r x wx ** pts_to rem #p wr **
+  Trade.trade
+    (r x wx ** pts_to rem #p wr)
+    (pts_to s #p w) **
+  pure (validate_and_parse_postcond_some ps w wx wr)
+    
+let validate_and_parse_post
+  (#t: typ)
+  (#tgt: Type0)
+  (#tgt_serializable: (tgt -> bool))
+  (ps: parser_spec t tgt tgt_serializable)
+  (#impl_tgt: Type0)
+  (r: rel impl_tgt tgt)
+  (s: S.slice U8.t)
+  (p: perm)
+  (w: Seq.seq U8.t)
+  (res: option (impl_tgt & S.slice U8.t))
+: Tot slprop
+= match res with
+  | None -> pts_to s #p w ** pure (validate_and_parse_postcond_none t w)
+  | Some (x, rem) ->
+    exists* wx wr . validate_and_parse_post_some ps r s p w x rem wx wr
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn validate_and_parse
+  (#ty: Type)
+  (# [@@@erasable] vmatch: perm -> ty -> cbor -> slprop)
+  (parse: cbor_det_parse_t vmatch)
+  (# [@@@erasable] t1: Ghost.erased typ)
+  (v1: impl_typ vmatch t1)
+  (#[@@@erasable] t: Ghost.erased typ)
+  (#[@@@erasable] tgt: Type0)
+  (#[@@@erasable] tgt_serializable: Ghost.erased (tgt -> bool))
+  (#[@@@erasable] ps: Ghost.erased (parser_spec t tgt tgt_serializable))
+  (#impl_tgt: Type0)
+  (#[@@@erasable] r: rel impl_tgt tgt)
+  (i: impl_zero_copy_parse vmatch ps r)
+  (sq: squash (Ghost.reveal t1 == Ghost.reveal t))
+  (s: S.slice U8.t)
+  (#[@@@erasable] p: perm)
+  (#[@@@erasable] w: Ghost.erased (Seq.seq U8.t))
+requires
+  pts_to s #p w
+returns res: option (impl_tgt & S.slice U8.t)
+ensures
+  validate_and_parse_post ps r s p w res
+{
+  let q = parse s;
+  match q {
+    None -> {
+      unfold (cbor_det_parse_post vmatch s p w None);
+      fold (validate_and_parse_post ps r s p w None);
+      None
+    }
+    Some rlrem -> {
+      unfold (cbor_det_parse_post vmatch s p w (Some rlrem));
+      let (rl, rem) = rlrem;
+      unfold (cbor_det_parse_post_some vmatch s p w rl rem);
+      with c . assert (vmatch 1.0R rl c);
+      with wr . assert (pts_to rem #p wr);
+      Cbor.cbor_det_serialize_parse' c wr;
+      let test = v1 rl;
+      if (test) {
+        let x = i rl;
+        Trade.trans_hyp_l _ _ _ (pts_to s #p w);
+        fold (validate_and_parse_post ps r s p w (Some (x, rem)));
+        Some (x, rem)
+      } else {
+        Trade.elim _ _;
+        fold (validate_and_parse_post ps r s p w None);
+        None
+      }
+    }
+  }
+}
+
 let impl_zero_copy_parse_t_eq
     (#ty: Type0)
     (vmatch: perm -> ty -> cbor -> slprop)

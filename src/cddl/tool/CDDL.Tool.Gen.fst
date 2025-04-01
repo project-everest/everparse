@@ -161,8 +161,7 @@ let "^serializer^" = T.inline_coerce_eq seq"^bundle^" "^bundle^"''.b_serializer
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
 let "^bundle^" = bundle_set_parser_and_serializer g"^bundle^"'' "^typename^"_pretty gteq"^bundle^"'' spect_"^typename^"_pretty gspecteq"^bundle^"'' rel_"^typename^" greleq"^bundle^" "^parser^" (bundle_parser_eq_intro peq"^bundle^"  "^bundle^"'' (_ by (FStar.Tactics.norm [delta_only [`%bundle_parser_t]]; FStar.Tactics.trefl ())) g"^bundle^"'' (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"'']; primops]; FStar.Tactics.trefl ()))) "^serializer^" (bundle_serializer_eq_intro seq"^bundle^" "^bundle^"'' (_ by (FStar.Tactics.norm [delta_only [`%bundle_serializer_t]]; FStar.Tactics.trefl ())) g"^bundle^"'' (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"'']; primops]; FStar.Tactics.trefl ())))
-inline_for_extraction noextract [@@noextract_to "^krml^"]
-let "^parser^"' = "^bundle^".b_parser
+let validate_and_"^parser^" = validate_and_parse Det.cbor_det_impl.cbor_det_parse "^validator^" "^bundle^".b_parser ()
 inline_for_extraction noextract [@@noextract_to "^krml^"]
 let "^serializer^"' = "^bundle^".b_serializer"
 
