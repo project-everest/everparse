@@ -124,6 +124,7 @@ let bundle_get_impl_type_steps =
     `%base_attr;
     `%bundle_attr;
     `%bundle_get_impl_type_attr;
+    `%sem_attr; // because there are validators in the middle of bundles
   ] ::
   delta_only (
     `%Mkbundle?.b_impl_type ::
@@ -138,6 +139,7 @@ let bundle_get_spec_type_steps =
     `%base_attr;
     `%bundle_attr;
     `%bundle_get_impl_type_attr;
+    `%sem_attr; // because there are validators in the middle of bundles
   ] ::
   delta_only (
     `%Mkbundle?.b_spec_type ::
@@ -152,6 +154,7 @@ let bundle_get_rel_steps =
     `%base_attr;
     `%bundle_attr;
     `%bundle_get_impl_type_attr;
+    `%sem_attr; // because there are validators in the middle of bundles
   ] ::
   delta_only (
     `%Mkbundle?.b_spec_type ::
