@@ -12,6 +12,7 @@ module SZ = FStar.SizeT
 
 module AST = CDDL.Spec.AST.Base
 
+inline_for_extraction
 [@@AST.base_attr]
 noeq
 type cbor_impl

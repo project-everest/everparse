@@ -6,6 +6,7 @@ include CBOR.Pulse.API.Det.Rust.Macros
 open CDDL.Spec.AST.Base
 module AST = CDDL.Spec.AST.Base
 
+inline_for_extraction
 [@@AST.base_attr]
 let cbor_det_impl : cbor_impl cbor_det_match cbor_det_map_entry_match cbor_det_array_iterator_match cbor_det_map_iterator_match
 = {
