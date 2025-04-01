@@ -1,0 +1,10 @@
+[submodule "opt/FStar"]
+	path = opt/FStar
+	url = https://github.com/mtzguido/FStar
+	branch = bij
+[submodule "opt/karamel"]
+	path = opt/karamel
+	url = https://github.com/FStarLang/karamel
+[submodule "opt/pulse"]
+	path = opt/pulse
+	url = https://github.com/FStarLang/pulse
