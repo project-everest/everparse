@@ -85,6 +85,43 @@ fn impl_serialize_array_group_ext'
   i c out out_count out_size l
 }
 
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_serialize_array_group_bij
+    (#[@@@erasable]t: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable] inj: Ghost.erased bool)
+    (#[@@@erasable]ps: Ghost.erased (ag_spec t tgt inj))
+    (#impl_tgt: Type0)
+    (#[@@@erasable]r: rel impl_tgt tgt)
+    (i: impl_serialize_array_group ps r)
+    (#[@@@erasable]tgt' : Type0)
+    ([@@@erasable]f12: Ghost.erased (tgt -> tgt'))
+    ([@@@erasable]f21: Ghost.erased (tgt' -> tgt))
+    ([@@@erasable]fprf_21_12: (x: tgt) -> squash (Ghost.reveal f21 (Ghost.reveal f12 x) == x))
+    ([@@@erasable]fprf_12_21: (x: tgt') -> squash (Ghost.reveal f12 (Ghost.reveal f21 x) == x))
+    (#impl_tgt' : Type0)
+    (g12: (impl_tgt -> impl_tgt'))
+    (g21: (impl_tgt' -> impl_tgt))
+    ([@@@erasable]gprf_21_12: (x: impl_tgt) -> squash (g21 (g12 x) == x))
+    ([@@@erasable]gprf_12_21: (x: impl_tgt') -> squash (g12 (g21 x) == x))
+: impl_serialize_array_group #(Ghost.reveal t) #tgt' #inj (ag_spec_inj ps f12 f21 fprf_21_12 fprf_12_21) #impl_tgt' (rel_fun r g21 f21)
+=
+    (c: _)
+    (#v: _)
+    (out: _)
+    (out_count: _)
+    (out_size: _)
+    (l: _)
+{
+  let c' = g21 c;
+  Trade.rewrite_with_trade
+    (rel_fun r g21 f21 c v)
+    (r c' (Ghost.reveal f21 v));
+  let res = i c' #(Ghost.reveal f21 v) out out_count out_size l;
+  Trade.elim _ _;
+  res
+}
+
 inline_for_extraction noextract [@@noextract_to "krml";
   FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ())
 ]

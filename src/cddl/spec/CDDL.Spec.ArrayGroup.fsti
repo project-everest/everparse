@@ -924,6 +924,63 @@ let spec_array_group
   parser_inj = ();
 }
 
+let ag_size_inj
+  (#target1: Type0)
+  (target1_size: (target1 -> nat))
+  (#target2: Type0)
+  (f21: (target2 -> target1))
+  (x: target2)
+: Tot nat
+= target1_size (f21 x)
+
+let array_group_parser_spec_inj
+  (#source: array_group None)
+  (#target1: Type0)
+  (#target_size1: target1 -> Tot nat)
+  (#target_prop1: target1 -> bool)
+  (p: array_group_parser_spec source target_size1 target_prop1)
+  (#target2: Type0)
+  (f12: (target1 -> target2)) (f21: (target2 -> target1)) (prf_21_12: (x: target1) -> squash (f21 (f12 x) == x))
+: Tot (array_group_parser_spec source (ag_size_inj target_size1 f21) (serializable_inj target_prop1 f21))
+= fun c -> let x1 = p c in prf_21_12 x1; f12 x1
+
+let array_group_serializer_spec_inj
+  (#source: array_group None)
+  (#target1: Type0)
+  (#target_size1: target1 -> Tot nat)
+  (#target_prop1: target1 -> bool)
+  (#p: array_group_parser_spec source target_size1 target_prop1)
+  (s: array_group_serializer_spec p)
+  (#target2: Type0)
+  (f12: (target1 -> target2)) (f21: (target2 -> target1)) (prf_21_12: (x: target1) -> squash (f21 (f12 x) == x)) (prf_12_21: (x: target2) -> squash (f12 (f21 x) == x))
+: Tot (array_group_serializer_spec (array_group_parser_spec_inj p f12 f21 prf_21_12))
+= fun x2 -> prf_12_21 x2; s (f21 x2)
+
+let ag_spec_inj_injective
+  (#source:array_group None) (#target1 #target2: Type0) (#inj: bool)
+  (s: ag_spec source target1 inj)
+  (f12: (target1 -> target2)) (f21: (target2 -> target1)) (prf_21_12: (x: target1) -> squash (f21 (f12 x) == x)) (prf_12_21: (x: target2) -> squash (f12 (f21 x) == x))
+  (c: array_group_parser_spec_arg source)
+: Lemma
+  (ensures (inj ==> array_group_serializer_spec_inj s.ag_serializer f12 f21 prf_21_12 prf_12_21 (array_group_parser_spec_inj s.ag_parser f12 f21 prf_21_12 c) == c))
+= if inj
+  then begin
+    prf_21_12 (s.ag_parser c)
+  end
+
+let ag_spec_inj
+  (#source:array_group None) (#target1 #target2: Type0) (#inj: bool)
+  (s: ag_spec source target1 inj)
+  (f12: (target1 -> target2)) (f21: (target2 -> target1)) (prf_21_12: (x: target1) -> squash (f21 (f12 x) == x)) (prf_12_21: (x: target2) -> squash (f12 (f21 x) == x))
+: Tot (ag_spec source target2 inj)
+= {
+  ag_size = ag_size_inj s.ag_size f21;
+  ag_serializable = serializable_inj s.ag_serializable f21;
+  ag_parser = array_group_parser_spec_inj s.ag_parser f12 f21 prf_21_12;
+  ag_serializer = array_group_serializer_spec_inj s.ag_serializer f12 f21 prf_21_12 prf_12_21;
+  ag_parser_inj = Classical.forall_intro (ag_spec_inj_injective s f12 f21 prf_21_12 prf_12_21);
+}
+
 let array_group_parser_spec_bij
   (#source: array_group None)
   (#target1: Type0)

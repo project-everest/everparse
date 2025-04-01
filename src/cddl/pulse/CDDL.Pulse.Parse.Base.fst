@@ -239,6 +239,43 @@ fn impl_zero_copy_ext
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_zero_copy_bij
+    (#ty: Type0)
+    (#vmatch: perm -> ty -> cbor -> slprop)
+    (#[@@@erasable]t: Ghost.erased typ)
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable]tgt_serializable: Ghost.erased (tgt -> bool))
+    (#[@@@erasable]ps: Ghost.erased (parser_spec t tgt tgt_serializable))
+    (#impl_tgt: Type0)
+    (#[@@@erasable]r: rel impl_tgt tgt)
+    (i: impl_zero_copy_parse vmatch ps r)
+    (#[@@@erasable]tgt' : Type0)
+    ([@@@erasable]f12: Ghost.erased (tgt -> tgt'))
+    ([@@@erasable]f21: Ghost.erased (tgt' -> tgt))
+    ([@@@erasable]fprf_21_12: (x: tgt) -> squash (Ghost.reveal f21 (Ghost.reveal f12 x) == x))
+    (#impl_tgt' : Type0)
+    (g12: (impl_tgt -> impl_tgt'))
+    (g21: (impl_tgt' -> impl_tgt))
+    ([@@@erasable]gprf_21_12: (x: impl_tgt) -> squash (g21 (g12 x) == x))
+: impl_zero_copy_parse #_ vmatch #(Ghost.reveal t) #tgt' #(serializable_inj tgt_serializable f21) (parse_spec_inj ps (Ghost.reveal f12) (Ghost.reveal f21) fprf_21_12) #impl_tgt' (rel_fun r g21 f21)
+=
+    (c: ty)
+    (#p: perm)
+    (#v: Ghost.erased cbor)
+{
+  let res1 = i c;
+  with w1 . assert (r res1 w1);
+  let res2 = g12 res1;
+  let _ = gprf_21_12 res1;
+  let _ = fprf_21_12 w1;
+  Trade.rewrite_with_trade
+    (r res1 w1)
+    (rel_fun r g21 (Ghost.reveal f21) res2 (Ghost.reveal f12 (Ghost.reveal w1)));
+  Trade.trans _ _ (vmatch p c v);
+  res2
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_choice
     (#ty: Type u#0)
     (#vmatch: perm -> ty -> cbor -> slprop)

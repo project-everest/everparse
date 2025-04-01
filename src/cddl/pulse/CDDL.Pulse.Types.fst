@@ -354,6 +354,15 @@ let rel_option_right
   | Some s -> r i s
   )
 
+let rel_fun
+  (#impl #spec: Type0)
+  (r: rel impl spec)
+  (#impl' #spec' : Type0)
+  (f_impl : impl' -> impl)
+  (f_spec : spec' -> spec)
+: Tot (rel impl' spec')
+= mk_rel (fun i s -> r (f_impl i) (f_spec s))
+
 let rel_bij_l
   (#left #right: Type)
   (r: rel left right)

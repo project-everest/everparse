@@ -122,6 +122,47 @@ let spec_coerce_target_prop
   parser_inj = ();
 }
 
+let serializable_inj
+  (#target1: Type0)
+  (target1_prop: (target1 -> bool))
+  (#target2: Type0)
+  (f21: (target2 -> target1))
+  (x: target2)
+: Tot bool
+= target1_prop (f21 x)
+
+let parse_spec_inj (#source:typ) (#target1 #target2: Type0) (#target1_prop: target1 -> bool) (p: parser_spec source target1 target1_prop) (f12: (target1 -> target2)) (f21: (target2 -> target1)) (prf_21_12: (x: target1) -> squash (f21 (f12 x) == x))
+: Tot (parser_spec source target2 (serializable_inj target1_prop f21))
+= fun c -> let x1 = p c in prf_21_12 x1; f12 x1
+
+let serialize_spec_inj (#source:typ) (#target1 #target2: Type0) (#target1_prop: target1 -> bool) (#p: parser_spec source target1 target1_prop) (s: serializer_spec p) (f12: (target1 -> target2)) (f21: (target2 -> target1)) (prf_21_12: (x: target1) -> squash (f21 (f12 x) == x)) (prf_12_21: (x: target2) -> squash (f12 (f21 x) == x))
+: Tot (serializer_spec (parse_spec_inj p f12 f21 prf_21_12))
+= fun x2 -> prf_12_21 x2; s (f21 x2)
+
+let spec_inj_injective
+  (#source:typ) (#target1 #target2: Type0) (#inj: bool)
+  (s: spec source target1 inj)
+  (f12: (target1 -> target2)) (f21: (target2 -> target1)) (prf_21_12: (x: target1) -> squash (f21 (f12 x) == x)) (prf_12_21: (x: target2) -> squash (f12 (f21 x) == x))
+  (c: Cbor.cbor { source c })
+: Lemma
+  (ensures (inj ==> serialize_spec_inj s.serializer f12 f21 prf_21_12 prf_12_21 (parse_spec_inj s.parser f12 f21 prf_21_12 c) == c))
+= if inj
+  then begin
+    prf_21_12 (s.parser c)
+  end
+
+let spec_inj
+  (#source:typ) (#target1 #target2: Type0) (#inj: bool)
+  (s: spec source target1 inj)
+  (f12: (target1 -> target2)) (f21: (target2 -> target1)) (prf_21_12: (x: target1) -> squash (f21 (f12 x) == x)) (prf_12_21: (x: target2) -> squash (f12 (f21 x) == x))
+: Tot (spec source target2 inj)
+= {
+  serializable = serializable_inj s.serializable f21;
+  parser = parse_spec_inj s.parser f12 f21 prf_21_12;
+  serializer = serialize_spec_inj s.serializer f12 f21 prf_21_12 prf_12_21;
+  parser_inj = Classical.forall_intro (spec_inj_injective s f12 f21 prf_21_12 prf_12_21);
+}
+
 let parse_spec_bij (#source:typ) (#target1 #target2: Type0) (#target1_prop: target1 -> bool) (p: parser_spec source target1 target1_prop) (target2_prop: target2 -> bool) (bij: bijection target1 target2 {
   forall x . target2_prop x <==> target1_prop (bij.bij_to_from x)
 }) : parser_spec source target2 target2_prop =

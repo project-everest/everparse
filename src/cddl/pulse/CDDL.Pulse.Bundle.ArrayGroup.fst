@@ -35,6 +35,39 @@ let get_array_bundle_impl_type
   | Mkarray_bundle _ _ _ _ ab_impl_type _ _ _ -> ab_impl_type
 
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
+let bundle_array_group_bij
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (b: array_bundle cbor_array_iterator_match)
+  (#[@@@erasable]tgt: Type0)
+  (#[@@@erasable]tgt' : Type0)
+  (#[@@@erasable]f12: Ghost.erased (tgt -> tgt'))
+  (#[@@@erasable]f21: Ghost.erased (tgt' -> tgt))
+  ([@@@erasable]fprf_21_12: (x: tgt) -> squash (Ghost.reveal f21 (Ghost.reveal f12 x) == x))
+  ([@@@erasable]fprf_12_21: (x: tgt') -> squash (Ghost.reveal f12 (Ghost.reveal f21 x) == x))
+  ([@@@erasable] tgt_eq: squash (tgt == b.ab_spec_type))
+  (#impl_tgt: Type0)
+  (#impl_tgt' : Type0)
+  (g12: (impl_tgt -> impl_tgt'))
+  (g21: (impl_tgt' -> impl_tgt))
+  ([@@@erasable]gprf_21_12: (x: impl_tgt) -> squash (g21 (g12 x) == x))
+  ([@@@erasable]gprf_12_21: (x: impl_tgt') -> squash (g12 (g21 x) == x))
+  ([@@@erasable] impl_tgt_eq: squash (impl_tgt == b.ab_impl_type))
+: Tot (array_bundle cbor_array_iterator_match)
+= match b with
+  | Mkarray_bundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel b_parser b_serializer ->
+    {
+      ab_typ = b_typ;
+      ab_spec_type = tgt';
+      ab_spec_type_eq = Ghost.hide (let eq' = Ghost.reveal b_spec_type_eq in let f21' = Ghost.reveal f21 in EqTest.mk_eq_test (fun x1' x2' -> fprf_12_21 x1'; fprf_12_21 x2'; eq' (f21' x1') (f21' x2')));
+      ab_spec = ag_spec_inj b_spec f12 f21 fprf_21_12 fprf_12_21;
+      ab_impl_type = impl_tgt';
+      ab_rel = rel_fun b_rel g21 f21;
+      ab_parser = impl_zero_copy_array_group_bij b_parser f12 f21 fprf_21_12 g12 g21 gprf_21_12;
+      ab_serializer = impl_serialize_array_group_bij b_serializer f12 f21 fprf_21_12 fprf_12_21 g12 g21 gprf_21_12 gprf_12_21;
+    }
+
+inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let array_bundle_set_parser_and_serializer
   (#cbor_array_iterator_t: Type0)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)

@@ -135,6 +135,44 @@ fn impl_zero_copy_array_group_ext
 }
 
 inline_for_extraction noextract [@@noextract_to "krml"]
+fn impl_zero_copy_array_group_bij
+  (#cbor_array_iterator_t: Type)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+    (#[@@@erasable]g1: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable]tgt_size1: Ghost.erased (tgt -> nat))
+    (#[@@@erasable]tgt_serializable1: Ghost.erased (tgt -> bool))
+    (#[@@@erasable]ps1: Ghost.erased (array_group_parser_spec g1 tgt_size1 tgt_serializable1))
+    (#impl_tgt: Type0)
+    (#[@@@erasable]r: rel impl_tgt tgt)
+    (i: impl_zero_copy_array_group cbor_array_iterator_match ps1 r)
+    (#[@@@erasable]tgt' : Type0)
+    ([@@@erasable]f12: Ghost.erased (tgt -> tgt'))
+    ([@@@erasable]f21: Ghost.erased (tgt' -> tgt))
+    ([@@@erasable]fprf_21_12: (x: tgt) -> squash (Ghost.reveal f21 (Ghost.reveal f12 x) == x))
+    (#impl_tgt' : Type0)
+    (g12: (impl_tgt -> impl_tgt'))
+    (g21: (impl_tgt' -> impl_tgt))
+    ([@@@erasable]gprf_21_12: (x: impl_tgt) -> squash (g21 (g12 x) == x))
+: impl_zero_copy_array_group #cbor_array_iterator_t cbor_array_iterator_match #(Ghost.reveal g1) #tgt' #(ag_size_inj tgt_size1 f21) #(serializable_inj tgt_serializable1 f21) (array_group_parser_spec_inj ps1 f12 f21 fprf_21_12) #impl_tgt' (rel_fun r g21 (Ghost.reveal f21))
+=
+    (c: cbor_array_iterator_t)
+    (#p: perm)
+    (#l: Ghost.erased (list cbor))
+{
+  let res1 = i c;
+  with w1 . assert (r res1 w1);
+  let res2 = g12 res1;
+  let _ = gprf_21_12 res1;
+  let _ = fprf_21_12 w1;
+  Trade.rewrite_with_trade
+    (r res1 w1)
+    (rel_fun r g21 (Ghost.reveal f21) res2 (Ghost.reveal f12 (Ghost.reveal w1)));
+  Trade.trans _ _ (cbor_array_iterator_match p c l);
+  res2
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_zero_copy_array_group_item
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)

@@ -120,6 +120,27 @@ val impl_serialize_array_group_ext
 : impl_serialize_array_group #(Ghost.reveal t') #tgt #inj' (Ghost.reveal ps') #impl_tgt r
 
 inline_for_extraction noextract [@@noextract_to "krml"]
+val impl_serialize_array_group_bij
+    (#[@@@erasable]t: Ghost.erased (array_group None))
+    (#[@@@erasable]tgt: Type0)
+    (#[@@@erasable] inj: Ghost.erased bool)
+    (#[@@@erasable]ps: Ghost.erased (ag_spec t tgt inj))
+    (#impl_tgt: Type0)
+    (#[@@@erasable]r: rel impl_tgt tgt)
+    (i: impl_serialize_array_group ps r)
+    (#[@@@erasable]tgt' : Type0)
+    ([@@@erasable]f12: Ghost.erased (tgt -> tgt'))
+    ([@@@erasable]f21: Ghost.erased (tgt' -> tgt))
+    ([@@@erasable]fprf_21_12: (x: tgt) -> squash (Ghost.reveal f21 (Ghost.reveal f12 x) == x))
+    ([@@@erasable]fprf_12_21: (x: tgt') -> squash (Ghost.reveal f12 (Ghost.reveal f21 x) == x))
+    (#impl_tgt' : Type0)
+    (g12: (impl_tgt -> impl_tgt'))
+    (g21: (impl_tgt' -> impl_tgt))
+    ([@@@erasable]gprf_21_12: (x: impl_tgt) -> squash (g21 (g12 x) == x))
+    ([@@@erasable]gprf_12_21: (x: impl_tgt') -> squash (g12 (g21 x) == x))
+: impl_serialize_array_group #(Ghost.reveal t) #tgt' #inj (ag_spec_inj ps f12 f21 fprf_21_12 fprf_12_21) #impl_tgt' (rel_fun r g21 f21)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_array_group_item
     (#[@@@erasable]t: Ghost.erased typ)
     (#[@@@erasable]tgt: Type0)
