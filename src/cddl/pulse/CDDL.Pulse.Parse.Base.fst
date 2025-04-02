@@ -76,13 +76,15 @@ let validate_and_parse_postcond_some
   (#tgt_serializable: (tgt -> bool))
   (ps: parser_spec t tgt tgt_serializable)
   (w: Seq.seq U8.t)
-  (wx: tgt)
+  (#tgt': Type0)
+  (wx: tgt')
   (wr: Seq.seq U8.t)
 : Tot prop
 = match Cbor.cbor_det_parse w with
   | None -> False
   | Some (c, len) ->
     t c /\
+    tgt' == tgt /\
     wx == ps c /\
     wr == Seq.slice w len (Seq.length w) /\
     w == Seq.append (Cbor.cbor_det_serialize c) wr
@@ -93,14 +95,15 @@ let validate_and_parse_post_some
   (#tgt: Type0)
   (#tgt_serializable: (tgt -> bool))
   (ps: parser_spec t tgt tgt_serializable)
-  (#impl_tgt: Type0)
-  (r: rel impl_tgt tgt)
+  (#tgt': Type0)
+  (#impl_tgt': Type0)
+  (r: rel impl_tgt' tgt')
   (s: S.slice U8.t)
   (p: perm)
   (w: Seq.seq U8.t)
-  (x: impl_tgt)
+  (x: impl_tgt')
   (rem: S.slice U8.t)
-  (wx: tgt)
+  (wx: tgt')
   (wr: Seq.seq U8.t)
 : Tot slprop
 =
@@ -115,12 +118,13 @@ let validate_and_parse_post
   (#tgt: Type0)
   (#tgt_serializable: (tgt -> bool))
   (ps: parser_spec t tgt tgt_serializable)
-  (#impl_tgt: Type0)
-  (r: rel impl_tgt tgt)
+  (#impl_tgt': Type0)
+  (#tgt': Type0)
+  (r: rel impl_tgt' tgt')
   (s: S.slice U8.t)
   (p: perm)
   (w: Seq.seq U8.t)
-  (res: option (impl_tgt & S.slice U8.t))
+  (res: option (impl_tgt' & S.slice U8.t))
 : Tot slprop
 = match res with
   | None -> pts_to s #p w ** pure (validate_and_parse_postcond_none t w)
@@ -141,15 +145,21 @@ fn validate_and_parse
   (#impl_tgt: Type0)
   (#[@@@erasable] r: rel impl_tgt tgt)
   (i: impl_zero_copy_parse vmatch ps r)
-  (sq: squash (Ghost.reveal t1 == Ghost.reveal t))
+  ([@@@erasable] sq: squash (Ghost.reveal t1 == Ghost.reveal t))
+  (#impl_tgt': Type0)
+  (#[@@@erasable] tgt': Type0)
+  ([@@@erasable] r': rel impl_tgt' tgt')
+  ([@@@erasable] sq_impl_tgt: squash (impl_tgt' == impl_tgt))
+  ([@@@erasable] sq_tgt: squash (tgt' == tgt))
+  ([@@@erasable] sq_r: squash (r' == r))
   (s: S.slice U8.t)
   (#[@@@erasable] p: perm)
   (#[@@@erasable] w: Ghost.erased (Seq.seq U8.t))
 requires
   pts_to s #p w
-returns res: option (impl_tgt & S.slice U8.t)
+returns res: option (impl_tgt' & S.slice U8.t)
 ensures
-  validate_and_parse_post ps r s p w res
+  validate_and_parse_post ps r' s p w res
 {
   let q = parse s;
   match q {
