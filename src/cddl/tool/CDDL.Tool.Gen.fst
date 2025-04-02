@@ -39,13 +39,13 @@ let opaque_to_smt = "\"opaque_to_smt\""
 
 let extend_ancillaries' env' ancillary_env source source' = "
 let _ : unit = _ by (FStar.Tactics.print (\"ancillary envs\"); FStar.Tactics.exact (`()))
-[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+[@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
 let av"^env'^"_0 : Parse.ancillary_validate_env Det.cbor_det_match "^env'^".be_ast.e_sem_env =
   Parse.ancillary_validate_env_extend av"^ancillary_env^" _
-[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+[@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
 let a"^env'^"_0 : ancillary_bundle_env Det.cbor_det_match "^env'^".be_ast.e_sem_env =
   ancillary_bundle_env_extend a"^ancillary_env^" _
-[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+[@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
 let aa"^env'^"_0 : ancillary_array_bundle_env Det.cbor_det_array_iterator_match "^env'^".be_ast.e_sem_env =
   ancillary_array_bundle_env_extend aa"^ancillary_env^" _
 let _ : unit = _ by (FStar.Tactics.print (\"source'\"); FStar.Tactics.exact (`()))
@@ -172,7 +172,7 @@ let "^serializer^"' = "^bundle^".b_serializer"
 let produce_parser env env_anc' wf validator parser serializer typename bundle =
 produce_validator env wf validator^"
 let _ : unit = _ by (FStar.Tactics.print (\"bundle\"); FStar.Tactics.exact (`()))
-noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
+noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr; "^opaque_to_smt^"]
 let "^bundle^"' = impl_bundle_wf_type' Det.cbor_det_impl "^env^" av"^env_anc'^" a"^env_anc'^" aa"^env_anc'^" "^wf^" (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))"^
 produce_parser0 env env_anc' wf validator parser serializer typename bundle
 
@@ -185,7 +185,7 @@ let "^validator^" = Parse.validate_ask_for_type Det.cbor_det_impl "^env^".be_v "
 let produce_ask_for_parser env env_anc' wf validator parser serializer typename bundle =
 produce_ask_for_validator env wf validator^"
 let _ : unit = _ by (FStar.Tactics.print (\"bundle\"); FStar.Tactics.exact (`()))
-noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
+noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr; "^opaque_to_smt^"]
 let "^bundle^"' = impl_bundle_wf_ask_for_guarded_type Det.cbor_det_impl "^env^" av"^env_anc'^" a"^env_anc'^" aa"^env_anc'^" "^wf^" (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))"^
 produce_parser0 env env_anc' wf validator parser serializer typename bundle
 
@@ -197,7 +197,7 @@ let "^validator^" = Parse.validate_ask_for_array_group Det.cbor_det_impl "^env^"
 let produce_ask_for_array_parser env env_anc' wf validator parser serializer typename bundle =
 produce_ask_for_array_validator env wf validator^"
 let _ : unit = _ by (FStar.Tactics.print (\"bundle\"); FStar.Tactics.exact (`()))
-noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
+noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr; "^opaque_to_smt^"]
 let "^bundle^"' = impl_bundle_wf_ask_for_array_group Det.cbor_det_impl "^env^" av"^env_anc'^" a"^env_anc'^" aa"^env_anc'^" "^wf^" (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
 let g"^bundle^"' : Ghost.erased (array_bundle Det.cbor_det_array_iterator_match) = Ghost.hide "^bundle^"'
 let _ : unit = _ by (FStar.Tactics.print (\"type\"); FStar.Tactics.exact (`()))
@@ -255,11 +255,11 @@ let rec compute_ancillaries_aux
     | Some (P.AskForType t _ false) ->
       let msg = produce_ask_for_validator env wf validator ^ "
 let _ : unit = _ by (FStar.Tactics.print (\"ancillary env'\"); FStar.Tactics.exact (`()))
-[@@bundle_attr; sem_attr; noextract_to "^krml^"] noextract
+[@@bundle_attr; sem_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let av"^anc_env'^" = Parse.ancillary_validate_env_set_ask_for av"^anc_env^" "^wf^" (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) "^validator^"
-[@@bundle_attr; noextract_to "^krml^"] noextract
+[@@bundle_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let a"^anc_env'^" = a" ^ anc_env ^ "
-[@@bundle_attr; noextract_to "^krml^"] noextract
+[@@bundle_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let aa"^anc_env'^" = aa" ^ anc_env
       in
       { anc with
@@ -273,11 +273,11 @@ let aa"^anc_env'^" = aa" ^ anc_env
     | Some (P.AskForType t t_wf true) ->
       let msg = produce_ask_for_parser env anc_env wf validator parser serializer typename bundle ^ "
 let _ : unit = _ by (FStar.Tactics.print (\"ancillary env'\"); FStar.Tactics.exact (`()))
-[@@bundle_attr; sem_attr; noextract_to "^krml^"] noextract
+[@@bundle_attr; sem_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let av"^anc_env'^" = av"^anc_env^"
-[@@bundle_attr; noextract_to "^krml^"] noextract
+[@@bundle_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let a"^anc_env'^" = ancillary_bundle_env_set_ask_for a"^anc_env^" "^wf^" (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) "^validator^" "^bundle^"
-[@@bundle_attr; noextract_to "^krml^"] noextract
+[@@bundle_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let aa"^anc_env'^" = aa" ^ anc_env
       in
       { anc with
@@ -291,11 +291,11 @@ let aa"^anc_env'^" = aa" ^ anc_env
     | Some (P.AskForArrayGroup t t_wf) ->
       let msg = produce_ask_for_array_parser env anc_env wf validator parser serializer typename bundle ^ "
 let _ : unit = _ by (FStar.Tactics.print (\"ancillary env'\"); FStar.Tactics.exact (`()))
-[@@bundle_attr; sem_attr; noextract_to "^krml^"] noextract
+[@@bundle_attr; sem_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let av"^anc_env'^" = av"^anc_env^"
-[@@bundle_attr; noextract_to "^krml^"] noextract
+[@@bundle_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let a"^anc_env'^" = a"^anc_env^"
-[@@bundle_attr; noextract_to "^krml^"] noextract
+[@@bundle_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let aa"^anc_env'^" = ancillary_array_bundle_env_set_ask_for aa"^anc_env^" "^wf^" (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) "^validator^" "^bundle
       in
       { anc with
@@ -309,7 +309,7 @@ let aa"^anc_env'^" = ancillary_array_bundle_env_set_ask_for aa"^anc_env^" "^wf^"
     end
   | ask' ->
     let msg wf' = "
-[@@noextract_to "^krml^"; bundle_attr] noextract
+[@@noextract_to "^krml^"; bundle_attr; "^opaque_to_smt^"] noextract
 let "^wf'^"' = Parse.ask_zero_copy_ask_for_option (Parse.ancillary_validate_env_is_some av"^anc_env^") (ancillary_bundle_env_is_some a"^anc_env^") (ancillary_array_bundle_env_is_some aa"^anc_env^") "^wf
     in
     let anc2 = init_compute_ancillaries_aux anc ask' env msg in
@@ -360,7 +360,7 @@ let rec compute_ancillaries
   | ask ->
     let anc_env = env ^ "_" ^ string_of_int anc.env_index in
     let msg wf' = "
-[@@noextract_to "^krml^"; bundle_attr] noextract
+[@@noextract_to "^krml^"; bundle_attr; "^opaque_to_smt^"] noextract
 let "^wf'^"' = Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some av"^anc_env^") (ancillary_bundle_env_is_some a"^anc_env^") (ancillary_array_bundle_env_is_some aa"^anc_env^") "^wf
     in
     let anc2 = init_compute_ancillaries_aux anc ask env msg in
@@ -497,14 +497,14 @@ let "^source^"_cons () : squash (Cons? "^source^") = _ by (T.trefl_or_norm ())
 let _ : unit = assert (\""^name^"\" == T.pull_name "^source^" ("^source^"_cons ())) by (T.trefl_or_norm ())
 let _ : unit = _ by (FStar.Tactics.print (\"owf'\"); FStar.Tactics.exact (`()))
 let "^source^"_type () : squash (CDDL.Spec.AST.Driver.DType? (snd (T.list_hd "^source^" ("^source^"_cons ())))) = _ by (T.trefl_or_norm ())
-[@@noextract_to "^krml^"] noextract
+[@@noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let o"^wf^"' = compute_wf_typ' "^env^".be_ast (T.pull_name "^source^" ("^source^"_cons ())) (_ by (T.trefl_or_norm ())) (T.pull_type "^source^" ("^source^"_cons ()) ("^source^"_type ())) "^fuel^"
 let _ : unit = _ by (FStar.Tactics.print (\"owf\"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; "^opaque_to_smt^"; "^opaque_to_smt^"] noextract
 let o"^wf^" = o"^wf^"'
 let o"^wf^"_eq () : Lemma (ensures (o"^wf^" == o"^wf^"')) [SMTPatOr [[SMTPat o"^wf^"]; [SMTPat o"^wf^"']]] = assert (o"^wf^" == o"^wf^"') by (T.trefl_or_norm ())
 let _ : unit = _ by (FStar.Tactics.print (\"wf'\"); FStar.Tactics.exact (`()))
-[@@noextract_to "^krml^"] noextract
+[@@noextract_to "^krml^"; "^opaque_to_smt^"] noextract
 let "^wf^"' = extract_computed_wf_typ' "^env^".be_ast (T.pull_name "^source^" ("^source^"_cons ())) (T.pull_type "^source^" ("^source^"_cons ()) ("^source^"_type ())) "^fuel^" o"^wf^" (_ by (T.trefl_or_norm ()))
 let _ : unit = _ by (FStar.Tactics.print (\"wf\"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; base_attr; "^opaque_to_smt^"] noextract
@@ -512,7 +512,7 @@ let "^wf^" = "^wf^"'
 let "^wf^"_eq () : Lemma (ensures ("^wf^" == "^wf^"')) [SMTPatOr [[SMTPat "^wf^"]; [SMTPat "^wf^"']]] = assert ("^wf^" == "^wf^"') by (T.trefl_or_norm ())"^
 anc1.output^produce_parser env env_anc' wf validator parser serializer parsertype bundle ^"
 let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
-[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+[@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
 let "^env'^" =
   bundle_env_extend_typ_with_weak "^env^" (T.pull_name "^source^" ("^source^"_cons ())) (T.pull_type "^source^" ("^source^"_cons ()) ("^source^"_type ())) "^wf^" "^validator^" "^bundle^
 extend_ancillaries_for_typ env env' anc1.env_index source source'
@@ -545,7 +545,7 @@ let "^source^"_cons () : squash (Cons? "^source^") = _ by (T.trefl_or_norm ())
 let _ : unit = assert (\""^name^"\" == T.pull_name "^source^" ("^source^"_cons ())) by (T.trefl_or_norm ())
 let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
 let "^source^"_group () : squash (CDDL.Spec.AST.Driver.DGroup? (snd (T.list_hd "^source^" ("^source^"_cons ())))) = _ by (T.trefl_or_norm ())
-[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+[@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
 let "^env'^" =
   bundle_env_extend_group "^env^" (T.pull_name "^source^" ("^source^"_cons ())) (T.pull_group "^source^" ("^source^"_cons ()) ("^source^"_group ())) (_ by (T.trefl_or_norm ())) (_ by (T.trefl_or_norm ()))" ^ extend_ancillaries_for_array_group env env' source source'
 )
@@ -611,15 +611,15 @@ let option_sorted_source = topological_sort source
 let option_sorted_source_some () : squash (Some? option_sorted_source) = _ by (FStar.Tactics.norm [delta; iota; primops]; FStar.Tactics.trefl ())
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; base_attr; "^opaque_to_smt^"] noextract
 let sorted_source0 = T.get_option_some option_sorted_source (option_sorted_source_some ())
-[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+[@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
 let env0 : bundle_env Det.cbor_det_match = empty_bundle_env _
-[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+[@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
 let avenv0_0 : Parse.ancillary_validate_env Det.cbor_det_match env0.be_ast.e_sem_env =
   fun _ -> None
-[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+[@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
 let aenv0_0 : ancillary_bundle_env Det.cbor_det_match env0.be_ast.e_sem_env =
   fun _ _ -> None
-[@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
+[@@noextract_to "^krml^"; sem_attr; bundle_attr; "^opaque_to_smt^"] noextract
 let aaenv0_0 : ancillary_array_bundle_env Det.cbor_det_array_iterator_match env0.be_ast.e_sem_env =
   fun _ _ -> None
 let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64)
