@@ -110,6 +110,7 @@ let base_delta_only_steps = [
         `%fst; `%snd; `%Mktuple2?._1; `%Mktuple2?._2;
         `%Some?; `%None?;
         `%Some?.v;
+        `%coerce_eq;
 ]
 
 noextract [@@noextract_to "krml"]
