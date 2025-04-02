@@ -211,15 +211,29 @@ endif
 .PHONY: cddl-demo
 
 ifeq (,$(NO_PULSE))
-cose: cddl
-	+$(MAKE) -C src/cose
+cose-extract-test: cddl
+	+$(MAKE) -C src/cose test-extract
+
+# This rule is incompatible with cose-extract-test
+cose-snapshot: cddl
+	+$(MAKE) -C src/cose snapshot
 else
-cose:
+cose-extract-test:
+cose-snapshot:
 endif
+
+.PHONY: cose-extract-test cose-snapshot
+
+cose-test: cose-extract-test
+
+.PHONY: cose-test
+
+cose: cbor
+	+$(MAKE) -C src/cose
 
 .PHONY: cose
 
-cddl-test: cddl cddl-plugin-test cddl-demo cose
+cddl-test: cddl cddl-plugin-test cddl-demo cose-extract-test
 
 .PHONY: cddl-test
 
