@@ -1,6 +1,6 @@
 all: package-subset asn1 cbor cddl cbor-interface
 
-export FSTAR_EXE ?= $(realpath opt)/fstar-install/fstar/bin/fstar.exe
+export FSTAR_EXE ?= $(realpath opt)/FStar/bin/fstar.exe
 export KRML_HOME ?= $(realpath opt/karamel)
 export PULSE_HOME ?= $(realpath opt/pulse/out)
 

@@ -1,0 +1,29 @@
+{
+    "fstar_exe": "/home/nswamy/workspace/everest/everparse/opt/FStar/bin/fstar.exe",
+    "options": [
+      "--load_cmxs", "evercddl_lib",
+        "--load_cmxs", "evercddl_plugin",
+        "--warn_error", "-342", 
+        "--odir", ".",
+        "--cache_checked_modules",
+        "--warn_error", "@241",
+        "--already_cached", "PulseCore,Pulse,C,LowStar,*,-CDDLTest,Prims,FStar,LowStar",
+        "--cmi"
+    ],
+    "include_dirs": [
+        "/home/nswamy/workspace/everest/everparse/src/cbor/spec",
+        "/home/nswamy/workspace/everest/everparse/src/cddl/spec",
+        "/home/nswamy/workspace/everest/everparse/src/cddl/tool",
+        "/home/nswamy/workspace/everest/everparse/lib/evercddl/lib",
+        "/home/nswamy/workspace/everest/everparse/lib/evercddl/plugin", 
+        "/home/nswamy/workspace/everest/everparse/src/cbor/pulse",
+        "/home/nswamy/workspace/everest/everparse/src/cddl/pulse",
+        "_output",
+        "/home/nswamy/workspace/everest/everparse/opt/karamel/krmllib",
+        "/home/nswamy/workspace/everest/everparse/opt/karamel/krmllib/obj",
+        "/home/nswamy/workspace/everest/everparse/opt/pulse/out/lib/pulse" 
+    ]
+  }
+  
+
+
