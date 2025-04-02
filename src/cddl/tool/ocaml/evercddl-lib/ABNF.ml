@@ -6,7 +6,7 @@ let print_spaces () =
   let spaces = String.make !stack_level ' ' in
   print_string spaces
 
-let enable_debug = true
+let enable_debug = false
 
 let debug
       (name: string)
