@@ -4,6 +4,8 @@ include CDDL.Pulse.AST.Bundle
 
 let eq_sym (#t: Type) (#x1 #x2: t) (peq: squash (x1 == x2)) : Tot (squash (x2 == x1)) = ()
 
+let get_option_some (#t: Type) (x: option t) (sq: squash (Some? x)) : Tot t = Some?.v x
+
 let solve_by_norm () : FStar.Tactics.Tac unit =
   FStar.Tactics.norm [delta; iota; zeta; primops];
   FStar.Tactics.trefl ()
@@ -62,11 +64,11 @@ let solve_mk_wf_typ_fuel_for () : FStar.Tactics.Tac unit =
 open CDDL.Spec.AST.Driver
 
 [@@base_attr; noextract_to "krml"] noextract
-let list_hd (#t: Type) (l: list t { Cons? l }) : Tot t =
+let list_hd (#t: Type) (l: list t) (sq: squash (Cons? l)) : Tot t =
   let hd :: _ = l in hd
 
 [@@base_attr; noextract_to "krml"] noextract
-let list_tl (#t: Type) (l: list t { Cons? l }) : Tot (list t) =
+let list_tl (#t: Type) (l: list t) (sq: squash (Cons? l)) : Tot (list t) =
   let _ :: tl = l in tl
 
 [@@base_attr; noextract_to "krml"] noextract
@@ -79,21 +81,26 @@ let pair_snd (#t1 #t2: Type) (x: (t1 & t2)) : Tot t2 =
 
 [@@base_attr; noextract_to "krml"] noextract
 let pull_name
-  (l: list (string & decl) { Cons? l })
+  (l: list (string & decl))
+  (sq: squash (Cons? l))
 : Tot string
-= (pair_fst (list_hd l))
+= (pair_fst (list_hd l sq))
 
 [@@base_attr; noextract_to "krml"] noextract
 let pull_type
-  (l: list (string & decl) { Cons? l /\ DType? (snd (List.Tot.hd l)) })
+  (l: list (string & decl))
+  (sq: squash (Cons? l))
+  (sq2: squash (DType? (snd (list_hd l sq))))
 : Tot typ
-= (DType?._0 (pair_snd (list_hd l)))
+= (DType?._0 (pair_snd (list_hd l sq)))
 
 [@@base_attr; noextract_to "krml"] noextract
 let pull_group
-  (l: list (string & decl) { Cons? l /\ DGroup? (snd (List.Tot.hd l)) })
+  (l: list (string & decl))
+  (sq: squash (Cons? l))
+  (sq2: squash (DGroup? (snd (list_hd l sq))))
 : Tot group
-= (DGroup?._0 (pair_snd (list_hd l)))
+= (DGroup?._0 (pair_snd (list_hd l sq)))
 
 noextract [@@noextract_to "krml"]
 let base_steps = [
