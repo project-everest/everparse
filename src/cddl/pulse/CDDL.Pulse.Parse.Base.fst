@@ -132,6 +132,27 @@ let validate_and_parse_post
     exists* wx wr . validate_and_parse_post_some ps r s p w x rem wx wr
 
 inline_for_extraction noextract [@@noextract_to "krml"]
+let validate_and_parse_t
+  (#ty: Type0)
+  ( vmatch: perm -> ty -> cbor -> slprop)
+  ( t1: typ)
+  (# t: typ)
+  (# tgt: Type0)
+  (# tgt_serializable: (tgt -> bool))
+  ( ps: (parser_spec t tgt tgt_serializable))
+  (#impl_tgt': Type0)
+  (# tgt': Type0)
+  ( r': rel impl_tgt' tgt')
+: Tot Type
+=
+  (s: S.slice U8.t) ->
+  (# p: perm) ->
+  (# w: Ghost.erased (Seq.seq U8.t)) ->
+  stt (option (impl_tgt' & S.slice U8.t))
+    (pts_to s #p w)
+    (fun res -> validate_and_parse_post ps r' s p w res)
+
+inline_for_extraction noextract [@@noextract_to "krml"]
 fn validate_and_parse
   (#ty: Type)
   (# [@@@erasable] vmatch: perm -> ty -> cbor -> slprop)
@@ -152,14 +173,11 @@ fn validate_and_parse
   ([@@@erasable] sq_impl_tgt: squash (impl_tgt' == impl_tgt))
   ([@@@erasable] sq_tgt: squash (tgt' == tgt))
   ([@@@erasable] sq_r: squash (r' == r))
+: validate_and_parse_t #ty vmatch t1 #t #tgt #tgt_serializable ps #impl_tgt' #tgt' r'
+=
   (s: S.slice U8.t)
   (#[@@@erasable] p: perm)
   (#[@@@erasable] w: Ghost.erased (Seq.seq U8.t))
-requires
-  pts_to s #p w
-returns res: option (impl_tgt' & S.slice U8.t)
-ensures
-  validate_and_parse_post ps r' s p w res
 {
   let q = parse s;
   match q {
