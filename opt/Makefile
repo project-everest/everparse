@@ -2,24 +2,25 @@ all: FStar karamel pulse
 
 export ADMIT=1
 
+export EVERPARSE_OPT_PATH=$(realpath .)
+
+include env.Makefile
+
 submodules:
 	git submodule init
 	git submodule update
 
 FStar: submodules
-	+$(MAKE) -C $@ FSTAR_TAG= package
-	rm -rf fstar-install
-	mkdir fstar-install
-ifeq ($(OS),Windows_NT)
-	$(error "Not sure what to do on Windows")
-else
-	tar xzf $@/fstar.tar.gz -C fstar-install
-endif
+	+$(MAKE) -C $@ 1
 
-karamel: FStar
-	+$(MAKE) -C $@ FSTAR_EXE=$(realpath fstar-install/fstar/bin/fstar.exe)
+z3: submodules
+	mkdir -p $@
+	FStar/.scripts/get_fstar_z3.sh $(realpath .)/$@
 
-pulse: FStar
-	+$(MAKE) -C $@ FSTAR_EXE=$(realpath fstar-install/fstar/bin/fstar.exe)
+karamel: FStar z3
+	+$(MAKE) -C $@
 
-.PHONY: all FStar karamel pulse submodules
+pulse: FStar z3
+	+$(MAKE) -C $@
+
+.PHONY: all FStar karamel z3 pulse submodules
