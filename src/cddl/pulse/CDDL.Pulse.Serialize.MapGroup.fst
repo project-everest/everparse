@@ -773,7 +773,7 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_aux
 
 #pop-options
 
-#push-options "--z3rlimit 256 --print_implicits"
+#push-options "--z3rlimit 256 --print_implicits --split_queries always"
 
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc'

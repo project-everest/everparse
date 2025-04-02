@@ -6,41 +6,12 @@ module S = Pulse.Lib.Slice.Util
 module V = Pulse.Lib.Vec
 module Spec = CDDL.Spec.All
 
-module FE = FStar.FunctionalExtensionality
-
-let fe_restricted_arrow (t t': Type) = FE.restricted_t t (fun _ -> t')
-
-let fe_restricted_arrow_eq (#t #t': Type) (f1 f2: fe_restricted_arrow t t') : Lemma
-  (requires (FE.feq f1 f2))
-  (ensures f1 == f2)
-= ()
-
-let fe_restricted_arrow_eq' (#t #t': Type) (f1 f2: fe_restricted_arrow t t')
-  (prf: (x: t) -> Lemma
-    (f1 x == f2 x)
-  )
-: Lemma
-  (f1 == f2)
-= Classical.forall_intro prf;
-  fe_restricted_arrow_eq f1 f2
-
-let feq2 (#t1 #t2 #t: Type) (f g: (t1 -> t2 -> t)) : Tot prop =
-  forall x1 x2 . f x1 x2 == g x1 x2
-
-let rel (t1 t2: Type) = fe_restricted_arrow t1 (fe_restricted_arrow t2 slprop)
+let rel (t1 t2: Type) = t1 -> t2 -> slprop
 
 let coerce_rel (#t1 #t': Type) (r: rel t1 t') (t2: Type) (sq: squash (t1 == t2)) : Tot (rel t2 t') = r
 
-let rel_eq (#t #t': Type) (r1 r2: rel t t') : Lemma
-  (requires (feq2 r1 r2))
-  (ensures r1 == r2)
-= fe_restricted_arrow_eq' r1 r2 (fun x ->
-    fe_restricted_arrow_eq' (r1 x) (r2 x) (fun x' -> ())
-  )
-
 [@@pulse_unfold]
-let mk_rel (#t: Type) (#t': Type) (f: (x: t) -> (x': t') -> slprop) : Tot (rel t t') =
-  FE.on_dom t (fun x -> FE.on_dom t' (f x))
+let mk_rel (#t: Type) (#t': Type) (f: (x: t) -> (x': t') -> slprop) : Tot (rel t t') = f
 
 let rel_always_false (t1 t2: Type0) : rel t1 t2 = mk_rel (fun _ _ -> pure False)
 
