@@ -44,6 +44,13 @@ let option_ask_for_is_type
   | Some (AskForType _ _ _) -> True
   | _ -> False
 
+let option_ask_for_get_type
+  (v_sem_env: sem_env)
+  (a: option (ask_for v_sem_env))
+  (sq: squash (option_ask_for_is_type v_sem_env a))
+: Tot (Ghost.erased CDDL.Spec.Base.typ)
+= typ_sem v_sem_env (AskForType?.t (Some?.v a))
+
 [@@base_attr]
 let option_ask_for_is_array_group
   (v_sem_env: sem_env)

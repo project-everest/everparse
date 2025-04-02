@@ -76,7 +76,7 @@ let validate_ask_for_type
   (env: validator_env vmatch v_sem_env { SZ.fits_u64 })
   (a: option (ask_for v_sem_env))
   (sq: squash (option_ask_for_is_type v_sem_env a))
-: impl_typ vmatch (typ_sem v_sem_env (AskForType?.t (Some?.v a)))
+: impl_typ vmatch (option_ask_for_get_type v_sem_env a sq)
 = let Some (AskForType t t_wf guarded) = a in
   V.validate_typ impl env guarded t t_wf
 

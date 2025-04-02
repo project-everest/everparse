@@ -2,6 +2,8 @@ module CDDL.Pulse.AST.Tactics
 include CDDL.Spec.AST.Elab
 include CDDL.Pulse.AST.Bundle
 
+let eq_sym (#t: Type) (#x1 #x2: t) (peq: squash (x1 == x2)) : Tot (squash (x2 == x1)) = ()
+
 let solve_by_norm () : FStar.Tactics.Tac unit =
   FStar.Tactics.norm [delta; iota; zeta; primops];
   FStar.Tactics.trefl ()
