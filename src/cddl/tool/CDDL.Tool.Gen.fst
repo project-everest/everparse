@@ -329,7 +329,7 @@ let _ : unit = _ by (FStar.Tactics.print (\"ancillary "^wf'^"\"); FStar.Tactics.
 [@@base_attr; noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_steps); FStar.Tactics.trefl ())] noextract
 let "^wf'^" = "^wf'^"'
 let _ : unit = _ by (FStar.Tactics.print (\"ancillary "^wf'^"_eq\"); FStar.Tactics.exact (`()))
-let _ : squash ("^wf'^" == "^wf'^"') = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))"
+let "^wf'^"_eq () : Lemma (ensures ("^wf'^" == "^wf'^"')) [SMTPatOr [[SMTPat "^wf'^"]; [SMTPat "^wf'^"']]] = assert ("^wf'^" == "^wf'^"') by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())"
     in
     let validator' = "aux_" ^ env ^ "_validate_" ^ candidate in
     let parser' = "aux_" ^ env ^ "_parse_" ^ candidate in
@@ -491,21 +491,21 @@ let produce_typ_defs
   let env_anc' = env ^ "_" ^ string_of_int anc1.env_index in
   let anc' : ancillaries_t wenv'.e_sem_env = extend_ancillaries_t anc1.anc wenv'.e_sem_env in
   let msg = "
-let _ : squash (\""^name^"\" == T.pull_name "^source^") = _ by (T.trefl_or_norm ())
+let _ : unit = assert (\""^name^"\" == T.pull_name "^source^") by (T.trefl_or_norm ())
 let _ : unit = _ by (FStar.Tactics.print (\"owf'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"] noextract
 let o"^wf^"' = compute_wf_typ' "^env^".be_ast (T.pull_name "^source^") (_ by (T.trefl_or_norm ())) (T.pull_type "^source^") "^fuel^"
 let _ : unit = _ by (FStar.Tactics.print (\"owf\"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"] noextract
 let o"^wf^" = o"^wf^"'
-let o"^wf^"_eq : squash (o"^wf^" == o"^wf^"') = _ by (T.trefl_or_norm ())
+let o"^wf^"_eq () : Lemma (ensures (o"^wf^" == o"^wf^"')) [SMTPatOr [[SMTPat o"^wf^"]; [SMTPat o"^wf^"']]] = assert (o"^wf^" == o"^wf^"') by (T.trefl_or_norm ())
 let _ : unit = _ by (FStar.Tactics.print (\"wf'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"] noextract
 let "^wf^"' = extract_computed_wf_typ' "^env^".be_ast (T.pull_name "^source^") (T.pull_type "^source^") "^fuel^" o"^wf^" (_ by (T.trefl_or_norm ()))
 let _ : unit = _ by (FStar.Tactics.print (\"wf\"); FStar.Tactics.exact (`()))
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm [delta; zeta; iota; primops]; FStar.Tactics.trefl ()); noextract_to "^krml^"; base_attr] noextract
 let "^wf^" = "^wf^"'
-let _ : squash ("^wf^" == "^wf^"') = _ by (T.trefl_or_norm ())"^
+let "^wf^"_eq () : Lemma (ensures ("^wf^" == "^wf^"')) [SMTPatOr [[SMTPat "^wf^"]; [SMTPat "^wf^"']]] = assert ("^wf^" == "^wf^"') by (T.trefl_or_norm ())"^
 anc1.output^produce_parser env env_anc' wf validator parser serializer parsertype bundle ^"
 let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
@@ -537,7 +537,7 @@ let produce_group_defs
   let msg =
 (
 "
-let _ : squash (\""^name^"\" == T.pull_name "^source^") = _ by (T.trefl_or_norm ())
+let _ : unit = assert (\""^name^"\" == T.pull_name "^source^") by (T.trefl_or_norm ())
 let _ : unit = _ by (FStar.Tactics.print (\"env'\"); FStar.Tactics.exact (`()))
 [@@noextract_to "^krml^"; sem_attr; bundle_attr] noextract
 let "^env'^" =
@@ -615,6 +615,7 @@ let aenv0_0 : ancillary_bundle_env Det.cbor_det_match env0.be_ast.e_sem_env =
 let aaenv0_0 : ancillary_array_bundle_env Det.cbor_det_array_iterator_match env0.be_ast.e_sem_env =
   fun _ _ -> None
 let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64)
+#set-options \"--warn_error -271-276\" // SMT patterns
 "
 
 let produce_defs_fst
