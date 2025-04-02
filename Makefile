@@ -210,7 +210,16 @@ endif
 
 .PHONY: cddl-demo
 
-cddl-test: cddl cddl-plugin-test cddl-demo
+ifeq (,$(NO_PULSE))
+cose: cddl
+	+$(MAKE) -C src/cose
+else
+cose:
+endif
+
+.PHONY: cose
+
+cddl-test: cddl cddl-plugin-test cddl-demo cose
 
 .PHONY: cddl-test
 
