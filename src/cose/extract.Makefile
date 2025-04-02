@@ -23,3 +23,15 @@ extract: $(ALL_KRML_FILES)
 	$(KRML) -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]'  -bundle COSE.Format=*[rename=COSE_Format] -add-include '"CBORDetAbstract.h"' -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
 
 .PHONY: extract
+
+snapshot: extract
+	mkdir -p snapshot
+	rm -f snapshot/*.c snapshot/*.h
+	cp $(OUTPUT_DIRECTORY)/*.c snapshot/
+	cp $(OUTPUT_DIRECTORY)/*.h snapshot/
+
+.PHONY: snapshot
+
+test: extract
+	for f in $(OUTPUT_DIRECTORY)/*.c $(OUTPUT_DIRECTORY)/*.h ; do diff snapshot/$$(basename $$f) $$f ; done
+	for f in snapshot/*.c snapshot/*.h ; do diff $$f $(OUTPUT_DIRECTORY)/$$(basename $$f) ; done
