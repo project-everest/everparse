@@ -19,11 +19,11 @@ build:
 test-extract: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile test
 
-test: test-extract
-
 .PHONY: test-interop
 test-interop: build
 	+$(MAKE) -C interop
+
+test: test-extract test-interop
 
 .PHONY: test-extract test
 
