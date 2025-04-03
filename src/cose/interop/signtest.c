@@ -66,9 +66,9 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
         .case_Mkevercddl_empty_or_serialized_map_pretty0 = {
             .x0 = {
                 .tag = FStar_Pervasives_Native_Some,
-                .v = { // I just hope this is -8 (COSE_ALGORITHM_EDDSA)
+                .v = {
                     .tag = COSE_Format_Inl,
-                    .case_Inl = {
+                    .case_Inl = { // I just hope this is -8 (COSE_ALGORITHM_EDDSA)
                         .tag = COSE_Format_Mkevercddl_int_pretty1,
                         .case_Mkevercddl_int_pretty1 = 7,
                     }
@@ -78,7 +78,13 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
             .x2 = { .tag = FStar_Pervasives_Native_None },
             .x3 = { .tag = FStar_Pervasives_Native_None },
             .x4 = { .tag = FStar_Pervasives_Native_None },
-            .x5 = { .tag = FStar_Pervasives_Native_None },
+            .x5 = {
+                .tag = COSE_Format_Inl,
+                .case_Inl = {
+                    .elt = (K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty[]) {},
+                    .len = 0,
+                },
+            },
         },
     };
 
@@ -93,7 +99,13 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
         .x2 = { .tag = FStar_Pervasives_Native_None },
         .x3 = { .tag = FStar_Pervasives_Native_None },
         .x4 = { .tag = FStar_Pervasives_Native_None },
-        .x5 = { .tag = FStar_Pervasives_Native_None },
+        .x5 = {
+            .tag = COSE_Format_Inl,
+            .case_Inl = {
+                .elt = (K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty[]) {},
+                .len = 0,
+            },
+        },
     };
 
     COSE_Format_evercddl_COSE_Sign1_pretty c = {
