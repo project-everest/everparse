@@ -1,4 +1,3 @@
-import sys
 import subprocess
 from pycose.keys import CoseKey
 from pycose.messages import Sign1Message
@@ -11,8 +10,7 @@ key = CoseKey._from_cryptography_key(load_der_private_key(open('message.key', 'r
 msg = Sign1Message.decode(open('message.cbor', 'rb').read())
 
 msg.key = key
-if msg.verify_signature():
-    print('Signature verifies!')
-else:
-    print('Invalid signature.')
-    sys.exit(1)
+assert msg.verify_signature()
+assert msg.payload == b'payload', msg.payload
+assert msg.external_aad == b'', msg.aad
+print('Signature verifies!')
