@@ -37,7 +37,7 @@ clean_out_files=\
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter z3-testgen-test exttype
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter z3-testgen-test exttype specialize_test
 
 .PHONY: exttype
 
@@ -76,6 +76,10 @@ output-types:
 
 .PHONY: probe
 probe:
+	+$(MAKE) -C $@
+
+.PHONY: specialize_test
+specialize_test:
 	+$(MAKE) -C $@
 
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))

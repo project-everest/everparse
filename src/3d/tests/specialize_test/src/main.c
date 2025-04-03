@@ -1,4 +1,4 @@
-#include "SpecializeABC.h"
+#include "SpecializeABCWrapper.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -119,7 +119,7 @@ int main(void) {
     .buf = (uint8_t*)&destB,
     .len = sizeof(destB)
   };
-  if (FineGrainedProbeSpecializeCheckC(
+  if (SpecializeAbcCheckC(
       false, 
       (EVERPARSE_COPY_BUFFER_T) &a_out,
       (EVERPARSE_COPY_BUFFER_T) &b_out,
@@ -137,7 +137,7 @@ int main(void) {
     printf("Validation failed for c64\n");
     return 1;
   }
-  if (FineGrainedProbeSpecializeCheckC(
+  if (SpecializeAbcCheckC(
     true, 
     (EVERPARSE_COPY_BUFFER_T) &a_out,
     (EVERPARSE_COPY_BUFFER_T) &b_out,
