@@ -79,10 +79,7 @@ ValidateBf2bis(
     uint16_t bitfield1 = (uint16_t)(uint32_t)r;
     BOOLEAN
     bitfield1constraintIsOk =
-      EverParseGetBitfield16(bitfield1,
-        0U,
-        12U)
-      < EverParseGetBitfield16(bitfield0, 0U, 6U);
+      EverParseGetBitfield16(bitfield1, 0U, 12U) < EverParseGetBitfield16(bitfield0, 0U, 6U);
     uint64_t
     positionAfterBitfield11 =
       EverParseCheckConstraintOk(bitfield1constraintIsOk,
@@ -215,10 +212,10 @@ ValidateBf3(
     uint16_t bitfield1 = Load16Be(Input + (uint32_t)positionAfterBitfield0);
     BOOLEAN
     bitfield1constraintIsOk =
-      EverParseGetBitfield16MsbFirst(bitfield1,
-        0U,
-        12U)
-      < EverParseGetBitfield16MsbFirst(bitfield0, 0U, 6U);
+      EverParseGetBitfield16MsbFirst(bitfield1, 0U, 12U) <
+        EverParseGetBitfield16MsbFirst(bitfield0,
+          0U,
+          6U);
     uint64_t
     positionAfterBitfield11 =
       EverParseCheckConstraintOk(bitfield1constraintIsOk,
