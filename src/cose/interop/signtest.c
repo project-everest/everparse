@@ -111,7 +111,7 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
     bstr out;
     out.len = 1024; // TODO
     check(out.elt = malloc(out.len));
-    check(out.len = COSE_Format_serialize_COSE_Sign1(c, out));
+    check(out.len = COSE_Format_serialize_COSE_Sign1_Tagged(c, out));
 
     OPENSSL_free(sig.elt);
 
