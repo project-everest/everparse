@@ -21,6 +21,10 @@ test-extract: $(OUTPUT)
 
 test: test-extract
 
+.PHONY: test-interop
+test-interop: build
+	+$(MAKE) -C interop
+
 .PHONY: test-extract test
 
 # This rule is incompatible with `test-extract`
