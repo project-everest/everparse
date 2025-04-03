@@ -714,6 +714,8 @@ type atomic_action
       #disj:disj_index ->
       #l:loc_index ->
       #ptr_t:Type0 ->
+      typename:string ->
+      fieldname:string ->
       dt:dtyp k ha has_reader inv disj l ->
       src:ptr_t ->
       as_u64:(ptr_t -> PA.pure_external_action U64.t) ->
@@ -756,10 +758,10 @@ let atomic_action_as_action
       A.action_assignment x rhs
     | Action_call c ->
       c
-    | Action_probe_then_validate #nz #wk #k #_hr #inv #l dt src as_u64 dest init_cb dest_sz probe ->
+    | Action_probe_then_validate #nz #wk #k #_hr #inv #l typename fieldname dt src as_u64 dest init_cb dest_sz probe ->
       A.index_equations();
       let v = dtyp_as_validator dt in
-      A.probe_then_validate v src as_u64 dest init_cb dest_sz (probe_action_as_probe_m probe)
+      A.probe_then_validate typename fieldname v src as_u64 dest init_cb dest_sz (probe_action_as_probe_m probe)
 
 (* A sub-language of monadic actions.
 
@@ -1027,7 +1029,7 @@ type typ
       #i1:_ -> #d1: _ -> #l1:_ -> #ha1:_ ->
       #i2:_ -> #d2:_ -> #l2:_ -> #b2:_ -> #rt2:_ ->
       head:dtyp pk1 ha1 true i1 d1 l1 ->
-      act:(dtyp_as_type head -> action i2 d2 l2 b2 rt2 bool) ->
+      act:(typename:string -> dtyp_as_type head -> action i2 d2 l2 b2 rt2 bool) ->
       typ pk1 (join_inv i1 i2) (join_disj d1 d2) (join_loc l1 l2) true false
 
   | T_drop:
@@ -1109,8 +1111,8 @@ let t_probe_then_validate
        false
  = T_with_dep_action fieldname
      (DT_IType pointer_size)
-     (fun src ->
-        Atomic_action (Action_probe_then_validate td src as_u64 dest init_cb dest_sz (Probe_action_var probe)))
+     (fun typename src ->
+        Atomic_action (Action_probe_then_validate typename fieldname td src as_u64 dest init_cb dest_sz (Probe_action_var probe)))
 
 [@@specialize]
 let t_probe_then_validate_alt
@@ -1473,7 +1475,7 @@ let rec as_validator
           A.validate_with_dep_action fn
             (dtyp_as_validator i)
             (dtyp_as_leaf_reader i)
-            (fun x -> action_as_action (a x))))
+            (fun x -> action_as_action (a typename x))))
 
     | T_drop t ->
       assert_norm (as_type (T_drop t) == as_type t);

@@ -920,6 +920,8 @@ val probe_then_validate
       (#l:eloc)
       (#ha #allow_reading:bool)
       (#ptr_t:Type0)
+      (typename:string)
+      (fieldname:string)
       (v:validate_with_action_t p inv disj l ha allow_reading)
       (src:ptr_t)
       (as_u64: ptr_t -> PA.pure_external_action U64.t)
