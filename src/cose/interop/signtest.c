@@ -33,18 +33,13 @@ bstr sign_eddsa(EVP_PKEY *signing_key, const bstr tbs) {
 
 const COSE_Format_evercddl_int_tags signature1 = 1;
 
-bstr mk_sig_structure(bstr aad, bstr payload) {
+bstr mk_sig_structure(COSE_Format_evercddl_empty_or_serialized_map_pretty protected_headers,
+        bstr aad, bstr payload) {
     bstr empty = { .elt = (uint8_t[]) {}, .len = 0 };
-
-    // empty body_protected
-    COSE_Format_evercddl_empty_or_serialized_map_pretty body_protected = {
-        .tag = COSE_Format_Mkevercddl_empty_or_serialized_map_pretty1,
-        .case_Mkevercddl_empty_or_serialized_map_pretty1 = empty,
-    };
 
     COSE_Format_evercddl_Sig_structure_pretty c = {
         .x0 = signature1,
-        .x1 = body_protected,
+        .x1 = protected_headers,
         .x2 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {
@@ -66,10 +61,6 @@ bstr mk_sig_structure(bstr aad, bstr payload) {
 const int COSE_ALGORITHM_EDDSA = -8;
 
 bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
-    bstr sig_structure = mk_sig_structure(aad, payload);
-    bstr sig = sign_eddsa(signing_key, sig_structure);
-    free(sig_structure.elt);
-    
     COSE_Format_evercddl_empty_or_serialized_map_pretty protected_headers = {
         .tag = COSE_Format_Mkevercddl_empty_or_serialized_map_pretty0,
         .case_Mkevercddl_empty_or_serialized_map_pretty0 = {
@@ -90,6 +81,10 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
             .x5 = { .tag = FStar_Pervasives_Native_None },
         },
     };
+
+    bstr sig_structure = mk_sig_structure(protected_headers, aad, payload);
+    bstr sig = sign_eddsa(signing_key, sig_structure);
+    free(sig_structure.elt);
 
     // here would the content-type and key id go if we had them
     COSE_Format_evercddl_header_map_pretty unprotected_headers = {
