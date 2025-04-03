@@ -150,6 +150,6 @@ int main() {
     write_to_file(msg_fn, result.elt, result.len);
 
     char key_fn[] = "message.key";
-    printf("writing ed25519 private key to %s\n", key_fn);
+    printf("writing ed25519 private key to %s (DER format)\n", key_fn);
     write_to_file(key_fn, ed25519_private_key,  sizeof(ed25519_private_key));
 }
