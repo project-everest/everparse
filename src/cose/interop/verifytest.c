@@ -1,4 +1,4 @@
-#include "common.c"
+#include "common.h"
 #include <openssl/pem.h>
 
 bool validate(EVP_PKEY *signing_key, bstr tbs, bstr sig) {

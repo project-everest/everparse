@@ -1,7 +1,4 @@
-#include "COSE_Format.h"
-#include <openssl/evp.h>
-#include <openssl/err.h>
-#include <fcntl.h>
+#include "common.h"
 
 void openssl_error_msg(const char *msg) {
     char buf[256] = "unknown error";
@@ -41,8 +38,6 @@ bstr mk_sig_structure(COSE_Format_evercddl_empty_or_serialized_map_pretty protec
 
     return out;
 }
-
-const int COSE_ALGORITHM_EDDSA = -8;
 
 void write_to_file(const char *fn, const uint8_t *content, size_t content_len) {
     FILE *f; check(f = fopen(fn, "w"));

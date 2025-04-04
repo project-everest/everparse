@@ -1,4 +1,4 @@
-#include "common.c"
+#include "common.h"
 
 bstr sign_eddsa(EVP_PKEY *signing_key, const bstr tbs) {
     EVP_MD_CTX *sign_context = EVP_MD_CTX_new();
