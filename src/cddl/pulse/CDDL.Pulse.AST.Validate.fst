@@ -204,3 +204,27 @@ and validate_map_group
       (validate_typ impl env true _ s_key)
       (validate_typ impl env true _ s_value)
       (validate_typ impl env false _ s_key_except)
+
+let typ_sem_or_bust
+  (v_sem_env: AST.sem_env)
+  (ty: AST.typ)
+: GTot CDDL.Spec.Base.typ
+= if typ_bounded v_sem_env.se_bound ty
+  then AST.typ_sem v_sem_env ty
+  else CDDL.Spec.Misc.t_always_false
+
+[@@AST.sem_attr]
+let validate_typ'
+  (#t #t2 #t_arr #t_map: Type0)
+  (#vmatch: (perm -> t -> cbor -> slprop))
+  (#vmatch2: (perm -> t2 -> (cbor & cbor) -> slprop))
+  (#cbor_array_iterator_match: (perm -> t_arr -> list cbor -> slprop))
+  (#cbor_map_iterator_match: (perm -> t_map -> list (cbor & cbor) -> slprop))
+  (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
+  (#v_sem_env: AST.sem_env)
+  (env: validator_env vmatch v_sem_env)
+  (guard_choices: Ghost.erased bool)
+  (ty: AST.typ)
+  (wf: AST.ast0_wf_typ ty { AST.spec_wf_typ v_sem_env guard_choices ty wf /\ SZ.fits_u64 })
+: Tot (impl_typ vmatch (typ_sem_or_bust v_sem_env ty))
+= validate_typ impl env guard_choices ty wf

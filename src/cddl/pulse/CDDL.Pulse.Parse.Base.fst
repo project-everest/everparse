@@ -159,6 +159,7 @@ fn validate_and_parse
   (parse: cbor_det_parse_t vmatch)
   (# [@@@erasable] t1: Ghost.erased typ)
   (v1: impl_typ vmatch t1)
+  ()
   (#[@@@erasable] t: Ghost.erased typ)
   (#[@@@erasable] tgt: Type0)
   (#[@@@erasable] tgt_serializable: Ghost.erased (tgt -> bool))

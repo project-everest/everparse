@@ -139,9 +139,11 @@ let bundle_env_extend_typ_with_weak
   (e: bundle_env vmatch)
   (new_name: string)
   (t: typ)
-  (t_wf: ast0_wf_typ t {
+  ([@@@erasable] t_wf: Ghost.erased (ast0_wf_typ t) {
     wf_ast_env_extend_typ_with_weak_pre e.be_ast new_name t t_wf
   })
+  (t_wf' : ast0_wf_typ t)
+  (t_wf'_eq: squash (t_wf' == Ghost.reveal t_wf))
   (w: impl_typ vmatch (typ_sem e.be_ast.e_sem_env t))
   (p: bundle vmatch {
     Ghost.reveal p.b_typ == typ_sem e.be_ast.e_sem_env t
@@ -151,7 +153,7 @@ let bundle_env_extend_typ_with_weak
       e'.be_ast == wf_ast_env_extend_typ_with_weak e.be_ast new_name t t_wf
   })
 = {
-    be_ast = wf_ast_env_extend_typ_with_weak e.be_ast new_name t t_wf;
+    be_ast = wf_ast_env_extend_typ_with_weak e.be_ast new_name t t_wf';
     be_v = Env.extend_validator_env_with_typ_weak e.be_v new_name () t () w;
     be_b = extend_bundle_env' e.be_b new_name p;
     be_b_correct = (fun n' -> if n' = new_name then sem_of_typ_sem_wf_ast_env_extend_typ_with_weak e.be_ast new_name t t_wf else e.be_b_correct n');
@@ -631,17 +633,19 @@ let impl_bundle_wf_type'
   (ancillary: ancillary_bundle_env vmatch env.be_ast.e_sem_env)
   (ancillary_ag: ancillary_array_bundle_env cbor_array_iterator_match env.be_ast.e_sem_env)
   (#t: typ)
-  (t_wf: ast0_wf_typ t {
+  (t_wf: Ghost.erased (ast0_wf_typ t) {
     spec_wf_typ env.be_ast.e_sem_env true t t_wf /\ SZ.fits_u64
   })
+  (t_wf': ast0_wf_typ t)
+  (_: squash (t_wf' == Ghost.reveal t_wf))
   (_: squash (
-    None? (Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some ancillary_v) (ancillary_bundle_env_is_some ancillary) (ancillary_array_bundle_env_is_some ancillary_ag) t_wf)
+    None? (Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some ancillary_v) (ancillary_bundle_env_is_some ancillary) (ancillary_array_bundle_env_is_some ancillary_ag) t_wf')
   ))
 : Tot (res: bundle vmatch {
       spec_wf_typ env.be_ast.e_sem_env true t t_wf /\
       Ghost.reveal res.b_typ == typ_sem env.be_ast.e_sem_env t
   })
-= impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag t_wf
+= impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag t_wf'
 
 [@@bundle_attr]
 let impl_bundle_wf_ask_for_guarded_type
