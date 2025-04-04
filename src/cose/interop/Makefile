@@ -11,5 +11,7 @@ test: signtest .venv
 	python3 -m venv $@
 	$@/bin/pip install pycose
 
+CFLAGS += -fsanitize=address -fsanitize=undefined
+
 signtest: signtest.c ../snapshot/COSE_Format.h $(OBJFILES)
-	$(CC) -O0 -g $(CFLAGS) -I ../snapshot -I ../../cbor/pulse/det/c -lssl -lcrypto $(OBJFILES) $< -o $@
+	$(CC) -O2 -g $(CFLAGS) -I ../snapshot -I ../../cbor/pulse/det/c -lssl -lcrypto $(OBJFILES) $< -o $@

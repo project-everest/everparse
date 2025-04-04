@@ -1,12 +1,28 @@
 import subprocess
-from pycose.keys import CoseKey
+from pycose.keys import OKPKey, CoseKey
 from pycose.messages import Sign1Message
-from cryptography.hazmat.primitives.serialization import load_der_private_key
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ed25519
+
+print('Generating random key')
+
+privkey = ed25519.Ed25519PrivateKey.generate()
+open('message.privkey', 'wb').write(
+    privkey.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ),
+)
+
+key = CoseKey._from_cryptography_key(privkey)
+
+payload = b'payload'
+open('message.data', 'wb').write(payload)
 
 print('Running ./signtest')
-subprocess.run(['./signtest'])
+subprocess.check_call(['./signtest', 'message.data', 'message.privkey', 'message.cbor'])
 
-key = CoseKey._from_cryptography_key(load_der_private_key(open('message.key', 'rb').read(), password=None))
 msg = Sign1Message.decode(open('message.cbor', 'rb').read())
 
 msg.key = key

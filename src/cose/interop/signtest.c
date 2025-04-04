@@ -125,38 +125,50 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
     return out;
 }
 
-// ed25519 private key from the t_cose test suite
-const uint8_t ed25519_private_key[] = {
-  0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70,
-  0x04, 0x22, 0x04, 0x20, 0x5f, 0xe3, 0x9b, 0x74, 0x55, 0xa0, 0x73, 0xd1,
-  0x38, 0xc2, 0xe7, 0xd4, 0xe5, 0x06, 0x30, 0x52, 0x9f, 0xce, 0x7d, 0xdc,
-  0xe8, 0x22, 0x80, 0x2a, 0x68, 0x5d, 0xa8, 0x99, 0x16, 0x5d, 0x44, 0x58
-};
-
-bstr test_sign() {
-    char payload_str[] = "payload";
-    bstr payload = { .elt = payload_str, .len = sizeof(payload_str) - 1 };
+bstr test_sign(bstr payload, bstr key_data) {
     bstr aad = { .elt = (uint8_t[]) {}, .len = 0 };
-    const uint8_t *key_data = ed25519_private_key;
-    EVP_PKEY *signing_key = d2i_PrivateKey(EVP_PKEY_ED25519, NULL, &key_data, sizeof(ed25519_private_key));
+    const uint8_t *key_data_ptr = key_data.elt;
+    EVP_PKEY *signing_key = d2i_PrivateKey(EVP_PKEY_ED25519, NULL, &key_data_ptr, key_data.len);
     openssl_check(signing_key);
-    return sign1(signing_key, aad, payload);
+    bstr out = sign1(signing_key, aad, payload);
+    EVP_PKEY_free(signing_key);
+    return out;
 }
 
 void write_to_file(const char *fn, const uint8_t *content, size_t content_len) {
-    FILE *f = fopen(fn, "w");
-    fwrite(content, content_len, 1, f);
-    fclose(f);
+    FILE *f; check(f = fopen(fn, "w"));
+    check(fwrite(content, content_len, 1, f) == 1);
+    check(fclose(f) == 0);
 }
 
-int main() {
-    bstr result = test_sign();
+bstr read_from_file(const char *fn) {
+    FILE *f; check(f = fopen(fn, "r"));
+    check(fseek(f, 0, SEEK_END) == 0);
+    long size = ftell(f);
+    check(fseek(f, 0, SEEK_SET) == 0);
+    bstr out = { .len = size };
+    check(out.elt = malloc(size));
+    check(fread(out.elt, size, 1, f) == 1);
+    check(fclose(f) == 0);
+    return out;
+}
 
-    char msg_fn[] = "message.cbor";
+int main(int argc, const char **argv) {
+    if (argc != 4) {
+        fprintf(stderr, "usage: signtest message.data message.privkey message.cbor");
+        exit(1);
+    }
+
+    bstr payload = read_from_file(argv[1]);
+    bstr key_data = read_from_file(argv[2]);
+
+    bstr result = test_sign(payload, key_data);
+
+    const char *msg_fn = argv[3];
     printf("writing message to %s\n", msg_fn);
     write_to_file(msg_fn, result.elt, result.len);
 
-    char key_fn[] = "message.key";
-    printf("writing ed25519 private key to %s (DER format)\n", key_fn);
-    write_to_file(key_fn, ed25519_private_key,  sizeof(ed25519_private_key));
+    free(payload.elt);
+    free(key_data.elt);
+    free(result.elt);
 }
