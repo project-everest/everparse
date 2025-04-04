@@ -12,16 +12,23 @@ module Env = CDDL.Pulse.AST.Env // for validator_env
 module Parse = CDDL.Pulse.AST.Parse // for ancillary_validate_env
 
 [@@bundle_attr]
+let name_from_literal (l : literal) : option string =
+  match l with
+  | LTextString s -> Some s
+  | LSimple i
+  | LInt i -> Some ("intkey" ^ string_of_int i)
+
+[@@bundle_attr]
 let rec extract_name_map_group (t : ast0_wf_parse_map_group 'a) : option string =
   match t with
-  | WfMLiteral _ (LTextString s) _ _ -> Some s
+  | WfMLiteral _ l _ _ -> name_from_literal l
   | WfMZeroOrOne _g sub -> extract_name_map_group sub
   | _ -> None
 
 [@@bundle_attr]
 let name_from_array_key (key : typ) : option string =
   match key with
-  | TElem (ELiteral (LTextString s)) -> Some s
+  | TElem (ELiteral l) -> name_from_literal l
   | _ -> None
 
 [@@bundle_attr]

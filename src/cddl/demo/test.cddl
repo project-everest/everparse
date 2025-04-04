@@ -14,7 +14,17 @@ test4 = { }
 bstr = #2
 uint = #0
 
- test5 = [
+test5 = [
   foo : uint,
   bar : uint
 ]
+
+arr_intkeys = [
+  1 : uint,
+  bar : uint
+]
+
+map_intkeys = {
+  1 : uint,
+  bar : uint
+}
