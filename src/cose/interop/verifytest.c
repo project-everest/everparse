@@ -1,5 +1,4 @@
 #include "common.h"
-#include <openssl/pem.h>
 
 bool validate(EVP_PKEY *signing_key, bstr tbs, bstr sig) {
     EVP_MD_CTX *sign_context = EVP_MD_CTX_new();
@@ -40,10 +39,7 @@ bstr verify1(EVP_PKEY *signing_key, bstr aad, bstr msg) {
 
 bstr test_verify(bstr msg, bstr key_data) {
     bstr aad = { .elt = (uint8_t[]) {}, .len = 0 };
-    BIO *bio = BIO_new_mem_buf(key_data.elt, key_data.len);
-    EVP_PKEY *signing_key = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
-    openssl_check(signing_key);
-    BIO_free(bio);
+    EVP_PKEY *signing_key = parse_ed25519_public_key(key_data);
     bstr out = verify1(signing_key, aad, msg);
     EVP_PKEY_free(signing_key);
     return out;

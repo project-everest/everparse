@@ -39,6 +39,34 @@ bstr mk_sig_structure(COSE_Format_evercddl_empty_or_serialized_map_pretty protec
     return out;
 }
 
+EVP_PKEY *parse_ed25519_private_key(bstr cose_key) {
+    FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_OKP_pretty___Pulse_Lib_Slice_slice_uint8_t_
+        parsed_key = COSE_Format_validate_and_parse_COSE_Key_OKP(cose_key);
+    check(parsed_key.tag);
+    check(parsed_key.v.fst.x1.tag == COSE_Format_Inl);
+    check(parsed_key.v.fst.x1.case_Inl.tag == COSE_Format_Mkevercddl_int_pretty0);
+    check(parsed_key.v.fst.x1.case_Inl.case_Mkevercddl_int_pretty0 == 6);
+    check(parsed_key.v.fst.x4.tag);
+    check(parsed_key.v.fst.x4.v.len == 32);
+    EVP_PKEY *pkey;
+    openssl_check(pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, NULL, parsed_key.v.fst.x4.v.elt, parsed_key.v.fst.x4.v.len));
+    return pkey;
+}
+
+EVP_PKEY *parse_ed25519_public_key(bstr cose_key) {
+    FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_OKP_pretty___Pulse_Lib_Slice_slice_uint8_t_
+        parsed_key = COSE_Format_validate_and_parse_COSE_Key_OKP(cose_key);
+    check(parsed_key.tag);
+    check(parsed_key.v.fst.x1.tag == COSE_Format_Inl);
+    check(parsed_key.v.fst.x1.case_Inl.tag == COSE_Format_Mkevercddl_int_pretty0);
+    check(parsed_key.v.fst.x1.case_Inl.case_Mkevercddl_int_pretty0 == 6);
+    check(parsed_key.v.fst.x2.tag);
+    check(parsed_key.v.fst.x2.v.len == 32);
+    EVP_PKEY *pkey;
+    openssl_check(pkey = EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519, NULL, parsed_key.v.fst.x2.v.elt, parsed_key.v.fst.x2.v.len));
+    return pkey;
+}
+
 void write_to_file(const char *fn, const uint8_t *content, size_t content_len) {
     FILE *f; check(f = fopen(fn, "w"));
     check(fwrite(content, content_len, 1, f) == 1);

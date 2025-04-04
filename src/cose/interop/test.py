@@ -1,27 +1,16 @@
 import subprocess
-from pycose.keys import OKPKey, CoseKey
+from pycose.keys import OKPKey
 from pycose.messages import Sign1Message
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ed25519
+import cbor2
 
 print('Generating random key')
+key = OKPKey.generate_key('ed25519')
 
-privkey = ed25519.Ed25519PrivateKey.generate()
-open('message.privkey', 'wb').write(
-    privkey.private_bytes(
-        encoding=serialization.Encoding.DER,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ),
-)
-open('message.pubkey', 'wb').write(
-    privkey.public_key().public_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PublicFormat.SubjectPublicKeyInfo,
-    ),
-)
+open('message.privkey', 'wb').write(key.encode())
 
-key = CoseKey._from_cryptography_key(privkey)
+# pycose doesn't support public key exports yet
+cose_pubkey = cbor2.dumps({1: 1, -1: 6, -2: key.x})
+open('message.pubkey', 'wb').write(cose_pubkey)
 
 payload = b'payload'
 open('message.data', 'wb').write(payload)

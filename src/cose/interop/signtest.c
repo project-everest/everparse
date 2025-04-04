@@ -101,9 +101,7 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
 
 bstr test_verify(bstr payload, bstr key_data) {
     bstr aad = { .elt = (uint8_t[]) {}, .len = 0 };
-    const uint8_t *key_data_ptr = key_data.elt;
-    EVP_PKEY *signing_key = d2i_PrivateKey(EVP_PKEY_ED25519, NULL, &key_data_ptr, key_data.len);
-    openssl_check(signing_key);
+    EVP_PKEY *signing_key = parse_ed25519_private_key(key_data);
     bstr out = sign1(signing_key, aad, payload);
     EVP_PKEY_free(signing_key);
     return out;

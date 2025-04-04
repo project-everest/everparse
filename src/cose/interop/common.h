@@ -17,6 +17,9 @@ bstr mk_sig_structure(
     COSE_Format_evercddl_empty_or_serialized_map_pretty protected_headers,
     bstr aad, bstr payload);
 
+EVP_PKEY *parse_ed25519_private_key(bstr cose_key);
+EVP_PKEY *parse_ed25519_public_key(bstr cose_key);
+
 #define COSE_ALGORITHM_EDDSA (-8)
 
 void write_to_file(const char *fn, const uint8_t *content, size_t content_len);
