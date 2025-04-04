@@ -51,7 +51,7 @@ bstr test_verify(bstr msg, bstr key_data) {
 
 int main(int argc, const char **argv) {
     if (argc != 3) {
-        fprintf(stderr, "usage: verifytest message.pubkey message.cbor");
+        fprintf(stderr, "usage: verifytest message.pubkey message.cbor\n");
         exit(1);
     }
 

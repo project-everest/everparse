@@ -111,7 +111,7 @@ bstr test_verify(bstr payload, bstr key_data) {
 
 int main(int argc, const char **argv) {
     if (argc != 4) {
-        fprintf(stderr, "usage: signtest message.data message.privkey message.cbor");
+        fprintf(stderr, "usage: signtest message.data message.privkey message.cbor\n");
         exit(1);
     }
 
