@@ -13,3 +13,8 @@ test4 = { }
 
 bstr = #2
 uint = #0
+
+ test5 = [
+  foo : uint,
+  bar : uint
+]
