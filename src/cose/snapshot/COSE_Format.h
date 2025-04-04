@@ -14,8 +14,6 @@ typedef bool COSE_Format_evercddl_bool;
 
 typedef bool COSE_Format_evercddl_bool_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_bool_pretty0(bool projectee);
-
 bool COSE_Format_parse_bool(cbor_det_t c);
 
 typedef struct Pulse_Lib_Slice_slice__uint8_t_s
@@ -55,11 +53,6 @@ typedef void *COSE_Format_evercddl_everparsenomatch;
 typedef enum { COSE_Format_Mkevercddl_everparsenomatch_pretty0 }
 COSE_Format_evercddl_everparsenomatch_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_everparsenomatch_pretty0(
-  COSE_Format_evercddl_everparsenomatch_pretty projectee
-);
-
 COSE_Format_evercddl_everparsenomatch_pretty COSE_Format_parse_everparsenomatch(cbor_det_t c);
 
 size_t
@@ -92,8 +85,6 @@ typedef uint64_t COSE_Format_evercddl_uint;
 
 typedef uint64_t COSE_Format_evercddl_uint_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_uint_pretty0(uint64_t projectee);
-
 uint64_t COSE_Format_parse_uint(cbor_det_t c);
 
 size_t COSE_Format_serialize_uint(uint64_t c, Pulse_Lib_Slice_slice__uint8_t out);
@@ -121,8 +112,6 @@ bool COSE_Format_validate_nint(cbor_det_t c);
 typedef uint64_t COSE_Format_evercddl_nint;
 
 typedef uint64_t COSE_Format_evercddl_nint_pretty;
-
-bool COSE_Format_uu___is_Mkevercddl_nint_pretty0(uint64_t projectee);
 
 uint64_t COSE_Format_parse_nint(cbor_det_t c);
 
@@ -164,10 +153,6 @@ typedef struct COSE_Format_evercddl_int_pretty_s
 }
 COSE_Format_evercddl_int_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_int_pretty0(COSE_Format_evercddl_int_pretty projectee);
-
-bool COSE_Format_uu___is_Mkevercddl_int_pretty1(COSE_Format_evercddl_int_pretty projectee);
-
 COSE_Format_evercddl_int_pretty COSE_Format_parse_int(cbor_det_t c);
 
 size_t
@@ -200,8 +185,6 @@ typedef Pulse_Lib_Slice_slice__uint8_t COSE_Format_evercddl_bstr;
 
 typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_bstr_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_bstr_pretty0(COSE_Format_evercddl_bstr projectee);
-
 COSE_Format_evercddl_bstr COSE_Format_parse_bstr(cbor_det_t c);
 
 size_t
@@ -230,9 +213,6 @@ bool COSE_Format_validate_encodedcbor(cbor_det_t c);
 typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_encodedcbor;
 
 typedef COSE_Format_evercddl_bstr_pretty COSE_Format_evercddl_encodedcbor_pretty;
-
-bool
-COSE_Format_uu___is_Mkevercddl_encodedcbor_pretty0(COSE_Format_evercddl_bstr_pretty projectee);
 
 COSE_Format_evercddl_bstr_pretty COSE_Format_parse_encodedcbor(cbor_det_t c);
 
@@ -266,8 +246,6 @@ typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_bytes;
 
 typedef COSE_Format_evercddl_bstr_pretty COSE_Format_evercddl_bytes_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_bytes_pretty0(COSE_Format_evercddl_bstr_pretty projectee);
-
 COSE_Format_evercddl_bstr_pretty COSE_Format_parse_bytes(cbor_det_t c);
 
 size_t
@@ -299,8 +277,6 @@ bool COSE_Format_validate_tstr(cbor_det_t c);
 typedef Pulse_Lib_Slice_slice__uint8_t COSE_Format_evercddl_tstr;
 
 typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_tstr_pretty;
-
-bool COSE_Format_uu___is_Mkevercddl_tstr_pretty0(COSE_Format_evercddl_bstr projectee);
 
 COSE_Format_evercddl_bstr COSE_Format_parse_tstr(cbor_det_t c);
 
@@ -352,10 +328,6 @@ typedef struct COSE_Format_evercddl_label_pretty_s
 }
 COSE_Format_evercddl_label_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_label_pretty0(COSE_Format_evercddl_label_pretty projectee);
-
-bool COSE_Format_uu___is_Mkevercddl_label_pretty1(COSE_Format_evercddl_label_pretty projectee);
-
 COSE_Format_evercddl_label_pretty COSE_Format_parse_label(cbor_det_t c);
 
 size_t
@@ -387,8 +359,6 @@ bool COSE_Format_validate_tdate(cbor_det_t c);
 typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_tdate;
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_tdate_pretty;
-
-bool COSE_Format_uu___is_Mkevercddl_tdate_pretty0(COSE_Format_evercddl_tstr_pretty projectee);
 
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_tdate(cbor_det_t c);
 
@@ -422,8 +392,6 @@ typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_uri;
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_uri_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_uri_pretty0(COSE_Format_evercddl_tstr_pretty projectee);
-
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_uri(cbor_det_t c);
 
 size_t
@@ -455,8 +423,6 @@ bool COSE_Format_validate_b64url(cbor_det_t c);
 typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_b64url;
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_b64url_pretty;
-
-bool COSE_Format_uu___is_Mkevercddl_b64url_pretty0(COSE_Format_evercddl_tstr_pretty projectee);
 
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_b64url(cbor_det_t c);
 
@@ -490,9 +456,6 @@ typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_b64legacy;
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_b64legacy_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_b64legacy_pretty0(COSE_Format_evercddl_tstr_pretty projectee);
-
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_b64legacy(cbor_det_t c);
 
 size_t
@@ -524,8 +487,6 @@ bool COSE_Format_validate_regexp(cbor_det_t c);
 typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_regexp;
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_regexp_pretty;
-
-bool COSE_Format_uu___is_Mkevercddl_regexp_pretty0(COSE_Format_evercddl_tstr_pretty projectee);
 
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_regexp(cbor_det_t c);
 
@@ -559,9 +520,6 @@ typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_mimemessage;
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_mimemessage_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_mimemessage_pretty0(COSE_Format_evercddl_tstr_pretty projectee);
-
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_mimemessage(cbor_det_t c);
 
 size_t
@@ -593,8 +551,6 @@ bool COSE_Format_validate_text(cbor_det_t c);
 typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_text;
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_text_pretty;
-
-bool COSE_Format_uu___is_Mkevercddl_text_pretty0(COSE_Format_evercddl_tstr_pretty projectee);
 
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_text(cbor_det_t c);
 
@@ -628,8 +584,6 @@ typedef void *COSE_Format_evercddl_false;
 
 typedef enum { COSE_Format_Mkevercddl_false_pretty0 } COSE_Format_evercddl_false_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_false_pretty0(COSE_Format_evercddl_false_pretty projectee);
-
 COSE_Format_evercddl_false_pretty COSE_Format_parse_false(cbor_det_t c);
 
 size_t
@@ -661,8 +615,6 @@ bool COSE_Format_validate_true(cbor_det_t c);
 typedef void *COSE_Format_evercddl_true;
 
 typedef enum { COSE_Format_Mkevercddl_true_pretty0 } COSE_Format_evercddl_true_pretty;
-
-bool COSE_Format_uu___is_Mkevercddl_true_pretty0(COSE_Format_evercddl_true_pretty projectee);
 
 COSE_Format_evercddl_true_pretty COSE_Format_parse_true(cbor_det_t c);
 
@@ -696,8 +648,6 @@ typedef void *COSE_Format_evercddl_nil;
 
 typedef enum { COSE_Format_Mkevercddl_nil_pretty0 } COSE_Format_evercddl_nil_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_nil_pretty0(COSE_Format_evercddl_nil_pretty projectee);
-
 COSE_Format_evercddl_nil_pretty COSE_Format_parse_nil(cbor_det_t c);
 
 size_t
@@ -729,8 +679,6 @@ bool COSE_Format_validate_null(cbor_det_t c);
 typedef COSE_Format_evercddl_nil_pretty COSE_Format_evercddl_null;
 
 typedef COSE_Format_evercddl_nil_pretty COSE_Format_evercddl_null_pretty;
-
-bool COSE_Format_uu___is_Mkevercddl_null_pretty0(COSE_Format_evercddl_nil_pretty projectee);
 
 COSE_Format_evercddl_nil_pretty COSE_Format_parse_null(cbor_det_t c);
 
@@ -765,11 +713,6 @@ typedef void *COSE_Format_evercddl_undefined;
 typedef enum { COSE_Format_Mkevercddl_undefined_pretty0 }
 COSE_Format_evercddl_undefined_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_undefined_pretty0(
-  COSE_Format_evercddl_undefined_pretty projectee
-);
-
 COSE_Format_evercddl_undefined_pretty COSE_Format_parse_undefined(cbor_det_t c);
 
 size_t
@@ -802,8 +745,6 @@ typedef cbor_det_t COSE_Format_evercddl_any;
 
 typedef COSE_Format_evercddl_any COSE_Format_evercddl_any_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_any_pretty0(COSE_Format_evercddl_any projectee);
-
 COSE_Format_evercddl_any COSE_Format_parse_any(cbor_det_t c);
 
 size_t
@@ -832,8 +773,6 @@ bool COSE_Format_validate_values(cbor_det_t c);
 typedef COSE_Format_evercddl_any COSE_Format_evercddl_values;
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_values_pretty;
-
-bool COSE_Format_uu___is_Mkevercddl_values_pretty0(COSE_Format_evercddl_any_pretty projectee);
 
 COSE_Format_evercddl_any_pretty COSE_Format_parse_values(cbor_det_t c);
 
@@ -867,9 +806,6 @@ typedef COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_type_1;
 
 typedef COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_type_1_pretty;
 
-bool
-COSE_Format_uu___is_Mkaux_env25_type_1_pretty0(COSE_Format_evercddl_label_pretty projectee);
-
 COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_parse_1(cbor_det_array_iterator_t c);
 
 bool
@@ -885,9 +821,6 @@ extern bool (*COSE_Format_aux_env25_validate_2)(cbor_det_t x0);
 typedef COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_type_2;
 
 typedef COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_type_2_pretty;
-
-bool
-COSE_Format_uu___is_Mkaux_env25_type_2_pretty0(COSE_Format_evercddl_label_pretty projectee);
 
 COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_parse_2(cbor_det_t c);
 
@@ -922,9 +855,6 @@ extern bool (*COSE_Format_aux_env25_validate_4)(cbor_det_t x0);
 typedef COSE_Format_evercddl_any_pretty COSE_Format_aux_env25_type_4;
 
 typedef COSE_Format_evercddl_values_pretty COSE_Format_aux_env25_type_4_pretty;
-
-bool
-COSE_Format_uu___is_Mkaux_env25_type_4_pretty0(COSE_Format_evercddl_values_pretty projectee);
 
 COSE_Format_evercddl_values_pretty COSE_Format_aux_env25_parse_4(cbor_det_t c);
 
@@ -1136,11 +1066,6 @@ typedef struct COSE_Format_evercddl_header_map_pretty_s
 }
 COSE_Format_evercddl_header_map_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_header_map_pretty0(
-  COSE_Format_evercddl_header_map_pretty projectee
-);
-
 COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c);
 
 size_t
@@ -1186,16 +1111,6 @@ typedef struct COSE_Format_evercddl_empty_or_serialized_map_pretty_s
 }
 COSE_Format_evercddl_empty_or_serialized_map_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_empty_or_serialized_map_pretty0(
-  COSE_Format_evercddl_empty_or_serialized_map_pretty projectee
-);
-
-bool
-COSE_Format_uu___is_Mkevercddl_empty_or_serialized_map_pretty1(
-  COSE_Format_evercddl_empty_or_serialized_map_pretty projectee
-);
-
 COSE_Format_evercddl_empty_or_serialized_map_pretty
 COSE_Format_parse_empty_or_serialized_map(cbor_det_t c);
 
@@ -1234,11 +1149,6 @@ typedef struct COSE_Format_evercddl_COSE_Signature_pretty_s
 }
 COSE_Format_evercddl_COSE_Signature_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_COSE_Signature_pretty0(
-  COSE_Format_evercddl_COSE_Signature_pretty projectee
-);
-
 COSE_Format_evercddl_COSE_Signature_pretty COSE_Format_parse_COSE_Signature(cbor_det_t c);
 
 size_t
@@ -1270,11 +1180,6 @@ bool COSE_Format_aux_env29_validate_1(cbor_det_array_iterator_t *pi);
 typedef COSE_Format_evercddl_COSE_Signature_pretty COSE_Format_aux_env29_type_1;
 
 typedef COSE_Format_evercddl_COSE_Signature_pretty COSE_Format_aux_env29_type_1_pretty;
-
-bool
-COSE_Format_uu___is_Mkaux_env29_type_1_pretty0(
-  COSE_Format_evercddl_COSE_Signature_pretty projectee
-);
 
 COSE_Format_evercddl_COSE_Signature_pretty
 COSE_Format_aux_env29_parse_1(cbor_det_array_iterator_t c);
@@ -1342,11 +1247,6 @@ typedef struct COSE_Format_evercddl_COSE_Sign_pretty_s
 }
 COSE_Format_evercddl_COSE_Sign_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_COSE_Sign_pretty0(
-  COSE_Format_evercddl_COSE_Sign_pretty projectee
-);
-
 COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_parse_COSE_Sign(cbor_det_t c);
 
 size_t
@@ -1378,11 +1278,6 @@ bool COSE_Format_validate_COSE_Sign_Tagged(cbor_det_t c);
 typedef COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_evercddl_COSE_Sign_Tagged;
 
 typedef COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_evercddl_COSE_Sign_Tagged_pretty;
-
-bool
-COSE_Format_uu___is_Mkevercddl_COSE_Sign_Tagged_pretty0(
-  COSE_Format_evercddl_COSE_Sign_pretty projectee
-);
 
 COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_parse_COSE_Sign_Tagged(cbor_det_t c);
 
@@ -1421,11 +1316,6 @@ typedef struct COSE_Format_evercddl_COSE_Sign1_pretty_s
   COSE_Format_evercddl_bstr signature;
 }
 COSE_Format_evercddl_COSE_Sign1_pretty;
-
-bool
-COSE_Format_uu___is_Mkevercddl_COSE_Sign1_pretty0(
-  COSE_Format_evercddl_COSE_Sign1_pretty projectee
-);
 
 COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_parse_COSE_Sign1(cbor_det_t c);
 
@@ -1472,16 +1362,6 @@ typedef struct COSE_Format_evercddl_COSE_Untagged_Message_pretty_s
 }
 COSE_Format_evercddl_COSE_Untagged_Message_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_COSE_Untagged_Message_pretty0(
-  COSE_Format_evercddl_COSE_Untagged_Message_pretty projectee
-);
-
-bool
-COSE_Format_uu___is_Mkevercddl_COSE_Untagged_Message_pretty1(
-  COSE_Format_evercddl_COSE_Untagged_Message_pretty projectee
-);
-
 COSE_Format_evercddl_COSE_Untagged_Message_pretty
 COSE_Format_parse_COSE_Untagged_Message(cbor_det_t c);
 
@@ -1515,11 +1395,6 @@ bool COSE_Format_validate_COSE_Sign1_Tagged(cbor_det_t c);
 typedef COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_evercddl_COSE_Sign1_Tagged;
 
 typedef COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_evercddl_COSE_Sign1_Tagged_pretty;
-
-bool
-COSE_Format_uu___is_Mkevercddl_COSE_Sign1_Tagged_pretty0(
-  COSE_Format_evercddl_COSE_Sign1_pretty projectee
-);
 
 COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_parse_COSE_Sign1_Tagged(cbor_det_t c);
 
@@ -1567,16 +1442,6 @@ typedef struct COSE_Format_evercddl_COSE_Tagged_Message_pretty_s
 }
 COSE_Format_evercddl_COSE_Tagged_Message_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_COSE_Tagged_Message_pretty0(
-  COSE_Format_evercddl_COSE_Tagged_Message_pretty projectee
-);
-
-bool
-COSE_Format_uu___is_Mkevercddl_COSE_Tagged_Message_pretty1(
-  COSE_Format_evercddl_COSE_Tagged_Message_pretty projectee
-);
-
 COSE_Format_evercddl_COSE_Tagged_Message_pretty
 COSE_Format_parse_COSE_Tagged_Message(cbor_det_t c);
 
@@ -1623,16 +1488,6 @@ typedef struct COSE_Format_evercddl_COSE_Messages_pretty_s
   ;
 }
 COSE_Format_evercddl_COSE_Messages_pretty;
-
-bool
-COSE_Format_uu___is_Mkevercddl_COSE_Messages_pretty0(
-  COSE_Format_evercddl_COSE_Messages_pretty projectee
-);
-
-bool
-COSE_Format_uu___is_Mkevercddl_COSE_Messages_pretty1(
-  COSE_Format_evercddl_COSE_Messages_pretty projectee
-);
 
 COSE_Format_evercddl_COSE_Messages_pretty COSE_Format_parse_COSE_Messages(cbor_det_t c);
 
@@ -1699,11 +1554,6 @@ typedef struct COSE_Format_evercddl_Sig_structure_pretty_s
 }
 COSE_Format_evercddl_Sig_structure_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_Sig_structure_pretty0(
-  COSE_Format_evercddl_Sig_structure_pretty projectee
-);
-
 COSE_Format_evercddl_Sig_structure_pretty COSE_Format_parse_Sig_structure(cbor_det_t c);
 
 size_t
@@ -1735,11 +1585,6 @@ bool COSE_Format_validate_Internal_Types(cbor_det_t c);
 typedef COSE_Format_evercddl_Sig_structure_pretty COSE_Format_evercddl_Internal_Types;
 
 typedef COSE_Format_evercddl_Sig_structure_pretty COSE_Format_evercddl_Internal_Types_pretty;
-
-bool
-COSE_Format_uu___is_Mkevercddl_Internal_Types_pretty0(
-  COSE_Format_evercddl_Sig_structure_pretty projectee
-);
 
 COSE_Format_evercddl_Sig_structure_pretty COSE_Format_parse_Internal_Types(cbor_det_t c);
 
@@ -1783,10 +1628,6 @@ typedef struct COSE_Format_evercddl_start_pretty_s
 }
 COSE_Format_evercddl_start_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_start_pretty0(COSE_Format_evercddl_start_pretty projectee);
-
-bool COSE_Format_uu___is_Mkevercddl_start_pretty1(COSE_Format_evercddl_start_pretty projectee);
-
 COSE_Format_evercddl_start_pretty COSE_Format_parse_start(cbor_det_t c);
 
 size_t
@@ -1818,8 +1659,6 @@ bool COSE_Format_validate_eb64url(cbor_det_t c);
 typedef COSE_Format_evercddl_any COSE_Format_evercddl_eb64url;
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_eb64url_pretty;
-
-bool COSE_Format_uu___is_Mkevercddl_eb64url_pretty0(COSE_Format_evercddl_any_pretty projectee);
 
 COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64url(cbor_det_t c);
 
@@ -1853,9 +1692,6 @@ typedef COSE_Format_evercddl_any COSE_Format_evercddl_eb64legacy;
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_eb64legacy_pretty;
 
-bool
-COSE_Format_uu___is_Mkevercddl_eb64legacy_pretty0(COSE_Format_evercddl_any_pretty projectee);
-
 COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64legacy(cbor_det_t c);
 
 size_t
@@ -1888,8 +1724,6 @@ typedef COSE_Format_evercddl_any COSE_Format_evercddl_eb16;
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_eb16_pretty;
 
-bool COSE_Format_uu___is_Mkevercddl_eb16_pretty0(COSE_Format_evercddl_any_pretty projectee);
-
 COSE_Format_evercddl_any_pretty COSE_Format_parse_eb16(cbor_det_t c);
 
 size_t
@@ -1921,8 +1755,6 @@ bool COSE_Format_validate_cborany(cbor_det_t c);
 typedef COSE_Format_evercddl_any COSE_Format_evercddl_cborany;
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_cborany_pretty;
-
-bool COSE_Format_uu___is_Mkevercddl_cborany_pretty0(COSE_Format_evercddl_any_pretty projectee);
 
 COSE_Format_evercddl_any_pretty COSE_Format_parse_cborany(cbor_det_t c);
 
