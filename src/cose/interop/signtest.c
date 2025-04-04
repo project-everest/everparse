@@ -46,7 +46,7 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
             .x5 = {
                 .tag = COSE_Format_Inl,
                 .case_Inl = {
-                    .elt = (K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty[]) {},
+                    .elt = (K___COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty[]) {},
                     .len = 0,
                 },
             },
@@ -76,7 +76,7 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
         .x5 = {
             .tag = COSE_Format_Inl,
             .case_Inl = {
-                .elt = (K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty[]) {},
+                .elt = (K___COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty[]) {},
                 .len = 0,
             },
         },

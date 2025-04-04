@@ -1737,6 +1737,1509 @@ COSE_Format_validate_and_parse_label(Pulse_Lib_Slice_slice__uint8_t s)
   }
 }
 
+typedef struct option__CBOR_Pulse_API_Det_Type_cbor_det_t_s
+{
+  FStar_Pervasives_Native_option__size_t_tags tag;
+  cbor_det_t v;
+}
+option__CBOR_Pulse_API_Det_Type_cbor_det_t;
+
+bool COSE_Format_validate_COSE_Key_OKP(cbor_det_t c)
+{
+  uint8_t ty = cbor_det_major_type(c);
+  if (ty == CBOR_MAJOR_TYPE_MAP)
+  {
+    uint64_t rem0 = cbor_det_get_map_length(c);
+    uint64_t remaining = rem0;
+    cbor_det_t c10 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64, 1ULL);
+    cbor_det_t dest0 = c10;
+    bool bres0 = cbor_det_map_get(c, c10, &dest0);
+    option__CBOR_Pulse_API_Det_Type_cbor_det_t mg0;
+    if (bres0)
+    {
+      cbor_det_t res = dest0;
+      mg0 =
+        (
+          (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+            .tag = FStar_Pervasives_Native_Some,
+            .v = res
+          }
+        );
+    }
+    else
+      mg0 = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+    impl_map_group_result res0;
+    if (mg0.tag == FStar_Pervasives_Native_None)
+      res0 = MGFail;
+    else if (mg0.tag == FStar_Pervasives_Native_Some)
+    {
+      cbor_det_t cv = mg0.v;
+      uint8_t mt = cbor_det_major_type(cv);
+      bool is_uint = mt == CBOR_MAJOR_TYPE_UINT64;
+      bool check_value;
+      if (is_uint)
+      {
+        uint64_t i = cbor_det_read_uint64(cv);
+        check_value = i == 1ULL;
+      }
+      else
+        check_value = false;
+      if (check_value)
+      {
+        uint64_t i1 = remaining;
+        uint64_t i2 = i1 - 1ULL;
+        remaining = i2;
+        res0 = MGOK;
+      }
+      else
+        res0 = MGFail;
+    }
+    else
+      res0 =
+        KRML_EABORT(impl_map_group_result,
+          "unreachable (pattern matches are exhaustive in F*)");
+    impl_map_group_result res2 = res0;
+    impl_map_group_result res10 = res2;
+    impl_map_group_result res11;
+    switch (res10)
+    {
+      case MGOK:
+        {
+          cbor_det_t c1 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 0ULL);
+          cbor_det_t dest = c1;
+          bool bres = cbor_det_map_get(c, c1, &dest);
+          option__CBOR_Pulse_API_Det_Type_cbor_det_t mg;
+          if (bres)
+          {
+            cbor_det_t res = dest;
+            mg =
+              (
+                (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+                  .tag = FStar_Pervasives_Native_Some,
+                  .v = res
+                }
+              );
+          }
+          else
+            mg =
+              ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+          impl_map_group_result res;
+          if (mg.tag == FStar_Pervasives_Native_None)
+            res = MGFail;
+          else if (mg.tag == FStar_Pervasives_Native_Some)
+          {
+            cbor_det_t cv = mg.v;
+            bool test = COSE_Format_validate_int(cv);
+            bool check_value;
+            if (test)
+              check_value = true;
+            else
+              check_value = COSE_Format_validate_tstr(cv);
+            if (check_value)
+            {
+              uint64_t i1 = remaining;
+              uint64_t i2 = i1 - 1ULL;
+              remaining = i2;
+              res = MGOK;
+            }
+            else
+              res = MGFail;
+          }
+          else
+            res =
+              KRML_EABORT(impl_map_group_result,
+                "unreachable (pattern matches are exhaustive in F*)");
+          impl_map_group_result res0 = res;
+          impl_map_group_result res1 = res0;
+          res11 = res1;
+          break;
+        }
+      case MGFail:
+        {
+          res11 = MGFail;
+          break;
+        }
+      case MGCutFail:
+        {
+          res11 = MGCutFail;
+          break;
+        }
+      default:
+        {
+          KRML_HOST_EPRINTF("KaRaMeL incomplete match at %s:%d\n", __FILE__, __LINE__);
+          KRML_HOST_EXIT(253U);
+        }
+    }
+    impl_map_group_result res12;
+    switch (res11)
+    {
+      case MGOK:
+        {
+          uint64_t i0 = remaining;
+          cbor_det_t c1 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 1ULL);
+          cbor_det_t dest = c1;
+          bool bres = cbor_det_map_get(c, c1, &dest);
+          option__CBOR_Pulse_API_Det_Type_cbor_det_t mg;
+          if (bres)
+          {
+            cbor_det_t res = dest;
+            mg =
+              (
+                (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+                  .tag = FStar_Pervasives_Native_Some,
+                  .v = res
+                }
+              );
+          }
+          else
+            mg =
+              ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+          impl_map_group_result res0;
+          if (mg.tag == FStar_Pervasives_Native_None)
+            res0 = MGFail;
+          else if (mg.tag == FStar_Pervasives_Native_Some)
+          {
+            cbor_det_t cv = mg.v;
+            bool check_value = COSE_Format_validate_bstr(cv);
+            if (check_value)
+            {
+              uint64_t i1 = remaining;
+              uint64_t i2 = i1 - 1ULL;
+              remaining = i2;
+              res0 = MGOK;
+            }
+            else
+              res0 = MGFail;
+          }
+          else
+            res0 =
+              KRML_EABORT(impl_map_group_result,
+                "unreachable (pattern matches are exhaustive in F*)");
+          impl_map_group_result res1 = res0;
+          impl_map_group_result res11 = res1;
+          impl_map_group_result res;
+          switch (res11)
+          {
+            case MGOK:
+              {
+                res = MGOK;
+                break;
+              }
+            case MGFail:
+              {
+                remaining = i0;
+                res = MGOK;
+                break;
+              }
+            case MGCutFail:
+              {
+                res = MGCutFail;
+                break;
+              }
+            default:
+              {
+                KRML_HOST_EPRINTF("KaRaMeL incomplete match at %s:%d\n", __FILE__, __LINE__);
+                KRML_HOST_EXIT(253U);
+              }
+          }
+          res12 = res;
+          break;
+        }
+      case MGFail:
+        {
+          res12 = MGFail;
+          break;
+        }
+      case MGCutFail:
+        {
+          res12 = MGCutFail;
+          break;
+        }
+      default:
+        {
+          KRML_HOST_EPRINTF("KaRaMeL incomplete match at %s:%d\n", __FILE__, __LINE__);
+          KRML_HOST_EXIT(253U);
+        }
+    }
+    impl_map_group_result res1;
+    switch (res12)
+    {
+      case MGOK:
+        {
+          uint64_t i0 = remaining;
+          cbor_det_t c1 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 2ULL);
+          cbor_det_t dest = c1;
+          bool bres = cbor_det_map_get(c, c1, &dest);
+          option__CBOR_Pulse_API_Det_Type_cbor_det_t mg;
+          if (bres)
+          {
+            cbor_det_t res = dest;
+            mg =
+              (
+                (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+                  .tag = FStar_Pervasives_Native_Some,
+                  .v = res
+                }
+              );
+          }
+          else
+            mg =
+              ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+          impl_map_group_result res0;
+          if (mg.tag == FStar_Pervasives_Native_None)
+            res0 = MGFail;
+          else if (mg.tag == FStar_Pervasives_Native_Some)
+          {
+            cbor_det_t cv = mg.v;
+            bool test = COSE_Format_validate_bstr(cv);
+            bool check_value;
+            if (test)
+              check_value = true;
+            else
+              check_value = COSE_Format_validate_bool(cv);
+            if (check_value)
+            {
+              uint64_t i1 = remaining;
+              uint64_t i2 = i1 - 1ULL;
+              remaining = i2;
+              res0 = MGOK;
+            }
+            else
+              res0 = MGFail;
+          }
+          else
+            res0 =
+              KRML_EABORT(impl_map_group_result,
+                "unreachable (pattern matches are exhaustive in F*)");
+          impl_map_group_result res2 = res0;
+          impl_map_group_result res11 = res2;
+          impl_map_group_result res;
+          switch (res11)
+          {
+            case MGOK:
+              {
+                res = MGOK;
+                break;
+              }
+            case MGFail:
+              {
+                remaining = i0;
+                res = MGOK;
+                break;
+              }
+            case MGCutFail:
+              {
+                res = MGCutFail;
+                break;
+              }
+            default:
+              {
+                KRML_HOST_EPRINTF("KaRaMeL incomplete match at %s:%d\n", __FILE__, __LINE__);
+                KRML_HOST_EXIT(253U);
+              }
+          }
+          res1 = res;
+          break;
+        }
+      case MGFail:
+        {
+          res1 = MGFail;
+          break;
+        }
+      case MGCutFail:
+        {
+          res1 = MGCutFail;
+          break;
+        }
+      default:
+        {
+          KRML_HOST_EPRINTF("KaRaMeL incomplete match at %s:%d\n", __FILE__, __LINE__);
+          KRML_HOST_EXIT(253U);
+        }
+    }
+    impl_map_group_result res3;
+    switch (res1)
+    {
+      case MGOK:
+        {
+          uint64_t i0 = remaining;
+          cbor_det_t c1 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 3ULL);
+          cbor_det_t dest = c1;
+          bool bres = cbor_det_map_get(c, c1, &dest);
+          option__CBOR_Pulse_API_Det_Type_cbor_det_t mg;
+          if (bres)
+          {
+            cbor_det_t res = dest;
+            mg =
+              (
+                (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+                  .tag = FStar_Pervasives_Native_Some,
+                  .v = res
+                }
+              );
+          }
+          else
+            mg =
+              ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+          impl_map_group_result res0;
+          if (mg.tag == FStar_Pervasives_Native_None)
+            res0 = MGFail;
+          else if (mg.tag == FStar_Pervasives_Native_Some)
+          {
+            cbor_det_t cv = mg.v;
+            bool check_value = COSE_Format_validate_bstr(cv);
+            if (check_value)
+            {
+              uint64_t i1 = remaining;
+              uint64_t i2 = i1 - 1ULL;
+              remaining = i2;
+              res0 = MGOK;
+            }
+            else
+              res0 = MGFail;
+          }
+          else
+            res0 =
+              KRML_EABORT(impl_map_group_result,
+                "unreachable (pattern matches are exhaustive in F*)");
+          impl_map_group_result res1 = res0;
+          impl_map_group_result res11 = res1;
+          impl_map_group_result res;
+          switch (res11)
+          {
+            case MGOK:
+              {
+                res = MGOK;
+                break;
+              }
+            case MGFail:
+              {
+                remaining = i0;
+                res = MGOK;
+                break;
+              }
+            case MGCutFail:
+              {
+                res = MGCutFail;
+                break;
+              }
+            default:
+              {
+                KRML_HOST_EPRINTF("KaRaMeL incomplete match at %s:%d\n", __FILE__, __LINE__);
+                KRML_HOST_EXIT(253U);
+              }
+          }
+          res3 = res;
+          break;
+        }
+      case MGFail:
+        {
+          res3 = MGFail;
+          break;
+        }
+      case MGCutFail:
+        {
+          res3 = MGCutFail;
+          break;
+        }
+      default:
+        {
+          KRML_HOST_EPRINTF("KaRaMeL incomplete match at %s:%d\n", __FILE__, __LINE__);
+          KRML_HOST_EXIT(253U);
+        }
+    }
+    switch (res3)
+    {
+      case MGOK:
+        {
+          uint64_t rem = remaining;
+          return rem == 0ULL;
+        }
+      case MGFail:
+        {
+          return false;
+        }
+      case MGCutFail:
+        {
+          return false;
+        }
+      default:
+        {
+          KRML_HOST_EPRINTF("KaRaMeL incomplete match at %s:%d\n", __FILE__, __LINE__);
+          KRML_HOST_EXIT(253U);
+        }
+    }
+  }
+  else
+    return false;
+}
+
+bool
+COSE_Format_uu___is_Mkevercddl_COSE_Key_OKP_pretty0(
+  COSE_Format_evercddl_COSE_Key_OKP_pretty projectee
+)
+{
+  KRML_MAYBE_UNUSED_VAR(projectee);
+  return true;
+}
+
+COSE_Format_evercddl_COSE_Key_OKP_pretty
+COSE_Format_evercddl_COSE_Key_OKP_pretty_right(COSE_Format_evercddl_COSE_Key_OKP x5)
+{
+  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty x10 = x5.snd;
+  FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+  x9 = x5.fst.snd;
+  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty x8 = x5.fst.fst.snd;
+  COSE_Format_evercddl_label x7 = x5.fst.fst.fst;
+  return ((COSE_Format_evercddl_COSE_Key_OKP_pretty){ .x1 = x7, .x2 = x8, .x3 = x9, .x4 = x10 });
+}
+
+COSE_Format_evercddl_COSE_Key_OKP
+COSE_Format_evercddl_COSE_Key_OKP_pretty_left(COSE_Format_evercddl_COSE_Key_OKP_pretty x11)
+{
+  COSE_Format_evercddl_label x19 = x11.x1;
+  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty x20 = x11.x2;
+  FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+  x21 = x11.x3;
+  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty x22 = x11.x4;
+  return
+    (
+      (COSE_Format_evercddl_COSE_Key_OKP){
+        .fst = { .fst = { .fst = x19, .snd = x20 }, .snd = x21 },
+        .snd = x22
+      }
+    );
+}
+
+COSE_Format_evercddl_COSE_Key_OKP_pretty COSE_Format_parse_COSE_Key_OKP(cbor_det_t c)
+{
+  cbor_det_t c10 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64, 1ULL);
+  cbor_det_t dest0 = c10;
+  bool bres0 = cbor_det_map_get(c, c10, &dest0);
+  option__CBOR_Pulse_API_Det_Type_cbor_det_t ow0;
+  if (bres0)
+  {
+    cbor_det_t res = dest0;
+    ow0 =
+      (
+        (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = res
+        }
+      );
+  }
+  else
+    ow0 = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+  option__CBOR_Pulse_API_Det_Type_cbor_det_t _letpattern = ow0;
+  if (!(_letpattern.tag == FStar_Pervasives_Native_Some))
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+  cbor_det_t c11 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 0ULL);
+  cbor_det_t dest1 = c11;
+  bool bres1 = cbor_det_map_get(c, c11, &dest1);
+  option__CBOR_Pulse_API_Det_Type_cbor_det_t ow1;
+  if (bres1)
+  {
+    cbor_det_t res = dest1;
+    ow1 =
+      (
+        (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = res
+        }
+      );
+  }
+  else
+    ow1 = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+  option__CBOR_Pulse_API_Det_Type_cbor_det_t _letpattern0 = ow1;
+  COSE_Format_evercddl_label res0;
+  if (_letpattern0.tag == FStar_Pervasives_Native_Some)
+  {
+    cbor_det_t w = _letpattern0.v;
+    bool test = COSE_Format_validate_int(w);
+    COSE_Format_evercddl_label res1;
+    if (test)
+    {
+      COSE_Format_evercddl_int_pretty res = COSE_Format_parse_int(w);
+      res1 = ((COSE_Format_evercddl_label){ .tag = COSE_Format_Inl, { .case_Inl = res } });
+    }
+    else
+    {
+      COSE_Format_evercddl_bstr res = COSE_Format_parse_tstr(w);
+      res1 = ((COSE_Format_evercddl_label){ .tag = COSE_Format_Inr, { .case_Inr = res } });
+    }
+    res0 = res1;
+  }
+  else
+    res0 =
+      KRML_EABORT(COSE_Format_evercddl_label,
+        "unreachable (pattern matches are exhaustive in F*)");
+  COSE_Format_evercddl_label w2 = res0;
+  COSE_Format_evercddl_label w1 = w2;
+  uint64_t dummy0 = 0ULL;
+  KRML_HOST_IGNORE(&dummy0);
+  cbor_det_t c12 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 1ULL);
+  cbor_det_t dest2 = c12;
+  bool bres2 = cbor_det_map_get(c, c12, &dest2);
+  option__CBOR_Pulse_API_Det_Type_cbor_det_t mg0;
+  if (bres2)
+  {
+    cbor_det_t res = dest2;
+    mg0 =
+      (
+        (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = res
+        }
+      );
+  }
+  else
+    mg0 = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+  impl_map_group_result res1;
+  if (mg0.tag == FStar_Pervasives_Native_None)
+    res1 = MGFail;
+  else if (mg0.tag == FStar_Pervasives_Native_Some)
+  {
+    cbor_det_t cv = mg0.v;
+    bool check_value = COSE_Format_validate_bstr(cv);
+    if (check_value)
+      res1 = MGOK;
+    else
+      res1 = MGFail;
+  }
+  else
+    res1 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
+  impl_map_group_result res2 = res1;
+  impl_map_group_result test1 = res2;
+  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty _bind_c0;
+  if (uu___is_MGOK(test1))
+  {
+    cbor_det_t c1 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 1ULL);
+    cbor_det_t dest = c1;
+    bool bres = cbor_det_map_get(c, c1, &dest);
+    option__CBOR_Pulse_API_Det_Type_cbor_det_t ow;
+    if (bres)
+    {
+      cbor_det_t res = dest;
+      ow =
+        (
+          (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+            .tag = FStar_Pervasives_Native_Some,
+            .v = res
+          }
+        );
+    }
+    else
+      ow = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+    option__CBOR_Pulse_API_Det_Type_cbor_det_t _letpattern = ow;
+    COSE_Format_evercddl_bstr res;
+    if (_letpattern.tag == FStar_Pervasives_Native_Some)
+    {
+      cbor_det_t w = _letpattern.v;
+      COSE_Format_evercddl_bstr res0 = COSE_Format_parse_bstr(w);
+      res = res0;
+    }
+    else
+      res =
+        KRML_EABORT(COSE_Format_evercddl_bstr,
+          "unreachable (pattern matches are exhaustive in F*)");
+    COSE_Format_evercddl_bstr w11 = res;
+    _bind_c0 =
+      (
+        (FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = w11
+        }
+      );
+  }
+  else
+    _bind_c0 =
+      (
+        (FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty){
+          .tag = FStar_Pervasives_Native_None
+        }
+      );
+  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty w20 = _bind_c0;
+  K_________FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty__FStar_Pervasives_Native_option_COSE_Format_evercddl_bstr_pretty
+  w10 = { .fst = w1, .snd = w20 };
+  uint64_t dummy1 = 0ULL;
+  KRML_HOST_IGNORE(&dummy1);
+  cbor_det_t c13 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 2ULL);
+  cbor_det_t dest3 = c13;
+  bool bres3 = cbor_det_map_get(c, c13, &dest3);
+  option__CBOR_Pulse_API_Det_Type_cbor_det_t mg1;
+  if (bres3)
+  {
+    cbor_det_t res = dest3;
+    mg1 =
+      (
+        (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = res
+        }
+      );
+  }
+  else
+    mg1 = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+  impl_map_group_result res3;
+  if (mg1.tag == FStar_Pervasives_Native_None)
+    res3 = MGFail;
+  else if (mg1.tag == FStar_Pervasives_Native_Some)
+  {
+    cbor_det_t cv = mg1.v;
+    bool test = COSE_Format_validate_bstr(cv);
+    bool check_value;
+    if (test)
+      check_value = true;
+    else
+      check_value = COSE_Format_validate_bool(cv);
+    if (check_value)
+      res3 = MGOK;
+    else
+      res3 = MGFail;
+  }
+  else
+    res3 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
+  impl_map_group_result res4 = res3;
+  impl_map_group_result test10 = res4;
+  FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+  _bind_c1;
+  if (uu___is_MGOK(test10))
+  {
+    cbor_det_t c1 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 2ULL);
+    cbor_det_t dest = c1;
+    bool bres = cbor_det_map_get(c, c1, &dest);
+    option__CBOR_Pulse_API_Det_Type_cbor_det_t ow;
+    if (bres)
+    {
+      cbor_det_t res = dest;
+      ow =
+        (
+          (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+            .tag = FStar_Pervasives_Native_Some,
+            .v = res
+          }
+        );
+    }
+    else
+      ow = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+    option__CBOR_Pulse_API_Det_Type_cbor_det_t _letpattern = ow;
+    FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+    res0;
+    if (_letpattern.tag == FStar_Pervasives_Native_Some)
+    {
+      cbor_det_t w = _letpattern.v;
+      bool test = COSE_Format_validate_bstr(w);
+      FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+      res1;
+      if (test)
+      {
+        COSE_Format_evercddl_bstr res = COSE_Format_parse_bstr(w);
+        res1 =
+          (
+            (FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty){
+              .tag = COSE_Format_Inl,
+              { .case_Inl = res }
+            }
+          );
+      }
+      else
+      {
+        bool res = COSE_Format_parse_bool(w);
+        res1 =
+          (
+            (FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty){
+              .tag = COSE_Format_Inr,
+              { .case_Inr = res }
+            }
+          );
+      }
+      res0 = res1;
+    }
+    else
+      res0 =
+        KRML_EABORT(FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty,
+          "unreachable (pattern matches are exhaustive in F*)");
+    FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+    w11 = res0;
+    _bind_c1 =
+      (
+        (FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = w11
+        }
+      );
+  }
+  else
+    _bind_c1 =
+      (
+        (FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty){
+          .tag = FStar_Pervasives_Native_None
+        }
+      );
+  FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+  w21 = _bind_c1;
+  K__________FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty____FStar_Pervasives_Native_option_COSE_Format_evercddl_bstr_pretty__FStar_Pervasives_Native_option_FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+  w11 = { .fst = w10, .snd = w21 };
+  uint64_t dummy = 0ULL;
+  KRML_HOST_IGNORE(&dummy);
+  cbor_det_t c14 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 3ULL);
+  cbor_det_t dest4 = c14;
+  bool bres4 = cbor_det_map_get(c, c14, &dest4);
+  option__CBOR_Pulse_API_Det_Type_cbor_det_t mg;
+  if (bres4)
+  {
+    cbor_det_t res = dest4;
+    mg =
+      (
+        (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = res
+        }
+      );
+  }
+  else
+    mg = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+  impl_map_group_result res5;
+  if (mg.tag == FStar_Pervasives_Native_None)
+    res5 = MGFail;
+  else if (mg.tag == FStar_Pervasives_Native_Some)
+  {
+    cbor_det_t cv = mg.v;
+    bool check_value = COSE_Format_validate_bstr(cv);
+    if (check_value)
+      res5 = MGOK;
+    else
+      res5 = MGFail;
+  }
+  else
+    res5 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
+  impl_map_group_result res6 = res5;
+  impl_map_group_result test11 = res6;
+  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty _bind_c;
+  if (uu___is_MGOK(test11))
+  {
+    cbor_det_t c1 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 3ULL);
+    cbor_det_t dest = c1;
+    bool bres = cbor_det_map_get(c, c1, &dest);
+    option__CBOR_Pulse_API_Det_Type_cbor_det_t ow;
+    if (bres)
+    {
+      cbor_det_t res = dest;
+      ow =
+        (
+          (option__CBOR_Pulse_API_Det_Type_cbor_det_t){
+            .tag = FStar_Pervasives_Native_Some,
+            .v = res
+          }
+        );
+    }
+    else
+      ow = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
+    option__CBOR_Pulse_API_Det_Type_cbor_det_t _letpattern = ow;
+    COSE_Format_evercddl_bstr res;
+    if (_letpattern.tag == FStar_Pervasives_Native_Some)
+    {
+      cbor_det_t w = _letpattern.v;
+      COSE_Format_evercddl_bstr res0 = COSE_Format_parse_bstr(w);
+      res = res0;
+    }
+    else
+      res =
+        KRML_EABORT(COSE_Format_evercddl_bstr,
+          "unreachable (pattern matches are exhaustive in F*)");
+    COSE_Format_evercddl_bstr w11 = res;
+    _bind_c =
+      (
+        (FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = w11
+        }
+      );
+  }
+  else
+    _bind_c =
+      (
+        (FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty){
+          .tag = FStar_Pervasives_Native_None
+        }
+      );
+  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty w22 = _bind_c;
+  COSE_Format_evercddl_COSE_Key_OKP res10 = { .fst = w11, .snd = w22 };
+  COSE_Format_evercddl_COSE_Key_OKP_pretty
+  res20 = COSE_Format_evercddl_COSE_Key_OKP_pretty_right(res10);
+  return res20;
+}
+
+size_t
+COSE_Format_serialize_COSE_Key_OKP(
+  COSE_Format_evercddl_COSE_Key_OKP_pretty c,
+  Pulse_Lib_Slice_slice__uint8_t out
+)
+{
+  COSE_Format_evercddl_COSE_Key_OKP c_ = COSE_Format_evercddl_COSE_Key_OKP_pretty_left(c);
+  uint64_t pcount = 0ULL;
+  size_t psize = (size_t)0U;
+  COSE_Format_evercddl_COSE_Key_OKP _letpattern = c_;
+  K__________FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty____FStar_Pervasives_Native_option_COSE_Format_evercddl_bstr_pretty__FStar_Pervasives_Native_option_FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+  c1 = _letpattern.fst;
+  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty c2 = _letpattern.snd;
+  K__________FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty____FStar_Pervasives_Native_option_COSE_Format_evercddl_bstr_pretty__FStar_Pervasives_Native_option_FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+  _letpattern10 = c1;
+  K_________FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty__FStar_Pervasives_Native_option_COSE_Format_evercddl_bstr_pretty
+  c110 = _letpattern10.fst;
+  FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+  c21 = _letpattern10.snd;
+  K_________FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty__FStar_Pervasives_Native_option_COSE_Format_evercddl_bstr_pretty
+  _letpattern20 = c110;
+  COSE_Format_evercddl_label c120 = _letpattern20.fst;
+  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty c220 = _letpattern20.snd;
+  COSE_Format_evercddl_label _letpattern30 = c120;
+  COSE_Format_evercddl_label c23 = _letpattern30;
+  uint64_t count0 = pcount;
+  bool res10;
+  if (count0 < 18446744073709551615ULL)
+  {
+    size_t size0 = psize;
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    _letpattern4 = split__uint8_t(out, size0);
+    Pulse_Lib_Slice_slice__uint8_t out1 = _letpattern4.snd;
+    cbor_det_t c30 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64, 1ULL);
+    size_t slen0 = len__uint8_t(out1);
+    size_t len = cbor_det_size(c30, slen0);
+    option__size_t res0;
+    if (len > (size_t)0U)
+    {
+      uint8_t *out2 = slice_to_arrayptr_intro__uint8_t(out1);
+      size_t len_ = cbor_det_serialize(c30, out2, len);
+      res0 = ((option__size_t){ .tag = FStar_Pervasives_Native_Some, .v = len_ });
+    }
+    else
+      res0 = ((option__size_t){ .tag = FStar_Pervasives_Native_None });
+    size_t res1;
+    if (res0.tag == FStar_Pervasives_Native_None)
+      res1 = (size_t)0U;
+    else if (res0.tag == FStar_Pervasives_Native_Some)
+      res1 = res0.v;
+    else
+      res1 = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
+    size_t res11 = res1;
+    if (res11 > (size_t)0U)
+    {
+      size_t size1 = size0 + res11;
+      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      _letpattern5 = split__uint8_t(out, size1);
+      Pulse_Lib_Slice_slice__uint8_t out2 = _letpattern5.snd;
+      cbor_det_t c3 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_UINT64, 1ULL);
+      size_t slen = len__uint8_t(out2);
+      size_t len = cbor_det_size(c3, slen);
+      option__size_t res0;
+      if (len > (size_t)0U)
+      {
+        uint8_t *out3 = slice_to_arrayptr_intro__uint8_t(out2);
+        size_t len_ = cbor_det_serialize(c3, out3, len);
+        res0 = ((option__size_t){ .tag = FStar_Pervasives_Native_Some, .v = len_ });
+      }
+      else
+        res0 = ((option__size_t){ .tag = FStar_Pervasives_Native_None });
+      size_t res;
+      if (res0.tag == FStar_Pervasives_Native_None)
+        res = (size_t)0U;
+      else if (res0.tag == FStar_Pervasives_Native_Some)
+        res = res0.v;
+      else
+        res = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
+      size_t res2 = res;
+      if (res2 > (size_t)0U)
+      {
+        size_t size2 = size1 + res2;
+        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        _letpattern6 = split__uint8_t(out, size2);
+        Pulse_Lib_Slice_slice__uint8_t out012 = _letpattern6.fst;
+        size_t aout_len = len__uint8_t(out012);
+        uint8_t *aout = slice_to_arrayptr_intro__uint8_t(out012);
+        bool res = cbor_det_serialize_map_insert_to_array(aout, aout_len, size0, size1);
+        bool res0 = res;
+        if (res0)
+        {
+          psize = size2;
+          pcount = count0 + 1ULL;
+          res10 = true;
+        }
+        else
+          res10 = false;
+      }
+      else
+        res10 = false;
+    }
+    else
+      res10 = false;
+  }
+  else
+    res10 = false;
+  bool res11;
+  if (res10)
+  {
+    uint64_t count = pcount;
+    bool res20;
+    if (count < 18446744073709551615ULL)
+    {
+      size_t size0 = psize;
+      __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+      _letpattern4 = split__uint8_t(out, size0);
+      Pulse_Lib_Slice_slice__uint8_t out1 = _letpattern4.snd;
+      cbor_det_t c3 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 0ULL);
+      size_t slen = len__uint8_t(out1);
+      size_t len = cbor_det_size(c3, slen);
+      option__size_t res0;
+      if (len > (size_t)0U)
+      {
+        uint8_t *out2 = slice_to_arrayptr_intro__uint8_t(out1);
+        size_t len_ = cbor_det_serialize(c3, out2, len);
+        res0 = ((option__size_t){ .tag = FStar_Pervasives_Native_Some, .v = len_ });
+      }
+      else
+        res0 = ((option__size_t){ .tag = FStar_Pervasives_Native_None });
+      size_t res;
+      if (res0.tag == FStar_Pervasives_Native_None)
+        res = (size_t)0U;
+      else if (res0.tag == FStar_Pervasives_Native_Some)
+        res = res0.v;
+      else
+        res = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
+      size_t res11 = res;
+      if (res11 > (size_t)0U)
+      {
+        size_t size1 = size0 + res11;
+        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        _letpattern5 = split__uint8_t(out, size1);
+        Pulse_Lib_Slice_slice__uint8_t out2 = _letpattern5.snd;
+        size_t res2;
+        if (c23.tag == COSE_Format_Inl)
+        {
+          COSE_Format_evercddl_int_pretty c14 = c23.case_Inl;
+          size_t res = COSE_Format_serialize_int(c14, out2);
+          res2 = res;
+        }
+        else if (c23.tag == COSE_Format_Inr)
+        {
+          COSE_Format_evercddl_bstr c24 = c23.case_Inr;
+          size_t res = COSE_Format_serialize_tstr(c24, out2);
+          res2 = res;
+        }
+        else
+          res2 = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
+        if (res2 > (size_t)0U)
+        {
+          size_t size2 = size1 + res2;
+          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          _letpattern6 = split__uint8_t(out, size2);
+          Pulse_Lib_Slice_slice__uint8_t out012 = _letpattern6.fst;
+          size_t aout_len = len__uint8_t(out012);
+          uint8_t *aout = slice_to_arrayptr_intro__uint8_t(out012);
+          bool res = cbor_det_serialize_map_insert_to_array(aout, aout_len, size0, size1);
+          bool res0 = res;
+          if (res0)
+          {
+            psize = size2;
+            pcount = count + 1ULL;
+            res20 = true;
+          }
+          else
+            res20 = false;
+        }
+        else
+          res20 = false;
+      }
+      else
+        res20 = false;
+    }
+    else
+      res20 = false;
+    res11 = res20;
+  }
+  else
+    res11 = false;
+  bool res12;
+  if (res11)
+  {
+    bool res2;
+    if (c220.tag == FStar_Pervasives_Native_Some)
+    {
+      COSE_Format_evercddl_bstr c13 = c220.v;
+      uint64_t count = pcount;
+      bool res0;
+      if (count < 18446744073709551615ULL)
+      {
+        size_t size0 = psize;
+        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        _letpattern3 = split__uint8_t(out, size0);
+        Pulse_Lib_Slice_slice__uint8_t out1 = _letpattern3.snd;
+        cbor_det_t c3 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 1ULL);
+        size_t slen = len__uint8_t(out1);
+        size_t len = cbor_det_size(c3, slen);
+        option__size_t res1;
+        if (len > (size_t)0U)
+        {
+          uint8_t *out2 = slice_to_arrayptr_intro__uint8_t(out1);
+          size_t len_ = cbor_det_serialize(c3, out2, len);
+          res1 = ((option__size_t){ .tag = FStar_Pervasives_Native_Some, .v = len_ });
+        }
+        else
+          res1 = ((option__size_t){ .tag = FStar_Pervasives_Native_None });
+        size_t res;
+        if (res1.tag == FStar_Pervasives_Native_None)
+          res = (size_t)0U;
+        else if (res1.tag == FStar_Pervasives_Native_Some)
+          res = res1.v;
+        else
+          res = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
+        size_t res11 = res;
+        if (res11 > (size_t)0U)
+        {
+          size_t size1 = size0 + res11;
+          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          _letpattern4 = split__uint8_t(out, size1);
+          Pulse_Lib_Slice_slice__uint8_t out2 = _letpattern4.snd;
+          size_t res2 = COSE_Format_serialize_bstr(c13, out2);
+          if (res2 > (size_t)0U)
+          {
+            size_t size2 = size1 + res2;
+            __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+            _letpattern5 = split__uint8_t(out, size2);
+            Pulse_Lib_Slice_slice__uint8_t out012 = _letpattern5.fst;
+            size_t aout_len = len__uint8_t(out012);
+            uint8_t *aout = slice_to_arrayptr_intro__uint8_t(out012);
+            bool res = cbor_det_serialize_map_insert_to_array(aout, aout_len, size0, size1);
+            bool res1 = res;
+            if (res1)
+            {
+              psize = size2;
+              pcount = count + 1ULL;
+              res0 = true;
+            }
+            else
+              res0 = false;
+          }
+          else
+            res0 = false;
+        }
+        else
+          res0 = false;
+      }
+      else
+        res0 = false;
+      res2 = res0;
+    }
+    else if (c220.tag == FStar_Pervasives_Native_None)
+      res2 = true;
+    else
+      res2 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+    res12 = res2;
+  }
+  else
+    res12 = false;
+  bool res1;
+  if (res12)
+  {
+    bool res20;
+    if (c21.tag == FStar_Pervasives_Native_Some)
+    {
+      FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bool_pretty
+      c12 = c21.v;
+      uint64_t count = pcount;
+      bool res0;
+      if (count < 18446744073709551615ULL)
+      {
+        size_t size0 = psize;
+        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        _letpattern2 = split__uint8_t(out, size0);
+        Pulse_Lib_Slice_slice__uint8_t out1 = _letpattern2.snd;
+        cbor_det_t c3 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 2ULL);
+        size_t slen = len__uint8_t(out1);
+        size_t len = cbor_det_size(c3, slen);
+        option__size_t res1;
+        if (len > (size_t)0U)
+        {
+          uint8_t *out2 = slice_to_arrayptr_intro__uint8_t(out1);
+          size_t len_ = cbor_det_serialize(c3, out2, len);
+          res1 = ((option__size_t){ .tag = FStar_Pervasives_Native_Some, .v = len_ });
+        }
+        else
+          res1 = ((option__size_t){ .tag = FStar_Pervasives_Native_None });
+        size_t res;
+        if (res1.tag == FStar_Pervasives_Native_None)
+          res = (size_t)0U;
+        else if (res1.tag == FStar_Pervasives_Native_Some)
+          res = res1.v;
+        else
+          res = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
+        size_t res11 = res;
+        if (res11 > (size_t)0U)
+        {
+          size_t size1 = size0 + res11;
+          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          _letpattern3 = split__uint8_t(out, size1);
+          Pulse_Lib_Slice_slice__uint8_t out2 = _letpattern3.snd;
+          size_t res2;
+          if (c12.tag == COSE_Format_Inl)
+          {
+            COSE_Format_evercddl_bstr c13 = c12.case_Inl;
+            size_t res = COSE_Format_serialize_bstr(c13, out2);
+            res2 = res;
+          }
+          else if (c12.tag == COSE_Format_Inr)
+          {
+            bool c22 = c12.case_Inr;
+            size_t res = COSE_Format_serialize_bool(c22, out2);
+            res2 = res;
+          }
+          else
+            res2 = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
+          if (res2 > (size_t)0U)
+          {
+            size_t size2 = size1 + res2;
+            __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+            _letpattern4 = split__uint8_t(out, size2);
+            Pulse_Lib_Slice_slice__uint8_t out012 = _letpattern4.fst;
+            size_t aout_len = len__uint8_t(out012);
+            uint8_t *aout = slice_to_arrayptr_intro__uint8_t(out012);
+            bool res = cbor_det_serialize_map_insert_to_array(aout, aout_len, size0, size1);
+            bool res1 = res;
+            if (res1)
+            {
+              psize = size2;
+              pcount = count + 1ULL;
+              res0 = true;
+            }
+            else
+              res0 = false;
+          }
+          else
+            res0 = false;
+        }
+        else
+          res0 = false;
+      }
+      else
+        res0 = false;
+      res20 = res0;
+    }
+    else if (c21.tag == FStar_Pervasives_Native_None)
+      res20 = true;
+    else
+      res20 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+    res1 = res20;
+  }
+  else
+    res1 = false;
+  bool res0;
+  if (res1)
+  {
+    bool res2;
+    if (c2.tag == FStar_Pervasives_Native_Some)
+    {
+      COSE_Format_evercddl_bstr c11 = c2.v;
+      uint64_t count = pcount;
+      bool res0;
+      if (count < 18446744073709551615ULL)
+      {
+        size_t size0 = psize;
+        __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+        _letpattern1 = split__uint8_t(out, size0);
+        Pulse_Lib_Slice_slice__uint8_t out1 = _letpattern1.snd;
+        cbor_det_t c3 = cbor_det_mk_int64(CBOR_MAJOR_TYPE_NEG_INT64, 3ULL);
+        size_t slen = len__uint8_t(out1);
+        size_t len = cbor_det_size(c3, slen);
+        option__size_t res1;
+        if (len > (size_t)0U)
+        {
+          uint8_t *out2 = slice_to_arrayptr_intro__uint8_t(out1);
+          size_t len_ = cbor_det_serialize(c3, out2, len);
+          res1 = ((option__size_t){ .tag = FStar_Pervasives_Native_Some, .v = len_ });
+        }
+        else
+          res1 = ((option__size_t){ .tag = FStar_Pervasives_Native_None });
+        size_t res;
+        if (res1.tag == FStar_Pervasives_Native_None)
+          res = (size_t)0U;
+        else if (res1.tag == FStar_Pervasives_Native_Some)
+          res = res1.v;
+        else
+          res = KRML_EABORT(size_t, "unreachable (pattern matches are exhaustive in F*)");
+        size_t res11 = res;
+        if (res11 > (size_t)0U)
+        {
+          size_t size1 = size0 + res11;
+          __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+          _letpattern2 = split__uint8_t(out, size1);
+          Pulse_Lib_Slice_slice__uint8_t out2 = _letpattern2.snd;
+          size_t res2 = COSE_Format_serialize_bstr(c11, out2);
+          if (res2 > (size_t)0U)
+          {
+            size_t size2 = size1 + res2;
+            __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+            _letpattern3 = split__uint8_t(out, size2);
+            Pulse_Lib_Slice_slice__uint8_t out012 = _letpattern3.fst;
+            size_t aout_len = len__uint8_t(out012);
+            uint8_t *aout = slice_to_arrayptr_intro__uint8_t(out012);
+            bool res = cbor_det_serialize_map_insert_to_array(aout, aout_len, size0, size1);
+            bool res1 = res;
+            if (res1)
+            {
+              psize = size2;
+              pcount = count + 1ULL;
+              res0 = true;
+            }
+            else
+              res0 = false;
+          }
+          else
+            res0 = false;
+        }
+        else
+          res0 = false;
+      }
+      else
+        res0 = false;
+      res2 = res0;
+    }
+    else if (c2.tag == FStar_Pervasives_Native_None)
+      res2 = true;
+    else
+      res2 = KRML_EABORT(bool, "unreachable (pattern matches are exhaustive in F*)");
+    res0 = res2;
+  }
+  else
+    res0 = false;
+  size_t _bind_c;
+  if (res0)
+  {
+    size_t size = psize;
+    uint64_t count = pcount;
+    size_t aout_len = len__uint8_t(out);
+    uint8_t *aout = slice_to_arrayptr_intro__uint8_t(out);
+    size_t res1 = cbor_det_serialize_map_to_array(count, aout, aout_len, size);
+    _bind_c = res1;
+  }
+  else
+    _bind_c = (size_t)0U;
+  size_t res = _bind_c;
+  return res;
+}
+
+FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_OKP_pretty___Pulse_Lib_Slice_slice_uint8_t_
+COSE_Format_validate_and_parse_COSE_Key_OKP(Pulse_Lib_Slice_slice__uint8_t s)
+{
+  size_t len = len__uint8_t(s);
+  uint8_t *a0 = slice_to_arrayptr_intro__uint8_t(s);
+  uint8_t *a1 = a0;
+  size_t res = cbor_det_validate(a1, len);
+  size_t len0 = res;
+  option___CBOR_Pulse_API_Det_Type_cbor_det_t___Pulse_Lib_Slice_slice_uint8_t_ q;
+  if (len0 == (size_t)0U)
+    q =
+      (
+        (option___CBOR_Pulse_API_Det_Type_cbor_det_t___Pulse_Lib_Slice_slice_uint8_t_){
+          .tag = FStar_Pervasives_Native_None
+        }
+      );
+  else
+  {
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s_ = split__uint8_t(s, len0);
+    Pulse_Lib_Slice_slice__uint8_t s1 = s_.fst;
+    Pulse_Lib_Slice_slice__uint8_t s2 = s_.snd;
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    _letpattern = { .fst = s1, .snd = s2 };
+    Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern.fst;
+    Pulse_Lib_Slice_slice__uint8_t rem = _letpattern.snd;
+    size_t len1 = len__uint8_t(input2);
+    uint8_t *a = slice_to_arrayptr_intro__uint8_t(input2);
+    uint8_t *a0 = a;
+    cbor_det_t res = cbor_det_parse(a0, len1);
+    cbor_det_t res0 = res;
+    q =
+      (
+        (option___CBOR_Pulse_API_Det_Type_cbor_det_t___Pulse_Lib_Slice_slice_uint8_t_){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = { .fst = res0, .snd = rem }
+        }
+      );
+  }
+  if (q.tag == FStar_Pervasives_Native_None)
+    return
+      (
+        (FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_OKP_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+          .tag = FStar_Pervasives_Native_None
+        }
+      );
+  else if (q.tag == FStar_Pervasives_Native_Some)
+  {
+    __CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice_uint8_t rlrem = q.v;
+    __CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice_uint8_t _letpattern = rlrem;
+    cbor_det_t rl = _letpattern.fst;
+    Pulse_Lib_Slice_slice__uint8_t rem = _letpattern.snd;
+    bool test = COSE_Format_validate_COSE_Key_OKP(rl);
+    if (test)
+    {
+      COSE_Format_evercddl_COSE_Key_OKP_pretty x = COSE_Format_parse_COSE_Key_OKP(rl);
+      return
+        (
+          (FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_OKP_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+            .tag = FStar_Pervasives_Native_Some,
+            .v = { .fst = x, .snd = rem }
+          }
+        );
+    }
+    else
+      return
+        (
+          (FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_OKP_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+            .tag = FStar_Pervasives_Native_None
+          }
+        );
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+}
+
+bool COSE_Format_validate_COSE_Key(cbor_det_t c)
+{
+  return COSE_Format_validate_COSE_Key_OKP(c);
+}
+
+bool
+COSE_Format_uu___is_Mkevercddl_COSE_Key_pretty0(
+  COSE_Format_evercddl_COSE_Key_OKP_pretty projectee
+)
+{
+  KRML_MAYBE_UNUSED_VAR(projectee);
+  return true;
+}
+
+COSE_Format_evercddl_COSE_Key_OKP_pretty
+COSE_Format_evercddl_COSE_Key_pretty_right(COSE_Format_evercddl_COSE_Key_OKP_pretty x1)
+{
+  return x1;
+}
+
+COSE_Format_evercddl_COSE_Key_OKP_pretty
+COSE_Format_evercddl_COSE_Key_pretty_left(COSE_Format_evercddl_COSE_Key_OKP_pretty x3)
+{
+  return x3;
+}
+
+COSE_Format_evercddl_COSE_Key_OKP_pretty COSE_Format_parse_COSE_Key(cbor_det_t c)
+{
+  COSE_Format_evercddl_COSE_Key_OKP_pretty res1 = COSE_Format_parse_COSE_Key_OKP(c);
+  COSE_Format_evercddl_COSE_Key_OKP_pretty
+  res2 = COSE_Format_evercddl_COSE_Key_pretty_right(res1);
+  return res2;
+}
+
+size_t
+COSE_Format_serialize_COSE_Key(
+  COSE_Format_evercddl_COSE_Key_OKP_pretty c,
+  Pulse_Lib_Slice_slice__uint8_t out
+)
+{
+  COSE_Format_evercddl_COSE_Key_OKP_pretty c_ = COSE_Format_evercddl_COSE_Key_pretty_left(c);
+  size_t res = COSE_Format_serialize_COSE_Key_OKP(c_, out);
+  return res;
+}
+
+FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_pretty___Pulse_Lib_Slice_slice_uint8_t_
+COSE_Format_validate_and_parse_COSE_Key(Pulse_Lib_Slice_slice__uint8_t s)
+{
+  size_t len = len__uint8_t(s);
+  uint8_t *a0 = slice_to_arrayptr_intro__uint8_t(s);
+  uint8_t *a1 = a0;
+  size_t res = cbor_det_validate(a1, len);
+  size_t len0 = res;
+  option___CBOR_Pulse_API_Det_Type_cbor_det_t___Pulse_Lib_Slice_slice_uint8_t_ q;
+  if (len0 == (size_t)0U)
+    q =
+      (
+        (option___CBOR_Pulse_API_Det_Type_cbor_det_t___Pulse_Lib_Slice_slice_uint8_t_){
+          .tag = FStar_Pervasives_Native_None
+        }
+      );
+  else
+  {
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t s_ = split__uint8_t(s, len0);
+    Pulse_Lib_Slice_slice__uint8_t s1 = s_.fst;
+    Pulse_Lib_Slice_slice__uint8_t s2 = s_.snd;
+    __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
+    _letpattern = { .fst = s1, .snd = s2 };
+    Pulse_Lib_Slice_slice__uint8_t input2 = _letpattern.fst;
+    Pulse_Lib_Slice_slice__uint8_t rem = _letpattern.snd;
+    size_t len1 = len__uint8_t(input2);
+    uint8_t *a = slice_to_arrayptr_intro__uint8_t(input2);
+    uint8_t *a0 = a;
+    cbor_det_t res = cbor_det_parse(a0, len1);
+    cbor_det_t res0 = res;
+    q =
+      (
+        (option___CBOR_Pulse_API_Det_Type_cbor_det_t___Pulse_Lib_Slice_slice_uint8_t_){
+          .tag = FStar_Pervasives_Native_Some,
+          .v = { .fst = res0, .snd = rem }
+        }
+      );
+  }
+  if (q.tag == FStar_Pervasives_Native_None)
+    return
+      (
+        (FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+          .tag = FStar_Pervasives_Native_None
+        }
+      );
+  else if (q.tag == FStar_Pervasives_Native_Some)
+  {
+    __CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice_uint8_t rlrem = q.v;
+    __CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice_uint8_t _letpattern = rlrem;
+    cbor_det_t rl = _letpattern.fst;
+    Pulse_Lib_Slice_slice__uint8_t rem = _letpattern.snd;
+    bool test = COSE_Format_validate_COSE_Key(rl);
+    if (test)
+    {
+      COSE_Format_evercddl_COSE_Key_OKP_pretty x = COSE_Format_parse_COSE_Key(rl);
+      return
+        (
+          (FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+            .tag = FStar_Pervasives_Native_Some,
+            .v = { .fst = x, .snd = rem }
+          }
+        );
+    }
+    else
+      return
+        (
+          (FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+            .tag = FStar_Pervasives_Native_None
+          }
+        );
+  }
+  else
+  {
+    KRML_HOST_EPRINTF("KaRaMeL abort at %s:%d\n%s\n",
+      __FILE__,
+      __LINE__,
+      "unreachable (pattern matches are exhaustive in F*)");
+    KRML_HOST_EXIT(255U);
+  }
+}
+
 bool COSE_Format_validate_tdate(cbor_det_t c)
 {
   uint8_t k = cbor_det_major_type(c);
@@ -3782,7 +5285,7 @@ COSE_Format_validate_and_parse_values(Pulse_Lib_Slice_slice__uint8_t s)
   }
 }
 
-bool COSE_Format_aux_env25_validate_1(cbor_det_array_iterator_t *pi)
+bool COSE_Format_aux_env27_validate_1(cbor_det_array_iterator_t *pi)
 {
   cbor_det_array_iterator_t i = *pi;
   bool is_done = cbor_det_array_iterator_is_empty(i);
@@ -3797,25 +5300,25 @@ bool COSE_Format_aux_env25_validate_1(cbor_det_array_iterator_t *pi)
 }
 
 bool
-COSE_Format_uu___is_Mkaux_env25_type_1_pretty0(COSE_Format_evercddl_label_pretty projectee)
+COSE_Format_uu___is_Mkaux_env27_type_1_pretty0(COSE_Format_evercddl_label_pretty projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
 COSE_Format_evercddl_label_pretty
-COSE_Format_aux_env25_type_1_pretty_right(COSE_Format_evercddl_label_pretty x1)
+COSE_Format_aux_env27_type_1_pretty_right(COSE_Format_evercddl_label_pretty x1)
 {
   return x1;
 }
 
 COSE_Format_evercddl_label_pretty
-COSE_Format_aux_env25_type_1_pretty_left(COSE_Format_evercddl_label_pretty x3)
+COSE_Format_aux_env27_type_1_pretty_left(COSE_Format_evercddl_label_pretty x3)
 {
   return x3;
 }
 
-COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_parse_1(cbor_det_array_iterator_t c)
+COSE_Format_evercddl_label_pretty COSE_Format_aux_env27_parse_1(cbor_det_array_iterator_t c)
 {
   cbor_det_array_iterator_t pc = c;
   cbor_det_t x = cbor_det_array_iterator_next(&pc);
@@ -3824,7 +5327,7 @@ COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_parse_1(cbor_det_array_i
 }
 
 bool
-COSE_Format_aux_env25_serialize_1(
+COSE_Format_aux_env27_serialize_1(
   COSE_Format_evercddl_label_pretty c,
   Pulse_Lib_Slice_slice__uint8_t out,
   uint64_t *out_count,
@@ -3852,47 +5355,47 @@ COSE_Format_aux_env25_serialize_1(
     return false;
 }
 
-bool (*COSE_Format_aux_env25_validate_2)(cbor_det_t x0) = COSE_Format_validate_label;
+bool (*COSE_Format_aux_env27_validate_2)(cbor_det_t x0) = COSE_Format_validate_label;
 
 bool
-COSE_Format_uu___is_Mkaux_env25_type_2_pretty0(COSE_Format_evercddl_label_pretty projectee)
+COSE_Format_uu___is_Mkaux_env27_type_2_pretty0(COSE_Format_evercddl_label_pretty projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
 COSE_Format_evercddl_label_pretty
-COSE_Format_aux_env25_type_2_pretty_right(COSE_Format_evercddl_label_pretty x1)
+COSE_Format_aux_env27_type_2_pretty_right(COSE_Format_evercddl_label_pretty x1)
 {
   return x1;
 }
 
 COSE_Format_evercddl_label_pretty
-COSE_Format_aux_env25_type_2_pretty_left(COSE_Format_evercddl_label_pretty x3)
+COSE_Format_aux_env27_type_2_pretty_left(COSE_Format_evercddl_label_pretty x3)
 {
   return x3;
 }
 
-COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_parse_2(cbor_det_t c)
+COSE_Format_evercddl_label_pretty COSE_Format_aux_env27_parse_2(cbor_det_t c)
 {
   COSE_Format_evercddl_label_pretty res1 = COSE_Format_parse_label(c);
-  COSE_Format_evercddl_label_pretty res2 = COSE_Format_aux_env25_type_2_pretty_right(res1);
+  COSE_Format_evercddl_label_pretty res2 = COSE_Format_aux_env27_type_2_pretty_right(res1);
   return res2;
 }
 
 size_t
-COSE_Format_aux_env25_serialize_2(
+COSE_Format_aux_env27_serialize_2(
   COSE_Format_evercddl_label_pretty c,
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
-  COSE_Format_evercddl_label_pretty c_ = COSE_Format_aux_env25_type_2_pretty_left(c);
+  COSE_Format_evercddl_label_pretty c_ = COSE_Format_aux_env27_type_2_pretty_left(c);
   size_t res = COSE_Format_serialize_label(c_, out);
   return res;
 }
 
-FStar_Pervasives_Native_option___COSE_Format_aux_env25_type_2_pretty___Pulse_Lib_Slice_slice_uint8_t_
-COSE_Format_validate_and_aux_env25_parse_2(Pulse_Lib_Slice_slice__uint8_t s)
+FStar_Pervasives_Native_option___COSE_Format_aux_env27_type_2_pretty___Pulse_Lib_Slice_slice_uint8_t_
+COSE_Format_validate_and_aux_env27_parse_2(Pulse_Lib_Slice_slice__uint8_t s)
 {
   size_t len = len__uint8_t(s);
   uint8_t *a0 = slice_to_arrayptr_intro__uint8_t(s);
@@ -3932,7 +5435,7 @@ COSE_Format_validate_and_aux_env25_parse_2(Pulse_Lib_Slice_slice__uint8_t s)
   if (q.tag == FStar_Pervasives_Native_None)
     return
       (
-        (FStar_Pervasives_Native_option___COSE_Format_aux_env25_type_2_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+        (FStar_Pervasives_Native_option___COSE_Format_aux_env27_type_2_pretty___Pulse_Lib_Slice_slice_uint8_t_){
           .tag = FStar_Pervasives_Native_None
         }
       );
@@ -3942,13 +5445,13 @@ COSE_Format_validate_and_aux_env25_parse_2(Pulse_Lib_Slice_slice__uint8_t s)
     __CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice_uint8_t _letpattern = rlrem;
     cbor_det_t rl = _letpattern.fst;
     Pulse_Lib_Slice_slice__uint8_t rem = _letpattern.snd;
-    bool test = COSE_Format_aux_env25_validate_2(rl);
+    bool test = COSE_Format_aux_env27_validate_2(rl);
     if (test)
     {
-      COSE_Format_evercddl_label_pretty x = COSE_Format_aux_env25_parse_2(rl);
+      COSE_Format_evercddl_label_pretty x = COSE_Format_aux_env27_parse_2(rl);
       return
         (
-          (FStar_Pervasives_Native_option___COSE_Format_aux_env25_type_2_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+          (FStar_Pervasives_Native_option___COSE_Format_aux_env27_type_2_pretty___Pulse_Lib_Slice_slice_uint8_t_){
             .tag = FStar_Pervasives_Native_Some,
             .v = { .fst = x, .snd = rem }
           }
@@ -3957,7 +5460,7 @@ COSE_Format_validate_and_aux_env25_parse_2(Pulse_Lib_Slice_slice__uint8_t s)
     else
       return
         (
-          (FStar_Pervasives_Native_option___COSE_Format_aux_env25_type_2_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+          (FStar_Pervasives_Native_option___COSE_Format_aux_env27_type_2_pretty___Pulse_Lib_Slice_slice_uint8_t_){
             .tag = FStar_Pervasives_Native_None
           }
         );
@@ -3972,7 +5475,7 @@ COSE_Format_validate_and_aux_env25_parse_2(Pulse_Lib_Slice_slice__uint8_t s)
   }
 }
 
-bool COSE_Format_aux_env25_validate_3(cbor_det_t c)
+bool COSE_Format_aux_env27_validate_3(cbor_det_t c)
 {
   uint8_t mt0 = cbor_det_major_type(c);
   bool is_uint = mt0 == CBOR_MAJOR_TYPE_UINT64;
@@ -4060,47 +5563,47 @@ bool COSE_Format_aux_env25_validate_3(cbor_det_t c)
   }
 }
 
-bool (*COSE_Format_aux_env25_validate_4)(cbor_det_t x0) = COSE_Format_validate_values;
+bool (*COSE_Format_aux_env27_validate_4)(cbor_det_t x0) = COSE_Format_validate_values;
 
 bool
-COSE_Format_uu___is_Mkaux_env25_type_4_pretty0(COSE_Format_evercddl_values_pretty projectee)
+COSE_Format_uu___is_Mkaux_env27_type_4_pretty0(COSE_Format_evercddl_values_pretty projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
 COSE_Format_evercddl_values_pretty
-COSE_Format_aux_env25_type_4_pretty_right(COSE_Format_evercddl_any_pretty x1)
+COSE_Format_aux_env27_type_4_pretty_right(COSE_Format_evercddl_any_pretty x1)
 {
   return x1;
 }
 
 COSE_Format_evercddl_any_pretty
-COSE_Format_aux_env25_type_4_pretty_left(COSE_Format_evercddl_values_pretty x3)
+COSE_Format_aux_env27_type_4_pretty_left(COSE_Format_evercddl_values_pretty x3)
 {
   return x3;
 }
 
-COSE_Format_evercddl_values_pretty COSE_Format_aux_env25_parse_4(cbor_det_t c)
+COSE_Format_evercddl_values_pretty COSE_Format_aux_env27_parse_4(cbor_det_t c)
 {
   COSE_Format_evercddl_any_pretty res1 = COSE_Format_parse_values(c);
-  COSE_Format_evercddl_values_pretty res2 = COSE_Format_aux_env25_type_4_pretty_right(res1);
+  COSE_Format_evercddl_values_pretty res2 = COSE_Format_aux_env27_type_4_pretty_right(res1);
   return res2;
 }
 
 size_t
-COSE_Format_aux_env25_serialize_4(
+COSE_Format_aux_env27_serialize_4(
   COSE_Format_evercddl_values_pretty c,
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
-  COSE_Format_evercddl_any_pretty c_ = COSE_Format_aux_env25_type_4_pretty_left(c);
+  COSE_Format_evercddl_any_pretty c_ = COSE_Format_aux_env27_type_4_pretty_left(c);
   size_t res = COSE_Format_serialize_values(c_, out);
   return res;
 }
 
-FStar_Pervasives_Native_option___COSE_Format_aux_env25_type_4_pretty___Pulse_Lib_Slice_slice_uint8_t_
-COSE_Format_validate_and_aux_env25_parse_4(Pulse_Lib_Slice_slice__uint8_t s)
+FStar_Pervasives_Native_option___COSE_Format_aux_env27_type_4_pretty___Pulse_Lib_Slice_slice_uint8_t_
+COSE_Format_validate_and_aux_env27_parse_4(Pulse_Lib_Slice_slice__uint8_t s)
 {
   size_t len = len__uint8_t(s);
   uint8_t *a0 = slice_to_arrayptr_intro__uint8_t(s);
@@ -4140,7 +5643,7 @@ COSE_Format_validate_and_aux_env25_parse_4(Pulse_Lib_Slice_slice__uint8_t s)
   if (q.tag == FStar_Pervasives_Native_None)
     return
       (
-        (FStar_Pervasives_Native_option___COSE_Format_aux_env25_type_4_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+        (FStar_Pervasives_Native_option___COSE_Format_aux_env27_type_4_pretty___Pulse_Lib_Slice_slice_uint8_t_){
           .tag = FStar_Pervasives_Native_None
         }
       );
@@ -4150,13 +5653,13 @@ COSE_Format_validate_and_aux_env25_parse_4(Pulse_Lib_Slice_slice__uint8_t s)
     __CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice_uint8_t _letpattern = rlrem;
     cbor_det_t rl = _letpattern.fst;
     Pulse_Lib_Slice_slice__uint8_t rem = _letpattern.snd;
-    bool test = COSE_Format_aux_env25_validate_4(rl);
+    bool test = COSE_Format_aux_env27_validate_4(rl);
     if (test)
     {
-      COSE_Format_evercddl_values_pretty x = COSE_Format_aux_env25_parse_4(rl);
+      COSE_Format_evercddl_values_pretty x = COSE_Format_aux_env27_parse_4(rl);
       return
         (
-          (FStar_Pervasives_Native_option___COSE_Format_aux_env25_type_4_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+          (FStar_Pervasives_Native_option___COSE_Format_aux_env27_type_4_pretty___Pulse_Lib_Slice_slice_uint8_t_){
             .tag = FStar_Pervasives_Native_Some,
             .v = { .fst = x, .snd = rem }
           }
@@ -4165,7 +5668,7 @@ COSE_Format_validate_and_aux_env25_parse_4(Pulse_Lib_Slice_slice__uint8_t s)
     else
       return
         (
-          (FStar_Pervasives_Native_option___COSE_Format_aux_env25_type_4_pretty___Pulse_Lib_Slice_slice_uint8_t_){
+          (FStar_Pervasives_Native_option___COSE_Format_aux_env27_type_4_pretty___Pulse_Lib_Slice_slice_uint8_t_){
             .tag = FStar_Pervasives_Native_None
           }
         );
@@ -4179,13 +5682,6 @@ COSE_Format_validate_and_aux_env25_parse_4(Pulse_Lib_Slice_slice__uint8_t s)
     KRML_HOST_EXIT(255U);
   }
 }
-
-typedef struct option__CBOR_Pulse_API_Det_Type_cbor_det_t_s
-{
-  FStar_Pervasives_Native_option__size_t_tags tag;
-  cbor_det_t v;
-}
-option__CBOR_Pulse_API_Det_Type_cbor_det_t;
 
 bool COSE_Format_validate_header_map(cbor_det_t c)
 {
@@ -5312,7 +6808,7 @@ COSE_Format_uu___is_Mkevercddl_header_map_pretty0(
 COSE_Format_evercddl_header_map_pretty
 COSE_Format_evercddl_header_map_pretty_right(COSE_Format_evercddl_header_map x6)
 {
-  FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty__CDDL_Pulse_Parse_MapGroup_map_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+  FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty__CDDL_Pulse_Parse_MapGroup_map_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
   x12 = x6.snd;
   FStar_Pervasives_either___COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty__FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty_
   x11 = x6.fst.snd;
@@ -5348,7 +6844,7 @@ COSE_Format_evercddl_header_map_pretty_left(COSE_Format_evercddl_header_map_pret
   FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty x24 = x13.x3;
   FStar_Pervasives_either___COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty__FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty_
   x25 = x13.x4;
-  FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty__CDDL_Pulse_Parse_MapGroup_map_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+  FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty__CDDL_Pulse_Parse_MapGroup_map_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
   x26 = x13.x5;
   return
     (
@@ -5591,8 +7087,8 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
       i =
         {
           .cddl_array_iterator_contents = ar,
-          .cddl_array_iterator_impl_validate = COSE_Format_aux_env25_validate_1,
-          .cddl_array_iterator_impl_parse = COSE_Format_aux_env25_parse_1
+          .cddl_array_iterator_impl_validate = COSE_Format_aux_env27_validate_1,
+          .cddl_array_iterator_impl_parse = COSE_Format_aux_env27_parse_1
         };
       FStar_Pervasives_either__CDDL_Pulse_Types_slice_COSE_Format_evercddl_label_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_label_pretty
       res0 = { .tag = COSE_Format_Inr, { .case_Inr = i } };
@@ -6529,17 +8025,17 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
   K______FStar_Pervasives_Native_option_FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty___FStar_Pervasives_Native_option_FStar_Pervasives_either_CDDL_Pulse_Types_slice_COSE_Format_evercddl_label_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_label_pretty____FStar_Pervasives_Native_option_FStar_Pervasives_either_COSE_Format_evercddl_tstr_pretty_COSE_Format_evercddl_int_pretty____FStar_Pervasives_Native_option_COSE_Format_evercddl_bstr_pretty__FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty__FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty_
   w13 = { .fst = w12, .snd = w22 };
   cbor_det_map_iterator_t i = cbor_det_map_iterator_start(c);
-  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
   rres =
     {
       .cddl_map_iterator_contents = i,
-      .cddl_map_iterator_impl_validate1 = COSE_Format_aux_env25_validate_2,
-      .cddl_map_iterator_impl_parse1 = COSE_Format_aux_env25_parse_2,
-      .cddl_map_iterator_impl_validate_ex = COSE_Format_aux_env25_validate_3,
-      .cddl_map_iterator_impl_validate2 = COSE_Format_aux_env25_validate_4,
-      .cddl_map_iterator_impl_parse2 = COSE_Format_aux_env25_parse_4
+      .cddl_map_iterator_impl_validate1 = COSE_Format_aux_env27_validate_2,
+      .cddl_map_iterator_impl_parse1 = COSE_Format_aux_env27_parse_2,
+      .cddl_map_iterator_impl_validate_ex = COSE_Format_aux_env27_validate_3,
+      .cddl_map_iterator_impl_validate2 = COSE_Format_aux_env27_validate_4,
+      .cddl_map_iterator_impl_parse2 = COSE_Format_aux_env27_parse_4
     };
-  FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty__CDDL_Pulse_Parse_MapGroup_map_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+  FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty__CDDL_Pulse_Parse_MapGroup_map_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
   w23 = { .tag = COSE_Format_Inr, { .case_Inr = rres } };
   COSE_Format_evercddl_header_map res11 = { .fst = w13, .snd = w23 };
   COSE_Format_evercddl_header_map_pretty
@@ -6565,17 +8061,17 @@ op_Array_Access__COSE_Format_evercddl_label_pretty(
 }
 
 static size_t
-len___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_(
-  Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+len___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_(
+  Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
   s
 )
 {
   return s.len;
 }
 
-static K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
-op_Array_Access___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_(
-  Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+static K___COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
+op_Array_Access___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_(
+  Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
   a,
   size_t i
 )
@@ -6584,30 +8080,30 @@ op_Array_Access___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_ty
 }
 
 typedef struct
-__Pulse_Lib_Slice_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty__Pulse_Lib_Slice_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty__s
+__Pulse_Lib_Slice_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty__Pulse_Lib_Slice_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty__s
 {
-  Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+  Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
   fst;
-  Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+  Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
   snd;
 }
-__Pulse_Lib_Slice_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty__Pulse_Lib_Slice_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_;
+__Pulse_Lib_Slice_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty__Pulse_Lib_Slice_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_;
 
-static __Pulse_Lib_Slice_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty__Pulse_Lib_Slice_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
-split___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_(
-  Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+static __Pulse_Lib_Slice_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty__Pulse_Lib_Slice_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
+split___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_(
+  Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
   s,
   size_t i
 )
 {
-  K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty *elt_ = s.elt + i;
-  Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+  K___COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty *elt_ = s.elt + i;
+  Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
   s1 = { .elt = s.elt, .len = i };
-  Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+  Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
   s2 = { .elt = elt_, .len = s.len - i };
   return
     (
-      (__Pulse_Lib_Slice_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty__Pulse_Lib_Slice_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_){
+      (__Pulse_Lib_Slice_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty__Pulse_Lib_Slice_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_){
         .fst = s1,
         .snd = s2
       }
@@ -6626,7 +8122,7 @@ COSE_Format_serialize_header_map(
   COSE_Format_evercddl_header_map _letpattern = c_;
   K______FStar_Pervasives_Native_option_FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty___FStar_Pervasives_Native_option_FStar_Pervasives_either_CDDL_Pulse_Types_slice_COSE_Format_evercddl_label_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_label_pretty____FStar_Pervasives_Native_option_FStar_Pervasives_either_COSE_Format_evercddl_tstr_pretty_COSE_Format_evercddl_int_pretty____FStar_Pervasives_Native_option_COSE_Format_evercddl_bstr_pretty__FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty__FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty_
   c1 = _letpattern.fst;
-  FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty__CDDL_Pulse_Parse_MapGroup_map_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+  FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty__CDDL_Pulse_Parse_MapGroup_map_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
   c2 = _letpattern.snd;
   K______FStar_Pervasives_Native_option_FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty___FStar_Pervasives_Native_option_FStar_Pervasives_either_CDDL_Pulse_Types_slice_COSE_Format_evercddl_label_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_label_pretty____FStar_Pervasives_Native_option_FStar_Pervasives_either_COSE_Format_evercddl_tstr_pretty_COSE_Format_evercddl_int_pretty____FStar_Pervasives_Native_option_COSE_Format_evercddl_bstr_pretty__FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty__FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty_
   _letpattern10 = c1;
@@ -6807,7 +8303,7 @@ COSE_Format_serialize_header_map(
                 size_t i0 = pi;
                 COSE_Format_evercddl_label_pretty
                 x = op_Array_Access__COSE_Format_evercddl_label_pretty(c16, i0);
-                bool res = COSE_Format_aux_env25_serialize_1(x, out2, &pcount1, &psize1);
+                bool res = COSE_Format_aux_env27_serialize_1(x, out2, &pcount1, &psize1);
                 if (res)
                 {
                   size_t i_ = i0 + (size_t)1U;
@@ -6878,7 +8374,7 @@ COSE_Format_serialize_header_map(
                 tri = cbor_det_array_iterator_truncate(i.cddl_array_iterator_contents, len0 - len1);
                 COSE_Format_evercddl_label_pretty res = i.cddl_array_iterator_impl_parse(tri);
                 COSE_Format_evercddl_label_pretty x = res;
-                bool res0 = COSE_Format_aux_env25_serialize_1(x, out2, &pcount1, &psize1);
+                bool res0 = COSE_Format_aux_env27_serialize_1(x, out2, &pcount1, &psize1);
                 if (!res0)
                   pres = false;
                 bool res1 = pres;
@@ -7616,25 +9112,25 @@ COSE_Format_serialize_header_map(
     bool res20;
     if (c2.tag == COSE_Format_Inl)
     {
-      Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+      Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
       c11 = c2.case_Inl;
-      Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+      Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
       i = c11;
-      Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+      Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
       pi = i;
       KRML_HOST_IGNORE(&pi);
-      Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+      Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
       pc = i;
       bool pres = true;
       bool res0 = pres;
       bool cond;
       if (res0)
       {
-        Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+        Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
         c3 = pc;
         bool
         em =
-          len___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_(c3) ==
+          len___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_(c3) ==
             (size_t)0U;
         cond = !em;
       }
@@ -7648,22 +9144,22 @@ COSE_Format_serialize_header_map(
         else
         {
           uint64_t count_ = count + 1ULL;
-          Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+          Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
           i1 = pc;
-          K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+          K___COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
           res =
-            op_Array_Access___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_(i1,
+            op_Array_Access___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_(i1,
               (size_t)0U);
-          __Pulse_Lib_Slice_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty__Pulse_Lib_Slice_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+          __Pulse_Lib_Slice_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty__Pulse_Lib_Slice_slice__COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
           _letpattern1 =
-            split___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_(i1,
+            split___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_(i1,
               (size_t)1U);
-          Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+          Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
           ir = _letpattern1.snd;
-          Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+          Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
           i_ = ir;
           pc = i_;
-          K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+          K___COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
           _letpattern10 = res;
           COSE_Format_evercddl_label_pretty ck = _letpattern10.fst;
           COSE_Format_evercddl_values_pretty cv = _letpattern10.snd;
@@ -7671,7 +9167,7 @@ COSE_Format_serialize_header_map(
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
           _letpattern2 = split__uint8_t(out, size0);
           Pulse_Lib_Slice_slice__uint8_t out1 = _letpattern2.snd;
-          size_t sz1 = COSE_Format_aux_env25_serialize_2(ck, out1);
+          size_t sz1 = COSE_Format_aux_env27_serialize_2(ck, out1);
           if (sz1 == (size_t)0U)
             pres = false;
           else
@@ -7719,7 +9215,7 @@ COSE_Format_serialize_header_map(
               oo = _letpattern3.v;
               __CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice_uint8_t _letpattern4 = oo;
               cbor_det_t o = _letpattern4.fst;
-              bool is_except = COSE_Format_aux_env25_validate_3(o);
+              bool is_except = COSE_Format_aux_env27_validate_3(o);
               if (is_except)
                 pres = false;
               else
@@ -7727,7 +9223,7 @@ COSE_Format_serialize_header_map(
                 __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
                 _letpattern5 = split__uint8_t(out1, sz1);
                 Pulse_Lib_Slice_slice__uint8_t out2 = _letpattern5.snd;
-                size_t sz2 = COSE_Format_aux_env25_serialize_4(cv, out2);
+                size_t sz2 = COSE_Format_aux_env27_serialize_4(cv, out2);
                 if (sz2 == (size_t)0U)
                   pres = false;
                 else
@@ -7769,11 +9265,11 @@ COSE_Format_serialize_header_map(
         bool ite;
         if (res)
         {
-          Pulse_Lib_Slice_slice___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_
+          Pulse_Lib_Slice_slice___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_
           c3 = pc;
           bool
           em =
-            len___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty_(c3) ==
+            len___COSE_Format_aux_env27_type_2_pretty___COSE_Format_aux_env27_type_4_pretty_(c3) ==
               (size_t)0U;
           ite = !em;
         }
@@ -7787,16 +9283,16 @@ COSE_Format_serialize_header_map(
     }
     else if (c2.tag == COSE_Format_Inr)
     {
-      CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+      CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
       c21 = c2.case_Inr;
-      CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+      CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
       pc = c21;
       bool pres = true;
       bool res = pres;
       bool cond0;
       if (res)
       {
-        CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+        CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
         c3 = pc;
         cbor_det_map_iterator_t pj = c3.cddl_map_iterator_contents;
         bool pres1 = true;
@@ -7850,7 +9346,7 @@ COSE_Format_serialize_header_map(
         else
         {
           uint64_t count_ = count + 1ULL;
-          CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+          CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
           i = pc;
           cbor_det_map_iterator_t pj = i.cddl_map_iterator_contents;
           cbor_det_map_entry_t hd0 = cbor_det_map_iterator_next(&pj);
@@ -7904,7 +9400,7 @@ COSE_Format_serialize_header_map(
           COSE_Format_evercddl_values_pretty
           hd_value_res = i.cddl_map_iterator_impl_parse2(hd_value);
           cbor_det_map_iterator_t j = pj;
-          CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+          CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
           i_ =
             {
               .cddl_map_iterator_contents = j,
@@ -7915,7 +9411,7 @@ COSE_Format_serialize_header_map(
               .cddl_map_iterator_impl_parse2 = i.cddl_map_iterator_impl_parse2
             };
           pc = i_;
-          K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+          K___COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
           _letpattern1 = { .fst = hd_key_res, .snd = hd_value_res };
           COSE_Format_evercddl_label_pretty ck = _letpattern1.fst;
           COSE_Format_evercddl_values_pretty cv = _letpattern1.snd;
@@ -7923,7 +9419,7 @@ COSE_Format_serialize_header_map(
           __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
           _letpattern2 = split__uint8_t(out, size0);
           Pulse_Lib_Slice_slice__uint8_t out1 = _letpattern2.snd;
-          size_t sz1 = COSE_Format_aux_env25_serialize_2(ck, out1);
+          size_t sz1 = COSE_Format_aux_env27_serialize_2(ck, out1);
           if (sz1 == (size_t)0U)
             pres = false;
           else
@@ -7971,7 +9467,7 @@ COSE_Format_serialize_header_map(
               oo = _letpattern3.v;
               __CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice_uint8_t _letpattern4 = oo;
               cbor_det_t o = _letpattern4.fst;
-              bool is_except = COSE_Format_aux_env25_validate_3(o);
+              bool is_except = COSE_Format_aux_env27_validate_3(o);
               if (is_except)
                 pres = false;
               else
@@ -7979,7 +9475,7 @@ COSE_Format_serialize_header_map(
                 __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
                 _letpattern5 = split__uint8_t(out1, sz1);
                 Pulse_Lib_Slice_slice__uint8_t out2 = _letpattern5.snd;
-                size_t sz2 = COSE_Format_aux_env25_serialize_4(cv, out2);
+                size_t sz2 = COSE_Format_aux_env27_serialize_4(cv, out2);
                 if (sz2 == (size_t)0U)
                   pres = false;
                 else
@@ -8021,7 +9517,7 @@ COSE_Format_serialize_header_map(
         bool ite0;
         if (res)
         {
-          CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
+          CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty
           c3 = pc;
           cbor_det_map_iterator_t pj = c3.cddl_map_iterator_contents;
           bool pres1 = true;
@@ -9097,7 +10593,7 @@ COSE_Format_validate_and_parse_COSE_Signature(Pulse_Lib_Slice_slice__uint8_t s)
   }
 }
 
-bool COSE_Format_aux_env29_validate_1(cbor_det_array_iterator_t *pi)
+bool COSE_Format_aux_env31_validate_1(cbor_det_array_iterator_t *pi)
 {
   cbor_det_array_iterator_t i = *pi;
   bool is_done = cbor_det_array_iterator_is_empty(i);
@@ -9112,7 +10608,7 @@ bool COSE_Format_aux_env29_validate_1(cbor_det_array_iterator_t *pi)
 }
 
 bool
-COSE_Format_uu___is_Mkaux_env29_type_1_pretty0(
+COSE_Format_uu___is_Mkaux_env31_type_1_pretty0(
   COSE_Format_evercddl_COSE_Signature_pretty projectee
 )
 {
@@ -9121,19 +10617,19 @@ COSE_Format_uu___is_Mkaux_env29_type_1_pretty0(
 }
 
 COSE_Format_evercddl_COSE_Signature_pretty
-COSE_Format_aux_env29_type_1_pretty_right(COSE_Format_evercddl_COSE_Signature_pretty x1)
+COSE_Format_aux_env31_type_1_pretty_right(COSE_Format_evercddl_COSE_Signature_pretty x1)
 {
   return x1;
 }
 
 COSE_Format_evercddl_COSE_Signature_pretty
-COSE_Format_aux_env29_type_1_pretty_left(COSE_Format_evercddl_COSE_Signature_pretty x3)
+COSE_Format_aux_env31_type_1_pretty_left(COSE_Format_evercddl_COSE_Signature_pretty x3)
 {
   return x3;
 }
 
 COSE_Format_evercddl_COSE_Signature_pretty
-COSE_Format_aux_env29_parse_1(cbor_det_array_iterator_t c)
+COSE_Format_aux_env31_parse_1(cbor_det_array_iterator_t c)
 {
   cbor_det_array_iterator_t pc = c;
   cbor_det_t x = cbor_det_array_iterator_next(&pc);
@@ -9142,7 +10638,7 @@ COSE_Format_aux_env29_parse_1(cbor_det_array_iterator_t c)
 }
 
 bool
-COSE_Format_aux_env29_serialize_1(
+COSE_Format_aux_env31_serialize_1(
   COSE_Format_evercddl_COSE_Signature_pretty c,
   Pulse_Lib_Slice_slice__uint8_t out,
   uint64_t *out_count,
@@ -9480,8 +10976,8 @@ COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_parse_COSE_Sign(cbor_det_t c)
   i2 =
     {
       .cddl_array_iterator_contents = ar1,
-      .cddl_array_iterator_impl_validate = COSE_Format_aux_env29_validate_1,
-      .cddl_array_iterator_impl_parse = COSE_Format_aux_env29_parse_1
+      .cddl_array_iterator_impl_validate = COSE_Format_aux_env31_validate_1,
+      .cddl_array_iterator_impl_parse = COSE_Format_aux_env31_parse_1
     };
   FStar_Pervasives_either__CDDL_Pulse_Types_slice_COSE_Format_evercddl_COSE_Signature_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_COSE_Signature_pretty
   res = { .tag = COSE_Format_Inr, { .case_Inr = i2 } };
@@ -9660,7 +11156,7 @@ COSE_Format_serialize_COSE_Sign(
               size_t i0 = pi;
               COSE_Format_evercddl_COSE_Signature_pretty
               x = op_Array_Access__COSE_Format_evercddl_COSE_Signature_pretty(c12, i0);
-              bool res = COSE_Format_aux_env29_serialize_1(x, out1, &pcount1, &psize1);
+              bool res = COSE_Format_aux_env31_serialize_1(x, out1, &pcount1, &psize1);
               if (res)
               {
                 size_t i_ = i0 + (size_t)1U;
@@ -9732,7 +11228,7 @@ COSE_Format_serialize_COSE_Sign(
               COSE_Format_evercddl_COSE_Signature_pretty
               res = i.cddl_array_iterator_impl_parse(tri);
               COSE_Format_evercddl_COSE_Signature_pretty x = res;
-              bool res0 = COSE_Format_aux_env29_serialize_1(x, out1, &pcount1, &psize1);
+              bool res0 = COSE_Format_aux_env31_serialize_1(x, out1, &pcount1, &psize1);
               if (!res0)
                 pres = false;
               bool res1 = pres;
