@@ -16,7 +16,10 @@ let name_from_literal (l : literal) : option string =
   match l with
   | LTextString s -> Some s
   | LSimple i
-  | LInt i -> Some ("intkey" ^ string_of_int i)
+  | LInt i ->
+    Some (if i >= 0
+          then "intkey" ^ string_of_int i
+          else "intkeyneg" ^ string_of_int (-i))
 
 [@@bundle_attr]
 let rec extract_name_map_group (t : ast0_wf_parse_map_group 'a) : option string =

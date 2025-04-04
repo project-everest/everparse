@@ -21,10 +21,12 @@ test5 = [
 
 arr_intkeys = [
   1 : uint,
+  -3 : bool,
   bar : uint
 ]
 
 map_intkeys = {
   1 : uint,
+  -3 : bool,
   bar : uint
 }
