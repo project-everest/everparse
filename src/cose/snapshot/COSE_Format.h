@@ -12,6 +12,9 @@ bool COSE_Format_validate_bool(cbor_det_t c);
 
 typedef bool COSE_Format_evercddl_bool_pretty;
 
+/**
+Parser for evercddl_bool
+*/
 bool COSE_Format_parse_bool(cbor_det_t c);
 
 typedef struct Pulse_Lib_Slice_slice__uint8_t_s
@@ -24,6 +27,9 @@ Pulse_Lib_Slice_slice__uint8_t;
 typedef enum { FStar_Pervasives_Native_None, FStar_Pervasives_Native_Some }
 FStar_Pervasives_Native_option__size_t_tags;
 
+/**
+Serializer for evercddl_bool
+*/
 size_t COSE_Format_serialize_bool(bool c, Pulse_Lib_Slice_slice__uint8_t out);
 
 typedef struct K___COSE_Format_evercddl_bool_pretty_Pulse_Lib_Slice_slice_uint8_t_s
@@ -49,8 +55,14 @@ bool COSE_Format_validate_everparsenomatch(cbor_det_t c);
 typedef enum { COSE_Format_Mkevercddl_everparsenomatch_pretty0 }
 COSE_Format_evercddl_everparsenomatch_pretty;
 
+/**
+Parser for evercddl_everparsenomatch
+*/
 COSE_Format_evercddl_everparsenomatch_pretty COSE_Format_parse_everparsenomatch(cbor_det_t c);
 
+/**
+Serializer for evercddl_everparsenomatch
+*/
 size_t
 COSE_Format_serialize_everparsenomatch(
   COSE_Format_evercddl_everparsenomatch_pretty c,
@@ -79,8 +91,14 @@ bool COSE_Format_validate_uint(cbor_det_t c);
 
 typedef uint64_t COSE_Format_evercddl_uint_pretty;
 
+/**
+Parser for evercddl_uint
+*/
 uint64_t COSE_Format_parse_uint(cbor_det_t c);
 
+/**
+Serializer for evercddl_uint
+*/
 size_t COSE_Format_serialize_uint(uint64_t c, Pulse_Lib_Slice_slice__uint8_t out);
 
 typedef struct K___COSE_Format_evercddl_uint_pretty_Pulse_Lib_Slice_slice_uint8_t_s
@@ -105,8 +123,14 @@ bool COSE_Format_validate_nint(cbor_det_t c);
 
 typedef uint64_t COSE_Format_evercddl_nint_pretty;
 
+/**
+Parser for evercddl_nint
+*/
 uint64_t COSE_Format_parse_nint(cbor_det_t c);
 
+/**
+Serializer for evercddl_nint
+*/
 size_t COSE_Format_serialize_nint(uint64_t c, Pulse_Lib_Slice_slice__uint8_t out);
 
 typedef struct K___COSE_Format_evercddl_nint_pretty_Pulse_Lib_Slice_slice_uint8_t_s
@@ -145,8 +169,14 @@ typedef struct COSE_Format_evercddl_int_pretty_s
 }
 COSE_Format_evercddl_int_pretty;
 
+/**
+Parser for evercddl_int
+*/
 COSE_Format_evercddl_int_pretty COSE_Format_parse_int(cbor_det_t c);
 
+/**
+Serializer for evercddl_int
+*/
 size_t
 COSE_Format_serialize_int(
   COSE_Format_evercddl_int_pretty c,
@@ -177,8 +207,14 @@ typedef Pulse_Lib_Slice_slice__uint8_t COSE_Format_evercddl_bstr;
 
 typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_bstr_pretty;
 
+/**
+Parser for evercddl_bstr
+*/
 COSE_Format_evercddl_bstr COSE_Format_parse_bstr(cbor_det_t c);
 
+/**
+Serializer for evercddl_bstr
+*/
 size_t
 COSE_Format_serialize_bstr(COSE_Format_evercddl_bstr c, Pulse_Lib_Slice_slice__uint8_t out);
 
@@ -204,8 +240,14 @@ bool COSE_Format_validate_encodedcbor(cbor_det_t c);
 
 typedef COSE_Format_evercddl_bstr_pretty COSE_Format_evercddl_encodedcbor_pretty;
 
+/**
+Parser for evercddl_encodedcbor
+*/
 COSE_Format_evercddl_bstr_pretty COSE_Format_parse_encodedcbor(cbor_det_t c);
 
+/**
+Serializer for evercddl_encodedcbor
+*/
 size_t
 COSE_Format_serialize_encodedcbor(
   COSE_Format_evercddl_bstr_pretty c,
@@ -234,8 +276,14 @@ bool COSE_Format_validate_bytes(cbor_det_t c);
 
 typedef COSE_Format_evercddl_bstr_pretty COSE_Format_evercddl_bytes_pretty;
 
+/**
+Parser for evercddl_bytes
+*/
 COSE_Format_evercddl_bstr_pretty COSE_Format_parse_bytes(cbor_det_t c);
 
+/**
+Serializer for evercddl_bytes
+*/
 size_t
 COSE_Format_serialize_bytes(
   COSE_Format_evercddl_bstr_pretty c,
@@ -264,8 +312,14 @@ bool COSE_Format_validate_tstr(cbor_det_t c);
 
 typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_tstr_pretty;
 
+/**
+Parser for evercddl_tstr
+*/
 COSE_Format_evercddl_bstr COSE_Format_parse_tstr(cbor_det_t c);
 
+/**
+Serializer for evercddl_tstr
+*/
 size_t
 COSE_Format_serialize_tstr(COSE_Format_evercddl_bstr c, Pulse_Lib_Slice_slice__uint8_t out);
 
@@ -314,8 +368,14 @@ typedef struct COSE_Format_evercddl_label_pretty_s
 }
 COSE_Format_evercddl_label_pretty;
 
+/**
+Parser for evercddl_label
+*/
 COSE_Format_evercddl_label_pretty COSE_Format_parse_label(cbor_det_t c);
 
+/**
+Serializer for evercddl_label
+*/
 size_t
 COSE_Format_serialize_label(
   COSE_Format_evercddl_label_pretty c,
@@ -344,8 +404,14 @@ bool COSE_Format_validate_tdate(cbor_det_t c);
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_tdate_pretty;
 
+/**
+Parser for evercddl_tdate
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_tdate(cbor_det_t c);
 
+/**
+Serializer for evercddl_tdate
+*/
 size_t
 COSE_Format_serialize_tdate(
   COSE_Format_evercddl_tstr_pretty c,
@@ -374,8 +440,14 @@ bool COSE_Format_validate_uri(cbor_det_t c);
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_uri_pretty;
 
+/**
+Parser for evercddl_uri
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_uri(cbor_det_t c);
 
+/**
+Serializer for evercddl_uri
+*/
 size_t
 COSE_Format_serialize_uri(
   COSE_Format_evercddl_tstr_pretty c,
@@ -404,8 +476,14 @@ bool COSE_Format_validate_b64url(cbor_det_t c);
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_b64url_pretty;
 
+/**
+Parser for evercddl_b64url
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_b64url(cbor_det_t c);
 
+/**
+Serializer for evercddl_b64url
+*/
 size_t
 COSE_Format_serialize_b64url(
   COSE_Format_evercddl_tstr_pretty c,
@@ -434,8 +512,14 @@ bool COSE_Format_validate_b64legacy(cbor_det_t c);
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_b64legacy_pretty;
 
+/**
+Parser for evercddl_b64legacy
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_b64legacy(cbor_det_t c);
 
+/**
+Serializer for evercddl_b64legacy
+*/
 size_t
 COSE_Format_serialize_b64legacy(
   COSE_Format_evercddl_tstr_pretty c,
@@ -464,8 +548,14 @@ bool COSE_Format_validate_regexp(cbor_det_t c);
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_regexp_pretty;
 
+/**
+Parser for evercddl_regexp
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_regexp(cbor_det_t c);
 
+/**
+Serializer for evercddl_regexp
+*/
 size_t
 COSE_Format_serialize_regexp(
   COSE_Format_evercddl_tstr_pretty c,
@@ -494,8 +584,14 @@ bool COSE_Format_validate_mimemessage(cbor_det_t c);
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_mimemessage_pretty;
 
+/**
+Parser for evercddl_mimemessage
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_mimemessage(cbor_det_t c);
 
+/**
+Serializer for evercddl_mimemessage
+*/
 size_t
 COSE_Format_serialize_mimemessage(
   COSE_Format_evercddl_tstr_pretty c,
@@ -524,8 +620,14 @@ bool COSE_Format_validate_text(cbor_det_t c);
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_text_pretty;
 
+/**
+Parser for evercddl_text
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_text(cbor_det_t c);
 
+/**
+Serializer for evercddl_text
+*/
 size_t
 COSE_Format_serialize_text(
   COSE_Format_evercddl_tstr_pretty c,
@@ -554,8 +656,14 @@ bool COSE_Format_validate_false(cbor_det_t c);
 
 typedef enum { COSE_Format_Mkevercddl_false_pretty0 } COSE_Format_evercddl_false_pretty;
 
+/**
+Parser for evercddl_false
+*/
 COSE_Format_evercddl_false_pretty COSE_Format_parse_false(cbor_det_t c);
 
+/**
+Serializer for evercddl_false
+*/
 size_t
 COSE_Format_serialize_false(
   COSE_Format_evercddl_false_pretty c,
@@ -584,8 +692,14 @@ bool COSE_Format_validate_true(cbor_det_t c);
 
 typedef enum { COSE_Format_Mkevercddl_true_pretty0 } COSE_Format_evercddl_true_pretty;
 
+/**
+Parser for evercddl_true
+*/
 COSE_Format_evercddl_true_pretty COSE_Format_parse_true(cbor_det_t c);
 
+/**
+Serializer for evercddl_true
+*/
 size_t
 COSE_Format_serialize_true(
   COSE_Format_evercddl_true_pretty c,
@@ -614,8 +728,14 @@ bool COSE_Format_validate_nil(cbor_det_t c);
 
 typedef enum { COSE_Format_Mkevercddl_nil_pretty0 } COSE_Format_evercddl_nil_pretty;
 
+/**
+Parser for evercddl_nil
+*/
 COSE_Format_evercddl_nil_pretty COSE_Format_parse_nil(cbor_det_t c);
 
+/**
+Serializer for evercddl_nil
+*/
 size_t
 COSE_Format_serialize_nil(
   COSE_Format_evercddl_nil_pretty c,
@@ -644,8 +764,14 @@ bool COSE_Format_validate_null(cbor_det_t c);
 
 typedef COSE_Format_evercddl_nil_pretty COSE_Format_evercddl_null_pretty;
 
+/**
+Parser for evercddl_null
+*/
 COSE_Format_evercddl_nil_pretty COSE_Format_parse_null(cbor_det_t c);
 
+/**
+Serializer for evercddl_null
+*/
 size_t
 COSE_Format_serialize_null(
   COSE_Format_evercddl_nil_pretty c,
@@ -675,8 +801,14 @@ bool COSE_Format_validate_undefined(cbor_det_t c);
 typedef enum { COSE_Format_Mkevercddl_undefined_pretty0 }
 COSE_Format_evercddl_undefined_pretty;
 
+/**
+Parser for evercddl_undefined
+*/
 COSE_Format_evercddl_undefined_pretty COSE_Format_parse_undefined(cbor_det_t c);
 
+/**
+Serializer for evercddl_undefined
+*/
 size_t
 COSE_Format_serialize_undefined(
   COSE_Format_evercddl_undefined_pretty c,
@@ -707,8 +839,14 @@ typedef cbor_det_t COSE_Format_evercddl_any;
 
 typedef COSE_Format_evercddl_any COSE_Format_evercddl_any_pretty;
 
+/**
+Parser for evercddl_any
+*/
 COSE_Format_evercddl_any COSE_Format_parse_any(cbor_det_t c);
 
+/**
+Serializer for evercddl_any
+*/
 size_t
 COSE_Format_serialize_any(COSE_Format_evercddl_any c, Pulse_Lib_Slice_slice__uint8_t out);
 
@@ -734,8 +872,14 @@ bool COSE_Format_validate_values(cbor_det_t c);
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_values_pretty;
 
+/**
+Parser for evercddl_values
+*/
 COSE_Format_evercddl_any_pretty COSE_Format_parse_values(cbor_det_t c);
 
+/**
+Serializer for evercddl_values
+*/
 size_t
 COSE_Format_serialize_values(
   COSE_Format_evercddl_any_pretty c,
@@ -778,8 +922,14 @@ extern bool (*COSE_Format_aux_env25_validate_2)(cbor_det_t x0);
 
 typedef COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_type_2_pretty;
 
+/**
+Parser for aux_env25_type_2
+*/
 COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_parse_2(cbor_det_t c);
 
+/**
+Serializer for aux_env25_type_2
+*/
 size_t
 COSE_Format_aux_env25_serialize_2(
   COSE_Format_evercddl_label_pretty c,
@@ -810,8 +960,14 @@ extern bool (*COSE_Format_aux_env25_validate_4)(cbor_det_t x0);
 
 typedef COSE_Format_evercddl_values_pretty COSE_Format_aux_env25_type_4_pretty;
 
+/**
+Parser for aux_env25_type_4
+*/
 COSE_Format_evercddl_values_pretty COSE_Format_aux_env25_parse_4(cbor_det_t c);
 
+/**
+Serializer for aux_env25_type_4
+*/
 size_t
 COSE_Format_aux_env25_serialize_4(
   COSE_Format_evercddl_values_pretty c,
@@ -1020,8 +1176,14 @@ typedef struct COSE_Format_evercddl_header_map_pretty_s
 }
 COSE_Format_evercddl_header_map_pretty;
 
+/**
+Parser for evercddl_header_map
+*/
 COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c);
 
+/**
+Serializer for evercddl_header_map
+*/
 size_t
 COSE_Format_serialize_header_map(
   COSE_Format_evercddl_header_map_pretty c,
@@ -1065,9 +1227,15 @@ typedef struct COSE_Format_evercddl_empty_or_serialized_map_pretty_s
 }
 COSE_Format_evercddl_empty_or_serialized_map_pretty;
 
+/**
+Parser for evercddl_empty_or_serialized_map
+*/
 COSE_Format_evercddl_empty_or_serialized_map_pretty
 COSE_Format_parse_empty_or_serialized_map(cbor_det_t c);
 
+/**
+Serializer for evercddl_empty_or_serialized_map
+*/
 size_t
 COSE_Format_serialize_empty_or_serialized_map(
   COSE_Format_evercddl_empty_or_serialized_map_pretty c,
@@ -1103,8 +1271,14 @@ typedef struct COSE_Format_evercddl_COSE_Signature_pretty_s
 }
 COSE_Format_evercddl_COSE_Signature_pretty;
 
+/**
+Parser for evercddl_COSE_Signature
+*/
 COSE_Format_evercddl_COSE_Signature_pretty COSE_Format_parse_COSE_Signature(cbor_det_t c);
 
+/**
+Serializer for evercddl_COSE_Signature
+*/
 size_t
 COSE_Format_serialize_COSE_Signature(
   COSE_Format_evercddl_COSE_Signature_pretty c,
@@ -1199,8 +1373,14 @@ typedef struct COSE_Format_evercddl_COSE_Sign_pretty_s
 }
 COSE_Format_evercddl_COSE_Sign_pretty;
 
+/**
+Parser for evercddl_COSE_Sign
+*/
 COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_parse_COSE_Sign(cbor_det_t c);
 
+/**
+Serializer for evercddl_COSE_Sign
+*/
 size_t
 COSE_Format_serialize_COSE_Sign(
   COSE_Format_evercddl_COSE_Sign_pretty c,
@@ -1229,8 +1409,14 @@ bool COSE_Format_validate_COSE_Sign_Tagged(cbor_det_t c);
 
 typedef COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_evercddl_COSE_Sign_Tagged_pretty;
 
+/**
+Parser for evercddl_COSE_Sign_Tagged
+*/
 COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_parse_COSE_Sign_Tagged(cbor_det_t c);
 
+/**
+Serializer for evercddl_COSE_Sign_Tagged
+*/
 size_t
 COSE_Format_serialize_COSE_Sign_Tagged(
   COSE_Format_evercddl_COSE_Sign_pretty c,
@@ -1267,8 +1453,14 @@ typedef struct COSE_Format_evercddl_COSE_Sign1_pretty_s
 }
 COSE_Format_evercddl_COSE_Sign1_pretty;
 
+/**
+Parser for evercddl_COSE_Sign1
+*/
 COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_parse_COSE_Sign1(cbor_det_t c);
 
+/**
+Serializer for evercddl_COSE_Sign1
+*/
 size_t
 COSE_Format_serialize_COSE_Sign1(
   COSE_Format_evercddl_COSE_Sign1_pretty c,
@@ -1312,9 +1504,15 @@ typedef struct COSE_Format_evercddl_COSE_Untagged_Message_pretty_s
 }
 COSE_Format_evercddl_COSE_Untagged_Message_pretty;
 
+/**
+Parser for evercddl_COSE_Untagged_Message
+*/
 COSE_Format_evercddl_COSE_Untagged_Message_pretty
 COSE_Format_parse_COSE_Untagged_Message(cbor_det_t c);
 
+/**
+Serializer for evercddl_COSE_Untagged_Message
+*/
 size_t
 COSE_Format_serialize_COSE_Untagged_Message(
   COSE_Format_evercddl_COSE_Untagged_Message_pretty c,
@@ -1344,8 +1542,14 @@ bool COSE_Format_validate_COSE_Sign1_Tagged(cbor_det_t c);
 
 typedef COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_evercddl_COSE_Sign1_Tagged_pretty;
 
+/**
+Parser for evercddl_COSE_Sign1_Tagged
+*/
 COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_parse_COSE_Sign1_Tagged(cbor_det_t c);
 
+/**
+Serializer for evercddl_COSE_Sign1_Tagged
+*/
 size_t
 COSE_Format_serialize_COSE_Sign1_Tagged(
   COSE_Format_evercddl_COSE_Sign1_pretty c,
@@ -1390,9 +1594,15 @@ typedef struct COSE_Format_evercddl_COSE_Tagged_Message_pretty_s
 }
 COSE_Format_evercddl_COSE_Tagged_Message_pretty;
 
+/**
+Parser for evercddl_COSE_Tagged_Message
+*/
 COSE_Format_evercddl_COSE_Tagged_Message_pretty
 COSE_Format_parse_COSE_Tagged_Message(cbor_det_t c);
 
+/**
+Serializer for evercddl_COSE_Tagged_Message
+*/
 size_t
 COSE_Format_serialize_COSE_Tagged_Message(
   COSE_Format_evercddl_COSE_Tagged_Message_pretty c,
@@ -1437,8 +1647,14 @@ typedef struct COSE_Format_evercddl_COSE_Messages_pretty_s
 }
 COSE_Format_evercddl_COSE_Messages_pretty;
 
+/**
+Parser for evercddl_COSE_Messages
+*/
 COSE_Format_evercddl_COSE_Messages_pretty COSE_Format_parse_COSE_Messages(cbor_det_t c);
 
+/**
+Serializer for evercddl_COSE_Messages
+*/
 size_t
 COSE_Format_serialize_COSE_Messages(
   COSE_Format_evercddl_COSE_Messages_pretty c,
@@ -1502,8 +1718,14 @@ typedef struct COSE_Format_evercddl_Sig_structure_pretty_s
 }
 COSE_Format_evercddl_Sig_structure_pretty;
 
+/**
+Parser for evercddl_Sig_structure
+*/
 COSE_Format_evercddl_Sig_structure_pretty COSE_Format_parse_Sig_structure(cbor_det_t c);
 
+/**
+Serializer for evercddl_Sig_structure
+*/
 size_t
 COSE_Format_serialize_Sig_structure(
   COSE_Format_evercddl_Sig_structure_pretty c,
@@ -1532,8 +1754,14 @@ bool COSE_Format_validate_Internal_Types(cbor_det_t c);
 
 typedef COSE_Format_evercddl_Sig_structure_pretty COSE_Format_evercddl_Internal_Types_pretty;
 
+/**
+Parser for evercddl_Internal_Types
+*/
 COSE_Format_evercddl_Sig_structure_pretty COSE_Format_parse_Internal_Types(cbor_det_t c);
 
+/**
+Serializer for evercddl_Internal_Types
+*/
 size_t
 COSE_Format_serialize_Internal_Types(
   COSE_Format_evercddl_Sig_structure_pretty c,
@@ -1574,8 +1802,14 @@ typedef struct COSE_Format_evercddl_start_pretty_s
 }
 COSE_Format_evercddl_start_pretty;
 
+/**
+Parser for evercddl_start
+*/
 COSE_Format_evercddl_start_pretty COSE_Format_parse_start(cbor_det_t c);
 
+/**
+Serializer for evercddl_start
+*/
 size_t
 COSE_Format_serialize_start(
   COSE_Format_evercddl_start_pretty c,
@@ -1604,8 +1838,14 @@ bool COSE_Format_validate_eb64url(cbor_det_t c);
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_eb64url_pretty;
 
+/**
+Parser for evercddl_eb64url
+*/
 COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64url(cbor_det_t c);
 
+/**
+Serializer for evercddl_eb64url
+*/
 size_t
 COSE_Format_serialize_eb64url(
   COSE_Format_evercddl_any_pretty c,
@@ -1634,8 +1874,14 @@ bool COSE_Format_validate_eb64legacy(cbor_det_t c);
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_eb64legacy_pretty;
 
+/**
+Parser for evercddl_eb64legacy
+*/
 COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64legacy(cbor_det_t c);
 
+/**
+Serializer for evercddl_eb64legacy
+*/
 size_t
 COSE_Format_serialize_eb64legacy(
   COSE_Format_evercddl_any_pretty c,
@@ -1664,8 +1910,14 @@ bool COSE_Format_validate_eb16(cbor_det_t c);
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_eb16_pretty;
 
+/**
+Parser for evercddl_eb16
+*/
 COSE_Format_evercddl_any_pretty COSE_Format_parse_eb16(cbor_det_t c);
 
+/**
+Serializer for evercddl_eb16
+*/
 size_t
 COSE_Format_serialize_eb16(
   COSE_Format_evercddl_any_pretty c,
@@ -1694,8 +1946,14 @@ bool COSE_Format_validate_cborany(cbor_det_t c);
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_cborany_pretty;
 
+/**
+Parser for evercddl_cborany
+*/
 COSE_Format_evercddl_any_pretty COSE_Format_parse_cborany(cbor_det_t c);
 
+/**
+Serializer for evercddl_cborany
+*/
 size_t
 COSE_Format_serialize_cborany(
   COSE_Format_evercddl_any_pretty c,

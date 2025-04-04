@@ -67,6 +67,9 @@ static bool evercddl_bool_pretty_left(bool x3)
   return x3;
 }
 
+/**
+Parser for evercddl_bool
+*/
 bool COSE_Format_parse_bool(cbor_det_t c)
 {
   uint8_t w = cbor_det_read_simple_value(c);
@@ -93,6 +96,9 @@ typedef struct option__size_t_s
 }
 option__size_t;
 
+/**
+Serializer for evercddl_bool
+*/
 size_t COSE_Format_serialize_bool(bool c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   bool c_ = evercddl_bool_pretty_left(c);
@@ -290,6 +296,9 @@ evercddl_everparsenomatch_pretty_right(void)
   return COSE_Format_Mkevercddl_everparsenomatch_pretty0;
 }
 
+/**
+Parser for evercddl_everparsenomatch
+*/
 COSE_Format_evercddl_everparsenomatch_pretty COSE_Format_parse_everparsenomatch(cbor_det_t c)
 {
   KRML_MAYBE_UNUSED_VAR(c);
@@ -297,6 +306,9 @@ COSE_Format_evercddl_everparsenomatch_pretty COSE_Format_parse_everparsenomatch(
   return res2;
 }
 
+/**
+Serializer for evercddl_everparsenomatch
+*/
 size_t
 COSE_Format_serialize_everparsenomatch(
   COSE_Format_evercddl_everparsenomatch_pretty c,
@@ -405,6 +417,9 @@ static uint64_t evercddl_uint_pretty_left(uint64_t x3)
   return x3;
 }
 
+/**
+Parser for evercddl_uint
+*/
 uint64_t COSE_Format_parse_uint(cbor_det_t c)
 {
   uint64_t res = cbor_det_read_uint64(c);
@@ -414,6 +429,9 @@ uint64_t COSE_Format_parse_uint(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_uint
+*/
 size_t COSE_Format_serialize_uint(uint64_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   uint64_t c_ = evercddl_uint_pretty_left(c);
@@ -540,6 +558,9 @@ static uint64_t evercddl_nint_pretty_left(uint64_t x3)
   return x3;
 }
 
+/**
+Parser for evercddl_nint
+*/
 uint64_t COSE_Format_parse_nint(cbor_det_t c)
 {
   uint64_t res = cbor_det_read_uint64(c);
@@ -549,6 +570,9 @@ uint64_t COSE_Format_parse_nint(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_nint
+*/
 size_t COSE_Format_serialize_nint(uint64_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   uint64_t c_ = evercddl_nint_pretty_left(c);
@@ -735,6 +759,9 @@ static evercddl_int evercddl_int_pretty_left(COSE_Format_evercddl_int_pretty x7)
   }
 }
 
+/**
+Parser for evercddl_int
+*/
 COSE_Format_evercddl_int_pretty COSE_Format_parse_int(cbor_det_t c)
 {
   bool test = COSE_Format_validate_uint(c);
@@ -753,6 +780,9 @@ COSE_Format_evercddl_int_pretty COSE_Format_parse_int(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_int
+*/
 size_t
 COSE_Format_serialize_int(
   COSE_Format_evercddl_int_pretty c,
@@ -884,6 +914,9 @@ static Pulse_Lib_Slice_slice__uint8_t arrayptr_to_slice_intro__uint8_t(uint8_t *
   return ((Pulse_Lib_Slice_slice__uint8_t){ .elt = a, .len = alen });
 }
 
+/**
+Parser for evercddl_bstr
+*/
 COSE_Format_evercddl_bstr COSE_Format_parse_bstr(cbor_det_t c)
 {
   uint64_t len = cbor_det_get_string_length(c);
@@ -896,6 +929,9 @@ COSE_Format_evercddl_bstr COSE_Format_parse_bstr(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_bstr
+*/
 size_t
 COSE_Format_serialize_bstr(COSE_Format_evercddl_bstr c, Pulse_Lib_Slice_slice__uint8_t out)
 {
@@ -1051,6 +1087,9 @@ evercddl_encodedcbor_pretty_left(COSE_Format_evercddl_bstr_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_encodedcbor
+*/
 COSE_Format_evercddl_bstr_pretty COSE_Format_parse_encodedcbor(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -1067,6 +1106,9 @@ typedef struct __uint64_t_COSE_Format_evercddl_bstr_pretty_s
 }
 __uint64_t_COSE_Format_evercddl_bstr_pretty;
 
+/**
+Serializer for evercddl_encodedcbor
+*/
 size_t
 COSE_Format_serialize_encodedcbor(
   COSE_Format_evercddl_bstr_pretty c,
@@ -1198,6 +1240,9 @@ evercddl_bytes_pretty_left(COSE_Format_evercddl_bstr_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_bytes
+*/
 COSE_Format_evercddl_bstr_pretty COSE_Format_parse_bytes(cbor_det_t c)
 {
   COSE_Format_evercddl_bstr res1 = COSE_Format_parse_bstr(c);
@@ -1205,6 +1250,9 @@ COSE_Format_evercddl_bstr_pretty COSE_Format_parse_bytes(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_bytes
+*/
 size_t
 COSE_Format_serialize_bytes(
   COSE_Format_evercddl_bstr_pretty c,
@@ -1313,6 +1361,9 @@ static Pulse_Lib_Slice_slice__uint8_t evercddl_tstr_pretty_left(COSE_Format_ever
   return x3;
 }
 
+/**
+Parser for evercddl_tstr
+*/
 COSE_Format_evercddl_bstr COSE_Format_parse_tstr(cbor_det_t c)
 {
   uint64_t len = cbor_det_get_string_length(c);
@@ -1325,6 +1376,9 @@ COSE_Format_evercddl_bstr COSE_Format_parse_tstr(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_tstr
+*/
 size_t
 COSE_Format_serialize_tstr(COSE_Format_evercddl_bstr c, Pulse_Lib_Slice_slice__uint8_t out)
 {
@@ -1525,6 +1579,9 @@ evercddl_label_pretty_left(COSE_Format_evercddl_label_pretty x7)
   }
 }
 
+/**
+Parser for evercddl_label
+*/
 COSE_Format_evercddl_label_pretty COSE_Format_parse_label(cbor_det_t c)
 {
   bool test = COSE_Format_validate_int(c);
@@ -1543,6 +1600,9 @@ COSE_Format_evercddl_label_pretty COSE_Format_parse_label(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_label
+*/
 size_t
 COSE_Format_serialize_label(
   COSE_Format_evercddl_label_pretty c,
@@ -1684,6 +1744,9 @@ evercddl_tdate_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_tdate
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_tdate(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -1700,6 +1763,9 @@ typedef struct __uint64_t_COSE_Format_evercddl_tstr_pretty_s
 }
 __uint64_t_COSE_Format_evercddl_tstr_pretty;
 
+/**
+Serializer for evercddl_tdate
+*/
 size_t
 COSE_Format_serialize_tdate(
   COSE_Format_evercddl_tstr_pretty c,
@@ -1843,6 +1909,9 @@ static COSE_Format_evercddl_bstr evercddl_uri_pretty_left(COSE_Format_evercddl_t
   return x3;
 }
 
+/**
+Parser for evercddl_uri
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_uri(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -1852,6 +1921,9 @@ COSE_Format_evercddl_tstr_pretty COSE_Format_parse_uri(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_uri
+*/
 size_t
 COSE_Format_serialize_uri(
   COSE_Format_evercddl_tstr_pretty c,
@@ -1997,6 +2069,9 @@ evercddl_b64url_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_b64url
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_b64url(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -2006,6 +2081,9 @@ COSE_Format_evercddl_tstr_pretty COSE_Format_parse_b64url(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_b64url
+*/
 size_t
 COSE_Format_serialize_b64url(
   COSE_Format_evercddl_tstr_pretty c,
@@ -2151,6 +2229,9 @@ evercddl_b64legacy_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_b64legacy
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_b64legacy(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -2160,6 +2241,9 @@ COSE_Format_evercddl_tstr_pretty COSE_Format_parse_b64legacy(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_b64legacy
+*/
 size_t
 COSE_Format_serialize_b64legacy(
   COSE_Format_evercddl_tstr_pretty c,
@@ -2305,6 +2389,9 @@ evercddl_regexp_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_regexp
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_regexp(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -2314,6 +2401,9 @@ COSE_Format_evercddl_tstr_pretty COSE_Format_parse_regexp(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_regexp
+*/
 size_t
 COSE_Format_serialize_regexp(
   COSE_Format_evercddl_tstr_pretty c,
@@ -2459,6 +2549,9 @@ evercddl_mimemessage_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_mimemessage
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_mimemessage(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -2468,6 +2561,9 @@ COSE_Format_evercddl_tstr_pretty COSE_Format_parse_mimemessage(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_mimemessage
+*/
 size_t
 COSE_Format_serialize_mimemessage(
   COSE_Format_evercddl_tstr_pretty c,
@@ -2598,6 +2694,9 @@ static COSE_Format_evercddl_bstr evercddl_text_pretty_left(COSE_Format_evercddl_
   return x3;
 }
 
+/**
+Parser for evercddl_text
+*/
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_text(cbor_det_t c)
 {
   COSE_Format_evercddl_bstr res1 = COSE_Format_parse_tstr(c);
@@ -2605,6 +2704,9 @@ COSE_Format_evercddl_tstr_pretty COSE_Format_parse_text(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_text
+*/
 size_t
 COSE_Format_serialize_text(
   COSE_Format_evercddl_tstr_pretty c,
@@ -2715,6 +2817,9 @@ static COSE_Format_evercddl_false_pretty evercddl_false_pretty_right(void)
   return COSE_Format_Mkevercddl_false_pretty0;
 }
 
+/**
+Parser for evercddl_false
+*/
 COSE_Format_evercddl_false_pretty COSE_Format_parse_false(cbor_det_t c)
 {
   KRML_MAYBE_UNUSED_VAR(c);
@@ -2722,6 +2827,9 @@ COSE_Format_evercddl_false_pretty COSE_Format_parse_false(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_false
+*/
 size_t
 COSE_Format_serialize_false(
   COSE_Format_evercddl_false_pretty c,
@@ -2851,6 +2959,9 @@ static COSE_Format_evercddl_true_pretty evercddl_true_pretty_right(void)
   return COSE_Format_Mkevercddl_true_pretty0;
 }
 
+/**
+Parser for evercddl_true
+*/
 COSE_Format_evercddl_true_pretty COSE_Format_parse_true(cbor_det_t c)
 {
   KRML_MAYBE_UNUSED_VAR(c);
@@ -2858,6 +2969,9 @@ COSE_Format_evercddl_true_pretty COSE_Format_parse_true(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_true
+*/
 size_t
 COSE_Format_serialize_true(
   COSE_Format_evercddl_true_pretty c,
@@ -2987,6 +3101,9 @@ static COSE_Format_evercddl_nil_pretty evercddl_nil_pretty_right(void)
   return COSE_Format_Mkevercddl_nil_pretty0;
 }
 
+/**
+Parser for evercddl_nil
+*/
 COSE_Format_evercddl_nil_pretty COSE_Format_parse_nil(cbor_det_t c)
 {
   KRML_MAYBE_UNUSED_VAR(c);
@@ -2994,6 +3111,9 @@ COSE_Format_evercddl_nil_pretty COSE_Format_parse_nil(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_nil
+*/
 size_t
 COSE_Format_serialize_nil(
   COSE_Format_evercddl_nil_pretty c,
@@ -3122,6 +3242,9 @@ evercddl_null_pretty_left(COSE_Format_evercddl_nil_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_null
+*/
 COSE_Format_evercddl_nil_pretty COSE_Format_parse_null(cbor_det_t c)
 {
   COSE_Format_evercddl_nil_pretty res1 = COSE_Format_parse_nil(c);
@@ -3129,6 +3252,9 @@ COSE_Format_evercddl_nil_pretty COSE_Format_parse_null(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_null
+*/
 size_t
 COSE_Format_serialize_null(
   COSE_Format_evercddl_nil_pretty c,
@@ -3239,6 +3365,9 @@ static COSE_Format_evercddl_undefined_pretty evercddl_undefined_pretty_right(voi
   return COSE_Format_Mkevercddl_undefined_pretty0;
 }
 
+/**
+Parser for evercddl_undefined
+*/
 COSE_Format_evercddl_undefined_pretty COSE_Format_parse_undefined(cbor_det_t c)
 {
   KRML_MAYBE_UNUSED_VAR(c);
@@ -3246,6 +3375,9 @@ COSE_Format_evercddl_undefined_pretty COSE_Format_parse_undefined(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_undefined
+*/
 size_t
 COSE_Format_serialize_undefined(
   COSE_Format_evercddl_undefined_pretty c,
@@ -3373,6 +3505,9 @@ static cbor_det_t evercddl_any_pretty_left(COSE_Format_evercddl_any x3)
   return x3;
 }
 
+/**
+Parser for evercddl_any
+*/
 COSE_Format_evercddl_any COSE_Format_parse_any(cbor_det_t c)
 {
   cbor_det_t res1 = c;
@@ -3380,6 +3515,9 @@ COSE_Format_evercddl_any COSE_Format_parse_any(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_any
+*/
 size_t
 COSE_Format_serialize_any(COSE_Format_evercddl_any c, Pulse_Lib_Slice_slice__uint8_t out)
 {
@@ -3506,6 +3644,9 @@ static COSE_Format_evercddl_any evercddl_values_pretty_left(COSE_Format_evercddl
   return x3;
 }
 
+/**
+Parser for evercddl_values
+*/
 COSE_Format_evercddl_any_pretty COSE_Format_parse_values(cbor_det_t c)
 {
   COSE_Format_evercddl_any res1 = COSE_Format_parse_any(c);
@@ -3513,6 +3654,9 @@ COSE_Format_evercddl_any_pretty COSE_Format_parse_values(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_values
+*/
 size_t
 COSE_Format_serialize_values(
   COSE_Format_evercddl_any_pretty c,
@@ -3670,6 +3814,9 @@ aux_env25_type_2_pretty_left(COSE_Format_evercddl_label_pretty x3)
   return x3;
 }
 
+/**
+Parser for aux_env25_type_2
+*/
 COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_parse_2(cbor_det_t c)
 {
   COSE_Format_evercddl_label_pretty res1 = COSE_Format_parse_label(c);
@@ -3677,6 +3824,9 @@ COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_parse_2(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for aux_env25_type_2
+*/
 size_t
 COSE_Format_aux_env25_serialize_2(
   COSE_Format_evercddl_label_pretty c,
@@ -3871,6 +4021,9 @@ aux_env25_type_4_pretty_left(COSE_Format_evercddl_values_pretty x3)
   return x3;
 }
 
+/**
+Parser for aux_env25_type_4
+*/
 COSE_Format_evercddl_values_pretty COSE_Format_aux_env25_parse_4(cbor_det_t c)
 {
   COSE_Format_evercddl_any_pretty res1 = COSE_Format_parse_values(c);
@@ -3878,6 +4031,9 @@ COSE_Format_evercddl_values_pretty COSE_Format_aux_env25_parse_4(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for aux_env25_type_4
+*/
 size_t
 COSE_Format_aux_env25_serialize_4(
   COSE_Format_evercddl_values_pretty c,
@@ -5191,6 +5347,9 @@ evercddl_header_map_pretty_left(COSE_Format_evercddl_header_map_pretty x13)
     );
 }
 
+/**
+Parser for evercddl_header_map
+*/
 COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c)
 {
   uint64_t dummy0 = 0ULL;
@@ -6442,6 +6601,9 @@ split___COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_prett
     );
 }
 
+/**
+Serializer for evercddl_header_map
+*/
 size_t
 COSE_Format_serialize_header_map(
   COSE_Format_evercddl_header_map_pretty c,
@@ -8171,6 +8333,9 @@ fst__CBOR_Pulse_API_Det_Type_cbor_det_t_Pulse_Lib_Slice_slice_uint8_t(
   return x.fst;
 }
 
+/**
+Parser for evercddl_empty_or_serialized_map
+*/
 COSE_Format_evercddl_empty_or_serialized_map_pretty
 COSE_Format_parse_empty_or_serialized_map(cbor_det_t c)
 {
@@ -8312,6 +8477,9 @@ COSE_Format_parse_empty_or_serialized_map(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_empty_or_serialized_map
+*/
 size_t
 COSE_Format_serialize_empty_or_serialized_map(
   COSE_Format_evercddl_empty_or_serialized_map_pretty c,
@@ -8635,6 +8803,9 @@ evercddl_COSE_Signature_pretty_left(COSE_Format_evercddl_COSE_Signature_pretty x
   return ((evercddl_COSE_Signature){ .fst = { .fst = x12, .snd = x13 }, .snd = x14 });
 }
 
+/**
+Parser for evercddl_COSE_Signature
+*/
 COSE_Format_evercddl_COSE_Signature_pretty COSE_Format_parse_COSE_Signature(cbor_det_t c)
 {
   cbor_det_array_iterator_t ar = cbor_det_array_iterator_start(c);
@@ -8711,6 +8882,9 @@ COSE_Format_evercddl_COSE_Signature_pretty COSE_Format_parse_COSE_Signature(cbor
   return res20;
 }
 
+/**
+Serializer for evercddl_COSE_Signature
+*/
 size_t
 COSE_Format_serialize_COSE_Signature(
   COSE_Format_evercddl_COSE_Signature_pretty c,
@@ -9150,6 +9324,9 @@ evercddl_COSE_Sign_pretty_left(COSE_Format_evercddl_COSE_Sign_pretty x9)
     ((evercddl_COSE_Sign){ .fst = { .fst = x15, .snd = x16 }, .snd = { .fst = x17, .snd = x18 } });
 }
 
+/**
+Parser for evercddl_COSE_Sign
+*/
 COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_parse_COSE_Sign(cbor_det_t c)
 {
   cbor_det_array_iterator_t ar = cbor_det_array_iterator_start(c);
@@ -9305,6 +9482,9 @@ op_Array_Access__COSE_Format_evercddl_COSE_Signature_pretty(
   return a.elt[i];
 }
 
+/**
+Serializer for evercddl_COSE_Sign
+*/
 size_t
 COSE_Format_serialize_COSE_Sign(
   COSE_Format_evercddl_COSE_Sign_pretty c,
@@ -9707,6 +9887,9 @@ evercddl_COSE_Sign_Tagged_pretty_left(COSE_Format_evercddl_COSE_Sign_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_COSE_Sign_Tagged
+*/
 COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_parse_COSE_Sign_Tagged(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -9723,6 +9906,9 @@ typedef struct __uint64_t_COSE_Format_evercddl_COSE_Sign_pretty_s
 }
 __uint64_t_COSE_Format_evercddl_COSE_Sign_pretty;
 
+/**
+Serializer for evercddl_COSE_Sign_Tagged
+*/
 size_t
 COSE_Format_serialize_COSE_Sign_Tagged(
   COSE_Format_evercddl_COSE_Sign_pretty c,
@@ -9975,6 +10161,9 @@ evercddl_COSE_Sign1_pretty_left(COSE_Format_evercddl_COSE_Sign1_pretty x9)
     ((evercddl_COSE_Sign1){ .fst = { .fst = x15, .snd = x16 }, .snd = { .fst = x17, .snd = x18 } });
 }
 
+/**
+Parser for evercddl_COSE_Sign1
+*/
 COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_parse_COSE_Sign1(cbor_det_t c)
 {
   cbor_det_array_iterator_t ar = cbor_det_array_iterator_start(c);
@@ -10103,6 +10292,9 @@ COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_parse_COSE_Sign1(cbor_det_t c
   return res20;
 }
 
+/**
+Serializer for evercddl_COSE_Sign1
+*/
 size_t
 COSE_Format_serialize_COSE_Sign1(
   COSE_Format_evercddl_COSE_Sign1_pretty c,
@@ -10418,6 +10610,9 @@ evercddl_COSE_Untagged_Message_pretty_left(
   }
 }
 
+/**
+Parser for evercddl_COSE_Untagged_Message
+*/
 COSE_Format_evercddl_COSE_Untagged_Message_pretty
 COSE_Format_parse_COSE_Untagged_Message(cbor_det_t c)
 {
@@ -10438,6 +10633,9 @@ COSE_Format_parse_COSE_Untagged_Message(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_COSE_Untagged_Message
+*/
 size_t
 COSE_Format_serialize_COSE_Untagged_Message(
   COSE_Format_evercddl_COSE_Untagged_Message_pretty c,
@@ -10580,6 +10778,9 @@ evercddl_COSE_Sign1_Tagged_pretty_left(COSE_Format_evercddl_COSE_Sign1_pretty x3
   return x3;
 }
 
+/**
+Parser for evercddl_COSE_Sign1_Tagged
+*/
 COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_parse_COSE_Sign1_Tagged(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -10596,6 +10797,9 @@ typedef struct __uint64_t_COSE_Format_evercddl_COSE_Sign1_pretty_s
 }
 __uint64_t_COSE_Format_evercddl_COSE_Sign1_pretty;
 
+/**
+Serializer for evercddl_COSE_Sign1_Tagged
+*/
 size_t
 COSE_Format_serialize_COSE_Sign1_Tagged(
   COSE_Format_evercddl_COSE_Sign1_pretty c,
@@ -10788,6 +10992,9 @@ evercddl_COSE_Tagged_Message_pretty_left(COSE_Format_evercddl_COSE_Tagged_Messag
   }
 }
 
+/**
+Parser for evercddl_COSE_Tagged_Message
+*/
 COSE_Format_evercddl_COSE_Tagged_Message_pretty
 COSE_Format_parse_COSE_Tagged_Message(cbor_det_t c)
 {
@@ -10808,6 +11015,9 @@ COSE_Format_parse_COSE_Tagged_Message(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_COSE_Tagged_Message
+*/
 size_t
 COSE_Format_serialize_COSE_Tagged_Message(
   COSE_Format_evercddl_COSE_Tagged_Message_pretty c,
@@ -10997,6 +11207,9 @@ evercddl_COSE_Messages_pretty_left(COSE_Format_evercddl_COSE_Messages_pretty x7)
   }
 }
 
+/**
+Parser for evercddl_COSE_Messages
+*/
 COSE_Format_evercddl_COSE_Messages_pretty COSE_Format_parse_COSE_Messages(cbor_det_t c)
 {
   bool test = COSE_Format_validate_COSE_Untagged_Message(c);
@@ -11016,6 +11229,9 @@ COSE_Format_evercddl_COSE_Messages_pretty COSE_Format_parse_COSE_Messages(cbor_d
   return res2;
 }
 
+/**
+Serializer for evercddl_COSE_Messages
+*/
 size_t
 COSE_Format_serialize_COSE_Messages(
   COSE_Format_evercddl_COSE_Messages_pretty c,
@@ -11483,6 +11699,9 @@ evercddl_Sig_structure_pretty_left(COSE_Format_evercddl_Sig_structure_pretty x7)
   return ((evercddl_Sig_structure){ .fst = x12, .snd = { .fst = x13, .snd = x14 } });
 }
 
+/**
+Parser for evercddl_Sig_structure
+*/
 COSE_Format_evercddl_Sig_structure_pretty COSE_Format_parse_Sig_structure(cbor_det_t c)
 {
   cbor_det_array_iterator_t ar = cbor_det_array_iterator_start(c);
@@ -11956,6 +12175,9 @@ static void op_Array_Assignment__uint8_t(Pulse_Lib_Slice_slice__uint8_t a, size_
   a.elt[i] = v;
 }
 
+/**
+Serializer for evercddl_Sig_structure
+*/
 size_t
 COSE_Format_serialize_Sig_structure(
   COSE_Format_evercddl_Sig_structure_pretty c,
@@ -12404,6 +12626,9 @@ evercddl_Internal_Types_pretty_left(COSE_Format_evercddl_Sig_structure_pretty x3
   return x3;
 }
 
+/**
+Parser for evercddl_Internal_Types
+*/
 COSE_Format_evercddl_Sig_structure_pretty COSE_Format_parse_Internal_Types(cbor_det_t c)
 {
   COSE_Format_evercddl_Sig_structure_pretty res1 = COSE_Format_parse_Sig_structure(c);
@@ -12411,6 +12636,9 @@ COSE_Format_evercddl_Sig_structure_pretty COSE_Format_parse_Internal_Types(cbor_
   return res2;
 }
 
+/**
+Serializer for evercddl_Internal_Types
+*/
 size_t
 COSE_Format_serialize_Internal_Types(
   COSE_Format_evercddl_Sig_structure_pretty c,
@@ -12579,6 +12807,9 @@ static evercddl_start evercddl_start_pretty_left(COSE_Format_evercddl_start_pret
   }
 }
 
+/**
+Parser for evercddl_start
+*/
 COSE_Format_evercddl_start_pretty COSE_Format_parse_start(cbor_det_t c)
 {
   bool test = COSE_Format_validate_COSE_Messages(c);
@@ -12597,6 +12828,9 @@ COSE_Format_evercddl_start_pretty COSE_Format_parse_start(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_start
+*/
 size_t
 COSE_Format_serialize_start(
   COSE_Format_evercddl_start_pretty c,
@@ -12738,6 +12972,9 @@ evercddl_eb64url_pretty_left(COSE_Format_evercddl_any_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_eb64url
+*/
 COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64url(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -12754,6 +12991,9 @@ typedef struct __uint64_t_COSE_Format_evercddl_any_pretty_s
 }
 __uint64_t_COSE_Format_evercddl_any_pretty;
 
+/**
+Serializer for evercddl_eb64url
+*/
 size_t
 COSE_Format_serialize_eb64url(
   COSE_Format_evercddl_any_pretty c,
@@ -12899,6 +13139,9 @@ evercddl_eb64legacy_pretty_left(COSE_Format_evercddl_any_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_eb64legacy
+*/
 COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64legacy(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -12908,6 +13151,9 @@ COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64legacy(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_eb64legacy
+*/
 size_t
 COSE_Format_serialize_eb64legacy(
   COSE_Format_evercddl_any_pretty c,
@@ -13051,6 +13297,9 @@ static COSE_Format_evercddl_any evercddl_eb16_pretty_left(COSE_Format_evercddl_a
   return x3;
 }
 
+/**
+Parser for evercddl_eb16
+*/
 COSE_Format_evercddl_any_pretty COSE_Format_parse_eb16(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -13060,6 +13309,9 @@ COSE_Format_evercddl_any_pretty COSE_Format_parse_eb16(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_eb16
+*/
 size_t
 COSE_Format_serialize_eb16(
   COSE_Format_evercddl_any_pretty c,
@@ -13205,6 +13457,9 @@ evercddl_cborany_pretty_left(COSE_Format_evercddl_any_pretty x3)
   return x3;
 }
 
+/**
+Parser for evercddl_cborany
+*/
 COSE_Format_evercddl_any_pretty COSE_Format_parse_cborany(cbor_det_t c)
 {
   cbor_det_t cpl = cbor_det_get_tagged_payload(c);
@@ -13214,6 +13469,9 @@ COSE_Format_evercddl_any_pretty COSE_Format_parse_cborany(cbor_det_t c)
   return res2;
 }
 
+/**
+Serializer for evercddl_cborany
+*/
 size_t
 COSE_Format_serialize_cborany(
   COSE_Format_evercddl_any_pretty c,
