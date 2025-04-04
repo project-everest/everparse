@@ -21,8 +21,8 @@ CFLAGS += -I ../snapshot -I ../../cbor/pulse/det/c
 HEADERDEPS = ../snapshot/COSE_Format.h ../../cbor/pulse/det/c/CBORDet.h
 
 common.o: common.c $(HEADERDEPS)
-signtest.o: signtest.c $(HEADERDEPS)
-verifytest.o: verifytest.c $(HEADERDEPS)
+signtest.o: signtest.c $(HEADERDEPS) common.h
+verifytest.o: verifytest.c $(HEADERDEPS) common.h
 CBOR_Det.o: ../../cbor/pulse/det/c/CBORDet.c $(HEADERDEPS)
 COSE_Format.o: ../snapshot/COSE_Format.c $(HEADERDEPS)
 	$(CC) $(CFLAGS) -c $< -o $@
