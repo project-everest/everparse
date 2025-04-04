@@ -11,7 +11,7 @@ submodules:
 	git submodule update
 
 FStar: submodules
-	+$(MAKE) -C $@ 1
+	+$(MAKE) -C $@ 1 ADMIT=1
 
 z3: submodules
 	mkdir -p $@
@@ -21,6 +21,6 @@ karamel: FStar z3
 	+$(MAKE) -C $@
 
 pulse: FStar z3
-	+$(MAKE) -C $@
+	+$(MAKE) -C $@ ADMIT=1
 
 .PHONY: all FStar karamel z3 pulse submodules
