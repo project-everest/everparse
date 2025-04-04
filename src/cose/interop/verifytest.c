@@ -40,7 +40,6 @@ bstr verify1(EVP_PKEY *signing_key, bstr aad, bstr msg) {
 
 bstr test_verify(bstr msg, bstr key_data) {
     bstr aad = { .elt = (uint8_t[]) {}, .len = 0 };
-    const uint8_t *key_data_ptr = key_data.elt;
     BIO *bio = BIO_new_mem_buf(key_data.elt, key_data.len);
     EVP_PKEY *signing_key = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
     openssl_check(signing_key);
