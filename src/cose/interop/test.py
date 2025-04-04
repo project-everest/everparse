@@ -38,5 +38,7 @@ assert msg.external_aad == b'', msg.aad
 print('Signature verifies!')
 
 print('Running ./verifytest')
-subprocess.check_call(['./verifytest', 'message.pubkey', 'message.cbor'])
+verify = subprocess.run(['./verifytest', 'message.pubkey', 'message.cbor'], stdout=subprocess.PIPE)
+verify.check_returncode()
+assert verify.stdout == payload, verify.stdout
 print('Signature verifies using our tool!')

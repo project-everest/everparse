@@ -61,7 +61,7 @@ int main(int argc, const char **argv) {
 
     bstr payload = test_verify(msg, key_data);
 
-    fprintf(stderr, "writing message to stdout\n");
+    fprintf(stderr, "writing payload to stdout\n");
     check(fwrite(payload.elt, payload.len, 1, stdout) == 1);
 
     free(key_data.elt);
