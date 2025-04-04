@@ -56,8 +56,8 @@ let number_field (i:int) (cf:cfield)
 let ctype_of_typ (e:env_t) (t:typ)
 : ML (either ctype string)
 = match t.v with
-  | Pointer _ (PQ UInt32 _) -> Inl <| Ty tuint32
-  | Pointer _ (PQ UInt64 _) -> Inl <| Ty tuint64
+  | Pointer _ (PQ UInt32 _ _) -> Inl <| Ty tuint32
+  | Pointer _ (PQ UInt64 _ _) -> Inl <| Ty tuint64
   | Type_arrow _ _ -> Inr "No arrow types in C"
   | _ ->
     let t = Binding.unfold_typ_abbrev_and_enum (fst e) t in

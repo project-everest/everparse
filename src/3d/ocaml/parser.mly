@@ -233,13 +233,25 @@ maybe_pointer_typ:
   | t=typ { t }
   | t=pointer_typ { t }
 
-pointer_qualifier:
-  | POINTER LPAREN t=IDENT RPAREN
+pointer_tag:
+  | POINTER { false }
+  | POINTER QUESTION { true } 
+
+pointer_qual:
+  | { (UInt64, false) }
+  | LPAREN t=IDENT RPAREN
     { 
       match t.v.name with
-      | "UINT32" -> PQ(UInt32, true)
-      | "UINT64" -> PQ(UInt64, true)
+      | "UINT32" -> (UInt32, true)
+      | "UINT64" -> (UInt64, true)
       | _ -> error "Unexpected pointer qualifier; expected UINT32 or UINT64" t.range
+    }
+
+pointer_qualifier:
+  | nullable=pointer_tag qual=pointer_qual
+    { 
+      let (w, d) = qual in
+      PQ (w, d, nullable)
     }
 
 pointer_typ:
@@ -247,7 +259,7 @@ pointer_typ:
     { 
       let q =
         match qopt with
-        | None -> PQ(UInt64, false)
+        | None -> PQ(UInt64, false, false)
         | Some q -> q 
       in
       with_range (Pointer(t,q)) $startpos }
@@ -571,8 +583,8 @@ decl_no_range:
     }
 
   | SPECIALIZE LPAREN p1=pointer_qualifier COMMA p2=pointer_qualifier RPAREN i=IDENT j=IDENT SEMICOLON
-    { let PQ(p1, _) = p1 in
-      let PQ(p2, _) = p2 in
+    { let PQ(p1, _, _) = p1 in
+      let PQ(p2, _, _) = p2 in
       Specialize ([p1, p2], i, j) }
 
   | OUTPUT TYPEDEF STRUCT i=IDENT

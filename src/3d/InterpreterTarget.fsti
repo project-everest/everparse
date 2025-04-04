@@ -191,6 +191,7 @@ type typ : Type =
       fn:non_empty_string ->
       t:dtyp ->
       sz:A.pointer_size_t ->
+      nullable:bool ->
       probe:T.probe_action ->
       dest:A.ident ->
       as_u64:A.ident ->

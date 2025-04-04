@@ -925,6 +925,7 @@ val probe_then_validate
       (v:validate_with_action_t p inv disj l ha allow_reading)
       (src:ptr_t)
       (as_u64: ptr_t -> PA.pure_external_action U64.t)
+      (nullable:bool)
       (dest:CP.copy_buffer_t)
       (init:PA.init_probe_dest_t)
       (prep_dest_sz:U64.t)

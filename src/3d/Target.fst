@@ -471,7 +471,7 @@ let rec print_typ (mname:string) (t:typ) : ML string = //(decreases t) =
   | T_with_action t _
   | T_with_dep_action t _
   | T_with_comment t _ -> print_typ mname t
-  | T_with_probe t _ _ _ _ _ _ -> Printf.sprintf "%s probe" (print_typ mname t)
+  | T_with_probe t _ _ _ _ _ _ _ -> Printf.sprintf "%s probe" (print_typ mname t)
   | T_arrow [] t -> print_typ mname t
   | T_arrow ts t ->
     Printf.sprintf "(%s -> %s)"

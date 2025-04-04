@@ -719,6 +719,7 @@ type atomic_action
       dt:dtyp k ha has_reader inv disj l ->
       src:ptr_t ->
       as_u64:(ptr_t -> PA.pure_external_action U64.t) ->
+      nullable:bool ->
       dest:CP.copy_buffer_t ->
       init_cb:PA.init_probe_dest_t ->
       dest_prep_sz:U64.t -> 
@@ -758,10 +759,10 @@ let atomic_action_as_action
       A.action_assignment x rhs
     | Action_call c ->
       c
-    | Action_probe_then_validate #nz #wk #k #_hr #inv #l typename fieldname dt src as_u64 dest init_cb dest_sz probe ->
+    | Action_probe_then_validate #nz #wk #k #_hr #inv #l typename fieldname dt src as_u64 nullable dest init_cb dest_sz probe ->
       A.index_equations();
       let v = dtyp_as_validator dt in
-      A.probe_then_validate typename fieldname v src as_u64 dest init_cb dest_sz (probe_action_as_probe_m probe)
+      A.probe_then_validate typename fieldname v src as_u64 nullable dest init_cb dest_sz (probe_action_as_probe_m probe)
 
 (* A sub-language of monadic actions.
 
@@ -1080,7 +1081,6 @@ type typ
       terminator:dtyp_as_type element_type ->
       typ P.parse_string_kind inv_none disj_none loc_none ha false
 
-
 [@@specialize]
 inline_for_extraction
 let coerce (#[@@@erasable]a:Type)
@@ -1093,6 +1093,7 @@ let coerce (#[@@@erasable]a:Type)
 [@@specialize]
 let t_probe_then_validate
       (pointer_size:pointer_size_t)
+      (nullable:bool)
       (fieldname:string)
       (init_cb:PA.init_probe_dest_t)
       (dest_sz:U64.t)
@@ -1112,11 +1113,12 @@ let t_probe_then_validate
  = T_with_dep_action fieldname
      (DT_IType pointer_size)
      (fun typename src ->
-        Atomic_action (Action_probe_then_validate typename fieldname td src as_u64 dest init_cb dest_sz (Probe_action_var probe)))
+        Atomic_action (Action_probe_then_validate typename fieldname td src as_u64 nullable dest init_cb dest_sz (Probe_action_var probe)))
 
 [@@specialize]
 let t_probe_then_validate_alt
       (pointer_size:pointer_size_t)
+      (nullable:bool)
       (fieldname:string)
       (init_cb:PA.init_probe_dest_t)
       (dest_sz:U64.t)
@@ -1135,6 +1137,7 @@ let t_probe_then_validate_alt
        false
  = t_probe_then_validate
       pointer_size
+      nullable
       fieldname
       init_cb
       dest_sz

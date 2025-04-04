@@ -1966,6 +1966,7 @@ let probe_then_validate
       (v:validate_with_action_t p inv disj l ha allow_reading)
       (src:ptr_t)
       (as_u64:ptr_t -> PA.pure_external_action U64.t)
+      (nullable:bool)
       (dest:CP.copy_buffer_t)
       (init:PA.init_probe_dest_t)
       (prep_dest_sz:U64.t)
@@ -1974,20 +1975,27 @@ let probe_then_validate
       CP.properties dest;
       let h0 = HST.get () in
       let src64 = as_u64 src () in
-      let b = PA.run_probe_m (init_and_probe init prep_dest_sz probe) src64 dest in
-      let h1 = HST.get () in
-      modifies_address_liveness_insensitive_unused_in h0 h1;
-      if b <> 0uL
+      if nullable && src64 = 0uL
       then (
-        let result = v ctxt error_handler_fn (CP.stream_of dest) (CP.stream_len dest) 0uL in
-        not (LPE.is_error result)
+        //nullable pointers are accepted without probing, if they are null
+        true
       )
       else (
-        error_handler_fn typename fieldname
-          LPE.(error_reason_of_result validator_error_probe_failed)
-          LPE.(get_validator_error_kind validator_error_probe_failed)
-          ctxt input pos;
-        false
+        let b = PA.run_probe_m (init_and_probe init prep_dest_sz probe) src64 dest in
+        let h1 = HST.get () in
+        modifies_address_liveness_insensitive_unused_in h0 h1;
+        if b <> 0uL
+        then (
+          let result = v ctxt error_handler_fn (CP.stream_of dest) (CP.stream_len dest) 0uL in
+          not (LPE.is_error result)
+        )
+        else (
+          error_handler_fn typename fieldname
+            LPE.(error_reason_of_result validator_error_probe_failed)
+            LPE.(get_validator_error_kind validator_error_probe_failed)
+            ctxt input pos;
+          false
+        )
       )
 
 #pop-options

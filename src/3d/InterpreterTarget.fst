@@ -246,7 +246,7 @@ let tag_of_parser p
     | Parse_impos -> "Parse_impos"
     | Parse_with_comment _ _ -> "Parse_with_comment"
     | Parse_string _ _ -> "Parse_string"
-    | Parse_with_probe _ _ _ _ _ _ _ -> "Parse_with_probe"
+    | Parse_with_probe _ _ _ _ _ _ _ _ -> "Parse_with_probe"
 
 let as_lam (x:T.lam 'a)
   : lam 'a
@@ -379,7 +379,7 @@ let rec typ_indexes_of_parser (en:env) (p:T.parser)
         (typ_indexes_of_parser p)
         (typ_indexes_of_action a)
 
-    | T.Parse_with_probe p _ _ dest _ _ _ ->
+    | T.Parse_with_probe p _ _ _ dest _ _ _ ->
       let i, l, d, s = typ_indexes_of_parser p in 
       typ_indexes_union
            (i, l, d, s)
@@ -517,9 +517,9 @@ let typ_of_parser (en: env) : Tot (T.parser -> ML typ)
     | T.Parse_weaken_right p _ ->
       typ_of_parser p
 
-    | T.Parse_with_probe p sz probe_fn dest as_u64 init dest_sz ->
+    | T.Parse_with_probe p sz nullable probe_fn dest as_u64 init dest_sz ->
       let d = dtyp_of_parser p in
-      T_probe_then_validate fn d sz probe_fn dest as_u64 init dest_sz
+      T_probe_then_validate fn d sz nullable probe_fn dest as_u64 init dest_sz
 
     | T.Parse_map _ _
     | T.Parse_return _ -> failwith "Unnecessary"
@@ -573,7 +573,7 @@ let rec has_action_of_typ (t:typ)
   | T_at_most _ _ t -> has_action_of_typ t
   | T_exact _ _ t -> has_action_of_typ t
   | T_string _ t _ -> has_action_of_dtyp t
-  | T_probe_then_validate _ _ _ _ _ _ _ _ -> true
+  | T_probe_then_validate _ _ _ _ _ _ _ _ _ -> true
 
 let check_validity_of_typ_indexes (td:T.type_decl) indexes =
   let rec atomic_locs_of l =
@@ -690,6 +690,11 @@ let print_dtyp (mname:string) (dt:dtyp) =
 
 let print_lam (mname:string) (p:'a -> ML string) (x:lam 'a) =
   Printf.sprintf "(fun %s -> %s)"
+    (print_ident mname (fst x))
+    (p (snd x))
+
+let print_lam2 (mname:string) (p:'a -> ML string) (x:lam 'a) =
+  Printf.sprintf "(fun _ %s -> %s)"
     (print_ident mname (fst x))
     (p (snd x))
 
@@ -842,7 +847,7 @@ let rec print_typ (mname:string) (t:typ)
       Printf.sprintf "(T_with_dep_action \"%s\" %s %s)"
                      fn
                      (print_dtyp mname d)
-                     (print_lam mname (print_action mname) a)
+                     (print_lam2 mname (print_action mname) a)
 
     | T_drop t ->
       Printf.sprintf "(T_drop %s)"
@@ -893,9 +898,10 @@ let rec print_typ (mname:string) (t:typ)
                      (print_dtyp mname d)
                      (T.print_expr mname z)
 
-    | T_probe_then_validate fn dt sz (T.Probe_action_var probe_fn) dest as_u64 init dest_sz ->
-      Printf.sprintf "(t_probe_then_validate %s \"%s\" %s %s %s %s %s %s)"
+    | T_probe_then_validate fn dt sz nullable (T.Probe_action_var probe_fn) dest as_u64 init dest_sz ->
+      Printf.sprintf "(t_probe_then_validate %s %b \"%s\" %s %s %s %s %s %s)"
                      (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
+                     nullable
                      fn
                      (print_ident mname init)
                      (T.print_expr mname dest_sz)
@@ -904,9 +910,10 @@ let rec print_typ (mname:string) (t:typ)
                      (print_ident mname as_u64)
                      (print_dtyp mname dt)
 
-    | T_probe_then_validate fn dt sz probe_fn dest as_u64 init dest_sz ->
-      Printf.sprintf "(t_probe_then_validate_alt %s \"%s\" %s %s %s %s %s %s)"
+    | T_probe_then_validate fn dt sz nullable probe_fn dest as_u64 init dest_sz ->
+      Printf.sprintf "(t_probe_then_validate_alt %s %b \"%s\" %s %s %s %s %s %s)"
                      (match sz with | A.UInt32 -> "UInt32" | A.UInt64 -> "UInt64")
+                     nullable
                      fn
                      (print_ident mname init)
                      (T.print_expr mname dest_sz)

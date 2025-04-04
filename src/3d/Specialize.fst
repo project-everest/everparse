@@ -22,12 +22,12 @@ let rec specialize_type (e:B.env) (t:typ)
     let insts = List.map (fun i -> with_dummy_range <| Identifier i) instantiations in
     i, {t with v = Type_app i k insts ps}
   )
-  | Pointer t (PQ UInt64 false) ->
+  | Pointer t (PQ UInt64 false nullable) ->
     let i, t' = specialize_type e t in
-    i, {t with v = Pointer t' (PQ UInt32 true)}
-  | Pointer t (PQ pq true) ->
+    i, {t with v = Pointer t' (PQ UInt32 true nullable)}
+  | Pointer t (PQ pq true nullable) ->
     let i, t' = specialize_type e t in
-    i, {t with v = Pointer t' (PQ pq true)}
+    i, {t with v = Pointer t' (PQ pq true nullable)}
   | Type_arrow _ _ -> failwith "Cannot specialize function types"
   
 

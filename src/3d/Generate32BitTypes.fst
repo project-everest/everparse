@@ -49,7 +49,7 @@ let gen_name_32 (n:typedef_names)
 let maybe_specialize_32 (e:env_t) (t:typ)
 : ML (option typ)
 = match t.v with
-  | Pointer _ (PQ UInt64 false) -> //implicit U64 pointer
+  | Pointer _ (PQ UInt64 false _) -> //implicit U64 pointer
     Some tuint32
 
   | Pointer _ pq ->

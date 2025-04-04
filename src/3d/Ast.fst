@@ -376,6 +376,7 @@ and pointer_qualifier =
   | PQ : 
     pq:pointer_size_t ->
     explicit:bool { not explicit ==> pq==UInt64 } ->
+    nullable:bool ->
     pointer_qualifier
   
 and typ = with_meta_t typ'
@@ -905,8 +906,9 @@ let rec print_typ t : ML string =
         (print_generic_insts gs)
         (String.concat ", " (List.map print_typ_param ps))
     end
-  | Pointer t (PQ q explicit) ->
-     Printf.sprintf "(pointer %s (%b %s))"
+  | Pointer t (PQ q explicit nullable) ->
+     Printf.sprintf "(pointer %s %s (%b %s))"
+       (if nullable then "?" else "")
        (print_typ t)
         explicit
        (print_integer_type q)
@@ -917,7 +919,7 @@ let rec print_typ t : ML string =
 
 let pq_as_integer_type (pq:pointer_qualifier) : integer_type =
   match pq with
-  | PQ i _ -> i
+  | PQ i _ _ -> i
 
 let typ_as_integer_type (t:typ) : ML integer_type =
   match t.v with
@@ -1429,7 +1431,7 @@ let eq_opt (f:'a -> 'a -> bool) (x y:option 'a) =
 
 let eq_pointer_qualifier (q1 q2:pointer_qualifier) =
   match q1, q2 with
-  | PQ i1 x1, PQ i2 x2 -> i1 = i2 && x1 = x2
+  | PQ i1 x1 n1, PQ i2 x2 n2 -> i1 = i2 && x1 = x2 && n1 = n2
 
 let rec eq_typ (t1 t2:typ) : Tot bool =
   match t1.v, t2.v with

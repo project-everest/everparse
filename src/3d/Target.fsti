@@ -193,6 +193,7 @@ type typ =
   | T_with_probe: 
       content_typ:typ ->
       pointer_size:A.pointer_size_t ->
+      pointer_nullable:bool ->
       probe_fn:probe_action ->
       dest:A.ident ->
       as_u64:A.ident ->
@@ -299,6 +300,7 @@ type parser' =
   | Parse_with_probe :
       p:parser ->
       pointer_size:A.pointer_size_t ->
+      pointer_nullable:bool ->
       probe:probe_action ->
       dest:A.ident ->
       as_u64:A.ident ->

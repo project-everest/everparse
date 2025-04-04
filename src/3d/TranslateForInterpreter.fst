@@ -331,7 +331,7 @@ let rec translate_expr (e:A.expr) : ML T.expr =
 
 let rec translate_output_type (t:A.typ) : ML T.typ =
   match t.v with
-  | Pointer t (PQ A.UInt64 _) -> T.T_pointer (translate_output_type t) A.UInt64
+  | Pointer t (PQ A.UInt64 _ _) -> T.T_pointer (translate_output_type t) A.UInt64
   | Type_app id b [] [] -> T.T_app id b []
   | _ -> failwith "Impossible, translate_output_type did not get an output type!"
 
@@ -391,7 +391,7 @@ let translate_typ_param (p:typ_param) : ML (T.expr & T.decls) =
 
 let rec translate_typ (t:A.typ) : ML (T.typ & T.decls) =
   match t.v with
-  | Pointer t (PQ a _) ->
+  | Pointer t (PQ a _ nullable) ->
     let t', decls = translate_typ t in
     T.T_pointer t' a, decls
   | Type_app hd b gs args ->
@@ -610,9 +610,9 @@ let rec parse_typ (env:global_env)
     let u64_or_u32, _ = translate_typ (A.type_of_integer_type pointer_size) in
     parse_typ env typename fieldname u64_or_u32
 
-  | T.T_with_probe content_type integer_type probe as_u64 dest init dest_sz -> 
+  | T.T_with_probe content_type integer_type pointer_nullable probe as_u64 dest init dest_sz -> 
     let p = parse_typ env typename fieldname content_type in
-    let q = T.Parse_with_probe p integer_type probe as_u64 dest init dest_sz in
+    let q = T.Parse_with_probe p integer_type pointer_nullable probe as_u64 dest init dest_sz in
     let u64_or_u32, _ = translate_typ (A.type_of_integer_type integer_type) in
     let u64_or_u32_parser = parse_typ env typename fieldname u64_or_u32 in
     { p_kind = u64_or_u32_parser.p_kind;
@@ -775,7 +775,7 @@ let rec parser_is_constant_size_without_actions
   | T.Parse_with_action _ _ _
   | T.Parse_if_else _ _ _
   | T.Parse_string _ _
-  | T.Parse_with_probe _ _ _ _ _ _ _
+  | T.Parse_with_probe _ _ _ _ _ _ _ _
     -> false
   | T.Parse_map p _
   | T.Parse_refinement _ p _
@@ -860,9 +860,9 @@ let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =
     in
     let probe_action, dest, ds, probe_init, dest_sz = translate_probe_call probe_call in
     match f.v.field_type.v with
-    | Pointer t (PQ a _) ->
+    | Pointer t (PQ a _ nullable) ->
       let t, ds1 = translate_typ t in
-      let sf_typ = T.T_with_probe t a probe_action dest as_u64 probe_init dest_sz in
+      let sf_typ = T.T_with_probe t a nullable probe_action dest as_u64 probe_init dest_sz in
       T.({ sf_dependence=sf.field_dependence;
            sf_ident=sf.field_ident;
            sf_typ=sf_typ }), 
@@ -1158,7 +1158,7 @@ let rec hoist_typ
       d, T_with_comment t c
 
     | T_pointer _ _
-    | T_with_probe _ _ _ _ _ _ _
+    | T_with_probe _ _ _ _ _ _ _ _
     | T_arrow _ _ ->
       [], t
 
