@@ -10,8 +10,6 @@
 
 bool COSE_Format_validate_bool(cbor_det_t c);
 
-typedef bool COSE_Format_evercddl_bool;
-
 typedef bool COSE_Format_evercddl_bool_pretty;
 
 bool COSE_Format_parse_bool(cbor_det_t c);
@@ -48,8 +46,6 @@ COSE_Format_validate_and_parse_bool(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_everparsenomatch(cbor_det_t c);
 
-typedef void *COSE_Format_evercddl_everparsenomatch;
-
 typedef enum { COSE_Format_Mkevercddl_everparsenomatch_pretty0 }
 COSE_Format_evercddl_everparsenomatch_pretty;
 
@@ -81,8 +77,6 @@ COSE_Format_validate_and_parse_everparsenomatch(Pulse_Lib_Slice_slice__uint8_t s
 
 bool COSE_Format_validate_uint(cbor_det_t c);
 
-typedef uint64_t COSE_Format_evercddl_uint;
-
 typedef uint64_t COSE_Format_evercddl_uint_pretty;
 
 uint64_t COSE_Format_parse_uint(cbor_det_t c);
@@ -108,8 +102,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_uint_pretty___Pulse_Lib_Sl
 COSE_Format_validate_and_parse_uint(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_nint(cbor_det_t c);
-
-typedef uint64_t COSE_Format_evercddl_nint;
 
 typedef uint64_t COSE_Format_evercddl_nint_pretty;
 
@@ -210,8 +202,6 @@ COSE_Format_validate_and_parse_bstr(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_encodedcbor(cbor_det_t c);
 
-typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_encodedcbor;
-
 typedef COSE_Format_evercddl_bstr_pretty COSE_Format_evercddl_encodedcbor_pretty;
 
 COSE_Format_evercddl_bstr_pretty COSE_Format_parse_encodedcbor(cbor_det_t c);
@@ -242,8 +232,6 @@ COSE_Format_validate_and_parse_encodedcbor(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_bytes(cbor_det_t c);
 
-typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_bytes;
-
 typedef COSE_Format_evercddl_bstr_pretty COSE_Format_evercddl_bytes_pretty;
 
 COSE_Format_evercddl_bstr_pretty COSE_Format_parse_bytes(cbor_det_t c);
@@ -273,8 +261,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_bytes_pretty___Pulse_Lib_S
 COSE_Format_validate_and_parse_bytes(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_tstr(cbor_det_t c);
-
-typedef Pulse_Lib_Slice_slice__uint8_t COSE_Format_evercddl_tstr;
 
 typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_tstr_pretty;
 
@@ -356,8 +342,6 @@ COSE_Format_validate_and_parse_label(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_tdate(cbor_det_t c);
 
-typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_tdate;
-
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_tdate_pretty;
 
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_tdate(cbor_det_t c);
@@ -387,8 +371,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_tdate_pretty___Pulse_Lib_S
 COSE_Format_validate_and_parse_tdate(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_uri(cbor_det_t c);
-
-typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_uri;
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_uri_pretty;
 
@@ -420,8 +402,6 @@ COSE_Format_validate_and_parse_uri(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_b64url(cbor_det_t c);
 
-typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_b64url;
-
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_b64url_pretty;
 
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_b64url(cbor_det_t c);
@@ -451,8 +431,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_b64url_pretty___Pulse_Lib_
 COSE_Format_validate_and_parse_b64url(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_b64legacy(cbor_det_t c);
-
-typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_b64legacy;
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_b64legacy_pretty;
 
@@ -484,8 +462,6 @@ COSE_Format_validate_and_parse_b64legacy(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_regexp(cbor_det_t c);
 
-typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_regexp;
-
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_regexp_pretty;
 
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_regexp(cbor_det_t c);
@@ -515,8 +491,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_regexp_pretty___Pulse_Lib_
 COSE_Format_validate_and_parse_regexp(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_mimemessage(cbor_det_t c);
-
-typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_mimemessage;
 
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_mimemessage_pretty;
 
@@ -548,8 +522,6 @@ COSE_Format_validate_and_parse_mimemessage(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_text(cbor_det_t c);
 
-typedef COSE_Format_evercddl_bstr COSE_Format_evercddl_text;
-
 typedef COSE_Format_evercddl_tstr_pretty COSE_Format_evercddl_text_pretty;
 
 COSE_Format_evercddl_tstr_pretty COSE_Format_parse_text(cbor_det_t c);
@@ -579,8 +551,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_text_pretty___Pulse_Lib_Sl
 COSE_Format_validate_and_parse_text(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_false(cbor_det_t c);
-
-typedef void *COSE_Format_evercddl_false;
 
 typedef enum { COSE_Format_Mkevercddl_false_pretty0 } COSE_Format_evercddl_false_pretty;
 
@@ -612,8 +582,6 @@ COSE_Format_validate_and_parse_false(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_true(cbor_det_t c);
 
-typedef void *COSE_Format_evercddl_true;
-
 typedef enum { COSE_Format_Mkevercddl_true_pretty0 } COSE_Format_evercddl_true_pretty;
 
 COSE_Format_evercddl_true_pretty COSE_Format_parse_true(cbor_det_t c);
@@ -643,8 +611,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_true_pretty___Pulse_Lib_Sl
 COSE_Format_validate_and_parse_true(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_nil(cbor_det_t c);
-
-typedef void *COSE_Format_evercddl_nil;
 
 typedef enum { COSE_Format_Mkevercddl_nil_pretty0 } COSE_Format_evercddl_nil_pretty;
 
@@ -676,8 +642,6 @@ COSE_Format_validate_and_parse_nil(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_null(cbor_det_t c);
 
-typedef COSE_Format_evercddl_nil_pretty COSE_Format_evercddl_null;
-
 typedef COSE_Format_evercddl_nil_pretty COSE_Format_evercddl_null_pretty;
 
 COSE_Format_evercddl_nil_pretty COSE_Format_parse_null(cbor_det_t c);
@@ -707,8 +671,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_null_pretty___Pulse_Lib_Sl
 COSE_Format_validate_and_parse_null(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_undefined(cbor_det_t c);
-
-typedef void *COSE_Format_evercddl_undefined;
 
 typedef enum { COSE_Format_Mkevercddl_undefined_pretty0 }
 COSE_Format_evercddl_undefined_pretty;
@@ -770,8 +732,6 @@ COSE_Format_validate_and_parse_any(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_values(cbor_det_t c);
 
-typedef COSE_Format_evercddl_any COSE_Format_evercddl_values;
-
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_values_pretty;
 
 COSE_Format_evercddl_any_pretty COSE_Format_parse_values(cbor_det_t c);
@@ -802,8 +762,6 @@ COSE_Format_validate_and_parse_values(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_aux_env25_validate_1(cbor_det_array_iterator_t *pi);
 
-typedef COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_type_1;
-
 typedef COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_type_1_pretty;
 
 COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_parse_1(cbor_det_array_iterator_t c);
@@ -817,8 +775,6 @@ COSE_Format_aux_env25_serialize_1(
 );
 
 extern bool (*COSE_Format_aux_env25_validate_2)(cbor_det_t x0);
-
-typedef COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_type_2;
 
 typedef COSE_Format_evercddl_label_pretty COSE_Format_aux_env25_type_2_pretty;
 
@@ -851,8 +807,6 @@ COSE_Format_validate_and_aux_env25_parse_2(Pulse_Lib_Slice_slice__uint8_t s);
 bool COSE_Format_aux_env25_validate_3(cbor_det_t c);
 
 extern bool (*COSE_Format_aux_env25_validate_4)(cbor_det_t x0);
-
-typedef COSE_Format_evercddl_any_pretty COSE_Format_aux_env25_type_4;
 
 typedef COSE_Format_evercddl_values_pretty COSE_Format_aux_env25_type_4_pretty;
 
@@ -1177,8 +1131,6 @@ COSE_Format_validate_and_parse_COSE_Signature(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_aux_env29_validate_1(cbor_det_array_iterator_t *pi);
 
-typedef COSE_Format_evercddl_COSE_Signature_pretty COSE_Format_aux_env29_type_1;
-
 typedef COSE_Format_evercddl_COSE_Signature_pretty COSE_Format_aux_env29_type_1_pretty;
 
 COSE_Format_evercddl_COSE_Signature_pretty
@@ -1274,8 +1226,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Sign_pretty___Pulse_L
 COSE_Format_validate_and_parse_COSE_Sign(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_COSE_Sign_Tagged(cbor_det_t c);
-
-typedef COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_evercddl_COSE_Sign_Tagged;
 
 typedef COSE_Format_evercddl_COSE_Sign_pretty COSE_Format_evercddl_COSE_Sign_Tagged_pretty;
 
@@ -1391,8 +1341,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Untagged_Message_pret
 COSE_Format_validate_and_parse_COSE_Untagged_Message(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_COSE_Sign1_Tagged(cbor_det_t c);
-
-typedef COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_evercddl_COSE_Sign1_Tagged;
 
 typedef COSE_Format_evercddl_COSE_Sign1_pretty COSE_Format_evercddl_COSE_Sign1_Tagged_pretty;
 
@@ -1582,8 +1530,6 @@ COSE_Format_validate_and_parse_Sig_structure(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_Internal_Types(cbor_det_t c);
 
-typedef COSE_Format_evercddl_Sig_structure_pretty COSE_Format_evercddl_Internal_Types;
-
 typedef COSE_Format_evercddl_Sig_structure_pretty COSE_Format_evercddl_Internal_Types_pretty;
 
 COSE_Format_evercddl_Sig_structure_pretty COSE_Format_parse_Internal_Types(cbor_det_t c);
@@ -1656,8 +1602,6 @@ COSE_Format_validate_and_parse_start(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_eb64url(cbor_det_t c);
 
-typedef COSE_Format_evercddl_any COSE_Format_evercddl_eb64url;
-
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_eb64url_pretty;
 
 COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64url(cbor_det_t c);
@@ -1687,8 +1631,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_eb64url_pretty___Pulse_Lib
 COSE_Format_validate_and_parse_eb64url(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_eb64legacy(cbor_det_t c);
-
-typedef COSE_Format_evercddl_any COSE_Format_evercddl_eb64legacy;
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_eb64legacy_pretty;
 
@@ -1720,8 +1662,6 @@ COSE_Format_validate_and_parse_eb64legacy(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_eb16(cbor_det_t c);
 
-typedef COSE_Format_evercddl_any COSE_Format_evercddl_eb16;
-
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_eb16_pretty;
 
 COSE_Format_evercddl_any_pretty COSE_Format_parse_eb16(cbor_det_t c);
@@ -1751,8 +1691,6 @@ FStar_Pervasives_Native_option___COSE_Format_evercddl_eb16_pretty___Pulse_Lib_Sl
 COSE_Format_validate_and_parse_eb16(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_cborany(cbor_det_t c);
-
-typedef COSE_Format_evercddl_any COSE_Format_evercddl_cborany;
 
 typedef COSE_Format_evercddl_any_pretty COSE_Format_evercddl_cborany_pretty;
 
