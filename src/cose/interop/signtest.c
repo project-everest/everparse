@@ -1,19 +1,4 @@
-#include "COSE_Format.h"
-#include <openssl/evp.h>
-#include <openssl/err.h>
-#include <fcntl.h>
-
-void openssl_error_msg(const char *msg) {
-    char buf[256] = "unknown error";
-    unsigned long err = ERR_get_error();
-    if (err) ERR_error_string_n(err, buf, sizeof(buf) - 1);
-    fprintf(stderr, "openssl failed: %s (%s)\n", msg, buf);
-}
-
-#define check(cond) { if (!(cond)) { fprintf(stderr, "failed: %s\n", #cond); abort(); } }
-#define openssl_check(cond) { if (!(cond)) { openssl_error_msg(#cond); abort(); } }
-
-typedef Pulse_Lib_Slice_slice__uint8_t bstr;
+#include "common.c"
 
 bstr sign_eddsa(EVP_PKEY *signing_key, const bstr tbs) {
     EVP_MD_CTX *sign_context = EVP_MD_CTX_new();
@@ -30,35 +15,6 @@ bstr sign_eddsa(EVP_PKEY *signing_key, const bstr tbs) {
     EVP_MD_CTX_free(sign_context);
     return sig;
 }
-
-const COSE_Format_evercddl_int_tags signature1 = 1;
-
-bstr mk_sig_structure(COSE_Format_evercddl_empty_or_serialized_map_pretty protected_headers,
-        bstr aad, bstr payload) {
-    bstr empty = { .elt = (uint8_t[]) {}, .len = 0 };
-
-    COSE_Format_evercddl_Sig_structure_pretty c = {
-        .x0 = signature1,
-        .x1 = protected_headers,
-        .x2 = {
-            .tag = COSE_Format_Inr,
-            .case_Inr = {
-                .fst = aad,
-                .snd = payload,
-            },
-        },
-    };
-    
-    bstr out;
-    out.len = 1024; // TODO
-    check(out.elt = malloc(out.len));
-
-    check(out.len = COSE_Format_serialize_Sig_structure(c, out));
-
-    return out;
-}
-
-const int COSE_ALGORITHM_EDDSA = -8;
 
 bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
     COSE_Format_evercddl_empty_or_serialized_map_pretty protected_headers = {
@@ -125,31 +81,13 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
     return out;
 }
 
-bstr test_sign(bstr payload, bstr key_data) {
+bstr test_verify(bstr payload, bstr key_data) {
     bstr aad = { .elt = (uint8_t[]) {}, .len = 0 };
     const uint8_t *key_data_ptr = key_data.elt;
     EVP_PKEY *signing_key = d2i_PrivateKey(EVP_PKEY_ED25519, NULL, &key_data_ptr, key_data.len);
     openssl_check(signing_key);
     bstr out = sign1(signing_key, aad, payload);
     EVP_PKEY_free(signing_key);
-    return out;
-}
-
-void write_to_file(const char *fn, const uint8_t *content, size_t content_len) {
-    FILE *f; check(f = fopen(fn, "w"));
-    check(fwrite(content, content_len, 1, f) == 1);
-    check(fclose(f) == 0);
-}
-
-bstr read_from_file(const char *fn) {
-    FILE *f; check(f = fopen(fn, "r"));
-    check(fseek(f, 0, SEEK_END) == 0);
-    long size = ftell(f);
-    check(fseek(f, 0, SEEK_SET) == 0);
-    bstr out = { .len = size };
-    check(out.elt = malloc(size));
-    check(fread(out.elt, size, 1, f) == 1);
-    check(fclose(f) == 0);
     return out;
 }
 
@@ -162,7 +100,7 @@ int main(int argc, const char **argv) {
     bstr payload = read_from_file(argv[1]);
     bstr key_data = read_from_file(argv[2]);
 
-    bstr result = test_sign(payload, key_data);
+    bstr result = test_verify(payload, key_data);
 
     const char *msg_fn = argv[3];
     printf("writing message to %s\n", msg_fn);

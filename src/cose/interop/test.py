@@ -14,6 +14,12 @@ open('message.privkey', 'wb').write(
         encryption_algorithm=serialization.NoEncryption(),
     ),
 )
+open('message.pubkey', 'wb').write(
+    privkey.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ),
+)
 
 key = CoseKey._from_cryptography_key(privkey)
 
@@ -30,3 +36,7 @@ assert msg.verify_signature()
 assert msg.payload == b'payload', msg.payload
 assert msg.external_aad == b'', msg.aad
 print('Signature verifies!')
+
+print('Running ./verifytest')
+subprocess.check_call(['./verifytest', 'message.pubkey', 'message.cbor'])
+print('Signature verifies using our tool!')
