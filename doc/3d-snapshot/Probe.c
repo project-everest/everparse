@@ -246,6 +246,13 @@ ProbeValidateS(
     }
     else
     {
+      ErrorHandlerFn("_S",
+        "tpointer",
+        EverParseErrorReasonOfResult(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        Ctxt,
+        Input,
+        positionAfterbound);
       actionResult = FALSE;
     }
     if (actionResult)
@@ -406,6 +413,13 @@ ProbeValidateU(
     }
     else
     {
+      ErrorHandlerFn("_U",
+        "spointer",
+        EverParseErrorReasonOfResult(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        Ctxt,
+        Input,
+        positionAftertag);
       actionResult = FALSE;
     }
     if (actionResult)
@@ -565,6 +579,13 @@ ProbeValidateV(
     }
     else
     {
+      ErrorHandlerFn("_V",
+        "sptr",
+        EverParseErrorReasonOfResult(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        Ctxt,
+        Input,
+        positionAftertag);
       actionResult = FALSE;
     }
     if (actionResult)
@@ -676,6 +697,13 @@ ProbeValidateV(
     }
     else
     {
+      ErrorHandlerFn("_V",
+        "tptr",
+        EverParseErrorReasonOfResult(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        Ctxt,
+        Input,
+        positionAftersptr);
       actionResult = FALSE;
     }
     if (actionResult)
@@ -787,6 +815,13 @@ ProbeValidateV(
     }
     else
     {
+      ErrorHandlerFn("_V",
+        "t2ptr",
+        EverParseErrorReasonOfResult(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        Ctxt,
+        Input,
+        positionAftertptr);
       actionResult = FALSE;
     }
     if (actionResult)
@@ -953,6 +988,13 @@ ProbeValidateI(
     }
     else
     {
+      ErrorHandlerFn("_I",
+        "ttptr",
+        EverParseErrorReasonOfResult(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        EverParseGetValidatorErrorKind(EVERPARSE_VALIDATOR_ERROR_PROBE_FAILED),
+        Ctxt,
+        Input,
+        StartPosition);
       actionResult = FALSE;
     }
     if (actionResult)
