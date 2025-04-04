@@ -69,6 +69,16 @@ val equiv_sym
 : Lemma
   (ensures equiv data_model x1 x2 == equiv data_model x2 x1)
 
+val equiv_trans
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
+  (x1 x2 x3: raw_data_item)
+: Lemma
+  (requires (equiv data_model x1 x2 /\ equiv data_model x2 x3))
+  (ensures (equiv data_model x1 x3))
+
 let valid_item
   (data_model: (raw_data_item -> raw_data_item -> bool))
   (x: raw_data_item)

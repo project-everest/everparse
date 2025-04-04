@@ -1227,7 +1227,30 @@ let rec list_setoid_assoc
   | [] -> None
   | (a, v) :: q -> if equiv x a then Some v else list_setoid_assoc equiv x q
 
-let rec list_setoid_assoc_equiv
+let rec list_setoid_assoc_equiv_gen
+  (#t1: Type)
+  (#t2: Type)
+  (equiv equiv': t1 -> t1 -> bool)
+  (l: list (t1 & t2))
+  (x: t1)
+  (x' : t1) 
+  (prf: (
+    (a: (t1 & t2)) ->
+    Lemma
+    (requires (List.Tot.memP a l /\ a << l))
+    (ensures (equiv x (fst a) == equiv' x' (fst a)))
+  ))
+: Lemma
+  (ensures (list_setoid_assoc equiv x l == list_setoid_assoc equiv' x' l))
+= match l with
+  | [] -> ()
+  | a :: q ->
+    prf a;
+    if equiv x (fst a)
+    then ()
+    else list_setoid_assoc_equiv_gen equiv equiv' q x x' prf
+
+let list_setoid_assoc_equiv
   (#t1: Type)
   (#t2: Type)
   (equiv: t1 -> t1 -> bool {
@@ -1240,10 +1263,13 @@ let rec list_setoid_assoc_equiv
 : Lemma
   (requires (equiv x x'))
   (ensures (list_setoid_assoc equiv x l == list_setoid_assoc equiv x' l))
-= match l with
-  | [] -> ()
-  | a :: q ->
-    list_setoid_assoc_equiv equiv q x x'
+= list_setoid_assoc_equiv_gen
+    equiv
+    equiv
+    l
+    x
+    x'
+    (fun _ -> ())
 
 let rec list_setoid_assoc_mem
   (#t1: Type)
@@ -1302,7 +1328,7 @@ let rec list_setoid_assoc_append
   | [] -> ()
   | _ :: q -> list_setoid_assoc_append equiv x q l'
 
-let rec list_setoid_assoc_ext
+let list_setoid_assoc_ext
   (#t1: Type)
   (#t2: Type)
   (equiv equiv': t1 -> t1 -> bool)
@@ -1313,9 +1339,8 @@ let rec list_setoid_assoc_ext
   )
 : Lemma
   (list_setoid_assoc equiv x l == list_setoid_assoc equiv' x l)
-= match l with
-  | [] -> ()
-  | av :: q -> prf av; list_setoid_assoc_ext equiv equiv' x q prf
+= list_setoid_assoc_equiv_gen
+    equiv equiv' l x x (fun a -> prf a)
 
 let rec list_setoid_assoc_eqtype
   (#t1: eqtype)

@@ -376,6 +376,142 @@ let rec equiv_sym
   | _ -> ()
   else ()
 
+let abc_cba (a b c: nat) : Lemma
+  (a + b + c == c + b + a)
+= ()
+
+#push-options "--z3rlimit 16"
+
+let rec equiv_trans'
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3) /\
+    (forall x1 x2 x3 . (equiv data_model x1 x2 /\ data_model x2 x3) ==> data_model x1 x3)
+  })
+  (x1 x2 x3: raw_data_item)
+: Lemma
+  (requires (equiv data_model x1 x2 /\ equiv data_model x2 x3))
+  (ensures (equiv data_model x1 x3))
+  (decreases (raw_data_item_size x1 + raw_data_item_size x2 + raw_data_item_size x3))
+= equiv_eq data_model x1 x2;
+  equiv_eq data_model x2 x3;
+  equiv_eq data_model x1 x3;
+  raw_data_item_size_eq x1;
+  raw_data_item_size_eq x2;
+  raw_data_item_size_eq x3;
+  if data_model x1 x2
+  then ()
+  else if data_model x2 x3
+  then ()
+  else if x1 = x2
+  then ()
+  else if x2 = x3
+  then ()
+  else match x1, x2, x3 with
+  | Array _ v1, Array _ v2, Array _ v3 ->
+    list_for_all2_trans
+      (equiv data_model)
+      v1 v2 v3
+      (fun y1 y2 y3 ->
+        list_sum_memP raw_data_item_size v1 y1;
+        list_sum_memP raw_data_item_size v2 y2;
+        list_sum_memP raw_data_item_size v3 y3;
+        equiv_trans' data_model y1 y2 y3
+      )
+  | Map _ v1, Map _ v2, Map _ v3 ->
+    let prf
+      (l1 l2 l3: list (raw_data_item & raw_data_item))
+    : Lemma
+      (requires (
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) l1 +
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) l2 +
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) l3 ==
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) v1 +
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) v2 +
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) v3 /\
+        List.Tot.for_all (setoid_assoc_eq (equiv data_model) (equiv data_model) l1) l2 /\
+        List.Tot.for_all (setoid_assoc_eq (equiv data_model) (equiv data_model) l2) l3
+      ))
+      (ensures (
+        List.Tot.for_all (setoid_assoc_eq (equiv data_model) (equiv data_model) l1) l3
+      ))
+    = list_for_all_intro
+        (setoid_assoc_eq (equiv data_model) (equiv data_model) l1)
+        l3
+        (fun y3 ->
+          list_sum_memP
+            (pair_sum raw_data_item_size raw_data_item_size)
+            l3 y3;
+          List.Tot.for_all_mem
+            (setoid_assoc_eq (equiv data_model) (equiv data_model) l2)
+            l3;
+          assert (setoid_assoc_eq (equiv data_model) (equiv data_model) l2 y3);
+          let ky3 = fst y3 in
+          let Some vy2 = list_setoid_assoc (equiv data_model) ky3 l2 in
+          let Some ky2 = list_setoid_assoc_mem (equiv data_model) ky3 l2 in
+          let y2 = (ky2, vy2) in
+          list_sum_memP
+            (pair_sum raw_data_item_size raw_data_item_size)
+            l2 y2;
+          List.Tot.for_all_mem
+            (setoid_assoc_eq (equiv data_model) (equiv data_model) l1)
+            l2;
+          assert (setoid_assoc_eq (equiv data_model) (equiv data_model) l1 y2);
+          let Some vy1 = list_setoid_assoc (equiv data_model) (ky2) l1 in
+          let Some ky1 = list_setoid_assoc_mem (equiv data_model) (ky2) l1 in
+          let y1 = (ky1, vy1) in
+          list_sum_memP
+            (pair_sum raw_data_item_size raw_data_item_size)
+            l1 y1;
+          equiv_trans' data_model (snd y3) vy2 vy1;
+          list_setoid_assoc_equiv_gen
+            (equiv data_model) (equiv data_model)
+            l1
+            ky3
+            ky2
+            (fun a ->
+              list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) l1 a;
+              let ka = fst a in
+              if equiv data_model ky3 ka
+              then begin
+                equiv_sym data_model ky3 ka;
+                equiv_trans' data_model ka ky3 ky2;
+                equiv_sym data_model ky2 ka
+              end
+              else if equiv data_model ky2 ka
+              then begin
+                equiv_trans' data_model ky3 ky2 ka
+              end
+              else ()
+            );
+          ()
+        )
+    in
+    prf v1 v2 v3;
+    abc_cba // FIXME: WHY WHY WHY?
+      (list_sum (pair_sum raw_data_item_size raw_data_item_size) v1)
+      (list_sum (pair_sum raw_data_item_size raw_data_item_size) v2)
+      (list_sum (pair_sum raw_data_item_size raw_data_item_size) v3);
+    prf v3 v2 v1;
+    ()
+  | Tagged tag1 v1, Tagged tag2 v2, Tagged tag3 v3 ->
+    equiv_trans' data_model v1 v2 v3
+  | _ -> ()
+
+#pop-options
+
+let equiv_trans
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
+  (x1 x2 x3: raw_data_item)
+: Lemma
+  (requires (equiv data_model x1 x2 /\ equiv data_model x2 x3))
+  (ensures (equiv data_model x1 x3))
+= Classical.forall_intro_2 (equiv_sym data_model);
+  equiv_trans' data_model x1 x2 x3
+
 let rec valid_eq'
   (data_model: (raw_data_item -> raw_data_item -> bool))
   (x: raw_data_item)
