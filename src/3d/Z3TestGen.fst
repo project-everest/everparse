@@ -345,6 +345,8 @@ let mk_bitwise_not (a: A.integer_type) (bitvec_arg: option string) : ML string =
   | None -> failwith "ill-formed bitwise_not"
   | Some arg -> "(bv2int (bvxor "^arg^" #b"^String.make (integer_type_bit_size a) '1'^"))"
 
+let ident_to_string = A.ident_to_string
+
 let mk_op : T.op -> option string -> ML string = function
   | T.Eq -> mk_app "="
   | T.Neq -> (fun s -> mk_app "not" (Some (mk_app "=" s)))
@@ -370,8 +372,7 @@ let mk_op : T.op -> option string -> ML string = function
   | T.BitFieldOf size order -> (fun arg -> Printf.sprintf "(get-bitfield-%ssb %d %s)" (match order with A.LSBFirst -> "l" | A.MSBFirst -> "m") size (assert_some arg))
   | T.Cast _ _ -> assert_some (* casts allowed only if they are proven not to lose precision *)
   | T.Ext s -> mk_app s
-
-let ident_to_string = A.ident_to_string
+  | T.ProbeFunctionName s -> mk_app (ident_to_string s)
 
 let mk_bitwise_arg (t: A.integer_type) (arg: string) : Tot string =
   mk_app ("(_ int2bv "^string_of_int (integer_type_bit_size t)^")") (Some arg)
@@ -931,7 +932,7 @@ let rec typ_depth (t: I.typ) : GTot nat
   | I.T_false _
   | I.T_string _ _ _
   | I.T_denoted _ _
-  | I.T_probe_then_validate _ _ _ _ _
+  | I.T_probe_then_validate _ _ _ _ _ _ _ _ _
     -> 0
 
 let rec parse_typ (t : I.typ) : Tot (parser not_reading)
@@ -964,7 +965,7 @@ let rec parse_typ (t : I.typ) : Tot (parser not_reading)
       parse_nlist_total_constant_size i size
     else
       parse_nlist (fun _ -> mk_expr size) (parse_typ body)
-  | I.T_probe_then_validate _ _ _ _ _ -> unsupported_parser "probe_then_validate" _
+  | I.T_probe_then_validate _ _ _ _ _ _ _ _ _ -> unsupported_parser "probe_then_validate" _
 
 and parse_ifthenelse (cond: I.expr) (tthen: I.typ) (telse: I.typ) : Tot (int -> parser not_reading)
   (decreases (1 + typ_depth tthen + typ_depth telse))
@@ -1003,7 +1004,7 @@ let simple_arg_type_of_typ (t: T.typ) (allow_out: bool) : Tot (option (simple_ar
 
 let arg_type_of_typ (t: T.typ) : Tot (option arg_type) =
   match t with
-  | T.T_pointer t ->
+  | T.T_pointer t _ ->
     begin match simple_arg_type_of_typ t true with
     | Some t' -> Some (ArgPointer t')
     | _ -> None
@@ -1048,11 +1049,12 @@ let produce_not_type_decl (a: I.not_type_decl) (out: string -> ML unit) : ML uni
   | T.Definition (i, param, typ, body) ->
     produce_definition i param typ body out
   | T.Assumption _ -> failwith "produce_not_type_decl: unsupported"
+  | T.Probe_function _ _ _
   | T.Output_type _
   | T.Output_type_expr _ _
   | T.Extern_type _
-  | T.Extern_fn _ _ _
-  | T.Extern_probe _
+  | T.Extern_fn _ _ _ _
+  | T.Extern_probe _ _
   -> ()
 
 type prog_def =
@@ -1104,8 +1106,8 @@ let simple_arg_type_of_ast_typ
   (a: Ast.typ)
 : Tot (simple_arg_type true)
 = match a.v with
-  | A.Pointer _ -> ArgExtern ()
-  | A.Type_app i _ _ ->
+  | A.Pointer _ _ -> ArgExtern ()
+  | A.Type_app i _ _ _->
     begin match A.maybe_as_integer_typ i with
     | Some it -> ArgInt it
     | None ->
@@ -1113,6 +1115,7 @@ let simple_arg_type_of_ast_typ
       then ArgBool
       else ArgOutput () (output_type_name_to_string i)
     end
+  | A.Type_arrow _ _ -> ArgExtern() //Exclude this case somehow?
 
 let rec prog_out_fields_of_ast_out_fields
   (accu: list (string & simple_arg_type true))

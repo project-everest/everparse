@@ -27,15 +27,17 @@ FSTAR_OPTIONS=$(addprefix --include , $(INCLUDES))
 positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck.3d,$(wildcard *.3d))
 positive_tests_nosuffix=$(basename $(positive_tests))
 modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
-modules_static_assertions=TestFieldPtrStaticAssertions.c AlignStaticAssertions.c
+modules_static_assertions=$(addsuffix StaticAssertions.c, TestFieldPtr Align Specialize2 Specialize3 FineGrainedProbeSpecialize)
+module_extern_apis=$(addsuffix _ExternalAPI.h, Specialize2 Specialize3 FineGrainedProbe FineGrainedProbeSpecialize)
 clean_out_files=\
 	$(addsuffix .c,$(modules_or_wrappers)) \
 	$(modules_static_assertions) \
-	$(addsuffix .h,$(modules_or_wrappers))
+	$(addsuffix .h,$(modules_or_wrappers)) \
+	$(module_extern_apis)
 
 OTHER_HEADERS=TestFieldPtrBase.h AlignC.h
 
-all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter z3-testgen-test exttype
+all: batch-test batch-test-negative batch-cleanup-test inplace-hash-test modules tcpip extern output-types batch-interpret-test elf-test static funptr ifdefs probe iter z3-testgen-test exttype specialize_test
 
 .PHONY: exttype
 
@@ -74,6 +76,10 @@ output-types:
 
 .PHONY: probe
 probe:
+	+$(MAKE) -C $@
+
+.PHONY: specialize_test
+specialize_test:
 	+$(MAKE) -C $@
 
 batch-test-negative: $(addsuffix .negtest,$(wildcard FAIL*.3d))
@@ -116,6 +122,12 @@ inplace-hash-test:
 	$(3D) --odir out.inplace-hash --batch --no_copy_everparse_h Comments.3d
 	$(3D) --odir out.inplace-hash --batch --check_hashes inplace Comments.3d
 	$(3D) --check_inplace_hash Comments.3d=out.inplace-hash/Comments.h
+
+echo-clean-out-files:
+	echo "$$(for f in $(clean_out_files) ; do echo $$f ; done | sort)"
+
+echo-out-files:
+	echo "$$(ls out.cleanup | sort)"
 
 batch-cleanup-test:
 	mkdir -p out.cleanup

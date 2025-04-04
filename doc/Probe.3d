@@ -1,5 +1,6 @@
 //SNIPPET_START: simple probe$
 extern probe ProbeAndCopy
+extern probe (INIT) ProbeInit
 
 typedef struct _T(UINT32 bound) {
   UINT16 x { x >= bound };

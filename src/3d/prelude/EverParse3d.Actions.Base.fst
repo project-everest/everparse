@@ -9,6 +9,7 @@ module I = EverParse3d.InputStream.Base
 module HS = FStar.HyperStack
 module HST = FStar.HyperStack.ST
 module CP = EverParse3d.CopyBuffer
+module PA = EverParse3d.ProbeActions
 module AppCtxt = EverParse3d.AppCtxt
 module LPE = EverParse3d.ErrorCode
 open FStar.Tactics.Typeclasses
@@ -1940,6 +1941,15 @@ let copy_buffer_loc (x:CP.copy_buffer_t)
 
 inline_for_extraction
 noextract
+let init_and_probe 
+      (init:PA.init_probe_dest_t)
+      (prep_dest_sz:U64.t)
+      (probe:PA.probe_m unit true)
+: PA.probe_m unit false
+= PA.seq_probe_m () (PA.init_probe_m init prep_dest_sz) probe
+
+inline_for_extraction
+noextract
 let probe_then_validate 
       (#nz:bool)
       (#wk: _)
@@ -1950,22 +1960,42 @@ let probe_then_validate
       (#disj:_)
       (#l:eloc)
       (#ha #allow_reading:bool)
+      (#ptr_t:Type0)
+      (typename:string)
+      (fieldname:string)
       (v:validate_with_action_t p inv disj l ha allow_reading)
-      (src:U64.t)
-      (len:U64.t)
+      (src:ptr_t)
+      (as_u64:ptr_t -> PA.pure_external_action U64.t)
+      (nullable:bool)
       (dest:CP.copy_buffer_t)
-      (probe:CP.probe_fn)
+      (init:PA.init_probe_dest_t)
+      (prep_dest_sz:U64.t)
+      (probe:PA.probe_m unit true)
   = fun ctxt error_handler_fn input input_length pos posf ->
       CP.properties dest;
       let h0 = HST.get () in
-      let b = probe src len dest in
-      let h1 = HST.get () in
-      modifies_address_liveness_insensitive_unused_in h0 h1;
-      if b
+      let src64 = as_u64 src () in
+      if nullable && src64 = 0uL
       then (
-        let result = v ctxt error_handler_fn (CP.stream_of dest) (CP.stream_len dest) 0uL in
-        not (LPE.is_error result)
+        //nullable pointers are accepted without probing, if they are null
+        true
       )
-      else false
+      else (
+        let b = PA.run_probe_m (init_and_probe init prep_dest_sz probe) src64 dest in
+        let h1 = HST.get () in
+        modifies_address_liveness_insensitive_unused_in h0 h1;
+        if b <> 0uL
+        then (
+          let result = v ctxt error_handler_fn (CP.stream_of dest) (CP.stream_len dest) 0uL in
+          not (LPE.is_error result)
+        )
+        else (
+          error_handler_fn typename fieldname
+            LPE.(error_reason_of_result validator_error_probe_failed)
+            LPE.(get_validator_error_kind validator_error_probe_failed)
+            ctxt input pos;
+          false
+        )
+      )
 
 #pop-options

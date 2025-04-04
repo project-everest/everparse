@@ -83,6 +83,10 @@ BOOLEAN ProbeAndCopy(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   }
 }
 
+BOOLEAN ProbeInit(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+  return true;
+}
+
 // `ProbeInPlace` is a probing function declared in Probe.3d and the
 // generated ../obj/Probe_ExternalAPI.h, but we need to define it by
 // hand here. We define it as checking whether the pointer read from
