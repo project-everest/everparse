@@ -6,6 +6,13 @@ open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
 module EqTest = CDDL.Spec.EqTest
 
+[@@bundle_attr] // so it inlines
+unfold noextract
+let maybe_named (s : option string) (t : Type u#aa) : Type u#aa =
+  match s with
+  | Some n -> FStar.Tactics.PrettifyType.named n t
+  | None -> t
+
 inline_for_extraction noextract [@@noextract_to "krml"]
 noeq
 type bundle
