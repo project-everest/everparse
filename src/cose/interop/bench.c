@@ -98,6 +98,40 @@ void bench_serialize(EVP_PKEY *pkey) {
     report_bench_time("serialize", nruns, &start, &finish);
 }
 
+void bench_serialize_sig_struct(EVP_PKEY *pkey) {
+    unsigned nruns = 10000;
+    struct timespec start, finish;
+
+    bstr out = { .len = 1024 };
+    out.elt = malloc(out.len);
+
+    bstr signed_msg = sign1(pkey, empty_sig_headers(), empty_sig_headers(), aad, payload);
+    COSE_Format_evercddl_COSE_Sign1_pretty c =
+        COSE_Format_validate_and_parse_COSE_Sign1_Tagged(signed_msg).v.fst;
+    COSE_Format_evercddl_Sig_structure_pretty sig_struct = {
+        .x0 = 1,
+        .x1 = c.x0,
+        .x2 = {
+            .tag = COSE_Format_Inr,
+            .case_Inr = {
+                .fst = aad,
+                .snd = payload,
+            },
+        },
+    };
+
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    for (unsigned i = 0; i < nruns; i++) {
+        COSE_Format_serialize_Sig_structure(sig_struct, out);
+    }
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+
+    free(signed_msg.elt);
+    free(out.elt);
+
+    report_bench_time("serialize_sig_struct", nruns, &start, &finish);
+}
+
 
 int main() {
     EVP_PKEY *pkey = create_key_pair();
@@ -105,5 +139,6 @@ int main() {
     bench_verify(pkey);
     bench_parse(pkey);
     bench_serialize(pkey);
+    bench_serialize_sig_struct(pkey);
     EVP_PKEY_free(pkey);
 }
