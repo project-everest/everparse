@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <assert.h>
-#include "aux.h"
+#include "probecallbacks.h"
 
 typedef struct _A {
   uint32_t a1;
