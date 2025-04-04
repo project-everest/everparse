@@ -5326,12 +5326,12 @@ COSE_Format_evercddl_header_map_pretty_right(COSE_Format_evercddl_header_map x6)
   return
     (
       (COSE_Format_evercddl_header_map_pretty){
-        .x0 = x7,
-        .x1 = x8,
-        .x2 = x9,
-        .x3 = x10,
-        .x4 = x11,
-        .x5 = x12
+        ._x0 = x7,
+        ._x1 = x8,
+        ._x2 = x9,
+        ._x3 = x10,
+        ._x4 = x11,
+        ._x5 = x12
       }
     );
 }
@@ -5340,16 +5340,16 @@ COSE_Format_evercddl_header_map
 COSE_Format_evercddl_header_map_pretty_left(COSE_Format_evercddl_header_map_pretty x13)
 {
   FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty
-  x21 = x13.x0;
+  x21 = x13._x0;
   FStar_Pervasives_Native_option__FStar_Pervasives_either_CDDL_Pulse_Types_slice_COSE_Format_evercddl_label_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_label_pretty
-  x22 = x13.x1;
+  x22 = x13._x1;
   FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_tstr_pretty_COSE_Format_evercddl_int_pretty
-  x23 = x13.x2;
-  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty x24 = x13.x3;
+  x23 = x13._x2;
+  FStar_Pervasives_Native_option__COSE_Format_evercddl_bstr_pretty x24 = x13._x3;
   FStar_Pervasives_either___COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty__FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty___FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty_
-  x25 = x13.x4;
+  x25 = x13._x4;
   FStar_Pervasives_either__CDDL_Pulse_Types_slice__COSE_Format_aux_env25_type_2_pretty___COSE_Format_aux_env25_type_4_pretty__CDDL_Pulse_Parse_MapGroup_map_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
-  x26 = x13.x5;
+  x26 = x13._x5;
   return
     (
       (COSE_Format_evercddl_header_map){
@@ -8819,15 +8819,15 @@ COSE_Format_evercddl_COSE_Signature_pretty_right(COSE_Format_evercddl_COSE_Signa
   COSE_Format_evercddl_bstr x6 = x3.snd;
   COSE_Format_evercddl_header_map_pretty x5 = x3.fst.snd;
   COSE_Format_evercddl_empty_or_serialized_map_pretty x4 = x3.fst.fst;
-  return ((COSE_Format_evercddl_COSE_Signature_pretty){ .x0 = x4, .x1 = x5, .x2 = x6 });
+  return ((COSE_Format_evercddl_COSE_Signature_pretty){ ._x0 = x4, ._x1 = x5, ._x2 = x6 });
 }
 
 COSE_Format_evercddl_COSE_Signature
 COSE_Format_evercddl_COSE_Signature_pretty_left(COSE_Format_evercddl_COSE_Signature_pretty x7)
 {
-  COSE_Format_evercddl_empty_or_serialized_map_pretty x12 = x7.x0;
-  COSE_Format_evercddl_header_map_pretty x13 = x7.x1;
-  COSE_Format_evercddl_bstr x14 = x7.x2;
+  COSE_Format_evercddl_empty_or_serialized_map_pretty x12 = x7._x0;
+  COSE_Format_evercddl_header_map_pretty x13 = x7._x1;
+  COSE_Format_evercddl_bstr x14 = x7._x2;
   return
     ((COSE_Format_evercddl_COSE_Signature){ .fst = { .fst = x12, .snd = x13 }, .snd = x14 });
 }
@@ -9336,18 +9336,18 @@ COSE_Format_evercddl_COSE_Sign_pretty_right(COSE_Format_evercddl_COSE_Sign x4)
   x7 = x4.snd.fst;
   COSE_Format_evercddl_header_map_pretty x6 = x4.fst.snd;
   COSE_Format_evercddl_empty_or_serialized_map_pretty x5 = x4.fst.fst;
-  return ((COSE_Format_evercddl_COSE_Sign_pretty){ .x0 = x5, .x1 = x6, .x2 = x7, .x3 = x8 });
+  return ((COSE_Format_evercddl_COSE_Sign_pretty){ ._x0 = x5, ._x1 = x6, ._x2 = x7, ._x3 = x8 });
 }
 
 COSE_Format_evercddl_COSE_Sign
 COSE_Format_evercddl_COSE_Sign_pretty_left(COSE_Format_evercddl_COSE_Sign_pretty x9)
 {
-  COSE_Format_evercddl_empty_or_serialized_map_pretty x15 = x9.x0;
-  COSE_Format_evercddl_header_map_pretty x16 = x9.x1;
+  COSE_Format_evercddl_empty_or_serialized_map_pretty x15 = x9._x0;
+  COSE_Format_evercddl_header_map_pretty x16 = x9._x1;
   FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty
-  x17 = x9.x2;
+  x17 = x9._x2;
   FStar_Pervasives_either__CDDL_Pulse_Types_slice_COSE_Format_evercddl_COSE_Signature_pretty_CDDL_Pulse_Parse_ArrayGroup_array_iterator_t_CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_evercddl_COSE_Signature_pretty
-  x18 = x9.x3;
+  x18 = x9._x3;
   return
     (
       (COSE_Format_evercddl_COSE_Sign){
@@ -10163,17 +10163,18 @@ COSE_Format_evercddl_COSE_Sign1_pretty_right(COSE_Format_evercddl_COSE_Sign1 x4)
   x7 = x4.snd.fst;
   COSE_Format_evercddl_header_map_pretty x6 = x4.fst.snd;
   COSE_Format_evercddl_empty_or_serialized_map_pretty x5 = x4.fst.fst;
-  return ((COSE_Format_evercddl_COSE_Sign1_pretty){ .x0 = x5, .x1 = x6, .x2 = x7, .x3 = x8 });
+  return
+    ((COSE_Format_evercddl_COSE_Sign1_pretty){ ._x0 = x5, ._x1 = x6, ._x2 = x7, ._x3 = x8 });
 }
 
 COSE_Format_evercddl_COSE_Sign1
 COSE_Format_evercddl_COSE_Sign1_pretty_left(COSE_Format_evercddl_COSE_Sign1_pretty x9)
 {
-  COSE_Format_evercddl_empty_or_serialized_map_pretty x15 = x9.x0;
-  COSE_Format_evercddl_header_map_pretty x16 = x9.x1;
+  COSE_Format_evercddl_empty_or_serialized_map_pretty x15 = x9._x0;
+  COSE_Format_evercddl_header_map_pretty x16 = x9._x1;
   FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty
-  x17 = x9.x2;
-  COSE_Format_evercddl_bstr x18 = x9.x3;
+  x17 = x9._x2;
+  COSE_Format_evercddl_bstr x18 = x9._x3;
   return
     (
       (COSE_Format_evercddl_COSE_Sign1){
@@ -11731,16 +11732,16 @@ COSE_Format_evercddl_Sig_structure_pretty_right(COSE_Format_evercddl_Sig_structu
   x6 = x3.snd.snd;
   COSE_Format_evercddl_empty_or_serialized_map_pretty x5 = x3.snd.fst;
   COSE_Format_evercddl_int_tags x4 = x3.fst;
-  return ((COSE_Format_evercddl_Sig_structure_pretty){ .x0 = x4, .x1 = x5, .x2 = x6 });
+  return ((COSE_Format_evercddl_Sig_structure_pretty){ ._x0 = x4, ._x1 = x5, ._x2 = x6 });
 }
 
 COSE_Format_evercddl_Sig_structure
 COSE_Format_evercddl_Sig_structure_pretty_left(COSE_Format_evercddl_Sig_structure_pretty x7)
 {
-  COSE_Format_evercddl_int_tags x12 = x7.x0;
-  COSE_Format_evercddl_empty_or_serialized_map_pretty x13 = x7.x1;
+  COSE_Format_evercddl_int_tags x12 = x7._x0;
+  COSE_Format_evercddl_empty_or_serialized_map_pretty x13 = x7._x1;
   FStar_Pervasives_either___COSE_Format_evercddl_empty_or_serialized_map_pretty____COSE_Format_evercddl_bstr_pretty___COSE_Format_evercddl_bstr_pretty____COSE_Format_evercddl_bstr_pretty___COSE_Format_evercddl_bstr_pretty_
-  x14 = x7.x2;
+  x14 = x7._x2;
   return ((COSE_Format_evercddl_Sig_structure){ .fst = x12, .snd = { .fst = x13, .snd = x14 } });
 }
 
