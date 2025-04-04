@@ -157,9 +157,11 @@ let gteq"^bundle^"'' () : squash (g"^bundle^"''.b_impl_type == "^typename^"_pret
 let peq"^bundle^" () = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match "^bundle^"''.b_spec.parser "^bundle^"''.b_rel "^typename^"_pretty (teq"^bundle^"'' ())
 let seq"^bundle^" () = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq "^bundle^"''.b_spec "^bundle^"''.b_rel "^typename^"_pretty (teq"^bundle^"'' ())
 let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+[@@normalize_for_extraction (nbe :: T.bundle_steps);
+   Comment \"Parser for "^typename^"\"]
 let "^parser^" = T.inline_coerce_eq (peq"^bundle^" ()) "^bundle^"''.b_parser
-[@@normalize_for_extraction (nbe :: T.bundle_steps)]
+[@@normalize_for_extraction (nbe :: T.bundle_steps);
+   Comment \"Serializer for "^typename^"\"]
 let "^serializer^" = T.inline_coerce_eq (seq"^bundle^" ()) "^bundle^"''.b_serializer
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
