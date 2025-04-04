@@ -1,7 +1,7 @@
 EVERPARSE_SRC_PATH = $(realpath ../..)
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-OBJFILES = ../snapshot/COSE_Format.o ../../cbor/pulse/det/c/CBORDet.o
+OBJFILES = ../snapshot/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c
 
 .PHONY: test
 test: signtest verifytest .venv
