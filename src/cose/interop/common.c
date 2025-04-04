@@ -46,10 +46,10 @@ EVP_PKEY *parse_ed25519_private_key(bstr cose_key) {
     check(parsed_key.v.fst.x1.tag == COSE_Format_Inl);
     check(parsed_key.v.fst.x1.case_Inl.tag == COSE_Format_Mkevercddl_int_pretty0);
     check(parsed_key.v.fst.x1.case_Inl.case_Mkevercddl_int_pretty0 == 6);
-    check(parsed_key.v.fst.x4.tag);
-    check(parsed_key.v.fst.x4.v.len == 32);
+    check(parsed_key.v.fst.x3.tag);
+    check(parsed_key.v.fst.x3.v.len == 32);
     EVP_PKEY *pkey;
-    openssl_check(pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, NULL, parsed_key.v.fst.x4.v.elt, parsed_key.v.fst.x4.v.len));
+    openssl_check(pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, NULL, parsed_key.v.fst.x3.v.elt, parsed_key.v.fst.x3.v.len));
     return pkey;
 }
 
