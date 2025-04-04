@@ -25,10 +25,8 @@ typedef struct Pulse_Lib_Slice_slice__uint8_t_s
 }
 Pulse_Lib_Slice_slice__uint8_t;
 
-#define FStar_Pervasives_Native_None 0
-#define FStar_Pervasives_Native_Some 1
-
-typedef uint8_t FStar_Pervasives_Native_option__size_t_tags;
+typedef enum { FStar_Pervasives_Native_None, FStar_Pervasives_Native_Some }
+FStar_Pervasives_Native_option__size_t_tags;
 
 size_t COSE_Format_serialize_bool(bool c, Pulse_Lib_Slice_slice__uint8_t out);
 
@@ -54,9 +52,8 @@ bool COSE_Format_validate_everparsenomatch(cbor_det_t c);
 
 typedef void *COSE_Format_evercddl_everparsenomatch;
 
-#define COSE_Format_Mkevercddl_everparsenomatch_pretty0 0
-
-typedef uint8_t COSE_Format_evercddl_everparsenomatch_pretty;
+typedef enum { COSE_Format_Mkevercddl_everparsenomatch_pretty0 }
+COSE_Format_evercddl_everparsenomatch_pretty;
 
 bool
 COSE_Format_uu___is_Mkevercddl_everparsenomatch_pretty0(
@@ -151,15 +148,10 @@ COSE_Format_validate_and_parse_nint(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_int(cbor_det_t c);
 
-#define COSE_Format_Inl 0
-#define COSE_Format_Inr 1
+typedef enum { COSE_Format_Inl, COSE_Format_Inr } COSE_Format_evercddl_int_tags;
 
-typedef uint8_t COSE_Format_evercddl_int_tags;
-
-#define COSE_Format_Mkevercddl_int_pretty0 0
-#define COSE_Format_Mkevercddl_int_pretty1 1
-
-typedef uint8_t COSE_Format_evercddl_int_pretty_tags;
+typedef enum { COSE_Format_Mkevercddl_int_pretty0, COSE_Format_Mkevercddl_int_pretty1 }
+COSE_Format_evercddl_int_pretty_tags;
 
 typedef struct COSE_Format_evercddl_int_pretty_s
 {
@@ -346,10 +338,8 @@ typedef struct COSE_Format_evercddl_label_s
 }
 COSE_Format_evercddl_label;
 
-#define COSE_Format_Mkevercddl_label_pretty0 0
-#define COSE_Format_Mkevercddl_label_pretty1 1
-
-typedef uint8_t COSE_Format_evercddl_label_pretty_tags;
+typedef enum { COSE_Format_Mkevercddl_label_pretty0, COSE_Format_Mkevercddl_label_pretty1 }
+COSE_Format_evercddl_label_pretty_tags;
 
 typedef struct COSE_Format_evercddl_label_pretty_s
 {
@@ -636,9 +626,7 @@ bool COSE_Format_validate_false(cbor_det_t c);
 
 typedef void *COSE_Format_evercddl_false;
 
-#define COSE_Format_Mkevercddl_false_pretty0 0
-
-typedef uint8_t COSE_Format_evercddl_false_pretty;
+typedef enum { COSE_Format_Mkevercddl_false_pretty0 } COSE_Format_evercddl_false_pretty;
 
 bool COSE_Format_uu___is_Mkevercddl_false_pretty0(COSE_Format_evercddl_false_pretty projectee);
 
@@ -672,9 +660,7 @@ bool COSE_Format_validate_true(cbor_det_t c);
 
 typedef void *COSE_Format_evercddl_true;
 
-#define COSE_Format_Mkevercddl_true_pretty0 0
-
-typedef uint8_t COSE_Format_evercddl_true_pretty;
+typedef enum { COSE_Format_Mkevercddl_true_pretty0 } COSE_Format_evercddl_true_pretty;
 
 bool COSE_Format_uu___is_Mkevercddl_true_pretty0(COSE_Format_evercddl_true_pretty projectee);
 
@@ -708,9 +694,7 @@ bool COSE_Format_validate_nil(cbor_det_t c);
 
 typedef void *COSE_Format_evercddl_nil;
 
-#define COSE_Format_Mkevercddl_nil_pretty0 0
-
-typedef uint8_t COSE_Format_evercddl_nil_pretty;
+typedef enum { COSE_Format_Mkevercddl_nil_pretty0 } COSE_Format_evercddl_nil_pretty;
 
 bool COSE_Format_uu___is_Mkevercddl_nil_pretty0(COSE_Format_evercddl_nil_pretty projectee);
 
@@ -778,9 +762,8 @@ bool COSE_Format_validate_undefined(cbor_det_t c);
 
 typedef void *COSE_Format_evercddl_undefined;
 
-#define COSE_Format_Mkevercddl_undefined_pretty0 0
-
-typedef uint8_t COSE_Format_evercddl_undefined_pretty;
+typedef enum { COSE_Format_Mkevercddl_undefined_pretty0 }
+COSE_Format_evercddl_undefined_pretty;
 
 bool
 COSE_Format_uu___is_Mkevercddl_undefined_pretty0(
@@ -1186,10 +1169,11 @@ COSE_Format_validate_and_parse_header_map(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_empty_or_serialized_map(cbor_det_t c);
 
-#define COSE_Format_Mkevercddl_empty_or_serialized_map_pretty0 0
-#define COSE_Format_Mkevercddl_empty_or_serialized_map_pretty1 1
-
-typedef uint8_t COSE_Format_evercddl_empty_or_serialized_map_pretty_tags;
+typedef enum {
+  COSE_Format_Mkevercddl_empty_or_serialized_map_pretty0,
+  COSE_Format_Mkevercddl_empty_or_serialized_map_pretty1
+}
+COSE_Format_evercddl_empty_or_serialized_map_pretty_tags;
 
 typedef struct COSE_Format_evercddl_empty_or_serialized_map_pretty_s
 {
@@ -1471,10 +1455,11 @@ COSE_Format_validate_and_parse_COSE_Sign1(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_COSE_Untagged_Message(cbor_det_t c);
 
-#define COSE_Format_Mkevercddl_COSE_Untagged_Message_pretty0 0
-#define COSE_Format_Mkevercddl_COSE_Untagged_Message_pretty1 1
-
-typedef uint8_t COSE_Format_evercddl_COSE_Untagged_Message_pretty_tags;
+typedef enum {
+  COSE_Format_Mkevercddl_COSE_Untagged_Message_pretty0,
+  COSE_Format_Mkevercddl_COSE_Untagged_Message_pretty1
+}
+COSE_Format_evercddl_COSE_Untagged_Message_pretty_tags;
 
 typedef struct COSE_Format_evercddl_COSE_Untagged_Message_pretty_s
 {
@@ -1565,10 +1550,11 @@ COSE_Format_validate_and_parse_COSE_Sign1_Tagged(Pulse_Lib_Slice_slice__uint8_t 
 
 bool COSE_Format_validate_COSE_Tagged_Message(cbor_det_t c);
 
-#define COSE_Format_Mkevercddl_COSE_Tagged_Message_pretty0 0
-#define COSE_Format_Mkevercddl_COSE_Tagged_Message_pretty1 1
-
-typedef uint8_t COSE_Format_evercddl_COSE_Tagged_Message_pretty_tags;
+typedef enum {
+  COSE_Format_Mkevercddl_COSE_Tagged_Message_pretty0,
+  COSE_Format_Mkevercddl_COSE_Tagged_Message_pretty1
+}
+COSE_Format_evercddl_COSE_Tagged_Message_pretty_tags;
 
 typedef struct COSE_Format_evercddl_COSE_Tagged_Message_pretty_s
 {
@@ -1621,10 +1607,11 @@ COSE_Format_validate_and_parse_COSE_Tagged_Message(Pulse_Lib_Slice_slice__uint8_
 
 bool COSE_Format_validate_COSE_Messages(cbor_det_t c);
 
-#define COSE_Format_Mkevercddl_COSE_Messages_pretty0 0
-#define COSE_Format_Mkevercddl_COSE_Messages_pretty1 1
-
-typedef uint8_t COSE_Format_evercddl_COSE_Messages_pretty_tags;
+typedef enum {
+  COSE_Format_Mkevercddl_COSE_Messages_pretty0,
+  COSE_Format_Mkevercddl_COSE_Messages_pretty1
+}
+COSE_Format_evercddl_COSE_Messages_pretty_tags;
 
 typedef struct COSE_Format_evercddl_COSE_Messages_pretty_s
 {
@@ -1782,10 +1769,8 @@ COSE_Format_validate_and_parse_Internal_Types(Pulse_Lib_Slice_slice__uint8_t s);
 
 bool COSE_Format_validate_start(cbor_det_t c);
 
-#define COSE_Format_Mkevercddl_start_pretty0 0
-#define COSE_Format_Mkevercddl_start_pretty1 1
-
-typedef uint8_t COSE_Format_evercddl_start_pretty_tags;
+typedef enum { COSE_Format_Mkevercddl_start_pretty0, COSE_Format_Mkevercddl_start_pretty1 }
+COSE_Format_evercddl_start_pretty_tags;
 
 typedef struct COSE_Format_evercddl_start_pretty_s
 {

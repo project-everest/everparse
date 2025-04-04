@@ -8,11 +8,7 @@
 
 #define SIMPLE_VALUE_TRUE (21U)
 
-#define MGOK 0
-#define MGFail 1
-#define MGCutFail 2
-
-typedef uint8_t impl_map_group_result;
+typedef enum { MGOK, MGFail, MGCutFail } impl_map_group_result;
 
 static bool uu___is_MGOK(impl_map_group_result projectee)
 {
