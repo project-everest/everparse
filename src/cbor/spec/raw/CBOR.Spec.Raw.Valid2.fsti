@@ -93,3 +93,7 @@ val valid_eq'
   (x: raw_data_item)
 : Lemma
   (ensures (valid data_model x == holds_on_raw_data_item (valid_item data_model) x))
+
+let basic_data_model (x1 x2: raw_data_item) : Tot bool = false
+
+unfold let raw_equiv2 = equiv basic_data_model

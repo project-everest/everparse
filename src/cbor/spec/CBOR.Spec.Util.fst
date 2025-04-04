@@ -1388,6 +1388,30 @@ let rec setoid_assoc_eq_ext
     then ()
     else setoid_assoc_eq_ext equiv_key1 equiv_key2 equiv_value1 equiv_value2 q x prf
 
+let rec list_setoid_assoc_destruct
+  (#t1: Type)
+  (#t2: Type)
+  (equiv: t1 -> t1 -> bool)
+  (x: t1)
+  (l: list (t1 & t2))
+: Pure (list (t1 & t2) & (t1 & list (t1 & t2)))
+  (requires Some? (list_setoid_assoc equiv x l))
+  (ensures (fun (ll, (x', lr)) ->
+    match list_setoid_assoc equiv x l with
+    | None -> False
+    | Some y ->
+      l == List.Tot.append ll ((x', y) :: lr) /\
+      equiv x x' /\
+      list_setoid_assoc equiv x ll == None
+  ))
+= let (x', y') :: l' = l in
+  if equiv x x'
+  then ([], (x', l'))
+  else begin
+    let (ll, (x'', lr)) = list_setoid_assoc_destruct equiv x l' in
+    ((x', y') :: ll, (x'', lr))
+  end
+
 let list_assoc_append
     (#tk: eqtype)
     (#tv: Type)
