@@ -33,7 +33,16 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
             .x1 = { .tag = FStar_Pervasives_Native_None },
             .x2 = { .tag = FStar_Pervasives_Native_None },
             .x3 = { .tag = FStar_Pervasives_Native_None },
-            .x4 = { .tag = FStar_Pervasives_Native_None },
+            .x4 = {
+                .tag = COSE_Format_Inr,
+                .case_Inr = {
+                    .tag = COSE_Format_Inr,
+                    .case_Inr = {
+                        .fst = { .tag = FStar_Pervasives_Native_None },
+                        .snd = { .tag = FStar_Pervasives_Native_None },
+                    },
+                }
+            },
             .x5 = {
                 .tag = COSE_Format_Inl,
                 .case_Inl = {
@@ -54,7 +63,16 @@ bstr sign1(EVP_PKEY *signing_key, bstr aad, bstr payload) {
         .x1 = { .tag = FStar_Pervasives_Native_None },
         .x2 = { .tag = FStar_Pervasives_Native_None },
         .x3 = { .tag = FStar_Pervasives_Native_None },
-        .x4 = { .tag = FStar_Pervasives_Native_None },
+        .x4 = {
+            .tag = COSE_Format_Inr,
+            .case_Inr = {
+                .tag = COSE_Format_Inr,
+                .case_Inr = {
+                    .fst = { .tag = FStar_Pervasives_Native_None },
+                    .snd = { .tag = FStar_Pervasives_Native_None },
+                },
+            }
+        },
         .x5 = {
             .tag = COSE_Format_Inl,
             .case_Inl = {
