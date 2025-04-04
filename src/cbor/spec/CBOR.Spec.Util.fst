@@ -63,7 +63,7 @@ let rec list_existsb_implies
   (#t: Type)
   (p p' : t -> bool)
   (l: list t)
-  (prf: (x: t { x << l }) -> Lemma
+  (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
     (requires (p x == true))
     (ensures (p' x == true))
   )
@@ -75,6 +75,18 @@ let rec list_existsb_implies
     if p a
     then prf a
     else list_existsb_implies p p' q prf
+
+let list_existsb_ext
+  (#t: Type)
+  (p p' : t -> bool)
+  (l: list t)
+  (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
+    (ensures (p x == p' x))
+  )
+: Lemma
+  (ensures (List.Tot.existsb p l == List.Tot.existsb p' l))
+= Classical.move_requires (list_existsb_implies p p' l) (fun x -> prf x);
+  Classical.move_requires (list_existsb_implies p' p l) (fun x -> prf x)
 
 let list_existsb2_implies
   (#t1 #t2: Type)
@@ -94,7 +106,7 @@ let rec list_for_all_implies
   (#t: Type)
   (p1 p2: t -> bool)
   (l: list t)
-  (prf: (x: t { x << l }) -> Lemma
+  (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
     (requires (p1 x == true))
     (ensures (p2 x == true))
   )
@@ -634,7 +646,7 @@ let list_for_all_ext
   (#t: Type)
   (p1 p2: t -> bool)
   (l: list t)
-  (prf: (x: t { x << l }) -> Lemma
+  (prf: (x: t { List.Tot.memP x l /\ x << l }) -> Lemma
     (p1 x == p2 x)
   )
 : Lemma
@@ -753,6 +765,29 @@ let rec list_no_setoid_repeats
   | a :: q ->
     list_no_setoid_repeats equiv q &&
     not (List.Tot.existsb (equiv a) q)
+
+let rec list_no_setoid_repeats_ext
+  (#t: Type)
+  (equiv1 equiv2: t -> t -> bool)
+  (l: list t)
+  (prf: (l1: list t) -> (l2: list t) -> (x: t) -> (y: t { l == List.Tot.append l1 l2 /\ List.Tot.memP x l1 /\ List.Tot.memP y l2 /\ x << l /\ y << l }) -> Lemma
+    (equiv1 x y == equiv2 x y)
+  )
+: Lemma
+  (ensures (list_no_setoid_repeats equiv1 l == list_no_setoid_repeats equiv2 l))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    list_no_setoid_repeats_ext equiv1 equiv2 q (fun l1 l2 x y -> prf (a :: l1) l2 x y);
+    list_existsb_ext
+      (equiv1 a)
+      (equiv2 a)
+      q
+      (fun y ->
+        List.Tot.memP_precedes y q;
+        prf [a] q a y
+      )
 
 let rec list_no_setoid_repeats_append_elim_l
   (#t: Type)
@@ -1151,6 +1186,16 @@ let rec list_of_pair_list_for_all
   | [] -> ()
   | _ :: q -> list_of_pair_list_for_all f q
 
+let rec list_of_pair_list_map
+  (#t: Type)
+  (f: t -> bool)
+  (l: list (t & t))
+: Lemma
+  (List.Tot.for_all (holds_on_pair f) l == (List.Tot.for_all f (List.Tot.map fst l) && List.Tot.for_all f (List.Tot.map snd l)))
+= match l with
+  | [] -> ()
+  | _ :: q -> list_of_pair_list_map f q
+
 let rec list_of_pair_list_length
   (#t: Type)
   (l: list (t & t))
@@ -1282,6 +1327,41 @@ let rec list_setoid_assoc_eqtype
 = match l with
   | [] -> ()
   | (a, v) :: q -> list_setoid_assoc_eqtype x q
+
+let setoid_assoc_eq
+  (#key #value: Type)
+  (equiv_key: (key -> key -> bool))
+  (equiv_value: (value -> value -> bool))
+  (l: list (key & value))
+  (x: (key & value))
+: Tot bool
+= match list_setoid_assoc equiv_key (fst x) l with
+  | None -> false
+  | Some y -> equiv_value (snd x) y
+
+let rec setoid_assoc_eq_ext
+  (#key #value: Type)
+  (equiv_key1 equiv_key2: (key -> key -> bool))
+  (equiv_value1 equiv_value2: (value -> value -> bool))
+  (l: list (key & value))
+  (x: (key & value))
+  (prf: (y: (key & value)) -> Lemma
+    (requires (List.Tot.memP y l /\ y << l))
+    (ensures (
+      equiv_key1 (fst x) (fst y) == equiv_key2 (fst x) (fst y) /\
+      equiv_value1 (snd x) (snd y) == equiv_value2 (snd x) (snd y)
+    ))
+  )
+: Lemma
+  (ensures (setoid_assoc_eq equiv_key1 equiv_value1 l x == setoid_assoc_eq equiv_key2 equiv_value2 l x))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | y :: q ->
+    prf y;
+    if equiv_key1 (fst x) (fst y)
+    then ()
+    else setoid_assoc_eq_ext equiv_key1 equiv_key2 equiv_value1 equiv_value2 q x prf
 
 let list_assoc_append
     (#tk: eqtype)
