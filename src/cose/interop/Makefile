@@ -18,7 +18,7 @@ run-bench: bench
 	python3 -m venv $@
 	$@/bin/pip install pycose
 
-# SANFLAGS += -fsanitize=address -fsanitize=undefined
+SANFLAGS += -fsanitize=address -fsanitize=undefined
 CFLAGS += $(SANFLAGS)
 LDFLAGS += $(SANFLAGS)
 LDFLAGS += -lssl -lcrypto
