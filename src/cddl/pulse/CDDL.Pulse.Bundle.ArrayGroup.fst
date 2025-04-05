@@ -166,6 +166,7 @@ let bundle_array_group_item
   (#cbor_array_iterator_t: Type)
   (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
   (cbor_array_iterator_next: array_iterator_next_t vmatch cbor_array_iterator_match)
+  (nm : option string)
   (b: bundle vmatch)
 : Tot (array_bundle cbor_array_iterator_match)
 = match b with
@@ -175,7 +176,7 @@ let bundle_array_group_item
   ab_spec_type = _;
   ab_spec_type_eq = b_spec_type_eq;
   ab_spec = ag_spec_item b_spec;
-  ab_impl_type = b_impl_type;
+  ab_impl_type = maybe_named nm b_impl_type;
   ab_rel = _;
   ab_parser = impl_zero_copy_array_group_item cbor_array_iterator_next b_parser;
   ab_serializer = impl_serialize_array_group_item b_serializer

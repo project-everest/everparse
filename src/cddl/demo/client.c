@@ -6,8 +6,8 @@ int main(void) {
     .v = 42L
   };
   CDDLTest_Test_evercddl_test1_pretty test = {
-    .x0 = 18L,
-    .x1 = test_snd
+    .foo = 18L,
+    .bar = test_snd
   };
   uint8_t out[32];
   Pulse_Lib_Slice_slice__uint8_t out_s = {
@@ -26,7 +26,7 @@ int main(void) {
   if (! (CDDLTest_Test_validate_test1(obj)))
     return 3;
   CDDLTest_Test_evercddl_test1_pretty ret = CDDLTest_Test_parse_test1(obj);
-  if (! (ret.x0 == test.x0 && ret.x1.tag == test.x1.tag && ret.x1.v == test.x1.v))
+  if (! (ret.foo == test.foo && ret.bar.tag == test.bar.tag && ret.bar.v == test.bar.v))
     return 4;
   return CDDLTest_Client_main();
 }

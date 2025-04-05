@@ -158,6 +158,7 @@ let bundle_map_zero_or_one
   (#vmatch: perm -> ty -> cbor -> slprop)
   (mb1: map_bundle vmatch)
   (v1: impl_map_group_t vmatch mb1.mb_typ mb1.mb_footprint)
+  (nm : option string)
   ([@@@erasable] sq: squash (
     MapGroupFail? (apply_map_group_det mb1.mb_typ cbor_map_empty)
   ))
@@ -171,7 +172,7 @@ let bundle_map_zero_or_one
   mb_spec_type = _;
   mb_spec_type_eq = EqTest.option_eq mb_spec_type_eq;
   mb_spec = mg_spec_zero_or_one mb_spec;
-  mb_impl_type = _;
+  mb_impl_type = maybe_named nm (option mb_impl_type);
   mb_rel = _;
   mb_parser = impl_zero_copy_map_zero_or_one #_ #_ #_ #_ #_ #_ #_ #mb_spec.mg_parser v1 mb_parser ();
   mb_serializer = impl_serialize_map_group_zero_or_one mb_serializer ();
@@ -217,6 +218,7 @@ let bundle_map_match_item_for
   (lkey: with_cbor_literal_t vmatch (Ghost.reveal key))
   ([@@@erasable] cut: Ghost.erased bool)
   (value: bundle vmatch)
+  (nm : option string)
 : Tot (map_bundle vmatch)
 = match value with
   | Mkbundle b_typ b_spec_type b_spec_type_eq b_spec b_impl_type b_rel b_parser b_serializer ->
@@ -227,7 +229,7 @@ let bundle_map_match_item_for
   mb_spec_type = _;
   mb_spec_type_eq = b_spec_type_eq;
   mb_spec = mg_spec_match_item_for cut key b_spec;
-  mb_impl_type = _;
+  mb_impl_type = maybe_named nm b_impl_type;
   mb_rel = _;
   mb_parser = impl_zero_copy_match_item_for get lkey cut b_parser;
   mb_serializer = impl_serialize_match_item_for insert (CDDL.Pulse.Serialize.Misc.impl_serialize_literal serialize lkey) cut b_serializer;

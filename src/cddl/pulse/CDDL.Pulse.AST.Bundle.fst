@@ -11,6 +11,36 @@ open CBOR.Spec.API.Type
 module Env = CDDL.Pulse.AST.Env // for validator_env
 module Parse = CDDL.Pulse.AST.Parse // for ancillary_validate_env
 
+[@@bundle_attr]
+let name_from_literal (l : literal) : option string =
+  match l with
+  | LTextString s -> Some s
+  | LSimple i
+  | LInt i ->
+    Some (if i >= 0
+          then "intkey" ^ string_of_int i
+          else "intkeyneg" ^ string_of_int (-i))
+
+[@@bundle_attr]
+let rec extract_name_map_group (t : ast0_wf_parse_map_group 'a) : option string =
+  match t with
+  | WfMLiteral _ l _ _ -> name_from_literal l
+  | WfMZeroOrOne _g sub -> extract_name_map_group sub
+  | _ -> None
+
+[@@bundle_attr]
+let name_from_array_key (key : typ) : option string =
+  match key with
+  | TElem (ELiteral l) -> name_from_literal l
+  | _ -> None
+
+[@@bundle_attr]
+let rec extract_name_array_group (t : ast0_wf_array_group 'a) : option string =
+  match t with
+  | WfAElem _ key _ _ -> name_from_array_key key
+  | WfAZeroOrOne _g sub -> extract_name_array_group sub
+  | _ -> None
+
 let bundle_env'
   (#t: Type0)
   (vmatch: (perm -> t -> cbor -> slprop))
@@ -506,9 +536,10 @@ and impl_bundle_wf_array_group
     )
     (decreases t_wf)
 = match t_wf with
-  | WfAElem _ _ _ t_wf' ->
+  | WfAElem _ key _ t_wf' ->
+    let nm = extract_name_array_group t_wf in
     let pt = impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag t_wf' in
-    (bundle_array_group_item impl.cbor_array_iterator_next pt)
+    (bundle_array_group_item impl.cbor_array_iterator_next nm pt)
   | WfAZeroOrOne _ t_wf' ->
     let pe = impl_bundle_wf_array_group impl env ancillary_v ancillary ancillary_ag t_wf' in
     (bundle_array_group_zero_or_one pe (V.validate_array_group impl env.be_v _ t_wf') ())
@@ -569,16 +600,19 @@ and impl_bundle_wf_map_group
     let ps2 = impl_bundle_wf_map_group impl env ancillary_v ancillary ancillary_ag s2 in
     impl_bundle_wf_map_group_concat impl.cbor_share impl.cbor_gather env s1 ps1 s2 ps2
   | WfMZeroOrOne _ s1 ->
+    let nm = extract_name_map_group t_wf in
     let ps1 = impl_bundle_wf_map_group impl env ancillary_v ancillary ancillary_ag s1 in
     bundle_map_ext'
       (bundle_map_zero_or_one
         ps1
         (V.validate_map_group impl env.be_v _ s1)
+        nm
         ()
       )
       (t_choice ps1.mb_footprint t_always_false)
       ()
   | WfMLiteral cut key _ s ->
+    let nm = extract_name_map_group t_wf in
     let ps1 = impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag s in
         (bundle_map_match_item_for
           impl.cbor_map_get
@@ -594,6 +628,7 @@ and impl_bundle_wf_map_group
           )
           cut
           ps1
+          nm
         )
   | WfMZeroOrMore _ key_except _ s_key s_key_except s_value ->
     let Some (v_key, p_key) = ancillary _ s_key in

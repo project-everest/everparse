@@ -105,6 +105,9 @@ let pull_group
 noextract [@@noextract_to "krml"]
 let base_steps = [
       zeta; iota; primops;
+      delta_qualifier ["unfold"];
+      (* Unfold everything marked with the unfold qualifier. This is
+      needed to reduce string concatenation. *)
   ]
 
 noextract [@@noextract_to "krml"]
