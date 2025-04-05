@@ -1,6 +1,8 @@
 import subprocess
 from pycose.keys import OKPKey
 from pycose.messages import Sign1Message
+from pycose.headers import Algorithm, ContentType
+from pycose.algorithms import EdDSA
 import cbor2
 
 print('Generating random key')
@@ -31,3 +33,17 @@ verify = subprocess.run(['./verifytest', 'message.pubkey', 'message.cbor'], stdo
 verify.check_returncode()
 assert verify.stdout == payload, verify.stdout
 print('Signature verifies using our tool!')
+
+
+
+print('Signing with pycose')
+# Setting some extra headers, otherwise the signed message is bitwise identical to the one we're producing
+msg2 = Sign1Message(phdr={Algorithm: EdDSA}, uhdr={ContentType: 'text/plain'}, payload=payload)
+msg2.key = key
+open('message.pycose.cbor', 'wb').write(msg2.encode())
+
+print('Running ./verifytest')
+verify = subprocess.run(['./verifytest', 'message.pubkey', 'message.pycose.cbor'], stdout=subprocess.PIPE)
+verify.check_returncode()
+assert verify.stdout == payload, verify.stdout
+print('PyCOSE Signature verifies using our tool!')
