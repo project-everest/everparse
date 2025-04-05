@@ -66,7 +66,6 @@ let raw_data_item_uint64_optimize_elem (x: raw_data_item) : Tot raw_data_item =
   | Tagged tag v -> Tagged (raw_uint64_optimize tag) v
   | _ -> x
 
-(*
 let raw_data_item_uint64_optimize_elem_valid (x: raw_data_item) : Lemma
   (requires (valid basic_data_model x == true))
   (ensures (valid basic_data_model (raw_data_item_uint64_optimize_elem x) == true /\
@@ -79,14 +78,10 @@ let raw_data_item_uint64_optimize_elem_valid (x: raw_data_item) : Lemma
   | Array _ v ->
     list_for_all2_refl raw_equiv2 v (fun x -> equiv_refl basic_data_model x)
   | Map _ v ->
-    list_for_all_intro (setoid_assoc_eq raw_equiv2 raw_equiv2 v) v (fun y ->
-      equiv_refl basic_data_model (fst y);
-      list_setoid_assoc_mem_elim raw_equiv2 v y (fst y);
-      let Some y' = list_setoid_assoc raw_equiv2 (fst y) v in
-      
-      equiv_refl basic_data_model y';
-      ()
-    );
+    equiv_refl_forall basic_data_model;
+    equiv_sym_forall basic_data_model;
+    equiv_trans_forall basic_data_model;
+    list_setoid_assoc_eq_refl raw_equiv2 raw_equiv2 v;
     ()
   | Tagged _ v -> equiv_refl basic_data_model v
   | _ -> ()

@@ -23,7 +23,7 @@ val valid_eq
     | Map _ v ->
       List.Tot.for_all (valid data_model) (List.Tot.map fst v) &&
       List.Tot.for_all (valid data_model) (List.Tot.map snd v) &&
-      not (list_no_setoid_repeats (equiv data_model) (List.Tot.map fst v))
+      list_no_setoid_repeats (equiv data_model) (List.Tot.map fst v)
     | _ -> true
   )))
 
@@ -61,6 +61,12 @@ val equiv_refl
 : Lemma
   (ensures equiv data_model x1 x1)
 
+let equiv_refl_forall
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+: Lemma
+  (ensures forall x1 . equiv data_model x1 x1)
+= Classical.forall_intro (equiv_refl data_model)
+
 val equiv_sym
   (data_model: (raw_data_item -> raw_data_item -> bool) {
     forall x1 x2 . data_model x1 x2 == data_model x2 x1
@@ -68,6 +74,14 @@ val equiv_sym
   (x1 x2: raw_data_item)
 : Lemma
   (ensures equiv data_model x1 x2 == equiv data_model x2 x1)
+
+let equiv_sym_forall
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    forall x1 x2 . data_model x1 x2 == data_model x2 x1
+  })
+: Lemma
+  (ensures forall x1 x2 . equiv data_model x1 x2 == equiv data_model x2 x1)
+= Classical.forall_intro_2 (equiv_sym data_model)
 
 val equiv_trans
   (data_model: (raw_data_item -> raw_data_item -> bool) {
@@ -79,13 +93,27 @@ val equiv_trans
   (requires (equiv data_model x1 x2 /\ equiv data_model x2 x3))
   (ensures (equiv data_model x1 x3))
 
+let equiv_trans_forall
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
+: Lemma
+  (forall x1 x2 x3 .  (equiv data_model x1 x2 /\ equiv data_model x2 x3) ==> equiv data_model x1 x3)
+= let prf
+    x1 x2 x3
+  : Lemma ((equiv data_model x1 x2 /\ equiv data_model x2 x3) ==> equiv data_model x1 x3)
+  = Classical.move_requires (equiv_trans data_model x1 x2) x3
+  in
+  Classical.forall_intro_3 prf
+
 let valid_item
   (data_model: (raw_data_item -> raw_data_item -> bool))
   (x: raw_data_item)
 : Tot bool
 =   match x with
     | Map _ v ->
-      not (list_no_setoid_repeats (equiv data_model) (List.Tot.map fst v))
+      (list_no_setoid_repeats (equiv data_model) (List.Tot.map fst v))
     | _ -> true
 
 val valid_eq'

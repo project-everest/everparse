@@ -813,6 +813,31 @@ let rec list_no_setoid_repeats_append_elim_r
   | [] -> ()
   | a :: q -> list_no_setoid_repeats_append_elim_r equiv q l2
 
+let rec list_no_setoid_repeats_append_elim_memP
+  (#t: Type)
+  (equiv: t -> t -> bool)
+  (l1 l2: list t)
+  (sq: squash (list_no_setoid_repeats equiv (List.Tot.append l1 l2)))
+  (x1 x2: t)
+: Lemma
+  (ensures (List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2) ==> equiv x1 x2 == false)
+  (decreases l1)
+= if FStar.StrongExcludedMiddle.strong_excluded_middle (List.Tot.memP x1 l1 /\ List.Tot.memP x2 l2)
+  then begin
+    let x1' :: l1' = l1 in
+    if FStar.StrongExcludedMiddle.strong_excluded_middle (x1 == x1')
+    then begin
+      if equiv x1 x2
+      then begin
+        List.Tot.append_memP l1' l2 x2;
+        list_existsb_intro (equiv x1) (List.Tot.append l1' l2) x2; ()
+      end
+      else ()
+    end
+    else (list_no_setoid_repeats_append_elim_memP equiv l1' l2 () x1 x2; ())
+  end
+  else ()
+
 let rec list_no_setoid_repeats_implies
   (#t: Type)
   (equiv1 equiv2: t -> t -> bool)
@@ -1411,6 +1436,61 @@ let rec list_setoid_assoc_destruct
     let (ll, (x'', lr)) = list_setoid_assoc_destruct equiv x l' in
     ((x', y') :: ll, (x'', lr))
   end
+
+let rec list_setoid_assoc_eq_refl_gen
+  (#t1: Type)
+  (#t2: Type)
+  (equiv1: t1 -> t1 -> bool {
+    (forall x . equiv1 x x) /\
+    (forall xl xr . equiv1 xl xr == equiv1 xr xl) /\
+    (forall xl xm xr . (equiv1 xl xm /\ equiv1 xm xr) ==> equiv1 xl xr)
+  })
+  (equiv2: t2 -> t2 -> bool {
+    forall x . equiv2 x x
+  })
+  (ll lr: list (t1 & t2))
+: Lemma
+  (requires (list_no_setoid_repeats equiv1 (List.Tot.map fst (List.Tot.append ll lr))))
+  (ensures (
+    List.Tot.for_all (setoid_assoc_eq equiv1 equiv2 (List.Tot.append ll lr)) lr
+  ))
+  (decreases lr)
+= match lr with
+  | [] -> ()
+  | (x1, x2) :: lr' ->
+    list_setoid_assoc_append equiv1 x1 ll lr;
+    begin match list_setoid_assoc equiv1 x1 ll with
+    | Some x2' ->
+      let Some x1' = list_setoid_assoc_mem equiv1 x1 ll in
+      List.Tot.memP_map_intro fst (x1', x2') ll;
+      List.Tot.map_append fst ll lr;
+      List.Tot.memP_map_intro fst (x1, x2) lr;
+      list_no_setoid_repeats_append_elim_memP equiv1 (List.Tot.map fst ll) (List.Tot.map fst lr) () x1' x1;
+      assert False
+    | None ->
+      List.Tot.append_assoc ll [x1, x2] lr';
+      list_setoid_assoc_eq_refl_gen equiv1 equiv2 (List.Tot.append ll [x1, x2]) lr';
+      ()
+    end
+
+let list_setoid_assoc_eq_refl
+  (#t1: Type)
+  (#t2: Type)
+  (equiv1: t1 -> t1 -> bool {
+    (forall x . equiv1 x x) /\
+    (forall xl xr . equiv1 xl xr == equiv1 xr xl) /\
+    (forall xl xm xr . (equiv1 xl xm /\ equiv1 xm xr) ==> equiv1 xl xr)
+  })
+  (equiv2: t2 -> t2 -> bool {
+    forall x . equiv2 x x
+  })
+  (l: list (t1 & t2))
+: Lemma
+  (requires (list_no_setoid_repeats equiv1 (List.Tot.map fst l)))
+  (ensures (
+    List.Tot.for_all (setoid_assoc_eq equiv1 equiv2 l) l
+  ))
+= list_setoid_assoc_eq_refl_gen equiv1 equiv2 [] l
 
 let list_assoc_append
     (#tk: eqtype)

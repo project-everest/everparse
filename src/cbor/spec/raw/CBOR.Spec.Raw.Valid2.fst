@@ -26,7 +26,7 @@ let rec valid'
   | Map _ v ->
     List.Tot.for_all (valid' data_model (fuel - 1)) (List.Tot.map fst v) &&
     List.Tot.for_all (valid' data_model (fuel - 1)) (List.Tot.map snd v) &&
-    not (list_no_setoid_repeats (equiv' data_model (fuel - 1)) (List.Tot.map fst v))
+    (list_no_setoid_repeats (equiv' data_model (fuel - 1)) (List.Tot.map fst v))
   | _ -> true
 
 and equiv'
@@ -206,7 +206,7 @@ let valid_eq
     | Map _ v ->
       List.Tot.for_all (valid data_model) (List.Tot.map fst v) &&
       List.Tot.for_all (valid data_model) (List.Tot.map snd v) &&
-      not (list_no_setoid_repeats (equiv data_model) (List.Tot.map fst v))
+      (list_no_setoid_repeats (equiv data_model) (List.Tot.map fst v))
     | _ -> true
   )))
 = match x with
