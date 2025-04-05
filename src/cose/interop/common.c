@@ -16,12 +16,10 @@ const COSE_Format_evercddl_int_tags signature1 = 1;
 
 bstr mk_sig_structure(COSE_Format_evercddl_empty_or_serialized_map_pretty protected_headers,
         bstr aad, bstr payload) {
-    bstr empty = { .elt = (uint8_t[]) {}, .len = 0 };
-
     COSE_Format_evercddl_Sig_structure_pretty c = {
-        .x0 = signature1,
-        .x1 = protected_headers,
-        .x2 = {
+        .context = signature1,
+        .body_protected = protected_headers,
+        ._x0 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {
                 .fst = aad,
@@ -41,11 +39,11 @@ bstr mk_sig_structure(COSE_Format_evercddl_empty_or_serialized_map_pretty protec
 
 COSE_Format_evercddl_header_map_pretty empty_sig_headers() {
     return (COSE_Format_evercddl_header_map_pretty) {
-        .x0 = { .tag = FStar_Pervasives_Native_None },
-        .x1 = { .tag = FStar_Pervasives_Native_None },
-        .x2 = { .tag = FStar_Pervasives_Native_None },
-        .x3 = { .tag = FStar_Pervasives_Native_None },
-        .x4 = {
+        .intkey1 = { .tag = FStar_Pervasives_Native_None },
+        .intkey2 = { .tag = FStar_Pervasives_Native_None },
+        .intkey3 = { .tag = FStar_Pervasives_Native_None },
+        .intkey4 = { .tag = FStar_Pervasives_Native_None },
+        ._x0 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {
                 .tag = COSE_Format_Inr,
@@ -55,7 +53,7 @@ COSE_Format_evercddl_header_map_pretty empty_sig_headers() {
                 },
             }
         },
-        .x5 = {
+        ._x1 = {
             .tag = COSE_Format_Inl,
             .case_Inl = {
                 .elt = (K___COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty[]) {},
@@ -85,7 +83,7 @@ bstr sign1(EVP_PKEY *signing_key,
         COSE_Format_evercddl_header_map_pretty protected_headers,
         COSE_Format_evercddl_header_map_pretty unprotected_headers,
         bstr aad, bstr payload) {
-    protected_headers.x0 = (FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty) {
+    protected_headers.intkey1 = (FStar_Pervasives_Native_option__FStar_Pervasives_either_COSE_Format_evercddl_int_pretty_COSE_Format_evercddl_tstr_pretty) {
         .tag = FStar_Pervasives_Native_Some,
         .v = {
             .tag = COSE_Format_Inl,
@@ -105,10 +103,10 @@ bstr sign1(EVP_PKEY *signing_key,
     free(sig_structure.elt);
 
     COSE_Format_evercddl_COSE_Sign1_pretty c = {
-        .x0 = protected_headers_,
-        .x1 = unprotected_headers,
-        .x2 = { .tag = COSE_Format_Inl, .case_Inl = payload },
-        .x3 = sig,
+        .protected = protected_headers_,
+        .unprotected = unprotected_headers,
+        .payload = { .tag = COSE_Format_Inl, .case_Inl = payload },
+        .signature = sig,
     };
 
     bstr out;
@@ -140,13 +138,13 @@ bstr verify1(EVP_PKEY *signing_key, bstr aad, bstr msg) {
         COSE_Format_validate_and_parse_COSE_Sign1_Tagged(msg);
     check(parsed_msg.tag);
 
-    check(parsed_msg.v.fst.x2.tag == COSE_Format_Inl); // detached payload not supported
-    bstr payload = parsed_msg.v.fst.x2.case_Inl;
+    check(parsed_msg.v.fst.payload.tag == COSE_Format_Inl); // detached payload not supported
+    bstr payload = parsed_msg.v.fst.payload.case_Inl;
 
-    bstr sig = parsed_msg.v.fst.x3;
+    bstr sig = parsed_msg.v.fst.signature;
     
     COSE_Format_evercddl_empty_or_serialized_map_pretty protected_headers =
-        parsed_msg.v.fst.x0;
+        parsed_msg.v.fst.protected;
     // TODO check algorithm
   
     bstr sig_structure = mk_sig_structure(protected_headers, aad, payload);
@@ -162,13 +160,13 @@ EVP_PKEY *parse_ed25519_private_key(bstr cose_key) {
     FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_OKP_pretty___Pulse_Lib_Slice_slice_uint8_t_
         parsed_key = COSE_Format_validate_and_parse_COSE_Key_OKP(cose_key);
     check(parsed_key.tag);
-    check(parsed_key.v.fst.x1.tag == COSE_Format_Inl);
-    check(parsed_key.v.fst.x1.case_Inl.tag == COSE_Format_Mkevercddl_int_pretty0);
-    check(parsed_key.v.fst.x1.case_Inl.case_Mkevercddl_int_pretty0 == 6);
-    check(parsed_key.v.fst.x3.tag);
-    check(parsed_key.v.fst.x3.v.len == 32);
+    check(parsed_key.v.fst.intkeyneg1.tag == COSE_Format_Inl);
+    check(parsed_key.v.fst.intkeyneg1.case_Inl.tag == COSE_Format_Mkevercddl_int_pretty0);
+    check(parsed_key.v.fst.intkeyneg1.case_Inl.case_Mkevercddl_int_pretty0 == 6);
+    check(parsed_key.v.fst.intkeyneg4.tag);
+    check(parsed_key.v.fst.intkeyneg4.v.len == 32);
     EVP_PKEY *pkey;
-    openssl_check(pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, NULL, parsed_key.v.fst.x3.v.elt, parsed_key.v.fst.x3.v.len));
+    openssl_check(pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, NULL, parsed_key.v.fst.intkeyneg4.v.elt, parsed_key.v.fst.intkeyneg4.v.len));
     return pkey;
 }
 
@@ -176,13 +174,13 @@ EVP_PKEY *parse_ed25519_public_key(bstr cose_key) {
     FStar_Pervasives_Native_option___COSE_Format_evercddl_COSE_Key_OKP_pretty___Pulse_Lib_Slice_slice_uint8_t_
         parsed_key = COSE_Format_validate_and_parse_COSE_Key_OKP(cose_key);
     check(parsed_key.tag);
-    check(parsed_key.v.fst.x1.tag == COSE_Format_Inl);
-    check(parsed_key.v.fst.x1.case_Inl.tag == COSE_Format_Mkevercddl_int_pretty0);
-    check(parsed_key.v.fst.x1.case_Inl.case_Mkevercddl_int_pretty0 == 6);
-    check(parsed_key.v.fst.x2.tag);
-    check(parsed_key.v.fst.x2.v.len == 32);
+    check(parsed_key.v.fst.intkeyneg1.tag == COSE_Format_Inl);
+    check(parsed_key.v.fst.intkeyneg1.case_Inl.tag == COSE_Format_Mkevercddl_int_pretty0);
+    check(parsed_key.v.fst.intkeyneg1.case_Inl.case_Mkevercddl_int_pretty0 == 6);
+    check(parsed_key.v.fst.intkeyneg2.tag);
+    check(parsed_key.v.fst.intkeyneg2.v.len == 32);
     EVP_PKEY *pkey;
-    openssl_check(pkey = EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519, NULL, parsed_key.v.fst.x2.v.elt, parsed_key.v.fst.x2.v.len));
+    openssl_check(pkey = EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519, NULL, parsed_key.v.fst.intkeyneg2.v.elt, parsed_key.v.fst.intkeyneg2.v.len));
     return pkey;
 }
 

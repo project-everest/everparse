@@ -4,11 +4,15 @@ include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 OBJFILES = ../snapshot/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c
 
 .PHONY: all
-all: test bench
+all: test run-bench
 
 .PHONY: test
 test: signtest verifytest .venv
 	./.venv/bin/python test.py
+
+.PHONY: run-bench
+run-bench: bench
+	./bench
 
 .venv:
 	python3 -m venv $@
@@ -20,6 +24,7 @@ LDFLAGS += $(SANFLAGS)
 LDFLAGS += -lssl -lcrypto
 CFLAGS += -O2 -g
 CFLAGS += -I ../snapshot -I ../../cbor/pulse/det/c
+CFLAGS += -Wall -Wenum-conversion
 
 HEADERDEPS = ../snapshot/COSE_Format.h ../../cbor/pulse/det/c/CBORDet.h
 

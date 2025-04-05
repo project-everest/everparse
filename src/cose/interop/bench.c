@@ -1,6 +1,5 @@
 #include "common.h"
 #include <time.h>
-// #include <sys/time.h>
 
 EVP_PKEY *create_key_pair() {
     EVP_PKEY *pkey;
@@ -26,7 +25,7 @@ void report_bench_time(const char *func, unsigned nruns, struct timespec *start,
 #define xp6(x) xp5(x x)
 #define xp7(x) xp6(x x)
 
-char payload_str[] = xp7("payload");
+unsigned char payload_str[] = xp7("payload");
 bstr payload = { .len = sizeof(payload_str) - 1, .elt = payload_str };
 
 bstr aad = { .len = 0, .elt = (uint8_t[]) {} };
@@ -109,9 +108,9 @@ void bench_serialize_sig_struct(EVP_PKEY *pkey) {
     COSE_Format_evercddl_COSE_Sign1_pretty c =
         COSE_Format_validate_and_parse_COSE_Sign1_Tagged(signed_msg).v.fst;
     COSE_Format_evercddl_Sig_structure_pretty sig_struct = {
-        .x0 = 1,
-        .x1 = c.x0,
-        .x2 = {
+        .context = 1,
+        .body_protected = c.protected,
+        ._x0 = {
             .tag = COSE_Format_Inr,
             .case_Inr = {
                 .fst = aad,
