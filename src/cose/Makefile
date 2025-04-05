@@ -1,4 +1,4 @@
-all: build
+all: build interop
 
 EVERPARSE_SRC_PATH = $(realpath ..)
 
