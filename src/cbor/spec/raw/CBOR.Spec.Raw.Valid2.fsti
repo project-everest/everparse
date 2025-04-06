@@ -122,6 +122,86 @@ val valid_eq'
 : Lemma
   (ensures (valid data_model x == holds_on_raw_data_item (valid_item data_model) x))
 
+let valid_map
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (v: list (raw_data_item & raw_data_item))
+: Tot bool
+= list_no_setoid_repeats (equiv data_model) (List.Tot.map fst v)
+
+noextract
+let map_entry_order
+  (#key: Type)
+  (key_order: (key -> key -> bool))
+  (value: Type)
+  (m1: (key & value))
+  (m2: (key & value))
+: Tot bool
+= key_order (fst m1) (fst m2)
+
+let valid_map'
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (v: list (raw_data_item & raw_data_item))
+: Tot bool
+= list_no_setoid_repeats (map_entry_order (equiv data_model) _) v
+
+let rec list_existsb_map_fst
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (a: (raw_data_item & raw_data_item))
+  (v: list (raw_data_item & raw_data_item))
+: Lemma
+  (ensures List.Tot.existsb (map_entry_order (equiv data_model) _ a) v == List.Tot.existsb (equiv data_model (fst a)) (List.Tot.map fst v))
+  (decreases v)
+= match v with
+  | [] -> ()
+  | (a', _) :: q ->
+    if equiv data_model (fst a) a'
+    then ()
+    else list_existsb_map_fst data_model a q
+
+let rec valid_map_eq
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (v: list (raw_data_item & raw_data_item))
+: Lemma
+  (valid_map data_model v == valid_map' data_model v)
+= match v with
+  | [] -> ()
+  | kv :: v' ->
+    valid_map_eq data_model v';
+    list_existsb_map_fst data_model kv v';
+    ()
+
 let basic_data_model (x1 x2: raw_data_item) : Tot bool = false
 
 unfold let raw_equiv2 = equiv basic_data_model
+
+let valid_raw_data_item_map_fmap_equiv
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
+  (f: raw_data_item -> raw_data_item)
+  (l: list (raw_data_item & raw_data_item))
+  (prf: (x: raw_data_item { x << l }) -> Lemma
+    (requires (valid data_model x))
+    (ensures (equiv data_model x (f x) == true))
+  )
+: Lemma
+  (requires (
+    List.Tot.for_all (holds_on_pair (holds_on_raw_data_item (valid_item data_model))) l /\
+    valid_map data_model l == true
+  ))
+  (ensures (valid_map data_model (List.Tot.map (apply_on_pair f) l) == true))
+= 
+  valid_map_eq data_model l;
+        list_no_setoid_repeats_map (apply_on_pair f) l (map_entry_order (equiv data_model) _) (map_entry_order (equiv data_model) _) (fun x x' ->
+          List.Tot.for_all_mem (holds_on_pair (holds_on_raw_data_item (valid_item data_model))) l;
+          valid_eq' data_model (fst x);
+          valid_eq' data_model (fst x');
+          prf (fst x);
+          prf (fst x');
+          equiv_sym data_model (f (fst x')) (fst x');
+          equiv_trans data_model (fst x) (f (fst x)) (f (fst x'));
+          equiv_trans data_model (fst x) (f (fst x')) (fst x')
+        );
+  valid_map_eq data_model (List.Tot.map (apply_on_pair f) l)
+

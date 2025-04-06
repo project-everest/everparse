@@ -86,3 +86,84 @@ let raw_data_item_uint64_optimize_elem_valid (x: raw_data_item) : Lemma
   | Tagged _ v -> equiv_refl basic_data_model v
   | _ -> ()
 
+let raw_data_item_uint64_optimize_elem_equiv (x: raw_data_item) : Lemma
+  (requires (valid basic_data_model x == true))
+  (ensures (raw_equiv2 x (raw_data_item_uint64_optimize_elem x) == true))
+= equiv_eq basic_data_model x (raw_data_item_uint64_optimize_elem x);
+  raw_data_item_uint64_optimize_elem_valid x;
+  ()
+
+let raw_data_item_uint64_optimize_elem_size (x: raw_data_item) : Lemma
+  (raw_data_item_size (raw_data_item_uint64_optimize_elem x) == raw_data_item_size x)
+= raw_data_item_size_eq x;
+  raw_data_item_size_eq (raw_data_item_uint64_optimize_elem x)
+
+let raw_data_item_uint64_optimize : raw_data_item -> raw_data_item =
+  raw_data_item_fmap raw_data_item_uint64_optimize_elem
+
+let rec raw_data_item_uint64_optimize_size (x: raw_data_item) : Lemma
+  (ensures (raw_data_item_size (raw_data_item_uint64_optimize x) == raw_data_item_size x))
+  (decreases x)
+= raw_data_item_size_eq x;
+  raw_data_item_size_eq (raw_data_item_uint64_optimize x);
+  raw_data_item_fmap_eq raw_data_item_uint64_optimize_elem x;
+  assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
+  match x with
+  | Map len v ->
+    assert (raw_data_item_uint64_optimize (Map len v) == raw_data_item_fmap raw_data_item_uint64_optimize_elem (Map len v));
+    assert (raw_data_item_uint64_optimize (Map len v) == raw_data_item_uint64_optimize_elem (Map len (List.Tot.map (apply_on_pair raw_data_item_uint64_optimize) v)));
+    list_sum_map (pair_sum raw_data_item_size raw_data_item_size) v (pair_sum raw_data_item_size raw_data_item_size) (apply_on_pair raw_data_item_uint64_optimize) (fun x ->
+      raw_data_item_uint64_optimize_size (fst x);
+      raw_data_item_uint64_optimize_size (snd x)
+    );
+    raw_data_item_uint64_optimize_elem_size (Map len (List.Tot.map (apply_on_pair raw_data_item_uint64_optimize) v))
+  | Array len v ->
+    list_sum_map raw_data_item_size v raw_data_item_size raw_data_item_uint64_optimize (fun x ->
+      raw_data_item_uint64_optimize_size x
+    );
+    raw_data_item_uint64_optimize_elem_size (Array len (List.Tot.map raw_data_item_uint64_optimize v))
+  | Tagged len v ->
+    raw_data_item_uint64_optimize_size v;
+    raw_data_item_uint64_optimize_elem_size (Tagged len (raw_data_item_uint64_optimize v))
+  | _ -> raw_data_item_uint64_optimize_elem_size x
+
+let raw_data_item_uint64_optimize_correct (x: raw_data_item) : Lemma
+  (ensures (raw_data_item_ints_optimal (raw_data_item_uint64_optimize x) == true))
+= holds_on_raw_data_item_fmap raw_data_item_uint64_optimize_elem raw_data_item_ints_optimal_elem (fun _ -> ()) x
+
+(*
+let raw_data_item_uint64_optimize_valid (x: raw_data_item) : Lemma
+    (requires (valid basic_data_model x == true))
+    (ensures (valid basic_data_model (raw_data_item_uint64_optimize x) == true))
+    (decreases x)
+= valid_eq' basic_data_model x;
+  valid_eq' basic_data_model (raw_data_item_uint64_optimize x);
+  holds_on_raw_data_item_fmap_inv
+    raw_data_item_uint64_optimize_elem
+    (valid_item basic_data_model)
+    (fun x ->
+      match x with
+      | Map len v ->
+        assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
+        let v' = List.Tot.map (apply_on_pair raw_data_item_uint64_optimize) v in
+        assert (pre_holds_on_raw_data_item (valid_item basic_data_model) (pre_raw_data_item_fmap raw_data_item_uint64_optimize_elem x) == true);
+        assert (List.Tot.for_all (holds_on_pair (holds_on_raw_data_item (valid_item basic_data_model))) v');
+        assert (pre_raw_data_item_fmap raw_data_item_uint64_optimize_elem x == Map len v' );
+        valid_raw_data_item_map_fmap_equiv basic_data_model raw_data_item_uint64_optimize_elem v (fun x -> raw_data_item_uint64_optimize_elem_equiv x);
+        assert (valid_item basic_data_model (pre_raw_data_item_fmap raw_data_item_uint64_optimize_elem x));
+        assume False
+      | _ -> ()
+    )
+    (fun x ->
+       valid_eq' basic_data_model x;
+       valid_eq' basic_data_model (raw_data_item_uint64_optimize x);
+       raw_data_item_uint64_optimize_elem_valid x
+    )
+    x
+
+
+(*
+let raw_data_item_uint64_optimize_equiv (x: raw_data_item) : Lemma
+  (requires (valid basic_data_model x == true))
+  (ensures (raw_equiv2 x (raw_data_item_uint64_optimize x) == true))
+= raw_equiv2_fmap raw_data_item_uint64_optimize_elem raw_data_item_uint64_optimize_elem_equiv x
