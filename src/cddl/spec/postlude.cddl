@@ -1,4 +1,4 @@
-                  tdate = #6.0(tstr)
+;                  tdate = #6.0(tstr)
 ;                  time = #6.1(number)
 ;                  number = int / float
 ; TODO: bigint
@@ -9,16 +9,16 @@
 ;                  unsigned = uint / biguint
 ;                  decfrac = #6.4([e10: int, m: integer])
 ;                  bigfloat = #6.5([e2: int, m: integer])
-                  eb64url = #6.21(any)
-                  eb64legacy = #6.22(any)
-                  eb16 = #6.23(any)
-                  encoded-cbor = #6.24(bstr) ; FIXME: this is the standard definition, but I believe this should rather be something like #6.24(bstr .cbor any)
-                  uri = #6.32(tstr)
-                  b64url = #6.33(tstr)
-                  b64legacy = #6.34(tstr)
-                  regexp = #6.35(tstr)
-                  mime-message = #6.36(tstr)
-                  cbor-any = #6.55799(any)
+;                  eb64url = #6.21(any)
+;                 eb64legacy = #6.22(any)
+;                  eb16 = #6.23(any)
+;                  encoded-cbor = #6.24(bstr) ; FIXME: this is the standard definition, but I believe this should rather be something like #6.24(bstr .cbor any)
+;                  uri = #6.32(tstr)
+;                  b64url = #6.33(tstr)
+;                  b64legacy = #6.34(tstr)
+;                  regexp = #6.35(tstr)
+;                  mime-message = #6.36(tstr)
+;                  cbor-any = #6.55799(any)
 
 ; TODO: floats
 ;                  float16 = #7.25
@@ -29,23 +29,23 @@
 ;                  float = float16-32 / float64
 
 
-                  int = uint / nint
-                  uint = #0
-                  nint = #1
+;                  int = uint / nint
+                   uint = #0
+;                  nint = #1
 
-                  text = tstr
+;                  text = tstr
                   bytes = bstr
                   bstr = #2
-                  tstr = #3
+;                  tstr = #3
 
 ;                  bool = false / true ; already defined because of the F* spec type
                   false = #7.20
                   true = #7.21
-                  null = nil
-                  nil = #7.22
-                  undefined = #7.23
+;                  null = nil
+;                  nil = #7.22
+;                  undefined = #7.23
 
-                  any = #
+                 any = #
 
 ; EverParse CDDL also introduces:
 ; `everparse-no-match`, a typename to denote empty types that never match

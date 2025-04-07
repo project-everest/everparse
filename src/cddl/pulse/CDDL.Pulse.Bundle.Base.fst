@@ -33,6 +33,27 @@ let get_bundle_impl_type
 = match b with
   | Mkbundle _ _ _ _ b_impl_type _ _ _ -> b_impl_type
 
+let mk_eq_test_bij
+  (#tgt: Type0)
+  (#tgt' : Type0)
+  (f12: (tgt -> tgt'))
+  (f21: (tgt' -> tgt))
+  ([@@@erasable]fprf_21_12: (x: tgt) -> squash (f21 (f12 x) == x))
+  ([@@@erasable]fprf_12_21: (x: tgt') -> squash (f12 (f21 x) == x))
+  (eq': EqTest.eq_test tgt)
+: EqTest.eq_test tgt'
+= EqTest.mk_eq_test (fun x1' x2' -> 
+    fprf_12_21 x1'; fprf_12_21 x2'; 
+    let b = eq' (f21 x1') (f21 x2') in
+    if b then (
+      assert (f21 x1' == f21 x2');
+      b
+    ) else (
+      assert (f21 x1' =!= f21 x2');
+      b
+    ))
+
+
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let bundle_bij
   (#cbor_t: Type)
@@ -58,7 +79,7 @@ let bundle_bij
     {
       b_typ = b_typ;
       b_spec_type = tgt';
-      b_spec_type_eq = Ghost.hide (let eq' = Ghost.reveal b_spec_type_eq in EqTest.mk_eq_test (fun x1' x2' -> fprf_12_21 x1'; fprf_12_21 x2'; eq' (f21 x1') (f21 x2')));
+      b_spec_type_eq = Ghost.hide (mk_eq_test_bij f12 f21 fprf_21_12 fprf_12_21 b_spec_type_eq);
       b_spec = spec_inj b_spec f12 f21 fprf_21_12 fprf_12_21;
       b_impl_type = impl_tgt';
       b_rel = rel_fun b_rel g21 f21;

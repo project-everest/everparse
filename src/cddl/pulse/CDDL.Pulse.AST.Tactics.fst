@@ -4,6 +4,12 @@ include CDDL.Pulse.AST.Bundle
 
 let as_squash (#t:Type0) (f: unit -> Lemma t) : squash t = f ()
 
+let squash_bij_lemma (#a:Type) (#p:a -> Type)
+    ($f: (x:a -> Lemma (p x)))
+    (x:a)
+: squash (p x)
+= f x
+
 let lemma_as_squash () : FStar.Tactics.Tac unit = 
   let open FStar.Tactics in
   let p = forall_intro () in
@@ -179,6 +185,7 @@ let bundle_get_rel_steps =
   ] ::
   delta_only (
     `%Mkbundle?.b_spec_type ::
+    `%Mkbundle?.b_spec_type_eq ::
     `%Mkarray_bundle?.ab_spec_type ::
     `%Mkmap_bundle?.mb_spec_type ::
     `%Mkbundle?.b_impl_type ::
