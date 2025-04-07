@@ -54,6 +54,7 @@ let raw_data_item_ints_optimal_elem (x: raw_data_item) : Tot bool =
     -> raw_uint64_optimal v
   | Simple _ -> true
 
+unfold
 let raw_data_item_ints_optimal : raw_data_item -> Tot bool =
   holds_on_raw_data_item raw_data_item_ints_optimal_elem
 
@@ -108,7 +109,7 @@ let rec raw_data_item_uint64_optimize_size (x: raw_data_item) : Lemma
 = raw_data_item_size_eq x;
   raw_data_item_size_eq (raw_data_item_uint64_optimize x);
   raw_data_item_fmap_eq raw_data_item_uint64_optimize_elem x;
-  assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
+//  assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
   match x with
   | Map len v ->
     assert (raw_data_item_uint64_optimize (Map len v) == raw_data_item_fmap raw_data_item_uint64_optimize_elem (Map len v));
@@ -257,3 +258,155 @@ let rec raw_data_item_uint64_optimize_valid (x: raw_data_item) (sq: squash (vali
     assert (equiv basic_data_model x x');
     ()
   | _ -> ()
+
+(* Sorting map keys *)
+
+noextract
+let raw_data_item_sorted_elem (order: (raw_data_item -> raw_data_item -> bool)) (x: raw_data_item) : Tot bool
+= match x with
+  | Map _ l ->
+      FStar.List.Tot.sorted (map_entry_order order _) l
+  | _ -> true
+
+noextract
+unfold
+let raw_data_item_sorted (order: (raw_data_item -> raw_data_item -> bool)) : Tot (raw_data_item -> bool)
+= holds_on_raw_data_item (raw_data_item_sorted_elem order)
+
+let list_sorted_map_assoc_ext
+  (#t: eqtype)
+  (#t': Type)
+  (order: t -> t -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (l1 l2: list (t & t'))
+  (sq1: squash (List.Tot.sorted (map_entry_order order _) l1 == true))
+  (sq2: squash (List.Tot.sorted (map_entry_order order _) l2 == true))
+  (prf: (x: t) -> Lemma
+    (List.Tot.assoc x l1 == List.Tot.assoc x l2)
+  )
+: Lemma
+  (ensures (
+    l1 == l2
+  ))
+= Classical.forall_intro prf;
+  assert_norm (map_entry_order order t' == CBOR.Spec.Raw.Valid.map_entry_order order t');
+  CBOR.Spec.Raw.Map.list_sorted_map_assoc_ext order l1 l2
+
+let rec raw_equiv_sorted_optimal
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires (
+    raw_equiv2 x1 x2 /\
+    raw_data_item_sorted order x1 /\
+    raw_data_item_sorted order x2 /\
+    raw_data_item_ints_optimal x1 /\
+    raw_data_item_ints_optimal x2
+  ))
+  (ensures (x1 == x2))
+  (decreases (raw_data_item_size x1 + raw_data_item_size x2))
+= equiv_eq basic_data_model x1 x2;
+  holds_on_raw_data_item_eq (raw_data_item_sorted_elem order) x1;
+  holds_on_raw_data_item_eq (raw_data_item_sorted_elem order) x2;
+  holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x1;
+  holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x2;
+  raw_data_item_size_eq x1;
+  raw_data_item_size_eq x2;
+  if x1 = x2 then () else
+  match x1, x2 with
+  | Simple _, Simple _ -> ()
+  | Int64 _ v1, Int64 _ v2 ->
+    raw_uint64_optimal_unique v1 v2
+  | String _ v1 _, String _ v2 _ ->
+    raw_uint64_optimal_unique v1 v2
+  | Tagged tag1 v1, Tagged tag2 v2 ->
+    raw_uint64_optimal_unique tag1 tag2;
+    raw_equiv_sorted_optimal order v1 v2;
+    ()
+  | Array len1 l1, Array len2 l2 ->
+    list_for_all2_length (equiv basic_data_model) l1 l2;
+    raw_uint64_optimal_unique len1 len2;
+//    assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
+    list_for_all2_prod (raw_data_item_sorted order) (raw_data_item_sorted order) l1 l2;
+    list_for_all2_prod raw_data_item_ints_optimal raw_data_item_ints_optimal l1 l2;
+    list_for_all2_andp_intro
+      (prodp (raw_data_item_sorted order) (raw_data_item_sorted order))
+      (prodp raw_data_item_ints_optimal raw_data_item_ints_optimal)
+      l1 l2;
+    list_for_all2_andp_intro
+      (andp2
+        (prodp (raw_data_item_sorted order) (raw_data_item_sorted order))
+        (prodp raw_data_item_ints_optimal raw_data_item_ints_optimal))
+      raw_equiv2
+      l1 l2;
+    list_for_all2_implies
+      (andp2
+        (andp2
+          (prodp (raw_data_item_sorted order) (raw_data_item_sorted order))
+          (prodp raw_data_item_ints_optimal raw_data_item_ints_optimal))
+        raw_equiv2
+      )
+      ( = )
+      l1 l2
+      (fun x1' x2' ->
+        list_sum_memP raw_data_item_size l1 x1';
+        list_sum_memP raw_data_item_size l2 x2';
+        raw_equiv_sorted_optimal order x1' x2'
+      );
+    list_for_all2_equals l1 l2
+  | Map len1 l1, Map len2 l2 ->
+    let list_assoc_eq_setoid_assoc
+      (l1' l2' : list (raw_data_item & raw_data_item))
+      (k: raw_data_item)
+    : Lemma
+      (requires (
+        List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) l1' /\
+        List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) l2' /\
+        List.Tot.for_all (holds_on_pair (raw_data_item_ints_optimal)) l1' /\
+        List.Tot.for_all (holds_on_pair (raw_data_item_ints_optimal)) l2' /\
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) l1' + list_sum (pair_sum raw_data_item_size raw_data_item_size) l2' < raw_data_item_size x1 + raw_data_item_size x2 /\
+        Some? (List.Tot.assoc k l1') /\
+        List.Tot.for_all (setoid_assoc_eq (raw_equiv2) (raw_equiv2) l2') l1'
+      ))
+      (ensures (
+        List.Tot.assoc k l1' == List.Tot.assoc k l2'
+      ))
+    = let Some v = List.Tot.assoc k l1' in
+      list_assoc_mem_intro k v l1';
+      list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) l1' (k, v);
+      List.Tot.for_all_mem (setoid_assoc_eq raw_equiv2 raw_equiv2 l2') l1';
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_sorted order)) l1';
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_ints_optimal)) l1';
+      list_setoid_assoc_eqtype k l2';
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_sorted order)) l2';
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_ints_optimal)) l2';
+      list_setoid_assoc_equiv_gen raw_equiv2 ( = ) l2' k k (fun kv' ->
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) l2' kv';
+        let k' = fst kv' in
+        equiv_refl_forall basic_data_model;
+        if raw_equiv2 k k'
+        then raw_equiv_sorted_optimal order k (fst kv')
+        else ()
+      );
+      let Some v' = List.Tot.assoc k l2' in
+      list_assoc_mem_intro k v' l2';
+      list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) l2' (k, v');
+      raw_equiv_sorted_optimal order v v';
+      assert (List.Tot.assoc k l1' == List.Tot.assoc k l2')
+    in
+    let prf_assoc (k: raw_data_item) : Lemma
+      (List.Tot.assoc k l1 == List.Tot.assoc k l2)
+    = match List.Tot.assoc k l1 with
+      | Some _ -> list_assoc_eq_setoid_assoc l1 l2 k
+      | None ->
+        match List.Tot.assoc k l2 with
+        | Some _ -> list_assoc_eq_setoid_assoc l2 l1 k
+        | None -> ()
+    in
+    list_sorted_map_assoc_ext order l1 l2 () () prf_assoc;
+    raw_uint64_optimal_unique len1 len2
