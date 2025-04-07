@@ -548,3 +548,74 @@ let raw_data_item_sorted_optimal_valid
       | _ -> ()
     )
     x1
+
+(* Equivalence and map access *)
+
+let list_setoid_assoc_sorted_optimal
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (x: raw_data_item)
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    raw_data_item_ints_optimal x == true /\
+    raw_data_item_sorted order x == true /\
+    List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) l == true /\
+    List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) l == true
+  ))
+  (ensures (
+    list_setoid_assoc raw_equiv2 x l == List.Tot.assoc x l
+  ))
+= list_setoid_assoc_ext
+    raw_equiv2
+    ( = )
+    x
+    l
+    (fun y ->
+      List.Tot.for_all_mem (holds_on_pair raw_data_item_ints_optimal) l;
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_sorted order)) l;
+      raw_equiv_sorted_optimal_eq order x (fst y)
+    );
+  list_setoid_assoc_eqtype x l
+
+let list_setoid_assoc_valid_equiv
+  (x1: raw_data_item)
+  (l1: list (raw_data_item & raw_data_item))
+  (x2: raw_data_item)
+  (l2: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    valid_map basic_data_model l1 == true /\
+    valid_map basic_data_model l2 == true /\
+    List.Tot.for_all (setoid_assoc_eq (raw_equiv2) (raw_equiv2) l1) l2 /\
+    List.Tot.for_all (setoid_assoc_eq (raw_equiv2) (raw_equiv2) l2) l1 /\
+    raw_equiv2 x1 x2 == true
+  ))
+  (ensures (
+    match list_setoid_assoc raw_equiv2 x1 l1, list_setoid_assoc raw_equiv2 x2 l2 with
+    | None, None -> True
+    | Some v1, Some v2 -> raw_equiv2 v1 v2
+    | _ -> False
+  ))
+= equiv_refl_forall basic_data_model;
+  equiv_sym_forall basic_data_model;
+  equiv_trans_forall basic_data_model;
+  match list_setoid_assoc raw_equiv2 x1 l1 with
+  | Some v1 ->
+    let Some k1 = list_setoid_assoc_mem raw_equiv2 x1 l1 in
+    List.Tot.for_all_mem (setoid_assoc_eq (raw_equiv2) (raw_equiv2) l2) l1;
+    list_setoid_assoc_equiv raw_equiv2 l2 x1 k1;
+    list_setoid_assoc_equiv raw_equiv2 l2 x1 x2;
+    ()
+  | _ ->
+    begin match list_setoid_assoc raw_equiv2 x2 l2 with
+    | None -> ()
+    | Some v2 ->
+      let Some k2 = list_setoid_assoc_mem raw_equiv2 x2 l2 in
+      List.Tot.for_all_mem (setoid_assoc_eq (raw_equiv2) (raw_equiv2) l1) l2;
+      list_setoid_assoc_equiv raw_equiv2 l1 x2 k2;
+      list_setoid_assoc_equiv raw_equiv2 l1 x1 x2;      
+      ()
+    end
