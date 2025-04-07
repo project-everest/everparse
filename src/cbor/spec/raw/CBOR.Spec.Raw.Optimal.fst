@@ -410,3 +410,141 @@ let rec raw_equiv_sorted_optimal
     in
     list_sorted_map_assoc_ext order l1 l2 () () prf_assoc;
     raw_uint64_optimal_unique len1 len2
+
+let raw_equiv_sorted_optimal_eq
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires (
+    raw_data_item_sorted order x1 /\
+    raw_data_item_sorted order x2 /\
+    raw_data_item_ints_optimal x1 /\
+    raw_data_item_ints_optimal x2
+  ))
+  (ensures (raw_equiv2 x1 x2 == (x1 = x2)))
+= if raw_equiv2 x1 x2
+  then raw_equiv_sorted_optimal order x1 x2
+  else if x1 = x2
+  then equiv_refl basic_data_model x1
+  else ()
+
+let valid_raw_data_item_map_no_repeats_sorted_optimal'
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (v: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) v == true /\
+    List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) v == true /\
+    List.Tot.no_repeats_p (List.Tot.map fst v)
+  ))
+  (ensures (valid_map basic_data_model v == true))
+= let v' = (List.Tot.map fst v) in
+  list_no_setoid_repeats_no_repeats v';
+  assert (list_no_setoid_repeats ( = ) v');
+  list_no_setoid_repeats_implies
+    ( = )
+    (raw_equiv2)
+    v'
+    (fun x x' ->
+      let y = list_memP_map_elim fst x v in
+      let y' = list_memP_map_elim fst x' v in
+      List.Tot.for_all_mem (holds_on_pair raw_data_item_ints_optimal) v;
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_sorted order)) v;
+      raw_equiv_sorted_optimal_eq order x x'
+    )
+
+let valid_raw_data_item_map_no_repeats
+  (v: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (valid_map basic_data_model v == true))
+  (ensures (List.Tot.no_repeats_p (List.Tot.map fst v)))
+= list_no_setoid_repeats_implies
+    raw_equiv2
+    ( = )
+    (List.Tot.map fst v)
+    (fun x x' -> equiv_refl basic_data_model x);
+  list_no_setoid_repeats_no_repeats (List.Tot.map fst v)
+
+let valid_raw_data_item_map_no_repeats_sorted_optimal
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (v: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) v == true /\
+    List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) v == true
+  ))
+  (ensures (valid_map basic_data_model v == true <==> List.Tot.no_repeats_p (List.Tot.map fst v)))
+= Classical.move_requires valid_raw_data_item_map_no_repeats v;
+  Classical.move_requires (valid_raw_data_item_map_no_repeats_sorted_optimal' order) v
+
+let rec raw_data_item_sorted_optimal_valid_aux
+  (order: (raw_data_item -> raw_data_item -> bool) {
+    order_irrefl order /\
+    order_trans order
+  })
+  (l: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) l /\
+    List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) l /\
+    FStar.List.Tot.sorted (map_entry_order order _) l
+  ))
+  (ensures (
+    list_no_setoid_repeats (map_entry_order raw_equiv2 _) l
+  ))
+  (decreases l)
+= match l with
+  | [] -> ()
+  | a :: q ->
+    raw_data_item_sorted_optimal_valid_aux order q;
+    if List.Tot.existsb (map_entry_order raw_equiv2 _ a) q
+    then begin
+      let a' = list_existsb_elim (map_entry_order raw_equiv2 _ a) q in
+      list_sorted_memP (map_entry_order order _) a q a';
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_sorted order)) q;
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_ints_optimal)) q;
+      raw_equiv_sorted_optimal order (fst a) (fst a')
+    end
+    else ()
+
+let raw_data_item_sorted_optimal_valid
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (x1: raw_data_item)
+: Lemma
+  (requires (
+    raw_data_item_sorted order x1 /\
+    raw_data_item_ints_optimal x1
+  ))
+  (ensures (valid basic_data_model x1))
+= valid_eq' basic_data_model x1;
+  holds_on_raw_data_item_andp (raw_data_item_sorted_elem order) raw_data_item_ints_optimal_elem x1;
+  holds_on_raw_data_item_implies
+    (andp (raw_data_item_sorted_elem order) raw_data_item_ints_optimal_elem)
+    (valid_item basic_data_model)
+    (fun x ->
+      match x with
+      | Map len v ->
+        holds_on_raw_data_item_andp (raw_data_item_sorted_elem order) raw_data_item_ints_optimal_elem x;
+          holds_on_raw_data_item_eq (raw_data_item_sorted_elem order) (Map len v);
+          holds_on_raw_data_item_eq (raw_data_item_ints_optimal_elem) (Map len v);
+          assert (List.Tot.for_all (holds_on_pair (holds_on_raw_data_item raw_data_item_ints_optimal_elem)) v);
+          assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
+          assert (List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) v);
+          raw_data_item_sorted_optimal_valid_aux order v;
+          valid_map_eq basic_data_model v;
+          assert (valid_map basic_data_model v == true)
+      | _ -> ()
+    )
+    x1
