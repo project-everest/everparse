@@ -98,6 +98,7 @@ let raw_data_item_uint64_optimize_elem_size (x: raw_data_item) : Lemma
 = raw_data_item_size_eq x;
   raw_data_item_size_eq (raw_data_item_uint64_optimize_elem x)
 
+unfold
 let raw_data_item_uint64_optimize : raw_data_item -> raw_data_item =
   raw_data_item_fmap raw_data_item_uint64_optimize_elem
 
@@ -131,39 +132,128 @@ let raw_data_item_uint64_optimize_correct (x: raw_data_item) : Lemma
   (ensures (raw_data_item_ints_optimal (raw_data_item_uint64_optimize x) == true))
 = holds_on_raw_data_item_fmap raw_data_item_uint64_optimize_elem raw_data_item_ints_optimal_elem (fun _ -> ()) x
 
-(*
-let raw_data_item_uint64_optimize_valid (x: raw_data_item) : Lemma
-    (requires (valid basic_data_model x == true))
-    (ensures (valid basic_data_model (raw_data_item_uint64_optimize x) == true))
-    (decreases x)
-= valid_eq' basic_data_model x;
-  valid_eq' basic_data_model (raw_data_item_uint64_optimize x);
-  holds_on_raw_data_item_fmap_inv
-    raw_data_item_uint64_optimize_elem
-    (valid_item basic_data_model)
-    (fun x ->
-      match x with
-      | Map len v ->
-        assert_norm (raw_data_item_uint64_optimize == raw_data_item_fmap raw_data_item_uint64_optimize_elem);
-        let v' = List.Tot.map (apply_on_pair raw_data_item_uint64_optimize) v in
-        assert (pre_holds_on_raw_data_item (valid_item basic_data_model) (pre_raw_data_item_fmap raw_data_item_uint64_optimize_elem x) == true);
-        assert (List.Tot.for_all (holds_on_pair (holds_on_raw_data_item (valid_item basic_data_model))) v');
-        assert (pre_raw_data_item_fmap raw_data_item_uint64_optimize_elem x == Map len v' );
-        valid_raw_data_item_map_fmap_equiv basic_data_model raw_data_item_uint64_optimize_elem v (fun x -> raw_data_item_uint64_optimize_elem_equiv x);
-        assert (valid_item basic_data_model (pre_raw_data_item_fmap raw_data_item_uint64_optimize_elem x));
-        assume False
-      | _ -> ()
-    )
-    (fun x ->
-       valid_eq' basic_data_model x;
-       valid_eq' basic_data_model (raw_data_item_uint64_optimize x);
-       raw_data_item_uint64_optimize_elem_valid x
-    )
-    x
-
-
-(*
-let raw_data_item_uint64_optimize_equiv (x: raw_data_item) : Lemma
-  (requires (valid basic_data_model x == true))
-  (ensures (raw_equiv2 x (raw_data_item_uint64_optimize x) == true))
-= raw_equiv2_fmap raw_data_item_uint64_optimize_elem raw_data_item_uint64_optimize_elem_equiv x
+let rec raw_data_item_uint64_optimize_valid (x: raw_data_item) (sq: squash (valid basic_data_model x)) : Lemma
+    (ensures (valid basic_data_model (raw_data_item_uint64_optimize x) /\
+      equiv basic_data_model x (raw_data_item_uint64_optimize x)
+    ))
+    (decreases (raw_data_item_size x))
+= let x' = (raw_data_item_uint64_optimize x) in
+  valid_eq basic_data_model x;
+  valid_eq basic_data_model x';
+  equiv_eq basic_data_model x x';
+  raw_data_item_fmap_eq raw_data_item_uint64_optimize_elem x;
+  raw_data_item_size_eq x;
+  raw_data_item_size_eq x';
+  equiv_refl_forall basic_data_model;
+  equiv_sym_forall basic_data_model;
+  equiv_trans_forall basic_data_model;
+  match x with
+  | Tagged _ v ->
+    raw_data_item_uint64_optimize_valid v ()
+  | Array _ v ->
+    let v' = (List.Tot.map raw_data_item_uint64_optimize v) in
+    List.Tot.for_all_mem (valid basic_data_model) v;
+    list_for_all_intro
+      (valid basic_data_model)
+      v'
+      (fun x ->
+        let x' : raw_data_item = x in
+        let x0 = list_memP_map_elim raw_data_item_uint64_optimize x' v in
+        list_sum_memP raw_data_item_size v x0;
+        raw_data_item_uint64_optimize_valid x0 ();
+        ()
+      );
+    list_for_all2_map
+      raw_data_item_uint64_optimize
+      v
+      (equiv basic_data_model)
+      (fun x ->
+        list_sum_memP raw_data_item_size v x;
+        raw_data_item_uint64_optimize_valid x ();
+        ()
+      );
+    ()
+  | Map _ v ->
+    let v' = List.Tot.map (apply_on_pair raw_data_item_uint64_optimize) v in
+    List.Tot.for_all_mem (valid basic_data_model) (List.Tot.map fst v);
+    List.Tot.for_all_mem (valid basic_data_model) (List.Tot.map snd v);
+    list_map_fst_apply_on_pair raw_data_item_uint64_optimize v;
+    list_map_snd_apply_on_pair raw_data_item_uint64_optimize v;
+    list_for_all_intro
+      (valid basic_data_model)
+      (List.Tot.map fst v')
+      (fun z ->
+        let z_ : raw_data_item = z in
+        assert (List.Tot.memP z_ (List.Tot.map fst v'));
+        assert (List.Tot.memP z_ (List.Tot.map raw_data_item_uint64_optimize (List.Tot.map fst v)));
+        let z0 = list_memP_map_elim raw_data_item_uint64_optimize z_ (List.Tot.map fst v) in
+        let z1 = list_memP_map_elim fst z0 v in
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v z1;
+        assert (z0 == fst z1);
+        assert (valid basic_data_model z0);
+        assert (raw_data_item_size z0 < raw_data_item_size x);
+        raw_data_item_uint64_optimize_valid z0 ();
+        ()
+      );
+    list_for_all_intro
+      (valid basic_data_model)
+      (List.Tot.map snd v')
+      (fun z ->
+        let z_ : raw_data_item = z in
+        assert (List.Tot.memP z_ (List.Tot.map snd v'));
+        assert (List.Tot.memP z_ (List.Tot.map raw_data_item_uint64_optimize (List.Tot.map snd v)));
+        let z0 = list_memP_map_elim raw_data_item_uint64_optimize z_ (List.Tot.map snd v) in
+        let z1 = list_memP_map_elim snd z0 v in
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v z1;
+        assert (z0 == snd z1);
+        assert (valid basic_data_model z0);
+        assert (raw_data_item_size z0 < raw_data_item_size x);
+        raw_data_item_uint64_optimize_valid z0 ();
+        ()
+      );
+    list_no_setoid_repeats_map
+      raw_data_item_uint64_optimize
+      (List.Tot.map fst v)
+      (equiv basic_data_model)
+      (equiv basic_data_model)
+      (fun z z' ->
+        let z_ : raw_data_item = z in
+        let z'_ : raw_data_item = z' in
+        let z0 = list_memP_map_elim fst z_ v in
+        let z0' = list_memP_map_elim fst z'_ v in
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v z0;
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v z0';
+        raw_data_item_uint64_optimize_valid z_ ();
+        raw_data_item_uint64_optimize_valid z'_ ();
+        ()
+      );
+    assert (valid basic_data_model x');
+    list_for_all2_map raw_data_item_uint64_optimize (List.Tot.map fst v) (equiv basic_data_model) (fun z ->
+      let z_ : raw_data_item = z in
+      let z0 = list_memP_map_elim fst z_ v in
+      list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v z0;
+      raw_data_item_uint64_optimize_valid z_ ();
+      ()
+    );
+    list_for_all2_map raw_data_item_uint64_optimize (List.Tot.map snd v) (equiv basic_data_model) (fun z ->
+      let z_ : raw_data_item = z in
+      let z0 = list_memP_map_elim snd z_ v in
+      list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v z0;
+      raw_data_item_uint64_optimize_valid z_ ();
+      ()
+    );
+    list_setoid_assoc_eq_refl
+      (equiv basic_data_model)
+      (equiv basic_data_model)
+      v;
+    list_setoid_assoc_eq_equiv1 
+      (equiv basic_data_model)
+      (equiv basic_data_model)
+      v v' v;
+    list_setoid_assoc_eq_equiv2
+      (equiv basic_data_model)
+      (equiv basic_data_model)
+      v v v';
+    assert (equiv basic_data_model x x');
+    ()
+  | _ -> ()
