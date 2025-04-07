@@ -56,7 +56,7 @@ COSE_Format_evercddl_header_map_pretty empty_sig_headers() {
         ._x1 = {
             .tag = COSE_Format_Inl,
             .case_Inl = {
-                .elt = (K___COSE_Format_aux_env27_type_2_pretty_COSE_Format_aux_env27_type_4_pretty[]) {},
+                .elt = (K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty[]) {},
                 .len = 0,
             },
         },
