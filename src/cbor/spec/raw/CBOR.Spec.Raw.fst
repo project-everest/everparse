@@ -20,6 +20,7 @@ let mk_cbor_equiv'
 =
   R.raw_data_item_uint64_optimize_equiv r ();
   let r' = R.raw_data_item_uint64_optimize r in
+  R.raw_data_item_uint64_optimize_correct r;
   R.cbor_raw_sort_equiv r';
   equiv_trans basic_data_model r r' (mk_cbor r)
 
@@ -37,7 +38,8 @@ let mk_cbor_equiv
 
 let mk_cbor_eq
   r
-= valid_eq' r;
+= valid_eq basic_data_model r;
+  valid_eq' basic_data_model r;
   R.holds_on_raw_data_item_eq R.valid_raw_data_item_elem r;
   mk_cbor_equiv' r;
   let r' = mk_cbor r in
@@ -49,12 +51,18 @@ let mk_cbor_eq
   R.holds_on_raw_data_item_eq (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order) r';
   R.raw_data_item_sorted_optimal_valid R.deterministically_encoded_cbor_map_key_order r';
   R.holds_on_raw_data_item_eq R.valid_raw_data_item_elem r';
+  R.raw_equiv_eq_valid r r';
+  R.raw_data_item_uint64_optimize_map_length r;
+  R.raw_data_item_uint64_optimize_valid r ();
+  R.raw_data_item_uint64_optimize_correct r;
+  R.cbor_raw_sort_correct (R.raw_data_item_uint64_optimize r);
   match r, r' with
-  | R.Tagged _ v, R.Tagged _ v' ->
+  | R.Tagged tag v, R.Tagged tag' v' ->
     mk_cbor_equiv' v;
     R.equiv_sym basic_data_model (mk_cbor v) v;
     R.equiv_trans basic_data_model (mk_cbor v) v v';
-    R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor v) v'
+    R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor v) v';
+    ()
   | R.Array len v, R.Array len' v' ->
     List.Tot.for_all_mem R.valid_raw_data_item v;
     List.Tot.for_all_mem R.raw_data_item_ints_optimal v';
@@ -68,7 +76,8 @@ let mk_cbor_eq
     U.list_for_all2_equals
       (List.Tot.map mk_cbor v)
       (List.Tot.map cast_to_cbor v')
-  | R.Map _ v, R.Map _ v' ->
+  | R.Map len v, R.Map len' v' ->
+    valid_eq basic_data_model r';
     let prf
       (x: R.raw_data_item)
     : Lemma
@@ -84,6 +93,8 @@ let mk_cbor_eq
           list_assoc_cbor v' (mk_cbor x);
           let Some x_ = U.list_setoid_assoc_mem R.raw_equiv x v in
           List.Tot.for_all_mem (U.holds_on_pair R.valid_raw_data_item) v;
+          R.raw_data_item_sorted_optimal_valid R.deterministically_encoded_cbor_map_key_order w';
+          equiv_eq basic_data_model w w';
           mk_cbor_equiv' w;
           R.raw_equiv_sym w (mk_cbor w);
           R.raw_equiv_trans (mk_cbor w) w w';
@@ -92,6 +103,9 @@ let mk_cbor_eq
       end
     in
     cbor_map_length_eq v';
+    assert (len.value == len'.value);
+    assert (List.Tot.length v == List.Tot.length v');
+    assert (mk_cbor_match_map v v');
     ()
   | _ -> ()
 

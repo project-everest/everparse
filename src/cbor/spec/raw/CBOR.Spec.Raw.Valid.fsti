@@ -211,3 +211,52 @@ let valid_raw_data_item_map_fmap_equiv
         );
   valid_map_eq data_model (List.Tot.map (apply_on_pair f) l)
 
+let raw_equiv'
+  (x1 x2: raw_data_item)
+: Tot bool
+=
+    valid basic_data_model x1 && valid basic_data_model x2 &&
+    begin match x1, x2 with
+    | Array _ v1, Array _ v2 ->
+      list_for_all2 (equiv basic_data_model) v1 v2
+    | Map _ v1, Map _ v2 ->
+      List.Tot.for_all (setoid_assoc_eq (equiv basic_data_model) (equiv basic_data_model) v2) v1 &&
+      List.Tot.for_all (setoid_assoc_eq (equiv basic_data_model) (equiv basic_data_model) v1) v2
+    | Tagged tag1 v1, Tagged tag2 v2 ->
+      tag1.value = tag2.value &&
+      equiv basic_data_model v1 v2
+    | Int64 ty1 v1, Int64 ty2 v2 ->
+      ty1 = ty2 && v1.value = v2.value
+    | String ty1 _ v1, String ty2 _ v2 ->
+      ty1 = ty2 && v1 = v2
+    | Simple v1, Simple v2 -> v1 = v2
+    | _ -> false
+    end
+
+let raw_equiv'_refl_valid
+  (x: raw_data_item)
+: Lemma
+  (requires (valid basic_data_model x))
+  (ensures (raw_equiv' x x))
+= valid_eq basic_data_model x;
+  equiv_refl_forall basic_data_model;
+  equiv_sym_forall basic_data_model;
+  equiv_trans_forall basic_data_model;
+  match x with
+  | Array len v ->
+    List.Tot.for_all_mem (valid basic_data_model) v;
+    list_for_all2_refl raw_equiv v (fun x -> ())
+  | Map len v -> list_setoid_assoc_eq_refl raw_equiv raw_equiv v
+  | _ -> ()
+
+let raw_equiv_eq_valid
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires (valid_raw_data_item x1 /\
+    valid_raw_data_item x2
+  ))
+  (ensures (raw_equiv x1 x2 == raw_equiv' x1 x2))
+= equiv_eq basic_data_model x1 x2;
+  if x1 = x2
+  then raw_equiv'_refl_valid x1
+  else ()

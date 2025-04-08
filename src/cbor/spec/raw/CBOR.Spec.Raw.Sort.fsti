@@ -63,7 +63,12 @@ val cbor_raw_sort_correct
     raw_data_item_ints_optimal x' == true /\
     raw_data_item_sorted deterministically_encoded_cbor_map_key_order x' == true /\
     valid_raw_data_item x'  == true /\
-    raw_equiv x x'
+    raw_equiv x x' /\
+    begin match x, x' with
+    | Map len _, Map len' _ -> len.value == len'.value
+    | Map _ _, _ | _, Map _ _ -> False
+    | _ -> True
+    end
   ))
 
 let cbor_raw_sort_equiv = cbor_raw_sort_correct

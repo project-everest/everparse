@@ -36,24 +36,21 @@ let cbor_raw_sort_elem_equiv
   (x: raw_data_item)
 : Lemma
   (requires (valid basic_data_model x))
-  (ensures (raw_equiv x (cbor_raw_sort_elem x) == true))
-= admit ()
-(*
-  raw_equiv_eq x (cbor_raw_sort_elem x);
-  match x with
-  | Map len v ->
-    list_for_all_intro (list_existsb2 (holds_on_pair2 raw_equiv) (cbor_map_sort_failsafe v)) v (fun x ->
-      raw_equiv_refl (fst x);
-      raw_equiv_refl (snd x);
-      list_existsb_intro (holds_on_pair2 raw_equiv x) (cbor_map_sort_failsafe v) x
-    );
-    list_for_all_intro (list_existsb2 (holds_on_pair2 raw_equiv) v) (cbor_map_sort_failsafe v) (fun x ->
-      raw_equiv_refl (fst x);
-      raw_equiv_refl (snd x);
-      list_existsb_intro (holds_on_pair2 raw_equiv x) v x
-    )
-  | _ -> raw_equiv_refl x
-*)
+  (ensures (let x' = cbor_raw_sort_elem x in
+    valid basic_data_model x' /\
+    raw_equiv x x' == true
+  ))
+= let x' = cbor_raw_sort_elem x in
+  valid_eq basic_data_model x;
+  valid_eq basic_data_model x';
+  equiv_eq basic_data_model x x';
+  if x = x'
+  then ()
+  else begin
+    match x with
+    | Map len v -> assume False
+    | _ -> raw_equiv_refl x
+  end
 
 let cbor_raw_sort_ints_optimal
   (x: raw_data_item)
@@ -78,7 +75,12 @@ let cbor_raw_sort_correct
     raw_data_item_ints_optimal x' == true /\
     raw_data_item_sorted deterministically_encoded_cbor_map_key_order x' == true /\
     valid_raw_data_item x'  == true /\
-    raw_equiv x x'
+    raw_equiv x x' /\
+    begin match x, x' with
+    | Map len _, Map len' _ -> len.value == len'.value
+    | Map _ _, _ | _, Map _ _ -> False
+    | _ -> True
+    end
   ))
 = admit ()
 (*

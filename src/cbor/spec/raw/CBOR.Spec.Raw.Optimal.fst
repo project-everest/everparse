@@ -103,6 +103,14 @@ unfold
 let raw_data_item_uint64_optimize : raw_data_item -> raw_data_item =
   raw_data_item_fmap raw_data_item_uint64_optimize_elem
 
+let raw_data_item_uint64_optimize_map_length (x: raw_data_item) : Lemma
+  (match x, raw_data_item_uint64_optimize x with
+  | Map len _, Map len' _ -> len.value == len'.value
+  | Map _ _, _ | _, Map _ _ -> False
+  | _ -> True
+  )
+= raw_data_item_fmap_eq raw_data_item_uint64_optimize_elem x
+
 let rec raw_data_item_uint64_optimize_size (x: raw_data_item) : Lemma
   (ensures (raw_data_item_size (raw_data_item_uint64_optimize x) == raw_data_item_size x))
   (decreases x)
