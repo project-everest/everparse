@@ -1,0 +1,110 @@
+# Note: no postlude added to these tests.
+
+.NOTINTERMEDIATE:
+.DELETE_ON_ERROR:
+
+all: all-c
+all: all-run
+
+ODIR := _output
+
+ALL_CDDLS = $(wildcard *.cddl)
+ALL_FSTS = $(patsubst %.cddl,$(ODIR)/%.fst,$(ALL_CDDLS))
+ALL_CHECKED = $(patsubst %.cddl,$(ODIR)/%.fst.checked,$(ALL_CDDLS))
+ALL_C_FILES = $(patsubst %.cddl,$(ODIR)/%.c,$(ALL_CDDLS))
+
+RUN += $(patsubst Test_%.c,%,$(wildcard Test_*.c))
+
+.PHONY: all-fst
+all-fst: $(ALL_FSTS)
+
+.PHONY: all-checked
+all-checked: $(ALL_CHECKED)
+
+.PHONY: all-c
+all-c: $(ALL_C_FILES)
+
+EVERPARSE_SRC_PATH = $(realpath ../..)
+
+$(ODIR)/%.fst: %.cddl
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname "$(patsubst %.cddl,%,$<)" --odir $(ODIR)
+
+$(ODIR)/%.o: $(ODIR)/%.c
+	cc -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output $(CFLAGS) -c $< -o $@
+
+EVERPARSE_SRC_PATH = $(realpath ../..)
+EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
+OUTPUT_DIRECTORY := _output
+SRC_PATHS += $(OUTPUT_DIRECTORY)
+INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/tool $(EVERPARSE_PATH)/lib/evercddl/lib $(EVERPARSE_PATH)/lib/evercddl/plugin $(EVERPARSE_SRC_PATH)/cbor/pulse $(EVERPARSE_SRC_PATH)/cddl/pulse $(OUTPUT_DIRECTORY)
+
+ALREADY_CACHED := ,*
+FSTAR_OPTIONS += --load_cmxs evercddl_lib --load_cmxs evercddl_plugin
+FSTAR_OPTIONS += --warn_error -342
+FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
+FSTAR_DEP_OPTIONS := --extract '*,-FStar,-Pulse,-CBOR,-CDDL'
+FSTAR_FILES := $(ALL_FSTS)
+
+CBOR_KRML_MODULES += CBOR.Spec.Constants
+CBOR_KRML_MODULES += CBOR.Pulse.API.Det.Type
+CBOR_KRML_MODULES += CBOR.Pulse.API.Det.C
+
+CBOR_KRML_MODULES += CDDL.Pulse.Misc
+CBOR_KRML_MODULES += CDDL.Spec.Misc
+CBOR_KRML_MODULES += CDDL.Pulse.MapGroup
+CBOR_KRML_MODULES += CDDL.Pulse.Parse.MapGroup
+CBOR_KRML_MODULES += CDDL.Pulse.Serialize.MapGroup
+# CBOR_KRML_MODULES += CDDL.Pulse.ArrayGroup
+CBOR_KRML_MODULES += CDDL.Pulse.Parse.ArrayGroup
+# CBOR_KRML_MODULES += CDDL.Pulse.Serialize.ArrayGroup
+CBOR_KRML_MODULES += CDDL.Pulse.Types
+
+CBOR_KRML_MODULES += Pulse.Lib.Slice
+
+CBOR_KRML_MODULES += FStar.Pervasives
+CBOR_KRML_MODULES += FStar.Pervasives.Native
+
+FSTAR_DEP_OPTIONS += $(addprefix --extract +,$(CBOR_KRML_MODULES))
+
+include $(EVERPARSE_SRC_PATH)/karamel.Makefile
+include $(EVERPARSE_SRC_PATH)/pulse.Makefile
+include $(EVERPARSE_SRC_PATH)/common.Makefile
+
+KRML_OPTS += -warn-error @4@6
+
+KRML=$(KRML_HOME)/krml -fstar $(FSTAR_EXE) $(KRML_OPTS)
+
+CBOR_KRML_FILES = $(patsubst %,%.krml,$(subst .,_,$(CBOR_KRML_MODULES)))
+
+$(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml $(addprefix $(OUTPUT_DIRECTORY)/,$(CBOR_KRML_FILES))
+	$(KRML) -fnoshort-enums \
+	 -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
+	 -bundle '$*=*' \
+	 -add-include '"CBORDetAbstract.h"' \
+	 -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type \
+	 -no-prefix CBOR.Spec.Constants -skip-compilation $^ \
+	 -tmpdir $(OUTPUT_DIRECTORY)
+
+# $(OUTPUT_DIRECTORY)/test.exe: $(OUTPUT_DIRECTORY)/CDDLExtractionTest.o client.c
+# 	$(CC) $(CFLAGS) -Wall -o $@ $^ $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o -I $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
+
+# extract: $(OUTPUT_DIRECTORY)/test.exe
+
+# test: extract
+# 	$(OUTPUT_DIRECTORY)/test.exe
+
+# .PHONY: extract test
+
+$(ODIR)/Test_%.exe: $(ODIR)/Test_%.o $(ODIR)/%.o
+	cc -O3 -o $@ $^ $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o
+
+$(ODIR)/Test_%.o: Test_%.c $(ODIR)/%.c
+	cc -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output $(CFLAGS) -c $< -o $@
+
+%.run: $(ODIR)/Test_%.exe
+	./$<
+
+# all: run
+
+.PHONY: all-run
+all-run: $(patsubst %,%.run,$(RUN))

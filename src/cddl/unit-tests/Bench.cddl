@@ -1,0 +1,8 @@
+map = [
+  42 : uint;
+  * uint;
+]
+
+uint = #0
+; bstr = #2
+any = #
