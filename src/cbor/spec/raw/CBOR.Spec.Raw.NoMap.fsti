@@ -1,5 +1,5 @@
 module CBOR.Spec.Raw.NoMap
-include CBOR.Spec.Raw.Valid2
+include CBOR.Spec.Raw.Valid
 open CBOR.Spec.Util
 open FStar.Mul
 

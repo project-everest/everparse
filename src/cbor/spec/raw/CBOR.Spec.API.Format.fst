@@ -1,5 +1,5 @@
 module CBOR.Spec.API.Format
-module RV = CBOR.Spec.Raw.Valid
+module RV = CBOR.Spec.Raw.Optimal
 module RF = CBOR.Spec.Raw.Format
 module RS = CBOR.Spec.Raw.Sort
 module R = CBOR.Spec.Raw
@@ -37,16 +37,16 @@ let cbor_det_serialize_parse x =
   RF.serialize_parse_cbor (R.mk_det_raw_cbor x)
 
 let cbor_det_serialize_tag tag =
-  RF.serialize_cbor_tag (RF.mk_raw_uint64 tag)
+  RF.serialize_cbor_tag (RV.mk_raw_uint64 tag)
 
 let cbor_det_serialize_tag_length tag =
-  RF.serialize_cbor_tag_length (RF.mk_raw_uint64 tag)
+  RF.serialize_cbor_tag_length (RV.mk_raw_uint64 tag)
 
 let cbor_det_serialize_tag_correct tag payload =
-  R.mk_cbor_eq (R.Tagged (RF.mk_raw_uint64 tag) (R.mk_det_raw_cbor payload));
-  R.mk_det_raw_cbor_mk_cbor (R.Tagged (RF.mk_raw_uint64 tag) (R.mk_det_raw_cbor payload));
-  assert (R.mk_det_raw_cbor (pack (CTagged tag payload)) == R.Tagged (RF.mk_raw_uint64 tag) (R.mk_det_raw_cbor payload));
-  RF.serialize_cbor_tag_correct (RF.mk_raw_uint64 tag) (R.mk_det_raw_cbor payload)
+  R.mk_cbor_eq (R.Tagged (RV.mk_raw_uint64 tag) (R.mk_det_raw_cbor payload));
+  R.mk_det_raw_cbor_mk_cbor (R.Tagged (RV.mk_raw_uint64 tag) (R.mk_det_raw_cbor payload));
+  assert (R.mk_det_raw_cbor (pack (CTagged tag payload)) == R.Tagged (RV.mk_raw_uint64 tag) (R.mk_det_raw_cbor payload));
+  RF.serialize_cbor_tag_correct (RV.mk_raw_uint64 tag) (R.mk_det_raw_cbor payload)
 
 let rec list_map_mk_det_raw_cbor_correct
   (l: list cbor)

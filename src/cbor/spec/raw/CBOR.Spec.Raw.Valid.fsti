@@ -1,4 +1,4 @@
-module CBOR.Spec.Raw.Valid2
+module CBOR.Spec.Raw.Valid
 include CBOR.Spec.Raw.Base
 open CBOR.Spec.Util
 
@@ -173,6 +173,12 @@ let rec valid_map_eq
 let basic_data_model (x1 x2: raw_data_item) : Tot bool = false
 
 unfold let raw_equiv2 = equiv basic_data_model
+unfold let raw_equiv = raw_equiv2
+unfold let valid_raw_data_item = valid basic_data_model
+unfold let valid_raw_data_item_elem = valid_item basic_data_model
+unfold let raw_equiv_refl = equiv_refl basic_data_model
+unfold let raw_equiv_sym = equiv_sym basic_data_model
+unfold let raw_equiv_trans = equiv_trans basic_data_model
 
 let valid_raw_data_item_map_fmap_equiv
   (data_model: (raw_data_item -> raw_data_item -> bool) {

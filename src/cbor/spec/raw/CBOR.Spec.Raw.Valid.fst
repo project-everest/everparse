@@ -1,4 +1,4 @@
-module CBOR.Spec.Raw.Valid2
+module CBOR.Spec.Raw.Valid
 
 let raw_data_item_size_eq_pat
   (x: raw_data_item)

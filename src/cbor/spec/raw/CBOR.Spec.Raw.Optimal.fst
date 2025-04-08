@@ -1,5 +1,5 @@
 module CBOR.Spec.Raw.Optimal
-include CBOR.Spec.Raw.Valid2
+include CBOR.Spec.Raw.Valid
 open CBOR.Spec.Util
 open FStar.Mul
 
@@ -259,6 +259,8 @@ let rec raw_data_item_uint64_optimize_valid (x: raw_data_item) (sq: squash (vali
     ()
   | _ -> ()
 
+let raw_data_item_uint64_optimize_equiv = raw_data_item_uint64_optimize_valid
+
 (* Sorting map keys *)
 
 noextract
@@ -291,7 +293,6 @@ let list_sorted_map_assoc_ext
     l1 == l2
   ))
 = Classical.forall_intro prf;
-  assert_norm (map_entry_order order t' == CBOR.Spec.Raw.Valid.map_entry_order order t');
   CBOR.Spec.Raw.Map.list_sorted_map_assoc_ext order l1 l2
 
 let rec raw_equiv_sorted_optimal

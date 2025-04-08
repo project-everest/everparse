@@ -1,13 +1,11 @@
 module CBOR.Spec.Raw
 friend CBOR.Spec.API.Type
-
-module R = CBOR.Spec.Raw.Sort
   
 let mk_cbor r =
   if R.valid_raw_data_item r
   then begin
     R.raw_data_item_uint64_optimize_correct r;
-    R.raw_data_item_uint64_optimize_valid r;
+    R.raw_data_item_uint64_optimize_valid r ();
     let r' = R.raw_data_item_uint64_optimize r in
     R.cbor_raw_sort_correct r';
     R.cbor_raw_sort r'
@@ -19,31 +17,32 @@ let mk_cbor_equiv'
 : Lemma
   (requires (R.valid_raw_data_item r == true))
   (ensures (R.raw_equiv r (mk_cbor r)))
-= R.raw_data_item_uint64_optimize_equiv r;
+=
+  R.raw_data_item_uint64_optimize_equiv r ();
   let r' = R.raw_data_item_uint64_optimize r in
   R.cbor_raw_sort_equiv r';
-  R.raw_equiv_trans r r' (mk_cbor r)
+  equiv_trans basic_data_model r r' (mk_cbor r)
 
 let mk_cbor_equiv
   r1 r2
 = mk_cbor_equiv' r1;
   mk_cbor_equiv' r2;
-  R.raw_equiv_sym (mk_cbor r2) r2;
-  R.raw_equiv_sym (mk_cbor r1) r1;
-  Classical.move_requires (R.raw_equiv_trans r1 (mk_cbor r1)) (mk_cbor r2);
-  Classical.move_requires (R.raw_equiv_trans r1 (mk_cbor r2)) r2;
-  Classical.move_requires (R.raw_equiv_trans (mk_cbor r1) r1) r2;
-  Classical.move_requires (R.raw_equiv_trans (mk_cbor r1) r2) (mk_cbor r2);
+  equiv_sym basic_data_model (mk_cbor r2) r2;
+  equiv_sym basic_data_model (mk_cbor r1) r1;
+  Classical.move_requires (equiv_trans basic_data_model r1 (mk_cbor r1)) (mk_cbor r2);
+  Classical.move_requires (equiv_trans basic_data_model r1 (mk_cbor r2)) r2;
+  Classical.move_requires (equiv_trans basic_data_model (mk_cbor r1) r1) r2;
+  Classical.move_requires (equiv_trans basic_data_model (mk_cbor r1) r2) (mk_cbor r2);
   Classical.move_requires (R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor r1)) (mk_cbor r2)
 
 let mk_cbor_eq
   r
-= assert_norm (R.valid_raw_data_item == R.holds_on_raw_data_item R.valid_raw_data_item_elem);
+= valid_eq' r;
   R.holds_on_raw_data_item_eq R.valid_raw_data_item_elem r;
   mk_cbor_equiv' r;
   let r' = mk_cbor r in
   assert (R.raw_equiv r r' == true);
-  R.raw_equiv_eq r r';
+  R.equiv_eq basic_data_model r r';
   assert_norm (R.raw_data_item_ints_optimal == R.holds_on_raw_data_item R.raw_data_item_ints_optimal_elem);
   assert_norm (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order == R.holds_on_raw_data_item (R.raw_data_item_sorted_elem R.deterministically_encoded_cbor_map_key_order));
   R.holds_on_raw_data_item_eq R.raw_data_item_ints_optimal_elem r';
@@ -53,8 +52,8 @@ let mk_cbor_eq
   match r, r' with
   | R.Tagged _ v, R.Tagged _ v' ->
     mk_cbor_equiv' v;
-    R.raw_equiv_sym (mk_cbor v) v;
-    R.raw_equiv_trans (mk_cbor v) v v';
+    R.equiv_sym basic_data_model (mk_cbor v) v;
+    R.equiv_trans basic_data_model (mk_cbor v) v v';
     R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor v) v'
   | R.Array len v, R.Array len' v' ->
     List.Tot.for_all_mem R.valid_raw_data_item v;
@@ -62,8 +61,8 @@ let mk_cbor_eq
     List.Tot.for_all_mem (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order) v';
     U.list_for_all2_map2 R.raw_equiv v v' mk_cbor cast_to_cbor ( = ) (fun x x' ->
       mk_cbor_equiv' x;
-      R.raw_equiv_sym (mk_cbor x) x;
-      R.raw_equiv_trans (mk_cbor x) x x';
+      R.equiv_sym basic_data_model (mk_cbor x) x;
+      R.equiv_trans basic_data_model (mk_cbor x) x x';
       R.raw_equiv_sorted_optimal R.deterministically_encoded_cbor_map_key_order (mk_cbor x) x'
     );
     U.list_for_all2_equals
