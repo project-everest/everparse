@@ -117,7 +117,7 @@ let rec compute_wf_typ
 
 let produce_validator env wf validator = "
 let _ : unit = _ by (FStar.Tactics.print (\"validator\"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.steps)]
+[@@normalize_for_extraction (nbe :: T.steps); \"KrmlPrivate\"]
 let "^validator^" = Impl.validate_typ' Det.cbor_det_impl "^env^".be_v true _ "^wf
 
 let _pretty : string = "\"_pretty\""
@@ -157,8 +157,7 @@ let gteq"^bundle^"'' () : squash (g"^bundle^"''.b_impl_type == "^typename^"_pret
 let peq"^bundle^" () = Parse.impl_zero_copy_parse_t_eq Det.cbor_det_match "^bundle^"''.b_spec.parser "^bundle^"''.b_rel "^typename^"_pretty (teq"^bundle^"'' ())
 let seq"^bundle^" () = CDDL.Pulse.Serialize.Base.impl_serialize_t_eq "^bundle^"''.b_spec "^bundle^"''.b_rel "^typename^"_pretty (teq"^bundle^"'' ())
 let _ : unit = _ by (FStar.Tactics.print (\"parser\"); FStar.Tactics.exact (`()))
-[@@normalize_for_extraction (nbe :: T.bundle_steps);
-   Comment \"Parser for "^typename^"\"]
+[@@normalize_for_extraction (nbe :: T.bundle_steps); \"KrmlPrivate\"]
 let "^parser^" = T.inline_coerce_eq (peq"^bundle^" ()) "^bundle^"''.b_parser
 [@@normalize_for_extraction (nbe :: T.bundle_steps);
    Comment \"Serializer for "^typename^"\"]
@@ -166,6 +165,7 @@ let "^serializer^" = T.inline_coerce_eq (seq"^bundle^" ()) "^bundle^"''.b_serial
 let _ : unit = _ by (FStar.Tactics.print (\"bundle'\"); FStar.Tactics.exact (`()))
 inline_for_extraction noextract [@@noextract_to "^krml^"; bundle_attr; bundle_get_impl_type_attr]
 let "^bundle^" = bundle_set_parser_and_serializer g"^bundle^"'' "^typename^"_pretty (gteq"^bundle^"'' ()) spect_"^typename^"_pretty (gspecteq"^bundle^"'' ()) rel_"^typename^" (greleq"^bundle^" (); ()) "^parser^" (bundle_parser_eq_intro (peq"^bundle^" ())  "^bundle^"'' (_ by (FStar.Tactics.norm [delta_only [`%bundle_parser_t]]; FStar.Tactics.trefl ())) g"^bundle^"'' (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"'']; primops]; FStar.Tactics.trefl ()))) "^serializer^" (bundle_serializer_eq_intro (seq"^bundle^" ()) "^bundle^"'' (_ by (FStar.Tactics.norm [delta_only [`%bundle_serializer_t]]; FStar.Tactics.trefl ())) g"^bundle^"'' (_ by (FStar.Tactics.norm [delta_only [`%g"^bundle^"'']; primops]; FStar.Tactics.trefl ())))
+[@@Comment \"Parser for "^typename^"\"]
 let validate_and_"^parser^" = validate_and_parse Det.cbor_det_impl.cbor_det_parse "^validator^" () "^bundle^".b_parser () rel_"^typename^" () () ()
 inline_for_extraction noextract [@@noextract_to "^krml^"]
 let "^serializer^"' = CDDL.Pulse.Serialize.Base.impl_serialize_cast_rel "^bundle^".b_serializer rel_"^typename^" () () ()"
