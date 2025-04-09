@@ -194,23 +194,16 @@ ProbeValidateS(
     uint64_t writeOffset = 0ULL;
     BOOLEAN failed = FALSE;
     BOOLEAN ok = ProbeInit((uint64_t)8U, Dest);
-    if (!ok)
+    if (ok)
     {
-      failed = TRUE;
-    }
-    BOOLEAN hasFailed = failed;
-    if (!hasFailed)
-    {
-      uint64_t rd = readOffset;
-      uint64_t wr = writeOffset;
-      if (rd != 0ULL || wr != 0ULL || (uint64_t)8U == 0ULL)
+      if ((uint64_t)8U == 0ULL)
       {
         failed = TRUE;
       }
       else
       {
-        BOOLEAN ok0 = ProbeAndCopy(src64, (uint64_t)8U, Dest);
-        if (ok0)
+        BOOLEAN ok1 = ProbeAndCopy(src64, (uint64_t)8U, Dest);
+        if (ok1)
         {
           readOffset = (uint64_t)8U;
           writeOffset = (uint64_t)8U;
@@ -221,9 +214,13 @@ ProbeValidateS(
         }
       }
     }
-    BOOLEAN hasFailed0 = failed;
+    else
+    {
+      failed = TRUE;
+    }
+    BOOLEAN hasFailed = failed;
     uint64_t b;
-    if (hasFailed0)
+    if (hasFailed)
     {
       b = 0ULL;
     }
@@ -361,23 +358,16 @@ ProbeValidateU(
     uint64_t writeOffset = 0ULL;
     BOOLEAN failed = FALSE;
     BOOLEAN ok = ProbeInit((uint64_t)9U, DestS);
-    if (!ok)
+    if (ok)
     {
-      failed = TRUE;
-    }
-    BOOLEAN hasFailed = failed;
-    if (!hasFailed)
-    {
-      uint64_t rd = readOffset;
-      uint64_t wr = writeOffset;
-      if (rd != 0ULL || wr != 0ULL || (uint64_t)9U == 0ULL)
+      if ((uint64_t)9U == 0ULL)
       {
         failed = TRUE;
       }
       else
       {
-        BOOLEAN ok0 = ProbeAndCopyAlt(src64, (uint64_t)9U, DestS);
-        if (ok0)
+        BOOLEAN ok1 = ProbeAndCopyAlt(src64, (uint64_t)9U, DestS);
+        if (ok1)
         {
           readOffset = (uint64_t)9U;
           writeOffset = (uint64_t)9U;
@@ -388,9 +378,13 @@ ProbeValidateU(
         }
       }
     }
-    BOOLEAN hasFailed0 = failed;
+    else
+    {
+      failed = TRUE;
+    }
+    BOOLEAN hasFailed = failed;
     uint64_t b;
-    if (hasFailed0)
+    if (hasFailed)
     {
       b = 0ULL;
     }
@@ -527,23 +521,16 @@ ProbeValidateV(
     uint64_t writeOffset = 0ULL;
     BOOLEAN failed = FALSE;
     BOOLEAN ok = ProbeInit((uint64_t)9U, DestS);
-    if (!ok)
+    if (ok)
     {
-      failed = TRUE;
-    }
-    BOOLEAN hasFailed = failed;
-    if (!hasFailed)
-    {
-      uint64_t rd = readOffset;
-      uint64_t wr = writeOffset;
-      if (rd != 0ULL || wr != 0ULL || (uint64_t)9U == 0ULL)
+      if ((uint64_t)9U == 0ULL)
       {
         failed = TRUE;
       }
       else
       {
-        BOOLEAN ok0 = ProbeAndCopy(src64, (uint64_t)9U, DestS);
-        if (ok0)
+        BOOLEAN ok1 = ProbeAndCopy(src64, (uint64_t)9U, DestS);
+        if (ok1)
         {
           readOffset = (uint64_t)9U;
           writeOffset = (uint64_t)9U;
@@ -554,9 +541,13 @@ ProbeValidateV(
         }
       }
     }
-    BOOLEAN hasFailed0 = failed;
+    else
+    {
+      failed = TRUE;
+    }
+    BOOLEAN hasFailed = failed;
     uint64_t b;
-    if (hasFailed0)
+    if (hasFailed)
     {
       b = 0ULL;
     }
@@ -645,23 +636,16 @@ ProbeValidateV(
     uint64_t writeOffset = 0ULL;
     BOOLEAN failed = FALSE;
     BOOLEAN ok = ProbeInit((uint64_t)8U, DestT);
-    if (!ok)
+    if (ok)
     {
-      failed = TRUE;
-    }
-    BOOLEAN hasFailed = failed;
-    if (!hasFailed)
-    {
-      uint64_t rd = readOffset;
-      uint64_t wr = writeOffset;
-      if (rd != 0ULL || wr != 0ULL || (uint64_t)8U == 0ULL)
+      if ((uint64_t)8U == 0ULL)
       {
         failed = TRUE;
       }
       else
       {
-        BOOLEAN ok0 = ProbeAndCopyAlt(src64, (uint64_t)8U, DestT);
-        if (ok0)
+        BOOLEAN ok1 = ProbeAndCopyAlt(src64, (uint64_t)8U, DestT);
+        if (ok1)
         {
           readOffset = (uint64_t)8U;
           writeOffset = (uint64_t)8U;
@@ -672,9 +656,13 @@ ProbeValidateV(
         }
       }
     }
-    BOOLEAN hasFailed0 = failed;
+    else
+    {
+      failed = TRUE;
+    }
+    BOOLEAN hasFailed = failed;
     uint64_t b;
-    if (hasFailed0)
+    if (hasFailed)
     {
       b = 0ULL;
     }
@@ -763,23 +751,16 @@ ProbeValidateV(
     uint64_t writeOffset = 0ULL;
     BOOLEAN failed = FALSE;
     BOOLEAN ok = ProbeInit((uint64_t)8U, DestT);
-    if (!ok)
+    if (ok)
     {
-      failed = TRUE;
-    }
-    BOOLEAN hasFailed = failed;
-    if (!hasFailed)
-    {
-      uint64_t rd = readOffset;
-      uint64_t wr = writeOffset;
-      if (rd != 0ULL || wr != 0ULL || (uint64_t)8U == 0ULL)
+      if ((uint64_t)8U == 0ULL)
       {
         failed = TRUE;
       }
       else
       {
-        BOOLEAN ok0 = ProbeAndCopy(src64, (uint64_t)8U, DestT);
-        if (ok0)
+        BOOLEAN ok1 = ProbeAndCopy(src64, (uint64_t)8U, DestT);
+        if (ok1)
         {
           readOffset = (uint64_t)8U;
           writeOffset = (uint64_t)8U;
@@ -790,9 +771,13 @@ ProbeValidateV(
         }
       }
     }
-    BOOLEAN hasFailed0 = failed;
+    else
+    {
+      failed = TRUE;
+    }
+    BOOLEAN hasFailed = failed;
     uint64_t b;
-    if (hasFailed0)
+    if (hasFailed)
     {
       b = 0ULL;
     }
@@ -899,16 +884,11 @@ ProbeTt(
 {
   uint64_t rd = *ReadOffset;
   uint64_t wr = *WriteOffset;
-  if (rd != 0ULL || wr != 0ULL || (uint64_t)9U == 0ULL)
-  {
-    *Failed = TRUE;
-    return;
-  }
-  BOOLEAN ok = ProbeAndCopy(Src, (uint64_t)9U, Dest);
+  BOOLEAN ok = ProbeAndCopyIncremental((uint64_t)9U, rd, wr, Src, Dest);
   if (ok)
   {
-    *ReadOffset = (uint64_t)9U;
-    *WriteOffset = (uint64_t)9U;
+    *ReadOffset = rd + (uint64_t)9U;
+    *WriteOffset = wr + (uint64_t)9U;
     return;
   }
   *Failed = TRUE;
@@ -959,18 +939,17 @@ ProbeValidateI(
     uint64_t writeOffset = 0ULL;
     BOOLEAN failed = FALSE;
     BOOLEAN ok = ProbeInit((uint64_t)9U, Dest);
-    if (!ok)
+    if (ok)
+    {
+      ProbeTt(&readOffset, &writeOffset, &failed, src64, Dest);
+    }
+    else
     {
       failed = TRUE;
     }
     BOOLEAN hasFailed = failed;
-    if (!hasFailed)
-    {
-      ProbeTt(&readOffset, &writeOffset, &failed, src64, Dest);
-    }
-    BOOLEAN hasFailed0 = failed;
     uint64_t b;
-    if (hasFailed0)
+    if (hasFailed)
     {
       b = 0ULL;
     }

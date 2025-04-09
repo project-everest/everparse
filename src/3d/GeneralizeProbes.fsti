@@ -18,6 +18,12 @@ open FStar.All
 open Ast
 val simple_probe_function_for_type (t:ident) : ident 
 
+val find_probe_fn (e:Binding.env) (q:probe_qualifier)
+: ML ident
+
+val find_extern_coercion (e:Binding.env) (t0:typ) (t1:typ)
+: ML ident
+
 val generic_instantiations_for_type (e:Binding.env) (tt:typ)
 : ML (list expr & typ)
 

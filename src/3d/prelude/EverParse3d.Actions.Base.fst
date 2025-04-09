@@ -1942,16 +1942,26 @@ let copy_buffer_loc (x:CP.copy_buffer_t)
 inline_for_extraction
 noextract
 let init_and_probe 
+      (#mz:bool)
       (init:PA.init_probe_dest_t)
       (prep_dest_sz:U64.t)
-      (probe:PA.probe_m unit true)
-: PA.probe_m unit false
-= PA.seq_probe_m () (PA.init_probe_m init prep_dest_sz) probe
+      (probe:PA.probe_m unit true mz)
+: PA.probe_m unit false mz
+= fun read_offset write_offset failed src dest ->
+    let ok = init prep_dest_sz dest in
+    if ok
+    then (
+      probe read_offset write_offset failed src dest
+    )
+    else (
+      failed *= true
+    )
 
 inline_for_extraction
 noextract
 let probe_then_validate 
       (#nz:bool)
+      (#maybe_zero_offset:bool)
       (#wk: _)
       (#k:parser_kind nz wk)
       (#t:Type)
@@ -1970,7 +1980,7 @@ let probe_then_validate
       (dest:CP.copy_buffer_t)
       (init:PA.init_probe_dest_t)
       (prep_dest_sz:U64.t)
-      (probe:PA.probe_m unit true)
+      (probe:PA.probe_m unit true maybe_zero_offset)
   = fun ctxt error_handler_fn input input_length pos posf ->
       CP.properties dest;
       let h0 = HST.get () in

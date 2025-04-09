@@ -33,6 +33,12 @@ open GlobalEnv
 
 let generalized_signature = list (ident & typ)
 
+let print_probe_qualifier = function
+  | PQWithOffsets -> "WithOffsets"
+  | PQRead i -> Printf.sprintf "Read %s" (print_integer_type i)
+  | PQWrite i -> Printf.sprintf "Write %s" (print_integer_type i)
+  | PQInit -> "Init"
+
 noeq
 type env = {
   benv:Binding.env;
@@ -50,6 +56,24 @@ let simple_probe_name_for_type (e:env) (type_name:ident)
 = if List.Tot.mem type_name.v e.needs_probe
   then Some (simple_probe_function_for_type type_name)
   else None
+
+let find_probe_fn (e:B.env) (q:probe_qualifier)
+: ML ident
+= match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e) (Some q) with
+  | None ->
+    error (Printf.sprintf "Cannot find probe function for %s" (print_probe_qualifier q))
+          dummy_range
+  | Some id ->
+    id
+  
+let find_extern_coercion (e:B.env) (t0:typ) (t1:typ)
+: ML ident
+= match GlobalEnv.resolve_extern_coercion (B.global_env_of_env e) t0 t1 with
+  | None ->
+    error (Printf.sprintf "Cannot find coercion for %s to %s" (print_typ t0) (print_typ t1))
+          dummy_range
+  | Some id ->
+    id
 
 let should_generate_probe (e:env) (n:typedef_names) = List.mem n.typedef_abbrev.v e.needs_probe
 let should_generalize_ident (e:env) (id:ident) =
@@ -220,10 +244,13 @@ let generate_probe_functions (e:env) (d:decl)
             App SizeOf [with_range (Identifier names.typedef_abbrev) names.typedef_name.range]
           ) d.d_decl.range
       in
+      let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets in
       let simple_probe =
-        with_range (
-          Probe_action_simple None probe_size
-        ) d.d_decl.range
+          with_range
+          (Probe_atomic_action (
+            Probe_action_copy probe_and_copy_n probe_size
+          ))
+          d.d_decl.range
       in
       let params = List.Tot.filter (should_retain_param_for_probe e.benv) params in
       let d' = 
