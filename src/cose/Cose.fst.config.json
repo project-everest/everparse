@@ -11,7 +11,9 @@
       "--ext", "context_pruning"
     ],
     "include_dirs": [
+      "./_output",
       "../../src/lowparse",
+      "../../src/lowparse/pulse",
       "../../opt/karamel/krmllib",
       "../../opt/karamel/krmllib/obj",
       "../../opt/pulse/out/lib/pulse",
