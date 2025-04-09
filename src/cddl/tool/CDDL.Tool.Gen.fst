@@ -75,6 +75,8 @@ type ancillaries_t (se: sem_env) = {
   validators: P.ancillary_validate_env_bool se.se_bound;
   parsers: P.ancillary_parse_env_bool se;
   array_parsers: P.ancillary_parse_array_group_env_bool se;
+  type_names: (t: typ) -> (t_wf: ast0_wf_typ t) -> option string;
+  map_iterators: list string;
 }
 
 noeq
@@ -87,23 +89,28 @@ type ancillaries_aux_t (se: sem_env) = {
 
 let compute_wf_typ_ret
   (env: sem_env)
-= result (nat & ((ancillaries_t env -> option (P.ask_for env)) & wf_ast_env))
+  (t: typ)
+= result (nat & (ast0_wf_typ t & ((ancillaries_t env -> option (P.ask_for env)) & wf_ast_env)))
 
 let compute_wf_typ_post
   (env: wf_ast_env)
-  (res: compute_wf_typ_ret env.e_sem_env)
+  (t: typ)
+  (res: compute_wf_typ_ret env.e_sem_env t)
 : Tot prop
 = match res with
   | ROutOfFuel -> False
   | RFailure _ -> True
-  | RSuccess (_, (_, env')) -> ast_env_included env env'
+  | RSuccess (_, (wt, (f, env'))) ->
+    ast_env_included env env' /\
+    typ_bounded env'.e_sem_env.se_bound t /\
+    bounded_wf_typ env'.e_sem_env.se_bound t wt
 
 let rec compute_wf_typ
   (env: wf_ast_env)
   (name: string)
   (t: typ)
   (fuel: nat)
-: Dv (res: compute_wf_typ_ret env.e_sem_env { compute_wf_typ_post env res })
+: Dv (res: compute_wf_typ_ret env.e_sem_env t { compute_wf_typ_post env t res })
 = if None? (env.e_sem_env.se_bound name)
   then match mk_wf_typ' fuel env t with
   | RFailure s -> RFailure s
@@ -112,7 +119,7 @@ let rec compute_wf_typ
     let f (anc: ancillaries_t env.e_sem_env) : Tot (option (P.ask_for env.e_sem_env)) =
       P.ask_zero_copy_wf_type anc.validators anc.parsers anc.array_parsers wt
     in
-    RSuccess (fuel, (f, wf_ast_env_extend_typ_with_weak env name t wt))
+    RSuccess (fuel, (wt, (f, wf_ast_env_extend_typ_with_weak env name t wt)))
   else RFailure (name ^ " is already defined")
 
 let produce_validator env wf validator = "
@@ -286,6 +293,7 @@ let aa"^anc_env'^" = aa" ^ anc_env
         anc = {
           anc.anc with
           parsers = (fun t' t_wf' -> if t = t' && t_wf = t_wf' then true else anc.anc.parsers t' t_wf');
+          type_names = (fun t' t_wf' -> if t = t' && t_wf = t_wf' then Some typename else anc.anc.type_names t' t_wf');
         };
         env_index = env_index';
         output = anc.output ^ msg;
@@ -378,6 +386,8 @@ let extend_ancillaries_t
     validators = (fun t -> if typ_bounded ne t then anc.validators t else false);
     parsers = (fun t t_wf -> if typ_bounded ne t && bounded_wf_typ ne _ t_wf then anc.parsers t t_wf else false);
     array_parsers = (fun t t_wf -> if group_bounded ne t && bounded_wf_array_group ne _ t_wf then anc.array_parsers t t_wf else false);
+    type_names = (fun t t_wf -> if typ_bounded ne t && bounded_wf_typ ne _ t_wf then anc.type_names t t_wf else None);
+    map_iterators = anc.map_iterators;
   }
 
 noeq
@@ -459,6 +469,81 @@ let produce_typ_defs_post
   | ROutOfFuel -> False
   | RSuccess (_, (| wenv', _ |)) -> ast_env_included wenv wenv'
 
+let rec produce_iterators_for_typ
+  (wenv: sem_env)
+  (anc: ancillaries_t wenv)
+  (accu: string)
+  (#t: typ)
+  (wf: ast0_wf_typ t)
+: Tot (ancillaries_t wenv & string)
+  (decreases wf)
+= match wf with
+  | WfTDetCbor _ _ s
+  | WfTTagged _ _ s
+  | WfTRewrite _ _ s -> produce_iterators_for_typ wenv anc accu s
+  | WfTMap _ _ s -> produce_iterators_for_map_group wenv anc accu s
+  | WfTChoice _ _ s1 s2 ->
+    let (anc1, accu1) = produce_iterators_for_typ wenv anc accu s1 in
+    produce_iterators_for_typ wenv anc1 accu1 s2
+  | _ -> (anc, accu)
+
+and produce_iterators_for_array_group
+  (wenv: sem_env)
+  (anc: ancillaries_t wenv)
+  (accu: string)
+  (#t: group)
+  (wf: ast0_wf_array_group t)
+: Tot (ancillaries_t wenv & string)
+  (decreases wf)
+= match wf with
+  | WfAElem _ _ _ s -> produce_iterators_for_typ wenv anc accu s
+  | WfAZeroOrOneOrMore _ s _ // FIXME: also produce array iterators
+  | WfAZeroOrOne _ s
+  | WfARewrite _ _ s -> produce_iterators_for_array_group wenv anc accu s
+  | WfAChoice _ _ s1 s2
+  | WfAConcat _ _ s1 s2 ->
+    let (anc1, accu1) = produce_iterators_for_array_group wenv anc accu s1 in
+    produce_iterators_for_array_group wenv anc1 accu1 s2
+
+and produce_iterators_for_map_group
+  (wenv: sem_env)
+  (anc: ancillaries_t wenv)
+  (accu: string)
+  (#t: elab_map_group)
+  (wf: ast0_wf_parse_map_group t)
+: Tot (ancillaries_t wenv & string)
+  (decreases wf)
+= match wf with
+  | WfMZeroOrMore _ _ _ sk _ sv ->
+    let (anc1, accu1) = produce_iterators_for_typ wenv anc accu sk in
+    let (anc2, accu2) = produce_iterators_for_typ wenv anc1 accu1 sv in
+    begin match anc2.type_names _ sk with
+    | None -> (anc2, accu2)
+    | Some bk ->
+      begin match anc2.type_names _ sv with
+      | None -> (anc2, accu2)
+      | Some bv ->
+        let map_iterator = "iterate_map_" ^ bk ^ "_and_" ^ bv in
+        if List.Tot.mem map_iterator anc2.map_iterators
+        then (anc2, accu2)
+        else
+          let anc3 = { anc2 with map_iterators = map_iterator :: anc2.map_iterators } in
+          let accu3 = accu2 ^ "
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let is_empty_" ^ map_iterator ^ " = CDDL.Pulse.Parse.MapGroup.cddl_map_iterator_is_empty  Det.cbor_det_impl.cbor_map_iterator_is_empty Det.cbor_det_impl.cbor_map_iterator_next Det.cbor_det_impl.cbor_map_entry_key Det.cbor_det_impl.cbor_map_entry_value "^bk^" "^bv^"
+let next_" ^ map_iterator ^ " = CDDL.Pulse.Parse.MapGroup.cddl_map_iterator_next Det.cbor_det_impl.cbor_map_iterator_share Det.cbor_det_impl.cbor_map_iterator_gather Det.cbor_det_impl.cbor_map_iterator_next Det.cbor_det_impl.cbor_map_entry_key Det.cbor_det_impl.cbor_map_entry_value Det.cbor_det_impl.cbor_map_entry_share Det.cbor_det_impl.cbor_map_entry_gather "^bk^" "^bv
+          in
+          (anc3, accu3)
+       end
+    end
+  | WfMChoice _ s1 _ s2
+  | WfMConcat _ s1 _ s2 ->
+    let (anc1, accu1) = produce_iterators_for_map_group wenv anc accu s1 in
+    produce_iterators_for_map_group wenv anc1 accu1 s2
+  | WfMZeroOrOne _ s -> produce_iterators_for_map_group wenv anc accu s
+  | WfMLiteral _ _ _ s -> produce_iterators_for_typ wenv anc accu s
+  | _ -> (anc, accu)
+
 let produce_typ_defs
   (index: nat)
   (wenv: wf_ast_env)
@@ -468,7 +553,7 @@ let produce_typ_defs
 : Dv (res: produce_typ_defs_t { produce_typ_defs_post wenv res })
 = match compute_wf_typ wenv name t 0 with
   | RFailure s -> RFailure s
-  | RSuccess (fuel, (f, wenv')) ->
+  | RSuccess (fuel, (wt, (f, wenv'))) ->
   let i = string_of_int index in
   let j = string_of_int (index + 1) in
   let validator = mk_validator_name name in
@@ -519,6 +604,7 @@ let "^env'^" =
   bundle_env_extend_typ_with_weak "^env^" (T.pull_name "^source^" ("^source^"_cons ())) (T.pull_type "^source^" ("^source^"_cons ()) ("^source^"_type ())) "^wf^" "^wf^"'"^" ("^wf^"_eq ()) "^validator^" "^bundle^
 extend_ancillaries_for_typ env env' anc1.env_index source source'
 in
+  let (anc', msg) = produce_iterators_for_typ wenv'.e_sem_env anc' msg wt in
   RSuccess (msg, (| wenv', anc' |))
 
 let produce_group_defs
@@ -588,6 +674,8 @@ let empty_ancillaries : ancillaries_t empty_sem_env = {
   validators = (fun _ -> false);
   parsers = (fun _ _ -> false);
   array_parsers = (fun _ _ -> false);
+  type_names = (fun _ _ -> None);
+  map_iterators = [];
 }
 
 let produce_defs0 accu l =
