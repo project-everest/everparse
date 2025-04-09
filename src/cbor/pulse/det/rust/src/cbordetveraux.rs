@@ -8,17 +8,6 @@ pub(crate) const _zero_for_deref: u32 = 0u32;
 
 #[derive(PartialEq, Clone, Copy)] pub struct raw_uint64 { pub size: u8, pub value: u64 }
 
-pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
-{
-    let size: u8 =
-        if x <= max_simple_value_additional_info as u64
-        { 0u8 }
-        else if x < 256u64
-        { 1u8 }
-        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
-    raw_uint64 { size, value: x }
-}
-
 fn get_bitfield_gen8(x: u8, lo: u32, hi: u32) -> u8
 {
     let op1: u8 = x.wrapping_shl(8u32.wrapping_sub(hi));
@@ -434,6 +423,17 @@ fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
     let res0: i16 = (&pres)[0];
     let res1: i16 = res0;
     res1
+}
+
+pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
+{
+    let size: u8 =
+        if x <= max_simple_value_additional_info as u64
+        { 0u8 }
+        else if x < 256u64
+        { 1u8 }
+        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
+    raw_uint64 { size, value: x }
 }
 
 fn read_initial_byte_t(input: &[u8]) -> initial_byte_t
