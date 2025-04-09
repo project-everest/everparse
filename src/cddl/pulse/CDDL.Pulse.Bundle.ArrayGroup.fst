@@ -67,6 +67,45 @@ let bundle_array_group_bij
       ab_serializer = impl_serialize_array_group_bij b_serializer f12 f21 fprf_21_12 fprf_12_21 g12 g21 gprf_21_12 gprf_12_21;
     }
 
+let array_bundle_parser_t
+  (#cbor_array_iterator_t: Type0)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (b: (array_bundle cbor_array_iterator_match))
+: Tot Type
+= impl_zero_copy_array_group cbor_array_iterator_match b.ab_spec.ag_parser b.ab_rel
+
+let array_bundle_parser_eq_intro
+  (#cbor_array_iterator_t: Type0)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (#t0 #t: Type)
+  (sq0: squash (t0 == t))
+  (b1: (array_bundle cbor_array_iterator_match))
+  (sq1: squash (array_bundle_parser_t b1 == t0))
+  (b2: (array_bundle cbor_array_iterator_match))
+  (sq2: squash (b1 == b2))
+: Tot (squash (array_bundle_parser_t b2 == t))
+= ()
+
+unfold
+let array_bundle_serializer_t
+  (#cbor_array_iterator_t: Type0)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (b: (array_bundle cbor_array_iterator_match))
+: Tot Type
+= impl_serialize_array_group b.ab_spec b.ab_rel
+
+let array_bundle_serializer_eq_intro
+  (#cbor_array_iterator_t: Type0)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)
+  (#t0 #t: Type)
+  (sq0: squash (t0 == t))
+  (b1: (array_bundle cbor_array_iterator_match))
+  (sq1: squash (array_bundle_serializer_t b1 == t0))
+  (b2: (array_bundle cbor_array_iterator_match))
+  (sq2: squash (b1 == b2))
+: Tot (squash (array_bundle_serializer_t b2 == t))
+= ()
+
 inline_for_extraction noextract [@@noextract_to "krml"; bundle_get_impl_type_attr]
 let array_bundle_set_parser_and_serializer
   (#cbor_array_iterator_t: Type0)
@@ -80,10 +119,10 @@ let array_bundle_set_parser_and_serializer
   ([@@@erasable] r_eq: squash (b.ab_rel == coerce_eq () r))
   (#[@@@erasable] t': Type)
   (p: t')
-  ([@@@erasable] p_eq: squash (impl_zero_copy_array_group cbor_array_iterator_match b.ab_spec.ag_parser b.ab_rel == t'))
+  ([@@@erasable] p_eq: squash (array_bundle_parser_t b == t'))
   (#[@@@erasable] ts: Type)
   (s: ts)
-  ([@@@erasable] s_eq: squash (impl_serialize_array_group b.ab_spec b.ab_rel == ts))
+  ([@@@erasable] s_eq: squash (array_bundle_serializer_t b  == ts))
 : Tot (array_bundle cbor_array_iterator_match)
 = {
     ab_typ = b.ab_typ;
