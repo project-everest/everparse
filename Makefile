@@ -204,6 +204,15 @@ endif
 .PHONY: cddl-demo
 
 ifeq (,$(NO_PULSE))
+cddl-unit-tests: cddl
+	+$(MAKE) -C src/cddl/unit-tests
+else
+cddl-unit-tests:
+endif
+
+.PHONY: cddl-unit-tests
+
+ifeq (,$(NO_PULSE))
 cose-extract-test: cddl
 	+$(MAKE) -C src/cose test-extract
 
@@ -226,7 +235,7 @@ cose: cbor
 
 .PHONY: cose
 
-cddl-test: cddl cddl-plugin-test cddl-demo cose-extract-test
+cddl-test: cddl cddl-plugin-test cddl-demo cose-extract-test cddl-unit-tests
 
 .PHONY: cddl-test
 
