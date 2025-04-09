@@ -8,7 +8,7 @@ open Pulse.Lib.Slice
 module U8 = FStar.UInt8
 module SZ = FStar.SizeT
 module Trade = Pulse.Lib.Trade.Util
-module R = CBOR.Spec.Raw.Valid
+module R = CBOR.Spec.Raw.Optimal
 
 val cbor_validate
   (input: slice U8.t)

@@ -342,6 +342,7 @@ fn cbor_det_serialize_string
   let roff = SpecRaw.mk_raw_uint64 off;
   let res = Serialize.cbor_serialize_string () ty roff out;
   let x = Ghost.hide (SpecRaw.String ty roff (Seq.slice v 0 (U64.v off)));
+  SpecRaw.valid_eq SpecRaw.basic_data_model x;
   SpecRaw.mk_cbor_eq x;
   SpecRaw.mk_det_raw_cbor_mk_cbor x;
   res
@@ -487,6 +488,7 @@ fn cbor_det_mk_tagged (_: unit) : mk_tagged_t #_ cbor_det_match
   with r. assert Raw.cbor_match 1.0R res r;
   Trade.trans_concl_r _ _ (Raw.cbor_match pv v w') _;
   SpecRaw.mk_cbor_eq (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v')));
+  SpecRaw.valid_eq SpecRaw.basic_data_model (SpecRaw.Tagged tag64 w');
   SpecRaw.mk_cbor_eq (SpecRaw.Tagged tag64 w');
   SpecRaw.mk_cbor_equiv (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v'))) (SpecRaw.Tagged tag64 w');
   assert (pure (SpecRaw.mk_det_raw_cbor (Spec.pack (Spec.CTagged tag v')) `SpecRaw.raw_equiv` SpecRaw.Tagged tag64 w'));

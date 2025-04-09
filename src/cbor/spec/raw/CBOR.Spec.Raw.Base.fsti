@@ -40,40 +40,6 @@ let dummy_raw_data_item : Ghost.erased raw_data_item =
 let raw_uint64_equiv (x1 x2: raw_uint64) : Tot bool =
   x1.value = x2.value
 
-val raw_equiv (l1 l2: raw_data_item) : Tot bool
-
-val raw_equiv_eq (l1 l2: raw_data_item) : Lemma
-  (raw_equiv l1 l2 == begin match l1, l2 with
-  | Simple v1, Simple v2 -> v1 = v2
-  | Int64 ty1 v1, Int64 ty2 v2 -> ty1 = ty2 && raw_uint64_equiv v1 v2
-  | String ty1 len1 v1, String ty2 len2 v2 -> ty1 = ty2 && raw_uint64_equiv len1 len2 && v1 = v2
-  | Array len1 v1, Array len2 v2 -> raw_uint64_equiv len1 len2 && list_for_all2 raw_equiv v1 v2
-  | Map len1 v1, Map len2 v2 ->
-    raw_uint64_equiv len1 len2 &&
-    list_for_all_exists (holds_on_pair2 raw_equiv) v1 v2 &&
-    list_for_all_exists (holds_on_pair2 raw_equiv) v2 v1
-  | Tagged tag1 v1, Tagged tag2 v2 ->
-    raw_uint64_equiv tag1 tag2 &&
-    raw_equiv v1 v2
-  | _ -> false
-  end)
-
-val raw_equiv_sym (l1 l2: raw_data_item) : Lemma
-  (ensures (raw_equiv l1 l2 == raw_equiv l2 l1))
-
-let rec raw_equiv_refl (x: raw_data_item) : Lemma
-  (raw_equiv x x == true)
-= raw_equiv_eq x x;
-  match x with
-  | Tagged tag v -> raw_equiv_refl v
-  | Array len v ->
-    list_for_all2_refl raw_equiv v (fun x -> raw_equiv_refl x)
-  | Map len v ->
-    list_for_all2_refl (holds_on_pair2 raw_equiv) v
-      (fun x -> raw_equiv_refl (fst x); raw_equiv_refl (snd x));
-    list_for_all2_exists (holds_on_pair2 raw_equiv) v v
-  | _ -> ()
-
 noextract
 let get_major_type
   (d: raw_data_item)
@@ -289,12 +255,6 @@ val raw_data_item_size_eq
   | _ -> 1
   end)
 
-val raw_equiv_trans (x1 x2 x3: raw_data_item) : Lemma
-  (requires (raw_equiv x1 x2 == true /\
-    raw_equiv x2 x3 == true
-  ))
-  (ensures (raw_equiv x1 x3 == true))
-
 val raw_data_item_fmap
   (f: raw_data_item -> raw_data_item)
   (x: raw_data_item)
@@ -315,52 +275,6 @@ val raw_data_item_fmap_eq
   (x: raw_data_item)
 : Lemma
   (raw_data_item_fmap f x == f (pre_raw_data_item_fmap f x))
-
-let rec raw_equiv_fmap
-  (f: raw_data_item -> raw_data_item)
-  (prf: (x: raw_data_item) -> Lemma
-    (raw_equiv x (f x) == true)
-  )
-  (x: raw_data_item)
-: Lemma
-  (ensures (raw_equiv x (raw_data_item_fmap f x) == true))
-  (decreases x)
-= raw_data_item_fmap_eq f x;
-  let x' = raw_data_item_fmap f x in
-  raw_equiv_eq x x';
-  match x with
-  | Map len v ->
-    list_for_all2_map (apply_on_pair (raw_data_item_fmap f)) v (holds_on_pair2 raw_equiv) (fun x ->
-      raw_equiv_fmap f prf (fst x);
-      raw_equiv_fmap f prf (snd x)
-    );
-    let v_ = List.Tot.map (apply_on_pair (raw_data_item_fmap f)) v in
-    list_for_all2_exists (holds_on_pair2 raw_equiv) v v_;
-    list_for_all2_swap (holds_on_pair2 raw_equiv) v v_;
-    list_for_all2_implies (swap (holds_on_pair2 raw_equiv)) (holds_on_pair2 raw_equiv) v_ v (fun x x_ ->
-      raw_equiv_sym (fst x) (fst x_);
-      raw_equiv_sym (snd x) (snd x_)
-    );
-    list_for_all2_exists (holds_on_pair2 raw_equiv) v_ v;
-    let x_ = Map len v_ in
-    raw_equiv_eq x x_;
-    prf x_;
-    raw_equiv_trans x x_ x'
-  | Array len v ->
-    list_for_all2_map (raw_data_item_fmap f) v raw_equiv (fun x ->
-      raw_equiv_fmap f prf x
-    );
-    let x_ = Array len (List.Tot.map (raw_data_item_fmap f) v) in
-    raw_equiv_eq x x_;
-    prf x_;
-    raw_equiv_trans x x_ x'
-  | Tagged len v ->
-    raw_equiv_fmap f prf v;
-    let x_ = Tagged len (raw_data_item_fmap f v) in
-    raw_equiv_eq x x_;
-    prf x_;
-    raw_equiv_trans x x_ x'
-  | _ -> prf x
 
 val holds_on_raw_data_item_fmap_gen
   (f: raw_data_item -> raw_data_item)

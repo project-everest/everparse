@@ -1,497 +1,536 @@
 module CBOR.Spec.Raw.Valid
 
-let rec raw_equiv_sorted_optimal
-  (order: raw_data_item -> raw_data_item -> bool {
-    order_irrefl order /\
-    order_trans order
+let raw_data_item_size_eq_pat
+  (x: raw_data_item)
+: Lemma
+  (ensures (raw_data_item_size x == begin match x with
+  | Array _ v -> 2 + list_sum raw_data_item_size v
+  | Map _ v -> 2 + list_sum (pair_sum raw_data_item_size raw_data_item_size) v
+  | Tagged _ v -> 2 + raw_data_item_size v
+  | _ -> 1
+  end))
+  [SMTPat (raw_data_item_size x)]
+= raw_data_item_size_eq x
+
+let rec valid'
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (fuel: nat)
+: Tot (raw_data_item -> bool)
+  (decreases fuel)
+= fun x ->
+  if raw_data_item_size x > fuel
+  then false
+  else match x with
+  | Array _ v -> List.Tot.for_all (valid' data_model (fuel - 1)) v
+  | Tagged _ v -> valid' data_model (fuel - 1) v
+  | Map _ v ->
+    List.Tot.for_all (valid' data_model (fuel - 1)) (List.Tot.map fst v) &&
+    List.Tot.for_all (valid' data_model (fuel - 1)) (List.Tot.map snd v) &&
+    (list_no_setoid_repeats (equiv' data_model (fuel - 1)) (List.Tot.map fst v))
+  | _ -> true
+
+and equiv'
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (fuel: nat)
+: Tot ((raw_data_item -> raw_data_item -> bool))
+  (decreases fuel)
+= fun x1 x2 ->
+  if data_model x1 x2
+  then true
+  else if x1 = x2
+  then true
+  else if 2 + raw_data_item_size x1 + raw_data_item_size x2 > fuel
+  then false
+  else
+    valid' data_model (fuel - 1) x1 && valid' data_model (fuel - 1) x2 &&
+    begin match x1, x2 with
+    | Array _ v1, Array _ v2 ->
+      list_for_all2 (equiv' data_model (fuel - 1)) v1 v2
+    | Map _ v1, Map _ v2 ->
+      List.Tot.for_all (setoid_assoc_eq (equiv' data_model (fuel - 1)) (equiv' data_model (fuel - 1)) v2) v1 &&
+      List.Tot.for_all (setoid_assoc_eq (equiv' data_model (fuel - 1)) (equiv' data_model (fuel - 1)) v1) v2
+    | Tagged tag1 v1, Tagged tag2 v2 ->
+      tag1.value = tag2.value &&
+      equiv' data_model (fuel - 1) v1 v2
+    | Int64 ty1 v1, Int64 ty2 v2 ->
+      ty1 = ty2 && v1.value = v2.value
+    | String ty1 _ v1, String ty2 _ v2 ->
+      ty1 = ty2 && v1 = v2
+    | _ -> false
+    end
+
+let rec valid_incr
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (fuel fuel': nat)
+  (x: raw_data_item)
+: Lemma
+  (requires raw_data_item_size x <= fuel /\ fuel <= fuel')
+  (ensures valid' data_model fuel x == valid' data_model fuel' x)
+  (decreases fuel)
+= match x with
+  | Array _ v ->
+    list_for_all_ext
+      (valid' data_model (fuel - 1))
+      (valid' data_model (fuel' - 1))
+      v
+      (fun y ->
+        list_sum_memP raw_data_item_size v y;
+        valid_incr data_model (fuel - 1) (fuel' - 1) y
+      )
+  | Tagged tag v ->
+    valid_incr data_model (fuel - 1) (fuel' - 1) v
+  | Map _ v ->
+    list_for_all_ext
+      (valid' data_model (fuel - 1))
+      (valid' data_model (fuel' - 1))
+      (List.Tot.map fst v)
+      (fun y ->
+        let y' = list_memP_map_elim fst y v in
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v y';
+        valid_incr data_model (fuel - 1) (fuel' - 1) y
+      );
+    list_for_all_ext
+      (valid' data_model (fuel - 1))
+      (valid' data_model (fuel' - 1))
+      (List.Tot.map snd v)
+      (fun y ->
+        let y' = list_memP_map_elim snd y v in
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v y';
+        valid_incr data_model (fuel - 1) (fuel' - 1) y
+      );
+    list_no_setoid_repeats_ext
+      (equiv' data_model (fuel - 1))
+      (equiv' data_model (fuel' - 1))
+      (List.Tot.map fst v)
+      (fun l1 l2 z y ->
+        List.Tot.append_length l1 l2;
+        let (v1, v2) = List.Tot.splitAt (List.Tot.length l1) v in
+        List.Tot.map_append fst v1 v2;
+        list_splitAt_append (List.Tot.length l1) v;
+        List.Tot.append_length_inv_head l1 l2 (List.Tot.map fst v1) (List.Tot.map fst v2);
+        list_sum_append (pair_sum raw_data_item_size raw_data_item_size) v1 v2;
+        let z' = list_memP_map_elim fst z v1 in
+        let y' = list_memP_map_elim fst y v2 in
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v1 z';
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v2 y';
+        equiv_incr data_model (fuel - 1) (fuel' - 1) z y
+      )
+  | _ -> ()
+
+and equiv_incr
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (fuel fuel': nat)
+  (x1 x2: raw_data_item)
+: Lemma
+  (requires 2 + raw_data_item_size x1 + raw_data_item_size x2 <= fuel /\
+    fuel <= fuel')
+  (ensures equiv' data_model fuel x1 x2 == equiv' data_model fuel' x1 x2)
+  (decreases fuel)
+= if data_model x1 x2 || x1 = x2
+  then ()
+  else begin
+    valid_incr data_model (fuel - 1) (fuel' - 1) x1;
+    valid_incr data_model (fuel - 1) (fuel' - 1) x2;
+    match x1, x2 with
+    | Array _ v1, Array _ v2 ->
+      list_for_all2_ext
+        (equiv' data_model (fuel - 1))
+        (equiv' data_model (fuel' - 1))
+        v1 v2
+        (fun y1 y2 ->
+          list_sum_memP raw_data_item_size v1 y1;
+          list_sum_memP raw_data_item_size v2 y2;
+          equiv_incr data_model (fuel - 1) (fuel' - 1) y1 y2;
+          ()
+        )
+    | Tagged tag1 v1, Tagged tag2 v2 ->
+      equiv_incr data_model (fuel - 1) (fuel' - 1) v1 v2
+    | Map _ v1, Map _ v2 ->
+      let prf
+        (v1' v2' : list (raw_data_item & raw_data_item))
+      : Lemma
+        (requires (
+          list_sum (pair_sum raw_data_item_size raw_data_item_size) v1' +
+          list_sum (pair_sum raw_data_item_size raw_data_item_size) v2' <
+            raw_data_item_size x1 + raw_data_item_size x2
+        ))
+        (ensures (
+          List.Tot.for_all (setoid_assoc_eq (equiv' data_model (fuel - 1)) (equiv' data_model (fuel - 1)) v1') v2' ==
+          List.Tot.for_all (setoid_assoc_eq (equiv' data_model (fuel' - 1)) (equiv' data_model (fuel' - 1)) v1') v2'
+        ))
+      =
+        list_for_all_ext
+          (setoid_assoc_eq (equiv' data_model (fuel - 1)) (equiv' data_model (fuel - 1)) v1')
+          (setoid_assoc_eq (equiv' data_model (fuel' - 1)) (equiv' data_model (fuel' - 1)) v1')
+          v2'
+          (fun z ->
+            setoid_assoc_eq_ext
+              (equiv' data_model (fuel - 1)) (equiv' data_model (fuel' - 1)) 
+              (equiv' data_model (fuel - 1)) (equiv' data_model (fuel' - 1))
+              v1'
+              z
+              (fun y ->
+                list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v1' y;
+                list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v2' z;
+                equiv_incr data_model (fuel - 1) (fuel' - 1) (fst z) (fst y);
+                equiv_incr data_model (fuel - 1) (fuel' - 1) (snd z) (snd y);
+                ()
+              )
+          )
+      in
+      prf v1 v2;
+      prf v2 v1
+    | _ -> ()
+  end
+
+let valid
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (x: raw_data_item)
+: Tot bool
+= valid' data_model (raw_data_item_size x) x
+
+let equiv
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (x1 x2: raw_data_item)
+: Tot bool
+= equiv' data_model (2 + raw_data_item_size x1 + raw_data_item_size x2) x1 x2
+
+let valid_eq
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (x: raw_data_item)
+: Lemma
+  (ensures (valid data_model x == (
+    match x with
+    | Array _ v -> List.Tot.for_all (valid data_model) v
+    | Tagged _ v -> valid data_model v
+    | Map _ v ->
+      List.Tot.for_all (valid data_model) (List.Tot.map fst v) &&
+      List.Tot.for_all (valid data_model) (List.Tot.map snd v) &&
+      (list_no_setoid_repeats (equiv data_model) (List.Tot.map fst v))
+    | _ -> true
+  )))
+= match x with
+  | Array _ v ->
+    list_for_all_ext
+      (valid' data_model (raw_data_item_size x - 1))
+      (valid data_model)
+      v
+      (fun y ->
+        list_sum_memP raw_data_item_size v y;
+        valid_incr data_model (raw_data_item_size y) (raw_data_item_size x - 1) y;
+        ()
+      )
+  | Tagged tag v ->
+    valid_incr data_model (raw_data_item_size v) (raw_data_item_size x - 1) v
+  | Map _ v ->
+    list_for_all_ext
+      (valid' data_model (raw_data_item_size x - 1))
+      (valid data_model)
+      (List.Tot.map fst v)
+      (fun y ->
+        let y' = list_memP_map_elim fst y v in
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v y';
+        valid_incr data_model (raw_data_item_size y) (raw_data_item_size x - 1) y
+      );
+    list_for_all_ext
+      (valid' data_model (raw_data_item_size x - 1))
+      (valid data_model)
+      (List.Tot.map snd v)
+      (fun y ->
+        let y' = list_memP_map_elim snd y v in
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v y';
+        valid_incr data_model (raw_data_item_size y) (raw_data_item_size x - 1) y
+      );
+    list_no_setoid_repeats_ext
+      (equiv' data_model (raw_data_item_size x - 1))
+      (equiv data_model)
+      (List.Tot.map fst v)
+      (fun l1 l2 z y ->
+        List.Tot.append_length l1 l2;
+        let (v1, v2) = List.Tot.splitAt (List.Tot.length l1) v in
+        List.Tot.map_append fst v1 v2;
+        list_splitAt_append (List.Tot.length l1) v;
+        List.Tot.append_length_inv_head l1 l2 (List.Tot.map fst v1) (List.Tot.map fst v2);
+        list_sum_append (pair_sum raw_data_item_size raw_data_item_size) v1 v2;
+        let z' = list_memP_map_elim fst z v1 in
+        let y' = list_memP_map_elim fst y v2 in
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v1 z';
+        list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v2 y';
+        equiv_incr data_model (2 + raw_data_item_size z + raw_data_item_size y) (raw_data_item_size x - 1) z y
+      )
+  | _ -> ()
+
+let equiv_eq
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (x1 x2: raw_data_item)
+: Lemma
+  (ensures equiv data_model x1 x2 == (
+  if data_model x1 x2
+  then true
+  else if x1 = x2
+  then true
+  else
+    valid data_model x1 && valid data_model x2 &&
+    begin match x1, x2 with
+    | Array _ v1, Array _ v2 ->
+      list_for_all2 (equiv data_model) v1 v2
+    | Map _ v1, Map _ v2 ->
+      List.Tot.for_all (setoid_assoc_eq (equiv data_model) (equiv data_model) v2) v1 &&
+      List.Tot.for_all (setoid_assoc_eq (equiv data_model) (equiv data_model) v1) v2
+    | Tagged tag1 v1, Tagged tag2 v2 ->
+      tag1.value = tag2.value &&
+      equiv data_model v1 v2
+    | Int64 ty1 v1, Int64 ty2 v2 ->
+      ty1 = ty2 && v1.value = v2.value
+    | String ty1 _ v1, String ty2 _ v2 ->
+      ty1 = ty2 && v1 = v2
+    | _ -> false
+    end
+  ))
+= if data_model x1 x2 || x1 = x2
+  then ()
+  else begin
+    valid_incr data_model (raw_data_item_size x1) (2 + raw_data_item_size x1 + raw_data_item_size x2 - 1) x1;
+    valid_incr data_model (raw_data_item_size x2) (2 + raw_data_item_size x1 + raw_data_item_size x2 - 1) x2;
+    match x1, x2 with
+    | Array _ v1, Array _ v2 ->
+      list_for_all2_ext
+        (equiv' data_model (2 + raw_data_item_size x1 + raw_data_item_size x2 - 1))
+        (equiv data_model)
+        v1 v2
+        (fun y1 y2 ->
+          list_sum_memP raw_data_item_size v1 y1;
+          list_sum_memP raw_data_item_size v2 y2;
+          equiv_incr data_model (2 + raw_data_item_size y1 + raw_data_item_size y2) (2 + raw_data_item_size x1 + raw_data_item_size x2 - 1) y1 y2;
+          ()
+        )
+    | Tagged tag1 v1, Tagged tag2 v2 ->
+      equiv_incr data_model (2 + raw_data_item_size v1 + raw_data_item_size v2) (2 + raw_data_item_size x1 + raw_data_item_size x2 - 1) v1 v2
+    | Map _ v1, Map _ v2 ->
+      let prf
+        (v1' v2' : list (raw_data_item & raw_data_item))
+      : Lemma
+        (requires (
+          list_sum (pair_sum raw_data_item_size raw_data_item_size) v1' +
+          list_sum (pair_sum raw_data_item_size raw_data_item_size) v2' <
+            raw_data_item_size x1 + raw_data_item_size x2
+        ))
+        (ensures (
+          List.Tot.for_all (setoid_assoc_eq (equiv' data_model (2 + raw_data_item_size x1 + raw_data_item_size x2 - 1)) (equiv' data_model (2 + raw_data_item_size x1 + raw_data_item_size x2 - 1)) v1') v2' ==
+          List.Tot.for_all (setoid_assoc_eq (equiv data_model) (equiv data_model) v1') v2'
+        ))
+      =
+        list_for_all_ext
+          (setoid_assoc_eq (equiv' data_model (2 + raw_data_item_size x1 + raw_data_item_size x2 - 1)) (equiv' data_model (2 + raw_data_item_size x1 + raw_data_item_size x2 - 1)) v1')
+          (setoid_assoc_eq (equiv data_model) (equiv data_model) v1')
+          v2'
+          (fun z ->
+            setoid_assoc_eq_ext
+              (equiv' data_model (2 + raw_data_item_size x1 + raw_data_item_size x2 - 1)) (equiv data_model) 
+              (equiv' data_model (2 + raw_data_item_size x1 + raw_data_item_size x2 - 1)) (equiv data_model)
+              v1'
+              z
+              (fun y ->
+                list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v1' y;
+                list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) v2' z;
+                equiv_incr data_model (2 + raw_data_item_size (fst z) + raw_data_item_size (fst y)) (2 + raw_data_item_size x1 + raw_data_item_size x2  - 1) (fst z) (fst y);
+                equiv_incr data_model (2 + raw_data_item_size (snd z) + raw_data_item_size (snd y)) (2 + raw_data_item_size x1 + raw_data_item_size x2  - 1) (snd z) (snd y);
+                ()
+              )
+          )
+      in
+      prf v1 v2;
+      prf v2 v1
+    | _ -> ()
+  end
+
+let equiv_refl
+  (data_model: (raw_data_item -> raw_data_item -> bool))
+  (x1: raw_data_item)
+: Lemma
+  (ensures equiv data_model x1 x1)
+= ()
+
+let rec equiv_sym
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    forall x1 x2 . data_model x1 x2 == data_model x2 x1
   })
   (x1 x2: raw_data_item)
 : Lemma
-  (requires (
-    raw_equiv x1 x2 /\
-    raw_data_item_sorted order x1 /\
-    raw_data_item_sorted order x2 /\
-    raw_data_item_ints_optimal x1 /\
-    raw_data_item_ints_optimal x2
-  ))
-  (ensures (x1 == x2))
+  (ensures equiv data_model x1 x2 == equiv data_model x2 x1)
   (decreases x1)
-= raw_equiv_eq x1 x2;
-  holds_on_raw_data_item_eq (raw_data_item_sorted_elem order) x1;
-  holds_on_raw_data_item_eq (raw_data_item_sorted_elem order) x2;
-  holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x1;
-  holds_on_raw_data_item_eq raw_data_item_ints_optimal_elem x2;
-  match x1, x2 with
-  | Simple _, Simple _ -> ()
-  | Int64 _ v1, Int64 _ v2 ->
-    raw_uint64_optimal_unique v1 v2
-  | String _ v1 _, String _ v2 _ ->
-    raw_uint64_optimal_unique v1 v2
-  | Tagged tag1 v1, Tagged tag2 v2 ->
-    raw_uint64_optimal_unique tag1 tag2;
-    raw_equiv_sorted_optimal order v1 v2
-  | Array len1 l1, Array len2 l2 ->
-    raw_uint64_optimal_unique len1 len2;
-    assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
-    list_for_all2_prod (raw_data_item_sorted order) (raw_data_item_sorted order) l1 l2;
-    list_for_all2_prod raw_data_item_ints_optimal raw_data_item_ints_optimal l1 l2;
-    list_for_all2_andp_intro
-      (prodp (raw_data_item_sorted order) (raw_data_item_sorted order))
-      (prodp raw_data_item_ints_optimal raw_data_item_ints_optimal)
-      l1 l2;
-    list_for_all2_andp_intro
-      (andp2
-        (prodp (raw_data_item_sorted order) (raw_data_item_sorted order))
-        (prodp raw_data_item_ints_optimal raw_data_item_ints_optimal))
-      raw_equiv
-      l1 l2;
-    list_for_all2_implies
-      (andp2
-        (andp2
-          (prodp (raw_data_item_sorted order) (raw_data_item_sorted order))
-          (prodp raw_data_item_ints_optimal raw_data_item_ints_optimal))
-        raw_equiv
-      )
-      ( = )
-      l1 l2
-      (fun x1' x2' ->
-        raw_equiv_sorted_optimal order x1' x2'
-      );
-    list_for_all2_equals l1 l2
-  | Map len1 l1, Map len2 l2 ->
-    raw_uint64_optimal_unique len1 len2;
-    assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
-    list_for_all_andp (holds_on_pair (raw_data_item_sorted order)) (holds_on_pair raw_data_item_ints_optimal) l1;
-    list_for_all_andp (holds_on_pair (raw_data_item_sorted order)) (holds_on_pair raw_data_item_ints_optimal) l2;
-    list_for_all_exists_prodp
-      (holds_on_pair2 raw_equiv)
-      (andp
-        (holds_on_pair (raw_data_item_sorted order))
-        (holds_on_pair raw_data_item_ints_optimal)
-      )
-      (andp
-        (holds_on_pair (raw_data_item_sorted order))
-        (holds_on_pair raw_data_item_ints_optimal)
-      )
-      l1 l2;
-    list_for_all_exists_implies
-      (andp2
-        (holds_on_pair2 raw_equiv)
-        (prodp
-          (andp
-            (holds_on_pair (raw_data_item_sorted order))
-            (holds_on_pair raw_data_item_ints_optimal)
-          )
-          (andp
-            (holds_on_pair (raw_data_item_sorted order))
-            (holds_on_pair raw_data_item_ints_optimal)
-          )
-        )
-      )
-      ( = )
-      l1 l2
-      (fun x1 x2 ->
-        raw_equiv_sorted_optimal order (fst x1) (fst x2);
-        raw_equiv_sorted_optimal order (snd x1) (snd x2)
-      );
-    list_for_all_exists_equal_eq l1 l2;
-    list_for_all_exists_prodp
-      (holds_on_pair2 raw_equiv)
-      (andp
-        (holds_on_pair (raw_data_item_sorted order))
-        (holds_on_pair raw_data_item_ints_optimal)
-      )
-      (andp
-        (holds_on_pair (raw_data_item_sorted order))
-        (holds_on_pair raw_data_item_ints_optimal)
-      )
-      l2 l1;
-    list_for_all_exists_implies
-      (andp2
-        (holds_on_pair2 raw_equiv)
-        (prodp
-          (andp
-            (holds_on_pair (raw_data_item_sorted order))
-            (holds_on_pair raw_data_item_ints_optimal)
-          )
-          (andp
-            (holds_on_pair (raw_data_item_sorted order))
-            (holds_on_pair raw_data_item_ints_optimal)
-          )
-        )
-      )
-      ( = )
-      l2 l1
-      (fun x2 x1 ->
-        raw_equiv_sym (fst x2) (fst x1);
-        raw_equiv_sorted_optimal order (fst x1) (fst x2);
-        raw_equiv_sym (snd x2) (snd x1);
-        raw_equiv_sorted_optimal order (snd x1) (snd x2)
-      );
-    list_for_all_exists_equal_eq l2 l1;
-    list_sorted_ext_eq (map_entry_order order _) l1 l2
-
-let rec raw_data_item_sorted_optimal_valid_aux
-  (order: (raw_data_item -> raw_data_item -> bool) {
-    order_irrefl order /\
-    order_trans order
-  })
-  (l: list (raw_data_item & raw_data_item))
-: Lemma
-  (requires (
-    List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) l /\
-    List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) l /\
-    FStar.List.Tot.sorted (map_entry_order order _) l
-  ))
-  (ensures (
-    list_no_setoid_repeats (map_entry_order raw_equiv _) l
-  ))
-  (decreases l)
-= match l with
-  | [] -> ()
-  | a :: q ->
-    raw_data_item_sorted_optimal_valid_aux order q;
-    if List.Tot.existsb (map_entry_order raw_equiv _ a) q
-    then begin
-      let a' = list_existsb_elim (map_entry_order raw_equiv _ a) q in
-      list_sorted_memP (map_entry_order order _) a q a';
-      List.Tot.for_all_mem (holds_on_pair (raw_data_item_sorted order)) q;
-      List.Tot.for_all_mem (holds_on_pair (raw_data_item_ints_optimal)) q;
-      raw_equiv_sorted_optimal order (fst a) (fst a')
-    end
-    else ()
-
-
-let raw_data_item_sorted_optimal_valid
-  (order: raw_data_item -> raw_data_item -> bool {
-    order_irrefl order /\
-    order_trans order
-  })
-  (x1: raw_data_item)
-: Lemma
-  (requires (
-    raw_data_item_sorted order x1 /\
-    raw_data_item_ints_optimal x1
-  ))
-  (ensures (valid_raw_data_item x1))
-= holds_on_raw_data_item_andp (raw_data_item_sorted_elem order) raw_data_item_ints_optimal_elem x1;
-  holds_on_raw_data_item_implies
-    (andp (raw_data_item_sorted_elem order) raw_data_item_ints_optimal_elem)
-    valid_raw_data_item_elem
-    (fun x ->
-      match x with
-      | Map len v ->
-        holds_on_raw_data_item_andp (raw_data_item_sorted_elem order) raw_data_item_ints_optimal_elem x;
-          holds_on_raw_data_item_eq (raw_data_item_sorted_elem order) (Map len v);
-          holds_on_raw_data_item_eq (raw_data_item_ints_optimal_elem) (Map len v);
-          assert (List.Tot.for_all (holds_on_pair (holds_on_raw_data_item raw_data_item_ints_optimal_elem)) v);
-          assert_norm (raw_data_item_ints_optimal == holds_on_raw_data_item raw_data_item_ints_optimal_elem);
-          assert (List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) v);
-          raw_data_item_sorted_optimal_valid_aux order v
-      | _ -> ()
-    )
-    x1
-
-let rec raw_equiv_list_no_map_append
-  (ll1 lr1 ll2 lr2: list raw_data_item)
-: Lemma
-  (requires (List.Tot.length ll1 == List.Tot.length ll2))
-  (ensures (raw_equiv_list_no_map (List.Tot.append ll1 lr1) (List.Tot.append ll2 lr2) == (raw_equiv_list_no_map ll1 ll2 && raw_equiv_list_no_map lr1 lr2)))
-  (decreases (list_sum raw_data_item_size ll1))
-= match ll1, ll2 with
-  | x1 :: q1, x2 :: q2 ->
-    raw_data_item_size_eq x1;
-    begin match x1, x2 with
-    | Tagged tag1 v1, Tagged tag2 v2 ->
-      raw_equiv_list_no_map_append (v1 :: q1) lr1 (v2 :: q2) lr2
-    | Array len1 v1, Array len2 v2 ->
-      list_sum_append raw_data_item_size v1 q1;
-      if raw_uint64_equiv len1 len2
-      then begin
-        assert (List.Tot.length v1 == List.Tot.length v2);
-        List.Tot.append_assoc v1 q1 lr1;
-        List.Tot.append_assoc v2 q2 lr2;
-        List.Tot.append_length v1 q1;
-        List.Tot.append_length v2 q2;
-        raw_equiv_list_no_map_append (List.Tot.append v1 q1) lr1 (List.Tot.append v2 q2) lr2
-      end
-    | _ -> raw_equiv_list_no_map_append q1 lr1 q2 lr2
-    end
+= equiv_eq data_model x1 x2;
+  equiv_eq data_model x2 x1;
+  if data_model x1 x2
+  then ()
+  else if x1 = x2
+  then ()
+  else if valid data_model x1 && valid data_model x2
+  then match x1, x2 with
+  | Array _ v1, Array _ v2 ->
+    list_for_all2_sym
+      (equiv data_model)
+      v1 v2
+      (fun y1 y2 -> equiv_sym data_model y1 y2)
+  | Tagged _ v1, Tagged _ v2 -> equiv_sym data_model v1 v2
   | _ -> ()
-
-let rec raw_equiv_list_no_map_no_map
-  (l1 l2: list raw_data_item)
-: Lemma
-  (requires (raw_equiv_list_no_map l1 l2 == true))
-  (ensures (List.Tot.for_all (holds_on_raw_data_item (notp Map?)) l1 == true))
-  (decreases (list_sum raw_data_item_size l1))
-= match l1, l2 with
-  | x1 :: q1, x2 :: q2 ->
-    raw_data_item_size_eq x1;
-    holds_on_raw_data_item_eq (notp Map?) x1;
-    begin match x1, x2 with
-    | Tagged _ v1, Tagged _ v2 ->
-      raw_equiv_list_no_map_no_map (v1 :: q1) (v2 :: q2)
-    | Array _ v1, Array _ v2 ->
-      list_sum_append raw_data_item_size v1 q1;
-      raw_equiv_list_no_map_no_map (v1 `List.Tot.append` q1) (v2 `List.Tot.append` q2);
-      List.Tot.for_all_append (holds_on_raw_data_item (notp Map?)) v1 q1
-    | _ -> raw_equiv_list_no_map_no_map q1 q2
-    end
-  | _ -> ()
-
-let rec raw_equiv_list_no_map_equiv
-  (l1 l2: list raw_data_item)
-: Lemma
-  (requires (raw_equiv_list_no_map l1 l2 == true))
-  (ensures (list_for_all2 raw_equiv l1 l2 == true))
-  (decreases (list_sum raw_data_item_size l1))
-= match l1, l2 with
-  | x1 :: q1, x2 :: q2 ->
-    raw_data_item_size_eq x1;
-    raw_equiv_eq x1 x2;
-    holds_on_raw_data_item_eq (notp Map?) x1;
-    begin match x1, x2 with
-    | Tagged _ v1, Tagged _ v2 ->
-      raw_equiv_list_no_map_equiv (v1 :: q1) (v2 :: q2)
-    | Array _ v1, Array _ v2 ->
-      list_sum_append raw_data_item_size v1 q1;
-      raw_equiv_list_no_map_equiv (v1 `List.Tot.append` q1) (v2 `List.Tot.append` q2);
-      list_for_all2_append raw_equiv v1 q1 v2 q2
-    | _ -> raw_equiv_list_no_map_equiv q1 q2
-    end
-  | _ -> ()
-
-let rec raw_equiv_list_no_map_sym'
-  (l1 l2: list raw_data_item)
-: Lemma
-  (requires (raw_equiv_list_no_map l1 l2 == true))
-  (ensures (raw_equiv_list_no_map l2 l1 == true))
-  (decreases (list_sum raw_data_item_size l1))
-= match l1, l2 with
-  | x1 :: q1, x2 :: q2 ->
-    raw_data_item_size_eq x1;
-    raw_data_item_size_eq x2;
-    begin match x1, x2 with
-    | Array len1 v1, Array len2 v2 ->
-      list_sum_append raw_data_item_size v1 q1;
-      raw_equiv_list_no_map_sym' (v1 `List.Tot.append` q1) (v2 `List.Tot.append` q2)
-    | Tagged tag1 v1, Tagged tag2 v2 ->
-      raw_equiv_list_no_map_sym' (v1 :: q1) (v2 :: q2)
-    | _ -> raw_equiv_list_no_map_sym' q1 q2
-    end
-  | _ -> ()
-
-let raw_equiv_list_no_map_sym
-  (l1 l2: list raw_data_item)
-: Lemma
-  (raw_equiv_list_no_map l1 l2 == raw_equiv_list_no_map l2 l1)
-= Classical.move_requires (raw_equiv_list_no_map_sym' l1) l2;
-  Classical.move_requires (raw_equiv_list_no_map_sym' l2) l1
-
-let rec raw_equiv_equiv_list_no_map
-  (l1 l2: list raw_data_item)
-: Lemma
-  (requires (
-    list_for_all2 raw_equiv l1 l2 == true /\
-    list_for_all2 (prod_or (holds_on_raw_data_item (notp Map?)) (holds_on_raw_data_item (notp Map?))) l1 l2 == true
-  ))
-  (ensures (
-    raw_equiv_list_no_map l1 l2 == true
-  ))
-  (decreases (list_sum raw_data_item_size l1))
-= match l1, l2 with
-  | x1 :: q1, x2 :: q2 ->
-    raw_data_item_size_eq x1;
-    raw_equiv_eq x1 x2;
-    begin match x1, x2 with
-    | Array len1 v1, Array len2 v2 ->
-      list_sum_append raw_data_item_size v1 q1;
-      list_for_all2_append raw_equiv v1 q1 v2 q2;
-      list_for_all2_prod_or_weak (holds_on_raw_data_item (notp Map?)) (holds_on_raw_data_item (notp Map?)) v1 v2;
-      list_for_all2_append (prod_or (holds_on_raw_data_item (notp Map?)) (holds_on_raw_data_item (notp Map?))) v1 q1 v2 q2;
-      raw_equiv_equiv_list_no_map (v1 `List.Tot.append` q1) (v2 `List.Tot.append` q2)
-    | Tagged tag1 v1, Tagged tag2 v2 ->
-      raw_equiv_equiv_list_no_map (v1 :: q1) (v2 :: q2)
-    | _ -> raw_equiv_equiv_list_no_map q1 q2
-    end
-  | _ -> ()
-
-let raw_equiv_list_no_map_eq
-  (l1 l2: list raw_data_item)
-: Lemma
-  (raw_equiv_list_no_map l1 l2 == (list_for_all2 raw_equiv l1 l2 && list_for_all2 (prod_or (holds_on_raw_data_item (notp Map?)) (holds_on_raw_data_item (notp Map?))) l1 l2))
-= if raw_equiv_list_no_map l1 l2
-  then begin
-    raw_equiv_list_no_map_no_map l1 l2;
-    raw_equiv_list_no_map_equiv l1 l2;
-    list_for_all2_length raw_equiv l1 l2;
-    list_for_all2_prod_or_weak (holds_on_raw_data_item (notp Map?)) (holds_on_raw_data_item (notp Map?)) l1 l2
-  end
-  else if (list_for_all2 raw_equiv l1 l2 && list_for_all2 (prod_or (holds_on_raw_data_item (notp Map?)) (holds_on_raw_data_item (notp Map?))) l1 l2)
-  then raw_equiv_equiv_list_no_map l1 l2
   else ()
 
-let rec raw_equiv_list_no_map_eq'
-  (l1 l2: list raw_data_item)
+let abc_cba (a b c: nat) : Lemma
+  (a + b + c == c + b + a)
+= ()
+
+#push-options "--z3rlimit 16"
+
+let rec equiv_trans'
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3) /\
+    (forall x1 x2 x3 . (equiv data_model x1 x2 /\ data_model x2 x3) ==> data_model x1 x3)
+  })
+  (x1 x2 x3: raw_data_item)
 : Lemma
-  (ensures (raw_equiv_list_no_map l1 l2 == list_for_all2 raw_equiv_no_map l1 l2))
-  (decreases l1)
-= raw_equiv_list_no_map_eq l1 l2;
-  match l1, l2 with
-  | a1 :: q1, a2 :: q2 ->
-    raw_equiv_list_no_map_eq [a1] [a2];
-    raw_equiv_list_no_map_eq q1 q2;
-    raw_equiv_list_no_map_eq' q1 q2
+  (requires (equiv data_model x1 x2 /\ equiv data_model x2 x3))
+  (ensures (equiv data_model x1 x3))
+  (decreases (raw_data_item_size x1 + raw_data_item_size x2 + raw_data_item_size x3))
+= equiv_eq data_model x1 x2;
+  equiv_eq data_model x2 x3;
+  equiv_eq data_model x1 x3;
+  raw_data_item_size_eq x1;
+  raw_data_item_size_eq x2;
+  raw_data_item_size_eq x3;
+  if data_model x1 x2
+  then ()
+  else if data_model x2 x3
+  then ()
+  else if x1 = x2
+  then ()
+  else if x2 = x3
+  then ()
+  else match x1, x2, x3 with
+  | Array _ v1, Array _ v2, Array _ v3 ->
+    list_for_all2_trans
+      (equiv data_model)
+      v1 v2 v3
+      (fun y1 y2 y3 ->
+        list_sum_memP raw_data_item_size v1 y1;
+        list_sum_memP raw_data_item_size v2 y2;
+        list_sum_memP raw_data_item_size v3 y3;
+        equiv_trans' data_model y1 y2 y3
+      )
+  | Map _ v1, Map _ v2, Map _ v3 ->
+    let prf
+      (l1 l2 l3: list (raw_data_item & raw_data_item))
+    : Lemma
+      (requires (
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) l1 +
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) l2 +
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) l3 ==
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) v1 +
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) v2 +
+        list_sum (pair_sum raw_data_item_size raw_data_item_size) v3 /\
+        List.Tot.for_all (setoid_assoc_eq (equiv data_model) (equiv data_model) l1) l2 /\
+        List.Tot.for_all (setoid_assoc_eq (equiv data_model) (equiv data_model) l2) l3
+      ))
+      (ensures (
+        List.Tot.for_all (setoid_assoc_eq (equiv data_model) (equiv data_model) l1) l3
+      ))
+    = list_for_all_intro
+        (setoid_assoc_eq (equiv data_model) (equiv data_model) l1)
+        l3
+        (fun y3 ->
+          list_sum_memP
+            (pair_sum raw_data_item_size raw_data_item_size)
+            l3 y3;
+          List.Tot.for_all_mem
+            (setoid_assoc_eq (equiv data_model) (equiv data_model) l2)
+            l3;
+          assert (setoid_assoc_eq (equiv data_model) (equiv data_model) l2 y3);
+          let ky3 = fst y3 in
+          let Some vy2 = list_setoid_assoc (equiv data_model) ky3 l2 in
+          let Some ky2 = list_setoid_assoc_mem (equiv data_model) ky3 l2 in
+          let y2 = (ky2, vy2) in
+          list_sum_memP
+            (pair_sum raw_data_item_size raw_data_item_size)
+            l2 y2;
+          List.Tot.for_all_mem
+            (setoid_assoc_eq (equiv data_model) (equiv data_model) l1)
+            l2;
+          assert (setoid_assoc_eq (equiv data_model) (equiv data_model) l1 y2);
+          let Some vy1 = list_setoid_assoc (equiv data_model) (ky2) l1 in
+          let Some ky1 = list_setoid_assoc_mem (equiv data_model) (ky2) l1 in
+          let y1 = (ky1, vy1) in
+          list_sum_memP
+            (pair_sum raw_data_item_size raw_data_item_size)
+            l1 y1;
+          equiv_trans' data_model (snd y3) vy2 vy1;
+          list_setoid_assoc_equiv_gen
+            (equiv data_model) (equiv data_model)
+            l1
+            ky3
+            ky2
+            (fun a ->
+              list_sum_memP (pair_sum raw_data_item_size raw_data_item_size) l1 a;
+              let ka = fst a in
+              if equiv data_model ky3 ka
+              then begin
+                equiv_sym data_model ky3 ka;
+                equiv_trans' data_model ka ky3 ky2;
+                equiv_sym data_model ky2 ka
+              end
+              else if equiv data_model ky2 ka
+              then begin
+                equiv_trans' data_model ky3 ky2 ka
+              end
+              else ()
+            );
+          ()
+        )
+    in
+    prf v1 v2 v3;
+    abc_cba // FIXME: WHY WHY WHY?
+      (list_sum (pair_sum raw_data_item_size raw_data_item_size) v1)
+      (list_sum (pair_sum raw_data_item_size raw_data_item_size) v2)
+      (list_sum (pair_sum raw_data_item_size raw_data_item_size) v3);
+    prf v3 v2 v1;
+    ()
+  | Tagged tag1 v1, Tagged tag2 v2, Tagged tag3 v3 ->
+    equiv_trans' data_model v1 v2 v3
   | _ -> ()
 
-let valid_no_maps_in_keys_no_maps_in_keys_gen
-  (p: raw_data_item -> bool)
+#pop-options
+
+let equiv_trans
+  (data_model: (raw_data_item -> raw_data_item -> bool) {
+    (forall x1 x2 . data_model x1 x2 == data_model x2 x1) /\
+    (forall x1 x2 x3 . (data_model x1 x2 /\ equiv data_model x2 x3) ==> data_model x1 x3)
+  })
+  (x1 x2 x3: raw_data_item)
+: Lemma
+  (requires (equiv data_model x1 x2 /\ equiv data_model x2 x3))
+  (ensures (equiv data_model x1 x3))
+= Classical.forall_intro_2 (equiv_sym data_model);
+  equiv_trans' data_model x1 x2 x3
+
+let rec valid_eq'
+  (data_model: (raw_data_item -> raw_data_item -> bool))
   (x: raw_data_item)
 : Lemma
-  (requires (valid_raw_data_item_no_maps_in_keys_gen p x == true))
-  (ensures (holds_on_raw_data_item p x == true))
-= holds_on_raw_data_item_implies
-    (valid_raw_data_item_no_maps_in_keys_elem_gen p)
-    p
-    (fun x' -> ())
-    x
-
-let rec valid_no_maps_in_keys_valid_map
-  (l: list (raw_data_item & raw_data_item))
-: Lemma
-  (requires (
-    List.Tot.for_all (holds_on_pair valid_raw_data_item_no_maps_in_keys) l == true /\
-    no_maps_in_keys_map l == true /\
-    valid_raw_data_item_no_maps_in_keys_map l == true
-  ))
-  (ensures (
-    valid_raw_data_item_map l == true
-  ))
-= match l with
-  | [] -> ()
-  | a :: q ->
-    valid_no_maps_in_keys_valid_map q;
-    if List.Tot.existsb (map_entry_order raw_equiv _ a) q
-    then begin
-      let a' = list_existsb_elim (map_entry_order raw_equiv _ a) q in
-      assert (List.Tot.memP a l);
-      assert (List.Tot.memP a' l);
-      List.Tot.for_all_mem (holds_on_pair valid_raw_data_item_no_maps_in_keys) l;
-      List.Tot.memP_map_intro fst a l;
-      List.Tot.memP_map_intro fst a' l;
-      valid_no_maps_in_keys_no_maps_in_keys (fst a);
-      valid_no_maps_in_keys_no_maps_in_keys (fst a');
-      list_for_all2_prod_or_weak (holds_on_raw_data_item (notp Map?)) (holds_on_raw_data_item (notp Map?)) [fst a] [fst a'];
-      raw_equiv_equiv_list_no_map [fst a] [fst a'];
-      list_existsb_intro (map_entry_order raw_equiv_no_map _ a) q a'
-    end
-
-let valid_no_maps_in_keys_valid
-  (x: raw_data_item)
-: Lemma
-  (requires (valid_raw_data_item_no_maps_in_keys x == true))
-  (ensures (valid_raw_data_item x == true))
-= holds_on_raw_data_item_implies
-    valid_raw_data_item_no_maps_in_keys_elem
-    valid_raw_data_item_elem
-    (fun x' -> 
-      assert_norm (valid_raw_data_item_no_maps_in_keys == holds_on_raw_data_item valid_raw_data_item_no_maps_in_keys_elem);
-      match x' with
-      | Map len v ->
-        holds_on_raw_data_item_eq_map valid_raw_data_item_no_maps_in_keys_elem len v;
-        valid_no_maps_in_keys_valid_map v
-      | _ -> ()
-    )
-    x
-
-let valid_no_maps_in_keys_valid_gen
-  (p: raw_data_item -> bool)
-  (x: raw_data_item)
-: Lemma
-  (requires (
-    valid_raw_data_item_no_maps_in_keys_gen p x == true /\
-    (forall x' . p x' == true ==> no_maps_in_keys_elem x' == true)
-  ))
-  (ensures (valid_raw_data_item x == true))
-= holds_on_raw_data_item_implies
-    (valid_raw_data_item_no_maps_in_keys_elem_gen p)
-    valid_raw_data_item_no_maps_in_keys_elem
-    (fun x' -> ())
-    x;
-  valid_no_maps_in_keys_valid x
-
-let rec valid_valid_no_maps_in_keys_map
-  (l: list (raw_data_item & raw_data_item))
-: Lemma
-  (requires (
-    valid_raw_data_item_map l == true
-  ))
-  (ensures (
-    valid_raw_data_item_no_maps_in_keys_map l == true
-  ))
-= match l with
-  | [] -> ()
-  | a :: q ->
-    valid_valid_no_maps_in_keys_map q;
-    if List.Tot.existsb (map_entry_order raw_equiv_no_map _ a) q
-    then
-      list_existsb_implies (map_entry_order raw_equiv_no_map _ a) (map_entry_order raw_equiv _ a) q (fun a' -> raw_equiv_list_no_map_equiv [fst a] [fst a'])
-
-let valid_valid_no_maps_in_keys_gen
-  (p: raw_data_item -> bool)
-  (x: raw_data_item)
-: Lemma
-  (requires (valid_raw_data_item x == true /\
-    holds_on_raw_data_item p x == true
-  ))
-  (ensures (valid_raw_data_item_no_maps_in_keys_gen p x == true))
-= holds_on_raw_data_item_andp
-    valid_raw_data_item_elem
-    p
-    x;
-  holds_on_raw_data_item_implies
-    (andp valid_raw_data_item_elem p)
-    (valid_raw_data_item_no_maps_in_keys_elem_gen p)
-    (fun x' -> 
-      match x' with
-      | Map len v ->
-        holds_on_raw_data_item_eq_map valid_raw_data_item len v;
-        valid_valid_no_maps_in_keys_map v
-      | _ -> ()
-    )
-    x
-
-let valid_valid_no_maps_in_keys
-  (x: raw_data_item)
-: Lemma
-  (requires (valid_raw_data_item x == true /\
-    no_maps_in_keys x == true
-  ))
-  (ensures (valid_raw_data_item_no_maps_in_keys x == true))
-= assert_norm (valid_raw_data_item_no_maps_in_keys x == valid_raw_data_item_no_maps_in_keys_gen no_maps_in_keys_elem x);
-  valid_valid_no_maps_in_keys_gen no_maps_in_keys_elem x
-
-let valid_raw_data_item_no_maps_in_keys_eq
-  (x: raw_data_item)
-: Lemma
-  (valid_raw_data_item_no_maps_in_keys x ==
-    (valid_raw_data_item x && no_maps_in_keys x)
-  )
-= Classical.move_requires valid_no_maps_in_keys_no_maps_in_keys x;
-  Classical.move_requires valid_no_maps_in_keys_valid x;
-  Classical.move_requires valid_valid_no_maps_in_keys x
-
-let valid_raw_data_item_no_maps_in_keys_gen_eq
-  (p: raw_data_item -> bool)
-  (x: raw_data_item)
-: Lemma
-  (requires (
-    forall x' . p x' == true ==> no_maps_in_keys_elem x' == true
-  ))
-  (ensures (valid_raw_data_item_no_maps_in_keys_gen p x ==
-    (valid_raw_data_item x && holds_on_raw_data_item p x)
-  ))
-= Classical.move_requires (valid_no_maps_in_keys_no_maps_in_keys_gen p) x;
-  Classical.move_requires (valid_no_maps_in_keys_valid_gen p) x;
-  Classical.move_requires (valid_valid_no_maps_in_keys_gen p) x
+  (ensures (valid data_model x == holds_on_raw_data_item (valid_item data_model) x))
+= valid_eq data_model x;
+  holds_on_raw_data_item_eq (valid_item data_model) x;
+  match x with
+  | Array _ v ->
+    list_for_all_ext (valid data_model) (holds_on_raw_data_item (valid_item data_model)) v (fun y -> valid_eq' data_model y)
+  | Tagged _ v -> valid_eq' data_model v
+  | Map _ v ->
+    list_of_pair_list_map (valid data_model) v;
+    list_for_all_ext
+      (holds_on_pair (valid data_model))
+      (holds_on_pair (holds_on_raw_data_item (valid_item data_model)))
+      v
+      (fun x ->
+        valid_eq' data_model (fst x);
+        valid_eq' data_model (snd x)
+      )
+  | _ -> ()
