@@ -171,6 +171,7 @@ let bundle_get_rel_steps =
   ] ::
   delta_only (
     `%Mkbundle?.b_spec_type ::
+    `%Mkbundle?.b_spec_type_eq ::
     `%Mkarray_bundle?.ab_spec_type ::
     `%Mkmap_bundle?.mb_spec_type ::
     `%Mkbundle?.b_impl_type ::

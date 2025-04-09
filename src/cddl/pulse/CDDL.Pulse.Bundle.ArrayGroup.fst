@@ -59,7 +59,7 @@ let bundle_array_group_bij
     {
       ab_typ = b_typ;
       ab_spec_type = tgt';
-      ab_spec_type_eq = Ghost.hide (let eq' = Ghost.reveal b_spec_type_eq in EqTest.mk_eq_test (fun x1' x2' -> fprf_12_21 x1'; fprf_12_21 x2'; eq' (f21 x1') (f21 x2')));
+      ab_spec_type_eq =  Ghost.hide (mk_eq_test_bij f12 f21 fprf_21_12 fprf_12_21 b_spec_type_eq);
       ab_spec = ag_spec_inj b_spec f12 f21 fprf_21_12 fprf_12_21;
       ab_impl_type = impl_tgt';
       ab_rel = rel_fun b_rel g21 f21;
