@@ -2,7 +2,7 @@ module CBOR.Spec.Raw
 include CBOR.Spec.Raw.Sort
 include CBOR.Spec.API.Type
 
-module R = CBOR.Spec.Raw.Valid
+module R = CBOR.Spec.Raw.Sort
 module RS = CBOR.Spec.Raw.Sort
 module U = CBOR.Spec.Util
 module U64 = FStar.UInt64

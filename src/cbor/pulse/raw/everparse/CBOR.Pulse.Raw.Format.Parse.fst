@@ -127,7 +127,7 @@ let impl_raw_uint64_optimal
   (x: raw_uint64)
 : Pure bool
     (requires True)
-    (ensures fun res -> res == raw_uint64_optimal x)
+    (ensures fun res -> res == CBOR.Spec.Raw.Optimal.raw_uint64_optimal x)
 = if
     (x.value `U64.lte` FStar.Int.Cast.uint8_to_uint64 max_simple_value_additional_info) = (x.size = 0uy)
   then
