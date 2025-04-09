@@ -1,5 +1,7 @@
 all: extract
 
+CFLAGS += -O3
+
 EVERPARSE_SRC_PATH = $(realpath ../../../..)
 OUTPUT_DIRECTORY:=.
 
