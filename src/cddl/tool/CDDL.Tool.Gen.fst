@@ -1,19 +1,7 @@
 module CDDL.Tool.Gen
 include CDDL.Spec.AST.Driver
+include CDDL.Pulse.Attr
 module U32 = FStar.UInt32
-
-let filter_char (c: FStar.Char.char) : Tot bool =
-  let code = FStar.Char.u32_of_char c in
-  (code `U32.gte` FStar.Char.u32_of_char 'A' &&
-    code `U32.lte` FStar.Char.u32_of_char 'Z') ||
-  (code `U32.gte` FStar.Char.u32_of_char 'a' &&
-    code `U32.lte` FStar.Char.u32_of_char 'z') ||
-  (code `U32.gte` FStar.Char.u32_of_char '0' &&
-    code `U32.lte` FStar.Char.u32_of_char '9') ||
-  code = FStar.Char.u32_of_char '_'
-
-let filter_name (name: string) = 
-  FStar.String.string_of_list (List.Tot.filter filter_char (FStar.String.list_of_string name))
 
 let mk_validator_name (name: string) : string =
   "validate_" ^ filter_name name

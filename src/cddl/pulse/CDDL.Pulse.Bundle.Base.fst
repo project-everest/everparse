@@ -10,7 +10,7 @@ module EqTest = CDDL.Spec.EqTest
 unfold noextract
 let maybe_named (s : option string) (t : Type u#aa) : Type u#aa =
   match s with
-  | Some n -> FStar.Tactics.PrettifyType.named n t
+  | Some n -> FStar.Tactics.PrettifyType.named (CDDL.Pulse.Attr.filter_name n) t
   | None -> t
 
 inline_for_extraction noextract [@@noextract_to "krml"]
