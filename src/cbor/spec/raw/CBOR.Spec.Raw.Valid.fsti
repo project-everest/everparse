@@ -187,7 +187,7 @@ let valid_raw_data_item_map_fmap_equiv
   })
   (f: raw_data_item -> raw_data_item)
   (l: list (raw_data_item & raw_data_item))
-  (prf: (x: raw_data_item { x << l }) -> Lemma
+  (prf: (x: raw_data_item { (List.Tot.memP x (List.Tot.map fst l)) /\ x << l }) -> Lemma
     (requires (valid data_model x))
     (ensures (equiv data_model x (f x) == true))
   )
@@ -203,7 +203,9 @@ let valid_raw_data_item_map_fmap_equiv
           List.Tot.for_all_mem (holds_on_pair (holds_on_raw_data_item (valid_item data_model))) l;
           valid_eq' data_model (fst x);
           valid_eq' data_model (fst x');
+          List.Tot.memP_map_intro fst x l;
           prf (fst x);
+          List.Tot.memP_map_intro fst x' l;
           prf (fst x');
           equiv_sym data_model (f (fst x')) (fst x');
           equiv_trans data_model (fst x) (f (fst x)) (f (fst x'));

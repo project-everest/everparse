@@ -589,6 +589,37 @@ let list_setoid_assoc_sorted_optimal
     );
   list_setoid_assoc_eqtype x l
 
+let list_assoc_sorted_optimal_setoid_assoc_eq
+  (order: raw_data_item -> raw_data_item -> bool {
+    order_irrefl order /\
+    order_trans order
+  })
+  (l1: list (raw_data_item & raw_data_item))
+  (l2: list (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) l1 == true /\
+    List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) l1 == true /\
+    List.Tot.for_all (holds_on_pair raw_data_item_ints_optimal) l2 == true /\
+    List.Tot.for_all (holds_on_pair (raw_data_item_sorted order)) l2 == true /\
+    List.Tot.no_repeats_p (List.Tot.map fst l1) /\
+    List.Tot.no_repeats_p (List.Tot.map fst l2) /\
+    (forall x . List.Tot.assoc x l1 == List.Tot.assoc x l2)
+  ))
+  (ensures (
+    List.Tot.for_all (setoid_assoc_eq (raw_equiv2) (raw_equiv2) l1) l2
+  ))
+= list_for_all_intro
+    (setoid_assoc_eq (raw_equiv2) (raw_equiv2) l1)
+    l2
+    (fun x ->
+      List.Tot.for_all_mem (holds_on_pair raw_data_item_ints_optimal) l2;
+      List.Tot.for_all_mem (holds_on_pair (raw_data_item_sorted order)) l2;
+      list_setoid_assoc_sorted_optimal order (fst x) l1;
+      list_assoc_no_repeats_mem_elim (fst x) (snd x) l2;
+      equiv_refl basic_data_model (snd x)
+    )
+
 let list_setoid_assoc_valid_equiv
   (x1: raw_data_item)
   (l1: list (raw_data_item & raw_data_item))
