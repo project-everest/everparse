@@ -4,7 +4,7 @@
 	branch = bij
 [submodule "opt/karamel"]
 	path = opt/karamel
-	url = https://github.com/FStarLang/karamel
+	url = https://github.com/mtzguido/karamel
 [submodule "opt/pulse"]
 	path = opt/pulse
 	url = https://github.com/FStarLang/pulse
