@@ -528,6 +528,8 @@ and produce_iterators_for_map_group
         then (anc2, accu2)
         else
           let anc3 = { anc2 with map_iterators = map_iterator :: anc2.map_iterators } in
+          let bk = bk ^ "_pretty" in
+          let bv = bv ^ "_pretty" in
           let accu3 = accu2 ^ "
 [@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
 let is_empty_" ^ map_iterator ^ " = CDDL.Pulse.Parse.MapGroup.cddl_map_iterator_is_empty  Det.cbor_det_impl.cbor_map_iterator_is_empty Det.cbor_det_impl.cbor_map_iterator_next Det.cbor_det_impl.cbor_map_entry_key Det.cbor_det_impl.cbor_map_entry_value "^bk^" "^bv^"
