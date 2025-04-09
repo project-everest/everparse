@@ -11,6 +11,36 @@ open CBOR.Spec.API.Type
 module Env = CDDL.Pulse.AST.Env // for validator_env
 module Parse = CDDL.Pulse.AST.Parse // for ancillary_validate_env
 
+[@@bundle_attr]
+let name_from_literal (l : literal) : option string =
+  match l with
+  | LTextString s -> Some s
+  | LSimple i
+  | LInt i ->
+    Some (if i >= 0
+          then "intkey" ^ string_of_int i
+          else "intkeyneg" ^ string_of_int (-i))
+
+[@@bundle_attr]
+let rec extract_name_map_group (t : ast0_wf_parse_map_group 'a) : option string =
+  match t with
+  | WfMLiteral _ l _ _ -> name_from_literal l
+  | WfMZeroOrOne _g sub -> extract_name_map_group sub
+  | _ -> None
+
+[@@bundle_attr]
+let name_from_array_key (key : typ) : option string =
+  match key with
+  | TElem (ELiteral l) -> name_from_literal l
+  | _ -> None
+
+[@@bundle_attr]
+let rec extract_name_array_group (t : ast0_wf_array_group 'a) : option string =
+  match t with
+  | WfAElem _ key _ _ -> name_from_array_key key
+  | WfAZeroOrOne _g sub -> extract_name_array_group sub
+  | _ -> None
+
 let bundle_env'
   (#t: Type0)
   (vmatch: (perm -> t -> cbor -> slprop))
@@ -139,9 +169,11 @@ let bundle_env_extend_typ_with_weak
   (e: bundle_env vmatch)
   (new_name: string)
   (t: typ)
-  (t_wf: ast0_wf_typ t {
+  ([@@@erasable] t_wf: Ghost.erased (ast0_wf_typ t) {
     wf_ast_env_extend_typ_with_weak_pre e.be_ast new_name t t_wf
   })
+  (t_wf' : ast0_wf_typ t)
+  (t_wf'_eq: squash (t_wf' == Ghost.reveal t_wf))
   (w: impl_typ vmatch (typ_sem e.be_ast.e_sem_env t))
   (p: bundle vmatch {
     Ghost.reveal p.b_typ == typ_sem e.be_ast.e_sem_env t
@@ -151,7 +183,7 @@ let bundle_env_extend_typ_with_weak
       e'.be_ast == wf_ast_env_extend_typ_with_weak e.be_ast new_name t t_wf
   })
 = {
-    be_ast = wf_ast_env_extend_typ_with_weak e.be_ast new_name t t_wf;
+    be_ast = wf_ast_env_extend_typ_with_weak e.be_ast new_name t t_wf';
     be_v = Env.extend_validator_env_with_typ_weak e.be_v new_name () t () w;
     be_b = extend_bundle_env' e.be_b new_name p;
     be_b_correct = (fun n' -> if n' = new_name then sem_of_typ_sem_wf_ast_env_extend_typ_with_weak e.be_ast new_name t t_wf else e.be_b_correct n');
@@ -504,9 +536,10 @@ and impl_bundle_wf_array_group
     )
     (decreases t_wf)
 = match t_wf with
-  | WfAElem _ _ _ t_wf' ->
+  | WfAElem _ key _ t_wf' ->
+    let nm = extract_name_array_group t_wf in
     let pt = impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag t_wf' in
-    (bundle_array_group_item impl.cbor_array_iterator_next pt)
+    (bundle_array_group_item impl.cbor_array_iterator_next nm pt)
   | WfAZeroOrOne _ t_wf' ->
     let pe = impl_bundle_wf_array_group impl env ancillary_v ancillary ancillary_ag t_wf' in
     (bundle_array_group_zero_or_one pe (V.validate_array_group impl env.be_v _ t_wf') ())
@@ -567,16 +600,19 @@ and impl_bundle_wf_map_group
     let ps2 = impl_bundle_wf_map_group impl env ancillary_v ancillary ancillary_ag s2 in
     impl_bundle_wf_map_group_concat impl.cbor_share impl.cbor_gather env s1 ps1 s2 ps2
   | WfMZeroOrOne _ s1 ->
+    let nm = extract_name_map_group t_wf in
     let ps1 = impl_bundle_wf_map_group impl env ancillary_v ancillary ancillary_ag s1 in
     bundle_map_ext'
       (bundle_map_zero_or_one
         ps1
         (V.validate_map_group impl env.be_v _ s1)
+        nm
         ()
       )
       (t_choice ps1.mb_footprint t_always_false)
       ()
   | WfMLiteral cut key _ s ->
+    let nm = extract_name_map_group t_wf in
     let ps1 = impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag s in
         (bundle_map_match_item_for
           impl.cbor_map_get
@@ -592,6 +628,7 @@ and impl_bundle_wf_map_group
           )
           cut
           ps1
+          nm
         )
   | WfMZeroOrMore _ key_except _ s_key s_key_except s_value ->
     let Some (v_key, p_key) = ancillary _ s_key in
@@ -631,17 +668,19 @@ let impl_bundle_wf_type'
   (ancillary: ancillary_bundle_env vmatch env.be_ast.e_sem_env)
   (ancillary_ag: ancillary_array_bundle_env cbor_array_iterator_match env.be_ast.e_sem_env)
   (#t: typ)
-  (t_wf: ast0_wf_typ t {
+  (t_wf: Ghost.erased (ast0_wf_typ t) {
     spec_wf_typ env.be_ast.e_sem_env true t t_wf /\ SZ.fits_u64
   })
+  (t_wf': ast0_wf_typ t)
+  (_: squash (t_wf' == Ghost.reveal t_wf))
   (_: squash (
-    None? (Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some ancillary_v) (ancillary_bundle_env_is_some ancillary) (ancillary_array_bundle_env_is_some ancillary_ag) t_wf)
+    None? (Parse.ask_zero_copy_wf_type (Parse.ancillary_validate_env_is_some ancillary_v) (ancillary_bundle_env_is_some ancillary) (ancillary_array_bundle_env_is_some ancillary_ag) t_wf')
   ))
 : Tot (res: bundle vmatch {
       spec_wf_typ env.be_ast.e_sem_env true t t_wf /\
       Ghost.reveal res.b_typ == typ_sem env.be_ast.e_sem_env t
   })
-= impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag t_wf
+= impl_bundle_wf_type impl env ancillary_v ancillary ancillary_ag t_wf'
 
 [@@bundle_attr]
 let impl_bundle_wf_ask_for_guarded_type

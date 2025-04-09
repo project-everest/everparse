@@ -3,13 +3,9 @@ all: package-subset asn1 cbor cddl cbor-interface
 export FSTAR_EXE ?= $(realpath opt)/FStar/bin/fstar.exe
 export KRML_HOME ?= $(realpath opt/karamel)
 export PULSE_HOME ?= $(realpath opt/pulse/out)
+export EVERPARSE_OPT_PATH=$(realpath opt)
 
-env:
-	echo export FSTAR_EXE=$(FSTAR_EXE)
-	echo export KRML_HOME=$(KRML_HOME)
-	echo export PULSE_HOME=$(PULSE_HOME)
-
-.PHONY: env
+include $(EVERPARSE_OPT_PATH)/env.Makefile
 
 package-subset: quackyducky lowparse 3d
 
@@ -211,15 +207,29 @@ endif
 .PHONY: cddl-demo
 
 ifeq (,$(NO_PULSE))
-cose: cddl
-	+$(MAKE) -C src/cose
+cose-extract-test: cddl
+	+$(MAKE) -C src/cose test-extract
+
+# This rule is incompatible with cose-extract-test
+cose-snapshot: cddl
+	+$(MAKE) -C src/cose snapshot
 else
-cose:
+cose-extract-test:
+cose-snapshot:
 endif
+
+.PHONY: cose-extract-test cose-snapshot
+
+cose-test: cose-extract-test
+
+.PHONY: cose-test
+
+cose: cbor
+	+$(MAKE) -C src/cose
 
 .PHONY: cose
 
-cddl-test: cddl cddl-plugin-test cddl-demo cose
+cddl-test: cddl cddl-plugin-test cddl-demo cose-extract-test
 
 .PHONY: cddl-test
 

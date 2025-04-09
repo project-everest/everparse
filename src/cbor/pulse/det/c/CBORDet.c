@@ -1711,9 +1711,8 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
         size_t i;
         if
         (
-          b0.major_type
-          == CBOR_MAJOR_TYPE_BYTE_STRING
-          || b0.major_type == CBOR_MAJOR_TYPE_TEXT_STRING
+          b0.major_type == CBOR_MAJOR_TYPE_BYTE_STRING ||
+            b0.major_type == CBOR_MAJOR_TYPE_TEXT_STRING
         )
         {
           initial_byte_t b = x.fst;
@@ -1790,9 +1789,8 @@ static size_t cbor_validate_det_(Pulse_Lib_Slice_slice__uint8_t input)
           size_t i;
           if
           (
-            b0.major_type
-            == CBOR_MAJOR_TYPE_BYTE_STRING
-            || b0.major_type == CBOR_MAJOR_TYPE_TEXT_STRING
+            b0.major_type == CBOR_MAJOR_TYPE_BYTE_STRING ||
+              b0.major_type == CBOR_MAJOR_TYPE_TEXT_STRING
           )
           {
             initial_byte_t b = x.fst;
@@ -5364,8 +5362,7 @@ cbor_freeable cbor_copy0(cbor_raw x)
     cbor_map_entry *v_ = KRML_HOST_MALLOC(sizeof (cbor_map_entry) * len);
     if (v_ != NULL)
       for (uint32_t _i = 0U; _i < len; ++_i)
-        v_[_i]
-        =
+        v_[_i] =
           (
             (cbor_map_entry){
               .cbor_map_entry_key = { .tag = CBOR_Case_Simple, { .case_CBOR_Case_Simple = 0U } },
@@ -5376,8 +5373,7 @@ cbor_freeable cbor_copy0(cbor_raw x)
     cbor_freeable_map_entry *vf = KRML_HOST_MALLOC(sizeof (cbor_freeable_map_entry) * len);
     if (vf != NULL)
       for (uint32_t _i = 0U; _i < len; ++_i)
-        vf[_i]
-        =
+        vf[_i] =
           (
             (cbor_freeable_map_entry){
               .map_entry_key = { .tag = CBOR_Copy_Unit },

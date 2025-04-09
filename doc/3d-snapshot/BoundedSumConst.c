@@ -80,9 +80,7 @@ BoundedSumConstValidateBoundedSum(
     /* start: checking constraint */
     BOOLEAN
     right_refinementConstraintIsOk =
-      left
-      <= (uint32_t)42U
-      && right_refinement <= ((uint32_t)42U - left);
+      left <= (uint32_t)42U && right_refinement <= ((uint32_t)42U - left);
     /* end: checking constraint */
     positionAfterBoundedSum0 =
       EverParseCheckConstraintOk(right_refinementConstraintIsOk,

@@ -1132,14 +1132,17 @@ let extract_computed_wf_typ'
   (new_name: string)
   (t: typ)
   (fuel: nat)
-  (res: result (ast0_wf_typ t) {
+  ([@@@erasable] res: Ghost.erased (result (ast0_wf_typ t)) {
     compute_wf_typ'_post e new_name t res
   })
-  (res_success: squash (RSuccess? res))
+  (res': result (ast0_wf_typ t))
+  (sq: squash (res' == Ghost.reveal res))
+  (res_success: squash (RSuccess? res'))
 : Tot (t_wf: ast0_wf_typ t {
-      wf_ast_env_extend_typ_with_weak_pre e new_name t t_wf
+      wf_ast_env_extend_typ_with_weak_pre e new_name t t_wf /\
+      typ_bounded e.e_sem_env.se_bound t
   })
-= RSuccess?._0 res
+= RSuccess?._0 res'
 
 [@@sem_attr]
 let wf_ast_env_extend_typ

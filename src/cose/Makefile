@@ -1,4 +1,4 @@
-all: extract-all
+all: build interop
 
 EVERPARSE_SRC_PATH = $(realpath ..)
 
@@ -9,10 +9,29 @@ $(OUTPUT): cose.cddl ../cddl/spec/postlude.cddl
 	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT))
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
-extract-all: $(OUTPUT)
-	+$(MAKE) -f extract.Makefile extract
+build:
+	+$(MAKE) -C snapshot
 
-.PHONY: extract-all all
+.PHONY: build
+
+.PHONY: all
+
+test-extract: $(OUTPUT)
+	+$(MAKE) -f extract.Makefile test
+
+.PHONY: test-interop
+test-interop: build
+	+$(MAKE) -C interop
+
+test: test-extract test-interop
+
+.PHONY: test-extract test
+
+# This rule is incompatible with `test-extract`
+snapshot: $(OUTPUT)
+	+$(MAKE) -f extract.Makefile snapshot
+
+.PHONY: snapshot
 
 # Uncomment if you want to edit the produced F* file
 # include extract.Makefile

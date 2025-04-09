@@ -31,12 +31,12 @@
 
 ;                  int = uint / nint
                    uint = #0
-;                  nint = #1
+                  nint = #1
 
 ;                  text = tstr
                   bytes = bstr
                   bstr = #2
-;                  tstr = #3
+                  tstr = #3
 
 ;                  bool = false / true ; already defined because of the F* spec type
                   false = #7.20

@@ -1052,10 +1052,10 @@ and ast0_wf_array_group
 = 
 | WfAElem:
   _cut: bool ->
-  _key: typ ->
+  key: typ ->
   ty: typ ->
   prf: ast0_wf_typ ty ->
-  ast0_wf_array_group (GElem _cut _key ty)
+  ast0_wf_array_group (GElem _cut key ty)
 | WfAZeroOrOne:
   g: group ->
   s: ast0_wf_array_group g ->

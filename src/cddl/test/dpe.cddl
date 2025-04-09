@@ -4,3 +4,66 @@ initialize-context-input-args = {
   ? &(seed:3) ^=> bytes, 
   * &(tstr:uint) => any 
 }
+
+derive-context-engine-record = {
+  l0-image-header:bytes,
+  l0-image-header_sig:bytes,
+  l0-binary:bytes,
+  l0-binary-hash:bytes,
+  l0-image-auth-pubkey: bytes
+}
+
+device-id-csr-ingredients = {
+  ku : nint,
+  version: nint,
+  s_common: tstr,
+  s_org: tstr,
+  s_country: tstr
+}
+
+alias-key-crt-ingredients = {
+  version: nint,
+  serialNumber: bytes,
+  i_common: tstr,
+  i_org: tstr,
+  notBefore: bytes,
+  notAfter: bytes,
+  s_common: tstr,
+  s_org: tstr,
+  s_country: tstr,
+  ku: nint,
+  l0_version: nint
+}
+
+
+derive-context-l0-record = {
+  fwid: bytes,
+  device-id-label: bytes, 
+  alias-key-label: bytes,
+  device-id-csr-ingredients: device-id-csr-ingredients,
+  alias-key-crt-ingredients: alias-key-crt-ingredients
+}
+
+derive-context-input-args-data = {
+  &(engine-record:1) => derive-context-engine-record //
+  &(l0-record:2) => derive-context-l0-record
+}
+
+
+derive-context-input-args = { 
+? &(context-handle:1) ^=> bytes, 
+? &(retain-parent-context:2) ^=> bool,  ; Default = false 
+? &(allow-new-context-to-derive:3) ^=> bool,  ; Default = true 
+? &(create-certificate:4) ^=> bool,  ; Default = true 
+? &(new-session-initiator-handshake:5) ^=> bytes, 
+? &(input-data:6) ^=> derive-context-input-args-data,
+;; ? &(internal-inputs:7) ^=> [* $internal-input-type], 
+? &(target-locality:8) ^=> bytes, 
+? &(return-certificate:9) ^=> bool,  ; Default = false 
+? &(allow-new-context-to-export:10) ^=> bool,  ; Default = false 
+? &(export-cdi:11) ^=> bool,  ; Default = false 
+? &(recursive:12) ^=> bool,  ; Default = false 
+* &(tstr:uint) => any 
+}
+
+$internal-input-type /= 1, 2

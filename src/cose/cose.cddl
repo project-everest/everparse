@@ -98,3 +98,22 @@ Sig_structure = [
         payload : bstr
     )
 ]
+
+COSE_Key = COSE_Key_OKP ;/ COSE_KEY_Generic
+
+COSE_Key_OKP = {
+    1: 1,                ; kty
+    -1: int / tstr,      ; crv: EC identifier - Taken from the "COSE Elliptic Curves" registry
+    ? -2: bstr,          ; x: x-coordinate
+    ? -4: bstr,          ; d: private key
+    * label => values
+}
+
+;COSE_Key_Generic = {
+;    1 => tstr / int,          ; kty
+;    ? 2 => bstr,              ; kid
+;    ? 3 => tstr / int,        ; alg
+;    ? 4 => [+ (tstr / int) ], ; key_ops
+;    ? 5 => bstr,              ; Base IV
+;    * label => values
+;}
