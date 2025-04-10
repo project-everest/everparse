@@ -95,10 +95,15 @@ $(OUTPUT_DIRECTORY)/%.c: $(OUTPUT_DIRECTORY)/%.krml $(addprefix $(OUTPUT_DIRECTO
 
 # .PHONY: extract test
 
-$(ODIR)/Test_%.exe: $(ODIR)/Test_%.o $(ODIR)/%.o
+remove__ = $(firstword $(subst __, ,$1))
+
+.SECONDEXPANSION:
+
+
+$(ODIR)/Test_%.exe: $(ODIR)/Test_%.o $(ODIR)/$$(call remove__,%).o
 	$(CC) -O3 -o $@ $^ $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o
 
-$(ODIR)/Test_%.o: Test_%.c $(ODIR)/%.c
+$(ODIR)/Test_%.o: Test_%.c $(ODIR)/$$(call remove__,%).c
 	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output $(CFLAGS) -c $< -o $@
 
 %.run: $(ODIR)/Test_%.exe

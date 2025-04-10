@@ -2,9 +2,9 @@
 #include "Bench.h"
 #include "timing.h"
 
-#define BSIZE (10 + (1<<29)) /* size of buffer */
-// #define N (1+(1<<28)) /* more elements for test */
+
 #define N 10000
+#define BSIZE (30 + 3*N + (N*N)) /* size of buffer */
 
 int main()
 {
