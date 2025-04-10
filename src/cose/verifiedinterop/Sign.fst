@@ -61,3 +61,44 @@ fn mk_int (i: Int32.t)
     Mkevercddl_int_pretty0 (Mkevercddl_uint_pretty0 j)
   }
 }
+
+open CDDL.Pulse.Types
+
+let rel_sig_structure_eq (a: evercddl_Sig_structure_pretty) (b: spect_evercddl_Sig_structure_pretty) :
+  squash (rel_evercddl_Sig_structure a b == (match a, b with
+    | Mkevercddl_Sig_structure_pretty0 context body_protected rest,
+      Mkspect_evercddl_Sig_structure_pretty0 vcontext vbody_protected vrest ->
+        rel_either rel_unit rel_unit context vcontext **
+        (rel_evercddl_empty_or_serialized_map body_protected vbody_protected **
+          (match rest, vrest with
+            | Inr (aad, payload), Inr (vaad, vpayload) ->
+              rel_evercddl_bstr aad vaad ** rel_evercddl_bstr payload vpayload
+            | Inl (sign_protected, (aad, payload)), Inl (vsign_protected, (vaad, vpayload)) ->
+              rel_evercddl_empty_or_serialized_map sign_protected vsign_protected **
+                (rel_evercddl_bstr aad vaad ** rel_evercddl_bstr payload vpayload)
+            | _ -> pure False)))) =
+  ()
+
+inline_for_extraction
+let signature1: either unit unit = Inr ()
+
+let mk_sig_structure_spec
+    (phdr: spect_evercddl_empty_or_serialized_map_pretty)
+    (aad payload: spect_evercddl_bstr_pretty)
+    : GTot spect_evercddl_Sig_structure_pretty =
+  Mkspect_evercddl_Sig_structure_pretty0 signature1 phdr (Inr (aad, payload))
+
+fn mk_sig_structure phdr aad payload #vphdr #vaad #vpayload
+  requires rel_evercddl_empty_or_serialized_map phdr vphdr
+  requires rel_evercddl_bstr aad vaad
+  requires rel_evercddl_bstr payload vpayload
+  returns r: _
+  ensures rel_evercddl_Sig_structure r (mk_sig_structure_spec vphdr vaad vpayload)
+{
+  rewrite emp as rel_either rel_unit rel_unit signature1 signature1;
+  rw_l (rel_sig_structure_eq (Mkevercddl_Sig_structure_pretty0 signature1 phdr (Inr (aad, payload)))
+    (Mkspect_evercddl_Sig_structure_pretty0 signature1 vphdr (Inr (vaad, vpayload))));
+  with res vres. assert rel_evercddl_Sig_structure res vres;
+  rewrite each vres as mk_sig_structure_spec vphdr vaad vpayload;
+  res
+}
