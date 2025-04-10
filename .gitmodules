@@ -10,4 +10,4 @@
 	url = https://github.com/FStarLang/pulse
 [submodule "opt/hacl-star"]
 	path = opt/hacl-star
-	url = git@github.com:project-everest/hacl-star
+	url = https://github.com/hacl-star/hacl-star
