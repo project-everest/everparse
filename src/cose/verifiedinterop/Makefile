@@ -33,7 +33,7 @@ _output/Sign.c: $(ALL_KRML_FILES)
 CFLAGS += -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
 
 $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a:
-	$(MAKE) -C $(dirname $@)
+	$(MAKE) -C $(dir $@)
 
 sign: _output/Sign.c ../../cbor/pulse/det/c/CBORDet.c $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a
 	$(CC) $(CFLAGS) $+ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a -o $@
