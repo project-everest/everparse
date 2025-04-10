@@ -66,9 +66,9 @@ QCBORError DecodeSpiffy(UsefulBufC Encoded, BigMap *p)
     /* Let QCBORDecode internal error tracking do its work. */
     QCBORDecode_Init(&DecodeCtx, Encoded, QCBOR_DECODE_MODE_NORMAL);
     QCBORDecode_EnterArray(&DecodeCtx, NULL);
-    for (int i = 0; i < p->len; i++) {
+    for (int i = 0; i < N; i++) {
         QCBORDecode_EnterArray(&DecodeCtx, NULL);
-        for (int j = 0; j < p->len; j++) {
+        for (int j = 0; j < N; j++) {
             int64_t t;
             QCBORDecode_GetInt64(&DecodeCtx, &t);
             p->vals[i][j] = t;

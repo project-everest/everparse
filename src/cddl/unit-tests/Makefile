@@ -99,9 +99,15 @@ remove__ = $(firstword $(subst __, ,$1))
 
 .SECONDEXPANSION:
 
+CFLAGS += -I QCBOR/inc
 
-$(ODIR)/Test_%.exe: $(ODIR)/Test_%.o $(ODIR)/$$(call remove__,%).o
-	$(CC) -O3 -o $@ $^ $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o
+QCBOR/libqcbor.a:
+	$(MAKE) -C QCBOR
+
+# Some tests require libqcbor, we just add it to this invocation for all tests.
+# And libqcbor requires -lm (though we could disable that)
+$(ODIR)/Test_%.exe: $(ODIR)/Test_%.o $(ODIR)/$$(call remove__,%).o QCBOR/libqcbor.a
+	$(CC) -O3 -o $@ $^ $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o QCBOR/libqcbor.a -lm
 
 $(ODIR)/Test_%.o: Test_%.c $(ODIR)/$$(call remove__,%).c
 	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output $(CFLAGS) -c $< -o $@
@@ -109,9 +115,8 @@ $(ODIR)/Test_%.o: Test_%.c $(ODIR)/$$(call remove__,%).c
 %.run: $(ODIR)/Test_%.exe
 	./$<
 
-qcbor_bench: qcbor_bench.c
-	$(MAKE) -C QCBOR
-	$(CC) -O3 -o $@ $< -I QCBOR/inc QCBOR/libqcbor.a -lm
+qcbor_bench: qcbor_bench.c QCBOR/libqcbor.a
+	$(CC) $(CFLAGS) -O3 -o $@ $< QCBOR/libqcbor.a -lm
 
 run-qcbor_bench: qcbor_bench
 	./$<
