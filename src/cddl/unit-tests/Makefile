@@ -109,6 +109,13 @@ $(ODIR)/Test_%.o: Test_%.c $(ODIR)/$$(call remove__,%).c
 %.run: $(ODIR)/Test_%.exe
 	./$<
 
+qcbor_bench: qcbor_bench.c
+	$(MAKE) -C QCBOR
+	$(CC) -O3 -o $@ $< -I QCBOR/inc QCBOR/libqcbor.a -lm
+
+run-qcbor_bench: qcbor_bench
+	./$<
+
 # all: run
 
 .PHONY: all-run
