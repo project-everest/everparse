@@ -201,3 +201,5 @@ fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
     Vec.free arr;
   }
 }
+
+fn main () returns exitcode: Int32.t { 0l }
