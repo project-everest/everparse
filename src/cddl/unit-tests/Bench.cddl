@@ -1,8 +1,6 @@
-map = [
-  42 : uint;
-  * uint;
-]
+submap = [ * uint ]
+map = [ * submap ]
 
 uint = #0
 ; bstr = #2
-any = #
+; any = #

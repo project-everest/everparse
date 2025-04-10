@@ -16,12 +16,12 @@ static int time_par = 0;
 #define __TIME(s, expr, v) ({						\
 		struct timespec __t1p, __t2p;				\
 		struct timespec __t1w, __t2w;				\
-		typeof(expr) ret;					\
+		typeof(expr) __ret;					\
 		float *__vv = v;					\
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &__t1p);	\
 		clock_gettime(CLOCK_REALTIME, &__t1w);			\
 		fprintf(stderr, "About to call `" s "` \n");		\
-		ret = expr;						\
+		__ret = expr;						\
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &__t2p);	\
 		clock_gettime(CLOCK_REALTIME, &__t2w);			\
 		fprintf(stderr, "computed `" s "` in %.5fs total "	\
@@ -34,7 +34,7 @@ static int time_par = 0;
 					__tdiff(__t1w, __t2w));		\
 		if (__vv)						\
 		        *__vv = __tdiff(__t1w, __t2w);			\
-		ret;})
+		__ret;})
 
 /*
  * Dada una expresión [expr] y un puntero a float [v],
