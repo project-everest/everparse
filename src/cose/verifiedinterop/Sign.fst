@@ -94,6 +94,9 @@ fn mk_sig_structure phdr aad payload #vphdr #vaad #vpayload
   requires rel_evercddl_bstr payload vpayload
   returns r: _
   ensures rel_evercddl_Sig_structure r (mk_sig_structure_spec vphdr vaad vpayload)
+  ensures pure (r.context == signature1)
+  ensures pure (r.body_protected == phdr)
+  ensures pure (r._x0 == Inr (aad, payload))
 {
   rewrite emp as rel_either rel_unit rel_unit signature1 signature1;
   rw_l (rel_sig_structure_eq (Mkevercddl_Sig_structure_pretty0 signature1 phdr (Inr (aad, payload)))
@@ -101,4 +104,100 @@ fn mk_sig_structure phdr aad payload #vphdr #vaad #vpayload
   with res vres. assert rel_evercddl_Sig_structure res vres;
   rewrite each vres as mk_sig_structure_spec vphdr vaad vpayload;
   res
+}
+
+ghost fn norm_r p s
+  requires p
+  ensures norm s p
+{
+  norm_spec s p;
+  rewrite p as norm s p
+}
+
+let unfold_plus p lids =
+  norm_r p [delta_only lids; iota; primops]
+
+ghost fn free_mk_sig_structure
+    (ss: evercddl_Sig_structure_pretty { ss.context == signature1 })
+    (phdr: _ { ss.body_protected == phdr })
+    aad (payload: _ { ss._x0 == Inr (aad, payload) })
+    #vphdr #vaad #vpayload
+  requires rel_evercddl_Sig_structure ss (mk_sig_structure_spec vphdr vaad vpayload)
+  ensures rel_evercddl_empty_or_serialized_map phdr vphdr
+  ensures rel_evercddl_bstr aad vaad
+  ensures rel_evercddl_bstr payload vpayload
+{
+  rewrite each ss as (Mkevercddl_Sig_structure_pretty0 signature1 phdr (Inr (aad, payload)));
+  unfold_plus (rel_evercddl_Sig_structure _ _) [`%mk_sig_structure_spec];
+  rw_r (rel_sig_structure_eq _ _);
+  rewrite rel_either rel_unit rel_unit signature1 signature1 as emp;
+}
+
+open EverCrypt.Ed25519
+module AP = Pulse.Lib.ArrayPtr
+
+let to_be_signed_spec
+    (phdr: spect_evercddl_empty_or_serialized_map_pretty)
+    (aad payload: spect_evercddl_bstr_pretty)
+    (tbs: Seq.seq UInt8.t) =
+  let open CDDL.Pulse.Bundle.Base in
+  bundle_Sig_structure''.b_spec.serializable (mk_sig_structure_spec phdr aad payload) /\
+  Seq.equal tbs (CBOR.Spec.API.Format.cbor_det_serialize (bundle_Sig_structure''.b_spec.serializer (mk_sig_structure_spec phdr aad payload)))
+
+module Vec = Pulse.Lib.Vec
+module S = Pulse.Lib.Slice
+
+inline_for_extraction
+let sz_to_u32_safe (i: SizeT.t { SizeT.v i < pow2 32 }) : j:UInt32.t { UInt32.v j == SizeT.v i } =
+  Math.Lemmas.small_mod (SizeT.v i) (pow2 32);
+  SizeT.sizet_to_uint32 i
+
+assume val abort () : stt unit emp (fun _ -> pure False)
+
+fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
+    #vphdr #vaad #vpayload #pprivkey (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
+  requires AP.pts_to privkey #pprivkey vprivkey
+  requires rel_evercddl_empty_or_serialized_map phdr vphdr
+  requires rel_evercddl_bstr aad vaad
+  requires rel_evercddl_bstr payload vpayload
+  requires exists* vsigbuf. pts_to sigbuf vsigbuf ** pure (Seq.length vsigbuf == 64)
+  ensures AP.pts_to privkey #pprivkey vprivkey
+  ensures rel_evercddl_empty_or_serialized_map phdr vphdr
+  ensures rel_evercddl_bstr aad vaad
+  ensures rel_evercddl_bstr payload vpayload
+  ensures exists* tbs.
+    AP.pts_to sigbuf (spec_ed25519_sign vprivkey tbs) **
+    pure (to_be_signed_spec vphdr vaad vpayload tbs)
+{
+  let sz = 1024sz;
+  assert pure (SizeT.v sz <= 1024);
+  let arr = Vec.alloc 0uy sz;
+  Seq.lemma_create_len (SizeT.v sz) 0uy; //?!?
+  Vec.to_array_pts_to arr;
+  let outbuf = S.from_array (Vec.vec_to_array arr) sz;
+  S.pts_to_len _;
+  assert pure (S.len outbuf == sz);
+  let sig_struct = mk_sig_structure phdr aad payload;
+  let written = serialize_Sig_structure' sig_struct outbuf;
+  S.pts_to_len _;
+  assert pure (SizeT.v written <= SizeT.v sz);
+  assert pure (SizeT.v written <= 1024);
+  assert_norm (1024 < pow2 32);
+  free_mk_sig_structure sig_struct phdr aad payload;
+  if (written = 0sz) {
+    abort ();
+    with vsigbuf. rewrite AP.pts_to sigbuf vsigbuf as AP.pts_to sigbuf (spec_ed25519_sign vprivkey vsigbuf);
+    with voutbuf. rewrite S.pts_to outbuf voutbuf ** S.is_from_array (Vec.vec_to_array arr) outbuf as emp;
+  } else {
+    let tbs = Pulse.Lib.Slice.Util.subslice_trade outbuf 0sz written;
+    with vtbs. assert S.pts_to tbs vtbs ** pure (to_be_signed_spec vphdr vaad vpayload vtbs);
+    S.pts_to_len _;
+    let tbs' = S.slice_to_arrayptr_intro tbs;
+    sign sigbuf privkey (sz_to_u32_safe written) tbs';
+    S.slice_to_arrayptr_elim tbs';
+    Pulse.Lib.Trade.elim_trade _ _;
+    S.to_array outbuf;
+    Vec.to_vec_pts_to arr;
+    Vec.free arr;
+  }
 }

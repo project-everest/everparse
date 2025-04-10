@@ -3,11 +3,12 @@
     "options": [
       "--load_cmxs", "evercddl_lib",
       "--load_cmxs", "evercddl_plugin",
-      "--already_cached", "PulseCore,Pulse,C,LowStar,*,-COSE,Prims,FStar,LowStar",
+      "--already_cached", "PulseCore,Pulse,C,LowStar,*,-COSE,Prims,FStar,LowStar,-EverCrypt",
       "--ext", "context_pruning"
     ],
     "include_dirs": [
       ".",
+      "./verifiedinterop",
       "./_output",
       "../../src/lowparse",
       "../../src/lowparse/pulse",
