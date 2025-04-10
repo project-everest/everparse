@@ -237,6 +237,19 @@ let parsed_initialize_context_input
         (pts_to s #p w)
 
 
+[@@pulse_unfold]
+unfold
+let my_unfold (s:string) (p:slprop) = norm [delta_only [s]; hnf; iota; primops] p
+
+ghost
+fn unfold_with_trade (s:string) (p:slprop)
+requires p
+ensures my_unfold s p ** Trade.trade (my_unfold s p) p
+{
+  norm_spec [delta_only [s]; hnf; iota; primops] p;
+  Trade.Util.rewrite_with_trade p (my_unfold s p);
+}
+
 fn parse_initialize_context_input_args (s:Slice.slice UInt8.t) (#p:perm) (#w:erased _)
 requires pts_to s #p w
 returns x:option (slice UInt8.t) //todo, check that slice_len is uds_len
@@ -256,6 +269,7 @@ ensures parsed_initialize_context_input s #p w x
       unfold_rel_initialize_context_input_args _ _;
       destruct_quad _ _ _ _ _ _;
       Trade.Util.elim_hyp_r _ _ (pts_to s #p w);
+      // Trade.trade_compose _ _ (pts_to s #p w);
       Trade.trade_compose _ _ (pts_to s #p w);
       Trade.trade_compose _ _ (pts_to s #p w);
       Trade.Util.elim_hyp_r _ _ (pts_to s #p w);
@@ -282,15 +296,6 @@ ensures parsed_initialize_context_input s #p w x
   }
 }
 
-ghost
-fn unfold_with_trade (p:slprop) (s:string)
-requires p
-ensures norm [delta_only [s]; hnf; iota; primops] p ** Trade.trade (norm [delta_only [s]; hnf; iota; primops] p) p
-{
-  norm_spec [delta_only [s]; hnf; iota; primops] p;
-  Trade.Util.rewrite_with_trade p (norm [delta_only [s]; hnf; iota; primops] p);
-  // rewrite norm [delta_once [s]] p as p;
-}
 
 ghost
 fn destruct_fst (#l0 #l1 #h0 #h1:Type0) (r0:rel l0 h0) (r1:rel l1 h1) (xl: (l0 & l1)) (xh: (h0 & h1)) (res:slprop)
@@ -320,8 +325,266 @@ ensures
   Trade.trade_compose _ _ res;
 }
 
+let either_slprop #a #b (x:either a b) (p: a -> slprop) (q: b -> slprop)
+: slprop
+= match x with
+  | Inl x -> p x
+  | Inr x -> q x
 
-fn extract_derice_context_input_args x (w:erased _)
+noeq
+type engine_record_t = {
+  l0_image_header:slice UInt8.t;
+  l0_image_header_sig:slice UInt8.t;
+  l0_binary:slice UInt8.t;
+  l0_binary_hash:slice UInt8.t;
+  l0_image_auth_pubkey:slice UInt8.t;
+}
+
+fn destruct_pair_concrete_nest (#l0 #l1 #h0 #h1:Type0)
+  (r0:rel l0 h0) 
+  (r1:rel l1 h1)
+  (xl: (l0 & l1))
+  (xh: erased (h0 & h1)) (res:slprop) (rest:slprop) 
+requires 
+  rel_pair r0 r1 xl xh **
+  Trade.trade (rel_pair r0 r1 xl xh ** rest) res
+returns v:(l0 & l1)
+ensures 
+  r0 (fst v) (fst xh) **
+  r1 (snd v) (snd xh) **
+  Trade.trade (r0 (fst v) (fst xh) ** (r1 (snd v) (snd xh) ** rest)) res **
+  pure (v == xl)
+{
+  destruct_pair _ _ xl xh ();
+  Trade.Util.trans_hyp_l _ _ _ res;
+  let v = (fst xl, snd xl);
+  rewrite each xl as v;
+  Trade.Util.assoc_hyp_r _ _ _ res;
+  v
+}
+
+fn destruct_pair_concrete (#l0 #l1 #h0 #h1:Type0) (r0:rel l0 h0) (r1:rel l1 h1) (xl: (l0 & l1)) (xh: erased (h0 & h1)) (res:slprop)
+requires 
+  rel_pair r0 r1 xl xh **
+  Trade.trade (rel_pair r0 r1 xl xh) res
+returns v:(l0 & l1)
+ensures 
+  r0 (fst v) (fst xh) **
+  r1 (snd v) (snd xh) **
+  Trade.trade (r0 (fst v) (fst xh) ** r1 (snd v) (snd xh)) res **
+  pure (v == xl)
+{
+  slprop_equivs();
+  rewrite each (rel_pair r0 r1 xl xh) as (rel_pair r0 r1 xl xh ** emp);
+  let v = destruct_pair_concrete_nest r0 r1 xl xh res emp;
+  v
+}
+
+fn destruct_evercddl_bytes_head 
+    (x:evercddl_bytes_pretty)
+    (w:erased _)
+    (rest done res:slprop)
+requires
+  rel_evercddl_bytes x w **
+  Trade.trade ((rel_evercddl_bytes x w ** rest) ** done) res
+returns xx:slice UInt8.t
+ensures
+  exists* ws. 
+  rel_slice_of_seq false xx ws **
+  Trade.trade (rest ** (done ** rel_slice_of_seq false xx ws)) res
+{
+  Trade.Util.assoc_hyp_r _ _ _ _;
+  let xx = extract_bytes x w;
+  Trade.Util.trans_hyp_l _ _ _ res;
+  slprop_equivs();
+  with ws. assert (rel_slice_of_seq false xx ws);
+  with p. rewrite Trade.trade p res as Trade.trade (rest ** (done ** rel_slice_of_seq false xx ws)) res;
+  xx
+}
+
+fn trade_emp_hyp_r (p q:_)
+requires
+  trade p q
+ensures
+  trade (p ** emp) q
+{
+  slprop_equivs();
+  rewrite each p as (p ** emp);
+}
+
+fn trade_emp_hyp_r_elim (p q r:_)
+requires
+  trade (p ** (emp ** q)) r
+ensures
+  trade (p ** q) r
+{
+  slprop_equivs();
+  rewrite each (emp ** q) as q;
+}
+
+ghost
+fn rewrite_with_trade_trans
+  (p1 p2 res: slprop)
+  requires p1 ** trade p1 res ** pure (p1 == p2)
+  ensures p2 ** trade p2 res
+{
+  rewrite each p1 as p2;
+}
+
+let is_engine_record (e:engine_record_t) (res:slprop) : slprop =
+  exists* hdr hdr_sig bin bin_hash pk p.
+    rel_slice_of_seq false e.l0_image_header hdr **
+    rel_slice_of_seq false e.l0_image_header_sig hdr_sig **
+    rel_slice_of_seq false e.l0_binary bin **
+    rel_slice_of_seq false e.l0_binary_hash bin_hash **
+    rel_slice_of_seq false e.l0_image_auth_pubkey pk **
+    Trade.trade p res ** 
+    pure (p == (rel_slice_of_seq false e.l0_image_header hdr **
+                rel_slice_of_seq false e.l0_image_header_sig hdr_sig **
+                rel_slice_of_seq false e.l0_binary bin **
+                rel_slice_of_seq false e.l0_binary_hash bin_hash **
+                rel_slice_of_seq false e.l0_image_auth_pubkey pk))
+
+fn extract_derive_context_engine_record x (w:erased _)
+requires rel_evercddl_derive_context_engine_record x w
+returns e:engine_record_t
+ensures is_engine_record e (rel_evercddl_derive_context_engine_record x w)
+{
+  unfold_with_trade (`%rel_evercddl_derive_context_engine_record) (rel_evercddl_derive_context_engine_record x w);
+  destruct_rel_fun _ _ _ _ _;
+  Trade.trade_compose _ _ (rel_evercddl_derive_context_engine_record x w);
+  let rest, pk = destruct_pair_concrete _ _ _ _ _;
+  let rest, bin_hash = destruct_pair_concrete_nest _ _ _ _ _ _;
+  let rest, bin = destruct_pair_concrete_nest _ _ _ _ _ _;
+  let hdr, hdr_sig = destruct_pair_concrete_nest _ _ _ _ _ _;
+  trade_emp_hyp_r _ _;
+  let hdr = destruct_evercddl_bytes_head _ _ _ _ _;
+  trade_emp_hyp_r_elim _ _ _;
+  let hdr_sig = destruct_evercddl_bytes_head _ _ _ _ _;
+  let bin = destruct_evercddl_bytes_head _ _ _ _ _;
+  let bin_hash = destruct_evercddl_bytes_head _ _ _ _ _;
+  Trade.Util.assoc_hyp_l _ _ _ _;
+  let pk = destruct_evercddl_bytes_head _ _ _ _ _;
+  let res = 
+    { l0_image_header = hdr;
+      l0_image_header_sig = hdr_sig;
+      l0_binary = bin;
+      l0_binary_hash = bin_hash;
+      l0_image_auth_pubkey = pk };
+  rewrite each
+    hdr as res.l0_image_header,
+    hdr_sig as res.l0_image_header_sig,
+    bin as res.l0_binary,
+    bin_hash as res.l0_binary_hash,
+    pk as res.l0_image_auth_pubkey;
+  slprop_equivs();
+  fold (is_engine_record res);
+  res
+}
+
+fn destruct_evercddl_nint_head 
+    (x:evercddl_nint_pretty)
+    (w:erased _)
+    (rest done res:slprop)
+requires
+  rel_evercddl_nint x w **
+  Trade.trade ((rel_evercddl_nint x w ** rest) ** done) res
+returns xx:UInt64.t
+ensures
+  pure (xx == evercddl_nint_pretty_left x /\ xx == spect_evercddl_nint_pretty_left w) **
+  Trade.trade (rest ** done) res
+{
+  rewrite each (rel_evercddl_nint x w) as pure (evercddl_nint_pretty_left x == spect_evercddl_nint_pretty_left w);
+  Trade.Util.assoc_hyp_r _ _ _ _;
+  Trade.Util.elim_hyp_l (pure _) _ _;
+  evercddl_nint_pretty_left x
+}
+
+fn destruct_evercddl_tstr_head 
+    (x:evercddl_tstr_pretty)
+    (w:erased _)
+    (rest done res:slprop)
+requires
+  rel_evercddl_tstr x w **
+  Trade.trade ((rel_evercddl_tstr x w ** rest) ** done) res
+returns xx:slice UInt8.t
+ensures exists* ws. 
+  rel_slice_of_seq false xx ws **
+  Trade.trade (rest ** (done ** rel_slice_of_seq false xx ws)) res
+{
+  unfold_with_trade (`%rel_evercddl_tstr) (rel_evercddl_tstr x w);
+  destruct_rel_fun _ _ _ _ _;
+  Trade.trade_compose _ _ (rel_evercddl_tstr x w);
+  Trade.Util.assoc_hyp_r _ _ _ _;
+  Trade.Util.trans_hyp_l _ _ _ res;
+  slprop_equivs();
+  with (xx:slice UInt8.t) ws. assert (rel_slice_of_seq false xx ws);
+  with p. rewrite Trade.trade p res as Trade.trade (rest ** (done ** rel_slice_of_seq false xx ws)) res;
+  xx
+}
+
+noeq
+type device_id_csr_ingredients_t = {
+  ku : UInt64.t;
+  version: UInt64.t;
+  s_common: slice UInt8.t;
+  s_org: slice UInt8.t;
+  s_country: slice UInt8.t;
+}
+
+let is_device_id_csr_ingredients (e:device_id_csr_ingredients_t) (res:slprop) : slprop =
+  exists* com org cnt p.
+    rel_slice_of_seq false e.s_common com **
+    rel_slice_of_seq false e.s_org org **
+    rel_slice_of_seq false e.s_country cnt **
+    Trade.trade p res ** 
+    pure (p == (rel_slice_of_seq false e.s_common com **
+                rel_slice_of_seq false e.s_org org **
+                rel_slice_of_seq false e.s_country cnt))
+
+fn extract_device_id_csr_ingredients x (w:erased _)
+requires rel_evercddl_device_id_csr_ingredients x w
+returns res:device_id_csr_ingredients_t
+ensures is_device_id_csr_ingredients res (rel_evercddl_device_id_csr_ingredients x w)
+{
+  unfold_with_trade (`%rel_evercddl_device_id_csr_ingredients) (rel_evercddl_device_id_csr_ingredients x w);
+  destruct_rel_fun _ _ _ _ _;
+  Trade.trade_compose _ _ (rel_evercddl_device_id_csr_ingredients x w);
+
+  let rest, country = destruct_pair_concrete _ _ _ _ _;
+  let rest, org = destruct_pair_concrete_nest _ _ _ _ _ _;
+  let rest, common = destruct_pair_concrete_nest _ _ _ _ _ _;
+  let ku, version = destruct_pair_concrete_nest _ _ _ _ _ _;
+
+  trade_emp_hyp_r _ _;
+  let ku = destruct_evercddl_nint_head _ _ _ _ _;
+  let version =  destruct_evercddl_nint_head _ _ _ _ _;
+  let s_common = destruct_evercddl_tstr_head _ _ _ _ _;
+  trade_emp_hyp_r_elim _ _ _;
+  let s_org = destruct_evercddl_tstr_head _ _ _ _ _;
+  Trade.Util.assoc_hyp_l _ _ _ _;
+  let s_country = destruct_evercddl_tstr_head _ _ _ _ _;
+
+ let res = { ku; version; s_common; s_org; s_country };
+ rewrite each
+    s_common as res.s_common,
+    s_org as res.s_org,
+    s_country as res.s_country;
+  slprop_equivs();
+  fold (is_device_id_csr_ingredients res);
+  res
+}
+
+fn extract_derive_context_input_args_data x (w:erased _)
+requires rel_evercddl_derive_context_input_args_data x w
+ensures emp
+{
+  unfold (rel_evercddl_derive_context_input_args_data x w);
+  destruct_rel_fun _ _ _ _ _;
+  admit()
+}
+
+fn extract_devive_context_input_args x (w:erased _)
 requires rel_evercddl_derive_context_input_args x w
 ensures emp
 {
@@ -335,7 +598,6 @@ ensures emp
       (evercddl_derive_context_input_args_pretty_left x)
       (spect_evercddl_derive_context_input_args_pretty_left w)
       _;
-  destruct_fst _ _ _ _ _;
   destruct_fst _ _ _ _ _;
   destruct_fst _ _ _ _ _;
   destruct_fst _ _ _ _ _;
@@ -360,7 +622,7 @@ ensures pts_to s #p w
     Some xrem -> {
       let (x, rem) = xrem;
       elim_validate_and_parse_post_some x rem;
-      extract_derice_context_input_args x _;
+      extract_devive_context_input_args x _;
       admit()
     }
   }
