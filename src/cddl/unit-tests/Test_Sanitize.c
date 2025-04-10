@@ -14,5 +14,5 @@ int main()
   s.id_466 = 0;
   s.x = 0;
 
-    return 0;
+  return 0;
 }
