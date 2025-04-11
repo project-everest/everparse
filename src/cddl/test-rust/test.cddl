@@ -1,14 +1,11 @@
 test1 = {
-;  42: bstr,
-;  bar: uint
+  bar: #0
 }
 
 test2 = [
-; *
-  uint, bstr
+  #0,
+  #2
 ]
 
-; test3 = test1 / test2
-
-bstr = #2
-uint = #0
+; bstr = #2
+; uint = #0
