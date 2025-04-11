@@ -19,9 +19,11 @@
         "/home/nswamy/workspace/everest/everparse/src/cbor/pulse",
         "/home/nswamy/workspace/everest/everparse/src/cddl/pulse",
         "_output",
+        "util",
+        "dpe",
         "/home/nswamy/workspace/everest/everparse/opt/karamel/krmllib",
         "/home/nswamy/workspace/everest/everparse/opt/karamel/krmllib/obj",
-        "/home/nswamy/workspace/everest/everparse/opt/pulse/out/lib/pulse" 
+        "/home/nswamy/workspace/everest/everparse/opt/pulse/out/lib/pulse"
     ]
   }
   
