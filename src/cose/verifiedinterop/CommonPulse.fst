@@ -449,6 +449,15 @@ let rel_sign1_tagged_eq1 phdr uhdr payload sig vphdr vuhdr vpayload vsig =
     rel_evercddl_header_map uhdr vuhdr) **
     (rel_evercddl_bstr payload vpayload ** rel_evercddl_bstr sig vsig))
 
+module A = Pulse.Lib.Array
+
+let rel_bstr_eq (x: evercddl_bstr_pretty) (y: spect_evercddl_bstr_pretty) =
+  assert_norm' (rel_evercddl_bstr x y ==
+    (match x, y with
+    | Mkevercddl_bstr_pretty0 { s; p }, Mkspect_evercddl_bstr_pretty0 y ->
+      pts_to s #p y ** pure (false == false))
+    )
+
 fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
     #pprivkey (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
     (#vuhdr: erased _) (#vaad: erased _) (#vpayload: erased _)
@@ -475,23 +484,27 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
   let sigbuf2 = AP.from_array sigbuf;
   create_sig privkey phdr aad payload sigbuf2;
   AP.to_array sigbuf2 sigbuf #_ #(spec_ed25519_sign vprivkey _);
+  with tbs. assert A.pts_to sigbuf (spec_ed25519_sign vprivkey tbs);
+  let sigbuf3 = S.from_array sigbuf 64sz;
+  let sigbuf4: evercddl_bstr_pretty = { _x0 = { p = 1.0R; s = sigbuf3 } };
+  rewrite
+    S.pts_to sigbuf3 (spec_ed25519_sign vprivkey tbs) ** pure (false == false)
+    as
+    (rel_evercddl_bstr sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs });
   // let uhdr = mk_emphdrs ();
-  rw_l (rel_sign1_tagged_eq1 phdr _ payload _ (sign1_phdrs_spec alg) _ vpayload _);
+  rw_l (rel_sign1_tagged_eq1 phdr _ payload sigbuf4 (sign1_phdrs_spec alg) _ vpayload _);
   let outbuf_sz = serialize_COSE_Sign1_Tagged' _ outbuf;
   rw_r (rel_sign1_tagged_eq1 phdr _ payload _ (sign1_phdrs_spec alg) _ vpayload _);
+  rewrite
+    (rel_evercddl_bstr sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs })
+    as
+    S.pts_to sigbuf3 (spec_ed25519_sign vprivkey tbs) ** pure (false == false);
+  S.to_array sigbuf3;
   drop_ (rel_evercddl_empty_or_serialized_map phdr _);
   if (outbuf_sz = 0sz) { abort (); 0sz } else {
     outbuf_sz;
   }
 }
-
-let rel_bstr_eq (x: evercddl_bstr_pretty) (y: spect_evercddl_bstr_pretty) =
-  assert_norm' (rel_evercddl_bstr x y ==
-    (match x, y with
-    | Mkevercddl_bstr_pretty0 { s; p }, Mkspect_evercddl_bstr_pretty0 y ->
-      pts_to s #p y ** pure (false == false))
-    // pts_to x._x0.s #x._x0.p y._x0 ** pure (false == false)
-    )
 
 fn sign1_simple privkey payload (outbuf: S.slice UInt8.t)
     #pprivkey (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
