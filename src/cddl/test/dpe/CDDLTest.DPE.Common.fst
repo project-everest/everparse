@@ -30,27 +30,32 @@ let tstr_any =
                 (CDDL.Pulse.Iterator.Base.mk_spec rel_aux_env16_type_1)
                 (CDDL.Pulse.Iterator.Base.mk_spec rel_aux_env16_type_3))
 
+
+let bytes_of_evercddl_bytes (yy:Seq.seq UInt8.t) (ww:spect_evercddl_bytes_pretty) =
+  yy == spect_evercddl_bstr_pretty_left (spect_evercddl_bytes_pretty_left ww)
+
 fn extract_bytes x (y:erased _)
 requires rel_evercddl_bytes x y
-returns xx:slice UInt8.t
+returns xx:Slice.slice UInt8.t
 ensures 
-  exists* yy. 
-    rel_slice_of_seq false xx yy **
-    Trade.trade 
-      (rel_slice_of_seq false xx yy)
-      (rel_evercddl_bytes x y)
+  exists* p yy. 
+    pts_to xx #p yy **
+    Trade.trade (pts_to xx #p yy) (rel_evercddl_bytes x y) **
+    pure (bytes_of_evercddl_bytes yy y)
 {
   unfold (rel_evercddl_bytes x y);
   destruct_rel_fun _ _ _ _ _;
   with xx yy. unfold (rel_evercddl_bstr xx yy);
   destruct_rel_fun _ _ _ _ _;
   with (res:slice UInt8.t) (resy:_). assert (rel_slice_of_seq false res resy);
+  rewrite each (rel_slice_of_seq false res resy) as (pts_to res.s #res.p resy ** pure (false == false));
   Trade.trade_compose _ _ (rel_fun rel_evercddl_bstr
           evercddl_bytes_pretty_left
           spect_evercddl_bytes_pretty_left
           x
           y);
-  res
+  Trade.Util.elim_hyp_r _ _ _;
+  res.s
 }
 
 fn destruct_evercddl_bytes_head 
@@ -60,18 +65,19 @@ fn destruct_evercddl_bytes_head
 requires
   rel_evercddl_bytes x w **
   Trade.trade ((rel_evercddl_bytes x w ** rest) ** done) res
-returns xx:slice UInt8.t
+returns xx:Slice.slice UInt8.t
 ensures
-  exists* ws. 
-  rel_slice_of_seq false xx ws **
-  Trade.trade (rest ** (done ** rel_slice_of_seq false xx ws)) res
+  exists* p ws. 
+    pts_to xx #p ws **
+    Trade.trade (rest ** (done ** pts_to xx #p ws)) res **
+    pure (bytes_of_evercddl_bytes ws w)
 {
   Trade.Util.assoc_hyp_r _ _ _ _;
   let xx = extract_bytes x w;
   Trade.Util.trans_hyp_l _ _ _ res;
   slprop_equivs();
-  with ws. assert (rel_slice_of_seq false xx ws);
-  with p. rewrite Trade.trade p res as Trade.trade (rest ** (done ** rel_slice_of_seq false xx ws)) res;
+  with perm ws. assert (pts_to xx #perm ws);
+  with p. rewrite Trade.trade p res as Trade.trade (rest ** (done ** pts_to xx #perm ws)) res;
   xx
 }
 
@@ -117,14 +123,12 @@ ensures exists* ws.
 }
 
 let is_slice_opt 
-    (sl:option (slice UInt8.t))
+    (sl:option (Slice.slice UInt8.t))
     (dflt:slprop)
 : slprop
 = match sl with
   | None -> dflt
   | Some sl -> 
-    exists* b. //relate uds to w?
-      rel_slice_of_seq false sl b **
-      Trade.trade
-        (rel_slice_of_seq false sl b)
-        dflt
+    exists* perm b. //relate uds to w?
+      pts_to sl #perm b **
+      Trade.trade (pts_to sl #perm b) dflt

@@ -23,7 +23,9 @@
         "dpe",
         "/home/nswamy/workspace/everest/everparse/opt/karamel/krmllib",
         "/home/nswamy/workspace/everest/everparse/opt/karamel/krmllib/obj",
-        "/home/nswamy/workspace/everest/everparse/opt/pulse/out/lib/pulse"
+        "/home/nswamy/workspace/everest/everparse/opt/pulse/out/lib/pulse",
+        "/home/nswamy/workspace/everest/everparse/opt/pulse/share/pulse/examples/dice/_cache",
+        "/home/nswamy/workspace/everest/everparse/opt/pulse/share/pulse/examples/dice"
     ]
   }
   

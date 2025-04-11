@@ -13,7 +13,10 @@ $(EVERPARSE_SRC_PATH)/cddl/tool \
 $(EVERPARSE_SRC_PATH)/../lib/evercddl/lib \
 $(EVERPARSE_SRC_PATH)/../lib/evercddl/plugin \
 ../util \
-../_output
+../_output \
+$(PULSE_HOME)/../share/pulse/examples/dice \
+$(PULSE_HOME)/../share/pulse/examples/dice/_cache
+
 
 ALREADY_CACHED := *,-CDDL.Spec,
 

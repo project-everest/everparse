@@ -104,23 +104,31 @@ ensures
   rewrite each (snd y) as (proj_4_4 y);
 }
 
+let is_uds_bytes (uds:Seq.seq UInt8.t) (w:Seq.seq UInt8.t) =
+  exists (wx:spect_evercddl_initialize_context_input_args_pretty) (wr:Seq.seq UInt8.t).
+          validate_and_parse_postcond_some bundle_initialize_context_input_args.b_spec.parser
+          w
+          wx
+          wr 
+          /\
+          wx._x2 ==
+          Some (spect_evercddl_bytes_pretty_right (spect_evercddl_bstr_pretty_right uds))
+        
 let parsed_initialize_context_input 
     (s:Slice.slice UInt8.t) (#p:perm) (w:erased _)
-    (seed:option (slice UInt8.t))
+    (seed:option (Slice.slice UInt8.t))
 : slprop
 = match seed with
   | None -> pts_to s #p w
   | Some seed -> 
-    exists* uds. //relate uds to w?
-      rel_slice_of_seq false seed uds **
-      Trade.trade
-        (rel_slice_of_seq false seed uds)
-        (pts_to s #p w)
-
-
+    exists* perm (uds:Seq.seq UInt8.t).
+      pts_to seed #perm uds **
+      Trade.trade (pts_to seed #perm uds) (pts_to s #p w) **
+      pure (is_uds_bytes uds w)
+            
 fn parse_initialize_context_input_args (s:Slice.slice UInt8.t) (#p:perm) (#w:erased _)
 requires pts_to s #p w
-returns x:option (slice UInt8.t) //todo, check that slice_len is uds_len
+returns x:option (Slice.slice UInt8.t) //todo, check that slice_len is uds_len
 ensures parsed_initialize_context_input s #p w x
 {
   let res = validate_and_parse_initialize_context_input_args s;
@@ -137,7 +145,6 @@ ensures parsed_initialize_context_input s #p w x
       unfold_rel_initialize_context_input_args _ _;
       destruct_quad _ _ _ _ _ _;
       Trade.Util.elim_hyp_r _ _ (pts_to s #p w);
-      // Trade.trade_compose _ _ (pts_to s #p w);
       Trade.trade_compose _ _ (pts_to s #p w);
       Trade.trade_compose _ _ (pts_to s #p w);
       Trade.Util.elim_hyp_r _ _ (pts_to s #p w);

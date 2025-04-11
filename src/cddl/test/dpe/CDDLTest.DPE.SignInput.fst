@@ -12,8 +12,8 @@ open CDDL.Pulse.Types
 module T = CDDL.Pulse.AST.Tactics
 open CDDL.Pulse.AST.Bundle
 open CBOR.Spec.API.Type
-open CDDL.Spec.Base
 open CDDLTest.DPE.Common
+open CDDL.Spec.Base
 
 fn parse_option_bytes x (w:erased _) res
 requires

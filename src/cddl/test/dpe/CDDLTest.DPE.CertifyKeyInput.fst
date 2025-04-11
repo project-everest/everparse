@@ -19,7 +19,7 @@ fn parse_certify_key_input x (w:erased _) res
 requires
   rel_evercddl_certifykeyinputargs x w **
   Trade.trade (rel_evercddl_certifykeyinputargs x w) res
-returns x:option (slice UInt8.t)
+returns x:option (Slice.slice UInt8.t)
 ensures is_slice_opt x res
 {
   unfold_with_trade (`%rel_evercddl_certifykeyinputargs) (rel_evercddl_certifykeyinputargs x w);
@@ -55,7 +55,7 @@ ensures is_slice_opt x res
 
 fn parse_certify_key_input_args (s:Slice.slice UInt8.t) (#p:perm) (#w:erased _)
 requires pts_to s #p w
-returns x:option (slice UInt8.t)
+returns x:option (Slice.slice UInt8.t)
 ensures is_slice_opt x (pts_to s #p w)
 {
   let res = validate_and_parse_certifykeyinputargs s;
@@ -72,4 +72,23 @@ ensures is_slice_opt x (pts_to s #p w)
       parse_certify_key_input _ _ _;
     }
   }
+}
+
+fn write_certify_key_output
+    (out:Slice.slice UInt8.t)
+    (pubkey:Slice.slice UInt8.t)
+    (cert:Slice.slice UInt8.t)
+    (#pk #c:erased _) (#p #q:perm)
+requires
+  exists* w.
+    pts_to pubkey #p pk **
+    pts_to pubkey #q c **
+    pts_to out w
+ensures
+  exists* w.
+    pts_to pubkey #p pk **
+    pts_to pubkey #q c **
+    pts_to out w
+{
+  ()
 }

@@ -89,3 +89,18 @@ certify-key-output-args = {
   ? &(new-context-handle:3) ^=> bytes,
   * &(tstr:uint) => any 
 }
+
+sign-input-args = { 
+  ? &(context-handle:1) ^=> bytes, 
+  ? &(retain-context:2) ^=> bool, ; Default = false 
+  ? &(label:3) ^=> bytes, 
+  ? &(is-symmetric:4) ^=> bool, ; Default = false 
+  ? &(to-be-signed:5) ^=> bytes, 
+  * &(tstr:uint) => any 
+} 
+ 
+sign-output-args = { 
+  ? &(signature:1) ^=> bytes, 
+  ? &(new-context-handle:2) ^=> bytes,  ; If retained 
+  * &(tstr:uint) => any 
+}
