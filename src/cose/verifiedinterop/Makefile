@@ -27,7 +27,7 @@ ALL_C_FILES := _output/CommonPulse.c
 .PHONY: extract
 extract: $(ALL_C_FILES)
 
-_output/CommonPulse.c: $(ALL_KRML_FILES)
+_output/CommonPulse.c _output/COSE_Format.c: $(ALL_KRML_FILES)
 	$(KRML) -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
 		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
 		-add-include '"CBORDetAbstract.h"' \
