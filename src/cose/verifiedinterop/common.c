@@ -9,8 +9,8 @@ uint8_t *parse_ed25519_private_key(bstr cose_key) {
         parsed_key = COSE_Format_validate_and_parse_COSE_Key_OKP(cose_key);
     check(parsed_key.tag);
     check(parsed_key.v.fst.intkeyneg1.tag == COSE_Format_Inl);
-    check(parsed_key.v.fst.intkeyneg1.case_Inl.tag == COSE_Format_Mkevercddl_int_pretty0);
-    check(parsed_key.v.fst.intkeyneg1.case_Inl.case_Mkevercddl_int_pretty0 == 6);
+    check(parsed_key.v.fst.intkeyneg1.val.case_Inl.tag == COSE_Format_Mkevercddl_int_pretty0);
+    check(parsed_key.v.fst.intkeyneg1.val.case_Inl.val.case_Mkevercddl_int_pretty0 == 6);
     check(parsed_key.v.fst.intkeyneg4.tag);
     check(parsed_key.v.fst.intkeyneg4.v.len == 32);
     return parsed_key.v.fst.intkeyneg4.v.elt;
@@ -21,8 +21,8 @@ uint8_t *parse_ed25519_public_key(bstr cose_key) {
         parsed_key = COSE_Format_validate_and_parse_COSE_Key_OKP(cose_key);
     check(parsed_key.tag);
     check(parsed_key.v.fst.intkeyneg1.tag == COSE_Format_Inl);
-    check(parsed_key.v.fst.intkeyneg1.case_Inl.tag == COSE_Format_Mkevercddl_int_pretty0);
-    check(parsed_key.v.fst.intkeyneg1.case_Inl.case_Mkevercddl_int_pretty0 == 6);
+    check(parsed_key.v.fst.intkeyneg1.val.case_Inl.tag == COSE_Format_Mkevercddl_int_pretty0);
+    check(parsed_key.v.fst.intkeyneg1.val.case_Inl.val.case_Mkevercddl_int_pretty0 == 6);
     check(parsed_key.v.fst.intkeyneg2.tag);
     check(parsed_key.v.fst.intkeyneg2.v.len == 32);
     return parsed_key.v.fst.intkeyneg2.v.elt;
