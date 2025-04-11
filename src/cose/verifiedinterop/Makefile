@@ -33,7 +33,6 @@ _output/CommonPulse.c _output/COSE_Format.c: $(ALL_KRML_FILES)
 		-add-include '"CBORDetAbstract.h"' \
 		-bundle 'COSE.Format=COSE.Format,C,CDDL.*' \
 		-add-include '"COSE_Format.h"' \
-		-fnoanonymous-unions \
 		-bundle CommonPulse=*[rename=CommonPulse] \
 		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix CommonPulse \
 		-skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
