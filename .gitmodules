@@ -4,7 +4,13 @@
 	branch = bij
 [submodule "opt/karamel"]
 	path = opt/karamel
-	url = https://github.com/FStarLang/karamel
+	url = https://github.com/mtzguido/karamel
 [submodule "opt/pulse"]
 	path = opt/pulse
 	url = https://github.com/FStarLang/pulse
+[submodule "opt/hacl-star"]
+	path = opt/hacl-star
+	url = https://github.com/hacl-star/hacl-star
+[submodule "src/cddl/unit-tests/QCBOR"]
+	path = src/cddl/unit-tests/QCBOR
+	url = https://github.com/laurencelundblade/QCBOR

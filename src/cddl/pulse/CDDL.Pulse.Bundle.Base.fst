@@ -5,12 +5,57 @@ include CDDL.Pulse.Serialize.Base
 open Pulse.Lib.Pervasives
 open CBOR.Spec.API.Type
 module EqTest = CDDL.Spec.EqTest
+open FStar.List.Tot.Base { (@) }
+
+let allowed (c: Char.char) : bool =
+  let open FStar.UInt32 in
+  let code = FStar.Char.u32_of_char c in
+  (code `gte` FStar.Char.u32_of_char 'a' &&
+    code `lte` FStar.Char.u32_of_char 'Z') ||
+  (code `gte` FStar.Char.u32_of_char 'a' &&
+    code `lte` FStar.Char.u32_of_char 'z') ||
+  (code `gte` FStar.Char.u32_of_char '0' &&
+    code `lte` FStar.Char.u32_of_char '9') ||
+  code = FStar.Char.u32_of_char '_'
+
+let escape (c: Char.char) : list Char.char =
+  (* Escape '-' as '_', for the rest use character codes. *)
+  if c = '-' then
+    ['_']
+  else
+    let code = FStar.Char.u32_of_char c |> FStar.UInt32.v in
+    let s = string_of_int code in
+    let s = FStar.String.list_of_string s in
+    '_' :: s
+
+[@@bundle_attr] // so it inlines
+let rec sanitize_aux (s : list Char.char) : list Char.char =
+  match s with
+  | [] -> []
+  | x :: xs ->
+    if allowed x
+    then x :: sanitize_aux xs
+    else escape x @ sanitize_aux xs
+
+[@@bundle_attr] // so it inlines
+let sanitize_name (s:string) : string =
+  s
+  |> FStar.String.list_of_string
+  |> sanitize_aux
+  |> FStar.String.string_of_list
 
 [@@bundle_attr] // so it inlines
 unfold noextract
 let maybe_named (s : option string) (t : Type u#aa) : Type u#aa =
   match s with
-  | Some n -> FStar.Tactics.PrettifyType.named n t
+  | Some n ->
+    (* normalize_term below is important to actually
+       compute the concrete string. I though having this
+       here would mean I can elide the @@bundle_attrs above,
+       but it seems not. *)
+    FStar.Tactics.PrettifyType.named
+      (normalize_term (sanitize_name n))
+      t
   | None -> t
 
 inline_for_extraction noextract [@@noextract_to "krml"]
