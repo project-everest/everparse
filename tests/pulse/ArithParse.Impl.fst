@@ -40,22 +40,11 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 let jump_header : jumper parse_header =
   jump_dtuple2 jump_u8 (leaf_reader_of_reader read_u8) jump_header_rhs
 
-inline_for_extraction noextract [@@noextract_to "krml"]
-let read_header_rhs (lhs: U8.t) : reader (serialize_header_rhs lhs) =
-  ifthenelse_reader
-    (serialize_header_rhs lhs)
-    (lhs = 255uy)
-    (fun _ -> reader_ext (read_u64) (serialize_header_rhs lhs))
-    (fun _ -> reader_ext (read_ret u_as_uint64 (fun _ -> ())) (serialize_header_rhs lhs))
-
-let read_header () : leaf_reader #_ #_ #_ (serializer_of_tot_serializer tot_serialize_header) =
-  [@@inline_let] let _ = parse_header_eq () in
-  leaf_reader_of_reader
-    (reader_ext (read_dtuple2 jump_u8 read_u8 read_header_rhs) _)
-
 module SZ = FStar.SizeT
 
 #push-options "--ifuel 4"
+
+module Trade = Pulse.Lib.Trade.Util
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_validate_count_payload () : validate_recursive_step_count #_ serialize_expr_param =
@@ -66,8 +55,12 @@ fn impl_validate_count_payload () : validate_recursive_step_count #_ serialize_e
   (#rem: _)
   (prem: _)
 {
-  let h = read_header () a;
-  let Mkdtuple2 kd len = h;
+  parse_header_eq ();
+  pts_to_serialized_ext_trade (serializer_of_tot_serializer tot_serialize_header) serialize_header a;
+  let a1 = dtuple2_dfst _ jump_u8 _ a;
+  Trade.trans _ _ (pts_to_serialized (serializer_of_tot_serializer tot_serialize_header) a #pm va);
+  let kd = leaf_reader_of_reader read_u8 a1;
+  Trade.elim _ _;
   if (kd = 255uy) {
     prem := 0sz;
     false
@@ -93,8 +86,12 @@ fn impl_jump_count_payload () : jump_recursive_step_count #_ serialize_expr_para
   (a: _)
   (bound: _)
 {
-  let h = read_header () a;
-  let Mkdtuple2 kd len = h;
+  parse_header_eq ();
+  pts_to_serialized_ext_trade (serializer_of_tot_serializer tot_serialize_header) serialize_header a;
+  let a1 = dtuple2_dfst _ jump_u8 _ a;
+  Trade.trans _ _ (pts_to_serialized (serializer_of_tot_serializer tot_serialize_header) a #pm va);
+  let kd = leaf_reader_of_reader read_u8 a1;
+  Trade.elim _ _;
   if (kd = 255uy) {
     0sz;
   }
