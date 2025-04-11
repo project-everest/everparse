@@ -340,49 +340,7 @@ fn mk_emphdrs ()
   rw_l (rel_map_sign1_emphdrs_eq _);
   with res. assert rel_evercddl_header_map res (sign1_emphdrs_spec ());
   drop_ (S.is_from_array (V.vec_to_array rest) rest2); // TODO leak
-  let foo:
-  FStar.Pervasives.either (FStar.Tactics.PrettifyType.named "intkey6"
-                  COSE.Format.evercddl_bstr_pretty &
-                FStar.Tactics.PrettifyType.named "intkey5"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey5"
-                          COSE.Format.evercddl_everparsenomatch_pretty)))
-              (FStar.Tactics.PrettifyType.named "intkey6"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey6"
-                          COSE.Format.evercddl_everparsenomatch_pretty)) &
-                FStar.Tactics.PrettifyType.named "intkey5"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey5"
-                          COSE.Format.evercddl_everparsenomatch_pretty)))
-  = Inr (None, None);
-  let foo':
-        FStar.Pervasives.either (FStar.Tactics.PrettifyType.named "intkey5"
-              COSE.Format.evercddl_bstr_pretty &
-            FStar.Tactics.PrettifyType.named "intkey6"
-              (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey6"
-                      COSE.Format.evercddl_everparsenomatch_pretty)))
-          (FStar.Pervasives.either (FStar.Tactics.PrettifyType.named "intkey6"
-                  COSE.Format.evercddl_bstr_pretty &
-                FStar.Tactics.PrettifyType.named "intkey5"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey5"
-                          COSE.Format.evercddl_everparsenomatch_pretty)))
-              (FStar.Tactics.PrettifyType.named "intkey6"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey6"
-                          COSE.Format.evercddl_everparsenomatch_pretty)) &
-                FStar.Tactics.PrettifyType.named "intkey5"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey5"
-                          COSE.Format.evercddl_everparsenomatch_pretty))))
-   = Inr foo;
-  let bar':
-        FStar.Pervasives.either (CDDL.Pulse.Types.slice (COSE.Format.aux_env25_type_2_pretty &
-                COSE.Format.aux_env25_type_4_pretty))
-          (CDDL.Pulse.Parse.MapGroup.map_iterator_t CBOR.Pulse.API.Det.Type.cbor_det_map_iterator_t
-              COSE.Format.aux_env25_type_2_pretty
-              COSE.Format.aux_env25_type_4_pretty
-              CBOR.Pulse.API.Det.C.cbor_det_match
-              (CDDL.Pulse.Iterator.Base.mk_spec COSE.Format.rel_aux_env25_type_2)
-              (CDDL.Pulse.Iterator.Base.mk_spec COSE.Format.rel_aux_env25_type_4))
-  = Inl { s = rest2; p=1.0R };
-  rewrite each res as (Mkevercddl_header_map_pretty0 None None None None foo' bar');
-  (Mkevercddl_header_map_pretty0 None None None None foo' bar')
+  res
 }
 
 let sign1_tagged_spec (alg: Int32.t) uhdr payload sig =
