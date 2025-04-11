@@ -533,3 +533,181 @@ fn sign1_simple privkey payload (outbuf: S.slice UInt8.t)
   drop_ (rel_evercddl_header_map uhdr _); // TODO leak
   res
 }
+
+fn verify_sig pubkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
+    (#vphdr: erased _) (#vaad: erased _) (#vpayload: erased _) (#ppubkey: erased _)
+    #psigbuf (#vsigbuf: erased (Seq.seq UInt8.t) { Seq.length vsigbuf == 64 })
+    (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
+  requires AP.pts_to pubkey #ppubkey vpubkey
+  requires rel_evercddl_empty_or_serialized_map phdr vphdr
+  requires rel_evercddl_bstr aad vaad
+  requires rel_evercddl_bstr payload vpayload
+  requires pts_to sigbuf #psigbuf vsigbuf
+  returns success: bool
+  ensures AP.pts_to pubkey #ppubkey vpubkey
+  ensures rel_evercddl_empty_or_serialized_map phdr vphdr
+  ensures rel_evercddl_bstr aad vaad
+  ensures rel_evercddl_bstr payload vpayload
+  ensures pts_to sigbuf #psigbuf vsigbuf
+  // ensures pure (success == spec_ed25519_verify vpubkey tbs vsignature)
+{
+  let sz = 1024sz;
+  assert pure (SizeT.v sz <= 1024);
+  let arr = Vec.alloc 0uy sz;
+  Seq.lemma_create_len (SizeT.v sz) 0uy; //?!?
+  Vec.to_array_pts_to arr;
+  let outbuf = S.from_array (Vec.vec_to_array arr) sz;
+  S.pts_to_len _;
+  assert pure (S.len outbuf == sz);
+  let sig_struct = mk_sig_structure phdr aad payload;
+  let written = serialize_Sig_structure' sig_struct outbuf;
+  S.pts_to_len _;
+  assert pure (SizeT.v written <= SizeT.v sz);
+  assert pure (SizeT.v written <= 1024);
+  assert_norm (1024 < pow2 32);
+  elim_trade _ _;
+  if (written = 0sz) {
+    abort ();
+    with w. rewrite S.pts_to outbuf w ** S.is_from_array (V.vec_to_array arr) outbuf as emp;
+    false
+    // with vsigbuf. rewrite AP.pts_to sigbuf vsigbuf as AP.pts_to sigbuf (spec_ed25519_sign vpubkey vsigbuf);
+    // with voutbuf. rewrite S.pts_to outbuf voutbuf ** S.is_from_array (Vec.vec_to_array arr) outbuf as emp;
+  } else {
+    let tbs = Pulse.Lib.Slice.Util.subslice_trade outbuf 0sz written;
+    with vtbs. assert S.pts_to tbs vtbs ** pure (to_be_signed_spec vphdr vaad vpayload vtbs);
+    S.pts_to_len _;
+    let tbs' = S.slice_to_arrayptr_intro tbs;
+    let success = verify pubkey (sz_to_u32_safe written) tbs' sigbuf;
+    S.slice_to_arrayptr_elim tbs';
+    Pulse.Lib.Trade.elim_trade _ _;
+    S.to_array outbuf;
+    Vec.to_vec_pts_to arr;
+    Vec.free arr;
+    success
+  }
+}
+
+let rel_sign1_tagged_eq (a: evercddl_COSE_Sign1_Tagged_pretty) (b: spect_evercddl_COSE_Sign1_Tagged_pretty) =
+  assert_norm' (rel_evercddl_COSE_Sign1_Tagged a b ==
+    ((COSE.Format.rel_evercddl_empty_or_serialized_map a._x0.protected b._x0._x0 **
+            COSE.Format.rel_evercddl_header_map a._x0.unprotected b._x0._x1) **
+        ((CDDL.Pulse.Types.rel_either COSE.Format.rel_evercddl_bstr
+                COSE.Format.rel_evercddl_nil a._x0.payload b._x0._x2) **
+            COSE.Format.rel_evercddl_bstr a._x0.signature b._x0._x3))
+    )
+
+let rel_bstr_eq' (x: evercddl_bstr_pretty) (y: spect_evercddl_bstr_pretty) =
+  assert_norm' (rel_evercddl_bstr x y ==
+      pts_to x._x0.s #x._x0.p y._x0 ** pure (false == false))
+
+let _ = rel_either
+
+inline_for_extraction
+let sixty_four: v: SizeT.t { SizeT.v v == 64 } = 64sz
+
+module T = Pulse.Lib.Trade
+
+ghost fn rw_r_wt #a #b (h: squash (a == b)) requires a ensures b ** trade b a { T.rewrite_with_trade a b }
+ghost fn rw_l_wt #a #b (h: squash (a == b)) requires b ensures a ** trade a b { T.rewrite_with_trade b a }
+
+fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x0.payload })
+    #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
+    (#vaad: erased _) (#vmsg: erased _)
+  requires AP.pts_to pubkey #ppubkey vpubkey
+  requires rel_evercddl_COSE_Sign1_Tagged msg vmsg
+  requires rel_evercddl_bstr aad vaad
+
+  returns success: bool
+  // TODO leak leak
+  ensures AP.pts_to pubkey #ppubkey vpubkey
+  ensures rel_evercddl_COSE_Sign1_Tagged msg vmsg
+  ensures rel_evercddl_bstr aad vaad
+{
+  rw_r_wt (rel_sign1_tagged_eq _ _);
+  rw_r_wt (rel_bstr_eq' msg._x0.signature _);
+  rel_either_cases _ _ _ _;
+  rewrite_with_trade
+    (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0._x2)
+    (rel_evercddl_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0._x2));
+  let sig = msg._x0.signature._x0.s;
+  rewrite each msg._x0.signature._x0.s as sig;
+  if (S.len sig = sixty_four) {
+    assert pure (S.len sig == sixty_four);
+    S.pts_to_len sig;
+    with vsig. assert S.pts_to sig #msg._x0.signature._x0.p vsig;
+    assert pure (SizeT.v (S.len sig) == 64);
+    assert pure (Seq.length vsig == 64);
+    let sig' = S.slice_to_arrayptr_intro sig;
+    let success = verify_sig pubkey msg._x0.protected aad (Inl?.v msg._x0.payload) sig';
+    S.slice_to_arrayptr_elim sig';
+    T.elim_trade _ (rel_evercddl_bstr msg._x0.signature _);
+    T.elim_trade _ (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0._x2);
+    T.elim_trade _ (rel_evercddl_COSE_Sign1_Tagged msg vmsg);
+    success
+  } else {
+    T.elim_trade _ (rel_evercddl_bstr msg._x0.signature _);
+    T.elim_trade _ (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0._x2);
+    T.elim_trade _ (rel_evercddl_COSE_Sign1_Tagged msg vmsg);
+    false
+  }
+}
+
+fn verify1 pubkey aad msg
+    #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
+    (#vaad: erased _) #pmsg (#vmsg: erased _)
+  requires AP.pts_to pubkey #ppubkey vpubkey
+  requires S.pts_to #UInt8.t msg #pmsg vmsg
+  requires rel_evercddl_bstr aad vaad
+
+  returns success: bool
+  ensures AP.pts_to pubkey #ppubkey vpubkey
+  ensures S.pts_to msg #pmsg vmsg
+  ensures rel_evercddl_bstr aad vaad
+{
+  let alg: Int32.t = -8l;
+  let res = validate_and_parse_COSE_Sign1_Tagged _;
+  match res {
+    None -> {
+      unfold CDDL.Pulse.Parse.Base.validate_and_parse_post;
+      false
+    }
+    Some res -> {
+      match res {
+        (x, rem) -> {
+          unfold CDDL.Pulse.Parse.Base.validate_and_parse_post;
+          with wx wr.
+          unfold CDDL.Pulse.Parse.Base.validate_and_parse_post_some bundle_COSE_Sign1_Tagged.b_spec.CDDL.Spec.Base.parser
+            rel_evercddl_COSE_Sign1_Tagged msg pmsg vmsg x rem wx wr;
+          if (Inl? x._x0.payload) {
+            let success = verify1_core pubkey aad x;
+            T.elim_trade _ (S.pts_to msg #pmsg vmsg);
+            success
+          } else {
+            T.elim_trade _ (S.pts_to msg #pmsg vmsg);
+            false
+          }
+        }
+      }
+    }
+  }
+}
+
+fn verify1_simple pubkey msg
+    #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
+    #pmsg (#vmsg: erased _)
+  requires AP.pts_to pubkey #ppubkey vpubkey
+  requires S.pts_to #UInt8.t msg #pmsg vmsg
+
+  returns success: bool
+  ensures AP.pts_to pubkey #ppubkey vpubkey
+  ensures S.pts_to msg #pmsg vmsg
+{
+  let mut aadbuf = [| 0uy; 0sz |];
+  let aadslice = S.from_array aadbuf 0sz;
+  with aad. assert pure ((aad <: evercddl_bstr_pretty) == Mkevercddl_bstr_pretty0 { s = aadslice; p = 1.0R });
+  rw_l (rel_bstr_eq aad (Mkspect_evercddl_bstr_pretty0 _));
+  let res = verify1 pubkey aad msg;
+  rw_r (rel_bstr_eq aad (Mkspect_evercddl_bstr_pretty0 _));
+  S.to_array aadslice;
+  res
+}
