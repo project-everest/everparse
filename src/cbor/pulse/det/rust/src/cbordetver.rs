@@ -220,7 +220,7 @@ pub fn cbor_det_mk_map <'a>(a: &'a mut [crate::cbordetveraux::cbor_map_entry <'a
     <'a>
 {
     let mut dest: [crate::cbordetveraux::cbor_raw; 1] =
-        [crate::cbordetveraux::cbor_raw::CBOR_Case_Simple { v: 0u8 }; 1usize];
+        [crate::cbordetveraux::dummy_cbor_det_t(); 1usize];
     let bres: bool =
         if a.len() > 18446744073709551615u64 as usize
         { false }

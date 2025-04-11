@@ -35,6 +35,8 @@ typedef struct cbor_det_array_iterator_t_s cbor_det_array_iterator_t;
 
 typedef struct cbor_det_map_iterator_t_s cbor_det_map_iterator_t;
 
+extern cbor_det_t dummy_cbor_det_t(void);
+
 extern cbor_det_t cbor_det_reset_perm(cbor_det_t x0);
 
 extern size_t cbor_det_validate(uint8_t *input, size_t input_len);

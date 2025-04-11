@@ -256,6 +256,8 @@ cbor_det_array_iterator_t;
 typedef CBOR_Pulse_Raw_Iterator_cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
 cbor_det_map_iterator_t;
 
+cbor_raw dummy_cbor_det_t(void);
+
 cbor_raw cbor_det_reset_perm(cbor_raw x1);
 
 size_t cbor_det_validate(uint8_t *input, size_t input_len);

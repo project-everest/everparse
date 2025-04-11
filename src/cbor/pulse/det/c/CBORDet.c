@@ -5100,6 +5100,11 @@ cbor_freeable cbor_copy0(cbor_raw x)
   }
 }
 
+cbor_raw dummy_cbor_det_t(void)
+{
+  return ((cbor_raw){ .tag = CBOR_Case_Simple, { .case_CBOR_Case_Simple = 0U } });
+}
+
 cbor_raw cbor_det_reset_perm(cbor_raw x1)
 {
   return cbor_raw_reset_perm_tot(x1);
@@ -5214,7 +5219,7 @@ cbor_raw cbor_det_mk_map_from_array(cbor_map_entry *a, uint64_t len)
 {
   Pulse_Lib_Slice_slice__CBOR_Pulse_Raw_Type_cbor_map_entry
   s = from_array__CBOR_Pulse_Raw_Type_cbor_map_entry(a, (size_t)len);
-  cbor_raw dest = { .tag = CBOR_Case_Simple, { .case_CBOR_Case_Simple = 0U } };
+  cbor_raw dest = dummy_cbor_det_t();
   bool ite;
   if (len__CBOR_Pulse_Raw_Type_cbor_map_entry(s) > (size_t)18446744073709551615ULL)
     ite = false;

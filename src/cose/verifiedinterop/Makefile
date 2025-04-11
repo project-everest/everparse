@@ -30,6 +30,12 @@ extract: $(ALL_C_FILES)
 _output/Sign.c: $(ALL_KRML_FILES)
 	$(KRML) -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]'  -bundle Sign=*[rename=Sign] -add-include '"CBORDetAbstract.h"' -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix Sign -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
 
+# disable extraction_inline_all
+$(ALL_KRML_FILES): %.krml:
+	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml \
+	  --extract_module $(basename $(notdir $(subst .checked,,$<)))
+	touch -c $@
+
 CFLAGS += -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
 
 $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a:

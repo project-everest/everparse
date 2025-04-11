@@ -4831,3 +4831,5 @@ pub type cbor_det_array_iterator_t <'a> = cbor_raw_iterator__CBOR_Pulse_Raw_Type
 
 pub type cbor_det_map_iterator_t <'a> =
 cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>;
+
+pub fn dummy_cbor_det_t <'a>() -> cbor_raw <'a> { cbor_raw::CBOR_Case_Simple { v: 0u8 } }
