@@ -28,22 +28,22 @@ assert msg.payload == b'payload', msg.payload
 assert msg.external_aad == b'', msg.aad
 print('Signature verifies!')
 
-# print('Running ./verifytest')
-# verify = subprocess.run(['./verifytest', 'message.pubkey', 'message.cbor'], stdout=subprocess.PIPE)
-# verify.check_returncode()
+print('Running ./verifytest')
+verify = subprocess.run(['./verifytest', 'message.pubkey', 'message.cbor'], stdout=subprocess.PIPE)
+verify.check_returncode()
 # assert verify.stdout == payload, verify.stdout
-# print('Signature verifies using our tool!')
+print('Signature verifies using our tool!')
 
 
 
-# print('Signing with pycose')
-# # Setting some extra headers, otherwise the signed message is bitwise identical to the one we're producing
-# msg2 = Sign1Message(phdr={Algorithm: EdDSA}, uhdr={ContentType: 'text/plain'}, payload=payload)
-# msg2.key = key
-# open('message.pycose.cbor', 'wb').write(msg2.encode())
+print('Signing with pycose')
+# Setting some extra headers, otherwise the signed message is bitwise identical to the one we're producing
+msg2 = Sign1Message(phdr={Algorithm: EdDSA}, uhdr={ContentType: 'text/plain'}, payload=payload)
+msg2.key = key
+open('message.pycose.cbor', 'wb').write(msg2.encode())
 
-# print('Running ./verifytest')
-# verify = subprocess.run(['./verifytest', 'message.pubkey', 'message.pycose.cbor'], stdout=subprocess.PIPE)
-# verify.check_returncode()
+print('Running ./verifytest')
+verify = subprocess.run(['./verifytest', 'message.pubkey', 'message.pycose.cbor'], stdout=subprocess.PIPE)
+verify.check_returncode()
 # assert verify.stdout == payload, verify.stdout
-# print('PyCOSE Signature verifies using our tool!')
+print('PyCOSE Signature verifies using our tool!')

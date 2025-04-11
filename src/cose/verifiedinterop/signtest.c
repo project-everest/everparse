@@ -2,7 +2,6 @@
 #include "CommonPulse.h"
 
 bstr test_sign(bstr payload, bstr key_data) {
-    bstr aad = { .elt = (uint8_t[]) {}, .len = 0 };
     uint8_t *signing_key = parse_ed25519_private_key(key_data);
     bstr outbuf = { .len = 1024 };
     check(outbuf.elt = malloc(outbuf.len));

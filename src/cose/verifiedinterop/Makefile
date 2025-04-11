@@ -1,5 +1,5 @@
 .PHONY: all
-all: signtest
+all: signtest verifytest test
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
@@ -27,7 +27,7 @@ ALL_C_FILES := _output/CommonPulse.c
 .PHONY: extract
 extract: $(ALL_C_FILES)
 
-_output/CommonPulse.c _output/COSE_Format.c: $(ALL_KRML_FILES)
+_output/CommonPulse.c: $(ALL_KRML_FILES)
 	$(KRML) -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
 		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
 		-add-include '"CBORDetAbstract.h"' \
@@ -37,6 +37,8 @@ _output/CommonPulse.c _output/COSE_Format.c: $(ALL_KRML_FILES)
 		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix CommonPulse \
 		-skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
 
+_output/COSE_Format.c: _output/CommonPulse.c
+
 CFLAGS += -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
 
 $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a:
@@ -45,6 +47,9 @@ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a:
 signtest: signtest.c common.c _output/CommonPulse.c _output/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a
 	$(CC) $(CFLAGS) $+ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a -I _output -o $@
 
+verifytest: verifytest.c common.c _output/CommonPulse.c _output/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a
+	$(CC) $(CFLAGS) $+ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a -I _output -o $@
+
 .PHONY: test
-test: signtest
+test: signtest verifytest
 	../interop/.venv/bin/python test.py
