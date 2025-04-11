@@ -235,8 +235,8 @@ let rel_inl_map =
                 COSE.Format.rel_aux_env25_type_4)
 
 let dummy_map_val () : aux_env25_type_2_pretty & aux_env25_type_4_pretty =
-  let zero: evercddl_int_pretty = Mkevercddl_int_pretty0 (Mkevercddl_uint_pretty0 0uL) in
-  Mkaux_env25_type_2_pretty0 (Mkevercddl_label_pretty0 zero),
+  Mkaux_env25_type_2_pretty0 (Mkevercddl_label_pretty0
+    (Mkevercddl_int_pretty0 (Mkevercddl_uint_pretty0 0uL))),
   Mkaux_env25_type_4_pretty0 (Mkevercddl_values_pretty0 (Mkevercddl_any_pretty0
     { c = CBOR.Pulse.API.Det.Type.dummy_cbor_det_t (); p = 0.5R }))
 
@@ -308,55 +308,7 @@ fn mk_phdrs (alg: Int32.t)
   rw_l (rel_map_sign1_phdrs_eq alg alg' _);
   with res. assert rel_evercddl_empty_or_serialized_map res (sign1_phdrs_spec alg);
   drop_ (S.is_from_array (V.vec_to_array rest) rest2); // TODO leak
-
-  let alg'':
-        FStar.Tactics.PrettifyType.named "intkey1"
-              (FStar.Pervasives.either COSE.Format.evercddl_int_pretty
-                  COSE.Format.evercddl_tstr_pretty)
-  = Inl alg';
-  let foo:
-  FStar.Pervasives.either (FStar.Tactics.PrettifyType.named "intkey6"
-                  COSE.Format.evercddl_bstr_pretty &
-                FStar.Tactics.PrettifyType.named "intkey5"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey5"
-                          COSE.Format.evercddl_everparsenomatch_pretty)))
-              (FStar.Tactics.PrettifyType.named "intkey6"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey6"
-                          COSE.Format.evercddl_everparsenomatch_pretty)) &
-                FStar.Tactics.PrettifyType.named "intkey5"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey5"
-                          COSE.Format.evercddl_everparsenomatch_pretty)))
-  = Inr (None, None);
-  let foo':
-        FStar.Pervasives.either (FStar.Tactics.PrettifyType.named "intkey5"
-              COSE.Format.evercddl_bstr_pretty &
-            FStar.Tactics.PrettifyType.named "intkey6"
-              (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey6"
-                      COSE.Format.evercddl_everparsenomatch_pretty)))
-          (FStar.Pervasives.either (FStar.Tactics.PrettifyType.named "intkey6"
-                  COSE.Format.evercddl_bstr_pretty &
-                FStar.Tactics.PrettifyType.named "intkey5"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey5"
-                          COSE.Format.evercddl_everparsenomatch_pretty)))
-              (FStar.Tactics.PrettifyType.named "intkey6"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey6"
-                          COSE.Format.evercddl_everparsenomatch_pretty)) &
-                FStar.Tactics.PrettifyType.named "intkey5"
-                  (FStar.Pervasives.Native.option (FStar.Tactics.PrettifyType.named "intkey5"
-                          COSE.Format.evercddl_everparsenomatch_pretty))))
-   = Inr foo;
-  let bar':
-        FStar.Pervasives.either (CDDL.Pulse.Types.slice (COSE.Format.aux_env25_type_2_pretty &
-                COSE.Format.aux_env25_type_4_pretty))
-          (CDDL.Pulse.Parse.MapGroup.map_iterator_t CBOR.Pulse.API.Det.Type.cbor_det_map_iterator_t
-              COSE.Format.aux_env25_type_2_pretty
-              COSE.Format.aux_env25_type_4_pretty
-              CBOR.Pulse.API.Det.C.cbor_det_match
-              (CDDL.Pulse.Iterator.Base.mk_spec COSE.Format.rel_aux_env25_type_2)
-              (CDDL.Pulse.Iterator.Base.mk_spec COSE.Format.rel_aux_env25_type_4))
-  = Inl { s = rest2; p=1.0R };
-  rewrite each res as Mkevercddl_empty_or_serialized_map_pretty0 (Mkevercddl_header_map_pretty0 (Some alg'') None None None foo' bar');
-  Mkevercddl_empty_or_serialized_map_pretty0 (Mkevercddl_header_map_pretty0 (Some alg'') None None None foo' bar')
+  res
 }
 
 let sign1_emphdrs_spec () : GTot _ =
