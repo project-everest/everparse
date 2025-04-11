@@ -1,4 +1,4 @@
-module Sign
+module CommonPulse
 #lang-pulse
 open Pulse
 open COSE.Format
@@ -520,5 +520,3 @@ fn sign1_simple privkey payload (outbuf: S.slice UInt8.t)
   drop_ (rel_evercddl_header_map uhdr _); // TODO leak
   res
 }
-
-fn main () returns exitcode: Int32.t { 0l }
