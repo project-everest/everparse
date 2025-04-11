@@ -44,7 +44,7 @@ val spec_ed25519_verify: public:Seq.lseq U8.t 32 -> msg:Seq.seq U8.t{Seq.length 
 
 /// From EverCrypt.Ed25519.verify
 val verify:
-    p_public_key: perm
+    #p_public_key: perm
   -> #v_public_key: Ghost.erased (Seq.seq U8.t) { Seq.length v_public_key == 32 }
   -> public_key:AP.ptr U8.t
   -> msg_len:size_t

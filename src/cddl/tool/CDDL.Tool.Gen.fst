@@ -141,7 +141,7 @@ let _ : unit = _ by (FStar.Tactics.print (\"type\"); FStar.Tactics.exact (`()))
 [@@ \"KrmlPrivate\"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
 let "^typename^" = "^bundle^"'.b_impl_type
 let teq"^bundle^" () : squash ("^bundle^"'.b_impl_type == "^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())"^
-produce_splice typename "[@@no_auto_projectors]"^"
+produce_splice typename ""^"
 noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())]
 let spect_"^typename^" = "^bundle^"'.b_spec_type
 let specteq"^bundle^" () : squash ("^bundle^"'.b_spec_type == spect_"^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())"^
@@ -211,7 +211,7 @@ let _ : unit = _ by (FStar.Tactics.print (\"type\"); FStar.Tactics.exact (`()))
 [@@ \"KrmlPrivate\"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
 let "^typename^" = "^bundle^"'.ab_impl_type
 let teq"^bundle^" () : squash ("^bundle^"'.ab_impl_type == "^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())"^
-produce_splice typename "[@@no_auto_projectors]"^"
+produce_splice typename ""^"
 noextract [@@noextract_to "^krml^"; FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())]
 let spect_"^typename^" = "^bundle^"'.ab_spec_type
 let specteq"^bundle^" () : squash ("^bundle^"'.ab_spec_type == spect_"^typename^") = _ by (FStar.Tactics.norm (nbe :: T.bundle_get_spec_type_steps); FStar.Tactics.trefl ())"^
