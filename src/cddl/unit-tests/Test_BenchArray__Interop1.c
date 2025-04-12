@@ -10,7 +10,7 @@
 #undef CBOR_MAJOR_TYPE_ARRAY
 #undef CBOR_MAJOR_TYPE_MAP
 
-#include "Bench.h"
+#include "BenchArray.h"
 
 #define N 10000
 #define BSIZE (30 + 3*N + (N*N)) /* size of buffer */
@@ -71,27 +71,27 @@ int main()
     for (int i = 0; i < N; i++)
         elems[i] = 0;
 
-    Bench_evercddl_submap_pretty submap = {
-                .tag = Bench_Mkevercddl_submap_pretty0,
+    BenchArray_evercddl_submap_pretty submap = {
+                .tag = BenchArray_Mkevercddl_submap_pretty0,
                 .case_Mkevercddl_submap_pretty0 = {
                              .len = N,
                              .elt = elems,
                              }
     };
 
-    Bench_evercddl_submap_pretty *submaps = malloc(N * sizeof submaps[0]);
+    BenchArray_evercddl_submap_pretty *submaps = malloc(N * sizeof submaps[0]);
     for (int i = 0; i < N; i++)
         submaps[i] = submap; // note: reusing the same map
 
-    Bench_evercddl_map_pretty m = {
-                .tag = Bench_Mkevercddl_map_pretty0,
+    BenchArray_evercddl_map_pretty m = {
+                .tag = BenchArray_Mkevercddl_map_pretty0,
                 .case_Mkevercddl_map_pretty0 = {
                              .len = N,
                              .elt = submaps,
                              }
     };
 
-    size_t size = TIME(Bench_serialize_map(m, slice), &f);
+    size_t size = TIME(BenchArray_serialize_map(m, slice), &f);
     if (size == 0) {
         printf("Serialization failed\n");
         return 1;

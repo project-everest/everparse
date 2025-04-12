@@ -4,7 +4,7 @@
 #include <assert.h>
 
 extern "C" {
-#include "Bench.h"
+#include "BenchArray.h"
 }
 
 #define N 10000
@@ -81,19 +81,19 @@ bool Decode(uint8_t* buf, size_t len)
     return true;
 }
 
-bool parse_evercddl(Bench_evercddl_map_pretty m)
+bool parse_evercddl(BenchArray_evercddl_map_pretty m)
 {
-    assert (m.tag == Bench_Mkevercddl_map_pretty1);
-    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_Bench_aux_env4_type_1_pretty
+    assert (m.tag == BenchArray_Mkevercddl_map_pretty1);
+    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_aux_env4_type_1_pretty
       it = m.case_Mkevercddl_map_pretty1;
 
     for (int i = 0; i < N; i++) {
-        Bench_evercddl_submap_pretty submap = Bench_next_iterate_array_aux_env4_type_1(&it);
-        assert (submap.tag == Bench_Mkevercddl_submap_pretty1);
-        CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_Bench_aux_env3_type_1_pretty
+        BenchArray_evercddl_submap_pretty submap = Bench_next_iterate_array_aux_env4_type_1(&it);
+        assert (submap.tag == BenchArray_Mkevercddl_submap_pretty1);
+        CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_aux_env3_type_1_pretty
           it2 = submap.case_Mkevercddl_submap_pretty1;
         for (int j = 0; j < N; j++) {
-            Bench_evercddl_uint_pretty t = Bench_next_iterate_array_aux_env3_type_1(&it2);
+            BenchArray_evercddl_uint_pretty t = Bench_next_iterate_array_aux_env3_type_1(&it2);
             assert (t == 0);
         }
     }
@@ -139,14 +139,14 @@ int main()
     };
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___Bench_evercddl_map_pretty___Pulse_Lib_Slice_slice_uint8_t_
-      m_opt = TIME(Bench_validate_and_parse_map(slice), &f);
+    FStar_Pervasives_Native_option___BenchArray_evercddl_map_pretty___Pulse_Lib_Slice_slice_uint8_t_
+      m_opt = TIME(BenchArray_validate_and_parse_map(slice), &f);
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
     printf("Parsed %zu bytes\n", m_opt.v.snd.len);
     printf("Original len %zu\n", len);
     assert (m_opt.v.snd.len == 0); /* len is whatever remains */
 
-    Bench_evercddl_map_pretty m =  m_opt.v.fst;
+    BenchArray_evercddl_map_pretty m =  m_opt.v.fst;
 
     printf(" >>> VALIDATION BANDWIDTH: %f MB/s\n", len / f / 1e6);
 
