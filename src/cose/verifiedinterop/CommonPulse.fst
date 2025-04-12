@@ -242,8 +242,9 @@ let dummy_map_val () : aux_env25_type_2_pretty & aux_env25_type_4_pretty =
 
 let assert_norm' (p: prop) : Pure (squash p) (requires normalize p) (ensures fun _ -> True) = ()
 
-let rel_inl_map_eq x y = assert_norm' (rel_inl_map x y == 
-  (exists* l . rel_slice_of_list (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4) false x l **
+let rel_inl_map_eq (x: slice (aux_env25_type_2_pretty & aux_env25_type_4_pretty)) y = assert_norm' (rel_inl_map x y == 
+  (exists* l .
+    (exists* s . pts_to x.s #x.p s ** Pulse.Lib.SeqMatch.seq_list_match s l (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4) ** pure (false == false)) **
       pure (y == map_of_list_pair ((CDDL.Pulse.Bundle.Base.mk_eq_test_bij
                     COSE.Format.spect_aux_env25_type_2_pretty_right
                     COSE.Format.spect_aux_env25_type_2_pretty_left
@@ -283,31 +284,50 @@ let sign1_phdrs_spec (alg: Int32.t) =
       None None None (Inr (Inr (None, None)))
       (CDDL.Spec.Map.empty _ _))
 
-let rel_map_sign1_phdrs_eq (alg: Int32.t) alg' rest =
+let rel_map_sign1_phdrs_eq (alg: Int32.t) alg' s =
   assert_norm' (rel_evercddl_empty_or_serialized_map (Mkevercddl_empty_or_serialized_map_pretty0
     (Mkevercddl_header_map_pretty0 (Some (Inl alg')) None None None (Inr (Inr (None, None)))
-      (Inl { s = rest; p=1.0R })))
+      (Inl s)))
     (sign1_phdrs_spec alg) ==
     (((((rel_evercddl_int alg' (specint_of_i32 alg) **
       emp) ** emp) ** emp) ** (emp ** emp)) **
-      rel_inl_map { s = rest; p=1.0R } (CDDL.Spec.Map.empty _ _)))
+      rel_inl_map s (CDDL.Spec.Map.empty _ _)))
 
-fn mk_phdrs (alg: Int32.t)
+module A = Pulse.Lib.Array
+
+fn mk_phdrs (alg: Int32.t) (rest: A.larray (aux_env25_type_2_pretty & aux_env25_type_4_pretty) 0)
+    #prest (#vrest: erased _)
+  requires pts_to rest #prest vrest
   returns res: evercddl_empty_or_serialized_map_pretty
   ensures rel_evercddl_empty_or_serialized_map res (sign1_phdrs_spec alg)
+  ensures trade (rel_evercddl_empty_or_serialized_map res (sign1_phdrs_spec alg))
+    (pts_to rest #prest vrest)
 {
   let alg' = mk_int alg;
-  let rest = V.alloc (dummy_map_val ()) 0sz;
-  V.to_array_pts_to rest;
-  let rest2 = S.from_array (V.vec_to_array rest) 0sz;
+  A.pts_to_len rest;
+  let rest2 = S.from_array rest 0sz;
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
       (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4);
-  fold rel_slice_of_list (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4) false
-      (Mkslice rest2 1.0R) [];
-  rw_l (rel_inl_map_eq {s = rest2; p=1.0R} (CDDL.Spec.Map.empty _ _));
+  assert pure (Seq.Base.create 0 (dummy_map_val ()) `Seq.equal` vrest);
+  rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_phdrs_eq alg alg' _);
   with res. assert rel_evercddl_empty_or_serialized_map res (sign1_phdrs_spec alg);
-  drop_ (S.is_from_array (V.vec_to_array rest) rest2); // TODO leak
+  ghost fn aux ()
+    requires S.is_from_array rest rest2 ** rel_evercddl_empty_or_serialized_map res (sign1_phdrs_spec alg)
+    ensures pts_to rest #prest vrest
+  {
+    rw_r (rel_map_sign1_phdrs_eq alg alg' _);
+    rw_r (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
+    S.to_array rest2;
+    A.pts_to_len rest;
+    with vrest'. assert pts_to rest #prest vrest';
+    assert pure (Seq.equal vrest' vrest);
+    drop_ (
+      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4) **
+      rel_evercddl_int alg' (specint_of_i32 alg)
+    );
+  };
+  intro_trade _ _ _ aux;
   res
 }
 
@@ -316,38 +336,52 @@ let sign1_emphdrs_spec () : GTot _ =
       None None None None (Inr (Inr (None, None)))
       (CDDL.Spec.Map.empty _ _))
 
-let rel_map_sign1_emphdrs_eq rest =
+let rel_map_sign1_emphdrs_eq s =
   assert_norm' (rel_evercddl_header_map (
     (Mkevercddl_header_map_pretty0 None None None None (Inr (Inr (None, None)))
-      (Inl { s = rest; p=1.0R })))
+      (Inl s)))
     (sign1_emphdrs_spec ()) ==
     (((((emp ** emp) ** emp) ** emp) ** (emp ** emp)) **
-      rel_inl_map { s = rest; p=1.0R } (CDDL.Spec.Map.empty _ _)))
+      rel_inl_map s (CDDL.Spec.Map.empty _ _)))
 
-fn mk_emphdrs ()
+fn mk_emphdrs (rest: A.larray (aux_env25_type_2_pretty & aux_env25_type_4_pretty) 0)
+    #prest (#vrest: erased _)
+  requires pts_to rest #prest vrest
   returns res: evercddl_header_map_pretty
   ensures rel_evercddl_header_map res (sign1_emphdrs_spec ())
+  ensures trade (rel_evercddl_header_map res (sign1_emphdrs_spec ())) (pts_to rest #prest vrest)
 {
-  // let alg' = mk_int alg;
-  let rest = V.alloc (dummy_map_val ()) 0sz;
-  V.to_array_pts_to rest;
-  let rest2 = S.from_array (V.vec_to_array rest) 0sz;
+  A.pts_to_len rest;
+  assert pure (Seq.equal vrest (Seq.create 0 (dummy_map_val ())));
+  let rest2 = S.from_array rest 0sz;
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
       (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4);
-  fold rel_slice_of_list (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4) false
-      (Mkslice rest2 1.0R) [];
-  rw_l (rel_inl_map_eq {s = rest2; p=1.0R} (CDDL.Spec.Map.empty _ _));
+  rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_emphdrs_eq _);
   with res. assert rel_evercddl_header_map res (sign1_emphdrs_spec ());
-  drop_ (S.is_from_array (V.vec_to_array rest) rest2); // TODO leak
+
+  ghost fn aux ()
+    requires S.is_from_array rest rest2 ** rel_evercddl_header_map res (sign1_emphdrs_spec ())
+    ensures pts_to rest #prest vrest
+  {
+    rw_r (rel_map_sign1_emphdrs_eq _);
+    rw_r (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
+    S.to_array rest2;
+    A.pts_to_len rest;
+    with vrest'. assert pts_to rest #prest vrest';
+    assert pure (Seq.equal vrest' vrest);
+    drop_ (
+      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4)
+    );
+  };
+  intro_trade _ _ _ aux;
+
   res
 }
 
 let sign1_tagged_spec (alg: Int32.t) uhdr payload sig =
   Mkspect_evercddl_COSE_Sign1_Tagged_pretty0 (Mkspect_evercddl_COSE_Sign1_pretty0
     (sign1_phdrs_spec alg) uhdr (Inl payload) sig)
-
-// #push-options "--print_implicits"
 
 let rel_sign1_tagged_eq1 phdr uhdr payload sig vphdr vuhdr vpayload vsig =
   assert_norm' (rel_evercddl_COSE_Sign1_Tagged
@@ -380,7 +414,6 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
 
   returns outbuf_sz: SizeT.t
   ensures AP.pts_to privkey #pprivkey vprivkey
-  // TODO leak leak
   ensures rel_evercddl_header_map uhdr vuhdr
   ensures rel_evercddl_bstr aad vaad
   ensures rel_evercddl_bstr payload vpayload
@@ -388,7 +421,8 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
   //  ** pure (SizeT.lt 0sz outbuf_sz ==> Seq.slice voutbuf 0 (SizeT.v outbuf_sz) == _)
 {
   let alg: Int32.t = -8l;
-  let phdr = mk_phdrs alg;
+  let mut phdrauxbuf = [| dummy_map_val (); 0sz |];
+  let phdr = mk_phdrs alg phdrauxbuf;
   let mut sigbuf = [| 0uy; 64sz |];
   Seq.lemma_create_len (SizeT.v 64sz) 0uy; //?!?
   let sigbuf2 = AP.from_array sigbuf;
@@ -401,7 +435,6 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
     S.pts_to sigbuf3 (spec_ed25519_sign vprivkey tbs) ** pure (false == false)
     as
     (rel_evercddl_bstr sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs });
-  // let uhdr = mk_emphdrs ();
   rw_l (rel_sign1_tagged_eq1 phdr _ payload sigbuf4 (sign1_phdrs_spec alg) _ vpayload _);
   let outbuf_sz = serialize_COSE_Sign1_Tagged' _ outbuf;
   rw_r (rel_sign1_tagged_eq1 phdr _ payload _ (sign1_phdrs_spec alg) _ vpayload _);
@@ -410,7 +443,7 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
     as
     S.pts_to sigbuf3 (spec_ed25519_sign vprivkey tbs) ** pure (false == false);
   S.to_array sigbuf3;
-  drop_ (rel_evercddl_empty_or_serialized_map phdr _);
+  elim_trade _ _;
   if (outbuf_sz = 0sz) { abort (); 0sz } else {
     outbuf_sz;
   }
@@ -426,13 +459,12 @@ fn sign1_simple privkey payload (outbuf: S.slice UInt8.t)
 
   returns outbuf_sz: SizeT.t
   ensures AP.pts_to privkey #pprivkey vprivkey
-  // TODO leak leak
-  // ensures rel_evercddl_empty_or_serialized_map uhdr vuhdr
   ensures rel_evercddl_bstr payload vpayload
   ensures exists* voutbuf. S.pts_to outbuf voutbuf ** pure (SizeT.v outbuf_sz <= Seq.length voutbuf)
   //  ** pure (SizeT.lt 0sz outbuf_sz ==> Seq.slice voutbuf 0 (SizeT.v outbuf_sz) == _)
 {
-  let uhdr = mk_emphdrs ();
+  let mut uhdrauxbuf = [| dummy_map_val (); 0sz |];
+  let uhdr = mk_emphdrs uhdrauxbuf;
   let mut aadbuf = [| 0uy; 0sz |];
   let aadslice = S.from_array aadbuf 0sz;
   with aad. assert pure ((aad <: evercddl_bstr_pretty) == Mkevercddl_bstr_pretty0 { s = aadslice; p = 1.0R });
@@ -440,7 +472,7 @@ fn sign1_simple privkey payload (outbuf: S.slice UInt8.t)
   let res = sign1 privkey uhdr aad payload outbuf;
   rw_r (rel_bstr_eq aad (Mkspect_evercddl_bstr_pretty0 _));
   S.to_array aadslice;
-  drop_ (rel_evercddl_header_map uhdr _); // TODO leak
+  elim_trade _ _;
   res
 }
 
@@ -480,8 +512,6 @@ fn verify_sig pubkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
     abort ();
     with w. rewrite S.pts_to outbuf w ** S.is_from_array (V.vec_to_array arr) outbuf as emp;
     false
-    // with vsigbuf. rewrite AP.pts_to sigbuf vsigbuf as AP.pts_to sigbuf (spec_ed25519_sign vpubkey vsigbuf);
-    // with voutbuf. rewrite S.pts_to outbuf voutbuf ** S.is_from_array (Vec.vec_to_array arr) outbuf as emp;
   } else {
     let tbs = Pulse.Lib.Slice.Util.subslice_trade outbuf 0sz written;
     with vtbs. assert S.pts_to tbs vtbs ** pure (to_be_signed_spec vphdr vaad vpayload vtbs);
@@ -528,7 +558,6 @@ fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x
   requires rel_evercddl_bstr aad vaad
 
   returns success: bool
-  // TODO leak leak
   ensures AP.pts_to pubkey #ppubkey vpubkey
   ensures rel_evercddl_COSE_Sign1_Tagged msg vmsg
   ensures rel_evercddl_bstr aad vaad
