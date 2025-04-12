@@ -23,11 +23,11 @@ device_id_csr_ingredients = {
 
 alias_key_crt_ingredients = {
   version: nint,
-  serialNumber: bytes,
+  serial_number: bytes,
   i_common: tstr,
   i_org: tstr,
-  notBefore: bytes,
-  notAfter: bytes,
+  not_before: bytes,
+  not_after: bytes,
   s_common: tstr,
   s_org: tstr,
   s_country: tstr,

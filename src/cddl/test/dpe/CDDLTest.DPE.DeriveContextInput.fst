@@ -18,360 +18,286 @@ open CDDLTest.DPE.Common
 
 noeq
 type engine_record_t = {
-  l0_image_header:slice UInt8.t;
-  l0_image_header_sig:slice UInt8.t;
-  l0_binary:slice UInt8.t;
-  l0_binary_hash:slice UInt8.t;
-  l0_image_auth_pubkey:slice UInt8.t;
+  l0_image_header:Slice.slice UInt8.t;
+  l0_image_header_sig:Slice.slice UInt8.t;
+  l0_binary:Slice.slice UInt8.t;
+  l0_binary_hash:Slice.slice UInt8.t;
+  l0_image_auth_pubkey:Slice.slice UInt8.t;
 }
 
-let is_engine_record (e:engine_record_t) (res:slprop) : slprop =
-  exists* hdr hdr_sig bin bin_hash pk p.
-    rel_slice_of_seq false e.l0_image_header hdr **
-    rel_slice_of_seq false e.l0_image_header_sig hdr_sig **
-    rel_slice_of_seq false e.l0_binary bin **
-    rel_slice_of_seq false e.l0_binary_hash bin_hash **
-    rel_slice_of_seq false e.l0_image_auth_pubkey pk **
-    Trade.trade p res ** 
-    pure (p == (rel_slice_of_seq false e.l0_image_header hdr **
-                rel_slice_of_seq false e.l0_image_header_sig hdr_sig **
-                rel_slice_of_seq false e.l0_binary bin **
-                rel_slice_of_seq false e.l0_binary_hash bin_hash **
-                rel_slice_of_seq false e.l0_image_auth_pubkey pk))
+let engine_record = evercddl_derive_context_engine_record_pretty
+let spec_engine_record = spect_evercddl_derive_context_engine_record_pretty
+let is_engine_record_core
+      (e:engine_record)
+      (wx:spec_engine_record)
+: slprop
+= rel_evercddl_bytes e.l0_image_header wx._x0 **
+  rel_evercddl_bytes e.l0_image_header_sig wx._x1 **
+  rel_evercddl_bytes e.l0_binary wx._x2 **
+  rel_evercddl_bytes e.l0_binary_hash wx._x3 **
+  rel_evercddl_bytes e.l0_image_auth_pubkey wx._x4
 
+let is_engine_record (e:engine_record) (se:spec_engine_record) : slprop =
+  is_engine_record_core e se **
+  Trade.trade (is_engine_record_core e se) (rel_evercddl_derive_context_engine_record e se)
+
+
+ghost
 fn extract_derive_context_engine_record x (w:erased _)
 requires rel_evercddl_derive_context_engine_record x w
-returns e:engine_record_t
-ensures is_engine_record e (rel_evercddl_derive_context_engine_record x w)
+ensures is_engine_record x w
 {
-  unfold_with_trade (`%rel_evercddl_derive_context_engine_record) (rel_evercddl_derive_context_engine_record x w);
-  destruct_rel_fun _ _ _ _ _;
-  Trade.trade_compose _ _ (rel_evercddl_derive_context_engine_record x w);
-  let rest, pk = destruct_pair_concrete _ _ _ _ _;
-  let rest, bin_hash = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let rest, bin = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let hdr, hdr_sig = destruct_pair_concrete_nest _ _ _ _ _ _;
-  trade_emp_hyp_r _ _;
-  let hdr = destruct_evercddl_bytes_head _ _ _ _ _;
-  // trade_emp_hyp_r_elim _ _ _;
-  let hdr_sig = destruct_evercddl_bytes_head _ _ _ _ _;
-  let bin = destruct_evercddl_bytes_head _ _ _ _ _;
-  let bin_hash = destruct_evercddl_bytes_head _ _ _ _ _;
-  Trade.Util.assoc_hyp_l _ _ _ _;
-  let pk = destruct_evercddl_bytes_head _ _ _ _ _;
-  let res = 
-    { l0_image_header = hdr;
-      l0_image_header_sig = hdr_sig;
-      l0_binary = bin;
-      l0_binary_hash = bin_hash;
-      l0_image_auth_pubkey = pk };
-  rewrite each
-    hdr as res.l0_image_header,
-    hdr_sig as res.l0_image_header_sig,
-    bin as res.l0_binary,
-    bin_hash as res.l0_binary_hash,
-    pk as res.l0_image_auth_pubkey;
-  slprop_equivs();
-  fold (is_engine_record res);
-  res
+  Trade.rewrite_with_trade 
+    (rel_evercddl_derive_context_engine_record x w)
+    (is_engine_record_core x w);
+  fold (is_engine_record x w);
 }
 
-noeq
-type device_id_csr_ingredients_t = {
-  ku : UInt64.t;
-  version: UInt64.t;
-  s_common: slice UInt8.t;
-  s_org: slice UInt8.t;
-  s_country: slice UInt8.t;
-}
-
-let is_device_id_csr_ingredients (e:device_id_csr_ingredients_t) (res:slprop) : slprop =
-  exists* com org cnt p.
-    rel_slice_of_seq false e.s_common com **
-    rel_slice_of_seq false e.s_org org **
-    rel_slice_of_seq false e.s_country cnt **
-    Trade.trade p res ** 
-    pure (p == (rel_slice_of_seq false e.s_common com **
-                rel_slice_of_seq false e.s_org org **
-                rel_slice_of_seq false e.s_country cnt))
-
+let device_id_csr_ingredients = evercddl_device_id_csr_ingredients_pretty
+let spec_device_id_csr_ingredients = spect_evercddl_device_id_csr_ingredients_pretty
+[@@pulse_unfold]
+let is_device_id_csr_ingredients_core (e:device_id_csr_ingredients) (se:spec_device_id_csr_ingredients) : slprop =
+    rel_evercddl_nint e.ku se._x0 **
+    rel_evercddl_nint e.version se._x1 **
+    rel_evercddl_tstr e.s_common se._x2 **
+    rel_evercddl_tstr e.s_org se._x3 **
+    rel_evercddl_tstr e.s_country se._x4
+let is_device_id_csr_ingredients (e:device_id_csr_ingredients) (se:spec_device_id_csr_ingredients) : slprop =
+    is_device_id_csr_ingredients_core e se **
+    Trade.trade (is_device_id_csr_ingredients_core e se) (rel_evercddl_device_id_csr_ingredients e se)
+    
+ghost 
 fn extract_device_id_csr_ingredients x (w:erased _)
 requires rel_evercddl_device_id_csr_ingredients x w
-returns res:device_id_csr_ingredients_t
-ensures is_device_id_csr_ingredients res (rel_evercddl_device_id_csr_ingredients x w)
+ensures is_device_id_csr_ingredients x w
 {
-  unfold_with_trade (`%rel_evercddl_device_id_csr_ingredients) (rel_evercddl_device_id_csr_ingredients x w);
-  destruct_rel_fun _ _ _ _ _;
-  Trade.trade_compose _ _ (rel_evercddl_device_id_csr_ingredients x w);
-
-  let rest, country = destruct_pair_concrete _ _ _ _ _;
-  let rest, org = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let rest, common = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let ku, version = destruct_pair_concrete_nest _ _ _ _ _ _;
-
-  trade_emp_hyp_r _ _;
-  let ku = destruct_evercddl_nint_head _ _ _ _ _;
-  let version =  destruct_evercddl_nint_head _ _ _ _ _;
-  let s_common = destruct_evercddl_tstr_head _ _ _ _ _;
-  let s_org = destruct_evercddl_tstr_head _ _ _ _ _;
-  Trade.Util.assoc_hyp_l _ _ _ _;
-  let s_country = destruct_evercddl_tstr_head _ _ _ _ _;
-
- let res = { ku; version; s_common; s_org; s_country };
- rewrite each
-    s_common as res.s_common,
-    s_org as res.s_org,
-    s_country as res.s_country;
-  slprop_equivs();
-  fold (is_device_id_csr_ingredients res);
-  res
+  Trade.rewrite_with_trade 
+    (rel_evercddl_device_id_csr_ingredients x w)
+    (is_device_id_csr_ingredients_core x w);
+  fold (is_device_id_csr_ingredients x w);
 }
 
-noeq
-type alias_key_crt_ingredients_t = {
-  version: UInt64.t;
-  serialNumber: slice UInt8.t;
-  i_common: slice UInt8.t;
-  i_org: slice UInt8.t;
-  notBefore: slice UInt8.t;
-  notAfter: slice UInt8.t;
-  s_common: slice UInt8.t;
-  s_org: slice UInt8.t;
-  s_country: slice UInt8.t;
-  ku: UInt64.t;
-  l0_version: UInt64.t
-}
+let alias_key_crt_ingredients = evercddl_alias_key_crt_ingredients_pretty
+let spec_alias_key_crt_ingredients = spect_evercddl_alias_key_crt_ingredients_pretty
 
 [@@pulse_unfold]
 unfold
-let is_alias_key_crt_ingredients_core (e:alias_key_crt_ingredients_t) sn c o nb na com org cnt : slprop =
-  rel_slice_of_seq false e.serialNumber sn **
-  rel_slice_of_seq false e.i_common c **
-  rel_slice_of_seq false e.i_org o **
-  rel_slice_of_seq false e.notBefore nb **
-  rel_slice_of_seq false e.notAfter na **
-  rel_slice_of_seq false e.s_common com **
-  rel_slice_of_seq false e.s_org org **
-  rel_slice_of_seq false e.s_country cnt
+let is_alias_key_crt_ingredients_core (e:alias_key_crt_ingredients) (s:spec_alias_key_crt_ingredients) =
+  rel_evercddl_nint e.version s._x0 **
+  rel_evercddl_bytes e.serial_78umber s._x1 **
+  rel_evercddl_tstr e.i_common s._x2 **
+  rel_evercddl_tstr e.i_org s._x3 **
+  rel_evercddl_bytes e.not_66efore s._x4 **
+  rel_evercddl_bytes e.not_65fter s._x5 **
+  rel_evercddl_tstr e.s_common s._x6 **
+  rel_evercddl_tstr e.s_org s._x7 **
+  rel_evercddl_tstr e.s_country s._x8 **
+  rel_evercddl_nint e.ku s._x9 **
+  rel_evercddl_nint e.l0_version s._x10
 
-#push-options "--query_stats"
-fn make_alias_key_crt_ingredients 
-    (version:UInt64.t)
-    serialNumber
-    i_common
-    i_org
-    notBefore
-    notAfter
-    s_common
-    s_org
-    s_country
-    (ku
-     l0_version: UInt64.t)
-requires 
-  rel_slice_of_seq false serialNumber 'n **
-  rel_slice_of_seq false i_common 'c **
-  rel_slice_of_seq false i_org 'o **
-  rel_slice_of_seq false notBefore 'nb **
-  rel_slice_of_seq false notAfter 'na **
-  rel_slice_of_seq false s_common 'com **
-  rel_slice_of_seq false s_org 'org **
-  rel_slice_of_seq false s_country 'cnt
-returns 
-  e:alias_key_crt_ingredients_t
-ensures
-  is_alias_key_crt_ingredients_core e 'n 'c 'o 'nb 'na 'com 'org 'cnt **
-  pure (e == { ku; s_country; s_org; s_common; i_org; i_common; notAfter; notBefore; version; serialNumber; l0_version })
-{
-  let res = { ku; s_country; s_org; s_common; i_org; i_common; notAfter; notBefore; version; serialNumber; l0_version };
-  rewrite each
-    i_common as res.i_common,
-    i_org as res.i_org,
-    notBefore as res.notBefore,
-    notAfter as res.notAfter,
-    version as res.version,
-    serialNumber as res.serialNumber,
-    l0_version as res.l0_version,
-    ku as res.ku,
-    s_common as res.s_common,
-    s_org as res.s_org,
-    s_country as res.s_country;
-  res
-}
+let is_alias_key_crt_ingredients (e:alias_key_crt_ingredients) (s:spec_alias_key_crt_ingredients) : slprop =
+  is_alias_key_crt_ingredients_core e s **
+  Trade.trade (is_alias_key_crt_ingredients_core e s) (rel_evercddl_alias_key_crt_ingredients e s)
 
-let is_alias_key_crt_ingredients (e:alias_key_crt_ingredients_t) (res:slprop) : slprop =
-  exists* sn c o nb na com org cnt.
-    is_alias_key_crt_ingredients_core e sn c o nb na com org cnt **
-    Trade.trade (is_alias_key_crt_ingredients_core e sn c o nb na com org cnt) res
-
+ghost
 fn extract_alias_key_crt_ingredients x (w:erased _)
 requires rel_evercddl_alias_key_crt_ingredients x w
-returns res:alias_key_crt_ingredients_t
-ensures is_alias_key_crt_ingredients res (rel_evercddl_alias_key_crt_ingredients x w)
+ensures is_alias_key_crt_ingredients x w
 {
-  unfold_with_trade (`%rel_evercddl_alias_key_crt_ingredients) (rel_evercddl_alias_key_crt_ingredients x w);
-  destruct_rel_fun _ _ _ _ _;
-  Trade.trade_compose _ _ (rel_evercddl_alias_key_crt_ingredients x w);
-
-  let rest, l0_version = destruct_pair_concrete _ _ _ _ _;
-  let rest, ku = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let rest, country = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let rest, org = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let rest, common = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let rest, notAfter = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let rest, notBefore = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let rest, org = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let rest, common = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let version, serialNumber = destruct_pair_concrete_nest _ _ _ _ _ _;
-
-  trade_emp_hyp_r _ _;
-  let version =  destruct_evercddl_nint_head _ _ _ _ _;
-  let serialNumber =  destruct_evercddl_bytes_head _ _ _ _ _;
-  let i_common =  destruct_evercddl_tstr_head _ _ _ _ _;
-  let i_org =  destruct_evercddl_tstr_head _ _ _ _ _;
-  let notBefore = destruct_evercddl_bytes_head _ _ _ _ _;
-  let notAfter = destruct_evercddl_bytes_head _ _ _ _ _;
-  let s_common =  destruct_evercddl_tstr_head _ _ _ _ _;
-  let s_org =  destruct_evercddl_tstr_head _ _ _ _ _;
-  let s_country =  destruct_evercddl_tstr_head _ _ _ _ _;
-  let ku = destruct_evercddl_nint_head _ _ _ _ _;
-  Trade.Util.assoc_hyp_l _ _ _ _;
-  let l0_version = destruct_evercddl_nint_head _ _ _ _ _;
-
-  let res = make_alias_key_crt_ingredients 
-    version
-    serialNumber
-    i_common
-    i_org
-    notBefore
-    notAfter
-    s_common
-    s_org
-    s_country
-    ku
-    l0_version;
-  slprop_equivs();
-  fold (is_alias_key_crt_ingredients res (rel_evercddl_alias_key_crt_ingredients x w));
-  res
-
+  Trade.rewrite_with_trade 
+    (rel_evercddl_alias_key_crt_ingredients x w)
+    (is_alias_key_crt_ingredients_core x w);
+  fold (is_alias_key_crt_ingredients x w);
 }
 
-
-noeq
-type derive_context_l0_record_t = {
-  fwid: slice UInt8.t;
-  device_id_label: slice UInt8.t;
-  alias_key_label: slice UInt8.t;
-  device_id_csr_ingredients: device_id_csr_ingredients_t;
-  alias_key_crt_ingredients: alias_key_crt_ingredients_t;
-}
-
+let l0_record = evercddl_derive_context_l0_record_pretty
+let spec_l0_record = spect_evercddl_derive_context_l0_record_pretty
 [@@pulse_unfold]
-unfold
-let is_derive_context_l0_record_core (e:derive_context_l0_record_t) fid did akl : slprop =
-  rel_slice_of_seq false e.fwid fid **
-  rel_slice_of_seq false e.device_id_label did **
-  rel_slice_of_seq false e.alias_key_label akl
+let is_l0_record_core (e:l0_record) (wx:spec_l0_record) : slprop =
+  rel_evercddl_bytes e.fwid wx._x0 **
+  rel_evercddl_bytes e.device_id_label wx._x1 **
+  rel_evercddl_bytes e.alias_key_label wx._x2 **
+  is_device_id_csr_ingredients_core e.device_id_csr_ingredients wx._x3 **
+  is_alias_key_crt_ingredients_core e.alias_key_crt_ingredients wx._x4
 
-let is_derive_context_l0_record (e:derive_context_l0_record_t) (k:slprop) =
-  exists* fid did akl k1 k2.
-    is_derive_context_l0_record_core e fid did akl **
-    is_device_id_csr_ingredients e.device_id_csr_ingredients k1 **
-    is_alias_key_crt_ingredients e.alias_key_crt_ingredients k2 **
-    Trade.trade (is_derive_context_l0_record_core e fid did akl ** k1 ** k2) k
+let is_l0_record (e:l0_record) (se:spec_l0_record) : slprop =
+  is_l0_record_core e se **
+  Trade.trade (is_l0_record_core e se) (rel_evercddl_derive_context_l0_record e se)
 
-fn make_derive_context_l0_record
-    fwid device_id_label alias_key_label
-    device_id_csr_ingredients
-    alias_key_crt_ingredients
-requires 
-  rel_slice_of_seq false fwid 'fid **
-  rel_slice_of_seq false device_id_label 'did **
-  rel_slice_of_seq false alias_key_label 'akl **
-  is_device_id_csr_ingredients device_id_csr_ingredients 'k1 **
-  is_alias_key_crt_ingredients alias_key_crt_ingredients 'k2
-returns 
-  e:derive_context_l0_record_t
-ensures
-  is_derive_context_l0_record_core e 'fid 'did 'akl **
-  is_device_id_csr_ingredients e.device_id_csr_ingredients 'k1 **
-  is_alias_key_crt_ingredients e.alias_key_crt_ingredients 'k2 **
-  pure (e == { fwid; device_id_label; alias_key_label; device_id_csr_ingredients; alias_key_crt_ingredients })
-{
-  let res = { fwid; device_id_label; alias_key_label; device_id_csr_ingredients; alias_key_crt_ingredients };
-  rewrite each
-    fwid as res.fwid,
-    device_id_label as res.device_id_label,
-    alias_key_label as res.alias_key_label,
-    device_id_csr_ingredients as res.device_id_csr_ingredients,
-    alias_key_crt_ingredients as res.alias_key_crt_ingredients;
-  res
-}
-
+ghost
 fn extract_derive_context_l0_record x (w:erased _)
 requires rel_evercddl_derive_context_l0_record x w
-returns res:derive_context_l0_record_t
-ensures is_derive_context_l0_record res (rel_evercddl_derive_context_l0_record x w)
+ensures is_l0_record x w
 {
-  unfold_with_trade (`%rel_evercddl_derive_context_l0_record) (rel_evercddl_derive_context_l0_record x w);
-  destruct_rel_fun _ _ _ _ _;
-  Trade.trade_compose _ _ (rel_evercddl_derive_context_l0_record x w);
-
-  let rest, ak_i = destruct_pair_concrete _ _ _ _ _;
-  let rest, did_i = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let rest, akl = destruct_pair_concrete_nest _ _ _ _ _ _;
-  let fwid, did_l = destruct_pair_concrete_nest _ _ _ _ _ _;
-
-  trade_emp_hyp_r _ _;
-
-  let fwid = destruct_evercddl_bytes_head _ _ _ _ _;
-  let device_id_label = destruct_evercddl_bytes_head _ _ _ _ _;
-  let alias_key_label = destruct_evercddl_bytes_head _ _ _ _ _;
-  let device_id_csr_ingredients = extract_device_id_csr_ingredients _ _;
-  Trade.Util.assoc_hyp_l _ _ _ _;
-  let alias_key_crt_ingredients = extract_alias_key_crt_ingredients _ _;
-  let res = make_derive_context_l0_record 
-    fwid
-    device_id_label
-    alias_key_label
-    device_id_csr_ingredients
-    alias_key_crt_ingredients;
-  slprop_equivs();
-  fold (is_derive_context_l0_record res (rel_evercddl_derive_context_l0_record x w));
-  res
+  Trade.rewrite_with_trade 
+    (rel_evercddl_derive_context_l0_record x w)
+    (is_l0_record_core x w);
+  fold (is_l0_record x w);
 }
 
-ghost
-fn is_engine_record_compose (e:engine_record_t) (res res':slprop)
-requires is_engine_record e res ** Trade.trade res res'
-ensures is_engine_record e res'
-{
-  unfold is_engine_record;
-  Trade.trade_compose _ _ res';
-  fold is_engine_record;
-}
-
-ghost
-fn is_derive_context_l0_record_compose e res res'
-requires is_derive_context_l0_record e res ** Trade.trade res res'
-ensures is_derive_context_l0_record e res'
-{
-  unfold is_derive_context_l0_record;
-  Trade.trade_compose _ _ res';
-  fold is_derive_context_l0_record
-}
-
-let is_derive_context_input_args 
-    (e:either engine_record_t derive_context_l0_record_t) 
-    (res:slprop) 
+let is_derive_context_input_args_data
+    (e:either engine_record l0_record) 
+    (res:either spec_engine_record spec_l0_record)
 : slprop
-= match e with
-  | Inl e -> is_engine_record e res
-  | Inr e -> is_derive_context_l0_record e res
+= match e, res with
+  | Inl er, Inl s_er ->
+    is_engine_record er s_er **
+    Trade.trade 
+      (is_engine_record er s_er) 
+      (rel_evercddl_derive_context_input_args_data 
+        (evercddl_derive_context_input_args_data_pretty_right e)
+        (spect_evercddl_derive_context_input_args_data_pretty_right res))
+  | Inr l0, Inr s_l0 ->
+    is_l0_record l0 s_l0 **
+    Trade.trade 
+      (is_l0_record l0 s_l0) 
+      (rel_evercddl_derive_context_input_args_data 
+        (evercddl_derive_context_input_args_data_pretty_right e)
+        (spect_evercddl_derive_context_input_args_data_pretty_right res))
+  | _ -> pure False
 
-fn extract_derive_context_input_args_data x (w:erased _)
+[@@pulse_unfold]
+let norm_token = emp
+
+ghost
+fn unfold_is_engine_record_trade x y ()
+requires emp
+ensures
+   Trade.trade
+     (is_engine_record x y)
+     (is_engine_record_core x y **
+        Trade.trade
+          (is_engine_record_core x y)
+          (rel_evercddl_derive_context_engine_record x y))
+{
+  ghost
+  fn aux ()
+  requires emp ** is_engine_record x y
+  ensures 
+       (is_engine_record_core x y **
+        Trade.trade
+          (is_engine_record_core x y)
+          (rel_evercddl_derive_context_engine_record x y))
+  {
+    unfold (is_engine_record x y);
+  };
+  Trade.intro_trade _ _ _ aux;
+}
+
+ghost
+fn trade_take (p p' q r:slprop) 
+requires Trade.trade q r ** Trade.trade p (p' ** Trade.trade p' q)
+ensures Trade.trade p r
+{
+  ghost
+  fn aux ()
+  requires (Trade.trade q r ** Trade.trade p (p' ** Trade.trade p' q)) ** p
+  ensures r
+  {
+    Trade.elim_trade p _;
+    Trade.elim_trade p' _;
+    Trade.elim_trade _ r;
+  };
+  Trade.intro_trade _ _ _ aux;
+}
+
+ghost
+fn unfold_is_l0_record_trade x y ()
+requires emp
+ensures
+   Trade.trade
+     (is_l0_record x y)
+     (is_l0_record_core x y **
+        Trade.trade
+          (is_l0_record_core x y)
+          (rel_evercddl_derive_context_l0_record x y))
+{
+  ghost
+  fn aux ()
+  requires emp ** is_l0_record x y
+  ensures 
+       (is_l0_record_core x y **
+        Trade.trade
+          (is_l0_record_core x y)
+          (rel_evercddl_derive_context_l0_record x y))
+  {
+    unfold (is_l0_record x y);
+  };
+  Trade.intro_trade _ _ _ aux;
+}
+
+ghost
+fn destruct_rel_either_left 
+    (#a #b #a' #b':Type0) 
+    (r:rel a b)
+    (r':rel a' b')
+    (x:either a a')
+    (y:either b b')
+    (res:slprop)
+requires 
+  rel_either r r' x y **
+  pure (Inl? x) **
+  Trade.trade (rel_either r r' x y) res
+returns
+  xx:a
+ensures
+  exists* (yy:b).
+    pure (y == Inl yy /\ x == Inl xx) **
+    r xx yy **
+    Trade.trade (r xx yy) res
+{
+  rel_either_cases _ _ _ _;
+  let xx = Inl?.v x;
+  let yy = hide <| Inl?.v y;
+  rewrite each x as (Inl xx);
+  rel_either_eq_left r r' xx yy;
+  Trade.rewrite_with_trade 
+    (rel_either r r' (Inl xx) y)
+    (r xx yy);
+  rewrite each (Inl #a #a' xx) as x;
+  Trade.trade_compose _ _ res;
+  xx
+}
+
+ghost
+fn destruct_rel_either_right
+    (#a #b #a' #b':Type0) 
+    (r:rel a b)
+    (r':rel a' b')
+    (x:either a a')
+    (y:erased (either b b'))
+    (res:slprop)
+requires 
+  rel_either r r' x y **
+  pure (Inr? x) **
+  Trade.trade (rel_either r r' x y) res
+returns
+  xx:a'
+ensures
+  exists* (yy:b').
+    pure (y == Inr yy /\ x == Inr xx) **
+    r' xx yy **
+    Trade.trade (r' xx yy) res
+{
+  rel_either_cases _ _ _ _;
+  let xx = Inr?.v x;
+  let yy = hide <| Inr?.v y;
+  rewrite each x as (Inr xx);
+  rel_either_eq_right r r' xx yy;
+  Trade.rewrite_with_trade 
+    (rel_either r r' (Inr xx) y)
+    (r' xx yy);
+  rewrite each (Inr #a #a' xx) as x;
+  Trade.trade_compose _ _ res;
+  xx
+}
+
+ghost
+fn extract_derive_context_input_args_data x (w:_)
 requires rel_evercddl_derive_context_input_args_data x w
-returns e:either engine_record_t derive_context_l0_record_t
-ensures is_derive_context_input_args e (rel_evercddl_derive_context_input_args_data x w)
+ensures is_derive_context_input_args_data 
+          (evercddl_derive_context_input_args_data_pretty_left x)
+          (spect_evercddl_derive_context_input_args_data_pretty_left w)
 {
   unfold_with_trade (`%rel_evercddl_derive_context_input_args_data) (rel_evercddl_derive_context_input_args_data _ _);
   destruct_rel_fun _ _ _ _ _;
@@ -381,78 +307,230 @@ ensures is_derive_context_input_args e (rel_evercddl_derive_context_input_args_d
     Inl _ -> {
       let _ = destruct_rel_either_left _ _ _ _ _;
       let engine_record = extract_derive_context_engine_record _ _;
-      is_engine_record_compose _ _ _;
-      fold (is_derive_context_input_args (Inl engine_record));
-      Inl engine_record
+      with xx yy. assert (is_engine_record xx yy);
+      unfold_is_engine_record_trade xx yy ();
+      trade_take (is_engine_record xx yy) _ _ _;
+      rewrite each x as (evercddl_derive_context_input_args_data_pretty_right (Inl xx));
+      rewrite each w as (spect_evercddl_derive_context_input_args_data_pretty_right (Inl yy));
+      fold (is_derive_context_input_args_data (Inl xx) (Inl yy));
     }
 
     Inr l0 -> {
       let _ = destruct_rel_either_right _ _ _ _ _;
       let l0_record = extract_derive_context_l0_record _ _;
-      is_derive_context_l0_record_compose _ _ _;
-      fold (is_derive_context_input_args (Inr l0_record));
-      Inr l0_record
+      with xx yy. assert (is_l0_record xx yy);
+      unfold_is_l0_record_trade xx yy ();
+      trade_take (is_l0_record xx yy) _ _ _;
+      rewrite each x as (evercddl_derive_context_input_args_data_pretty_right (Inr xx));
+      rewrite each w as (spect_evercddl_derive_context_input_args_data_pretty_right (Inr yy));
+      fold (is_derive_context_input_args_data (Inr xx) (Inr yy));
     }
   }
 }
 
-let is_derive_context_input
-    (res:option (either engine_record_t derive_context_l0_record_t))
-    (dflt:slprop) =
-  match res with
-  | None -> dflt
-  | Some e -> is_derive_context_input_args e dflt
+let is_record_opt (e:option (either engine_record l0_record)) (res:option (either spec_engine_record spec_l0_record)) : slprop =
+  match e, res with
+  | None, None ->
+    rel_option rel_evercddl_derive_context_input_args_data None None
+  | Some ee, Some eres -> 
+    is_derive_context_input_args_data ee eres **
+    Trade.trade 
+      (is_derive_context_input_args_data ee eres)
+      (rel_option rel_evercddl_derive_context_input_args_data 
+        (Some <| evercddl_derive_context_input_args_data_pretty_right ee)
+        (Some <| spect_evercddl_derive_context_input_args_data_pretty_right eres))
+  | _, _ -> pure False
+
+inline_for_extraction
+let map_opt (x:option 'a) (f:'a -> 'b) : option 'b = 
+  match x with
+  | None -> None
+  | Some v -> Some (f v)
 
 ghost
-fn trans_is_derive_context_input_args
-     e res res'
-requires is_derive_context_input_args e res ** Trade.trade res res'
-ensures is_derive_context_input_args e res'
+fn is_record_opt_trade_compose
+    (e:_)//option (either engine_record l0_record)) 
+    (se:_)//option (either spec_engine_record spec_l0_record))
+    (res:slprop) 
+requires
+  is_record_opt 
+    (map_opt e evercddl_derive_context_input_args_data_pretty_left)
+    (map_opt se spect_evercddl_derive_context_input_args_data_pretty_left) **
+  Trade.trade
+    (rel_option rel_evercddl_derive_context_input_args_data e se)
+    res
+ensures
+  is_record_opt 
+    (map_opt e evercddl_derive_context_input_args_data_pretty_left)
+    (map_opt se spect_evercddl_derive_context_input_args_data_pretty_left) **
+  Trade.trade 
+    (is_record_opt 
+      (map_opt e evercddl_derive_context_input_args_data_pretty_left)
+      (map_opt se spect_evercddl_derive_context_input_args_data_pretty_left))
+    res
 {
-  unfold is_derive_context_input_args;
-  match e {
-    Inl e -> {
-      assert (is_engine_record e res);
-      is_engine_record_compose e res res';
-      fold (is_derive_context_input_args (Inl e));
-    }
-    Inr e -> {
-      assert (is_derive_context_l0_record e res);
-      is_derive_context_l0_record_compose e res res';
-      fold (is_derive_context_input_args (Inr e));
-    }
-  }
+  admit()
 }
 
-fn extract_option_derive_context_input_args_data x (w:erased _) res
-requires rel_option (rel_evercddl_derive_context_input_args_data) x w **
-         Trade.trade (rel_option (rel_evercddl_derive_context_input_args_data) x w)
-                      res
-returns e:option (either engine_record_t derive_context_l0_record_t)
-ensures is_derive_context_input e res
+
+ghost
+fn destruct_rel_option (#a #b:Type0) (r:rel a b) (x:option a) (y:option b)
+requires 
+  rel_option r x y ** pure (Some? x)
+returns _:squash (Some? y /\ Some? x)
+ensures
+    r (Some?.v x) (Some?.v y) **
+    Trade.trade (r (Some?.v x) (Some?.v y)) (rel_option r x y)
+{
+  rel_option_cases r _ _;
+  rel_option_eq_some r (Some?.v x) (Some?.v y);
+  Trade.rewrite_with_trade 
+    (rel_option r x y)
+    (r (Some?.v x) (Some?.v y));
+  ()
+}
+
+ghost
+fn extract_derive_context_input_args_data_opt x (w:option spect_evercddl_derive_context_input_args_data_pretty)
+requires rel_option rel_evercddl_derive_context_input_args_data x w
+ensures 
+  is_record_opt 
+    (map_opt x evercddl_derive_context_input_args_data_pretty_left)
+    (map_opt w spect_evercddl_derive_context_input_args_data_pretty_left)
 {
   rel_option_cases _ _ _;
   match x {
-    None -> {
-      Trade.elim_trade _ _;
-      fold (is_derive_context_input None res);
-      None    
+    None -> { 
+      rewrite each w as None;
+      fold (is_record_opt None None);
+      ()
     }
-    Some x -> {
-     let xx = destruct_rel_option _ _ _;
-     Trade.trade_compose _ _ res;
-     let ret = extract_derive_context_input_args_data _ _;
-     trans_is_derive_context_input_args _ _ _;
-     fold (is_derive_context_input (Some ret) res);
-     Some ret
+    Some x -> { 
+      destruct_rel_option _ _ _;
+      extract_derive_context_input_args_data
+      admit() 
     }
   }
 }
 
-fn extract_derive_context_input_args x (w:erased _)
+
+ghost
+fn fst_pair (#l0 #l1 #h0 #h1:Type0)
+  (r0:rel l0 h0) 
+  (r1:rel l1 h1)
+  (xl: (l0 & l1))
+  (xh: (h0 & h1)) (res:slprop)
+requires 
+  rel_pair r0 r1 xl xh **
+  Trade.trade (rel_pair r0 r1 xl xh) res
+ensures 
+  r0 (fst xl) (fst xh) ** 
+  Trade.trade (r0 (fst xl) (fst xh)) res
+{
+  Trade.Util.rewrite_with_trade 
+    (rel_pair r0 r1 xl xh)
+    (r0 (fst xl) (fst xh) ** r1 (snd xl) (snd xh));
+  Trade.trade_compose _ _ res;
+  Trade.Util.elim_hyp_r _ _ res;
+}
+
+ghost
+fn snd_pair (#l0 #l1 #h0 #h1:Type0)
+  (r0:rel l0 h0) 
+  (r1:rel l1 h1)
+  (xl: (l0 & l1))
+  (xh: (h0 & h1)) (res:slprop)
+requires 
+  rel_pair r0 r1 xl xh **
+  Trade.trade (rel_pair r0 r1 xl xh) res
+ensures 
+  r1 (snd xl) (snd xh) ** 
+  Trade.trade (r1 (snd xl) (snd xh)) res
+{
+  Trade.Util.rewrite_with_trade 
+    (rel_pair r0 r1 xl xh)
+    (r0 (fst xl) (fst xh) ** r1 (snd xl) (snd xh));
+  Trade.trade_compose _ _ res;
+  Trade.Util.elim_hyp_l _ _ res;
+}
+
+ghost
+fn extract_derive_context_input_args x w
 requires rel_evercddl_derive_context_input_args x w
-returns e:option (either engine_record_t derive_context_l0_record_t)
-ensures is_derive_context_input e (rel_evercddl_derive_context_input_args x w)
+ensures 
+  is_record_opt 
+    (map_opt x.intkey6 evercddl_derive_context_input_args_data_pretty_left)
+    (map_opt w._x5 spect_evercddl_derive_context_input_args_data_pretty_left) **
+  Trade.trade
+    (is_record_opt 
+      (map_opt x.intkey6 evercddl_derive_context_input_args_data_pretty_left)
+      (map_opt w._x5 spect_evercddl_derive_context_input_args_data_pretty_left))
+    (rel_evercddl_derive_context_input_args x w)
+{
+  unfold_with_trade
+    (`%rel_evercddl_derive_context_input_args) 
+    (rel_evercddl_derive_context_input_args x w);
+  destruct_rel_fun _ _ _ _ _;
+  Trade.trade_compose _ _ (rel_evercddl_derive_context_input_args x w);
+  fold_last_relation (`%tstr_any) tstr_any;  
+  let rest_12 = fst_pair _ _ _ _ _;
+  let rest_11 = fst_pair _ _ _ _ _;
+  let rest_10 = fst_pair _ _ _ _ _;
+  let rest_9 = fst_pair _ _ _ _ _;
+  let rest_8 = fst_pair _ _ _ _ _;
+  let rest_7 = fst_pair _ _ _ _ _;
+  let rest_6 = fst_pair _ _ _ _ _;
+  let input_data = snd_pair _ _ _ _ _;
+  rewrite each  
+    (Tactics.PrettifyType.named "intkey6"
+          evercddl_derive_context_input_args_data_pretty)
+  as evercddl_derive_context_input_args_data_pretty;
+  extract_derive_context_input_args_data_opt _ _;
+  is_record_opt_trade_compose _ _ _;
+}
+
+
+let is_input_args_data w se = 
+  exists (wx:spect_evercddl_derive_context_input_args_pretty) 
+         (wr:Seq.seq UInt8.t).
+    validate_and_parse_postcond_some bundle_derive_context_input_args.b_spec.parser w wx wr /\
+    se == map_opt wx._x5 spect_evercddl_derive_context_input_args_data_pretty_left
+
+fn parse_derive_context_input_args (s:Slice.slice UInt8.t) (#p:perm) (#w:erased _)
+requires pts_to s #p w
+returns e:(option (either engine_record l0_record) & bool)
+ensures (
+  match e with
+  | _, false -> pts_to s #p w
+  | e, _ -> 
+    exists* se.
+      is_record_opt e se **
+      Trade.trade (is_record_opt e se) (pts_to s #p w) **
+      pure (is_input_args_data w se)
+  )
+
+{
+  let res = validate_and_parse_derive_context_input_args s;
+  match res {
+    None -> {
+      unfold validate_and_parse_post;
+      (None, false)
+    }
+    Some xrem -> {
+      let (x, rem) = xrem;
+      unfold validate_and_parse_post;
+      extract_derive_context_input_args x _;
+      Trade.Util.elim_hyp_r _ _ _;
+      Trade.trade_compose _ _ (pts_to s #p w);
+      (map_opt x.intkey6 evercddl_derive_context_input_args_data_pretty_left, true)
+    }
+  }
+}
+
+(*)
+  is_record_opt (e:option (either engine_record l0_record)) (res:option (either spec_engine_record spec_l0_record)) : slprop =
+
+// ensures is_derive_context_input e (rel_evercddl_derive_context_input_args x w)
 {
   unfold_with_trade
     (`%rel_evercddl_derive_context_input_args) 
@@ -472,7 +550,8 @@ ensures is_derive_context_input e (rel_evercddl_derive_context_input_args x w)
     (Tactics.PrettifyType.named "intkey6"
           evercddl_derive_context_input_args_data_pretty)
   as evercddl_derive_context_input_args_data_pretty;
-  extract_option_derive_context_input_args_data _ _ _;
+  show_proof_state;
+  // extract_option_derive_context_input_args_data _ _ _;
 }
 
 ghost
@@ -495,26 +574,3 @@ ensures is_derive_context_input e res'
   }
 }
 
-
-fn parse_derive_context_input_args (s:Slice.slice UInt8.t) (#p:perm) (#w:erased _)
-requires pts_to s #p w
-returns e:option (either engine_record_t derive_context_l0_record_t)
-ensures is_derive_context_input e (pts_to s #p w)
-{
-  let res = validate_and_parse_derive_context_input_args s;
-  match res {
-    None -> {
-      unfold validate_and_parse_post;
-      fold (is_derive_context_input None (pts_to s #p w));
-      None
-    }
-    Some xrem -> {
-      let (x, rem) = xrem;
-      elim_validate_and_parse_post_some x rem;
-      let res = extract_derive_context_input_args x _;
-      Trade.Util.elim_hyp_r _ _ _;
-      trans_is_derive_context_input _ _ _;
-      res
-    }
-  }
-}
