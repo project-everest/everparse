@@ -607,7 +607,6 @@ fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x
 {
   rw_r_wt (rel_sign1_tagged_eq _ _);
   rw_r_wt (rel_bstr_eq' msg._x0.signature _);
-  rel_either_cases _ _ _ _;
   rewrite_with_trade
     (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0._x2)
     (rel_evercddl_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0._x2));
@@ -636,6 +635,64 @@ fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x
   }
 }
 
+[@@pulse_unfold]
+let borrows (what from: slprop) : slprop =
+  what ** trade what from
+
+fn borrow_payload
+    (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x0.payload })
+    (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged_pretty { Inl? (reveal vmsg)._x0._x2 })
+  requires rel_evercddl_COSE_Sign1_Tagged msg vmsg
+  returns payload: S.slice UInt8.t
+  ensures
+    borrows (pts_to payload #((Inl?.v msg._x0.payload)._x0.p) (Inl?.v (reveal vmsg)._x0._x2)._x0)
+      (rel_evercddl_COSE_Sign1_Tagged msg vmsg)
+{
+  rw_r (rel_sign1_tagged_eq _ _);
+  rewrite_with_trade
+    (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0._x2)
+    (rel_evercddl_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0._x2));
+  rw_r (rel_bstr_eq' (Inl?.v msg._x0.payload) _);
+  ghost fn aux ()
+    requires
+      rel_evercddl_bstr msg._x0.signature (reveal vmsg)._x0._x3 **
+      rel_evercddl_empty_or_serialized_map msg._x0.protected (reveal vmsg)._x0._x0 **
+      rel_evercddl_header_map msg._x0.unprotected (reveal vmsg)._x0._x1 **
+      T.trade (rel_evercddl_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0._x2))
+        (rel_either rel_evercddl_bstr
+            rel_evercddl_nil
+            msg._x0.payload
+            (reveal vmsg)._x0._x2)
+    requires S.pts_to (Inl?.v msg._x0.payload)._x0.s #(Inl?.v msg._x0.payload)._x0.p
+      (Inl?.v (reveal vmsg)._x0._x2)._x0
+    ensures rel_evercddl_COSE_Sign1_Tagged msg vmsg
+  {
+    rw_l (rel_bstr_eq' (Inl?.v msg._x0.payload) _);
+    elim_trade _ _;
+    rw_l (rel_sign1_tagged_eq _ _);
+  };
+  intro_trade _ _ _ aux;
+  (Inl?.v msg._x0.payload)._x0.s
+}
+
+let parses_from #t #st (s: CDDL.Spec.Base.spec t st true) (x: st) y =
+  match CBOR.Spec.API.Format.cbor_det_parse y with
+  | Some (c, len) -> len == Seq.length y /\ t c /\ s.parser c == x
+  | None -> False
+
+let good_signature (pubkey: Seq.seq UInt8.t { Seq.length pubkey == 32 })
+    (msg: Seq.seq UInt8.t) (aad: Seq.seq UInt8.t) (payload: Seq.seq UInt8.t) : prop =
+  exists (vmsg: spect_evercddl_COSE_Sign1_Tagged_pretty) tbs.
+  parses_from bundle_COSE_Sign1_Tagged''.b_spec vmsg msg /\
+  vmsg._x0._x2 == Inl (Mkspect_evercddl_bstr_pretty0 payload) /\
+  Seq.length vmsg._x0._x3._x0 == 64 /\
+  to_be_signed_spec vmsg._x0._x0 { _x0 = aad } { _x0 = payload } tbs /\
+  spec_ed25519_verify pubkey tbs vmsg._x0._x3._x0
+
+let int_eq_of_diff_zero (a b: int) : Lemma (requires a - b == 0) (ensures a == b) = ()
+let nat_eq_of_diff_zero (a b: nat) : Lemma (requires a - b == 0) (ensures a == b) =
+  int_eq_of_diff_zero a b
+
 fn verify1 pubkey aad msg
     #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
     (#vaad: erased _) #pmsg (#vmsg: erased _)
@@ -643,32 +700,57 @@ fn verify1 pubkey aad msg
   requires S.pts_to #UInt8.t msg #pmsg vmsg
   requires rel_evercddl_bstr aad vaad
 
-  returns success: bool
+  returns payload: option (S.slice UInt8.t)
+
   ensures AP.pts_to pubkey #ppubkey vpubkey
-  ensures S.pts_to msg #pmsg vmsg
   ensures rel_evercddl_bstr aad vaad
+  ensures
+    (match payload with
+    | Some payload ->
+      exists* ppayload vpayload.
+        borrows (S.pts_to payload #ppayload vpayload) (S.pts_to msg #pmsg vmsg) **
+        pure (good_signature vpubkey vmsg (reveal vaad)._x0 vpayload)
+    | None -> S.pts_to msg #pmsg vmsg)
 {
-  let alg: Int32.t = -8l;
   let res = validate_and_parse_COSE_Sign1_Tagged _;
   match res {
     None -> {
       unfold CDDL.Pulse.Parse.Base.validate_and_parse_post;
-      false
+      None
     }
     Some res -> {
       match res {
         (x, rem) -> {
           unfold CDDL.Pulse.Parse.Base.validate_and_parse_post;
-          with wx wr.
           unfold CDDL.Pulse.Parse.Base.validate_and_parse_post_some bundle_COSE_Sign1_Tagged.b_spec.CDDL.Spec.Base.parser
-            rel_evercddl_COSE_Sign1_Tagged msg pmsg vmsg x rem wx wr;
-          if (Inl? x._x0.payload) {
+            rel_evercddl_COSE_Sign1_Tagged msg pmsg vmsg x rem;
+          with y. assert rel_evercddl_COSE_Sign1_Tagged x y;
+          with wr. assert pts_to rem #pmsg wr;
+
+          rw_r_wt (rel_sign1_tagged_eq _ _);
+          rel_either_cases _ _ _ _;
+          elim_trade _ (rel_evercddl_COSE_Sign1_Tagged _ _);
+
+          if (S.len rem = 0sz && Inl? x._x0.payload) {
+            let len = hide (Some?.v (CBOR.Spec.API.Format.cbor_det_parse vmsg))._2;
+            S.pts_to_len rem;
+            assert pure (Seq.length wr == 0);
+            Seq.lemma_len_slice vmsg len (Seq.length vmsg);
+            nat_eq_of_diff_zero (Seq.length vmsg) len;
+            assert pure (parses_from bundle_COSE_Sign1_Tagged''.b_spec y vmsg);
             let success = verify1_core pubkey aad x;
-            T.elim_trade _ (S.pts_to msg #pmsg vmsg);
-            success
+            if (success) {
+              let payload = borrow_payload x;
+              Pulse.Lib.Trade.Util.elim_hyp_r _ _ _;
+              trade_compose _ (rel_evercddl_COSE_Sign1_Tagged _ _) _;
+              Some payload
+            } else {
+              T.elim_trade _ (S.pts_to msg #pmsg vmsg);
+              None
+            }
           } else {
             T.elim_trade _ (S.pts_to msg #pmsg vmsg);
-            false
+            None
           }
         }
       }
@@ -682,9 +764,15 @@ fn verify1_simple pubkey msg
   requires AP.pts_to pubkey #ppubkey vpubkey
   requires S.pts_to #UInt8.t msg #pmsg vmsg
 
-  returns success: bool
+  returns payload: option (S.slice UInt8.t)
   ensures AP.pts_to pubkey #ppubkey vpubkey
-  ensures S.pts_to msg #pmsg vmsg
+  ensures
+    (match payload with
+    | Some payload ->
+      exists* ppayload vpayload.
+        borrows (S.pts_to payload #ppayload vpayload) (S.pts_to msg #pmsg vmsg) **
+        pure (good_signature vpubkey vmsg (Seq.create 0 0uy) vpayload)
+    | None -> S.pts_to msg #pmsg vmsg)
 {
   let mut aadbuf = [| 0uy; 0sz |];
   let aadslice = S.from_array aadbuf 0sz;
