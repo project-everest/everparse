@@ -12,23 +12,23 @@ open CBOR.Spec.API.Type
 open CDDL.Spec.Base
 
 let tstr_any = 
-  rel_either_left (rel_slice_of_table (mk_eq_test_bij spect_aux_env16_type_1_pretty_right
-                    spect_aux_env16_type_1_pretty_left
-                    spect_aux_env16_type_1_pretty_left_right
-                    spect_aux_env16_type_1_pretty_right_left
+  rel_either_left (rel_slice_of_table (mk_eq_test_bij spect_aux_env18_type_1_pretty_right
+                    spect_aux_env18_type_1_pretty_left
+                    spect_aux_env18_type_1_pretty_left_right
+                    spect_aux_env18_type_1_pretty_right_left
                     (mk_eq_test_bij spect_evercddl_uint_pretty_right
                         spect_evercddl_uint_pretty_left
                         spect_evercddl_uint_pretty_left_right
                         spect_evercddl_uint_pretty_right_left
                         (EqTest.eqtype_eq UInt64.t)))
-                rel_aux_env16_type_1
-                rel_aux_env16_type_3)
+                rel_aux_env18_type_1
+                rel_aux_env18_type_3)
             (rel_map_iterator CBOR.Pulse.API.Det.C.cbor_det_match
                 CBOR.Pulse.API.Det.C.cbor_det_map_iterator_match
-                aux_env16_type_1_pretty
-                aux_env16_type_3_pretty
-                (CDDL.Pulse.Iterator.Base.mk_spec rel_aux_env16_type_1)
-                (CDDL.Pulse.Iterator.Base.mk_spec rel_aux_env16_type_3))
+                aux_env18_type_1_pretty
+                aux_env18_type_3_pretty
+                (CDDL.Pulse.Iterator.Base.mk_spec rel_aux_env18_type_1)
+                (CDDL.Pulse.Iterator.Base.mk_spec rel_aux_env18_type_3))
 
 
 let bytes_of_evercddl_bytes (yy:Seq.seq UInt8.t) (ww:spect_evercddl_bytes_pretty) =

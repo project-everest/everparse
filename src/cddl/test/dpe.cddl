@@ -86,8 +86,8 @@ $policy-type /= &(tcg-dice-kp-assertLoc:11)
 certify-key-output-args = { 
   ? &(certificate:1) ^=> bytes, 
   ? &(derived-public-key:2) ^=> bytes, 
-  ? &(new-context-handle:3) ^=> bytes,
-  * &(tstr:uint) => any 
+  ? &(new-context-handle:3) ^=> bytes
+;;  * &(tstr:uint) => any 
 }
 
 sign-input-args = { 
@@ -101,6 +101,6 @@ sign-input-args = {
  
 sign-output-args = { 
   ? &(signature:1) ^=> bytes, 
-  ? &(new-context-handle:2) ^=> bytes,  ; If retained 
-  * &(tstr:uint) => any 
+  ? &(new-context-handle:2) ^=> bytes  ; If retained 
+;;  * &(tstr:uint) => any 
 }
