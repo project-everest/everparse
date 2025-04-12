@@ -17,6 +17,7 @@ module U32 = FStar.UInt32
 module I = CDDLTest.DPE.InitializeContextInput
 module DC = CDDLTest.DPE.DeriveContextInput
 module CKO = CDDLTest.DPE.CertifyKeyOutput
+module SO = CDDLTest.DPE.SignOutput
 open CDDL.Pulse.Types
 open FStar.Seq
 open DPESlice
@@ -85,98 +86,12 @@ ensures (
   }
 }
 
-let trace_valid_for_derive_context (t:trace) : prop =
-  match current_state t with
-  | G_Available (Engine_context_spec _)
-  | G_Available (L0_context_spec _) -> True
-  | _ -> False
-
 type derive_context_result =
   | Input_parsing_failure
   | Missing_arguments
   | Incorrect_state
   | Session_error
   | Success
-
-ghost
-fn is_record_opt_cases e s k
-requires DC.is_record_opt e s k
-ensures  DC.is_record_opt e s k ** pure (Some? e <==> Some? s)
-{
-  admit()
-}
-
-ghost
-fn elim_is_record_opt_none (s:option spec_record_t) k
-requires DC.is_record_opt None s k
-ensures pure (s == None) ** k
-{
-  admit()
-}
-
-ghost
-fn elim_is_record_opt_some (r:record_t) (s:option spec_record_t) k
-requires DC.is_record_opt (Some r) s k
-returns _:squash (Some? s)
-ensures DC.is_derive_context_input_args_data r (Some?.v s) k
-{
-  admit()
-}
-
-
-ghost
-fn claim_is_record_opt (e:option record_t) (s:option spec_record_t) k
-requires DC.is_record_opt e s k
-ensures k
-{
-  admit()
-}
-
-ghost
-fn claim_is_dci (e:record_t) (s:spec_record_t) k
-requires DC.is_derive_context_input_args_data e s k
-ensures k
-{
-  admit()
-}
-
-ghost
-fn is_dci_cases
-    (e:record_t)
-    (res:spec_record_t)
-    (k:slprop)
-requires DC.is_derive_context_input_args_data e res k
-ensures DC.is_derive_context_input_args_data e res k **
-        pure (Inl? e <==> Inl? res)
-{
-  admit()
-}
-
-let current_state_is_l0 (t:trace {trace_valid_for_derive_context t}) : prop =
-  match current_state t with
-  | G_Available (L0_context_spec _) -> True
-  | G_Available (Engine_context_spec _) -> False
-
-fn check_state_l0
-  (sid:sid_t)
-  (#t:G.erased trace { trace_valid_for_derive_context t })
-requires
-  sid_pts_to trace_ref sid t
-returns ok:bool
-ensures
-  sid_pts_to trace_ref sid t
-ensures pure (ok <==> current_state_is_l0 t)
-{
-  admit()
-}
-
-let trace_and_record_invalid_engine
-    (t:trace {trace_valid_for_derive_context t})
-    (e:spec_record_t)
-: Lemma 
-  (requires current_state_is_l0 t /\ Inl? e)
-  (ensures ~(trace_and_record_valid_for_derive_child t e))
-= ()
 
 [@@pulse_unfold]
 let derive_context_post 
@@ -198,12 +113,12 @@ let derive_context_post
     pure (exists (spec_record:DPESlice.spec_record_t).
               {:pattern (DC.is_input_args_data w (Some spec_record))}
             DC.is_input_args_data w (Some spec_record) /\
-            ~(trace_and_record_valid_for_derive_child t spec_record))
+            ~(trace_and_record_valid_for_derive_context t spec_record))
   | _ -> 
     exists* (spec_record:DPESlice.spec_record_t).
         pure (DC.is_input_args_data w (Some spec_record) /\
-              trace_and_record_valid_for_derive_child t spec_record) **
-        derive_child_client_perm sid t spec_record (Success? res)
+              trace_and_record_valid_for_derive_context t spec_record) **
+        derive_context_client_perm sid t spec_record (Success? res)
 
 #push-options "--query_stats"
 
@@ -215,7 +130,25 @@ fn take_record_perm
 requires DC.is_derive_context_input_args_data record spec k
 ensures record_perm record spec ** Trade.trade (record_perm record spec) k
 { 
-  admit() //  Trade.Util.rewrite_with_trade k (record_perm record spec);
+  DC.is_dci_cases _ _ _;
+  match record {
+    Inl eng -> {
+      let Inl spec_l = spec;
+      unfold DC.is_derive_context_input_args_data;
+      assert (DC.is_engine_record_core eng spec_l);
+      rewrite 
+        each (DC.is_engine_record_core eng spec_l)
+           as (record_perm (Inl eng) (Inl spec_l));
+    }
+    Inr l0 -> {
+      let Inr spec_r = spec;
+      unfold DC.is_derive_context_input_args_data;
+      assert (DC.is_l0_record_core l0 spec_r);
+      rewrite 
+        each (DC.is_l0_record_core l0 spec_r)
+           as (record_perm (Inr l0) (Inr spec_r));
+    }
+  }
 }
 
 fn derive_context_aux
@@ -225,7 +158,7 @@ fn derive_context_aux
   (#w:erased _)
   (input:Slice.slice U8.t)
   (record:record_t)
-  (#spec:erased spec_record_t { trace_and_record_valid_for_derive_child t spec })
+  (#spec:erased spec_record_t { trace_and_record_valid_for_derive_context t spec })
 requires
   DC.is_derive_context_input_args_data record spec (pts_to input #p w) **
   sid_pts_to trace_ref sid t **
@@ -235,7 +168,7 @@ ensures pts_to input #p w
 ensures derive_context_post sid t p w input res
 {
   take_record_perm _ _ _;
-  let res = derive_child sid t record;
+  let res = derive_context sid t record;
   Trade.elim_trade _ _;
   match res {
     true -> { Success }
@@ -263,22 +196,22 @@ ensures derive_context_post sid t p w input res
     }
 
     true -> {
-      is_record_opt_cases _ _ _;
+      DC.is_record_opt_cases _ _ _;
       match record_opt {
         None -> {
-          elim_is_record_opt_none _ _;
+          DC.elim_is_record_opt_none _ _;
           Missing_arguments
         }
 
         Some record -> {
-          elim_is_record_opt_some _ _ _;
-          is_dci_cases _ _ _;
+          DC.elim_is_record_opt_some _ _ _;
+          DC.is_dci_cases _ _ _;
           let is_l0 = check_state_l0 sid;
           if is_l0
           {
             match record {
               Inl _ -> {
-                claim_is_dci _ _ _;
+                DC.claim_is_dci _ _ _;
                 Incorrect_state
               }
 
@@ -295,7 +228,7 @@ ensures derive_context_post sid t p w input res
               }
 
               Inr l0 -> {
-                claim_is_dci _ _ _;
+                DC.claim_is_dci _ _ _;
                 Incorrect_state
               }
             }

@@ -21,7 +21,7 @@ open EngineTypes
 open EngineCore
 open L0Types
 open L0Core
-
+#lang-pulse
 module G = FStar.Ghost
 module PCM = FStar.PCM
 module SZ = FStar.SizeT
@@ -246,52 +246,9 @@ let dpe_ghost_state = ghost_pcm_ref dpe_pcm
 val sid_pts_to (r:dpe_ghost_state) (sid:sid_t) (t:trace) : slprop
 val trace_ref : dpe_ghost_state
 
-// let session_state_related (s:session_state) (gs:g_session_state) : slprop =
-//   match s, gs with
-//   | SessionStart, G_SessionStart
-//   | InUse, G_InUse _
-//   | SessionClosed, G_SessionClosed _
-//   | SessionError, G_SessionError _ -> emp
-
-//   | Available {context}, G_Available repr -> context_perm context repr
-
-//   | _ -> pure False
-
-// //
-// // Invariant for sessions that have been started
-// //
-// let session_state_perm (r:gref) (pht:pht_t) (sid:sid_t) : slprop =
-//   exists* (s:session_state) (t:trace).
-//     pure (PHT.lookup pht sid == Some s) **
-//     sid_pts_to r sid t **
-//     session_state_related s (current_state t)
-
-// //
-// // We have to do this UInt.fits since the OnRange is defined for nat keys,
-// //   if we parameterized it over a typeclass, we can directly use u32 keys
-// //   and this should go away
-// //
-// let session_perm (r:gref) (pht:pht_t) (sid:nat) =
-//   if UInt.fits sid 16
-//   then session_state_perm r pht (U16.uint_to_t sid)
-//   else emp
-
-// noextract
-// let map_literal (f:sid_t -> trace_pcm_t) : pcm_t = Map.map_literal f
-
-// noextract
-// let all_sids_unused : pcm_t = map_literal (fun _ -> Some 1.0R, emp_trace)
-
-// let sids_above_unused (s:sid_t) : GTot pcm_t = map_literal (fun sid ->
-//   if U16.lt sid s then None, emp_trace
-//   else Some 1.0R, emp_trace)
-
-
-// val trace_ref : gref
-
-// //
-// // The DPE API
-// //
+//
+// The DPE API
+//
 
 let open_session_client_perm (s:option sid_t) : slprop =
   match s with
@@ -330,13 +287,19 @@ let record_perm (record:record_t) (spec:spec_record_t)  : slprop =
   | Inr l0, Inr s_l0 -> DK.is_l0_record_core l0 s_l0
   | _ -> pure False
 
-let trace_and_record_valid_for_derive_child (t:trace) (r:spec_record_t) : prop =
+let trace_valid_for_derive_context (t:trace) : prop =
+  match current_state t with
+  | G_Available (Engine_context_spec _)
+  | G_Available (L0_context_spec _) -> True
+  | _ -> False
+
+let trace_and_record_valid_for_derive_context (t:trace) (r:spec_record_t) : prop =
   match current_state t, r with
   | G_Available (Engine_context_spec _), Inl _
   | G_Available (L0_context_spec _), Inr _ -> True
   | _ -> False
 
-let derive_child_post_trace (r:spec_record_t) (t:trace) =
+let derive_context_post_trace (r:spec_record_t) (t:trace) =
   match r, current_state t with
   | Inl r, G_Available (L0_context_spec l0_ctxt) ->
     r == engine_record_of_l0_context l0_ctxt
@@ -344,7 +307,7 @@ let derive_child_post_trace (r:spec_record_t) (t:trace) =
     r == l0_record_of_l1_context l1_ctxt
   | _ -> False
 
-let derive_child_client_perm (sid:sid_t) (t0:trace) (repr:spec_record_t) (res:bool)
+let derive_context_client_perm (sid:sid_t) (t0:trace) (repr:spec_record_t) (res:bool)
   : slprop =
   match res with
   | false ->
@@ -352,20 +315,35 @@ let derive_child_client_perm (sid:sid_t) (t0:trace) (repr:spec_record_t) (res:bo
                 pure (current_state t1 == G_SessionError (G_InUse (current_state t0)))
   | true ->
     exists* t1. sid_pts_to trace_ref sid t1 **
-                pure (derive_child_post_trace repr t1)
+                pure (derive_context_post_trace repr t1)
+
+let current_state_is_l0 (t:trace {trace_valid_for_derive_context t}) : prop =
+  match current_state t with
+  | G_Available (L0_context_spec _) -> True
+  | G_Available (Engine_context_spec _) -> False
+
+fn check_state_l0
+  (sid:sid_t)
+  (#t:G.erased trace { trace_valid_for_derive_context t })
+requires
+  sid_pts_to trace_ref sid t
+returns ok:bool
+ensures
+  sid_pts_to trace_ref sid t
+ensures pure (ok <==> current_state_is_l0 t)
 
 
-val derive_child (sid:sid_t)
+val derive_context (sid:sid_t)
   (t:G.erased trace)
   (record:record_t)
-  (#rrepr:erased spec_record_t { trace_and_record_valid_for_derive_child t rrepr })
+  (#rrepr:erased spec_record_t { trace_valid_for_derive_context t })
   : stt bool
     (requires
       record_perm record rrepr **
       sid_pts_to trace_ref sid t)
     (ensures fun b ->
       record_perm record rrepr **
-      derive_child_client_perm sid t rrepr b)
+      derive_context_client_perm sid t rrepr b)
 
 
 noextract
@@ -441,4 +419,3 @@ val close_session
            sid_pts_to trace_ref sid t)
         (ensures fun m ->
            session_closed_client_perm sid t)
-

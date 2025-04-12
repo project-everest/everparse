@@ -82,11 +82,11 @@ let spec_alias_key_crt_ingredients = spect_evercddl_alias_key_crt_ingredients_pr
 
 let is_alias_key_crt_ingredients_core (e:alias_key_crt_ingredients) (s:spec_alias_key_crt_ingredients) =
   rel_evercddl_nint e.version s._x0 **
-  rel_evercddl_bytes e.serial_78umber s._x1 **
+  rel_evercddl_bytes e.serial_number s._x1 **
   rel_evercddl_tstr e.i_common s._x2 **
   rel_evercddl_tstr e.i_org s._x3 **
-  rel_evercddl_bytes e.not_66efore s._x4 **
-  rel_evercddl_bytes e.not_65fter s._x5 **
+  rel_evercddl_bytes e.not_before s._x4 **
+  rel_evercddl_bytes e.not_after s._x5 **
   rel_evercddl_tstr e.s_common s._x6 **
   rel_evercddl_tstr e.s_org s._x7 **
   rel_evercddl_tstr e.s_country s._x8 **
@@ -143,6 +143,65 @@ let is_derive_context_input_args_data
   | Inr l0, Inr s_l0 ->
     is_l0_record l0 s_l0 k
   | _ -> pure False
+
+ghost
+fn is_dci_cases e res k
+requires is_derive_context_input_args_data e res k
+ensures is_derive_context_input_args_data e res k **
+        pure (Inl? e <==> Inl? res)
+{
+  match e {
+    Inl e -> {
+      match res {
+        Inr _ -> {
+          unfold is_derive_context_input_args_data;
+          assert pure (False);
+          unreachable ()
+        }
+        Inl res -> {
+          unfold is_derive_context_input_args_data;
+          fold (is_derive_context_input_args_data (Inl e) (Inl res) k);
+        }
+      }
+    }
+
+    Inr e -> {
+      match res {
+        Inl _ -> {
+          unfold is_derive_context_input_args_data;
+          assert pure (False);
+          unreachable ()
+        }
+        Inr res -> {
+          unfold is_derive_context_input_args_data;
+          fold (is_derive_context_input_args_data (Inr e) (Inr res) k);
+        }
+      }
+    }
+  }
+}
+
+ghost
+fn claim_is_dci e s k
+requires is_derive_context_input_args_data e s k
+ensures k
+{
+  is_dci_cases _ _ _;
+  match e {
+    Inl eng -> {
+      let Inl spec_l = s;
+      unfold is_derive_context_input_args_data;
+      assert (is_engine_record_core eng spec_l);
+      Trade.elim_trade _ _;
+    }
+    Inr l0 -> {
+      let Inr spec_r = s;
+      unfold is_derive_context_input_args_data;
+      assert (is_l0_record_core l0 spec_r);
+      Trade.elim_trade _ _;
+    }
+  }
+}
 
 ghost
 fn trans_is_derive_context_input
@@ -302,6 +361,63 @@ let is_record_opt
   | Some ee, Some eres -> 
     is_derive_context_input_args_data ee eres k
   | _, _ -> pure False
+
+ghost
+fn is_record_opt_cases e s k
+requires is_record_opt e s k
+ensures  is_record_opt e s k ** pure (Some? e <==> Some? s)
+{
+  match e {
+    None -> {
+      match s {
+        Some _ -> {
+          unfold is_record_opt;
+          assert pure (False);
+          unreachable ()
+        }
+        None -> {
+          unfold is_record_opt;
+          fold (is_record_opt None None k);
+        }
+      }
+    }
+
+    Some e -> {
+      match s {
+        None -> {
+          unfold is_record_opt;
+          assert pure (False);
+          unreachable ()
+        }
+        Some s -> {
+          unfold is_record_opt;
+          fold (is_record_opt (Some e) (Some s) k);
+        }
+      }
+    }
+  }
+} 
+
+ghost
+fn elim_is_record_opt_none s k
+requires is_record_opt None s k
+ensures pure (s == None) ** k
+{
+  is_record_opt_cases _ _ _;
+  let None = s;
+  unfold is_record_opt;
+}
+
+ghost
+fn elim_is_record_opt_some r s k
+requires is_record_opt (Some r) s k
+returns _:squash (Some? s)
+ensures is_derive_context_input_args_data r (Some?.v s) k
+{
+  is_record_opt_cases _ _ _;
+  let Some s = s;
+  unfold is_record_opt;
+}
 
 ghost
 fn is_record_opt_compose
@@ -499,3 +615,5 @@ ensures (
     }
   }
 }
+
+
