@@ -46,9 +46,7 @@ ColorValidateColoredPoint(
     /* start: checking constraint */
     BOOLEAN
     col_refinementConstraintIsOk =
-      COLOR_RED
-      == col_refinement
-      || COLOR_GREEN == col_refinement || COLOR_BLUE == col_refinement;
+      COLOR_RED == col_refinement || COLOR_GREEN == col_refinement || COLOR_BLUE == col_refinement;
     /* end: checking constraint */
     positionAfterColoredPoint =
       EverParseCheckConstraintOk(col_refinementConstraintIsOk,
