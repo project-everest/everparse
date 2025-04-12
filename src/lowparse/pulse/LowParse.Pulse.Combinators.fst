@@ -1979,6 +1979,80 @@ fn l2r_write_nondep_then
   res2
 }
 
+let vmatch_pair
+  (#tl1 #tl2 #th1 #th2: Type0)
+  (vmatch1: tl1 -> th1 -> slprop)
+  (vmatch2: tl2 -> th2 -> slprop)
+  (xl: (tl1 & tl2))
+  (xh: (th1 & th2))
+: Tot slprop
+= vmatch1 (fst xl) (fst xh) ** vmatch2 (snd xl) (snd xh)
+
+inline_for_extraction
+fn l2r_write_nondep_then_direct_proj1
+  (#tl1 #tl2 #th1 #th2: Type0)
+  (vmatch1: tl1 -> th1 -> slprop)
+  (vmatch2: tl2 -> th2 -> slprop)
+  (xl: (tl1 & tl2))
+  (xh: erased (th1 & th2))
+requires
+      (vmatch_pair vmatch1 vmatch2 xl xh)
+returns xl1: tl1
+ensures
+  vmatch1 xl1 (fst xh) ** trade (vmatch1 xl1 (fst xh)) (vmatch_pair vmatch1 vmatch2 xl xh)
+{
+  let (res, _) = xl;
+  Trade.rewrite_with_trade
+    (vmatch_pair vmatch1 vmatch2 xl xh)
+    (vmatch1 res (fst xh) ** vmatch2 (snd xl) (snd xh));
+  Trade.elim_hyp_r _ _ _;
+  res
+}
+
+inline_for_extraction
+fn l2r_write_nondep_then_direct_proj2
+  (#tl1 #tl2 #th1 #th2: Type0)
+  (vmatch1: tl1 -> th1 -> slprop)
+  (vmatch2: tl2 -> th2 -> slprop)
+  (xl: (tl1 & tl2))
+  (xh: erased (th1 & th2))
+requires
+  (vmatch_pair vmatch1 vmatch2 xl xh)
+returns xl2: tl2
+ensures
+  vmatch2 xl2 (snd xh) ** trade (vmatch2 xl2 (snd xh)) (vmatch_pair vmatch1 vmatch2 xl xh)
+{
+  let (_, res) = xl;
+  Trade.rewrite_with_trade
+    (vmatch_pair vmatch1 vmatch2 xl xh)
+    (vmatch1 (fst xl) (fst xh) ** vmatch2 res (snd xh));
+  Trade.elim_hyp_l _ _ _;
+  res
+}
+
+inline_for_extraction
+let l2r_write_nondep_then_direct
+  (#tl1 #tl2 #th1 #th2: Type)
+  (#vmatch1: tl1 -> th1 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (w1: l2r_writer vmatch1 s1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#vmatch2: tl2 -> th2 -> slprop)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 th2)
+  (#s2: serializer p2)
+  (w2: l2r_writer vmatch2 s2)
+: l2r_writer #_ #(th1 & th2) (vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2)
+= l2r_write_nondep_then
+    w1
+    sq
+    w2
+    _
+    (l2r_write_nondep_then_direct_proj1 vmatch1 vmatch2)
+    (l2r_write_nondep_then_direct_proj2 vmatch1 vmatch2)
+
 inline_for_extraction
 fn l2r_leaf_write_synth
   (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (w: l2r_leaf_writer u#0 s1)
