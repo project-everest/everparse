@@ -455,8 +455,7 @@ let certify_key_client_perm (sid:sid_t) (t0:trace) : slprop =
 
 val certify_key (sid:sid_t)
   (pub_key:Slice.slice U8.t { Slice.len pub_key == 32sz })
-  (crt_len:U32.t)
-  (crt:Slice.slice U8.t { SZ.v <| Slice.len crt == U32.v crt_len })
+  (crt:Slice.slice U8.t)
   (t:G.erased trace { trace_valid_for_certify_key t })
   : stt U32.t
         (requires

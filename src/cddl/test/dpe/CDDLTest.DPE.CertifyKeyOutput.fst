@@ -18,6 +18,9 @@ open CDDLTest.DPE.Common
 let pretty_bytes (x:Seq.seq UInt8.t) =
   spect_evercddl_bytes_pretty_right (spect_evercddl_bstr_pretty_right x)
 
+let pretty_slice (x:slice UInt8.t) =
+  evercddl_bytes_pretty_right (evercddl_bstr_pretty_right x)
+
 let _ = rel_evercddl_certifykeyoutputargs
 
 
@@ -47,7 +50,10 @@ ensures
   rel_option rel_evercddl_bytes res (Some <| pretty_bytes w) **
   pure (of_bytes_option #p res (Some x))
 {
-  admit()
+  let res : slice UInt8.t = { s = x; p = p };
+  rewrite (pts_to x #p w ** pure (false == false))
+  as (rel_option rel_evercddl_bytes (Some <| pretty_slice res) (Some <| pretty_bytes w));
+  Some (pretty_slice res)
 }
 
 fn mk_evercddl_bytes_pretty_none ()
@@ -55,45 +61,19 @@ requires emp
 ensures
   rel_option rel_evercddl_bytes None None
 {
-  admit()
-}
-
-// ghost
-// fn mk_rel_pair #a0 #b0 #a1 #b1 (r1:rel a0 b0) (r1:rel a1 b1)
-// requires
-//    r0 x0 y0 ** r1 x1 y1
-// ensures
-
-//     (x:Slice.slice UInt8.t)
-//     (#p #w:erased _)
-// requires
-//   pts_to x #p w
-// returns res:_
-// ensures
-//   rel_option rel_evercddl_bytes res (Some <| pretty_bytes w)
-// {
-//   admit()
-// }
-
-
-fn mk_tstr_any_empty ()
-requires emp
-returns res:_
-ensures exists* w. tstr_any res w
-{
-  admit()
+  rewrite emp as rel_option rel_evercddl_bytes None None;
 }
 
 [@@pulse_unfold]
 unfold
-let my_unfold_l (#a:Type) (s:list string) (p:a) = norm [delta_only s; hnf; iota; primops] p
+let my_unfold_l (#a:Type) (s:list string) (p:a) = norm [delta_only s; iota; primops] p
 
 ghost
 fn fold_l (s:list string) (p:slprop)
 requires my_unfold_l s p
 ensures p
 {
-  norm_spec [delta_only s; hnf; iota; primops] p;
+  norm_spec [delta_only s; iota; primops] p;
   rewrite each (my_unfold_l s p) as p;
 }
 
@@ -102,7 +82,7 @@ fn unfold_l (s:list string) (p:slprop)
 requires p
 ensures my_unfold_l s p
 {
-  norm_spec [delta_only s; hnf; iota; primops] p;
+  norm_spec [delta_only s; iota; primops] p;
   rewrite each p as (my_unfold_l s p);
 }
 
@@ -117,22 +97,33 @@ ensures
   as (rel_pair r0 r1 (x0, x1) (y0, y1));
 }
 
+ghost
+fn fold_rel_option (#a #b:Type0) (r:rel a b) (x:a) (y:b)
+requires
+  r x y
+ensures
+  rel_option r (Some x) (Some y)
+{
+  rewrite (r x y) as (rel_option r (Some x) (Some y));
+}
+
+ghost
 fn fold_certify_key_output_args (x:_) (w:erased _)
 requires
   rel_pair (rel_pair (rel_option rel_evercddl_bytes) (rel_option rel_evercddl_bytes))
            (rel_option rel_evercddl_bytes)
           x w
-returns res:_
-ensures exists* (hres:spect_evercddl_certifykeyoutputargs_pretty).
-      rel_evercddl_certifykeyoutputargs res hres **
-      pure (hres._x0 == (fst (fst w)) /\
-            hres._x1 == (snd (fst w)) /\
-            hres._x2 == snd w /\
-            res.intkey1 ==  (fst (fst x)) /\
-            res.intkey2 ==  (snd (fst x)) /\
-            res.intkey3 == None)
+ensures 
+  rel_evercddl_certifykeyoutputargs 
+    (evercddl_certifykeyoutputargs_pretty_right x)
+    (spect_evercddl_certifykeyoutputargs_pretty_right w)
 {
-  admit()
+  rewrite (rel_pair (rel_pair (rel_option rel_evercddl_bytes) (rel_option rel_evercddl_bytes))
+                    (rel_option rel_evercddl_bytes)
+                  x w)
+  as (rel_evercddl_certifykeyoutputargs 
+             (evercddl_certifykeyoutputargs_pretty_right x)
+             (spect_evercddl_certifykeyoutputargs_pretty_right w));
 }
 
 let res_has_pk_and_cert (res:evercddl_certifykeyoutputargs_pretty) (pk cert:Slice.slice UInt8.t) p q =
@@ -140,7 +131,7 @@ let res_has_pk_and_cert (res:evercddl_certifykeyoutputargs_pretty) (pk cert:Slic
   of_bytes_option #q res.intkey2 (Some cert) /\
   of_bytes_option #q res.intkey3 None
 
-fn write_certify_key_output
+fn prepare_certify_key_output
     (pubkey:Slice.slice UInt8.t)
     (cert:Slice.slice UInt8.t)
     (#pk #c:erased _) (#p #q:perm)
@@ -159,7 +150,8 @@ ensures
   mk_rel_pair (rel_option rel_evercddl_bytes) (rel_option rel_evercddl_bytes) pk cert;
   mk_evercddl_bytes_pretty_none ();
   mk_rel_pair (rel_pair (rel_option rel_evercddl_bytes) (rel_option rel_evercddl_bytes)) (rel_option rel_evercddl_bytes) _ None;
-  let res = fold_certify_key_output_args _ _;
+  fold_certify_key_output_args _ _;
+  with res hres. assert (rel_evercddl_certifykeyoutputargs res hres);
   res
 }
  
@@ -173,33 +165,37 @@ let is_serialized_certify_key_output hres w =
           w
           sz
 
-fn write_certify_key_output_main
-    (out:Slice.slice UInt8.t)
-    (pubkey:Slice.slice UInt8.t)
-    (cert:Slice.slice UInt8.t)
-    (#pk #c:erased _) (#p #q:perm)
-requires
-  exists* w.
-    pts_to pubkey #p pk **
-    pts_to cert #q c **
-    pts_to out w
-returns res:(_ & bool)
-ensures
-  exists* hres w.
-    rel_evercddl_certifykeyoutputargs (fst res) hres **
-    pts_to out w **
-    pure (struct_has_pubkey_and_cert hres pk c /\
-          res_has_pk_and_cert (fst res) pubkey cert p q) **
-    pure (snd res ==>  is_serialized_certify_key_output hres w)
+let norm_token = emp
+ghost
+fn intro_norm ()
+requires emp
+ensures norm_token
 {
-  let res = write_certify_key_output pubkey cert;
-  let sz = serialize_certifykeyoutputargs' _ out;
-  if (sz = 0sz) {
-    (res, false)
-  }
-  else {
-    (res, true)
-  }
+  fold norm_token;
+}
+
+ghost
+fn force_norm ()
+requires norm_token
+ensures emp
+{
+  unfold norm_token;
+}
+
+ghost 
+fn extract_bytes x (y:erased _)
+requires rel_evercddl_bytes x y
+returns xx:Slice.slice UInt8.t
+ensures 
+  exists* p yy. 
+    pts_to xx #p yy **
+    pure (bytes_of_evercddl_bytes yy y /\ of_bytes #p x xx)
+
+{
+  unfold_l [`%rel_fun; `%rel_evercddl_bytes; `%rel_evercddl_bstr; `%mk_rel; `%rel_slice_of_seq]
+            (rel_evercddl_bytes x y);
+  with (x:Slice.slice UInt8.t) #p y. assert S.pts_to x #p y;
+  x
 }
 
 ghost
@@ -214,14 +210,14 @@ ensures
     pts_to pubkey #p pk **
     pts_to cert #q c
 {
-  slprop_equivs();
-  unfold (rel_evercddl_certifykeyoutputargs x hres);
-  destruct_rel_fun _ _ _ _ _;
-  drop_ (Trade.trade _ _);
-  destruct_pair _ _ ((evercddl_certifykeyoutputargs_pretty_left x)) _ ();
-  drop_ (Trade.trade _ _);
-  destruct_pair (rel_option rel_evercddl_bytes) (rel_option rel_evercddl_bytes) (fst (evercddl_certifykeyoutputargs_pretty_left x)) (fst (spect_evercddl_certifykeyoutputargs_pretty_left hres)) ();
-  show_proof_state;
+  rewrite (rel_evercddl_certifykeyoutputargs x hres) as
+          (rel_evercddl_bytes (Some?.v x.intkey1) (Some?.v hres._x0) **
+           rel_evercddl_bytes (Some?.v x.intkey2) (Some?.v hres._x1) **
+           emp);
+  let xx = extract_bytes (Some?.v x.intkey1) _;
+  let yy = extract_bytes (Some?.v x.intkey2) _;
+  rewrite each xx as pubkey, yy as cert;
+  ()
 }
 
 fn write_certify_key_output_alt
@@ -244,7 +240,7 @@ ensures
           is_serialized_certify_key_output hres w /\
           struct_has_pubkey_and_cert hres pk c)
 {
-  let res = write_certify_key_output pubkey cert;
+  let res = prepare_certify_key_output pubkey cert;
   let sz = serialize_certifykeyoutputargs' _ out;
   destruct_certifykeyoutputargs res _ pubkey cert p q pk c;
   if (sz = 0sz) {

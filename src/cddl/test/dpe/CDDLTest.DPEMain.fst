@@ -8,15 +8,10 @@ open Pulse.Lib.Pervasives
 // open L0Core
 
 module G = FStar.Ghost
-// module PCM = FStar.PCM
 module SZ = FStar.SizeT
 module U8 = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
-// module PM = Pulse.Lib.PCMMap
-// module FP = Pulse.Lib.PCM.FractionalPreorder
-// module A = Pulse.Lib.Array
-// module PHT = Pulse.Lib.HashTable.Spec
 #lang-pulse
 
 module I = CDDLTest.DPE.InitializeContextInput
@@ -91,30 +86,34 @@ ensures (
   }
 }
 
-// noextract
-// let trace_valid_for_derive_child (t:trace)  : prop =
-//   match current_state t, r with
-//   | G_Available (Engine_context_repr _)
-//   | G_Available (L0_context_repr _) -> True
-//   | _ -> False
+module CKO = CDDLTest.DPE.CertifyKeyOutput
 
-// fn derive_child
-//   (#sid:sid_t)
-//   (#t:G.erased trace { trace_valid_for_derive_child t })
-//   (#p:perm)
-//   (input:slice U8.t)
-// requires
-//   pts_to input #p w **
-//   sid_pts_to trace_ref sid t
-// returns ok:bool
-// ensures
-//   cond ok
-//   (
-//     derive_child_client_perm sid t rrepr b
-//   )
-//   (
-//     pts_to input #p w **
-//     sid_pts_to trace_ref sid t
-//   )
-//         (ensures fun b ->
-//            derive_child_client_perm sid t rrepr b)
+assume
+val max_cert_len : SZ.t
+
+fn certify_key
+    (sid:sid_t)
+    (out:Slice.slice U8.t)
+    (#t:G.erased trace { trace_valid_for_certify_key t })
+requires sid_pts_to trace_ref sid t
+requires exists* w. pts_to out w
+returns ok:bool
+ensures certify_key_client_perm sid t
+ensures exists* w.
+    pts_to out w **
+    pure (ok ==> (exists pk cert hres.
+          CKO.is_serialized_certify_key_output hres w /\
+          CKO.struct_has_pubkey_and_cert hres pk cert))
+{
+  let mut pk_out = [| 0uy; 32sz |];
+  let mut cert_out = [| 0uy; max_cert_len |];
+  let pk_out_slice = Slice.from_array pk_out 32sz;
+  let cert_out_slice = Slice.from_array cert_out max_cert_len;
+  Slice.pts_to_len pk_out_slice;
+  Slice.pts_to_len cert_out_slice;
+  let _ = DPESlice.certify_key sid pk_out_slice cert_out_slice t;
+  let ok = CKO.write_certify_key_output_alt out pk_out_slice cert_out_slice;
+  Slice.to_array pk_out_slice;
+  Slice.to_array cert_out_slice;
+  ok
+}
