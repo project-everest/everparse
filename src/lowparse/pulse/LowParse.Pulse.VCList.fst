@@ -1268,6 +1268,75 @@ let nlist_match_slice_wf_eq
   (nlist_match_slice0 vmatch n a l == nlist_match_slice_wf n a l vmatch)
 = assert_norm (nlist_match_slice0 vmatch n a l == nlist_match_slice_wf n a l vmatch)
 
+ghost fn nlist_match_slice0_elim
+  (#telem: Type0)
+  (#t: Type0)
+  (vmatch: (telem -> t -> slprop))
+  (n: nat)
+  (a: with_perm (S.slice telem))
+  (l: LowParse.Spec.VCList.nlist n t)
+requires nlist_match_slice0 vmatch n a l
+ensures exists* c .
+    pts_to a.v #a.p c **
+    PM.seq_list_match c l (vmatch)
+{
+  unfold (nlist_match_slice0 vmatch n a l);
+  let ar' = nlist_match_slice_elim Some (fun _ -> vmatch) n a l;
+  with c . assert (
+    pts_to #telem (ar' <: with_perm (S.slice telem)).v #ar'.p c
+  );
+  rewrite (pts_to #telem (ar' <: with_perm (S.slice telem)).v #ar'.p c)
+    as (pts_to a.v #a.p c)
+}
+
+ghost
+fn nlist_match_slice0_intro
+  (#telem: Type0)
+  (#t: Type0)
+  (vmatch: (telem -> t -> slprop))
+  (n: nat)
+  (a: with_perm (S.slice telem))
+  (l: nlist n t)
+  (c: Seq.seq telem)
+requires
+    (pts_to a.v #a.p c **
+      PM.seq_list_match c l (vmatch)
+    )
+ensures
+    (nlist_match_slice0 vmatch n a l)
+{
+  fold (nlist_match_slice Some (fun _ -> vmatch) n a l);
+  fold (nlist_match_slice0 vmatch n a l)
+}
+
+ghost fn nlist_match_slice0_elim_trade
+  (#telem: Type0)
+  (#t: Type0)
+  (vmatch: (telem -> t -> slprop))
+  (n: nat)
+  (a: with_perm (S.slice telem))
+  (l: LowParse.Spec.VCList.nlist n t)
+requires nlist_match_slice0 vmatch n a l
+ensures exists* c .
+    pts_to a.v #a.p c **
+    PM.seq_list_match c l (vmatch) **
+    Trade.trade
+      (pts_to a.v #a.p c **
+        PM.seq_list_match c l (vmatch))
+      (nlist_match_slice0 vmatch n a l)
+{
+  nlist_match_slice0_elim vmatch n a l;
+  with c . assert (pts_to a.v #a.p c);
+  ghost fn aux ()
+  requires emp ** (pts_to a.v #a.p c **
+        PM.seq_list_match c l (vmatch))
+  ensures (nlist_match_slice0 vmatch n a l)
+  {
+    nlist_match_slice0_intro vmatch n a l c
+  };
+  Trade.intro _ _ _ aux;
+}
+
 inline_for_extraction
 fn l2r_write_nlist_as_slice0
   (#telem: Type0)
