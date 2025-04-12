@@ -1739,3 +1739,163 @@ ensures
   fold (pts_to_serialized s src #psrc vsrc);
   fold (pts_to_serialized s dst vsrc);
 }
+
+inline_for_extraction
+let zero_copy_parse
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+=
+  (input: slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased t) ->
+  stt t'
+    (pts_to_serialized s input #pm v)
+    (fun res ->
+      vmatch res v **
+      Trade.trade
+        (vmatch res v)
+        (pts_to_serialized s input #pm v)
+    )
+
+inline_for_extraction
+fn zero_copy_parse_id
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+: zero_copy_parse #_ #_ (pts_to_serialized_with_perm s) #_ #_ s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  let res = { v = input; p = pm };
+  Trade.rewrite_with_trade
+    (pts_to_serialized s input #pm v)
+    (pts_to_serialized_with_perm s res v);
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_lens
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: zero_copy_parse vmatch1 s)
+  (#t2': Type0)
+  (#vmatch2: t2' -> t -> slprop)
+  (lens: vmatch_lens vmatch1 vmatch2)
+: zero_copy_parse #_ #_ vmatch2 #_ #_ s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  let tmp = r input;
+  let res = lens tmp _;
+  Trade.trans (vmatch2 res _) _ _;
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_read
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: leaf_reader s)
+: zero_copy_parse #_ #_ (eq_as_slprop t) #_ #_ s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  let res = r input;
+  fold (eq_as_slprop t res v);
+  ghost fn aux ()
+  requires pts_to_serialized s input #pm v ** eq_as_slprop t res v
+  ensures pts_to_serialized s input #pm v
+  {
+    unfold (eq_as_slprop t res v)
+  };
+  Trade.intro _ _ _ aux;
+  res
+}
+
+let vmatch_ignore (#t2: Type0) (x1: unit) (x2: t2) : Tot slprop = emp
+
+inline_for_extraction
+fn zero_copy_parse_ignore
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+: zero_copy_parse #_ #_ (vmatch_ignore #t) #_ #_ s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  fold (vmatch_ignore () (Ghost.reveal v));
+  ghost fn aux ()
+  requires pts_to_serialized s input #pm v ** (vmatch_ignore () (Ghost.reveal v))
+  ensures pts_to_serialized s input #pm v
+  {
+    unfold (vmatch_ignore () (Ghost.reveal v))
+  };
+  Trade.intro _ _ _ aux;
+  ()
+}
+
+inline_for_extraction
+fn zero_copy_parse_ext
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: zero_copy_parse vmatch1 s)
+  (#k': Ghost.erased parser_kind)
+  (#p': parser k' t)
+  (s': serializer p' {
+    forall b . parse p b == parse p' b
+  })
+: zero_copy_parse #_ #_ vmatch1 #_ #_ s'
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  pts_to_serialized_ext_trade s' s input;
+  let res = r input;
+  Trade.trans (vmatch1 res v) _ _;
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_ifthenelse
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (cond: bool)
+  (rtrue: squash (cond == true) -> zero_copy_parse vmatch1 s)
+  (rfalse: squash (cond == false) -> zero_copy_parse vmatch1 s)
+: zero_copy_parse #_ #_ vmatch1 #_ #_ s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  if (cond) {
+    rtrue () input
+  } else {
+    rfalse () input
+  }
+}
