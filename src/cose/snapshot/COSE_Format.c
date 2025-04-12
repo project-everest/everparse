@@ -7146,6 +7146,41 @@ COSE_Format_validate_and_parse_header_map(Pulse_Lib_Slice_slice__uint8_t s)
 }
 
 bool
+COSE_Format_is_empty_iterate_array_aux_env25_type_1(
+  CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env25_type_1_pretty
+  i
+)
+{
+  return cbor_det_array_iterator_is_empty(i.cddl_array_iterator_contents);
+}
+
+COSE_Format_evercddl_label_pretty
+COSE_Format_next_iterate_array_aux_env25_type_1(
+  CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env25_type_1_pretty
+  *pi
+)
+{
+  CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env25_type_1_pretty
+  i = *pi;
+  uint64_t len0 = cbor_det_array_iterator_length(i.cddl_array_iterator_contents);
+  cbor_det_array_iterator_t pj = i.cddl_array_iterator_contents;
+  KRML_HOST_IGNORE(i.cddl_array_iterator_impl_validate(&pj));
+  cbor_det_array_iterator_t ji = pj;
+  uint64_t len1 = cbor_det_array_iterator_length(ji);
+  *pi =
+    (
+      (CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env25_type_1_pretty){
+        .cddl_array_iterator_contents = ji,
+        .cddl_array_iterator_impl_validate = i.cddl_array_iterator_impl_validate,
+        .cddl_array_iterator_impl_parse = i.cddl_array_iterator_impl_parse
+      }
+    );
+  return
+    i.cddl_array_iterator_impl_parse(cbor_det_array_iterator_truncate(i.cddl_array_iterator_contents,
+        len0 - len1));
+}
+
+bool
 COSE_Format_is_empty_iterate_map_aux_env25_type_2_and_aux_env25_type_4(
   CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty
   i
@@ -8670,6 +8705,41 @@ COSE_Format_validate_and_parse_COSE_Sign(Pulse_Lib_Slice_slice__uint8_t s)
       "unreachable (pattern matches are exhaustive in F*)");
     KRML_HOST_EXIT(255U);
   }
+}
+
+bool
+COSE_Format_is_empty_iterate_array_aux_env29_type_1(
+  CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env29_type_1_pretty
+  i
+)
+{
+  return cbor_det_array_iterator_is_empty(i.cddl_array_iterator_contents);
+}
+
+COSE_Format_evercddl_COSE_Signature_pretty
+COSE_Format_next_iterate_array_aux_env29_type_1(
+  CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env29_type_1_pretty
+  *pi
+)
+{
+  CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env29_type_1_pretty
+  i = *pi;
+  uint64_t len0 = cbor_det_array_iterator_length(i.cddl_array_iterator_contents);
+  cbor_det_array_iterator_t pj = i.cddl_array_iterator_contents;
+  KRML_HOST_IGNORE(i.cddl_array_iterator_impl_validate(&pj));
+  cbor_det_array_iterator_t ji = pj;
+  uint64_t len1 = cbor_det_array_iterator_length(ji);
+  *pi =
+    (
+      (CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_COSE_Format_aux_env29_type_1_pretty){
+        .cddl_array_iterator_contents = ji,
+        .cddl_array_iterator_impl_validate = i.cddl_array_iterator_impl_validate,
+        .cddl_array_iterator_impl_parse = i.cddl_array_iterator_impl_parse
+      }
+    );
+  return
+    i.cddl_array_iterator_impl_parse(cbor_det_array_iterator_truncate(i.cddl_array_iterator_contents,
+        len0 - len1));
 }
 
 bool COSE_Format_validate_COSE_Sign_Tagged(cbor_det_t c)
