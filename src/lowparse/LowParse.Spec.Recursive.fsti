@@ -239,6 +239,36 @@ val serialize_recursive_eq
 : Lemma
   (bare_serialize (serialize_recursive sp) x == bare_serialize (serialize_recursive_aux sp) x)
 
+let spec_serialize_recursive_payload
+  (#p: parse_recursive_param)
+  (sp: serialize_recursive_param p)
+  (h: p.header)
+: Tot (serializer (spec_parse_recursive_payload p (parse_recursive p) h))
+= serialize_weaken _
+    (serialize_nlist
+      (p.count h)
+      (serialize_recursive sp)
+    )
+
+let spec_serialize_recursive_aux
+  (#pp: parse_recursive_param)
+  (sp: serialize_recursive_param pp)
+  (#k: parser_kind)
+  (#ph: parser k pp.header)
+  (sh: serializer ph { k.parser_kind_subkind == Some ParserStrong })
+: Tot (serializer (spec_parse_recursive_aux pp ph (parse_recursive pp)))
+=
+  serialize_weaken _
+    (serialize_synth _
+      pp.synth_
+      (serialize_dtuple2
+        sh
+        (spec_serialize_recursive_payload sp)
+      )
+      sp.synth_recip
+      ()
+    )
+
 let get_children
   (#p: parse_recursive_param)
   (s: serialize_recursive_param p)
