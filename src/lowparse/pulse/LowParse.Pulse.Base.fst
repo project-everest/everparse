@@ -682,6 +682,36 @@ fn reader_of_leaf_reader
   f x
 }
 
+let l2r_writer_for_pre
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: Ghost.erased t)
+  (offset: SZ.t)
+  (v: Ghost.erased bytes)
+: Tot prop
+= SZ.v offset + Seq.length (bare_serialize s x) <= Seq.length v
+
+let l2r_writer_for_post
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: Ghost.erased t)
+  (offset: SZ.t)
+  (v: Ghost.erased bytes)
+  (res: SZ.t)
+  (v' : Seq.seq byte)
+: Tot prop
+=
+      let bs = bare_serialize s x in
+      SZ.v res == SZ.v offset + Seq.length bs /\
+      SZ.v res <= Seq.length v /\
+      Seq.length v' == Seq.length v /\
+      Seq.slice v' 0 (SZ.v offset) `Seq.equal` Seq.slice v 0 (SZ.v offset) /\
+      Seq.slice v' (SZ.v offset) (SZ.v res) `Seq.equal` bs
+
 inline_for_extraction
 let l2r_writer_for
   (#t' #t: Type0)
@@ -697,16 +727,11 @@ let l2r_writer_for
   (#v: Ghost.erased bytes) ->
   stt SZ.t
     (pts_to out v ** vmatch x' x ** pure (
-      SZ.v offset + Seq.length (bare_serialize s x) <= Seq.length v
+      l2r_writer_for_pre s x offset v
     ))
     (fun res -> exists* v' .
       pts_to out v' ** vmatch x' x ** pure (
-      let bs = bare_serialize s x in
-      SZ.v res == SZ.v offset + Seq.length bs /\
-      SZ.v res <= Seq.length v /\
-      Seq.length v' == Seq.length v /\
-      Seq.slice v' 0 (SZ.v offset) `Seq.equal` Seq.slice v 0 (SZ.v offset) /\
-      Seq.slice v' (SZ.v offset) (SZ.v res) `Seq.equal` bs
+      l2r_writer_for_post s x offset v res v'
     ))
 
 inline_for_extraction
