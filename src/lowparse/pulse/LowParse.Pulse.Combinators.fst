@@ -1560,6 +1560,24 @@ let vmatch_dep_proj2
 : Tot slprop
 = vmatch xl (| xh1, xh2 |)
 
+ghost fn vmatch_dep_proj2_elim_trade
+  (#tl #th1: Type0)
+  (#th2: th1 -> Type0)
+  (vmatch: tl -> dtuple2 th1 th2 -> slprop)
+  (xh1: th1)
+  (xl: tl)
+  (xh2: th2 xh1)
+requires vmatch_dep_proj2 vmatch xh1 xl xh2
+ensures vmatch xl (| xh1, xh2 |) **
+  Trade.trade
+    (vmatch xl (| xh1, xh2 |))
+    (vmatch_dep_proj2 vmatch xh1 xl xh2)
+{
+  Trade.rewrite_with_trade
+    (vmatch_dep_proj2 vmatch xh1 xl xh2)
+    (vmatch xl (| xh1, xh2 |))
+}
+
 inline_for_extraction
 fn l2r_write_dtuple2_recip
   (#tl #th1: Type)
