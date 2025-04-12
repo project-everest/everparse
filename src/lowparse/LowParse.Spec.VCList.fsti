@@ -464,6 +464,35 @@ let parse_nlist_singleton_as_synth_eq
   in
   Classical.forall_intro prf
 
+let pair_to_nlist
+  (t: Type)
+  (x: (t & t))
+: Tot (nlist 2 t)
+= [fst x; snd x]
+
+let pair_to_nlist_recip
+  (t: Type)
+  (x: nlist 2 t)
+: Tot (t & t)
+= let [y; z] = x in (y, z)
+
+let parse_nlist_pair_as_synth_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Lemma
+  (forall b . parse (parse_nlist 2 p) b == parse (parse_synth (nondep_then p p) (pair_to_nlist t)) b)
+= let prf
+    (b: bytes)
+  : Lemma
+    (parse (parse_nlist 2 p) b == parse (parse_synth (nondep_then p p) (pair_to_nlist t)) b)
+  = parse_nlist_eq 2 p b;
+    Classical.forall_intro (parse_nlist_eq 1 p);
+    parse_synth_eq (nondep_then p p) (pair_to_nlist _) b;
+    nondep_then_eq p p b
+  in
+  Classical.forall_intro prf
+
 let rec serialize_nlist'
   (n: nat)
   (#k: parser_kind)
