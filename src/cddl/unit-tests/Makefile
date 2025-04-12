@@ -99,7 +99,7 @@ remove__ = $(firstword $(subst __, ,$1))
 
 .SECONDEXPANSION:
 
-CFLAGS += -I QCBOR/inc
+CFLAGS += -I QCBOR/inc -g
 
 QCBOR/libqcbor.a:
 	$(MAKE) -C QCBOR
