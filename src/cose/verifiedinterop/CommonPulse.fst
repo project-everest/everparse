@@ -576,6 +576,7 @@ let rel_bstr_eq' (x: evercddl_bstr_pretty) (y: spect_evercddl_bstr_pretty) =
 inline_for_extraction noextract
 let sixty_four: v: SizeT.t { SizeT.v v == 64 } = 64sz
 
+inline_for_extraction noextract
 fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x0.payload })
     #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
     (#vaad: erased _) (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged_pretty { Inl? (reveal vmsg)._x0._x2 })
@@ -624,6 +625,7 @@ fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x
   }
 }
 
+inline_for_extraction noextract
 fn borrow_payload
     (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x0.payload })
     (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged_pretty { Inl? (reveal vmsg)._x0._x2 })
