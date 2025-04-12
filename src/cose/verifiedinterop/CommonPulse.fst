@@ -138,6 +138,11 @@ module AP = Pulse.Lib.ArrayPtr
 let ser_to #t #st (s: CDDL.Spec.Base.spec t st true) (x: st) y =
   s.serializable x /\ Seq.equal y (CBOR.Spec.API.Format.cbor_det_serialize (s.serializer x))
 
+let ser_to_inj #t #st s x y y' :
+    Lemma (requires ser_to #t #st s x y /\ ser_to s x y') (ensures y == y')
+      [SMTPat (ser_to s x y); SMTPat (ser_to s x y')] =
+  ()
+
 let to_be_signed_spec
     (phdr: spect_evercddl_empty_or_serialized_map_pretty)
     (aad payload: spect_evercddl_bstr_pretty)
@@ -526,7 +531,7 @@ fn verify_sig pubkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
   ensures rel_evercddl_bstr aad vaad
   ensures rel_evercddl_bstr payload vpayload
   ensures pts_to sigbuf #psigbuf vsigbuf
-  // ensures pure (success == spec_ed25519_verify vpubkey tbs vsignature)
+  ensures pure (success <==> (exists tbs. to_be_signed_spec vphdr vaad vpayload tbs /\ spec_ed25519_verify vpubkey tbs vsigbuf))
 {
   let sz = 1024sz;
   assert pure (SizeT.v sz <= 1024);
@@ -584,7 +589,7 @@ module T = Pulse.Lib.Trade
 
 fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x0.payload })
     #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
-    (#vaad: erased _) (#vmsg: erased _)
+    (#vaad: erased _) (#vmsg: erased spect_evercddl_COSE_Sign1_Tagged_pretty { Inl? (reveal vmsg)._x0._x2 })
   requires AP.pts_to pubkey #ppubkey vpubkey
   requires rel_evercddl_COSE_Sign1_Tagged msg vmsg
   requires rel_evercddl_bstr aad vaad
@@ -593,6 +598,12 @@ fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x
   ensures AP.pts_to pubkey #ppubkey vpubkey
   ensures rel_evercddl_COSE_Sign1_Tagged msg vmsg
   ensures rel_evercddl_bstr aad vaad
+  ensures pure (success <==>
+      (let sig = (reveal vmsg)._x0._x3._x0 in
+        Seq.length sig == 64 /\
+        exists (tbs: Seq.seq UInt8.t{Seq.length tbs <= max_size_t}).
+        to_be_signed_spec (reveal vmsg)._x0._x0 vaad (Inl?.v (reveal vmsg)._x0._x2) tbs /\
+        spec_ed25519_verify vpubkey tbs sig))
 {
   rw_r_wt (rel_sign1_tagged_eq _ _);
   rw_r_wt (rel_bstr_eq' msg._x0.signature _);
@@ -602,10 +613,10 @@ fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x
     (rel_evercddl_bstr (Inl?.v msg._x0.payload) (Inl?.v (reveal vmsg)._x0._x2));
   let sig = msg._x0.signature._x0.s;
   rewrite each msg._x0.signature._x0.s as sig;
+  S.pts_to_len sig;
+  with vsig. assert S.pts_to sig #msg._x0.signature._x0.p vsig;
   if (S.len sig = sixty_four) {
     assert pure (S.len sig == sixty_four);
-    S.pts_to_len sig;
-    with vsig. assert S.pts_to sig #msg._x0.signature._x0.p vsig;
     assert pure (SizeT.v (S.len sig) == 64);
     assert pure (Seq.length vsig == 64);
     let sig' = S.slice_to_arrayptr_intro sig;
@@ -619,6 +630,8 @@ fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x
     T.elim_trade _ (rel_evercddl_bstr msg._x0.signature _);
     T.elim_trade _ (rel_either rel_evercddl_bstr rel_evercddl_nil msg._x0.payload (reveal vmsg)._x0._x2);
     T.elim_trade _ (rel_evercddl_COSE_Sign1_Tagged msg vmsg);
+    assert pure (Seq.length vsig =!= 64);
+    assert pure ((reveal vmsg)._x0._x3._x0 == vsig);
     false
   }
 }
