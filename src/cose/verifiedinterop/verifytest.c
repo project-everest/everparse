@@ -3,8 +3,10 @@
 
 bstr test_verify(bstr msg, bstr key_data) {
     uint8_t *signing_key = parse_ed25519_public_key(key_data);
-    check(verify1_simple(signing_key, msg));
-    return (bstr) { .len = 0, .elt = NULL }; // FIXME
+    FStar_Pervasives_Native_option__Pulse_Lib_Slice_slice_uint8_t verified_payload =
+        verify1_simple(signing_key, msg);
+    check(verified_payload.tag);
+    return verified_payload.v;
 }
 
 int main(int argc, const char **argv) {
@@ -18,9 +20,8 @@ int main(int argc, const char **argv) {
 
     bstr payload = test_verify(msg, key_data);
 
-    // FIXME
-    // fprintf(stderr, "writing payload to stdout\n");
-    // check(fwrite(payload.elt, payload.len, 1, stdout) == 1);
+    fprintf(stderr, "writing payload to stdout\n");
+    check(fwrite(payload.elt, payload.len, 1, stdout) == 1);
 
     free(key_data.elt);
     free(msg.elt);

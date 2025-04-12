@@ -39,6 +39,10 @@ _output/CommonPulse.c: $(ALL_KRML_FILES)
 
 _output/COSE_Format.c: _output/CommonPulse.c
 
+SANFLAGS += -fsanitize=address -fsanitize=undefined
+CFLAGS += $(SANFLAGS)
+LDFLAGS += $(SANFLAGS)
+
 CFLAGS += -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
 
 $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a:

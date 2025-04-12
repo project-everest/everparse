@@ -594,7 +594,7 @@ let rel_array_iterator
 inline_for_extraction
 let cddl_array_iterator_is_empty_t
   (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0) =
-  (#spec: Ghost.erased (Iterator.type_spec impl_elt)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
+  (spec: Ghost.erased (Iterator.type_spec impl_elt)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
   (i: array_iterator_t impl_elt cbor_array_iterator_match spec) ->
   (#l: Ghost.erased (list (dfst spec))) ->
   stt bool
@@ -607,10 +607,10 @@ let cddl_array_iterator_is_empty_t
 inline_for_extraction
 fn cddl_array_iterator_is_empty
   (#cbor_array_iterator_t: Type0)
-  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0)
-  (cbor_array_iterator_is_empty: array_iterator_is_empty_t cbor_array_iterator_match)
+  (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop)   (cbor_array_iterator_is_empty: array_iterator_is_empty_t cbor_array_iterator_match)
+(impl_elt: Type0)
 : cddl_array_iterator_is_empty_t #_ cbor_array_iterator_match impl_elt
-= (#spec: _)
+= (spec: _)
   (i: _)
   (#l: _)
 {
@@ -623,7 +623,7 @@ fn cddl_array_iterator_is_empty
 inline_for_extraction
 let cddl_array_iterator_next_t
   (#cbor_array_iterator_t: Type0) (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (impl_elt: Type0) =
-  (#spec: Ghost.erased (Iterator.type_spec impl_elt)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
+  (spec: Ghost.erased (Iterator.type_spec impl_elt)) -> // taking `spec` as argument to the operator, rather than the type, guarantees that Karamel will produce it only (at most) once per `impl_elt` type.
   (pi: ref (array_iterator_t impl_elt cbor_array_iterator_match spec)) ->
   (#gi: Ghost.erased (array_iterator_t impl_elt cbor_array_iterator_match spec)) ->
   (#l: Ghost.erased (list (dfst spec))) ->
@@ -652,7 +652,7 @@ fn cddl_array_iterator_next
   (truncate: array_iterator_truncate_t cbor_array_iterator_match)
   (impl_elt: Type0)
 : cddl_array_iterator_next_t #_ cbor_array_iterator_match impl_elt
-= (#spec: _)
+= (spec: _)
   (pi: _)
   (#gi: _)
   (#l: _)

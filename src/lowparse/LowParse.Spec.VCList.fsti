@@ -401,6 +401,98 @@ val parse_list_parse_nlist
     | _ -> False
   ))
 
+let empty_to_nlist
+  (t: Type)
+  (_: unit)
+: Tot (nlist 0 t)
+= []
+
+let empty_to_nlist_recip
+  (t: Type)
+  (_: nlist 0 t)
+: Tot unit
+= ()
+
+let parse_nlist_nil_as_synth_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Lemma
+  (forall b . parse (parse_nlist 0 p) b == parse (parse_synth parse_empty (empty_to_nlist t)) b)
+= let prf
+    (b: bytes)
+  : Lemma
+    (parse (parse_nlist 0 p) b == parse (parse_synth parse_empty (empty_to_nlist t)) b)
+  = parse_nlist_eq 0 p b;
+    parse_synth_eq parse_empty (empty_to_nlist t) b
+  in
+  Classical.forall_intro prf
+
+let parse_nlist_cons_as_synth_eq
+  (n: nat)
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Lemma
+  (forall b . parse (parse_nlist (n + 1) p) b == parse (parse_synth (nondep_then p (parse_nlist n p)) (synth_nlist n)) b)
+= ()
+
+let singleton_to_nlist
+  (#t: Type)
+  (x: t)
+: Tot (nlist 1 t)
+= [x]
+
+let singleton_to_nlist_recip
+  (#t: Type)
+  (l: nlist 1 t)
+: Tot t
+= List.Tot.hd l
+
+let parse_nlist_singleton_as_synth_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Lemma
+  (forall b . parse (parse_nlist 1 p) b == parse (parse_synth p singleton_to_nlist) b)
+= let prf
+    (b: bytes)
+  : Lemma
+    (parse (parse_nlist 1 p) b == parse (parse_synth p singleton_to_nlist) b)
+  = parse_nlist_eq 1 p b;
+    parse_synth_eq p singleton_to_nlist b
+  in
+  Classical.forall_intro prf
+
+let pair_to_nlist
+  (t: Type)
+  (x: (t & t))
+: Tot (nlist 2 t)
+= [fst x; snd x]
+
+let pair_to_nlist_recip
+  (t: Type)
+  (x: nlist 2 t)
+: Tot (t & t)
+= let [y; z] = x in (y, z)
+
+let parse_nlist_pair_as_synth_eq
+  (#k: parser_kind)
+  (#t: Type)
+  (p: parser k t)
+: Lemma
+  (forall b . parse (parse_nlist 2 p) b == parse (parse_synth (nondep_then p p) (pair_to_nlist t)) b)
+= let prf
+    (b: bytes)
+  : Lemma
+    (parse (parse_nlist 2 p) b == parse (parse_synth (nondep_then p p) (pair_to_nlist t)) b)
+  = parse_nlist_eq 2 p b;
+    Classical.forall_intro (parse_nlist_eq 1 p);
+    parse_synth_eq (nondep_then p p) (pair_to_nlist _) b;
+    nondep_then_eq p p b
+  in
+  Classical.forall_intro prf
+
 let rec serialize_nlist'
   (n: nat)
   (#k: parser_kind)

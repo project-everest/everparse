@@ -31,7 +31,7 @@ print('Signature verifies!')
 print('Running ./verifytest')
 verify = subprocess.run(['./verifytest', 'message.pubkey', 'message.cbor'], stdout=subprocess.PIPE)
 verify.check_returncode()
-# assert verify.stdout == payload, verify.stdout
+assert verify.stdout == payload, verify.stdout
 print('Signature verifies using our tool!')
 
 
@@ -45,5 +45,5 @@ open('message.pycose.cbor', 'wb').write(msg2.encode())
 print('Running ./verifytest')
 verify = subprocess.run(['./verifytest', 'message.pubkey', 'message.pycose.cbor'], stdout=subprocess.PIPE)
 verify.check_returncode()
-# assert verify.stdout == payload, verify.stdout
+assert verify.stdout == payload, verify.stdout
 print('PyCOSE Signature verifies using our tool!')

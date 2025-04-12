@@ -99,6 +99,47 @@ let parse_recursive_eq'
 = parse_recursive_eq p b;
   tot_parse_synth_eq (parse_recursive_alt p (parse_recursive p)) p.synth_ b
 
+let spec_parse_recursive_payload
+  (p: parse_recursive_param)
+  (ih: parser (parse_recursive_kind p.parse_header_kind) p.t)
+  (h: p.header)
+: Tot (parser parse_recursive_payload_kind (parse_recursive_payload_t p.t p.header p.count h))
+= weaken parse_recursive_payload_kind (parse_nlist (p.count h) ih)
+
+let spec_parse_recursive_aux
+  (p: parse_recursive_param)
+  (#k: parser_kind)
+  (ph: parser k p.header)
+  (ih: parser (parse_recursive_kind p.parse_header_kind) p.t)
+: Tot (parser _ p.t)
+= (ph `parse_dtuple2` spec_parse_recursive_payload p ih) `parse_synth` p.synth_
+
+let parse_recursive_eq_gen
+  (p: parse_recursive_param)
+  (k: parser_kind)
+  (ph: parser k p.header)
+: Lemma
+  (requires (forall b . parse ph b == parse p.parse_header b))
+  (ensures (forall b. parse (parse_recursive p) b == parse (spec_parse_recursive_aux p ph (parser_of_tot_parser (parse_recursive p))) b))
+= let prf
+    (b: bytes)
+  : Lemma (parse (parse_recursive p) b == parse (spec_parse_recursive_aux p ph (parser_of_tot_parser (parse_recursive p))) b)
+  = let ih = (parser_of_tot_parser (parse_recursive p)) in
+    parse_recursive_eq' p b;
+    parse_synth_eq
+      (parse_dtuple2 ph (spec_parse_recursive_payload p ih))
+      p.synth_
+      b;
+    parse_dtuple2_eq ph (spec_parse_recursive_payload p ih) b;
+    match parse ph b with
+    | None -> ()
+    | Some (h, lenh) ->
+      let b' = Seq.slice b lenh (Seq.length b) in
+      tot_parse_nlist_parse_nlist (p.count h) (parse_recursive p) b';
+      ()
+  in
+  Classical.forall_intro prf
+
 let tot_parse_nlist_sum
   (#k: parser_kind)
   (#t: Type)
@@ -197,6 +238,36 @@ val serialize_recursive_eq
   (x: pp.t)
 : Lemma
   (bare_serialize (serialize_recursive sp) x == bare_serialize (serialize_recursive_aux sp) x)
+
+let spec_serialize_recursive_payload
+  (#p: parse_recursive_param)
+  (sp: serialize_recursive_param p)
+  (h: p.header)
+: Tot (serializer (spec_parse_recursive_payload p (parse_recursive p) h))
+= serialize_weaken _
+    (serialize_nlist
+      (p.count h)
+      (serialize_recursive sp)
+    )
+
+let spec_serialize_recursive_aux
+  (#pp: parse_recursive_param)
+  (sp: serialize_recursive_param pp)
+  (#k: parser_kind)
+  (#ph: parser k pp.header)
+  (sh: serializer ph { k.parser_kind_subkind == Some ParserStrong })
+: Tot (serializer (spec_parse_recursive_aux pp ph (parse_recursive pp)))
+=
+  serialize_weaken _
+    (serialize_synth _
+      pp.synth_
+      (serialize_dtuple2
+        sh
+        (spec_serialize_recursive_payload sp)
+      )
+      sp.synth_recip
+      ()
+    )
 
 let get_children
   (#p: parse_recursive_param)

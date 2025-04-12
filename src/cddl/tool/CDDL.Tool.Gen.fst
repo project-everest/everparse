@@ -77,6 +77,8 @@ type ancillaries_t (se: sem_env) = {
   array_parsers: P.ancillary_parse_array_group_env_bool se;
   type_names: (t: typ) -> (t_wf: ast0_wf_typ t) -> option string;
   map_iterators: list string;
+  array_names: (t: group) -> (t_wf: ast0_wf_array_group t) -> option string;
+  array_iterators: list string;
 }
 
 noeq
@@ -254,7 +256,8 @@ let rec compute_ancillaries_aux
   (parser: string)
   (serializer: string)
   (typename: string)
-: Dv (ancillaries_aux_t se)
+: FStar.All.ML // Dv
+(ancillaries_aux_t se)
 =
   let anc_env = env ^ "_" ^ string_of_int anc.env_index in
   match P.ask_zero_copy_ask_for_option anc.anc.validators anc.anc.parsers anc.anc.array_parsers ask with
@@ -301,6 +304,7 @@ let aa"^anc_env'^" = aa" ^ anc_env
         output = anc.output ^ msg;
       }
     | Some (P.AskForArrayGroup t t_wf) ->
+      let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Tool.Print.group_to_string t ^ ", typename: " ^ typename ^ "\n") in
       let msg = produce_ask_for_array_parser env anc_env wf validator parser serializer typename bundle ^ "
 let _ : unit = _ by (FStar.Tactics.print (\"ancillary env'\"); FStar.Tactics.exact (`()))
 [@@bundle_attr; sem_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
@@ -314,6 +318,7 @@ let aa"^anc_env'^" = ancillary_array_bundle_env_set_ask_for aa"^anc_env^" "^wf^"
         anc = {
           anc.anc with
           array_parsers = (fun t' t_wf' -> if t = t' && t_wf = t_wf' then true else anc.anc.array_parsers t' t_wf');
+          array_names = (fun t' t_wf' -> if t = t' && t_wf = t_wf' then Some typename else anc.anc.array_names t' t_wf');
         };
         env_index = env_index';
         output = anc.output ^ msg;
@@ -333,7 +338,8 @@ and init_compute_ancillaries_aux
   (ask': option (P.ask_for se))
   (env: string)
   (msg: (string -> string))
-: Dv (ancillaries_aux_t se)
+: FStar.All.ML // Dv
+(ancillaries_aux_t se)
 =
     let candidate = string_of_int anc.next_candidate_index in
     let wf' = "aux_" ^ env ^ "_wf_" ^ candidate in
@@ -364,7 +370,8 @@ let rec compute_ancillaries
   (anc: ancillaries_aux_t se)
   (env: string)
   (wf: string)
-: Dv (anc': ancillaries_aux_t se {
+: FStar.All.ML // Dv
+  (anc': ancillaries_aux_t se {
     None? (init anc'.anc)
   })
 = match init anc.anc with
@@ -390,7 +397,9 @@ let extend_ancillaries_t
     array_parsers = (fun t t_wf -> if group_bounded ne t && bounded_wf_array_group ne _ t_wf then anc.array_parsers t t_wf else false);
     type_names = (fun t t_wf -> if typ_bounded ne t && bounded_wf_typ ne _ t_wf then anc.type_names t t_wf else None);
     map_iterators = anc.map_iterators;
-  }
+    array_names = (fun t t_wf -> if group_bounded ne t && bounded_wf_array_group ne _ t_wf then anc.array_names t t_wf else None);
+    array_iterators = anc.array_iterators; 
+ }
 
 noeq
 type record_type = {
@@ -477,12 +486,14 @@ let rec produce_iterators_for_typ
   (accu: string)
   (#t: typ)
   (wf: ast0_wf_typ t)
-: Tot (ancillaries_t wenv & string)
+: FStar.All.ML // Tot
+(ancillaries_t wenv & string)
   (decreases wf)
 = match wf with
   | WfTDetCbor _ _ s
   | WfTTagged _ _ s
   | WfTRewrite _ _ s -> produce_iterators_for_typ wenv anc accu s
+  | WfTArray _ s -> produce_iterators_for_array_group wenv anc accu s
   | WfTMap _ _ s -> produce_iterators_for_map_group wenv anc accu s
   | WfTChoice _ _ s1 s2 ->
     let (anc1, accu1) = produce_iterators_for_typ wenv anc accu s1 in
@@ -495,11 +506,34 @@ and produce_iterators_for_array_group
   (accu: string)
   (#t: group)
   (wf: ast0_wf_array_group t)
-: Tot (ancillaries_t wenv & string)
+: FStar.All.ML // Tot
+(ancillaries_t wenv & string)
   (decreases wf)
 = match wf with
   | WfAElem _ _ _ s -> produce_iterators_for_typ wenv anc accu s
-  | WfAZeroOrOneOrMore _ s _ // FIXME: also produce array iterators
+  | WfAZeroOrOneOrMore g s _ ->
+    let (anc2, accu2) = produce_iterators_for_array_group wenv anc accu s in
+    begin match anc2.array_names _ s with
+    | None ->
+      let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Tool.Print.group_to_string g ^ " NOT FOUND\n") in
+      (anc2, accu2)
+    | Some b ->
+        let array_iterator = "iterate_array_" ^ b in
+        if List.Tot.mem array_iterator anc2.array_iterators
+        then
+          let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Tool.Print.group_to_string g ^ " ALREADY PRODUCED\n") in
+          (anc2, accu2)
+        else
+          let _ = FStar.IO.print_string ("ancillary for group:" ^ CDDL.Tool.Print.group_to_string g ^ " FOUND\n") in
+          let anc3 = { anc2 with array_iterators = array_iterator :: anc2.array_iterators } in
+          let b = b ^ "_pretty" in
+          let accu3 = accu2 ^ "
+[@@FStar.Tactics.postprocess_with (fun _ -> FStar.Tactics.norm (nbe :: T.bundle_get_impl_type_steps); FStar.Tactics.trefl ())]
+let is_empty_" ^ array_iterator ^ " = CDDL.Pulse.Parse.ArrayGroup.cddl_array_iterator_is_empty  Det.cbor_det_impl.cbor_array_iterator_is_done "^b^"
+let next_" ^ array_iterator ^ " = CDDL.Pulse.Parse.ArrayGroup.cddl_array_iterator_next Det.cbor_det_impl.cbor_array_iterator_length Det.cbor_det_impl.cbor_array_iterator_share Det.cbor_det_impl.cbor_array_iterator_gather Det.cbor_det_impl.cbor_array_iterator_truncate "^b
+          in
+          (anc3, accu3)
+    end
   | WfAZeroOrOne _ s
   | WfARewrite _ _ s -> produce_iterators_for_array_group wenv anc accu s
   | WfAChoice _ _ s1 s2
@@ -513,7 +547,8 @@ and produce_iterators_for_map_group
   (accu: string)
   (#t: elab_map_group)
   (wf: ast0_wf_parse_map_group t)
-: Tot (ancillaries_t wenv & string)
+: FStar.All.ML // Tot
+(ancillaries_t wenv & string)
   (decreases wf)
 = match wf with
   | WfMZeroOrMore _ _ _ sk _ sv ->
@@ -554,7 +589,8 @@ let produce_typ_defs
   (anc: ancillaries_t wenv.e_sem_env)
   (name: string)
   (t: typ)
-: Dv (res: produce_typ_defs_t { produce_typ_defs_post wenv res })
+: FStar.All.ML // Dv
+ (res: produce_typ_defs_t { produce_typ_defs_post wenv res })
 = match compute_wf_typ wenv name t 0 with
   | RFailure s -> RFailure s
   | RSuccess (fuel, (wt, (f, wenv'))) ->
@@ -650,7 +686,8 @@ let rec produce_defs'
   (env: wf_ast_env)
   (anc: ancillaries_t env.e_sem_env)
   (l: list (string & decl))
-: Dv (res: result string { ~ (ROutOfFuel? res) })
+: FStar.All.ML // Dv
+ (res: result string { ~ (ROutOfFuel? res) })
 = match l with
   | [] -> RSuccess accu
   | (name, def) :: q ->
@@ -680,6 +717,8 @@ let empty_ancillaries : ancillaries_t empty_sem_env = {
   array_parsers = (fun _ _ -> false);
   type_names = (fun _ _ -> None);
   map_iterators = [];
+  array_names = (fun _ _ -> None);
+  array_iterators = [];
 }
 
 let produce_defs0 accu l =
@@ -722,7 +761,8 @@ let _ : squash (SZ.fits_u64) = assume (SZ.fits_u64)
 
 let produce_defs_fst
   mname lang filenames (l: list (string & decl))
-: Dv string
+: FStar.All.ML // Dv
+  string
 = match CDDL.Spec.AST.Driver.topological_sort l with
   | None -> "Error: topological sort failed"
   | Some l ->
@@ -730,18 +770,3 @@ let produce_defs_fst
     match produce_defs0 accu l with
     | RSuccess s -> s
     | RFailure msg -> "Error: " ^ msg
-
-let produce_defs
-  (l: list (string & decl))
-: FStar.Tactics.Tac unit
-= let accu = "
-*)
-" in
-  match produce_defs0 accu l with
-  | RFailure s -> FStar.Tactics.fail s
-  | RSuccess msg -> let msg = msg ^ "
-(*
-"
-    in
-    FStar.Tactics.print msg;
-    FStar.Tactics.exact (`())
