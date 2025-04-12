@@ -135,15 +135,6 @@ type expr_t =
 
 (* Separation-logic predicate *)
 
-let vmatch_pair
-  (#tl1 #tl2 #th1 #th2: Type)
-  (vmatch1: tl1 -> th1 -> slprop)
-  (vmatch2: tl2 -> th2 -> slprop)
-  (xl: (tl1 & tl2))
-  (xh: (th1 & th2))
-: Tot slprop
-= vmatch1 (fst xl) (fst xh) ** vmatch2 (snd xl) (snd xh)
-
 [@@pulse_unfold]
 let rel_base_EUPlus
   (count: U8.t)
@@ -318,13 +309,154 @@ fn rewrite_with_trade_squash
   Trade.rewrite_with_trade #is p1 p2
 }
 
-// inline_for_extraction noextract [@@noextract_to "krml"] let
-assume val write_expr_base_payload'
+inline_for_extraction noextract [@@noextract_to "krml"]
+let get_header_type
+  (h: header)
+: Tot U8.t
+= match h with
+  | (| ty, _ |) -> ty
+
+ghost fn unfold_vmatch_and_const
+  (#tl #th: Type0)
+  (const: slprop)
+  (vmatch: tl -> th -> slprop)
+  (xl: tl)
+  (xh: th)
+requires
+  vmatch_and_const const vmatch xl xh
+ensures
+  const ** vmatch xl xh **
+  Trade.trade (const ** vmatch xl xh) (vmatch_and_const const vmatch xl xh)
+{
+  Trade.rewrite_with_trade
+    (vmatch_and_const const vmatch xl xh)
+    (const ** vmatch xl xh)
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn write_expr_base_payload_plus
+  (xh1: header)
+  (sq255: squash (get_header_type xh1 = 255uy == false))
+  (sq254: squash (get_header_type xh1 = 254uy == false))
+: vmatch_lens #_ #_ #_ (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1)
+  (pts_to_serialized_with_perm (serialize_nlist (count_payload xh1) serialize_expr))
+= (x1': _)
+  (x: _)
+{
+  let y' : Ghost.erased expr = Ghost.hide (synth_expr (| xh1, Ghost.reveal x |));
+  Trade.rewrite_with_trade
+    (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1 x1' x)
+    (rel_base x1' y');
+  rel_base_cases _ _;
+  let EUPlus count pl = x1';
+  let n = Ghost.hide (Plus?.n y');
+  let l = Ghost.hide (Plus?.l y');
+  Trade.rewrite_with_trade
+    (rel_base x1' y')
+    (rel_base_EUPlus count pl n () l);
+  Trade.trans _ (rel_base x1' y') _;
+  unfold_vmatch_and_const (pure (eq2 #nat n (U8.v count))) (pts_to_serialized_with_perm (serialize_nlist n serialize_expr)) pl l;
+  Trade.trans _ _ (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1 x1' x);
+  Trade.elim_hyp_l _ _ _;
+  pl
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+fn write_expr_base_payload_minus
+  (xh1: header)
+  (sq255: squash (get_header_type xh1 = 255uy == false))
+  (sq254: squash (get_header_type xh1 = 254uy == true))
+:
+vmatch_lens #_ #_ #_ (vmatch_synth (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1) (synth_nlist 1))
+  (vmatch_pair (pts_to_serialized_with_perm serialize_expr)
+      (vmatch_synth (pts_to_serialized_with_perm serialize_expr) singleton_to_nlist_recip))
+=
+  (x1': _)
+  (x: _)
+{
+  let y' : Ghost.erased expr = (synth_expr (| xh1, synth_nlist 1 x |));
+  Trade.rewrite_with_trade
+    (vmatch_synth (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1) (synth_nlist 1) x1' x)
+    (rel_base x1' y');
+  rel_base_cases _ _;
+  let EUMinus fs sn = x1';
+  let v = Ghost.hide (Minus?._0 y');
+  Trade.rewrite_with_trade
+    (rel_base x1' y')
+    (vmatch_pair (pts_to_serialized_with_perm serialize_expr) (pts_to_serialized_with_perm serialize_expr) (fs, sn) v);
+  Trade.trans _ (rel_base x1' y') _;
+  Trade.rewrite_with_trade
+    (vmatch_pair (pts_to_serialized_with_perm serialize_expr) (pts_to_serialized_with_perm serialize_expr) (fs, sn) v)
+    (vmatch_pair (pts_to_serialized_with_perm serialize_expr) (vmatch_synth (pts_to_serialized_with_perm serialize_expr) singleton_to_nlist_recip) (fs, sn) x);
+  Trade.trans _ _ (vmatch_synth (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1) (synth_nlist 1) x1' x);
+  (fs, sn)
+}
+
+inline_for_extraction noextract [@@noextract_to "krml"]
+let write_expr_base_payload'
   (xh1: header)
 : l2r_writer (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1)
     (serialize_nlist 
       (count_payload xh1)
       serialize_expr
+    )
+= l2r_writer_ifthenelse
+    (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1)
+    (serialize_nlist 
+      (count_payload xh1)
+      serialize_expr
+    )
+    (get_header_type xh1 = 255uy)
+    (fun _ ->
+      [@@inline_let] let _ = LowParse.Spec.VCList.parse_nlist_nil_as_synth_eq parse_expr in
+      l2r_writer_ext
+        (l2r_write_synth_recip
+          _
+          (empty_to_nlist expr) (empty_to_nlist_recip expr)
+          (l2r_write_empty _)
+        )
+        _
+    )
+    (fun _ -> l2r_writer_ifthenelse
+      (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1)
+      (serialize_nlist 
+        (count_payload xh1)
+        serialize_expr
+      )
+      (get_header_type xh1 = 254uy)
+      (fun _ ->
+        [@@inline_let] let _ = LowParse.Spec.VCList.parse_nlist_nil_as_synth_eq parse_expr in
+        [@@inline_let] let _ = LowParse.Spec.VCList.parse_nlist_singleton_as_synth_eq parse_expr in
+        l2r_writer_ext
+          (l2r_write_synth_recip
+            (vmatch_dep_proj2 (vmatch_synth rel_base synth_expr) xh1)
+            (synth_nlist 1) (synth_nlist_recip 1)
+            (l2r_writer_lens
+              (write_expr_base_payload_minus xh1 () ())
+              (l2r_write_nondep_then_direct
+                (l2r_write_copy serialize_expr)
+                ()
+                (l2r_writer_ext
+                  (l2r_write_synth _
+                    (l2r_write_copy serialize_expr)
+                    (singleton_to_nlist #expr)
+                    (singleton_to_nlist_recip #expr)
+                  )
+                  (serialize_nlist 1 serialize_expr)
+                )
+              )
+            )
+          )
+          (serialize_nlist 
+            (count_payload xh1)
+            serialize_expr
+          )
+      )
+      (fun _ ->
+        l2r_writer_lens
+          (write_expr_base_payload_plus xh1 () ())
+          (l2r_write_copy _)
+      )
     )
 
 inline_for_extraction noextract [@@noextract_to "krml"]
