@@ -64,10 +64,31 @@ type ht_t = ht_t sid_t session_state
 noeq
 type st = { st_ctr:sid_t; st_tbl:ht_t; }
 
-
 //
 // Ghost state set up
 //
+
+module DK = CDDLTest.DPE.DeriveContextInput
+let record_t = either DK.engine_record DK.l0_record
+let spec_record_t = either DK.spec_engine_record DK.spec_l0_record
+
+val cdi_functional_correctness : c0:Seq.seq U8.t -> uds_bytes:Seq.seq U8.t -> repr:DK.spec_engine_record -> prop
+val l0_is_authentic : repr:DK.spec_engine_record -> prop
+
+val l0_context_spec_t : Type u#0
+val engine_record_of_l0_context (r:l0_context_spec_t) : GTot DK.spec_engine_record
+val uds_of_l0 (r:l0_context_spec_t) : GTot (Seq.seq U8.t)
+val cdi_of_l0 (r:l0_context_spec_t) : GTot (Seq.seq U8.t)
+
+val l1_context_spec_t : Type u#0
+val l0_record_of_l1_context (r:l1_context_spec_t) : GTot DK.spec_l0_record
+val cdi_of_l1 (r:l1_context_spec_t) : GTot (Seq.seq U8.t)
+
+noeq
+type spec_context_t = 
+  | Engine_context_spec : uds:Seq.seq U8.t -> spec_context_t
+  | L0_context_spec     : r:l0_context_spec_t -> spec_context_t
+  | L1_context_spec     : r:l1_context_spec_t -> spec_context_t
 
 //
 // Ghost session state
@@ -80,7 +101,7 @@ noeq
 type g_session_state : Type u#1 =
   | G_UnInitialized : g_session_state
   | G_SessionStart : g_session_state
-  | G_Available : repr:context_repr_t -> g_session_state
+  | G_Available : repr:spec_context_t -> g_session_state
   | G_InUse : g_session_state -> g_session_state
   | G_SessionClosed : g_session_state -> g_session_state
   | G_SessionError : g_session_state -> g_session_state
@@ -92,12 +113,12 @@ type g_session_state : Type u#1 =
 //   and L1 repr should use the same CDI as the L0 repr
 //
 noextract
-let next_repr (r1 r2:context_repr_t) : prop =
+let next_spec (r1 r2:spec_context_t) : prop =
   match r1, r2 with
-  | Engine_context_repr uds, L0_context_repr l0_repr ->
-    uds == l0_repr.uds
-  | L0_context_repr l0_repr, L1_context_repr l1_repr ->
-    l0_repr.cdi == l1_repr.cdi
+  | Engine_context_spec uds, L0_context_spec l0_repr ->
+    uds == uds_of_l0 l0_repr
+  | L0_context_spec l0_repr, L1_context_spec l1_repr ->
+    cdi_of_l0 l0_repr == cdi_of_l1 l1_repr
   | _ -> False
 
 //
@@ -117,15 +138,15 @@ let rec next (s0 s1:g_session_state) : prop =
   //
   // SessionStart may go to Available with engine repr
   //
-  | G_SessionStart, G_Available (Engine_context_repr _) -> True
+  | G_SessionStart, G_Available (Engine_context_spec _) -> True
 
   //
   // Available r0 may go to Available r1,
   //   as long as repr r1 follows repr r0
   //
   | G_Available r0, G_Available r1 ->
-    next_repr r0 r1 \/
-    (L1_context_repr? r0 /\ r0 == r1)
+    next_spec r0 r1 \/
+    (L1_context_spec? r0 /\ r0 == r1)
 
   //
   // SessionClosed is a terminal state
@@ -219,140 +240,58 @@ let next_trace (t:trace) (s:g_session_state { valid_transition t s }) : trace =
     | [] -> [s]::t
     | l -> (s::l)::t
 
-//
-// A frame preserving update in the trace PCM,
-//   given a valid transition
-//
-noextract
-let mk_frame_preserving_upd
-  (t:hist trace_preorder)
-  (s:g_session_state { valid_transition t s })
-  : FStar.PCM.frame_preserving_upd trace_pcm (Some 1.0R, t) (Some 1.0R, next_trace t s) =
-  fun _ -> Some 1.0R, next_trace t s
+val dpe_pcm_carrier_t : Type u#1
+val dpe_pcm : PCM.pcm dpe_pcm_carrier_t
+let dpe_ghost_state = ghost_pcm_ref dpe_pcm
+val sid_pts_to (r:dpe_ghost_state) (sid:sid_t) (t:trace) : slprop
+val trace_ref : dpe_ghost_state
 
-//
-// A snapshot of the trace PCM is the trace with no permission
-//
-noextract
-let snapshot (x:trace_pcm_t) : trace_pcm_t = None, snd x
+// let session_state_related (s:session_state) (gs:g_session_state) : slprop =
+//   match s, gs with
+//   | SessionStart, G_SessionStart
+//   | InUse, G_InUse _
+//   | SessionClosed, G_SessionClosed _
+//   | SessionError, G_SessionError _ -> emp
 
-let snapshot_idempotent (x:trace_pcm_t)
-  : Lemma (snapshot x == snapshot (snapshot x)) = ()
+//   | Available {context}, G_Available repr -> context_perm context repr
 
-let snapshot_duplicable (x:trace_pcm_t)
-  : Lemma
-      (requires True)
-      (ensures x `FStar.PCM.composable trace_pcm` snapshot x) = ()
+//   | _ -> pure False
 
-let full_perm_empty_history_compatible ()
-  : Lemma (FStar.PCM.compatible trace_pcm (Some 1.0R, []) (Some 1.0R, [])) = ()
+// //
+// // Invariant for sessions that have been started
+// //
+// let session_state_perm (r:gref) (pht:pht_t) (sid:sid_t) : slprop =
+//   exists* (s:session_state) (t:trace).
+//     pure (PHT.lookup pht sid == Some s) **
+//     sid_pts_to r sid t **
+//     session_state_related s (current_state t)
 
-noextract
-type pcm_t : Type u#1 = PM.map sid_t trace_pcm_t
+// //
+// // We have to do this UInt.fits since the OnRange is defined for nat keys,
+// //   if we parameterized it over a typeclass, we can directly use u32 keys
+// //   and this should go away
+// //
+// let session_perm (r:gref) (pht:pht_t) (sid:nat) =
+//   if UInt.fits sid 16
+//   then session_state_perm r pht (U16.uint_to_t sid)
+//   else emp
 
-//
-// The PCM for the DPE state is a map pcm with sid_t keys
-//   and pointwise trace_pcm
-noextract
-let pcm : PCM.pcm pcm_t = PM.pointwise sid_t trace_pcm
+// noextract
+// let map_literal (f:sid_t -> trace_pcm_t) : pcm_t = Map.map_literal f
 
-[@@ erasable]
-noextract
-type gref = ghost_pcm_ref pcm
+// noextract
+// let all_sids_unused : pcm_t = map_literal (fun _ -> Some 1.0R, emp_trace)
 
-noextract
-let emp_trace : trace = []
+// let sids_above_unused (s:sid_t) : GTot pcm_t = map_literal (fun sid ->
+//   if U16.lt sid s then None, emp_trace
+//   else Some 1.0R, emp_trace)
 
-noextract
-let singleton (sid:sid_t) (p:perm) (t:trace) : GTot pcm_t =
-  Map.upd (Map.const (None, emp_trace)) sid (Some p, t)
 
-//
-// The main permission we provide to the client,
-//   to capture the session history for a sid
-//
-noextract
-let sid_pts_to (r:gref) (sid:sid_t) (t:trace) : slprop =
-  ghost_pcm_pts_to r (singleton sid 0.5R t)
+// val trace_ref : gref
 
-noextract
-type pht_t = PHT.pht_t sid_t session_state
-
-//
-// Towards the global state invariant
-//
-
-let session_state_related (s:session_state) (gs:g_session_state) : slprop =
-  match s, gs with
-  | SessionStart, G_SessionStart
-  | InUse, G_InUse _
-  | SessionClosed, G_SessionClosed _
-  | SessionError, G_SessionError _ -> emp
-
-  | Available {context}, G_Available repr -> context_perm context repr
-
-  | _ -> pure False
-
-//
-// Invariant for sessions that have been started
-//
-let session_state_perm (r:gref) (pht:pht_t) (sid:sid_t) : slprop =
-  exists* (s:session_state) (t:trace).
-    pure (PHT.lookup pht sid == Some s) **
-    sid_pts_to r sid t **
-    session_state_related s (current_state t)
-
-//
-// We have to do this UInt.fits since the OnRange is defined for nat keys,
-//   if we parameterized it over a typeclass, we can directly use u32 keys
-//   and this should go away
-//
-let session_perm (r:gref) (pht:pht_t) (sid:nat) =
-  if UInt.fits sid 16
-  then session_state_perm r pht (U16.uint_to_t sid)
-  else emp
-
-noextract
-let map_literal (f:sid_t -> trace_pcm_t) : pcm_t = Map.map_literal f
-
-noextract
-let all_sids_unused : pcm_t = map_literal (fun _ -> Some 1.0R, emp_trace)
-
-let sids_above_unused (s:sid_t) : GTot pcm_t = map_literal (fun sid ->
-  if U16.lt sid s then None, emp_trace
-  else Some 1.0R, emp_trace)
-
-//
-// Main invariant
-//
-let dpe_inv (r:gref) (s:option st) : slprop =
-  match s with
-  //
-  // Global state is not initialized,
-  //   all the sessions are unused
-  //
-  | None -> ghost_pcm_pts_to r all_sids_unused
-  
-  //
-  // Global state has been initialized
-  //
-  | Some s ->
-    //
-    // sids above counter are unused
-    //
-    ghost_pcm_pts_to r (sids_above_unused s.st_ctr) **
-    
-    //
-    // For sids below counter, we have the session state perm
-    //
-    (exists* pht. models s.st_tbl pht **
-                  on_range (session_perm r pht) 0 (U16.v s.st_ctr))
-
-val trace_ref : gref
-
-//
-// The DPE API
-//
+// //
+// // The DPE API
+// //
 
 let open_session_client_perm (s:option sid_t) : slprop =
   match s with
@@ -371,9 +310,7 @@ let trace_valid_for_initialize_context (t:trace) : prop =
 
 let initialize_context_client_perm (sid:sid_t) (uds:Seq.seq U8.t) =
   exists* t. sid_pts_to trace_ref sid t **
-             pure (current_state t == G_Available (Engine_context_repr uds))
-
-let lslice t (n:nat) = s:Slice.slice t { SZ.v <| Slice.len s == n }
+             pure (current_state t == G_Available (Engine_context_spec uds))
 
 val initialize_context (sid:sid_t) 
   (t:G.erased trace { trace_valid_for_initialize_context t })
@@ -387,21 +324,27 @@ val initialize_context (sid:sid_t)
            pts_to uds #p uds_bytes **
            initialize_context_client_perm sid uds_bytes)
 
-noextract
-let trace_and_record_valid_for_derive_child (t:trace) (r:repr_t) : prop =
+let record_perm (record:record_t) (spec:spec_record_t)  : slprop = 
+  match record, spec with
+  | Inl er, Inl s_er -> DK.is_engine_record_core er s_er
+  | Inr l0, Inr s_l0 -> DK.is_l0_record_core l0 s_l0
+  | _ -> pure False
+
+let trace_and_record_valid_for_derive_child (t:trace) (r:spec_record_t) : prop =
   match current_state t, r with
-  | G_Available (Engine_context_repr _), Engine_repr _
-  | G_Available (L0_context_repr _), L0_repr _ -> True
+  | G_Available (Engine_context_spec _), Inl _
+  | G_Available (L0_context_spec _), Inr _ -> True
   | _ -> False
 
-noextract
-let derive_child_post_trace (r:repr_t) (t:trace) =
+let derive_child_post_trace (r:spec_record_t) (t:trace) =
   match r, current_state t with
-  | Engine_repr r, G_Available (L0_context_repr lrepr)
-  | L0_repr r, G_Available (L1_context_repr lrepr) -> lrepr.repr == r
+  | Inl r, G_Available (L0_context_spec l0_ctxt) ->
+    r == engine_record_of_l0_context l0_ctxt
+  | Inr r, G_Available (L1_context_spec l1_ctxt) ->
+    r == l0_record_of_l1_context l1_ctxt
   | _ -> False
 
-let derive_child_client_perm (sid:sid_t) (t0:trace) (repr:repr_t) (res:bool)
+let derive_child_client_perm (sid:sid_t) (t0:trace) (repr:spec_record_t) (res:bool)
   : slprop =
   match res with
   | false ->
@@ -411,42 +354,24 @@ let derive_child_client_perm (sid:sid_t) (t0:trace) (repr:repr_t) (res:bool)
     exists* t1. sid_pts_to trace_ref sid t1 **
                 pure (derive_child_post_trace repr t1)
 
+
 val derive_child (sid:sid_t)
   (t:G.erased trace)
   (record:record_t)
-  (#rrepr:erased repr_t { trace_and_record_valid_for_derive_child t rrepr })
+  (#rrepr:erased spec_record_t { trace_and_record_valid_for_derive_child t rrepr })
   : stt bool
-        (requires
-           record_perm record 1.0R rrepr **
-           sid_pts_to trace_ref sid t)
-        (ensures fun b ->
-           derive_child_client_perm sid t rrepr b)
+    (requires
+      record_perm record rrepr **
+      sid_pts_to trace_ref sid t)
+    (ensures fun b ->
+      record_perm record rrepr **
+      derive_child_client_perm sid t rrepr b)
 
-noextract
-let trace_valid_for_close (t:trace) : prop =
-  match current_state t with
-  | G_UnInitialized
-  | G_SessionClosed _
-  | G_InUse _ -> False
-  | _ -> True
-
-let session_closed_client_perm (sid:sid_t) (t0:trace) =
-  exists* t1. sid_pts_to trace_ref sid t1 **
-              pure (current_state t1 == G_SessionClosed (G_InUse (current_state t0)))
-
-val close_session
-  (sid:sid_t)
-  (t:G.erased trace { trace_valid_for_close t })
-  : stt unit
-        (requires
-           sid_pts_to trace_ref sid t)
-        (ensures fun m ->
-           session_closed_client_perm sid t)
 
 noextract
 let trace_valid_for_certify_key (t:trace) : prop =
   match current_state t with
-  | G_Available (L1_context_repr _) -> True
+  | G_Available (L1_context_spec _) -> True
   | _ -> False
 
 let certify_key_client_perm (sid:sid_t) (t0:trace) : slprop =
@@ -472,7 +397,7 @@ val certify_key (sid:sid_t)
 noextract
 let trace_valid_for_sign (t:trace) : prop =
   match current_state t with
-  | G_Available (L1_context_repr _) -> True
+  | G_Available (L1_context_spec _) -> True
   | _ -> False
 
 let sign_client_perm (sid:sid_t) (t0:trace) : slprop =
@@ -494,3 +419,26 @@ val sign (sid:sid_t)
            (exists* signature_repr msg_repr.
               pts_to signature signature_repr **
               pts_to msg msg_repr))
+
+
+noextract
+let trace_valid_for_close (t:trace) : prop =
+  match current_state t with
+  | G_UnInitialized
+  | G_SessionClosed _
+  | G_InUse _ -> False
+  | _ -> True
+
+let session_closed_client_perm (sid:sid_t) (t0:trace) =
+  exists* t1. sid_pts_to trace_ref sid t1 **
+              pure (current_state t1 == G_SessionClosed (G_InUse (current_state t0)))
+
+val close_session
+  (sid:sid_t)
+  (t:G.erased trace { trace_valid_for_close t })
+  : stt unit
+        (requires
+           sid_pts_to trace_ref sid t)
+        (ensures fun m ->
+           session_closed_client_perm sid t)
+
