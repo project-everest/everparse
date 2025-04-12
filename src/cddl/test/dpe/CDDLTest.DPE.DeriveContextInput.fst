@@ -482,7 +482,6 @@ ensures (
       is_record_opt e se (pts_to s #p w) **
       pure (is_input_args_data w se)
   )
-
 {
   let res = validate_and_parse_derive_context_input_args s;
   match res {
