@@ -5,7 +5,7 @@ bstr test_sign(bstr payload, bstr key_data) {
     uint8_t *signing_key = parse_ed25519_private_key(key_data);
     bstr outbuf = { .len = 1024 };
     check(outbuf.elt = malloc(outbuf.len));
-    outbuf.len = sign1_simple(signing_key, payload, outbuf);
+    outbuf = sign1_simple(signing_key, payload, outbuf);
     return outbuf;
 }
 

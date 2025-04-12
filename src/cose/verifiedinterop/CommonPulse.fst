@@ -135,13 +135,15 @@ fn mk_sig_structure phdr aad payload
 open EverCrypt.Ed25519
 module AP = Pulse.Lib.ArrayPtr
 
+let ser_to #t #st (s: CDDL.Spec.Base.spec t st true) (x: st) y =
+  s.serializable x /\ Seq.equal y (CBOR.Spec.API.Format.cbor_det_serialize (s.serializer x))
+
 let to_be_signed_spec
     (phdr: spect_evercddl_empty_or_serialized_map_pretty)
     (aad payload: spect_evercddl_bstr_pretty)
-    (tbs: Seq.seq UInt8.t) =
-  let open CDDL.Pulse.Bundle.Base in
-  bundle_Sig_structure''.b_spec.serializable (mk_sig_structure_spec phdr aad payload) /\
-  Seq.equal tbs (CBOR.Spec.API.Format.cbor_det_serialize (bundle_Sig_structure''.b_spec.serializer (mk_sig_structure_spec phdr aad payload)))
+    (tbs: Seq.seq UInt8.t)
+    : prop =
+  ser_to bundle_Sig_structure''.b_spec (mk_sig_structure_spec phdr aad payload) tbs
 
 module Vec = Pulse.Lib.Vec
 module S = Pulse.Lib.Slice
@@ -402,23 +404,51 @@ let rel_bstr_eq (x: evercddl_bstr_pretty) (y: spect_evercddl_bstr_pretty) =
       pts_to s #p y ** pure (false == false))
     )
 
+ghost fn rw_r_wt #a #b (h: squash (a == b)) requires a ensures b ** trade b a { rewrite_with_trade a b }
+ghost fn rw_l_wt #a #b (h: squash (a == b)) requires b ensures a ** trade a b { rewrite_with_trade b a }
+
+let sign1_spec
+    privkey
+    (uhdr: spect_evercddl_header_map_pretty)
+    (aad payload: spect_evercddl_bstr_pretty)
+    (msg: Seq.seq UInt8.t)
+    : prop =
+  let open CDDL.Pulse.Bundle.Base in
+  let phdr = sign1_phdrs_spec (-8l) in
+  exists tbs. to_be_signed_spec phdr aad payload tbs /\
+  ser_to bundle_COSE_Sign1_Tagged''.b_spec
+    (Mkspect_evercddl_COSE_Sign1_Tagged_pretty0 (Mkspect_evercddl_COSE_Sign1_pretty0
+        phdr uhdr (Inl payload) { _x0 = spec_ed25519_sign privkey tbs }))
+    msg
+
+ghost fn trade_exists (#t: Type0) (p: t->slprop) x
+  ensures trade (p x) (exists* y. p y)
+{
+  ghost fn aux ()
+    requires emp ** p x
+    ensures exists* y. p y
+  { () };
+  intro_trade _ _ _ aux;
+}
+
 fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
     #pprivkey (#vprivkey: erased (Seq.seq UInt8.t) { Seq.length vprivkey == 32 })
     (#vuhdr: erased _) (#vaad: erased _) (#vpayload: erased _)
-    (#voutbuf: erased _)
   requires AP.pts_to privkey #pprivkey vprivkey
   requires rel_evercddl_header_map uhdr vuhdr
   requires rel_evercddl_bstr aad vaad
   requires rel_evercddl_bstr payload vpayload
-  requires pts_to outbuf voutbuf
+  requires exists* voutbuf. pts_to outbuf voutbuf
 
-  returns outbuf_sz: SizeT.t
+  returns out: S.slice UInt8.t
   ensures AP.pts_to privkey #pprivkey vprivkey
   ensures rel_evercddl_header_map uhdr vuhdr
   ensures rel_evercddl_bstr aad vaad
   ensures rel_evercddl_bstr payload vpayload
-  ensures exists* voutbuf. pts_to outbuf voutbuf ** pure (SizeT.v outbuf_sz <= Seq.length voutbuf)
-  //  ** pure (SizeT.lt 0sz outbuf_sz ==> Seq.slice voutbuf 0 (SizeT.v outbuf_sz) == _)
+  ensures exists* msg.
+    S.pts_to out msg **
+    trade (S.pts_to out msg) (exists* voutbuf. pts_to outbuf voutbuf) **
+    pure (sign1_spec vprivkey vuhdr vaad vpayload msg)
 {
   let alg: Int32.t = -8l;
   let mut phdrauxbuf = [| dummy_map_val (); 0sz |];
@@ -430,22 +460,24 @@ fn sign1 privkey uhdr aad payload (outbuf: S.slice UInt8.t)
   AP.to_array sigbuf2 sigbuf #_ #(spec_ed25519_sign vprivkey _);
   with tbs. assert A.pts_to sigbuf (spec_ed25519_sign vprivkey tbs);
   let sigbuf3 = S.from_array sigbuf 64sz;
-  let sigbuf4: evercddl_bstr_pretty = { _x0 = { p = 1.0R; s = sigbuf3 } };
-  rewrite
-    S.pts_to sigbuf3 (spec_ed25519_sign vprivkey tbs) ** pure (false == false)
-    as
-    (rel_evercddl_bstr sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs });
-  rw_l (rel_sign1_tagged_eq1 phdr _ payload sigbuf4 (sign1_phdrs_spec alg) _ vpayload _);
+  with sigbuf4. assert pure ((sigbuf4 <: evercddl_bstr_pretty) == { _x0 = { p = 1.0R; s = sigbuf3 } });
+  rw_l_wt (rel_bstr_eq sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs });
+  rw_l_wt (rel_sign1_tagged_eq1 phdr _ payload sigbuf4 (sign1_phdrs_spec alg) _ vpayload _);
   let outbuf_sz = serialize_COSE_Sign1_Tagged' _ outbuf;
-  rw_r (rel_sign1_tagged_eq1 phdr _ payload _ (sign1_phdrs_spec alg) _ vpayload _);
-  rewrite
-    (rel_evercddl_bstr sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs })
-    as
-    S.pts_to sigbuf3 (spec_ed25519_sign vprivkey tbs) ** pure (false == false);
+  elim_trade (rel_evercddl_COSE_Sign1_Tagged _ _) _;
+  elim_trade (rel_evercddl_bstr sigbuf4 { _x0 = spec_ed25519_sign vprivkey tbs }) _;
   S.to_array sigbuf3;
   elim_trade _ _;
-  if (outbuf_sz = 0sz) { abort (); 0sz } else {
-    outbuf_sz;
+  with voutbuf. assert S.pts_to outbuf voutbuf;
+  trade_exists (S.pts_to outbuf) voutbuf;
+  if (outbuf_sz = 0sz) {
+    abort ();
+    assert S.pts_to outbuf (spec_ed25519_sign vprivkey tbs);
+    outbuf
+  } else {
+    let out = Pulse.Lib.Slice.Util.subslice_trade outbuf 0sz outbuf_sz;
+    trade_compose _ (S.pts_to outbuf _) _;
+    out;
   }
 }
 
@@ -457,11 +489,13 @@ fn sign1_simple privkey payload (outbuf: S.slice UInt8.t)
   requires rel_evercddl_bstr payload vpayload
   requires pts_to outbuf voutbuf
 
-  returns outbuf_sz: SizeT.t
+  returns out: S.slice UInt8.t
   ensures AP.pts_to privkey #pprivkey vprivkey
   ensures rel_evercddl_bstr payload vpayload
-  ensures exists* voutbuf. S.pts_to outbuf voutbuf ** pure (SizeT.v outbuf_sz <= Seq.length voutbuf)
-  //  ** pure (SizeT.lt 0sz outbuf_sz ==> Seq.slice voutbuf 0 (SizeT.v outbuf_sz) == _)
+  ensures exists* msg.
+    S.pts_to out msg **
+    trade (S.pts_to out msg) (exists* voutbuf. pts_to outbuf voutbuf) **
+    pure (sign1_spec vprivkey (sign1_emphdrs_spec ()) { _x0 = Seq.create 0 0uy } vpayload msg)
 {
   let mut uhdrauxbuf = [| dummy_map_val (); 0sz |];
   let uhdr = mk_emphdrs uhdrauxbuf;
@@ -470,9 +504,10 @@ fn sign1_simple privkey payload (outbuf: S.slice UInt8.t)
   with aad. assert pure ((aad <: evercddl_bstr_pretty) == Mkevercddl_bstr_pretty0 { s = aadslice; p = 1.0R });
   rw_l (rel_bstr_eq aad (Mkspect_evercddl_bstr_pretty0 _));
   let res = sign1 privkey uhdr aad payload outbuf;
+  with msg. assert pts_to res msg;
   rw_r (rel_bstr_eq aad (Mkspect_evercddl_bstr_pretty0 _));
   S.to_array aadslice;
-  elim_trade _ _;
+  elim_trade _ (A.pts_to uhdrauxbuf _);
   res
 }
 
@@ -546,9 +581,6 @@ inline_for_extraction
 let sixty_four: v: SizeT.t { SizeT.v v == 64 } = 64sz
 
 module T = Pulse.Lib.Trade
-
-ghost fn rw_r_wt #a #b (h: squash (a == b)) requires a ensures b ** trade b a { T.rewrite_with_trade a b }
-ghost fn rw_l_wt #a #b (h: squash (a == b)) requires b ensures a ** trade a b { T.rewrite_with_trade b a }
 
 fn verify1_core pubkey aad (msg: evercddl_COSE_Sign1_Tagged_pretty { Inl? msg._x0.payload })
     #ppubkey (#vpubkey: erased (Seq.seq UInt8.t) { Seq.length vpubkey == 32 })
