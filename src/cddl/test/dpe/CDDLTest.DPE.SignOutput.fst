@@ -213,6 +213,11 @@ ensures
   ()
 }
 
+let is_serialized_sig (out sig:Seq.seq UInt8.t) =
+  exists hres.
+    is_serialized_sign_output hres out /\
+    struct_has_sig hres sig
+
 fn write_certify_key_output_alt
     (out:Slice.slice UInt8.t)
     (sign:Slice.slice UInt8.t)
@@ -226,9 +231,7 @@ ensures
   exists* w.
     pts_to sign #p s **
     pts_to out w **
-    pure (exists hres. res ==> 
-          is_serialized_sign_output hres w /\
-          struct_has_sig hres s)
+    pure (res ==> is_serialized_sig w s)
 {
   let res = prepare_sign_output sign;
   let sz = serialize_signoutputargs' _ out;

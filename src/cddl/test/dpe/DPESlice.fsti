@@ -382,22 +382,25 @@ let sign_client_perm (sid:sid_t) (t0:trace) : slprop =
   exists* t1. sid_pts_to trace_ref sid t1 **
               pure (current_state t1 == current_state t0)
 
-val sign (sid:sid_t)
+val is_signature (sign tbs:Seq.seq UInt8.t) : prop
+
+fn sign 
+  (sid:sid_t)
   (signature:Slice.slice U8.t { Slice.len signature == 64sz })
   (msg:Slice.slice U8.t { SZ.v <| Slice.len msg < pow2 32 })
   (t:G.erased trace { trace_valid_for_sign t })
-  : stt unit
-        (requires
-           sid_pts_to trace_ref sid t **
-           (exists* signature_repr msg_repr.
-              pts_to signature signature_repr **
-              pts_to msg msg_repr))
-        (ensures fun _ ->
-           certify_key_client_perm sid t **
-           (exists* signature_repr msg_repr.
-              pts_to signature signature_repr **
-              pts_to msg msg_repr))
-
+  (#tbs:erased (Seq.seq U8.t))
+  (#p:perm)
+requires 
+  sid_pts_to trace_ref sid t **
+  pts_to msg #p tbs **
+  (exists* w. pts_to signature w)
+ensures 
+  exists* sign. 
+    certify_key_client_perm sid t **
+    pts_to msg #p tbs **
+    pts_to signature sign **
+    pure (is_signature sign tbs)
 
 noextract
 let trace_valid_for_close (t:trace) : prop =

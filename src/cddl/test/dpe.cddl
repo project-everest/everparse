@@ -95,7 +95,7 @@ sign-input-args = {
   ? &(retain-context:2) ^=> bool, ; Default = false 
   ? &(label:3) ^=> bytes, 
   ? &(is-symmetric:4) ^=> bool, ; Default = false 
-  ? &(to-be-signed:5) ^=> bytes, 
+  &(to-be-signed:5) ^=> bytes, 
   * &(tstr:uint) => any 
 } 
  

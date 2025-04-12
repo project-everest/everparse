@@ -17,6 +17,7 @@ module U32 = FStar.UInt32
 module I = CDDLTest.DPE.InitializeContextInput
 module DC = CDDLTest.DPE.DeriveContextInput
 module CKO = CDDLTest.DPE.CertifyKeyOutput
+module SI = CDDLTest.DPE.SignInput
 module SO = CDDLTest.DPE.SignOutput
 open CDDL.Pulse.Types
 open FStar.Seq
@@ -24,20 +25,12 @@ open DPESlice
 module U8 = FStar.UInt8
 module D = CDDLTest.Destructors
 
-let norm_token = emp
+assume
+val max_cert_len : SZ.t
+assume
+val size_t_fits_in_u32 (z:SZ.t)
+: Lemma (SZ.v z < pow2 32)
 
-ghost
-fn intro_norm ()
-requires emp
-ensures norm_token
-{ fold norm_token; () }
-
-
-ghost
-fn force_norm ()
-requires norm_token
-ensures emp
-{ unfold norm_token; () }
 
 fn initialize_context
   (#sid:sid_t)
@@ -239,9 +232,6 @@ ensures derive_context_post sid t p w input res
   }
 }
 
-assume
-val max_cert_len : SZ.t
-
 fn certify_key
     (sid:sid_t)
     (out:Slice.slice U8.t)
@@ -267,4 +257,70 @@ ensures exists* w.
   Slice.to_array pk_out_slice;
   Slice.to_array cert_out_slice;
   ok
+}
+
+
+type sign_result =
+  | Parse_failed
+  | Sig_failed
+  | Sig_success
+
+fn sign
+    (sid:sid_t)
+    (input:Slice.slice U8.t)
+    (out:Slice.slice U8.t)
+    (#t:G.erased trace { trace_valid_for_sign t })
+    (#p:perm)
+    (#w wout:erased _)
+requires
+  sid_pts_to trace_ref sid t **
+  pts_to input #p w **
+  pts_to out wout
+returns ok:sign_result
+ensures (
+  match ok with
+  | Parse_failed -> 
+    sid_pts_to trace_ref sid t **
+    pts_to input #p w **
+    pts_to out wout **
+    pure (SI.parse_failed w)
+
+  | Sig_failed -> (
+    exists* wout.
+      certify_key_client_perm sid t **
+      pts_to input #p w **
+      pts_to out wout **
+      pure (exists tbs_bytes. SI.is_tbs_bytes tbs_bytes w)
+  )
+
+  | Sig_success -> (
+    exists* (out_bytes:_).
+      certify_key_client_perm sid t **
+      pts_to input #p w **
+      pts_to out out_bytes **
+      pure (exists sig tbs_bytes.
+        SI.is_tbs_bytes tbs_bytes w /\
+        is_signature sig tbs_bytes /\
+        SO.is_serialized_sig out_bytes sig
+      )
+  )
+)
+{
+  let tbs_opt = SI.parse_sign_input_args input;
+  match tbs_opt {
+    None -> {
+      Parse_failed
+    }
+    Some tbs_slice -> {
+      let mut sign_out = [| 0uy; 64sz |];
+      let sign_out_slice = Slice.from_array sign_out 64sz;
+      Slice.pts_to_len sign_out_slice;
+      size_t_fits_in_u32 (Slice.len tbs_slice);
+      sign sid sign_out_slice tbs_slice t;
+      let ok = SO.write_certify_key_output_alt out sign_out_slice;
+      Slice.to_array sign_out_slice;
+      Trade.elim_trade _ _;
+      if ok { Sig_success } else { Sig_failed }
+    }
+  }
 }

@@ -58,13 +58,17 @@ let is_tbs_bytes (tbs_bytes:Seq.seq UInt8.t) (w:Seq.seq UInt8.t) =
           validate_and_parse_postcond_some bundle_signinputargs.b_spec.parser w wx wr /\
           wx._x4 == spect_evercddl_bytes_pretty_right (spect_evercddl_bstr_pretty_right tbs_bytes)
 
+let parse_failed (w:Seq.seq UInt8.t) =
+  validate_and_parse_postcond_none bundle_signinputargs.b_typ w
 
 fn parse_sign_input_args (s:Slice.slice UInt8.t) (#p:perm) (#w:erased _)
 requires pts_to s #p w
 returns tbs:option (Slice.slice UInt8.t)
 ensures (
   match tbs with
-  | None -> pts_to s #p w
+  | None -> 
+    pts_to s #p w **
+    pure (parse_failed w)
   | Some tbs -> 
     exists* #q tbs_bytes.
       pts_to tbs #q tbs_bytes **
