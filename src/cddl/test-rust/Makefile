@@ -1,4 +1,4 @@
-all: extract-all
+all: build-rust
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
 
@@ -10,7 +10,10 @@ $(OUTPUT): test.cddl
 extract-all: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile extract
 
-.PHONY: extract-all all
+build-rust:
+	cargo build
+
+.PHONY: build-rust extract-all all
 
 # Uncomment if you want to edit the produced F* file
 # include extract.Makefile
