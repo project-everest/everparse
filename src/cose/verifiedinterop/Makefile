@@ -1,5 +1,5 @@
 .PHONY: all
-all: sign
+all: signtest verifytest test
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
 EVERPARSE_PATH = $(realpath $(EVERPARSE_SRC_PATH)/..)
@@ -12,7 +12,7 @@ FSTAR_OPTIONS += --load_cmxs evercddl_lib --load_cmxs evercddl_plugin
 FSTAR_OPTIONS += --warn_error -342 # noextract
 FSTAR_DEP_FILE := $(OUTPUT_DIRECTORY)/.depend
 FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool'
-FSTAR_FILES := Sign.fst
+FSTAR_FILES := CommonPulse.fst
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 include $(EVERPARSE_SRC_PATH)/pulse.Makefile
@@ -22,24 +22,38 @@ KRML_OPTS += -warn-error @4@6
 
 KRML=$(KRML_HOME)/krml -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
-ALL_C_FILES := _output/Sign.c
+ALL_C_FILES := _output/CommonPulse.c
 
 .PHONY: extract
 extract: $(ALL_C_FILES)
 
-_output/Sign.c: $(ALL_KRML_FILES)
-	$(KRML) -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' -bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]'  -bundle Sign=*[rename=Sign] -add-include '"CBORDetAbstract.h"' -no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix Sign -skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
+_output/CommonPulse.c: $(ALL_KRML_FILES)
+	$(KRML) -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
+		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
+		-add-include '"CBORDetAbstract.h"' \
+		-bundle 'COSE.Format=COSE.Format,C,CDDL.*' \
+		-add-include '"COSE_Format.h"' \
+		-bundle CommonPulse=*[rename=CommonPulse] \
+		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix CommonPulse \
+		-skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
 
-# disable extraction_inline_all
-$(ALL_KRML_FILES): %.krml:
-	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml \
-	  --extract_module $(basename $(notdir $(subst .checked,,$<)))
-	touch -c $@
+_output/COSE_Format.c: _output/CommonPulse.c
+
+SANFLAGS += -fsanitize=address -fsanitize=undefined
+CFLAGS += $(SANFLAGS)
+LDFLAGS += $(SANFLAGS)
 
 CFLAGS += -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
 
 $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a:
 	$(MAKE) -C $(dir $@)
 
-sign: _output/Sign.c ../../cbor/pulse/det/c/CBORDet.c $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a
-	$(CC) $(CFLAGS) $+ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a -o $@
+signtest: signtest.c common.c _output/CommonPulse.c _output/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a
+	$(CC) $(CFLAGS) $+ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a -I _output -o $@
+
+verifytest: verifytest.c common.c _output/CommonPulse.c _output/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a
+	$(CC) $(CFLAGS) $+ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a -I _output -o $@
+
+.PHONY: test
+test: signtest verifytest
+	../interop/.venv/bin/python test.py

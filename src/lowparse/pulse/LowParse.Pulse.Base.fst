@@ -682,6 +682,36 @@ fn reader_of_leaf_reader
   f x
 }
 
+let l2r_writer_for_pre
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: Ghost.erased t)
+  (offset: SZ.t)
+  (v: Ghost.erased bytes)
+: Tot prop
+= SZ.v offset + Seq.length (bare_serialize s x) <= Seq.length v
+
+let l2r_writer_for_post
+  (#t: Type0)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+  (x: Ghost.erased t)
+  (offset: SZ.t)
+  (v: Ghost.erased bytes)
+  (res: SZ.t)
+  (v' : Seq.seq byte)
+: Tot prop
+=
+      let bs = bare_serialize s x in
+      SZ.v res == SZ.v offset + Seq.length bs /\
+      SZ.v res <= Seq.length v /\
+      Seq.length v' == Seq.length v /\
+      Seq.slice v' 0 (SZ.v offset) `Seq.equal` Seq.slice v 0 (SZ.v offset) /\
+      Seq.slice v' (SZ.v offset) (SZ.v res) `Seq.equal` bs
+
 inline_for_extraction
 let l2r_writer_for
   (#t' #t: Type0)
@@ -697,16 +727,11 @@ let l2r_writer_for
   (#v: Ghost.erased bytes) ->
   stt SZ.t
     (pts_to out v ** vmatch x' x ** pure (
-      SZ.v offset + Seq.length (bare_serialize s x) <= Seq.length v
+      l2r_writer_for_pre s x offset v
     ))
     (fun res -> exists* v' .
       pts_to out v' ** vmatch x' x ** pure (
-      let bs = bare_serialize s x in
-      SZ.v res == SZ.v offset + Seq.length bs /\
-      SZ.v res <= Seq.length v /\
-      Seq.length v' == Seq.length v /\
-      Seq.slice v' 0 (SZ.v offset) `Seq.equal` Seq.slice v 0 (SZ.v offset) /\
-      Seq.slice v' (SZ.v offset) (SZ.v res) `Seq.equal` bs
+      l2r_writer_for_post s x offset v res v'
     ))
 
 inline_for_extraction
@@ -1523,6 +1548,104 @@ type with_perm (t: Type) = {
   p: perm
 }
 
+let vmatch_ref
+  (#tl #th: Type0)
+  (vmatch: tl -> th -> slprop)
+  (r: with_perm (ref tl))
+  (vh: th)
+: Tot slprop
+= exists* vl . R.pts_to r.v #r.p vl ** vmatch vl vh
+
+let vmatch_ref_wf0
+  (#tbound: Type)
+  (#tl #th: Type0)
+  (bound: tbound)
+  (vmatch: tl -> (vh: th { vh << bound }) -> slprop)
+  (r: with_perm (ref tl))
+  (vh: th)
+  (sq: option (squash (vh << bound)))
+: Tot slprop
+= match sq with
+  | Some _ -> exists* vl . R.pts_to r.v #r.p vl ** vmatch vl vh
+  | None -> pure False
+
+let vmatch_ref_wf
+  (#tbound: Type)
+  (#tl #th: Type0)
+  (bound: tbound)
+  (vmatch: tl -> (vh: th { vh << bound }) -> slprop)
+  (r: with_perm (ref tl))
+  (vh: th)
+: Tot slprop
+= if FStar.StrongExcludedMiddle.strong_excluded_middle (vh << bound)
+  then vmatch_ref_wf0 bound vmatch r vh (Some ())
+  else pure False
+
+let vmatch_ref_wf_eq
+  (#tbound: Type)
+  (#tl #th: Type0)
+  (bound: tbound)
+  (vmatch: tl -> th -> slprop)
+  (r: with_perm (ref tl))
+  (vh: th)
+: Lemma
+  (requires (vh << bound))
+  (ensures (vmatch_ref_wf bound vmatch r vh == vmatch_ref vmatch r vh))
+= let b = (FStar.StrongExcludedMiddle.strong_excluded_middle (vh << bound)) in // FIXME: WHY WHY WHY the let binding?
+  assert (vmatch_ref_wf bound vmatch r vh == vmatch_ref_wf0 bound vmatch r vh (Some ()));
+  assert_norm (vmatch_ref_wf0 bound vmatch r vh (Some ()) == vmatch_ref vmatch r vh)
+
+ghost fn vmatch_ref_elim_trade
+  (#tl #th: Type0)
+  (vmatch: tl -> th -> slprop)
+  (r: with_perm (ref tl))
+  (vh: th)
+requires vmatch_ref vmatch r vh
+ensures exists* vl .
+  R.pts_to r.v #r.p vl ** vmatch vl vh **
+  Trade.trade
+    (R.pts_to r.v #r.p vl ** vmatch vl vh)
+    (vmatch_ref vmatch r vh)
+{
+  unfold (vmatch_ref vmatch r vh);
+  with vl . assert (R.pts_to r.v #r.p vl ** vmatch vl vh);
+  ghost fn aux ()
+  requires emp ** (R.pts_to r.v #r.p vl ** vmatch vl vh)
+  ensures vmatch_ref vmatch r vh
+  {
+    fold (vmatch_ref vmatch r vh)
+  };
+  Trade.intro _ _ _ aux
+}
+
+inline_for_extraction
+fn l2r_write_ref
+  (#th: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k th)
+  (#s: serializer p)
+  (#tl: Type0)
+  (#vmatch: tl -> th -> slprop)
+  (w: l2r_writer vmatch s)
+: l2r_writer #_ #_ (vmatch_ref vmatch) #_ #_ s
+=
+  (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  vmatch_ref_elim_trade vmatch x' x;
+  with gz . assert (vmatch gz x);
+  let z = !(x'.v);
+  Trade.elim_hyp_l _ _ _;
+  Trade.rewrite_with_trade (vmatch gz x) (vmatch z x);
+  Trade.trans _ _ (vmatch_ref vmatch x' x);
+  let res = w z out offset;
+  Trade.elim _ _;
+  res
+}
+
 let pts_to_serialized_with_perm
   (#t: Type0)
   (#k: parser_kind)
@@ -1615,4 +1738,164 @@ ensures
   S.copy dst src;
   fold (pts_to_serialized s src #psrc vsrc);
   fold (pts_to_serialized s dst vsrc);
+}
+
+inline_for_extraction
+let zero_copy_parse
+  (#t' #t: Type0)
+  (vmatch: t' -> t -> slprop)
+  (#k: parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+=
+  (input: slice byte) ->
+  (#pm: perm) ->
+  (#v: Ghost.erased t) ->
+  stt t'
+    (pts_to_serialized s input #pm v)
+    (fun res ->
+      vmatch res v **
+      Trade.trade
+        (vmatch res v)
+        (pts_to_serialized s input #pm v)
+    )
+
+inline_for_extraction
+fn zero_copy_parse_id
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+: zero_copy_parse #_ #_ (pts_to_serialized_with_perm s) #_ #_ s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  let res = { v = input; p = pm };
+  Trade.rewrite_with_trade
+    (pts_to_serialized s input #pm v)
+    (pts_to_serialized_with_perm s res v);
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_lens
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: zero_copy_parse vmatch1 s)
+  (#t2': Type0)
+  (#vmatch2: t2' -> t -> slprop)
+  (lens: vmatch_lens vmatch1 vmatch2)
+: zero_copy_parse #_ #_ vmatch2 #_ #_ s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  let tmp = r input;
+  let res = lens tmp _;
+  Trade.trans (vmatch2 res _) _ _;
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_read
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: leaf_reader s)
+: zero_copy_parse #_ #_ (eq_as_slprop t) #_ #_ s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  let res = r input;
+  fold (eq_as_slprop t res v);
+  ghost fn aux ()
+  requires pts_to_serialized s input #pm v ** eq_as_slprop t res v
+  ensures pts_to_serialized s input #pm v
+  {
+    unfold (eq_as_slprop t res v)
+  };
+  Trade.intro _ _ _ aux;
+  res
+}
+
+let vmatch_ignore (#t2: Type0) (x1: unit) (x2: t2) : Tot slprop = emp
+
+inline_for_extraction
+fn zero_copy_parse_ignore
+  (#t: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p)
+: zero_copy_parse #_ #_ (vmatch_ignore #t) #_ #_ s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  fold (vmatch_ignore () (Ghost.reveal v));
+  ghost fn aux ()
+  requires pts_to_serialized s input #pm v ** (vmatch_ignore () (Ghost.reveal v))
+  ensures pts_to_serialized s input #pm v
+  {
+    unfold (vmatch_ignore () (Ghost.reveal v))
+  };
+  Trade.intro _ _ _ aux;
+  ()
+}
+
+inline_for_extraction
+fn zero_copy_parse_ext
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (r: zero_copy_parse vmatch1 s)
+  (#k': Ghost.erased parser_kind)
+  (#p': parser k' t)
+  (s': serializer p' {
+    forall b . parse p b == parse p' b
+  })
+: zero_copy_parse #_ #_ vmatch1 #_ #_ s'
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  pts_to_serialized_ext_trade s' s input;
+  let res = r input;
+  Trade.trans (vmatch1 res v) _ _;
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_ifthenelse
+  (#t1'  #t: Type0)
+  (#vmatch1: t1' -> t -> slprop)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (#s: serializer p)
+  (cond: bool)
+  (rtrue: squash (cond == true) -> zero_copy_parse vmatch1 s)
+  (rfalse: squash (cond == false) -> zero_copy_parse vmatch1 s)
+: zero_copy_parse #_ #_ vmatch1 #_ #_ s
+=
+  (input: slice byte)
+  (#pm: perm)
+  (#v: Ghost.erased _)
+{
+  if (cond) {
+    rtrue () input
+  } else {
+    rfalse () input
+  }
 }

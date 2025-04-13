@@ -9,9 +9,9 @@
 #undef CBOR_MAJOR_TYPE_ARRAY
 #undef CBOR_MAJOR_TYPE_MAP
 
-#include "Bench.h"
+#include "BenchArray.h"
 
-#define N 10000
+#define N 1000
 #define BSIZE (30 + 3*N + (N*N)) /* size of buffer */
 
 typedef struct {
@@ -104,12 +104,17 @@ int main()
     };
 
     /* Validate it, make sure it parses back. */
-    FStar_Pervasives_Native_option___Bench_evercddl_map_pretty___Pulse_Lib_Slice_slice_uint8_t_
-      m_opt = TIME(Bench_validate_and_parse_map(slice), &f);
+    FStar_Pervasives_Native_option___BenchArray_evercddl_map_pretty___Pulse_Lib_Slice_slice_uint8_t_
+      m_opt = TIME(BenchArray_validate_and_parse_map(slice), &f);
     assert (m_opt.tag == FStar_Pervasives_Native_Some);
     printf("Parsed %zu bytes\n", m_opt.v.snd.len);
     printf("Original len %zu\n", Encoded.len);
     assert (m_opt.v.snd.len == 0); /* len is whatever remains */
+
+    BenchArray_evercddl_map_pretty m =  m_opt.v.fst;
+    assert (m.tag == BenchArray_Mkevercddl_map_pretty1);
+    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_aux_env4_type_1_pretty
+      it = m.case_Mkevercddl_map_pretty1;
 
     printf(" >>> PARSING BANDWIDTH: %f MB/s\n", Encoded.len / f / 1e6);
 

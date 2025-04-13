@@ -800,7 +800,7 @@ impl_serialize_array_group_zero_or_more_iterator
       with gc l2 . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc l2);
       let c = !pc;
       rewrite each gc as c;
-      let em = cddl_array_iterator_is_empty impl_tgt1 is_empty c;
+      let em = cddl_array_iterator_is_empty is_empty impl_tgt1 _ c;
       not em
     } else {
       false
@@ -826,7 +826,7 @@ impl_serialize_array_group_zero_or_more_iterator
     )
   ) {
     with gc l2 . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc l2);
-    let x : impl_tgt1 = cddl_array_iterator_next length share gather truncate impl_tgt1 pc;
+    let x : impl_tgt1 = cddl_array_iterator_next length share gather truncate impl_tgt1 _ pc;
     with gc' l2' . assert (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) gc' l2');
     let z : Ghost.erased tgt1 = Ghost.hide (List.Tot.hd l2);
     Trade.rewrite_with_trade (dsnd (Iterator.mk_spec r1) _ _) (r1 x z);
@@ -1008,7 +1008,7 @@ fn impl_serialize_array_group_one_or_more_iterator
   Trade.rewrite_with_trade
     (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c v)
     (rel_array_iterator cbor_array_iterator_match (Iterator.mk_spec r1) c v');
-  let em = cddl_array_iterator_is_empty impl_tgt1 is_empty c;
+  let em = cddl_array_iterator_is_empty is_empty impl_tgt1 _ c;
   Trade.elim _ _;
   if (em) {
     false

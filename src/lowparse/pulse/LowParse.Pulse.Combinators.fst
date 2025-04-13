@@ -1560,6 +1560,24 @@ let vmatch_dep_proj2
 : Tot slprop
 = vmatch xl (| xh1, xh2 |)
 
+ghost fn vmatch_dep_proj2_elim_trade
+  (#tl #th1: Type0)
+  (#th2: th1 -> Type0)
+  (vmatch: tl -> dtuple2 th1 th2 -> slprop)
+  (xh1: th1)
+  (xl: tl)
+  (xh2: th2 xh1)
+requires vmatch_dep_proj2 vmatch xh1 xl xh2
+ensures vmatch xl (| xh1, xh2 |) **
+  Trade.trade
+    (vmatch xl (| xh1, xh2 |))
+    (vmatch_dep_proj2 vmatch xh1 xl xh2)
+{
+  Trade.rewrite_with_trade
+    (vmatch_dep_proj2 vmatch xh1 xl xh2)
+    (vmatch xl (| xh1, xh2 |))
+}
+
 inline_for_extraction
 fn l2r_write_dtuple2_recip
   (#tl #th1: Type)
@@ -1889,6 +1907,77 @@ let leaf_compute_remaining_size_dtuple2
     )
 
 inline_for_extraction
+fn zero_copy_parse_dtuple2
+  (#tl1 #tl2 #th1: Type)
+  (#th2: th1 -> Type)
+  (#vmatch1: tl1 -> th1 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (j1: jumper p1)
+  (w1: zero_copy_parse vmatch1 s1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#vmatch2: (x: th1) -> tl2 -> th2 x -> slprop)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: (x: th1) -> parser k2 (th2 x))
+  (#s2: (x: th1) -> serializer (p2 x))
+  (w2: (xh: Ghost.erased th1) -> zero_copy_parse (vmatch2 xh) (s2 xh))
+: zero_copy_parse #(tl1 `cpair` tl2) #(dtuple2 th1 th2) (vmatch_dep_prod vmatch1 vmatch2) #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  let (input1, input2) = split_dtuple2 s1 j1 s2 input;
+  unfold (split_dtuple2_post s1 s2 input pm v (input1, input2));
+  unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
+  let res1 = w1 input1;
+  with v1 . assert (vmatch1 res1 v1);
+  Trade.trans_hyp_l (vmatch1 res1 _) _ _ _;
+  let res2 = w2 v1 input2;
+  Trade.trans_hyp_r _ (vmatch2 v1 res2 _) _ _;
+  let res : cpair tl1 tl2 = (| res1, res2 |);
+  Trade.rewrite_with_trade
+    (vmatch1 res1 v1 ** vmatch2 v1 res2 _)
+    (vmatch_dep_prod vmatch1 vmatch2 res v);
+  Trade.trans (vmatch_dep_prod vmatch1 vmatch2 res v) _ _;
+  res
+}
+
+inline_for_extraction
+fn read_and_zero_copy_parse_dtuple2
+  (#tl #th1: Type)
+  (#th2: th1 -> Type)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (j1: jumper p1)
+  (w1: leaf_reader s1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#vmatch: tl -> dtuple2 th1 th2 -> slprop)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: (x: th1) -> parser k2 (th2 x))
+  (#s2: (x: th1) -> serializer (p2 x))
+  (w2: (xh: th1) -> zero_copy_parse (vmatch_dep_proj2 vmatch xh) (s2 xh))
+: zero_copy_parse #tl #(dtuple2 th1 th2) vmatch #(and_then_kind k1 k2) #(parse_dtuple2 p1 p2) (serialize_dtuple2 s1 s2)
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  let (input1, input2) = split_dtuple2 s1 j1 s2 input;
+  unfold (split_dtuple2_post s1 s2 input pm v (input1, input2));
+  unfold (split_dtuple2_post' s1 s2 input pm v input1 input2);
+  let v1 = w1 input1;
+  Trade.elim_hyp_l _ _ _;
+  let res = w2 v1 input2;
+  Trade.trans (vmatch_dep_proj2 vmatch v1 res _) _ _;
+  Trade.rewrite_with_trade
+    (vmatch_dep_proj2 vmatch v1 res _)
+    (vmatch res v);
+  Trade.trans (vmatch res v) _ _;
+  res
+}
+
+inline_for_extraction
 fn compute_remaining_size_nondep_then
   (#tl1 #tl2 #th1 #th2: Type)
   (#vmatch1: tl1 -> th1 -> slprop)
@@ -1977,6 +2066,114 @@ fn l2r_write_nondep_then
   Seq.slice_slice v2 0 (SZ.v res1) 0 (SZ.v offset);
   Trade.elim _ _;
   res2
+}
+
+let vmatch_pair
+  (#tl1 #tl2 #th1 #th2: Type0)
+  (vmatch1: tl1 -> th1 -> slprop)
+  (vmatch2: tl2 -> th2 -> slprop)
+  (xl: (tl1 & tl2))
+  (xh: (th1 & th2))
+: Tot slprop
+= vmatch1 (fst xl) (fst xh) ** vmatch2 (snd xl) (snd xh)
+
+inline_for_extraction
+fn l2r_write_nondep_then_direct_proj1
+  (#tl1 #tl2 #th1 #th2: Type0)
+  (vmatch1: tl1 -> th1 -> slprop)
+  (vmatch2: tl2 -> th2 -> slprop)
+  (xl: (tl1 & tl2))
+  (xh: erased (th1 & th2))
+requires
+      (vmatch_pair vmatch1 vmatch2 xl xh)
+returns xl1: tl1
+ensures
+  vmatch1 xl1 (fst xh) ** trade (vmatch1 xl1 (fst xh)) (vmatch_pair vmatch1 vmatch2 xl xh)
+{
+  let (res, _) = xl;
+  Trade.rewrite_with_trade
+    (vmatch_pair vmatch1 vmatch2 xl xh)
+    (vmatch1 res (fst xh) ** vmatch2 (snd xl) (snd xh));
+  Trade.elim_hyp_r _ _ _;
+  res
+}
+
+inline_for_extraction
+fn l2r_write_nondep_then_direct_proj2
+  (#tl1 #tl2 #th1 #th2: Type0)
+  (vmatch1: tl1 -> th1 -> slprop)
+  (vmatch2: tl2 -> th2 -> slprop)
+  (xl: (tl1 & tl2))
+  (xh: erased (th1 & th2))
+requires
+  (vmatch_pair vmatch1 vmatch2 xl xh)
+returns xl2: tl2
+ensures
+  vmatch2 xl2 (snd xh) ** trade (vmatch2 xl2 (snd xh)) (vmatch_pair vmatch1 vmatch2 xl xh)
+{
+  let (_, res) = xl;
+  Trade.rewrite_with_trade
+    (vmatch_pair vmatch1 vmatch2 xl xh)
+    (vmatch1 (fst xl) (fst xh) ** vmatch2 res (snd xh));
+  Trade.elim_hyp_l _ _ _;
+  res
+}
+
+inline_for_extraction
+let l2r_write_nondep_then_direct
+  (#tl1 #tl2 #th1 #th2: Type)
+  (#vmatch1: tl1 -> th1 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (w1: l2r_writer vmatch1 s1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#vmatch2: tl2 -> th2 -> slprop)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 th2)
+  (#s2: serializer p2)
+  (w2: l2r_writer vmatch2 s2)
+: l2r_writer #_ #(th1 & th2) (vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2)
+= l2r_write_nondep_then
+    w1
+    sq
+    w2
+    _
+    (l2r_write_nondep_then_direct_proj1 vmatch1 vmatch2)
+    (l2r_write_nondep_then_direct_proj2 vmatch1 vmatch2)
+
+inline_for_extraction
+fn zero_copy_parse_nondep_then
+  (#tl1 #tl2 #th1 #th2: Type)
+  (#vmatch1: tl1 -> th1 -> slprop)
+  (#k1: Ghost.erased parser_kind)
+  (#p1: parser k1 th1)
+  (#s1: serializer p1)
+  (j1: jumper p1)
+  (w1: zero_copy_parse vmatch1 s1)
+  (sq: squash (k1.parser_kind_subkind == Some ParserStrong))
+  (#vmatch2: tl2 -> th2 -> slprop)
+  (#k2: Ghost.erased parser_kind)
+  (#p2: parser k2 th2)
+  (#s2: serializer p2)
+  (w2: zero_copy_parse vmatch2 s2)
+: zero_copy_parse #_ #(th1 & th2) (vmatch_pair vmatch1 vmatch2) #(and_then_kind k1 k2) #(nondep_then p1 p2) (serialize_nondep_then s1 s2)
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  let (input1, input2) = split_nondep_then s1 j1 s2 input;
+  unfold (split_nondep_then_post s1 s2 input pm v (input1, input2));
+  unfold (split_nondep_then_post' s1 s2 input pm v input1 input2);
+  let res1 = w1 input1;
+  Trade.trans_hyp_l (vmatch1 res1 _) _ _ _;
+  let res2 = w2 input2;
+  Trade.trans_hyp_r _ (vmatch2 res2 _) _ _;
+  Trade.rewrite_with_trade
+    (vmatch1 res1 _ ** vmatch2 res2 _)
+    (vmatch_pair vmatch1 vmatch2 (res1, res2) v);
+  Trade.trans (vmatch_pair vmatch1 vmatch2 (res1, res2) v) _ _;
+  (res1, res2)
 }
 
 inline_for_extraction
@@ -2106,6 +2303,45 @@ fn l2r_write_synth_recip
 }
 
 inline_for_extraction
+fn zero_copy_parse_synth
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (#tl: Type0) (#vmatch: tl -> t1 -> slprop) (r: zero_copy_parse vmatch s1)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+: zero_copy_parse #_ #_ (vmatch_synth vmatch f1) #_ #_ (serialize_synth p1 f2 s1 f1 ())
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+{
+  pts_to_serialized_synth_l2r_trade s1 f2 f1 input;
+  let res = r input;
+  Trade.trans (vmatch res (f1 v)) _ _;
+  Trade.rewrite_with_trade
+    (vmatch res (f1 v))
+    (vmatch_synth vmatch f1 res v);
+  Trade.trans (vmatch_synth vmatch f1 res v) _ _;
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_synth_recip
+  (#k1: Ghost.erased parser_kind) (#t1: Type0) (#p1: parser k1 t1) (#s1: serializer p1) (#tl: Type0)
+  (#t2: Type0) (f2: (t1 -> GTot t2) { synth_injective f2 }) (f1: (t2 -> GTot t1) { synth_inverse f2 f1 })
+  (#vmatch2: tl -> t2 -> slprop) (r: zero_copy_parse (vmatch_synth vmatch2 f2) s1)
+: zero_copy_parse #_ #_ vmatch2 #_ #_ (serialize_synth p1 f2 s1 f1 ())
+= (input: slice byte)
+  (#pm: _)
+  (#v: _)
+{
+  pts_to_serialized_synth_l2r_trade s1 f2 f1 input;
+  let res = r input;
+  Trade.trans (vmatch_synth vmatch2 f2 res (f1 v)) _ _;
+  Trade.rewrite_with_trade
+    (vmatch_synth vmatch2 f2 res (f1 v))
+    (vmatch2 res v);
+  Trade.trans (vmatch2 res v) _ _;
+  res
+}
+
+inline_for_extraction
 fn compute_remaining_size_synth_recip
   (#t: Type0) (#t1: Type0) (#t2: Type0)
   (vmatch: t -> t2 -> slprop)
@@ -2203,6 +2439,28 @@ fn compute_remaining_size_filter
   res
 }
 
+inline_for_extraction
+fn zero_copy_parse_filter
+  (#t: Type0) (#t1: Type0)
+  (vmatch: t -> t1 -> slprop)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1) (w: zero_copy_parse #t #t1 vmatch s1)
+  (f: (t1 -> GTot bool))
+: zero_copy_parse #t #(parse_filter_refine u#0 f) (vmatch_filter vmatch f) #(parse_filter_kind k1) #(parse_filter p1 f) (serialize_filter s1 f)
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  pts_to_serialized_filter_elim_trade s1 f input;
+  let res = w input;
+  with v' . assert (vmatch res v');
+  Trade.trans (vmatch res v') _ _;
+  Trade.rewrite_with_trade
+    (vmatch res v')
+    (vmatch_filter vmatch f res v);
+  Trade.trans _ (vmatch res v') _;
+  res
+}
+
 let vmatch_filter_recip
   (#tl: Type0)
   (#th: Type0)
@@ -2253,5 +2511,35 @@ fn compute_remaining_size_filter_recip
   unfold (vmatch_filter_recip f vmatch x' x);
   with xh . assert (vmatch x' xh);
   rewrite (vmatch x' xh) as (vmatch x' x);
+  res
+}
+
+inline_for_extraction
+fn zero_copy_parse_filter_recip
+  (#t: Type0) (#t1: Type0)
+  (#k1: Ghost.erased parser_kind) (#p1: parser k1 t1) (#s1: serializer p1)
+  (f: (t1 -> GTot bool))
+  (vmatch: t -> parse_filter_refine f -> slprop)
+  (w: zero_copy_parse (vmatch_filter_recip f vmatch) s1)
+: zero_copy_parse #t #(parse_filter_refine u#0 f) vmatch #(parse_filter_kind k1) #(parse_filter p1 f) (serialize_filter s1 f)
+= (input: _)
+  (#pm: _)
+  (#v: _)
+{
+  pts_to_serialized_filter_elim_trade s1 f input;
+  let res = w input;
+  with v' . assert (vmatch_filter_recip f vmatch res v');
+  Trade.trans (vmatch_filter_recip f vmatch res v') _ _;
+  unfold (vmatch_filter_recip f vmatch res v');
+  with v'' . assert (vmatch res v'');
+  rewrite (vmatch res v'') as (vmatch res v);
+  ghost fn aux ()
+  requires emp ** vmatch res v
+  ensures vmatch_filter_recip f vmatch res v'
+  {
+    fold (vmatch_filter_recip f vmatch res v')
+  };
+  Trade.intro _ _ _ aux;
+  Trade.trans (vmatch res v) _ _;
   res
 }
