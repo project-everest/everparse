@@ -113,8 +113,6 @@ let derive_context_post
               trace_and_record_valid_for_derive_context t spec_record) **
         derive_context_client_perm sid t spec_record (Success? res)
 
-#push-options "--query_stats"
-
 ghost
 fn take_record_perm 
   (record:record_t)
@@ -253,7 +251,7 @@ ensures exists* w.
   Slice.pts_to_len pk_out_slice;
   Slice.pts_to_len cert_out_slice;
   let _ = DPESlice.certify_key sid pk_out_slice cert_out_slice t;
-  let ok = CKO.write_certify_key_output_alt out pk_out_slice cert_out_slice;
+  let ok = CKO.write_certify_key_output out pk_out_slice cert_out_slice;
   Slice.to_array pk_out_slice;
   Slice.to_array cert_out_slice;
   ok
@@ -317,7 +315,7 @@ ensures (
       Slice.pts_to_len sign_out_slice;
       size_t_fits_in_u32 (Slice.len tbs_slice);
       sign sid sign_out_slice tbs_slice t;
-      let ok = SO.write_certify_key_output_alt out sign_out_slice;
+      let ok = SO.write_sign_output out sign_out_slice;
       Slice.to_array sign_out_slice;
       Trade.elim_trade _ _;
       if ok { Sig_success } else { Sig_failed }

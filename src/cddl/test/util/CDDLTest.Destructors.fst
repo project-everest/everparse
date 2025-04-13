@@ -234,7 +234,7 @@ fn rewrite_with_trade_trans
   rewrite each p1 as p2;
 }
 
-
+ghost
 fn destruct_rel_either_left 
     (#a #b #a' #b':Type0) 
     (r:rel a b)
