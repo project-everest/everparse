@@ -1,5 +1,8 @@
 all: package-subset asn1 cbor cddl cbor-interface
 
+export FSTAR_EXE ?= $(realpath opt)/FStar/bin/fstar.exe
+export KRML_HOME ?= $(realpath opt/karamel)
+export PULSE_HOME ?= $(realpath opt/pulse/out)
 export EVERPARSE_OPT_PATH=$(realpath opt)
 
 include $(EVERPARSE_OPT_PATH)/env.Makefile
