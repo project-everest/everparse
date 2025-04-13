@@ -16,4 +16,4 @@ mod lowstar {
 pub mod cbordetver;
 pub mod cbordetveraux;
 
-// pub mod cddlextractiontest;
+pub mod cddlextractiontest;
