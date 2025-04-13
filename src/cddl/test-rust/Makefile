@@ -10,7 +10,7 @@ $(OUTPUT): test.cddl
 extract-all: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile extract
 
-build-rust:
+build-rust: extract-all
 	cargo build
 
 .PHONY: build-rust extract-all all
