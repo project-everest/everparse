@@ -1632,6 +1632,15 @@ let cbor_det_serialize_postcond
     Seq.slice v' (SZ.v len) (Seq.length v) == Seq.slice v (SZ.v len) (Seq.length v) /\
     v' `Seq.equal` (s `Seq.append` Seq.slice v (SZ.v len) (Seq.length v))
 
+noextract [@@noextract_to "krml"]
+let cbor_det_serialize_postcond_c
+  (y: Spec.cbor)
+  (v: Seq.seq U8.t)
+  (v': Seq.seq U8.t)
+  (res: SZ.t)
+: Tot prop
+= cbor_det_serialize_postcond y v v' (if res = 0sz then None else Some res)
+
 inline_for_extraction
 let cbor_det_serialize_t
   (#cbordet: Type)
