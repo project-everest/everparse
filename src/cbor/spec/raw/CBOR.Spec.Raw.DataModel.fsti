@@ -13,11 +13,7 @@ open CBOR.Spec.Raw.Base
 val cbor
   (order: raw_data_item -> raw_data_item -> bool)
   (compare: raw_data_item -> raw_data_item -> int {
-    (forall x . order x x == false) /\
-    (forall x y z . (order x y /\ order y z) ==> order x z) /\
-    (forall x y . order x y == (compare x y < 0)) /\
-    (forall x y . compare x y == 0 <==> x == y) /\
-    (forall x y . (compare x y < 0 <==> compare y x > 0))
+    CBOR.Spec.Raw.Sort.compare_prop order compare
   })
 : eqtype
 
@@ -26,11 +22,7 @@ val cbor
 val cbor_map
   (order: raw_data_item -> raw_data_item -> bool)
   (compare: raw_data_item -> raw_data_item -> int {
-    (forall x . order x x == false) /\
-    (forall x y z . (order x y /\ order y z) ==> order x z) /\
-    (forall x y . order x y == (compare x y < 0)) /\
-    (forall x y . compare x y == 0 <==> x == y) /\
-    (forall x y . (compare x y < 0 <==> compare y x > 0))
+    CBOR.Spec.Raw.Sort.compare_prop order compare
   })
 : eqtype
 

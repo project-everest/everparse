@@ -1,15 +1,11 @@
 module CBOR.Spec.Raw.DataModel
 
-module R = CBOR.Spec.Raw.Sort2
+module R = CBOR.Spec.Raw.Sort
 
 let cbor_bool
   (order: raw_data_item -> raw_data_item -> bool)
   (compare: raw_data_item -> raw_data_item -> int {
-    (forall x . order x x == false) /\
-    (forall x y z . (order x y /\ order y z) ==> order x z) /\
-    (forall x y . order x y == (compare x y < 0)) /\
-    (forall x y . compare x y == 0 <==> x == y) /\
-    (forall x y . (compare x y < 0 <==> compare y x > 0))
+    R.compare_prop order compare
   })
   (x: R.raw_data_item)
 : Tot bool =
@@ -24,11 +20,7 @@ let cbor order compare = (x: R.raw_data_item { cbor_prop order compare x })
 unfold
 let cbor_map_prop order
   (compare: raw_data_item -> raw_data_item -> int {
-    (forall x . order x x == false) /\
-    (forall x y z . (order x y /\ order y z) ==> order x z) /\
-    (forall x y . order x y == (compare x y < 0)) /\
-    (forall x y . compare x y == 0 <==> x == y) /\
-    (forall x y . (compare x y < 0 <==> compare y x > 0))
+    R.compare_prop order compare
   })
   (x: list (R.raw_data_item & R.raw_data_item)) : Tot prop =
   List.Tot.for_all (U.holds_on_pair R.raw_data_item_ints_optimal) x == true /\
@@ -233,11 +225,7 @@ let cbor_map_get_union #order #compare m1 m2 k =
 let cast_to_cbor
   (order: raw_data_item -> raw_data_item -> bool)
   (compare: raw_data_item -> raw_data_item -> int {
-    (forall x . order x x == false) /\
-    (forall x y z . (order x y /\ order y z) ==> order x z) /\
-    (forall x y . order x y == (compare x y < 0)) /\
-    (forall x y . compare x y == 0 <==> x == y) /\
-    (forall x y . (compare x y < 0 <==> compare y x > 0))
+    R.compare_prop order compare
   })
   (x: R.raw_data_item) : Tot (cbor order compare) =
   if cbor_bool order compare x

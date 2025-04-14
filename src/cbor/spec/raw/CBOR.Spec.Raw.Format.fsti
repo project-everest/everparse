@@ -285,6 +285,12 @@ let cbor_compare_equal
   Seq.append_empty_r (serialize_cbor x2);
   Classical.move_requires (serialize_cbor_inj x1 x2 Seq.empty) Seq.empty
 
+let lemma_compare_prop : squash (CBOR.Spec.Raw.Sort.compare_prop deterministically_encoded_cbor_map_key_order cbor_compare) =
+  Classical.forall_intro_2 deterministically_encoded_cbor_map_key_order_spec;
+  Classical.forall_intro_2 cbor_compare_correct;
+  Classical.forall_intro_2 cbor_compare_equal;
+  Classical.forall_intro_2 bytes_lex_compare_opp
+
 let cbor_map_entry_raw_compare_succeeds
   (l: list (raw_data_item & raw_data_item))
 : Lemma

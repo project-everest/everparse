@@ -2,6 +2,7 @@ module CBOR.Spec.Raw
 include CBOR.Spec.Raw.Sort
 include CBOR.Spec.API.Type
 
+module RF = CBOR.Spec.Raw.Format
 module R = CBOR.Spec.Raw.Sort
 module RS = CBOR.Spec.Raw.Sort
 module U = CBOR.Spec.Util
@@ -56,7 +57,7 @@ val mk_det_raw_cbor (c: cbor) : Pure R.raw_data_item
   (requires True)
   (ensures fun y ->
     R.raw_data_item_ints_optimal y /\
-    RS.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order y /\
+    RS.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order y /\
     R.valid_raw_data_item y /\
     mk_cbor y == c
   )
@@ -74,15 +75,15 @@ let mk_det_raw_cbor_inj_strong (c1 c2: cbor) : Lemma
 let mk_det_raw_cbor_mk_cbor (x: R.raw_data_item) : Lemma
   (requires (
     R.raw_data_item_ints_optimal x /\
-    RS.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order x
+    RS.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order x
   ))
   (ensures (
     R.valid_raw_data_item x /\
     mk_det_raw_cbor (mk_cbor x) == x
   ))
-= R.raw_data_item_sorted_optimal_valid RS.deterministically_encoded_cbor_map_key_order x;
+= R.raw_data_item_sorted_optimal_valid RF.deterministically_encoded_cbor_map_key_order x;
   mk_cbor_equiv (mk_det_raw_cbor (mk_cbor x)) x;
-  R.raw_equiv_sorted_optimal RS.deterministically_encoded_cbor_map_key_order (mk_det_raw_cbor (mk_cbor x)) x
+  R.raw_equiv_sorted_optimal RF.deterministically_encoded_cbor_map_key_order (mk_det_raw_cbor (mk_cbor x)) x
 
 let mk_det_raw_cbor_map_entry
   (x: (cbor & cbor))
@@ -105,7 +106,7 @@ val mk_det_raw_cbor_map
     match unpack res with
     | CMap m ->
       let l1 = List.Tot.map mk_det_raw_cbor_map_entry l in
-      let l' = RS.cbor_map_sort l1 in
+      let l' = RS.cbor_map_sort RF.deterministically_encoded_cbor_map_key_order l1 in
       List.Tot.no_repeats_p (List.Tot.map fst l1) /\
       List.Tot.length l == FStar.UInt64.v len /\
       List.Tot.length l' == FStar.UInt64.v len /\
@@ -120,9 +121,9 @@ val mk_det_raw_cbor_map_raw
 : Pure (list (raw_data_item & raw_data_item))
     (requires True)
     (ensures (fun res ->
-      List.Tot.sorted (map_entry_order RS.deterministically_encoded_cbor_map_key_order _) res /\
+      List.Tot.sorted (map_entry_order RF.deterministically_encoded_cbor_map_key_order _) res /\
       List.Tot.length res == cbor_map_length m /\
-      List.Tot.for_all (U.holds_on_pair (R.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order)) res /\
+      List.Tot.for_all (U.holds_on_pair (R.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order)) res /\
       List.Tot.for_all (U.holds_on_pair R.raw_data_item_ints_optimal) res
     ))
 
@@ -144,7 +145,7 @@ val mk_det_raw_cbor_map_raw_mem
 : Lemma
   (let l = mk_det_raw_cbor_map_raw m in
   List.Tot.memP x l <==> (
-    U.holds_on_pair (R.raw_data_item_sorted RS.deterministically_encoded_cbor_map_key_order) x /\
+    U.holds_on_pair (R.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order) x /\
     U.holds_on_pair R.raw_data_item_ints_optimal x /\
     cbor_map_get m (mk_cbor (fst x)) == Some (mk_cbor (snd x))
   ))
@@ -168,7 +169,7 @@ let mk_det_raw_cbor_map_raw_snoc_post
 : Tot prop
 =
     let l = mk_det_raw_cbor_map_raw m in
-    let ol' = cbor_map_insert l (mk_det_raw_cbor key, mk_det_raw_cbor value) in
+    let ol' = CBOR.Spec.Raw.Map.map_insert RF.cbor_compare l (mk_det_raw_cbor key, mk_det_raw_cbor value) in
     (None? ol' <==> cbor_map_defined key m) /\
     (Some? ol' ==> ol' == Some (mk_det_raw_cbor_map_raw (cbor_map_union m (cbor_map_singleton key value))))
 

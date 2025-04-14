@@ -1347,6 +1347,8 @@ ensures
   Trade.intro _ _ _ aux
 }
 
+#push-options "--z3rlimit 32"
+
 inline_for_extraction
 fn ser_payload_map_not_map_lens
   (xh1: header)
@@ -1434,6 +1436,8 @@ fn ser_payload_map_not_map_lens
     _ _;
   res
 }
+
+#pop-options
 
 inline_for_extraction
 let ser_payload_map_not_map

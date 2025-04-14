@@ -1,5 +1,6 @@
 module CBOR.Spec.Raw.Format.MapPair
 friend CBOR.Spec.API.Type
+friend CBOR.Spec.Raw.DataModel
 open LowParse.Spec.Combinators
 open LowParse.Spec.VCList
 open CBOR.Spec.Raw.EverParse
@@ -7,12 +8,13 @@ open CBOR.Spec.Raw.Format
 open CBOR.Spec.Util
 open LowParse.Spec.SeqBytes
 
+module RF = CBOR.Spec.Raw.Format
 module R = CBOR.Spec.Raw.Sort
 
 let cbor_map_bool (x: list (R.raw_data_item & R.raw_data_item)) : Tot bool =
   List.Tot.for_all (holds_on_pair R.raw_data_item_ints_optimal) x &&
-  List.Tot.for_all (holds_on_pair (R.raw_data_item_sorted R.deterministically_encoded_cbor_map_key_order)) x &&
-  List.Tot.sorted (R.map_entry_order R.deterministically_encoded_cbor_map_key_order _) x
+  List.Tot.for_all (holds_on_pair (R.raw_data_item_sorted RF.deterministically_encoded_cbor_map_key_order)) x &&
+  List.Tot.sorted (R.map_entry_order RF.deterministically_encoded_cbor_map_key_order _) x
 
 let synth_cbor_map
   (x: parse_filter_refine (cbor_map_bool))

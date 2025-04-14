@@ -407,6 +407,7 @@ let rec map_insert_sorted'
 let map_insert_sorted
   (order: raw_data_item -> raw_data_item -> bool)
   (compare: raw_data_item -> raw_data_item -> int {
+    
     (forall x . order x x == false) /\
     (forall x y z . (order x y /\ order y z) ==> order x z) /\
     (forall x y . order x y == (compare x y < 0)) /\
