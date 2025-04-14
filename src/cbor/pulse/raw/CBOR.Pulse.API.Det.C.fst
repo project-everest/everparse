@@ -114,6 +114,48 @@ ensures
   res
 }
 
+let seq_slice_append
+  (#t: Type)
+  (s1 s2: Seq.seq t)
+: Lemma
+  (ensures
+    Seq.slice (Seq.append s1 s2) 0 (Seq.length s1) `Seq.equal` s1 /\
+    Seq.slice (Seq.append s1 s2) (Seq.length s1) (Seq.length s1 + Seq.length s2) `Seq.equal` s2
+  )
+= ()
+
+fn cbor_det_serialize_safe
+  (x: cbor_det_t)
+  (output: AP.ptr U8.t)
+  (output_len: SZ.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#pm: perm)
+requires
+    (cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
+returns res: SZ.t
+ensures
+    (exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
+      SZ.v output_len == Seq.length v' /\
+      cbor_det_serialize_postcond_c y v v' res
+    ))
+{
+  Spec.cbor_det_serialize_parse y;
+  let sz = cbor_det_size x output_len;
+  if (sz = 0sz) {
+    0sz
+  } else {
+    Seq.lemma_split v (SZ.v sz);
+    Classical.forall_intro (seq_slice_append (Spec.cbor_det_serialize y));
+    let _ = AP.split output sz;
+    let res = cbor_det_serialize x output sz;
+    with v' . assert (AP.pts_to output v');
+    assert (pure (Seq.equal v' (Spec.cbor_det_serialize y)));
+    AP.join output _;
+    res
+  }
+}
+
 fn cbor_det_impl_utf8_correct_from_array (_: unit) : cbor_det_impl_utf8_correct_from_array_t
 =
   (s: _)
@@ -145,6 +187,73 @@ let cbor_det_mk_map_entry = CBOR.Pulse.API.Det.Common.cbor_det_mk_map_entry
 
 let cbor_det_mk_map_from_array : mk_map_from_array_t cbor_det_match cbor_det_map_entry_match =
   mk_map_from_array (CBOR.Pulse.API.Base.mk_map_from_ref (CBOR.Pulse.API.Det.Type.dummy_cbor_det_t ()) (CBOR.Pulse.API.Det.Common.cbor_det_mk_map_gen ()))
+
+ghost fn map_gen_post_to_array
+  (#t1 #t2: Type0)
+  (vmatch1: perm -> t1 -> Spec.cbor -> slprop)
+  (vmatch2: perm -> t2 -> (Spec.cbor & Spec.cbor) -> slprop)
+  (a: A.array t2)
+  (s: S.slice t2)
+  (va: (Seq.seq t2))
+  (pv: perm)
+  (vv: (list (Spec.cbor & Spec.cbor)))
+  (vdest0: t1)
+  (bres: bool)
+  (res: option t1)
+  (vdest: t1)
+requires
+  mk_map_gen_post vmatch1 vmatch2 s va pv vv res **  
+  S.is_from_array a s **
+  pure (mk_map_gen_by_ref_postcond vdest0 res vdest bres /\
+    mk_map_gen_by_ref_postcond vdest0 res vdest bres
+  )
+ensures
+  mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest bres
+{
+  match res {
+    None -> {
+      unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv None);
+      S.to_array s;
+      fold (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest false);
+    }
+    Some vres -> {
+      unfold (mk_map_gen_post vmatch1 vmatch2 s va pv vv (Some vres));
+      with w va' . assert (Trade.trade (vmatch1 1.0R vres w) (pts_to s va' ** PM.seq_list_match va vv (vmatch2 pv)));
+      ghost fn aux (_: unit)
+      requires S.is_from_array a s ** S.pts_to s va'
+      ensures A.pts_to a va'
+      {
+        S.to_array s;
+      };
+      Trade.intro _ _ _ aux;
+      Trade.trans_concl_l _ _ _ _;
+      rewrite each vres as vdest;
+      fold (mk_map_from_array_safe_post vmatch1 vmatch2 a va pv vv vdest true);
+    }
+  }
+}
+
+fn cbor_det_mk_map_from_array_safe () :
+  mk_map_from_array_safe_t #_ #_ cbor_det_match cbor_det_map_entry_match
+=
+  (a: _)
+  (len: _)
+  (dest: _)
+  (#va: _)
+  (#pv: _)
+  (#vv: _)
+{
+  with vdest0 . assert (pts_to dest vdest0);
+  let _ : squash (SZ.fits_u64) = assume SZ.fits_u64;  
+  let s = S.from_array a (SZ.uint64_to_sizet len);
+  S.pts_to_len s;
+  PM.seq_list_match_length (cbor_det_map_entry_match pv) va vv;
+  let bres = CBOR.Pulse.API.Det.Common.cbor_det_mk_map_gen () s dest;
+  with res . assert (mk_map_gen_post cbor_det_match cbor_det_map_entry_match s va pv vv res);
+  with vdest . assert (pts_to dest vdest);
+  map_gen_post_to_array _ _ a s va pv vv vdest0 bres res vdest;
+  bres
+}
 
 let cbor_det_equal = CBOR.Pulse.API.Det.Common.cbor_det_equal
 

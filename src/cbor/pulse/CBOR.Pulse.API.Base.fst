@@ -1297,6 +1297,67 @@ ensures
   res
 }
 
+let mk_map_from_array_safe_post
+  (#t1 #t2: Type)
+  (vmatch1: perm -> t1 -> cbor -> slprop)
+  (vmatch2: perm -> t2 -> (cbor & cbor) -> slprop)
+  (a: A.array t2)
+  (va: (Seq.seq t2))
+  (pv: perm)
+  (vv: (list (cbor & cbor)))
+  (vres: t1)
+  (res: bool)
+: Tot slprop
+= if res
+  then
+    exists* (v': cbor_map {FStar.UInt.fits (cbor_map_length v') 64}) va' .
+      vmatch1 1.0R vres (pack (CMap v')) **
+      Trade.trade
+        (vmatch1 1.0R vres (pack (CMap v')))
+        (pts_to a va' ** // this function potentially sorts the input array, so we lose the link to the initial array contents
+          PM.seq_list_match va vv (vmatch2 pv) // but we keep the permissions on each element
+        ) **
+        pure (
+          List.Tot.no_repeats_p (List.Tot.map fst vv) /\
+          (forall x . List.Tot.assoc x vv == cbor_map_get v' x) /\
+          cbor_map_length v' == Seq.length va
+        )
+  else
+    exists* va' vv' .
+    pts_to a va' **
+    PM.seq_list_match va' vv' (vmatch2 pv) **
+    Trade.trade 
+      (PM.seq_list_match va' vv' (vmatch2 pv))
+      (PM.seq_list_match va vv (vmatch2 pv)) **
+    pure (
+      mk_map_gen_none_postcond va vv va' vv'
+    )
+
+inline_for_extraction
+noextract [@@noextract_to "krml"]
+let mk_map_from_array_safe_t
+  (#cbor_t: Type0)
+  (#cbor_map_entry_t: Type0)
+  (cbor_match: perm -> cbor_t -> cbor -> slprop)
+  (cbor_map_entry_match: perm -> cbor_map_entry_t -> (cbor & cbor) -> slprop)
+=
+  (a: A.array cbor_map_entry_t) ->
+  (len: U64.t) ->
+  (dest: R.ref cbor_t) ->
+  (#va: Ghost.erased (Seq.seq cbor_map_entry_t)) ->
+  (#pv: perm) ->
+  (#vv: Ghost.erased (list (cbor & cbor))) ->
+  stt bool
+    (A.pts_to a va **
+      PM.seq_list_match va vv (cbor_map_entry_match pv) **
+      (exists* vdest . R.pts_to dest vdest) **
+      pure (A.length a == U64.v len)
+    )
+    (fun res -> exists* vdest .
+      R.pts_to dest vdest **
+      mk_map_from_array_safe_post cbor_match cbor_map_entry_match a va pv vv vdest res
+    )
+
 inline_for_extraction
 fn mk_map_from_option
   (#t1 #t2: Type0)
@@ -1631,6 +1692,15 @@ let cbor_det_serialize_postcond
     Seq.slice v' 0 (SZ.v len) == s /\
     Seq.slice v' (SZ.v len) (Seq.length v) == Seq.slice v (SZ.v len) (Seq.length v) /\
     v' `Seq.equal` (s `Seq.append` Seq.slice v (SZ.v len) (Seq.length v))
+
+noextract [@@noextract_to "krml"]
+let cbor_det_serialize_postcond_c
+  (y: Spec.cbor)
+  (v: Seq.seq U8.t)
+  (v': Seq.seq U8.t)
+  (res: SZ.t)
+: Tot prop
+= cbor_det_serialize_postcond y v v' (if res = 0sz then None else Some res)
 
 inline_for_extraction
 let cbor_det_serialize_t

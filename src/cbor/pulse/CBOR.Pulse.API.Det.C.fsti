@@ -75,6 +75,20 @@ val cbor_det_serialize
       cbor_det_serialize_fits_postcond y res v
     ))
 
+val cbor_det_serialize_safe
+  (x: cbor_det_t)
+  (output: AP.ptr U8.t)
+  (output_len: SZ.t)
+  (#y: Ghost.erased Spec.cbor)
+  (#v: Ghost.erased (Seq.seq U8.t))
+  (#pm: perm)
+: stt SZ.t
+    (cbor_det_match pm x y ** pts_to output v ** pure (SZ.v output_len == Seq.length v /\ Seq.length (Spec.cbor_det_serialize y) <= SZ.v output_len))
+    (fun res -> exists* v' . cbor_det_match pm x y ** pts_to output v' ** pure (
+      SZ.v output_len == Seq.length v' /\
+      cbor_det_serialize_postcond_c y v v' res
+    ))
+
 inline_for_extraction
 noextract [@@noextract_to "krml"]
 fn cbor_det_serialize_to_slice
@@ -129,6 +143,8 @@ val cbor_det_map_entry_match: perm -> cbor_det_map_entry_t -> Spec.cbor & Spec.c
 val cbor_det_mk_map_entry () : mk_map_entry_t cbor_det_match cbor_det_map_entry_match
 
 val cbor_det_mk_map_from_array : mk_map_from_array_t cbor_det_match cbor_det_map_entry_match
+
+val cbor_det_mk_map_from_array_safe () : mk_map_from_array_safe_t cbor_det_match cbor_det_map_entry_match
 
 inline_for_extraction
 noextract [@@noextract_to "krml"]
