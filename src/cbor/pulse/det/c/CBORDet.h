@@ -268,6 +268,8 @@ size_t cbor_det_size(cbor_raw x, size_t bound);
 
 size_t cbor_det_serialize(cbor_raw x, uint8_t *output, size_t output_len);
 
+size_t cbor_det_serialize_safe(cbor_raw x, uint8_t *output, size_t output_len);
+
 bool cbor_det_impl_utf8_correct_from_array(uint8_t *s, size_t len);
 
 cbor_raw cbor_det_mk_simple_value(uint8_t v);
@@ -283,6 +285,8 @@ cbor_raw cbor_det_mk_array_from_array(cbor_raw *a, uint64_t len);
 cbor_map_entry cbor_det_mk_map_entry(cbor_raw xk, cbor_raw xv);
 
 cbor_raw cbor_det_mk_map_from_array(cbor_map_entry *a, uint64_t len);
+
+bool cbor_det_mk_map_from_array_safe(cbor_map_entry *a, uint64_t len, cbor_raw *dest);
 
 bool cbor_det_equal(cbor_raw x1, cbor_raw x2);
 
