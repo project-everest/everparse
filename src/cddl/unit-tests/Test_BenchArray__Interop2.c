@@ -10,9 +10,7 @@
 #undef CBOR_MAJOR_TYPE_MAP
 
 #include "BenchArray.h"
-
-#define N 1000
-#define BSIZE (30 + 3*N + (N*N)) /* size of buffer */
+#include "BenchArray_common.h"
 
 typedef struct {
     int len;
@@ -61,7 +59,6 @@ UsefulBufC Encode(const BigMap *p, UsefulBuf Buffer)
     }
 }
 
-
 int main()
 {
     printf("Entry\n");
@@ -83,7 +80,7 @@ int main()
     Init(init);
 
     /* Encode the engine structure. */
-    float f;
+    float f, f2;
     Encoded = TIME(Encode(init, Buffer), &f);
     if (UsefulBuf_IsNULLC(Encoded)) {
         printf("Encode failed\n");
@@ -91,7 +88,7 @@ int main()
     }
     assert (Encoded.ptr == buf);
     printf("Encoded in %zu bytes\n", Encoded.len);
-    printf(" >>> SERIALIZATION BANDWITH : %f MB/s\n",
+    printf(" >>> QCBOR SERIALIZATION BANDWITH : %f MB/s\n",
            (double)Encoded.len / f / 1e6);
     for (int i = 0; i < 20 && i < Encoded.len; i++) {
         printf("%02x ", ((uint8_t *) Encoded.ptr)[i]);
@@ -116,7 +113,16 @@ int main()
     CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_aux_env4_type_1_pretty
       it = m.case_Mkevercddl_map_pretty1;
 
-    printf(" >>> PARSING BANDWIDTH: %f MB/s\n", Encoded.len / f / 1e6);
+    printf(" >>> EVERCDDL VALIDATION BANDWIDTH: %f MB/s\n", Encoded.len / f / 1e6);
+
+    bool rc = TIME(parse_evercddl(m), &f2);
+    if (!rc) {
+        printf("Parse failed\n");
+        exit(1);
+    }
+
+    printf(" >>> EVERCDDL PARSING BANDWIDTH: %f MB/s\n", Encoded.len / f2 / 1e6);
+    printf(" >>> EVERCDDL COMBINED BANDWIDTH: %f MB/s\n", Encoded.len / (f + f2) / 1e6);
 
     printf("Done\n");
 

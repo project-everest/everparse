@@ -1,48 +1,23 @@
 #include <stdio.h>
 #include "BenchArray.h"
+#include "BenchArray_common.h"
 #include "timing.h"
-
-
-#define N 10000
-#define BSIZE (30 + 3*N + (N*N)) /* size of buffer */
 
 int main()
 {
-    printf("testing\n");
-
     size_t len = BSIZE;
     char *buf = malloc(len);
-    float f;
     assert(buf);
+    printf("testing\n");
 
     Pulse_Lib_Slice_slice__uint8_t slice = {
         .elt = (uint8_t *) buf,
         .len = len
     };
 
-    uint64_t *elems = malloc(N * sizeof elems[0]);
-    for (int i = 0; i < N; i++)
-        elems[i] = 0;
+    float f, f0;
 
-    BenchArray_evercddl_submap_pretty submap = {
-                .tag = BenchArray_Mkevercddl_submap_pretty0,
-                .case_Mkevercddl_submap_pretty0 = {
-                             .len = N,
-                             .elt = elems,
-                             }
-    };
-
-    BenchArray_evercddl_submap_pretty *submaps = malloc(N * sizeof submaps[0]);
-    for (int i = 0; i < N; i++)
-        submaps[i] = submap; // note: reusing the same map
-
-    BenchArray_evercddl_map_pretty m = {
-                .tag = BenchArray_Mkevercddl_map_pretty0,
-                .case_Mkevercddl_map_pretty0 = {
-                             .len = N,
-                             .elt = submaps,
-                             }
-    };
+    BenchArray_evercddl_map_pretty m = TIME(build(), &f0);
 
     size_t size = TIME(BenchArray_serialize_map(m, slice), &f);
     if (size == 0) {
@@ -56,6 +31,7 @@ int main()
     printf("\n");
 
     printf(" >>> SERIALIZATION BANDWIDTH: %f MB/s\n", size / f / 1e6);
+    printf(" >>> SERIALIZATION BANDWIDTH (COMBINED): %f MB/s\n", size / (f0 + f) / 1e6);
 
     /* Validate it, make sure it parses back. */
     FStar_Pervasives_Native_option___BenchArray_evercddl_map_pretty___Pulse_Lib_Slice_slice_uint8_t_

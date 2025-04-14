@@ -11,11 +11,9 @@
 #undef CBOR_MAJOR_TYPE_MAP
 
 #include "BenchArray.h"
+#include "BenchArray_common.h"
 
-#define N 10000
-#define BSIZE (30 + 3*N + (N*N)) /* size of buffer */
-
-QCBORError DecodeSpiffy(UsefulBufC Encoded)
+QCBORError ValidSpiffy(UsefulBufC Encoded)
 {
     QCBORError         uErr;
     QCBORDecodeContext DecodeCtx;
@@ -40,10 +38,50 @@ QCBORError DecodeSpiffy(UsefulBufC Encoded)
     return uErr;
 }
 
-int parse_qcbor(uint8_t *buf, size_t len)
+QCBORError DecodeSpiffy(UsefulBufC Encoded, uint64_t *sum)
+{
+    QCBORError         uErr;
+    QCBORDecodeContext DecodeCtx;
+
+    *sum = 0;
+
+    /* Let QCBORDecode internal error tracking do its work. */
+    QCBORDecode_Init(&DecodeCtx, Encoded, QCBOR_DECODE_MODE_NORMAL);
+    QCBORDecode_EnterArray(&DecodeCtx, NULL);
+    for (int i = 0; i < N; i++) {
+        QCBORDecode_EnterArray(&DecodeCtx, NULL);
+        for (int j = 0; j < N; j++) {
+            int64_t t;
+            QCBORDecode_GetInt64(&DecodeCtx, &t);
+            *sum += t;
+            // assert (t == 0);
+        }
+        QCBORDecode_ExitArray(&DecodeCtx);
+    }
+    QCBORDecode_ExitArray(&DecodeCtx);
+
+    /* Catch further decoding error here */
+    uErr = QCBORDecode_Finish(&DecodeCtx);
+
+    return uErr;
+}
+
+int valid_qcbor(uint8_t *buf, size_t len)
 {
     UsefulBufC bb = { buf, len };
-    QCBORError uErr = DecodeSpiffy(bb);
+    QCBORError uErr = ValidSpiffy(bb);
+    if (uErr != QCBOR_SUCCESS) {
+        printf("QCBOR error %d\n", uErr);
+        return 1;
+    }
+    printf("QCBOR parsed %zu bytes\n", len);
+    return 0;
+}
+
+int parse_qcbor(uint8_t *buf, size_t len, uint64_t *sum)
+{
+    UsefulBufC bb = { buf, len };
+    QCBORError uErr = DecodeSpiffy(bb, sum);
     if (uErr != QCBOR_SUCCESS) {
         printf("QCBOR error %d\n", uErr);
         return 1;
@@ -59,7 +97,7 @@ int main()
 
     size_t len = BSIZE;
     char *buf = malloc(len);
-    float f;
+    float f, f0, f2;
     assert(buf);
 
     Pulse_Lib_Slice_slice__uint8_t slice = {
@@ -67,29 +105,7 @@ int main()
         .len = len
     };
 
-    uint64_t *elems = malloc(N * sizeof elems[0]);
-    for (int i = 0; i < N; i++)
-        elems[i] = 0;
-
-    BenchArray_evercddl_submap_pretty submap = {
-                .tag = BenchArray_Mkevercddl_submap_pretty0,
-                .case_Mkevercddl_submap_pretty0 = {
-                             .len = N,
-                             .elt = elems,
-                             }
-    };
-
-    BenchArray_evercddl_submap_pretty *submaps = malloc(N * sizeof submaps[0]);
-    for (int i = 0; i < N; i++)
-        submaps[i] = submap; // note: reusing the same map
-
-    BenchArray_evercddl_map_pretty m = {
-                .tag = BenchArray_Mkevercddl_map_pretty0,
-                .case_Mkevercddl_map_pretty0 = {
-                             .len = N,
-                             .elt = submaps,
-                             }
-    };
+    BenchArray_evercddl_map_pretty m = TIME(build(), &f0);
 
     size_t size = TIME(BenchArray_serialize_map(m, slice), &f);
     if (size == 0) {
@@ -103,16 +119,28 @@ int main()
     printf("\n");
 
     printf(" >>> SERIALIZATION BANDWIDTH: %f MB/s\n", size / f / 1e6);
+    printf(" >>> SERIALIZATION BANDWIDTH (COMBINED): %f MB/s\n", size / (f + f0) / 1e6);
 
     /* Now parse it with QCBOR */
 
-    int rc = TIME(parse_qcbor(slice.elt, size), &f);
+    int rc = TIME(valid_qcbor(slice.elt, size), &f);
     if (rc != 0) {
         printf("QCBOR Parsing failed\n");
         return 1;
     }
 
-    printf(" >>> PARSING BANDWIDTH: %f MB/s\n", size / f / 1e6);
+    printf(" >>> QCBOR VALIDATION BANDWIDTH: %f MB/s\n", size / f / 1e6);
+
+    uint64_t sum;
+
+    rc = TIME(parse_qcbor(slice.elt, size, &sum), &f2);
+    if (rc != 0) {
+        printf("QCBOR Parsing failed\n");
+        return 1;
+    }
+
+    printf(" >>> QCBOR PARSING BANDWIDTH: %f MB/s\n", size / f2 / 1e6);
+    printf(" >>> QCBOR COMBINED BANDWIDTH: %f MB/s\n", size / (f + f2) / 1e6);
 
     printf("ok\n");
 

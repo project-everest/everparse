@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "qcbor/qcbor_decode.h"
 #include "qcbor/qcbor_spiffy_decode.h"
+#include "tinycbor/src/cbor.h"
 // Prevent clashes between QCBOR and our header :-)
 #undef CBOR_MAJOR_TYPE_BYTE_STRING
 #undef CBOR_MAJOR_TYPE_TEXT_STRING
@@ -14,7 +15,7 @@ extern "C" {
 #include "CBORDetAPI.h"
 }
 
-#define N 3000 /* number of elements in map */
+#define N 8000 /* number of elements in map */
 #define BSIZE (30 + 180 * N) /* size of buffer */
 #define K 1000 /* number of keys to look up */
 #define LAPS 5 /* how many times the lookup pass is repeated */
@@ -24,7 +25,7 @@ uint64_t bigrand() {
     r = r * RAND_MAX + rand ();
     r = r * RAND_MAX + rand ();
     r = r * RAND_MAX + rand ();
-    return r ; // % 100000000;
+    return r;
 }
 
 bool lookup1(BenchMap_evercddl_map_pretty m, uint64_t key, uint64_t *val) {
@@ -120,6 +121,50 @@ bool qcbor_lookup1_no_short(uint8_t *buf, size_t len, uint64_t key, uint64_t *va
 }
 
 bool tinycbor_lookup1(uint8_t *buf, size_t len, uint64_t key, uint64_t *val) {
+    CborParser p;
+    CborValue v;
+
+    cbor_parser_init(buf, len, 0, &p, &v);
+
+    CborType type = cbor_value_get_type(&v);
+    assert (type == CborMapType);
+    assert (cbor_value_is_map(&v));
+    CborValue map;
+    if (CborNoError != cbor_value_enter_container(&v, &map)) {
+        printf("Failed to enter map\n");
+        return false;
+    }
+
+    while (!cbor_value_at_end(&map)) {
+        uint64_t key_val, val_val;
+        // if (CborNoError != cbor_value_get_map_key(&map, &key_val)) {
+        //     printf("Failed to get map key\n");
+        //     return false;
+        // }
+        // if (CborNoError != cbor_value_get_map_value(&map, &val_val)) {
+        //     printf("Failed to get map value\n");
+        //     return false;
+        // }
+        cbor_value_get_uint64(&map, &key_val);
+        cbor_value_advance(&map);
+        cbor_value_get_uint64(&map, &val_val);
+        cbor_value_advance(&map);
+
+        // printf("TinyCBOR read key %llu\n", key_val);
+        // printf("TinyCBOR read val %llu\n", val_val);
+
+        if (key_val == key) {
+            if (val)
+                *val = val_val;
+            return true;
+        } else if (key_val > key) {
+            return false;
+        }
+    }
+
+    // cannot use cbor_value_map_find_value, it only works
+    // for text string keys
+
     return false;
 }
 
@@ -245,18 +290,18 @@ int main()
     printf (" >>> QCBOR LOOKUP: %f us\n", f * 1e6 / K / LAPS);
     assert (ncheck == nfound);
 
-    // ncheck = 0;
-    // TIME_void(
-    // ({
-    //     for (int lap = 0; lap < LAPS; lap++) {
-    //         for (int i = 0; i < K; i++) {
-    //             uint64_t key = keys[i];
-    //             ncheck += tinycbor_lookup1(buf, len, key, NULL);
-    //         }
-    //     }
-    // }), &f);
-    // printf (" >>> TINYCBOR lOOKUP: %f us\n", f * 1e6 / K / LAPS);
-    // assert (ncheck == nfound);
+    ncheck = 0;
+    TIME_void(
+    ({
+        for (int lap = 0; lap < LAPS; lap++) {
+            for (int i = 0; i < K; i++) {
+                uint64_t key = keys[i];
+                ncheck += tinycbor_lookup1(buf, len, key, NULL);
+            }
+        }
+    }), &f);
+    printf (" >>> TINYCBOR lOOKUP: %f us\n", f * 1e6 / K / LAPS);
+    assert (ncheck == nfound);
 
     // ncheck = 0;
     // TIME_void(

@@ -20,7 +20,7 @@ static int time_par = 0;
 		float *__vv = v;					\
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &__t1p);	\
 		clock_gettime(CLOCK_REALTIME, &__t1w);			\
-		fprintf(stderr, "About to call `" s "` \n");		\
+		0 && fprintf(stderr, "About to call `" s "` \n");	\
 		__ret = expr;						\
 		clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &__t2p);	\
 		clock_gettime(CLOCK_REALTIME, &__t2w);			\

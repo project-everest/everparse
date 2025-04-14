@@ -5,10 +5,8 @@
 
 extern "C" {
 #include "BenchArray.h"
+#include "BenchArray_common.h"
 }
-
-#define N 10000
-#define BSIZE (30 + 3*N + (N*N)) /* size of buffer */
 
 typedef struct {
     int len;
@@ -41,11 +39,44 @@ size_t Encode(const BigMap *p, uint8_t* out)
     return cbor_encoder_get_buffer_size(&enc, out);
 }
 
-bool Decode(uint8_t* buf, size_t len)
+bool Valid(uint8_t* buf, size_t len)
 {
     CborParser p;
     CborValue v;
 
+    cbor_parser_init(buf, len, 0, &p, &v);
+
+    CborType type = cbor_value_get_type(&v);
+    CborValue arr;
+
+    if (CborNoError != cbor_value_enter_container(&v, &arr)) {
+        printf("Failed to enter array\n");
+        return false;
+    }
+
+    for (int i = 0; i < N; i++) {
+        CborValue subarr;
+        if (CborNoError != cbor_value_enter_container(&arr, &subarr))
+            return false;
+        for (int j = 0; j < N; j++) {
+            uint64_t t;
+            if (CborNoError != cbor_value_get_uint64(&subarr, &t))
+                return false;
+            cbor_value_advance(&subarr);
+        }
+        cbor_value_leave_container(&arr, &subarr);
+    }
+
+    cbor_value_leave_container(&v, &arr);
+    return true;
+}
+
+bool Decode(uint8_t* buf, size_t len, uint64_t *sum)
+{
+    CborParser p;
+    CborValue v;
+
+    *sum = 0;
 
     cbor_parser_init(buf, len, 0, &p, &v);
 
@@ -56,48 +87,29 @@ bool Decode(uint8_t* buf, size_t len)
 
     if (CborNoError != cbor_value_enter_container(&v, &arr)) {
         printf("Failed to enter array\n");
-        return NULL;
+        return false;
     }
 
     for (int i = 0; i < N; i++) {
         CborValue subarr;
         // printf("i %d\n", i);
         if (CborNoError != cbor_value_enter_container(&arr, &subarr))
-            return NULL;
+            return false;
         // printf("entered subarray\n");
         for (int j = 0; j < N; j++) {
             uint64_t t;
             // printf ("i %d j %d\n", i, j);
             if (CborNoError != cbor_value_get_uint64(&subarr, &t))
-                return NULL;
+                return false;
             // printf ("read %d\n", t);
-            assert (t == 0);
+            // assert (t == 0);
+            *sum += t;
             cbor_value_advance(&subarr);
         }
         cbor_value_leave_container(&arr, &subarr);
     }
 
     cbor_value_leave_container(&v, &arr);
-    return true;
-}
-
-bool parse_evercddl(BenchArray_evercddl_map_pretty m)
-{
-    assert (m.tag == BenchArray_Mkevercddl_map_pretty1);
-    CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_aux_env4_type_1_pretty
-      it = m.case_Mkevercddl_map_pretty1;
-
-    for (int i = 0; i < N; i++) {
-        BenchArray_evercddl_submap_pretty submap = Bench_next_iterate_array_aux_env4_type_1(&it);
-        assert (submap.tag == BenchArray_Mkevercddl_submap_pretty1);
-        CDDL_Pulse_Parse_ArrayGroup_array_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_array_iterator_t_BenchArray_aux_env3_type_1_pretty
-          it2 = submap.case_Mkevercddl_submap_pretty1;
-        for (int j = 0; j < N; j++) {
-            BenchArray_evercddl_uint_pretty t = Bench_next_iterate_array_aux_env3_type_1(&it2);
-            assert (t == 0);
-        }
-    }
-
     return true;
 }
 
@@ -126,7 +138,7 @@ int main()
         exit(1);
     }
     printf("Encoded in %zu bytes\n", len);
-    printf(" >>> SERIALIZATION BANDWITH : %f MB/s\n",
+    printf(" >>> TINYCBOR SERIALIZATION BANDWITH : %f MB/s\n",
            (double)len / f / 1e6);
     for (int i = 0; i < 20 && i < len; i++) {
         printf("%02x ", ((uint8_t *) buf)[i]);
@@ -160,12 +172,22 @@ int main()
 
     printf(" >>> EVERCDDL COMBINED BANDWIDTH: %f MB/s\n", len / (f + f2) / 1e6);
 
-    rc = TIME(Decode(buf, len), &f);
+    rc = TIME(Valid(buf, len), &f);
+    if (!rc) {
+        printf("Validation failed\n");
+        exit(1);
+    }
+    printf(" >>> TINYCBOR VALIDATION BANDWIDTH: %f MB/s\n", len / f / 1e6);
+
+    uint64_t sum;
+
+    rc = TIME(Decode(buf, len, &sum), &f2);
     if (!rc) {
         printf("Decode failed\n");
         exit(1);
     }
     printf(" >>> TINYCBOR PARSING BANDWIDTH: %f MB/s\n", len / f / 1e6);
+    printf(" >>> TINYCBOR COMBINED BANDWIDTH: %f MB/s\n", len / (f + f2) / 1e6);
 
     printf("Done\n");
 

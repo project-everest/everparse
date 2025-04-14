@@ -14,6 +14,7 @@ ALL_CHECKED = $(patsubst %.cddl,$(ODIR)/%.fst.checked,$(ALL_CDDLS))
 ALL_C_FILES = $(patsubst %.cddl,$(ODIR)/%.c,$(ALL_CDDLS))
 
 RUN += $(patsubst Test_%.c,%,$(wildcard Test_*.c))
+RUN += $(patsubst Test_%.cpp,%,$(wildcard Test_*.cpp))
 
 .PHONY: all-fst
 all-fst: $(ALL_FSTS)
@@ -117,7 +118,7 @@ $(ODIR)/Test_%.o: Test_%.c $(ODIR)/$$(call remove__,%).c
 	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output $(CFLAGS) -c $< -o $@
 
 $(ODIR)/Test_%.o: Test_%.cpp $(ODIR)/$$(call remove__,%).c
-	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I tinycbor-build/src -I tinycbor -I _output $(CFLAGS) -c $< -o $@
+	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I tinycbor-build/src -I tinycbor-build -I _output $(CFLAGS) -c $< -o $@
 
 %.run: $(ODIR)/Test_%.exe
 	./$<
