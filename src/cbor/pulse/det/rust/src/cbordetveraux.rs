@@ -370,6 +370,17 @@ pub(crate) fn cbor_mk_map_entry <'a>(xk: cbor_raw <'a>, xv: cbor_raw <'a>) ->
     res
 }
 
+pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
+{
+    let size: u8 =
+        if x <= max_simple_value_additional_info as u64
+        { 0u8 }
+        else if x < 256u64
+        { 1u8 }
+        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
+    raw_uint64 { size, value: x }
+}
+
 fn impl_uint8_compare(x1: u8, x2: u8) -> i16
 { if x1 < x2 { -1i16 } else if x1 > x2 { 1i16 } else { 0i16 } }
 
@@ -423,17 +434,6 @@ fn lex_compare_bytes(s1: &[u8], s2: &[u8]) -> i16
     let res0: i16 = (&pres)[0];
     let res1: i16 = res0;
     res1
-}
-
-pub(crate) fn mk_raw_uint64(x: u64) -> raw_uint64
-{
-    let size: u8 =
-        if x <= max_simple_value_additional_info as u64
-        { 0u8 }
-        else if x < 256u64
-        { 1u8 }
-        else if x < 65536u64 { 2u8 } else if x < 4294967296u64 { 3u8 } else { 4u8 };
-    raw_uint64 { size, value: x }
 }
 
 fn read_initial_byte_t(input: &[u8]) -> initial_byte_t

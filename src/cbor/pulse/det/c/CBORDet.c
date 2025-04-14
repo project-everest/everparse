@@ -410,6 +410,22 @@ static cbor_map_entry cbor_mk_map_entry(cbor_raw xk, cbor_raw xv)
     );
 }
 
+static CBOR_Spec_Raw_Base_raw_uint64 mk_raw_uint64(uint64_t x)
+{
+  uint8_t ite;
+  if (x <= (uint64_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO)
+    ite = 0U;
+  else if (x < 256ULL)
+    ite = 1U;
+  else if (x < 65536ULL)
+    ite = 2U;
+  else if (x < 4294967296ULL)
+    ite = 3U;
+  else
+    ite = 4U;
+  return ((CBOR_Spec_Raw_Base_raw_uint64){ .size = ite, .value = x });
+}
+
 static int16_t impl_uint8_compare(uint8_t x1, uint8_t x2)
 {
   if (x1 < x2)
@@ -466,22 +482,6 @@ lex_compare_bytes(Pulse_Lib_Slice_slice__uint8_t s1, Pulse_Lib_Slice_slice__uint
       pres = c;
   }
   return pres;
-}
-
-static CBOR_Spec_Raw_Base_raw_uint64 mk_raw_uint64(uint64_t x)
-{
-  uint8_t ite;
-  if (x <= (uint64_t)MAX_SIMPLE_VALUE_ADDITIONAL_INFO)
-    ite = 0U;
-  else if (x < 256ULL)
-    ite = 1U;
-  else if (x < 65536ULL)
-    ite = 2U;
-  else if (x < 4294967296ULL)
-    ite = 3U;
-  else
-    ite = 4U;
-  return ((CBOR_Spec_Raw_Base_raw_uint64){ .size = ite, .value = x });
 }
 
 static initial_byte_t read_initial_byte_t(Pulse_Lib_Slice_slice__uint8_t input)
