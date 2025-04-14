@@ -460,3 +460,60 @@ let unpack_precedes #order #compare c =
   | R.Array _ v ->
     Classical.forall_intro (Classical.move_requires (cbor_list_of_list_cbor_precedes #order #compare v))
   | _ -> ()
+
+let size c = raw_data_item_size c
+
+let cbor_map_mem_mem
+  #order #compare 
+  (m: cbor_map order compare)
+  (kv: (cbor order compare & cbor order compare))
+: Lemma
+  (requires (cbor_map_mem kv m))
+  (ensures (List.Tot.memP (fst kv, snd kv) m))
+= CBOR.Spec.Util.list_assoc_mem_intro (fst kv) (snd kv) m
+
+let cbor_map_mem_size
+  #order #compare 
+  (m: cbor_map order compare)
+  (kv: (cbor order compare & cbor order compare))
+: Lemma
+  (requires (cbor_map_mem kv m))
+  (ensures (
+    let sz = CBOR.Spec.Util.list_sum (CBOR.Spec.Util.pair_sum raw_data_item_size raw_data_item_size) m in
+    size (fst kv) <= sz /\ size (snd kv) <= sz
+  ))
+= cbor_map_mem_mem m kv;
+  CBOR.Spec.Util.list_sum_memP (CBOR.Spec.Util.pair_sum raw_data_item_size raw_data_item_size) m (fst kv, snd kv)
+
+let rec list_cbor_of_cbor_list_size
+  #order #compare
+  (l: list R.raw_data_item)
+  (x: cbor order compare)
+: Lemma
+  (requires (
+    List.Tot.for_all (R.raw_data_item_ints_optimal) l /\
+    List.Tot.for_all (R.raw_data_item_sorted order) l /\
+    List.Tot.memP x (list_cbor_of_cbor_list l)
+  ))
+  (ensures (
+    size x <= CBOR.Spec.Util.list_sum raw_data_item_size l
+  ))
+= let a :: q = l in
+  if x = a
+  then ()
+  else begin
+    list_cbor_of_cbor_list_size q x;
+    ()
+  end
+
+let size_unpack #order #compare x =
+  raw_data_item_size_eq x;
+  holds_on_raw_data_item_eq (R.raw_data_item_ints_optimal_elem) x;
+  holds_on_raw_data_item_eq (R.raw_data_item_sorted_elem order) x;
+  match x with
+  | Map _ m -> Classical.forall_intro (Classical.move_requires (cbor_map_mem_size #order #compare m));
+    ()
+  | Array _ v ->
+    Classical.forall_intro (Classical.move_requires (list_cbor_of_cbor_list_size #order #compare v));
+    ()
+  | _ -> ()

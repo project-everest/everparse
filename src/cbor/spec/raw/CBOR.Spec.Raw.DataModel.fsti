@@ -535,4 +535,18 @@ val unpack_precedes
   ))
   [SMTPat (unpack c)]
 
-(* TODO: size *)
+val size
+  #order #compare
+  (c: cbor order compare)
+: nat
+
+val size_unpack
+  #order #compare
+  (c: cbor order compare)
+: Lemma
+  (match unpack c with
+  | CArray v -> (forall x . List.Tot.memP x v ==> size x < size c)
+  | CMap v -> (forall x . cbor_map_mem x v ==> (size (fst x) < size c /\ size (snd x) < size c))
+  | CTagged _ v -> size v < size c
+  | _ -> True
+  )
