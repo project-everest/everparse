@@ -47,6 +47,8 @@ extern size_t cbor_det_size(cbor_det_t x, size_t bound);
 
 extern size_t cbor_det_serialize(cbor_det_t x, uint8_t *output, size_t output_len);
 
+extern size_t cbor_det_serialize_safe(cbor_det_t x, uint8_t *output, size_t output_len);
+
 extern bool cbor_det_impl_utf8_correct_from_array(uint8_t *x0, size_t x1);
 
 extern cbor_det_t cbor_det_mk_simple_value(uint8_t x0);
@@ -62,6 +64,9 @@ extern cbor_det_t cbor_det_mk_array_from_array(cbor_det_t *x0, uint64_t x1);
 extern cbor_det_map_entry_t cbor_det_mk_map_entry(cbor_det_t x0, cbor_det_t x1);
 
 extern cbor_det_t cbor_det_mk_map_from_array(cbor_det_map_entry_t *uu___, uint64_t x0);
+
+extern bool
+cbor_det_mk_map_from_array_safe(cbor_det_map_entry_t *x0, uint64_t x1, cbor_det_t *x2);
 
 extern bool cbor_det_equal(cbor_det_t x0, cbor_det_t x1);
 
