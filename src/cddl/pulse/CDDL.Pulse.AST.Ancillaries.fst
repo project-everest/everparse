@@ -163,6 +163,7 @@ and ask_zero_copy_wf_map_group
     ask_zero_copy_wf_map_group ancillary_v ancillary ancillary_ag s1
   | WfMLiteral cut key _ s ->
     ask_zero_copy_wf_type ancillary_v ancillary ancillary_ag s
+  | WfMMatchWithCut _ key_except _ s_key s_key_except s_value
   | WfMZeroOrMore _ key_except _ s_key s_key_except s_value ->
     if not (ancillary _ s_key)
     then Some (AskForType _ s_key true)

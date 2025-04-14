@@ -75,6 +75,22 @@ let map_group_choice_compatible_no_cut
       end
     | res -> coerce_failure res
     end
+  | WfMMatchWithCut key key_except value _ _ _ ->
+    begin match map_group_footprint typ_disjoint fuel env g2 with
+    | RSuccess (t2, t_ex2) ->
+      let res1 = typ_diff_disjoint env key key_except t2 t_ex2 in
+      if not (RSuccess? res1)
+      then res1
+      else begin
+        Spec.map_group_choice_compatible_no_cut_match_item_cut
+          (typ_sem env.e_sem_env key `Util.andp` Util.notp (typ_sem env.e_sem_env key_except))
+          (typ_sem env.e_sem_env value)
+          (elab_map_group_sem env.e_sem_env g2)
+          (typ_sem env.e_sem_env t2 `Util.andp` Util.notp (typ_sem env.e_sem_env t_ex2));
+        RSuccess ()
+      end
+    | res -> coerce_failure res
+    end
   | WfMConcat g1l s1l g1r s1r ->
     elab_map_group_sem_concat env.e_sem_env g1l g1r;
     let res1 = map_group_choice_compatible_no_cut env s1l s2 in

@@ -767,6 +767,7 @@ type elab_map_group =
   elab_map_group
 | MGMatchWithCut:
   key: typ ->
+  key_except: typ ->
   value: typ ->
   elab_map_group
 | MGCut:
@@ -796,7 +797,8 @@ let rec bounded_elab_map_group
   | MGMatch _ key value ->
     wf_literal key &&
     typ_bounded env value
-  | MGMatchWithCut key value ->
+  | MGMatchWithCut key key_except value ->
+    typ_bounded env key_except &&
     typ_bounded env key &&
     typ_bounded env value
   | MGCut key ->
@@ -844,8 +846,8 @@ let rec elab_map_group_sem
   | MGAlwaysFalse -> Spec.map_group_always_false
   | MGMatch cut key value ->
     Spec.map_group_match_item_for cut (eval_literal key) (typ_sem env value)
-  | MGMatchWithCut key value ->
-    Spec.map_group_match_item true (typ_sem env key) (typ_sem env value)
+  | MGMatchWithCut key key_except value ->
+    Spec.map_group_match_item true (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except))) (typ_sem env value)
   | MGCut key ->
     Spec.map_group_cut (typ_sem env key)
   | MGTable key key_except value ->
@@ -928,6 +930,7 @@ let rec spec_map_group_footprint
   | MGMatch cut key value
   -> Spec.map_group_footprint_match_item_for cut (eval_literal key) (typ_sem env value);
     (Ghost.hide (Spec.t_literal (eval_literal key)))
+  | MGMatchWithCut key key_except _
   | MGTable key key_except _ // TODO: extend to GOneOrMore
   -> (Ghost.hide (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except))))
   | MGChoice g1 g2
@@ -937,8 +940,7 @@ let rec spec_map_group_footprint
     (Ghost.hide (Ghost.reveal ty1 `Spec.t_choice` Ghost.reveal ty2))
   | MGNop
   | MGAlwaysFalse -> (Ghost.hide Spec.t_always_false)
-  | MGCut key
-  | MGMatchWithCut key _ -> (Ghost.hide (typ_sem env key))
+  | MGCut key -> (Ghost.hide (typ_sem env key))
 
 #pop-options
 
@@ -1116,6 +1118,14 @@ and ast0_wf_parse_map_group
     value: typ ->
     s: ast0_wf_typ value ->
     ast0_wf_parse_map_group (MGMatch cut key value)
+| WfMMatchWithCut:
+    key: typ ->
+    key_except: typ ->
+    value: typ ->
+    s_key: ast0_wf_typ key ->
+    s_key_except: ast0_wf_typ key_except ->
+    s_value: ast0_wf_typ value ->
+    ast0_wf_parse_map_group (MGMatchWithCut key key_except value)
 | WfMZeroOrMore:
     key: typ ->
     key_except: typ ->
@@ -1292,6 +1302,7 @@ and bounded_wf_parse_map_group
 | WfMLiteral cut key value s ->
     wf_literal key &&
     bounded_wf_typ env value s
+| WfMMatchWithCut key key_except value s_key s_key_except s_value
 | WfMZeroOrMore key key_except value s_key s_key_except s_value ->
     bounded_wf_typ env key s_key &&
     bounded_wf_typ env key_except s_key_except &&
@@ -1459,6 +1470,7 @@ and bounded_wf_parse_map_group_incr
     bounded_wf_parse_map_group_incr env env' g s
   | WfMLiteral cut key value s ->
     bounded_wf_typ_incr env env' value s
+  | WfMMatchWithCut key key_except value s_key s_key_except s_value
   | WfMZeroOrMore key key_except value s_key s_key_except s_value ->
     bounded_wf_typ_incr env env' key s_key;
     bounded_wf_typ_incr env env' key_except s_key_except;
@@ -1570,6 +1582,7 @@ and bounded_wf_parse_map_group_bounded
   (decreases wf)
   [SMTPat (bounded_wf_parse_map_group env g wf)]
 = match wf with
+  | WfMMatchWithCut key key_except value s_key s_key_except s_value
   | WfMZeroOrMore key key_except value s_key s_key_except s_value ->
     bounded_wf_typ_bounded env key s_key;
     bounded_wf_typ_bounded env key_except s_key_except;
@@ -1690,6 +1703,7 @@ and spec_wf_parse_map_group
     Spec.MapGroupFail? (Spec.apply_map_group_det (elab_map_group_sem env g) Cbor.cbor_map_empty)
 | WfMLiteral cut key value s ->
     spec_wf_typ env true value s
+| WfMMatchWithCut key key_except value s_key s_key_except s_value
 | WfMZeroOrMore key key_except value s_key s_key_except s_value ->
     spec_wf_typ env true key s_key /\
     spec_wf_typ env false key_except s_key_except /\
@@ -1900,6 +1914,7 @@ and spec_wf_parse_map_group_incr
     spec_wf_parse_map_group_incr env env' g s
   | WfMLiteral cut key value s ->
     spec_wf_typ_incr env env' true value s
+  | WfMMatchWithCut key key_except value s_key s_key_except s_value
   | WfMZeroOrMore key key_except value s_key s_key_except s_value ->
     spec_wf_typ_incr env env' true key s_key;
     spec_wf_typ_incr env env' false key_except s_key_except;
@@ -2628,6 +2643,7 @@ and target_type_of_wf_map_group
 = match wf with
   | WfMNop _ -> TTElem TTUnit
   | WfMChoice _ s1 _ s2 -> TTUnion (target_type_of_wf_map_group s1) (target_type_of_wf_map_group s2)
+  | WfMMatchWithCut _ _ _ s1 _ s2 -> TTPair (target_type_of_wf_typ s1) (target_type_of_wf_typ s2)
   | WfMConcat _ s1 _ s2 -> TTPair (target_type_of_wf_map_group s1) (target_type_of_wf_map_group s2)
   | WfMZeroOrOne _ s -> TTOption (target_type_of_wf_map_group s)
   | WfMLiteral _ _ _ s -> target_type_of_wf_typ s
@@ -2709,6 +2725,7 @@ and target_type_of_wf_map_group_bounded
     target_type_of_wf_map_group_bounded env s2
   | WfMZeroOrOne _ s -> target_type_of_wf_map_group_bounded env s
   | WfMLiteral _ _ _ s -> target_type_of_wf_typ_bounded env s
+  | WfMMatchWithCut _ _ _ s_key _ s_value
   | WfMZeroOrMore _ _ _ s_key _ s_value ->
     target_type_of_wf_typ_bounded env s_key;
     target_type_of_wf_typ_bounded env s_value

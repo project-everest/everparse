@@ -131,7 +131,7 @@ let rec mk_elab_map_group
   | GElem cut (TElem (ELiteral key)) value ->
     RSuccess (MGMatch cut key value)
   | GElem true key value ->
-    RSuccess (MGMatchWithCut key value)
+    RSuccess (MGMatchWithCut key (TElem EAlwaysFalse) value)
   | GAlwaysFalse -> RSuccess MGAlwaysFalse
   | GNop -> RSuccess MGNop
   | GZeroOrOne g ->
@@ -226,6 +226,13 @@ let rec mk_elab_map_group_correct
     Spec.map_group_filter_ext
       (Util.notp (Spec.matches_map_group_entry (Util.andp (typ_sem env.e_sem_env key) (Util.notp Spec.t_always_false)) (typ_sem env.e_sem_env value)))
       (Util.notp (Spec.matches_map_group_entry (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)))
+  | GElem cut key value ->
+    Spec.map_group_match_item_ext
+      cut
+      (Util.andp (typ_sem env.e_sem_env key) (Util.notp Spec.t_always_false))
+      (typ_sem env.e_sem_env value)
+      (typ_sem env.e_sem_env key)
+      (typ_sem env.e_sem_env value)
   | GDef n ->
     let g' = (env.e_env n) in
     rewrite_group_correct env.e_sem_env fuel true g';
@@ -289,7 +296,7 @@ let rec extract_cut
 : Tot typ
 = match g with
   | MGMatch true key _ -> (TElem (ELiteral key))
-  | MGMatchWithCut key _ -> key
+  | MGMatchWithCut key (TElem EAlwaysFalse) _ -> key
   | MGChoice g1 _ -> extract_cut g1
   | _ -> (TElem EAlwaysFalse)
 
@@ -340,7 +347,10 @@ let rec extract_cut_correct
   | MGChoice g1 _ ->
     extract_cut_correct env g1 m
   | MGMatch true key _ -> ()
-  | MGMatchWithCut key _ -> ()
+  | MGMatchWithCut key (TElem EAlwaysFalse) _ ->
+    let ty = typ_sem env key in
+    assert (CDDL.Spec.Base.typ_equiv ty (Util.andp ty (Util.notp (elem_typ_sem EAlwaysFalse))));
+    ()
   | _ -> cbor_map_disjoint_from_footprint_always_false m
 
 #pop-options
@@ -399,12 +409,12 @@ let rec annot_tables
     | RFailure _ -> RSuccess (mk_TChoice cut (TElem (ELiteral key)), g)
     | ROutOfFuel -> ROutOfFuel
     end
-  | MGMatchWithCut key _ ->
-    begin match typ_included fuel env key cut with
-    | RSuccess _ -> RSuccess (cut, MGAlwaysFalse)
-    | RFailure _ -> RSuccess (mk_TChoice cut key, g)
-    | ROutOfFuel -> ROutOfFuel
+  | MGMatchWithCut key (TElem EAlwaysFalse) value ->
+    begin match typ_inter_underapprox fuel env cut key with
+    | RSuccess key_except -> RSuccess (mk_TChoice cut key, MGMatchWithCut key key_except value)
+    | res -> coerce_failure res
     end
+  | MGMatchWithCut _ _ _ -> RFailure "annot_tables cannot be run twice: MGMatchWithCut"
   | MGCut key -> RSuccess (mk_TChoice cut key, g)
   | MGAlwaysFalse -> RSuccess (TElem EAny, g)
   | MGNop -> RSuccess (cut, g)
@@ -439,6 +449,41 @@ let cbor_map_filter_ext_strong
   (requires forall x . Cbor.cbor_map_mem x m ==> f1 x == f2 x)
   (ensures Cbor.cbor_map_filter f1 m == Cbor.cbor_map_filter f2 m)
 = Cbor.cbor_map_ext (Cbor.cbor_map_filter f1 m) (Cbor.cbor_map_filter f2 m)
+
+#restart-solver
+let apply_map_group_det_match_item_cut_is_equal
+  (k1: Spec.typ)
+  (k2: Spec.typ)
+  (ty: Spec.typ)
+  (l: Cbor.cbor_map)
+: Lemma
+  (requires (
+    Cbor.cbor_map_filter (Spec.matches_map_group_entry k1 Spec.any) l == 
+    Cbor.cbor_map_filter (Spec.matches_map_group_entry k2 Spec.any) l    
+  ))
+  (ensures (
+    Spec.apply_map_group_det (Spec.map_group_match_item true k1 ty) l ==  Spec.apply_map_group_det (Spec.map_group_match_item true k2 ty) l
+  ))
+= let s = Cbor.cbor_map_filter (Spec.matches_map_group_entry k1 Spec.any) l in
+  assert (Cbor.cbor_map_equal (Cbor.cbor_map_sub l s) (Cbor.cbor_map_filter (CBOR.Spec.Util.notp (Spec.matches_map_group_entry k1 Spec.any)) l));
+  assert (Cbor.cbor_map_equal (Cbor.cbor_map_sub l s) (Cbor.cbor_map_filter (CBOR.Spec.Util.notp (Spec.matches_map_group_entry k2 Spec.any)) l));
+  assert ((Cbor.cbor_map_filter (CBOR.Spec.Util.notp (Spec.matches_map_group_entry k1 Spec.any)) l) == (Cbor.cbor_map_filter (CBOR.Spec.Util.notp (Spec.matches_map_group_entry k2 Spec.any)) l));
+  Spec.apply_map_group_det_match_item_cut k1 ty l;
+  Spec.apply_map_group_det_match_item_cut k2 ty l;
+  ()
+
+let cbor_map_disjoint_from_footprint_choice
+  (m: Cbor.cbor_map)
+  (f1 f2: Spec.typ)
+: Lemma
+  (requires (
+    Spec.cbor_map_disjoint_from_footprint m f1 /\
+    Spec.cbor_map_disjoint_from_footprint m f2
+  ))
+  (ensures (
+    Spec.cbor_map_disjoint_from_footprint m (Spec.t_choice f1 f2)
+  ))
+= ()
 
 #push-options "--z3rlimit 256 --ifuel 8 --fuel 4 --query_stats --split_queries always"
 
@@ -496,6 +541,39 @@ let rec annot_tables_correct_aux'
       assert (None? (Cbor.cbor_map_get m (eval_literal key)));
       assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m == Spec.MapGroupFail);
       assert (Spec.apply_map_group_det Spec.map_group_always_false m == Spec.MapGroupFail);
+      assert (annot_tables_correct_postcond fuel env cut g m)
+    | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
+    end
+  | MGMatchWithCut key (TElem EAlwaysFalse) value ->
+    let tkey = typ_sem env.e_sem_env key in
+    let tvalue = (typ_sem env.e_sem_env value) in
+    Spec.map_group_match_item_ext true tkey tvalue (Util.andp tkey (Util.notp (elem_typ_sem EAlwaysFalse))) tvalue;
+    assert (elab_map_group_sem env.e_sem_env g == Spec.map_group_match_item true tkey tvalue);
+    Spec.apply_map_group_det_match_item_cut tkey tvalue m;
+    begin match typ_inter_underapprox fuel env cut key with
+    | RSuccess key_except ->
+      let tkey' = (Util.andp (typ_sem env.e_sem_env key) (Util.notp (typ_sem env.e_sem_env key_except))) in
+      let f = (Spec.matches_map_group_entry tkey Spec.any) in
+      let nf = Util.notp f in
+      let mnf = Cbor.cbor_map_filter nf m in
+      let mf = Cbor.cbor_map_filter f m in
+      let g' = MGMatchWithCut key key_except value in
+      assert (annot_tables fuel env cut g == RSuccess (mk_TChoice cut key, g'));
+      assert (elab_map_group_sem env.e_sem_env g' == Spec.map_group_match_item true tkey' tvalue);
+      Spec.apply_map_group_det_match_item_cut tkey' tvalue m;
+      let f' = (Spec.matches_map_group_entry (Util.andp (typ_sem env.e_sem_env key) (Util.notp (typ_sem env.e_sem_env key_except))) Spec.any) in
+      let nf' = Util.notp f in
+      let mnf' = Cbor.cbor_map_filter nf' m in
+      let mf' = Cbor.cbor_map_filter f' m in
+      cbor_map_filter_ext_strong f f' m;
+      assert (mf == mf');
+      cbor_map_filter_ext_strong nf nf' m;
+      assert (mnf == mnf');
+      apply_map_group_det_match_item_cut_is_equal tkey tkey' tvalue m;
+      assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m == Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g') m);
+      assert (Spec.cbor_map_disjoint_from_footprint mnf (typ_sem env.e_sem_env key));
+      assert (Spec.cbor_map_disjoint_from_footprint mnf (typ_sem env.e_sem_env cut));
+      cbor_map_disjoint_from_footprint_choice mnf (typ_sem env.e_sem_env cut) (typ_sem env.e_sem_env key);
       assert (annot_tables_correct_postcond fuel env cut g m)
     | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
     end
@@ -861,6 +939,19 @@ and mk_wf_parse_map_group
   | MGMatch cut key value ->
     begin match mk_wf_typ fuel' env true value with
     | RSuccess tvalue -> RSuccess (WfMLiteral cut key value tvalue)
+    | res -> coerce_failure res
+    end
+  | MGMatchWithCut key key_except value ->
+    begin match mk_wf_typ fuel' env true key with
+    | RSuccess tkey ->
+      begin match mk_wf_typ fuel' env false key_except with
+      | RSuccess tkey_except ->
+        begin match mk_wf_typ fuel' env true value with
+        | RSuccess tvalue -> RSuccess (WfMMatchWithCut key key_except value tkey tkey_except tvalue)
+        | res -> coerce_failure res
+        end
+      | res -> coerce_failure res
+      end
     | res -> coerce_failure res
     end
   | MGTable key key_except value ->

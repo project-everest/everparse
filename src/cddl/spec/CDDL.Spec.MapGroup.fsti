@@ -477,6 +477,20 @@ let map_group_choice_compatible_intro
   (map_group_choice_compatible left right)
 = Classical.forall_intro (Classical.move_requires prf)
 
+val map_group_choice_compatible_match_item_with_cut
+  (key: typ)
+  (value: typ)
+  (right: map_group)
+  (fp: typ)
+: Lemma
+  (requires (
+    key `typ_disjoint` fp /\
+    map_group_footprint right fp
+  ))
+  (ensures (
+    map_group_choice_compatible (map_group_match_item true key value) right
+  ))
+
 #restart-solver
 val map_group_choice_compatible_match_item_for
   (cut: bool)
@@ -748,6 +762,21 @@ let map_group_choice_compatible_no_cut_match_item_for_cut
     map_group_choice_compatible_no_cut (map_group_match_item_for true key value) g
   ))
 = map_group_choice_compatible_match_item_for true key value g f
+
+let map_group_choice_compatible_no_cut_match_item_cut
+  (key: typ)
+  (value: typ)
+  (g: det_map_group)
+  (f: typ)
+: Lemma
+  (requires (
+    map_group_footprint g f /\
+    typ_disjoint key f
+  ))
+  (ensures (
+    map_group_choice_compatible_no_cut (map_group_match_item true key value) g
+  ))
+= map_group_choice_compatible_match_item_with_cut key value g f
 
 val map_group_footprint_concat_consumes_all_recip
   (g1 g2: map_group)

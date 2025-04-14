@@ -68,7 +68,7 @@ let rec elab_map_group_is_productive
 = match g with
   | MGAlwaysFalse
   | MGMatch _ _ _
-  | MGMatchWithCut _ _
+  | MGMatchWithCut _ _ _
     -> RSuccess ()
   | MGNop -> RFailure "elab_map_group_is_productive: MGNop"
   | MGTable _ _ _ -> RFailure "elab_map_group_is_productive: MGTable"
@@ -112,7 +112,7 @@ let rec apply_map_group_det_empty_fail
 = match g with
   | MGAlwaysFalse
   | MGMatch _ _ _
-  | MGMatchWithCut _ _ -> RSuccess true
+  | MGMatchWithCut _ _ _ -> RSuccess true
   | MGCut _
   | MGTable _ _ _
   | MGNop -> RSuccess false
@@ -1239,11 +1239,11 @@ let rec map_group_footprint'
     ->
     let res = RSuccess (TElem (ELiteral key), TElem EAlwaysFalse) in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
-  | MGMatchWithCut key _
   | MGCut key
     ->
     let res = RSuccess (key, TElem EAlwaysFalse) in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
+  | MGMatchWithCut key key_except _
   | MGTable key key_except _ ->
     let res = RSuccess (key, key_except) in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)

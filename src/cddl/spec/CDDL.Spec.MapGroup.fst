@@ -48,6 +48,25 @@ let restrict_map_group_concat
       | _ -> ()
     )
 
+let map_group_choice_compatible_match_item_with_cut
+  (key: typ)
+  (value: typ)
+  (right: map_group)
+  (fp: typ)
+: Lemma
+  (requires (
+    key `typ_disjoint` fp /\
+    map_group_footprint right fp
+  ))
+  (ensures (
+    map_group_choice_compatible (map_group_match_item true key value) right
+  ))
+= map_group_choice_compatible_intro (map_group_match_item true key value) right (fun x ->
+    let phi = matches_map_group_entry fp any in
+    cbor_map_split phi x;
+    map_group_footprint_elim right fp (cbor_map_filter phi x) (cbor_map_filter (U.notp phi) x)
+  )
+
 let map_group_choice_compatible_match_item_for
   (cut: bool)
   (key: cbor)

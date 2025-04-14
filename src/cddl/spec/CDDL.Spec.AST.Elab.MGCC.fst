@@ -171,8 +171,23 @@ let rec map_group_choice_compatible'
                   (| RSuccess (), () |)
                 end
               end
+            | WfMMatchWithCut key2 key_except2 value2 _ _ _ ->
+              (| RFailure "map_group_choice_compatible: WfMMatchWithCut WfMMatchWithCut", () |)
             | WfMZeroOrMore _ _ _ _ _ _ -> (| RFailure "map_group_choice_compatible: GZeroOrMore right, not disjoint", () |)
             end
+          end
+        | res -> (| coerce_failure res, () |)
+        end
+      | WfMMatchWithCut key key_except value s_key s_key_except s_value ->
+        begin match map_group_footprint typ_disjoint fuel env g2 with
+        | RSuccess (t2, t_ex2) ->
+          begin match typ_diff_disjoint env key key_except t2 t_ex2 with
+          | RSuccess _ ->
+            Spec.map_group_choice_compatible_match_item_with_cut (typ_sem env.e_sem_env key `Util.andp` Util.notp (typ_sem env.e_sem_env key_except)) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g2) (typ_sem env.e_sem_env t2 `Util.andp` Util.notp (typ_sem env.e_sem_env t_ex2));
+            (| RSuccess (), () |)
+          | ROutOfFuel -> (| ROutOfFuel, () |)
+          | RFailure _ ->
+            (| RFailure "map_group_choice_compatible: GMapElem true (TElem (ELiteral key)) value, not disjoint", () |)
           end
         | res -> (| coerce_failure res, () |)
         end
