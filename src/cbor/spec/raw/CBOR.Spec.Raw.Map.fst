@@ -315,3 +315,116 @@ let map_sort_correct
   list_sorted_map_entry_order_no_repeats key_order l';
   list_assoc_no_repeats_equiv l l';
   ()
+
+(* Map insertion *)
+
+let map_entry_compare compare
+  (x1 x2: raw_data_item & raw_data_item)
+: Tot int
+= compare (fst x1) (fst x2)
+
+let rec map_insert
+  compare
+  (m: list (raw_data_item & raw_data_item))
+  (kv: (raw_data_item & raw_data_item))
+: Tot (option (list (raw_data_item & raw_data_item)))
+= match m with
+  | [] -> Some [kv]
+  | kv' :: q ->
+    let c = map_entry_compare compare kv' kv in
+    if c < 0
+    then begin
+      match map_insert compare q kv with
+      | None -> None
+      | Some l' -> Some (kv' :: l')
+    end
+    else if c > 0
+    then begin
+      Some (kv :: m)
+    end
+    else None
+
+let rec map_insert_mem
+  compare
+  (m: list (raw_data_item & raw_data_item))
+  (kv: (raw_data_item & raw_data_item))
+  (x: (raw_data_item & raw_data_item))
+: Lemma
+  (ensures (match map_insert compare m kv with
+  | None -> True
+  | Some l' -> List.Tot.memP x l' <==> List.Tot.memP x (kv :: m)
+  ))
+  (decreases m)
+= match m with
+  | [] -> ()
+  | kv' :: q ->
+    let c = map_entry_compare compare kv' kv in
+    if c < 0
+    then map_insert_mem compare q kv x
+    else ()
+
+let rec map_insert_sorted'
+  (order: raw_data_item -> raw_data_item -> bool)
+  (compare: raw_data_item -> raw_data_item -> int {
+    (forall x . order x x == false) /\
+    (forall x y z . (order x y /\ order y z) ==> order x z) /\
+    (forall x y . order x y == (compare x y < 0)) /\
+    (forall x y . compare x y == 0 <==> x == y) /\
+    (forall x y . (compare x y < 0 <==> compare y x > 0))
+  })
+  (m: list (raw_data_item & raw_data_item))
+  (kv: (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.sorted (map_entry_order order _) m
+  ))
+  (ensures (
+    let ol' = map_insert compare m kv in
+    (None? ol' <==> List.Tot.memP (fst kv) (List.Tot.map fst m)) /\
+    begin match ol' with
+    | None -> True
+    | Some l' -> List.Tot.sorted (map_entry_order order _) l'
+    end
+  ))
+  (decreases m)
+= match m with
+  | [] -> ()
+  | kv' :: q ->
+    let c = map_entry_compare compare kv' kv in
+    if c < 0
+    then begin
+      map_insert_sorted' order compare q kv;
+      ()
+    end
+    else if c > 0
+    then begin
+      assert (map_entry_order order _ kv kv');
+      CBOR.Spec.Raw.Map.list_sorted_map_entry_order_not_memP_tail order kv m;
+      ()
+    end
+    else ()
+
+let map_insert_sorted
+  (order: raw_data_item -> raw_data_item -> bool)
+  (compare: raw_data_item -> raw_data_item -> int {
+    (forall x . order x x == false) /\
+    (forall x y z . (order x y /\ order y z) ==> order x z) /\
+    (forall x y . order x y == (compare x y < 0)) /\
+    (forall x y . compare x y == 0 <==> x == y) /\
+    (forall x y . (compare x y < 0 <==> compare y x > 0))
+  })
+  (m: list (raw_data_item & raw_data_item))
+  (kv: (raw_data_item & raw_data_item))
+: Lemma
+  (requires (
+    List.Tot.sorted (map_entry_order order _) m
+  ))
+  (ensures (
+    let ol' = map_insert compare m kv in
+    (None? ol' <==> List.Tot.memP (fst kv) (List.Tot.map fst m)) /\
+    begin match ol' with
+    | None -> True
+    | Some l' -> List.Tot.sorted (map_entry_order order _) l'
+    end
+  ))
+= map_insert_sorted' order compare m kv

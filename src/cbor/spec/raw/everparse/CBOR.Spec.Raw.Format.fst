@@ -234,41 +234,6 @@ let serialize_cbor_map_cons key value q =
   LPL.tot_serialize_nondep_then_eq F.tot_serialize_raw_data_item F.tot_serialize_raw_data_item (key, value);
   ()
 
-let rec cbor_map_insert_sorted'
-  (m: list (raw_data_item & raw_data_item))
-  (kv: (raw_data_item & raw_data_item))
-: Lemma
-  (requires (
-    List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m
-  ))
-  (ensures (
-    let ol' = cbor_map_insert m kv in
-    (None? ol' <==> List.Tot.memP (fst kv) (List.Tot.map fst m)) /\
-    begin match ol' with
-    | None -> True
-    | Some l' -> List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l'
-    end
-  ))
-  (decreases m)
-= match m with
-  | [] -> ()
-  | kv' :: q ->
-    let c = cbor_map_entry_raw_compare kv' kv in
-    if c < 0
-    then begin
-      cbor_map_insert_sorted' q kv;
-      ()
-    end
-    else if c > 0
-    then begin
-      assert (map_entry_order deterministically_encoded_cbor_map_key_order _ kv kv');
-      CBOR.Spec.Raw.Map.list_sorted_map_entry_order_not_memP_tail deterministically_encoded_cbor_map_key_order kv m;
-      ()
-    end
-    else cbor_compare_equal (fst kv') (fst kv)
-
-let cbor_map_insert_sorted m kv = cbor_map_insert_sorted' m kv
-
 #push-options "--z3rlimit 32"
 
 #restart-solver

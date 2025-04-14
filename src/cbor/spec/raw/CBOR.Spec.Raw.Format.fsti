@@ -262,10 +262,7 @@ val cbor_compare_correct
 : Lemma
   (ensures (cbor_compare x1 x2 == bytes_lex_compare (serialize_cbor x1) (serialize_cbor x2)))
 
-let cbor_map_entry_raw_compare
-  (x1 x2: raw_data_item & raw_data_item)
-: Tot int
-= cbor_compare (fst x1) (fst x2)
+let cbor_map_entry_raw_compare = CBOR.Spec.Raw.Map.map_entry_compare cbor_compare
 
 let cbor_map_entry_raw_compare_correct : squash (
   let order = (map_entry_order deterministically_encoded_cbor_map_key_order _) in
@@ -420,47 +417,11 @@ let rec serialize_cbor_map_append (l1 l2: list (raw_data_item & raw_data_item)) 
     serialize_cbor_map_cons k v (l1' `List.Tot.append` l2);
     Seq.append_assoc (serialize_cbor k `Seq.append` serialize_cbor v) (serialize_cbor_map l1') (serialize_cbor_map l2)
 
-let rec cbor_map_insert
-  (m: list (raw_data_item & raw_data_item))
-  (kv: (raw_data_item & raw_data_item))
-: Tot (option (list (raw_data_item & raw_data_item)))
-= match m with
-  | [] -> Some [kv]
-  | kv' :: q ->
-    let c = cbor_map_entry_raw_compare kv' kv in
-    if c < 0
-    then begin
-      match cbor_map_insert q kv with
-      | None -> None
-      | Some l' -> Some (kv' :: l')
-    end
-    else if c > 0
-    then begin
-      Some (kv :: m)
-    end
-    else None
+let cbor_map_insert = CBOR.Spec.Raw.Map.map_insert cbor_compare
 
-let rec cbor_map_insert_mem
-  (m: list (raw_data_item & raw_data_item))
-  (kv: (raw_data_item & raw_data_item))
-  (x: (raw_data_item & raw_data_item))
-: Lemma
-  (ensures (match cbor_map_insert m kv with
-  | None -> True
-  | Some l' -> List.Tot.memP x l' <==> List.Tot.memP x (kv :: m)
-  ))
-  (decreases m)
-= match m with
-  | [] -> ()
-  | kv' :: q ->
-    let c = cbor_map_entry_raw_compare kv' kv in
-    if c < 0
-    then cbor_map_insert_mem q kv x
-    else ()
+let cbor_map_insert_mem = CBOR.Spec.Raw.Map.map_insert_mem cbor_compare
 
-val cbor_map_insert_sorted
-  (m: list (raw_data_item & raw_data_item))
-  (kv: (raw_data_item & raw_data_item))
+let cbor_map_insert_sorted m kv
 : Lemma
   (requires (
     List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) m
@@ -473,6 +434,13 @@ val cbor_map_insert_sorted
     | Some l' -> List.Tot.sorted (map_entry_order deterministically_encoded_cbor_map_key_order _) l'
     end
   ))
+=
+  Classical.forall_intro_2 deterministically_encoded_cbor_map_key_order_spec;
+  Classical.forall_intro_2 cbor_compare_correct;
+  Classical.forall_intro_2 cbor_compare_equal;
+  Classical.forall_intro_2 bytes_lex_compare_opp;
+  CBOR.Spec.Raw.Map.map_insert_sorted deterministically_encoded_cbor_map_key_order cbor_compare m kv;
+  ()
 
 val serialize_cbor_map_insert_length
   (m: list (raw_data_item & raw_data_item))
