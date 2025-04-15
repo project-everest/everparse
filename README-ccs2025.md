@@ -46,3 +46,9 @@ Section 5.2:
 
 Appendix A:
 - The arithmetic example is in `tests/pulse`
+
+Appendix C:
+- The DPE CDDL specifications are in `src/cddl/test/dpe.cddl`
+- The verified Pulse code formatting objects to and from byte arrays is in `src/cddl/test/dpe/`
+- The in-memory profile DPE API is in `src/cddl/test/DPESlice.fsti`, adapt from Ebner et al. 2025 to be standalone
+- The main API implementing the CBOR profile is in `src/cddl/test/dpe/DPEMain.fst`
