@@ -35,6 +35,11 @@ Section 4.2:
 - The CDDL sserializer implementation combinators are defined in `src/cddl/pulse/CDDL.Pulse.Serialize.*`
 - The CDDL code generator is defined as `impl_bundle_wf_type` in `src/cddl/pulse/CDDL.Pulse.AST.Bundle.fst`
 
+Section 5.1:
+- Record benchmark: CDDL description in `BenchFlat.cddl`, driver code in `Test_BenchFlat.cpp`.
+- Map benchmark: CDDL description in `BenchMap.cddl`, driver code in `Test_BenchMap.cpp`.
+- Array benchmark: CDDL description in `src/cddl/unit-tests/BenchArray.cddl`. The driver `Test_BenchArray.c` serializes and parses with our tool. `Test_BenchArray__Interop1.c` serializes with our tool and parses with QCBOR. `Test_BenchArray__Interop2.c` serialized with QCBOR and parses with our tool. Finall, `Test_BenchArray__Interop3.cpp` tests against TinyCBOR.
+
 Section 5.2:
 - The unverified interoperability tests are in the directory `src/cose/interop`.  The interesting file is `common.c`, which uses the generated C API.
 - The verified signature creation and verification code is in `src/cose/verifiedinterop`.  The main file is `CommonPulse.fst`.
