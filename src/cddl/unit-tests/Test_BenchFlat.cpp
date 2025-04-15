@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "qcbor/qcbor_encode.h"
 #include "qcbor/qcbor_spiffy_decode.h"
+#include "tinycbor/src/cbor.h"
 
 // Prevent clashes between QCBOR and our header :-)
 #undef CBOR_MAJOR_TYPE_BYTE_STRING
@@ -16,7 +17,7 @@ extern "C" {
 }
 
 #define EXPECTED_SIZE 97
-#define LAPS 10000 /* how many times the lookup pass is repeated */
+#define LAPS 100000 /* how many times the lookup pass is repeated */
 
 uint64_t bigrand() {
     uint64_t r = rand ();
@@ -25,65 +26,6 @@ uint64_t bigrand() {
     r = r * RAND_MAX + rand ();
     return r ; // % 100000000;
 }
-
-// bool qcbor_lookup1(uint8_t *buf, size_t len, uint64_t key, uint64_t *val) {
-//   assert (val);
-//     QCBORError rc;
-//     QCBORDecodeContext ctx;
-//     QCBORItem item;
-//     QCBORDecode_Init(&ctx, (UsefulBufC){buf, len}, QCBOR_DECODE_MODE_NORMAL);
-//     QCBORDecode_EnterMap(&ctx, NULL);
-//     QCBORDecode_GetUInt64InMapN(&ctx, key, val);
-//     rc = QCBORDecode_GetError(&ctx);
-//     if (rc == QCBOR_SUCCESS) {
-//         QCBORDecode_ExitMap(&ctx);
-//         return true;
-//     }
-
-//     return false;
-// }
-
-// bool evercbor_lookup1(uint8_t *buf, size_t len, uint64_t key, uint64_t *val) {
-//   cbor_det_t m = cbor_det_parse(buf, len);
-//   cbor_det_t k = cbor_det_mk_int64(0, key);
-//   cbor_det_t cval;
-//   bool rc = cbor_det_map_get(m, k, &cval);
-
-//   if (rc) {
-//     *val = cbor_det_read_uint64(cval);
-//   }
-
-//   return rc;
-// }
-
-
-// bool qcbor_lookup1_no_short(uint8_t *buf, size_t len, uint64_t key, uint64_t *val) {
-//     QCBORError rc;
-//     QCBORDecodeContext ctx;
-//     QCBORItem item;
-//     QCBORDecode_Init(&ctx, (UsefulBufC){buf, len}, QCBOR_DECODE_MODE_NORMAL);
-//     QCBORDecode_EnterMap(&ctx, NULL);
-//     while ((rc = QCBORDecode_GetNext(&ctx, &item)) != QCBOR_ERR_NO_MORE_ITEMS) {
-//         uint64_t key2;
-//         QCBORDecode_GetUInt64(&ctx, &key2);
-//         if (key2 == key) {
-//             if (val) {
-//                 QCBORDecode_GetUInt64(&ctx, val);
-//             }
-//             QCBORDecode_ExitMap(&ctx);
-//             return true;
-//         }
-//     }
-//     return false;
-// }
-
-// bool tinycbor_lookup1(uint8_t *buf, size_t len, uint64_t key, uint64_t *val) {
-//     return false;
-// }
-
-// bool tinycbor_lookup1_no_short(uint8_t *buf, size_t len, uint64_t key, uint64_t *val) {
-//     return false;
-// }
 
 void bench_evercddl () {
     uint8_t *buf = (uint8_t *) malloc(EXPECTED_SIZE);
@@ -247,7 +189,7 @@ void bench_qcbor () {
     float f;
 
     /* reuse evercddl struct, why not. */
-    uint8_t *buf = (uint8_t *) malloc(2 * EXPECTED_SIZE);
+    uint8_t *buf = (uint8_t *) malloc(EXPECTED_SIZE);
     BenchFlat_evercddl_record_pretty_s r, r2;
     r.f1 = bigrand();
     r.f2 = bigrand();
@@ -258,7 +200,7 @@ void bench_qcbor () {
     r.f7 = bigrand();
     r.f8 = bigrand();
 
-    UsefulBuf Buffer = { buf, 2 * EXPECTED_SIZE };
+    UsefulBuf Buffer = { buf, EXPECTED_SIZE };
     UsefulBufC Encoded;
 
     UsefulBufC enc;
@@ -309,12 +251,98 @@ void bench_qcbor () {
     assert (r.f8 == r2.f8);
 }
 
+size_t tinycbor_encode(uint8_t *buf, size_t len, BenchFlat_evercddl_record_pretty_s r) {
+    CborEncoder enc;
+    cbor_encoder_init(&enc, buf, len, 0);
+    cbor_encoder_create_map(&enc, &enc, 8);
+    cbor_encode_text_stringz(&enc, "f1"); cbor_encode_uint(&enc, r.f1);
+    cbor_encode_text_stringz(&enc, "f2"); cbor_encode_uint(&enc, r.f2);
+    cbor_encode_text_stringz(&enc, "f3"); cbor_encode_uint(&enc, r.f3);
+    cbor_encode_text_stringz(&enc, "f4"); cbor_encode_uint(&enc, r.f4);
+    cbor_encode_text_stringz(&enc, "f5"); cbor_encode_uint(&enc, r.f5);
+    cbor_encode_text_stringz(&enc, "f6"); cbor_encode_uint(&enc, r.f6);
+    cbor_encode_text_stringz(&enc, "f7"); cbor_encode_uint(&enc, r.f7);
+    cbor_encode_text_stringz(&enc, "f8"); cbor_encode_uint(&enc, r.f8);
+    cbor_encoder_close_container(&enc, &enc);
+    size_t len2 = cbor_encoder_get_buffer_size(&enc, buf);
+    if (len2 != len) {
+        printf("TINYCBOR ERROR: %zu != %zu\n", len2, len);
+        return 0;
+    }
+    return len2;
+}
+
+bool tinycbor_decode(uint8_t *buf, size_t len, BenchFlat_evercddl_record_pretty_s *r) {
+    CborParser p;
+    CborValue vmap, v;
+    cbor_parser_init(buf, len, 0, &p, &vmap);
+    cbor_value_map_find_value(&vmap, "f1", &v); cbor_value_get_uint64(&v, &r->f1);
+    cbor_value_map_find_value(&vmap, "f2", &v); cbor_value_get_uint64(&v, &r->f2);
+    cbor_value_map_find_value(&vmap, "f3", &v); cbor_value_get_uint64(&v, &r->f3);
+    cbor_value_map_find_value(&vmap, "f4", &v); cbor_value_get_uint64(&v, &r->f4);
+    cbor_value_map_find_value(&vmap, "f5", &v); cbor_value_get_uint64(&v, &r->f5);
+    cbor_value_map_find_value(&vmap, "f6", &v); cbor_value_get_uint64(&v, &r->f6);
+    cbor_value_map_find_value(&vmap, "f7", &v); cbor_value_get_uint64(&v, &r->f7);
+    cbor_value_map_find_value(&vmap, "f8", &v); cbor_value_get_uint64(&v, &r->f8);
+
+    return true;
+}
+
+void bench_tinycbor () {
+    float f;
+
+    /* reuse evercddl struct, why not. */
+    uint8_t *buf = (uint8_t *) malloc(EXPECTED_SIZE);
+    BenchFlat_evercddl_record_pretty_s r, r2;
+    r.f1 = bigrand();
+    r.f2 = bigrand();
+    r.f3 = bigrand();
+    r.f4 = bigrand();
+    r.f5 = bigrand();
+    r.f6 = bigrand();
+    r.f7 = bigrand();
+    r.f8 = bigrand();
+
+    size_t len;
+    TIME_void(
+    ({
+        for (int i = 0; i < LAPS; i++) {
+            len = tinycbor_encode(buf, EXPECTED_SIZE, r);
+            assert (len == EXPECTED_SIZE);
+        }
+    }), &f);
+    printf(" >>> TINYCBOR SERIALIZATION OF RECORD TAKES: %f us\n", f * 1e6 / LAPS);
+
+    for (int j = 0 ; j < len ; j++) {
+        printf("%02x ", buf[j]);
+    }
+    printf("\n");
+
+    TIME_void(
+    ({
+        for (int i = 0; i < LAPS; i++) {
+            bool rc = tinycbor_decode(buf, len, &r2);
+        }
+    }), &f);
+    printf(" >>> TINYCBOR PARSING OF RECORD TAKES: %f us\n", f * 1e6 / LAPS);
+    assert (r.f1 == r2.f1);
+    assert (r.f2 == r2.f2);
+    assert (r.f3 == r2.f3);
+    assert (r.f4 == r2.f4);
+    assert (r.f5 == r2.f5);
+    assert (r.f6 == r2.f6);
+    assert (r.f7 == r2.f7);
+    assert (r.f8 == r2.f8);
+}
+
+
 int main()
 {
     printf("Testing\n");
 
     bench_evercddl ();
     bench_qcbor ();
+    bench_tinycbor ();
 
     printf("DONE\n");
 
