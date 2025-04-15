@@ -35,5 +35,9 @@ Section 4.2:
 - The CDDL sserializer implementation combinators are defined in `src/cddl/pulse/CDDL.Pulse.Serialize.*`
 - The CDDL code generator is defined as `impl_bundle_wf_type` in `src/cddl/pulse/CDDL.Pulse.AST.Bundle.fst`
 
+Section 5.2:
+- The unverified interoperability tests are in the directory `src/cose/interop`.  The interesting file is `common.c`, which uses the generated C API.
+- The verified signature creation and verification code is in `src/cose/verifiedinterop`.  The main file is `CommonPulse.fst`.
+
 Appendix A:
 - The arithmetic example is in `tests/pulse`
