@@ -39,9 +39,7 @@ _output/CommonPulse.c: $(ALL_KRML_FILES)
 
 _output/COSE_Format.c: _output/CommonPulse.c
 
-SANFLAGS += -fsanitize=address -fsanitize=undefined
-CFLAGS += $(SANFLAGS)
-LDFLAGS += $(SANFLAGS)
+SANFLAGS = -fsanitize=address -fsanitize=undefined
 
 CFLAGS += -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
 
@@ -49,10 +47,13 @@ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a:
 	$(MAKE) -C $(dir $@)
 
 signtest: signtest.c common.c _output/CommonPulse.c _output/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a
-	$(CC) $(CFLAGS) $+ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a -I _output -o $@
+	$(CC) $(SANFLAGS) $(CFLAGS) $+ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a -I _output -o $@
 
 verifytest: verifytest.c common.c _output/CommonPulse.c _output/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a
-	$(CC) $(CFLAGS) $+ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a -I _output -o $@
+	$(CC) $(SANFLAGS) $(CFLAGS) $+ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a -I _output -o $@
+
+bench: bench.c common.c _output/CommonPulse.c _output/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a
+	clang -O3 $(CFLAGS) $+ $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a -I _output -o $@
 
 .PHONY: test
 test: signtest verifytest

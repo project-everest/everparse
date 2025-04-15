@@ -13,6 +13,9 @@ void openssl_error_msg(const char *msg);
 
 typedef Pulse_Lib_Slice_slice__uint8_t bstr;
 
+bstr sign_eddsa(EVP_PKEY *signing_key, const bstr tbs);
+bool validate(EVP_PKEY *signing_key, bstr tbs, bstr sig);
+
 bstr mk_sig_structure(
     COSE_Format_evercddl_empty_or_serialized_map_pretty protected_headers,
     bstr aad, bstr payload);

@@ -18,11 +18,11 @@ run-bench: bench
 	python3 -m venv $@
 	$@/bin/pip install pycose
 
-SANFLAGS += -fsanitize=address -fsanitize=undefined
-CFLAGS += $(SANFLAGS)
-LDFLAGS += $(SANFLAGS)
+# SANFLAGS += -fsanitize=address -fsanitize=undefined
+# CFLAGS += $(SANFLAGS)
+# LDFLAGS += $(SANFLAGS)
 LDFLAGS += -lssl -lcrypto
-CFLAGS += -O2 -g
+CFLAGS += -O3
 CFLAGS += -I ../snapshot -I ../../cbor/pulse/det/c
 CFLAGS += -Wall -Wenum-conversion
 

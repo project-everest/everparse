@@ -300,7 +300,7 @@ let rel_map_sign1_phdrs_eq (alg: Int32.t) alg' s =
       emp) ** emp) ** emp) ** (emp ** emp)) **
       rel_inl_map s (CDDL.Spec.Map.empty _ _)))
 
-inline_for_extraction noextract
+inline_for_extraction
 fn mk_phdrs (alg: Int32.t) (rest: A.larray (aux_env25_type_2_pretty & aux_env25_type_4_pretty) 0)
     #prest (#vrest: erased _)
   requires pts_to rest #prest vrest
