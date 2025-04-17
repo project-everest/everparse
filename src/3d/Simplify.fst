@@ -144,6 +144,8 @@ let rec simplify_probe_action (env:T.env_t) (a:probe_action) : ML probe_action =
   | Probe_action_ite hd then_ else_ ->
     {a with v = Probe_action_ite (simplify_expr env hd) (simplify_probe_action env then_)
                                  (simplify_probe_action env else_) }
+  | Probe_action_array len b ->
+    {a with v = Probe_action_array (simplify_expr env len) (simplify_probe_action env b) }  
  
 let simplify_field_array (env:T.env_t) (f:field_array_t) : ML field_array_t =
   match f with

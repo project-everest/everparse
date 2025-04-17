@@ -176,6 +176,10 @@ type probe_action =
       m1: probe_action ->
       m2: probe_action ->
       probe_action
+  | Probe_action_array:
+      len: expr ->
+      m: probe_action ->
+      probe_action  
   
 noeq
 type typ =

@@ -10,20 +10,34 @@ typedef struct _A {
   uint32_t a2;
 } A;
 
+typedef struct _P64 {
+  uint64_t p1;
+  uint64_t p2;
+} P64;
+
+typedef struct _P32 {
+  uint32_t p1;
+  uint32_t p2;
+} P32;
+
 typedef struct _B64 {
   uint32_t b1;
   uint64_t pa;
+  P64 ps[4];
 } B64;
 
 typedef struct _B32 {
   uint32_t b1;
   uint32_t pa;
+  P32 ps[4];
 } B32;
 
 
 A a = {0x00000000, 0x00000001};
-B64 b64 = {0x00000000, 0x0000000000000002};
-B32 b32 = {0x00000000, 0x00000003};
+P64 p64 = {17ULL, 17ULL};
+B64 b64 = {0x00000000, 0x0000000000000002, {{17ULL, 17ULL},{17ULL, 17ULL},{17ULL, 17ULL},{17ULL, 17ULL}}};
+P32 p32 = {42ULL, 42ULL};
+B32 b32 = {0x00000000, 0x00000003, {{42ULL, 42ULL},{42ULL, 42ULL},{42ULL, 42ULL},{42ULL, 42ULL}}};
 uint64_t c64 = 0x0000000000000001;
 uint64_t c32 = 0x0000000000000004;
 
@@ -76,19 +90,24 @@ BOOLEAN GetSrcPointer(uint64_t src, uint8_t **out, uint64_t *size)
 uint32_t
 ProbeAndReadU32(BOOLEAN *failed, uint64_t read_offset, uint64_t src, EVERPARSE_COPY_BUFFER_T x2)
 {
+  printf("ProbeAndReadU32: read_offset=%lu, src=%lu ...", read_offset, src);
   uint8_t *src_ptr;
   uint64_t src_len;
   uint32_t result = 0;
   if (!GetSrcPointer(src, &src_ptr, &src_len))
   {
     *failed = true;
+    printf("GetSrcPointer failed\n");
     return 0;
   }
+  printf("src_len=%lu ...", src_len);
   if (read_offset + sizeof(uint32_t) > src_len)
   {
+    printf("bounds check failed\n");
     *failed = true;
     return 0;
   }
+  printf("ok!\n");
   memcpy(&result, src_ptr + read_offset, sizeof(uint32_t));
   return result;
 }
@@ -101,6 +120,8 @@ BOOLEAN ProbeAndCopyLen(
   EVERPARSE_COPY_BUFFER_T dst
 )
 {
+  printf("ProbeAndCopyLen: bytes_to_read=%ld, read_offset=%ld, write_offset=%ld, src=%ld\n",
+      bytes_to_read, read_offset, write_offset, src);
   uint8_t *src_ptr;
   uint64_t src_len;
   if (!GetSrcPointer(src, &src_ptr, &src_len))
@@ -115,7 +136,8 @@ BOOLEAN ProbeAndCopy(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   return ProbeAndCopyLen(len, 0, 0, src, dst);
 }
 
-BOOLEAN ProbeInit(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+BOOLEAN ProbeInit(uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+  printf("ProbeInit: len=%lu\n", len);
   return true;
 }
 

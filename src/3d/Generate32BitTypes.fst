@@ -83,16 +83,53 @@ let maybe_gen_l
   then true, l'
   else false, l
   
+let rec specialize_expr (en:env_t) (e:expr)
+: ML expr
+= match e.v with
+  | Constant _
+  | This -> e
+  | Static e -> { e with v = Static <| specialize_expr en e}
+  | Identifier id ->
+    if should_specialize en id 
+    then { e with v = Identifier (name32 id) }
+    else e
+  | App op exprs -> { e with v = App op (List.map (specialize_expr en) exprs) }
+
+let maybe_specialize_field_array (en:env_t) (fa:field_array_t)
+: ML (option field_array_t)
+= match fa with
+  | FieldArrayQualified (e, ByteArrayByteSize) -> Some <| FieldArrayQualified (specialize_expr en e, ByteArrayByteSize)
+  | FieldArrayQualified (e, ArrayByteSize) -> Some <| FieldArrayQualified (specialize_expr en e, ArrayByteSize)
+  | _ -> None
+
+let gen_atomic_field (e:env_t) (af:atomic_field)
+: ML (bool & atomic_field)
+= let b, ft =
+    match maybe_specialize_32 e af.v.field_type with
+    | None -> false, af.v.field_type
+    | Some t32 -> true, t32
+  in
+  let b', arr =
+    match maybe_specialize_field_array e af.v.field_array_opt with
+    | None -> false, af.v.field_array_opt
+    | Some fa -> true, fa
+  in
+  let b'', constr =
+    match af.v.field_constraint with
+    | None -> false, None
+    | Some constr -> true, Some (specialize_expr e constr)
+  in
+  let af32 = { af with v = { af.v with field_type = ft; field_probe=None; field_array_opt=arr; field_constraint=constr } } in
+  b||b'||b'', af32
+
+
 
 let rec gen_field (e:env_t) (f:field) 
 : ML (bool & field)
 = match f.v with
   | AtomicField af -> (
-    match maybe_specialize_32 e af.v.field_type with
-    | None -> false, f
-    | Some t32 ->
-      let af32 = { af with v = { af.v with field_type = t32; field_probe=None } } in
-      true, { f with v=AtomicField af32 }
+    let b, af' = gen_atomic_field e af in
+    b, { f with v=AtomicField af' }
   )
   | RecordField r i -> (
     let changed, r' = maybe_gen_l (gen_field e) r in

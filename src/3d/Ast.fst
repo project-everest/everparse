@@ -523,6 +523,10 @@ type probe_action' =
     then_:probe_action ->
     else_:probe_action ->
     probe_action'
+  | Probe_action_array:
+    len:expr ->
+    action:probe_action ->
+    probe_action'
 and probe_action = with_meta_t probe_action'
 
 open FStar.List.Tot
@@ -1037,6 +1041,10 @@ and print_probe_action (p:probe_action) : ML string =
       (print_expr hd)
       (print_probe_action then_)
       (print_probe_action else_)
+  | Probe_action_array len action ->
+    Printf.sprintf "array(%s, %s)"
+      (print_expr len)
+      (print_probe_action action)
 
 and print_probe_atomic_action (p:probe_atomic_action)
 : ML string
@@ -1556,6 +1564,8 @@ let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
     {a with v = Probe_action_let i (subst_probe_atomic_action s aa) (subst_probe_action s k) }
   | Probe_action_ite hd then_ else_ ->
     {a with v = Probe_action_ite (subst_expr s hd) (subst_probe_action s then_) (subst_probe_action s else_) }
+  | Probe_action_array len action ->
+    {a with v = Probe_action_array (subst_expr s len) (subst_probe_action s action) }
 //No need to substitute in output expressions
 let subst_out_expr (s:subst) (o:out_expr) : out_expr = o
 let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =

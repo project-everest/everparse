@@ -605,6 +605,10 @@ type probe_action : bool -> Type u#1 =
       m1: probe_action false ->
       m2: probe_action false ->
       probe_action false
+  | Probe_action_array:
+      bytes_len:U64.t ->
+      elemnent_probe:probe_action false ->
+      probe_action false
 
 [@@specialize]
 let rec probe_action_as_probe_m #maybe_zero (p:probe_action maybe_zero)
@@ -623,6 +627,8 @@ let rec probe_action_as_probe_m #maybe_zero (p:probe_action maybe_zero)
     PA.bind_probe_m () (atomic_probe_action_as_probe_m m1) k
   | Probe_action_ite cond m1 m2 ->
     PA.if_then_else cond (probe_action_as_probe_m m1) (probe_action_as_probe_m m2)
+  | Probe_action_array len body ->
+    PA.probe_array len (probe_action_as_probe_m body)
 
 (* The type of atomic actions.
 

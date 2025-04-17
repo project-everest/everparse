@@ -1465,6 +1465,24 @@ let rec check_probe env a : ML (probe_action & typ) =
                 a.range;
     { a with v = Probe_action_ite e th el }, t
 
+  | Probe_action_array len body ->
+    let len, t = check_expr env len in
+    let len =
+      if not (eq_typ env t tuint64)
+      then match try_cast_integer env (len, t) tuint64 with
+          | Some e -> e
+          | _ -> error (Printf.sprintf "Probe array length %s has type %s instead of UInt64"
+                        (print_expr len)
+                        (print_typ t))
+                        len.range
+      else len
+    in
+    let body, t = check_probe env body in
+    if not (eq_typ env t tunit)
+    then error (Printf.sprintf "Probe array body has type %s instead of unit" (print_typ t)) 
+              body.range;
+    { a with v = Probe_action_array len body }, tunit
+
 let check_probe_call (env:env) (ft:typ) (p:probe_call)
 : ML probe_call
 = let check_dest env (d:ident) : ML ident =

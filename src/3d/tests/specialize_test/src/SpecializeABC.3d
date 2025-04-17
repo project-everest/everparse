@@ -11,10 +11,18 @@ typedef struct _A {
 	UINT32 a2;
 } A;
 
+
+aligned
+typedef struct _P {
+	UINT8 *p1;
+	UINT8 *p2;
+} P;
+
 aligned
 typedef struct _B (EVERPARSE_COPY_BUFFER_T a_out) {
 	UINT32 b1;
 	A *pointer? pa probe (length=sizeof(A), destination=a_out);
+	P ps[:byte-size (sizeof(P) * 4)]; //array of 4 P
 } B;
 
 aligned

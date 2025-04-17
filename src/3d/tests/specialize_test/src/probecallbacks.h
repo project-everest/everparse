@@ -37,19 +37,22 @@ BOOLEAN ProbeAndCopyLenAux(
   )
   {
     copy_buffer_t *p = dst;
+    printf("ProbeAndCopyLenAux: bytes_to_read=%lu, read_offset=%lu, write_offset=%lu, src_len=%lu, copy_buffer_len=%lu\n",
+        bytes_to_read, read_offset, write_offset, src_len, p->len);
     if (read_offset + bytes_to_read > src_len)
     {
-      printf("ProbeAndCopy failed: src_len=%ld, read_offset=%ld, bytes_to_read=%ld\n",
+      printf("ProbeAndCopy failed: src_len=%lu, read_offset=%lu, bytes_to_read=%lu\n",
           src_len, read_offset, bytes_to_read);
       return false;
     }
     if (write_offset + bytes_to_read > p->len)
     {
-      printf("ProbeAndCopy failed: p->len=%ld, write_offset=%ld, bytes_to_read=%ld\n", 
+      printf("ProbeAndCopy failed: p->len=%lu, write_offset=%lu, bytes_to_read=%lu\n", 
            p->len, write_offset, bytes_to_read);
       return false;
     }
     memcpy(p->buf + write_offset, src + read_offset, bytes_to_read);
+    printf("ProbeAndCopyLenAux succeeded\n");
     return true;
   }
   

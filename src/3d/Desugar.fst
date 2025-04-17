@@ -344,6 +344,8 @@ let rec resolve_probe_action' (env:qenv) (act:probe_action') : ML probe_action' 
     Probe_action_let i (resolve_probe_atomic_action env a) (resolve_probe_action (push_name env i.v.name) k)
   | Probe_action_ite hd then_ else_ ->
     Probe_action_ite (resolve_expr env hd) (resolve_probe_action env then_) (resolve_probe_action env else_)
+  | Probe_action_array len body ->
+    Probe_action_array (resolve_expr env len) (resolve_probe_action env body)
 and resolve_probe_action (env:qenv) (act:probe_action) : ML probe_action =
   { act with v = resolve_probe_action' env act.v }
 

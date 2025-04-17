@@ -199,14 +199,9 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
         let n1 = alignment_bytes af1 in
         skip_bytes_write n1 (coerce_fields e r0 tl1)
       | false, false -> (
-        if not (eq_idents af0.v.field_ident af1.v.field_ident)
-        then failwith <|
-              Printf.sprintf
-                "Unexpected fields: cannot coerce field %s to %s"
-                (print_ident af0.v.field_ident)
-                (print_ident af1.v.field_ident)
-        else (
-          let t0_is_u32 =
+        let coerce_scalar_part ()
+        : ML probe_action
+        = let t0_is_u32 =
             match af0.v.field_type.v with
             | Pointer _ pq -> pq_as_integer_type pq = UInt32
             | _ -> eq_typ af0.v.field_type tuint32
@@ -248,9 +243,49 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
                   (print_typ af0.v.field_type)
                   (print_typ af1.v.field_type)
           )
+        in
+        if not (eq_idents af0.v.field_ident af1.v.field_ident)
+        then failwith <|
+              Printf.sprintf
+                "Unexpected fields: cannot coerce field %s to %s"
+                (print_ident af0.v.field_ident)
+                (print_ident af1.v.field_ident)
+        else if Some? af0.v.field_bitwidth ||
+                Some? af1.v.field_bitwidth
+        then failwith <|
+              Printf.sprintf
+                "Unexpected fields: cannot yet coerce bitfields %s to %s"
+                (print_ident af0.v.field_ident)
+                (print_ident af1.v.field_ident)
+        else (
+          match af0.v.field_array_opt, af1.v.field_array_opt with
+          | FieldScalar, FieldScalar -> coerce_scalar_part ()
+          | FieldArrayQualified (n0, aq0), FieldArrayQualified (n1, aq1) -> (
+            let _ =
+              match aq0, aq1 with
+              | ByteArrayByteSize, ByteArrayByteSize
+              | ArrayByteSize, ArrayByteSize -> ()
+              | _ ->
+                failwith <|
+                  Printf.sprintf
+                    "Unexpected fields: Unsupported array type, cannot coerce field %s to %s"
+                    (print_ident af0.v.field_ident)
+                    (print_ident af1.v.field_ident)
+            in
+            let coerce_elt = coerce_scalar_part () in
+            with_dummy_range <| Probe_action_array n0 coerce_elt
+          )
+          | _ ->
+            failwith <|
+              Printf.sprintf
+                "Unexpected fields: cannot coerce field %s of type %s to %s"
+                (print_ident af0.v.field_ident)
+                (print_typ af0.v.field_type)
+                (print_typ af1.v.field_type)
+
         )
       )
-    )
+    ) 
     | _ -> 
       failwith "Cannot yet coerce structs with non-structurally similar fields"
   )
@@ -324,6 +359,9 @@ let rec optimize_coercion (p:probe_action)
     { p with v = Probe_action_let i a (optimize_coercion k) }
   | Probe_action_ite e t f ->
     { p with v = Probe_action_ite e (optimize_coercion t) (optimize_coercion f) }
+  | Probe_action_array l body ->
+    let body = optimize_coercion body in
+    { p with v = Probe_action_array l body }
   | _ -> p
   
 
