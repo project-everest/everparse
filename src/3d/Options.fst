@@ -364,7 +364,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdFStarOption (('h', "help", Getopt.ZeroArgs (fun _ -> display_usage (); exit 0)), "Show this help message");
     CmdOption "json" (OptBool json) "Dump the AST in JSON format" [];
     CmdOption "makefile" (OptStringOption "gmake|nmake" valid_makefile makefile) "Do not produce anything, other than a Makefile to produce everything" [];
-    CmdOption "makefile_name" (OptStringOption "some file name" always_valid makefile_name) "Name of the Makefile to produce (with --makefile, default <output directory>/EverParse.Makefile" [];
+    CmdOption "makefile_name" (OptStringOption "some file name" always_valid makefile_name) "Name of the Makefile to produce (with --makefile, default <output directory>/EverParse.Makefile). If not absolute, then 3D will prepend it with the output directory provided by `--odir`" [];
     CmdOption "odir" (OptStringOption "output directory" always_valid output_dir) "output directory (default '.'); writes <module_name>.fst and <module_name>_wrapper.c to the output directory" [];
     CmdOption "save_hashes" (OptBool save_hashes) "Save hashes" [];
     CmdOption "save_z3_transcript" (OptStringOption "some file name" always_valid save_z3_transcript) "Save the Z3 transcript (input and output) to a file" [];
@@ -497,7 +497,7 @@ let get_makefile _ =
 let get_makefile_name _ =
   match !makefile_name with
   | None -> OS.concat (get_output_dir ()) "EverParse.Makefile"
-  | Some mf -> mf
+  | Some mf -> OS.concat_if_not_absolute (get_output_dir ()) mf
 
 let get_skip_o_rules _ =
   !skip_o_rules

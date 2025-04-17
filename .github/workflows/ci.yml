@@ -91,7 +91,7 @@ jobs:
 
       - name: Everparse CI
         id: cistep
-        run: make -C everparse ci 3D_Z3_EXECUTABLE=z3-4.13.3 -skj$(nproc)
+        run: make -C everparse ci -skj$(nproc)
 
       # I'm leaving this disabled as I do not get good incrementality
       # when trying this out by hand due to dependence hash mismatches
