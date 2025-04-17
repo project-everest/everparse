@@ -41,8 +41,8 @@ B32 b32 = {0x00000000, 0x00000003, {{42ULL, 42ULL},{42ULL, 42ULL},{42ULL, 42ULL}
 uint64_t c64 = 0x0000000000000001;
 uint64_t c32 = 0x0000000000000004;
 
-B64 b64_null_a = {0x00000000, 0x0000000000000000};
-B32 b32_null_a = {0x00000000, 0x00000000};
+B64 b64_null_a = {0x00000000, 0x0000000000000000, {{17ULL, 17ULL},{17ULL, 17ULL},{17ULL, 17ULL},{17ULL, 17ULL}}};
+B32 b32_null_a = {0x00000000, 0x00000000,  {{42ULL, 42ULL},{42ULL, 42ULL},{42ULL, 42ULL},{42ULL, 42ULL}}};
 uint64_t c64_null_a = 0x0000000000000005;
 uint64_t c32_null_a = 0x0000000000000006;
 
@@ -142,6 +142,13 @@ BOOLEAN ProbeInit(uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
 }
 
 // THE MAIN TEST FUNCTION
+BOOLEAN eq_p64(P64 a, P64 b) {
+  return a.p1 == b.p1 && a.p2 == b.p2;
+}
+
+BOOLEAN eq_p64_p32(P64 a, P32 b) {
+  return a.p1 == b.p1 && a.p2 == b.p2;
+}
 
 int test1(void) {
   A destA;
@@ -165,6 +172,10 @@ int test1(void) {
       ))
   {
     if (destB.b1 == b64.b1 && destB.pa == b64.pa &&
+        eq_p64(destB.ps[0], p64) &&
+        eq_p64(destB.ps[1], p64) &&
+        eq_p64(destB.ps[2], p64) &&
+        eq_p64(destB.ps[3], p64) &&
         destA.a1 == a.a1 && destA.a2 == a.a2)
     {
       printf("Validation succeeded for c64:\nb.b1=%d, b.pa=%ld\na.a1=%d, a.a2=%d\n",
@@ -192,6 +203,10 @@ int test1(void) {
     ))
   {
     if (destB.b1 == b32.b1 && destB.pa == UlongToPtr(b32.pa) &&
+        eq_p64_p32(destB.ps[0], p32) &&
+        eq_p64_p32(destB.ps[1], p32) &&
+        eq_p64_p32(destB.ps[2], p32) &&
+        eq_p64_p32(destB.ps[3], p32) &&
         destA.a1 == a.a1 && destA.a2 == a.a2)
     {
       printf("Validation succeeded for c32:\nb.b1=%d, b.pa=%ld\na.a1=%d, a.a2=%d\n",
@@ -235,6 +250,10 @@ int test2(void) {
       ))
   {
     if (destB.b1 == b64_null_a.b1 && destB.pa == b64_null_a.pa &&
+        eq_p64(destB.ps[0], p64) &&
+        eq_p64(destB.ps[1], p64) &&
+        eq_p64(destB.ps[2], p64) &&
+        eq_p64(destB.ps[3], p64) &&
         destA.a1 == 0 && destA.a2 == 0)
     {
       printf("Validation succeeded for c64_null_a:\nb.b1=%d, b.pa=%ld\na.a1=%d, a.a2=%d\n",
@@ -265,6 +284,10 @@ int test2(void) {
     ))
   {
     if (destB.b1 == b32_null_a.b1 && destB.pa == UlongToPtr(b32_null_a.pa) &&
+        eq_p64_p32(destB.ps[0], p32) &&
+        eq_p64_p32(destB.ps[1], p32) &&
+        eq_p64_p32(destB.ps[2], p32) &&
+        eq_p64_p32(destB.ps[3], p32) &&
         destA.a1 == 0 && destA.a2 == 0)
     {
       printf("Validation succeeded for c32_null_a:\nb.b1=%d, b.pa=%ld\na.a1=%d, a.a2=%d\n",
