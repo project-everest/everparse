@@ -88,4 +88,6 @@ val get_produce_testcases_c: unit -> ML bool
 
 val get_z3_skip_c_initializers: unit -> ML bool
 
+val get_z3_use_ptr: unit -> ML bool
+
 val get_fstar_exe: unit -> ML string

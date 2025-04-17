@@ -47,6 +47,10 @@ let prelude : string =
 
 (declare-fun branch-trace (Int) Int)
 
+(declare-fun probe-source-buffer (Int) Int)
+(declare-fun probe-source-offset (Int) Int)
+; TODO: we will also need a probe source size once we generalize the pointer type
+
 (define-fun parse-false ((x State)) State
   " ^ mk_state "-1" "(choice-index x)" "(array-index x)" "(next-array-index x)" "(branch-index x)" ^ "
 )
@@ -967,8 +971,14 @@ let mk_parse_probe
       (after-state "^ptr^")
       (if
         (and
-          (= (return-value "^ptr^") (next-array-index (after-state "^ptr^"))) ; we always constrain Z3 to produce a test case with correct probe pointers
-          (= (state-witness-size (next-array-index (after-state "^ptr^"))) "^size^") ; we always constrain Z3 to produce probe buffers whose size is equal to the user-specified probe size
+          (and
+            (= (return-value "^ptr^") (next-array-index (after-state "^ptr^"))) ; we always constrain Z3 to produce a test case with correct probe pointers
+            (= (state-witness-size (next-array-index (after-state "^ptr^"))) "^size^") ; we always constrain Z3 to produce probe buffers whose size is equal to the user-specified probe size
+          )
+          (and ; record the location where the probe pointer is stored
+            (= (probe-source-buffer (next-array-index (after-state "^ptr^"))) (array-index "^input^"))
+            (= (probe-source-offset (next-array-index (after-state "^ptr^"))) (choice-index "^input^"))
+          )
         )
         (let (("^tmp^" ("^body^" "^
           mk_state
@@ -1299,7 +1309,7 @@ let read_witness_layer (z3: Z3.z3) (array_index: nat) : ML (Seq.seq int) =
   in
   aux Seq.empty witness_size
 
-let read_witness (z3: Z3.z3) : ML (Seq.seq (Seq.seq int)) =
+let read_witness (use_ptr: bool) (z3: Z3.z3) : ML (Seq.seq (Seq.seq int) & option (Seq.seq (int & int))) =
   z3.to_z3 "(eval (next-array-index state-witness))\n";
   let nb_layers = Lisp.read_bare_int_from z3.from_z3 in
   if nb_layers < 1
@@ -1313,7 +1323,24 @@ let read_witness (z3: Z3.z3) : ML (Seq.seq (Seq.seq int)) =
       let accu' = Seq.cons wl accu in
       aux accu' layer
   in
-  aux Seq.empty nb_layers
+  let layers = aux Seq.empty nb_layers in
+  if use_ptr
+  then
+    let rec aux2 (accu: Seq.seq (int & int)) (layer: nat) : ML (Seq.seq (int & int)) =
+      if layer = 0
+      then accu
+      else begin
+        z3.to_z3 (Printf.sprintf "(eval (probe-source-buffer %d))\n" layer);
+        let buf = Lisp.read_bare_int_from z3.from_z3 in
+        z3.to_z3 (Printf.sprintf "(eval (probe-source-offset %d))\n" layer);
+        let off = Lisp.read_bare_int_from z3.from_z3 in
+        let accu' = Seq.cons (buf, off) accu in
+        let layer' : nat = layer - 1 in
+        aux2 accu' layer'
+      end
+    in
+    (layers, Some (aux2 Seq.empty (nb_layers - 1)))
+  else (layers, None)
 
 let read_branch_trace (z3: Z3.z3) : ML (Seq.seq int) =
   z3.to_z3 "(eval (branch-index state-witness))\n";
@@ -1466,7 +1493,7 @@ let print_outparameters
     )
     arg_types
 
-let alloc_copy_buffer
+let alloc_default_copy_buffer
   (flight: string)
   (wid: nat)
   (nblayers: nat)
@@ -1485,7 +1512,37 @@ let alloc_copy_buffer
   arg_var
   arg_var
 
+let alloc_ptr_copy_buffer
+  (flight: string)
+  (wid: nat)
+  (arg_var: string)
+: Tot string
+=
+  Printf.sprintf
+"
+  copy_buffer_t _contents_%s = witness%s%d[0];
+  EVERPARSE_COPY_BUFFER_T %s = (void* ) &_contents_%s;
+"
+  arg_var
+  flight
+  wid
+  arg_var
+  arg_var
+
+let alloc_copy_buffer
+  (use_ptr: bool)
+  (flight: string)
+  (wid: nat)
+  (nblayers: nat)
+  (arg_var: string)
+: Tot string
+=
+  if use_ptr
+  then alloc_ptr_copy_buffer flight wid arg_var
+  else alloc_default_copy_buffer flight wid nblayers arg_var
+
 let print_witness_call_as_c
+  (use_ptr: bool)
   (out: (string -> ML unit))
   (p: prog)
   (positive: bool)
@@ -1504,7 +1561,7 @@ let print_witness_call_as_c
   List.iter
     (fun arg_ty ->
       match arg_ty with
-      | (arg_var, ArgCopyBuffer) -> out (alloc_copy_buffer flight num nblayers arg_var)
+      | (arg_var, ArgCopyBuffer) -> out (alloc_copy_buffer use_ptr flight num nblayers arg_var)
       | (arg_var, ArgPointer ty) -> out (alloc_ptr_arg arg_var ty)
       | (_, ArgSimple _) -> ()
     )
@@ -1580,6 +1637,7 @@ let print_witness_as_c_aux
   (print_c_initializer: bool)
   (flight: string)
   (witness: Seq.seq (Seq.seq int))
+  (pointer_locs: option (Seq.seq (int & int)))
   (len: int { len == Seq.length witness })
   (num: nat)
 : ML unit
@@ -1613,22 +1671,49 @@ let print_witness_as_c_aux
   out (string_of_int len);
   out "] = {";
   out layers;
-  out "};"
+  out "};";
+  match pointer_locs with
+  | None -> ()
+  | Some pl ->
+    let rec aux2 (layer: nat) : ML unit =
+      if layer = 0
+      then ()
+      else begin
+        let layer' : nat = layer - 1 in
+        if layer' >= Seq.length pl
+        then failwith "IMPOSSIBLE: index out of bounds in print_witness_as_c_aux";
+        let (buf, off) = Seq.index pl layer' in
+        out (Printf.sprintf
+"{   uint8_t *tmpptr = witness%s%d[%d].buf; memcpy(&witness%s%d[%d].buf[%d], (uint8_t* ) (void* ) &tmpptr, sizeof(uint8_t* )); }"
+          flight
+          num
+          layer
+          flight
+          num
+          buf
+          off
+       )
+      end
+    in
+    if len = 0
+    then ()
+    else aux2 (len - 1)
 
 let print_witness_as_c_gen
   (out: (string -> ML unit))
   (print_c_initializer: bool)
   (flight: string)
   (witness: Seq.seq (Seq.seq int))
+  (pointer_locs: option (Seq.seq (int & int)))
   (f: (len: int { len == Seq.length witness }) -> ML unit)
   (num: nat)
 : ML unit
 = let len = Seq.length witness in
   out "{\n";
-  print_witness_as_c_aux out true flight witness len num;
+  print_witness_as_c_aux out true flight witness pointer_locs len num;
   out "
   printf(\"";
-  print_witness_as_c_aux out print_c_initializer flight witness len num;
+  print_witness_as_c_aux out print_c_initializer flight witness pointer_locs len num;
   out "\\n\");
 ";
   f len;
@@ -1680,14 +1765,15 @@ let print_witness_as_c
   (arg_types: list (string & arg_type))
   (counter: ref nat)
   (witness: Seq.seq (Seq.seq int))
+  (pointer_locs: option (Seq.seq (int & int)))
   (args: list string)
 : ML unit
 = let num = incr counter in
   write_witness_to_file witness (fun i -> mk_output_filename num out_dir ((if positive then "POS." else "NEG.") ^ string_of_int i ^ "." ^ validator_name) args);
-  print_witness_as_c_gen out print_c_initializer flight witness (fun len ->
+  print_witness_as_c_gen out print_c_initializer flight witness pointer_locs (fun len ->
     if len = 0
     then failwith "print_witness_as_c: no witness layers. This should not happen.";
-    print_witness_call_as_c out p positive flight validator_name arg_types args num len
+    print_witness_call_as_c (Some? pointer_locs) out p positive flight validator_name arg_types args num len
   ) num
 
 let print_diff_witness_as_c
@@ -1701,15 +1787,16 @@ let print_diff_witness_as_c
   (arg_types: list (string & arg_type))
   (counter: ref nat)
   (witness: Seq.seq (Seq.seq int))
+  (pointer_locs: option (Seq.seq (int & int)))
   (args: list string)
 : ML unit
 = let num = incr counter in
   write_witness_to_file witness (fun i -> mk_output_filename num out_dir ("POS." ^ string_of_int i ^ "." ^ validator_name1 ^ ".NEG." ^ validator_name2) args);
-  print_witness_as_c_gen out print_c_initializer flight witness (fun len ->
+  print_witness_as_c_gen out print_c_initializer flight witness pointer_locs (fun len ->
     if len = 0
     then failwith "print_witness_as_c: no witness layers. This should not happen.";
-    print_witness_call_as_c out p true flight validator_name1 arg_types args num len;
-    print_witness_call_as_c out p false flight validator_name2 arg_types args num len
+    print_witness_call_as_c (Some? pointer_locs) out p true flight validator_name1 arg_types args num len;
+    print_witness_call_as_c (Some? pointer_locs) out p false flight validator_name2 arg_types args num len
   )
   num
 
@@ -1771,22 +1858,22 @@ let mk_want_another_distinct_witness witness witness_args : Tot string =
 "
   (mk_arg_conj (mk_choose_conj witness ("(= (next-array-index state-witness) "^string_of_int (Seq.length witness)^")") 0) 0 witness_args)
 
-let rec want_witnesses (print_test_case: (Seq.seq (Seq.seq int) -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i : ML unit =
+let rec want_witnesses (use_ptr: bool) (print_test_case: (Seq.seq (Seq.seq int) -> option (Seq.seq (int & int)) -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) i : ML unit =
   z3.to_z3 "(check-sat)\n";
   let status = z3.from_z3 () in
   if status = "sat" then begin
     z3.to_z3 "(eval (input-size state-witness))\n";
     let input_size = z3.from_z3 () in
-    let witness = read_witness z3 in
+    let (witness, pointer_locs) = read_witness use_ptr z3 in
     let witness_args = read_witness_args z3 [] nargs in
     let branch_trace = read_branch_trace z3 in
     print_witness_and_call name l witness input_size branch_trace witness_args;
-    print_test_case witness witness_args;
+    print_test_case witness pointer_locs witness_args;
     z3.to_z3 (mk_want_another_distinct_witness witness witness_args);
     if i <= 1
     then ()
     else
-      want_witnesses print_test_case z3 name l nargs (i - 1)
+      want_witnesses use_ptr print_test_case z3 name l nargs (i - 1)
   end
   else begin
     FStar.IO.print_string
@@ -1907,35 +1994,36 @@ let enumerate_branch_traces
   res
 
 let rec want_witnesses_with_depth
-  (print_test_case: (Seq.seq (Seq.seq int) -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
+  (use_ptr: bool)
+  (print_test_case: (Seq.seq (Seq.seq int) -> option (Seq.seq (int & int)) -> list string -> ML unit)) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) nbwitnesses
   cur_depth (tree: list branch_trace_node) (branch_trace: string)
 : ML unit
 =
   FStar.IO.print_string (Printf.sprintf "Checking witnesses for branch trace: %s\n" branch_trace);
-  want_witnesses print_test_case z3 name l nargs nbwitnesses;
+  want_witnesses use_ptr print_test_case z3 name l nargs nbwitnesses;
   z3.to_z3 (Printf.sprintf "(assert (> (branch-index state-witness) %d))\n" cur_depth);
   let rec aux (tree: list branch_trace_node) : ML unit = match tree with
   | [] -> ()
   | Node choice tree' :: q ->
     z3.to_z3 "(push)\n";
     z3.to_z3 (Printf.sprintf "(assert (= (branch-trace %d) %d))\n" cur_depth choice);
-    want_witnesses_with_depth print_test_case z3 name l nargs nbwitnesses (cur_depth + 1) tree' (branch_trace ^ " " ^ string_of_int choice);
+    want_witnesses_with_depth use_ptr print_test_case z3 name l nargs nbwitnesses (cur_depth + 1) tree' (branch_trace ^ " " ^ string_of_int choice);
     z3.to_z3 "(pop)\n";
     aux q
   in
   aux tree
 
-let witnesses_for (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq (Seq.seq int) -> list string -> ML unit) & (unit -> ML string))) nbwitnesses max_depth =
+let witnesses_for (use_ptr: bool) (z3: Z3.z3) (name: string) (l: list arg_type) (nargs: nat { nargs == count_args l }) (print_test_case_mk_get_first_witness: list ((Seq.seq (Seq.seq int) -> option (Seq.seq (int & int)) -> list string -> ML unit) & (unit -> ML string))) nbwitnesses max_depth =
   z3.to_z3 "(push)\n";
   z3.to_z3 (mk_get_witness name l);
   let traces = enumerate_branch_traces z3 max_depth in
   z3.to_z3 assert_valid_state;
   List.iter
-    #((Seq.seq (Seq.seq int) -> list string -> ML unit) & (unit -> ML string))
+    #((Seq.seq (Seq.seq int) -> option (Seq.seq (int & int)) -> list string -> ML unit) & (unit -> ML string))
     (fun (ptc, f) ->
       z3.to_z3 "(push)\n";
       z3.to_z3 (f ());
-      want_witnesses_with_depth ptc z3 name l nargs nbwitnesses 0 traces "";
+      want_witnesses_with_depth use_ptr ptc z3 name l nargs nbwitnesses 0 traces "";
       z3.to_z3 "(pop)\n"
     )
     print_test_case_mk_get_first_witness
@@ -1978,7 +2066,7 @@ typedef struct {
 } witness_layer_t;
 "
 
-let test_probe_functions = "
+let test_default_probe_functions = "
 typedef struct {
   witness_layer_t *layers;
   uint64_t count;
@@ -1996,7 +2084,24 @@ uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
 }
 "
 
-let generate_probe_function (name: string) : Tot string = "
+let test_ptr_probe_functions = "
+typedef witness_layer_t copy_buffer_t;
+
+uint8_t * EverParseStreamOf(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return state->buf;
+}
+
+uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
+  copy_buffer_t *state = ((copy_buffer_t * ) x);
+  return state->len;
+}
+"
+
+let test_probe_functions (use_ptr: bool) : Tot string =
+  if use_ptr then test_ptr_probe_functions else test_default_probe_functions
+
+let generate_default_probe_function (name: string) : Tot string = "
 BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   copy_buffer_t *state = (copy_buffer_t * ) dst;
   if (src < state->count) {
@@ -2015,20 +2120,36 @@ BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
 }
 "
 
+let generate_ptr_probe_function (name: string) : Tot string = "
+BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+  copy_buffer_t *state = (copy_buffer_t * ) dst;
+  state->buf = (uint8_t* ) (void* ) src;
+  state->len = len;
+  return true;
+}
+"
+
+let generate_probe_function (use_ptr: bool) (name: string) : Tot string =
+  if use_ptr
+  then generate_ptr_probe_function name
+  else generate_default_probe_function name
+
 let cout_test_probe_functions
+  (use_ptr: bool)
   (cout: string -> ML unit)
   (prog: prog)
 : ML unit
-= cout test_probe_functions;
+= cout (test_probe_functions use_ptr);
   List.iter
     (fun x -> match x with
     | (name, ProgProbe) ->
-      cout (generate_probe_function name)
+      cout (generate_probe_function use_ptr name)
     | _ -> ()
     )
     prog
 
 let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
+  (use_ptr: bool)
   (print_c_initializer: bool)
   (flight: string) (prog: prog) (name1: string) (nbwitnesses: int) (depth: nat) (pos: bool) (neg: bool) : ML unit =
   let def = List.assoc name1 prog in
@@ -2048,7 +2169,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   cout ".h\"
 ";
   cout test_error_handler;
-  cout_test_probe_functions cout prog;
+  cout_test_probe_functions use_ptr cout prog;
   cout "
   int main(void) {
 ";
@@ -2071,7 +2192,7 @@ let do_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
       else []
     end
   in
-  witnesses_for z3 name1 sargs nargs tasks nbwitnesses depth;
+  witnesses_for use_ptr z3 name1 sargs nargs tasks nbwitnesses depth;
   cout "  return 0;
   }
 "
@@ -2092,13 +2213,15 @@ let mk_get_diff_test_witness (name1: string) (l: list arg_type) (name2: string) 
 
 let do_diff_test_for
   (out_dir: string) (counter: ref nat) (cout: string -> ML unit) (z3: Z3.z3)
+  (use_ptr: bool)
   (print_c_initializer: bool)
   (flight: string) (prog: prog) name1 name2 (args: list (string & arg_type)) (nargs: nat { nargs == count_args (List.Tot.map snd args) }) validator_name1 validator_name2 nbwitnesses depth =
   FStar.IO.print_string (Printf.sprintf ";; Witnesses that work with %s but not with %s\n" name1 name2);
   let sargs = List.Tot.map snd args in
-  witnesses_for z3 name1 sargs nargs ([print_diff_witness_as_c out_dir cout print_c_initializer prog flight validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 sargs name2)]) nbwitnesses depth
+  witnesses_for use_ptr z3 name1 sargs nargs ([print_diff_witness_as_c out_dir cout print_c_initializer prog flight validator_name1 validator_name2 args counter, (fun _ -> mk_get_diff_test_witness name1 sargs name2)]) nbwitnesses depth
 
 let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
+  (use_ptr: bool)
   (print_c_initializer: bool)
   (flight: string) (prog: prog) name1 name2 nbwitnesses depth =
   let def = List.assoc name1 prog in
@@ -2127,13 +2250,13 @@ let do_diff_test (out_dir: string) (out_file: option string) (z3: Z3.z3)
   cout ".h\"
 ";
   cout test_error_handler;
-  cout_test_probe_functions cout prog;
+  cout_test_probe_functions use_ptr cout prog;
   cout "
   int main(void) {
 ";
   let counter = alloc 0 in
-  do_diff_test_for out_dir counter cout z3 print_c_initializer flight prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
-  do_diff_test_for out_dir counter cout z3 print_c_initializer flight prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
+  do_diff_test_for out_dir counter cout z3 print_c_initializer use_ptr flight prog name1 name2 args nargs validator_name1 validator_name2 nbwitnesses depth;
+  do_diff_test_for out_dir counter cout z3 print_c_initializer use_ptr flight prog name2 name1 args nargs validator_name2 validator_name1 nbwitnesses depth;
   cout "  return 0;
   }
 "

@@ -41,6 +41,7 @@ let save_z3_transcript: ref (option vstring) = alloc None
 let skip_c_makefiles : ref bool = alloc false
 let skip_deps: ref bool = alloc false
 let skip_o_rules: ref bool = alloc false
+let use_ptr_for_probe: ref bool = alloc false
 
 let valid_micro_step (str: string) : Tot bool = match str with
   | "verify"
@@ -382,6 +383,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "z3_skip_c_initializers" (OptBool z3_skip_c_initializers) "Do not use C field initializers for test cases" [];
     CmdOption "z3_test" (OptStringOption "parser name" always_valid z3_test) "produce positive and/or negative test cases for a given parser" [];
     CmdOption "z3_test_mode" (OptStringOption "pos|neg|all" valid_z3_test_mode z3_test_mode) "produce positive, negative, or all kinds of test cases (default all)" [];
+    CmdOption "z3_use_ptr" (OptBool use_ptr_for_probe) "use pointers rather than array indices for probes" [];
     CmdOption "z3_witnesses" (OptStringOption "nb" always_valid z3_witnesses) "ask for nb distinct test witnesses per branch case (default 1)" [];
     CmdOption "__arg0" (OptStringOption "executable name" always_valid arg0) "executable name to use for the help message" [];
     CmdOption "__micro_step" (OptStringOption "verify|extract|copy_clang_format|copy_everparse_h|emit_config" valid_micro_step micro_step) "micro step" [];
@@ -620,6 +622,9 @@ let get_produce_testcases_c () : ML bool =
 
 let get_z3_skip_c_initializers () : ML bool =
   !z3_skip_c_initializers
+
+let get_z3_use_ptr () : ML bool =
+  !use_ptr_for_probe
 
 let get_fstar_exe () : ML string =
   match !fstar_exe with
