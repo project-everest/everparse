@@ -17,3 +17,6 @@
 [submodule "src/cddl/unit-tests/tinycbor"]
 	path = src/cddl/unit-tests/tinycbor
 	url = https://github.com/intel/tinycbor
+[submodule "opt/everest"]
+	path = opt/everest
+	url = git@github.com:project-everest/everest.git
