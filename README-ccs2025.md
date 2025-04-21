@@ -1,5 +1,15 @@
 This package contains the supplementary material for ACM CCS 2025 submission.
 
+A Dockerfile is included to rebuild everything, including Everest dependencies, F*, etc. To build it, just run `docker build -t evercbor .`
+
+Then, you can experiment with `docker run -i -t evercbor` ; there, you can use the following Makefile rules:
+* `make cbor-test` tests the CBOR library
+* `make cbor-verify` entirely reverifies the CBOR library. (This may take 1 hour.)
+* `make cose-test` tests the COSE library
+* `make cddl-test` tests the CDDL library
+* `make cbor-snapshot` regenerates the CBOR library. This rule is incompatible with `cbor-test`
+* `make cose-snapshot` rebuilds the COSE library. This rule is incompatible with `cddl-test`
+
 Section 2.2:
 - the Pulse implementation combinators are in `src/lowparse/pulse`
 - the recursive combinator specification is in `src/lowparse/LowParse.Spec.Recursive.fst*`
@@ -41,6 +51,8 @@ Section 5.1:
 - Array benchmark: CDDL description in `src/cddl/unit-tests/BenchArray.cddl`. The driver `Test_BenchArray.c` serializes and parses with our tool. `Test_BenchArray__Interop1.c` serializes with our tool and parses with QCBOR. `Test_BenchArray__Interop2.c` serialized with QCBOR and parses with our tool. Finall, `Test_BenchArray__Interop3.cpp` tests against TinyCBOR.
 
 Section 5.2:
+- The COSE specification is at `src/cose/cose.cddl`
+- The verified C code obtained after extracting COSE is at `src/cose/snapshot/`
 - The unverified interoperability tests are in the directory `src/cose/interop`.  The interesting file is `common.c`, which uses the generated C API.
 - The verified signature creation and verification code is in `src/cose/verifiedinterop`.  The main file is `CommonPulse.fst`.
 
