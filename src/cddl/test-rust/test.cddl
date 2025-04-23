@@ -1,11 +1,11 @@
 test1 = {
-  bar: #0
+  bar: uint
 }
 
 test2 = [
-  #0,
-  #2
+  uint,
+  bstr
 ]
 
-; bstr = #2
-; uint = #0
+bstr = #2
+uint = #0
