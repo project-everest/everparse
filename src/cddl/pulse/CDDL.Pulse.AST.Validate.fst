@@ -97,7 +97,7 @@ let rec validate_typ
       impl.cbor_get_map_length
       (validate_map_group impl env g2 s2)
       ()
-  | AST.WfTDef n -> env n
+  | AST.WfTDef n -> fun c #p #v -> env n c #p #v
 
 and validate_array_group
   (#t #t2 #t_arr #t_map: Type0)
