@@ -59,7 +59,7 @@ let cbor_map_key_list_no_repeats_p = DM.cbor_map_key_list_no_repeats_p
 
 let cbor_map_key_list_length = DM.cbor_map_key_list_length
 
-let cbor_map_fold = DM.cbor_map_fold
+let cbor_map_fold f x m = DM.cbor_map_fold f x m
 
 let cbor_map_fold_ext = DM.cbor_map_fold_ext
 
