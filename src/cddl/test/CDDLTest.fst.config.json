@@ -1,5 +1,5 @@
 {
-    "fstar_exe": "/home/nswamy/workspace/everest/everparse/opt/FStar/bin/fstar.exe",
+    "fstar_exe": "../../../opt/FStar/bin/fstar.exe",
     "options": [
       "--load_cmxs", "evercddl_lib",
         "--load_cmxs", "evercddl_plugin",
@@ -11,21 +11,21 @@
         "--cmi"
     ],
     "include_dirs": [
-        "/home/nswamy/workspace/everest/everparse/src/cbor/spec",
-        "/home/nswamy/workspace/everest/everparse/src/cddl/spec",
-        "/home/nswamy/workspace/everest/everparse/src/cddl/tool",
-        "/home/nswamy/workspace/everest/everparse/lib/evercddl/lib",
-        "/home/nswamy/workspace/everest/everparse/lib/evercddl/plugin", 
-        "/home/nswamy/workspace/everest/everparse/src/cbor/pulse",
-        "/home/nswamy/workspace/everest/everparse/src/cddl/pulse",
+        "../../../src/cbor/spec",
+        "../../../src/cddl/spec",
+        "../../../src/cddl/tool",
+        "../../../lib/evercddl/lib",
+        "../../../lib/evercddl/plugin", 
+        "../../../src/cbor/pulse",
+        "../../../src/cddl/pulse",
         "_output",
         "util",
         "dpe",
-        "/home/nswamy/workspace/everest/everparse/opt/karamel/krmllib",
-        "/home/nswamy/workspace/everest/everparse/opt/karamel/krmllib/obj",
-        "/home/nswamy/workspace/everest/everparse/opt/pulse/out/lib/pulse",
-        "/home/nswamy/workspace/everest/everparse/opt/pulse/share/pulse/examples/dice/_cache",
-        "/home/nswamy/workspace/everest/everparse/opt/pulse/share/pulse/examples/dice"
+        "../../../opt/karamel/krmllib",
+        "../../../opt/karamel/krmllib/obj",
+        "../../../opt/pulse/out/lib/pulse",
+        "../../../opt/pulse/share/pulse/examples/dice/_cache",
+        "../../../opt/pulse/share/pulse/examples/dice"
     ]
   }
   
