@@ -14,6 +14,7 @@ module AppCtxt = EverParse3d.AppCtxt
 module LPE = EverParse3d.ErrorCode
 open FStar.Tactics.Typeclasses
 open FStar.FunctionalExtensionality
+open EverParse3d.Actions.Common
 module B = LowStar.Buffer
 module U8 = FStar.UInt8
 module P = EverParse3d.Prelude
@@ -29,9 +30,9 @@ let inv_implies (inv0 inv1:slice_inv) =
     inv0 h ==> inv1 h
 let true_inv : slice_inv = F.on HS.mem #prop (fun _ -> True)
 let conj_inv (i0 i1:slice_inv) : slice_inv = F.on HS.mem #prop (fun h -> i0 h /\ i1 h)
-let eloc = (l: FStar.Ghost.erased B.loc { B.address_liveness_insensitive_locs `B.loc_includes` l })
+let eloc = eloc
 let eloc_union (l1 l2:eloc) : Tot eloc = B.loc_union l1 l2
-let eloc_none : eloc = B.loc_none
+let eloc_none : eloc = eloc_none
 let eloc_includes (l1 l2:eloc) = B.loc_includes l1 l2 /\ True
 let eloc_disjoint (l1 l2:eloc) = B.loc_disjoint l1 l2 /\ True
 let inv_implies_refl inv = ()
@@ -113,42 +114,42 @@ let index_equations ()
 let bpointer a = B.pointer a
 let ptr_loc #a (x:B.pointer a) : Tot eloc = B.loc_buffer x
 let ptr_inv #a (x:B.pointer a) : slice_inv = F.on HS.mem #prop (fun h -> B.live h x /\ True)
-let app_ctxt = AppCtxt.app_ctxt
-let app_loc (x:AppCtxt.app_ctxt) (l:eloc) : eloc = 
-  AppCtxt.properties x;
-  AppCtxt.loc_of x `loc_union` l
-let app_loc_fp (x:AppCtxt.app_ctxt) (has_action:bool) (l:eloc) : eloc = 
-  if has_action then AppCtxt.ghost_loc_of x `loc_union` app_loc x l
-  else app_loc x l
+// let app_ctxt = AppCtxt.app_ctxt
+// let app_loc (x:AppCtxt.app_ctxt) (l:eloc) : eloc = 
+//   AppCtxt.properties x;
+//   AppCtxt.loc_of x `loc_union` l
+// let app_loc_fp (x:AppCtxt.app_ctxt) (has_action:bool) (l:eloc) : eloc = 
+//   if has_action then AppCtxt.ghost_loc_of x `loc_union` app_loc x l
+//   else app_loc x l
 
-inline_for_extraction
-noextract
-let input_buffer_t = EverParse3d.InputStream.All.t
+// inline_for_extraction
+// noextract
+// let input_buffer_t = EverParse3d.InputStream.All.t
 
-inline_for_extraction
-let error_handler = 
-    typename:string ->
-    fieldname:string ->
-    error_reason:string ->
-    error_code:U64.t ->
-    ctxt: app_ctxt ->
-    sl: input_buffer_t ->
-    pos: LPE.pos_t ->
-    Stack unit
-      (requires fun h ->
-        I.live sl h /\
-        true_inv h /\
-        B.live h ctxt /\
-        loc_not_unused_in h `loc_includes` app_loc_fp ctxt true eloc_none /\
-        address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true eloc_none /\
-        app_loc_fp ctxt true eloc_none `loc_disjoint` I.footprint sl /\
-        U64.v pos <= Seq.length (I.get_read sl h)
-      )
-      (ensures fun h0 _ h1 ->
-        let sl = Ghost.reveal sl in
-        modifies (app_loc ctxt eloc_none) h0 h1 /\
-        B.live h1 ctxt /\
-        true_inv h1)
+// inline_for_extraction
+// let error_handler = 
+//     typename:string ->
+//     fieldname:string ->
+//     error_reason:string ->
+//     error_code:U64.t ->
+//     ctxt: app_ctxt ->
+//     sl: input_buffer_t ->
+//     pos: LPE.pos_t ->
+//     Stack unit
+//       (requires fun h ->
+//         I.live sl h /\
+//         true_inv h /\
+//         B.live h ctxt /\
+//         loc_not_unused_in h `loc_includes` app_loc_fp ctxt true eloc_none /\
+//         address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true eloc_none /\
+//         app_loc_fp ctxt true eloc_none `loc_disjoint` I.footprint sl /\
+//         U64.v pos <= Seq.length (I.get_read sl h)
+//       )
+//       (ensures fun h0 _ h1 ->
+//         let sl = Ghost.reveal sl in
+//         modifies (app_loc ctxt eloc_none) h0 h1 /\
+//         B.live h1 ctxt /\
+//         true_inv h1)
 
 let action
   inv disj l on_success returns_true a

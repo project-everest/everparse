@@ -523,7 +523,7 @@ let mk_action_binding
 noeq
 type atomic_probe_action : Type0 -> Type u#1 =
   | Atomic_probe_and_copy :
-      bytes_to_read : U64.t { bytes_to_read <> 0uL }->
+      bytes_to_read : U64.t ->
       probe_fn: PA.probe_fn_incremental ->
       atomic_probe_action unit
   | Atomic_probe_and_read :

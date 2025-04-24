@@ -7,6 +7,7 @@ module U8 = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
+open Utils3d
 open EverParse3d.CopyBuffer
 open LowStar.Buffer
 open LowStar.BufferOps
@@ -210,7 +211,7 @@ let probe_m a (requires_unread_dest:bool) (expect_zero_offsets:bool) =
 
 inline_for_extraction
 noextract
-let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.t { bytes_to_read <> 0uL}) 
+let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.t)
 : probe_m unit true false
 = fun read_offset write_offset failed src dest ->
     let h0  = get () in
@@ -255,6 +256,7 @@ let write_at_offset_m (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t 
       failed *= true
     )
 
+
 inline_for_extraction
 noextract
 let probe_and_read_at_offset_m (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t t s)
@@ -263,7 +265,7 @@ let probe_and_read_at_offset_m (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_
     let rd = !*read_offset in
     let v = reader failed rd src dest in
     let has_failed = !*failed in
-    if has_failed then v
+    if has_failed then probe_failed v
     else (
       read_offset *= U64.(rd +^ s);
       v
@@ -277,7 +279,7 @@ let seq_probe_m (#a:Type) (dflt:a) (m1:probe_m unit true false) (m2:probe_m a tr
     let res1 = m1 read_offset write_offset failed src dest in
     let has_failed = !*failed in
     if has_failed
-    then dflt
+    then probe_failed dflt
     else m2 read_offset write_offset failed src dest
 
 inline_for_extraction
@@ -287,7 +289,7 @@ let bind_probe_m (#a #b:Type) (dflt:b) (m1:probe_m a true false) (m2:a -> probe_
 = fun read_offset write_offset failed src dest ->
     let res1 = m1 read_offset write_offset failed src dest in
     let has_failed = !*failed in
-    if has_failed then dflt
+    if has_failed then probe_failed dflt
     else m2 res1 read_offset write_offset failed src dest
 
 inline_for_extraction
@@ -449,7 +451,7 @@ let probe_array_aux (byte_len:U64.t) (probe_elem:probe_m unit true false)
       = let r0 = !*read_offset in
         probe_elem read_offset write_offset failed src dest;
         let has_failed = !*failed in
-        if has_failed then ()
+        if has_failed then probe_failed ()
         else (
           let r1 = !*read_offset in
           assert (U64.v r1 >= U64.v r0);
@@ -543,10 +545,7 @@ let run_probe_m (#any:bool) (m:probe_m unit false any) (src:U64.t) (dest:copy_bu
     m read_offset write_offset failed src dest;
     let wr = !*write_offset in
     let has_failed = !*failed in
-    let res = 
-      if has_failed
-      then 0uL
-      else !*write_offset
-    in
   pop_frame();
-  res
+  if has_failed
+  then probe_failed 0uL
+  else wr
