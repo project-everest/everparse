@@ -505,10 +505,6 @@ noeq
 type probe_action' =
   | Probe_atomic_action of probe_atomic_action
   | Probe_action_var of expr
-  | Probe_action_simple : 
-    probe_fn: option ident ->
-    bytes_to_read : expr -> 
-    probe_action'
   | Probe_action_seq :
     hd:probe_action ->
     tl:probe_action ->
@@ -528,6 +524,9 @@ type probe_action' =
     action:probe_action ->
     probe_action'
 and probe_action = with_meta_t probe_action'
+
+let probe_action_simple (f:ident) (len:expr) =
+  Probe_atomic_action (Probe_action_copy f len)
 
 open FStar.List.Tot
 
@@ -730,7 +729,7 @@ type decl' =
 
   | ExternProbe :
       ident ->
-      option probe_qualifier ->
+      probe_qualifier ->
       decl'
 
 [@@ PpxDerivingYoJson ]
@@ -1023,10 +1022,6 @@ and print_probe_action (p:probe_action) : ML string =
     print_probe_atomic_action a
   | Probe_action_var i ->
     Printf.sprintf "(Probe_action_var %s)" (print_expr i)
-  | Probe_action_simple f n ->
-    Printf.sprintf "(Probe_action_simple %s (%s))"
-      (print_opt f print_ident)
-      (print_expr n)
   | Probe_action_seq hd tl ->
     Printf.sprintf "%s; %s" 
       (print_probe_action hd)
@@ -1060,9 +1055,11 @@ and print_probe_atomic_action (p:probe_atomic_action)
 
 and print_probe_call (p:probe_call) : ML string =
   match p with
-  | { probe_dest; probe_block } ->
-    Printf.sprintf "(destination=%s) { %s }"
+  | { probe_ptr_as_u64; probe_init; probe_dest; probe_block } ->
+    Printf.sprintf "(destination=%s, probe_ptr_as_u64=%s, probe_init=%s) { %s }"
           (print_ident probe_dest)
+          (print_opt probe_ptr_as_u64 print_ident)
+          (print_opt probe_init print_ident)
           (print_probe_action probe_block)
 
 and print_action (a:action) : ML string =
@@ -1556,8 +1553,6 @@ let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
     {a with v = Probe_atomic_action (subst_probe_atomic_action s aa)}
   | Probe_action_var i ->
     { a with v = Probe_action_var (subst_expr s i) }
-  | Probe_action_simple f n -> 
-    {a with v = Probe_action_simple f (subst_expr s n) }
   | Probe_action_seq hd tl ->
     {a with v = Probe_action_seq (subst_probe_action s hd) (subst_probe_action s tl) }
   | Probe_action_let i aa k ->

@@ -309,12 +309,14 @@ with_probe:
       let p = mk_pos $startpos in
       let rng = p,p in
       match probe_fn_opt, block with
+      | None, None -> 
+        error "Expected either a probe function or a probe action" rng
       | Some _, Some _ ->
         error "Composite probe blocks do not have a probe function" rng
-      | _, None -> (
+      | Some pf, None -> (
         match fields with 
         | [("length", l); ("destination", {v=Identifier d})] ->
-          let p = with_range (Probe_action_simple (probe_fn_opt, l)) $startpos in
+          let p = with_range (probe_action_simple pf l) $startpos in
           { probe_block = p; probe_dest=d; probe_ptr_as_u64=None; probe_dest_sz=l; probe_init=None }
         | _ ->
           error "Expected 'length' and 'destination' fields in probe" rng
@@ -604,7 +606,7 @@ decl_no_range:
     { ExternFn (i, ret, ps, pure <> None) }
 
   | EXTERN PROBE q=option_of(probe_qualifier) i=IDENT
-    { ExternProbe (i, q) }
+    { let q = match q with None -> PQWithOffsets | Some q -> q in ExternProbe (i, q) }
 
 probe_qualifier:
   | LPAREN q=IDENT 
@@ -614,7 +616,6 @@ probe_qualifier:
     RPAREN
     {
       match q.v.name, t with
-      | "WITH_OFFSETS", None -> PQWithOffsets
       | "INIT", None -> PQInit
       | "READ", Some t -> PQRead t
       | "WRITE", Some t -> PQWrite t

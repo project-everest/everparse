@@ -17,21 +17,21 @@ let live_and_unread (dest:copy_buffer_t) h =
   I.live sl h /\
   Seq.length (I.get_read sl h) == 0
 
-let probe_fn = src:U64.t -> len:U64.t -> dest:copy_buffer_t ->
-  Stack bool
-    (fun h0 ->
-      I.live (stream_of dest) h0)
-    (fun h0 b h1 ->
-      let sl = stream_of dest in
-      I.live sl h1 /\
-      (if b
-       then (
-        Seq.length (I.get_read sl h1) == 0 /\
-        modifies (I.footprint sl) h0 h1
-       )
-       else (
-        h0 == h1
-       )))
+// let probe_fn = src:U64.t -> len:U64.t -> dest:copy_buffer_t ->
+//   Stack bool
+//     (fun h0 ->
+//       I.live (stream_of dest) h0)
+//     (fun h0 b h1 ->
+//       let sl = stream_of dest in
+//       I.live sl h1 /\
+//       (if b
+//        then (
+//         Seq.length (I.get_read sl h1) == 0 /\
+//         modifies (I.footprint sl) h0 h1
+//        )
+//        else (
+//         h0 == h1
+//        )))
 
 let probe_fn_incremental = 
   bytes_to_read:U64.t ->
@@ -498,30 +498,30 @@ let lift_pure_external_action (#a:Type) (f:pure_external_action a)
 : probe_m a true false
 = fun read_offset write_offset failed src dest -> f()
 
-inline_for_extraction
-let probe_fn_as_probe_m (bytes_to_read:U64.t) (f:probe_fn)
-: probe_m unit true true
-= fun read_offset write_offset failed src dest ->
-    let rd = !*read_offset in
-    let wr = !*write_offset in
-    if bytes_to_read = 0uL
-    then (
-      failed *= true
-    )
-    else ( 
-      let h0 = get () in
-      let ok = f src bytes_to_read dest in
-      let h1 = get () in
-      if ok
-      then (
-        read_offset *= bytes_to_read;
-        write_offset *= bytes_to_read;
-        ()
-      )
-      else (
-        failed *= true
-      )
-    )
+// inline_for_extraction
+// let probe_fn_as_probe_m (bytes_to_read:U64.t) (f:probe_fn)
+// : probe_m unit true true
+// = fun read_offset write_offset failed src dest ->
+//     let rd = !*read_offset in
+//     let wr = !*write_offset in
+//     if bytes_to_read = 0uL
+//     then (
+//       failed *= true
+//     )
+//     else ( 
+//       let h0 = get () in
+//       let ok = f src bytes_to_read dest in
+//       let h1 = get () in
+//       if ok
+//       then (
+//         read_offset *= bytes_to_read;
+//         write_offset *= bytes_to_read;
+//         ()
+//       )
+//       else (
+//         failed *= true
+//       )
+//     )
 
 inline_for_extraction
 noextract

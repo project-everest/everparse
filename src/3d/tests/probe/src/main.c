@@ -84,9 +84,18 @@ BOOLEAN ProbeInit(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
 // reusing the `secondary` array directly as an input buffer to the
 // validator for the `secondary` type defined in Probe.3d.
 
-BOOLEAN ProbeInPlace(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+BOOLEAN ProbeInPlace(
+  uint64_t len,
+  uint64_t read_offset,
+  uint64_t write_offset,
+  uint64_t src, 
+  EVERPARSE_COPY_BUFFER_T dst
+) {
   static_assert(sizeof(secondary) == 4);
-  if (src == (uint64_t) secondary && len == sizeof(secondary)) {
+  if (src == (uint64_t) secondary &&
+      read_offset == 0 &&
+      write_offset == 0 &&
+      len == sizeof(secondary)) {
     copy_buffer_t *p = dst;
     p->buf = (uint8_t*) secondary;
     p->len = len;

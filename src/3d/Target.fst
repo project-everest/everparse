@@ -617,8 +617,6 @@ let rec print_probe_action (mname:string) (p:probe_action) : ML string =
     Printf.sprintf "(Probe_action_atomic %s)" (print_atomic_probe_action a)
   | Probe_action_var e ->
     Printf.sprintf "(Probe_action_var %s)" (print_expr mname e)
-  | Probe_action_simple bytes_to_read probe_fn ->
-    Printf.sprintf "(Probe_action_simple %s %s)" (print_expr mname bytes_to_read) (print_ident probe_fn)
   | Probe_action_seq p1 p2 ->
     Printf.sprintf "(Probe_action_seq %s %s)" (print_probe_action mname p1) (print_probe_action mname p2)
   | Probe_action_let i m1 m2 ->
@@ -967,7 +965,7 @@ let print_c_entry
    let wrapped_call_probe_buffer wrappedName params (probe: probe_entrypoint) : ML string =
      let len = expr_to_c probe.probe_ep_length in
      Printf.sprintf
-      "if (%s(probeAddr, %s, probeDest)) {
+      "if (%s(%s, 0, 0, probeAddr, probeDest)) {
          uint8_t * base = EverParseStreamOf(probeDest);
          return %s(%s base, %s);
        } else {
@@ -1004,7 +1002,7 @@ let print_c_entry
    let wrapped_call_probe_stream wrappedName params (probe: probe_entrypoint) : ML string =
      let len = print_expr modul probe.probe_ep_length in
      Printf.sprintf
-      "if (%s(probeAddr, %s, probeDest)) {
+      "if (%s(%s, 0, 0, probeAddr, probeDest)) {
          EVERPARSE_INPUT_STREAM_BASE * base = EverParseStreamOf(probeDest);
          return %s(%s base);
        } else {
@@ -1452,8 +1450,6 @@ let print_external_api_fstar_interpreter (modul:string) (ds:decls) : ML string =
           (print_ident i)
           (print_typ modul t))))
         (print_typ modul ret)
-    | Extern_probe f PQSimple ->
-      Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_fn\n\n" (print_ident f)
     | Extern_probe f PQWithOffsets ->
       Printf.sprintf "\n\nval %s : EverParse3d.ProbeActions.probe_fn_incremental\n\n" (print_ident f)
     | Extern_probe f (PQRead t) ->

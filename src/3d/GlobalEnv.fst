@@ -111,7 +111,7 @@ let module_name_matches (g:global_env) (id:ident) : ML bool =
 
 let _and_ (x:bool) (y:bool) : ML bool = x && y
 
-let extern_probe_fn_qual (g:global_env) (pq:option probe_qualifier)
+let extern_probe_fn_qual (g:global_env) (pq:probe_qualifier)
 : ML (option ident)
 = let finder k v out : ML _ =
       match out with
@@ -126,10 +126,10 @@ let extern_probe_fn_qual (g:global_env) (pq:option probe_qualifier)
 
 let default_probe_fn (g:global_env)
 : ML (option ident)
-= extern_probe_fn_qual g None
+= extern_probe_fn_qual g PQWithOffsets
 
 let resolve_probe_fn_any (g:global_env) (id:ident)
-  : ML (option (ident & either typ (option probe_qualifier)))
+  : ML (option (ident & either typ probe_qualifier))
   = match H.try_find g.ge_probe_fn id.v with
     | Some {d_decl={v=ExternProbe id pq}} ->
       Some (id, Inr pq)
@@ -139,7 +139,7 @@ let resolve_probe_fn_any (g:global_env) (id:ident)
       Some (id, Inl (mk_arrow_ps ps probe_m_t) )
     | _ -> None
 
-let resolve_probe_fn (g:global_env) (id:ident) (pq:option probe_qualifier)
+let resolve_probe_fn (g:global_env) (id:ident) (pq:probe_qualifier)
   : ML (option ident)
   = match resolve_probe_fn_any g id with
     | Some (id, Inr pq') -> if pq=pq' then Some id else None

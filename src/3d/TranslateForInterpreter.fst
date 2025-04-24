@@ -821,11 +821,6 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
     T.Probe_action_atomic (translate_atomic a), []
   | A.Probe_action_var i ->
     T.Probe_action_var (translate_expr i), []
-  | A.Probe_action_simple f n ->
-    if None? f
-    then failwith "Probe action name should have already been resolved";
-    let Some f = f in
-    T.Probe_action_simple (translate_expr n) f, []
   | A.Probe_action_seq hd tl ->
     let hd, ds1 = translate_probe_action hd in
     let tl, ds2 = translate_probe_action tl in
@@ -1444,13 +1439,12 @@ let translate_decl (env:global_env) (d:A.decl) : ML (list T.decl) =
     ds @ [with_comments (T.Extern_fn f ret params pure) (A.is_entrypoint d) false []]
 
   | ExternProbe f pq ->
-    let translate_qualifier (pq:option A.probe_qualifier) : ML T.probe_qualifier =
+    let translate_qualifier (pq:A.probe_qualifier) : ML T.probe_qualifier =
       match pq with
-      | None -> T.PQSimple
-      | Some A.PQWithOffsets -> T.PQWithOffsets
-      | Some A.PQInit -> T.PQInit
-      | Some (A.PQRead t) -> T.PQRead t
-      | Some (A.PQWrite t) -> T.PQWrite t
+      | A.PQWithOffsets -> T.PQWithOffsets
+      | A.PQInit -> T.PQInit
+      | A.PQRead t -> T.PQRead t
+      | A.PQWrite t -> T.PQWrite t
     in
     let pq = translate_qualifier pq in
     [with_comments (T.Extern_probe f pq) (A.is_entrypoint d) false []]

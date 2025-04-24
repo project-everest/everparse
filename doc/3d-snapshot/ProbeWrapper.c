@@ -87,7 +87,7 @@ BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len) {
 }
 
 BOOLEAN ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr) {
-	if (ProbeAndCopy(probeAddr, 9U, probeDest)) {
+	if (ProbeAndCopy(9U, 0, 0, probeAddr, probeDest)) {
          uint8_t * base = EverParseStreamOf(probeDest);
          return ProbeCheckIndirect( base, 9U);
        } else {

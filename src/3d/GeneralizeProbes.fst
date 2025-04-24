@@ -59,7 +59,7 @@ let simple_probe_name_for_type (e:env) (type_name:ident)
 
 let find_probe_fn (e:B.env) (q:probe_qualifier)
 : ML ident
-= match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e) (Some q) with
+= match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e) q with
   | None ->
     error (Printf.sprintf "Cannot find probe function for %s" (print_probe_qualifier q))
           dummy_range
@@ -121,12 +121,17 @@ let rec head_type (e:env) (t:typ) : ML (ident & list typ_param) =
   | Pointer t _ -> head_type e t
   | _ -> failwith "head_type: unexpected arrow type"
 
+let has_simple_probe (fp:probe_call) : option expr =
+  match fp with
+  | { probe_block={ v = Probe_atomic_action (Probe_action_copy _ len) }} -> Some len
+  | _ -> None
+
 let atomic_field_has_simple_probe_aux (e:env) head_type (f:atomic_field)
-: bool & option ident
+: ML (bool & option ident)
 = match f.v.field_probe with
   | Some fp -> (
-    match fp with 
-    | { probe_block = { v = Probe_action_simple _ l } } -> (
+    match has_simple_probe fp with
+    | Some l -> (
         match l.v with
         | App (Cast _ _) [{ v = App SizeOf [{v=Identifier x}]}]
         | App SizeOf [{v=Identifier x}] ->
@@ -137,13 +142,16 @@ let atomic_field_has_simple_probe_aux (e:env) head_type (f:atomic_field)
           )
         | _ -> false, None
       )
-    | _ -> 
+    | _ ->
+      FStar.IO.print_string <|
+        Printf.sprintf "Expected a simple probe, got %s\n"
+          (print_probe_call fp);
       false, None
   )
   | _ -> false, None
 
 let atomic_field_has_simple_probe (e:env) head_type (f:atomic_field)
-: bool
+: ML bool
 = let b, _ = atomic_field_has_simple_probe_aux e head_type f in b
 
 let fold_left_changed (#a #b:Type) (f: a -> b -> ML (a & bool)) (x:a) (l:list b) 

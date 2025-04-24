@@ -1186,6 +1186,7 @@ type prog_def =
   args: list (string & simple_arg_type true) ->
   prog_def
 | ProgProbe:
+  T.probe_qualifier ->
   prog_def
 
 let prog = list (string & prog_def)
@@ -1258,9 +1259,9 @@ let produce_output_type_decl
 : Tot prog
 = (ident_to_string ot.out_typ_names.typedef_name, ProgOutput (prog_out_fields_of_ast_out_fields [] ot.out_typ_fields)) :: accu
 
-let produce_probe_decl (accu: prog) (probe: A.ident) : Tot prog =
+let produce_probe_decl (accu: prog) (probe: A.ident) pq : Tot prog =
     let name = probe.v.name in // ignore module qualifier
-    let x = (name, ProgProbe) in
+    let x = (name, ProgProbe pq) in
     if List.Tot.mem x accu
     then accu
     else x :: accu
@@ -1268,7 +1269,7 @@ let produce_probe_decl (accu: prog) (probe: A.ident) : Tot prog =
 let produce_decl (out: string -> ML unit) (accu: prog) (a: I.decl) : ML prog =
   match a with
   | Inl (T.Output_type ot, _) -> produce_output_type_decl accu ot
-  | Inl (T.Extern_probe probe T.PQSimple, _) -> produce_probe_decl accu probe
+  | Inl (T.Extern_probe probe pq, _) -> produce_probe_decl accu probe pq
   | Inl a -> produce_not_type_decl a out; accu
   | Inr a -> produce_type_decl out accu a
 
@@ -2105,7 +2106,11 @@ let test_probe_functions (use_ptr: bool) : Tot string =
   if use_ptr then test_ptr_probe_functions else test_default_probe_functions
 
 let generate_default_probe_function (name: string) : Tot string = "
-BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
+  if (ro != 0 || wo != 0) {
+    printf(\"ProbeAndCopy: ro and wo must be 0\\n\");
+    exit(4);
+  };
   copy_buffer_t *state = (copy_buffer_t * ) dst;
   if (src < state->count) {
     uint64_t got_len = state->layers[src].len;
@@ -2124,10 +2129,23 @@ BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
 "
 
 let generate_ptr_probe_function (name: string) : Tot string = "
-BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+BOOLEAN "^name^"(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
+  if (ro != 0 || wo != 0) {
+    printf(\"ProbeAndCopy: ro and wo must be 0\\n\");
+    exit(4);
+  };
   copy_buffer_t *state = (copy_buffer_t * ) dst;
   state->buf = (uint8_t* ) (void* ) src;
   state->len = len;
+  return true;
+}
+"
+
+let generate_probe_init_function (name: string) : Tot string = "
+BOOLEAN "^name^"(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+  (void)(src);
+  (void)(len);
+  (void)(dst);
   return true;
 }
 "
@@ -2145,8 +2163,10 @@ let cout_test_probe_functions
 = cout (test_probe_functions use_ptr);
   List.iter
     (fun x -> match x with
-    | (name, ProgProbe) ->
+    | (name, ProgProbe T.PQWithOffsets) ->
       cout (generate_probe_function use_ptr name)
+    | (name, ProgProbe T.PQInit) ->
+      cout (generate_probe_init_function name)
     | _ -> ()
     )
     prog

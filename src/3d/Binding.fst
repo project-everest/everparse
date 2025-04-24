@@ -1304,7 +1304,7 @@ let rec check_probe env a : ML (probe_action & typ) =
       
     | Probe_action_read f -> (
       match GlobalEnv.resolve_probe_fn_any env.globals f with
-      | Some (id, Inr (Some (PQRead i))) ->
+      | Some (id, Inr (PQRead i)) ->
         Probe_action_read id, type_of_integer_type i
       | _ ->
         error (Printf.sprintf "Probe function %s not found or not a read function" (print_ident f))
@@ -1312,7 +1312,7 @@ let rec check_probe env a : ML (probe_action & typ) =
     )
     | Probe_action_write f v -> (
       match GlobalEnv.resolve_probe_fn_any env.globals f with
-      | Some (id, Inr (Some (PQWrite i))) -> (
+      | Some (id, Inr (PQWrite i)) -> (
         let v, t = check_expr env v in
         match try_cast_integer env (v, t) (type_of_integer_type i) with
         | Some v ->
@@ -1329,7 +1329,7 @@ let rec check_probe env a : ML (probe_action & typ) =
               f.range
     )
     | Probe_action_copy f v -> (
-      match GlobalEnv.resolve_probe_fn env.globals f (Some PQWithOffsets) with
+      match GlobalEnv.resolve_probe_fn env.globals f PQWithOffsets with
       | None ->
         error (Printf.sprintf "Probe function %s not found" (print_ident f))
               f.range
@@ -1347,11 +1347,11 @@ let rec check_probe env a : ML (probe_action & typ) =
 
     | Probe_action_call f args -> (
       match GlobalEnv.resolve_probe_fn_any env.globals f, args with
-      | Some (_, Inr (Some (PQWrite _))), [v] ->
+      | Some (_, Inr (PQWrite _)), [v] ->
         check_atomic_probe env (Probe_action_write f v)
-      | Some (_, Inr (Some (PQRead _))), [] ->
+      | Some (_, Inr (PQRead _)), [] ->
         check_atomic_probe env (Probe_action_read f)
-      | Some (_, Inr (Some PQWithOffsets)), [l] ->
+      | Some (_, Inr PQWithOffsets), [l] ->
         check_atomic_probe env (Probe_action_copy f l)
       | Some (_, Inl _), [] ->
         Probe_action_call f args, tunit
@@ -1397,37 +1397,37 @@ let rec check_probe env a : ML (probe_action & typ) =
               e.range;
     { a with v=Probe_action_var e }, tunit
   )
-  | Probe_action_simple probe_fn length ->
-    let length, typ = check_expr env length in
-    let length =
-      if not (eq_typ env typ tuint64)
-      then match try_cast_integer env (length, typ) tuint64 with
-          | Some e -> e
-          | _ -> error (Printf.sprintf "Probe length expression %s has type %s instead of UInt64"
-                        (print_expr length)
-                        (print_typ typ))
-                        length.range
-      else length
-    in
-    let probe_fn =
-      match probe_fn with
-      | None -> (
-        match GlobalEnv.default_probe_fn env.globals with
-        | None -> 
-          error (Printf.sprintf "Probe function not specified and no default probe function found")
-                length.range
-        | Some i -> i
-      )
-      | Some p -> (
-        match GlobalEnv.resolve_probe_fn env.globals p None with
-        | None -> 
-          error (Printf.sprintf "Probe function %s not found" (print_ident p))
-                p.range
-        | Some i -> 
-          i
-      )
-    in
-    { a with v=Probe_action_simple (Some probe_fn) length}, tunit
+  // | Probe_action_simple probe_fn length ->
+  //   let length, typ = check_expr env length in
+  //   let length =
+  //     if not (eq_typ env typ tuint64)
+  //     then match try_cast_integer env (length, typ) tuint64 with
+  //         | Some e -> e
+  //         | _ -> error (Printf.sprintf "Probe length expression %s has type %s instead of UInt64"
+  //                       (print_expr length)
+  //                       (print_typ typ))
+  //                       length.range
+  //     else length
+  //   in
+  //   let probe_fn =
+  //     match probe_fn with
+  //     | None -> (
+  //       match GlobalEnv.default_probe_fn env.globals with
+  //       | None -> 
+  //         error (Printf.sprintf "Probe function not specified and no default probe function found")
+  //               length.range
+  //       | Some i -> i
+  //     )
+  //     | Some p -> (
+  //       match GlobalEnv.resolve_probe_fn env.globals p PQWithOffsets with
+  //       | None -> 
+  //         error (Printf.sprintf "Probe function %s not found" (print_ident p))
+  //               p.range
+  //       | Some i -> 
+  //         i
+  //     )
+  //   in
+  //   { a with v=Probe_action_simple (Some probe_fn) length}, tunit
 
   | Probe_action_seq a0 rest ->
     let a0, t0 = check_probe env a0 in
@@ -1524,7 +1524,7 @@ let check_probe_call (env:env) (ft:typ) (p:probe_call)
   let check_probe_init (init:option ident) : ML (option ident) =
     match init with
     | None -> (
-      match GlobalEnv.extern_probe_fn_qual env.globals (Some PQInit) with
+      match GlobalEnv.extern_probe_fn_qual env.globals PQInit with
       | Some id -> Some id
       | _ ->
         error (Printf.sprintf "Probe init function not found")
@@ -1532,7 +1532,7 @@ let check_probe_call (env:env) (ft:typ) (p:probe_call)
     )
     | Some f -> (
       match GlobalEnv.resolve_probe_fn_any env.globals f with
-      | Some (id, Inr (Some PQInit)) -> Some id
+      | Some (id, Inr PQInit) -> Some id
       | _ ->
         error (Printf.sprintf "Probe function %s not found or not an init function" (print_ident f))
               f.range

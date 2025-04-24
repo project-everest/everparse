@@ -1,5 +1,4 @@
 extern probe ProbeAndCopy
-extern probe (WITH_OFFSETS) ProbeAndCopyLen
 extern probe (READ UINT32) ProbeAndReadU32
 extern probe (WRITE UINT64) WriteU64
 extern probe (INIT) ProbeInit
@@ -22,7 +21,7 @@ typedef struct _BB {
 aligned
 typedef struct _B (EVERPARSE_COPY_BUFFER_T a_out) {
 	UINT32 b1;
-	A *pa probe (length=sizeof(A), destination=a_out);
+	A *pa probe ProbeAndCopy(length=sizeof(A), destination=a_out);
 	BB b2;
 } B;
 
@@ -30,7 +29,7 @@ aligned
 typedef struct _C (EVERPARSE_COPY_BUFFER_T a_out, EVERPARSE_COPY_BUFFER_T b_out)
 {
 	UINT32 c1;
-	B(a_out) *pb probe (length=sizeof(B), destination=b_out);
+	B(a_out) *pb probe ProbeAndCopy(length=sizeof(B), destination=b_out);
 } C;
 
 aligned
@@ -41,7 +40,7 @@ typedef struct _D64 (
 )
 {
 	C(a_out, b_out) *pointer(UINT64)
-		pc probe (length=sizeof(C), destination=c_out);
+		pc probe ProbeAndCopy(length=sizeof(C), destination=c_out);
 } D64;
 
 

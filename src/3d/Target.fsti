@@ -158,10 +158,6 @@ type probe_action =
   | Probe_action_var :
       expr ->
       probe_action
-  | Probe_action_simple:
-      bytes_to_read : expr ->
-      probe_fn: A.ident ->
-      probe_action
   | Probe_action_seq:
       probe_action ->
       probe_action ->
@@ -377,9 +373,7 @@ and output_expr = {
  * This decl will then be used to emit F* and C code for output types
  *)
 
-noeq
 type probe_qualifier =
-  | PQSimple
   | PQWithOffsets
   | PQInit
   | PQRead of A.integer_type

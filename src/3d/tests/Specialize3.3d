@@ -1,5 +1,4 @@
 extern probe ProbeAndCopy
-extern probe (WITH_OFFSETS) ProbeAndCopyLen
 extern probe (READ UINT32) ProbeAndReadU32
 extern probe (WRITE UINT64) WriteU64
 extern probe (INIT) ProbeInit

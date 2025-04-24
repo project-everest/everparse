@@ -133,8 +133,6 @@ let simplify_probe_atomic_action (env:T.env_t) (a:probe_atomic_action)
 let rec simplify_probe_action (env:T.env_t) (a:probe_action) : ML probe_action =
   match a.v with
   | Probe_action_var i -> a
-  | Probe_action_simple f l -> 
-    {a with v = Probe_action_simple f (simplify_expr env l) }
   | Probe_atomic_action aa ->
     {a with v = Probe_atomic_action (simplify_probe_atomic_action env aa)}
   | Probe_action_seq hd tl ->

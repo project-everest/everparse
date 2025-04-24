@@ -112,7 +112,7 @@ ProbeAndReadU32(BOOLEAN *failed, uint64_t read_offset, uint64_t src, EVERPARSE_C
   return result;
 }
 
-BOOLEAN ProbeAndCopyLen(
+BOOLEAN ProbeAndCopy(
   uint64_t bytes_to_read,
   uint64_t read_offset,
   uint64_t write_offset,
@@ -129,11 +129,6 @@ BOOLEAN ProbeAndCopyLen(
     return false;
   }
   return ProbeAndCopyLenAux(bytes_to_read, read_offset, write_offset, src_ptr, src_len, dst);
-}
-
-
-BOOLEAN ProbeAndCopy(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
-  return ProbeAndCopyLen(len, 0, 0, src, dst);
 }
 
 BOOLEAN ProbeInit(uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
