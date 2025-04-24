@@ -60,10 +60,13 @@ uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
 // used as an input buffer to the validator for the `secondary` type
 // defined in Probe.3d.
 
-BOOLEAN ProbeAndCopy(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+BOOLEAN ProbeAndCopy(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
   static_assert(sizeof(secondary) == 4);
   copy_buffer_t *p = dst;
-  if (src == (uint64_t) secondary && len == sizeof(secondary) && p->len >= len) {
+  if (src == (uint64_t) secondary &&
+      ro == 0 &&
+      wo == 0 &&
+      len == sizeof(secondary) && p->len >= len) {
     memcpy(p->buf, (uint8_t*) secondary, len);
     return true;
   } else {
