@@ -18,7 +18,7 @@ let eloc_none : eloc = B.loc_none
   
 let app_ctxt = AppCtxt.app_ctxt
 let app_loc (x:AppCtxt.app_ctxt) (l:eloc) : eloc = 
-  AppCtxt.properties x;
+  // AppCtxt.properties x;
   AppCtxt.loc_of x `loc_union` l
 let app_loc_fp (x:AppCtxt.app_ctxt) (has_action:bool) (l:eloc) : eloc = 
   // if has_action then AppCtxt.ghost_loc_of x `loc_union` app_loc x l
@@ -31,7 +31,7 @@ let input_buffer_t = EverParse3d.InputStream.All.t
 
 let app_ctxt_error_pre (ctxt:app_ctxt) (l:loc) (h:HS.mem) =
   B.live h ctxt /\
-  loc_not_unused_in h `loc_includes` app_loc_fp ctxt true eloc_none /\
+  // loc_not_unused_in h `loc_includes` app_loc_fp ctxt true eloc_none /\
   app_loc_fp ctxt true eloc_none `loc_disjoint` l
 
 

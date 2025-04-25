@@ -167,7 +167,7 @@ let action
         inv h /\
         B.live h ctxt /\
         // B.live h (AppCtxt.action_ghost_ptr ctxt) /\
-        loc_not_unused_in h `loc_includes` app_loc_fp ctxt true l /\
+        loc_not_unused_in h `loc_includes` l /\
         address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true l /\
         app_loc_fp ctxt true l `loc_disjoint` I.footprint sl /\
         U64.v pos <= U64.v posf /\
@@ -260,7 +260,7 @@ let validate_with_action_t'
     inv h /\
     B.live h ctxt /\
     // B.live h (AppCtxt.action_ghost_ptr ctxt) /\
-    loc_not_unused_in h `loc_includes` app_loc_fp ctxt true l /\
+    loc_not_unused_in h `loc_includes` l /\
     address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true l /\
     U64.v pos == Seq.length (I.get_read sl h) /\
     app_loc_fp ctxt true l `loc_disjoint` I.footprint sl
@@ -1010,7 +1010,7 @@ let validate_list_inv
   let res = Seq.index (as_seq h bres) 0 in
   inv h0 /\
   disj /\
-  loc_not_unused_in h0 `loc_includes` app_loc_fp ctxt true l /\
+  loc_not_unused_in h0 `loc_includes` l /\
   app_loc_fp ctxt true l `loc_disjoint` I.footprint sl /\
   app_loc_fp ctxt true l `loc_disjoint` loc_buffer bres /\
   address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true l /\
@@ -1043,6 +1043,7 @@ let validate_list_inv
   ) /\
   modifies (app_loc_fp ctxt ha l `loc_union` loc_buffer bres `loc_union` I.perm_footprint sl) h1 h
 
+#push-options "--fuel 0 --ifuel 2 --z3rlimit_factor 4"
 inline_for_extraction
 noextract
 let validate_list_body
@@ -1064,7 +1065,8 @@ let validate_list_body
     validate_list_inv p inv disj l g0 g1 ctxt sl bres ha h false /\
     validate_list_inv p inv disj l g0 g1 ctxt sl bres ha h' res
   ))
-=
+= 
+// AppCtxt.properties ctxt; 
   let h = HST.get () in
   LPLL.parse_list_eq p (I.get_remaining sl h);
   let position = !* bres in
@@ -1077,6 +1079,7 @@ let validate_list_body
     upd bres 0ul result;
     LPE.is_error result
   end
+#pop-options
 
 inline_for_extraction
 noextract
@@ -1096,7 +1099,7 @@ let validate_list'
   (requires (fun h ->
     inv h /\
     disj /\
-    loc_not_unused_in h `loc_includes` app_loc_fp ctxt true l /\
+    loc_not_unused_in h `loc_includes` l /\
     app_loc_fp ctxt true l `loc_disjoint` I.footprint sl /\
     address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true l /\
     B.live h ctxt /\
@@ -1710,7 +1713,7 @@ let validate_list_up_to_inv
   B.live h0 ctxt /\
   B.live h ctxt /\
   // B.live h (AppCtxt.action_ghost_ptr ctxt) /\
-  loc_not_unused_in h `loc_includes` app_loc_fp ctxt true loc_none /\
+  // loc_not_unused_in h `loc_includes` app_loc_fp ctxt true loc_none /\
   address_liveness_insensitive_locs `loc_includes` (app_loc_fp ctxt true loc_none) /\
   B.modifies (B.loc_buffer bres `B.loc_union` I.perm_footprint sl `B.loc_union` app_loc_fp ctxt ha loc_none) h0 h /\
   begin
@@ -1761,7 +1764,7 @@ let validate_list_up_to_body
   ))
 =
   let h = HST.get () in
-  assert (  loc_not_unused_in h `loc_includes` app_loc_fp ctxt true loc_none);
+  // assert (  loc_not_unused_in h `loc_includes` app_loc_fp ctxt true loc_none);
   LUT.parse_list_up_to_eq (cond_string_up_to terminator) p prf (I.get_remaining sl h);
   let position = !* bres in
   let result = v ctxt error_handler_fn sl sl_len position in
@@ -1982,6 +1985,12 @@ let probe_then_validate
       (init:PA.init_probe_dest_t)
       (prep_dest_sz:U64.t)
       (probe:PA.probe_m unit true maybe_zero_offset)
+: action (conj_inv inv (copy_buffer_inv dest))
+         (conj_disjointness disj (disjoint (copy_buffer_loc dest) l))
+         (eloc_union l (copy_buffer_loc dest)) 
+          true
+           false
+           bool
   = fun ctxt error_handler_fn input input_length pos posf ->
       CP.properties dest;
       let h0 = HST.get () in
