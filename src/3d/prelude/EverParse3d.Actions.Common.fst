@@ -21,8 +21,9 @@ let app_loc (x:AppCtxt.app_ctxt) (l:eloc) : eloc =
   AppCtxt.properties x;
   AppCtxt.loc_of x `loc_union` l
 let app_loc_fp (x:AppCtxt.app_ctxt) (has_action:bool) (l:eloc) : eloc = 
-  if has_action then AppCtxt.ghost_loc_of x `loc_union` app_loc x l
-  else app_loc x l
+  // if has_action then AppCtxt.ghost_loc_of x `loc_union` app_loc x l
+  // else
+  app_loc x l
 
 inline_for_extraction
 noextract

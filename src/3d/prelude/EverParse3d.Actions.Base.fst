@@ -166,7 +166,7 @@ let action
         disj /\
         inv h /\
         B.live h ctxt /\
-        B.live h (AppCtxt.action_ghost_ptr ctxt) /\
+        // B.live h (AppCtxt.action_ghost_ptr ctxt) /\
         loc_not_unused_in h `loc_includes` app_loc_fp ctxt true l /\
         address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true l /\
         app_loc_fp ctxt true l `loc_disjoint` I.footprint sl /\
@@ -259,7 +259,7 @@ let validate_with_action_t'
     disj /\
     inv h /\
     B.live h ctxt /\
-    B.live h (AppCtxt.action_ghost_ptr ctxt) /\
+    // B.live h (AppCtxt.action_ghost_ptr ctxt) /\
     loc_not_unused_in h `loc_includes` app_loc_fp ctxt true l /\
     address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true l /\
     U64.v pos == Seq.length (I.get_read sl h) /\
@@ -1019,7 +1019,7 @@ let validate_list_inv
   I.live sl h /\
   live h0 ctxt /\
   live h ctxt /\
-  live h (AppCtxt.action_ghost_ptr ctxt) /\
+  // live h (AppCtxt.action_ghost_ptr ctxt) /\
   live h1 bres /\
   begin
     let s = I.get_remaining sl h0 in
@@ -1101,7 +1101,7 @@ let validate_list'
     address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true l /\
     B.live h ctxt /\
     I.live sl h /\
-    B.live h (AppCtxt.action_ghost_ptr ctxt) /\
+    // B.live h (AppCtxt.action_ghost_ptr ctxt) /\
     U64.v pos == Seq.length (I.get_read sl h)
   ))
   (ensures (fun h res h' ->
@@ -1709,7 +1709,7 @@ let validate_list_up_to_inv
   B.loc_disjoint (B.loc_buffer bres) (app_loc_fp ctxt true loc_none) /\
   B.live h0 ctxt /\
   B.live h ctxt /\
-  B.live h (AppCtxt.action_ghost_ptr ctxt) /\
+  // B.live h (AppCtxt.action_ghost_ptr ctxt) /\
   loc_not_unused_in h `loc_includes` app_loc_fp ctxt true loc_none /\
   address_liveness_insensitive_locs `loc_includes` (app_loc_fp ctxt true loc_none) /\
   B.modifies (B.loc_buffer bres `B.loc_union` I.perm_footprint sl `B.loc_union` app_loc_fp ctxt ha loc_none) h0 h /\
