@@ -1901,24 +1901,6 @@ let copy_buffer_loc (x:CP.copy_buffer_t)
 
 inline_for_extraction
 noextract
-let init_and_probe 
-      (#mz:bool)
-      (init:PA.init_probe_dest_t)
-      (prep_dest_sz:U64.t)
-      (probe:PA.probe_m unit true mz)
-: PA.probe_m unit false mz
-= fun ctxt err read_offset write_offset failed src dest ->
-    let ok = init prep_dest_sz dest in
-    if ok
-    then (
-      probe ctxt err read_offset write_offset failed src dest
-    )
-    else (
-      failed *= true
-    )
-
-inline_for_extraction
-noextract
 let probe_then_validate 
       (#nz:bool)
       (#maybe_zero_offset:bool)
@@ -1957,7 +1939,7 @@ let probe_then_validate
         true
       )
       else (
-        let b = PA.run_probe_m (init_and_probe init prep_dest_sz probe) ctxt error_handler_fn src64 dest in
+        let b = PA.run_probe_m (PA.init_and_probe init prep_dest_sz probe) ctxt error_handler_fn src64 dest in
         let h1 = HST.get () in
         modifies_address_liveness_insensitive_unused_in h0 h1;
         if b <> 0uL

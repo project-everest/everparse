@@ -42,6 +42,7 @@ let probe_fn_incremental =
        )))
 
 inline_for_extraction
+noextract
 let init_probe_dest_t =
   sz:U64.t ->
   dest:copy_buffer_t ->
@@ -77,6 +78,7 @@ inline_for_extraction
 let coerce_value_t (t0 t1:Type0) = t0 -> t1
 
 inline_for_extraction
+noextract
 let probe_and_read_at_offset_t (t:Type0) (size_t:U64.t) =
   failed:B.pointer bool ->
   read_offset:U64.t ->
@@ -95,20 +97,6 @@ let probe_and_read_at_offset_t (t:Type0) (size_t:U64.t) =
         let has_failed = B.get h1 failed 0 in
         not has_failed ==> U64.fits (U64.v read_offset + U64.v size_t)
       ))
-
-inline_for_extraction
-let probe_and_read_at_offset_uint32 = probe_and_read_at_offset_t U32.t 4uL
-inline_for_extraction
-let probe_and_read_at_offset_uint64 = probe_and_read_at_offset_t U64.t 8uL
-inline_for_extraction
-let write_at_offset_uint8 = write_at_offset_t U8.t 1uL
-inline_for_extraction
-let write_at_offset_uint16 = write_at_offset_t U16.t 2uL
-inline_for_extraction
-let write_at_offset_uint32 = write_at_offset_t U32.t 4uL
-inline_for_extraction
-let write_at_offset_uint64 = write_at_offset_t U64.t 8uL
-
 
 inline_for_extraction
 type probe_m_result a = a
@@ -227,7 +215,6 @@ let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.
       write_offset *= U64.(wr +^ bytes_to_read)
     )
     else (
-      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       failed *= true
     )
 
@@ -240,7 +227,6 @@ let init_probe_m (f:init_probe_dest_t) (sz:U64.t)
     if ok
     then ()
     else (
-      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       failed *= true
     )
 
@@ -257,7 +243,6 @@ let write_at_offset_m (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t 
       write_offset *= U64.(wr +^ w)
     )
     else (
-      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       failed *= true
     )
 
@@ -331,7 +316,6 @@ let skip_read (bytes_to_skip:U64.t)
       read_offset *= U64.(rd +^ bytes_to_skip)
     )
     else (
-      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       failed *= true
     )  
 
@@ -346,7 +330,6 @@ let skip_write (bytes_to_skip:U64.t)
       write_offset *= U64.(wr +^ bytes_to_skip)
     )
     else (
-      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       failed *= true
     )  
 
@@ -355,7 +338,6 @@ noextract
 let fail
 : probe_m unit true false
 = fun ctxt err read_offset write_offset failed src dest ->
-    err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
     failed *= true
 
 inline_for_extraction
@@ -520,14 +502,29 @@ let probe_array (byte_len:U64.t) (probe_elem:probe_m unit true false)
 : probe_m unit true false
 = probe_array_aux byte_len probe_elem
 
-let pure_external_action t =
-  unit -> Stack t (fun _ -> True) (fun h0 _ h1 -> h0==h1)
-
 inline_for_extraction
 noextract
 let lift_pure_external_action (#a:Type) (f:pure_external_action a)
 : probe_m a true false
 = fun ctxt err read_offset write_offset failed src dest -> f()
+
+inline_for_extraction
+noextract
+let init_and_probe 
+      (#mz:bool)
+      (init:init_probe_dest_t)
+      (prep_dest_sz:U64.t)
+      (probe:probe_m unit true mz)
+: probe_m unit false mz
+= fun ctxt err read_offset write_offset failed src dest ->
+    let ok = init prep_dest_sz dest in
+    if ok
+    then (
+      probe ctxt err read_offset write_offset failed src dest
+    )
+    else (
+      failed *= true
+    )
 
 inline_for_extraction
 noextract
