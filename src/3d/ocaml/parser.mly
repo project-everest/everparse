@@ -527,8 +527,8 @@ probe_atomic_action:
 
 probe_action_no_range:
   | a=probe_atomic_action { Probe_atomic_action a }
-  | a1=probe_atomic_action a=probe_action { Probe_action_seq (with_range (Probe_atomic_action a1) ($startpos(a1)), a) }
-  | VAR i=IDENT EQ a1=probe_atomic_action a2=probe_action  { Probe_action_let (i, a1, a2) }
+  | a1=probe_atomic_action a=probe_action { Probe_action_seq ("", with_range (Probe_atomic_action a1) ($startpos(a1)), a) }
+  | VAR i=IDENT EQ a1=probe_atomic_action a2=probe_action  { Probe_action_let ("", i, a1, a2) }
 
 probe_action:
   | a=probe_action_no_range { with_range a ($startpos(a)) }

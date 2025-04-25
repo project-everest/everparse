@@ -7,7 +7,6 @@ module U8 = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
-open Utils3d
 open EverParse3d.CopyBuffer
 open LowStar.Buffer
 open LowStar.BufferOps
@@ -186,6 +185,9 @@ let probe_m_post
 
 inline_for_extraction
 let probe_m a (requires_unread_dest:bool) (expect_zero_offsets:bool) =
+  typename:string ->
+  fieldname:string ->
+  fielddetail:string ->
   ctxt: app_ctxt ->
   error_handler_fn : error_handler ->
   read_offset:B.pointer U64.t ->
@@ -203,7 +205,7 @@ inline_for_extraction
 noextract
 let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.t)
 : probe_m unit true false
-= fun ctxt err read_offset write_offset failed src dest ->
+= fun _ _ _ ctxt err read_offset write_offset failed src dest ->
     let h0  = get () in
     let rd = !*read_offset in
     let wr = !*write_offset in
@@ -222,7 +224,7 @@ inline_for_extraction
 noextract
 let init_probe_m (f:init_probe_dest_t) (sz:U64.t)
 : probe_m unit false false
-= fun ctxt err read_offset write_offset failed src dest ->
+= fun _ _ _ ctxt err read_offset write_offset failed src dest ->
     let ok = f sz dest in
     if ok
     then ()
@@ -235,7 +237,7 @@ inline_for_extraction
 noextract
 let write_at_offset_m (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
 : probe_m unit true false
-= fun ctxt err read_offset write_offset failed src dest ->
+= fun _ _ _ ctxt err read_offset write_offset failed src dest ->
     let wr = !*write_offset in
     let ok = f v wr dest in
     if ok
@@ -251,13 +253,13 @@ inline_for_extraction
 noextract
 let probe_and_read_at_offset_m (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t t s)
 : probe_m t true false
-= fun ctxt err read_offset write_offset failed src dest ->
+= fun tn fn det ctxt err read_offset write_offset failed src dest ->
     let rd = !*read_offset in
     let v = reader failed rd src dest in
     let has_failed = !*failed in
     if has_failed
     then (
-      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+      err tn fn det 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       v
     )
     else (
@@ -267,37 +269,37 @@ let probe_and_read_at_offset_m (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_
 
 inline_for_extraction
 noextract
-let seq_probe_m (#a:Type) (dflt:a) (m1:probe_m unit true false) (m2:probe_m a true false)
+let seq_probe_m (#a:Type) (detail:string) (dflt:a) (m1:probe_m unit true false) (m2:probe_m a true false)
 : probe_m a true false
-= fun ctxt err read_offset write_offset failed src dest ->
-    let res1 = m1 ctxt err read_offset write_offset failed src dest in
+= fun tn fn det ctxt err read_offset write_offset failed src dest ->
+    let res1 = m1 tn fn det ctxt err read_offset write_offset failed src dest in
     let has_failed = !*failed in
     if has_failed
     then (
-      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+      err tn fn detail 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       dflt
     )
-    else m2 ctxt err read_offset write_offset failed src dest
+    else m2 tn fn det ctxt err read_offset write_offset failed src dest
 
 inline_for_extraction
 noextract
-let bind_probe_m (#a #b:Type) (dflt:b) (m1:probe_m a true false) (m2:a -> probe_m b true false)
+let bind_probe_m (#a #b:Type) (detail:string) (dflt:b) (m1:probe_m a true false) (m2:a -> probe_m b true false)
 : probe_m b true false
-= fun ctxt err read_offset write_offset failed src dest ->
-    let res1 = m1 ctxt err read_offset write_offset failed src dest in
+= fun tn fn det ctxt err read_offset write_offset failed src dest ->
+    let res1 = m1 tn fn det ctxt err read_offset write_offset failed src dest in
     let has_failed = !*failed in
     if has_failed 
     then (
-      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+      err tn fn detail 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       dflt
     )
-    else m2 res1 ctxt err read_offset write_offset failed src dest
+    else m2 res1 tn fn det ctxt err read_offset write_offset failed src dest
 
 inline_for_extraction
 noextract
 let return_probe_m (#a:Type) (v:a)
 : probe_m a true false
-= fun ctxt err read_offset write_offset failed src dest -> v
+= fun _ _ _ ctxt err read_offset write_offset failed src dest -> v
 
 inline_for_extraction
 let check_overflow_add (x:U64.t) (y:U64.t)
@@ -309,7 +311,7 @@ inline_for_extraction
 noextract
 let skip_read (bytes_to_skip:U64.t)
 : probe_m unit true false
-= fun ctxt err read_offset write_offset failed src dest ->
+= fun _ _ _ ctxt err read_offset write_offset failed src dest ->
     let rd = !*read_offset in
     if check_overflow_add rd bytes_to_skip
     then (
@@ -323,7 +325,7 @@ inline_for_extraction
 noextract
 let skip_write (bytes_to_skip:U64.t)
 : probe_m unit true false
-= fun ctxt err read_offset write_offset failed src dest ->
+= fun _ _ _ ctxt err read_offset write_offset failed src dest ->
     let wr = !*write_offset in
     if check_overflow_add wr bytes_to_skip
     then (
@@ -337,17 +339,17 @@ inline_for_extraction
 noextract
 let fail
 : probe_m unit true false
-= fun ctxt err read_offset write_offset failed src dest ->
+= fun _ _ _ ctxt err read_offset write_offset failed src dest ->
     failed *= true
 
 inline_for_extraction
 noextract
 let if_then_else (b:bool) (m0 m1:probe_m unit true false)
 : probe_m unit true false
-= fun ctxt err read_offset write_offset failed src dest ->
+= fun tn fn det ctxt err read_offset write_offset failed src dest ->
     if b
-    then m0 ctxt err read_offset write_offset failed src dest
-    else m1 ctxt err read_offset write_offset failed src dest
+    then m0 tn fn det ctxt err read_offset write_offset failed src dest
+    else m1 tn fn det ctxt err read_offset write_offset failed src dest
 
 module HST = FStar.HyperStack.ST
 module CL = C.Loops
@@ -411,6 +413,7 @@ let array_inv
 inline_for_extraction
 noextract
 let probe_array_aux (byte_len:U64.t) (probe_elem:probe_m unit true false)
+  (tn fn det:string)
   (ctxt:AppCtxt.app_ctxt)
   (err:error_handler)
   (read_offset:B.pointer U64.t)
@@ -454,29 +457,23 @@ let probe_array_aux (byte_len:U64.t) (probe_elem:probe_m unit true false)
         (fun h -> test_post true h)
         (fun h0 _ h1 -> test_pre false h1)
       = let r0 = !*read_offset in
-        probe_elem ctxt err read_offset write_offset failed src dest;
+        probe_elem tn fn det ctxt err read_offset write_offset failed src dest;
         let has_failed = !*failed in
-        if has_failed 
+        let r1 = !*read_offset in
+        assert (U64.v r1 >= U64.v r0);
+        let bytes_read = U64.(r1 -^ r0) in
+        let c = !*ctr in
+        if has_failed
+        || bytes_read = 0uL
+        || U64.(c <^ bytes_read)
         then (
-          err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+          err tn fn det 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+          failed *= true;
           ()
         )
         else (
-          let r1 = !*read_offset in
-          assert (U64.v r1 >= U64.v r0);
-          let bytes_read = U64.(r1 -^ r0) in
-          let c = !*ctr in
-          if bytes_read = 0uL
-          || U64.(c <^ bytes_read)
-          then (
-            err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
-            failed *= true;
-            ()
-          )
-          else (
-            ctr *= U64.(c -^ bytes_read);
-            ()
-          )
+          ctr *= U64.(c -^ bytes_read);
+          ()
         )
     in
     C.Loops.while #(test_pre false) #test_post test body;
@@ -506,7 +503,7 @@ inline_for_extraction
 noextract
 let lift_pure_external_action (#a:Type) (f:pure_external_action a)
 : probe_m a true false
-= fun ctxt err read_offset write_offset failed src dest -> f()
+= fun _ _ _ ctxt err read_offset write_offset failed src dest -> f()
 
 inline_for_extraction
 noextract
@@ -516,20 +513,22 @@ let init_and_probe
       (prep_dest_sz:U64.t)
       (probe:probe_m unit true mz)
 : probe_m unit false mz
-= fun ctxt err read_offset write_offset failed src dest ->
+= fun tn fn det ctxt err read_offset write_offset failed src dest ->
     let ok = init prep_dest_sz dest in
     if ok
     then (
-      probe ctxt err read_offset write_offset failed src dest
+      probe tn fn det ctxt err read_offset write_offset failed src dest
     )
     else (
       failed *= true
     )
 
+
 inline_for_extraction
 noextract
 let run_probe_m (#any:bool) 
   (m:probe_m unit false any)
+  (tn fn det:string)
   (ctxt:app_ctxt)
   (err:error_handler)
   (src:U64.t)
@@ -550,10 +549,13 @@ let run_probe_m (#any:bool)
     let read_offset = alloca 0uL 1ul in
     let write_offset = alloca 0uL 1ul in
     let failed = alloca false 1ul in
-    m ctxt err read_offset write_offset failed src dest;
+    m tn fn det ctxt err read_offset write_offset failed src dest;
     let wr = !*write_offset in
     let has_failed = !*failed in
   pop_frame();
   if has_failed
-  then probe_failed 0uL
+  then (
+    err tn fn det 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+    0uL
+  )
   else wr

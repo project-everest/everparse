@@ -821,14 +821,14 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
     T.Probe_action_atomic (translate_atomic a), []
   | A.Probe_action_var i ->
     T.Probe_action_var (translate_expr i), []
-  | A.Probe_action_seq hd tl ->
+  | A.Probe_action_seq d hd tl ->
     let hd, ds1 = translate_probe_action hd in
     let tl, ds2 = translate_probe_action tl in
-    T.Probe_action_seq hd tl, ds1@ds2
-  | A.Probe_action_let i a k ->
+    T.Probe_action_seq d hd tl, ds1@ds2
+  | A.Probe_action_let d i a k ->
     let a = translate_atomic a in
     let tl, ds2 = translate_probe_action k in
-    T.Probe_action_let i a tl, ds2
+    T.Probe_action_let d i a tl, ds2
   | A.Probe_action_ite e th el ->
     let th, ds1 = translate_probe_action th in
     let el, ds2 = translate_probe_action el in

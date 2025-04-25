@@ -506,10 +506,12 @@ type probe_action' =
   | Probe_atomic_action of probe_atomic_action
   | Probe_action_var of expr
   | Probe_action_seq :
+    detail:string ->
     hd:probe_action ->
     tl:probe_action ->
     probe_action'
   | Probe_action_let :
+    detail:string ->
     i:ident ->
     a:probe_atomic_action ->
     k:probe_action ->
@@ -1022,12 +1024,14 @@ and print_probe_action (p:probe_action) : ML string =
     print_probe_atomic_action a
   | Probe_action_var i ->
     Printf.sprintf "(Probe_action_var %s)" (print_expr i)
-  | Probe_action_seq hd tl ->
-    Printf.sprintf "%s; %s" 
+  | Probe_action_seq detail hd tl ->
+    Printf.sprintf "(* %s *) %s; %s"
+      detail
       (print_probe_action hd)
       (print_probe_action tl)
-  | Probe_action_let i hd tl ->
-    Printf.sprintf "var %s = %s; %s"
+  | Probe_action_let detail i hd tl ->
+    Printf.sprintf "(* %s *) var %s = %s; %s"
+      detail
       (print_ident i)
       (print_probe_atomic_action hd)
       (print_probe_action tl)
@@ -1553,10 +1557,10 @@ let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
     {a with v = Probe_atomic_action (subst_probe_atomic_action s aa)}
   | Probe_action_var i ->
     { a with v = Probe_action_var (subst_expr s i) }
-  | Probe_action_seq hd tl ->
-    {a with v = Probe_action_seq (subst_probe_action s hd) (subst_probe_action s tl) }
-  | Probe_action_let i aa k ->
-    {a with v = Probe_action_let i (subst_probe_atomic_action s aa) (subst_probe_action s k) }
+  | Probe_action_seq d hd tl ->
+    {a with v = Probe_action_seq d (subst_probe_action s hd) (subst_probe_action s tl) }
+  | Probe_action_let d i aa k ->
+    {a with v = Probe_action_let d i (subst_probe_atomic_action s aa) (subst_probe_action s k) }
   | Probe_action_ite hd then_ else_ ->
     {a with v = Probe_action_ite (subst_expr s hd) (subst_probe_action s then_) (subst_probe_action s else_) }
   | Probe_action_array len action ->

@@ -336,10 +336,10 @@ let rec resolve_probe_action' (env:qenv) (act:probe_action') : ML probe_action' 
   match act with
   | Probe_atomic_action ac -> Probe_atomic_action (resolve_probe_atomic_action env ac)
   | Probe_action_var i -> Probe_action_var (resolve_expr env i)
-  | Probe_action_seq hd tl ->
-    Probe_action_seq (resolve_probe_action env hd) (resolve_probe_action env tl)
-  | Probe_action_let i a k ->
-    Probe_action_let i (resolve_probe_atomic_action env a) (resolve_probe_action (push_name env i.v.name) k)
+  | Probe_action_seq d hd tl ->
+    Probe_action_seq d (resolve_probe_action env hd) (resolve_probe_action env tl)
+  | Probe_action_let d i a k ->
+    Probe_action_let d i (resolve_probe_atomic_action env a) (resolve_probe_action (push_name env i.v.name) k)
   | Probe_action_ite hd then_ else_ ->
     Probe_action_ite (resolve_expr env hd) (resolve_probe_action env then_) (resolve_probe_action env else_)
   | Probe_action_array len body ->

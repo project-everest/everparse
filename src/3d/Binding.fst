@@ -1397,39 +1397,8 @@ let rec check_probe env a : ML (probe_action & typ) =
               e.range;
     { a with v=Probe_action_var e }, tunit
   )
-  // | Probe_action_simple probe_fn length ->
-  //   let length, typ = check_expr env length in
-  //   let length =
-  //     if not (eq_typ env typ tuint64)
-  //     then match try_cast_integer env (length, typ) tuint64 with
-  //         | Some e -> e
-  //         | _ -> error (Printf.sprintf "Probe length expression %s has type %s instead of UInt64"
-  //                       (print_expr length)
-  //                       (print_typ typ))
-  //                       length.range
-  //     else length
-  //   in
-  //   let probe_fn =
-  //     match probe_fn with
-  //     | None -> (
-  //       match GlobalEnv.default_probe_fn env.globals with
-  //       | None -> 
-  //         error (Printf.sprintf "Probe function not specified and no default probe function found")
-  //               length.range
-  //       | Some i -> i
-  //     )
-  //     | Some p -> (
-  //       match GlobalEnv.resolve_probe_fn env.globals p PQWithOffsets with
-  //       | None -> 
-  //         error (Printf.sprintf "Probe function %s not found" (print_ident p))
-  //               p.range
-  //       | Some i -> 
-  //         i
-  //     )
-  //   in
-  //   { a with v=Probe_action_simple (Some probe_fn) length}, tunit
 
-  | Probe_action_seq a0 rest ->
+  | Probe_action_seq detail a0 rest ->
     let a0, t0 = check_probe env a0 in
     if not (eq_typ env t0 tunit)
     then (
@@ -1438,14 +1407,14 @@ let rec check_probe env a : ML (probe_action & typ) =
             a.range
     );
     let rest, t = check_probe env rest in
-    { a with v=Probe_action_seq a0 rest }, t
+    { a with v=Probe_action_seq detail a0 rest }, t
 
-  | Probe_action_let i aa k ->
+  | Probe_action_let detail i aa k ->
     let aa, t = check_atomic_probe env aa in
     add_local env i t;
     let k, t = check_probe env k in
     remove_local env i;
-    { a with v = Probe_action_let i aa k }, t
+    { a with v = Probe_action_let detail i aa k }, t
 
   | Probe_action_ite e th el ->
     let e, t = check_expr env e in

@@ -159,10 +159,12 @@ type probe_action =
       expr ->
       probe_action
   | Probe_action_seq:
+      detail:string ->
       probe_action ->
       probe_action ->
       probe_action
   | Probe_action_let:
+      detail:string ->
       i:A.ident ->
       m1: atomic_probe_action ->
       m2: probe_action ->

@@ -7,12 +7,12 @@ module U8 = FStar.UInt8
 module U16 = FStar.UInt16
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
-open Utils3d
 open EverParse3d.CopyBuffer
 open LowStar.Buffer
 open LowStar.BufferOps
 open FStar.HyperStack.ST
 open EverParse3d.Actions.Common
+
 
 inline_for_extraction
 noextract
@@ -67,12 +67,12 @@ val probe_and_read_at_offset_m (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_
 
 inline_for_extraction
 noextract
-val seq_probe_m (#a:Type) (dflt:a) (m1:probe_m unit true false) (m2:probe_m a true false)
+val seq_probe_m (#a:Type) (detail:string) (dflt:a) (m1:probe_m unit true false) (m2:probe_m a true false)
 : probe_m a true false
 
 inline_for_extraction
 noextract
-val bind_probe_m (#a #b:Type) (dflt:b) (m1:probe_m a true false) (m2:a -> probe_m b true false)
+val bind_probe_m (#a #b:Type) (detail:string) (dflt:b) (m1:probe_m a true false) (m2:a -> probe_m b true false)
 : probe_m b true false
 
 inline_for_extraction
@@ -129,6 +129,7 @@ inline_for_extraction
 noextract
 val run_probe_m (#any:bool) 
   (m:probe_m unit false any)
+  (tn fn det:string)
   (ctxt:app_ctxt)
   (err:error_handler)
   (src:U64.t)
