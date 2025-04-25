@@ -12,27 +12,12 @@ open EverParse3d.CopyBuffer
 open LowStar.Buffer
 open LowStar.BufferOps
 open FStar.HyperStack.ST
+open EverParse3d.Actions.Common
 
 let live_and_unread (dest:copy_buffer_t) h =
   let sl = stream_of dest in
   I.live sl h /\
   Seq.length (I.get_read sl h) == 0
-
-// let probe_fn = src:U64.t -> len:U64.t -> dest:copy_buffer_t ->
-//   Stack bool
-//     (fun h0 ->
-//       I.live (stream_of dest) h0)
-//     (fun h0 b h1 ->
-//       let sl = stream_of dest in
-//       I.live sl h1 /\
-//       (if b
-//        then (
-//         Seq.length (I.get_read sl h1) == 0 /\
-//         modifies (I.footprint sl) h0 h1
-//        )
-//        else (
-//         h0 == h1
-//        )))
 
 let probe_fn_incremental = 
   bytes_to_read:U64.t ->
@@ -132,6 +117,7 @@ unfold
 let probe_m_pre
     (requires_unread_dest:bool)
     (expect_zero_offsets:bool) 
+    (ctxt:app_ctxt)
     (read_offset:B.pointer U64.t)
     (write_offset:B.pointer U64.t)
     (failed:B.pointer bool)
@@ -140,12 +126,22 @@ let probe_m_pre
     (h0:HS.mem)
 : prop
 = let sl = stream_of dest in
+  let locs = 
+    B.loc_union
+      (B.loc_union
+        (B.loc_buffer failed) 
+        (B.loc_union
+          (B.loc_buffer read_offset)
+          (B.loc_buffer write_offset)))
+      (loc_of dest)
+  in  
   B.live h0 read_offset /\
   B.live h0 write_offset /\
   B.live h0 failed /\
   B.disjoint read_offset write_offset /\
   B.disjoint read_offset failed /\
   B.disjoint write_offset failed /\
+  app_ctxt_error_pre ctxt locs h0 /\
   B.loc_disjoint
     (B.loc_union
       (B.loc_buffer failed) 
@@ -165,6 +161,7 @@ let probe_m_post
     (#a:Type)
     (requires_unread_dest:bool)
     (expect_zero_offsets:bool) 
+    (ctxt:app_ctxt)
     (read_offset:B.pointer U64.t)
     (write_offset:B.pointer U64.t)
     (failed:B.pointer bool)
@@ -175,10 +172,20 @@ let probe_m_post
     (h1:HS.mem)
 : prop
 = let sl = stream_of dest in
+  let locs = 
+    B.loc_union
+      (B.loc_union
+        (B.loc_buffer failed) 
+        (B.loc_union
+          (B.loc_buffer read_offset)
+          (B.loc_buffer write_offset)))
+      (loc_of dest)
+  in  
   live_and_unread dest h1 /\
   B.live h1 read_offset /\
   B.live h1 write_offset /\
   B.live h1 failed /\
+  app_ctxt_error_pre ctxt locs h1 /\
   (
     let r0 = B.get h0 read_offset 0 in
     let r1 = B.get h1 read_offset 0 in
@@ -187,17 +194,12 @@ let probe_m_post
     let has_failed = B.get h1 failed 0 in
     U64.(w1 >=^ w0) /\
     U64.(r1 >=^ r0) /\
-    modifies 
-        (B.loc_union 
-          (B.loc_union 
-            (B.loc_buffer failed)
-            (B.loc_union 
-              (B.loc_buffer read_offset)
-              (B.loc_buffer write_offset)))
-          (I.footprint sl)) h0 h1)
+    modifies (app_loc ctxt locs) h0 h1)
 
 inline_for_extraction
 let probe_m a (requires_unread_dest:bool) (expect_zero_offsets:bool) =
+  ctxt: app_ctxt ->
+  error_handler_fn : error_handler ->
   read_offset:B.pointer U64.t ->
   write_offset:B.pointer U64.t ->
   failed:B.pointer bool ->
@@ -205,15 +207,15 @@ let probe_m a (requires_unread_dest:bool) (expect_zero_offsets:bool) =
   dest:copy_buffer_t ->
   Stack (probe_m_result a)
     (probe_m_pre 
-      requires_unread_dest expect_zero_offsets read_offset write_offset failed src dest)
-    (probe_m_post 
-      requires_unread_dest expect_zero_offsets read_offset write_offset failed src dest)
+      requires_unread_dest expect_zero_offsets ctxt read_offset write_offset failed src dest)
+    (probe_m_post
+      requires_unread_dest expect_zero_offsets ctxt read_offset write_offset failed src dest)
 
 inline_for_extraction
 noextract
 let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.t)
 : probe_m unit true false
-= fun read_offset write_offset failed src dest ->
+= fun ctxt err read_offset write_offset failed src dest ->
     let h0  = get () in
     let rd = !*read_offset in
     let wr = !*write_offset in
@@ -225,6 +227,7 @@ let probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.
       write_offset *= U64.(wr +^ bytes_to_read)
     )
     else (
+      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       failed *= true
     )
 
@@ -232,11 +235,12 @@ inline_for_extraction
 noextract
 let init_probe_m (f:init_probe_dest_t) (sz:U64.t)
 : probe_m unit false false
-= fun read_offset write_offset failed src dest ->
+= fun ctxt err read_offset write_offset failed src dest ->
     let ok = f sz dest in
     if ok
     then ()
     else (
+      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       failed *= true
     )
 
@@ -245,7 +249,7 @@ inline_for_extraction
 noextract
 let write_at_offset_m (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t w) (v:t)
 : probe_m unit true false
-= fun read_offset write_offset failed src dest ->
+= fun ctxt err read_offset write_offset failed src dest ->
     let wr = !*write_offset in
     let ok = f v wr dest in
     if ok
@@ -253,6 +257,7 @@ let write_at_offset_m (#t:Type0) (#w:U64.t { w <> 0uL }) (f:write_at_offset_t t 
       write_offset *= U64.(wr +^ w)
     )
     else (
+      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       failed *= true
     )
 
@@ -261,11 +266,15 @@ inline_for_extraction
 noextract
 let probe_and_read_at_offset_m (#t:Type0) (#s:U64.t { s <> 0uL }) (reader:probe_and_read_at_offset_t t s)
 : probe_m t true false
-= fun read_offset write_offset failed src dest ->
+= fun ctxt err read_offset write_offset failed src dest ->
     let rd = !*read_offset in
     let v = reader failed rd src dest in
     let has_failed = !*failed in
-    if has_failed then probe_failed v
+    if has_failed
+    then (
+      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+      v
+    )
     else (
       read_offset *= U64.(rd +^ s);
       v
@@ -275,28 +284,35 @@ inline_for_extraction
 noextract
 let seq_probe_m (#a:Type) (dflt:a) (m1:probe_m unit true false) (m2:probe_m a true false)
 : probe_m a true false
-= fun read_offset write_offset failed src dest ->
-    let res1 = m1 read_offset write_offset failed src dest in
+= fun ctxt err read_offset write_offset failed src dest ->
+    let res1 = m1 ctxt err read_offset write_offset failed src dest in
     let has_failed = !*failed in
     if has_failed
-    then probe_failed dflt
-    else m2 read_offset write_offset failed src dest
+    then (
+      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+      dflt
+    )
+    else m2 ctxt err read_offset write_offset failed src dest
 
 inline_for_extraction
 noextract
 let bind_probe_m (#a #b:Type) (dflt:b) (m1:probe_m a true false) (m2:a -> probe_m b true false)
 : probe_m b true false
-= fun read_offset write_offset failed src dest ->
-    let res1 = m1 read_offset write_offset failed src dest in
+= fun ctxt err read_offset write_offset failed src dest ->
+    let res1 = m1 ctxt err read_offset write_offset failed src dest in
     let has_failed = !*failed in
-    if has_failed then probe_failed dflt
-    else m2 res1 read_offset write_offset failed src dest
+    if has_failed 
+    then (
+      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+      dflt
+    )
+    else m2 res1 ctxt err read_offset write_offset failed src dest
 
 inline_for_extraction
 noextract
 let return_probe_m (#a:Type) (v:a)
 : probe_m a true false
-= fun read_offset write_offset failed src dest -> v
+= fun ctxt err read_offset write_offset failed src dest -> v
 
 inline_for_extraction
 let check_overflow_add (x:U64.t) (y:U64.t)
@@ -308,13 +324,14 @@ inline_for_extraction
 noextract
 let skip_read (bytes_to_skip:U64.t)
 : probe_m unit true false
-= fun read_offset write_offset failed src dest ->
+= fun ctxt err read_offset write_offset failed src dest ->
     let rd = !*read_offset in
     if check_overflow_add rd bytes_to_skip
     then (
       read_offset *= U64.(rd +^ bytes_to_skip)
     )
     else (
+      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       failed *= true
     )  
 
@@ -322,13 +339,14 @@ inline_for_extraction
 noextract
 let skip_write (bytes_to_skip:U64.t)
 : probe_m unit true false
-= fun read_offset write_offset failed src dest ->
+= fun ctxt err read_offset write_offset failed src dest ->
     let wr = !*write_offset in
     if check_overflow_add wr bytes_to_skip
     then (
       write_offset *= U64.(wr +^ bytes_to_skip)
     )
     else (
+      err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
       failed *= true
     )  
 
@@ -336,17 +354,18 @@ inline_for_extraction
 noextract
 let fail
 : probe_m unit true false
-= fun read_offset write_offset failed src dest ->
+= fun ctxt err read_offset write_offset failed src dest ->
+    err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
     failed *= true
 
 inline_for_extraction
 noextract
 let if_then_else (b:bool) (m0 m1:probe_m unit true false)
 : probe_m unit true false
-= fun read_offset write_offset failed src dest ->
+= fun ctxt err read_offset write_offset failed src dest ->
     if b
-    then m0 read_offset write_offset failed src dest
-    else m1 read_offset write_offset failed src dest
+    then m0 ctxt err read_offset write_offset failed src dest
+    else m1 ctxt err read_offset write_offset failed src dest
 
 module HST = FStar.HyperStack.ST
 module CL = C.Loops
@@ -356,6 +375,7 @@ unfold
 let array_inv
     (requires_unread_dest:bool)
     (expect_zero_offsets:bool) 
+    (ctxt:app_ctxt) 
     (read_offset:B.pointer U64.t)
     (write_offset:B.pointer U64.t)
     (failed:B.pointer bool)
@@ -377,6 +397,7 @@ let array_inv
           (B.loc_buffer read_offset)
           (B.loc_buffer write_offset))))
   in
+  app_ctxt_error_pre ctxt (loc_union locs (I.footprint sl)) h0 /\
   B.live h0 ctr /\
   B.live h0 read_offset /\
   B.live h0 write_offset /\
@@ -392,7 +413,7 @@ let array_inv
     B.get h0 read_offset 0 == 0uL /\
     B.get h0 write_offset 0 == 0uL) /\
   (requires_unread_dest ==> Seq.length (I.get_read sl h0) == 0) /\
-  modifies (B.loc_union locs (I.footprint sl)) hpre h0 /\
+  modifies (app_loc ctxt (B.loc_union locs (I.footprint sl))) hpre h0 /\
   (let r0 = B.get hpre read_offset 0 in
    let r1 = B.get h0 read_offset 0 in
    let w0 = B.get hpre write_offset 0 in
@@ -404,18 +425,20 @@ let array_inv
    let remaining_bytes = B.get h0 ctr 0 in
    U64.v bytes_read_so_far + U64.v remaining_bytes == U64.v byte_len)))
  
-
+#push-options "--z3rlimit_factor 8 --ifuel 2 --fuel 0 --split_queries no --query_stats"
 inline_for_extraction
 noextract
 let probe_array_aux (byte_len:U64.t) (probe_elem:probe_m unit true false)
+  (ctxt:AppCtxt.app_ctxt)
+  (err:error_handler)
   (read_offset:B.pointer U64.t)
   (write_offset:B.pointer U64.t)
   (failed:B.pointer bool)
   (src:U64.t)
   (dest:copy_buffer_t)
 : Stack (probe_m_result unit)
-    (fun h0 -> probe_m_pre true false read_offset write_offset failed src dest h0)
-    (fun h0 x h1 -> probe_m_post true false read_offset write_offset failed src dest h0 x h1)
+    (fun h0 -> probe_m_pre true false ctxt read_offset write_offset failed src dest h0)
+    (fun h0 x h1 -> probe_m_post true false ctxt read_offset write_offset failed src dest h0 x h1)
 =   CopyBuffer.properties dest;
     let h0 = HST.get () in
     HST.push_frame ();
@@ -425,12 +448,12 @@ let probe_array_aux (byte_len:U64.t) (probe_elem:probe_m unit true false)
     let hpre = HST.get () in
     let test_pre (not_failed_yet:bool) (h:HS.mem) : Type0 =
       array_inv 
-        true false read_offset write_offset failed src dest
+        true false ctxt read_offset write_offset failed src dest
         not_failed_yet byte_len ctr hpre h
     in
     let test_post (b:bool) (h:HS.mem) : Type0 =
       array_inv 
-        true false read_offset write_offset failed src dest
+        true false ctxt read_offset write_offset failed src dest
         b byte_len ctr hpre h /\
       (b <==> U64.v (B.get h ctr 0) > 0 /\ (B.get h failed 0 == false))
     in
@@ -449,9 +472,13 @@ let probe_array_aux (byte_len:U64.t) (probe_elem:probe_m unit true false)
         (fun h -> test_post true h)
         (fun h0 _ h1 -> test_pre false h1)
       = let r0 = !*read_offset in
-        probe_elem read_offset write_offset failed src dest;
+        probe_elem ctxt err read_offset write_offset failed src dest;
         let has_failed = !*failed in
-        if has_failed then probe_failed ()
+        if has_failed 
+        then (
+          err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
+          ()
+        )
         else (
           let r1 = !*read_offset in
           assert (U64.v r1 >= U64.v r0);
@@ -460,6 +487,7 @@ let probe_array_aux (byte_len:U64.t) (probe_elem:probe_m unit true false)
           if bytes_read = 0uL
           || U64.(c <^ bytes_read)
           then (
+            err "" "" "" 0uL ctxt (CopyBuffer.stream_of dest) 0uL;
             failed *= true;
             ()
           )
@@ -484,6 +512,7 @@ let probe_array_aux (byte_len:U64.t) (probe_elem:probe_m unit true false)
     // assert (probe_m_post true false read_offset write_offset failed src dest h0 () h1);
     // assert (probe_m_post true false read_offset write_offset failed src dest h0 () h2);    
     ()
+#pop-options
 
 inline_for_extraction
 noextract
@@ -498,51 +527,33 @@ inline_for_extraction
 noextract
 let lift_pure_external_action (#a:Type) (f:pure_external_action a)
 : probe_m a true false
-= fun read_offset write_offset failed src dest -> f()
-
-// inline_for_extraction
-// let probe_fn_as_probe_m (bytes_to_read:U64.t) (f:probe_fn)
-// : probe_m unit true true
-// = fun read_offset write_offset failed src dest ->
-//     let rd = !*read_offset in
-//     let wr = !*write_offset in
-//     if bytes_to_read = 0uL
-//     then (
-//       failed *= true
-//     )
-//     else ( 
-//       let h0 = get () in
-//       let ok = f src bytes_to_read dest in
-//       let h1 = get () in
-//       if ok
-//       then (
-//         read_offset *= bytes_to_read;
-//         write_offset *= bytes_to_read;
-//         ()
-//       )
-//       else (
-//         failed *= true
-//       )
-//     )
+= fun ctxt err read_offset write_offset failed src dest -> f()
 
 inline_for_extraction
 noextract
-let run_probe_m (#any:bool) (m:probe_m unit false any) (src:U64.t) (dest:copy_buffer_t)
+let run_probe_m (#any:bool) 
+  (m:probe_m unit false any)
+  (ctxt:app_ctxt)
+  (err:error_handler)
+  (src:U64.t)
+  (dest:copy_buffer_t)
 : Stack U64.t
     (fun h0 ->
       let sl = stream_of dest in
+      app_ctxt_error_pre ctxt (I.footprint sl) h0 /\
       I.live sl h0)
     (fun h0 b h1 ->
       let sl = stream_of dest in
       I.live sl h1 /\
-      modifies (I.footprint sl) h0 h1 /\
+      B.live h1 ctxt /\
+      modifies (app_loc ctxt (I.footprint sl)) h0 h1 /\
       (b <> 0uL ==> Seq.length (I.get_read sl h1) == 0))
 = EverParse3d.CopyBuffer.properties dest;
   push_frame();
     let read_offset = alloca 0uL 1ul in
     let write_offset = alloca 0uL 1ul in
     let failed = alloca false 1ul in
-    m read_offset write_offset failed src dest;
+    m ctxt err read_offset write_offset failed src dest;
     let wr = !*write_offset in
     let has_failed = !*failed in
   pop_frame();

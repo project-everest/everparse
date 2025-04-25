@@ -17,13 +17,10 @@ let eloc = (l: FStar.Ghost.erased B.loc { B.address_liveness_insensitive_locs `B
 let eloc_none : eloc = B.loc_none
   
 let app_ctxt = AppCtxt.app_ctxt
+
 let app_loc (x:AppCtxt.app_ctxt) (l:eloc) : eloc = 
-  // AppCtxt.properties x;
+
   AppCtxt.loc_of x `loc_union` l
-let app_loc_fp (x:AppCtxt.app_ctxt) (has_action:bool) (l:eloc) : eloc = 
-  // if has_action then AppCtxt.ghost_loc_of x `loc_union` app_loc x l
-  // else
-  app_loc x l
 
 inline_for_extraction
 noextract
@@ -31,9 +28,7 @@ let input_buffer_t = EverParse3d.InputStream.All.t
 
 let app_ctxt_error_pre (ctxt:app_ctxt) (l:loc) (h:HS.mem) =
   B.live h ctxt /\
-  // loc_not_unused_in h `loc_includes` app_loc_fp ctxt true eloc_none /\
-  app_loc_fp ctxt true eloc_none `loc_disjoint` l
-
+  AppCtxt.loc_of ctxt `loc_disjoint` l
 
 inline_for_extraction
 let error_handler = 
@@ -48,10 +43,6 @@ let error_handler =
       (requires fun h ->
         I.live sl h /\
         app_ctxt_error_pre ctxt (I.footprint sl) h /\
-        // B.live h ctxt /\
-        // loc_not_unused_in h `loc_includes` app_loc_fp ctxt true eloc_none /\
-        // address_liveness_insensitive_locs `loc_includes` app_loc_fp ctxt true eloc_none /\
-        // app_loc_fp ctxt true eloc_none `loc_disjoint` I.footprint sl /\
         U64.v pos <= Seq.length (I.get_read sl h)
       )
       (ensures fun h0 _ h1 ->
