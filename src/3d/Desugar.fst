@@ -469,7 +469,8 @@ let resolve_out_type (env:qenv) (out_t:out_typ) : ML out_typ =
 let resolve_probe_function_type env = function
     | SimpleProbeFunction id -> SimpleProbeFunction (resolve_ident env id)
     | CoerceProbeFunction (x, y) -> CoerceProbeFunction (resolve_ident env x, resolve_ident env y)
-  
+    | HelperProbeFunction -> HelperProbeFunction
+
 let resolve_decl' (env:qenv) (d:decl') : ML decl' =
   match d with
   | ModuleAbbrev i m -> push_module_abbrev env i.v.name m.v.name; d

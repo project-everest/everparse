@@ -40,28 +40,85 @@ let probe_return_unit
   Probe_atomic_action <|
   Probe_action_return (with_dummy_range (Constant Unit))
 
-let read_and_coerce_pointer (e:B.env) (fid:ident) (k:probe_action)
+let read_and_coerce_pointer (e:B.env) (fid:expr)
 : ML probe_action
 = let reader = find_probe_fn e (PQRead UInt32) in
   let writer = find_probe_fn e (PQWrite UInt64) in
   let coercion = find_extern_coercion e tuint32 tuint64 in
-  let fid64 = {fid with v = { fid.v with name = fid.v.name ^ "_64" } } in
-  let fid_expr = with_dummy_range <| Identifier fid in
-  let fid64_expr = with_dummy_range <| Identifier fid64 in
+  let as_ident x = with_dummy_range <| to_ident' x in
+  let as_expr x = with_dummy_range <| Identifier <| as_ident x in
   with_dummy_range <|
-  Probe_action_let
-    ("read: " ^ print_ident fid)
-    fid
+  Probe_action_let fid
+    (as_ident "ptr32")
     (Probe_action_read reader)
     (with_dummy_range <|
-      Probe_action_let 
-         ("coerce: " ^ print_ident fid)
-          fid64
-          (Probe_action_call coercion [fid_expr])
-          (with_dummy_range <| 
-            Probe_action_seq
-              ("write: " ^ print_ident fid)
-              (with_dummy_range <| Probe_atomic_action (Probe_action_write writer fid64_expr)) k))
+      Probe_action_let fid
+          (as_ident "ptr64")
+          (Probe_action_call coercion [as_expr "ptr32"])
+          (with_dummy_range <| Probe_atomic_action (Probe_action_write writer (as_expr "ptr64"))))
+
+
+let skip_bytes_read (n:int)
+: ML probe_action
+= with_dummy_range <| Probe_atomic_action (Probe_action_skip_read (with_dummy_range <| Constant (Int UInt64 n)))
+
+let skip_bytes_write (n:int)
+: ML probe_action
+= with_dummy_range <| Probe_atomic_action (Probe_action_skip_write (with_dummy_range <| Constant (Int UInt64 n)))
+
+let copy_bytes (e:B.env) (n:int)
+: ML probe_action
+= let probe_and_copy_n = find_probe_fn e PQWithOffsets in
+  with_dummy_range <|
+  Probe_atomic_action 
+        (Probe_action_call probe_and_copy_n [with_dummy_range <| Constant (Int UInt64 n)])
+
+let cstring (s:string) = with_dummy_range <| Constant (String s)
+let continue (fn:string) (a:probe_action) (k:probe_action)
+: ML probe_action
+= with_dummy_range <|
+  Probe_action_seq (cstring fn) a k
+
+let probe_and_copy_alignment 
+    (e:B.env)
+    (n0 n1:int)
+    (k:probe_action)
+: ML probe_action
+= if n0=n1
+  then continue "alignment" (copy_bytes e n0) k
+  else continue "alignment" (skip_bytes_read n0)
+          (continue "alignment" (skip_bytes_write n1) k)
+
+let read_and_coerce_id = with_dummy_range <| to_ident' "read_and_coerce_pointer"
+let mk_ident x = with_dummy_range <| to_ident' x
+let mk_expr x = with_dummy_range <| Identifier (mk_ident x)
+let mk_probe_helpers (e:B.env)
+: ML (list decl)
+= let read_and_coerce =
+  //  with_dummy_range <|
+    ProbeFunction
+      read_and_coerce_id
+      [tstring, mk_ident "fieldname", Immutable]
+      (read_and_coerce_pointer e (mk_expr "fieldname"))
+      HelperProbeFunction
+  in
+  [mk_decl read_and_coerce dummy_range [] false]
+
+let read_and_coerce_pointer_k (e:B.env) (fid:ident) (k:probe_action)
+: ML probe_action
+= 
+  let read_and_coerce = 
+    let hd =
+      with_dummy_range <| 
+        App (ProbeFunctionName read_and_coerce_id) 
+            [cstring <| print_ident fid]
+    in
+    with_dummy_range <| Probe_action_var hd
+  in
+  continue (print_ident fid) read_and_coerce k
+  // continue 
+  //   (print_ident fid)
+  //   (read_and_coerce_pointer e (cstring <| print_ident fid)) k
 
 let integer_type_of_type t
 : option integer_type
@@ -106,7 +163,7 @@ let probe_and_copy_type (e:B.env) (fn:ident) (t0:typ) (k:probe_action)
         in
         let hd = with_dummy_range <| Probe_action_var hd in
         with_dummy_range <|
-        Probe_action_seq (print_ident fn) hd k
+        Probe_action_seq (cstring <| print_ident fn) hd k
       )
   )
   | Some i -> 
@@ -119,41 +176,10 @@ let probe_and_copy_type (e:B.env) (fn:ident) (t0:typ) (k:probe_action)
     in
     with_dummy_range <|
     Probe_action_seq
-      (print_ident fn)
+      (cstring <| print_ident fn)
       (with_dummy_range <| Probe_atomic_action (Probe_action_copy probe_and_copy_n (with_dummy_range <| Constant (Int UInt64 size))))
       k
   
-let skip_bytes_read (fn:string) (n:int) (k:probe_action)
-: ML probe_action
-= with_dummy_range <|
-    Probe_action_seq fn
-      (with_dummy_range <| Probe_atomic_action (Probe_action_skip_read (with_dummy_range <| Constant (Int UInt64 n))))
-      k
-
-let skip_bytes_write (fn:string) (n:int) (k:probe_action)
-: ML probe_action
-= with_dummy_range <|
-    Probe_action_seq fn
-      (with_dummy_range <| Probe_atomic_action (Probe_action_skip_write (with_dummy_range <| Constant (Int UInt64 n))))
-      k
-
-let probe_and_copy_alignment 
-    (e:B.env)
-    (n0 n1:int)
-    (k:probe_action)
-: ML probe_action
-= if n0=n1
-  then (
-    let probe_and_copy_n = find_probe_fn e PQWithOffsets in
-    with_dummy_range <|
-      Probe_action_seq "alignment"
-        (with_dummy_range <| Probe_atomic_action 
-          (Probe_action_call probe_and_copy_n [with_dummy_range <| Constant (Int UInt64 n0)]))
-        k
-  )
-  else (
-    skip_bytes_read "alignment" n0 (skip_bytes_write "alignment" n1 k)
-  )
 
 let alignment_bytes (af:atomic_field)
 : ML int
@@ -174,7 +200,7 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
               (print_ident i0)
               (print_ident i1);
       with_dummy_range <|
-      Probe_action_seq (print_ident i0)
+      Probe_action_seq (cstring <| print_ident i0)
         (coerce_fields e r0 r1)
         (coerce_fields e tl0 tl1)
      )
@@ -186,7 +212,7 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
               (print_ident i0)
               (print_ident i1);
       with_dummy_range <|
-      Probe_action_seq (print_ident i0)
+      Probe_action_seq (cstring <| print_ident i0)
         (coerce_switch_case e sw0 sw1)
         (coerce_fields e tl0 tl1)
     )
@@ -200,10 +226,10 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
         probe_and_copy_alignment e n0 n1 (coerce_fields e tl0 tl1)
       | true, false ->
         let n0 = alignment_bytes af0 in
-        skip_bytes_read "alignment" n0 (coerce_fields e tl0 r1)
+        continue "alignment" (skip_bytes_read n0) (coerce_fields e tl0 r1)
       | false, true ->
         let n1 = alignment_bytes af1 in
-        skip_bytes_write "alignment" n1 (coerce_fields e r0 tl1)
+        continue "alignment" (skip_bytes_write n1) (coerce_fields e r0 tl1)
       | false, false -> (
         let coerce_scalar_part ()
         : ML probe_action
@@ -218,7 +244,7 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
             | _ -> false
           in
           if t0_is_u32 && t1_is_ptr64
-          then read_and_coerce_pointer e af0.v.field_ident (coerce_fields e tl0 tl1)
+          then read_and_coerce_pointer_k e af0.v.field_ident (coerce_fields e tl0 tl1)
           else if eq_typ af0.v.field_type af1.v.field_type
           then probe_and_copy_type e af0.v.field_ident af0.v.field_type (coerce_fields e tl0 tl1)
           else (
@@ -237,7 +263,7 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
                   with_dummy_range <| App (ProbeFunctionName id) insts
               in
               with_dummy_range <|
-              Probe_action_seq (print_ident af0.v.field_ident)
+              Probe_action_seq (cstring <| print_ident af0.v.field_ident)
                 (with_dummy_range <| Probe_action_var hd)
                 (coerce_fields e tl0 tl1)
             )
@@ -398,12 +424,27 @@ let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
   in
   { d with d_decl = probe_fn }
 
+
 let replace_stubs (e:global_env) (ds:list decl)
 : ML (list decl)
 = let e = B.mk_env e in
-  List.map 
-    (fun (d:decl) ->
-      if CoerceProbeFunctionStub? d.d_decl.v
-      then replace_stub e d
-      else d)
-    ds
+  let probe_helpers =
+    if List.existsb (fun d -> CoerceProbeFunctionStub? d.d_decl.v) ds
+    then mk_probe_helpers e
+    else []
+  in
+  let decls_rev, _ = 
+    List.fold_left
+      (fun (acc, added_helpers) (d:decl) ->
+        match d.d_decl.v with
+        | CoerceProbeFunctionStub _ _ _ ->
+          let d = replace_stub e d in
+          if added_helpers
+          then d::acc, added_helpers
+          else d::probe_helpers @ acc, true
+        | _ -> d::acc, added_helpers)
+      ([], false)
+      ds
+  in
+  List.rev decls_rev 
+    

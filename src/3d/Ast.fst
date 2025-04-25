@@ -245,13 +245,14 @@ let bit_order_of (i:ident) : ML bitfield_bit_order =
   | None -> error ("Unknown integer type: " ^ ident_to_string i) i.range
   | Some t -> t
 
-/// Integer, hex and boolean constants
+/// Integer, hex, boolean, and string constants
 [@@ PpxDerivingYoJson ]
 type constant =
   | Unit
   | Int : integer_type -> int -> constant
   | XInt: integer_type -> string -> constant   //hexadecimal constants
   | Bool of bool
+  | String of string
 
 /// Operators supported in refinement expressions
 [@@ PpxDerivingYoJson ]
@@ -506,12 +507,12 @@ type probe_action' =
   | Probe_atomic_action of probe_atomic_action
   | Probe_action_var of expr
   | Probe_action_seq :
-    detail:string ->
+    detail:expr ->
     hd:probe_action ->
     tl:probe_action ->
     probe_action'
   | Probe_action_let :
-    detail:string ->
+    detail:expr ->
     i:ident ->
     a:probe_atomic_action ->
     k:probe_action ->
@@ -640,7 +641,7 @@ noeq
 type probe_function_type =
   | SimpleProbeFunction of ident
   | CoerceProbeFunction of ident & ident
-
+  | HelperProbeFunction
 /// A 3d specification a list of declarations
 ///   - Define: macro definitions for constants
 ///   - TypeAbbrev: macro definition of types
@@ -789,7 +790,7 @@ let print_constant (c:constant) =
     then x
     else Printf.sprintf "%s%s" x tag
   | Bool b -> Printf.sprintf "%b" b
-
+  | String s -> Printf.sprintf "\"%s\"" s
 let print_ident (i:ident) = ident_to_string i
 
 let print_integer_type = function
@@ -1026,12 +1027,12 @@ and print_probe_action (p:probe_action) : ML string =
     Printf.sprintf "(Probe_action_var %s)" (print_expr i)
   | Probe_action_seq detail hd tl ->
     Printf.sprintf "(* %s *) %s; %s"
-      detail
+      (print_expr detail)
       (print_probe_action hd)
       (print_probe_action tl)
   | Probe_action_let detail i hd tl ->
     Printf.sprintf "(* %s *) var %s = %s; %s"
-      detail
+      (print_expr detail)
       (print_ident i)
       (print_probe_atomic_action hd)
       (print_probe_action tl)
@@ -1131,6 +1132,7 @@ let print_attributes (a:list attribute) : ML string =
 let print_probe_function_type = function
   | SimpleProbeFunction i -> print_ident i
   | CoerceProbeFunction (i,j) -> Printf.sprintf "%s -> %s" (print_ident i) (print_ident j)
+  | HelperProbeFunction -> "helper"
 let print_decl' (d:decl') : ML string =
   match d with
   | ModuleAbbrev i m -> Printf.sprintf "module %s = %s" (print_ident i) (print_ident m)
@@ -1468,6 +1470,8 @@ let with_dummy_range x = with_range x dummy_range
 let to_ident' x = {modul_name=None;name=x}
 let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) KindSpec [] [])
 let tbool = mk_prim_t "Bool"
+let tstring = mk_prim_t "string"
+let string_as_expr s = with_dummy_range (Constant (String s))
 let tunit = mk_prim_t "unit"
 let tuint8 = mk_prim_t "UINT8"
 let tuint8be = mk_prim_t "UINT8BE"

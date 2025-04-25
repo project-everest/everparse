@@ -307,7 +307,7 @@ let type_of_constant rng (c:constant) : ML typ =
   | XInt tag _ -> //bounds checked by the syntax
     type_of_integer_type tag
   | Bool _ -> tbool
-
+  | String _ -> tstring
 
 let parser_may_fail (env:env) (t:typ) : ML bool =
   match t.v with
@@ -1306,8 +1306,15 @@ let rec check_probe env a : ML (probe_action & typ) =
       match GlobalEnv.resolve_probe_fn_any env.globals f with
       | Some (id, Inr (PQRead i)) ->
         Probe_action_read id, type_of_integer_type i
-      | _ ->
-        error (Printf.sprintf "Probe function %s not found or not a read function" (print_ident f))
+      | Some (_, Inr _) ->
+        error (Printf.sprintf "Probe function %s not a read function" (print_ident f))
+              f.range
+      | Some (_, Inl _) ->
+        error (Printf.sprintf "Probe function %s not an extern function" (print_ident f))
+              f.range
+      | None ->
+        error (Printf.sprintf "Probe function %s not found" 
+                  (print_ident f))
               f.range
     )
     | Probe_action_write f v -> (
@@ -2225,6 +2232,7 @@ let check_probe_function_type
      (p: probe_function_type)
 : ML probe_function_type
 = match p with
+  | HelperProbeFunction -> HelperProbeFunction
   | SimpleProbeFunction tn ->
     let _ = lookup_type_decl e tn in
     SimpleProbeFunction tn
@@ -2420,6 +2428,15 @@ let initial_global_env mname =
           has_reader = true;
           parser_weak_kind = WeakKindStrongPrefix;
           parser_kind_nz = Some true
+        });
+      ("string",
+        {
+          may_fail = true;
+          integral = None;
+          bit_order = None;
+          has_reader = false;
+          parser_weak_kind = WeakKindWeak;
+          parser_kind_nz = None
         });
       ("UINT8",
         {

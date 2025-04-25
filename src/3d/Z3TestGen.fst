@@ -350,6 +350,7 @@ let mk_constant = function
   | A.XInt _ x -> string_of_int (OS.int_of_string x)
   | A.Bool true -> "true"
   | A.Bool false -> "false"
+  | A.String s -> "0"
 
 let mk_app fn = function
   | None -> fn

@@ -618,9 +618,9 @@ let rec print_probe_action (mname:string) (p:probe_action) : ML string =
   | Probe_action_var e ->
     Printf.sprintf "(Probe_action_var %s)" (print_expr mname e)
   | Probe_action_seq d p1 p2 ->
-    Printf.sprintf "(Probe_action_seq \"%s\" %s %s)" d (print_probe_action mname p1) (print_probe_action mname p2)
+    Printf.sprintf "(Probe_action_seq %s %s %s)" (print_expr mname d) (print_probe_action mname p1) (print_probe_action mname p2)
   | Probe_action_let d i m1 m2 ->
-    Printf.sprintf "(Probe_action_let \"%s\" %s (fun %s -> %s))" d (print_atomic_probe_action m1) (print_ident i) (print_probe_action mname m2)
+    Printf.sprintf "(Probe_action_let %s %s (fun %s -> %s))" (print_expr mname d) (print_atomic_probe_action m1) (print_ident i) (print_probe_action mname m2)
   | Probe_action_ite cond m1 m2 ->
     Printf.sprintf "(Probe_action_ite %s %s %s)" (print_expr mname cond) (print_probe_action mname m1) (print_probe_action mname m2)
   | Probe_action_array len b ->
@@ -888,6 +888,8 @@ let expr_to_c
   (e: expr)
 : ML string
 = match fst e with
+  | Constant (A.String s) ->
+    Printf.sprintf "\"%s\"" s //(String.escaped s)
   | Constant (A.Int _ i) -> Printf.sprintf "%dU" i
   | Constant (A.XInt tag x) ->
     let print_tag = function

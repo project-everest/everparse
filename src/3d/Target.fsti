@@ -159,12 +159,12 @@ type probe_action =
       expr ->
       probe_action
   | Probe_action_seq:
-      detail:string ->
+      detail:expr ->
       probe_action ->
       probe_action ->
       probe_action
   | Probe_action_let:
-      detail:string ->
+      detail:expr ->
       i:A.ident ->
       m1: atomic_probe_action ->
       m2: probe_action ->
@@ -393,9 +393,7 @@ type decl' =
       probe_action ->
       decl'
   | Output_type: A.out_typ -> decl'  //output types specifications, we keep them if we need to print them to C
-
   | Output_type_expr : output_expr -> is_get:bool -> decl'  //is_get boolean indicates that the output expression appears in a getter position, i.e. in a type parameter, it is false when the output expression is an assignment action lhs
-
   | Extern_type : A.ident -> decl'
   | Extern_fn : A.ident -> typ -> list param -> pure:bool -> decl'
   | Extern_probe : A.ident -> probe_qualifier -> decl'
