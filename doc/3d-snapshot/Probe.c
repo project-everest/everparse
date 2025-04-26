@@ -213,15 +213,17 @@ ProbeValidateS(
     {
       failed = TRUE;
     }
+    uint64_t wr = writeOffset;
     BOOLEAN hasFailed = failed;
     uint64_t b;
     if (hasFailed)
     {
+      ErrorHandlerFn("_S", "tpointer", "probe", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
       b = 0ULL;
     }
     else
     {
-      b = writeOffset;
+      b = wr;
     }
     BOOLEAN actionResult;
     if (b != 0ULL)
@@ -372,15 +374,17 @@ ProbeValidateU(
     {
       failed = TRUE;
     }
+    uint64_t wr = writeOffset;
     BOOLEAN hasFailed = failed;
     uint64_t b;
     if (hasFailed)
     {
+      ErrorHandlerFn("_U", "spointer", "probe", 0ULL, Ctxt, EverParseStreamOf(DestS), 0ULL);
       b = 0ULL;
     }
     else
     {
-      b = writeOffset;
+      b = wr;
     }
     BOOLEAN actionResult;
     if (b != 0ULL)
@@ -530,15 +534,17 @@ ProbeValidateV(
     {
       failed = TRUE;
     }
+    uint64_t wr = writeOffset;
     BOOLEAN hasFailed = failed;
     uint64_t b;
     if (hasFailed)
     {
+      ErrorHandlerFn("_V", "sptr", "probe", 0ULL, Ctxt, EverParseStreamOf(DestS), 0ULL);
       b = 0ULL;
     }
     else
     {
-      b = writeOffset;
+      b = wr;
     }
     BOOLEAN actionResult;
     if (b != 0ULL)
@@ -640,15 +646,17 @@ ProbeValidateV(
     {
       failed = TRUE;
     }
+    uint64_t wr = writeOffset;
     BOOLEAN hasFailed = failed;
     uint64_t b;
     if (hasFailed)
     {
+      ErrorHandlerFn("_V", "tptr", "probe", 0ULL, Ctxt, EverParseStreamOf(DestT), 0ULL);
       b = 0ULL;
     }
     else
     {
-      b = writeOffset;
+      b = wr;
     }
     BOOLEAN actionResult;
     if (b != 0ULL)
@@ -750,15 +758,17 @@ ProbeValidateV(
     {
       failed = TRUE;
     }
+    uint64_t wr = writeOffset;
     BOOLEAN hasFailed = failed;
     uint64_t b;
     if (hasFailed)
     {
+      ErrorHandlerFn("_V", "t2ptr", "probe", 0ULL, Ctxt, EverParseStreamOf(DestT), 0ULL);
       b = 0ULL;
     }
     else
     {
-      b = writeOffset;
+      b = wr;
     }
     BOOLEAN actionResult;
     if (b != 0ULL)
@@ -922,15 +932,17 @@ ProbeValidateI(
     {
       failed = TRUE;
     }
+    uint64_t wr = writeOffset;
     BOOLEAN hasFailed = failed;
     uint64_t b;
     if (hasFailed)
     {
+      ErrorHandlerFn("_I", "ttptr", "probe", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
       b = 0ULL;
     }
     else
     {
-      b = writeOffset;
+      b = wr;
     }
     BOOLEAN actionResult;
     if (b != 0ULL)
