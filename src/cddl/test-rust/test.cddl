@@ -1,10 +1,10 @@
 test1 = {
-  bar: uint
+  * (uint => bstr)
 }
 
 test2 = [
   uint,
-  bstr
+  * bstr
 ]
 
 bstr = #2
