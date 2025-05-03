@@ -587,3 +587,5 @@ let cbor_det_serialize_tag = Det.cbor_det_serialize_tag ()
 let cbor_det_serialize_array = Det.cbor_det_serialize_array ()
 let cbor_det_serialize_map_insert = Det.cbor_det_serialize_map_insert ()
 let cbor_det_serialize_map = Det.cbor_det_serialize_map ()
+
+let dummy_cbor_det_t () = Det.dummy_cbor_det_t ()

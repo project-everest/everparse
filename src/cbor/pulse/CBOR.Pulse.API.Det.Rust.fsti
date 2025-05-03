@@ -435,3 +435,5 @@ val cbor_det_serialize_tag: Base.cbor_det_serialize_tag_t
 val cbor_det_serialize_array: Base.cbor_det_serialize_array_t
 val cbor_det_serialize_map_insert: Base.cbor_det_serialize_map_insert_t
 val cbor_det_serialize_map: Base.cbor_det_serialize_map_t
+
+val dummy_cbor_det_t (_: unit) : cbordet
