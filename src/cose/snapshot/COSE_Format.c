@@ -844,18 +844,20 @@ bool COSE_Format_validate_bstr(cbor_det_t c)
   return cbor_det_major_type(c) == CBOR_MAJOR_TYPE_BYTE_STRING;
 }
 
-bool COSE_Format_uu___is_Mkevercddl_bstr_pretty0(COSE_Format_evercddl_bstr projectee)
+bool COSE_Format_uu___is_Mkevercddl_bstr_pretty0(Pulse_Lib_Slice_slice__uint8_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_bstr evercddl_bstr_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_bstr_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
 {
   return x1;
 }
 
-static Pulse_Lib_Slice_slice__uint8_t evercddl_bstr_pretty_left(COSE_Format_evercddl_bstr x3)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_bstr_pretty_left(Pulse_Lib_Slice_slice__uint8_t x3)
 {
   return x3;
 }
@@ -868,7 +870,7 @@ static Pulse_Lib_Slice_slice__uint8_t arrayptr_to_slice_intro__uint8_t(uint8_t *
 /**
 Parser for evercddl_bstr
 */
-COSE_Format_evercddl_bstr COSE_Format_parse_bstr(cbor_det_t c)
+Pulse_Lib_Slice_slice__uint8_t COSE_Format_parse_bstr(cbor_det_t c)
 {
   uint64_t len = cbor_det_get_string_length(c);
   return
@@ -880,7 +882,10 @@ COSE_Format_evercddl_bstr COSE_Format_parse_bstr(cbor_det_t c)
 Serializer for evercddl_bstr
 */
 size_t
-COSE_Format_serialize_bstr(COSE_Format_evercddl_bstr c, Pulse_Lib_Slice_slice__uint8_t out)
+COSE_Format_serialize_bstr(
+  Pulse_Lib_Slice_slice__uint8_t c,
+  Pulse_Lib_Slice_slice__uint8_t out
+)
 {
   Pulse_Lib_Slice_slice__uint8_t c_ = evercddl_bstr_pretty_left(c);
   if (len__uint8_t(c_) <= (size_t)18446744073709551615ULL)
@@ -1001,20 +1006,20 @@ bool COSE_Format_validate_encodedcbor(cbor_det_t c)
 }
 
 bool
-COSE_Format_uu___is_Mkevercddl_encodedcbor_pretty0(COSE_Format_evercddl_bstr_pretty projectee)
+COSE_Format_uu___is_Mkevercddl_encodedcbor_pretty0(Pulse_Lib_Slice_slice__uint8_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_bstr_pretty
-evercddl_encodedcbor_pretty_right(COSE_Format_evercddl_bstr x1)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_encodedcbor_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_bstr
-evercddl_encodedcbor_pretty_left(COSE_Format_evercddl_bstr_pretty x3)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_encodedcbor_pretty_left(Pulse_Lib_Slice_slice__uint8_t x3)
 {
   return x3;
 }
@@ -1022,7 +1027,7 @@ evercddl_encodedcbor_pretty_left(COSE_Format_evercddl_bstr_pretty x3)
 /**
 Parser for evercddl_encodedcbor
 */
-COSE_Format_evercddl_bstr_pretty COSE_Format_parse_encodedcbor(cbor_det_t c)
+Pulse_Lib_Slice_slice__uint8_t COSE_Format_parse_encodedcbor(cbor_det_t c)
 {
   return
     evercddl_encodedcbor_pretty_right(COSE_Format_parse_bstr(cbor_det_get_tagged_payload(c)));
@@ -1033,12 +1038,12 @@ Serializer for evercddl_encodedcbor
 */
 size_t
 COSE_Format_serialize_encodedcbor(
-  COSE_Format_evercddl_bstr_pretty c,
+  Pulse_Lib_Slice_slice__uint8_t c,
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
   uint64_t ctag = 24ULL;
-  COSE_Format_evercddl_bstr cpayload = evercddl_encodedcbor_pretty_left(c);
+  Pulse_Lib_Slice_slice__uint8_t cpayload = evercddl_encodedcbor_pretty_left(c);
   size_t aout_len = len__uint8_t(out);
   size_t
   tsz = cbor_det_serialize_tag_to_array(ctag, slice_to_arrayptr_intro__uint8_t(out), aout_len);
@@ -1129,20 +1134,20 @@ bool COSE_Format_validate_bytes(cbor_det_t c)
   return COSE_Format_validate_bstr(c);
 }
 
-bool COSE_Format_uu___is_Mkevercddl_bytes_pretty0(COSE_Format_evercddl_bstr_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_bytes_pretty0(Pulse_Lib_Slice_slice__uint8_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_bstr_pretty
-evercddl_bytes_pretty_right(COSE_Format_evercddl_bstr x1)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_bytes_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_bstr
-evercddl_bytes_pretty_left(COSE_Format_evercddl_bstr_pretty x3)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_bytes_pretty_left(Pulse_Lib_Slice_slice__uint8_t x3)
 {
   return x3;
 }
@@ -1150,7 +1155,7 @@ evercddl_bytes_pretty_left(COSE_Format_evercddl_bstr_pretty x3)
 /**
 Parser for evercddl_bytes
 */
-COSE_Format_evercddl_bstr_pretty COSE_Format_parse_bytes(cbor_det_t c)
+Pulse_Lib_Slice_slice__uint8_t COSE_Format_parse_bytes(cbor_det_t c)
 {
   return evercddl_bytes_pretty_right(COSE_Format_parse_bstr(c));
 }
@@ -1160,7 +1165,7 @@ Serializer for evercddl_bytes
 */
 size_t
 COSE_Format_serialize_bytes(
-  COSE_Format_evercddl_bstr_pretty c,
+  Pulse_Lib_Slice_slice__uint8_t c,
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
@@ -1241,18 +1246,20 @@ bool COSE_Format_validate_tstr(cbor_det_t c)
   return cbor_det_major_type(c) == CBOR_MAJOR_TYPE_TEXT_STRING;
 }
 
-bool COSE_Format_uu___is_Mkevercddl_tstr_pretty0(COSE_Format_evercddl_bstr projectee)
+bool COSE_Format_uu___is_Mkevercddl_tstr_pretty0(Pulse_Lib_Slice_slice__uint8_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_bstr evercddl_tstr_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_tstr_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
 {
   return x1;
 }
 
-static Pulse_Lib_Slice_slice__uint8_t evercddl_tstr_pretty_left(COSE_Format_evercddl_bstr x3)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_tstr_pretty_left(Pulse_Lib_Slice_slice__uint8_t x3)
 {
   return x3;
 }
@@ -1260,7 +1267,7 @@ static Pulse_Lib_Slice_slice__uint8_t evercddl_tstr_pretty_left(COSE_Format_ever
 /**
 Parser for evercddl_tstr
 */
-COSE_Format_evercddl_bstr COSE_Format_parse_tstr(cbor_det_t c)
+Pulse_Lib_Slice_slice__uint8_t COSE_Format_parse_tstr(cbor_det_t c)
 {
   uint64_t len = cbor_det_get_string_length(c);
   return
@@ -1272,7 +1279,10 @@ COSE_Format_evercddl_bstr COSE_Format_parse_tstr(cbor_det_t c)
 Serializer for evercddl_tstr
 */
 size_t
-COSE_Format_serialize_tstr(COSE_Format_evercddl_bstr c, Pulse_Lib_Slice_slice__uint8_t out)
+COSE_Format_serialize_tstr(
+  Pulse_Lib_Slice_slice__uint8_t c,
+  Pulse_Lib_Slice_slice__uint8_t out
+)
 {
   Pulse_Lib_Slice_slice__uint8_t c_ = evercddl_tstr_pretty_left(c);
   if (len__uint8_t(c_) <= (size_t)18446744073709551615ULL)
@@ -1427,7 +1437,7 @@ evercddl_label_pretty_right(COSE_Format_evercddl_label x2)
   }
   else if (x2.tag == COSE_Format_Inr)
   {
-    COSE_Format_evercddl_bstr x4 = x2.case_Inr;
+    Pulse_Lib_Slice_slice__uint8_t x4 = x2.case_Inr;
     return
       (
         (COSE_Format_evercddl_label_pretty){
@@ -1456,7 +1466,7 @@ evercddl_label_pretty_left(COSE_Format_evercddl_label_pretty x7)
   }
   else if (x7.tag == COSE_Format_Mkevercddl_label_pretty1)
   {
-    COSE_Format_evercddl_bstr x12 = x7.case_Mkevercddl_label_pretty1;
+    Pulse_Lib_Slice_slice__uint8_t x12 = x7.case_Mkevercddl_label_pretty1;
     return ((COSE_Format_evercddl_label){ .tag = COSE_Format_Inr, { .case_Inr = x12 } });
   }
   else
@@ -1511,7 +1521,7 @@ COSE_Format_serialize_label(
   }
   else if (scrut.tag == COSE_Format_Inr)
   {
-    COSE_Format_evercddl_bstr c2 = scrut.case_Inr;
+    Pulse_Lib_Slice_slice__uint8_t c2 = scrut.case_Inr;
     return COSE_Format_serialize_tstr(c2, out);
   }
   else
@@ -1604,20 +1614,20 @@ bool COSE_Format_validate_tdate(cbor_det_t c)
     return false;
 }
 
-bool COSE_Format_uu___is_Mkevercddl_tdate_pretty0(COSE_Format_evercddl_tstr_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_tdate_pretty0(Pulse_Lib_Slice_slice__uint8_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_tstr_pretty
-evercddl_tdate_pretty_right(COSE_Format_evercddl_bstr x1)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_tdate_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_bstr
-evercddl_tdate_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_tdate_pretty_left(Pulse_Lib_Slice_slice__uint8_t x3)
 {
   return x3;
 }
@@ -1625,7 +1635,7 @@ evercddl_tdate_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
 /**
 Parser for evercddl_tdate
 */
-COSE_Format_evercddl_tstr_pretty COSE_Format_parse_tdate(cbor_det_t c)
+Pulse_Lib_Slice_slice__uint8_t COSE_Format_parse_tdate(cbor_det_t c)
 {
   return evercddl_tdate_pretty_right(COSE_Format_parse_tstr(cbor_det_get_tagged_payload(c)));
 }
@@ -1635,12 +1645,12 @@ Serializer for evercddl_tdate
 */
 size_t
 COSE_Format_serialize_tdate(
-  COSE_Format_evercddl_tstr_pretty c,
+  Pulse_Lib_Slice_slice__uint8_t c,
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
   uint64_t ctag = 0ULL;
-  COSE_Format_evercddl_bstr cpayload = evercddl_tdate_pretty_left(c);
+  Pulse_Lib_Slice_slice__uint8_t cpayload = evercddl_tdate_pretty_left(c);
   size_t aout_len = len__uint8_t(out);
   size_t
   tsz = cbor_det_serialize_tag_to_array(ctag, slice_to_arrayptr_intro__uint8_t(out), aout_len);
@@ -1737,18 +1747,20 @@ bool COSE_Format_validate_uri(cbor_det_t c)
     return false;
 }
 
-bool COSE_Format_uu___is_Mkevercddl_uri_pretty0(COSE_Format_evercddl_tstr_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_uri_pretty0(Pulse_Lib_Slice_slice__uint8_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_tstr_pretty evercddl_uri_pretty_right(COSE_Format_evercddl_bstr x1)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_uri_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_bstr evercddl_uri_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_uri_pretty_left(Pulse_Lib_Slice_slice__uint8_t x3)
 {
   return x3;
 }
@@ -1756,7 +1768,7 @@ static COSE_Format_evercddl_bstr evercddl_uri_pretty_left(COSE_Format_evercddl_t
 /**
 Parser for evercddl_uri
 */
-COSE_Format_evercddl_tstr_pretty COSE_Format_parse_uri(cbor_det_t c)
+Pulse_Lib_Slice_slice__uint8_t COSE_Format_parse_uri(cbor_det_t c)
 {
   return evercddl_uri_pretty_right(COSE_Format_parse_tstr(cbor_det_get_tagged_payload(c)));
 }
@@ -1765,13 +1777,10 @@ COSE_Format_evercddl_tstr_pretty COSE_Format_parse_uri(cbor_det_t c)
 Serializer for evercddl_uri
 */
 size_t
-COSE_Format_serialize_uri(
-  COSE_Format_evercddl_tstr_pretty c,
-  Pulse_Lib_Slice_slice__uint8_t out
-)
+COSE_Format_serialize_uri(Pulse_Lib_Slice_slice__uint8_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   uint64_t ctag = 32ULL;
-  COSE_Format_evercddl_bstr cpayload = evercddl_uri_pretty_left(c);
+  Pulse_Lib_Slice_slice__uint8_t cpayload = evercddl_uri_pretty_left(c);
   size_t aout_len = len__uint8_t(out);
   size_t
   tsz = cbor_det_serialize_tag_to_array(ctag, slice_to_arrayptr_intro__uint8_t(out), aout_len);
@@ -1868,20 +1877,20 @@ bool COSE_Format_validate_b64url(cbor_det_t c)
     return false;
 }
 
-bool COSE_Format_uu___is_Mkevercddl_b64url_pretty0(COSE_Format_evercddl_tstr_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_b64url_pretty0(Pulse_Lib_Slice_slice__uint8_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_tstr_pretty
-evercddl_b64url_pretty_right(COSE_Format_evercddl_bstr x1)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_b64url_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_bstr
-evercddl_b64url_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_b64url_pretty_left(Pulse_Lib_Slice_slice__uint8_t x3)
 {
   return x3;
 }
@@ -1889,7 +1898,7 @@ evercddl_b64url_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
 /**
 Parser for evercddl_b64url
 */
-COSE_Format_evercddl_tstr_pretty COSE_Format_parse_b64url(cbor_det_t c)
+Pulse_Lib_Slice_slice__uint8_t COSE_Format_parse_b64url(cbor_det_t c)
 {
   return evercddl_b64url_pretty_right(COSE_Format_parse_tstr(cbor_det_get_tagged_payload(c)));
 }
@@ -1899,12 +1908,12 @@ Serializer for evercddl_b64url
 */
 size_t
 COSE_Format_serialize_b64url(
-  COSE_Format_evercddl_tstr_pretty c,
+  Pulse_Lib_Slice_slice__uint8_t c,
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
   uint64_t ctag = 33ULL;
-  COSE_Format_evercddl_bstr cpayload = evercddl_b64url_pretty_left(c);
+  Pulse_Lib_Slice_slice__uint8_t cpayload = evercddl_b64url_pretty_left(c);
   size_t aout_len = len__uint8_t(out);
   size_t
   tsz = cbor_det_serialize_tag_to_array(ctag, slice_to_arrayptr_intro__uint8_t(out), aout_len);
@@ -2001,21 +2010,20 @@ bool COSE_Format_validate_b64legacy(cbor_det_t c)
     return false;
 }
 
-bool
-COSE_Format_uu___is_Mkevercddl_b64legacy_pretty0(COSE_Format_evercddl_tstr_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_b64legacy_pretty0(Pulse_Lib_Slice_slice__uint8_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_tstr_pretty
-evercddl_b64legacy_pretty_right(COSE_Format_evercddl_bstr x1)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_b64legacy_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_bstr
-evercddl_b64legacy_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_b64legacy_pretty_left(Pulse_Lib_Slice_slice__uint8_t x3)
 {
   return x3;
 }
@@ -2023,7 +2031,7 @@ evercddl_b64legacy_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
 /**
 Parser for evercddl_b64legacy
 */
-COSE_Format_evercddl_tstr_pretty COSE_Format_parse_b64legacy(cbor_det_t c)
+Pulse_Lib_Slice_slice__uint8_t COSE_Format_parse_b64legacy(cbor_det_t c)
 {
   return evercddl_b64legacy_pretty_right(COSE_Format_parse_tstr(cbor_det_get_tagged_payload(c)));
 }
@@ -2033,12 +2041,12 @@ Serializer for evercddl_b64legacy
 */
 size_t
 COSE_Format_serialize_b64legacy(
-  COSE_Format_evercddl_tstr_pretty c,
+  Pulse_Lib_Slice_slice__uint8_t c,
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
   uint64_t ctag = 34ULL;
-  COSE_Format_evercddl_bstr cpayload = evercddl_b64legacy_pretty_left(c);
+  Pulse_Lib_Slice_slice__uint8_t cpayload = evercddl_b64legacy_pretty_left(c);
   size_t aout_len = len__uint8_t(out);
   size_t
   tsz = cbor_det_serialize_tag_to_array(ctag, slice_to_arrayptr_intro__uint8_t(out), aout_len);
@@ -2135,20 +2143,20 @@ bool COSE_Format_validate_regexp(cbor_det_t c)
     return false;
 }
 
-bool COSE_Format_uu___is_Mkevercddl_regexp_pretty0(COSE_Format_evercddl_tstr_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_regexp_pretty0(Pulse_Lib_Slice_slice__uint8_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_tstr_pretty
-evercddl_regexp_pretty_right(COSE_Format_evercddl_bstr x1)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_regexp_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_bstr
-evercddl_regexp_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_regexp_pretty_left(Pulse_Lib_Slice_slice__uint8_t x3)
 {
   return x3;
 }
@@ -2156,7 +2164,7 @@ evercddl_regexp_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
 /**
 Parser for evercddl_regexp
 */
-COSE_Format_evercddl_tstr_pretty COSE_Format_parse_regexp(cbor_det_t c)
+Pulse_Lib_Slice_slice__uint8_t COSE_Format_parse_regexp(cbor_det_t c)
 {
   return evercddl_regexp_pretty_right(COSE_Format_parse_tstr(cbor_det_get_tagged_payload(c)));
 }
@@ -2166,12 +2174,12 @@ Serializer for evercddl_regexp
 */
 size_t
 COSE_Format_serialize_regexp(
-  COSE_Format_evercddl_tstr_pretty c,
+  Pulse_Lib_Slice_slice__uint8_t c,
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
   uint64_t ctag = 35ULL;
-  COSE_Format_evercddl_bstr cpayload = evercddl_regexp_pretty_left(c);
+  Pulse_Lib_Slice_slice__uint8_t cpayload = evercddl_regexp_pretty_left(c);
   size_t aout_len = len__uint8_t(out);
   size_t
   tsz = cbor_det_serialize_tag_to_array(ctag, slice_to_arrayptr_intro__uint8_t(out), aout_len);
@@ -2269,20 +2277,20 @@ bool COSE_Format_validate_mimemessage(cbor_det_t c)
 }
 
 bool
-COSE_Format_uu___is_Mkevercddl_mimemessage_pretty0(COSE_Format_evercddl_tstr_pretty projectee)
+COSE_Format_uu___is_Mkevercddl_mimemessage_pretty0(Pulse_Lib_Slice_slice__uint8_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_tstr_pretty
-evercddl_mimemessage_pretty_right(COSE_Format_evercddl_bstr x1)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_mimemessage_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_bstr
-evercddl_mimemessage_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_mimemessage_pretty_left(Pulse_Lib_Slice_slice__uint8_t x3)
 {
   return x3;
 }
@@ -2290,7 +2298,7 @@ evercddl_mimemessage_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
 /**
 Parser for evercddl_mimemessage
 */
-COSE_Format_evercddl_tstr_pretty COSE_Format_parse_mimemessage(cbor_det_t c)
+Pulse_Lib_Slice_slice__uint8_t COSE_Format_parse_mimemessage(cbor_det_t c)
 {
   return
     evercddl_mimemessage_pretty_right(COSE_Format_parse_tstr(cbor_det_get_tagged_payload(c)));
@@ -2301,12 +2309,12 @@ Serializer for evercddl_mimemessage
 */
 size_t
 COSE_Format_serialize_mimemessage(
-  COSE_Format_evercddl_tstr_pretty c,
+  Pulse_Lib_Slice_slice__uint8_t c,
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
   uint64_t ctag = 36ULL;
-  COSE_Format_evercddl_bstr cpayload = evercddl_mimemessage_pretty_left(c);
+  Pulse_Lib_Slice_slice__uint8_t cpayload = evercddl_mimemessage_pretty_left(c);
   size_t aout_len = len__uint8_t(out);
   size_t
   tsz = cbor_det_serialize_tag_to_array(ctag, slice_to_arrayptr_intro__uint8_t(out), aout_len);
@@ -2397,19 +2405,20 @@ bool COSE_Format_validate_text(cbor_det_t c)
   return COSE_Format_validate_tstr(c);
 }
 
-bool COSE_Format_uu___is_Mkevercddl_text_pretty0(COSE_Format_evercddl_tstr_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_text_pretty0(Pulse_Lib_Slice_slice__uint8_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_tstr_pretty
-evercddl_text_pretty_right(COSE_Format_evercddl_bstr x1)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_text_pretty_right(Pulse_Lib_Slice_slice__uint8_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_bstr evercddl_text_pretty_left(COSE_Format_evercddl_tstr_pretty x3)
+static Pulse_Lib_Slice_slice__uint8_t
+evercddl_text_pretty_left(Pulse_Lib_Slice_slice__uint8_t x3)
 {
   return x3;
 }
@@ -2417,7 +2426,7 @@ static COSE_Format_evercddl_bstr evercddl_text_pretty_left(COSE_Format_evercddl_
 /**
 Parser for evercddl_text
 */
-COSE_Format_evercddl_tstr_pretty COSE_Format_parse_text(cbor_det_t c)
+Pulse_Lib_Slice_slice__uint8_t COSE_Format_parse_text(cbor_det_t c)
 {
   return evercddl_text_pretty_right(COSE_Format_parse_tstr(c));
 }
@@ -2427,7 +2436,7 @@ Serializer for evercddl_text
 */
 size_t
 COSE_Format_serialize_text(
-  COSE_Format_evercddl_tstr_pretty c,
+  Pulse_Lib_Slice_slice__uint8_t c,
   Pulse_Lib_Slice_slice__uint8_t out
 )
 {
@@ -3160,18 +3169,18 @@ bool COSE_Format_validate_any(cbor_det_t c)
   return true;
 }
 
-bool COSE_Format_uu___is_Mkevercddl_any_pretty0(COSE_Format_evercddl_any projectee)
+bool COSE_Format_uu___is_Mkevercddl_any_pretty0(cbor_det_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_any evercddl_any_pretty_right(cbor_det_t x1)
+static cbor_det_t evercddl_any_pretty_right(cbor_det_t x1)
 {
   return x1;
 }
 
-static cbor_det_t evercddl_any_pretty_left(COSE_Format_evercddl_any x3)
+static cbor_det_t evercddl_any_pretty_left(cbor_det_t x3)
 {
   return x3;
 }
@@ -3179,7 +3188,7 @@ static cbor_det_t evercddl_any_pretty_left(COSE_Format_evercddl_any x3)
 /**
 Parser for evercddl_any
 */
-COSE_Format_evercddl_any COSE_Format_parse_any(cbor_det_t c)
+cbor_det_t COSE_Format_parse_any(cbor_det_t c)
 {
   return evercddl_any_pretty_right(c);
 }
@@ -3187,8 +3196,7 @@ COSE_Format_evercddl_any COSE_Format_parse_any(cbor_det_t c)
 /**
 Serializer for evercddl_any
 */
-size_t
-COSE_Format_serialize_any(COSE_Format_evercddl_any c, Pulse_Lib_Slice_slice__uint8_t out)
+size_t COSE_Format_serialize_any(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   cbor_det_t c_ = evercddl_any_pretty_left(c);
   size_t len = cbor_det_size(c_, len__uint8_t(out));
@@ -3291,19 +3299,18 @@ bool COSE_Format_validate_values(cbor_det_t c)
   return COSE_Format_validate_any(c);
 }
 
-bool COSE_Format_uu___is_Mkevercddl_values_pretty0(COSE_Format_evercddl_any_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_values_pretty0(cbor_det_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_any_pretty
-evercddl_values_pretty_right(COSE_Format_evercddl_any x1)
+static cbor_det_t evercddl_values_pretty_right(cbor_det_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_any evercddl_values_pretty_left(COSE_Format_evercddl_any_pretty x3)
+static cbor_det_t evercddl_values_pretty_left(cbor_det_t x3)
 {
   return x3;
 }
@@ -3311,7 +3318,7 @@ static COSE_Format_evercddl_any evercddl_values_pretty_left(COSE_Format_evercddl
 /**
 Parser for evercddl_values
 */
-COSE_Format_evercddl_any_pretty COSE_Format_parse_values(cbor_det_t c)
+cbor_det_t COSE_Format_parse_values(cbor_det_t c)
 {
   return evercddl_values_pretty_right(COSE_Format_parse_any(c));
 }
@@ -3319,11 +3326,7 @@ COSE_Format_evercddl_any_pretty COSE_Format_parse_values(cbor_det_t c)
 /**
 Serializer for evercddl_values
 */
-size_t
-COSE_Format_serialize_values(
-  COSE_Format_evercddl_any_pretty c,
-  Pulse_Lib_Slice_slice__uint8_t out
-)
+size_t COSE_Format_serialize_values(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   return COSE_Format_serialize_any(evercddl_values_pretty_left(c), out);
 }
@@ -3465,7 +3468,10 @@ COSE_Format_aux_env25_serialize_1(
     return false;
 }
 
-bool (*COSE_Format_aux_env25_validate_2)(cbor_det_t x0) = COSE_Format_validate_label;
+bool COSE_Format_aux_env25_validate_2(cbor_det_t c)
+{
+  return COSE_Format_validate_label(c);
+}
 
 bool
 COSE_Format_uu___is_Mkaux_env25_type_2_pretty0(COSE_Format_evercddl_label_pretty projectee)
@@ -3618,23 +3624,23 @@ bool COSE_Format_aux_env25_validate_3(cbor_det_t c)
     return false;
 }
 
-bool (*COSE_Format_aux_env25_validate_4)(cbor_det_t x0) = COSE_Format_validate_values;
+bool COSE_Format_aux_env25_validate_4(cbor_det_t c)
+{
+  return COSE_Format_validate_values(c);
+}
 
-bool
-COSE_Format_uu___is_Mkaux_env25_type_4_pretty0(COSE_Format_evercddl_values_pretty projectee)
+bool COSE_Format_uu___is_Mkaux_env25_type_4_pretty0(cbor_det_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_values_pretty
-aux_env25_type_4_pretty_right(COSE_Format_evercddl_any_pretty x1)
+static cbor_det_t aux_env25_type_4_pretty_right(cbor_det_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_any_pretty
-aux_env25_type_4_pretty_left(COSE_Format_evercddl_values_pretty x3)
+static cbor_det_t aux_env25_type_4_pretty_left(cbor_det_t x3)
 {
   return x3;
 }
@@ -3642,7 +3648,7 @@ aux_env25_type_4_pretty_left(COSE_Format_evercddl_values_pretty x3)
 /**
 Parser for aux_env25_type_4
 */
-COSE_Format_evercddl_values_pretty COSE_Format_aux_env25_parse_4(cbor_det_t c)
+cbor_det_t COSE_Format_aux_env25_parse_4(cbor_det_t c)
 {
   return aux_env25_type_4_pretty_right(COSE_Format_parse_values(c));
 }
@@ -3650,11 +3656,7 @@ COSE_Format_evercddl_values_pretty COSE_Format_aux_env25_parse_4(cbor_det_t c)
 /**
 Serializer for aux_env25_type_4
 */
-size_t
-COSE_Format_aux_env25_serialize_4(
-  COSE_Format_evercddl_values_pretty c,
-  Pulse_Lib_Slice_slice__uint8_t out
-)
+size_t COSE_Format_aux_env25_serialize_4(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   return COSE_Format_serialize_values(aux_env25_type_4_pretty_left(c), out);
 }
@@ -5118,7 +5120,7 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
         );
     else
       scrut = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
-    COSE_Format_evercddl_bstr ite;
+    Pulse_Lib_Slice_slice__uint8_t ite;
     if (scrut.tag == FStar_Pervasives_Native_Some)
     {
       cbor_det_t w = scrut.v;
@@ -5126,7 +5128,7 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
     }
     else
       ite =
-        KRML_EABORT(COSE_Format_evercddl_bstr,
+        KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
           "unreachable (pattern matches are exhaustive in F*)");
     ite6 =
       (
@@ -5266,7 +5268,7 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
         );
     else
       scrut0 = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
-    COSE_Format_evercddl_bstr w11;
+    Pulse_Lib_Slice_slice__uint8_t w11;
     if (scrut0.tag == FStar_Pervasives_Native_Some)
     {
       cbor_det_t w = scrut0.v;
@@ -5274,7 +5276,7 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
     }
     else
       w11 =
-        KRML_EABORT(COSE_Format_evercddl_bstr,
+        KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
           "unreachable (pattern matches are exhaustive in F*)");
     uint64_t buf = 0ULL;
     KRML_HOST_IGNORE(&buf);
@@ -5482,7 +5484,7 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
       else
         scrut0 =
           ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
-      COSE_Format_evercddl_bstr w11;
+      Pulse_Lib_Slice_slice__uint8_t w11;
       if (scrut0.tag == FStar_Pervasives_Native_Some)
       {
         cbor_det_t w = scrut0.v;
@@ -5490,7 +5492,7 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
       }
       else
         w11 =
-          KRML_EABORT(COSE_Format_evercddl_bstr,
+          KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
             "unreachable (pattern matches are exhaustive in F*)");
       uint64_t buf = 0ULL;
       KRML_HOST_IGNORE(&buf);
@@ -5894,7 +5896,7 @@ COSE_Format_serialize_header_map(
         }
         else if (c15.tag == COSE_Format_Inr)
         {
-          COSE_Format_evercddl_bstr c25 = c15.case_Inr;
+          Pulse_Lib_Slice_slice__uint8_t c25 = c15.case_Inr;
           res2 = COSE_Format_serialize_tstr(c25, out2);
         }
         else
@@ -6150,7 +6152,7 @@ COSE_Format_serialize_header_map(
           size_t res2;
           if (c14.tag == COSE_Format_Inl)
           {
-            COSE_Format_evercddl_bstr c15 = c14.case_Inl;
+            Pulse_Lib_Slice_slice__uint8_t c15 = c14.case_Inl;
             res2 = COSE_Format_serialize_tstr(c15, out2);
           }
           else if (c14.tag == COSE_Format_Inr)
@@ -6199,7 +6201,7 @@ COSE_Format_serialize_header_map(
   if (ite2)
     if (c220.tag == FStar_Pervasives_Native_Some)
     {
-      COSE_Format_evercddl_bstr c13 = c220.v;
+      Pulse_Lib_Slice_slice__uint8_t c13 = c220.v;
       uint64_t count = pcount;
       if (count < 18446744073709551615ULL)
       {
@@ -6271,7 +6273,7 @@ COSE_Format_serialize_header_map(
     {
       K___COSE_Format_evercddl_bstr_pretty_FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty
       c12 = c210.case_Inl;
-      COSE_Format_evercddl_bstr c13 = c12.fst;
+      Pulse_Lib_Slice_slice__uint8_t c13 = c12.fst;
       FStar_Pervasives_Native_option__COSE_Format_evercddl_everparsenomatch_pretty c22 = c12.snd;
       uint64_t count0 = pcount;
       bool ite;
@@ -6410,7 +6412,7 @@ COSE_Format_serialize_header_map(
       {
         K___COSE_Format_evercddl_bstr_pretty_FStar_Pervasives_Native_option_COSE_Format_evercddl_everparsenomatch_pretty
         c12 = c22.case_Inl;
-        COSE_Format_evercddl_bstr c13 = c12.fst;
+        Pulse_Lib_Slice_slice__uint8_t c13 = c12.fst;
         FStar_Pervasives_Native_option__COSE_Format_evercddl_everparsenomatch_pretty c23 = c12.snd;
         uint64_t count0 = pcount;
         bool ite;
@@ -6733,7 +6735,7 @@ COSE_Format_serialize_header_map(
           pc = ir;
           K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty scrut0 = res;
           COSE_Format_evercddl_label_pretty ck = scrut0.fst;
-          COSE_Format_evercddl_values_pretty cv = scrut0.snd;
+          cbor_det_t cv = scrut0.snd;
           size_t size0 = psize;
           Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size0).snd;
           size_t sz1 = COSE_Format_aux_env25_serialize_2(ck, out1);
@@ -6914,8 +6916,7 @@ COSE_Format_serialize_header_map(
           cbor_det_map_entry_t hd = phd;
           COSE_Format_evercddl_label_pretty
           hd_key_res = i.cddl_map_iterator_impl_parse1(cbor_det_map_entry_key(hd));
-          COSE_Format_evercddl_values_pretty
-          hd_value_res = i.cddl_map_iterator_impl_parse2(cbor_det_map_entry_value(hd));
+          cbor_det_t hd_value_res = i.cddl_map_iterator_impl_parse2(cbor_det_map_entry_value(hd));
           pc =
             (
               (CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty){
@@ -6928,7 +6929,7 @@ COSE_Format_serialize_header_map(
               }
             );
           COSE_Format_evercddl_label_pretty ck = hd_key_res;
-          COSE_Format_evercddl_values_pretty cv = hd_value_res;
+          cbor_det_t cv = hd_value_res;
           size_t size0 = psize;
           Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size0).snd;
           size_t sz1 = COSE_Format_aux_env25_serialize_2(ck, out1);
@@ -7246,8 +7247,7 @@ COSE_Format_next_iterate_map_aux_env25_type_2_and_aux_env25_type_4(
   cbor_det_map_entry_t hd = phd;
   COSE_Format_evercddl_label_pretty
   hd_key_res = i.cddl_map_iterator_impl_parse1(cbor_det_map_entry_key(hd));
-  COSE_Format_evercddl_values_pretty
-  hd_value_res = i.cddl_map_iterator_impl_parse2(cbor_det_map_entry_value(hd));
+  cbor_det_t hd_value_res = i.cddl_map_iterator_impl_parse2(cbor_det_map_entry_value(hd));
   *pi =
     (
       (CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty){
@@ -7803,7 +7803,7 @@ typedef struct evercddl_COSE_Signature_s
 {
   __COSE_Format_evercddl_empty_or_serialized_map_pretty_COSE_Format_evercddl_header_map_pretty
   fst;
-  COSE_Format_evercddl_bstr snd;
+  Pulse_Lib_Slice_slice__uint8_t snd;
 }
 evercddl_COSE_Signature;
 
@@ -7819,7 +7819,7 @@ COSE_Format_uu___is_Mkevercddl_COSE_Signature_pretty0(
 static COSE_Format_evercddl_COSE_Signature_pretty
 evercddl_COSE_Signature_pretty_right(evercddl_COSE_Signature x3)
 {
-  COSE_Format_evercddl_bstr x6 = x3.snd;
+  Pulse_Lib_Slice_slice__uint8_t x6 = x3.snd;
   COSE_Format_evercddl_header_map_pretty x5 = x3.fst.snd;
   COSE_Format_evercddl_empty_or_serialized_map_pretty x4 = x3.fst.fst;
   return
@@ -7837,7 +7837,7 @@ evercddl_COSE_Signature_pretty_left(COSE_Format_evercddl_COSE_Signature_pretty x
 {
   COSE_Format_evercddl_empty_or_serialized_map_pretty x12 = x7.protected;
   COSE_Format_evercddl_header_map_pretty x13 = x7.unprotected;
-  COSE_Format_evercddl_bstr x14 = x7.signature;
+  Pulse_Lib_Slice_slice__uint8_t x14 = x7.signature;
   return ((evercddl_COSE_Signature){ .fst = { .fst = x12, .snd = x13 }, .snd = x14 });
 }
 
@@ -7906,7 +7906,7 @@ COSE_Format_serialize_COSE_Signature(
   evercddl_COSE_Signature scrut = evercddl_COSE_Signature_pretty_left(c);
   __COSE_Format_evercddl_empty_or_serialized_map_pretty_COSE_Format_evercddl_header_map_pretty
   c1 = scrut.fst;
-  COSE_Format_evercddl_bstr c2 = scrut.snd;
+  Pulse_Lib_Slice_slice__uint8_t c2 = scrut.snd;
   COSE_Format_evercddl_empty_or_serialized_map_pretty c11 = c1.fst;
   COSE_Format_evercddl_header_map_pretty c21 = c1.snd;
   uint64_t count0 = pcount;
@@ -8468,7 +8468,7 @@ COSE_Format_serialize_COSE_Sign(
       size_t size1;
       if (c11.tag == COSE_Format_Inl)
       {
-        COSE_Format_evercddl_bstr c12 = c11.case_Inl;
+        Pulse_Lib_Slice_slice__uint8_t c12 = c11.case_Inl;
         size1 = COSE_Format_serialize_bstr(c12, out1);
       }
       else if (c11.tag == COSE_Format_Inr)
@@ -8934,7 +8934,7 @@ typedef struct
 __FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty_COSE_Format_evercddl_bstr_pretty_s
 {
   FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty fst;
-  COSE_Format_evercddl_bstr snd;
+  Pulse_Lib_Slice_slice__uint8_t snd;
 }
 __FStar_Pervasives_either_COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty_COSE_Format_evercddl_bstr_pretty;
 
@@ -8959,7 +8959,7 @@ COSE_Format_uu___is_Mkevercddl_COSE_Sign1_pretty0(
 static COSE_Format_evercddl_COSE_Sign1_pretty
 evercddl_COSE_Sign1_pretty_right(evercddl_COSE_Sign1 x4)
 {
-  COSE_Format_evercddl_bstr x8 = x4.snd.snd;
+  Pulse_Lib_Slice_slice__uint8_t x8 = x4.snd.snd;
   FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty
   x7 = x4.snd.fst;
   COSE_Format_evercddl_header_map_pretty x6 = x4.fst.snd;
@@ -8982,7 +8982,7 @@ evercddl_COSE_Sign1_pretty_left(COSE_Format_evercddl_COSE_Sign1_pretty x9)
   COSE_Format_evercddl_header_map_pretty x16 = x9.unprotected;
   FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty
   x17 = x9.payload;
-  COSE_Format_evercddl_bstr x18 = x9.signature;
+  Pulse_Lib_Slice_slice__uint8_t x18 = x9.signature;
   return
     ((evercddl_COSE_Sign1){ .fst = { .fst = x15, .snd = x16 }, .snd = { .fst = x17, .snd = x18 } });
 }
@@ -9137,7 +9137,7 @@ COSE_Format_serialize_COSE_Sign1(
   {
     FStar_Pervasives_either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty
     c11 = c2.fst;
-    COSE_Format_evercddl_bstr c21 = c2.snd;
+    Pulse_Lib_Slice_slice__uint8_t c21 = c2.snd;
     uint64_t count = pcount;
     bool ite;
     if (count < 18446744073709551615ULL)
@@ -9147,7 +9147,7 @@ COSE_Format_serialize_COSE_Sign1(
       size_t size1;
       if (c11.tag == COSE_Format_Inl)
       {
-        COSE_Format_evercddl_bstr c12 = c11.case_Inl;
+        Pulse_Lib_Slice_slice__uint8_t c12 = c11.case_Inl;
         size1 = COSE_Format_serialize_bstr(c12, out1);
       }
       else if (c11.tag == COSE_Format_Inr)
@@ -10595,7 +10595,8 @@ COSE_Format_evercddl_Sig_structure_pretty COSE_Format_parse_Sig_structure(cbor_d
     cbor_det_array_iterator_t c13 = pc4;
     cbor_det_array_iterator_t
     buf1 = cbor_det_array_iterator_truncate(c12, rlen03 - cbor_det_array_iterator_length(c13));
-    COSE_Format_evercddl_bstr w13 = COSE_Format_parse_bstr(cbor_det_array_iterator_next(&buf1));
+    Pulse_Lib_Slice_slice__uint8_t
+    w13 = COSE_Format_parse_bstr(cbor_det_array_iterator_next(&buf1));
     cbor_det_array_iterator_t buf = c13;
     ite5 =
       (
@@ -10626,7 +10627,8 @@ COSE_Format_evercddl_Sig_structure_pretty COSE_Format_parse_Sig_structure(cbor_d
     cbor_det_array_iterator_t c12 = pc3;
     cbor_det_array_iterator_t
     buf0 = cbor_det_array_iterator_truncate(c11, rlen02 - cbor_det_array_iterator_length(c12));
-    COSE_Format_evercddl_bstr w12 = COSE_Format_parse_bstr(cbor_det_array_iterator_next(&buf0));
+    Pulse_Lib_Slice_slice__uint8_t
+    w12 = COSE_Format_parse_bstr(cbor_det_array_iterator_next(&buf0));
     cbor_det_array_iterator_t buf = c12;
     ite5 =
       (
@@ -10837,8 +10839,8 @@ COSE_Format_serialize_Sig_structure(
           ite0 = false;
         if (ite0)
         {
-          COSE_Format_evercddl_bstr c14 = c22.fst;
-          COSE_Format_evercddl_bstr c23 = c22.snd;
+          Pulse_Lib_Slice_slice__uint8_t c14 = c22.fst;
+          Pulse_Lib_Slice_slice__uint8_t c23 = c22.snd;
           uint64_t count = pcount;
           bool ite;
           if (count < 18446744073709551615ULL)
@@ -10886,8 +10888,8 @@ COSE_Format_serialize_Sig_structure(
       else if (c21.tag == COSE_Format_Inr)
       {
         K___COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_bstr_pretty c22 = c21.case_Inr;
-        COSE_Format_evercddl_bstr c12 = c22.fst;
-        COSE_Format_evercddl_bstr c23 = c22.snd;
+        Pulse_Lib_Slice_slice__uint8_t c12 = c22.fst;
+        Pulse_Lib_Slice_slice__uint8_t c23 = c22.snd;
         uint64_t count = pcount;
         bool ite;
         if (count < 18446744073709551615ULL)
@@ -11913,7 +11915,7 @@ COSE_Format_evercddl_COSE_Key_OKP_pretty COSE_Format_parse_COSE_Key_OKP(cbor_det
         );
     else
       scrut = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
-    COSE_Format_evercddl_bstr ite;
+    Pulse_Lib_Slice_slice__uint8_t ite;
     if (scrut.tag == FStar_Pervasives_Native_Some)
     {
       cbor_det_t w = scrut.v;
@@ -11921,7 +11923,7 @@ COSE_Format_evercddl_COSE_Key_OKP_pretty COSE_Format_parse_COSE_Key_OKP(cbor_det
     }
     else
       ite =
-        KRML_EABORT(COSE_Format_evercddl_bstr,
+        KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
           "unreachable (pattern matches are exhaustive in F*)");
     ite2 =
       (
@@ -11984,7 +11986,7 @@ COSE_Format_evercddl_COSE_Key_OKP_pretty COSE_Format_parse_COSE_Key_OKP(cbor_det
         );
     else
       scrut = ((option__CBOR_Pulse_API_Det_Type_cbor_det_t){ .tag = FStar_Pervasives_Native_None });
-    COSE_Format_evercddl_bstr ite;
+    Pulse_Lib_Slice_slice__uint8_t ite;
     if (scrut.tag == FStar_Pervasives_Native_Some)
     {
       cbor_det_t w = scrut.v;
@@ -11992,7 +11994,7 @@ COSE_Format_evercddl_COSE_Key_OKP_pretty COSE_Format_parse_COSE_Key_OKP(cbor_det
     }
     else
       ite =
-        KRML_EABORT(COSE_Format_evercddl_bstr,
+        KRML_EABORT(Pulse_Lib_Slice_slice__uint8_t,
           "unreachable (pattern matches are exhaustive in F*)");
     ite4 =
       (
@@ -12172,7 +12174,7 @@ COSE_Format_serialize_COSE_Key_OKP(
         }
         else if (c23.tag == COSE_Format_Inr)
         {
-          COSE_Format_evercddl_bstr c24 = c23.case_Inr;
+          Pulse_Lib_Slice_slice__uint8_t c24 = c23.case_Inr;
           res2 = COSE_Format_serialize_tstr(c24, out2);
         }
         else
@@ -12212,7 +12214,7 @@ COSE_Format_serialize_COSE_Key_OKP(
   if (ite1)
     if (c22.tag == FStar_Pervasives_Native_Some)
     {
-      COSE_Format_evercddl_bstr c13 = c22.v;
+      Pulse_Lib_Slice_slice__uint8_t c13 = c22.v;
       uint64_t count = pcount;
       if (count < 18446744073709551615ULL)
       {
@@ -12282,7 +12284,7 @@ COSE_Format_serialize_COSE_Key_OKP(
   if (ite2)
     if (c210.tag == FStar_Pervasives_Native_Some)
     {
-      COSE_Format_evercddl_bstr c12 = c210.v;
+      Pulse_Lib_Slice_slice__uint8_t c12 = c210.v;
       uint64_t count = pcount;
       if (count < 18446744073709551615ULL)
       {
@@ -12390,7 +12392,7 @@ COSE_Format_serialize_COSE_Key_OKP(
           pc = ir;
           K___COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty scrut0 = res;
           COSE_Format_evercddl_label_pretty ck = scrut0.fst;
-          COSE_Format_evercddl_values_pretty cv = scrut0.snd;
+          cbor_det_t cv = scrut0.snd;
           size_t size0 = psize;
           Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size0).snd;
           size_t sz1 = COSE_Format_aux_env25_serialize_2(ck, out1);
@@ -12571,8 +12573,7 @@ COSE_Format_serialize_COSE_Key_OKP(
           cbor_det_map_entry_t hd = phd;
           COSE_Format_evercddl_label_pretty
           hd_key_res = i.cddl_map_iterator_impl_parse1(cbor_det_map_entry_key(hd));
-          COSE_Format_evercddl_values_pretty
-          hd_value_res = i.cddl_map_iterator_impl_parse2(cbor_det_map_entry_value(hd));
+          cbor_det_t hd_value_res = i.cddl_map_iterator_impl_parse2(cbor_det_map_entry_value(hd));
           pc =
             (
               (CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_COSE_Format_aux_env25_type_2_pretty_COSE_Format_aux_env25_type_4_pretty){
@@ -12585,7 +12586,7 @@ COSE_Format_serialize_COSE_Key_OKP(
               }
             );
           COSE_Format_evercddl_label_pretty ck = hd_key_res;
-          COSE_Format_evercddl_values_pretty cv = hd_value_res;
+          cbor_det_t cv = hd_value_res;
           size_t size0 = psize;
           Pulse_Lib_Slice_slice__uint8_t out1 = split__uint8_t(out, size0).snd;
           size_t sz1 = COSE_Format_aux_env25_serialize_2(ck, out1);
@@ -12928,20 +12929,18 @@ bool COSE_Format_validate_eb64url(cbor_det_t c)
     return false;
 }
 
-bool COSE_Format_uu___is_Mkevercddl_eb64url_pretty0(COSE_Format_evercddl_any_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_eb64url_pretty0(cbor_det_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_any_pretty
-evercddl_eb64url_pretty_right(COSE_Format_evercddl_any x1)
+static cbor_det_t evercddl_eb64url_pretty_right(cbor_det_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_any
-evercddl_eb64url_pretty_left(COSE_Format_evercddl_any_pretty x3)
+static cbor_det_t evercddl_eb64url_pretty_left(cbor_det_t x3)
 {
   return x3;
 }
@@ -12949,7 +12948,7 @@ evercddl_eb64url_pretty_left(COSE_Format_evercddl_any_pretty x3)
 /**
 Parser for evercddl_eb64url
 */
-COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64url(cbor_det_t c)
+cbor_det_t COSE_Format_parse_eb64url(cbor_det_t c)
 {
   return evercddl_eb64url_pretty_right(COSE_Format_parse_any(cbor_det_get_tagged_payload(c)));
 }
@@ -12957,14 +12956,10 @@ COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64url(cbor_det_t c)
 /**
 Serializer for evercddl_eb64url
 */
-size_t
-COSE_Format_serialize_eb64url(
-  COSE_Format_evercddl_any_pretty c,
-  Pulse_Lib_Slice_slice__uint8_t out
-)
+size_t COSE_Format_serialize_eb64url(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   uint64_t ctag = 21ULL;
-  COSE_Format_evercddl_any cpayload = evercddl_eb64url_pretty_left(c);
+  cbor_det_t cpayload = evercddl_eb64url_pretty_left(c);
   size_t aout_len = len__uint8_t(out);
   size_t
   tsz = cbor_det_serialize_tag_to_array(ctag, slice_to_arrayptr_intro__uint8_t(out), aout_len);
@@ -13061,21 +13056,18 @@ bool COSE_Format_validate_eb64legacy(cbor_det_t c)
     return false;
 }
 
-bool
-COSE_Format_uu___is_Mkevercddl_eb64legacy_pretty0(COSE_Format_evercddl_any_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_eb64legacy_pretty0(cbor_det_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_any_pretty
-evercddl_eb64legacy_pretty_right(COSE_Format_evercddl_any x1)
+static cbor_det_t evercddl_eb64legacy_pretty_right(cbor_det_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_any
-evercddl_eb64legacy_pretty_left(COSE_Format_evercddl_any_pretty x3)
+static cbor_det_t evercddl_eb64legacy_pretty_left(cbor_det_t x3)
 {
   return x3;
 }
@@ -13083,7 +13075,7 @@ evercddl_eb64legacy_pretty_left(COSE_Format_evercddl_any_pretty x3)
 /**
 Parser for evercddl_eb64legacy
 */
-COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64legacy(cbor_det_t c)
+cbor_det_t COSE_Format_parse_eb64legacy(cbor_det_t c)
 {
   return evercddl_eb64legacy_pretty_right(COSE_Format_parse_any(cbor_det_get_tagged_payload(c)));
 }
@@ -13091,14 +13083,10 @@ COSE_Format_evercddl_any_pretty COSE_Format_parse_eb64legacy(cbor_det_t c)
 /**
 Serializer for evercddl_eb64legacy
 */
-size_t
-COSE_Format_serialize_eb64legacy(
-  COSE_Format_evercddl_any_pretty c,
-  Pulse_Lib_Slice_slice__uint8_t out
-)
+size_t COSE_Format_serialize_eb64legacy(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   uint64_t ctag = 22ULL;
-  COSE_Format_evercddl_any cpayload = evercddl_eb64legacy_pretty_left(c);
+  cbor_det_t cpayload = evercddl_eb64legacy_pretty_left(c);
   size_t aout_len = len__uint8_t(out);
   size_t
   tsz = cbor_det_serialize_tag_to_array(ctag, slice_to_arrayptr_intro__uint8_t(out), aout_len);
@@ -13195,18 +13183,18 @@ bool COSE_Format_validate_eb16(cbor_det_t c)
     return false;
 }
 
-bool COSE_Format_uu___is_Mkevercddl_eb16_pretty0(COSE_Format_evercddl_any_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_eb16_pretty0(cbor_det_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_any_pretty evercddl_eb16_pretty_right(COSE_Format_evercddl_any x1)
+static cbor_det_t evercddl_eb16_pretty_right(cbor_det_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_any evercddl_eb16_pretty_left(COSE_Format_evercddl_any_pretty x3)
+static cbor_det_t evercddl_eb16_pretty_left(cbor_det_t x3)
 {
   return x3;
 }
@@ -13214,7 +13202,7 @@ static COSE_Format_evercddl_any evercddl_eb16_pretty_left(COSE_Format_evercddl_a
 /**
 Parser for evercddl_eb16
 */
-COSE_Format_evercddl_any_pretty COSE_Format_parse_eb16(cbor_det_t c)
+cbor_det_t COSE_Format_parse_eb16(cbor_det_t c)
 {
   return evercddl_eb16_pretty_right(COSE_Format_parse_any(cbor_det_get_tagged_payload(c)));
 }
@@ -13222,14 +13210,10 @@ COSE_Format_evercddl_any_pretty COSE_Format_parse_eb16(cbor_det_t c)
 /**
 Serializer for evercddl_eb16
 */
-size_t
-COSE_Format_serialize_eb16(
-  COSE_Format_evercddl_any_pretty c,
-  Pulse_Lib_Slice_slice__uint8_t out
-)
+size_t COSE_Format_serialize_eb16(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   uint64_t ctag = 23ULL;
-  COSE_Format_evercddl_any cpayload = evercddl_eb16_pretty_left(c);
+  cbor_det_t cpayload = evercddl_eb16_pretty_left(c);
   size_t aout_len = len__uint8_t(out);
   size_t
   tsz = cbor_det_serialize_tag_to_array(ctag, slice_to_arrayptr_intro__uint8_t(out), aout_len);
@@ -13326,20 +13310,18 @@ bool COSE_Format_validate_cborany(cbor_det_t c)
     return false;
 }
 
-bool COSE_Format_uu___is_Mkevercddl_cborany_pretty0(COSE_Format_evercddl_any_pretty projectee)
+bool COSE_Format_uu___is_Mkevercddl_cborany_pretty0(cbor_det_t projectee)
 {
   KRML_MAYBE_UNUSED_VAR(projectee);
   return true;
 }
 
-static COSE_Format_evercddl_any_pretty
-evercddl_cborany_pretty_right(COSE_Format_evercddl_any x1)
+static cbor_det_t evercddl_cborany_pretty_right(cbor_det_t x1)
 {
   return x1;
 }
 
-static COSE_Format_evercddl_any
-evercddl_cborany_pretty_left(COSE_Format_evercddl_any_pretty x3)
+static cbor_det_t evercddl_cborany_pretty_left(cbor_det_t x3)
 {
   return x3;
 }
@@ -13347,7 +13329,7 @@ evercddl_cborany_pretty_left(COSE_Format_evercddl_any_pretty x3)
 /**
 Parser for evercddl_cborany
 */
-COSE_Format_evercddl_any_pretty COSE_Format_parse_cborany(cbor_det_t c)
+cbor_det_t COSE_Format_parse_cborany(cbor_det_t c)
 {
   return evercddl_cborany_pretty_right(COSE_Format_parse_any(cbor_det_get_tagged_payload(c)));
 }
@@ -13355,14 +13337,10 @@ COSE_Format_evercddl_any_pretty COSE_Format_parse_cborany(cbor_det_t c)
 /**
 Serializer for evercddl_cborany
 */
-size_t
-COSE_Format_serialize_cborany(
-  COSE_Format_evercddl_any_pretty c,
-  Pulse_Lib_Slice_slice__uint8_t out
-)
+size_t COSE_Format_serialize_cborany(cbor_det_t c, Pulse_Lib_Slice_slice__uint8_t out)
 {
   uint64_t ctag = 55799ULL;
-  COSE_Format_evercddl_any cpayload = evercddl_cborany_pretty_left(c);
+  cbor_det_t cpayload = evercddl_cborany_pretty_left(c);
   size_t aout_len = len__uint8_t(out);
   size_t
   tsz = cbor_det_serialize_tag_to_array(ctag, slice_to_arrayptr_intro__uint8_t(out), aout_len);
