@@ -10,7 +10,7 @@ $(OUTPUT): cose.cddl ../cddl/spec/postlude.cddl
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
 build-c:
-	+$(MAKE) -C snapshot
+	+$(MAKE) -C c
 
 .PHONY: build-c
 

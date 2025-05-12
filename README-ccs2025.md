@@ -52,7 +52,7 @@ Section 5.1:
 
 Section 5.2:
 - The COSE specification is at `src/cose/cose.cddl`
-- The verified C code obtained after extracting COSE is at `src/cose/snapshot/`
+- The verified C code obtained after extracting COSE is at `src/cose/c/`
 - The unverified interoperability tests are in the directory `src/cose/interop`.  The interesting file is `common.c`, which uses the generated C API.
 - The verified signature creation and verification code is in `src/cose/verifiedinterop`.  The main file is `CommonPulse.fst`.
 

@@ -1,7 +1,7 @@
 EVERPARSE_SRC_PATH = $(realpath ../..)
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
-OBJFILES = ../snapshot/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c
+OBJFILES = ../c/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c
 
 .PHONY: all
 all: test run-bench
@@ -23,10 +23,10 @@ run-bench: bench
 # LDFLAGS += $(SANFLAGS)
 LDFLAGS += -lssl -lcrypto
 CFLAGS += -O3
-CFLAGS += -I ../snapshot -I ../../cbor/pulse/det/c
+CFLAGS += -I ../c -I ../../cbor/pulse/det/c
 CFLAGS += -Wall -Wenum-conversion
 
-HEADERDEPS = ../snapshot/COSE_Format.h ../../cbor/pulse/det/c/CBORDet.h
+HEADERDEPS = ../c/COSE_Format.h ../../cbor/pulse/det/c/CBORDet.h
 
 common.o: common.c $(HEADERDEPS)
 signtest.o: signtest.c $(HEADERDEPS) common.h
@@ -34,7 +34,7 @@ verifytest.o: verifytest.c $(HEADERDEPS) common.h
 bench.o: bench.c $(HEADERDEPS) common.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-COSE_Format.o: ../snapshot/COSE_Format.c $(HEADERDEPS)
+COSE_Format.o: ../c/COSE_Format.c $(HEADERDEPS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 CBOR_Det.o: ../../cbor/pulse/det/c/CBORDet.c $(HEADERDEPS)

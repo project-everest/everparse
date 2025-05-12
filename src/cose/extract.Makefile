@@ -24,13 +24,13 @@ extract: $(ALL_KRML_FILES)
 .PHONY: extract
 
 snapshot: extract
-	mkdir -p snapshot
-	rm -f snapshot/*.c snapshot/*.h
-	cp $(OUTPUT_DIRECTORY)/*.c snapshot/
-	cp $(OUTPUT_DIRECTORY)/*.h snapshot/
+	mkdir -p c
+	rm -f c/*.c c/*.h
+	cp $(OUTPUT_DIRECTORY)/*.c c/
+	cp $(OUTPUT_DIRECTORY)/*.h c/
 
 .PHONY: snapshot
 
 test: extract
-	for f in $(OUTPUT_DIRECTORY)/*.c $(OUTPUT_DIRECTORY)/*.h ; do diff snapshot/$$(basename $$f) $$f ; done
-	for f in snapshot/*.c snapshot/*.h ; do diff $$f $(OUTPUT_DIRECTORY)/$$(basename $$f) ; done
+	for f in $(OUTPUT_DIRECTORY)/*.c $(OUTPUT_DIRECTORY)/*.h ; do diff c/$$(basename $$f) $$f ; done
+	for f in c/*.c c/*.h ; do diff $$f $(OUTPUT_DIRECTORY)/$$(basename $$f) ; done
