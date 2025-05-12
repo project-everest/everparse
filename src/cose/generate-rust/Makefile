@@ -10,8 +10,11 @@ $(OUTPUT): ../cose.cddl ../../cddl/spec/postlude.cddl
 extract-all: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile extract
 
+snapshot: extract-all
+	cp _output/{cbordetveraux,cbordetver,commonpulse,coseformat}.rs ../rust/src
+
 build-rust: extract-all
-	cargo build
+	cd ../rust && cargo build
 
 .PHONY: build-rust extract-all all
 
