@@ -19,4 +19,4 @@
 	url = https://github.com/intel/tinycbor
 [submodule "opt/everest"]
 	path = opt/everest
-	url = git@github.com:project-everest/everest.git
+	url = https://github.com/project-everest/everest
