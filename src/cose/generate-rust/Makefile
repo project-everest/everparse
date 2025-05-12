@@ -10,13 +10,12 @@ $(OUTPUT): ../cose.cddl ../../cddl/spec/postlude.cddl
 extract-all: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile extract
 
+SNAPSHOT_FILES=cbordetveraux cbordetver commonpulse coseformat
+
 snapshot: extract-all
-	cp _output/{cbordetveraux,cbordetver,commonpulse,coseformat}.rs ../rust/src
+	for f in $(SNAPSHOT_FILES) ; do cp _output/$$f.rs ../rust/src/ ; done
 
-build-rust: extract-all
-	cd ../rust && cargo build
-
-.PHONY: build-rust extract-all all
+.PHONY: extract-all snapshot all
 
 # Uncomment if you want to edit the produced F* file
 # include extract.Makefile

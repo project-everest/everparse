@@ -220,7 +220,8 @@ cose-extract-test: cddl
 	+$(MAKE) -C src/cose test-extract
 
 # This rule is incompatible with cose-extract-test
-cose-snapshot: cddl
+# cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
+cose-snapshot: cddl cbor-extract-pre
 	+$(MAKE) -C src/cose snapshot
 else
 cose-extract-test:
@@ -233,7 +234,7 @@ cose-test: cose-extract-test
 
 .PHONY: cose-test
 
-cose: cbor
+cose:
 	+$(MAKE) -C src/cose
 
 .PHONY: cose
