@@ -6,7 +6,11 @@ edition = "2021"
 [dependencies]
 static_assertions = "1.1.0"
 ed25519-dalek = "2"
-clap = { version = "4.5.37", features = ["derive"] }
+clap = { version = "4.5.38", features = ["derive"] }
+
+[dev-dependencies]
+rand = "0.9.1"
+cose-rust = "0.1.7"
 
 [profile.test]
 inherits = "release"
