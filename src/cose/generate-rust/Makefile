@@ -17,5 +17,10 @@ snapshot: extract-all
 
 .PHONY: extract-all snapshot all
 
+test: extract-all
+	for f in $(SNAPSHOT_FILES) ; do diff ../rust/src/$$f.rs _output/$$f.rs ; done
+
+.PHONY: test
+
 # Uncomment if you want to edit the produced F* file
 # include extract.Makefile

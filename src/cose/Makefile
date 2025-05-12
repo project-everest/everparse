@@ -25,12 +25,19 @@ build: build-c build-rust
 
 .PHONY: all
 
-test-extract: $(OUTPUT)
+test-extract-c: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile test
+
+test-extract-rust: $(OUTPUT)
+	+$(MAKE) -C generate-rust test
+
+.PHONY: test-extract-c test-extract-rust
 
 .PHONY: test-interop
 test-interop: build
 	+$(MAKE) -C interop
+
+test-extract: test-extract-c test-extract-rust
 
 test: test-extract test-interop
 
