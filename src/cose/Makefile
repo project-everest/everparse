@@ -43,11 +43,13 @@ snapshot: snapshot-c snapshot-rust
 
 snapshot-c: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile snapshot
+	+$(MAKE) build-c
 
 .PHONY: snapshot-c
 
 snapshot-rust: $(OUTPUT)
 	+$(MAKE) -C generate-rust snapshot
+	+$(MAKE) build-rust
 
 .PHONY: snapshot-c
 
