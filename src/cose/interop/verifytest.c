@@ -3,7 +3,7 @@
 bstr test_verify(bstr msg, bstr key_data) {
     bstr aad = { .elt = (uint8_t[]) {}, .len = 0 };
     EVP_PKEY *signing_key = parse_ed25519_public_key(key_data);
-    bstr out = verify1(signing_key, aad, msg);
+    bstr out = COSE_OpenSSL_verify1(signing_key, aad, msg);
     EVP_PKEY_free(signing_key);
     return out;
 }

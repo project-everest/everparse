@@ -3,7 +3,7 @@
 bstr test_sign(bstr payload, bstr key_data) {
     bstr aad = { .elt = (uint8_t[]) {}, .len = 0 };
     EVP_PKEY *signing_key = parse_ed25519_private_key(key_data);
-    bstr out = sign1(signing_key, empty_sig_headers(), empty_sig_headers(), aad, payload);
+    bstr out = COSE_OpenSSL_sign1(signing_key, COSE_OpenSSL_empty_sig_headers(), COSE_OpenSSL_empty_sig_headers(), aad, payload);
     EVP_PKEY_free(signing_key);
     return out;
 }

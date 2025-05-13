@@ -30,7 +30,8 @@ CFLAGS += -Wall -Wenum-conversion
 
 HEADERDEPS = ../c/COSE_Format.h ../../cbor/pulse/det/c/CBORDet.h
 
-common.o: common.c $(HEADERDEPS)
+COSE_OpenSSL.o: COSE_OpenSSL.c $(HEADERDEPS)
+common.o: common.c $(HEADERDEPS) COSE_OpenSSL.h
 signtest.o: signtest.c $(HEADERDEPS) common.h
 verifytest.o: verifytest.c $(HEADERDEPS) common.h
 bench.o: bench.c $(HEADERDEPS) common.h
@@ -42,9 +43,9 @@ CBOR_Det.o: ../../cbor/pulse/det/c/CBORDet.c $(HEADERDEPS)
 %.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 
-signtest: signtest.o common.o COSE_Format.o CBOR_Det.o
-verifytest: verifytest.o common.o COSE_Format.o CBOR_Det.o
-bench: bench.o common.o COSE_Format.o CBOR_Det.o
+signtest: signtest.o COSE_OpenSSL.o common.o COSE_Format.o CBOR_Det.o
+verifytest: verifytest.o COSE_OpenSSL.o common.o COSE_Format.o CBOR_Det.o
+bench: bench.o COSE_OpenSSL.o common.o COSE_Format.o CBOR_Det.o
 
 bench signtest verifytest: %:
 	$(CC) $+ $(LDFLAGS) -o $@
