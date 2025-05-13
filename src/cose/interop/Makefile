@@ -25,27 +25,28 @@ run-bench: bench
 # LDFLAGS += $(SANFLAGS)
 LDFLAGS += -lssl -lcrypto
 CFLAGS += -O3
-CFLAGS += -I ../c -I ../../cbor/pulse/det/c
+CFLAGS += -I ../c -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
 CFLAGS += -Wall -Wenum-conversion
 
-HEADERDEPS = ../c/COSE_Format.h ../../cbor/pulse/det/c/CBORDet.h
+HEADERDEPS = ../c/COSE_Format.h ../c/COSE_OpenSSL.h $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.h
 
-COSE_OpenSSL.o: COSE_OpenSSL.c $(HEADERDEPS)
-common.o: common.c $(HEADERDEPS) COSE_OpenSSL.h
+common.o: common.c $(HEADERDEPS)
 signtest.o: signtest.c $(HEADERDEPS) common.h
 verifytest.o: verifytest.c $(HEADERDEPS) common.h
 bench.o: bench.c $(HEADERDEPS) common.h
 
-COSE_Format.o: ../c/COSE_Format.c $(HEADERDEPS)
+ALL_O_FILES=common.o signtest.o verifytest.o bench.o
 
-CBOR_Det.o: ../../cbor/pulse/det/c/CBORDet.c $(HEADERDEPS)
-
-%.o:
+$(ALL_O_FILES): %.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 
-signtest: signtest.o COSE_OpenSSL.o common.o COSE_Format.o CBOR_Det.o
-verifytest: verifytest.o COSE_OpenSSL.o common.o COSE_Format.o CBOR_Det.o
-bench: bench.o COSE_OpenSSL.o common.o COSE_Format.o CBOR_Det.o
+signtest: signtest.o common.o
+verifytest: verifytest.o common.o
+bench: bench.o common.o
+
+COSE_FORMAT_O=../c/COSE_Format.o
+COSE_OPENSSL_O=../c/COSE_OpenSSL.o
+CBOR_DET_O=$(EVERPARSE_SRC_PATH)/cbor/pulse/det/c/CBORDet.o
 
 bench signtest verifytest: %:
-	$(CC) $+ $(LDFLAGS) -o $@
+	$(CC) $+ $(COSE_OPENSSL_O) $(COSE_FORMAT_O) $(CBOR_DET_O) $(LDFLAGS) -o $@
