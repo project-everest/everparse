@@ -1,6 +1,6 @@
 all: package-subset asn1 cbor cddl cbor-interface
 
-export FSTAR_EXE ?= $(realpath opt)/FStar/bin/fstar.exe
+export FSTAR_EXE ?= $(wildcard $(realpath opt)/FStar/bin/fstar.exe)
 export KRML_HOME ?= $(realpath opt/karamel)
 export PULSE_HOME ?= $(realpath opt/pulse/out)
 export EVERPARSE_OPT_PATH=$(realpath opt)
@@ -21,11 +21,15 @@ ifeq (,$(NO_PULSE))
   SRC_DIRS += src/lowparse/pulse src/cbor/pulse src/cbor/pulse/raw src/cbor/pulse/raw/everparse src/cddl/pulse src/cddl/tool
 endif
 
+ifneq (,$(FSTAR_EXE))
+
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 ifeq (,$(NO_PULSE))
   include $(EVERPARSE_SRC_PATH)/pulse.Makefile
 endif
 include $(EVERPARSE_SRC_PATH)/common.Makefile
+
+endif
 
 lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
 
