@@ -173,7 +173,15 @@ endif
 
 .PHONY: cbor-snapshot
 
-cbor-test-extracted: cbor-det-c-test cbor-det-rust-test cbor-det-c-vertest cbor-det-common-vertest
+cbor-test-unverified: cbor-det-c-test cbor-det-rust-test
+
+.PHONY: cbor-test-unverified
+
+cbor-test-verified: cbor-det-c-vertest cbor-det-common-vertest
+
+.PHONY: cbor-test-verified
+
+cbor-test-extracted: cbor-test-unverified cbor-test-verified
 
 .PHONY: cbor-test-extracted
 
