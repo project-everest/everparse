@@ -169,7 +169,11 @@ endif
 
 .PHONY: cbor-snapshot
 
-cbor-test: cbor-det-c-test cbor-det-rust-test cbor-det-c-vertest cbor-det-common-vertest cbor-test-snapshot
+cbor-test-extracted: cbor-det-c-test cbor-det-rust-test cbor-det-c-vertest cbor-det-common-vertest
+
+.PHONY: cbor-test-extracted
+
+cbor-test: cbor-test-extracted cbor-test-snapshot
 
 cddl-spec: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
 
