@@ -55,6 +55,7 @@ Section 5.2:
 - The verified C code obtained after extracting COSE is at `src/cose/c/`
 - The unverified interoperability tests are in the directory `src/cose/interop`.  The interesting file is `common.c`, which uses the generated C API.
 - The verified signature creation and verification code is in `src/cose/verifiedinterop`.  The main file is `CommonPulse.fst`.
+- The verified Rust code obtained after extracting COSE is at `src/cose/rust/`. It can be built (resp. tested) by running `cargo build` (resp. `cargo test`) from that directory.
 
 Appendix A:
 - The arithmetic example is in `tests/pulse`
