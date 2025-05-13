@@ -32,5 +32,5 @@ snapshot: extract
 .PHONY: snapshot
 
 test: extract
-	for f in $(OUTPUT_DIRECTORY)/*.c $(OUTPUT_DIRECTORY)/*.h ; do diff c/$$(basename $$f) $$f ; done
-	for f in c/*.c c/*.h ; do diff $$f $(OUTPUT_DIRECTORY)/$$(basename $$f) ; done
+	for f in $(OUTPUT_DIRECTORY)/*.c $(OUTPUT_DIRECTORY)/*.h ; do diff c/$$(basename $$f) $$f || exit 1 ; done
+	for f in c/*.c c/*.h ; do diff $$f $(OUTPUT_DIRECTORY)/$$(basename $$f) || exit 1 ; done

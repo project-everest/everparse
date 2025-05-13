@@ -11,14 +11,20 @@ extract-all: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile extract
 
 SNAPSHOT_FILES=cbordetveraux cbordetver commonpulse coseformat
+SNAPSHOT_FILES_RS=$(addsuffix .rs,$(SNAPSHOT_FILES))
+OUTPUT_SNAPSHOT_FILES_RS=$(addprefix _output/,$(SNAPSHOT_FILES_RS))
 
 snapshot: extract-all
-	for f in $(SNAPSHOT_FILES) ; do cp _output/$$f.rs ../rust/src/ ; done
+	cp $(OUTPUT_SNAPSHOT_FILES_RS) ../rust/src/
 
 .PHONY: extract-all snapshot all
 
-test: extract-all
-	for f in $(SNAPSHOT_FILES) ; do diff ../rust/src/$$f.rs _output/$$f.rs ; done
+%.diff: extract-all
+	diff ../rust/src/$(basename $@) _output/$(basename $@)
+
+.PHONY: %.diff
+
+test: $(addsuffix .diff,$(SNAPSHOT_FILES_RS))
 
 .PHONY: test
 
