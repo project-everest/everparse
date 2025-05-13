@@ -1,5 +1,5 @@
 #include "common.h"
-#include "CommonPulse.h"
+#include "COSE_EverCrypt.h"
 #include <time.h>
 
 extern void
@@ -46,7 +46,7 @@ void bench_sign(uint8_t *privkey) {
 
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (unsigned i = 0; i < nruns; i++) {
-        sign1_simple(privkey, payload, outbuf);
+        COSE_EverCrypt_sign1_simple(privkey, payload, outbuf);
     }
     clock_gettime(CLOCK_MONOTONIC, &finish);
 
@@ -62,7 +62,7 @@ void bench_verify(uint8_t *privkey, uint8_t *pubkey) {
     bstr signed_msg = sign1_simple(privkey, payload, outbuf);
     clock_gettime(CLOCK_MONOTONIC, &start);
     for (unsigned i = 0; i < nruns; i++) {
-        check(verify1_simple(pubkey, signed_msg).tag);
+        check(COSE_EverCrypt_verify1_simple(pubkey, signed_msg).tag);
     }
     clock_gettime(CLOCK_MONOTONIC, &finish);
     free(outbuf.elt);

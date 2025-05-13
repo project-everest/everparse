@@ -10,6 +10,7 @@ module S = Pulse.Lib.Slice
 module V = Pulse.Lib.Vec
 module A = Pulse.Lib.Array
 open CDDL.Pulse.Types
+open Abort
 
 [@@pulse_unfold]
 let borrows (what from: slprop) : slprop =
@@ -159,8 +160,6 @@ inline_for_extraction noextract
 let sz_to_u32_safe (i: SizeT.t { SizeT.v i < pow2 32 }) : j:UInt32.t { UInt32.v j == SizeT.v i } =
   Math.Lemmas.small_mod (SizeT.v i) (pow2 32);
   SizeT.sizet_to_uint32 i
-
-assume val abort () : stt unit emp (fun _ -> pure False)
 
 fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
     (#vphdr: erased _) (#vaad: erased _) (#vpayload: erased _) (#pprivkey: erased _)

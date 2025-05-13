@@ -2,6 +2,7 @@
 #define COMMON_H
 
 #include "COSE_Format.h"
+#include "COSE_EverCrypt.h"
 #include <fcntl.h>
 
 #define check(cond) { if (!(cond)) { fprintf(stderr, "failed: %s\n", #cond); abort(); } }

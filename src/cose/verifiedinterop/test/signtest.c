@@ -1,11 +1,11 @@
 #include "common.h"
-#include "CommonPulse.h"
+#include "COSE_EverCrypt.h"
 
 bstr test_sign(bstr payload, bstr key_data) {
     uint8_t *signing_key = parse_ed25519_private_key(key_data);
     bstr outbuf = { .len = 1024 };
     check(outbuf.elt = malloc(outbuf.len));
-    outbuf = sign1_simple(signing_key, payload, outbuf);
+    outbuf = COSE_EverCrypt_sign1_simple(signing_key, payload, outbuf);
     return outbuf;
 }
 

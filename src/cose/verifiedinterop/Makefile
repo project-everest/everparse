@@ -23,19 +23,18 @@ KRML_OPTS += -warn-error @4@6
 
 KRML=$(KRML_HOME)/krml -fstar $(FSTAR_EXE) $(KRML_OPTS)
 
-ALL_C_FILES := _output/CommonPulse.c
+ALL_C_FILES := _output/COSE_EverCrypt.c
 
 .PHONY: extract
 extract: $(ALL_C_FILES)
 
-_output/CommonPulse.c: $(ALL_KRML_FILES)
+_output/COSE_EverCrypt.c: $(ALL_KRML_FILES)
 	$(KRML) -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
 		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
 		-add-include '"CBORDetAbstract.h"' \
 		-bundle 'COSE.Format=COSE.Format,C,CDDL.*' \
-		-add-include '"COSE_Format.h"' \
-		-bundle CommonPulse=*[rename=CommonPulse] \
-		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix CommonPulse \
+		-bundle 'CommonPulse=Abort[rename=COSE_EverCrypt,rename-prefix]' \
+		-no-prefix CBOR.Pulse.API.Det.C -no-prefix CBOR.Pulse.API.Det.Type -no-prefix CBOR.Spec.Constants -no-prefix Abort \
 		-skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
 
-_output/COSE_Format.c: _output/CommonPulse.c
+_output/COSE_Format.c: _output/COSE_EverCrypt.c
