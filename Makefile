@@ -105,7 +105,12 @@ endif
 
 .PHONY: lowparse-pulse
 
-cbor:
+submodules:
+	git submodule init && git submodule update
+
+.PHONY: submodules
+
+cbor: submodules
 	+$(MAKE) -C src/cbor/pulse/det
 
 cbor-interface: $(filter-out src/cbor/spec/raw/%,$(filter src/cbor/spec/%,$(ALL_CHECKED_FILES)))
@@ -256,7 +261,7 @@ cose-test: cose-extract-test cose-extracted-test
 
 .PHONY: cose-test
 
-cose:
+cose: submodules
 	+$(MAKE) -C src/cose
 
 .PHONY: cose
