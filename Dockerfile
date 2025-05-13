@@ -19,4 +19,4 @@ WORKDIR $HOME/everparse
 
 # Build and publish the release
 ARG CI_THREADS=24
-RUN  . "$HOME/.cargo/env" && eval $(opam env) && bash src/package/install-deps.sh && make -j $CI_THREADS -C opt && env OTHERFLAGS='--admit_smt_queries true' make -j $CI_THREADS cbor cddl
+RUN  . "$HOME/.cargo/env" && eval $(opam env) && bash src/package/install-deps.sh && make -j $CI_THREADS -C opt && env OTHERFLAGS='--admit_smt_queries true' make -j $CI_THREADS cbor cddl cose
