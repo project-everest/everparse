@@ -28,8 +28,11 @@ To build the C and Rust COSE library, run `make cose`
 
 To test the C and Rust COSE library, run `make cose-extracted-test`
 
-* The generated C source files for COSE are in `src/cose/c`
-* Interop tests for the C library are in `src/cose/interop`
+* The generated C source files for COSE are in `src/cose/c` :
+  + `COSE_Format.c` contains the verified parsers and serializers for COSE
+  + `COSE_EverCrypt.c` is a verified implementation of sign1 and verify1 with COSE_Format and HACL* EverCrypt
+  + `COSE_OpenSSL.c` is a handwritten implementation of sign1 and verify1 with OpenSSL, unverified except for parsing and serializing, calling into COSE_Format
+* Interop tests for the C library are in `src/cose/interop` (OpenSSL) and `src/cose/verifiedinterop/test` (HACL* EverCrypt)
 * The generated Rust source files for COSE are in `src/cose/rust`, where you can use `cargo build` and `cargo test` ; the crate is called `evercosign`
 
 ### CDDL
