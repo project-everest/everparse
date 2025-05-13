@@ -1,4 +1,4 @@
-module CommonPulse
+module COSE.EverCrypt
 #lang-pulse
 open Pulse
 open COSE.Format

@@ -232,7 +232,8 @@ endif
 .PHONY: cddl-unit-tests
 
 ifeq (,$(NO_PULSE))
-cose-extract-test: cddl
+# cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
+cose-extract-test: cddl cbor-extract-pre
 	+$(MAKE) -C src/cose test-extract
 
 # This rule is incompatible with cose-extract-test
