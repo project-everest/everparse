@@ -23,14 +23,16 @@ extract: $(ALL_KRML_FILES)
 
 .PHONY: extract
 
+C_FILES=COSE_Format.c COSE_Format.h CBORDetAPI.h
+
+%.diff: extract
+	diff c/$(basename $@) $(OUTPUT_DIRECTORY)/$(basename $@)
+
 snapshot: extract
 	mkdir -p c
-	rm -f c/*.c c/*.h
-	cp $(OUTPUT_DIRECTORY)/*.c c/
-	cp $(OUTPUT_DIRECTORY)/*.h c/
+	rm -f $(addprefix c/,$(C_FILES))
+	cp $(addprefix $(OUTPUT_DIRECTORY)/,$(C_FILES)) c/
 
 .PHONY: snapshot
 
-test: extract
-	for f in $(OUTPUT_DIRECTORY)/*.c $(OUTPUT_DIRECTORY)/*.h ; do diff c/$$(basename $$f) $$f || exit 1 ; done
-	for f in c/*.c c/*.h ; do diff $$f $(OUTPUT_DIRECTORY)/$$(basename $$f) || exit 1 ; done
+test: $(addsuffix .diff,$(C_FILES))
