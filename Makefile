@@ -234,7 +234,12 @@ endif
 
 .PHONY: cose-extract-test cose-snapshot
 
-cose-test: cose-extract-test
+cose-extracted-test: cose
+	+$(MAKE) -C src/cose test-extracted
+
+.PHONY: cose-extracted-test
+
+cose-test: cose-extract-test cose-extracted-test
 
 .PHONY: cose-test
 
