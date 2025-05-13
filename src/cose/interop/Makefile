@@ -15,8 +15,10 @@ run-bench: bench
 	./bench
 
 .venv:
-	python3 -m venv $@
-	$@/bin/pip install pycose
+	rm -rf $@ $@.tmp
+	python3 -m venv $@.tmp
+	$@.tmp/bin/python3 -m pip install pycose
+	mv $@.tmp $@
 
 # SANFLAGS += -fsanitize=address -fsanitize=undefined
 # CFLAGS += $(SANFLAGS)
@@ -32,15 +34,17 @@ common.o: common.c $(HEADERDEPS)
 signtest.o: signtest.c $(HEADERDEPS) common.h
 verifytest.o: verifytest.c $(HEADERDEPS) common.h
 bench.o: bench.c $(HEADERDEPS) common.h
-	$(CC) $(CFLAGS) -c $< -o $@
 
 COSE_Format.o: ../c/COSE_Format.c $(HEADERDEPS)
-	$(CC) $(CFLAGS) -c $< -o $@
 
 CBOR_Det.o: ../../cbor/pulse/det/c/CBORDet.c $(HEADERDEPS)
+
+%.o:
 	$(CC) $(CFLAGS) -c $< -o $@
 
 signtest: signtest.o common.o COSE_Format.o CBOR_Det.o
 verifytest: verifytest.o common.o COSE_Format.o CBOR_Det.o
 bench: bench.o common.o COSE_Format.o CBOR_Det.o
-	$(CC) $(LDFLAGS) $+ -o $@
+
+bench signtest verifytest: %:
+	$(CC) $+ $(LDFLAGS) -o $@
