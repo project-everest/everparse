@@ -1,9 +1,5 @@
 # EverParse
 
-| Linux | Windows |
-|---------|-------|
-| [![Linux](https://msr-project-everest.visualstudio.com/Everest/_apis/build/status/QuackyDucky/QuackyDucky-Linux?branchName=master)](https://msr-project-everest.visualstudio.com/Everest/_build/latest?definitionId=36&branchName=master) | [![Windows](https://msr-project-everest.visualstudio.com/Everest/_apis/build/status/QuackyDucky/everparse-windows-minimal-ci?branchName=master)](https://msr-project-everest.visualstudio.com/Everest/_build/latest?definitionId=50&branchName=master) |
-
 EverParse is a framework for generating verified secure parsers from DSL format specification languages.
 It consists of LowParse, a verified combinator library (in `src/lowparse`), and QuackyDucky, an untrusted message format specification language compiler.
 
@@ -20,12 +16,6 @@ We publish binary packages for EverParse as GitHub releases: https://github.com/
 ## Build from source
 
 Full build instructions, including how to install dependencies, are available at https://project-everest.github.io/everparse/build.html, or equivalently in `doc/build.rst` in this repository.
-
-## Container Images
-
-Instead of downloading or building EverParse, if you are in a hurry, consider using a containerized build instead, via a Docker image for Everest.
-
-Indeed, EverParse is part of [Project Everest](https://project-everest.github.io). Everest CI maintains up-to-date Docker Images on Docker Hub for [Linux](https://hub.docker.com/r/projecteverest/everest-linux). Those Docker images include a fully built and tested EverParse in the `quackyducky` subdirectory.
 
 ## Using QuackyDucky
 
