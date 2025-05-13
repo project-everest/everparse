@@ -34,11 +34,15 @@ test-extract-rust: $(OUTPUT)
 .PHONY: test-extract-c test-extract-rust
 
 .PHONY: test-interop
-test-interop: build
+test-interop: build-c
 	+$(MAKE) -C interop
 
-# TODO: also add Rust tests here
-test-extracted: test-interop
+test-rust: build-rust
+	cd rust && cargo test
+
+.PHONY: test-rust
+
+test-extracted: test-interop test-rust
 
 .PHONY: test-extracted
 
