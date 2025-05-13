@@ -31,9 +31,9 @@ verifytest: verifytest.c common.c $(COSE_EVERCRYPT_O) $(COSE_FORMAT_O) $(CBORDET
 bench: bench.c common.c $(COSE_EVERCRYPT_O) $(COSE_FORMAT_O) $(CBORDET_O) $(HACL_HOME)/dist/gcc-compatible/libevercrypt.a
 	clang -O3 $(CFLAGS) $^ -I _output -o $@
 
-../../interop/.venv:
+../../.venv:
 	$(MAKE) -C $(dir $@) $(notdir $@)
 
 .PHONY: test
-test: signtest verifytest ../../interop/.venv
-	../../interop/.venv/bin/python test.py
+test: signtest verifytest ../../.venv
+	../../.venv/bin/python test.py

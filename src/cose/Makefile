@@ -26,16 +26,26 @@ test-extract-rust:
 
 .PHONY: test-extract-c test-extract-rust
 
+.venv:
+	rm -rf $@ $@.tmp
+	python3 -m venv $@.tmp
+	$@.tmp/bin/python3 -m pip install pycose
+	mv $@.tmp $@
+
 .PHONY: test-interop
-test-interop: build-c
+test-interop: build-c .venv
 	+$(MAKE) -C interop
+
+.PHONY: test-verified-interop
+test-verified-interop: build-c .venv
+	+$(MAKE) -C verifiedinterop/test
 
 test-rust: build-rust
 	cd rust && cargo test
 
 .PHONY: test-rust
 
-test-extracted: test-interop test-rust
+test-extracted: test-interop test-verified-interop test-rust
 
 .PHONY: test-extracted
 

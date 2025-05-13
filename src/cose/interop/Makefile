@@ -7,18 +7,15 @@ OBJFILES = ../c/COSE_Format.c ../../cbor/pulse/det/c/CBORDet.c
 all: test run-bench
 
 .PHONY: test
-test: signtest verifytest .venv
-	./.venv/bin/python test.py
+test: signtest verifytest ../.venv
+	../.venv/bin/python test.py
 
 .PHONY: run-bench
 run-bench: bench
 	./bench
 
-.venv:
-	rm -rf $@ $@.tmp
-	python3 -m venv $@.tmp
-	$@.tmp/bin/python3 -m pip install pycose
-	mv $@.tmp $@
+../.venv:
+	$(MAKE) -C $(dir $@) $(notdir $@)
 
 # SANFLAGS += -fsanitize=address -fsanitize=undefined
 # CFLAGS += $(SANFLAGS)
