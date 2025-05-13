@@ -14,7 +14,8 @@ RUN sudo apt-get install --yes \
   wget
 
 # Bring in the contents
-RUN git clone --branch _taramana_cbor_bij https://github.com/project-everest/everparse $HOME/everparse
+ARG CACHE_BUST
+RUN git clone --branch _taramana_cbor_bij https://github.com/project-everest/everparse $HOME/everparse && echo $CACHE_BUST
 WORKDIR $HOME/everparse
 
 # Build and publish the release
