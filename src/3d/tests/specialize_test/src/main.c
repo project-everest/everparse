@@ -50,27 +50,27 @@ uint64_t c32_null_a = 0x0000000000000006;
 //For this test, we simulate a pointer with abstract indexes
 BOOLEAN GetSrcPointer(uint64_t src, uint8_t **out, uint64_t *size)
 {
-  if (src == UlongToPtr(c64))
+  if (src == c64)
   {
     *out = (uint8_t*) &b64;
     *size = sizeof(b64);
   }
-  else if (src == UlongToPtr(c32))
+  else if (src == c32)
   {
     *out = (uint8_t*) &b32;
     *size = sizeof(b32);
   }
-  else if (src == UlongToPtr(c64_null_a))
+  else if (src == c64_null_a)
   {
     *out = (uint8_t*) &b64_null_a;
     *size = sizeof(b64_null_a);
   }
-  else if (src == UlongToPtr(c32_null_a))
+  else if (src == c32_null_a)
   {
     *out = (uint8_t*) &b32_null_a;
     *size = sizeof(b32_null_a);
   }
-  else if (src == UlongToPtr(b64.pa))
+  else if (src == b64.pa)
   {
     *out = (uint8_t*) &a;
     *size = sizeof(a);

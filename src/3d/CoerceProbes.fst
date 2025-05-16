@@ -28,6 +28,12 @@ module B = Binding
 open GlobalEnv
 open GeneralizeProbes
 
+let params = list generic_param & list param
+noeq
+type env = {
+  benv:B.env;
+  params:params;
+}
 let probe_fail
 : probe_action
 = with_dummy_range <|
@@ -40,11 +46,11 @@ let probe_return_unit
   Probe_atomic_action <|
   Probe_action_return (with_dummy_range (Constant Unit))
 
-let read_and_coerce_pointer (e:B.env) (fid:expr)
+let read_and_coerce_pointer (e:env) (fid:expr)
 : ML probe_action
-= let reader = find_probe_fn e (PQRead UInt32) in
-  let writer = find_probe_fn e (PQWrite UInt64) in
-  let coercion = find_extern_coercion e tuint32 tuint64 in
+= let reader = find_probe_fn e.benv (PQRead UInt32) in
+  let writer = find_probe_fn e.benv (PQWrite UInt64) in
+  let coercion = find_extern_coercion e.benv tuint32 tuint64 in
   let as_ident x = with_dummy_range <| to_ident' x in
   let as_expr x = with_dummy_range <| Identifier <| as_ident x in
   with_dummy_range <|
@@ -66,9 +72,9 @@ let skip_bytes_write (n:expr)
 : ML probe_action
 = with_dummy_range <| Probe_atomic_action (Probe_action_skip_write n)
 
-let copy_bytes (e:B.env) (n:expr)
+let copy_bytes (e:env) (n:expr)
 : ML probe_action
-= let probe_and_copy_n = find_probe_fn e PQWithOffsets in
+= let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets in
   with_dummy_range <|
   Probe_atomic_action 
         (Probe_action_call probe_and_copy_n [n])
@@ -85,7 +91,7 @@ let skip_bytes_read_id = with_dummy_range <| to_ident' "skip_bytes_read"
 let skip_bytes_write_id = with_dummy_range <| to_ident' "skip_bytes_write"
 let mk_ident x = with_dummy_range <| to_ident' x
 let mk_expr x = with_dummy_range <| Identifier (mk_ident x)
-let mk_probe_helpers (e:B.env)
+let mk_probe_helpers (e:env)
 : ML (list decl)
 = let read_and_coerce =
     ProbeFunction
@@ -147,7 +153,7 @@ let icopy_bytes (n:int) =
   with_dummy_range <| Probe_action_var hd
 
 let probe_and_copy_alignment 
-    (e:B.env)
+    (e:env)
     (n0 n1:int)
     (k:probe_action)
 : ML probe_action
@@ -156,7 +162,7 @@ let probe_and_copy_alignment
   else continue "alignment" (iskip_bytes_read n0)
           (continue "alignment" (iskip_bytes_write n1) k)
 
-let read_and_coerce_pointer_k (e:B.env) (fid:ident) (k:probe_action)
+let read_and_coerce_pointer_k (e:env) (fid:ident) (k:probe_action)
 : ML probe_action
 = 
   let read_and_coerce = 
@@ -180,27 +186,38 @@ let integer_type_of_type t
   else if eq_typ t tuint64 then Some UInt64
   else None 
 
-let rec head_type (e:B.env) (t:typ) : ML ident =
-  match (Binding.unfold_typ_abbrev_only e t).v with
+let rec head_type (e:env) (t:typ) : ML ident =
+  match (Binding.unfold_typ_abbrev_only e.benv t).v with
   | Type_app hd _ _ _ -> hd
   | Pointer t _ -> head_type e t
   | _ -> error "Cannot find head type of an arrow" t.range
 
-let probe_and_copy_type (e:B.env) (fn:ident) (t0:typ) (k:probe_action)
+let is_pointer_or_integer (e:env) (t:typ) : ML (option integer_type) =
+  match (Binding.unfold_typ_abbrev_only e.benv t).v with
+  | Pointer _ (PQ sz _ _) -> Some sz
+  | _ -> integer_type_of_type t
+
+let find_probe_fn_for_type (e:env) (id:ident)
+: ML (option ident)
+= match GlobalEnv.find_probe_fn (B.global_env_of_env e.benv) (SimpleProbeFunction id) with
+  | None ->
+    GlobalEnv.find_probe_fn (B.global_env_of_env e.benv) (CoerceProbeFunction(id,id))
+  | p -> p
+let probe_and_copy_type (e:env) (fn:ident) (t0:typ) (k:probe_action)
 : ML probe_action
-= let probe_and_copy_n = find_probe_fn e PQWithOffsets in
-  let t = B.unfold_typ_abbrev_and_enum e t0 in
-  match integer_type_of_type t with
+= let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets in
+  let t = B.unfold_typ_abbrev_and_enum e.benv t0 in
+  match is_pointer_or_integer e t with
   | None -> (
       if eq_typ t tunit then k else
       let id = head_type e t in
-      match GlobalEnv.find_probe_fn (B.global_env_of_env e) (SimpleProbeFunction id) with
+      match find_probe_fn_for_type e id with
       | None ->
         error 
           (Printf.sprintf "Cannot find probe function for type %s" (print_typ t))
           t.range
       | Some id -> (
-        let insts, _ = GeneralizeProbes.generic_instantiations_for_type e t in
+        let insts, _ = GeneralizeProbes.generic_instantiations_for_type e.benv t in
         Options.debug_print_string <|
           Printf.sprintf "****Instantiating probe function for type %s unfolded to %s with %s\n" 
             (print_typ t0)
@@ -236,10 +253,25 @@ let probe_and_copy_type (e:B.env) (fn:ident) (t0:typ) (k:probe_action)
 let alignment_bytes (af:atomic_field)
 : ML int
 = match af.v.field_array_opt with
-  | FieldArrayQualified ({v=Constant (Int _ n)}, ByteArrayByteSize) -> n
+  | FieldArrayQualified ({v=Constant (Int _ n)}, ByteArrayByteSize) -> n                  
   | _ -> failwith "Not an alignment field"
 
-let rec coerce_fields (e:B.env) (r0 r1:record)
+let check_scope (env:env) (e:expr)
+: ML unit
+= let fvs = free_vars_of_expr e in
+  List.iter (fun i -> 
+    if not (List.existsb (fun (_, j, _) -> eq_idents i j) (snd env.params))
+    then (
+      error 
+        (Printf.sprintf
+          "Cannot coerce a type with a data-dependent length;\
+           the length of this type may depend on the field `%s`\n"
+           (print_ident i))
+        i.range
+    ))
+  fvs
+
+let rec coerce_fields (e:env) (r0 r1:record)
 : ML probe_action
 = match r0, r1 with
   | hd0::tl0, hd1::tl1 -> (
@@ -300,9 +332,9 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
           else if eq_typ af0.v.field_type af1.v.field_type
           then probe_and_copy_type e af0.v.field_ident af0.v.field_type (coerce_fields e tl0 tl1)
           else (
-            match Generate32BitTypes.has_32bit_coercion e af0.v.field_type af1.v.field_type with
+            match Generate32BitTypes.has_32bit_coercion e.benv af0.v.field_type af1.v.field_type with
             | Some id -> (
-              let insts, _ = GeneralizeProbes.generic_instantiations_for_type e af0.v.field_type in
+              let insts, _ = GeneralizeProbes.generic_instantiations_for_type e.benv af0.v.field_type in
               Options.debug_print_string <|
                 Printf.sprintf "****Instantiating probe function for type %s with %s\n" 
                   (print_typ af0.v.field_type)
@@ -357,6 +389,7 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
                     (print_ident af1.v.field_ident)
             in
             let coerce_elt = coerce_scalar_part () in
+            let _ = check_scope e n0 in
             with_dummy_range <| Probe_action_array n0 coerce_elt
           )
           | _ ->
@@ -377,7 +410,7 @@ let rec coerce_fields (e:B.env) (r0 r1:record)
     probe_return_unit
   | _ -> failwith "Unexpected number of fields"
 
-and coerce_switch_case (e:B.env) (sw0 sw1:switch_case)
+and coerce_switch_case (e:env) (sw0 sw1:switch_case)
 : ML probe_action
 = let scrutinee0, cases0 = sw0 in
   let scrutinee1, cases1 = sw1 in
@@ -451,14 +484,15 @@ let rec optimize_coercion (p:probe_action)
     { p with v = Probe_action_array l body }
   | _ -> p
   
-
 let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
 : ML decl
 = let CoerceProbeFunctionStub i params (CoerceProbeFunction (t0, t1)) = d.d_decl.v in
   Options.debug_print_string <|
-    Printf.sprintf "Replacing stub %s (from %s to %s)\n" i.v.name (print_ident t0) (print_ident t1);
+  Printf.sprintf "Replacing stub %s (from %s to %s)\n"
+    i.v.name (print_ident t0) (print_ident t1);
   let d0, _ = B.lookup_type_decl e t0 in
   let d1, _ = B.lookup_type_decl e t1 in
+  let e = { benv=e; params=B.params_of_decl d } in
   let coercion =
     match d0.d_decl.v, d1.d_decl.v with
     | Record _ _ _ _ r0, Record _ _ _ _ r1 ->
@@ -486,7 +520,7 @@ let replace_stubs (e:global_env) (ds:list decl)
 = let e = B.mk_env e in
   let probe_helpers =
     if List.existsb (fun d -> CoerceProbeFunctionStub? d.d_decl.v) ds
-    then mk_probe_helpers e
+    then mk_probe_helpers {benv=e;params=([],[])}
     else []
   in
   let decls_rev, _ = 

@@ -865,8 +865,8 @@ and check_expr (env:env) (e:expr)
              // else
              let e = cast n from_t to in
              let t = type_of_integer_type to in
-             Options.debug_print_string
-               (Printf.sprintf "--------------- %s has type %s\n" (print_expr e) (print_typ t));
+            //  Options.debug_print_string
+            //    (Printf.sprintf "--------------- %s has type %s\n" (print_expr e) (print_typ t));
              e, t
            | _ -> failwith "Impossible: must be an integral type"
       end

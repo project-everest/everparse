@@ -131,17 +131,19 @@ let atomic_field_has_simple_probe_aux (e:env) head_type (f:atomic_field)
 = match f.v.field_probe with
   | Some fp -> (
     match has_simple_probe fp with
-    | Some l -> (
-        match l.v with
-        | App (Cast _ _) [{ v = App SizeOf [{v=Identifier x}]}]
-        | App SizeOf [{v=Identifier x}] ->
-          if eq_idents x head_type
-          then true, None
-          else (
-            false, Some x
-          )
-        | _ -> false, None
-      )
+    | Some l -> true, Some head_type
+    // (
+    //     match l.v with
+    //     | App (Cast _ _) [{ v = App SizeOf [{v=Identifier x}]}]
+    //     | App SizeOf [{v=Identifier x}] ->
+    //       if eq_idents x head_type
+    //       then true, None
+    //       else (
+    //         false, Some x
+    //       )
+    //     | _ ->
+    //       false, None
+    //   )
     | _ ->
       FStar.IO.print_string <|
         Printf.sprintf "Expected a simple probe, got %s\n"
@@ -164,30 +166,32 @@ let rec needs_probe_field (maybe_gen:bool) (enclosing_type:typedef_names) (e:env
   match f.v with
   | AtomicField f ->
     let head_type, _ = head_type e f.v.field_type in
-    let has_simple_probe, field_type_ident = atomic_field_has_simple_probe_aux e head_type f in
+    let has_simple_probe = atomic_field_has_simple_probe e head_type f in
     if has_simple_probe
-    then (let e, changed = mark_for_probe e head_type  in
-          let e, changed' = maybe_generalize e enclosing_type in
-          e, changed || changed')
+    then (
+      let e, changed = mark_for_probe e head_type  in
+      let e, changed' = maybe_generalize e enclosing_type in
+      e, changed || changed'
+    )
     else (
-      match field_type_ident with
-      | Some x ->
-        error 
-          (Printf.sprintf 
-            "Expected a probe with sizeof(%s) but found a probe with sizeof(%s)"
-            (print_ident head_type)
-            (print_ident x))
-          f.range
-      | None -> 
-        let e, changed = 
-          if should_generate_probe e enclosing_type
-          then mark_for_probe e head_type // struct A { B b; } should probe B if A is probed
-          else e, false
-        in
-        if should_generalize_ident e head_type 
-        then let e, changed' = maybe_generalize e enclosing_type in // struct A { B <...> b; } should generalize A if B is generalized
-              e, changed || changed'
-        else e, changed
+      // match field_type_ident with
+      // | Some x ->
+      //   error 
+      //     (Printf.sprintf 
+      //       "Expected a probe with sizeof(%s) but found a probe with sizeof(%s)"
+      //       (print_ident head_type)
+      //       (print_ident x))
+      //     f.range
+      // | None -> 
+      let e, changed = 
+        if should_generate_probe e enclosing_type
+        then mark_for_probe e head_type // struct A { B b; } should probe B if A is probed
+        else e, false
+      in
+      if should_generalize_ident e head_type 
+      then let e, changed' = maybe_generalize e enclosing_type in // struct A { B <...> b; } should generalize A if B is generalized
+            e, changed || changed'
+      else e, changed
     )
   | RecordField r _ ->
     fold_left_changed (needs_probe_field maybe_gen enclosing_type) e r
@@ -242,7 +246,7 @@ let rec generic_instantiations_for_type (e:B.env) (tt:typ)
     args, mk_arrow_ps params probe_m_t
   | _ -> failwith "Impossible: field type is an arrow"
 
-let generate_probe_functions (e:env) (d:decl)
+let generate_probe_function_stubs (e:env) (d:decl)
 : ML (list decl)
 = let simple_probe (names:_{should_generate_probe e names}) params
     : ML decl
@@ -262,9 +266,13 @@ let generate_probe_functions (e:env) (d:decl)
       in
       let params = List.Tot.filter (should_retain_param_for_probe e.benv) params in
       let d' = 
-        mk_decl 
-          (ProbeFunction simple_probe_name params simple_probe 
-            (SimpleProbeFunction names.typedef_abbrev))
+        mk_decl         
+        //  (ProbeFunction simple_probe_name params simple_probe 
+        //     (SimpleProbeFunction names.typedef_abbrev))
+          (CoerceProbeFunctionStub 
+            simple_probe_name
+            params
+            (CoerceProbeFunction (names.typedef_abbrev, names.typedef_abbrev)))
           dummy_range
           []
           false
@@ -521,9 +529,24 @@ let generalize_probe_decls (e:GlobalEnv.global_env) (ds:list decl)
 = let e = { benv = Binding.mk_env e; needs_probe = []; should_generalize = H.create 10 } in
   let e = need_probe_decls e ds in
   let print_ident (i:ident') = i.name in
+  let _ = 
+    List.iter
+      (fun d ->
+        match d.d_decl.v with
+        | Specialize _ t _ ->
+          if None? (H.try_find e.should_generalize t.v)
+          then error (Printf.sprintf "Type %s was marked for specialization, but nothing was found to be specialized"        
+                              (print_ident t.v))
+                      d.d_decl.range
+        | _ -> ())
+        ds
+  in
   Options.debug_print_string
     (Printf.sprintf "Probes needed for: %s\nShould generalize: %s\n" 
       (String.concat ", " (List.map print_ident e.needs_probe))
       (String.concat ", " (H.fold (fun k _ out -> print_ident k::out) e.should_generalize [])));
-  let ds = List.collect (generate_probe_functions e) ds in
+  let ds = List.collect (generate_probe_function_stubs e) ds in
+  Options.debug_print_string "=============After generate probe functions=============\n";
+  Options.debug_print_string (print_decls ds);
+  Options.debug_print_string "\n";
   List.collect (generalize_probes_decl e) ds

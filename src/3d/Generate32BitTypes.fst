@@ -195,15 +195,31 @@ let rec gen_decl (env:env_t) (d:decl) : ML (option decl) =
 
   | _ -> None
 
+let is_identity_probe_function (d:decl)
+: option (ident & list param & ident & (unit -> decl'))
+= match d.d_decl.v with
+  | ProbeFunction id ps v (SimpleProbeFunction tn) ->
+    let mk () = ProbeFunction (name32 id) ps v (SimpleProbeFunction tn) in
+    Some (id, ps, tn, mk)
+
+  | CoerceProbeFunctionStub id ps (CoerceProbeFunction (src, dest)) ->
+    if not <| eq_idents src dest
+    then None
+    else (
+      let mk () = CoerceProbeFunctionStub (name32 id) ps (CoerceProbeFunction(src, dest)) in
+      Some (id, ps, src, mk)
+    )
+  | _ -> None
+
 let gen_decls (e:env_t) (d: decl)
 : ML (list decl & env_t)
-= match d.d_decl.v with
-  | ProbeFunction id ps v (SimpleProbeFunction tn) -> (
-    
+= match is_identity_probe_function d with
+  | None -> [d], e
+  | Some (id, ps, tn, mk) -> (
     let decl, _ = Binding.lookup_type_decl (fst e) tn in
     match gen_decl e decl with
     | None -> 
-      let c = ProbeFunction (name32 id) ps v (SimpleProbeFunction tn) in
+      let c = mk() in
       let c = mk_decl c d.d_decl.range [] false in
       [d;c], e
     | Some d' ->

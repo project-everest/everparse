@@ -1710,3 +1710,13 @@ let idents_of_decl (d:decl) =
   | CaseType names _ _ _
   | OutputType { out_typ_names = names } 
   | ExternType names -> [names.typedef_name; names.typedef_abbrev]
+
+  let rec free_vars_of_expr (e:expr)
+  : ML (list ident)
+  = match e.v with
+    | Constant _ -> []
+    | Identifier i -> [i]
+    | Static e -> free_vars_of_expr e
+    | This -> []
+    | App SizeOf _ -> []
+    | App _ es -> List.fold_left (fun out e -> free_vars_of_expr e @ out) [] es
