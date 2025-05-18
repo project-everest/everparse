@@ -114,7 +114,7 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   
   let decls = TypeSizes.size_of_decls benv en.typesizes_env decls in
 
-  Options.debug_print_string "=============Finished typesizes pass=============\n";
+  Options.debug_print_string "=============After typesizes pass=============\n";
 
   let decls = CoerceProbes.replace_stubs benv decls in
 
@@ -147,7 +147,7 @@ let parse_check_and_desugar (en:env) (mname:string) (fn:string)
   Options.debug_print_string "=============After refining records =============\n";
 
   let static_asserts = StaticAssertions.compute_static_asserts benv en.typesizes_env refinement in
-  Options.debug_print_string "=============Finished static asserts pass=============\n";
+  Options.debug_print_string "=============After static asserts pass=============\n";
 
   let en = {
     en with 

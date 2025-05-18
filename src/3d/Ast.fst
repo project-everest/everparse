@@ -18,6 +18,10 @@ module Ast
 
 open FStar.All
 
+
+let _or_ b1 b2 = b1 || b2
+let _and_ b1 b2 = b1 && b2
+
 let reserved_prefix = "___"
 
 //redefining either because we need to serialize to Json
@@ -1546,13 +1550,26 @@ let apply (s:subst) (id:ident) : ML expr =
   match H.try_find s id.v with
   | None -> with_range (Identifier id) id.range
   | Some e -> e
+let subst_op (s:subst) (o:op) : ML op =
+  match o with
+  | ProbeFunctionName i -> (
+    let e = apply s i in 
+    match e.v with
+    | Identifier i' -> ProbeFunctionName i'
+    | _ ->
+      failwith 
+      (Printf.sprintf
+        "Expression %s used where a probe function identifier was expected"
+        (print_expr e))
+  )
+  | _ -> o
 let rec subst_expr (s:subst) (e:expr) : ML expr =
   match e.v with
   | Constant _
   | This -> e
   | Identifier i -> apply s i
   | Static e -> { e with v = Static (subst_expr s e) }
-  | App op es -> {e with v = App op (List.map (subst_expr s) es)}
+  | App op es -> {e with v = App (subst_op s op) (List.map (subst_expr s) es)}
 let subst_atomic_action (s:subst) (aa:atomic_action) : ML atomic_action =
   match aa with
   | Action_return e -> Action_return (subst_expr s e)

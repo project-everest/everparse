@@ -132,20 +132,8 @@ let atomic_field_has_simple_probe_aux (e:env) head_type (f:atomic_field)
   | Some fp -> (
     match has_simple_probe fp with
     | Some l -> true, Some head_type
-    // (
-    //     match l.v with
-    //     | App (Cast _ _) [{ v = App SizeOf [{v=Identifier x}]}]
-    //     | App SizeOf [{v=Identifier x}] ->
-    //       if eq_idents x head_type
-    //       then true, None
-    //       else (
-    //         false, Some x
-    //       )
-    //     | _ ->
-    //       false, None
-    //   )
     | _ ->
-      FStar.IO.print_string <|
+      Options.debug_print_string <|
         Printf.sprintf "Expected a simple probe, got %s\n"
           (print_probe_call fp);
       false, None
@@ -207,11 +195,22 @@ and needs_probe_case (maybe_generalize:bool) (enclosing_type:typedef_names) (e:e
 let need_probe_decl (e:env) (d:decl) 
 : ML (env & bool)
 = let maybe_generalize = not (is_entrypoint d) in
+  let should_descend n : ML bool =
+    should_generalize_ident e n.typedef_abbrev `_or_`
+    should_generate_probe e n
+  in
   match d.d_decl.v with
   | Record names _ _ _ fields ->
-    fold_left_changed (needs_probe_field maybe_generalize names) e fields
+    if should_descend names
+    then fold_left_changed (needs_probe_field maybe_generalize names) e fields
+   else e, false
   | CaseType names _ _ sw ->
-    fold_left_changed (needs_probe_case maybe_generalize names) e (snd sw)
+    if should_descend names
+    then fold_left_changed (needs_probe_case maybe_generalize names) e (snd sw)
+    else e, false
+  | Specialize _ t _ -> (
+    mark_for_generalize e t
+  )
   | _ -> e, false
 
 let rec need_probe_decls (e:env) (ds:list decl)
@@ -468,6 +467,11 @@ let default_instantiation_subst
       List.map (fun g -> default_instatiation_for g) gs
       |> List.unzip
     in
+    Options.debug_print_string <|
+      (Printf.sprintf
+        "Generated substitution: {%s}\n"
+          (String.concat "; "
+            (List.map (fun (i, e) -> Printf.sprintf "[%s -> %s]" (print_ident i) (print_expr e)) subst)));
     decls, mk_subst subst
 
 let generalize_probes_decl (e:env) (d:decl)
@@ -487,6 +491,14 @@ let generalize_probes_decl (e:env) (d:decl)
     } in
     gen_name
   in
+  let id_of_decl d =
+    match idents_of_decl d with
+    | [i] -> i
+    | _::j::_ -> j
+  in
+  Options.debug_print_string
+    (Printf.sprintf "Generalize_probe_decls for %s\n"
+      (print_ident <| id_of_decl d));
   match d.d_decl.v with
   | Record names gs params w fields -> (
     let fields, gs', sig = generalize_probe_fields e "" fields in
@@ -494,16 +506,22 @@ let generalize_probes_decl (e:env) (d:decl)
     | [] -> [d]
     | _ -> (
       Options.debug_print_string
-        (Printf.sprintf "**************************Instantiations with signature %s for fields: %s\n"
+        (Printf.sprintf "**************************For type %s\nInstantiations with signature %s for fields: %s\n"
+              (print_ident names.typedef_abbrev)
               (print_generics gs')
               (String.concat "; " <| List.map print_field fields));
       if not <| should_generalize e names
       then (
         let ds, s = default_instantiation_subst e d.d_decl.range gs' sig in
         let fields = List.map (subst_field s) fields in
-        ds@[ { d with 
+        let d = { d with 
                 d_decl = { d.d_decl with 
-                v=Record names gs params w fields }} ]
+                v=Record names gs params w fields }} in
+        Options.debug_print_string
+          (Printf.sprintf
+            "<After substitution>:\n%s\n</After substitution>"
+            (print_decl d));
+        ds@[ d ]
       )
       else (
         let gen_name = generalize_type names gs params sig in
@@ -521,13 +539,23 @@ let generalize_probes_decl (e:env) (d:decl)
     match gs' with
     | [] -> [d]
     | _ -> (
+      Options.debug_print_string
+        (Printf.sprintf "**************************For type %s\nInstantiations with signature %s for fields: %s\n"
+              (print_ident names.typedef_abbrev)
+              (print_generics gs')
+              (String.concat "; " <| List.map print_case cases));
       if not <| should_generalize e names
       then (
         let ds, s = default_instantiation_subst e d.d_decl.range gs' sig in
         let cases' = List.map (subst_case s) cases in
-        ds@[ { d with 
+        let d = { d with 
             d_decl = { d.d_decl with 
-            v=CaseType names gs params (v, cases') }} ]
+            v=CaseType names gs params (v, cases') }} in
+        Options.debug_print_string
+          (Printf.sprintf
+            "<After substitution>:\n%s\n</After substitution>"
+            (print_decl d));
+        ds@[ d ]
       )
       else (
         let gen_name = generalize_type names gs params sig in

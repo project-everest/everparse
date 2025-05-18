@@ -498,8 +498,6 @@ let try_cast_integer env et to : ML (option expr) =
     else None
   else None
 
-let _or_ b1 b2 = b1 || b2
-let _and_ b1 b2 = b1 && b2
 let try_retype_arith_exprs (env:env) e1 e2 rng : ML (option (expr & expr & typ))=
   let e1, t1 = e1 in
   let e2, t2 = e2 in
