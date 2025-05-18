@@ -625,7 +625,8 @@ let rec print_probe_action (mname:string) (p:probe_action) : ML string =
     Printf.sprintf "(Probe_action_ite %s %s %s)" (print_expr mname cond) (print_probe_action mname m1) (print_probe_action mname m2)
   | Probe_action_array len b ->
     Printf.sprintf "(Probe_action_array %s %s)" (print_expr mname len) (print_probe_action mname b)
-
+  | Probe_action_copy_init_sz f ->
+    Printf.sprintf "(Probe_action_copy_init_sz %s)" (print_ident f)
 
 let print_typedef_typ (tdn:typedef_name) : ML string =
   Printf.sprintf "%s %s"

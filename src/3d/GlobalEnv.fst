@@ -148,6 +148,7 @@ let resolve_probe_fn (g:global_env) (id:ident) (pq:probe_qualifier)
 let eq_probe_function_type pq0 pq1 : ML bool =
   match pq0, pq1 with
   | SimpleProbeFunction t0, SimpleProbeFunction t1 -> eq_idents t0 t1
+  | CoerceProbeFunctionPlaceholder t0, CoerceProbeFunctionPlaceholder t1 -> eq_idents t0 t1
   | CoerceProbeFunction (t0, t1), CoerceProbeFunction (t0', t1') ->
     Options.debug_print_string <|
       Printf.sprintf "Comparing %s to %s\n" (print_probe_function_type pq0) (print_probe_function_type pq1);

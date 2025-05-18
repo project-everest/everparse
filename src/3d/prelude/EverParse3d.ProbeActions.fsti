@@ -52,8 +52,13 @@ val probe_fn_incremental_as_probe_m (f:probe_fn_incremental) (bytes_to_read:U64.
 
 inline_for_extraction
 noextract
-val init_probe_m (f:init_probe_dest_t) (sz:U64.t)
+val init_probe_m (f:init_probe_dest_t)
 : probe_m unit false false
+
+inline_for_extraction
+noextract
+val init_probe_size
+: probe_m U64.t true false
 
 inline_for_extraction
 noextract
@@ -74,6 +79,11 @@ inline_for_extraction
 noextract
 val bind_probe_m (#a #b:Type) (detail:string) (dflt:b) (m1:probe_m a true false) (m2:a -> probe_m b true false)
 : probe_m b true false
+
+inline_for_extraction
+noextract
+val probe_and_copy_init_sz (f:probe_fn_incremental)
+: probe_m unit true false
 
 inline_for_extraction
 noextract
@@ -121,7 +131,6 @@ noextract
 val init_and_probe 
       (#mz:bool)
       (init:init_probe_dest_t)
-      (prep_dest_sz:U64.t)
       (probe:probe_m unit true mz)
 : probe_m unit false mz
 
@@ -133,6 +142,7 @@ val run_probe_m (#any:bool)
   (ctxt:app_ctxt)
   (err:error_handler)
   (src:U64.t)
+  (sz:U64.t)
   (dest:copy_buffer_t)
 : Stack U64.t
     (fun h0 ->

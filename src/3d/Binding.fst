@@ -740,13 +740,13 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
       then { t with v = Pointer (check_typ pointer_ok env t0) (check_pointer_qualifier pq) }
       else error (Printf.sprintf "Pointer types are not permissible here; got %s" (print_typ t)) t.range
 
-    | Type_app s KindSpec gs ps ->
-      (match lookup env s with
-       | Inl _ ->
-         error (Printf.sprintf "%s is not a type" (ident_to_string s)) s.range
+    | Type_app s KindSpec gs ps -> (
+      match lookup env s with
+      | Inl _ ->
+        error (Printf.sprintf "%s is not a type" (ident_to_string s)) s.range
 
-       | Inr (d, _) ->
-         let gparams, params =
+      | Inr (d, _) ->
+        let gparams, params =
           match d.d_decl.v with
           | Specialize _ id _ ->
             let d, _ = lookup_type_decl env id in
@@ -754,48 +754,49 @@ let rec check_typ (pointer_ok:bool) (env:env) (t:typ)
             [], snd <| params_of_decl d
           | _ -> params_of_decl d
         in
-         if List.length gparams <> List.length gs 
-         || List.length params <> List.length ps
-         then error (Printf.sprintf "Not enough arguments to %s" (ident_to_string s)) s.range;
-         let gs =
-           List.map2 
-            (fun e (GenericProbeFunction _ gt _) ->
-              let e, t = check_expr env e in
-              if not (eq_typ env t gt)
-              then 
-                error (
-                  Printf.sprintf "Expected a generic instantiation of a probe function of type %s; got %s of type %s" 
-                    (print_typ gt) (print_expr e) (print_typ t)
-                ) e.range;
-              e)
-            gs
-            gparams
-         in
-         let err t t' p : ML typ_param =
-            error (Printf.sprintf 
-                          "Argument type mismatch (%s has type %s, expected %s)"
-                          (Ast.print_typ_param p)
-                          (Ast.print_typ t) (Ast.print_typ t')) (range_of_typ_param p)
-         in
-         let ps =
-           List.map2 (fun (t, _, _) p ->
-             let p, t' = check_typ_param env p in
-             if not (eq_typ env t t')
-             then begin
-               match p with
-               | Inl e -> (
-                  match try_cast_integer env (e, t') t with
-                  | Some e -> Inl e
-                  | _ -> err t' t p
-                )
-               | Inr o ->
-                 err t' t p
-             end
-             else p)
-             params
-             ps
-         in
-         {t with v = Type_app s KindSpec gs ps})
+        if List.length gparams <> List.length gs 
+        || List.length params <> List.length ps
+        then error (Printf.sprintf "Not enough arguments to %s" (ident_to_string s)) s.range;
+        let gs =
+          List.map2 
+          (fun e (GenericProbeFunction _ gt _) ->
+            let e, t = check_expr env e in
+            if not (eq_typ env t gt)
+            then
+              error (
+                Printf.sprintf "Expected a generic instantiation of a probe function of type %s; got %s of type %s" 
+                  (print_typ gt) (print_expr e) (print_typ t)
+              ) e.range;
+            e)
+          gs
+          gparams
+        in
+        let err t t' p : ML typ_param =
+          error (Printf.sprintf 
+                        "Argument type mismatch (%s has type %s, expected %s)"
+                        (Ast.print_typ_param p)
+                        (Ast.print_typ t) (Ast.print_typ t')) (range_of_typ_param p)
+        in
+        let ps =
+          List.map2 (fun (t, _, _) p ->
+            let p, t' = check_typ_param env p in
+            if not (eq_typ env t t')
+            then begin
+              match p with
+              | Inl e -> (
+                match try_cast_integer env (e, t') t with
+                | Some e -> Inl e
+                | _ -> err t' t p
+              )
+              | Inr o ->
+                err t' t p
+            end
+            else p)
+            params
+            ps
+        in
+        {t with v = Type_app s KindSpec gs ps}
+    )
 
     | Type_app i KindExtern gs args ->
       if List.length gs <> 0
@@ -1458,6 +1459,16 @@ let rec check_probe env a : ML (probe_action & typ) =
     then error (Printf.sprintf "Probe array body has type %s instead of unit" (print_typ t)) 
               body.range;
     { a with v = Probe_action_array len body }, tunit
+
+  | Probe_action_copy_init_sz f -> (
+    match GlobalEnv.resolve_probe_fn_any env.globals f with
+    | Some (id, Inr PQWithOffsets) ->
+      { a with v = Probe_action_copy_init_sz id }, tunit
+    | _ ->
+      error (Printf.sprintf "Probe function %s not found or not a probe-and-copy function" (print_ident f))
+            f.range
+  )
+
 
 let check_probe_call (env:env) (ft:typ) (p:probe_call)
 : ML probe_call
@@ -2236,6 +2247,9 @@ let check_probe_function_type
   | SimpleProbeFunction tn ->
     let _ = lookup_type_decl e tn in
     SimpleProbeFunction tn
+  | CoerceProbeFunctionPlaceholder i ->
+    let _ = lookup_type_decl e i in
+    CoerceProbeFunctionPlaceholder i
   | CoerceProbeFunction (t, u) ->
     let _ = lookup_type_decl e t in
     let _ = lookup_type_decl e u in

@@ -270,9 +270,9 @@ let generate_probe_function_stubs (e:env) (d:decl)
         //  (ProbeFunction simple_probe_name params simple_probe 
         //     (SimpleProbeFunction names.typedef_abbrev))
           (CoerceProbeFunctionStub 
-            simple_probe_name
+            (Ast.name32 simple_probe_name)
             params
-            (CoerceProbeFunction (names.typedef_abbrev, names.typedef_abbrev)))
+            (CoerceProbeFunctionPlaceholder names.typedef_abbrev))
           dummy_range
           []
           false
@@ -422,17 +422,53 @@ let default_instantiation (e:env) (r:range) (head_type:ident)
   | Some probe_inst ->
     with_range (Identifier probe_inst) r
 
-let default_instantiation_subst (e:env) (r:range) (gs:list generic_param) (sig:generalized_signature)
-: ML subst
-= let insts = 
-    List.map2 
-      (fun (GenericProbeFunction id _ _) (s, _) -> id, default_instantiation e r s)
-      gs sig
-  in
-  Options.debug_print_string
-    (Printf.sprintf "Instantiations: %s\n"
-      (String.concat "; " <| List.map (fun (i, e) -> Printf.sprintf "%s -> %s" (print_ident i) (print_expr e)) insts));
-  mk_subst insts
+let default_instantiation_subst
+      (e:env)
+      (r:range)
+      (gs:list generic_param)
+      (sig:generalized_signature)
+: ML (list decl & subst)
+= match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e.benv) PQWithOffsets with
+  | None ->
+    failwith "No extern probe function found"
+  | Some probe_and_copy_n ->
+    let default_instantiation_body = 
+      with_range (Probe_action_copy_init_sz probe_and_copy_n) r
+    in
+    let default_name_for param_name type_name =
+      let name = Printf.sprintf "%s_%s" param_name.v.name type_name.v.name in
+      { param_name with v = { param_name.v with name } }
+    in
+    let formals_of_type (t:typ) : ML (list param) =
+      match t.v with
+      | Type_arrow args _ ->
+        List.mapi (fun i t -> 
+          let name = Printf.sprintf "%s_arg%d" reserved_prefix i in
+          t, mk_ident name, Immutable) args
+      | _ -> []
+    in
+    let default_instatiation_for (g:generic_param)
+    : ML (decl & (ident & expr)) 
+    = let GenericProbeFunction param_name typ type_name = g in
+      let name = default_name_for param_name type_name in
+      let params = formals_of_type typ in
+      let decl = 
+        mk_decl
+          (ProbeFunction
+            name
+            params
+            default_instantiation_body (SimpleProbeFunction type_name))
+          dummy_range
+          []
+          false
+      in
+      decl, (param_name, with_range (Identifier name) r)
+    in
+    let decls, subst =
+      List.map (fun g -> default_instatiation_for g) gs
+      |> List.unzip
+    in
+    decls, mk_subst subst
 
 let generalize_probes_decl (e:env) (d:decl)
 : ML (list decl)
@@ -449,25 +485,7 @@ let generalize_probes_decl (e:env) (d:decl)
         gen_name with 
         typedef_attributes = gen_name.typedef_attributes
     } in
-    // let instantiated_type =
-    //   let head = gen_name.typedef_abbrev in
-    //   let insts = List.map (default_instantiation e d.d_decl.range) sig in
-    //   let instantiations =
-    //     insts @
-    //     List.map
-    //       (function GenericProbeFunction i _ ->
-    //         with_range (Identifier i) i.range)
-    //       gs
-    //   in
-    //   let params =
-    //     List.map (fun (_, i, _) -> Inl <| with_range (Identifier i) i.range) params
-    //   in
-    //   with_range (Type_app head KindSpec instantiations params)
-    //               d.d_decl.range
-    // in
-    // let inst_attrs = List.filter (fun a -> not (Aligned? a)) names.typedef_attributes in
     gen_name
-    // , instantiated_type, inst_attrs
   in
   match d.d_decl.v with
   | Record names gs params w fields -> (
@@ -481,11 +499,11 @@ let generalize_probes_decl (e:env) (d:decl)
               (String.concat "; " <| List.map print_field fields));
       if not <| should_generalize e names
       then (
-        let s = default_instantiation_subst e d.d_decl.range gs' sig in
+        let ds, s = default_instantiation_subst e d.d_decl.range gs' sig in
         let fields = List.map (subst_field s) fields in
-        [ { d with 
-            d_decl = { d.d_decl with 
-            v=Record names gs params w fields }} ]
+        ds@[ { d with 
+                d_decl = { d.d_decl with 
+                v=Record names gs params w fields }} ]
       )
       else (
         let gen_name = generalize_type names gs params sig in
@@ -505,9 +523,9 @@ let generalize_probes_decl (e:env) (d:decl)
     | _ -> (
       if not <| should_generalize e names
       then (
-        let s = default_instantiation_subst e d.d_decl.range gs' sig in
+        let ds, s = default_instantiation_subst e d.d_decl.range gs' sig in
         let cases' = List.map (subst_case s) cases in
-        [ { d with 
+        ds@[ { d with 
             d_decl = { d.d_decl with 
             v=CaseType names gs params (v, cases') }} ]
       )

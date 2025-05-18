@@ -177,7 +177,10 @@ type probe_action =
   | Probe_action_array:
       len: expr ->
       m: probe_action ->
-      probe_action  
+      probe_action
+  | Probe_action_copy_init_sz:
+      f:A.ident ->
+      probe_action 
   
 noeq
 type typ =

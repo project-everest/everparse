@@ -314,8 +314,7 @@ let translate_op : A.op -> ML T.op =
   | SizeOf -> failwith (Printf.sprintf "Operator `%s` should have been eliminated already"
                                   (Ast.print_op op))
   | ProbeFunctionName i -> T.ProbeFunctionName i
-
-
+ 
 let rec translate_expr (e:A.expr) : ML T.expr =
   (match e.v with
    | Constant c -> T.Constant c
@@ -837,6 +836,8 @@ let rec translate_probe_action (a:A.probe_action) : ML (T.probe_action & T.decls
     let len = translate_expr len in
     let e, ds = translate_probe_action e in
     T.Probe_action_array len e, ds
+  | A.Probe_action_copy_init_sz f ->
+    T.Probe_action_copy_init_sz f, []
 
 #push-options "--z3rlimit_factor 4"
 let translate_atomic_field (f:A.atomic_field) : ML (T.struct_field & T.decls) =

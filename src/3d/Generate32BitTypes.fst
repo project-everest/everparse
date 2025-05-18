@@ -29,9 +29,6 @@ open GlobalEnv
 type env_t = B.env & list ident 
 let should_specialize (e:env_t) (id:ident) : ML bool = 
   List.existsb (fun id' -> eq_idents id id') (snd e)
-let name32 (head_name:ident) : ident =
-  let gen = reserved_prefix ^ "specialized32_" ^ head_name.v.name in
-  {head_name with v = { head_name.v with name = gen }}
 
 let coercion_for_type (t:ident) : ML ident =
   name32 (GeneralizeProbes.simple_probe_function_for_type t)
@@ -195,33 +192,16 @@ let rec gen_decl (env:env_t) (d:decl) : ML (option decl) =
 
   | _ -> None
 
-let is_identity_probe_function (d:decl)
-: option (ident & list param & ident & (unit -> decl'))
-= match d.d_decl.v with
-  | ProbeFunction id ps v (SimpleProbeFunction tn) ->
-    let mk () = ProbeFunction (name32 id) ps v (SimpleProbeFunction tn) in
-    Some (id, ps, tn, mk)
-
-  | CoerceProbeFunctionStub id ps (CoerceProbeFunction (src, dest)) ->
-    if not <| eq_idents src dest
-    then None
-    else (
-      let mk () = CoerceProbeFunctionStub (name32 id) ps (CoerceProbeFunction(src, dest)) in
-      Some (id, ps, src, mk)
-    )
-  | _ -> None
-
 let gen_decls (e:env_t) (d: decl)
 : ML (list decl & env_t)
-= match is_identity_probe_function d with
-  | None -> [d], e
-  | Some (id, ps, tn, mk) -> (
+= match d.d_decl.v with
+  | CoerceProbeFunctionStub id ps (CoerceProbeFunctionPlaceholder tn) -> (
     let decl, _ = Binding.lookup_type_decl (fst e) tn in
     match gen_decl e decl with
     | None -> 
-      let c = mk() in
+      let c = CoerceProbeFunctionStub id ps (CoerceProbeFunction(tn, tn)) in
       let c = mk_decl c d.d_decl.range [] false in
-      [d;c], e
+      [c], e
     | Some d' ->
       let src =
         match idents_of_decl d' with
@@ -229,15 +209,14 @@ let gen_decls (e:env_t) (d: decl)
         | [_; id] -> id
         | _ -> failwith "Unexpected number of names"
       in
-      let name = name32 id in
       let c =
         mk_decl 
-          (CoerceProbeFunctionStub (name32 id) ps (CoerceProbeFunction (src, tn)))
+          (CoerceProbeFunctionStub id ps (CoerceProbeFunction (src, tn)))
           d.d_decl.range 
           [] 
           false
       in
-      [d'; d; c], (fst e, tn :: snd e)
+      [d'; (* d; *) c], (fst e, tn :: snd e)
   )
   | _ ->
     [d], e
@@ -265,4 +244,3 @@ let generate_32_bit_types (e:GlobalEnv.global_env) (d: list decl)
       d
   in
   List.rev ds
- 

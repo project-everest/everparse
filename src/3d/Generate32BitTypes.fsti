@@ -24,8 +24,6 @@ open Ast
 open FStar.All
 module B = Binding
 
-val name32 (head_name:ident) : ident
-
 val coercion_for_type (t:ident)
 : ML ident
 

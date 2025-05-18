@@ -132,6 +132,7 @@ let ident_to_string i = Printf.sprintf "%s%s"
    | Some m -> m ^ ".")
   i.v.name
 
+
 let ident_name i = i.v.name
 
 exception Error of string
@@ -526,6 +527,9 @@ type probe_action' =
     len:expr ->
     action:probe_action ->
     probe_action'
+  | Probe_action_copy_init_sz:
+    f:ident ->
+    probe_action'
 and probe_action = with_meta_t probe_action'
 
 let probe_action_simple (f:ident) (len:expr) =
@@ -634,12 +638,14 @@ type probe_qualifier =
 [@@ PpxDerivingYoJson ]
 noeq
 type generic_param =
-  | GenericProbeFunction : param_name:ident -> k:typ -> probe_for_type:ident -> generic_param
+  | GenericProbeFunction :
+    param_name:ident -> k:typ -> probe_for_type:ident ->  generic_param
 
 [@@ PpxDerivingYoJson ]
 noeq
 type probe_function_type =
   | SimpleProbeFunction of ident
+  | CoerceProbeFunctionPlaceholder of ident
   | CoerceProbeFunction of ident & ident
   | HelperProbeFunction
 /// A 3d specification a list of declarations
@@ -711,8 +717,8 @@ type decl' =
       
   | CoerceProbeFunctionStub:
       ident ->
-      list param ->
-      p:probe_function_type { CoerceProbeFunction? p } ->
+    list param ->
+      p:probe_function_type { CoerceProbeFunction? p \/ CoerceProbeFunctionPlaceholder? p } ->
       decl'
 
   | OutputType:
@@ -954,6 +960,11 @@ let print_params (ps:list param) =
                (print_qual q)
                (print_typ t)
                (print_ident p))))
+let print_params_nl (ps:list param) =
+  match ps with
+  | [] -> ""
+  | _ ->
+    Printf.sprintf "\n%s\n" (print_params ps)
 
 let print_opt (o:option 'a) (f:'a -> ML string) : ML string =
   match o with
@@ -1004,10 +1015,6 @@ and print_atomic_field (f:atomic_field) : ML string =
     | FieldString (Some sz) -> Printf.sprintf "[:zeroterm-byte-size-at-most %s]" (print_expr sz)
     | FieldConsumeAll -> Printf.sprintf "[:consume-all]"
   in
-  let print_probe_field = function
-    | ProbeLength e -> Printf.sprintf "length=%s" (print_expr e)
-    | ProbeDest e -> Printf.sprintf "destination=%s" (print_expr e)
-  in
   let sf = f.v in
     Printf.sprintf "%s%s %s%s%s%s%s;"
       (if sf.field_dependence then "dependent " else "")
@@ -1017,7 +1024,7 @@ and print_atomic_field (f:atomic_field) : ML string =
       (print_array sf.field_array_opt)
       (print_opt sf.field_constraint (fun e -> Printf.sprintf "{%s}" (print_expr e)))
       (print_opt sf.field_probe
-        (fun p -> Printf.sprintf " probe %s" (print_probe_call p)))
+        (fun p -> Printf.sprintf "\nprobe %s" (print_probe_call p)))
 
 and print_probe_action (p:probe_action) : ML string =
   match p.v with
@@ -1026,18 +1033,18 @@ and print_probe_action (p:probe_action) : ML string =
   | Probe_action_var i ->
     Printf.sprintf "(Probe_action_var %s)" (print_expr i)
   | Probe_action_seq detail hd tl ->
-    Printf.sprintf "(* %s *) %s; %s"
+    Printf.sprintf "(* %s *) %s;\n%s"
       (print_expr detail)
       (print_probe_action hd)
       (print_probe_action tl)
   | Probe_action_let detail i hd tl ->
-    Printf.sprintf "(* %s *) var %s = %s; %s"
+    Printf.sprintf "(* %s *) var %s = %s;\n%s"
       (print_expr detail)
       (print_ident i)
       (print_probe_atomic_action hd)
       (print_probe_action tl)
   | Probe_action_ite hd then_ else_ ->
-    Printf.sprintf "if (%s) { %s } else { %s }"
+    Printf.sprintf "if (%s)\n{\n %s\n}\nelse\n{\n%s\n}"
       (print_expr hd)
       (print_probe_action then_)
       (print_probe_action else_)
@@ -1045,6 +1052,8 @@ and print_probe_action (p:probe_action) : ML string =
     Printf.sprintf "array(%s, %s)"
       (print_expr len)
       (print_probe_action action)
+  | Probe_action_copy_init_sz f ->
+    Printf.sprintf "copy_init_sz(%s)" (print_ident f)
 
 and print_probe_atomic_action (p:probe_atomic_action)
 : ML string
@@ -1060,10 +1069,11 @@ and print_probe_atomic_action (p:probe_atomic_action)
 
 and print_probe_call (p:probe_call) : ML string =
   match p with
-  | { probe_ptr_as_u64; probe_init; probe_dest; probe_block } ->
-    Printf.sprintf "(destination=%s, probe_ptr_as_u64=%s, probe_init=%s) { %s }"
+  | { probe_ptr_as_u64; probe_init; probe_dest; probe_dest_sz; probe_block } ->
+    Printf.sprintf "(destination=%s,\nprobe_ptr_as_u64=%s,\nprobe_dest_sz=%s,\nprobe_init=%s)\n{ %s }\n"
           (print_ident probe_dest)
           (print_opt probe_ptr_as_u64 print_ident)
+          (print_expr probe_dest_sz)
           (print_opt probe_init print_ident)
           (print_probe_action probe_block)
 
@@ -1090,7 +1100,7 @@ and print_action (a:action) : ML string =
 
 and print_switch_case (s:switch_case) : ML string =
   let head, cases = s in
-  Printf.sprintf "switch (%s) {\n
+  Printf.sprintf "switch (%s) {\n\
                   %s\n\
                  }"
                  (print_expr head)
@@ -1117,7 +1127,7 @@ let print_generics generics =
   match generics with
   | [] -> ""
   | _ -> 
-    Printf.sprintf "<%s>" (String.concat ", " (List.map print_generic_param generics))
+    Printf.sprintf "\n<%s>\n" (String.concat ",\n" (List.map print_generic_param generics))
 
 let print_attribute (a:attribute) : ML string =
   match a with
@@ -1131,8 +1141,15 @@ let print_attributes (a:list attribute) : ML string =
   | _ -> Printf.sprintf "[%s]" (String.concat ", " (List.map print_attribute a)) ^ " "
 let print_probe_function_type = function
   | SimpleProbeFunction i -> print_ident i
+  | CoerceProbeFunctionPlaceholder i -> Printf.sprintf "placeholder %s" (print_ident i)
   | CoerceProbeFunction (i,j) -> Printf.sprintf "%s -> %s" (print_ident i) (print_ident j)
   | HelperProbeFunction -> "helper"
+let print_probe_qualifier = function
+  | PQWithOffsets -> "with-offsets"
+  | PQInit -> "(INIT)"
+  | PQRead i -> Printf.sprintf "(READ %s)" (print_integer_type i)
+  | PQWrite i -> Printf.sprintf "(WRITE %s)" (print_integer_type i)
+
 let print_decl' (d:decl') : ML string =
   match d with
   | ModuleAbbrev i m -> Printf.sprintf "module %s = %s" (print_ident i) (print_ident m)
@@ -1167,7 +1184,7 @@ let print_decl' (d:decl') : ML string =
                     (print_attributes td.typedef_attributes)
                     (ident_to_string td.typedef_name)
                     (print_generics generics)
-                    (print_params params)
+                    (print_params_nl params)
                     (match wopt with | None -> "" | Some e -> " where " ^ print_expr e)
                     (String.concat "\n" (List.map print_field fields))
                     (ident_to_string td.typedef_abbrev)
@@ -1204,8 +1221,16 @@ let print_decl' (d:decl') : ML string =
       (print_ident j)
   | OutputType out_t -> "Printing for output types is TBD"
   | ExternType _ -> "Printing for extern types is TBD"
-  | ExternFn _ _ _ _
-  | ExternProbe _ _ -> "Printing for extern functions is TBD"
+  | ExternFn id t ps pure ->
+    Printf.sprintf "extern %s%s %s%s"
+      (if pure then "PURE " else "")
+      (print_typ t)
+      (print_ident id)
+      (print_params ps)   
+  | ExternProbe id q ->
+    Printf.sprintf "extern probe %s %s"
+      (print_probe_qualifier q)
+      (print_ident id)
 
 let print_decl (d:decl) : ML string =
   match d.d_decl.comments with
@@ -1468,6 +1493,7 @@ and eq_typs (ts1 ts2:list typ) : Tot bool =
 let dummy_range = dummy_pos, dummy_pos
 let with_dummy_range x = with_range x dummy_range
 let to_ident' x = {modul_name=None;name=x}
+let mk_ident x = with_dummy_range <| to_ident' x
 let mk_prim_t x = with_dummy_range (Type_app (with_dummy_range (to_ident' x)) KindSpec [] [])
 let tbool = mk_prim_t "Bool"
 let tstring = mk_prim_t "string"
@@ -1569,6 +1595,8 @@ let rec subst_probe_action (s:subst) (a:probe_action) : ML probe_action =
     {a with v = Probe_action_ite (subst_expr s hd) (subst_probe_action s then_) (subst_probe_action s else_) }
   | Probe_action_array len action ->
     {a with v = Probe_action_array (subst_expr s len) (subst_probe_action s action) }
+  | Probe_action_copy_init_sz f ->
+    {a with v = Probe_action_copy_init_sz f }
 //No need to substitute in output expressions
 let subst_out_expr (s:subst) (o:out_expr) : out_expr = o
 let subst_typ_param (s:subst) (p:typ_param) : ML typ_param =
@@ -1720,3 +1748,7 @@ let idents_of_decl (d:decl) =
     | This -> []
     | App SizeOf _ -> []
     | App _ es -> List.fold_left (fun out e -> free_vars_of_expr e @ out) [] es
+  
+let name32 (head_name:ident) : ident =
+  let gen = reserved_prefix ^ "specialized32_" ^ head_name.v.name in
+  {head_name with v = { head_name.v with name = gen }}

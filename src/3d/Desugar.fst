@@ -344,6 +344,8 @@ let rec resolve_probe_action' (env:qenv) (act:probe_action') : ML probe_action' 
     Probe_action_ite (resolve_expr env hd) (resolve_probe_action env then_) (resolve_probe_action env else_)
   | Probe_action_array len body ->
     Probe_action_array (resolve_expr env len) (resolve_probe_action env body)
+  | Probe_action_copy_init_sz f ->
+    Probe_action_copy_init_sz (resolve_ident env f)
 and resolve_probe_action (env:qenv) (act:probe_action) : ML probe_action =
   { act with v = resolve_probe_action' env act.v }
 
@@ -468,6 +470,7 @@ let resolve_out_type (env:qenv) (out_t:out_typ) : ML out_typ =
 
 let resolve_probe_function_type env = function
     | SimpleProbeFunction id -> SimpleProbeFunction (resolve_ident env id)
+    | CoerceProbeFunctionPlaceholder i -> CoerceProbeFunctionPlaceholder (resolve_ident env i)
     | CoerceProbeFunction (x, y) -> CoerceProbeFunction (resolve_ident env x, resolve_ident env y)
     | HelperProbeFunction -> HelperProbeFunction
 

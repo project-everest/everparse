@@ -89,7 +89,6 @@ let read_and_coerce_id = with_dummy_range <| to_ident' "read_and_coerce_pointer"
 let copy_bytes_id = with_dummy_range <| to_ident' "copy_bytes"
 let skip_bytes_read_id = with_dummy_range <| to_ident' "skip_bytes_read"
 let skip_bytes_write_id = with_dummy_range <| to_ident' "skip_bytes_write"
-let mk_ident x = with_dummy_range <| to_ident' x
 let mk_expr x = with_dummy_range <| Identifier (mk_ident x)
 let mk_probe_helpers (e:env)
 : ML (list decl)
@@ -486,33 +485,35 @@ let rec optimize_coercion (p:probe_action)
   
 let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
 : ML decl
-= let CoerceProbeFunctionStub i params (CoerceProbeFunction (t0, t1)) = d.d_decl.v in
-  Options.debug_print_string <|
-  Printf.sprintf "Replacing stub %s (from %s to %s)\n"
-    i.v.name (print_ident t0) (print_ident t1);
-  let d0, _ = B.lookup_type_decl e t0 in
-  let d1, _ = B.lookup_type_decl e t1 in
-  let e = { benv=e; params=B.params_of_decl d } in
-  let coercion =
-    match d0.d_decl.v, d1.d_decl.v with
-    | Record _ _ _ _ r0, Record _ _ _ _ r1 ->
-      coerce_fields e r0 r1
-    | CaseType _ _ params0 r0, CaseType _ _ params1 r1 ->
-      if List.length params0 <> List.length params1
-      then failwith "Cannot coerce case types with different number of parameters";
-      coerce_switch_case e r0 r1
-    | _ ->
-      error
-        (Printf.sprintf "Type %s is not coercible to %s" (print_ident t0) (print_ident t1))
-        d.d_decl.range
-  in
-  let probe_action = optimize_coercion coercion in
-  let probe_fn = { 
-      d.d_decl with
-      v = ProbeFunction i params probe_action (CoerceProbeFunction(t0, t1)) 
-    }
-  in
-  { d with d_decl = probe_fn }
+= match d.d_decl.v with
+  | CoerceProbeFunctionStub i params (CoerceProbeFunction (t0, t1)) ->
+    Options.debug_print_string <|
+    Printf.sprintf "Replacing stub %s (from %s to %s)\n"
+      i.v.name (print_ident t0) (print_ident t1);
+    let d0, _ = B.lookup_type_decl e t0 in
+    let d1, _ = B.lookup_type_decl e t1 in
+    let e = { benv=e; params=B.params_of_decl d } in
+    let coercion =
+      match d0.d_decl.v, d1.d_decl.v with
+      | Record _ _ _ _ r0, Record _ _ _ _ r1 ->
+        coerce_fields e r0 r1
+      | CaseType _ _ params0 r0, CaseType _ _ params1 r1 ->
+        if List.length params0 <> List.length params1
+        then failwith "Cannot coerce case types with different number of parameters";
+        coerce_switch_case e r0 r1
+      | _ ->
+        error
+          (Printf.sprintf "Type %s is not coercible to %s" (print_ident t0) (print_ident t1))
+          d.d_decl.range
+    in
+    let probe_action = optimize_coercion coercion in
+    let probe_fn = { 
+        d.d_decl with
+        v = ProbeFunction i params probe_action (CoerceProbeFunction(t0, t1)) 
+      }
+    in
+    { d with d_decl = probe_fn }
+  | _ -> d
 
 
 let replace_stubs (e:global_env) (ds:list decl)

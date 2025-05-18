@@ -173,7 +173,10 @@ BOOLEAN ProbeAndCopy(
 
 BOOLEAN ProbeInit(uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
   printf("ProbeInit: len=%lu\n", len);
-  return true;
+  copy_buffer_t *cp = (copy_buffer_t*)dst;
+  if (len == cp->len)
+  { return true; }
+  return false;
 }
 
 // THE MAIN TEST FUNCTION
