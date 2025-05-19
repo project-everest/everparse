@@ -47,6 +47,9 @@ let specialize_atomic_field (e:B.env) (af:atomic_field)
           with_dummy_range <| App (ProbeFunctionName coercion) args
         | _ -> failwith (Printf.sprintf "Unexpected probe block: %s\n" (print_probe_action pc.probe_block))
       in
+      (* Note: it is important to not specialize the pc.probe_dest_sz, as that is
+         invariant with specialization: it's the size of the probe destination buffer
+         *after* coercion of the 32-bit layout to 64-bit layout *)
       Some { pc with probe_block = with_dummy_range <| Probe_action_var pb }
     )
   in

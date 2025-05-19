@@ -263,8 +263,8 @@ let check_scope (env:env) (e:expr)
     then (
       error 
         (Printf.sprintf
-          "Cannot coerce a type with a data-dependent length;\
-           the length of this type may depend on the field `%s`\n"
+          "Cannot coerce a type with a data-dependent length; \
+           the length of this type may depend on the field `%s`"
            (print_ident i))
         i.range
     ))
@@ -407,7 +407,34 @@ let rec coerce_fields (e:env) (r0 r1:record)
   )
   | [], [] ->
     probe_return_unit
-  | _ -> failwith "Unexpected number of fields"
+  | hd::tl, [] -> (
+    match hd.v with
+    | AtomicField af -> (
+      if TypeSizes.is_alignment_field af.v.field_ident
+      then (
+        let n = alignment_bytes af in
+        continue "alignment" (iskip_bytes_read n) (coerce_fields e tl [])
+      )
+      else error ("Unexpected fields: extra non-alignment field in LHS type") af.v.field_ident.range
+    )
+    | _ -> 
+      error ("Unexpected fields: extra non-alignment field in LHS type") hd.range
+  )
+
+  | [], hd::tl-> (
+    match hd.v with
+    | AtomicField af -> (
+      if TypeSizes.is_alignment_field af.v.field_ident
+      then (
+        let n = alignment_bytes af in
+        continue "alignment" (iskip_bytes_write n) (coerce_fields e [] tl)
+      ) 
+      else error ("Unexpected fields: extra non-alignment field in RHS type") af.v.field_ident.range
+    )
+    | _ -> 
+      error ("Unexpected fields: extra non-alignment field in RHS type") hd.range
+  )
+
 
 and coerce_switch_case (e:env) (sw0 sw1:switch_case)
 : ML probe_action
@@ -496,6 +523,10 @@ let replace_stub (e:B.env) (d:decl { CoerceProbeFunctionStub? d.d_decl.v })
     let coercion =
       match d0.d_decl.v, d1.d_decl.v with
       | Record _ _ _ _ r0, Record _ _ _ _ r1 ->
+        Options.debug_print_string <|
+          Printf.sprintf "Coercing record %s to %s\nfields lhs: %s\nfields rhs: %s" 
+            (print_ident t0) (print_ident t1)
+            (print_record r0) (print_record r1);
         coerce_fields e r0 r1
       | CaseType _ _ params0 r0, CaseType _ _ params1 r1 ->
         if List.length params0 <> List.length params1
