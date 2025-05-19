@@ -73,6 +73,7 @@ val postprocess_fst
   (add_include: list string)
   (clang_format: bool)
   (clang_format_executable: string)
+  (copy_clang_format_opt: bool)
   (skip_c_makefiles: bool)
   (cleanup: bool)
   (no_everparse_h: bool)

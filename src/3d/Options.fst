@@ -27,6 +27,7 @@ let add_include : ref (list vstring) = alloc []
 let batch : ref bool = alloc false
 let clang_format : ref bool = alloc false
 let clang_format_executable : ref (option vstring) = alloc None
+let clang_format_use_custom_config : ref bool = alloc false
 let cleanup : ref bool = alloc false
 let config_file : ref (option (valid_string check_config_file_name)) = alloc None
 let debug : ref bool = alloc false
@@ -337,6 +338,7 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "check_inplace_hash" (OptList "file.3d=file.h" always_valid inplace_hashes) "Check hashes stored in one .h/.c file" [];
     CmdOption "clang_format" (OptBool clang_format) "Call clang-format on extracted .c/.h files" [];
     CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["clang_format"];
+    CmdOption "clang_format_use_custom_config" (OptBool clang_format) "Skip copying .clang-format from EverParse, use existing one instead" ["clang_format"];
     CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and krml-args.rsp (--batch only)" [];
     CmdOption "config" (OptStringOption "config file" check_config_file_name config_file) "The name of a JSON formatted file containing configuration options" [];    
     CmdOption "emit_output_types_defs" (OptBool emit_output_types_defs) "Emit definitions of output types in a .h file" [];
@@ -425,6 +427,9 @@ let get_clang_format_executable () =
   match !clang_format_executable with
   | None -> ""
   | Some s -> s
+
+let get_clang_format_use_custom_config () =
+  !clang_format_use_custom_config
 
 let get_cleanup () =
   !cleanup
