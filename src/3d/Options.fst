@@ -336,8 +336,8 @@ let (display_usage_2, compute_options_2, fstar_options) =
     CmdOption "batch" (OptBool batch) "Verify the generated F* code and extract C code" [];
     CmdOption "check_hashes" (OptStringOption "weak|strong|inplace" valid_check_hashes check_hashes) "Check hashes" ["batch"];
     CmdOption "check_inplace_hash" (OptList "file.3d=file.h" always_valid inplace_hashes) "Check hashes stored in one .h/.c file" [];
-    CmdOption "clang_format" (OptBool clang_format) "Call clang-format on extracted .c/.h files" [];
-    CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["clang_format"];
+    CmdOption "clang_format" (OptBool clang_format) "Call clang-format on extracted .c/.h files (--batch only)" ["batch"];
+    CmdOption "clang_format_executable" (OptStringOption "clang-format full path" always_valid clang_format_executable) "Set the path to clang-format if not reachable through PATH" ["batch"; "clang_format"];
     CmdOption "clang_format_use_custom_config" (OptBool clang_format) "Skip copying .clang-format from EverParse, use existing one instead" ["clang_format"];
     CmdOption "cleanup" (OptBool cleanup) "Remove *.fst*, *.krml and krml-args.rsp (--batch only)" [];
     CmdOption "config" (OptStringOption "config file" check_config_file_name config_file) "The name of a JSON formatted file containing configuration options" [];    
