@@ -11,7 +11,7 @@ extern probe (INIT) ProbeInit
 extern PURE UINT64 UlongToPtr(UINT32 ptr)
 
 aligned
-typedef struct _LFD_64
+typedef struct _S_LFD
 {
     UINT32 Base;
 
@@ -19,19 +19,19 @@ typedef struct _LFD_64
     USHORT f2;
     USHORT f3;
   
-    UNINTERPRETED *ptr1;
-    UNINTERPRETED *ptr2;
-    UNINTERPRETED *ptr3;
+    UINT8 *ptr1;
+    UINT8 *ptr2;
+    UINT8 *ptr3;
 
     USHORT f4;
     USHORT f5;
 
-} LFD64;
+} S_LFD;
 
 typedef struct _PLFD(EVERPARSE_COPY_BUFFER_T out)
 {
-    LFD64 *pointer(UINT64) plog
-        probe ProbeAndCopy(length=sizeof(LFD_64), destination=out);
+    S_LFD *pointer(UINT64) plog
+        probe ProbeAndCopy(length=sizeof(S_LFD), destination=out);
 } PLFD;
 
 specialize (pointer(UINT64), pointer(UINT32)) PLFD PLFD32;
