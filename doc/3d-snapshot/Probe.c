@@ -115,6 +115,48 @@ ValidateT(
   return positionAfterT;
 }
 
+static void
+SProbeTpointerT(
+  EVERPARSE_STRING Tn,
+  EVERPARSE_STRING Fn,
+  uint8_t *Ctxt,
+  void
+  (*Err)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
+  uint64_t *ReadOffset,
+  uint64_t *WriteOffset,
+  BOOLEAN *Failed,
+  uint64_t Src,
+  uint64_t Sz,
+  EVERPARSE_COPY_BUFFER_T Dest
+)
+{
+  uint64_t res1 = Sz;
+  BOOLEAN hasFailed = *Failed;
+  if (hasFailed)
+  {
+    Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
+    return;
+  }
+  uint64_t rd = *ReadOffset;
+  uint64_t wr = *WriteOffset;
+  BOOLEAN ok = ProbeAndCopy(res1, rd, wr, Src, Dest);
+  if (ok)
+  {
+    *ReadOffset = rd + res1;
+    *WriteOffset = wr + res1;
+    return;
+  }
+  *Failed = TRUE;
+}
+
 uint64_t
 ProbeValidateS(
   EVERPARSE_COPY_BUFFER_T Dest,
@@ -196,18 +238,16 @@ ProbeValidateS(
     BOOLEAN ok = ProbeInit((uint64_t)8U, Dest);
     if (ok)
     {
-      uint64_t rd = readOffset;
-      uint64_t wr = writeOffset;
-      BOOLEAN ok1 = ProbeAndCopy((uint64_t)8U, rd, wr, src64, Dest);
-      if (ok1)
-      {
-        readOffset = rd + (uint64_t)8U;
-        writeOffset = wr + (uint64_t)8U;
-      }
-      else
-      {
-        failed = TRUE;
-      }
+      SProbeTpointerT("_S",
+        "tpointer",
+        Ctxt,
+        ErrorHandlerFn,
+        &readOffset,
+        &writeOffset,
+        &failed,
+        src64,
+        (uint64_t)8U,
+        Dest);
     }
     else
     {
@@ -272,6 +312,48 @@ ProbeValidateS(
     Input,
     positionAfterbound);
   return positionAfterS0;
+}
+
+static void
+UProbeSpointerS(
+  EVERPARSE_STRING Tn,
+  EVERPARSE_STRING Fn,
+  uint8_t *Ctxt,
+  void
+  (*Err)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
+  uint64_t *ReadOffset,
+  uint64_t *WriteOffset,
+  BOOLEAN *Failed,
+  uint64_t Src,
+  uint64_t Sz,
+  EVERPARSE_COPY_BUFFER_T Dest
+)
+{
+  uint64_t res1 = Sz;
+  BOOLEAN hasFailed = *Failed;
+  if (hasFailed)
+  {
+    Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
+    return;
+  }
+  uint64_t rd = *ReadOffset;
+  uint64_t wr = *WriteOffset;
+  BOOLEAN ok = ProbeAndCopy(res1, rd, wr, Src, Dest);
+  if (ok)
+  {
+    *ReadOffset = rd + res1;
+    *WriteOffset = wr + res1;
+    return;
+  }
+  *Failed = TRUE;
 }
 
 uint64_t
@@ -357,18 +439,16 @@ ProbeValidateU(
     BOOLEAN ok = ProbeInit((uint64_t)9U, DestS);
     if (ok)
     {
-      uint64_t rd = readOffset;
-      uint64_t wr = writeOffset;
-      BOOLEAN ok1 = ProbeAndCopyAlt((uint64_t)9U, rd, wr, src64, DestS);
-      if (ok1)
-      {
-        readOffset = rd + (uint64_t)9U;
-        writeOffset = wr + (uint64_t)9U;
-      }
-      else
-      {
-        failed = TRUE;
-      }
+      UProbeSpointerS("_U",
+        "spointer",
+        Ctxt,
+        ErrorHandlerFn,
+        &readOffset,
+        &writeOffset,
+        &failed,
+        src64,
+        (uint64_t)9U,
+        DestS);
     }
     else
     {
@@ -433,6 +513,132 @@ ProbeValidateU(
     Input,
     positionAftertag);
   return positionAfterU0;
+}
+
+static void
+VProbeSptrS(
+  EVERPARSE_STRING Tn,
+  EVERPARSE_STRING Fn,
+  uint8_t *Ctxt,
+  void
+  (*Err)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
+  uint64_t *ReadOffset,
+  uint64_t *WriteOffset,
+  BOOLEAN *Failed,
+  uint64_t Src,
+  uint64_t Sz,
+  EVERPARSE_COPY_BUFFER_T Dest
+)
+{
+  uint64_t res1 = Sz;
+  BOOLEAN hasFailed = *Failed;
+  if (hasFailed)
+  {
+    Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
+    return;
+  }
+  uint64_t rd = *ReadOffset;
+  uint64_t wr = *WriteOffset;
+  BOOLEAN ok = ProbeAndCopy(res1, rd, wr, Src, Dest);
+  if (ok)
+  {
+    *ReadOffset = rd + res1;
+    *WriteOffset = wr + res1;
+    return;
+  }
+  *Failed = TRUE;
+}
+
+static void
+VProbeTptrT(
+  EVERPARSE_STRING Tn,
+  EVERPARSE_STRING Fn,
+  uint8_t *Ctxt,
+  void
+  (*Err)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
+  uint64_t *ReadOffset,
+  uint64_t *WriteOffset,
+  BOOLEAN *Failed,
+  uint64_t Src,
+  uint64_t Sz,
+  EVERPARSE_COPY_BUFFER_T Dest
+)
+{
+  uint64_t res1 = Sz;
+  BOOLEAN hasFailed = *Failed;
+  if (hasFailed)
+  {
+    Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
+    return;
+  }
+  uint64_t rd = *ReadOffset;
+  uint64_t wr = *WriteOffset;
+  BOOLEAN ok = ProbeAndCopy(res1, rd, wr, Src, Dest);
+  if (ok)
+  {
+    *ReadOffset = rd + res1;
+    *WriteOffset = wr + res1;
+    return;
+  }
+  *Failed = TRUE;
+}
+
+static void
+VProbeT2ptrT(
+  EVERPARSE_STRING Tn,
+  EVERPARSE_STRING Fn,
+  uint8_t *Ctxt,
+  void
+  (*Err)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
+  uint64_t *ReadOffset,
+  uint64_t *WriteOffset,
+  BOOLEAN *Failed,
+  uint64_t Src,
+  uint64_t Sz,
+  EVERPARSE_COPY_BUFFER_T Dest
+)
+{
+  uint64_t res1 = Sz;
+  BOOLEAN hasFailed = *Failed;
+  if (hasFailed)
+  {
+    Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
+    return;
+  }
+  uint64_t rd = *ReadOffset;
+  uint64_t wr = *WriteOffset;
+  BOOLEAN ok = ProbeAndCopy(res1, rd, wr, Src, Dest);
+  if (ok)
+  {
+    *ReadOffset = rd + res1;
+    *WriteOffset = wr + res1;
+    return;
+  }
+  *Failed = TRUE;
 }
 
 uint64_t
@@ -517,18 +723,16 @@ ProbeValidateV(
     BOOLEAN ok = ProbeInit((uint64_t)9U, DestS);
     if (ok)
     {
-      uint64_t rd = readOffset;
-      uint64_t wr = writeOffset;
-      BOOLEAN ok1 = ProbeAndCopy((uint64_t)9U, rd, wr, src64, DestS);
-      if (ok1)
-      {
-        readOffset = rd + (uint64_t)9U;
-        writeOffset = wr + (uint64_t)9U;
-      }
-      else
-      {
-        failed = TRUE;
-      }
+      VProbeSptrS("_V",
+        "sptr",
+        Ctxt,
+        ErrorHandlerFn,
+        &readOffset,
+        &writeOffset,
+        &failed,
+        src64,
+        (uint64_t)9U,
+        DestS);
     }
     else
     {
@@ -629,18 +833,16 @@ ProbeValidateV(
     BOOLEAN ok = ProbeInit((uint64_t)8U, DestT);
     if (ok)
     {
-      uint64_t rd = readOffset;
-      uint64_t wr = writeOffset;
-      BOOLEAN ok1 = ProbeAndCopyAlt((uint64_t)8U, rd, wr, src64, DestT);
-      if (ok1)
-      {
-        readOffset = rd + (uint64_t)8U;
-        writeOffset = wr + (uint64_t)8U;
-      }
-      else
-      {
-        failed = TRUE;
-      }
+      VProbeTptrT("_V",
+        "tptr",
+        Ctxt,
+        ErrorHandlerFn,
+        &readOffset,
+        &writeOffset,
+        &failed,
+        src64,
+        (uint64_t)8U,
+        DestT);
     }
     else
     {
@@ -741,18 +943,16 @@ ProbeValidateV(
     BOOLEAN ok = ProbeInit((uint64_t)8U, DestT);
     if (ok)
     {
-      uint64_t rd = readOffset;
-      uint64_t wr = writeOffset;
-      BOOLEAN ok1 = ProbeAndCopy((uint64_t)8U, rd, wr, src64, DestT);
-      if (ok1)
-      {
-        readOffset = rd + (uint64_t)8U;
-        writeOffset = wr + (uint64_t)8U;
-      }
-      else
-      {
-        failed = TRUE;
-      }
+      VProbeT2ptrT("_V",
+        "t2ptr",
+        Ctxt,
+        ErrorHandlerFn,
+        &readOffset,
+        &writeOffset,
+        &failed,
+        src64,
+        (uint64_t)8U,
+        DestT);
     }
     else
     {
@@ -859,21 +1059,42 @@ static inline uint64_t ValidateTt(uint64_t InputLength, uint64_t StartPosition)
 }
 
 static void
-ProbeTt(
+IProbeTtptrTt(
+  EVERPARSE_STRING Tn,
+  EVERPARSE_STRING Fn,
+  uint8_t *Ctxt,
+  void
+  (*Err)(
+    EVERPARSE_STRING x0,
+    EVERPARSE_STRING x1,
+    EVERPARSE_STRING x2,
+    uint64_t x3,
+    uint8_t *x4,
+    uint8_t *x5,
+    uint64_t x6
+  ),
   uint64_t *ReadOffset,
   uint64_t *WriteOffset,
   BOOLEAN *Failed,
   uint64_t Src,
+  uint64_t Sz,
   EVERPARSE_COPY_BUFFER_T Dest
 )
 {
+  uint64_t res1 = Sz;
+  BOOLEAN hasFailed = *Failed;
+  if (hasFailed)
+  {
+    Err(Tn, Fn, "probe_and_copy_init_sz", 0ULL, Ctxt, EverParseStreamOf(Dest), 0ULL);
+    return;
+  }
   uint64_t rd = *ReadOffset;
   uint64_t wr = *WriteOffset;
-  BOOLEAN ok = ProbeAndCopy((uint64_t)9U, rd, wr, Src, Dest);
+  BOOLEAN ok = ProbeAndCopy(res1, rd, wr, Src, Dest);
   if (ok)
   {
-    *ReadOffset = rd + (uint64_t)9U;
-    *WriteOffset = wr + (uint64_t)9U;
+    *ReadOffset = rd + res1;
+    *WriteOffset = wr + res1;
     return;
   }
   *Failed = TRUE;
@@ -926,7 +1147,16 @@ ProbeValidateI(
     BOOLEAN ok = ProbeInit((uint64_t)9U, Dest);
     if (ok)
     {
-      ProbeTt(&readOffset, &writeOffset, &failed, src64, Dest);
+      IProbeTtptrTt("_I",
+        "ttptr",
+        Ctxt,
+        ErrorHandlerFn,
+        &readOffset,
+        &writeOffset,
+        &failed,
+        src64,
+        (uint64_t)9U,
+        Dest);
     }
     else
     {

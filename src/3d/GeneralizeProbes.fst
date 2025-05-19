@@ -412,18 +412,10 @@ and generalize_probe_cases (e:env) (path_prefix:string) (cs:list case)
        f::fs, gs'@gs, is'@is)
     cs ([], [], [])
 
-let default_instantiation (e:env) (r:range) (head_type:ident)
-: ML expr 
-= match simple_probe_name_for_type e head_type with
-  | None ->
-    failwith (Printf.sprintf "Could not find probe instantiation for %s\n"
-                (print_ident head_type))
-  | Some probe_inst ->
-    with_range (Identifier probe_inst) r
-
 let default_instantiation_subst
       (e:env)
       (r:range)
+      (enclosing_type:typedef_names)
       (gs:list generic_param)
       (sig:generalized_signature)
 : ML (list decl & subst)
@@ -435,7 +427,11 @@ let default_instantiation_subst
       with_range (Probe_action_copy_init_sz probe_and_copy_n) r
     in
     let default_name_for param_name type_name =
-      let name = Printf.sprintf "%s_%s" param_name.v.name type_name.v.name in
+      let name =
+        Printf.sprintf "%s_%s_%s" 
+          enclosing_type.typedef_abbrev.v.name
+          param_name.v.name
+          type_name.v.name in
       { param_name with v = { param_name.v with name } }
     in
     let formals_of_type (t:typ) : ML (list param) =
@@ -512,7 +508,7 @@ let generalize_probes_decl (e:env) (d:decl)
               (String.concat "; " <| List.map print_field fields));
       if not <| should_generalize e names
       then (
-        let ds, s = default_instantiation_subst e d.d_decl.range gs' sig in
+        let ds, s = default_instantiation_subst e d.d_decl.range names gs' sig in
         let fields = List.map (subst_field s) fields in
         let d = { d with 
                 d_decl = { d.d_decl with 
@@ -546,7 +542,7 @@ let generalize_probes_decl (e:env) (d:decl)
               (String.concat "; " <| List.map print_case cases));
       if not <| should_generalize e names
       then (
-        let ds, s = default_instantiation_subst e d.d_decl.range gs' sig in
+        let ds, s = default_instantiation_subst e d.d_decl.range names gs' sig in
         let cases' = List.map (subst_case s) cases in
         let d = { d with 
             d_decl = { d.d_decl with 
