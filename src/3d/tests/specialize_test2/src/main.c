@@ -188,7 +188,7 @@ int testuh64(void) {
   };
   uint64_t uh64_ptr = (uint64_t)uh64;
   uint8_t *input_buffer = (uint8_t*)&uh64_ptr;
-  printf("Calling validator with pointer %lu, whereas uh64=%lu\n", Load64Le(input_buffer), uh64);
+  printf("Calling validator with pointer %lu, whereas uh64=%lu\n", Load64Le(input_buffer), uh64_ptr);
   if (SpecializeVlarrayCheckUnknownHeaders(
       false,
       UnknownHeaderCount,
@@ -222,7 +222,7 @@ int testuh32(void) {
   };
   uint64_t uh32_ptr = (uint64_t)uh32;
   uint8_t *input_buffer = (uint8_t*)&uh32_ptr;
-  printf("Calling validator with pointer %lu, whereas uh32=%lu\n", Load64Le(input_buffer), uh32);
+  printf("Calling validator with pointer %lu, whereas uh32=%lu\n", Load64Le(input_buffer), uh32_ptr);
   if (SpecializeVlarrayCheckUnknownHeaders(
       true,
       UnknownHeaderCount,
