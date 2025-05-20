@@ -1,4 +1,4 @@
-This package contains the supplementary material for ACM CCS 2025 submission.
+This EverParse branch contains a verified implementation of CBOR and COSE signing, as well as a verified parser and serializer generator from CDDL descriptions.
 
 A Dockerfile is included to rebuild everything, including Everest dependencies, F*, etc. To build it, just run `docker build -t evercbor .`
 

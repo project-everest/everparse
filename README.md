@@ -11,7 +11,7 @@ For more information, you can read:
 
 ## CBOR and COSE
 
-The following instructions work without F*. For more details on the proofs, see `README-ccs2025.md`
+The following instructions work without F*. For more details on the proofs, see `README-cbor.md`
 
 ### CBOR
 
