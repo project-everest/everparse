@@ -8,7 +8,7 @@ typedef struct _T {
 entrypoint
 typedef struct _S(EVERPARSE_COPY_BUFFER_T dest) {
   UINT8 tag;
-  T *t probe (length = 8, destination = dest);
+  T *t probe ProbeAndCopy(length = 8, destination = dest);
 } S;
 
 
@@ -16,5 +16,5 @@ typedef struct _S(EVERPARSE_COPY_BUFFER_T dest) {
 entrypoint
 typedef struct _R(EVERPARSE_COPY_BUFFER_T dest) {
   UINT8 tag;
-  S(dest) *s probe (length = 9, destination = dest);
+  S(dest) *s probe ProbeAndCopy(length = 9, destination = dest);
 } R;

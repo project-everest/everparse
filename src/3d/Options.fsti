@@ -22,6 +22,8 @@ val get_clang_format : unit -> ML bool
 
 val get_clang_format_executable : unit -> ML string
 
+val get_clang_format_use_custom_config: unit -> ML bool
+
 val get_cleanup : unit -> ML bool
 
 val get_skip_c_makefiles : unit -> ML bool
@@ -82,6 +84,12 @@ val get_test_checker: unit -> ML (option string)
 
 val get_z3_branch_depth: unit -> ML nat
 
+val get_z3_flight_name: unit -> ML string
+
 val get_produce_testcases_c: unit -> ML bool
+
+val get_z3_skip_c_initializers: unit -> ML bool
+
+val get_z3_use_ptr: unit -> ML bool
 
 val get_fstar_exe: unit -> ML string

@@ -1,4 +1,5 @@
 extern probe ProbeInPlace
+extern probe (INIT) ProbeInit
 
 #define PROBE_LENGTH 28
 

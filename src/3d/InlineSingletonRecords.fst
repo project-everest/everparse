@@ -17,7 +17,7 @@ module InlineSingletonRecords
 open Ast
 open FStar.All
 module H = Hashtable
-type singleton_record = list param & atomic_field
+type singleton_record = list generic_param & list param & atomic_field
 let env = H.t ident' singleton_record
 
 (*
@@ -41,33 +41,27 @@ let simplify_atomic_field (env:env) (f:atomic_field)
   = let field = f.v in
     let field = 
       match field.field_type.v with
-      | Pointer _ -> (
-        if Some? field.field_probe
-        then field
-        else failwith "Impossible: field types cannot be pointers"
-      ) 
-      | Type_app hd _ args ->
+      | Type_arrow _ _
+      | Pointer _ _ -> field
+      | Type_app hd _ gs args ->
         begin
         match H.try_find env hd.v with
         | None -> //not a singleton record
           field
-        | Some (params, inlined_field) ->
+        | Some (generics, params, inlined_field) ->
           match field.field_array_opt, field.field_bitwidth with
           | FieldArrayQualified _, _
           | FieldString _, _
           | _, Some _ ->  //cannot be inlined
             field
           | _ -> 
-            let subst = 
-               List.map2 
-               (fun (_t, x, _q) e ->
-                match e with
-                | Inr _ -> failwith "Cannot inline singleton records with output type parameters"
-                | Inl e -> (x, e))
-               params args
+            let subst =
+              Ast.extend_substitute
+                [(inlined_field.v.field_ident, with_dummy_range (Identifier field.field_ident))]
+                (gs, generics)
+                (args, params)
             in
-            let subst = (inlined_field.v.field_ident, with_dummy_range (Identifier field.field_ident)) :: subst in
-            let inlined_field = subst_atomic_field (mk_subst subst) inlined_field in
+            let inlined_field = subst_atomic_field subst inlined_field in
             let error msg = 
               let msg = 
                 Printf.sprintf "Other types depend on the value of this field, but this field cannot be read because %s"
@@ -137,7 +131,7 @@ let simplify_decl (env:env) (d:decl) : ML decl =
   | Define _ _ _ ->
     d
 
-  | TypeAbbrev t i ->
+  | TypeAbbrev _ _ _ _ _ ->
     d
 
   | Enum t i cases ->
@@ -180,35 +174,39 @@ let simplify_decl (env:env) (d:decl) : ML decl =
       (Printf.sprintf "For Enum %s, inserting field = %s\n"
         i.v.name
         (print_atomic_field af));
-    H.insert env i.v ([], af);
+    H.insert env i.v ([], [], af);
     d
     
-  | Record tdnames params None [{v = AtomicField field; range; comments}] -> //singleton
+  | Record tdnames generics params None [{v = AtomicField field; range; comments}] -> //singleton
     begin
     match field.v with
     | { field_array_opt = FieldArrayQualified _ }
     | { field_array_opt = FieldString _ }
-    | { field_bitwidth = Some _ } ->
+    | { field_bitwidth = Some _ }
+    | { field_probe = Some _ } ->
        d
     | _ -> 
       let af = simplify_atomic_field env field in
-      H.insert env tdnames.typedef_name.v (params, field);
+      H.insert env tdnames.typedef_name.v (generics, params, field);
       let field = with_range_and_comments (AtomicField af) range comments in
-      decl_with_v d (Record tdnames params None [field])
+      decl_with_v d (Record tdnames generics params None [field])
     end
 
-  | Record tdnames params wopt fields ->
+  | Record tdnames generics params wopt fields ->
     let fields = List.map (simplify_field env) fields in
-    decl_with_v d (Record tdnames params wopt fields)
+    decl_with_v d (Record tdnames generics params wopt fields)
 
-  | CaseType tdnames params switch ->
+  | CaseType tdnames generics params switch ->
     let switch = simplify_switch_case env switch in
-    decl_with_v d (CaseType tdnames params switch)
+    decl_with_v d (CaseType tdnames generics params switch)
 
+  | Specialize _ _ _
+  | ProbeFunction _ _ _ _
+  | CoerceProbeFunctionStub _ _ _
   | OutputType _
   | ExternType _
-  | ExternFn _ _ _
-  | ExternProbe _ -> d
+  | ExternFn _ _ _ _
+  | ExternProbe _ _ -> d
 
 let simplify_prog (p:list decl) =
   let env = H.create 10 in
