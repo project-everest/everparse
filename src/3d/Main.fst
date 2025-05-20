@@ -710,6 +710,7 @@ let go () : ML unit =
       (Options.get_emit_output_types_defs ())
       (Options.get_skip_o_rules ())
       (Options.get_clang_format ())
+      (not (Options.get_clang_format_use_custom_config ()))
       cmd_line_files
   | None ->
   (* Special mode: --__produce_c_from_existing_krml *)
@@ -782,6 +783,7 @@ let go () : ML unit =
         (Options.get_add_include ())
         (Options.get_clang_format ())
         (Options.get_clang_format_executable ())
+        (not (Options.get_clang_format_use_custom_config ()))
         (Options.get_skip_c_makefiles ())
         (Options.get_cleanup ())
         (Options.get_no_everparse_h ())
