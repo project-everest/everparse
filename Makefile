@@ -197,7 +197,8 @@ cddl-spec: $(filter src/cddl/spec/%,$(ALL_CHECKED_FILES))
 ifeq (,$(NO_PULSE))
 cddl-pulse: cddl-spec $(filter src/cddl/pulse/%,$(ALL_CHECKED_FILES))
 
-cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES))
+# cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
+cddl-tool: cddl-pulse $(filter src/cddl/tool/%,$(ALL_CHECKED_FILES)) cbor-extract-pre
 	+$(MAKE) -C src/cddl/tool
 else
 cddl-tool:
@@ -237,13 +238,11 @@ endif
 .PHONY: cddl-unit-tests
 
 ifeq (,$(NO_PULSE))
-# cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
-cose-extract-test: cddl cbor-extract-pre
+cose-extract-test: cddl
 	+$(MAKE) -C src/cose test-extract
 
 # This rule is incompatible with cose-extract-test
-# cbor-extract-pre needed because Rust extraction extracts CBOR and COSE altogether
-cose-snapshot: cddl cbor-extract-pre
+cose-snapshot: cddl
 	+$(MAKE) -C src/cose snapshot
 else
 cose-extract-test:
