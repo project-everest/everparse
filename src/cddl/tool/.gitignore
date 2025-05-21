@@ -3,3 +3,4 @@ plugin.depend*
 *.done
 extraction
 extraction.depend*
+extraction-c.depend*

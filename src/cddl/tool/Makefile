@@ -1,4 +1,4 @@
-all: build extraction
+all: build extraction extraction-c
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/pulse $(EVERPARSE_SRC_PATH)/cbor/pulse
@@ -30,6 +30,9 @@ $(EVERPARSE_CDDL): ocaml.done plugin.done $(wildcard ocaml/*/*.ml*)
 	cd ocaml && dune install --prefix=$(realpath $(EVERPARSE_SRC_PATH)/..)
 
 .PHONY: all
+
+extraction-c: $(ALL_CHECKED_FILES)
+	$(MAKE) -f $@.Makefile
 
 extraction: $(ALL_CHECKED_FILES)
 	$(MAKE) -f $@.Makefile
