@@ -1,4 +1,4 @@
-all: build extraction extraction-c
+all: build extraction-all
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
 INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec $(EVERPARSE_SRC_PATH)/cddl/pulse $(EVERPARSE_SRC_PATH)/cbor/pulse
@@ -34,7 +34,12 @@ $(EVERPARSE_CDDL): ocaml.done plugin.done $(wildcard ocaml/*/*.ml*)
 extraction-c: $(ALL_CHECKED_FILES)
 	$(MAKE) -f $@.Makefile
 
+extraction-rust: $(ALL_CHECKED_FILES)
+	$(MAKE) -f $@.Makefile
+
 extraction: $(ALL_CHECKED_FILES)
 	$(MAKE) -f $@.Makefile
 
-.PHONY: extraction
+extraction-all: extraction extraction-c extraction-rust
+
+.PHONY: extraction extraction-c extraction-rust extraction-all

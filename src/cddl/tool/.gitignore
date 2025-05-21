@@ -4,3 +4,4 @@ plugin.depend*
 extraction
 extraction.depend*
 extraction-c.depend*
+extraction-rust.depend*

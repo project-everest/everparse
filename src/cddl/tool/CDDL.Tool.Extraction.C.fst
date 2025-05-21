@@ -1,8 +1,7 @@
-module CDDL.Tool.Extraction
+module CDDL.Tool.Extraction.C
 open CDDL.Pulse.AST.Bundle
 open CDDL.Tool.Gen
 module DetC = CDDL.Pulse.AST.Det.C
-module DetRust = CDDL.Pulse.AST.Det.Rust
 module Impl = CDDL.Pulse.AST.Validate
 module Env = CDDL.Pulse.AST.Env
 module Parse = CDDL.Pulse.AST.Parse
