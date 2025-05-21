@@ -37,9 +37,6 @@ extraction-c: $(ALL_CHECKED_FILES)
 extraction-rust: $(ALL_CHECKED_FILES)
 	$(MAKE) -f $@.Makefile
 
-extraction: $(ALL_CHECKED_FILES)
-	$(MAKE) -f $@.Makefile
-
-extraction-all: extraction extraction-c extraction-rust
+extraction-all: extraction-c extraction-rust
 
 .PHONY: extraction extraction-c extraction-rust extraction-all
