@@ -1,3 +1,5 @@
 ocaml.depend*
 plugin.depend*
 *.done
+extraction
+extraction.depend*
