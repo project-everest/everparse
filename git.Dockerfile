@@ -17,9 +17,13 @@ RUN sudo apt-get install --yes \
 
 # Bring in the contents
 ARG CACHE_BUST
-RUN git clone --branch _taramana_cbor_bij https://github.com/project-everest/everparse $HOME/everparse && echo $CACHE_BUST
-WORKDIR $HOME/everparse
+RUN sudo mkdir /mnt/everparse && sudo chown opam:opam /mnt/everparse
+RUN git clone --branch _taramana_cbor_bij https://github.com/project-everest/everparse /mnt/everparse && echo $CACHE_BUST
+WORKDIR /mnt/everparse
 
 # Build and publish the release
 ARG CI_THREADS=24
 RUN  . "$HOME/.cargo/env" && eval $(opam env) && bash src/package/install-deps.sh && make -j $CI_THREADS -C opt && env OTHERFLAGS='--admit_smt_queries true' make -j $CI_THREADS cbor cddl cose
+
+ENTRYPOINT ["/mnt/everparse/opt/shell.sh", "--login", "-c"]
+CMD ["/bin/bash"]
