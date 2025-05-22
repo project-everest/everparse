@@ -11,6 +11,7 @@ RUN . "$HOME/.cargo/env" && rustup component add rustfmt && cargo install bindge
 # Install other dependencies
 RUN sudo apt-get install --yes \
   libssl-dev \
+  cmake \
   python-is-python3 \
   wget
 
