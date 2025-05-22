@@ -44,7 +44,7 @@ extract: $(ALL_KRML_FILES)
 		-skip-linking $^ -tmpdir $(OUTPUT_DIRECTORY) -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -header noheader.txt
 
 %.diff: extract
-	diff c/$(basename $@) $(OUTPUT_DIRECTORY)/$(basename $@)
+	diff ../c/$(basename $@) $(OUTPUT_DIRECTORY)/$(basename $@)
 
 .PHONY: %.diff
 
