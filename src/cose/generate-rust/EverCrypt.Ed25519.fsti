@@ -17,7 +17,8 @@ noextract [@@noextract_to "krml"]
 val spec_ed25519_sign: secret:Seq.lseq U8.t 32 -> msg:Seq.seq U8.t{Seq.length msg <= max_size_t} -> Seq.lseq U8.t 64
 
 /// From EverCrypt.Ed25519.sign
-val sign:
+inline_for_extraction noextract [@@noextract_to "krml"]
+let sign_t =
     signature:S.slice U8.t
   -> #p_private_key: perm
   -> #v_private_key: Ghost.erased (Seq.seq U8.t) { Seq.length v_private_key == 32 }
@@ -37,12 +38,15 @@ val sign:
       pts_to msg #p_msg v_msg
     )
 
+val sign (_: unit) : sign_t
+
 /// From Spec.Ed25519
 noextract [@@noextract_to "krml"]
 val spec_ed25519_verify: public:Seq.lseq U8.t 32 -> msg:Seq.seq U8.t{Seq.length msg <= max_size_t} -> signature:Seq.lseq U8.t 64 -> bool
 
 /// From EverCrypt.Ed25519.verify
-val verify:
+inline_for_extraction noextract [@@noextract_to "krml"]
+let verify_t =
     #p_public_key: perm
   -> #v_public_key: Ghost.erased (Seq.seq U8.t) { Seq.length v_public_key == 32 }
   -> public_key:S.slice U8.t
@@ -64,3 +68,5 @@ val verify:
       pts_to msg #p_msg v_msg **
       pts_to signature #p_signature v_signature
     )
+
+val verify (_: unit) : verify_t

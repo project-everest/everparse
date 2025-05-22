@@ -5,6 +5,9 @@ open Pulse
 let spec_ed25519_sign secret msg = Seq.create 64 0uy
 
 fn sign
+  (_: unit)
+: sign_t
+=
     (signature:S.slice U8.t)
     (#p_private_key: perm)
     (#v_private_key: Ghost.erased (Seq.seq U8.t) { Seq.length v_private_key == 32 })
@@ -12,15 +15,6 @@ fn sign
     (#p_msg: perm)
     (#v_msg: Ghost.erased (Seq.seq U8.t) { Seq.length v_msg <= max_size_t })
     (msg:S.slice U8.t)
-  requires
-    (exists* v_signature . pts_to signature v_signature ** pure (Seq.length v_signature == 64)) **
-    pts_to private_key #p_private_key v_private_key **
-    pts_to msg #p_msg v_msg
-  returns _: squash (Seq.length v_private_key == 32)
-  ensures
-    S.pts_to signature (spec_ed25519_sign v_private_key v_msg) **
-    pts_to private_key #p_private_key v_private_key **
-    pts_to msg #p_msg v_msg
 {
   S.(signature.(0sz) <- 0uy);
   admit ()
@@ -29,6 +23,9 @@ fn sign
 let spec_ed25519_verify public msg sig = true
 
 fn verify
+  (_: unit)
+: verify_t
+=
     (#p_public_key: perm)
     (#v_public_key: Ghost.erased (Seq.seq U8.t) { Seq.length v_public_key == 32 })
     (public_key:S.slice U8.t)

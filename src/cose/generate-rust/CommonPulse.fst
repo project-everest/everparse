@@ -201,7 +201,7 @@ fn create_sig privkey phdr aad payload (sigbuf: S.slice UInt8.t)
     let tbs = Pulse.Lib.Slice.Util.subslice_trade outbuf 0sz written;
     with vtbs. assert S.pts_to tbs vtbs ** pure (to_be_signed_spec vphdr vaad vpayload vtbs);
     S.pts_to_len tbs;
-    sign sigbuf privkey tbs;
+    sign () sigbuf privkey tbs;
     elim_trade _ _;
     S.to_array outbuf;
     V.to_vec_pts_to arr;
@@ -548,7 +548,7 @@ fn verify_sig pubkey phdr aad payload (sigbuf: S.slice UInt8.t)
     let tbs = Pulse.Lib.Slice.Util.subslice_trade outbuf 0sz written;
     with vtbs. assert S.pts_to tbs vtbs ** pure (to_be_signed_spec vphdr vaad vpayload vtbs);
     S.pts_to_len tbs;
-    let success = verify pubkey tbs sigbuf;
+    let success = verify () pubkey tbs sigbuf;
     elim_trade _ _;
     S.to_array outbuf;
     V.to_vec_pts_to arr;
