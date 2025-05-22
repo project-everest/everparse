@@ -230,7 +230,7 @@ endif
 
 ifeq (,$(NO_PULSE))
 cddl-unit-tests: cddl
-	+$(MAKE) -C src/cddl/unit-tests
+	+$(MAKE) -C src/cddl test
 else
 cddl-unit-tests:
 endif
@@ -265,7 +265,7 @@ cose: submodules
 
 .PHONY: cose
 
-cddl-test: cddl cddl-plugin-test cddl-demo cose-extract-test cddl-unit-tests
+cddl-test: cddl cddl-plugin-test cose-extract-test cddl-unit-tests
 
 .PHONY: cddl-test
 
