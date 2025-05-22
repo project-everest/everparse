@@ -10,7 +10,7 @@ INCLUDE_PATHS += $(EVERPARSE_SRC_PATH)/cbor/spec $(EVERPARSE_SRC_PATH)/cddl/spec
 OUTPUT:=$(OUTPUT_DIRECTORY)/COSE.Format.fst
 
 $(OUTPUT): ../cose.cddl $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT))
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --fstar_only
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
 ALREADY_CACHED := *,-COSE,-Abort,-EverCrypt

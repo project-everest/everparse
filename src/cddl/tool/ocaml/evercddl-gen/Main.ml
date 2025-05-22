@@ -22,11 +22,14 @@ let list_is_empty = function
   | [] -> true
   | _ -> false
 
+let fstar_only = ref false
+
 let _ =
   let argspec = ref [
       ("--rust", Arg.Unit (fun _ -> lang := "Rust"), "Use the Rust EverCBOR library");
       ("--mname", Arg.String (fun m -> mname := m), "Set the module name");
       ("--odir", Arg.String (fun d -> odir := d), "Set the output directory (default .)");
+      ("--fstar_only", Arg.Unit (fun _ -> fstar_only := true), "Only generate F*");
     ]
   in
   let usagemsg = "EverCDDL: Produces a F* file to generate formally verified parsers and serializers from CDDL specifications.\nUsage: "^Sys.argv.(0) ^" [options] file1 [file2 ...]" in
@@ -54,5 +57,8 @@ let _ =
          output_string ch str;
          close_out ch;
          Sys.rename filename_tmp filename;
-         print_endline ("Success, output to: " ^ filename)
+         print_endline ("Success, output to: " ^ filename);
+         if !fstar_only then exit 0;
+         prerr_endline ("ERROR: Should implement extraction to C, Rust");
+         exit 1
        end

@@ -5,7 +5,7 @@ EVERPARSE_SRC_PATH = $(realpath ../..)
 OUTPUT=_output/COSE.Format.fst
 
 $(OUTPUT): ../cose.cddl ../../cddl/spec/postlude.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --rust
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --mname COSE.Format --odir $(dir $(OUTPUT)) --rust --fstar_only
 
 extract-all: $(OUTPUT)
 	+$(MAKE) -f extract.Makefile extract

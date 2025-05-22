@@ -6,7 +6,7 @@ OUTPUT_DIRECTORY=_output
 OUTPUT=$(OUTPUT_DIRECTORY)/CDDLTest.Test.fst
 
 $(OUTPUT): dpe.cddl dpe_postlude.cddl
-	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $(dir $(OUTPUT))
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe $^ --odir $(dir $(OUTPUT)) --fstar_only
 	cp extract0.Makefile $(OUTPUT_DIRECTORY)/Makefile
 
 extract-all: $(OUTPUT)
