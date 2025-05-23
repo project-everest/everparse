@@ -3,6 +3,7 @@
   (name Main)
   (public_name cddl.exe)
   (libraries
+    re
     evercddl.lib
   )
  (modes native)
