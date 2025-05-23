@@ -1,7 +1,7 @@
 # This Dockerfile should be run from the root EverParse directory
 
 ARG ocaml_version=4.14
-FROM ocaml/opam:ubuntu-20.04-ocaml-$ocaml_version
+FROM ocaml/opam:ubuntu-22.04-ocaml-$ocaml_version
 
 # install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
