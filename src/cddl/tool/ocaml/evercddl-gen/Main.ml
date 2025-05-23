@@ -18,6 +18,8 @@ let lang = ref "C"
 
 let odir = ref "."
 
+let tmpdir = ref ""
+
 let list_is_empty = function
   | [] -> true
   | _ -> false
@@ -190,6 +192,7 @@ let _ =
       ("--mname", Arg.String (fun m -> mname := m), "Set the module name");
       ("--odir", Arg.String (fun d -> odir := d), "Set the output directory (default .)");
       ("--fstar_only", Arg.Unit (fun _ -> fstar_only := true), "Only generate F*");
+      ("--tmpdir", Arg.String (fun d -> tmpdir := d), "Set the temporary directory (default automatically generated)");
     ]
   in
   let usagemsg = "EverCDDL: Produces a F* file to generate formally verified parsers and serializers from CDDL specifications.\nUsage: "^Sys.argv.(0) ^" [options] file1 [file2 ...]" in
@@ -200,7 +203,7 @@ let _ =
   argspec := ("--help", Arg.Unit help, "Display this help message") :: !argspec;
   Arg.parse !argspec process_file usagemsg;
   if list_is_empty !rev_filenames then help ();
-  let dir = if !fstar_only then !odir else mk_tmp_dir_name () in
+  let dir = if !fstar_only then !odir else if !tmpdir <> "" then !tmpdir else mk_tmp_dir_name () in
   let basename = produce_fst_file dir in
   if !fstar_only then exit 0;
   let res = run_cmd fstar_exe
