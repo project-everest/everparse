@@ -54,6 +54,136 @@ let mk_tmp_dir_name () =
     (Filename.get_temp_dir_name ())
     ("evercddl" ^ Re.replace_string regexp_fractional ~by:".tmp" (Float.to_string (Unix.time ())))
 
+
+(* Run program prog with argument args (starting from $1, so prog need
+   not be duplicated).
+   NOTE: This is taken from everparse:src/3d/ocaml/OS.ml, but we only
+   return the exit code rather than exiting the process.
+ *)
+
+let run_cmd prog args =
+  let cmd = String.concat " " (prog :: args) in
+  print_endline (Printf.sprintf "Running: %s" cmd);
+  let args = Array.of_list args in
+  (* FIXME: use Process.execute, because we do not need to memorize
+     stdin/stdout, alas it is not exposed to the .mli *)
+  let out = Process.run prog args in
+  List.iter print_endline out.Process.Output.stdout;
+  List.iter prerr_endline out.Process.Output.stderr;
+  (* FIXME: use Process.Exit.check, alas it is not exposed to the .mli
+     Providing exit_status to Process.run would leave no chance to
+     print out the command output *)
+  match out.Process.Output.exit_status with
+  | Process.Exit.Exit 0 -> 0
+  | st ->
+    prerr_endline (Process.Exit.to_string st);
+      begin match st with
+      | Process.Exit.Exit n -> n
+      | _ -> 127
+      end
+
+let regexp_path_drive = Re.Posix.compile_pat "^[a-zA-Z]+:[\\/]"
+
+let string_matches_regexp s r = Re.execp r s
+
+let filename_is_relative n =
+  if Filename.is_relative n
+  then true
+  else if Sys.cygwin
+  then not (string_matches_regexp n regexp_path_drive)
+  else false
+
+let get_absolute_filename n =
+  if filename_is_relative n
+  then Filename.concat (Sys.getcwd ()) n
+  else n
+
+let everparse_home =
+  try
+    Sys.getenv "EVERPARSE_HOME"
+  with
+  | Not_found ->
+     (* assume the executable is in the bin/ subdirectory *)
+     get_absolute_filename (Filename.concat (Filename.dirname Sys.executable_name) Filename.parent_dir_name)
+
+let fstar_exe =
+  try
+    Sys.getenv "FSTAR_EXE"
+  with
+  | Not_found ->
+     let opt_fstar_exe = Filename.concat (Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "FStar") "bin") "fstar.exe" in
+     if Sys.file_exists opt_fstar_exe
+     then opt_fstar_exe
+     else "fstar.exe" (* rely on PATH *)
+
+let krml_home =
+  try
+    Sys.getenv "KRML_HOME"
+  with
+  | Not_found -> Filename.concat (Filename.concat everparse_home "opt") "karamel"
+
+let pulse_home =
+  try
+    Sys.getenv "PULSE_HOME"
+  with
+  | Not_found -> Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "pulse") "out"
+
+let z3_version = "4.8.5"
+
+let z3_executable_option =
+  let test = run_cmd fstar_exe ["--locate_z3"; z3_version] in
+  if test = 0
+  then []
+  else
+    let opt_z3 = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "z3") ("z3-" ^ z3_version) in
+    if Sys.file_exists opt_z3
+    then ["--z3_executable"; opt_z3]
+    else []
+
+let include_option_of_paths =
+  List.concat_map (fun l -> ["--include"; l])
+
+let everparse_src = Filename.concat everparse_home "src"
+let everparse_src_cbor = Filename.concat everparse_src "cbor"
+let everparse_src_cbor_spec = Filename.concat everparse_src_cbor "spec"
+let everparse_src_cbor_pulse = Filename.concat everparse_src_cbor "pulse"
+let everparse_src_cddl = Filename.concat everparse_src "cddl"
+let everparse_src_cddl_spec = Filename.concat everparse_src_cddl "spec"
+let everparse_src_cddl_pulse = Filename.concat everparse_src_cddl "pulse"
+let krml_home_krmllib = Filename.concat krml_home "krmllib"
+let everparse_home_lib = Filename.concat everparse_home "lib"
+let everparse_home_lib_evercddl = Filename.concat everparse_home_lib "evercddl"
+
+let include_options =
+  include_option_of_paths
+    [
+      everparse_src_cbor_spec;
+      everparse_src_cbor_pulse;
+      everparse_src_cddl_spec;
+      everparse_src_cddl_pulse;
+      Filename.concat everparse_src_cddl "tool";
+      krml_home_krmllib;
+      Filename.concat krml_home_krmllib "obj";
+      Filename.concat (Filename.concat pulse_home "lib") "pulse";
+      Filename.concat everparse_home_lib_evercddl "lib";
+      Filename.concat everparse_home_lib_evercddl "plugin";
+    ]
+
+(* TODO: honor OTHERFLAGS. This would require implementing Bash word
+   splitting, since we are using lists of arguments. *)
+
+let fstar_options =
+  z3_executable_option @
+    [
+      "--cache_checked_modules";
+      "--warn_error"; "@241";
+      "--cmi";
+      "--ext"; "context_pruning";
+      "--load_cmxs"; "evercddl_lib";
+      "--load_cmxs"; "evercddl_plugin";
+    ] @
+      include_options
+
 let _ =
   let argspec = ref [
       ("--rust", Arg.Unit (fun _ -> lang := "Rust"), "Use the Rust EverCBOR library");
@@ -73,5 +203,20 @@ let _ =
   let dir = if !fstar_only then !odir else mk_tmp_dir_name () in
   let basename = produce_fst_file dir in
   if !fstar_only then exit 0;
-  prerr_endline ("ERROR: Should implement extraction to C, Rust");
-  exit 1
+  let res = run_cmd fstar_exe
+    (
+      [
+        Filename.concat dir basename;
+        "--cache_dir"; dir;
+        "--already_cached"; ("*,-" ^ !mname);
+      ] @
+        fstar_options
+    )
+  in
+  if res <> 0
+  then
+    begin
+      prerr_endline "Verification failed";
+      exit res
+    end;
+  ()
