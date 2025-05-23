@@ -56,33 +56,10 @@ let mk_tmp_dir_name () =
     (Filename.get_temp_dir_name ())
     ("evercddl" ^ Re.replace_string regexp_fractional ~by:".tmp" (Float.to_string (Unix.time ())))
 
-
-(* Run program prog with argument args (starting from $1, so prog need
-   not be duplicated).
-   NOTE: This is taken from everparse:src/3d/ocaml/OS.ml, but we only
-   return the exit code rather than exiting the process.
- *)
-
 let run_cmd prog args =
-  let cmd = String.concat " " (prog :: args) in
-  print_endline (Printf.sprintf "Running: %s" cmd);
-  let args = Array.of_list args in
-  (* FIXME: use Process.execute, because we do not need to memorize
-     stdin/stdout, alas it is not exposed to the .mli *)
-  let out = Process.run prog args in
-  List.iter print_endline out.Process.Output.stdout;
-  List.iter prerr_endline out.Process.Output.stderr;
-  (* FIXME: use Process.Exit.check, alas it is not exposed to the .mli
-     Providing exit_status to Process.run would leave no chance to
-     print out the command output *)
-  match out.Process.Output.exit_status with
-  | Process.Exit.Exit 0 -> 0
-  | st ->
-    prerr_endline (Process.Exit.to_string st);
-      begin match st with
-      | Process.Exit.Exit n -> n
-      | _ -> 127
-      end
+  let cmd = Filename.quote_command prog args in
+  prerr_endline ("Running: " ^ cmd);
+  Sys.command cmd
 
 let regexp_path_drive = Re.Posix.compile_pat "^[a-zA-Z]+:[\\/]"
 
