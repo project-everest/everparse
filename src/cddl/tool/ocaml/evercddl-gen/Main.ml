@@ -54,7 +54,7 @@ let regexp_fractional = Re.Posix.compile_pat "\\..*"
 let mk_tmp_dir_name () =
   Filename.concat
     (Filename.get_temp_dir_name ())
-    ("evercddl" ^ Re.replace_string regexp_fractional ~by:".tmp" (Float.to_string (Unix.time ())))
+    ("evercddl_" ^ string_of_int (Unix.getpid ()) ^ "_" ^ Re.replace_string regexp_fractional ~by:".tmp" (Float.to_string (Unix.time ())))
 
 let run_cmd ?silent:(silent=false) prog args =
   let f = Filename.quote_command prog in
