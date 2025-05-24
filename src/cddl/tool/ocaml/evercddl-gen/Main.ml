@@ -56,8 +56,9 @@ let mk_tmp_dir_name () =
     (Filename.get_temp_dir_name ())
     ("evercddl" ^ Re.replace_string regexp_fractional ~by:".tmp" (Float.to_string (Unix.time ())))
 
-let run_cmd prog args =
-  let cmd = Filename.quote_command prog args in
+let run_cmd ?silent:(silent=false) prog args =
+  let f = Filename.quote_command prog in
+  let cmd = if silent then f ~stdout:Filename.null ~stderr:Filename.null args else f args in (* FIXME: can we avoid repeating `args`? *)
   prerr_endline ("Running: " ^ cmd);
   Sys.command cmd
 
@@ -110,7 +111,7 @@ let pulse_home =
 let z3_version = "4.8.5"
 
 let z3_executable_option =
-  let test = run_cmd fstar_exe ["--locate_z3"; z3_version] in
+  let test = run_cmd ~silent:true fstar_exe ["--locate_z3"; z3_version] in
   if test = 0
   then []
   else
