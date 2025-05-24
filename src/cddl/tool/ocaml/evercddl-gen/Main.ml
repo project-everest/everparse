@@ -130,6 +130,7 @@ let everparse_src_cbor_pulse = Filename.concat everparse_src_cbor "pulse"
 let everparse_src_cddl = Filename.concat everparse_src "cddl"
 let everparse_src_cddl_spec = Filename.concat everparse_src_cddl "spec"
 let everparse_src_cddl_pulse = Filename.concat everparse_src_cddl "pulse"
+let everparse_src_cddl_tool = Filename.concat everparse_src_cddl "tool"
 let krml_home_krmllib = Filename.concat krml_home "krmllib"
 let everparse_home_lib = Filename.concat everparse_home "lib"
 let everparse_home_lib_evercddl = Filename.concat everparse_home_lib "evercddl"
@@ -141,7 +142,7 @@ let include_options =
       everparse_src_cbor_pulse;
       everparse_src_cddl_spec;
       everparse_src_cddl_pulse;
-      Filename.concat everparse_src_cddl "tool";
+      everparse_src_cddl_tool;
       krml_home_krmllib;
       Filename.concat krml_home_krmllib "obj";
       Filename.concat (Filename.concat pulse_home "lib") "pulse";
@@ -182,6 +183,36 @@ let fstar_options =
 let admit = ref false
 
 let is_rust () = !lang = "Rust"
+
+let regexp_period = Re.Posix.compile_pat "[.]"
+
+let load_krml_list dir file =
+  let res = ref [] in
+  let ch = open_in (Filename.concat dir file) in
+  let rec aux () =
+    match
+      try
+        Some (input_line ch)
+      with End_of_file -> None
+    with
+    | Some ln ->
+       res := Filename.concat dir ln :: !res;
+       aux ()
+    | None ->
+       close_in ch;
+       !res
+  in
+  aux ()
+
+let c_krml_list =
+  load_krml_list
+    (Filename.concat everparse_src_cddl_tool "extraction-c")
+    "c.lst"
+
+let rust_krml_list =
+  load_krml_list
+    (Filename.concat everparse_src_cddl_tool "extraction-rust")
+    "rust.lst"
 
 let _ =
   let argspec = ref [
@@ -244,4 +275,47 @@ let _ =
       prerr_endline "Extraction to krml failed";
       exit res
     end;
-  ()
+  let mname_subst = Re.replace_string regexp_period ~by:"_" !mname in
+  let krml_file = Filename.concat dir (mname_subst ^ ".krml") in
+  let krml_options =
+    if is_rust () then
+      [
+        "-fstar"; fstar_exe;
+        "-backend"; "rust";
+        "-fno-box";
+        "-fkeep-tuples";
+        "-fcontained-type"; "cbor_raw_iterator";
+        "-warn-error"; "@1..27";
+	"-bundle"; (!mname ^ "=[rename=" ^ mname_subst ^ "]");
+	"-bundle"; "CBOR.Pulse.API.Det.Rust=[rename=CBORDetVer]";
+	"-bundle"; "CBOR.Spec.Constants+CBOR.Pulse.Raw.Type+CBOR.Pulse.API.Det.Type=\\*[rename=CBORDetVerAux]";
+        "-tmpdir"; !odir;
+        "-skip-compilation";
+        krml_file;
+      ] @
+        rust_krml_list
+    else
+      [
+          "-warn-error"; "@1..27";
+          "-skip-compilation";
+          "-tmpdir"; !odir;
+          "-header"; Filename.concat everparse_src_cddl_tool "noheader.txt";
+        "-fstar"; fstar_exe;
+        "-fnoshort-enums";
+        "-bundle"; "FStar.\\*,LowStar.\\*,C.\\*,C,PulseCore.\\*,Pulse.\\*[rename=fstar]";
+        "-no-prefix"; "CBOR.Pulse.API.Det.C";
+        "-no-prefix"; "CBOR.Pulse.API.Det.Type";
+        "-no-prefix"; "CBOR.Spec.Constants";
+        "-bundle"; "CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\\*[rename=CBORDetAPI]";
+	"-bundle"; (!mname ^ "=\\*");
+	"-add-include"; "\"CBORDetAbstract.h\"";
+        krml_file;
+      ] @
+        c_krml_list
+  in
+  let res =
+    run_cmd
+      (Filename.concat krml_home "krml")
+      krml_options
+  in
+  exit res
