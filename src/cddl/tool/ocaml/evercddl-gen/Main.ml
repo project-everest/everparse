@@ -149,6 +149,21 @@ let include_options =
       Filename.concat everparse_home_lib_evercddl "plugin";
     ]
 
+let everparse_src_cbor_spec_raw = Filename.concat everparse_src_cbor_spec "raw"
+let everparse_src_cbor_pulse_raw = Filename.concat everparse_src_cbor_pulse "raw"
+let everparse_src_lowparse = Filename.concat everparse_src "lowparse"
+
+let include_options_for_rust =
+  include_option_of_paths
+    [
+      everparse_src_cbor_spec_raw;
+      Filename.concat everparse_src_cbor_spec_raw "everparse";
+      everparse_src_cbor_pulse_raw;
+      Filename.concat everparse_src_cbor_pulse_raw "everparse";
+      everparse_src_lowparse;
+      Filename.concat everparse_src_lowparse "pulse";
+    ]
+
 (* TODO: honor OTHERFLAGS. This would require implementing Bash word
    splitting, since we are using lists of arguments. *)
 
@@ -163,6 +178,8 @@ let fstar_options =
       "--load_cmxs"; "evercddl_plugin";
     ] @
       include_options
+
+let is_rust () = !lang = "Rust"
 
 let _ =
   let argspec = ref [
@@ -184,10 +201,11 @@ let _ =
   let dir = if !fstar_only then !odir else if !tmpdir <> "" then !tmpdir else mk_tmp_dir_name () in
   let basename = produce_fst_file dir in
   if !fstar_only then exit 0;
+  let filename = Filename.concat dir basename in
   let res = run_cmd fstar_exe
     (
       [
-        Filename.concat dir basename;
+        filename;
         "--cache_dir"; dir;
         "--already_cached"; ("*,-" ^ !mname);
       ] @
@@ -198,6 +216,28 @@ let _ =
   then
     begin
       prerr_endline "Verification failed";
+      exit res
+    end;
+  let res =
+    run_cmd fstar_exe
+      (
+        [
+          filename;
+          "--cache_dir"; dir;
+          "--odir"; dir;
+          "--already_cached"; "*,";
+          "--codegen"; "krml";
+          "--extract_module"; !mname;
+	  "--ext"; "extraction_inline_all";
+        ] @
+          (if is_rust () then include_options_for_rust else []) @
+          fstar_options
+      )
+  in
+  if res <> 0
+  then
+    begin
+      prerr_endline "Extraction to krml failed";
       exit res
     end;
   ()
