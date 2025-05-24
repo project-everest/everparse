@@ -232,6 +232,11 @@ let _ =
   argspec := ("--help", Arg.Unit help, "Display this help message") :: !argspec;
   Arg.parse !argspec process_file usagemsg;
   if list_is_empty !rev_filenames then help ();
+  if !fstar_only && is_rust () && string_matches_regexp !mname regexp_period then
+    begin
+      prerr_endline ("ERROR: Module name " ^ !mname ^ " contains a period. This has unintended consequences for Rust code generation. Please specify a module name with --mname");
+      exit 1
+    end;
   let dir = if !fstar_only then !odir else if !tmpdir <> "" then !tmpdir else mk_tmp_dir_name () in
   let basename = produce_fst_file dir in
   if !fstar_only then exit 0;
