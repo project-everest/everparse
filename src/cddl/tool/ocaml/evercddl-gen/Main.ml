@@ -323,4 +323,5 @@ let _ =
       (Filename.concat krml_home "krml")
       krml_options
   in
+  if res = 0 then print_endline "EverCDDL succeeded!";
   exit res
