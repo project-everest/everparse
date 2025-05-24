@@ -179,10 +179,13 @@ let fstar_options =
     ] @
       include_options
 
+let admit = ref false
+
 let is_rust () = !lang = "Rust"
 
 let _ =
   let argspec = ref [
+      ("--admit", Arg.Unit (fun _ -> admit := true), "Admit proofs");
       ("--rust", Arg.Unit (fun _ -> lang := "Rust"), "Use the Rust EverCBOR library");
       ("--mname", Arg.String (fun m -> mname := m), "Set the module name");
       ("--odir", Arg.String (fun d -> odir := d), "Set the output directory (default .)");
@@ -209,6 +212,7 @@ let _ =
         "--cache_dir"; dir;
         "--already_cached"; ("*,-" ^ !mname);
       ] @
+        (if !admit then [ "--admit_smt_queries"; "true" ] else []) @
         fstar_options
     )
   in
