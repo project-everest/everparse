@@ -7,7 +7,7 @@ ALREADY_CACHED := *,
 FSTAR_FILES := CDDL.Tool.Extraction.C.fst
 OUTPUT_DIRECTORY := extraction-c
 FSTAR_DEP_FILE := extraction-c.depend
-FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool,+CDDL.Tool.Extraction'
+FSTAR_DEP_OPTIONS := --extract '*,-FStar.Tactics,-FStar.Reflection,-Pulse,-PulseCore,+Pulse.Class,+Pulse.Lib.Slice,-CDDL.Pulse.Bundle,-CDDL.Pulse.AST.Bundle,-CDDL.Tool,+CDDL.Tool.Extraction.C'
 FSTAR_OPTIONS += --warn_error -342 # noextract
 
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
