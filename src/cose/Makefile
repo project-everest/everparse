@@ -49,7 +49,17 @@ test-extracted: test-interop test-verified-interop test-rust
 
 .PHONY: test-extracted
 
-test-extract: test-extract-c test-extract-rust
+test-batch-c: cose.cddl
+	rm -rf $@ $@.tmp
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl --admit
+	mv $@.tmp $@
+
+test-batch-rust: cose.cddl
+	rm -rf $@ $@.tmp
+	$(EVERPARSE_SRC_PATH)/../bin/cddl.exe --odir $@.tmp --tmpdir $@.tmp $< $(EVERPARSE_SRC_PATH)/cddl/spec/postlude.cddl --rust --admit
+	mv $@.tmp $@
+
+test-extract: test-extract-c test-extract-rust test-batch-c test-batch-rust
 
 test: test-extract test-extracted
 
