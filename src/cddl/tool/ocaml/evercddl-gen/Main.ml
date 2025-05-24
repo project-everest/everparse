@@ -117,7 +117,7 @@ let z3_executable_option =
   else
     let opt_z3 = Filename.concat (Filename.concat (Filename.concat everparse_home "opt") "z3") ("z3-" ^ z3_version) in
     if Sys.file_exists opt_z3
-    then ["--z3_executable"; opt_z3]
+    then ["--smt"; opt_z3]
     else []
 
 let include_option_of_paths =
