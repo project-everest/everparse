@@ -2,8 +2,6 @@ all: build
 
 EVERPARSE_SRC_PATH = $(realpath ../..)
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-
 CFLAGS += -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c
 
 ALL_C_FILES := $(wildcard *.c)
