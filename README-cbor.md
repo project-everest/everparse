@@ -10,6 +10,10 @@ Then, you can experiment with `docker run -i -t evercbor` ; there, you can use t
 * `make cbor-snapshot` regenerates the CBOR library. This rule is incompatible with `cbor-test`
 * `make cose-snapshot` rebuilds the COSE library. This rule is incompatible with `cddl-test`
 
+If you are interested in the proofs, you can read [our
+paper](https://doi.org/10.48550/arXiv.2505.17335). Below is the
+matching between the paper and the proofs.
+
 Section 2.2:
 - the Pulse implementation combinators are in `src/lowparse/pulse`
 - the recursive combinator specification is in `src/lowparse/LowParse.Spec.Recursive.fst*`

@@ -5,24 +5,50 @@ It consists of LowParse, a verified combinator library (in `src/lowparse`), and 
 
 For more information, you can read:
 * The [EverParse project website and user manual](https://project-everest.github.io/everparse), also available in the `doc` subdirectory of this repository as `*.rst` reStructuredText files.
+* our [CBOR/CDDL/COSE paper draft](https://doi.org/10.48550/arXiv.2505.17335) (see `README-cbor.md` for matchings between our paper and the code.)
 * our [Microsoft Research blog post](https://www.microsoft.com/en-us/research/blog/everparse-hardening-critical-attack-surfaces-with-formally-proven-message-parsers/)
 * our [PLDI 2022 paper](https://www.microsoft.com/en-us/research/publication/hardening-attack-surfaces-with-formally-proven-binary-format-parsers/)
 * our [USENIX Security 2019 paper](https://www.microsoft.com/en-us/research/publication/everparse/).
 
-## CBOR and COSE
+## CBOR, CDDL and COSE
 
-The following instructions work without F*. For more details on the proofs, see `README-cbor.md`
+This section is focused on build and usage instructions. For more details on the proofs, see `README-cbor.md`
+
+### Docker image
+
+A `Dockerfile` is available for you to build CBOR, CDDL and COSE in a Docker image
+with `docker build -t evercddl .` and use them in a Docker container
+with `docker run -i -t evercddl`
+
+A pre-built Docker image is [available on GitHub Packages](https://github.com/tahina-pro/quackyducky/pkgs/container/evercbor)
+
+NOTE: These Docker images only contain CBOR, CDDL and COSE. They do not
+contain the rest of EverParse.
+
+If you do not want to use the Docker image, you can follow the build instructions below.
 
 ### CBOR
+
+EverParse presents EverCBOR, our formally verified implementation of CBOR.
+
+NOTE: Currently, we only support the deterministic subset of CBOR. Full support of CBOR is coming soon.
+
+The following instructions work without F*.
 
 To build the C and Rust CBOR library, run `make cbor`
 
 To test the C and Rust CBOR library, run `make cbor-test-unverified`
 
-* The generated C source files for CBOR are in `src/cbor/pulse/det/c`, which also contains some tests in the `test` subdirectory
+* The generated C source files for CBOR are in `src/cbor/pulse/det/c`, which also contains some tests in the `test` subdirectory. There, the header file is `CBORDet.h`. The object file is `CBORDet.o`, which you can link with your application.
 * The generated Rust source files for CBOR are in `src/cbor/pulse/det/rust` , where you can use `cargo build` and `cargo test` ; the crate is called `cborrs`
 
 ### COSE
+
+EverParse presents EverCOSign, our formally verified implementation of COSE signing.
+
+NOTE: Support for encryption is in progress.
+
+The following instructions work without F*.
 
 To build the C and Rust COSE library, run `make cose`
 
@@ -32,12 +58,37 @@ To test the C and Rust COSE library, run `make cose-extracted-test`
   + `COSE_Format.c` contains the verified parsers and serializers for COSE
   + `COSE_EverCrypt.c` is a verified implementation of sign1 and verify1 with COSE_Format and HACL* EverCrypt
   + `COSE_OpenSSL.c` is a handwritten implementation of sign1 and verify1 with OpenSSL, unverified except for parsing and serializing, calling into COSE_Format
+* To use the corresponding include files, you need to add `src/cbor/pulse/det/c` to the include path of your C compiler.
 * Interop tests for the C library are in `src/cose/interop` (OpenSSL) and `src/cose/verifiedinterop/test` (HACL* EverCrypt)
 * The generated Rust source files for COSE are in `src/cose/rust`, where you can use `cargo build` and `cargo test` ; the crate is called `evercosign`
 
 ### CDDL
 
-The CDDL verified parser generator requires F*. Usage instructions coming soon.
+EverParse presents EverCDDL, our formally verified implementation of CDDL.
+
+NOTE: While we support patterns such as `(? 18 : int, * int => any)`,
+some other patterns, such as `(? 18 => int, * int => any)`, are not
+yet supported.
+
+#### Build
+
+1. Install opam 2.x, which you can install following the [official instructions](https://opam.ocaml.org/doc/Install.html). You do not need to install OCaml, though.
+
+2. Run `./build-evercddl.sh` . This will build EverCDDL using a local opam switch, so this will not impact your existing opam switches if any.
+
+#### Use
+
+If you have a CDDL data format description, say `mydesc.cddl`, you can
+automatically compile it into C parsers and serializers, with
+`bin/cddl.exe src/cddl/spec/postlude.cddl mydesc.cddl` (where
+`src/cddl/spec/postlude.cddl` is a subset of the official postlude
+from RFC 8610). The generated C code links against EverCBOR.
+
+If you want to generate Rust code instead, use the `--rust`
+option. Right now, contrary to C, the generated Rust code is
+standalone and does not need a separate installation of EverCBOR.
+
+More options are available, use `--help` for more details.
 
 ## Download
 
