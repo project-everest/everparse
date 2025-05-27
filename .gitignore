@@ -26,3 +26,5 @@ everparse_*.zip
 
 # make touchfiles
 .*.touch
+_opam
+_opam.tmp
