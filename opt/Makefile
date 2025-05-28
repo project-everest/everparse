@@ -4,7 +4,7 @@ export ADMIT=1
 
 export EVERPARSE_OPT_PATH=$(realpath .)
 
-export FSTAR_EXE  := $(EVERPARSE_OPT_PATH)/FStar/bin/fstar.exe
+export FSTAR_EXE  := $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe
 export KRML_HOME  := $(EVERPARSE_OPT_PATH)/karamel
 export PULSE_HOME := $(EVERPARSE_OPT_PATH)/pulse/out
 export HACL_HOME := $(EVERPARSE_OPT_PATH)/hacl-star
@@ -17,7 +17,7 @@ submodules:
 	git submodule update
 
 FStar: submodules
-	+$(MAKE) -C $@ 1 ADMIT=1
+	+$(MAKE) -C $@ ADMIT=1
 
 z3: submodules
 	mkdir -p $@
