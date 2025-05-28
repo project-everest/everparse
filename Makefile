@@ -8,9 +8,8 @@ export PATH := $(EVERPARSE_OPT_PATH)/z3:$(PATH)
 
 include $(EVERPARSE_OPT_PATH)/env.Makefile
 
-_opam:
+_opam: submodules
 	rm -rf $@.tmp
-	git submodule init && git submodule update
 	if opam init --bare --no-setup && opam switch create ./ ocaml-base-compiler.5.3.0 && opam exec opt/everest/everest opam ; then true ; else mv $@ $@.tmp ; exit 1 ; fi
 
 package-subset: quackyducky lowparse 3d
@@ -112,7 +111,7 @@ endif
 .PHONY: lowparse-pulse
 
 submodules:
-	git submodule init && git submodule update
+	$(MAKE) -C opt submodules
 
 .PHONY: submodules
 
