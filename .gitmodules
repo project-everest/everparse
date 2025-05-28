@@ -1,10 +1,10 @@
 [submodule "opt/FStar"]
 	path = opt/FStar
-	url = https://github.com/mtzguido/FStar
+	url = https://github.com/tahina-pro/FStar.git
 	branch = bij
 [submodule "opt/karamel"]
 	path = opt/karamel
-	url = https://github.com/mtzguido/karamel
+	url = https://github.com/tahina-pro/kremlin.git
 [submodule "opt/pulse"]
 	path = opt/pulse
 	url = https://github.com/FStarLang/pulse
