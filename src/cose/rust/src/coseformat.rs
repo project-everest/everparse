@@ -9198,7 +9198,7 @@ serialize_empty_or_serialized_map(c: evercddl_empty_or_serialized_map_pretty, ou
         evercddl_empty_or_serialized_map::Inr { v: c2 } =>
           {
               let len: usize = c2.len();
-              if 0u64 as usize <= len && len <= 0u64 as usize
+              if (0u64 as usize) <= len && len <= 0u64 as usize
               {
                   if 2u8 == crate::cbordetveraux::cbor_major_type_byte_string
                   {

@@ -2150,11 +2150,10 @@ fn cbor_serialized_array_iterator_init <'a>(c: cbor_serialized <'a>) ->
     { s: c.cbor_serialized_payload, len: c.cbor_serialized_header.value }
 }
 
-fn cbor_serialized_array_iterator_is_empty <'a>(c: cbor_raw_serialized_iterator <'a>) -> bool
+fn cbor_serialized_array_iterator_is_empty(c: cbor_raw_serialized_iterator) -> bool
 { c.len == 0u64 }
 
-fn cbor_serialized_array_iterator_length <'a>(c: cbor_raw_serialized_iterator <'a>) -> u64
-{ c.len }
+fn cbor_serialized_array_iterator_length(c: cbor_raw_serialized_iterator) -> u64 { c.len }
 
 #[derive(PartialEq, Clone, Copy)]
 enum cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw_tags
@@ -2178,7 +2177,7 @@ fn cbor_serialized_array_iterator_next <'b, 'a>(
     <'a>
 {
     let i1: usize = jump_raw_data_item(i.s, 0usize);
-    let s: (&[u8], &[u8]) = i.s.split_at(i1);
+    let s: (&[u8], &[u8]) = (i.s).split_at(i1);
     let _letpattern: (&[u8], &[u8]) =
         {
             let s1: &[u8] = s.0;
@@ -2201,7 +2200,7 @@ fn cbor_serialized_array_iterator_next <'b, 'a>(
     let s2: &[u8] = _letpattern1.1;
     let res: cbor_raw = cbor_read(s1);
     let i·: cbor_raw_serialized_iterator =
-        cbor_raw_serialized_iterator { s: s2, len: i.len.wrapping_sub(1u64) };
+        cbor_raw_serialized_iterator { s: s2, len: (i.len).wrapping_sub(1u64) };
     pi[0] =
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw::CBOR_Raw_Iterator_Serialized { _0: i· };
     res
@@ -2220,7 +2219,7 @@ fn cbor_serialized_map_iterator_init <'a>(c: cbor_serialized <'a>) ->
     { s: c.cbor_serialized_payload, len: c.cbor_serialized_header.value }
 }
 
-fn cbor_serialized_map_iterator_is_empty <'a>(c: cbor_raw_serialized_iterator <'a>) -> bool
+fn cbor_serialized_map_iterator_is_empty(c: cbor_raw_serialized_iterator) -> bool
 { c.len == 0u64 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -2239,7 +2238,7 @@ fn cbor_serialized_map_iterator_next <'b, 'a>(
 {
     let off1: usize = jump_raw_data_item(i.s, 0usize);
     let i1: usize = jump_raw_data_item(i.s, off1);
-    let s: (&[u8], &[u8]) = i.s.split_at(i1);
+    let s: (&[u8], &[u8]) = (i.s).split_at(i1);
     let _letpattern: (&[u8], &[u8]) =
         {
             let s1: &[u8] = s.0;
@@ -2289,7 +2288,7 @@ fn cbor_serialized_map_iterator_next <'b, 'a>(
             cbor_map_entry { cbor_map_entry_key: res1, cbor_map_entry_value: res2 }
         };
     let i·: cbor_raw_serialized_iterator =
-        cbor_raw_serialized_iterator { s: s2, len: i.len.wrapping_sub(1u64) };
+        cbor_raw_serialized_iterator { s: s2, len: (i.len).wrapping_sub(1u64) };
     pi[0] =
         cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry::CBOR_Raw_Iterator_Serialized
         { _0: i· };
@@ -2349,9 +2348,7 @@ pub(crate) fn cbor_array_iterator_init <'a>(c: cbor_raw <'a>) ->
     }
 }
 
-pub(crate) fn cbor_array_iterator_is_empty <'a>(
-    c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
-) ->
+pub(crate) fn cbor_array_iterator_is_empty(c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw) ->
     bool
 {
     match c
@@ -2371,9 +2368,7 @@ pub(crate) fn cbor_array_iterator_is_empty <'a>(
     }
 }
 
-pub(crate) fn cbor_array_iterator_length <'a>(
-    c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
-) ->
+pub(crate) fn cbor_array_iterator_length(c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw) ->
     u64
 {
     match c
@@ -2486,8 +2481,8 @@ pub(crate) fn cbor_map_iterator_init <'a>(c: cbor_raw <'a>) ->
     }
 }
 
-pub(crate) fn cbor_map_iterator_is_empty <'a>(
-    c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
+pub(crate) fn cbor_map_iterator_is_empty(
+    c: cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
 ) ->
     bool
 {
@@ -2817,7 +2812,7 @@ fn size_header(x: header, out: &mut [usize]) -> bool
     { false }
 }
 
-fn cbor_raw_get_header <'a>(xl: cbor_raw <'a>) -> header
+fn cbor_raw_get_header(xl: cbor_raw) -> header
 {
     match xl
     {
@@ -2859,7 +2854,7 @@ fn cbor_raw_get_header <'a>(xl: cbor_raw <'a>) -> header
                                 raw_uint64
                                 {
                                     size: c·.cbor_string_size,
-                                    value: c·.cbor_string_ptr.len() as u64
+                                    value: (c·.cbor_string_ptr).len() as u64
                                 };
                             res
                         },
@@ -2896,7 +2891,10 @@ fn cbor_raw_get_header <'a>(xl: cbor_raw <'a>) -> header
                   {
                       cbor_raw::CBOR_Case_Array { v: c· } =>
                         raw_uint64
-                        { size: c·.cbor_array_length_size, value: c·.cbor_array_ptr.len() as u64 },
+                        {
+                            size: c·.cbor_array_length_size,
+                            value: (c·.cbor_array_ptr).len() as u64
+                        },
                       cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
                       _ => panic!("Incomplete pattern matching")
                   };
@@ -2909,7 +2907,10 @@ fn cbor_raw_get_header <'a>(xl: cbor_raw <'a>) -> header
                   {
                       cbor_raw::CBOR_Case_Array { v: c· } =>
                         raw_uint64
-                        { size: c·.cbor_array_length_size, value: c·.cbor_array_ptr.len() as u64 },
+                        {
+                            size: c·.cbor_array_length_size,
+                            value: (c·.cbor_array_ptr).len() as u64
+                        },
                       cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
                       _ => panic!("Incomplete pattern matching")
                   };
@@ -2922,7 +2923,7 @@ fn cbor_raw_get_header <'a>(xl: cbor_raw <'a>) -> header
                   {
                       cbor_raw::CBOR_Case_Map { v: c· } =>
                         raw_uint64
-                        { size: c·.cbor_map_length_size, value: c·.cbor_map_ptr.len() as u64 },
+                        { size: c·.cbor_map_length_size, value: (c·.cbor_map_ptr).len() as u64 },
                       cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
                       _ => panic!("Incomplete pattern matching")
                   };
@@ -2935,7 +2936,7 @@ fn cbor_raw_get_header <'a>(xl: cbor_raw <'a>) -> header
                   {
                       cbor_raw::CBOR_Case_Map { v: c· } =>
                         raw_uint64
-                        { size: c·.cbor_map_length_size, value: c·.cbor_map_ptr.len() as u64 },
+                        { size: c·.cbor_map_length_size, value: (c·.cbor_map_ptr).len() as u64 },
                       cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
                       _ => panic!("Incomplete pattern matching")
                   };
@@ -2956,7 +2957,7 @@ fn cbor_raw_get_header <'a>(xl: cbor_raw <'a>) -> header
     }
 }
 
-fn cbor_raw_with_perm_get_header <'a>(xl: cbor_raw <'a>) -> header
+fn cbor_raw_with_perm_get_header(xl: cbor_raw) -> header
 {
     let res: header = cbor_raw_get_header(xl);
     res
@@ -2988,7 +2989,7 @@ option__LowParse_Pulse_Base_with_perm·Pulse_Lib_Slice_slice·CBOR_Pulse_Raw_Typ
     Some { v: &'a [cbor_map_entry <'a>] }
 }
 
-pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -> usize
+pub(crate) fn ser·(x·: cbor_raw, out: &mut [u8], offset: usize) -> usize
 {
     let res: header = cbor_raw_with_perm_get_header(x·);
     let xh1: header = res;
@@ -3236,7 +3237,7 @@ pub(crate) fn ser· <'a>(x·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -
     res3
 }
 
-fn ser <'a>(x1·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -> usize
+fn ser(x1·: cbor_raw, out: &mut [u8], offset: usize) -> usize
 {
     let x2·: cbor_raw = x1·;
     let res: usize = ser·(x2·, out, offset);
@@ -3244,13 +3245,13 @@ fn ser <'a>(x1·: cbor_raw <'a>, out: &'a mut [u8], offset: usize) -> usize
     res0
 }
 
-pub(crate) fn cbor_serialize <'a>(x: cbor_raw <'a>, output: &'a mut [u8]) -> usize
+pub(crate) fn cbor_serialize(x: cbor_raw, output: &mut [u8]) -> usize
 {
     let res: usize = ser(x, output, 0usize);
     res
 }
 
-pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
+pub(crate) fn siz·(x·: cbor_raw, out: &mut [usize]) -> bool
 {
     let res: header = cbor_raw_with_perm_get_header(x·);
     let xh1: header = res;
@@ -3517,7 +3518,7 @@ pub(crate) fn siz· <'a>(x·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
     res2
 }
 
-fn siz <'a>(x1·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
+fn siz(x1·: cbor_raw, out: &mut [usize]) -> bool
 {
     let x2·: cbor_raw = x1·;
     let res: bool = siz·(x2·, out);
@@ -3525,7 +3526,7 @@ fn siz <'a>(x1·: cbor_raw <'a>, out: &'a mut [usize]) -> bool
     res0
 }
 
-pub(crate) fn cbor_size <'a>(x: cbor_raw <'a>, bound: usize) -> usize
+pub(crate) fn cbor_size(x: cbor_raw, bound: usize) -> usize
 {
     let mut output: [usize; 1] = [bound; 1usize];
     let res: bool = siz(x, &mut output);
@@ -3790,31 +3791,25 @@ pub(crate) fn cbor_serialize_map(len: raw_uint64, out: &mut [u8], off: usize) ->
     res
 }
 
-fn cbor_match_compare_serialized_tagged <'a>(
-    c1: cbor_serialized <'a>,
-    c2: cbor_serialized <'a>
-) ->
-    i16
+fn cbor_match_compare_serialized_tagged(c1: cbor_serialized, c2: cbor_serialized) -> i16
 {
     let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
     res
 }
 
-fn cbor_match_compare_serialized_array <'a>(c1: cbor_serialized <'a>, c2: cbor_serialized <'a>) ->
-    i16
+fn cbor_match_compare_serialized_array(c1: cbor_serialized, c2: cbor_serialized) -> i16
 {
     let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
     res
 }
 
-fn cbor_match_compare_serialized_map <'a>(c1: cbor_serialized <'a>, c2: cbor_serialized <'a>) ->
-    i16
+fn cbor_match_compare_serialized_map(c1: cbor_serialized, c2: cbor_serialized) -> i16
 {
     let res: i16 = lex_compare_bytes(c1.cbor_serialized_payload, c2.cbor_serialized_payload);
     res
 }
 
-pub(crate) fn impl_major_type <'a>(x: cbor_raw <'a>) -> u8
+pub(crate) fn impl_major_type(x: cbor_raw) -> u8
 {
     match x
     {
@@ -3907,7 +3902,7 @@ fn snd__CBOR_Pulse_Raw_Type_cbor_serialized_CBOR_Pulse_Raw_Type_cbor_serialized 
     _2
 }
 
-pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i16
+pub(crate) fn impl_cbor_compare(x1: cbor_raw, x2: cbor_raw) -> i16
 {
     let ty1: u8 = impl_major_type(x1);
     let ty2: u8 = impl_major_type(x2);
@@ -3946,7 +3941,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                               raw_uint64
                               {
                                   size: c·.cbor_string_size,
-                                  value: c·.cbor_string_ptr.len() as u64
+                                  value: (c·.cbor_string_ptr).len() as u64
                               };
                           res
                       },
@@ -3962,7 +3957,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                               raw_uint64
                               {
                                   size: c·.cbor_string_size,
-                                  value: c·.cbor_string_ptr.len() as u64
+                                  value: (c·.cbor_string_ptr).len() as u64
                               };
                           res
                       },
@@ -4046,7 +4041,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                 {
                     cbor_raw::CBOR_Case_Array { v: c· } =>
                       raw_uint64
-                      { size: c·.cbor_array_length_size, value: c·.cbor_array_ptr.len() as u64 },
+                      { size: c·.cbor_array_length_size, value: (c·.cbor_array_ptr).len() as u64 },
                     cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
                     _ => panic!("Incomplete pattern matching")
                 };
@@ -4055,7 +4050,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                 {
                     cbor_raw::CBOR_Case_Array { v: c· } =>
                       raw_uint64
-                      { size: c·.cbor_array_length_size, value: c·.cbor_array_ptr.len() as u64 },
+                      { size: c·.cbor_array_length_size, value: (c·.cbor_array_ptr).len() as u64 },
                     cbor_raw::CBOR_Case_Serialized_Array { v: c· } => c·.cbor_serialized_header,
                     _ => panic!("Incomplete pattern matching")
                 };
@@ -4316,7 +4311,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                 {
                     cbor_raw::CBOR_Case_Map { v: c· } =>
                       raw_uint64
-                      { size: c·.cbor_map_length_size, value: c·.cbor_map_ptr.len() as u64 },
+                      { size: c·.cbor_map_length_size, value: (c·.cbor_map_ptr).len() as u64 },
                     cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
                     _ => panic!("Incomplete pattern matching")
                 };
@@ -4325,7 +4320,7 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
                 {
                     cbor_raw::CBOR_Case_Map { v: c· } =>
                       raw_uint64
-                      { size: c·.cbor_map_length_size, value: c·.cbor_map_ptr.len() as u64 },
+                      { size: c·.cbor_map_length_size, value: (c·.cbor_map_ptr).len() as u64 },
                     cbor_raw::CBOR_Case_Serialized_Map { v: c· } => c·.cbor_serialized_header,
                     _ => panic!("Incomplete pattern matching")
                 };
@@ -4637,10 +4632,9 @@ pub(crate) fn impl_cbor_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i1
     { c }
 }
 
-fn cbor_raw_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i16
-{ impl_cbor_compare(x1, x2) }
+fn cbor_raw_compare(x1: cbor_raw, x2: cbor_raw) -> i16 { impl_cbor_compare(x1, x2) }
 
-fn cbor_map_entry_raw_compare <'a>(x1: cbor_map_entry <'a>, x2: cbor_map_entry <'a>) -> i16
+fn cbor_map_entry_raw_compare(x1: cbor_map_entry, x2: cbor_map_entry) -> i16
 {
     let res: i16 = cbor_raw_compare(x1.cbor_map_entry_key, x2.cbor_map_entry_key);
     res
@@ -4793,7 +4787,7 @@ pub(crate) fn cbor_raw_sort(a: &mut [cbor_map_entry]) -> bool
     res
 }
 
-pub(crate) fn impl_cbor_det_compare <'a>(x1: cbor_raw <'a>, x2: cbor_raw <'a>) -> i16
+pub(crate) fn impl_cbor_det_compare(x1: cbor_raw, x2: cbor_raw) -> i16
 {
     let res: i16 = impl_cbor_compare(x1, x2);
     res

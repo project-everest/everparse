@@ -55,15 +55,14 @@ pub enum option__size_t
     Some { v: usize }
 }
 
-pub fn cbor_det_size <'a>(x: crate::cbordetveraux::cbor_raw <'a>, bound: usize) ->
-    option__size_t
+pub fn cbor_det_size(x: crate::cbordetveraux::cbor_raw, bound: usize) -> option__size_t
 {
     let res: usize = crate::cbordetveraux::cbor_size(x, bound);
     let size: usize = res;
     if size == 0usize { option__size_t::None } else { option__size_t::Some { v: size } }
 }
 
-pub fn cbor_det_serialize <'a>(x: crate::cbordetveraux::cbor_raw <'a>, output: &'a mut [u8]) ->
+pub fn cbor_det_serialize(x: crate::cbordetveraux::cbor_raw, output: &mut [u8]) ->
     option__size_t
 {
     let res: usize = crate::cbordetveraux::cbor_size(x, output.len());
@@ -251,17 +250,14 @@ pub fn cbor_det_mk_map <'a>(a: &'a mut [crate::cbordetveraux::cbor_map_entry <'a
     { option__CBOR_Pulse_Raw_Type_cbor_raw::None }
 }
 
-pub fn cbor_det_equal <'a>(
-    x1: crate::cbordetveraux::cbor_raw <'a>,
-    x2: crate::cbordetveraux::cbor_raw <'a>
-) ->
+pub fn cbor_det_equal(x1: crate::cbordetveraux::cbor_raw, x2: crate::cbordetveraux::cbor_raw) ->
     bool
 {
     let comp: i16 = crate::cbordetveraux::impl_cbor_compare(x1, x2);
     comp == 0i16
 }
 
-pub fn cbor_det_major_type <'a>(x: crate::cbordetveraux::cbor_raw <'a>) -> u8
+pub fn cbor_det_major_type(x: crate::cbordetveraux::cbor_raw) -> u8
 {
     let res: u8 = crate::cbordetveraux::impl_major_type(x);
     res
@@ -376,14 +372,14 @@ pub fn cbor_det_destruct <'a>(c: crate::cbordetveraux::cbor_raw <'a>) -> cbor_de
     }
 }
 
-pub fn cbor_det_get_array_length <'a>(x: crate::cbordetveraux::cbor_raw <'a>) -> u64
+pub fn cbor_det_get_array_length(x: crate::cbordetveraux::cbor_raw) -> u64
 {
     let res: crate::cbordetveraux::raw_uint64 =
         match x
         {
             crate::cbordetveraux::cbor_raw::CBOR_Case_Array { v: c· } =>
               crate::cbordetveraux::raw_uint64
-              { size: c·.cbor_array_length_size, value: c·.cbor_array_ptr.len() as u64 },
+              { size: c·.cbor_array_length_size, value: (c·.cbor_array_ptr).len() as u64 },
             crate::cbordetveraux::cbor_raw::CBOR_Case_Serialized_Array { v: c· } =>
               c·.cbor_serialized_header,
             _ => panic!("Incomplete pattern matching")
@@ -405,8 +401,8 @@ pub fn cbor_det_array_iterator_start <'a>(x: crate::cbordetveraux::cbor_raw <'a>
     res0
 }
 
-pub fn cbor_det_array_iterator_is_empty <'a>(
-    x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
+pub fn cbor_det_array_iterator_is_empty(
+    x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
 ) ->
     bool
 {
@@ -424,8 +420,8 @@ pub fn cbor_det_array_iterator_next <'b, 'a>(
     res
 }
 
-pub fn cbor_det_array_iterator_length <'a>(
-    x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw <'a>
+pub fn cbor_det_array_iterator_length(
+    x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
 ) ->
     u64
 {
@@ -460,14 +456,14 @@ pub fn cbor_det_get_array_item <'a>(x: crate::cbordetveraux::cbor_raw <'a>, i: u
     }
 }
 
-pub fn cbor_det_map_length <'a>(x: crate::cbordetveraux::cbor_raw <'a>) -> u64
+pub fn cbor_det_map_length(x: crate::cbordetveraux::cbor_raw) -> u64
 {
     let res: crate::cbordetveraux::raw_uint64 =
         match x
         {
             crate::cbordetveraux::cbor_raw::CBOR_Case_Map { v: c· } =>
               crate::cbordetveraux::raw_uint64
-              { size: c·.cbor_map_length_size, value: c·.cbor_map_ptr.len() as u64 },
+              { size: c·.cbor_map_length_size, value: (c·.cbor_map_ptr).len() as u64 },
             crate::cbordetveraux::cbor_raw::CBOR_Case_Serialized_Map { v: c· } =>
               c·.cbor_serialized_header,
             _ => panic!("Incomplete pattern matching")
@@ -489,8 +485,8 @@ pub fn cbor_det_map_iterator_start <'a>(x: crate::cbordetveraux::cbor_raw <'a>) 
     res0
 }
 
-pub fn cbor_det_map_iterator_is_empty <'a>(
-    x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry <'a>
+pub fn cbor_det_map_iterator_is_empty(
+    x: crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_map_entry
 ) ->
     bool
 {
@@ -615,3 +611,6 @@ pub fn cbor_det_serialize_map(len: u64, out: &mut [u8], off: usize) -> usize
     let res: usize = crate::cbordetveraux::cbor_serialize_map(rlen, out, off);
     res
 }
+
+pub fn dummy_cbor_det_t <'a>() -> crate::cbordetveraux::cbor_raw <'a>
+{ crate::cbordetveraux::dummy_cbor_det_t() }
