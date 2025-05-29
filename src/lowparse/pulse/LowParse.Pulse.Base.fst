@@ -1548,6 +1548,104 @@ type with_perm (t: Type) = {
   p: perm
 }
 
+let vmatch_ref
+  (#tl #th: Type0)
+  (vmatch: tl -> th -> slprop)
+  (r: with_perm (ref tl))
+  (vh: th)
+: Tot slprop
+= exists* vl . R.pts_to r.v #r.p vl ** vmatch vl vh
+
+let vmatch_ref_wf0
+  (#tbound: Type)
+  (#tl #th: Type0)
+  (bound: tbound)
+  (vmatch: tl -> (vh: th { vh << bound }) -> slprop)
+  (r: with_perm (ref tl))
+  (vh: th)
+  (sq: option (squash (vh << bound)))
+: Tot slprop
+= match sq with
+  | Some _ -> exists* vl . R.pts_to r.v #r.p vl ** vmatch vl vh
+  | None -> pure False
+
+let vmatch_ref_wf
+  (#tbound: Type)
+  (#tl #th: Type0)
+  (bound: tbound)
+  (vmatch: tl -> (vh: th { vh << bound }) -> slprop)
+  (r: with_perm (ref tl))
+  (vh: th)
+: Tot slprop
+= if FStar.StrongExcludedMiddle.strong_excluded_middle (vh << bound)
+  then vmatch_ref_wf0 bound vmatch r vh (Some ())
+  else pure False
+
+let vmatch_ref_wf_eq
+  (#tbound: Type)
+  (#tl #th: Type0)
+  (bound: tbound)
+  (vmatch: tl -> th -> slprop)
+  (r: with_perm (ref tl))
+  (vh: th)
+: Lemma
+  (requires (vh << bound))
+  (ensures (vmatch_ref_wf bound vmatch r vh == vmatch_ref vmatch r vh))
+= let b = (FStar.StrongExcludedMiddle.strong_excluded_middle (vh << bound)) in // FIXME: WHY WHY WHY the let binding?
+  assert (vmatch_ref_wf bound vmatch r vh == vmatch_ref_wf0 bound vmatch r vh (Some ()));
+  assert_norm (vmatch_ref_wf0 bound vmatch r vh (Some ()) == vmatch_ref vmatch r vh)
+
+ghost fn vmatch_ref_elim_trade
+  (#tl #th: Type0)
+  (vmatch: tl -> th -> slprop)
+  (r: with_perm (ref tl))
+  (vh: th)
+requires vmatch_ref vmatch r vh
+ensures exists* vl .
+  R.pts_to r.v #r.p vl ** vmatch vl vh **
+  Trade.trade
+    (R.pts_to r.v #r.p vl ** vmatch vl vh)
+    (vmatch_ref vmatch r vh)
+{
+  unfold (vmatch_ref vmatch r vh);
+  with vl . assert (R.pts_to r.v #r.p vl ** vmatch vl vh);
+  ghost fn aux ()
+  requires emp ** (R.pts_to r.v #r.p vl ** vmatch vl vh)
+  ensures vmatch_ref vmatch r vh
+  {
+    fold (vmatch_ref vmatch r vh)
+  };
+  Trade.intro _ _ _ aux
+}
+
+inline_for_extraction
+fn l2r_write_ref
+  (#th: Type0)
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k th)
+  (#s: serializer p)
+  (#tl: Type0)
+  (#vmatch: tl -> th -> slprop)
+  (w: l2r_writer vmatch s)
+: l2r_writer #_ #_ (vmatch_ref vmatch) #_ #_ s
+=
+  (x': _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  vmatch_ref_elim_trade vmatch x' x;
+  with gz . assert (vmatch gz x);
+  let z = !(x'.v);
+  Trade.elim_hyp_l _ _ _;
+  Trade.rewrite_with_trade (vmatch gz x) (vmatch z x);
+  Trade.trans _ _ (vmatch_ref vmatch x' x);
+  let res = w z out offset;
+  Trade.elim _ _;
+  res
+}
+
 let pts_to_serialized_with_perm
   (#t: Type0)
   (#k: parser_kind)
