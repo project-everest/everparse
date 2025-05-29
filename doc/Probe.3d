@@ -10,18 +10,16 @@ typedef struct _T(UINT32 bound) {
 entrypoint
 typedef struct _S(EVERPARSE_COPY_BUFFER_T dest) {
   UINT8 bound;
-  T(bound) *tpointer probe ProbeAndCopy(length = 8, destination = dest);
+  T(bound) *tpointer probe ProbeAndCopy(length = sizeof(T), destination = dest);
 } S;
 
 //SNIPPET_END: simple probe$
 
 //SNIPPET_START: multi probe$
-extern probe ProbeAndCopyAlt
-
 entrypoint
 typedef struct _U(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
   UINT8 tag;
-  S(destT) *spointer probe ProbeAndCopyAlt(length = 9, destination = destS);
+  S(destT) *spointer probe ProbeAndCopy(length = sizeof(S), destination = destS);
 } U;
 //SNIPPET_END: multi probe$
 
@@ -31,7 +29,7 @@ entrypoint
 typedef struct _V(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
   UINT8 tag;
   S(destT) *sptr probe ProbeAndCopy(length = 9, destination = destS);
-  T(17) *tptr probe ProbeAndCopyAlt(length = 8, destination = destT);
+  T(17) *tptr probe ProbeAndCopy(length = 8, destination = destT);
   T(tag) *t2ptr probe ProbeAndCopy(length = 8, destination = destT);
 } V;
 //SNIPPET_END: reuse copy buffer$
@@ -59,3 +57,18 @@ typedef struct _I(EVERPARSE_COPY_BUFFER_T dest) {
   TT *ttptr probe ProbeAndCopy(length=sizeof(TT), destination=dest);
 } I;
 //SNIPPET_END: indirect alt$
+
+
+//SNIPPET_START: probe_and_copy_alt$
+extern probe ProbeAndCopyAlt
+
+entrypoint probe ProbeAndCopy(length=sizeof(this))
+entrypoint probe ProbeAndCopyAlt(length=sizeof(this))
+typedef struct _Indirect(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2) {
+  UINT32 fst;
+  UINT32 snd;
+  UINT8 tag;
+  T *tptr1 probe ProbeAndCopy(length=sizeof(T), dest=destT1);
+  T *tptr2 probe ProbeAndCopyAlt(length=sizeof(T), dest=destT2);
+} Indirect;
+//SNIPPET_END: probe_and_copy_alt$

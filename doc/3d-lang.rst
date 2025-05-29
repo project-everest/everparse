@@ -555,44 +555,47 @@ kernel code, it may be possible to probe a pointer to check that it is valid,
 and only then proceed to read from it. 3d supports parsing structures containing
 pointers, provided safe probing functions can be provided by the caller.
 
-Let's look an an example:
+A First Example: Simple Probes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Let's start with a simple example. Our goal is to validate a format that
+contains a single indirection: a structure ``S`` containing a pointer to a
+structure ``T``.
 
 .. literalinclude:: Probe.3d
   :language: 3d
   :start-after: SNIPPET_START: simple probe$
   :end-before: SNIPPET_END: simple probe$
 
-The first line declares a `probe` function called `ProbeAndCopy`. This is a
+The first line declares a ``probe`` function called ``ProbeAndCopy``. This is a
 requirement on the user of the generated parser to link the generated code with
-a function called `ProbeAndCopy`. In fact, the generated code contains and
-extern declaration with the signature shown below:
+a function called ``ProbeAndCopy``. In fact, the generated code contains an
+extern declaration with the signature shown below (in ``Probe_ExternalAPI.h``):
 
 .. code-block:: c
 
-  extern BOOLEAN ProbeAndCopy(uint64_t base, uint64_t length, EVERPARSE_COPY_BUFFER_T buffer);
+  extern BOOLEAN ProbeAndCopy(
+    uint64_t size,  //The number of bytes to copy
+    uint64_t read_offset, //starting at this offset from the src pointer
+    uint64_t write_offset, //writing to this offset in the dst buffer
+    uint64_t src, //the source address to be probed and checked for validity
+    EVERPARSE_COPY_BUFFER_T dst //the target buffer into which the data is to be copied
+  );
 
-where, in `EverParseEndianness.h`, we have
+That is, the ``ProbeAndCopy`` function is expected to check probe the source address, 
+check its validity at ``read_offset``, and copy ``size`` bytes into the ``dst``
+buffer starting at ``write_offset``.
 
-That is, the `ProbeAndCopy` function is expected to take three arguments:
-
-  * A pointer value, represented as a 64-bit unsigned integer, to be probed for validity.
-
-  * A length value, also a `uint64_t`, representing the extent of memory to be
-    checked for validity starting from the base address
-
-  * And a buffer of type `EVERPARSE_COPY_BUFFER_T`. Typically, the
-    implementation of `ProbeAndCopy` may choose to copy the memory starting at
-    the base address into the buffer, so that the parser can then read from the
-    buffer.
-
-The type `EVERPARSE_COPY_BUFFER_T` is also left to the user to define. In
-particular, in `EverParseEndianness.h`, we have
+Note, although a typical implementation may choose to copy memory into the
+destination buffer, this not strictly required. In particular, the type
+``EVERPARSE_COPY_BUFFER_T`` is also left to the user to define. In particular,
+in ``EverParseEndianness.h``, we have
 
 .. code-block:: c
 
   typedef void* EVERPARSE_COPY_BUFFER_T;
 
-While in `EverParse.h`, we further have:
+While in ``EverParse.h``, we further have:
 
 .. code-block:: c
 
@@ -600,18 +603,33 @@ While in `EverParse.h`, we further have:
 
   extern uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T buf);
 
-That is, the client code can choose any definition for `EVERPARSE_COPY_BUFFER_T`
-(since it is just a `void*`), so long as it can also provide two functions:
-`EverParseStreamOf` to extract a buffer of bytes from a
-`EVERPARSE_COPY_BUFFER_T`; and `EverParseStreamLen` to extract the length of the
-buffer.
+That is, the client code can choose any definition for
+``EVERPARSE_COPY_BUFFER_T`` (since it is just a ``void*``), so long as it can
+also provide two functions: ``EverParseStreamOf`` to extract a buffer of bytes
+from a ``EVERPARSE_COPY_BUFFER_T``; and ``EverParseStreamLen`` to extract the
+length of the buffer.
 
-Let's return to the example to see how the `ProbeAndCopy` function is used.
+The second line defines another extern callback for ``extern probe (INIT)
+ProbeInit``. This results in the following extern C declaration in
+``Probe_ExternalAPI.h``:
 
-The type `T` is just a struct with two fields, constrained by a lower bound. The
-type `S` is more interesting. It starts with a `UINT8 bound` and then contains a
-*pointer* `t` to a `T(bound)` struct. To emphasize the point, the following
-picture illustrates the layout::
+.. code-block:: c
+
+  extern BOOLEAN ProbeInit(
+    uint64_t size,
+    EVERPARSE_COPY_BUFFER_T dst
+  )
+
+The ``ProbeInit`` callback allows a caller to initialize the destination buffer,
+preparing it to contain up to ``size`` bytes of data, e.g., if need be, one
+could use this callback to allocate memory.
+
+Let's return to the example to see how the ``ProbeAndCopy`` function is used.
+
+The type ``T`` is just a struct with two fields, constrained by a lower bound.
+The type ``S`` is more interesting. It starts with a ``UINT8 bound`` and then
+contains a *pointer* ``t`` to a ``T`(bound)`` struct. To emphasize the point,
+the following picture illustrates the layout::
 
      bytes
      0........1........2........3........4........5........6........7........8........9 
@@ -625,33 +643,42 @@ picture illustrates the layout::
  T:  {        x        |        y        }
 
   
-
-The input buffer represents the `S` structure in 5 bytes, beginning with one
-byte for the `bound`, and following by 8 bytes for the `tpointer`
+The input buffer represents the ``S`` structure in 5 bytes, beginning with one
+byte for the ``bound``, and following by 8 bytes for the ``tpointer``
 field---currently, 3D treats pointer fields as always 8 bytes long.
 
-The `tpointer` field contains a memory address that points to the a `T`
-structure, which is represented in 4 bytes, with 2 bytes each for its `x` and
-`y` fields, as usual.
+The ``tpointer`` field contains a memory address that points to the a ``T``
+structure, which is represented in 4 bytes, with 2 bytes each for its ``x`` and
+``y`` fields, as usual.
 
 The 3D notation below:
 
 .. code-block:: 3d
 
-  T(bound) *tpointer probe ProbeAndCopy(length = 8, destination = dest);
+  T(bound) *tpointer probe ProbeAndCopy(length = sizeof(T), destination = dest);
 
 Instructs the parser to:
-   
-  * First, use the `ProbeAndCopy` function to check that the 8 bytes starting at
-    the address pointed to by `tpointer` are valid memory, using the `dest`
-    parameter as its copy buffer.
 
-  * If `ProbeAndCopy` succeeds, then validate that `EverParseStreamOf(dest)`
-    buffer contains a valid `T(bound)` structure, in `EverParseStreamLen(dest)`
-    bytes.
+  * First, read the contents of the ``tpointer`` field into a local vairable ``src``
 
-One can use multiple probe functions in a specification. Continuing our example
-from above, one can write:
+  * Then, call ``ProbeInit(4, dest)`` to prepare the destination buffer, where
+    ``sizeof(T)=4``.
+
+  * Then, if ``ProbeInit`` succeeds, use ``ProbeAndCopy(sizeof(T), 0, 0, src,
+    destS)`` check that the ``sizeof(T)`` bytes starting at the address pointed
+    to by ``tpointer`` is valid memory, using the ``dest`` parameter as its copy
+    buffer.
+
+  * Finally, if ``ProbeAndCopy`` succeeds, then validate that
+    ``EverParseStreamOf(dest)`` buffer contains a valid ``T(bound)`` structure,
+    in ``EverParseStreamLen(dest)`` bytes.
+
+Probing Multiple Indirections
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Continuing our simple example, let's add another layer of indirection:, with a
+structure ``U`` containing a pointer to ``S``. This can be specified as shown
+below:
 
 .. literalinclude:: Probe.3d
   :language: 3d
@@ -659,13 +686,30 @@ from above, one can write:
   :end-before: SNIPPET_END: multi probe$
 
 
-* We define a second probing function `ProbeAndCopyAlt`
+* The type ``U`` packages a pointer to an ``S`` structure with a tag.
 
-* The a type `U`, that packages a pointer to an  `S` structure with a tag. Note,
-  the `spointer` is probed using `ProbeAndCopyAlt`, while the `tpointer`
-  nested within it is probed using `ProbeAndCopy`.
+* The specification of ``U`` is parameterized by `two` destintation buffers:
+  ``destS`` to receive the contents of the memory referenced by ``spointer``;
+  and ``destT`` to receive the contents of the memory referenced by
+  ``tpointer``.
 
-One can also reuse the same copy buffer for multiple probe, so long as the
+Operationally, the validator for ``U`` proceeds by:
+
+* First, validating the tag field (in this case, it is a noop)
+
+* Then, reading ``spointer`` into ``srcS`` and
+
+  - Calling ``ProbeInit(sizeof(S), destS)``
+
+  - Then, ``ProbeAndCopy(sizeof(S), 0, 0, srcS, destS)``
+
+  - Then, validate ``EverParseStreamOf(destS)`` contains a valid ``S(destT)``.
+
+The validation of ``S(destT)`` proceeds as described before, copying the
+contents of ``tpointer`` into ``destT`` and validating it.
+
+
+Note, one can also reuse the same copy buffer for multiple probe, so long as the
 probes are done sequentially. For instance, we use several probes below, reusing
 `destT` multiple times to parser the nested `T` structure within `sptr`, and
 again for `tptr` and `t2ptr`.
@@ -683,9 +727,11 @@ an error message::
 
   ./Probe.3d:(30,16): (Error) Nested mutation of the copy buffer [destT]
 
-Finally, there is one more variation in using probes. Consider the following
-type:
+Top-level Probes
+^^^^^^^^^^^^^^^^
 
+Rather than attaching a probe to a field, one can also attach a probe to an
+entire type. For instance, one can write the following:
 
 .. literalinclude:: Probe.3d
   :language: 3d
@@ -710,14 +756,45 @@ fields.::
      0........1........2........3........4........5........6........7........8.........9 
   TT:{        x                          |                 y                 |   tag    }
 
-
 The specification is equivalent to the following, though more concise:
-
 
 .. literalinclude:: Probe.3d
   :language: 3d
   :start-after: SNIPPET_START: indirect alt$
   :end-before: SNIPPET_END: indirect alt$
+
+Multiple Probe Callbacks
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Sometimes, it can be useful to have several probe callbacks, e.g., some of them
+may copy, while for others it might be safe to validate the data in place.
+
+The example below shows how to use multiple probes:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: indirect alt$
+  :end-before: SNIPPET_END: indirect alt$
+
+* The extern declaration of ``ProbeAndCopyAlt`` produces a second extern
+  declaration in ``Probe_ExternalAPI.h`` for the client code to provide and link
+  with.
+
+* One can associate multiple entrypoint probe attributes on a type, each with a
+  different probe and copy function (TODO: check that we forbid multiple
+  entrypoints with the same probe function)
+
+* One can also associate different probes on each field of a type.
+
+An End-to-end Executable Example
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A small but fully worked out example `is available in the EverParse repository
+<https://github.com/project-everest/everparse/tree/master/src/3d/tests/probe>`_.
+
+It shows the use of multiple probe functions, linked with callbacks implemented
+in C, as well as a main C driver program that validates several example inputs
+containing pointers.
 
 
 Generating code with for several compile-time configurations
