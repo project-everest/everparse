@@ -989,6 +989,30 @@ let nlist_match_slice
     PM.seq_list_match c l (vmatch a) **
     pure (vslice a == Some ar)
 
+ghost fn nlist_match_slice_elim
+  (#tslice: Type0)
+  (#telem: Type0)
+  (#t: Type0)
+  (vslice: (tslice -> GTot (option (with_perm (S.slice telem)))))
+  (vmatch: (tslice -> telem -> t -> slprop))
+  (n: nat)
+  (a: tslice)
+  (l: LowParse.Spec.VCList.nlist n t)
+requires nlist_match_slice vslice vmatch n a l
+returns ar: Ghost.erased (with_perm (S.slice telem))
+ensures exists* c .
+    pts_to (Ghost.reveal ar).v #ar.p c **
+    PM.seq_list_match c l (vmatch a) **
+    pure (vslice a == Some (Ghost.reveal ar))
+{
+  unfold (nlist_match_slice vslice vmatch n a l);
+  with ar c . assert (
+    pts_to #telem (ar <: with_perm (S.slice telem)).v #ar.p c **
+    PM.seq_list_match c l (vmatch a)
+  );
+  ar
+}
+
 ghost
 fn nlist_match_slice_intro
   (#tslice: Type0)
@@ -1212,4 +1236,134 @@ fn l2r_write_nlist_as_slice
   Trade.elim _ _;
   fold (nlist_match_slice vslice vmatch (SZ.v n) arr x);
   !pres
+}
+
+let nlist_match_slice0
+  (#telem: Type0)
+  (#t: Type)
+  (vmatch: (telem -> t -> slprop))
+= nlist_match_slice Some (fun _ -> vmatch)
+
+let nlist_match_slice_wf
+  (#telem: Type0)
+  (#t: Type)
+  (n: nat)
+  (a: _)
+  (l: LowParse.Spec.VCList.nlist n t)
+  (vmatch: (telem -> (x: t { x << l }) -> slprop))
+: Tot slprop
+= exists* (ar: with_perm (S.slice telem)) c .
+    pts_to ar.v #ar.p c **
+    PM.seq_list_match c l (vmatch) **
+    pure (Some a == Some ar)
+
+let nlist_match_slice_wf_eq
+  (#telem: Type0)
+  (#t: Type)
+  (vmatch: (telem -> t -> slprop))
+  (n: nat)
+  (a: _)
+  (l: LowParse.Spec.VCList.nlist n t)
+: Lemma
+  (nlist_match_slice0 vmatch n a l == nlist_match_slice_wf n a l vmatch)
+= assert_norm (nlist_match_slice0 vmatch n a l == nlist_match_slice_wf n a l vmatch)
+
+ghost fn nlist_match_slice0_elim
+  (#telem: Type0)
+  (#t: Type0)
+  (vmatch: (telem -> t -> slprop))
+  (n: nat)
+  (a: with_perm (S.slice telem))
+  (l: LowParse.Spec.VCList.nlist n t)
+requires nlist_match_slice0 vmatch n a l
+ensures exists* c .
+    pts_to a.v #a.p c **
+    PM.seq_list_match c l (vmatch)
+{
+  unfold (nlist_match_slice0 vmatch n a l);
+  let ar' = nlist_match_slice_elim Some (fun _ -> vmatch) n a l;
+  with c . assert (
+    pts_to #telem (ar' <: with_perm (S.slice telem)).v #ar'.p c
+  );
+  rewrite (pts_to #telem (ar' <: with_perm (S.slice telem)).v #ar'.p c)
+    as (pts_to a.v #a.p c)
+}
+
+ghost
+fn nlist_match_slice0_intro
+  (#telem: Type0)
+  (#t: Type0)
+  (vmatch: (telem -> t -> slprop))
+  (n: nat)
+  (a: with_perm (S.slice telem))
+  (l: nlist n t)
+  (c: Seq.seq telem)
+requires
+    (pts_to a.v #a.p c **
+      PM.seq_list_match c l (vmatch)
+    )
+ensures
+    (nlist_match_slice0 vmatch n a l)
+{
+  fold (nlist_match_slice Some (fun _ -> vmatch) n a l);
+  fold (nlist_match_slice0 vmatch n a l)
+}
+
+ghost fn nlist_match_slice0_elim_trade
+  (#telem: Type0)
+  (#t: Type0)
+  (vmatch: (telem -> t -> slprop))
+  (n: nat)
+  (a: with_perm (S.slice telem))
+  (l: LowParse.Spec.VCList.nlist n t)
+requires nlist_match_slice0 vmatch n a l
+ensures exists* c .
+    pts_to a.v #a.p c **
+    PM.seq_list_match c l (vmatch) **
+    Trade.trade
+      (pts_to a.v #a.p c **
+        PM.seq_list_match c l (vmatch))
+      (nlist_match_slice0 vmatch n a l)
+{
+  nlist_match_slice0_elim vmatch n a l;
+  with c . assert (pts_to a.v #a.p c);
+  ghost fn aux ()
+  requires emp ** (pts_to a.v #a.p c **
+        PM.seq_list_match c l (vmatch))
+  ensures (nlist_match_slice0 vmatch n a l)
+  {
+    nlist_match_slice0_intro vmatch n a l c
+  };
+  Trade.intro _ _ _ aux;
+}
+
+inline_for_extraction
+fn l2r_write_nlist_as_slice0
+  (#telem: Type0)
+  (#t: Type0)
+  (vmatch: (telem -> t -> slprop))
+  (#k: Ghost.erased parser_kind)
+  (#p: parser k t)
+  (s: serializer p  { k.parser_kind_subkind == Some ParserStrong })
+  (w: (l2r_writer (vmatch) s))
+  (n: Ghost.erased nat) // because it is known as the length of the slice
+: l2r_writer #_ #_ (nlist_match_slice0 vmatch (n)) #_ #_ (LowParse.Spec.VCList.serialize_nlist (n) s)
+=
+  (arr: _)
+  (#x: _)
+  (out: _)
+  (offset: _)
+  (#v: _)
+{
+  unfold (nlist_match_slice0 vmatch (n) arr x);
+  let ar = nlist_match_slice_elim Some (fun _ -> vmatch) n arr x;
+  with c . assert (pts_to (Ghost.reveal ar).v #ar.p c);
+  rewrite (pts_to (Ghost.reveal ar).v #ar.p c) as (pts_to arr.v #arr.p c);
+  S.pts_to_len arr.v;
+  PM.seq_list_match_length vmatch c x;
+  let n' = S.len arr.v;
+  nlist_match_slice_intro Some (fun _ -> vmatch) (SZ.v n') arr x arr c;
+  let res = l2r_write_nlist_as_slice Some (fun _ -> vmatch) s (fun _ -> w) n' arr out offset;
+  fold (nlist_match_slice0 vmatch (n) arr x);
+  res
 }
