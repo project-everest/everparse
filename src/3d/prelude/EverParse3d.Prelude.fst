@@ -328,6 +328,8 @@ let read____UINT32 = LowParse.Low.BoundedInt.read_u32_le
 let parse____UINT64 = LowParse.Spec.Int.parse_u64_le
 let read____UINT64 = LowParse.Low.Int.read_u64_le
   
+let parse_unit = parse_ret ()
+
 inline_for_extraction noextract
 let read_unit
   : LPL.leaf_reader (parse_ret ())

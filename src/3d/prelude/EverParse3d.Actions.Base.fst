@@ -432,7 +432,7 @@ let validate_with_error_handler
 
 inline_for_extraction noextract
 let validate_ret
-  : validate_with_action_t (parse_ret ()) true_inv disjointness_trivial eloc_none false true
+  : validate_with_action_t (parse_unit) true_inv disjointness_trivial eloc_none false true
   = fun ctxt error_handler_fn input input_length start_position ->
     start_position
 

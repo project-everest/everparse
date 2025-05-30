@@ -58,10 +58,6 @@ noextract
 val parser (#nz:bool) (#wk: weak_kind) (k:parser_kind nz wk) (t:Type u#r) : Type u#r
 
 inline_for_extraction noextract
-val parse_ret (#t:Type) (v:t)
-  : Tot (parser ret_kind t)
-
-inline_for_extraction noextract
 val parse_dep_pair (#nz1:_) (#k1:parser_kind nz1 WeakKindStrongPrefix) (#t1: Type) (p1: parser k1 t1)
                    (#nz2:_) (#wk2: _) (#k2:parser_kind nz2 wk2) (#t2: (t1 -> Tot Type)) (p2: (x: t1) -> parser k2 (t2 x))
   : Tot (parser (and_then_kind k1 k2) (dtuple2 t1 t2) )
@@ -244,13 +240,13 @@ let ___UINT64 : eqtype = U64.t
 val parse____UINT64 : parser kind____UINT64 ___UINT64
 val read____UINT64 : reader parse____UINT64
 
-let parse_unit
+inline_for_extraction noextract
+val parse_unit
   : parser kind_unit unit
-  = parse_ret ()
 
 inline_for_extraction noextract
 val read_unit
-  : reader (parse_ret ())
+  : reader parse_unit
 
 ////////////////////////////////////////////////////////////////////////////////
 //Convenience lemmas for bounded arithmetic, especially on bitfields

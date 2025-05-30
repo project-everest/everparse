@@ -244,7 +244,7 @@ val validate_with_error_handler
 
 inline_for_extraction noextract
 val validate_ret
-  : validate_with_action_t (parse_ret ()) true_inv disjointness_trivial eloc_none false true
+  : validate_with_action_t (parse_unit) true_inv disjointness_trivial eloc_none false true
 
 inline_for_extraction noextract
 val validate_pair
@@ -743,7 +743,7 @@ val validate_unit
 
 inline_for_extraction noextract
 val read_unit
-  : leaf_reader (parse_ret ())
+  : leaf_reader (parse_unit)
 
 inline_for_extraction noextract
 val validate_unit_refinement (f:unit -> bool) (cf:string)
