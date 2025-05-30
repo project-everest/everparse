@@ -57,7 +57,7 @@
 %token          MODULE EXPORT OUTPUT UNION EXTERN
 %token          ENTRYPOINT REFINING ALIGNED
 %token          HASH_IF HASH_ELSE HASH_ENDIF HASH_ELIF
-%token          PROBE POINTER PURE SPECIALIZE 
+%token          PROBE POINTER PURE SPECIALIZE SKIP_READ SKIP_WRITE
 
 (* LBRACE_ONERROR CHECK  *)
 %start <Ast.prog> prog
@@ -523,6 +523,8 @@ action:
 
 probe_atomic_action:
   | RETURN e=expr SEMICOLON { Probe_action_return e }
+  | SKIP_WRITE LPAREN e=expr RPAREN SEMICOLON { Probe_action_skip_write e }
+  | SKIP_READ LPAREN e=expr RPAREN SEMICOLON { Probe_action_skip_read e }
   | f=IDENT LPAREN args=arguments RPAREN SEMICOLON { Probe_action_call(f, args) }
 
 probe_action_no_range:
@@ -584,10 +586,9 @@ decl_no_range:
         CaseType(td, [], ps, (with_range (Identifier e) ($startpos(i)), cs))
     }
 
-  | SPECIALIZE LPAREN p1=pointer_qualifier COMMA p2=pointer_qualifier RPAREN i=IDENT j=IDENT SEMICOLON
-    { let PQ(p1, _, _) = p1 in
-      let PQ(p2, _, _) = p2 in
-      Specialize ([p1, p2], i, j) }
+  | SPECIALIZE LPAREN POINTER LPAREN STAR RPAREN COMMA p2=pointer_qualifier RPAREN i=IDENT j=IDENT SEMICOLON
+    { let PQ(p2, _, _) = p2 in
+      Specialize ([UInt64, p2], i, j) }
 
   | OUTPUT TYPEDEF STRUCT i=IDENT
     LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE

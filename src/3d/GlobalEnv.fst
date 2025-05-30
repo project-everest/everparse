@@ -111,22 +111,27 @@ let module_name_matches (g:global_env) (id:ident) : ML bool =
 
 let _and_ (x:bool) (y:bool) : ML bool = x && y
 
-let extern_probe_fn_qual (g:global_env) (pq:probe_qualifier)
+let check_unique (msg:unit -> ML string) (r:range) (l:list ident)
+: ML (option ident)
+= match l with
+  | [] -> None
+  | [x] -> Some x
+  | _ ->
+    error (Printf.sprintf "%s: %s" (msg()) (String.concat ", " (List.map print_ident l))) r
+
+let extern_probe_fn_qual (g:global_env) (r:range) (pq:probe_qualifier)
 : ML (option ident)
 = let finder k v out : ML _ =
-      match out with
-      | Some _ -> out
-      | None -> 
-        match v.d_decl.v with
-        | ExternProbe id pq' ->
-          if (pq=pq') `_and_` module_name_matches g id then Some id else None
-        | _ -> None
+      match v.d_decl.v with
+      | ExternProbe id pq' ->
+        if (pq=pq') `_and_` module_name_matches g id then id::out else out
+      | _ -> out
   in
-  H.fold finder g.ge_probe_fn None
+  check_unique (fun _ -> "Found multiple probe functions") r (H.fold finder g.ge_probe_fn [])
 
-let default_probe_fn (g:global_env)
+let default_probe_fn (g:global_env) (r:range)
 : ML (option ident)
-= extern_probe_fn_qual g PQWithOffsets
+= extern_probe_fn_qual g r PQWithOffsets
 
 let resolve_probe_fn_any (g:global_env) (id:ident)
   : ML (option (ident & either typ probe_qualifier))
@@ -156,19 +161,16 @@ let eq_probe_function_type pq0 pq1 : ML bool =
   | HelperProbeFunction, HelperProbeFunction -> true
   | _, _ -> false
 
-let find_probe_fn (g:global_env) (pq:probe_function_type)
+let find_probe_fn (g:global_env) r (pq:probe_function_type)
 : ML (option ident)
-= let finder k v out : ML (option ident) =
-      match out with
-      | Some _ -> out
-      | None -> 
-        match v.d_decl.v with
-        | ProbeFunction id _ _ pq' 
-        | CoerceProbeFunctionStub id _ pq' ->
-          if eq_probe_function_type pq pq' `_and_` module_name_matches g id then Some id else None
-        | _ -> None
+= let finder k v out : ML (list ident) =
+      match v.d_decl.v with
+      | ProbeFunction id _ _ pq' 
+      | CoerceProbeFunctionStub id _ pq' ->
+        if eq_probe_function_type pq pq' `_and_` module_name_matches g id then id::out else out
+      | _ -> out
   in
-  H.fold finder g.ge_probe_fn None
+  check_unique (fun _ -> "Found multiple probe functions") r (H.fold finder g.ge_probe_fn [])
 
 let fields_of_type (g:global_env) (typename:ident)
 : ML (option (list field))
@@ -176,20 +178,21 @@ let fields_of_type (g:global_env) (typename:ident)
   | Some ({d_decl={v=Record _ _ _ _ fields}}, _) -> Some fields
   | _ -> None
 
-let resolve_extern_coercion (g:global_env) (t0 t1:typ)
+let resolve_extern_coercion (g:global_env) (r:range) (t0 t1:typ)
 : ML (option ident)
 = let finder k v out : ML _ =
-      match out with
-      | Some _ -> out
-      | None -> 
-        match v.d_decl.v with
-        | ExternFn id t1' [(t0', _, _)] true ->
-          if eq_typ t0 t0' `_and_` eq_typ t1 t1'
-          `_and_` module_name_matches g id 
-          then Some id
-          else None
-          
-        | _ -> None
+    match v.d_decl.v with
+    | ExternFn id t1' [(t0', _, _)] true ->
+      if eq_typ t0 t0' `_and_` eq_typ t1 t1'
+      `_and_` module_name_matches g id 
+      then id::out
+      else out
+      
+    | _ -> out
   in
-  H.fold finder g.ge_extern_fn None
-
+  check_unique
+    (fun _ -> 
+      Printf.sprintf "Multiple extern coercions found for %s -> %s"
+        (print_typ t0) (print_typ t1))
+    r
+    (H.fold finder g.ge_extern_fn [])

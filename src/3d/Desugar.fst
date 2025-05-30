@@ -529,6 +529,13 @@ let resolve_decl' (env:qenv) (d:decl') : ML decl' =
 
 let resolve_decl (env:qenv) (d:decl) : ML decl = decl_with_v d (resolve_decl' env d.d_decl.v)
 
+let hoist_extern_probes (decls:list decl) : ML (list decl) =
+  let externs, rest = List.partition (fun d -> match d.d_decl.v with
+                                               | ExternProbe _ _ -> true
+                                               | _ -> false) decls in
+  externs @ rest
+
+(* The main desugaring function *)
 let desugar (genv:GlobalEnv.global_env) (mname:string) (p:prog) : ML prog =
   let decls, refinement = p in
   let decls = List.collect desugar_one_enum decls in
@@ -543,6 +550,7 @@ let desugar (genv:GlobalEnv.global_env) (mname:string) (p:prog) : ML prog =
   } in
   H.insert env.extern_types (Ast.to_ident' "void") ();
   let decls = List.map (resolve_decl env) decls in
+  let decls = hoist_extern_probes decls in
   decls,
   (match refinement with
    | None -> None

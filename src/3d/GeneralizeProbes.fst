@@ -57,21 +57,21 @@ let simple_probe_name_for_type (e:env) (type_name:ident)
   then Some (simple_probe_function_for_type type_name)
   else None
 
-let find_probe_fn (e:B.env) (q:probe_qualifier)
+let find_probe_fn (e:B.env) (q:probe_qualifier) r
 : ML ident
-= match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e) q with
+= match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e) r q with
   | None ->
     error (Printf.sprintf "Cannot find probe function for %s" (print_probe_qualifier q))
           dummy_range
   | Some id ->
     id
   
-let find_extern_coercion (e:B.env) (t0:typ) (t1:typ)
+let find_extern_coercion (e:B.env) (t0:typ) (t1:typ) r
 : ML ident
-= match GlobalEnv.resolve_extern_coercion (B.global_env_of_env e) t0 t1 with
+= match GlobalEnv.resolve_extern_coercion (B.global_env_of_env e) r t0 t1 with
   | None ->
     error (Printf.sprintf "Cannot find coercion for %s to %s" (print_typ t0) (print_typ t1))
-          dummy_range
+          r
   | Some id ->
     id
 
@@ -109,10 +109,11 @@ let set_generalization_signature (e:env) (id:ident) (sig:generalized_signature)
     e
   )
   else (
-    failwith
+    error
      (Printf.sprintf 
       "Cannot set generalization signature for a type %s that is not marked for generalization"
       (print_ident id))
+     id.range
   )
 
 let rec head_type (e:env) (t:typ) : ML (ident & list typ_param) =
@@ -213,10 +214,19 @@ let need_probe_decl (e:env) (d:decl)
   )
   | _ -> e, false
 
-let rec need_probe_decls (e:env) (ds:list decl)
-: ML env
-= let e, changed = fold_left_changed need_probe_decl e ds in
-  if changed then need_probe_decls e ds else e
+let need_probe_decls (e:env) (ds:list decl)
+: ML (env & bool)
+= let any_change : ref bool = alloc false in
+  let rec aux (e:env) (ds:list decl) : ML (env & bool) = 
+    let e, changed = fold_left_changed need_probe_decl e ds in
+    if changed 
+    then (
+      any_change := true;
+      aux e ds
+    )
+    else (e, !any_change)
+  in
+  aux e ds
 
 let should_retain_param_for_probe (e:B.env) (p:param)
 : bool
@@ -255,7 +265,7 @@ let generate_probe_function_stubs (e:env) (d:decl)
             App SizeOf [with_range (Identifier names.typedef_abbrev) names.typedef_name.range]
           ) d.d_decl.range
       in
-      let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets in
+      let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets d.d_decl.range in
       let simple_probe =
           with_range
           (Probe_atomic_action (
@@ -419,9 +429,10 @@ let default_instantiation_subst
       (gs:list generic_param)
       (sig:generalized_signature)
 : ML (list decl & subst)
-= match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e.benv) PQWithOffsets with
+= match GlobalEnv.extern_probe_fn_qual (B.global_env_of_env e.benv) r PQWithOffsets with
   | None ->
-    failwith "No extern probe function found"
+    error (Printf.sprintf "No extern probe function found for %s" (print_ident enclosing_type.typedef_abbrev))
+          r
   | Some probe_and_copy_n ->
     let default_instantiation_body = 
       with_range (Probe_action_copy_init_sz probe_and_copy_n) r
@@ -470,7 +481,7 @@ let default_instantiation_subst
             (List.map (fun (i, e) -> Printf.sprintf "[%s -> %s]" (print_ident i) (print_expr e)) subst)));
     decls, mk_subst subst
 
-let generalize_probes_decl (e:env) (d:decl)
+let do_generalization (e:env) (d:decl)
 : ML (list decl)
 = let generalize_type names gs (params:list param) sig : ML _ =
     if not <| should_generalize e names
@@ -569,7 +580,7 @@ let generalize_probes_decl (e:env) (d:decl)
 let generalize_probe_decls (e:GlobalEnv.global_env) (ds:list decl)
 : ML (list decl)
 = let e = { benv = Binding.mk_env e; needs_probe = []; should_generalize = H.create 10 } in
-  let e = need_probe_decls e ds in
+  let e, any_change = need_probe_decls e ds in
   let print_ident (i:ident') = i.name in
   let _ = 
     List.iter
@@ -587,8 +598,11 @@ let generalize_probe_decls (e:GlobalEnv.global_env) (ds:list decl)
     (Printf.sprintf "Probes needed for: %s\nShould generalize: %s\n" 
       (String.concat ", " (List.map print_ident e.needs_probe))
       (String.concat ", " (H.fold (fun k _ out -> print_ident k::out) e.should_generalize [])));
-  let ds = List.collect (generate_probe_function_stubs e) ds in
-  Options.debug_print_string "=============After generate probe functions=============\n";
-  Options.debug_print_string (print_decls ds);
-  Options.debug_print_string "\n";
-  List.collect (generalize_probes_decl e) ds
+  if not any_change then ds
+  else (
+    let ds = List.collect (generate_probe_function_stubs e) ds in
+    Options.debug_print_string "=============After generate probe functions=============\n";
+    Options.debug_print_string (print_decls ds);
+    Options.debug_print_string "\n";
+    List.collect (do_generalization e) ds
+  )

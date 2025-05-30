@@ -68,7 +68,10 @@ let () =
   H.add keywords "probe" PROBE;
   H.add keywords "pointer" POINTER;
   H.add keywords "PURE" PURE;
-  H.add keywords "specialize" SPECIALIZE
+  H.add keywords "specialize" SPECIALIZE;
+  H.add keywords "SkipWrite" SKIP_WRITE;
+  H.add keywords "SkipRead" SKIP_READ
+
 
 let unsigned_int_of_string s = int_of_string (String.sub s 0 (String.length s - 2))
 

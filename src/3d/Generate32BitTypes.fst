@@ -228,7 +228,7 @@ let has_32bit_coercion (e:B.env) (t32 t:typ) : ML (option ident) =
   | Type_app id _ _ _, Type_app id32 _ _ _ -> 
     Options.debug_print_string <|
       Printf.sprintf "Checking for coercion from %s to %s\n" (print_ident id32) (print_ident id);
-    GlobalEnv.find_probe_fn (B.global_env_of_env e) (CoerceProbeFunction (id32, id))
+    GlobalEnv.find_probe_fn (B.global_env_of_env e) t32.range (CoerceProbeFunction (id32, id))
   | _ ->
     None
 

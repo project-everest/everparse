@@ -48,9 +48,9 @@ let probe_return_unit
 
 let read_and_coerce_pointer (e:env) (fid:expr)
 : ML probe_action
-= let reader = find_probe_fn e.benv (PQRead UInt32) in
-  let writer = find_probe_fn e.benv (PQWrite UInt64) in
-  let coercion = find_extern_coercion e.benv tuint32 tuint64 in
+= let reader = find_probe_fn e.benv (PQRead UInt32) fid.range in
+  let writer = find_probe_fn e.benv (PQWrite UInt64) fid.range in
+  let coercion = find_extern_coercion e.benv tuint32 tuint64 fid.range in
   let as_ident x = with_dummy_range <| to_ident' x in
   let as_expr x = with_dummy_range <| Identifier <| as_ident x in
   with_dummy_range <|
@@ -74,7 +74,7 @@ let skip_bytes_write (n:expr)
 
 let copy_bytes (e:env) (n:expr)
 : ML probe_action
-= let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets in
+= let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets n.range in
   with_dummy_range <|
   Probe_atomic_action 
         (Probe_action_call probe_and_copy_n [n])
@@ -196,21 +196,21 @@ let is_pointer_or_integer (e:env) (t:typ) : ML (option integer_type) =
   | Pointer _ (PQ sz _ _) -> Some sz
   | _ -> integer_type_of_type t
 
-let find_probe_fn_for_type (e:env) (id:ident)
+let find_probe_fn_for_type (e:env) (id:ident) (r:range)
 : ML (option ident)
-= match GlobalEnv.find_probe_fn (B.global_env_of_env e.benv) (SimpleProbeFunction id) with
+= match GlobalEnv.find_probe_fn (B.global_env_of_env e.benv) r (SimpleProbeFunction id) with
   | None ->
-    GlobalEnv.find_probe_fn (B.global_env_of_env e.benv) (CoerceProbeFunction(id,id))
+    GlobalEnv.find_probe_fn (B.global_env_of_env e.benv) r (CoerceProbeFunction(id,id))
   | p -> p
 let probe_and_copy_type (e:env) (fn:ident) (t0:typ) (k:probe_action)
 : ML probe_action
-= let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets in
+= let probe_and_copy_n = find_probe_fn e.benv PQWithOffsets fn.range in
   let t = B.unfold_typ_abbrev_and_enum e.benv t0 in
   match is_pointer_or_integer e t with
   | None -> (
       if eq_typ t tunit then k else
       let id = head_type e t in
-      match find_probe_fn_for_type e id with
+      match find_probe_fn_for_type e id t.range with
       | None ->
         error 
           (Printf.sprintf "Cannot find probe function for type %s" (print_typ t))

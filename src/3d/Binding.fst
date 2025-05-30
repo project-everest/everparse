@@ -1283,24 +1283,32 @@ let rec check_probe env a : ML (probe_action & typ) =
       let e, t= check_expr env e in
       Probe_action_return e, t
     
-    | Probe_action_skip_read n ->
+    | Probe_action_skip_read n -> (
       let n, t = check_expr env n in
-      if not (eq_typ env t tuint64)
-      then error (Printf.sprintf "Skip value %s has type %s instead of UInt64"
+      match try_cast_integer env (n, t) tuint64 with
+      | Some v ->
+        Probe_action_skip_read n, tunit
+      | None -> 
+        error (Printf.sprintf "Probe skip read %s has type %s instead of %s"
                     (print_expr n)
-                    (print_typ t))
+                    (print_typ t)
+                    (print_integer_type UInt64))
                     n.range
-      else Probe_action_skip_read n, tunit
+    )
     
-    | Probe_action_skip_write n ->
+    | Probe_action_skip_write n -> (
       let n, t = check_expr env n in
-      if not (eq_typ env t tuint64)
-      then error (Printf.sprintf "Skip value %s has type %s instead of UInt64"
+      match try_cast_integer env (n, t) tuint64 with
+      | Some v ->
+        Probe_action_skip_write n, tunit
+      | None -> 
+        error (Printf.sprintf "Probe skip write %s has type %s instead of %s"
                     (print_expr n)
-                    (print_typ t))
+                    (print_typ t)
+                    (print_integer_type UInt64))
                     n.range
-      else Probe_action_skip_write n, tunit
-      
+    )
+
     | Probe_action_read f -> (
       match GlobalEnv.resolve_probe_fn_any env.globals f with
       | Some (id, Inr (PQRead i)) ->
@@ -1494,7 +1502,7 @@ let check_probe_call (env:env) (ft:typ) (p:probe_call)
         match ptr_size with
         | UInt64 -> Some as_u64_identity
         | UInt32 -> (
-          match GlobalEnv.resolve_extern_coercion (global_env_of_env env) tuint32 tuint64 with
+          match GlobalEnv.resolve_extern_coercion (global_env_of_env env) p.probe_block.range tuint32 tuint64 with
           | None ->
             error (Printf.sprintf "Could not find a coercion from 32-bit to 64-bit pointers; please add an `extern PURE UINT64 <CoercionName> (UINT33 ptr)`")
                   ft.range
@@ -1509,7 +1517,7 @@ let check_probe_call (env:env) (ft:typ) (p:probe_call)
   let check_probe_init (init:option ident) : ML (option ident) =
     match init with
     | None -> (
-      match GlobalEnv.extern_probe_fn_qual env.globals PQInit with
+      match GlobalEnv.extern_probe_fn_qual env.globals p.probe_block.range PQInit with
       | Some id -> Some id
       | _ ->
         error (Printf.sprintf "Probe init function not found")
