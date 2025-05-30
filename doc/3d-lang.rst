@@ -1,14 +1,18 @@
-        .. _3d-lang:
+.. _3d-lang:
 
-The 3d Dependent Data Description language
-==========================================
+Overview
+---------
 
 3d supports several fixed-width integer base types, (nested) structs,
 constraints, enums, parameterized data types, tagged or otherwise
-value-dependent unions, fixed-size arrays, and variable-size
-arrays. In addition to data validation, 3d also supports *local
-actions* to pass values read from the data structure, or pointers to
-them, to the caller code.
+value-dependent unions, fixed-size arrays, and variable-size arrays.
+
+In addition to data validation, 3d also supports *local actions* to pass values
+read from the data structure, or pointers to them, to the caller code.
+
+3d also supports validating structures that contain pointers, probing pointers
+for validity and traversing them in order to validate the data they refer to. 
+
 
 Base types
 ----------
@@ -16,10 +20,41 @@ Base types
 The primitive types in 3d include unsigned integers of the following
 flavors:
 
-* UINT8: 8-bit unsigned little-endian integer
+* ``UINT8``: 8-bit unsigned little-endian integer
 * UINT16: 16-bit unsigned little-endian integer
+
+  - Literal values of ``UINT8`` are integers with the ``uy`` suffix, e.g.,
+    ``0uy, 8uy 255uy`` etc.
+    
+  - Literals can also be specified in hexadecimal, with hex digits in either
+    lower or upper case``0xabuy, 0x1Auy, 0xFFuy, 0xFfuy`` etc.
+  - Literal values of ``UINT8`` are integers with the ``uy`` suffix, e.g.,
+    ``0uy, 8uy 255uy`` etc.
+    
+  - Literals can also be specified in hexadecimal, e.g., ``0xabuy, 0xffuy`` etc.
+
+
 * UINT32: 32-bit unsigned little-endian integer
 * UINT64: 64-bit unsigned little-endian integer
+
+Literal values of unsigned integer types can be specified in either decimal or
+hexadecimal, e.g., ``0, 1, 255`` etc. in decimal; or in with hexadecimal with 
+either lower or upper case, e.g., ``0x0, 0x01, 0xff, 0xFF, 0xFf`` etc.
+
+3d infers the smallest width of a literal based on type information, but the
+width can also be specified explicitly.
+
+For ``UINT8``, a literal has the ``uy`` suffix, e.g., ``0uy, 1uy, 0xffuy,
+255uy`` etc.
+
+For ``UINT16``, a literal has the ``us`` suffix, e.g., ``0us, 1us, 0xffffus,
+255us, 65535us`` etc.
+
+For ``UINT32``, a literal has the ``ul`` suffix, e.g., ``0ul, 1ul, 0xfffffffful,
+255ul, 4294967295ul`` etc.
+
+For ``UINT64``, a literal has the ``uL`` suffix, e.g., ``0uL, 1uL, 0xffffffffffffffffuL,
+255uL`` etc.
 
 We also provide big-endian unsigned integers:
 
@@ -27,10 +62,10 @@ We also provide big-endian unsigned integers:
 * UINT32BE: 32-bit unsigned big-endian integer
 * UINT64BE: 64-bit unsigned big-endian integer
 
-Big-endian integers are often useful in describing network message
-formats. 3d ensures suitable endianness conversions are applied when
-comparing or equating integers represented in different endianness. We
-show an example of this :ref:`below <sec-constraints>`.
+Big-endian integers are often useful in describing network message formats. 3d
+ensures suitable endianness conversions are applied when comparing or equating
+integers represented in different endianness. We show an example of this
+:ref:`below <sec-constraints>`.
 
 Structs
 -------
@@ -309,8 +344,8 @@ In this case, the validator for ``boundedSum`` would check
 that ``bound <= 1729``, before validating its fields.
    
 
-Tagged unions
--------------
+Tagged unions or ``casetype``
+------------------------------
 
 3d supports *tagged unions*: a data type can store a value named *tag*
 and a *payload* whose type depends on the tag value. The tag does not
@@ -322,6 +357,8 @@ prefixed by its size in bits.
 
 .. literalinclude:: TaggedUnion.3d
     :language: 3d
+    :start-after: SNIPPET_START: casetype$
+    :end-before: SNIPPET_END: casetype$
 
 .. warning::
 
@@ -336,6 +373,16 @@ on an argument value, which can be reused, e.g. for several types that
 put different constraints on the value of the tag.
 
 A ``casetype`` type can also be marked ``entrypoint``.
+
+Rather than defining a top-level ``casetype``, one can define a type by cases as
+a field in a struct. For example, the following type is equivalent to the one
+before:
+
+
+.. literalinclude:: TaggedUnion.3d
+    :language: 3d
+    :start-after: SNIPPET_START: switch literal$
+    :end-before: SNIPPET_END: switch literal$
 
 
 Arrays
@@ -528,6 +575,20 @@ then, we write ``x`` into ``*out``; and finally return ``true``.
    the input buffer. As such, the ``out`` parameter should have type
    ``PUINT8*`` rather than ``UINT8*``.
 
+Actions that always succeed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For actions that always succeed, 3d supports a more concise notation, using the
+``:act`` form, as shown below:
+
+.. literalinclude:: GetFieldPtr.3d
+    :language: 3d
+    :start-after: SNIPPET_START: GetFieldPtr.T act$
+    :end-before: SNIPPET_END: GetFieldPtr.T act$
+
+This is equivalent to the prior ``:on-success`` action shown earlier.
+
+
 Restrictions
 ............
 
@@ -539,9 +600,255 @@ Restrictions
 
 * Actions cannot be associated with bit fields.
 
+.. _sec-alignment:
 
-Probing or Following Pointers when Parsing
-------------------------------------------
+Alignment
+---------
+
+As mentioned previously, 3d does not introduce any implicit alignment padding.
+However, it is often convenient to use 3d to model the in-memory layout of a C
+structure, including the alignment padding that a C compiler would insert.
+Rather than requiring the user to manually insert padding fields, 3d allows
+decorating a struct with an ``aligned`` attribute, which instructs the 3d
+frontend to add padding between fields modeling the behavior of a C compiler.
+This page provides a useful reference about `alignment padding in C
+<https://learn.microsoft.com/en-us/cpp/c-language/alignment-c?view=msvc-170>`_.
+
+For example, consider the following structs:
+
+.. literalinclude:: Align.3d
+  :language: 3d
+  :start-after: SNIPPET_START: structs
+  :end-before: SNIPPET_END: structs
+
+
+
+The `aligned` attribute to each struct adds alignment padding
+between fields.
+
+  * Both fields of the type `point` are aligned at 2-byte boundaries; so no
+    padding is inserted between them.
+
+  * In type `coloredPoint1` the field `color` is aligned at a 1-byte boundary,
+    while `pr` is aligned at a 2-byte boundary; so 1 byte of padding is inserted
+    between them. So, the whole struct consumes six bytes, aligned at a 2-byte
+    boundary.
+
+  * In type `coloredPoint2` the field `pt` is aligned at a 2-byte boundary, but
+    the type `color` is aligned at a 1-byte boundary. So, no padding is inserted
+    between them. But, the resulting type must be aligned at a 2-byte boundary,
+    so 1 byte of padding is inserted after the `color` field---so, the whole
+    struct consumes six bytes.
+
+The 3d compiler emits diagnostics describing the padding it inserts::
+
+  Adding padding field in Align._coloredPoint1 for 1 bytes at (preceding field Align.point pt;)
+  Adding padding field in Align._coloredPoint2 for 1 bytes at (end padding)
+
+The `aligned` attribute can also be adding to casetypes, though the behavior is
+more limited:
+
+.. literalinclude:: Align.3d
+  :language: 3d
+  :start-after: SNIPPET_START: union
+  :end-before: SNIPPET_END: union
+
+Here, we have an aligned "union". 3d checks that every branch of the union
+describes field with the same size. It *does not* insert padding to make every
+type have the same size. For example, if the `UINT16 other` fields were left out
+of the default case of `Value`, the 3d compiler would emit the following error
+message::
+
+  With the 'aligned' qualifier, all cases of a union with a fixed size must have the same size; union padding is not yet supported
+ 
+The `aligned` attribute is also supported on variable-length types, but it only applies
+to the fixed-size prefix of the type. For example, consider the following type:
+
+.. literalinclude:: Align.3d
+  :language: 3d
+  :start-after: SNIPPET_START: TLV
+  :end-before: SNIPPET_END: TLV
+
+The output from the 3d compiler includes the following diagnostic::
+
+  Adding padding field in Align._tlv for 3 bytes at (preceding field dependent UINT32 length;)
+  Adding padding field in Align._tlv for 1 bytes at (preceding field Align.Value(tag) payload[:byte-size length];)
+
+3d adds 3 bytes after `tag` and preceding `length`, since `length` is 4-byte aligned.
+It adds 1 byte after `other` and preceding the `payload` field, since the payload is a `Value` array and is 2-byte aligned.
+But, notice, it does not add a padding field after `payload` to align the `other2` field, since `other2` follows a variable-length field.
+
+The semantics of alignment padding is subtle and 3d aims to mimic the behavior
+of a C compiler. If you are using alignment padding, it is recommended to check
+that the type described in 3d corresponds to the C type you are modeling, as described
+in the next section.
+
+Note, the `aligned` attribute is not allowed on typedefs, enums, or other kinds
+of 3d declarations.
+
+Checking 3d types for correspondence with existing C types
+----------------------------------------------------------
+
+A typical scenario is that you have an existing C program with some
+collection of types defined in a file ``Types.h``.  You've written a
+``Types.3d`` file to defined validators for byte buffers containing
+those types, typically *refining* the C types with additional semantic
+constraints and also with actions. Now, you may want to make sure that
+types you defined in ``Types.3d`` correspond to the types in
+``Types.h``, e.g., to ensure that you didn't forget to include a field
+in a struct, or that you've made explicit in your ``Types.3d`` the
+alignment padding between struct fields that a C compiler is sometimes
+requires to insert.
+
+To assist with this, 3d provides the following feature:
+
+.. literalinclude:: GetFieldPtr.3d
+  :language: 3d
+
+Following the type definitions, the ``refining`` section states that
+the type ``S`` defined in the C header file ``GetFieldPtrBase.h`` is
+refined by the type ``T`` defined here. As a result of this
+declaration, 3d emits a static assertion in the C code of the form
+
+.. code-block:: c
+
+  #include "GetFieldPtrBase.h"
+  C_ASSERT(sizeof(S) == 30);
+   
+checking that the ``sizeof(S)`` as computed by the C compiler matches
+3d's computation of the ``sizeof(T)``.
+
+In generality, the refining declaration takes the following form:
+
+.. code-block:: 3d
+
+  refining "I1.h", ..., "In.h" {
+      S1 as T1, ...
+      Sm as Tm
+  }
+
+
+where each ``Si`` is a type defined in one of the C header files
+"I1.h", ..., "In.h", and the ``Ti`` are types defined in the current
+3d file. In case the types have the same names, one can simply write
+``T`` instead of ``T as T``.
+
+As a second example, let's revisit the type from the `:ref:alignment section
+<sec-alignment>`, aiming to show that the 3d type corresponds to the C types
+defined in the header file `AlignBase.h` shown below:
+
+.. literalinclude:: AlignBase.h
+  :language: c
+
+Let's also decorate the 3d file with the following refining declaration:
+
+.. literalinclude:: Align.3d
+  :language: 3d
+  :start-after: SNIPPET_START: refining
+  :end-before: SNIPPET_END: refining
+  
+The 3d compiler emits the following static assertions:
+
+.. code-block:: c
+
+  #include <stddef.h>
+  #include "AlignBase.h"
+  #define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1];
+  C_ASSERT(sizeof(TLV) == 10);
+  C_ASSERT(offsetof(TLV, tag) == 0);
+  C_ASSERT(offsetof(TLV, length) == 4);
+  C_ASSERT(offsetof(TLV, other) == 8);
+  C_ASSERT(offsetof(TLV, payload) == 10);
+  C_ASSERT(sizeof(Value) == 6);
+  C_ASSERT(sizeof(coloredPoint2) == 6);
+  C_ASSERT(offsetof(coloredPoint2, pt) == 0);
+  C_ASSERT(offsetof(coloredPoint2, color) == 4);
+  C_ASSERT(sizeof(coloredPoint1) == 6);
+  C_ASSERT(offsetof(coloredPoint1, color) == 0);
+  C_ASSERT(offsetof(coloredPoint1, pt) == 2);
+  C_ASSERT(sizeof(point) == 4);
+  C_ASSERT(offsetof(point, x) == 0);
+  C_ASSERT(offsetof(point, y) == 2);
+
+If you compile this with clang, you will see that actually, the first assertion
+on the size of `TLV` fails. The C compiler treats the zero-length array
+`payload` in the struct `TLV` as having zero size with alignment of 2 (because
+of the `Value` payload), while 3d does not. Hence the C compiler adds one byte
+of padding after the `other` field and 2 bytes after it, while 3d adds only 1
+before the `padding field`. 
+
+A fix in this case is to explicitly add the padding bytes, as shown below:
+
+.. code-block:: 3d
+
+  aligned
+  typedef struct _tlv {
+    UINT8 tag;
+    UINT32 length;
+    UINT8 other;
+    UINT8 padding;
+    Value(tag) payload[:byte-size length];
+    UINT8 padding2[2]
+    UINT32 other2;
+  } TLV;
+
+Generating code with for several compile-time configurations
+------------------------------------------------------------
+
+Sometimes one wants to write a single format specification to
+accommodate several compile-time configurations, e.g., to support
+multiple architectures. 3D offers some limited support for decorating
+a specification with compile-time conditionals familiar to C
+programmers, e.g., ``#if`` and ``#else``, and to generate C code
+while preserving these C preprocessor directives.
+
+For example, the listing below shows an integer type that can either
+be represented using 64 bits (if ``ARCH64`` is true) or 32 bits.
+
+.. literalinclude:: PointArch_32_64.3d
+    :language: 3d
+
+To compile such a file using 3D, we also need to provide a
+``.3d.config`` file that declares all the compile-time flags used in
+the specification and mentions a C header file in which to find
+definitions for those flags. Here is a sample config file:
+
+.. literalinclude:: Arch.3d.config
+
+Then, one can invoke ``3d.exe --config Arch.3d.config
+PointArch_32_64.3d --batch``, which produces the following C code as
+output.
+
+In the header file ``PointArch_32_64.h``, we see an include for
+the header file mentioned in the config:
+
+.. code-block:: c
+
+   #include "arch_flags.h"
+
+In the generated C file, ``PointArch_32_64.c``, we see the code below,
+with the suitable preprocessor directives protecting the two variants
+of the the ``Int`` type declared in the source 3d file.
+
+.. code-block:: c
+
+   static inline uint64_t
+   ValidateInt(...) {
+   {
+      #if ARCH64
+      /* Validating field x */
+      /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
+      ...
+      #else
+      /* Validating field x */
+      /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+      ...
+      #endif
+   }
+
+
+Validating Data with Indirections or Pointers
+---------------------------------------------
 
 In some cases, rather than parsing from a flat array of contiguous memory, one
 wants to parse a structure with indirections, i.e., the input buffer may contain
@@ -555,8 +862,56 @@ kernel code, it may be possible to probe a pointer to check that it is valid,
 and only then proceed to read from it. 3d supports parsing structures containing
 pointers, provided safe probing functions can be provided by the caller.
 
-A First Example: Simple Probes
-..............................
+Pointer Types
+.............
+
+Let's start by looking at some basic support for pointer types in 3d.
+
+As in C, any field of a structure can be marked as a pointer: here, below, the
+second field ``y`` is marked as pointer to a ``UINT32``.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: simple pointer1$
+  :end-before: SNIPPET_END: simple pointer1$
+
+By default, a pointer type is simply treated as an unsigned 64-bit integer and
+3d will not dereference the pointer when validating a type. One can mark any
+field as a pointer, not just fields with base type, and a pointer field can be
+associated with a constraint, as any other field of a base type. The example
+below shows a constraint on a pointer field checking that it is
+non-null---notice that in the constraint,  the ``ptr`` value is just treated as
+having type ``UINT64``. 
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: simple pointer2$
+  :end-before: SNIPPET_END: simple pointer2$
+
+One can also associate an action with a pointer field, e.g., reading its value
+into an out parameter.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: simple pointer3$
+  :end-before: SNIPPET_END: simple pointer3$
+
+One can also explicitly mark the size of a pointer, giving it the type
+``UINT64`` (the default) or ``UINT32``, as shown in the examples below.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: simple pointer4$
+  :end-before: SNIPPET_END: simple pointer4$
+
+Note, in all these examples, the *type* of pointed-to data is irrelevant: 3d
+simply treats the pointer as an integer value.
+
+Probing Pointers: A first example
+.................................
+
+We now look at how to traverse pointers, dereferencing them and validating the
+data they point to.
 
 Let's start with a simple example. Our goal is to validate a format that
 contains a single indirection: a structure ``S`` containing a pointer to a
@@ -786,6 +1141,47 @@ The specification is equivalent to the following, though more concise:
   :start-after: SNIPPET_START: indirect alt$
   :end-before: SNIPPET_END: indirect alt$
 
+.. _Coercing_pointers:
+
+Coercing Pointer Types
+......................
+
+One can also add a probe to a pointer with an explicit pointer size, so long as
+one also provides a callback to convert a value from that explicit pointer size
+to ``UINT64``, as in the example below:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: coerce$
+  :end-before: SNIPPET_END: coerce$
+
+Here, we first define a callback ``UlongToPtr`` to convert a ``UINT32`` to a
+``UINT64``. 
+
+In ``Probe_ExternalAPI.h``, this extern declaration produces the following C
+signature:
+
+.. code-block:: c
+    
+    extern uint64_t UlongToPtr(uint32_t ptr);
+
+Then, in ``CoercePtr``, we can qualify our pointer type to 32-bits: the 3d
+compiler will automatically insert the ``UlongToPtr`` coercion on the 32-bit
+pointer value before called ``ProbeAndCopy`` with the coerced pointer value.
+
+.. note::
+
+  If you declare more than one coercion to coerce between a pair of types, 3d
+  will likely complain with the following error:
+
+  .. code-block::
+
+    ./Probe.3d:(132,33): (Error) Multiple extern coercions found for UINT32 -> UINT64: Probe.UlongToPtr, Probe.UlongToPtr2
+
+  This is because 3d applies coercions implicitly, and if multiple coercions are
+  found between a pair of types, it cannot choose which coercion to apply.
+
+
 Multiple Probe Callbacks
 ........................
 
@@ -796,8 +1192,8 @@ The example below shows how to use multiple probes:
 
 .. literalinclude:: Probe.3d
   :language: 3d
-  :start-after: SNIPPET_START: indirect alt$
-  :end-before: SNIPPET_END: indirect alt$
+  :start-after: SNIPPET_START: probe_and_copy_alt$
+  :end-before: SNIPPET_END: probe_and_copy_alt$
 
 * The extern declaration of ``ProbeAndCopyAlt`` produces a second extern
   declaration in ``Probe_ExternalAPI.h`` for the client code to provide and link
@@ -830,6 +1226,21 @@ of probing entry point, and one for the non-probing variant:
     EVERPARSE_COPY_BUFFER_T destT2,
     uint8_t *base,
     uint32_t len);
+
+
+.. note:: 
+
+  External declarations for probe callbacks and for pointer coercions are in
+  scope for the entire file, since 3d can call these functions implicitly when
+  elaborating a specification. So, unless you are an expert and have a
+  particular need for multiple probe callbacks, it is possible that declaring
+  multiple probe callbacks can result in errors such as the one below,
+  especially when using multiple probe callbacks in conjuction with
+  :ref:`specialization <Specialization>`.
+  
+  .. code-block::
+
+     ./Specialize1.3d:(10,30): (Error) Found multiple probe functions: Specialize1.ProbeAndCopyAlt, Specialize1.ProbeAndCopy
 
 
 Nullable Pointers
@@ -871,256 +1282,250 @@ It shows the use of multiple probe functions, linked with callbacks implemented
 in C, as well as a main C driver program that validates several example inputs
 containing pointers.
 
+.. _Specialization:
 
 Specialization for Different Pointer Sizes
 ------------------------------------------
 
+Consider writing a specification to handle messages that could be sent from both
+32- and 64-bit machines, particularly if those messages contain pointers. This
+scenario happens in practice, e.g., when a 64-bit OS kernel shares memory with
+user-mode processes that may be either native 64-bit processes or emulated
+32-bit processes.
 
-Generating code with for several compile-time configurations
-------------------------------------------------------------
+3d supports a form of compile-time specialization that allows one to write a
+specification with 64-bit clients in mind, and then have the compiler specialize
+the 64-bit specification also for use with a 32-bit clients. There are many
+subtle elements to consider, and we describe them gradually, starting with a
+simple first example.
 
-Sometimes one wants to write a single format specification to
-accommodate several compile-time configurations, e.g., to support
-multiple architectures. 3D offers some limited support for decorating
-a specification with compile-time conditionals familiar to C
-programmmers, e.g., ``#if`` and ``#else``, and to generate C code
-while preserving these C preprocessor directives.
 
-For example, the listing below shows an integer type that can either
-be represented using 64 bits (if ``ARCH64`` is true) or 32 bits.
+A First Example
+...............
 
-.. literalinclude:: PointArch_32_64.3d
-    :language: 3d
+As in the previous section, we have a format with two levels of indirection:
+``R64`` with a pointer to ``S64``, and ``S64`` with a pointer to ``T``.
 
-To compile such a file using 3D, we also need to provide a
-``.3d.config`` file that declares all the compile-time flags used in
-the specification and mentions a C header file in which to find
-definitions for those flags. Here is a sample config file:
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: prefix$
+  :end-before: SNIPPET_END: prefix$
 
-.. literalinclude:: Arch.3d.config
+A First Manual Attempt
+^^^^^^^^^^^^^^^^^^^^^^^
 
-Then, one can invoke ``3d.exe --config Arch.3d.config
-PointArch_32_64.3d --batch``, which produces the following C code as
-output.
+If we wanted to specify a variant of ``R32`` with a 32-bit pointer to a ``S32``
+which in turn had a 32-bit pointer to a ``T``, we could explicitly rewrite our
+entire specification, as shown below.
 
-In the header file ``PointArch_32_64.h``, we see an include for
-the header file mentioned in the config:
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: attempt0$
+  :end-before: SNIPPET_END: attempt0$
+
+At the top-level of the specification, one could then define ``RMux``, a
+multiplexing layer, which depending on the value of ``requestor32``, validates
+either an ``R32_Attempt`` or an ``R64``.
+
+This looks plausible, even though it is verbose and leads to a lot of
+duplication. However, even aside from the verbosity this revised specification
+has a deeper problem.
+
+Consider the case where ``requestor32=true``: if the probe on ``ptrS`` runs
+successfully, it will have copied ``sizeof(S32Attempt)=12`` bytes, and then
+checked that the bytes copied into ``destS`` is a valid ``S32Attempt``. If after
+this validation, a caller wants to, say, read the value of the ``s2`` field,
+then they would need to read ``4`` bytes at offset ``8`` from ``destS`` buffer. 
+
+On the other hand, when ``requestor32=false``: if the probe on ``ptrS`` runs
+successfully, it will have copied ``sizeof(S64)=24`` bytes (including the 4
+bytes of padding between ``s1`` and ``ptrT`` and then 4 bytes of padding after
+the field ``s2``), and then checked that the bytes copied into ``destS`` is a
+valid ``S64``. If after this validation, a caller wants to read the value of the
+``s2`` field, then they would need to read ``4`` bytes at offset ``16`` from
+``destS`` buffer. 
+
+That is, even after reading and validating the input, the caller has to
+distinguish the cases of ``requestor32``. We would prefer instead to have a way
+to handle either 32- or 64-bit inputs, but after validation, we would like the
+contents of the destination buffers to always be in 64-bit form, for easy
+manipulation by native 64-bit kernel code, without needing to bifurcate further
+handling of 32- and 64-bit inputs.
+
+A Second Manual Attempt
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Here's another attempt at specializing ``R64``:
+
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: manual$
+  :end-before: SNIPPET_END: manual$
+
+This time, we have an even more verbose specification, but we'll see that it
+actually achieves what we want. This specification is legal 3d, and it uses an
+explicit, low-level form of probing functions that we do not typically expect
+users to write. But, it's a useful intermediate language to explain things.
+
+The first field, ``r1``, is as before.
+
+The second field is an explicitly qualified pointer, qualified to
+``pointer(UINT32)`` and with probe block associated with it. Our goal is to
+coerce probe the input pointer ``ptrS`` and read its contents while coercing it
+into a 64-bit layout, and then to validate that the copied bytes is a valid
+``S64(r1, destT)``.
+
+The probe block will first call ``ProbeInit``, initializing the ``destS``
+buffer, preparing it to receive ``sizeof(S64)`` bytes. Then, within the probe
+block, it executes a sequence of actions:
+
+* Copy the first 4 bytes references by ``ptrS``--this is the ``s1`` field
+
+* Skip 4 bytes of alignment padding
+
+* Then read a 32 bit pointer ``ptrT``, coerce it to 64-butes, and write it into
+  the destination buffer
+
+* Then copy the next 4 bytes from the input buffer (field ``s2``)
+
+* Finally, skip 4 bytes of padding at the end
+
+After the probe block executed, we validate the ``EverParseStreamOf(destS)`` to
+contain a valid  ``S64(r1, destT)``, which in turn will probe ``ptrT`` etc.
+
+This does what we want, in the sense that if validation succeeds, then ``destS``
+contains a 64-bit representation of the input, regardless of ``requestor32``,
+and the caller can then proceed uniformly, without needing to bifurcate its
+handling of 32- and 64-bit clients.
+
+However, writing low-level coercions like this is impractical and error prone.
+
+Automated Specialization
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Instead, 3d offers a ``specialize`` directive, to automatically rewrite a tree
+of definitions rooted at a given type, replacing each occurrence of an
+*unqualified* pointer type with an ``pointer(UINT32)``.
+
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: specialize$
+  :end-before: SNIPPET_END: specialize$
+
+This instructs 3d to automatically generate the definition for ``R32`` from
+``R64``, in the style of ``R32Manual``. In doing so, 3d will also try to
+specialize the probe function on the nested ``ptrT`` in the ``S64``, but in
+doing so it will discover that there is nothing to specialize in ``T`` and the
+behavior of probing ``ptrT`` will be unchanged.
+
+In order to use the specialize directive, we need to define a few additional
+callbacks. 
+
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: specialize$
+  :end-before: SNIPPET_END: specialize$
+
+The first callback, a ``UlongToPtr`` coercions, we saw :ref:`before
+<Coercing_pointers>`: we'll need it to coerce a 32-bit pointer to 64-bits. It
+produces the following C signature:
 
 .. code-block:: c
 
-   #include "arch_flags.h"
+  extern uint64_t UlongToPtr(uint32_t ptr);
 
-In the generated C file, ``PointArch_32_64.c``, we see the code below,
-with the suitable preprocessor directives protecting the two variants
-of the the ``Int`` type declared in the source 3d file.
+The next callback, ``ProbeAndReadU32`` produces the following C signature:
 
 .. code-block:: c
 
-   static inline uint64_t
-   ValidateInt(...) {
-   {
-      #if ARCH64
-      /* Validating field x */
-      /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-      ...
-      #else
-      /* Validating field x */
-      /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      ...
-      #endif
-   }
+  extern uint32_t ProbeAndReadU32(
+    BOOLEAN *failed,
+    uint64_t read_offset,
+    uint64_t src,
+    EVERPARSE_COPY_BUFFER_T dest);
 
-.. _sec-alignment:
+It probes a pointer ``src`` at a given ``read_offset``, checks its validity, and
+reads 4 bytes from that offset and returns it as a ``uint32_t``. If the validity
+check fails, it must set its out parameter ``failed`` to true. It typically does
+not use its last parameter ``dest``, though this can be used by the caller to
+provide useful contextual information.
 
-Alignment
----------
-
-As mentioned previously, 3d does not introduce any implicit alignment padding.
-However, it is often convenient to use 3d to model the in-memory layout of a C
-structure, including the alignment padding that a C compiler would insert.
-Rather than requiring the user to manually insert padding fields, 3d allows
-decorating a struct with an ``aligned`` attribute, which instructs the 3d
-frontend to add padding between fields modeling the behavior of a C compiler.
-This page provides a useful reference about `alignment padding in C
-<https://learn.microsoft.com/en-us/cpp/c-language/alignment-c?view=msvc-170>`_.
-
-For example, consider the following structs:
-
-.. literalinclude:: Align.3d
-  :language: 3d
-  :start-after: SNIPPET_START: structs
-  :end-before: SNIPPET_END: structs
-
-
-
-The `aligned` attribute to each struct adds alignment padding
-between fields.
-
-  * Both fields of the type `point` are aligned at 2-byte boundaries; so no
-    padding is inserted between them.
-
-  * In type `coloredPoint1` the field `color` is aligned at a 1-byte boundary,
-    while `pr` is aligned at a 2-byte boundary; so 1 byte of padding is inserted
-    between them. So, the whole struct consumes six bytes, aligned at a 2-byte
-    boundary.
-
-  * In type `coloredPoint2` the field `pt` is aligned at a 2-byte boundary, but
-    the type `color` is aligned at a 1-byte boundary. So, no padding is inserted
-    between them. But, the resulting type must be aligned at a 2-byte boundary,
-    so 1 byte of padding is inserted after the `color` field---so, the whole
-    struct consumes six bytes.
-
-The 3d compiler emits diagnostics describing the padding it inserts::
-
-  Adding padding field in Align._coloredPoint1 for 1 bytes at (preceding field Align.point pt;)
-  Adding padding field in Align._coloredPoint2 for 1 bytes at (end padding)
-
-The `aligned` attribute can also be adding to casetypes, though the behavior is
-more limited:
-
-.. literalinclude:: Align.3d
-  :language: 3d
-  :start-after: SNIPPET_START: union
-  :end-before: SNIPPET_END: union
-
-Here, we have an aligned "union". 3d checks that every branch of the union
-describes field with the same size. It *does not* insert padding to make every
-type have the same size. For example, if the `UINT16 other` fields were left out
-of the default case of `Value`, the 3d compiler would emit the following error
-message::
-
-  With the 'aligned' qualifier, all cases of a union with a fixed size must have the same size; union padding is not yet supported
- 
-The `aligned` attribute is also supported on variable-length types, but it only applies
-to the fixed-size prefix of the type. For example, consider the following type:
-
-.. literalinclude:: Align.3d
-  :language: 3d
-  :start-after: SNIPPET_START: TLV
-  :end-before: SNIPPET_END: TLV
-
-The output from the 3d compiler includes the following diagnostic::
-
-  Adding padding field in Align._tlv for 3 bytes at (preceding field dependent UINT32 length;)
-  Adding padding field in Align._tlv for 1 bytes at (preceding field Align.Value(tag) payload[:byte-size length];)
-
-3d adds 3 bytes after `tag` and preceding `length`, since `length` is 4-byte aligned.
-It adds 1 byte after `other` and preceding the `payload` field, since the payload is a `Value` array and is 2-byte aligned.
-But, notice, it does not add a padding field after `payload` to align the `other2` field, since `other2` follows a variable-length field.
-
-The semantics of alignment padding is subtle and 3d aims to mimic the behavior
-of a C compiler. If you are using alignment padding, it is recommended to check
-that the type described in 3d corresponds to the C type you are modeling, as described
-in the next section.
-
-Note, the `aligned` attribute is not allowed on typedefs, enums, or other kinds
-of 3d declarations.
-
-Checking 3d types for correspondence with existing C types
-----------------------------------------------------------
-
-A typical scenario is that you have an existing C program with some
-collection of types defined in a file ``Types.h``.  You've written a
-``Types.3d`` file to defined validators for byte buffers containing
-those types, typically *refining* the C types with additional semantic
-constraints and also with actions. Now, you may want to make sure that
-types you defined in ``Types.3d`` correspond to the types in
-``Types.h``, e.g., to ensure that you didn't forget to include a field
-in a struct, or that you've made explicit in your ``Types.3d`` the
-alignment padding between struct fields that a C compiler is sometimes
-requires to insert.
-
-To assist with this, 3d provides the following feature:
-
-.. literalinclude:: GetFieldPtr.3d
-  :language: 3d
-
-Following the type definitions, the ``refining`` section states that
-the type ``S`` defined in the C header file ``GetFieldPtrBase.h`` is
-refined by the type ``T`` defined here. As a result of this
-declaration, 3d emits a static assertion in the C code of the form
+Finally, the  callback ``WriteU64`` produces the following C signature:
 
 .. code-block:: c
 
-  #include "GetFieldPtrBase.h"
-  C_ASSERT(sizeof(S) == 30);
-   
-checking that the ``sizeof(S)`` as computed by the C compiler matches
-3d's computation of the ``sizeof(T)``.
+  extern BOOLEAN WriteU64(
+    uint64_t value,
+    uint64_t write_offset, 
+    EVERPARSE_COPY_BUFFER_T destination);
 
-In generality, the refining declaration takes the following form:
+It allows writing a single ``uint64_t`` ``value`` at a given ``write_offset``
+into a destination buffer ``EVERPARSE_COPY_BUFFER_T``. If the write fails, e.g.,
+because ``write_offset`` is out of bounds, then it must return ``false``,
+otherwise ``true``.
+
+
+With ``R32`` now automatically defined, we can easily define our multiplexing
+layer, as shown below.
+
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: multiplex$
+  :end-before: SNIPPET_END: multiplex$
+
+
+First Example in its Entirety
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We've gone through several iterations to arrive at our first example of
+specialization. Here is the final specification in its entirety:
+
 
 .. code-block:: 3d
 
-  refining "I1.h", ..., "In.h" {
-      S1 as T1, ...
-      Sm as Tm
-  }
-
-
-where each ``Si`` is a type defined in one of the C header files
-"I1.h", ..., "In.h", and the ``Ti`` are types defined in the current
-3d file. In case the types have the same names, one can simply write
-``T`` instead of ``T as T``.
-
-As a second example, let's revisit the type from the `:ref:alignment section
-<sec-alignment>`, aiming to show that the 3d type corresponds to the C types
-defined in the header file `AlignBase.h` shown below:
-
-.. literalinclude:: AlignBase.h
-  :language: c
-
-Let's also decorate the 3d file with the following refining declaration:
-
-.. literalinclude:: Align.3d
-  :language: 3d
-  :start-after: SNIPPET_START: refining
-  :end-before: SNIPPET_END: refining
-  
-The 3d compiler emits the following static assertions:
-
-.. code-block:: c
-
-  #include <stddef.h>
-  #include "AlignBase.h"
-  #define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1];
-  C_ASSERT(sizeof(TLV) == 10);
-  C_ASSERT(offsetof(TLV, tag) == 0);
-  C_ASSERT(offsetof(TLV, length) == 4);
-  C_ASSERT(offsetof(TLV, other) == 8);
-  C_ASSERT(offsetof(TLV, payload) == 10);
-  C_ASSERT(sizeof(Value) == 6);
-  C_ASSERT(sizeof(coloredPoint2) == 6);
-  C_ASSERT(offsetof(coloredPoint2, pt) == 0);
-  C_ASSERT(offsetof(coloredPoint2, color) == 4);
-  C_ASSERT(sizeof(coloredPoint1) == 6);
-  C_ASSERT(offsetof(coloredPoint1, color) == 0);
-  C_ASSERT(offsetof(coloredPoint1, pt) == 2);
-  C_ASSERT(sizeof(point) == 4);
-  C_ASSERT(offsetof(point, x) == 0);
-  C_ASSERT(offsetof(point, y) == 2);
-
-If you compile this with clang, you will see that actually, the first assertion
-on the size of `TLV` fails. The C compiler treats the zero-length array
-`payload` in the struct `TLV` as having zero size with alignment of 2 (because
-of the `Value` payload), while 3d does not. Hence the C compiler adds one byte
-of padding after the `other` field and 2 bytes after it, while 3d adds only 1
-before the `padding field`. 
-
-A fix in this case is to explicitly add the padding bytes, as shown below:
-
-.. code-block:: 3d
+  extern probe ProbeAndCopy
+  extern probe (INIT) ProbeInit
+  extern PURE UINT64 UlongToPtr(UINT32 ptr)
+  extern probe (READ UINT32) ProbeAndReadU32
+  extern probe (WRITE UINT64) WriteU64
 
   aligned
-  typedef struct _tlv {
-    UINT8 tag;
-    UINT32 length;
-    UINT8 other;
-    UINT8 padding;
-    Value(tag) payload[:byte-size length];
-    UINT8 padding2[2]
-    UINT32 other2;
-  } TLV;
+  typedef struct _T(UINT32 bound) {
+      UINT32 t1;
+      UINT32 t2 { t2 <= bound };    
+  } T;
+
+  aligned
+  typedef struct _S64(UINT32 bound, EVERPARSE_COPY_BUFFER_T dest) {
+      UINT32 s1 { s1 <= bound };
+      T(s1) *ptrT probe ProbeAndCopy(length=sizeof(T), destination=dest);
+      UINT32 s2;
+  } S64;
+
+  aligned
+  typedef struct _R64(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
+      UINT32 r1;
+      S64(r1, destT) *ptrS probe ProbeAndCopy(length=sizeof(S64), destination=destS);
+  } R64;
+
+  specialize (pointer(*), pointer(UINT32)) R64 R32;
+
+  entrypoint
+  typedef struct R(Bool requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
+      switch (requestor32) {
+          case true: R32(destS, destT) r32;
+          default: R64(destS, destT) r64;
+      } field;
+  } R;
+
+
+Other forms of Specialization
+.............................
+
+Today, 3d only supports specialized 64-bit pointer types to 32-bit pointers. In
+the future, we envision adding support for other forms of specialization, e.g.,
+automatically specializing little-endian to big-endian types.
+
 
 Comments
 --------

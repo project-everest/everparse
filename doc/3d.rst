@@ -6,7 +6,7 @@
 .. note::
 
    The documentation from this page covers the EverParse/3d releases
-   v2021.03.05 or later. Documentations for earlier versions may be
+   v2025.05.20 or later. Documentations for earlier versions may be
    found in the Git history.
 
 EverParse/3d lets you write a data format description and
@@ -82,13 +82,6 @@ following properties:
   contain valid representations of the message according to its
   specification, rejecting all others.
 
-The 3d Dependent Data Description language
-------------------------------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   3d-lang
 
 Download and install
 --------------------
@@ -337,3 +330,12 @@ version message:
   Show the usage message and the status of some options given so far,
   and exit (do not process any further options to the right, nor any
   files at all.)
+
+Language Reference
+------------------
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Contents:
+ 
+   3d-lang
