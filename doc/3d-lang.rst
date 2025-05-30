@@ -556,7 +556,7 @@ and only then proceed to read from it. 3d supports parsing structures containing
 pointers, provided safe probing functions can be provided by the caller.
 
 A First Example: Simple Probes
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..............................
 
 Let's start with a simple example. Our goal is to validate a format that
 contains a single indirection: a structure ``S`` containing a pointer to a
@@ -673,8 +673,17 @@ Instructs the parser to:
     ``EverParseStreamOf(dest)`` buffer contains a valid ``T(bound)`` structure,
     in ``EverParseStreamLen(dest)`` bytes.
 
+Ultimately, the generated code provides the following signature for a C caller,
+in ``ProbeWrapper.h``, to validate a buffer pointers to by ``base``, containing
+at least ``len`` bytes, checking that it contains a valid ``S(dest)``.
+
+.. code-block:: c
+
+  BOOLEAN ProbeCheckS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len);
+
+
 Probing Multiple Indirections
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.............................
 
 Continuing our simple example, let's add another layer of indirection:, with a
 structure ``U`` containing a pointer to ``S``. This can be specified as shown
@@ -708,11 +717,16 @@ Operationally, the validator for ``U`` proceeds by:
 The validation of ``S(destT)`` proceeds as described before, copying the
 contents of ``tpointer`` into ``destT`` and validating it.
 
+The C interface includes the following:
+
+.. code-block:: c
+
+  BOOLEAN ProbeCheckU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len);
 
 Note, one can also reuse the same copy buffer for multiple probe, so long as the
 probes are done sequentially. For instance, we use several probes below, reusing
-`destT` multiple times to parser the nested `T` structure within `sptr`, and
-again for `tptr` and `t2ptr`.
+``destT`` multiple times to parser the nested ``T`` structure within ``sptr``,
+and again for ``tptr`` and ``t2ptr``.
 
 .. literalinclude:: Probe.3d
   :language: 3d
@@ -722,13 +736,13 @@ again for `tptr` and `t2ptr`.
 This is allowed since the probes are done sequentially, and the copy buffer is
 not reused before the probe \& validation are complete. On the other hand, if
 one were to try to reuse a copy buffer before its probe \& validation are
-complete (e.g., by using `destT` as the destination buffer for `sptr`) 3D issues
-an error message::
+complete (e.g., by using ``destT`` as the destination buffer for ``sptr``) 3D
+issues an error message::
 
   ./Probe.3d:(30,16): (Error) Nested mutation of the copy buffer [destT]
 
 Top-level Probes
-^^^^^^^^^^^^^^^^
+................
 
 Rather than attaching a probe to a field, one can also attach a probe to an
 entire type. For instance, one can write the following:
@@ -756,6 +770,15 @@ fields.::
      0........1........2........3........4........5........6........7........8.........9 
   TT:{        x                          |                 y                 |   tag    }
 
+This yields the following C interface, with two entry points. The first is to
+probe and validate a pointer to the type ``Indirect``, while the second is to
+validate a ``struct Indirect``.
+
+.. code-block:: c
+
+  BOOLEAN ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr);
+  BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len);
+
 The specification is equivalent to the following, though more concise:
 
 .. literalinclude:: Probe.3d
@@ -764,7 +787,7 @@ The specification is equivalent to the following, though more concise:
   :end-before: SNIPPET_END: indirect alt$
 
 Multiple Probe Callbacks
-^^^^^^^^^^^^^^^^^^^^^^^^
+........................
 
 Sometimes, it can be useful to have several probe callbacks, e.g., some of them
 may copy, while for others it might be safe to validate the data in place.
@@ -781,13 +804,65 @@ The example below shows how to use multiple probes:
   with.
 
 * One can associate multiple entrypoint probe attributes on a type, each with a
-  different probe and copy function (TODO: check that we forbid multiple
-  entrypoints with the same probe function)
+  different probe and copy function.
 
 * One can also associate different probes on each field of a type.
 
+The resulting C interface contains multiple entry points, one for each variant
+of probing entry point, and one for the non-probing variant:
+
+.. code-block:: c
+
+  BOOLEAN ProbeProbeAndCopyCheckMultiProbe(
+    EVERPARSE_COPY_BUFFER_T destT1,
+    EVERPARSE_COPY_BUFFER_T destT2,
+    EVERPARSE_COPY_BUFFER_T probeDest,
+    uint64_t probeAddr);
+
+  BOOLEAN ProbeProbeAndCopyAltCheckMultiProbe(
+    EVERPARSE_COPY_BUFFER_T destT1,
+    EVERPARSE_COPY_BUFFER_T destT2,
+    EVERPARSE_COPY_BUFFER_T probeDest,
+    uint64_t probeAddr);
+
+  BOOLEAN ProbeCheckMultiProbe(
+    EVERPARSE_COPY_BUFFER_T destT1,
+    EVERPARSE_COPY_BUFFER_T destT2,
+    uint8_t *base,
+    uint32_t len);
+
+
+Nullable Pointers
+.................
+
+By default, all probed pointer fields are expected to be non-null. If a pointer
+value happens to be null, then either
+
+* The ``ProbeAndCopy`` function can return false, in which case validation fails
+
+* Or, the ``ProbeAndCopy`` function can return true, in which the generated code
+  would proceed to try to validate the contents of the destination buffer, which
+  will likely fail.
+
+If a pointer in a data structure is allowed to be null, then one can mark it as
+such with a nullable qualifier, ``pointer?`` as shown below.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: nullable$
+  :end-before: SNIPPET_END: nullable$
+
+For a pointer with a nullable qualifier, the generated code first checks if the
+pointer is non-null:
+
+* If the pointer is null, validation succeeds without calling the probe function
+
+* If the pointer is non-null, the probe function is called, and validation
+  proceeds as in the non-null case.
+
+
 An End-to-end Executable Example
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+................................
 
 A small but fully worked out example `is available in the EverParse repository
 <https://github.com/project-everest/everparse/tree/master/src/3d/tests/probe>`_.
@@ -795,6 +870,10 @@ A small but fully worked out example `is available in the EverParse repository
 It shows the use of multiple probe functions, linked with callbacks implemented
 in C, as well as a main C driver program that validates several example inputs
 containing pointers.
+
+
+Specialization for Different Pointer Sizes
+------------------------------------------
 
 
 Generating code with for several compile-time configurations

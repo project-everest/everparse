@@ -64,11 +64,21 @@ extern probe ProbeAndCopyAlt
 
 entrypoint probe ProbeAndCopy(length=sizeof(this))
 entrypoint probe ProbeAndCopyAlt(length=sizeof(this))
-typedef struct _Indirect(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2) {
+typedef struct _MultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2) {
   UINT32 fst;
   UINT32 snd;
   UINT8 tag;
-  T *tptr1 probe ProbeAndCopy(length=sizeof(T), dest=destT1);
-  T *tptr2 probe ProbeAndCopyAlt(length=sizeof(T), dest=destT2);
-} Indirect;
+  T(17) *tptr1 probe ProbeAndCopy(length=sizeof(T), destination=destT1);
+  T(42) *tptr2 probe ProbeAndCopyAlt(length=sizeof(T), destination=destT2);
+} MultiProbe;
 //SNIPPET_END: probe_and_copy_alt$
+
+//SNIPPET_START: nullable$
+
+entrypoint
+typedef struct _MaybeT(EVERPARSE_COPY_BUFFER_T dest) {
+  UINT32 Bound;
+  T(Bound) *pointer? ptr probe ProbeAndCopy(length=sizeof(T), destination=dest);
+} MaybeT;
+
+//SNIPPET_END: nullable$

@@ -2231,9 +2231,30 @@ let check_typedef_names
   (tdnames: Ast.typedef_names)
 : ML Ast.typedef_names
 = let env = { mk_env e with this=Some tdnames.typedef_name } in
-  {
-      tdnames with
-        typedef_attributes = List.map (check_attribute env) tdnames.typedef_attributes
+  let attrs = List.map (check_attribute env) tdnames.typedef_attributes in
+  let eq_attrs a0 a1 =
+    match a0, a1 with
+    | Entrypoint None, Entrypoint _
+    | Entrypoint _, Entrypoint None ->
+      true
+    | Entrypoint (Some p0), Entrypoint (Some p1) ->
+      eq_idents p0.probe_ep_fn p1.probe_ep_fn
+    | Aligned, Aligned
+    | Noextract, Noextract -> true
+    | _ -> false
+  in
+  let _ = 
+    List.fold_right 
+      (fun a out ->
+        if List.existsb (eq_attrs a) out
+        then error (Printf.sprintf "Duplicate attribute %s" (print_attribute a)) tdnames.typedef_name.range
+        else a :: out)
+      attrs
+      []
+  in
+  {    tdnames with
+        typedef_attributes =
+          List.map (check_attribute env) tdnames.typedef_attributes
   }
 
 let check_probe_function_type
