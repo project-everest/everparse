@@ -28,7 +28,7 @@ positive_tests=$(filter-out $(wildcard FAIL*.3d) FieldDependence0.3d ActAndCheck
 positive_tests_nosuffix=$(basename $(positive_tests))
 modules_or_wrappers=$(positive_tests_nosuffix) $(addsuffix Wrapper,$(positive_tests_nosuffix))
 modules_static_assertions=$(addsuffix StaticAssertions.c, TestFieldPtr Align Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbeSpecialize)
-module_extern_apis=$(addsuffix _ExternalAPI.h, SpecializeDep1 Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize)
+module_extern_apis=$(addsuffix _ExternalAPI.h, Specialize2 Specialize3 Specialize5 Specialize6 FineGrainedProbe FineGrainedProbeSpecialize)
 clean_out_files=\
 	$(addsuffix .c,$(modules_or_wrappers)) \
 	$(modules_static_assertions) \

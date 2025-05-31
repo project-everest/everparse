@@ -270,6 +270,23 @@ let check_scope (env:env) (e:expr)
     ))
   fvs
 
+let check_scope_type (env:env) (field_name:ident) (t:typ)
+: ML unit
+= let fvs = free_vars_of_typ t in
+  List.iter (fun i -> 
+    if not (List.existsb (fun (_, j, _) -> eq_idents i j) (snd env.params))
+    then (
+      error 
+        (Printf.sprintf
+          "Cannot coerce a type with data-dependency; \
+           field %s of type %s may depend on the field `%s`"
+          (print_ident field_name)
+          (print_typ t)
+          (print_ident i))
+        i.range
+    ))
+  fvs
+
 let rec coerce_fields (e:env) (r0 r1:record)
 : ML probe_action
 = match r0, r1 with
@@ -289,11 +306,14 @@ let rec coerce_fields (e:env) (r0 r1:record)
      )
     | SwitchCaseField sw0 i0, SwitchCaseField sw1 i1 -> (
       if not (eq_idents i0 i1)
-      then failwith <|
-            Printf.sprintf
+      then (
+        error
+            (Printf.sprintf
               "Unexpected fields: cannot coerce field %s to %s"
               (print_ident i0)
-              (print_ident i1);
+              (print_ident i1))
+            i0.range
+      );
       with_dummy_range <|
       Probe_action_seq (cstring <| print_ident i0)
         (coerce_switch_case e sw0 sw1)
@@ -329,7 +349,10 @@ let rec coerce_fields (e:env) (r0 r1:record)
           if t0_is_u32 && t1_is_ptr64
           then read_and_coerce_pointer_k e af0.v.field_ident (coerce_fields e tl0 tl1)
           else if eq_typ af0.v.field_type af1.v.field_type
-          then probe_and_copy_type e af0.v.field_ident af0.v.field_type (coerce_fields e tl0 tl1)
+          then (
+            let _ = check_scope_type e af0.v.field_ident af0.v.field_type in
+            probe_and_copy_type e af0.v.field_ident af0.v.field_type (coerce_fields e tl0 tl1)
+          )
           else (
             match Generate32BitTypes.has_32bit_coercion e.benv af0.v.field_type af1.v.field_type with
             | Some id -> (
@@ -351,27 +374,34 @@ let rec coerce_fields (e:env) (r0 r1:record)
                 (coerce_fields e tl0 tl1)
             )
             | None ->
-              failwith <|
-                Printf.sprintf
+              error 
+                (Printf.sprintf
                   "Unexpected fields: cannot coerce field %s of type %s to %s"
                   (print_ident af0.v.field_ident)
                   (print_typ af0.v.field_type)
-                  (print_typ af1.v.field_type)
+                  (print_typ af1.v.field_type))
+              af0.v.field_ident.range
           )
         in
         if not (eq_idents af0.v.field_ident af1.v.field_ident)
-        then failwith <|
-              Printf.sprintf
+        then (
+          error 
+            (Printf.sprintf
                 "Unexpected fields: cannot coerce field %s to %s"
                 (print_ident af0.v.field_ident)
-                (print_ident af1.v.field_ident)
+                (print_ident af1.v.field_ident))
+            af0.v.field_ident.range
+        )
         else if Some? af0.v.field_bitwidth ||
                 Some? af1.v.field_bitwidth
-        then failwith <|
-              Printf.sprintf
-                "Unexpected fields: cannot yet coerce bitfields %s to %s"
+        then (
+          error 
+            (Printf.sprintf
+                "Unexpected fields: cannot coerce bit fields %s to %s"
                 (print_ident af0.v.field_ident)
-                (print_ident af1.v.field_ident)
+                (print_ident af1.v.field_ident))
+            af0.v.field_ident.range
+        )
         else (
           match af0.v.field_array_opt, af1.v.field_array_opt with
           | FieldScalar, FieldScalar -> coerce_scalar_part ()
@@ -381,24 +411,25 @@ let rec coerce_fields (e:env) (r0 r1:record)
               | ByteArrayByteSize, ByteArrayByteSize
               | ArrayByteSize, ArrayByteSize -> ()
               | _ ->
-                failwith <|
-                  Printf.sprintf
+                error
+                  (Printf.sprintf
                     "Unexpected fields: Unsupported array type, cannot coerce field %s to %s"
                     (print_ident af0.v.field_ident)
-                    (print_ident af1.v.field_ident)
+                    (print_ident af1.v.field_ident))
+                  af0.v.field_ident.range
             in
             let coerce_elt = coerce_scalar_part () in
             let _ = check_scope e n0 in
             with_dummy_range <| Probe_action_array n0 coerce_elt
           )
           | _ ->
-            failwith <|
-              Printf.sprintf
+            error 
+              (Printf.sprintf
                 "Unexpected fields: cannot coerce field %s of type %s to %s"
                 (print_ident af0.v.field_ident)
                 (print_typ af0.v.field_type)
-                (print_typ af1.v.field_type)
-
+                (print_typ af1.v.field_type))
+              af0.v.field_ident.range
         )
       )
     ) 

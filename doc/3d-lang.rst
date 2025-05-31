@@ -1480,43 +1480,9 @@ We've gone through several iterations to arrive at our first example of
 specialization. Here is the final specification in its entirety:
 
 
-.. code-block:: 3d
 
-  extern probe ProbeAndCopy
-  extern probe (INIT) ProbeInit
-  extern PURE UINT64 UlongToPtr(UINT32 ptr)
-  extern probe (READ UINT32) ProbeAndReadU32
-  extern probe (WRITE UINT64) WriteU64
-
-  aligned
-  typedef struct _T(UINT32 bound) {
-      UINT32 t1;
-      UINT32 t2 { t2 <= bound };    
-  } T;
-
-  aligned
-  typedef struct _S64(UINT32 bound, EVERPARSE_COPY_BUFFER_T dest) {
-      UINT32 s1 { s1 <= bound };
-      T(s1) *ptrT probe ProbeAndCopy(length=sizeof(T), destination=dest);
-      UINT32 s2;
-  } S64;
-
-  aligned
-  typedef struct _R64(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
-      UINT32 r1;
-      S64(r1, destT) *ptrS probe ProbeAndCopy(length=sizeof(S64), destination=destS);
-  } R64;
-
-  specialize (pointer(*), pointer(UINT32)) R64 R32;
-
-  entrypoint
-  typedef struct R(Bool requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
-      switch (requestor32) {
-          case true: R32(destS, destT) r32;
-          default: R64(destS, destT) r64;
-      } field;
-  } R;
-
+.. literalinclude:: Specialize1Standalone.3d
+  :language: 3d
 
 
 What is Proven About Specialization
@@ -1561,6 +1527,22 @@ our proofs.
 
 We are working to enrich our proofs to cover this property.
 
+**Static assertions**
+
+Computing coercions between different layouts of types based on
+architecture-specific details of compilers is delicate. Rather than trusting
+outright 3d's implementation of the layout of structures including alignment
+padding for 32- and 64-bit layouts, 3d emits static assertions to check that the
+layout it computes corresponds to the layout for the corresponding structures
+computed by whatever C compiler one uses to compile the code.
+
+For our example above, 3d automatically generates a ``refining`` block and emits
+the following C code:
+
+.. literalinclude:: out/Specialize1StandaloneStaticAssertions.c
+  :language: c
+
+
 
 An End-to-end Executable Example
 ................................
@@ -1572,6 +1554,187 @@ EverParse repository
 It shows an example similar to the one developed above, but linked with a main C
 program and test driver. It also illustrates the use of nullable pointers in
 conjunct with probing and specialization.
+
+Limitations on Variable-length Structures
+.........................................
+
+Automated specialization has only limited support for variable-length
+structures. The main restriction is that a coercion between types cannot depend
+on the data being coerced. We illustrate with a couple of examples:
+
+Consider the following canonical tag-length-value encoding:
+
+
+.. code-block:: 3d
+
+  typedef struct _UNION(UINT8 tag) {
+      switch (tag) {
+          case 0:
+              UINT8 case0;
+          case 1:
+              UINT16 case1;
+          default: 
+              UINT32 other;
+      } field;
+  } UNION;
+
+  typedef struct _TLV
+  {
+      UINT8 tag;
+      UINT32 length;
+      UNION(tag) payload[:byte-size length];
+  } TLV;
+
+
+Now, let's say one wanted to prove a pointer to a ``TLV``, one could attempt
+this:
+
+.. code-block:: 3d
+
+  typedef struct _WRAPPER(EVERPARSE_COPY_BUFFER_T Output)
+  {
+      TLV *tlv probe ProbeAndCopy(length=???, destination=Output);
+  } WRAPPER;
+
+
+But, this type is not expressible: when writing a probe, one needs to provide a
+``length``, bounding the amount of data to be copied into the ``Output`` buffer.
+But, in this case, there is no length to provide.
+
+We could try another approach by expecting the context to bound the length in
+advance:
+
+.. code-block:: 3d
+
+  typedef struct _UNION(UINT8 tag) {
+      switch (tag) {
+          case 0:
+              UINT8 case0;
+          case 1:
+              UINT16 case1;
+          default: 
+              UINT32 other;
+      } field;
+  } UNION;
+
+  typedef struct _TLV(UINT32 Len)
+  {
+      UINT8 tag;
+      UINT32 length { length == Len };
+      UNION(tag) payload[:byte-size length];
+  } TLV;
+
+  typedef struct _WRAPPER(UINT32 Len, EVERPARSE_COPY_BUFFER_T Output)
+  where (Len > 5) 
+  {
+      TLV(Len - 5) *tlv probe ProbeAndCopy(length=Len, destination=Output);
+  } WRAPPER;
+
+
+This works: if the caller can bound the entire size of the pointed to data and
+pass it to ``WRAPPER`` as a parameter ``Len``, then we can use that as a bound.
+
+However, if now we try to specialize ``WRAPPER`` as follows:
+
+.. code-block:: 3d
+
+  specialize (pointer(*), pointer(UINT32)) WRAPPER WRAPPER_32;
+
+We get the following error:
+
+.. code-block::
+
+  ./SpecializeDep1.3d:(22,11): (Error) Cannot coerce a type with data-dependency; 
+    field payload of type SpecializeDep1.UNION(tag) may depend on the field `tag`
+
+That is, in order to coerce a ``UNION(tag)`` from a 32- to 64-bit
+representation, in genneral, a coercion would have to read the ``tag`` field of
+``TLV``, then branch on it, and then coerce each case of ``UNION`` accordingly.
+As mentioned earlier, coercions cannot depend on the data being coerced---so 3d
+rejects this specification.
+
+Note, in this case, one could argue that ``UNION(tag)`` has the same
+representation in 32- and 64-bits, so 3d could accept the specification:
+however, 3d does not yet recognize such special cases.
+
+One could play the same game again, and try to get the caller to provide the
+``tag`` as a parameter (although as we do this, increasingly, the caller has to
+be able to predict the cases of the data). The listing below works:
+
+.. literalinclude:: SpecializeDep1.3d
+  :language: 3d
+
+However, we remark on a few points:
+
+  * First, this specification is far from ideal, since it requires the caller to
+    predict both the ``tag`` and ``length`` of the TLV message.
+
+  * Second, 3d's determination of data dependence is a syntactic criterion:
+    notice how we have changed the type of the payload field to only mention the
+    parameters in scope, rather than the fields.
+
+    .. code-block:: 3d
+
+      UNION(Expected) payload[:byte-size Len];
+
+Data Dependency for Well-formedness
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There is another form of data dependency that is also not supported: dependence
+on data constraints that ensure well-formedness of specifications. The following
+variant of our previous example illustrates.
+
+.. code-block:: 3d
+
+  typedef struct _TLV(UINT8 Expected, UINT16 Len)
+  {
+      UINT8 tag { tag == Expected };
+      UINT32 length { Len > 5 && length == Len - 5 };
+      UNION(Expected) payload[:byte-size (Len - 5)];
+  } TLV;
+
+  typedef struct _WRAPPER(UINT8 Expected, UINT16 Len, EVERPARSE_COPY_BUFFER_T Output)
+  {
+      TLV(Expected, Len) *tlv
+          probe ProbeAndCopy(length=Len, destination=Output);
+  } WRAPPER;
+
+In this variant, rather than constrain ``Len > 5`` in the ``Wrapper``, we add a
+constraint on the ``length`` field enforcing ``Len > 5``, and then using ``Len -
+5`` for the length of ``payload``---the constraint ensures that the subtraction
+``Len - 5`` does not underflow.
+
+However, if we try to specialize ``WRAPPER`` to 32 bits:
+
+.. code-block:: 3d
+
+  specialize (pointer(*), pointer(UINT32)) WRAPPER WRAPPER_32;
+
+We get the following *verification* error:
+
+.. code-block::
+
+  * Error 19 at out/SpecializeDep1Fail.fst(195,2-205,63):
+  - Cannot verify u16 subtraction
+  - The SMT solver could not prove the query. Use --query_stats for more
+    details.
+  - Also see: SpecializeDep1Fail.3d(22,40-22,40)
+
+3d accepts the specification and then translates it to F* for well-formedness
+checking: but F* rejects the specification saying it cannot prove that the
+subtraction ``Len - 5`` does not underflow. This is because, again, the coercion
+of ``TLV`` from 32- to 64-bits is not data dependent, and as such, the
+constraint on the ``length`` field is not enforced by the coercion, and F*
+rightfully rejects the subtraction as unsafe.
+
+
+More Common Variable-length Idioms
+..................................
+
+Although data dependency is forbidden in coercions, there are many cases where
+variable-length structures fit well with 3d's support for auto-specialization.
+
+
 
 
 Other forms of Specialization

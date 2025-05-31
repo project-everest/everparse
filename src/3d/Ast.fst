@@ -1756,16 +1756,41 @@ let idents_of_decl (d:decl) =
   | OutputType { out_typ_names = names } 
   | ExternType names -> [names.typedef_name; names.typedef_abbrev]
 
-  let rec free_vars_of_expr (e:expr)
-  : ML (list ident)
-  = match e.v with
-    | Constant _ -> []
-    | Identifier i -> [i]
-    | Static e -> free_vars_of_expr e
-    | This -> []
-    | App SizeOf _ -> []
-    | App _ es -> List.fold_left (fun out e -> free_vars_of_expr e @ out) [] es
+let rec free_vars_of_expr (e:expr)
+: ML (list ident)
+= match e.v with
+  | Constant _ -> []
+  | Identifier i -> [i]
+  | Static e -> free_vars_of_expr e
+  | This -> []
+  | App SizeOf _ -> []
+  | App _ es -> List.fold_left (fun out e -> free_vars_of_expr e @ out) [] es
+
+let rec free_vars_of_out_expr (o:out_expr)
+: ML (list ident)
+= match o.out_expr_node.v with
+  | OE_id i -> [i]
+  | OE_star e -> free_vars_of_out_expr e
+  | OE_addrof e -> free_vars_of_out_expr e
+  | OE_deref e i -> free_vars_of_out_expr e @ [i]
+  | OE_dot e i -> free_vars_of_out_expr e @ [i]
   
+let free_vars_of_typ_param (p:typ_param)
+: ML (list ident)
+= match p with
+  | Inl e -> free_vars_of_expr e
+  | Inr oe -> free_vars_of_out_expr oe
+
+let rec free_vars_of_typ (t:typ)
+: ML (list ident)
+= match t.v with
+  | Type_app i _ gs ps -> 
+    List.fold_left (fun out e -> free_vars_of_expr e @ out) [] gs 
+    @
+    List.fold_left (fun out p -> free_vars_of_typ_param p @ out) [] ps
+  | Pointer t q -> free_vars_of_typ t
+  | Type_arrow ts t -> List.fold_left (fun out t -> free_vars_of_typ t @ out) (free_vars_of_typ t) ts
+
 let name32 (head_name:ident) : ident =
   let gen = reserved_prefix ^ "specialized32_" ^ head_name.v.name in
   {head_name with v = { head_name.v with name = gen }}
