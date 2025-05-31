@@ -11,6 +11,17 @@ typedef struct _T(mutable PUINT8* out) {
 } T;
 // SNIPPET_END: GetFieldPtr.T
 
+
+// SNIPPET_START: GetFieldPtr.T act$
+entrypoint
+typedef struct _TAct(mutable PUINT8* out) {
+    UINT8 f1[10];
+    UINT8 f2[20]
+    {:act  var x = field_ptr; *out = x; };
+} TAct;
+// SNIPPET_END: GetFieldPtr.T act$
+
+
 refining "GetFieldPtrBase.h" {
    S as T
 }

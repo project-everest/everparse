@@ -4,17 +4,6 @@
 #include <stdbool.h>
 #include <assert.h>
 
-// ERROR HANDLING
-
-// `ProbeEverParseError` is declared in the generated
-// ../obj/ProbeWrapper.c, but we have to define it by hand here. It is
-// the callback function called if any validator for a type defined in
-// Probe.3d fails.
-
-void ProbeEverParseError(char *StructName, char *FieldName, char *Reason) {
-  printf("Validation failed in Probe, struct %s, field %s. Reason: %s\n", StructName, FieldName, Reason);
-}
-
 // THE INPUT BUFFERS
 
 // We assume a little-endian C ABI.
@@ -71,16 +60,23 @@ uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T x) {
 // used as an input buffer to the validator for the `secondary` type
 // defined in Probe.3d.
 
-BOOLEAN ProbeAndCopy(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+BOOLEAN ProbeAndCopy(uint64_t len, uint64_t ro, uint64_t wo, uint64_t src, EVERPARSE_COPY_BUFFER_T dst) {
   static_assert(sizeof(secondary) == 4);
   copy_buffer_t *p = dst;
-  if (src == (uint64_t) secondary && len == sizeof(secondary) && p->len >= len) {
+  if (src == (uint64_t) secondary &&
+      ro == 0 &&
+      wo == 0 &&
+      len == sizeof(secondary) && p->len >= len) {
     memcpy(p->buf, (uint8_t*) secondary, len);
     return true;
   } else {
     printf("ProbeAndCopy failed\n");
     return false;
   }
+}
+
+BOOLEAN ProbeInit(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+  return true;
 }
 
 // `ProbeInPlace` is a probing function declared in Probe.3d and the
@@ -91,9 +87,18 @@ BOOLEAN ProbeAndCopy(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
 // reusing the `secondary` array directly as an input buffer to the
 // validator for the `secondary` type defined in Probe.3d.
 
-BOOLEAN ProbeInPlace(uint64_t src, uint64_t len, EVERPARSE_COPY_BUFFER_T dst) {
+BOOLEAN ProbeInPlace(
+  uint64_t len,
+  uint64_t read_offset,
+  uint64_t write_offset,
+  uint64_t src, 
+  EVERPARSE_COPY_BUFFER_T dst
+) {
   static_assert(sizeof(secondary) == 4);
-  if (src == (uint64_t) secondary && len == sizeof(secondary)) {
+  if (src == (uint64_t) secondary &&
+      read_offset == 0 &&
+      write_offset == 0 &&
+      len == sizeof(secondary)) {
     copy_buffer_t *p = dst;
     p->buf = (uint8_t*) secondary;
     p->len = len;

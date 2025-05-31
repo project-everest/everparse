@@ -117,7 +117,7 @@ ValidateIntPayload(
     return positionAfterIntPayload;
   }
   ErrorHandlerFn("_int_payload",
-    "_x_5",
+    "_x_9",
     EverParseErrorReasonOfResult(positionAfterIntPayload),
     EverParseGetValidatorErrorKind(positionAfterIntPayload),
     Ctxt,

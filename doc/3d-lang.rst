@@ -1,14 +1,18 @@
-        .. _3d-lang:
+.. _3d-lang:
 
-The 3d Dependent Data Description language
-==========================================
+Overview
+---------
 
 3d supports several fixed-width integer base types, (nested) structs,
 constraints, enums, parameterized data types, tagged or otherwise
-value-dependent unions, fixed-size arrays, and variable-size
-arrays. In addition to data validation, 3d also supports *local
-actions* to pass values read from the data structure, or pointers to
-them, to the caller code.
+value-dependent unions, fixed-size arrays, and variable-size arrays.
+
+In addition to data validation, 3d also supports *local actions* to pass values
+read from the data structure, or pointers to them, to the caller code.
+
+3d also supports validating structures that contain pointers, probing pointers
+for validity and traversing them in order to validate the data they refer to. 
+
 
 Base types
 ----------
@@ -16,10 +20,41 @@ Base types
 The primitive types in 3d include unsigned integers of the following
 flavors:
 
-* UINT8: 8-bit unsigned little-endian integer
+* ``UINT8``: 8-bit unsigned little-endian integer
 * UINT16: 16-bit unsigned little-endian integer
+
+  - Literal values of ``UINT8`` are integers with the ``uy`` suffix, e.g.,
+    ``0uy, 8uy 255uy`` etc.
+    
+  - Literals can also be specified in hexadecimal, with hex digits in either
+    lower or upper case``0xabuy, 0x1Auy, 0xFFuy, 0xFfuy`` etc.
+  - Literal values of ``UINT8`` are integers with the ``uy`` suffix, e.g.,
+    ``0uy, 8uy 255uy`` etc.
+    
+  - Literals can also be specified in hexadecimal, e.g., ``0xabuy, 0xffuy`` etc.
+
+
 * UINT32: 32-bit unsigned little-endian integer
 * UINT64: 64-bit unsigned little-endian integer
+
+Literal values of unsigned integer types can be specified in either decimal or
+hexadecimal, e.g., ``0, 1, 255`` etc. in decimal; or in with hexadecimal with 
+either lower or upper case, e.g., ``0x0, 0x01, 0xff, 0xFF, 0xFf`` etc.
+
+3d infers the smallest width of a literal based on type information, but the
+width can also be specified explicitly.
+
+For ``UINT8``, a literal has the ``uy`` suffix, e.g., ``0uy, 1uy, 0xffuy,
+255uy`` etc.
+
+For ``UINT16``, a literal has the ``us`` suffix, e.g., ``0us, 1us, 0xffffus,
+255us, 65535us`` etc.
+
+For ``UINT32``, a literal has the ``ul`` suffix, e.g., ``0ul, 1ul, 0xfffffffful,
+255ul, 4294967295ul`` etc.
+
+For ``UINT64``, a literal has the ``uL`` suffix, e.g., ``0uL, 1uL, 0xffffffffffffffffuL,
+255uL`` etc.
 
 We also provide big-endian unsigned integers:
 
@@ -27,10 +62,10 @@ We also provide big-endian unsigned integers:
 * UINT32BE: 32-bit unsigned big-endian integer
 * UINT64BE: 64-bit unsigned big-endian integer
 
-Big-endian integers are often useful in describing network message
-formats. 3d ensures suitable endianness conversions are applied when
-comparing or equating integers represented in different endianness. We
-show an example of this :ref:`below <sec-constraints>`.
+Big-endian integers are often useful in describing network message formats. 3d
+ensures suitable endianness conversions are applied when comparing or equating
+integers represented in different endianness. We show an example of this
+:ref:`below <sec-constraints>`.
 
 Structs
 -------
@@ -309,8 +344,8 @@ In this case, the validator for ``boundedSum`` would check
 that ``bound <= 1729``, before validating its fields.
    
 
-Tagged unions
--------------
+Tagged unions or ``casetype``
+------------------------------
 
 3d supports *tagged unions*: a data type can store a value named *tag*
 and a *payload* whose type depends on the tag value. The tag does not
@@ -322,6 +357,8 @@ prefixed by its size in bits.
 
 .. literalinclude:: TaggedUnion.3d
     :language: 3d
+    :start-after: SNIPPET_START: casetype$
+    :end-before: SNIPPET_END: casetype$
 
 .. warning::
 
@@ -336,6 +373,16 @@ on an argument value, which can be reused, e.g. for several types that
 put different constraints on the value of the tag.
 
 A ``casetype`` type can also be marked ``entrypoint``.
+
+Rather than defining a top-level ``casetype``, one can define a type by cases as
+a field in a struct. For example, the following type is equivalent to the one
+before:
+
+
+.. literalinclude:: TaggedUnion.3d
+    :language: 3d
+    :start-after: SNIPPET_START: switch literal$
+    :end-before: SNIPPET_END: switch literal$
 
 
 Arrays
@@ -528,6 +575,20 @@ then, we write ``x`` into ``*out``; and finally return ``true``.
    the input buffer. As such, the ``out`` parameter should have type
    ``PUINT8*`` rather than ``UINT8*``.
 
+Actions that always succeed
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For actions that always succeed, 3d supports a more concise notation, using the
+``:act`` form, as shown below:
+
+.. literalinclude:: GetFieldPtr.3d
+    :language: 3d
+    :start-after: SNIPPET_START: GetFieldPtr.T act$
+    :end-before: SNIPPET_END: GetFieldPtr.T act$
+
+This is equivalent to the prior ``:on-success`` action shown earlier.
+
+
 Restrictions
 ............
 
@@ -538,241 +599,6 @@ Restrictions
   can be associated with the fields of that type, if any.
 
 * Actions cannot be associated with bit fields.
-
-
-Probing or Following Pointers when Parsing
-------------------------------------------
-
-In some cases, rather than parsing from a flat array of contiguous memory, one
-wants to parse a structure with indirections, i.e., the input buffer may contain
-pointers to other chunks of memory containing sub-structures to be parsed.
-
-Parsing such pointer-rich structures is delicate, since before following a
-pointer, one needs to check that the pointer references valid memory. Given a
-raw pointer (just a memory address), one cannot, in general, check that the
-pointer is valid. However, in some scenarios, such checks are possible, e.g., in
-kernel code, it may be possible to probe a pointer to check that it is valid,
-and only then proceed to read from it. 3d supports parsing structures containing
-pointers, provided safe probing functions can be provided by the caller.
-
-Let's look an an example:
-
-.. literalinclude:: Probe.3d
-  :language: 3d
-  :start-after: SNIPPET_START: simple probe$
-  :end-before: SNIPPET_END: simple probe$
-
-The first line declares a `probe` function called `ProbeAndCopy`. This is a
-requirement on the user of the generated parser to link the generated code with
-a function called `ProbeAndCopy`. In fact, the generated code contains and
-extern declaration with the signature shown below:
-
-.. code-block:: c
-
-  extern BOOLEAN ProbeAndCopy(uint64_t base, uint64_t length, EVERPARSE_COPY_BUFFER_T buffer);
-
-where, in `EverParseEndianness.h`, we have
-
-That is, the `ProbeAndCopy` function is expected to take three arguments:
-
-  * A pointer value, represented as a 64-bit unsigned integer, to be probed for validity.
-
-  * A length value, also a `uint64_t`, representing the extent of memory to be
-    checked for validity starting from the base address
-
-  * And a buffer of type `EVERPARSE_COPY_BUFFER_T`. Typically, the
-    implementation of `ProbeAndCopy` may choose to copy the memory starting at
-    the base address into the buffer, so that the parser can then read from the
-    buffer.
-
-The type `EVERPARSE_COPY_BUFFER_T` is also left to the user to define. In
-particular, in `EverParseEndianness.h`, we have
-
-.. code-block:: c
-
-  typedef void* EVERPARSE_COPY_BUFFER_T;
-
-While in `EverParse.h`, we further have:
-
-.. code-block:: c
-
-  extern uint8_t *EverParseStreamOf(EVERPARSE_COPY_BUFFER_T buf);
-
-  extern uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T buf);
-
-That is, the client code can choose any definition for `EVERPARSE_COPY_BUFFER_T`
-(since it is just a `void*`), so long as it can also provide two functions:
-`EverParseStreamOf` to extract a buffer of bytes from a
-`EVERPARSE_COPY_BUFFER_T`; and `EverParseStreamLen` to extract the length of the
-buffer.
-
-Let's return to the example to see how the `ProbeAndCopy` function is used.
-
-The type `T` is just a struct with two fields, constrained by a lower bound. The
-type `S` is more interesting. It starts with a `UINT8 bound` and then contains a
-*pointer* `t` to a `T(bound)` struct. To emphasize the point, the following
-picture illustrates the layout::
-
-     bytes
-     0........1........2........3........4........5........6........7........8........9 
- S:  { bound  |              tpointer                                                 }
-                                |
-                                |
-      .-------------------------.                            
-      |
-      v 
-     0........1........2........3........4........5........6........7........8.........9 
- T:  {        x        |        y        }
-
-  
-
-The input buffer represents the `S` structure in 5 bytes, beginning with one
-byte for the `bound`, and following by 8 bytes for the `tpointer`
-field---currently, 3D treats pointer fields as always 8 bytes long.
-
-The `tpointer` field contains a memory address that points to the a `T`
-structure, which is represented in 4 bytes, with 2 bytes each for its `x` and
-`y` fields, as usual.
-
-The 3D notation below:
-
-.. code-block:: 3d
-
-  T(bound) *tpointer probe ProbeAndCopy(length = 8, destination = dest);
-
-Instructs the parser to:
-   
-  * First, use the `ProbeAndCopy` function to check that the 8 bytes starting at
-    the address pointed to by `tpointer` are valid memory, using the `dest`
-    parameter as its copy buffer.
-
-  * If `ProbeAndCopy` succeeds, then validate that `EverParseStreamOf(dest)`
-    buffer contains a valid `T(bound)` structure, in `EverParseStreamLen(dest)`
-    bytes.
-
-One can use multiple probe functions in a specification. Continuing our example
-from above, one can write:
-
-.. literalinclude:: Probe.3d
-  :language: 3d
-  :start-after: SNIPPET_START: multi probe$
-  :end-before: SNIPPET_END: multi probe$
-
-
-* We define a second probing function `ProbeAndCopyAlt`
-
-* The a type `U`, that packages a pointer to an  `S` structure with a tag. Note,
-  the `spointer` is probed using `ProbeAndCopyAlt`, while the `tpointer`
-  nested within it is probed using `ProbeAndCopy`.
-
-One can also reuse the same copy buffer for multiple probe, so long as the
-probes are done sequentially. For instance, we use several probes below, reusing
-`destT` multiple times to parser the nested `T` structure within `sptr`, and
-again for `tptr` and `t2ptr`.
-
-.. literalinclude:: Probe.3d
-  :language: 3d
-  :start-after: SNIPPET_START: reuse copy buffer$
-  :end-before: SNIPPET_END: reuse copy buffer$
-
-This is allowed since the probes are done sequentially, and the copy buffer is
-not reused before the probe \& validation are complete. On the other hand, if
-one were to try to reuse a copy buffer before its probe \& validation are
-complete (e.g., by using `destT` as the destination buffer for `sptr`) 3D issues
-an error message::
-
-  ./Probe.3d:(30,16): (Error) Nested mutation of the copy buffer [destT]
-
-Finally, there is one more variation in using probes. Consider the following
-type:
-
-
-.. literalinclude:: Probe.3d
-  :language: 3d
-  :start-after: SNIPPET_START: indirect$
-  :end-before: SNIPPET_END: indirect$
-
-
-This type specifies the following layout, with an input buffer containing a
-single pointer which refers to a buffer containing a valid struct with three
-fields.::
-
-
-
-     bytes
-     0........1........2........3........4........5........6........7........8
-   I:{                        pointer                                        }
-                                |
-                                |
-      .-------------------------.                            
-      |
-      v 
-     0........1........2........3........4........5........6........7........8.........9 
-  TT:{        x                          |                 y                 |   tag    }
-
-
-The specification is equivalent to the following, though more concise:
-
-
-.. literalinclude:: Probe.3d
-  :language: 3d
-  :start-after: SNIPPET_START: indirect alt$
-  :end-before: SNIPPET_END: indirect alt$
-
-
-Generating code with for several compile-time configurations
-------------------------------------------------------------
-
-Sometimes one wants to write a single format specification to
-accommodate several compile-time configurations, e.g., to support
-multiple architectures. 3D offers some limited support for decorating
-a specification with compile-time conditionals familiar to C
-programmmers, e.g., ``#if`` and ``#else``, and to generate C code
-while preserving these C preprocessor directives.
-
-For example, the listing below shows an integer type that can either
-be represented using 64 bits (if ``ARCH64`` is true) or 32 bits.
-
-.. literalinclude:: PointArch_32_64.3d
-    :language: 3d
-
-To compile such a file using 3D, we also need to provide a
-``.3d.config`` file that declares all the compile-time flags used in
-the specification and mentions a C header file in which to find
-definitions for those flags. Here is a sample config file:
-
-.. literalinclude:: Arch.3d.config
-
-Then, one can invoke ``3d.exe --config Arch.3d.config
-PointArch_32_64.3d --batch``, which produces the following C code as
-output.
-
-In the header file ``PointArch_32_64.h``, we see an include for
-the header file mentioned in the config:
-
-.. code-block:: c
-
-   #include "arch_flags.h"
-
-In the generated C file, ``PointArch_32_64.c``, we see the code below,
-with the suitable preprocessor directives protecting the two variants
-of the the ``Int`` type declared in the source 3d file.
-
-.. code-block:: c
-
-   static inline uint64_t
-   ValidateInt(...) {
-   {
-      #if ARCH64
-      /* Validating field x */
-      /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
-      ...
-      #else
-      /* Validating field x */
-      /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
-      ...
-      #endif
-   }
 
 .. _sec-alignment:
 
@@ -965,6 +791,796 @@ A fix in this case is to explicitly add the padding bytes, as shown below:
     UINT8 padding2[2]
     UINT32 other2;
   } TLV;
+
+Generating code with for several compile-time configurations
+------------------------------------------------------------
+
+Sometimes one wants to write a single format specification to
+accommodate several compile-time configurations, e.g., to support
+multiple architectures. 3D offers some limited support for decorating
+a specification with compile-time conditionals familiar to C
+programmers, e.g., ``#if`` and ``#else``, and to generate C code
+while preserving these C preprocessor directives.
+
+For example, the listing below shows an integer type that can either
+be represented using 64 bits (if ``ARCH64`` is true) or 32 bits.
+
+.. literalinclude:: PointArch_32_64.3d
+    :language: 3d
+
+To compile such a file using 3D, we also need to provide a
+``.3d.config`` file that declares all the compile-time flags used in
+the specification and mentions a C header file in which to find
+definitions for those flags. Here is a sample config file:
+
+.. literalinclude:: Arch.3d.config
+
+Then, one can invoke ``3d.exe --config Arch.3d.config
+PointArch_32_64.3d --batch``, which produces the following C code as
+output.
+
+In the header file ``PointArch_32_64.h``, we see an include for
+the header file mentioned in the config:
+
+.. code-block:: c
+
+   #include "arch_flags.h"
+
+In the generated C file, ``PointArch_32_64.c``, we see the code below,
+with the suitable preprocessor directives protecting the two variants
+of the the ``Int`` type declared in the source 3d file.
+
+.. code-block:: c
+
+   static inline uint64_t
+   ValidateInt(...) {
+   {
+      #if ARCH64
+      /* Validating field x */
+      /* Checking that we have enough space for a UINT64, i.e., 8 bytes */
+      ...
+      #else
+      /* Validating field x */
+      /* Checking that we have enough space for a UINT32, i.e., 4 bytes */
+      ...
+      #endif
+   }
+
+
+Validating Data with Indirections or Pointers
+---------------------------------------------
+
+In some cases, rather than parsing from a flat array of contiguous memory, one
+wants to parse a structure with indirections, i.e., the input buffer may contain
+pointers to other chunks of memory containing sub-structures to be parsed.
+
+Parsing such pointer-rich structures is delicate, since before following a
+pointer, one needs to check that the pointer references valid memory. Given a
+raw pointer (just a memory address), one cannot, in general, check that the
+pointer is valid. However, in some scenarios, such checks are possible, e.g., in
+kernel code, it may be possible to probe a pointer to check that it is valid,
+and only then proceed to read from it. 3d supports parsing structures containing
+pointers, provided safe probing functions can be provided by the caller.
+
+Pointer Types
+.............
+
+Let's start by looking at some basic support for pointer types in 3d.
+
+As in C, any field of a structure can be marked as a pointer: here, below, the
+second field ``y`` is marked as pointer to a ``UINT32``.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: simple pointer1$
+  :end-before: SNIPPET_END: simple pointer1$
+
+By default, a pointer type is simply treated as an unsigned 64-bit integer and
+3d will not dereference the pointer when validating a type. One can mark any
+field as a pointer, not just fields with base type, and a pointer field can be
+associated with a constraint, as any other field of a base type. The example
+below shows a constraint on a pointer field checking that it is
+non-null---notice that in the constraint,  the ``ptr`` value is just treated as
+having type ``UINT64``. 
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: simple pointer2$
+  :end-before: SNIPPET_END: simple pointer2$
+
+One can also associate an action with a pointer field, e.g., reading its value
+into an out parameter.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: simple pointer3$
+  :end-before: SNIPPET_END: simple pointer3$
+
+One can also explicitly mark the size of a pointer, giving it the type
+``UINT64`` (the default) or ``UINT32``, as shown in the examples below.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: simple pointer4$
+  :end-before: SNIPPET_END: simple pointer4$
+
+Note, in all these examples, the *type* of pointed-to data is irrelevant: 3d
+simply treats the pointer as an integer value.
+
+Probing Pointers: A first example
+.................................
+
+We now look at how to traverse pointers, dereferencing them and validating the
+data they point to.
+
+Let's start with a simple example. Our goal is to validate a format that
+contains a single indirection: a structure ``S`` containing a pointer to a
+structure ``T``.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: simple probe$
+  :end-before: SNIPPET_END: simple probe$
+
+The first line declares a ``probe`` function called ``ProbeAndCopy``. This is a
+requirement on the user of the generated parser to link the generated code with
+a function called ``ProbeAndCopy``. In fact, the generated code contains an
+extern declaration with the signature shown below (in ``Probe_ExternalAPI.h``):
+
+.. code-block:: c
+
+  extern BOOLEAN ProbeAndCopy(
+    uint64_t size,  //The number of bytes to copy
+    uint64_t read_offset, //starting at this offset from the src pointer
+    uint64_t write_offset, //writing to this offset in the dst buffer
+    uint64_t src, //the source address to be probed and checked for validity
+    EVERPARSE_COPY_BUFFER_T dst //the target buffer into which the data is to be copied
+  );
+
+That is, the ``ProbeAndCopy`` function is expected to check probe the source address, 
+check its validity at ``read_offset``, and copy ``size`` bytes into the ``dst``
+buffer starting at ``write_offset``.
+
+Note, although a typical implementation may choose to copy memory into the
+destination buffer, this not strictly required. In particular, the type
+``EVERPARSE_COPY_BUFFER_T`` is also left to the user to define. In particular,
+in ``EverParseEndianness.h``, we have
+
+.. code-block:: c
+
+  typedef void* EVERPARSE_COPY_BUFFER_T;
+
+While in ``EverParse.h``, we further have:
+
+.. code-block:: c
+
+  extern uint8_t *EverParseStreamOf(EVERPARSE_COPY_BUFFER_T buf);
+
+  extern uint64_t EverParseStreamLen(EVERPARSE_COPY_BUFFER_T buf);
+
+That is, the client code can choose any definition for
+``EVERPARSE_COPY_BUFFER_T`` (since it is just a ``void*``), so long as it can
+also provide two functions: ``EverParseStreamOf`` to extract a buffer of bytes
+from a ``EVERPARSE_COPY_BUFFER_T``; and ``EverParseStreamLen`` to extract the
+length of the buffer.
+
+The second line defines another extern callback for ``extern probe (INIT)
+ProbeInit``. This results in the following extern C declaration in
+``Probe_ExternalAPI.h``:
+
+.. code-block:: c
+
+  extern BOOLEAN ProbeInit(
+    uint64_t size,
+    EVERPARSE_COPY_BUFFER_T dst
+  )
+
+The ``ProbeInit`` callback allows a caller to initialize the destination buffer,
+preparing it to contain up to ``size`` bytes of data, e.g., if need be, one
+could use this callback to allocate memory.
+
+Let's return to the example to see how the ``ProbeAndCopy`` function is used.
+
+The type ``T`` is just a struct with two fields, constrained by a lower bound.
+The type ``S`` is more interesting. It starts with a ``UINT8 bound`` and then
+contains a *pointer* ``t`` to a ``T`(bound)`` struct. To emphasize the point,
+the following picture illustrates the layout::
+
+     bytes
+     0........1........2........3........4........5........6........7........8........9 
+ S:  { bound  |              tpointer                                                 }
+                                |
+                                |
+      .-------------------------.                            
+      |
+      v 
+     0........1........2........3........4........5........6........7........8.........9 
+ T:  {        x        |        y        }
+
+  
+The input buffer represents the ``S`` structure in 5 bytes, beginning with one
+byte for the ``bound``, and following by 8 bytes for the ``tpointer``
+field---currently, 3D treats pointer fields as always 8 bytes long.
+
+The ``tpointer`` field contains a memory address that points to the a ``T``
+structure, which is represented in 4 bytes, with 2 bytes each for its ``x`` and
+``y`` fields, as usual.
+
+The 3D notation below:
+
+.. code-block:: 3d
+
+  T(bound) *tpointer probe ProbeAndCopy(length = sizeof(T), destination = dest);
+
+Instructs the parser to:
+
+  * First, read the contents of the ``tpointer`` field into a local vairable ``src``
+
+  * Then, call ``ProbeInit(4, dest)`` to prepare the destination buffer, where
+    ``sizeof(T)=4``.
+
+  * Then, if ``ProbeInit`` succeeds, use ``ProbeAndCopy(sizeof(T), 0, 0, src,
+    destS)`` check that the ``sizeof(T)`` bytes starting at the address pointed
+    to by ``tpointer`` is valid memory, using the ``dest`` parameter as its copy
+    buffer.
+
+  * Finally, if ``ProbeAndCopy`` succeeds, then validate that
+    ``EverParseStreamOf(dest)`` buffer contains a valid ``T(bound)`` structure,
+    in ``EverParseStreamLen(dest)`` bytes.
+
+Ultimately, the generated code provides the following signature for a C caller,
+in ``ProbeWrapper.h``, to validate a buffer pointers to by ``base``, containing
+at least ``len`` bytes, checking that it contains a valid ``S(dest)``.
+
+.. code-block:: c
+
+  BOOLEAN ProbeCheckS(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len);
+
+
+Probing Multiple Indirections
+.............................
+
+Continuing our simple example, let's add another layer of indirection:, with a
+structure ``U`` containing a pointer to ``S``. This can be specified as shown
+below:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: multi probe$
+  :end-before: SNIPPET_END: multi probe$
+
+
+* The type ``U`` packages a pointer to an ``S`` structure with a tag.
+
+* The specification of ``U`` is parameterized by `two` destintation buffers:
+  ``destS`` to receive the contents of the memory referenced by ``spointer``;
+  and ``destT`` to receive the contents of the memory referenced by
+  ``tpointer``.
+
+Operationally, the validator for ``U`` proceeds by:
+
+* First, validating the tag field (in this case, it is a noop)
+
+* Then, reading ``spointer`` into ``srcS`` and
+
+  - Calling ``ProbeInit(sizeof(S), destS)``
+
+  - Then, ``ProbeAndCopy(sizeof(S), 0, 0, srcS, destS)``
+
+  - Then, validate ``EverParseStreamOf(destS)`` contains a valid ``S(destT)``.
+
+The validation of ``S(destT)`` proceeds as described before, copying the
+contents of ``tpointer`` into ``destT`` and validating it.
+
+The C interface includes the following:
+
+.. code-block:: c
+
+  BOOLEAN ProbeCheckU(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT, uint8_t *base, uint32_t len);
+
+Note, one can also reuse the same copy buffer for multiple probe, so long as the
+probes are done sequentially. For instance, we use several probes below, reusing
+``destT`` multiple times to parser the nested ``T`` structure within ``sptr``,
+and again for ``tptr`` and ``t2ptr``.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: reuse copy buffer$
+  :end-before: SNIPPET_END: reuse copy buffer$
+
+This is allowed since the probes are done sequentially, and the copy buffer is
+not reused before the probe \& validation are complete. On the other hand, if
+one were to try to reuse a copy buffer before its probe \& validation are
+complete (e.g., by using ``destT`` as the destination buffer for ``sptr``) 3D
+issues an error message::
+
+  ./Probe.3d:(30,16): (Error) Nested mutation of the copy buffer [destT]
+
+Top-level Probes
+................
+
+Rather than attaching a probe to a field, one can also attach a probe to an
+entire type. For instance, one can write the following:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: indirect$
+  :end-before: SNIPPET_END: indirect$
+
+
+This type specifies the following layout, with an input buffer containing a
+single pointer which refers to a buffer containing a valid struct with three
+fields.::
+
+
+
+     bytes
+     0........1........2........3........4........5........6........7........8
+   I:{                        pointer                                        }
+                                |
+                                |
+      .-------------------------.                            
+      |
+      v 
+     0........1........2........3........4........5........6........7........8.........9 
+  TT:{        x                          |                 y                 |   tag    }
+
+This yields the following C interface, with two entry points. The first is to
+probe and validate a pointer to the type ``Indirect``, while the second is to
+validate a ``struct Indirect``.
+
+.. code-block:: c
+
+  BOOLEAN ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr);
+  BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len);
+
+The specification is equivalent to the following, though more concise:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: indirect alt$
+  :end-before: SNIPPET_END: indirect alt$
+
+.. _Coercing_pointers:
+
+Coercing Pointer Types
+......................
+
+One can also add a probe to a pointer with an explicit pointer size, so long as
+one also provides a callback to convert a value from that explicit pointer size
+to ``UINT64``, as in the example below:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: coerce$
+  :end-before: SNIPPET_END: coerce$
+
+Here, we first define a callback ``UlongToPtr`` to convert a ``UINT32`` to a
+``UINT64``. 
+
+In ``Probe_ExternalAPI.h``, this extern declaration produces the following C
+signature:
+
+.. code-block:: c
+    
+    extern uint64_t UlongToPtr(uint32_t ptr);
+
+Then, in ``CoercePtr``, we can qualify our pointer type to 32-bits: the 3d
+compiler will automatically insert the ``UlongToPtr`` coercion on the 32-bit
+pointer value before called ``ProbeAndCopy`` with the coerced pointer value.
+
+.. note::
+
+  If you declare more than one coercion to coerce between a pair of types, 3d
+  will likely complain with the following error:
+
+  .. code-block::
+
+    ./Probe.3d:(132,33): (Error) Multiple extern coercions found for UINT32 -> UINT64: Probe.UlongToPtr, Probe.UlongToPtr2
+
+  This is because 3d applies coercions implicitly, and if multiple coercions are
+  found between a pair of types, it cannot choose which coercion to apply.
+
+
+Multiple Probe Callbacks
+........................
+
+Sometimes, it can be useful to have several probe callbacks, e.g., some of them
+may copy, while for others it might be safe to validate the data in place.
+
+The example below shows how to use multiple probes:
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: probe_and_copy_alt$
+  :end-before: SNIPPET_END: probe_and_copy_alt$
+
+* The extern declaration of ``ProbeAndCopyAlt`` produces a second extern
+  declaration in ``Probe_ExternalAPI.h`` for the client code to provide and link
+  with.
+
+* One can associate multiple entrypoint probe attributes on a type, each with a
+  different probe and copy function.
+
+* One can also associate different probes on each field of a type.
+
+The resulting C interface contains multiple entry points, one for each variant
+of probing entry point, and one for the non-probing variant:
+
+.. code-block:: c
+
+  BOOLEAN ProbeProbeAndCopyCheckMultiProbe(
+    EVERPARSE_COPY_BUFFER_T destT1,
+    EVERPARSE_COPY_BUFFER_T destT2,
+    EVERPARSE_COPY_BUFFER_T probeDest,
+    uint64_t probeAddr);
+
+  BOOLEAN ProbeProbeAndCopyAltCheckMultiProbe(
+    EVERPARSE_COPY_BUFFER_T destT1,
+    EVERPARSE_COPY_BUFFER_T destT2,
+    EVERPARSE_COPY_BUFFER_T probeDest,
+    uint64_t probeAddr);
+
+  BOOLEAN ProbeCheckMultiProbe(
+    EVERPARSE_COPY_BUFFER_T destT1,
+    EVERPARSE_COPY_BUFFER_T destT2,
+    uint8_t *base,
+    uint32_t len);
+
+
+.. note:: 
+
+  External declarations for probe callbacks and for pointer coercions are in
+  scope for the entire file, since 3d can call these functions implicitly when
+  elaborating a specification. So, unless you are an expert and have a
+  particular need for multiple probe callbacks, it is possible that declaring
+  multiple probe callbacks can result in errors such as the one below,
+  especially when using multiple probe callbacks in conjuction with
+  :ref:`specialization <Specialization>`.
+  
+  .. code-block::
+
+     ./Specialize1.3d:(10,30): (Error) Found multiple probe functions: Specialize1.ProbeAndCopyAlt, Specialize1.ProbeAndCopy
+
+
+Nullable Pointers
+.................
+
+By default, all probed pointer fields are expected to be non-null. If a pointer
+value happens to be null, then either
+
+* The ``ProbeAndCopy`` function can return false, in which case validation fails
+
+* Or, the ``ProbeAndCopy`` function can return true, in which the generated code
+  would proceed to try to validate the contents of the destination buffer, which
+  will likely fail.
+
+If a pointer in a data structure is allowed to be null, then one can mark it as
+such with a nullable qualifier, ``pointer?`` as shown below.
+
+.. literalinclude:: Probe.3d
+  :language: 3d
+  :start-after: SNIPPET_START: nullable$
+  :end-before: SNIPPET_END: nullable$
+
+For a pointer with a nullable qualifier, the generated code first checks if the
+pointer is non-null:
+
+* If the pointer is null, validation succeeds without calling the probe function
+
+* If the pointer is non-null, the probe function is called, and validation
+  proceeds as in the non-null case.
+
+
+An End-to-end Executable Example
+................................
+
+A small but fully worked out example `is available in the EverParse repository
+<https://github.com/project-everest/everparse/tree/master/src/3d/tests/probe>`_.
+
+It shows the use of multiple probe functions, linked with callbacks implemented
+in C, as well as a main C driver program that validates several example inputs
+containing pointers.
+
+.. _Specialization:
+
+Specialization for Different Pointer Sizes
+------------------------------------------
+
+Consider writing a specification to handle messages that could be sent from both
+32- and 64-bit machines, particularly if those messages contain pointers. This
+scenario happens in practice, e.g., when a 64-bit OS kernel shares memory with
+user-mode processes that may be either native 64-bit processes or emulated
+32-bit processes.
+
+3d supports a form of compile-time specialization that allows one to write a
+specification with 64-bit clients in mind, and then have the compiler specialize
+the 64-bit specification also for use with a 32-bit clients. There are many
+subtle elements to consider, and we describe them gradually, starting with a
+simple first example.
+
+
+A First Example
+...............
+
+As in the previous section, we have a format with two levels of indirection:
+``R64`` with a pointer to ``S64``, and ``S64`` with a pointer to ``T``.
+
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: prefix$
+  :end-before: SNIPPET_END: prefix$
+
+A First Manual Attempt
+^^^^^^^^^^^^^^^^^^^^^^^
+
+If we wanted to specify a variant of ``R32`` with a 32-bit pointer to a ``S32``
+which in turn had a 32-bit pointer to a ``T``, we could explicitly rewrite our
+entire specification, as shown below.
+
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: attempt0$
+  :end-before: SNIPPET_END: attempt0$
+
+At the top-level of the specification, one could then define ``RMux``, a
+multiplexing layer, which depending on the value of ``requestor32``, validates
+either an ``R32_Attempt`` or an ``R64``.
+
+This looks plausible, even though it is verbose and leads to a lot of
+duplication. However, even aside from the verbosity this revised specification
+has a deeper problem.
+
+Consider the case where ``requestor32=true``: if the probe on ``ptrS`` runs
+successfully, it will have copied ``sizeof(S32Attempt)=12`` bytes, and then
+checked that the bytes copied into ``destS`` is a valid ``S32Attempt``. If after
+this validation, a caller wants to, say, read the value of the ``s2`` field,
+then they would need to read ``4`` bytes at offset ``8`` from ``destS`` buffer. 
+
+On the other hand, when ``requestor32=false``: if the probe on ``ptrS`` runs
+successfully, it will have copied ``sizeof(S64)=24`` bytes (including the 4
+bytes of padding between ``s1`` and ``ptrT`` and then 4 bytes of padding after
+the field ``s2``), and then checked that the bytes copied into ``destS`` is a
+valid ``S64``. If after this validation, a caller wants to read the value of the
+``s2`` field, then they would need to read ``4`` bytes at offset ``16`` from
+``destS`` buffer. 
+
+That is, even after reading and validating the input, the caller has to
+distinguish the cases of ``requestor32``. We would prefer instead to have a way
+to handle either 32- or 64-bit inputs, but after validation, we would like the
+contents of the destination buffers to always be in 64-bit form, for easy
+manipulation by native 64-bit kernel code, without needing to bifurcate further
+handling of 32- and 64-bit inputs.
+
+A Second Manual Attempt
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Here's another attempt at specializing ``R64``:
+
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: manual$
+  :end-before: SNIPPET_END: manual$
+
+This time, we have an even more verbose specification, but we'll see that it
+actually achieves what we want. This specification is legal 3d, and it uses an
+explicit, low-level form of probing functions that we do not typically expect
+users to write. But, it's a useful intermediate language to explain things.
+
+The first field, ``r1``, is as before.
+
+The second field is an explicitly qualified pointer, qualified to
+``pointer(UINT32)`` and with probe block associated with it. Our goal is to
+coerce probe the input pointer ``ptrS`` and read its contents while coercing it
+into a 64-bit layout, and then to validate that the copied bytes is a valid
+``S64(r1, destT)``.
+
+The probe block will first call ``ProbeInit``, initializing the ``destS``
+buffer, preparing it to receive ``sizeof(S64)`` bytes. Then, within the probe
+block, it executes a sequence of actions:
+
+* Copy the first 4 bytes references by ``ptrS``--this is the ``s1`` field
+
+* Skip 4 bytes of alignment padding
+
+* Then read a 32 bit pointer ``ptrT``, coerce it to 64-butes, and write it into
+  the destination buffer
+
+* Then copy the next 4 bytes from the input buffer (field ``s2``)
+
+* Finally, skip 4 bytes of padding at the end
+
+After the probe block executed, we validate the ``EverParseStreamOf(destS)`` to
+contain a valid  ``S64(r1, destT)``, which in turn will probe ``ptrT`` etc.
+
+This does what we want, in the sense that if validation succeeds, then ``destS``
+contains a 64-bit representation of the input, regardless of ``requestor32``,
+and the caller can then proceed uniformly, without needing to bifurcate its
+handling of 32- and 64-bit clients.
+
+However, writing low-level coercions like this is impractical and error prone.
+
+Automated Specialization
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Instead, 3d offers a ``specialize`` directive, to automatically rewrite a tree
+of definitions rooted at a given type, replacing each occurrence of an
+*unqualified* pointer type with an ``pointer(UINT32)``.
+
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: specialize$
+  :end-before: SNIPPET_END: specialize$
+
+This instructs 3d to automatically generate the definition for ``R32`` from
+``R64``, in the style of ``R32Manual``. In doing so, 3d will also try to
+specialize the probe function on the nested ``ptrT`` in the ``S64``, but in
+doing so it will discover that there is nothing to specialize in ``T`` and the
+behavior of probing ``ptrT`` will be unchanged.
+
+In order to use the specialize directive, we need to define a few additional
+callbacks. 
+
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: specialize$
+  :end-before: SNIPPET_END: specialize$
+
+The first callback, a ``UlongToPtr`` coercions, we saw :ref:`before
+<Coercing_pointers>`: we'll need it to coerce a 32-bit pointer to 64-bits. It
+produces the following C signature:
+
+.. code-block:: c
+
+  extern uint64_t UlongToPtr(uint32_t ptr);
+
+The next callback, ``ProbeAndReadU32`` produces the following C signature:
+
+.. code-block:: c
+
+  extern uint32_t ProbeAndReadU32(
+    BOOLEAN *failed,
+    uint64_t read_offset,
+    uint64_t src,
+    EVERPARSE_COPY_BUFFER_T dest);
+
+It probes a pointer ``src`` at a given ``read_offset``, checks its validity, and
+reads 4 bytes from that offset and returns it as a ``uint32_t``. If the validity
+check fails, it must set its out parameter ``failed`` to true. It typically does
+not use its last parameter ``dest``, though this can be used by the caller to
+provide useful contextual information.
+
+Finally, the  callback ``WriteU64`` produces the following C signature:
+
+.. code-block:: c
+
+  extern BOOLEAN WriteU64(
+    uint64_t value,
+    uint64_t write_offset, 
+    EVERPARSE_COPY_BUFFER_T destination);
+
+It allows writing a single ``uint64_t`` ``value`` at a given ``write_offset``
+into a destination buffer ``EVERPARSE_COPY_BUFFER_T``. If the write fails, e.g.,
+because ``write_offset`` is out of bounds, then it must return ``false``,
+otherwise ``true``.
+
+
+With ``R32`` now automatically defined, we can easily define our multiplexing
+layer, as shown below.
+
+.. literalinclude:: Specialize1.3d
+  :language: 3d
+  :start-after: SNIPPET_START: multiplex$
+  :end-before: SNIPPET_END: multiplex$
+
+First Example in its Entirety
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We've gone through several iterations to arrive at our first example of
+specialization. Here is the final specification in its entirety:
+
+
+.. code-block:: 3d
+
+  extern probe ProbeAndCopy
+  extern probe (INIT) ProbeInit
+  extern PURE UINT64 UlongToPtr(UINT32 ptr)
+  extern probe (READ UINT32) ProbeAndReadU32
+  extern probe (WRITE UINT64) WriteU64
+
+  aligned
+  typedef struct _T(UINT32 bound) {
+      UINT32 t1;
+      UINT32 t2 { t2 <= bound };    
+  } T;
+
+  aligned
+  typedef struct _S64(UINT32 bound, EVERPARSE_COPY_BUFFER_T dest) {
+      UINT32 s1 { s1 <= bound };
+      T(s1) *ptrT probe ProbeAndCopy(length=sizeof(T), destination=dest);
+      UINT32 s2;
+  } S64;
+
+  aligned
+  typedef struct _R64(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
+      UINT32 r1;
+      S64(r1, destT) *ptrS probe ProbeAndCopy(length=sizeof(S64), destination=destS);
+  } R64;
+
+  specialize (pointer(*), pointer(UINT32)) R64 R32;
+
+  entrypoint
+  typedef struct R(Bool requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
+      switch (requestor32) {
+          case true: R32(destS, destT) r32;
+          default: R64(destS, destT) r64;
+      } field;
+  } R;
+
+
+
+What is Proven About Specialization
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Safety**
+
+As with all code produced by 3d, we prove that the generated code is:
+
+* memory safe
+* arithmetically safe
+* has no undefined behaviors
+* is double-fetch free
+
+For specifications with probes, these guarantees are, of course, conditional on
+the behavior of the extern callbacks. In particular, the callbacks implemnted in
+C must themselves be memory safe, e.g., ``ProbeAndCopy(n, rd, wr, src, dest)``
+must safely check that ``src + rd`` points to ``n`` bytes of valid memory and
+that safely copies those ``n`` bytes into ``dest`` at offset ``wr`` is safe.
+
+**Soundness**
+
+We also prove that if validation succeeds, then the destination buffers contain
+valid representations of their specified types. For instance, in the example
+above, we prove that ``destS`` contains a valid representation of an ``S64(r1,
+destT)`` and that ``destT`` contains a valid representation of ``T(s1)``.
+
+**Completeness**
+
+For non-specialized specifications, we usually prove a completeness property,
+namely that if the input contains a well-formatted representation of a type
+``T``, then the generated validator is guaranteed to accept that input.
+
+Our proof for specialization does not cover this property: in particular,
+formally, we have not yet proven that a well-formatted 32-bit input will always
+be correctly coerced to a 64-bit layout and then accepted by the validator.
+
+More concretely, an ideal result would be that an input correctly formatted
+according to ``R32Attempt`` will always be accepted by the type ``R32`` computed
+as a specialization of ``R64``. However, this equivalence is not yet covered by
+our proofs.
+
+We are working to enrich our proofs to cover this property.
+
+
+An End-to-end Executable Example
+................................
+
+A small but fully worked out example `of specialization is available in the
+EverParse repository
+<https://github.com/project-everest/everparse/tree/master/src/3d/tests/specialize_test>`_.
+
+It shows an example similar to the one developed above, but linked with a main C
+program and test driver. It also illustrates the use of nullable pointers in
+conjunct with probing and specialization.
+
+
+Other forms of Specialization
+.............................
+
+Today, 3d only supports specialized 64-bit pointer types to 32-bit pointers. In
+the future, we envision adding support for other forms of specialization, e.g.,
+automatically specializing little-endian to big-endian types.
+
 
 Comments
 --------
