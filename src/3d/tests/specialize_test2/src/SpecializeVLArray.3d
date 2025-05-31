@@ -33,7 +33,7 @@ typedef struct _UNKNOWN_HEADERS_64(
         probe ProbeAndCopy(length=sizeof(UNKNOWN_HEADER_64) * UnknownHeaderCount, destination=UnknownHeaderProbe);
 } UNKNOWN_HEADERS_64;
 
-specialize (pointer(UINT64), pointer(UINT32)) UNKNOWN_HEADERS_64 UNKNOWN_HEADERS_32;
+specialize (pointer(*), pointer(UINT32)) UNKNOWN_HEADERS_64 UNKNOWN_HEADERS_32;
 
 entrypoint
 casetype _UNKNOWN_HEADERS(

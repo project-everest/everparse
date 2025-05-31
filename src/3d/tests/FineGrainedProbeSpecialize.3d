@@ -44,7 +44,7 @@ typedef struct _D64 (
 } D64;
 
 
-specialize (pointer(UINT64), pointer(UINT32)) D64 D32;
+specialize (pointer(*), pointer(UINT32)) D64 D32;
 
 entrypoint
 casetype _D (

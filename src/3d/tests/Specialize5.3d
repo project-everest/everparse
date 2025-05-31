@@ -34,7 +34,7 @@ typedef struct _PLFD(EVERPARSE_COPY_BUFFER_T out)
         probe ProbeAndCopy(length=sizeof(S_LFD), destination=out);
 } PLFD;
 
-specialize (pointer(UINT64), pointer(UINT32)) PLFD PLFD32;
+specialize (pointer(*), pointer(UINT32)) PLFD PLFD32;
 
 entrypoint
 casetype _LFD(Bool Requestor32, EVERPARSE_COPY_BUFFER_T out)

@@ -40,7 +40,7 @@ typedef struct _B64 (EVERPARSE_COPY_BUFFER_T a_out, EVERPARSE_COPY_BUFFER_T aa_o
 	AA2(b1) *paa2 probe ProbeAndCopy(length=sizeof(AA2), destination=aa_out);
 } B64;
 
-specialize (pointer(UINT64), pointer(UINT32)) B64 B32;
+specialize (pointer(*), pointer(UINT32)) B64 B32;
 
 entrypoint
 casetype _B (

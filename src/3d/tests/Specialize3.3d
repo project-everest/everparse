@@ -27,7 +27,7 @@ typedef struct _C64 (EVERPARSE_COPY_BUFFER_T a_out, EVERPARSE_COPY_BUFFER_T b_ou
 	  ProbeAndCopy(length=sizeof(B), destination=b_out);
 } C64;
 
-specialize (pointer(UINT64), pointer(UINT32)) C64 C32;
+specialize (pointer(*), pointer(UINT32)) C64 C32;
 
 
 entrypoint

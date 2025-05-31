@@ -17,7 +17,7 @@ typedef struct _WRAPPER(UINT32 Len, EVERPARSE_COPY_BUFFER_T Output)
         probe ProbeAndCopy(length=Len, destination=Output);
 } WRAPPER;
 
-specialize (pointer(UINT64), pointer(UINT64)) WRAPPER WRAPPER_32;
+specialize (pointer(*), pointer(UINT64)) WRAPPER WRAPPER_32;
 
 entrypoint
 casetype _ENTRY(Bool Requestor32, UINT32 Len, EVERPARSE_COPY_BUFFER_T Output)

@@ -35,7 +35,7 @@ typedef struct _C64 (
 } C64;
 
 
-specialize (pointer(UINT64), pointer(UINT32)) C64 C32;
+specialize (pointer(*), pointer(UINT32)) C64 C32;
 
 entrypoint
 casetype _C (

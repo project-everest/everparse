@@ -103,7 +103,7 @@ typedef struct _PSRI_64(
         probe ProbeAndCopy(length=sizeof(SRI_64), destination=out);
 } PSRI_64;
 
-specialize (pointer(UINT64), pointer(UINT32))
+specialize (pointer(*), pointer(UINT32))
     PSRI_64
     PSRI_32;
 
