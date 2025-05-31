@@ -118,8 +118,7 @@ inline_for_extraction noextract
 val parse_nlist
         (n:U32.t)
         (n_const:option nat { Some? n_const ==> Some?.v n_const == U32.v n })
-        (#wk: _)
-        (#k:parser_kind true wk)
+        (#k:parser_kind true WeakKindStrongPrefix)
         (#t:_)
         (p:parser k t)
   : Tot (parser (kind_nlist k n_const) (nlist n t))

@@ -925,7 +925,7 @@ type typ
 
   | T_nlist:
       fieldname:string ->       
-      #wk:_ -> #pk:P.parser_kind true wk ->
+      #pk:P.parser_kind true P.WeakKindStrongPrefix ->
       #i:_ -> #l:_ -> #d:_ -> #b:_ -> #ha:_ ->
       n:U32.t ->
       n_is_constant:option nat { P.memoizes_n_as_const n_is_constant n } ->
