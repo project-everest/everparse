@@ -160,3 +160,18 @@ BOOLEAN ProbeCheckMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t l
 	}
 	return TRUE;
 }
+
+BOOLEAN ProbeCheckCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	frame.filled = FALSE;
+	uint64_t result = ProbeValidateCoercePtr(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	return TRUE;
+}

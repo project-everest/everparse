@@ -36,7 +36,8 @@ keywords_3d = (
   "probe",
   "pointer",
   "specialize",
-  "align"
+  "align",
+  "PURE"
 )
 
 # very rough lexer; not 100% precise

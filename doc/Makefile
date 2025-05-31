@@ -73,6 +73,7 @@ all-diffs-nobuild: $(addsuffix -nobuild, $(3D_DIFF))
 accept-all: $(addsuffix .accept, $(subst .diff,,$(3D_DIFF)))
 
 clean:
-	rm -rf out _build
+	rm -rf _build
+	git clean -fdx out
 
 .PHONY: accept-all all-diffs-nobuild

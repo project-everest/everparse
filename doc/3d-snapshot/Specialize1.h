@@ -1,7 +1,7 @@
 
 
-#ifndef __GetFieldPtr_H
-#define __GetFieldPtr_H
+#ifndef __Specialize1_H
+#define __Specialize1_H
 
 #if defined(__cplusplus)
 extern "C" {
@@ -10,8 +10,10 @@ extern "C" {
 #include "EverParse.h"
 
 uint64_t
-GetFieldPtrValidateT(
-  uint8_t **Out,
+Specialize1ValidateR(
+  BOOLEAN Requestor32,
+  EVERPARSE_COPY_BUFFER_T DestS,
+  EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -24,13 +26,15 @@ GetFieldPtrValidateT(
     uint64_t x6
   ),
   uint8_t *Input,
-  uint64_t InputLength,
+  uint64_t InputLen,
   uint64_t StartPosition
 );
 
 uint64_t
-GetFieldPtrValidateTact(
-  uint8_t **Out,
+Specialize1ValidateRmux(
+  BOOLEAN Requestor32,
+  EVERPARSE_COPY_BUFFER_T DestS,
+  EVERPARSE_COPY_BUFFER_T DestT,
   uint8_t *Ctxt,
   void
   (*ErrorHandlerFn)(
@@ -43,7 +47,7 @@ GetFieldPtrValidateTact(
     uint64_t x6
   ),
   uint8_t *Input,
-  uint64_t InputLength,
+  uint64_t InputLen,
   uint64_t StartPosition
 );
 
@@ -51,5 +55,5 @@ GetFieldPtrValidateTact(
 }
 #endif
 
-#define __GetFieldPtr_H_DEFINED
+#define __Specialize1_H_DEFINED
 #endif

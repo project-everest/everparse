@@ -1287,7 +1287,7 @@ let rec check_probe env a : ML (probe_action & typ) =
       let n, t = check_expr env n in
       match try_cast_integer env (n, t) tuint64 with
       | Some v ->
-        Probe_action_skip_read n, tunit
+        Probe_action_skip_read v, tunit
       | None -> 
         error (Printf.sprintf "Probe skip read %s has type %s instead of %s"
                     (print_expr n)
@@ -1300,7 +1300,7 @@ let rec check_probe env a : ML (probe_action & typ) =
       let n, t = check_expr env n in
       match try_cast_integer env (n, t) tuint64 with
       | Some v ->
-        Probe_action_skip_write n, tunit
+        Probe_action_skip_write v, tunit
       | None -> 
         error (Printf.sprintf "Probe skip write %s has type %s instead of %s"
                     (print_expr n)

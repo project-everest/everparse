@@ -1473,7 +1473,6 @@ layer, as shown below.
   :start-after: SNIPPET_START: multiplex$
   :end-before: SNIPPET_END: multiplex$
 
-
 First Example in its Entirety
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1517,6 +1516,62 @@ specialization. Here is the final specification in its entirety:
           default: R64(destS, destT) r64;
       } field;
   } R;
+
+
+
+What is Proven About Specialization
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Safety**
+
+As with all code produced by 3d, we prove that the generated code is:
+
+* memory safe
+* arithmetically safe
+* has no undefined behaviors
+* is double-fetch free
+
+For specifications with probes, these guarantees are, of course, conditional on
+the behavior of the extern callbacks. In particular, the callbacks implemnted in
+C must themselves be memory safe, e.g., ``ProbeAndCopy(n, rd, wr, src, dest)``
+must safely check that ``src + rd`` points to ``n`` bytes of valid memory and
+that safely copies those ``n`` bytes into ``dest`` at offset ``wr`` is safe.
+
+**Soundness**
+
+We also prove that if validation succeeds, then the destination buffers contain
+valid representations of their specified types. For instance, in the example
+above, we prove that ``destS`` contains a valid representation of an ``S64(r1,
+destT)`` and that ``destT`` contains a valid representation of ``T(s1)``.
+
+**Completeness**
+
+For non-specialized specifications, we usually prove a completeness property,
+namely that if the input contains a well-formatted representation of a type
+``T``, then the generated validator is guaranteed to accept that input.
+
+Our proof for specialization does not cover this property: in particular,
+formally, we have not yet proven that a well-formatted 32-bit input will always
+be correctly coerced to a 64-bit layout and then accepted by the validator.
+
+More concretely, an ideal result would be that an input correctly formatted
+according to ``R32Attempt`` will always be accepted by the type ``R32`` computed
+as a specialization of ``R64``. However, this equivalence is not yet covered by
+our proofs.
+
+We are working to enrich our proofs to cover this property.
+
+
+An End-to-end Executable Example
+................................
+
+A small but fully worked out example `of specialization is available in the
+EverParse repository
+<https://github.com/project-everest/everparse/tree/master/src/3d/tests/specialize_test>`_.
+
+It shows an example similar to the one developed above, but linked with a main C
+program and test driver. It also illustrates the use of nullable pointers in
+conjunct with probing and specialization.
 
 
 Other forms of Specialization

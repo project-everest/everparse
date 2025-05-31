@@ -335,7 +335,7 @@ Language Reference
 ------------------
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 4
    :caption: Contents:
  
    3d-lang
