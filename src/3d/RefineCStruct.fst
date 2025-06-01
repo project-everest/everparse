@@ -43,9 +43,17 @@ type ctype_decl =
 | CUnion : ident -> ident -> cfields -> ctype_decl
 
 let no_module (i:ident) : ML ident = { i with v = { i.v with modul_name = None } }
+let add_auto_prefix (i:ident) : ML ident =
+  { i with v = { i.v with name = Printf.sprintf "auto_%s" i.v.name } }
+let maybe_strip_auto_prefix (i:ident) : ML ident =
+  if String.length i.v.name < 5 || String.sub i.v.name 0 5 <> "auto_"
+  then i
+  else { i with v = { i.v with name = String.sub i.v.name 5 (String.length i.v.name - 5) } }
+
 let cname_of_names (names:typedef_names)
 : ML (ident & ident)
-= names.typedef_name, names.typedef_abbrev
+= add_auto_prefix names.typedef_name,
+  add_auto_prefix names.typedef_abbrev
 
 let number_field (i:int) (cf:cfield)
 : ML cfield
@@ -79,8 +87,6 @@ let ctype_of_typ (e:env_t) (t:typ)
       | _ -> Inr "Not a type application"
     )
 
-exception UnsupportedField of (field & string)
-
 let rec expr_const (e:expr)
 : ML (option int)
 = match e.v with
@@ -98,44 +104,71 @@ let rec expr_const (e:expr)
   )
   | _ -> None
 
+let warn_unsupported_field (f:field) (reason:string)
+: ML unit
+= warning ( 
+    Printf.sprintf "Cannot confirm field offsets and alignment of \
+      the field %s and all subsequenet fields, \
+      since its type could not be translated to C, because %s"
+        (print_field f)
+        reason
+    ) f.range
+
 let rec cfield_of_field (e:env_t) (f0:field)
-: ML (list cfield)
+: ML (option (list cfield))
 = match f0.v with
   | AtomicField f ->
-    if eq_typ f.v.field_type tunit then [] 
-    else if TS.is_alignment_field f.v.field_ident then []
+    if eq_typ f.v.field_type tunit then Some [] 
+    else if TS.is_alignment_field f.v.field_ident then Some []
     else (
       match f.v.field_array_opt with
       | FieldScalar -> (
         match ctype_of_typ e f.v.field_type with
-        | Inl ct -> [ct, f.v.field_ident, None]
+        | Inl ct ->
+          Some [ct, f.v.field_ident, None]
         | Inr reason ->
-          raise (UnsupportedField (f0, reason))
+          warn_unsupported_field f0 reason;
+          None
       )
       | FieldArrayQualified (e, ByteArrayByteSize)
       | FieldArrayQualified (e, ArrayByteSize) -> (
         match expr_const e with
-        | Some n -> [Ty tuint8, f.v.field_ident, Some n]
-        | None -> raise (UnsupportedField (f0, "Unsupported variable-length field"))
+        | Some n -> 
+          Some [Ty tuint8, f.v.field_ident, Some n]
+        | None ->
+          warn_unsupported_field f0 "Unsupported variable-length field";
+          None
       )
       | FieldArrayQualified _
       | FieldString _
       | FieldConsumeAll ->
-        raise (UnsupportedField(f0, "Unsupported variable-length field"))
+        warn_unsupported_field f0 "Unsupported variable-length field";
+        None
     )
   | RecordField fields i ->
-    let cfields = List.collect (cfield_of_field e) fields in
-    [Struct cfields, i, None]
+    let cfields = cfields_of_fields e fields in
+    Some [Struct cfields, i, None]
   | SwitchCaseField sw i ->
     let cfields = cfields_of_switch_case e sw in
-    [Union cfields, i, None]
+    Some [Union cfields, i, None]
 
 and cfields_of_switch_case (e:env_t) (sw:switch_case)
 : ML (list cfield)
 = let fields = List.map (function Case _ f -> f | DefaultCase f -> f) (snd sw) in 
-  let cfields = List.collect (cfield_of_field e) fields in
+  let cfields = cfields_of_fields e fields in
   let cfields = List.mapi (fun i cf -> number_field i cf) cfields in
   cfields
+
+and cfields_of_fields (e:env_t) (fields:list field)
+: ML (list cfield)
+= match fields with 
+  | [] -> []
+  | f0 :: fs -> (
+    match cfield_of_field e f0 with
+    | None -> []
+    | Some cfields ->
+      cfields @ cfields_of_fields e fs
+  )
 
 let ctype_of_decl' (e:env_t) (d:decl)
 : ML (list ctype_decl)
@@ -143,7 +176,7 @@ let ctype_of_decl' (e:env_t) (d:decl)
   | Record names _gs _ps _w fields ->
     if List.existsb Aligned? names.typedef_attributes
     then (
-      let cfields = List.collect (cfield_of_field e) fields in
+      let cfields = cfields_of_fields e fields in
       let name, abbr = cname_of_names names in
       [CStruct name abbr cfields]
     )
@@ -162,19 +195,8 @@ let ctype_of_decl' (e:env_t) (d:decl)
 
 let ctype_of_decl (e:env_t) (d:decl)
 : ML (list ctype_decl)
-= try
-    ctype_of_decl' e d
-  with
-  | UnsupportedField (f, reason) -> 
-    error (
-      Printf.sprintf "Cannot confirm field offsets and alignment because \
-      the field %s of type %s could not be translated to C, because %s"
-        (print_field f)
-        (print_ident (List.hd (idents_of_decl d)))
-        reason
-    ) f.range
-  | ex -> raise ex
-
+= ctype_of_decl' e d
+  
 let refine_records (e:GlobalEnv.global_env) (t:TS.size_env) (p:prog)
 : ML (list ctype_decl & prog)
 = let e = B.mk_env e, t in

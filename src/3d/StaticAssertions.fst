@@ -47,6 +47,19 @@ let empty_static_asserts = {
   assertions = []
 }
 
+let print_type_refinement (t:type_refinement) : ML string =
+  let type_map_str =
+    t.type_map
+    |> List.map (fun (i, jopt) ->
+      match jopt with
+      | None -> Printf.sprintf "%s: %s" (ident_to_string i) (ident_to_string i)
+      | Some j -> Printf.sprintf "%s: %s" (ident_to_string i) (ident_to_string j))
+    |> String.concat ", "
+  in
+  Printf.sprintf "Type refinement: { includes = %s; type_map = [%s] }"
+    (String.concat ", " t.includes)
+    type_map_str
+
 let compute_static_asserts (benv:B.global_env)
                            (senv:TypeSizes.size_env)
                            (r:option type_refinement)
@@ -55,6 +68,9 @@ let compute_static_asserts (benv:B.global_env)
     match r with
     | None -> empty_static_asserts
     | Some r -> 
+      Options.debug_print_string
+        (Printf.sprintf "Computing static assertions for type refinement: %s\n"
+          (print_type_refinement r));
       let static_assertions =
         r.type_map
         |> List.collect
@@ -64,7 +80,11 @@ let compute_static_asserts (benv:B.global_env)
               | None -> i
               | Some j -> j
             in
-            let offsets = TypeSizes.field_offsets_of_type env j in
+            let jj = RefineCStruct.maybe_strip_auto_prefix j in
+            Options.debug_print_string
+              (Printf.sprintf "Computing static assertions for type %s\n"
+                (ident_to_string jj));
+            let offsets = TypeSizes.field_offsets_of_type env jj in
             let offset_of_assertions =
               match offsets with
               | Inr msg ->
@@ -86,7 +106,7 @@ let compute_static_asserts (benv:B.global_env)
                             field_name = fst offset;
                             offset = snd offset }])
             in
-            let t_j = with_dummy_range (Type_app j KindSpec [] []) in
+            let t_j = with_dummy_range (Type_app jj KindSpec [] []) in
             let sizeof_assertion =
               match TypeSizes.size_of_typ env t_j with
               | TypeSizes.Fixed n

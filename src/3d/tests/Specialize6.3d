@@ -10,8 +10,6 @@ extern probe (WRITE UINT64) WriteU64
 extern probe (INIT) ProbeInit
 extern PURE UINT64 UlongToPtr(UINT32 ptr)
 
-#define UL_MAX_CHUNKS   10000
-
 aligned
 typedef struct _PAIR 
 {

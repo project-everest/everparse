@@ -1728,12 +1728,16 @@ constraint on the ``length`` field is not enforced by the coercion, and F*
 rightfully rejects the subtraction as unsafe.
 
 
-More Common Variable-length Idioms
-..................................
+And End-to-end Example with Variable-length Structures
+.......................................................
 
 Although data dependency is forbidden in coercions, there are many cases where
 variable-length structures fit well with 3d's support for auto-specialization.
 
+A small but fully worked out example `of specialization with variable-length
+structures is available in the EverParse repository
+<https://github.com/project-everest/everparse/tree/master/src/3d/tests/specialize_test2>`_, 
+including a main file driving the generated code with test input.
 
 
 
