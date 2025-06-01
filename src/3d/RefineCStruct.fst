@@ -129,8 +129,23 @@ let rec cfield_of_field (env:env_t) (f0:field)
         match expr_const e with
         | Some n -> (
           match ctype_of_typ env f.v.field_type with
-          | Inl ct ->
-            Some [ct, f.v.field_ident, Some n]
+          | Inl ct -> (
+            let sz = TypeSizes.size_of_typ env f.v.field_type in
+            match sz with
+            | TypeSizes.Fixed sz ->
+              if sz<>0 && n % sz = 0
+              then Some [ct, f.v.field_ident, Some (n / sz)]
+              else (
+                warn_unsupported_field f0
+                  (Printf.sprintf "Size %d is not a multiple of array size %d" sz n);
+                None
+              )
+            | _ -> (
+              warn_unsupported_field f0
+                (Printf.sprintf "Size of type %s is not fixed" (print_typ f.v.field_type));
+              None
+            )          
+          )     
           | Inr reason ->
             warn_unsupported_field f0 reason;
             None
