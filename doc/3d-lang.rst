@@ -678,16 +678,19 @@ The output from the 3d compiler includes the following diagnostic::
 It adds 1 byte after `other` and preceding the `payload` field, since the payload is a `Value` array and is 2-byte aligned.
 But, notice, it does not add a padding field after `payload` to align the `other2` field, since `other2` follows a variable-length field.
 
-The semantics of alignment padding is subtle and 3d aims to mimic the behavior
-of a C compiler. If you are using alignment padding, it is recommended to check
-that the type described in 3d corresponds to the C type you are modeling, as described
-in the next section.
-
 Note, the `aligned` attribute is not allowed on typedefs, enums, or other kinds
 of 3d declarations.
 
-Checking 3d types for correspondence with existing C types
-----------------------------------------------------------
+The semantics of alignment padding is subtle and 3d aims to mimic the behavior
+of a C compiler. 
+
+If you are using alignment padding, it is recommended to check that the type
+described in 3d corresponds to the C type you are modeling, as described in the
+next section.
+
+
+Explicitly checking 3d types for correspondence with existing C types
+----------------------------------------------------------------------
 
 A typical scenario is that you have an existing C program with some
 collection of types defined in a file ``Types.h``.  You've written a
@@ -733,7 +736,7 @@ where each ``Si`` is a type defined in one of the C header files
 3d file. In case the types have the same names, one can simply write
 ``T`` instead of ``T as T``.
 
-As a second example, let's revisit the type from the `:ref:alignment section
+As a second example, let's revisit the type from the :ref:`alignment section
 <sec-alignment>`, aiming to show that the 3d type corresponds to the C types
 defined in the header file `AlignBase.h` shown below:
 
@@ -1663,6 +1666,8 @@ be able to predict the cases of the data). The listing below works:
 
 .. literalinclude:: SpecializeDep1.3d
   :language: 3d
+  :start-after: //SNIPPET_START: main$
+  :end-before: //SNIPPET_END: main$
 
 However, we remark on a few points:
 
@@ -1676,6 +1681,17 @@ However, we remark on a few points:
     .. code-block:: 3d
 
       UNION(Expected) payload[:byte-size Len];
+
+Note, one does not always need the calling context to pass in arguments like
+``Len`` or ``Expected``: these just need to be values in scope at the point at
+which the probe is used. For instance, the following would work too, for a
+pointer to a variable length array, each of whose elements is a ``UNION(tag)``:
+
+.. literalinclude:: SpecializeDep1.3d
+  :language: 3d
+  :start-after: //SNIPPET_START: alt$
+  :end-before: //SNIPPET_END: alt$
+
 
 Data Dependency for Well-formedness
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

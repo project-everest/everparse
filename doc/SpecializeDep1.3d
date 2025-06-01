@@ -1,3 +1,4 @@
+//SNIPPET_START: main$
 extern probe ProbeAndCopy
 extern probe (READ UINT32) ProbeAndReadU32
 extern probe (WRITE UINT64) WriteU64
@@ -47,3 +48,21 @@ casetype _ENTRY(
             WRAPPER(Expected, Len, Output) w64;
     }
 } ENTRY;
+//SNIPPET_END: main$
+
+//SNIPPET_START: alt$
+typedef struct _UNION_ARRAY(UINT8 tag, UINT32 len)
+{
+    UNION(tag) payload[:byte-size len];
+} UNION_ARRAY;
+
+typedef struct _TLV_ALT(EVERPARSE_COPY_BUFFER_T Output)
+{
+    UINT8 tag;
+    UINT32 length;
+    UNION_ARRAY(tag, length) *ptr 
+        probe ProbeAndCopy(length=length, destination=Output);
+} TLV_ALT;
+
+specialize (pointer(*), pointer(UINT32)) TLV_ALT TLV_ALT_32;
+//SNIPPET_END: alt$
