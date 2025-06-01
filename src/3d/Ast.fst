@@ -763,7 +763,8 @@ let decl_with_v (d:decl) (v:decl') : decl =
 noeq
 type type_refinement = {
   includes:list string;
-  type_map:list (ident * option ident)
+  type_map:list (ident * option ident);
+  auto_type_map: list (ident & option ident); //map from type to its auto-generated type
 }
 
 [@@ PpxDerivingYoJson ]

@@ -662,7 +662,8 @@ type_refinement:
     {
           {
             includes = includes;
-            type_map = type_map
+            type_map = type_map;
+            auto_type_map = []
           }
     }
 

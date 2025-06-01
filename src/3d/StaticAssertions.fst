@@ -60,73 +60,76 @@ let print_type_refinement (t:type_refinement) : ML string =
     (String.concat ", " t.includes)
     type_map_str
 
-let compute_static_asserts (benv:B.global_env)
-                           (senv:TypeSizes.size_env)
-                           (r:option type_refinement)
+let compute_static_asserts_aux 
+      (benv:B.global_env)
+      (senv:TypeSizes.size_env)
+      (includes:list string)
+      (type_map: list (ident * option ident))
   : ML static_asserts
   = let env = B.mk_env benv, senv in
-    match r with
-    | None -> empty_static_asserts
-    | Some r -> 
-      Options.debug_print_string
-        (Printf.sprintf "Computing static assertions for type refinement: %s\n"
-          (print_type_refinement r));
-      let static_assertions =
-        r.type_map
-        |> List.collect
-          (fun (i, jopt) ->
-            let j =
-              match jopt with
-              | None -> i
-              | Some j -> j
-            in
-            let jj = RefineCStruct.maybe_strip_auto_prefix j in
-            Options.debug_print_string
-              (Printf.sprintf "Computing static assertions for type %s\n"
-                (ident_to_string jj));
-            let offsets = TypeSizes.field_offsets_of_type env jj in
-            let offset_of_assertions =
-              match offsets with
-              | Inr msg ->
-                Ast.warning 
-                  (Printf.sprintf
-                    "No offsetof assertions for type %s because %s\n"
-                    (ident_to_string j)
-                    msg)
-                  i.range;
-                []
-              | Inl offsets ->
-                offsets |>
-                List.collect
-                  (fun offset -> 
-                    if TypeSizes.is_alignment_field (fst offset)
-                    then []
-                    else [OffsetOfAssertion { 
-                            type_name = i;
-                            field_name = fst offset;
-                            offset = snd offset }])
-            in
-            let t_j = with_dummy_range (Type_app jj KindSpec [] []) in
-            let sizeof_assertion =
-              match TypeSizes.size_of_typ env t_j with
-              | TypeSizes.Fixed n
-              | TypeSizes.WithVariableSuffix n ->
-                SizeOfAssertion {
-                  type_name = i;
-                  size = n }
-              | _ -> 
-                Ast.error 
-                  (Printf.sprintf
-                    "Type %s is variable sized and cannot refine a C type %s"
-                    (ident_to_string j) (ident_to_string i))
-                  i.range
-            in
-            sizeof_assertion::offset_of_assertions)
-      in
-      {
-        includes = r.Ast.includes;
-        assertions = static_assertions
-      }
+    let static_assertions =
+      type_map
+      |> List.collect
+        (fun (i, jopt) ->
+          let j =
+            match jopt with
+            | None -> i
+            | Some j -> j
+          in
+          let offsets = TypeSizes.field_offsets_of_type env j in
+          let offset_of_assertions =
+            match offsets with
+            | Inr msg ->
+              Ast.warning 
+                (Printf.sprintf
+                  "No offsetof assertions for type %s because %s\n"
+                  (ident_to_string j)
+                  msg)
+                i.range;
+              []
+            | Inl offsets ->
+              offsets |>
+              List.collect
+                (fun offset -> 
+                  if TypeSizes.is_alignment_field (fst offset)
+                  then []
+                  else [OffsetOfAssertion { 
+                          type_name = i;
+                          field_name = fst offset;
+                          offset = snd offset }])
+          in
+          let t_j = with_dummy_range (Type_app j KindSpec [] []) in
+          let sizeof_assertion =
+            match TypeSizes.size_of_typ env t_j with
+            | TypeSizes.Fixed n
+            | TypeSizes.WithVariableSuffix n ->
+              SizeOfAssertion {
+                type_name = i;
+                size = n }
+            | _ -> 
+              Ast.error 
+                (Printf.sprintf
+                  "Type %s is variable sized and cannot refine a C type %s"
+                  (ident_to_string j) (ident_to_string i))
+                i.range
+          in
+          sizeof_assertion::offset_of_assertions)
+    in
+    {
+      includes;
+      assertions = static_assertions
+    }
+
+let compute_static_asserts (benv:B.global_env)
+                           (senv:TypeSizes.size_env)
+                           (t:option type_refinement)
+: ML (static_asserts & static_asserts)
+  = match t with
+    | None -> (empty_static_asserts, empty_static_asserts)
+    | Some t ->
+      let sas = compute_static_asserts_aux benv senv t.includes t.type_map in
+      let auto_sas = compute_static_asserts_aux benv senv [] t.auto_type_map in
+      (sas, auto_sas)
 
 let no_static_asserts (sas: static_asserts) : Tot bool =
   Nil? sas.includes &&
