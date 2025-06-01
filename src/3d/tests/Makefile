@@ -148,5 +148,8 @@ batch-cleanup-test:
 
 clean:
 	rm -rf out.batch out.fail.batch out.cleanup out.elf out.inplace-hash out.pos test-cpp.exe out.batch-interpret out.z3-testgen
+	make -C specialize_test clean
+	make -C specialize_test2 clean
+	make -C probe clean
 
 .PHONY: all batch-test batch-test-negative %.negtest clean batch-cleanup-test inplace-hash-test modules tcpip extern %.interpret batch-interpret-test static funptr ifdefs

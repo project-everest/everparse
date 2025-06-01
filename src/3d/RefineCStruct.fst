@@ -102,7 +102,7 @@ let warn_unsupported_field (f:field) (reason:string)
 : ML unit
 = warning ( 
     Printf.sprintf "Cannot confirm field offsets and alignment of \
-      the field %s and all subsequenet fields, \
+      the field %s and all subsequent fields, \
       since its type could not be translated to C, because %s"
         (print_field f)
         reason
