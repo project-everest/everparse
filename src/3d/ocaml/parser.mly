@@ -563,6 +563,15 @@ out_field:
   | UNION LBRACE out_flds=right_flexible_nonempty_list(SEMICOLON, out_field) RBRACE
     { Out_field_anon (out_flds, true) }
 
+specialize_lhs:
+  | POINTER LPAREN STAR RPAREN { () }
+  | POINTER LPAREN i=IDENT RPAREN 
+    {
+      match i.v.name with
+      | "UINT64" -> ()
+      | _ -> error "Unexpected pointer qualifier; '*'" i.range
+    }
+
 decl_no_range:
   | MODULE i=IDENT EQ m=IDENT { ModuleAbbrev (i, m) }
   | DEFINE i=IDENT c=constant { Define (i, None, c) }
@@ -586,7 +595,7 @@ decl_no_range:
         CaseType(td, [], ps, (with_range (Identifier e) ($startpos(i)), cs))
     }
 
-  | SPECIALIZE LPAREN POINTER LPAREN STAR RPAREN COMMA p2=pointer_qualifier RPAREN i=IDENT j=IDENT SEMICOLON
+  | SPECIALIZE LPAREN specialize_lhs COMMA p2=pointer_qualifier RPAREN i=IDENT j=IDENT SEMICOLON
     { let PQ(p2, _, _) = p2 in
       Specialize ([UInt64, p2], i, j) }
 
