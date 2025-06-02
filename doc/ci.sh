@@ -40,4 +40,4 @@ if git diff --exit-code HEAD > /dev/null; then
 fi
 git add -u
 git commit --author "Dzomo, the Everest Yak <24394600+dzomo@users.noreply.github.com>" -m "[CI] Refresh EverParse doc"
-git push
+# git push
