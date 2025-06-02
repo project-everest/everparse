@@ -622,22 +622,21 @@ For example, consider the following structs:
   :end-before: SNIPPET_END: structs
 
 
-
-The `aligned` attribute to each struct adds alignment padding
+The ``aligned`` attribute to each struct adds alignment padding
 between fields.
 
-  * Both fields of the type `point` are aligned at 2-byte boundaries; so no
+  * Both fields of the type ``point`` are aligned at 2-byte boundaries; so no
     padding is inserted between them.
 
-  * In type `coloredPoint1` the field `color` is aligned at a 1-byte boundary,
-    while `pr` is aligned at a 2-byte boundary; so 1 byte of padding is inserted
+  * In type ``coloredPoint1`` the field ``color`` is aligned at a 1-byte boundary,
+    while ``pr`` is aligned at a 2-byte boundary; so 1 byte of padding is inserted
     between them. So, the whole struct consumes six bytes, aligned at a 2-byte
     boundary.
 
-  * In type `coloredPoint2` the field `pt` is aligned at a 2-byte boundary, but
-    the type `color` is aligned at a 1-byte boundary. So, no padding is inserted
+  * In type ``coloredPoint2`` the field ``pt`` is aligned at a 2-byte boundary, but
+    the type ``color`` is aligned at a 1-byte boundary. So, no padding is inserted
     between them. But, the resulting type must be aligned at a 2-byte boundary,
-    so 1 byte of padding is inserted after the `color` field---so, the whole
+    so 1 byte of padding is inserted after the ``color`` field---so, the whole
     struct consumes six bytes.
 
 The 3d compiler emits diagnostics describing the padding it inserts::
@@ -645,7 +644,7 @@ The 3d compiler emits diagnostics describing the padding it inserts::
   Adding padding field in Align._coloredPoint1 for 1 bytes at (preceding field Align.point pt;)
   Adding padding field in Align._coloredPoint2 for 1 bytes at (end padding)
 
-The `aligned` attribute can also be adding to casetypes, though the behavior is
+The ``aligned`` attribute can also be adding to casetypes, though the behavior is
 more limited:
 
 .. literalinclude:: Align.3d
@@ -655,13 +654,27 @@ more limited:
 
 Here, we have an aligned "union". 3d checks that every branch of the union
 describes field with the same size. It *does not* insert padding to make every
-type have the same size. For example, if the `UINT16 other` fields were left out
-of the default case of `Value`, the 3d compiler would emit the following error
+type have the same size. For example, if the ``UINT16 other`` fields were left out
+of the default case of ``Value``, the 3d compiler would emit the following error
 message::
 
   With the 'aligned' qualifier, all cases of a union with a fixed size must have the same size; union padding is not yet supported
- 
-The `aligned` attribute is also supported on variable-length types, but it only applies
+
+Note, the ``aligned`` attribute is not allowed on typedefs, enums, or other kinds
+of 3d declarations.
+
+Variable-length Types
+......................
+
+The ``aligned`` attribute is also supported on variable-length types, but use it
+with care. 3d inserts alignment padding to mimic the behavior of a C compiler;
+but C does not support variable-length types! There are many idioms that C
+programmers use to model variable-length types, e.g., a zero-length array at the
+end of a struct; sometimes a 1-length array; and sometimes and array with no
+length at all, using `C99 flexible array members
+<https://www.gnu.org/software/c-intro-and-ref/manual/html_node/Flexible-Array-Fields.html>`_
+
+A rule of thumb for ``aligned`` on variable-length types is that it only applies
 to the fixed-size prefix of the type. For example, consider the following type:
 
 .. literalinclude:: Align.3d
@@ -674,34 +687,98 @@ The output from the 3d compiler includes the following diagnostic::
   Adding padding field in Align._tlv for 3 bytes at (preceding field dependent UINT32 length;)
   Adding padding field in Align._tlv for 1 bytes at (preceding field Align.Value(tag) payload[:byte-size length];)
 
-3d adds 3 bytes after `tag` and preceding `length`, since `length` is 4-byte aligned.
-It adds 1 byte after `other` and preceding the `payload` field, since the payload is a `Value` array and is 2-byte aligned.
-But, notice, it does not add a padding field after `payload` to align the `other2` field, since `other2` follows a variable-length field.
+* 3d adds 3 bytes after ``tag`` and preceding ``length``, since ``length`` is 4-byte
+  aligned.
 
-Note, the `aligned` attribute is not allowed on typedefs, enums, or other kinds
-of 3d declarations.
+* It adds 1 byte after ``other`` and preceding the ``payload`` field, since the
+  payload is a ``Value`` array and is 2-byte aligned.
 
-The semantics of alignment padding is subtle and 3d aims to mimic the behavior
-of a C compiler. 
+* But, notice, it does not add a padding field after ``payload`` to align the
+  ``other2`` field, since ``other2`` follows a variable-length field.
 
-If you are using alignment padding, it is recommended to check that the type
-described in 3d corresponds to the C type you are modeling, as described in the
-next section.
+In contrast, consider the following type in C:
+
+.. code-block:: c
+
+  typedef struct _tlv {
+    UINT8 tag;
+    UINT32 length;
+    UINT8 other;
+    Value payload[0];
+  } TLV;
+
+The alignment of the ``Value payload[0]`` field is 2, but its size is zero. So,
+a C compiler adds the following padding:
+
+* 3 bytes after ``tag`` and preceding ``length``, since ``length`` is 4-byte
+  aligned.
+
+* 1 byte after ``other`` and preceding the ``payload`` field, since the payload
+  is 2-byte aligned.
+
+* 2 bytes of end padding, since the alignment of ``TLV`` is 4
+
+In such cases, if one really intends to model a variable-length C type, it is
+better to explicitly insert alignment padding to match a given layout, rather
+than relying on 3d to insert alignment padding that may not match the layout you
+have in mind.
+
+.. literalinclude:: Align.3d
+  :language: 3d
+  :start-after: SNIPPET_START: TLV_ALT
+  :end-before: SNIPPET_END: TLV_ALT
+
+Static Assertions to Validate Alignment
+........................................
+
+To confirm that the alignment 3d inserts matches the layout of a C type, 3d
+automatically generates C types corresponding to every type with an ``aligned``
+attribute, and emits C static assertions to check that the sizes and field
+offsets computed by 3d match what the C compiler computes.
+
+For example, for the types defined in this section, 3d generates a file
+``AlignAutoStaticAssertions.c`` with the contents below:
+
+.. literalinclude:: out/AlignAutoStaticAssertions.c
+  :language: c
+
+Notice that in the C transcription of the type ``TLV``, 3d simply omits the
+suffix of the type starting with the variable-length payload field.
+
+If you compile this file with a C compiler (e.g., ``gcc -c
+AlignAutoStaticAssertions.c``), you will see that the following static assertion
+will fail, an indicator that for this variable-length type, you will be better
+off removing the ``align`` attribute and explicitly modeling the alignment
+padding yourself:
+
+.. code-block:: c
+
+  EVERPARSE_STATIC_ASSERT(sizeof(TLV) == 10);
+
+This is becase the C compiler inserts 3 bytes of end padding after the field
+``other``, whereas with the variable-length field, 3d adds 1 byte of padding.
+
+.. note:: 
+
+  Arguably, due to these potential discrepancies, 3d could simply forbid the
+  ``aligned`` attribute on variable-length types.
 
 
 Explicitly checking 3d types for correspondence with existing C types
 ----------------------------------------------------------------------
 
-A typical scenario is that you have an existing C program with some
-collection of types defined in a file ``Types.h``.  You've written a
-``Types.3d`` file to defined validators for byte buffers containing
-those types, typically *refining* the C types with additional semantic
-constraints and also with actions. Now, you may want to make sure that
-types you defined in ``Types.3d`` correspond to the types in
-``Types.h``, e.g., to ensure that you didn't forget to include a field
-in a struct, or that you've made explicit in your ``Types.3d`` the
-alignment padding between struct fields that a C compiler is sometimes
-requires to insert.
+In addition to automatically generating static assertions for types with the
+``aligned`` attribute, 3d allows one to explicitly assert the correspondence
+between some 3d typed and C types.
+
+A typical scenario is that you have an existing C program with some collection
+of types defined in a file ``Types.h``.  You've written a ``Types.3d`` file to
+defined validators for byte buffers containing those types, typically *refining*
+the C types with additional semantic constraints and also with actions. Now, you
+may want to make sure that types you defined in ``Types.3d`` correspond to the
+types in ``Types.h``, e.g., to ensure that you didn't forget to include a field
+in a struct, or that you've made explicit in your ``Types.3d`` the alignment
+padding between struct fields that a C compiler is sometimes requires to insert.
 
 To assist with this, 3d provides the following feature:
 
@@ -752,48 +829,12 @@ Let's also decorate the 3d file with the following refining declaration:
   
 The 3d compiler emits the following static assertions:
 
-.. code-block:: c
+.. literalinclude:: out/AlignStaticAssertions.c
+  :language: c
 
-  #include <stddef.h>
-  #include "AlignBase.h"
-  #define C_ASSERT(e) typedef char __C_ASSERT__[(e)?1:-1];
-  C_ASSERT(sizeof(TLV) == 10);
-  C_ASSERT(offsetof(TLV, tag) == 0);
-  C_ASSERT(offsetof(TLV, length) == 4);
-  C_ASSERT(offsetof(TLV, other) == 8);
-  C_ASSERT(offsetof(TLV, payload) == 10);
-  C_ASSERT(sizeof(Value) == 6);
-  C_ASSERT(sizeof(coloredPoint2) == 6);
-  C_ASSERT(offsetof(coloredPoint2, pt) == 0);
-  C_ASSERT(offsetof(coloredPoint2, color) == 4);
-  C_ASSERT(sizeof(coloredPoint1) == 6);
-  C_ASSERT(offsetof(coloredPoint1, color) == 0);
-  C_ASSERT(offsetof(coloredPoint1, pt) == 2);
-  C_ASSERT(sizeof(point) == 4);
-  C_ASSERT(offsetof(point, x) == 0);
-  C_ASSERT(offsetof(point, y) == 2);
-
-If you compile this with clang, you will see that actually, the first assertion
-on the size of `TLV` fails. The C compiler treats the zero-length array
-`payload` in the struct `TLV` as having zero size with alignment of 2 (because
-of the `Value` payload), while 3d does not. Hence the C compiler adds one byte
-of padding after the `other` field and 2 bytes after it, while 3d adds only 1
-before the `padding field`. 
-
-A fix in this case is to explicitly add the padding bytes, as shown below:
-
-.. code-block:: 3d
-
-  aligned
-  typedef struct _tlv {
-    UINT8 tag;
-    UINT32 length;
-    UINT8 other;
-    UINT8 padding;
-    Value(tag) payload[:byte-size length];
-    UINT8 padding2[2]
-    UINT32 other2;
-  } TLV;
+As before, the ``sizeof(TLV)==10`` fails, because of differences in alignment
+padding with variable-length structures, a good indication to use explicit 
+alignment padding for variable-length types.
 
 Generating code with for several compile-time configurations
 ------------------------------------------------------------
@@ -1542,7 +1583,7 @@ computed by whatever C compiler one uses to compile the code.
 For our example above, 3d automatically generates a ``refining`` block and emits
 the following C code:
 
-.. literalinclude:: out/Specialize1StandaloneStaticAssertions.c
+.. literalinclude:: out/Specialize1StandaloneAutoStaticAssertions.c
   :language: c
 
 
