@@ -52,7 +52,12 @@ quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-samp
 
 test: all lowparse-test quackyducky-test 3d-test asn1-test
 
-ci: test
+ci: test 3d-doc-ci
+
+3d-doc-ci: 3d-doc-test
+	+$(MAKE) -C doc 3d-ci
+
+.PHONY: 3d-doc-ci
 
 clean-3d:
 	+$(MAKE) -C src/3d clean

@@ -22,7 +22,7 @@ else
   FIND=find
 fi
 
-make html
+# make html # assume this is already done, see in the Makefile, 3d-ci depends on html
 cp -R _build/html/* "$destpath"
 
 cd "$destpath"
