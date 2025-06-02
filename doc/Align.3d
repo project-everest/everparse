@@ -47,6 +47,19 @@ typedef struct _tlv {
 } TLV;
 // SNIPPET_END: TLV
 
+// SNIPPET_START: TLV_ALT
+typedef struct _tlv_alt {
+  UINT8 tag;
+  UINT8 padding0[3];
+  UINT32 length;
+  UINT8 other;
+  UINT8 padding1;
+  Value(tag) payload[:byte-size length];
+  UINT16 padding2;
+} TLV_ALT;
+// SNIPPET_END: TLV_ALT
+
+
 // SNIPPET_START: refining
 refining "AlignBase.h" {
    TLV, Value, coloredPoint2, coloredPoint1, point

@@ -39,3 +39,18 @@ BOOLEAN GetFieldPtrCheckT(uint8_t** out, uint8_t *base, uint32_t len) {
 	}
 	return TRUE;
 }
+
+BOOLEAN GetFieldPtrCheckTact(uint8_t** out, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	frame.filled = FALSE;
+	uint64_t result = GetFieldPtrValidateTact(out,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
+	{
+		if (frame.filled)
+		{
+			GetFieldPtrEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	return TRUE;
+}

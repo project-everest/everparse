@@ -87,7 +87,7 @@ BOOLEAN ProbeCheckIndirect(uint8_t *base, uint32_t len) {
 }
 
 BOOLEAN ProbeProbeAndCopyCheckIndirect(EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr) {
-	if (ProbeAndCopy(probeAddr, 9U, probeDest)) {
+	if (ProbeAndCopy(9U, 0, 0, probeAddr, probeDest)) {
          uint8_t * base = EverParseStreamOf(probeDest);
          return ProbeCheckIndirect( base, 9U);
        } else {
@@ -100,6 +100,71 @@ BOOLEAN ProbeCheckI(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
 	EVERPARSE_ERROR_FRAME frame;
 	frame.filled = FALSE;
 	uint64_t result = ProbeValidateI(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN ProbeCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	frame.filled = FALSE;
+	uint64_t result = ProbeValidateMultiProbe(destT1, destT2,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN ProbeProbeAndCopyCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr) {
+	if (ProbeAndCopy(25U, 0, 0, probeAddr, probeDest)) {
+         uint8_t * base = EverParseStreamOf(probeDest);
+         return ProbeCheckMultiProbe(destT1, destT2,  base, 25U);
+       } else {
+         // FIXME: we currently assume that the probe function handles its own error
+         return FALSE;
+       }
+}
+
+BOOLEAN ProbeProbeAndCopyAltCheckMultiProbe(EVERPARSE_COPY_BUFFER_T destT1, EVERPARSE_COPY_BUFFER_T destT2, EVERPARSE_COPY_BUFFER_T probeDest, uint64_t probeAddr) {
+	if (ProbeAndCopyAlt(25U, 0, 0, probeAddr, probeDest)) {
+         uint8_t * base = EverParseStreamOf(probeDest);
+         return ProbeCheckMultiProbe(destT1, destT2,  base, 25U);
+       } else {
+         // FIXME: we currently assume that the probe function handles its own error
+         return FALSE;
+       }
+}
+
+BOOLEAN ProbeCheckMaybeT(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	frame.filled = FALSE;
+	uint64_t result = ProbeValidateMaybeT(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
+	if (EverParseIsError(result))
+	{
+		if (frame.filled)
+		{
+			ProbeEverParseError(frame.typename_s, frame.fieldname, frame.reason);
+		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOLEAN ProbeCheckCoercePtr(EVERPARSE_COPY_BUFFER_T dest, uint8_t *base, uint32_t len) {
+	EVERPARSE_ERROR_FRAME frame;
+	frame.filled = FALSE;
+	uint64_t result = ProbeValidateCoercePtr(dest,  (uint8_t*)&frame, &DefaultErrorHandler, base, len, 0);
 	if (EverParseIsError(result))
 	{
 		if (frame.filled)

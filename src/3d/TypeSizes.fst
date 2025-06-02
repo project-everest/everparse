@@ -30,8 +30,6 @@ let product_size (base:size) (n:int) =
 
 let typename = ident'
 
-let alignment = option (x:int{x == 1 \/ x == 2 \/ x == 4 \/ x == 8})
-
 type size_env = H.t typename (size & alignment)
 
 //TODO: size of pointer is platform-dependent
@@ -94,8 +92,11 @@ let extend_with_size_of_typedef_names (env:env_t) (names:typedef_names) (size:si
 let size_and_alignment_of_typ (env:env_t) (t:typ)
   : ML (size & alignment)
   = match t.v with
-    | Type_app i _ _ -> size_and_alignment_of_typename env i
-    | Pointer _ -> Fixed 8, Some 8 //pointers are 64 bit and aligned
+    | Type_app i _ _ _ -> size_and_alignment_of_typename env i
+    | Pointer _ (PQ UInt64 _ _) -> Fixed 8, Some 8 //pointers are 64 bit and aligned
+    | Pointer _ (PQ UInt32 _ _) -> Fixed 4, Some 4 //u32 pointers are 32 bit and aligned
+    | Pointer _ _ -> failwith "Pointer sizes should already have been resolved to UInt32 or UInt64"
+    | Type_arrow _ _ -> Variable, None 
 
 let size_of_typ (env:env_t) (t:typ)
   : ML size
@@ -137,7 +138,7 @@ let rec value_of_const_expr (env:env_t) (e:expr)
   | App SizeOf [{v=Identifier t}] ->
     begin
     try
-      match size_of_typ env (with_range (Type_app t KindSpec []) t.range) with
+      match size_of_typ env (with_range (Type_app t KindSpec [] []) t.range) with
       | Fixed n
       | WithVariableSuffix n -> Some (Inr (UInt32, n))
       | _ -> None
@@ -391,17 +392,49 @@ let rec size_and_alignment_of_field (env:env_t)
         in
         if all_cases_fixed
         && not (Fixed? size)
-        then error
-              "With the 'aligned' qualifier, \
-               all cases of a union with a fixed size \
-               must have the same size; \
-               union padding is not yet supported"
+        then error 
+              (Printf.sprintf
+                "Type %s is a union with an 'aligned' qualifier. \
+                All cases of a union with a fixed size \
+                must have the same size; \
+                union padding is not yet supported"
+               (ident_to_string diag_enclosing_type_name)
+              )
                f.range
       );
       let swc = fst swc, cases in
       let f = { f with v = SwitchCaseField swc field_name } in
       f, size, alignment
-        
+
+let field_size_and_alignment (env:env_t) (enclosing_typ:ident) (field_name:ident)
+: ML (option (size & alignment))
+= let ge = Binding.global_env_of_env (fst env) in
+  match GlobalEnv.fields_of_type ge enclosing_typ with
+  | None ->
+    None
+  | Some fields ->
+    let found =
+      List.tryFind
+        (fun f ->
+          match f.v with
+          | AtomicField af -> eq_idents af.v.field_ident field_name
+          | RecordField _ id
+          | SwitchCaseField _ id -> eq_idents id field_name)
+        fields  
+    in
+    match found with
+    | None ->
+      None
+    | Some f ->
+      let f, size, alignment = size_and_alignment_of_field env false enclosing_typ f in
+      Some (size, alignment)
+
+let should_skip (f:field) : bool =
+  match f.v with
+  | AtomicField af ->
+    eq_typ af.v.field_type tunit
+  | _ -> false
+  
 let field_offsets_of_type (env:env_t) (typ:ident)
 : ML (either (list (ident & int)) string)
 = let ge = Binding.global_env_of_env (fst env) in
@@ -414,25 +447,29 @@ let field_offsets_of_type (env:env_t) (typ:ident)
     = match fields with
       | [] -> Inl <| List.rev acc
       | field :: fields ->
-        let _, size, _ = size_and_alignment_of_field env false typ field in
-        let id =
-          match field.v with
-          | AtomicField af -> af.v.field_ident
-          | RecordField _ id
-          | SwitchCaseField _ id -> id
-        in
-        match size with
-        | Fixed n ->
-          let next_offset = n + current_offset in
-          field_offsets next_offset ((id, current_offset) :: acc) fields
+        if should_skip field
+        then field_offsets current_offset acc fields
+        else (
+          let _, size, _ = size_and_alignment_of_field env false typ field in
+          let id =
+            match field.v with
+            | AtomicField af -> af.v.field_ident
+            | RecordField _ id
+            | SwitchCaseField _ id -> id
+          in
+          match size with
+          | Fixed n ->
+            let next_offset = n + current_offset in
+            field_offsets next_offset ((id, current_offset) :: acc) fields
 
-        | WithVariableSuffix _
-        | Variable ->
-          Inl <| List.rev ((id, current_offset) :: acc)
+          | WithVariableSuffix _
+          | Variable ->
+            Inl <| List.rev ((id, current_offset) :: acc)
+        )
     in
     field_offsets 0 [] fields
 
-let is_alignment_field (fieldname:ident) =
+let is_alignment_field (fieldname:ident) : Tot bool =
   Utils.string_starts_with (ident_to_string fieldname) alignment_prefix
 
 let decl_size_with_alignment (env:env_t) (d:decl)
@@ -441,45 +478,35 @@ let decl_size_with_alignment (env:env_t) (d:decl)
     | ModuleAbbrev _ _ -> d
     | Define _ _ _ -> d
 
-    | TypeAbbrev t i
+    | TypeAbbrev _ t i _ _
     | Enum t i _ ->
       let s, a = size_and_alignment_of_typ env t in
       extend_with_size_of_ident env i s a;
       d
 
-    | Record names params where fields ->
+    | Record names generics params where fields ->
       let dummy_ident = with_dummy_range (to_ident' "_") in
       let { v = RecordField fields _ }, size, max_align = 
         size_and_alignment_of_field env (should_align names) names.typedef_name (with_dummy_range (RecordField fields dummy_ident))
       in
       extend_with_size_of_typedef_names env names size max_align;
-      decl_with_v d (Record names params where fields)
+      decl_with_v d (Record names generics params where fields)
 
-    | CaseType names params cases ->
+    | CaseType names generics params cases ->
       let dummy_ident = with_dummy_range (to_ident' "_") in    
       let { v = SwitchCaseField cases _ }, size, alignment = 
         size_and_alignment_of_field env (should_align names) names.typedef_name (with_dummy_range (SwitchCaseField cases dummy_ident))
       in
       extend_with_size_of_typedef_names env names size alignment;
-      decl_with_v d (CaseType names params cases)
+      decl_with_v d (CaseType names generics params cases)
 
+    | Specialize _ _ _
+    | ProbeFunction _ _ _ _
+    | CoerceProbeFunctionStub _ _ _
     | OutputType _
     | ExternType _
-    | ExternFn _ _ _
-    | ExternProbe _ -> d
-
-let idents_of_decl (d:decl) =
-  match d.d_decl.v with
-  | ModuleAbbrev i _
-  | Define i _ _ 
-  | TypeAbbrev _ i 
-  | Enum _ i _
-  | ExternFn i _ _
-  | ExternProbe i -> [i]
-  | Record names _ _ _
-  | CaseType names _ _
-  | OutputType { out_typ_names = names } 
-  | ExternType names -> [names.typedef_name; names.typedef_abbrev]
+    | ExternFn _ _ _ _
+    | ExternProbe _ _ -> d
 
 let size_of_decls (genv:B.global_env) (senv:size_env) (ds:list decl) =
   let env = B.mk_env genv, senv in

@@ -1,0 +1,12 @@
+all: test
+
+include obj\EverParse.Makefile
+
+obj\main.obj: src\main.c
+	$(CC) $(CFLAGS) /I $(EVERPARSE_INPUT_DIR) /I $(EVERPARSE_OUTPUT_DIR) /c /Fo: obj\main.obj src\main.c
+
+obj\test.exe: $(EVERPARSE_ALL_O_FILES) obj\main.obj
+	$(CC) $(LDFLAGS) /Fe: obj\test.exe $(EVERPARSE_ALL_O_FILES) obj\main.obj
+
+test: obj\test.exe
+	obj\test.exe

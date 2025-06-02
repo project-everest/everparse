@@ -1,0 +1,46 @@
+=============After specialization=============
+Printing for extern functions is TBD
+/*------------------------------------*/
+Printing for extern functions is TBD
+/*------------------------------------*/
+Printing for extern functions is TBD
+/*------------------------------------*/
+Printing for extern functions is TBD
+/*------------------------------------*/
+Printing for extern functions is TBD
+/*------------------------------------*/
+typedef UINT16 SpecializeVLArray.USHORT;
+/*------------------------------------*/
+typedef UINT8 SpecializeVLArray.UNINTERPRETED;
+/*------------------------------------*/
+[aligned] typedef struct SpecializeVLArray._UNKNOWN_HEADER_64 {
+SpecializeVLArray.USHORT NameLength;
+SpecializeVLArray.USHORT RawValueLength;
+(pointer  SpecializeVLArray.UNINTERPRETED (false UINT64)) pName;
+(pointer  SpecializeVLArray.UNINTERPRETED (false UINT64)) pRawValue; 
+} SpecializeVLArray.UNKNOWN_HEADER_64, *
+/*------------------------------------*/
+stub probe SpecializeVLArray.___probe_UNKNOWN_HEADER_64() (for SpecializeVLArray.UNKNOWN_HEADER_64 -> SpecializeVLArray.UNKNOWN_HEADER_64)
+/*------------------------------------*/
+typedef struct SpecializeVLArray._UNKNOWN_HEADERS_INTERNAL_64(SpecializeVLArray.USHORT UnknownHeaderCount) {
+SpecializeVLArray.UNKNOWN_HEADER_64 UnknownHeaders[:byte-size ((sizeof SpecializeVLArray.UNKNOWN_HEADER_64) * (UINT32) UnknownHeaderCount)]; 
+} SpecializeVLArray.UNKNOWN_HEADERS_INTERNAL_64, *
+/*------------------------------------*/
+stub probe SpecializeVLArray.___probe_UNKNOWN_HEADERS_INTERNAL_64((SpecializeVLArray.USHORT UnknownHeaderCount)) (for SpecializeVLArray.UNKNOWN_HEADERS_INTERNAL_64 -> SpecializeVLArray.UNKNOWN_HEADERS_INTERNAL_64)
+/*------------------------------------*/
+typedef struct SpecializeVLArray._UNKNOWN_HEADERS_64<(___probe_pUnknownHeaders : (SpecializeVLArray.USHORT -> probe_m_unit) probe for SpecializeVLArray.UNKNOWN_HEADERS_INTERNAL_64)>(SpecializeVLArray.USHORT UnknownHeaderCount, EVERPARSE_COPY_BUFFER_T UnknownHeaderProbe) {
+(pointer  SpecializeVLArray.UNKNOWN_HEADERS_INTERNAL_64(UnknownHeaderCount) (true UINT64)) pUnknownHeaders probe (destination=UnknownHeaderProbe, probe_ptr_as_u64=as_u64_identity, probe_init=SpecializeVLArray.ProbeInit) { (Probe_action_var (probe-fun ___probe_pUnknownHeaders UnknownHeaderCount)) }; 
+} SpecializeVLArray.UNKNOWN_HEADERS_64, *
+/*------------------------------------*/
+typedef struct SpecializeVLArray.___specialized_UNKNOWN_HEADERS_32(SpecializeVLArray.USHORT UnknownHeaderCount, EVERPARSE_COPY_BUFFER_T UnknownHeaderProbe) {
+(pointer  SpecializeVLArray.UNKNOWN_HEADERS_INTERNAL_64(UnknownHeaderCount) (true UINT64)) pUnknownHeaders probe (destination=UnknownHeaderProbe, probe_ptr_as_u64=as_u64_identity, probe_init=SpecializeVLArray.ProbeInit) { (Probe_action_var (probe-fun SpecializeVLArray.___specialized32____probe_UNKNOWN_HEADERS_INTERNAL_64 UnknownHeaderCount)) }; 
+} SpecializeVLArray.UNKNOWN_HEADERS_32, *
+/*------------------------------------*/
+[entrypoint] casetype SpecializeVLArray._UNKNOWN_HEADERS(Bool Requestor32, SpecializeVLArray.USHORT UnknownHeaderCount, EVERPARSE_COPY_BUFFER_T UnknownHeaderProbe) {
+switch (Requestor32) {
+
+                  case true: SpecializeVLArray.UNKNOWN_HEADERS_32(UnknownHeaderCount, UnknownHeaderProbe) pUnknownHeaders32;;
+case false: SpecializeVLArray.UNKNOWN_HEADERS_64<SpecializeVLArray.___probe_UNKNOWN_HEADERS_INTERNAL_64>(UnknownHeaderCount, UnknownHeaderProbe) pUnknownHeaders64;;
+} 
+} SpecializeVLArray.UNKNOWN_HEADERS, *
+:(0,0): (Error) Probe function SpecializeVLArray.___specialized32____probe_UNKNOWN_HEADERS_INTERNAL_64 not found
