@@ -30,8 +30,6 @@ let product_size (base:size) (n:int) =
 
 let typename = ident'
 
-let alignment = option (x:int{x == 1 \/ x == 2 \/ x == 4 \/ x == 8})
-
 type size_env = H.t typename (size & alignment)
 
 //TODO: size of pointer is platform-dependent
@@ -407,7 +405,30 @@ let rec size_and_alignment_of_field (env:env_t)
       let swc = fst swc, cases in
       let f = { f with v = SwitchCaseField swc field_name } in
       f, size, alignment
-        
+
+let field_size_and_alignment (env:env_t) (enclosing_typ:ident) (field_name:ident)
+: ML (option (size & alignment))
+= let ge = Binding.global_env_of_env (fst env) in
+  match GlobalEnv.fields_of_type ge enclosing_typ with
+  | None ->
+    None
+  | Some fields ->
+    let found =
+      List.tryFind
+        (fun f ->
+          match f.v with
+          | AtomicField af -> eq_idents af.v.field_ident field_name
+          | RecordField _ id
+          | SwitchCaseField _ id -> eq_idents id field_name)
+        fields  
+    in
+    match found with
+    | None ->
+      None
+    | Some f ->
+      let f, size, alignment = size_and_alignment_of_field env false enclosing_typ f in
+      Some (size, alignment)
+
 let should_skip (f:field) : bool =
   match f.v with
   | AtomicField af ->

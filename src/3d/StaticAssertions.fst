@@ -93,10 +93,15 @@ let compute_static_asserts_aux
                 (fun offset -> 
                   if TypeSizes.is_alignment_field (fst offset)
                   then []
-                  else [OffsetOfAssertion { 
+                  else (
+                    match TypeSizes.field_size_and_alignment env j (fst offset) with
+                    | Some (TypeSizes.Fixed _, _) ->
+                      [OffsetOfAssertion { 
                           type_name = i;
                           field_name = fst offset;
-                          offset = snd offset }])
+                          offset = snd offset }]
+                    | _ -> []
+                  ))
           in
           let t_j = with_dummy_range (Type_app j KindSpec [] []) in
           let sizeof_assertion =
