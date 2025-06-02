@@ -75,6 +75,8 @@ all_o_files=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o  $(EVERPARSE
 $(EVERPARSE_OUTPUT_DIR)/main.o: $(EVERPARSE_INPUT_DIR)/main.c $(EVERPARSE_OUTPUT_DIR)/SpecializeVLArrayWrapper.h
 	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 
+$(EVERPARSE_OUTPUT_DIR)/SpecializeVLArrayAutoStaticAssertions.c: $(EVERPARSE_OUTPUT_DIR)/SpecializeVLArray.ExternalAPI.fsti
+
 $(EVERPARSE_OUTPUT_DIR)/SpecializeVLArrayAutoStaticAssertions.o: $(EVERPARSE_OUTPUT_DIR)/SpecializeVLArrayAutoStaticAssertions.c 
 	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 

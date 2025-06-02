@@ -75,7 +75,9 @@ all_o_files=$(EVERPARSE_ALL_O_FILES) $(EVERPARSE_OUTPUT_DIR)/main.o $(EVERPARSE_
 $(EVERPARSE_OUTPUT_DIR)/main.o: $(EVERPARSE_INPUT_DIR)/main.c $(EVERPARSE_INPUT_DIR)/probecallbacks.h $(EVERPARSE_OUTPUT_DIR)/SpecializeABCWrapper.h
 	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 
-$(EVERPARSE_OUTPUT_DIR)/SpecializeABCAutoStaticAssertions.o: $(EVERPARSE_OUTPUT_DIR)/SpecializeABCAutoStaticAssertions.c 
+$(EVERPARSE_OUTPUT_DIR)/SpecializeABCAutoStaticAssertions.c: $(EVERPARSE_OUTPUT_DIR)/SpecializeABC.ExternalAPI.fsti
+
+$(EVERPARSE_OUTPUT_DIR)/SpecializeABCAutoStaticAssertions.o: $(EVERPARSE_OUTPUT_DIR)/SpecializeABCAutoStaticAssertions.c
 	$(CC) $(CFLAGS) -I $(EVERPARSE_OUTPUT_DIR) -c -o $@ $<
 
 # Link the test program
