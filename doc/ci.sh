@@ -41,4 +41,4 @@ if git diff --exit-code HEAD > /dev/null; then
 fi
 git add -u
 git -c 'user.name=Dzomo, the Everest Yak' -c 'user.email=24394600+dzomo@users.noreply.github.com' commit -m "[CI] Refresh EverParse doc"
-# git push
+git push
