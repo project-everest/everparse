@@ -39,5 +39,5 @@ if git diff --exit-code HEAD > /dev/null; then
     exit 0
 fi
 git add -u
-git commit --author "Dzomo, the Everest Yak <24394600+dzomo@users.noreply.github.com>" -m "[CI] Refresh EverParse doc"
+git -c 'user.name=Dzomo, the Everest Yak' -c 'user.email=24394600+dzomo@users.noreply.github.com' commit -m "[CI] Refresh EverParse doc"
 # git push
