@@ -227,7 +227,7 @@ In ``BF2``, although ``x``, ``y`` and ``z`` cumulatively consume only
 a single underlying type---we have 10 unused bits before ``x`` and 4
 unused bits before ``y``.
 
-.. code-block:: c
+.. code-block:: text
 
    counting from most-significant bits to least-significant bits:
 
@@ -290,7 +290,7 @@ constraints. For example, the following code is currently rejected.
 
 With the following error message:
 
-.. code-block:: c
+.. code-block:: text
 
    (Error) The type of this field does not have a reader, either because its values are too large or because reading it may incur a double fetch; subsequent fields cannot depend on it
 
@@ -1218,7 +1218,7 @@ pointer value before called ``ProbeAndCopy`` with the coerced pointer value.
   If you declare more than one coercion to coerce between a pair of types, 3d
   will likely complain with the following error:
 
-  .. code-block::
+  .. code-block:: text
 
     ./Probe.3d:(132,33): (Error) Multiple extern coercions found for UINT32 -> UINT64: Probe.UlongToPtr, Probe.UlongToPtr2
 
@@ -1282,7 +1282,7 @@ of probing entry point, and one for the non-probing variant:
   especially when using multiple probe callbacks in conjuction with
   :ref:`specialization <Specialization>`.
   
-  .. code-block::
+  .. code-block:: text
 
      ./Specialize1.3d:(10,30): (Error) Found multiple probe functions: Specialize1.ProbeAndCopyAlt, Specialize1.ProbeAndCopy
 
@@ -1686,7 +1686,7 @@ However, if now we try to specialize ``WRAPPER`` as follows:
 
 We get the following error:
 
-.. code-block::
+.. code-block:: text
 
   ./SpecializeDep1.3d:(22,11): (Error) Cannot coerce a type with data-dependency; 
     field payload of type SpecializeDep1.UNION(tag) may depend on the field `tag`
@@ -1769,7 +1769,7 @@ However, if we try to specialize ``WRAPPER`` to 32 bits:
 
 We get the following *verification* error:
 
-.. code-block::
+.. code-block:: text
 
   * Error 19 at out/SpecializeDep1Fail.fst(195,2-205,63):
   - Cannot verify u16 subtraction
@@ -1989,7 +1989,7 @@ headers. In this section, we show how to specify this format in
 3d. The full specification can be found `here <https://github.com/project-everest/everparse/tree/master/src/3d/tests/tcpip/TCP.3d>`_.
 
 
-.. code-block:: c
+.. code-block:: text
 
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
