@@ -50,7 +50,7 @@ help: .venv
 %: Makefile .venv
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-3d: $(3D_DIFF)
+3d: $(3D_DIFF) html
 
 3d-do-tests:
 	mkdir -p out
