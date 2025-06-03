@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+set -x
 
 echo "Preparing to update the docs. We are on branch: $branchname"
 
