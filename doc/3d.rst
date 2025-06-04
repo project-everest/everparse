@@ -185,6 +185,12 @@ Options are treated from left to right:
   This option automatically toggles ``--clang_format`` and
   ``--batch``.
 
+* ``--clang_format_use_custom_config``
+
+  With ``--clang_format``, skip copying the ``.clang-format`` file
+  from the EverParse distribution, and assume that there is already an
+  existing ``.clang-format``
+  
 * ``--cleanup``
 
   With ``--batch``, remove all produced intermediate files other than
@@ -362,6 +368,18 @@ The produced Makefile, by default called ``EverParse.Makefile``, is
 meant to be included in the main ``Makefile`` of your project. On
 Linux, such a typical main ``Makefile`` for use with GNU Make may look
 like:
+
+Also valid in Makefile generation mode are the following options:
+
+* ``--clang_format``
+
+  Add ``.clang-format`` as a dependency of generated ``.c`` and ``.h``
+  files, and produce a rule to generate ``.clang-format``
+
+* ``--clang_format_use_custom_config``
+
+  Same as ``--clang_format``, but do not produce a rule to generate
+  ``.clang-format``
 
 .. literalinclude:: Sample.EverParse.Makefile
     :language: make
