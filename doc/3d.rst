@@ -122,10 +122,28 @@ On Linux: ``everparse.sh`` [options] input_files
 From the source tree: ``bin/3d.exe``. Caveat: in that case, no options
 are toggled by default (not even ``--batch`` or ``--clang_format``)
 and you need to provide all options by hand.
+  
+Options are treated from left to right, with higher priority on
+right-most options. Thus, any ``--no_clang_format`` will override any
+occurrence of ``--clang_format`` or ``--clang_format_executable`` to
+its left, and vice-versa.
+
+You can provide one or more ``input_files`` to EverParse. Then,
+``EverParse.h`` and ``EverParseEndianness.h`` will be shared across
+``.c`` and ``.h`` files produced for all the ``.3d`` files that you
+provided.
+
+.. note::
+
+  EverParse input files must all bear the ``.3d`` file name extension,
+  and their names must start with a capital letter.
 
 
 Default mode
 ^^^^^^^^^^^^
+
+In default mode, EverParse3d produces C code corresponding to
+validators proven correct with respect to the 3d specification.
 
 Options are treated from left to right:
 
@@ -177,20 +195,126 @@ Options are treated from left to right:
 
   Keep all produced intermediate files. This is toggled by default.
 
-Options are treated from left to right, with higher priority on
-right-most options. Thus, any ``--no_clang_format`` will override any
-occurrence of ``--clang_format`` or ``--clang_format_executable`` to
-its left, and vice-versa.
+* ``--skip_c_makefiles``
 
-You can provide one or more ``input_files`` to EverParse. Then,
-``EverParse.h`` and ``EverParseEndianness.h`` will be shared across
-``.c`` and ``.h`` files produced for all the ``.3d`` files that you
-provided.
+  Skip generating the default Makefiles produced by Karamel to compile
+  the produced C code.
 
-.. note::
+* ``--add_include <myinclude.h>``
 
-  EverParse input files must all bear the ``.3d`` file name extension,
-  and their names must start with a capital letter.
+  ``--add_include "myinclude.h"``
+
+  Prepend each produced C file with a ``#include <myinclude.h>`` or a
+  ``#include "myinclude.h"`` C preprocessor directive.
+
+* ``--config myfile.config``
+
+  Use the specified JSON file ``myfile.config`` to declare
+  compile-time flags (see compile-time configuration in the 3D
+  language reference.)
+
+* ``--fstar path/to/fstar.exe``
+
+  Allows to specify the location of the F* executable. The
+  ``everparse.sh`` / ``everparse.cmd`` script in the EverParse binary
+  package is already configured to use the F* executable provided in
+  the package. Otherwise, the default is to use the ``fstar.exe``
+  found from the ``PATH``.
+  
+* ``--input_stream buffer|extern|static``
+
+  Specifies the format of validator input buffers:
+
+  + With ``buffer`` (which is the default), a validator takes as
+    argument a byte array and its length.
+
+  + With ``extern``, a validator takes as argument a value of a
+    user-defined ``EVERPARSE_INPUT_STREAM_BASE`` type, representing an
+    input byte stream, for which the following functions need to be
+    defined:
+
+    .. code-block:: c
+
+       extern BOOLEAN EverParseHas(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n
+       );
+
+    ``EverParseHas`` returns ``1`` if the input stream ``x`` has ``n``
+    bytes available to read, ``0`` otherwise.
+
+    .. code-block:: c
+
+       extern uint8_t* EverParseRead(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n,
+         uint8_t *dst
+       );
+
+    ``EverParseRead`` takes and reads ``n`` bytes from the input
+    stream ``x``, possibly copying them into ``dst``, and returns a
+    byte array containing the bytes read. There is no requirement that
+    the function returns ``dst``, or even that a copy to ``dst`` is
+    made.  `
+
+    .. code-block:: c
+
+       extern void EverParseSkip(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n
+       );
+
+    ``EverParseSkip`` advances the input stream ``x`` by ``n`` bytes
+    without reading them.
+
+    .. code-block:: c
+
+       extern uint8_t* EverParsePeep(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x,
+         uint64_t n
+       );
+
+    ``EverParsePeep`` returns a pointer to a byte array that is part
+    of the input stream ``x`` and points to its next ``n`` bytes, then
+    advances the input stream by ``n``. If such operation is
+    impossible, then returns ``NULL``. Such a pointer is returned by
+    the ``field_ptr`` action (see "Atomic actions" in the 3d language
+    reference), so it is the responsibility of the application to
+    ensure double-fetch freedom on the contents of the returned field
+    is preserved.
+
+    .. code-block:: c
+
+       extern uint64_t EverParseEmpty(
+         EVERPARSE_EXTRA_T _extra_t,
+         EVERPARSE_INPUT_STREAM_BASE x
+       );
+
+    ``EverParseEmpty`` skips to the end of the input stream ``x`` and
+    returns the number of bytes so skipped, without reading them.
+
+    In all such functions, ``EVERPARSE_EXTRA_T`` is a user-defined
+    type for the context used for error handling (see "Error handling"
+    in the 3d language reference.)
+    
+  + ``static`` is like ``extern`` except that the functions on
+    ``EVERPARSE_INPUT_STREAM_BASE`` are declared ``static``.
+
+  In any case, to compile the C code produced by EverParse, you need
+  to add to the include path the subdirectory
+  ``src/3d/prelude/<input_stream_format>`` of the EverParse binary
+  package or repository; this directory contains the ``EverParse.h``
+  corresponding to the input stream format given by ``--input_stream``
+
+* ``--input_stream_include myinclude.h``
+
+  With ``--input_stream``, defines the name of the C include file that
+  provides definitions for ``EVERPARSE_INPUT_STREAM_BASE`` and its
+  associated functions.
 
 Alternate mode: generating a Makefile
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
