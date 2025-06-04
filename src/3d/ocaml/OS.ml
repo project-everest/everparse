@@ -1,10 +1,40 @@
+let is_windows () = Sys.win32
+
 let dirname = Filename.dirname
+
+let mkdir dir =
+  if Sys.file_exists dir && Sys.is_directory dir
+  then ()
+  else Sys.mkdir dir 0o755
 
 (* The filename without its path *)
 
 let basename = Filename.basename
 
 let concat = Filename.concat
+
+(* Conditionally concatenating a dir path and a filename, only if the filename is not absolute *)
+
+(* NOTE: Working around https://github.com/ocaml-batteries-team/batteries-included/issues/1136 *)
+let is_absolute_windows (path_str : string) : bool =
+  if is_windows () then
+    match BatString.to_list path_str with
+    | '\\' :: _ -> true
+    | letter :: ':' :: '\\' :: _ -> BatChar.is_letter letter
+    | _ -> false
+  else
+    false
+
+let is_path_absolute path_str =
+  let open Batteries.Incubator in
+  let open BatPathGen.OfString in
+  let path = of_string path_str in
+  is_absolute path || is_absolute_windows path_str
+
+let concat_if_not_absolute dir file =
+  if is_path_absolute file
+  then file
+  else concat dir file
 
 (* The filename without its extension *)
 
@@ -126,6 +156,9 @@ let file_contents f =
   let s = really_input_string ic l in
   close_in ic;
   s
+
+let overwrite_file filename =
+  BatFile.with_file_out filename (fun _ -> ())
 
 let write_witness_to_file w filename =
   BatFile.with_file_out filename (fun out ->

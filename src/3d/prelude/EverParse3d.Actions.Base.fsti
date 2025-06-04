@@ -19,6 +19,7 @@ open EverParse3d.Prelude
 module U32 = FStar.UInt32
 module U64 = FStar.UInt64
 module CP = EverParse3d.CopyBuffer
+module PA = EverParse3d.ProbeActions
 
 inline_for_extraction
 noextract
@@ -905,10 +906,12 @@ val mk_external_action
 val copy_buffer_inv (x:CP.copy_buffer_t) : slice_inv
 val copy_buffer_loc (x:CP.copy_buffer_t) : eloc
 
+
 inline_for_extraction
 noextract
 val probe_then_validate
       (#nz:bool)
+      (#maybe_zero_offset:bool)
       (#wk: _)
       (#k:parser_kind nz wk)
       (#t:Type)
@@ -917,11 +920,17 @@ val probe_then_validate
       (#disj:disjointness_pre)
       (#l:eloc)
       (#ha #allow_reading:bool)
+      (#ptr_t:Type0)
+      (typename:string)
+      (fieldname:string)
       (v:validate_with_action_t p inv disj l ha allow_reading)
-      (src:U64.t)
-      (len:U64.t)
+      (src:ptr_t)
+      (as_u64: ptr_t -> PA.pure_external_action U64.t)
+      (nullable:bool)
       (dest:CP.copy_buffer_t)
-      (probe:CP.probe_fn)
+      (init:PA.init_probe_dest_t)
+      (prep_dest_sz:U64.t)
+      (probe:PA.probe_m unit true maybe_zero_offset)
   : action (conj_inv inv (copy_buffer_inv dest))
            (conj_disjointness disj (disjoint (copy_buffer_loc dest) l))
            (eloc_union l (copy_buffer_loc dest)) 
