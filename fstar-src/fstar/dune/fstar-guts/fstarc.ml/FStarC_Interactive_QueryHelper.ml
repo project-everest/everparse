@@ -268,13 +268,14 @@ let (complookup :
                  FStarC_List.nth (FStarC_Util.splitlines text)
                    (row - Prims.int_one) in
                let explode s =
-                 let rec exp i l =
-                   if i < Prims.int_zero
-                   then l
-                   else
-                     (let uu___4 =
-                        let uu___5 = FStarC_String.get s i in uu___5 :: l in
-                      exp (i - Prims.int_one) uu___4) in
+                 let rec exp i =
+                   fun l ->
+                     if i < Prims.int_zero
+                     then l
+                     else
+                       (let uu___4 =
+                          let uu___5 = FStarC_String.get s i in uu___5 :: l in
+                        exp (i - Prims.int_one) uu___4) in
                  exp ((FStarC_String.length s) - Prims.int_one) [] in
                let begin_col =
                  let uu___3 =

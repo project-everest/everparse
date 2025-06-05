@@ -175,15 +175,15 @@ let rec (regions_of_some_refs : some_refs -> unit FStar_Set.set) =
     | (Ref (uu___, uu___1, r))::tl ->
         FStar_Set.union (FStar_Set.singleton ()) (regions_of_some_refs tl)
 type ('i, 'rs, 'h0, 'h1) modifies_some_refs = Obj.t
-let (norm_steps : Fstarcompiler.FStar_Pervasives.norm_step Prims.list) =
-  [Fstarcompiler.FStar_Pervasives.iota;
-  Fstarcompiler.FStar_Pervasives.zeta;
-  Fstarcompiler.FStar_Pervasives.delta;
-  Fstarcompiler.FStar_Pervasives.delta_only
+let (norm_steps : Fstarcompiler.FStarC_NormSteps.norm_step Prims.list) =
+  [Fstarcompiler.FStarC_NormSteps.iota;
+  Fstarcompiler.FStarC_NormSteps.zeta;
+  Fstarcompiler.FStarC_NormSteps.delta;
+  Fstarcompiler.FStarC_NormSteps.delta_only
     ["FStar.Monotonic.HyperStack.regions_of_some_refs";
     "FStar.Monotonic.HyperStack.refs_in_region";
     "FStar.Monotonic.HyperStack.modifies_some_refs"];
-  Fstarcompiler.FStar_Pervasives.primops]
+  Fstarcompiler.FStarC_NormSteps.primops]
 type ('rs, 'h0, 'h1) mods = unit
 type aref =
   | ARef of unit * FStar_Monotonic_Heap.aref 

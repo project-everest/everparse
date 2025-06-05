@@ -414,9 +414,9 @@ let reification :
              (fun uu___2 ->
                 Obj.magic
                   (FStar_Tactics_V2_Derived.norm_term
-                     [Fstarcompiler.FStar_Pervasives.delta;
-                     Fstarcompiler.FStar_Pervasives.zeta;
-                     Fstarcompiler.FStar_Pervasives.iota] uu___2)) uu___2) in
+                     [Fstarcompiler.FStarC_NormSteps.delta;
+                     Fstarcompiler.FStarC_NormSteps.zeta;
+                     Fstarcompiler.FStarC_NormSteps.iota] uu___2)) uu___2) in
       FStar_Tactics_Effect.tac_bind
         (FStar_Sealed.seal
            (Obj.magic
@@ -457,9 +457,9 @@ let reification :
                      (fun uu___3 ->
                         Obj.magic
                           (FStar_Tactics_V2_Derived.norm_term
-                             [Fstarcompiler.FStar_Pervasives.delta;
-                             Fstarcompiler.FStar_Pervasives.zeta;
-                             Fstarcompiler.FStar_Pervasives.iota] uu___3))
+                             [Fstarcompiler.FStarC_NormSteps.delta;
+                             Fstarcompiler.FStarC_NormSteps.zeta;
+                             Fstarcompiler.FStarC_NormSteps.iota] uu___3))
                        uu___3) in
               Obj.magic
                 (FStar_Tactics_Effect.tac_bind
@@ -480,9 +480,9 @@ let reification :
                       (fun unit ->
                          let uu___2 =
                            FStar_Tactics_V2_Derived.norm_term
-                             [Fstarcompiler.FStar_Pervasives.delta;
-                             Fstarcompiler.FStar_Pervasives.zeta;
-                             Fstarcompiler.FStar_Pervasives.iota] me in
+                             [Fstarcompiler.FStarC_NormSteps.delta;
+                             Fstarcompiler.FStarC_NormSteps.zeta;
+                             Fstarcompiler.FStarC_NormSteps.iota] me in
                          Obj.magic
                            (FStar_Tactics_Effect.tac_bind
                               (FStar_Sealed.seal
@@ -921,7 +921,7 @@ let canon_monoid :
                                                                     Obj.magic
                                                                     (FStarC_Tactics_V2_Builtins.norm
                                                                     [
-                                                                    Fstarcompiler.FStar_Pervasives.delta_only
+                                                                    Fstarcompiler.FStarC_NormSteps.delta_only
                                                                     ["FStar.Tactics.CanonMonoid.mldenote";
                                                                     "FStar.Tactics.CanonMonoid.flatten";
                                                                     "FStar.List.Tot.Base.op_At";

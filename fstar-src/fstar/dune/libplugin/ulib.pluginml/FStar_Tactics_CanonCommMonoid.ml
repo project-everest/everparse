@@ -655,9 +655,9 @@ let reification :
                   fun ts ->
                     let uu___ =
                       FStar_Tactics_V2_Derived.norm_term
-                        [Fstarcompiler.FStar_Pervasives.delta;
-                        Fstarcompiler.FStar_Pervasives.zeta;
-                        Fstarcompiler.FStar_Pervasives.iota] tmult in
+                        [Fstarcompiler.FStarC_NormSteps.delta;
+                        Fstarcompiler.FStarC_NormSteps.zeta;
+                        Fstarcompiler.FStarC_NormSteps.iota] tmult in
                     FStar_Tactics_Effect.tac_bind
                       (FStar_Sealed.seal
                          (Obj.magic
@@ -676,9 +676,9 @@ let reification :
                          (fun tmult1 ->
                             let uu___1 =
                               FStar_Tactics_V2_Derived.norm_term
-                                [Fstarcompiler.FStar_Pervasives.delta;
-                                Fstarcompiler.FStar_Pervasives.zeta;
-                                Fstarcompiler.FStar_Pervasives.iota] tunit in
+                                [Fstarcompiler.FStarC_NormSteps.delta;
+                                Fstarcompiler.FStarC_NormSteps.zeta;
+                                Fstarcompiler.FStarC_NormSteps.iota] tunit in
                             Obj.magic
                               (FStar_Tactics_Effect.tac_bind
                                  (FStar_Sealed.seal
@@ -703,9 +703,9 @@ let reification :
                                        let uu___2 =
                                          FStar_Tactics_Util.map
                                            (FStar_Tactics_V2_Derived.norm_term
-                                              [Fstarcompiler.FStar_Pervasives.delta;
-                                              Fstarcompiler.FStar_Pervasives.zeta;
-                                              Fstarcompiler.FStar_Pervasives.iota])
+                                              [Fstarcompiler.FStarC_NormSteps.delta;
+                                              Fstarcompiler.FStarC_NormSteps.zeta;
+                                              Fstarcompiler.FStarC_NormSteps.iota])
                                            ts in
                                        Obj.magic
                                          (FStar_Tactics_Effect.tac_bind
@@ -896,7 +896,7 @@ let (unfold_topdown :
                       fun uu___3 ->
                         let uu___4 =
                           FStarC_Tactics_V2_Builtins.norm
-                            [Fstarcompiler.FStar_Pervasives.delta] in
+                            [Fstarcompiler.FStarC_NormSteps.delta] in
                         FStar_Tactics_Effect.tac_bind
                           (FStar_Sealed.seal
                              (Obj.magic
@@ -2305,7 +2305,7 @@ let canon_monoid_aux :
                                                                     Obj.magic
                                                                     (FStarC_Tactics_V2_Builtins.norm
                                                                     [
-                                                                    Fstarcompiler.FStar_Pervasives.delta_only
+                                                                    Fstarcompiler.FStarC_NormSteps.delta_only
                                                                     ["FStar.Tactics.CanonCommMonoid.canon";
                                                                     "FStar.Tactics.CanonCommMonoid.xsdenote";
                                                                     "FStar.Tactics.CanonCommMonoid.flatten";
@@ -2331,9 +2331,9 @@ let canon_monoid_aux :
                                                                     "FStar.List.Tot.Base.partition";
                                                                     "FStar.List.Tot.Base.bool_of_compare";
                                                                     "FStar.List.Tot.Base.compare_of_bool"];
-                                                                    Fstarcompiler.FStar_Pervasives.zeta;
-                                                                    Fstarcompiler.FStar_Pervasives.iota;
-                                                                    Fstarcompiler.FStar_Pervasives.primops]))
+                                                                    Fstarcompiler.FStarC_NormSteps.zeta;
+                                                                    Fstarcompiler.FStarC_NormSteps.iota;
+                                                                    Fstarcompiler.FStarC_NormSteps.primops]))
                                                                     uu___17)))
                                                                     uu___15)))
                                                                     uu___13)))

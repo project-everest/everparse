@@ -29,15 +29,6 @@ FSTAR_DUNE_BUILD_OPTIONS := $(FSTAR_DUNE_OPTIONS)
 .PHONY: .force
 .force:
 
-# In some places, we need to compute absolute paths, and in a Cygwin
-# enviroment we need Windows-style paths (forward slashes ok, but no
-# /cygdrive/).
-ifeq ($(OS),Windows_NT)
-cygpath=$(shell cygpath -m "$(abspath $(1))")
-else
-cygpath=$(abspath "$(1)")
-endif
-
 build:
 	$(call msg, "DUNE BUILD")
 	dune build --root=dune $(FSTAR_DUNE_BUILD_OPTIONS)
@@ -45,6 +36,8 @@ build:
 install_bin: build
 	$(call msg, "DUNE INSTALL")
 	dune install --root=dune --prefix=$(call cygpath,out)
+
+minimal: install_bin install_lib_src
 
 check_lib: install_bin
 	$(call msg, "CHECK LIB")
@@ -58,13 +51,19 @@ check_lib: install_bin
 	  FSTAR_ROOT=$(CURDIR) \
 	  $(MAKE) -f mk/lib.mk verify
 
-install_lib: check_lib
-	$(call msg, "INSTALL LIB")
-	@# Install library and its checked files
-	cp -T -H -p -r ulib out/lib/fstar/ulib
-	cp -T -H -p -r ulib.checked out/lib/fstar/ulib.checked
+install_lib_src:
+	$(call msg, "INSTALL LIB SRC")
+	@# Install library sources, set up fstar.include
+	rm -rf out/lib/fstar/ulib
+	mkdir -p out/lib/fstar
+	cp -H -p -r ulib out/lib/fstar/ulib
 	echo 'ulib'          > out/lib/fstar/fstar.include
 	echo 'ulib.checked' >> out/lib/fstar/fstar.include
+
+install_lib: check_lib install_lib_src
+	$(call msg, "INSTALL LIB")
+	@# Install library checked files
+	cp -T -H -p -r ulib.checked out/lib/fstar/ulib.checked
 
 check_fstarc: install_bin
 	$(call msg, "CHECK FSTARC")
@@ -72,8 +71,8 @@ check_fstarc: install_bin
 	  SRC=src/ \
 	  FSTAR_EXE=$(call cygpath,out/bin/fstar.exe) \
 	  CACHE_DIR=fstarc.checked/ \
-	  CODEGEN=None \
-	  OUTPUT_DIR=None \
+	  CODEGEN=none \
+	  OUTPUT_DIR=none \
 	  TAG=fstarc \
 	  FSTAR_LIB=$(call cygpath,ulib) \
 	  FSTAR_ROOT=$(CURDIR) \
@@ -119,5 +118,5 @@ package:
 	.scripts/bin-install.sh pkgtmp/fstar
 	.scripts/mk-package.sh pkgtmp fstar$(FSTAR_TAG)
 ## LINES BELOW ADDED BY src-install.sh
-export FSTAR_COMMITDATE=2025-01-18 02:46:28 -0800
-export FSTAR_COMMIT=2a13363bf6ab2da54dfe43ed5485d914a872f4a3
+export FSTAR_COMMITDATE=2025-05-29 21:30:24 -0300
+export FSTAR_COMMIT=3ff998c60bb0efe9925fc94e8fb8b785b9485af0

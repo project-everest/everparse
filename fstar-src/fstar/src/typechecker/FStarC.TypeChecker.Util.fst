@@ -15,11 +15,10 @@
 *)
 
 module FStarC.TypeChecker.Util
-open FStar.Pervasives
+
+open FStarC
 open FStarC.Effect
 open FStarC.List
-open FStar open FStarC
-open FStarC
 open FStarC.Util
 open FStarC.Errors
 open FStarC.Errors.Msg
@@ -46,7 +45,6 @@ module BU = FStarC.Util
 module U = FStarC.Syntax.Util
 module N = FStarC.TypeChecker.Normalize
 module TcComm = FStarC.TypeChecker.Common
-module P = FStarC.Syntax.Print
 module C = FStarC.Parser.Const
 module UF = FStarC.Syntax.Unionfind
 module TEQ = FStarC.TypeChecker.TermEqAndSimplify
@@ -2489,7 +2487,7 @@ let find_coercion (env:Env.env) (checked: lcomp) (exp_t: typ) (e:term)
     let? exp_head_lid = head_lid_of exp_t in
     let? computed_head_lid = head_lid_of computed_t in
 
-    let candidates = Env.lookup_attr env "FStar.Pervasives.coercion" in
+    let candidates = Env.lookup_attr env (string_of_lid C.coercion_lid) in
     candidates |> first_opt (fun se ->
       (* `f` is the candidate coercion, `e` the term to coerce *)
       let? f_name, f_us, f_typ =
@@ -2852,9 +2850,10 @@ let instantiate_one_binder (env:env_t) (r:Range.range) (b:binder) : term & typ &
         | Some (Ctx_uvar_meta_tac tau) -> U.is_fvar C.tcresolve_lid tau
         | _ -> false
       in
+      let name = "'" ^ show x ^ "'" in
       if is_typeclass then "Typeclass constraint argument"
-      else if Some? ctx_uvar_meta then "Instantiating meta argument"
-      else "Instantiating implicit argument"
+      else if Some? ctx_uvar_meta then "Instantiating meta argument" ^ name
+      else "Instantiating implicit argument " ^ name
     in
     Env.new_implicit_var_aux msg r env t Strict ctx_uvar_meta should_unrefine
   in
@@ -2926,8 +2925,7 @@ let maybe_instantiate (env:Env.env) (e:term) (t:typ) : term & typ & guard_t =
                   match inst_n, bs with
                   | Some 0, _ -> [], bs, subst, Env.trivial_guard //no more instantiations to do
                   | _, {binder_qual = Some (Implicit _)} ::rest
-                  | _, {binder_qual = Some (Meta _)} ::rest
-                  | _, {binder_attrs = _::_} :: rest ->
+                  | _, {binder_qual = Some (Meta _)} ::rest ->
                       let b = List.hd bs in
                       let b = SS.subst_binder subst b in
                       let tm, ty, aq, g = instantiate_one_binder env e.pos b in
@@ -3735,10 +3733,10 @@ let make_record_fields_in_order env uc topt
                rest, a::as_rev, missing
              )
 
-           | _ ->
+           | x1::x2::_ ->
 //             debug();
-             raise_error rng Errors.Fatal_MissingFieldInRecord
-                (BU.format2 "Field %s of record type %s is given multiple assignments"
+             raise_error (fst x1) Errors.Fatal_MissingFieldInRecord
+                (BU.format2 "Field '%s' of record type '%s' is given multiple assignments."
                   (string_of_id field_name)
                   (string_of_lid rdc.typename)))
         (fas, [], [])
@@ -3753,7 +3751,7 @@ let make_record_fields_in_order env uc topt
       | (f, _)::_, _ ->
 //        debug();
         raise_error f Errors.Fatal_MissingFieldInRecord [
-            Errors.Msg.text <| BU.format2 "Field '%s' is redundant for type %s" (show f) (show rdc.typename);
+            Errors.Msg.text <| BU.format2 "No field '%s' in record type '%s'." (show f) (show rdc.typename);
             if Cons? missing then
               prefix 2 1 (text "Missing fields:")
                 (pp_missing ())

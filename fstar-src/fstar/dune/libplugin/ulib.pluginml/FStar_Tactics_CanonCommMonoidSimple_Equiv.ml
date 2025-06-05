@@ -185,8 +185,8 @@ let (fatom :
                                (fun vfresh ->
                                   let uu___3 =
                                     FStar_Tactics_V2_Derived.norm_term
-                                      [Fstarcompiler.FStar_Pervasives.iota;
-                                      Fstarcompiler.FStar_Pervasives.zeta] t in
+                                      [Fstarcompiler.FStarC_NormSteps.iota;
+                                      Fstarcompiler.FStarC_NormSteps.zeta] t in
                                   Obj.magic
                                     (FStar_Tactics_Effect.tac_bind
                                        (FStar_Sealed.seal
@@ -393,9 +393,9 @@ let (reification :
           fun t ->
             let uu___ =
               FStar_Tactics_V2_Derived.norm_term
-                [Fstarcompiler.FStar_Pervasives.iota;
-                Fstarcompiler.FStar_Pervasives.zeta;
-                Fstarcompiler.FStar_Pervasives.delta]
+                [Fstarcompiler.FStarC_NormSteps.iota;
+                Fstarcompiler.FStarC_NormSteps.zeta;
+                Fstarcompiler.FStarC_NormSteps.delta]
                 (Fstarcompiler.FStarC_Reflection_V2_Builtins.pack_ln
                    (Fstarcompiler.FStarC_Reflection_V2_Data.Tv_App
                       ((Fstarcompiler.FStarC_Reflection_V2_Builtins.pack_ln
@@ -426,9 +426,9 @@ let (reification :
                  (fun mult ->
                     let uu___1 =
                       FStar_Tactics_V2_Derived.norm_term
-                        [Fstarcompiler.FStar_Pervasives.iota;
-                        Fstarcompiler.FStar_Pervasives.zeta;
-                        Fstarcompiler.FStar_Pervasives.delta]
+                        [Fstarcompiler.FStarC_NormSteps.iota;
+                        Fstarcompiler.FStarC_NormSteps.zeta;
+                        Fstarcompiler.FStarC_NormSteps.delta]
                         (Fstarcompiler.FStarC_Reflection_V2_Builtins.pack_ln
                            (Fstarcompiler.FStarC_Reflection_V2_Data.Tv_App
                               ((Fstarcompiler.FStarC_Reflection_V2_Builtins.pack_ln
@@ -460,8 +460,8 @@ let (reification :
                             (fun unit ->
                                let uu___2 =
                                  FStar_Tactics_V2_Derived.norm_term
-                                   [Fstarcompiler.FStar_Pervasives.iota;
-                                   Fstarcompiler.FStar_Pervasives.zeta] t in
+                                   [Fstarcompiler.FStarC_NormSteps.iota;
+                                   Fstarcompiler.FStarC_NormSteps.zeta] t in
                                Obj.magic
                                  (FStar_Tactics_Effect.tac_bind
                                     (FStar_Sealed.seal
@@ -714,9 +714,9 @@ let (canon_lhs_rhs :
         fun rhs ->
           let uu___ =
             FStar_Tactics_V2_Derived.norm_term
-              [Fstarcompiler.FStar_Pervasives.iota;
-              Fstarcompiler.FStar_Pervasives.zeta;
-              Fstarcompiler.FStar_Pervasives.delta]
+              [Fstarcompiler.FStarC_NormSteps.iota;
+              Fstarcompiler.FStarC_NormSteps.zeta;
+              Fstarcompiler.FStarC_NormSteps.delta]
               (Fstarcompiler.FStarC_Reflection_V2_Builtins.pack_ln
                  (Fstarcompiler.FStarC_Reflection_V2_Data.Tv_App
                     ((Fstarcompiler.FStarC_Reflection_V2_Builtins.pack_ln
@@ -1046,9 +1046,9 @@ let (canon_lhs_rhs :
                                                                     let uu___14
                                                                     =
                                                                     FStarC_Tactics_V2_Builtins.norm
-                                                                    [Fstarcompiler.FStar_Pervasives.iota;
-                                                                    Fstarcompiler.FStar_Pervasives.zeta;
-                                                                    Fstarcompiler.FStar_Pervasives.delta_only
+                                                                    [Fstarcompiler.FStarC_NormSteps.iota;
+                                                                    Fstarcompiler.FStarC_NormSteps.zeta;
+                                                                    Fstarcompiler.FStarC_NormSteps.delta_only
                                                                     ["FStar.Tactics.CanonCommMonoidSimple.Equiv.canon";
                                                                     "FStar.Tactics.CanonCommMonoidSimple.Equiv.xsdenote";
                                                                     "FStar.Tactics.CanonCommMonoidSimple.Equiv.flatten";
@@ -1063,7 +1063,7 @@ let (canon_lhs_rhs :
                                                                     "FStar.List.Tot.Base.partition";
                                                                     "FStar.List.Tot.Base.bool_of_compare";
                                                                     "FStar.List.Tot.Base.compare_of_bool"];
-                                                                    Fstarcompiler.FStar_Pervasives.primops] in
+                                                                    Fstarcompiler.FStarC_NormSteps.primops] in
                                                                     Obj.magic
                                                                     (FStar_Tactics_Effect.tac_bind
                                                                     (FStar_Sealed.seal
@@ -1130,8 +1130,8 @@ let (canon_monoid :
     fun m ->
       let uu___ =
         FStarC_Tactics_V2_Builtins.norm
-          [Fstarcompiler.FStar_Pervasives.iota;
-          Fstarcompiler.FStar_Pervasives.zeta] in
+          [Fstarcompiler.FStarC_NormSteps.iota;
+          Fstarcompiler.FStarC_NormSteps.zeta] in
       FStar_Tactics_Effect.tac_bind
         (FStar_Sealed.seal
            (Obj.magic

@@ -1,7 +1,7 @@
 open Fstarcompiler
 open Prims
-let (namedv_to_string :
-  FStar_Tactics_NamedView.namedv ->
+let (namedv_view_to_string :
+  FStarC_Reflection_V2_Data.namedv_view ->
     (Prims.string, unit) FStar_Tactics_Effect.tac_repr)
   =
   fun x ->
@@ -24,6 +24,27 @@ let (namedv_to_string :
               Prims.strcat uu___1
                 (Prims.strcat "#"
                    (Prims.string_of_int x.FStarC_Reflection_V2_Data.uniq))))
+let (namedv_to_string :
+  FStarC_Reflection_Types.namedv ->
+    (Prims.string, unit) FStar_Tactics_Effect.tac_repr)
+  =
+  fun x ->
+    let uu___ =
+      Obj.magic
+        (FStar_Tactics_Effect.lift_div_tac
+           (fun uu___1 -> FStarC_Reflection_V2_Builtins.inspect_namedv x)) in
+    FStar_Tactics_Effect.tac_bind
+      (FStar_Sealed.seal
+         (Obj.magic
+            (FStar_Range.mk_range "FStar.Tactics.Print.fst"
+               (Prims.of_int (13)) (Prims.of_int (10)) (Prims.of_int (13))
+               (Prims.of_int (55)))))
+      (FStar_Sealed.seal
+         (Obj.magic
+            (FStar_Range.mk_range "FStar.Tactics.Print.fst"
+               (Prims.of_int (14)) (Prims.of_int (2)) (Prims.of_int (14))
+               (Prims.of_int (25))))) (Obj.magic uu___)
+      (fun uu___1 -> (fun x1 -> Obj.magic (namedv_view_to_string x1)) uu___1)
 let _ =
   Fstarcompiler.FStarC_Tactics_Native.register_tactic
     "FStar.Tactics.Print.namedv_to_string" (Prims.of_int (2))
@@ -35,7 +56,7 @@ let _ =
                "FStar.Tactics.Print.namedv_to_string (plugin)"
                (Fstarcompiler.FStarC_Tactics_Native.from_tactic_1
                   namedv_to_string)
-               Fstarcompiler.FStarC_Reflection_V2_Embeddings.e_namedv_view
+               Fstarcompiler.FStarC_Reflection_V2_Embeddings.e_namedv
                Fstarcompiler.FStarC_Syntax_Embeddings.e_string psc ncb us
                args)
 let (paren : Prims.string -> Prims.string) =
@@ -63,13 +84,13 @@ let rec print_list_aux :
                        (FStar_Sealed.seal
                           (Obj.magic
                              (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                (Prims.of_int (21)) (Prims.of_int (13))
-                                (Prims.of_int (21)) (Prims.of_int (16)))))
+                                (Prims.of_int (25)) (Prims.of_int (13))
+                                (Prims.of_int (25)) (Prims.of_int (16)))))
                        (FStar_Sealed.seal
                           (Obj.magic
                              (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                (Prims.of_int (21)) (Prims.of_int (13))
-                                (Prims.of_int (21)) (Prims.of_int (45)))))
+                                (Prims.of_int (25)) (Prims.of_int (13))
+                                (Prims.of_int (25)) (Prims.of_int (45)))))
                        (Obj.magic uu___)
                        (fun uu___1 ->
                           (fun uu___1 ->
@@ -80,16 +101,16 @@ let rec print_list_aux :
                                     (Obj.magic
                                        (FStar_Range.mk_range
                                           "FStar.Tactics.Print.fst"
-                                          (Prims.of_int (21))
+                                          (Prims.of_int (25))
                                           (Prims.of_int (26))
-                                          (Prims.of_int (21))
+                                          (Prims.of_int (25))
                                           (Prims.of_int (45)))))
                                  (FStar_Sealed.seal
                                     (Obj.magic
                                        (FStar_Range.mk_range "Prims.fst"
-                                          (Prims.of_int (611))
+                                          (Prims.of_int (613))
                                           (Prims.of_int (19))
-                                          (Prims.of_int (611))
+                                          (Prims.of_int (613))
                                           (Prims.of_int (31)))))
                                  (Obj.magic uu___3)
                                  (fun uu___4 ->
@@ -101,16 +122,16 @@ let rec print_list_aux :
                                      (Obj.magic
                                         (FStar_Range.mk_range
                                            "FStar.Tactics.Print.fst"
-                                           (Prims.of_int (21))
+                                           (Prims.of_int (25))
                                            (Prims.of_int (19))
-                                           (Prims.of_int (21))
+                                           (Prims.of_int (25))
                                            (Prims.of_int (45)))))
                                   (FStar_Sealed.seal
                                      (Obj.magic
                                         (FStar_Range.mk_range "Prims.fst"
-                                           (Prims.of_int (611))
+                                           (Prims.of_int (613))
                                            (Prims.of_int (19))
-                                           (Prims.of_int (611))
+                                           (Prims.of_int (613))
                                            (Prims.of_int (31)))))
                                   (Obj.magic uu___2)
                                   (fun uu___3 ->
@@ -131,12 +152,12 @@ let print_list :
           (FStar_Sealed.seal
              (Obj.magic
                 (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                   (Prims.of_int (25)) (Prims.of_int (9)) (Prims.of_int (25))
+                   (Prims.of_int (29)) (Prims.of_int (9)) (Prims.of_int (29))
                    (Prims.of_int (27)))))
           (FStar_Sealed.seal
              (Obj.magic
-                (FStar_Range.mk_range "Prims.fst" (Prims.of_int (611))
-                   (Prims.of_int (19)) (Prims.of_int (611))
+                (FStar_Range.mk_range "Prims.fst" (Prims.of_int (613))
+                   (Prims.of_int (19)) (Prims.of_int (613))
                    (Prims.of_int (31))))) (Obj.magic uu___1)
           (fun uu___2 ->
              FStar_Tactics_Effect.lift_div_tac
@@ -145,12 +166,12 @@ let print_list :
         (FStar_Sealed.seal
            (Obj.magic
               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                 (Prims.of_int (25)) (Prims.of_int (9)) (Prims.of_int (25))
+                 (Prims.of_int (29)) (Prims.of_int (9)) (Prims.of_int (29))
                  (Prims.of_int (33)))))
         (FStar_Sealed.seal
            (Obj.magic
               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                 (Prims.of_int (25)) (Prims.of_int (3)) (Prims.of_int (25))
+                 (Prims.of_int (29)) (Prims.of_int (3)) (Prims.of_int (29))
                  (Prims.of_int (33))))) (Obj.magic uu___)
         (fun uu___1 ->
            FStar_Tactics_Effect.lift_div_tac
@@ -175,13 +196,13 @@ let rec (universe_to_ast_string :
                      (FStar_Sealed.seal
                         (Obj.magic
                            (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                              (Prims.of_int (30)) (Prims.of_int (35))
-                              (Prims.of_int (30)) (Prims.of_int (61)))))
+                              (Prims.of_int (34)) (Prims.of_int (35))
+                              (Prims.of_int (34)) (Prims.of_int (61)))))
                      (FStar_Sealed.seal
                         (Obj.magic
                            (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                              (Prims.of_int (30)) (Prims.of_int (29))
-                              (Prims.of_int (30)) (Prims.of_int (61)))))
+                              (Prims.of_int (34)) (Prims.of_int (29))
+                              (Prims.of_int (34)) (Prims.of_int (61)))))
                      (Obj.magic uu___1)
                      (fun uu___2 ->
                         FStar_Tactics_Effect.lift_div_tac
@@ -190,13 +211,13 @@ let rec (universe_to_ast_string :
                    (FStar_Sealed.seal
                       (Obj.magic
                          (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                            (Prims.of_int (30)) (Prims.of_int (29))
-                            (Prims.of_int (30)) (Prims.of_int (61)))))
+                            (Prims.of_int (34)) (Prims.of_int (29))
+                            (Prims.of_int (34)) (Prims.of_int (61)))))
                    (FStar_Sealed.seal
                       (Obj.magic
                          (FStar_Range.mk_range "Prims.fst"
-                            (Prims.of_int (611)) (Prims.of_int (19))
-                            (Prims.of_int (611)) (Prims.of_int (31)))))
+                            (Prims.of_int (613)) (Prims.of_int (19))
+                            (Prims.of_int (613)) (Prims.of_int (31)))))
                    (Obj.magic uu___)
                    (fun uu___1 ->
                       FStar_Tactics_Effect.lift_div_tac
@@ -209,13 +230,13 @@ let rec (universe_to_ast_string :
                    (FStar_Sealed.seal
                       (Obj.magic
                          (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                            (Prims.of_int (31)) (Prims.of_int (28))
-                            (Prims.of_int (31)) (Prims.of_int (64)))))
+                            (Prims.of_int (35)) (Prims.of_int (28))
+                            (Prims.of_int (35)) (Prims.of_int (64)))))
                    (FStar_Sealed.seal
                       (Obj.magic
                          (FStar_Range.mk_range "Prims.fst"
-                            (Prims.of_int (611)) (Prims.of_int (19))
-                            (Prims.of_int (611)) (Prims.of_int (31)))))
+                            (Prims.of_int (613)) (Prims.of_int (19))
+                            (Prims.of_int (613)) (Prims.of_int (31)))))
                    (Obj.magic uu___)
                    (fun uu___1 ->
                       FStar_Tactics_Effect.lift_div_tac
@@ -285,12 +306,12 @@ let rec (term_to_ast_string :
       (FStar_Sealed.seal
          (Obj.magic
             (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-               (Prims.of_int (41)) (Prims.of_int (8)) (Prims.of_int (41))
+               (Prims.of_int (45)) (Prims.of_int (8)) (Prims.of_int (45))
                (Prims.of_int (17)))))
       (FStar_Sealed.seal
          (Obj.magic
             (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-               (Prims.of_int (41)) (Prims.of_int (2)) (Prims.of_int (70))
+               (Prims.of_int (45)) (Prims.of_int (2)) (Prims.of_int (74))
                (Prims.of_int (30))))) (Obj.magic uu___)
       (fun uu___1 ->
          (fun uu___1 ->
@@ -298,18 +319,18 @@ let rec (term_to_ast_string :
             | FStar_Tactics_NamedView.Tv_Var bv ->
                 Obj.magic
                   (Obj.repr
-                     (let uu___2 = namedv_to_string bv in
+                     (let uu___2 = namedv_view_to_string bv in
                       FStar_Tactics_Effect.tac_bind
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (42)) (Prims.of_int (29))
-                                 (Prims.of_int (42)) (Prims.of_int (48)))))
+                                 (Prims.of_int (46)) (Prims.of_int (29))
+                                 (Prims.of_int (46)) (Prims.of_int (53)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___2)
                         (fun uu___3 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -322,13 +343,13 @@ let rec (term_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (43)) (Prims.of_int (31))
-                                 (Prims.of_int (43)) (Prims.of_int (46)))))
+                                 (Prims.of_int (47)) (Prims.of_int (31))
+                                 (Prims.of_int (47)) (Prims.of_int (46)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___2)
                         (fun uu___3 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -352,16 +373,16 @@ let rec (term_to_ast_string :
                                  (Obj.magic
                                     (FStar_Range.mk_range
                                        "FStar.Tactics.Print.fst"
-                                       (Prims.of_int (46))
+                                       (Prims.of_int (50))
                                        (Prims.of_int (49))
-                                       (Prims.of_int (46))
+                                       (Prims.of_int (50))
                                        (Prims.of_int (75)))))
                               (FStar_Sealed.seal
                                  (Obj.magic
                                     (FStar_Range.mk_range "Prims.fst"
-                                       (Prims.of_int (611))
+                                       (Prims.of_int (613))
                                        (Prims.of_int (19))
-                                       (Prims.of_int (611))
+                                       (Prims.of_int (613))
                                        (Prims.of_int (31)))))
                               (Obj.magic uu___5)
                               (fun uu___6 ->
@@ -372,13 +393,13 @@ let rec (term_to_ast_string :
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (46)) (Prims.of_int (42))
-                                     (Prims.of_int (46)) (Prims.of_int (75)))))
+                                     (Prims.of_int (50)) (Prims.of_int (42))
+                                     (Prims.of_int (50)) (Prims.of_int (75)))))
                             (FStar_Sealed.seal
                                (Obj.magic
                                   (FStar_Range.mk_range "Prims.fst"
-                                     (Prims.of_int (611)) (Prims.of_int (19))
-                                     (Prims.of_int (611)) (Prims.of_int (31)))))
+                                     (Prims.of_int (613)) (Prims.of_int (19))
+                                     (Prims.of_int (613)) (Prims.of_int (31)))))
                             (Obj.magic uu___4)
                             (fun uu___5 ->
                                FStar_Tactics_Effect.lift_div_tac
@@ -391,14 +412,14 @@ let rec (term_to_ast_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (46)) (Prims.of_int (23))
-                                   (Prims.of_int (46)) (Prims.of_int (76)))))
+                                   (Prims.of_int (50)) (Prims.of_int (23))
+                                   (Prims.of_int (50)) (Prims.of_int (76)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (46)) (Prims.of_int (17))
-                                   (Prims.of_int (46)) (Prims.of_int (76)))))
+                                   (Prims.of_int (50)) (Prims.of_int (17))
+                                   (Prims.of_int (50)) (Prims.of_int (76)))))
                           (Obj.magic uu___3)
                           (fun uu___4 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -407,13 +428,13 @@ let rec (term_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (46)) (Prims.of_int (17))
-                                 (Prims.of_int (46)) (Prims.of_int (76)))))
+                                 (Prims.of_int (50)) (Prims.of_int (17))
+                                 (Prims.of_int (50)) (Prims.of_int (76)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___2)
                         (fun uu___3 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -429,14 +450,14 @@ let rec (term_to_ast_string :
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (47)) (Prims.of_int (43))
-                                     (Prims.of_int (47)) (Prims.of_int (64)))))
+                                     (Prims.of_int (51)) (Prims.of_int (43))
+                                     (Prims.of_int (51)) (Prims.of_int (64)))))
                             (FStar_Sealed.seal
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (47)) (Prims.of_int (42))
-                                     (Prims.of_int (47)) (Prims.of_int (95)))))
+                                     (Prims.of_int (51)) (Prims.of_int (42))
+                                     (Prims.of_int (51)) (Prims.of_int (95)))))
                             (Obj.magic uu___5)
                             (fun uu___6 ->
                                (fun uu___6 ->
@@ -447,16 +468,16 @@ let rec (term_to_ast_string :
                                          (Obj.magic
                                             (FStar_Range.mk_range
                                                "FStar.Tactics.Print.fst"
-                                               (Prims.of_int (47))
+                                               (Prims.of_int (51))
                                                (Prims.of_int (74))
-                                               (Prims.of_int (47))
+                                               (Prims.of_int (51))
                                                (Prims.of_int (94)))))
                                       (FStar_Sealed.seal
                                          (Obj.magic
                                             (FStar_Range.mk_range "Prims.fst"
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (19))
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (31)))))
                                       (Obj.magic uu___8)
                                       (fun uu___9 ->
@@ -469,17 +490,17 @@ let rec (term_to_ast_string :
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "FStar.Tactics.Print.fst"
-                                                (Prims.of_int (47))
+                                                (Prims.of_int (51))
                                                 (Prims.of_int (67))
-                                                (Prims.of_int (47))
+                                                (Prims.of_int (51))
                                                 (Prims.of_int (94)))))
                                        (FStar_Sealed.seal
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "Prims.fst"
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (19))
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (31)))))
                                        (Obj.magic uu___7)
                                        (fun uu___8 ->
@@ -492,14 +513,14 @@ let rec (term_to_ast_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (47)) (Prims.of_int (42))
-                                   (Prims.of_int (47)) (Prims.of_int (95)))))
+                                   (Prims.of_int (51)) (Prims.of_int (42))
+                                   (Prims.of_int (51)) (Prims.of_int (95)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (47)) (Prims.of_int (36))
-                                   (Prims.of_int (47)) (Prims.of_int (95)))))
+                                   (Prims.of_int (51)) (Prims.of_int (36))
+                                   (Prims.of_int (51)) (Prims.of_int (95)))))
                           (Obj.magic uu___4)
                           (fun uu___5 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -508,13 +529,13 @@ let rec (term_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (47)) (Prims.of_int (36))
-                                 (Prims.of_int (47)) (Prims.of_int (95)))))
+                                 (Prims.of_int (51)) (Prims.of_int (36))
+                                 (Prims.of_int (51)) (Prims.of_int (95)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___3)
                         (fun uu___4 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -531,14 +552,14 @@ let rec (term_to_ast_string :
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (48)) (Prims.of_int (37))
-                                     (Prims.of_int (48)) (Prims.of_int (55)))))
+                                     (Prims.of_int (52)) (Prims.of_int (37))
+                                     (Prims.of_int (52)) (Prims.of_int (55)))))
                             (FStar_Sealed.seal
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (48)) (Prims.of_int (36))
-                                     (Prims.of_int (48)) (Prims.of_int (86)))))
+                                     (Prims.of_int (52)) (Prims.of_int (36))
+                                     (Prims.of_int (52)) (Prims.of_int (86)))))
                             (Obj.magic uu___4)
                             (fun uu___5 ->
                                (fun uu___5 ->
@@ -549,16 +570,16 @@ let rec (term_to_ast_string :
                                          (Obj.magic
                                             (FStar_Range.mk_range
                                                "FStar.Tactics.Print.fst"
-                                               (Prims.of_int (48))
+                                               (Prims.of_int (52))
                                                (Prims.of_int (65))
-                                               (Prims.of_int (48))
+                                               (Prims.of_int (52))
                                                (Prims.of_int (85)))))
                                       (FStar_Sealed.seal
                                          (Obj.magic
                                             (FStar_Range.mk_range "Prims.fst"
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (19))
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (31)))))
                                       (Obj.magic uu___7)
                                       (fun uu___8 ->
@@ -571,17 +592,17 @@ let rec (term_to_ast_string :
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "FStar.Tactics.Print.fst"
-                                                (Prims.of_int (48))
+                                                (Prims.of_int (52))
                                                 (Prims.of_int (58))
-                                                (Prims.of_int (48))
+                                                (Prims.of_int (52))
                                                 (Prims.of_int (85)))))
                                        (FStar_Sealed.seal
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "Prims.fst"
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (19))
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (31)))))
                                        (Obj.magic uu___6)
                                        (fun uu___7 ->
@@ -594,14 +615,14 @@ let rec (term_to_ast_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (48)) (Prims.of_int (36))
-                                   (Prims.of_int (48)) (Prims.of_int (86)))))
+                                   (Prims.of_int (52)) (Prims.of_int (36))
+                                   (Prims.of_int (52)) (Prims.of_int (86)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (48)) (Prims.of_int (30))
-                                   (Prims.of_int (48)) (Prims.of_int (86)))))
+                                   (Prims.of_int (52)) (Prims.of_int (30))
+                                   (Prims.of_int (52)) (Prims.of_int (86)))))
                           (Obj.magic uu___3)
                           (fun uu___4 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -610,13 +631,13 @@ let rec (term_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (48)) (Prims.of_int (30))
-                                 (Prims.of_int (48)) (Prims.of_int (86)))))
+                                 (Prims.of_int (52)) (Prims.of_int (30))
+                                 (Prims.of_int (52)) (Prims.of_int (86)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___2)
                         (fun uu___3 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -633,14 +654,14 @@ let rec (term_to_ast_string :
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (49)) (Prims.of_int (41))
-                                     (Prims.of_int (49)) (Prims.of_int (59)))))
+                                     (Prims.of_int (53)) (Prims.of_int (41))
+                                     (Prims.of_int (53)) (Prims.of_int (59)))))
                             (FStar_Sealed.seal
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (49)) (Prims.of_int (40))
-                                     (Prims.of_int (49)) (Prims.of_int (90)))))
+                                     (Prims.of_int (53)) (Prims.of_int (40))
+                                     (Prims.of_int (53)) (Prims.of_int (90)))))
                             (Obj.magic uu___4)
                             (fun uu___5 ->
                                (fun uu___5 ->
@@ -651,16 +672,16 @@ let rec (term_to_ast_string :
                                          (Obj.magic
                                             (FStar_Range.mk_range
                                                "FStar.Tactics.Print.fst"
-                                               (Prims.of_int (49))
+                                               (Prims.of_int (53))
                                                (Prims.of_int (69))
-                                               (Prims.of_int (49))
+                                               (Prims.of_int (53))
                                                (Prims.of_int (89)))))
                                       (FStar_Sealed.seal
                                          (Obj.magic
                                             (FStar_Range.mk_range "Prims.fst"
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (19))
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (31)))))
                                       (Obj.magic uu___7)
                                       (fun uu___8 ->
@@ -673,17 +694,17 @@ let rec (term_to_ast_string :
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "FStar.Tactics.Print.fst"
-                                                (Prims.of_int (49))
+                                                (Prims.of_int (53))
                                                 (Prims.of_int (62))
-                                                (Prims.of_int (49))
+                                                (Prims.of_int (53))
                                                 (Prims.of_int (89)))))
                                        (FStar_Sealed.seal
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "Prims.fst"
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (19))
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (31)))))
                                        (Obj.magic uu___6)
                                        (fun uu___7 ->
@@ -696,14 +717,14 @@ let rec (term_to_ast_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (49)) (Prims.of_int (40))
-                                   (Prims.of_int (49)) (Prims.of_int (90)))))
+                                   (Prims.of_int (53)) (Prims.of_int (40))
+                                   (Prims.of_int (53)) (Prims.of_int (90)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (49)) (Prims.of_int (34))
-                                   (Prims.of_int (49)) (Prims.of_int (90)))))
+                                   (Prims.of_int (53)) (Prims.of_int (34))
+                                   (Prims.of_int (53)) (Prims.of_int (90)))))
                           (Obj.magic uu___3)
                           (fun uu___4 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -712,13 +733,13 @@ let rec (term_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (49)) (Prims.of_int (34))
-                                 (Prims.of_int (49)) (Prims.of_int (90)))))
+                                 (Prims.of_int (53)) (Prims.of_int (34))
+                                 (Prims.of_int (53)) (Prims.of_int (90)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___2)
                         (fun uu___3 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -733,14 +754,14 @@ let rec (term_to_ast_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (50)) (Prims.of_int (32))
-                                   (Prims.of_int (50)) (Prims.of_int (58)))))
+                                   (Prims.of_int (54)) (Prims.of_int (32))
+                                   (Prims.of_int (54)) (Prims.of_int (58)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (50)) (Prims.of_int (26))
-                                   (Prims.of_int (50)) (Prims.of_int (58)))))
+                                   (Prims.of_int (54)) (Prims.of_int (26))
+                                   (Prims.of_int (54)) (Prims.of_int (58)))))
                           (Obj.magic uu___3)
                           (fun uu___4 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -749,13 +770,13 @@ let rec (term_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (50)) (Prims.of_int (26))
-                                 (Prims.of_int (50)) (Prims.of_int (58)))))
+                                 (Prims.of_int (54)) (Prims.of_int (26))
+                                 (Prims.of_int (54)) (Prims.of_int (58)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___2)
                         (fun uu___3 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -772,14 +793,14 @@ let rec (term_to_ast_string :
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (51)) (Prims.of_int (43))
-                                     (Prims.of_int (51)) (Prims.of_int (61)))))
+                                     (Prims.of_int (55)) (Prims.of_int (43))
+                                     (Prims.of_int (55)) (Prims.of_int (61)))))
                             (FStar_Sealed.seal
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (51)) (Prims.of_int (42))
-                                     (Prims.of_int (51)) (Prims.of_int (92)))))
+                                     (Prims.of_int (55)) (Prims.of_int (42))
+                                     (Prims.of_int (55)) (Prims.of_int (92)))))
                             (Obj.magic uu___4)
                             (fun uu___5 ->
                                (fun uu___5 ->
@@ -790,16 +811,16 @@ let rec (term_to_ast_string :
                                          (Obj.magic
                                             (FStar_Range.mk_range
                                                "FStar.Tactics.Print.fst"
-                                               (Prims.of_int (51))
+                                               (Prims.of_int (55))
                                                (Prims.of_int (71))
-                                               (Prims.of_int (51))
+                                               (Prims.of_int (55))
                                                (Prims.of_int (91)))))
                                       (FStar_Sealed.seal
                                          (Obj.magic
                                             (FStar_Range.mk_range "Prims.fst"
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (19))
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (31)))))
                                       (Obj.magic uu___7)
                                       (fun uu___8 ->
@@ -812,17 +833,17 @@ let rec (term_to_ast_string :
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "FStar.Tactics.Print.fst"
-                                                (Prims.of_int (51))
+                                                (Prims.of_int (55))
                                                 (Prims.of_int (64))
-                                                (Prims.of_int (51))
+                                                (Prims.of_int (55))
                                                 (Prims.of_int (91)))))
                                        (FStar_Sealed.seal
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "Prims.fst"
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (19))
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (31)))))
                                        (Obj.magic uu___6)
                                        (fun uu___7 ->
@@ -835,14 +856,14 @@ let rec (term_to_ast_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (51)) (Prims.of_int (42))
-                                   (Prims.of_int (51)) (Prims.of_int (92)))))
+                                   (Prims.of_int (55)) (Prims.of_int (42))
+                                   (Prims.of_int (55)) (Prims.of_int (92)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (51)) (Prims.of_int (36))
-                                   (Prims.of_int (51)) (Prims.of_int (92)))))
+                                   (Prims.of_int (55)) (Prims.of_int (36))
+                                   (Prims.of_int (55)) (Prims.of_int (92)))))
                           (Obj.magic uu___3)
                           (fun uu___4 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -851,13 +872,13 @@ let rec (term_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (51)) (Prims.of_int (36))
-                                 (Prims.of_int (51)) (Prims.of_int (92)))))
+                                 (Prims.of_int (55)) (Prims.of_int (36))
+                                 (Prims.of_int (55)) (Prims.of_int (92)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___2)
                         (fun uu___3 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -884,17 +905,17 @@ let rec (term_to_ast_string :
                                    (Obj.magic
                                       (FStar_Range.mk_range
                                          "FStar.Tactics.Print.fst"
-                                         (Prims.of_int (56))
+                                         (Prims.of_int (60))
                                          (Prims.of_int (30))
-                                         (Prims.of_int (56))
+                                         (Prims.of_int (60))
                                          (Prims.of_int (48)))))
                                 (FStar_Sealed.seal
                                    (Obj.magic
                                       (FStar_Range.mk_range
                                          "FStar.Tactics.Print.fst"
-                                         (Prims.of_int (56))
+                                         (Prims.of_int (60))
                                          (Prims.of_int (30))
-                                         (Prims.of_int (58))
+                                         (Prims.of_int (62))
                                          (Prims.of_int (51)))))
                                 (Obj.magic uu___7)
                                 (fun uu___8 ->
@@ -907,17 +928,17 @@ let rec (term_to_ast_string :
                                                (Obj.magic
                                                   (FStar_Range.mk_range
                                                      "FStar.Tactics.Print.fst"
-                                                     (Prims.of_int (57))
+                                                     (Prims.of_int (61))
                                                      (Prims.of_int (30))
-                                                     (Prims.of_int (57))
+                                                     (Prims.of_int (61))
                                                      (Prims.of_int (51)))))
                                             (FStar_Sealed.seal
                                                (Obj.magic
                                                   (FStar_Range.mk_range
                                                      "FStar.Tactics.Print.fst"
-                                                     (Prims.of_int (57))
+                                                     (Prims.of_int (61))
                                                      (Prims.of_int (30))
-                                                     (Prims.of_int (58))
+                                                     (Prims.of_int (62))
                                                      (Prims.of_int (51)))))
                                             (Obj.magic uu___11)
                                             (fun uu___12 ->
@@ -930,17 +951,17 @@ let rec (term_to_ast_string :
                                                          (Obj.magic
                                                             (FStar_Range.mk_range
                                                                "FStar.Tactics.Print.fst"
-                                                               (Prims.of_int (58))
+                                                               (Prims.of_int (62))
                                                                (Prims.of_int (30))
-                                                               (Prims.of_int (58))
+                                                               (Prims.of_int (62))
                                                                (Prims.of_int (51)))))
                                                       (FStar_Sealed.seal
                                                          (Obj.magic
                                                             (FStar_Range.mk_range
                                                                "Prims.fst"
-                                                               (Prims.of_int (611))
+                                                               (Prims.of_int (613))
                                                                (Prims.of_int (19))
-                                                               (Prims.of_int (611))
+                                                               (Prims.of_int (613))
                                                                (Prims.of_int (31)))))
                                                       (Obj.magic uu___14)
                                                       (fun uu___15 ->
@@ -954,17 +975,17 @@ let rec (term_to_ast_string :
                                                           (Obj.magic
                                                              (FStar_Range.mk_range
                                                                 "FStar.Tactics.Print.fst"
-                                                                (Prims.of_int (57))
+                                                                (Prims.of_int (61))
                                                                 (Prims.of_int (54))
-                                                                (Prims.of_int (58))
+                                                                (Prims.of_int (62))
                                                                 (Prims.of_int (51)))))
                                                        (FStar_Sealed.seal
                                                           (Obj.magic
                                                              (FStar_Range.mk_range
                                                                 "Prims.fst"
-                                                                (Prims.of_int (611))
+                                                                (Prims.of_int (613))
                                                                 (Prims.of_int (19))
-                                                                (Prims.of_int (611))
+                                                                (Prims.of_int (613))
                                                                 (Prims.of_int (31)))))
                                                        (Obj.magic uu___13)
                                                        (fun uu___14 ->
@@ -979,17 +1000,17 @@ let rec (term_to_ast_string :
                                              (Obj.magic
                                                 (FStar_Range.mk_range
                                                    "FStar.Tactics.Print.fst"
-                                                   (Prims.of_int (57))
+                                                   (Prims.of_int (61))
                                                    (Prims.of_int (30))
-                                                   (Prims.of_int (58))
+                                                   (Prims.of_int (62))
                                                    (Prims.of_int (51)))))
                                           (FStar_Sealed.seal
                                              (Obj.magic
                                                 (FStar_Range.mk_range
                                                    "Prims.fst"
-                                                   (Prims.of_int (611))
+                                                   (Prims.of_int (613))
                                                    (Prims.of_int (19))
-                                                   (Prims.of_int (611))
+                                                   (Prims.of_int (613))
                                                    (Prims.of_int (31)))))
                                           (Obj.magic uu___10)
                                           (fun uu___11 ->
@@ -1002,17 +1023,17 @@ let rec (term_to_ast_string :
                                               (Obj.magic
                                                  (FStar_Range.mk_range
                                                     "FStar.Tactics.Print.fst"
-                                                    (Prims.of_int (56))
+                                                    (Prims.of_int (60))
                                                     (Prims.of_int (51))
-                                                    (Prims.of_int (58))
+                                                    (Prims.of_int (62))
                                                     (Prims.of_int (51)))))
                                            (FStar_Sealed.seal
                                               (Obj.magic
                                                  (FStar_Range.mk_range
                                                     "Prims.fst"
-                                                    (Prims.of_int (611))
+                                                    (Prims.of_int (613))
                                                     (Prims.of_int (19))
-                                                    (Prims.of_int (611))
+                                                    (Prims.of_int (613))
                                                     (Prims.of_int (31)))))
                                            (Obj.magic uu___9)
                                            (fun uu___10 ->
@@ -1025,16 +1046,16 @@ let rec (term_to_ast_string :
                                  (Obj.magic
                                     (FStar_Range.mk_range
                                        "FStar.Tactics.Print.fst"
-                                       (Prims.of_int (56))
+                                       (Prims.of_int (60))
                                        (Prims.of_int (30))
-                                       (Prims.of_int (58))
+                                       (Prims.of_int (62))
                                        (Prims.of_int (51)))))
                               (FStar_Sealed.seal
                                  (Obj.magic
                                     (FStar_Range.mk_range "Prims.fst"
-                                       (Prims.of_int (611))
+                                       (Prims.of_int (613))
                                        (Prims.of_int (19))
-                                       (Prims.of_int (611))
+                                       (Prims.of_int (613))
                                        (Prims.of_int (31)))))
                               (Obj.magic uu___6)
                               (fun uu___7 ->
@@ -1045,13 +1066,13 @@ let rec (term_to_ast_string :
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (55)) (Prims.of_int (52))
-                                     (Prims.of_int (58)) (Prims.of_int (51)))))
+                                     (Prims.of_int (59)) (Prims.of_int (52))
+                                     (Prims.of_int (62)) (Prims.of_int (51)))))
                             (FStar_Sealed.seal
                                (Obj.magic
                                   (FStar_Range.mk_range "Prims.fst"
-                                     (Prims.of_int (611)) (Prims.of_int (19))
-                                     (Prims.of_int (611)) (Prims.of_int (31)))))
+                                     (Prims.of_int (613)) (Prims.of_int (19))
+                                     (Prims.of_int (613)) (Prims.of_int (31)))))
                             (Obj.magic uu___5)
                             (fun uu___6 ->
                                FStar_Tactics_Effect.lift_div_tac
@@ -1063,14 +1084,14 @@ let rec (term_to_ast_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (55)) (Prims.of_int (29))
-                                   (Prims.of_int (58)) (Prims.of_int (52)))))
+                                   (Prims.of_int (59)) (Prims.of_int (29))
+                                   (Prims.of_int (62)) (Prims.of_int (52)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (55)) (Prims.of_int (23))
-                                   (Prims.of_int (58)) (Prims.of_int (52)))))
+                                   (Prims.of_int (59)) (Prims.of_int (23))
+                                   (Prims.of_int (62)) (Prims.of_int (52)))))
                           (Obj.magic uu___4)
                           (fun uu___5 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -1079,13 +1100,13 @@ let rec (term_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (55)) (Prims.of_int (23))
-                                 (Prims.of_int (58)) (Prims.of_int (52)))))
+                                 (Prims.of_int (59)) (Prims.of_int (23))
+                                 (Prims.of_int (62)) (Prims.of_int (52)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___3)
                         (fun uu___4 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -1101,14 +1122,14 @@ let rec (term_to_ast_string :
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (62)) (Prims.of_int (8))
-                                     (Prims.of_int (62)) (Prims.of_int (28)))))
+                                     (Prims.of_int (66)) (Prims.of_int (8))
+                                     (Prims.of_int (66)) (Prims.of_int (28)))))
                             (FStar_Sealed.seal
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (61)) (Prims.of_int (12))
-                                     (Prims.of_int (66)) (Prims.of_int (35)))))
+                                     (Prims.of_int (65)) (Prims.of_int (12))
+                                     (Prims.of_int (70)) (Prims.of_int (35)))))
                             (Obj.magic uu___4)
                             (fun uu___5 ->
                                (fun uu___5 ->
@@ -1121,17 +1142,17 @@ let rec (term_to_ast_string :
                                            (Obj.magic
                                               (FStar_Range.mk_range
                                                  "FStar.Tactics.Print.fst"
-                                                 (Prims.of_int (64))
+                                                 (Prims.of_int (68))
                                                  (Prims.of_int (8))
-                                                 (Prims.of_int (64))
+                                                 (Prims.of_int (68))
                                                  (Prims.of_int (39)))))
                                         (FStar_Sealed.seal
                                            (Obj.magic
                                               (FStar_Range.mk_range
                                                  "FStar.Tactics.Print.fst"
-                                                 (Prims.of_int (64))
+                                                 (Prims.of_int (68))
                                                  (Prims.of_int (8))
-                                                 (Prims.of_int (66))
+                                                 (Prims.of_int (70))
                                                  (Prims.of_int (34)))))
                                         (Obj.magic uu___8)
                                         (fun uu___9 ->
@@ -1144,17 +1165,17 @@ let rec (term_to_ast_string :
                                                      (Obj.magic
                                                         (FStar_Range.mk_range
                                                            "FStar.Tactics.Print.fst"
-                                                           (Prims.of_int (66))
+                                                           (Prims.of_int (70))
                                                            (Prims.of_int (8))
-                                                           (Prims.of_int (66))
+                                                           (Prims.of_int (70))
                                                            (Prims.of_int (34)))))
                                                   (FStar_Sealed.seal
                                                      (Obj.magic
                                                         (FStar_Range.mk_range
                                                            "Prims.fst"
-                                                           (Prims.of_int (611))
+                                                           (Prims.of_int (613))
                                                            (Prims.of_int (19))
-                                                           (Prims.of_int (611))
+                                                           (Prims.of_int (613))
                                                            (Prims.of_int (31)))))
                                                   (Obj.magic uu___11)
                                                   (fun uu___12 ->
@@ -1168,17 +1189,17 @@ let rec (term_to_ast_string :
                                                       (Obj.magic
                                                          (FStar_Range.mk_range
                                                             "FStar.Tactics.Print.fst"
-                                                            (Prims.of_int (65))
+                                                            (Prims.of_int (69))
                                                             (Prims.of_int (8))
-                                                            (Prims.of_int (66))
+                                                            (Prims.of_int (70))
                                                             (Prims.of_int (34)))))
                                                    (FStar_Sealed.seal
                                                       (Obj.magic
                                                          (FStar_Range.mk_range
                                                             "Prims.fst"
-                                                            (Prims.of_int (611))
+                                                            (Prims.of_int (613))
                                                             (Prims.of_int (19))
-                                                            (Prims.of_int (611))
+                                                            (Prims.of_int (613))
                                                             (Prims.of_int (31)))))
                                                    (Obj.magic uu___10)
                                                    (fun uu___11 ->
@@ -1192,16 +1213,16 @@ let rec (term_to_ast_string :
                                          (Obj.magic
                                             (FStar_Range.mk_range
                                                "FStar.Tactics.Print.fst"
-                                               (Prims.of_int (64))
+                                               (Prims.of_int (68))
                                                (Prims.of_int (8))
-                                               (Prims.of_int (66))
+                                               (Prims.of_int (70))
                                                (Prims.of_int (34)))))
                                       (FStar_Sealed.seal
                                          (Obj.magic
                                             (FStar_Range.mk_range "Prims.fst"
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (19))
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (31)))))
                                       (Obj.magic uu___7)
                                       (fun uu___8 ->
@@ -1214,17 +1235,17 @@ let rec (term_to_ast_string :
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "FStar.Tactics.Print.fst"
-                                                (Prims.of_int (63))
+                                                (Prims.of_int (67))
                                                 (Prims.of_int (8))
-                                                (Prims.of_int (66))
+                                                (Prims.of_int (70))
                                                 (Prims.of_int (34)))))
                                        (FStar_Sealed.seal
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "Prims.fst"
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (19))
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (31)))))
                                        (Obj.magic uu___6)
                                        (fun uu___7 ->
@@ -1237,14 +1258,14 @@ let rec (term_to_ast_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (61)) (Prims.of_int (12))
-                                   (Prims.of_int (66)) (Prims.of_int (35)))))
+                                   (Prims.of_int (65)) (Prims.of_int (12))
+                                   (Prims.of_int (70)) (Prims.of_int (35)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (61)) (Prims.of_int (6))
-                                   (Prims.of_int (66)) (Prims.of_int (35)))))
+                                   (Prims.of_int (65)) (Prims.of_int (6))
+                                   (Prims.of_int (70)) (Prims.of_int (35)))))
                           (Obj.magic uu___3)
                           (fun uu___4 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -1253,13 +1274,13 @@ let rec (term_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (61)) (Prims.of_int (6))
-                                 (Prims.of_int (66)) (Prims.of_int (35)))))
+                                 (Prims.of_int (65)) (Prims.of_int (6))
+                                 (Prims.of_int (70)) (Prims.of_int (35)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___2)
                         (fun uu___3 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -1275,14 +1296,14 @@ let rec (term_to_ast_string :
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (67)) (Prims.of_int (58))
-                                     (Prims.of_int (67)) (Prims.of_int (78)))))
+                                     (Prims.of_int (71)) (Prims.of_int (58))
+                                     (Prims.of_int (71)) (Prims.of_int (78)))))
                             (FStar_Sealed.seal
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (67)) (Prims.of_int (57))
-                                     (Prims.of_int (67)) (Prims.of_int (140)))))
+                                     (Prims.of_int (71)) (Prims.of_int (57))
+                                     (Prims.of_int (71)) (Prims.of_int (140)))))
                             (Obj.magic uu___5)
                             (fun uu___6 ->
                                (fun uu___6 ->
@@ -1294,17 +1315,17 @@ let rec (term_to_ast_string :
                                            (Obj.magic
                                               (FStar_Range.mk_range
                                                  "FStar.Tactics.Print.fst"
-                                                 (Prims.of_int (67))
+                                                 (Prims.of_int (71))
                                                  (Prims.of_int (88))
-                                                 (Prims.of_int (67))
+                                                 (Prims.of_int (71))
                                                  (Prims.of_int (108)))))
                                         (FStar_Sealed.seal
                                            (Obj.magic
                                               (FStar_Range.mk_range
                                                  "Prims.fst"
-                                                 (Prims.of_int (611))
+                                                 (Prims.of_int (613))
                                                  (Prims.of_int (19))
-                                                 (Prims.of_int (611))
+                                                 (Prims.of_int (613))
                                                  (Prims.of_int (31)))))
                                         (Obj.magic uu___9)
                                         (fun uu___10 ->
@@ -1319,16 +1340,16 @@ let rec (term_to_ast_string :
                                          (Obj.magic
                                             (FStar_Range.mk_range
                                                "FStar.Tactics.Print.fst"
-                                               (Prims.of_int (67))
+                                               (Prims.of_int (71))
                                                (Prims.of_int (88))
-                                               (Prims.of_int (67))
+                                               (Prims.of_int (71))
                                                (Prims.of_int (139)))))
                                       (FStar_Sealed.seal
                                          (Obj.magic
                                             (FStar_Range.mk_range "Prims.fst"
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (19))
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (31)))))
                                       (Obj.magic uu___8)
                                       (fun uu___9 ->
@@ -1341,17 +1362,17 @@ let rec (term_to_ast_string :
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "FStar.Tactics.Print.fst"
-                                                (Prims.of_int (67))
+                                                (Prims.of_int (71))
                                                 (Prims.of_int (81))
-                                                (Prims.of_int (67))
+                                                (Prims.of_int (71))
                                                 (Prims.of_int (139)))))
                                        (FStar_Sealed.seal
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "Prims.fst"
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (19))
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (31)))))
                                        (Obj.magic uu___7)
                                        (fun uu___8 ->
@@ -1364,14 +1385,14 @@ let rec (term_to_ast_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (67)) (Prims.of_int (57))
-                                   (Prims.of_int (67)) (Prims.of_int (140)))))
+                                   (Prims.of_int (71)) (Prims.of_int (57))
+                                   (Prims.of_int (71)) (Prims.of_int (140)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (67)) (Prims.of_int (51))
-                                   (Prims.of_int (67)) (Prims.of_int (140)))))
+                                   (Prims.of_int (71)) (Prims.of_int (51))
+                                   (Prims.of_int (71)) (Prims.of_int (140)))))
                           (Obj.magic uu___4)
                           (fun uu___5 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -1380,13 +1401,13 @@ let rec (term_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (67)) (Prims.of_int (51))
-                                 (Prims.of_int (67)) (Prims.of_int (140)))))
+                                 (Prims.of_int (71)) (Prims.of_int (51))
+                                 (Prims.of_int (71)) (Prims.of_int (140)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___3)
                         (fun uu___4 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -1403,14 +1424,14 @@ let rec (term_to_ast_string :
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (68)) (Prims.of_int (58))
-                                     (Prims.of_int (68)) (Prims.of_int (78)))))
+                                     (Prims.of_int (72)) (Prims.of_int (58))
+                                     (Prims.of_int (72)) (Prims.of_int (78)))))
                             (FStar_Sealed.seal
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (68)) (Prims.of_int (57))
-                                     (Prims.of_int (68)) (Prims.of_int (140)))))
+                                     (Prims.of_int (72)) (Prims.of_int (57))
+                                     (Prims.of_int (72)) (Prims.of_int (140)))))
                             (Obj.magic uu___5)
                             (fun uu___6 ->
                                (fun uu___6 ->
@@ -1422,17 +1443,17 @@ let rec (term_to_ast_string :
                                            (Obj.magic
                                               (FStar_Range.mk_range
                                                  "FStar.Tactics.Print.fst"
-                                                 (Prims.of_int (68))
+                                                 (Prims.of_int (72))
                                                  (Prims.of_int (88))
-                                                 (Prims.of_int (68))
+                                                 (Prims.of_int (72))
                                                  (Prims.of_int (108)))))
                                         (FStar_Sealed.seal
                                            (Obj.magic
                                               (FStar_Range.mk_range
                                                  "Prims.fst"
-                                                 (Prims.of_int (611))
+                                                 (Prims.of_int (613))
                                                  (Prims.of_int (19))
-                                                 (Prims.of_int (611))
+                                                 (Prims.of_int (613))
                                                  (Prims.of_int (31)))))
                                         (Obj.magic uu___9)
                                         (fun uu___10 ->
@@ -1447,16 +1468,16 @@ let rec (term_to_ast_string :
                                          (Obj.magic
                                             (FStar_Range.mk_range
                                                "FStar.Tactics.Print.fst"
-                                               (Prims.of_int (68))
+                                               (Prims.of_int (72))
                                                (Prims.of_int (88))
-                                               (Prims.of_int (68))
+                                               (Prims.of_int (72))
                                                (Prims.of_int (139)))))
                                       (FStar_Sealed.seal
                                          (Obj.magic
                                             (FStar_Range.mk_range "Prims.fst"
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (19))
-                                               (Prims.of_int (611))
+                                               (Prims.of_int (613))
                                                (Prims.of_int (31)))))
                                       (Obj.magic uu___8)
                                       (fun uu___9 ->
@@ -1469,17 +1490,17 @@ let rec (term_to_ast_string :
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "FStar.Tactics.Print.fst"
-                                                (Prims.of_int (68))
+                                                (Prims.of_int (72))
                                                 (Prims.of_int (81))
-                                                (Prims.of_int (68))
+                                                (Prims.of_int (72))
                                                 (Prims.of_int (139)))))
                                        (FStar_Sealed.seal
                                           (Obj.magic
                                              (FStar_Range.mk_range
                                                 "Prims.fst"
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (19))
-                                                (Prims.of_int (611))
+                                                (Prims.of_int (613))
                                                 (Prims.of_int (31)))))
                                        (Obj.magic uu___7)
                                        (fun uu___8 ->
@@ -1492,14 +1513,14 @@ let rec (term_to_ast_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (68)) (Prims.of_int (57))
-                                   (Prims.of_int (68)) (Prims.of_int (140)))))
+                                   (Prims.of_int (72)) (Prims.of_int (57))
+                                   (Prims.of_int (72)) (Prims.of_int (140)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (68)) (Prims.of_int (51))
-                                   (Prims.of_int (68)) (Prims.of_int (140)))))
+                                   (Prims.of_int (72)) (Prims.of_int (51))
+                                   (Prims.of_int (72)) (Prims.of_int (140)))))
                           (Obj.magic uu___4)
                           (fun uu___5 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -1508,13 +1529,13 @@ let rec (term_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (68)) (Prims.of_int (51))
-                                 (Prims.of_int (68)) (Prims.of_int (140)))))
+                                 (Prims.of_int (72)) (Prims.of_int (51))
+                                 (Prims.of_int (72)) (Prims.of_int (140)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___3)
                         (fun uu___4 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -1557,16 +1578,16 @@ and (match_returns_to_string :
                                     (Obj.magic
                                        (FStar_Range.mk_range
                                           "FStar.Tactics.Print.fst"
-                                          (Prims.of_int (76))
+                                          (Prims.of_int (80))
                                           (Prims.of_int (27))
-                                          (Prims.of_int (76))
+                                          (Prims.of_int (80))
                                           (Prims.of_int (51)))))
                                  (FStar_Sealed.seal
                                     (Obj.magic
                                        (FStar_Range.mk_range "Prims.fst"
-                                          (Prims.of_int (611))
+                                          (Prims.of_int (613))
                                           (Prims.of_int (19))
-                                          (Prims.of_int (611))
+                                          (Prims.of_int (613))
                                           (Prims.of_int (31)))))
                                  (Obj.magic uu___2)
                                  (fun uu___3 ->
@@ -1578,12 +1599,12 @@ and (match_returns_to_string :
       (FStar_Sealed.seal
          (Obj.magic
             (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-               (Prims.of_int (74)) (Prims.of_int (4)) (Prims.of_int (76))
+               (Prims.of_int (78)) (Prims.of_int (4)) (Prims.of_int (80))
                (Prims.of_int (51)))))
       (FStar_Sealed.seal
          (Obj.magic
             (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-               (Prims.of_int (77)) (Prims.of_int (2)) (Prims.of_int (84))
+               (Prims.of_int (81)) (Prims.of_int (2)) (Prims.of_int (88))
                (Prims.of_int (78))))) (Obj.magic uu___)
       (fun uu___1 ->
          (fun tacopt_to_string ->
@@ -1603,13 +1624,13 @@ and (match_returns_to_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (80)) (Prims.of_int (5))
-                                   (Prims.of_int (80)) (Prims.of_int (23)))))
+                                   (Prims.of_int (84)) (Prims.of_int (5))
+                                   (Prims.of_int (84)) (Prims.of_int (23)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range "Prims.fst"
-                                   (Prims.of_int (611)) (Prims.of_int (19))
-                                   (Prims.of_int (611)) (Prims.of_int (31)))))
+                                   (Prims.of_int (613)) (Prims.of_int (19))
+                                   (Prims.of_int (613)) (Prims.of_int (31)))))
                           (Obj.magic uu___2)
                           (fun uu___3 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -1618,13 +1639,13 @@ and (match_returns_to_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (80)) (Prims.of_int (4))
-                                 (Prims.of_int (80)) (Prims.of_int (30)))))
+                                 (Prims.of_int (84)) (Prims.of_int (4))
+                                 (Prims.of_int (84)) (Prims.of_int (30)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (80)) (Prims.of_int (4))
-                                 (Prims.of_int (84)) (Prims.of_int (78)))))
+                                 (Prims.of_int (84)) (Prims.of_int (4))
+                                 (Prims.of_int (88)) (Prims.of_int (78)))))
                         (Obj.magic uu___1)
                         (fun uu___2 ->
                            (fun uu___2 ->
@@ -1638,17 +1659,17 @@ and (match_returns_to_string :
                                          (Obj.magic
                                             (FStar_Range.mk_range
                                                "FStar.Tactics.Print.fst"
-                                               (Prims.of_int (83))
+                                               (Prims.of_int (87))
                                                (Prims.of_int (27))
-                                               (Prims.of_int (83))
+                                               (Prims.of_int (87))
                                                (Prims.of_int (49)))))
                                       (FStar_Sealed.seal
                                          (Obj.magic
                                             (FStar_Range.mk_range
                                                "FStar.Tactics.Print.fst"
-                                               (Prims.of_int (83))
+                                               (Prims.of_int (87))
                                                (Prims.of_int (27))
-                                               (Prims.of_int (83))
+                                               (Prims.of_int (87))
                                                (Prims.of_int (77)))))
                                       (Obj.magic uu___5)
                                       (fun uu___6 ->
@@ -1661,17 +1682,17 @@ and (match_returns_to_string :
                                                     (Obj.magic
                                                        (FStar_Range.mk_range
                                                           "FStar.Tactics.Print.fst"
-                                                          (Prims.of_int (83))
+                                                          (Prims.of_int (87))
                                                           (Prims.of_int (52))
-                                                          (Prims.of_int (83))
+                                                          (Prims.of_int (87))
                                                           (Prims.of_int (77)))))
                                                  (FStar_Sealed.seal
                                                     (Obj.magic
                                                        (FStar_Range.mk_range
                                                           "Prims.fst"
-                                                          (Prims.of_int (611))
+                                                          (Prims.of_int (613))
                                                           (Prims.of_int (19))
-                                                          (Prims.of_int (611))
+                                                          (Prims.of_int (613))
                                                           (Prims.of_int (31)))))
                                                  (Obj.magic uu___7)
                                                  (fun uu___8 ->
@@ -1687,17 +1708,17 @@ and (match_returns_to_string :
                                          (Obj.magic
                                             (FStar_Range.mk_range
                                                "FStar.Tactics.Print.fst"
-                                               (Prims.of_int (84))
+                                               (Prims.of_int (88))
                                                (Prims.of_int (27))
-                                               (Prims.of_int (84))
+                                               (Prims.of_int (88))
                                                (Prims.of_int (49)))))
                                       (FStar_Sealed.seal
                                          (Obj.magic
                                             (FStar_Range.mk_range
                                                "FStar.Tactics.Print.fst"
-                                               (Prims.of_int (84))
+                                               (Prims.of_int (88))
                                                (Prims.of_int (27))
-                                               (Prims.of_int (84))
+                                               (Prims.of_int (88))
                                                (Prims.of_int (77)))))
                                       (Obj.magic uu___5)
                                       (fun uu___6 ->
@@ -1710,17 +1731,17 @@ and (match_returns_to_string :
                                                     (Obj.magic
                                                        (FStar_Range.mk_range
                                                           "FStar.Tactics.Print.fst"
-                                                          (Prims.of_int (84))
+                                                          (Prims.of_int (88))
                                                           (Prims.of_int (52))
-                                                          (Prims.of_int (84))
+                                                          (Prims.of_int (88))
                                                           (Prims.of_int (77)))))
                                                  (FStar_Sealed.seal
                                                     (Obj.magic
                                                        (FStar_Range.mk_range
                                                           "Prims.fst"
-                                                          (Prims.of_int (611))
+                                                          (Prims.of_int (613))
                                                           (Prims.of_int (19))
-                                                          (Prims.of_int (611))
+                                                          (Prims.of_int (613))
                                                           (Prims.of_int (31)))))
                                                  (Obj.magic uu___7)
                                                  (fun uu___8 ->
@@ -1734,16 +1755,16 @@ and (match_returns_to_string :
                                       (Obj.magic
                                          (FStar_Range.mk_range
                                             "FStar.Tactics.Print.fst"
-                                            (Prims.of_int (82))
+                                            (Prims.of_int (86))
                                             (Prims.of_int (4))
-                                            (Prims.of_int (84))
+                                            (Prims.of_int (88))
                                             (Prims.of_int (78)))))
                                    (FStar_Sealed.seal
                                       (Obj.magic
                                          (FStar_Range.mk_range "Prims.fst"
-                                            (Prims.of_int (611))
+                                            (Prims.of_int (613))
                                             (Prims.of_int (19))
-                                            (Prims.of_int (611))
+                                            (Prims.of_int (613))
                                             (Prims.of_int (31)))))
                                    (Obj.magic uu___3)
                                    (fun uu___4 ->
@@ -1766,12 +1787,12 @@ and (branch_to_ast_string :
       (FStar_Sealed.seal
          (Obj.magic
             (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-               (Prims.of_int (90)) (Prims.of_int (13)) (Prims.of_int (90))
+               (Prims.of_int (94)) (Prims.of_int (13)) (Prims.of_int (94))
                (Prims.of_int (14)))))
       (FStar_Sealed.seal
          (Obj.magic
             (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-               (Prims.of_int (89)) (Prims.of_int (50)) (Prims.of_int (91))
+               (Prims.of_int (93)) (Prims.of_int (50)) (Prims.of_int (95))
                (Prims.of_int (41))))) (Obj.magic uu___)
       (fun uu___1 ->
          (fun uu___1 ->
@@ -1783,13 +1804,13 @@ and (branch_to_ast_string :
                     (FStar_Sealed.seal
                        (Obj.magic
                           (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                             (Prims.of_int (91)) (Prims.of_int (20))
-                             (Prims.of_int (91)) (Prims.of_int (40)))))
+                             (Prims.of_int (95)) (Prims.of_int (20))
+                             (Prims.of_int (95)) (Prims.of_int (40)))))
                     (FStar_Sealed.seal
                        (Obj.magic
                           (FStar_Range.mk_range "Prims.fst"
-                             (Prims.of_int (611)) (Prims.of_int (19))
-                             (Prims.of_int (611)) (Prims.of_int (31)))))
+                             (Prims.of_int (613)) (Prims.of_int (19))
+                             (Prims.of_int (613)) (Prims.of_int (31)))))
                     (Obj.magic uu___3)
                     (fun uu___4 ->
                        FStar_Tactics_Effect.lift_div_tac
@@ -1799,13 +1820,13 @@ and (branch_to_ast_string :
                      (FStar_Sealed.seal
                         (Obj.magic
                            (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                              (Prims.of_int (91)) (Prims.of_int (8))
-                              (Prims.of_int (91)) (Prims.of_int (41)))))
+                              (Prims.of_int (95)) (Prims.of_int (8))
+                              (Prims.of_int (95)) (Prims.of_int (41)))))
                      (FStar_Sealed.seal
                         (Obj.magic
                            (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                              (Prims.of_int (91)) (Prims.of_int (2))
-                              (Prims.of_int (91)) (Prims.of_int (41)))))
+                              (Prims.of_int (95)) (Prims.of_int (2))
+                              (Prims.of_int (95)) (Prims.of_int (41)))))
                      (Obj.magic uu___2)
                      (fun uu___3 ->
                         FStar_Tactics_Effect.lift_div_tac
@@ -1822,12 +1843,12 @@ and (comp_to_ast_string :
           (FStar_Sealed.seal
              (Obj.magic
                 (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                   (Prims.of_int (95)) (Prims.of_int (26))
-                   (Prims.of_int (95)) (Prims.of_int (46)))))
+                   (Prims.of_int (99)) (Prims.of_int (26))
+                   (Prims.of_int (99)) (Prims.of_int (46)))))
           (FStar_Sealed.seal
              (Obj.magic
-                (FStar_Range.mk_range "Prims.fst" (Prims.of_int (611))
-                   (Prims.of_int (19)) (Prims.of_int (611))
+                (FStar_Range.mk_range "Prims.fst" (Prims.of_int (613))
+                   (Prims.of_int (19)) (Prims.of_int (613))
                    (Prims.of_int (31))))) (Obj.magic uu___)
           (fun uu___1 ->
              FStar_Tactics_Effect.lift_div_tac
@@ -1838,12 +1859,12 @@ and (comp_to_ast_string :
           (FStar_Sealed.seal
              (Obj.magic
                 (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                   (Prims.of_int (96)) (Prims.of_int (28))
-                   (Prims.of_int (96)) (Prims.of_int (48)))))
+                   (Prims.of_int (100)) (Prims.of_int (28))
+                   (Prims.of_int (100)) (Prims.of_int (48)))))
           (FStar_Sealed.seal
              (Obj.magic
-                (FStar_Range.mk_range "Prims.fst" (Prims.of_int (611))
-                   (Prims.of_int (19)) (Prims.of_int (611))
+                (FStar_Range.mk_range "Prims.fst" (Prims.of_int (613))
+                   (Prims.of_int (19)) (Prims.of_int (613))
                    (Prims.of_int (31))))) (Obj.magic uu___)
           (fun uu___1 ->
              FStar_Tactics_Effect.lift_div_tac
@@ -1855,13 +1876,13 @@ and (comp_to_ast_string :
             (FStar_Sealed.seal
                (Obj.magic
                   (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                     (Prims.of_int (97)) (Prims.of_int (37))
-                     (Prims.of_int (97)) (Prims.of_int (59)))))
+                     (Prims.of_int (101)) (Prims.of_int (37))
+                     (Prims.of_int (101)) (Prims.of_int (59)))))
             (FStar_Sealed.seal
                (Obj.magic
                   (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                     (Prims.of_int (97)) (Prims.of_int (37))
-                     (Prims.of_int (97)) (Prims.of_int (91)))))
+                     (Prims.of_int (101)) (Prims.of_int (37))
+                     (Prims.of_int (101)) (Prims.of_int (91)))))
             (Obj.magic uu___2)
             (fun uu___3 ->
                (fun uu___3 ->
@@ -1871,13 +1892,13 @@ and (comp_to_ast_string :
                       (FStar_Sealed.seal
                          (Obj.magic
                             (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                               (Prims.of_int (97)) (Prims.of_int (68))
-                               (Prims.of_int (97)) (Prims.of_int (91)))))
+                               (Prims.of_int (101)) (Prims.of_int (68))
+                               (Prims.of_int (101)) (Prims.of_int (91)))))
                       (FStar_Sealed.seal
                          (Obj.magic
                             (FStar_Range.mk_range "Prims.fst"
-                               (Prims.of_int (611)) (Prims.of_int (19))
-                               (Prims.of_int (611)) (Prims.of_int (31)))))
+                               (Prims.of_int (613)) (Prims.of_int (19))
+                               (Prims.of_int (613)) (Prims.of_int (31)))))
                       (Obj.magic uu___5)
                       (fun uu___6 ->
                          FStar_Tactics_Effect.lift_div_tac
@@ -1887,13 +1908,13 @@ and (comp_to_ast_string :
                        (FStar_Sealed.seal
                           (Obj.magic
                              (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                (Prims.of_int (97)) (Prims.of_int (62))
-                                (Prims.of_int (97)) (Prims.of_int (91)))))
+                                (Prims.of_int (101)) (Prims.of_int (62))
+                                (Prims.of_int (101)) (Prims.of_int (91)))))
                        (FStar_Sealed.seal
                           (Obj.magic
                              (FStar_Range.mk_range "Prims.fst"
-                                (Prims.of_int (611)) (Prims.of_int (19))
-                                (Prims.of_int (611)) (Prims.of_int (31)))))
+                                (Prims.of_int (613)) (Prims.of_int (19))
+                                (Prims.of_int (613)) (Prims.of_int (31)))))
                        (Obj.magic uu___4)
                        (fun uu___5 ->
                           FStar_Tactics_Effect.lift_div_tac
@@ -1903,12 +1924,12 @@ and (comp_to_ast_string :
           (FStar_Sealed.seal
              (Obj.magic
                 (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                   (Prims.of_int (97)) (Prims.of_int (37))
-                   (Prims.of_int (97)) (Prims.of_int (91)))))
+                   (Prims.of_int (101)) (Prims.of_int (37))
+                   (Prims.of_int (101)) (Prims.of_int (91)))))
           (FStar_Sealed.seal
              (Obj.magic
-                (FStar_Range.mk_range "Prims.fst" (Prims.of_int (611))
-                   (Prims.of_int (19)) (Prims.of_int (611))
+                (FStar_Range.mk_range "Prims.fst" (Prims.of_int (613))
+                   (Prims.of_int (19)) (Prims.of_int (613))
                    (Prims.of_int (31))))) (Obj.magic uu___1)
           (fun uu___2 ->
              FStar_Tactics_Effect.lift_div_tac
@@ -1921,13 +1942,13 @@ and (comp_to_ast_string :
               (FStar_Sealed.seal
                  (Obj.magic
                     (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                       (Prims.of_int (99)) (Prims.of_int (21))
-                       (Prims.of_int (99)) (Prims.of_int (47)))))
+                       (Prims.of_int (103)) (Prims.of_int (21))
+                       (Prims.of_int (103)) (Prims.of_int (47)))))
               (FStar_Sealed.seal
                  (Obj.magic
                     (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                       (Prims.of_int (99)) (Prims.of_int (21))
-                       (Prims.of_int (99)) (Prims.of_int (111)))))
+                       (Prims.of_int (103)) (Prims.of_int (21))
+                       (Prims.of_int (103)) (Prims.of_int (111)))))
               (Obj.magic uu___4)
               (fun uu___5 ->
                  (fun uu___5 ->
@@ -1941,16 +1962,16 @@ and (comp_to_ast_string :
                                  (Obj.magic
                                     (FStar_Range.mk_range
                                        "FStar.Tactics.Print.fst"
-                                       (Prims.of_int (99))
+                                       (Prims.of_int (103))
                                        (Prims.of_int (88))
-                                       (Prims.of_int (99))
+                                       (Prims.of_int (103))
                                        (Prims.of_int (110)))))
                               (FStar_Sealed.seal
                                  (Obj.magic
                                     (FStar_Range.mk_range "Prims.fst"
-                                       (Prims.of_int (611))
+                                       (Prims.of_int (613))
                                        (Prims.of_int (19))
-                                       (Prims.of_int (611))
+                                       (Prims.of_int (613))
                                        (Prims.of_int (31)))))
                               (Obj.magic uu___10)
                               (fun uu___11 ->
@@ -1961,13 +1982,14 @@ and (comp_to_ast_string :
                                (Obj.magic
                                   (FStar_Range.mk_range
                                      "FStar.Tactics.Print.fst"
-                                     (Prims.of_int (99)) (Prims.of_int (81))
-                                     (Prims.of_int (99)) (Prims.of_int (110)))))
+                                     (Prims.of_int (103)) (Prims.of_int (81))
+                                     (Prims.of_int (103))
+                                     (Prims.of_int (110)))))
                             (FStar_Sealed.seal
                                (Obj.magic
                                   (FStar_Range.mk_range "Prims.fst"
-                                     (Prims.of_int (611)) (Prims.of_int (19))
-                                     (Prims.of_int (611)) (Prims.of_int (31)))))
+                                     (Prims.of_int (613)) (Prims.of_int (19))
+                                     (Prims.of_int (613)) (Prims.of_int (31)))))
                             (Obj.magic uu___9)
                             (fun uu___10 ->
                                FStar_Tactics_Effect.lift_div_tac
@@ -1980,14 +2002,14 @@ and (comp_to_ast_string :
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (99)) (Prims.of_int (63))
-                                   (Prims.of_int (99)) (Prims.of_int (111)))))
+                                   (Prims.of_int (103)) (Prims.of_int (63))
+                                   (Prims.of_int (103)) (Prims.of_int (111)))))
                           (FStar_Sealed.seal
                              (Obj.magic
                                 (FStar_Range.mk_range
                                    "FStar.Tactics.Print.fst"
-                                   (Prims.of_int (99)) (Prims.of_int (57))
-                                   (Prims.of_int (99)) (Prims.of_int (111)))))
+                                   (Prims.of_int (103)) (Prims.of_int (57))
+                                   (Prims.of_int (103)) (Prims.of_int (111)))))
                           (Obj.magic uu___8)
                           (fun uu___9 ->
                              FStar_Tactics_Effect.lift_div_tac
@@ -1996,13 +2018,13 @@ and (comp_to_ast_string :
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                                 (Prims.of_int (99)) (Prims.of_int (57))
-                                 (Prims.of_int (99)) (Prims.of_int (111)))))
+                                 (Prims.of_int (103)) (Prims.of_int (57))
+                                 (Prims.of_int (103)) (Prims.of_int (111)))))
                         (FStar_Sealed.seal
                            (Obj.magic
                               (FStar_Range.mk_range "Prims.fst"
-                                 (Prims.of_int (611)) (Prims.of_int (19))
-                                 (Prims.of_int (611)) (Prims.of_int (31)))))
+                                 (Prims.of_int (613)) (Prims.of_int (19))
+                                 (Prims.of_int (613)) (Prims.of_int (31)))))
                         (Obj.magic uu___7)
                         (fun uu___8 ->
                            FStar_Tactics_Effect.lift_div_tac
@@ -2013,13 +2035,13 @@ and (comp_to_ast_string :
                             (Obj.magic
                                (FStar_Range.mk_range
                                   "FStar.Tactics.Print.fst"
-                                  (Prims.of_int (99)) (Prims.of_int (50))
-                                  (Prims.of_int (99)) (Prims.of_int (111)))))
+                                  (Prims.of_int (103)) (Prims.of_int (50))
+                                  (Prims.of_int (103)) (Prims.of_int (111)))))
                          (FStar_Sealed.seal
                             (Obj.magic
                                (FStar_Range.mk_range "Prims.fst"
-                                  (Prims.of_int (611)) (Prims.of_int (19))
-                                  (Prims.of_int (611)) (Prims.of_int (31)))))
+                                  (Prims.of_int (613)) (Prims.of_int (19))
+                                  (Prims.of_int (613)) (Prims.of_int (31)))))
                          (Obj.magic uu___6)
                          (fun uu___7 ->
                             FStar_Tactics_Effect.lift_div_tac
@@ -2029,12 +2051,12 @@ and (comp_to_ast_string :
             (FStar_Sealed.seal
                (Obj.magic
                   (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                     (Prims.of_int (99)) (Prims.of_int (21))
-                     (Prims.of_int (99)) (Prims.of_int (111)))))
+                     (Prims.of_int (103)) (Prims.of_int (21))
+                     (Prims.of_int (103)) (Prims.of_int (111)))))
             (FStar_Sealed.seal
                (Obj.magic
-                  (FStar_Range.mk_range "Prims.fst" (Prims.of_int (611))
-                     (Prims.of_int (19)) (Prims.of_int (611))
+                  (FStar_Range.mk_range "Prims.fst" (Prims.of_int (613))
+                     (Prims.of_int (19)) (Prims.of_int (613))
                      (Prims.of_int (31))))) (Obj.magic uu___3)
             (fun uu___4 ->
                FStar_Tactics_Effect.lift_div_tac
@@ -2043,12 +2065,12 @@ and (comp_to_ast_string :
           (FStar_Sealed.seal
              (Obj.magic
                 (FStar_Range.mk_range "FStar.Tactics.Print.fst"
-                   (Prims.of_int (99)) (Prims.of_int (15))
-                   (Prims.of_int (99)) (Prims.of_int (111)))))
+                   (Prims.of_int (103)) (Prims.of_int (15))
+                   (Prims.of_int (103)) (Prims.of_int (111)))))
           (FStar_Sealed.seal
              (Obj.magic
-                (FStar_Range.mk_range "Prims.fst" (Prims.of_int (611))
-                   (Prims.of_int (19)) (Prims.of_int (611))
+                (FStar_Range.mk_range "Prims.fst" (Prims.of_int (613))
+                   (Prims.of_int (19)) (Prims.of_int (613))
                    (Prims.of_int (31))))) (Obj.magic uu___2)
           (fun uu___3 ->
              FStar_Tactics_Effect.lift_div_tac

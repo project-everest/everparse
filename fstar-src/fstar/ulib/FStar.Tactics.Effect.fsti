@@ -175,7 +175,7 @@ let lift_div_tac_wp (#a:Type) (wp:pure_wp a) : tac_wp_t a =
   elim_pure_wp_monotonicity wp;  
   fun ps p -> wp (fun x -> p (Success x ps))
 
-let lift_div_tac (a:Type) (wp:pure_wp a) (f:eqtype_as_type unit -> DIV a wp)
+let lift_div_tac (a:Type) (wp:pure_wp a) (f:unit -> DIV a wp)
   : tac_repr a (lift_div_tac_wp wp)
   = elim_pure_wp_monotonicity wp;
     fun ps -> Success (f ()) ps
@@ -247,6 +247,11 @@ val postprocess_with (tau : unit -> Tac unit) : Tot unit
  * runs before extraction, and hence typechecking and the logical
  * environment should not be affected at all. *)
 val postprocess_for_extraction_with (tau : unit -> Tac unit) : Tot unit
+
+(* When using [postprocess_with] or [postprocess_for_extraction_with]
+ * this flag indicates that the type of the definition should also be
+ * processed with the same tactic. *)
+val postprocess_type : unit
 
 #set-options "--no_tactics"
 

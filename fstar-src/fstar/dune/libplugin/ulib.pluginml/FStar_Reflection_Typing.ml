@@ -1171,22 +1171,30 @@ and ('dummyV0, 'dummyV1) univ_leq =
   Fstarcompiler.FStarC_Reflection_Types.universe * (unit, unit) univ_leq 
   | UNLEQ_Max of Fstarcompiler.FStarC_Reflection_Types.universe *
   Fstarcompiler.FStarC_Reflection_Types.universe 
-let uu___is_UN_Refl uu___1 uu___ uu___2 =
-  match uu___2 with | UN_Refl _ -> true | _ -> false
-let uu___is_UN_MaxCongL uu___1 uu___ uu___2 =
-  match uu___2 with | UN_MaxCongL _ -> true | _ -> false
-let uu___is_UN_MaxCongR uu___1 uu___ uu___2 =
-  match uu___2 with | UN_MaxCongR _ -> true | _ -> false
-let uu___is_UN_MaxComm uu___1 uu___ uu___2 =
-  match uu___2 with | UN_MaxComm _ -> true | _ -> false
-let uu___is_UN_MaxLeq uu___1 uu___ uu___2 =
-  match uu___2 with | UN_MaxLeq _ -> true | _ -> false
-let uu___is_UNLEQ_Refl uu___1 uu___ uu___2 =
-  match uu___2 with | UNLEQ_Refl _ -> true | _ -> false
-let uu___is_UNLEQ_Succ uu___1 uu___ uu___2 =
-  match uu___2 with | UNLEQ_Succ _ -> true | _ -> false
-let uu___is_UNLEQ_Max uu___1 uu___ uu___2 =
-  match uu___2 with | UNLEQ_Max _ -> true | _ -> false
+let uu___is_UN_Refl uu___1 =
+  fun uu___ ->
+    fun uu___2 -> match uu___2 with | UN_Refl _ -> true | _ -> false
+let uu___is_UN_MaxCongL uu___1 =
+  fun uu___ ->
+    fun uu___2 -> match uu___2 with | UN_MaxCongL _ -> true | _ -> false
+let uu___is_UN_MaxCongR uu___1 =
+  fun uu___ ->
+    fun uu___2 -> match uu___2 with | UN_MaxCongR _ -> true | _ -> false
+let uu___is_UN_MaxComm uu___1 =
+  fun uu___ ->
+    fun uu___2 -> match uu___2 with | UN_MaxComm _ -> true | _ -> false
+let uu___is_UN_MaxLeq uu___1 =
+  fun uu___ ->
+    fun uu___2 -> match uu___2 with | UN_MaxLeq _ -> true | _ -> false
+let uu___is_UNLEQ_Refl uu___1 =
+  fun uu___ ->
+    fun uu___2 -> match uu___2 with | UNLEQ_Refl _ -> true | _ -> false
+let uu___is_UNLEQ_Succ uu___1 =
+  fun uu___ ->
+    fun uu___2 -> match uu___2 with | UNLEQ_Succ _ -> true | _ -> false
+let uu___is_UNLEQ_Max uu___1 =
+  fun uu___ ->
+    fun uu___2 -> match uu___2 with | UNLEQ_Max _ -> true | _ -> false
 let (mk_if :
   Fstarcompiler.FStarC_Reflection_Types.term ->
     Fstarcompiler.FStarC_Reflection_Types.term ->
@@ -1380,20 +1388,34 @@ type ('dummyV0, 'dummyV1) non_informative =
   Fstarcompiler.FStarC_Reflection_Types.term 
   | Non_informative_token of Fstarcompiler.FStarC_Reflection_Types.env *
   Fstarcompiler.FStarC_Reflection_Types.typ * unit 
-let uu___is_Non_informative_type uu___1 uu___ uu___2 =
-  match uu___2 with | Non_informative_type _ -> true | _ -> false
-let uu___is_Non_informative_fv uu___1 uu___ uu___2 =
-  match uu___2 with | Non_informative_fv _ -> true | _ -> false
-let uu___is_Non_informative_uinst uu___1 uu___ uu___2 =
-  match uu___2 with | Non_informative_uinst _ -> true | _ -> false
-let uu___is_Non_informative_app uu___1 uu___ uu___2 =
-  match uu___2 with | Non_informative_app _ -> true | _ -> false
-let uu___is_Non_informative_total_arrow uu___1 uu___ uu___2 =
-  match uu___2 with | Non_informative_total_arrow _ -> true | _ -> false
-let uu___is_Non_informative_ghost_arrow uu___1 uu___ uu___2 =
-  match uu___2 with | Non_informative_ghost_arrow _ -> true | _ -> false
-let uu___is_Non_informative_token uu___1 uu___ uu___2 =
-  match uu___2 with | Non_informative_token _ -> true | _ -> false
+let uu___is_Non_informative_type uu___1 =
+  fun uu___ ->
+    fun uu___2 ->
+      match uu___2 with | Non_informative_type _ -> true | _ -> false
+let uu___is_Non_informative_fv uu___1 =
+  fun uu___ ->
+    fun uu___2 ->
+      match uu___2 with | Non_informative_fv _ -> true | _ -> false
+let uu___is_Non_informative_uinst uu___1 =
+  fun uu___ ->
+    fun uu___2 ->
+      match uu___2 with | Non_informative_uinst _ -> true | _ -> false
+let uu___is_Non_informative_app uu___1 =
+  fun uu___ ->
+    fun uu___2 ->
+      match uu___2 with | Non_informative_app _ -> true | _ -> false
+let uu___is_Non_informative_total_arrow uu___1 =
+  fun uu___ ->
+    fun uu___2 ->
+      match uu___2 with | Non_informative_total_arrow _ -> true | _ -> false
+let uu___is_Non_informative_ghost_arrow uu___1 =
+  fun uu___ ->
+    fun uu___2 ->
+      match uu___2 with | Non_informative_ghost_arrow _ -> true | _ -> false
+let uu___is_Non_informative_token uu___1 =
+  fun uu___ ->
+    fun uu___2 ->
+      match uu___2 with | Non_informative_token _ -> true | _ -> false
 type ('bnds, 'pat, 'uuuuu) bindings_ok_for_pat = Obj.t
 type ('g, 'bs, 'br) bindings_ok_for_branch = Obj.t
 type ('g, 'bss, 'brs) bindings_ok_for_branch_N = Obj.t
@@ -1639,70 +1661,166 @@ and ('dummyV0, 'dummyV1, 'dummyV2, 'dummyV3, 'dummyV4) match_is_complete =
   Fstarcompiler.FStarC_Reflection_V2_Data.pattern Prims.list *
   Fstarcompiler.FStarC_Reflection_V2_Data.binding Prims.list Prims.list *
   unit 
-let uu___is_T_Token uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_Token _ -> true | _ -> false
-let uu___is_T_Var uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_Var _ -> true | _ -> false
-let uu___is_T_FVar uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_FVar _ -> true | _ -> false
-let uu___is_T_UInst uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_UInst _ -> true | _ -> false
-let uu___is_T_Const uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_Const _ -> true | _ -> false
-let uu___is_T_Abs uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_Abs _ -> true | _ -> false
-let uu___is_T_App uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_App _ -> true | _ -> false
-let uu___is_T_Let uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_Let _ -> true | _ -> false
-let uu___is_T_Arrow uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_Arrow _ -> true | _ -> false
-let uu___is_T_Refine uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_Refine _ -> true | _ -> false
-let uu___is_T_PropIrrelevance uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_PropIrrelevance _ -> true | _ -> false
-let uu___is_T_Sub uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_Sub _ -> true | _ -> false
-let uu___is_T_If uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_If _ -> true | _ -> false
-let uu___is_T_Match uu___2 uu___1 uu___ uu___3 =
-  match uu___3 with | T_Match _ -> true | _ -> false
-let uu___is_Rel_refl uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Rel_refl _ -> true | _ -> false
-let uu___is_Rel_sym uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Rel_sym _ -> true | _ -> false
-let uu___is_Rel_trans uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Rel_trans _ -> true | _ -> false
-let uu___is_Rel_univ uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Rel_univ _ -> true | _ -> false
-let uu___is_Rel_beta uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Rel_beta _ -> true | _ -> false
-let uu___is_Rel_eq_token uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Rel_eq_token _ -> true | _ -> false
-let uu___is_Rel_subtyping_token uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Rel_subtyping_token _ -> true | _ -> false
-let uu___is_Rel_equiv uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Rel_equiv _ -> true | _ -> false
-let uu___is_Rel_arrow uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Rel_arrow _ -> true | _ -> false
-let uu___is_Rel_abs uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Rel_abs _ -> true | _ -> false
-let uu___is_Rel_ctxt uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Rel_ctxt _ -> true | _ -> false
-let uu___is_Relc_typ uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Relc_typ _ -> true | _ -> false
-let uu___is_Relc_total_ghost uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Relc_total_ghost _ -> true | _ -> false
-let uu___is_Relc_ghost_total uu___3 uu___2 uu___1 uu___ uu___4 =
-  match uu___4 with | Relc_ghost_total _ -> true | _ -> false
-let uu___is_BT_Nil uu___6 uu___5 uu___4 uu___3 uu___2 uu___1 uu___ uu___7 =
-  match uu___7 with | BT_Nil _ -> true | _ -> false
-let uu___is_BT_S uu___6 uu___5 uu___4 uu___3 uu___2 uu___1 uu___ uu___7 =
-  match uu___7 with | BT_S _ -> true | _ -> false
-let uu___is_BO uu___6 uu___5 uu___4 uu___3 uu___2 uu___1 uu___ uu___7 =
-  match uu___7 with | BO _ -> true | _ -> false
-let uu___is_MC_Tok uu___4 uu___3 uu___2 uu___1 uu___ uu___5 =
-  match uu___5 with | MC_Tok _ -> true | _ -> false
+let uu___is_T_Token uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_Token _ -> true | _ -> false
+let uu___is_T_Var uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_Var _ -> true | _ -> false
+let uu___is_T_FVar uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_FVar _ -> true | _ -> false
+let uu___is_T_UInst uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_UInst _ -> true | _ -> false
+let uu___is_T_Const uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_Const _ -> true | _ -> false
+let uu___is_T_Abs uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_Abs _ -> true | _ -> false
+let uu___is_T_App uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_App _ -> true | _ -> false
+let uu___is_T_Let uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_Let _ -> true | _ -> false
+let uu___is_T_Arrow uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_Arrow _ -> true | _ -> false
+let uu___is_T_Refine uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_Refine _ -> true | _ -> false
+let uu___is_T_PropIrrelevance uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 ->
+        match uu___3 with | T_PropIrrelevance _ -> true | _ -> false
+let uu___is_T_Sub uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_Sub _ -> true | _ -> false
+let uu___is_T_If uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_If _ -> true | _ -> false
+let uu___is_T_Match uu___2 =
+  fun uu___1 ->
+    fun uu___ ->
+      fun uu___3 -> match uu___3 with | T_Match _ -> true | _ -> false
+let uu___is_Rel_refl uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 -> match uu___4 with | Rel_refl _ -> true | _ -> false
+let uu___is_Rel_sym uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 -> match uu___4 with | Rel_sym _ -> true | _ -> false
+let uu___is_Rel_trans uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 -> match uu___4 with | Rel_trans _ -> true | _ -> false
+let uu___is_Rel_univ uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 -> match uu___4 with | Rel_univ _ -> true | _ -> false
+let uu___is_Rel_beta uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 -> match uu___4 with | Rel_beta _ -> true | _ -> false
+let uu___is_Rel_eq_token uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 -> match uu___4 with | Rel_eq_token _ -> true | _ -> false
+let uu___is_Rel_subtyping_token uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 ->
+          match uu___4 with | Rel_subtyping_token _ -> true | _ -> false
+let uu___is_Rel_equiv uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 -> match uu___4 with | Rel_equiv _ -> true | _ -> false
+let uu___is_Rel_arrow uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 -> match uu___4 with | Rel_arrow _ -> true | _ -> false
+let uu___is_Rel_abs uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 -> match uu___4 with | Rel_abs _ -> true | _ -> false
+let uu___is_Rel_ctxt uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 -> match uu___4 with | Rel_ctxt _ -> true | _ -> false
+let uu___is_Relc_typ uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 -> match uu___4 with | Relc_typ _ -> true | _ -> false
+let uu___is_Relc_total_ghost uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 ->
+          match uu___4 with | Relc_total_ghost _ -> true | _ -> false
+let uu___is_Relc_ghost_total uu___3 =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        fun uu___4 ->
+          match uu___4 with | Relc_ghost_total _ -> true | _ -> false
+let uu___is_BT_Nil uu___6 =
+  fun uu___5 ->
+    fun uu___4 ->
+      fun uu___3 ->
+        fun uu___2 ->
+          fun uu___1 ->
+            fun uu___ ->
+              fun uu___7 -> match uu___7 with | BT_Nil _ -> true | _ -> false
+let uu___is_BT_S uu___6 =
+  fun uu___5 ->
+    fun uu___4 ->
+      fun uu___3 ->
+        fun uu___2 ->
+          fun uu___1 ->
+            fun uu___ ->
+              fun uu___7 -> match uu___7 with | BT_S _ -> true | _ -> false
+let uu___is_BO uu___6 =
+  fun uu___5 ->
+    fun uu___4 ->
+      fun uu___3 ->
+        fun uu___2 ->
+          fun uu___1 ->
+            fun uu___ ->
+              fun uu___7 -> match uu___7 with | BO _ -> true | _ -> false
+let uu___is_MC_Tok uu___4 =
+  fun uu___3 ->
+    fun uu___2 ->
+      fun uu___1 ->
+        fun uu___ ->
+          fun uu___5 -> match uu___5 with | MC_Tok _ -> true | _ -> false
 type ('g, 't1, 't2) sub_typing = (unit, unit, unit, unit) related
 type ('g, 'c1, 'c2) sub_comp = (unit, unit, unit, unit) related_comp
 type ('g, 't1, 't2) equiv = (unit, unit, unit, unit) related
@@ -1718,9 +1836,10 @@ let (subtyping_token_renaming :
               Fstarcompiler.FStarC_Reflection_Types.term ->
                 Fstarcompiler.FStarC_Reflection_Types.term ->
                   (unit, unit, unit)
-                    Fstarcompiler.FStarC_Tactics_Types.subtyping_token ->
+                    Fstarcompiler.FStarC_Tactics_Types_Reflection.subtyping_token
+                    ->
                     (unit, unit, unit)
-                      Fstarcompiler.FStarC_Tactics_Types.subtyping_token)
+                      Fstarcompiler.FStarC_Tactics_Types_Reflection.subtyping_token)
   =
   fun g ->
     fun bs0 ->
@@ -1736,9 +1855,10 @@ let (subtyping_token_weakening :
             Fstarcompiler.FStarC_Reflection_Types.term ->
               Fstarcompiler.FStarC_Reflection_Types.term ->
                 (unit, unit, unit)
-                  Fstarcompiler.FStarC_Tactics_Types.subtyping_token ->
+                  Fstarcompiler.FStarC_Tactics_Types_Reflection.subtyping_token
+                  ->
                   (unit, unit, unit)
-                    Fstarcompiler.FStarC_Tactics_Types.subtyping_token)
+                    Fstarcompiler.FStarC_Tactics_Types_Reflection.subtyping_token)
   =
   fun g ->
     fun bs0 ->
@@ -2059,5 +2179,6 @@ let (typing_to_token :
     Fstarcompiler.FStarC_Reflection_Types.term ->
       comp_typ ->
         (unit, unit, unit) typing ->
-          (unit, unit, unit) Fstarcompiler.FStarC_Tactics_Types.typing_token)
+          (unit, unit, unit)
+            Fstarcompiler.FStarC_Tactics_Types_Reflection.typing_token)
   = fun g -> fun e -> fun c -> fun uu___ -> Prims.magic ()

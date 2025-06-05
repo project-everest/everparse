@@ -98,26 +98,28 @@ let merge_increasing_lists_rev :
   'a . ('a -> Prims.string) -> 'a Prims.list Prims.list -> 'a Prims.list =
   fun key_fn ->
     fun lists ->
-      let cmp v1 v2 =
-        match (v1, v2) with
-        | ((uu___, []), uu___1) -> failwith "impossible"
-        | (uu___, (uu___1, [])) -> failwith "impossible"
-        | ((pr1, h1::uu___), (pr2, h2::uu___1)) ->
-            let cmp_h =
-              let uu___2 = key_fn h1 in
-              let uu___3 = key_fn h2 in string_compare uu___2 uu___3 in
-            if cmp_h <> Prims.int_zero then cmp_h else pr1 - pr2 in
-      let rec aux lists1 acc =
-        let uu___ = heap_pop cmp lists1 in
-        match uu___ with
-        | FStar_Pervasives_Native.None -> acc
-        | FStar_Pervasives_Native.Some ((pr, []), uu___1) ->
-            failwith "impossible"
-        | FStar_Pervasives_Native.Some ((pr, v::[]), lists2) ->
-            let uu___1 = push_nodup key_fn v acc in aux lists2 uu___1
-        | FStar_Pervasives_Native.Some ((pr, v::tl), lists2) ->
-            let uu___1 = heap_insert cmp lists2 (pr, tl) in
-            let uu___2 = push_nodup key_fn v acc in aux uu___1 uu___2 in
+      let cmp v1 =
+        fun v2 ->
+          match (v1, v2) with
+          | ((uu___, []), uu___1) -> failwith "impossible"
+          | (uu___, (uu___1, [])) -> failwith "impossible"
+          | ((pr1, h1::uu___), (pr2, h2::uu___1)) ->
+              let cmp_h =
+                let uu___2 = key_fn h1 in
+                let uu___3 = key_fn h2 in string_compare uu___2 uu___3 in
+              if cmp_h <> Prims.int_zero then cmp_h else pr1 - pr2 in
+      let rec aux lists1 =
+        fun acc ->
+          let uu___ = heap_pop cmp lists1 in
+          match uu___ with
+          | FStar_Pervasives_Native.None -> acc
+          | FStar_Pervasives_Native.Some ((pr, []), uu___1) ->
+              failwith "impossible"
+          | FStar_Pervasives_Native.Some ((pr, v::[]), lists2) ->
+              let uu___1 = push_nodup key_fn v acc in aux lists2 uu___1
+          | FStar_Pervasives_Native.Some ((pr, v::tl), lists2) ->
+              let uu___1 = heap_insert cmp lists2 (pr, tl) in
+              let uu___2 = push_nodup key_fn v acc in aux uu___1 uu___2 in
       let lists1 = FStarC_List.filter (fun x -> x <> []) lists in
       match lists1 with
       | [] -> []
@@ -298,27 +300,30 @@ let btree_find_prefix :
   'a . 'a btree -> Prims.string -> (prefix_match * 'a) Prims.list =
   fun bt ->
     fun prefix ->
-      let rec aux bt1 prefix1 acc =
-        match bt1 with
-        | StrEmpty -> acc
-        | StrBranch (k, v, lbt, rbt) ->
-            let cmp = string_compare k prefix1 in
-            let include_middle = FStarC_Util.starts_with k prefix1 in
-            let explore_right = (cmp <= Prims.int_zero) || include_middle in
-            let explore_left = cmp > Prims.int_zero in
-            let matches = if explore_right then aux rbt prefix1 acc else acc in
-            let matches1 =
-              if include_middle
-              then
-                ({
-                   prefix = (FStar_Pervasives_Native.Some prefix1);
-                   completion = k
-                 }, v)
-                :: matches
-              else matches in
-            let matches2 =
-              if explore_left then aux lbt prefix1 matches1 else matches1 in
-            matches2 in
+      let rec aux bt1 =
+        fun prefix1 ->
+          fun acc ->
+            match bt1 with
+            | StrEmpty -> acc
+            | StrBranch (k, v, lbt, rbt) ->
+                let cmp = string_compare k prefix1 in
+                let include_middle = FStarC_Util.starts_with k prefix1 in
+                let explore_right = (cmp <= Prims.int_zero) || include_middle in
+                let explore_left = cmp > Prims.int_zero in
+                let matches =
+                  if explore_right then aux rbt prefix1 acc else acc in
+                let matches1 =
+                  if include_middle
+                  then
+                    ({
+                       prefix = (FStar_Pervasives_Native.Some prefix1);
+                       completion = k
+                     }, v)
+                    :: matches
+                  else matches in
+                let matches2 =
+                  if explore_left then aux lbt prefix1 matches1 else matches1 in
+                matches2 in
       aux bt prefix []
 let rec btree_fold :
   'a 'b . 'a btree -> (Prims.string -> 'a -> 'b -> 'b) -> 'b -> 'b =
@@ -538,17 +543,19 @@ let names_revmap :
   =
   fun fn ->
     fun name_collections ->
-      let rec aux acc imports name_collections1 =
-        FStarC_List.fold_left
-          (fun acc1 ->
-             fun uu___ ->
-               match uu___ with
-               | Names bt ->
-                   let uu___1 = let uu___2 = fn bt in (imports, uu___2) in
-                   uu___1 :: acc1
-               | ImportedNames (nm, name_collections2) ->
-                   aux acc1 (nm :: imports) name_collections2) acc
-          name_collections1 in
+      let rec aux acc =
+        fun imports ->
+          fun name_collections1 ->
+            FStarC_List.fold_left
+              (fun acc1 ->
+                 fun uu___ ->
+                   match uu___ with
+                   | Names bt ->
+                       let uu___1 = let uu___2 = fn bt in (imports, uu___2) in
+                       uu___1 :: acc1
+                   | ImportedNames (nm, name_collections2) ->
+                       aux acc1 (nm :: imports) name_collections2) acc
+              name_collections1 in
       aux [] [] name_collections
 let btree_find_all :
   'a .
@@ -710,33 +717,46 @@ let (register_module_path :
     fun loaded ->
       fun path1 ->
         fun mod_query ->
-          let ins_ns id bindings full_name loaded1 =
-            let uu___ =
-              let uu___1 = names_find_exact bindings id in (uu___1, loaded1) in
-            match uu___ with
-            | (FStar_Pervasives_Native.None, uu___1) ->
-                names_insert bindings id
-                  (Namespace { ns_name = full_name; ns_loaded = loaded1 })
-            | (FStar_Pervasives_Native.Some (Namespace
-               { ns_name = uu___1; ns_loaded = false;_}), true) ->
-                names_insert bindings id
-                  (Namespace { ns_name = full_name; ns_loaded = loaded1 })
-            | (FStar_Pervasives_Native.Some uu___1, uu___2) -> bindings in
-          let ins_mod id bindings full_name loaded1 =
-            names_insert bindings id
-              (Module
-                 {
-                   mod_name = full_name;
-                   mod_path = path1;
-                   mod_loaded = loaded1
-                 }) in
+          let ins_ns id =
+            fun bindings ->
+              fun full_name ->
+                fun loaded1 ->
+                  let uu___ =
+                    let uu___1 = names_find_exact bindings id in
+                    (uu___1, loaded1) in
+                  match uu___ with
+                  | (FStar_Pervasives_Native.None, uu___1) ->
+                      names_insert bindings id
+                        (Namespace
+                           { ns_name = full_name; ns_loaded = loaded1 })
+                  | (FStar_Pervasives_Native.Some (Namespace
+                     { ns_name = uu___1; ns_loaded = false;_}), true) ->
+                      names_insert bindings id
+                        (Namespace
+                           { ns_name = full_name; ns_loaded = loaded1 })
+                  | (FStar_Pervasives_Native.Some uu___1, uu___2) -> bindings in
+          let ins_mod id =
+            fun bindings ->
+              fun full_name ->
+                fun loaded1 ->
+                  names_insert bindings id
+                    (Module
+                       {
+                         mod_name = full_name;
+                         mod_path = path1;
+                         mod_loaded = loaded1
+                       }) in
           let name_of_revq query1 =
             FStarC_String.concat "." (FStarC_List.rev query1) in
-          let ins id q revq bindings loaded1 =
-            let name = name_of_revq (id :: revq) in
-            match q with
-            | [] -> ins_mod id bindings name loaded1
-            | uu___ -> ins_ns id bindings name loaded1 in
+          let ins id =
+            fun q ->
+              fun revq ->
+                fun bindings ->
+                  fun loaded1 ->
+                    let name = name_of_revq (id :: revq) in
+                    match q with
+                    | [] -> ins_mod id bindings name loaded1
+                    | uu___ -> ins_ns id bindings name loaded1 in
           let uu___ =
             trie_mutate tbl.tbl_mods mod_query []
               (fun tr ->

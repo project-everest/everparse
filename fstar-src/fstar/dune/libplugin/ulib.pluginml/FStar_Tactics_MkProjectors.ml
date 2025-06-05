@@ -342,10 +342,10 @@ let (mk_one_projector :
                                                                     let uu___15
                                                                     =
                                                                     FStarC_Tactics_V2_Builtins.norm
-                                                                    [Fstarcompiler.FStar_Pervasives.iota;
-                                                                    Fstarcompiler.FStar_Pervasives.delta_only
+                                                                    [Fstarcompiler.FStarC_NormSteps.iota;
+                                                                    Fstarcompiler.FStarC_NormSteps.delta_only
                                                                     unf;
-                                                                    Fstarcompiler.FStar_Pervasives.zeta_full] in
+                                                                    Fstarcompiler.FStarC_NormSteps.zeta_full] in
                                                                     Obj.magic
                                                                     (FStar_Tactics_Effect.tac_bind
                                                                     (FStar_Sealed.seal
@@ -679,7 +679,7 @@ let (substitute_attr : FStar_Tactics_NamedView.term) =
   Fstarcompiler.FStarC_Reflection_V2_Builtins.pack_ln
     (Fstarcompiler.FStarC_Reflection_V2_Data.Tv_FVar
        (Fstarcompiler.FStarC_Reflection_V2_Builtins.pack_fv
-          ["FStar"; "Pervasives"; "Substitute"]))
+          ["FStar"; "Attributes"; "Substitute"]))
 let (mk_proj_decl :
   Prims.bool ->
     Fstarcompiler.FStarC_Reflection_Types.name ->
@@ -722,9 +722,9 @@ let (mk_proj_decl :
                              (FStar_Sealed.seal
                                 (Obj.magic
                                    (FStar_Range.mk_range "Prims.fst"
-                                      (Prims.of_int (611))
+                                      (Prims.of_int (613))
                                       (Prims.of_int (19))
-                                      (Prims.of_int (611))
+                                      (Prims.of_int (613))
                                       (Prims.of_int (31)))))
                              (Obj.magic uu___2)
                              (fun uu___3 ->
@@ -765,9 +765,9 @@ let (mk_proj_decl :
                                      (FStar_Sealed.seal
                                         (Obj.magic
                                            (FStar_Range.mk_range "Prims.fst"
-                                              (Prims.of_int (611))
+                                              (Prims.of_int (613))
                                               (Prims.of_int (19))
-                                              (Prims.of_int (611))
+                                              (Prims.of_int (613))
                                               (Prims.of_int (31)))))
                                      (Obj.magic uu___4)
                                      (fun uu___5 ->
@@ -933,9 +933,9 @@ let (mk_proj_decl :
                                                                     (Obj.magic
                                                                     (FStar_Range.mk_range
                                                                     "Prims.fst"
-                                                                    (Prims.of_int (611))
+                                                                    (Prims.of_int (613))
                                                                     (Prims.of_int (19))
-                                                                    (Prims.of_int (611))
+                                                                    (Prims.of_int (613))
                                                                     (Prims.of_int (31)))))
                                                                     (Obj.magic
                                                                     uu___15)
@@ -963,9 +963,9 @@ let (mk_proj_decl :
                                                                     (Obj.magic
                                                                     (FStar_Range.mk_range
                                                                     "Prims.fst"
-                                                                    (Prims.of_int (611))
+                                                                    (Prims.of_int (613))
                                                                     (Prims.of_int (19))
-                                                                    (Prims.of_int (611))
+                                                                    (Prims.of_int (613))
                                                                     (Prims.of_int (31)))))
                                                                     (Obj.magic
                                                                     uu___14)
@@ -993,9 +993,9 @@ let (mk_proj_decl :
                                                                     (Obj.magic
                                                                     (FStar_Range.mk_range
                                                                     "Prims.fst"
-                                                                    (Prims.of_int (611))
+                                                                    (Prims.of_int (613))
                                                                     (Prims.of_int (19))
-                                                                    (Prims.of_int (611))
+                                                                    (Prims.of_int (613))
                                                                     (Prims.of_int (31)))))
                                                                     (Obj.magic
                                                                     uu___11)
@@ -1287,9 +1287,9 @@ let (mk_proj_decl :
                                                                     (Obj.magic
                                                                     (FStar_Range.mk_range
                                                                     "Prims.fst"
-                                                                    (Prims.of_int (611))
+                                                                    (Prims.of_int (613))
                                                                     (Prims.of_int (19))
-                                                                    (Prims.of_int (611))
+                                                                    (Prims.of_int (613))
                                                                     (Prims.of_int (31)))))
                                                                     (Obj.magic
                                                                     uu___13)

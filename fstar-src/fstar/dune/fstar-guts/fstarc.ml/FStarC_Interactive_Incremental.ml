@@ -203,6 +203,19 @@ let (pop_entries :
 let repl_task :
   'uuuuu 'uuuuu1 'uuuuu2 . ('uuuuu * ('uuuuu1 * 'uuuuu2)) -> 'uuuuu1 =
   fun uu___ -> match uu___ with | (uu___1, (p, uu___2)) -> p
+let (push_kind_geq :
+  FStarC_Interactive_Ide_Types.push_kind ->
+    FStarC_Interactive_Ide_Types.push_kind -> Prims.bool)
+  =
+  fun pk1 ->
+    fun pk2 ->
+      (pk1 = pk2) ||
+        (match (pk1, pk2) with
+         | (FStarC_Interactive_Ide_Types.FullCheck,
+            FStarC_Interactive_Ide_Types.LaxCheck) -> true
+         | (FStarC_Interactive_Ide_Types.LaxCheck,
+            FStarC_Interactive_Ide_Types.SyntaxCheck) -> true
+         | uu___ -> false)
 let (inspect_repl_stack :
   FStarC_Interactive_Ide_Types.repl_stack_t ->
     (FStarC_Parser_AST.decl * FStarC_Parser_ParseIt.code_fragment) Prims.list
@@ -238,71 +251,83 @@ let (inspect_repl_stack :
                 let entries1 = first_push :: rest in
                 let repl_task1 uu___1 =
                   match uu___1 with | (uu___2, (p, uu___3)) -> p in
-                let rec matching_prefix accum lookups entries2 ds1 =
-                  match (entries2, ds1) with
-                  | ([], []) -> return (lookups, accum)
-                  | (e::entries3, d::ds2) ->
-                      (match repl_task1 e with
-                       | FStarC_Interactive_Ide_Types.Noop ->
-                           matching_prefix accum lookups entries3 (d :: ds2)
-                       | FStarC_Interactive_Ide_Types.PushFragment
-                           (FStar_Pervasives.Inl frag, uu___1, uu___2) ->
-                           let uu___3 = pop_entries (e :: entries3) in
-                           op_let_Bang uu___3
-                             (fun pops ->
-                                let uu___4 = push_decls1 (d :: ds2) in
-                                op_let_Bang uu___4
-                                  (fun pushes ->
-                                     return
-                                       ((FStarC_List.op_At lookups
-                                           (FStarC_List.op_At pops pushes)),
-                                         accum)))
-                       | FStarC_Interactive_Ide_Types.PushFragment
-                           (FStar_Pervasives.Inr d', pk, issues) ->
-                           let uu___1 =
-                             FStarC_Parser_AST_Util.eq_decl
-                               (FStar_Pervasives_Native.fst d) d' in
-                           if uu___1
-                           then
-                             let uu___2 = d in
-                             (match uu___2 with
-                              | (d1, s1) ->
-                                  (write_full_buffer_fragment_progress
-                                     (FragmentSuccess (d1, s1, pk));
-                                   if with_symbols
-                                   then
-                                     (let uu___4 = dump_symbols d1 in
+                let rec matching_prefix accum =
+                  fun lookups ->
+                    fun entries2 ->
+                      fun ds1 ->
+                        match (entries2, ds1) with
+                        | ([], []) -> return (lookups, accum)
+                        | (e::entries3, d::ds2) ->
+                            (match repl_task1 e with
+                             | FStarC_Interactive_Ide_Types.Noop ->
+                                 matching_prefix accum lookups entries3 (d ::
+                                   ds2)
+                             | FStarC_Interactive_Ide_Types.PushFragment
+                                 (FStar_Pervasives.Inl frag, uu___1, uu___2)
+                                 ->
+                                 let uu___3 = pop_entries (e :: entries3) in
+                                 op_let_Bang uu___3
+                                   (fun pops ->
+                                      let uu___4 = push_decls1 (d :: ds2) in
                                       op_let_Bang uu___4
-                                        (fun lookups' ->
+                                        (fun pushes ->
+                                           return
+                                             ((FStarC_List.op_At lookups
+                                                 (FStarC_List.op_At pops
+                                                    pushes)), accum)))
+                             | FStarC_Interactive_Ide_Types.PushFragment
+                                 (FStar_Pervasives.Inr d', pk, issues) ->
+                                 let uu___1 =
+                                   (FStarC_Parser_AST_Diff.eq_decl
+                                      (FStar_Pervasives_Native.fst d) d')
+                                     && (push_kind_geq pk push_kind) in
+                                 if uu___1
+                                 then
+                                   let uu___2 = d in
+                                   (match uu___2 with
+                                    | (d1, s1) ->
+                                        (write_full_buffer_fragment_progress
+                                           (FragmentSuccess (d1, s1, pk));
+                                         if with_symbols
+                                         then
+                                           (let uu___4 = dump_symbols d1 in
+                                            op_let_Bang uu___4
+                                              (fun lookups' ->
+                                                 matching_prefix
+                                                   (FStarC_List.op_At issues
+                                                      accum)
+                                                   (FStarC_List.op_At
+                                                      lookups' lookups)
+                                                   entries3 ds2))
+                                         else
                                            matching_prefix
                                              (FStarC_List.op_At issues accum)
-                                             (FStarC_List.op_At lookups'
-                                                lookups) entries3 ds2))
-                                   else
-                                     matching_prefix
-                                       (FStarC_List.op_At issues accum)
-                                       lookups entries3 ds2))
-                           else
-                             (let uu___3 = pop_entries (e :: entries3) in
-                              op_let_Bang uu___3
-                                (fun pops ->
-                                   let uu___4 = push_decls1 (d :: ds2) in
-                                   op_let_Bang uu___4
-                                     (fun pushes ->
-                                        return
-                                          ((FStarC_List.op_At pops
-                                              (FStarC_List.op_At lookups
-                                                 pushes)), accum)))))
-                  | ([], ds2) ->
-                      let uu___1 = push_decls1 ds2 in
-                      op_let_Bang uu___1
-                        (fun pushes ->
-                           return ((FStarC_List.op_At lookups pushes), accum))
-                  | (es, []) ->
-                      let uu___1 = pop_entries es in
-                      op_let_Bang uu___1
-                        (fun pops ->
-                           return ((FStarC_List.op_At lookups pops), accum)) in
+                                             lookups entries3 ds2))
+                                 else
+                                   (let uu___3 = pop_entries (e :: entries3) in
+                                    op_let_Bang uu___3
+                                      (fun pops ->
+                                         let uu___4 = push_decls1 (d :: ds2) in
+                                         op_let_Bang uu___4
+                                           (fun pushes ->
+                                              return
+                                                ((FStarC_List.op_At pops
+                                                    (FStarC_List.op_At
+                                                       lookups pushes)),
+                                                  accum)))))
+                        | ([], ds2) ->
+                            let uu___1 = push_decls1 ds2 in
+                            op_let_Bang uu___1
+                              (fun pushes ->
+                                 return
+                                   ((FStarC_List.op_At lookups pushes),
+                                     accum))
+                        | (es, []) ->
+                            let uu___1 = pop_entries es in
+                            op_let_Bang uu___1
+                              (fun pops ->
+                                 return
+                                   ((FStarC_List.op_At lookups pops), accum)) in
                 matching_prefix [] [] entries1 ds
 let reload_deps :
   'uuuuu 'uuuuu1 .

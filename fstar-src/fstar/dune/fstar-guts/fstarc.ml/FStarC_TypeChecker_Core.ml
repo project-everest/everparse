@@ -14,7 +14,7 @@ let (dbg_Top : Prims.bool FStarC_Effect.ref) =
 let (dbg_Exit : Prims.bool FStarC_Effect.ref) =
   FStarC_Debug.get_toggle "CoreExit"
 let (goal_ctr : Prims.int FStarC_Effect.ref) =
-  FStarC_Util.mk_ref Prims.int_zero
+  FStarC_Effect.mk_ref Prims.int_zero
 let (get_goal_ctr : unit -> Prims.int) =
   fun uu___ -> FStarC_Effect.op_Bang goal_ctr
 let (incr_goal_ctr : unit -> Prims.int) =
@@ -158,67 +158,72 @@ let (open_pat :
   =
   fun g ->
     fun p ->
-      let rec open_pat_aux g1 p1 sub =
-        match p1.FStarC_Syntax_Syntax.v with
-        | FStarC_Syntax_Syntax.Pat_constant uu___ -> (g1, p1, sub)
-        | FStarC_Syntax_Syntax.Pat_cons (fv, us_opt, pats) ->
-            let uu___ =
-              FStarC_List.fold_left
-                (fun uu___1 ->
-                   fun uu___2 ->
-                     match (uu___1, uu___2) with
-                     | ((g2, pats1, sub1), (p2, imp)) ->
-                         let uu___3 = open_pat_aux g2 p2 sub1 in
-                         (match uu___3 with
-                          | (g3, p3, sub2) ->
-                              (g3, ((p3, imp) :: pats1), sub2)))
-                (g1, [], sub) pats in
-            (match uu___ with
-             | (g2, pats1, sub1) ->
-                 (g2,
-                   {
-                     FStarC_Syntax_Syntax.v =
-                       (FStarC_Syntax_Syntax.Pat_cons
-                          (fv, us_opt, (FStarC_List.rev pats1)));
-                     FStarC_Syntax_Syntax.p = (p1.FStarC_Syntax_Syntax.p)
-                   }, sub1))
-        | FStarC_Syntax_Syntax.Pat_var x ->
-            let bx =
-              let uu___ =
-                let uu___1 =
-                  FStarC_Syntax_Subst.subst sub x.FStarC_Syntax_Syntax.sort in
-                {
-                  FStarC_Syntax_Syntax.ppname =
-                    (x.FStarC_Syntax_Syntax.ppname);
-                  FStarC_Syntax_Syntax.index = (x.FStarC_Syntax_Syntax.index);
-                  FStarC_Syntax_Syntax.sort = uu___1
-                } in
-              FStarC_Syntax_Syntax.mk_binder uu___ in
-            let uu___ = fresh_binder g1 bx in
-            (match uu___ with
-             | (g2, bx') ->
-                 let sub1 =
-                   let uu___1 =
-                     FStarC_Syntax_Subst.shift_subst Prims.int_one sub in
-                   (FStarC_Syntax_Syntax.DB
-                      (Prims.int_zero, (bx'.FStarC_Syntax_Syntax.binder_bv)))
-                     :: uu___1 in
-                 (g2,
-                   {
-                     FStarC_Syntax_Syntax.v =
-                       (FStarC_Syntax_Syntax.Pat_var
-                          (bx'.FStarC_Syntax_Syntax.binder_bv));
-                     FStarC_Syntax_Syntax.p = (p1.FStarC_Syntax_Syntax.p)
-                   }, sub1))
-        | FStarC_Syntax_Syntax.Pat_dot_term eopt ->
-            let eopt1 =
-              FStarC_Util.map_option (FStarC_Syntax_Subst.subst sub) eopt in
-            (g1,
-              {
-                FStarC_Syntax_Syntax.v =
-                  (FStarC_Syntax_Syntax.Pat_dot_term eopt1);
-                FStarC_Syntax_Syntax.p = (p1.FStarC_Syntax_Syntax.p)
-              }, sub) in
+      let rec open_pat_aux g1 =
+        fun p1 ->
+          fun sub ->
+            match p1.FStarC_Syntax_Syntax.v with
+            | FStarC_Syntax_Syntax.Pat_constant uu___ -> (g1, p1, sub)
+            | FStarC_Syntax_Syntax.Pat_cons (fv, us_opt, pats) ->
+                let uu___ =
+                  FStarC_List.fold_left
+                    (fun uu___1 ->
+                       fun uu___2 ->
+                         match (uu___1, uu___2) with
+                         | ((g2, pats1, sub1), (p2, imp)) ->
+                             let uu___3 = open_pat_aux g2 p2 sub1 in
+                             (match uu___3 with
+                              | (g3, p3, sub2) ->
+                                  (g3, ((p3, imp) :: pats1), sub2)))
+                    (g1, [], sub) pats in
+                (match uu___ with
+                 | (g2, pats1, sub1) ->
+                     (g2,
+                       {
+                         FStarC_Syntax_Syntax.v =
+                           (FStarC_Syntax_Syntax.Pat_cons
+                              (fv, us_opt, (FStarC_List.rev pats1)));
+                         FStarC_Syntax_Syntax.p = (p1.FStarC_Syntax_Syntax.p)
+                       }, sub1))
+            | FStarC_Syntax_Syntax.Pat_var x ->
+                let bx =
+                  let uu___ =
+                    let uu___1 =
+                      FStarC_Syntax_Subst.subst sub
+                        x.FStarC_Syntax_Syntax.sort in
+                    {
+                      FStarC_Syntax_Syntax.ppname =
+                        (x.FStarC_Syntax_Syntax.ppname);
+                      FStarC_Syntax_Syntax.index =
+                        (x.FStarC_Syntax_Syntax.index);
+                      FStarC_Syntax_Syntax.sort = uu___1
+                    } in
+                  FStarC_Syntax_Syntax.mk_binder uu___ in
+                let uu___ = fresh_binder g1 bx in
+                (match uu___ with
+                 | (g2, bx') ->
+                     let sub1 =
+                       let uu___1 =
+                         FStarC_Syntax_Subst.shift_subst Prims.int_one sub in
+                       (FStarC_Syntax_Syntax.DB
+                          (Prims.int_zero,
+                            (bx'.FStarC_Syntax_Syntax.binder_bv)))
+                         :: uu___1 in
+                     (g2,
+                       {
+                         FStarC_Syntax_Syntax.v =
+                           (FStarC_Syntax_Syntax.Pat_var
+                              (bx'.FStarC_Syntax_Syntax.binder_bv));
+                         FStarC_Syntax_Syntax.p = (p1.FStarC_Syntax_Syntax.p)
+                       }, sub1))
+            | FStarC_Syntax_Syntax.Pat_dot_term eopt ->
+                let eopt1 =
+                  FStarC_Util.map_option (FStarC_Syntax_Subst.subst sub) eopt in
+                (g1,
+                  {
+                    FStarC_Syntax_Syntax.v =
+                      (FStarC_Syntax_Syntax.Pat_dot_term eopt1);
+                    FStarC_Syntax_Syntax.p = (p1.FStarC_Syntax_Syntax.p)
+                  }, sub) in
       open_pat_aux g p []
 let (open_term :
   env ->
@@ -443,29 +448,33 @@ let (showable_context : context FStarC_Class_Show.showable) =
   }
 let (print_context : context -> Prims.string) =
   fun ctx ->
-    let rec aux depth ctx1 =
-      match ctx1 with
-      | [] -> ""
-      | (msg, ctx_term)::tl ->
-          let hd =
-            let uu___ =
-              match ctx_term with
-              | FStar_Pervasives_Native.None -> ""
-              | FStar_Pervasives_Native.Some ctx_term1 ->
-                  context_term_to_string ctx_term1 in
-            FStarC_Util.format3 "%s %s (%s)\n" depth msg uu___ in
-          let tl1 = aux (Prims.strcat depth ">") tl in Prims.strcat hd tl1 in
+    let rec aux depth =
+      fun ctx1 ->
+        match ctx1 with
+        | [] -> ""
+        | (msg, ctx_term)::tl ->
+            let hd =
+              let uu___ =
+                match ctx_term with
+                | FStar_Pervasives_Native.None -> ""
+                | FStar_Pervasives_Native.Some ctx_term1 ->
+                    context_term_to_string ctx_term1 in
+              FStarC_Util.format3 "%s %s (%s)\n" depth msg uu___ in
+            let tl1 = aux (Prims.strcat depth ">") tl in Prims.strcat hd tl1 in
     aux "" (FStarC_List.rev ctx.error_context)
-type error = (context * Prims.string)
+type error = (context * FStarC_Errors_Msg.error_message)
 let (print_error : error -> Prims.string) =
   fun err ->
     let uu___ = err in
     match uu___ with
     | (ctx, msg) ->
         let uu___1 = print_context ctx in
-        FStarC_Util.format2 "%s%s" uu___1 msg
+        let uu___2 = FStarC_Errors_Msg.rendermsg msg in
+        FStarC_Util.format2 "%s%s" uu___1 uu___2
 let (print_error_short : error -> Prims.string) =
-  fun err -> FStar_Pervasives_Native.snd err
+  fun err ->
+    let uu___ = err in
+    match uu___ with | (uu___1, msg) -> FStarC_Errors_Msg.rendermsg msg
 type 'a __result =
   | Success of 'a 
   | Error of error 
@@ -537,7 +546,7 @@ let (__proj__Mkcache_stats_t__item__hits : cache_stats_t -> Prims.int) =
 let (__proj__Mkcache_stats_t__item__misses : cache_stats_t -> Prims.int) =
   fun projectee -> match projectee with | { hits; misses;_} -> misses
 let (cache_stats : cache_stats_t FStarC_Effect.ref) =
-  FStarC_Util.mk_ref { hits = Prims.int_zero; misses = Prims.int_zero }
+  FStarC_Effect.mk_ref { hits = Prims.int_zero; misses = Prims.int_zero }
 let (record_cache_hit : unit -> unit) =
   fun uu___ ->
     let cs = FStarC_Effect.op_Bang cache_stats in
@@ -660,7 +669,12 @@ let op_let_Question :
       match x with
       | FStar_Pervasives_Native.None -> FStar_Pervasives_Native.None
       | FStar_Pervasives_Native.Some x1 -> f x1
-let fail : 'a . Prims.string -> 'a result =
+let fail_str : 'a . Prims.string -> 'a result =
+  fun msg ->
+    fun ctx ->
+      let uu___ = let uu___1 = FStarC_Errors_Msg.mkmsg msg in (ctx, uu___1) in
+      Error uu___
+let fail : 'a . FStarC_Errors_Msg.error_message -> 'a result =
   fun msg -> fun ctx -> Error (ctx, msg)
 let (dump_context : unit result) =
   fun ctx ->
@@ -713,8 +727,11 @@ let (is_type :
         | uu___1 ->
             let uu___2 =
               let uu___3 =
-                FStarC_Class_Show.show FStarC_Syntax_Print.showable_term t1 in
-              FStarC_Util.format1 "Expected a type; got %s" uu___3 in
+                let uu___4 = FStarC_Errors_Msg.text "Expected a type, got" in
+                let uu___5 =
+                  FStarC_Class_PP.pp FStarC_Syntax_Print.pretty_term t1 in
+                FStarC_Pprint.op_Hat_Slash_Hat uu___4 uu___5 in
+              [uu___3] in
             fail uu___2 in
       fun ctx ->
         let ctx1 =
@@ -798,10 +815,14 @@ let rec (is_arrow :
                | FStar_Pervasives_Native.None ->
                    let uu___3 =
                      let uu___4 =
-                       let uu___5 = FStarC_Syntax_Util.comp_effect_name c in
-                       FStarC_Ident.string_of_lid uu___5 in
-                     FStarC_Util.format1
-                       "Expected total or gtot arrow, got %s" uu___4 in
+                       let uu___5 =
+                         FStarC_Errors_Msg.text
+                           "Expected total or gtot arrow, got" in
+                       let uu___6 =
+                         let uu___7 = FStarC_Syntax_Util.comp_effect_name c in
+                         FStarC_Class_PP.pp FStarC_Ident.pretty_lident uu___7 in
+                       FStarC_Pprint.op_Hat_Slash_Hat uu___5 uu___6 in
+                     [uu___4] in
                    fail uu___3
                | FStar_Pervasives_Native.Some e_tag1 ->
                    let uu___3 = arrow_formals_comp g t1 in
@@ -884,12 +905,21 @@ let rec (is_arrow :
         | uu___1 ->
             let uu___2 =
               let uu___3 =
-                FStarC_Class_Tagged.tag_of FStarC_Syntax_Syntax.tagged_term
-                  t1 in
-              let uu___4 =
-                FStarC_Class_Show.show FStarC_Syntax_Print.showable_term t1 in
-              FStarC_Util.format2 "Expected an arrow, got (%s) %s" uu___3
-                uu___4 in
+                let uu___4 =
+                  FStarC_Errors_Msg.text "Expected an arrow, got a" in
+                let uu___5 =
+                  let uu___6 =
+                    let uu___7 =
+                      FStarC_Class_Tagged.tag_of
+                        FStarC_Syntax_Syntax.tagged_term t1 in
+                    FStarC_Pprint.doc_of_string uu___7 in
+                  let uu___7 =
+                    let uu___8 =
+                      FStarC_Class_PP.pp FStarC_Syntax_Print.pretty_term t1 in
+                    FStarC_Pprint.op_Hat_Slash_Hat FStarC_Pprint.colon uu___8 in
+                  FStarC_Pprint.op_Hat_Hat uu___6 uu___7 in
+                FStarC_Pprint.op_Hat_Slash_Hat uu___4 uu___5 in
+              [uu___3] in
             fail uu___2 in
       fun ctx ->
         let ctx1 =
@@ -923,20 +953,20 @@ let (check_arg_qual :
                { FStarC_Syntax_Syntax.aqual_implicit = true;
                  FStarC_Syntax_Syntax.aqual_attributes = uu___1;_}
                -> (fun uu___2 -> Success ((), FStar_Pervasives_Native.None))
-           | uu___1 -> fail "missing arg qualifier implicit")
+           | uu___1 -> fail_str "missing arg qualifier implicit")
       | FStar_Pervasives_Native.Some (FStarC_Syntax_Syntax.Meta uu___) ->
           (match a with
            | FStar_Pervasives_Native.Some
                { FStarC_Syntax_Syntax.aqual_implicit = true;
                  FStarC_Syntax_Syntax.aqual_attributes = uu___1;_}
                -> (fun uu___2 -> Success ((), FStar_Pervasives_Native.None))
-           | uu___1 -> fail "missing arg qualifier implicit")
+           | uu___1 -> fail_str "missing arg qualifier implicit")
       | uu___ ->
           (match a with
            | FStar_Pervasives_Native.Some
                { FStarC_Syntax_Syntax.aqual_implicit = true;
                  FStarC_Syntax_Syntax.aqual_attributes = uu___1;_}
-               -> fail "extra arg qualifier implicit"
+               -> fail_str "extra arg qualifier implicit"
            | uu___1 ->
                (fun uu___2 -> Success ((), FStar_Pervasives_Native.None)))
 let (check_bqual :
@@ -948,6 +978,12 @@ let (check_bqual :
           (fun uu___ -> Success ((), FStar_Pervasives_Native.None))
       | (FStar_Pervasives_Native.Some (FStarC_Syntax_Syntax.Implicit b01),
          FStar_Pervasives_Native.Some (FStarC_Syntax_Syntax.Implicit b11)) ->
+          (fun uu___ -> Success ((), FStar_Pervasives_Native.None))
+      | (FStar_Pervasives_Native.Some (FStarC_Syntax_Syntax.Equality),
+         FStar_Pervasives_Native.None) ->
+          (fun uu___ -> Success ((), FStar_Pervasives_Native.None))
+      | (FStar_Pervasives_Native.None, FStar_Pervasives_Native.Some
+         (FStarC_Syntax_Syntax.Equality)) ->
           (fun uu___ -> Success ((), FStar_Pervasives_Native.None))
       | (FStar_Pervasives_Native.Some (FStarC_Syntax_Syntax.Equality),
          FStar_Pervasives_Native.Some (FStarC_Syntax_Syntax.Equality)) ->
@@ -968,7 +1004,7 @@ let (check_bqual :
                    FStarC_Syntax_Print.showable_bqual) b1 in
             FStarC_Util.format2 "Binder qualifier mismatch, %s vs %s" uu___2
               uu___3 in
-          fail uu___1
+          fail_str uu___1
 let (check_aqual :
   FStarC_Syntax_Syntax.aqual -> FStarC_Syntax_Syntax.aqual -> unit result) =
   fun a0 ->
@@ -987,11 +1023,20 @@ let (check_aqual :
           then (fun uu___2 -> Success ((), FStar_Pervasives_Native.None))
           else
             (let uu___3 =
-               let uu___4 = FStarC_Util.string_of_bool b0 in
-               let uu___5 = FStarC_Util.string_of_bool b1 in
-               FStarC_Util.format2
-                 "Unequal arg qualifiers: lhs implicit=%s and rhs implicit=%s"
-                 uu___4 uu___5 in
+               let uu___4 =
+                 let uu___5 =
+                   FStarC_Errors_Msg.text
+                     "Unequal arg qualifiers: lhs implicit=" in
+                 let uu___6 =
+                   let uu___7 = FStarC_Class_PP.pp FStarC_Class_PP.pp_bool b0 in
+                   let uu___8 =
+                     let uu___9 = FStarC_Errors_Msg.text "and rhs implicit=" in
+                     let uu___10 =
+                       FStarC_Class_PP.pp FStarC_Class_PP.pp_bool b1 in
+                     FStarC_Pprint.op_Hat_Hat uu___9 uu___10 in
+                   FStarC_Pprint.op_Hat_Slash_Hat uu___7 uu___8 in
+                 FStarC_Pprint.op_Hat_Hat uu___5 uu___6 in
+               [uu___4] in
              fail uu___3)
       | (FStar_Pervasives_Native.None, FStar_Pervasives_Native.Some
          { FStarC_Syntax_Syntax.aqual_implicit = false;
@@ -1005,11 +1050,19 @@ let (check_aqual :
       | uu___ ->
           let uu___1 =
             let uu___2 =
-              FStarC_Class_Show.show FStarC_Syntax_Print.showable_aqual a0 in
-            let uu___3 =
-              FStarC_Class_Show.show FStarC_Syntax_Print.showable_aqual a1 in
-            FStarC_Util.format2 "Unequal arg qualifiers: lhs %s and rhs %s"
-              uu___2 uu___3 in
+              let uu___3 =
+                FStarC_Errors_Msg.text "Unequal arg qualifiers: lhs" in
+              let uu___4 =
+                let uu___5 =
+                  FStarC_Class_PP.pp FStarC_Syntax_Print.pretty_aqual a0 in
+                let uu___6 =
+                  let uu___7 = FStarC_Errors_Msg.text "and rhs" in
+                  let uu___8 =
+                    FStarC_Class_PP.pp FStarC_Syntax_Print.pretty_aqual a1 in
+                  FStarC_Pprint.op_Hat_Slash_Hat uu___7 uu___8 in
+                FStarC_Pprint.op_Hat_Hat uu___5 uu___6 in
+              FStarC_Pprint.op_Hat_Slash_Hat uu___3 uu___4 in
+            [uu___2] in
           fail uu___1
 let (check_positivity_qual :
   relation ->
@@ -1026,7 +1079,7 @@ let (check_positivity_qual :
             (uu___is_SUBTYPING rel) p0 p1 in
         if uu___
         then fun uu___1 -> Success ((), FStar_Pervasives_Native.None)
-        else fail "Unequal positivity qualifiers"
+        else fail_str "Unequal positivity qualifiers"
 let (mk_forall_l :
   FStarC_Syntax_Syntax.universes ->
     FStarC_Syntax_Syntax.binders ->
@@ -1203,7 +1256,7 @@ let no_guard : 'a . 'a result -> 'a result =
               let uu___3 =
                 FStarC_Class_Show.show FStarC_Syntax_Print.showable_term g1 in
               FStarC_Util.format1 "Unexpected guard: %s" uu___3 in
-            fail uu___2 in
+            fail_str uu___2 in
           uu___1 ctx
       | err -> err
 let (equatable : env -> FStarC_Syntax_Syntax.term -> Prims.bool) =
@@ -1347,7 +1400,7 @@ let (lookup :
       let uu___ = FStarC_Syntax_TermHashTable.lookup e table in
       match uu___ with
       | FStar_Pervasives_Native.None ->
-          (record_cache_miss (); fail "not in cache")
+          (record_cache_miss (); fail_str "not in cache")
       | FStar_Pervasives_Native.Some he ->
           let uu___1 =
             context_included he.he_gamma
@@ -1378,7 +1431,7 @@ let (lookup :
                   uu___6 uu___7 uu___8
               else ());
              (fun uu___4 -> Success (he.he_res)))
-          else fail "not in cache"
+          else fail_str "not in cache"
 let (check_no_escape :
   FStarC_Syntax_Syntax.binders -> FStarC_Syntax_Syntax.term -> unit result) =
   fun bs ->
@@ -1396,7 +1449,7 @@ let (check_no_escape :
              Prims.op_Negation uu___1) bs in
       if uu___
       then fun uu___1 -> Success ((), FStar_Pervasives_Native.None)
-      else fail "Name escapes its scope"
+      else fail_str "Name escapes its scope"
 let rec map :
   'a 'b . ('a -> 'b result) -> 'a Prims.list -> 'b Prims.list result =
   fun f ->
@@ -1441,43 +1494,45 @@ let mapi :
   =
   fun f ->
     fun l ->
-      let rec aux i l1 =
-        match l1 with
-        | [] -> (fun uu___ -> Success ([], FStar_Pervasives_Native.None))
-        | hd::tl ->
-            let uu___ = f i hd in
-            (fun ctx0 ->
-               let uu___1 = uu___ ctx0 in
-               match uu___1 with
-               | Success (x, g1) ->
-                   let uu___2 =
-                     let uu___3 =
-                       let uu___4 = aux (i + Prims.int_one) tl in
-                       fun ctx01 ->
-                         let uu___5 = uu___4 ctx01 in
-                         match uu___5 with
-                         | Success (x1, g11) ->
-                             let uu___6 =
-                               let uu___7 uu___8 =
-                                 Success
-                                   ((x :: x1), FStar_Pervasives_Native.None) in
-                               uu___7 ctx01 in
-                             (match uu___6 with
-                              | Success (y, g2) ->
-                                  let uu___7 =
-                                    let uu___8 = and_pre g11 g2 in
-                                    (y, uu___8) in
-                                  Success uu___7
-                              | err -> err)
-                         | Error err -> Error err in
-                     uu___3 ctx0 in
-                   (match uu___2 with
-                    | Success (y, g2) ->
-                        let uu___3 =
-                          let uu___4 = and_pre g1 g2 in (y, uu___4) in
-                        Success uu___3
-                    | err -> err)
-               | Error err -> Error err) in
+      let rec aux i =
+        fun l1 ->
+          match l1 with
+          | [] -> (fun uu___ -> Success ([], FStar_Pervasives_Native.None))
+          | hd::tl ->
+              let uu___ = f i hd in
+              (fun ctx0 ->
+                 let uu___1 = uu___ ctx0 in
+                 match uu___1 with
+                 | Success (x, g1) ->
+                     let uu___2 =
+                       let uu___3 =
+                         let uu___4 = aux (i + Prims.int_one) tl in
+                         fun ctx01 ->
+                           let uu___5 = uu___4 ctx01 in
+                           match uu___5 with
+                           | Success (x1, g11) ->
+                               let uu___6 =
+                                 let uu___7 uu___8 =
+                                   Success
+                                     ((x :: x1),
+                                       FStar_Pervasives_Native.None) in
+                                 uu___7 ctx01 in
+                               (match uu___6 with
+                                | Success (y, g2) ->
+                                    let uu___7 =
+                                      let uu___8 = and_pre g11 g2 in
+                                      (y, uu___8) in
+                                    Success uu___7
+                                | err -> err)
+                           | Error err -> Error err in
+                       uu___3 ctx0 in
+                     (match uu___2 with
+                      | Success (y, g2) ->
+                          let uu___3 =
+                            let uu___4 = and_pre g1 g2 in (y, uu___4) in
+                          Success uu___3
+                      | err -> err)
+                 | Error err -> Error err) in
       aux Prims.int_zero l
 let rec map2 :
   'a 'b 'c .
@@ -1599,7 +1654,7 @@ let rec iter2 :
                           Success uu___3
                       | err -> err)
                  | Error err -> Error err)
-          | uu___ -> fail "Lists of differing length"
+          | uu___ -> fail_str "Lists of differing length"
 let (is_non_informative :
   FStarC_TypeChecker_Env.env -> FStarC_Syntax_Syntax.typ -> Prims.bool) =
   fun g -> fun t -> FStarC_TypeChecker_Normalize.non_info_norm g t
@@ -1733,30 +1788,51 @@ let rec (check_relation :
     fun rel ->
       fun t0 ->
         fun t1 ->
-          let err uu___ =
+          let err lbl =
             match rel with
             | EQUALITY ->
+                let uu___ =
+                  let uu___1 =
+                    let uu___2 =
+                      let uu___3 = FStarC_Errors_Msg.text lbl in
+                      FStarC_Pprint.parens uu___3 in
+                    let uu___3 =
+                      let uu___4 = FStarC_Errors_Msg.text "not equal terms:" in
+                      let uu___5 =
+                        let uu___6 =
+                          FStarC_Class_PP.pp FStarC_Syntax_Print.pretty_term
+                            t0 in
+                        let uu___7 =
+                          let uu___8 = FStarC_Errors_Msg.text "<>" in
+                          let uu___9 =
+                            FStarC_Class_PP.pp
+                              FStarC_Syntax_Print.pretty_term t1 in
+                          FStarC_Pprint.op_Hat_Slash_Hat uu___8 uu___9 in
+                        FStarC_Pprint.op_Hat_Slash_Hat uu___6 uu___7 in
+                      FStarC_Pprint.op_Hat_Slash_Hat uu___4 uu___5 in
+                    FStarC_Pprint.op_Hat_Slash_Hat uu___2 uu___3 in
+                  [uu___1] in
+                fail uu___
+            | uu___ ->
                 let uu___1 =
                   let uu___2 =
-                    FStarC_Class_Show.show FStarC_Syntax_Print.showable_term
-                      t0 in
-                  let uu___3 =
-                    FStarC_Class_Show.show FStarC_Syntax_Print.showable_term
-                      t1 in
-                  FStarC_Util.format2 "not equal terms: %s <> %s" uu___2
-                    uu___3 in
-                fail uu___1
-            | uu___1 ->
-                let uu___2 =
-                  let uu___3 =
-                    FStarC_Class_Show.show FStarC_Syntax_Print.showable_term
-                      t0 in
-                  let uu___4 =
-                    FStarC_Class_Show.show FStarC_Syntax_Print.showable_term
-                      t1 in
-                  FStarC_Util.format2 "%s is not a subtype of %s" uu___3
-                    uu___4 in
-                fail uu___2 in
+                    let uu___3 =
+                      let uu___4 = FStarC_Errors_Msg.text lbl in
+                      FStarC_Pprint.parens uu___4 in
+                    let uu___4 =
+                      let uu___5 =
+                        FStarC_Class_PP.pp FStarC_Syntax_Print.pretty_term t0 in
+                      let uu___6 =
+                        let uu___7 =
+                          FStarC_Errors_Msg.text "is not a subtype of" in
+                        let uu___8 =
+                          FStarC_Class_PP.pp FStarC_Syntax_Print.pretty_term
+                            t1 in
+                        FStarC_Pprint.op_Hat_Slash_Hat uu___7 uu___8 in
+                      FStarC_Pprint.op_Hat_Slash_Hat uu___5 uu___6 in
+                    FStarC_Pprint.op_Hat_Slash_Hat uu___3 uu___4 in
+                  [uu___2] in
+                fail uu___1 in
           let rel_to_string rel1 =
             match rel1 with | EQUALITY -> "=?=" | SUBTYPING uu___ -> "<:?" in
           (let uu___1 = FStarC_Effect.op_Bang dbg in
@@ -1780,188 +1856,214 @@ let rec (check_relation :
                  let uu___2 =
                    let uu___3 =
                      let guard_ok = Prims.op_Negation x in
-                     let head_matches t01 t11 =
-                       let head0 = FStarC_Syntax_Util.leftmost_head t01 in
-                       let head1 = FStarC_Syntax_Util.leftmost_head t11 in
-                       let uu___4 =
-                         let uu___5 =
-                           let uu___6 = FStarC_Syntax_Util.un_uinst head0 in
-                           uu___6.FStarC_Syntax_Syntax.n in
-                         let uu___6 =
-                           let uu___7 = FStarC_Syntax_Util.un_uinst head1 in
-                           uu___7.FStarC_Syntax_Syntax.n in
-                         (uu___5, uu___6) in
-                       match uu___4 with
-                       | (FStarC_Syntax_Syntax.Tm_fvar fv0,
-                          FStarC_Syntax_Syntax.Tm_fvar fv1) ->
-                           FStarC_Syntax_Syntax.fv_eq fv0 fv1
-                       | (FStarC_Syntax_Syntax.Tm_name x0,
-                          FStarC_Syntax_Syntax.Tm_name x1) ->
-                           FStarC_Syntax_Syntax.bv_eq x0 x1
-                       | (FStarC_Syntax_Syntax.Tm_constant c0,
-                          FStarC_Syntax_Syntax.Tm_constant c1) ->
-                           equal_term head0 head1
-                       | (FStarC_Syntax_Syntax.Tm_type uu___5,
-                          FStarC_Syntax_Syntax.Tm_type uu___6) -> true
-                       | (FStarC_Syntax_Syntax.Tm_arrow uu___5,
-                          FStarC_Syntax_Syntax.Tm_arrow uu___6) -> true
-                       | (FStarC_Syntax_Syntax.Tm_match uu___5,
-                          FStarC_Syntax_Syntax.Tm_match uu___6) -> true
-                       | uu___5 -> false in
-                     let which_side_to_unfold t01 t11 =
-                       maybe_relate_after_unfolding g.tcenv t01 t11 in
-                     let maybe_unfold_side side1 t01 t11 =
-                       FStarC_Profiling.profile
-                         (fun uu___4 ->
-                            match side1 with
-                            | Neither -> FStar_Pervasives_Native.None
-                            | Both ->
-                                let uu___5 =
-                                  let uu___6 =
-                                    FStarC_TypeChecker_Normalize.maybe_unfold_head
-                                      g.tcenv t01 in
-                                  let uu___7 =
-                                    FStarC_TypeChecker_Normalize.maybe_unfold_head
-                                      g.tcenv t11 in
-                                  (uu___6, uu___7) in
-                                (match uu___5 with
-                                 | (FStar_Pervasives_Native.Some t02,
-                                    FStar_Pervasives_Native.Some t12) ->
-                                     FStar_Pervasives_Native.Some (t02, t12)
-                                 | (FStar_Pervasives_Native.Some t02,
-                                    FStar_Pervasives_Native.None) ->
-                                     FStar_Pervasives_Native.Some (t02, t11)
-                                 | (FStar_Pervasives_Native.None,
-                                    FStar_Pervasives_Native.Some t12) ->
-                                     FStar_Pervasives_Native.Some (t01, t12)
-                                 | uu___6 -> FStar_Pervasives_Native.None)
-                            | Left ->
-                                let uu___5 =
-                                  FStarC_TypeChecker_Normalize.maybe_unfold_head
-                                    g.tcenv t01 in
-                                (match uu___5 with
-                                 | FStar_Pervasives_Native.Some t02 ->
-                                     FStar_Pervasives_Native.Some (t02, t11)
-                                 | uu___6 -> FStar_Pervasives_Native.None)
-                            | Right ->
-                                let uu___5 =
-                                  FStarC_TypeChecker_Normalize.maybe_unfold_head
-                                    g.tcenv t11 in
-                                (match uu___5 with
-                                 | FStar_Pervasives_Native.Some t12 ->
-                                     FStar_Pervasives_Native.Some (t01, t12)
-                                 | uu___6 -> FStar_Pervasives_Native.None))
-                         FStar_Pervasives_Native.None
-                         "FStarC.TypeChecker.Core.maybe_unfold_side" in
-                     let maybe_unfold t01 t11 ctx01 =
-                       let uu___4 = unfolding_ok ctx01 in
-                       match uu___4 with
-                       | Success (x1, g11) ->
+                     let head_matches t01 =
+                       fun t11 ->
+                         let head0 = FStarC_Syntax_Util.leftmost_head t01 in
+                         let head1 = FStarC_Syntax_Util.leftmost_head t11 in
+                         let uu___4 =
                            let uu___5 =
-                             let uu___6 =
-                               if x1
-                               then
+                             let uu___6 = FStarC_Syntax_Util.un_uinst head0 in
+                             uu___6.FStarC_Syntax_Syntax.n in
+                           let uu___6 =
+                             let uu___7 = FStarC_Syntax_Util.un_uinst head1 in
+                             uu___7.FStarC_Syntax_Syntax.n in
+                           (uu___5, uu___6) in
+                         match uu___4 with
+                         | (FStarC_Syntax_Syntax.Tm_fvar fv0,
+                            FStarC_Syntax_Syntax.Tm_fvar fv1) ->
+                             FStarC_Syntax_Syntax.fv_eq fv0 fv1
+                         | (FStarC_Syntax_Syntax.Tm_name x0,
+                            FStarC_Syntax_Syntax.Tm_name x1) ->
+                             FStarC_Syntax_Syntax.bv_eq x0 x1
+                         | (FStarC_Syntax_Syntax.Tm_constant c0,
+                            FStarC_Syntax_Syntax.Tm_constant c1) ->
+                             equal_term head0 head1
+                         | (FStarC_Syntax_Syntax.Tm_type uu___5,
+                            FStarC_Syntax_Syntax.Tm_type uu___6) -> true
+                         | (FStarC_Syntax_Syntax.Tm_arrow uu___5,
+                            FStarC_Syntax_Syntax.Tm_arrow uu___6) -> true
+                         | (FStarC_Syntax_Syntax.Tm_match uu___5,
+                            FStarC_Syntax_Syntax.Tm_match uu___6) -> true
+                         | uu___5 -> false in
+                     let which_side_to_unfold t01 =
+                       fun t11 ->
+                         maybe_relate_after_unfolding g.tcenv t01 t11 in
+                     let maybe_unfold_side side1 =
+                       fun t01 ->
+                         fun t11 ->
+                           FStarC_Profiling.profile
+                             (fun uu___4 ->
+                                match side1 with
+                                | Neither -> FStar_Pervasives_Native.None
+                                | Both ->
+                                    let uu___5 =
+                                      let uu___6 =
+                                        FStarC_TypeChecker_Normalize.maybe_unfold_head
+                                          g.tcenv t01 in
+                                      let uu___7 =
+                                        FStarC_TypeChecker_Normalize.maybe_unfold_head
+                                          g.tcenv t11 in
+                                      (uu___6, uu___7) in
+                                    (match uu___5 with
+                                     | (FStar_Pervasives_Native.Some t02,
+                                        FStar_Pervasives_Native.Some t12) ->
+                                         FStar_Pervasives_Native.Some
+                                           (t02, t12)
+                                     | (FStar_Pervasives_Native.Some t02,
+                                        FStar_Pervasives_Native.None) ->
+                                         FStar_Pervasives_Native.Some
+                                           (t02, t11)
+                                     | (FStar_Pervasives_Native.None,
+                                        FStar_Pervasives_Native.Some t12) ->
+                                         FStar_Pervasives_Native.Some
+                                           (t01, t12)
+                                     | uu___6 -> FStar_Pervasives_Native.None)
+                                | Left ->
+                                    let uu___5 =
+                                      FStarC_TypeChecker_Normalize.maybe_unfold_head
+                                        g.tcenv t01 in
+                                    (match uu___5 with
+                                     | FStar_Pervasives_Native.Some t02 ->
+                                         FStar_Pervasives_Native.Some
+                                           (t02, t11)
+                                     | uu___6 -> FStar_Pervasives_Native.None)
+                                | Right ->
+                                    let uu___5 =
+                                      FStarC_TypeChecker_Normalize.maybe_unfold_head
+                                        g.tcenv t11 in
+                                    (match uu___5 with
+                                     | FStar_Pervasives_Native.Some t12 ->
+                                         FStar_Pervasives_Native.Some
+                                           (t01, t12)
+                                     | uu___6 -> FStar_Pervasives_Native.None))
+                             FStar_Pervasives_Native.None
+                             "FStarC.TypeChecker.Core.maybe_unfold_side" in
+                     let maybe_unfold t01 =
+                       fun t11 ->
+                         fun ctx01 ->
+                           let uu___4 = unfolding_ok ctx01 in
+                           match uu___4 with
+                           | Success (x1, g11) ->
+                               let uu___5 =
+                                 let uu___6 =
+                                   if x1
+                                   then
+                                     let uu___7 =
+                                       let uu___8 =
+                                         which_side_to_unfold t01 t11 in
+                                       maybe_unfold_side uu___8 t01 t11 in
+                                     fun uu___8 ->
+                                       Success
+                                         (uu___7,
+                                           FStar_Pervasives_Native.None)
+                                   else
+                                     (fun uu___8 ->
+                                        Success
+                                          (FStar_Pervasives_Native.None,
+                                            FStar_Pervasives_Native.None)) in
+                                 uu___6 ctx01 in
+                               (match uu___5 with
+                                | Success (y, g2) ->
+                                    let uu___6 =
+                                      let uu___7 = and_pre g11 g2 in
+                                      (y, uu___7) in
+                                    Success uu___6
+                                | err1 -> err1)
+                           | Error err1 -> Error err1 in
+                     let emit_guard t01 =
+                       fun t11 ->
+                         let uu___4 ctx =
+                           let ctx1 =
+                             {
+                               no_guard = (ctx.no_guard);
+                               unfolding_ok = (ctx.unfolding_ok);
+                               error_context =
+                                 (("checking lhs while emitting guard",
+                                    FStar_Pervasives_Native.None) ::
+                                 (ctx.error_context))
+                             } in
+                           let uu___5 = do_check g t01 in uu___5 ctx1 in
+                         fun ctx01 ->
+                           let uu___5 = uu___4 ctx01 in
+                           match uu___5 with
+                           | Success (x1, g11) ->
+                               let uu___6 =
                                  let uu___7 =
-                                   let uu___8 = which_side_to_unfold t01 t11 in
-                                   maybe_unfold_side uu___8 t01 t11 in
-                                 fun uu___8 ->
-                                   Success
-                                     (uu___7, FStar_Pervasives_Native.None)
-                               else
-                                 (fun uu___8 ->
-                                    Success
-                                      (FStar_Pervasives_Native.None,
-                                        FStar_Pervasives_Native.None)) in
-                             uu___6 ctx01 in
-                           (match uu___5 with
-                            | Success (y, g2) ->
-                                let uu___6 =
-                                  let uu___7 = and_pre g11 g2 in (y, uu___7) in
-                                Success uu___6
-                            | err1 -> err1)
-                       | Error err1 -> Error err1 in
-                     let emit_guard t01 t11 =
-                       let uu___4 ctx =
-                         let ctx1 =
-                           {
-                             no_guard = (ctx.no_guard);
-                             unfolding_ok = (ctx.unfolding_ok);
-                             error_context =
-                               (("checking lhs while emitting guard",
-                                  FStar_Pervasives_Native.None) ::
-                               (ctx.error_context))
-                           } in
-                         let uu___5 = do_check g t01 in uu___5 ctx1 in
-                       fun ctx01 ->
-                         let uu___5 = uu___4 ctx01 in
-                         match uu___5 with
-                         | Success (x1, g11) ->
-                             let uu___6 =
-                               let uu___7 =
-                                 match x1 with
-                                 | (uu___8, t_typ) ->
-                                     let uu___9 = universe_of g t_typ in
-                                     (fun ctx02 ->
-                                        let uu___10 = uu___9 ctx02 in
-                                        match uu___10 with
-                                        | Success (x2, g12) ->
-                                            let uu___11 =
-                                              let uu___12 =
-                                                let uu___13 =
-                                                  FStarC_Syntax_Util.mk_eq2
-                                                    x2 t_typ t01 t11 in
-                                                guard uu___13 in
-                                              uu___12 ctx02 in
-                                            (match uu___11 with
-                                             | Success (y, g2) ->
-                                                 let uu___12 =
-                                                   let uu___13 =
-                                                     and_pre g12 g2 in
-                                                   ((), uu___13) in
-                                                 Success uu___12
-                                             | err1 -> err1)
-                                        | Error err1 -> Error err1) in
-                               uu___7 ctx01 in
-                             (match uu___6 with
-                              | Success (y, g2) ->
-                                  let uu___7 =
-                                    let uu___8 = and_pre g11 g2 in
-                                    ((), uu___8) in
-                                  Success uu___7
-                              | err1 -> err1)
-                         | Error err1 -> Error err1 in
-                     let fallback t01 t11 =
-                       if guard_ok
-                       then
-                         let uu___4 = (equatable g t01) || (equatable g t11) in
-                         (if uu___4 then emit_guard t01 t11 else err ())
-                       else err () in
-                     let maybe_unfold_side_and_retry side1 t01 t11 ctx01 =
-                       let uu___4 = unfolding_ok ctx01 in
-                       match uu___4 with
-                       | Success (x1, g11) ->
-                           let uu___5 =
-                             let uu___6 =
-                               if x1
-                               then
-                                 let uu___7 = maybe_unfold_side side1 t01 t11 in
-                                 match uu___7 with
-                                 | FStar_Pervasives_Native.None ->
-                                     fallback t01 t11
-                                 | FStar_Pervasives_Native.Some (t02, t12) ->
-                                     check_relation g rel t02 t12
-                               else fallback t01 t11 in
-                             uu___6 ctx01 in
-                           (match uu___5 with
-                            | Success (y, g2) ->
-                                let uu___6 =
-                                  let uu___7 = and_pre g11 g2 in ((), uu___7) in
-                                Success uu___6
-                            | err1 -> err1)
-                       | Error err1 -> Error err1 in
-                     let maybe_unfold_and_retry t01 t11 =
-                       let uu___4 = which_side_to_unfold t01 t11 in
-                       maybe_unfold_side_and_retry uu___4 t01 t11 in
+                                   match x1 with
+                                   | (uu___8, t_typ) ->
+                                       let uu___9 = universe_of g t_typ in
+                                       (fun ctx02 ->
+                                          let uu___10 = uu___9 ctx02 in
+                                          match uu___10 with
+                                          | Success (x2, g12) ->
+                                              let uu___11 =
+                                                let uu___12 =
+                                                  let uu___13 =
+                                                    FStarC_Syntax_Util.mk_eq2
+                                                      x2 t_typ t01 t11 in
+                                                  guard uu___13 in
+                                                uu___12 ctx02 in
+                                              (match uu___11 with
+                                               | Success (y, g2) ->
+                                                   let uu___12 =
+                                                     let uu___13 =
+                                                       and_pre g12 g2 in
+                                                     ((), uu___13) in
+                                                   Success uu___12
+                                               | err1 -> err1)
+                                          | Error err1 -> Error err1) in
+                                 uu___7 ctx01 in
+                               (match uu___6 with
+                                | Success (y, g2) ->
+                                    let uu___7 =
+                                      let uu___8 = and_pre g11 g2 in
+                                      ((), uu___8) in
+                                    Success uu___7
+                                | err1 -> err1)
+                           | Error err1 -> Error err1 in
+                     let fallback t01 =
+                       fun t11 ->
+                         if guard_ok
+                         then
+                           let uu___4 =
+                             (equatable g t01) || (equatable g t11) in
+                           (if uu___4
+                            then emit_guard t01 t11
+                            else err "not equatable")
+                         else err "guards not allowed" in
+                     let maybe_unfold_side_and_retry side1 =
+                       fun t01 ->
+                         fun t11 ->
+                           fun ctx01 ->
+                             let uu___4 = unfolding_ok ctx01 in
+                             match uu___4 with
+                             | Success (x1, g11) ->
+                                 let uu___5 =
+                                   let uu___6 =
+                                     if x1
+                                     then
+                                       let uu___7 =
+                                         maybe_unfold_side side1 t01 t11 in
+                                       match uu___7 with
+                                       | FStar_Pervasives_Native.None ->
+                                           fallback t01 t11
+                                       | FStar_Pervasives_Native.Some
+                                           (t02, t12) ->
+                                           check_relation g rel t02 t12
+                                     else fallback t01 t11 in
+                                   uu___6 ctx01 in
+                                 (match uu___5 with
+                                  | Success (y, g2) ->
+                                      let uu___6 =
+                                        let uu___7 = and_pre g11 g2 in
+                                        ((), uu___7) in
+                                      Success uu___6
+                                  | err1 -> err1)
+                             | Error err1 -> Error err1 in
+                     let maybe_unfold_and_retry t01 =
+                       fun t11 ->
+                         let uu___4 = which_side_to_unfold t01 t11 in
+                         maybe_unfold_side_and_retry uu___4 t01 t11 in
                      let beta_iota_reduce t =
                        let t2 = FStarC_Syntax_Subst.compress t in
                        let t3 =
@@ -1990,19 +2092,23 @@ let rec (check_relation :
                          let uu___5 = beta_iota_reduce1 t1 in
                          FStarC_Syntax_Subst.compress uu___5 in
                        FStarC_Syntax_Util.unlazy_emb uu___4 in
-                     let check_relation1 g2 rel1 t02 t12 ctx =
-                       let ctx1 =
-                         {
-                           no_guard = (ctx.no_guard);
-                           unfolding_ok = (ctx.unfolding_ok);
-                           error_context =
-                             (("check_relation",
-                                (FStar_Pervasives_Native.Some
-                                   (CtxRel (t02, rel1, t12)))) ::
-                             (ctx.error_context))
-                         } in
-                       let uu___4 = check_relation g2 rel1 t02 t12 in
-                       uu___4 ctx1 in
+                     let check_relation1 g2 =
+                       fun rel1 ->
+                         fun t02 ->
+                           fun t12 ->
+                             fun ctx ->
+                               let ctx1 =
+                                 {
+                                   no_guard = (ctx.no_guard);
+                                   unfolding_ok = (ctx.unfolding_ok);
+                                   error_context =
+                                     (("check_relation",
+                                        (FStar_Pervasives_Native.Some
+                                           (CtxRel (t02, rel1, t12)))) ::
+                                     (ctx.error_context))
+                                 } in
+                               let uu___4 = check_relation g2 rel1 t02 t12 in
+                               uu___4 ctx1 in
                      let uu___4 = equal_term t01 t11 in
                      if uu___4
                      then
@@ -2021,7 +2127,7 @@ let rec (check_relation :
                             then
                               (fun uu___7 ->
                                  Success ((), FStar_Pervasives_Native.None))
-                            else err ()
+                            else err "teq_nosmt_force over Types failed"
                         | (FStarC_Syntax_Syntax.Tm_meta
                            { FStarC_Syntax_Syntax.tm2 = t02;
                              FStarC_Syntax_Syntax.meta =
@@ -2084,7 +2190,8 @@ let rec (check_relation :
                                then
                                  fun uu___8 ->
                                    Success ((), FStar_Pervasives_Native.None)
-                               else err ())
+                               else
+                                 err "teq_nosmt_force over Tm_uinst failed")
                             else maybe_unfold_and_retry t01 t11
                         | (FStarC_Syntax_Syntax.Tm_fvar uu___6,
                            FStarC_Syntax_Syntax.Tm_fvar uu___7) ->
@@ -3555,81 +3662,94 @@ let rec (check_relation :
                              FStarC_Syntax_Syntax.brs = brs1;
                              FStarC_Syntax_Syntax.rc_opt1 = uu___9;_})
                             ->
-                            let relate_branch br0 br1 uu___10 =
-                              match (br0, br1) with
-                              | ((p0, FStar_Pervasives_Native.None, body0),
-                                 (p1, FStar_Pervasives_Native.None, body1))
-                                  ->
-                                  let uu___11 =
-                                    let uu___12 =
-                                      FStarC_Syntax_Syntax.eq_pat p0 p1 in
-                                    Prims.op_Negation uu___12 in
-                                  if uu___11
-                                  then fail "patterns not equal"
-                                  else
-                                    (let uu___13 =
-                                       open_branches_eq_pat g
-                                         (p0, FStar_Pervasives_Native.None,
-                                           body0)
-                                         (p1, FStar_Pervasives_Native.None,
-                                           body1) in
-                                     match uu___13 with
-                                     | (g', (p01, uu___14, body01),
-                                        (p11, uu___15, body11)) ->
-                                         let uu___16 =
-                                           FStarC_TypeChecker_PatternUtils.raw_pat_as_exp
-                                             g.tcenv p01 in
-                                         (match uu___16 with
-                                          | FStar_Pervasives_Native.Some
-                                              (uu___17, bvs0) ->
-                                              let bs0 =
-                                                FStarC_List.map
-                                                  FStarC_Syntax_Syntax.mk_binder
-                                                  bvs0 in
-                                              let uu___18 =
-                                                check_binders g bs0 in
-                                              (fun ctx01 ->
-                                                 let uu___19 = uu___18 ctx01 in
-                                                 match uu___19 with
-                                                 | Success (x1, g11) ->
-                                                     let uu___20 =
-                                                       let uu___21 ctx =
-                                                         let ctx1 =
-                                                           {
-                                                             no_guard =
-                                                               (ctx.no_guard);
-                                                             unfolding_ok =
-                                                               (ctx.unfolding_ok);
-                                                             error_context =
-                                                               (("relate_branch",
-                                                                  FStar_Pervasives_Native.None)
-                                                               ::
-                                                               (ctx.error_context))
-                                                           } in
-                                                         let uu___22 =
-                                                           let uu___23 =
-                                                             check_relation1
-                                                               g' rel body01
-                                                               body11 in
-                                                           with_binders bs0
-                                                             x1 uu___23 in
-                                                         uu___22 ctx1 in
-                                                       uu___21 ctx01 in
-                                                     (match uu___20 with
-                                                      | Success (y, g2) ->
-                                                          let uu___21 =
-                                                            let uu___22 =
-                                                              and_pre g11 g2 in
-                                                            ((), uu___22) in
-                                                          Success uu___21
-                                                      | err1 -> err1)
-                                                 | Error err1 -> Error err1)
-                                          | uu___17 ->
-                                              fail
-                                                "raw_pat_as_exp failed in check_equality match rule"))
-                              | uu___11 ->
-                                  fail
-                                    "Core does not support branches with when" in
+                            let relate_branch br0 =
+                              fun br1 ->
+                                fun uu___10 ->
+                                  match (br0, br1) with
+                                  | ((p0, FStar_Pervasives_Native.None,
+                                      body0),
+                                     (p1, FStar_Pervasives_Native.None,
+                                      body1)) ->
+                                      let uu___11 =
+                                        let uu___12 =
+                                          FStarC_Syntax_Syntax.eq_pat p0 p1 in
+                                        Prims.op_Negation uu___12 in
+                                      if uu___11
+                                      then fail_str "patterns not equal"
+                                      else
+                                        (let uu___13 =
+                                           open_branches_eq_pat g
+                                             (p0,
+                                               FStar_Pervasives_Native.None,
+                                               body0)
+                                             (p1,
+                                               FStar_Pervasives_Native.None,
+                                               body1) in
+                                         match uu___13 with
+                                         | (g', (p01, uu___14, body01),
+                                            (p11, uu___15, body11)) ->
+                                             let uu___16 =
+                                               FStarC_TypeChecker_PatternUtils.raw_pat_as_exp
+                                                 g.tcenv p01 in
+                                             (match uu___16 with
+                                              | FStar_Pervasives_Native.Some
+                                                  (uu___17, bvs0) ->
+                                                  let bs0 =
+                                                    FStarC_List.map
+                                                      FStarC_Syntax_Syntax.mk_binder
+                                                      bvs0 in
+                                                  let uu___18 =
+                                                    check_binders g bs0 in
+                                                  (fun ctx01 ->
+                                                     let uu___19 =
+                                                       uu___18 ctx01 in
+                                                     match uu___19 with
+                                                     | Success (x1, g11) ->
+                                                         let uu___20 =
+                                                           let uu___21 ctx =
+                                                             let ctx1 =
+                                                               {
+                                                                 no_guard =
+                                                                   (ctx.no_guard);
+                                                                 unfolding_ok
+                                                                   =
+                                                                   (ctx.unfolding_ok);
+                                                                 error_context
+                                                                   =
+                                                                   (("relate_branch",
+                                                                    FStar_Pervasives_Native.None)
+                                                                   ::
+                                                                   (ctx.error_context))
+                                                               } in
+                                                             let uu___22 =
+                                                               let uu___23 =
+                                                                 check_relation1
+                                                                   g' rel
+                                                                   body01
+                                                                   body11 in
+                                                               with_binders
+                                                                 bs0 x1
+                                                                 uu___23 in
+                                                             uu___22 ctx1 in
+                                                           uu___21 ctx01 in
+                                                         (match uu___20 with
+                                                          | Success (y, g2)
+                                                              ->
+                                                              let uu___21 =
+                                                                let uu___22 =
+                                                                  and_pre g11
+                                                                    g2 in
+                                                                ((), uu___22) in
+                                                              Success uu___21
+                                                          | err1 -> err1)
+                                                     | Error err1 ->
+                                                         Error err1)
+                                              | uu___17 ->
+                                                  fail_str
+                                                    "raw_pat_as_exp failed in check_equality match rule"))
+                                  | uu___11 ->
+                                      fail_str
+                                        "Core does not support branches with when" in
                             let uu___10 =
                               let uu___11 = check_relation1 g EQUALITY e0 e1 in
                               fun ctx01 ->
@@ -3696,7 +3816,7 @@ and (check_relation_args :
                                      Success uu___6
                                  | err -> err)
                             | Error err -> Error err)) ()
-          else fail "Unequal number of arguments"
+          else fail_str "Unequal number of arguments"
 and (check_relation_comp :
   env ->
     relation ->
@@ -3735,23 +3855,27 @@ and (check_relation_comp :
               if uu___2
               then (fun uu___3 -> Success ((), FStar_Pervasives_Native.None))
               else
-                (let ct_eq res0 args0 res1 args1 =
-                   let uu___4 = check_relation g EQUALITY res0 res1 in
-                   fun ctx0 ->
-                     let uu___5 = uu___4 ctx0 in
-                     match uu___5 with
-                     | Success (x, g1) ->
-                         let uu___6 =
-                           let uu___7 =
-                             check_relation_args g EQUALITY args0 args1 in
-                           uu___7 ctx0 in
-                         (match uu___6 with
-                          | Success (y, g2) ->
-                              let uu___7 =
-                                let uu___8 = and_pre g1 g2 in ((), uu___8) in
-                              Success uu___7
-                          | err -> err)
-                     | Error err -> Error err in
+                (let ct_eq res0 =
+                   fun args0 ->
+                     fun res1 ->
+                       fun args1 ->
+                         let uu___4 = check_relation g EQUALITY res0 res1 in
+                         fun ctx0 ->
+                           let uu___5 = uu___4 ctx0 in
+                           match uu___5 with
+                           | Success (x, g1) ->
+                               let uu___6 =
+                                 let uu___7 =
+                                   check_relation_args g EQUALITY args0 args1 in
+                                 uu___7 ctx0 in
+                               (match uu___6 with
+                                | Success (y, g2) ->
+                                    let uu___7 =
+                                      let uu___8 = and_pre g1 g2 in
+                                      ((), uu___8) in
+                                    Success uu___7
+                                | err -> err)
+                           | Error err -> Error err in
                  let uu___4 =
                    FStarC_Syntax_Util.comp_eff_name_res_and_args c0 in
                  match uu___4 with
@@ -3783,14 +3907,28 @@ and (check_relation_comp :
                              else
                                (let uu___10 =
                                   let uu___11 =
-                                    FStarC_Ident.string_of_lid
-                                      ct0.FStarC_Syntax_Syntax.effect_name in
-                                  let uu___12 =
-                                    FStarC_Ident.string_of_lid
-                                      ct1.FStarC_Syntax_Syntax.effect_name in
-                                  FStarC_Util.format2
-                                    "Subcomp failed: Unequal computation types %s and %s"
-                                    uu___11 uu___12 in
+                                    let uu___12 =
+                                      FStarC_Errors_Msg.text
+                                        "Subcomp failed: Unequal computation types" in
+                                    let uu___13 =
+                                      let uu___14 =
+                                        FStarC_Class_PP.pp
+                                          FStarC_Ident.pretty_lident
+                                          ct0.FStarC_Syntax_Syntax.effect_name in
+                                      let uu___15 =
+                                        let uu___16 =
+                                          FStarC_Pprint.doc_of_string "and" in
+                                        let uu___17 =
+                                          FStarC_Class_PP.pp
+                                            FStarC_Ident.pretty_lident
+                                            ct1.FStarC_Syntax_Syntax.effect_name in
+                                        FStarC_Pprint.op_Hat_Slash_Hat
+                                          uu___16 uu___17 in
+                                      FStarC_Pprint.op_Hat_Slash_Hat uu___14
+                                        uu___15 in
+                                    FStarC_Pprint.op_Hat_Slash_Hat uu___12
+                                      uu___13 in
+                                  [uu___11] in
                                 fail uu___10))))
           | (uu___1, FStar_Pervasives_Native.None) ->
               let uu___2 =
@@ -3800,23 +3938,27 @@ and (check_relation_comp :
               if uu___2
               then (fun uu___3 -> Success ((), FStar_Pervasives_Native.None))
               else
-                (let ct_eq res0 args0 res1 args1 =
-                   let uu___4 = check_relation g EQUALITY res0 res1 in
-                   fun ctx0 ->
-                     let uu___5 = uu___4 ctx0 in
-                     match uu___5 with
-                     | Success (x, g1) ->
-                         let uu___6 =
-                           let uu___7 =
-                             check_relation_args g EQUALITY args0 args1 in
-                           uu___7 ctx0 in
-                         (match uu___6 with
-                          | Success (y, g2) ->
-                              let uu___7 =
-                                let uu___8 = and_pre g1 g2 in ((), uu___8) in
-                              Success uu___7
-                          | err -> err)
-                     | Error err -> Error err in
+                (let ct_eq res0 =
+                   fun args0 ->
+                     fun res1 ->
+                       fun args1 ->
+                         let uu___4 = check_relation g EQUALITY res0 res1 in
+                         fun ctx0 ->
+                           let uu___5 = uu___4 ctx0 in
+                           match uu___5 with
+                           | Success (x, g1) ->
+                               let uu___6 =
+                                 let uu___7 =
+                                   check_relation_args g EQUALITY args0 args1 in
+                                 uu___7 ctx0 in
+                               (match uu___6 with
+                                | Success (y, g2) ->
+                                    let uu___7 =
+                                      let uu___8 = and_pre g1 g2 in
+                                      ((), uu___8) in
+                                    Success uu___7
+                                | err -> err)
+                           | Error err -> Error err in
                  let uu___4 =
                    FStarC_Syntax_Util.comp_eff_name_res_and_args c0 in
                  match uu___4 with
@@ -3848,14 +3990,28 @@ and (check_relation_comp :
                              else
                                (let uu___10 =
                                   let uu___11 =
-                                    FStarC_Ident.string_of_lid
-                                      ct0.FStarC_Syntax_Syntax.effect_name in
-                                  let uu___12 =
-                                    FStarC_Ident.string_of_lid
-                                      ct1.FStarC_Syntax_Syntax.effect_name in
-                                  FStarC_Util.format2
-                                    "Subcomp failed: Unequal computation types %s and %s"
-                                    uu___11 uu___12 in
+                                    let uu___12 =
+                                      FStarC_Errors_Msg.text
+                                        "Subcomp failed: Unequal computation types" in
+                                    let uu___13 =
+                                      let uu___14 =
+                                        FStarC_Class_PP.pp
+                                          FStarC_Ident.pretty_lident
+                                          ct0.FStarC_Syntax_Syntax.effect_name in
+                                      let uu___15 =
+                                        let uu___16 =
+                                          FStarC_Pprint.doc_of_string "and" in
+                                        let uu___17 =
+                                          FStarC_Class_PP.pp
+                                            FStarC_Ident.pretty_lident
+                                            ct1.FStarC_Syntax_Syntax.effect_name in
+                                        FStarC_Pprint.op_Hat_Slash_Hat
+                                          uu___16 uu___17 in
+                                      FStarC_Pprint.op_Hat_Slash_Hat uu___14
+                                        uu___15 in
+                                    FStarC_Pprint.op_Hat_Slash_Hat uu___12
+                                      uu___13 in
+                                  [uu___11] in
                                 fail uu___10))))
           | (FStar_Pervasives_Native.Some (E_Total, t0),
              FStar_Pervasives_Native.Some (uu___1, t1)) ->
@@ -3868,7 +4024,7 @@ and (check_relation_comp :
               let uu___1 = non_informative g t1 in
               if uu___1
               then check_relation g rel t0 t1
-              else fail "Expected a Total computation, but got Ghost"
+              else fail_str "Expected a Total computation, but got Ghost"
 and (check_subtype :
   env ->
     FStarC_Syntax_Syntax.term FStar_Pervasives_Native.option ->
@@ -3906,25 +4062,29 @@ and (memo_check :
   =
   fun g ->
     fun e ->
-      let check_then_memo g1 e1 ctx =
-        let r = let uu___ = do_check_and_promote g1 e1 in uu___ ctx in
-        match r with
-        | Success (res, FStar_Pervasives_Native.None) ->
-            (insert g1 e1 (res, FStar_Pervasives_Native.None); r)
-        | Success (res, FStar_Pervasives_Native.Some guard1) ->
-            (match g1.guard_handler with
-             | FStar_Pervasives_Native.None ->
-                 (insert g1 e1 (res, (FStar_Pervasives_Native.Some guard1));
-                  r)
-             | FStar_Pervasives_Native.Some gh ->
-                 let uu___ = gh g1.tcenv guard1 in
-                 if uu___
-                 then
-                   let r1 = (res, FStar_Pervasives_Native.None) in
-                   (insert g1 e1 r1; Success r1)
-                 else
-                   (let uu___2 = fail "guard handler failed" in uu___2 ctx))
-        | uu___ -> r in
+      let check_then_memo g1 =
+        fun e1 ->
+          fun ctx ->
+            let r = let uu___ = do_check_and_promote g1 e1 in uu___ ctx in
+            match r with
+            | Success (res, FStar_Pervasives_Native.None) ->
+                (insert g1 e1 (res, FStar_Pervasives_Native.None); r)
+            | Success (res, FStar_Pervasives_Native.Some guard1) ->
+                (match g1.guard_handler with
+                 | FStar_Pervasives_Native.None ->
+                     (insert g1 e1
+                        (res, (FStar_Pervasives_Native.Some guard1));
+                      r)
+                 | FStar_Pervasives_Native.Some gh ->
+                     let uu___ = gh g1.tcenv guard1 in
+                     if uu___
+                     then
+                       let r1 = (res, FStar_Pervasives_Native.None) in
+                       (insert g1 e1 r1; Success r1)
+                     else
+                       (let uu___2 = fail_str "guard handler failed" in
+                        uu___2 ctx))
+            | uu___ -> r in
       fun ctx ->
         if Prims.op_Negation g.should_read_cache
         then check_then_memo g e ctx
@@ -4038,7 +4198,7 @@ and (do_check :
                  let uu___2 =
                    FStarC_Class_Show.show FStarC_Syntax_Print.showable_bv x in
                  FStarC_Util.format1 "Variable not found: %s" uu___2 in
-               fail uu___1
+               fail_str uu___1
            | FStar_Pervasives_Native.Some (t, uu___1) ->
                (fun uu___2 ->
                   Success ((E_Total, t), FStar_Pervasives_Native.None)))
@@ -4050,7 +4210,7 @@ and (do_check :
            | FStar_Pervasives_Native.Some (([], t), uu___1) ->
                (fun uu___2 ->
                   Success ((E_Total, t), FStar_Pervasives_Native.None))
-           | uu___1 -> fail "Missing universes instantiation")
+           | uu___1 -> fail_str "Missing universes instantiation")
       | FStarC_Syntax_Syntax.Tm_uinst
           ({ FStarC_Syntax_Syntax.n = FStarC_Syntax_Syntax.Tm_fvar f;
              FStarC_Syntax_Syntax.pos = uu___;
@@ -4068,16 +4228,17 @@ and (do_check :
                    FStarC_Ident.string_of_lid
                      (f.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v in
                  FStarC_Util.format1 "Top-level name not found: %s" uu___5 in
-               fail uu___4
+               fail_str uu___4
            | FStar_Pervasives_Native.Some (t, uu___4) ->
                (fun uu___5 ->
                   Success ((E_Total, t), FStar_Pervasives_Native.None)))
       | FStarC_Syntax_Syntax.Tm_constant c ->
           (match c with
-           | FStarC_Const.Const_range_of -> fail "Unhandled constant"
-           | FStarC_Const.Const_set_range_of -> fail "Unhandled constant"
-           | FStarC_Const.Const_reify uu___ -> fail "Unhandled constant"
-           | FStarC_Const.Const_reflect uu___ -> fail "Unhandled constant"
+           | FStarC_Const.Const_range_of -> fail_str "Unhandled constant"
+           | FStarC_Const.Const_set_range_of -> fail_str "Unhandled constant"
+           | FStarC_Const.Const_reify uu___ -> fail_str "Unhandled constant"
+           | FStarC_Const.Const_reflect uu___ ->
+               fail_str "Unhandled constant"
            | uu___ ->
                let t =
                  FStarC_TypeChecker_TcTerm.tc_constant g.tcenv
@@ -4315,79 +4476,86 @@ and (do_check :
                        | err -> err)
                   | Error err -> Error err))
       | FStarC_Syntax_Syntax.Tm_app uu___ ->
-          let rec check_app_arg uu___1 uu___2 =
-            match (uu___1, uu___2) with
-            | ((eff_hd, t_hd), (arg, arg_qual)) ->
-                let uu___3 = is_arrow g t_hd in
-                (fun ctx0 ->
-                   let uu___4 = uu___3 ctx0 in
-                   match uu___4 with
-                   | Success (x, g1) ->
-                       let uu___5 =
-                         let uu___6 =
-                           match x with
-                           | (x1, eff_arr, t') ->
-                               let uu___7 = check "app arg" g arg in
-                               (fun ctx01 ->
-                                  let uu___8 = uu___7 ctx01 in
-                                  match uu___8 with
-                                  | Success (x2, g11) ->
-                                      let uu___9 =
-                                        let uu___10 =
-                                          match x2 with
-                                          | (eff_arg, t_arg) ->
-                                              let uu___11 ctx =
-                                                let ctx1 =
-                                                  {
-                                                    no_guard = (ctx.no_guard);
-                                                    unfolding_ok =
-                                                      (ctx.unfolding_ok);
-                                                    error_context =
-                                                      (("app subtyping",
-                                                         FStar_Pervasives_Native.None)
-                                                      :: (ctx.error_context))
-                                                  } in
-                                                let uu___12 =
-                                                  check_subtype g
-                                                    (FStar_Pervasives_Native.Some
-                                                       arg) t_arg
-                                                    (x1.FStarC_Syntax_Syntax.binder_bv).FStarC_Syntax_Syntax.sort in
-                                                uu___12 ctx1 in
-                                              (fun ctx02 ->
-                                                 let uu___12 = uu___11 ctx02 in
-                                                 match uu___12 with
-                                                 | Success (x3, g12) ->
-                                                     let uu___13 =
-                                                       let uu___14 =
-                                                         let uu___15 ctx =
-                                                           let ctx1 =
-                                                             {
-                                                               no_guard =
-                                                                 (ctx.no_guard);
-                                                               unfolding_ok =
-                                                                 (ctx.unfolding_ok);
-                                                               error_context
-                                                                 =
-                                                                 (("app arg qual",
-                                                                    FStar_Pervasives_Native.None)
-                                                                 ::
-                                                                 (ctx.error_context))
-                                                             } in
-                                                           let uu___16 =
-                                                             check_arg_qual
-                                                               arg_qual
-                                                               x1.FStarC_Syntax_Syntax.binder_qual in
-                                                           uu___16 ctx1 in
-                                                         fun ctx03 ->
-                                                           let uu___16 =
-                                                             uu___15 ctx03 in
-                                                           match uu___16 with
-                                                           | Success
-                                                               (x4, g13) ->
-                                                               let uu___17 =
-                                                                 let uu___18
+          let rec check_app_arg uu___1 =
+            fun uu___2 ->
+              match (uu___1, uu___2) with
+              | ((eff_hd, t_hd), (arg, arg_qual)) ->
+                  let uu___3 = is_arrow g t_hd in
+                  (fun ctx0 ->
+                     let uu___4 = uu___3 ctx0 in
+                     match uu___4 with
+                     | Success (x, g1) ->
+                         let uu___5 =
+                           let uu___6 =
+                             match x with
+                             | (x1, eff_arr, t') ->
+                                 let uu___7 = check "app arg" g arg in
+                                 (fun ctx01 ->
+                                    let uu___8 = uu___7 ctx01 in
+                                    match uu___8 with
+                                    | Success (x2, g11) ->
+                                        let uu___9 =
+                                          let uu___10 =
+                                            match x2 with
+                                            | (eff_arg, t_arg) ->
+                                                let uu___11 ctx =
+                                                  let ctx1 =
+                                                    {
+                                                      no_guard =
+                                                        (ctx.no_guard);
+                                                      unfolding_ok =
+                                                        (ctx.unfolding_ok);
+                                                      error_context =
+                                                        (("app subtyping",
+                                                           FStar_Pervasives_Native.None)
+                                                        ::
+                                                        (ctx.error_context))
+                                                    } in
+                                                  let uu___12 =
+                                                    check_subtype g
+                                                      (FStar_Pervasives_Native.Some
+                                                         arg) t_arg
+                                                      (x1.FStarC_Syntax_Syntax.binder_bv).FStarC_Syntax_Syntax.sort in
+                                                  uu___12 ctx1 in
+                                                (fun ctx02 ->
+                                                   let uu___12 =
+                                                     uu___11 ctx02 in
+                                                   match uu___12 with
+                                                   | Success (x3, g12) ->
+                                                       let uu___13 =
+                                                         let uu___14 =
+                                                           let uu___15 ctx =
+                                                             let ctx1 =
+                                                               {
+                                                                 no_guard =
+                                                                   (ctx.no_guard);
+                                                                 unfolding_ok
                                                                    =
-                                                                   let uu___19
+                                                                   (ctx.unfolding_ok);
+                                                                 error_context
+                                                                   =
+                                                                   (("app arg qual",
+                                                                    FStar_Pervasives_Native.None)
+                                                                   ::
+                                                                   (ctx.error_context))
+                                                               } in
+                                                             let uu___16 =
+                                                               check_arg_qual
+                                                                 arg_qual
+                                                                 x1.FStarC_Syntax_Syntax.binder_qual in
+                                                             uu___16 ctx1 in
+                                                           fun ctx03 ->
+                                                             let uu___16 =
+                                                               uu___15 ctx03 in
+                                                             match uu___16
+                                                             with
+                                                             | Success
+                                                                 (x4, g13) ->
+                                                                 let uu___17
+                                                                   =
+                                                                   let uu___18
+                                                                    =
+                                                                    let uu___19
                                                                     =
                                                                     let uu___20
                                                                     =
@@ -4402,17 +4570,17 @@ and (do_check :
                                                                     eff_arr
                                                                     eff_arg)),
                                                                     uu___20) in
-                                                                   fun
+                                                                    fun
                                                                     uu___20
                                                                     ->
                                                                     Success
                                                                     (uu___19,
                                                                     FStar_Pervasives_Native.None) in
-                                                                 uu___18
-                                                                   ctx03 in
-                                                               (match uu___17
-                                                                with
-                                                                | Success
+                                                                   uu___18
+                                                                    ctx03 in
+                                                                 (match uu___17
+                                                                  with
+                                                                  | Success
                                                                     (y, g2)
                                                                     ->
                                                                     let uu___18
@@ -4425,53 +4593,57 @@ and (do_check :
                                                                     uu___19) in
                                                                     Success
                                                                     uu___18
-                                                                | err -> err)
-                                                           | Error err ->
-                                                               Error err in
-                                                       uu___14 ctx02 in
-                                                     (match uu___13 with
-                                                      | Success (y, g2) ->
-                                                          let uu___14 =
-                                                            let uu___15 =
-                                                              and_pre g12 g2 in
-                                                            (y, uu___15) in
-                                                          Success uu___14
-                                                      | err -> err)
-                                                 | Error err -> Error err) in
-                                        uu___10 ctx01 in
-                                      (match uu___9 with
-                                       | Success (y, g2) ->
-                                           let uu___10 =
-                                             let uu___11 = and_pre g11 g2 in
-                                             (y, uu___11) in
-                                           Success uu___10
-                                       | err -> err)
-                                  | Error err -> Error err) in
-                         uu___6 ctx0 in
-                       (match uu___5 with
-                        | Success (y, g2) ->
-                            let uu___6 =
-                              let uu___7 = and_pre g1 g2 in (y, uu___7) in
-                            Success uu___6
-                        | err -> err)
-                   | Error err -> Error err) in
-          let check_app hd args =
-            let uu___1 = check "app head" g hd in
-            fun ctx0 ->
-              let uu___2 = uu___1 ctx0 in
-              match uu___2 with
-              | Success (x, g1) ->
-                  let uu___3 =
-                    let uu___4 =
-                      match x with
-                      | (eff_hd, t) -> fold check_app_arg (eff_hd, t) args in
-                    uu___4 ctx0 in
-                  (match uu___3 with
-                   | Success (y, g2) ->
-                       let uu___4 = let uu___5 = and_pre g1 g2 in (y, uu___5) in
-                       Success uu___4
-                   | err -> err)
-              | Error err -> Error err in
+                                                                  | err ->
+                                                                    err)
+                                                             | Error err ->
+                                                                 Error err in
+                                                         uu___14 ctx02 in
+                                                       (match uu___13 with
+                                                        | Success (y, g2) ->
+                                                            let uu___14 =
+                                                              let uu___15 =
+                                                                and_pre g12
+                                                                  g2 in
+                                                              (y, uu___15) in
+                                                            Success uu___14
+                                                        | err -> err)
+                                                   | Error err -> Error err) in
+                                          uu___10 ctx01 in
+                                        (match uu___9 with
+                                         | Success (y, g2) ->
+                                             let uu___10 =
+                                               let uu___11 = and_pre g11 g2 in
+                                               (y, uu___11) in
+                                             Success uu___10
+                                         | err -> err)
+                                    | Error err -> Error err) in
+                           uu___6 ctx0 in
+                         (match uu___5 with
+                          | Success (y, g2) ->
+                              let uu___6 =
+                                let uu___7 = and_pre g1 g2 in (y, uu___7) in
+                              Success uu___6
+                          | err -> err)
+                     | Error err -> Error err) in
+          let check_app hd =
+            fun args ->
+              let uu___1 = check "app head" g hd in
+              fun ctx0 ->
+                let uu___2 = uu___1 ctx0 in
+                match uu___2 with
+                | Success (x, g1) ->
+                    let uu___3 =
+                      let uu___4 =
+                        match x with
+                        | (eff_hd, t) -> fold check_app_arg (eff_hd, t) args in
+                      uu___4 ctx0 in
+                    (match uu___3 with
+                     | Success (y, g2) ->
+                         let uu___4 =
+                           let uu___5 = and_pre g1 g2 in (y, uu___5) in
+                         Success uu___4
+                     | err -> err)
+                | Error err -> Error err in
           let uu___1 = FStarC_Syntax_Util.head_and_args_full e1 in
           (match uu___1 with
            | (hd, args) ->
@@ -5025,7 +5197,7 @@ and (do_check :
                  FStarC_Class_Show.show FStarC_Syntax_Print.showable_comp c in
                FStarC_Util.format1
                  "Effect ascriptions are not fully handled yet: %s" uu___6 in
-             fail uu___5)
+             fail_str uu___5)
       | FStarC_Syntax_Syntax.Tm_let
           { FStarC_Syntax_Syntax.lbs = (false, lb::[]);
             FStarC_Syntax_Syntax.body1 = body;_}
@@ -5289,7 +5461,7 @@ and (do_check :
                              lb.FStarC_Syntax_Syntax.lbeff in
                          FStarC_Util.format1
                            "Let binding is effectful (lbeff = %s)" uu___5 in
-                       fail uu___4)))
+                       fail_str uu___4)))
       | FStarC_Syntax_Syntax.Tm_match
           { FStarC_Syntax_Syntax.scrutinee = sc;
             FStarC_Syntax_Syntax.ret_opt = FStar_Pervasives_Native.None;
@@ -5323,105 +5495,116 @@ and (do_check :
                             | Success (x1, g11) ->
                                 let uu___6 =
                                   let uu___7 =
-                                    let rec check_branches path_condition
-                                      branch_typ_opt branches1 =
-                                      match branches1 with
-                                      | [] ->
-                                          (match branch_typ_opt with
-                                           | FStar_Pervasives_Native.None ->
-                                               fail
-                                                 "could not compute a type for the match"
-                                           | FStar_Pervasives_Native.Some et
-                                               ->
-                                               let uu___8 =
-                                                 boolean_negation_simp
-                                                   path_condition in
-                                               (match uu___8 with
-                                                | FStar_Pervasives_Native.None
-                                                    ->
-                                                    (fun uu___9 ->
-                                                       Success
-                                                         (et,
-                                                           FStar_Pervasives_Native.None))
-                                                | FStar_Pervasives_Native.Some
-                                                    g2 ->
-                                                    let uu___9 =
-                                                      let uu___10 =
-                                                        FStarC_Syntax_Util.b2t
-                                                          g2 in
-                                                      guard uu___10 in
-                                                    (fun ctx02 ->
-                                                       let uu___10 =
-                                                         uu___9 ctx02 in
-                                                       match uu___10 with
-                                                       | Success (x2, g12) ->
-                                                           let uu___11 =
-                                                             let uu___12
-                                                               uu___13 =
-                                                               Success
-                                                                 (et,
-                                                                   FStar_Pervasives_Native.None) in
-                                                             uu___12 ctx02 in
-                                                           (match uu___11
-                                                            with
-                                                            | Success
-                                                                (y, g21) ->
-                                                                let uu___12 =
-                                                                  let uu___13
+                                    let rec check_branches path_condition =
+                                      fun branch_typ_opt ->
+                                        fun branches1 ->
+                                          match branches1 with
+                                          | [] ->
+                                              (match branch_typ_opt with
+                                               | FStar_Pervasives_Native.None
+                                                   ->
+                                                   fail_str
+                                                     "could not compute a type for the match"
+                                               | FStar_Pervasives_Native.Some
+                                                   et ->
+                                                   let uu___8 =
+                                                     boolean_negation_simp
+                                                       path_condition in
+                                                   (match uu___8 with
+                                                    | FStar_Pervasives_Native.None
+                                                        ->
+                                                        (fun uu___9 ->
+                                                           Success
+                                                             (et,
+                                                               FStar_Pervasives_Native.None))
+                                                    | FStar_Pervasives_Native.Some
+                                                        g2 ->
+                                                        let uu___9 =
+                                                          let uu___10 =
+                                                            FStarC_Syntax_Util.b2t
+                                                              g2 in
+                                                          guard uu___10 in
+                                                        (fun ctx02 ->
+                                                           let uu___10 =
+                                                             uu___9 ctx02 in
+                                                           match uu___10 with
+                                                           | Success
+                                                               (x2, g12) ->
+                                                               let uu___11 =
+                                                                 let uu___12
+                                                                   uu___13 =
+                                                                   Success
+                                                                    (et,
+                                                                    FStar_Pervasives_Native.None) in
+                                                                 uu___12
+                                                                   ctx02 in
+                                                               (match uu___11
+                                                                with
+                                                                | Success
+                                                                    (y, g21)
+                                                                    ->
+                                                                    let uu___12
+                                                                    =
+                                                                    let uu___13
                                                                     =
                                                                     and_pre
                                                                     g12 g21 in
-                                                                  (y,
+                                                                    (y,
                                                                     uu___13) in
-                                                                Success
-                                                                  uu___12
-                                                            | err -> err)
-                                                       | Error err ->
-                                                           Error err)))
-                                      | (p, FStar_Pervasives_Native.None, b)::rest
-                                          ->
-                                          let uu___8 =
-                                            open_branch g
-                                              (p,
-                                                FStar_Pervasives_Native.None,
-                                                b) in
-                                          (match uu___8 with
-                                           | (uu___9, (p1, uu___10, b1)) ->
-                                               let uu___11 ctx =
-                                                 let ctx1 =
-                                                   {
-                                                     no_guard =
-                                                       (ctx.no_guard);
-                                                     unfolding_ok =
-                                                       (ctx.unfolding_ok);
-                                                     error_context =
-                                                       (("check_pat",
-                                                          FStar_Pervasives_Native.None)
-                                                       ::
-                                                       (ctx.error_context))
-                                                   } in
-                                                 let uu___12 =
-                                                   check_pat g p1 t_sc in
-                                                 uu___12 ctx1 in
-                                               (fun ctx02 ->
-                                                  let uu___12 = uu___11 ctx02 in
-                                                  match uu___12 with
-                                                  | Success (x2, g12) ->
-                                                      let uu___13 =
-                                                        let uu___14 =
-                                                          match x2 with
-                                                          | (bs, us) ->
-                                                              let uu___15 =
-                                                                pattern_branch_condition
-                                                                  g sc p1 in
-                                                              (fun ctx03 ->
-                                                                 let uu___16
-                                                                   =
-                                                                   uu___15
+                                                                    Success
+                                                                    uu___12
+                                                                | err -> err)
+                                                           | Error err ->
+                                                               Error err)))
+                                          | (p, FStar_Pervasives_Native.None,
+                                             b)::rest ->
+                                              let uu___8 =
+                                                open_branch g
+                                                  (p,
+                                                    FStar_Pervasives_Native.None,
+                                                    b) in
+                                              (match uu___8 with
+                                               | (uu___9, (p1, uu___10, b1))
+                                                   ->
+                                                   let uu___11 ctx =
+                                                     let ctx1 =
+                                                       {
+                                                         no_guard =
+                                                           (ctx.no_guard);
+                                                         unfolding_ok =
+                                                           (ctx.unfolding_ok);
+                                                         error_context =
+                                                           (("check_pat",
+                                                              FStar_Pervasives_Native.None)
+                                                           ::
+                                                           (ctx.error_context))
+                                                       } in
+                                                     let uu___12 =
+                                                       check_pat g p1 t_sc in
+                                                     uu___12 ctx1 in
+                                                   (fun ctx02 ->
+                                                      let uu___12 =
+                                                        uu___11 ctx02 in
+                                                      match uu___12 with
+                                                      | Success (x2, g12) ->
+                                                          let uu___13 =
+                                                            let uu___14 =
+                                                              match x2 with
+                                                              | (bs, us) ->
+                                                                  let uu___15
+                                                                    =
+                                                                    pattern_branch_condition
+                                                                    g sc p1 in
+                                                                  (fun ctx03
+                                                                    ->
+                                                                    let uu___16
+                                                                    =
+                                                                    uu___15
                                                                     ctx03 in
-                                                                 match uu___16
-                                                                 with
-                                                                 | Success
+                                                                    match uu___16
+                                                                    with
+                                                                    | 
+                                                                    Success
                                                                     (x3, g13)
                                                                     ->
                                                                     let uu___17
@@ -5722,7 +5905,7 @@ and (do_check :
                                                                     | 
                                                                     uu___25::uu___26
                                                                     ->
-                                                                    fail
+                                                                    fail_str
                                                                     "Redundant branches after wildcard"
                                                                     | 
                                                                     uu___25
@@ -5789,19 +5972,25 @@ and (do_check :
                                                                     | 
                                                                     err ->
                                                                     err)
-                                                                 | Error err
+                                                                    | 
+                                                                    Error err
                                                                     ->
                                                                     Error err) in
-                                                        uu___14 ctx02 in
-                                                      (match uu___13 with
-                                                       | Success (y, g2) ->
-                                                           let uu___14 =
-                                                             let uu___15 =
-                                                               and_pre g12 g2 in
-                                                             (y, uu___15) in
-                                                           Success uu___14
-                                                       | err -> err)
-                                                  | Error err -> Error err)) in
+                                                            uu___14 ctx02 in
+                                                          (match uu___13 with
+                                                           | Success 
+                                                               (y, g2) ->
+                                                               let uu___14 =
+                                                                 let uu___15
+                                                                   =
+                                                                   and_pre
+                                                                    g12 g2 in
+                                                                 (y, uu___15) in
+                                                               Success
+                                                                 uu___14
+                                                           | err -> err)
+                                                      | Error err ->
+                                                          Error err)) in
                                     let uu___8 =
                                       match rc_opt with
                                       | FStar_Pervasives_Native.Some
@@ -6022,8 +6211,13 @@ and (do_check :
                                                                 let uu___16 =
                                                                   let rec check_branches
                                                                     path_condition
+                                                                    =
+                                                                    fun
                                                                     branches1
-                                                                    acc_eff =
+                                                                    ->
+                                                                    fun
+                                                                    acc_eff
+                                                                    ->
                                                                     match branches1
                                                                     with
                                                                     | 
@@ -6405,7 +6599,7 @@ and (do_check :
                                                                     | 
                                                                     uu___34::uu___35
                                                                     ->
-                                                                    fail
+                                                                    fail_str
                                                                     "Redundant branches after wildcard"
                                                                     | 
                                                                     uu___34
@@ -6603,13 +6797,13 @@ and (do_check :
                   | err -> err)
              | Error err -> Error err)
       | FStarC_Syntax_Syntax.Tm_match uu___ ->
-          fail "Match with effect returns ascription, or tactic handler"
+          fail_str "Match with effect returns ascription, or tactic handler"
       | uu___ ->
           let uu___1 =
             let uu___2 =
               FStarC_Class_Tagged.tag_of FStarC_Syntax_Syntax.tagged_term e1 in
             FStarC_Util.format1 "Unexpected term: %s" uu___2 in
-          fail uu___1
+          fail_str uu___1
 and (check_binders :
   env ->
     FStarC_Syntax_Syntax.binders ->
@@ -6617,69 +6811,70 @@ and (check_binders :
   =
   fun g_initial ->
     fun xs ->
-      let rec aux g xs1 =
-        match xs1 with
-        | [] -> (fun uu___ -> Success ([], FStar_Pervasives_Native.None))
-        | x::xs2 ->
-            let uu___ =
-              check "binder sort" g
-                (x.FStarC_Syntax_Syntax.binder_bv).FStarC_Syntax_Syntax.sort in
-            (fun ctx0 ->
-               let uu___1 = uu___ ctx0 in
-               match uu___1 with
-               | Success (x1, g1) ->
-                   let uu___2 =
-                     let uu___3 =
-                       match x1 with
-                       | (uu___4, t) ->
-                           let uu___5 = is_type g t in
-                           (fun ctx01 ->
-                              let uu___6 = uu___5 ctx01 in
-                              match uu___6 with
-                              | Success (x2, g11) ->
-                                  let uu___7 =
-                                    let uu___8 =
-                                      let uu___9 =
-                                        let uu___10 =
-                                          let uu___11 = push_binder g x in
-                                          aux uu___11 xs2 in
-                                        fun ctx02 ->
-                                          let uu___11 = uu___10 ctx02 in
-                                          match uu___11 with
-                                          | Success (x3, g12) ->
-                                              let uu___12 =
-                                                let uu___13 uu___14 =
-                                                  Success
-                                                    ((x2 :: x3),
-                                                      FStar_Pervasives_Native.None) in
-                                                uu___13 ctx02 in
-                                              (match uu___12 with
-                                               | Success (y, g2) ->
-                                                   let uu___13 =
-                                                     let uu___14 =
-                                                       and_pre g12 g2 in
-                                                     (y, uu___14) in
-                                                   Success uu___13
-                                               | err -> err)
-                                          | Error err -> Error err in
-                                      with_binders [x] [x2] uu___9 in
-                                    uu___8 ctx01 in
-                                  (match uu___7 with
-                                   | Success (y, g2) ->
-                                       let uu___8 =
-                                         let uu___9 = and_pre g11 g2 in
-                                         (y, uu___9) in
-                                       Success uu___8
-                                   | err -> err)
-                              | Error err -> Error err) in
-                     uu___3 ctx0 in
-                   (match uu___2 with
-                    | Success (y, g2) ->
-                        let uu___3 =
-                          let uu___4 = and_pre g1 g2 in (y, uu___4) in
-                        Success uu___3
-                    | err -> err)
-               | Error err -> Error err) in
+      let rec aux g =
+        fun xs1 ->
+          match xs1 with
+          | [] -> (fun uu___ -> Success ([], FStar_Pervasives_Native.None))
+          | x::xs2 ->
+              let uu___ =
+                check "binder sort" g
+                  (x.FStarC_Syntax_Syntax.binder_bv).FStarC_Syntax_Syntax.sort in
+              (fun ctx0 ->
+                 let uu___1 = uu___ ctx0 in
+                 match uu___1 with
+                 | Success (x1, g1) ->
+                     let uu___2 =
+                       let uu___3 =
+                         match x1 with
+                         | (uu___4, t) ->
+                             let uu___5 = is_type g t in
+                             (fun ctx01 ->
+                                let uu___6 = uu___5 ctx01 in
+                                match uu___6 with
+                                | Success (x2, g11) ->
+                                    let uu___7 =
+                                      let uu___8 =
+                                        let uu___9 =
+                                          let uu___10 =
+                                            let uu___11 = push_binder g x in
+                                            aux uu___11 xs2 in
+                                          fun ctx02 ->
+                                            let uu___11 = uu___10 ctx02 in
+                                            match uu___11 with
+                                            | Success (x3, g12) ->
+                                                let uu___12 =
+                                                  let uu___13 uu___14 =
+                                                    Success
+                                                      ((x2 :: x3),
+                                                        FStar_Pervasives_Native.None) in
+                                                  uu___13 ctx02 in
+                                                (match uu___12 with
+                                                 | Success (y, g2) ->
+                                                     let uu___13 =
+                                                       let uu___14 =
+                                                         and_pre g12 g2 in
+                                                       (y, uu___14) in
+                                                     Success uu___13
+                                                 | err -> err)
+                                            | Error err -> Error err in
+                                        with_binders [x] [x2] uu___9 in
+                                      uu___8 ctx01 in
+                                    (match uu___7 with
+                                     | Success (y, g2) ->
+                                         let uu___8 =
+                                           let uu___9 = and_pre g11 g2 in
+                                           (y, uu___9) in
+                                         Success uu___8
+                                     | err -> err)
+                                | Error err -> Error err) in
+                       uu___3 ctx0 in
+                     (match uu___2 with
+                      | Success (y, g2) ->
+                          let uu___3 =
+                            let uu___4 = and_pre g1 g2 in (y, uu___4) in
+                          Success uu___3
+                      | err -> err)
+                 | Error err -> Error err) in
       aux g_initial xs
 and (check_comp :
   env -> FStarC_Syntax_Syntax.comp -> FStarC_Syntax_Syntax.universe result) =
@@ -6724,7 +6919,7 @@ and (check_comp :
           if
             (FStarC_List.length ct.FStarC_Syntax_Syntax.comp_univs) <>
               Prims.int_one
-          then fail "Unexpected/missing universe instantitation in comp"
+          then fail_str "Unexpected/missing universe instantitation in comp"
           else
             (let u = FStarC_List.hd ct.FStarC_Syntax_Syntax.comp_univs in
              let effect_app_tm =
@@ -6808,16 +7003,49 @@ and (check_comp :
                                                 let uu___14 =
                                                   let uu___15 =
                                                     let uu___16 =
-                                                      FStarC_Syntax_Util.comp_effect_name
-                                                        c in
-                                                    FStarC_Ident.string_of_lid
-                                                      uu___16 in
-                                                  let uu___16 =
-                                                    FStarC_Ident.string_of_lid
-                                                      c_lid in
-                                                  FStarC_Util.format2
-                                                    "Total effect %s (normalized to %s) does not have a representation"
-                                                    uu___15 uu___16 in
+                                                      FStarC_Pprint.break_
+                                                        Prims.int_one in
+                                                    let uu___17 =
+                                                      let uu___18 =
+                                                        FStarC_Errors_Msg.text
+                                                          "Total effect" in
+                                                      let uu___19 =
+                                                        let uu___20 =
+                                                          let uu___21 =
+                                                            FStarC_Syntax_Util.comp_effect_name
+                                                              c in
+                                                          FStarC_Class_PP.pp
+                                                            FStarC_Ident.pretty_lident
+                                                            uu___21 in
+                                                        let uu___21 =
+                                                          let uu___22 =
+                                                            FStarC_Errors_Msg.text
+                                                              "(normalized to" in
+                                                          let uu___23 =
+                                                            let uu___24 =
+                                                              let uu___25 =
+                                                                FStarC_Class_PP.pp
+                                                                  FStarC_Ident.pretty_lident
+                                                                  c_lid in
+                                                              let uu___26 =
+                                                                FStarC_Pprint.doc_of_string
+                                                                  ")" in
+                                                              FStarC_Pprint.op_Hat_Hat
+                                                                uu___25
+                                                                uu___26 in
+                                                            let uu___25 =
+                                                              let uu___26 =
+                                                                FStarC_Errors_Msg.text
+                                                                  "does not have a representation." in
+                                                              [uu___26] in
+                                                            uu___24 ::
+                                                              uu___25 in
+                                                          uu___22 :: uu___23 in
+                                                        uu___20 :: uu___21 in
+                                                      uu___18 :: uu___19 in
+                                                    FStarC_Pprint.flow
+                                                      uu___16 uu___17 in
+                                                  [uu___15] in
                                                 fail uu___14
                                             | FStar_Pervasives_Native.Some tm
                                                 -> universe_of g tm)) in
@@ -7039,7 +7267,7 @@ and (check_pat :
                                                      (t,
                                                        FStar_Pervasives_Native.None))
                                             | uu___9 ->
-                                                fail
+                                                fail_str
                                                   "check_pat in core has unset dot pattern" in
                                           (fun ctx0 ->
                                              let uu___9 = uu___8 ctx0 in
@@ -7326,7 +7554,7 @@ and (check_pat :
                                        Success uu___6
                                    | err -> err)
                               | Error err -> Error err))))
-        | uu___ -> fail "check_pat called with a dot pattern"
+        | uu___ -> fail_str "check_pat called with a dot pattern"
 and (check_scrutinee_pattern_type_compatible :
   env ->
     FStarC_Syntax_Syntax.typ ->
@@ -7338,12 +7566,30 @@ and (check_scrutinee_pattern_type_compatible :
         let err s =
           let uu___ =
             let uu___1 =
-              FStarC_Class_Show.show FStarC_Syntax_Print.showable_term t_sc in
-            let uu___2 =
-              FStarC_Class_Show.show FStarC_Syntax_Print.showable_term t_pat in
-            FStarC_Util.format3
-              "Scrutinee type %s and Pattern type %s are not compatible because %s"
-              uu___1 uu___2 s in
+              let uu___2 = FStarC_Pprint.break_ Prims.int_one in
+              let uu___3 =
+                let uu___4 = FStarC_Errors_Msg.text "Scrutinee type" in
+                let uu___5 =
+                  let uu___6 =
+                    FStarC_Class_PP.pp FStarC_Syntax_Print.pretty_term t_sc in
+                  let uu___7 =
+                    let uu___8 = FStarC_Errors_Msg.text "and pattern type" in
+                    let uu___9 =
+                      let uu___10 =
+                        FStarC_Class_PP.pp FStarC_Syntax_Print.pretty_term
+                          t_pat in
+                      let uu___11 =
+                        let uu___12 =
+                          FStarC_Errors_Msg.text "are not compatible because" in
+                        let uu___13 =
+                          let uu___14 = FStarC_Errors_Msg.text s in [uu___14] in
+                        uu___12 :: uu___13 in
+                      uu___10 :: uu___11 in
+                    uu___8 :: uu___9 in
+                  uu___6 :: uu___7 in
+                uu___4 :: uu___5 in
+              FStarC_Pprint.flow uu___2 uu___3 in
+            [uu___1] in
           fail uu___ in
         let uu___ = FStarC_Syntax_Util.head_and_args t_sc in
         match uu___ with
@@ -7837,7 +8083,8 @@ let (check_term_top :
                                       Prims.op_Negation uu___6) in
                                  if uu___5
                                  then
-                                   fail "expected total effect, found ghost"
+                                   fail_str
+                                     "expected total effect, found ghost"
                                  else
                                    (fun uu___7 ->
                                       Success

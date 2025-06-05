@@ -1,10 +1,10 @@
 open Prims
 let (fallback_range :
   FStarC_Range_Type.range FStar_Pervasives_Native.option FStarC_Effect.ref) =
-  FStarC_Util.mk_ref FStar_Pervasives_Native.None
+  FStarC_Effect.mk_ref FStar_Pervasives_Native.None
 let (error_range_bound :
   FStarC_Range_Type.range FStar_Pervasives_Native.option FStarC_Effect.ref) =
-  FStarC_Util.mk_ref FStar_Pervasives_Native.None
+  FStarC_Effect.mk_ref FStar_Pervasives_Native.None
 let with_error_bound : 'a . FStarC_Range_Type.range -> (unit -> 'a) -> 'a =
   fun r ->
     fun f ->
@@ -77,56 +77,62 @@ let (update_flags :
     FStarC_Errors_Codes.error_setting Prims.list)
   =
   fun l ->
-    let set_one_flag i flag default_flag =
-      match (flag, default_flag) with
-      | (FStarC_Errors_Codes.CWarning, FStarC_Errors_Codes.CAlwaysError) ->
-          let uu___ =
-            let uu___1 =
-              let uu___2 = FStarC_Util.string_of_int i in
-              FStarC_Util.format1 "cannot turn error %s into warning" uu___2 in
-            Invalid_warn_error_setting uu___1 in
-          FStarC_Effect.raise uu___
-      | (FStarC_Errors_Codes.CError, FStarC_Errors_Codes.CAlwaysError) ->
-          let uu___ =
-            let uu___1 =
-              let uu___2 = FStarC_Util.string_of_int i in
-              FStarC_Util.format1 "cannot turn error %s into warning" uu___2 in
-            Invalid_warn_error_setting uu___1 in
-          FStarC_Effect.raise uu___
-      | (FStarC_Errors_Codes.CSilent, FStarC_Errors_Codes.CAlwaysError) ->
-          let uu___ =
-            let uu___1 =
-              let uu___2 = FStarC_Util.string_of_int i in
-              FStarC_Util.format1 "cannot silence error %s" uu___2 in
-            Invalid_warn_error_setting uu___1 in
-          FStarC_Effect.raise uu___
-      | (FStarC_Errors_Codes.CSilent, FStarC_Errors_Codes.CFatal) ->
-          let uu___ =
-            let uu___1 =
-              let uu___2 = FStarC_Util.string_of_int i in
-              FStarC_Util.format1
-                "cannot change the error level of fatal error %s" uu___2 in
-            Invalid_warn_error_setting uu___1 in
-          FStarC_Effect.raise uu___
-      | (FStarC_Errors_Codes.CWarning, FStarC_Errors_Codes.CFatal) ->
-          let uu___ =
-            let uu___1 =
-              let uu___2 = FStarC_Util.string_of_int i in
-              FStarC_Util.format1
-                "cannot change the error level of fatal error %s" uu___2 in
-            Invalid_warn_error_setting uu___1 in
-          FStarC_Effect.raise uu___
-      | (FStarC_Errors_Codes.CError, FStarC_Errors_Codes.CFatal) ->
-          let uu___ =
-            let uu___1 =
-              let uu___2 = FStarC_Util.string_of_int i in
-              FStarC_Util.format1
-                "cannot change the error level of fatal error %s" uu___2 in
-            Invalid_warn_error_setting uu___1 in
-          FStarC_Effect.raise uu___
-      | (FStarC_Errors_Codes.CAlwaysError, FStarC_Errors_Codes.CFatal) ->
-          FStarC_Errors_Codes.CFatal
-      | uu___ -> flag in
+    let set_one_flag i =
+      fun flag ->
+        fun default_flag ->
+          match (flag, default_flag) with
+          | (FStarC_Errors_Codes.CWarning, FStarC_Errors_Codes.CAlwaysError)
+              ->
+              let uu___ =
+                let uu___1 =
+                  let uu___2 = FStarC_Util.string_of_int i in
+                  FStarC_Util.format1 "cannot turn error %s into warning"
+                    uu___2 in
+                Invalid_warn_error_setting uu___1 in
+              FStarC_Effect.raise uu___
+          | (FStarC_Errors_Codes.CError, FStarC_Errors_Codes.CAlwaysError) ->
+              let uu___ =
+                let uu___1 =
+                  let uu___2 = FStarC_Util.string_of_int i in
+                  FStarC_Util.format1 "cannot turn error %s into warning"
+                    uu___2 in
+                Invalid_warn_error_setting uu___1 in
+              FStarC_Effect.raise uu___
+          | (FStarC_Errors_Codes.CSilent, FStarC_Errors_Codes.CAlwaysError)
+              ->
+              let uu___ =
+                let uu___1 =
+                  let uu___2 = FStarC_Util.string_of_int i in
+                  FStarC_Util.format1 "cannot silence error %s" uu___2 in
+                Invalid_warn_error_setting uu___1 in
+              FStarC_Effect.raise uu___
+          | (FStarC_Errors_Codes.CSilent, FStarC_Errors_Codes.CFatal) ->
+              let uu___ =
+                let uu___1 =
+                  let uu___2 = FStarC_Util.string_of_int i in
+                  FStarC_Util.format1
+                    "cannot change the error level of fatal error %s" uu___2 in
+                Invalid_warn_error_setting uu___1 in
+              FStarC_Effect.raise uu___
+          | (FStarC_Errors_Codes.CWarning, FStarC_Errors_Codes.CFatal) ->
+              let uu___ =
+                let uu___1 =
+                  let uu___2 = FStarC_Util.string_of_int i in
+                  FStarC_Util.format1
+                    "cannot change the error level of fatal error %s" uu___2 in
+                Invalid_warn_error_setting uu___1 in
+              FStarC_Effect.raise uu___
+          | (FStarC_Errors_Codes.CError, FStarC_Errors_Codes.CFatal) ->
+              let uu___ =
+                let uu___1 =
+                  let uu___2 = FStarC_Util.string_of_int i in
+                  FStarC_Util.format1
+                    "cannot change the error level of fatal error %s" uu___2 in
+                Invalid_warn_error_setting uu___1 in
+              FStarC_Effect.raise uu___
+          | (FStarC_Errors_Codes.CAlwaysError, FStarC_Errors_Codes.CFatal) ->
+              FStarC_Errors_Codes.CFatal
+          | uu___ -> flag in
     let set_flag_for_range uu___ =
       match uu___ with
       | (flag, range) ->
@@ -250,12 +256,15 @@ let (json_of_issue : issue -> FStarC_Json.json) =
           let uu___5 =
             let uu___6 =
               let uu___7 =
+                let uu___8 =
+                  FStarC_Util.map_opt issue1.issue_range
+                    FStarC_Range_Ops.refind_range in
                 Obj.magic
                   (FStarC_Class_Monad.op_Less_Dollar_Greater
                      FStarC_Class_Monad.monad_option () ()
-                     (fun uu___8 ->
-                        (Obj.magic FStarC_Range_Type.json_of_range) uu___8)
-                     (Obj.magic issue1.issue_range)) in
+                     (fun uu___9 ->
+                        (Obj.magic FStarC_Range_Type.json_of_range) uu___9)
+                     (Obj.magic uu___8)) in
               FStarC_Util.dflt FStarC_Json.JsonNull uu___7 in
             ("range", uu___6) in
           let uu___6 =
@@ -377,7 +386,8 @@ let optional_def :
 let (issue_to_doc' : Prims.bool -> issue -> FStarC_Pprint.document) =
   fun print_hdr ->
     fun issue1 ->
-      let r = issue1.issue_range in
+      let r =
+        FStarC_Util.map_opt issue1.issue_range FStarC_Range_Ops.refind_range in
       let hdr =
         if print_hdr
         then
@@ -597,7 +607,12 @@ let (fixup_issue_range :
   fun rng ->
     let rng1 =
       match rng with
-      | FStar_Pervasives_Native.None -> FStarC_Effect.op_Bang fallback_range
+      | FStar_Pervasives_Native.None ->
+          let uu___ = FStarC_Effect.op_Bang fallback_range in
+          (match uu___ with
+           | FStar_Pervasives_Native.Some r -> FStar_Pervasives_Native.Some r
+           | FStar_Pervasives_Native.None ->
+               FStarC_Effect.op_Bang error_range_bound)
       | FStar_Pervasives_Native.Some range ->
           let use_rng = FStarC_Range_Type.use_range range in
           let use_rng' =
@@ -621,26 +636,35 @@ let (fixup_issue_range :
     FStarC_Util.map_opt rng1 maybe_bound_range
 let (mk_default_handler : Prims.bool -> error_handler) =
   fun print ->
-    let issues = FStarC_Util.mk_ref [] in
-    let err_count = FStarC_Util.mk_ref Prims.int_zero in
+    let issues = FStarC_Effect.mk_ref [] in
+    let err_count = FStarC_Effect.mk_ref Prims.int_zero in
     let add_one e =
-      if e.issue_level = EError
+      let e1 =
+        let uu___ = fixup_issue_range e.issue_range in
+        {
+          issue_msg = (e.issue_msg);
+          issue_level = (e.issue_level);
+          issue_range = uu___;
+          issue_number = (e.issue_number);
+          issue_ctx = (e.issue_ctx)
+        } in
+      if e1.issue_level = EError
       then
         (let uu___1 =
            let uu___2 = FStarC_Effect.op_Bang err_count in
            Prims.int_one + uu___2 in
          FStarC_Effect.op_Colon_Equals err_count uu___1)
       else ();
-      (match e.issue_level with
-       | EInfo when print -> print_issue e
-       | uu___2 when print && (FStarC_Debug.any ()) -> print_issue e
+      (match e1.issue_level with
+       | EInfo when print -> print_issue e1
+       | uu___2 when print && (FStarC_Debug.any ()) -> print_issue e1
        | uu___2 ->
            let uu___3 =
-             let uu___4 = FStarC_Effect.op_Bang issues in e :: uu___4 in
+             let uu___4 = FStarC_Effect.op_Bang issues in e1 :: uu___4 in
            FStarC_Effect.op_Colon_Equals issues uu___3);
       (let uu___3 =
          (FStarC_Options.defensive_abort ()) &&
-           (e.issue_number = (FStar_Pervasives_Native.Some defensive_errno)) in
+           (e1.issue_number = (FStar_Pervasives_Native.Some defensive_errno)) in
        if uu___3 then failwith "Aborting due to --defensive abort" else ()) in
     let count_errors uu___ = FStarC_Effect.op_Bang err_count in
     let report uu___ =
@@ -668,7 +692,7 @@ let (mk_default_handler : Prims.bool -> error_handler) =
     }
 let (default_handler : error_handler) = mk_default_handler true
 let (current_handler : error_handler FStarC_Effect.ref) =
-  FStarC_Util.mk_ref default_handler
+  FStarC_Effect.mk_ref default_handler
 let (mk_issue :
   issue_level ->
     FStarC_Range_Type.range FStar_Pervasives_Native.option ->
@@ -762,7 +786,7 @@ let (__proj__Mkerror_context_t__item__set :
   fun projectee ->
     match projectee with | { push; pop; clear = clear1; get; set;_} -> set
 let (error_context : error_context_t) =
-  let ctxs = FStarC_Util.mk_ref [] in
+  let ctxs = FStarC_Effect.mk_ref [] in
   let push s =
     let uu___ = let uu___1 = FStarC_Effect.op_Bang ctxs in s :: uu___1 in
     FStarC_Effect.op_Colon_Equals ctxs uu___ in
@@ -822,8 +846,8 @@ let (uu___0 :
   (((Prims.string -> FStarC_Errors_Codes.error_setting Prims.list) -> unit) *
     (unit -> FStarC_Errors_Codes.error_setting Prims.list)))
   =
-  let parser_callback = FStarC_Util.mk_ref FStar_Pervasives_Native.None in
-  let error_flags = FStarC_Util.smap_create (Prims.of_int (10)) in
+  let parser_callback = FStarC_Effect.mk_ref FStar_Pervasives_Native.None in
+  let error_flags = FStarC_SMap.create (Prims.of_int (10)) in
   let set_error_flags uu___ =
     let parse s =
       let uu___1 = FStarC_Effect.op_Bang parser_callback in
@@ -837,18 +861,17 @@ let (uu___0 :
          match () with
          | () ->
              let r = parse we in
-             (FStarC_Util.smap_add error_flags we
-                (FStar_Pervasives_Native.Some r);
+             (FStarC_SMap.add error_flags we (FStar_Pervasives_Native.Some r);
               FStarC_Getopt.Success)) ()
     with
     | Invalid_warn_error_setting msg ->
-        (FStarC_Util.smap_add error_flags we FStar_Pervasives_Native.None;
+        (FStarC_SMap.add error_flags we FStar_Pervasives_Native.None;
          FStarC_Getopt.Error
            ((Prims.strcat "Invalid --warn_error setting: "
                (Prims.strcat msg "\n")), "warn_error")) in
   let get_error_flags uu___ =
     let we = FStarC_Options.warn_error () in
-    let uu___1 = FStarC_Util.smap_try_find error_flags we in
+    let uu___1 = FStarC_SMap.try_find error_flags we in
     match uu___1 with
     | FStar_Pervasives_Native.Some (FStar_Pervasives_Native.Some w) -> w
     | uu___2 -> FStarC_Errors_Codes.default_settings in
@@ -1189,23 +1212,24 @@ let (find_multiset_discrepancy :
                  else (hd, Prims.int_one) :: (h, n) :: t) in
       let l11 = let uu___ = sort l1 in collect uu___ in
       let l21 = let uu___ = sort l2 in collect uu___ in
-      let rec aux l12 l22 =
-        match (l12, l22) with
-        | ([], []) -> FStar_Pervasives_Native.None
-        | ((e, n)::uu___, []) ->
-            FStar_Pervasives_Native.Some (e, n, Prims.int_zero)
-        | ([], (e, n)::uu___) ->
-            FStar_Pervasives_Native.Some (e, Prims.int_zero, n)
-        | ((hd1, n1)::tl1, (hd2, n2)::tl2) ->
-            if hd1 < hd2
-            then FStar_Pervasives_Native.Some (hd1, n1, Prims.int_zero)
-            else
-              if hd1 > hd2
-              then FStar_Pervasives_Native.Some (hd2, Prims.int_zero, n2)
+      let rec aux l12 =
+        fun l22 ->
+          match (l12, l22) with
+          | ([], []) -> FStar_Pervasives_Native.None
+          | ((e, n)::uu___, []) ->
+              FStar_Pervasives_Native.Some (e, n, Prims.int_zero)
+          | ([], (e, n)::uu___) ->
+              FStar_Pervasives_Native.Some (e, Prims.int_zero, n)
+          | ((hd1, n1)::tl1, (hd2, n2)::tl2) ->
+              if hd1 < hd2
+              then FStar_Pervasives_Native.Some (hd1, n1, Prims.int_zero)
               else
-                if n1 <> n2
-                then FStar_Pervasives_Native.Some (hd1, n1, n2)
-                else aux tl1 tl2 in
+                if hd1 > hd2
+                then FStar_Pervasives_Native.Some (hd2, Prims.int_zero, n2)
+                else
+                  if n1 <> n2
+                  then FStar_Pervasives_Native.Some (hd1, n1, n2)
+                  else aux tl1 tl2 in
       aux l11 l21
 let raise_error_doc :
   'a .
@@ -1249,3 +1273,22 @@ let (log_issue_text :
         log_issue FStarC_Class_HasRange.hasRange_range rng code ()
           (Obj.magic FStarC_Errors_Msg.is_error_message_string)
           (Obj.magic msg)
+let (uu___1 : unit) =
+  FStarC_Effect.op_Colon_Equals FStarC_Options.check_include_dir
+    (fun s ->
+       if Prims.op_Negation (FStarC_Filepath.is_directory s)
+       then
+         let uu___ =
+           let uu___2 =
+             let uu___3 =
+               FStarC_Errors_Msg.text "Not a valid include directory:" in
+             let uu___4 = FStarC_Pprint.doc_of_string s in
+             FStarC_Pprint.prefix (Prims.of_int (2)) Prims.int_one uu___3
+               uu___4 in
+           [uu___2] in
+         log_issue FStarC_Class_HasRange.hasRange_range
+           FStarC_Range_Type.dummyRange
+           FStarC_Errors_Codes.Fatal_NotValidIncludeDirectory ()
+           (Obj.magic FStarC_Errors_Msg.is_error_message_list_doc)
+           (Obj.magic uu___)
+       else ())

@@ -6,7 +6,7 @@ let (dbg_NormRebuild : Prims.bool FStarC_Effect.ref) =
 let (maybe_debug :
   FStarC_TypeChecker_Cfg.cfg ->
     FStarC_Syntax_Syntax.term ->
-      (FStarC_Syntax_Syntax.term * FStarC_Util.time_ns)
+      (FStarC_Syntax_Syntax.term * FStarC_Timing.time_ns)
         FStar_Pervasives_Native.option -> unit)
   =
   fun cfg ->
@@ -17,9 +17,9 @@ let (maybe_debug :
         then
           match dbg with
           | FStar_Pervasives_Native.Some (tm, time_then) ->
-              let time_now = FStarC_Util.now_ns () in
+              let time_now = FStarC_Timing.now_ns () in
               let uu___ =
-                let uu___1 = FStarC_Util.time_diff_ms time_then time_now in
+                let uu___1 = FStarC_Timing.diff_ms time_then time_now in
                 FStarC_Class_Show.show FStarC_Class_Show.showable_int uu___1 in
               let uu___1 =
                 FStarC_Class_Show.show FStarC_Syntax_Print.showable_term tm in
@@ -47,7 +47,7 @@ let cases :
 type 'a cfg_memo =
   (FStarC_TypeChecker_Cfg.cfg * 'a) FStarC_Syntax_Syntax.memo
 let fresh_memo : 'a . unit -> 'a FStarC_Syntax_Syntax.memo =
-  fun uu___ -> FStarC_Util.mk_ref FStar_Pervasives_Native.None
+  fun uu___ -> FStarC_Effect.mk_ref FStar_Pervasives_Native.None
 type closure =
   | Clos of ((FStarC_Syntax_Syntax.binder FStar_Pervasives_Native.option *
   closure * FStarC_Syntax_Syntax.subst_t FStarC_Syntax_Syntax.memo)
@@ -262,7 +262,7 @@ let (showable_stack_elt : stack_elt FStarC_Class_Show.showable) =
          match uu___ with
          | Arg (c, uu___1, uu___2) ->
              let uu___3 = FStarC_Class_Show.show showable_closure c in
-             FStarC_Util.format1 "Closure %s" uu___3
+             FStarC_Util.format1 "Arg %s" uu___3
          | MemoLazy uu___1 -> "MemoLazy"
          | Abs (uu___1, bs, uu___2, uu___3, uu___4) ->
              let uu___5 =
@@ -587,7 +587,7 @@ let (closure_as_term :
 let (unembed_binder_knot :
   FStarC_Syntax_Syntax.binder FStarC_Syntax_Embeddings_Base.embedding
     FStar_Pervasives_Native.option FStarC_Effect.ref)
-  = FStarC_Util.mk_ref FStar_Pervasives_Native.None
+  = FStarC_Effect.mk_ref FStar_Pervasives_Native.None
 let (unembed_binder :
   FStarC_Syntax_Syntax.term ->
     FStarC_Syntax_Syntax.binder FStar_Pervasives_Native.option)
@@ -968,47 +968,6 @@ let (reduce_equality :
               (cfg.FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg)
           } in
         reduce_primops norm_cb uu___ tm
-type norm_request_t =
-  | Norm_request_none 
-  | Norm_request_ready 
-  | Norm_request_requires_rejig 
-let (uu___is_Norm_request_none : norm_request_t -> Prims.bool) =
-  fun projectee ->
-    match projectee with | Norm_request_none -> true | uu___ -> false
-let (uu___is_Norm_request_ready : norm_request_t -> Prims.bool) =
-  fun projectee ->
-    match projectee with | Norm_request_ready -> true | uu___ -> false
-let (uu___is_Norm_request_requires_rejig : norm_request_t -> Prims.bool) =
-  fun projectee ->
-    match projectee with
-    | Norm_request_requires_rejig -> true
-    | uu___ -> false
-let (is_norm_request :
-  FStarC_Syntax_Syntax.term -> FStarC_Syntax_Syntax.args -> norm_request_t) =
-  fun hd ->
-    fun args ->
-      let aux min_args =
-        if (FStarC_List.length args) < min_args
-        then Norm_request_none
-        else
-          if (FStarC_List.length args) = min_args
-          then Norm_request_ready
-          else Norm_request_requires_rejig in
-      let uu___ =
-        let uu___1 = FStarC_Syntax_Util.un_uinst hd in
-        uu___1.FStarC_Syntax_Syntax.n in
-      match uu___ with
-      | FStarC_Syntax_Syntax.Tm_fvar fv when
-          FStarC_Syntax_Syntax.fv_eq_lid fv
-            FStarC_Parser_Const.normalize_term
-          -> aux (Prims.of_int (2))
-      | FStarC_Syntax_Syntax.Tm_fvar fv when
-          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.normalize ->
-          aux Prims.int_one
-      | FStarC_Syntax_Syntax.Tm_fvar fv when
-          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.norm ->
-          aux (Prims.of_int (3))
-      | uu___1 -> Norm_request_none
 let (should_consider_norm_requests :
   FStarC_TypeChecker_Cfg.cfg -> Prims.bool) =
   fun cfg ->
@@ -1020,133 +979,11 @@ let (should_consider_norm_requests :
            (cfg.FStarC_TypeChecker_Cfg.tcenv).FStarC_TypeChecker_Env.curmodule
            FStarC_Parser_Const.prims_lid in
        Prims.op_Negation uu___)
-let (rejig_norm_request :
-  FStarC_Syntax_Syntax.term ->
-    FStarC_Syntax_Syntax.args -> FStarC_Syntax_Syntax.term)
-  =
-  fun hd ->
-    fun args ->
-      let uu___ =
-        let uu___1 = FStarC_Syntax_Util.un_uinst hd in
-        uu___1.FStarC_Syntax_Syntax.n in
-      match uu___ with
-      | FStarC_Syntax_Syntax.Tm_fvar fv when
-          FStarC_Syntax_Syntax.fv_eq_lid fv
-            FStarC_Parser_Const.normalize_term
-          ->
-          (match args with
-           | t1::t2::rest when (FStarC_List.length rest) > Prims.int_zero ->
-               let uu___1 = FStarC_Syntax_Util.mk_app hd [t1; t2] in
-               FStarC_Syntax_Util.mk_app uu___1 rest
-           | uu___1 ->
-               failwith
-                 "Impossible! invalid rejig_norm_request for normalize_term")
-      | FStarC_Syntax_Syntax.Tm_fvar fv when
-          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.normalize ->
-          (match args with
-           | t::rest when (FStarC_List.length rest) > Prims.int_zero ->
-               let uu___1 = FStarC_Syntax_Util.mk_app hd [t] in
-               FStarC_Syntax_Util.mk_app uu___1 rest
-           | uu___1 ->
-               failwith
-                 "Impossible! invalid rejig_norm_request for normalize")
-      | FStarC_Syntax_Syntax.Tm_fvar fv when
-          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.norm ->
-          (match args with
-           | t1::t2::t3::rest when (FStarC_List.length rest) > Prims.int_zero
-               ->
-               let uu___1 = FStarC_Syntax_Util.mk_app hd [t1; t2; t3] in
-               FStarC_Syntax_Util.mk_app uu___1 rest
-           | uu___1 ->
-               failwith "Impossible! invalid rejig_norm_request for norm")
-      | uu___1 ->
-          let uu___2 =
-            let uu___3 =
-              FStarC_Class_Show.show FStarC_Syntax_Print.showable_term hd in
-            Prims.strcat "Impossible! invalid rejig_norm_request for: %s"
-              uu___3 in
-          failwith uu___2
 let (is_nbe_request : FStarC_TypeChecker_Env.step Prims.list -> Prims.bool) =
   fun s ->
     FStarC_Util.for_some
       (FStarC_Class_Deq.op_Equals_Question FStarC_TypeChecker_Env.deq_step
          FStarC_TypeChecker_Env.NBE) s
-let get_norm_request :
-  'uuuuu .
-    FStarC_TypeChecker_Cfg.cfg ->
-      (FStarC_Syntax_Syntax.term -> FStarC_Syntax_Syntax.term) ->
-        (FStarC_Syntax_Syntax.term * 'uuuuu) Prims.list ->
-          (FStarC_TypeChecker_Env.step Prims.list *
-            FStarC_Syntax_Syntax.term) FStar_Pervasives_Native.option
-  =
-  fun cfg ->
-    fun full_norm ->
-      fun args ->
-        let parse_steps s =
-          let uu___ =
-            FStarC_TypeChecker_Primops_Base.try_unembed_simple
-              (FStarC_Syntax_Embeddings.e_list
-                 FStarC_Syntax_Embeddings.e_norm_step) s in
-          match uu___ with
-          | FStar_Pervasives_Native.Some steps ->
-              let uu___1 = FStarC_TypeChecker_Cfg.translate_norm_steps steps in
-              FStar_Pervasives_Native.Some uu___1
-          | FStar_Pervasives_Native.None -> FStar_Pervasives_Native.None in
-        let inherited_steps =
-          FStarC_List.op_At
-            (if
-               (cfg.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.erase_universes
-             then [FStarC_TypeChecker_Env.EraseUniverses]
-             else [])
-            (FStarC_List.op_At
-               (if
-                  (cfg.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.allow_unbound_universes
-                then [FStarC_TypeChecker_Env.AllowUnboundUniverses]
-                else [])
-               (if
-                  (cfg.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.nbe_step
-                then [FStarC_TypeChecker_Env.NBE]
-                else [])) in
-        match args with
-        | uu___::(tm, uu___1)::[] ->
-            let s =
-              [FStarC_TypeChecker_Env.Beta;
-              FStarC_TypeChecker_Env.Zeta;
-              FStarC_TypeChecker_Env.Iota;
-              FStarC_TypeChecker_Env.Primops;
-              FStarC_TypeChecker_Env.UnfoldUntil
-                FStarC_Syntax_Syntax.delta_constant;
-              FStarC_TypeChecker_Env.Reify] in
-            FStar_Pervasives_Native.Some
-              ((FStarC_List.op_At
-                  ((FStarC_TypeChecker_Env.DontUnfoldAttr
-                      [FStarC_Parser_Const.tac_opaque_attr]) ::
-                  inherited_steps) s), tm)
-        | (tm, uu___)::[] ->
-            let s =
-              [FStarC_TypeChecker_Env.Beta;
-              FStarC_TypeChecker_Env.Zeta;
-              FStarC_TypeChecker_Env.Iota;
-              FStarC_TypeChecker_Env.Primops;
-              FStarC_TypeChecker_Env.UnfoldUntil
-                FStarC_Syntax_Syntax.delta_constant;
-              FStarC_TypeChecker_Env.Reify] in
-            FStar_Pervasives_Native.Some
-              ((FStarC_List.op_At
-                  ((FStarC_TypeChecker_Env.DontUnfoldAttr
-                      [FStarC_Parser_Const.tac_opaque_attr]) ::
-                  inherited_steps) s), tm)
-        | (steps, uu___)::uu___1::(tm, uu___2)::[] ->
-            let uu___3 = let uu___4 = full_norm steps in parse_steps uu___4 in
-            (match uu___3 with
-             | FStar_Pervasives_Native.None -> FStar_Pervasives_Native.None
-             | FStar_Pervasives_Native.Some s ->
-                 FStar_Pervasives_Native.Some
-                   ((FStarC_List.op_At
-                       ((FStarC_TypeChecker_Env.DontUnfoldAttr
-                           [FStarC_Parser_Const.tac_opaque_attr]) ::
-                       inherited_steps) s), tm))
-        | uu___ -> FStar_Pervasives_Native.None
 let (nbe_eval :
   FStarC_TypeChecker_Cfg.cfg ->
     FStarC_TypeChecker_Env.steps ->
@@ -1510,12 +1347,13 @@ let (decide_unfolding :
               FStar_Pervasives_Native.Some
                 ((FStar_Pervasives_Native.Some cfg'), stack1)
           | FStarC_TypeChecker_Normalize_Unfolding.Should_unfold_reify ->
-              let rec push e s =
-                match s with
-                | [] -> [e]
-                | (UnivArgs (us, r))::t ->
-                    let uu___ = push e t in (UnivArgs (us, r)) :: uu___
-                | h::t -> e :: h :: t in
+              let rec push e =
+                fun s ->
+                  match s with
+                  | [] -> [e]
+                  | (UnivArgs (us, r))::t ->
+                      let uu___ = push e t in (UnivArgs (us, r)) :: uu___
+                  | h::t -> e :: h :: t in
               let ref =
                 let uu___ =
                   let uu___1 =
@@ -1576,7 +1414,7 @@ let (__get_n_binders :
              FStarC_Syntax_Syntax.comp))
     FStarC_Effect.ref)
   =
-  FStarC_Util.mk_ref
+  FStarC_Effect.mk_ref
     (fun e ->
        fun s ->
          fun n -> fun t -> failwith "Impossible: __get_n_binders unset")
@@ -1771,29 +1609,35 @@ let (is_quantified_const :
                                  unrefine_true
                                    (b2.FStarC_Syntax_Syntax.binder_bv).FStarC_Syntax_Syntax.sort in
                                FStarC_Syntax_Util.term_eq s1 s2) bs bs_q) in
-               let is_bv bv1 t =
-                 let uu___ =
-                   let uu___1 = FStarC_Syntax_Subst.compress t in
-                   uu___1.FStarC_Syntax_Syntax.n in
-                 match uu___ with
-                 | FStarC_Syntax_Syntax.Tm_name bv' ->
-                     FStarC_Syntax_Syntax.bv_eq bv1 bv'
-                 | uu___1 -> false in
-               let replace_full_applications_with bv1 arity s t =
-                 let chgd = FStarC_Util.mk_ref false in
-                 let t' =
-                   FStarC_Syntax_Visit.visit_term false
-                     (fun t1 ->
-                        let uu___ = FStarC_Syntax_Util.head_and_args t1 in
-                        match uu___ with
-                        | (hd, args) ->
-                            let uu___1 =
-                              ((FStarC_List.length args) = arity) &&
-                                (is_bv bv1 hd) in
-                            if uu___1
-                            then (FStarC_Effect.op_Colon_Equals chgd true; s)
-                            else t1) t in
-                 let uu___ = FStarC_Effect.op_Bang chgd in (t', uu___) in
+               let is_bv bv1 =
+                 fun t ->
+                   let uu___ =
+                     let uu___1 = FStarC_Syntax_Subst.compress t in
+                     uu___1.FStarC_Syntax_Syntax.n in
+                   match uu___ with
+                   | FStarC_Syntax_Syntax.Tm_name bv' ->
+                       FStarC_Syntax_Syntax.bv_eq bv1 bv'
+                   | uu___1 -> false in
+               let replace_full_applications_with bv1 =
+                 fun arity ->
+                   fun s ->
+                     fun t ->
+                       let chgd = FStarC_Effect.mk_ref false in
+                       let t' =
+                         FStarC_Syntax_Visit.visit_term false
+                           (fun t1 ->
+                              let uu___ = FStarC_Syntax_Util.head_and_args t1 in
+                              match uu___ with
+                              | (hd, args) ->
+                                  let uu___1 =
+                                    ((FStarC_List.length args) = arity) &&
+                                      (is_bv bv1 hd) in
+                                  if uu___1
+                                  then
+                                    (FStarC_Effect.op_Colon_Equals chgd true;
+                                     s)
+                                  else t1) t in
+                       let uu___ = FStarC_Effect.op_Bang chgd in (t', uu___) in
                let uu___ = FStarC_Syntax_Formula.destruct_typ_as_formula phi in
                Obj.magic
                  (FStarC_Class_Monad.op_let_Bang
@@ -2157,44 +2001,30 @@ let (is_forall_const :
                              uu___4))))
            | uu___1 -> Obj.magic (Obj.repr FStar_Pervasives_Native.None))
         uu___1 uu___
-let (is_extract_as_attr :
-  FStarC_Syntax_Syntax.attribute ->
-    FStarC_Syntax_Syntax.term FStar_Pervasives_Native.option)
+type norm_request_kind =
+  | NormalizeTerm 
+  | Normalize 
+  | Norm 
+let (uu___is_NormalizeTerm : norm_request_kind -> Prims.bool) =
+  fun projectee ->
+    match projectee with | NormalizeTerm -> true | uu___ -> false
+let (uu___is_Normalize : norm_request_kind -> Prims.bool) =
+  fun projectee -> match projectee with | Normalize -> true | uu___ -> false
+let (uu___is_Norm : norm_request_kind -> Prims.bool) =
+  fun projectee -> match projectee with | Norm -> true | uu___ -> false
+let (is_norm_request_head :
+  FStarC_Syntax_Syntax.fv -> norm_request_kind FStar_Pervasives_Native.option)
   =
-  fun attr ->
-    let uu___ = FStarC_Syntax_Util.head_and_args attr in
-    match uu___ with
-    | (head, args) ->
-        let uu___1 =
-          let uu___2 =
-            let uu___3 = FStarC_Syntax_Subst.compress head in
-            uu___3.FStarC_Syntax_Syntax.n in
-          (uu___2, args) in
-        (match uu___1 with
-         | (FStarC_Syntax_Syntax.Tm_fvar fv, (t, uu___2)::[]) when
-             FStarC_Syntax_Syntax.fv_eq_lid fv
-               FStarC_Parser_Const.extract_as_lid
-             ->
-             let uu___3 =
-               let uu___4 = FStarC_Syntax_Subst.compress t in
-               uu___4.FStarC_Syntax_Syntax.n in
-             (match uu___3 with
-              | FStarC_Syntax_Syntax.Tm_quoted (impl, uu___4) ->
-                  FStar_Pervasives_Native.Some impl
-              | uu___4 -> FStar_Pervasives_Native.None)
-         | uu___2 -> FStar_Pervasives_Native.None)
-let (has_extract_as_attr :
-  FStarC_TypeChecker_Env.env ->
-    FStarC_Ident.lid ->
-      FStarC_Syntax_Syntax.term FStar_Pervasives_Native.option)
-  =
-  fun g ->
-    fun lid ->
-      let uu___ = FStarC_TypeChecker_Env.lookup_attrs_of_lid g lid in
-      match uu___ with
-      | FStar_Pervasives_Native.Some attrs ->
-          FStarC_Util.find_map attrs is_extract_as_attr
-      | FStar_Pervasives_Native.None -> FStar_Pervasives_Native.None
+  fun fv ->
+    if FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.normalize_term
+    then FStar_Pervasives_Native.Some NormalizeTerm
+    else
+      if FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.normalize
+      then FStar_Pervasives_Native.Some Normalize
+      else
+        if FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.norm
+        then FStar_Pervasives_Native.Some Norm
+        else FStar_Pervasives_Native.None
 let rec (norm :
   FStarC_TypeChecker_Cfg.cfg ->
     env -> stack -> FStarC_Syntax_Syntax.term -> FStarC_Syntax_Syntax.term)
@@ -2289,6 +2119,15 @@ let rec (norm :
                      FStarC_Util.print1 " >> This is a constructor: %s\n"
                        uu___6);
                 rebuild cfg empty_env stack2 t1)
+           | FStarC_Syntax_Syntax.Tm_fvar fv when
+               (should_consider_norm_requests cfg) &&
+                 (let uu___2 = is_norm_request_head fv in
+                  FStar_Pervasives_Native.uu___is_Some uu___2)
+               ->
+               let uu___2 =
+                 let uu___3 = is_norm_request_head fv in
+                 FStar_Pervasives_Native.__proj__Some__item__v uu___3 in
+               handle_norm_request cfg env1 stack2 uu___2 t1
            | FStarC_Syntax_Syntax.Tm_fvar fv ->
                let lid = FStarC_Syntax_Syntax.lid_of_fv fv in
                let qninfo =
@@ -2328,347 +2167,6 @@ let rec (norm :
                    t1.FStarC_Syntax_Syntax.pos in
                let uu___2 = closure_as_term cfg env1 t2 in
                rebuild cfg env1 stack2 uu___2
-           | FStarC_Syntax_Syntax.Tm_app
-               { FStarC_Syntax_Syntax.hd = hd;
-                 FStarC_Syntax_Syntax.args = args;_}
-               when
-               (should_consider_norm_requests cfg) &&
-                 (let uu___2 = is_norm_request hd args in
-                  uu___2 = Norm_request_requires_rejig)
-               ->
-               (if
-                  (cfg.FStarC_TypeChecker_Cfg.debug).FStarC_TypeChecker_Cfg.print_normalized
-                then FStarC_Util.print_string "Rejigging norm request ... \n"
-                else ();
-                (let uu___3 = rejig_norm_request hd args in
-                 norm cfg env1 stack2 uu___3))
-           | FStarC_Syntax_Syntax.Tm_app
-               { FStarC_Syntax_Syntax.hd = hd;
-                 FStarC_Syntax_Syntax.args = args;_}
-               when
-               (should_consider_norm_requests cfg) &&
-                 (let uu___2 = is_norm_request hd args in
-                  uu___2 = Norm_request_ready)
-               ->
-               (if
-                  (cfg.FStarC_TypeChecker_Cfg.debug).FStarC_TypeChecker_Cfg.print_normalized
-                then
-                  (let uu___3 =
-                     FStarC_Class_Show.show FStarC_Syntax_Print.showable_term
-                       hd in
-                   let uu___4 = FStarC_Syntax_Print.args_to_string args in
-                   FStarC_Util.print2
-                     "Potential norm request with hd = %s and args = %s ... \n"
-                     uu___3 uu___4)
-                else ();
-                (let cfg' =
-                   {
-                     FStarC_TypeChecker_Cfg.steps =
-                       (let uu___3 = cfg.FStarC_TypeChecker_Cfg.steps in
-                        {
-                          FStarC_TypeChecker_Cfg.beta =
-                            (uu___3.FStarC_TypeChecker_Cfg.beta);
-                          FStarC_TypeChecker_Cfg.iota =
-                            (uu___3.FStarC_TypeChecker_Cfg.iota);
-                          FStarC_TypeChecker_Cfg.zeta =
-                            (uu___3.FStarC_TypeChecker_Cfg.zeta);
-                          FStarC_TypeChecker_Cfg.zeta_full =
-                            (uu___3.FStarC_TypeChecker_Cfg.zeta_full);
-                          FStarC_TypeChecker_Cfg.weak =
-                            (uu___3.FStarC_TypeChecker_Cfg.weak);
-                          FStarC_TypeChecker_Cfg.hnf =
-                            (uu___3.FStarC_TypeChecker_Cfg.hnf);
-                          FStarC_TypeChecker_Cfg.primops =
-                            (uu___3.FStarC_TypeChecker_Cfg.primops);
-                          FStarC_TypeChecker_Cfg.do_not_unfold_pure_lets =
-                            false;
-                          FStarC_TypeChecker_Cfg.unfold_until =
-                            (uu___3.FStarC_TypeChecker_Cfg.unfold_until);
-                          FStarC_TypeChecker_Cfg.unfold_only =
-                            FStar_Pervasives_Native.None;
-                          FStarC_TypeChecker_Cfg.unfold_once =
-                            (uu___3.FStarC_TypeChecker_Cfg.unfold_once);
-                          FStarC_TypeChecker_Cfg.unfold_fully =
-                            FStar_Pervasives_Native.None;
-                          FStarC_TypeChecker_Cfg.unfold_attr =
-                            (uu___3.FStarC_TypeChecker_Cfg.unfold_attr);
-                          FStarC_TypeChecker_Cfg.unfold_qual =
-                            (uu___3.FStarC_TypeChecker_Cfg.unfold_qual);
-                          FStarC_TypeChecker_Cfg.unfold_namespace =
-                            (uu___3.FStarC_TypeChecker_Cfg.unfold_namespace);
-                          FStarC_TypeChecker_Cfg.dont_unfold_attr =
-                            (uu___3.FStarC_TypeChecker_Cfg.dont_unfold_attr);
-                          FStarC_TypeChecker_Cfg.pure_subterms_within_computations
-                            =
-                            (uu___3.FStarC_TypeChecker_Cfg.pure_subterms_within_computations);
-                          FStarC_TypeChecker_Cfg.simplify =
-                            (uu___3.FStarC_TypeChecker_Cfg.simplify);
-                          FStarC_TypeChecker_Cfg.erase_universes =
-                            (uu___3.FStarC_TypeChecker_Cfg.erase_universes);
-                          FStarC_TypeChecker_Cfg.allow_unbound_universes =
-                            (uu___3.FStarC_TypeChecker_Cfg.allow_unbound_universes);
-                          FStarC_TypeChecker_Cfg.reify_ =
-                            (uu___3.FStarC_TypeChecker_Cfg.reify_);
-                          FStarC_TypeChecker_Cfg.compress_uvars =
-                            (uu___3.FStarC_TypeChecker_Cfg.compress_uvars);
-                          FStarC_TypeChecker_Cfg.no_full_norm =
-                            (uu___3.FStarC_TypeChecker_Cfg.no_full_norm);
-                          FStarC_TypeChecker_Cfg.check_no_uvars =
-                            (uu___3.FStarC_TypeChecker_Cfg.check_no_uvars);
-                          FStarC_TypeChecker_Cfg.unmeta =
-                            (uu___3.FStarC_TypeChecker_Cfg.unmeta);
-                          FStarC_TypeChecker_Cfg.unascribe =
-                            (uu___3.FStarC_TypeChecker_Cfg.unascribe);
-                          FStarC_TypeChecker_Cfg.in_full_norm_request =
-                            (uu___3.FStarC_TypeChecker_Cfg.in_full_norm_request);
-                          FStarC_TypeChecker_Cfg.weakly_reduce_scrutinee =
-                            (uu___3.FStarC_TypeChecker_Cfg.weakly_reduce_scrutinee);
-                          FStarC_TypeChecker_Cfg.nbe_step =
-                            (uu___3.FStarC_TypeChecker_Cfg.nbe_step);
-                          FStarC_TypeChecker_Cfg.for_extraction =
-                            (uu___3.FStarC_TypeChecker_Cfg.for_extraction);
-                          FStarC_TypeChecker_Cfg.unrefine =
-                            (uu___3.FStarC_TypeChecker_Cfg.unrefine);
-                          FStarC_TypeChecker_Cfg.default_univs_to_zero =
-                            (uu___3.FStarC_TypeChecker_Cfg.default_univs_to_zero);
-                          FStarC_TypeChecker_Cfg.tactics =
-                            (uu___3.FStarC_TypeChecker_Cfg.tactics)
-                        });
-                     FStarC_TypeChecker_Cfg.tcenv =
-                       (cfg.FStarC_TypeChecker_Cfg.tcenv);
-                     FStarC_TypeChecker_Cfg.debug =
-                       (cfg.FStarC_TypeChecker_Cfg.debug);
-                     FStarC_TypeChecker_Cfg.delta_level =
-                       [FStarC_TypeChecker_Env.Unfold
-                          FStarC_Syntax_Syntax.delta_constant];
-                     FStarC_TypeChecker_Cfg.primitive_steps =
-                       (cfg.FStarC_TypeChecker_Cfg.primitive_steps);
-                     FStarC_TypeChecker_Cfg.strong =
-                       (cfg.FStarC_TypeChecker_Cfg.strong);
-                     FStarC_TypeChecker_Cfg.memoize_lazy =
-                       (cfg.FStarC_TypeChecker_Cfg.memoize_lazy);
-                     FStarC_TypeChecker_Cfg.normalize_pure_lets = true;
-                     FStarC_TypeChecker_Cfg.reifying =
-                       (cfg.FStarC_TypeChecker_Cfg.reifying);
-                     FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg =
-                       (cfg.FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg)
-                   } in
-                 let uu___3 = get_norm_request cfg (norm cfg' env1 []) args in
-                 match uu___3 with
-                 | FStar_Pervasives_Native.None ->
-                     (if
-                        (cfg.FStarC_TypeChecker_Cfg.debug).FStarC_TypeChecker_Cfg.print_normalized
-                      then
-                        FStarC_Util.print_string "Norm request None ... \n"
-                      else ();
-                      (let stack3 =
-                         FStarC_List.fold_right
-                           (fun uu___5 ->
-                              fun stack4 ->
-                                match uu___5 with
-                                | (a, aq) ->
-                                    let uu___6 =
-                                      let uu___7 =
-                                        let uu___8 =
-                                          let uu___9 =
-                                            let uu___10 = fresh_memo () in
-                                            (env1, a, uu___10, false) in
-                                          Clos uu___9 in
-                                        (uu___8, aq,
-                                          (t1.FStarC_Syntax_Syntax.pos)) in
-                                      Arg uu___7 in
-                                    uu___6 :: stack4) args stack2 in
-                       FStarC_TypeChecker_Cfg.log cfg
-                         (fun uu___6 ->
-                            let uu___7 =
-                              FStarC_Util.string_of_int
-                                (FStarC_List.length args) in
-                            FStarC_Util.print1 "\tPushed %s arguments\n"
-                              uu___7);
-                       norm cfg env1 stack3 hd))
-                 | FStar_Pervasives_Native.Some (s, tm) when is_nbe_request s
-                     ->
-                     let tm' = closure_as_term cfg env1 tm in
-                     let uu___4 =
-                       FStarC_Util.record_time_ms
-                         (fun uu___5 -> nbe_eval cfg s tm') in
-                     (match uu___4 with
-                      | (tm_norm, elapsed) ->
-                          (if
-                             (cfg.FStarC_TypeChecker_Cfg.debug).FStarC_TypeChecker_Cfg.print_normalized
-                           then
-                             (let cfg'1 =
-                                FStarC_TypeChecker_Cfg.config s
-                                  cfg.FStarC_TypeChecker_Cfg.tcenv in
-                              let uu___6 =
-                                FStarC_Class_Show.show
-                                  FStarC_Class_Show.showable_int elapsed in
-                              let uu___7 =
-                                FStarC_Class_Show.show
-                                  FStarC_Syntax_Print.showable_term tm' in
-                              let uu___8 =
-                                FStarC_Class_Show.show
-                                  FStarC_TypeChecker_Cfg.showable_cfg cfg'1 in
-                              let uu___9 =
-                                FStarC_Class_Show.show
-                                  FStarC_Syntax_Print.showable_term tm_norm in
-                              FStarC_Util.print4
-                                "NBE result timing (%s ms){\nOn term {\n%s\n}\nwith steps {%s}\nresult is{\n\n%s\n}\n}\n"
-                                uu___6 uu___7 uu___8 uu___9)
-                           else ();
-                           rebuild cfg env1 stack2 tm_norm))
-                 | FStar_Pervasives_Native.Some (s, tm) ->
-                     (if
-                        (cfg.FStarC_TypeChecker_Cfg.debug).FStarC_TypeChecker_Cfg.print_normalized
-                      then
-                        (let uu___5 =
-                           let uu___6 =
-                             let uu___7 =
-                               let uu___8 =
-                                 FStarC_Class_Show.show
-                                   FStarC_Syntax_Print.showable_term tm in
-                               FStarC_Util.format1
-                                 "Starting norm request on `%s`." uu___8 in
-                             FStarC_Errors_Msg.text uu___7 in
-                           let uu___7 =
-                             let uu___8 =
-                               let uu___9 = FStarC_Errors_Msg.text "Steps =" in
-                               let uu___10 =
-                                 let uu___11 =
-                                   FStarC_Class_Show.show
-                                     (FStarC_Class_Show.show_list
-                                        FStarC_TypeChecker_Env.showable_step)
-                                     s in
-                                 FStarC_Errors_Msg.text uu___11 in
-                               FStarC_Pprint.op_Hat_Slash_Hat uu___9 uu___10 in
-                             [uu___8] in
-                           uu___6 :: uu___7 in
-                         FStarC_Errors.diag
-                           FStarC_Class_HasRange.hasRange_range
-                           tm.FStarC_Syntax_Syntax.pos ()
-                           (Obj.magic
-                              FStarC_Errors_Msg.is_error_message_list_doc)
-                           (Obj.magic uu___5))
-                      else ();
-                      (let delta_level =
-                         let uu___5 =
-                           FStarC_Util.for_some
-                             (fun uu___6 ->
-                                match uu___6 with
-                                | FStarC_TypeChecker_Env.UnfoldUntil uu___7
-                                    -> true
-                                | FStarC_TypeChecker_Env.UnfoldOnly uu___7 ->
-                                    true
-                                | FStarC_TypeChecker_Env.UnfoldFully uu___7
-                                    -> true
-                                | uu___7 -> false) s in
-                         if uu___5
-                         then
-                           [FStarC_TypeChecker_Env.Unfold
-                              FStarC_Syntax_Syntax.delta_constant]
-                         else
-                           if
-                             (cfg.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.for_extraction
-                           then
-                             [FStarC_TypeChecker_Env.Eager_unfolding_only;
-                             FStarC_TypeChecker_Env.InliningDelta]
-                           else [FStarC_TypeChecker_Env.NoDelta] in
-                       let cfg'1 =
-                         let uu___5 =
-                           let uu___6 = FStarC_TypeChecker_Cfg.to_fsteps s in
-                           {
-                             FStarC_TypeChecker_Cfg.beta =
-                               (uu___6.FStarC_TypeChecker_Cfg.beta);
-                             FStarC_TypeChecker_Cfg.iota =
-                               (uu___6.FStarC_TypeChecker_Cfg.iota);
-                             FStarC_TypeChecker_Cfg.zeta =
-                               (uu___6.FStarC_TypeChecker_Cfg.zeta);
-                             FStarC_TypeChecker_Cfg.zeta_full =
-                               (uu___6.FStarC_TypeChecker_Cfg.zeta_full);
-                             FStarC_TypeChecker_Cfg.weak =
-                               (uu___6.FStarC_TypeChecker_Cfg.weak);
-                             FStarC_TypeChecker_Cfg.hnf =
-                               (uu___6.FStarC_TypeChecker_Cfg.hnf);
-                             FStarC_TypeChecker_Cfg.primops =
-                               (uu___6.FStarC_TypeChecker_Cfg.primops);
-                             FStarC_TypeChecker_Cfg.do_not_unfold_pure_lets =
-                               (uu___6.FStarC_TypeChecker_Cfg.do_not_unfold_pure_lets);
-                             FStarC_TypeChecker_Cfg.unfold_until =
-                               (uu___6.FStarC_TypeChecker_Cfg.unfold_until);
-                             FStarC_TypeChecker_Cfg.unfold_only =
-                               (uu___6.FStarC_TypeChecker_Cfg.unfold_only);
-                             FStarC_TypeChecker_Cfg.unfold_once =
-                               (uu___6.FStarC_TypeChecker_Cfg.unfold_once);
-                             FStarC_TypeChecker_Cfg.unfold_fully =
-                               (uu___6.FStarC_TypeChecker_Cfg.unfold_fully);
-                             FStarC_TypeChecker_Cfg.unfold_attr =
-                               (uu___6.FStarC_TypeChecker_Cfg.unfold_attr);
-                             FStarC_TypeChecker_Cfg.unfold_qual =
-                               (uu___6.FStarC_TypeChecker_Cfg.unfold_qual);
-                             FStarC_TypeChecker_Cfg.unfold_namespace =
-                               (uu___6.FStarC_TypeChecker_Cfg.unfold_namespace);
-                             FStarC_TypeChecker_Cfg.dont_unfold_attr =
-                               (uu___6.FStarC_TypeChecker_Cfg.dont_unfold_attr);
-                             FStarC_TypeChecker_Cfg.pure_subterms_within_computations
-                               =
-                               (uu___6.FStarC_TypeChecker_Cfg.pure_subterms_within_computations);
-                             FStarC_TypeChecker_Cfg.simplify =
-                               (uu___6.FStarC_TypeChecker_Cfg.simplify);
-                             FStarC_TypeChecker_Cfg.erase_universes =
-                               (uu___6.FStarC_TypeChecker_Cfg.erase_universes);
-                             FStarC_TypeChecker_Cfg.allow_unbound_universes =
-                               (uu___6.FStarC_TypeChecker_Cfg.allow_unbound_universes);
-                             FStarC_TypeChecker_Cfg.reify_ =
-                               (uu___6.FStarC_TypeChecker_Cfg.reify_);
-                             FStarC_TypeChecker_Cfg.compress_uvars =
-                               (uu___6.FStarC_TypeChecker_Cfg.compress_uvars);
-                             FStarC_TypeChecker_Cfg.no_full_norm =
-                               (uu___6.FStarC_TypeChecker_Cfg.no_full_norm);
-                             FStarC_TypeChecker_Cfg.check_no_uvars =
-                               (uu___6.FStarC_TypeChecker_Cfg.check_no_uvars);
-                             FStarC_TypeChecker_Cfg.unmeta =
-                               (uu___6.FStarC_TypeChecker_Cfg.unmeta);
-                             FStarC_TypeChecker_Cfg.unascribe =
-                               (uu___6.FStarC_TypeChecker_Cfg.unascribe);
-                             FStarC_TypeChecker_Cfg.in_full_norm_request =
-                               true;
-                             FStarC_TypeChecker_Cfg.weakly_reduce_scrutinee =
-                               (uu___6.FStarC_TypeChecker_Cfg.weakly_reduce_scrutinee);
-                             FStarC_TypeChecker_Cfg.nbe_step =
-                               (uu___6.FStarC_TypeChecker_Cfg.nbe_step);
-                             FStarC_TypeChecker_Cfg.for_extraction =
-                               ((cfg.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.for_extraction);
-                             FStarC_TypeChecker_Cfg.unrefine =
-                               (uu___6.FStarC_TypeChecker_Cfg.unrefine);
-                             FStarC_TypeChecker_Cfg.default_univs_to_zero =
-                               (uu___6.FStarC_TypeChecker_Cfg.default_univs_to_zero);
-                             FStarC_TypeChecker_Cfg.tactics =
-                               (uu___6.FStarC_TypeChecker_Cfg.tactics)
-                           } in
-                         {
-                           FStarC_TypeChecker_Cfg.steps = uu___5;
-                           FStarC_TypeChecker_Cfg.tcenv =
-                             (cfg.FStarC_TypeChecker_Cfg.tcenv);
-                           FStarC_TypeChecker_Cfg.debug =
-                             (cfg.FStarC_TypeChecker_Cfg.debug);
-                           FStarC_TypeChecker_Cfg.delta_level = delta_level;
-                           FStarC_TypeChecker_Cfg.primitive_steps =
-                             (cfg.FStarC_TypeChecker_Cfg.primitive_steps);
-                           FStarC_TypeChecker_Cfg.strong =
-                             (cfg.FStarC_TypeChecker_Cfg.strong);
-                           FStarC_TypeChecker_Cfg.memoize_lazy =
-                             (cfg.FStarC_TypeChecker_Cfg.memoize_lazy);
-                           FStarC_TypeChecker_Cfg.normalize_pure_lets = true;
-                           FStarC_TypeChecker_Cfg.reifying =
-                             (cfg.FStarC_TypeChecker_Cfg.reifying);
-                           FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg =
-                             (cfg.FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg)
-                         } in
-                       let t0 = FStarC_Util.now_ns () in
-                       let tm_normed = norm cfg'1 env1 [] tm in
-                       maybe_debug cfg tm_normed
-                         (FStar_Pervasives_Native.Some (tm, t0));
-                       rebuild cfg env1 stack2 tm_normed))))
            | FStarC_Syntax_Syntax.Tm_type u ->
                let u1 = norm_universe cfg env1 u in
                let uu___2 =
@@ -3025,7 +2523,7 @@ let rec (norm :
                                        let uu___6 =
                                          let uu___7 =
                                            let uu___8 =
-                                             FStarC_Util.mk_ref
+                                             FStarC_Effect.mk_ref
                                                (FStar_Pervasives_Native.Some
                                                   (cfg, ([], a))) in
                                            (env1, a, uu___8, false) in
@@ -3135,9 +2633,10 @@ let rec (norm :
                                  let uu___6 = dummy () in uu___6 :: env2)
                             env1 bs1 in
                         norm_comp cfg uu___4 c1 in
-                      let close_binders env2 bs2 =
-                        let uu___4 = env_subst env2 in
-                        FStarC_Syntax_Subst.subst_binders uu___4 bs2 in
+                      let close_binders env2 =
+                        fun bs2 ->
+                          let uu___4 = env_subst env2 in
+                          FStarC_Syntax_Subst.subst_binders uu___4 bs2 in
                       let bs2 =
                         if
                           (cfg.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.hnf
@@ -3966,7 +3465,7 @@ and (do_unfold_fv :
                     ->
                     let uu___2 =
                       FStarC_Util.find_map se.FStarC_Syntax_Syntax.sigattrs
-                        is_extract_as_attr in
+                        FStarC_Parser_Const_ExtractAs.is_extract_as_attr in
                     (match uu___2 with
                      | FStar_Pervasives_Native.Some impl ->
                          FStar_Pervasives_Native.Some ([], impl)
@@ -4053,6 +3552,570 @@ and (do_unfold_fv :
                             uu___4 in
                         failwith uu___3
                   else norm cfg empty_env stack1 t1))
+and (handle_norm_request :
+  FStarC_TypeChecker_Cfg.cfg ->
+    env ->
+      stack_elt Prims.list ->
+        norm_request_kind ->
+          FStarC_Syntax_Syntax.term -> FStarC_Syntax_Syntax.term)
+  =
+  fun cfg ->
+    fun env1 ->
+      fun stack1 ->
+        fun k ->
+          fun hd ->
+            let debug =
+              (cfg.FStarC_TypeChecker_Cfg.debug).FStarC_TypeChecker_Cfg.print_normalized in
+            if debug
+            then
+              (let uu___1 =
+                 FStarC_Class_Show.show FStarC_Syntax_Print.showable_term hd in
+               let uu___2 =
+                 let uu___3 =
+                   let uu___4 = firstn (Prims.of_int (5)) stack1 in
+                   FStar_Pervasives_Native.fst uu___4 in
+                 FStarC_Class_Show.show
+                   (FStarC_Class_Show.show_list showable_stack_elt) uu___3 in
+               FStarC_Util.print2 "handle_norm_request %s, stack = %s\n"
+                 uu___1 uu___2)
+            else ();
+            (let inherited_steps =
+               FStarC_List.op_At
+                 (if
+                    (cfg.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.erase_universes
+                  then [FStarC_TypeChecker_Env.EraseUniverses]
+                  else [])
+                 (FStarC_List.op_At
+                    (if
+                       (cfg.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.allow_unbound_universes
+                     then [FStarC_TypeChecker_Env.AllowUnboundUniverses]
+                     else [])
+                    (if
+                       (cfg.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.nbe_step
+                     then [FStarC_TypeChecker_Env.NBE]
+                     else [])) in
+             let parse_steps s =
+               let uu___1 =
+                 FStarC_TypeChecker_Primops_Base.try_unembed_simple
+                   (FStarC_Syntax_Embeddings.e_list
+                      FStarC_Syntax_Embeddings.e_norm_step) s in
+               match uu___1 with
+               | FStar_Pervasives_Native.Some steps ->
+                   let uu___2 =
+                     FStarC_TypeChecker_Cfg.translate_norm_steps steps in
+                   FStar_Pervasives_Native.Some uu___2
+               | FStar_Pervasives_Native.None -> FStar_Pervasives_Native.None in
+             let env_term_steps_stack =
+               match (k, stack1) with
+               | (NormalizeTerm, (UnivArgs uu___1)::(Arg
+                  (Clos (uu___2, uu___3, uu___4, uu___5), uu___6, uu___7))::(Arg
+                  (Clos (a_env, a_t, uu___8, uu___9), uu___10, uu___11))::stack')
+                   ->
+                   let steps =
+                     [FStarC_TypeChecker_Env.Beta;
+                     FStarC_TypeChecker_Env.Zeta;
+                     FStarC_TypeChecker_Env.Iota;
+                     FStarC_TypeChecker_Env.Primops;
+                     FStarC_TypeChecker_Env.UnfoldUntil
+                       FStarC_Syntax_Syntax.delta_constant;
+                     FStarC_TypeChecker_Env.Reify] in
+                   let steps1 =
+                     FStarC_List.op_At
+                       ((FStarC_TypeChecker_Env.DontUnfoldAttr
+                           [FStarC_Parser_Const.tac_opaque_attr]) ::
+                       inherited_steps) steps in
+                   ((FStar_Pervasives_Native.Some (a_env, a_t, steps1)),
+                     stack')
+               | (NormalizeTerm, (Arg
+                  (Clos (uu___1, uu___2, uu___3, uu___4), uu___5, uu___6))::(Arg
+                  (Clos (a_env, a_t, uu___7, uu___8), uu___9, uu___10))::stack')
+                   ->
+                   let steps =
+                     [FStarC_TypeChecker_Env.Beta;
+                     FStarC_TypeChecker_Env.Zeta;
+                     FStarC_TypeChecker_Env.Iota;
+                     FStarC_TypeChecker_Env.Primops;
+                     FStarC_TypeChecker_Env.UnfoldUntil
+                       FStarC_Syntax_Syntax.delta_constant;
+                     FStarC_TypeChecker_Env.Reify] in
+                   let steps1 =
+                     FStarC_List.op_At
+                       ((FStarC_TypeChecker_Env.DontUnfoldAttr
+                           [FStarC_Parser_Const.tac_opaque_attr]) ::
+                       inherited_steps) steps in
+                   ((FStar_Pervasives_Native.Some (a_env, a_t, steps1)),
+                     stack')
+               | (Normalize, (Arg
+                  (Clos (a_env, a_t, uu___1, uu___2), uu___3, uu___4))::stack')
+                   ->
+                   let steps =
+                     [FStarC_TypeChecker_Env.Beta;
+                     FStarC_TypeChecker_Env.Zeta;
+                     FStarC_TypeChecker_Env.Iota;
+                     FStarC_TypeChecker_Env.Primops;
+                     FStarC_TypeChecker_Env.UnfoldUntil
+                       FStarC_Syntax_Syntax.delta_constant;
+                     FStarC_TypeChecker_Env.Reify] in
+                   let steps1 =
+                     FStarC_List.op_At
+                       ((FStarC_TypeChecker_Env.DontUnfoldAttr
+                           [FStarC_Parser_Const.tac_opaque_attr]) ::
+                       inherited_steps) steps in
+                   ((FStar_Pervasives_Native.Some (a_env, a_t, steps1)),
+                     stack')
+               | (Norm, (UnivArgs uu___1)::(Arg
+                  (Clos (s_env, s_t, uu___2, uu___3), uu___4, uu___5))::(Arg
+                  (Clos (uu___6, uu___7, uu___8, uu___9), uu___10, uu___11))::(Arg
+                  (Clos (a_env, a_t, uu___12, uu___13), uu___14, uu___15))::stack')
+                   ->
+                   let cfg' =
+                     {
+                       FStarC_TypeChecker_Cfg.steps =
+                         (let uu___16 = cfg.FStarC_TypeChecker_Cfg.steps in
+                          {
+                            FStarC_TypeChecker_Cfg.beta =
+                              (uu___16.FStarC_TypeChecker_Cfg.beta);
+                            FStarC_TypeChecker_Cfg.iota =
+                              (uu___16.FStarC_TypeChecker_Cfg.iota);
+                            FStarC_TypeChecker_Cfg.zeta =
+                              (uu___16.FStarC_TypeChecker_Cfg.zeta);
+                            FStarC_TypeChecker_Cfg.zeta_full =
+                              (uu___16.FStarC_TypeChecker_Cfg.zeta_full);
+                            FStarC_TypeChecker_Cfg.weak =
+                              (uu___16.FStarC_TypeChecker_Cfg.weak);
+                            FStarC_TypeChecker_Cfg.hnf =
+                              (uu___16.FStarC_TypeChecker_Cfg.hnf);
+                            FStarC_TypeChecker_Cfg.primops =
+                              (uu___16.FStarC_TypeChecker_Cfg.primops);
+                            FStarC_TypeChecker_Cfg.do_not_unfold_pure_lets =
+                              false;
+                            FStarC_TypeChecker_Cfg.unfold_until =
+                              (uu___16.FStarC_TypeChecker_Cfg.unfold_until);
+                            FStarC_TypeChecker_Cfg.unfold_only =
+                              FStar_Pervasives_Native.None;
+                            FStarC_TypeChecker_Cfg.unfold_once =
+                              (uu___16.FStarC_TypeChecker_Cfg.unfold_once);
+                            FStarC_TypeChecker_Cfg.unfold_fully =
+                              FStar_Pervasives_Native.None;
+                            FStarC_TypeChecker_Cfg.unfold_attr =
+                              (uu___16.FStarC_TypeChecker_Cfg.unfold_attr);
+                            FStarC_TypeChecker_Cfg.unfold_qual =
+                              (uu___16.FStarC_TypeChecker_Cfg.unfold_qual);
+                            FStarC_TypeChecker_Cfg.unfold_namespace =
+                              (uu___16.FStarC_TypeChecker_Cfg.unfold_namespace);
+                            FStarC_TypeChecker_Cfg.dont_unfold_attr =
+                              (uu___16.FStarC_TypeChecker_Cfg.dont_unfold_attr);
+                            FStarC_TypeChecker_Cfg.pure_subterms_within_computations
+                              =
+                              (uu___16.FStarC_TypeChecker_Cfg.pure_subterms_within_computations);
+                            FStarC_TypeChecker_Cfg.simplify =
+                              (uu___16.FStarC_TypeChecker_Cfg.simplify);
+                            FStarC_TypeChecker_Cfg.erase_universes =
+                              (uu___16.FStarC_TypeChecker_Cfg.erase_universes);
+                            FStarC_TypeChecker_Cfg.allow_unbound_universes =
+                              (uu___16.FStarC_TypeChecker_Cfg.allow_unbound_universes);
+                            FStarC_TypeChecker_Cfg.reify_ =
+                              (uu___16.FStarC_TypeChecker_Cfg.reify_);
+                            FStarC_TypeChecker_Cfg.compress_uvars =
+                              (uu___16.FStarC_TypeChecker_Cfg.compress_uvars);
+                            FStarC_TypeChecker_Cfg.no_full_norm =
+                              (uu___16.FStarC_TypeChecker_Cfg.no_full_norm);
+                            FStarC_TypeChecker_Cfg.check_no_uvars =
+                              (uu___16.FStarC_TypeChecker_Cfg.check_no_uvars);
+                            FStarC_TypeChecker_Cfg.unmeta =
+                              (uu___16.FStarC_TypeChecker_Cfg.unmeta);
+                            FStarC_TypeChecker_Cfg.unascribe =
+                              (uu___16.FStarC_TypeChecker_Cfg.unascribe);
+                            FStarC_TypeChecker_Cfg.in_full_norm_request =
+                              (uu___16.FStarC_TypeChecker_Cfg.in_full_norm_request);
+                            FStarC_TypeChecker_Cfg.weakly_reduce_scrutinee =
+                              (uu___16.FStarC_TypeChecker_Cfg.weakly_reduce_scrutinee);
+                            FStarC_TypeChecker_Cfg.nbe_step =
+                              (uu___16.FStarC_TypeChecker_Cfg.nbe_step);
+                            FStarC_TypeChecker_Cfg.for_extraction =
+                              (uu___16.FStarC_TypeChecker_Cfg.for_extraction);
+                            FStarC_TypeChecker_Cfg.unrefine =
+                              (uu___16.FStarC_TypeChecker_Cfg.unrefine);
+                            FStarC_TypeChecker_Cfg.default_univs_to_zero =
+                              (uu___16.FStarC_TypeChecker_Cfg.default_univs_to_zero);
+                            FStarC_TypeChecker_Cfg.tactics =
+                              (uu___16.FStarC_TypeChecker_Cfg.tactics)
+                          });
+                       FStarC_TypeChecker_Cfg.tcenv =
+                         (cfg.FStarC_TypeChecker_Cfg.tcenv);
+                       FStarC_TypeChecker_Cfg.debug =
+                         (cfg.FStarC_TypeChecker_Cfg.debug);
+                       FStarC_TypeChecker_Cfg.delta_level =
+                         [FStarC_TypeChecker_Env.Unfold
+                            FStarC_Syntax_Syntax.delta_constant];
+                       FStarC_TypeChecker_Cfg.primitive_steps =
+                         (cfg.FStarC_TypeChecker_Cfg.primitive_steps);
+                       FStarC_TypeChecker_Cfg.strong =
+                         (cfg.FStarC_TypeChecker_Cfg.strong);
+                       FStarC_TypeChecker_Cfg.memoize_lazy =
+                         (cfg.FStarC_TypeChecker_Cfg.memoize_lazy);
+                       FStarC_TypeChecker_Cfg.normalize_pure_lets = true;
+                       FStarC_TypeChecker_Cfg.reifying =
+                         (cfg.FStarC_TypeChecker_Cfg.reifying);
+                       FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg =
+                         (cfg.FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg)
+                     } in
+                   let s_t1 = norm cfg' s_env [] s_t in
+                   let uu___16 = parse_steps s_t1 in
+                   (match uu___16 with
+                    | FStar_Pervasives_Native.Some s ->
+                        let s1 =
+                          FStarC_List.op_At
+                            ((FStarC_TypeChecker_Env.DontUnfoldAttr
+                                [FStarC_Parser_Const.tac_opaque_attr]) ::
+                            inherited_steps) s in
+                        ((FStar_Pervasives_Native.Some (a_env, a_t, s1)),
+                          stack')
+                    | FStar_Pervasives_Native.None ->
+                        (if debug
+                         then
+                           (let uu___18 =
+                              FStarC_Class_Show.show
+                                FStarC_Syntax_Print.showable_term s_t1 in
+                            let uu___19 =
+                              FStarC_Class_Show.show
+                                (FStarC_Class_Show.show_list
+                                   (FStarC_Class_Show.show_tuple3
+                                      (FStarC_Class_Show.show_option
+                                         FStarC_Syntax_Print.showable_binder)
+                                      showable_closure
+                                      (showable_memo
+                                         (FStarC_Class_Show.show_list
+                                            FStarC_Syntax_Print.showable_subst_elt))))
+                                s_env in
+                            FStarC_Util.print2
+                              "handle_norm_request: couldn't parse steps %s in env %s\n"
+                              uu___18 uu___19)
+                         else ();
+                         (FStar_Pervasives_Native.None, stack1)))
+               | (Norm, (Arg
+                  (Clos (s_env, s_t, uu___1, uu___2), uu___3, uu___4))::(Arg
+                  (Clos (uu___5, uu___6, uu___7, uu___8), uu___9, uu___10))::(Arg
+                  (Clos (a_env, a_t, uu___11, uu___12), uu___13, uu___14))::stack')
+                   ->
+                   let cfg' =
+                     {
+                       FStarC_TypeChecker_Cfg.steps =
+                         (let uu___15 = cfg.FStarC_TypeChecker_Cfg.steps in
+                          {
+                            FStarC_TypeChecker_Cfg.beta =
+                              (uu___15.FStarC_TypeChecker_Cfg.beta);
+                            FStarC_TypeChecker_Cfg.iota =
+                              (uu___15.FStarC_TypeChecker_Cfg.iota);
+                            FStarC_TypeChecker_Cfg.zeta =
+                              (uu___15.FStarC_TypeChecker_Cfg.zeta);
+                            FStarC_TypeChecker_Cfg.zeta_full =
+                              (uu___15.FStarC_TypeChecker_Cfg.zeta_full);
+                            FStarC_TypeChecker_Cfg.weak =
+                              (uu___15.FStarC_TypeChecker_Cfg.weak);
+                            FStarC_TypeChecker_Cfg.hnf =
+                              (uu___15.FStarC_TypeChecker_Cfg.hnf);
+                            FStarC_TypeChecker_Cfg.primops =
+                              (uu___15.FStarC_TypeChecker_Cfg.primops);
+                            FStarC_TypeChecker_Cfg.do_not_unfold_pure_lets =
+                              false;
+                            FStarC_TypeChecker_Cfg.unfold_until =
+                              (uu___15.FStarC_TypeChecker_Cfg.unfold_until);
+                            FStarC_TypeChecker_Cfg.unfold_only =
+                              FStar_Pervasives_Native.None;
+                            FStarC_TypeChecker_Cfg.unfold_once =
+                              (uu___15.FStarC_TypeChecker_Cfg.unfold_once);
+                            FStarC_TypeChecker_Cfg.unfold_fully =
+                              FStar_Pervasives_Native.None;
+                            FStarC_TypeChecker_Cfg.unfold_attr =
+                              (uu___15.FStarC_TypeChecker_Cfg.unfold_attr);
+                            FStarC_TypeChecker_Cfg.unfold_qual =
+                              (uu___15.FStarC_TypeChecker_Cfg.unfold_qual);
+                            FStarC_TypeChecker_Cfg.unfold_namespace =
+                              (uu___15.FStarC_TypeChecker_Cfg.unfold_namespace);
+                            FStarC_TypeChecker_Cfg.dont_unfold_attr =
+                              (uu___15.FStarC_TypeChecker_Cfg.dont_unfold_attr);
+                            FStarC_TypeChecker_Cfg.pure_subterms_within_computations
+                              =
+                              (uu___15.FStarC_TypeChecker_Cfg.pure_subterms_within_computations);
+                            FStarC_TypeChecker_Cfg.simplify =
+                              (uu___15.FStarC_TypeChecker_Cfg.simplify);
+                            FStarC_TypeChecker_Cfg.erase_universes =
+                              (uu___15.FStarC_TypeChecker_Cfg.erase_universes);
+                            FStarC_TypeChecker_Cfg.allow_unbound_universes =
+                              (uu___15.FStarC_TypeChecker_Cfg.allow_unbound_universes);
+                            FStarC_TypeChecker_Cfg.reify_ =
+                              (uu___15.FStarC_TypeChecker_Cfg.reify_);
+                            FStarC_TypeChecker_Cfg.compress_uvars =
+                              (uu___15.FStarC_TypeChecker_Cfg.compress_uvars);
+                            FStarC_TypeChecker_Cfg.no_full_norm =
+                              (uu___15.FStarC_TypeChecker_Cfg.no_full_norm);
+                            FStarC_TypeChecker_Cfg.check_no_uvars =
+                              (uu___15.FStarC_TypeChecker_Cfg.check_no_uvars);
+                            FStarC_TypeChecker_Cfg.unmeta =
+                              (uu___15.FStarC_TypeChecker_Cfg.unmeta);
+                            FStarC_TypeChecker_Cfg.unascribe =
+                              (uu___15.FStarC_TypeChecker_Cfg.unascribe);
+                            FStarC_TypeChecker_Cfg.in_full_norm_request =
+                              (uu___15.FStarC_TypeChecker_Cfg.in_full_norm_request);
+                            FStarC_TypeChecker_Cfg.weakly_reduce_scrutinee =
+                              (uu___15.FStarC_TypeChecker_Cfg.weakly_reduce_scrutinee);
+                            FStarC_TypeChecker_Cfg.nbe_step =
+                              (uu___15.FStarC_TypeChecker_Cfg.nbe_step);
+                            FStarC_TypeChecker_Cfg.for_extraction =
+                              (uu___15.FStarC_TypeChecker_Cfg.for_extraction);
+                            FStarC_TypeChecker_Cfg.unrefine =
+                              (uu___15.FStarC_TypeChecker_Cfg.unrefine);
+                            FStarC_TypeChecker_Cfg.default_univs_to_zero =
+                              (uu___15.FStarC_TypeChecker_Cfg.default_univs_to_zero);
+                            FStarC_TypeChecker_Cfg.tactics =
+                              (uu___15.FStarC_TypeChecker_Cfg.tactics)
+                          });
+                       FStarC_TypeChecker_Cfg.tcenv =
+                         (cfg.FStarC_TypeChecker_Cfg.tcenv);
+                       FStarC_TypeChecker_Cfg.debug =
+                         (cfg.FStarC_TypeChecker_Cfg.debug);
+                       FStarC_TypeChecker_Cfg.delta_level =
+                         [FStarC_TypeChecker_Env.Unfold
+                            FStarC_Syntax_Syntax.delta_constant];
+                       FStarC_TypeChecker_Cfg.primitive_steps =
+                         (cfg.FStarC_TypeChecker_Cfg.primitive_steps);
+                       FStarC_TypeChecker_Cfg.strong =
+                         (cfg.FStarC_TypeChecker_Cfg.strong);
+                       FStarC_TypeChecker_Cfg.memoize_lazy =
+                         (cfg.FStarC_TypeChecker_Cfg.memoize_lazy);
+                       FStarC_TypeChecker_Cfg.normalize_pure_lets = true;
+                       FStarC_TypeChecker_Cfg.reifying =
+                         (cfg.FStarC_TypeChecker_Cfg.reifying);
+                       FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg =
+                         (cfg.FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg)
+                     } in
+                   let s_t1 = norm cfg' s_env [] s_t in
+                   let uu___15 = parse_steps s_t1 in
+                   (match uu___15 with
+                    | FStar_Pervasives_Native.Some s ->
+                        let s1 =
+                          FStarC_List.op_At
+                            ((FStarC_TypeChecker_Env.DontUnfoldAttr
+                                [FStarC_Parser_Const.tac_opaque_attr]) ::
+                            inherited_steps) s in
+                        ((FStar_Pervasives_Native.Some (a_env, a_t, s1)),
+                          stack')
+                    | FStar_Pervasives_Native.None ->
+                        (if debug
+                         then
+                           (let uu___17 =
+                              FStarC_Class_Show.show
+                                FStarC_Syntax_Print.showable_term s_t1 in
+                            let uu___18 =
+                              FStarC_Class_Show.show
+                                (FStarC_Class_Show.show_list
+                                   (FStarC_Class_Show.show_tuple3
+                                      (FStarC_Class_Show.show_option
+                                         FStarC_Syntax_Print.showable_binder)
+                                      showable_closure
+                                      (showable_memo
+                                         (FStarC_Class_Show.show_list
+                                            FStarC_Syntax_Print.showable_subst_elt))))
+                                s_env in
+                            FStarC_Util.print2
+                              "handle_norm_request: couldn't parse steps %s in env %s\n"
+                              uu___17 uu___18)
+                         else ();
+                         (FStar_Pervasives_Native.None, stack1)))
+               | uu___1 -> (FStar_Pervasives_Native.None, stack1) in
+             match env_term_steps_stack with
+             | (FStar_Pervasives_Native.None, stack2) ->
+                 (if debug
+                  then
+                    (let uu___2 =
+                       FStarC_Class_Show.show
+                         FStarC_Syntax_Print.showable_term hd in
+                     let uu___3 =
+                       FStarC_Class_Show.show
+                         (FStarC_Class_Show.show_list showable_stack_elt)
+                         stack2 in
+                     FStarC_Util.print2
+                       "Couldn't recognize norm request %s;; stack = %s\n"
+                       uu___2 uu___3)
+                  else ();
+                  rebuild cfg env1 stack2 hd)
+             | (FStar_Pervasives_Native.Some (t_env, tm, s), stack2) when
+                 is_nbe_request s ->
+                 let tm' = closure_as_term cfg t_env tm in
+                 let uu___1 =
+                   FStarC_Timing.record_ms (fun uu___2 -> nbe_eval cfg s tm') in
+                 (match uu___1 with
+                  | (tm_norm, elapsed) ->
+                      (if debug
+                       then
+                         (let cfg' =
+                            FStarC_TypeChecker_Cfg.config s
+                              cfg.FStarC_TypeChecker_Cfg.tcenv in
+                          let uu___3 =
+                            FStarC_Class_Show.show
+                              FStarC_Class_Show.showable_int elapsed in
+                          let uu___4 =
+                            FStarC_Class_Show.show
+                              FStarC_Syntax_Print.showable_term tm' in
+                          let uu___5 =
+                            FStarC_Class_Show.show
+                              FStarC_TypeChecker_Cfg.showable_cfg cfg' in
+                          let uu___6 =
+                            FStarC_Class_Show.show
+                              FStarC_Syntax_Print.showable_term tm_norm in
+                          FStarC_Util.print4
+                            "NBE result timing (%s ms){\nOn term {\n%s\n}\nwith steps {%s}\nresult is{\n\n%s\n}\n}\n"
+                            uu___3 uu___4 uu___5 uu___6)
+                       else ();
+                       rebuild cfg env1 stack2 tm_norm))
+             | (FStar_Pervasives_Native.Some (t_env, tm, s), stack2) ->
+                 (if debug
+                  then
+                    (let uu___2 =
+                       let uu___3 =
+                         let uu___4 =
+                           let uu___5 =
+                             FStarC_Class_Show.show
+                               FStarC_Syntax_Print.showable_term tm in
+                           FStarC_Util.format1
+                             "Starting norm request on `%s`." uu___5 in
+                         FStarC_Errors_Msg.text uu___4 in
+                       let uu___4 =
+                         let uu___5 =
+                           let uu___6 = FStarC_Errors_Msg.text "Steps =" in
+                           let uu___7 =
+                             let uu___8 =
+                               FStarC_Class_Show.show
+                                 (FStarC_Class_Show.show_list
+                                    FStarC_TypeChecker_Env.showable_step) s in
+                             FStarC_Errors_Msg.text uu___8 in
+                           FStarC_Pprint.op_Hat_Slash_Hat uu___6 uu___7 in
+                         [uu___5] in
+                       uu___3 :: uu___4 in
+                     FStarC_Errors.diag FStarC_Class_HasRange.hasRange_range
+                       tm.FStarC_Syntax_Syntax.pos ()
+                       (Obj.magic FStarC_Errors_Msg.is_error_message_list_doc)
+                       (Obj.magic uu___2))
+                  else ();
+                  (let delta_level =
+                     let uu___2 =
+                       FStarC_Util.for_some
+                         (fun uu___3 ->
+                            match uu___3 with
+                            | FStarC_TypeChecker_Env.UnfoldUntil uu___4 ->
+                                true
+                            | FStarC_TypeChecker_Env.UnfoldOnly uu___4 ->
+                                true
+                            | FStarC_TypeChecker_Env.UnfoldFully uu___4 ->
+                                true
+                            | uu___4 -> false) s in
+                     if uu___2
+                     then
+                       [FStarC_TypeChecker_Env.Unfold
+                          FStarC_Syntax_Syntax.delta_constant]
+                     else
+                       if
+                         (cfg.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.for_extraction
+                       then
+                         [FStarC_TypeChecker_Env.Eager_unfolding_only;
+                         FStarC_TypeChecker_Env.InliningDelta]
+                       else [FStarC_TypeChecker_Env.NoDelta] in
+                   let cfg' =
+                     let uu___2 =
+                       let uu___3 = FStarC_TypeChecker_Cfg.to_fsteps s in
+                       {
+                         FStarC_TypeChecker_Cfg.beta =
+                           (uu___3.FStarC_TypeChecker_Cfg.beta);
+                         FStarC_TypeChecker_Cfg.iota =
+                           (uu___3.FStarC_TypeChecker_Cfg.iota);
+                         FStarC_TypeChecker_Cfg.zeta =
+                           (uu___3.FStarC_TypeChecker_Cfg.zeta);
+                         FStarC_TypeChecker_Cfg.zeta_full =
+                           (uu___3.FStarC_TypeChecker_Cfg.zeta_full);
+                         FStarC_TypeChecker_Cfg.weak =
+                           (uu___3.FStarC_TypeChecker_Cfg.weak);
+                         FStarC_TypeChecker_Cfg.hnf =
+                           (uu___3.FStarC_TypeChecker_Cfg.hnf);
+                         FStarC_TypeChecker_Cfg.primops =
+                           (uu___3.FStarC_TypeChecker_Cfg.primops);
+                         FStarC_TypeChecker_Cfg.do_not_unfold_pure_lets =
+                           (uu___3.FStarC_TypeChecker_Cfg.do_not_unfold_pure_lets);
+                         FStarC_TypeChecker_Cfg.unfold_until =
+                           (uu___3.FStarC_TypeChecker_Cfg.unfold_until);
+                         FStarC_TypeChecker_Cfg.unfold_only =
+                           (uu___3.FStarC_TypeChecker_Cfg.unfold_only);
+                         FStarC_TypeChecker_Cfg.unfold_once =
+                           (uu___3.FStarC_TypeChecker_Cfg.unfold_once);
+                         FStarC_TypeChecker_Cfg.unfold_fully =
+                           (uu___3.FStarC_TypeChecker_Cfg.unfold_fully);
+                         FStarC_TypeChecker_Cfg.unfold_attr =
+                           (uu___3.FStarC_TypeChecker_Cfg.unfold_attr);
+                         FStarC_TypeChecker_Cfg.unfold_qual =
+                           (uu___3.FStarC_TypeChecker_Cfg.unfold_qual);
+                         FStarC_TypeChecker_Cfg.unfold_namespace =
+                           (uu___3.FStarC_TypeChecker_Cfg.unfold_namespace);
+                         FStarC_TypeChecker_Cfg.dont_unfold_attr =
+                           (uu___3.FStarC_TypeChecker_Cfg.dont_unfold_attr);
+                         FStarC_TypeChecker_Cfg.pure_subterms_within_computations
+                           =
+                           (uu___3.FStarC_TypeChecker_Cfg.pure_subterms_within_computations);
+                         FStarC_TypeChecker_Cfg.simplify =
+                           (uu___3.FStarC_TypeChecker_Cfg.simplify);
+                         FStarC_TypeChecker_Cfg.erase_universes =
+                           (uu___3.FStarC_TypeChecker_Cfg.erase_universes);
+                         FStarC_TypeChecker_Cfg.allow_unbound_universes =
+                           (uu___3.FStarC_TypeChecker_Cfg.allow_unbound_universes);
+                         FStarC_TypeChecker_Cfg.reify_ =
+                           (uu___3.FStarC_TypeChecker_Cfg.reify_);
+                         FStarC_TypeChecker_Cfg.compress_uvars =
+                           (uu___3.FStarC_TypeChecker_Cfg.compress_uvars);
+                         FStarC_TypeChecker_Cfg.no_full_norm =
+                           (uu___3.FStarC_TypeChecker_Cfg.no_full_norm);
+                         FStarC_TypeChecker_Cfg.check_no_uvars =
+                           (uu___3.FStarC_TypeChecker_Cfg.check_no_uvars);
+                         FStarC_TypeChecker_Cfg.unmeta =
+                           (uu___3.FStarC_TypeChecker_Cfg.unmeta);
+                         FStarC_TypeChecker_Cfg.unascribe =
+                           (uu___3.FStarC_TypeChecker_Cfg.unascribe);
+                         FStarC_TypeChecker_Cfg.in_full_norm_request = true;
+                         FStarC_TypeChecker_Cfg.weakly_reduce_scrutinee =
+                           (uu___3.FStarC_TypeChecker_Cfg.weakly_reduce_scrutinee);
+                         FStarC_TypeChecker_Cfg.nbe_step =
+                           (uu___3.FStarC_TypeChecker_Cfg.nbe_step);
+                         FStarC_TypeChecker_Cfg.for_extraction =
+                           ((cfg.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.for_extraction);
+                         FStarC_TypeChecker_Cfg.unrefine =
+                           (uu___3.FStarC_TypeChecker_Cfg.unrefine);
+                         FStarC_TypeChecker_Cfg.default_univs_to_zero =
+                           (uu___3.FStarC_TypeChecker_Cfg.default_univs_to_zero);
+                         FStarC_TypeChecker_Cfg.tactics =
+                           (uu___3.FStarC_TypeChecker_Cfg.tactics)
+                       } in
+                     {
+                       FStarC_TypeChecker_Cfg.steps = uu___2;
+                       FStarC_TypeChecker_Cfg.tcenv =
+                         (cfg.FStarC_TypeChecker_Cfg.tcenv);
+                       FStarC_TypeChecker_Cfg.debug =
+                         (cfg.FStarC_TypeChecker_Cfg.debug);
+                       FStarC_TypeChecker_Cfg.delta_level = delta_level;
+                       FStarC_TypeChecker_Cfg.primitive_steps =
+                         (cfg.FStarC_TypeChecker_Cfg.primitive_steps);
+                       FStarC_TypeChecker_Cfg.strong =
+                         (cfg.FStarC_TypeChecker_Cfg.strong);
+                       FStarC_TypeChecker_Cfg.memoize_lazy =
+                         (cfg.FStarC_TypeChecker_Cfg.memoize_lazy);
+                       FStarC_TypeChecker_Cfg.normalize_pure_lets = true;
+                       FStarC_TypeChecker_Cfg.reifying =
+                         (cfg.FStarC_TypeChecker_Cfg.reifying);
+                       FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg =
+                         (cfg.FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg)
+                     } in
+                   let t0 = FStarC_Timing.now_ns () in
+                   let tm_normed = norm cfg' t_env [] tm in
+                   maybe_debug cfg tm_normed
+                     (FStar_Pervasives_Native.Some (tm, t0));
+                   rebuild cfg t_env stack2 tm_normed)))
 and (reduce_impure_comp :
   FStarC_TypeChecker_Cfg.cfg ->
     env ->
@@ -6797,15 +6860,16 @@ and (do_rebuild :
                        norm cfg env_arg stack3 tm)))
           | (App (env2, head, aq, r))::stack' when should_reify cfg stack1 ->
               let t0 = t in
-              let fallback msg uu___ =
-                FStarC_TypeChecker_Cfg.log cfg
-                  (fun uu___2 ->
-                     let uu___3 =
-                       FStarC_Class_Show.show
-                         FStarC_Syntax_Print.showable_term t in
-                     FStarC_Util.print2 "Not reifying%s: %s\n" msg uu___3);
-                (let t1 = FStarC_Syntax_Syntax.extend_app head (t, aq) r in
-                 rebuild cfg env2 stack' t1) in
+              let fallback msg =
+                fun uu___ ->
+                  FStarC_TypeChecker_Cfg.log cfg
+                    (fun uu___2 ->
+                       let uu___3 =
+                         FStarC_Class_Show.show
+                           FStarC_Syntax_Print.showable_term t in
+                       FStarC_Util.print2 "Not reifying%s: %s\n" msg uu___3);
+                  (let t1 = FStarC_Syntax_Syntax.extend_app head (t, aq) r in
+                   rebuild cfg env2 stack' t1) in
               let is_non_tac_layered_effect m =
                 let norm_m =
                   FStarC_TypeChecker_Env.norm_eff_name
@@ -7163,74 +7227,79 @@ and (do_rebuild :
                           FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg =
                             (cfg1.FStarC_TypeChecker_Cfg.compat_memo_ignore_cfg)
                         }) in
-                   let norm_or_whnf env3 t1 =
-                     if whnf
-                     then closure_as_term cfg_exclude_zeta env3 t1
-                     else norm cfg_exclude_zeta env3 [] t1 in
-                   let rec norm_pat env3 p =
-                     match p.FStarC_Syntax_Syntax.v with
-                     | FStarC_Syntax_Syntax.Pat_constant uu___3 -> (p, env3)
-                     | FStarC_Syntax_Syntax.Pat_cons (fv, us_opt, pats) ->
-                         let us_opt1 =
-                           if
-                             (cfg1.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.erase_universes
-                           then FStar_Pervasives_Native.None
-                           else
-                             (match us_opt with
-                              | FStar_Pervasives_Native.None ->
-                                  FStar_Pervasives_Native.None
-                              | FStar_Pervasives_Native.Some us ->
-                                  let uu___4 =
-                                    FStarC_List.map (norm_universe cfg1 env3)
-                                      us in
-                                  FStar_Pervasives_Native.Some uu___4) in
-                         let uu___3 =
-                           FStarC_List.fold_left
-                             (fun uu___4 ->
-                                fun uu___5 ->
-                                  match (uu___4, uu___5) with
-                                  | ((pats1, env4), (p1, b)) ->
-                                      let uu___6 = norm_pat env4 p1 in
-                                      (match uu___6 with
-                                       | (p2, env5) ->
-                                           (((p2, b) :: pats1), env5)))
-                             ([], env3) pats in
-                         (match uu___3 with
-                          | (pats1, env4) ->
-                              ({
-                                 FStarC_Syntax_Syntax.v =
-                                   (FStarC_Syntax_Syntax.Pat_cons
-                                      (fv, us_opt1, (FStarC_List.rev pats1)));
-                                 FStarC_Syntax_Syntax.p =
-                                   (p.FStarC_Syntax_Syntax.p)
-                               }, env4))
-                     | FStarC_Syntax_Syntax.Pat_var x ->
-                         let x1 =
+                   let norm_or_whnf env3 =
+                     fun t1 ->
+                       if whnf
+                       then closure_as_term cfg_exclude_zeta env3 t1
+                       else norm cfg_exclude_zeta env3 [] t1 in
+                   let rec norm_pat env3 =
+                     fun p ->
+                       match p.FStarC_Syntax_Syntax.v with
+                       | FStarC_Syntax_Syntax.Pat_constant uu___3 ->
+                           (p, env3)
+                       | FStarC_Syntax_Syntax.Pat_cons (fv, us_opt, pats) ->
+                           let us_opt1 =
+                             if
+                               (cfg1.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.erase_universes
+                             then FStar_Pervasives_Native.None
+                             else
+                               (match us_opt with
+                                | FStar_Pervasives_Native.None ->
+                                    FStar_Pervasives_Native.None
+                                | FStar_Pervasives_Native.Some us ->
+                                    let uu___4 =
+                                      FStarC_List.map
+                                        (norm_universe cfg1 env3) us in
+                                    FStar_Pervasives_Native.Some uu___4) in
                            let uu___3 =
-                             norm_or_whnf env3 x.FStarC_Syntax_Syntax.sort in
-                           {
-                             FStarC_Syntax_Syntax.ppname =
-                               (x.FStarC_Syntax_Syntax.ppname);
-                             FStarC_Syntax_Syntax.index =
-                               (x.FStarC_Syntax_Syntax.index);
-                             FStarC_Syntax_Syntax.sort = uu___3
-                           } in
-                         let uu___3 = let uu___4 = dummy () in uu___4 :: env3 in
-                         ({
-                            FStarC_Syntax_Syntax.v =
-                              (FStarC_Syntax_Syntax.Pat_var x1);
-                            FStarC_Syntax_Syntax.p =
-                              (p.FStarC_Syntax_Syntax.p)
-                          }, uu___3)
-                     | FStarC_Syntax_Syntax.Pat_dot_term eopt ->
-                         let eopt1 =
-                           FStarC_Util.map_option (norm_or_whnf env3) eopt in
-                         ({
-                            FStarC_Syntax_Syntax.v =
-                              (FStarC_Syntax_Syntax.Pat_dot_term eopt1);
-                            FStarC_Syntax_Syntax.p =
-                              (p.FStarC_Syntax_Syntax.p)
-                          }, env3) in
+                             FStarC_List.fold_left
+                               (fun uu___4 ->
+                                  fun uu___5 ->
+                                    match (uu___4, uu___5) with
+                                    | ((pats1, env4), (p1, b)) ->
+                                        let uu___6 = norm_pat env4 p1 in
+                                        (match uu___6 with
+                                         | (p2, env5) ->
+                                             (((p2, b) :: pats1), env5)))
+                               ([], env3) pats in
+                           (match uu___3 with
+                            | (pats1, env4) ->
+                                ({
+                                   FStarC_Syntax_Syntax.v =
+                                     (FStarC_Syntax_Syntax.Pat_cons
+                                        (fv, us_opt1,
+                                          (FStarC_List.rev pats1)));
+                                   FStarC_Syntax_Syntax.p =
+                                     (p.FStarC_Syntax_Syntax.p)
+                                 }, env4))
+                       | FStarC_Syntax_Syntax.Pat_var x ->
+                           let x1 =
+                             let uu___3 =
+                               norm_or_whnf env3 x.FStarC_Syntax_Syntax.sort in
+                             {
+                               FStarC_Syntax_Syntax.ppname =
+                                 (x.FStarC_Syntax_Syntax.ppname);
+                               FStarC_Syntax_Syntax.index =
+                                 (x.FStarC_Syntax_Syntax.index);
+                               FStarC_Syntax_Syntax.sort = uu___3
+                             } in
+                           let uu___3 =
+                             let uu___4 = dummy () in uu___4 :: env3 in
+                           ({
+                              FStarC_Syntax_Syntax.v =
+                                (FStarC_Syntax_Syntax.Pat_var x1);
+                              FStarC_Syntax_Syntax.p =
+                                (p.FStarC_Syntax_Syntax.p)
+                            }, uu___3)
+                       | FStarC_Syntax_Syntax.Pat_dot_term eopt ->
+                           let eopt1 =
+                             FStarC_Util.map_option (norm_or_whnf env3) eopt in
+                           ({
+                              FStarC_Syntax_Syntax.v =
+                                (FStarC_Syntax_Syntax.Pat_dot_term eopt1);
+                              FStarC_Syntax_Syntax.p =
+                                (p.FStarC_Syntax_Syntax.p)
+                            }, env3) in
                    let norm_branches uu___3 =
                      match env2 with
                      | [] when whnf -> branches1
@@ -7460,129 +7529,135 @@ and (do_rebuild :
                           (FStarC_Syntax_Syntax.Record_ctor uu___3);_}
                       -> true
                   | uu___2 -> false in
-                let guard_when_clause wopt b rest =
-                  match wopt with
-                  | FStar_Pervasives_Native.None -> b
-                  | FStar_Pervasives_Native.Some w ->
-                      let then_branch = b in
-                      let else_branch =
-                        FStarC_Syntax_Syntax.mk
-                          (FStarC_Syntax_Syntax.Tm_match
-                             {
-                               FStarC_Syntax_Syntax.scrutinee = scrutinee;
-                               FStarC_Syntax_Syntax.ret_opt = asc_opt;
-                               FStarC_Syntax_Syntax.brs = rest;
-                               FStarC_Syntax_Syntax.rc_opt1 = lopt1
-                             }) r in
-                      FStarC_Syntax_Util.if_then_else w then_branch
-                        else_branch in
-                let rec matches_pat scrutinee_orig p =
-                  let scrutinee1 = FStarC_Syntax_Util.unmeta scrutinee_orig in
-                  let scrutinee2 = FStarC_Syntax_Util.unlazy scrutinee1 in
-                  let uu___1 = FStarC_Syntax_Util.head_and_args scrutinee2 in
-                  match uu___1 with
-                  | (head, args) ->
-                      (match p.FStarC_Syntax_Syntax.v with
-                       | FStarC_Syntax_Syntax.Pat_var bv ->
-                           FStar_Pervasives.Inl [(bv, scrutinee_orig)]
-                       | FStarC_Syntax_Syntax.Pat_dot_term uu___2 ->
-                           FStar_Pervasives.Inl []
-                       | FStarC_Syntax_Syntax.Pat_constant s ->
-                           (match scrutinee2.FStarC_Syntax_Syntax.n with
-                            | FStarC_Syntax_Syntax.Tm_constant s' when
-                                FStarC_Const.eq_const s s' ->
-                                FStar_Pervasives.Inl []
-                            | uu___2 ->
-                                let uu___3 =
-                                  let uu___4 = is_cons head in
-                                  Prims.op_Negation uu___4 in
-                                FStar_Pervasives.Inr uu___3)
-                       | FStarC_Syntax_Syntax.Pat_cons (fv, uu___2, arg_pats)
-                           ->
-                           let uu___3 =
-                             let uu___4 = FStarC_Syntax_Util.un_uinst head in
-                             uu___4.FStarC_Syntax_Syntax.n in
-                           (match uu___3 with
-                            | FStarC_Syntax_Syntax.Tm_fvar fv' when
-                                FStarC_Syntax_Syntax.fv_eq fv fv' ->
-                                matches_args [] args arg_pats
-                            | uu___4 ->
-                                let uu___5 =
-                                  let uu___6 = is_cons head in
-                                  Prims.op_Negation uu___6 in
-                                FStar_Pervasives.Inr uu___5))
-                and matches_args out a p =
-                  match (a, p) with
-                  | ([], []) -> FStar_Pervasives.Inl out
-                  | ((t1, uu___1)::rest_a, (p1, uu___2)::rest_p) ->
-                      let uu___3 = matches_pat t1 p1 in
-                      (match uu___3 with
-                       | FStar_Pervasives.Inl s ->
-                           matches_args (FStarC_List.op_At out s) rest_a
-                             rest_p
-                       | m -> m)
-                  | uu___1 -> FStar_Pervasives.Inr false in
-                let rec matches scrutinee1 p =
-                  match p with
-                  | [] -> norm_and_rebuild_match ()
-                  | (p1, wopt, b)::rest ->
-                      let uu___1 = matches_pat scrutinee1 p1 in
-                      (match uu___1 with
-                       | FStar_Pervasives.Inr (false) ->
-                           matches scrutinee1 rest
-                       | FStar_Pervasives.Inr (true) ->
-                           norm_and_rebuild_match ()
-                       | FStar_Pervasives.Inl s ->
-                           (FStarC_TypeChecker_Cfg.log cfg1
-                              (fun uu___3 ->
-                                 let uu___4 =
-                                   FStarC_Class_Show.show
-                                     FStarC_Syntax_Print.showable_pat p1 in
-                                 let uu___5 =
-                                   let uu___6 =
-                                     FStarC_List.map
-                                       (fun uu___7 ->
-                                          match uu___7 with
-                                          | (uu___8, t1) ->
-                                              FStarC_Class_Show.show
-                                                FStarC_Syntax_Print.showable_term
-                                                t1) s in
-                                   FStarC_String.concat "; " uu___6 in
-                                 FStarC_Util.print2
-                                   "Matches pattern %s with subst = %s\n"
-                                   uu___4 uu___5);
-                            (let env0 = env2 in
-                             let env3 =
-                               FStarC_List.fold_left
-                                 (fun env4 ->
-                                    fun uu___3 ->
-                                      match uu___3 with
-                                      | (bv, t1) ->
-                                          let uu___4 =
-                                            let uu___5 =
+                let guard_when_clause wopt =
+                  fun b ->
+                    fun rest ->
+                      match wopt with
+                      | FStar_Pervasives_Native.None -> b
+                      | FStar_Pervasives_Native.Some w ->
+                          let then_branch = b in
+                          let else_branch =
+                            FStarC_Syntax_Syntax.mk
+                              (FStarC_Syntax_Syntax.Tm_match
+                                 {
+                                   FStarC_Syntax_Syntax.scrutinee = scrutinee;
+                                   FStarC_Syntax_Syntax.ret_opt = asc_opt;
+                                   FStarC_Syntax_Syntax.brs = rest;
+                                   FStarC_Syntax_Syntax.rc_opt1 = lopt1
+                                 }) r in
+                          FStarC_Syntax_Util.if_then_else w then_branch
+                            else_branch in
+                let rec matches_pat scrutinee_orig =
+                  fun p ->
+                    let scrutinee1 = FStarC_Syntax_Util.unmeta scrutinee_orig in
+                    let scrutinee2 = FStarC_Syntax_Util.unlazy scrutinee1 in
+                    let uu___1 = FStarC_Syntax_Util.head_and_args scrutinee2 in
+                    match uu___1 with
+                    | (head, args) ->
+                        (match p.FStarC_Syntax_Syntax.v with
+                         | FStarC_Syntax_Syntax.Pat_var bv ->
+                             FStar_Pervasives.Inl [(bv, scrutinee_orig)]
+                         | FStarC_Syntax_Syntax.Pat_dot_term uu___2 ->
+                             FStar_Pervasives.Inl []
+                         | FStarC_Syntax_Syntax.Pat_constant s ->
+                             (match scrutinee2.FStarC_Syntax_Syntax.n with
+                              | FStarC_Syntax_Syntax.Tm_constant s' when
+                                  FStarC_Const.eq_const s s' ->
+                                  FStar_Pervasives.Inl []
+                              | uu___2 ->
+                                  let uu___3 =
+                                    let uu___4 = is_cons head in
+                                    Prims.op_Negation uu___4 in
+                                  FStar_Pervasives.Inr uu___3)
+                         | FStarC_Syntax_Syntax.Pat_cons
+                             (fv, uu___2, arg_pats) ->
+                             let uu___3 =
+                               let uu___4 = FStarC_Syntax_Util.un_uinst head in
+                               uu___4.FStarC_Syntax_Syntax.n in
+                             (match uu___3 with
+                              | FStarC_Syntax_Syntax.Tm_fvar fv' when
+                                  FStarC_Syntax_Syntax.fv_eq fv fv' ->
+                                  matches_args [] args arg_pats
+                              | uu___4 ->
+                                  let uu___5 =
+                                    let uu___6 = is_cons head in
+                                    Prims.op_Negation uu___6 in
+                                  FStar_Pervasives.Inr uu___5))
+                and matches_args out =
+                  fun a ->
+                    fun p ->
+                      match (a, p) with
+                      | ([], []) -> FStar_Pervasives.Inl out
+                      | ((t1, uu___1)::rest_a, (p1, uu___2)::rest_p) ->
+                          let uu___3 = matches_pat t1 p1 in
+                          (match uu___3 with
+                           | FStar_Pervasives.Inl s ->
+                               matches_args (FStarC_List.op_At out s) rest_a
+                                 rest_p
+                           | m -> m)
+                      | uu___1 -> FStar_Pervasives.Inr false in
+                let rec matches scrutinee1 =
+                  fun p ->
+                    match p with
+                    | [] -> norm_and_rebuild_match ()
+                    | (p1, wopt, b)::rest ->
+                        let uu___1 = matches_pat scrutinee1 p1 in
+                        (match uu___1 with
+                         | FStar_Pervasives.Inr (false) ->
+                             matches scrutinee1 rest
+                         | FStar_Pervasives.Inr (true) ->
+                             norm_and_rebuild_match ()
+                         | FStar_Pervasives.Inl s ->
+                             (FStarC_TypeChecker_Cfg.log cfg1
+                                (fun uu___3 ->
+                                   let uu___4 =
+                                     FStarC_Class_Show.show
+                                       FStarC_Syntax_Print.showable_pat p1 in
+                                   let uu___5 =
+                                     let uu___6 =
+                                       FStarC_List.map
+                                         (fun uu___7 ->
+                                            match uu___7 with
+                                            | (uu___8, t1) ->
+                                                FStarC_Class_Show.show
+                                                  FStarC_Syntax_Print.showable_term
+                                                  t1) s in
+                                     FStarC_String.concat "; " uu___6 in
+                                   FStarC_Util.print2
+                                     "Matches pattern %s with subst = %s\n"
+                                     uu___4 uu___5);
+                              (let env0 = env2 in
+                               let env3 =
+                                 FStarC_List.fold_left
+                                   (fun env4 ->
+                                      fun uu___3 ->
+                                        match uu___3 with
+                                        | (bv, t1) ->
+                                            let uu___4 =
+                                              let uu___5 =
+                                                let uu___6 =
+                                                  FStarC_Syntax_Syntax.mk_binder
+                                                    bv in
+                                                FStar_Pervasives_Native.Some
+                                                  uu___6 in
                                               let uu___6 =
-                                                FStarC_Syntax_Syntax.mk_binder
-                                                  bv in
-                                              FStar_Pervasives_Native.Some
-                                                uu___6 in
-                                            let uu___6 =
-                                              let uu___7 =
-                                                let uu___8 =
-                                                  FStarC_Util.mk_ref
-                                                    (if
-                                                       (cfg1.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.hnf
-                                                     then
-                                                       FStar_Pervasives_Native.None
-                                                     else
-                                                       FStar_Pervasives_Native.Some
-                                                         (cfg1, ([], t1))) in
-                                                ([], t1, uu___8, false) in
-                                              Clos uu___7 in
-                                            let uu___7 = fresh_memo () in
-                                            (uu___5, uu___6, uu___7) in
-                                          uu___4 :: env4) env2 s in
-                             let uu___3 = guard_when_clause wopt b rest in
-                             norm cfg1 env3 stack2 uu___3))) in
+                                                let uu___7 =
+                                                  let uu___8 =
+                                                    FStarC_Effect.mk_ref
+                                                      (if
+                                                         (cfg1.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.hnf
+                                                       then
+                                                         FStar_Pervasives_Native.None
+                                                       else
+                                                         FStar_Pervasives_Native.Some
+                                                           (cfg1, ([], t1))) in
+                                                  ([], t1, uu___8, false) in
+                                                Clos uu___7 in
+                                              let uu___7 = fresh_memo () in
+                                              (uu___5, uu___6, uu___7) in
+                                            uu___4 :: env4) env2 s in
+                               let uu___3 = guard_when_clause wopt b rest in
+                               norm cfg1 env3 stack2 uu___3))) in
                 if
                   (cfg1.FStarC_TypeChecker_Cfg.steps).FStarC_TypeChecker_Cfg.iota
                 then matches scrutinee branches1
@@ -7667,7 +7742,7 @@ and (norm_residual_comp :
         }
 let (reflection_env_hook :
   FStarC_TypeChecker_Env.env FStar_Pervasives_Native.option FStarC_Effect.ref)
-  = FStarC_Util.mk_ref FStar_Pervasives_Native.None
+  = FStarC_Effect.mk_ref FStar_Pervasives_Native.None
 let (normalize_with_primitive_steps :
   FStarC_TypeChecker_Primops_Base.primitive_step Prims.list ->
     FStarC_TypeChecker_Env.steps ->
@@ -7678,63 +7753,67 @@ let (normalize_with_primitive_steps :
     fun s ->
       fun e ->
         fun t ->
-          let is_nbe = is_nbe_request s in
-          let maybe_nbe = if is_nbe then " (NBE)" else "" in
-          FStarC_Errors.with_ctx
-            (Prims.strcat "While normalizing a term" maybe_nbe)
+          FStarC_Stats.record "norm_term"
             (fun uu___ ->
-               let uu___1 =
-                 let uu___2 =
-                   let uu___3 = FStarC_TypeChecker_Env.current_module e in
-                   FStarC_Ident.string_of_lid uu___3 in
-                 FStar_Pervasives_Native.Some uu___2 in
-               FStarC_Profiling.profile
-                 (fun uu___2 ->
-                    let c = FStarC_TypeChecker_Cfg.config' ps s e in
-                    FStarC_Effect.op_Colon_Equals reflection_env_hook
-                      (FStar_Pervasives_Native.Some e);
-                    FStarC_Effect.op_Colon_Equals
-                      FStarC_TypeChecker_Normalize_Unfolding.plugin_unfold_warn_ctr
-                      (Prims.of_int (10));
-                    FStarC_TypeChecker_Cfg.log_top c
-                      (fun uu___6 ->
-                         let uu___7 =
-                           FStarC_Class_Show.show
-                             FStarC_Syntax_Print.showable_term t in
-                         FStarC_Util.print2
-                           "\nStarting normalizer%s for (%s) {\n" maybe_nbe
-                           uu___7);
-                    FStarC_TypeChecker_Cfg.log_top c
-                      (fun uu___7 ->
-                         let uu___8 =
-                           FStarC_Class_Show.show
-                             FStarC_TypeChecker_Cfg.showable_cfg c in
-                         FStarC_Util.print1 ">>> cfg = %s\n" uu___8);
-                    FStarC_Defensive.def_check_scoped
-                      FStarC_TypeChecker_Env.hasBinders_env
-                      FStarC_Class_Binders.hasNames_term
-                      FStarC_Syntax_Print.pretty_term
-                      t.FStarC_Syntax_Syntax.pos
-                      "normalize_with_primitive_steps call" e t;
-                    (let uu___8 =
-                       FStarC_Util.record_time_ms
-                         (fun uu___9 ->
-                            if is_nbe then nbe_eval c s t else norm c [] [] t) in
-                     match uu___8 with
-                     | (r, ms) ->
-                         (FStarC_TypeChecker_Cfg.log_top c
-                            (fun uu___10 ->
-                               let uu___11 =
-                                 FStarC_Class_Show.show
-                                   FStarC_Syntax_Print.showable_term r in
-                               let uu___12 =
-                                 FStarC_Class_Show.show
-                                   FStarC_Class_Show.showable_int ms in
-                               FStarC_Util.print3
-                                 "}\nNormalization%s result = (%s) in %s ms\n"
-                                 maybe_nbe uu___11 uu___12);
-                          r))) uu___1
-                 "FStarC.TypeChecker.Normalize.normalize_with_primitive_steps")
+               let is_nbe = is_nbe_request s in
+               let maybe_nbe = if is_nbe then " (NBE)" else "" in
+               FStarC_Errors.with_ctx
+                 (Prims.strcat "While normalizing a term" maybe_nbe)
+                 (fun uu___1 ->
+                    let uu___2 =
+                      let uu___3 =
+                        let uu___4 = FStarC_TypeChecker_Env.current_module e in
+                        FStarC_Ident.string_of_lid uu___4 in
+                      FStar_Pervasives_Native.Some uu___3 in
+                    FStarC_Profiling.profile
+                      (fun uu___3 ->
+                         let c = FStarC_TypeChecker_Cfg.config' ps s e in
+                         FStarC_Effect.op_Colon_Equals reflection_env_hook
+                           (FStar_Pervasives_Native.Some e);
+                         FStarC_Effect.op_Colon_Equals
+                           FStarC_TypeChecker_Normalize_Unfolding.plugin_unfold_warn_ctr
+                           Prims.int_one;
+                         FStarC_TypeChecker_Cfg.log_top c
+                           (fun uu___7 ->
+                              let uu___8 =
+                                FStarC_Class_Show.show
+                                  FStarC_Syntax_Print.showable_term t in
+                              FStarC_Util.print2
+                                "\nStarting normalizer%s for (%s) {\n"
+                                maybe_nbe uu___8);
+                         FStarC_TypeChecker_Cfg.log_top c
+                           (fun uu___8 ->
+                              let uu___9 =
+                                FStarC_Class_Show.show
+                                  FStarC_TypeChecker_Cfg.showable_cfg c in
+                              FStarC_Util.print1 ">>> cfg = %s\n" uu___9);
+                         FStarC_Defensive.def_check_scoped
+                           FStarC_TypeChecker_Env.hasBinders_env
+                           FStarC_Class_Binders.hasNames_term
+                           FStarC_Syntax_Print.pretty_term
+                           t.FStarC_Syntax_Syntax.pos
+                           "normalize_with_primitive_steps call" e t;
+                         (let uu___9 =
+                            FStarC_Timing.record_ms
+                              (fun uu___10 ->
+                                 if is_nbe
+                                 then nbe_eval c s t
+                                 else norm c [] [] t) in
+                          match uu___9 with
+                          | (r, ms) ->
+                              (FStarC_TypeChecker_Cfg.log_top c
+                                 (fun uu___11 ->
+                                    let uu___12 =
+                                      FStarC_Class_Show.show
+                                        FStarC_Syntax_Print.showable_term r in
+                                    let uu___13 =
+                                      FStarC_Class_Show.show
+                                        FStarC_Class_Show.showable_int ms in
+                                    FStarC_Util.print3
+                                      "}\nNormalization%s result = (%s) in %s ms\n"
+                                      maybe_nbe uu___12 uu___13);
+                               r))) uu___2
+                      "FStarC.TypeChecker.Normalize.normalize_with_primitive_steps"))
 let (normalize :
   FStarC_TypeChecker_Env.steps ->
     FStarC_TypeChecker_Env.env ->
@@ -7759,56 +7838,61 @@ let (normalize_comp :
   fun s ->
     fun e ->
       fun c ->
-        let uu___ =
-          let uu___1 =
-            let uu___2 = FStarC_TypeChecker_Env.current_module e in
-            FStarC_Ident.string_of_lid uu___2 in
-          FStar_Pervasives_Native.Some uu___1 in
-        FStarC_Profiling.profile
-          (fun uu___1 ->
-             let cfg = FStarC_TypeChecker_Cfg.config s e in
-             FStarC_Effect.op_Colon_Equals reflection_env_hook
-               (FStar_Pervasives_Native.Some e);
-             FStarC_Effect.op_Colon_Equals
-               FStarC_TypeChecker_Normalize_Unfolding.plugin_unfold_warn_ctr
-               (Prims.of_int (10));
-             FStarC_TypeChecker_Cfg.log_top cfg
-               (fun uu___5 ->
-                  let uu___6 =
-                    FStarC_Class_Show.show FStarC_Syntax_Print.showable_comp
-                      c in
-                  FStarC_Util.print1
-                    "Starting normalizer for computation (%s) {\n" uu___6);
-             FStarC_TypeChecker_Cfg.log_top cfg
-               (fun uu___6 ->
-                  let uu___7 =
-                    FStarC_Class_Show.show
-                      FStarC_TypeChecker_Cfg.showable_cfg cfg in
-                  FStarC_Util.print1 ">>> cfg = %s\n" uu___7);
-             FStarC_Defensive.def_check_scoped
-               FStarC_TypeChecker_Env.hasBinders_env
-               FStarC_Class_Binders.hasNames_comp
-               FStarC_Syntax_Print.pretty_comp c.FStarC_Syntax_Syntax.pos
-               "normalize_comp call" e c;
-             (let uu___7 =
-                FStarC_Errors.with_ctx "While normalizing a computation type"
-                  (fun uu___8 ->
-                     FStarC_Util.record_time_ms
-                       (fun uu___9 -> norm_comp cfg [] c)) in
-              match uu___7 with
-              | (c1, ms) ->
-                  (FStarC_TypeChecker_Cfg.log_top cfg
-                     (fun uu___9 ->
-                        let uu___10 =
-                          FStarC_Class_Show.show
-                            FStarC_Syntax_Print.showable_comp c1 in
-                        let uu___11 =
-                          FStarC_Class_Show.show
-                            FStarC_Class_Show.showable_int ms in
-                        FStarC_Util.print2
-                          "}\nNormalization result = (%s) in %s ms\n" uu___10
-                          uu___11);
-                   c1))) uu___ "FStarC.TypeChecker.Normalize.normalize_comp"
+        FStarC_Stats.record "norm_comp"
+          (fun uu___ ->
+             let uu___1 =
+               let uu___2 =
+                 let uu___3 = FStarC_TypeChecker_Env.current_module e in
+                 FStarC_Ident.string_of_lid uu___3 in
+               FStar_Pervasives_Native.Some uu___2 in
+             FStarC_Profiling.profile
+               (fun uu___2 ->
+                  let cfg = FStarC_TypeChecker_Cfg.config s e in
+                  FStarC_Effect.op_Colon_Equals reflection_env_hook
+                    (FStar_Pervasives_Native.Some e);
+                  FStarC_Effect.op_Colon_Equals
+                    FStarC_TypeChecker_Normalize_Unfolding.plugin_unfold_warn_ctr
+                    Prims.int_one;
+                  FStarC_TypeChecker_Cfg.log_top cfg
+                    (fun uu___6 ->
+                       let uu___7 =
+                         FStarC_Class_Show.show
+                           FStarC_Syntax_Print.showable_comp c in
+                       FStarC_Util.print1
+                         "Starting normalizer for computation (%s) {\n"
+                         uu___7);
+                  FStarC_TypeChecker_Cfg.log_top cfg
+                    (fun uu___7 ->
+                       let uu___8 =
+                         FStarC_Class_Show.show
+                           FStarC_TypeChecker_Cfg.showable_cfg cfg in
+                       FStarC_Util.print1 ">>> cfg = %s\n" uu___8);
+                  FStarC_Defensive.def_check_scoped
+                    FStarC_TypeChecker_Env.hasBinders_env
+                    FStarC_Class_Binders.hasNames_comp
+                    FStarC_Syntax_Print.pretty_comp
+                    c.FStarC_Syntax_Syntax.pos "normalize_comp call" e c;
+                  (let uu___8 =
+                     FStarC_Errors.with_ctx
+                       "While normalizing a computation type"
+                       (fun uu___9 ->
+                          FStarC_Timing.record_ms
+                            (fun uu___10 -> norm_comp cfg [] c)) in
+                   match uu___8 with
+                   | (c1, ms) ->
+                       (FStarC_TypeChecker_Cfg.log_top cfg
+                          (fun uu___10 ->
+                             let uu___11 =
+                               FStarC_Class_Show.show
+                                 FStarC_Syntax_Print.showable_comp c1 in
+                             let uu___12 =
+                               FStarC_Class_Show.show
+                                 FStarC_Class_Show.showable_int ms in
+                             FStarC_Util.print2
+                               "}\nNormalization result = (%s) in %s ms\n"
+                               uu___11 uu___12);
+                        c1))) uu___1
+               "FStarC.TypeChecker.Normalize.normalize_comp")
 let (normalize_universe :
   FStarC_TypeChecker_Env.env ->
     FStarC_Syntax_Syntax.universe -> FStarC_Syntax_Syntax.universe)
@@ -9229,27 +9313,29 @@ let (unfold_head_once :
   =
   fun env1 ->
     fun t ->
-      let aux f us args =
-        let uu___ =
-          FStarC_TypeChecker_Env.lookup_nonrec_definition
-            [FStarC_TypeChecker_Env.Unfold
-               FStarC_Syntax_Syntax.delta_constant] env1
-            (f.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v in
-        match uu___ with
-        | FStar_Pervasives_Native.None -> FStar_Pervasives_Native.None
-        | FStar_Pervasives_Native.Some head_def_ts ->
-            let uu___1 =
-              FStarC_TypeChecker_Env.inst_tscheme_with head_def_ts us in
-            (match uu___1 with
-             | (uu___2, head_def) ->
-                 let t' =
-                   FStarC_Syntax_Syntax.mk_Tm_app head_def args
-                     t.FStarC_Syntax_Syntax.pos in
-                 let t'1 =
-                   normalize
-                     [FStarC_TypeChecker_Env.Beta;
-                     FStarC_TypeChecker_Env.Iota] env1 t' in
-                 FStar_Pervasives_Native.Some t'1) in
+      let aux f =
+        fun us ->
+          fun args ->
+            let uu___ =
+              FStarC_TypeChecker_Env.lookup_nonrec_definition
+                [FStarC_TypeChecker_Env.Unfold
+                   FStarC_Syntax_Syntax.delta_constant] env1
+                (f.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v in
+            match uu___ with
+            | FStar_Pervasives_Native.None -> FStar_Pervasives_Native.None
+            | FStar_Pervasives_Native.Some head_def_ts ->
+                let uu___1 =
+                  FStarC_TypeChecker_Env.inst_tscheme_with head_def_ts us in
+                (match uu___1 with
+                 | (uu___2, head_def) ->
+                     let t' =
+                       FStarC_Syntax_Syntax.mk_Tm_app head_def args
+                         t.FStarC_Syntax_Syntax.pos in
+                     let t'1 =
+                       normalize
+                         [FStarC_TypeChecker_Env.Beta;
+                         FStarC_TypeChecker_Env.Iota] env1 t' in
+                     FStar_Pervasives_Native.Some t'1) in
       let uu___ = FStarC_Syntax_Util.head_and_args t in
       match uu___ with
       | (head, args) ->
@@ -9278,36 +9364,39 @@ let (get_n_binders' :
     fun steps ->
       fun n ->
         fun t ->
-          let rec aux retry n1 t1 =
-            let uu___ = FStarC_Syntax_Util.arrow_formals_comp t1 in
-            match uu___ with
-            | (bs, c) ->
-                let len = FStarC_List.length bs in
-                (match (bs, c) with
-                 | ([], uu___1) when retry ->
-                     let uu___2 = unfold_whnf' steps env1 t1 in
-                     aux false n1 uu___2
-                 | ([], uu___1) when Prims.op_Negation retry -> (bs, c)
-                 | (bs1, c1) when len = n1 -> (bs1, c1)
-                 | (bs1, c1) when len > n1 ->
-                     let uu___1 = FStarC_List.splitAt n1 bs1 in
-                     (match uu___1 with
-                      | (bs_l, bs_r) ->
-                          let uu___2 =
-                            let uu___3 = FStarC_Syntax_Util.arrow bs_r c1 in
-                            FStarC_Syntax_Syntax.mk_Total uu___3 in
-                          (bs_l, uu___2))
-                 | (bs1, c1) when
-                     ((len < n1) && (FStarC_Syntax_Util.is_total_comp c1)) &&
-                       (let uu___1 = FStarC_Syntax_Util.has_decreases c1 in
-                        Prims.op_Negation uu___1)
-                     ->
-                     let uu___1 =
-                       let uu___2 = FStarC_Syntax_Util.comp_result c1 in
-                       aux true (n1 - len) uu___2 in
-                     (match uu___1 with
-                      | (bs', c') -> ((FStarC_List.op_At bs1 bs'), c'))
-                 | (bs1, c1) -> (bs1, c1)) in
+          let rec aux retry =
+            fun n1 ->
+              fun t1 ->
+                let uu___ = FStarC_Syntax_Util.arrow_formals_comp t1 in
+                match uu___ with
+                | (bs, c) ->
+                    let len = FStarC_List.length bs in
+                    (match (bs, c) with
+                     | ([], uu___1) when retry ->
+                         let uu___2 = unfold_whnf' steps env1 t1 in
+                         aux false n1 uu___2
+                     | ([], uu___1) when Prims.op_Negation retry -> (bs, c)
+                     | (bs1, c1) when len = n1 -> (bs1, c1)
+                     | (bs1, c1) when len > n1 ->
+                         let uu___1 = FStarC_List.splitAt n1 bs1 in
+                         (match uu___1 with
+                          | (bs_l, bs_r) ->
+                              let uu___2 =
+                                let uu___3 = FStarC_Syntax_Util.arrow bs_r c1 in
+                                FStarC_Syntax_Syntax.mk_Total uu___3 in
+                              (bs_l, uu___2))
+                     | (bs1, c1) when
+                         ((len < n1) && (FStarC_Syntax_Util.is_total_comp c1))
+                           &&
+                           (let uu___1 = FStarC_Syntax_Util.has_decreases c1 in
+                            Prims.op_Negation uu___1)
+                         ->
+                         let uu___1 =
+                           let uu___2 = FStarC_Syntax_Util.comp_result c1 in
+                           aux true (n1 - len) uu___2 in
+                         (match uu___1 with
+                          | (bs', c') -> ((FStarC_List.op_At bs1 bs'), c'))
+                     | (bs1, c1) -> (bs1, c1)) in
           aux true n t
 let (get_n_binders :
   FStarC_TypeChecker_Env.env ->

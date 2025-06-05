@@ -7,6 +7,7 @@ let (uu___is_Mk : t -> Prims.bool) = fun projectee -> true
 let (__proj__Mk__item__v : t -> unit FStar_Int.int_t) =
   fun projectee -> match projectee with | Mk v -> v
 let (v : t -> unit FStar_Int.int_t) = fun x -> __proj__Mk__item__v x
+type 'x fits = unit
 let (int_to_t : unit FStar_Int.int_t -> t) = fun x -> Mk x
 let (zero : t) = int_to_t Prims.int_zero
 let (one : t) = int_to_t Prims.int_one

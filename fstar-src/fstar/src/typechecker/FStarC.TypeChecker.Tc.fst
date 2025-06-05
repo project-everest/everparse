@@ -15,10 +15,8 @@
 *)
 
 module FStarC.TypeChecker.Tc
-open FStar.Pervasives
 open FStarC.Effect
 open FStarC.List
-open FStar open FStarC
 open FStarC
 open FStarC.Errors
 open FStarC.TypeChecker
@@ -40,11 +38,9 @@ open FStarC.Class.Setlike
 open FStarC.Class.Ord
 
 module S  = FStarC.Syntax.Syntax
-module SP  = FStarC.Syntax.Print
 module SS = FStarC.Syntax.Subst
 module UF = FStarC.Syntax.Unionfind
 module N  = FStarC.TypeChecker.Normalize
-module TcComm = FStarC.TypeChecker.Common
 module TcUtil = FStarC.TypeChecker.Util
 module BU = FStarC.Util //basic util
 module U  = FStarC.Syntax.Util
@@ -54,7 +50,6 @@ module TcEff = FStarC.TypeChecker.TcEffect
 module PC = FStarC.Parser.Const
 module EMB = FStarC.Syntax.Embeddings
 module ToSyntax = FStarC.ToSyntax.ToSyntax
-module O = FStarC.Options
 
 let dbg_TwoPhases = Debug.get_toggle "TwoPhases"
 let dbg_IdInfoOn  = Debug.get_toggle "IdInfoOn"
@@ -80,7 +75,7 @@ let set_hint_correlator env se =
     //this is useful when we verify the extracted interface alongside
     let tbl = env.qtbl_name_and_index |> snd in
     let get_n lid =
-      let n_opt = BU.smap_try_find tbl (show lid) in
+      let n_opt = SMap.try_find tbl (show lid) in
       if is_some n_opt then n_opt |> must else 0
     in
 
@@ -254,24 +249,12 @@ let proc_check_with (attrs:list attribute) (kont : unit -> 'a) : 'a =
       kont ())
   | _ -> failwith "ill-formed `check_with`"
 
-let handle_postprocess_with_attr (env:Env.env) (ats:list attribute)
-    : (list attribute & option term)
-=   (* Extract the postprocess_with *)
-    match U.extract_attr' PC.postprocess_with ats with
-    | None -> ats, None
-    | Some (ats, [tau, None]) ->
-        ats, Some tau
-    | Some (ats, args) ->
-        Errors.log_issue env Errors.Warning_UnrecognizedAttribute
-          (BU.format1 "Ill-formed application of `%s`" (show PC.postprocess_with));
-        ats, None
-
 let store_sigopts (se:sigelt) : sigelt =
   { se with sigopts = Some (Options.get_vconfig ()) }
 
 (* Alternative to making a huge let rec... knot is set below in this file *)
 let tc_decls_knot : ref (option (Env.env -> list sigelt -> list sigelt & Env.env)) =
-  BU.mk_ref None
+  mk_ref None
 
 let do_two_phases env : bool = not (Options.lax ())
 let run_phase1 (f:unit -> 'a) =
@@ -280,6 +263,68 @@ let run_phase1 (f:unit -> 'a) =
   FStarC.TypeChecker.Core.clear_memo_table();
   r
 
+let read_postprocess_with_attr (for_extraction : bool) (env:Env.env) (ats:list attribute)
+    : list attribute & option term & bool
+      (* returns:
+         - remaining attrs
+         - postprocess tactic
+         - whether postprocess_type is set. *)
+= (* Extract the postprocess_with *)
+  let get1 ats lid =
+    match U.extract_attr' lid ats with
+    | None -> ats, None
+    | Some (ats, [tau, None]) ->
+      ats, Some tau
+    | Some (ats, args) ->
+      Errors.log_issue env Errors.Warning_UnrecognizedAttribute [
+        text <| BU.format1 "Ill-formed application of `%s`" (show lid);
+      ];
+      ats, None
+  in
+  let lid = if for_extraction then PC.postprocess_extr_with else PC.postprocess_with in
+  let ats, pt = get1 ats lid in
+  let on_type =
+    (* NOTE: retain the attribute even if we find it. So postprocess_type can work
+    with a postprocess_with and postprocess_for_extraction_with simultaneously 
+    on a single definition. *)
+    Some? (U.extract_attr' PC.postprocess_type ats)
+  in
+  ats, pt, on_type
+
+let run_postprocess (for_extraction : bool) env (se : sigelt) : sigelt =
+  let attrs, pt, on_type = read_postprocess_with_attr for_extraction env se.sigattrs in
+
+  (* remove the postprocess_with, if any *)
+  let se = { se with sigattrs = attrs } in
+
+  let postprocess_lb (tau:term) (on_type : bool) (lb:letbinding) : letbinding =
+      let s, univnames = SS.univ_var_opening lb.lbunivs in
+      let lbdef = SS.subst s lb.lbdef in
+      let lbtyp = SS.subst s lb.lbtyp in
+      let env = Env.push_univ_vars env univnames in
+
+      let lbdef = Env.postprocess env tau lbtyp lbdef in
+      let lbdef = SS.close_univ_vars univnames lbdef in
+
+      let lbtyp =
+        if on_type then
+          let u = env.universe_of env lbtyp in
+          let lbtyp = Env.postprocess env tau lbtyp lbtyp in
+          SS.close_univ_vars univnames lbtyp
+        else lbtyp
+      in
+
+      { lb with lbdef = lbdef; lbtyp = lbtyp }
+  in
+  let se =
+    match pt, se.sigel with
+    | Some tac, Sig_let {lbs; lids} ->
+        // Postprocess the letbindings with the tactic, if any
+        let lbs = (fst lbs, List.map (postprocess_lb tac on_type) (snd lbs)) in
+        { se with sigel = Sig_let {lbs; lids} }
+    | _ -> se
+  in
+  se
 
 (* The type checking rule for Sig_let (lbs, lids) *)
 let tc_sig_let env r se lbs lids : list sigelt & list sigelt & Env.env =
@@ -455,19 +500,7 @@ let tc_sig_let env r se lbs lids : list sigelt & list sigelt & Env.env =
         e)
       else e
     in
-    let attrs, post_tau = handle_postprocess_with_attr env se.sigattrs in
-    (* remove the postprocess_with, if any *)
-    let se = { se with sigattrs = attrs } in
 
-    let postprocess_lb (tau:term) (lb:letbinding) : letbinding =
-        let s, univnames = SS.univ_var_opening lb.lbunivs in
-        let lbdef = SS.subst s lb.lbdef in
-        let lbtyp = SS.subst s lb.lbtyp in
-        let env = Env.push_univ_vars env univnames in
-        let lbdef = Env.postprocess env tau lbtyp lbdef in
-        let lbdef = SS.close_univ_vars univnames lbdef in
-        { lb with lbdef = lbdef }
-    in
     let env' =
         match (SS.compress e).n with
         | Tm_let {lbs} ->
@@ -491,13 +524,6 @@ let tc_sig_let env r se lbs lids : list sigelt & list sigelt & Env.env =
         // Propagate binder names into signature
         let lbs = (fst lbs, (snd lbs) |> List.map rename_parameters) in
 
-        // Postprocess the letbindings with the tactic, if any
-        let lbs = (fst lbs,
-                    (match post_tau with
-                     | Some tau -> List.map (postprocess_lb tau) (snd lbs)
-                     | None -> (snd lbs)))
-        in
-
         //propagate the MaskedEffect tag to the qualifiers
         let quals = match e.n with
             | Tm_meta {meta=Meta_desugared Masked_effect} -> HasMaskedEffect::quals
@@ -508,6 +534,7 @@ let tc_sig_let env r se lbs lids : list sigelt & list sigelt & Env.env =
         lbs
       | _ -> failwith "impossible (typechecking should preserve Tm_let)"
     in
+    let se = run_postprocess false env' se in
 
     //
     // if no_subtyping attribute is present, typecheck the signatures with use_eq_strict
@@ -616,7 +643,7 @@ let tc_decl' env0 se: list sigelt & list sigelt & Env.env =
     | [] ->
         List.iter Errors.print_issue errs;
         Errors.log_issue se Errors.Error_DidNotFail [
-            text "This top-level definition was expected to fail, but it succeeded";
+            text "This top-level definition was expected to fail, but it succeeded.";
           ]
     | _ ->
         if expected_errors <> [] then
@@ -629,9 +656,9 @@ let tc_decl' env0 se: list sigelt & list sigelt & Env.env =
             Errors.log_issue fail_rng Errors.Error_DidNotFail [
                 prefix 2 1
                   (text "This top-level definition was expected to raise error codes")
-                  (pp expected_errors) ^/^
+                  (pp (sort expected_errors)) ^/^
                 prefix 2 1 (text "but it raised")
-                  (pp actual_errors) ^^
+                  (pp (sort actual_errors)) ^^
                 dot;
                 text (BU.format3 "Error #%s was raised %s times, instead of %s."
                                       (show e) (show n2) (show n1));
@@ -781,17 +808,28 @@ let tc_decl' env0 se: list sigelt & list sigelt & Env.env =
 
     // env.splice will check the tactic
 
-    let ses = env.splice env is_typed lids t se.sigrng in
+    let ses = env.splice env se.sigquals se.sigattrs is_typed lids t se.sigrng in
+
+    if Debug.low () then
+      BU.print1 "Will splice decls:\n%s\n" (show ses);
+
     let ses = 
-      if is_typed
-      then let sigquals = 
+      (* For non-typed splices, they choose their own attributes and qualifiers.
+      The tactics can access them via the cur_attrs and cur_quals primitives, and add
+      them to the generated sigelts, possibly filtering some out.
+
+      Typed splices should probably do the same, though we would need to have
+      a typing judgment for them (e.g. stating what is allowed). *)
+      if is_typed then
+        let sigquals =
               match se.sigquals with
               | [] -> [ S.Visible_default ]
               | qs -> qs
            in
-            List.map 
-              (fun sp -> { sp with sigquals = sigquals@sp.sigquals; sigattrs = se.sigattrs@sp.sigattrs})
-              ses
+           let ses = ses |> List.map (fun sp ->
+                             { sp with sigquals = sigquals@sp.sigquals; sigattrs = se.sigattrs@sp.sigattrs}) in
+           let ses = ses |> List.map (Compress.deep_compress_se false false) in
+           ses
       else ses
     in
     let ses = ses |> List.map (fun se ->
@@ -888,9 +926,11 @@ let tc_decl' env0 se: list sigelt & list sigelt & Env.env =
     [se], [], env0)
 
 
-(* [tc_decl env se] typechecks [se] in environment [env] and returns *
+(* [tc_decl env se] typechecks [se] in environment [env] and returns
  * the list of typechecked sig_elts, and a list of new sig_elts elaborated
- * during typechecking but not yet typechecked *)
+ * during typechecking but not yet typechecked. This may also be called
+ * on ALREADY CHECKED declarations coming out of a splice_t. See the
+ * check for sigmeta_already_checked below. *)
 let tc_decl env se: list sigelt & list sigelt & Env.env =
   FStarC.GenSym.reset_gensym();
   let env0 = env in
@@ -1083,6 +1123,11 @@ let tc_decls env ses =
       (Some (Ident.string_of_lid (Env.current_module env)))      
       "FStarC.TypeChecker.Tc.encode_sig";
 
+
+    (* Potentially write hints to disk after every query, when on interactive mode. *)
+    if Options.interactive () then
+      SMTEncoding.Solver.flush_hints ();
+
     (List.rev_append ses' ses, env), ses_elaborated
     end
   in
@@ -1171,7 +1216,7 @@ let finish_partial_modul (loading_from_cache:bool) (iface_exists:bool) (en:env) 
   );
 
   //we can clear the lid to query index table
-  env.qtbl_name_and_index |> snd |> BU.smap_clear;
+  env.qtbl_name_and_index |> snd |> SMap.clear;
 
   //pop BUT ignore the old env
 
@@ -1219,15 +1264,11 @@ let load_checked_module_sigelts (en:env) (m:modul) : env =
   env
 
 let load_checked_module (en:env) (m:modul) :env =
-  (* Another compression pass to make sure we are not loading a corrupt
-  module. *)
-
   (* Reset debug flags *)
   let dsnap = Debug.snapshot () in
   if not (Options.should_check (string_of_lid m.name)) && not (Options.debug_all_modules ())
   then Debug.disable_all ();
 
-  let m = deep_compress_modul m in
   let env = load_checked_module_sigelts en m in
   //And then call finish_partial_modul, which is the normal workflow of tc_modul below
   //except with the flag `must_check_exports` set to false, since this is already a checked module
@@ -1237,7 +1278,6 @@ let load_checked_module (en:env) (m:modul) :env =
   env
 
 let load_partial_checked_module (en:env) (m:modul) : env =
-  let m = deep_compress_modul m in
   load_checked_module_sigelts en m
 
 let check_module env0 m b =

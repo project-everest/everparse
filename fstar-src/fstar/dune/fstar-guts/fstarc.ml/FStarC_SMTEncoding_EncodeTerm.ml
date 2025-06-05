@@ -278,42 +278,50 @@ let (isTotFun_axioms :
       fun vars ->
         fun guards ->
           fun is_pure ->
-            let maybe_mkForall pat vars1 body =
-              match vars1 with
-              | [] -> body
-              | uu___ ->
-                  FStarC_SMTEncoding_Term.mkForall pos (pat, vars1, body) in
-            let rec is_tot_fun_axioms ctx ctx_guard head1 vars1 guards1 =
-              match (vars1, guards1) with
-              | ([], []) -> FStarC_SMTEncoding_Util.mkTrue
-              | (uu___::[], uu___1) ->
-                  if is_pure
-                  then
-                    let uu___2 =
-                      let uu___3 =
-                        let uu___4 =
-                          FStarC_SMTEncoding_Term.mk_IsTotFun head1 in
-                        (ctx_guard, uu___4) in
-                      FStarC_SMTEncoding_Util.mkImp uu___3 in
-                    maybe_mkForall [[head1]] ctx uu___2
-                  else FStarC_SMTEncoding_Util.mkTrue
-              | (x::vars2, g_x::guards2) ->
-                  let is_tot_fun_head =
-                    let uu___ =
-                      let uu___1 =
-                        let uu___2 =
-                          FStarC_SMTEncoding_Term.mk_IsTotFun head1 in
-                        (ctx_guard, uu___2) in
-                      FStarC_SMTEncoding_Util.mkImp uu___1 in
-                    maybe_mkForall [[head1]] ctx uu___ in
-                  let app = mk_Apply head1 [x] in
-                  let ctx1 = FStarC_List.op_At ctx [x] in
-                  let ctx_guard1 =
-                    FStarC_SMTEncoding_Util.mkAnd (ctx_guard, g_x) in
-                  let rest =
-                    is_tot_fun_axioms ctx1 ctx_guard1 app vars2 guards2 in
-                  FStarC_SMTEncoding_Util.mkAnd (is_tot_fun_head, rest)
-              | uu___ -> failwith "impossible: isTotFun_axioms" in
+            let maybe_mkForall pat =
+              fun vars1 ->
+                fun body ->
+                  match vars1 with
+                  | [] -> body
+                  | uu___ ->
+                      FStarC_SMTEncoding_Term.mkForall pos (pat, vars1, body) in
+            let rec is_tot_fun_axioms ctx =
+              fun ctx_guard ->
+                fun head1 ->
+                  fun vars1 ->
+                    fun guards1 ->
+                      match (vars1, guards1) with
+                      | ([], []) -> FStarC_SMTEncoding_Util.mkTrue
+                      | (uu___::[], uu___1) ->
+                          if is_pure
+                          then
+                            let uu___2 =
+                              let uu___3 =
+                                let uu___4 =
+                                  FStarC_SMTEncoding_Term.mk_IsTotFun head1 in
+                                (ctx_guard, uu___4) in
+                              FStarC_SMTEncoding_Util.mkImp uu___3 in
+                            maybe_mkForall [[head1]] ctx uu___2
+                          else FStarC_SMTEncoding_Util.mkTrue
+                      | (x::vars2, g_x::guards2) ->
+                          let is_tot_fun_head =
+                            let uu___ =
+                              let uu___1 =
+                                let uu___2 =
+                                  FStarC_SMTEncoding_Term.mk_IsTotFun head1 in
+                                (ctx_guard, uu___2) in
+                              FStarC_SMTEncoding_Util.mkImp uu___1 in
+                            maybe_mkForall [[head1]] ctx uu___ in
+                          let app = mk_Apply head1 [x] in
+                          let ctx1 = FStarC_List.op_At ctx [x] in
+                          let ctx_guard1 =
+                            FStarC_SMTEncoding_Util.mkAnd (ctx_guard, g_x) in
+                          let rest =
+                            is_tot_fun_axioms ctx1 ctx_guard1 app vars2
+                              guards2 in
+                          FStarC_SMTEncoding_Util.mkAnd
+                            (is_tot_fun_head, rest)
+                      | uu___ -> failwith "impossible: isTotFun_axioms" in
             is_tot_fun_axioms [] FStarC_SMTEncoding_Util.mkTrue head vars
               guards
 let (maybe_curry_app :
@@ -494,26 +502,27 @@ let (as_function_typ :
   =
   fun env ->
     fun t0 ->
-      let rec aux norm1 t =
-        let t1 = FStarC_Syntax_Subst.compress t in
-        match t1.FStarC_Syntax_Syntax.n with
-        | FStarC_Syntax_Syntax.Tm_arrow uu___ -> t1
-        | FStarC_Syntax_Syntax.Tm_refine uu___ ->
-            let uu___1 = FStarC_Syntax_Util.unrefine t1 in aux true uu___1
-        | uu___ ->
-            if norm1
-            then let uu___1 = whnf env t1 in aux false uu___1
-            else
-              (let uu___2 =
-                 let uu___3 =
-                   FStarC_Range_Ops.string_of_range
-                     t0.FStarC_Syntax_Syntax.pos in
-                 let uu___4 =
-                   FStarC_Class_Show.show FStarC_Syntax_Print.showable_term
-                     t0 in
-                 FStarC_Util.format2 "(%s) Expected a function typ; got %s"
-                   uu___3 uu___4 in
-               failwith uu___2) in
+      let rec aux norm1 =
+        fun t ->
+          let t1 = FStarC_Syntax_Subst.compress t in
+          match t1.FStarC_Syntax_Syntax.n with
+          | FStarC_Syntax_Syntax.Tm_arrow uu___ -> t1
+          | FStarC_Syntax_Syntax.Tm_refine uu___ ->
+              let uu___1 = FStarC_Syntax_Util.unrefine t1 in aux true uu___1
+          | uu___ ->
+              if norm1
+              then let uu___1 = whnf env t1 in aux false uu___1
+              else
+                (let uu___2 =
+                   let uu___3 =
+                     FStarC_Range_Ops.string_of_range
+                       t0.FStarC_Syntax_Syntax.pos in
+                   let uu___4 =
+                     FStarC_Class_Show.show FStarC_Syntax_Print.showable_term
+                       t0 in
+                   FStarC_Util.format2 "(%s) Expected a function typ; got %s"
+                     uu___3 uu___4 in
+                 failwith uu___2) in
       aux true t0
 let rec (curried_arrow_formals_comp :
   FStarC_Syntax_Syntax.term ->
@@ -824,17 +833,19 @@ and (encode_arith_term :
               match head.FStarC_Syntax_Syntax.n with
               | FStarC_Syntax_Syntax.Tm_fvar fv -> fv
               | uu___1 -> failwith "Impossible" in
-            let unary unbox arg_tms1 =
-              let uu___1 = FStarC_List.hd arg_tms1 in unbox uu___1 in
-            let binary unbox arg_tms1 =
-              let uu___1 =
-                let uu___2 = FStarC_List.hd arg_tms1 in unbox uu___2 in
-              let uu___2 =
-                let uu___3 =
-                  let uu___4 = FStarC_List.tl arg_tms1 in
-                  FStarC_List.hd uu___4 in
-                unbox uu___3 in
-              (uu___1, uu___2) in
+            let unary unbox =
+              fun arg_tms1 ->
+                let uu___1 = FStarC_List.hd arg_tms1 in unbox uu___1 in
+            let binary unbox =
+              fun arg_tms1 ->
+                let uu___1 =
+                  let uu___2 = FStarC_List.hd arg_tms1 in unbox uu___2 in
+                let uu___2 =
+                  let uu___3 =
+                    let uu___4 = FStarC_List.tl arg_tms1 in
+                    FStarC_List.hd uu___4 in
+                  unbox uu___3 in
+                (uu___1, uu___2) in
             let mk_default uu___1 =
               let uu___2 =
                 FStarC_SMTEncoding_Env.lookup_free_var_sym env
@@ -844,41 +855,58 @@ and (encode_arith_term :
                   let args = FStarC_List.op_At fuel_args arg_tms in
                   maybe_curry_app head.FStarC_Syntax_Syntax.pos fname arity
                     args in
-            let mk_l box op mk_args ts =
-              let uu___1 = FStarC_Options.smtencoding_l_arith_native () in
-              if uu___1
-              then
-                let uu___2 = let uu___3 = mk_args ts in op uu___3 in
-                box uu___2
-              else mk_default () in
-            let mk_nl box unbox nm op ts =
-              let uu___1 = FStarC_Options.smtencoding_nl_arith_wrapped () in
-              if uu___1
-              then
-                let uu___2 = binary unbox ts in
-                match uu___2 with
-                | (t1, t2) ->
-                    let uu___3 = FStarC_SMTEncoding_Util.mkApp (nm, [t1; t2]) in
-                    box uu___3
-              else
-                (let uu___3 = FStarC_Options.smtencoding_nl_arith_native () in
-                 if uu___3
-                 then
-                   let uu___4 = let uu___5 = binary unbox ts in op uu___5 in
-                   box uu___4
-                 else mk_default ()) in
-            let add box unbox =
-              mk_l box FStarC_SMTEncoding_Util.mkAdd (binary unbox) in
-            let sub box unbox =
-              mk_l box FStarC_SMTEncoding_Util.mkSub (binary unbox) in
-            let minus box unbox =
-              mk_l box FStarC_SMTEncoding_Util.mkMinus (unary unbox) in
-            let mul box unbox nm =
-              mk_nl box unbox nm FStarC_SMTEncoding_Util.mkMul in
-            let div box unbox nm =
-              mk_nl box unbox nm FStarC_SMTEncoding_Util.mkDiv in
-            let modulus box unbox =
-              mk_nl box unbox "_mod" FStarC_SMTEncoding_Util.mkMod in
+            let mk_l box =
+              fun op ->
+                fun mk_args ->
+                  fun ts ->
+                    let uu___1 = FStarC_Options.smtencoding_l_arith_native () in
+                    if uu___1
+                    then
+                      let uu___2 = let uu___3 = mk_args ts in op uu___3 in
+                      box uu___2
+                    else mk_default () in
+            let mk_nl box =
+              fun unbox ->
+                fun nm ->
+                  fun op ->
+                    fun ts ->
+                      let uu___1 =
+                        FStarC_Options.smtencoding_nl_arith_wrapped () in
+                      if uu___1
+                      then
+                        let uu___2 = binary unbox ts in
+                        match uu___2 with
+                        | (t1, t2) ->
+                            let uu___3 =
+                              FStarC_SMTEncoding_Util.mkApp (nm, [t1; t2]) in
+                            box uu___3
+                      else
+                        (let uu___3 =
+                           FStarC_Options.smtencoding_nl_arith_native () in
+                         if uu___3
+                         then
+                           let uu___4 =
+                             let uu___5 = binary unbox ts in op uu___5 in
+                           box uu___4
+                         else mk_default ()) in
+            let add box =
+              fun unbox ->
+                mk_l box FStarC_SMTEncoding_Util.mkAdd (binary unbox) in
+            let sub box =
+              fun unbox ->
+                mk_l box FStarC_SMTEncoding_Util.mkSub (binary unbox) in
+            let minus box =
+              fun unbox ->
+                mk_l box FStarC_SMTEncoding_Util.mkMinus (unary unbox) in
+            let mul box =
+              fun unbox ->
+                fun nm -> mk_nl box unbox nm FStarC_SMTEncoding_Util.mkMul in
+            let div box =
+              fun unbox ->
+                fun nm -> mk_nl box unbox nm FStarC_SMTEncoding_Util.mkDiv in
+            let modulus box =
+              fun unbox ->
+                mk_nl box unbox "_mod" FStarC_SMTEncoding_Util.mkMod in
             let ops =
               [(FStarC_Parser_Const.op_Addition,
                  (add FStarC_SMTEncoding_Term.boxInt
@@ -1073,9 +1101,13 @@ and (encode_BitVector_term :
                             FStarC_List.hd uu___8 in
                           FStarC_SMTEncoding_Term.unboxInt uu___7 in
                         (uu___5, uu___6) in
-                      let mk_bv op mk_args resBox ts =
-                        let uu___5 = let uu___6 = mk_args ts in op uu___6 in
-                        resBox uu___5 in
+                      let mk_bv op =
+                        fun mk_args ->
+                          fun resBox ->
+                            fun ts ->
+                              let uu___5 =
+                                let uu___6 = mk_args ts in op uu___6 in
+                              resBox uu___5 in
                       let bv_and =
                         mk_bv FStarC_SMTEncoding_Util.mkBvAnd binary
                           (FStarC_SMTEncoding_Term.boxBitVec sz) in
@@ -2216,7 +2248,8 @@ and (encode_term :
               let uu___3 =
                 FStarC_Syntax_Unionfind.uvar_id
                   uv.FStarC_Syntax_Syntax.ctx_uvar_head in
-              FStarC_SMTEncoding_Util.mk_Term_uvar uu___3 in
+              FStarC_SMTEncoding_Term.mk_Term_uvar uu___3
+                FStarC_Range_Type.dummyRange in
             let uu___3 =
               let uu___4 = FStarC_Syntax_Util.ctx_uvar_typ uv in
               encode_term_pred FStar_Pervasives_Native.None uu___4 env ttm in
@@ -3159,61 +3192,66 @@ and (encode_match :
                 (match uu___1 with
                  | (scr, decls) ->
                      let uu___2 =
-                       let encode_branch b uu___3 =
-                         match uu___3 with
-                         | (else_case, decls1) ->
-                             let uu___4 = FStarC_Syntax_Subst.open_branch b in
-                             (match uu___4 with
-                              | (p, w, br) ->
-                                  let uu___5 = encode_pat env1 p in
-                                  (match uu___5 with
-                                   | (env0, pattern1) ->
-                                       let guard = pattern1.guard scr' in
-                                       let projections =
-                                         pattern1.projections scr' in
-                                       let env2 =
-                                         FStarC_List.fold_left
-                                           (fun env3 ->
-                                              fun uu___6 ->
-                                                match uu___6 with
-                                                | (x, t) ->
-                                                    FStarC_SMTEncoding_Env.push_term_var
-                                                      env3 x t) env1
-                                           projections in
-                                       let uu___6 =
-                                         match w with
-                                         | FStar_Pervasives_Native.None ->
-                                             (guard, [])
-                                         | FStar_Pervasives_Native.Some w1 ->
-                                             let uu___7 = encode_term w1 env2 in
-                                             (match uu___7 with
-                                              | (w2, decls2) ->
-                                                  let uu___8 =
-                                                    let uu___9 =
-                                                      let uu___10 =
-                                                        let uu___11 =
-                                                          let uu___12 =
-                                                            FStarC_SMTEncoding_Term.boxBool
-                                                              FStarC_SMTEncoding_Util.mkTrue in
-                                                          (w2, uu___12) in
-                                                        FStarC_SMTEncoding_Util.mkEq
-                                                          uu___11 in
-                                                      (guard, uu___10) in
-                                                    FStarC_SMTEncoding_Util.mkAnd
-                                                      uu___9 in
-                                                  (uu___8, decls2)) in
-                                       (match uu___6 with
-                                        | (guard1, decls2) ->
-                                            let uu___7 = encode_br br env2 in
-                                            (match uu___7 with
-                                             | (br1, decls3) ->
-                                                 let uu___8 =
-                                                   FStarC_SMTEncoding_Util.mkITE
-                                                     (guard1, br1, else_case) in
-                                                 (uu___8,
-                                                   (FStarC_List.op_At decls1
-                                                      (FStarC_List.op_At
-                                                         decls2 decls3))))))) in
+                       let encode_branch b =
+                         fun uu___3 ->
+                           match uu___3 with
+                           | (else_case, decls1) ->
+                               let uu___4 = FStarC_Syntax_Subst.open_branch b in
+                               (match uu___4 with
+                                | (p, w, br) ->
+                                    let uu___5 = encode_pat env1 p in
+                                    (match uu___5 with
+                                     | (env0, pattern1) ->
+                                         let guard = pattern1.guard scr' in
+                                         let projections =
+                                           pattern1.projections scr' in
+                                         let env2 =
+                                           FStarC_List.fold_left
+                                             (fun env3 ->
+                                                fun uu___6 ->
+                                                  match uu___6 with
+                                                  | (x, t) ->
+                                                      FStarC_SMTEncoding_Env.push_term_var
+                                                        env3 x t) env1
+                                             projections in
+                                         let uu___6 =
+                                           match w with
+                                           | FStar_Pervasives_Native.None ->
+                                               (guard, [])
+                                           | FStar_Pervasives_Native.Some w1
+                                               ->
+                                               let uu___7 =
+                                                 encode_term w1 env2 in
+                                               (match uu___7 with
+                                                | (w2, decls2) ->
+                                                    let uu___8 =
+                                                      let uu___9 =
+                                                        let uu___10 =
+                                                          let uu___11 =
+                                                            let uu___12 =
+                                                              FStarC_SMTEncoding_Term.boxBool
+                                                                FStarC_SMTEncoding_Util.mkTrue in
+                                                            (w2, uu___12) in
+                                                          FStarC_SMTEncoding_Util.mkEq
+                                                            uu___11 in
+                                                        (guard, uu___10) in
+                                                      FStarC_SMTEncoding_Util.mkAnd
+                                                        uu___9 in
+                                                    (uu___8, decls2)) in
+                                         (match uu___6 with
+                                          | (guard1, decls2) ->
+                                              let uu___7 = encode_br br env2 in
+                                              (match uu___7 with
+                                               | (br1, decls3) ->
+                                                   let uu___8 =
+                                                     FStarC_SMTEncoding_Util.mkITE
+                                                       (guard1, br1,
+                                                         else_case) in
+                                                   (uu___8,
+                                                     (FStarC_List.op_At
+                                                        decls1
+                                                        (FStarC_List.op_At
+                                                           decls2 decls3))))))) in
                        FStarC_List.fold_right encode_branch pats
                          (default_case, decls) in
                      (match uu___2 with
@@ -3268,77 +3306,79 @@ and (encode_pat :
                              (env2, uu___6))) (env, []) vars in
            (match uu___2 with
             | (env1, vars1) ->
-                let rec mk_guard pat1 scrutinee =
-                  match pat1.FStarC_Syntax_Syntax.v with
-                  | FStarC_Syntax_Syntax.Pat_var uu___3 ->
-                      FStarC_SMTEncoding_Util.mkTrue
-                  | FStarC_Syntax_Syntax.Pat_dot_term uu___3 ->
-                      FStarC_SMTEncoding_Util.mkTrue
-                  | FStarC_Syntax_Syntax.Pat_constant c ->
-                      let uu___3 = encode_const c env1 in
-                      (match uu___3 with
-                       | (tm, decls) ->
-                           ((match decls with
-                             | uu___5::uu___6 ->
-                                 failwith
-                                   "Unexpected encoding of constant pattern"
-                             | uu___5 -> ());
-                            FStarC_SMTEncoding_Util.mkEq (scrutinee, tm)))
-                  | FStarC_Syntax_Syntax.Pat_cons (f, uu___3, args) ->
-                      let is_f =
-                        let tc_name =
-                          FStarC_TypeChecker_Env.typ_of_datacon
-                            env1.FStarC_SMTEncoding_Env.tcenv
-                            (f.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v in
+                let rec mk_guard pat1 =
+                  fun scrutinee ->
+                    match pat1.FStarC_Syntax_Syntax.v with
+                    | FStarC_Syntax_Syntax.Pat_var uu___3 ->
+                        FStarC_SMTEncoding_Util.mkTrue
+                    | FStarC_Syntax_Syntax.Pat_dot_term uu___3 ->
+                        FStarC_SMTEncoding_Util.mkTrue
+                    | FStarC_Syntax_Syntax.Pat_constant c ->
+                        let uu___3 = encode_const c env1 in
+                        (match uu___3 with
+                         | (tm, decls) ->
+                             ((match decls with
+                               | uu___5::uu___6 ->
+                                   failwith
+                                     "Unexpected encoding of constant pattern"
+                               | uu___5 -> ());
+                              FStarC_SMTEncoding_Util.mkEq (scrutinee, tm)))
+                    | FStarC_Syntax_Syntax.Pat_cons (f, uu___3, args) ->
+                        let is_f =
+                          let tc_name =
+                            FStarC_TypeChecker_Env.typ_of_datacon
+                              env1.FStarC_SMTEncoding_Env.tcenv
+                              (f.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v in
+                          let uu___4 =
+                            FStarC_TypeChecker_Env.datacons_of_typ
+                              env1.FStarC_SMTEncoding_Env.tcenv tc_name in
+                          match uu___4 with
+                          | (uu___5, uu___6::[]) ->
+                              FStarC_SMTEncoding_Util.mkTrue
+                          | uu___5 ->
+                              FStarC_SMTEncoding_Env.mk_data_tester env1
+                                (f.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v
+                                scrutinee in
+                        let sub_term_guards =
+                          FStarC_List.mapi
+                            (fun i ->
+                               fun uu___4 ->
+                                 match uu___4 with
+                                 | (arg, uu___5) ->
+                                     let proj =
+                                       FStarC_SMTEncoding_Env.primitive_projector_by_pos
+                                         env1.FStarC_SMTEncoding_Env.tcenv
+                                         (f.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v
+                                         i in
+                                     let uu___6 =
+                                       FStarC_SMTEncoding_Util.mkApp
+                                         (proj, [scrutinee]) in
+                                     mk_guard arg uu___6) args in
+                        FStarC_SMTEncoding_Util.mk_and_l (is_f ::
+                          sub_term_guards) in
+                let rec mk_projections pat1 =
+                  fun scrutinee ->
+                    match pat1.FStarC_Syntax_Syntax.v with
+                    | FStarC_Syntax_Syntax.Pat_dot_term uu___3 -> []
+                    | FStarC_Syntax_Syntax.Pat_var x -> [(x, scrutinee)]
+                    | FStarC_Syntax_Syntax.Pat_constant uu___3 -> []
+                    | FStarC_Syntax_Syntax.Pat_cons (f, uu___3, args) ->
                         let uu___4 =
-                          FStarC_TypeChecker_Env.datacons_of_typ
-                            env1.FStarC_SMTEncoding_Env.tcenv tc_name in
-                        match uu___4 with
-                        | (uu___5, uu___6::[]) ->
-                            FStarC_SMTEncoding_Util.mkTrue
-                        | uu___5 ->
-                            FStarC_SMTEncoding_Env.mk_data_tester env1
-                              (f.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v
-                              scrutinee in
-                      let sub_term_guards =
-                        FStarC_List.mapi
-                          (fun i ->
-                             fun uu___4 ->
-                               match uu___4 with
-                               | (arg, uu___5) ->
-                                   let proj =
-                                     FStarC_SMTEncoding_Env.primitive_projector_by_pos
-                                       env1.FStarC_SMTEncoding_Env.tcenv
-                                       (f.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v
-                                       i in
-                                   let uu___6 =
-                                     FStarC_SMTEncoding_Util.mkApp
-                                       (proj, [scrutinee]) in
-                                   mk_guard arg uu___6) args in
-                      FStarC_SMTEncoding_Util.mk_and_l (is_f ::
-                        sub_term_guards) in
-                let rec mk_projections pat1 scrutinee =
-                  match pat1.FStarC_Syntax_Syntax.v with
-                  | FStarC_Syntax_Syntax.Pat_dot_term uu___3 -> []
-                  | FStarC_Syntax_Syntax.Pat_var x -> [(x, scrutinee)]
-                  | FStarC_Syntax_Syntax.Pat_constant uu___3 -> []
-                  | FStarC_Syntax_Syntax.Pat_cons (f, uu___3, args) ->
-                      let uu___4 =
-                        FStarC_List.mapi
-                          (fun i ->
-                             fun uu___5 ->
-                               match uu___5 with
-                               | (arg, uu___6) ->
-                                   let proj =
-                                     FStarC_SMTEncoding_Env.primitive_projector_by_pos
-                                       env1.FStarC_SMTEncoding_Env.tcenv
-                                       (f.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v
-                                       i in
-                                   let uu___7 =
-                                     FStarC_SMTEncoding_Util.mkApp
-                                       (proj, [scrutinee]) in
-                                   mk_projections arg uu___7) args in
-                      FStarC_List.flatten uu___4 in
+                          FStarC_List.mapi
+                            (fun i ->
+                               fun uu___5 ->
+                                 match uu___5 with
+                                 | (arg, uu___6) ->
+                                     let proj =
+                                       FStarC_SMTEncoding_Env.primitive_projector_by_pos
+                                         env1.FStarC_SMTEncoding_Env.tcenv
+                                         (f.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v
+                                         i in
+                                     let uu___7 =
+                                       FStarC_SMTEncoding_Util.mkApp
+                                         (proj, [scrutinee]) in
+                                     mk_projections arg uu___7) args in
+                        FStarC_List.flatten uu___4 in
                 let pat_term1 uu___3 = encode_term pat_term env1 in
                 let pattern1 =
                   {
@@ -3484,116 +3524,127 @@ and (encode_formula :
             FStarC_Class_Show.show FStarC_Syntax_Print.showable_term phi1 in
           FStarC_Util.print2 "Formula (%s)  %s\n" uu___1 uu___2
         else () in
-      let enc f r l =
-        let uu___ =
-          FStarC_Util.fold_map
-            (fun decls ->
-               fun x ->
-                 let uu___1 = encode_term (FStar_Pervasives_Native.fst x) env in
-                 match uu___1 with
-                 | (t, decls') -> ((FStarC_List.op_At decls decls'), t)) [] l in
-        match uu___ with
-        | (decls, args) ->
-            let uu___1 =
-              let uu___2 = f args in
-              {
-                FStarC_SMTEncoding_Term.tm =
-                  (uu___2.FStarC_SMTEncoding_Term.tm);
-                FStarC_SMTEncoding_Term.freevars =
-                  (uu___2.FStarC_SMTEncoding_Term.freevars);
-                FStarC_SMTEncoding_Term.rng = r
-              } in
-            (uu___1, decls) in
-      let const_op f r uu___ = let uu___1 = f r in (uu___1, []) in
-      let un_op f l = let uu___ = FStarC_List.hd l in f uu___ in
-      let bin_op f uu___ =
-        match uu___ with
-        | t1::t2::[] -> f (t1, t2)
-        | uu___1 -> failwith "Impossible" in
-      let enc_prop_c f r l =
-        let uu___ =
-          FStarC_Util.fold_map
-            (fun decls ->
-               fun uu___1 ->
-                 match uu___1 with
-                 | (t, uu___2) ->
-                     let uu___3 = encode_formula t env in
-                     (match uu___3 with
-                      | (phi1, decls') ->
-                          ((FStarC_List.op_At decls decls'), phi1))) [] l in
-        match uu___ with
-        | (decls, phis) ->
-            let uu___1 =
-              let uu___2 = f phis in
-              {
-                FStarC_SMTEncoding_Term.tm =
-                  (uu___2.FStarC_SMTEncoding_Term.tm);
-                FStarC_SMTEncoding_Term.freevars =
-                  (uu___2.FStarC_SMTEncoding_Term.freevars);
-                FStarC_SMTEncoding_Term.rng = r
-              } in
-            (uu___1, decls) in
-      let eq_op r args =
-        let rf =
-          FStarC_List.filter
-            (fun uu___ ->
-               match uu___ with
-               | (a, q) ->
-                   (match q with
-                    | FStar_Pervasives_Native.Some
-                        { FStarC_Syntax_Syntax.aqual_implicit = true;
-                          FStarC_Syntax_Syntax.aqual_attributes = uu___1;_}
-                        -> false
-                    | uu___1 -> true)) args in
-        if (FStarC_List.length rf) <> (Prims.of_int (2))
-        then
-          let uu___ =
-            FStarC_Util.format1
-              "eq_op: got %s non-implicit arguments instead of 2?"
-              (Prims.string_of_int (FStarC_List.length rf)) in
-          failwith uu___
-        else
-          (let uu___1 = enc (bin_op FStarC_SMTEncoding_Util.mkEq) in
-           uu___1 r rf) in
-      let mk_imp r uu___ =
-        match uu___ with
-        | (lhs, uu___1)::(rhs, uu___2)::[] ->
-            let uu___3 = encode_formula rhs env in
-            (match uu___3 with
-             | (l1, decls1) ->
-                 (match l1.FStarC_SMTEncoding_Term.tm with
-                  | FStarC_SMTEncoding_Term.App
-                      (FStarC_SMTEncoding_Term.TrueOp, uu___4) ->
-                      (l1, decls1)
-                  | uu___4 ->
-                      let uu___5 = encode_formula lhs env in
-                      (match uu___5 with
-                       | (l2, decls2) ->
-                           let uu___6 =
-                             FStarC_SMTEncoding_Term.mkImp (l2, l1) r in
-                           (uu___6, (FStarC_List.op_At decls1 decls2)))))
-        | uu___1 -> failwith "impossible" in
-      let mk_ite r uu___ =
-        match uu___ with
-        | (guard, uu___1)::(_then, uu___2)::(_else, uu___3)::[] ->
-            let uu___4 = encode_formula guard env in
-            (match uu___4 with
-             | (g, decls1) ->
-                 let uu___5 = encode_formula _then env in
-                 (match uu___5 with
-                  | (t, decls2) ->
-                      let uu___6 = encode_formula _else env in
-                      (match uu___6 with
-                       | (e, decls3) ->
-                           let res =
-                             FStarC_SMTEncoding_Term.mkITE (g, t, e) r in
-                           (res,
-                             (FStarC_List.op_At decls1
-                                (FStarC_List.op_At decls2 decls3))))))
-        | uu___1 -> failwith "impossible" in
-      let unboxInt_l f l =
-        let uu___ = FStarC_List.map FStarC_SMTEncoding_Term.unboxInt l in
-        f uu___ in
+      let enc f =
+        fun r ->
+          fun l ->
+            let uu___ =
+              FStarC_Util.fold_map
+                (fun decls ->
+                   fun x ->
+                     let uu___1 =
+                       encode_term (FStar_Pervasives_Native.fst x) env in
+                     match uu___1 with
+                     | (t, decls') -> ((FStarC_List.op_At decls decls'), t))
+                [] l in
+            match uu___ with
+            | (decls, args) ->
+                let uu___1 =
+                  let uu___2 = f args in
+                  {
+                    FStarC_SMTEncoding_Term.tm =
+                      (uu___2.FStarC_SMTEncoding_Term.tm);
+                    FStarC_SMTEncoding_Term.freevars =
+                      (uu___2.FStarC_SMTEncoding_Term.freevars);
+                    FStarC_SMTEncoding_Term.rng = r
+                  } in
+                (uu___1, decls) in
+      let const_op f = fun r -> fun uu___ -> let uu___1 = f r in (uu___1, []) in
+      let un_op f = fun l -> let uu___ = FStarC_List.hd l in f uu___ in
+      let bin_op f =
+        fun uu___ ->
+          match uu___ with
+          | t1::t2::[] -> f (t1, t2)
+          | uu___1 -> failwith "Impossible" in
+      let enc_prop_c f =
+        fun r ->
+          fun l ->
+            let uu___ =
+              FStarC_Util.fold_map
+                (fun decls ->
+                   fun uu___1 ->
+                     match uu___1 with
+                     | (t, uu___2) ->
+                         let uu___3 = encode_formula t env in
+                         (match uu___3 with
+                          | (phi1, decls') ->
+                              ((FStarC_List.op_At decls decls'), phi1))) [] l in
+            match uu___ with
+            | (decls, phis) ->
+                let uu___1 =
+                  let uu___2 = f phis in
+                  {
+                    FStarC_SMTEncoding_Term.tm =
+                      (uu___2.FStarC_SMTEncoding_Term.tm);
+                    FStarC_SMTEncoding_Term.freevars =
+                      (uu___2.FStarC_SMTEncoding_Term.freevars);
+                    FStarC_SMTEncoding_Term.rng = r
+                  } in
+                (uu___1, decls) in
+      let eq_op r =
+        fun args ->
+          let rf =
+            FStarC_List.filter
+              (fun uu___ ->
+                 match uu___ with
+                 | (a, q) ->
+                     (match q with
+                      | FStar_Pervasives_Native.Some
+                          { FStarC_Syntax_Syntax.aqual_implicit = true;
+                            FStarC_Syntax_Syntax.aqual_attributes = uu___1;_}
+                          -> false
+                      | uu___1 -> true)) args in
+          if (FStarC_List.length rf) <> (Prims.of_int (2))
+          then
+            let uu___ =
+              FStarC_Util.format1
+                "eq_op: got %s non-implicit arguments instead of 2?"
+                (Prims.string_of_int (FStarC_List.length rf)) in
+            failwith uu___
+          else
+            (let uu___1 = enc (bin_op FStarC_SMTEncoding_Util.mkEq) in
+             uu___1 r rf) in
+      let mk_imp r =
+        fun uu___ ->
+          match uu___ with
+          | (lhs, uu___1)::(rhs, uu___2)::[] ->
+              let uu___3 = encode_formula rhs env in
+              (match uu___3 with
+               | (l1, decls1) ->
+                   (match l1.FStarC_SMTEncoding_Term.tm with
+                    | FStarC_SMTEncoding_Term.App
+                        (FStarC_SMTEncoding_Term.TrueOp, uu___4) ->
+                        (l1, decls1)
+                    | uu___4 ->
+                        let uu___5 = encode_formula lhs env in
+                        (match uu___5 with
+                         | (l2, decls2) ->
+                             let uu___6 =
+                               FStarC_SMTEncoding_Term.mkImp (l2, l1) r in
+                             (uu___6, (FStarC_List.op_At decls1 decls2)))))
+          | uu___1 -> failwith "impossible" in
+      let mk_ite r =
+        fun uu___ ->
+          match uu___ with
+          | (guard, uu___1)::(_then, uu___2)::(_else, uu___3)::[] ->
+              let uu___4 = encode_formula guard env in
+              (match uu___4 with
+               | (g, decls1) ->
+                   let uu___5 = encode_formula _then env in
+                   (match uu___5 with
+                    | (t, decls2) ->
+                        let uu___6 = encode_formula _else env in
+                        (match uu___6 with
+                         | (e, decls3) ->
+                             let res =
+                               FStarC_SMTEncoding_Term.mkITE (g, t, e) r in
+                             (res,
+                               (FStarC_List.op_At decls1
+                                  (FStarC_List.op_At decls2 decls3))))))
+          | uu___1 -> failwith "impossible" in
+      let unboxInt_l f =
+        fun l ->
+          let uu___ = FStarC_List.map FStarC_SMTEncoding_Term.unboxInt l in
+          f uu___ in
       let connectives =
         let uu___ =
           let uu___1 = enc_prop_c (bin_op FStarC_SMTEncoding_Util.mkAnd) in
@@ -3840,34 +3891,38 @@ and (encode_formula :
                      } in
                  let uu___2 = FStarC_SMTEncoding_Term.mk_Valid tt1 in
                  (uu___2, decls)) in
-      let encode_q_body env1 bs ps body =
-        let uu___ = encode_binders FStar_Pervasives_Native.None bs env1 in
-        match uu___ with
-        | (vars, guards, env2, decls, uu___1) ->
-            let uu___2 = encode_smt_patterns ps env2 in
-            (match uu___2 with
-             | (pats, decls') ->
-                 let uu___3 = encode_formula body env2 in
-                 (match uu___3 with
-                  | (body1, decls'') ->
-                      let guards1 =
-                        match pats with
-                        | ({
-                             FStarC_SMTEncoding_Term.tm =
-                               FStarC_SMTEncoding_Term.App
-                               (FStarC_SMTEncoding_Term.Var gf, p::[]);
-                             FStarC_SMTEncoding_Term.freevars = uu___4;
-                             FStarC_SMTEncoding_Term.rng = uu___5;_}::[])::[]
-                            when
-                            let uu___6 =
-                              FStarC_Ident.string_of_lid
-                                FStarC_Parser_Const.guard_free in
-                            uu___6 = gf -> []
-                        | uu___4 -> guards in
-                      let uu___4 = FStarC_SMTEncoding_Util.mk_and_l guards1 in
-                      (vars, pats, uu___4, body1,
-                        (FStarC_List.op_At decls
-                           (FStarC_List.op_At decls' decls''))))) in
+      let encode_q_body env1 =
+        fun bs ->
+          fun ps ->
+            fun body ->
+              let uu___ = encode_binders FStar_Pervasives_Native.None bs env1 in
+              match uu___ with
+              | (vars, guards, env2, decls, uu___1) ->
+                  let uu___2 = encode_smt_patterns ps env2 in
+                  (match uu___2 with
+                   | (pats, decls') ->
+                       let uu___3 = encode_formula body env2 in
+                       (match uu___3 with
+                        | (body1, decls'') ->
+                            let guards1 =
+                              match pats with
+                              | ({
+                                   FStarC_SMTEncoding_Term.tm =
+                                     FStarC_SMTEncoding_Term.App
+                                     (FStarC_SMTEncoding_Term.Var gf, p::[]);
+                                   FStarC_SMTEncoding_Term.freevars = uu___4;
+                                   FStarC_SMTEncoding_Term.rng = uu___5;_}::[])::[]
+                                  when
+                                  let uu___6 =
+                                    FStarC_Ident.string_of_lid
+                                      FStarC_Parser_Const.guard_free in
+                                  uu___6 = gf -> []
+                              | uu___4 -> guards in
+                            let uu___4 =
+                              FStarC_SMTEncoding_Util.mk_and_l guards1 in
+                            (vars, pats, uu___4, body1,
+                              (FStarC_List.op_At decls
+                                 (FStarC_List.op_At decls' decls''))))) in
       debug phi;
       (let phi1 = FStarC_Syntax_Util.unascribe phi in
        let uu___1 = FStarC_Syntax_Formula.destruct_typ_as_formula phi1 in

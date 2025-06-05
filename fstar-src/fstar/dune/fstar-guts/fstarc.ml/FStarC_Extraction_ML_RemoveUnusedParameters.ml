@@ -10,16 +10,16 @@ type entry = argument_tag Prims.list
 type env_t =
   {
   current_module: FStarC_Extraction_ML_Syntax.mlsymbol Prims.list ;
-  tydef_map: entry FStarC_Util.psmap }
+  tydef_map: entry FStarC_PSMap.t }
 let (__proj__Mkenv_t__item__current_module :
   env_t -> FStarC_Extraction_ML_Syntax.mlsymbol Prims.list) =
   fun projectee ->
     match projectee with | { current_module; tydef_map;_} -> current_module
-let (__proj__Mkenv_t__item__tydef_map : env_t -> entry FStarC_Util.psmap) =
+let (__proj__Mkenv_t__item__tydef_map : env_t -> entry FStarC_PSMap.t) =
   fun projectee ->
     match projectee with | { current_module; tydef_map;_} -> tydef_map
 let (initial_env : env_t) =
-  let uu___ = FStarC_Util.psmap_empty () in
+  let uu___ = FStarC_PSMap.empty () in
   { current_module = []; tydef_map = uu___ }
 type tydef =
   (FStarC_Extraction_ML_Syntax.mlsymbol *
@@ -35,7 +35,7 @@ let (extend_env :
           let uu___1 =
             FStarC_Extraction_ML_Syntax.string_of_mlpath
               ((env.current_module), i) in
-          FStarC_Util.psmap_add env.tydef_map uu___1 e in
+          FStarC_PSMap.add env.tydef_map uu___1 e in
         { current_module = (env.current_module); tydef_map = uu___ }
 let (lookup_tyname :
   env_t ->
@@ -45,7 +45,7 @@ let (lookup_tyname :
   fun env ->
     fun name ->
       let uu___ = FStarC_Extraction_ML_Syntax.string_of_mlpath name in
-      FStarC_Util.psmap_try_find env.tydef_map uu___
+      FStarC_PSMap.try_find env.tydef_map uu___
 type var_set = FStarC_Extraction_ML_Syntax.mlident FStarC_RBSet.t
 let (empty_var_set : Prims.string FStarC_RBSet.t) =
   Obj.magic
@@ -549,68 +549,69 @@ let (elim_one_mltydecl :
                      (td.FStarC_Extraction_ML_Syntax.tydecl_meta);
                    FStarC_Extraction_ML_Syntax.tydecl_defn = body1
                  }))
-let (elim_module :
+let (elim_modulebody :
   env_t ->
     FStarC_Extraction_ML_Syntax.mlmodule1 Prims.list ->
       (env_t * FStarC_Extraction_ML_Syntax.mlmodule1 Prims.list))
   =
   fun env ->
     fun m ->
-      let elim_module1 env1 m1 =
-        match m1.FStarC_Extraction_ML_Syntax.mlmodule1_m with
-        | FStarC_Extraction_ML_Syntax.MLM_Ty td ->
-            let uu___ = FStarC_Util.fold_map elim_one_mltydecl env1 td in
-            (match uu___ with
-             | (env2, td1) ->
-                 (env2,
-                   {
-                     FStarC_Extraction_ML_Syntax.mlmodule1_m =
-                       (FStarC_Extraction_ML_Syntax.MLM_Ty td1);
-                     FStarC_Extraction_ML_Syntax.mlmodule1_attrs =
-                       (m1.FStarC_Extraction_ML_Syntax.mlmodule1_attrs)
-                   }))
-        | FStarC_Extraction_ML_Syntax.MLM_Let lb ->
-            let uu___ =
-              let uu___1 =
-                let uu___2 = elim_letbinding env1 lb in
-                FStarC_Extraction_ML_Syntax.MLM_Let uu___2 in
-              {
-                FStarC_Extraction_ML_Syntax.mlmodule1_m = uu___1;
-                FStarC_Extraction_ML_Syntax.mlmodule1_attrs =
-                  (m1.FStarC_Extraction_ML_Syntax.mlmodule1_attrs)
-              } in
-            (env1, uu___)
-        | FStarC_Extraction_ML_Syntax.MLM_Exn (name, sym_tys) ->
-            let uu___ =
-              let uu___1 =
-                let uu___2 =
-                  let uu___3 =
-                    FStarC_List.map
-                      (fun uu___4 ->
-                         match uu___4 with
-                         | (s, t) ->
-                             let uu___5 = elim_mlty env1 t in (s, uu___5))
-                      sym_tys in
-                  (name, uu___3) in
-                FStarC_Extraction_ML_Syntax.MLM_Exn uu___2 in
-              {
-                FStarC_Extraction_ML_Syntax.mlmodule1_m = uu___1;
-                FStarC_Extraction_ML_Syntax.mlmodule1_attrs =
-                  (m1.FStarC_Extraction_ML_Syntax.mlmodule1_attrs)
-              } in
-            (env1, uu___)
-        | FStarC_Extraction_ML_Syntax.MLM_Top e ->
-            let uu___ =
-              let uu___1 =
-                let uu___2 = elim_mlexpr env1 e in
-                FStarC_Extraction_ML_Syntax.MLM_Top uu___2 in
-              {
-                FStarC_Extraction_ML_Syntax.mlmodule1_m = uu___1;
-                FStarC_Extraction_ML_Syntax.mlmodule1_attrs =
-                  (m1.FStarC_Extraction_ML_Syntax.mlmodule1_attrs)
-              } in
-            (env1, uu___)
-        | uu___ -> (env1, m1) in
+      let elim_module1 env1 =
+        fun m1 ->
+          match m1.FStarC_Extraction_ML_Syntax.mlmodule1_m with
+          | FStarC_Extraction_ML_Syntax.MLM_Ty td ->
+              let uu___ = FStarC_Util.fold_map elim_one_mltydecl env1 td in
+              (match uu___ with
+               | (env2, td1) ->
+                   (env2,
+                     {
+                       FStarC_Extraction_ML_Syntax.mlmodule1_m =
+                         (FStarC_Extraction_ML_Syntax.MLM_Ty td1);
+                       FStarC_Extraction_ML_Syntax.mlmodule1_attrs =
+                         (m1.FStarC_Extraction_ML_Syntax.mlmodule1_attrs)
+                     }))
+          | FStarC_Extraction_ML_Syntax.MLM_Let lb ->
+              let uu___ =
+                let uu___1 =
+                  let uu___2 = elim_letbinding env1 lb in
+                  FStarC_Extraction_ML_Syntax.MLM_Let uu___2 in
+                {
+                  FStarC_Extraction_ML_Syntax.mlmodule1_m = uu___1;
+                  FStarC_Extraction_ML_Syntax.mlmodule1_attrs =
+                    (m1.FStarC_Extraction_ML_Syntax.mlmodule1_attrs)
+                } in
+              (env1, uu___)
+          | FStarC_Extraction_ML_Syntax.MLM_Exn (name, sym_tys) ->
+              let uu___ =
+                let uu___1 =
+                  let uu___2 =
+                    let uu___3 =
+                      FStarC_List.map
+                        (fun uu___4 ->
+                           match uu___4 with
+                           | (s, t) ->
+                               let uu___5 = elim_mlty env1 t in (s, uu___5))
+                        sym_tys in
+                    (name, uu___3) in
+                  FStarC_Extraction_ML_Syntax.MLM_Exn uu___2 in
+                {
+                  FStarC_Extraction_ML_Syntax.mlmodule1_m = uu___1;
+                  FStarC_Extraction_ML_Syntax.mlmodule1_attrs =
+                    (m1.FStarC_Extraction_ML_Syntax.mlmodule1_attrs)
+                } in
+              (env1, uu___)
+          | FStarC_Extraction_ML_Syntax.MLM_Top e ->
+              let uu___ =
+                let uu___1 =
+                  let uu___2 = elim_mlexpr env1 e in
+                  FStarC_Extraction_ML_Syntax.MLM_Top uu___2 in
+                {
+                  FStarC_Extraction_ML_Syntax.mlmodule1_m = uu___1;
+                  FStarC_Extraction_ML_Syntax.mlmodule1_attrs =
+                    (m1.FStarC_Extraction_ML_Syntax.mlmodule1_attrs)
+                } in
+              (env1, uu___)
+          | uu___ -> (env1, m1) in
       let uu___ =
         FStarC_List.fold_left
           (fun uu___1 ->
@@ -636,8 +637,8 @@ let (set_current_module :
       { current_module = curmod; tydef_map = (e.tydef_map) }
 let (elim_mllib :
   env_t ->
-    FStarC_Extraction_ML_Syntax.mllib ->
-      (env_t * FStarC_Extraction_ML_Syntax.mllib))
+    FStarC_Extraction_ML_Syntax.mlmodule ->
+      (env_t * FStarC_Extraction_ML_Syntax.mlmodule))
   =
   fun env ->
     fun m ->
@@ -647,33 +648,28 @@ let (elim_mllib :
       if uu___
       then (env, m)
       else
-        (let uu___2 = m in
-         match uu___2 with
-         | FStarC_Extraction_ML_Syntax.MLLib libs ->
-             let elim_one_lib env1 lib =
-               let uu___3 = lib in
-               match uu___3 with
-               | (name, sig_mod, _libs) ->
-                   let env2 = set_current_module env1 name in
-                   let uu___4 =
-                     match sig_mod with
-                     | FStar_Pervasives_Native.Some (sig_, mod_) ->
-                         let uu___5 = elim_module env2 mod_ in
-                         (match uu___5 with
-                          | (env3, mod_1) ->
-                              ((FStar_Pervasives_Native.Some (sig_, mod_1)),
-                                env3))
-                     | FStar_Pervasives_Native.None ->
-                         (FStar_Pervasives_Native.None, env2) in
-                   (match uu___4 with
-                    | (sig_mod1, env3) -> (env3, (name, sig_mod1, _libs))) in
-             let uu___3 = FStarC_Util.fold_map elim_one_lib env libs in
-             (match uu___3 with
-              | (env1, libs1) ->
-                  (env1, (FStarC_Extraction_ML_Syntax.MLLib libs1))))
+        (let elim_one_lib env1 =
+           fun lib ->
+             let uu___2 = lib in
+             match uu___2 with
+             | (name, sig_mod) ->
+                 let env2 = set_current_module env1 name in
+                 let uu___3 =
+                   match sig_mod with
+                   | FStar_Pervasives_Native.Some (sig_, mod_) ->
+                       let uu___4 = elim_modulebody env2 mod_ in
+                       (match uu___4 with
+                        | (env3, mod_1) ->
+                            ((FStar_Pervasives_Native.Some (sig_, mod_1)),
+                              env3))
+                   | FStar_Pervasives_Native.None ->
+                       (FStar_Pervasives_Native.None, env2) in
+                 (match uu___3 with
+                  | (sig_mod1, env3) -> (env3, (name, sig_mod1))) in
+         elim_one_lib env m)
 let (elim_mllibs :
-  FStarC_Extraction_ML_Syntax.mllib Prims.list ->
-    FStarC_Extraction_ML_Syntax.mllib Prims.list)
+  FStarC_Extraction_ML_Syntax.mlmodule Prims.list ->
+    FStarC_Extraction_ML_Syntax.mlmodule Prims.list)
   =
   fun l ->
     let uu___ = FStarC_Util.fold_map elim_mllib initial_env l in

@@ -5,7 +5,7 @@ let (post : unit -> (unit, unit) FStar_Tactics_Effect.tac_repr) =
   fun uu___ ->
     let uu___1 =
       FStarC_Tactics_V2_Builtins.norm
-        [Fstarcompiler.FStar_Pervasives.delta_fully
+        [Fstarcompiler.FStarC_NormSteps.delta_fully
            ["FStar.Pure.BreakVC.mono_lem"; "FStar.Pure.BreakVC.break_wp'"]] in
     FStar_Tactics_Effect.tac_bind
       (FStar_Sealed.seal

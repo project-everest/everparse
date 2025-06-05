@@ -8,7 +8,7 @@ let (dbg_RegisterGoal : Prims.bool FStarC_Effect.ref) =
 let (dbg_TacFail : Prims.bool FStarC_Effect.ref) =
   FStarC_Debug.get_toggle "TacFail"
 let (goal_ctr : Prims.int FStarC_Effect.ref) =
-  FStarC_Util.mk_ref Prims.int_zero
+  FStarC_Effect.mk_ref Prims.int_zero
 let (get_goal_ctr : unit -> Prims.int) =
   fun uu___ -> FStarC_Effect.op_Bang goal_ctr
 let (incr_goal_ctr : unit -> Prims.int) =
@@ -341,6 +341,10 @@ let catch : 'a . 'a tac -> (Prims.exn, 'a) FStar_Pervasives.either tac =
                      (ps.FStarC_Tactics_Types.goals);
                    FStarC_Tactics_Types.smt_goals =
                      (ps.FStarC_Tactics_Types.smt_goals);
+                   FStarC_Tactics_Types.splice_quals =
+                     (ps.FStarC_Tactics_Types.splice_quals);
+                   FStarC_Tactics_Types.splice_attrs =
+                     (ps.FStarC_Tactics_Types.splice_attrs);
                    FStarC_Tactics_Types.depth =
                      (ps.FStarC_Tactics_Types.depth);
                    FStarC_Tactics_Types.__dump =
@@ -408,12 +412,34 @@ let rec iter_tac : 'a . ('a -> unit tac) -> 'a Prims.list -> unit tac =
                (fun uu___1 ->
                   let uu___1 = Obj.magic uu___1 in Obj.magic (iter_tac f tl))
                  uu___1)
+let rec fold_right :
+  'a 'b . ('a -> 'b -> 'b tac) -> 'a Prims.list -> 'b -> 'b tac =
+  fun uu___2 ->
+    fun uu___1 ->
+      fun uu___ ->
+        (fun f ->
+           fun l ->
+             fun x ->
+               match l with
+               | [] ->
+                   Obj.magic
+                     (FStarC_Class_Monad.return monad_tac () (Obj.magic x))
+               | hd::tl ->
+                   let uu___ = fold_right f tl x in
+                   Obj.magic
+                     (FStarC_Class_Monad.op_let_Bang monad_tac () ()
+                        (Obj.magic uu___)
+                        (fun uu___1 ->
+                           (fun r ->
+                              let r = Obj.magic r in Obj.magic (f hd r))
+                             uu___1))) uu___2 uu___1 uu___
 exception Bad of Prims.string 
 let (uu___is_Bad : Prims.exn -> Prims.bool) =
   fun projectee -> match projectee with | Bad uu___ -> true | uu___ -> false
 let (__proj__Bad__item__uu___ : Prims.exn -> Prims.string) =
   fun projectee -> match projectee with | Bad uu___ -> uu___
-let (nwarn : Prims.int FStarC_Effect.ref) = FStarC_Util.mk_ref Prims.int_zero
+let (nwarn : Prims.int FStarC_Effect.ref) =
+  FStarC_Effect.mk_ref Prims.int_zero
 let (check_valid_goal : FStarC_Tactics_Types.goal -> unit) =
   fun g ->
     let uu___ = FStarC_Options.defensive () in
@@ -501,6 +527,10 @@ let (set_goals : FStarC_Tactics_Types.goal Prims.list -> unit tac) =
              FStarC_Tactics_Types.goals = gs;
              FStarC_Tactics_Types.smt_goals =
                (ps.FStarC_Tactics_Types.smt_goals);
+             FStarC_Tactics_Types.splice_quals =
+               (ps.FStarC_Tactics_Types.splice_quals);
+             FStarC_Tactics_Types.splice_attrs =
+               (ps.FStarC_Tactics_Types.splice_attrs);
              FStarC_Tactics_Types.depth = (ps.FStarC_Tactics_Types.depth);
              FStarC_Tactics_Types.__dump = (ps.FStarC_Tactics_Types.__dump);
              FStarC_Tactics_Types.psc = (ps.FStarC_Tactics_Types.psc);
@@ -530,6 +560,10 @@ let (set_smt_goals : FStarC_Tactics_Types.goal Prims.list -> unit tac) =
                (ps.FStarC_Tactics_Types.all_implicits);
              FStarC_Tactics_Types.goals = (ps.FStarC_Tactics_Types.goals);
              FStarC_Tactics_Types.smt_goals = gs;
+             FStarC_Tactics_Types.splice_quals =
+               (ps.FStarC_Tactics_Types.splice_quals);
+             FStarC_Tactics_Types.splice_attrs =
+               (ps.FStarC_Tactics_Types.splice_attrs);
              FStarC_Tactics_Types.depth = (ps.FStarC_Tactics_Types.depth);
              FStarC_Tactics_Types.__dump = (ps.FStarC_Tactics_Types.__dump);
              FStarC_Tactics_Types.psc = (ps.FStarC_Tactics_Types.psc);
@@ -595,6 +629,10 @@ let (dismiss : unit tac) =
            FStarC_Tactics_Types.goals = uu___1;
            FStarC_Tactics_Types.smt_goals =
              (ps.FStarC_Tactics_Types.smt_goals);
+           FStarC_Tactics_Types.splice_quals =
+             (ps.FStarC_Tactics_Types.splice_quals);
+           FStarC_Tactics_Types.splice_attrs =
+             (ps.FStarC_Tactics_Types.splice_attrs);
            FStarC_Tactics_Types.depth = (ps.FStarC_Tactics_Types.depth);
            FStarC_Tactics_Types.__dump = (ps.FStarC_Tactics_Types.__dump);
            FStarC_Tactics_Types.psc = (ps.FStarC_Tactics_Types.psc);
@@ -630,6 +668,10 @@ let (replace_cur : FStarC_Tactics_Types.goal -> unit tac) =
               FStarC_Tactics_Types.goals = uu___2;
               FStarC_Tactics_Types.smt_goals =
                 (ps.FStarC_Tactics_Types.smt_goals);
+              FStarC_Tactics_Types.splice_quals =
+                (ps.FStarC_Tactics_Types.splice_quals);
+              FStarC_Tactics_Types.splice_attrs =
+                (ps.FStarC_Tactics_Types.splice_attrs);
               FStarC_Tactics_Types.depth = (ps.FStarC_Tactics_Types.depth);
               FStarC_Tactics_Types.__dump = (ps.FStarC_Tactics_Types.__dump);
               FStarC_Tactics_Types.psc = (ps.FStarC_Tactics_Types.psc);
@@ -672,6 +714,10 @@ let (add_goals : FStarC_Tactics_Types.goal Prims.list -> unit tac) =
                (FStarC_List.op_At gs ps.FStarC_Tactics_Types.goals);
              FStarC_Tactics_Types.smt_goals =
                (ps.FStarC_Tactics_Types.smt_goals);
+             FStarC_Tactics_Types.splice_quals =
+               (ps.FStarC_Tactics_Types.splice_quals);
+             FStarC_Tactics_Types.splice_attrs =
+               (ps.FStarC_Tactics_Types.splice_attrs);
              FStarC_Tactics_Types.depth = (ps.FStarC_Tactics_Types.depth);
              FStarC_Tactics_Types.__dump = (ps.FStarC_Tactics_Types.__dump);
              FStarC_Tactics_Types.psc = (ps.FStarC_Tactics_Types.psc);
@@ -703,6 +749,10 @@ let (add_smt_goals : FStarC_Tactics_Types.goal Prims.list -> unit tac) =
              FStarC_Tactics_Types.goals = (ps.FStarC_Tactics_Types.goals);
              FStarC_Tactics_Types.smt_goals =
                (FStarC_List.op_At gs ps.FStarC_Tactics_Types.smt_goals);
+             FStarC_Tactics_Types.splice_quals =
+               (ps.FStarC_Tactics_Types.splice_quals);
+             FStarC_Tactics_Types.splice_attrs =
+               (ps.FStarC_Tactics_Types.splice_attrs);
              FStarC_Tactics_Types.depth = (ps.FStarC_Tactics_Types.depth);
              FStarC_Tactics_Types.__dump = (ps.FStarC_Tactics_Types.__dump);
              FStarC_Tactics_Types.psc = (ps.FStarC_Tactics_Types.psc);
@@ -735,6 +785,10 @@ let (push_goals : FStarC_Tactics_Types.goal Prims.list -> unit tac) =
                (FStarC_List.op_At ps.FStarC_Tactics_Types.goals gs);
              FStarC_Tactics_Types.smt_goals =
                (ps.FStarC_Tactics_Types.smt_goals);
+             FStarC_Tactics_Types.splice_quals =
+               (ps.FStarC_Tactics_Types.splice_quals);
+             FStarC_Tactics_Types.splice_attrs =
+               (ps.FStarC_Tactics_Types.splice_attrs);
              FStarC_Tactics_Types.depth = (ps.FStarC_Tactics_Types.depth);
              FStarC_Tactics_Types.__dump = (ps.FStarC_Tactics_Types.__dump);
              FStarC_Tactics_Types.psc = (ps.FStarC_Tactics_Types.psc);
@@ -766,6 +820,10 @@ let (push_smt_goals : FStarC_Tactics_Types.goal Prims.list -> unit tac) =
              FStarC_Tactics_Types.goals = (ps.FStarC_Tactics_Types.goals);
              FStarC_Tactics_Types.smt_goals =
                (FStarC_List.op_At ps.FStarC_Tactics_Types.smt_goals gs);
+             FStarC_Tactics_Types.splice_quals =
+               (ps.FStarC_Tactics_Types.splice_quals);
+             FStarC_Tactics_Types.splice_attrs =
+               (ps.FStarC_Tactics_Types.splice_attrs);
              FStarC_Tactics_Types.depth = (ps.FStarC_Tactics_Types.depth);
              FStarC_Tactics_Types.__dump = (ps.FStarC_Tactics_Types.__dump);
              FStarC_Tactics_Types.psc = (ps.FStarC_Tactics_Types.psc);
@@ -796,6 +854,10 @@ let (add_implicits : FStarC_TypeChecker_Env.implicits -> unit tac) =
              FStarC_Tactics_Types.goals = (ps.FStarC_Tactics_Types.goals);
              FStarC_Tactics_Types.smt_goals =
                (ps.FStarC_Tactics_Types.smt_goals);
+             FStarC_Tactics_Types.splice_quals =
+               (ps.FStarC_Tactics_Types.splice_quals);
+             FStarC_Tactics_Types.splice_attrs =
+               (ps.FStarC_Tactics_Types.splice_attrs);
              FStarC_Tactics_Types.depth = (ps.FStarC_Tactics_Types.depth);
              FStarC_Tactics_Types.__dump = (ps.FStarC_Tactics_Types.__dump);
              FStarC_Tactics_Types.psc = (ps.FStarC_Tactics_Types.psc);
@@ -1022,6 +1084,10 @@ let (compress_implicits : unit tac) =
            FStarC_Tactics_Types.goals = (ps.FStarC_Tactics_Types.goals);
            FStarC_Tactics_Types.smt_goals =
              (ps.FStarC_Tactics_Types.smt_goals);
+           FStarC_Tactics_Types.splice_quals =
+             (ps.FStarC_Tactics_Types.splice_quals);
+           FStarC_Tactics_Types.splice_attrs =
+             (ps.FStarC_Tactics_Types.splice_attrs);
            FStarC_Tactics_Types.depth = (ps.FStarC_Tactics_Types.depth);
            FStarC_Tactics_Types.__dump = (ps.FStarC_Tactics_Types.__dump);
            FStarC_Tactics_Types.psc = (ps.FStarC_Tactics_Types.psc);
@@ -1157,6 +1223,12 @@ let divide : 'a 'b . FStarC_BigInt.t -> 'a tac -> 'b tac -> ('a * 'b) tac =
                                              FStarC_Tactics_Types.goals = lgs;
                                              FStarC_Tactics_Types.smt_goals =
                                                [];
+                                             FStarC_Tactics_Types.splice_quals
+                                               =
+                                               (p.FStarC_Tactics_Types.splice_quals);
+                                             FStarC_Tactics_Types.splice_attrs
+                                               =
+                                               (p.FStarC_Tactics_Types.splice_attrs);
                                              FStarC_Tactics_Types.depth =
                                                (p.FStarC_Tactics_Types.depth);
                                              FStarC_Tactics_Types.__dump =
@@ -1226,6 +1298,12 @@ let divide : 'a 'b . FStarC_BigInt.t -> 'a tac -> 'b tac -> ('a * 'b) tac =
                                                                     = rgs;
                                                                     FStarC_Tactics_Types.smt_goals
                                                                     = [];
+                                                                    FStarC_Tactics_Types.splice_quals
+                                                                    =
+                                                                    (lp'.FStarC_Tactics_Types.splice_quals);
+                                                                    FStarC_Tactics_Types.splice_attrs
+                                                                    =
+                                                                    (lp'.FStarC_Tactics_Types.splice_attrs);
                                                                     FStarC_Tactics_Types.depth
                                                                     =
                                                                     (lp'.FStarC_Tactics_Types.depth);
@@ -1318,6 +1396,12 @@ let divide : 'a 'b . FStarC_BigInt.t -> 'a tac -> 'b tac -> ('a * 'b) tac =
                                                                     (FStarC_List.op_At
                                                                     rp'.FStarC_Tactics_Types.smt_goals
                                                                     p.FStarC_Tactics_Types.smt_goals));
+                                                                    FStarC_Tactics_Types.splice_quals
+                                                                    =
+                                                                    (rp'.FStarC_Tactics_Types.splice_quals);
+                                                                    FStarC_Tactics_Types.splice_attrs
+                                                                    =
+                                                                    (rp'.FStarC_Tactics_Types.splice_attrs);
                                                                     FStarC_Tactics_Types.depth
                                                                     =
                                                                     (rp'.FStarC_Tactics_Types.depth);

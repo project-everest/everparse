@@ -61,16 +61,17 @@ let filter :
   fun uu___ ->
     fun predicate ->
       fun set ->
-        let rec aux acc uu___1 =
-          match uu___1 with
-          | L -> acc
-          | N (uu___2, l, v, r) ->
-              let uu___3 =
-                let uu___4 =
-                  let uu___5 = predicate v in
-                  if uu___5 then add uu___ v acc else acc in
-                aux uu___4 l in
-              aux uu___3 r in
+        let rec aux acc =
+          fun uu___1 ->
+            match uu___1 with
+            | L -> acc
+            | N (uu___2, l, v, r) ->
+                let uu___3 =
+                  let uu___4 =
+                    let uu___5 = predicate v in
+                    if uu___5 then add uu___ v acc else acc in
+                  aux uu___4 l in
+                aux uu___3 r in
         aux (empty ()) set
 let rec extract_min :
   'a . 'a FStarC_Class_Ord.ord -> 'a rbset -> ('a rbset * 'a) =
@@ -120,9 +121,8 @@ let rec elems : 'a . 'a rbset -> 'a Prims.list =
     | L -> []
     | N (uu___, a1, x, b) ->
         let uu___1 = elems a1 in
-        let uu___2 =
-          let uu___3 = elems b in FStar_List_Tot_Base.append [x] uu___3 in
-        FStar_List_Tot_Base.append uu___1 uu___2
+        let uu___2 = let uu___3 = elems b in FStarC_List.op_At [x] uu___3 in
+        FStarC_List.op_At uu___1 uu___2
 let equal :
   'a . 'a FStarC_Class_Ord.ord -> 'a rbset -> 'a rbset -> Prims.bool =
   fun uu___ ->
@@ -148,16 +148,17 @@ let inter : 'a . 'a FStarC_Class_Ord.ord -> 'a rbset -> 'a rbset -> 'a rbset
   fun uu___ ->
     fun s1 ->
       fun s2 ->
-        let rec aux s11 acc =
-          match s11 with
-          | L -> acc
-          | N (uu___1, a1, x, b) ->
-              let uu___2 = mem uu___ x s2 in
-              if uu___2
-              then
-                let uu___3 = let uu___4 = aux b acc in aux a1 uu___4 in
-                add uu___ x uu___3
-              else (let uu___4 = aux b acc in aux a1 uu___4) in
+        let rec aux s11 =
+          fun acc ->
+            match s11 with
+            | L -> acc
+            | N (uu___1, a1, x, b) ->
+                let uu___2 = mem uu___ x s2 in
+                if uu___2
+                then
+                  let uu___3 = let uu___4 = aux b acc in aux a1 uu___4 in
+                  add uu___ x uu___3
+                else (let uu___4 = aux b acc in aux a1 uu___4) in
         aux s1 L
 let rec diff :
   'a . 'a FStarC_Class_Ord.ord -> 'a rbset -> 'a rbset -> 'a rbset =

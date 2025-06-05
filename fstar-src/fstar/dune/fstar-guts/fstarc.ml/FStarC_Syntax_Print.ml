@@ -617,6 +617,15 @@ let (tscheme_to_string : FStarC_Syntax_Syntax.tscheme -> Prims.string) =
     if uu___
     then FStarC_Syntax_Print_Ugly.tscheme_to_string ts
     else FStarC_Syntax_Print_Pretty.tscheme_to_string ts
+let (tscheme_to_doc : FStarC_Syntax_Syntax.tscheme -> FStarC_Pprint.document)
+  =
+  fun ts ->
+    let uu___ = FStarC_Options.ugly () in
+    if uu___
+    then
+      let uu___1 = FStarC_Syntax_Print_Ugly.tscheme_to_string ts in
+      FStarC_Pprint.arbitrary_string uu___1
+    else FStarC_Syntax_Print_Pretty.tscheme_to_doc ts
 let (sub_eff_to_string : FStarC_Syntax_Syntax.sub_eff -> Prims.string) =
   fun se ->
     let tsopt_to_string ts_opt =
@@ -641,33 +650,18 @@ let (pretty_sigelt : FStarC_Syntax_Syntax.sigelt FStarC_Class_PP.pretty) =
 let (pretty_comp : FStarC_Syntax_Syntax.comp FStarC_Class_PP.pretty) =
   { FStarC_Class_PP.pp = comp_to_doc }
 let (pretty_ctxu : FStarC_Syntax_Syntax.ctx_uvar FStarC_Class_PP.pretty) =
-  {
-    FStarC_Class_PP.pp =
-      (fun x ->
-         let uu___ = FStarC_Class_Show.show showable_ctxu x in
-         FStarC_Pprint.doc_of_string uu___)
-  }
+  FStarC_Class_PP.pretty_from_showable showable_ctxu
 let (pretty_uvar : FStarC_Syntax_Syntax.uvar FStarC_Class_PP.pretty) =
-  {
-    FStarC_Class_PP.pp =
-      (fun x ->
-         let uu___ = FStarC_Class_Show.show showable_uvar x in
-         FStarC_Pprint.doc_of_string uu___)
-  }
+  FStarC_Class_PP.pretty_from_showable showable_uvar
 let (pretty_binder : FStarC_Syntax_Syntax.binder FStarC_Class_PP.pretty) =
-  {
-    FStarC_Class_PP.pp =
-      (fun x ->
-         let uu___ = FStarC_Class_Show.show showable_binder x in
-         FStarC_Pprint.doc_of_string uu___)
-  }
+  FStarC_Class_PP.pretty_from_showable showable_binder
 let (pretty_bv : FStarC_Syntax_Syntax.bv FStarC_Class_PP.pretty) =
-  {
-    FStarC_Class_PP.pp =
-      (fun x ->
-         let uu___ = FStarC_Class_Show.show showable_bv x in
-         FStarC_Pprint.doc_of_string uu___)
-  }
+  FStarC_Class_PP.pretty_from_showable showable_bv
+let (pretty_qualifier :
+  FStarC_Syntax_Syntax.qualifier FStarC_Class_PP.pretty) =
+  FStarC_Class_PP.pretty_from_showable showable_qualifier
+let (pretty_aqual : FStarC_Syntax_Syntax.aqual FStarC_Class_PP.pretty) =
+  FStarC_Class_PP.pretty_from_showable showable_aqual
 let (pretty_binding : FStarC_Syntax_Syntax.binding FStarC_Class_PP.pretty) =
   {
     FStarC_Class_PP.pp =

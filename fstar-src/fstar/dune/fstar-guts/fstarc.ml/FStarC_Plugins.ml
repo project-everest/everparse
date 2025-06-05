@@ -1,8 +1,8 @@
 open Prims
 let (loaded : Prims.string Prims.list FStarC_Effect.ref) =
-  FStarC_Util.mk_ref []
+  FStarC_Effect.mk_ref []
 let (loaded_plugin_lib : Prims.bool FStarC_Effect.ref) =
-  FStarC_Util.mk_ref false
+  FStarC_Effect.mk_ref false
 let (pout : Prims.string -> unit) =
   fun s ->
     let uu___ = FStarC_Debug.any () in
@@ -86,7 +86,7 @@ let (load_plugin : Prims.string -> unit) =
              let uu___6 = FStarC_Util.get_exec_dir () in
              Prims.strcat uu___6
                "/../lib/fstar/pluginlib/fstar_pluginlib.cmxs" in
-           FStarC_Util.normalize_file_path uu___5 in
+           FStarC_Filepath.normalize_file_path uu___5 in
          do_dynlink uu___4);
         pout "Loaded fstar.pluginlib OK\n";
         FStarC_Effect.op_Colon_Equals loaded_plugin_lib true)
@@ -98,7 +98,7 @@ let (load_plugins_dir : Prims.string -> unit) =
   fun dir ->
     let uu___ =
       let uu___1 =
-        let uu___2 = FStarC_Util.readdir dir in
+        let uu___2 = FStarC_Filepath.readdir dir in
         FStarC_List.filter
           (fun s ->
              ((FStarC_String.length s) >= (Prims.of_int (5))) &&
@@ -124,10 +124,6 @@ let (compile_modules : Prims.string -> Prims.string Prims.list -> unit) =
               FStar_List_Tot_Base.append ["-w"; "-8-11-20-21-26-28"] uu___2 in
             FStar_List_Tot_Base.append ["-I"; dir] uu___1 in
           FStar_List_Tot_Base.append ["ocamlopt"; "-shared"] uu___ in
-        let ocamlpath_sep =
-          match FStarC_Platform.system with
-          | FStarC_Platform.Windows -> ";"
-          | FStarC_Platform.Posix -> ":" in
         let old_ocamlpath =
           let uu___ = FStarC_Util.expand_environment_variable "OCAMLPATH" in
           match uu___ with
@@ -135,8 +131,8 @@ let (compile_modules : Prims.string -> Prims.string Prims.list -> unit) =
           | FStar_Pervasives_Native.None -> "" in
         let env_setter =
           let uu___ = FStarC_Find.locate_ocaml () in
-          FStarC_Util.format3 "env OCAMLPATH=\"%s%s%s\"" uu___ ocamlpath_sep
-            old_ocamlpath in
+          FStarC_Util.format3 "env OCAMLPATH=\"%s%s%s\"" uu___
+            FStarC_Platform.ocamlpath_sep old_ocamlpath in
         let cmd =
           FStarC_String.concat " " (env_setter :: "ocamlfind" :: args) in
         let rc = FStarC_Util.system_run cmd in
@@ -177,8 +173,7 @@ let (compile_modules : Prims.string -> Prims.string Prims.list -> unit) =
            FStarC_Effect.raise uu___)
 let (autoload_plugin : Prims.string -> Prims.bool) =
   fun ext ->
-    let uu___ =
-      let uu___1 = FStarC_Options_Ext.get "noautoload" in uu___1 <> "" in
+    let uu___ = FStarC_Options_Ext.enabled "noautoload" in
     if uu___
     then false
     else

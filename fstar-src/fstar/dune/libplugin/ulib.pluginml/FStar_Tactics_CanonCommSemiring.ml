@@ -1608,13 +1608,13 @@ let rec reification_aux :
                                              Obj.magic
                                                (make_fvar t unquotea ts vm))
                                         uu___3))) uu___1)
-let (steps : Fstarcompiler.FStar_Pervasives.norm_step Prims.list) =
-  [Fstarcompiler.FStar_Pervasives.primops;
-  Fstarcompiler.FStar_Pervasives.iota;
-  Fstarcompiler.FStar_Pervasives.zeta;
-  Fstarcompiler.FStar_Pervasives.delta_attr
+let (steps : Fstarcompiler.FStarC_NormSteps.norm_step Prims.list) =
+  [Fstarcompiler.FStarC_NormSteps.primops;
+  Fstarcompiler.FStarC_NormSteps.iota;
+  Fstarcompiler.FStarC_NormSteps.zeta;
+  Fstarcompiler.FStarC_NormSteps.delta_attr
     ["FStar.Tactics.CanonCommSemiring.canon_attr"];
-  Fstarcompiler.FStar_Pervasives.delta_only
+  Fstarcompiler.FStarC_NormSteps.delta_only
     ["FStar.Mul.op_Star";
     "FStar.Algebra.CommMonoid.int_plus_cm";
     "FStar.Algebra.CommMonoid.int_multiply_cm";

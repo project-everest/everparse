@@ -224,9 +224,7 @@ let (__do_rewrite :
                                lcomp.FStarC_TypeChecker_Common.res_typ in
                              let typ1 =
                                let uu___4 =
-                                 let uu___5 =
-                                   FStarC_Options_Ext.get "__unrefine" in
-                                 uu___5 <> "" in
+                                 FStarC_Options_Ext.enabled "__unrefine" in
                                if uu___4
                                then
                                  let typ_norm =
@@ -747,42 +745,60 @@ and (on_subterms :
                      fun rewriter ->
                        fun env ->
                          fun tm ->
-                           let recurse env1 tm1 =
-                             ctrl_fold_env g0 d controller rewriter env1 tm1 in
+                           let recurse env1 =
+                             fun tm1 ->
+                               ctrl_fold_env g0 d controller rewriter env1
+                                 tm1 in
                            let rr = recurse env in
-                           let rec descend_binders uu___8 uu___7 uu___6
-                             uu___5 uu___4 uu___3 uu___2 uu___1 uu___ =
-                             (fun orig ->
-                                fun accum_binders ->
-                                  fun retyping_subst ->
-                                    fun accum_flag ->
-                                      fun env1 ->
-                                        fun bs ->
-                                          fun t ->
-                                            fun k ->
-                                              fun rebuild ->
-                                                match bs with
-                                                | [] ->
-                                                    let t1 =
-                                                      FStarC_Syntax_Subst.subst
-                                                        retyping_subst t in
-                                                    let uu___ =
-                                                      recurse env1 t1 in
-                                                    Obj.magic
-                                                      (FStarC_Class_Monad.op_let_Bang
-                                                         FStarC_Tactics_Monad.monad_tac
-                                                         () ()
-                                                         (Obj.magic uu___)
-                                                         (fun uu___1 ->
-                                                            (fun uu___1 ->
-                                                               let uu___1 =
-                                                                 Obj.magic
-                                                                   uu___1 in
-                                                               match uu___1
-                                                               with
-                                                               | (t2, t_flag)
-                                                                   ->
-                                                                   (match t_flag
+                           let rec descend_binders uu___8 =
+                             fun uu___7 ->
+                               fun uu___6 ->
+                                 fun uu___5 ->
+                                   fun uu___4 ->
+                                     fun uu___3 ->
+                                       fun uu___2 ->
+                                         fun uu___1 ->
+                                           fun uu___ ->
+                                             (fun orig ->
+                                                fun accum_binders ->
+                                                  fun retyping_subst ->
+                                                    fun accum_flag ->
+                                                      fun env1 ->
+                                                        fun bs ->
+                                                          fun t ->
+                                                            fun k ->
+                                                              fun rebuild ->
+                                                                match bs with
+                                                                | [] ->
+                                                                    let t1 =
+                                                                    FStarC_Syntax_Subst.subst
+                                                                    retyping_subst
+                                                                    t in
+                                                                    let uu___
+                                                                    =
+                                                                    recurse
+                                                                    env1 t1 in
+                                                                    Obj.magic
+                                                                    (FStarC_Class_Monad.op_let_Bang
+                                                                    FStarC_Tactics_Monad.monad_tac
+                                                                    () ()
+                                                                    (Obj.magic
+                                                                    uu___)
+                                                                    (fun
+                                                                    uu___1 ->
+                                                                    (fun
+                                                                    uu___1 ->
+                                                                    let uu___1
+                                                                    =
+                                                                    Obj.magic
+                                                                    uu___1 in
+                                                                    match uu___1
+                                                                    with
+                                                                    | 
+                                                                    (t2,
+                                                                    t_flag)
+                                                                    ->
+                                                                    (match t_flag
                                                                     with
                                                                     | 
                                                                     FStarC_Tactics_Types.Abort
@@ -858,29 +874,36 @@ and (on_subterms :
                                                                     (Obj.magic
                                                                     uu___5)))
                                                                     uu___4))))
-                                                              uu___1))
-                                                | b::bs1 ->
-                                                    let s =
-                                                      FStarC_Syntax_Subst.subst
-                                                        retyping_subst
-                                                        (b.FStarC_Syntax_Syntax.binder_bv).FStarC_Syntax_Syntax.sort in
-                                                    let uu___ =
-                                                      recurse env1 s in
-                                                    Obj.magic
-                                                      (FStarC_Class_Monad.op_let_Bang
-                                                         FStarC_Tactics_Monad.monad_tac
-                                                         () ()
-                                                         (Obj.magic uu___)
-                                                         (fun uu___1 ->
-                                                            (fun uu___1 ->
-                                                               let uu___1 =
-                                                                 Obj.magic
-                                                                   uu___1 in
-                                                               match uu___1
-                                                               with
-                                                               | (s1, flag)
-                                                                   ->
-                                                                   (match flag
+                                                                    uu___1))
+                                                                | b::bs1 ->
+                                                                    let s =
+                                                                    FStarC_Syntax_Subst.subst
+                                                                    retyping_subst
+                                                                    (b.FStarC_Syntax_Syntax.binder_bv).FStarC_Syntax_Syntax.sort in
+                                                                    let uu___
+                                                                    =
+                                                                    recurse
+                                                                    env1 s in
+                                                                    Obj.magic
+                                                                    (FStarC_Class_Monad.op_let_Bang
+                                                                    FStarC_Tactics_Monad.monad_tac
+                                                                    () ()
+                                                                    (Obj.magic
+                                                                    uu___)
+                                                                    (fun
+                                                                    uu___1 ->
+                                                                    (fun
+                                                                    uu___1 ->
+                                                                    let uu___1
+                                                                    =
+                                                                    Obj.magic
+                                                                    uu___1 in
+                                                                    match uu___1
+                                                                    with
+                                                                    | 
+                                                                    (s1,
+                                                                    flag) ->
+                                                                    (match flag
                                                                     with
                                                                     | 
                                                                     FStarC_Tactics_Types.Abort
@@ -957,9 +980,10 @@ and (on_subterms :
                                                                     env2 bs1
                                                                     t k
                                                                     rebuild))))
-                                                              uu___1)))
-                               uu___8 uu___7 uu___6 uu___5 uu___4 uu___3
-                               uu___2 uu___1 uu___ in
+                                                                    uu___1)))
+                                               uu___8 uu___7 uu___6 uu___5
+                                               uu___4 uu___3 uu___2 uu___1
+                                               uu___ in
                            let go uu___ =
                              (fun uu___ ->
                                 let tm1 = FStarC_Syntax_Subst.compress tm in

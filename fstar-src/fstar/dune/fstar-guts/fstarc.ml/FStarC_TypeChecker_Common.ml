@@ -292,8 +292,8 @@ let (__proj__Mkidentifier_info__item__identifier_range :
     match projectee with
     | { identifier; identifier_ty; identifier_range;_} -> identifier_range
 type id_info_by_col = (Prims.int * identifier_info) Prims.list
-type col_info_by_row = id_info_by_col FStarC_Util.pimap
-type row_info_by_file = col_info_by_row FStarC_Util.psmap
+type col_info_by_row = id_info_by_col FStarC_PIMap.t
+type row_info_by_file = col_info_by_row FStarC_PSMap.t
 type id_info_table =
   {
   id_info_enabled: Prims.bool ;
@@ -323,13 +323,14 @@ let (insert_col_info :
   fun col ->
     fun info ->
       fun col_infos ->
-        let rec __insert aux rest =
-          match rest with
-          | [] -> (aux, [(col, info)])
-          | (c, i)::rest' ->
-              if col < c
-              then (aux, ((col, info) :: rest))
-              else __insert ((c, i) :: aux) rest' in
+        let rec __insert aux =
+          fun rest ->
+            match rest with
+            | [] -> (aux, [(col, info)])
+            | (c, i)::rest' ->
+                if col < c
+                then (aux, ((col, info) :: rest))
+                else __insert ((c, i) :: aux) rest' in
         let uu___ = __insert [] col_infos in
         match uu___ with | (l, r) -> FStarC_List.op_At (FStarC_List.rev l) r
 let (find_nearest_preceding_col_info :
@@ -339,16 +340,17 @@ let (find_nearest_preceding_col_info :
   =
   fun col ->
     fun col_infos ->
-      let rec aux out uu___ =
-        match uu___ with
-        | [] -> out
-        | (c, i)::rest ->
-            if c > col
-            then out
-            else aux (FStar_Pervasives_Native.Some i) rest in
+      let rec aux out =
+        fun uu___ ->
+          match uu___ with
+          | [] -> out
+          | (c, i)::rest ->
+              if c > col
+              then out
+              else aux (FStar_Pervasives_Native.Some i) rest in
       aux FStar_Pervasives_Native.None col_infos
 let (id_info_table_empty : id_info_table) =
-  let uu___ = FStarC_Util.psmap_empty () in
+  let uu___ = FStarC_PSMap.empty () in
   { id_info_enabled = false; id_info_db = uu___; id_info_buffer = [] }
 let (print_identifier_info : identifier_info -> Prims.string) =
   fun info ->
@@ -367,11 +369,10 @@ let (id_info__insert :
   (FStarC_Syntax_Syntax.typ ->
      FStarC_Syntax_Syntax.typ FStar_Pervasives_Native.option)
     ->
-    (Prims.int * identifier_info) Prims.list FStarC_Util.pimap
-      FStarC_Util.psmap ->
+    (Prims.int * identifier_info) Prims.list FStarC_PIMap.t FStarC_PSMap.t ->
       identifier_info ->
-        (Prims.int * identifier_info) Prims.list FStarC_Util.pimap
-          FStarC_Util.psmap)
+        (Prims.int * identifier_info) Prims.list FStarC_PIMap.t
+          FStarC_PSMap.t)
   =
   fun ty_map ->
     fun db ->
@@ -402,13 +403,13 @@ let (id_info__insert :
             (match uu___ with
              | (row, col) ->
                  let rows =
-                   let uu___1 = FStarC_Util.pimap_empty () in
-                   FStarC_Util.psmap_find_default db fn uu___1 in
-                 let cols = FStarC_Util.pimap_find_default rows row [] in
+                   let uu___1 = FStarC_PIMap.empty () in
+                   FStarC_PSMap.find_default db fn uu___1 in
+                 let cols = FStarC_PIMap.find_default rows row [] in
                  let uu___1 =
                    let uu___2 = insert_col_info col info1 cols in
-                   FStarC_Util.pimap_add rows row uu___2 in
-                 FStarC_Util.psmap_add db fn uu___1)
+                   FStarC_PIMap.add rows row uu___2 in
+                 FStarC_PSMap.add db fn uu___1)
 let (id_info_insert :
   id_info_table ->
     (FStarC_Syntax_Syntax.bv, FStarC_Syntax_Syntax.fv)
@@ -485,9 +486,9 @@ let (id_info_at_pos :
       fun row ->
         fun col ->
           let rows =
-            let uu___ = FStarC_Util.pimap_empty () in
-            FStarC_Util.psmap_find_default table.id_info_db fn uu___ in
-          let cols = FStarC_Util.pimap_find_default rows row [] in
+            let uu___ = FStarC_PIMap.empty () in
+            FStarC_PSMap.find_default table.id_info_db fn uu___ in
+          let cols = FStarC_PIMap.find_default rows row [] in
           let uu___ = find_nearest_preceding_col_info col cols in
           match uu___ with
           | FStar_Pervasives_Native.None -> FStar_Pervasives_Native.None
@@ -814,7 +815,7 @@ let (mk_lcomp :
     fun res_typ ->
       fun cflags ->
         fun comp_thunk ->
-          let uu___ = FStarC_Util.mk_ref (FStar_Pervasives.Inl comp_thunk) in
+          let uu___ = FStarC_Effect.mk_ref (FStar_Pervasives.Inl comp_thunk) in
           { eff_name; res_typ; cflags; comp_thunk = uu___ }
 let (lcomp_comp : lcomp -> (FStarC_Syntax_Syntax.comp * guard_t)) =
   fun lc ->

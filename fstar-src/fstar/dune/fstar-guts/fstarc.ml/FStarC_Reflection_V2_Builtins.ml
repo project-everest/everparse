@@ -54,28 +54,13 @@ let (pack_fv : Prims.string Prims.list -> FStarC_Syntax_Syntax.fv) =
     let lid = FStarC_Parser_Const.p2l ns in
     let fallback uu___ =
       let quals =
-        let uu___1 = FStarC_Ident.lid_equals lid FStarC_Parser_Const.cons_lid in
-        if uu___1
+        let id = FStarC_Ident.ident_of_lid lid in
+        let c =
+          let uu___1 = FStarC_Ident.string_of_id id in
+          FStarC_String.get uu___1 Prims.int_zero in
+        if (FStar_Char.lowercase c) <> c
         then FStar_Pervasives_Native.Some FStarC_Syntax_Syntax.Data_ctor
-        else
-          (let uu___3 =
-             FStarC_Ident.lid_equals lid FStarC_Parser_Const.nil_lid in
-           if uu___3
-           then FStar_Pervasives_Native.Some FStarC_Syntax_Syntax.Data_ctor
-           else
-             (let uu___5 =
-                FStarC_Ident.lid_equals lid FStarC_Parser_Const.some_lid in
-              if uu___5
-              then
-                FStar_Pervasives_Native.Some FStarC_Syntax_Syntax.Data_ctor
-              else
-                (let uu___7 =
-                   FStarC_Ident.lid_equals lid FStarC_Parser_Const.none_lid in
-                 if uu___7
-                 then
-                   FStar_Pervasives_Native.Some
-                     FStarC_Syntax_Syntax.Data_ctor
-                 else FStar_Pervasives_Native.None))) in
+        else FStar_Pervasives_Native.None in
       let uu___1 = FStarC_Parser_Const.p2l ns in
       FStarC_Syntax_Syntax.lid_as_fv uu___1 quals in
     let uu___ =

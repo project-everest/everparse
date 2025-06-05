@@ -325,9 +325,10 @@ let rec (free_names_and_uvs' :
   FStarC_Syntax_Syntax.term -> use_cache_t -> free_vars_and_fvars) =
   fun tm ->
     fun use_cache ->
-      let aux_binders bs from_body =
-        let from_binders = free_names_and_uvars_binders bs use_cache in
-        op_Plus_Plus from_binders from_body in
+      let aux_binders bs =
+        fun from_body ->
+          let from_binders = free_names_and_uvars_binders bs use_cache in
+          op_Plus_Plus from_binders from_body in
       let t = FStarC_Syntax_Subst.compress tm in
       match t.FStarC_Syntax_Syntax.n with
       | FStarC_Syntax_Syntax.Tm_delayed uu___ -> failwith "Impossible"

@@ -15,20 +15,14 @@
 *)
 
 module FStarC.Syntax.DsEnv
-open FStarC.Effect
 
-open FStar open FStarC
 open FStarC
-open FStarC.Util
 open FStarC.Effect
 open FStarC.Syntax
 open FStarC.Syntax.Syntax
-open FStarC.Syntax.Util
-open FStarC.Parser
 open FStarC.Ident
-module BU = FStarC.Util
+
 module S = FStarC.Syntax.Syntax
-module U = FStarC.Syntax.Util
 
 val ugly_sigelt_to_string_hook : ref (sigelt -> string)
 
@@ -60,7 +54,7 @@ type foundname =
   | Eff_name  of sigelt & lident
 
 val fail_or:  env -> (lident -> option 'a) -> lident -> 'a
-val fail_or2: (ident -> option 'a) -> ident -> 'a
+val fail_or2: env -> (ident -> option 'a) -> ident -> 'a
 
 val opens_and_abbrevs :env -> list (either open_module_or_namespace module_abbrev)
 val dep_graph: env -> FStarC.Parser.Dep.deps
@@ -143,3 +137,5 @@ val prepare_module_or_interface: bool -> bool -> env -> lident -> module_inclusi
 (* private *) val unique:  bool -> bool -> env -> lident -> bool
 (* private *) val check_admits: env -> modul -> modul
 (* private *) val finish:  env -> modul -> env
+
+val set_no_prelude : env -> bool -> env

@@ -40,7 +40,7 @@ let (__proj__NTBinding__item___0 :
   = fun projectee -> match projectee with | NTBinding _0 -> _0
 let (repl_stack :
   FStarC_Interactive_Ide_Types.repl_stack_t FStarC_Effect.ref) =
-  FStarC_Util.mk_ref []
+  FStarC_Effect.mk_ref []
 let (set_check_kind :
   FStarC_TypeChecker_Env.env_t ->
     FStarC_Interactive_Ide_Types.push_kind -> FStarC_TypeChecker_Env.env_t)
@@ -158,22 +158,23 @@ let (repl_ld_tasks_of_deps :
           FStarC_Interactive_Ide_Types.tf_fname = fname;
           FStarC_Interactive_Ide_Types.tf_modtime = uu___
         } in
-      let rec aux deps1 final_tasks1 =
-        match deps1 with
-        | intf::impl::deps' when
-            FStarC_Universal.needs_interleaving intf impl ->
-            let uu___ =
-              let uu___1 =
-                let uu___2 = wrap intf in
-                let uu___3 = wrap impl in (uu___2, uu___3) in
-              FStarC_Interactive_Ide_Types.LDInterleaved uu___1 in
-            let uu___1 = aux deps' final_tasks1 in uu___ :: uu___1
-        | intf_or_impl::deps' ->
-            let uu___ =
-              let uu___1 = wrap intf_or_impl in
-              FStarC_Interactive_Ide_Types.LDSingle uu___1 in
-            let uu___1 = aux deps' final_tasks1 in uu___ :: uu___1
-        | [] -> final_tasks1 in
+      let rec aux deps1 =
+        fun final_tasks1 ->
+          match deps1 with
+          | intf::impl::deps' when
+              FStarC_Universal.needs_interleaving intf impl ->
+              let uu___ =
+                let uu___1 =
+                  let uu___2 = wrap intf in
+                  let uu___3 = wrap impl in (uu___2, uu___3) in
+                FStarC_Interactive_Ide_Types.LDInterleaved uu___1 in
+              let uu___1 = aux deps' final_tasks1 in uu___ :: uu___1
+          | intf_or_impl::deps' ->
+              let uu___ =
+                let uu___1 = wrap intf_or_impl in
+                FStarC_Interactive_Ide_Types.LDSingle uu___1 in
+              let uu___1 = aux deps' final_tasks1 in uu___ :: uu___1
+          | [] -> final_tasks1 in
       aux deps final_tasks
 let (deps_and_repl_ld_tasks_of_our_file :
   Prims.string ->
@@ -530,7 +531,7 @@ let (fresh_name_tracking_hooks :
       FStarC_Syntax_DsEnv.dsenv_hooks * FStarC_TypeChecker_Env.tcenv_hooks))
   =
   fun uu___ ->
-    let events = FStarC_Util.mk_ref [] in
+    let events = FStarC_Effect.mk_ref [] in
     let push_event evt =
       let uu___1 = let uu___2 = FStarC_Effect.op_Bang events in evt :: uu___2 in
       FStarC_Effect.op_Colon_Equals events uu___1 in
@@ -573,14 +574,17 @@ let (track_name_changes :
          (FStarC_TypeChecker_Env.env_t * name_tracking_event Prims.list))))
   =
   fun env ->
-    let set_hooks dshooks tchooks env1 =
-      let uu___ =
-        FStarC_Universal.with_dsenv_of_tcenv env1
-          (fun dsenv ->
-             let uu___1 = FStarC_Syntax_DsEnv.set_ds_hooks dsenv dshooks in
-             ((), uu___1)) in
-      match uu___ with
-      | ((), tcenv') -> FStarC_TypeChecker_Env.set_tc_hooks tcenv' tchooks in
+    let set_hooks dshooks =
+      fun tchooks ->
+        fun env1 ->
+          let uu___ =
+            FStarC_Universal.with_dsenv_of_tcenv env1
+              (fun dsenv ->
+                 let uu___1 = FStarC_Syntax_DsEnv.set_ds_hooks dsenv dshooks in
+                 ((), uu___1)) in
+          match uu___ with
+          | ((), tcenv') ->
+              FStarC_TypeChecker_Env.set_tc_hooks tcenv' tchooks in
     let uu___ =
       let uu___1 =
         FStarC_Syntax_DsEnv.ds_hooks env.FStarC_TypeChecker_Env.dsenv in
@@ -714,85 +718,90 @@ let (repl_ldtx :
   =
   fun st ->
     fun tasks ->
-      let rec revert_many st1 uu___ =
-        match uu___ with
-        | [] -> st1
-        | (_id, (task, _st'))::entries ->
-            let st' = pop_repl "repl_ldtx" st1 in
-            let dep_graph =
-              FStarC_TypeChecker_Env.dep_graph
-                st1.FStarC_Interactive_Ide_Types.repl_env in
-            let st'1 =
-              let uu___1 =
-                FStarC_TypeChecker_Env.set_dep_graph
-                  st'.FStarC_Interactive_Ide_Types.repl_env dep_graph in
-              {
-                FStarC_Interactive_Ide_Types.repl_line =
-                  (st'.FStarC_Interactive_Ide_Types.repl_line);
-                FStarC_Interactive_Ide_Types.repl_column =
-                  (st'.FStarC_Interactive_Ide_Types.repl_column);
-                FStarC_Interactive_Ide_Types.repl_fname =
-                  (st'.FStarC_Interactive_Ide_Types.repl_fname);
-                FStarC_Interactive_Ide_Types.repl_deps_stack =
-                  (st'.FStarC_Interactive_Ide_Types.repl_deps_stack);
-                FStarC_Interactive_Ide_Types.repl_curmod =
-                  (st'.FStarC_Interactive_Ide_Types.repl_curmod);
-                FStarC_Interactive_Ide_Types.repl_env = uu___1;
-                FStarC_Interactive_Ide_Types.repl_stdin =
-                  (st'.FStarC_Interactive_Ide_Types.repl_stdin);
-                FStarC_Interactive_Ide_Types.repl_names =
-                  (st'.FStarC_Interactive_Ide_Types.repl_names);
-                FStarC_Interactive_Ide_Types.repl_buffered_input_queries =
-                  (st'.FStarC_Interactive_Ide_Types.repl_buffered_input_queries);
-                FStarC_Interactive_Ide_Types.repl_lang =
-                  (st'.FStarC_Interactive_Ide_Types.repl_lang)
-              } in
-            revert_many st'1 entries in
-      let rec aux st1 tasks1 previous =
-        match (tasks1, previous) with
-        | ([], []) -> FStar_Pervasives.Inl st1
-        | (task::tasks2, []) ->
-            let timestamped_task = update_task_timestamps task in
-            let uu___ =
-              repl_tx st1 FStarC_Interactive_Ide_Types.LaxCheck
-                timestamped_task in
-            (match uu___ with
-             | (diag, st2) ->
-                 if Prims.op_Negation (FStarC_Util.is_some diag)
-                 then
-                   let uu___1 =
-                     let uu___2 = FStarC_Effect.op_Bang repl_stack in
-                     {
-                       FStarC_Interactive_Ide_Types.repl_line =
-                         (st2.FStarC_Interactive_Ide_Types.repl_line);
-                       FStarC_Interactive_Ide_Types.repl_column =
-                         (st2.FStarC_Interactive_Ide_Types.repl_column);
-                       FStarC_Interactive_Ide_Types.repl_fname =
-                         (st2.FStarC_Interactive_Ide_Types.repl_fname);
-                       FStarC_Interactive_Ide_Types.repl_deps_stack = uu___2;
-                       FStarC_Interactive_Ide_Types.repl_curmod =
-                         (st2.FStarC_Interactive_Ide_Types.repl_curmod);
-                       FStarC_Interactive_Ide_Types.repl_env =
-                         (st2.FStarC_Interactive_Ide_Types.repl_env);
-                       FStarC_Interactive_Ide_Types.repl_stdin =
-                         (st2.FStarC_Interactive_Ide_Types.repl_stdin);
-                       FStarC_Interactive_Ide_Types.repl_names =
-                         (st2.FStarC_Interactive_Ide_Types.repl_names);
-                       FStarC_Interactive_Ide_Types.repl_buffered_input_queries
-                         =
-                         (st2.FStarC_Interactive_Ide_Types.repl_buffered_input_queries);
-                       FStarC_Interactive_Ide_Types.repl_lang =
-                         (st2.FStarC_Interactive_Ide_Types.repl_lang)
-                     } in
-                   aux uu___1 tasks2 []
-                 else FStar_Pervasives.Inr st2)
-        | (task::tasks2, prev::previous1) when
-            let uu___ = update_task_timestamps task in
-            (FStar_Pervasives_Native.fst (FStar_Pervasives_Native.snd prev))
-              = uu___
-            -> aux st1 tasks2 previous1
-        | (tasks2, previous1) ->
-            let uu___ = revert_many st1 previous1 in aux uu___ tasks2 [] in
+      let rec revert_many st1 =
+        fun uu___ ->
+          match uu___ with
+          | [] -> st1
+          | (_id, (task, _st'))::entries ->
+              let st' = pop_repl "repl_ldtx" st1 in
+              let dep_graph =
+                FStarC_TypeChecker_Env.dep_graph
+                  st1.FStarC_Interactive_Ide_Types.repl_env in
+              let st'1 =
+                let uu___1 =
+                  FStarC_TypeChecker_Env.set_dep_graph
+                    st'.FStarC_Interactive_Ide_Types.repl_env dep_graph in
+                {
+                  FStarC_Interactive_Ide_Types.repl_line =
+                    (st'.FStarC_Interactive_Ide_Types.repl_line);
+                  FStarC_Interactive_Ide_Types.repl_column =
+                    (st'.FStarC_Interactive_Ide_Types.repl_column);
+                  FStarC_Interactive_Ide_Types.repl_fname =
+                    (st'.FStarC_Interactive_Ide_Types.repl_fname);
+                  FStarC_Interactive_Ide_Types.repl_deps_stack =
+                    (st'.FStarC_Interactive_Ide_Types.repl_deps_stack);
+                  FStarC_Interactive_Ide_Types.repl_curmod =
+                    (st'.FStarC_Interactive_Ide_Types.repl_curmod);
+                  FStarC_Interactive_Ide_Types.repl_env = uu___1;
+                  FStarC_Interactive_Ide_Types.repl_stdin =
+                    (st'.FStarC_Interactive_Ide_Types.repl_stdin);
+                  FStarC_Interactive_Ide_Types.repl_names =
+                    (st'.FStarC_Interactive_Ide_Types.repl_names);
+                  FStarC_Interactive_Ide_Types.repl_buffered_input_queries =
+                    (st'.FStarC_Interactive_Ide_Types.repl_buffered_input_queries);
+                  FStarC_Interactive_Ide_Types.repl_lang =
+                    (st'.FStarC_Interactive_Ide_Types.repl_lang)
+                } in
+              revert_many st'1 entries in
+      let rec aux st1 =
+        fun tasks1 ->
+          fun previous ->
+            match (tasks1, previous) with
+            | ([], []) -> FStar_Pervasives.Inl st1
+            | (task::tasks2, []) ->
+                let timestamped_task = update_task_timestamps task in
+                let uu___ =
+                  repl_tx st1 FStarC_Interactive_Ide_Types.LaxCheck
+                    timestamped_task in
+                (match uu___ with
+                 | (diag, st2) ->
+                     if Prims.op_Negation (FStarC_Util.is_some diag)
+                     then
+                       let uu___1 =
+                         let uu___2 = FStarC_Effect.op_Bang repl_stack in
+                         {
+                           FStarC_Interactive_Ide_Types.repl_line =
+                             (st2.FStarC_Interactive_Ide_Types.repl_line);
+                           FStarC_Interactive_Ide_Types.repl_column =
+                             (st2.FStarC_Interactive_Ide_Types.repl_column);
+                           FStarC_Interactive_Ide_Types.repl_fname =
+                             (st2.FStarC_Interactive_Ide_Types.repl_fname);
+                           FStarC_Interactive_Ide_Types.repl_deps_stack =
+                             uu___2;
+                           FStarC_Interactive_Ide_Types.repl_curmod =
+                             (st2.FStarC_Interactive_Ide_Types.repl_curmod);
+                           FStarC_Interactive_Ide_Types.repl_env =
+                             (st2.FStarC_Interactive_Ide_Types.repl_env);
+                           FStarC_Interactive_Ide_Types.repl_stdin =
+                             (st2.FStarC_Interactive_Ide_Types.repl_stdin);
+                           FStarC_Interactive_Ide_Types.repl_names =
+                             (st2.FStarC_Interactive_Ide_Types.repl_names);
+                           FStarC_Interactive_Ide_Types.repl_buffered_input_queries
+                             =
+                             (st2.FStarC_Interactive_Ide_Types.repl_buffered_input_queries);
+                           FStarC_Interactive_Ide_Types.repl_lang =
+                             (st2.FStarC_Interactive_Ide_Types.repl_lang)
+                         } in
+                       aux uu___1 tasks2 []
+                     else FStar_Pervasives.Inr st2)
+            | (task::tasks2, prev::previous1) when
+                let uu___ = update_task_timestamps task in
+                (FStar_Pervasives_Native.fst
+                   (FStar_Pervasives_Native.snd prev))
+                  = uu___
+                -> aux st1 tasks2 previous1
+            | (tasks2, previous1) ->
+                let uu___ = revert_many st1 previous1 in aux uu___ tasks2 [] in
       aux st tasks
         (FStarC_List.rev st.FStarC_Interactive_Ide_Types.repl_deps_stack)
 let (ld_deps :
@@ -872,16 +881,14 @@ let (add_module_completions :
              Prims.strcat (FStarC_String.uppercase first) uu___1) in
         let mods = FStarC_Parser_Dep.build_inclusion_candidates_list () in
         let loaded_mods_set =
-          let uu___ = FStarC_Util.psmap_empty () in
-          let uu___1 =
-            let uu___2 = FStarC_Basefiles.prims () in uu___2 :: deps in
+          let uu___ = FStarC_PSMap.empty () in
           FStarC_List.fold_left
             (fun acc ->
                fun dep ->
-                 let uu___2 = FStarC_Parser_Dep.lowercase_module_name dep in
-                 FStarC_Util.psmap_add acc uu___2 true) uu___ uu___1 in
+                 let uu___1 = FStarC_Parser_Dep.lowercase_module_name dep in
+                 FStarC_PSMap.add acc uu___1 true) uu___ deps in
         let loaded modname =
-          FStarC_Util.psmap_find_default loaded_mods_set modname false in
+          FStarC_PSMap.find_default loaded_mods_set modname false in
         let this_mod_key = FStarC_Parser_Dep.lowercase_module_name this_fname in
         FStarC_List.fold_left
           (fun table1 ->

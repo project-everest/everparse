@@ -507,16 +507,18 @@ let rec (eq_t :
                 | FStar_Pervasives_Native.Some n ->
                     if n <= (FStarC_List.length args1)
                     then
-                      let eq_args1 as1 as2 =
-                        FStarC_List.fold_left2
-                          (fun acc ->
-                             fun uu___3 ->
-                               fun uu___4 ->
-                                 match (uu___3, uu___4) with
-                                 | ((a1, uu___5), (a2, uu___6)) ->
-                                     let uu___7 = eq_t env a1 a2 in
-                                     eq_inj acc uu___7)
-                          FStarC_TypeChecker_TermEqAndSimplify.Equal as1 as2 in
+                      let eq_args1 as1 =
+                        fun as2 ->
+                          FStarC_List.fold_left2
+                            (fun acc ->
+                               fun uu___3 ->
+                                 fun uu___4 ->
+                                   match (uu___3, uu___4) with
+                                   | ((a1, uu___5), (a2, uu___6)) ->
+                                       let uu___7 = eq_t env a1 a2 in
+                                       eq_inj acc uu___7)
+                            FStarC_TypeChecker_TermEqAndSimplify.Equal as1
+                            as2 in
                       let uu___3 = FStarC_List.splitAt n args1 in
                       (match uu___3 with
                        | (parms1, args11) ->
@@ -1011,65 +1013,71 @@ let (__proj__AbstractNBE__item__t : abstract_nbe_term -> t) =
   fun projectee -> match projectee with | AbstractNBE t1 -> t1
 let (mk_any_emb : t -> t embedding) =
   fun ty ->
-    let em1 _cb a = a in
-    let un1 _cb t1 = FStar_Pervasives_Native.Some t1 in
+    let em1 _cb = fun a -> a in
+    let un1 _cb = fun t1 -> FStar_Pervasives_Native.Some t1 in
     mk_emb em1 un1 (fun uu___ -> ty)
       (fun uu___ -> FStarC_Syntax_Syntax.ET_abstract)
 let (e_any : t embedding) =
-  let em1 _cb a = a in
-  let un1 _cb t1 = FStar_Pervasives_Native.Some t1 in
+  let em1 _cb = fun a -> a in
+  let un1 _cb = fun t1 -> FStar_Pervasives_Native.Some t1 in
   mk_emb em1 un1 (fun uu___ -> lid_as_typ FStarC_Parser_Const.term_lid [] [])
     (fun uu___ -> FStarC_Syntax_Syntax.ET_abstract)
 let (e_unit : unit embedding) =
-  let em1 _cb a = Constant Unit in
-  let un1 _cb t1 = FStar_Pervasives_Native.Some () in
+  let em1 _cb = fun a -> Constant Unit in
+  let un1 _cb = fun t1 -> FStar_Pervasives_Native.Some () in
   mk_emb' em1 un1
     (fun uu___ -> lid_as_typ FStarC_Parser_Const.unit_lid [] [])
     (FStarC_Syntax_Embeddings_Base.emb_typ_of FStarC_Syntax_Embeddings.e_unit)
 let (e_bool : Prims.bool embedding) =
-  let em1 _cb a = Constant (Bool a) in
-  let un1 _cb t1 =
-    match t1 with
-    | Constant (Bool a) -> FStar_Pervasives_Native.Some a
-    | uu___ -> FStar_Pervasives_Native.None in
+  let em1 _cb = fun a -> Constant (Bool a) in
+  let un1 _cb =
+    fun t1 ->
+      match t1 with
+      | Constant (Bool a) -> FStar_Pervasives_Native.Some a
+      | uu___ -> FStar_Pervasives_Native.None in
   mk_emb' em1 un1
     (fun uu___ -> lid_as_typ FStarC_Parser_Const.bool_lid [] [])
     (FStarC_Syntax_Embeddings_Base.emb_typ_of FStarC_Syntax_Embeddings.e_bool)
 let (e_char : FStar_String.char embedding) =
-  let em1 _cb c = Constant (Char c) in
-  let un1 _cb c =
-    match c with
-    | Constant (Char a) -> FStar_Pervasives_Native.Some a
-    | uu___ -> FStar_Pervasives_Native.None in
+  let em1 _cb = fun c -> Constant (Char c) in
+  let un1 _cb =
+    fun c ->
+      match c with
+      | Constant (Char a) -> FStar_Pervasives_Native.Some a
+      | uu___ -> FStar_Pervasives_Native.None in
   mk_emb' em1 un1
     (fun uu___ -> lid_as_typ FStarC_Parser_Const.char_lid [] [])
     (FStarC_Syntax_Embeddings_Base.emb_typ_of FStarC_Syntax_Embeddings.e_char)
 let (e_string : Prims.string embedding) =
-  let em1 _cb s = Constant (String (s, FStarC_Range_Type.dummyRange)) in
-  let un1 _cb s =
-    match s with
-    | Constant (String (s1, uu___)) -> FStar_Pervasives_Native.Some s1
-    | uu___ -> FStar_Pervasives_Native.None in
+  let em1 _cb = fun s -> Constant (String (s, FStarC_Range_Type.dummyRange)) in
+  let un1 _cb =
+    fun s ->
+      match s with
+      | Constant (String (s1, uu___)) -> FStar_Pervasives_Native.Some s1
+      | uu___ -> FStar_Pervasives_Native.None in
   mk_emb' em1 un1
     (fun uu___ -> lid_as_typ FStarC_Parser_Const.string_lid [] [])
     (FStarC_Syntax_Embeddings_Base.emb_typ_of
        FStarC_Syntax_Embeddings.e_string)
 let (e_int : FStarC_BigInt.t embedding) =
-  let em1 _cb c = Constant (Int c) in
-  let un1 _cb c =
-    match c with
-    | Constant (Int a) -> FStar_Pervasives_Native.Some a
-    | uu___ -> FStar_Pervasives_Native.None in
+  let em1 _cb = fun c -> Constant (Int c) in
+  let un1 _cb =
+    fun c ->
+      match c with
+      | Constant (Int a) -> FStar_Pervasives_Native.Some a
+      | uu___ -> FStar_Pervasives_Native.None in
   mk_emb' em1 un1 (fun uu___ -> lid_as_typ FStarC_Parser_Const.int_lid [] [])
     (FStarC_Syntax_Embeddings_Base.emb_typ_of
        FStarC_Syntax_Embeddings.e_fsint)
 let (e_real : FStarC_Real.real embedding) =
-  let em1 _cb uu___ =
-    match uu___ with | FStarC_Real.Real c -> Constant (Real c) in
-  let un1 _cb c =
-    match c with
-    | Constant (Real a) -> FStar_Pervasives_Native.Some (FStarC_Real.Real a)
-    | uu___ -> FStar_Pervasives_Native.None in
+  let em1 _cb =
+    fun uu___ -> match uu___ with | FStarC_Real.Real c -> Constant (Real c) in
+  let un1 _cb =
+    fun c ->
+      match c with
+      | Constant (Real a) ->
+          FStar_Pervasives_Native.Some (FStarC_Real.Real a)
+      | uu___ -> FStar_Pervasives_Native.None in
   mk_emb' em1 un1
     (fun uu___ -> lid_as_typ FStarC_Parser_Const.real_lid [] [])
     (FStarC_Syntax_Embeddings_Base.emb_typ_of FStarC_Syntax_Embeddings.e_real)
@@ -1085,43 +1093,45 @@ let e_option :
           FStarC_Ident.string_of_lid FStarC_Parser_Const.option_lid in
         let uu___3 = let uu___4 = ea.e_typ () in [uu___4] in (uu___2, uu___3) in
       FStarC_Syntax_Syntax.ET_app uu___1 in
-    let em1 cb o =
-      lazy_embed etyp o
-        (fun uu___ ->
-           match o with
-           | FStar_Pervasives_Native.None ->
-               let uu___1 =
-                 let uu___2 = let uu___3 = type_of ea in as_iarg uu___3 in
-                 [uu___2] in
-               lid_as_constr FStarC_Parser_Const.none_lid
-                 [FStarC_Syntax_Syntax.U_zero] uu___1
-           | FStar_Pervasives_Native.Some x ->
-               let uu___1 =
-                 let uu___2 = let uu___3 = embed ea cb x in as_arg uu___3 in
-                 let uu___3 =
-                   let uu___4 = let uu___5 = type_of ea in as_iarg uu___5 in
-                   [uu___4] in
-                 uu___2 :: uu___3 in
-               lid_as_constr FStarC_Parser_Const.some_lid
-                 [FStarC_Syntax_Syntax.U_zero] uu___1) in
-    let un1 cb trm =
-      lazy_unembed etyp trm
-        (fun trm1 ->
-           match trm1.nbe_t with
-           | Construct (fvar, us, args1) when
-               FStarC_Syntax_Syntax.fv_eq_lid fvar
-                 FStarC_Parser_Const.none_lid
-               -> FStar_Pervasives_Native.Some FStar_Pervasives_Native.None
-           | Construct (fvar, us, (a1, uu___)::uu___1::[]) when
-               FStarC_Syntax_Syntax.fv_eq_lid fvar
-                 FStarC_Parser_Const.some_lid
-               ->
-               let uu___2 = unembed ea cb a1 in
-               FStarC_Util.bind_opt uu___2
-                 (fun a2 ->
-                    FStar_Pervasives_Native.Some
-                      (FStar_Pervasives_Native.Some a2))
-           | uu___ -> FStar_Pervasives_Native.None) in
+    let em1 cb =
+      fun o ->
+        lazy_embed etyp o
+          (fun uu___ ->
+             match o with
+             | FStar_Pervasives_Native.None ->
+                 let uu___1 =
+                   let uu___2 = let uu___3 = type_of ea in as_iarg uu___3 in
+                   [uu___2] in
+                 lid_as_constr FStarC_Parser_Const.none_lid
+                   [FStarC_Syntax_Syntax.U_zero] uu___1
+             | FStar_Pervasives_Native.Some x ->
+                 let uu___1 =
+                   let uu___2 = let uu___3 = embed ea cb x in as_arg uu___3 in
+                   let uu___3 =
+                     let uu___4 = let uu___5 = type_of ea in as_iarg uu___5 in
+                     [uu___4] in
+                   uu___2 :: uu___3 in
+                 lid_as_constr FStarC_Parser_Const.some_lid
+                   [FStarC_Syntax_Syntax.U_zero] uu___1) in
+    let un1 cb =
+      fun trm ->
+        lazy_unembed etyp trm
+          (fun trm1 ->
+             match trm1.nbe_t with
+             | Construct (fvar, us, args1) when
+                 FStarC_Syntax_Syntax.fv_eq_lid fvar
+                   FStarC_Parser_Const.none_lid
+                 -> FStar_Pervasives_Native.Some FStar_Pervasives_Native.None
+             | Construct (fvar, us, (a1, uu___)::uu___1::[]) when
+                 FStarC_Syntax_Syntax.fv_eq_lid fvar
+                   FStarC_Parser_Const.some_lid
+                 ->
+                 let uu___2 = unembed ea cb a1 in
+                 FStarC_Util.bind_opt uu___2
+                   (fun a2 ->
+                      FStar_Pervasives_Native.Some
+                        (FStar_Pervasives_Native.Some a2))
+             | uu___ -> FStar_Pervasives_Native.None) in
     mk_emb em1 un1
       (fun uu___ ->
          let uu___1 =
@@ -1134,68 +1144,73 @@ let e_tuple2 : 'a 'b . 'a embedding -> 'b embedding -> ('a * 'b) embedding =
       let etyp uu___ =
         let uu___1 =
           let uu___2 =
-            FStarC_Ident.string_of_lid FStarC_Parser_Const.lid_tuple2 in
+            FStarC_Ident.string_of_lid FStarC_Parser_Const_Tuples.lid_tuple2 in
           let uu___3 =
             let uu___4 = ea.e_typ () in
             let uu___5 = let uu___6 = eb.e_typ () in [uu___6] in uu___4 ::
               uu___5 in
           (uu___2, uu___3) in
         FStarC_Syntax_Syntax.ET_app uu___1 in
-      let em1 cb x =
-        lazy_embed etyp x
-          (fun uu___ ->
-             let uu___1 =
-               let uu___2 =
-                 let uu___3 = embed eb cb (FStar_Pervasives_Native.snd x) in
-                 as_arg uu___3 in
-               let uu___3 =
-                 let uu___4 =
-                   let uu___5 = embed ea cb (FStar_Pervasives_Native.fst x) in
-                   as_arg uu___5 in
-                 let uu___5 =
-                   let uu___6 = let uu___7 = type_of eb in as_iarg uu___7 in
-                   let uu___7 =
-                     let uu___8 = let uu___9 = type_of ea in as_iarg uu___9 in
-                     [uu___8] in
-                   uu___6 :: uu___7 in
-                 uu___4 :: uu___5 in
-               uu___2 :: uu___3 in
-             lid_as_constr FStarC_Parser_Const.lid_Mktuple2
-               [FStarC_Syntax_Syntax.U_zero; FStarC_Syntax_Syntax.U_zero]
-               uu___1) in
-      let un1 cb trm =
-        lazy_unembed etyp trm
-          (fun uu___ ->
-             (fun trm1 ->
-                match trm1.nbe_t with
-                | Construct
-                    (fvar, us, (b1, uu___)::(a1, uu___1)::uu___2::uu___3::[])
-                    when
-                    FStarC_Syntax_Syntax.fv_eq_lid fvar
-                      FStarC_Parser_Const.lid_Mktuple2
-                    ->
-                    Obj.magic
-                      (Obj.repr
-                         (let uu___4 = unembed ea cb a1 in
-                          FStarC_Class_Monad.op_let_Bang
-                            FStarC_Class_Monad.monad_option () ()
-                            (Obj.magic uu___4)
-                            (fun uu___5 ->
-                               (fun a2 ->
-                                  let a2 = Obj.magic a2 in
-                                  let uu___5 = unembed eb cb b1 in
-                                  Obj.magic
-                                    (FStarC_Class_Monad.op_let_Bang
-                                       FStarC_Class_Monad.monad_option () ()
-                                       (Obj.magic uu___5)
-                                       (fun uu___6 ->
-                                          (fun b2 ->
-                                             let b2 = Obj.magic b2 in
-                                             Obj.magic
-                                               (FStar_Pervasives_Native.Some
-                                                  (a2, b2))) uu___6))) uu___5)))
-                | uu___ -> Obj.magic (Obj.repr FStar_Pervasives_Native.None))
-               uu___) in
+      let em1 cb =
+        fun x ->
+          lazy_embed etyp x
+            (fun uu___ ->
+               let uu___1 =
+                 let uu___2 =
+                   let uu___3 = embed eb cb (FStar_Pervasives_Native.snd x) in
+                   as_arg uu___3 in
+                 let uu___3 =
+                   let uu___4 =
+                     let uu___5 = embed ea cb (FStar_Pervasives_Native.fst x) in
+                     as_arg uu___5 in
+                   let uu___5 =
+                     let uu___6 = let uu___7 = type_of eb in as_iarg uu___7 in
+                     let uu___7 =
+                       let uu___8 = let uu___9 = type_of ea in as_iarg uu___9 in
+                       [uu___8] in
+                     uu___6 :: uu___7 in
+                   uu___4 :: uu___5 in
+                 uu___2 :: uu___3 in
+               lid_as_constr FStarC_Parser_Const_Tuples.lid_Mktuple2
+                 [FStarC_Syntax_Syntax.U_zero; FStarC_Syntax_Syntax.U_zero]
+                 uu___1) in
+      let un1 cb =
+        fun trm ->
+          lazy_unembed etyp trm
+            (fun uu___ ->
+               (fun trm1 ->
+                  match trm1.nbe_t with
+                  | Construct
+                      (fvar, us,
+                       (b1, uu___)::(a1, uu___1)::uu___2::uu___3::[])
+                      when
+                      FStarC_Syntax_Syntax.fv_eq_lid fvar
+                        FStarC_Parser_Const_Tuples.lid_Mktuple2
+                      ->
+                      Obj.magic
+                        (Obj.repr
+                           (let uu___4 = unembed ea cb a1 in
+                            FStarC_Class_Monad.op_let_Bang
+                              FStarC_Class_Monad.monad_option () ()
+                              (Obj.magic uu___4)
+                              (fun uu___5 ->
+                                 (fun a2 ->
+                                    let a2 = Obj.magic a2 in
+                                    let uu___5 = unembed eb cb b1 in
+                                    Obj.magic
+                                      (FStarC_Class_Monad.op_let_Bang
+                                         FStarC_Class_Monad.monad_option ()
+                                         () (Obj.magic uu___5)
+                                         (fun uu___6 ->
+                                            (fun b2 ->
+                                               let b2 = Obj.magic b2 in
+                                               Obj.magic
+                                                 (FStar_Pervasives_Native.Some
+                                                    (a2, b2))) uu___6)))
+                                   uu___5)))
+                  | uu___ ->
+                      Obj.magic (Obj.repr FStar_Pervasives_Native.None))
+                 uu___) in
       mk_emb em1 un1
         (fun uu___ ->
            let uu___1 =
@@ -1204,7 +1219,7 @@ let e_tuple2 : 'a 'b . 'a embedding -> 'b embedding -> ('a * 'b) embedding =
                let uu___4 = let uu___5 = type_of ea in as_arg uu___5 in
                [uu___4] in
              uu___2 :: uu___3 in
-           lid_as_typ FStarC_Parser_Const.lid_tuple2
+           lid_as_typ FStarC_Parser_Const_Tuples.lid_tuple2
              [FStarC_Syntax_Syntax.U_zero; FStarC_Syntax_Syntax.U_zero]
              uu___1) etyp
 let e_tuple3 :
@@ -1217,7 +1232,8 @@ let e_tuple3 :
         let etyp uu___ =
           let uu___1 =
             let uu___2 =
-              FStarC_Ident.string_of_lid FStarC_Parser_Const.lid_tuple3 in
+              FStarC_Ident.string_of_lid
+                FStarC_Parser_Const_Tuples.lid_tuple3 in
             let uu___3 =
               let uu___4 = ea.e_typ () in
               let uu___5 =
@@ -1227,85 +1243,90 @@ let e_tuple3 :
               uu___4 :: uu___5 in
             (uu___2, uu___3) in
           FStarC_Syntax_Syntax.ET_app uu___1 in
-        let em1 cb uu___ =
-          match uu___ with
-          | (x1, x2, x3) ->
-              lazy_embed etyp (x1, x2, x3)
-                (fun uu___1 ->
-                   let uu___2 =
-                     let uu___3 =
-                       let uu___4 = embed ec cb x3 in as_arg uu___4 in
-                     let uu___4 =
-                       let uu___5 =
-                         let uu___6 = embed eb cb x2 in as_arg uu___6 in
-                       let uu___6 =
-                         let uu___7 =
-                           let uu___8 = embed ea cb x1 in as_arg uu___8 in
-                         let uu___8 =
-                           let uu___9 =
-                             let uu___10 = type_of ec in as_iarg uu___10 in
-                           let uu___10 =
-                             let uu___11 =
-                               let uu___12 = type_of eb in as_iarg uu___12 in
-                             let uu___12 =
-                               let uu___13 =
-                                 let uu___14 = type_of ea in as_iarg uu___14 in
-                               [uu___13] in
-                             uu___11 :: uu___12 in
-                           uu___9 :: uu___10 in
-                         uu___7 :: uu___8 in
-                       uu___5 :: uu___6 in
-                     uu___3 :: uu___4 in
-                   lid_as_constr FStarC_Parser_Const.lid_Mktuple3
-                     [FStarC_Syntax_Syntax.U_zero;
-                     FStarC_Syntax_Syntax.U_zero;
-                     FStarC_Syntax_Syntax.U_zero] uu___2) in
-        let un1 cb trm =
-          lazy_unembed etyp trm
-            (fun uu___ ->
-               (fun trm1 ->
-                  match trm1.nbe_t with
-                  | Construct
-                      (fvar, us,
-                       (c1, uu___)::(b1, uu___1)::(a1, uu___2)::uu___3::uu___4::uu___5::[])
-                      when
-                      FStarC_Syntax_Syntax.fv_eq_lid fvar
-                        FStarC_Parser_Const.lid_Mktuple3
-                      ->
-                      Obj.magic
-                        (Obj.repr
-                           (let uu___6 = unembed ea cb a1 in
-                            FStarC_Class_Monad.op_let_Bang
-                              FStarC_Class_Monad.monad_option () ()
-                              (Obj.magic uu___6)
-                              (fun uu___7 ->
-                                 (fun a2 ->
-                                    let a2 = Obj.magic a2 in
-                                    let uu___7 = unembed eb cb b1 in
-                                    Obj.magic
-                                      (FStarC_Class_Monad.op_let_Bang
-                                         FStarC_Class_Monad.monad_option ()
-                                         () (Obj.magic uu___7)
-                                         (fun uu___8 ->
-                                            (fun b2 ->
-                                               let b2 = Obj.magic b2 in
-                                               let uu___8 = unembed ec cb c1 in
-                                               Obj.magic
-                                                 (FStarC_Class_Monad.op_let_Bang
-                                                    FStarC_Class_Monad.monad_option
-                                                    () () (Obj.magic uu___8)
-                                                    (fun uu___9 ->
-                                                       (fun c2 ->
-                                                          let c2 =
-                                                            Obj.magic c2 in
-                                                          Obj.magic
-                                                            (FStar_Pervasives_Native.Some
-                                                               (a2, b2, c2)))
-                                                         uu___9))) uu___8)))
-                                   uu___7)))
-                  | uu___ ->
-                      Obj.magic (Obj.repr FStar_Pervasives_Native.None))
-                 uu___) in
+        let em1 cb =
+          fun uu___ ->
+            match uu___ with
+            | (x1, x2, x3) ->
+                lazy_embed etyp (x1, x2, x3)
+                  (fun uu___1 ->
+                     let uu___2 =
+                       let uu___3 =
+                         let uu___4 = embed ec cb x3 in as_arg uu___4 in
+                       let uu___4 =
+                         let uu___5 =
+                           let uu___6 = embed eb cb x2 in as_arg uu___6 in
+                         let uu___6 =
+                           let uu___7 =
+                             let uu___8 = embed ea cb x1 in as_arg uu___8 in
+                           let uu___8 =
+                             let uu___9 =
+                               let uu___10 = type_of ec in as_iarg uu___10 in
+                             let uu___10 =
+                               let uu___11 =
+                                 let uu___12 = type_of eb in as_iarg uu___12 in
+                               let uu___12 =
+                                 let uu___13 =
+                                   let uu___14 = type_of ea in
+                                   as_iarg uu___14 in
+                                 [uu___13] in
+                               uu___11 :: uu___12 in
+                             uu___9 :: uu___10 in
+                           uu___7 :: uu___8 in
+                         uu___5 :: uu___6 in
+                       uu___3 :: uu___4 in
+                     lid_as_constr FStarC_Parser_Const_Tuples.lid_Mktuple3
+                       [FStarC_Syntax_Syntax.U_zero;
+                       FStarC_Syntax_Syntax.U_zero;
+                       FStarC_Syntax_Syntax.U_zero] uu___2) in
+        let un1 cb =
+          fun trm ->
+            lazy_unembed etyp trm
+              (fun uu___ ->
+                 (fun trm1 ->
+                    match trm1.nbe_t with
+                    | Construct
+                        (fvar, us,
+                         (c1, uu___)::(b1, uu___1)::(a1, uu___2)::uu___3::uu___4::uu___5::[])
+                        when
+                        FStarC_Syntax_Syntax.fv_eq_lid fvar
+                          FStarC_Parser_Const_Tuples.lid_Mktuple3
+                        ->
+                        Obj.magic
+                          (Obj.repr
+                             (let uu___6 = unembed ea cb a1 in
+                              FStarC_Class_Monad.op_let_Bang
+                                FStarC_Class_Monad.monad_option () ()
+                                (Obj.magic uu___6)
+                                (fun uu___7 ->
+                                   (fun a2 ->
+                                      let a2 = Obj.magic a2 in
+                                      let uu___7 = unembed eb cb b1 in
+                                      Obj.magic
+                                        (FStarC_Class_Monad.op_let_Bang
+                                           FStarC_Class_Monad.monad_option ()
+                                           () (Obj.magic uu___7)
+                                           (fun uu___8 ->
+                                              (fun b2 ->
+                                                 let b2 = Obj.magic b2 in
+                                                 let uu___8 =
+                                                   unembed ec cb c1 in
+                                                 Obj.magic
+                                                   (FStarC_Class_Monad.op_let_Bang
+                                                      FStarC_Class_Monad.monad_option
+                                                      () ()
+                                                      (Obj.magic uu___8)
+                                                      (fun uu___9 ->
+                                                         (fun c2 ->
+                                                            let c2 =
+                                                              Obj.magic c2 in
+                                                            Obj.magic
+                                                              (FStar_Pervasives_Native.Some
+                                                                 (a2, b2, c2)))
+                                                           uu___9))) uu___8)))
+                                     uu___7)))
+                    | uu___ ->
+                        Obj.magic (Obj.repr FStar_Pervasives_Native.None))
+                   uu___) in
         mk_emb em1 un1
           (fun uu___ ->
              let uu___1 =
@@ -1317,7 +1338,7 @@ let e_tuple3 :
                    [uu___6] in
                  uu___4 :: uu___5 in
                uu___2 :: uu___3 in
-             lid_as_typ FStarC_Parser_Const.lid_tuple3
+             lid_as_typ FStarC_Parser_Const_Tuples.lid_tuple3
                [FStarC_Syntax_Syntax.U_zero;
                FStarC_Syntax_Syntax.U_zero;
                FStarC_Syntax_Syntax.U_zero] uu___1) etyp
@@ -1334,7 +1355,8 @@ let e_tuple4 :
           let etyp uu___ =
             let uu___1 =
               let uu___2 =
-                FStarC_Ident.string_of_lid FStarC_Parser_Const.lid_tuple4 in
+                FStarC_Ident.string_of_lid
+                  FStarC_Parser_Const_Tuples.lid_tuple4 in
               let uu___3 =
                 let uu___4 = ea.e_typ () in
                 let uu___5 =
@@ -1347,102 +1369,107 @@ let e_tuple4 :
                 uu___4 :: uu___5 in
               (uu___2, uu___3) in
             FStarC_Syntax_Syntax.ET_app uu___1 in
-          let em1 cb uu___ =
-            match uu___ with
-            | (x1, x2, x3, x4) ->
-                lazy_embed etyp (x1, x2, x3, x4)
-                  (fun uu___1 ->
-                     let uu___2 =
-                       let uu___3 =
-                         let uu___4 = embed ed cb x4 in as_arg uu___4 in
-                       let uu___4 =
-                         let uu___5 =
-                           let uu___6 = embed ec cb x3 in as_arg uu___6 in
-                         let uu___6 =
-                           let uu___7 =
-                             let uu___8 = embed eb cb x2 in as_arg uu___8 in
-                           let uu___8 =
-                             let uu___9 =
-                               let uu___10 = embed ea cb x1 in as_arg uu___10 in
-                             let uu___10 =
-                               let uu___11 =
-                                 let uu___12 = type_of ed in as_iarg uu___12 in
-                               let uu___12 =
-                                 let uu___13 =
-                                   let uu___14 = type_of ec in
-                                   as_iarg uu___14 in
-                                 let uu___14 =
-                                   let uu___15 =
-                                     let uu___16 = type_of eb in
-                                     as_iarg uu___16 in
-                                   let uu___16 =
-                                     let uu___17 =
-                                       let uu___18 = type_of ea in
-                                       as_iarg uu___18 in
-                                     [uu___17] in
-                                   uu___15 :: uu___16 in
-                                 uu___13 :: uu___14 in
-                               uu___11 :: uu___12 in
-                             uu___9 :: uu___10 in
-                           uu___7 :: uu___8 in
-                         uu___5 :: uu___6 in
-                       uu___3 :: uu___4 in
-                     lid_as_constr FStarC_Parser_Const.lid_Mktuple4
-                       [FStarC_Syntax_Syntax.U_zero;
-                       FStarC_Syntax_Syntax.U_zero;
-                       FStarC_Syntax_Syntax.U_zero;
-                       FStarC_Syntax_Syntax.U_zero] uu___2) in
-          let un1 cb trm =
-            lazy_unembed etyp trm
-              (fun uu___ ->
-                 (fun trm1 ->
-                    match trm1.nbe_t with
-                    | Construct
-                        (fvar, us,
-                         (d1, uu___)::(c1, uu___1)::(b1, uu___2)::(a1,
-                                                                   uu___3)::uu___4::uu___5::uu___6::uu___7::[])
-                        when
-                        FStarC_Syntax_Syntax.fv_eq_lid fvar
-                          FStarC_Parser_Const.lid_Mktuple4
-                        ->
-                        Obj.magic
-                          (Obj.repr
-                             (let uu___8 = unembed ea cb a1 in
-                              FStarC_Class_Monad.op_let_Bang
-                                FStarC_Class_Monad.monad_option () ()
-                                (Obj.magic uu___8)
-                                (fun uu___9 ->
-                                   (fun a2 ->
-                                      let a2 = Obj.magic a2 in
-                                      let uu___9 = unembed eb cb b1 in
-                                      Obj.magic
-                                        (FStarC_Class_Monad.op_let_Bang
-                                           FStarC_Class_Monad.monad_option ()
-                                           () (Obj.magic uu___9)
-                                           (fun uu___10 ->
-                                              (fun b2 ->
-                                                 let b2 = Obj.magic b2 in
-                                                 let uu___10 =
-                                                   unembed ec cb c1 in
-                                                 Obj.magic
-                                                   (FStarC_Class_Monad.op_let_Bang
-                                                      FStarC_Class_Monad.monad_option
-                                                      () ()
-                                                      (Obj.magic uu___10)
-                                                      (fun uu___11 ->
-                                                         (fun c2 ->
-                                                            let c2 =
-                                                              Obj.magic c2 in
-                                                            let uu___11 =
-                                                              unembed ed cb
-                                                                d1 in
-                                                            Obj.magic
-                                                              (FStarC_Class_Monad.op_let_Bang
-                                                                 FStarC_Class_Monad.monad_option
-                                                                 () ()
-                                                                 (Obj.magic
+          let em1 cb =
+            fun uu___ ->
+              match uu___ with
+              | (x1, x2, x3, x4) ->
+                  lazy_embed etyp (x1, x2, x3, x4)
+                    (fun uu___1 ->
+                       let uu___2 =
+                         let uu___3 =
+                           let uu___4 = embed ed cb x4 in as_arg uu___4 in
+                         let uu___4 =
+                           let uu___5 =
+                             let uu___6 = embed ec cb x3 in as_arg uu___6 in
+                           let uu___6 =
+                             let uu___7 =
+                               let uu___8 = embed eb cb x2 in as_arg uu___8 in
+                             let uu___8 =
+                               let uu___9 =
+                                 let uu___10 = embed ea cb x1 in
+                                 as_arg uu___10 in
+                               let uu___10 =
+                                 let uu___11 =
+                                   let uu___12 = type_of ed in
+                                   as_iarg uu___12 in
+                                 let uu___12 =
+                                   let uu___13 =
+                                     let uu___14 = type_of ec in
+                                     as_iarg uu___14 in
+                                   let uu___14 =
+                                     let uu___15 =
+                                       let uu___16 = type_of eb in
+                                       as_iarg uu___16 in
+                                     let uu___16 =
+                                       let uu___17 =
+                                         let uu___18 = type_of ea in
+                                         as_iarg uu___18 in
+                                       [uu___17] in
+                                     uu___15 :: uu___16 in
+                                   uu___13 :: uu___14 in
+                                 uu___11 :: uu___12 in
+                               uu___9 :: uu___10 in
+                             uu___7 :: uu___8 in
+                           uu___5 :: uu___6 in
+                         uu___3 :: uu___4 in
+                       lid_as_constr FStarC_Parser_Const_Tuples.lid_Mktuple4
+                         [FStarC_Syntax_Syntax.U_zero;
+                         FStarC_Syntax_Syntax.U_zero;
+                         FStarC_Syntax_Syntax.U_zero;
+                         FStarC_Syntax_Syntax.U_zero] uu___2) in
+          let un1 cb =
+            fun trm ->
+              lazy_unembed etyp trm
+                (fun uu___ ->
+                   (fun trm1 ->
+                      match trm1.nbe_t with
+                      | Construct
+                          (fvar, us,
+                           (d1, uu___)::(c1, uu___1)::(b1, uu___2)::(a1,
+                                                                    uu___3)::uu___4::uu___5::uu___6::uu___7::[])
+                          when
+                          FStarC_Syntax_Syntax.fv_eq_lid fvar
+                            FStarC_Parser_Const_Tuples.lid_Mktuple4
+                          ->
+                          Obj.magic
+                            (Obj.repr
+                               (let uu___8 = unembed ea cb a1 in
+                                FStarC_Class_Monad.op_let_Bang
+                                  FStarC_Class_Monad.monad_option () ()
+                                  (Obj.magic uu___8)
+                                  (fun uu___9 ->
+                                     (fun a2 ->
+                                        let a2 = Obj.magic a2 in
+                                        let uu___9 = unembed eb cb b1 in
+                                        Obj.magic
+                                          (FStarC_Class_Monad.op_let_Bang
+                                             FStarC_Class_Monad.monad_option
+                                             () () (Obj.magic uu___9)
+                                             (fun uu___10 ->
+                                                (fun b2 ->
+                                                   let b2 = Obj.magic b2 in
+                                                   let uu___10 =
+                                                     unembed ec cb c1 in
+                                                   Obj.magic
+                                                     (FStarC_Class_Monad.op_let_Bang
+                                                        FStarC_Class_Monad.monad_option
+                                                        () ()
+                                                        (Obj.magic uu___10)
+                                                        (fun uu___11 ->
+                                                           (fun c2 ->
+                                                              let c2 =
+                                                                Obj.magic c2 in
+                                                              let uu___11 =
+                                                                unembed ed cb
+                                                                  d1 in
+                                                              Obj.magic
+                                                                (FStarC_Class_Monad.op_let_Bang
+                                                                   FStarC_Class_Monad.monad_option
+                                                                   () ()
+                                                                   (Obj.magic
                                                                     uu___11)
-                                                                 (fun uu___12
+                                                                   (fun
+                                                                    uu___12
                                                                     ->
                                                                     (fun d2
                                                                     ->
@@ -1454,11 +1481,11 @@ let e_tuple4 :
                                                                     (a2, b2,
                                                                     c2, d2)))
                                                                     uu___12)))
-                                                           uu___11))) uu___10)))
-                                     uu___9)))
-                    | uu___ ->
-                        Obj.magic (Obj.repr FStar_Pervasives_Native.None))
-                   uu___) in
+                                                             uu___11)))
+                                                  uu___10))) uu___9)))
+                      | uu___ ->
+                          Obj.magic (Obj.repr FStar_Pervasives_Native.None))
+                     uu___) in
           mk_emb em1 un1
             (fun uu___ ->
                let uu___1 =
@@ -1473,7 +1500,7 @@ let e_tuple4 :
                      uu___6 :: uu___7 in
                    uu___4 :: uu___5 in
                  uu___2 :: uu___3 in
-               lid_as_typ FStarC_Parser_Const.lid_tuple4
+               lid_as_typ FStarC_Parser_Const_Tuples.lid_tuple4
                  [FStarC_Syntax_Syntax.U_zero;
                  FStarC_Syntax_Syntax.U_zero;
                  FStarC_Syntax_Syntax.U_zero;
@@ -1493,7 +1520,8 @@ let e_tuple5 :
             let etyp uu___ =
               let uu___1 =
                 let uu___2 =
-                  FStarC_Ident.string_of_lid FStarC_Parser_Const.lid_tuple5 in
+                  FStarC_Ident.string_of_lid
+                    FStarC_Parser_Const_Tuples.lid_tuple5 in
                 let uu___3 =
                   let uu___4 = ea.e_typ () in
                   let uu___5 =
@@ -1509,116 +1537,119 @@ let e_tuple5 :
                   uu___4 :: uu___5 in
                 (uu___2, uu___3) in
               FStarC_Syntax_Syntax.ET_app uu___1 in
-            let em1 cb uu___ =
-              match uu___ with
-              | (x1, x2, x3, x4, x5) ->
-                  lazy_embed etyp (x1, x2, x3, x4, x5)
-                    (fun uu___1 ->
-                       let uu___2 =
-                         let uu___3 =
-                           let uu___4 = embed ee cb x5 in as_arg uu___4 in
-                         let uu___4 =
-                           let uu___5 =
-                             let uu___6 = embed ed cb x4 in as_arg uu___6 in
-                           let uu___6 =
-                             let uu___7 =
-                               let uu___8 = embed ec cb x3 in as_arg uu___8 in
-                             let uu___8 =
-                               let uu___9 =
-                                 let uu___10 = embed eb cb x2 in
-                                 as_arg uu___10 in
-                               let uu___10 =
-                                 let uu___11 =
-                                   let uu___12 = embed ea cb x1 in
-                                   as_arg uu___12 in
-                                 let uu___12 =
-                                   let uu___13 =
-                                     let uu___14 = type_of ee in
-                                     as_iarg uu___14 in
-                                   let uu___14 =
-                                     let uu___15 =
-                                       let uu___16 = type_of ed in
-                                       as_iarg uu___16 in
-                                     let uu___16 =
-                                       let uu___17 =
-                                         let uu___18 = type_of ec in
-                                         as_iarg uu___18 in
-                                       let uu___18 =
-                                         let uu___19 =
-                                           let uu___20 = type_of eb in
-                                           as_iarg uu___20 in
-                                         let uu___20 =
-                                           let uu___21 =
-                                             let uu___22 = type_of ea in
-                                             as_iarg uu___22 in
-                                           [uu___21] in
-                                         uu___19 :: uu___20 in
-                                       uu___17 :: uu___18 in
-                                     uu___15 :: uu___16 in
-                                   uu___13 :: uu___14 in
-                                 uu___11 :: uu___12 in
-                               uu___9 :: uu___10 in
-                             uu___7 :: uu___8 in
-                           uu___5 :: uu___6 in
-                         uu___3 :: uu___4 in
-                       lid_as_constr FStarC_Parser_Const.lid_Mktuple5
-                         [FStarC_Syntax_Syntax.U_zero;
-                         FStarC_Syntax_Syntax.U_zero;
-                         FStarC_Syntax_Syntax.U_zero;
-                         FStarC_Syntax_Syntax.U_zero;
-                         FStarC_Syntax_Syntax.U_zero] uu___2) in
-            let un1 cb trm =
-              lazy_unembed etyp trm
-                (fun uu___ ->
-                   (fun trm1 ->
-                      match trm1.nbe_t with
-                      | Construct
-                          (fvar, us,
-                           (e1, uu___)::(d1, uu___1)::(c1, uu___2)::(b1,
-                                                                    uu___3)::
-                           (a1, uu___4)::uu___5::uu___6::uu___7::uu___8::uu___9::[])
-                          when
-                          FStarC_Syntax_Syntax.fv_eq_lid fvar
-                            FStarC_Parser_Const.lid_Mktuple5
-                          ->
-                          Obj.magic
-                            (Obj.repr
-                               (let uu___10 = unembed ea cb a1 in
-                                FStarC_Class_Monad.op_let_Bang
-                                  FStarC_Class_Monad.monad_option () ()
-                                  (Obj.magic uu___10)
-                                  (fun uu___11 ->
-                                     (fun a2 ->
-                                        let a2 = Obj.magic a2 in
-                                        let uu___11 = unembed eb cb b1 in
-                                        Obj.magic
-                                          (FStarC_Class_Monad.op_let_Bang
-                                             FStarC_Class_Monad.monad_option
-                                             () () (Obj.magic uu___11)
-                                             (fun uu___12 ->
-                                                (fun b2 ->
-                                                   let b2 = Obj.magic b2 in
-                                                   let uu___12 =
-                                                     unembed ec cb c1 in
-                                                   Obj.magic
-                                                     (FStarC_Class_Monad.op_let_Bang
-                                                        FStarC_Class_Monad.monad_option
-                                                        () ()
-                                                        (Obj.magic uu___12)
-                                                        (fun uu___13 ->
-                                                           (fun c2 ->
-                                                              let c2 =
-                                                                Obj.magic c2 in
-                                                              let uu___13 =
-                                                                unembed ed cb
-                                                                  d1 in
-                                                              Obj.magic
-                                                                (FStarC_Class_Monad.op_let_Bang
-                                                                   FStarC_Class_Monad.monad_option
-                                                                   () ()
-                                                                   (Obj.magic
+            let em1 cb =
+              fun uu___ ->
+                match uu___ with
+                | (x1, x2, x3, x4, x5) ->
+                    lazy_embed etyp (x1, x2, x3, x4, x5)
+                      (fun uu___1 ->
+                         let uu___2 =
+                           let uu___3 =
+                             let uu___4 = embed ee cb x5 in as_arg uu___4 in
+                           let uu___4 =
+                             let uu___5 =
+                               let uu___6 = embed ed cb x4 in as_arg uu___6 in
+                             let uu___6 =
+                               let uu___7 =
+                                 let uu___8 = embed ec cb x3 in as_arg uu___8 in
+                               let uu___8 =
+                                 let uu___9 =
+                                   let uu___10 = embed eb cb x2 in
+                                   as_arg uu___10 in
+                                 let uu___10 =
+                                   let uu___11 =
+                                     let uu___12 = embed ea cb x1 in
+                                     as_arg uu___12 in
+                                   let uu___12 =
+                                     let uu___13 =
+                                       let uu___14 = type_of ee in
+                                       as_iarg uu___14 in
+                                     let uu___14 =
+                                       let uu___15 =
+                                         let uu___16 = type_of ed in
+                                         as_iarg uu___16 in
+                                       let uu___16 =
+                                         let uu___17 =
+                                           let uu___18 = type_of ec in
+                                           as_iarg uu___18 in
+                                         let uu___18 =
+                                           let uu___19 =
+                                             let uu___20 = type_of eb in
+                                             as_iarg uu___20 in
+                                           let uu___20 =
+                                             let uu___21 =
+                                               let uu___22 = type_of ea in
+                                               as_iarg uu___22 in
+                                             [uu___21] in
+                                           uu___19 :: uu___20 in
+                                         uu___17 :: uu___18 in
+                                       uu___15 :: uu___16 in
+                                     uu___13 :: uu___14 in
+                                   uu___11 :: uu___12 in
+                                 uu___9 :: uu___10 in
+                               uu___7 :: uu___8 in
+                             uu___5 :: uu___6 in
+                           uu___3 :: uu___4 in
+                         lid_as_constr
+                           FStarC_Parser_Const_Tuples.lid_Mktuple5
+                           [FStarC_Syntax_Syntax.U_zero;
+                           FStarC_Syntax_Syntax.U_zero;
+                           FStarC_Syntax_Syntax.U_zero;
+                           FStarC_Syntax_Syntax.U_zero;
+                           FStarC_Syntax_Syntax.U_zero] uu___2) in
+            let un1 cb =
+              fun trm ->
+                lazy_unembed etyp trm
+                  (fun uu___ ->
+                     (fun trm1 ->
+                        match trm1.nbe_t with
+                        | Construct
+                            (fvar, us,
+                             (e1, uu___)::(d1, uu___1)::(c1, uu___2)::
+                             (b1, uu___3)::(a1, uu___4)::uu___5::uu___6::uu___7::uu___8::uu___9::[])
+                            when
+                            FStarC_Syntax_Syntax.fv_eq_lid fvar
+                              FStarC_Parser_Const_Tuples.lid_Mktuple5
+                            ->
+                            Obj.magic
+                              (Obj.repr
+                                 (let uu___10 = unembed ea cb a1 in
+                                  FStarC_Class_Monad.op_let_Bang
+                                    FStarC_Class_Monad.monad_option () ()
+                                    (Obj.magic uu___10)
+                                    (fun uu___11 ->
+                                       (fun a2 ->
+                                          let a2 = Obj.magic a2 in
+                                          let uu___11 = unembed eb cb b1 in
+                                          Obj.magic
+                                            (FStarC_Class_Monad.op_let_Bang
+                                               FStarC_Class_Monad.monad_option
+                                               () () (Obj.magic uu___11)
+                                               (fun uu___12 ->
+                                                  (fun b2 ->
+                                                     let b2 = Obj.magic b2 in
+                                                     let uu___12 =
+                                                       unembed ec cb c1 in
+                                                     Obj.magic
+                                                       (FStarC_Class_Monad.op_let_Bang
+                                                          FStarC_Class_Monad.monad_option
+                                                          () ()
+                                                          (Obj.magic uu___12)
+                                                          (fun uu___13 ->
+                                                             (fun c2 ->
+                                                                let c2 =
+                                                                  Obj.magic
+                                                                    c2 in
+                                                                let uu___13 =
+                                                                  unembed ed
+                                                                    cb d1 in
+                                                                Obj.magic
+                                                                  (FStarC_Class_Monad.op_let_Bang
+                                                                    FStarC_Class_Monad.monad_option
+                                                                    () ()
+                                                                    (Obj.magic
                                                                     uu___13)
-                                                                   (fun
+                                                                    (fun
                                                                     uu___14
                                                                     ->
                                                                     (fun d2
@@ -1651,11 +1682,11 @@ let e_tuple5 :
                                                                     e2)))
                                                                     uu___15)))
                                                                     uu___14)))
-                                                             uu___13)))
-                                                  uu___12))) uu___11)))
-                      | uu___ ->
-                          Obj.magic (Obj.repr FStar_Pervasives_Native.None))
-                     uu___) in
+                                                               uu___13)))
+                                                    uu___12))) uu___11)))
+                        | uu___ ->
+                            Obj.magic (Obj.repr FStar_Pervasives_Native.None))
+                       uu___) in
             mk_emb em1 un1
               (fun uu___ ->
                  let uu___1 =
@@ -1675,7 +1706,7 @@ let e_tuple5 :
                        uu___6 :: uu___7 in
                      uu___4 :: uu___5 in
                    uu___2 :: uu___3 in
-                 lid_as_typ FStarC_Parser_Const.lid_tuple5
+                 lid_as_typ FStarC_Parser_Const_Tuples.lid_tuple5
                    [FStarC_Syntax_Syntax.U_zero;
                    FStarC_Syntax_Syntax.U_zero;
                    FStarC_Syntax_Syntax.U_zero;
@@ -1698,57 +1729,65 @@ let e_either :
               uu___5 in
           (uu___2, uu___3) in
         FStarC_Syntax_Syntax.ET_app uu___1 in
-      let em1 cb s =
-        lazy_embed etyp s
-          (fun uu___ ->
-             match s with
-             | FStar_Pervasives.Inl a1 ->
-                 let uu___1 =
-                   let uu___2 = let uu___3 = embed ea cb a1 in as_arg uu___3 in
-                   let uu___3 =
-                     let uu___4 = let uu___5 = type_of eb in as_iarg uu___5 in
-                     let uu___5 =
-                       let uu___6 = let uu___7 = type_of ea in as_iarg uu___7 in
-                       [uu___6] in
-                     uu___4 :: uu___5 in
-                   uu___2 :: uu___3 in
-                 lid_as_constr FStarC_Parser_Const.inl_lid
-                   [FStarC_Syntax_Syntax.U_zero; FStarC_Syntax_Syntax.U_zero]
-                   uu___1
-             | FStar_Pervasives.Inr b1 ->
-                 let uu___1 =
-                   let uu___2 = let uu___3 = embed eb cb b1 in as_arg uu___3 in
-                   let uu___3 =
-                     let uu___4 = let uu___5 = type_of eb in as_iarg uu___5 in
-                     let uu___5 =
-                       let uu___6 = let uu___7 = type_of ea in as_iarg uu___7 in
-                       [uu___6] in
-                     uu___4 :: uu___5 in
-                   uu___2 :: uu___3 in
-                 lid_as_constr FStarC_Parser_Const.inr_lid
-                   [FStarC_Syntax_Syntax.U_zero; FStarC_Syntax_Syntax.U_zero]
-                   uu___1) in
-      let un1 cb trm =
-        lazy_unembed etyp trm
-          (fun trm1 ->
-             match trm1.nbe_t with
-             | Construct (fvar, us, (a1, uu___)::uu___1::uu___2::[]) when
-                 FStarC_Syntax_Syntax.fv_eq_lid fvar
-                   FStarC_Parser_Const.inl_lid
-                 ->
-                 let uu___3 = unembed ea cb a1 in
-                 FStarC_Util.bind_opt uu___3
-                   (fun a2 ->
-                      FStar_Pervasives_Native.Some (FStar_Pervasives.Inl a2))
-             | Construct (fvar, us, (b1, uu___)::uu___1::uu___2::[]) when
-                 FStarC_Syntax_Syntax.fv_eq_lid fvar
-                   FStarC_Parser_Const.inr_lid
-                 ->
-                 let uu___3 = unembed eb cb b1 in
-                 FStarC_Util.bind_opt uu___3
-                   (fun b2 ->
-                      FStar_Pervasives_Native.Some (FStar_Pervasives.Inr b2))
-             | uu___ -> FStar_Pervasives_Native.None) in
+      let em1 cb =
+        fun s ->
+          lazy_embed etyp s
+            (fun uu___ ->
+               match s with
+               | FStar_Pervasives.Inl a1 ->
+                   let uu___1 =
+                     let uu___2 =
+                       let uu___3 = embed ea cb a1 in as_arg uu___3 in
+                     let uu___3 =
+                       let uu___4 = let uu___5 = type_of eb in as_iarg uu___5 in
+                       let uu___5 =
+                         let uu___6 =
+                           let uu___7 = type_of ea in as_iarg uu___7 in
+                         [uu___6] in
+                       uu___4 :: uu___5 in
+                     uu___2 :: uu___3 in
+                   lid_as_constr FStarC_Parser_Const.inl_lid
+                     [FStarC_Syntax_Syntax.U_zero;
+                     FStarC_Syntax_Syntax.U_zero] uu___1
+               | FStar_Pervasives.Inr b1 ->
+                   let uu___1 =
+                     let uu___2 =
+                       let uu___3 = embed eb cb b1 in as_arg uu___3 in
+                     let uu___3 =
+                       let uu___4 = let uu___5 = type_of eb in as_iarg uu___5 in
+                       let uu___5 =
+                         let uu___6 =
+                           let uu___7 = type_of ea in as_iarg uu___7 in
+                         [uu___6] in
+                       uu___4 :: uu___5 in
+                     uu___2 :: uu___3 in
+                   lid_as_constr FStarC_Parser_Const.inr_lid
+                     [FStarC_Syntax_Syntax.U_zero;
+                     FStarC_Syntax_Syntax.U_zero] uu___1) in
+      let un1 cb =
+        fun trm ->
+          lazy_unembed etyp trm
+            (fun trm1 ->
+               match trm1.nbe_t with
+               | Construct (fvar, us, (a1, uu___)::uu___1::uu___2::[]) when
+                   FStarC_Syntax_Syntax.fv_eq_lid fvar
+                     FStarC_Parser_Const.inl_lid
+                   ->
+                   let uu___3 = unembed ea cb a1 in
+                   FStarC_Util.bind_opt uu___3
+                     (fun a2 ->
+                        FStar_Pervasives_Native.Some
+                          (FStar_Pervasives.Inl a2))
+               | Construct (fvar, us, (b1, uu___)::uu___1::uu___2::[]) when
+                   FStarC_Syntax_Syntax.fv_eq_lid fvar
+                     FStarC_Parser_Const.inr_lid
+                   ->
+                   let uu___3 = unembed eb cb b1 in
+                   FStarC_Util.bind_opt uu___3
+                     (fun b2 ->
+                        FStar_Pervasives_Native.Some
+                          (FStar_Pervasives.Inr b2))
+               | uu___ -> FStar_Pervasives_Native.None) in
       mk_emb em1 un1
         (fun uu___ ->
            let uu___1 =
@@ -1761,11 +1800,12 @@ let e_either :
              [FStarC_Syntax_Syntax.U_zero; FStarC_Syntax_Syntax.U_zero]
              uu___1) etyp
 let (e___range : FStarC_Range_Type.range embedding) =
-  let em1 cb r = Constant (Range r) in
-  let un1 cb t1 =
-    match t1 with
-    | Constant (Range r) -> FStar_Pervasives_Native.Some r
-    | uu___ -> FStar_Pervasives_Native.None in
+  let em1 cb = fun r -> Constant (Range r) in
+  let un1 cb =
+    fun t1 ->
+      match t1 with
+      | Constant (Range r) -> FStar_Pervasives_Native.Some r
+      | uu___ -> FStar_Pervasives_Native.None in
   mk_emb' em1 un1
     (fun uu___ -> lid_as_typ FStarC_Parser_Const.__range_lid [] [])
     (FStarC_Syntax_Embeddings_Base.emb_typ_of
@@ -1778,38 +1818,40 @@ let e_sealed : 'a . 'a embedding -> 'a FStarC_Sealed.sealed embedding =
           FStarC_Ident.string_of_lid FStarC_Parser_Const.sealed_lid in
         let uu___3 = let uu___4 = ea.e_typ () in [uu___4] in (uu___2, uu___3) in
       FStarC_Syntax_Syntax.ET_app uu___1 in
-    let em1 cb x =
-      lazy_embed etyp x
-        (fun uu___ ->
-           let uu___1 =
-             let uu___2 =
-               let uu___3 = embed ea cb (FStarC_Sealed.unseal x) in
-               as_arg uu___3 in
-             let uu___3 =
-               let uu___4 = let uu___5 = type_of ea in as_iarg uu___5 in
-               [uu___4] in
-             uu___2 :: uu___3 in
-           lid_as_constr FStarC_Parser_Const.seal_lid
-             [FStarC_Syntax_Syntax.U_zero] uu___1) in
-    let un1 cb trm =
-      lazy_unembed etyp trm
-        (fun uu___ ->
-           (fun trm1 ->
-              match trm1.nbe_t with
-              | Construct (fvar, us, (a1, uu___)::uu___1::[]) when
-                  FStarC_Syntax_Syntax.fv_eq_lid fvar
-                    FStarC_Parser_Const.seal_lid
-                  ->
-                  Obj.magic
-                    (Obj.repr
-                       (let uu___2 = unembed ea cb a1 in
-                        FStarC_Class_Monad.fmap
-                          FStarC_Class_Monad.monad_option () ()
-                          (fun uu___3 ->
-                             (Obj.magic FStarC_Sealed.seal) uu___3)
-                          (Obj.magic uu___2)))
-              | uu___ -> Obj.magic (Obj.repr FStar_Pervasives_Native.None))
-             uu___) in
+    let em1 cb =
+      fun x ->
+        lazy_embed etyp x
+          (fun uu___ ->
+             let uu___1 =
+               let uu___2 =
+                 let uu___3 = embed ea cb (FStarC_Sealed.unseal x) in
+                 as_arg uu___3 in
+               let uu___3 =
+                 let uu___4 = let uu___5 = type_of ea in as_iarg uu___5 in
+                 [uu___4] in
+               uu___2 :: uu___3 in
+             lid_as_constr FStarC_Parser_Const.seal_lid
+               [FStarC_Syntax_Syntax.U_zero] uu___1) in
+    let un1 cb =
+      fun trm ->
+        lazy_unembed etyp trm
+          (fun uu___ ->
+             (fun trm1 ->
+                match trm1.nbe_t with
+                | Construct (fvar, us, (a1, uu___)::uu___1::[]) when
+                    FStarC_Syntax_Syntax.fv_eq_lid fvar
+                      FStarC_Parser_Const.seal_lid
+                    ->
+                    Obj.magic
+                      (Obj.repr
+                         (let uu___2 = unembed ea cb a1 in
+                          FStarC_Class_Monad.fmap
+                            FStarC_Class_Monad.monad_option () ()
+                            (fun uu___3 ->
+                               (Obj.magic FStarC_Sealed.seal) uu___3)
+                            (Obj.magic uu___2)))
+                | uu___ -> Obj.magic (Obj.repr FStar_Pervasives_Native.None))
+               uu___) in
     mk_emb em1 un1
       (fun uu___ ->
          let uu___1 =
@@ -1822,36 +1864,39 @@ let (e_range : FStarC_Range_Type.range embedding) =
 let (e_issue : FStarC_Errors.issue embedding) =
   let t_issue =
     FStarC_Syntax_Embeddings_Base.type_of FStarC_Syntax_Embeddings.e_issue in
-  let li blob rng =
-    let uu___ = FStarC_Dyn.mkdyn blob in
-    {
-      FStarC_Syntax_Syntax.blob = uu___;
-      FStarC_Syntax_Syntax.lkind = FStarC_Syntax_Syntax.Lazy_issue;
-      FStarC_Syntax_Syntax.ltyp = t_issue;
-      FStarC_Syntax_Syntax.rng = rng
-    } in
-  let em1 cb iss =
-    let uu___ =
-      let uu___1 =
-        let uu___2 = li iss FStarC_Range_Type.dummyRange in
-        FStar_Pervasives.Inl uu___2 in
-      let uu___2 =
-        FStarC_Thunk.mk (fun uu___3 -> failwith "Cannot unembed issue") in
-      (uu___1, uu___2) in
-    Lazy uu___ in
-  let un1 cb t1 =
-    match t1 with
-    | Lazy
-        (FStar_Pervasives.Inl
-         { FStarC_Syntax_Syntax.blob = blob;
-           FStarC_Syntax_Syntax.lkind = FStarC_Syntax_Syntax.Lazy_issue;
-           FStarC_Syntax_Syntax.ltyp = uu___;
-           FStarC_Syntax_Syntax.rng = uu___1;_},
-         uu___2)
-        ->
-        let uu___3 = FStarC_Dyn.undyn blob in
-        FStar_Pervasives_Native.Some uu___3
-    | uu___ -> FStar_Pervasives_Native.None in
+  let li blob =
+    fun rng ->
+      let uu___ = FStarC_Dyn.mkdyn blob in
+      {
+        FStarC_Syntax_Syntax.blob = uu___;
+        FStarC_Syntax_Syntax.lkind = FStarC_Syntax_Syntax.Lazy_issue;
+        FStarC_Syntax_Syntax.ltyp = t_issue;
+        FStarC_Syntax_Syntax.rng = rng
+      } in
+  let em1 cb =
+    fun iss ->
+      let uu___ =
+        let uu___1 =
+          let uu___2 = li iss FStarC_Range_Type.dummyRange in
+          FStar_Pervasives.Inl uu___2 in
+        let uu___2 =
+          FStarC_Thunk.mk (fun uu___3 -> failwith "Cannot unembed issue") in
+        (uu___1, uu___2) in
+      Lazy uu___ in
+  let un1 cb =
+    fun t1 ->
+      match t1 with
+      | Lazy
+          (FStar_Pervasives.Inl
+           { FStarC_Syntax_Syntax.blob = blob;
+             FStarC_Syntax_Syntax.lkind = FStarC_Syntax_Syntax.Lazy_issue;
+             FStarC_Syntax_Syntax.ltyp = uu___;
+             FStarC_Syntax_Syntax.rng = uu___1;_},
+           uu___2)
+          ->
+          let uu___3 = FStarC_Dyn.undyn blob in
+          FStar_Pervasives_Native.Some uu___3
+      | uu___ -> FStar_Pervasives_Native.None in
   mk_emb' em1 un1
     (fun uu___ -> lid_as_typ FStarC_Parser_Const.issue_lid [] [])
     (FStarC_Syntax_Embeddings_Base.emb_typ_of
@@ -1859,43 +1904,46 @@ let (e_issue : FStarC_Errors.issue embedding) =
 let (e_document : FStarC_Pprint.document embedding) =
   let t_document =
     FStarC_Syntax_Embeddings_Base.type_of FStarC_Syntax_Embeddings.e_document in
-  let li blob rng =
-    let uu___ = FStarC_Dyn.mkdyn blob in
-    {
-      FStarC_Syntax_Syntax.blob = uu___;
-      FStarC_Syntax_Syntax.lkind = FStarC_Syntax_Syntax.Lazy_doc;
-      FStarC_Syntax_Syntax.ltyp = t_document;
-      FStarC_Syntax_Syntax.rng = rng
-    } in
-  let em1 cb doc =
-    let uu___ =
-      let uu___1 =
-        let uu___2 = li doc FStarC_Range_Type.dummyRange in
-        FStar_Pervasives.Inl uu___2 in
-      let uu___2 =
-        FStarC_Thunk.mk (fun uu___3 -> failwith "Cannot unembed document") in
-      (uu___1, uu___2) in
-    Lazy uu___ in
-  let un1 cb t1 =
-    match t1 with
-    | Lazy
-        (FStar_Pervasives.Inl
-         { FStarC_Syntax_Syntax.blob = blob;
-           FStarC_Syntax_Syntax.lkind = FStarC_Syntax_Syntax.Lazy_doc;
-           FStarC_Syntax_Syntax.ltyp = uu___;
-           FStarC_Syntax_Syntax.rng = uu___1;_},
-         uu___2)
-        ->
-        let uu___3 = FStarC_Dyn.undyn blob in
-        FStar_Pervasives_Native.Some uu___3
-    | uu___ -> FStar_Pervasives_Native.None in
+  let li blob =
+    fun rng ->
+      let uu___ = FStarC_Dyn.mkdyn blob in
+      {
+        FStarC_Syntax_Syntax.blob = uu___;
+        FStarC_Syntax_Syntax.lkind = FStarC_Syntax_Syntax.Lazy_doc;
+        FStarC_Syntax_Syntax.ltyp = t_document;
+        FStarC_Syntax_Syntax.rng = rng
+      } in
+  let em1 cb =
+    fun doc ->
+      let uu___ =
+        let uu___1 =
+          let uu___2 = li doc FStarC_Range_Type.dummyRange in
+          FStar_Pervasives.Inl uu___2 in
+        let uu___2 =
+          FStarC_Thunk.mk (fun uu___3 -> failwith "Cannot unembed document") in
+        (uu___1, uu___2) in
+      Lazy uu___ in
+  let un1 cb =
+    fun t1 ->
+      match t1 with
+      | Lazy
+          (FStar_Pervasives.Inl
+           { FStarC_Syntax_Syntax.blob = blob;
+             FStarC_Syntax_Syntax.lkind = FStarC_Syntax_Syntax.Lazy_doc;
+             FStarC_Syntax_Syntax.ltyp = uu___;
+             FStarC_Syntax_Syntax.rng = uu___1;_},
+           uu___2)
+          ->
+          let uu___3 = FStarC_Dyn.undyn blob in
+          FStar_Pervasives_Native.Some uu___3
+      | uu___ -> FStar_Pervasives_Native.None in
   mk_emb' em1 un1
     (fun uu___ -> lid_as_typ FStarC_Parser_Const.document_lid [] [])
     (FStarC_Syntax_Embeddings_Base.emb_typ_of
        FStarC_Syntax_Embeddings.e_document)
 let (e_vconfig : FStarC_VConfig.vconfig embedding) =
-  let em1 cb r = failwith "e_vconfig NBE" in
-  let un1 cb t1 = failwith "e_vconfig NBE" in
+  let em1 cb = fun r -> failwith "e_vconfig NBE" in
+  let un1 cb = fun t1 -> failwith "e_vconfig NBE" in
   mk_emb' em1 un1
     (fun uu___ -> lid_as_typ FStarC_Parser_Const.vconfig_lid [] [])
     (FStarC_Syntax_Embeddings_Base.emb_typ_of
@@ -1907,60 +1955,67 @@ let e_list : 'a . 'a embedding -> 'a Prims.list embedding =
         let uu___2 = FStarC_Ident.string_of_lid FStarC_Parser_Const.list_lid in
         let uu___3 = let uu___4 = ea.e_typ () in [uu___4] in (uu___2, uu___3) in
       FStarC_Syntax_Syntax.ET_app uu___1 in
-    let em1 cb l =
-      lazy_embed etyp l
-        (fun uu___ ->
-           let typ1 = let uu___1 = type_of ea in as_iarg uu___1 in
-           let nil =
-             lid_as_constr FStarC_Parser_Const.nil_lid
-               [FStarC_Syntax_Syntax.U_zero] [typ1] in
-           let cons hd tl =
-             let uu___1 =
-               let uu___2 = as_arg tl in
-               let uu___3 =
-                 let uu___4 = let uu___5 = embed ea cb hd in as_arg uu___5 in
-                 [uu___4; typ1] in
-               uu___2 :: uu___3 in
-             lid_as_constr FStarC_Parser_Const.cons_lid
-               [FStarC_Syntax_Syntax.U_zero] uu___1 in
-           FStarC_List.fold_right cons l nil) in
-    let rec un1 cb trm =
-      lazy_unembed etyp trm
-        (fun trm1 ->
-           match trm1.nbe_t with
-           | Construct (fv, uu___, uu___1) when
-               FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.nil_lid
-               -> FStar_Pervasives_Native.Some []
-           | Construct
-               (fv, uu___,
-                (tl, FStar_Pervasives_Native.None)::(hd,
-                                                     FStar_Pervasives_Native.None)::
-                (uu___1, FStar_Pervasives_Native.Some
-                 { FStarC_Syntax_Syntax.aqual_implicit = true;
-                   FStarC_Syntax_Syntax.aqual_attributes = uu___2;_})::[])
-               when
-               FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.cons_lid
-               ->
-               let uu___3 = unembed ea cb hd in
-               FStarC_Util.bind_opt uu___3
-                 (fun hd1 ->
-                    let uu___4 = un1 cb tl in
-                    FStarC_Util.bind_opt uu___4
-                      (fun tl1 -> FStar_Pervasives_Native.Some (hd1 :: tl1)))
-           | Construct
-               (fv, uu___,
-                (tl, FStar_Pervasives_Native.None)::(hd,
-                                                     FStar_Pervasives_Native.None)::[])
-               when
-               FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.cons_lid
-               ->
-               let uu___1 = unembed ea cb hd in
-               FStarC_Util.bind_opt uu___1
-                 (fun hd1 ->
-                    let uu___2 = un1 cb tl in
-                    FStarC_Util.bind_opt uu___2
-                      (fun tl1 -> FStar_Pervasives_Native.Some (hd1 :: tl1)))
-           | uu___ -> FStar_Pervasives_Native.None) in
+    let em1 cb =
+      fun l ->
+        lazy_embed etyp l
+          (fun uu___ ->
+             let typ1 = let uu___1 = type_of ea in as_iarg uu___1 in
+             let nil =
+               lid_as_constr FStarC_Parser_Const.nil_lid
+                 [FStarC_Syntax_Syntax.U_zero] [typ1] in
+             let cons hd =
+               fun tl ->
+                 let uu___1 =
+                   let uu___2 = as_arg tl in
+                   let uu___3 =
+                     let uu___4 =
+                       let uu___5 = embed ea cb hd in as_arg uu___5 in
+                     [uu___4; typ1] in
+                   uu___2 :: uu___3 in
+                 lid_as_constr FStarC_Parser_Const.cons_lid
+                   [FStarC_Syntax_Syntax.U_zero] uu___1 in
+             FStarC_List.fold_right cons l nil) in
+    let rec un1 cb =
+      fun trm ->
+        lazy_unembed etyp trm
+          (fun trm1 ->
+             match trm1.nbe_t with
+             | Construct (fv, uu___, uu___1) when
+                 FStarC_Syntax_Syntax.fv_eq_lid fv
+                   FStarC_Parser_Const.nil_lid
+                 -> FStar_Pervasives_Native.Some []
+             | Construct
+                 (fv, uu___,
+                  (tl, FStar_Pervasives_Native.None)::(hd,
+                                                       FStar_Pervasives_Native.None)::
+                  (uu___1, FStar_Pervasives_Native.Some
+                   { FStarC_Syntax_Syntax.aqual_implicit = true;
+                     FStarC_Syntax_Syntax.aqual_attributes = uu___2;_})::[])
+                 when
+                 FStarC_Syntax_Syntax.fv_eq_lid fv
+                   FStarC_Parser_Const.cons_lid
+                 ->
+                 let uu___3 = unembed ea cb hd in
+                 FStarC_Util.bind_opt uu___3
+                   (fun hd1 ->
+                      let uu___4 = un1 cb tl in
+                      FStarC_Util.bind_opt uu___4
+                        (fun tl1 -> FStar_Pervasives_Native.Some (hd1 :: tl1)))
+             | Construct
+                 (fv, uu___,
+                  (tl, FStar_Pervasives_Native.None)::(hd,
+                                                       FStar_Pervasives_Native.None)::[])
+                 when
+                 FStarC_Syntax_Syntax.fv_eq_lid fv
+                   FStarC_Parser_Const.cons_lid
+                 ->
+                 let uu___1 = unembed ea cb hd in
+                 FStarC_Util.bind_opt uu___1
+                   (fun hd1 ->
+                      let uu___2 = un1 cb tl in
+                      FStarC_Util.bind_opt uu___2
+                        (fun tl1 -> FStar_Pervasives_Native.Some (hd1 :: tl1)))
+             | uu___ -> FStar_Pervasives_Native.None) in
     mk_emb em1 un1
       (fun uu___ ->
          let uu___1 =
@@ -1976,50 +2031,53 @@ let e_arrow : 'a 'b . 'a embedding -> 'b embedding -> ('a -> 'b) embedding =
           let uu___2 = ea.e_typ () in
           let uu___3 = eb.e_typ () in (uu___2, uu___3) in
         FStarC_Syntax_Syntax.ET_fun uu___1 in
-      let em1 cb f =
-        lazy_embed etyp f
-          (fun uu___ ->
-             let uu___1 =
-               let uu___2 =
-                 let uu___3 =
-                   let uu___4 =
-                     let uu___5 = let uu___6 = type_of eb in as_arg uu___6 in
-                     [uu___5] in
-                   Lam_args uu___4 in
-                 {
-                   interp =
-                     (fun tas ->
-                        let uu___4 =
-                          let uu___5 =
-                            let uu___6 = FStarC_List.hd tas in
-                            FStar_Pervasives_Native.fst uu___6 in
-                          unembed ea cb uu___5 in
-                        match uu___4 with
-                        | FStar_Pervasives_Native.Some a1 ->
-                            let uu___5 = f a1 in embed eb cb uu___5
-                        | FStar_Pervasives_Native.None ->
-                            failwith "cannot unembed function argument");
-                   shape = uu___3;
-                   arity = Prims.int_one
-                 } in
-               Lam uu___2 in
-             mk_t uu___1) in
-      let un1 cb lam =
-        let k lam1 =
-          FStar_Pervasives_Native.Some
-            (fun x ->
-               let uu___ =
-                 let uu___1 =
-                   let uu___2 =
-                     let uu___3 = let uu___4 = embed ea cb x in as_arg uu___4 in
-                     [uu___3] in
-                   cb.iapp lam1 uu___2 in
-                 unembed eb cb uu___1 in
-               match uu___ with
-               | FStar_Pervasives_Native.Some y -> y
-               | FStar_Pervasives_Native.None ->
-                   failwith "cannot unembed function result") in
-        lazy_unembed etyp lam k in
+      let em1 cb =
+        fun f ->
+          lazy_embed etyp f
+            (fun uu___ ->
+               let uu___1 =
+                 let uu___2 =
+                   let uu___3 =
+                     let uu___4 =
+                       let uu___5 = let uu___6 = type_of eb in as_arg uu___6 in
+                       [uu___5] in
+                     Lam_args uu___4 in
+                   {
+                     interp =
+                       (fun tas ->
+                          let uu___4 =
+                            let uu___5 =
+                              let uu___6 = FStarC_List.hd tas in
+                              FStar_Pervasives_Native.fst uu___6 in
+                            unembed ea cb uu___5 in
+                          match uu___4 with
+                          | FStar_Pervasives_Native.Some a1 ->
+                              let uu___5 = f a1 in embed eb cb uu___5
+                          | FStar_Pervasives_Native.None ->
+                              failwith "cannot unembed function argument");
+                     shape = uu___3;
+                     arity = Prims.int_one
+                   } in
+                 Lam uu___2 in
+               mk_t uu___1) in
+      let un1 cb =
+        fun lam ->
+          let k lam1 =
+            FStar_Pervasives_Native.Some
+              (fun x ->
+                 let uu___ =
+                   let uu___1 =
+                     let uu___2 =
+                       let uu___3 =
+                         let uu___4 = embed ea cb x in as_arg uu___4 in
+                       [uu___3] in
+                     cb.iapp lam1 uu___2 in
+                   unembed eb cb uu___1 in
+                 match uu___ with
+                 | FStar_Pervasives_Native.Some y -> y
+                 | FStar_Pervasives_Native.None ->
+                     failwith "cannot unembed function result") in
+          lazy_unembed etyp lam k in
       mk_emb em1 un1
         (fun uu___ ->
            let uu___1 = type_of ea in
@@ -2031,200 +2089,209 @@ let (e_abstract_nbe_term : abstract_nbe_term embedding) =
     FStar_Pervasives_Native.None
 let e_unsupported : 'a . unit -> 'a embedding =
   fun uu___ ->
-    let em1 _cb a1 = failwith "Unsupported NBE embedding" in
-    let un1 _cb t1 = failwith "Unsupported NBE embedding" in
+    let em1 _cb = fun a1 -> failwith "Unsupported NBE embedding" in
+    let un1 _cb = fun t1 -> failwith "Unsupported NBE embedding" in
     mk_emb em1 un1
       (fun uu___1 -> lid_as_typ FStarC_Parser_Const.term_lid [] [])
       (fun uu___1 -> FStarC_Syntax_Syntax.ET_abstract)
-let (e_norm_step : FStar_Pervasives.norm_step embedding) =
-  let em1 cb n =
-    match n with
-    | FStar_Pervasives.Simpl ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_simpl
-            FStar_Pervasives_Native.None in
-        mkFV uu___ [] []
-    | FStar_Pervasives.Weak ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_weak
-            FStar_Pervasives_Native.None in
-        mkFV uu___ [] []
-    | FStar_Pervasives.HNF ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_hnf
-            FStar_Pervasives_Native.None in
-        mkFV uu___ [] []
-    | FStar_Pervasives.Primops ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_primops
-            FStar_Pervasives_Native.None in
-        mkFV uu___ [] []
-    | FStar_Pervasives.Delta ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_delta
-            FStar_Pervasives_Native.None in
-        mkFV uu___ [] []
-    | FStar_Pervasives.Zeta ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_zeta
-            FStar_Pervasives_Native.None in
-        mkFV uu___ [] []
-    | FStar_Pervasives.Iota ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_iota
-            FStar_Pervasives_Native.None in
-        mkFV uu___ [] []
-    | FStar_Pervasives.Reify ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_reify
-            FStar_Pervasives_Native.None in
-        mkFV uu___ [] []
-    | FStar_Pervasives.NBE ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_nbe
-            FStar_Pervasives_Native.None in
-        mkFV uu___ [] []
-    | FStar_Pervasives.UnfoldOnly l ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_unfoldonly
-            FStar_Pervasives_Native.None in
-        let uu___1 =
-          let uu___2 =
-            let uu___3 = embed (e_list e_string) cb l in as_arg uu___3 in
-          [uu___2] in
-        mkFV uu___ [] uu___1
-    | FStar_Pervasives.UnfoldFully l ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv
+let (e_norm_step : FStarC_NormSteps.norm_step embedding) =
+  let em1 cb =
+    fun n ->
+      match n with
+      | FStarC_NormSteps.Simpl ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_simpl
+              FStar_Pervasives_Native.None in
+          mkFV uu___ [] []
+      | FStarC_NormSteps.Weak ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_weak
+              FStar_Pervasives_Native.None in
+          mkFV uu___ [] []
+      | FStarC_NormSteps.HNF ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_hnf
+              FStar_Pervasives_Native.None in
+          mkFV uu___ [] []
+      | FStarC_NormSteps.Primops ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_primops
+              FStar_Pervasives_Native.None in
+          mkFV uu___ [] []
+      | FStarC_NormSteps.Delta ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_delta
+              FStar_Pervasives_Native.None in
+          mkFV uu___ [] []
+      | FStarC_NormSteps.Zeta ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_zeta
+              FStar_Pervasives_Native.None in
+          mkFV uu___ [] []
+      | FStarC_NormSteps.Iota ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_iota
+              FStar_Pervasives_Native.None in
+          mkFV uu___ [] []
+      | FStarC_NormSteps.Reify ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_reify
+              FStar_Pervasives_Native.None in
+          mkFV uu___ [] []
+      | FStarC_NormSteps.NBE ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_nbe
+              FStar_Pervasives_Native.None in
+          mkFV uu___ [] []
+      | FStarC_NormSteps.UnfoldOnly l ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv
+              FStarC_Parser_Const.steps_unfoldonly
+              FStar_Pervasives_Native.None in
+          let uu___1 =
+            let uu___2 =
+              let uu___3 = embed (e_list e_string) cb l in as_arg uu___3 in
+            [uu___2] in
+          mkFV uu___ [] uu___1
+      | FStarC_NormSteps.UnfoldFully l ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv
+              FStarC_Parser_Const.steps_unfoldfully
+              FStar_Pervasives_Native.None in
+          let uu___1 =
+            let uu___2 =
+              let uu___3 = embed (e_list e_string) cb l in as_arg uu___3 in
+            [uu___2] in
+          mkFV uu___ [] uu___1
+      | FStarC_NormSteps.UnfoldAttr l ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv
+              FStarC_Parser_Const.steps_unfoldattr
+              FStar_Pervasives_Native.None in
+          let uu___1 =
+            let uu___2 =
+              let uu___3 = embed (e_list e_string) cb l in as_arg uu___3 in
+            [uu___2] in
+          mkFV uu___ [] uu___1
+      | FStarC_NormSteps.UnfoldQual l ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv
+              FStarC_Parser_Const.steps_unfoldqual
+              FStar_Pervasives_Native.None in
+          let uu___1 =
+            let uu___2 =
+              let uu___3 = embed (e_list e_string) cb l in as_arg uu___3 in
+            [uu___2] in
+          mkFV uu___ [] uu___1
+      | FStarC_NormSteps.UnfoldNamespace l ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv
+              FStarC_Parser_Const.steps_unfoldnamespace
+              FStar_Pervasives_Native.None in
+          let uu___1 =
+            let uu___2 =
+              let uu___3 = embed (e_list e_string) cb l in as_arg uu___3 in
+            [uu___2] in
+          mkFV uu___ [] uu___1
+      | FStarC_NormSteps.ZetaFull ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv
+              FStarC_Parser_Const.steps_zeta_full
+              FStar_Pervasives_Native.None in
+          mkFV uu___ [] []
+      | FStarC_NormSteps.Unascribe ->
+          let uu___ =
+            FStarC_Syntax_Syntax.lid_as_fv
+              FStarC_Parser_Const.steps_unascribe
+              FStar_Pervasives_Native.None in
+          mkFV uu___ [] [] in
+  let un1 cb =
+    fun t0 ->
+      match t0.nbe_t with
+      | FV (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_simpl
+          -> FStar_Pervasives_Native.Some FStarC_NormSteps.Simpl
+      | FV (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_weak ->
+          FStar_Pervasives_Native.Some FStarC_NormSteps.Weak
+      | FV (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_hnf ->
+          FStar_Pervasives_Native.Some FStarC_NormSteps.HNF
+      | FV (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_primops
+          -> FStar_Pervasives_Native.Some FStarC_NormSteps.Primops
+      | FV (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_delta
+          -> FStar_Pervasives_Native.Some FStarC_NormSteps.Delta
+      | FV (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_zeta ->
+          FStar_Pervasives_Native.Some FStarC_NormSteps.Zeta
+      | FV (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_iota ->
+          FStar_Pervasives_Native.Some FStarC_NormSteps.Iota
+      | FV (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_nbe ->
+          FStar_Pervasives_Native.Some FStarC_NormSteps.NBE
+      | FV (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_reify
+          -> FStar_Pervasives_Native.Some FStarC_NormSteps.Reify
+      | FV (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv
+            FStarC_Parser_Const.steps_zeta_full
+          -> FStar_Pervasives_Native.Some FStarC_NormSteps.ZetaFull
+      | FV (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv
+            FStarC_Parser_Const.steps_unascribe
+          -> FStar_Pervasives_Native.Some FStarC_NormSteps.Unascribe
+      | FV (fv, uu___, (l, uu___1)::[]) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv
+            FStarC_Parser_Const.steps_unfoldonly
+          ->
+          let uu___2 = unembed (e_list e_string) cb l in
+          FStarC_Util.bind_opt uu___2
+            (fun ss ->
+               FStar_Pervasives_Native.Some (FStarC_NormSteps.UnfoldOnly ss))
+      | FV (fv, uu___, (l, uu___1)::[]) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv
             FStarC_Parser_Const.steps_unfoldfully
-            FStar_Pervasives_Native.None in
-        let uu___1 =
-          let uu___2 =
-            let uu___3 = embed (e_list e_string) cb l in as_arg uu___3 in
-          [uu___2] in
-        mkFV uu___ [] uu___1
-    | FStar_Pervasives.UnfoldAttr l ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_unfoldattr
-            FStar_Pervasives_Native.None in
-        let uu___1 =
-          let uu___2 =
-            let uu___3 = embed (e_list e_string) cb l in as_arg uu___3 in
-          [uu___2] in
-        mkFV uu___ [] uu___1
-    | FStar_Pervasives.UnfoldQual l ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_unfoldqual
-            FStar_Pervasives_Native.None in
-        let uu___1 =
-          let uu___2 =
-            let uu___3 = embed (e_list e_string) cb l in as_arg uu___3 in
-          [uu___2] in
-        mkFV uu___ [] uu___1
-    | FStar_Pervasives.UnfoldNamespace l ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv
+          ->
+          let uu___2 = unembed (e_list e_string) cb l in
+          FStarC_Util.bind_opt uu___2
+            (fun ss ->
+               FStar_Pervasives_Native.Some (FStarC_NormSteps.UnfoldFully ss))
+      | FV (fv, uu___, (l, uu___1)::[]) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv
+            FStarC_Parser_Const.steps_unfoldattr
+          ->
+          let uu___2 = unembed (e_list e_string) cb l in
+          FStarC_Util.bind_opt uu___2
+            (fun ss ->
+               FStar_Pervasives_Native.Some (FStarC_NormSteps.UnfoldAttr ss))
+      | FV (fv, uu___, (l, uu___1)::[]) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv
+            FStarC_Parser_Const.steps_unfoldqual
+          ->
+          let uu___2 = unembed (e_list e_string) cb l in
+          FStarC_Util.bind_opt uu___2
+            (fun ss ->
+               FStar_Pervasives_Native.Some (FStarC_NormSteps.UnfoldQual ss))
+      | FV (fv, uu___, (l, uu___1)::[]) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv
             FStarC_Parser_Const.steps_unfoldnamespace
-            FStar_Pervasives_Native.None in
-        let uu___1 =
-          let uu___2 =
-            let uu___3 = embed (e_list e_string) cb l in as_arg uu___3 in
-          [uu___2] in
-        mkFV uu___ [] uu___1
-    | FStar_Pervasives.ZetaFull ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_zeta_full
-            FStar_Pervasives_Native.None in
-        mkFV uu___ [] []
-    | FStar_Pervasives.Unascribe ->
-        let uu___ =
-          FStarC_Syntax_Syntax.lid_as_fv FStarC_Parser_Const.steps_unascribe
-            FStar_Pervasives_Native.None in
-        mkFV uu___ [] [] in
-  let un1 cb t0 =
-    match t0.nbe_t with
-    | FV (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_simpl ->
-        FStar_Pervasives_Native.Some FStar_Pervasives.Simpl
-    | FV (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_weak ->
-        FStar_Pervasives_Native.Some FStar_Pervasives.Weak
-    | FV (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_hnf ->
-        FStar_Pervasives_Native.Some FStar_Pervasives.HNF
-    | FV (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_primops
-        -> FStar_Pervasives_Native.Some FStar_Pervasives.Primops
-    | FV (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_delta ->
-        FStar_Pervasives_Native.Some FStar_Pervasives.Delta
-    | FV (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_zeta ->
-        FStar_Pervasives_Native.Some FStar_Pervasives.Zeta
-    | FV (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_iota ->
-        FStar_Pervasives_Native.Some FStar_Pervasives.Iota
-    | FV (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_nbe ->
-        FStar_Pervasives_Native.Some FStar_Pervasives.NBE
-    | FV (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_reify ->
-        FStar_Pervasives_Native.Some FStar_Pervasives.Reify
-    | FV (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_zeta_full
-        -> FStar_Pervasives_Native.Some FStar_Pervasives.ZetaFull
-    | FV (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.steps_unascribe
-        -> FStar_Pervasives_Native.Some FStar_Pervasives.Unascribe
-    | FV (fv, uu___, (l, uu___1)::[]) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv
-          FStarC_Parser_Const.steps_unfoldonly
-        ->
-        let uu___2 = unembed (e_list e_string) cb l in
-        FStarC_Util.bind_opt uu___2
-          (fun ss ->
-             FStar_Pervasives_Native.Some (FStar_Pervasives.UnfoldOnly ss))
-    | FV (fv, uu___, (l, uu___1)::[]) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv
-          FStarC_Parser_Const.steps_unfoldfully
-        ->
-        let uu___2 = unembed (e_list e_string) cb l in
-        FStarC_Util.bind_opt uu___2
-          (fun ss ->
-             FStar_Pervasives_Native.Some (FStar_Pervasives.UnfoldFully ss))
-    | FV (fv, uu___, (l, uu___1)::[]) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv
-          FStarC_Parser_Const.steps_unfoldattr
-        ->
-        let uu___2 = unembed (e_list e_string) cb l in
-        FStarC_Util.bind_opt uu___2
-          (fun ss ->
-             FStar_Pervasives_Native.Some (FStar_Pervasives.UnfoldAttr ss))
-    | FV (fv, uu___, (l, uu___1)::[]) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv
-          FStarC_Parser_Const.steps_unfoldqual
-        ->
-        let uu___2 = unembed (e_list e_string) cb l in
-        FStarC_Util.bind_opt uu___2
-          (fun ss ->
-             FStar_Pervasives_Native.Some (FStar_Pervasives.UnfoldQual ss))
-    | FV (fv, uu___, (l, uu___1)::[]) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv
-          FStarC_Parser_Const.steps_unfoldnamespace
-        ->
-        let uu___2 = unembed (e_list e_string) cb l in
-        FStarC_Util.bind_opt uu___2
-          (fun ss ->
-             FStar_Pervasives_Native.Some
-               (FStar_Pervasives.UnfoldNamespace ss))
-    | uu___ ->
-        ((let uu___2 =
-            let uu___3 = t_to_string t0 in
-            FStarC_Util.format1 "Not an embedded norm_step: %s" uu___3 in
-          FStarC_Errors.log_issue0 FStarC_Errors_Codes.Warning_NotEmbedded ()
-            (Obj.magic FStarC_Errors_Msg.is_error_message_string)
-            (Obj.magic uu___2));
-         FStar_Pervasives_Native.None) in
+          ->
+          let uu___2 = unembed (e_list e_string) cb l in
+          FStarC_Util.bind_opt uu___2
+            (fun ss ->
+               FStar_Pervasives_Native.Some
+                 (FStarC_NormSteps.UnfoldNamespace ss))
+      | uu___ ->
+          ((let uu___2 =
+              let uu___3 = t_to_string t0 in
+              FStarC_Util.format1 "Not an embedded norm_step: %s" uu___3 in
+            FStarC_Errors.log_issue0 FStarC_Errors_Codes.Warning_NotEmbedded
+              () (Obj.magic FStarC_Errors_Msg.is_error_message_string)
+              (Obj.magic uu___2));
+           FStar_Pervasives_Native.None) in
   mk_emb em1 un1
     (fun uu___ ->
        let uu___1 =
@@ -2390,13 +2457,14 @@ let arrow_as_prim_step_1 :
       fun f ->
         fun _fv_lid ->
           fun cb ->
-            let f_wrapped _us args1 =
-              let uu___ = FStarC_List.hd args1 in
-              match uu___ with
-              | (x, uu___1) ->
-                  let uu___2 = unembed ea cb x in
-                  FStarC_Util.map_opt uu___2
-                    (fun x1 -> let uu___3 = f x1 in embed eb cb uu___3) in
+            let f_wrapped _us =
+              fun args1 ->
+                let uu___ = FStarC_List.hd args1 in
+                match uu___ with
+                | (x, uu___1) ->
+                    let uu___2 = unembed ea cb x in
+                    FStarC_Util.map_opt uu___2
+                      (fun x1 -> let uu___3 = f x1 in embed eb cb uu___3) in
             f_wrapped
 let arrow_as_prim_step_2 :
   'a 'b 'c .
@@ -2415,25 +2483,26 @@ let arrow_as_prim_step_2 :
         fun f ->
           fun _fv_lid ->
             fun cb ->
-              let f_wrapped _us args1 =
-                let uu___ = FStarC_List.hd args1 in
-                match uu___ with
-                | (x, uu___1) ->
-                    let uu___2 =
-                      let uu___3 = FStarC_List.tl args1 in
-                      FStarC_List.hd uu___3 in
-                    (match uu___2 with
-                     | (y, uu___3) ->
-                         let uu___4 = unembed ea cb x in
-                         FStarC_Util.bind_opt uu___4
-                           (fun x1 ->
-                              let uu___5 = unembed eb cb y in
-                              FStarC_Util.bind_opt uu___5
-                                (fun y1 ->
-                                   let uu___6 =
-                                     let uu___7 = f x1 y1 in
-                                     embed ec cb uu___7 in
-                                   FStar_Pervasives_Native.Some uu___6))) in
+              let f_wrapped _us =
+                fun args1 ->
+                  let uu___ = FStarC_List.hd args1 in
+                  match uu___ with
+                  | (x, uu___1) ->
+                      let uu___2 =
+                        let uu___3 = FStarC_List.tl args1 in
+                        FStarC_List.hd uu___3 in
+                      (match uu___2 with
+                       | (y, uu___3) ->
+                           let uu___4 = unembed ea cb x in
+                           FStarC_Util.bind_opt uu___4
+                             (fun x1 ->
+                                let uu___5 = unembed eb cb y in
+                                FStarC_Util.bind_opt uu___5
+                                  (fun y1 ->
+                                     let uu___6 =
+                                       let uu___7 = f x1 y1 in
+                                       embed ec cb uu___7 in
+                                     FStar_Pervasives_Native.Some uu___6))) in
               f_wrapped
 let arrow_as_prim_step_3 :
   'a 'b 'c 'd .
@@ -2454,36 +2523,37 @@ let arrow_as_prim_step_3 :
           fun f ->
             fun _fv_lid ->
               fun cb ->
-                let f_wrapped _us args1 =
-                  let uu___ = FStarC_List.hd args1 in
-                  match uu___ with
-                  | (x, uu___1) ->
-                      let uu___2 =
-                        let uu___3 = FStarC_List.tl args1 in
-                        FStarC_List.hd uu___3 in
-                      (match uu___2 with
-                       | (y, uu___3) ->
-                           let uu___4 =
-                             let uu___5 =
-                               let uu___6 = FStarC_List.tl args1 in
-                               FStarC_List.tl uu___6 in
-                             FStarC_List.hd uu___5 in
-                           (match uu___4 with
-                            | (z, uu___5) ->
-                                let uu___6 = unembed ea cb x in
-                                FStarC_Util.bind_opt uu___6
-                                  (fun x1 ->
-                                     let uu___7 = unembed eb cb y in
-                                     FStarC_Util.bind_opt uu___7
-                                       (fun y1 ->
-                                          let uu___8 = unembed ec cb z in
-                                          FStarC_Util.bind_opt uu___8
-                                            (fun z1 ->
-                                               let uu___9 =
-                                                 let uu___10 = f x1 y1 z1 in
-                                                 embed ed cb uu___10 in
-                                               FStar_Pervasives_Native.Some
-                                                 uu___9))))) in
+                let f_wrapped _us =
+                  fun args1 ->
+                    let uu___ = FStarC_List.hd args1 in
+                    match uu___ with
+                    | (x, uu___1) ->
+                        let uu___2 =
+                          let uu___3 = FStarC_List.tl args1 in
+                          FStarC_List.hd uu___3 in
+                        (match uu___2 with
+                         | (y, uu___3) ->
+                             let uu___4 =
+                               let uu___5 =
+                                 let uu___6 = FStarC_List.tl args1 in
+                                 FStarC_List.tl uu___6 in
+                               FStarC_List.hd uu___5 in
+                             (match uu___4 with
+                              | (z, uu___5) ->
+                                  let uu___6 = unembed ea cb x in
+                                  FStarC_Util.bind_opt uu___6
+                                    (fun x1 ->
+                                       let uu___7 = unembed eb cb y in
+                                       FStarC_Util.bind_opt uu___7
+                                         (fun y1 ->
+                                            let uu___8 = unembed ec cb z in
+                                            FStarC_Util.bind_opt uu___8
+                                              (fun z1 ->
+                                                 let uu___9 =
+                                                   let uu___10 = f x1 y1 z1 in
+                                                   embed ed cb uu___10 in
+                                                 FStar_Pervasives_Native.Some
+                                                   uu___9))))) in
                 f_wrapped
 let (e_order : FStarC_Order.order embedding) =
   let ord_Lt_lid =
@@ -2507,23 +2577,25 @@ let (e_order : FStarC_Order.order embedding) =
   let ord_Gt_fv =
     FStarC_Syntax_Syntax.lid_as_fv ord_Gt_lid
       (FStar_Pervasives_Native.Some FStarC_Syntax_Syntax.Data_ctor) in
-  let embed_order cb o =
-    match o with
-    | FStarC_Order.Lt -> mkConstruct ord_Lt_fv [] []
-    | FStarC_Order.Eq -> mkConstruct ord_Eq_fv [] []
-    | FStarC_Order.Gt -> mkConstruct ord_Gt_fv [] [] in
-  let unembed_order cb t1 =
-    match t1.nbe_t with
-    | Construct (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv ord_Lt_lid ->
-        FStar_Pervasives_Native.Some FStarC_Order.Lt
-    | Construct (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv ord_Eq_lid ->
-        FStar_Pervasives_Native.Some FStarC_Order.Eq
-    | Construct (fv, uu___, []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv ord_Gt_lid ->
-        FStar_Pervasives_Native.Some FStarC_Order.Gt
-    | uu___ -> FStar_Pervasives_Native.None in
+  let embed_order cb =
+    fun o ->
+      match o with
+      | FStarC_Order.Lt -> mkConstruct ord_Lt_fv [] []
+      | FStarC_Order.Eq -> mkConstruct ord_Eq_fv [] []
+      | FStarC_Order.Gt -> mkConstruct ord_Gt_fv [] [] in
+  let unembed_order cb =
+    fun t1 ->
+      match t1.nbe_t with
+      | Construct (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv ord_Lt_lid ->
+          FStar_Pervasives_Native.Some FStarC_Order.Lt
+      | Construct (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv ord_Eq_lid ->
+          FStar_Pervasives_Native.Some FStarC_Order.Eq
+      | Construct (fv, uu___, []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv ord_Gt_lid ->
+          FStar_Pervasives_Native.Some FStarC_Order.Gt
+      | uu___ -> FStar_Pervasives_Native.None in
   let fv_as_emb_typ fv =
     let uu___ =
       let uu___1 =

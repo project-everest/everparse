@@ -576,9 +576,9 @@ let reification :
                  (fun uu___2 ->
                     Obj.magic
                       (FStar_Tactics_V2_Derived.norm_term
-                         [Fstarcompiler.FStar_Pervasives.delta;
-                         Fstarcompiler.FStar_Pervasives.zeta;
-                         Fstarcompiler.FStar_Pervasives.iota] uu___2)) uu___2) in
+                         [Fstarcompiler.FStarC_NormSteps.delta;
+                         Fstarcompiler.FStarC_NormSteps.zeta;
+                         Fstarcompiler.FStarC_NormSteps.iota] uu___2)) uu___2) in
           FStar_Tactics_Effect.tac_bind
             (FStar_Sealed.seal
                (Obj.magic
@@ -623,9 +623,9 @@ let reification :
                          (fun uu___3 ->
                             Obj.magic
                               (FStar_Tactics_V2_Derived.norm_term
-                                 [Fstarcompiler.FStar_Pervasives.delta;
-                                 Fstarcompiler.FStar_Pervasives.zeta;
-                                 Fstarcompiler.FStar_Pervasives.iota] uu___3))
+                                 [Fstarcompiler.FStarC_NormSteps.delta;
+                                 Fstarcompiler.FStarC_NormSteps.zeta;
+                                 Fstarcompiler.FStarC_NormSteps.iota] uu___3))
                            uu___3) in
                   Obj.magic
                     (FStar_Tactics_Effect.tac_bind
@@ -646,9 +646,9 @@ let reification :
                           (fun unit ->
                              let uu___2 =
                                FStar_Tactics_V2_Derived.norm_term
-                                 [Fstarcompiler.FStar_Pervasives.delta;
-                                 Fstarcompiler.FStar_Pervasives.zeta;
-                                 Fstarcompiler.FStar_Pervasives.iota] t in
+                                 [Fstarcompiler.FStarC_NormSteps.delta;
+                                 Fstarcompiler.FStarC_NormSteps.zeta;
+                                 Fstarcompiler.FStarC_NormSteps.iota] t in
                              Obj.magic
                                (FStar_Tactics_Effect.tac_bind
                                   (FStar_Sealed.seal
@@ -909,9 +909,9 @@ let canon_monoid :
                                                                     (Obj.magic
                                                                     (FStar_Range.mk_range
                                                                     "Prims.fst"
-                                                                    (Prims.of_int (611))
+                                                                    (Prims.of_int (613))
                                                                     (Prims.of_int (19))
-                                                                    (Prims.of_int (611))
+                                                                    (Prims.of_int (613))
                                                                     (Prims.of_int (31)))))
                                                                     (Obj.magic
                                                                     uu___13)
@@ -1090,7 +1090,7 @@ let canon_monoid :
                                                                     Obj.magic
                                                                     (FStarC_Tactics_V2_Builtins.norm
                                                                     [
-                                                                    Fstarcompiler.FStar_Pervasives.delta_only
+                                                                    Fstarcompiler.FStarC_NormSteps.delta_only
                                                                     ["FStar.Tactics.CanonCommMonoidSimple.canon";
                                                                     "FStar.Tactics.CanonCommMonoidSimple.xsdenote";
                                                                     "FStar.Tactics.CanonCommMonoidSimple.flatten";
@@ -1105,7 +1105,7 @@ let canon_monoid :
                                                                     "FStar.List.Tot.Base.partition";
                                                                     "FStar.List.Tot.Base.bool_of_compare";
                                                                     "FStar.List.Tot.Base.compare_of_bool"];
-                                                                    Fstarcompiler.FStar_Pervasives.primops]))
+                                                                    Fstarcompiler.FStarC_NormSteps.primops]))
                                                                     uu___16)))
                                                                     uu___14)))
                                                                     uu___12)))

@@ -15,10 +15,8 @@
 *)
 
 module FStarC.TypeChecker.TcTerm
-open FStar.Pervasives
 open FStarC.Effect
 open FStarC.List
-open FStar open FStarC
 open FStarC
 open FStarC.Errors
 open FStarC.Defensive
@@ -49,7 +47,6 @@ module TcUtil = FStarC.TypeChecker.Util
 module Gen = FStarC.TypeChecker.Generalize
 module BU = FStarC.Util
 module U  = FStarC.Syntax.Util
-module PP = FStarC.Syntax.Print
 module UF = FStarC.Syntax.Unionfind
 module Const = FStarC.Parser.Const
 module TEQ = FStarC.TypeChecker.TermEqAndSimplify
@@ -143,35 +140,32 @@ let check_no_escape (head_opt : option term)
    the user is expected to write f #a to apply f, matching the
    implicit qualifier at the binding site.
 
-   However, they do not (and cannot, there's no syntax for it) provide
-   the attributes of the binding site at the application site.
+   However, users do not provide the attributes of the
+   binding site at the application site. NEVERTHELESS, we do
+   internally add the attributes in the application node, and
+   as we sometimes re-check terms, aq could contain attributes.
+   These should just be ignored and replaced by those of b.
 
    So, this function checks that the implicit flags match and takes
    the attributes from the binding site, i.e., expected_aq.
 *)
 let check_expected_aqual_for_binder (aq:aqual) (b:binder) (pos:Range.range) : aqual =
-  match
-    let expected_aq = U.aqual_of_binder b in
-    match aq, expected_aq with
-    | None, None -> Inr aq
-    | None, Some eaq ->
-      if eaq.aqual_implicit //programmer should have written #
-      then Inl "expected implicit annotation on the argument"
-      else Inr expected_aq //keep the attributes
-    | Some aq, None ->
-      Inl "expected an explicit argument (without annotation)"
-    | Some aq, Some eaq ->
-      if aq.aqual_implicit <> eaq.aqual_implicit
-      then Inl "mismatch"
-      else Inr expected_aq //keep the attributes
-  with
-  | Inl err ->
+  let expected_aq = U.aqual_of_binder b in
+  // All we check is that the "plicity" matches, and
+  // keep attributes of the binder.
+  let is_imp (a:aqual) : bool = match a with | Some a -> a.aqual_implicit | _ -> false in
+  if is_imp aq <> is_imp expected_aq then begin
     let open FStarC.Pprint in
+    let open FStarC.Errors.Msg in
     let msg = [
-      Errors.Msg.text ("Inconsistent argument qualifiers: " ^ err ^ ".");
+      text "Inconsistent argument qualifiers.";
+      text (BU.format2 "Expected an %splicit argument, got an %splicit one."
+              (if is_imp aq then "im" else "ex")
+              (if is_imp expected_aq then "im" else "ex"));
     ] in
     raise_error pos Errors.Fatal_InconsistentImplicitQualifier msg
-  | Inr r -> r
+  end;
+  expected_aq
 
 let check_erasable_binder_attributes env attrs (binder_ty:typ) =
     attrs |>
@@ -318,10 +312,10 @@ let check_expected_effect env (use_eq:bool) (copt:option comp) (ec : term & comp
                let def_eff_opt = Env.get_default_effect env norm_eff_name in
                match def_eff_opt with
                | None ->
-                 raise_error e Errors.Error_LayeredMissingAnnot //hard error if layered effects are used without annotations
-                             (BU.format2 "Missing annotation for a layered effect (%s) computation at %s"
-                                (c |> U.comp_effect_name |> show)
-                                (show e.pos))
+                 // hard error if layered effects are used without annotations
+                 raise_error e Errors.Error_LayeredMissingAnnot [
+                   text (BU.format1 "Missing annotation for a layered effect (%s) computation." (c |> U.comp_effect_name |> show));
+                 ]
                | Some def_eff ->
                  //
                  //AR: TODO: it may be good hygiene to check that def_eff exists
@@ -437,7 +431,7 @@ let check_pat_fvs (rng:Range.range) env pats bs =
     begin match bs |> BU.find_opt (fun ({binder_bv=b}) -> not (mem b pat_vars)) with
         | None -> ()
         | Some ({binder_bv=x}) ->
-          Errors.log_issue rng Errors.Warning_SMTPatternIllFormed
+          Errors.log_issue pats Errors.Warning_SMTPatternIllFormed
              (BU.format1 "Pattern misses at least one bound variable: %s" (show x))
     end
 
@@ -738,7 +732,7 @@ let rec tc_term env e =
           (tag_of (SS.compress e))
           (print_expected_ty_str env);
 
-    let r, ms = BU.record_time_ms (fun () ->
+    let r, ms = Timing.record_ms (fun () ->
                     tc_maybe_toplevel_term ({env with top_level=false}) e) in
     if Debug.medium () then begin
         BU.print4 "(%s) } tc_term of %s (%s) took %sms\n" (Range.string_of_range <| Env.get_range env)
@@ -1206,7 +1200,7 @@ and tc_maybe_toplevel_term env (e:term) : term                  (* type-checked 
       match choice with
       | None ->
         raise_error field_name Errors.Fatal_IdentifierNotFound [
-           text <| BU.format1 "Field name %s could not be resolved" (string_of_lid field_name);
+           text <| BU.format1 "Field name %s could not be resolved." (string_of_lid field_name);
         ]
       | Some choice ->
         let f = S.fv_to_tm choice in
@@ -1704,6 +1698,8 @@ and tc_value env (e:term) : term
 
   //As a general naming convention, we use e for the term being analyzed and its subterms as e1, e2, etc.
   //We use t and its variants for the type of the term being analyzed
+  if Debug.extreme () then
+    BU.print1 "Checking value %s\n" (show e);
   let env = Env.set_range env e.pos in
   let top = SS.compress e in
   match top.n with
@@ -1762,7 +1758,7 @@ and tc_value env (e:term) : term
     let fv = S.set_range_of_fv fv range in
     maybe_warn_on_use env fv;
     if List.length us <> List.length us' then
-      raise_error env Errors.Fatal_UnexpectedNumberOfUniverse
+      raise_error fv Errors.Fatal_UnexpectedNumberOfUniverse
                   (BU.format3 "Unexpected number of universe instantiations for \"%s\" (%s vs %s)"
                                   (show fv)
                                   (show (List.length us))
@@ -1795,8 +1791,17 @@ and tc_value env (e:term) : term
                  "Universe applications are only allowed on top-level identifiers"
 
   | Tm_fvar fv ->
+    let maybe_set_fv_qual env fv =
+      (* The Data_ctor qualifier is mostly set by desugaring, but
+         may be missing in tactic-generated terms. In general,
+         we should try to not rely on desugaring. *)
+      if None? fv.fv_qual && Env.is_datacon env fv.fv_name.v
+      then { fv with fv_qual = Some Data_ctor }
+      else fv
+    in
     let (us, t), range = Env.lookup_lid env fv.fv_name.v in
     let fv = S.set_range_of_fv fv range in
+    let fv = maybe_set_fv_qual env fv in
     maybe_warn_on_use env fv;
     if !dbg_Range
     then BU.print5 "Lookup up fvar %s at location %s (lid range = defined at %s, used at %s); got universes type %s\n"
@@ -2740,23 +2745,9 @@ and check_application_args env head (chead:comp) ghead args expected_topt : term
                      bs       (* formal parameters *)
                      args     (* remaining actual arguments *) : (term & lcomp & guard_t) =
 
-        let instantiate_one_and_go b rest_bs args =
-          (* We compute a range by combining the range of the head
-           * and the last argument we checked (if any). This is such that
-           * if we instantiate an implicit for `f ()` (of type `#x:a -> ...),
-           * we give it the range of `f ()` instead of just the range for `f`.
-           * See issue #2021. This is only for the use range, we take
-           * the def range from the head, so the 'see also' should still
-           * point to the definition of the head. *)
-          let r = match outargs with
-                  | [] -> head.pos
-                  | ((t, _), _, _)::_ ->
-                      Range.range_of_rng (Range.def_range head.pos)
-                                        (Range.union_rng (Range.use_range head.pos)
-                                                          (Range.use_range t.pos))
-          in
+        let instantiate_one_and_go rng b rest_bs args =
           let b = SS.subst_binder subst b in
-          let tm, ty, aq, g' = TcUtil.instantiate_one_binder env r b in
+          let tm, ty, aq, g' = TcUtil.instantiate_one_binder env rng b in
           let ty, g_ex = check_no_escape (Some head) env fvs ty in
           let guard = g ++ g' ++ g_ex in
           let arg = tm, aq in
@@ -2769,12 +2760,22 @@ and check_application_args env head (chead:comp) ghead args expected_topt : term
         | ({binder_bv=x;binder_qual=Some (Implicit _)})::rest, (_, None)::_
         | ({binder_bv=x;binder_qual=Some (Meta _)})::rest, (_, None)::_
           ->
-          instantiate_one_and_go (List.hd bs) rest args
+          (* We compute a range by combining the range of the head
+           * and the last argument we checked (if any). This is such that
+           * if we instantiate an implicit for `f ()` (of type `#x:a -> ...),
+           * we give it the range of `f ()` instead of just the range for `f`.
+           * See issue #2021. *)
+          let r = match outargs with
+                  | [] -> head.pos
+                  | ((t, _), _, _)::_ ->
+                      Range.union_ranges head.pos t.pos
+          in
+          instantiate_one_and_go r (List.hd bs) rest args
 
         (* User provided a _ for a meta arg, keep the meta for the unknown. *)
         | ({binder_bv=x;binder_qual=Some (Meta tau);binder_attrs=b_attrs})::rest,
           ({n = Tm_unknown}, Some {aqual_implicit=true})::rest' ->
-          instantiate_one_and_go (List.hd bs) rest rest' (* NB: rest' instead of args, we consume the _ *)
+          instantiate_one_and_go (pos (fst (List.hd args))) (List.hd bs) rest rest' (* NB: rest' instead of args, we consume the _ *)
 
         | ({binder_bv=x;binder_qual=bqual;binder_attrs=b_attrs})::rest, (e, aq)::rest' -> (* a concrete argument *)
             let aq = check_expected_aqual_for_binder aq (List.hd bs) e.pos in
@@ -4869,10 +4870,9 @@ let rec __typeof_tot_or_gtot_term_fastpath (env:env) (t:term) (must_tot:bool) : 
       in the return type
 *)
 let typeof_tot_or_gtot_term_fastpath (env:env) (t:term) (must_tot:bool) : option typ =
+  Errors.with_ctx "In a call to typeof_tot_or_gtot_term_fastpath" <| fun () ->
   def_check_scoped t.pos "fastpath" env t;
-  Errors.with_ctx
-    "In a call to typeof_tot_or_gtot_term_fastpath"
-    (fun () -> __typeof_tot_or_gtot_term_fastpath env t must_tot)
+  __typeof_tot_or_gtot_term_fastpath env t must_tot
 
 (*
  * Precondition: G |- t : Tot _ or G |- t : GTot _

@@ -13,64 +13,54 @@ let (e_tf : tf FStarC_Syntax_Embeddings_Base.embedding) =
       let uu___1 = FStarC_Ident.string_of_lid FStarC_Parser_Const.prop_lid in
       (uu___1, []) in
     FStarC_Syntax_Syntax.ET_app uu___ in
-  let em p rng _shadow _norm =
-    match p with
-    | T -> FStarC_Syntax_Util.t_true
-    | F -> FStarC_Syntax_Util.t_false in
-  let un t _norm =
-    let uu___ =
-      let uu___1 = FStarC_Syntax_Embeddings_Base.unmeta_div_results t in
-      uu___1.FStarC_Syntax_Syntax.n in
-    match uu___ with
-    | FStarC_Syntax_Syntax.Tm_fvar fv when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.true_lid ->
-        FStar_Pervasives_Native.Some T
-    | FStarC_Syntax_Syntax.Tm_fvar fv when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.false_lid ->
-        FStar_Pervasives_Native.Some F
-    | uu___1 -> FStar_Pervasives_Native.None in
+  let em p =
+    fun rng ->
+      fun _shadow ->
+        fun _norm ->
+          match p with
+          | T -> FStarC_Syntax_Util.t_true
+          | F -> FStarC_Syntax_Util.t_false in
+  let un t =
+    fun _norm ->
+      let uu___ =
+        let uu___1 = FStarC_Syntax_Embeddings_Base.unmeta_div_results t in
+        uu___1.FStarC_Syntax_Syntax.n in
+      match uu___ with
+      | FStarC_Syntax_Syntax.Tm_fvar fv when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.true_lid ->
+          FStar_Pervasives_Native.Some T
+      | FStarC_Syntax_Syntax.Tm_fvar fv when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.false_lid ->
+          FStar_Pervasives_Native.Some F
+      | uu___1 -> FStar_Pervasives_Native.None in
   FStarC_Syntax_Embeddings_Base.mk_emb_full em un (fun uu___ -> ty)
     (fun uu___ -> match uu___ with | T -> "T" | F -> "F")
     (fun uu___ -> emb_t_prop)
 let (nbe_e_tf : tf FStarC_TypeChecker_NBETerm.embedding) =
-  let lid_as_typ l us args =
-    let uu___ = FStarC_Syntax_Syntax.lid_as_fv l FStar_Pervasives_Native.None in
-    FStarC_TypeChecker_NBETerm.mkFV uu___ us args in
-  let em _cb a =
-    match a with
-    | T -> lid_as_typ FStarC_Parser_Const.true_lid [] []
-    | F -> lid_as_typ FStarC_Parser_Const.false_lid [] [] in
-  let un _cb t =
-    match t.FStarC_TypeChecker_NBETerm.nbe_t with
-    | FStarC_TypeChecker_NBETerm.FV (fv, [], []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.true_lid ->
-        FStar_Pervasives_Native.Some T
-    | FStarC_TypeChecker_NBETerm.FV (fv, [], []) when
-        FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.false_lid ->
-        FStar_Pervasives_Native.Some F
-    | uu___ -> FStar_Pervasives_Native.None in
+  let lid_as_typ l =
+    fun us ->
+      fun args ->
+        let uu___ =
+          FStarC_Syntax_Syntax.lid_as_fv l FStar_Pervasives_Native.None in
+        FStarC_TypeChecker_NBETerm.mkFV uu___ us args in
+  let em _cb =
+    fun a ->
+      match a with
+      | T -> lid_as_typ FStarC_Parser_Const.true_lid [] []
+      | F -> lid_as_typ FStarC_Parser_Const.false_lid [] [] in
+  let un _cb =
+    fun t ->
+      match t.FStarC_TypeChecker_NBETerm.nbe_t with
+      | FStarC_TypeChecker_NBETerm.FV (fv, [], []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.true_lid ->
+          FStar_Pervasives_Native.Some T
+      | FStarC_TypeChecker_NBETerm.FV (fv, [], []) when
+          FStarC_Syntax_Syntax.fv_eq_lid fv FStarC_Parser_Const.false_lid ->
+          FStar_Pervasives_Native.Some F
+      | uu___ -> FStar_Pervasives_Native.None in
   FStarC_TypeChecker_NBETerm.mk_emb em un
     (fun uu___ -> lid_as_typ FStarC_Parser_Const.bool_lid [] [])
     (FStarC_Syntax_Embeddings_Base.emb_typ_of e_tf)
-let (cmp :
-  FStarC_Real.real ->
-    FStarC_Real.real -> FStarC_Order.order FStar_Pervasives_Native.option)
-  =
-  fun r1 ->
-    fun r2 ->
-      match ((FStarC_Real.__proj__Real__item___0 r1),
-              (FStarC_Real.__proj__Real__item___0 r2))
-      with
-      | ("0.0", "0.0") -> FStar_Pervasives_Native.Some FStarC_Order.Eq
-      | ("0.0", "0.5") -> FStar_Pervasives_Native.Some FStarC_Order.Lt
-      | ("0.0", "1.0") -> FStar_Pervasives_Native.Some FStarC_Order.Lt
-      | ("0.5", "0.0") -> FStar_Pervasives_Native.Some FStarC_Order.Gt
-      | ("0.5", "0.5") -> FStar_Pervasives_Native.Some FStarC_Order.Eq
-      | ("0.5", "1.0") -> FStar_Pervasives_Native.Some FStarC_Order.Lt
-      | ("1.0", "0.0") -> FStar_Pervasives_Native.Some FStarC_Order.Gt
-      | ("1.0", "0.5") -> FStar_Pervasives_Native.Some FStarC_Order.Gt
-      | ("1.0", "1.0") -> FStar_Pervasives_Native.Some FStarC_Order.Eq
-      | uu___ -> FStar_Pervasives_Native.None
 let (lt :
   FStarC_Real.real -> FStarC_Real.real -> tf FStar_Pervasives_Native.option)
   =
@@ -78,7 +68,7 @@ let (lt :
     fun uu___ ->
       (fun r1 ->
          fun r2 ->
-           let uu___ = cmp r1 r2 in
+           let uu___ = FStarC_Real.cmp r1 r2 in
            Obj.magic
              (FStarC_Class_Monad.fmap FStarC_Class_Monad.monad_option () ()
                 (fun uu___1 ->
@@ -95,7 +85,7 @@ let (le :
     fun uu___ ->
       (fun r1 ->
          fun r2 ->
-           let uu___ = cmp r1 r2 in
+           let uu___ = FStarC_Real.cmp r1 r2 in
            Obj.magic
              (FStarC_Class_Monad.fmap FStarC_Class_Monad.monad_option () ()
                 (fun uu___1 ->
@@ -113,7 +103,7 @@ let (gt :
     fun uu___ ->
       (fun r1 ->
          fun r2 ->
-           let uu___ = cmp r1 r2 in
+           let uu___ = FStarC_Real.cmp r1 r2 in
            Obj.magic
              (FStarC_Class_Monad.fmap FStarC_Class_Monad.monad_option () ()
                 (fun uu___1 ->
@@ -130,7 +120,7 @@ let (ge :
     fun uu___ ->
       (fun r1 ->
          fun r2 ->
-           let uu___ = cmp r1 r2 in
+           let uu___ = FStarC_Real.cmp r1 r2 in
            Obj.magic
              (FStarC_Class_Monad.fmap FStarC_Class_Monad.monad_option () ()
                 (fun uu___1 ->

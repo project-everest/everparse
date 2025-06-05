@@ -52,7 +52,7 @@ let (native_tactics_steps :
     FStarC_List.map step_from_native_step uu___1
 let (__primitive_steps_ref :
   FStarC_TypeChecker_Primops_Base.primitive_step Prims.list FStarC_Effect.ref)
-  = FStarC_Util.mk_ref []
+  = FStarC_Effect.mk_ref []
 let (primitive_steps :
   unit -> FStarC_TypeChecker_Primops_Base.primitive_step Prims.list) =
   fun uu___ ->
@@ -507,15 +507,19 @@ let e_tactic_1_alt :
   =
   fun ea ->
     fun er ->
-      let em uu___ uu___1 uu___2 uu___3 =
-        failwith "Impossible: embedding tactic (1)?" in
-      let un t0 n =
-        let uu___ = unembed_tactic_1_alt ea er t0 n in
-        match uu___ with
-        | FStar_Pervasives_Native.Some f ->
-            FStar_Pervasives_Native.Some
-              ((fun x -> let uu___1 = f x in FStarC_Tactics_Monad.run uu___1))
-        | FStar_Pervasives_Native.None -> FStar_Pervasives_Native.None in
+      let em uu___ =
+        fun uu___1 ->
+          fun uu___2 ->
+            fun uu___3 -> failwith "Impossible: embedding tactic (1)?" in
+      let un t0 =
+        fun n ->
+          let uu___ = unembed_tactic_1_alt ea er t0 n in
+          match uu___ with
+          | FStar_Pervasives_Native.Some f ->
+              FStar_Pervasives_Native.Some
+                ((fun x ->
+                    let uu___1 = f x in FStarC_Tactics_Monad.run uu___1))
+          | FStar_Pervasives_Native.None -> FStar_Pervasives_Native.None in
       let uu___ =
         FStarC_Syntax_Embeddings_Base.term_as_fv FStarC_Syntax_Syntax.t_unit in
       FStarC_Syntax_Embeddings_Base.mk_emb em un uu___
@@ -781,6 +785,10 @@ let run_unembedded_tactic_on_ps :
                     (ps.FStarC_Tactics_Types.goals);
                   FStarC_Tactics_Types.smt_goals =
                     (ps.FStarC_Tactics_Types.smt_goals);
+                  FStarC_Tactics_Types.splice_quals =
+                    (ps.FStarC_Tactics_Types.splice_quals);
+                  FStarC_Tactics_Types.splice_attrs =
+                    (ps.FStarC_Tactics_Types.splice_attrs);
                   FStarC_Tactics_Types.depth =
                     (ps.FStarC_Tactics_Types.depth);
                   FStarC_Tactics_Types.__dump =
@@ -917,6 +925,10 @@ let run_unembedded_tactic_on_ps :
                     (ps1.FStarC_Tactics_Types.goals);
                   FStarC_Tactics_Types.smt_goals =
                     (ps1.FStarC_Tactics_Types.smt_goals);
+                  FStarC_Tactics_Types.splice_quals =
+                    (ps1.FStarC_Tactics_Types.splice_quals);
+                  FStarC_Tactics_Types.splice_attrs =
+                    (ps1.FStarC_Tactics_Types.splice_attrs);
                   FStarC_Tactics_Types.depth =
                     (ps1.FStarC_Tactics_Types.depth);
                   FStarC_Tactics_Types.__dump =
@@ -1084,6 +1096,29 @@ let run_unembedded_tactic_on_ps :
                      uu___1 :: msg in
                    FStarC_Effect.raise
                      (FStarC_Errors.Error (code, msg1, rng, ctx))
+               | FStarC_Tactics_Result.Failed (FStarC_Errors.Stop, ps3) ->
+                   let uu___1 =
+                     let uu___2 = FStarC_Errors.get_err_count () in
+                     uu___2 > Prims.int_zero in
+                   if uu___1
+                   then FStarC_Effect.raise FStarC_Errors.Stop
+                   else
+                     (let uu___3 =
+                        let uu___4 =
+                          FStarC_Errors_Msg.text
+                            "A tactic raised the Stop exception but did not log errors." in
+                        let uu___5 =
+                          let uu___6 =
+                            FStarC_Errors_Msg.text "Failing anyway." in
+                          [uu___6] in
+                        uu___4 :: uu___5 in
+                      FStarC_Errors.raise_error
+                        FStarC_Class_HasRange.hasRange_range
+                        ps3.FStarC_Tactics_Types.entry_range
+                        FStarC_Errors_Codes.Fatal_UserTacticFailure ()
+                        (Obj.magic
+                           FStarC_Errors_Msg.is_error_message_list_doc)
+                        (Obj.magic uu___3))
                | FStarC_Tactics_Result.Failed (e, ps3) ->
                    (if ps3.FStarC_Tactics_Types.dump_on_failure
                     then

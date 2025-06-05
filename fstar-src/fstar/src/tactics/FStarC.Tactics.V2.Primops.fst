@@ -41,26 +41,13 @@ open FStarC.Tactics.InterpFuns
 open FStarC.Class.Show
 open FStarC.Class.Monad
 
-module BU      = FStarC.Util
-module Cfg     = FStarC.TypeChecker.Cfg
 module E       = FStarC.Tactics.Embedding
-module Env     = FStarC.TypeChecker.Env
-module Err     = FStarC.Errors
-module NBE     = FStarC.TypeChecker.NBE
 module NBET    = FStarC.TypeChecker.NBETerm
-module N       = FStarC.TypeChecker.Normalize
 module NRE     = FStarC.Reflection.V2.NBEEmbeddings
 module PC      = FStarC.Parser.Const
-module PO      = FStarC.TypeChecker.Primops
-module Print   = FStarC.Syntax.Print
 module RE      = FStarC.Reflection.V2.Embeddings
 module S       = FStarC.Syntax.Syntax
-module SS      = FStarC.Syntax.Subst
-module TcComm  = FStarC.TypeChecker.Common
-module TcRel   = FStarC.TypeChecker.Rel
-module TcTerm  = FStarC.TypeChecker.TcTerm
 module TI      = FStarC.Tactics.Interpreter
-module U       = FStarC.Syntax.Util
 
 let solve (#a:Type) {| ev : a |} : Tot a = ev
 
@@ -224,6 +211,7 @@ let ops = [
   mk_tac_step_1 0 "free_uvars"  free_uvars free_uvars;
   mk_tac_step_1 0 "all_ext_options" all_ext_options all_ext_options;
   mk_tac_step_1 0 "ext_getv" ext_getv ext_getv;
+  mk_tac_step_1 0 "ext_enabled" ext_enabled ext_enabled;
   mk_tac_step_1 0 "ext_getns" ext_getns ext_getns;
 
   mk_tac_step_2 1 "alloc"
@@ -244,6 +232,9 @@ let ops = [
     (fun _ -> write)
     (fun _ -> write);
 
+  mk_tac_step_1 0 "splice_quals" splice_quals splice_quals;
+  mk_tac_step_1 0 "splice_attrs" splice_attrs splice_attrs;
+
   // reflection typechecker callbacks (part of the DSL framework)
 
   mk_tac_step_2 0 "is_non_informative"      refl_is_non_informative refl_is_non_informative;
@@ -256,9 +247,9 @@ let ops = [
   mk_tac_step_2 0 "universe_of"             refl_universe_of refl_universe_of;
   mk_tac_step_2 0 "check_prop_validity"     refl_check_prop_validity refl_check_prop_validity;
   mk_tac_step_4 0 "check_match_complete"    refl_check_match_complete refl_check_match_complete;
-  mk_tac_step_3 0 "instantiate_implicits"
-    #_ #_ #_ #(e_ret_t (e_tuple3 (e_list (e_tuple2 RE.e_namedv solve)) solve solve))
-    #_ #_ #_ #(nbe_e_ret_t (NBET.e_tuple3 (NBET.e_list (NBET.e_tuple2 NRE.e_namedv solve)) solve solve))
+  mk_tac_step_4 0 "instantiate_implicits"
+    #_ #_ #_ #_ #(e_ret_t (e_tuple3 (e_list (e_tuple2 RE.e_namedv solve)) solve solve))
+    #_ #_ #_ #_ #(nbe_e_ret_t (NBET.e_tuple3 (NBET.e_list (NBET.e_tuple2 NRE.e_namedv solve)) solve solve))
     refl_instantiate_implicits refl_instantiate_implicits;
   mk_tac_step_4 0 "try_unify"
     #_ #(e_list (e_tuple2 RE.e_namedv RE.e_term))             #_ #_ #(e_ret_t (e_list (e_tuple2 RE.e_namedv RE.e_term)))

@@ -277,50 +277,56 @@ let e_lazy :
   =
   fun k ->
     fun ty ->
-      let ee x rng _topt _norm =
-        FStarC_Syntax_Util.mk_lazy x ty k (FStar_Pervasives_Native.Some rng) in
-      let uu t _norm =
-        let t0 = t in
-        let uu___ =
-          let uu___1 = FStarC_Syntax_Subst.compress t in
-          uu___1.FStarC_Syntax_Syntax.n in
-        match uu___ with
-        | FStarC_Syntax_Syntax.Tm_lazy
-            { FStarC_Syntax_Syntax.blob = b;
-              FStarC_Syntax_Syntax.lkind = lkind;
-              FStarC_Syntax_Syntax.ltyp = uu___1;
-              FStarC_Syntax_Syntax.rng = uu___2;_}
-            when
-            FStarC_Class_Deq.op_Equals_Question
-              FStarC_Syntax_Syntax.deq_lazy_kind lkind k
-            ->
-            let uu___3 = FStarC_Dyn.undyn b in
-            FStar_Pervasives_Native.Some uu___3
-        | FStarC_Syntax_Syntax.Tm_lazy
-            { FStarC_Syntax_Syntax.blob = b;
-              FStarC_Syntax_Syntax.lkind = lkind;
-              FStarC_Syntax_Syntax.ltyp = uu___1;
-              FStarC_Syntax_Syntax.rng = uu___2;_}
-            ->
-            ((let uu___4 =
-                let uu___5 =
-                  FStarC_Class_Show.show
-                    FStarC_Syntax_Syntax.showable_lazy_kind k in
-                let uu___6 =
-                  FStarC_Class_Show.show
-                    FStarC_Syntax_Syntax.showable_lazy_kind lkind in
-                let uu___7 =
-                  FStarC_Class_Show.show FStarC_Syntax_Print.showable_term t0 in
-                FStarC_Util.format3
-                  "Warning, lazy unembedding failed, tag mismatch.\n\tExpected %s, got %s\n\tt = %s."
-                  uu___5 uu___6 uu___7 in
-              FStarC_Errors.log_issue
-                (FStarC_Syntax_Syntax.has_range_syntax ()) t0
-                FStarC_Errors_Codes.Warning_NotEmbedded ()
-                (Obj.magic FStarC_Errors_Msg.is_error_message_string)
-                (Obj.magic uu___4));
-             FStar_Pervasives_Native.None)
-        | uu___1 -> FStar_Pervasives_Native.None in
+      let ee x =
+        fun rng ->
+          fun _topt ->
+            fun _norm ->
+              FStarC_Syntax_Util.mk_lazy x ty k
+                (FStar_Pervasives_Native.Some rng) in
+      let uu t =
+        fun _norm ->
+          let t0 = t in
+          let uu___ =
+            let uu___1 = FStarC_Syntax_Subst.compress t in
+            uu___1.FStarC_Syntax_Syntax.n in
+          match uu___ with
+          | FStarC_Syntax_Syntax.Tm_lazy
+              { FStarC_Syntax_Syntax.blob = b;
+                FStarC_Syntax_Syntax.lkind = lkind;
+                FStarC_Syntax_Syntax.ltyp = uu___1;
+                FStarC_Syntax_Syntax.rng = uu___2;_}
+              when
+              FStarC_Class_Deq.op_Equals_Question
+                FStarC_Syntax_Syntax.deq_lazy_kind lkind k
+              ->
+              let uu___3 = FStarC_Dyn.undyn b in
+              FStar_Pervasives_Native.Some uu___3
+          | FStarC_Syntax_Syntax.Tm_lazy
+              { FStarC_Syntax_Syntax.blob = b;
+                FStarC_Syntax_Syntax.lkind = lkind;
+                FStarC_Syntax_Syntax.ltyp = uu___1;
+                FStarC_Syntax_Syntax.rng = uu___2;_}
+              ->
+              ((let uu___4 =
+                  let uu___5 =
+                    FStarC_Class_Show.show
+                      FStarC_Syntax_Syntax.showable_lazy_kind k in
+                  let uu___6 =
+                    FStarC_Class_Show.show
+                      FStarC_Syntax_Syntax.showable_lazy_kind lkind in
+                  let uu___7 =
+                    FStarC_Class_Show.show FStarC_Syntax_Print.showable_term
+                      t0 in
+                  FStarC_Util.format3
+                    "Warning, lazy unembedding failed, tag mismatch.\n\tExpected %s, got %s\n\tt = %s."
+                    uu___5 uu___6 uu___7 in
+                FStarC_Errors.log_issue
+                  (FStarC_Syntax_Syntax.has_range_syntax ()) t0
+                  FStarC_Errors_Codes.Warning_NotEmbedded ()
+                  (Obj.magic FStarC_Errors_Msg.is_error_message_string)
+                  (Obj.magic uu___4));
+               FStar_Pervasives_Native.None)
+          | uu___1 -> FStar_Pervasives_Native.None in
       let uu___ = term_as_fv ty in mk_emb ee uu uu___
 let lazy_embed :
   'a .
@@ -464,30 +470,31 @@ let mk_extracted_embedding :
   fun name ->
     fun u ->
       fun e ->
-        let uu t _norm =
-          let uu___ = FStarC_Syntax_Util.head_and_args t in
-          match uu___ with
-          | (hd, args) ->
-              let uu___1 =
-                let uu___2 =
-                  let uu___3 =
-                    let uu___4 = FStarC_Syntax_Util.un_uinst hd in
-                    FStarC_Syntax_Subst.compress uu___4 in
-                  uu___3.FStarC_Syntax_Syntax.n in
-                match uu___2 with
-                | FStarC_Syntax_Syntax.Tm_fvar fv ->
-                    FStar_Pervasives_Native.Some
-                      ((fv.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v)
-                | uu___3 -> FStar_Pervasives_Native.None in
-              op_let_Question uu___1
-                (fun hd_lid ->
-                   let uu___2 =
-                     let uu___3 = FStarC_Ident.string_of_lid hd_lid in
-                     let uu___4 =
-                       FStarC_List.map FStar_Pervasives_Native.fst args in
-                     (uu___3, uu___4) in
-                   u uu___2) in
-        let ee x rng _topt _norm = e x in
+        let uu t =
+          fun _norm ->
+            let uu___ = FStarC_Syntax_Util.head_and_args t in
+            match uu___ with
+            | (hd, args) ->
+                let uu___1 =
+                  let uu___2 =
+                    let uu___3 =
+                      let uu___4 = FStarC_Syntax_Util.un_uinst hd in
+                      FStarC_Syntax_Subst.compress uu___4 in
+                    uu___3.FStarC_Syntax_Syntax.n in
+                  match uu___2 with
+                  | FStarC_Syntax_Syntax.Tm_fvar fv ->
+                      FStar_Pervasives_Native.Some
+                        ((fv.FStarC_Syntax_Syntax.fv_name).FStarC_Syntax_Syntax.v)
+                  | uu___3 -> FStar_Pervasives_Native.None in
+                op_let_Question uu___1
+                  (fun hd_lid ->
+                     let uu___2 =
+                       let uu___3 = FStarC_Ident.string_of_lid hd_lid in
+                       let uu___4 =
+                         FStarC_List.map FStar_Pervasives_Native.fst args in
+                       (uu___3, uu___4) in
+                     u uu___2) in
+        let ee x = fun rng -> fun _topt -> fun _norm -> e x in
         let uu___ =
           let uu___1 = FStarC_Ident.lid_of_str name in
           FStarC_Syntax_Syntax.lid_as_fv uu___1 FStar_Pervasives_Native.None in

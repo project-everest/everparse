@@ -75,7 +75,7 @@ let (mlexpr_of_range :
         FStarC_Extraction_ML_Syntax.ml_string_ty
         (FStarC_Extraction_ML_Syntax.MLE_Const
            (FStarC_Extraction_ML_Syntax.MLC_String s)) in
-    let drop_path = FStarC_Util.basename in
+    let drop_path = FStarC_Filepath.basename in
     let uu___ =
       let uu___1 =
         let uu___2 =
@@ -322,20 +322,21 @@ let rec (type_leq_c :
               else (false, FStar_Pervasives_Native.None)
           | (FStarC_Extraction_ML_Syntax.MLTY_Fun (t1, f, t2),
              FStarC_Extraction_ML_Syntax.MLTY_Fun (t1', f', t2')) ->
-              let mk_fun xs body =
-                match xs with
-                | [] -> body
-                | uu___ ->
-                    let e1 =
-                      match body.FStarC_Extraction_ML_Syntax.expr with
-                      | FStarC_Extraction_ML_Syntax.MLE_Fun (ys, body1) ->
-                          FStarC_Extraction_ML_Syntax.MLE_Fun
-                            ((FStarC_List.op_At xs ys), body1)
-                      | uu___1 ->
-                          FStarC_Extraction_ML_Syntax.MLE_Fun (xs, body) in
-                    let uu___1 =
-                      mk_ty_fun xs body.FStarC_Extraction_ML_Syntax.mlty in
-                    FStarC_Extraction_ML_Syntax.with_ty uu___1 e1 in
+              let mk_fun xs =
+                fun body ->
+                  match xs with
+                  | [] -> body
+                  | uu___ ->
+                      let e1 =
+                        match body.FStarC_Extraction_ML_Syntax.expr with
+                        | FStarC_Extraction_ML_Syntax.MLE_Fun (ys, body1) ->
+                            FStarC_Extraction_ML_Syntax.MLE_Fun
+                              ((FStarC_List.op_At xs ys), body1)
+                        | uu___1 ->
+                            FStarC_Extraction_ML_Syntax.MLE_Fun (xs, body) in
+                      let uu___1 =
+                        mk_ty_fun xs body.FStarC_Extraction_ML_Syntax.mlty in
+                      FStarC_Extraction_ML_Syntax.with_ty uu___1 e1 in
               (match e with
                | FStar_Pervasives_Native.Some
                    {
@@ -479,16 +480,17 @@ let (is_xtuple :
   fun uu___ ->
     match uu___ with
     | (ns, n) ->
-        let uu___1 =
-          let uu___2 = FStarC_Util.concat_l "." (FStarC_List.op_At ns [n]) in
-          FStarC_Parser_Const.is_tuple_datacon_string uu___2 in
-        if uu___1
-        then
-          let uu___2 =
-            let uu___3 = FStarC_Util.char_at n (Prims.of_int (7)) in
-            FStarC_Util.int_of_char uu___3 in
-          FStar_Pervasives_Native.Some uu___2
-        else FStar_Pervasives_Native.None
+        let uu___1 = FStarC_Util.concat_l "." (FStarC_List.op_At ns [n]) in
+        FStarC_Parser_Const_Tuples.get_tuple_datacon_arity uu___1
+let (is_xtuple_ty :
+  (Prims.string Prims.list * Prims.string) ->
+    Prims.int FStar_Pervasives_Native.option)
+  =
+  fun uu___ ->
+    match uu___ with
+    | (ns, n) ->
+        let uu___1 = FStarC_Util.concat_l "." (FStarC_List.op_At ns [n]) in
+        FStarC_Parser_Const_Tuples.get_tuple_tycon_arity uu___1
 let (resugar_exp :
   FStarC_Extraction_ML_Syntax.mlexpr -> FStarC_Extraction_ML_Syntax.mlexpr) =
   fun e ->
@@ -527,23 +529,6 @@ let record_fields :
                let uu___1 = FStarC_Ident.ident_of_lid f in
                FStarC_Ident.string_of_id uu___1 in
              (uu___, e)) fs vs
-let (is_xtuple_ty :
-  (Prims.string Prims.list * Prims.string) ->
-    Prims.int FStar_Pervasives_Native.option)
-  =
-  fun uu___ ->
-    match uu___ with
-    | (ns, n) ->
-        let uu___1 =
-          let uu___2 = FStarC_Util.concat_l "." (FStarC_List.op_At ns [n]) in
-          FStarC_Parser_Const.is_tuple_constructor_string uu___2 in
-        if uu___1
-        then
-          let uu___2 =
-            let uu___3 = FStarC_Util.char_at n (Prims.of_int (5)) in
-            FStarC_Util.int_of_char uu___3 in
-          FStar_Pervasives_Native.Some uu___2
-        else FStar_Pervasives_Native.None
 let (resugar_mlty :
   FStarC_Extraction_ML_Syntax.mlty -> FStarC_Extraction_ML_Syntax.mlty) =
   fun t ->
@@ -709,18 +694,19 @@ let (list_elements :
       FStar_Pervasives_Native.option)
   =
   fun e ->
-    let rec list_elements1 acc e1 =
-      match e1.FStarC_Extraction_ML_Syntax.expr with
-      | FStarC_Extraction_ML_Syntax.MLE_CTor
-          (("Fstarcompiler.Prims"::[], "Cons"), hd::tl::[]) ->
-          list_elements1 (hd :: acc) tl
-      | FStarC_Extraction_ML_Syntax.MLE_CTor
-          (("Fstarcompiler.Prims"::[], "Nil"), []) ->
-          FStar_Pervasives_Native.Some (FStarC_List.rev acc)
-      | FStarC_Extraction_ML_Syntax.MLE_CTor
-          (("Prims"::[], "Cons"), hd::tl::[]) ->
-          list_elements1 (hd :: acc) tl
-      | FStarC_Extraction_ML_Syntax.MLE_CTor (("Prims"::[], "Nil"), []) ->
-          FStar_Pervasives_Native.Some (FStarC_List.rev acc)
-      | uu___ -> FStar_Pervasives_Native.None in
+    let rec list_elements1 acc =
+      fun e1 ->
+        match e1.FStarC_Extraction_ML_Syntax.expr with
+        | FStarC_Extraction_ML_Syntax.MLE_CTor
+            (("Fstarcompiler.Prims"::[], "Cons"), hd::tl::[]) ->
+            list_elements1 (hd :: acc) tl
+        | FStarC_Extraction_ML_Syntax.MLE_CTor
+            (("Fstarcompiler.Prims"::[], "Nil"), []) ->
+            FStar_Pervasives_Native.Some (FStarC_List.rev acc)
+        | FStarC_Extraction_ML_Syntax.MLE_CTor
+            (("Prims"::[], "Cons"), hd::tl::[]) ->
+            list_elements1 (hd :: acc) tl
+        | FStarC_Extraction_ML_Syntax.MLE_CTor (("Prims"::[], "Nil"), []) ->
+            FStar_Pervasives_Native.Some (FStarC_List.rev acc)
+        | uu___ -> FStar_Pervasives_Native.None in
     list_elements1 [] e

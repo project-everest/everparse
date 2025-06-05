@@ -12,10 +12,34 @@ let (showable_int : Prims.int showable) = { show = Prims.string_of_int }
 let (showable_string : Prims.string showable) =
   { show = (fun x -> Prims.strcat "\"" (Prims.strcat x "\"")) }
 let show_list : 'a . 'a showable -> 'a Prims.list showable =
-  fun uu___ -> { show = (FStarC_Common.string_of_list (show uu___)) }
+  fun uu___ ->
+    {
+      show =
+        (fun l ->
+           let rec show_list_aux l1 =
+             match l1 with
+             | [] -> ""
+             | x::[] -> show uu___ x
+             | x::xs ->
+                 let uu___1 = show uu___ x in
+                 let uu___2 =
+                   let uu___3 = show_list_aux xs in Prims.strcat ", " uu___3 in
+                 Prims.strcat uu___1 uu___2 in
+           let uu___1 =
+             let uu___2 = show_list_aux l in Prims.strcat uu___2 "]" in
+           Prims.strcat "[" uu___1)
+    }
 let show_option :
   'a . 'a showable -> 'a FStar_Pervasives_Native.option showable =
-  fun uu___ -> { show = (FStarC_Common.string_of_option (show uu___)) }
+  fun uu___ ->
+    {
+      show =
+        (fun uu___1 ->
+           match uu___1 with
+           | FStar_Pervasives_Native.None -> "None"
+           | FStar_Pervasives_Native.Some x ->
+               let uu___2 = show uu___ x in Prims.strcat "Some " uu___2)
+    }
 let show_either :
   'a 'b .
     'a showable -> 'b showable -> ('a, 'b) FStar_Pervasives.either showable

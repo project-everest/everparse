@@ -470,7 +470,7 @@ let rec (ovalue_is_readable : typ -> Obj.t -> Prims.bool) =
           (FStar_Pervasives_Native.uu___is_Some v1) &&
             (let keys =
                FStar_List_Tot_Base.map FStar_Pervasives_Native.fst l.fields in
-             let pred t' v2 = ovalue_is_readable t' v2 in
+             let pred t' = fun v2 -> ovalue_is_readable t' v2 in
              FStar_List_Tot_Base.for_all (struct_field_is_readable l pred v1)
                keys)
       | TUnion l ->
@@ -506,7 +506,7 @@ let rec (ovalue_of_value : typ -> Obj.t -> Obj.t) =
       match t with
       | TStruct l ->
           Obj.repr
-            (let oval t' v' = ovalue_of_value t' v' in
+            (let oval t' = fun v' -> ovalue_of_value t' v' in
              ostruct_create l (ostruct_field_of_struct_field l oval v))
       | TArray (len, t1) ->
           Obj.repr
@@ -1477,3 +1477,4 @@ let (write_buffer : typ -> unit buffer -> FStar_UInt32.t -> Obj.t -> unit) =
         fun v -> let uu___ = pointer_of_buffer_cell t b i in write t uu___ v
 type ('t, 'blarge, 'bsmall) buffer_includes = unit
 type ('uuuuu, 'uuuuu1) cloc_aloc = (unit, unit) aloc
+

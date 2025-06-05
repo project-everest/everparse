@@ -12,15 +12,12 @@ let (shellescape : Prims.string -> Prims.string) =
 let (new_ocamlpath : unit -> Prims.string) =
   fun uu___ ->
     let ocamldir = FStarC_Find.locate_ocaml () in
-    let sep =
-      match FStarC_Platform.system with
-      | FStarC_Platform.Windows -> ";"
-      | FStarC_Platform.Posix -> ":" in
     let old_ocamlpath =
       let uu___1 = FStarC_Util.expand_environment_variable "OCAMLPATH" in
       FStarC_Util.dflt "" uu___1 in
     let new_ocamlpath1 =
-      Prims.strcat ocamldir (Prims.strcat sep old_ocamlpath) in
+      Prims.strcat ocamldir
+        (Prims.strcat FStarC_Platform.ocamlpath_sep old_ocamlpath) in
     new_ocamlpath1
 let exec_in_ocamlenv : 'a . Prims.string -> Prims.string Prims.list -> 'a =
   fun cmd ->

@@ -306,85 +306,94 @@ let (gen :
              univs_and_uvars_of_lec uu___3 in
            match uu___2 with
            | (univs, uvs, lec_hd) ->
-               let force_univs_eq lec2 u1 u2 =
-                 let uu___3 =
-                   FStarC_Class_Setlike.equal ()
-                     (Obj.magic
-                        (FStarC_FlatSet.setlike_flat_set
-                           FStarC_Syntax_Free.ord_univ_uvar)) (Obj.magic u1)
-                     (Obj.magic u2) in
-                 if uu___3
-                 then ()
-                 else
-                   (let uu___5 = lec_hd in
-                    match uu___5 with
-                    | (lb1, uu___6, uu___7) ->
-                        let uu___8 = lec2 in
-                        (match uu___8 with
-                         | (lb2, uu___9, uu___10) ->
-                             let msg =
-                               let uu___11 =
-                                 FStarC_Class_Show.show
-                                   (FStarC_Class_Show.show_either
-                                      FStarC_Syntax_Print.showable_bv
-                                      FStarC_Syntax_Print.showable_fv) lb1 in
-                               let uu___12 =
-                                 FStarC_Class_Show.show
-                                   (FStarC_Class_Show.show_either
-                                      FStarC_Syntax_Print.showable_bv
-                                      FStarC_Syntax_Print.showable_fv) lb2 in
-                               FStarC_Util.format2
-                                 "Generalizing the types of these mutually recursive definitions requires an incompatible set of universes for %s and %s"
-                                 uu___11 uu___12 in
-                             FStarC_Errors.raise_error
-                               FStarC_TypeChecker_Env.hasRange_env env
-                               FStarC_Errors_Codes.Fatal_IncompatibleSetOfUniverse
-                               ()
-                               (Obj.magic
-                                  FStarC_Errors_Msg.is_error_message_string)
-                               (Obj.magic msg))) in
-               let force_uvars_eq lec2 u1 u2 =
-                 let uvars_subseteq u11 u21 =
-                   FStarC_Util.for_all
-                     (fun u ->
-                        FStarC_Util.for_some
-                          (fun u' ->
-                             FStarC_Syntax_Unionfind.equiv
-                               u.FStarC_Syntax_Syntax.ctx_uvar_head
-                               u'.FStarC_Syntax_Syntax.ctx_uvar_head) u21)
-                     u11 in
-                 let uu___3 =
-                   (uvars_subseteq u1 u2) && (uvars_subseteq u2 u1) in
-                 if uu___3
-                 then ()
-                 else
-                   (let uu___5 = lec_hd in
-                    match uu___5 with
-                    | (lb1, uu___6, uu___7) ->
-                        let uu___8 = lec2 in
-                        (match uu___8 with
-                         | (lb2, uu___9, uu___10) ->
-                             let msg =
-                               let uu___11 =
-                                 FStarC_Class_Show.show
-                                   (FStarC_Class_Show.show_either
-                                      FStarC_Syntax_Print.showable_bv
-                                      FStarC_Syntax_Print.showable_fv) lb1 in
-                               let uu___12 =
-                                 FStarC_Class_Show.show
-                                   (FStarC_Class_Show.show_either
-                                      FStarC_Syntax_Print.showable_bv
-                                      FStarC_Syntax_Print.showable_fv) lb2 in
-                               FStarC_Util.format2
-                                 "Generalizing the types of these mutually recursive definitions requires an incompatible number of types for %s and %s"
-                                 uu___11 uu___12 in
-                             FStarC_Errors.raise_error
-                               FStarC_TypeChecker_Env.hasRange_env env
-                               FStarC_Errors_Codes.Fatal_IncompatibleNumberOfTypes
-                               ()
-                               (Obj.magic
-                                  FStarC_Errors_Msg.is_error_message_string)
-                               (Obj.magic msg))) in
+               let force_univs_eq lec2 =
+                 fun u1 ->
+                   fun u2 ->
+                     let uu___3 =
+                       FStarC_Class_Setlike.equal ()
+                         (Obj.magic
+                            (FStarC_FlatSet.setlike_flat_set
+                               FStarC_Syntax_Free.ord_univ_uvar))
+                         (Obj.magic u1) (Obj.magic u2) in
+                     if uu___3
+                     then ()
+                     else
+                       (let uu___5 = lec_hd in
+                        match uu___5 with
+                        | (lb1, uu___6, uu___7) ->
+                            let uu___8 = lec2 in
+                            (match uu___8 with
+                             | (lb2, uu___9, uu___10) ->
+                                 let msg =
+                                   let uu___11 =
+                                     FStarC_Class_Show.show
+                                       (FStarC_Class_Show.show_either
+                                          FStarC_Syntax_Print.showable_bv
+                                          FStarC_Syntax_Print.showable_fv)
+                                       lb1 in
+                                   let uu___12 =
+                                     FStarC_Class_Show.show
+                                       (FStarC_Class_Show.show_either
+                                          FStarC_Syntax_Print.showable_bv
+                                          FStarC_Syntax_Print.showable_fv)
+                                       lb2 in
+                                   FStarC_Util.format2
+                                     "Generalizing the types of these mutually recursive definitions requires an incompatible set of universes for %s and %s"
+                                     uu___11 uu___12 in
+                                 FStarC_Errors.raise_error
+                                   FStarC_TypeChecker_Env.hasRange_env env
+                                   FStarC_Errors_Codes.Fatal_IncompatibleSetOfUniverse
+                                   ()
+                                   (Obj.magic
+                                      FStarC_Errors_Msg.is_error_message_string)
+                                   (Obj.magic msg))) in
+               let force_uvars_eq lec2 =
+                 fun u1 ->
+                   fun u2 ->
+                     let uvars_subseteq u11 =
+                       fun u21 ->
+                         FStarC_Util.for_all
+                           (fun u ->
+                              FStarC_Util.for_some
+                                (fun u' ->
+                                   FStarC_Syntax_Unionfind.equiv
+                                     u.FStarC_Syntax_Syntax.ctx_uvar_head
+                                     u'.FStarC_Syntax_Syntax.ctx_uvar_head)
+                                u21) u11 in
+                     let uu___3 =
+                       (uvars_subseteq u1 u2) && (uvars_subseteq u2 u1) in
+                     if uu___3
+                     then ()
+                     else
+                       (let uu___5 = lec_hd in
+                        match uu___5 with
+                        | (lb1, uu___6, uu___7) ->
+                            let uu___8 = lec2 in
+                            (match uu___8 with
+                             | (lb2, uu___9, uu___10) ->
+                                 let msg =
+                                   let uu___11 =
+                                     FStarC_Class_Show.show
+                                       (FStarC_Class_Show.show_either
+                                          FStarC_Syntax_Print.showable_bv
+                                          FStarC_Syntax_Print.showable_fv)
+                                       lb1 in
+                                   let uu___12 =
+                                     FStarC_Class_Show.show
+                                       (FStarC_Class_Show.show_either
+                                          FStarC_Syntax_Print.showable_bv
+                                          FStarC_Syntax_Print.showable_fv)
+                                       lb2 in
+                                   FStarC_Util.format2
+                                     "Generalizing the types of these mutually recursive definitions requires an incompatible number of types for %s and %s"
+                                     uu___11 uu___12 in
+                                 FStarC_Errors.raise_error
+                                   FStarC_TypeChecker_Env.hasRange_env env
+                                   FStarC_Errors_Codes.Fatal_IncompatibleNumberOfTypes
+                                   ()
+                                   (Obj.magic
+                                      FStarC_Errors_Msg.is_error_message_string)
+                                   (Obj.magic msg))) in
                let lecs1 =
                  let uu___3 = FStarC_List.tl lecs in
                  FStarC_List.fold_right
@@ -520,19 +529,19 @@ let (gen :
                                                         x in
                                                     FStarC_Syntax_Syntax.iarg
                                                       uu___9) gen_tvars in
-                                         let instantiate_lbname_with_app tm
-                                           fv =
-                                           let uu___7 =
-                                             let uu___8 =
-                                               FStarC_Util.right lbname in
-                                             FStarC_Syntax_Syntax.fv_eq fv
-                                               uu___8 in
-                                           if uu___7
-                                           then
-                                             FStarC_Syntax_Syntax.mk_Tm_app
-                                               tm tvar_args
-                                               tm.FStarC_Syntax_Syntax.pos
-                                           else tm in
+                                         let instantiate_lbname_with_app tm =
+                                           fun fv ->
+                                             let uu___7 =
+                                               let uu___8 =
+                                                 FStarC_Util.right lbname in
+                                               FStarC_Syntax_Syntax.fv_eq fv
+                                                 uu___8 in
+                                             if uu___7
+                                             then
+                                               FStarC_Syntax_Syntax.mk_Tm_app
+                                                 tm tvar_args
+                                                 tm.FStarC_Syntax_Syntax.pos
+                                             else tm in
                                          FStarC_Syntax_InstFV.inst
                                            instantiate_lbname_with_app e1
                                        else e1 in

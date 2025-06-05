@@ -128,12 +128,15 @@ let (univ_to_string : FStarC_Syntax_Syntax.universe -> Prims.string) =
            FStarC_Syntax_Resugar.resugar_universe u
              FStarC_Range_Type.dummyRange in
          let d = FStarC_Parser_ToDocument.term_to_document e in pp d)
-let (tscheme_to_string : FStarC_Syntax_Syntax.tscheme -> Prims.string) =
+let (tscheme_to_doc : FStarC_Syntax_Syntax.tscheme -> FStarC_Pprint.document)
+  =
   fun ts ->
     FStarC_GenSym.with_frozen_gensym
       (fun uu___ ->
          let d = FStarC_Syntax_Resugar.resugar_tscheme ts in
-         let d1 = FStarC_Parser_ToDocument.decl_to_document d in pp d1)
+         FStarC_Parser_ToDocument.decl_to_document d)
+let (tscheme_to_string : FStarC_Syntax_Syntax.tscheme -> Prims.string) =
+  fun ts -> let uu___ = tscheme_to_doc ts in pp uu___
 let (pat_to_string : FStarC_Syntax_Syntax.pat -> Prims.string) =
   fun p ->
     FStarC_GenSym.with_frozen_gensym
