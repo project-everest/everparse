@@ -10,8 +10,8 @@
     ],
     "include_dirs": [
       "./src/lowparse",
-      "../karamel/krmllib",
-      "../karamel/krmllib/obj",
+      "${KRML_HOME}/krmllib",
+      "${KRML_HOME}/krmllib/obj",
       "./src/3d",
       "./src/3d/prelude",
       "./src/ASN1"
