@@ -235,7 +235,7 @@ let emit_fstar_code_for_interpreter (en:env)
                              module T = FStar.Tactics\n\
                              module A = EverParse3d.Actions.All\n\
                              module P = EverParse3d.Prelude\n\
-                             #set-options \"--fuel 0 --ifuel 0 --ext context_pruning\"\n"
+                             #set-options \"--fuel 0 --ifuel 0 --ext optimize_let_vc\"\n"
                              modul maybe_open_external_api
     in
 

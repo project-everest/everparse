@@ -191,7 +191,7 @@ let parse_der_length_payload_unfold
          log256_unique (U8.v y) 1       
        end else ()
   end else begin
-    let len : nat = U8.v x - 128 in
+    let unfold len : nat = U8.v x - 128 in
     synth_be_int_injective len; // FIXME: WHY WHY WHY does the pattern not trigger, even with higher rlimit?
     parse_synth_eq ((parse_seq_flbytes len `parse_synth` (synth_be_int len))
         `parse_filter` (fun (y: lint len) -> y >= pow2 (8 * (len - 1)))) (synth_der_length_greater x len) input;
@@ -559,7 +559,7 @@ let serialize_der_length_payload
           (synth_inverse_intro' (synth_der_length_129 x) (synth_der_length_129_recip x) (tag_of_der_length_eq_129_eta x))
        )
    end else begin
-    let len : nat = U8.v x - 128 in
+    let unfold len : nat = U8.v x - 128 in
     synth_be_int_injective len; // FIXME: WHY WHY WHY does the pattern not trigger, even with higher rlimit?
     serialize_weaken
       (parse_der_length_payload_kind x)

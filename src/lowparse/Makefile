@@ -20,7 +20,7 @@ endif
 INCLUDE_KRML=--include $(KRMLLIB) --include $(KRMLLIB)/obj
 
 ALREADY_CACHED = --already_cached *,-LowParse
-FSTAR_OPTIONS += --ext context_pruning --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED)
+FSTAR_OPTIONS += --ext optimize_let_vc --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED)
 
 LOWPARSE_FILES=$(wildcard LowParse.*.fst) $(wildcard LowParse.*.fsti)
 

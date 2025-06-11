@@ -19,7 +19,7 @@ let rec be_to_n_leading_zeros
   ))
   (decreases (Seq.length s))
 = E.reveal_be_to_n s;
-  let s' = Seq.slice s 0 (Seq.length s - 1) in
+  let unfold s' = Seq.slice s 0 (Seq.length s - 1) in
   E.reveal_be_to_n s';
   assert_norm (pow2 0 == 1);
   assert_norm (pow2 8 == 256);
@@ -699,7 +699,7 @@ let rec be_to_n_zero
   (n: nat)
 : Lemma
   (E.be_to_n (Seq.create n 0uy) == 0)
-= let s = Seq.create n 0uy in
+= let unfold s = Seq.create n 0uy in
   E.reveal_be_to_n s;
   assert (Seq.length s == n);
   if n = 0

@@ -14,8 +14,7 @@ let pos_width = normalize_term (64 - error_width)
 [@ CMacro ]
 let validator_max_length : (u: U64.t { 4 <= U64.v u /\ U64.v u == pow2 pos_width - 1 } ) =
   FStar.Math.Lemmas.pow2_le_compat 64 pos_width;
-  [@inline_let]
-  let x =  U64.uint_to_t (pow2 pos_width - 1) in
+  let unfold x =  U64.uint_to_t (pow2 pos_width - 1) in
   normalize_term_spec x;
   normalize_term x
 

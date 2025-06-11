@@ -6,12 +6,12 @@
       "--initial_ifuel", "2",
       "--max_ifuel", "2",
       "--initial_ifuel", "2",
-      "--ext", "context_pruning"
+      "--ext", "optimize_let_vc"
     ],
     "include_dirs": [
       "./src/lowparse",
-      "${KRML_HOME}/krmllib",
-      "${KRML_HOME}/krmllib/obj",
+      "../karamel/krmllib",
+      "../karamel/krmllib/obj",
       "./src/3d",
       "./src/3d/prelude",
       "./src/ASN1"

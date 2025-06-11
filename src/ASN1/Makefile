@@ -7,7 +7,7 @@ LOWPARSE_HOME=$(EVERPARSE_HOME)/src/lowparse
 
 INCLUDE_PATH = $(LOWPARSE_HOME) $(KRML_HOME)/krmllib $(KRML_HOME)/krmllib/obj
 
-FSTAR_OPTIONS = --cache_checked_modules --ext context_pruning \
+FSTAR_OPTIONS = --cache_checked_modules --ext optimize_let_vc \
 		--already_cached *,-ASN1Test,-ASN1 \
 		--cmi \
 	        --odir ocaml/extracted \
