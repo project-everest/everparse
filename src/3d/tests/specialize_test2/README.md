@@ -7,8 +7,8 @@ file there.
 
 This directory tests support for probing variable-length arrays
 
-* `src/Specialize4.3d` defines the data formats, using the specialize
+* `src/SpecializeVLArray.3d` defines the data formats, using the specialize
   directive
 
-* `src/main.c` and `src/aux.h` define the probing functions, and the
+* `src/main.c` defines the probing functions, and the
   main test function
