@@ -1435,8 +1435,8 @@ let rec as_validator
 
     | T_if_else b t0 t1 ->
       assert_norm (as_type (T_if_else b t0 t1) == P.t_ite b (fun _ -> as_type (t0())) (fun _ -> as_type (t1 ())));
-      let p0 (_:squash b) = P.parse_weaken_right (as_parser (t0())) _ in
-      let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser (t1())) _ in
+      let unfold p0 (_:squash b) = P.parse_weaken_right (as_parser (t0())) _ in
+      let unfold p1 (_:squash (not b)) = P.parse_weaken_left (as_parser (t1())) _ in
       assert_norm (as_parser (T_if_else b t0 t1) == P.parse_ite b p0 p1);
       let v0 (_:squash b) = 
         A.validate_weaken_right (as_validator typename (t0())) _
@@ -1448,8 +1448,8 @@ let rec as_validator
 
     | T_cases b t0 t1 ->
       assert_norm (as_type (T_cases b t0 t1) == P.t_ite b (fun _ -> as_type t0) (fun _ -> as_type t1));
-      let p0 (_:squash b) = P.parse_weaken_right (as_parser t0) _ in
-      let p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) _ in
+      let unfold p0 (_:squash b) = P.parse_weaken_right (as_parser t0) _ in
+      let unfold p1 (_:squash (not b)) = P.parse_weaken_left (as_parser t1) _ in
       assert_norm (as_parser (T_cases b t0 t1) == P.parse_ite b p0 p1);
       let v0 (_:squash b) = 
         A.validate_weaken_right (as_validator typename t0) _
