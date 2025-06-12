@@ -1,0 +1,26 @@
+struct {
+    uint16 id;
+    uint32 list<12..42>;
+    uint32 list2<32..234>;
+} content_one;
+
+struct {
+    uint32 size;
+    uint64 a[size];
+} content_two;
+
+enum {
+    one (0x4242), /* Constant tag */
+    two (0x4241),
+    (65535) /* Indicates 16 bit representation */ 
+} content_type; /* Enum with 2 defined cases */ 
+
+struct {
+    uint32 id;
+    content_type c_t;
+    select (c_t){
+        case one: content_one;
+        case two: content_two;
+    } inner_content;
+    uint16 arr[412];
+} message;
