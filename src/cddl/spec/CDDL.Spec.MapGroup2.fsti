@@ -1514,6 +1514,18 @@ val map_group_concat_footprint_disjoint
     apply_map_group_det source2 m2 == MapGroupDet m2 cbor_map_empty
   ))
 
+let map_constraint_disjoint_domains
+  (fp1 fp2: map_constraint)
+: Tot prop
+= forall kv1 kv2 . (fp1 kv1 /\ fp2 kv2) ==> fst kv1 <> fst kv2
+
+let map_constraint_disjoint_domains_implies_disjoint
+  (fp1 fp2: map_constraint)
+: Lemma
+  (requires (map_constraint_disjoint_domains fp1 fp2))
+  (ensures (map_constraint_disjoint fp1 fp2))
+= ()
+
 val map_group_parser_spec_concat
   (#source1: det_map_group)
   (#source_fp1: map_constraint)
@@ -1532,9 +1544,12 @@ val map_group_parser_spec_concat
   (target_size: (target1 & target2) -> Tot nat {
     map_group_footprint source1 source_fp1 /\
     map_group_footprint source2 source_fp2 /\
-    map_constraint_disjoint source_fp1 source_fp2 /\
-    map_group_parser_spec_domain_inj p1 /\
-    map_group_parser_spec_domain_inj p2 /\
+    (
+      (map_constraint_disjoint source_fp1 source_fp2 /\
+        map_group_parser_spec_domain_inj p1 /\
+        map_group_parser_spec_domain_inj p2
+      ) \/ map_constraint_disjoint_domains source_fp1 source_fp2 // this disjunction is provided for the future, if we ever want domain_inj to be governed by a Boolean argument on mg_spec rather than always holding.
+    ) /\
     (forall x . target_size x == target_size1 (fst x) + target_size2 (snd x))
   })
   (target_prop: (target1 & target2) -> bool {
@@ -1561,9 +1576,12 @@ val map_group_parser_spec_concat_eq
   (target_size: (target1 & target2) -> Tot nat {
     map_group_footprint source1 source_fp1 /\
     map_group_footprint source2 source_fp2 /\
-    map_constraint_disjoint source_fp1 source_fp2 /\
-    map_group_parser_spec_domain_inj p1 /\
-    map_group_parser_spec_domain_inj p2 /\
+    (
+      (map_constraint_disjoint source_fp1 source_fp2 /\
+        map_group_parser_spec_domain_inj p1 /\
+        map_group_parser_spec_domain_inj p2
+      ) \/ map_constraint_disjoint_domains source_fp1 source_fp2
+    ) /\
     (forall x . target_size x == target_size1 (fst x) + target_size2 (snd x))
   })
   (target_prop: (target1 & target2) -> bool {
@@ -1599,9 +1617,12 @@ let map_group_serializer_spec_concat
   (target_size: (target1 & target2) -> Tot nat {
     map_group_footprint source1 source_fp1 /\
     map_group_footprint source2 source_fp2 /\
-    map_constraint_disjoint source_fp1 source_fp2 /\
-    map_group_parser_spec_domain_inj p1 /\
-    map_group_parser_spec_domain_inj p2 /\
+    (
+      (map_constraint_disjoint source_fp1 source_fp2 /\
+        map_group_parser_spec_domain_inj p1 /\
+        map_group_parser_spec_domain_inj p2
+      ) \/ map_constraint_disjoint_domains source_fp1 source_fp2
+    ) /\
     (forall x . target_size x == target_size1 (fst x) + target_size2 (snd x))
   })
   (target_prop: (target1 & target2) -> bool {

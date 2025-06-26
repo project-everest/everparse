@@ -196,9 +196,12 @@ let map_group_parser_spec_concat'
   (target_size: (target1 & target2) -> Tot nat {
     map_group_footprint source1 source_fp1 /\
     map_group_footprint source2 source_fp2 /\
-    map_constraint_disjoint source_fp1 source_fp2 /\
-    map_group_parser_spec_domain_inj p1 /\
-    map_group_parser_spec_domain_inj p2 /\
+    (
+      (map_constraint_disjoint source_fp1 source_fp2 /\
+        map_group_parser_spec_domain_inj p1 /\
+        map_group_parser_spec_domain_inj p2
+      ) \/ map_constraint_disjoint_domains source_fp1 source_fp2
+    ) /\
     (forall x . target_size x == target_size1 (fst x) + target_size2 (snd x))
   })
   (target_prop: (target1 & target2) -> bool {
