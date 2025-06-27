@@ -283,6 +283,13 @@ let map_group_footprint_concat_consumes_all
   assert (MapGroupDet?.remaining x `cbor_map_equal` cbor_map_empty);
   ()
 
+let map_group_match_item_for_footprint // FIXME: necessary because Pulse does not handle `if then else` in `pure` conditions
+  (cut: bool)
+  (k: cbor)
+  (dest: typ)
+: Tot map_constraint
+= matches_map_group_entry (t_literal k) (if cut then any else dest)
+
 #restart-solver
 let map_group_footprint_match_item_for
   (cut: bool)
@@ -290,13 +297,13 @@ let map_group_footprint_match_item_for
   (value: typ)
 : Lemma
   (ensures (
-    map_group_footprint (map_group_match_item_for cut key value) (matches_map_group_entry (t_literal key) (if cut then any else value))
+    map_group_footprint (map_group_match_item_for cut key value) (map_group_match_item_for_footprint cut key value)
   ))
   [SMTPat (map_group_footprint (map_group_match_item_for cut key value))]
 = let g = map_group_match_item_for cut key value in
   map_group_footprint_intro
     g
-    (matches_map_group_entry (t_literal key) (if cut then any else value))
+    (map_group_match_item_for_footprint cut key value)
     (fun m m' ->
       match cbor_map_get m key with
       | Some v ->
@@ -507,7 +514,7 @@ val map_group_choice_compatible_match_item_for
   (fp: map_constraint)
 : Lemma
   (requires (
-    (matches_map_group_entry (t_literal key) (if cut then any else value)) `map_constraint_disjoint` fp /\
+    (map_group_match_item_for_footprint cut key value) `map_constraint_disjoint` fp /\
     map_group_footprint right fp
   ))
   (ensures (
@@ -1442,7 +1449,7 @@ let map_group_parser_spec_match_item_for
   (target_size: target -> Tot nat {
     forall x . target_size x == 1
   })
-: Tot (map_group_parser_spec (map_group_match_item_for cut k ty) (matches_map_group_entry (t_literal k) (if cut then any else ty)) target_size target_prop)
+: Tot (map_group_parser_spec (map_group_match_item_for cut k ty) (map_group_match_item_for_footprint cut k ty) target_size target_prop)
 = fun x ->
   let Some v = cbor_map_get x k in
   cbor_map_equiv x (cbor_map_singleton k v);
@@ -1481,7 +1488,7 @@ let mg_spec_match_item_for
   (#target: Type)
   (#inj: bool)
   (p: spec ty target inj)
-: Tot (mg_spec (map_group_match_item_for cut k ty) (matches_map_group_entry (t_literal k) (if cut then any else ty)) target inj)
+: Tot (mg_spec (map_group_match_item_for cut k ty) (map_group_match_item_for_footprint cut k ty) target inj)
 = {
   mg_size = mg_spec_match_item_for_size target;
   mg_serializable = p.serializable;
