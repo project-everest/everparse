@@ -268,7 +268,6 @@ let _ =
           "--already_cached"; "*,";
           "--codegen"; "krml";
           "--extract_module"; !mname;
-	  "--ext"; "extraction_inline_all";
         ] @
           (if is_rust () then include_options_for_rust else []) @
           fstar_options
