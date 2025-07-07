@@ -19,7 +19,7 @@ type impl_map_group_result =
 unfold
 let impl_map_group_pre
   (g: map_group)
-  (f: typ)
+  (f: map_constraint)
   (v: cbor)
   (m1 m2: cbor_map)
   (count: bool)
@@ -37,7 +37,7 @@ let impl_map_group_pre
 
 let impl_map_group_post
   (g: map_group)
-  (f: typ)
+  (f: map_constraint)
   (v: cbor)
   (m1 m2: cbor_map)
   (count: bool)
@@ -59,7 +59,7 @@ let impl_map_group_t
   (#t: Type0)
   (vmatch: perm -> t -> cbor -> slprop)
   (g: map_group)
-  (f: typ)
+  (f: map_constraint)
 =
   (c: t) ->
   (#p: perm) ->
@@ -86,7 +86,7 @@ fn apply_impl_map_group
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
   (#g: Ghost.erased map_group)
-  (#f: Ghost.erased typ)
+  (#f: Ghost.erased map_constraint)
   (w: impl_map_group_t vmatch g f)
   (c: t)
   (#p: perm)
@@ -122,7 +122,7 @@ fn impl_t_map_group
   (cbor_get_major_type: get_major_type_t vmatch)
   (get_map_length: get_map_length_t vmatch)
   (#g1: Ghost.erased map_group)
-  (#f1: Ghost.erased typ)
+  (#f1: Ghost.erased map_constraint)
   (w1: impl_map_group_t vmatch g1 f1)
   (sq: squash (map_group_footprint g1 f1))
 : impl_typ u#0 #_ vmatch #None (t_map g1)
@@ -159,7 +159,7 @@ fn impl_map_group_nop
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
   (_: unit)
-: impl_map_group_t #_ vmatch (map_group_nop) (t_always_false)
+: impl_map_group_t #_ vmatch (map_group_nop) (map_constraint_empty)
 = (c: _)
   (#p: _)
   (#v: _)
@@ -177,7 +177,7 @@ fn impl_map_group_always_false
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
   (_: unit)
-: impl_map_group_t #_ vmatch (map_group_always_false) (t_always_false)
+: impl_map_group_t #_ vmatch (map_group_always_false) (map_constraint_empty)
 = (c: _)
   (#p: _)
   (#v: _)
@@ -195,17 +195,17 @@ fn impl_map_group_concat
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
   (#g1: Ghost.erased map_group)
-  (#f1: Ghost.erased typ)
+  (#f1: Ghost.erased map_constraint)
   (w1: impl_map_group_t vmatch g1 f1)
   (#g2: Ghost.erased map_group)
-  (#f2: Ghost.erased typ)
+  (#f2: Ghost.erased map_constraint)
   (w2: impl_map_group_t vmatch g2 f2)
   (prf: squash (
     map_group_footprint g1 f1 /\
     map_group_footprint g2 f2 /\
-    typ_disjoint f1 f2
+    map_constraint_disjoint f1 f2
   ))
-: impl_map_group_t #_ vmatch (map_group_concat g1 g2) (t_choice f1 f2)
+: impl_map_group_t #_ vmatch (map_group_concat g1 g2) (map_constraint_choice f1 f2)
 = (c: _)
   (#p: _)
   (#v: _)
@@ -241,16 +241,16 @@ fn impl_map_group_choice
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
   (#g1: Ghost.erased map_group)
-  (#f1: Ghost.erased typ)
+  (#f1: Ghost.erased map_constraint)
   (w1: impl_map_group_t vmatch g1 f1)
   (#g2: Ghost.erased map_group)
-  (#f2: Ghost.erased typ)
+  (#f2: Ghost.erased map_constraint)
   (w2: impl_map_group_t vmatch g2 f2)
   (prf: squash (
     map_group_footprint g1 f1 /\
     map_group_footprint g2 f2
   ))
-: impl_map_group_t #_ vmatch (map_group_choice g1 g2) (t_choice f1 f2)
+: impl_map_group_t #_ vmatch (map_group_choice g1 g2) (map_constraint_choice f1 f2)
 = (c: _)
   (#p: _)
   (#v: _)
@@ -282,14 +282,14 @@ fn impl_map_group_ext
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
   (#g1: Ghost.erased map_group)
-  (#f1: Ghost.erased typ)
+  (#f1: Ghost.erased map_constraint)
   (impl1: impl_map_group_t vmatch g1 f1)
   (g2: Ghost.erased map_group)
-  (f2: Ghost.erased typ)
+  (f2: Ghost.erased map_constraint)
   (sq: squash (
     map_group_footprint g1 f1 /\
     g2 == g1 /\
-    typ_included f1 f2
+    map_constraint_included f1 f2
   ))
 : impl_map_group_t #_ vmatch g2 f2
 = (c: _)
@@ -309,7 +309,7 @@ let impl_map_group_zero_or_one
   (#t: Type0)
   (#vmatch: perm -> t -> cbor -> slprop)
   (#g1: Ghost.erased map_group)
-  (#f1: Ghost.erased typ)
+  (#f1: Ghost.erased map_constraint)
   (w1: impl_map_group_t vmatch g1 f1)
   (prf: squash (
     map_group_footprint g1 f1
@@ -340,7 +340,7 @@ let impl_map_group_match_item_for_body_post
 = exists* i' .
           vmatch p c v **
           pts_to pi i' **
-          pure (impl_map_group_post (map_group_match_item_for cut k dest) (t_literal k) v v1 v2 count i i' res)
+          pure (impl_map_group_post (map_group_match_item_for cut k dest) (map_group_match_item_for_footprint cut k dest) v v1 v2 count i i' res)
 
 inline_for_extraction
 fn impl_map_group_match_item_for_body
@@ -361,7 +361,7 @@ fn impl_map_group_match_item_for_body
   (i: Ghost.erased U64.t)
 : with_cbor_literal_cont_t #_ vmatch k
           (vmatch p c v ** pts_to pi i **
-            pure (impl_map_group_pre (map_group_match_item_for cut k dest) (t_literal k) v v1 v2 count i)
+            pure (impl_map_group_pre (map_group_match_item_for cut k dest) (map_group_match_item_for_footprint cut k dest) v v1 v2 count i)
           )
   impl_map_group_result
   (impl_map_group_match_item_for_body_post vmatch cut k dest c p v v1 v2 count pi i)
@@ -417,7 +417,7 @@ fn impl_map_group_match_item_for
   (wk: with_cbor_literal_t vmatch k)
   (#dest: Ghost.erased typ)
   (vdest: impl_typ vmatch dest)
-: impl_map_group_t #_ vmatch (map_group_match_item_for cut k dest) (t_literal k)
+: impl_map_group_t #_ vmatch (map_group_match_item_for cut k dest) (map_group_match_item_for_footprint cut k dest)
 = (c: _)
   (#p: _)
   (#v: _)
@@ -606,7 +606,7 @@ let add_sub_cancel
 ghost
 fn impl_map_group_filter_aux_skip
   (f: ((cbor & cbor) -> bool))
-  (phi: typ)
+  (phi: map_constraint)
   (v1 v2: cbor_map)
   (hd_k hd_v: cbor)
   (tl: list (cbor & cbor))
@@ -688,7 +688,7 @@ fn impl_map_group_filter
   (cbor_map_iterator_next: map_iterator_next_t vmatch2 cbor_map_iterator_match)
   (#f: Ghost.erased ((cbor & cbor) -> bool))
   (implf: impl_map_entry_cond vmatch2 f)
-  (phi: Ghost.erased typ)
+  (phi: Ghost.erased map_constraint)
   (sq: squash (map_group_footprint (map_group_filter f) phi))
 : impl_map_group_t #_ vmatch (map_group_filter f) phi
 = (c: _)
@@ -835,46 +835,25 @@ fn impl_map_entry_cond_notp
 }
 
 inline_for_extraction
-fn impl_typ_notp
+fn impl_map_entry_cond_andp
   (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
-  (#f: Ghost.erased typ)
-  (implf: impl_typ vmatch f)
-: impl_typ u#0 #_ vmatch #None (Util.notp f)
+  (#vmatch2: perm -> t -> (cbor & cbor) -> slprop)
+  (#f: Ghost.erased ((cbor & cbor) -> bool))
+  (implf: impl_map_entry_cond vmatch2 f)
+  (#g: Ghost.erased ((cbor & cbor) -> bool))
+  (implg: impl_map_entry_cond vmatch2 g)
+: impl_map_entry_cond u#0 #_ vmatch2 (Util.andp f g)
 = (x: _)
   (#p: _)
   (#v: _)
 {
   let test = implf x;
-  not test
-}
-
-inline_for_extraction
-fn impl_typ_andp
-  (#t: Type0)
-  (#vmatch: perm -> t -> cbor -> slprop)
-  (#f1: Ghost.erased typ)
-  (#f2: Ghost.erased typ)
-  (implf1: impl_typ vmatch f1)
-  (implf2: impl_typ vmatch f2)
-: impl_typ u#0 #_ vmatch #None (Util.andp f1 f2)
-= (x: _)
-  (#p: _)
-  (#v: _)
-{
-  let test1 = implf1 x;
-  if (test1) {
-    implf2 x
+  if (test) {
+    implg x
   } else {
     false
   }
 }
-
-let typ_included_refl
-  (t: typ)
-: Lemma
-  (typ_included t t)
-= ()
 
 inline_for_extraction
 let impl_zero_or_more_map_group_match_item_except
@@ -888,26 +867,30 @@ let impl_zero_or_more_map_group_match_item_except
   (cbor_map_iterator_next: map_iterator_next_t vmatch2 cbor_map_iterator_match)
   (map_entry_key: map_entry_key_t vmatch2 vmatch)
   (map_entry_value: map_entry_value_t vmatch2 vmatch)
-  (#tkey #tvalue #texcept: Ghost.erased typ)
+  (#tkey #tvalue: Ghost.erased typ)
+  (#texcept: Ghost.erased map_constraint)
   (fkey: impl_typ vmatch tkey)
   (fvalue: impl_typ vmatch tvalue)
-  (fexcept: impl_typ vmatch texcept)
-: Tot (impl_map_group_t vmatch (map_group_zero_or_more (map_group_match_item false (Util.andp tkey (Util.notp texcept)) tvalue)) (Util.andp tkey (Util.notp texcept)))
+  (fexcept: impl_map_entry_cond vmatch2 texcept)
+: Tot (impl_map_group_t vmatch (map_group_filtered_table tkey tvalue texcept) (Util.andp (matches_map_group_entry tkey tvalue) (Util.notp texcept)))
 = impl_map_group_ext
     (impl_map_group_filter
       cbor_map_iterator_init
       cbor_map_iterator_is_empty
       cbor_map_iterator_next
-      #(Util.notp (matches_map_group_entry (Util.andp tkey (Util.notp texcept)) tvalue))
+      #(Util.notp (Util.andp (matches_map_group_entry tkey tvalue) (Util.notp texcept)))
       (impl_map_entry_cond_notp
-        (impl_map_entry_cond_matches_map_group_entry
-          map_entry_key
-          map_entry_value
-          (impl_typ_andp fkey (impl_typ_notp fexcept))
-          fvalue
+        (impl_map_entry_cond_andp
+          (impl_map_entry_cond_matches_map_group_entry
+            map_entry_key
+            map_entry_value
+            fkey
+            fvalue
+          )
+          (impl_map_entry_cond_notp fexcept)
         )
       )
-      (Util.andp tkey (Util.notp texcept))
+      (Util.andp (matches_map_group_entry tkey tvalue) (Util.notp texcept))
       ()
     )
     _ _

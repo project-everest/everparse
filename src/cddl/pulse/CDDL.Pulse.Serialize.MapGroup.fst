@@ -5,7 +5,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map
    (cbor_det_serialize_map: cbor_det_serialize_map_t)
     (# [@@@erasable] t: Ghost.erased det_map_group)
-    (# [@@@erasable] fp: Ghost.erased typ)
+    (# [@@@erasable] fp: Ghost.erased map_constraint)
     (# [@@@erasable] tgt: Type0)
     (# [@@@erasable] inj: Ghost.erased bool)
     (# [@@@erasable] s: Ghost.erased (mg_spec t fp tgt inj))
@@ -36,7 +36,7 @@ fn impl_serialize_map
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_ext
     (#[@@@erasable]t: Ghost.erased (det_map_group))
-    (# [@@@erasable] fp: Ghost.erased typ)
+    (# [@@@erasable] fp: Ghost.erased map_constraint)
     (#[@@@erasable]tgt: Type0)
     (#[@@@erasable] inj: Ghost.erased bool)
     (#[@@@erasable]ps: Ghost.erased (mg_spec t fp tgt inj))
@@ -44,7 +44,7 @@ fn impl_serialize_map_group_ext
     (#[@@@erasable]r: rel impl_tgt tgt)
     (i: impl_serialize_map_group ps r)
     (#[@@@erasable]t': Ghost.erased (det_map_group))
-    (# [@@@erasable] fp': Ghost.erased typ)
+    (# [@@@erasable] fp': Ghost.erased map_constraint)
     (#[@@@erasable] inj': Ghost.erased bool)
     ([@@@erasable]ps': Ghost.erased (mg_spec t' fp' tgt inj'))
     ([@@@erasable]sq: squash (
@@ -71,16 +71,16 @@ fn impl_serialize_map_group_ext
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_serialize_map_group_ext'
     (#[@@@erasable]t: Ghost.erased (det_map_group))
-    (# [@@@erasable] fp: Ghost.erased typ)
+    (# [@@@erasable] fp: Ghost.erased map_constraint)
     (#[@@@erasable]tgt: Type0)
     (#[@@@erasable] inj: Ghost.erased bool)
     (#[@@@erasable]ps: Ghost.erased (mg_spec t fp tgt inj))
     (#impl_tgt: Type0)
     (#[@@@erasable]r: rel impl_tgt tgt)
     (i: impl_serialize_map_group ps r)
-    ([@@@erasable] fp': Ghost.erased typ)
+    ([@@@erasable] fp': Ghost.erased map_constraint)
     (sq: squash (
-      typ_equiv fp fp'
+      map_constraint_equiv fp fp'
     ))
 : impl_serialize_map_group #(Ghost.reveal t) #(Ghost.reveal fp') #tgt #inj (mg_spec_ext ps fp' ps.mg_size ps.mg_serializable) #impl_tgt r
 = impl_serialize_map_group_ext i _ ()
@@ -104,7 +104,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_choice
     (#[@@@erasable]t1: Ghost.erased det_map_group)
     (#[@@@erasable]tgt1: Type0)
-    (#[@@@erasable] fp1: Ghost.erased typ)
+    (#[@@@erasable] fp1: Ghost.erased map_constraint)
     (#[@@@erasable] inj1: Ghost.erased bool)
     (#[@@@erasable]ps1: Ghost.erased (mg_spec t1 fp1 tgt1 inj1))
     (#impl_tgt1: Type0)
@@ -112,7 +112,7 @@ fn impl_serialize_map_group_choice
     (i1: impl_serialize_map_group ps1 r1)
     (#[@@@erasable]t2: Ghost.erased det_map_group)
     (#[@@@erasable]tgt2: Type0)
-    (#[@@@erasable] fp2: Ghost.erased typ)
+    (#[@@@erasable] fp2: Ghost.erased map_constraint)
     (#[@@@erasable] inj2: Ghost.erased bool)
     (#[@@@erasable]ps2: Ghost.erased (mg_spec t2 fp2 tgt2 inj2))
     (#impl_tgt2: Type0)
@@ -155,7 +155,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_zero_or_one
     (#[@@@erasable]t1: Ghost.erased det_map_group)
     (#[@@@erasable]tgt1: Type0)
-    (#[@@@erasable] fp1: Ghost.erased typ)
+    (#[@@@erasable] fp1: Ghost.erased map_constraint)
     (#[@@@erasable] inj1: Ghost.erased bool)
     (#[@@@erasable]ps1: Ghost.erased (mg_spec t1 fp1 tgt1 inj1))
     (#impl_tgt1: Type0)
@@ -194,7 +194,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_either_left
     (#[@@@erasable]t1: Ghost.erased det_map_group)
     (#[@@@erasable]tgt1: Type0)
-    (#[@@@erasable] fp1: Ghost.erased typ)
+    (#[@@@erasable] fp1: Ghost.erased map_constraint)
     (#[@@@erasable] inj1: Ghost.erased bool)
     (#[@@@erasable]ps1: Ghost.erased (mg_spec t1 fp1 tgt1 inj1))
     (#impl_tgt1: Type0)
@@ -243,18 +243,18 @@ let cbor_det_serialize_map_append_length_pat
 
 let mg_spec_concat_serializer_eq
   (#source1: det_map_group)
-  (#source_fp1: typ)
+  (#source_fp1: map_constraint)
   (#target1: Type)
   (#inj1: bool)
   (p1: mg_spec source1 source_fp1 target1 inj1)
   (#source2: det_map_group)
-  (#source_fp2: typ)
+  (#source_fp2: map_constraint)
   (#target2: Type)
   (#inj2: bool)
   (p2: mg_spec source2 source_fp2 target2 inj2 {
     map_group_footprint source1 source_fp1 /\
     map_group_footprint source2 source_fp2 /\
-    typ_disjoint source_fp1 source_fp2
+    map_constraint_disjoint source_fp1 source_fp2
   })
   (v: (target1 & target2))
 : Lemma
@@ -286,13 +286,14 @@ let cbor_map_length_disjoint_union_pat (m1 m2: cbor_map) : Lemma
   [SMTPat (cbor_map_union m1 m2)]
 = Classical.move_requires (cbor_map_length_disjoint_union m1) m2
 
-#push-options "--z3rlimit 16"
+#push-options "--z3rlimit 32"
 
+#restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_group_concat
     (#[@@@erasable]t1: Ghost.erased det_map_group)
     (#[@@@erasable]tgt1: Type0)
-    (#[@@@erasable] fp1: Ghost.erased typ)
+    (#[@@@erasable] fp1: Ghost.erased map_constraint)
     (#[@@@erasable] inj1: Ghost.erased bool)
     (#[@@@erasable]ps1: Ghost.erased (mg_spec t1 fp1 tgt1 inj1))
     (#impl_tgt1: Type0)
@@ -300,7 +301,7 @@ fn impl_serialize_map_group_concat
     (i1: impl_serialize_map_group ps1 r1)
     (#[@@@erasable]t2: Ghost.erased det_map_group)
     (#[@@@erasable]tgt2: Type0)
-    (#[@@@erasable] fp2: Ghost.erased typ)
+    (#[@@@erasable] fp2: Ghost.erased map_constraint)
     (#[@@@erasable] inj2: Ghost.erased bool)
     (#[@@@erasable]ps2: Ghost.erased (mg_spec t2 fp2 tgt2 inj2))
     (#impl_tgt2: Type0)
@@ -309,7 +310,7 @@ fn impl_serialize_map_group_concat
     (sq: squash (
       map_group_footprint t1 fp1 /\
       map_group_footprint t2 fp2 /\
-      typ_disjoint fp1 fp2
+      map_constraint_disjoint fp1 fp2
     ))
 : impl_serialize_map_group #_ #_ #_ #_ (mg_spec_concat ps1 ps2) #_ (rel_pair r1 r2)
 =
@@ -458,21 +459,23 @@ fn impl_serialize_match_item_for
 
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_serialize_map_zero_or_more_iterator_t
-  (#ty: Type0) (vmatch: perm -> ty -> cbor -> slprop) (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
+  (#ty #ty2: Type0) (vmatch: perm -> ty -> cbor -> slprop)
+  (#vmatch2: perm -> ty2 -> cbor & cbor -> slprop)
+  (#cbor_map_iterator_t: Type0) (cbor_map_iterator_match: perm -> cbor_map_iterator_t -> list (cbor & cbor) -> slprop)
     (#key: typ)
     (#tkey: Type0)
     (sp1: (spec key tkey true))
     (#ikey: Type0)
     (r1: rel ikey tkey)
-    (key_except: typ)
     (#value: typ)
     (#tvalue: Type0)
     (#inj: bool)
     (sp2: (spec value tvalue inj))
     (#ivalue: Type0)
     (r2: rel ivalue tvalue)
+    (except: map_constraint { inj \/ map_constraint_value_injective key sp2.parser except })
 =
-  impl_serialize_map_group #_ #_ #_ #_ (mg_zero_or_more_match_item sp1 key_except sp2) #_ (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+  impl_serialize_map_group #_ #_ #_ #_ (mg_zero_or_more_match_item sp1 sp2 except) #_ (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2))
 
 module GR = Pulse.Lib.GhostReference
 module Map = CDDL.Spec.Map
@@ -480,23 +483,19 @@ module Map = CDDL.Spec.Map
 #push-options "--z3rlimit 32 --split_queries always"
 
 #restart-solver
-let map_of_list_is_append_serializable_disjoint
+let map_of_list_serializable_disjoint
   (#key #value: Type)
   (#tkey: typ)
   (sp1: spec tkey key true)
-  (key_except: typ)
   (#tvalue: typ)
   (#inj: bool)
   (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
   (m1: Map.t key (list value))
   (m2: Map.t key (list value))
-  (m: Map.t key (list value))
 : Lemma
-  (requires (
-    map_of_list_is_append m1 m2 m
-  ))
   (ensures (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     (sp.mg_serializable m1 /\ sp.mg_serializable m2) ==>
     (Map.disjoint m1 m2 <==> cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2))
   ))
@@ -511,10 +510,10 @@ let map_of_list_is_append_serializable_intro_serializable
   (#key #value: Type)
   (#tkey: typ)
   (sp1: spec tkey key true)
-  (key_except: typ)
   (#tvalue: typ)
   (#inj: bool)
   (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
   (m1: Map.t key (list value))
   (m2: Map.t key (list value))
   (m: Map.t key (list value))
@@ -523,7 +522,7 @@ let map_of_list_is_append_serializable_intro_serializable
     map_of_list_is_append m1 m2 m
   ))
   (ensures (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     (sp.mg_serializable m1 /\ sp.mg_serializable m2 /\ Map.disjoint m1 m2) ==>
       sp.mg_serializable m
   ))
@@ -556,10 +555,10 @@ let map_of_list_is_append_serializable_intro
   (#key #value: Type)
   (#tkey: typ)
   (sp1: spec tkey key true)
-  (key_except: typ)
   (#tvalue: typ)
   (#inj: bool)
   (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
   (m1: Map.t key (list value))
   (m2: Map.t key (list value))
   (m: Map.t key (list value))
@@ -568,7 +567,7 @@ let map_of_list_is_append_serializable_intro
     map_of_list_is_append m1 m2 m
   ))
   (ensures (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     (sp.mg_serializable m1 /\ sp.mg_serializable m2 /\ (Map.disjoint m1 m2 \/ cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2))) ==>
     (Map.disjoint m1 m2 /\
       cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2) /\
@@ -576,13 +575,13 @@ let map_of_list_is_append_serializable_intro
       sp.mg_serializer m == (sp.mg_serializer m1 `cbor_map_union` sp.mg_serializer m2)
     )
   ))
-= let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
-  map_of_list_is_append_serializable_intro_serializable sp1 key_except sp2 m1 m2 m;
-  map_of_list_is_append_serializable_disjoint sp1 key_except sp2 m1 m2 m;
+= let sp = mg_zero_or_more_match_item sp1 sp2 except in
+  map_of_list_is_append_serializable_intro_serializable sp1 sp2 except m1 m2 m;
+  map_of_list_serializable_disjoint sp1 sp2 except m1 m2;
   if sp.mg_serializable m1 && sp.mg_serializable m2 && cbor_map_disjoint_tot (sp.mg_serializer m1) (sp.mg_serializer m2)
   then begin
     assert (
-      forall kv . (map_group_zero_or_more_match_item_serializer'_mem_aux sp1 key_except sp2 m kv <==> (map_group_zero_or_more_match_item_serializer'_mem_aux sp1 key_except sp2 m1 kv \/ map_group_zero_or_more_match_item_serializer'_mem_aux sp1 key_except sp2 m2 kv)
+      forall kv . (map_group_zero_or_more_match_item_serializer'_mem_aux sp1 sp2 except m kv <==> (map_group_zero_or_more_match_item_serializer'_mem_aux sp1 sp2 except m1 kv \/ map_group_zero_or_more_match_item_serializer'_mem_aux sp1 sp2 except m2 kv)
     ));
     cbor_map_mem_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2);
     cbor_map_mem_ext (sp.mg_serializer m) (sp.mg_serializer m1 `cbor_map_union` sp.mg_serializer m2)
@@ -625,10 +624,10 @@ let map_of_list_is_append_serializable_elim
   (#key #value: Type)
   (#tkey: typ)
   (sp1: spec tkey key true)
-  (key_except: typ)
   (#tvalue: typ)
   (#inj: bool)
   (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
   (m1: Map.t key (list value))
   (m2: Map.t key (list value))
   (m: Map.t key (list value))
@@ -639,7 +638,7 @@ let map_of_list_is_append_serializable_elim
     map_of_list_maps_to_nonempty m2
   ))
   (ensures (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     (sp.mg_serializable m
     ) ==> (sp.mg_serializable m1 /\
       sp.mg_serializable m2 /\
@@ -647,7 +646,7 @@ let map_of_list_is_append_serializable_elim
       cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2)
     )
   ))
-= let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+= let sp = mg_zero_or_more_match_item sp1 sp2 except in
   if sp.mg_serializable m
   then begin
     assert (
@@ -655,38 +654,64 @@ let map_of_list_is_append_serializable_elim
       sp.mg_serializable m2 /\
       Map.disjoint m1 m2
     );
-    map_of_list_is_append_serializable_disjoint sp1 key_except sp2 m1 m2 m
+    map_of_list_serializable_disjoint sp1 sp2 except m1 m2
   end
+
+let map_of_list_is_append_serializable_elim'
+  (#key #value: Type)
+  (#tkey: typ)
+  (sp1: spec tkey key true)
+  (#tvalue: typ)
+  (#inj: bool)
+  (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
+  (m1: Map.t key (list value))
+  (m2: Map.t key (list value))
+  (m: Map.t key (list value))
+  (sq: squash (map_of_list_is_append m1 m2 m))
+  (sq1: squash (map_of_list_maps_to_nonempty m1))
+  (sq2: squash (map_of_list_maps_to_nonempty m2))
+: Lemma
+  (ensures (
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
+    (sp.mg_serializable m
+    ) ==> (sp.mg_serializable m1 /\
+      sp.mg_serializable m2 /\
+      Map.disjoint m1 m2 /\
+      cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2)
+    )
+  ))
+= map_of_list_is_append_serializable_elim sp1 sp2 except m1 m2 m
 
 #restart-solver
 let map_of_list_is_append_serializable_singleton
   (#key #value: Type)
   (#tkey: typ)
   (sp1: spec tkey key true)
-  (key_except: typ)
   (#tvalue: typ)
   (#inj: bool)
   (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
   (k: key)
   (k_eq: EqTest.eq_test_for k)
   (v: value)
 : Lemma
   (ensures (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     let m = EqTest.map_singleton k k_eq [v] in
     (sp.mg_serializable m <==> (
       sp1.serializable k /\
-      (~ (key_except (sp1.serializer k))) /\
-      sp2.serializable v
+      sp2.serializable v /\
+      (~ (except (sp1.serializer k, sp2.serializer v)))
     )) /\
     (sp.mg_serializable m ==> (
     sp.mg_serializer m == cbor_map_singleton (sp1.serializer k) (sp2.serializer v)
   ))))
-= let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+= let sp = mg_zero_or_more_match_item sp1 sp2 except in
   let m = EqTest.map_singleton k k_eq [v] in
   assert (forall kv . Map.mem kv m <==> (fst kv == k /\ snd kv == [v]));
-  assert (sp.mg_serializable m <==> (forall kv . Map.mem kv m ==> map_entry_serializable sp1 key_except sp2 kv));
-  assert (sp.mg_serializable m <==> map_entry_serializable sp1 key_except sp2 (k, [v]));
+  assert (sp.mg_serializable m <==> (forall kv . Map.mem kv m ==> map_entry_serializable sp1 sp2 except kv));
+  assert (sp.mg_serializable m <==> map_entry_serializable sp1 sp2 except (k, [v]));
   if sp.mg_serializable m
   then begin
     cbor_map_mem_ext
@@ -716,10 +741,10 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_aux
   (#tkey: typ)
   (sp1: spec tkey key true)
   (key_eq: EqTest.eq_test key)
-  (key_except: typ)
   (#tvalue: typ)
   (#inj: bool)
   (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
   (l: cbor_map)
   (m1: Map.t key (list value))
   (k: key)
@@ -728,39 +753,39 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_aux
   (len: nat)
 : Lemma
   (requires (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     sp.mg_serializable m1 /\
     cbor_map_disjoint l (sp.mg_serializer m1) /\
     map_of_list_maps_to_nonempty m2
   ))
   (ensures (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
-    sp.mg_serializable m1 /\
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
+    sp.mg_serializable m1 /\ (
       (
         sp1.serializable k /\
-        (~ (key_except (sp1.serializer k))) /\
         sp2.serializable v /\
+        (~ (except (sp1.serializer k, sp2.serializer v))) /\
         (~ (cbor_map_defined (sp1.serializer k) (cbor_map_union l (sp.mg_serializer m1))))
       ) ==> (
       sp.mg_serializable (map_of_list_snoc key_eq m1 k v) /\
       cbor_map_disjoint l (sp.mg_serializer (map_of_list_snoc key_eq m1 k v)) /\
       cbor_map_union l (sp.mg_serializer (map_of_list_snoc key_eq m1 k v)) == cbor_map_union (cbor_map_union l (sp.mg_serializer m1)) (cbor_map_singleton (sp1.serializer k) (sp2.serializer v)) /\
       cbor_map_length (sp.mg_serializer (map_of_list_snoc key_eq m1 k v)) == cbor_map_length (sp.mg_serializer m1) + 1
-  )))
+  ))))
 = 
   let m2' = map_of_list_cons key_eq k v m2 in
   assert (map_of_list_maps_to_nonempty m2');
   let mkv = EqTest.map_singleton k (key_eq k) [v] in
   let m1' = map_of_list_snoc key_eq m1 k v in
-  map_of_list_is_append_serializable_elim sp1 key_except sp2 mkv m2 m2';
-  map_of_list_is_append_serializable_singleton sp1 key_except sp2 k (key_eq k) v;
-  let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
-  map_of_list_is_append_serializable_intro sp1 key_except sp2 m1 mkv m1';
-  map_of_list_is_append_serializable_disjoint sp1 key_except sp2 m1 mkv m1';
+  map_of_list_is_append_serializable_elim sp1 sp2 except mkv m2 m2';
+  map_of_list_is_append_serializable_singleton sp1 sp2 except k (key_eq k) v;
+  let sp = mg_zero_or_more_match_item sp1 sp2 except in
+  map_of_list_is_append_serializable_intro sp1 sp2 except m1 mkv m1';
+  map_of_list_serializable_disjoint sp1 sp2 except m1 mkv;
   if
         sp1.serializable k &&
-        (not (key_except (sp1.serializer k))) &&
         sp2.serializable v &&
+        (not (except (sp1.serializer k, sp2.serializer v))) &&
         (not (cbor_map_defined (sp1.serializer k) (cbor_map_union l (sp.mg_serializer m1))))
   then begin
       assert (sp.mg_serializable m1');
@@ -773,7 +798,137 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_aux
 
 #pop-options
 
-#push-options "--z3rlimit 256 --print_implicits --split_queries always"
+let map_of_list_maps_to_nonempty_singleton
+  (#key: Type)
+  (#value: Type)
+  (k: key)
+  (k_eq: ((k' : key) -> Pure bool True (fun res -> res == true <==> k'  == k)))
+  (v: list value)
+  (sq: squash (Cons? v))
+: Lemma
+  (map_of_list_maps_to_nonempty (Map.singleton k k_eq v))
+= ()
+
+let map_of_list_maps_to_nonempty_cons
+  (#key: Type)
+  (#value: Type)
+  (k_eq: EqTest.eq_test key)
+  (k: key)
+  (v: value)
+  (m: Map.t key (list value))
+  (sq: squash (map_of_list_maps_to_nonempty m))
+: Lemma
+  (map_of_list_maps_to_nonempty (map_of_list_cons k_eq k v m))
+= ()
+
+#push-options "--z3rlimit 32"
+
+#restart-solver
+let impl_serialize_map_group_valid_map_zero_or_more_snoc_disjoint1
+  (#key #value: Type)
+  (#tkey: typ)
+  (sp1: spec tkey key true)
+  (key_eq: EqTest.eq_test key)
+  (#tvalue: typ)
+  (#inj: bool)
+  (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
+  (l: cbor_map)
+  (m1: Map.t key (list value))
+  (k: key)
+  (v: value)
+  (m2: Map.t key (list value))
+  (sq: squash (
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
+    sp.mg_serializable m1 /\
+    sp1.serializable k /\
+    sp2.serializable v /\
+    (~ (except (sp1.serializer k, sp2.serializer v))) /\
+    sp.mg_serializable m2 /\
+    (~ (Map.defined k m2)) /\
+    (~ (cbor_map_defined (sp1.serializer k) (cbor_map_union l (sp.mg_serializer m1))))
+  ))
+: Tot (squash (
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
+    let m1' = map_of_list_snoc key_eq m1 k v in    
+    sp.mg_serializable m1' /\
+    cbor_map_disjoint (sp.mg_serializer m1') (sp.mg_serializer m2) <==> cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2)
+  ))
+= 
+  let mkv = EqTest.map_singleton k (key_eq k) [v] in
+  map_of_list_maps_to_nonempty_singleton k (key_eq k) [v] ();
+  let m1' = map_of_list_snoc key_eq m1 k v in
+  map_of_list_is_append_snoc key_eq m1 k v;
+  map_of_list_is_append_serializable_intro sp1 sp2 except m1 mkv m1';
+  map_of_list_serializable_disjoint sp1 sp2 except m1 mkv;
+  map_of_list_serializable_disjoint sp1 sp2 except m1 m2;
+  map_of_list_serializable_disjoint sp1 sp2 except m1' m2;
+  ()
+
+#restart-solver
+let impl_serialize_map_group_valid_map_zero_or_more_snoc_length1
+  (#key #value: Type)
+  (#tkey: typ)
+  (sp1: spec tkey key true)
+  (key_eq: EqTest.eq_test key)
+  (#tvalue: typ)
+  (#inj: bool)
+  (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
+  (l: cbor_map)
+  (m1: Map.t key (list value))
+  (k: key)
+  (v: value)
+  (m2: Map.t key (list value))
+  (sq: squash (
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
+    let m2' = map_of_list_cons key_eq k v m2 in
+    sp.mg_serializable m1 /\
+    cbor_map_disjoint l (sp.mg_serializer m1) /\
+    map_of_list_maps_to_nonempty m2 /\
+    sp1.serializable k /\
+    sp2.serializable v /\
+    (~ (except (sp1.serializer k, sp2.serializer v))) /\
+    sp.mg_serializable m2 /\
+    (~ (Map.defined k m2)) /\
+    (~ (cbor_map_defined (sp1.serializer k) (cbor_map_union l (sp.mg_serializer m1)))) /\
+    sp.mg_serializable m2' /\
+    cbor_map_disjoint (cbor_map_union l (sp.mg_serializer m1)) (sp.mg_serializer m2')
+  ))
+: Tot (squash (
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
+    let m1' = map_of_list_snoc key_eq m1 k v in    
+    let m2' = map_of_list_cons key_eq k v m2 in
+    sp.mg_serializable m1' /\
+    sp.mg_serializable m2' /\
+    cbor_map_length (cbor_map_union l (sp.mg_serializer m1)) + cbor_map_length (sp.mg_serializer m2') == cbor_map_length (cbor_map_union l (sp.mg_serializer m1')) + cbor_map_length (sp.mg_serializer m2)
+  ))
+= 
+  impl_serialize_map_group_valid_map_zero_or_more_snoc_disjoint1 sp1 key_eq sp2 except l m1 k v m2 ();
+  let mkv = EqTest.map_singleton k (key_eq k) [v] in
+  map_of_list_maps_to_nonempty_singleton k (key_eq k) [v] ();
+  let m1' = map_of_list_snoc key_eq m1 k v in
+  let m2' = map_of_list_cons key_eq k v m2 in
+  map_of_list_serializable_disjoint sp1 sp2 except m1' m2;
+  map_of_list_serializable_disjoint sp1 sp2 except m1 m2';
+  let sp = mg_zero_or_more_match_item sp1 sp2 except in
+  map_of_list_is_append_snoc key_eq m1 k v;
+  map_of_list_is_append_serializable_intro sp1 sp2 except m1 mkv m1';
+  map_of_list_is_append_cons key_eq k v m2;
+  map_of_list_is_append_serializable_intro sp1 sp2 except mkv m2 m2';
+  cbor_map_length_disjoint_union l (sp.mg_serializer m1');
+  let ll = cbor_map_length l in
+  cbor_map_length_disjoint_union (sp.mg_serializer m1) (sp.mg_serializer mkv);
+  let lm1 = cbor_map_length (sp.mg_serializer m1) in
+  cbor_map_length_disjoint_union l (sp.mg_serializer m1);
+  cbor_map_length_disjoint_union (sp.mg_serializer mkv) (sp.mg_serializer m2);
+  let lm2 = cbor_map_length (sp.mg_serializer m2) in
+  impl_serialize_map_group_valid_map_zero_or_more_snoc_length ll lm1 1 lm2;
+  ()
+
+#pop-options
+
+#push-options "--z3rlimit 128 --z3cliopt 'smt.qi.eager_threshold=100' --print_implicits --split_queries always"
 
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc'
@@ -781,30 +936,29 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc'
   (#tkey: typ)
   (sp1: spec tkey key true)
   (key_eq: EqTest.eq_test key)
-  (key_except: typ)
   (#tvalue: typ)
   (#inj: bool)
   (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
   (l: cbor_map)
   (m1: Map.t key (list value))
   (k: key)
   (v: value)
   (m2: Map.t key (list value))
   (len: nat)
-: Lemma
-  (requires (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+  (sq: squash (
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     sp.mg_serializable m1 /\
     cbor_map_disjoint l (sp.mg_serializer m1) /\
     map_of_list_maps_to_nonempty m2
   ))
-  (ensures (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+: Tot (squash (
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     sp.mg_serializable m1 /\ (
       impl_serialize_map_group_valid (cbor_map_union l (sp.mg_serializer m1)) sp (map_of_list_cons key_eq k v m2) len <==> (
       sp1.serializable k /\
-      (~ (key_except (sp1.serializer k))) /\
       sp2.serializable v /\
+      (~ (except (sp1.serializer k, sp2.serializer v))) /\
       FStar.UInt.fits (cbor_map_length l + cbor_map_length (sp.mg_serializer m1) + 1) 64 /\
       Seq.length (Cbor.cbor_det_serialize_map (cbor_map_union l (sp.mg_serializer m1))) + Seq.length (Cbor.cbor_det_serialize (sp1.serializer k)) + Seq.length (Cbor.cbor_det_serialize (sp2.serializer v)) <= len /\
       (~ (cbor_map_defined (sp1.serializer k) (cbor_map_union l (sp.mg_serializer m1)))) /\
@@ -813,29 +967,33 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc'
       )
     ))
   ))
-= 
-  impl_serialize_map_group_valid_map_zero_or_more_snoc_aux sp1 key_eq key_except sp2 l m1 k v m2 len;
+= impl_serialize_map_group_valid_map_zero_or_more_snoc_aux sp1 key_eq sp2 except l m1 k v m2 len;
   let m2' = map_of_list_cons key_eq k v m2 in
-  assert (map_of_list_maps_to_nonempty m2');
+  map_of_list_is_append_cons key_eq k v m2;
+  let sq1 : squash (map_of_list_maps_to_nonempty m2) =   assert (map_of_list_maps_to_nonempty m2) in
+  let sq2 : squash (map_of_list_maps_to_nonempty m2') = map_of_list_maps_to_nonempty_cons key_eq k v m2 sq1 in
   let mkv = EqTest.map_singleton k (key_eq k) [v] in
+  map_of_list_maps_to_nonempty_singleton k (key_eq k) [v] ();
   let m1' = map_of_list_snoc key_eq m1 k v in
-  map_of_list_is_append_serializable_elim sp1 key_except sp2 mkv m2 m2';
-  map_of_list_is_append_serializable_singleton sp1 key_except sp2 k (key_eq k) v;
-  let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
-  map_of_list_is_append_serializable_intro sp1 key_except sp2 m1 mkv m1';
-  map_of_list_is_append_serializable_disjoint sp1 key_except sp2 m1 mkv m1';
+  map_of_list_is_append_snoc key_eq m1 k v;
+  map_of_list_is_append_serializable_elim' sp1 sp2 except mkv m2 m2' () () sq2;
+  map_of_list_is_append_serializable_singleton sp1 sp2 except k (key_eq k) v;
+  let sp = mg_zero_or_more_match_item sp1 sp2 except in
+  map_of_list_is_append_serializable_intro sp1 sp2 except m1 mkv m1';
+  map_of_list_serializable_disjoint sp1 sp2 except m1 mkv;
   if
     sp1.serializable k &&
-    (not (key_except (sp1.serializer k))) &&
-    sp2.serializable v
+    sp2.serializable v &&
+    (not (except (sp1.serializer k, sp2.serializer v)))
   then begin
     if sp.mg_serializable m2
     then begin
-      map_of_list_is_append_serializable_disjoint sp1 key_except sp2 mkv m2 m2';
+      map_of_list_serializable_disjoint sp1 sp2 except mkv m2;
       if Map.defined k m2
       then ()
       else begin
-        map_of_list_is_append_serializable_intro sp1 key_except sp2 mkv m2 m2';
+        map_of_list_is_append_cons key_eq k v m2;
+        map_of_list_is_append_serializable_intro sp1 sp2 except mkv m2 m2';
         if cbor_map_defined (sp1.serializer k) (cbor_map_union l (sp.mg_serializer m1))
         then begin
           assert (~ (cbor_map_disjoint (cbor_map_union l (sp.mg_serializer m1)) (sp.mg_serializer m2')));
@@ -845,18 +1003,14 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc'
           assert (cbor_map_disjoint l (sp.mg_serializer m1'));
           assert (cbor_map_disjoint l (sp.mg_serializer m2') <==> cbor_map_disjoint l (sp.mg_serializer m2));
           assert (cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2') <==> cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2));
+          map_of_list_is_append_snoc key_eq m1 k v;
+          impl_serialize_map_group_valid_map_zero_or_more_snoc_disjoint1 sp1 key_eq sp2 except l m1 k v m2 ();
           assert (cbor_map_disjoint (sp.mg_serializer m1') (sp.mg_serializer m2) <==> cbor_map_disjoint (sp.mg_serializer m1) (sp.mg_serializer m2));
           assert (cbor_map_disjoint (cbor_map_union l (sp.mg_serializer m1)) (sp.mg_serializer m2') <==> cbor_map_disjoint (cbor_map_union l (sp.mg_serializer m1')) (sp.mg_serializer m2));
           if cbor_map_disjoint_tot (cbor_map_union l (sp.mg_serializer m1)) (sp.mg_serializer m2')
           then begin
             cbor_map_length_disjoint_union l (sp.mg_serializer m1');
-            let ll = cbor_map_length l in
-            cbor_map_length_disjoint_union (sp.mg_serializer m1) (sp.mg_serializer mkv);
-            let lm1 = cbor_map_length (sp.mg_serializer m1) in
-            cbor_map_length_disjoint_union l (sp.mg_serializer m1);
-            cbor_map_length_disjoint_union (sp.mg_serializer mkv) (sp.mg_serializer m2);
-            let lm2 = cbor_map_length (sp.mg_serializer m2) in
-            impl_serialize_map_group_valid_map_zero_or_more_snoc_length ll lm1 1 lm2;
+            impl_serialize_map_group_valid_map_zero_or_more_snoc_length1 sp1 key_eq sp2 except l m1 k v m2 ();
             assert (cbor_map_length (cbor_map_union l (sp.mg_serializer m1)) + cbor_map_length (sp.mg_serializer m2') == cbor_map_length (cbor_map_union l (sp.mg_serializer m1')) + cbor_map_length (sp.mg_serializer m2));
             assert (cbor_map_length (cbor_map_union l (sp.mg_serializer m1)) + cbor_map_length (sp.mg_serializer m2') >= cbor_map_length (cbor_map_union l (sp.mg_serializer m1)) + 1);
             let sl = Seq.length (Cbor.cbor_det_serialize_map l) in
@@ -871,6 +1025,18 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc'
             assert (Seq.length (Cbor.cbor_det_serialize_map (cbor_map_union (cbor_map_union l (sp.mg_serializer m1)) (sp.mg_serializer m2'))) == Seq.length (Cbor.cbor_det_serialize_map (cbor_map_union (cbor_map_union l (sp.mg_serializer m1')) (sp.mg_serializer m2))));
             impl_serialize_map_group_valid_map_zero_or_more_snoc_length_ge sl sm1 sk sv sm2;
             assert (Seq.length (Cbor.cbor_det_serialize_map (cbor_map_union (cbor_map_union l (sp.mg_serializer m1)) (sp.mg_serializer m2'))) >= Seq.length (Cbor.cbor_det_serialize_map (cbor_map_union l (sp.mg_serializer m1))) + sk + sv);
+            assert (
+      impl_serialize_map_group_valid (cbor_map_union l (sp.mg_serializer m1)) sp (map_of_list_cons key_eq k v m2) len <==> (
+      sp1.serializable k /\
+      sp2.serializable v /\
+      (~ (except (sp1.serializer k, sp2.serializer v))) /\
+      FStar.UInt.fits (cbor_map_length l + cbor_map_length (sp.mg_serializer m1) + 1) 64 /\
+      Seq.length (Cbor.cbor_det_serialize_map (cbor_map_union l (sp.mg_serializer m1))) + Seq.length (Cbor.cbor_det_serialize (sp1.serializer k)) + Seq.length (Cbor.cbor_det_serialize (sp2.serializer v)) <= len /\
+      (~ (cbor_map_defined (sp1.serializer k) (cbor_map_union l (sp.mg_serializer m1)))) /\
+      (sp.mg_serializable (map_of_list_snoc key_eq m1 k v) ==>
+        impl_serialize_map_group_valid (cbor_map_union l (sp.mg_serializer (map_of_list_snoc key_eq m1 k v))) sp m2 len
+      )
+            ));
             ()
           end
           else begin
@@ -895,10 +1061,10 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc
   (#tkey: typ)
   (sp1: spec tkey key true)
   (key_eq: EqTest.eq_test key)
-  (key_except: typ)
   (#tvalue: typ)
   (#inj: bool)
   (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
   (l: cbor_map)
   (m1: Map.t key (list value))
   (k: key)
@@ -907,18 +1073,18 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc
   (len: nat)
 : Lemma
   (requires (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     sp.mg_serializable m1 /\
     cbor_map_disjoint l (sp.mg_serializer m1) /\
     map_of_list_maps_to_nonempty m2
   ))
   (ensures (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     sp.mg_serializable m1 /\ (
       impl_serialize_map_group_valid (cbor_map_union l (sp.mg_serializer m1)) sp (map_of_list_cons key_eq k v m2) len <==> (
       sp1.serializable k /\
-      (~ (key_except (sp1.serializer k))) /\
       sp2.serializable v /\
+      (~ (except (sp1.serializer k, sp2.serializer v))) /\
       FStar.UInt.fits (cbor_map_length l + cbor_map_length (sp.mg_serializer m1) + 1) 64 /\
       Seq.length (Cbor.cbor_det_serialize_map (cbor_map_union l (sp.mg_serializer m1))) + Seq.length (Cbor.cbor_det_serialize (sp1.serializer k)) + Seq.length (Cbor.cbor_det_serialize (sp2.serializer v)) <= len /\
       (~ (cbor_map_defined (sp1.serializer k) (cbor_map_union l (sp.mg_serializer m1)))) /\
@@ -928,8 +1094,8 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc
     )) /\ (
       (
         sp1.serializable k /\
-        (~ (key_except (sp1.serializer k))) /\
         sp2.serializable v /\
+        (~ (except (sp1.serializer k, sp2.serializer v))) /\
         (~ (cbor_map_defined (sp1.serializer k) (cbor_map_union l (sp.mg_serializer m1))))
       ) ==> (
       sp.mg_serializable (map_of_list_snoc key_eq m1 k v) /\
@@ -938,10 +1104,36 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc
       cbor_map_length (sp.mg_serializer (map_of_list_snoc key_eq m1 k v)) == cbor_map_length (sp.mg_serializer m1) + 1
   ))))
 =
-  impl_serialize_map_group_valid_map_zero_or_more_snoc_aux sp1 key_eq key_except sp2 l m1 k v m2 len;
-  impl_serialize_map_group_valid_map_zero_or_more_snoc' sp1 key_eq key_except sp2 l m1 k v m2 len
+  impl_serialize_map_group_valid_map_zero_or_more_snoc_aux sp1 key_eq sp2 except l m1 k v m2 len;
+  impl_serialize_map_group_valid_map_zero_or_more_snoc' sp1 key_eq sp2 except l m1 k v m2 len ()
 
-#push-options "--z3rlimit 64 --print_implicits"
+#restart-solver
+let map_of_list_sub
+  (#key #value: Type)
+  (key_eq: EqTest.eq_test key)
+  (m: Map.t key (list value))
+  (k: key)
+  (v: value)
+  (lv': list value)
+: Pure (Map.t key (list value))
+  (requires (
+    Map.get m k == Some (v :: lv')
+  ))
+  (ensures fun m' ->
+    (map_of_list_maps_to_nonempty m ==> map_of_list_maps_to_nonempty m') /\
+    m == map_of_list_cons key_eq k v m'
+  )
+= 
+  let f (kv: (key & list value)) : bool =
+    not (key_eq k (fst kv))
+  in
+  let m' : Map.t key (list value) = match lv' with
+  | [] -> Map.filter f m
+  | _ -> EqTest.map_set #key #(list value) m k (key_eq k) lv'
+  in
+  assert (map_of_list_maps_to_nonempty m ==> map_of_list_maps_to_nonempty m');
+  assert (Map.equal m (map_of_list_cons key_eq k v m'));
+  m'
 
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow
@@ -949,17 +1141,17 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow
   (#tkey: typ)
   (sp1: spec tkey key true)
   (key_eq: EqTest.eq_test key)
-  (key_except: typ)
   (#tvalue: typ)
   (#inj: bool)
   (sp2: spec tvalue value inj)
+  (except: map_constraint { inj \/ map_constraint_value_injective tkey sp2.parser except })
   (l: cbor_map)
   (m1: Map.t key (list value))
   (m2: Map.t key (list value))
   (len: nat)
 : Lemma
   (requires (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     sp.mg_serializable m1 /\
     cbor_map_disjoint l (sp.mg_serializer m1) /\
     map_of_list_maps_to_nonempty m2 /\
@@ -967,11 +1159,11 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow
     (~ (FStar.UInt.fits (cbor_map_length l + cbor_map_length (sp.mg_serializer m1) + 1) 64))
   ))
   (ensures (
-    let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+    let sp = mg_zero_or_more_match_item sp1 sp2 except in
     sp.mg_serializable m1 /\
     ~ (impl_serialize_map_group_valid (cbor_map_union l (sp.mg_serializer m1)) sp m2 len)
   ))
-= let sp = mg_zero_or_more_match_item sp1 key_except sp2 in
+= let sp = mg_zero_or_more_match_item sp1 sp2 except in
   let prf
     (k: key)
   : Lemma
@@ -979,13 +1171,14 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow
     (ensures (
       ~ (impl_serialize_map_group_valid (cbor_map_union l (sp.mg_serializer m1)) sp m2 len)
     ))
-  = let Some (v :: lv') = Map.get m2 k in
-    let m2' = match lv' with
-    | [] -> Map.filter (fun kv -> not (key_eq k (fst kv))) m2
-    | _ -> Map.set m2 k (key_eq k) lv'
-    in
-    assert (Map.equal m2 (map_of_list_cons key_eq k v m2'));
-    impl_serialize_map_group_valid_map_zero_or_more_snoc sp1 key_eq key_except sp2 l m1 k v m2' len
+  = assert (Some? (Map.get m2 k));
+    let Some lv = Map.get m2 k in
+    assert (Cons? lv);
+    let v :: lv' = lv in
+    let m2' = map_of_list_sub key_eq m2 k v lv' in
+    map_of_list_is_append_cons key_eq k v m2';
+    impl_serialize_map_group_valid_map_zero_or_more_snoc sp1 key_eq sp2 except l m1 k v m2' len;
+    ()
   in
   Classical.forall_intro (Classical.move_requires prf);
   assert (~ (Map.equal m2 (Map.empty _ _)));
@@ -1030,8 +1223,6 @@ let impl_serialize_map_group_insert_prf
             Seq.slice_slice w 0 (SZ.v size2) (SZ.v size1) (SZ.v size2);
   ()
 
-#pop-options
-
 #restart-solver
 let slice_split_post
   (#t: Type)
@@ -1073,26 +1264,26 @@ let impl_serialize_map_zero_or_more_iterator_gen_t
     ([@@@erasable]sp1: Ghost.erased (spec key tkey true))
     (#ikey: Type0)
     ([@@@erasable]r1: rel ikey tkey)
-    ([@@@erasable]key_except: Ghost.erased typ)
     (#[@@@erasable]value: Ghost.erased typ)
     (#[@@@erasable]tvalue: Type0)
     (#[@@@erasable]inj: Ghost.erased bool)
     ([@@@erasable]sp2: Ghost.erased (spec value tvalue inj))
+    ([@@@erasable] except: Ghost.erased map_constraint { Ghost.reveal inj \/ map_constraint_value_injective key sp2.parser except })
     (#ivalue: Type0)
     ([@@@erasable]r2: rel ivalue tvalue)
     (iterator: ([@@@erasable] Ghost.erased (Iterator.type_spec ikey) -> [@@@erasable] Ghost.erased (Iterator.type_spec ivalue) -> Type0))
     (r: (spec1: Ghost.erased (Iterator.type_spec ikey)) -> (spec2: Ghost.erased (Iterator.type_spec ivalue)) -> rel (iterator spec1 spec2) (Map.t (dfst spec1) (list (dfst spec2))))
-= impl_serialize_map_group #(map_group_zero_or_more_match_item key key_except value) #_ #_ #_ (mg_zero_or_more_match_item sp1 key_except sp2) #_ (r (Iterator.mk_spec r1) (Iterator.mk_spec r2))
+= impl_serialize_map_group #(map_group_filtered_table key value except) #_ #_ #_ (mg_zero_or_more_match_item sp1 sp2 except) #_ (r (Iterator.mk_spec r1) (Iterator.mk_spec r2))
 
 let impl_serialize_map_zero_or_more_iterator_inv
     (#key: typ)
     (#tkey: Type0)
     (sp1: (spec key tkey true))
-    (key_except: typ)
     (#value: typ)
     (#tvalue: Type0)
     (#inj: bool)
     (sp2: (spec value tvalue inj))
+    (except: map_constraint { inj \/ map_constraint_value_injective key sp2.parser except })
   (v0: Map.t tkey (list tvalue))
   (l: cbor_map)
   (res: bool)
@@ -1102,7 +1293,7 @@ let impl_serialize_map_zero_or_more_iterator_inv
   (size: SZ.t)
 : Tot prop
 =
-  let sp = (mg_zero_or_more_match_item sp1 key_except sp2) in
+  let sp = (mg_zero_or_more_match_item sp1 sp2 except) in
       map_of_list_is_append m1 m2' v0 /\
       map_of_list_maps_to_nonempty m1 /\
       sp.mg_serializable m1 /\
@@ -1113,13 +1304,15 @@ let impl_serialize_map_zero_or_more_iterator_inv
       )) /\
       impl_serialize_map_group_valid l sp v0 (Seq.length w) == (res && impl_serialize_map_group_valid (cbor_map_union l (sp.mg_serializer m1)) sp m2' (Seq.length w))
 
-#push-options "--z3rlimit 256 --fuel 2 --ifuel 1 --query_stats --print_implicits --split_queries no"
+#push-options "--z3rlimit 256  --fuel 2 --ifuel 1 --query_stats --print_implicits --split_queries always"
 
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_zero_or_more_iterator_gen
   (#ty': Type0) (#vmatch': perm -> ty' -> cbor -> slprop)
+  (#ty2': Type0) (#vmatch2': perm -> ty2' -> cbor & cbor -> slprop)
   (parse: cbor_det_parse_t vmatch')
+  (mk_map_entry: mk_map_entry_t vmatch' vmatch2')
   (insert: cbor_det_serialize_map_insert_t)
     (#[@@@erasable]key: Ghost.erased typ)
     (#[@@@erasable]tkey: Type0)
@@ -1128,8 +1321,6 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     (#ikey: Type0)
     (#[@@@erasable]r1: rel ikey tkey)
     (pa1: impl_serialize sp1 r1)
-    (#[@@@erasable]key_except: Ghost.erased typ)
-    (va_ex: impl_typ vmatch' key_except)
     (#[@@@erasable]value: Ghost.erased typ)
     (#[@@@erasable]tvalue: Type0)
     (#[@@@erasable]inj: Ghost.erased bool)
@@ -1137,12 +1328,14 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     (#ivalue: Type0)
     (#[@@@erasable]r2: rel ivalue tvalue)
     (pa2: impl_serialize sp2 r2)
+    (#[@@@erasable] except: Ghost.erased map_constraint { Ghost.reveal inj \/ map_constraint_value_injective key sp2.parser except })
+    (va_ex: impl_map_entry_cond vmatch2' except)
     (iterator: ([@@@erasable] Ghost.erased (Iterator.type_spec ikey) -> [@@@erasable] Ghost.erased (Iterator.type_spec ivalue) -> Type0))
     (r: (spec1: Ghost.erased (Iterator.type_spec ikey)) -> (spec2: Ghost.erased (Iterator.type_spec ivalue)) -> rel (iterator spec1 spec2) (Map.t (dfst spec1) (list (dfst spec2))))
     (is_empty: cddl_map_iterator_is_empty_gen_t _ _ iterator r)
     (next: cddl_map_iterator_next_gen_t _ _ iterator r)
     (rel_len: rel_map_iterator_length _ _ iterator r)
-: impl_serialize_map_zero_or_more_iterator_gen_t #key #tkey sp1 #ikey r1 key_except #value #tvalue #inj sp2 #ivalue r2 iterator r
+: impl_serialize_map_zero_or_more_iterator_gen_t #key #tkey sp1 #ikey r1 #value #tvalue #inj sp2 except #ivalue r2 iterator r
 =
     (c0: _)
     (#v0: _)
@@ -1151,7 +1344,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     (out_size: _)
     (l: _)
 {
-  let sp = Ghost.hide (mg_zero_or_more_match_item sp1 key_except sp2);
+  let sp = Ghost.hide (mg_zero_or_more_match_item sp1 sp2 except);
   let mut pc = c0;
   let pm1 = GR.alloc (Map.empty tkey (list tvalue));
   assert (pure (
@@ -1186,7 +1379,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
       (r (Iterator.mk_spec r1) (Iterator.mk_spec r2) c m2)
       (r (Iterator.mk_spec r1) (Iterator.mk_spec r2) c0 v0) **
     pure (
-      impl_serialize_map_zero_or_more_iterator_inv sp1 key_except sp2 v0 l res w m1 (Ghost.hide (Ghost.reveal m2)) m2' count size /\
+      impl_serialize_map_zero_or_more_iterator_inv sp1 sp2 except v0 l res w m1 (Ghost.hide (Ghost.reveal m2)) m2' count size /\
       b == (res && not (FStar.StrongExcludedMiddle.strong_excluded_middle (m2 == Map.empty _ _)))
     )
   ) {
@@ -1196,7 +1389,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
     let count = !out_count;
     with c2_ m2_ . assert (r (Iterator.mk_spec r1) (Iterator.mk_spec r2) c2_ m2_);
     if (count = pow2_64_m1) {
-      impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow sp1 key_eq key_except sp2 l m1 m2_ (SZ.v (S.len out));
+      impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow sp1 key_eq sp2 except l m1 m2_ (SZ.v (S.len out));
       pres := false
     } else {
       let count' = U64.add count 1uL;
@@ -1211,7 +1404,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
       Trade.trans _ _ (r (Iterator.mk_spec r1) (Iterator.mk_spec r2) c0 v0);
       with c2 m2 . assert (r (Iterator.mk_spec r1) (Iterator.mk_spec r2) c2 m2);
       rel_len #(Iterator.mk_spec r1) #(Iterator.mk_spec r2) _ _;
-      impl_serialize_map_group_valid_map_zero_or_more_snoc sp1 key_eq key_except sp2 l m1 ke va m2 (SZ.v (S.len out));
+      impl_serialize_map_group_valid_map_zero_or_more_snoc sp1 key_eq sp2 except l m1 ke va m2 (SZ.v (S.len out));
       let mkv : Ghost.erased (Map.t tkey (list tvalue)) = EqTest.map_singleton (Ghost.reveal ke) (Ghost.reveal key_eq ke) [Ghost.reveal va];
       let m2' : Ghost.erased (Map.t tkey (list tvalue)) = map_of_list_cons key_eq (Ghost.reveal ke) (Ghost.reveal va) m2;
       Classical.forall_intro (EqTest.eq_test_unique key_eq);
@@ -1226,6 +1419,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
       with w . assert (pts_to out w);
       Seq.lemma_split w (SZ.v size0);
       let (outl1, out1) = S.split out size0;
+      with z1l . assert (pts_to outl1 z1l);
       let sz1 = pa1 ck out1;
       S.pts_to_len out1;
 //    map_of_list_is_append_serializable_singleton sp1 key_except sp2 ke (Ghost.reveal key_eq ke) va;
@@ -1240,54 +1434,75 @@ fn impl_serialize_map_zero_or_more_iterator_gen
         Seq.lemma_split w1 (SZ.v sz1);
         let w1' = Ghost.hide (Seq.slice w1 (SZ.v sz1) (Seq.length w1));
         Cbor.cbor_det_serialize_parse' (sp1.serializer ke) w1';
-        let Some oo = parse out1;
-        let (o, orem) = oo;
-        rewrite (cbor_det_parse_post vmatch' out1 1.0R w1 (Some oo))
-          as (cbor_det_parse_post_some vmatch' out1 1.0R w1 o orem);
-        unfold (cbor_det_parse_post_some vmatch' out1 1.0R w1 o orem);
-        with ke' . assert (vmatch' 1.0R o ke');
-        with w1'' . assert (pts_to orem w1'');
-        Cbor.cbor_det_serialize_inj_strong ke' (sp1.serializer ke) w1'' w1';
-        assert (pure (Ghost.reveal ke' == sp1.serializer ke));
-        let is_except = va_ex o;
-        Trade.elim (vmatch' 1.0R o ke' ** _) _;
-        if (is_except) {
-          S.join _ _ out;
-          S.pts_to_len out;
-          Trade.elim_hyp_l _ _ _;
-          assert (pure (Ghost.reveal key_except (sp1.serializer ke)));
-          pres := false
-        } else {
-          let (outl2, out2) = S.split out1 sz1;
-          S.pts_to_len out2;
-          let sz2 = pa2 cv out2;
-          with w2 . assert (pts_to out2 w2);
-          S.pts_to_len out2;
-          S.pts_to_len outl2;
+        let (outl2, out2) = S.split out1 sz1;
+        with z2l . assert (pts_to outl2 z2l);
+        S.pts_to_len out2;
+        let sz2 = pa2 cv out2;
+        with w2 . assert (pts_to out2 w2);
+        S.pts_to_len out2;
+        S.pts_to_len outl2;
+//        with w' . assert (pts_to out w');
+//        assert (pure (w' == Seq.append (Seq.slice w 0 (SZ.v size0)) (Seq.append (Seq.slice w1 0 (SZ.v sz1)) w2)));
+        Trade.elim_hyp_l _ _ _;
+        if (sz2 = 0sz) {
           S.join _ _ out1;
           S.pts_to_len out1;
           S.pts_to_len outl1;
           S.join _ _ out;
           S.pts_to_len out;
-          with w' . assert (pts_to out w');
-          assert (pure (w' == Seq.append (Seq.slice w 0 (SZ.v size0)) (Seq.append (Seq.slice w1 0 (SZ.v sz1)) w2)));
-          Trade.elim_hyp_l _ _ _;
-          if (sz2 = 0sz) {
+          pres := false
+        } else {
+          Seq.lemma_split w2 (SZ.v sz2);
+          let w2' = Ghost.hide (Seq.slice w2 (SZ.v sz2) (Seq.length w2));
+          Cbor.cbor_det_serialize_parse' (sp2.serializer va) w2';
+                                   //            assert (pure (SZ.v size2 == SZ.v size0 + (SZ.v sz1 + SZ.v sz2)));
+          with vl . assert (pts_to outl2 vl);
+          assert (pure (Seq.equal vl (CBOR.Spec.API.Format.cbor_det_serialize (sp1.serializer ke))));
+          Seq.append_empty_r (CBOR.Spec.API.Format.cbor_det_serialize (sp1.serializer ke));
+          assert (pure (Seq.append (CBOR.Spec.API.Format.cbor_det_serialize (sp1.serializer ke)) Seq.empty == vl));
+          Cbor.cbor_det_serialize_parse' (sp1.serializer ke) Seq.empty;
+//          assert (pure (Seq.length vl == SZ.v size2));
+          S.pts_to_len outl2;
+//          assert (pure (S.len outl == size2));
+          let Some oo1 = parse outl2;
+          let (o1, orem1) = oo1;
+          rewrite (cbor_det_parse_post vmatch' outl2 1.0R vl (Some oo1))
+            as (cbor_det_parse_post_some vmatch' outl2 1.0R vl o1 orem1);
+          unfold (cbor_det_parse_post_some vmatch' outl2 1.0R vl o1 orem1);
+          with ke' . assert (vmatch' 1.0R o1 ke');
+          with w1'' . assert (pts_to orem1 w1'');
+          Cbor.cbor_det_serialize_inj_strong ke' (sp1.serializer ke) w1'' Seq.empty;
+          assert (pure (Ghost.reveal ke' == sp1.serializer ke));
+          let Some oo2 = parse out2;
+          let (o2, orem2) = oo2;
+          rewrite (cbor_det_parse_post vmatch' out2 1.0R w2 (Some oo2))
+            as (cbor_det_parse_post_some vmatch' out2 1.0R w2 o2 orem2);
+          unfold (cbor_det_parse_post_some vmatch' out2 1.0R w2 o2 orem2);
+          with va' . assert (vmatch' 1.0R o2 va');
+          with (w2'' : Seq.seq U8.t) . assert (pts_to orem2 w2'');
+          Cbor.cbor_det_serialize_inj_strong va' (sp2.serializer va) w2'' w2';
+          assert (pure (Ghost.reveal va' == sp2.serializer va));
+          let o = mk_map_entry o1 o2;
+          let is_except = va_ex o;
+          Trade.elim (vmatch2' 1.0R o _) _;
+          Trade.elim (vmatch' 1.0R o2 va' ** pts_to orem2 w2'') (pts_to out2 w2);
+          Trade.elim (vmatch' 1.0R o1 ke' ** pts_to orem1 _) (pts_to outl2 _);
+          S.join outl2 out2 out1;
+          S.join outl1 out1 out;
+          S.pts_to_len out;
+          if (is_except) {
+            assert (pure (Ghost.reveal except ((sp1.serializer ke <: cbor), (sp2.serializer va <: cbor)) == true));
             pres := false
           } else {
-            Seq.lemma_split w2 (SZ.v sz2);
             let size1 = SZ.add size0 sz1;
             let size2 = SZ.add size1 sz2;
-//            assert (pure (SZ.v size2 == SZ.v size0 + (SZ.v sz1 + SZ.v sz2)));
+            with w' . assert (pts_to out w');
             let (outl, outr) = slice_split out size2;
-            with vl . assert (pts_to outl vl);
-            assert (pure (Seq.length vl == SZ.v size2));
             S.pts_to_len outl;
-            assert (pure (S.len outl == size2));
+            S.pts_to_len outr;
             impl_serialize_map_group_insert_prf w' (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) (SZ.v sz1) (sp2.serializer va) (SZ.v sz2) w2;
             let inserted = insert outl (cbor_map_union l (sp.mg_serializer m1)) size0 (sp1.serializer ke) size1 (sp2.serializer va);
             S.pts_to_len outl;
-            S.pts_to_len outr;
             with wl . assert (pts_to outl wl);
             assert (pure (Seq.length wl == SZ.v size2));
             with wr . assert (pts_to outr wr);
@@ -1358,7 +1573,9 @@ let impl_serialize_map_zero_or_more_iterator
   (map_entry_share: share_t vmatch2)
   (map_entry_gather: gather_t vmatch2)
   (#ty': Type0) (#vmatch': perm -> ty' -> cbor -> slprop)
+  (#ty2': Type0) (#vmatch2': perm -> ty2' -> cbor & cbor -> slprop)
   (parse: cbor_det_parse_t vmatch')
+  (mk_map_entry: mk_map_entry_t vmatch' vmatch2')
   (insert: cbor_det_serialize_map_insert_t)
     (#[@@@erasable]key: Ghost.erased typ)
     (#[@@@erasable]tkey: Type0)
@@ -1367,8 +1584,6 @@ let impl_serialize_map_zero_or_more_iterator
     (#ikey: Type0)
     (#[@@@erasable]r1: rel ikey tkey)
     (pa1: impl_serialize sp1 r1)
-    (#[@@@erasable]key_except: Ghost.erased typ)
-    (va_ex: impl_typ vmatch' key_except)
     (#[@@@erasable]value: Ghost.erased typ)
     (#[@@@erasable]tvalue: Type0)
     (#[@@@erasable]inj: Ghost.erased bool)
@@ -1376,16 +1591,19 @@ let impl_serialize_map_zero_or_more_iterator
     (#ivalue: Type0)
     (#[@@@erasable]r2: rel ivalue tvalue)
     (pa2: impl_serialize sp2 r2)
-: impl_serialize_map_zero_or_more_iterator_t #ty vmatch #cbor_map_iterator_t cbor_map_iterator_match #key #tkey sp1 #ikey r1 key_except #value #tvalue #inj sp2 #ivalue r2
+    (#[@@@erasable] except: Ghost.erased map_constraint { Ghost.reveal inj \/ map_constraint_value_injective key sp2.parser except })
+    (va_ex: impl_map_entry_cond vmatch2' except)
+: impl_serialize_map_zero_or_more_iterator_t #ty vmatch #vmatch2 #cbor_map_iterator_t cbor_map_iterator_match #key #tkey sp1 #ikey r1 #value #tvalue #inj sp2 #ivalue r2 except
 = impl_serialize_map_zero_or_more_iterator_gen
     parse
+    mk_map_entry
     insert
     key_eq
     pa1
-    va_ex
     pa2
-    (map_iterator_t cbor_map_iterator_t _ _ vmatch)
-    (rel_map_iterator vmatch cbor_map_iterator_match _ _)
+    va_ex
+    (map_iterator_t cbor_map_iterator_t _ _ vmatch vmatch2)
+    (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match _ _)
     (cddl_map_iterator_is_empty map_is_empty map_next map_entry_key map_entry_value _ _)
     (cddl_map_iterator_next map_share map_gather map_next map_entry_key map_entry_value map_entry_share map_entry_gather _ _)
     (rel_map_iterator_prop' cbor_map_iterator_match)
@@ -1541,7 +1759,9 @@ fn map_slice_iterator_next
 inline_for_extraction noextract [@@noextract_to "krml"]
 fn impl_serialize_map_zero_or_more_slice
   (#ty': Type0) (#vmatch': perm -> ty' -> cbor -> slprop)
+  (#ty2': Type0) (#vmatch2': perm -> ty2' -> cbor & cbor -> slprop)
   (parse: cbor_det_parse_t vmatch')
+  (mk_map_entry: mk_map_entry_t vmatch' vmatch2')
   (insert: cbor_det_serialize_map_insert_t)
     (#[@@@erasable]key: Ghost.erased typ)
     (#[@@@erasable]tkey: Type0)
@@ -1550,8 +1770,6 @@ fn impl_serialize_map_zero_or_more_slice
     (#ikey: Type0)
     (#[@@@erasable]r1: rel ikey tkey)
     (pa1: impl_serialize sp1 r1)
-    (#[@@@erasable]key_except: Ghost.erased typ)
-    (va_ex: impl_typ vmatch' key_except)
     (#[@@@erasable]value: Ghost.erased typ)
     (#[@@@erasable]tvalue: Type0)
     (#[@@@erasable]inj: Ghost.erased bool)
@@ -1559,7 +1777,9 @@ fn impl_serialize_map_zero_or_more_slice
     (#ivalue: Type0)
     (#[@@@erasable]r2: rel ivalue tvalue)
     (pa2: impl_serialize sp2 r2)
-: impl_serialize_map_group #(map_group_zero_or_more_match_item key key_except value) #_ #_ #_ (mg_zero_or_more_match_item sp1 key_except sp2) #_ (rel_slice_of_table key_eq r1 r2)
+    (#[@@@erasable] except: Ghost.erased map_constraint { Ghost.reveal inj \/ map_constraint_value_injective key sp2.parser except })
+    (va_ex: impl_map_entry_cond vmatch2' except)
+: impl_serialize_map_group #(map_group_filtered_table key value except) #_ #_ #_ (mg_zero_or_more_match_item sp1 sp2 except) #_ (rel_slice_of_table key_eq r1 r2)
 =
     (c0: _)
     (#v0: _)
@@ -1578,11 +1798,12 @@ fn impl_serialize_map_zero_or_more_slice
   let mut pi = i;
   let res = impl_serialize_map_zero_or_more_iterator_gen
     parse
+    mk_map_entry
     insert
     key_eq
     pa1
-    va_ex
     pa2
+    va_ex
     (map_slice_iterator_t _ _)
     (rel_map_slice_iterator _ _)
     (map_slice_iterator_is_empty _ _)
@@ -1611,8 +1832,10 @@ let impl_serialize_map_zero_or_more
   (map_entry_value: map_entry_value_t vmatch2 vmatch)
   (map_entry_share: share_t vmatch2)
   (map_entry_gather: gather_t vmatch2)
-  (#ty': Type0) (#vmatch': perm -> ty' -> cbor -> slprop)
+  (#ty' #ty2': Type0) (#vmatch': perm -> ty' -> cbor -> slprop)
+  (#vmatch2': perm -> ty2' -> cbor & cbor -> slprop)
   (parse: cbor_det_parse_t vmatch')
+  (mk_map_entry: mk_map_entry_t vmatch' vmatch2')
   (insert: cbor_det_serialize_map_insert_t)
     (#[@@@erasable]key: Ghost.erased typ)
     (#[@@@erasable]tkey: Type0)
@@ -1621,8 +1844,6 @@ let impl_serialize_map_zero_or_more
     (#ikey: Type0)
     (#[@@@erasable]r1: rel ikey tkey)
     (pa1: impl_serialize sp1 r1)
-    (#[@@@erasable]key_except: Ghost.erased typ)
-    (va_ex: impl_typ vmatch' key_except)
     (#[@@@erasable]value: Ghost.erased typ)
     (#[@@@erasable]tvalue: Type0)
     (#[@@@erasable]inj: Ghost.erased bool)
@@ -1630,23 +1851,26 @@ let impl_serialize_map_zero_or_more
     (#ivalue: Type0)
     (#[@@@erasable]r2: rel ivalue tvalue)
     (pa2: impl_serialize sp2 r2)
-: impl_serialize_map_group #(map_group_zero_or_more_match_item key key_except value) #_ #_ #_ (mg_zero_or_more_match_item sp1 key_except sp2) #_ (rel_either_left (rel_slice_of_table key_eq r1 r2) (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
+    (#[@@@erasable] except: Ghost.erased map_constraint { Ghost.reveal inj \/ map_constraint_value_injective key sp2.parser except })
+    (va_ex: impl_map_entry_cond vmatch2' except)
+: impl_serialize_map_group #(map_group_filtered_table key value except) #_ #_ #_ (mg_zero_or_more_match_item sp1 sp2 except) #_ (rel_either_left (rel_slice_of_table key_eq r1 r2) (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
 = impl_serialize_map_group_either_left
     (impl_serialize_map_zero_or_more_slice
       parse
+      mk_map_entry
       insert
       key_eq
       pa1
-      va_ex
       pa2
+      va_ex
     )
     (impl_serialize_map_zero_or_more_iterator
       map_share map_gather map_is_empty map_next map_entry_key map_entry_value map_entry_share map_entry_gather
       parse
+      mk_map_entry
       insert
       key_eq
       pa1
-      va_ex
       pa2
+      va_ex
     )
-    

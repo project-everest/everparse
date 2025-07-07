@@ -67,6 +67,8 @@ let rec impl_type_sem
   (#bound: name_env)
   (#cbor_t: Type0)
   (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#cbor2_t: Type0)
+  (vmatch2: perm -> cbor2_t -> Cbor.cbor & Cbor.cbor -> slprop)
   (#cbor_array_iterator_t: Type0)
   (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)
   (#cbor_map_iterator_t: Type0)
@@ -82,24 +84,24 @@ let rec impl_type_sem
   | TTDef s -> env s
   | TTElem elt -> { sem_impl_type = impl_elem_type_sem cbor_t elt; sem_rel = rel_elem_type_sem vmatch elt }
   | TTOption t ->
-    let it = impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env t in {
+    let it = impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env t in {
       sem_impl_type = option it.sem_impl_type;
       sem_rel = rel_option it.sem_rel
     }
   | TTPair t1 t2 ->
-    let it1 = impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env t1 in
-    let it2 = impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env t2 in {
+    let it1 = impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env t1 in
+    let it2 = impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env t2 in {
       sem_impl_type = (it1.sem_impl_type & it2.sem_impl_type);
       sem_rel = rel_pair it1.sem_rel it2.sem_rel
     }
   | TTUnion t1 t2 ->
-    let it1 = impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env t1 in
-    let it2 = impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env t2 in {
+    let it1 = impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env t1 in
+    let it2 = impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env t2 in {
       sem_impl_type = (it1.sem_impl_type `either` it2.sem_impl_type);
       sem_rel = rel_either it1.sem_rel it2.sem_rel
     }
   | TTArray t ->
-    let it = impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env t in {
+    let it = impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env t in {
       sem_impl_type =
         either
           (slice it.sem_impl_type)
@@ -112,17 +114,17 @@ let rec impl_type_sem
           ;
     }
   | TTTable t1 t2 ->
-    let it1 = impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env t1 in
-    let it2 = impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env t2 in {
+    let it1 = impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env t1 in
+    let it2 = impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env t2 in {
       sem_impl_type =
         either
           (slice (it1.sem_impl_type & it2.sem_impl_type))
-          (map_iterator_t cbor_map_iterator_t it1.sem_impl_type it2.sem_impl_type vmatch (Iterator.mk_spec it1.sem_rel) (Iterator.mk_spec it2.sem_rel))
+          (map_iterator_t cbor_map_iterator_t it1.sem_impl_type it2.sem_impl_type vmatch vmatch2 (Iterator.mk_spec it1.sem_rel) (Iterator.mk_spec it2.sem_rel))
           ; // HERE the relation on the element types is used in the implementation map type
       sem_rel = 
         rel_either_left
           (rel_slice_of_table (target_type_eq s_env t1) it1.sem_rel it2.sem_rel)
-          (rel_map_iterator vmatch cbor_map_iterator_match it1.sem_impl_type it2.sem_impl_type (Iterator.mk_spec it1.sem_rel) (Iterator.mk_spec it2.sem_rel))
+          (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match it1.sem_impl_type it2.sem_impl_type (Iterator.mk_spec it1.sem_rel) (Iterator.mk_spec it2.sem_rel))
           ;
     }
 
@@ -156,6 +158,8 @@ let rec impl_type_sem_incr
   (#bound1: name_env)
   (cbor_t: Type0)
   (vmatch: perm -> cbor_t -> Cbor.cbor -> slprop)
+  (#cbor2_t: Type0)
+  (vmatch2: perm -> cbor2_t -> Cbor.cbor & Cbor.cbor -> slprop)
   (#cbor_array_iterator_t: Type0)
   (cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list Cbor.cbor -> slprop)
   (#cbor_map_iterator_t: Type0)
@@ -170,20 +174,20 @@ let rec impl_type_sem_incr
   (requires rel_env_included env1 env2 /\
     target_type_bounded bound1 t
   )
-  (ensures impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env1 t == coerce_eq () (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env2 t)) // FIXME: WHY WHY WHY do we have this coerce_eq?
+  (ensures impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env1 t == coerce_eq () (impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env2 t)) // FIXME: WHY WHY WHY do we have this coerce_eq?
   (decreases t)
   [SMTPatOr [
-    [SMTPat (rel_env_included env1 env2); SMTPat (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env1 t);];
-    [SMTPat (rel_env_included env1 env2); SMTPat (impl_type_sem vmatch cbor_array_iterator_match cbor_map_iterator_match env2 t);];
+    [SMTPat (rel_env_included env1 env2); SMTPat (impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env1 t);];
+    [SMTPat (rel_env_included env1 env2); SMTPat (impl_type_sem vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env2 t);];
   ]]
 = match t with
   | TTOption t1
   | TTArray t1
-    -> impl_type_sem_incr cbor_t vmatch cbor_array_iterator_match cbor_map_iterator_match env1 env2 t1
+    -> impl_type_sem_incr cbor_t vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env1 env2 t1
   | TTPair t1 t2
   | TTUnion t1 t2
   | TTTable t1 t2 ->
     eq_test_unique (target_type_eq s_env1 t1) (coerce_eq () (target_type_eq s_env2 t1));
-    impl_type_sem_incr cbor_t vmatch cbor_array_iterator_match cbor_map_iterator_match env1 env2 t1;
-    impl_type_sem_incr cbor_t vmatch cbor_array_iterator_match cbor_map_iterator_match env1 env2 t2
+    impl_type_sem_incr cbor_t vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env1 env2 t1;
+    impl_type_sem_incr cbor_t vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match env1 env2 t2
   | _ -> ()

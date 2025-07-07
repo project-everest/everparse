@@ -3,6 +3,7 @@ module U = CBOR.Spec.Util
 
 #push-options "--z3rlimit 32"
 
+(*
 #restart-solver
 let restrict_map_group_concat
   (g1: map_group)
@@ -47,23 +48,12 @@ let restrict_map_group_concat
         end
       | _ -> ()
     )
+*)
 
 let map_group_choice_compatible_match_item_for
-  (cut: bool)
-  (key: cbor)
-  (value: typ)
-  (right: map_group)
-  (fp: typ)
-: Lemma
-  (requires (
-    t_literal key `typ_disjoint` fp /\
-    map_group_footprint right fp
-  ))
-  (ensures (
-    map_group_choice_compatible (map_group_match_item_for cut key value) right
-  ))
+  cut key value right fp
 = map_group_choice_compatible_intro (map_group_match_item_for cut key value) right (fun x ->
-    let phi = matches_map_group_entry fp any in
+    let phi = fp in
     cbor_map_split phi x;
     map_group_footprint_elim right fp (cbor_map_filter phi x) (cbor_map_filter (U.notp phi) x)
   )
@@ -74,33 +64,18 @@ let map_group_choice_compatible_match_item_for
 
 #restart-solver
 let map_group_footprint_concat_consumes_all_recip
-  (g1 g2: map_group)
-  (f1 f2: typ)
-  (m: cbor_map)
-: Pure (cbor_map & cbor_map)
-  (requires (
-    map_group_footprint g1 f1 /\
-    map_group_footprint g2 f2 /\
-    typ_disjoint f1 f2 /\
-    map_group_consumes_all (g1 `map_group_concat` g2) m
-  ))
-  (ensures (fun (m1, m2) ->
-    m1 `cbor_map_disjoint` m2 /\
-    apply_map_group_det g1 m1 == MapGroupDet m1 cbor_map_empty /\
-    apply_map_group_det g2 m2 == MapGroupDet m2 cbor_map_empty /\
-    m1 `cbor_map_union` m2 == m
-  ))
-= cbor_map_split (matches_map_group_entry f1 any) m;
-  let m1 = cbor_map_filter (matches_map_group_entry f1 any) m in
-  let m1' = cbor_map_filter (U.notp (matches_map_group_entry f1 any)) m in
+  g1 g2 f1 f2 m
+= cbor_map_split (f1) m;
+  let m1 = cbor_map_filter (f1) m in
+  let m1' = cbor_map_filter (U.notp (f1)) m in
   map_group_footprint_elim g1 f1 m1 m1';
   let MapGroupDet _ r1 = apply_map_group_det g1 m1 in 
   let MapGroupDet _ r1' = apply_map_group_det g1 m in
   assert (r1' == r1 `cbor_map_union` m1');
   cbor_map_disjoint_union_comm r1 m1';
-  cbor_map_split (matches_map_group_entry f2 any) m1';
-  let m2 = cbor_map_filter (matches_map_group_entry f2 any) m1' in
-  let m2' = cbor_map_filter (U.notp (matches_map_group_entry f2 any)) m1' in
+  cbor_map_split (f2) m1';
+  let m2 = cbor_map_filter (f2) m1' in
+  let m2' = cbor_map_filter (U.notp (f2)) m1' in
   cbor_map_union_assoc m2 m2' r1;
   cbor_map_disjoint_mem_union' m2' r1 ();
   assert (cbor_map_included r1 m1);
@@ -124,7 +99,7 @@ let map_group_footprint_concat_consumes_all_recip
 let parser_spec_map_group'
   (source0: det_map_group)
   (#source: det_map_group)
-  (#source_fp: typ)
+  (#source_fp: map_constraint)
   (#target: Type0)
   (#target_size: target -> Tot nat)
   (#target_prop: target -> bool)
@@ -140,15 +115,15 @@ let parser_spec_map_group'
     (requires True)
     (ensures fun y ->
       (let x = CMap?.c (unpack x) in
-        (let x' = cbor_map_filter (matches_map_group_entry source_fp any) x in
+        (let x' = cbor_map_filter (source_fp) x in
         map_group_parser_spec_arg_prop source source_fp x' /\
         y == p x'
       ))
     )
 =
     let CMap a = unpack x in
-    let a' = cbor_map_filter (matches_map_group_entry source_fp any) a in
-    cbor_map_split (matches_map_group_entry source_fp any) a;
+    let a' = cbor_map_filter (source_fp) a in
+    cbor_map_split (source_fp) a;
     let res = p a' in
     res
 
@@ -158,42 +133,20 @@ let parser_spec_map_group
 
 let parser_spec_map_group_eq
   source0 #source #source_fp p target_prop' x
-= let f = (matches_map_group_entry source_fp any) in
+= let f = (source_fp) in
   assert (
     (let x' = cbor_map_filter f (CMap?.c (unpack x)) in
     map_group_parser_spec_arg_prop source source_fp x' /\
     parser_spec_map_group source0 p target_prop' x == p x'
   ))
 
-#push-options "--z3rlimit 64"
+#push-options "--z3rlimit 64 --split_queries always"
 
 #restart-solver
-
 let map_group_concat_footprint_disjoint
-  (source1: det_map_group)
-  (source_fp1: typ)
-  (source2: det_map_group)
-  (source_fp2: typ {
-    map_group_footprint source1 source_fp1 /\
-    map_group_footprint source2 source_fp2 /\
-    typ_disjoint source_fp1 source_fp2
-  })
-  (m: cbor_map)
-: Lemma
-  (requires (
-    map_group_serializer_spec_arg_prop (map_group_concat source1 source2) (source_fp1 `t_choice` source_fp2) m
-  ))
-  (ensures (
-    let m1 = cbor_map_filter (matches_map_group_entry source_fp1 any) m in
-    let m2 = cbor_map_filter (matches_map_group_entry source_fp2 any) m in
-    cbor_map_disjoint m1 m2 /\
-    cbor_map_union m1 m2 == m /\
-    apply_map_group_det source1 m1 == MapGroupDet m1 cbor_map_empty /\
-    apply_map_group_det source1 m == MapGroupDet m1 m2 /\
-    apply_map_group_det source2 m2 == MapGroupDet m2 cbor_map_empty
-  ))
-= let m1 = cbor_map_filter (matches_map_group_entry source_fp1 any) m in
-  let m2 = cbor_map_filter (matches_map_group_entry source_fp2 any) m in
+  source1 source_fp1 source2 source_fp2 m
+= let m1 = cbor_map_filter (source_fp1) m in
+  let m2 = cbor_map_filter (source_fp2) m in
   assert (cbor_map_disjoint m1 m2);
   let m12 = cbor_map_union m1 m2 in
   let m' = cbor_map_sub m m12 in
@@ -227,55 +180,63 @@ let map_group_concat_footprint_disjoint
 #restart-solver
 let map_group_parser_spec_concat'
   (#source1: det_map_group)
-  (#source_fp1: typ)
+  (#source_fp1: map_constraint)
   (#target1: Type)
   (#target_size1: target1 -> Tot nat)
   (#target_prop1: target1 -> bool)
-  (p1: map_group_parser_spec source1 source_fp1 target_size1 target_prop1)
+  (#p1: map_group_parser_spec source1 source_fp1 target_size1 target_prop1)
+  (s1: map_group_serializer_spec p1)
   (#source2: det_map_group)
-  (#source_fp2: typ)
+  (#source_fp2: map_constraint)
   (#target2: Type)
   (#target_size2: target2 -> Tot nat)
   (#target_prop2: target2 -> bool)
-  (p2: map_group_parser_spec source2 source_fp2 target_size2 target_prop2)
+  (#p2: map_group_parser_spec source2 source_fp2 target_size2 target_prop2)
+  (s2: map_group_serializer_spec p2)
   (target_size: (target1 & target2) -> Tot nat {
     map_group_footprint source1 source_fp1 /\
     map_group_footprint source2 source_fp2 /\
-    typ_disjoint source_fp1 source_fp2 /\
+    (
+      (map_constraint_disjoint source_fp1 source_fp2 /\
+        map_group_parser_spec_domain_inj p1 /\
+        map_group_parser_spec_domain_inj p2
+      ) \/ map_constraint_disjoint_domains source_fp1 source_fp2
+    ) /\
     (forall x . target_size x == target_size1 (fst x) + target_size2 (snd x))
   })
   (target_prop: (target1 & target2) -> bool {
-    forall x . target_prop x <==> (target_prop1 (fst x) /\ target_prop2 (snd x))
+    forall x . target_prop x <==> (target_prop1 (fst x) /\ target_prop2 (snd x) /\ cbor_map_disjoint (s1 (fst x)) (s2 (snd x)))
   })
-  (l: map_group_parser_spec_arg (map_group_concat source1 source2) (source_fp1 `t_choice` source_fp2))
-: Pure (map_group_parser_spec_ret (map_group_concat source1 source2) (source_fp1 `t_choice` source_fp2) target_size target_prop l)
+  (l: map_group_parser_spec_arg (map_group_concat source1 source2) (source_fp1 `map_constraint_choice` source_fp2))
+: Pure (map_group_parser_spec_ret (map_group_concat source1 source2) (source_fp1 `map_constraint_choice` source_fp2) target_size target_prop l)
     (requires True)
     (ensures fun l' ->
-    let l1 = cbor_map_filter (matches_map_group_entry source_fp1 any) l in
-    let l2 = cbor_map_filter (matches_map_group_entry source_fp2 any) l in
+    let l1 = cbor_map_filter (source_fp1) l in
+    let l2 = cbor_map_filter (source_fp2) l in
     map_group_parser_spec_arg_prop source1 source_fp1 l1 /\
     map_group_parser_spec_arg_prop source2 source_fp2 l2 /\
     (l' <: (target1 & target2)) == (p1 l1, p2 l2)
   )
 =
   map_group_footprint_is_consumed source1 source_fp1 (l);
-  let res1 = p1 (cbor_map_filter (matches_map_group_entry source_fp1 any) l) in
-  let MapGroupDet c1 r1 = apply_map_group_det source1 (cbor_map_filter (matches_map_group_entry source_fp1 any) (l)) in
-  cbor_map_disjoint_union_comm r1 (cbor_map_filter (matches_map_group_entry source_fp2 any) (l));
-  cbor_map_split (matches_map_group_entry source_fp1 any) (l);
+  let res1 = p1 (cbor_map_filter (source_fp1) l) in
+  let MapGroupDet c1 r1 = apply_map_group_det source1 (cbor_map_filter (source_fp1) (l)) in
+  cbor_map_disjoint_union_comm r1 (cbor_map_filter (source_fp2) (l));
+  cbor_map_split (source_fp1) (l);
   let MapGroupDet c1' r1' = apply_map_group_det source1 (l) in
   cbor_map_equiv
-    (cbor_map_filter (U.notp (matches_map_group_entry source_fp1 any)) (l))
-    (cbor_map_filter (matches_map_group_entry source_fp2 any) (l));
-  map_group_footprint_consumed source1 source_fp1 (cbor_map_filter (matches_map_group_entry source_fp1 any) (l)) (cbor_map_filter (matches_map_group_entry source_fp2 any) (l));
-  cbor_map_union_assoc c1 r1 (cbor_map_filter (matches_map_group_entry source_fp2 any) (l));
-  assert (r1' == r1 `cbor_map_union` cbor_map_filter (matches_map_group_entry source_fp2 any) (l));
-  map_group_footprint_consumed source2 source_fp2 (cbor_map_filter (matches_map_group_entry source_fp2 any) (l)) r1;
-  let res2 = p2 (cbor_map_filter ((matches_map_group_entry source_fp2 any)) l) in
+    (cbor_map_filter (U.notp (source_fp1)) (l))
+    (cbor_map_filter (source_fp2) (l));
+  map_group_footprint_consumed source1 source_fp1 (cbor_map_filter (source_fp1) (l)) (cbor_map_filter (source_fp2) (l));
+  cbor_map_union_assoc c1 r1 (cbor_map_filter (source_fp2) (l));
+  assert (r1' == r1 `cbor_map_union` cbor_map_filter (source_fp2) (l));
+  map_group_footprint_consumed source2 source_fp2 (cbor_map_filter (source_fp2) (l)) r1;
+  let res2 = p2 (cbor_map_filter ((source_fp2)) l) in
   cbor_map_length_disjoint_union
-    ( (cbor_map_filter ( (matches_map_group_entry source_fp1 any)) l))
-    ( (cbor_map_filter ( (matches_map_group_entry source_fp2 any)) l));
+    ( (cbor_map_filter ( (source_fp1)) l))
+    ( (cbor_map_filter ( (source_fp2)) l));
   let res = (res1, res2) in
+  assert (cbor_map_disjoint (s1 res1) (s2 res2));
   res
 
 #pop-options
@@ -286,16 +247,16 @@ let map_group_parser_spec_concat
 
 #restart-solver
 let map_group_parser_spec_concat_eq
-  #source1 #source_fp1 #target1 #target_size1 p1 #source2 #source_fp2 #target2 #target_size2 p2 target_size target_prop
+  #source1 #source_fp1 #target1 #target_size1 #_ #p1 s1 #source2 #source_fp2 #target2 #target_size2 #_ #p2 s2 target_size target_prop
   l
-= let f1 =  (matches_map_group_entry source_fp1 any) in
-  let f2 =  (matches_map_group_entry source_fp2 any) in
+= let f1 =  (source_fp1) in
+  let f2 =  (source_fp2) in
   assert (
     let l1 = cbor_map_filter f1 l in
     let l2 = cbor_map_filter f2 l in
     map_group_parser_spec_arg_prop source1 source_fp1 l1 /\
     map_group_parser_spec_arg_prop source2 source_fp2 l2 /\
-    map_group_parser_spec_concat p1 p2 target_size target_prop l == (p1 l1, p2 l2)
+    (map_group_parser_spec_concat s1 s2 target_size target_prop l <: (target1 & target2)) == ((p1 l1 <: target1), (p2 l2 <: target2))
   )
 
 #push-options "--z3rlimit 32"
@@ -303,7 +264,7 @@ let map_group_parser_spec_concat_eq
 #restart-solver
 let map_group_parser_spec_choice'
   (#source1: det_map_group)
-  (#source_fp1: typ)
+  (#source_fp1: map_constraint)
   (#target1: Type)
   (#target_size1: target1 -> Tot nat)
   (#target_prop1: target1 -> bool)
@@ -311,7 +272,7 @@ let map_group_parser_spec_choice'
     map_group_footprint source1 source_fp1
   })
   (#source2: det_map_group)
-  (#source_fp2: typ)
+  (#source_fp2: map_constraint)
   (#target2: Type)
   (#target_size2: target2 -> Tot nat)
   (#target_prop2: target2 -> bool)
@@ -330,17 +291,17 @@ let map_group_parser_spec_choice'
     | Inr x2 -> target_prop2 x2
     end
   })  
-  (l: map_group_parser_spec_arg (map_group_choice source1 source2) (source_fp1 `t_choice` source_fp2))
-: Pure (map_group_parser_spec_ret (map_group_choice source1 source2) (source_fp1 `t_choice` source_fp2) target_size target_prop l)
+  (l: map_group_parser_spec_arg (map_group_choice source1 source2) (source_fp1 `map_constraint_choice` source_fp2))
+: Pure (map_group_parser_spec_ret (map_group_choice source1 source2) (source_fp1 `map_constraint_choice` source_fp2) target_size target_prop l)
     (requires True)
     (ensures (fun l' ->
-        let f1 = matches_map_group_entry source_fp1 any in
-        let f2 = matches_map_group_entry source_fp2 any in
+        let f1 = source_fp1 in
+        let f2 = source_fp2 in
         let l1 = cbor_map_filter f1 l in
         let l2 = cbor_map_filter f2 l in
         let test = MapGroupDet? (apply_map_group_det source1 (l1)) in
-        l1 == cbor_map_filter (matches_map_group_entry source_fp1 any) (l) /\
-        l2 == cbor_map_filter (matches_map_group_entry source_fp2 any) (l) /\
+        l1 == cbor_map_filter (source_fp1) (l) /\
+        l2 == cbor_map_filter (source_fp2) (l) /\
         (test ==> (
           map_group_parser_spec_arg_prop source1 source_fp1 l1 /\
           (l' <: (target1 `either` target2)) == Inl (p1 l1)
@@ -350,15 +311,15 @@ let map_group_parser_spec_choice'
           (l' <: (target1 `either` target2)) == Inr (p2 l2)
         ))
     ))
-= let m1 = cbor_map_filter (matches_map_group_entry source_fp1 any) (l) in
-  cbor_map_split (matches_map_group_entry source_fp1 any) (l);
-  map_group_footprint_elim source1 source_fp1 m1 (cbor_map_filter (U.notp (matches_map_group_entry source_fp1 any)) (l));
+= let m1 = cbor_map_filter (source_fp1) (l) in
+  cbor_map_split (source_fp1) (l);
+  map_group_footprint_elim source1 source_fp1 m1 (cbor_map_filter (U.notp (source_fp1)) (l));
   match apply_map_group_det source1 m1 with
-  | MapGroupDet _ _ -> Inl (p1 (cbor_map_filter ((matches_map_group_entry source_fp1 any)) l))
+  | MapGroupDet _ _ -> Inl (p1 (cbor_map_filter ((source_fp1)) l))
   | _ ->
     begin
       map_group_footprint_is_consumed source2 source_fp2 (l);
-      Inr (p2 (cbor_map_filter ((matches_map_group_entry source_fp2 any)) l))
+      Inr (p2 (cbor_map_filter ((source_fp2)) l))
     end
 
 #pop-options
@@ -371,13 +332,13 @@ let map_group_parser_spec_choice_eq
   #source1 #source_fp1 #target1 #target_size1 p1 #source2 #source_fp2 #target2 #target_size2 #target_prop2 p2 target_size target_prop l
 = let l' = map_group_parser_spec_choice p1 p2 target_size target_prop l in
   assert (
-        let f1 = matches_map_group_entry source_fp1 any in
-        let f2 = matches_map_group_entry source_fp2 any in
+        let f1 = source_fp1 in
+        let f2 = source_fp2 in
         let l1 = cbor_map_filter f1 l in
         let l2 = cbor_map_filter f2 l in
         let test = MapGroupDet? (apply_map_group_det source1 (l1)) in
-        l1 == cbor_map_filter (matches_map_group_entry source_fp1 any) (l) /\
-        l2 == cbor_map_filter (matches_map_group_entry source_fp2 any) (l) /\
+        l1 == cbor_map_filter (source_fp1) (l) /\
+        l2 == cbor_map_filter (source_fp2) (l) /\
         (test ==> (
           map_group_parser_spec_arg_prop source1 source_fp1 l1 /\
           (l' <: (target1 `either` target2)) == Inl (p1 l1)
@@ -390,16 +351,63 @@ let map_group_parser_spec_choice_eq
 
 #push-options "--z3rlimit 32"
 
+#restart-solver
+let mg_spec_choice_domain_inj'
+  (#source1: det_map_group)
+  (#source_fp1: map_constraint)
+  (#target1: Type)
+  (#inj1: bool)
+  (p1: mg_spec source1 source_fp1 target1 inj1 {
+    map_group_footprint source1 source_fp1
+  })
+  (#source2: det_map_group)
+  (#source_fp2: map_constraint)
+  (#target2: Type)
+  (#inj2: bool)
+  (p2: mg_spec source2 source_fp2 target2 inj2 {
+    map_group_footprint source2 source_fp2 /\
+    map_group_choice_compatible source1 source2
+  })
+  (x x' : cbor_map)
+  (k: cbor)
+: Lemma
+  (requires (
+    map_group_parser_spec_arg_prop (map_group_choice source1 source2) (map_constraint_choice source_fp1 source_fp2) x /\
+    map_group_serializer_spec_arg_prop (map_group_choice source1 source2) (map_constraint_choice source_fp1 source_fp2) x' /\
+    (map_group_parser_spec_choice p1.mg_parser p2.mg_parser (mg_spec_choice_size p1.mg_size p2.mg_size) (mg_spec_choice_serializable p1.mg_serializable p2.mg_serializable) x <: (either target1 target2)) == map_group_parser_spec_choice p1.mg_parser p2.mg_parser (mg_spec_choice_size p1.mg_size p2.mg_size) (mg_spec_choice_serializable p1.mg_serializable p2.mg_serializable) x' /\
+    cbor_map_defined k x'
+  ))
+  (ensures (
+    cbor_map_defined k x
+  ))
+= let x1 = cbor_map_filter source_fp1 x in
+  let x1' = cbor_map_filter source_fp1 x' in
+  map_group_footprint_elim source1 source_fp1 x1' (cbor_map_sub x' x1');
+  if MapGroupDet? (apply_map_group_det source1 x1)
+  then begin
+    assert (cbor_map_equal x' x1');
+    assert (cbor_map_equal x' (cbor_map_filter source_fp1 x'));
+    assert ((p1.mg_parser (cbor_map_filter source_fp1 x') <: target1) == p1.mg_parser x1);
+    assert (cbor_map_defined k x1);
+    assert (cbor_map_defined k x)
+  end
+  else begin
+    let x2 = cbor_map_filter source_fp2 x in
+    let x2' = cbor_map_filter source_fp2 x' in
+    map_group_footprint_elim source2 source_fp2 x2' (cbor_map_sub x' x2');
+    assert (cbor_map_equal' x' x2');
+    assert (cbor_map_equal x' (cbor_map_filter source_fp2 x'));
+    assert ((p2.mg_parser (cbor_map_filter source_fp2 x') <: target2) == p2.mg_parser x2);
+    assert (cbor_map_defined k x2);
+    assert (cbor_map_defined k x)
+  end
+
+let mg_spec_choice_domain_inj
+  p1 p2 x x' k
+= Classical.move_requires (mg_spec_choice_domain_inj' p1 p2 x x') k
+
 let map_group_zero_or_more_match_item_serializer_op_comm
-  (#tkey #tvalue: Type)
-  (#key #value: typ)
-  (pkey: spec key tkey true)
-  (key_except: typ)
-  (#inj: bool)
-  (pvalue: spec value tvalue inj)
-  (m: Map.t tkey (list tvalue) { map_group_zero_or_more_match_item_serializable pkey key_except pvalue m })
-  (accu: cbor_map)
-  (x1 x2: tkey)
+  #tkey #tvalue #key #value pkey #inj pvalue except m accu x1 x2
 = ()
 
 #pop-options

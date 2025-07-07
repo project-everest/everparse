@@ -38,6 +38,7 @@ let cbor_det_impl : cbor_impl cbor_det_match cbor_det_map_entry_match cbor_det_a
   cbor_map_iterator_next = cbor_det_map_iterator_next;
   cbor_map_iterator_share = cbor_det_map_iterator_share;
   cbor_map_iterator_gather = cbor_det_map_iterator_gather;
+  cbor_mk_map_entry = cbor_det_mk_map_entry;
   cbor_map_entry_key = cbor_det_map_entry_key;
   cbor_map_entry_value = cbor_det_map_entry_value;
   cbor_map_entry_share = cbor_det_map_entry_share;

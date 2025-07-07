@@ -14,11 +14,14 @@ let squash_modus_ponens
 : Tot (squash p2)
 = ()
 
+#push-options "--z3rlimit 32"
+
 #restart-solver
 let rec map_group_choice_compatible'
   (map_group_choice_compatible_no_cut: map_group_choice_compatible_no_cut_t)
   (typ_disjoint: typ_disjoint_t)
-  (typ_diff_disjoint: typ_diff_disjoint_t)
+  (typ_included: typ_included_t)
+//  (typ_diff_disjoint: typ_diff_disjoint_t)
   (fuel: nat) // to unfold definitions
   (env: ast_env)
   (#g1: elab_map_group)
@@ -34,7 +37,7 @@ let rec map_group_choice_compatible'
 = if fuel = 0
   then (| ROutOfFuel, () |)
   else let fuel' : nat = fuel - 1 in
-  let map_group_choice_compatible' = map_group_choice_compatible' map_group_choice_compatible_no_cut typ_disjoint typ_diff_disjoint fuel' in
+  let map_group_choice_compatible' = map_group_choice_compatible' map_group_choice_compatible_no_cut typ_disjoint typ_included fuel' in
   match s1 with
   | WfMZeroOrMore _ _ _ _ _ _ ->
     (| RFailure "map_group_choice_compatible: GZeroOrMore never fails", () |)
@@ -111,10 +114,10 @@ let rec map_group_choice_compatible'
         end
       | WfMLiteral cut key value _ ->
         begin match map_group_footprint typ_disjoint fuel env g2 with
-        | RSuccess (t2, t_ex2) ->
-          begin match typ_disjoint_from_diff typ_diff_disjoint env (TElem (ELiteral key)) t2 t_ex2 with
+        | RSuccess te2 ->
+          begin match map_constraint_disjoint typ_disjoint typ_included env (MCKeyValue (TElem (ELiteral key)) (if cut then TElem EAny else value)) te2 with
           | RSuccess _ ->
-            Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g2) (typ_sem env.e_sem_env t2 `Util.andp` Util.notp (typ_sem env.e_sem_env t_ex2));
+            Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g2) (map_constraint_sem env.e_sem_env te2);
             (| RSuccess (), () |)
           | ROutOfFuel -> (| ROutOfFuel, () |)
           | RFailure _ ->
@@ -123,7 +126,7 @@ let rec map_group_choice_compatible'
             else begin match s2 with
             | WfMNop _ -> (| RSuccess (), () |)
             | WfMConcat g2l s2l g2r s2r ->
-              let _ : squash (elab_map_group_sem env.e_sem_env g1 == Spec.map_group_match_item_for false (eval_literal key) (typ_sem env.e_sem_env value)) = assert_norm (elab_map_group_sem env.e_sem_env (MGMatch cut key value) == Spec.map_group_match_item_for false (eval_literal key) (typ_sem env.e_sem_env value)) in
+              let _ : squash (elab_map_group_sem env.e_sem_env g1 == Spec.map_group_match_item_for false (eval_literal key) (typ_sem env.e_sem_env value)) = assert_norm (elab_map_group_sem env.e_sem_env (MGMatch false key value) == Spec.map_group_match_item_for false (eval_literal key) (typ_sem env.e_sem_env value)) in
               elab_map_group_sem_concat env.e_sem_env g2l g2r;
               spec_wf_parse_map_group_concat env.e_sem_env g2l s2l g2r s2r;
               let (| res1, _ |) = map_group_choice_compatible' env s1 s2l () in
@@ -156,7 +159,7 @@ let rec map_group_choice_compatible'
               if key <> key2
               then begin // this case should already have been eliminated by the typ_disjoint test above
                 Classical.forall_intro_2 byte_seq_of_ascii_string_diff;
-                Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g2) (Spec.t_literal (eval_literal key2));
+                Spec.map_group_choice_compatible_match_item_for cut (eval_literal key) (typ_sem env.e_sem_env value) (elab_map_group_sem env.e_sem_env g2) (Spec.map_group_match_item_for_footprint cut2 (eval_literal key2) (typ_sem env.e_sem_env value2));
                 (| RSuccess (), () |)
               end else begin
                 let res1 = typ_disjoint env value value2 in
@@ -179,10 +182,13 @@ let rec map_group_choice_compatible'
       end
     end
 
+#pop-options
+
 let map_group_choice_compatible
   (map_group_choice_compatible_no_cut: map_group_choice_compatible_no_cut_t)
   (typ_disjoint: typ_disjoint_t)
-  (typ_diff_disjoint: typ_diff_disjoint_t)
+  (typ_included: typ_included_t)
+//  (typ_diff_disjoint: typ_diff_disjoint_t)
   (fuel: nat) // to unfold definitions
   (env: ast_env)
   (#g1: elab_map_group)
@@ -195,5 +201,5 @@ let map_group_choice_compatible
       spec_wf_parse_map_group env.e_sem_env _ s2
     ))
     (ensures fun r -> (map_group_choice_compatible'_postcond env.e_sem_env s1 s2 r))
-= let (| res, _ |) = map_group_choice_compatible' map_group_choice_compatible_no_cut typ_disjoint typ_diff_disjoint fuel env s1 s2 () in
+= let (| res, _ |) = map_group_choice_compatible' map_group_choice_compatible_no_cut typ_disjoint typ_included fuel env s1 s2 () in
   res
