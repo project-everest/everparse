@@ -115,7 +115,7 @@ submodules:
 
 .PHONY: submodules
 
-cbor: submodules
+cbor:
 	+$(MAKE) -C src/cbor/pulse/det
 
 cbor-interface: $(filter-out src/cbor/spec/raw/%,$(filter src/cbor/spec/%,$(ALL_CHECKED_FILES)))
@@ -265,7 +265,7 @@ cose-test: cose-extract-test cose-extracted-test
 
 .PHONY: cose-test
 
-cose: submodules
+cose:
 	+$(MAKE) -C src/cose
 
 .PHONY: cose

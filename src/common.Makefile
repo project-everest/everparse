@@ -90,7 +90,6 @@ $(ALL_ML_FILES): %.ml:
 
 $(ALL_KRML_FILES): %.krml:
 	$(FSTAR) $(notdir $(subst .checked,,$<)) --codegen krml \
-	  --ext extraction_inline_all \
 	  --extract_module $(basename $(notdir $(subst .checked,,$<)))
 	touch -c $@
 

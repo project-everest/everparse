@@ -16,10 +16,10 @@ submodules:
 	git submodule init
 	git submodule update
 
-FStar: submodules
+FStar:
 	+$(MAKE) -C $@ ADMIT=1
 
-z3: submodules
+z3:
 	mkdir -p $@
 	FStar/.scripts/get_fstar_z3.sh $(realpath .)/$@
 

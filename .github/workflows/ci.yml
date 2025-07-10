@@ -22,6 +22,7 @@ jobs:
       - run: echo "HOME=/home/user" | sudo tee -a $GITHUB_ENV
       - uses: mtzguido/set-opam-env@master
       - run: opam install -y hex re ctypes sha sexplib
+      - run: sudo apt update && sudo apt install -y cmake
       # ^ not in base
 
       - uses: actions/checkout@master

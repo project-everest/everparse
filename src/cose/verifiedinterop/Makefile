@@ -35,7 +35,7 @@ C_FILES=$(BASE_C_FILES) $(addprefix internal/,$(INTERNAL_C_FILES))
 
 .PHONY: extract
 extract: $(ALL_KRML_FILES)
-	$(KRML) -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
+	$(KRML) -faggressive-inlining -fnoshort-enums -bundle 'FStar.\*,LowStar.\*,C.\*,PulseCore.\*,Pulse.\*[rename=fstar]' \
 		-bundle 'CBOR.Spec.Constants+CBOR.Pulse.API.Det.Type+CBOR.Pulse.API.Det.C=CBOR.\*[rename=CBORDetAPI]' \
 		-add-include '"CBORDetAbstract.h"' \
 		-bundle 'COSE.EverCrypt=Abort,EverCrypt.Ed25519' \
