@@ -134,19 +134,13 @@ fn impl_array_group_choice
     (#l: Ghost.erased (list cbor))
 {
     let i = !pi;
-    Trade.rewrite_with_trade
-      (cbor_array_iterator_match p gi l)
-      (cbor_array_iterator_match p i l);
     let test1 = f1 pi;
     if (test1) {
-      Trade.trans _ _ (cbor_array_iterator_match p gi l);
       true
     } else {
       Trade.elim _ (cbor_array_iterator_match p i l);
       pi := i;
-      let res = f2 pi;
-      Trade.trans _ _ (cbor_array_iterator_match p gi l);
-      res
+      f2 pi
     }
 }
 
@@ -240,15 +234,14 @@ fn impl_array_group_item
     (#l: Ghost.erased (list cbor))
 {
     let i = !pi;
-    Trade.rewrite_with_trade
-      (cbor_array_iterator_match p gi l)
-      (cbor_array_iterator_match p i l);
     let is_done = cbor_array_iterator_is_done i;
     if (is_done) {
+      Trade.rewrite_with_trade
+        (cbor_array_iterator_match p gi l)
+        (cbor_array_iterator_match p i l);
         false
     } else {
         let c = cbor_array_iterator_next pi;
-        Trade.trans _ _ (cbor_array_iterator_match p gi l);
         let test = fty c;
         Trade.elim_hyp_l _ _ (cbor_array_iterator_match p gi l);
         test

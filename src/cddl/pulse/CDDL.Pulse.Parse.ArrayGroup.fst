@@ -658,8 +658,6 @@ fn cddl_array_iterator_next
   (#l: _)
 {
   let i = !pi;
-  Trade.rewrite_with_trade (rel_array_iterator cbor_array_iterator_match spec gi l)
-    (rel_array_iterator cbor_array_iterator_match spec i l);
   unfold (rel_array_iterator cbor_array_iterator_match spec i l);
   with pmi li . assert (cbor_array_iterator_match pmi i.cddl_array_iterator_contents li);
   ghost fn aux1 (_: unit)
@@ -669,7 +667,6 @@ fn cddl_array_iterator_next
     fold (rel_array_iterator cbor_array_iterator_match spec i l)
   };
   Trade.intro _ _ _ aux1;
-  Trade.trans _ _ (rel_array_iterator cbor_array_iterator_match spec gi l);
   array_group_concat_unique_weak_zero_or_more_right i.ty i.ty;
   array_group_concat_unique_weak_elim1 i.ty (array_group_zero_or_more i.ty) li;
   let li1 = Ghost.hide (fst (Some?.v (Ghost.reveal i.ty li)));

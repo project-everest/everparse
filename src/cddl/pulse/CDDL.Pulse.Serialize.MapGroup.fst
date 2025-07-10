@@ -1284,6 +1284,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
             assert (pure (Seq.length vl == SZ.v size2));
             S.pts_to_len outl;
             assert (pure (S.len outl == size2));
+            S.pts_to_len outr;
             impl_serialize_map_group_insert_prf w' (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) (SZ.v sz1) (sp2.serializer va) (SZ.v sz2) w2;
             let inserted = insert outl (cbor_map_union l (sp.mg_serializer m1)) size0 (sp1.serializer ke) size1 (sp2.serializer va);
             S.pts_to_len outl;
