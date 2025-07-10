@@ -1,13 +1,3 @@
-[submodule "opt/FStar"]
-	path = opt/FStar
-	url = https://github.com/tahina-pro/FStar.git
-	branch = bij
-[submodule "opt/karamel"]
-	path = opt/karamel
-	url = https://github.com/tahina-pro/kremlin.git
-[submodule "opt/pulse"]
-	path = opt/pulse
-	url = https://github.com/FStarLang/pulse
 [submodule "opt/hacl-star"]
 	path = opt/hacl-star
 	url = https://github.com/hacl-star/hacl-star
@@ -17,6 +7,3 @@
 [submodule "src/cddl/unit-tests/tinycbor"]
 	path = src/cddl/unit-tests/tinycbor
 	url = https://github.com/intel/tinycbor
-[submodule "opt/everest"]
-	path = opt/everest
-	url = https://github.com/project-everest/everest
