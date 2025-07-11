@@ -1,6 +1,0 @@
-[submodule "src/cddl/unit-tests/QCBOR"]
-	path = src/cddl/unit-tests/QCBOR
-	url = https://github.com/laurencelundblade/QCBOR
-[submodule "src/cddl/unit-tests/tinycbor"]
-	path = src/cddl/unit-tests/tinycbor
-	url = https://github.com/intel/tinycbor
