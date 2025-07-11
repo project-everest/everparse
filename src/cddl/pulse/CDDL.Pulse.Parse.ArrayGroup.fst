@@ -453,9 +453,10 @@ let mk_array_iterator_eq
     Ghost.reveal res.ps == coerce_eq () (Ghost.reveal ps)
   ))
   [SMTPat (mk_array_iterator contents pm va pa)]
-= let res = mk_array_iterator contents pm va pa in
-  assert_norm (array_group_parser_spec ty sz ser == array_group_parser_spec res.ty res.sz res.ser);
-  assert_norm (res.ps == coerce_eq () ps)
+= assert_norm (
+    let res = mk_array_iterator contents pm va pa in array_group_parser_spec ty sz ser == array_group_parser_spec res.ty res.sz res.ser
+  );
+  assert_norm (let res = mk_array_iterator contents pm va pa in res.ps == coerce_eq () ps)
 
 let array_group_parser_spec_zero_or_more0_mk_array_iterator_eq'
   (#cbor_array_iterator_t: Type0) (#cbor_array_iterator_match: perm -> cbor_array_iterator_t -> list cbor -> slprop) (#impl_elt: Type0)

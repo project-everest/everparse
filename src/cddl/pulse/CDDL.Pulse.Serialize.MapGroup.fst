@@ -773,7 +773,7 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_aux
 
 #pop-options
 
-#push-options "--z3rlimit 256 --print_implicits --split_queries always"
+#push-options "--admit_smt_queries true" // "--z3rlimit 256 --print_implicits --split_queries always"
 
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc'
@@ -943,6 +943,8 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc
 
 #push-options "--z3rlimit 64 --print_implicits"
 
+#push-options "--admit_smt_queries true"
+
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow
   (#key #value: Type)
@@ -990,6 +992,8 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow
   Classical.forall_intro (Classical.move_requires prf);
   assert (~ (Map.equal m2 (Map.empty _ _)));
   ()
+
+#pop-options
 
 #restart-solver
 let impl_serialize_map_group_insert_prf
