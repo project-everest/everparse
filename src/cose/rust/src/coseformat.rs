@@ -12535,33 +12535,31 @@ pub fn validate_Sig_structure(c: crate::cbordetveraux::cbor_raw) -> bool
                                         let test: bool = validate_bstr(c1);
                                         test
                                     };
-                                let res: bool =
-                                    if test13
-                                    {
-                                        let
-                                        i21:
-                                        crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
-                                        =
-                                            (&pi)[0];
-                                        let is_done3: bool =
-                                            crate::cbordetver::cbor_det_array_iterator_is_empty(i21);
-                                        let test2: bool =
-                                            if is_done3
-                                            { false }
-                                            else
-                                            {
-                                                let c1: crate::cbordetveraux::cbor_raw =
-                                                    crate::cbordetver::cbor_det_array_iterator_next(
-                                                        &mut pi
-                                                    );
-                                                let test: bool = validate_bstr(c1);
-                                                test
-                                            };
-                                        test2
-                                    }
-                                    else
-                                    { false };
-                                res
+                                if test13
+                                {
+                                    let
+                                    i21:
+                                    crate::cbordetveraux::cbor_raw_iterator__CBOR_Pulse_Raw_Type_cbor_raw
+                                    =
+                                        (&pi)[0];
+                                    let is_done3: bool =
+                                        crate::cbordetver::cbor_det_array_iterator_is_empty(i21);
+                                    let test2: bool =
+                                        if is_done3
+                                        { false }
+                                        else
+                                        {
+                                            let c1: crate::cbordetveraux::cbor_raw =
+                                                crate::cbordetver::cbor_det_array_iterator_next(
+                                                    &mut pi
+                                                );
+                                            let test: bool = validate_bstr(c1);
+                                            test
+                                        };
+                                    test2
+                                }
+                                else
+                                { false }
                             };
                         test2
                     }
