@@ -42,11 +42,8 @@ let cbor_det_validate_success_elim
     (ensures fun (v1, v2) ->
       Ghost.reveal v == Spec.cbor_det_serialize v1 `Seq.append` v2 /\ SZ.v len == Seq.length (Spec.cbor_det_serialize v1)
     )
-= let p v1 v2 = Ghost.reveal v == Spec.cbor_det_serialize v1 `Seq.append` v2 /\ SZ.v len == Seq.length (Spec.cbor_det_serialize v1) in
-  assert (exists v1 v2 . p v1 v2);
-  let v1 = FStar.IndefiniteDescription.indefinite_description_tot _ (fun v1 -> exists v2 . p v1 v2) in
-  assert (exists v2 . p v1 v2);
-  let v2 = FStar.IndefiniteDescription.indefinite_description_tot _ (fun v2 -> p v1 v2) in
+= let v1 = FStar.IndefiniteDescription.indefinite_description_tot _ (fun v1 -> exists v2 . Ghost.reveal v == Spec.cbor_det_serialize v1 `Seq.append` v2 /\ SZ.v len == Seq.length (Spec.cbor_det_serialize v1)) in
+  let v2 = FStar.IndefiniteDescription.indefinite_description_tot _ (fun v2 -> Ghost.reveal v == Spec.cbor_det_serialize v1 `Seq.append` v2 /\ SZ.v len == Seq.length (Spec.cbor_det_serialize v1)) in
   (Ghost.reveal v1, Ghost.reveal v2)
 
 fn cbor_det_parse
