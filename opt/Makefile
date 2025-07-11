@@ -28,6 +28,9 @@ pulse:
 everest:
 	git clone "https://github.com/project-everest/everest" $@
 
+hacl-star:
+	git clone "https://github.com/hacl-star/hacl-star" $@
+
 FStar.do: FStar
 	+$(MAKE) -C $< ADMIT=1
 
