@@ -52,6 +52,13 @@ quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-samp
 
 test: all lowparse-test quackyducky-test 3d-test asn1-test
 
+lowparse-pulse: lowparse
+	+$(MAKE) -C src/lowparse/pulse
+
+.PHONY: lowparse-pulse
+
+ci: test lowparse-pulse
+
 ci: test 3d-doc-ci
 
 3d-doc-ci: 3d-doc-test

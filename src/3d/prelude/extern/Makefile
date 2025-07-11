@@ -42,6 +42,7 @@ EverParse.rsp: $(FILTERED_KRML_FILES) ../EverParse.rsp
 	mv $@.tmp $@
 
 KRML_EXTERN = $(KRML_HOME)/krml \
+	  -fstar $(FSTAR_EXE) \
 	  -skip-compilation \
 	  -skip-makefiles \
 	  -bundle 'Prims,C.\*,FStar.\*,LowStar.\*[rename=SHOULDNOTBETHERE]' \
