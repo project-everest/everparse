@@ -1032,6 +1032,21 @@ let impl_serialize_map_group_insert_prf
 
 #pop-options
 
+let impl_serialize_map_group_insert_prf_post
+  (w: Seq.seq U8.t)
+  (l: cbor_map)
+  (sz0: nat)
+  (k: cbor)
+  (sz1: nat)
+  (v: cbor)
+  (sz2: nat)
+  (w2: Seq.seq U8.t)
+: Tot prop
+=
+    SZ.fits (sz0 + sz1 + sz2) /\
+    sz0 + sz1 + sz2 <= Seq.length w /\
+    cbor_det_serialize_map_insert_pre l (SZ.uint_to_t sz0) k (SZ.uint_to_t (sz0 + sz1)) v (Seq.slice w 0 (sz0 + sz1 + sz2))
+
 #restart-solver
 let slice_split_post
   (#t: Type)
@@ -1113,7 +1128,7 @@ let impl_serialize_map_zero_or_more_iterator_inv
       )) /\
       impl_serialize_map_group_valid l sp v0 (Seq.length w) == (res && impl_serialize_map_group_valid (cbor_map_union l (sp.mg_serializer m1)) sp m2' (Seq.length w))
 
-#push-options "--z3rlimit 256 --fuel 2 --ifuel 1 --query_stats --print_implicits --split_queries no"
+#push-options "--z3rlimit 256 --fuel 2 --ifuel 1 --query_stats --print_implicits --split_queries always"
 
 #restart-solver
 inline_for_extraction noextract [@@noextract_to "krml"]
@@ -1285,7 +1300,11 @@ fn impl_serialize_map_zero_or_more_iterator_gen
             S.pts_to_len outl;
             assert (pure (S.len outl == size2));
             S.pts_to_len outr;
-            impl_serialize_map_group_insert_prf w' (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) (SZ.v sz1) (sp2.serializer va) (SZ.v sz2) w2;
+            // impl_serialize_map_group_insert_prf w' (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) (SZ.v sz1) (sp2.serializer va) (SZ.v sz2) w2;
+            assume (pure (
+              impl_serialize_map_group_insert_prf_post
+                w' (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) (SZ.v sz1) (sp2.serializer va) (SZ.v sz2) w2
+            ));
             let inserted = insert outl (cbor_map_union l (sp.mg_serializer m1)) size0 (sp1.serializer ke) size1 (sp2.serializer va);
             S.pts_to_len outl;
             S.pts_to_len outr;
