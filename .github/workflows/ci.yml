@@ -85,6 +85,11 @@ jobs:
       - run: echo "KRML_EXE=$(pwd)/karamel/krml" | sudo tee -a $GITHUB_ENV
       - run: echo "$(pwd)/karamel" | sudo tee -a $GITHUB_PATH
 
+      - name: Install python3-venv
+        run: |
+          sudo apt-get update
+          sudo apt-get --yes install --no-install-recommends python3-venv
+
       - uses: actions/checkout@master
         id: checkout-pulse
         with:
@@ -119,7 +124,10 @@ jobs:
 
       - name: Everparse CI
         id: cistep
-        run: make -C everparse ci -skj$(nproc)
+        run: |
+          make -C everparse ci -skj$(nproc) branchname=${{ github.head_ref || github.ref_name }}
+        env:
+          DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
 
       # I'm leaving this disabled as I do not get good incrementality
       # when trying this out by hand due to dependence hash mismatches

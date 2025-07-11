@@ -33,7 +33,11 @@ keywords_3d = (
   "output",
   "union",
   "extern",
-  "probe"
+  "probe",
+  "pointer",
+  "specialize",
+  "align",
+  "PURE"
 )
 
 # very rough lexer; not 100% precise

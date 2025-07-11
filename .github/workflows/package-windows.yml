@@ -191,3 +191,7 @@ jobs:
         shell: cmd
         run: |
           ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\ELFTestGen.3d --odir ${{ github.workspace }}\test-elf --z3_test ELFTestGen._ELFTestGen --z3_witnesses 10 --z3_branch_depth 5
+      - name: Test EverParse test case generation with probe
+        shell: cmd
+        run: |
+          ${{ github.workspace }}\test\everparse.cmd ${{ github.workspace }}\everparse\src\3d\tests\probe\src\Probe.3d --odir ${{ github.workspace }}\test-probe --z3_test Probe._primaryInPlace --z3_witnesses 10 --z3_branch_depth 5

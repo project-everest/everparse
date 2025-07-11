@@ -1,0 +1,49 @@
+typedef UINT64 ULONGLONG;
+typedef UINT32 ULONG;
+typedef UINT16 USHORT;
+typedef UINT8 BYTE;
+typedef UINT8 UCHAR;
+
+extern probe ProbeAndCopy
+extern probe (READ UINT32) ProbeAndReadU32
+extern probe (WRITE UINT64) WriteU64
+extern probe (INIT) ProbeInit
+extern PURE UINT64 UlongToPtr(UINT32 ptr)
+
+aligned
+typedef struct _S_LFD
+{
+    UINT32 Base;
+
+    USHORT f1;
+    USHORT f2;
+    USHORT f3;
+  
+    UINT8 *ptr1;
+    UINT8 *ptr2;
+    UINT8 *ptr3;
+
+    USHORT f4;
+    USHORT f5;
+
+} S_LFD;
+
+typedef struct _PLFD(EVERPARSE_COPY_BUFFER_T out)
+{
+    S_LFD *pointer(UINT64) plog
+        probe ProbeAndCopy(length=sizeof(S_LFD), destination=out);
+} PLFD;
+
+specialize (pointer(*), pointer(UINT32)) PLFD PLFD32;
+
+entrypoint
+casetype _LFD(Bool Requestor32, EVERPARSE_COPY_BUFFER_T out)
+{
+    switch(Requestor32)
+    {
+        case true:
+            PLFD32(out) log32;
+        default:
+            PLFD(out) log64;
+    }
+} LFD;

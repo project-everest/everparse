@@ -53,7 +53,8 @@ let partial_state_bound_f32 (ui : U32.t) : Pure nat
         (if v < partial_state_upperbound 3 then
           (3)
         else
-          (4))))
+          (Math.Lemmas.pow2_le_compat 35 32;
+           4))))
 
 #push-options "--z3rlimit 128 --fuel 0 --ifuel 0"
 
@@ -530,12 +531,12 @@ let lemma_parse_asn1_identifier_head_inj ()
               )
               else
               (
-                let buf2' = U8.sub buf2 128uy in
+                let unfold buf2' = U8.sub buf2 128uy in
                 if (U8.v buf2' = 0) then
                   _
                 else
                 (
-                  let state2' = initialize_partial_state buf2' in
+                  let unfold state2' = initialize_partial_state buf2' in
                   let state2 = parse_cast_inverse
                     asn1_partial_id_t
                     (fun x -> partial_state_prefixr state2' x)
@@ -553,12 +554,12 @@ let lemma_parse_asn1_identifier_head_inj ()
           )
         else
           (
-          let buf1' = U8.sub buf1 128uy in
+          let unfold buf1' = U8.sub buf1 128uy in
           if (U8.v buf1' = 0) then
             _
           else
           (
-            let state1' = initialize_partial_state buf1' in
+            let unfold state1' = initialize_partial_state buf1' in
             let state1 = parse_cast_inverse
               asn1_partial_id_t
               (fun x -> partial_state_prefixr state1' x)
@@ -580,12 +581,12 @@ let lemma_parse_asn1_identifier_head_inj ()
               )
               else
               (
-                let buf2' = U8.sub buf2 128uy in
+                let unfold buf2' = U8.sub buf2 128uy in
                 if (U8.v buf2' = 0) then
                   _
                 else
                 (
-                  let state2' = initialize_partial_state buf2' in
+                  let unfold state2' = initialize_partial_state buf2' in
                   let state2 = parse_cast_inverse
                     asn1_partial_id_t
                     (fun x -> partial_state_prefixr state2' x)
@@ -634,12 +635,12 @@ let lemma_parse_asn1_identifier_head_alt_inj ()
           (if (U8.v buf2 < 128) then
             _
           else
-            (let buf2' = U8.sub buf2 128uy in
+            (let unfold buf2' = U8.sub buf2 128uy in
             if (U8.v buf2' = 0) then
               _
             else
             (
-              let state2' = initialize_partial_state buf2' in
+              let unfold state2' = initialize_partial_state buf2' in
               let state2 = parse_cast_inverse
                 U32.t
                 (fun x -> 0 < U32.v x /\ partial_state_prefixr state2' x)
@@ -654,12 +655,12 @@ let lemma_parse_asn1_identifier_head_alt_inj ()
           )
         else
           (
-          let buf1' = U8.sub buf1 128uy in
+          let unfold buf1' = U8.sub buf1 128uy in
           if (U8.v buf1' = 0) then
             _
           else
           (
-            let state1' = initialize_partial_state buf1' in
+            let unfold state1' = initialize_partial_state buf1' in
             let state1 = parse_cast_inverse
               U32.t
               (fun x -> 0 < U32.v x /\ partial_state_prefixr state1' x)
@@ -672,12 +673,12 @@ let lemma_parse_asn1_identifier_head_alt_inj ()
               _
               else
               (
-                let buf2' = U8.sub buf2 128uy in
+                let unfold buf2' = U8.sub buf2 128uy in
                 if (U8.v buf2' = 0) then
                   _
                 else
                 (
-                  let state2' = initialize_partial_state buf2' in
+                  let unfold state2' = initialize_partial_state buf2' in
                   let state2 = parse_cast_inverse
                     U32.t
                     (fun x -> 0 < U32.v x /\ partial_state_prefixr state2' x)

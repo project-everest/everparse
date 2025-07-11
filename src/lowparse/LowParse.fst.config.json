@@ -1,6 +1,8 @@
 {
     "fstar_exe": "fstar.exe",
-    "options": [],
+    "options": [
+      "--ext", "optimize_let_vc"
+    ],
     "include_dirs": [
       "${KRML_HOME}/krmllib",
       "${KRML_HOME}/krmllib/obj"

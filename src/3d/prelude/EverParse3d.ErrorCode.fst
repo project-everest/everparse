@@ -14,8 +14,7 @@ let pos_width = normalize_term (64 - error_width)
 [@ CMacro ]
 let validator_max_length : (u: U64.t { 4 <= U64.v u /\ U64.v u == pow2 pos_width - 1 } ) =
   FStar.Math.Lemmas.pow2_le_compat 64 pos_width;
-  [@inline_let]
-  let x =  U64.uint_to_t (pow2 pos_width - 1) in
+  let unfold x =  U64.uint_to_t (pow2 pos_width - 1) in
   normalize_term_spec x;
   normalize_term x
 
@@ -137,6 +136,9 @@ let validator_error_constraint_failed : validator_error = normalize_term (set_va
 [@ CMacro ]
 let validator_error_unexpected_padding : validator_error = normalize_term (set_validator_error_kind 0uL 7uL)
 
+[@ CMacro ]
+let validator_error_probe_failed : validator_error = normalize_term (set_validator_error_kind 0uL 8uL)
+
 let error_reason_of_result (code:U64.t) : string =
   match (get_validator_error_kind code) with
   | 1uL -> "generic error"
@@ -146,6 +148,7 @@ let error_reason_of_result (code:U64.t) : string =
   | 5uL -> "action failed"
   | 6uL -> "constraint failed"
   | 7uL -> "unexpected padding"
+  | 8uL -> "probe failed"
   | _ -> "unspecified"
 
 let check_constraint_ok (ok:bool) (position: pos_t): Tot U64.t =
