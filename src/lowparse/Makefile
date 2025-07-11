@@ -11,7 +11,6 @@ EVERPARSE_SRC_PATH = $(realpath ..)
 include $(EVERPARSE_SRC_PATH)/karamel.Makefile
 
 ALREADY_CACHED := *,-LowParse,
-FSTAR_OPTIONS += --ext optimize_let_vc --cache_checked_modules $(addprefix --include , $(INCLUDE_PATHS)) $(INCLUDE_KRML) $(ALREADY_CACHED)
 
 include $(EVERPARSE_SRC_PATH)/common.Makefile
 
