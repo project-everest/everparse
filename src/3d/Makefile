@@ -8,7 +8,7 @@ export KRML_HOME?=$(realpath ../../../karamel)
 
 INCLUDE_PATHS=
 OTHERFLAGS?=
-FSTAR = $(FSTAR_EXE) --ext context_pruning $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached 'Prims FStar -FStarC'
+FSTAR = $(FSTAR_EXE) --ext optimize_let_vc $(OTHERFLAGS) $(addprefix --include , $(INCLUDE_PATHS) $(EVERPARSE_HOME)/src/3d/prelude) --already_cached 'Prims FStar -FStarC'
 
 all: 3d prelude
 

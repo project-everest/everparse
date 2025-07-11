@@ -280,6 +280,13 @@ cddl-test: cddl cddl-plugin-test cose-extract-test cddl-unit-tests
 
 ci: test lowparse-pulse cbor-test cddl-test
 
+ci: test 3d-doc-ci
+
+3d-doc-ci: 3d-doc-test
+	+$(MAKE) -C doc 3d-ci
+
+.PHONY: 3d-doc-ci
+
 clean-3d:
 	+$(MAKE) -C src/3d clean
 
