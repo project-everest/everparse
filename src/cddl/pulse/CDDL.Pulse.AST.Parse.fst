@@ -93,6 +93,55 @@ let ancillary_validate_env_set_ask_for
 = ancillary_validate_env_set env _ i
 
 [@@sem_attr]
+let validate_ask_for_map_constraint
+  (#t #t2 #t_arr #t_map: Type0)
+  (#vmatch: (perm -> t -> Cbor.cbor -> slprop))
+  (#vmatch2: (perm -> t2 -> (Cbor.cbor & Cbor.cbor) -> slprop))
+  (#cbor_array_iterator_match: (perm -> t_arr -> list Cbor.cbor -> slprop))
+  (#cbor_map_iterator_match: (perm -> t_map -> list (Cbor.cbor & Cbor.cbor) -> slprop))
+  (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
+  (#v_sem_env: sem_env)
+  (env: validator_env vmatch v_sem_env { SZ.fits_u64 })
+  (a: option (ask_for v_sem_env))
+  (sq: squash (option_ask_for_is_map_constraint v_sem_env a))
+: impl_map_entry_cond vmatch2 (option_ask_for_get_map_constraint v_sem_env a sq)
+= let Some (AskForMapConstraint t t_wf) = a in
+  V.validate_map_constraint impl env t t_wf
+
+[@@sem_attr; Bundle.bundle_attr]
+let ancillary_map_constraint_env
+  (#cbor_t: Type)
+  (vmatch2: perm -> cbor_t -> Cbor.cbor & Cbor.cbor -> slprop)
+  (se: sem_env)
+= (t: map_constraint { bounded_map_constraint se.se_bound t}) -> option (impl_map_entry_cond vmatch2 (map_constraint_sem se t))
+
+[@@sem_attr; Bundle.bundle_attr]
+let ancillary_map_constraint_env_set
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> Cbor.cbor & Cbor.cbor -> slprop)
+  (#se: sem_env)
+  (env: ancillary_map_constraint_env vmatch se)
+  (t': map_constraint { bounded_map_constraint se.se_bound t'})
+  (i: impl_map_entry_cond vmatch (map_constraint_sem se t'))
+: Tot (ancillary_map_constraint_env vmatch se)
+= fun t ->
+  if t = t'
+  then Some i
+  else env t
+
+[@@sem_attr; Bundle.bundle_attr]
+let ancillary_map_constraint_env_set_ask_for
+  (#cbor_t: Type)
+  (#vmatch: perm -> cbor_t -> Cbor.cbor & Cbor.cbor -> slprop)
+  (#se: sem_env)
+  (env: ancillary_map_constraint_env vmatch se)
+  (a: option (ask_for se))
+  (sq: squash (option_ask_for_is_map_constraint se a))
+  (i: impl_map_entry_cond vmatch (map_constraint_sem se (AskForMapConstraint?.t (Some?.v a))))
+: Tot (ancillary_map_constraint_env vmatch se)
+= ancillary_map_constraint_env_set env _ i
+
+[@@sem_attr]
 let validate_ask_for_array_group
   (#t #t2 #t_arr #t_map: Type0)
   (#vmatch: (perm -> t -> Cbor.cbor -> slprop))

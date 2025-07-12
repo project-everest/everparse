@@ -75,6 +75,7 @@ type ancillaries_t (se: sem_env) = {
   validators: P.ancillary_validate_env_bool se.se_bound;
   parsers: P.ancillary_parse_env_bool se;
   array_parsers: P.ancillary_parse_array_group_env_bool se;
+  map_constraint_checkers: P.ancillary_map_constraint_env_bool se.se_bound;
   type_names: (t: typ) -> (t_wf: ast0_wf_typ t) -> option string;
   map_iterators: list string;
   array_names: (t: group) -> (t_wf: ast0_wf_array_group t) -> option string;
@@ -119,7 +120,7 @@ let rec compute_wf_typ
   | ROutOfFuel -> compute_wf_typ env name t (fuel + 1)
   | RSuccess wt ->
     let f (anc: ancillaries_t env.e_sem_env) : Tot (option (P.ask_for env.e_sem_env)) =
-      P.ask_zero_copy_wf_type anc.validators anc.parsers anc.array_parsers wt
+      P.ask_zero_copy_wf_type anc.validators anc.parsers anc.array_parsers anc.map_constraint_checkers wt
     in
     RSuccess (fuel, (wt, (f, wf_ast_env_extend_typ_with_weak env name t wt)))
   else RFailure (name ^ " is already defined")
@@ -191,6 +192,12 @@ let is_type_"^wf^" () : squash (Parse.option_ask_for_is_type "^env^".be_ast.e_se
 [@@normalize_for_extraction (nbe :: T.steps)]
 let "^validator^" = Parse.validate_ask_for_type Det.cbor_det_impl "^env^".be_v "^wf^" (is_type_"^wf^" ())"
 
+let produce_ask_for_map_constraint env wf map_constraint =
+"let _ : unit = _ by (FStar.Tactics.print (\"map_constraint\"); FStar.Tactics.exact (`()))
+let is_map_constraint_"^wf^" () : squash (Parse.option_ask_for_is_map_constraint "^env^".be_ast.e_sem_env "^wf^") = (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ()))
+[@@normalize_for_extraction (nbe :: T.steps)]
+let "^map_constraint^" = Parse.validate_ask_for_map_constraint Det.cbor_det_impl "^env^".be_v "^wf^" (is_map_constraint_"^wf^" ())"
+
 let produce_ask_for_parser env env_anc' wf validator parser serializer typename bundle =
 produce_ask_for_validator env wf validator^"
 let _ : unit = _ by (FStar.Tactics.print (\"bundle\"); FStar.Tactics.exact (`()))
@@ -255,17 +262,36 @@ let rec compute_ancillaries_aux
   (bundle: string)
   (parser: string)
   (serializer: string)
+  (map_constraint: string)
   (typename: string)
 : FStar.All.ML // Dv
 (ancillaries_aux_t se)
 =
   let anc_env = env ^ "_" ^ string_of_int anc.env_index in
-  match P.ask_zero_copy_ask_for_option anc.anc.validators anc.anc.parsers anc.anc.array_parsers ask with
+  match P.ask_zero_copy_ask_for_option anc.anc.validators anc.anc.parsers anc.anc.array_parsers anc.anc.map_constraint_checkers ask with
   | None ->
     let env_index' = anc.env_index + 1 in
     let anc_env' = env ^ "_" ^ string_of_int env_index' in
     begin match ask with
     | None -> anc
+    | Some (P.AskForMapConstraint t _) ->
+      let msg = produce_ask_for_map_constraint env wf map_constraint ^ "
+let _ : unit = _ by (FStar.Tactics.print (\"ancillary env'\"); FStar.Tactics.exact (`()))
+[@@bundle_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
+let a"^anc_env'^" = a" ^ anc_env ^ "
+[@@bundle_attr; sem_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
+let amc"^anc_env'^" = Parse.ancillary_map_constraint_env_set_ask_for amc"^anc_env^" "^wf^" (_ by (FStar.Tactics.norm (nbe :: T.bundle_steps); T.trefl_or_trivial ())) "^map_constraint^"
+[@@bundle_attr; noextract_to "^krml^"; "^opaque_to_smt^"] noextract
+let aa"^anc_env'^" = aa" ^ anc_env
+      in
+      { anc with
+        anc = {
+          anc.anc with
+          map_constraint_checkers = (fun v -> if v = t then true else anc.anc.map_constraint_checkers v);
+        };
+        env_index = env_index';
+        output = anc.output ^ msg;
+      }
     | Some (P.AskForType t _ false) ->
       let msg = produce_ask_for_validator env wf validator ^ "
 let _ : unit = _ by (FStar.Tactics.print (\"ancillary env'\"); FStar.Tactics.exact (`()))
@@ -330,7 +356,7 @@ let aa"^anc_env'^" = ancillary_array_bundle_env_set_ask_for aa"^anc_env^" "^wf^"
 let "^wf'^"' = Parse.ask_zero_copy_ask_for_option (Parse.ancillary_validate_env_is_some av"^anc_env^") (ancillary_bundle_env_is_some a"^anc_env^") (ancillary_array_bundle_env_is_some aa"^anc_env^") "^wf
     in
     let anc2 = init_compute_ancillaries_aux anc ask' env msg in
-    compute_ancillaries_aux anc2 ask env wf validator bundle parser serializer typename
+    compute_ancillaries_aux anc2 ask env wf validator bundle parser serializer map_constraint typename
 
 and init_compute_ancillaries_aux
   (#se: sem_env)
@@ -354,6 +380,7 @@ let "^wf'^" = "^wf'^"'
     let validator' = "aux_" ^ env ^ "_validate_" ^ candidate in
     let parser' = "aux_" ^ env ^ "_parse_" ^ candidate in
     let serializer' = "aux_" ^ env ^ "_serialize_" ^ candidate in
+    let map_constraint' =  "aux_" ^ env ^ "_map_constraint_" ^ candidate in
     let typename' = "aux_" ^ env ^ "_type_" ^ candidate in
     let bundle' = "aux_" ^ env ^ "_bundle_" ^ candidate in
     let anc1 = {
@@ -362,7 +389,7 @@ let "^wf'^" = "^wf'^"'
       output = anc.output ^ msg';
     }
     in
-    compute_ancillaries_aux anc1 ask' env wf' validator' bundle' parser' serializer' typename'
+    compute_ancillaries_aux anc1 ask' env wf' validator' bundle' parser' serializer' map_constraint' typename'
 
 let rec compute_ancillaries
   (#se: sem_env)
@@ -395,6 +422,7 @@ let extend_ancillaries_t
     validators = (fun t -> if typ_bounded ne t then anc.validators t else false);
     parsers = (fun t t_wf -> if typ_bounded ne t && bounded_wf_typ ne _ t_wf then anc.parsers t t_wf else false);
     array_parsers = (fun t t_wf -> if group_bounded ne t && bounded_wf_array_group ne _ t_wf then anc.array_parsers t t_wf else false);
+    map_constraint_checkers = (fun t -> if bounded_map_constraint ne t then anc.map_constraint_checkers t else false);
     type_names = (fun t t_wf -> if typ_bounded ne t && bounded_wf_typ ne _ t_wf then anc.type_names t t_wf else None);
     map_iterators = anc.map_iterators;
     array_names = (fun t t_wf -> if group_bounded ne t && bounded_wf_array_group ne _ t_wf then anc.array_names t t_wf else None);
@@ -551,7 +579,7 @@ and produce_iterators_for_map_group
 (ancillaries_t wenv & string)
   (decreases wf)
 = match wf with
-  | WfMZeroOrMore _ _ _ sk _ sv ->
+  | WfMZeroOrMore _ _ _ sk sv _ ->
     let (anc1, accu1) = produce_iterators_for_typ wenv anc accu sk in
     let (anc2, accu2) = produce_iterators_for_typ wenv anc1 accu1 sv in
     begin match anc2.type_names _ sk with
@@ -715,6 +743,7 @@ let empty_ancillaries : ancillaries_t empty_sem_env = {
   validators = (fun _ -> false);
   parsers = (fun _ _ -> false);
   array_parsers = (fun _ _ -> false);
+  map_constraint_checkers = (fun _ -> false);
   type_names = (fun _ _ -> None);
   map_iterators = [];
   array_names = (fun _ _ -> None);

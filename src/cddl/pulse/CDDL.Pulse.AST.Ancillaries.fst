@@ -76,6 +76,13 @@ let option_ask_for_is_map_constraint
   | Some (AskForMapConstraint _ _) -> True
   | _ -> False
 
+let option_ask_for_get_map_constraint
+  (v_sem_env: sem_env)
+  (a: option (ask_for v_sem_env))
+  (sq: squash (option_ask_for_is_map_constraint v_sem_env a))
+: Tot (Ghost.erased CDDL.Spec.MapGroup.map_constraint)
+= map_constraint_sem v_sem_env (AskForMapConstraint?.t (Some?.v a))
+
 
 #push-options "--z3rlimit 1024 --query_stats"
 
