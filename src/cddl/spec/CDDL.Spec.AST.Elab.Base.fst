@@ -1354,7 +1354,7 @@ let rec map_constraint_size
   | MCAnd c1 c2 -> 1 + map_constraint_size c1 + map_constraint_size c2
   | _ -> 0
 
-let rec map_constraint_disjoint // this is correct, but by far not complete. Here I only cover cases where c1 is a literal. TODO: put c1 and c2 in DNF first
+let rec map_constraint_disjoint
   (typ_disjoint: typ_disjoint_t)
   (typ_included: typ_included_t)
   (env: ast_env)
@@ -1373,29 +1373,42 @@ let rec map_constraint_disjoint // this is correct, but by far not complete. Her
       | _ -> True
     )
     (decreases (map_constraint_size c1 + map_constraint_size c2))
-= match c2 with
-  | MCFalse -> RSuccess ()
-  | MCOr c21 c22 ->
+= match c1, c2 with
+  | MCKeyValue (TElem EAlwaysFalse) _, _
+  | MCKeyValue _ (TElem EAlwaysFalse), _
+  | _, MCKeyValue (TElem EAlwaysFalse) _
+  | _, MCKeyValue _ (TElem EAlwaysFalse)
+  | _, MCFalse
+  | MCFalse, _
+    -> RSuccess ()
+  | MCNot (MCNot c2'), c1
+  | c1, MCNot (MCNot c2') ->
+    map_constraint_disjoint typ_disjoint typ_included env c1 c2'
+  | MCOr c21 c22, c1
+  | c1, MCOr c21 c22 ->
     let res1 = map_constraint_disjoint typ_disjoint typ_included env c1 c21 in
     if RSuccess? res1
     then map_constraint_disjoint typ_disjoint typ_included env c1 c22
     else res1
-  | MCAnd c21 c22 ->
-    let res1 = map_constraint_disjoint typ_disjoint typ_included env c1 c21 in
+  | MCAnd c21 c22, c1
+  | c1, MCAnd c21 c22 ->
+    let res1 = map_constraint_disjoint typ_disjoint typ_included env c21 c22 in
     if RSuccess? res1
     then res1
+    else
+    let res2 = map_constraint_disjoint typ_disjoint typ_included env c1 c21 in
+    if RSuccess? res2
+    then res2
     else map_constraint_disjoint typ_disjoint typ_included env c1 c22
-  | MCNot c2' ->
+  | MCNot c2', c1
+  | c1, MCNot c2' ->
     map_constraint_included typ_disjoint typ_included env c1 c2'
-  | MCKeyValue k2 v2 ->
-    begin match c1 with
-    | MCKeyValue k1 v1 ->
+  | MCKeyValue k2 v2, MCKeyValue k1 v1
+  | MCKeyValue k1 v1, MCKeyValue k2 v2 ->
       let res1 = typ_disjoint env k1 k2 in
       if RSuccess? res1
-      then typ_disjoint env v1 v2
-      else res1
-    | _ -> RFailure "map_constraint_disjoint: unsupported"
-    end
+      then res1
+      else typ_disjoint env v1 v2
 
 and map_constraint_included
   (typ_disjoint: typ_disjoint_t)
@@ -1416,36 +1429,65 @@ and map_constraint_included
       | _ -> True
     )
     (decreases (map_constraint_size c1 + map_constraint_size c2))
-= match c2 with
-  | MCFalse ->
-    begin match c1 with
-    | MCFalse
-    | MCKeyValue (TElem EAlwaysFalse) _
-    | MCKeyValue _ (TElem EAlwaysFalse) ->
-      RSuccess ()
-    | _ -> RFailure "map_constraint_included: False"
-    end
-  | MCAnd c21 c22 ->
+= match c1, c2 with
+  | MCKeyValue (TElem EAlwaysFalse) _, _
+  | MCKeyValue _ (TElem EAlwaysFalse), _
+  | MCFalse, _
+  | _, MCNot MCFalse
+    -> RSuccess ()
+  | MCNot (MCNot c1'), c2 ->
+    map_constraint_included typ_disjoint typ_included env c1' c2
+  | c1', MCNot (MCNot c2) ->
+    map_constraint_included typ_disjoint typ_included env c1' c2
+  | MCOr c21 c22, c1 ->
+    let res1 = map_constraint_included typ_disjoint typ_included env c21 c1 in
+    if RSuccess? res1
+    then map_constraint_included typ_disjoint typ_included env c22 c1
+    else res1
+  | MCNot (MCAnd c21 c22), c1 ->
+    let res1 = map_constraint_included typ_disjoint typ_included env (MCNot c21) c1 in
+    if RSuccess? res1
+    then map_constraint_included typ_disjoint typ_included env (MCNot c22) c1
+    else res1
+  | c1, MCAnd c21 c22 ->
     let res1 = map_constraint_included typ_disjoint typ_included env c1 c21 in
     if RSuccess? res1
     then map_constraint_included typ_disjoint typ_included env c1 c22
     else res1
-  | MCOr c21 c22 ->
+  | c1, MCNot c2' ->
+    map_constraint_disjoint typ_disjoint typ_included env c1 c2'
+  | MCAnd c21 c22, c1 ->
+    let res1 = map_constraint_included typ_disjoint typ_included env c21 c1 in
+    if RSuccess? res1
+    then res1
+    else map_constraint_included typ_disjoint typ_included env c22 c1
+  | MCNot (MCOr c21 c22), c1 ->
+    let res1 = map_constraint_included typ_disjoint typ_included env (MCNot c21) c1 in
+    if RSuccess? res1
+    then res1
+    else map_constraint_included typ_disjoint typ_included env (MCNot c22) c1
+  | c1, MCOr c21 c22 ->
     let res1 = map_constraint_included typ_disjoint typ_included env c1 c21 in
     if RSuccess? res1
     then res1
     else map_constraint_included typ_disjoint typ_included env c1 c22
-  | MCNot c2' ->
-    map_constraint_disjoint typ_disjoint typ_included env c1 c2'
-  | MCKeyValue k2 v2 ->
-    begin match c1 with
-    | MCKeyValue k1 v1 ->
+  | MCKeyValue k1 v1, MCFalse ->
+    let res1 = typ_included env k1 (TElem EAlwaysFalse) in
+    if RSuccess? res1
+    then res1
+    else typ_included env v1 (TElem EAlwaysFalse)
+  | MCKeyValue k1 v1, MCKeyValue k2 v2 ->
       let res1 = typ_included env k1 k2 in
       if RSuccess? res1
       then typ_included env v1 v2
       else res1
-    | _ -> RFailure "map_constraint_included: unsupported"
-    end
+  | MCNot MCFalse, MCKeyValue k2 v2 ->
+    let res1 = typ_included env (TElem EAny) k2 in
+    if RSuccess? res1
+    then typ_included env (TElem EAny) v2
+    else res1
+  | _, MCFalse -> RFailure "map_constraint_included: MCFalse right"
+  | MCNot (MCKeyValue _ _), MCKeyValue _ _ -> RFailure "map_constraint_included: MCNot (MCKeyValue _) left"
 
 let map_group_choice_compatible_no_cut_postcond
   (env: sem_env)
