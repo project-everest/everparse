@@ -130,7 +130,7 @@ jobs:
       - name: Everparse CI
         id: cistep
         run: |
-          make -C everparse ci -skj$(nproc) branchname=${{ github.head_ref || github.ref_name }}
+          make -C everparse ci -kj$(nproc) branchname=${{ github.head_ref || github.ref_name }}
         env:
           DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
 
