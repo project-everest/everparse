@@ -119,7 +119,7 @@ jobs:
         with:
           path: hacl-star
           repository: hacl-star/hacl-star
-          ref: master
+          ref: main
 
       - run: echo "HACL_HOME=$(pwd)/hacl-star" | sudo tee -a $GITHUB_ENV
 
