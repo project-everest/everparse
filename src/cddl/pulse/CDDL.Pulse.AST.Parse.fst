@@ -142,6 +142,32 @@ let ancillary_map_constraint_env_set_ask_for
 = ancillary_map_constraint_env_set env _ i
 
 [@@sem_attr]
+let ancillary_map_constraint_env_is_some
+  (#cbor_t: Type)
+  (#vmatch2: perm -> cbor_t -> Cbor.cbor & Cbor.cbor -> slprop)
+  (#se: sem_env)
+  (env: ancillary_map_constraint_env vmatch2 se)
+: Tot (Parse.ancillary_map_constraint_env_bool se.se_bound)
+= fun t -> Some? (env t)
+
+[@@bundle_attr; sem_attr] // sem_attr for ask
+let ancillary_map_constraint_env_extend
+  (#cbor_t: Type)
+  (#vmatch2: perm -> cbor_t -> Cbor.cbor & Cbor.cbor -> slprop)
+  (#se: sem_env)
+  (env1: ancillary_map_constraint_env vmatch2 se)
+  (se2: sem_env {
+    sem_env_included se se2
+  })
+: Tot (ancillary_map_constraint_env vmatch2 se2)
+= fun t ->
+  if bounded_map_constraint se.se_bound t
+  then begin
+    (env1 t)
+  end
+  else None
+
+[@@sem_attr]
 let validate_ask_for_array_group
   (#t #t2 #t_arr #t_map: Type0)
   (#vmatch: (perm -> t -> Cbor.cbor -> slprop))
