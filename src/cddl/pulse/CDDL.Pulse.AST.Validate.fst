@@ -218,8 +218,12 @@ and validate_map_constraint
   (wf: AST.ast0_wf_map_constraint ty { AST.spec_wf_map_constraint v_sem_env ty wf /\ SZ.fits_u64 })
 : Tot (impl_map_entry_cond vmatch2 (AST.map_constraint_sem v_sem_env ty))
   (decreases wf)
-= magic ()
-
+= match wf with
+  | WfMCFalse -> impl_map_entry_cond_empty _
+  | WfMCKeyValue _ k _ v -> impl_map_entry_cond_matches_map_group_entry impl.cbor_map_entry_key impl.cbor_map_entry_value (validate_typ impl env false _ k) (validate_typ impl env false _ v)
+  | WfMCNot _ mc -> impl_map_entry_cond_notp (validate_map_constraint impl env _ mc)
+  | WfMCAnd _ mc1 _ mc2 -> impl_map_entry_cond_andp (validate_map_constraint impl env _ mc1) (validate_map_constraint impl env _ mc2)
+  | WfMCOr _ mc1 _ mc2 -> impl_map_entry_cond_orp (validate_map_constraint impl env _ mc1) (validate_map_constraint impl env _ mc2)
 
 let typ_sem_or_bust
   (v_sem_env: AST.sem_env)

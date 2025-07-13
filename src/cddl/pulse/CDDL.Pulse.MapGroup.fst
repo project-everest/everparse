@@ -856,6 +856,39 @@ fn impl_map_entry_cond_andp
 }
 
 inline_for_extraction
+fn impl_map_entry_cond_orp
+  (#t: Type0)
+  (#vmatch2: perm -> t -> (cbor & cbor) -> slprop)
+  (#f: Ghost.erased ((cbor & cbor) -> bool))
+  (implf: impl_map_entry_cond vmatch2 f)
+  (#g: Ghost.erased ((cbor & cbor) -> bool))
+  (implg: impl_map_entry_cond vmatch2 g)
+: impl_map_entry_cond u#0 #_ vmatch2 (map_constraint_choice f g)
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  let test = implf x;
+  if (test) {
+    true
+  } else {
+    implg x
+  }
+}
+
+inline_for_extraction
+fn impl_map_entry_cond_empty
+  (#t: Type0)
+  (vmatch2: perm -> t -> (cbor & cbor) -> slprop)
+: impl_map_entry_cond u#0 #_ vmatch2 map_constraint_empty
+= (x: _)
+  (#p: _)
+  (#v: _)
+{
+  false
+}
+
+inline_for_extraction
 let impl_zero_or_more_map_group_match_item_except
   (#t #t2: Type0)
   (#cbor_map_iterator_t: Type0)
