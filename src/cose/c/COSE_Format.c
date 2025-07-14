@@ -3807,8 +3807,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
       ite = false;
     if (ite)
     {
-      cbor_det_map_entry_value(x);
-      ite0 = true;
+      cbor_det_t v1 = cbor_det_map_entry_value(x);
+      if (COSE_Format_validate_int(v1))
+        ite0 = true;
+      else
+        ite0 = COSE_Format_validate_tstr(v1);
     }
     else
       ite0 = false;
@@ -3827,8 +3830,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite1 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite1 = true;
+        else
+          ite1 = COSE_Format_validate_tstr(v1);
       }
       else
         ite1 = false;
@@ -3841,15 +3847,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
   else
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
-    bool ite;
+    bool ite0;
     if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-      ite = cbor_det_read_uint64(k) == 2ULL;
+      ite0 = cbor_det_read_uint64(k) == 2ULL;
     else
-      ite = false;
-    if (ite)
+      ite0 = false;
+    if (ite0)
     {
-      cbor_det_map_entry_value(x);
-      ite2 = true;
+      cbor_det_t v1 = cbor_det_map_entry_value(x);
+      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+      {
+        cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+        bool ite0;
+        if (cbor_det_array_iterator_is_empty(pi))
+          ite0 = false;
+        else
+          ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+        bool ite1;
+        if (ite0)
+        {
+          bool pcont = true;
+          while (pcont)
+          {
+            cbor_det_array_iterator_t i1 = pi;
+            bool ite;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite = false;
+            else
+              ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            if (!ite)
+            {
+              pi = i1;
+              pcont = false;
+            }
+          }
+          ite1 = true;
+        }
+        else
+          ite1 = false;
+        if (ite1)
+          ite2 = cbor_det_array_iterator_is_empty(pi);
+        else
+          ite2 = false;
+      }
+      else
+        ite2 = false;
     }
     else
       ite2 = false;
@@ -3870,8 +3912,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -3890,8 +3935,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -3903,15 +3951,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite3 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite3 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite3 = false;
+        }
+        else
+          ite3 = false;
       }
       else
         ite3 = false;
@@ -3932,8 +4016,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
       ite = false;
     if (ite)
     {
-      cbor_det_map_entry_value(x);
-      ite4 = true;
+      cbor_det_t v1 = cbor_det_map_entry_value(x);
+      if (COSE_Format_validate_tstr(v1))
+        ite4 = true;
+      else
+        ite4 = COSE_Format_validate_int(v1);
     }
     else
       ite4 = false;
@@ -3954,8 +4041,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -3974,8 +4064,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -3988,15 +4081,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite2 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite2 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite2 = false;
+        }
+        else
+          ite2 = false;
       }
       else
         ite2 = false;
@@ -4017,8 +4146,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -4037,8 +4169,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -4050,15 +4185,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite3 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite3 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite3 = false;
+          }
+          else
+            ite3 = false;
         }
         else
           ite3 = false;
@@ -4078,8 +4249,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite5 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_tstr(v1))
+          ite5 = true;
+        else
+          ite5 = COSE_Format_validate_int(v1);
       }
       else
         ite5 = false;
@@ -4099,10 +4273,7 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
     else
       ite = false;
     if (ite)
-    {
-      cbor_det_map_entry_value(x);
-      ite6 = true;
-    }
+      ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
     else
       ite6 = false;
   }
@@ -4122,8 +4293,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -4142,8 +4316,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -4156,15 +4333,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite2 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite2 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite2 = false;
+        }
+        else
+          ite2 = false;
       }
       else
         ite2 = false;
@@ -4185,8 +4398,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -4205,8 +4421,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -4218,15 +4437,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite3 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite3 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite3 = false;
+          }
+          else
+            ite3 = false;
         }
         else
           ite3 = false;
@@ -4247,8 +4502,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite4 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_tstr(v1))
+          ite4 = true;
+        else
+          ite4 = COSE_Format_validate_int(v1);
       }
       else
         ite4 = false;
@@ -4269,8 +4527,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -4289,8 +4550,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -4303,15 +4567,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -4332,8 +4632,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -4352,8 +4655,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -4365,15 +4671,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -4393,8 +4735,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite5 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite5 = true;
+          else
+            ite5 = COSE_Format_validate_int(v1);
         }
         else
           ite5 = false;
@@ -4413,10 +4758,7 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
       else
         ite = false;
       if (ite)
-      {
-        cbor_det_map_entry_value(x);
-        ite7 = true;
-      }
+        ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
       else
         ite7 = false;
     }
@@ -4473,8 +4815,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -4493,8 +4838,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -4507,15 +4855,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite2 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite2 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite2 = false;
+        }
+        else
+          ite2 = false;
       }
       else
         ite2 = false;
@@ -4536,8 +4920,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -4556,8 +4943,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -4569,15 +4959,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite3 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite3 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite3 = false;
+          }
+          else
+            ite3 = false;
         }
         else
           ite3 = false;
@@ -4598,8 +5024,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite4 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_tstr(v1))
+          ite4 = true;
+        else
+          ite4 = COSE_Format_validate_int(v1);
       }
       else
         ite4 = false;
@@ -4620,8 +5049,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -4640,8 +5072,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -4654,15 +5089,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -4683,8 +5154,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -4703,8 +5177,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -4716,15 +5193,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -4744,8 +5257,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite5 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite5 = true;
+          else
+            ite5 = COSE_Format_validate_int(v1);
         }
         else
           ite5 = false;
@@ -4765,10 +5281,7 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
       else
         ite = false;
       if (ite)
-      {
-        cbor_det_map_entry_value(x);
-        ite6 = true;
-      }
+        ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
       else
         ite6 = false;
     }
@@ -4788,8 +5301,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -4808,8 +5324,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -4822,15 +5341,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -4851,8 +5406,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -4871,8 +5429,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -4884,15 +5445,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -4913,8 +5510,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite4 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite4 = true;
+          else
+            ite4 = COSE_Format_validate_int(v1);
         }
         else
           ite4 = false;
@@ -4935,8 +5535,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -4955,8 +5558,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -4969,15 +5575,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite2 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite2 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite2 = false;
+            }
+            else
+              ite2 = false;
           }
           else
             ite2 = false;
@@ -4998,8 +5640,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite0 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite0 = true;
+              else
+                ite0 = COSE_Format_validate_tstr(v1);
             }
             else
               ite0 = false;
@@ -5018,8 +5663,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
                 ite = false;
               if (ite)
               {
-                cbor_det_map_entry_value(x);
-                ite1 = true;
+                cbor_det_t v1 = cbor_det_map_entry_value(x);
+                if (COSE_Format_validate_int(v1))
+                  ite1 = true;
+                else
+                  ite1 = COSE_Format_validate_tstr(v1);
               }
               else
                 ite1 = false;
@@ -5031,15 +5679,51 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
           else
           {
             cbor_det_t k = cbor_det_map_entry_key(x);
-            bool ite;
+            bool ite0;
             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-              ite = cbor_det_read_uint64(k) == 2ULL;
+              ite0 = cbor_det_read_uint64(k) == 2ULL;
             else
-              ite = false;
-            if (ite)
+              ite0 = false;
+            if (ite0)
             {
-              cbor_det_map_entry_value(x);
-              ite3 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+              {
+                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                bool ite0;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite0 = false;
+                else
+                  ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                bool ite1;
+                if (ite0)
+                {
+                  bool pcont = true;
+                  while (pcont)
+                  {
+                    cbor_det_array_iterator_t i1 = pi;
+                    bool ite;
+                    if (cbor_det_array_iterator_is_empty(pi))
+                      ite = false;
+                    else
+                      ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                    if (!ite)
+                    {
+                      pi = i1;
+                      pcont = false;
+                    }
+                  }
+                  ite1 = true;
+                }
+                else
+                  ite1 = false;
+                if (ite1)
+                  ite3 = cbor_det_array_iterator_is_empty(pi);
+                else
+                  ite3 = false;
+              }
+              else
+                ite3 = false;
             }
             else
               ite3 = false;
@@ -5059,8 +5743,11 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite5 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_tstr(v1))
+              ite5 = true;
+            else
+              ite5 = COSE_Format_validate_int(v1);
           }
           else
             ite5 = false;
@@ -5079,10 +5766,7 @@ bool COSE_Format_aux_env24_map_constraint_4(cbor_det_map_entry_t x)
         else
           ite = false;
         if (ite)
-        {
-          cbor_det_map_entry_value(x);
-          ite7 = true;
-        }
+          ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
         else
           ite7 = false;
       }
@@ -5143,8 +5827,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
       ite = false;
     if (ite)
     {
-      cbor_det_map_entry_value(x);
-      ite0 = true;
+      cbor_det_t v1 = cbor_det_map_entry_value(x);
+      if (COSE_Format_validate_int(v1))
+        ite0 = true;
+      else
+        ite0 = COSE_Format_validate_tstr(v1);
     }
     else
       ite0 = false;
@@ -5163,8 +5850,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite1 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite1 = true;
+        else
+          ite1 = COSE_Format_validate_tstr(v1);
       }
       else
         ite1 = false;
@@ -5177,15 +5867,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
   else
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
-    bool ite;
+    bool ite0;
     if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-      ite = cbor_det_read_uint64(k) == 2ULL;
+      ite0 = cbor_det_read_uint64(k) == 2ULL;
     else
-      ite = false;
-    if (ite)
+      ite0 = false;
+    if (ite0)
     {
-      cbor_det_map_entry_value(x);
-      ite2 = true;
+      cbor_det_t v1 = cbor_det_map_entry_value(x);
+      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+      {
+        cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+        bool ite0;
+        if (cbor_det_array_iterator_is_empty(pi))
+          ite0 = false;
+        else
+          ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+        bool ite1;
+        if (ite0)
+        {
+          bool pcont = true;
+          while (pcont)
+          {
+            cbor_det_array_iterator_t i1 = pi;
+            bool ite;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite = false;
+            else
+              ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            if (!ite)
+            {
+              pi = i1;
+              pcont = false;
+            }
+          }
+          ite1 = true;
+        }
+        else
+          ite1 = false;
+        if (ite1)
+          ite2 = cbor_det_array_iterator_is_empty(pi);
+        else
+          ite2 = false;
+      }
+      else
+        ite2 = false;
     }
     else
       ite2 = false;
@@ -5206,8 +5932,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -5226,8 +5955,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -5239,15 +5971,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite3 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite3 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite3 = false;
+        }
+        else
+          ite3 = false;
       }
       else
         ite3 = false;
@@ -5268,8 +6036,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
       ite = false;
     if (ite)
     {
-      cbor_det_map_entry_value(x);
-      ite4 = true;
+      cbor_det_t v1 = cbor_det_map_entry_value(x);
+      if (COSE_Format_validate_tstr(v1))
+        ite4 = true;
+      else
+        ite4 = COSE_Format_validate_int(v1);
     }
     else
       ite4 = false;
@@ -5290,8 +6061,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -5310,8 +6084,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -5324,15 +6101,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite2 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite2 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite2 = false;
+        }
+        else
+          ite2 = false;
       }
       else
         ite2 = false;
@@ -5353,8 +6166,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -5373,8 +6189,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -5386,15 +6205,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite3 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite3 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite3 = false;
+          }
+          else
+            ite3 = false;
         }
         else
           ite3 = false;
@@ -5414,8 +6269,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite5 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_tstr(v1))
+          ite5 = true;
+        else
+          ite5 = COSE_Format_validate_int(v1);
       }
       else
         ite5 = false;
@@ -5435,10 +6293,7 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
     else
       ite = false;
     if (ite)
-    {
-      cbor_det_map_entry_value(x);
-      ite6 = true;
-    }
+      ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
     else
       ite6 = false;
   }
@@ -5458,8 +6313,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -5478,8 +6336,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -5492,15 +6353,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite2 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite2 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite2 = false;
+        }
+        else
+          ite2 = false;
       }
       else
         ite2 = false;
@@ -5521,8 +6418,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -5541,8 +6441,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -5554,15 +6457,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite3 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite3 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite3 = false;
+          }
+          else
+            ite3 = false;
         }
         else
           ite3 = false;
@@ -5583,8 +6522,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite4 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_tstr(v1))
+          ite4 = true;
+        else
+          ite4 = COSE_Format_validate_int(v1);
       }
       else
         ite4 = false;
@@ -5605,8 +6547,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -5625,8 +6570,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -5639,15 +6587,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -5668,8 +6652,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -5688,8 +6675,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -5701,15 +6691,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -5729,8 +6755,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite5 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite5 = true;
+          else
+            ite5 = COSE_Format_validate_int(v1);
         }
         else
           ite5 = false;
@@ -5749,10 +6778,7 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
       else
         ite = false;
       if (ite)
-      {
-        cbor_det_map_entry_value(x);
-        ite7 = true;
-      }
+        ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
       else
         ite7 = false;
     }
@@ -5814,8 +6840,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -5834,8 +6863,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -5848,15 +6880,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite2 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite2 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite2 = false;
+        }
+        else
+          ite2 = false;
       }
       else
         ite2 = false;
@@ -5877,8 +6945,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -5897,8 +6968,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -5910,15 +6984,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite3 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite3 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite3 = false;
+          }
+          else
+            ite3 = false;
         }
         else
           ite3 = false;
@@ -5939,8 +7049,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite4 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_tstr(v1))
+          ite4 = true;
+        else
+          ite4 = COSE_Format_validate_int(v1);
       }
       else
         ite4 = false;
@@ -5961,8 +7074,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -5981,8 +7097,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -5995,15 +7114,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -6024,8 +7179,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -6044,8 +7202,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -6057,15 +7218,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -6085,8 +7282,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite5 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite5 = true;
+          else
+            ite5 = COSE_Format_validate_int(v1);
         }
         else
           ite5 = false;
@@ -6106,10 +7306,7 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
       else
         ite = false;
       if (ite)
-      {
-        cbor_det_map_entry_value(x);
-        ite6 = true;
-      }
+        ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
       else
         ite6 = false;
     }
@@ -6129,8 +7326,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -6149,8 +7349,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -6163,15 +7366,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -6192,8 +7431,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -6212,8 +7454,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -6225,15 +7470,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -6254,8 +7535,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite4 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite4 = true;
+          else
+            ite4 = COSE_Format_validate_int(v1);
         }
         else
           ite4 = false;
@@ -6276,8 +7560,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -6296,8 +7583,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -6310,15 +7600,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite2 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite2 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite2 = false;
+            }
+            else
+              ite2 = false;
           }
           else
             ite2 = false;
@@ -6339,8 +7665,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite0 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite0 = true;
+              else
+                ite0 = COSE_Format_validate_tstr(v1);
             }
             else
               ite0 = false;
@@ -6359,8 +7688,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
                 ite = false;
               if (ite)
               {
-                cbor_det_map_entry_value(x);
-                ite1 = true;
+                cbor_det_t v1 = cbor_det_map_entry_value(x);
+                if (COSE_Format_validate_int(v1))
+                  ite1 = true;
+                else
+                  ite1 = COSE_Format_validate_tstr(v1);
               }
               else
                 ite1 = false;
@@ -6372,15 +7704,51 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
           else
           {
             cbor_det_t k = cbor_det_map_entry_key(x);
-            bool ite;
+            bool ite0;
             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-              ite = cbor_det_read_uint64(k) == 2ULL;
+              ite0 = cbor_det_read_uint64(k) == 2ULL;
             else
-              ite = false;
-            if (ite)
+              ite0 = false;
+            if (ite0)
             {
-              cbor_det_map_entry_value(x);
-              ite3 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+              {
+                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                bool ite0;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite0 = false;
+                else
+                  ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                bool ite1;
+                if (ite0)
+                {
+                  bool pcont = true;
+                  while (pcont)
+                  {
+                    cbor_det_array_iterator_t i1 = pi;
+                    bool ite;
+                    if (cbor_det_array_iterator_is_empty(pi))
+                      ite = false;
+                    else
+                      ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                    if (!ite)
+                    {
+                      pi = i1;
+                      pcont = false;
+                    }
+                  }
+                  ite1 = true;
+                }
+                else
+                  ite1 = false;
+                if (ite1)
+                  ite3 = cbor_det_array_iterator_is_empty(pi);
+                else
+                  ite3 = false;
+              }
+              else
+                ite3 = false;
             }
             else
               ite3 = false;
@@ -6400,8 +7768,11 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite5 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_tstr(v1))
+              ite5 = true;
+            else
+              ite5 = COSE_Format_validate_int(v1);
           }
           else
             ite5 = false;
@@ -6420,10 +7791,7 @@ bool COSE_Format_aux_env24_map_constraint_5(cbor_det_map_entry_t x)
         else
           ite = false;
         if (ite)
-        {
-          cbor_det_map_entry_value(x);
-          ite7 = true;
-        }
+          ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
         else
           ite7 = false;
       }
@@ -6489,8 +7857,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       ite = false;
     if (ite)
     {
-      cbor_det_map_entry_value(x);
-      ite0 = true;
+      cbor_det_t v1 = cbor_det_map_entry_value(x);
+      if (COSE_Format_validate_int(v1))
+        ite0 = true;
+      else
+        ite0 = COSE_Format_validate_tstr(v1);
     }
     else
       ite0 = false;
@@ -6509,8 +7880,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite1 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite1 = true;
+        else
+          ite1 = COSE_Format_validate_tstr(v1);
       }
       else
         ite1 = false;
@@ -6523,15 +7897,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
   else
   {
     cbor_det_t k = cbor_det_map_entry_key(x);
-    bool ite;
+    bool ite0;
     if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-      ite = cbor_det_read_uint64(k) == 2ULL;
+      ite0 = cbor_det_read_uint64(k) == 2ULL;
     else
-      ite = false;
-    if (ite)
+      ite0 = false;
+    if (ite0)
     {
-      cbor_det_map_entry_value(x);
-      ite2 = true;
+      cbor_det_t v1 = cbor_det_map_entry_value(x);
+      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+      {
+        cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+        bool ite0;
+        if (cbor_det_array_iterator_is_empty(pi))
+          ite0 = false;
+        else
+          ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+        bool ite1;
+        if (ite0)
+        {
+          bool pcont = true;
+          while (pcont)
+          {
+            cbor_det_array_iterator_t i1 = pi;
+            bool ite;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite = false;
+            else
+              ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            if (!ite)
+            {
+              pi = i1;
+              pcont = false;
+            }
+          }
+          ite1 = true;
+        }
+        else
+          ite1 = false;
+        if (ite1)
+          ite2 = cbor_det_array_iterator_is_empty(pi);
+        else
+          ite2 = false;
+      }
+      else
+        ite2 = false;
     }
     else
       ite2 = false;
@@ -6552,8 +7962,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -6572,8 +7985,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -6585,15 +8001,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite3 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite3 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite3 = false;
+        }
+        else
+          ite3 = false;
       }
       else
         ite3 = false;
@@ -6614,8 +8066,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       ite = false;
     if (ite)
     {
-      cbor_det_map_entry_value(x);
-      ite4 = true;
+      cbor_det_t v1 = cbor_det_map_entry_value(x);
+      if (COSE_Format_validate_tstr(v1))
+        ite4 = true;
+      else
+        ite4 = COSE_Format_validate_int(v1);
     }
     else
       ite4 = false;
@@ -6636,8 +8091,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -6656,8 +8114,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -6670,15 +8131,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite2 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite2 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite2 = false;
+        }
+        else
+          ite2 = false;
       }
       else
         ite2 = false;
@@ -6699,8 +8196,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -6719,8 +8219,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -6732,15 +8235,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite3 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite3 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite3 = false;
+          }
+          else
+            ite3 = false;
         }
         else
           ite3 = false;
@@ -6760,8 +8299,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite5 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_tstr(v1))
+          ite5 = true;
+        else
+          ite5 = COSE_Format_validate_int(v1);
       }
       else
         ite5 = false;
@@ -6781,10 +8323,7 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
     else
       ite = false;
     if (ite)
-    {
-      cbor_det_map_entry_value(x);
-      ite6 = true;
-    }
+      ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
     else
       ite6 = false;
   }
@@ -6804,8 +8343,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -6824,8 +8366,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -6838,15 +8383,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite2 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite2 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite2 = false;
+        }
+        else
+          ite2 = false;
       }
       else
         ite2 = false;
@@ -6867,8 +8448,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -6887,8 +8471,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -6900,15 +8487,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite3 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite3 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite3 = false;
+          }
+          else
+            ite3 = false;
         }
         else
           ite3 = false;
@@ -6929,8 +8552,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite4 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_tstr(v1))
+          ite4 = true;
+        else
+          ite4 = COSE_Format_validate_int(v1);
       }
       else
         ite4 = false;
@@ -6951,8 +8577,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -6971,8 +8600,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -6985,15 +8617,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -7014,8 +8682,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -7034,8 +8705,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -7047,15 +8721,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -7075,8 +8785,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite5 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite5 = true;
+          else
+            ite5 = COSE_Format_validate_int(v1);
         }
         else
           ite5 = false;
@@ -7095,10 +8808,7 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
         ite = false;
       if (ite)
-      {
-        cbor_det_map_entry_value(x);
-        ite7 = true;
-      }
+        ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
       else
         ite7 = false;
     }
@@ -7150,8 +8860,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -7170,8 +8883,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -7184,15 +8900,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite2 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite2 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite2 = false;
+        }
+        else
+          ite2 = false;
       }
       else
         ite2 = false;
@@ -7213,8 +8965,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -7233,8 +8988,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -7246,15 +9004,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite3 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite3 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite3 = false;
+          }
+          else
+            ite3 = false;
         }
         else
           ite3 = false;
@@ -7275,8 +9069,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite4 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_tstr(v1))
+          ite4 = true;
+        else
+          ite4 = COSE_Format_validate_int(v1);
       }
       else
         ite4 = false;
@@ -7297,8 +9094,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -7317,8 +9117,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -7331,15 +9134,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -7360,8 +9199,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -7380,8 +9222,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -7393,15 +9238,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -7421,8 +9302,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite5 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite5 = true;
+          else
+            ite5 = COSE_Format_validate_int(v1);
         }
         else
           ite5 = false;
@@ -7442,10 +9326,7 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
         ite = false;
       if (ite)
-      {
-        cbor_det_map_entry_value(x);
-        ite6 = true;
-      }
+        ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
       else
         ite6 = false;
     }
@@ -7465,8 +9346,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -7485,8 +9369,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -7499,15 +9386,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -7528,8 +9451,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -7548,8 +9474,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -7561,15 +9490,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -7590,8 +9555,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite4 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite4 = true;
+          else
+            ite4 = COSE_Format_validate_int(v1);
         }
         else
           ite4 = false;
@@ -7612,8 +9580,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -7632,8 +9603,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -7646,15 +9620,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite2 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite2 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite2 = false;
+            }
+            else
+              ite2 = false;
           }
           else
             ite2 = false;
@@ -7675,8 +9685,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite0 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite0 = true;
+              else
+                ite0 = COSE_Format_validate_tstr(v1);
             }
             else
               ite0 = false;
@@ -7695,8 +9708,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
                 ite = false;
               if (ite)
               {
-                cbor_det_map_entry_value(x);
-                ite1 = true;
+                cbor_det_t v1 = cbor_det_map_entry_value(x);
+                if (COSE_Format_validate_int(v1))
+                  ite1 = true;
+                else
+                  ite1 = COSE_Format_validate_tstr(v1);
               }
               else
                 ite1 = false;
@@ -7708,15 +9724,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           else
           {
             cbor_det_t k = cbor_det_map_entry_key(x);
-            bool ite;
+            bool ite0;
             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-              ite = cbor_det_read_uint64(k) == 2ULL;
+              ite0 = cbor_det_read_uint64(k) == 2ULL;
             else
-              ite = false;
-            if (ite)
+              ite0 = false;
+            if (ite0)
             {
-              cbor_det_map_entry_value(x);
-              ite3 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+              {
+                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                bool ite0;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite0 = false;
+                else
+                  ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                bool ite1;
+                if (ite0)
+                {
+                  bool pcont = true;
+                  while (pcont)
+                  {
+                    cbor_det_array_iterator_t i1 = pi;
+                    bool ite;
+                    if (cbor_det_array_iterator_is_empty(pi))
+                      ite = false;
+                    else
+                      ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                    if (!ite)
+                    {
+                      pi = i1;
+                      pcont = false;
+                    }
+                  }
+                  ite1 = true;
+                }
+                else
+                  ite1 = false;
+                if (ite1)
+                  ite3 = cbor_det_array_iterator_is_empty(pi);
+                else
+                  ite3 = false;
+              }
+              else
+                ite3 = false;
             }
             else
               ite3 = false;
@@ -7736,8 +9788,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite5 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_tstr(v1))
+              ite5 = true;
+            else
+              ite5 = COSE_Format_validate_int(v1);
           }
           else
             ite5 = false;
@@ -7756,10 +9811,7 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
           ite = false;
         if (ite)
-        {
-          cbor_det_map_entry_value(x);
-          ite7 = true;
-        }
+          ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
         else
           ite7 = false;
       }
@@ -7831,8 +9883,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite0 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_int(v1))
+          ite0 = true;
+        else
+          ite0 = COSE_Format_validate_tstr(v1);
       }
       else
         ite0 = false;
@@ -7851,8 +9906,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite1 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite1 = true;
+          else
+            ite1 = COSE_Format_validate_tstr(v1);
         }
         else
           ite1 = false;
@@ -7865,15 +9923,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
     else
     {
       cbor_det_t k = cbor_det_map_entry_key(x);
-      bool ite;
+      bool ite0;
       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-        ite = cbor_det_read_uint64(k) == 2ULL;
+        ite0 = cbor_det_read_uint64(k) == 2ULL;
       else
-        ite = false;
-      if (ite)
+        ite0 = false;
+      if (ite0)
       {
-        cbor_det_map_entry_value(x);
-        ite2 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+        {
+          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+          bool ite0;
+          if (cbor_det_array_iterator_is_empty(pi))
+            ite0 = false;
+          else
+            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+          bool ite1;
+          if (ite0)
+          {
+            bool pcont = true;
+            while (pcont)
+            {
+              cbor_det_array_iterator_t i1 = pi;
+              bool ite;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite = false;
+              else
+                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              if (!ite)
+              {
+                pi = i1;
+                pcont = false;
+              }
+            }
+            ite1 = true;
+          }
+          else
+            ite1 = false;
+          if (ite1)
+            ite2 = cbor_det_array_iterator_is_empty(pi);
+          else
+            ite2 = false;
+        }
+        else
+          ite2 = false;
       }
       else
         ite2 = false;
@@ -7894,8 +9988,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -7914,8 +10011,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -7927,15 +10027,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite3 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite3 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite3 = false;
+          }
+          else
+            ite3 = false;
         }
         else
           ite3 = false;
@@ -7956,8 +10092,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         ite = false;
       if (ite)
       {
-        cbor_det_map_entry_value(x);
-        ite4 = true;
+        cbor_det_t v1 = cbor_det_map_entry_value(x);
+        if (COSE_Format_validate_tstr(v1))
+          ite4 = true;
+        else
+          ite4 = COSE_Format_validate_int(v1);
       }
       else
         ite4 = false;
@@ -7978,8 +10117,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -7998,8 +10140,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -8012,15 +10157,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -8041,8 +10222,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -8061,8 +10245,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -8074,15 +10261,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -8102,8 +10325,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite5 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite5 = true;
+          else
+            ite5 = COSE_Format_validate_int(v1);
         }
         else
           ite5 = false;
@@ -8123,10 +10349,7 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
         ite = false;
       if (ite)
-      {
-        cbor_det_map_entry_value(x);
-        ite6 = true;
-      }
+        ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
       else
         ite6 = false;
     }
@@ -8146,8 +10369,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -8166,8 +10392,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -8180,15 +10409,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -8209,8 +10474,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -8229,8 +10497,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -8242,15 +10513,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -8271,8 +10578,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite4 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite4 = true;
+          else
+            ite4 = COSE_Format_validate_int(v1);
         }
         else
           ite4 = false;
@@ -8293,8 +10603,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -8313,8 +10626,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -8327,15 +10643,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite2 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite2 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite2 = false;
+            }
+            else
+              ite2 = false;
           }
           else
             ite2 = false;
@@ -8356,8 +10708,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite0 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite0 = true;
+              else
+                ite0 = COSE_Format_validate_tstr(v1);
             }
             else
               ite0 = false;
@@ -8376,8 +10731,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
                 ite = false;
               if (ite)
               {
-                cbor_det_map_entry_value(x);
-                ite1 = true;
+                cbor_det_t v1 = cbor_det_map_entry_value(x);
+                if (COSE_Format_validate_int(v1))
+                  ite1 = true;
+                else
+                  ite1 = COSE_Format_validate_tstr(v1);
               }
               else
                 ite1 = false;
@@ -8389,15 +10747,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           else
           {
             cbor_det_t k = cbor_det_map_entry_key(x);
-            bool ite;
+            bool ite0;
             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-              ite = cbor_det_read_uint64(k) == 2ULL;
+              ite0 = cbor_det_read_uint64(k) == 2ULL;
             else
-              ite = false;
-            if (ite)
+              ite0 = false;
+            if (ite0)
             {
-              cbor_det_map_entry_value(x);
-              ite3 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+              {
+                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                bool ite0;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite0 = false;
+                else
+                  ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                bool ite1;
+                if (ite0)
+                {
+                  bool pcont = true;
+                  while (pcont)
+                  {
+                    cbor_det_array_iterator_t i1 = pi;
+                    bool ite;
+                    if (cbor_det_array_iterator_is_empty(pi))
+                      ite = false;
+                    else
+                      ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                    if (!ite)
+                    {
+                      pi = i1;
+                      pcont = false;
+                    }
+                  }
+                  ite1 = true;
+                }
+                else
+                  ite1 = false;
+                if (ite1)
+                  ite3 = cbor_det_array_iterator_is_empty(pi);
+                else
+                  ite3 = false;
+              }
+              else
+                ite3 = false;
             }
             else
               ite3 = false;
@@ -8417,8 +10811,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite5 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_tstr(v1))
+              ite5 = true;
+            else
+              ite5 = COSE_Format_validate_int(v1);
           }
           else
             ite5 = false;
@@ -8437,10 +10834,7 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
           ite = false;
         if (ite)
-        {
-          cbor_det_map_entry_value(x);
-          ite7 = true;
-        }
+          ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
         else
           ite7 = false;
       }
@@ -8492,8 +10886,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite0 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_int(v1))
+            ite0 = true;
+          else
+            ite0 = COSE_Format_validate_tstr(v1);
         }
         else
           ite0 = false;
@@ -8512,8 +10909,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite1 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite1 = true;
+            else
+              ite1 = COSE_Format_validate_tstr(v1);
           }
           else
             ite1 = false;
@@ -8526,15 +10926,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
       else
       {
         cbor_det_t k = cbor_det_map_entry_key(x);
-        bool ite;
+        bool ite0;
         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-          ite = cbor_det_read_uint64(k) == 2ULL;
+          ite0 = cbor_det_read_uint64(k) == 2ULL;
         else
-          ite = false;
-        if (ite)
+          ite0 = false;
+        if (ite0)
         {
-          cbor_det_map_entry_value(x);
-          ite2 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+          {
+            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+            bool ite0;
+            if (cbor_det_array_iterator_is_empty(pi))
+              ite0 = false;
+            else
+              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+            bool ite1;
+            if (ite0)
+            {
+              bool pcont = true;
+              while (pcont)
+              {
+                cbor_det_array_iterator_t i1 = pi;
+                bool ite;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite = false;
+                else
+                  ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                if (!ite)
+                {
+                  pi = i1;
+                  pcont = false;
+                }
+              }
+              ite1 = true;
+            }
+            else
+              ite1 = false;
+            if (ite1)
+              ite2 = cbor_det_array_iterator_is_empty(pi);
+            else
+              ite2 = false;
+          }
+          else
+            ite2 = false;
         }
         else
           ite2 = false;
@@ -8555,8 +10991,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -8575,8 +11014,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -8588,15 +11030,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite3 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite3 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite3 = false;
+            }
+            else
+              ite3 = false;
           }
           else
             ite3 = false;
@@ -8617,8 +11095,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           ite = false;
         if (ite)
         {
-          cbor_det_map_entry_value(x);
-          ite4 = true;
+          cbor_det_t v1 = cbor_det_map_entry_value(x);
+          if (COSE_Format_validate_tstr(v1))
+            ite4 = true;
+          else
+            ite4 = COSE_Format_validate_int(v1);
         }
         else
           ite4 = false;
@@ -8639,8 +11120,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -8659,8 +11143,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -8673,15 +11160,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite2 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite2 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite2 = false;
+            }
+            else
+              ite2 = false;
           }
           else
             ite2 = false;
@@ -8702,8 +11225,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite0 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite0 = true;
+              else
+                ite0 = COSE_Format_validate_tstr(v1);
             }
             else
               ite0 = false;
@@ -8722,8 +11248,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
                 ite = false;
               if (ite)
               {
-                cbor_det_map_entry_value(x);
-                ite1 = true;
+                cbor_det_t v1 = cbor_det_map_entry_value(x);
+                if (COSE_Format_validate_int(v1))
+                  ite1 = true;
+                else
+                  ite1 = COSE_Format_validate_tstr(v1);
               }
               else
                 ite1 = false;
@@ -8735,15 +11264,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           else
           {
             cbor_det_t k = cbor_det_map_entry_key(x);
-            bool ite;
+            bool ite0;
             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-              ite = cbor_det_read_uint64(k) == 2ULL;
+              ite0 = cbor_det_read_uint64(k) == 2ULL;
             else
-              ite = false;
-            if (ite)
+              ite0 = false;
+            if (ite0)
             {
-              cbor_det_map_entry_value(x);
-              ite3 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+              {
+                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                bool ite0;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite0 = false;
+                else
+                  ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                bool ite1;
+                if (ite0)
+                {
+                  bool pcont = true;
+                  while (pcont)
+                  {
+                    cbor_det_array_iterator_t i1 = pi;
+                    bool ite;
+                    if (cbor_det_array_iterator_is_empty(pi))
+                      ite = false;
+                    else
+                      ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                    if (!ite)
+                    {
+                      pi = i1;
+                      pcont = false;
+                    }
+                  }
+                  ite1 = true;
+                }
+                else
+                  ite1 = false;
+                if (ite1)
+                  ite3 = cbor_det_array_iterator_is_empty(pi);
+                else
+                  ite3 = false;
+              }
+              else
+                ite3 = false;
             }
             else
               ite3 = false;
@@ -8763,8 +11328,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite5 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_tstr(v1))
+              ite5 = true;
+            else
+              ite5 = COSE_Format_validate_int(v1);
           }
           else
             ite5 = false;
@@ -8784,10 +11352,7 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
           ite = false;
         if (ite)
-        {
-          cbor_det_map_entry_value(x);
-          ite6 = true;
-        }
+          ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
         else
           ite6 = false;
       }
@@ -8807,8 +11372,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite0 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_int(v1))
+              ite0 = true;
+            else
+              ite0 = COSE_Format_validate_tstr(v1);
           }
           else
             ite0 = false;
@@ -8827,8 +11395,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite1 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite1 = true;
+              else
+                ite1 = COSE_Format_validate_tstr(v1);
             }
             else
               ite1 = false;
@@ -8841,15 +11412,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
         else
         {
           cbor_det_t k = cbor_det_map_entry_key(x);
-          bool ite;
+          bool ite0;
           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-            ite = cbor_det_read_uint64(k) == 2ULL;
+            ite0 = cbor_det_read_uint64(k) == 2ULL;
           else
-            ite = false;
-          if (ite)
+            ite0 = false;
+          if (ite0)
           {
-            cbor_det_map_entry_value(x);
-            ite2 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+            {
+              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+              bool ite0;
+              if (cbor_det_array_iterator_is_empty(pi))
+                ite0 = false;
+              else
+                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+              bool ite1;
+              if (ite0)
+              {
+                bool pcont = true;
+                while (pcont)
+                {
+                  cbor_det_array_iterator_t i1 = pi;
+                  bool ite;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite = false;
+                  else
+                    ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  if (!ite)
+                  {
+                    pi = i1;
+                    pcont = false;
+                  }
+                }
+                ite1 = true;
+              }
+              else
+                ite1 = false;
+              if (ite1)
+                ite2 = cbor_det_array_iterator_is_empty(pi);
+              else
+                ite2 = false;
+            }
+            else
+              ite2 = false;
           }
           else
             ite2 = false;
@@ -8870,8 +11477,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite0 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite0 = true;
+              else
+                ite0 = COSE_Format_validate_tstr(v1);
             }
             else
               ite0 = false;
@@ -8890,8 +11500,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
                 ite = false;
               if (ite)
               {
-                cbor_det_map_entry_value(x);
-                ite1 = true;
+                cbor_det_t v1 = cbor_det_map_entry_value(x);
+                if (COSE_Format_validate_int(v1))
+                  ite1 = true;
+                else
+                  ite1 = COSE_Format_validate_tstr(v1);
               }
               else
                 ite1 = false;
@@ -8903,15 +11516,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           else
           {
             cbor_det_t k = cbor_det_map_entry_key(x);
-            bool ite;
+            bool ite0;
             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-              ite = cbor_det_read_uint64(k) == 2ULL;
+              ite0 = cbor_det_read_uint64(k) == 2ULL;
             else
-              ite = false;
-            if (ite)
+              ite0 = false;
+            if (ite0)
             {
-              cbor_det_map_entry_value(x);
-              ite3 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+              {
+                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                bool ite0;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite0 = false;
+                else
+                  ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                bool ite1;
+                if (ite0)
+                {
+                  bool pcont = true;
+                  while (pcont)
+                  {
+                    cbor_det_array_iterator_t i1 = pi;
+                    bool ite;
+                    if (cbor_det_array_iterator_is_empty(pi))
+                      ite = false;
+                    else
+                      ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                    if (!ite)
+                    {
+                      pi = i1;
+                      pcont = false;
+                    }
+                  }
+                  ite1 = true;
+                }
+                else
+                  ite1 = false;
+                if (ite1)
+                  ite3 = cbor_det_array_iterator_is_empty(pi);
+                else
+                  ite3 = false;
+              }
+              else
+                ite3 = false;
             }
             else
               ite3 = false;
@@ -8932,8 +11581,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             ite = false;
           if (ite)
           {
-            cbor_det_map_entry_value(x);
-            ite4 = true;
+            cbor_det_t v1 = cbor_det_map_entry_value(x);
+            if (COSE_Format_validate_tstr(v1))
+              ite4 = true;
+            else
+              ite4 = COSE_Format_validate_int(v1);
           }
           else
             ite4 = false;
@@ -8954,8 +11606,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite0 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_int(v1))
+                ite0 = true;
+              else
+                ite0 = COSE_Format_validate_tstr(v1);
             }
             else
               ite0 = false;
@@ -8974,8 +11629,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
                 ite = false;
               if (ite)
               {
-                cbor_det_map_entry_value(x);
-                ite1 = true;
+                cbor_det_t v1 = cbor_det_map_entry_value(x);
+                if (COSE_Format_validate_int(v1))
+                  ite1 = true;
+                else
+                  ite1 = COSE_Format_validate_tstr(v1);
               }
               else
                 ite1 = false;
@@ -8988,15 +11646,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           else
           {
             cbor_det_t k = cbor_det_map_entry_key(x);
-            bool ite;
+            bool ite0;
             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-              ite = cbor_det_read_uint64(k) == 2ULL;
+              ite0 = cbor_det_read_uint64(k) == 2ULL;
             else
-              ite = false;
-            if (ite)
+              ite0 = false;
+            if (ite0)
             {
-              cbor_det_map_entry_value(x);
-              ite2 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+              {
+                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                bool ite0;
+                if (cbor_det_array_iterator_is_empty(pi))
+                  ite0 = false;
+                else
+                  ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                bool ite1;
+                if (ite0)
+                {
+                  bool pcont = true;
+                  while (pcont)
+                  {
+                    cbor_det_array_iterator_t i1 = pi;
+                    bool ite;
+                    if (cbor_det_array_iterator_is_empty(pi))
+                      ite = false;
+                    else
+                      ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                    if (!ite)
+                    {
+                      pi = i1;
+                      pcont = false;
+                    }
+                  }
+                  ite1 = true;
+                }
+                else
+                  ite1 = false;
+                if (ite1)
+                  ite2 = cbor_det_array_iterator_is_empty(pi);
+                else
+                  ite2 = false;
+              }
+              else
+                ite2 = false;
             }
             else
               ite2 = false;
@@ -9017,8 +11711,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
                 ite = false;
               if (ite)
               {
-                cbor_det_map_entry_value(x);
-                ite0 = true;
+                cbor_det_t v1 = cbor_det_map_entry_value(x);
+                if (COSE_Format_validate_int(v1))
+                  ite0 = true;
+                else
+                  ite0 = COSE_Format_validate_tstr(v1);
               }
               else
                 ite0 = false;
@@ -9037,8 +11734,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
                   ite = false;
                 if (ite)
                 {
-                  cbor_det_map_entry_value(x);
-                  ite1 = true;
+                  cbor_det_t v1 = cbor_det_map_entry_value(x);
+                  if (COSE_Format_validate_int(v1))
+                    ite1 = true;
+                  else
+                    ite1 = COSE_Format_validate_tstr(v1);
                 }
                 else
                   ite1 = false;
@@ -9050,15 +11750,51 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
             else
             {
               cbor_det_t k = cbor_det_map_entry_key(x);
-              bool ite;
+              bool ite0;
               if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                ite = cbor_det_read_uint64(k) == 2ULL;
+                ite0 = cbor_det_read_uint64(k) == 2ULL;
               else
-                ite = false;
-              if (ite)
+                ite0 = false;
+              if (ite0)
               {
-                cbor_det_map_entry_value(x);
-                ite3 = true;
+                cbor_det_t v1 = cbor_det_map_entry_value(x);
+                if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                {
+                  cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                  bool ite0;
+                  if (cbor_det_array_iterator_is_empty(pi))
+                    ite0 = false;
+                  else
+                    ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                  bool ite1;
+                  if (ite0)
+                  {
+                    bool pcont = true;
+                    while (pcont)
+                    {
+                      cbor_det_array_iterator_t i1 = pi;
+                      bool ite;
+                      if (cbor_det_array_iterator_is_empty(pi))
+                        ite = false;
+                      else
+                        ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                      if (!ite)
+                      {
+                        pi = i1;
+                        pcont = false;
+                      }
+                    }
+                    ite1 = true;
+                  }
+                  else
+                    ite1 = false;
+                  if (ite1)
+                    ite3 = cbor_det_array_iterator_is_empty(pi);
+                  else
+                    ite3 = false;
+                }
+                else
+                  ite3 = false;
               }
               else
                 ite3 = false;
@@ -9078,8 +11814,11 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
               ite = false;
             if (ite)
             {
-              cbor_det_map_entry_value(x);
-              ite5 = true;
+              cbor_det_t v1 = cbor_det_map_entry_value(x);
+              if (COSE_Format_validate_tstr(v1))
+                ite5 = true;
+              else
+                ite5 = COSE_Format_validate_int(v1);
             }
             else
               ite5 = false;
@@ -9098,10 +11837,7 @@ bool COSE_Format_aux_env24_map_constraint_6(cbor_det_map_entry_t x)
           else
             ite = false;
           if (ite)
-          {
-            cbor_det_map_entry_value(x);
-            ite7 = true;
-          }
+            ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(x));
           else
             ite7 = false;
         }
@@ -9205,7 +11941,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
         ite0 = MGOK;
       }
       else
-        ite0 = MGCutFail;
+        ite0 = MGFail;
     }
     else
       ite0 =
@@ -9306,7 +12042,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               ite0 = MGOK;
             }
             else
-              ite0 = MGCutFail;
+              ite0 = MGFail;
           }
           else
             ite0 =
@@ -9391,7 +12127,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               ite0 = MGOK;
             }
             else
-              ite0 = MGCutFail;
+              ite0 = MGFail;
           }
           else
             ite0 =
@@ -9471,7 +12207,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
               ite = MGOK;
             }
             else
-              ite = MGCutFail;
+              ite = MGFail;
           }
           else
             ite =
@@ -9671,8 +12407,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         ite = false;
                       if (ite)
                       {
-                        cbor_det_map_entry_value(chd);
-                        ite0 = true;
+                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                        if (COSE_Format_validate_int(v1))
+                          ite0 = true;
+                        else
+                          ite0 = COSE_Format_validate_tstr(v1);
                       }
                       else
                         ite0 = false;
@@ -9691,8 +12430,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           ite = false;
                         if (ite)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite2 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (COSE_Format_validate_int(v1))
+                            ite2 = true;
+                          else
+                            ite2 = COSE_Format_validate_tstr(v1);
                         }
                         else
                           ite2 = false;
@@ -9705,15 +12447,51 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                     else
                     {
                       cbor_det_t k = cbor_det_map_entry_key(chd);
-                      bool ite;
+                      bool ite0;
                       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                        ite = cbor_det_read_uint64(k) == 2ULL;
+                        ite0 = cbor_det_read_uint64(k) == 2ULL;
                       else
-                        ite = false;
-                      if (ite)
+                        ite0 = false;
+                      if (ite0)
                       {
-                        cbor_det_map_entry_value(chd);
-                        ite3 = true;
+                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                        {
+                          cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                          bool ite0;
+                          if (cbor_det_array_iterator_is_empty(pi))
+                            ite0 = false;
+                          else
+                            ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                          bool ite1;
+                          if (ite0)
+                          {
+                            bool pcont = true;
+                            while (pcont)
+                            {
+                              cbor_det_array_iterator_t i1 = pi;
+                              bool ite;
+                              if (cbor_det_array_iterator_is_empty(pi))
+                                ite = false;
+                              else
+                                ite = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                              if (!ite)
+                              {
+                                pi = i1;
+                                pcont = false;
+                              }
+                            }
+                            ite1 = true;
+                          }
+                          else
+                            ite1 = false;
+                          if (ite1)
+                            ite3 = cbor_det_array_iterator_is_empty(pi);
+                          else
+                            ite3 = false;
+                        }
+                        else
+                          ite3 = false;
                       }
                       else
                         ite3 = false;
@@ -9734,8 +12512,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           ite = false;
                         if (ite)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite0 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (COSE_Format_validate_int(v1))
+                            ite0 = true;
+                          else
+                            ite0 = COSE_Format_validate_tstr(v1);
                         }
                         else
                           ite0 = false;
@@ -9754,8 +12535,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite1 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_int(v1))
+                              ite1 = true;
+                            else
+                              ite1 = COSE_Format_validate_tstr(v1);
                           }
                           else
                             ite1 = false;
@@ -9767,15 +12551,52 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       else
                       {
                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                        bool ite;
+                        bool ite0;
                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                          ite = cbor_det_read_uint64(k) == 2ULL;
+                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                         else
-                          ite = false;
-                        if (ite)
+                          ite0 = false;
+                        if (ite0)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite4 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                          {
+                            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                            bool ite0;
+                            if (cbor_det_array_iterator_is_empty(pi))
+                              ite0 = false;
+                            else
+                              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                            bool ite1;
+                            if (ite0)
+                            {
+                              bool pcont = true;
+                              while (pcont)
+                              {
+                                cbor_det_array_iterator_t i1 = pi;
+                                bool ite;
+                                if (cbor_det_array_iterator_is_empty(pi))
+                                  ite = false;
+                                else
+                                  ite =
+                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                if (!ite)
+                                {
+                                  pi = i1;
+                                  pcont = false;
+                                }
+                              }
+                              ite1 = true;
+                            }
+                            else
+                              ite1 = false;
+                            if (ite1)
+                              ite4 = cbor_det_array_iterator_is_empty(pi);
+                            else
+                              ite4 = false;
+                          }
+                          else
+                            ite4 = false;
                         }
                         else
                           ite4 = false;
@@ -9796,8 +12617,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         ite = false;
                       if (ite)
                       {
-                        cbor_det_map_entry_value(chd);
-                        ite5 = true;
+                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                        if (COSE_Format_validate_tstr(v1))
+                          ite5 = true;
+                        else
+                          ite5 = COSE_Format_validate_int(v1);
                       }
                       else
                         ite5 = false;
@@ -9818,8 +12642,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           ite = false;
                         if (ite)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite0 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (COSE_Format_validate_int(v1))
+                            ite0 = true;
+                          else
+                            ite0 = COSE_Format_validate_tstr(v1);
                         }
                         else
                           ite0 = false;
@@ -9838,8 +12665,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite1 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_int(v1))
+                              ite1 = true;
+                            else
+                              ite1 = COSE_Format_validate_tstr(v1);
                           }
                           else
                             ite1 = false;
@@ -9852,15 +12682,52 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       else
                       {
                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                        bool ite;
+                        bool ite0;
                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                          ite = cbor_det_read_uint64(k) == 2ULL;
+                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                         else
-                          ite = false;
-                        if (ite)
+                          ite0 = false;
+                        if (ite0)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite2 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                          {
+                            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                            bool ite0;
+                            if (cbor_det_array_iterator_is_empty(pi))
+                              ite0 = false;
+                            else
+                              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                            bool ite1;
+                            if (ite0)
+                            {
+                              bool pcont = true;
+                              while (pcont)
+                              {
+                                cbor_det_array_iterator_t i1 = pi;
+                                bool ite;
+                                if (cbor_det_array_iterator_is_empty(pi))
+                                  ite = false;
+                                else
+                                  ite =
+                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                if (!ite)
+                                {
+                                  pi = i1;
+                                  pcont = false;
+                                }
+                              }
+                              ite1 = true;
+                            }
+                            else
+                              ite1 = false;
+                            if (ite1)
+                              ite2 = cbor_det_array_iterator_is_empty(pi);
+                            else
+                              ite2 = false;
+                          }
+                          else
+                            ite2 = false;
                         }
                         else
                           ite2 = false;
@@ -9881,8 +12748,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite0 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_int(v1))
+                              ite0 = true;
+                            else
+                              ite0 = COSE_Format_validate_tstr(v1);
                           }
                           else
                             ite0 = false;
@@ -9901,8 +12771,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite1 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_int(v1))
+                                ite1 = true;
+                              else
+                                ite1 = COSE_Format_validate_tstr(v1);
                             }
                             else
                               ite1 = false;
@@ -9914,15 +12787,52 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         else
                         {
                           cbor_det_t k = cbor_det_map_entry_key(chd);
-                          bool ite;
+                          bool ite0;
                           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                            ite = cbor_det_read_uint64(k) == 2ULL;
+                            ite0 = cbor_det_read_uint64(k) == 2ULL;
                           else
-                            ite = false;
-                          if (ite)
+                            ite0 = false;
+                          if (ite0)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite3 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                            {
+                              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                              bool ite0;
+                              if (cbor_det_array_iterator_is_empty(pi))
+                                ite0 = false;
+                              else
+                                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                              bool ite1;
+                              if (ite0)
+                              {
+                                bool pcont = true;
+                                while (pcont)
+                                {
+                                  cbor_det_array_iterator_t i1 = pi;
+                                  bool ite;
+                                  if (cbor_det_array_iterator_is_empty(pi))
+                                    ite = false;
+                                  else
+                                    ite =
+                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                  if (!ite)
+                                  {
+                                    pi = i1;
+                                    pcont = false;
+                                  }
+                                }
+                                ite1 = true;
+                              }
+                              else
+                                ite1 = false;
+                              if (ite1)
+                                ite3 = cbor_det_array_iterator_is_empty(pi);
+                              else
+                                ite3 = false;
+                            }
+                            else
+                              ite3 = false;
                           }
                           else
                             ite3 = false;
@@ -9942,8 +12852,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           ite = false;
                         if (ite)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite6 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (COSE_Format_validate_tstr(v1))
+                            ite6 = true;
+                          else
+                            ite6 = COSE_Format_validate_int(v1);
                         }
                         else
                           ite6 = false;
@@ -9963,10 +12876,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       else
                         ite = false;
                       if (ite)
-                      {
-                        cbor_det_map_entry_value(chd);
-                        ite7 = true;
-                      }
+                        ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                       else
                         ite7 = false;
                     }
@@ -9986,8 +12896,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           ite = false;
                         if (ite)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite0 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (COSE_Format_validate_int(v1))
+                            ite0 = true;
+                          else
+                            ite0 = COSE_Format_validate_tstr(v1);
                         }
                         else
                           ite0 = false;
@@ -10006,8 +12919,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite1 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_int(v1))
+                              ite1 = true;
+                            else
+                              ite1 = COSE_Format_validate_tstr(v1);
                           }
                           else
                             ite1 = false;
@@ -10020,15 +12936,52 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       else
                       {
                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                        bool ite;
+                        bool ite0;
                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                          ite = cbor_det_read_uint64(k) == 2ULL;
+                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                         else
-                          ite = false;
-                        if (ite)
+                          ite0 = false;
+                        if (ite0)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite2 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                          {
+                            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                            bool ite0;
+                            if (cbor_det_array_iterator_is_empty(pi))
+                              ite0 = false;
+                            else
+                              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                            bool ite1;
+                            if (ite0)
+                            {
+                              bool pcont = true;
+                              while (pcont)
+                              {
+                                cbor_det_array_iterator_t i1 = pi;
+                                bool ite;
+                                if (cbor_det_array_iterator_is_empty(pi))
+                                  ite = false;
+                                else
+                                  ite =
+                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                if (!ite)
+                                {
+                                  pi = i1;
+                                  pcont = false;
+                                }
+                              }
+                              ite1 = true;
+                            }
+                            else
+                              ite1 = false;
+                            if (ite1)
+                              ite2 = cbor_det_array_iterator_is_empty(pi);
+                            else
+                              ite2 = false;
+                          }
+                          else
+                            ite2 = false;
                         }
                         else
                           ite2 = false;
@@ -10049,8 +13002,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite0 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_int(v1))
+                              ite0 = true;
+                            else
+                              ite0 = COSE_Format_validate_tstr(v1);
                           }
                           else
                             ite0 = false;
@@ -10069,8 +13025,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite1 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_int(v1))
+                                ite1 = true;
+                              else
+                                ite1 = COSE_Format_validate_tstr(v1);
                             }
                             else
                               ite1 = false;
@@ -10082,15 +13041,52 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         else
                         {
                           cbor_det_t k = cbor_det_map_entry_key(chd);
-                          bool ite;
+                          bool ite0;
                           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                            ite = cbor_det_read_uint64(k) == 2ULL;
+                            ite0 = cbor_det_read_uint64(k) == 2ULL;
                           else
-                            ite = false;
-                          if (ite)
+                            ite0 = false;
+                          if (ite0)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite3 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                            {
+                              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                              bool ite0;
+                              if (cbor_det_array_iterator_is_empty(pi))
+                                ite0 = false;
+                              else
+                                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                              bool ite1;
+                              if (ite0)
+                              {
+                                bool pcont = true;
+                                while (pcont)
+                                {
+                                  cbor_det_array_iterator_t i1 = pi;
+                                  bool ite;
+                                  if (cbor_det_array_iterator_is_empty(pi))
+                                    ite = false;
+                                  else
+                                    ite =
+                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                  if (!ite)
+                                  {
+                                    pi = i1;
+                                    pcont = false;
+                                  }
+                                }
+                                ite1 = true;
+                              }
+                              else
+                                ite1 = false;
+                              if (ite1)
+                                ite3 = cbor_det_array_iterator_is_empty(pi);
+                              else
+                                ite3 = false;
+                            }
+                            else
+                              ite3 = false;
                           }
                           else
                             ite3 = false;
@@ -10111,8 +13107,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           ite = false;
                         if (ite)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite4 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (COSE_Format_validate_tstr(v1))
+                            ite4 = true;
+                          else
+                            ite4 = COSE_Format_validate_int(v1);
                         }
                         else
                           ite4 = false;
@@ -10133,8 +13132,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite0 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_int(v1))
+                              ite0 = true;
+                            else
+                              ite0 = COSE_Format_validate_tstr(v1);
                           }
                           else
                             ite0 = false;
@@ -10153,8 +13155,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite1 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_int(v1))
+                                ite1 = true;
+                              else
+                                ite1 = COSE_Format_validate_tstr(v1);
                             }
                             else
                               ite1 = false;
@@ -10167,15 +13172,52 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         else
                         {
                           cbor_det_t k = cbor_det_map_entry_key(chd);
-                          bool ite;
+                          bool ite0;
                           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                            ite = cbor_det_read_uint64(k) == 2ULL;
+                            ite0 = cbor_det_read_uint64(k) == 2ULL;
                           else
-                            ite = false;
-                          if (ite)
+                            ite0 = false;
+                          if (ite0)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite2 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                            {
+                              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                              bool ite0;
+                              if (cbor_det_array_iterator_is_empty(pi))
+                                ite0 = false;
+                              else
+                                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                              bool ite1;
+                              if (ite0)
+                              {
+                                bool pcont = true;
+                                while (pcont)
+                                {
+                                  cbor_det_array_iterator_t i1 = pi;
+                                  bool ite;
+                                  if (cbor_det_array_iterator_is_empty(pi))
+                                    ite = false;
+                                  else
+                                    ite =
+                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                  if (!ite)
+                                  {
+                                    pi = i1;
+                                    pcont = false;
+                                  }
+                                }
+                                ite1 = true;
+                              }
+                              else
+                                ite1 = false;
+                              if (ite1)
+                                ite2 = cbor_det_array_iterator_is_empty(pi);
+                              else
+                                ite2 = false;
+                            }
+                            else
+                              ite2 = false;
                           }
                           else
                             ite2 = false;
@@ -10196,8 +13238,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite0 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_int(v1))
+                                ite0 = true;
+                              else
+                                ite0 = COSE_Format_validate_tstr(v1);
                             }
                             else
                               ite0 = false;
@@ -10216,8 +13261,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite1 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_int(v1))
+                                  ite1 = true;
+                                else
+                                  ite1 = COSE_Format_validate_tstr(v1);
                               }
                               else
                                 ite1 = false;
@@ -10229,15 +13277,53 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           else
                           {
                             cbor_det_t k = cbor_det_map_entry_key(chd);
-                            bool ite;
+                            bool ite0;
                             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                              ite = cbor_det_read_uint64(k) == 2ULL;
+                              ite0 = cbor_det_read_uint64(k) == 2ULL;
                             else
-                              ite = false;
-                            if (ite)
+                              ite0 = false;
+                            if (ite0)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite3 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                              {
+                                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                                bool ite0;
+                                if (cbor_det_array_iterator_is_empty(pi))
+                                  ite0 = false;
+                                else
+                                  ite0 =
+                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                bool ite1;
+                                if (ite0)
+                                {
+                                  bool pcont = true;
+                                  while (pcont)
+                                  {
+                                    cbor_det_array_iterator_t i1 = pi;
+                                    bool ite;
+                                    if (cbor_det_array_iterator_is_empty(pi))
+                                      ite = false;
+                                    else
+                                      ite =
+                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                    if (!ite)
+                                    {
+                                      pi = i1;
+                                      pcont = false;
+                                    }
+                                  }
+                                  ite1 = true;
+                                }
+                                else
+                                  ite1 = false;
+                                if (ite1)
+                                  ite3 = cbor_det_array_iterator_is_empty(pi);
+                                else
+                                  ite3 = false;
+                              }
+                              else
+                                ite3 = false;
                             }
                             else
                               ite3 = false;
@@ -10257,8 +13343,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite5 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_tstr(v1))
+                              ite5 = true;
+                            else
+                              ite5 = COSE_Format_validate_int(v1);
                           }
                           else
                             ite5 = false;
@@ -10277,10 +13366,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         else
                           ite = false;
                         if (ite)
-                        {
-                          cbor_det_map_entry_value(chd);
-                          ite8 = true;
-                        }
+                          ite8 = COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                         else
                           ite8 = false;
                       }
@@ -10338,8 +13424,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           ite = false;
                         if (ite)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite0 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (COSE_Format_validate_int(v1))
+                            ite0 = true;
+                          else
+                            ite0 = COSE_Format_validate_tstr(v1);
                         }
                         else
                           ite0 = false;
@@ -10358,8 +13447,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite1 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_int(v1))
+                              ite1 = true;
+                            else
+                              ite1 = COSE_Format_validate_tstr(v1);
                           }
                           else
                             ite1 = false;
@@ -10372,15 +13464,52 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                       else
                       {
                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                        bool ite;
+                        bool ite0;
                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                          ite = cbor_det_read_uint64(k) == 2ULL;
+                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                         else
-                          ite = false;
-                        if (ite)
+                          ite0 = false;
+                        if (ite0)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite2 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                          {
+                            cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                            bool ite0;
+                            if (cbor_det_array_iterator_is_empty(pi))
+                              ite0 = false;
+                            else
+                              ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                            bool ite1;
+                            if (ite0)
+                            {
+                              bool pcont = true;
+                              while (pcont)
+                              {
+                                cbor_det_array_iterator_t i1 = pi;
+                                bool ite;
+                                if (cbor_det_array_iterator_is_empty(pi))
+                                  ite = false;
+                                else
+                                  ite =
+                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                if (!ite)
+                                {
+                                  pi = i1;
+                                  pcont = false;
+                                }
+                              }
+                              ite1 = true;
+                            }
+                            else
+                              ite1 = false;
+                            if (ite1)
+                              ite2 = cbor_det_array_iterator_is_empty(pi);
+                            else
+                              ite2 = false;
+                          }
+                          else
+                            ite2 = false;
                         }
                         else
                           ite2 = false;
@@ -10401,8 +13530,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite0 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_int(v1))
+                              ite0 = true;
+                            else
+                              ite0 = COSE_Format_validate_tstr(v1);
                           }
                           else
                             ite0 = false;
@@ -10421,8 +13553,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite1 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_int(v1))
+                                ite1 = true;
+                              else
+                                ite1 = COSE_Format_validate_tstr(v1);
                             }
                             else
                               ite1 = false;
@@ -10434,15 +13569,52 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         else
                         {
                           cbor_det_t k = cbor_det_map_entry_key(chd);
-                          bool ite;
+                          bool ite0;
                           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                            ite = cbor_det_read_uint64(k) == 2ULL;
+                            ite0 = cbor_det_read_uint64(k) == 2ULL;
                           else
-                            ite = false;
-                          if (ite)
+                            ite0 = false;
+                          if (ite0)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite3 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                            {
+                              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                              bool ite0;
+                              if (cbor_det_array_iterator_is_empty(pi))
+                                ite0 = false;
+                              else
+                                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                              bool ite1;
+                              if (ite0)
+                              {
+                                bool pcont = true;
+                                while (pcont)
+                                {
+                                  cbor_det_array_iterator_t i1 = pi;
+                                  bool ite;
+                                  if (cbor_det_array_iterator_is_empty(pi))
+                                    ite = false;
+                                  else
+                                    ite =
+                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                  if (!ite)
+                                  {
+                                    pi = i1;
+                                    pcont = false;
+                                  }
+                                }
+                                ite1 = true;
+                              }
+                              else
+                                ite1 = false;
+                              if (ite1)
+                                ite3 = cbor_det_array_iterator_is_empty(pi);
+                              else
+                                ite3 = false;
+                            }
+                            else
+                              ite3 = false;
                           }
                           else
                             ite3 = false;
@@ -10463,8 +13635,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           ite = false;
                         if (ite)
                         {
-                          cbor_det_map_entry_value(chd);
-                          ite4 = true;
+                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                          if (COSE_Format_validate_tstr(v1))
+                            ite4 = true;
+                          else
+                            ite4 = COSE_Format_validate_int(v1);
                         }
                         else
                           ite4 = false;
@@ -10485,8 +13660,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite0 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_int(v1))
+                              ite0 = true;
+                            else
+                              ite0 = COSE_Format_validate_tstr(v1);
                           }
                           else
                             ite0 = false;
@@ -10505,8 +13683,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite1 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_int(v1))
+                                ite1 = true;
+                              else
+                                ite1 = COSE_Format_validate_tstr(v1);
                             }
                             else
                               ite1 = false;
@@ -10519,15 +13700,52 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         else
                         {
                           cbor_det_t k = cbor_det_map_entry_key(chd);
-                          bool ite;
+                          bool ite0;
                           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                            ite = cbor_det_read_uint64(k) == 2ULL;
+                            ite0 = cbor_det_read_uint64(k) == 2ULL;
                           else
-                            ite = false;
-                          if (ite)
+                            ite0 = false;
+                          if (ite0)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite2 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                            {
+                              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                              bool ite0;
+                              if (cbor_det_array_iterator_is_empty(pi))
+                                ite0 = false;
+                              else
+                                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                              bool ite1;
+                              if (ite0)
+                              {
+                                bool pcont = true;
+                                while (pcont)
+                                {
+                                  cbor_det_array_iterator_t i1 = pi;
+                                  bool ite;
+                                  if (cbor_det_array_iterator_is_empty(pi))
+                                    ite = false;
+                                  else
+                                    ite =
+                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                  if (!ite)
+                                  {
+                                    pi = i1;
+                                    pcont = false;
+                                  }
+                                }
+                                ite1 = true;
+                              }
+                              else
+                                ite1 = false;
+                              if (ite1)
+                                ite2 = cbor_det_array_iterator_is_empty(pi);
+                              else
+                                ite2 = false;
+                            }
+                            else
+                              ite2 = false;
                           }
                           else
                             ite2 = false;
@@ -10548,8 +13766,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite0 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_int(v1))
+                                ite0 = true;
+                              else
+                                ite0 = COSE_Format_validate_tstr(v1);
                             }
                             else
                               ite0 = false;
@@ -10568,8 +13789,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite1 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_int(v1))
+                                  ite1 = true;
+                                else
+                                  ite1 = COSE_Format_validate_tstr(v1);
                               }
                               else
                                 ite1 = false;
@@ -10581,15 +13805,53 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           else
                           {
                             cbor_det_t k = cbor_det_map_entry_key(chd);
-                            bool ite;
+                            bool ite0;
                             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                              ite = cbor_det_read_uint64(k) == 2ULL;
+                              ite0 = cbor_det_read_uint64(k) == 2ULL;
                             else
-                              ite = false;
-                            if (ite)
+                              ite0 = false;
+                            if (ite0)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite3 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                              {
+                                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                                bool ite0;
+                                if (cbor_det_array_iterator_is_empty(pi))
+                                  ite0 = false;
+                                else
+                                  ite0 =
+                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                bool ite1;
+                                if (ite0)
+                                {
+                                  bool pcont = true;
+                                  while (pcont)
+                                  {
+                                    cbor_det_array_iterator_t i1 = pi;
+                                    bool ite;
+                                    if (cbor_det_array_iterator_is_empty(pi))
+                                      ite = false;
+                                    else
+                                      ite =
+                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                    if (!ite)
+                                    {
+                                      pi = i1;
+                                      pcont = false;
+                                    }
+                                  }
+                                  ite1 = true;
+                                }
+                                else
+                                  ite1 = false;
+                                if (ite1)
+                                  ite3 = cbor_det_array_iterator_is_empty(pi);
+                                else
+                                  ite3 = false;
+                              }
+                              else
+                                ite3 = false;
                             }
                             else
                               ite3 = false;
@@ -10609,8 +13871,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite5 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_tstr(v1))
+                              ite5 = true;
+                            else
+                              ite5 = COSE_Format_validate_int(v1);
                           }
                           else
                             ite5 = false;
@@ -10630,10 +13895,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         else
                           ite = false;
                         if (ite)
-                        {
-                          cbor_det_map_entry_value(chd);
-                          ite6 = true;
-                        }
+                          ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                         else
                           ite6 = false;
                       }
@@ -10653,8 +13915,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite0 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_int(v1))
+                              ite0 = true;
+                            else
+                              ite0 = COSE_Format_validate_tstr(v1);
                           }
                           else
                             ite0 = false;
@@ -10673,8 +13938,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite1 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_int(v1))
+                                ite1 = true;
+                              else
+                                ite1 = COSE_Format_validate_tstr(v1);
                             }
                             else
                               ite1 = false;
@@ -10687,15 +13955,52 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                         else
                         {
                           cbor_det_t k = cbor_det_map_entry_key(chd);
-                          bool ite;
+                          bool ite0;
                           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                            ite = cbor_det_read_uint64(k) == 2ULL;
+                            ite0 = cbor_det_read_uint64(k) == 2ULL;
                           else
-                            ite = false;
-                          if (ite)
+                            ite0 = false;
+                          if (ite0)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite2 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                            {
+                              cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                              bool ite0;
+                              if (cbor_det_array_iterator_is_empty(pi))
+                                ite0 = false;
+                              else
+                                ite0 = COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                              bool ite1;
+                              if (ite0)
+                              {
+                                bool pcont = true;
+                                while (pcont)
+                                {
+                                  cbor_det_array_iterator_t i1 = pi;
+                                  bool ite;
+                                  if (cbor_det_array_iterator_is_empty(pi))
+                                    ite = false;
+                                  else
+                                    ite =
+                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                  if (!ite)
+                                  {
+                                    pi = i1;
+                                    pcont = false;
+                                  }
+                                }
+                                ite1 = true;
+                              }
+                              else
+                                ite1 = false;
+                              if (ite1)
+                                ite2 = cbor_det_array_iterator_is_empty(pi);
+                              else
+                                ite2 = false;
+                            }
+                            else
+                              ite2 = false;
                           }
                           else
                             ite2 = false;
@@ -10716,8 +14021,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite0 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_int(v1))
+                                ite0 = true;
+                              else
+                                ite0 = COSE_Format_validate_tstr(v1);
                             }
                             else
                               ite0 = false;
@@ -10736,8 +14044,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite1 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_int(v1))
+                                  ite1 = true;
+                                else
+                                  ite1 = COSE_Format_validate_tstr(v1);
                               }
                               else
                                 ite1 = false;
@@ -10749,15 +14060,53 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           else
                           {
                             cbor_det_t k = cbor_det_map_entry_key(chd);
-                            bool ite;
+                            bool ite0;
                             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                              ite = cbor_det_read_uint64(k) == 2ULL;
+                              ite0 = cbor_det_read_uint64(k) == 2ULL;
                             else
-                              ite = false;
-                            if (ite)
+                              ite0 = false;
+                            if (ite0)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite3 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                              {
+                                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                                bool ite0;
+                                if (cbor_det_array_iterator_is_empty(pi))
+                                  ite0 = false;
+                                else
+                                  ite0 =
+                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                bool ite1;
+                                if (ite0)
+                                {
+                                  bool pcont = true;
+                                  while (pcont)
+                                  {
+                                    cbor_det_array_iterator_t i1 = pi;
+                                    bool ite;
+                                    if (cbor_det_array_iterator_is_empty(pi))
+                                      ite = false;
+                                    else
+                                      ite =
+                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                    if (!ite)
+                                    {
+                                      pi = i1;
+                                      pcont = false;
+                                    }
+                                  }
+                                  ite1 = true;
+                                }
+                                else
+                                  ite1 = false;
+                                if (ite1)
+                                  ite3 = cbor_det_array_iterator_is_empty(pi);
+                                else
+                                  ite3 = false;
+                              }
+                              else
+                                ite3 = false;
                             }
                             else
                               ite3 = false;
@@ -10778,8 +14127,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             ite = false;
                           if (ite)
                           {
-                            cbor_det_map_entry_value(chd);
-                            ite4 = true;
+                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                            if (COSE_Format_validate_tstr(v1))
+                              ite4 = true;
+                            else
+                              ite4 = COSE_Format_validate_int(v1);
                           }
                           else
                             ite4 = false;
@@ -10800,8 +14152,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite0 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_int(v1))
+                                ite0 = true;
+                              else
+                                ite0 = COSE_Format_validate_tstr(v1);
                             }
                             else
                               ite0 = false;
@@ -10820,8 +14175,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite1 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_int(v1))
+                                  ite1 = true;
+                                else
+                                  ite1 = COSE_Format_validate_tstr(v1);
                               }
                               else
                                 ite1 = false;
@@ -10834,15 +14192,53 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           else
                           {
                             cbor_det_t k = cbor_det_map_entry_key(chd);
-                            bool ite;
+                            bool ite0;
                             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                              ite = cbor_det_read_uint64(k) == 2ULL;
+                              ite0 = cbor_det_read_uint64(k) == 2ULL;
                             else
-                              ite = false;
-                            if (ite)
+                              ite0 = false;
+                            if (ite0)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite2 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                              {
+                                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                                bool ite0;
+                                if (cbor_det_array_iterator_is_empty(pi))
+                                  ite0 = false;
+                                else
+                                  ite0 =
+                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                bool ite1;
+                                if (ite0)
+                                {
+                                  bool pcont = true;
+                                  while (pcont)
+                                  {
+                                    cbor_det_array_iterator_t i1 = pi;
+                                    bool ite;
+                                    if (cbor_det_array_iterator_is_empty(pi))
+                                      ite = false;
+                                    else
+                                      ite =
+                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                    if (!ite)
+                                    {
+                                      pi = i1;
+                                      pcont = false;
+                                    }
+                                  }
+                                  ite1 = true;
+                                }
+                                else
+                                  ite1 = false;
+                                if (ite1)
+                                  ite2 = cbor_det_array_iterator_is_empty(pi);
+                                else
+                                  ite2 = false;
+                              }
+                              else
+                                ite2 = false;
                             }
                             else
                               ite2 = false;
@@ -10863,8 +14259,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite0 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_int(v1))
+                                  ite0 = true;
+                                else
+                                  ite0 = COSE_Format_validate_tstr(v1);
                               }
                               else
                                 ite0 = false;
@@ -10883,8 +14282,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite1 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_int(v1))
+                                    ite1 = true;
+                                  else
+                                    ite1 = COSE_Format_validate_tstr(v1);
                                 }
                                 else
                                   ite1 = false;
@@ -10896,15 +14298,53 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             else
                             {
                               cbor_det_t k = cbor_det_map_entry_key(chd);
-                              bool ite;
+                              bool ite0;
                               if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                ite = cbor_det_read_uint64(k) == 2ULL;
+                                ite0 = cbor_det_read_uint64(k) == 2ULL;
                               else
-                                ite = false;
-                              if (ite)
+                                ite0 = false;
+                              if (ite0)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite3 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                {
+                                  cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                                  bool ite0;
+                                  if (cbor_det_array_iterator_is_empty(pi))
+                                    ite0 = false;
+                                  else
+                                    ite0 =
+                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                  bool ite1;
+                                  if (ite0)
+                                  {
+                                    bool pcont = true;
+                                    while (pcont)
+                                    {
+                                      cbor_det_array_iterator_t i1 = pi;
+                                      bool ite;
+                                      if (cbor_det_array_iterator_is_empty(pi))
+                                        ite = false;
+                                      else
+                                        ite =
+                                          COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                      if (!ite)
+                                      {
+                                        pi = i1;
+                                        pcont = false;
+                                      }
+                                    }
+                                    ite1 = true;
+                                  }
+                                  else
+                                    ite1 = false;
+                                  if (ite1)
+                                    ite3 = cbor_det_array_iterator_is_empty(pi);
+                                  else
+                                    ite3 = false;
+                                }
+                                else
+                                  ite3 = false;
                               }
                               else
                                 ite3 = false;
@@ -10924,8 +14364,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite5 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_tstr(v1))
+                                ite5 = true;
+                              else
+                                ite5 = COSE_Format_validate_int(v1);
                             }
                             else
                               ite5 = false;
@@ -10944,10 +14387,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           else
                             ite = false;
                           if (ite)
-                          {
-                            cbor_det_map_entry_value(chd);
-                            ite7 = true;
-                          }
+                            ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                           else
                             ite7 = false;
                         }
@@ -11180,8 +14620,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite0 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_int(v1))
+                                ite0 = true;
+                              else
+                                ite0 = COSE_Format_validate_tstr(v1);
                             }
                             else
                               ite0 = false;
@@ -11200,8 +14643,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite2 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_int(v1))
+                                  ite2 = true;
+                                else
+                                  ite2 = COSE_Format_validate_tstr(v1);
                               }
                               else
                                 ite2 = false;
@@ -11214,15 +14660,53 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                           else
                           {
                             cbor_det_t k = cbor_det_map_entry_key(chd);
-                            bool ite;
+                            bool ite0;
                             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                              ite = cbor_det_read_uint64(k) == 2ULL;
+                              ite0 = cbor_det_read_uint64(k) == 2ULL;
                             else
-                              ite = false;
-                            if (ite)
+                              ite0 = false;
+                            if (ite0)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite3 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                              {
+                                cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                                bool ite0;
+                                if (cbor_det_array_iterator_is_empty(pi))
+                                  ite0 = false;
+                                else
+                                  ite0 =
+                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                bool ite1;
+                                if (ite0)
+                                {
+                                  bool pcont = true;
+                                  while (pcont)
+                                  {
+                                    cbor_det_array_iterator_t i1 = pi;
+                                    bool ite;
+                                    if (cbor_det_array_iterator_is_empty(pi))
+                                      ite = false;
+                                    else
+                                      ite =
+                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                    if (!ite)
+                                    {
+                                      pi = i1;
+                                      pcont = false;
+                                    }
+                                  }
+                                  ite1 = true;
+                                }
+                                else
+                                  ite1 = false;
+                                if (ite1)
+                                  ite3 = cbor_det_array_iterator_is_empty(pi);
+                                else
+                                  ite3 = false;
+                              }
+                              else
+                                ite3 = false;
                             }
                             else
                               ite3 = false;
@@ -11243,8 +14727,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite0 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_int(v1))
+                                  ite0 = true;
+                                else
+                                  ite0 = COSE_Format_validate_tstr(v1);
                               }
                               else
                                 ite0 = false;
@@ -11263,8 +14750,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite1 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_int(v1))
+                                    ite1 = true;
+                                  else
+                                    ite1 = COSE_Format_validate_tstr(v1);
                                 }
                                 else
                                   ite1 = false;
@@ -11276,15 +14766,53 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             else
                             {
                               cbor_det_t k = cbor_det_map_entry_key(chd);
-                              bool ite;
+                              bool ite0;
                               if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                ite = cbor_det_read_uint64(k) == 2ULL;
+                                ite0 = cbor_det_read_uint64(k) == 2ULL;
                               else
-                                ite = false;
-                              if (ite)
+                                ite0 = false;
+                              if (ite0)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite4 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                {
+                                  cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                                  bool ite0;
+                                  if (cbor_det_array_iterator_is_empty(pi))
+                                    ite0 = false;
+                                  else
+                                    ite0 =
+                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                  bool ite1;
+                                  if (ite0)
+                                  {
+                                    bool pcont = true;
+                                    while (pcont)
+                                    {
+                                      cbor_det_array_iterator_t i1 = pi;
+                                      bool ite;
+                                      if (cbor_det_array_iterator_is_empty(pi))
+                                        ite = false;
+                                      else
+                                        ite =
+                                          COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                      if (!ite)
+                                      {
+                                        pi = i1;
+                                        pcont = false;
+                                      }
+                                    }
+                                    ite1 = true;
+                                  }
+                                  else
+                                    ite1 = false;
+                                  if (ite1)
+                                    ite4 = cbor_det_array_iterator_is_empty(pi);
+                                  else
+                                    ite4 = false;
+                                }
+                                else
+                                  ite4 = false;
                               }
                               else
                                 ite4 = false;
@@ -11305,8 +14833,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               ite = false;
                             if (ite)
                             {
-                              cbor_det_map_entry_value(chd);
-                              ite5 = true;
+                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                              if (COSE_Format_validate_tstr(v1))
+                                ite5 = true;
+                              else
+                                ite5 = COSE_Format_validate_int(v1);
                             }
                             else
                               ite5 = false;
@@ -11327,8 +14858,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite0 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_int(v1))
+                                  ite0 = true;
+                                else
+                                  ite0 = COSE_Format_validate_tstr(v1);
                               }
                               else
                                 ite0 = false;
@@ -11347,8 +14881,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite1 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_int(v1))
+                                    ite1 = true;
+                                  else
+                                    ite1 = COSE_Format_validate_tstr(v1);
                                 }
                                 else
                                   ite1 = false;
@@ -11361,15 +14898,53 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             else
                             {
                               cbor_det_t k = cbor_det_map_entry_key(chd);
-                              bool ite;
+                              bool ite0;
                               if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                ite = cbor_det_read_uint64(k) == 2ULL;
+                                ite0 = cbor_det_read_uint64(k) == 2ULL;
                               else
-                                ite = false;
-                              if (ite)
+                                ite0 = false;
+                              if (ite0)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite2 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                {
+                                  cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                                  bool ite0;
+                                  if (cbor_det_array_iterator_is_empty(pi))
+                                    ite0 = false;
+                                  else
+                                    ite0 =
+                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                  bool ite1;
+                                  if (ite0)
+                                  {
+                                    bool pcont = true;
+                                    while (pcont)
+                                    {
+                                      cbor_det_array_iterator_t i1 = pi;
+                                      bool ite;
+                                      if (cbor_det_array_iterator_is_empty(pi))
+                                        ite = false;
+                                      else
+                                        ite =
+                                          COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                      if (!ite)
+                                      {
+                                        pi = i1;
+                                        pcont = false;
+                                      }
+                                    }
+                                    ite1 = true;
+                                  }
+                                  else
+                                    ite1 = false;
+                                  if (ite1)
+                                    ite2 = cbor_det_array_iterator_is_empty(pi);
+                                  else
+                                    ite2 = false;
+                                }
+                                else
+                                  ite2 = false;
                               }
                               else
                                 ite2 = false;
@@ -11390,8 +14965,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite0 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_int(v1))
+                                    ite0 = true;
+                                  else
+                                    ite0 = COSE_Format_validate_tstr(v1);
                                 }
                                 else
                                   ite0 = false;
@@ -11410,8 +14988,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite1 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_int(v1))
+                                      ite1 = true;
+                                    else
+                                      ite1 = COSE_Format_validate_tstr(v1);
                                   }
                                   else
                                     ite1 = false;
@@ -11423,15 +15004,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               else
                               {
                                 cbor_det_t k = cbor_det_map_entry_key(chd);
-                                bool ite;
+                                bool ite0;
                                 if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                  ite = cbor_det_read_uint64(k) == 2ULL;
+                                  ite0 = cbor_det_read_uint64(k) == 2ULL;
                                 else
-                                  ite = false;
-                                if (ite)
+                                  ite0 = false;
+                                if (ite0)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite3 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                  {
+                                    cbor_det_array_iterator_t
+                                    pi = cbor_det_array_iterator_start(v1);
+                                    bool ite0;
+                                    if (cbor_det_array_iterator_is_empty(pi))
+                                      ite0 = false;
+                                    else
+                                      ite0 =
+                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                    bool ite1;
+                                    if (ite0)
+                                    {
+                                      bool pcont = true;
+                                      while (pcont)
+                                      {
+                                        cbor_det_array_iterator_t i1 = pi;
+                                        bool ite;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite = false;
+                                        else
+                                          ite =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        if (!ite)
+                                        {
+                                          pi = i1;
+                                          pcont = false;
+                                        }
+                                      }
+                                      ite1 = true;
+                                    }
+                                    else
+                                      ite1 = false;
+                                    if (ite1)
+                                      ite3 = cbor_det_array_iterator_is_empty(pi);
+                                    else
+                                      ite3 = false;
+                                  }
+                                  else
+                                    ite3 = false;
                                 }
                                 else
                                   ite3 = false;
@@ -11451,8 +15071,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite6 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_tstr(v1))
+                                  ite6 = true;
+                                else
+                                  ite6 = COSE_Format_validate_int(v1);
                               }
                               else
                                 ite6 = false;
@@ -11472,10 +15095,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             else
                               ite = false;
                             if (ite)
-                            {
-                              cbor_det_map_entry_value(chd);
-                              ite7 = true;
-                            }
+                              ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                             else
                               ite7 = false;
                           }
@@ -11495,8 +15115,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite0 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_int(v1))
+                                  ite0 = true;
+                                else
+                                  ite0 = COSE_Format_validate_tstr(v1);
                               }
                               else
                                 ite0 = false;
@@ -11515,8 +15138,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite1 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_int(v1))
+                                    ite1 = true;
+                                  else
+                                    ite1 = COSE_Format_validate_tstr(v1);
                                 }
                                 else
                                   ite1 = false;
@@ -11529,15 +15155,53 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             else
                             {
                               cbor_det_t k = cbor_det_map_entry_key(chd);
-                              bool ite;
+                              bool ite0;
                               if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                ite = cbor_det_read_uint64(k) == 2ULL;
+                                ite0 = cbor_det_read_uint64(k) == 2ULL;
                               else
-                                ite = false;
-                              if (ite)
+                                ite0 = false;
+                              if (ite0)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite2 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                {
+                                  cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                                  bool ite0;
+                                  if (cbor_det_array_iterator_is_empty(pi))
+                                    ite0 = false;
+                                  else
+                                    ite0 =
+                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                  bool ite1;
+                                  if (ite0)
+                                  {
+                                    bool pcont = true;
+                                    while (pcont)
+                                    {
+                                      cbor_det_array_iterator_t i1 = pi;
+                                      bool ite;
+                                      if (cbor_det_array_iterator_is_empty(pi))
+                                        ite = false;
+                                      else
+                                        ite =
+                                          COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                      if (!ite)
+                                      {
+                                        pi = i1;
+                                        pcont = false;
+                                      }
+                                    }
+                                    ite1 = true;
+                                  }
+                                  else
+                                    ite1 = false;
+                                  if (ite1)
+                                    ite2 = cbor_det_array_iterator_is_empty(pi);
+                                  else
+                                    ite2 = false;
+                                }
+                                else
+                                  ite2 = false;
                               }
                               else
                                 ite2 = false;
@@ -11558,8 +15222,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite0 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_int(v1))
+                                    ite0 = true;
+                                  else
+                                    ite0 = COSE_Format_validate_tstr(v1);
                                 }
                                 else
                                   ite0 = false;
@@ -11578,8 +15245,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite1 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_int(v1))
+                                      ite1 = true;
+                                    else
+                                      ite1 = COSE_Format_validate_tstr(v1);
                                   }
                                   else
                                     ite1 = false;
@@ -11591,15 +15261,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               else
                               {
                                 cbor_det_t k = cbor_det_map_entry_key(chd);
-                                bool ite;
+                                bool ite0;
                                 if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                  ite = cbor_det_read_uint64(k) == 2ULL;
+                                  ite0 = cbor_det_read_uint64(k) == 2ULL;
                                 else
-                                  ite = false;
-                                if (ite)
+                                  ite0 = false;
+                                if (ite0)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite3 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                  {
+                                    cbor_det_array_iterator_t
+                                    pi = cbor_det_array_iterator_start(v1);
+                                    bool ite0;
+                                    if (cbor_det_array_iterator_is_empty(pi))
+                                      ite0 = false;
+                                    else
+                                      ite0 =
+                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                    bool ite1;
+                                    if (ite0)
+                                    {
+                                      bool pcont = true;
+                                      while (pcont)
+                                      {
+                                        cbor_det_array_iterator_t i1 = pi;
+                                        bool ite;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite = false;
+                                        else
+                                          ite =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        if (!ite)
+                                        {
+                                          pi = i1;
+                                          pcont = false;
+                                        }
+                                      }
+                                      ite1 = true;
+                                    }
+                                    else
+                                      ite1 = false;
+                                    if (ite1)
+                                      ite3 = cbor_det_array_iterator_is_empty(pi);
+                                    else
+                                      ite3 = false;
+                                  }
+                                  else
+                                    ite3 = false;
                                 }
                                 else
                                   ite3 = false;
@@ -11620,8 +15329,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite4 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_tstr(v1))
+                                  ite4 = true;
+                                else
+                                  ite4 = COSE_Format_validate_int(v1);
                               }
                               else
                                 ite4 = false;
@@ -11642,8 +15354,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite0 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_int(v1))
+                                    ite0 = true;
+                                  else
+                                    ite0 = COSE_Format_validate_tstr(v1);
                                 }
                                 else
                                   ite0 = false;
@@ -11662,8 +15377,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite1 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_int(v1))
+                                      ite1 = true;
+                                    else
+                                      ite1 = COSE_Format_validate_tstr(v1);
                                   }
                                   else
                                     ite1 = false;
@@ -11676,15 +15394,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               else
                               {
                                 cbor_det_t k = cbor_det_map_entry_key(chd);
-                                bool ite;
+                                bool ite0;
                                 if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                  ite = cbor_det_read_uint64(k) == 2ULL;
+                                  ite0 = cbor_det_read_uint64(k) == 2ULL;
                                 else
-                                  ite = false;
-                                if (ite)
+                                  ite0 = false;
+                                if (ite0)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite2 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                  {
+                                    cbor_det_array_iterator_t
+                                    pi = cbor_det_array_iterator_start(v1);
+                                    bool ite0;
+                                    if (cbor_det_array_iterator_is_empty(pi))
+                                      ite0 = false;
+                                    else
+                                      ite0 =
+                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                    bool ite1;
+                                    if (ite0)
+                                    {
+                                      bool pcont = true;
+                                      while (pcont)
+                                      {
+                                        cbor_det_array_iterator_t i1 = pi;
+                                        bool ite;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite = false;
+                                        else
+                                          ite =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        if (!ite)
+                                        {
+                                          pi = i1;
+                                          pcont = false;
+                                        }
+                                      }
+                                      ite1 = true;
+                                    }
+                                    else
+                                      ite1 = false;
+                                    if (ite1)
+                                      ite2 = cbor_det_array_iterator_is_empty(pi);
+                                    else
+                                      ite2 = false;
+                                  }
+                                  else
+                                    ite2 = false;
                                 }
                                 else
                                   ite2 = false;
@@ -11705,8 +15462,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite0 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_int(v1))
+                                      ite0 = true;
+                                    else
+                                      ite0 = COSE_Format_validate_tstr(v1);
                                   }
                                   else
                                     ite0 = false;
@@ -11725,8 +15485,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite1 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_int(v1))
+                                        ite1 = true;
+                                      else
+                                        ite1 = COSE_Format_validate_tstr(v1);
                                     }
                                     else
                                       ite1 = false;
@@ -11738,15 +15501,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 else
                                 {
                                   cbor_det_t k = cbor_det_map_entry_key(chd);
-                                  bool ite;
+                                  bool ite0;
                                   if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                    ite = cbor_det_read_uint64(k) == 2ULL;
+                                    ite0 = cbor_det_read_uint64(k) == 2ULL;
                                   else
-                                    ite = false;
-                                  if (ite)
+                                    ite0 = false;
+                                  if (ite0)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite3 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                    {
+                                      cbor_det_array_iterator_t
+                                      pi = cbor_det_array_iterator_start(v1);
+                                      bool ite0;
+                                      if (cbor_det_array_iterator_is_empty(pi))
+                                        ite0 = false;
+                                      else
+                                        ite0 =
+                                          COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                      bool ite1;
+                                      if (ite0)
+                                      {
+                                        bool pcont = true;
+                                        while (pcont)
+                                        {
+                                          cbor_det_array_iterator_t i1 = pi;
+                                          bool ite;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite = false;
+                                          else
+                                            ite =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          if (!ite)
+                                          {
+                                            pi = i1;
+                                            pcont = false;
+                                          }
+                                        }
+                                        ite1 = true;
+                                      }
+                                      else
+                                        ite1 = false;
+                                      if (ite1)
+                                        ite3 = cbor_det_array_iterator_is_empty(pi);
+                                      else
+                                        ite3 = false;
+                                    }
+                                    else
+                                      ite3 = false;
                                   }
                                   else
                                     ite3 = false;
@@ -11766,8 +15568,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite5 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_tstr(v1))
+                                    ite5 = true;
+                                  else
+                                    ite5 = COSE_Format_validate_int(v1);
                                 }
                                 else
                                   ite5 = false;
@@ -11786,10 +15591,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               else
                                 ite = false;
                               if (ite)
-                              {
-                                cbor_det_map_entry_value(chd);
-                                ite8 = true;
-                              }
+                                ite8 = COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                               else
                                 ite8 = false;
                             }
@@ -11852,8 +15654,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite0 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_int(v1))
+                                  ite0 = true;
+                                else
+                                  ite0 = COSE_Format_validate_tstr(v1);
                               }
                               else
                                 ite0 = false;
@@ -11872,8 +15677,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite1 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_int(v1))
+                                    ite1 = true;
+                                  else
+                                    ite1 = COSE_Format_validate_tstr(v1);
                                 }
                                 else
                                   ite1 = false;
@@ -11886,15 +15694,53 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                             else
                             {
                               cbor_det_t k = cbor_det_map_entry_key(chd);
-                              bool ite;
+                              bool ite0;
                               if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                ite = cbor_det_read_uint64(k) == 2ULL;
+                                ite0 = cbor_det_read_uint64(k) == 2ULL;
                               else
-                                ite = false;
-                              if (ite)
+                                ite0 = false;
+                              if (ite0)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite2 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                {
+                                  cbor_det_array_iterator_t pi = cbor_det_array_iterator_start(v1);
+                                  bool ite0;
+                                  if (cbor_det_array_iterator_is_empty(pi))
+                                    ite0 = false;
+                                  else
+                                    ite0 =
+                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                  bool ite1;
+                                  if (ite0)
+                                  {
+                                    bool pcont = true;
+                                    while (pcont)
+                                    {
+                                      cbor_det_array_iterator_t i1 = pi;
+                                      bool ite;
+                                      if (cbor_det_array_iterator_is_empty(pi))
+                                        ite = false;
+                                      else
+                                        ite =
+                                          COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                      if (!ite)
+                                      {
+                                        pi = i1;
+                                        pcont = false;
+                                      }
+                                    }
+                                    ite1 = true;
+                                  }
+                                  else
+                                    ite1 = false;
+                                  if (ite1)
+                                    ite2 = cbor_det_array_iterator_is_empty(pi);
+                                  else
+                                    ite2 = false;
+                                }
+                                else
+                                  ite2 = false;
                               }
                               else
                                 ite2 = false;
@@ -11915,8 +15761,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite0 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_int(v1))
+                                    ite0 = true;
+                                  else
+                                    ite0 = COSE_Format_validate_tstr(v1);
                                 }
                                 else
                                   ite0 = false;
@@ -11935,8 +15784,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite1 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_int(v1))
+                                      ite1 = true;
+                                    else
+                                      ite1 = COSE_Format_validate_tstr(v1);
                                   }
                                   else
                                     ite1 = false;
@@ -11948,15 +15800,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               else
                               {
                                 cbor_det_t k = cbor_det_map_entry_key(chd);
-                                bool ite;
+                                bool ite0;
                                 if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                  ite = cbor_det_read_uint64(k) == 2ULL;
+                                  ite0 = cbor_det_read_uint64(k) == 2ULL;
                                 else
-                                  ite = false;
-                                if (ite)
+                                  ite0 = false;
+                                if (ite0)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite3 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                  {
+                                    cbor_det_array_iterator_t
+                                    pi = cbor_det_array_iterator_start(v1);
+                                    bool ite0;
+                                    if (cbor_det_array_iterator_is_empty(pi))
+                                      ite0 = false;
+                                    else
+                                      ite0 =
+                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                    bool ite1;
+                                    if (ite0)
+                                    {
+                                      bool pcont = true;
+                                      while (pcont)
+                                      {
+                                        cbor_det_array_iterator_t i1 = pi;
+                                        bool ite;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite = false;
+                                        else
+                                          ite =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        if (!ite)
+                                        {
+                                          pi = i1;
+                                          pcont = false;
+                                        }
+                                      }
+                                      ite1 = true;
+                                    }
+                                    else
+                                      ite1 = false;
+                                    if (ite1)
+                                      ite3 = cbor_det_array_iterator_is_empty(pi);
+                                    else
+                                      ite3 = false;
+                                  }
+                                  else
+                                    ite3 = false;
                                 }
                                 else
                                   ite3 = false;
@@ -11977,8 +15868,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 ite = false;
                               if (ite)
                               {
-                                cbor_det_map_entry_value(chd);
-                                ite4 = true;
+                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                if (COSE_Format_validate_tstr(v1))
+                                  ite4 = true;
+                                else
+                                  ite4 = COSE_Format_validate_int(v1);
                               }
                               else
                                 ite4 = false;
@@ -11999,8 +15893,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite0 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_int(v1))
+                                    ite0 = true;
+                                  else
+                                    ite0 = COSE_Format_validate_tstr(v1);
                                 }
                                 else
                                   ite0 = false;
@@ -12019,8 +15916,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite1 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_int(v1))
+                                      ite1 = true;
+                                    else
+                                      ite1 = COSE_Format_validate_tstr(v1);
                                   }
                                   else
                                     ite1 = false;
@@ -12033,15 +15933,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               else
                               {
                                 cbor_det_t k = cbor_det_map_entry_key(chd);
-                                bool ite;
+                                bool ite0;
                                 if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                  ite = cbor_det_read_uint64(k) == 2ULL;
+                                  ite0 = cbor_det_read_uint64(k) == 2ULL;
                                 else
-                                  ite = false;
-                                if (ite)
+                                  ite0 = false;
+                                if (ite0)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite2 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                  {
+                                    cbor_det_array_iterator_t
+                                    pi = cbor_det_array_iterator_start(v1);
+                                    bool ite0;
+                                    if (cbor_det_array_iterator_is_empty(pi))
+                                      ite0 = false;
+                                    else
+                                      ite0 =
+                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                    bool ite1;
+                                    if (ite0)
+                                    {
+                                      bool pcont = true;
+                                      while (pcont)
+                                      {
+                                        cbor_det_array_iterator_t i1 = pi;
+                                        bool ite;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite = false;
+                                        else
+                                          ite =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        if (!ite)
+                                        {
+                                          pi = i1;
+                                          pcont = false;
+                                        }
+                                      }
+                                      ite1 = true;
+                                    }
+                                    else
+                                      ite1 = false;
+                                    if (ite1)
+                                      ite2 = cbor_det_array_iterator_is_empty(pi);
+                                    else
+                                      ite2 = false;
+                                  }
+                                  else
+                                    ite2 = false;
                                 }
                                 else
                                   ite2 = false;
@@ -12062,8 +16001,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite0 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_int(v1))
+                                      ite0 = true;
+                                    else
+                                      ite0 = COSE_Format_validate_tstr(v1);
                                   }
                                   else
                                     ite0 = false;
@@ -12082,8 +16024,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite1 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_int(v1))
+                                        ite1 = true;
+                                      else
+                                        ite1 = COSE_Format_validate_tstr(v1);
                                     }
                                     else
                                       ite1 = false;
@@ -12095,15 +16040,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 else
                                 {
                                   cbor_det_t k = cbor_det_map_entry_key(chd);
-                                  bool ite;
+                                  bool ite0;
                                   if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                    ite = cbor_det_read_uint64(k) == 2ULL;
+                                    ite0 = cbor_det_read_uint64(k) == 2ULL;
                                   else
-                                    ite = false;
-                                  if (ite)
+                                    ite0 = false;
+                                  if (ite0)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite3 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                    {
+                                      cbor_det_array_iterator_t
+                                      pi = cbor_det_array_iterator_start(v1);
+                                      bool ite0;
+                                      if (cbor_det_array_iterator_is_empty(pi))
+                                        ite0 = false;
+                                      else
+                                        ite0 =
+                                          COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                      bool ite1;
+                                      if (ite0)
+                                      {
+                                        bool pcont = true;
+                                        while (pcont)
+                                        {
+                                          cbor_det_array_iterator_t i1 = pi;
+                                          bool ite;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite = false;
+                                          else
+                                            ite =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          if (!ite)
+                                          {
+                                            pi = i1;
+                                            pcont = false;
+                                          }
+                                        }
+                                        ite1 = true;
+                                      }
+                                      else
+                                        ite1 = false;
+                                      if (ite1)
+                                        ite3 = cbor_det_array_iterator_is_empty(pi);
+                                      else
+                                        ite3 = false;
+                                    }
+                                    else
+                                      ite3 = false;
                                   }
                                   else
                                     ite3 = false;
@@ -12123,8 +16107,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite5 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_tstr(v1))
+                                    ite5 = true;
+                                  else
+                                    ite5 = COSE_Format_validate_int(v1);
                                 }
                                 else
                                   ite5 = false;
@@ -12144,10 +16131,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               else
                                 ite = false;
                               if (ite)
-                              {
-                                cbor_det_map_entry_value(chd);
-                                ite6 = true;
-                              }
+                                ite6 = COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                               else
                                 ite6 = false;
                             }
@@ -12167,8 +16151,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite0 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_int(v1))
+                                    ite0 = true;
+                                  else
+                                    ite0 = COSE_Format_validate_tstr(v1);
                                 }
                                 else
                                   ite0 = false;
@@ -12187,8 +16174,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite1 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_int(v1))
+                                      ite1 = true;
+                                    else
+                                      ite1 = COSE_Format_validate_tstr(v1);
                                   }
                                   else
                                     ite1 = false;
@@ -12201,15 +16191,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                               else
                               {
                                 cbor_det_t k = cbor_det_map_entry_key(chd);
-                                bool ite;
+                                bool ite0;
                                 if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                  ite = cbor_det_read_uint64(k) == 2ULL;
+                                  ite0 = cbor_det_read_uint64(k) == 2ULL;
                                 else
-                                  ite = false;
-                                if (ite)
+                                  ite0 = false;
+                                if (ite0)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite2 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                  {
+                                    cbor_det_array_iterator_t
+                                    pi = cbor_det_array_iterator_start(v1);
+                                    bool ite0;
+                                    if (cbor_det_array_iterator_is_empty(pi))
+                                      ite0 = false;
+                                    else
+                                      ite0 =
+                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                    bool ite1;
+                                    if (ite0)
+                                    {
+                                      bool pcont = true;
+                                      while (pcont)
+                                      {
+                                        cbor_det_array_iterator_t i1 = pi;
+                                        bool ite;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite = false;
+                                        else
+                                          ite =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        if (!ite)
+                                        {
+                                          pi = i1;
+                                          pcont = false;
+                                        }
+                                      }
+                                      ite1 = true;
+                                    }
+                                    else
+                                      ite1 = false;
+                                    if (ite1)
+                                      ite2 = cbor_det_array_iterator_is_empty(pi);
+                                    else
+                                      ite2 = false;
+                                  }
+                                  else
+                                    ite2 = false;
                                 }
                                 else
                                   ite2 = false;
@@ -12230,8 +16259,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite0 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_int(v1))
+                                      ite0 = true;
+                                    else
+                                      ite0 = COSE_Format_validate_tstr(v1);
                                   }
                                   else
                                     ite0 = false;
@@ -12250,8 +16282,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite1 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_int(v1))
+                                        ite1 = true;
+                                      else
+                                        ite1 = COSE_Format_validate_tstr(v1);
                                     }
                                     else
                                       ite1 = false;
@@ -12263,15 +16298,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 else
                                 {
                                   cbor_det_t k = cbor_det_map_entry_key(chd);
-                                  bool ite;
+                                  bool ite0;
                                   if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                    ite = cbor_det_read_uint64(k) == 2ULL;
+                                    ite0 = cbor_det_read_uint64(k) == 2ULL;
                                   else
-                                    ite = false;
-                                  if (ite)
+                                    ite0 = false;
+                                  if (ite0)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite3 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                    {
+                                      cbor_det_array_iterator_t
+                                      pi = cbor_det_array_iterator_start(v1);
+                                      bool ite0;
+                                      if (cbor_det_array_iterator_is_empty(pi))
+                                        ite0 = false;
+                                      else
+                                        ite0 =
+                                          COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                      bool ite1;
+                                      if (ite0)
+                                      {
+                                        bool pcont = true;
+                                        while (pcont)
+                                        {
+                                          cbor_det_array_iterator_t i1 = pi;
+                                          bool ite;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite = false;
+                                          else
+                                            ite =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          if (!ite)
+                                          {
+                                            pi = i1;
+                                            pcont = false;
+                                          }
+                                        }
+                                        ite1 = true;
+                                      }
+                                      else
+                                        ite1 = false;
+                                      if (ite1)
+                                        ite3 = cbor_det_array_iterator_is_empty(pi);
+                                      else
+                                        ite3 = false;
+                                    }
+                                    else
+                                      ite3 = false;
                                   }
                                   else
                                     ite3 = false;
@@ -12292,8 +16366,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   ite = false;
                                 if (ite)
                                 {
-                                  cbor_det_map_entry_value(chd);
-                                  ite4 = true;
+                                  cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                  if (COSE_Format_validate_tstr(v1))
+                                    ite4 = true;
+                                  else
+                                    ite4 = COSE_Format_validate_int(v1);
                                 }
                                 else
                                   ite4 = false;
@@ -12314,8 +16391,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite0 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_int(v1))
+                                      ite0 = true;
+                                    else
+                                      ite0 = COSE_Format_validate_tstr(v1);
                                   }
                                   else
                                     ite0 = false;
@@ -12334,8 +16414,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite1 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_int(v1))
+                                        ite1 = true;
+                                      else
+                                        ite1 = COSE_Format_validate_tstr(v1);
                                     }
                                     else
                                       ite1 = false;
@@ -12348,15 +16431,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 else
                                 {
                                   cbor_det_t k = cbor_det_map_entry_key(chd);
-                                  bool ite;
+                                  bool ite0;
                                   if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                    ite = cbor_det_read_uint64(k) == 2ULL;
+                                    ite0 = cbor_det_read_uint64(k) == 2ULL;
                                   else
-                                    ite = false;
-                                  if (ite)
+                                    ite0 = false;
+                                  if (ite0)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite2 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                    {
+                                      cbor_det_array_iterator_t
+                                      pi = cbor_det_array_iterator_start(v1);
+                                      bool ite0;
+                                      if (cbor_det_array_iterator_is_empty(pi))
+                                        ite0 = false;
+                                      else
+                                        ite0 =
+                                          COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                      bool ite1;
+                                      if (ite0)
+                                      {
+                                        bool pcont = true;
+                                        while (pcont)
+                                        {
+                                          cbor_det_array_iterator_t i1 = pi;
+                                          bool ite;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite = false;
+                                          else
+                                            ite =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          if (!ite)
+                                          {
+                                            pi = i1;
+                                            pcont = false;
+                                          }
+                                        }
+                                        ite1 = true;
+                                      }
+                                      else
+                                        ite1 = false;
+                                      if (ite1)
+                                        ite2 = cbor_det_array_iterator_is_empty(pi);
+                                      else
+                                        ite2 = false;
+                                    }
+                                    else
+                                      ite2 = false;
                                   }
                                   else
                                     ite2 = false;
@@ -12377,8 +16499,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite0 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_int(v1))
+                                        ite0 = true;
+                                      else
+                                        ite0 = COSE_Format_validate_tstr(v1);
                                     }
                                     else
                                       ite0 = false;
@@ -12397,8 +16522,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite1 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite1 = true;
+                                        else
+                                          ite1 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite1 = false;
@@ -12410,15 +16538,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   else
                                   {
                                     cbor_det_t k = cbor_det_map_entry_key(chd);
-                                    bool ite;
+                                    bool ite0;
                                     if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                      ite = cbor_det_read_uint64(k) == 2ULL;
+                                      ite0 = cbor_det_read_uint64(k) == 2ULL;
                                     else
-                                      ite = false;
-                                    if (ite)
+                                      ite0 = false;
+                                    if (ite0)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite3 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                      {
+                                        cbor_det_array_iterator_t
+                                        pi = cbor_det_array_iterator_start(v1);
+                                        bool ite0;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite0 = false;
+                                        else
+                                          ite0 =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        bool ite1;
+                                        if (ite0)
+                                        {
+                                          bool pcont = true;
+                                          while (pcont)
+                                          {
+                                            cbor_det_array_iterator_t i1 = pi;
+                                            bool ite;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite = false;
+                                            else
+                                              ite =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            if (!ite)
+                                            {
+                                              pi = i1;
+                                              pcont = false;
+                                            }
+                                          }
+                                          ite1 = true;
+                                        }
+                                        else
+                                          ite1 = false;
+                                        if (ite1)
+                                          ite3 = cbor_det_array_iterator_is_empty(pi);
+                                        else
+                                          ite3 = false;
+                                      }
+                                      else
+                                        ite3 = false;
                                     }
                                     else
                                       ite3 = false;
@@ -12438,8 +16605,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite5 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_tstr(v1))
+                                      ite5 = true;
+                                    else
+                                      ite5 = COSE_Format_validate_int(v1);
                                   }
                                   else
                                     ite5 = false;
@@ -12458,10 +16628,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 else
                                   ite = false;
                                 if (ite)
-                                {
-                                  cbor_det_map_entry_value(chd);
-                                  ite7 = true;
-                                }
+                                  ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                                 else
                                   ite7 = false;
                               }
@@ -12727,8 +16894,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite0 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_int(v1))
+                                      ite0 = true;
+                                    else
+                                      ite0 = COSE_Format_validate_tstr(v1);
                                   }
                                   else
                                     ite0 = false;
@@ -12747,8 +16917,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite2 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_int(v1))
+                                        ite2 = true;
+                                      else
+                                        ite2 = COSE_Format_validate_tstr(v1);
                                     }
                                     else
                                       ite2 = false;
@@ -12761,15 +16934,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                 else
                                 {
                                   cbor_det_t k = cbor_det_map_entry_key(chd);
-                                  bool ite;
+                                  bool ite0;
                                   if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                    ite = cbor_det_read_uint64(k) == 2ULL;
+                                    ite0 = cbor_det_read_uint64(k) == 2ULL;
                                   else
-                                    ite = false;
-                                  if (ite)
+                                    ite0 = false;
+                                  if (ite0)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite3 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                    {
+                                      cbor_det_array_iterator_t
+                                      pi = cbor_det_array_iterator_start(v1);
+                                      bool ite0;
+                                      if (cbor_det_array_iterator_is_empty(pi))
+                                        ite0 = false;
+                                      else
+                                        ite0 =
+                                          COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                      bool ite1;
+                                      if (ite0)
+                                      {
+                                        bool pcont = true;
+                                        while (pcont)
+                                        {
+                                          cbor_det_array_iterator_t i1 = pi;
+                                          bool ite;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite = false;
+                                          else
+                                            ite =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          if (!ite)
+                                          {
+                                            pi = i1;
+                                            pcont = false;
+                                          }
+                                        }
+                                        ite1 = true;
+                                      }
+                                      else
+                                        ite1 = false;
+                                      if (ite1)
+                                        ite3 = cbor_det_array_iterator_is_empty(pi);
+                                      else
+                                        ite3 = false;
+                                    }
+                                    else
+                                      ite3 = false;
                                   }
                                   else
                                     ite3 = false;
@@ -12790,8 +17002,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite0 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_int(v1))
+                                        ite0 = true;
+                                      else
+                                        ite0 = COSE_Format_validate_tstr(v1);
                                     }
                                     else
                                       ite0 = false;
@@ -12810,8 +17025,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite1 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite1 = true;
+                                        else
+                                          ite1 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite1 = false;
@@ -12823,15 +17041,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   else
                                   {
                                     cbor_det_t k = cbor_det_map_entry_key(chd);
-                                    bool ite;
+                                    bool ite0;
                                     if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                      ite = cbor_det_read_uint64(k) == 2ULL;
+                                      ite0 = cbor_det_read_uint64(k) == 2ULL;
                                     else
-                                      ite = false;
-                                    if (ite)
+                                      ite0 = false;
+                                    if (ite0)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite4 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                      {
+                                        cbor_det_array_iterator_t
+                                        pi = cbor_det_array_iterator_start(v1);
+                                        bool ite0;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite0 = false;
+                                        else
+                                          ite0 =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        bool ite1;
+                                        if (ite0)
+                                        {
+                                          bool pcont = true;
+                                          while (pcont)
+                                          {
+                                            cbor_det_array_iterator_t i1 = pi;
+                                            bool ite;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite = false;
+                                            else
+                                              ite =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            if (!ite)
+                                            {
+                                              pi = i1;
+                                              pcont = false;
+                                            }
+                                          }
+                                          ite1 = true;
+                                        }
+                                        else
+                                          ite1 = false;
+                                        if (ite1)
+                                          ite4 = cbor_det_array_iterator_is_empty(pi);
+                                        else
+                                          ite4 = false;
+                                      }
+                                      else
+                                        ite4 = false;
                                     }
                                     else
                                       ite4 = false;
@@ -12852,8 +17109,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     ite = false;
                                   if (ite)
                                   {
-                                    cbor_det_map_entry_value(chd);
-                                    ite5 = true;
+                                    cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                    if (COSE_Format_validate_tstr(v1))
+                                      ite5 = true;
+                                    else
+                                      ite5 = COSE_Format_validate_int(v1);
                                   }
                                   else
                                     ite5 = false;
@@ -12874,8 +17134,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite0 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_int(v1))
+                                        ite0 = true;
+                                      else
+                                        ite0 = COSE_Format_validate_tstr(v1);
                                     }
                                     else
                                       ite0 = false;
@@ -12894,8 +17157,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite1 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite1 = true;
+                                        else
+                                          ite1 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite1 = false;
@@ -12908,15 +17174,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   else
                                   {
                                     cbor_det_t k = cbor_det_map_entry_key(chd);
-                                    bool ite;
+                                    bool ite0;
                                     if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                      ite = cbor_det_read_uint64(k) == 2ULL;
+                                      ite0 = cbor_det_read_uint64(k) == 2ULL;
                                     else
-                                      ite = false;
-                                    if (ite)
+                                      ite0 = false;
+                                    if (ite0)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite2 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                      {
+                                        cbor_det_array_iterator_t
+                                        pi = cbor_det_array_iterator_start(v1);
+                                        bool ite0;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite0 = false;
+                                        else
+                                          ite0 =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        bool ite1;
+                                        if (ite0)
+                                        {
+                                          bool pcont = true;
+                                          while (pcont)
+                                          {
+                                            cbor_det_array_iterator_t i1 = pi;
+                                            bool ite;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite = false;
+                                            else
+                                              ite =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            if (!ite)
+                                            {
+                                              pi = i1;
+                                              pcont = false;
+                                            }
+                                          }
+                                          ite1 = true;
+                                        }
+                                        else
+                                          ite1 = false;
+                                        if (ite1)
+                                          ite2 = cbor_det_array_iterator_is_empty(pi);
+                                        else
+                                          ite2 = false;
+                                      }
+                                      else
+                                        ite2 = false;
                                     }
                                     else
                                       ite2 = false;
@@ -12937,8 +17242,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite0 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite0 = true;
+                                        else
+                                          ite0 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite0 = false;
@@ -12957,8 +17265,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite1 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite1 = true;
+                                          else
+                                            ite1 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite1 = false;
@@ -12970,15 +17281,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                     {
                                       cbor_det_t k = cbor_det_map_entry_key(chd);
-                                      bool ite;
+                                      bool ite0;
                                       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                        ite = cbor_det_read_uint64(k) == 2ULL;
+                                        ite0 = cbor_det_read_uint64(k) == 2ULL;
                                       else
-                                        ite = false;
-                                      if (ite)
+                                        ite0 = false;
+                                      if (ite0)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite3 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                        {
+                                          cbor_det_array_iterator_t
+                                          pi = cbor_det_array_iterator_start(v1);
+                                          bool ite0;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite0 = false;
+                                          else
+                                            ite0 =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          bool ite1;
+                                          if (ite0)
+                                          {
+                                            bool pcont = true;
+                                            while (pcont)
+                                            {
+                                              cbor_det_array_iterator_t i1 = pi;
+                                              bool ite;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite = false;
+                                              else
+                                                ite =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              if (!ite)
+                                              {
+                                                pi = i1;
+                                                pcont = false;
+                                              }
+                                            }
+                                            ite1 = true;
+                                          }
+                                          else
+                                            ite1 = false;
+                                          if (ite1)
+                                            ite3 = cbor_det_array_iterator_is_empty(pi);
+                                          else
+                                            ite3 = false;
+                                        }
+                                        else
+                                          ite3 = false;
                                       }
                                       else
                                         ite3 = false;
@@ -12998,8 +17348,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite6 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_tstr(v1))
+                                        ite6 = true;
+                                      else
+                                        ite6 = COSE_Format_validate_int(v1);
                                     }
                                     else
                                       ite6 = false;
@@ -13019,10 +17372,7 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   else
                                     ite = false;
                                   if (ite)
-                                  {
-                                    cbor_det_map_entry_value(chd);
-                                    ite7 = true;
-                                  }
+                                    ite7 = COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                                   else
                                     ite7 = false;
                                 }
@@ -13042,8 +17392,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite0 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_int(v1))
+                                        ite0 = true;
+                                      else
+                                        ite0 = COSE_Format_validate_tstr(v1);
                                     }
                                     else
                                       ite0 = false;
@@ -13062,8 +17415,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite1 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite1 = true;
+                                        else
+                                          ite1 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite1 = false;
@@ -13076,15 +17432,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   else
                                   {
                                     cbor_det_t k = cbor_det_map_entry_key(chd);
-                                    bool ite;
+                                    bool ite0;
                                     if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                      ite = cbor_det_read_uint64(k) == 2ULL;
+                                      ite0 = cbor_det_read_uint64(k) == 2ULL;
                                     else
-                                      ite = false;
-                                    if (ite)
+                                      ite0 = false;
+                                    if (ite0)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite2 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                      {
+                                        cbor_det_array_iterator_t
+                                        pi = cbor_det_array_iterator_start(v1);
+                                        bool ite0;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite0 = false;
+                                        else
+                                          ite0 =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        bool ite1;
+                                        if (ite0)
+                                        {
+                                          bool pcont = true;
+                                          while (pcont)
+                                          {
+                                            cbor_det_array_iterator_t i1 = pi;
+                                            bool ite;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite = false;
+                                            else
+                                              ite =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            if (!ite)
+                                            {
+                                              pi = i1;
+                                              pcont = false;
+                                            }
+                                          }
+                                          ite1 = true;
+                                        }
+                                        else
+                                          ite1 = false;
+                                        if (ite1)
+                                          ite2 = cbor_det_array_iterator_is_empty(pi);
+                                        else
+                                          ite2 = false;
+                                      }
+                                      else
+                                        ite2 = false;
                                     }
                                     else
                                       ite2 = false;
@@ -13105,8 +17500,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite0 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite0 = true;
+                                        else
+                                          ite0 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite0 = false;
@@ -13125,8 +17523,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite1 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite1 = true;
+                                          else
+                                            ite1 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite1 = false;
@@ -13138,15 +17539,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                     {
                                       cbor_det_t k = cbor_det_map_entry_key(chd);
-                                      bool ite;
+                                      bool ite0;
                                       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                        ite = cbor_det_read_uint64(k) == 2ULL;
+                                        ite0 = cbor_det_read_uint64(k) == 2ULL;
                                       else
-                                        ite = false;
-                                      if (ite)
+                                        ite0 = false;
+                                      if (ite0)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite3 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                        {
+                                          cbor_det_array_iterator_t
+                                          pi = cbor_det_array_iterator_start(v1);
+                                          bool ite0;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite0 = false;
+                                          else
+                                            ite0 =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          bool ite1;
+                                          if (ite0)
+                                          {
+                                            bool pcont = true;
+                                            while (pcont)
+                                            {
+                                              cbor_det_array_iterator_t i1 = pi;
+                                              bool ite;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite = false;
+                                              else
+                                                ite =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              if (!ite)
+                                              {
+                                                pi = i1;
+                                                pcont = false;
+                                              }
+                                            }
+                                            ite1 = true;
+                                          }
+                                          else
+                                            ite1 = false;
+                                          if (ite1)
+                                            ite3 = cbor_det_array_iterator_is_empty(pi);
+                                          else
+                                            ite3 = false;
+                                        }
+                                        else
+                                          ite3 = false;
                                       }
                                       else
                                         ite3 = false;
@@ -13167,8 +17607,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite4 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_tstr(v1))
+                                        ite4 = true;
+                                      else
+                                        ite4 = COSE_Format_validate_int(v1);
                                     }
                                     else
                                       ite4 = false;
@@ -13189,8 +17632,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite0 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite0 = true;
+                                        else
+                                          ite0 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite0 = false;
@@ -13209,8 +17655,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite1 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite1 = true;
+                                          else
+                                            ite1 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite1 = false;
@@ -13223,15 +17672,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                     {
                                       cbor_det_t k = cbor_det_map_entry_key(chd);
-                                      bool ite;
+                                      bool ite0;
                                       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                        ite = cbor_det_read_uint64(k) == 2ULL;
+                                        ite0 = cbor_det_read_uint64(k) == 2ULL;
                                       else
-                                        ite = false;
-                                      if (ite)
+                                        ite0 = false;
+                                      if (ite0)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite2 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                        {
+                                          cbor_det_array_iterator_t
+                                          pi = cbor_det_array_iterator_start(v1);
+                                          bool ite0;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite0 = false;
+                                          else
+                                            ite0 =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          bool ite1;
+                                          if (ite0)
+                                          {
+                                            bool pcont = true;
+                                            while (pcont)
+                                            {
+                                              cbor_det_array_iterator_t i1 = pi;
+                                              bool ite;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite = false;
+                                              else
+                                                ite =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              if (!ite)
+                                              {
+                                                pi = i1;
+                                                pcont = false;
+                                              }
+                                            }
+                                            ite1 = true;
+                                          }
+                                          else
+                                            ite1 = false;
+                                          if (ite1)
+                                            ite2 = cbor_det_array_iterator_is_empty(pi);
+                                          else
+                                            ite2 = false;
+                                        }
+                                        else
+                                          ite2 = false;
                                       }
                                       else
                                         ite2 = false;
@@ -13252,8 +17740,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite0 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite0 = true;
+                                          else
+                                            ite0 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite0 = false;
@@ -13272,8 +17763,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite1 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite1 = true;
+                                            else
+                                              ite1 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite1 = false;
@@ -13285,15 +17779,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                       {
                                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                                        bool ite;
+                                        bool ite0;
                                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                          ite = cbor_det_read_uint64(k) == 2ULL;
+                                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                                         else
-                                          ite = false;
-                                        if (ite)
+                                          ite0 = false;
+                                        if (ite0)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite3 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                          {
+                                            cbor_det_array_iterator_t
+                                            pi = cbor_det_array_iterator_start(v1);
+                                            bool ite0;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite0 = false;
+                                            else
+                                              ite0 =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            bool ite1;
+                                            if (ite0)
+                                            {
+                                              bool pcont = true;
+                                              while (pcont)
+                                              {
+                                                cbor_det_array_iterator_t i1 = pi;
+                                                bool ite;
+                                                if (cbor_det_array_iterator_is_empty(pi))
+                                                  ite = false;
+                                                else
+                                                  ite =
+                                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                if (!ite)
+                                                {
+                                                  pi = i1;
+                                                  pcont = false;
+                                                }
+                                              }
+                                              ite1 = true;
+                                            }
+                                            else
+                                              ite1 = false;
+                                            if (ite1)
+                                              ite3 = cbor_det_array_iterator_is_empty(pi);
+                                            else
+                                              ite3 = false;
+                                          }
+                                          else
+                                            ite3 = false;
                                         }
                                         else
                                           ite3 = false;
@@ -13313,8 +17846,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite5 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_tstr(v1))
+                                          ite5 = true;
+                                        else
+                                          ite5 = COSE_Format_validate_int(v1);
                                       }
                                       else
                                         ite5 = false;
@@ -13333,10 +17869,8 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                       ite = false;
                                     if (ite)
-                                    {
-                                      cbor_det_map_entry_value(chd);
-                                      ite8 = true;
-                                    }
+                                      ite8 =
+                                        COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                                     else
                                       ite8 = false;
                                   }
@@ -13388,8 +17922,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite0 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_int(v1))
+                                        ite0 = true;
+                                      else
+                                        ite0 = COSE_Format_validate_tstr(v1);
                                     }
                                     else
                                       ite0 = false;
@@ -13408,8 +17945,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite1 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite1 = true;
+                                        else
+                                          ite1 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite1 = false;
@@ -13422,15 +17962,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   else
                                   {
                                     cbor_det_t k = cbor_det_map_entry_key(chd);
-                                    bool ite;
+                                    bool ite0;
                                     if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                      ite = cbor_det_read_uint64(k) == 2ULL;
+                                      ite0 = cbor_det_read_uint64(k) == 2ULL;
                                     else
-                                      ite = false;
-                                    if (ite)
+                                      ite0 = false;
+                                    if (ite0)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite2 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                      {
+                                        cbor_det_array_iterator_t
+                                        pi = cbor_det_array_iterator_start(v1);
+                                        bool ite0;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite0 = false;
+                                        else
+                                          ite0 =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        bool ite1;
+                                        if (ite0)
+                                        {
+                                          bool pcont = true;
+                                          while (pcont)
+                                          {
+                                            cbor_det_array_iterator_t i1 = pi;
+                                            bool ite;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite = false;
+                                            else
+                                              ite =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            if (!ite)
+                                            {
+                                              pi = i1;
+                                              pcont = false;
+                                            }
+                                          }
+                                          ite1 = true;
+                                        }
+                                        else
+                                          ite1 = false;
+                                        if (ite1)
+                                          ite2 = cbor_det_array_iterator_is_empty(pi);
+                                        else
+                                          ite2 = false;
+                                      }
+                                      else
+                                        ite2 = false;
                                     }
                                     else
                                       ite2 = false;
@@ -13451,8 +18030,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite0 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite0 = true;
+                                        else
+                                          ite0 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite0 = false;
@@ -13471,8 +18053,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite1 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite1 = true;
+                                          else
+                                            ite1 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite1 = false;
@@ -13484,15 +18069,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                     {
                                       cbor_det_t k = cbor_det_map_entry_key(chd);
-                                      bool ite;
+                                      bool ite0;
                                       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                        ite = cbor_det_read_uint64(k) == 2ULL;
+                                        ite0 = cbor_det_read_uint64(k) == 2ULL;
                                       else
-                                        ite = false;
-                                      if (ite)
+                                        ite0 = false;
+                                      if (ite0)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite3 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                        {
+                                          cbor_det_array_iterator_t
+                                          pi = cbor_det_array_iterator_start(v1);
+                                          bool ite0;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite0 = false;
+                                          else
+                                            ite0 =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          bool ite1;
+                                          if (ite0)
+                                          {
+                                            bool pcont = true;
+                                            while (pcont)
+                                            {
+                                              cbor_det_array_iterator_t i1 = pi;
+                                              bool ite;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite = false;
+                                              else
+                                                ite =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              if (!ite)
+                                              {
+                                                pi = i1;
+                                                pcont = false;
+                                              }
+                                            }
+                                            ite1 = true;
+                                          }
+                                          else
+                                            ite1 = false;
+                                          if (ite1)
+                                            ite3 = cbor_det_array_iterator_is_empty(pi);
+                                          else
+                                            ite3 = false;
+                                        }
+                                        else
+                                          ite3 = false;
                                       }
                                       else
                                         ite3 = false;
@@ -13513,8 +18137,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite4 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_tstr(v1))
+                                        ite4 = true;
+                                      else
+                                        ite4 = COSE_Format_validate_int(v1);
                                     }
                                     else
                                       ite4 = false;
@@ -13535,8 +18162,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite0 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite0 = true;
+                                        else
+                                          ite0 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite0 = false;
@@ -13555,8 +18185,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite1 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite1 = true;
+                                          else
+                                            ite1 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite1 = false;
@@ -13569,15 +18202,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                     {
                                       cbor_det_t k = cbor_det_map_entry_key(chd);
-                                      bool ite;
+                                      bool ite0;
                                       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                        ite = cbor_det_read_uint64(k) == 2ULL;
+                                        ite0 = cbor_det_read_uint64(k) == 2ULL;
                                       else
-                                        ite = false;
-                                      if (ite)
+                                        ite0 = false;
+                                      if (ite0)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite2 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                        {
+                                          cbor_det_array_iterator_t
+                                          pi = cbor_det_array_iterator_start(v1);
+                                          bool ite0;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite0 = false;
+                                          else
+                                            ite0 =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          bool ite1;
+                                          if (ite0)
+                                          {
+                                            bool pcont = true;
+                                            while (pcont)
+                                            {
+                                              cbor_det_array_iterator_t i1 = pi;
+                                              bool ite;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite = false;
+                                              else
+                                                ite =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              if (!ite)
+                                              {
+                                                pi = i1;
+                                                pcont = false;
+                                              }
+                                            }
+                                            ite1 = true;
+                                          }
+                                          else
+                                            ite1 = false;
+                                          if (ite1)
+                                            ite2 = cbor_det_array_iterator_is_empty(pi);
+                                          else
+                                            ite2 = false;
+                                        }
+                                        else
+                                          ite2 = false;
                                       }
                                       else
                                         ite2 = false;
@@ -13598,8 +18270,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite0 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite0 = true;
+                                          else
+                                            ite0 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite0 = false;
@@ -13618,8 +18293,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite1 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite1 = true;
+                                            else
+                                              ite1 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite1 = false;
@@ -13631,15 +18309,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                       {
                                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                                        bool ite;
+                                        bool ite0;
                                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                          ite = cbor_det_read_uint64(k) == 2ULL;
+                                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                                         else
-                                          ite = false;
-                                        if (ite)
+                                          ite0 = false;
+                                        if (ite0)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite3 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                          {
+                                            cbor_det_array_iterator_t
+                                            pi = cbor_det_array_iterator_start(v1);
+                                            bool ite0;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite0 = false;
+                                            else
+                                              ite0 =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            bool ite1;
+                                            if (ite0)
+                                            {
+                                              bool pcont = true;
+                                              while (pcont)
+                                              {
+                                                cbor_det_array_iterator_t i1 = pi;
+                                                bool ite;
+                                                if (cbor_det_array_iterator_is_empty(pi))
+                                                  ite = false;
+                                                else
+                                                  ite =
+                                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                if (!ite)
+                                                {
+                                                  pi = i1;
+                                                  pcont = false;
+                                                }
+                                              }
+                                              ite1 = true;
+                                            }
+                                            else
+                                              ite1 = false;
+                                            if (ite1)
+                                              ite3 = cbor_det_array_iterator_is_empty(pi);
+                                            else
+                                              ite3 = false;
+                                          }
+                                          else
+                                            ite3 = false;
                                         }
                                         else
                                           ite3 = false;
@@ -13659,8 +18376,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite5 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_tstr(v1))
+                                          ite5 = true;
+                                        else
+                                          ite5 = COSE_Format_validate_int(v1);
                                       }
                                       else
                                         ite5 = false;
@@ -13680,10 +18400,8 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                       ite = false;
                                     if (ite)
-                                    {
-                                      cbor_det_map_entry_value(chd);
-                                      ite6 = true;
-                                    }
+                                      ite6 =
+                                        COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                                     else
                                       ite6 = false;
                                   }
@@ -13703,8 +18421,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite0 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite0 = true;
+                                        else
+                                          ite0 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite0 = false;
@@ -13723,8 +18444,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite1 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite1 = true;
+                                          else
+                                            ite1 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite1 = false;
@@ -13737,15 +18461,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                     {
                                       cbor_det_t k = cbor_det_map_entry_key(chd);
-                                      bool ite;
+                                      bool ite0;
                                       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                        ite = cbor_det_read_uint64(k) == 2ULL;
+                                        ite0 = cbor_det_read_uint64(k) == 2ULL;
                                       else
-                                        ite = false;
-                                      if (ite)
+                                        ite0 = false;
+                                      if (ite0)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite2 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                        {
+                                          cbor_det_array_iterator_t
+                                          pi = cbor_det_array_iterator_start(v1);
+                                          bool ite0;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite0 = false;
+                                          else
+                                            ite0 =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          bool ite1;
+                                          if (ite0)
+                                          {
+                                            bool pcont = true;
+                                            while (pcont)
+                                            {
+                                              cbor_det_array_iterator_t i1 = pi;
+                                              bool ite;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite = false;
+                                              else
+                                                ite =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              if (!ite)
+                                              {
+                                                pi = i1;
+                                                pcont = false;
+                                              }
+                                            }
+                                            ite1 = true;
+                                          }
+                                          else
+                                            ite1 = false;
+                                          if (ite1)
+                                            ite2 = cbor_det_array_iterator_is_empty(pi);
+                                          else
+                                            ite2 = false;
+                                        }
+                                        else
+                                          ite2 = false;
                                       }
                                       else
                                         ite2 = false;
@@ -13766,8 +18529,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite0 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite0 = true;
+                                          else
+                                            ite0 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite0 = false;
@@ -13786,8 +18552,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite1 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite1 = true;
+                                            else
+                                              ite1 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite1 = false;
@@ -13799,15 +18568,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                       {
                                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                                        bool ite;
+                                        bool ite0;
                                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                          ite = cbor_det_read_uint64(k) == 2ULL;
+                                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                                         else
-                                          ite = false;
-                                        if (ite)
+                                          ite0 = false;
+                                        if (ite0)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite3 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                          {
+                                            cbor_det_array_iterator_t
+                                            pi = cbor_det_array_iterator_start(v1);
+                                            bool ite0;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite0 = false;
+                                            else
+                                              ite0 =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            bool ite1;
+                                            if (ite0)
+                                            {
+                                              bool pcont = true;
+                                              while (pcont)
+                                              {
+                                                cbor_det_array_iterator_t i1 = pi;
+                                                bool ite;
+                                                if (cbor_det_array_iterator_is_empty(pi))
+                                                  ite = false;
+                                                else
+                                                  ite =
+                                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                if (!ite)
+                                                {
+                                                  pi = i1;
+                                                  pcont = false;
+                                                }
+                                              }
+                                              ite1 = true;
+                                            }
+                                            else
+                                              ite1 = false;
+                                            if (ite1)
+                                              ite3 = cbor_det_array_iterator_is_empty(pi);
+                                            else
+                                              ite3 = false;
+                                          }
+                                          else
+                                            ite3 = false;
                                         }
                                         else
                                           ite3 = false;
@@ -13828,8 +18636,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite4 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_tstr(v1))
+                                          ite4 = true;
+                                        else
+                                          ite4 = COSE_Format_validate_int(v1);
                                       }
                                       else
                                         ite4 = false;
@@ -13850,8 +18661,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite0 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite0 = true;
+                                          else
+                                            ite0 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite0 = false;
@@ -13870,8 +18684,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite1 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite1 = true;
+                                            else
+                                              ite1 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite1 = false;
@@ -13884,15 +18701,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                       {
                                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                                        bool ite;
+                                        bool ite0;
                                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                          ite = cbor_det_read_uint64(k) == 2ULL;
+                                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                                         else
-                                          ite = false;
-                                        if (ite)
+                                          ite0 = false;
+                                        if (ite0)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite2 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                          {
+                                            cbor_det_array_iterator_t
+                                            pi = cbor_det_array_iterator_start(v1);
+                                            bool ite0;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite0 = false;
+                                            else
+                                              ite0 =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            bool ite1;
+                                            if (ite0)
+                                            {
+                                              bool pcont = true;
+                                              while (pcont)
+                                              {
+                                                cbor_det_array_iterator_t i1 = pi;
+                                                bool ite;
+                                                if (cbor_det_array_iterator_is_empty(pi))
+                                                  ite = false;
+                                                else
+                                                  ite =
+                                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                if (!ite)
+                                                {
+                                                  pi = i1;
+                                                  pcont = false;
+                                                }
+                                              }
+                                              ite1 = true;
+                                            }
+                                            else
+                                              ite1 = false;
+                                            if (ite1)
+                                              ite2 = cbor_det_array_iterator_is_empty(pi);
+                                            else
+                                              ite2 = false;
+                                          }
+                                          else
+                                            ite2 = false;
                                         }
                                         else
                                           ite2 = false;
@@ -13913,8 +18769,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite0 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite0 = true;
+                                            else
+                                              ite0 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite0 = false;
@@ -13933,8 +18792,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                               ite = false;
                                             if (ite)
                                             {
-                                              cbor_det_map_entry_value(chd);
-                                              ite1 = true;
+                                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                              if (COSE_Format_validate_int(v1))
+                                                ite1 = true;
+                                              else
+                                                ite1 = COSE_Format_validate_tstr(v1);
                                             }
                                             else
                                               ite1 = false;
@@ -13946,15 +18808,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         else
                                         {
                                           cbor_det_t k = cbor_det_map_entry_key(chd);
-                                          bool ite;
+                                          bool ite0;
                                           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                            ite = cbor_det_read_uint64(k) == 2ULL;
+                                            ite0 = cbor_det_read_uint64(k) == 2ULL;
                                           else
-                                            ite = false;
-                                          if (ite)
+                                            ite0 = false;
+                                          if (ite0)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite3 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                            {
+                                              cbor_det_array_iterator_t
+                                              pi = cbor_det_array_iterator_start(v1);
+                                              bool ite0;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite0 = false;
+                                              else
+                                                ite0 =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              bool ite1;
+                                              if (ite0)
+                                              {
+                                                bool pcont = true;
+                                                while (pcont)
+                                                {
+                                                  cbor_det_array_iterator_t i1 = pi;
+                                                  bool ite;
+                                                  if (cbor_det_array_iterator_is_empty(pi))
+                                                    ite = false;
+                                                  else
+                                                    ite =
+                                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                  if (!ite)
+                                                  {
+                                                    pi = i1;
+                                                    pcont = false;
+                                                  }
+                                                }
+                                                ite1 = true;
+                                              }
+                                              else
+                                                ite1 = false;
+                                              if (ite1)
+                                                ite3 = cbor_det_array_iterator_is_empty(pi);
+                                              else
+                                                ite3 = false;
+                                            }
+                                            else
+                                              ite3 = false;
                                           }
                                           else
                                             ite3 = false;
@@ -13974,8 +18875,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite5 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_tstr(v1))
+                                            ite5 = true;
+                                          else
+                                            ite5 = COSE_Format_validate_int(v1);
                                         }
                                         else
                                           ite5 = false;
@@ -13994,10 +18898,8 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                         ite = false;
                                       if (ite)
-                                      {
-                                        cbor_det_map_entry_value(chd);
-                                        ite7 = true;
-                                      }
+                                        ite7 =
+                                          COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                                       else
                                         ite7 = false;
                                     }
@@ -14070,8 +18972,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite0 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_int(v1))
+                                        ite0 = true;
+                                      else
+                                        ite0 = COSE_Format_validate_tstr(v1);
                                     }
                                     else
                                       ite0 = false;
@@ -14090,8 +18995,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite1 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite1 = true;
+                                        else
+                                          ite1 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite1 = false;
@@ -14104,15 +19012,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                   else
                                   {
                                     cbor_det_t k = cbor_det_map_entry_key(chd);
-                                    bool ite;
+                                    bool ite0;
                                     if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                      ite = cbor_det_read_uint64(k) == 2ULL;
+                                      ite0 = cbor_det_read_uint64(k) == 2ULL;
                                     else
-                                      ite = false;
-                                    if (ite)
+                                      ite0 = false;
+                                    if (ite0)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite2 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                      {
+                                        cbor_det_array_iterator_t
+                                        pi = cbor_det_array_iterator_start(v1);
+                                        bool ite0;
+                                        if (cbor_det_array_iterator_is_empty(pi))
+                                          ite0 = false;
+                                        else
+                                          ite0 =
+                                            COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                        bool ite1;
+                                        if (ite0)
+                                        {
+                                          bool pcont = true;
+                                          while (pcont)
+                                          {
+                                            cbor_det_array_iterator_t i1 = pi;
+                                            bool ite;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite = false;
+                                            else
+                                              ite =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            if (!ite)
+                                            {
+                                              pi = i1;
+                                              pcont = false;
+                                            }
+                                          }
+                                          ite1 = true;
+                                        }
+                                        else
+                                          ite1 = false;
+                                        if (ite1)
+                                          ite2 = cbor_det_array_iterator_is_empty(pi);
+                                        else
+                                          ite2 = false;
+                                      }
+                                      else
+                                        ite2 = false;
                                     }
                                     else
                                       ite2 = false;
@@ -14133,8 +19080,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite0 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite0 = true;
+                                        else
+                                          ite0 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite0 = false;
@@ -14153,8 +19103,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite1 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite1 = true;
+                                          else
+                                            ite1 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite1 = false;
@@ -14166,15 +19119,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                     {
                                       cbor_det_t k = cbor_det_map_entry_key(chd);
-                                      bool ite;
+                                      bool ite0;
                                       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                        ite = cbor_det_read_uint64(k) == 2ULL;
+                                        ite0 = cbor_det_read_uint64(k) == 2ULL;
                                       else
-                                        ite = false;
-                                      if (ite)
+                                        ite0 = false;
+                                      if (ite0)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite3 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                        {
+                                          cbor_det_array_iterator_t
+                                          pi = cbor_det_array_iterator_start(v1);
+                                          bool ite0;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite0 = false;
+                                          else
+                                            ite0 =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          bool ite1;
+                                          if (ite0)
+                                          {
+                                            bool pcont = true;
+                                            while (pcont)
+                                            {
+                                              cbor_det_array_iterator_t i1 = pi;
+                                              bool ite;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite = false;
+                                              else
+                                                ite =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              if (!ite)
+                                              {
+                                                pi = i1;
+                                                pcont = false;
+                                              }
+                                            }
+                                            ite1 = true;
+                                          }
+                                          else
+                                            ite1 = false;
+                                          if (ite1)
+                                            ite3 = cbor_det_array_iterator_is_empty(pi);
+                                          else
+                                            ite3 = false;
+                                        }
+                                        else
+                                          ite3 = false;
                                       }
                                       else
                                         ite3 = false;
@@ -14195,8 +19187,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       ite = false;
                                     if (ite)
                                     {
-                                      cbor_det_map_entry_value(chd);
-                                      ite4 = true;
+                                      cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                      if (COSE_Format_validate_tstr(v1))
+                                        ite4 = true;
+                                      else
+                                        ite4 = COSE_Format_validate_int(v1);
                                     }
                                     else
                                       ite4 = false;
@@ -14217,8 +19212,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite0 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite0 = true;
+                                        else
+                                          ite0 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite0 = false;
@@ -14237,8 +19235,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite1 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite1 = true;
+                                          else
+                                            ite1 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite1 = false;
@@ -14251,15 +19252,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                     {
                                       cbor_det_t k = cbor_det_map_entry_key(chd);
-                                      bool ite;
+                                      bool ite0;
                                       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                        ite = cbor_det_read_uint64(k) == 2ULL;
+                                        ite0 = cbor_det_read_uint64(k) == 2ULL;
                                       else
-                                        ite = false;
-                                      if (ite)
+                                        ite0 = false;
+                                      if (ite0)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite2 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                        {
+                                          cbor_det_array_iterator_t
+                                          pi = cbor_det_array_iterator_start(v1);
+                                          bool ite0;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite0 = false;
+                                          else
+                                            ite0 =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          bool ite1;
+                                          if (ite0)
+                                          {
+                                            bool pcont = true;
+                                            while (pcont)
+                                            {
+                                              cbor_det_array_iterator_t i1 = pi;
+                                              bool ite;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite = false;
+                                              else
+                                                ite =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              if (!ite)
+                                              {
+                                                pi = i1;
+                                                pcont = false;
+                                              }
+                                            }
+                                            ite1 = true;
+                                          }
+                                          else
+                                            ite1 = false;
+                                          if (ite1)
+                                            ite2 = cbor_det_array_iterator_is_empty(pi);
+                                          else
+                                            ite2 = false;
+                                        }
+                                        else
+                                          ite2 = false;
                                       }
                                       else
                                         ite2 = false;
@@ -14280,8 +19320,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite0 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite0 = true;
+                                          else
+                                            ite0 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite0 = false;
@@ -14300,8 +19343,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite1 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite1 = true;
+                                            else
+                                              ite1 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite1 = false;
@@ -14313,15 +19359,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                       {
                                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                                        bool ite;
+                                        bool ite0;
                                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                          ite = cbor_det_read_uint64(k) == 2ULL;
+                                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                                         else
-                                          ite = false;
-                                        if (ite)
+                                          ite0 = false;
+                                        if (ite0)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite3 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                          {
+                                            cbor_det_array_iterator_t
+                                            pi = cbor_det_array_iterator_start(v1);
+                                            bool ite0;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite0 = false;
+                                            else
+                                              ite0 =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            bool ite1;
+                                            if (ite0)
+                                            {
+                                              bool pcont = true;
+                                              while (pcont)
+                                              {
+                                                cbor_det_array_iterator_t i1 = pi;
+                                                bool ite;
+                                                if (cbor_det_array_iterator_is_empty(pi))
+                                                  ite = false;
+                                                else
+                                                  ite =
+                                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                if (!ite)
+                                                {
+                                                  pi = i1;
+                                                  pcont = false;
+                                                }
+                                              }
+                                              ite1 = true;
+                                            }
+                                            else
+                                              ite1 = false;
+                                            if (ite1)
+                                              ite3 = cbor_det_array_iterator_is_empty(pi);
+                                            else
+                                              ite3 = false;
+                                          }
+                                          else
+                                            ite3 = false;
                                         }
                                         else
                                           ite3 = false;
@@ -14341,8 +19426,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite5 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_tstr(v1))
+                                          ite5 = true;
+                                        else
+                                          ite5 = COSE_Format_validate_int(v1);
                                       }
                                       else
                                         ite5 = false;
@@ -14362,10 +19450,8 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                       ite = false;
                                     if (ite)
-                                    {
-                                      cbor_det_map_entry_value(chd);
-                                      ite6 = true;
-                                    }
+                                      ite6 =
+                                        COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                                     else
                                       ite6 = false;
                                   }
@@ -14385,8 +19471,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite0 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite0 = true;
+                                        else
+                                          ite0 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite0 = false;
@@ -14405,8 +19494,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite1 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite1 = true;
+                                          else
+                                            ite1 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite1 = false;
@@ -14419,15 +19511,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                     {
                                       cbor_det_t k = cbor_det_map_entry_key(chd);
-                                      bool ite;
+                                      bool ite0;
                                       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                        ite = cbor_det_read_uint64(k) == 2ULL;
+                                        ite0 = cbor_det_read_uint64(k) == 2ULL;
                                       else
-                                        ite = false;
-                                      if (ite)
+                                        ite0 = false;
+                                      if (ite0)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite2 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                        {
+                                          cbor_det_array_iterator_t
+                                          pi = cbor_det_array_iterator_start(v1);
+                                          bool ite0;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite0 = false;
+                                          else
+                                            ite0 =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          bool ite1;
+                                          if (ite0)
+                                          {
+                                            bool pcont = true;
+                                            while (pcont)
+                                            {
+                                              cbor_det_array_iterator_t i1 = pi;
+                                              bool ite;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite = false;
+                                              else
+                                                ite =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              if (!ite)
+                                              {
+                                                pi = i1;
+                                                pcont = false;
+                                              }
+                                            }
+                                            ite1 = true;
+                                          }
+                                          else
+                                            ite1 = false;
+                                          if (ite1)
+                                            ite2 = cbor_det_array_iterator_is_empty(pi);
+                                          else
+                                            ite2 = false;
+                                        }
+                                        else
+                                          ite2 = false;
                                       }
                                       else
                                         ite2 = false;
@@ -14448,8 +19579,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite0 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite0 = true;
+                                          else
+                                            ite0 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite0 = false;
@@ -14468,8 +19602,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite1 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite1 = true;
+                                            else
+                                              ite1 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite1 = false;
@@ -14481,15 +19618,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                       {
                                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                                        bool ite;
+                                        bool ite0;
                                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                          ite = cbor_det_read_uint64(k) == 2ULL;
+                                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                                         else
-                                          ite = false;
-                                        if (ite)
+                                          ite0 = false;
+                                        if (ite0)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite3 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                          {
+                                            cbor_det_array_iterator_t
+                                            pi = cbor_det_array_iterator_start(v1);
+                                            bool ite0;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite0 = false;
+                                            else
+                                              ite0 =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            bool ite1;
+                                            if (ite0)
+                                            {
+                                              bool pcont = true;
+                                              while (pcont)
+                                              {
+                                                cbor_det_array_iterator_t i1 = pi;
+                                                bool ite;
+                                                if (cbor_det_array_iterator_is_empty(pi))
+                                                  ite = false;
+                                                else
+                                                  ite =
+                                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                if (!ite)
+                                                {
+                                                  pi = i1;
+                                                  pcont = false;
+                                                }
+                                              }
+                                              ite1 = true;
+                                            }
+                                            else
+                                              ite1 = false;
+                                            if (ite1)
+                                              ite3 = cbor_det_array_iterator_is_empty(pi);
+                                            else
+                                              ite3 = false;
+                                          }
+                                          else
+                                            ite3 = false;
                                         }
                                         else
                                           ite3 = false;
@@ -14510,8 +19686,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite4 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_tstr(v1))
+                                          ite4 = true;
+                                        else
+                                          ite4 = COSE_Format_validate_int(v1);
                                       }
                                       else
                                         ite4 = false;
@@ -14532,8 +19711,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite0 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite0 = true;
+                                          else
+                                            ite0 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite0 = false;
@@ -14552,8 +19734,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite1 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite1 = true;
+                                            else
+                                              ite1 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite1 = false;
@@ -14566,15 +19751,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                       {
                                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                                        bool ite;
+                                        bool ite0;
                                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                          ite = cbor_det_read_uint64(k) == 2ULL;
+                                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                                         else
-                                          ite = false;
-                                        if (ite)
+                                          ite0 = false;
+                                        if (ite0)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite2 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                          {
+                                            cbor_det_array_iterator_t
+                                            pi = cbor_det_array_iterator_start(v1);
+                                            bool ite0;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite0 = false;
+                                            else
+                                              ite0 =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            bool ite1;
+                                            if (ite0)
+                                            {
+                                              bool pcont = true;
+                                              while (pcont)
+                                              {
+                                                cbor_det_array_iterator_t i1 = pi;
+                                                bool ite;
+                                                if (cbor_det_array_iterator_is_empty(pi))
+                                                  ite = false;
+                                                else
+                                                  ite =
+                                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                if (!ite)
+                                                {
+                                                  pi = i1;
+                                                  pcont = false;
+                                                }
+                                              }
+                                              ite1 = true;
+                                            }
+                                            else
+                                              ite1 = false;
+                                            if (ite1)
+                                              ite2 = cbor_det_array_iterator_is_empty(pi);
+                                            else
+                                              ite2 = false;
+                                          }
+                                          else
+                                            ite2 = false;
                                         }
                                         else
                                           ite2 = false;
@@ -14595,8 +19819,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite0 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite0 = true;
+                                            else
+                                              ite0 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite0 = false;
@@ -14615,8 +19842,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                               ite = false;
                                             if (ite)
                                             {
-                                              cbor_det_map_entry_value(chd);
-                                              ite1 = true;
+                                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                              if (COSE_Format_validate_int(v1))
+                                                ite1 = true;
+                                              else
+                                                ite1 = COSE_Format_validate_tstr(v1);
                                             }
                                             else
                                               ite1 = false;
@@ -14628,15 +19858,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         else
                                         {
                                           cbor_det_t k = cbor_det_map_entry_key(chd);
-                                          bool ite;
+                                          bool ite0;
                                           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                            ite = cbor_det_read_uint64(k) == 2ULL;
+                                            ite0 = cbor_det_read_uint64(k) == 2ULL;
                                           else
-                                            ite = false;
-                                          if (ite)
+                                            ite0 = false;
+                                          if (ite0)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite3 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                            {
+                                              cbor_det_array_iterator_t
+                                              pi = cbor_det_array_iterator_start(v1);
+                                              bool ite0;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite0 = false;
+                                              else
+                                                ite0 =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              bool ite1;
+                                              if (ite0)
+                                              {
+                                                bool pcont = true;
+                                                while (pcont)
+                                                {
+                                                  cbor_det_array_iterator_t i1 = pi;
+                                                  bool ite;
+                                                  if (cbor_det_array_iterator_is_empty(pi))
+                                                    ite = false;
+                                                  else
+                                                    ite =
+                                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                  if (!ite)
+                                                  {
+                                                    pi = i1;
+                                                    pcont = false;
+                                                  }
+                                                }
+                                                ite1 = true;
+                                              }
+                                              else
+                                                ite1 = false;
+                                              if (ite1)
+                                                ite3 = cbor_det_array_iterator_is_empty(pi);
+                                              else
+                                                ite3 = false;
+                                            }
+                                            else
+                                              ite3 = false;
                                           }
                                           else
                                             ite3 = false;
@@ -14656,8 +19925,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite5 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_tstr(v1))
+                                            ite5 = true;
+                                          else
+                                            ite5 = COSE_Format_validate_int(v1);
                                         }
                                         else
                                           ite5 = false;
@@ -14676,10 +19948,8 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                         ite = false;
                                       if (ite)
-                                      {
-                                        cbor_det_map_entry_value(chd);
-                                        ite7 = true;
-                                      }
+                                        ite7 =
+                                          COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                                       else
                                         ite7 = false;
                                     }
@@ -14731,8 +20001,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite0 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_int(v1))
+                                          ite0 = true;
+                                        else
+                                          ite0 = COSE_Format_validate_tstr(v1);
                                       }
                                       else
                                         ite0 = false;
@@ -14751,8 +20024,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite1 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite1 = true;
+                                          else
+                                            ite1 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite1 = false;
@@ -14765,15 +20041,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                     else
                                     {
                                       cbor_det_t k = cbor_det_map_entry_key(chd);
-                                      bool ite;
+                                      bool ite0;
                                       if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                        ite = cbor_det_read_uint64(k) == 2ULL;
+                                        ite0 = cbor_det_read_uint64(k) == 2ULL;
                                       else
-                                        ite = false;
-                                      if (ite)
+                                        ite0 = false;
+                                      if (ite0)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite2 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                        {
+                                          cbor_det_array_iterator_t
+                                          pi = cbor_det_array_iterator_start(v1);
+                                          bool ite0;
+                                          if (cbor_det_array_iterator_is_empty(pi))
+                                            ite0 = false;
+                                          else
+                                            ite0 =
+                                              COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                          bool ite1;
+                                          if (ite0)
+                                          {
+                                            bool pcont = true;
+                                            while (pcont)
+                                            {
+                                              cbor_det_array_iterator_t i1 = pi;
+                                              bool ite;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite = false;
+                                              else
+                                                ite =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              if (!ite)
+                                              {
+                                                pi = i1;
+                                                pcont = false;
+                                              }
+                                            }
+                                            ite1 = true;
+                                          }
+                                          else
+                                            ite1 = false;
+                                          if (ite1)
+                                            ite2 = cbor_det_array_iterator_is_empty(pi);
+                                          else
+                                            ite2 = false;
+                                        }
+                                        else
+                                          ite2 = false;
                                       }
                                       else
                                         ite2 = false;
@@ -14794,8 +20109,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite0 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite0 = true;
+                                          else
+                                            ite0 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite0 = false;
@@ -14814,8 +20132,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite1 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite1 = true;
+                                            else
+                                              ite1 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite1 = false;
@@ -14827,15 +20148,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                       {
                                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                                        bool ite;
+                                        bool ite0;
                                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                          ite = cbor_det_read_uint64(k) == 2ULL;
+                                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                                         else
-                                          ite = false;
-                                        if (ite)
+                                          ite0 = false;
+                                        if (ite0)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite3 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                          {
+                                            cbor_det_array_iterator_t
+                                            pi = cbor_det_array_iterator_start(v1);
+                                            bool ite0;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite0 = false;
+                                            else
+                                              ite0 =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            bool ite1;
+                                            if (ite0)
+                                            {
+                                              bool pcont = true;
+                                              while (pcont)
+                                              {
+                                                cbor_det_array_iterator_t i1 = pi;
+                                                bool ite;
+                                                if (cbor_det_array_iterator_is_empty(pi))
+                                                  ite = false;
+                                                else
+                                                  ite =
+                                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                if (!ite)
+                                                {
+                                                  pi = i1;
+                                                  pcont = false;
+                                                }
+                                              }
+                                              ite1 = true;
+                                            }
+                                            else
+                                              ite1 = false;
+                                            if (ite1)
+                                              ite3 = cbor_det_array_iterator_is_empty(pi);
+                                            else
+                                              ite3 = false;
+                                          }
+                                          else
+                                            ite3 = false;
                                         }
                                         else
                                           ite3 = false;
@@ -14856,8 +20216,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         ite = false;
                                       if (ite)
                                       {
-                                        cbor_det_map_entry_value(chd);
-                                        ite4 = true;
+                                        cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                        if (COSE_Format_validate_tstr(v1))
+                                          ite4 = true;
+                                        else
+                                          ite4 = COSE_Format_validate_int(v1);
                                       }
                                       else
                                         ite4 = false;
@@ -14878,8 +20241,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite0 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite0 = true;
+                                          else
+                                            ite0 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite0 = false;
@@ -14898,8 +20264,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite1 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite1 = true;
+                                            else
+                                              ite1 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite1 = false;
@@ -14912,15 +20281,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                       {
                                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                                        bool ite;
+                                        bool ite0;
                                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                          ite = cbor_det_read_uint64(k) == 2ULL;
+                                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                                         else
-                                          ite = false;
-                                        if (ite)
+                                          ite0 = false;
+                                        if (ite0)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite2 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                          {
+                                            cbor_det_array_iterator_t
+                                            pi = cbor_det_array_iterator_start(v1);
+                                            bool ite0;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite0 = false;
+                                            else
+                                              ite0 =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            bool ite1;
+                                            if (ite0)
+                                            {
+                                              bool pcont = true;
+                                              while (pcont)
+                                              {
+                                                cbor_det_array_iterator_t i1 = pi;
+                                                bool ite;
+                                                if (cbor_det_array_iterator_is_empty(pi))
+                                                  ite = false;
+                                                else
+                                                  ite =
+                                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                if (!ite)
+                                                {
+                                                  pi = i1;
+                                                  pcont = false;
+                                                }
+                                              }
+                                              ite1 = true;
+                                            }
+                                            else
+                                              ite1 = false;
+                                            if (ite1)
+                                              ite2 = cbor_det_array_iterator_is_empty(pi);
+                                            else
+                                              ite2 = false;
+                                          }
+                                          else
+                                            ite2 = false;
                                         }
                                         else
                                           ite2 = false;
@@ -14941,8 +20349,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite0 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite0 = true;
+                                            else
+                                              ite0 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite0 = false;
@@ -14961,8 +20372,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                               ite = false;
                                             if (ite)
                                             {
-                                              cbor_det_map_entry_value(chd);
-                                              ite1 = true;
+                                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                              if (COSE_Format_validate_int(v1))
+                                                ite1 = true;
+                                              else
+                                                ite1 = COSE_Format_validate_tstr(v1);
                                             }
                                             else
                                               ite1 = false;
@@ -14974,15 +20388,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         else
                                         {
                                           cbor_det_t k = cbor_det_map_entry_key(chd);
-                                          bool ite;
+                                          bool ite0;
                                           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                            ite = cbor_det_read_uint64(k) == 2ULL;
+                                            ite0 = cbor_det_read_uint64(k) == 2ULL;
                                           else
-                                            ite = false;
-                                          if (ite)
+                                            ite0 = false;
+                                          if (ite0)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite3 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                            {
+                                              cbor_det_array_iterator_t
+                                              pi = cbor_det_array_iterator_start(v1);
+                                              bool ite0;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite0 = false;
+                                              else
+                                                ite0 =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              bool ite1;
+                                              if (ite0)
+                                              {
+                                                bool pcont = true;
+                                                while (pcont)
+                                                {
+                                                  cbor_det_array_iterator_t i1 = pi;
+                                                  bool ite;
+                                                  if (cbor_det_array_iterator_is_empty(pi))
+                                                    ite = false;
+                                                  else
+                                                    ite =
+                                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                  if (!ite)
+                                                  {
+                                                    pi = i1;
+                                                    pcont = false;
+                                                  }
+                                                }
+                                                ite1 = true;
+                                              }
+                                              else
+                                                ite1 = false;
+                                              if (ite1)
+                                                ite3 = cbor_det_array_iterator_is_empty(pi);
+                                              else
+                                                ite3 = false;
+                                            }
+                                            else
+                                              ite3 = false;
                                           }
                                           else
                                             ite3 = false;
@@ -15002,8 +20455,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite5 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_tstr(v1))
+                                            ite5 = true;
+                                          else
+                                            ite5 = COSE_Format_validate_int(v1);
                                         }
                                         else
                                           ite5 = false;
@@ -15023,10 +20479,8 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                         ite = false;
                                       if (ite)
-                                      {
-                                        cbor_det_map_entry_value(chd);
-                                        ite6 = true;
-                                      }
+                                        ite6 =
+                                          COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                                       else
                                         ite6 = false;
                                     }
@@ -15046,8 +20500,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite0 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_int(v1))
+                                            ite0 = true;
+                                          else
+                                            ite0 = COSE_Format_validate_tstr(v1);
                                         }
                                         else
                                           ite0 = false;
@@ -15066,8 +20523,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite1 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite1 = true;
+                                            else
+                                              ite1 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite1 = false;
@@ -15080,15 +20540,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                       else
                                       {
                                         cbor_det_t k = cbor_det_map_entry_key(chd);
-                                        bool ite;
+                                        bool ite0;
                                         if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                          ite = cbor_det_read_uint64(k) == 2ULL;
+                                          ite0 = cbor_det_read_uint64(k) == 2ULL;
                                         else
-                                          ite = false;
-                                        if (ite)
+                                          ite0 = false;
+                                        if (ite0)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite2 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                          {
+                                            cbor_det_array_iterator_t
+                                            pi = cbor_det_array_iterator_start(v1);
+                                            bool ite0;
+                                            if (cbor_det_array_iterator_is_empty(pi))
+                                              ite0 = false;
+                                            else
+                                              ite0 =
+                                                COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                            bool ite1;
+                                            if (ite0)
+                                            {
+                                              bool pcont = true;
+                                              while (pcont)
+                                              {
+                                                cbor_det_array_iterator_t i1 = pi;
+                                                bool ite;
+                                                if (cbor_det_array_iterator_is_empty(pi))
+                                                  ite = false;
+                                                else
+                                                  ite =
+                                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                if (!ite)
+                                                {
+                                                  pi = i1;
+                                                  pcont = false;
+                                                }
+                                              }
+                                              ite1 = true;
+                                            }
+                                            else
+                                              ite1 = false;
+                                            if (ite1)
+                                              ite2 = cbor_det_array_iterator_is_empty(pi);
+                                            else
+                                              ite2 = false;
+                                          }
+                                          else
+                                            ite2 = false;
                                         }
                                         else
                                           ite2 = false;
@@ -15109,8 +20608,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite0 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite0 = true;
+                                            else
+                                              ite0 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite0 = false;
@@ -15129,8 +20631,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                               ite = false;
                                             if (ite)
                                             {
-                                              cbor_det_map_entry_value(chd);
-                                              ite1 = true;
+                                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                              if (COSE_Format_validate_int(v1))
+                                                ite1 = true;
+                                              else
+                                                ite1 = COSE_Format_validate_tstr(v1);
                                             }
                                             else
                                               ite1 = false;
@@ -15142,15 +20647,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         else
                                         {
                                           cbor_det_t k = cbor_det_map_entry_key(chd);
-                                          bool ite;
+                                          bool ite0;
                                           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                            ite = cbor_det_read_uint64(k) == 2ULL;
+                                            ite0 = cbor_det_read_uint64(k) == 2ULL;
                                           else
-                                            ite = false;
-                                          if (ite)
+                                            ite0 = false;
+                                          if (ite0)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite3 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                            {
+                                              cbor_det_array_iterator_t
+                                              pi = cbor_det_array_iterator_start(v1);
+                                              bool ite0;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite0 = false;
+                                              else
+                                                ite0 =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              bool ite1;
+                                              if (ite0)
+                                              {
+                                                bool pcont = true;
+                                                while (pcont)
+                                                {
+                                                  cbor_det_array_iterator_t i1 = pi;
+                                                  bool ite;
+                                                  if (cbor_det_array_iterator_is_empty(pi))
+                                                    ite = false;
+                                                  else
+                                                    ite =
+                                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                  if (!ite)
+                                                  {
+                                                    pi = i1;
+                                                    pcont = false;
+                                                  }
+                                                }
+                                                ite1 = true;
+                                              }
+                                              else
+                                                ite1 = false;
+                                              if (ite1)
+                                                ite3 = cbor_det_array_iterator_is_empty(pi);
+                                              else
+                                                ite3 = false;
+                                            }
+                                            else
+                                              ite3 = false;
                                           }
                                           else
                                             ite3 = false;
@@ -15171,8 +20715,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           ite = false;
                                         if (ite)
                                         {
-                                          cbor_det_map_entry_value(chd);
-                                          ite4 = true;
+                                          cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                          if (COSE_Format_validate_tstr(v1))
+                                            ite4 = true;
+                                          else
+                                            ite4 = COSE_Format_validate_int(v1);
                                         }
                                         else
                                           ite4 = false;
@@ -15193,8 +20740,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite0 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_int(v1))
+                                              ite0 = true;
+                                            else
+                                              ite0 = COSE_Format_validate_tstr(v1);
                                           }
                                           else
                                             ite0 = false;
@@ -15213,8 +20763,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                               ite = false;
                                             if (ite)
                                             {
-                                              cbor_det_map_entry_value(chd);
-                                              ite1 = true;
+                                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                              if (COSE_Format_validate_int(v1))
+                                                ite1 = true;
+                                              else
+                                                ite1 = COSE_Format_validate_tstr(v1);
                                             }
                                             else
                                               ite1 = false;
@@ -15227,15 +20780,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         else
                                         {
                                           cbor_det_t k = cbor_det_map_entry_key(chd);
-                                          bool ite;
+                                          bool ite0;
                                           if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                            ite = cbor_det_read_uint64(k) == 2ULL;
+                                            ite0 = cbor_det_read_uint64(k) == 2ULL;
                                           else
-                                            ite = false;
-                                          if (ite)
+                                            ite0 = false;
+                                          if (ite0)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite2 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                            {
+                                              cbor_det_array_iterator_t
+                                              pi = cbor_det_array_iterator_start(v1);
+                                              bool ite0;
+                                              if (cbor_det_array_iterator_is_empty(pi))
+                                                ite0 = false;
+                                              else
+                                                ite0 =
+                                                  COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                              bool ite1;
+                                              if (ite0)
+                                              {
+                                                bool pcont = true;
+                                                while (pcont)
+                                                {
+                                                  cbor_det_array_iterator_t i1 = pi;
+                                                  bool ite;
+                                                  if (cbor_det_array_iterator_is_empty(pi))
+                                                    ite = false;
+                                                  else
+                                                    ite =
+                                                      COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                  if (!ite)
+                                                  {
+                                                    pi = i1;
+                                                    pcont = false;
+                                                  }
+                                                }
+                                                ite1 = true;
+                                              }
+                                              else
+                                                ite1 = false;
+                                              if (ite1)
+                                                ite2 = cbor_det_array_iterator_is_empty(pi);
+                                              else
+                                                ite2 = false;
+                                            }
+                                            else
+                                              ite2 = false;
                                           }
                                           else
                                             ite2 = false;
@@ -15256,8 +20848,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                               ite = false;
                                             if (ite)
                                             {
-                                              cbor_det_map_entry_value(chd);
-                                              ite0 = true;
+                                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                              if (COSE_Format_validate_int(v1))
+                                                ite0 = true;
+                                              else
+                                                ite0 = COSE_Format_validate_tstr(v1);
                                             }
                                             else
                                               ite0 = false;
@@ -15276,8 +20871,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                                 ite = false;
                                               if (ite)
                                               {
-                                                cbor_det_map_entry_value(chd);
-                                                ite1 = true;
+                                                cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                                if (COSE_Format_validate_int(v1))
+                                                  ite1 = true;
+                                                else
+                                                  ite1 = COSE_Format_validate_tstr(v1);
                                               }
                                               else
                                                 ite1 = false;
@@ -15289,15 +20887,54 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                           else
                                           {
                                             cbor_det_t k = cbor_det_map_entry_key(chd);
-                                            bool ite;
+                                            bool ite0;
                                             if (cbor_det_major_type(k) == CBOR_MAJOR_TYPE_UINT64)
-                                              ite = cbor_det_read_uint64(k) == 2ULL;
+                                              ite0 = cbor_det_read_uint64(k) == 2ULL;
                                             else
-                                              ite = false;
-                                            if (ite)
+                                              ite0 = false;
+                                            if (ite0)
                                             {
-                                              cbor_det_map_entry_value(chd);
-                                              ite3 = true;
+                                              cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                              if (cbor_det_major_type(v1) == CBOR_MAJOR_TYPE_ARRAY)
+                                              {
+                                                cbor_det_array_iterator_t
+                                                pi = cbor_det_array_iterator_start(v1);
+                                                bool ite0;
+                                                if (cbor_det_array_iterator_is_empty(pi))
+                                                  ite0 = false;
+                                                else
+                                                  ite0 =
+                                                    COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                bool ite1;
+                                                if (ite0)
+                                                {
+                                                  bool pcont = true;
+                                                  while (pcont)
+                                                  {
+                                                    cbor_det_array_iterator_t i1 = pi;
+                                                    bool ite;
+                                                    if (cbor_det_array_iterator_is_empty(pi))
+                                                      ite = false;
+                                                    else
+                                                      ite =
+                                                        COSE_Format_validate_label(cbor_det_array_iterator_next(&pi));
+                                                    if (!ite)
+                                                    {
+                                                      pi = i1;
+                                                      pcont = false;
+                                                    }
+                                                  }
+                                                  ite1 = true;
+                                                }
+                                                else
+                                                  ite1 = false;
+                                                if (ite1)
+                                                  ite3 = cbor_det_array_iterator_is_empty(pi);
+                                                else
+                                                  ite3 = false;
+                                              }
+                                              else
+                                                ite3 = false;
                                             }
                                             else
                                               ite3 = false;
@@ -15317,8 +20954,11 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                             ite = false;
                                           if (ite)
                                           {
-                                            cbor_det_map_entry_value(chd);
-                                            ite5 = true;
+                                            cbor_det_t v1 = cbor_det_map_entry_value(chd);
+                                            if (COSE_Format_validate_tstr(v1))
+                                              ite5 = true;
+                                            else
+                                              ite5 = COSE_Format_validate_int(v1);
                                           }
                                           else
                                             ite5 = false;
@@ -15337,10 +20977,8 @@ bool COSE_Format_validate_header_map(cbor_det_t c)
                                         else
                                           ite = false;
                                         if (ite)
-                                        {
-                                          cbor_det_map_entry_value(chd);
-                                          ite7 = true;
-                                        }
+                                          ite7 =
+                                            COSE_Format_validate_bstr(cbor_det_map_entry_value(chd));
                                         else
                                           ite7 = false;
                                       }
@@ -15622,7 +21260,7 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
     if (ite)
       ite0 = MGOK;
     else
-      ite0 = MGCutFail;
+      ite0 = MGFail;
   }
   else
     ite0 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
@@ -15745,7 +21383,7 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
     if (ite0)
       ite1 = MGOK;
     else
-      ite1 = MGCutFail;
+      ite1 = MGFail;
   }
   else
     ite1 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
@@ -15835,7 +21473,7 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
     if (ite)
       ite3 = MGOK;
     else
-      ite3 = MGCutFail;
+      ite3 = MGFail;
   }
   else
     ite3 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
@@ -15922,7 +21560,7 @@ COSE_Format_evercddl_header_map_pretty COSE_Format_parse_header_map(cbor_det_t c
     if (COSE_Format_validate_bstr(cv))
       ite5 = MGOK;
     else
-      ite5 = MGCutFail;
+      ite5 = MGFail;
   }
   else
     ite5 = KRML_EABORT(impl_map_group_result, "unreachable (pattern matches are exhaustive in F*)");
