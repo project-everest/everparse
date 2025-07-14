@@ -88,11 +88,11 @@ let ancillary_validate_env_set_ask_for
   (env: ancillary_validate_env vmatch se)
   (a: option (ask_for se))
   (sq: squash (option_ask_for_is_type se a))
-  (i: impl_typ vmatch (typ_sem se (AskForType?.t (Some?.v a))))
+  (i: impl_typ vmatch (option_ask_for_get_type se a sq))
 : Tot (ancillary_validate_env vmatch se)
-= ancillary_validate_env_set env _ i
+= ancillary_validate_env_set env (AskForType?.t (Some?.v a)) i
 
-[@@sem_attr]
+[@@sem_attr; Bundle.bundle_attr]
 let validate_ask_for_map_constraint
   (#t #t2 #t_arr #t_map: Type0)
   (#vmatch: (perm -> t -> Cbor.cbor -> slprop))
@@ -137,11 +137,11 @@ let ancillary_map_constraint_env_set_ask_for
   (env: ancillary_map_constraint_env vmatch se)
   (a: option (ask_for se))
   (sq: squash (option_ask_for_is_map_constraint se a))
-  (i: impl_map_entry_cond vmatch (map_constraint_sem se (AskForMapConstraint?.t (Some?.v a))))
+  (i: impl_map_entry_cond vmatch (option_ask_for_get_map_constraint se a sq))
 : Tot (ancillary_map_constraint_env vmatch se)
-= ancillary_map_constraint_env_set env _ i
+= ancillary_map_constraint_env_set env (AskForMapConstraint?.t (Some?.v a)) i
 
-[@@sem_attr]
+[@@sem_attr; Bundle.bundle_attr]
 let ancillary_map_constraint_env_is_some
   (#cbor_t: Type)
   (#vmatch2: perm -> cbor_t -> Cbor.cbor & Cbor.cbor -> slprop)

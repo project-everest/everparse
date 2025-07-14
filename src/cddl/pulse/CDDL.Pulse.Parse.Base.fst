@@ -209,6 +209,22 @@ fn validate_and_parse
   }
 }
 
+let impl_zero_copy_parse_t_eq_gen
+    (#ty: Type0)
+    (vmatch: perm -> ty -> cbor -> slprop)
+    (#t: typ)
+    (#tgt: Type0)
+    (#tgt_serializable: tgt -> bool)
+    (ps: parser_spec t tgt tgt_serializable)
+    (#tgt1: Type0)
+    (#impl_tgt1: Type0)
+    (r: rel impl_tgt1 tgt1)
+    (ieq1: squash (tgt1 == tgt))
+    (impl_tgt2: Type0)
+    (ieq: squash (impl_tgt1 == impl_tgt2))
+: Tot (squash (impl_zero_copy_parse vmatch ps #impl_tgt1 r == impl_zero_copy_parse vmatch ps #impl_tgt2 (coerce_rel r impl_tgt2 ieq)))
+= ()
+
 let impl_zero_copy_parse_t_eq
     (#ty: Type0)
     (vmatch: perm -> ty -> cbor -> slprop)

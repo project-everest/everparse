@@ -764,6 +764,7 @@ type map_constraint =
 | MCAnd: map_constraint -> map_constraint -> map_constraint
 | MCOr: map_constraint -> map_constraint -> map_constraint
 
+[@@ base_attr]
 let rec bounded_map_constraint
   (env: name_env)
   (g: map_constraint)
@@ -804,6 +805,7 @@ let rec bounded_map_constraint_incr
     -> bounded_map_constraint_incr env env' g1
   | _ -> ()
 
+[@@ sem_attr ]
 let rec map_constraint_sem
   (env: sem_env)
   (g: map_constraint)
@@ -876,6 +878,7 @@ type elab_map_group =
   g2: elab_map_group ->
   elab_map_group
 
+[@@ base_attr]
 let rec bounded_elab_map_group
   (env: name_env)
   (g: elab_map_group)
