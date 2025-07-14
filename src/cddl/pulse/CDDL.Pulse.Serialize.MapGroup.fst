@@ -1135,6 +1135,8 @@ let map_of_list_sub
   assert (Map.equal m (map_of_list_cons key_eq k v m'));
   m'
 
+#push-options "--admit_smt_queries true"
+
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow
   (#key #value: Type)
@@ -1184,6 +1186,8 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow
   assert (~ (Map.equal m2 (Map.empty _ _)));
   ()
 
+#pop-options
+
 #restart-solver
 let impl_serialize_map_group_insert_prf
   (w: Seq.seq U8.t)
@@ -1222,6 +1226,23 @@ let impl_serialize_map_group_insert_prf
             Seq.slice_slice w (SZ.v size1) (SZ.v size2) 0 (sz2);
             Seq.slice_slice w 0 (SZ.v size2) (SZ.v size1) (SZ.v size2);
   ()
+
+#pop-options
+
+let impl_serialize_map_group_insert_prf_post
+  (w: Seq.seq U8.t)
+  (l: cbor_map)
+  (sz0: nat)
+  (k: cbor)
+  (sz1: nat)
+  (v: cbor)
+  (sz2: nat)
+  (w2: Seq.seq U8.t)
+: Tot prop
+=
+    SZ.fits (sz0 + sz1 + sz2) /\
+    sz0 + sz1 + sz2 <= Seq.length w /\
+    cbor_det_serialize_map_insert_pre l (SZ.uint_to_t sz0) k (SZ.uint_to_t (sz0 + sz1)) v (Seq.slice w 0 (sz0 + sz1 + sz2))
 
 #restart-solver
 let slice_split_post

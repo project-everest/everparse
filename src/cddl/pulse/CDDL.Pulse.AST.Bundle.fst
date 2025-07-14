@@ -159,8 +159,8 @@ let sem_of_typ_sem_wf_ast_env_extend_typ_with_weak
   (let e' = (wf_ast_env_extend_typ_with_weak e new_name t t_wf) in
     sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t
   )
-= let e' = (wf_ast_env_extend_typ_with_weak e new_name t t_wf) in
-  assert_norm (sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t)
+= 
+  assert_norm (let e' = (wf_ast_env_extend_typ_with_weak e new_name t t_wf) in sem_of_type_sem (e'.e_sem_env.se_env new_name) == typ_sem e.e_sem_env t)
 
 [@@bundle_attr; sem_attr] // sem_attr for validate_typ
 let bundle_env_extend_typ_with_weak

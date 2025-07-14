@@ -1135,17 +1135,19 @@ fn cddl_map_iterator_next
     let test_key = cddl_map_iterator_impl_validate1 i hd_key;
     Trade.elim _ (vmatch2 pmhd hd vhd);
     if not test_key {
+      Trade.elim (vmatch _ _ _) (vmatch2 pmhd hd vhd);
       Trade.elim (vmatch2 pmhd hd vhd) _;
       true
     } else {
-      let test_ex = cddl_map_iterator_impl_validate_ex i hd;
+      let test_ex = cddl_map_iterator_impl_validate_ex i hd_key;
+      Trade.elim (vmatch _ _ _) (vmatch2 pmhd hd vhd);
       if test_ex {
         Trade.elim (vmatch2 pmhd hd vhd) _;
         true
       } else {
         let hd_value = map_entry_value hd;
         let test_value = cddl_map_iterator_impl_validate2 i hd_value;
-        Trade.elim _ (vmatch2 pmhd hd vhd);
+        Trade.elim (vmatch _ _ _) (vmatch2 pmhd hd vhd);
         Trade.elim (vmatch2 pmhd hd vhd) _;
         not test_value
       }

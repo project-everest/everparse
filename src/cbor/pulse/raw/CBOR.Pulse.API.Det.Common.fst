@@ -254,8 +254,7 @@ let list_map_mk_det_raw_cbor_correct
     List.Tot.for_all (SpecRaw.raw_data_item_sorted SpecF.deterministically_encoded_cbor_map_key_order) l'
   ))
   [SMTPat (List.Tot.map mk_det_raw_cbor l)]
-= let l' = List.Tot.map mk_det_raw_cbor l in
-  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+= assert (List.Tot.map mk_det_raw_cbor l == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); 
   AF.list_map_mk_det_raw_cbor_correct l
 
 let list_map_mk_cbor_mk_det_raw_cbor
@@ -265,8 +264,7 @@ let list_map_mk_cbor_mk_det_raw_cbor
     List.Tot.map SpecRaw.mk_cbor (List.Tot.map mk_det_raw_cbor l) == l
   ))
   [SMTPat (List.Tot.map mk_det_raw_cbor l)]
-= let l' = List.Tot.map mk_det_raw_cbor l in
-  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+= assert (List.Tot.map mk_det_raw_cbor l == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ());
   AF.list_map_mk_cbor_mk_det_raw_cbor l
 
 let cbor_det_serialize_array_precond_elim
@@ -282,8 +280,7 @@ let cbor_det_serialize_array_precond_elim
     let rlen = SpecRaw.mk_raw_uint64 len in
     Serialize.cbor_serialize_array_precond rlen (List.Tot.map mk_det_raw_cbor l) off v
   ))
-= let l' = List.Tot.map mk_det_raw_cbor l in
-  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+= assert (List.Tot.map mk_det_raw_cbor l ==  List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ());
   ()
 
 let cbor_det_serialize_array_postcond_intro
@@ -299,8 +296,7 @@ let cbor_det_serialize_array_postcond_intro
   (ensures (
     cbor_det_serialize_array_postcond l res v
   ))
-= let l' = List.Tot.map mk_det_raw_cbor l in
-  assert (l' == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ()); // FIXME: WHY WHY WHY?
+= assert (List.Tot.map mk_det_raw_cbor l == List.Tot.map SpecRaw.mk_det_raw_cbor l) by (FStar.Tactics.trefl ());
   let x = SpecRaw.Array (SpecRaw.mk_raw_uint64 len) (List.Tot.map mk_det_raw_cbor l) in
   assert_norm (SpecRaw.raw_data_item_ints_optimal == SpecRaw.holds_on_raw_data_item SpecRaw.raw_data_item_ints_optimal_elem); // FIXME: WHY WHY WHY?
   SpecRaw.raw_data_item_sorted_optimal_valid SpecF.deterministically_encoded_cbor_map_key_order x;

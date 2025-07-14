@@ -1081,7 +1081,7 @@ let rec spec_map_group_footprint_incr
     spec_map_group_footprint_incr env env' g2
   | _ -> ()
 
-[@@base_attr; PpxDerivingShow]
+[@@base_attr]
 type ast0_wf_typ
 : typ -> Type
 = 

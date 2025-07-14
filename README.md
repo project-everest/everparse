@@ -25,7 +25,8 @@ A pre-built Docker image is [available on GitHub Packages](https://github.com/ta
 NOTE: These Docker images only contain CBOR, CDDL and COSE. They do not
 contain the rest of EverParse.
 
-If you do not want to use the Docker image, you can follow the build instructions below.
+The *Use* sections of the instructions below apply to the pre-built
+Docker image as well as when building by hand.
 
 ### CBOR
 
@@ -35,9 +36,15 @@ NOTE: Currently, we only support the deterministic subset of CBOR. Full support 
 
 The following instructions work without F*.
 
-To build the C and Rust CBOR library, run `make cbor`
+#### Build and test
 
-To test the C and Rust CBOR library, run `make cbor-test-unverified`
+EverCBOR is already built in the Docker image. If you are not using that image, you can:
+
+* build the C and Rust CBOR library: run `make cbor`
+
+* test the C and Rust CBOR library: run `make cbor-test-unverified`
+
+#### Use
 
 * The generated C source files for CBOR are in `src/cbor/pulse/det/c`, which also contains some tests in the `test` subdirectory. There, the header file is `CBORDet.h`. The object file is `CBORDet.o`, which you can link with your application.
 * The generated Rust source files for CBOR are in `src/cbor/pulse/det/rust` , where you can use `cargo build` and `cargo test` ; the crate is called `cborrs`
@@ -50,9 +57,15 @@ NOTE: Support for encryption is in progress.
 
 The following instructions work without F*.
 
-To build the C and Rust COSE library, run `make cose`
+#### Build and test
 
-To test the C and Rust COSE library, run `make cose-extracted-test`
+EverCOSign is already built in the Docker image. If you are not using that image, you can:
+
+* build the C and Rust COSE library: run `make cose`
+
+* test the C and Rust COSE library: run `make cose-extracted-test`
+
+#### Use
 
 * The generated C source files for COSE are in `src/cose/c` :
   + `COSE_Format.c` contains the verified parsers and serializers for COSE
@@ -74,11 +87,18 @@ v) // (b, * u => v)`
 
 #### Build
 
+EverCDDL is already built in the Docker image. If you are not using that image, you can build EverCDDL as follows:
+
 1. Install opam 2.x, which you can install following the [official instructions](https://opam.ocaml.org/doc/Install.html). You do not need to install OCaml, though.
 
-2. Run `./build-evercddl.sh` . This will build EverCDDL using a local opam switch, so this will not impact your existing opam switches if any.
+2. Run `./build-evercddl.sh` . This will build EverCDDL using a local
+   opam switch, so this will not impact your existing opam switches if
+   any.
 
 #### Use
+
+The EverCDDL code generator is compiled as an executable,
+`bin/cddl.exe`
 
 If you have a CDDL data format description, say `mydesc.cddl`, you can
 automatically compile it into C parsers and serializers, with

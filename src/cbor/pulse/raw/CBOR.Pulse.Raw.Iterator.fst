@@ -90,9 +90,8 @@ ensures
 {
   S.share c.s;
   half_mul pm c.slice_perm;
-  with _pm _sq.
-    rewrite pts_to c.s #_pm _sq as pts_to c'.s #_pm _sq;
-  rewrite each _sq as sq;
+  with _pm _sq .
+    rewrite pts_to c.s #_pm _sq as pts_to c'.s #_pm sq;
   fold (cbor_raw_slice_iterator_match elt_match pm c' l);
   ghost
   fn aux ()
@@ -711,15 +710,15 @@ decreases r
       PM.seq_list_match_nil_intro c r (elt_match (p /. 2.0R))
     }
     a :: q -> {
-      rewrite each r as (a :: q);
+//      rewrite each r as (a :: q);
       PM.seq_list_match_cons_elim c (a :: q) (elt_match p);
-      rewrite each List.Tot.hd (a :: q) as a;
+//      rewrite each List.Tot.hd (a :: q) as a; // does not work
       (* ^ Why!? *)
 
-      elt_share p (Seq.head c) a;
+      elt_share p (Seq.head c) _;
       cbor_raw_share_slice elt_match p (Seq.tail c) q elt_share ();
-      PM.seq_list_match_cons_intro (Seq.head c) a (Seq.tail c) q (elt_match (p /. 2.0R));
-      PM.seq_list_match_cons_intro (Seq.head c) a (Seq.tail c) q (elt_match (p /. 2.0R));
+      PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd (a :: q)) (Seq.tail c) q (elt_match (p /. 2.0R));
+      PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd (a :: q)) (Seq.tail c) q (elt_match (p /. 2.0R));
       rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
       ();
     }
@@ -835,11 +834,11 @@ decreases r1
     }
     a :: q -> {
       PM.seq_list_match_cons_elim c (a :: q) (elt_match p1);
-      rewrite each List.Tot.hd (a :: q) as a;
+//      rewrite each List.Tot.hd (a :: q) as a; // does not work
       PM.seq_list_match_cons_elim c r2 (elt_match p2);
-      elt_gather p1 (Seq.head c) a p2 (List.Tot.hd r2);
+      elt_gather p1 (Seq.head c) (List.Tot.hd (a :: q)) p2 (List.Tot.hd r2);
       cbor_raw_gather_slice elt_match p1 (Seq.tail c) q p2 (List.Tot.tl r2) elt_gather ();
-      PM.seq_list_match_cons_intro (Seq.head c) a (Seq.tail c) q (elt_match (p1 +. p2));
+      PM.seq_list_match_cons_intro (Seq.head c) (List.Tot.hd (a :: q)) (Seq.tail c) q (elt_match (p1 +. p2));
       rewrite each Seq.cons (Seq.head c) (Seq.tail c) as c;
       ()
     }

@@ -20,6 +20,8 @@ open FStar.Mul
 module H = Hashtable
 module B = Binding
 
+let alignment = option (x:int{x == 1 \/ x == 2 \/ x == 4 \/ x == 8})
+
 type size =
   | Fixed of int
   | WithVariableSuffix of int
@@ -40,11 +42,14 @@ val size_of_typ (env:env_t) (t:typ)
 val value_of_const_expr (env:env_t) (e:expr)
   : ML (option (either bool (integer_type & int)))
 
+val field_size_and_alignment (env:env_t) (enclosing_typ:ident) (field_name:ident)
+  : ML (option (size & alignment))
+
 val field_offsets_of_type (env:env_t) (typ:ident)
 : ML (either (list (ident & int)) string)
 
 val is_alignment_field (fieldname:ident)
-: ML bool
+: bool
 
 val size_of_decls (env:B.global_env) (senv:size_env) (d:list decl)
   : ML (list decl)

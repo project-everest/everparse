@@ -1,16 +1,21 @@
 all: package-subset asn1 cbor cddl cbor-interface
 
-export FSTAR_EXE ?= $(wildcard $(realpath opt)/FStar/out/bin/fstar.exe)
-export KRML_HOME ?= $(realpath opt/karamel)
-export PULSE_HOME ?= $(realpath opt/pulse/out)
 export EVERPARSE_OPT_PATH=$(realpath opt)
+export FSTAR_EXE ?= $(wildcard $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe)
+export KRML_HOME ?= $(EVERPARSE_OPT_PATH)/karamel
+export PULSE_HOME ?= $(EVERPARSE_OPT_PATH)/pulse/out
+export HACL_HOME ?= $(EVERPARSE_OPT_PATH)/hacl-star
+EVEREST_HOME ?= $(EVERPARSE_OPT_PATH)/everest
 export PATH := $(EVERPARSE_OPT_PATH)/z3:$(PATH)
 
 include $(EVERPARSE_OPT_PATH)/env.Makefile
 
-_opam: submodules
+$(EVERPARSE_OPT_PATH)/everest:
+	+$(MAKE) -C $(EVERPARSE_OPT_PATH) everest
+
+_opam: $(EVEREST_HOME)
 	rm -rf $@.tmp
-	if opam init --bare --no-setup && opam switch create ./ ocaml-base-compiler.5.3.0 && opam exec opt/everest/everest opam ; then true ; else mv $@ $@.tmp ; exit 1 ; fi
+	if opam init --bare --no-setup && opam switch create ./ ocaml-base-compiler.5.3.0 && opam exec $(EVEREST_HOME)/everest opam ; then true ; else mv $@ $@.tmp ; exit 1 ; fi
 
 package-subset: quackyducky lowparse 3d
 
@@ -111,11 +116,11 @@ endif
 .PHONY: lowparse-pulse
 
 submodules:
-	$(MAKE) -C opt submodules
+	$(MAKE) -C $(EVERPARSE_OPT_PATH) submodules
 
 .PHONY: submodules
 
-cbor: submodules
+cbor:
 	+$(MAKE) -C src/cbor/pulse/det
 
 cbor-interface: $(filter-out src/cbor/spec/raw/%,$(filter src/cbor/spec/%,$(ALL_CHECKED_FILES)))
@@ -265,7 +270,7 @@ cose-test: cose-extract-test cose-extracted-test
 
 .PHONY: cose-test
 
-cose: submodules
+cose:
 	+$(MAKE) -C src/cose
 
 .PHONY: cose
@@ -275,6 +280,13 @@ cddl-test: cddl cddl-plugin-test cose-extract-test cddl-unit-tests
 .PHONY: cddl-test
 
 ci: test lowparse-pulse cbor-test cddl-test
+
+ci: test 3d-doc-ci
+
+3d-doc-ci: 3d-doc-test
+	+$(MAKE) -C doc 3d-ci
+
+.PHONY: 3d-doc-ci
 
 clean-3d:
 	+$(MAKE) -C src/3d clean
