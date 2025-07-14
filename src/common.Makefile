@@ -42,7 +42,7 @@ FSTAR_FILES ?= $(wildcard $(addsuffix /*.fst,$(SRC_DIRS)) $(addsuffix /*.fsti,$(
 FSTAR_OPTIONS += $(OTHERFLAGS) $(addprefix --include ,$(INCLUDE_PATHS)) --cache_checked_modules --warn_error @241 --already_cached $(ALREADY_CACHED)Prims,FStar,LowStar --cmi --ext context_pruning
 
 # https://github.com/FStarLang/FStar/pull/3861
-FSTAR_OPTIONS += --ext optimize_let_vc
+# FSTAR_OPTIONS += --ext optimize_let_vc
 
 # Passing RESOURCEMONITOR=1 will create .runlim files through the source tree with
 # information about the time and space taken by each F* invocation.

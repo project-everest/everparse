@@ -2039,8 +2039,8 @@ let mg_spec_choice_inj
     let c2' = cbor_map_filter (U.notp f2) c in
     map_group_footprint_elim source2 source_fp2 c2 c2';
     assert (cbor_map_equal c2' cbor_map_empty);
-    assume (c2 == c);
-    assume False
+    assert (c2 == c);
+    ()
 
 val mg_spec_choice_domain_inj
   (#source1: det_map_group)
@@ -2749,7 +2749,7 @@ let map_group_zero_or_more_match_item_serializer
   assert (forall x . Some? (cbor_map_get y x) ==> cbor_map_mem (x, Some?.v (cbor_map_get y x)) y);
   let py = map_group_zero_or_more_match_item_parser' pkey pvalue except y in
   assert (forall (kv: (tkey & list tvalue)) . Map.mem kv x ==> cbor_map_mem (pkey.serializer (fst kv), pvalue.serializer (List.Tot.hd (snd kv))) y);
-  assume (Map.equal' py x);
+  assert (Map.equal' py x);
   y
 
 let map_group_zero_or_more_match_item_parser_inj

@@ -140,7 +140,7 @@ let parser_spec_map_group_eq
     parser_spec_map_group source0 p target_prop' x == p x'
   ))
 
-#push-options "--z3rlimit 64 --split_queries always"
+#push-options "--z3rlimit 256 --split_queries always"
 
 #restart-solver
 let map_group_concat_footprint_disjoint
