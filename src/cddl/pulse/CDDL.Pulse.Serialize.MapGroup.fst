@@ -773,7 +773,7 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_aux
 
 #pop-options
 
-#push-options "--admit_smt_queries true" // "--z3rlimit 256 --print_implicits --split_queries always"
+#push-options "--z3rlimit 256 --print_implicits --split_queries always"
 
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc'
@@ -943,8 +943,6 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc
 
 #push-options "--z3rlimit 64 --print_implicits"
 
-#push-options "--admit_smt_queries true"
-
 #restart-solver
 let impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow
   (#key #value: Type)
@@ -992,8 +990,6 @@ let impl_serialize_map_group_valid_map_zero_or_more_snoc_overflow
   Classical.forall_intro (Classical.move_requires prf);
   assert (~ (Map.equal m2 (Map.empty _ _)));
   ()
-
-#pop-options
 
 #restart-solver
 let impl_serialize_map_group_insert_prf
@@ -1132,6 +1128,14 @@ let impl_serialize_map_zero_or_more_iterator_inv
       )) /\
       impl_serialize_map_group_valid l sp v0 (Seq.length w) == (res && impl_serialize_map_group_valid (cbor_map_union l (sp.mg_serializer m1)) sp m2' (Seq.length w))
 
+let seq_slice_length_zero_left
+  (#t: Type)
+  (s: Seq.seq t)
+  (len: nat { len <= Seq.length s })
+: Lemma
+  (Seq.length (Seq.slice s 0 len) == len)
+= ()
+
 #push-options "--z3rlimit 256 --fuel 2 --ifuel 1 --query_stats --print_implicits --split_queries always"
 
 #restart-solver
@@ -1244,6 +1248,7 @@ fn impl_serialize_map_zero_or_more_iterator_gen
       let size0 = !out_size;
       with w . assert (pts_to out w);
       Seq.lemma_split w (SZ.v size0);
+      let sqw : squash (Seq.slice w 0 (SZ.v size0) == Cbor.cbor_det_serialize_map (cbor_map_union l (sp.mg_serializer m1))) = ();
       let (outl1, out1) = S.split out size0;
       let sz1 = pa1 ck out1;
       S.pts_to_len out1;
@@ -1304,8 +1309,13 @@ fn impl_serialize_map_zero_or_more_iterator_gen
             S.pts_to_len outl;
             assert (pure (S.len outl == size2));
             S.pts_to_len outr;
-            // impl_serialize_map_group_insert_prf w' (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) (SZ.v sz1) (sp2.serializer va) (SZ.v sz2) w2;
-            assume (pure (
+            let sqw2 : squash (Seq.slice w 0 (SZ.v size0) == Cbor.cbor_det_serialize_map (cbor_map_union l (sp.mg_serializer m1))) = sqw;
+            seq_slice_length_zero_left w (SZ.v size0);
+            assert (pure (Seq.length (Seq.slice w 0 (SZ.v size0)) == SZ.v size0));
+            assert (pure (Seq.length (Cbor.cbor_det_serialize_map (cbor_map_union l (sp.mg_serializer m1))) == SZ.v size0));
+            assert (pure (Seq.slice w1 0 (SZ.v sz1) == Cbor.cbor_det_serialize (sp1.serializer ke)));
+            impl_serialize_map_group_insert_prf w' (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) (SZ.v sz1) (sp2.serializer va) (SZ.v sz2) w2;
+            assert (pure (
               impl_serialize_map_group_insert_prf_post
                 w' (cbor_map_union l (sp.mg_serializer m1)) (SZ.v size0) (sp1.serializer ke) (SZ.v sz1) (sp2.serializer va) (SZ.v sz2) w2
             ));
