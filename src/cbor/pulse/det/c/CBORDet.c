@@ -1077,7 +1077,10 @@ static cbor_raw cbor_read(Pulse_Lib_Slice_slice__uint8_t input)
 {
   header
   ph =
-    { .fst = { .major_type = CBOR_MAJOR_TYPE_SIMPLE_VALUE }, .snd = { .tag = LongArgumentOther } };
+    {
+      .fst = { .major_type = CBOR_MAJOR_TYPE_SIMPLE_VALUE, .additional_info = 0U },
+      .snd = { .tag = LongArgumentOther }
+    };
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
   scrut = split__uint8_t(input, jump_header(input, (size_t)0U));
   __Pulse_Lib_Slice_slice_uint8_t_Pulse_Lib_Slice_slice_uint8_t
