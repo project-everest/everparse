@@ -11,7 +11,13 @@ krml.do:
 
 .PHONY: %.do
 
-snapshot: rust.snapshot c.snapshot
+snapshot: rust-snapshot c.snapshot
+
+.PHONY: rust-snapshot
+
+rust-snapshot: rust.snapshot
+	rm -rf rust/target/doc
+	cd rust && cargo doc --no-deps
 
 local_curdir := $(CURDIR)
 ifeq ($(OS),Windows_NT)
