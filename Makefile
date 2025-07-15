@@ -221,24 +221,6 @@ cddl: cbor cbor-interface cddl-spec cddl-tool
 .PHONY: cbor cbor-det-c-test cbor-det-rust-test cbor-test cddl
 
 ifeq (,$(NO_PULSE))
-cddl-plugin-test: cddl
-	+$(MAKE) -C src/cddl/test
-else
-cddl-plugin-test:
-endif
-
-.PHONY: cddl-plugin-test
-
-ifeq (,$(NO_PULSE))
-cddl-demo: cddl
-	+$(MAKE) -C src/cddl/demo
-else
-cddl-demo:
-endif
-
-.PHONY: cddl-demo
-
-ifeq (,$(NO_PULSE))
 cddl-unit-tests: cddl
 	+$(MAKE) -C src/cddl test
 else
@@ -275,7 +257,7 @@ cose:
 
 .PHONY: cose
 
-cddl-test: cddl cddl-plugin-test cose-extract-test cddl-unit-tests
+cddl-test: cddl cose-extract-test cddl-unit-tests
 
 .PHONY: cddl-test
 
