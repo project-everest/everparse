@@ -188,10 +188,11 @@ let typ_included2
     Spec.array_close_array_group (array_group_sem e.e_sem_env a1);
     Spec.array_close_array_group (array_group_sem e.e_sem_env a2);
     array_group_included e  true a1 a2
+  | TMap _, _
+  | _, TMap _
+    -> RFailure "typ_included: unsupported cases: map"
   | TElem _, _
   | _, TElem _
   | TArray _, _
   | _, TArray _
-  | TMap _, _
-  | _, TMap _
     -> RFailure "typ_included: unsupported cases"

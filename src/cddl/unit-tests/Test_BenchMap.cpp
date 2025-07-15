@@ -30,7 +30,7 @@ uint64_t bigrand() {
 
 bool lookup1(BenchMap_evercddl_map_pretty m, uint64_t key, uint64_t *val) {
   assert (val);
-  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_aux_env3_type_1_pretty_BenchMap_aux_env3_type_1_pretty
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_aux_env3_type_1_pretty_BenchMap_aux_env3_type_1_pretty
     it = m.case_Mkevercddl_map_pretty1;
 
   while (!BenchMap_is_empty_iterate_map_aux_env3_type_1_and_aux_env3_type_1(it)) {
@@ -53,8 +53,8 @@ bool lookup1(BenchMap_evercddl_map_pretty m, uint64_t key, uint64_t *val) {
 
 bool lookup1_no_short(BenchMap_evercddl_map_pretty m, uint64_t key, uint64_t *val) {
   assert (val);
-  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_aux_env3_type_1_pretty_BenchMap_aux_env3_type_1_pretty
-    it = m.case_Mkevercddl_map_pretty1;
+  CDDL_Pulse_Parse_MapGroup_map_iterator_t__CBOR_Pulse_API_Det_Type_cbor_det_t_CBOR_Pulse_API_Det_Type_cbor_det_map_entry_t_CBOR_Pulse_API_Det_Type_cbor_det_map_iterator_t_BenchMap_aux_env3_type_1_pretty_BenchMap_aux_env3_type_1_pretty
+  it = m.case_Mkevercddl_map_pretty1;
 
   while (!BenchMap_is_empty_iterate_map_aux_env3_type_1_and_aux_env3_type_1(it)) {
     K___BenchMap_aux_env3_type_1_pretty_BenchMap_aux_env3_type_1_pretty k =

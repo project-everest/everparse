@@ -1400,6 +1400,11 @@ let rec map_constraint_disjoint
     if RSuccess? res2
     then res2
     else map_constraint_disjoint typ_disjoint typ_included env c1 c22
+  | MCNot c1', MCNot c2' ->
+    let res1 = map_constraint_included typ_disjoint typ_included env c1 c2' in
+    if RSuccess? res1
+    then res1
+    else map_constraint_included typ_disjoint typ_included env c2 c1'
   | MCNot c2', c1
   | c1, MCNot c2' ->
     map_constraint_included typ_disjoint typ_included env c1 c2'
