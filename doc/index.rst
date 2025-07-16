@@ -53,6 +53,8 @@ Manual
 
 * :ref:`build`
 
+* `EverCBOR Rust API<https://project-everest.github.io/everparse/evercbor-rust/cborrs/>_`
+  
 In the News
 -----------
 `EverParse: Hardening critical attack surfaces with formally proven message parsers <https://www.microsoft.com/en-us/research/blog/everparse-hardening-critical-attack-surfaces-with-formally-proven-message-parsers/>`_;

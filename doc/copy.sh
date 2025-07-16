@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+set -e
 set -x
 
 if [[ $1 == "" ]]; then
@@ -8,7 +9,8 @@ if [[ $1 == "" ]]; then
 fi
 
 destpath=$(realpath "$1")
-cd $(dirname $0)
+scriptpath=$(realpath $(dirname $0))
+cd $scriptpath
 
 if which gsed &>/dev/null; then
   SED=gsed
@@ -22,6 +24,8 @@ else
   FIND=find
 fi
 
+mkdir -p "$destpath"
+
 # make html # assume this is already done, see in the Makefile, 3d-ci depends on html
 cp -R _build/html/* "$destpath"
 
@@ -31,3 +35,5 @@ rm -rf images && if [[ -d _images ]] ; then mv _images images ; fi
 $FIND . -type f | grep -v '\.git' | xargs $SED -i 's/_static/static/g'
 $FIND . -type f | grep -v '\.git' | xargs $SED -i 's/_images/images/g'
 $FIND . -type f | grep -v '\.git' | xargs $SED -i 's/_sources/sources/g'
+
+cp -R $scriptpath/../src/cbor/pulse/det/rust/target/doc "$destpath"/evercbor-rust
