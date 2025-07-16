@@ -52,20 +52,34 @@ In the News
 Papers
 ------
 
+`Secure Parsing and Serializing with Separation Logic Applied to CBOR, CDDL and COSE <https://arxiv.org/abs/2505.17335>`_;
+  Tahina Ramananandro, Gabriel Ebner, Guido Martinez, Nikhil Swamy;
+
+  32nd ACM SIGSAC Conference on Computer and Communications Security (CCS), 2025 (accepted for publication, to appear)
+
+`ASN1*: Provably Correct Non-Malleable Parsing for ASN.1 DER <https://www.microsoft.com/en-us/research/publication/asn1-provably-correct-non-malleable-parsing-for-asn-1-der/>`_;
+  Haobin Ni, Antoine Delignat-Lavaud, Cédric Fournet, Tahina Ramananandro, Nikhil Swamy;
+
+  In Proceedings of the ACM SIGPLAN international conference on Certified Programs and Proofs (CPP), 2022
+
 `Hardening Attack Surfaces with Formally Proven Binary Format Parsers <https://www.microsoft.com/en-us/research/publication/hardening-attack-surfaces-with-formally-proven-binary-format-parsers/>`_;
   Nikhil Swamy, Tahina Ramananandro, Aseem Rastogi, Irina Spiridonova, Haobin Ni, Dmitry Malloy, Juan Vazquez, Michael Tang, Omar Cardona, Arti Gupta;
+
   In Proceedings of the 43rd ACM SIGPLAN International Conference on Programming Language Design and Implementation, 2022
 
 `DICE*: A Formally Verified Implementation of DICE Measured Boot <https://www.microsoft.com/en-us/research/publication/dice-a-formally-verified-implementation-of-dice-measured-boot/>`_;
   Zhe Tao, Aseem Rastogi, Naman Gupta, Kapil Vaswani and Aditya V. Thakur;
+
   In Proceedings of the 30th USENIX Security Symposium, 2021
 
 `A Security Model and Fully Verified Implementation for the IETF QUIC Record Layer <https://project-everest.github.io/assets/everquic.pdf>`_;
   Antoine Delignat-Lavaud, Cedric Fournet, Bryan Parno, Jonathan Protzenko, Tahina Ramananandro, Jay Bosamiya, Joseph Lallemand, Itsaka Rakotonirina, and Yi Zhou;
+
   In Proceedings of the 42nd IEEE Symposium on Security and Privacy, 2021
 
 `EverParse: Verified Secure Zero-Copy Parsers for Authenticated Message Formats <https://project-everest.github.io/assets/everparse.pdf>`_;
   Tahina Ramananandro, Antoine Delignat-Lavaud, Cedric Fournet, Nikhil Swamy, Tej Chajed, Nadim Kobeissi, and Jonathan Protzenko;
+
   In Proceedings of the 28th USENIX Security Symposium, 2019
 
 .. toctree::
