@@ -9,10 +9,12 @@ RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends ll
 RUN . "$HOME/.cargo/env" && rustup component add rustfmt && cargo install bindgen-cli
 
 # Install other dependencies
-RUN sudo apt-get install --yes \
+RUN sudo apt-get update && sudo apt-get install --yes --no-install-recommends \
   libssl-dev \
   cmake \
   python-is-python3 \
+  python3-pip \
+  time \
   wget
 
 # Bring in the contents
@@ -21,7 +23,7 @@ WORKDIR /mnt/everparse
 
 # Build and publish the release
 ARG CI_THREADS=24
-RUN sudo apt-get update && . "$HOME/.cargo/env" && eval $(opam env) && bash src/package/install-deps.sh && make -j $CI_THREADS -C opt && env OTHERFLAGS='--admit_smt_queries true' make -j $CI_THREADS cbor cddl cose
+RUN sudo apt-get update && . "$HOME/.cargo/env" && env OPAMYES=1 make _opam && eval $(opam env) && make -j $CI_THREADS -C opt && env OTHERFLAGS='--admit_smt_queries true' make -j $CI_THREADS cbor cddl cose
 
 ENTRYPOINT ["/mnt/everparse/opt/shell.sh", "--login", "-c"]
 CMD ["/bin/bash"]
