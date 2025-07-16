@@ -5,7 +5,7 @@ It consists of LowParse, a verified combinator library (in `src/lowparse`), and 
 
 For more information, you can read:
 * The [EverParse project website and user manual](https://project-everest.github.io/everparse), also available in the `doc` subdirectory of this repository as `*.rst` reStructuredText files.
-* our [CBOR/CDDL/COSE paper draft](https://doi.org/10.48550/arXiv.2505.17335) (see `README-cbor.md` for matchings between our paper and the code.)
+* our [CBOR/CDDL/COSE paper draft](https://doi.org/10.48550/arXiv.2505.17335) (see `README-cbor.md` for matchings between our paper and the code. The paper has just been accepted to ACM CCS 2025.)
 * our [Microsoft Research blog post](https://www.microsoft.com/en-us/research/blog/everparse-hardening-critical-attack-surfaces-with-formally-proven-message-parsers/)
 * our [PLDI 2022 paper](https://www.microsoft.com/en-us/research/publication/hardening-attack-surfaces-with-formally-proven-binary-format-parsers/)
 * our [USENIX Security 2019 paper](https://www.microsoft.com/en-us/research/publication/everparse/).
