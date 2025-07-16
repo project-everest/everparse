@@ -46,8 +46,26 @@ EverCBOR is already built in the Docker image. If you are not using that image, 
 
 #### Use
 
-* The generated C source files for CBOR are in `src/cbor/pulse/det/c`, which also contains some tests in the `test` subdirectory. There, the header file is `CBORDet.h`. The object file is `CBORDet.o`, which you can link with your application.
-* The generated Rust source files for CBOR are in `src/cbor/pulse/det/rust` , where you can use `cargo build` and `cargo test` ; the crate is called `cborrs`
+* C:
+
+  + The generated C source files for CBOR are in
+    `src/cbor/pulse/det/c`, which also contains some tests in the
+    `test` subdirectory. There, the header file is `CBORDet.h`. The
+    object file is `CBORDet.o`, which you can link with your
+    application.
+  
+  + A fully documented example is in
+    `src/cbor/pulse/det/c/example`. There, `main.c` documents the C
+    API; its `Makefile` shows how to compile and link against CBORDet.
+  
+* Rust:
+
+  + The generated Rust source files for CBOR are in
+    `src/cbor/pulse/det/rust` , where you can use `cargo build` and
+    `cargo test` ; the crate is called `cborrs`.
+
+  + The generated HTML documentation of `cborrs` is in
+    `src/cbor/pulse/det/rust/target/doc/cborrs/cbordetver/index.html`
 
 ### COSE
 
