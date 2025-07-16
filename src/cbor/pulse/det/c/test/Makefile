@@ -7,8 +7,6 @@ EVERPARSE_SRC_PATH = $(realpath ../../../../..)
 EVERPARSE_LIB_PATH = $(realpath ..)
 EVERPARSE_INCLUDE_PATH = $(realpath ..)
 
-include $(EVERPARSE_SRC_PATH)/karamel.Makefile
-
 CFLAGS += -Werror -I $(EVERPARSE_INCLUDE_PATH)
 
 .PHONY: all
