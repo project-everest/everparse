@@ -1,0 +1,125 @@
+typedef UINT64 ULONGLONG;
+typedef UINT32 ULONG;
+typedef UINT16 USHORT;
+typedef UINT8 BYTE;
+typedef UINT8 UCHAR;
+
+extern probe ProbeAndCopy
+extern probe (READ UINT32) ProbeAndReadU32
+extern probe (WRITE UINT64) WriteU64
+extern probe (INIT) ProbeInit
+extern PURE UINT64 UlongToPtr(UINT32 ptr)
+
+aligned
+typedef struct _PAIR 
+{
+    UINT32 f1;
+    UINT8 *f2;
+} PAIR;
+
+aligned
+typedef struct _RH
+{
+    USHORT               f1;
+    UINT8               *ptr;
+    PAIR                 pairs[:byte-size 30 * sizeof(PAIR)];
+} RH;
+
+aligned
+typedef struct _RESP1
+{
+    ULONG f1;
+    UINT32 f2;
+    USHORT f3;
+    USHORT f4;
+    UINT8 *ptr;
+    RH Headers;
+    USHORT f5;
+    UINT8   *ptr2;
+} RESP1;
+
+aligned
+typedef struct _RESP2
+{
+    RESP1 r1;
+    USHORT f2;
+    UINT8 *ptr;
+} RESP2;
+
+aligned
+casetype _IRESP(
+    USHORT ApiVersion,
+    EVERPARSE_COPY_BUFFER_T ResponseProbe
+    )
+{
+    switch (ApiVersion)
+    {
+        case 1:
+            RESP1 *Header1 probe ProbeAndCopy(length = sizeof(RESP1), destination = ResponseProbe);
+        case 2:
+            RESP2 *Header2 probe ProbeAndCopy(length = sizeof(RESP2), destination = ResponseProbe);
+    }
+} IRESP;
+
+aligned
+casetype _RESP(
+    USHORT Version,
+    Bool RawResponse,
+    EVERPARSE_COPY_BUFFER_T ResponseProbe
+)
+{
+    switch (RawResponse)
+    {
+        case true:
+            UINT8 *Empty { Empty == 0 };
+        case false:
+            IRESP(Version, ResponseProbe) Response;
+    }
+} RESP;
+
+aligned
+typedef struct _SRI_64(
+    UINT32 MessageBodyLength,
+    USHORT ApiVersion,
+    Bool RawResponse,
+    EVERPARSE_COPY_BUFFER_T HeadersProbe)
+    where (MessageBodyLength >= sizeof(this))
+{
+    RESP(ApiVersion, RawResponse, HeadersProbe) Response;
+    USHORT Count { Count < 17 };
+    UINT8 *ptr1 { Count == 0 || ptr1 != 0 }; //test refinement on pointer field
+} SRI_64;
+
+typedef struct _PSRI_64(
+    UINT32 MessageBodyLength,
+    USHORT ApiVersion,
+    Bool RawResponse,
+    EVERPARSE_COPY_BUFFER_T HeadersProbe,
+    EVERPARSE_COPY_BUFFER_T out)
+{
+    SRI_64(MessageBodyLength, ApiVersion, RawResponse, HeadersProbe) *pointer(UINT64) pinfo
+        probe ProbeAndCopy(length=sizeof(SRI_64), destination=out);
+} PSRI_64;
+
+specialize (pointer(*), pointer(UINT32))
+    PSRI_64
+    PSRI_32;
+
+entrypoint
+casetype SRI(
+    Bool Requestor32,
+    UINT32 MessageBodyLength,
+    USHORT ApiVersion,
+    Bool RawResponse,
+    EVERPARSE_COPY_BUFFER_T HeadersProbe,
+    EVERPARSE_COPY_BUFFER_T out)
+{
+    switch (Requestor32) {
+        case true:
+            PSRI_32(MessageBodyLength, ApiVersion, RawResponse, HeadersProbe, out)
+                f32;
+        default:
+            PSRI_64(MessageBodyLength, ApiVersion, RawResponse, HeadersProbe, out)
+                f64;
+    }
+} SRI;

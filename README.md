@@ -79,9 +79,11 @@ EverCOSign is already built in the Docker image. If you are not using that image
 
 EverParse presents EverCDDL, our formally verified implementation of CDDL.
 
-NOTE: While we support patterns such as `(? 18 : int, * int => any)`,
-some other patterns, such as `(? 18 => int, * int => any)`, are not
-yet supported.
+NOTE: We finally support table extensibility patterns such as `(? 18
+=> int, * int => any)`. However, some other patterns may not yet be
+supported. In particular, we do not support map groups of the form `(a
+// b) (* u => v)`, which should be rewritten by hand into `(a, * u =>
+v) // (b, * u => v)`
 
 #### Build
 

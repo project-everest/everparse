@@ -27,7 +27,7 @@ let impl_serialize_map_group_pre
 let impl_serialize_map_group_valid
   (l: cbor_map)
   (#t: det_map_group)
-  (#fp: typ)
+  (#fp: map_constraint)
   (#tgt: Type0)
   (#inj: bool)
   (s: mg_spec t fp tgt inj)
@@ -44,7 +44,7 @@ let impl_serialize_map_group_post
   (size: SZ.t)
   (l: cbor_map)
   (#t: det_map_group)
-  (#fp: typ)
+  (#fp: map_constraint)
   (#tgt: Type0)
   (#inj: bool)
   (s: mg_spec t fp tgt inj)
@@ -60,7 +60,7 @@ let impl_serialize_map_group_post
 inline_for_extraction noextract [@@noextract_to "krml"]
 let impl_serialize_map_group
     (#t: det_map_group)
-    (#fp: typ)
+    (#fp: map_constraint)
     (#tgt: Type0)
     (#inj: bool)
     (s: mg_spec t fp tgt inj)
@@ -85,7 +85,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_map
    (cbor_det_serialize_map: cbor_det_serialize_map_t)
     (# [@@@erasable] t: Ghost.erased det_map_group)
-    (# [@@@erasable] fp: Ghost.erased typ)
+    (# [@@@erasable] fp: Ghost.erased map_constraint)
     (# [@@@erasable] tgt: Type0)
     (# [@@@erasable] inj: Ghost.erased bool)
     (# [@@@erasable] s: Ghost.erased (mg_spec t fp tgt inj))
@@ -98,7 +98,7 @@ val impl_serialize_map
 inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_map_group_ext
     (#[@@@erasable]t: Ghost.erased (det_map_group))
-    (# [@@@erasable] fp: Ghost.erased typ)
+    (# [@@@erasable] fp: Ghost.erased map_constraint)
     (#[@@@erasable]tgt: Type0)
     (#[@@@erasable] inj: Ghost.erased bool)
     (#[@@@erasable]ps: Ghost.erased (mg_spec t fp tgt inj))
@@ -106,7 +106,7 @@ val impl_serialize_map_group_ext
     (#[@@@erasable]r: rel impl_tgt tgt)
     (i: impl_serialize_map_group ps r)
     (#[@@@erasable]t': Ghost.erased (det_map_group))
-    (# [@@@erasable] fp': Ghost.erased typ)
+    (# [@@@erasable] fp': Ghost.erased map_constraint)
     (#[@@@erasable] inj': Ghost.erased bool)
     ([@@@erasable]ps': Ghost.erased (mg_spec t' fp' tgt inj'))
     ([@@@erasable]sq: squash (
@@ -123,16 +123,16 @@ val impl_serialize_map_group_ext
 inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_map_group_ext'
     (#[@@@erasable]t: Ghost.erased (det_map_group))
-    (# [@@@erasable] fp: Ghost.erased typ)
+    (# [@@@erasable] fp: Ghost.erased map_constraint)
     (#[@@@erasable]tgt: Type0)
     (#[@@@erasable] inj: Ghost.erased bool)
     (#[@@@erasable]ps: Ghost.erased (mg_spec t fp tgt inj))
     (#impl_tgt: Type0)
     (#[@@@erasable]r: rel impl_tgt tgt)
     (i: impl_serialize_map_group ps r)
-    ([@@@erasable] fp': Ghost.erased typ)
+    ([@@@erasable] fp': Ghost.erased map_constraint)
     (sq: squash (
-      typ_equiv fp fp'
+      map_constraint_equiv fp fp'
     ))
 : impl_serialize_map_group #(Ghost.reveal t) #(Ghost.reveal fp') #tgt #inj (mg_spec_ext ps fp' ps.mg_size ps.mg_serializable) #impl_tgt r
 
@@ -145,7 +145,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_map_group_choice
     (#[@@@erasable]t1: Ghost.erased det_map_group)
     (#[@@@erasable]tgt1: Type0)
-    (#[@@@erasable] fp1: Ghost.erased typ)
+    (#[@@@erasable] fp1: Ghost.erased map_constraint)
     (#[@@@erasable] inj1: Ghost.erased bool)
     (#[@@@erasable]ps1: Ghost.erased (mg_spec t1 fp1 tgt1 inj1))
     (#impl_tgt1: Type0)
@@ -153,7 +153,7 @@ val impl_serialize_map_group_choice
     (i1: impl_serialize_map_group ps1 r1)
     (#[@@@erasable]t2: Ghost.erased det_map_group)
     (#[@@@erasable]tgt2: Type0)
-    (#[@@@erasable] fp2: Ghost.erased typ)
+    (#[@@@erasable] fp2: Ghost.erased map_constraint)
     (#[@@@erasable] inj2: Ghost.erased bool)
     (#[@@@erasable]ps2: Ghost.erased (mg_spec t2 fp2 tgt2 inj2))
     (#impl_tgt2: Type0)
@@ -170,7 +170,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_map_group_zero_or_one
     (#[@@@erasable]t1: Ghost.erased det_map_group)
     (#[@@@erasable]tgt1: Type0)
-    (#[@@@erasable] fp1: Ghost.erased typ)
+    (#[@@@erasable] fp1: Ghost.erased map_constraint)
     (#[@@@erasable] inj1: Ghost.erased bool)
     (#[@@@erasable]ps1: Ghost.erased (mg_spec t1 fp1 tgt1 inj1))
     (#impl_tgt1: Type0)
@@ -186,7 +186,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_map_group_either_left
     (#[@@@erasable]t1: Ghost.erased det_map_group)
     (#[@@@erasable]tgt1: Type0)
-    (#[@@@erasable] fp1: Ghost.erased typ)
+    (#[@@@erasable] fp1: Ghost.erased map_constraint)
     (#[@@@erasable] inj1: Ghost.erased bool)
     (#[@@@erasable]ps1: Ghost.erased (mg_spec t1 fp1 tgt1 inj1))
     (#impl_tgt1: Type0)
@@ -201,7 +201,7 @@ inline_for_extraction noextract [@@noextract_to "krml"]
 val impl_serialize_map_group_concat
     (#[@@@erasable]t1: Ghost.erased det_map_group)
     (#[@@@erasable]tgt1: Type0)
-    (#[@@@erasable] fp1: Ghost.erased typ)
+    (#[@@@erasable] fp1: Ghost.erased map_constraint)
     (#[@@@erasable] inj1: Ghost.erased bool)
     (#[@@@erasable]ps1: Ghost.erased (mg_spec t1 fp1 tgt1 inj1))
     (#impl_tgt1: Type0)
@@ -209,7 +209,7 @@ val impl_serialize_map_group_concat
     (i1: impl_serialize_map_group ps1 r1)
     (#[@@@erasable]t2: Ghost.erased det_map_group)
     (#[@@@erasable]tgt2: Type0)
-    (#[@@@erasable] fp2: Ghost.erased typ)
+    (#[@@@erasable] fp2: Ghost.erased map_constraint)
     (#[@@@erasable] inj2: Ghost.erased bool)
     (#[@@@erasable]ps2: Ghost.erased (mg_spec t2 fp2 tgt2 inj2))
     (#impl_tgt2: Type0)
@@ -218,7 +218,7 @@ val impl_serialize_map_group_concat
     (sq: squash (
       map_group_footprint t1 fp1 /\
       map_group_footprint t2 fp2 /\
-      typ_disjoint fp1 fp2
+      map_constraint_disjoint fp1 fp2
     ))
 : impl_serialize_map_group #_ #_ #_ #_ (mg_spec_concat ps1 ps2) #_ (rel_pair r1 r2)
 
@@ -249,8 +249,10 @@ val impl_serialize_map_zero_or_more
   (map_entry_value: map_entry_value_t vmatch2 vmatch)
   (map_entry_share: share_t vmatch2)
   (map_entry_gather: gather_t vmatch2)
-  (#ty': Type0) (#vmatch': perm -> ty' -> cbor -> slprop)
+  (#ty' #ty2': Type0) (#vmatch': perm -> ty' -> cbor -> slprop)
+  (#vmatch2': perm -> ty2' -> cbor & cbor -> slprop)
   (parse: cbor_det_parse_t vmatch')
+  (mk_map_entry: mk_map_entry_t vmatch' vmatch2')
   (insert: cbor_det_serialize_map_insert_t)
     (#[@@@erasable]key: Ghost.erased typ)
     (#[@@@erasable]tkey: Type0)
@@ -259,8 +261,6 @@ val impl_serialize_map_zero_or_more
     (#ikey: Type0)
     (#[@@@erasable]r1: rel ikey tkey)
     (pa1: impl_serialize sp1 r1)
-    (#[@@@erasable]key_except: Ghost.erased typ)
-    (va_ex: impl_typ vmatch' key_except)
     (#[@@@erasable]value: Ghost.erased typ)
     (#[@@@erasable]tvalue: Type0)
     (#[@@@erasable]inj: Ghost.erased bool)
@@ -268,4 +268,6 @@ val impl_serialize_map_zero_or_more
     (#ivalue: Type0)
     (#[@@@erasable]r2: rel ivalue tvalue)
     (pa2: impl_serialize sp2 r2)
-: impl_serialize_map_group #(map_group_zero_or_more_match_item key key_except value) #_ #_ #_ (mg_zero_or_more_match_item sp1 key_except sp2) #_ (rel_either_left (rel_slice_of_table key_eq r1 r2) (rel_map_iterator vmatch cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))
+    (#[@@@erasable]except: Ghost.erased map_constraint { map_constraint_value_injective key sp2.parser except })
+    (va_ex: impl_map_entry_cond vmatch2' except)
+: impl_serialize_map_group #(map_group_filtered_table key value except) #_ #_ #_ (mg_zero_or_more_match_item sp1 sp2 except) #_ (rel_either_left (rel_slice_of_table key_eq r1 r2) (rel_map_iterator vmatch vmatch2 cbor_map_iterator_match ikey ivalue (Iterator.mk_spec r1) (Iterator.mk_spec r2)))

@@ -102,11 +102,25 @@ remove__ = $(firstword $(subst __, ,$1))
 
 CFLAGS += -I QCBOR/inc -g
 
-QCBOR/libqcbor.a:
+QCBOR:
+	rm -rf $@.tmp
+	git clone "https://github.com/laurencelundblade/QCBOR" $@.tmp
+	cd $@.tmp && git checkout 83c4af09d3752afa64ae66e2a3382192bf682541
+	mv $@.tmp $@
+
+QCBOR/libqcbor.a: QCBOR
 	$(MAKE) -C QCBOR
 
-tinycbor-build/libtinycbor.a:
+tinycbor:
+	rm -rf $@.tmp
+	git clone "https://github.com/intel/tinycbor" $@.tmp
+	cd $@.tmp && git checkout 45e4641059709862b4e46f3608d140337566334b
+	mv $@.tmp $@
+
+tinycbor-build: tinycbor
 	cmake -S tinycbor -B tinycbor-build
+
+tinycbor-build/libtinycbor.a: tinycbor-build
 	$(MAKE) -C tinycbor-build
 
 # Some tests require libqcbor, we just add it to this invocation for all tests.
@@ -117,7 +131,7 @@ $(ODIR)/Test_%.exe: $(ODIR)/Test_%.o $(ODIR)/$$(call remove__,%).o QCBOR/libqcbo
 $(ODIR)/Test_%.o: Test_%.c $(ODIR)/$$(call remove__,%).c
 	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I _output $(CFLAGS) -c $< -o $@
 
-$(ODIR)/Test_%.o: Test_%.cpp $(ODIR)/$$(call remove__,%).c
+$(ODIR)/Test_%.o: Test_%.cpp $(ODIR)/$$(call remove__,%).c tinycbor-build
 	$(CC) -O3 -I $(EVERPARSE_SRC_PATH)/cbor/pulse/det/c -I tinycbor-build/src -I tinycbor-build -I _output $(CFLAGS) -c $< -o $@
 
 %.run: $(ODIR)/Test_%.exe

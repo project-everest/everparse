@@ -1,0 +1,84 @@
+//SNIPPET_START: probes$
+extern PURE UINT64 UlongToPtr(UINT32 ptr)
+extern probe (READ UINT32) ProbeAndReadU32
+extern probe (WRITE UINT64) WriteU64
+//SNIPPET_END: probes$
+
+//SNIPPET_START: prefix$
+extern probe ProbeAndCopy
+extern probe (INIT) ProbeInit
+
+aligned
+typedef struct _T(UINT32 bound) {
+    UINT32 t1;
+    UINT32 t2 { t2 <= bound };    
+} T;
+
+aligned
+typedef struct _S64(UINT32 bound, EVERPARSE_COPY_BUFFER_T dest) {
+    UINT32 s1 { s1 <= bound };
+    T(s1) *ptrT probe ProbeAndCopy(length=sizeof(T), destination=dest);
+    UINT32 s2;
+} S64;
+
+aligned
+typedef struct _R64(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
+    UINT32 r1;
+    S64(r1, destT) *ptrS probe ProbeAndCopy(length=sizeof(S64), destination=destS);
+} R64;
+//SNIPPET_END: prefix$
+
+//SNIPPET_START: specialize$
+specialize (pointer(*), pointer(UINT32)) R64 R32;
+//SNIPPET_END: specialize$
+
+//SNIPPET_START: multiplex$
+entrypoint
+typedef struct R(Bool requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
+    switch (requestor32) {
+        case true: R32(destS, destT) r32;
+        default: R64(destS, destT) r64;
+    } field;
+} R;
+//SNIPPET_END: multiplex$
+
+//SNIPPET_START: manual$
+typedef struct _R32Manual(UINT32 bound, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
+    UINT32 r1 { r1 <= bound };
+    S64(r1, destT) *pointer(UINT32) ptrS probe 
+        (length=sizeof(S64), destination=destS) {
+            ProbeAndCopy(4); //copy field s1
+            SkipWrite(4); //4 bytes padding
+            var ptrT = ProbeAndReadU32(); //read ptrT
+            var ptrT64 = UlongToPtr(ptrT); //write (uint64_t)ptrT
+            WriteU64(ptrT64); //write ptrT64
+            ProbeAndCopy(4); //copy field s2
+            SkipWrite(4); //padding
+        };
+} R32Manual;
+//SNIPPET_END: manual$
+
+
+//SNIPPET_START: attempt0$
+aligned
+typedef struct _S32_Attempt(UINT32 bound, EVERPARSE_COPY_BUFFER_T dest) {
+    UINT32 f { f <= bound };
+    T(f) *pointer(UINT32) ptrT probe ProbeAndCopy(length=sizeof(T), destination=dest);
+    UINT32 g;
+} S32Attempt;
+
+aligned
+typedef struct _R32_Attempt(EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
+    UINT32 f;
+    S32Attempt(f, destT) *pointer(UINT32) ptrS probe ProbeAndCopy(length=sizeof(S32Attempt), destination=destS);
+} R32_Attempt;
+
+entrypoint
+typedef struct _RMux(Bool requestor32, EVERPARSE_COPY_BUFFER_T destS, EVERPARSE_COPY_BUFFER_T destT) {
+    switch (requestor32) {
+        case true: R32_Attempt(destS, destT) r32;
+        default: R64(destS, destT) r64;
+    } field;
+} RMux;
+
+//SNIPPET_END: attempt0$

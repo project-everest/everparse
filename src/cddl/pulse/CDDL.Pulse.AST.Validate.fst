@@ -194,7 +194,7 @@ and validate_map_group
         key
       )
       (validate_typ impl env true _ s')
-  | AST.WfMZeroOrMore key key_except value s_key s_key_except s_value ->
+  | AST.WfMZeroOrMore key value except s_key s_value s_except ->
     impl_zero_or_more_map_group_match_item_except
       impl.cbor_map_iterator_init
       impl.cbor_map_iterator_is_empty
@@ -203,7 +203,27 @@ and validate_map_group
       impl.cbor_map_entry_value
       (validate_typ impl env true _ s_key)
       (validate_typ impl env true _ s_value)
-      (validate_typ impl env false _ s_key_except)
+      (validate_map_constraint impl env _ s_except)
+
+and validate_map_constraint
+  (#t #t2 #t_arr #t_map: Type0)
+  (#vmatch: (perm -> t -> cbor -> slprop))
+  (#vmatch2: (perm -> t2 -> (cbor & cbor) -> slprop))
+  (#cbor_array_iterator_match: (perm -> t_arr -> list cbor -> slprop))
+  (#cbor_map_iterator_match: (perm -> t_map -> list (cbor & cbor) -> slprop))
+  (impl: cbor_impl vmatch vmatch2 cbor_array_iterator_match cbor_map_iterator_match)
+  (#v_sem_env: AST.sem_env)
+  (env: validator_env vmatch v_sem_env)
+  (ty: AST.map_constraint)
+  (wf: AST.ast0_wf_map_constraint ty { AST.spec_wf_map_constraint v_sem_env ty wf /\ SZ.fits_u64 })
+: Tot (impl_map_entry_cond vmatch2 (AST.map_constraint_sem v_sem_env ty))
+  (decreases wf)
+= match wf with
+  | WfMCFalse -> impl_map_entry_cond_empty _
+  | WfMCKeyValue _ k _ v -> impl_map_entry_cond_matches_map_group_entry impl.cbor_map_entry_key impl.cbor_map_entry_value (validate_typ impl env false _ k) (validate_typ impl env false _ v)
+  | WfMCNot _ mc -> impl_map_entry_cond_notp (validate_map_constraint impl env _ mc)
+  | WfMCAnd _ mc1 _ mc2 -> impl_map_entry_cond_andp (validate_map_constraint impl env _ mc1) (validate_map_constraint impl env _ mc2)
+  | WfMCOr _ mc1 _ mc2 -> impl_map_entry_cond_orp (validate_map_constraint impl env _ mc1) (validate_map_constraint impl env _ mc2)
 
 let typ_sem_or_bust
   (v_sem_env: AST.sem_env)

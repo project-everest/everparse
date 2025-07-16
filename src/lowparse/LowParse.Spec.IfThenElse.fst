@@ -78,7 +78,7 @@ let parse_ifthenelse_eq
   match parse p.parse_ifthenelse_tag_parser input with
   | None -> ()
   | Some (t, consumed_t) ->
-      let b = p.parse_ifthenelse_tag_cond t in
+      let unfold b = p.parse_ifthenelse_tag_cond t in
       let input' = Seq.slice input consumed_t (Seq.length input) in
       let f : (p.parse_ifthenelse_payload_t (p.parse_ifthenelse_tag_cond t) -> GTot p.parse_ifthenelse_t) = (p.parse_ifthenelse_synth) t in
       let f' = coerce (p.parse_ifthenelse_payload_t b -> GTot p.parse_ifthenelse_t) f in

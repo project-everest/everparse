@@ -50,6 +50,7 @@ type cbor_impl
   cbor_map_iterator_next: map_iterator_next_t vmatch2 cbor_map_iterator_match;
   cbor_map_iterator_share: share_t cbor_map_iterator_match;
   cbor_map_iterator_gather: gather_t cbor_map_iterator_match;
+  cbor_mk_map_entry: mk_map_entry_t vmatch vmatch2;
   cbor_map_entry_key: map_entry_key_t vmatch2 vmatch;
   cbor_map_entry_value: map_entry_value_t vmatch2 vmatch;
   cbor_map_entry_share: share_t vmatch2;

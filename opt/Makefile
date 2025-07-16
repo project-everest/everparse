@@ -1,4 +1,4 @@
-all: FStar karamel pulse
+all: FStar.do karamel.do pulse.do hacl-star
 
 export ADMIT=1
 
@@ -17,16 +17,31 @@ submodules:
 	git submodule update
 
 FStar:
-	+$(MAKE) -C $@ ADMIT=1
+	git clone "https://github.com/FStarLang/FStar" $@
 
-z3:
+karamel:
+	git clone "https://github.com/FStarLang/karamel" $@
+
+pulse:
+	git clone "https://github.com/FStarLang/pulse" $@
+
+everest:
+	git clone "https://github.com/project-everest/everest" $@
+
+hacl-star:
+	git clone "https://github.com/hacl-star/hacl-star" $@
+
+FStar.do: FStar
+	+$(MAKE) -C $< ADMIT=1
+
+z3: FStar.do
 	mkdir -p $@
 	FStar/.scripts/get_fstar_z3.sh $(realpath .)/$@
 
-karamel: FStar z3
-	+$(MAKE) -C $@
+karamel.do: karamel FStar.do z3
+	+$(MAKE) -C $<
 
-pulse: FStar z3
-	+$(MAKE) -C $@ ADMIT=1
+pulse.do: pulse FStar.do z3
+	+$(MAKE) -C $< ADMIT=1
 
-.PHONY: all FStar karamel z3 pulse submodules
+.PHONY: all submodules %.do

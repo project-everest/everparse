@@ -11,7 +11,8 @@ module U8 = FStar.UInt8
 let map_group_choice_compatible_no_cut
   (map_group_choice_compatible_no_cut: map_group_choice_compatible_no_cut_t)
   (typ_disjoint: typ_disjoint_t)
-  (typ_diff_disjoint: typ_diff_disjoint_t)
+  (typ_included: typ_included_t)
+//  (typ_diff_disjoint: typ_diff_disjoint_t)
   (fuel: nat) // to unfold definitions
 : map_group_choice_compatible_no_cut_t
 = fun env #g1 s1 #g2 s2 ->
@@ -23,10 +24,11 @@ let map_group_choice_compatible_no_cut
       (typ_sem env.e_sem_env value)
       (elab_map_group_sem env.e_sem_env g2);
     RSuccess ()
-  | WfMZeroOrMore key key_except value _ _ _ ->
-    Spec.map_group_choice_compatible_no_cut_zero_or_more_match_item_left
-      (Util.andp (typ_sem env.e_sem_env key) (Util.notp (typ_sem env.e_sem_env key_except)))
+  | WfMZeroOrMore key value except _ _ _ ->
+    Spec.map_group_choice_compatible_no_cut_filtered_table
+      (typ_sem env.e_sem_env key)
       (typ_sem env.e_sem_env value)
+      (map_constraint_sem env.e_sem_env except)
       (elab_map_group_sem env.e_sem_env g2);
     RSuccess ()
   | WfMChoice g1l s1l g1r s1r ->
@@ -57,8 +59,8 @@ let map_group_choice_compatible_no_cut
     end
   | WfMLiteral _cut key value _s ->
     begin match map_group_footprint typ_disjoint fuel env g2 with
-    | RSuccess (t2, t_ex2) ->
-      let res1 = typ_disjoint_from_diff typ_diff_disjoint env (TElem (ELiteral key)) t2 t_ex2 in
+    | RSuccess te2 ->
+      let res1 = map_constraint_disjoint typ_disjoint typ_included env (MCKeyValue (TElem (ELiteral key)) (TElem EAny)) te2 in
       if not (RSuccess? res1)
       then res1
       else begin
@@ -70,7 +72,7 @@ let map_group_choice_compatible_no_cut
           (eval_literal key)
           (typ_sem env.e_sem_env value)
           (elab_map_group_sem env.e_sem_env g2)
-          (typ_sem env.e_sem_env t2 `Util.andp` Util.notp (typ_sem env.e_sem_env t_ex2));
+          (map_constraint_sem env.e_sem_env te2);
         RSuccess ()
       end
     | res -> coerce_failure res

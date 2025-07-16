@@ -9,9 +9,4 @@ ifneq ($(.SHELLSTATUS),0)
   $(error "F* version check failed (FSTAR_EXE = $(FSTAR_EXE))" )
 endif
 
-_ != $(FSTAR_EXE) --ocamlenv ocamlfind query fstar.lib
-ifneq ($(.SHELLSTATUS),0)
-  $(error "Cannot find fstar.lib (FSTAR_EXE = $(FSTAR_EXE)). Is F* properly installed?")
-endif
-
 export FSTAR_EXE

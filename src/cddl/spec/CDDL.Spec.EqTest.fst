@@ -110,3 +110,30 @@ let map_singleton
   (v: value)
 : Map.t key value
 = Map.singleton k k_eq v
+
+let map_set
+  (#key: Type)
+  (#value: Type)
+  (m: Map.t key value)
+  (k: key)
+  (k_eq: eq_test_for k)
+  (v: value)
+: Tot (Map.t key value)
+= Map.set m k k_eq v
+
+let map_set_post
+  (#key: Type)
+  (#value: Type)
+  (m: Map.t key value)
+  (k: key)
+  (k_eq: eq_test_for k)
+  (v: value)
+  (k' : key)
+: Lemma
+  (ensures (
+    let m' = map_set m k k_eq v in
+    Map.get m' k' == (if k_eq k' then Some v else Map.get m k')
+  ))
+  [SMTPat (Map.get (map_set m k k_eq v) k')]
+= ()
+

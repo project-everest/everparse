@@ -14,7 +14,7 @@ type map_bundle
   (vmatch: perm -> ty -> cbor -> slprop)
 = {
   [@@@erasable] mb_typ: Ghost.erased (det_map_group);
-  [@@@erasable] mb_footprint: Ghost.erased typ;
+  [@@@erasable] mb_footprint: Ghost.erased map_constraint;
   [@@@erasable] mb_footprint_correct: squash (map_group_footprint mb_typ mb_footprint);
   mb_spec_type: Type0;
   [@@@erasable] mb_spec_type_eq: Ghost.erased (EqTest.eq_test mb_spec_type);
@@ -28,12 +28,12 @@ type map_bundle
 unfold
 let impl_serialize_map_ext_precond
     (#t1: (det_map_group))
-    (#fp1: typ)
+    (#fp1: map_constraint)
     (#tgt1: Type0)
     (#inj1: bool)
     (ps1: (mg_spec t1 fp1 tgt1 inj1))
     (#t2: det_map_group)
-    (#fp2: typ)
+    (#fp2: map_constraint)
     (#inj2: bool)
     (ps2: (mg_spec t2 fp2 tgt1 inj2))
 : Tot prop
@@ -72,7 +72,7 @@ let bundle_map_ext
   (#vmatch: perm -> ty -> cbor -> slprop)
   (mb1: map_bundle vmatch)
   (#[@@@erasable] t2: Ghost.erased det_map_group)
-  (#[@@@erasable] fp2: Ghost.erased typ)
+  (#[@@@erasable] fp2: Ghost.erased map_constraint)
   ([@@@erasable] sp2: Ghost.erased (mg_spec t2 fp2 mb1.mb_spec_type true))
   ([@@@erasable] sq: squash (
     impl_zero_copy_map_ext_precond (Ghost.reveal mb1.mb_typ) (mb1.mb_spec.mg_parser) (Ghost.reveal t2) sp2.mg_parser /\
@@ -99,9 +99,9 @@ let bundle_map_ext'
   (#ty: Type0)
   (#vmatch: perm -> ty -> cbor -> slprop)
   (mb1: map_bundle vmatch)
-  ([@@@erasable] fp2: Ghost.erased typ)
+  ([@@@erasable] fp2: Ghost.erased map_constraint)
   ([@@@erasable] sq: squash (
-    typ_equiv mb1.mb_footprint fp2
+    map_constraint_equiv mb1.mb_footprint fp2
   ))
 : Tot (map_bundle vmatch)
 = bundle_map_ext mb1 (mg_spec_ext mb1.mb_spec fp2 mb1.mb_spec.mg_size mb1.mb_spec.mg_serializable) ()
@@ -187,7 +187,7 @@ let bundle_map_concat
   (mb1: map_bundle vmatch)
   (mb2: map_bundle vmatch)
   ([@@@erasable] sq: squash (
-    typ_disjoint mb1.mb_footprint mb2.mb_footprint
+    map_constraint_disjoint mb1.mb_footprint mb2.mb_footprint
   ))
 : Tot (map_bundle vmatch)
 = match mb1 with
@@ -203,7 +203,7 @@ let bundle_map_concat
   mb_spec = mg_spec_concat mb_spec1 mb_spec2;
   mb_impl_type = _;
   mb_rel = _;
-  mb_parser = impl_zero_copy_map_concat share gather mb_parser1 mb_parser2 ();
+  mb_parser = impl_zero_copy_map_concat share gather mb_spec1.mg_serializer mb_parser1 mb_spec2.mg_serializer mb_parser2 ();
   mb_serializer = impl_serialize_map_group_concat mb_serializer1 mb_serializer2 ();
 }
 
@@ -254,13 +254,14 @@ let bundle_map_zero_or_more
   (map_entry_share: share_t vmatch2)
   (map_entry_gather: gather_t vmatch2)
   (parse: cbor_det_parse_t vmatch)
+  (mk_map_entry: mk_map_entry_t  vmatch vmatch2)
   (insert: cbor_det_serialize_map_insert_t)
   (key: bundle vmatch) // MUST contain function pointers ONLY
   (va1: impl_typ vmatch key.b_typ) // MUST be a function pointer
-  (#[@@@erasable] key_except: Ghost.erased typ)
-  (va_ex: impl_typ vmatch key_except) // MUST be a function pointer
   (value: bundle vmatch) // MUST contain function pointers ONLY
   (va2: impl_typ vmatch value.b_typ) // MUST be a function pointer
+  (#[@@@erasable] except: Ghost.erased map_constraint)
+  (va_ex: impl_map_entry_cond vmatch2 except) // MUST be a function pointer
 : Tot (map_bundle vmatch)
 = match key with
   | Mkbundle b_typ1 b_spec_type1 b_spec_type_eq1 b_spec1 b_impl_type1 b_rel1 b_parser1 b_serializer1 ->
@@ -272,9 +273,9 @@ let bundle_map_zero_or_more
   mb_footprint_correct = ();
   mb_spec_type = _;
   mb_spec_type_eq = EqTest.map_eq _ (EqTest.list_eq b_spec_type_eq2);
-  mb_spec = mg_zero_or_more_match_item b_spec1 key_except b_spec2;
+  mb_spec = mg_zero_or_more_match_item b_spec1 b_spec2 except;
   mb_impl_type = _;
   mb_rel = _;
-  mb_parser = impl_zero_copy_map_zero_or_more map_iterator_start map_share map_gather b_spec_type_eq1 b_spec1 va1 b_parser1 va_ex b_spec2 va2 b_parser2;
-  mb_serializer = impl_serialize_map_zero_or_more map_share map_gather map_is_empty map_next map_entry_key map_entry_value map_entry_share map_entry_gather parse insert #b_typ1 #b_spec_type1 b_spec_type_eq1 #b_spec1 #b_impl_type1 #b_rel1 b_serializer1 #key_except va_ex b_serializer2;
+  mb_parser = impl_zero_copy_map_zero_or_more map_iterator_start map_share map_gather b_spec_type_eq1 b_spec1 va1 b_parser1 b_spec2 va2 b_parser2  va_ex;
+  mb_serializer = impl_serialize_map_zero_or_more map_share map_gather map_is_empty map_next map_entry_key map_entry_value map_entry_share map_entry_gather parse mk_map_entry insert #b_typ1 #b_spec_type1 b_spec_type_eq1 #b_spec1 #b_impl_type1 #b_rel1 b_serializer1 b_serializer2 va_ex;
 }

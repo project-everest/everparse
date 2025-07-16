@@ -211,53 +211,53 @@ fn create_sig privkey phdr aad payload (sigbuf: AP.ptr UInt8.t)
 }
 
 let rel_inl_map =
-  (CDDL.Pulse.Types.rel_slice_of_table (CDDL.Pulse.Bundle.Base.mk_eq_test_bij
-                    COSE.Format.spect_aux_env25_type_2_pretty_right
-                    COSE.Format.spect_aux_env25_type_2_pretty_left
-                    COSE.Format.spect_aux_env25_type_2_pretty_left_right
-                    COSE.Format.spect_aux_env25_type_2_pretty_right_left
-                    (CDDL.Pulse.Bundle.Base.mk_eq_test_bij COSE.Format.spect_evercddl_label_pretty_right
-                        COSE.Format.spect_evercddl_label_pretty_left
-                        COSE.Format.spect_evercddl_label_pretty_left_right
-                        COSE.Format.spect_evercddl_label_pretty_right_left
-                        (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij COSE.Format.spect_evercddl_int_pretty_right
-                                COSE.Format.spect_evercddl_int_pretty_left
-                                COSE.Format.spect_evercddl_int_pretty_left_right
-                                COSE.Format.spect_evercddl_int_pretty_right_left
-                                (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij COSE.Format.spect_evercddl_uint_pretty_right
-                                        COSE.Format.spect_evercddl_uint_pretty_left
-                                        COSE.Format.spect_evercddl_uint_pretty_left_right
-                                        COSE.Format.spect_evercddl_uint_pretty_right_left
-                                        (CDDL.Spec.EqTest.eqtype_eq FStar.UInt64.t))
-                                    (CDDL.Pulse.Bundle.Base.mk_eq_test_bij COSE.Format.spect_evercddl_nint_pretty_right
-                                        COSE.Format.spect_evercddl_nint_pretty_left
-                                        COSE.Format.spect_evercddl_nint_pretty_left_right
-                                        COSE.Format.spect_evercddl_nint_pretty_right_left
-                                        (CDDL.Spec.EqTest.eqtype_eq FStar.UInt64.t))))
-                            (CDDL.Pulse.Bundle.Base.mk_eq_test_bij COSE.Format.spect_evercddl_tstr_pretty_right
-                                COSE.Format.spect_evercddl_tstr_pretty_left
-                                COSE.Format.spect_evercddl_tstr_pretty_left_right
-                                COSE.Format.spect_evercddl_tstr_pretty_right_left
-                                (CDDL.Spec.EqTest.eqtype_eq (FStar.Seq.Base.seq FStar.UInt8.t))))))
-                COSE.Format.rel_aux_env25_type_2
-                COSE.Format.rel_aux_env25_type_4)
+(rel_slice_of_table (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_aux_env24_type_2_pretty_right
+                              spect_aux_env24_type_2_pretty_left
+                              spect_aux_env24_type_2_pretty_left_right
+                              spect_aux_env24_type_2_pretty_right_left
+                              (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_label_pretty_right
+                                  spect_evercddl_label_pretty_left
+                                  spect_evercddl_label_pretty_left_right
+                                  spect_evercddl_label_pretty_right_left
+                                  (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_int_pretty_right
+                                          spect_evercddl_int_pretty_left
+                                          spect_evercddl_int_pretty_left_right
+                                          spect_evercddl_int_pretty_right_left
+                                          (CDDL.Spec.EqTest.either_eq (CDDL.Pulse.Bundle.Base.mk_eq_test_bij
+                                                  spect_evercddl_uint_pretty_right
+                                                  spect_evercddl_uint_pretty_left
+                                                  spect_evercddl_uint_pretty_left_right
+                                                  spect_evercddl_uint_pretty_right_left
+                                                  (CDDL.Spec.EqTest.eqtype_eq UInt64.t))
+                                              (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_nint_pretty_right
+                                                  spect_evercddl_nint_pretty_left
+                                                  spect_evercddl_nint_pretty_left_right
+                                                  spect_evercddl_nint_pretty_right_left
+                                                  (CDDL.Spec.EqTest.eqtype_eq UInt64.t))))
+                                      (CDDL.Pulse.Bundle.Base.mk_eq_test_bij spect_evercddl_tstr_pretty_right
+                                          spect_evercddl_tstr_pretty_left
+                                          spect_evercddl_tstr_pretty_left_right
+                                          spect_evercddl_tstr_pretty_right_left
+                                          (CDDL.Spec.EqTest.eqtype_eq (Seq.Base.seq UInt8.t))))))
+                          rel_aux_env24_type_2
+                          rel_aux_env24_type_3)
 
-let dummy_map_val () : aux_env25_type_2_pretty & aux_env25_type_4_pretty =
-  Mkaux_env25_type_2_pretty0 (Mkevercddl_label_pretty0
+let dummy_map_val () : aux_env24_type_2_pretty & aux_env24_type_3_pretty =
+  Mkaux_env24_type_2_pretty0 (Mkevercddl_label_pretty0
     (Mkevercddl_int_pretty0 (Mkevercddl_uint_pretty0 0uL))),
-  Mkaux_env25_type_4_pretty0 (Mkevercddl_values_pretty0 (Mkevercddl_any_pretty0
-    { c = CBOR.Pulse.API.Det.Type.dummy_cbor_det_t (); p = 0.5R }))
+  Mkaux_env24_type_3_pretty0 (Mkevercddl_values_pretty0 (Mkevercddl_any_pretty0
+    { c = CBOR.Pulse.API.Det.C.dummy_cbor_det_t (); p = 0.5R }))
 
 let assert_norm' (p: prop) : Pure (squash p) (requires normalize p) (ensures fun _ -> True) = ()
 
-let rel_inl_map_eq (x: slice (aux_env25_type_2_pretty & aux_env25_type_4_pretty)) y = assert_norm' (rel_inl_map x y == 
+let rel_inl_map_eq (x: slice (aux_env24_type_2_pretty & aux_env24_type_3_pretty)) y = assert_norm' (rel_inl_map x y == 
   (exists* l .
-    (exists* s . pts_to x.s #x.p s ** Pulse.Lib.SeqMatch.seq_list_match s l (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4) ** pure (false == false)) **
+    (exists* s . pts_to x.s #x.p s ** Pulse.Lib.SeqMatch.seq_list_match s l (rel_pair rel_aux_env24_type_2 rel_aux_env24_type_3) ** pure (false == false)) **
       pure (y == map_of_list_pair ((CDDL.Pulse.Bundle.Base.mk_eq_test_bij
-                    COSE.Format.spect_aux_env25_type_2_pretty_right
-                    COSE.Format.spect_aux_env25_type_2_pretty_left
-                    COSE.Format.spect_aux_env25_type_2_pretty_left_right
-                    COSE.Format.spect_aux_env25_type_2_pretty_right_left
+                    COSE.Format.spect_aux_env24_type_2_pretty_right
+                    COSE.Format.spect_aux_env24_type_2_pretty_left
+                    COSE.Format.spect_aux_env24_type_2_pretty_left_right
+                    COSE.Format.spect_aux_env24_type_2_pretty_right_left
                     (CDDL.Pulse.Bundle.Base.mk_eq_test_bij COSE.Format.spect_evercddl_label_pretty_right
                         COSE.Format.spect_evercddl_label_pretty_left
                         COSE.Format.spect_evercddl_label_pretty_left_right
@@ -287,20 +287,18 @@ let sign1_phdrs_spec (alg: Int32.t) =
   Mkspect_evercddl_empty_or_serialized_map_pretty0
     (Mkspect_evercddl_header_map_pretty0
       (Some (Inl (specint_of_i32 alg)))
-      None None None (Inr (Inr (None, None)))
-      (CDDL.Spec.Map.empty _ _))
+      None None None (Inr (Inr ((None, None), CDDL.Spec.Map.empty _ _))))
 
 let rel_map_sign1_phdrs_eq (alg: Int32.t) alg' s =
   assert_norm' (rel_evercddl_empty_or_serialized_map (Mkevercddl_empty_or_serialized_map_pretty0
-    (Mkevercddl_header_map_pretty0 (Some (Inl alg')) None None None (Inr (Inr (None, None)))
-      (Inl s)))
+    (Mkevercddl_header_map_pretty0 (Some (Inl alg')) None None None (Inr (Inr ((None, None), Inl s)))))
     (sign1_phdrs_spec alg) ==
     (((((rel_evercddl_int alg' (specint_of_i32 alg) **
-      emp) ** emp) ** emp) ** (emp ** emp)) **
-      rel_inl_map s (CDDL.Spec.Map.empty _ _)))
+      emp) ** emp) ** emp) ** ((emp ** emp) **
+      rel_inl_map s (CDDL.Spec.Map.empty _ _)))))
 
 inline_for_extraction
-fn mk_phdrs (alg: Int32.t) (rest: A.larray (aux_env25_type_2_pretty & aux_env25_type_4_pretty) 0)
+fn mk_phdrs (alg: Int32.t) (rest: A.larray (aux_env24_type_2_pretty & aux_env24_type_3_pretty) 0)
     #prest (#vrest: erased _)
   requires pts_to rest #prest vrest
   returns res: evercddl_empty_or_serialized_map_pretty
@@ -311,7 +309,7 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (aux_env25_type_2_pretty & aux_env25_
   A.pts_to_len rest;
   let rest2 = S.from_array rest 0sz;
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
-      (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4);
+      (rel_pair rel_aux_env24_type_2 rel_aux_env24_type_3);
   assert pure (Seq.Base.create 0 (dummy_map_val ()) `Seq.equal` vrest);
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_phdrs_eq alg alg' _);
@@ -327,7 +325,7 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (aux_env25_type_2_pretty & aux_env25_
     with vrest'. assert pts_to rest #prest vrest';
     assert pure (Seq.equal vrest' vrest);
     drop_ (
-      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4) **
+      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_aux_env24_type_2 rel_aux_env24_type_3) **
       rel_evercddl_int alg' (specint_of_i32 alg)
     );
   };
@@ -337,19 +335,19 @@ fn mk_phdrs (alg: Int32.t) (rest: A.larray (aux_env25_type_2_pretty & aux_env25_
 
 let sign1_emphdrs_spec () : GTot _ =
     (Mkspect_evercddl_header_map_pretty0
-      None None None None (Inr (Inr (None, None)))
-      (CDDL.Spec.Map.empty _ _))
+      None None None None (Inr (Inr ((None, None),
+      CDDL.Spec.Map.empty _ _))))
 
 let rel_map_sign1_emphdrs_eq s =
   assert_norm' (rel_evercddl_header_map (
-    (Mkevercddl_header_map_pretty0 None None None None (Inr (Inr (None, None)))
-      (Inl s)))
+    (Mkevercddl_header_map_pretty0 None None None None (Inr (Inr ((None, None),
+      (Inl s))))))
     (sign1_emphdrs_spec ()) ==
-    (((((emp ** emp) ** emp) ** emp) ** (emp ** emp)) **
-      rel_inl_map s (CDDL.Spec.Map.empty _ _)))
+    (((((emp ** emp) ** emp) ** emp) ** ((emp ** emp) **
+      rel_inl_map s (CDDL.Spec.Map.empty _ _)))))
 
 inline_for_extraction noextract
-fn mk_emphdrs (rest: A.larray (aux_env25_type_2_pretty & aux_env25_type_4_pretty) 0)
+fn mk_emphdrs (rest: A.larray (aux_env24_type_2_pretty & aux_env24_type_3_pretty) 0)
     #prest (#vrest: erased _)
   requires pts_to rest #prest vrest
   returns res: evercddl_header_map_pretty
@@ -359,7 +357,7 @@ fn mk_emphdrs (rest: A.larray (aux_env25_type_2_pretty & aux_env25_type_4_pretty
   assert pure (Seq.equal vrest (Seq.create 0 (dummy_map_val ())));
   let rest2 = S.from_array rest 0sz;
   Pulse.Lib.SeqMatch.seq_list_match_nil_intro (Seq.Base.create 0 (dummy_map_val ())) []
-      (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4);
+      (rel_pair rel_aux_env24_type_2 rel_aux_env24_type_3);
   rw_l (rel_inl_map_eq {s = rest2; p=prest} (CDDL.Spec.Map.empty _ _));
   rw_l (rel_map_sign1_emphdrs_eq _);
   with res. assert rel_evercddl_header_map res (sign1_emphdrs_spec ());
@@ -375,7 +373,7 @@ fn mk_emphdrs (rest: A.larray (aux_env25_type_2_pretty & aux_env25_type_4_pretty
     with vrest'. assert pts_to rest #prest vrest';
     assert pure (Seq.equal vrest' vrest);
     drop_ (
-      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_aux_env25_type_2 rel_aux_env25_type_4)
+      Pulse.Lib.SeqMatch.seq_list_match _ _ (rel_pair rel_aux_env24_type_2 rel_aux_env24_type_3)
     );
   };
   intro_trade _ _ _ aux;

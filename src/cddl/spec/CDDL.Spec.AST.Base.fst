@@ -757,6 +757,98 @@ let typ_sem_elem_incr
 (* Annotated AST and their semantics *)
 
 [@@base_attr; PpxDerivingShow]
+type map_constraint =
+| MCFalse
+| MCKeyValue: typ -> typ -> map_constraint
+| MCNot: map_constraint -> map_constraint
+| MCAnd: map_constraint -> map_constraint -> map_constraint
+| MCOr: map_constraint -> map_constraint -> map_constraint
+
+[@@ base_attr]
+let rec bounded_map_constraint
+  (env: name_env)
+  (g: map_constraint)
+: Tot bool
+= match g with
+  | MCFalse -> true
+  | MCKeyValue t1 t2 ->
+    typ_bounded env t1 && typ_bounded env t2
+  | MCNot g' ->
+    bounded_map_constraint env g'
+  | MCAnd g1 g2
+  | MCOr g1 g2 ->
+    bounded_map_constraint env g1 &&
+    bounded_map_constraint env g2
+
+let rec bounded_map_constraint_incr
+  (env env': name_env)
+  (g: map_constraint)
+: Lemma
+  (requires (
+    name_env_included env env' /\
+    bounded_map_constraint env g
+  ))
+  (ensures (
+    bounded_map_constraint env' g
+  ))
+  (decreases g)
+  [SMTPatOr [
+    [SMTPat (name_env_included env env'); SMTPat (bounded_map_constraint env g)];
+    [SMTPat (name_env_included env env'); SMTPat (bounded_map_constraint env' g)];
+  ]]
+= match g with
+  | MCAnd g1 g2
+  | MCOr g1 g2
+    -> bounded_map_constraint_incr env env' g1;
+    bounded_map_constraint_incr env env' g2
+  | MCNot g1
+    -> bounded_map_constraint_incr env env' g1
+  | _ -> ()
+
+[@@ sem_attr ]
+let rec map_constraint_sem
+  (env: sem_env)
+  (g: map_constraint)
+: Ghost Spec.map_constraint
+    (requires bounded_map_constraint env.se_bound g)
+    (ensures fun _ -> True)
+= match g with
+  | MCFalse -> Spec.map_constraint_empty
+  | MCKeyValue t1 t2 ->
+    Spec.matches_map_group_entry (typ_sem env t1) (typ_sem env t2)
+  | MCNot g' ->
+    Util.notp (map_constraint_sem env g')
+  | MCAnd g1 g2 ->
+    Util.andp (map_constraint_sem env g1) (map_constraint_sem env g2)
+  | MCOr g1 g2 ->
+    Spec.map_constraint_choice (map_constraint_sem env g1) (map_constraint_sem env g2)
+
+let rec map_constraint_sem_incr
+  (env env': sem_env)
+  (g: map_constraint)
+: Lemma
+    (requires bounded_map_constraint env.se_bound g /\
+      sem_env_included env env'
+    )
+    (ensures bounded_map_constraint env'.se_bound g /\
+      map_constraint_sem env' g == map_constraint_sem env g
+    )
+    (decreases g)
+  [SMTPatOr [
+    [SMTPat (sem_env_included env env'); SMTPat (map_constraint_sem env g)];
+    [SMTPat (sem_env_included env env'); SMTPat (map_constraint_sem env' g)];
+  ]]
+= bounded_map_constraint_incr env.se_bound env'.se_bound g;
+  match g with
+  | MCAnd g1 g2
+  | MCOr g1 g2
+    -> map_constraint_sem_incr env env' g1;
+    map_constraint_sem_incr env env' g2
+  | MCNot g1
+    -> map_constraint_sem_incr env env' g1
+  | _ -> ()
+
+[@@base_attr; PpxDerivingShow]
 type elab_map_group =
 | MGNop
 | MGAlwaysFalse
@@ -774,8 +866,8 @@ type elab_map_group =
   elab_map_group
 | MGTable:
   key: typ ->
-  key_except: typ ->
   value: typ ->
+  except: map_constraint ->
   elab_map_group
 | MGConcat:
   g1: elab_map_group ->
@@ -786,6 +878,7 @@ type elab_map_group =
   g2: elab_map_group ->
   elab_map_group
 
+[@@ base_attr]
 let rec bounded_elab_map_group
   (env: name_env)
   (g: elab_map_group)
@@ -801,9 +894,9 @@ let rec bounded_elab_map_group
     typ_bounded env value
   | MGCut key ->
     typ_bounded env key
-  | MGTable key key_except value ->
+  | MGTable key value except ->
     typ_bounded env key &&
-    typ_bounded env key_except &&
+    bounded_map_constraint env except &&
     typ_bounded env value
   | MGConcat g1 g2
   | MGChoice g1 g2
@@ -848,8 +941,8 @@ let rec elab_map_group_sem
     Spec.map_group_match_item true (typ_sem env key) (typ_sem env value)
   | MGCut key ->
     Spec.map_group_cut (typ_sem env key)
-  | MGTable key key_except value ->
-    Spec.map_group_zero_or_more (Spec.map_group_match_item false (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except))) (typ_sem env value))
+  | MGTable key value except ->
+    Spec.map_group_filtered_table (typ_sem env key) (typ_sem env value) (map_constraint_sem env except)
   | MGConcat g1 g2 ->
     Spec.map_group_concat (elab_map_group_sem env g1) (elab_map_group_sem env g2)
   | MGChoice g1 g2 ->
@@ -917,7 +1010,7 @@ let rec elab_map_group_sem_incr
 let rec spec_map_group_footprint
   (env: sem_env)
   (g: elab_map_group)
-: Pure (Ghost.erased Spec.typ)
+: Pure (Ghost.erased Spec.map_constraint)
     (requires bounded_elab_map_group env.se_bound g)
     (ensures fun  ty ->
       let s = elab_map_group_sem env g in
@@ -927,18 +1020,19 @@ let rec spec_map_group_footprint
 = match g with
   | MGMatch cut key value
   -> Spec.map_group_footprint_match_item_for cut (eval_literal key) (typ_sem env value);
-    (Ghost.hide (Spec.t_literal (eval_literal key)))
-  | MGTable key key_except _ // TODO: extend to GOneOrMore
-  -> (Ghost.hide (Util.andp (typ_sem env key) (Util.notp (typ_sem env key_except))))
+    Ghost.hide (Spec.map_group_match_item_for_footprint cut (eval_literal key) (typ_sem env value))
+  | MGTable key value except // TODO: extend to GOneOrMore
+  -> Ghost.hide (Util.andp (Spec.matches_map_group_entry (typ_sem env key) (typ_sem env value)) (Util.notp (map_constraint_sem env except)))
   | MGChoice g1 g2
   | MGConcat g1 g2 ->
     let ty1 = spec_map_group_footprint env g1 in
     let ty2 = spec_map_group_footprint env g2 in
-    (Ghost.hide (Ghost.reveal ty1 `Spec.t_choice` Ghost.reveal ty2))
+    (Ghost.hide (Ghost.reveal ty1 `Spec.map_constraint_choice` Ghost.reveal ty2))
   | MGNop
-  | MGAlwaysFalse -> (Ghost.hide Spec.t_always_false)
+  | MGAlwaysFalse -> (Ghost.hide Spec.map_constraint_empty)
   | MGCut key
-  | MGMatchWithCut key _ -> (Ghost.hide (typ_sem env key))
+  | MGMatchWithCut key _ ->
+    (Ghost.hide (Spec.matches_map_group_entry (typ_sem env key) Spec.any))
 
 #pop-options
 
@@ -955,12 +1049,12 @@ let spec_map_group_footprint_concat
     bounded_elab_map_group env.se_bound g1 /\
     bounded_elab_map_group env.se_bound g2 /\
     spec_map_group_footprint env (MGConcat g1 g2) == Ghost.hide (
-      spec_map_group_footprint env g1 `Spec.t_choice`
+      spec_map_group_footprint env g1 `Spec.map_constraint_choice`
       spec_map_group_footprint env g2
   )))
 = assert_norm (
     spec_map_group_footprint env (MGConcat g1 g2) == Ghost.hide (
-      spec_map_group_footprint env g1 `Spec.t_choice`
+      spec_map_group_footprint env g1 `Spec.map_constraint_choice`
       spec_map_group_footprint env g2
   ))
 
@@ -1118,12 +1212,38 @@ and ast0_wf_parse_map_group
     ast0_wf_parse_map_group (MGMatch cut key value)
 | WfMZeroOrMore:
     key: typ ->
-    key_except: typ ->
     value: typ ->
+    except: map_constraint ->
     s_key: ast0_wf_typ key ->
-    s_key_except: ast0_wf_typ key_except ->
     s_value: ast0_wf_typ value ->
-    ast0_wf_parse_map_group (MGTable key key_except value)
+    s_map_constraint: ast0_wf_map_constraint except ->
+    ast0_wf_parse_map_group (MGTable key value except)
+
+and ast0_wf_map_constraint
+: map_constraint -> Type
+= | WfMCFalse: ast0_wf_map_constraint MCFalse
+  | WfMCKeyValue:
+    key: typ ->
+    s_key: ast0_wf_typ key ->
+    value: typ ->
+    s_value: ast0_wf_typ value ->
+    ast0_wf_map_constraint (MCKeyValue key value)
+  | WfMCNot:
+    mc: map_constraint ->
+    s_mc: ast0_wf_map_constraint mc ->
+    ast0_wf_map_constraint (MCNot mc)
+  | WfMCAnd:
+    mc1: map_constraint ->
+    s_mc1: ast0_wf_map_constraint mc1 ->
+    mc2: map_constraint ->
+    s_mc2: ast0_wf_map_constraint mc2 ->
+    ast0_wf_map_constraint (MCAnd mc1 mc2)
+  | WfMCOr:
+    mc1: map_constraint ->
+    s_mc1: ast0_wf_map_constraint mc1 ->
+    mc2: map_constraint ->
+    s_mc2: ast0_wf_map_constraint mc2 ->
+    ast0_wf_map_constraint (MCOr mc1 mc2)
 
 (*
 and ast0_wf_validate_map_group
@@ -1292,11 +1412,30 @@ and bounded_wf_parse_map_group
 | WfMLiteral cut key value s ->
     wf_literal key &&
     bounded_wf_typ env value s
-| WfMZeroOrMore key key_except value s_key s_key_except s_value ->
+| WfMZeroOrMore key value except s_key s_value s_except ->
     bounded_wf_typ env key s_key &&
-    bounded_wf_typ env key_except s_key_except &&
+    bounded_wf_map_constraint env except s_except &&
     bounded_wf_typ env value s_value
 | WfMNop _ -> true
+
+and bounded_wf_map_constraint
+  (env: name_env)
+  (g: map_constraint)
+  (wf: ast0_wf_map_constraint g)
+: Tot bool
+  (decreases wf)
+= match wf with
+  | WfMCFalse -> true
+  | WfMCKeyValue key s_key value s_value ->
+    bounded_wf_typ env key s_key &&
+    bounded_wf_typ env value s_value
+  | WfMCNot g1 wf1 ->
+    bounded_wf_map_constraint env g1 wf1
+  | WfMCOr g1 wf1 g2 wf2
+  | WfMCAnd g1 wf1 g2 wf2 ->
+    bounded_wf_map_constraint env g1 wf1 &&
+    bounded_wf_map_constraint env g2 wf2
+
 // TODO: recover named map groups
 
 (*
@@ -1391,7 +1530,6 @@ and bounded_wf_array_group_incr
     bounded_wf_array_group_incr env env' g2 s2
   | WfARewrite _ g2 s2 ->
     bounded_wf_array_group_incr env env' g2 s2
-    
 (*    
   | WfADef _ -> ()
 *)
@@ -1459,10 +1597,38 @@ and bounded_wf_parse_map_group_incr
     bounded_wf_parse_map_group_incr env env' g s
   | WfMLiteral cut key value s ->
     bounded_wf_typ_incr env env' value s
-  | WfMZeroOrMore key key_except value s_key s_key_except s_value ->
+  | WfMZeroOrMore key value except s_key s_value s_except ->
     bounded_wf_typ_incr env env' key s_key;
-    bounded_wf_typ_incr env env' key_except s_key_except;
+    bounded_wf_map_constraint_incr env env' except s_except;
     bounded_wf_typ_incr env env' value s_value
+
+and bounded_wf_map_constraint_incr
+  (env env': name_env)
+  (g: map_constraint)
+  (wf: ast0_wf_map_constraint g)
+: Lemma
+  (requires name_env_included env env' /\
+    bounded_wf_map_constraint env g wf
+  )
+  (ensures
+      bounded_wf_map_constraint env' g wf
+  )
+  (decreases wf)
+  [SMTPatOr [
+    [SMTPat (name_env_included env env'); SMTPat (bounded_wf_map_constraint env g wf)];
+    [SMTPat (name_env_included env env'); SMTPat (bounded_wf_map_constraint env' g wf)];
+  ]]
+= match wf with
+  | WfMCFalse -> ()
+  | WfMCKeyValue key s_key value s_value ->
+    bounded_wf_typ_incr env env' key s_key;
+    bounded_wf_typ_incr env env' value s_value
+  | WfMCNot g1 wf1 ->
+    bounded_wf_map_constraint_incr env env' g1 wf1
+  | WfMCOr g1 wf1 g2 wf2
+  | WfMCAnd g1 wf1 g2 wf2 ->
+    bounded_wf_map_constraint_incr env env' g1 wf1;
+    bounded_wf_map_constraint_incr env env' g2 wf2
 
 let rec bounded_wf_typ_bounded
   (env: name_env)
@@ -1570,9 +1736,9 @@ and bounded_wf_parse_map_group_bounded
   (decreases wf)
   [SMTPat (bounded_wf_parse_map_group env g wf)]
 = match wf with
-  | WfMZeroOrMore key key_except value s_key s_key_except s_value ->
+  | WfMZeroOrMore key value except s_key s_value s_except ->
     bounded_wf_typ_bounded env key s_key;
-    bounded_wf_typ_bounded env key_except s_key_except;
+    bounded_wf_map_constraint_bounded env except s_except;
     bounded_wf_typ_bounded env value s_value
   | WfMLiteral cut key value s ->
     bounded_wf_typ_bounded env value s
@@ -1581,6 +1747,31 @@ and bounded_wf_parse_map_group_bounded
   | WfMChoice _ _ _ _
   | WfMNop _
   -> ()
+
+and bounded_wf_map_constraint_bounded
+  (env: name_env)
+  (g: map_constraint)
+  (wf: ast0_wf_map_constraint g)
+: Lemma
+  (requires
+    bounded_wf_map_constraint env g wf
+  )
+  (ensures
+    bounded_map_constraint env g
+  )
+  (decreases wf)
+  [SMTPat (bounded_wf_map_constraint env g wf)]
+= match wf with
+  | WfMCFalse -> ()
+  | WfMCKeyValue key s_key value s_value ->
+    bounded_wf_typ_bounded env key s_key;
+    bounded_wf_typ_bounded env value s_value
+  | WfMCNot g1 wf1 ->
+    bounded_wf_map_constraint_bounded env g1 wf1
+  | WfMCOr g1 wf1 g2 wf2
+  | WfMCAnd g1 wf1 g2 wf2 ->
+    bounded_wf_map_constraint_bounded env g1 wf1;
+    bounded_wf_map_constraint_bounded env g2 wf2
 
 let spec_true : prop = True
 
@@ -1683,18 +1874,37 @@ and spec_wf_parse_map_group
     spec_wf_parse_map_group env g1 s1 /\
     spec_wf_parse_map_group env g2 s2 /\
     (
-      Spec.typ_disjoint (spec_map_group_footprint env g1) (spec_map_group_footprint env g2)
+      Spec.map_constraint_disjoint (spec_map_group_footprint env g1) (spec_map_group_footprint env g2)
     )
 | WfMZeroOrOne g s ->
     spec_wf_parse_map_group env g s /\
     Spec.MapGroupFail? (Spec.apply_map_group_det (elab_map_group_sem env g) Cbor.cbor_map_empty)
 | WfMLiteral cut key value s ->
     spec_wf_typ env true value s
-| WfMZeroOrMore key key_except value s_key s_key_except s_value ->
+| WfMZeroOrMore key value except s_key s_value s_except ->
     spec_wf_typ env true key s_key /\
-    spec_wf_typ env false key_except s_key_except /\
+    spec_wf_map_constraint env except s_except /\
     spec_wf_typ env true value s_value
 | WfMNop _ -> spec_true
+end
+
+and spec_wf_map_constraint
+  (env: sem_env)
+  (g: map_constraint)
+  (wf: ast0_wf_map_constraint g)
+: GTot prop
+  (decreases wf)
+= bounded_wf_map_constraint env.se_bound g wf /\ begin match wf with
+  | WfMCFalse -> True
+  | WfMCKeyValue key s_key value s_value ->
+    spec_wf_typ env false key s_key /\
+    spec_wf_typ env false value s_value
+  | WfMCNot mc1 s_mc1 ->
+    spec_wf_map_constraint env mc1 s_mc1
+  | WfMCAnd mc1 s_mc1 mc2 s_mc2
+  | WfMCOr mc1 s_mc1 mc2 s_mc2 ->
+    spec_wf_map_constraint env mc1 s_mc1 /\
+    spec_wf_map_constraint env mc2 s_mc2
 end
 
 (*
@@ -1741,7 +1951,7 @@ let spec_wf_parse_map_group_concat
     spec_wf_parse_map_group env g1 s1 /\
     spec_wf_parse_map_group env g2 s2 /\
     (
-      Spec.typ_disjoint (spec_map_group_footprint env g1) (spec_map_group_footprint env g2)
+      Spec.map_constraint_disjoint (spec_map_group_footprint env g1) (spec_map_group_footprint env g2)
     )
   )))
 = ()
@@ -1831,7 +2041,35 @@ and spec_wf_array_group_incr
     spec_wf_array_group_incr env env' g2 s2
   | WfARewrite g1 g2 s2 ->
     spec_wf_array_group_incr env env' g2 s2
-    
+
+and spec_wf_map_constraint_incr
+  (env env': sem_env)
+  (g: map_constraint)
+  (wf: ast0_wf_map_constraint g)
+: Lemma
+  (requires sem_env_included env env' /\
+    bounded_wf_map_constraint env.se_bound g wf
+  )
+  (ensures
+      spec_wf_map_constraint env g wf <==> spec_wf_map_constraint env' g wf
+  )
+  (decreases wf)
+  [SMTPatOr [
+    [SMTPat (sem_env_included env env'); SMTPat (spec_wf_map_constraint env g wf)];
+    [SMTPat (sem_env_included env env'); SMTPat (spec_wf_map_constraint env' g wf)];
+  ]]
+= match wf with
+  | WfMCFalse -> ()
+  | WfMCKeyValue key s_key value s_value ->
+    spec_wf_typ_incr env env' false key s_key;
+    spec_wf_typ_incr env env' false value s_value
+  | WfMCNot g1 wf1 ->
+    spec_wf_map_constraint_incr env env' g1 wf1
+  | WfMCOr g1 wf1 g2 wf2
+  | WfMCAnd g1 wf1 g2 wf2 ->
+    spec_wf_map_constraint_incr env env' g1 wf1;
+    spec_wf_map_constraint_incr env env' g2 wf2
+
 (*    
   | WfADef _ -> ()
 *)
@@ -1900,9 +2138,9 @@ and spec_wf_parse_map_group_incr
     spec_wf_parse_map_group_incr env env' g s
   | WfMLiteral cut key value s ->
     spec_wf_typ_incr env env' true value s
-  | WfMZeroOrMore key key_except value s_key s_key_except s_value ->
+  | WfMZeroOrMore key value except s_key s_value s_except ->
     spec_wf_typ_incr env env' true key s_key;
-    spec_wf_typ_incr env env' false key_except s_key_except;
+    spec_wf_map_constraint_incr env env' except s_except;
     spec_wf_typ_incr env env' true value s_value
 
 [@@  sem_attr]
@@ -2631,7 +2869,7 @@ and target_type_of_wf_map_group
   | WfMConcat _ s1 _ s2 -> TTPair (target_type_of_wf_map_group s1) (target_type_of_wf_map_group s2)
   | WfMZeroOrOne _ s -> TTOption (target_type_of_wf_map_group s)
   | WfMLiteral _ _ _ s -> target_type_of_wf_typ s
-  | WfMZeroOrMore _ _ _ s_key _ s_value -> TTTable (target_type_of_wf_typ s_key) (target_type_of_wf_typ s_value)
+  | WfMZeroOrMore _ _ _ s_key s_value _ -> TTTable (target_type_of_wf_typ s_key) (target_type_of_wf_typ s_value)
 
 (*
 let target_type_of_wf_ast_elem
@@ -2709,7 +2947,7 @@ and target_type_of_wf_map_group_bounded
     target_type_of_wf_map_group_bounded env s2
   | WfMZeroOrOne _ s -> target_type_of_wf_map_group_bounded env s
   | WfMLiteral _ _ _ s -> target_type_of_wf_typ_bounded env s
-  | WfMZeroOrMore _ _ _ s_key _ s_value ->
+  | WfMZeroOrMore _ _ _ s_key s_value _ ->
     target_type_of_wf_typ_bounded env s_key;
     target_type_of_wf_typ_bounded env s_value
 

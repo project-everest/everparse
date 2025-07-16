@@ -1,0 +1,4 @@
+debug
+release
+.rust*
+CACHEDIR.TAG

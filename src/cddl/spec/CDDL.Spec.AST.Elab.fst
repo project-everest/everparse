@@ -98,7 +98,7 @@ let rec map_group_choice_compatible_no_cut
     CDDL.Spec.AST.Elab.MGCCNoCut.map_group_choice_compatible_no_cut
       (map_group_choice_compatible_no_cut fuel')
       (typ_disjoint fuel)
-      (typ_diff_disjoint fuel)
+      (typ_included fuel)
       fuel
       env s1 s2
 
@@ -114,7 +114,7 @@ let rec map_group_choice_compatible
     CDDL.Spec.AST.Elab.MGCC.map_group_choice_compatible
       (map_group_choice_compatible fuel')
       (typ_disjoint fuel)
-      (typ_diff_disjoint fuel)
+      (typ_included fuel)
       fuel
       env s1 s2
 
@@ -140,7 +140,7 @@ let rec mk_elab_map_group
     | err -> err
     end
   | GZeroOrMore (GElem false key value) ->
-    RSuccess (MGTable key (TElem EAlwaysFalse) value)
+    RSuccess (MGTable key value MCFalse)
   | GConcat g1 g2 ->
     begin match mk_elab_map_group fuel' env g1 with
     | RSuccess g1' ->
@@ -224,7 +224,7 @@ let rec mk_elab_map_group_correct
     mk_elab_map_group_correct fuel' env g_
   | GZeroOrMore (GElem false key value) ->
     Spec.map_group_filter_ext
-      (Util.notp (Spec.matches_map_group_entry (Util.andp (typ_sem env.e_sem_env key) (Util.notp Spec.t_always_false)) (typ_sem env.e_sem_env value)))
+      (Util.notp (Util.andp (Spec.matches_map_group_entry (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)) (Util.notp Spec.map_constraint_empty)))
       (Util.notp (Spec.matches_map_group_entry (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)))
   | GDef n ->
     let g' = (env.e_env n) in
@@ -286,12 +286,12 @@ let rec typ_inter_underapprox
 
 let rec extract_cut
   (g: elab_map_group)
-: Tot typ
+: Tot map_constraint
 = match g with
-  | MGMatch true key _ -> (TElem (ELiteral key))
-  | MGMatchWithCut key _ -> key
+  | MGMatch cut key value -> MCKeyValue (TElem (ELiteral key)) (if cut then TElem EAny else value)
+  | MGMatchWithCut key _ -> MCKeyValue key (TElem EAny)
   | MGChoice g1 _ -> extract_cut g1
-  | _ -> (TElem EAlwaysFalse)
+  | _ -> MCFalse
 
 let rec bounded_extract_cut
   (env: name_env)
@@ -299,7 +299,7 @@ let rec bounded_extract_cut
 : Lemma
   (requires (bounded_elab_map_group env g))
   (ensures (let (key) = extract_cut g in
-  typ_bounded env key
+  bounded_map_constraint env key
   ))
   (decreases g)
   [SMTPat (bounded_elab_map_group env g); SMTPat (extract_cut g)]
@@ -310,7 +310,7 @@ let rec bounded_extract_cut
 let cbor_map_disjoint_from_footprint_always_false
   (m: Cbor.cbor_map)
 : Lemma
-  (Spec.cbor_map_disjoint_from_footprint m Spec.t_always_false)
+  (Spec.cbor_map_disjoint_from_footprint m Spec.map_constraint_empty)
 = ()
 
 #push-options "--z3rlimit 32"
@@ -325,17 +325,17 @@ let rec extract_cut_correct
   (ensures (
     let (key) = extract_cut g in
     bounded_elab_map_group env.se_bound g /\
-    typ_bounded env.se_bound key /\
+    bounded_map_constraint env.se_bound key /\
     begin
       match Spec.apply_map_group_det (elab_map_group_sem env g) m with
-      | Spec.MapGroupDet _ m1 -> Spec.cbor_map_disjoint_from_footprint m1 (typ_sem env key)
-      | Spec.MapGroupFail -> Spec.cbor_map_disjoint_from_footprint m (typ_sem env key)
+      | Spec.MapGroupDet _ m1 -> Spec.cbor_map_disjoint_from_footprint m1 (map_constraint_sem env key)
+      | Spec.MapGroupFail -> Spec.cbor_map_disjoint_from_footprint m (map_constraint_sem env key)
       | _ -> True
     end
   ))
   (decreases g)
 = let (key) = extract_cut g in
-  assert (typ_bounded env.se_bound key);
+  assert (bounded_map_constraint env.se_bound key);
   match g with
   | MGChoice g1 _ ->
     extract_cut_correct env g1 m
@@ -348,17 +348,18 @@ let rec extract_cut_correct
 let rec annot_tables
   (fuel: nat)
   (env: ast_env)
-  (cut: typ)
+  (cut: map_constraint)
   (g: elab_map_group)
-: Pure (result (typ & elab_map_group))
+: Pure (result (map_constraint & elab_map_group))
     (requires (
-      typ_bounded env.e_sem_env.se_bound cut /\
+      bounded_map_constraint env.e_sem_env.se_bound cut /\
       bounded_elab_map_group env.e_sem_env.se_bound g
     ))
     (ensures (fun res -> match res with
     | RSuccess (cut', g') -> 
-      typ_bounded env.e_sem_env.se_bound cut' /\
+      bounded_map_constraint env.e_sem_env.se_bound cut' /\
       bounded_elab_map_group env.e_sem_env.se_bound g'
+    | ROutOfFuel -> False
     | _ -> True
     ))
     (decreases g)
@@ -367,12 +368,10 @@ let rec annot_tables
     begin match annot_tables fuel env cut g1 with
     | RSuccess (cut1, g1') ->
       let (extracted_cut) = extract_cut g1 in
-      begin match annot_tables fuel env (mk_TChoice cut extracted_cut) g2 with
+      begin match annot_tables fuel env (MCOr cut extracted_cut) g2 with
       | RSuccess (cut2, g2') ->
-        begin match typ_inter_underapprox fuel env cut1 cut2 with
-        | RSuccess cut' -> RSuccess (cut', MGChoice g1' g2')
-        | res -> coerce_failure res
-        end
+        let cut' = MCAnd cut1 cut2 in
+        RSuccess (cut', MGChoice g1' g2')
       | res -> res
       end
     | res -> res
@@ -386,51 +385,130 @@ let rec annot_tables
       end
     | res -> res
     end
-  | MGTable key (TElem EAlwaysFalse) value ->
-    begin match typ_inter_underapprox fuel env cut key with
-    | RSuccess key_except ->
-      RSuccess (cut, MGTable key key_except value)
-    | res -> coerce_failure res
-    end
+  | MGTable key value MCFalse ->
+    let except = cut in
+    RSuccess (MCOr cut (MCKeyValue key value), MGTable key value except)
   | MGTable _ _ _ -> RFailure "annot_tables cannot be run twice"
-  | MGMatch _ key _ ->
-    begin match typ_included fuel env (TElem (ELiteral key)) cut with
-    | RSuccess _ -> RSuccess (cut, MGAlwaysFalse)
-    | RFailure _ -> RSuccess (mk_TChoice cut (TElem (ELiteral key)), g)
-    | ROutOfFuel -> ROutOfFuel
-    end
+  | MGMatch cut' key value ->
+    let fp = (MCKeyValue (TElem (ELiteral key)) (if cut' then TElem EAny else value)) in
+    RSuccess (MCOr cut fp, g) // TODO: rewrite the group if cut' is true and key \included cut
   | MGMatchWithCut key _ ->
-    begin match typ_included fuel env key cut with
-    | RSuccess _ -> RSuccess (cut, MGAlwaysFalse)
-    | RFailure _ -> RSuccess (mk_TChoice cut key, g)
-    | ROutOfFuel -> ROutOfFuel
-    end
-  | MGCut key -> RSuccess (mk_TChoice cut key, g)
-  | MGAlwaysFalse -> RSuccess (TElem EAny, g)
+    let fp = MCKeyValue key (TElem EAny) in
+    RSuccess (MCOr cut fp, g)
+  | MGCut key ->
+    let fp = MCKeyValue key (TElem EAny) in
+    RSuccess (MCOr cut fp, g)
+  | MGAlwaysFalse -> RSuccess (MCFalse, g)
   | MGNop -> RSuccess (cut, g)
+
+let annot_tables_correct_postcond0
+  (fuel: nat)
+  (env: ast_env)
+  (cut: map_constraint)
+  (g: elab_map_group)
+  (m: Cbor.cbor_map)
+  (cut' : map_constraint)
+  (g' : elab_map_group)
+: GTot prop
+=
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
+    bounded_elab_map_group env.e_sem_env.se_bound g /\ (
+      let a = Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m in
+      bounded_map_constraint env.e_sem_env.se_bound cut' /\
+      bounded_elab_map_group env.e_sem_env.se_bound g' /\
+      a == Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g') m /\
+      (Spec.MapGroupDet? a ==> (let Spec.MapGroupDet _ m' = a in Spec.cbor_map_disjoint_from_footprint m' (map_constraint_sem env.e_sem_env cut')))
+    )
 
 let annot_tables_correct_postcond
   (fuel: nat)
   (env: ast_env)
-  (cut: typ)
+  (cut: map_constraint)
   (g: elab_map_group)
   (m: Cbor.cbor_map)
 : GTot prop
 =
-    typ_bounded env.e_sem_env.se_bound cut /\
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
     bounded_elab_map_group env.e_sem_env.se_bound g /\
-    begin match annot_tables fuel env cut g with
+    begin match  (annot_tables fuel env cut g) with
     | RSuccess (cut', g') ->
-      let a = Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m in
-      typ_bounded env.e_sem_env.se_bound cut' /\
-      bounded_elab_map_group env.e_sem_env.se_bound g' /\
-      a == Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g') m /\
-      begin match a with
-      | Spec.MapGroupDet _ m' -> Spec.cbor_map_disjoint_from_footprint m' (typ_sem env.e_sem_env cut')
-      | _ -> True
-      end
+    annot_tables_correct_postcond0 fuel env cut g m cut' g' 
     | _ -> True
     end        
+
+let annot_tables_correct_postcond_intro
+  (fuel: nat)
+  (env: ast_env)
+  (cut: map_constraint)
+  (g: elab_map_group)
+  (m: Cbor.cbor_map)
+  (sq1: squash (
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
+    bounded_elab_map_group env.e_sem_env.se_bound g
+  ))
+  (cut': map_constraint)
+  (g': elab_map_group)
+  (sq2: squash (annot_tables fuel env cut g == RSuccess (cut', g')))
+  (sq3: squash (bounded_map_constraint env.e_sem_env.se_bound cut'))
+  (sq4: squash (bounded_elab_map_group env.e_sem_env.se_bound g'))
+  (sq5: squash (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m == Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g') m))
+  (sq6: squash (
+      begin match Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m with
+      | Spec.MapGroupDet _ m' -> Spec.cbor_map_disjoint_from_footprint m' (map_constraint_sem env.e_sem_env cut')
+      | _ -> True
+      end
+  ))
+: Lemma
+  (annot_tables_correct_postcond fuel env cut g m)
+= ()
+
+let annot_tables_correct_postcond_intro_none
+  (fuel: nat)
+  (env: ast_env)
+  (cut: map_constraint)
+  (g: elab_map_group)
+  (m: Cbor.cbor_map)
+  (sq1: squash (
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
+    bounded_elab_map_group env.e_sem_env.se_bound g
+  ))
+  (cut': map_constraint)
+  (g': elab_map_group)
+  (sq2: squash (annot_tables fuel env cut g == RSuccess (cut', g')))
+  (sq3: squash (bounded_map_constraint env.e_sem_env.se_bound cut'))
+  (sq4: squash (bounded_elab_map_group env.e_sem_env.se_bound g'))
+  (sq5: squash (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m == Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g') m))
+  (sq6: squash (~ (Spec.MapGroupDet? (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m))))
+: Lemma
+  (annot_tables_correct_postcond fuel env cut g m)
+= ()
+
+#restart-solver
+let annot_tables_correct_postcond_intro_some
+  (fuel: nat)
+  (env: ast_env)
+  (cut: map_constraint)
+  (g: elab_map_group)
+  (m: Cbor.cbor_map)
+  (sq1: squash (
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
+    bounded_elab_map_group env.e_sem_env.se_bound g
+  ))
+  (cut': map_constraint)
+  (g': elab_map_group)
+  (sq2: squash (annot_tables fuel env cut g == RSuccess (cut', g')))
+  (sq3: squash (bounded_map_constraint env.e_sem_env.se_bound cut'))
+  (sq4: squash (bounded_elab_map_group env.e_sem_env.se_bound g'))
+  (sq5: squash (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m == Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g') m))
+  (sq6: squash (
+      Spec.MapGroupDet? (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m)
+  ))
+  (m': Cbor.cbor_map)
+  (sq65: squash (let Spec.MapGroupDet _ m_ = Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m in m_ == m'))
+  (sq7: squash (Spec.cbor_map_disjoint_from_footprint m' (map_constraint_sem env.e_sem_env cut')))
+: Lemma
+  (annot_tables_correct_postcond fuel env cut g m)
+= ()
 
 let cbor_map_filter_ext_strong
   (f1 f2: (Cbor.cbor & Cbor.cbor) -> Tot bool)
@@ -440,32 +518,132 @@ let cbor_map_filter_ext_strong
   (ensures Cbor.cbor_map_filter f1 m == Cbor.cbor_map_filter f2 m)
 = Cbor.cbor_map_ext (Cbor.cbor_map_filter f1 m) (Cbor.cbor_map_filter f2 m)
 
-#push-options "--z3rlimit 256 --ifuel 8 --fuel 4 --query_stats --split_queries always"
+let cbor_map_filter_disjoint_from_footprint
+  (c1 c2: Spec.map_constraint)
+  (m: Cbor.cbor_map)
+: Lemma
+  (requires (Spec.map_constraint_disjoint c1 c2))
+  (ensures (Spec.cbor_map_disjoint_from_footprint (Cbor.cbor_map_filter c1 m) c2))
+= ()
+
+#restart-solver
+let annot_tables_correct_aux_match
+  (fuel: nat)
+  (env: ast_env)
+  (cut: map_constraint)
+  (c: bool)
+  (key: literal)
+  (value: typ)
+  (m: Cbor.cbor_map)
+  (sq: squash (
+    let g = MGMatch c key value in
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
+    bounded_elab_map_group env.e_sem_env.se_bound g /\
+    Spec.cbor_map_disjoint_from_footprint m (map_constraint_sem env.e_sem_env cut)
+  ))
+: Tot (squash (
+    let g = MGMatch c key value in
+    annot_tables_correct_postcond fuel env cut g m
+  ))
+=
+    Spec.apply_map_group_det_match_item_for c (eval_literal key) (typ_sem env.e_sem_env value) m;
+    let fp = (MCKeyValue (TElem (ELiteral key)) (if c then TElem EAny else value)) in
+    let fp' = map_constraint_sem env.e_sem_env fp in
+    Spec.map_group_footprint_match_item_for c (eval_literal key) (typ_sem env.e_sem_env value);
+    let cut' = MCOr cut fp in
+    let g = MGMatch c key value in
+    let sq1 : squash (
+      bounded_map_constraint env.e_sem_env.se_bound cut /\
+      bounded_elab_map_group env.e_sem_env.se_bound g
+    ) = () in
+    let sq2 : squash (annot_tables fuel env cut g == RSuccess (cut', g)) =
+      assert (annot_tables fuel env cut (MGMatch c key value) == RSuccess (cut', MGMatch c key value)) by (FStar.Tactics.trefl ())
+    in
+    begin match Cbor.cbor_map_get m (eval_literal key) with
+    | None ->
+//      annot_tables_correct_postcond_intro_none fuel env cut g m () cut' g sq2 () () () ();
+      ()
+    | Some x -> 
+      if typ_sem env.e_sem_env value x
+      then begin
+        let f1 = (Util.notp (Spec.matches_map_group_entry (Spec.t_literal (eval_literal key)) (typ_sem env.e_sem_env value))) in
+        let f2 = (Util.notp (Spec.matches_map_group_entry (Spec.t_literal (eval_literal key)) (Spec.any))) in
+        let m1 = Cbor.cbor_map_filter f1 m in
+        let m2 = Cbor.cbor_map_filter f2 m in
+        assert (Cbor.cbor_map_equal m1 m2);
+        cbor_map_filter_disjoint_from_footprint (if c then f2 else f1) fp' m;
+//        annot_tables_correct_postcond_intro_some fuel env cut g m () cut' g () () () () () m1 () ();
+        ()
+      end
+      else begin
+//        annot_tables_correct_postcond_intro_none fuel env cut g m (_ by (FStar.Tactics.smt ())) cut' g sq2 () () () ();
+        ()
+      end
+    end
+
+#restart-solver
+let annot_tables_correct_aux_table
+  (fuel: nat)
+  (env: ast_env)
+  (cut: map_constraint)
+  (key: typ)
+  (value: typ)
+  (m: Cbor.cbor_map)
+  (sq: squash (
+    let g = MGTable key value MCFalse in
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
+    bounded_elab_map_group env.e_sem_env.se_bound g /\
+    Spec.cbor_map_disjoint_from_footprint m (map_constraint_sem env.e_sem_env cut)
+  ))
+: Tot (squash (
+    let g = MGTable key value MCFalse in
+    annot_tables_correct_postcond fuel env cut g m
+  ))
+= 
+  let g = MGTable key value MCFalse in
+      let nf = Util.notp (Util.andp (Spec.matches_map_group_entry (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)) (Util.notp Spec.map_constraint_empty)) in
+      let mnf = Cbor.cbor_map_filter nf m in
+      let mnnf = Cbor.cbor_map_filter (Util.notp nf) m in
+      assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m == Spec.MapGroupDet mnnf mnf);
+      let g' = MGTable key value cut in
+      let cut' = MCOr cut (MCKeyValue key value) in
+      assert (annot_tables fuel env cut g == RSuccess (cut', g'));
+      let nf' = Util.notp (Util.andp (Spec.matches_map_group_entry (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)) (Util.notp (map_constraint_sem env.e_sem_env cut))) in
+      let mnf' = Cbor.cbor_map_filter nf' m in
+      let mnnf' = Cbor.cbor_map_filter (Util.notp nf') m in
+      assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g') m == Spec.MapGroupDet mnnf' mnf');
+      cbor_map_filter_ext_strong nf nf' m;
+      assert (mnf == mnf');
+      assert (Cbor.cbor_map_equal mnnf mnnf');
+      assert (Spec.cbor_map_disjoint_from_footprint mnf (map_constraint_sem env.e_sem_env cut'));
+      assert (annot_tables_correct_postcond fuel env cut g m)
+
+#push-options "--z3rlimit 128 --ifuel 8 --fuel 4 --split_queries always"
 
 #restart-solver
 let rec annot_tables_correct_aux'
   (fuel: nat)
   (env: ast_env)
-  (cut: typ)
+  (cut: map_constraint)
   (g: elab_map_group)
   (m: Cbor.cbor_map)
   (sq: squash (
-    typ_bounded env.e_sem_env.se_bound cut /\
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
     bounded_elab_map_group env.e_sem_env.se_bound g /\
-    Spec.cbor_map_disjoint_from_footprint m (typ_sem env.e_sem_env cut)
+    Spec.cbor_map_disjoint_from_footprint m (map_constraint_sem env.e_sem_env cut)
   ))
-: Lemma (ensures (annot_tables_correct_postcond fuel env cut g m))
+: Lemma (ensures annot_tables_correct_postcond fuel env cut g m)
   (decreases g)
 = 
   match g with
   | MGChoice g1 g2 ->
     let (extracted_cut) = extract_cut g1 in
     annot_tables_correct_aux' fuel env cut g1 m ();
-    mk_TChoice_sem env.e_sem_env cut extracted_cut;
+//    mk_TChoice_sem env.e_sem_env cut extracted_cut;
     extract_cut_correct env.e_sem_env g1 m;
     begin match Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g1) m with
     | Spec.MapGroupFail ->
-      annot_tables_correct_aux' fuel env (mk_TChoice cut extracted_cut) g2 m ();
+      annot_tables_correct_aux' fuel env (MCOr cut extracted_cut) g2 m ();
       assert (annot_tables_correct_postcond fuel env cut g m)
     | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
     end
@@ -490,35 +668,9 @@ let rec annot_tables_correct_aux'
     | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
     end
   | MGMatch c key value ->
-    Spec.apply_map_group_det_match_item_for c (eval_literal key) (typ_sem env.e_sem_env value) m;
-    begin match typ_included fuel env (TElem (ELiteral key)) cut with
-    | RSuccess _ ->
-      assert (None? (Cbor.cbor_map_get m (eval_literal key)));
-      assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m == Spec.MapGroupFail);
-      assert (Spec.apply_map_group_det Spec.map_group_always_false m == Spec.MapGroupFail);
-      assert (annot_tables_correct_postcond fuel env cut g m)
-    | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
-    end
-  | MGTable key (TElem EAlwaysFalse) value ->
-    begin match typ_inter_underapprox fuel env cut key with
-    | RSuccess key_except ->
-      let nf = Util.notp (Spec.matches_map_group_entry (Util.andp (typ_sem env.e_sem_env key) (Util.notp (typ_sem env.e_sem_env (TElem EAlwaysFalse)))) (typ_sem env.e_sem_env value)) in
-      let mnf = Cbor.cbor_map_filter nf m in
-      let mnnf = Cbor.cbor_map_filter (Util.notp nf) m in
-      assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m == Spec.MapGroupDet mnnf mnf);
-      let g' = MGTable key key_except value in
-      assert (annot_tables fuel env cut g == RSuccess (cut, g'));
-      let nf' = Util.notp (Spec.matches_map_group_entry (Util.andp (typ_sem env.e_sem_env key) (Util.notp (typ_sem env.e_sem_env key_except))) (typ_sem env.e_sem_env value)) in
-      let mnf' = Cbor.cbor_map_filter nf' m in
-      let mnnf' = Cbor.cbor_map_filter (Util.notp nf') m in
-      assert (Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g') m == Spec.MapGroupDet mnnf' mnf');
-      cbor_map_filter_ext_strong nf nf' m;
-      assert (mnf == mnf');
-      assert (Cbor.cbor_map_equal mnnf mnnf');
-      assert (Spec.cbor_map_disjoint_from_footprint mnf (typ_sem env.e_sem_env cut));
-      assert (annot_tables_correct_postcond fuel env cut g m)
-    | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
-    end
+    annot_tables_correct_aux_match fuel env cut c key value m ()
+  | MGTable key value MCFalse ->
+    annot_tables_correct_aux_table fuel env cut key value m ()
   | _ -> assert (annot_tables_correct_postcond fuel env cut g m)
 
 #pop-options
@@ -526,26 +678,26 @@ let rec annot_tables_correct_aux'
 let annot_tables_correct'
   (fuel: nat)
   (env: ast_env)
-  (cut: typ)
+  (cut: map_constraint)
   (g: elab_map_group)
   (m: Cbor.cbor_map)
 : Lemma
   (requires (
-    typ_bounded env.e_sem_env.se_bound cut /\
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
     bounded_elab_map_group env.e_sem_env.se_bound g /\
-    Spec.cbor_map_disjoint_from_footprint m (typ_sem env.e_sem_env cut)
+    Spec.cbor_map_disjoint_from_footprint m (map_constraint_sem env.e_sem_env cut)
   ))
   (ensures (
-    typ_bounded env.e_sem_env.se_bound cut /\
+    bounded_map_constraint env.e_sem_env.se_bound cut /\
     bounded_elab_map_group env.e_sem_env.se_bound g /\
     begin match annot_tables fuel env cut g with
     | RSuccess (cut', g') ->
       let a = Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g) m in
-      typ_bounded env.e_sem_env.se_bound cut' /\
+      bounded_map_constraint env.e_sem_env.se_bound cut' /\
       bounded_elab_map_group env.e_sem_env.se_bound g' /\
       a == Spec.apply_map_group_det (elab_map_group_sem env.e_sem_env g') m /\
       begin match a with
-      | Spec.MapGroupDet _ m' -> Spec.cbor_map_disjoint_from_footprint m' (typ_sem env.e_sem_env cut')
+      | Spec.MapGroupDet _ m' -> Spec.cbor_map_disjoint_from_footprint m' (map_constraint_sem env.e_sem_env cut')
       | _ -> True
       end
     | _ -> True
@@ -563,21 +715,301 @@ let annot_tables_correct
   ))
   (ensures (
     bounded_elab_map_group env.e_sem_env.se_bound g /\
-    begin match annot_tables fuel env (TElem EAlwaysFalse) g with
+    begin match annot_tables fuel env (MCFalse) g with
     | RSuccess (cut', g') ->
-      typ_bounded env.e_sem_env.se_bound cut' /\
+      bounded_map_constraint env.e_sem_env.se_bound cut' /\
       bounded_elab_map_group env.e_sem_env.se_bound g' /\
       elab_map_group_sem env.e_sem_env g == elab_map_group_sem env.e_sem_env g'
     | _ -> True
     end        
   ))
-= match annot_tables fuel env (TElem EAlwaysFalse) g with
+= match annot_tables fuel env (MCFalse) g with
   | RSuccess (_, g') ->
-    assert (forall (m: Cbor.cbor_map) . Spec.cbor_map_disjoint_from_footprint m (typ_sem env.e_sem_env (TElem EAlwaysFalse)));
-    Classical.forall_intro (Classical.move_requires (annot_tables_correct' fuel env (TElem EAlwaysFalse) g));
+    assert (forall (m: Cbor.cbor_map) . Spec.cbor_map_disjoint_from_footprint m (map_constraint_sem env.e_sem_env (MCFalse)));
+    Classical.forall_intro (Classical.move_requires (annot_tables_correct' fuel env (MCFalse) g));
     Spec.apply_map_group_det_map_group_equiv (elab_map_group_sem env.e_sem_env g) (elab_map_group_sem env.e_sem_env g')
   | _ -> ()
-  
+
+[@@"opaque_to_smt"]
+let mk_mc_and
+  (fuel: nat)
+  (env: ast_env)
+  (g1 g2: map_constraint)
+: Pure (result map_constraint)
+    (requires 
+      bounded_map_constraint env.e_sem_env.se_bound g1 /\
+      bounded_map_constraint env.e_sem_env.se_bound g2
+    )
+    (ensures fun g' ->
+      bounded_map_constraint env.e_sem_env.se_bound g1 /\
+      bounded_map_constraint env.e_sem_env.se_bound g2 /\
+      begin match g' with
+      | RSuccess g' ->
+        bounded_map_constraint env.e_sem_env.se_bound g' /\
+        Spec.map_constraint_equiv (map_constraint_sem env.e_sem_env g') (Util.andp (map_constraint_sem env.e_sem_env g1) (map_constraint_sem env.e_sem_env g2))
+      | RFailure _ -> False
+      | ROutOfFuel -> True
+      end
+    )
+= begin match map_constraint_included (typ_disjoint fuel) (typ_included fuel) env g1 g2 with
+  | RSuccess _ -> RSuccess g1
+  | ROutOfFuel -> ROutOfFuel
+  | _ ->
+    begin match map_constraint_included (typ_disjoint fuel) (typ_included fuel) env g2 g1 with
+    | RSuccess _ -> RSuccess g2
+    | ROutOfFuel -> ROutOfFuel
+    | _ -> RSuccess (MCAnd g1 g2)
+    end
+  end
+
+[@@"opaque_to_smt"]
+let mk_mc_or
+  (fuel: nat)
+  (env: ast_env)
+  (g1 g2: map_constraint)
+: Pure (result map_constraint)
+    (requires 
+      bounded_map_constraint env.e_sem_env.se_bound g1 /\
+      bounded_map_constraint env.e_sem_env.se_bound g2
+    )
+    (ensures fun g' ->
+      bounded_map_constraint env.e_sem_env.se_bound g1 /\
+      bounded_map_constraint env.e_sem_env.se_bound g2 /\
+      begin match g' with
+      | RSuccess g' ->
+        bounded_map_constraint env.e_sem_env.se_bound g' /\
+        Spec.map_constraint_equiv (map_constraint_sem env.e_sem_env g') (Spec.map_constraint_choice (map_constraint_sem env.e_sem_env g1) (map_constraint_sem env.e_sem_env g2))
+      | RFailure _ -> False
+      | ROutOfFuel -> True
+      end
+    )
+= begin match map_constraint_included (typ_disjoint fuel) (typ_included fuel) env g1 g2 with
+  | RSuccess _ -> RSuccess g2
+  | ROutOfFuel -> ROutOfFuel
+  | _ ->
+    begin match map_constraint_included (typ_disjoint fuel) (typ_included fuel) env g2 g1 with
+    | RSuccess _ -> RSuccess g1
+    | ROutOfFuel -> ROutOfFuel
+    | _ -> RSuccess (MCOr g1 g2)
+    end
+  end
+
+let rec annot_tables'
+  (fuel: nat)
+  (env: ast_env)
+  (cut: map_constraint)
+  (g: elab_map_group)
+: Pure (result (map_constraint & elab_map_group))
+    (requires (
+      bounded_map_constraint env.e_sem_env.se_bound cut /\
+      bounded_elab_map_group env.e_sem_env.se_bound g
+    ))
+    (ensures (fun res -> match res with
+    | RSuccess (cut', g') -> 
+      bounded_map_constraint env.e_sem_env.se_bound cut' /\
+      bounded_elab_map_group env.e_sem_env.se_bound g'
+    | _ -> True
+    ))
+    (decreases g)
+= match g with
+  | MGChoice g1 g2 ->
+    begin match annot_tables' fuel env cut g1 with
+    | RSuccess (cut1, g1') ->
+      let (extracted_cut) = extract_cut g1 in
+      begin match mk_mc_or fuel env cut extracted_cut with
+      | RSuccess cut_ ->
+        begin match annot_tables' fuel env cut_ g2 with
+        | RSuccess (cut2, g2') ->
+          begin match mk_mc_and fuel env cut1 cut2 with
+          | RSuccess cut' ->
+            RSuccess (cut', MGChoice g1' g2')
+          | res -> coerce_failure res
+          end
+        | res -> res
+        end
+      | res -> coerce_failure res
+      end
+    | res -> res
+    end
+  | MGConcat g1 g2 ->
+    begin match annot_tables' fuel env cut g1 with
+    | RSuccess (cut1, g1') ->
+      begin match annot_tables' fuel env cut1 g2 with
+      | RSuccess (cut2, g2') -> RSuccess (cut2, MGConcat g1' g2')
+      | res -> res
+      end
+    | res -> res
+    end
+  | MGTable key value MCFalse ->
+    let except = cut in
+    begin match mk_mc_or fuel env cut (MCKeyValue key value) with
+    | RSuccess mc' ->  RSuccess (mc', MGTable key value except)
+    | res -> coerce_failure res
+    end
+  | MGTable _ _ _ -> RFailure "annot_tables cannot be run twice"
+  | MGMatch cut' key value ->
+    let fp = (MCKeyValue (TElem (ELiteral key)) (if cut' then TElem EAny else value)) in
+    begin match mk_mc_or fuel env cut fp with
+    | RSuccess mc' -> RSuccess (mc', g) // TODO: rewrite the group if cut' is true and key \included cut
+    | res -> coerce_failure res
+    end
+  | MGMatchWithCut key _ ->
+    let fp = MCKeyValue key (TElem EAny) in
+    begin match mk_mc_or fuel env cut fp with
+    | RSuccess cut' -> RSuccess (cut', g)
+    | res -> coerce_failure res
+    end
+  | MGCut key ->
+    let fp = MCKeyValue key (TElem EAny) in
+    begin match mk_mc_or fuel env cut fp with
+    | RSuccess cut' -> RSuccess (cut', g)
+    | res -> coerce_failure res
+    end
+  | MGAlwaysFalse -> RSuccess (MCFalse, g)
+  | MGNop -> RSuccess (cut, g)
+
+let annot_tables'_correct'_post
+  (fuel: nat)
+  (env: ast_env)
+  (cut1 cut2: map_constraint)
+  (g: elab_map_group)
+: Tot prop
+=
+      bounded_map_constraint env.e_sem_env.se_bound cut1 /\
+      bounded_map_constraint env.e_sem_env.se_bound cut2 /\
+      bounded_elab_map_group env.e_sem_env.se_bound g /\
+      (RSuccess? (annot_tables' fuel env cut1 g) ==> RSuccess? (annot_tables fuel env cut2 g)) /\
+      begin match annot_tables' fuel env cut1 g with
+      | RSuccess (cut1', g1') ->
+        begin match annot_tables fuel env cut2 g with
+        | RSuccess (cut2', g2') ->
+          bounded_map_constraint env.e_sem_env.se_bound cut1' /\
+          bounded_elab_map_group env.e_sem_env.se_bound g1' /\
+          bounded_map_constraint env.e_sem_env.se_bound cut2' /\
+          bounded_elab_map_group env.e_sem_env.se_bound g2' /\
+          Spec.map_constraint_equiv (map_constraint_sem env.e_sem_env cut1') (map_constraint_sem env.e_sem_env cut2') /\
+          elab_map_group_sem env.e_sem_env g1' == elab_map_group_sem env.e_sem_env g2'
+        |  _ -> False
+        end
+      | _ -> True
+      end
+
+let map_group_filtered_table_except_ext
+  (key value: Spec.typ)
+  (except1 except2: Spec.map_constraint)
+: Lemma
+  (requires (
+    Spec.map_constraint_equiv except1 except2
+  ))
+  (ensures (
+    Spec.map_group_filtered_table key value except1 == Spec.map_group_filtered_table key value except2
+  ))
+= 
+      Spec.map_group_filter_ext
+        (Util.notp (Util.andp (Spec.matches_map_group_entry key value) (Util.notp except1)))
+        (Util.notp (Util.andp (Spec.matches_map_group_entry key value) (Util.notp except2)))
+
+#push-options "--z3rlimit 32 --ifuel 6 --fuel 4 --split_queries always"
+
+#restart-solver
+
+let rec annot_tables'_correct'
+  (fuel: nat)
+  (env: ast_env)
+  (cut1 cut2: map_constraint)
+  (g: elab_map_group)
+: Lemma
+    (requires (
+      bounded_map_constraint env.e_sem_env.se_bound cut1 /\
+      bounded_map_constraint env.e_sem_env.se_bound cut2 /\
+      Spec.map_constraint_equiv (map_constraint_sem env.e_sem_env cut1) (map_constraint_sem env.e_sem_env cut2) /\
+      bounded_elab_map_group env.e_sem_env.se_bound g
+    ))
+    (ensures (
+      annot_tables'_correct'_post fuel env cut1 cut2 g
+    ))
+    (decreases g)
+= match g with
+  | MGChoice g1 g2 ->
+    annot_tables'_correct' fuel env cut1 cut2 g1;
+    begin match annot_tables' fuel env cut1 g1 with
+    | RSuccess (cut11, g11) ->
+      assert (RSuccess? (annot_tables fuel env cut2 g1));
+      let RSuccess (cut12, g12) = annot_tables fuel env cut2 g1 in
+      assert (elab_map_group_sem env.e_sem_env g11 == elab_map_group_sem env.e_sem_env g12);
+      let extracted_cut = extract_cut g1 in
+      begin match mk_mc_or fuel env cut1 extracted_cut with
+      | RSuccess cut_ ->
+        annot_tables'_correct' fuel env cut_ (MCOr cut2 extracted_cut) g2;
+        begin match annot_tables' fuel env cut_ g2 with
+        | RSuccess (cut21, g21) -> ()
+        | _ -> ()
+        end
+      | _ -> ()
+      end
+    | _ -> ()
+    end
+  | MGConcat g1 g2 ->
+    annot_tables'_correct' fuel env cut1 cut2 g1;
+    begin match annot_tables' fuel env cut1 g1 with
+    | RSuccess (cut11, g11) ->
+      let RSuccess (cut12, g12) = annot_tables fuel env cut2 g1 in
+      annot_tables'_correct' fuel env cut11 cut12 g2;
+      begin match annot_tables' fuel env cut11 g2 with
+      | RSuccess (cut21, g21) ->
+        let RSuccess (cut22, g22) = annot_tables fuel env cut12 g2 in
+        assert (elab_map_group_sem env.e_sem_env g11 == elab_map_group_sem env.e_sem_env g12);
+        assert (elab_map_group_sem env.e_sem_env g21 == elab_map_group_sem env.e_sem_env g22);
+        elab_map_group_sem_concat env.e_sem_env g11 g21;
+        elab_map_group_sem_concat env.e_sem_env g12 g22;
+        assert (elab_map_group_sem env.e_sem_env (MGConcat g11 g21) == elab_map_group_sem env.e_sem_env (MGConcat g12 g22));
+        assert (Spec.map_constraint_equiv (map_constraint_sem env.e_sem_env cut21) (map_constraint_sem env.e_sem_env cut22));
+        assert (annot_tables fuel env cut2 g == RSuccess (cut22, MGConcat g12 g22));
+        assert (annot_tables'_correct'_post fuel env cut1 cut2 g);
+        ()
+      | _ -> ()
+      end
+    | _ -> ()
+    end
+  | MGTable key value MCFalse ->
+    begin match mk_mc_or fuel env cut1 (MCKeyValue key value) with
+    | RSuccess mc' ->
+      assert (Spec.map_constraint_equiv
+        (map_constraint_sem env.e_sem_env mc')
+        (map_constraint_sem env.e_sem_env (MCOr cut2 (MCKeyValue key value)))
+      );
+      map_group_filtered_table_except_ext
+        (typ_sem env.e_sem_env key) (typ_sem env.e_sem_env value)
+        (map_constraint_sem env.e_sem_env cut1)
+        (map_constraint_sem env.e_sem_env cut2);
+      ()
+    | _ -> ()
+    end
+  | _ -> ()
+
+#pop-options
+
+let annot_tables'_correct
+  (fuel: nat)
+  (env: ast_env)
+  (g: elab_map_group)
+: Lemma
+    (requires (
+      bounded_elab_map_group env.e_sem_env.se_bound g
+    ))
+    (ensures (
+      bounded_elab_map_group env.e_sem_env.se_bound g /\
+      begin match annot_tables' fuel env MCFalse g with
+      | RSuccess (cut', g') ->
+        bounded_map_constraint env.e_sem_env.se_bound cut' /\
+        bounded_elab_map_group env.e_sem_env.se_bound g' /\
+        elab_map_group_sem env.e_sem_env g == elab_map_group_sem env.e_sem_env g'
+      | _ -> True
+      end
+    ))
+= annot_tables_correct fuel env g;
+  annot_tables'_correct' fuel env MCFalse MCFalse g
+
 #push-options "--z3rlimit 128 --split_queries always --query_stats --fuel 4 --ifuel 8"
 
 #restart-solver
@@ -616,9 +1048,9 @@ let rec mk_wf_typ
         rewrite_group_correct env.e_sem_env fuel m2;
         let m3 = rewrite_group fuel _ m2 in
 *)      
-      begin match annot_tables fuel env (TElem EAlwaysFalse) m1 with
+      begin match annot_tables' fuel env MCFalse m1 with
       | RSuccess (_, m2) ->
-        annot_tables_correct fuel env m1;
+        annot_tables'_correct fuel env m1;
         begin match mk_wf_parse_map_group fuel' env m2 with
         | RSuccess s3 -> RSuccess (WfTMap m (* _ _ s1.wf *) m2 s3)
         | res -> coerce_failure res
@@ -863,13 +1295,14 @@ and mk_wf_parse_map_group
     | RSuccess tvalue -> RSuccess (WfMLiteral cut key value tvalue)
     | res -> coerce_failure res
     end
-  | MGTable key key_except value ->
+  | MGTable key value except ->
     begin match mk_wf_typ fuel' env true key with
     | RSuccess tkey ->
-      begin match mk_wf_typ fuel' env false key_except with
-      | RSuccess tkey_except ->
-        begin match mk_wf_typ fuel' env true value with
-        | RSuccess tvalue -> RSuccess (WfMZeroOrMore key key_except value tkey tkey_except tvalue)
+      begin match mk_wf_typ fuel' env true value with
+      | RSuccess tvalue -> 
+        begin match mk_wf_map_constraint fuel' env except with
+        | RSuccess texcept ->
+          RSuccess (WfMZeroOrMore key value except tkey tvalue texcept)
         | res -> coerce_failure res
         end
       | res -> coerce_failure res
@@ -878,10 +1311,10 @@ and mk_wf_parse_map_group
     end
   | MGConcat g1 g2 ->
     begin match map_group_footprint (typ_disjoint fuel) fuel env g1 with
-    | RSuccess (t1, t_ex1) ->
+    | RSuccess te1 ->
       begin match map_group_footprint (typ_disjoint fuel) fuel env g2 with
-      | RSuccess (t2, t_ex2) ->
-        begin match typ_diff_disjoint fuel env t1 t_ex1 t2 t_ex2 with
+      | RSuccess te2 ->
+        begin match map_constraint_disjoint (typ_disjoint fuel) (typ_included fuel) env te1 te2 with
         | RSuccess _ ->
           begin match mk_wf_parse_map_group fuel' env g1 with
           | RSuccess s1 ->
@@ -899,6 +1332,56 @@ and mk_wf_parse_map_group
     end
   | MGNop -> RSuccess (WfMNop ())
   | _ -> RFailure "mk_wf_parse_map_group: unsupported"
+
+and mk_wf_map_constraint
+  (fuel: nat) // for typ_disjoint
+  (env: ast_env)
+  (g: map_constraint)
+: Pure (result (ast0_wf_map_constraint g))
+    (requires bounded_map_constraint env.e_sem_env.se_bound g)
+    (ensures fun r -> match r with
+    | RSuccess s -> spec_wf_map_constraint env.e_sem_env g s
+    | _ -> True
+    )
+    (decreases fuel)
+= if fuel = 0
+  then ROutOfFuel
+  else let fuel'  : nat = fuel - 1 in
+  match g with
+  | MCFalse -> RSuccess WfMCFalse
+  | MCKeyValue k v ->
+    begin match mk_wf_typ fuel' env false k with
+    | RSuccess tk ->
+      begin match mk_wf_typ fuel' env false v with
+      | RSuccess tv ->
+        RSuccess (WfMCKeyValue k tk v tv)
+      | res -> coerce_failure res
+      end
+    | res -> coerce_failure res
+    end
+  | MCNot g1 ->
+    begin match mk_wf_map_constraint fuel' env g1 with
+    | RSuccess tg1 -> RSuccess (WfMCNot g1 tg1)
+    | res -> coerce_failure res
+    end
+  | MCAnd g1 g2 ->
+    begin match mk_wf_map_constraint fuel' env g1 with
+    | RSuccess tg1 ->
+      begin match mk_wf_map_constraint fuel' env g2 with
+      | RSuccess tg2 -> RSuccess (WfMCAnd g1 tg1 g2 tg2)
+      | res -> coerce_failure res
+      end
+    | res -> coerce_failure res
+    end
+  | MCOr g1 g2 ->
+    begin match mk_wf_map_constraint fuel' env g1 with
+    | RSuccess tg1 ->
+      begin match mk_wf_map_constraint fuel' env g2 with
+      | RSuccess tg2 -> RSuccess (WfMCOr g1 tg1 g2 tg2)
+      | res -> coerce_failure res
+      end
+    | res -> coerce_failure res
+    end
 
 (*
 and mk_wf_validate_map_group

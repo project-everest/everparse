@@ -1143,18 +1143,15 @@ let rec array_group_concat_unique_weak
 let map_group_footprint'_postcond
   (env: sem_env)
   (g: elab_map_group)
-  (res: result (typ & typ))
+  (res: result map_constraint)
 : GTot prop
 =
       begin match res with
       | RSuccess te ->
-        let t = fst te in
-        let t_except = snd te in
         bounded_elab_map_group env.se_bound g /\
-        typ_bounded env.se_bound t /\
-        typ_bounded env.se_bound t_except /\
+        bounded_map_constraint env.se_bound te /\
         begin let t' = spec_map_group_footprint env g in
-        Spec.typ_included t' (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except))
+        Spec.map_constraint_included t' (map_constraint_sem env te)
         end
       | RFailure _ -> False
       | _ -> True
@@ -1163,26 +1160,24 @@ let map_group_footprint'_postcond
 let map_group_footprint'_postcond_intro_success
   (env: sem_env)
   (g: elab_map_group)
-  (t: typ)
-  (t_except: typ)
-  (t': Ghost.erased Spec.typ)
+  (te: map_constraint)
+  (t': Ghost.erased Spec.map_constraint)
 : Lemma
   (requires (
       bounded_elab_map_group env.se_bound g /\
-      typ_bounded env.se_bound t /\
-      typ_bounded env.se_bound t_except /\
+      bounded_map_constraint env.se_bound te /\
       spec_map_group_footprint env g == t' /\
-      Spec.typ_included t' (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except))
+      Spec.map_constraint_included t' (map_constraint_sem env te)
   ))
   (ensures (
-    map_group_footprint'_postcond env g (RSuccess (t, t_except))
+    map_group_footprint'_postcond env g (RSuccess te)
   ))
 = ()
 
 let map_group_footprint'_postcond_intro_out_of_fuel
   (env: sem_env)
   (g: elab_map_group)
-  (res: result (typ & typ))
+  (res: result map_constraint)
   (sq: squash (~ (RSuccess? res)))
   (sq_not_fail: squash (~ (RFailure? res)))
 : Lemma
@@ -1204,19 +1199,19 @@ let spec_map_group_footprint_choice_or_concat
     bounded_elab_map_group env.se_bound g1 /\
     bounded_elab_map_group env.se_bound g2 /\
     bounded_elab_map_group env.se_bound g /\
-    spec_map_group_footprint env g == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.t_choice` (spec_map_group_footprint env g2)))
+    spec_map_group_footprint env g == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.map_constraint_choice` (spec_map_group_footprint env g2)))
   ))
 = assert (
     bounded_elab_map_group env.se_bound g1 /\
     bounded_elab_map_group env.se_bound g2 /\
     bounded_elab_map_group env.se_bound (MGChoice g1 g2) /\
-    spec_map_group_footprint env (MGChoice g1 g2) == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.t_choice` (spec_map_group_footprint env g2)))
+    spec_map_group_footprint env (MGChoice g1 g2) == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.map_constraint_choice` (spec_map_group_footprint env g2)))
   );
  assert (
     bounded_elab_map_group env.se_bound g1 /\
     bounded_elab_map_group env.se_bound g2 /\
     bounded_elab_map_group env.se_bound (MGChoice g1 g2) /\
-    spec_map_group_footprint env (MGConcat g1 g2) == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.t_choice` (spec_map_group_footprint env g2)))
+    spec_map_group_footprint env (MGConcat g1 g2) == (Ghost.hide ((spec_map_group_footprint env g1) `Spec.map_constraint_choice` (spec_map_group_footprint env g2)))
   )
 
 #push-options "--z3rlimit 64 --ifuel 8 --fuel 2 --split_queries always --query_stats"
@@ -1228,24 +1223,24 @@ let rec map_group_footprint'
   (env: ast_env)
   (g: elab_map_group)
   (sq: squash (bounded_elab_map_group env.e_sem_env.se_bound g))
-: Tot (res: result (typ & typ) & squash (map_group_footprint'_postcond env.e_sem_env g res))
+: Tot (res: result (map_constraint) & squash (map_group_footprint'_postcond env.e_sem_env g res))
   (decreases g)
 = match g with
   | MGNop
   | MGAlwaysFalse ->
-    let res = RSuccess (TElem EAlwaysFalse, TElem EAlwaysFalse) in
+    let res = RSuccess MCFalse in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
-  | MGMatch _ key _
+  | MGMatch cut key value
     ->
-    let res = RSuccess (TElem (ELiteral key), TElem EAlwaysFalse) in
+    let res = RSuccess (MCKeyValue (TElem (ELiteral key)) (if cut then TElem EAny else value)) in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
   | MGMatchWithCut key _
   | MGCut key
     ->
-    let res = RSuccess (key, TElem EAlwaysFalse) in
+    let res = RSuccess (MCKeyValue key (TElem EAny)) in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
-  | MGTable key key_except _ ->
-    let res = RSuccess (key, key_except) in
+  | MGTable key value except ->
+    let res = RSuccess (MCAnd (MCKeyValue key value) (MCNot except)) in
     assert (map_group_footprint'_postcond env.e_sem_env g res); (| res, () |)
   | MGChoice g1 g2
   | MGConcat g1 g2 ->
@@ -1255,56 +1250,16 @@ let rec map_group_footprint'
     assert (map_group_footprint'_postcond env.e_sem_env g1 te1);
     begin match te1 with
     | RSuccess te1 ->
-      let t1 = fst te1 in
-      let t1_except = snd te1 in
       let (| te2, _ |) = map_group_footprint' typ_disjoint fuel env g2 sq2 in
       assert (map_group_footprint'_postcond env.e_sem_env g2 te2);
       begin match te2 with
       | RSuccess te2 ->
-        let t2 = fst te2 in
-        let t2_except = snd te2 in
         spec_map_group_footprint_choice_or_concat env.e_sem_env g1 g2 g sq1 sq2 ();
         let s1 = (spec_map_group_footprint env.e_sem_env g1) in
         let s2 = (spec_map_group_footprint env.e_sem_env g2) in
-        let u1 = typ_sub_underapprox typ_disjoint fuel env t1_except t2 in
-        begin match u1 with
-        | RSuccess d1 ->
-          let u2 = typ_sub_underapprox typ_disjoint fuel env t2_except t1 in
-          begin match u2 with
-          | RSuccess d2 ->
-            typ_with_except_union_approx
-              s1
-              (typ_sem env.e_sem_env t1)
-              (typ_sem env.e_sem_env t1_except)
-              s2
-              (typ_sem env.e_sem_env t2)
-              (typ_sem env.e_sem_env t2_except)
-              (typ_sem env.e_sem_env d1)
-              (typ_sem env.e_sem_env d2);
-            let t' = mk_TChoice t1 t2 in
-            mk_TChoice_sem env.e_sem_env t1 t2;
-            let d' = mk_TChoice d1 d2 in
-            mk_TChoice_sem env.e_sem_env d1 d2;
-            typ_included_andp_notp_equiv
-              (Spec.t_choice s1 s2)
-              (Spec.t_choice (typ_sem env.e_sem_env t1) (typ_sem env.e_sem_env t2))
-              (Spec.t_choice (typ_sem env.e_sem_env d1) (typ_sem env.e_sem_env d2))
-              (typ_sem env.e_sem_env t')
-              (typ_sem env.e_sem_env d');
-            assert (Spec.typ_included
-              (Spec.t_choice s1 s2)
-              (typ_sem env.e_sem_env t' `Util.andp` Util.notp (typ_sem env.e_sem_env d'))
-            );
-            assert (Spec.typ_included
-              ((spec_map_group_footprint env.e_sem_env g))
-              (typ_sem env.e_sem_env t' `Util.andp` Util.notp (typ_sem env.e_sem_env d'))
-            );
-            map_group_footprint'_postcond_intro_success env.e_sem_env g t' d' (Spec.t_choice s1 s2);
-            (| RSuccess (t', d'),  () |)
-          | res -> (| ROutOfFuel, map_group_footprint'_postcond_intro_out_of_fuel env.e_sem_env g (ROutOfFuel) () () |)
-          end
-        | res -> (| ROutOfFuel, map_group_footprint'_postcond_intro_out_of_fuel env.e_sem_env g (ROutOfFuel) () () |)
-        end
+        let te' = MCOr te1 te2 in
+        map_group_footprint'_postcond_intro_success env.e_sem_env g te' (Spec.map_constraint_choice s1 s2);
+        (| RSuccess (te'),  () |)
       | res -> (| ROutOfFuel, map_group_footprint'_postcond_intro_out_of_fuel env.e_sem_env g (ROutOfFuel) () () |)
       end
     | res -> (| ROutOfFuel, map_group_footprint'_postcond_intro_out_of_fuel env.e_sem_env g (ROutOfFuel) () () |)
@@ -1315,20 +1270,17 @@ let rec map_group_footprint'
 let map_group_footprint_postcond
   (env: sem_env)
   (g: elab_map_group)
-  (res: result (typ & typ))
+  (res: result map_constraint)
 : GTot prop
 =
       begin match res with
       | RSuccess te ->
-        let t = fst te in
-        let t_except = snd te in
         bounded_elab_map_group env.se_bound g /\
-        typ_bounded env.se_bound t /\
-        typ_bounded env.se_bound t_except /\
+        bounded_map_constraint env.se_bound te /\
         begin let t' = spec_map_group_footprint env g in
-          Spec.typ_included t' (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except)) /\
+          Spec.map_constraint_included t' (map_constraint_sem env te) /\
           Spec.map_group_footprint (elab_map_group_sem env g) t' /\
-          Spec.map_group_footprint (elab_map_group_sem env g) (typ_sem env t `Util.andp` Util.notp (typ_sem env t_except))
+          Spec.map_group_footprint (elab_map_group_sem env g) (map_constraint_sem env te)
         end
       | RFailure _ -> False
       | _ -> True
@@ -1340,7 +1292,7 @@ let map_group_footprint
   (fuel: nat)
   (env: ast_env)
   (g: elab_map_group)
-: Pure (result (typ & typ))
+: Pure (result map_constraint)
     (requires (bounded_elab_map_group env.e_sem_env.se_bound g))
     (ensures fun res -> map_group_footprint_postcond env.e_sem_env g res)
 = let (| res, prf |) = map_group_footprint' typ_disjoint fuel env g () in
@@ -1370,6 +1322,7 @@ let typ_diff_disjoint_t =
       | _ -> True
     ))
 
+(*
 let typ_disjoint_from_diff
   (typ_diff_disjoint: typ_diff_disjoint_t)
   (env: ast_env)
@@ -1390,6 +1343,156 @@ let typ_disjoint_from_diff
       | _ -> True
     ))
 = typ_diff_disjoint env t1 (TElem EAlwaysFalse) t2 t3
+*)
+
+let rec map_constraint_size
+  (c: map_constraint)
+: GTot nat
+= match c with
+  | MCNot c'  -> 1 + map_constraint_size c' 
+  | MCOr c1 c2
+  | MCAnd c1 c2 -> 1 + map_constraint_size c1 + map_constraint_size c2
+  | _ -> 0
+
+let rec map_constraint_disjoint
+  (typ_disjoint: typ_disjoint_t)
+  (typ_included: typ_included_t)
+  (env: ast_env)
+  (c1 c2: map_constraint)
+: Pure (result unit)
+    (requires
+      bounded_map_constraint env.e_sem_env.se_bound c1 /\
+      bounded_map_constraint env.e_sem_env.se_bound c2
+    )
+    (ensures fun res ->
+      match res with
+      | RSuccess _ ->
+        bounded_map_constraint env.e_sem_env.se_bound c1 /\
+        bounded_map_constraint env.e_sem_env.se_bound c2 /\
+        (Spec.map_constraint_disjoint (map_constraint_sem env.e_sem_env c1) (map_constraint_sem env.e_sem_env c2))
+      | _ -> True
+    )
+    (decreases (map_constraint_size c1 + map_constraint_size c2))
+= match c1, c2 with
+  | MCKeyValue (TElem EAlwaysFalse) _, _
+  | MCKeyValue _ (TElem EAlwaysFalse), _
+  | _, MCKeyValue (TElem EAlwaysFalse) _
+  | _, MCKeyValue _ (TElem EAlwaysFalse)
+  | _, MCFalse
+  | MCFalse, _
+    -> RSuccess ()
+  | MCNot (MCNot c2'), c1
+  | c1, MCNot (MCNot c2') ->
+    map_constraint_disjoint typ_disjoint typ_included env c1 c2'
+  | MCOr c21 c22, c1
+  | c1, MCOr c21 c22 ->
+    let res1 = map_constraint_disjoint typ_disjoint typ_included env c1 c21 in
+    if RSuccess? res1
+    then map_constraint_disjoint typ_disjoint typ_included env c1 c22
+    else res1
+  | MCAnd c21 c22, c1
+  | c1, MCAnd c21 c22 ->
+    let res1 = map_constraint_disjoint typ_disjoint typ_included env c21 c22 in
+    if RSuccess? res1
+    then res1
+    else
+    let res2 = map_constraint_disjoint typ_disjoint typ_included env c1 c21 in
+    if RSuccess? res2
+    then res2
+    else map_constraint_disjoint typ_disjoint typ_included env c1 c22
+  | MCNot c1', MCNot c2' ->
+    let res1 = map_constraint_included typ_disjoint typ_included env c1 c2' in
+    if RSuccess? res1
+    then res1
+    else map_constraint_included typ_disjoint typ_included env c2 c1'
+  | MCNot c2', c1
+  | c1, MCNot c2' ->
+    map_constraint_included typ_disjoint typ_included env c1 c2'
+  | MCKeyValue k2 v2, MCKeyValue k1 v1
+  | MCKeyValue k1 v1, MCKeyValue k2 v2 ->
+      let res1 = typ_disjoint env k1 k2 in
+      if RSuccess? res1
+      then res1
+      else typ_disjoint env v1 v2
+
+and map_constraint_included
+  (typ_disjoint: typ_disjoint_t)
+  (typ_included: typ_included_t)
+  (env: ast_env)
+  (c1 c2: map_constraint)
+: Pure (result unit)
+    (requires
+      bounded_map_constraint env.e_sem_env.se_bound c1 /\
+      bounded_map_constraint env.e_sem_env.se_bound c2
+    )
+    (ensures fun res ->
+      match res with
+      | RSuccess _ ->
+        bounded_map_constraint env.e_sem_env.se_bound c1 /\
+        bounded_map_constraint env.e_sem_env.se_bound c2 /\
+        (Spec.map_constraint_included (map_constraint_sem env.e_sem_env c1) (map_constraint_sem env.e_sem_env c2))
+      | _ -> True
+    )
+    (decreases (map_constraint_size c1 + map_constraint_size c2))
+= match c1, c2 with
+  | MCKeyValue (TElem EAlwaysFalse) _, _
+  | MCKeyValue _ (TElem EAlwaysFalse), _
+  | MCFalse, _
+  | _, MCNot MCFalse
+    -> RSuccess ()
+  | MCNot (MCNot c1'), c2 ->
+    map_constraint_included typ_disjoint typ_included env c1' c2
+  | c1', MCNot (MCNot c2) ->
+    map_constraint_included typ_disjoint typ_included env c1' c2
+  | MCOr c21 c22, c1 ->
+    let res1 = map_constraint_included typ_disjoint typ_included env c21 c1 in
+    if RSuccess? res1
+    then map_constraint_included typ_disjoint typ_included env c22 c1
+    else res1
+  | MCNot (MCAnd c21 c22), c1 ->
+    let res1 = map_constraint_included typ_disjoint typ_included env (MCNot c21) c1 in
+    if RSuccess? res1
+    then map_constraint_included typ_disjoint typ_included env (MCNot c22) c1
+    else res1
+  | c1, MCAnd c21 c22 ->
+    let res1 = map_constraint_included typ_disjoint typ_included env c1 c21 in
+    if RSuccess? res1
+    then map_constraint_included typ_disjoint typ_included env c1 c22
+    else res1
+  | c1, MCNot c2' ->
+    map_constraint_disjoint typ_disjoint typ_included env c1 c2'
+  | MCAnd c21 c22, c1 ->
+    let res1 = map_constraint_included typ_disjoint typ_included env c21 c1 in
+    if RSuccess? res1
+    then res1
+    else map_constraint_included typ_disjoint typ_included env c22 c1
+  | MCNot (MCOr c21 c22), c1 ->
+    let res1 = map_constraint_included typ_disjoint typ_included env (MCNot c21) c1 in
+    if RSuccess? res1
+    then res1
+    else map_constraint_included typ_disjoint typ_included env (MCNot c22) c1
+  | c1, MCOr c21 c22 ->
+    let res1 = map_constraint_included typ_disjoint typ_included env c1 c21 in
+    if RSuccess? res1
+    then res1
+    else map_constraint_included typ_disjoint typ_included env c1 c22
+  | MCKeyValue k1 v1, MCFalse ->
+    let res1 = typ_included env k1 (TElem EAlwaysFalse) in
+    if RSuccess? res1
+    then res1
+    else typ_included env v1 (TElem EAlwaysFalse)
+  | MCKeyValue k1 v1, MCKeyValue k2 v2 ->
+      let res1 = typ_included env k1 k2 in
+      if RSuccess? res1
+      then typ_included env v1 v2
+      else res1
+  | MCNot MCFalse, MCKeyValue k2 v2 ->
+    let res1 = typ_included env (TElem EAny) k2 in
+    if RSuccess? res1
+    then typ_included env (TElem EAny) v2
+    else res1
+  | _, MCFalse -> RFailure "map_constraint_included: MCFalse right"
+  | MCNot (MCKeyValue _ _), MCKeyValue _ _ -> RFailure "map_constraint_included: MCNot (MCKeyValue _) left"
 
 let map_group_choice_compatible_no_cut_postcond
   (env: sem_env)

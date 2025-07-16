@@ -26,82 +26,113 @@ jobs:
       # ^ not in base
 
       - uses: actions/checkout@master
-
-      - name: Checkout submodules
-        run: |
-          git submodule init
-          git submodule update --depth 1
-
-      - name: Read commit hashes for submodules
-        id: hashes
-        run: |
-          H=$(git -C opt/FStar rev-parse HEAD)
-          echo "FSTAR_COMMIT=$H" >> "$GITHUB_OUTPUT"
-          H=$(git -C opt/karamel rev-parse HEAD)
-          echo "KARAMEL_COMMIT=$H" >> "$GITHUB_OUTPUT"
-          H=$(git -C opt/pulse rev-parse HEAD)
-          echo "PULSE_COMMIT=$H" >> "$GITHUB_OUTPUT"
+        id: checkout-fstar
+        with:
+          path: FStar
+          repository: FStarLang/FStar
+          ref: master
 
       - name: Try fetch built F*
         id: cache-fstar
         uses: actions/cache/restore@v4
         with:
-          path: opt/FStar
-          key: FStar-${{ runner.os }}-${{ runner.arch }}-${{ steps.hashes.outputs.FSTAR_COMMIT }}
+          path: FStar
+          key: FStar-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}
 
       - name: Build F*
         if: steps.cache-fstar.outputs.cache-hit != 'true'
         run: |
-          make -C opt FStar -sj$(nproc)
+          make -C FStar -sj$(nproc) ADMIT=1
 
       - name: Save built F*
         if: steps.cache-fstar.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: opt/FStar
-          key: FStar-${{ runner.os }}-${{ runner.arch }}-${{ steps.hashes.outputs.FSTAR_COMMIT }}
+          path: FStar
+          key: FStar-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}
+
+      - run: echo "FSTAR_EXE=$(pwd)/FStar/bin/fstar.exe" | sudo tee -a $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        id: checkout-karamel
+        with:
+          path: karamel
+          repository: FStarLang/karamel
+          ref: master
 
       - name: Try fetch built karamel
         id: cache-karamel
         uses: actions/cache/restore@v4
         with:
-          path: opt/karamel
-          key: karamel-${{ runner.os }}-${{ runner.arch }}-${{ steps.hashes.outputs.FSTAR_COMMIT }}-${{ steps.hashes.outputs.KARAMEL_COMMIT }}
+          path: karamel
+          key: karamel-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-karamel.outputs.commit }}
 
       - name: Build karamel (if not cached)
         if: steps.cache-karamel.outputs.cache-hit != 'true'
         run: |
-          make -C opt karamel -sj$(nproc)
+          make -C karamel -sj$(nproc) ADMIT=1
 
       - name: Save built karamel
         if: steps.cache-karamel.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: opt/karamel
-          key: karamel-${{ runner.os }}-${{ runner.arch }}-${{ steps.hashes.outputs.FSTAR_COMMIT }}-${{ steps.hashes.outputs.KARAMEL_COMMIT }}
+          path: karamel
+          key: karamel-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-karamel.outputs.commit }}
+
+      - run: echo "KRML_HOME=$(pwd)/karamel" | sudo tee -a $GITHUB_ENV
+
+      - name: Install python3-venv
+        run: |
+          sudo apt-get update
+          sudo apt-get --yes install --no-install-recommends python3-venv
+
+      - uses: actions/checkout@master
+        id: checkout-pulse
+        with:
+          path: pulse
+          repository: FStarLang/pulse
+          ref: main
 
       - name: Try fetch built pulse
         id: cache-pulse
         uses: actions/cache/restore@v4
         with:
-          path: opt/pulse
-          key: pulse-${{ runner.os }}-${{ runner.arch }}-${{ steps.hashes.outputs.FSTAR_COMMIT }}-${{ steps.hashes.outputs.PULSE_COMMIT }}
+          path: pulse
+          key: pulse-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-pulse.outputs.commit }}
 
       - name: Build pulse (if not cached)
         if: steps.cache-pulse.outputs.cache-hit != 'true'
         run: |
-          make -C opt pulse -sj$(nproc)
+          make -C pulse -sj$(nproc) ADMIT=1
 
       - name: Save built pulse
         if: steps.cache-pulse.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: opt/pulse
-          key: pulse-${{ runner.os }}-${{ runner.arch }}-${{ steps.hashes.outputs.FSTAR_COMMIT }}-${{ steps.hashes.outputs.PULSE_COMMIT }}
+          path: pulse
+          key: pulse-${{ runner.os }}-${{ runner.arch }}-${{ steps.checkout-fstar.outputs.commit }}-${{ steps.checkout-pulse.outputs.commit }}
+
+      - run: echo "PULSE_HOME=$(pwd)/pulse"/out | sudo tee -a $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        id: checkout-hacl
+        with:
+          path: hacl-star
+          repository: hacl-star/hacl-star
+          ref: main
+
+      - run: echo "HACL_HOME=$(pwd)/hacl-star" | sudo tee -a $GITHUB_ENV
+
+      - uses: actions/checkout@master
+        with:
+          path: everparse
 
       - name: Everparse CI
         id: cistep
-        run: . $HOME/.cargo/env && make ci -skj$(nproc)
+        run: |
+          . $HOME/.cargo/env && make -C everparse ci -kj$(nproc) branchname=${{ github.head_ref || github.ref_name }}
+        env:
+          DZOMO_GITHUB_TOKEN: ${{ secrets.DZOMO_GITHUB_TOKEN }}
 
       # I'm leaving this disabled as I do not get good incrementality
       # when trying this out by hand due to dependence hash mismatches
