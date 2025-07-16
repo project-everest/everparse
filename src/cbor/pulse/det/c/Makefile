@@ -10,7 +10,12 @@ extract: $(OUTPUT_DIRECTORY)/CBORDet.o $(OUTPUT_DIRECTORY)/CBORDetSizeCheck.o $(
 test: extract
 	+$(MAKE) -C $@
 
-.PHONY: all extract test
+example: extract
+	+$(MAKE) -C $@
+
+all-tests: test example
+
+.PHONY: all extract test example all-tests
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<

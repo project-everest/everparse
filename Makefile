@@ -132,7 +132,7 @@ endif
 .PHONY: cbor-interface
 
 cbor-det-c-test: cbor
-	+$(MAKE) -C src/cbor/pulse/det/c/test
+	+$(MAKE) -C src/cbor/pulse/det/c all-tests
 
 ifeq (,$(NO_PULSE))
 cbor-det-c-vertest: cbor cbor-interface
