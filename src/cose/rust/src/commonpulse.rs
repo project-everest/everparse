@@ -43,14 +43,13 @@ pub fn create_sig(
             crate::coseformat::either__·COSE_Format_evercddl_empty_or_serialized_map_pretty····COSE_Format_evercddl_bstr_pretty···COSE_Format_evercddl_bstr_pretty··_·COSE_Format_evercddl_bstr_pretty···COSE_Format_evercddl_bstr_pretty·::Inr
             { v: (aad,payload) }
         };
-    let res: usize = crate::coseformat::serialize_Sig_structure(sig_struct, outbuf);
-    let written: usize = res;
+    let written: usize = crate::coseformat::serialize_Sig_structure(sig_struct, outbuf);
     if written == 0usize
     { crate::commonabort::abort() }
     else
     {
-        let res0: &[u8] = &outbuf[0usize..written];
-        let tbs: &[u8] = res0;
+        let res: &[u8] = &outbuf[0usize..written];
+        let tbs: &[u8] = res;
         crate::ed25519::sign(sigbuf, privkey, tbs)
     }
 }
@@ -162,7 +161,7 @@ pub fn sign1 <'a>(
     let mut sigbuf: [u8; 64] = [0u8; 64usize];
     let sigbuf2: &mut [u8] = &mut sigbuf;
     create_sig(privkey, phdr, aad, payload, sigbuf2);
-    let res: usize =
+    let outbuf_sz: usize =
         crate::coseformat::serialize_COSE_Sign1_Tagged(
             crate::coseformat::evercddl_COSE_Sign1_pretty
             {
@@ -175,7 +174,6 @@ pub fn sign1 <'a>(
             },
             outbuf
         );
-    let outbuf_sz: usize = res;
     if outbuf_sz == 0usize
     {
         crate::commonabort::abort();
@@ -183,9 +181,8 @@ pub fn sign1 <'a>(
     }
     else
     {
-        let res0: &[u8] = &outbuf[0usize..outbuf_sz];
-        let out: &[u8] = res0;
-        out
+        let res: &[u8] = &outbuf[0usize..outbuf_sz];
+        res
     }
 }
 
@@ -268,7 +265,7 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
     let mut sigbuf: [u8; 64] = [0u8; 64usize];
     let sigbuf2: &mut [u8] = &mut sigbuf;
     create_sig(privkey, phdr, aadslice, payload, sigbuf2);
-    let res: usize =
+    let outbuf_sz: usize =
         crate::coseformat::serialize_COSE_Sign1_Tagged(
             crate::coseformat::evercddl_COSE_Sign1_pretty
             {
@@ -281,21 +278,16 @@ pub fn sign1_simple <'a>(privkey: &'a [u8], payload: &'a [u8], outbuf: &'a mut [
             },
             outbuf
         );
-    let outbuf_sz: usize = res;
-    let _bind_c: &[u8] =
-        if outbuf_sz == 0usize
-        {
-            crate::commonabort::abort();
-            outbuf
-        }
-        else
-        {
-            let res0: &[u8] = &outbuf[0usize..outbuf_sz];
-            let out: &[u8] = res0;
-            out
-        };
-    let res0: &[u8] = _bind_c;
-    res0
+    if outbuf_sz == 0usize
+    {
+        crate::commonabort::abort();
+        outbuf
+    }
+    else
+    {
+        let res: &[u8] = &outbuf[0usize..outbuf_sz];
+        res
+    }
 }
 
 pub fn verify_sig(
@@ -319,8 +311,7 @@ pub fn verify_sig(
             crate::coseformat::either__·COSE_Format_evercddl_empty_or_serialized_map_pretty····COSE_Format_evercddl_bstr_pretty···COSE_Format_evercddl_bstr_pretty··_·COSE_Format_evercddl_bstr_pretty···COSE_Format_evercddl_bstr_pretty·::Inr
             { v: (aad,payload) }
         };
-    let res: usize = crate::coseformat::serialize_Sig_structure(sig_struct, outbuf);
-    let written: usize = res;
+    let written: usize = crate::coseformat::serialize_Sig_structure(sig_struct, outbuf);
     if written == 0usize
     {
         crate::commonabort::abort();
@@ -328,8 +319,8 @@ pub fn verify_sig(
     }
     else
     {
-        let res0: &[u8] = &outbuf[0usize..written];
-        let tbs: &[u8] = res0;
+        let res: &[u8] = &outbuf[0usize..written];
+        let tbs: &[u8] = res;
         let success: bool = crate::ed25519::verify(pubkey, tbs, sigbuf);
         success
     }
@@ -389,21 +380,19 @@ pub fn verify1 <'a>(pubkey: &'a [u8], aad: &'a [u8], msg: &'a [u8]) ->
                   let success: bool =
                       if sig.len() == 64usize
                       {
-                          let success: bool =
-                              verify_sig(
-                                  pubkey,
-                                  x.protected,
-                                  aad,
-                                  match x.payload
-                                  {
-                                      crate::coseformat::either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty::Inl
-                                      { v }
-                                      => v,
-                                      _ => panic!("Incomplete pattern matching")
-                                  },
-                                  sig
-                              );
-                          success
+                          verify_sig(
+                              pubkey,
+                              x.protected,
+                              aad,
+                              match x.payload
+                              {
+                                  crate::coseformat::either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty::Inl
+                                  { v }
+                                  => v,
+                                  _ => panic!("Incomplete pattern matching")
+                              },
+                              sig
+                          )
                       }
                       else
                       { false };
@@ -461,21 +450,19 @@ pub fn verify1_simple <'a>(pubkey: &'a [u8], msg: &'a [u8]) ->
                   let success: bool =
                       if sig.len() == 64usize
                       {
-                          let success: bool =
-                              verify_sig(
-                                  pubkey,
-                                  x.protected,
-                                  aadslice,
-                                  match x.payload
-                                  {
-                                      crate::coseformat::either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty::Inl
-                                      { v }
-                                      => v,
-                                      _ => panic!("Incomplete pattern matching")
-                                  },
-                                  sig
-                              );
-                          success
+                          verify_sig(
+                              pubkey,
+                              x.protected,
+                              aadslice,
+                              match x.payload
+                              {
+                                  crate::coseformat::either__COSE_Format_evercddl_bstr_pretty_COSE_Format_evercddl_nil_pretty::Inl
+                                  { v }
+                                  => v,
+                                  _ => panic!("Incomplete pattern matching")
+                              },
+                              sig
+                          )
                       }
                       else
                       { false };
