@@ -8,7 +8,7 @@ Verified efficient parsing for binary data formats
 EverParse is a framework for generating verified secure parsers and
 formatters from domain-specific format specification languages.
 
-The framework contains three components:
+The framework contains several components:
 
 **LowParse**: At the core of EverParse is *LowParse*, a verified library
 of parsing and formatting combinators programmed and verified in F\*.
@@ -22,6 +22,16 @@ within several low-level C programs.
 in a style common to many RFCs. We have used it to generate message
 processing code for several networking protocols, including TLS and
 QUIC.
+
+**EverCBOR**: A verified C and Rust library for CBOR parsing and
+serialization. Currently, EverCBOR supports the deterministic encoding
+(RFC 8949 Section 4.2) without floating-point numbers; supporting the
+full CBOR is work in progress.
+
+**EverCDDL**: An experimental frontend for EverParse that accepts data
+formats for CBOR objects in CDDL, and generates C or Rust data types,
+parsers and serializers. We have used it to generate message
+processing code for COSE signing.
 
 EverParse is open-source and available on `GitHub
 <https://github.com/project-everest/everparse/>`_. EverParse is part
