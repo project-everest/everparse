@@ -1,0 +1,11 @@
+test1 = {
+  * (uint => bstr)
+}
+
+test2 = [
+  uint,
+  * bstr
+]
+
+bstr = #2
+uint = #0

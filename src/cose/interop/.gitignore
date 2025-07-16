@@ -1,0 +1,5 @@
+signtest
+verifytest
+bench
+message.*
+.venv

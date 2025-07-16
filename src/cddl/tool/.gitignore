@@ -1,0 +1,7 @@
+ocaml.depend*
+plugin.depend*
+*.done
+extraction-c
+extraction-c.depend*
+extraction-rust
+extraction-rust.depend*
