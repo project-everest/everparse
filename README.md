@@ -20,7 +20,7 @@ A `Dockerfile` is available for you to build CBOR, CDDL and COSE in a Docker ima
 with `docker build -t evercddl .` and use them in a Docker container
 with `docker run -i -t evercddl`
 
-A pre-built Docker image is [available on GitHub Packages](https://github.com/tahina-pro/quackyducky/pkgs/container/evercbor)
+A pre-built Docker image is [available on GitHub Packages](https://github.com/project-everest/everparse/pkgs/container/evercbor)
 
 NOTE: These Docker images only contain CBOR, CDDL and COSE. They do not
 contain the rest of EverParse.

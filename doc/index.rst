@@ -46,6 +46,9 @@ package.
 
 The latest release of EverParse can be found `here <https://github.com/project-everest/everparse/releases>`_.
 
+Those public releases do not contain EverCBOR/EverCDDL. By contrast,
+we produce `pre-built Docker images containing only EverCBOR and EverCDDL <https://github.com/project-everest/everparse/pkgs/container/evercbor>`_
+
 Manual
 ------
 
@@ -53,7 +56,11 @@ Manual
 
 * :ref:`build`
 
-* `EverCBOR Rust API<https://project-everest.github.io/everparse/evercbor-rust/cborrs/>_`
+* EverCBOR:
+
+  + `Documented C example <https://github.com/project-everest/everparse/blob/master/src/cbor/pulse/det/c/example/main.c>`_
+
+  + `Rust API reference <https://project-everest.github.io/everparse/evercbor-rust/cborrs/>`_
   
 In the News
 -----------
