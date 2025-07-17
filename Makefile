@@ -1,4 +1,4 @@
-all: package-subset asn1 cbor cddl cbor-interface
+all: package-subset asn1 cbor cddl cbor-interface cose
 
 export EVERPARSE_OPT_PATH=$(realpath opt)
 export FSTAR_EXE ?= $(wildcard $(EVERPARSE_OPT_PATH)/FStar/out/bin/fstar.exe)
@@ -42,6 +42,10 @@ include $(EVERPARSE_SRC_PATH)/common.Makefile
 endif
 
 lowparse: $(filter-out src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
+
+ifeq (,$(NO_PULSE))
+lowparse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
+endif
 
 # lowparse needed because of .fst behind .fsti for extraction
 3d-prelude: $(filter src/3d/prelude/%,$(ALL_CHECKED_FILES)) $(filter-out src/lowparse/LowParse.SLow.% src/lowparse/pulse/%,$(filter src/lowparse/%,$(ALL_CHECKED_FILES)))
@@ -105,15 +109,7 @@ quackyducky-sample0-test: quackyducky lowparse
 
 quackyducky-test: quackyducky-unit-test quackyducky-sample-test quackyducky-sample0-test quackyducky-sample-low-test
 
-test: all lowparse-test quackyducky-test 3d-test asn1-test
-
-ifeq (,$(NO_PULSE))
-lowparse-pulse: $(filter src/lowparse/pulse/%,$(ALL_CHECKED_FILES))
-else
-lowparse-pulse:
-endif
-
-.PHONY: lowparse-pulse
+test: all lowparse-test quackyducky-test 3d-test asn1-test cbor-test cddl-test cose-test
 
 submodules:
 	$(MAKE) -C $(EVERPARSE_OPT_PATH) submodules
@@ -257,11 +253,9 @@ cose:
 
 .PHONY: cose
 
-cddl-test: cddl cose-extract-test cddl-unit-tests
+cddl-test: cddl cddl-unit-tests
 
 .PHONY: cddl-test
-
-ci: test lowparse-pulse cbor-test cddl-test
 
 ci: test 3d-doc-ci
 
